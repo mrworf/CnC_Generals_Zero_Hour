@@ -41,22 +41,24 @@ milestones:
   - id: M2
     title: "GPU-independent renderer API closure"
     file: delivery/milestones/cnc-generals-zero-hour/M2-renderer-closure.md
-    status: in_progress
+    status: completed
     dependencies: [M0]
     optional: false
     started_at: "2026-09-20T03:29:50Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md"
+    completed_at: "2026-09-20T03:39:44Z"
+    commit_hash: 8eeba80b0665528826b8649f2ebd6b3ff4798fbe
+    evidence: "Three completed slices classify 503 identifiers with 13 fail-closed rules, define the backend-neutral renderer contract, and compile ten GLSL modules. All four presets passed five renderer-contract tests; GCC Debug passed the complete 14-test suite. Root acceptance reran GCC Debug and Clang Release builds plus ten renderer-contract executions and verified source/packet freshness."
+    notes: "Accepted without GPU/display/retail/network access. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md; slice commits: 3c2074d, e7415e8, 8eeba80."
   - id: M3
     title: "headless engine and staged startup"
     file: delivery/milestones/cnc-generals-zero-hour/M3-headless-startup.md
-    status: pending
+    status: in_progress
     dependencies: [M1]
     optional: false
+    started_at: "2026-09-20T03:39:44Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_03_plan_01.md"
   - id: M4
     title: "VFS, retail data, and corpus characterization"
     file: delivery/milestones/cnc-generals-zero-hour/M4-retail-vfs.md
