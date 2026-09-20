@@ -112,6 +112,7 @@ target_include_directories(zh_wwsupport PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/incl
 
 target_sources(zh_renderer_sdl_gpu PRIVATE
   src/renderer/contract.cpp
+  src/renderer/recording_device.cpp
   src/renderer/shader_registry.cpp
 )
 target_include_directories(zh_renderer_sdl_gpu PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -228,6 +229,11 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(renderer_contract_tests PRIVATE zh_renderer_sdl_gpu)
   add_test(NAME renderer_contract COMMAND renderer_contract_tests)
   set_tests_properties(renderer_contract PROPERTIES LABELS renderer-contract)
+
+  add_executable(renderer_recording_device_tests tests/renderer/test_recording_device.cpp)
+  target_link_libraries(renderer_recording_device_tests PRIVATE zh_renderer_sdl_gpu)
+  add_test(NAME renderer_recording_device COMMAND renderer_recording_device_tests)
+  set_tests_properties(renderer_recording_device PROPERTIES LABELS renderer-contract)
 
   add_executable(renderer_shader_registry_tests tests/renderer/test_shader_registry.cpp)
   target_compile_definitions(renderer_shader_registry_tests PRIVATE
