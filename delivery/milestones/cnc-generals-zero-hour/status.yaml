@@ -30,22 +30,24 @@ milestones:
   - id: M1
     title: "portable ABI and support libraries"
     file: delivery/milestones/cnc-generals-zero-hour/M1-portable-foundations.md
-    status: in_progress
+    status: completed
     dependencies: [M0]
     optional: false
     started_at: "2026-09-20T03:20:07Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_01_plan_01.md"
+    completed_at: "2026-09-20T03:29:50Z"
+    commit_hash: bb9a388
+    evidence: "Three completed slices. All four GCC/Clang Debug/Release builds passed 9 foundation tests and emitted byte-identical serialization fixtures; combined ASan/UBSan suites passed with leak detection disabled for the restricted ptrace environment. Root acceptance reran GCC Debug and Clang Release foundation suites (18 tests), verified source/packet freshness, and found a clean worktree."
+    notes: "Accepted. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_01_plan_01.md; slice commits: 757aec8, 94349be, bb9a388."
   - id: M2
     title: "GPU-independent renderer API closure"
     file: delivery/milestones/cnc-generals-zero-hour/M2-renderer-closure.md
-    status: pending
+    status: in_progress
     dependencies: [M0]
     optional: false
+    started_at: "2026-09-20T03:29:50Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md"
   - id: M3
     title: "headless engine and staged startup"
     file: delivery/milestones/cnc-generals-zero-hour/M3-headless-startup.md
