@@ -16,11 +16,11 @@ compiled_from:
     remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-009, SE-010]
   runtime_reconciliation:
     path: docs/zero-hour-runtime-closure-reconciliation.md
-    revision: sha256:d531a7a52de8ee102a13d8d3369b7f76923e4b52b2e454782c5b47e0ded106c7
-    repository_commit: 0b10d439abed46555d80e79f539a2582add294cb
+    revision: sha256:c1b11659795b0ac904decefd870f0af2abb378d7e06bbac765f174209e2841ed
+    repository_commit: a692153398bcb693d7c347d2a58d9beb63e4879c
     change_id: RUNTIME-CLOSURE-2026-09-20
-    remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006]
-  baseline_repository_commit: 0b10d439abed46555d80e79f539a2582add294cb
+    remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010]
+  baseline_repository_commit: a692153398bcb693d7c347d2a58d9beb63e4879c
   definition_package: null
   reconciliation: null
 compilation_status: complete
@@ -33,22 +33,23 @@ assurance:
   evidence_grades: [component_fixture, original_source_compile_link, original_source_integration, retail_runtime]
   review: evidence/qa/cnc-generals-zero-hour/architecture-revalidation-2026-09-20.md
   closure_providers:
-    support_startup: [M19, M20]
-    persistence_determinism: [M20, M21, M24]
-    ui_world_effects_gpu: [M20, M22, M23]
+    support_startup: [M19, M26, M27, M28, M20]
+    persistence_determinism: [M26, M27, M20, M21, M24]
+    ui_world_effects_gpu: [M28, M20, M21, M22, M23]
     network: [M20, M25, M16]
-    media: [M20, M23]
+    media: [M28, M20, M23]
     production_gameplay_release: [M15, M17]
 packet_adoption:
   required: true
   previous_goal_membership: [M19, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
-  pending_execution_order: [M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
-  mandatory_remaining: [M20, M21, M22, M23, M24, M25, M15, M16, M17]
+  pending_execution_order: [M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+  mandatory_remaining: [M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17]
   optional_remaining: [M18]
-  first_milestone: M20
+  first_milestone: M26
   preserved_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md
-  next_governing_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_02.md
-  instruction: On later delivery resume explicitly adopt the committed readiness-approved replacement packet and its changed M20 scope; preserve prior goal and blocked plan 01 history. Generate new M20 plan 02 only during delivery. Do not start implementation during replanning.
+  next_governing_plan: delivery/plans/cnc-generals-zero-hour/milestone_26_plan_01.md
+  integrated_successor_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_02.md
+  instruction: On later delivery resume explicitly adopt the committed readiness-approved replacement packet including M26-M28 before changed M20; preserve prior goal and blocked plan 01 history. Start M26 plan 01, then later generate M20 plan 02 only during delivery. Do not start implementation during replanning.
 milestones:
   - id: M0
     title: "reproducible build readiness"
@@ -227,23 +228,53 @@ milestones:
     commit_hash: b868418
     evidence: "Three completed slices plus evidence/qa/cnc-generals-zero-hour/M19-original-support.md. All 3,293 inventory sources are classified; ten original support translation units have compile/link/runtime identity witnesses and negative provider controls. All four native preset suites passed 62/62; Clang ASan/UBSan original-support passed 7/7; root acceptance reran classification and focused identity tests (7/7) with unchanged source/packet revisions."
     notes: "Accepted at original-source compile/link and bounded runtime grade, not whole-game integration. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_19_plan_01.md; slice commits: 95a2c31, 4679929, b868418; reference closeout: fa34ee9. M20-M25 retain production-game closure."
+  - id: M26
+    title: "original process allocation and ABI foundation"
+    file: delivery/milestones/cnc-generals-zero-hour/M26-original-process-foundation.md
+    status: pending
+    dependencies: [M19]
+    remediation_ids: [SE-001, SE-002, SE-010, RC-001, RC-002, RC-004, RC-006, RC-007, RC-008]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: "Independent original allocation/string/process consumers; no whole-engine or retail requirement."
+  - id: M27
+    title: "original data codecs and map metadata providers"
+    file: delivery/milestones/cnc-generals-zero-hour/M27-original-data-providers.md
+    status: pending
+    dependencies: [M26, M4]
+    remediation_ids: [SE-002, SE-003, SE-007, SE-010, RC-001, RC-002, RC-004, RC-006, RC-007, RC-008, RC-009]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: "Independent original parser/codec/map metadata consumers; full INI dispatch and coupled registry belong to M20."
+  - id: M28
+    title: "original CPU presentation and media resources"
+    file: delivery/milestones/cnc-generals-zero-hour/M28-original-cpu-resources.md
+    status: pending
+    dependencies: [M27, M6, M7, M8, M12, M13]
+    remediation_ids: [SE-005, SE-006, SE-010, RC-001, RC-002, RC-004, RC-006, RC-007, RC-009, RC-010]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: "Original CPU/device seams and resource/audio consumers with owned fixtures; coupled GameClient and complete registry remain M20."
   - id: M20
     title: "integrated original runtime and data lifecycle"
     file: delivery/milestones/cnc-generals-zero-hour/M20-original-lifecycle.md
     status: blocked
-    dependencies: [M19, M4, M6, M7, M8, M12, M13]
-    remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-010, RC-001, RC-002, RC-003, RC-004, RC-005, RC-006]
+    dependencies: [M28]
+    remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-010, RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010]
     optional: false
     started_at: "2026-09-20T14:55:33Z"
     completed_at: null
     evidence: "evidence/qa/cnc-generals-zero-hour/M20-original-lifecycle-blocker.md proves an UPSTREAM_REQUIRED source-order dependency defect: original GameEngine::init requires real GameLogic, GameClient/W3D, module/object, particle and media providers assigned to M21-M23 before it can satisfy M20 lifecycle acceptance."
-    notes: "Blocked delivery history retained pending explicit packet adoption; the accepted runtime reconciliation resolves M20_SOURCE_ORDER_DEFECT by moving all required runtime providers here. Prior governing plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md; blocker commit: 418b1e6. After readiness and committed handoff, adopt revised scope and create plan 02. No reduced GameEngine, empty registry or parallel lifecycle. M21-M25 retain later domain completion/acceptance, never dependencies required for M20 completion."
+    notes: "Blocked delivery history retained pending explicit packet adoption; RC007-RC010 add independent M26-M28 providers before coupled M20 closure. Prior governing plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md; blocker commit: 418b1e6. After readiness/committed handoff deliver prerequisites then create M20 plan 02. No reduced GameEngine, empty registry or parallel lifecycle. M21-M25 retain later domain completion/acceptance, never dependencies required for M20 completion."
   - id: M21
     title: "original map and simulation execution"
     file: delivery/milestones/cnc-generals-zero-hour/M21-original-simulation.md
     status: pending
     dependencies: [M20]
-    remediation_ids: [SE-004, SE-010, RC-002, RC-003, RC-004]
+    remediation_ids: [SE-004, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010]
     optional: false
     completed_at: null
     evidence: null
@@ -253,7 +284,7 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M22-original-rendering.md
     status: pending
     dependencies: [M21, M14]
-    remediation_ids: [SE-005, SE-010, RC-002, RC-003, RC-004]
+    remediation_ids: [SE-005, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010]
     optional: false
     completed_at: null
     evidence: null
@@ -263,7 +294,7 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M23-original-interaction.md
     status: pending
     dependencies: [M22, M6, M8, M12, M13]
-    remediation_ids: [SE-006, SE-010, RC-002, RC-003, RC-004]
+    remediation_ids: [SE-006, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010]
     optional: false
     completed_at: null
     evidence: null
@@ -273,7 +304,7 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M24-original-persistence.md
     status: pending
     dependencies: [M21, M5]
-    remediation_ids: [SE-007, SE-010, RC-002, RC-003, RC-004]
+    remediation_ids: [SE-007, SE-010, RC-002, RC-003, RC-004, RC-007, RC-008, RC-010]
     optional: false
     completed_at: null
     evidence: null
@@ -283,7 +314,7 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M25-original-network.md
     status: pending
     dependencies: [M24, M11]
-    remediation_ids: [SE-008, SE-010, RC-002, RC-003, RC-004]
+    remediation_ids: [SE-008, SE-010, RC-002, RC-003, RC-004, RC-007, RC-008, RC-010]
     optional: false
     completed_at: null
     evidence: null

@@ -12,7 +12,7 @@ Original GameLogic loads maps and advances actual mission/skirmish state, comman
 
 Complete original map/chunk loading, terrain logic, object modules, scripting, AI/pathfinding, player/side setup, command/message routing and victory/defeat beyond the runtime already accepted in M20. Preserve update order and source ownership; prove complete mission/skirmish behavior. Existing original GameLogic, registries and all startup/update dependencies come from M20.
 
-Allocation rule: the [runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md) RC-001–RC-004 overrides any historical allocation below. M20 owns every transitive implementation dependency of its accepted original offline initialization, post-load, update, reset and destruction. This contract may add later feature behavior and full domain acceptance, but cannot supply a deferred half of M20's runtime. Existing acceptance clauses and negative tests remain required in full.
+Allocation rule: the [runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md) RC-001–RC-010 overrides historical allocation below. M26–M28 own independently accepted process/data/CPU providers; M20 integrates every remaining coupled dependency of its original offline initialization, post-load, update, reset and destruction. This contract adds later behavior and full domain acceptance, never a deferred half of that accepted runtime. Maintain the checked source dependency ledger, configuration/lifecycle edges, owner and freshness gates through this domain. Existing acceptance clauses and negative tests remain required in full.
 
 ## Explicit Exclusions
 
@@ -20,7 +20,7 @@ Rendered sessions follow M22/M23/M15; full save/replay cross-compiler checks are
 
 ## Source Requirements
 
-Runtime reconciliation RC-002/RC-003 preserves this domain's whole acceptance chain; RC-004 original-behavior identity rules apply. Exact authority revisions are recorded in status.yaml.
+Runtime reconciliation RC-002/RC-003 preserves this domain's whole acceptance chain; RC-004 original-behavior identity and RC-007–RC-010 provider/ledger and later-path rules apply. Exact authority revisions are recorded in status.yaml.
 
 [Migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-004; SE-010 assurance/evidence constraints. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 govern preservation, stack, formats and validation. Revisions/commits are in status.yaml.
 
@@ -41,6 +41,8 @@ Produces `PRE-030` (M21 original maps/simulation); inspect this contract's sourc
 
 Run scripted mission and skirmish setup through original parsers. Witness object creation, movement/attack effects, scripts, AI and victory/defeat with original-state checkpoints. Labels, category manifests or toy entities cannot satisfy acceptance.
 
+RC-010: extend the checked source dependency ledger through GameLogic::startNewGame, map INI/terrain, TerrainVisual::addProp, GameClient::preloadAssets and Recorder::initControls. Consume earlier CPU/data providers and implement additional map-start consumer behavior here, never defer it to M22/M23. Exercise supported initial .map dispatch and return/reset/re-entry with real nonempty original map/object/script state. Required providers without owners or stale source/registry evidence fail validation; no physical device is needed for headless scenario acceptance.
+
 ## Architecture / Security Constraints
 
 Original engine owns authoritative state/lifecycle; native adapters own OS/device/library edges. Preserve original allocators except narrow characterized portability changes. Retail roots/symlinks are read-only; never commit retail bytes/hashes/private paths. Isolate XDG writes. Never suppress unresolved symbols or use fake success-returning production subsystems.
@@ -59,6 +61,8 @@ Preserve original engine interfaces and fixed-width, char16_t/UTF-16LE, bounded 
 ## Required Validation
 
 Actual corpus maps plus owned parser/command fixtures; missing map/module, malformed chunks and invalid commands without partial-state success; repeated checkpoints and sanitizers. Disabling original GameLogic/map loader must fail runtime acceptance.
+
+Prove map-start CPU resource preloading, prop creation and recorder-control initialization through original consumers; reset/re-entry releases resources/callbacks without destroyed-global access. Vary independent client/audio random activity while comparing simulation checkpoints. Validate initial .map dispatch and error paths without bypassing source initialization.
 
 Build applicable targets with linux-gcc-debug, linux-clang-debug, linux-gcc-release and linux-clang-release. Run full asset-free CTest regression at milestone acceptance plus relevant ASan/UBSan. Record exact commands/context and map formerly unproven historical obligations to real-source tests. Retail/GPU checks use explicit separate gates; defaults remain private-data/device independent. Only permitted logical/derived evidence is committed.
 

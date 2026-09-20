@@ -12,7 +12,7 @@ Linux saves/replays restore original objects/scripts/AI/player state and reprodu
 
 Complete original Xfer traversal, SaveGame, recorder/playback and CRC for full real-game persistence and replay with bounded fixed-width source-established layouts. Preserve autosave/transactional load and isolate toy ZHSG as fixture-only. Original recorder, GameState/GameStateMap and Xfer/CRC implementations needed for startup/post-load/update already belong to M20.
 
-Allocation rule: the [runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md) RC-001–RC-004 overrides any historical allocation below. M20 owns every transitive implementation dependency of its accepted original offline initialization, post-load, update, reset and destruction. This contract may add later feature behavior and full domain acceptance, but cannot supply a deferred half of M20's runtime. Existing acceptance clauses and negative tests remain required in full.
+Allocation rule: the [runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md) RC-001–RC-010 overrides historical allocation below. M26–M28 own independently accepted process/data/CPU providers; M20 integrates every remaining coupled dependency of its original offline initialization, post-load, update, reset and destruction. This contract adds later behavior and full domain acceptance, never a deferred half of that accepted runtime. Maintain the checked source dependency ledger, configuration/lifecycle edges, owner and freshness gates through this domain. Existing acceptance clauses and negative tests remain required in full.
 
 ## Explicit Exclusions
 
@@ -20,7 +20,7 @@ Windows fixture compatibility remains optional M18; no compatibility promise for
 
 ## Source Requirements
 
-Runtime reconciliation RC-002/RC-003 preserves this domain's whole acceptance chain; RC-004 original-behavior identity rules apply. Exact authority revisions are recorded in status.yaml.
+Runtime reconciliation RC-002/RC-003 preserves this domain's whole acceptance chain; RC-004 original-behavior identity and RC-007–RC-010 provider/ledger and later-path rules apply. Exact authority revisions are recorded in status.yaml.
 
 [Migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-007; SE-010 assurance/evidence constraints. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 govern preservation, stack, formats and validation. Revisions/commits are in status.yaml.
 
@@ -41,6 +41,8 @@ Produces `PRE-033` (M24 original Xfer/replay/CRC); inspect this contract's sourc
 
 Round-trip a real source-engine map with objects, script/AI/player state and commands; resume and compare original checkpoints. Replay actual source commands across GCC/Clang Debug/Release rather than a parallel synthetic snapshot.
 
+RC-010: ledger the original GameState reset/load/postprocess/catch path and Recorder::playbackFile mode/header/MSG_NEW_GAME/InitRandom flow. GameState currently resets before load, so implement and prove rollback/transactional preservation rather than infer it from a parser rejection. Invalid headers must restore recorder mode and leave no mixed state; startup .rep dispatch uses the same validated path. Preserve cross-preset playback despite DEBUG_LOGGING version/build/exeCRC branches with explicit characterized compatibility handling, not blanket validation removal. Source/UI error resources come from prior providers; headless diagnostics remain bounded and noninteractive.
+
 ## Architecture / Security Constraints
 
 Original engine owns authoritative state/lifecycle; native adapters own OS/device/library edges. Preserve original allocators except narrow characterized portability changes. Retail roots/symlinks are read-only; never commit retail bytes/hashes/private paths. Isolate XDG writes. Never suppress unresolved symbols or use fake success-returning production subsystems.
@@ -59,6 +61,8 @@ Preserve original engine interfaces and fixed-width, char16_t/UTF-16LE, bounded 
 ## Required Validation
 
 Round-trip/autosave/record-playback; truncated/unknown-version/corrupt saves, invalid references, replay mismatch and unchanged live state on failed load; cross-preset original checkpoints and sanitizer tests. Corrupt real save/replay state to prove rejection.
+
+Inject failures after original reset, during traversal and post-load and assert exact pre-load state preservation/no mixed state and cleanup. Invalid playback headers restore mode; valid startup .rep dispatch and cross-preset command/RNG/CRC sequences pass. Client/audio random activity must not change simulation checkpoints. Maintain ledger/source-drift/owner checks and test noninteractive original diagnostic paths.
 
 Build applicable targets with linux-gcc-debug, linux-clang-debug, linux-gcc-release and linux-clang-release. Run full asset-free CTest regression at milestone acceptance plus relevant ASan/UBSan. Record exact commands/context and map formerly unproven historical obligations to real-source tests. Retail/GPU checks use explicit separate gates; defaults remain private-data/device independent. Only permitted logical/derived evidence is committed.
 

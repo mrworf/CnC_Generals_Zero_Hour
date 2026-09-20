@@ -10,7 +10,7 @@ Original GameMain, GameEngine and required registered subsystems compile, link a
 
 ## Scope
 
-Own the transitive implementation closure of original GameMain, GameEngine::init, postProcessLoadAll, execute, update, reset and destruction. Port required providers together, even where classification previously assigned them to M21–M25. Update source classification as each real provider is integrated.
+Own the remaining coupled implementation and final integrated closure of original GameMain, GameEngine::init, postProcessLoadAll, execute, update, reset and destruction. Consume independently accepted M26 process/ABI, M27 data and M28 CPU resource providers; do not redo their proven work. Port all remaining required providers together, even where classification previously assigned them to M21–M25. Update source classification and the checked dependency ledger as each real provider is integrated.
 
 Implement Linux CreateGameEngine and original subsystem factories; adapt original FileSystem/LocalFileSystem/ArchiveFileSystem to BIG/VFS and XDG. Port remaining original ABI/PCH/CRT, UnicodeString/UTF-16 call sites, MemoryPool, logging and subsystem headers. Initialize original INI dispatch, CSF/GameText, GlobalData, name keys, module/object factories, function lexicon, weapons/locomotors, particles and data stores.
 
@@ -22,11 +22,13 @@ Full map/mission/skirmish scenario acceptance is M21; hardware scenes M22; inter
 
 ## Source Requirements
 
-[Runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md): RC-001, RC-002, RC-004, RC-005 and RC-006; RC-003 retains downstream acceptance. This supersedes conflicting ordering in the [migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-002 remaining original call sites, SE-003, reachable providers from SE-004–SE-008, SE-001/SE-010 identity and assurance. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 remain governing scope/compatibility authority. Revisions/commits are in status.yaml.
+[Runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md): RC-001–RC-010, including independent provider allocation and full integrated acceptance. This supersedes conflicting ordering in the [migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-002 remaining original call sites, SE-003, reachable providers from SE-004–SE-008, SE-001/SE-010 identity and assurance. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 remain governing scope/compatibility authority. Revisions/commits are in status.yaml.
 
 ## Preconditions
 
-Direct providers: M19, M4, M6, M7, M8, M12, M13. M19 supplies bounded original support, M4 supplies VFS/corpus, M6/M7/M8 supply platform/recording/font components and M12/M13 supply audio/video backends. Consume evidenced contracts, not historical title/status alone. None establishes original runtime integration. M21–M25 are never prerequisites to M20. Missing original providers, ATL/header errors and portability work are deliverables here. Readiness separately audits external inputs.
+Direct provider: M28, transitively M27/M26 and their completed component inputs. M26 proves original process/allocator/ABI, M27 independently executable data/codecs/metadata pieces, and M28 original CPU presentation/media consumers. Consume their scoped evidence, not titles alone; none establishes full runtime integration. M21–M25 are never prerequisites to M20. Missing coupled original providers, ATL/header errors and remaining portability work are deliverables here. Readiness separately audits external inputs.
+
+- `PRE-037` — accepted M28 independent original CPU resources, transitively `PRE-036/PRE-035` from M27/M26. Their ledger and scoped original-consumer evidence must be available before integrated work; complete INI dispatch, coupled map cache and engine orchestration remain PRE-029 outputs here.
 
 - `PRE-028` — M19 bounded ten-provider original support acceptance; PRE-009 — retained M4 VFS/corpus component; PRE-019/PRE-010/PRE-020 — M6/M7/M8 platform, recording and font components; PRE-011/PRE-023/PRE-024 — M12/M13 pinned audio/video backends. These components are available; remaining original call-site portability belongs here.
 - `PRE-008` — user read-only roots at retail initialization validation. PRE-029 is produced here and includes all RC-002 runtime providers, recorder/GameState/Xfer/CRC and offline network boundary; it is not an entry prerequisite.
@@ -52,6 +54,14 @@ Enumerate logical resources as consumers are connected, including font/WND/INI/C
 
 Correct partial-initialization ownership: a pending subsystem that fails before registration must be released once and any published singleton cleared. Then unwind previously registered subsystems in reverse order. Safely handle not-yet-created globals in constructors/destructors and GameEngine destruction; preserve successful initialization order and memory-pool semantics. Stop/finalize workers before owner release and preserve the original error if teardown diagnostics also fail.
 
+RC-007–RC-010 refine all allocation above: M26/M27/M28 own independent prerequisites; this milestone owns complete production INI::theTypeTable and all original callback/registry/vtable/global dependencies, not a reduced fixture dispatch table. Verify the same extracted parser/setFPMode methods proved earlier are consumed in full production, with original two-pass INI directory ordering. MapUtil::ParseObjectDataChunk/MapObject/ThingFactory classification, addMap's GameText/map.str handling and INIMapCache's name-key/localization relationships are integrated here. Use nonempty map fixtures and separately gated retail data; empty maps cannot establish full cache behavior.
+
+Own every remaining startup side effect after subsystem creation: protection/fingerprint removal in every preset while retaining real resource checks; original MapCache refresh and generated writes; GameLOD options/capability/timing and bounded benchmark adaptation; early quit/error handling and reset. Init failures, including non-D3D ErrorCode, malformed INI, missing music and resources, must return actionable nonzero results without reaching execute or accidentally continuing into reset. Preserve initiating diagnostics through teardown. M28's bounded audio lookup failure must remain noninteractive through this full call chain.
+
+Extend the explicit no-match test profile to clear initial map/replay dispatch, build-map-cache and forced-benchmark requests; test normal supported dispatch later in M21/M24. All generated cache/benchmark output uses XDG, never retail or CWD. Preserve normal user options/defaults, and prove capability/LOD setup does not acquire a display or require legacy CPU probing. Full metadata tests include nonempty objects, absent/stale caches, cold/warm equivalence, read-only roots, write denial and Debug/Release differences. Retail-derived cache/checksum data remains private runtime state.
+
+Use M26's ledger and invalidation checks throughout coupled registry/startup/post-load/update/reset/destruction and record required logical resources and later owners. Source-inspected edges are not runtime-proven; ownerless required edges fail acceptance. Integrated process lifetime encloses original engine and workers within M26 services; prove safe global teardown and actual original allocation linkage in the final executable.
+
 ## Architecture / Security Constraints
 
 Original engine owns authoritative state/lifecycle; native adapters own OS/device/library edges. Preserve original allocators except narrow characterized portability changes. Retail roots/symlinks are read-only; never commit retail bytes/hashes/private paths. Isolate XDG writes. No alternate reduced class hidden behind a platform macro, duplicate globals, empty registry, trace-only lifecycle stage, weak stub, unresolved-symbol suppression or linker collection that hides required behavior is acceptable. Narrow platform conditionals and shared-method refactoring must preserve source behavior.
@@ -75,6 +85,10 @@ Preserve original engine interfaces and fixed-width, char16_t/UTF-16LE, bounded 
 - [ ] Runtime witnesses compare original state before/after update and prove required provider execution; trace strings or separately incremented probe counters cannot establish success.
 - [ ] Construction/init, INI load before registration, post-load, and update/reset failures each preserve the initiating error and prove exactly-once ownership, cleared globals, and stopped workers.
 - [ ] New runtime tests retain active checks in every preset; evidence discloses existing NDEBUG settings and sanitizer leak-detection configuration, with explicit relevant allocator live-count and resource/worker ownership checks.
+- [ ] Complete original INI table/module registries and coupled nonempty-map/cache/localization providers execute; independent M27 fixtures never replace production dispatch or full metadata acceptance.
+- [ ] Non-D3D init errors, malformed INI, missing music/resources and failure-triggered early quits terminate nonzero without execute/reset continuation or interactive waits; diagnostics survive cleanup. Normal controlled quits and valid verification/cache-build exits preserve success semantics.
+- [ ] Full cold/warm/absent/stale cache, read-only-root/write-denial and bounded GameLOD/benchmark tests pass across Debug/Release with all generated state in XDG and no device acquisition.
+- [ ] Process bootstrap encloses engine/workers; ledger checks cover complete registry/configuration/lifecycle edges and reject stale or ownerless requirements.
 
 ## Required Validation
 
@@ -86,6 +100,6 @@ Derive before/after state expectations from the selected source path (for exampl
 
 ## Known Risks / Deferred Work
 
-This is a substantial coupled source port; multiple coherent tested slices belong inside this one milestone transaction. Routine missing symbols, portability or classification repairs do not justify another architecture referral. Actual scene/mission/save/network acceptance remains with M21–M25 and M15–M18 without supplying any code retroactively needed here. Preserve rejected plan 01 and its blocker evidence; on adoption generate milestone_20_plan_02.md. Unexpected required asset/backend limits follow base-plan §9 evidence-gated escalation, never reduced silent coverage.
+This remains a substantial coupled source port after M26–M28 remove independently testable prerequisites. Routine missing symbols, portability or classification repairs do not justify another architecture referral. Actual scene/mission/save/network acceptance remains with M21–M25 and M15–M18 without supplying any code retroactively needed here. Preserve rejected plan 01 and its blocker evidence; after prerequisite delivery generate milestone_20_plan_02.md. Unexpected required asset/backend limits follow base-plan §9 evidence-gated escalation, never reduced silent coverage.
 
 The governing plan must inventory actual providers and owned validation boundaries before implementation. Validate incremental support/data work without demanding a complete engine build as the first gate; milestone acceptance still requires the complete stated closure. Further reachable providers discovered during porting remain within this milestone's authorized scope.
