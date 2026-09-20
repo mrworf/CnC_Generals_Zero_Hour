@@ -19,7 +19,7 @@ Authority: `delivery/milestones/cnc-generals-zero-hour/M19-original-support.md`,
 
 1. [Slice 01 — auditable source classification and identity gate](milestone_19_plan_01_slice_01.md): completed (`95a2c31`)
 2. [Slice 02 — original compression runtime boundary](milestone_19_plan_01_slice_02.md): completed (`4679929`)
-3. [Slice 03 — original WW support runtime boundary and milestone evidence](milestone_19_plan_01_slice_03.md): completed (commit pending)
+3. [Slice 03 — original WW support runtime boundary and milestone evidence](milestone_19_plan_01_slice_03.md): completed (`b868418`)
 
 ## Validation strategy
 
@@ -33,4 +33,4 @@ Each slice runs focused positive and negative tests. At milestone completion, bu
 
 ## Completion record
 
-All three slices established complete source classification and bounded original-source compile/link/runtime boundaries for EAC RefPack plus the dependency-closed WWLib/WWMath/WWSaveLoad support set. All four native preset suites pass 62/62, and the Clang ASan/UBSan original-support suite passes 7/7, including clean allocator teardown. GameEngine and device-provider integration remain explicitly deferred to M20–M25. The outer orchestrator owns milestone status and delivery-goal transitions.
+All three slices established complete source classification and bounded original-source compile/link/runtime boundaries for EAC RefPack plus the dependency-closed WWLib/WWMath/WWSaveLoad support set. All four native preset suites pass 62/62, and the Clang ASan/UBSan original-support suite passes 7/7, including clean allocator teardown. GameEngine and device-provider integration remain explicitly deferred to M20–M25. Slice commits: `95a2c31`, `4679929`, `b868418`. The outer orchestrator owns milestone status and delivery-goal transitions.
