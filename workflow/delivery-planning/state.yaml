@@ -4,7 +4,7 @@ product_id: cnc-generals-zero-hour
 status: ready_with_external_dependencies
 transaction:
   parent_commit: 0b10d439abed46555d80e79f539a2582add294cb
-  repository_commit: null
+  repository_commit: 3b1fb98eba9132f4b8444d46089ddfd0ef848494
   pre_existing_dirty_paths: []
 source:
   mode: CHANGE_PLAN

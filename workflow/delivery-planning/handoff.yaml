@@ -10,7 +10,7 @@ source:
   change_id: RUNTIME-CLOSURE-2026-09-20
   remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006]
 planning:
-  repository_commit: null
+  repository_commit: 3b1fb98eba9132f4b8444d46089ddfd0ef848494
 milestones:
   manifest: delivery/milestones/cnc-generals-zero-hour/status.yaml
   packet_revision: sha256:1089d3249ff78bed826f1e259160654f1d055f7d351d5e7c8b6aa4001a16ce80
