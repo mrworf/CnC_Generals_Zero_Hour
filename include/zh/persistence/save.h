@@ -33,6 +33,7 @@ struct SaveState {
     std::u16string scenario;
     foundation::UInt32 tick = 0;
     foundation::UInt64 random_state = 0;
+    foundation::Int32 score = 0;
     std::vector<EntityState> entities;
     std::optional<AutosaveMetadata> autosave;
 };

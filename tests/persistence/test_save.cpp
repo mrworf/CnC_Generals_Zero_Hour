@@ -23,7 +23,7 @@ void check(bool condition, const char* message)
 bool same(const persistence::SaveState& left, const persistence::SaveState& right)
 {
     if (left.scenario != right.scenario || left.tick != right.tick ||
-        left.random_state != right.random_state || left.entities.size() != right.entities.size() ||
+        left.random_state != right.random_state || left.score != right.score || left.entities.size() != right.entities.size() ||
         left.autosave.has_value() != right.autosave.has_value()) return false;
     for (std::size_t index = 0; index < left.entities.size(); ++index) {
         const auto& a = left.entities[index];
@@ -42,6 +42,7 @@ persistence::SaveState sample(bool autosave = true)
     value.scenario = u"Alpine Assault \U0001f642";
     value.tick = 720;
     value.random_state = 0x123456789abcdef0ULL;
+    value.score = -120;
     value.entities = {
         {17, 1, 350, 12.5F, -4.25F, u"Dozer"},
         {42, 2, -7, -0.0F, 88.0F, u"Tank \u03a9"},
@@ -89,7 +90,7 @@ int main()
     rejects_without_mutation(bytes, [](auto& data) { data.push_back(0); }, "trailing");
 
     // The entity count follows the 12-byte header, length-prefixed scenario, tick, and RNG.
-    const std::size_t entity_count_offset = 12 + 4 + state.scenario.size() * 2 + 4 + 8;
+    const std::size_t entity_count_offset = 12 + 4 + state.scenario.size() * 2 + 4 + 8 + 4;
     rejects_without_mutation(bytes, [=](auto& data) {
         data[entity_count_offset] = 0x01; data[entity_count_offset + 1] = 0x10;
         data[entity_count_offset + 2] = 0; data[entity_count_offset + 3] = 0;

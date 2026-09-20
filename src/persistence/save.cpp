@@ -67,6 +67,7 @@ std::vector<UInt8> encode_save(const SaveState& state)
         writer.write_utf16le(state.scenario, maximum_save_text_code_units);
         writer.write_u32_le(state.tick);
         writer.write_u64_le(state.random_state);
+        writer.write_u32_le(static_cast<UInt32>(state.score));
         writer.write_u32_le(static_cast<UInt32>(state.entities.size()));
         for (const auto& entity : state.entities) {
             writer.write_u32_le(entity.id);
@@ -106,6 +107,7 @@ void decode_save(ByteView bytes, SaveState& destination)
         validate_text(value.scenario, "save scenario");
         value.tick = reader.read_u32_le();
         value.random_state = reader.read_u64_le();
+        value.score = static_cast<Int32>(reader.read_u32_le());
         const UInt32 entity_count = reader.read_u32_le();
         if (entity_count > maximum_save_entities) throw PersistenceError("save entity count exceeds limit");
         // A valid entity needs at least fixed fields plus an empty UTF-16 length.

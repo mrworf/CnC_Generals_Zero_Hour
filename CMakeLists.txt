@@ -95,6 +95,10 @@ add_library(zh_persistence STATIC src/persistence/save.cpp src/persistence/repla
 target_include_directories(zh_persistence PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_persistence PUBLIC zh_wwsupport zh_build_options)
 
+add_library(zh_simulation STATIC src/simulation/determinism.cpp)
+target_include_directories(zh_simulation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(zh_simulation PUBLIC zh_persistence zh_build_options)
+
 target_sources(zh_compression PRIVATE src/foundation/compression.cpp)
 target_include_directories(zh_compression PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
@@ -292,6 +296,18 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(persistence_replay_tests PRIVATE zh_persistence)
   add_test(NAME persistence_replay COMMAND persistence_replay_tests)
   set_tests_properties(persistence_replay PROPERTIES LABELS "foundation;determinism")
+
+  add_executable(determinism_scenario_tests tests/determinism/test_scenario.cpp)
+  target_link_libraries(determinism_scenario_tests PRIVATE zh_simulation)
+  add_test(NAME determinism_scenario COMMAND determinism_scenario_tests
+    --emit-result "${CMAKE_CURRENT_BINARY_DIR}/determinism-result.txt")
+  set_tests_properties(determinism_scenario PROPERTIES LABELS determinism)
+  add_test(NAME determinism_report_comparison COMMAND "${Python3_EXECUTABLE}" -m unittest
+    tests.determinism.test_compare_presets)
+  set_tests_properties(determinism_report_comparison PROPERTIES
+    LABELS determinism
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
 
   if(ZH_ENABLE_RETAIL_TESTS)
     if(NOT IS_ABSOLUTE "${ZH_RETAIL_ZH_DATA}" OR NOT IS_ABSOLUTE "${ZH_RETAIL_GENERALS_DATA}" OR ZH_RETAIL_LANGUAGE STREQUAL "")
