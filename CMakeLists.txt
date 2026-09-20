@@ -198,6 +198,7 @@ target_link_libraries(zh_original_data PUBLIC zh_data zh_original_process zh_bui
 add_library(zh_original_resources STATIC
   GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/OriginalCpuPresentation.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/OriginalUiResources.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Audio/OriginalAudioDefinitions.cpp
 )
 target_include_directories(zh_original_resources PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_original_resources PUBLIC
@@ -393,6 +394,28 @@ if(ZH_BUILD_TESTS)
     --symbol "zh::original_resources::provider_ui_identity"
     --witness "original-resources UI: ok")
   set_tests_properties(original_resources_ui_identity PROPERTIES LABELS "original-resources;source-identity")
+  add_executable(original_resources_audio_tests tests/original_resources/test_audio_definitions.cpp)
+  target_link_libraries(original_resources_audio_tests PRIVATE zh_original_resources)
+  target_link_options(original_resources_audio_tests PRIVATE
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-resources-audio.link.map")
+  add_test(NAME original_resources_audio COMMAND original_resources_audio_tests)
+  set_tests_properties(original_resources_audio PROPERTIES LABELS "original-resources;source-identity")
+  add_test(NAME original_resources_audio_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m26_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-resources-audio.link.map"
+    --executable "$<TARGET_FILE:original_resources_audio_tests>"
+    --target zh_original_resources
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/Audio/OriginalAudioDefinitions.cpp"
+    --symbol "zh::original_resources::AudioDefinitions::load"
+    --symbol "zh::original_resources::provider_audio_identity"
+    --witness "original-resources audio: ok")
+  set_tests_properties(original_resources_audio_identity PROPERTIES LABELS "original-resources;source-identity")
+  add_test(NAME original_resources_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_resources/test_provider_removal.py"
+    --root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}")
+  set_tests_properties(original_resources_provider_removal PROPERTIES LABELS "original-resources;source-identity")
   add_test(NAME original_resources_extraction_provenance COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m28_original_provenance.py"
     --root "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -402,6 +425,10 @@ if(ZH_BUILD_TESTS)
     --root "${CMAKE_CURRENT_SOURCE_DIR}"
     --ledger "${CMAKE_CURRENT_SOURCE_DIR}/docs/original-runtime-dependency-ledger.tsv")
   set_tests_properties(original_resources_dependency_ledger PROPERTIES LABELS "original-resources;source-identity")
+  add_test(NAME original_resources_dependency_controls COMMAND "${Python3_EXECUTABLE}" -m unittest
+    tests.original_runtime.test_dependency_controls)
+  set_tests_properties(original_resources_dependency_controls PROPERTIES
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" LABELS "original-resources;source-identity")
   add_executable(original_data_config_tests tests/original_data/test_config.cpp)
   target_link_libraries(original_data_config_tests PRIVATE zh_original_data)
   target_link_options(original_data_config_tests PRIVATE

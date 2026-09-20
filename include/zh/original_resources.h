@@ -86,7 +86,44 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
+enum class DefinitionKind { music, sound, dialog };
+
+struct AudioDefinitionView {
+    DefinitionKind kind = DefinitionKind::sound;
+    std::string name;
+    std::string filename;
+    float volume = 1.0F;
+    bool loop = false;
+    int priority = 0;
+};
+
+class AudioDefinitions {
+public:
+    explicit AudioDefinitions(const data::VirtualFileSystem& vfs);
+    ~AudioDefinitions();
+    AudioDefinitions(const AudioDefinitions&) = delete;
+    AudioDefinitions& operator=(const AudioDefinitions&) = delete;
+
+    bool load(const std::vector<std::string>& definition_layers, std::size_t fail_after_stage = 0);
+    bool play_music(std::string_view name);
+    void render_null(std::size_t frames);
+    void shutdown() noexcept;
+    const AudioDefinitionView* find(std::string_view name) const noexcept;
+    bool ready() const noexcept;
+    bool null_output() const noexcept;
+    OwnershipCounts counts() const noexcept;
+    std::size_t active_voice_count() const noexcept;
+    std::size_t cd_search_attempts() const noexcept;
+    std::size_t modal_waits() const noexcept;
+    std::string_view last_error() const noexcept;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+};
+
 const char* provider_cpu_identity() noexcept;
 const char* provider_ui_identity() noexcept;
+const char* provider_audio_identity() noexcept;
 
 } // namespace zh::original_resources

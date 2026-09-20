@@ -56,3 +56,9 @@ Source-owned audio extraction unit; provider/CMake additions; owned definitions/
 ## Commit boundary
 
 One commit containing audio provider behavior, tests, assurance gates, plan results, and milestone QA evidence. Outer milestone/delivery status remains orchestrator-owned.
+
+## Result
+
+Complete. `AudioDefinitions` parses the source field vocabulary for AudioSettings, MusicTrack, AudioEvent, and DialogEvent, applies same-kind later-layer overrides, rejects incompatible duplicates, validates every logical resource, and publishes only a complete registry. Valid owned PCM music is decoded/scheduled through the accepted M12 `AudioManager` with a deterministic null sink. Unknown/non-music lookups fail, and missing music terminates in under one second with its logical path and explicit disabled CD/modal policy; observed CD-search and modal-wait counts remain zero.
+
+Cumulative focused runtime, live-symbol, provenance, provider-removal, dependency-ledger/drift, and classification gates pass 10/10 in all four presets. Four audio acquisition failure stages and repeated shutdown restore definition/voice/worker/device counts exactly. Focused Clang ASan/UBSan passes 10/10 with leak detection disabled, and the canonical asset-free suite passes 92/92 in every preset. Full evidence is in `evidence/qa/cnc-generals-zero-hour/m28-original-cpu-resources-2026-09-20.md`; the resulting commit is recorded in the governing plan after creation.

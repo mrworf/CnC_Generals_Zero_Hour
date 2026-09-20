@@ -26,6 +26,9 @@ def main() -> int:
     require(root / "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/OriginalUiResources.cpp",
             ["M28 extraction provenance", "Image::parseImageCoords", "FontLibrary::getFont",
              "WindowLayout::load", "provider_ui_identity"], errors)
+    require(root / "GeneralsMD/Code/GameEngine/Source/Common/Audio/OriginalAudioDefinitions.cpp",
+            ["M28 extraction provenance", "AudioManager::init/isMusicAlreadyLoaded",
+             "parseMusicTrackDefinition", "CD search/system-modal", "provider_audio_identity"], errors)
     require(root / "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/W3DDisplay.cpp",
             ["void W3DDisplay::initAssets", "void W3DDisplay::init3DScene", "void W3DDisplay::init2DScene",
              "void W3DDisplay::init", "void W3DDisplay::reset"], errors)
@@ -41,14 +44,24 @@ def main() -> int:
             ["Bool WindowLayout::load", "void WindowLayout::destroyWindows"], errors)
     require(root / "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManagerScript.cpp",
             ["GameWindow *GameWindowManager::winCreateFromScript"], errors)
+    require(root / "GeneralsMD/Code/GameEngine/Source/Common/Audio/GameAudio.cpp",
+            ["AudioManager::~AudioManager", "void AudioManager::init", "Bool AudioManager::isMusicAlreadyLoaded"], errors)
+    require(root / "GeneralsMD/Code/GameEngine/Source/Common/INI/INIAudioEventInfo.cpp",
+            ["void INI::parseMusicTrackDefinition", "void INI::parseAudioEventDefinition",
+             "void INI::parseDialogDefinition", "AudioEventInfo::m_audioEventInfo"], errors)
+    require(root / "GeneralsMD/Code/GameEngine/Source/Common/Audio/GameMusic.cpp",
+            ["MusicTrack::m_musicTrackFieldParseTable", '"Filename"', '"Volume"', '"Ambient"'], errors)
     require(root / "include/zh/original_resources.h",
-            ["class CpuPresentation", "class UiResources", "physical_device", "web_browser"], errors)
+            ["class CpuPresentation", "class UiResources", "class AudioDefinitions",
+             "physical_device", "web_browser"], errors)
     require(root / "CMakeLists.txt",
-            ["add_library(zh_original_resources STATIC", "OriginalCpuPresentation.cpp", "OriginalUiResources.cpp"], errors)
+            ["add_library(zh_original_resources STATIC", "OriginalCpuPresentation.cpp", "OriginalUiResources.cpp",
+             "OriginalAudioDefinitions.cpp"], errors)
     cmake = (root / "CMakeLists.txt").read_text(encoding="utf-8")
     target = cmake.split("add_library(zh_original_resources STATIC", 1)[1].split(")", 1)[0]
     forbidden = ["W3DDisplay.cpp", "W3DAssetManager.cpp", "dx8wrapper.cpp", "dx8webbrowser.cpp",
                  "GameWindowManagerScript.cpp", "WindowLayout.cpp", "GameFont.cpp", "Image.cpp"]
+    forbidden.extend(["GameAudio.cpp", "INIAudioEventInfo.cpp", "GameMusic.cpp"])
     for name in forbidden:
         if name in target:
             errors.append(f"coupled/device source entered independent M28 target: {name}")

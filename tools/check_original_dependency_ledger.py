@@ -12,7 +12,7 @@ COLUMNS = [
     "writes", "owner", "evidence_grade", "tests",
 ]
 GRADES = {"inspected", "compile", "link", "runtime"}
-OWNERS = {"M26", "M27", "M28", "M20"}
+OWNERS = {"M26", "M27", "M28", "M20", "M21", "M22", "M23", "M24", "M25"}
 
 
 def validate(root: pathlib.Path, ledger: pathlib.Path) -> list[str]:
