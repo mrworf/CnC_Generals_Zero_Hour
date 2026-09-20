@@ -6,7 +6,7 @@ Target: the Zero Hour game in `GeneralsMD/`. The original `Generals/` executable
 
 ## 1. Scope and completion criteria
 
-The release objective is a native x86-64 Linux build of Zero Hour that uses retail Zero Hour and base Generals data supplied by the user. The development build must also configure, compile, and run GPU-independent unit, VFS, serialization, determinism, and headless-engine tests natively on ARM64 Linux. ARM64 is a development host, not a supported game-release architecture. The repository must not download, modify, convert, or redistribute retail data.
+The release objective is a native x86-64 Linux build of Zero Hour that uses retail Zero Hour and base Generals data supplied by the user. Arch Linux x86-64 is the primary development and playable acceptance environment. Ubuntu 26.04 LTS and Fedora 44 remain clean-build portability environments. Other architectures are not supported. The repository must not download, modify, convert, or redistribute retail data.
 
 A workable first release must:
 
@@ -30,7 +30,8 @@ The following are explicitly out of scope:
 - SafeDisc, CD checks, launcher handshakes, serial-number storage, or other DRM behavior;
 - GameSpy accounts, Internet lobbies, matchmaking, statistics, patching, or a replacement online service;
 - an embedded browser, Windows Media playback, frame capture, or video recording;
-- controllers and controller-specific UI, IPv6, a mod manager, asset conversion, remastered graphics, or unrelated engine refactoring; and
+- controllers and controller-specific UI, IPv6, a mod manager, asset conversion, remastered graphics, or unrelated engine refactoring;
+- non-x86-64 targets, including ARM64; and
 - packaging formats such as Flatpak or AppImage until the native build and runtime dependency contract are stable.
 
 The first successful compile or link is not acceptance. It is an intermediate milestone.
@@ -124,13 +125,13 @@ CMake requirements:
 4. Add options only for real supported configurations: `ZH_BUILD_TESTS`, `ZH_ENABLE_ASAN`, `ZH_ENABLE_UBSAN`, `ZH_ENABLE_LAN`, `ZH_ENABLE_GPU_TESTS`, and `ZH_ENABLE_RETAIL_TESTS`. The last two default to `OFF`; configuring or testing on a GPU-less machine must not open a display or device. Do not add switches for dead service paths.
 5. Use imported targets such as `SDL3::SDL3`, `Freetype::Freetype`, `Fontconfig::Fontconfig`, and `ZLIB::ZLIB`. Provide small imported FFmpeg targets if the installed packages do not export them. Avoid global include/link directories.
 6. Compile GLSL to SPIR-V with declared custom commands and dependencies. Missing `glslc` or shader failure must stop the build.
-7. Produce `compile_commands.json` and these stable presets: `linux-gcc-debug`, `linux-clang-debug`, `linux-gcc-release`, and `linux-clang-release`. Presets build for the native host architecture and print it during configuration. GCC and Clang Debug presets are mandatory on ARM64 and x86-64; Release packaging and the playable binary are x86-64 only.
+7. Produce `compile_commands.json` and these stable x86-64 presets: `linux-gcc-debug`, `linux-clang-debug`, `linux-gcc-release`, and `linux-clang-release`. Presets print the host architecture during configuration and fail clearly on unsupported architectures.
 8. Use `-fno-fast-math` and `-ffp-contract=off` for deterministic code. These are necessary safeguards, not a substitute for the numeric work in section 5.
 9. Install only the executable, project-owned shaders/defaults, and required license notices. Never install or embed retail media.
 
 The documented interface is `cmake --preset <name>`, `cmake --build --preset <name>`, and `ctest --preset <name>`. CTest labels are part of the milestone contract: `foundation`, `headless`, `data`, `determinism`, `platform`, `renderer-contract`, `ui`, `audio`, `video`, `lan`, `gpu`, and `compatibility`. Milestone checks select labels rather than depending on an undocumented test invocation.
 
-The supported source-build baseline is Ubuntu 26.04 LTS and Fedora 44. Both provide SDL3 and `glslc` packages ([Ubuntu SDL3](https://packages.ubuntu.com/resolute/libsdl3-dev), [Ubuntu glslc](https://packages.ubuntu.com/en/resolute/glslc), [Fedora SDL3](https://packages.fedoraproject.org/pkgs/SDL3/SDL3/index.html), [Fedora glslc](https://packages.fedoraproject.org/pkgs/shaderc/glslc/)). Exact package names for every dependency and the tested minimum versions must be recorded in the M0 build guide rather than inferred by contributors.
+Arch Linux x86-64 is the primary source-build and playable baseline. Record a tested package snapshot because Arch is rolling release. Ubuntu 26.04 LTS and Fedora 44 are clean-build portability baselines; both provide SDL3 and `glslc` packages ([Ubuntu SDL3](https://packages.ubuntu.com/resolute/libsdl3-dev), [Ubuntu glslc](https://packages.ubuntu.com/en/resolute/glslc), [Fedora SDL3](https://packages.fedoraproject.org/pkgs/SDL3/SDL3/index.html), [Fedora glslc](https://packages.fedoraproject.org/pkgs/shaderc/glslc/)). Exact package names for every dependency, including Arch's `vulkan-validation-layers`, and tested versions must be recorded in the M0 build guide rather than inferred by contributors.
 
 ## 5. Portable data model, serialization, and determinism
 
@@ -241,7 +242,7 @@ M2 passes when every source-observed behavior has a documented public-API mappin
 
 M7 introduces a small `RecordingGpuDevice` behind the same engine-internal device interface as the SDL_GPU implementation. It records resource lifetimes, descriptors, uploads, pipeline keys, render-pass boundaries, draw order, resize/recreation sequencing, and error labels. Renderer, UI, world, effects, and video tests compare normalized command streams and reject invalid lifetimes, missing bindings, out-of-range uploads, pass misuse, and unbounded pipeline growth. It does not pretend to validate rasterized pixels.
 
-The first mandatory real-GPU work is M14, after command generation is complete. M14 opens one real x86-64 Vulkan-capable GPU through SDL_GPU, enables validation, exercises representative retail scenes, and performs visual and lifecycle acceptance. One working GPU and driver are sufficient; multiple graphics cards or driver families are not prerequisites. If M14 reveals an SDL_GPU abstraction gap, reopen M2, record the failed capability and reproducer, choose one backend below, rework M7-M10 against it, and repeat M14. Deferring the device test makes ARM64 and virtualized development practical but explicitly accepts this rework risk.
+The first mandatory real-GPU work is M14, after command generation is complete. M14 opens one real x86-64 Vulkan-capable GPU through SDL_GPU, enables validation, exercises representative retail scenes, and performs visual and lifecycle acceptance. One working GPU and driver are sufficient; multiple graphics cards or driver families are not prerequisites. If M14 reveals an SDL_GPU abstraction gap, reopen M2, record the failed capability and reproducer, choose one backend below, rework M7-M10 against it, and repeat M14. Deferring the device test keeps GPU-less and restricted development sessions productive but explicitly accepts this rework risk.
 
 If it fails:
 
@@ -315,19 +316,23 @@ Every prerequisite has an owner, acquisition method, consumer, validation, and f
 | PRE-002 | CMake, Ninja, GCC, Clang, `pkg-config`, `glslc`, and development packages listed in the build guide; developer/user | M0 | Both Debug presets configure; dependency probe prints versions and host architecture | Install the named packages; do not download during configure |
 | PRE-003 | Audited include/exclude and third-party-dependency manifests; repository | M0 | Every legacy project/source is classified as build, exclude with reason, or unavailable/out of scope | M0 creates and reviews the manifests before linking |
 | PRE-004 | CMake targets, presets, CTest labels, synthetic fixtures, and clean CI entry points; repository | M0 | Documented configure/build/test commands work without retail data | Fix bootstrap; no later milestone may invent a private build path |
-| PRE-005 | ARM64/x86-64-safe ABI, UTF-16, endian, numeric, filesystem, timing, threading, and compression support; repository | M1 | `foundation` tests pass natively on ARM64 and x86-64 with static width assertions | Fix M1; do not hide width differences with compiler flags |
+| PRE-005 | x86-64-safe ABI, UTF-16, endian, numeric, filesystem, timing, threading, and compression support; repository | M1 | `foundation` tests pass with GCC and Clang Debug/Release plus static width assertions and byte-exact codec fixtures | Fix M1; do not hide Win32/LP64 width differences with compiler flags |
 | PRE-006 | GPU-independent legacy-state inventory and SDL_GPU mapping; repository | M2 | Every source-observed state has a public API mapping, shader path, fallback, or rejection; all GLSL compiles | Resolve the mapping or select another backend before M7 |
 | PRE-007 | Null platform/render/audio/video implementations and deterministic headless loop; repository | M3 | Headless process reaches controlled ticks and shuts down with no display, GPU, or audio device | Fix headless boundary; it is required by data, simulation, and LAN work |
 | PRE-008 | Owned Zero Hour and base Generals data plus selected locale; user, outside Git | M4 | `ZH_RETAIL_ZH_DATA`, `ZH_RETAIL_GENERALS_DATA`, and `ZH_RETAIL_LANGUAGE` resolve to readable inputs | Asset-free tests continue, but M4 and dependent retail gates wait for data |
 | PRE-009 | Project-owned logical corpus manifest; repository, derived without copying data | M4 | Manifest names archive order, required logical assets, formats, effects, locale/font, and accepted collision rules | M4 remains open until corpus traversal is complete |
 | PRE-010 | `RecordingGpuDevice` and normalized renderer command schema; repository | M7 | Self-tests catch invalid lifetime, pass, binding, upload, and resize sequences | Renderer milestones cannot proceed without observable GPU-free contracts |
 | PRE-011 | Reviewed, license-compatible, URL/hash-pinned miniaudio source; repository maintainer | M12 | Hash/license/options are recorded and offline build succeeds | Choose and record a suitable release; no unpinned fetch fallback |
-| PRE-012 | One x86-64 Linux system with one real Vulkan-capable GPU supported by SDL_GPU; developer/user | M14 | SDL_GPU device opens and Vulkan validation is available | Defer M14-M17; M0-M13 remain executable on GPU-less hosts |
+| PRE-012 | The primary Arch x86-64 system with one real Vulkan-capable GPU supported by SDL_GPU; developer/user | M14 | SDL_GPU opens the RTX 4070 through Vulkan and Khronos validation is available | Install Arch `vulkan-validation-layers` if absent; defer M14-M17 if device or validation checks fail |
 | PRE-013 | Real-GPU capability, lifecycle, and visual acceptance record; repository | M15 | M14 report identifies device/driver, scenes, expected captures, validation output, and disposition | Reopen renderer milestones on backend gaps; gameplay acceptance cannot bypass it |
 | PRE-014 | Local multi-instance bind/discovery/direct-connect overrides and virtual datagram transport; repository | M11 | Two peers can use distinct loopback identities and deterministic injected packets | Fix M11; a second physical host is not an alternative prerequisite |
 | PRE-015 | Representative Windows 1.04 saves/replays and legal reference environment; optional user input | M18 | Fixture provenance/version is recorded and files are readable | Skip M18 with an explicit “unverified” status; M0-M17 are unaffected |
 | PRE-016 | SDL3-capable interactive display session; developer/user, software or virtualized display is acceptable | M6 | SDL can create a window and deliver focus/input/resize events without creating a GPU device | Run injected headless tests, but defer M6's interactive exit check until a display is available |
 | PRE-017 | Clean x86-64 Ubuntu 26.04 and Fedora 44 build environments; maintainer/CI | M17 | Documented packages install and presets configure in a fresh container, VM, or CI runner | M17 remains open; physical hosts are not required |
+
+Current local readiness evidence for PRE-008 is the read-only combined Steam installation exposed as `original_game_symlink`: Zero Hour is at its root, base Generals is under `ZH_Generals`, and `English` is the selected locale. The link is local-only and ignored by Git; no retail bytes or absolute private paths belong in repository artifacts. All 36 observed BIG archives have readable headers, and the initial corpus scan found no `NOX` entries or case-fold collisions.
+
+Current host evidence for PRE-012 is an NVIDIA GeForce RTX 4070 with NVIDIA 610.57.04 and Vulkan 1.4.341. Direct host probing succeeds; restricted development sandboxes may hide the GPU and graphical session. The Khronos validation layer is not currently installed, so PRE-012 cannot close until `vulkan-validation-layers` is installed and SDL_GPU validation succeeds. PRE-015 remains optional: no Windows save or replay fixtures were found in the retail installation, its BIG archives, or the corresponding Steam/Proton user-data directories.
 
 The dependency graph is:
 
@@ -356,12 +361,12 @@ For every preset, the canonical build check is `cmake --build --preset <preset>`
 
 | Milestone | Required automated labels/checks at exit |
 |---|---|
-| M0 | Configure/build smoke with both Debug presets on ARM64 and x86-64 and both Release presets on x86-64; empty and missing-dependency probes |
+| M0 | Configure/build smoke with GCC and Clang Debug/Release presets on Arch x86-64; clean Ubuntu/Fedora configure coverage may run early; empty and missing-dependency probes |
 | M1 | `foundation`; ASan and UBSan variants on available native hosts |
 | M2 | `renderer-contract` offline descriptor/shader table checks; no GPU tests enabled |
 | M3 | `foundation|headless` with display, audio, and GPU unavailable |
 | M4 | `data` with synthetic inputs, then retail-enabled verification using PRE-008 |
-| M5 | `foundation|determinism` on x86-64 GCC/Clang Debug/Release; ARM64 functional coverage |
+| M5 | `foundation|determinism` on x86-64 GCC/Clang Debug/Release |
 | M6 | `platform` injected-event suite plus the PRE-016 interactive smoke |
 | M7 | `renderer-contract` including all negative lifetime/pass/upload cases |
 | M8 | `platform|renderer-contract|ui` |
@@ -389,10 +394,10 @@ Work:
 - translate all relevant Zero Hour project manifests into explicit CMake source lists and classify every exclusion;
 - model `zh_main`, engine/device, W3D, WWShade, support, compression, test, and null-backend targets without source globs;
 - add the four native presets, dependency/version probes, `compile_commands.json`, generated build metadata, CTest labels, and offline behavior;
-- document exact Ubuntu 26.04 and Fedora 44 packages, including CMake, Ninja, both compilers, SDL3, `glslc`, FreeType, Fontconfig, zlib, and FFmpeg development packages; and
+- document exact Arch Linux, Ubuntu 26.04, and Fedora 44 packages, including CMake, Ninja, both compilers, SDL3, `glslc`, FreeType, Fontconfig, zlib, FFmpeg development packages, and Vulkan validation tooling; record the tested Arch package snapshot; and
 - add an asset-free CI/smoke target that proves the build graph without pretending the game links yet.
 
-Exit: PRE-003 and PRE-004 are complete; GCC and Clang Debug presets configure from a clean checkout on a native supported development architecture, tests can be selected by label, missing packages name their package/capability, and configure performs no network access.
+Exit: PRE-003 and PRE-004 are complete; GCC and Clang Debug/Release presets configure from a clean checkout on x86-64, tests can be selected by label, missing packages name their package/capability, and configure performs no network access.
 
 ### M1 — portable ABI and support libraries
 
@@ -406,7 +411,7 @@ Work:
 - characterize numeric conversions and establish deterministic compiler/floating-environment flags; and
 - add synthetic BIG, Unicode, compression, serialization, numeric, path, and timer fixtures.
 
-Exit: PRE-005 is complete. `foundation` tests pass with GCC and Clang on native ARM64 and x86-64 Debug builds and under ASan/UBSan where available. Serialized primitive fixtures are byte-identical across architectures; full replay CRC equality across ARM64 and x86-64 is not required.
+Exit: PRE-005 is complete. `foundation` tests pass with GCC and Clang in x86-64 Debug and Release builds and under ASan/UBSan where available. Serialized primitive fixtures are byte-identical across compilers and build types.
 
 ### M2 — GPU-independent renderer API closure
 
@@ -434,7 +439,7 @@ Work:
 - expose deterministic fixed-tick smoke/scenario execution, clean termination, logs, and exit codes; and
 - verify multiple simultaneous headless processes use separate writable-state directories when instructed.
 
-Exit: PRE-007 is complete. An asset-free headless executable starts, advances controlled ticks, reports intentionally skipped devices, and shuts down cleanly on ARM64 and x86-64 under both compilers.
+Exit: PRE-007 is complete. An asset-free headless executable starts, advances controlled ticks, reports intentionally skipped devices, and shuts down cleanly on x86-64 under both compilers.
 
 ### M4 — VFS, retail data, and corpus characterization
 
@@ -457,7 +462,7 @@ Work:
 
 - replace save, replay, CRC, and snapshot raw-memory serialization with versioned fixed-width fields;
 - implement Linux save/load and replay write/read round trips, autosave metadata, bounded collection decoding, and clear version rejection;
-- run deterministic headless scenarios repeatedly across GCC/Clang and Debug/Release on x86-64, with ARM64 used for functional and invariant coverage; and
+- run deterministic headless scenarios repeatedly across GCC/Clang and Debug/Release on x86-64; and
 - isolate simulation floating-point state from third-party libraries and diagnose every divergent checkpoint.
 
 Exit: new Linux saves load to equivalent state, Linux replays reproduce matching x86-64 CRC checkpoints across supported compilers/build types, malformed inputs fail before mutation/allocation abuse, and no Windows fixture is required. Windows import remains explicitly unverified until M18.
@@ -470,7 +475,7 @@ Work:
 
 - implement SDL lifecycle, window/events, scancode mapping, mouse/cursor/clipboard, UTF-8 text input and IME editing, focus, resize, and fullscreen state;
 - keep GPU-device creation behind the renderer interface and disabled for these tests;
-- test event translation through injectable SDL event fixtures so ARM64/headless CI covers mappings without a window; and
+- test event translation through injectable SDL event fixtures so headless CI covers mappings without a window; and
 - provide actionable behavior when no display server exists.
 
 Exit: `platform` tests pass headlessly, and one interactive window test validates keyboard, mouse, text input, focus, resize, and shutdown without creating a GPU device.
@@ -613,9 +618,9 @@ Work:
 - run clean x86-64 GCC and Clang Debug/Release builds and labeled asset-free suites without network access;
 - run ASan/UBSan, private retail-data smoke/acceptance, shader completeness, install/uninstall staging, arbitrary-CWD, read-only input-data, and missing-device tests;
 - install only executable/project assets/defaults/licenses and document data selection, XDG locations, limitations, troubleshooting, and verified hardware; and
-- verify the source build on Ubuntu 26.04 LTS and Fedora 44. These may be clean containers/VMs for build and headless checks; the one M14 hardware result satisfies GPU evidence.
+- verify the playable release on the primary Arch Linux x86-64 host and verify source builds on Ubuntu 26.04 LTS and Fedora 44. The latter may use clean containers/VMs for build and headless checks; the Arch M14 hardware result satisfies GPU evidence.
 
-Exit: a clean checkout builds with documented distribution dependencies, an x86-64 user can point it at owned data and pass the completion checklist, and known unverified compatibility claims are explicit. ARM64 remains a supported headless development host, not a packaged playable target.
+Exit: a clean checkout builds with documented distribution dependencies, the Arch x86-64 host can point it at owned data and pass the playable completion checklist, Ubuntu and Fedora clean builds pass, and known unverified compatibility claims are explicit.
 
 ### M18 — optional Windows save/replay compatibility
 
@@ -671,9 +676,9 @@ The source-build baseline uses distribution packages. A locked dependency superb
 
 | Area | GPU-free/portable acceptance | Hardware or optional acceptance | Required failures |
 |---|---|---|---|
-| Build | Native ARM64 and x86-64 GCC/Clang Debug; x86-64 Release; clean offline installed-dependency builds; all GLSL compiles | Ubuntu 26.04 and Fedora 44 source-build verification | Missing dependency/compiler/shader names the requirement; stale generated files cannot mask failure |
-| Types/Unicode | Width assertions; UTF-8/UTF-16; surrogate pairs; identical primitive codec bytes on ARM64/x86-64 | Selected-locale interactive text at M14/M15 | Invalid encoding, overflow, truncation, and forbidden lossy conversion fail predictably |
-| Numeric/determinism | Characterized conversions; Linux replay checkpoints across x86-64 compilers/builds; ARM64 invariant tests | Windows comparison only in optional M18 | NaN/infinity/narrowing behavior is defined; changed rounding mode is detected |
+| Build | Arch x86-64 GCC/Clang Debug/Release; clean offline installed-dependency builds; all GLSL compiles | Ubuntu 26.04 and Fedora 44 clean source-build verification | Missing dependency/compiler/shader names the requirement; unsupported architectures fail clearly; stale generated files cannot mask failure |
+| Types/Unicode | Width assertions; UTF-8/UTF-16; surrogate pairs; identical primitive codec bytes across x86-64 compilers/builds | Selected-locale interactive text at M14/M15 | Invalid encoding, overflow, truncation, and forbidden lossy conversion fail predictably |
+| Numeric/determinism | Characterized conversions; Linux replay checkpoints across x86-64 compilers/builds | Windows comparison only in optional M18 | NaN/infinity/narrowing behavior is defined; changed rounding mode is detected |
 | Data/VFS | Synthetic BIG/collision/traversal tests; headless retail verification; both roots and precedence | User-supplied corpus at M4 onward | Missing/corrupt/colliding/oversized/unsupported logical assets are named |
 | Serialization | Linux save/replay round trips; packet byte fixtures; fixed widths and versions | Windows save/replay fixtures only in M18 | Wrong endian/version/length/count and malformed UTF-16 fail before state mutation |
 | Renderer contracts | Recorder covers resources, pipelines, uploads, passes, UI/world/effects/video commands, resize, and lifetime failures | One real x86-64 Vulkan GPU at M14; visual and validation acceptance | Unsupported format has tested fallback or clear failure; shader/pipeline errors name source/state key |
@@ -688,4 +693,4 @@ The source-build baseline uses distribution packages. A locked dependency superb
 
 Proceed with a compatibility-focused native port that replaces platform edges while preserving Zero Hour's engine, simulation, data formats, and game behavior. SDL3 is the desktop/input foundation. SDL_GPU is the provisional renderer after exhaustive source/API closure and recorder-based command validation, with real device acceptance deliberately delayed to M14. miniaudio is the smallest credible Miles replacement, and FFmpeg is warranted narrowly for Bink. FreeType/Fontconfig, conditional HarfBuzz/FriBidi, POSIX sockets, standard C++ facilities, and system zlib cover the remaining required facilities without creating a new engine.
 
-This ordering keeps M0-M13 useful on ARM64 virtualized or GPU-less development machines. It does not claim that a recorder proves rendering: M14 is a hard gate for pixels and SDL_GPU device behavior, and a failure there can force renderer rework. One real GPU is a practical release prerequisite; multiple GPU families, multiple physical LAN hosts, and Windows save/replay fixtures are not. The highest remaining risks are renderer completeness, explicit UTF-16 and fixed-width serialization, floating-point determinism, archive precedence on a case-sensitive host, and Miles/Bink behavior. Each risk now has a named prerequisite, consuming milestone, observable exit, and failure path.
+This ordering keeps M0-M13 useful in x86-64 GPU-less or restricted development sessions. It does not claim that a recorder proves rendering: M14 is a hard gate for pixels and SDL_GPU device behavior, and a failure there can force renderer rework. The verified RTX 4070 Vulkan host is the practical release GPU; the missing validation-layer package must be installed before M14. Multiple GPU families, multiple physical LAN hosts, and Windows save/replay fixtures are not prerequisites. The highest remaining risks are renderer completeness, explicit UTF-16 and fixed-width serialization, floating-point determinism, archive precedence on a case-sensitive host, and Miles/Bink behavior. Each risk now has a named prerequisite, consuming milestone, observable exit, and failure path.
