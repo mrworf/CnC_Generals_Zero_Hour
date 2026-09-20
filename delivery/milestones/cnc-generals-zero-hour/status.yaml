@@ -210,10 +210,11 @@ milestones:
   - id: M19
     title: "original support closure and source identity"
     file: delivery/milestones/cnc-generals-zero-hour/M19-original-support.md
-    status: pending
+    status: in_progress
     dependencies: [M0, M1]
     remediation_ids: [SE-001, SE-002, SE-010]
     optional: false
+    started_at: "2026-09-20T14:39:13Z"
     completed_at: null
     evidence: null
     notes: "New original-source provider; historical component tests do not establish this outcome."
