@@ -39,6 +39,8 @@
 #include "GameClient/GameWindow.h"
 #include "GameClient/WindowLayout.h"
 
+#include <cstddef>
+
 //-------------------------------------------------------------------------------------------------
 /** Collection of function pointers to help us in managing callbacks */
 //-------------------------------------------------------------------------------------------------
@@ -49,6 +51,12 @@ public:
 
 	struct TableEntry
 	{
+		template <typename Function>
+		TableEntry(NameKeyType entryKey, const char *entryName, Function function)
+			: key(entryKey), name(entryName), func(reinterpret_cast<void *>(function)) {}
+		TableEntry(NameKeyType entryKey, const char *entryName, std::nullptr_t)
+			: key(entryKey), name(entryName), func(NULL) {}
+
 		NameKeyType key;
 		const char *name;
 		void *func;
@@ -151,4 +159,3 @@ inline WindowLayoutShutdownFunc FunctionLexicon::winLayoutShutdownFunc( NameKeyT
 extern FunctionLexicon *TheFunctionLexicon;  ///< function dictionary external
 
 #endif // end __FUNCTIONLEXICON_H_
-

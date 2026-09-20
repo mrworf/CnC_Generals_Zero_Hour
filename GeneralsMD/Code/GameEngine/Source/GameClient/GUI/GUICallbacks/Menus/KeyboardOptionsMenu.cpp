@@ -48,6 +48,7 @@
 
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
+#include "Common/NameKeyGenerator.h"
 #include "Common/UserPreferences.h"
 
 #include "GameClient/WindowLayout.h"
@@ -1158,5 +1159,4 @@ WindowMsgHandledType KeyboardTextEntryInput( GameWindow *window, UnsignedInt msg
 	return MSG_HANDLED;
 
 }  // end GadgetTextEntryInput
-
 

@@ -44,6 +44,7 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
 
@@ -167,7 +168,7 @@ ObjectID CountermeasuresBehavior::calculateCountermeasureToDivertTo( const Objec
 	//Start at the end of the list and go towards the beginning.
 	CountermeasuresVec::iterator it = m_counterMeasures.end();
 	//end is actually the end so advance the iterator.
-	if( it )
+	if( it != m_counterMeasures.begin() )
 	{
 		--it;
 		while( iteratorMax-- )
@@ -414,5 +415,4 @@ void CountermeasuresBehavior::loadPostProcess( void )
 	UpgradeMux::upgradeMuxLoadPostProcess();
 
 }  // end loadPostProcess
-
 

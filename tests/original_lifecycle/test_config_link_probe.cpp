@@ -1,6 +1,7 @@
 #include "PreRTS.h"
 #include "Common/FileSystem.h"
 #include "Common/Errors.h"
+#include "Common/GameEngine.h"
 #include "Common/INI.h"
 #include "Common/INIException.h"
 #include "Common/LocalFileSystem.h"
@@ -9,6 +10,11 @@
 
 #include <cstdio>
 #include <cstring>
+
+// The dispatch-only harness does not construct the production engine.  Live
+// original callbacks still reference its canonical singleton, so provide the
+// same absent-service state that exists before GameMain creates the engine.
+GameEngine *TheGameEngine = NULL;
 
 int main(int argc, char **argv)
 {

@@ -81,13 +81,22 @@
 #endif
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/ScriptEngine.h"
-#include "WWDownload/Registry.h"
+#include "Common/Registry.h"
 //added by saad
 //used to access a messagebox that does "ok" and "cancel"
 #include "GameClient/MessageBox.h"
 
 // This is for non-RC builds only!!!
-#define VERBOSE_VERSION L"Release"
+#define VERBOSE_VERSION u"Release"
+
+static Bool isOnlineOptionsContext()
+{
+#if defined(_WIN32)
+	return TheGameSpyInfo != NULL;
+#else
+	return FALSE;
+#endif
+}
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -824,7 +833,7 @@ static void setDefaults( void )
 	//-------------------------------------------------------------------------------------------------
 	// Resolution
 	//Find index of 800x600 mode.
-	if ((TheGameLogic->isInGame() == FALSE) || (TheGameLogic->isInShellGame() == TRUE)  && !TheGameSpyInfo) {
+	if ((TheGameLogic->isInGame() == FALSE) || (TheGameLogic->isInShellGame() == TRUE)  && !isOnlineOptionsContext()) {
 		Int numResolutions = TheDisplay->getDisplayModeCount();
 		Int defaultResIndex=0;
 		for( Int i = 0; i < numResolutions; ++i )
@@ -1141,19 +1150,20 @@ static void saveOptions( void )
 	GadgetComboBoxGetSelectedPos(comboBoxLANIP, &index);
 	if (index>=0 && TheGlobalData)
 	{
-		ip = (UnsignedInt)GadgetComboBoxGetItemData(comboBoxLANIP, index);
+		ip = (UnsignedInt)(uintptr_t)GadgetComboBoxGetItemData(comboBoxLANIP, index);
 		TheWritableGlobalData->m_defaultIP = ip;
 		pref->setLANIPAddress(ip);
 	}
 	GadgetComboBoxGetSelectedPos(comboBoxOnlineIP, &index);
 	if (index>=0)
 	{
-		ip = (UnsignedInt)GadgetComboBoxGetItemData(comboBoxOnlineIP, index);
+		ip = (UnsignedInt)(uintptr_t)GadgetComboBoxGetItemData(comboBoxOnlineIP, index);
 		pref->setOnlineIPAddress(ip);
 	}
 
 	//-------------------------------------------------------------------------------------------------
 	// HTTP Proxy
+#if defined(_WIN32)
 	GameWindow *textEntryHTTPProxy = TheWindowManager->winGetWindowFromId(NULL, NAMEKEY("OptionsMenu.wnd:TextEntryHTTPProxy"));
 	if (textEntryHTTPProxy)
 	{
@@ -1163,6 +1173,7 @@ static void saveOptions( void )
 		SetStringInRegistry("", "Proxy", aStr.str());
 		ghttpSetProxy(aStr.str());
 	}
+#endif
 
 	//-------------------------------------------------------------------------------------------------
 	// Firewall Port Override
@@ -1488,7 +1499,7 @@ void OptionsMenuInit( WindowLayout *layout, void *userData )
 		if (TheVersion)
 		{
 			UnicodeString version;
-			version.format(L"(%s) %s -- %s", versionString.str(), TheVersion->getFullUnicodeVersion().str(), TheVersion->getUnicodeBuildTime().str());
+			version.format(u"(%s) %s -- %s", versionString.str(), TheVersion->getFullUnicodeVersion().str(), TheVersion->getUnicodeBuildTime().str());
 			GadgetStaticTextSetText( labelVersion, version );
 		}
 		else
@@ -1575,6 +1586,7 @@ void OptionsMenuInit( WindowLayout *layout, void *userData )
 	}
 
 	// HTTP Proxy
+#if defined(_WIN32)
 	GameWindow *textEntryHTTPProxy = TheWindowManager->winGetWindowFromId(NULL, NAMEKEY("OptionsMenu.wnd:TextEntryHTTPProxy"));
 	if (textEntryHTTPProxy)
 	{
@@ -1584,6 +1596,7 @@ void OptionsMenuInit( WindowLayout *layout, void *userData )
 		uStr.translate(proxy.c_str());
 		GadgetTextEntrySetText(textEntryHTTPProxy, uStr);
 	}
+#endif
 
 	// Firewall Port Override
 	GameWindow *textEntryFirewallPortOverride = TheWindowManager->winGetWindowFromId(NULL, NAMEKEY("OptionsMenu.wnd:TextEntryFirewallPortOverride"));
@@ -1630,10 +1643,10 @@ void OptionsMenuInit( WindowLayout *layout, void *userData )
 	// populate resolution modes
 	GadgetComboBoxReset(comboBoxResolution);
 	Int numResolutions = TheDisplay->getDisplayModeCount();
-	for( i = 0; i < numResolutions; ++i )
+	for( Int i = 0; i < numResolutions; ++i )
 	{	Int xres,yres,bitDepth;
 		TheDisplay->getDisplayModeDescription(i,&xres,&yres,&bitDepth);
-		str.format(L"%d x %d",xres,yres);
+		str.format(u"%d x %d",xres,yres);
 		GadgetComboBoxAddEntry( comboBoxResolution, str, color);
 		if (xres == 800 && yres == 600)	//keep track of default mode in case we need it.
 			defaultResIndex=i;
@@ -1813,7 +1826,7 @@ void OptionsMenuInit( WindowLayout *layout, void *userData )
 	GameWindow *parent = TheWindowManager->winGetWindowFromId( NULL, parentID );
 	TheWindowManager->winSetFocus( parent );
 	
-	if( (TheGameLogic->isInGame() && TheGameLogic->getGameMode() != GAME_SHELL) || TheGameSpyInfo )
+	if( (TheGameLogic->isInGame() && TheGameLogic->getGameMode() != GAME_SHELL) || isOnlineOptionsContext() )
 	{
 		// disable controls that you can't change the options for in game
 		comboBoxLANIP->winEnable(FALSE);
@@ -2016,9 +2029,11 @@ WindowMsgHandledType OptionsMenuSystem( GameWindow *window, UnsignedInt msg,
 				comboBoxLANIP = NULL;
 				comboBoxOnlineIP = NULL;
 
+#if defined(_WIN32)
 				if(GameSpyIsOverlayOpen(GSOVERLAY_OPTIONS))
 					GameSpyCloseOverlay(GSOVERLAY_OPTIONS);
 				else
+#endif
 				{
 					DestroyOptionsLayout();
 				}
@@ -2042,9 +2057,11 @@ WindowMsgHandledType OptionsMenuSystem( GameWindow *window, UnsignedInt msg,
 					destroyQuitMenu(); // if we're in a game, the change res then enter the same kind of game, we nee the quit menu to be gone.
 
 
+#if defined(_WIN32)
 				if(GameSpyIsOverlayOpen(GSOVERLAY_OPTIONS))
 					GameSpyCloseOverlay(GSOVERLAY_OPTIONS);
 				else
+#endif
 				{
 					DestroyOptionsLayout();
 					if (dispChanged)

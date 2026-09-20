@@ -32,7 +32,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "Lib/BaseType.h"
-#include "Common/CRC.h"
+#include "Common/crc.h"
 #include "Common/GameEngine.h"
 #include "Common/GlobalData.h"
 #include "Common/MultiplayerSettings.h"
@@ -216,9 +216,9 @@ UnicodeString LANPreferences::getRemoteIPEntry(Int i)
 	ret.translate(ipstr);
 	if (asciientry.getLength() > 0)
 	{
-		ret.concat(L"(");
+		ret.concat(u"(");
 		ret.concat(QuotedPrintableToUnicodeString(asciientry));
-		ret.concat(L")");
+		ret.concat(u")");
 	}
 
 	return ret;
@@ -325,7 +325,8 @@ static void playerTooltip(GameWindow *window,
 		return;
 	}
 
-	UnsignedInt playerIP = (UnsignedInt)GadgetListBoxGetItemData( window, row, col );
+	UnsignedInt playerIP = static_cast<UnsignedInt>(reinterpret_cast<std::uintptr_t>(
+		GadgetListBoxGetItemData(window, row, col)));
 	LANPlayer *player = TheLAN->LookupPlayer(playerIP);
 	if (!player)
 	{
@@ -759,7 +760,7 @@ WindowMsgHandledType LanLobbyMenuSystem( GameWindow *window, UnsignedInt msg,
 				} //if ( controlID == buttonBack )
 				else if ( controlID == buttonHostID )
 				{
-					TheLAN->RequestGameCreate( UnicodeString(L""), FALSE);
+					TheLAN->RequestGameCreate(UnicodeString(u""), FALSE);
 					
 				}//else if ( controlID == buttonHostID )
 				else if ( controlID == buttonClearID )

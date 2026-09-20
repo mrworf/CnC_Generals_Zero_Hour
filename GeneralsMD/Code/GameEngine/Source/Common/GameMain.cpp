@@ -38,14 +38,24 @@ void GameMain( int argc, char *argv[] )
 {
 	// initialize the game engine using factory function
 	TheGameEngine = CreateGameEngine();
-	TheGameEngine->init(argc, argv);
+	try
+	{
+		TheGameEngine->init(argc, argv);
 
-	// run it
-	TheGameEngine->execute();
+		// run it
+		TheGameEngine->execute();
 
-	// since execute() returned, we are exiting the game
-	delete TheGameEngine;
-	TheGameEngine = NULL;
+		// since execute() returned, we are exiting the game
+		delete TheGameEngine;
+		TheGameEngine = NULL;
+	}
+	catch (...)
+	{
+		// Linux reports the original primary diagnostic at the process edge, but
+		// ownership still unwinds through the original engine destructor.
+		delete TheGameEngine;
+		TheGameEngine = NULL;
+		throw;
+	}
 
 }
-

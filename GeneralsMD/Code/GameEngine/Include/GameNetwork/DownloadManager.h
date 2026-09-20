@@ -31,8 +31,21 @@
 #ifndef __DOWNLOADMANAGER_H__
 #define __DOWNLOADMANAGER_H__
 
-#include "WWDownload/downloadDefs.h"
-#include "WWDownload/download.h"
+#include "WWDownload/downloaddefs.h"
+#if defined(_WIN32)
+#include "WWDownload/Download.h"
+#else
+class IDownload
+{
+public:
+	virtual ~IDownload() = default;
+	virtual HRESULT OnError(int error) = 0;
+	virtual HRESULT OnEnd() = 0;
+	virtual HRESULT OnQueryResume() = 0;
+	virtual HRESULT OnProgressUpdate(int bytesread, int totalsize, int timetaken, int timeleft) = 0;
+	virtual HRESULT OnStatusUpdate(int status) = 0;
+};
+#endif
 
 class CDownload;
 class QueuedDownload

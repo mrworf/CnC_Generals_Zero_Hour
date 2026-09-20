@@ -31,6 +31,7 @@
 #include "GameLogic/Module/ModelConditionUpgrade.h"
 
 #include "Common/ModelState.h"
+#include "Common/Xfer.h"
 #include "GameLogic/Object.h"
 
 // ------------------------------------------------------------------------------------------------

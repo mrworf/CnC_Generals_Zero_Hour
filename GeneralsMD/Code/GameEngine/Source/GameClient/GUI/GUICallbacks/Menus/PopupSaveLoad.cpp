@@ -47,8 +47,12 @@
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#include <filesystem>
+#include <system_error>
+
 #include "Common/GameEngine.h"
 #include "Common/GameState.h"
+#include "Common/GlobalData.h"
 #include "Common/MessageStream.h"
 #include "GameClient/CampaignManager.h"
 #include "GameClient/GadgetListBox.h"
@@ -454,7 +458,7 @@ static void setEditDescription( GameWindow *editControl )
 	// the map name (which is really only used in debug)
 	//
 	if( campaign )
-		defaultDesc.format( L"%s %d", 
+		defaultDesc.format( u"%s %d",
 												TheGameText->fetch( campaign->m_campaignNameLabel ).str(),
 												TheCampaignManager->getCurrentMissionNumber() + 1 );
 	else
@@ -462,9 +466,9 @@ static void setEditDescription( GameWindow *editControl )
 		const char *mapName = TheGlobalData->m_mapName.reverseFind( '\\' );
 
 		if( mapName )
-			defaultDesc.format( L"%S", mapName + 1 );
+			defaultDesc.translate(AsciiString(mapName + 1));
 		else
-			defaultDesc.format( L"%S", TheGlobalData->m_mapName.str() );
+			defaultDesc.translate(TheGlobalData->m_mapName);
 		
 		//Keep the extension out of the descriptive name.
 		if( (defaultDesc.getLength() >= 4)  &&  (defaultDesc.getCharAt(defaultDesc.getLength()-4) == '.') )
@@ -718,7 +722,8 @@ WindowMsgHandledType SaveLoadMenuSystem( GameWindow *window, UnsignedInt msg,
 					AsciiString filepath = TheGameState->getFilePathInSaveDirectory(selectedGameInfo->filename);
 
 					// delete the file
-					DeleteFile( filepath.str() );
+					std::error_code error;
+					std::filesystem::remove(filepath.str(), error);
 					
 					// repopulate the listbox
 					TheGameState->populateSaveGameListbox( listboxGames, currentLayoutType );

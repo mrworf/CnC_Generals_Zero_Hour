@@ -1,6 +1,7 @@
 #include "PreRTS.h"
 #include "Common/FileSystem.h"
 #include "Common/GameState.h"
+#include "Common/GameEngine.h"
 #include "Common/GlobalData.h"
 #include "Common/INI.h"
 #include "Common/INIException.h"
@@ -27,6 +28,7 @@
 
 const Char *g_strFile = "missing.str";
 const Char *g_csfFile = "Data/English/Generals.csf";
+GameEngine *TheGameEngine = NULL;
 
 namespace {
 int failures = 0;

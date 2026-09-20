@@ -31,6 +31,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "GameClient/Drawable.h"
+#include "GameClient/ClientRandomValue.h"
 #include "GameClient/Module/SwayClientUpdate.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"

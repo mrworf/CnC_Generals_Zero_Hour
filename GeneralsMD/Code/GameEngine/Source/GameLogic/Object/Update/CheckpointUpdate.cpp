@@ -37,6 +37,7 @@
 #include "GameLogic/Object.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/AI.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Module/AIUpdate.h"
 
 //-------------------------------------------------------------------------------------------------

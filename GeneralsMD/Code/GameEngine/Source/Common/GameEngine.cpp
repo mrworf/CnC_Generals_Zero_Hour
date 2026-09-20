@@ -92,6 +92,7 @@
 #include "GameClient/Shell.h"
 #include "GameClient/GameText.h"
 #include "GameClient/ParticleSys.h"
+#include "GameClient/Snow.h"
 #include "GameClient/Water.h"
 #include "GameClient/TerrainRoads.h"
 #include "GameClient/MetaEvent.h"
@@ -238,6 +239,21 @@ GameEngine::~GameEngine()
 
 	if (TheGameLODManager)
 		delete TheGameLODManager;
+	TheGameLODManager = NULL;
+
+	// These process-global parsed settings are not subsystems, so the original
+	// subsystem shutdown cannot own them. Release their complete override chains
+	// before the original allocator is torn down.
+	WaterTransparencySetting *water = const_cast<WaterTransparencySetting *>(
+		TheWaterTransparency.getNonOverloadedPointer());
+	if (water)
+		water->deleteInstance();
+	TheWaterTransparency = static_cast<WaterTransparencySetting *>(NULL);
+	WeatherSetting *weather = const_cast<WeatherSetting *>(
+		TheWeatherSetting.getNonOverloadedPointer());
+	if (weather)
+		weather->deleteInstance();
+	TheWeatherSetting = static_cast<WeatherSetting *>(NULL);
 
 	Drawable::killStaticImages();
 
@@ -595,7 +611,7 @@ void GameEngine::init( int argc, char *argv[] )
 		// for fingerprinting, we need to ensure the presence of these files
 
 
-#if !defined(_INTERNAL) && !defined(_DEBUG)
+#if defined(_WIN32) && !defined(_INTERNAL) && !defined(_DEBUG)
 		AsciiString dirName;
     dirName = TheArchiveFileSystem->getArchiveFilenameForFile("generalsbzh.sec");
 
@@ -691,10 +707,16 @@ void GameEngine::init( int argc, char *argv[] )
 	}
 	catch (ErrorCode ec)
 	{
+#if defined(_WIN32)
 		if (ec == ERROR_INVALID_D3D)
 		{
 			RELEASE_CRASHLOCALIZED("ERROR:D3DFailurePrompt", "ERROR:D3DFailureMessage");
 		}
+		throw;
+#else
+		(void)ec;
+		throw;
+#endif
 	}
 	catch (INIException e)
 	{
@@ -706,7 +728,14 @@ void GameEngine::init( int argc, char *argv[] )
 	}
 	catch (...)
 	{
+#if defined(_WIN32)
 		RELEASE_CRASH(("Uncaught Exception during initialization."));
+#else
+		// Preserve the actual platform/data failure for the Linux process edge.
+		// Continuing after partial subsystem construction dereferences missing
+		// globals and hides the primary diagnostic behind a secondary crash.
+		throw;
+#endif
 	}
 
 	if(!TheGlobalData->m_playIntro)

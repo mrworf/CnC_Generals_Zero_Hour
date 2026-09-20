@@ -30,7 +30,9 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#if defined(_WIN32)
 #include "GameSpy/ghttp/ghttp.h"
+#endif
 
 #include "Lib/BaseType.h"
 #include "Common/GameEngine.h"
@@ -39,7 +41,7 @@
 #include "Common/NameKeyGenerator.h"
 #include "Common/RandomValue.h"
 #include "Common/UserPreferences.h"
-#include "Common/Version.h"
+#include "Common/version.h"
 #include "Common/GameLOD.h"
 #include "GameClient/AnimateWindowManager.h"
 #include "GameClient/ExtendedMessageBox.h"
@@ -62,16 +64,17 @@
 #include "GameClient/GameClient.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/ScriptEngine.h"
-#include "GameNetwork/GameSpyOverlay.h"
 #include "GameClient/GameWindowTransitions.h"
 #include "GameClient/ChallengeGenerals.h"
+#include "GameNetwork/DownloadManager.h"
+#include "GameNetwork/GameSpy/MainMenuUtils.h"
 
+#if defined(_WIN32)
+#include "GameNetwork/GameSpyOverlay.h"
 #include "GameNetwork/GameSpy/PeerDefs.h"
 #include "GameNetwork/GameSpy/PeerThread.h"
 #include "GameNetwork/GameSpy/BuddyThread.h"
-
-#include "GameNetwork/DownloadManager.h"
-#include "GameNetwork/GameSpy/MainMenuUtils.h"
+#endif
 
 #include "GameClient/CDCheck.h"
 //Added By Saad
@@ -197,7 +200,7 @@ enum
 	SHOW_FRAMES_LIMIT = 20
 };
 
-static showFade = FALSE;
+static Bool showFade = FALSE;
 static Int dropDown = DROPDOWN_NONE;
 static Int pendingDropDown = DROPDOWN_NONE;
 static AnimateWindowManager *localAnimateWindowManager = NULL;
@@ -214,7 +217,7 @@ static Bool launchChallengeMenu = FALSE;
 static Bool dontAllowTransitions = FALSE;
 
 //Added by Saad
-const /*Int TIME_OUT = 15,*/ CORNER = 10;
+const Int /*TIME_OUT = 15,*/ CORNER = 10;
 void AcceptResolution();
 void DeclineResolution();
 GameWindow *resAcceptMenu = NULL;
@@ -322,7 +325,7 @@ static MessageBoxReturnType checkCDCallback( void *userData )
 	}
 	else
 	{
-		prepareCampaignGame((GameDifficulty)(Int)(Int *)userData);
+		prepareCampaignGame((GameDifficulty)(intptr_t)userData);
 		return MB_RETURN_CLOSE;
 	}
 }
@@ -546,7 +549,7 @@ void MainMenuInit( WindowLayout *layout, void *userData )
 	dropDownWindows[DROPDOWN_MAIN] = TheWindowManager->winGetWindowFromId( parentMainMenu, TheNameKeyGenerator->nameToKey( AsciiString("MainMenu.wnd:MapBorder2") ) );
 	dropDownWindows[DROPDOWN_LOADREPLAY] = TheWindowManager->winGetWindowFromId( parentMainMenu, TheNameKeyGenerator->nameToKey( AsciiString("MainMenu.wnd:MapBorder3") ) );
 	dropDownWindows[DROPDOWN_DIFFICULTY] = TheWindowManager->winGetWindowFromId( parentMainMenu, TheNameKeyGenerator->nameToKey( AsciiString("MainMenu.wnd:MapBorder4") ) );
-	for(i = 1; i < DROPDOWN_COUNT; ++i)
+	for(Int i = 1; i < DROPDOWN_COUNT; ++i)
 		dropDownWindows[i]->winHide(TRUE);
 
 	initialHide();
@@ -624,11 +627,13 @@ void MainMenuInit( WindowLayout *layout, void *userData )
 	}
 	/**/
 
+	#if defined(_WIN32)
 	if (TheGameSpyPeerMessageQueue && !TheGameSpyPeerMessageQueue->isConnected())
 	{
 		DEBUG_LOG(("Tearing down GameSpy from MainMenuInit()\n"));
 		TearDownGameSpy();
 	}
+	#endif
 	if (TheMapCache)
 		TheMapCache->updateCache();
 
@@ -684,7 +689,9 @@ void MainMenuShutdown( WindowLayout *layout, void *userData )
 	if (!startGame)
 		isShuttingDown = TRUE;
 
+#if defined(_WIN32)
 	CancelPatchCheckCallback();
+#endif
 
 	// if we are shutting down for an immediate pop, skip the animations
 	Bool popImmediate = *(Bool *)userData;
@@ -785,7 +792,7 @@ void DoResolutionDialog()
 	
 	UnicodeString resTimerString = TheGameText->fetch("GUI:Resolution");
 	
-	resolutionNew.format(L": %dx%d\n", newDispSettings.xRes , newDispSettings.yRes);
+	resolutionNew.format(u": %dx%d\n", newDispSettings.xRes , newDispSettings.yRes);
 	
 	resTimerString.concat(resolutionNew);
 		
@@ -839,11 +846,13 @@ void MainMenuUpdate( WindowLayout *layout, void *userData )
 	if(DontShowMainMenu && justEntered)
 		justEntered = FALSE;
 	
+#if defined(_WIN32)
 	if (TheDownloadManager && !TheDownloadManager->isDone())
 	{
 		TheDownloadManager->update();
 		DownloadMenuUpdate(layout, userData);
 	}
+#endif
 
 	// Added by Saad to the confirmation or decline of the resoluotion change
 	// dialog box.
@@ -922,14 +931,18 @@ void MainMenuUpdate( WindowLayout *layout, void *userData )
 //			initialGadgetDelay--;
 //	}
 
+#if defined(_WIN32)
 	if (raiseMessageBoxes)
 	{
 		RaiseGSMessageBox();
 		raiseMessageBoxes = FALSE;
 	}
+#endif
 
+	#if defined(_WIN32)
 	HTTPThinkWrapper();
 	GameSpyUpdateOverlays();
+	#endif
 //	if(localAnimateWindowManager)
 //		localAnimateWindowManager->update();
 //	if(localAnimateWindowManager && pendingDropDown != DROPDOWN_NONE && localAnimateWindowManager->isFinished())
@@ -1054,17 +1067,23 @@ WindowMsgHandledType MainMenuSystem( GameWindow *window, UnsignedInt msg,
 		//---------------------------------------------------------------------------------------------
 		case GWM_CREATE:
 		{
+		#if defined(_WIN32)
 			ghttpStartup();
+		#endif
 			break;
 		}  // end case
 
 		//---------------------------------------------------------------------------------------------
 		case GWM_DESTROY:
 		{
+		#if defined(_WIN32)
 			ghttpCleanup();
+		#endif
 			DEBUG_LOG(("Tearing down GameSpy from MainMenuSystem(GWM_DESTROY)\n"));
+		#if defined(_WIN32)
 			TearDownGameSpy();
 			StopAsyncDNSCheck(); // kill off the async DNS check thread in case it is still running
+		#endif
 			break;
 
 		}  // end case
@@ -1474,7 +1493,11 @@ WindowMsgHandledType MainMenuSystem( GameWindow *window, UnsignedInt msg,
 				dropDownWindows[DROPDOWN_MULTIPLAYER]->winHide(FALSE);
 				TheTransitionHandler->reverse("MainMenuMultiPlayerMenuTransitionToNext");
 
+			#if defined(_WIN32)
 				StartPatchCheck();
+			#else
+				throw std::runtime_error("unsupported online callback: MainMenu online service");
+			#endif
 //				localAnimateWindowManager->reverseAnimateWindow();
 				dropDown = DROPDOWN_NONE;
 
@@ -1508,6 +1531,7 @@ WindowMsgHandledType MainMenuSystem( GameWindow *window, UnsignedInt msg,
 			}  // end else if
 			else if( controlID == worldBuilderID )
 			{
+#if defined(_WIN32)
 #if defined _DEBUG
 				if(_spawnl(_P_NOWAIT,"WorldBuilderD.exe","WorldBuilderD.exe", NULL) < 0)
 					MessageBoxOk(TheGameText->fetch("GUI:WorldBuilder"), TheGameText->fetch("GUI:WorldBuilderLoadFailed"),NULL);
@@ -1518,10 +1542,17 @@ WindowMsgHandledType MainMenuSystem( GameWindow *window, UnsignedInt msg,
 				if(_spawnl(_P_NOWAIT,"WorldBuilder.exe","WorldBuilder.exe", NULL) < 0)
 					MessageBoxOk(TheGameText->fetch("GUI:WorldBuilder"), TheGameText->fetch("GUI:WorldBuilderLoadFailed"),NULL);
 #endif
+#else
+				throw std::runtime_error("unsupported online callback: MainMenu world builder launch");
+#endif
 			}
 			else if( controlID == getUpdateID )
 			{
+			#if defined(_WIN32)
 				StartDownloadingPatches();
+			#else
+				throw std::runtime_error("unsupported online callback: MainMenu patch download");
+			#endif
 			}
 			else if( controlID == exitID )
 			{

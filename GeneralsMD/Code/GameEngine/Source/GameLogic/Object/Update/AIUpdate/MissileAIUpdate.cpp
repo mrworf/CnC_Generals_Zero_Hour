@@ -36,6 +36,7 @@
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/Module/MissileAIUpdate.h"
 #include "GameLogic/Module/AIUpdate.h"

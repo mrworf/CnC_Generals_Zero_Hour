@@ -103,6 +103,17 @@ int _vsnwprintf(WideChar* destination, std::size_t capacity, const WideChar* for
       if (left <= 1) return -1;
       *out++ = u'%';
       --left;
+    } else if (*p == u'h' && p[1] == u's') {
+      ++p;
+      const char* value = va_arg(args, const char*);
+      if (!append_ascii(out, left, value ? value : "(null)")) return -1;
+    } else if (*p == u'l' && p[1] == u's') {
+      ++p;
+      const WideChar* value = va_arg(args, const WideChar*);
+      if (!append(out, left, value ? value : u"(null)")) return -1;
+    } else if (*p == u'S') {
+      const char* value = va_arg(args, const char*);
+      if (!append_ascii(out, left, value ? value : "(null)")) return -1;
     } else if (*p == u's') {
       if (!append(out, left, va_arg(args, const WideChar*))) return -1;
     } else if (*p == u'c') {

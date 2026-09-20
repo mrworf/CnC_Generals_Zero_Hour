@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cctype>
 #include <filesystem>
 #include <fnmatch.h>
 #include <system_error>
@@ -27,6 +28,12 @@ AsciiString logicalPath(const std::filesystem::path& path)
 	return AsciiString(value.c_str());
 }
 
+bool equalsNoCase(const std::string& left, const std::string& right)
+{
+	return left.size() == right.size() && std::equal(left.begin(), left.end(), right.begin(),
+		[](unsigned char a, unsigned char b) { return std::tolower(a) == std::tolower(b); });
+}
+
 }  // namespace
 
 PosixLocalFileSystem::PosixLocalFileSystem() = default;
@@ -39,7 +46,34 @@ PosixLocalFileSystem::~PosixLocalFileSystem() = default;
 std::filesystem::path PosixLocalFileSystem::resolveReadPath(const Char *path) const
 {
 	const std::filesystem::path native = nativePath(path);
-	return native.is_absolute() || m_readRoot.empty() ? native : (m_readRoot / native).lexically_normal();
+	if (native.is_absolute() || m_readRoot.empty())
+		return native;
+	for (const auto& component : native)
+		if (component == "..") return m_readRoot / ".invalid-parent-path";
+
+	std::filesystem::path resolved = m_readRoot;
+	for (const auto& component : native)
+	{
+		if (component == ".") continue;
+		const std::filesystem::path exact = resolved / component;
+		std::error_code error;
+		if (std::filesystem::exists(exact, error) && !error)
+		{
+			resolved = exact;
+			continue;
+		}
+		std::filesystem::path folded;
+		for (std::filesystem::directory_iterator it(resolved, error), end;
+			it != end && !error; it.increment(error))
+		{
+			if (!equalsNoCase(it->path().filename().string(), component.string())) continue;
+			if (!folded.empty()) return m_readRoot / ".ambiguous-case-path";
+			folded = it->path();
+		}
+		if (folded.empty()) return exact;
+		resolved = folded;
+	}
+	return resolved;
 }
 
 void PosixLocalFileSystem::init() {}

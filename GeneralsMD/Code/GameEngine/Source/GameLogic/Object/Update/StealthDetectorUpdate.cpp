@@ -43,6 +43,7 @@
 #include "GameClient/ParticleSys.h"
 #include "GameLogic/Damage.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/StealthUpdate.h"

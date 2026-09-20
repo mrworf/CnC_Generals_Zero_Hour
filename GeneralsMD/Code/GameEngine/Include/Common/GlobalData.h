@@ -448,6 +448,7 @@ public:
 	
 	Real				m_keyboardCameraRotateSpeed;    ///< How fast the camera rotates when rotated via keyboard controls.
   Int					m_playStats;									///< Int whether we want to log play stats or not, if <= 0 then we don't log
+	Int m_benchmarkTimer;										///< bounded benchmark duration in seconds
 
 #if defined(_DEBUG) || defined(_INTERNAL) || defined(_ALLOW_DEBUG_CHEATS_IN_RELEASE)
 	Bool m_specialPowerUsesDelay ;
@@ -468,7 +469,6 @@ public:
 	Bool m_disableCameraFade;								///< if true, script commands affecting camera are disabled
 	Bool m_disableScriptedInputDisabling;		///< if true, script commands can't disable input
 	Bool m_disableMilitaryCaption;					///< if true, military briefings go fast
-	Int m_benchmarkTimer;										///< how long to play the game in benchmark mode?
   Bool m_checkForLeaks;
 	Bool m_vTune;
 	Bool m_debugCamera;						///< Used to display Camera debug information

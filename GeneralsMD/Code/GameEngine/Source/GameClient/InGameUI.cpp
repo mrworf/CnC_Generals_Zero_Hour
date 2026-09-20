@@ -2965,13 +2965,17 @@ void InGameUI::destroyPlacementIcons( void )
 
 		if( m_placeIcon[ i ] ) 
 		{
-			TheTerrainVisual->removeFactionBibDrawable(m_placeIcon[ i ]);
+			if (TheTerrainVisual)
+				TheTerrainVisual->removeFactionBibDrawable(m_placeIcon[ i ]);
 			TheGameClient->destroyDrawable( m_placeIcon[ i ] );
 		}
 		m_placeIcon[ i ] = NULL;
 
 	}  // end for i
-	TheTerrainVisual->removeAllBibs();
+	// TerrainVisual is constructed after InGameUI. Preserve an earlier UI/data
+	// failure during partial GameClient initialization instead of masking it.
+	if (TheTerrainVisual)
+		TheTerrainVisual->removeAllBibs();
 
 }  // end destroyPlacementIcons
 

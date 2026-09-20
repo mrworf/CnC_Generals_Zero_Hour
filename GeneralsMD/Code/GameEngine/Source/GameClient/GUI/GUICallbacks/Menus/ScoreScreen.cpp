@@ -52,6 +52,8 @@
 //-----------------------------------------------------------------------------
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#include <stdexcept>
+
 #include "Common/AudioAffect.h"
 #include "Common/AudioEventRTS.h"
 #include "Common/AudioHandleSpecialValues.h"
@@ -91,13 +93,19 @@
 #include "GameClient/CampaignManager.h"
 #include "GameClient/GameWindowTransitions.h"
 #include "GameClient/VideoPlayer.h"
+#if defined(_WIN32)
 #include "GameNetwork/GameSpy/PeerDefs.h"
 #include "GameNetwork/GameSpy/GameResultsThread.h"
+#endif
 #include "GameNetwork/NetworkDefs.h"
 #include "GameNetwork/LANAPICallbacks.h"
+#include "GameNetwork/GameSpy/GameSpyColors.h"
+#include "GameNetwork/GameSpy/PersistentStorageThread.h"
+#if defined(_WIN32)
 #include "GameNetwork/GameSpyOverlay.h"
 #include "GameNetwork/GameSpy/BuddyThread.h"
 #include "GameNetwork/GameSpy/PersistentStorageThread.h"
+#endif
 #include "GameClient/InGameUI.h"
 #include "GameClient/ChallengeGenerals.h"
 
@@ -263,10 +271,12 @@ void ScoreScreenInit( WindowLayout *layout, void *userData )
 	//Play music after subsystems get reset including the audio...
 	g_playMusic = TRUE;
 	
+#if defined(_WIN32)
 	if (TheGameSpyInfo)
 	{
 		DEBUG_LOG(("ScoreScreenInit(): TheGameSpyInfo->stuff(%s/%s/%s)\n", TheGameSpyInfo->getLocalBaseName().str(), TheGameSpyInfo->getLocalEmail().str(), TheGameSpyInfo->getLocalPassword().str()));
 	}
+#endif
 
 	DontShowMainMenu = TRUE; //KRIS
 	buttonIsFinishCampaign = FALSE;
@@ -564,7 +574,11 @@ WindowMsgHandledType ScoreScreenSystem( GameWindow *window, UnsignedInt msg,
 			}
 			else if ( controlID == buttonBuddiesID )	
 			{
+			#if defined(_WIN32)
 				GameSpyToggleOverlay( GSOVERLAY_BUDDY );
+			#else
+				throw std::runtime_error("unsupported online callback: ScoreScreen buddy overlay");
+			#endif
 			}
 			else if ( controlID == buttonSaveReplayID )
 			{
@@ -590,6 +604,7 @@ WindowMsgHandledType ScoreScreenSystem( GameWindow *window, UnsignedInt msg,
 						TheLAN->RequestChat(txtInput, LANAPIInterface::LANCHAT_EMOTE);
 					//add the gamespy chat request here
 			} //if ( controlID == buttonEmote )
+			#if defined(_WIN32)
 			for(Int i = 0; i < MAX_SLOTS; ++i)
 			{
 				AsciiString name;
@@ -623,6 +638,7 @@ WindowMsgHandledType ScoreScreenSystem( GameWindow *window, UnsignedInt msg,
 					break;
 				}
 			}
+			#endif
 		}
 
 		case GEM_EDIT_DONE:
@@ -1033,6 +1049,9 @@ void initLANMultiPlayer(void)
 //-------------------------------------------------------------------------------------------------
 void initInternetMultiPlayer(void)
 {
+#if !defined(_WIN32)
+	throw std::runtime_error("unsupported online callback: ScoreScreen internet initialization");
+#else
 	screenType = SCORESCREEN_INTERNET;
 	grabMultiPlayerInfo();
 	GadgetTextEntrySetText(textEntryChat, UnicodeString::TheEmptyString);
@@ -1070,6 +1089,7 @@ void initInternetMultiPlayer(void)
 	strcpy(req.arg.status.statusString, "Online");
 	strcpy(req.arg.status.locationString, "");
 	TheGameSpyBuddyMessageQueue->addRequest(req);
+#endif
 }
 
 /** Special Init path for making this a Multiplayer Score Screen(Replay) */
@@ -1430,7 +1450,7 @@ void populatePlayerInfo( Player *player, Int pos)
 	winName.format("ScoreScreen.wnd:StaticTextUnitsBuilt%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", scoreKpr->getTotalUnitsBuilt());
+	winValue.format(u"%d", scoreKpr->getTotalUnitsBuilt());
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -1439,7 +1459,7 @@ void populatePlayerInfo( Player *player, Int pos)
 	winName.format("ScoreScreen.wnd:StaticTextUnitsLost%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", scoreKpr->getTotalUnitsLost());
+	winValue.format(u"%d", scoreKpr->getTotalUnitsLost());
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -1448,7 +1468,7 @@ void populatePlayerInfo( Player *player, Int pos)
 	winName.format("ScoreScreen.wnd:StaticTextUnitsDestroyed%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", scoreKpr->getTotalUnitsDestroyed());
+	winValue.format(u"%d", scoreKpr->getTotalUnitsDestroyed());
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -1457,7 +1477,7 @@ void populatePlayerInfo( Player *player, Int pos)
 	winName.format("ScoreScreen.wnd:StaticTextBuildingsBuilt%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", scoreKpr->getTotalBuildingsBuilt());
+	winValue.format(u"%d", scoreKpr->getTotalBuildingsBuilt());
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -1466,7 +1486,7 @@ void populatePlayerInfo( Player *player, Int pos)
 	winName.format("ScoreScreen.wnd:StaticTextBuildingsLost%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", scoreKpr->getTotalBuildingsLost());
+	winValue.format(u"%d", scoreKpr->getTotalBuildingsLost());
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -1475,7 +1495,7 @@ void populatePlayerInfo( Player *player, Int pos)
 	winName.format("ScoreScreen.wnd:StaticTextBuildingsDestroyed%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", scoreKpr->getTotalBuildingsDestroyed());
+	winValue.format(u"%d", scoreKpr->getTotalBuildingsDestroyed());
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -1484,7 +1504,7 @@ void populatePlayerInfo( Player *player, Int pos)
 	winName.format("ScoreScreen.wnd:StaticTextBuildingsDestroyed%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", scoreKpr->getTotalBuildingsDestroyed());
+	winValue.format(u"%d", scoreKpr->getTotalBuildingsDestroyed());
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -1493,7 +1513,7 @@ void populatePlayerInfo( Player *player, Int pos)
 	winName.format("ScoreScreen.wnd:StaticTextResources%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", scoreKpr->getTotalMoneyEarned());
+	winValue.format(u"%d", scoreKpr->getTotalMoneyEarned());
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -1525,7 +1545,7 @@ void populatePlayerInfo( Player *player, Int pos)
 winName.format("ScoreScreen.wnd:StaticTextScore%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", scoreKpr->calculateScore());
+	winValue.format(u"%d", scoreKpr->calculateScore());
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -1632,6 +1652,7 @@ winName.format("ScoreScreen.wnd:StaticTextScore%d", pos);
 		stats.write();
 	}
 
+	#if defined(_WIN32)
 	if ( screenType == SCORESCREEN_INTERNET )
 	{
 		DEBUG_LOG(("populatePlayerInfo() - SCORESCREEN_INTERNET\n"));
@@ -2024,6 +2045,7 @@ winName.format("ScoreScreen.wnd:StaticTextScore%d", pos);
 			}
 		}
 	}
+	#endif
 }
 
 /** We Grab information about the players differently in Multiplayer.  We only want the players
@@ -2487,7 +2509,7 @@ void populateSideInfo( UnicodeString side,ScoreGather *sg, Int pos, Color color)
 	winName.format("ScoreScreen.wnd:StaticTextUnitsBuilt%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", sg->m_totalUnitsBuilt);
+	winValue.format(u"%d", sg->m_totalUnitsBuilt);
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -2496,7 +2518,7 @@ void populateSideInfo( UnicodeString side,ScoreGather *sg, Int pos, Color color)
 	winName.format("ScoreScreen.wnd:StaticTextUnitsLost%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", sg->m_totalUnitsLost);
+	winValue.format(u"%d", sg->m_totalUnitsLost);
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -2505,7 +2527,7 @@ void populateSideInfo( UnicodeString side,ScoreGather *sg, Int pos, Color color)
 	winName.format("ScoreScreen.wnd:StaticTextUnitsDestroyed%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", sg->m_totalUnitsDestroyed);
+	winValue.format(u"%d", sg->m_totalUnitsDestroyed);
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -2514,7 +2536,7 @@ void populateSideInfo( UnicodeString side,ScoreGather *sg, Int pos, Color color)
 	winName.format("ScoreScreen.wnd:StaticTextBuildingsBuilt%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", sg->m_totalBuildingsBuilt);
+	winValue.format(u"%d", sg->m_totalBuildingsBuilt);
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -2523,7 +2545,7 @@ void populateSideInfo( UnicodeString side,ScoreGather *sg, Int pos, Color color)
 	winName.format("ScoreScreen.wnd:StaticTextBuildingsLost%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", sg->m_totalBuildingsLost);
+	winValue.format(u"%d", sg->m_totalBuildingsLost);
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -2532,7 +2554,7 @@ void populateSideInfo( UnicodeString side,ScoreGather *sg, Int pos, Color color)
 	winName.format("ScoreScreen.wnd:StaticTextBuildingsDestroyed%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", sg->m_totalBuildingsDestroyed);
+	winValue.format(u"%d", sg->m_totalBuildingsDestroyed);
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -2541,7 +2563,7 @@ void populateSideInfo( UnicodeString side,ScoreGather *sg, Int pos, Color color)
 	winName.format("ScoreScreen.wnd:StaticTextResources%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", sg->m_totalMoneyEarned);
+	winValue.format(u"%d", sg->m_totalMoneyEarned);
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);
@@ -2551,7 +2573,7 @@ void populateSideInfo( UnicodeString side,ScoreGather *sg, Int pos, Color color)
 winName.format("ScoreScreen.wnd:StaticTextScore%d", pos);
 	win =  TheWindowManager->winGetWindowFromId( parent, TheNameKeyGenerator->nameToKey( winName ) );
 	DEBUG_ASSERTCRASH(win,("Could not find window %s on the score screen", winName.str()));
-	winValue.format(L"%d", scoreKpr->calculateScore());
+	winValue.format(u"%d", scoreKpr->calculateScore());
 	GadgetStaticTextSetText(win, winValue);
 	win->winSetEnabledTextColors(color, win->winGetEnabledTextBorderColor());
 	win->winHide(FALSE);

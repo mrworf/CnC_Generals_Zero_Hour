@@ -60,6 +60,7 @@
 #include "Common/GameEngine.h"
 #include "Common/GameLOD.h"
 #include "Common/GameState.h"
+#include "Common/GlobalData.h"
 #include "Common/MultiplayerSettings.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -81,8 +82,10 @@
 #include "GameClient/ChallengeGenerals.h"
 #include "GameLogic/FPUControl.h"
 #include "GameLogic/GameLogic.h"
+#if defined(_WIN32)
 #include "GameNetwork/GameSpy/PeerDefs.h"
 #include "GameNetwork/GameSpy/PersistentStorageThread.h"
+#endif
 #include "GameNetwork/NetworkInterface.h"
 #include "GameNetwork/RankPointValue.h"
 
@@ -406,7 +409,7 @@ void SinglePlayerLoadScreen::init( GameInfo *game )
 
 	m_percent = TheWindowManager->winGetWindowFromId( m_loadScreen,TheNameKeyGenerator->nameToKey( AsciiString( "SinglePlayerLoadScreen.wnd:Percent" ) ));
 	DEBUG_ASSERTCRASH(m_percent, ("Can't initialize the m_percent for the single player loadscreen"));
-	GadgetStaticTextSetText(m_percent,UnicodeString(L"0%"));
+	GadgetStaticTextSetText(m_percent,UnicodeString(u"0%"));
 	m_percent->winHide(TRUE);
 
 	m_objectiveWin = TheWindowManager->winGetWindowFromId( m_loadScreen,TheNameKeyGenerator->nameToKey( AsciiString( "SinglePlayerLoadScreen.wnd:ObjectivesWin" ) ));
@@ -428,7 +431,7 @@ void SinglePlayerLoadScreen::init( GameInfo *game )
 			m_unicodeObjectiveLines[i] = TheGameText->fetch(mission->m_missionObjectivesLabel[i]);
 	}
 
-	for(i = 0; i < MAX_DISPLAYED_UNITS; ++i)
+	for(Int i = 0; i < MAX_DISPLAYED_UNITS; ++i)
 	{
 		lineName.format("SinglePlayerLoadScreen.wnd:StaticTextCameoText%d",i);
 		m_unitDesc[i] = TheWindowManager->winGetWindowFromId( m_loadScreen,TheNameKeyGenerator->nameToKey( lineName ));
@@ -567,7 +570,7 @@ void SinglePlayerLoadScreen::init( GameInfo *game )
 					shiftedPercent = 0;
 				Int percent = (shiftedPercent + FRAME_FUDGE_ADD)/1.3;
 				UnicodeString per;
-				per.format(L"%d%%",percent);
+				per.format(u"%d%%",percent);
 				TheMouse->setCursorTooltip(UnicodeString::TheEmptyString);
 				GadgetProgressBarSetProgress(m_progressBar, percent);
 				GadgetStaticTextSetText(m_percent, per);
@@ -625,7 +628,7 @@ void SinglePlayerLoadScreen::update( Int percent )
 {
 	percent = (percent + FRAME_FUDGE_ADD)/1.3;
 	UnicodeString per;
-	per.format(L"%d%%",percent);
+	per.format(u"%d%%",percent);
 	TheMouse->setCursorTooltip(UnicodeString::TheEmptyString);
 	GadgetProgressBarSetProgress(m_progressBar, percent);
 	GadgetStaticTextSetText(m_percent, per);
@@ -1079,7 +1082,7 @@ void ChallengeLoadScreen::init( GameInfo *game )
 					shiftedPercent = 0;
 				Int percent = (shiftedPercent + FRAME_FUDGE_ADD)/1.3;
 				UnicodeString per;
-				per.format(L"%d%%",percent);
+				per.format(u"%d%%",percent);
 				TheMouse->setCursorTooltip(UnicodeString::TheEmptyString);
 				GadgetProgressBarSetProgress(m_progressBar, percent);
 			}
@@ -1146,7 +1149,7 @@ void ChallengeLoadScreen::update( Int percent )
 {
 	percent = (percent + FRAME_FUDGE_ADD)/1.3;
 	UnicodeString per;
-	per.format(L"%d%%",percent);
+	per.format(u"%d%%",percent);
 	TheMouse->setCursorTooltip(UnicodeString::TheEmptyString);
 	GadgetProgressBarSetProgress(m_progressBar, percent);
 
@@ -1174,7 +1177,7 @@ ShellGameLoadScreen::~ShellGameLoadScreen( void )
 
 void ShellGameLoadScreen::init( GameInfo *game )
 {
-	static BOOL firstLoad = TRUE;
+	static Bool firstLoad = TRUE;
 
 	
 	// create the layout of the load screen
@@ -1395,7 +1398,7 @@ void MultiPlayerLoadScreen::init( GameInfo *game )
 
 	Int netSlot = 0;
 	// Loop through and make the loadscreen look all good.
-	for (i = 0; i < MAX_SLOTS; ++i)
+	for (Int i = 0; i < MAX_SLOTS; ++i)
 	{
 		// Load the Progress Bar
 		AsciiString winName;
@@ -1462,7 +1465,7 @@ void MultiPlayerLoadScreen::init( GameInfo *game )
 		netSlot++;
 	}
 	
-	for(i = netSlot; i < MAX_SLOTS; ++i)
+	for(Int i = netSlot; i < MAX_SLOTS; ++i)
 	{
 		m_progressBars[i]->winHide(TRUE);
 		m_playerNames[i]->winHide(TRUE);
@@ -1540,6 +1543,7 @@ void MultiPlayerLoadScreen::processProgress(Int playerId, Int percentage)
 }
 
 // GameSpyLoadScreen Class //////////////////////////////////////////////////
+#if defined(_WIN32)
 //-----------------------------------------------------------------------------
 GameSpyLoadScreen::GameSpyLoadScreen( void )
 {
@@ -1647,7 +1651,7 @@ GameSlot *lSlot = game->getSlot(game->getLocalSlotNum());
 
 	Int netSlot = 0;
 	// Loop through and make the loadscreen look all good.
-	for (i = 0; i < MAX_SLOTS; ++i)
+	for (Int i = 0; i < MAX_SLOTS; ++i)
 	{
 		// Load the Progress Bar
 		AsciiString winName;
@@ -1833,7 +1837,7 @@ GameSlot *lSlot = game->getSlot(game->getLocalSlotNum());
 		netSlot++;
 	}
 	
-	for(i = netSlot; i < MAX_SLOTS; ++i)
+	for(Int i = netSlot; i < MAX_SLOTS; ++i)
 	{
 		m_playerWin[i]->winHide(TRUE);
 		//m_playerNames[i]->winHide(TRUE);
@@ -1902,6 +1906,8 @@ void GameSpyLoadScreen::processProgress(Int playerId, Int percentage)
 
 // MapTransferLoadScreen Class //////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
+#endif
+
 MapTransferLoadScreen::MapTransferLoadScreen( void )
 {
 	//Added By Sadullah Nader
@@ -1963,7 +1969,7 @@ void MapTransferLoadScreen::init( GameInfo *game )
 
 	Int netSlot = 0;
 	// Loop through and make the loadscreen look all good.
-	for (i = 0; i < MAX_SLOTS; ++i)
+	for (Int i = 0; i < MAX_SLOTS; ++i)
 	{
 		// Load the Progress Bar
 		winName.format( "MapTransferScreen.wnd:ProgressLoad%d",i);
@@ -2004,7 +2010,7 @@ void MapTransferLoadScreen::init( GameInfo *game )
 		netSlot++;
 	}
 	
-	for(i = netSlot; i < MAX_SLOTS; ++i)
+	for(Int i = netSlot; i < MAX_SLOTS; ++i)
 	{
 		m_progressBars[i]->winHide(TRUE);
 		m_playerNames[i]->winHide(TRUE);
@@ -2083,4 +2089,3 @@ void MapTransferLoadScreen::setCurrentFilename(AsciiString filename)
 		GadgetStaticTextSetText(m_fileNameText, txt);
 	}
 }
-

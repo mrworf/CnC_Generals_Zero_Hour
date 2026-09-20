@@ -92,6 +92,15 @@ using HWND = void*;
 using HINSTANCE = void*;
 using HMODULE = void*;
 using FARPROC = void (*)();
+using HRESULT = long;
+constexpr HRESULT S_OK = 0;
+constexpr unsigned SEVERITY_ERROR = 1;
+constexpr unsigned FACILITY_ITF = 4;
+constexpr HRESULT MAKE_HRESULT(unsigned severity, unsigned facility, unsigned code)
+{
+  return static_cast<HRESULT>((severity << 31) | (facility << 16) | code);
+}
+constexpr unsigned VK_RETURN = 0x0d;
 constexpr std::size_t _MAX_PATH = 4096;
 
 struct WSADATA { WORD wVersion = 0; };
@@ -102,6 +111,25 @@ constexpr unsigned HIBYTE(WORD value) { return (value >> 8) & 0xffU; }
 inline int WSAStartup(WORD version, WSADATA *data) { if (data) data->wVersion = version; return 0; }
 inline int WSACleanup() { return 0; }
 inline int WSAGetLastError() { return errno; }
+inline char *itoa(int value, char *buffer, int radix)
+{
+  if (radix == 16) std::snprintf(buffer, 33, "%x", static_cast<unsigned>(value));
+  else if (radix == 8) std::snprintf(buffer, 33, "%o", static_cast<unsigned>(value));
+  else std::snprintf(buffer, 33, "%d", value);
+  return buffer;
+}
+inline DWORD GetTickCount()
+{
+  return static_cast<DWORD>(std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now().time_since_epoch()).count());
+}
+inline char16_t *wcsncpy(char16_t *destination, const char16_t *source, std::size_t count)
+{
+  std::size_t index = 0;
+  for (; index < count && source[index] != 0; ++index) destination[index] = source[index];
+  for (; index < count; ++index) destination[index] = 0;
+  return destination;
+}
 
 struct MEMORYSTATUS {
   DWORD dwLength = sizeof(MEMORYSTATUS);

@@ -37,6 +37,7 @@
 #include "Common/Xfer.h"
 #include "Common/BitFlagsIO.h"
 #include "GameLogic/PartitionManager.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Weapon.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/HordeUpdate.h"

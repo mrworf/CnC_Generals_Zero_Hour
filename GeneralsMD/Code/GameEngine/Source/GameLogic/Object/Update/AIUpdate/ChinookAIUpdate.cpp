@@ -44,6 +44,7 @@
 #include "GameClient/ParticleSys.h"
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/Locomotor.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/ChinookAIUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"

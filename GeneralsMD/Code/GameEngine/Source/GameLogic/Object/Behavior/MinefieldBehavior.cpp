@@ -32,6 +32,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 #define DEFINE_RELATIONSHIP_NAMES
 #include "Common/GameState.h"
+#include "Common/GlobalData.h"
 #include "Common/RandomValue.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"

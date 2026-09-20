@@ -30,6 +30,12 @@
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#include "GameClient/GameWindow.h"
+#include "GameClient/GameText.h"
+#include "GameClient/Mouse.h"
+
+#if !defined(ZH_OFFLINE_TOOLTIP_HELPERS_ONLY)
+
 #include "Common/GameEngine.h"
 #include "Common/GameState.h"
 #include "GameClient/GameText.h"
@@ -493,6 +499,8 @@ static void playerTooltip(GameWindow *window,
 	TheMouse->setCursorTooltip( tooltip, -1, NULL, 1.5f ); // the text and width are the only params used.  the others are the default values.
 }
 
+#endif
+
 void gameAcceptTooltip(GameWindow *window, WinInstanceData *instData, UnsignedInt mouse)
 {
 	Int x, y;
@@ -511,6 +519,7 @@ void gameAcceptTooltip(GameWindow *window, WinInstanceData *instData, UnsignedIn
 	}
 }
 
+#if !defined(ZH_OFFLINE_TOOLTIP_HELPERS_ONLY)
 void pingTooltip(GameWindow *window, WinInstanceData *instData, UnsignedInt mouse)
 {
 	Int x, y;
@@ -2884,4 +2893,4 @@ WindowMsgHandledType WOLGameSetupMenuSystem( GameWindow *window, UnsignedInt msg
 	return MSG_HANDLED;
 }//WindowMsgHandledType WOLGameSetupMenuSystem( GameWindow *window, UnsignedInt msg, 
 
-
+#endif

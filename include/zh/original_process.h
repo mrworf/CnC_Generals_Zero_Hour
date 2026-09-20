@@ -32,6 +32,7 @@ struct ServiceCounts {
 
 PoolConfigStatus pool_config_status() noexcept;
 std::size_t live_raw_allocations() noexcept;
+std::size_t live_pool_allocations() noexcept;
 bool initialize_services(int fail_after_stage, char* diagnostic, std::size_t diagnostic_size) noexcept;
 void shutdown_services() noexcept;
 ServiceCounts service_counts() noexcept;

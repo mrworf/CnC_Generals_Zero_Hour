@@ -187,3 +187,8 @@ template<> const char* BitFlags<ARMORSET_COUNT>::s_bitNameList[] =
 
 	NULL
 };
+
+// GCC does not instantiate this callback merely from its address in the INI
+// parse table. Keep the template body in its original owner and make the
+// table provider explicit, as the legacy MSVC build did implicitly.
+template void BitFlags<MODELCONDITION_COUNT>::parseSingleBitFromINI(INI*, void*, void*, const void*);

@@ -22,17 +22,14 @@
 // These globals remain null in the native offline profile.  Their Win32 owners
 // are UI/network entry points that M20 deliberately rejects rather than
 // silently constructing a transport or platform window.
-LANAPI *TheLAN = NULL;
-SkirmishGameInfo *TheSkirmishGameInfo = NULL;
-SkirmishGameInfo *TheChallengeGameInfo = NULL;
 IMEManagerInterface *TheIMEManager = NULL;
 Keyboard *TheKeyboard = NULL;
-DisconnectMenu *TheDisconnectMenu = NULL;
 GameSpyStagingRoom *TheGameSpyGame = NULL;
 Int NET_CRC_INTERVAL = 100;
-FunctionLexicon *TheFunctionLexicon = NULL;
-const Char *g_strFile = "data/Generals.str";
-const Char *g_csfFile = "data/%s/Generals.csf";
+// Focused fixture executables may provide their own retail-free localization
+// path constants.  Production uses these defaults.
+const Char *g_strFile __attribute__((weak)) = "data/Generals.str";
+const Char *g_csfFile __attribute__((weak)) = "data/%s/Generals.csf";
 
 namespace {
 class PosixCDManager final : public CDManager
@@ -243,9 +240,4 @@ void oversizeTheTerrain(Int)
 void doSkyBoxSet(Bool)
 {
 	unsupported_device_entry("skybox control requires a renderer provider");
-}
-
-void FixupScoreScreenMovieWindow()
-{
-	// No score-screen movie window exists in the headless profile.
 }

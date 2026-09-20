@@ -30,16 +30,22 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#include <cstdlib>
+#include <filesystem>
+#include <stdexcept>
+#include <system_error>
 
 #include "Lib/BaseType.h"
 #include "Common/FileSystem.h"
 #include "Common/GameEngine.h"
 #include "Common/GameState.h"
+#include "Common/GlobalData.h"
+#include "Common/NameKeyGenerator.h"
 #include "Common/Recorder.h"
-#include "Common/Version.h"
+#include "Common/version.h"
 #include "GameClient/WindowLayout.h"
 #include "GameClient/Gadget.h"
-#include "GameClient/GadgetListbox.h"
+#include "GameClient/GadgetListBox.h"
 #include "GameClient/Shell.h"
 #include "GameClient/KeyDefs.h"
 #include "GameClient/GameWindowManager.h"
@@ -628,12 +634,11 @@ void deleteReplay( void )
 	filename = TheRecorder->getReplayDir();
 	translate.translate(GetReplayFilenameFromListbox(listboxReplayFiles, selected));
 	filename.concat(translate);
-	if(DeleteFile(filename.str()) == 0)
+	std::error_code error;
+	if(!std::filesystem::remove(filename.str(), error))
 	{
-		char buffer[1024];
-		FormatMessage ( FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), 0, buffer, sizeof(buffer), NULL);
 		UnicodeString errorStr;
-		translate.set(buffer);
+		translate.set(error ? error.message().c_str() : "unable to remove replay");
 		errorStr.translate(translate);
 		MessageBoxOk(TheGameText->fetch("GUI:Error"),errorStr, NULL);
 	}
@@ -658,23 +663,27 @@ void copyReplay( void )
 	translate.translate(GetReplayFilenameFromListbox(listboxReplayFiles, selected));
 	filename.concat(translate);
 	
-	char path[1024];
-	LPITEMIDLIST pidl;
-	SHGetSpecialFolderLocation(NULL, CSIDL_DESKTOPDIRECTORY, &pidl);
-	SHGetPathFromIDList(pidl,path);
-	AsciiString newFilename;
-	newFilename.set(path);
-	newFilename.concat("\\");
-	newFilename.concat(translate);
-	if(CopyFile(filename.str(),newFilename.str(), FALSE) == 0)
+	const char *xdgDataHome = std::getenv("XDG_DATA_HOME");
+	if (!xdgDataHome || !*xdgDataHome)
 	{
-		wchar_t buffer[1024];
-		FormatMessageW( FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), 0, buffer, sizeof(buffer), NULL);
+		throw std::runtime_error("XDG_DATA_HOME is required to export a replay");
+	}
+	std::filesystem::path replayExport = std::filesystem::path(xdgDataHome) / "openzh" / "replays";
+	std::error_code error;
+	std::filesystem::create_directories(replayExport, error);
+	if (!error)
+	{
+		replayExport /= translate.str();
+		std::filesystem::copy_file(filename.str(), replayExport,
+			std::filesystem::copy_options::overwrite_existing, error);
+	}
+	if(error)
+	{
 		UnicodeString errorStr;
-		errorStr.set(buffer);
+		AsciiString errorAscii(error.message().c_str());
+		errorStr.translate(errorAscii);
 		errorStr.trim();
 		MessageBoxOk(TheGameText->fetch("GUI:Error"),errorStr, NULL);
 	}
 
 }
-

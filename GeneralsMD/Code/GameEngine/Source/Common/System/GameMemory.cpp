@@ -3646,6 +3646,35 @@ void shutdownMemoryManager()
 	theMainInitFlag = false;
 }
 
+Int DynamicMemoryAllocator::getRawUsedBlockCount()
+{
+	Int count = 0;
+	for (MemoryPoolSingleBlock *block = m_rawBlocks; block; block = block->getNextRawBlock())
+		++count;
+	return count;
+}
+
+Int MemoryPoolFactory::getLiveAllocationCount()
+{
+	Int count = 0;
+	for (MemoryPool *pool = m_firstPoolInFactory; pool; pool = pool->getNextPoolInList())
+		count += pool->getUsedBlockCount();
+	for (DynamicMemoryAllocator *dma = m_firstDmaInFactory; dma; dma = dma->getNextDmaInList())
+		count += dma->getRawUsedBlockCount();
+	return count;
+}
+
+void MemoryPoolFactory::writeLiveAllocationReport(FILE *output)
+{
+	if (!output) return;
+	for (MemoryPool *pool = m_firstPoolInFactory; pool; pool = pool->getNextPoolInList())
+		if (pool->getUsedBlockCount())
+			std::fprintf(output, "live pool: %s=%d\n", pool->getPoolName(), pool->getUsedBlockCount());
+	for (DynamicMemoryAllocator *dma = m_firstDmaInFactory; dma; dma = dma->getNextDmaInList())
+		if (dma->getRawUsedBlockCount())
+			std::fprintf(output, "live pool: raw=%d\n", dma->getRawUsedBlockCount());
+}
+
 //-----------------------------------------------------------------------------
 void* createW3DMemPool(const char *poolName, int allocationSize)
 {
@@ -3685,6 +3714,11 @@ namespace zh::original_process
 std::size_t live_raw_allocations() noexcept
 {
 	return theLiveRawAllocationCount.load();
+}
+
+std::size_t live_pool_allocations() noexcept
+{
+	return TheMemoryPoolFactory ? static_cast<std::size_t>(TheMemoryPoolFactory->getLiveAllocationCount()) : 0;
 }
 }
 #endif

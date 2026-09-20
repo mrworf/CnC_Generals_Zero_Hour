@@ -254,6 +254,34 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/Common/RTS/MissionStats.cpp
   GeneralsMD/Code/GameEngine/Source/Common/RTS/SpecialPower.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/GameType.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ExtendedMessageBox.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/GeneralsExpPoints.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/IMECandidate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/InGamePopupMessage.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ChallengeMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/CreditsMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/DifficultySelect.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/DisconnectWindow.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/EstablishConnectionsWindow.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/GameInfoWindow.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/KeyboardOptionsMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanGameOptionsMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanLobbyMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanMapSelectMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/MainMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/MapSelectMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/NetworkDirectConnect.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupReplay.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupPlayerInfo.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupSaveLoad.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ScoreScreen.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SinglePlayerMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishMapSelectMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/MessageBox.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ReplayControls.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/List.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/Geometry.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/QuotedPrintable.cpp
@@ -282,6 +310,8 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/Common/System/ArchiveFileSystem.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/StreamingArchiveFile.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/XferLoad.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/XferSave.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/XferCRC.cpp
   GeneralsMD/Code/GameEngine/Source/Common/MessageStream.cpp
   GeneralsMD/Code/GameEngine/Source/Common/Recorder.cpp
@@ -392,6 +422,8 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogicDispatch.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/System/CaveSystem.cpp
   GeneralsMD/Code/GameEngine/Source/GameNetwork/GameSpy/Chat.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/GameSpy/LobbyUtils.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLGameSetupMenu.cpp
   GeneralsMD/Code/GameEngine/Source/Common/INI/INIParticleSys.cpp
   GeneralsMD/Code/GameEngine/Source/Common/RTS/PlayerTemplate.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/System/RankInfo.cpp
@@ -405,12 +437,16 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/Common/INI/INIWater.cpp
   GeneralsMD/Code/GameEngine/Source/Common/INI/INIWeapon.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/Snow.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Statistics.cpp
   GeneralsMD/Code/GameEngine/Source/Common/INI/INIWebpageURL.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowTransitions.cpp
   GeneralsMD/Code/GameEngine/Source/Common/BitFlags.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Bezier/BezierSegment.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Bezier/BezFwdIterator.cpp
   GeneralsMD/Code/GameEngine/Source/Common/DiscreteCircle.cpp
   GeneralsMD/Code/GameEngine/Source/Common/StateMachine.cpp
   GeneralsMD/Code/GameEngine/Source/Common/RTS/AcademyStats.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/SkirmishBattleHonors.cpp
   GeneralsMD/Code/GameEngine/Source/Common/RTS/ActionManager.cpp
   GeneralsMD/Code/GameEngine/Source/Common/RTS/Handicap.cpp
   GeneralsMD/Code/GameEngine/Source/Common/RTS/Player.cpp
@@ -436,6 +472,7 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBar.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarBeacon.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarCommand.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarCommandProcessing.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarMultiSelect.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarOCLTimer.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarObserver.cpp
@@ -446,6 +483,8 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Diplomacy.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/InGameChat.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/QuitMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/DisconnectMenu/DisconnectMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/EstablishConnectionsMenu/EstablishConnectionsMenu.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarScheme.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/OptionsMenu.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Shell/Shell.cpp
@@ -493,11 +532,13 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/Common/RTS/ScoreKeeper.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/BuildAssistant.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/DisplayStringManager.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/DisplayString.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/Shadow.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindow.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManager.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManagerScript.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowTransitionsStyles.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/LoadScreen.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetStaticText.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIGroup.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIPlayer.cpp
@@ -513,16 +554,48 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProneUpdate.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/VictoryConditions.cpp
   GeneralsMD/Code/GameEngine/Source/GameNetwork/IPEnumeration.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/GUIUtil.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/LANAPI.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/LANAPICallbacks.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/LANAPIhandlers.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/LANGameInfo.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/NetworkUtil.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/Transport.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/udp.cpp
   GeneralsMD/Code/GameEngine/Source/GameNetwork/GameInfo.cpp
   GeneralsMD/Code/GameEngine/Source/GameNetwork/GameMessageParser.cpp
   GeneralsMD/Code/GameEngine/Source/GameNetwork/NetworkLinuxFactory.cpp
   src/original_runtime/linux_legacy_boundary.cpp
+  src/original_runtime/linux_online_callback_boundary.cpp
   src/original_runtime/posix_crash.cpp
   src/original_runtime/well_known_keys.cpp
 )
+# The original ModuleFactory constructor registers every module in these
+# directories. Keeping the registry live requires its matching original
+# constructor providers as one auditable startup closure.
+file(GLOB_RECURSE ZH_M20_MODULE_REGISTRY_PROVIDERS CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Body/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Create/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Damage/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SpecialPower/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/*.cpp")
+target_sources(zh_original_config_providers PRIVATE
+  ${ZH_M20_MODULE_REGISTRY_PROVIDERS}
+  GeneralsMD/Code/GameEngine/Source/GameClient/Drawable/Update/AnimatedParticleSysBoneClientUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Drawable/Update/SwayClientUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowGlobal.cpp)
 set_source_files_properties(
-  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/OptionsMenu.cpp
-  PROPERTIES COMPILE_DEFINITIONS ZH_OPTION_PREFERENCES_ONLY)
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupPlayerInfo.cpp
+  PROPERTIES COMPILE_DEFINITIONS ZH_BATTLE_HONOR_HELPERS_ONLY)
+set_source_files_properties(
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/GameSpy/LobbyUtils.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLGameSetupMenu.cpp
+  PROPERTIES COMPILE_DEFINITIONS ZH_OFFLINE_TOOLTIP_HELPERS_ONLY)
 foreach(config_target zh_original_config_spine zh_original_config_providers)
   target_include_directories(${config_target} PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
@@ -680,6 +753,27 @@ target_link_libraries(zh_main PRIVATE
   zh_null_audio zh_null_video zh_test_support zh_data
   zh_lan zh_singleplayer
 )
+
+# Original-source Linux lifecycle entry.  The legacy bootstrap remains available
+# while M20 proves this entry in isolation; slice acceptance promotes this target
+# only after its original-provider identity and failure contracts are green.
+add_executable(zh_original_main
+  src/original_runtime/linux_main.cpp
+  src/original_runtime/linux_game_engine.cpp
+  $<TARGET_OBJECTS:zh_original_lifecycle_spine>
+  $<TARGET_OBJECTS:zh_original_config_spine>)
+target_include_directories(zh_original_main PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include/legacy"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+target_link_libraries(zh_original_main PRIVATE
+  zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
+target_link_options(zh_original_main PRIVATE -Wl,--gc-sections
+  "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map")
 set_property(TARGET zh_main PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_LEGACY_ZH_MAIN_SOURCES}")
 
 install(TARGETS zh_main RUNTIME DESTINATION bin)
@@ -706,7 +800,7 @@ if(ZH_BUILD_TESTS)
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
   target_link_libraries(original_config_link_probe PRIVATE
-    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_build_options)
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
   target_link_options(original_config_link_probe PRIVATE
     -Wl,--gc-sections
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-config-dispatch.link.map")
@@ -756,7 +850,7 @@ if(ZH_BUILD_TESTS)
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
   target_link_libraries(original_data_startup_tests PRIVATE
-    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_build_options)
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
   target_link_options(original_data_startup_tests PRIVATE -Wl,--gc-sections
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-data-startup.link.map")
   add_test(NAME original_data_startup COMMAND original_data_startup_tests)
@@ -823,6 +917,38 @@ if(ZH_BUILD_TESTS)
     --member GameLogic.cpp.o
     --required-symbol TheGameLogic)
   set_tests_properties(original_headless_update_provider_removal PROPERTIES LABELS "original-headless-update;source-identity")
+  add_test(NAME original_production_entry COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_production_entry.py"
+    --executable "$<TARGET_FILE:zh_original_main>")
+  set_tests_properties(original_production_entry PROPERTIES
+    LABELS "original-production-entry;source-identity" TIMEOUT 30)
+  add_test(NAME original_production_entry_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_headless_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map"
+    --executable "$<TARGET_FILE:zh_original_main>"
+    --provider-target zh_original_config_providers
+    --spine-target zh_original_lifecycle_spine)
+  set_tests_properties(original_production_entry_identity PROPERTIES
+    LABELS "original-production-entry;source-identity")
+  add_test(NAME original_production_entry_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target zh_original_main
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member GameLogic.cpp.o
+    --required-symbol TheGameLogic)
+  set_tests_properties(original_production_entry_provider_removal PROPERTIES
+    LABELS "original-production-entry;source-identity")
+  add_test(NAME original_production_function_lexicon COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_function_lexicon.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --archive "$<TARGET_FILE:zh_original_config_providers>"
+    --executable "$<TARGET_FILE:zh_original_main>"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map")
+  set_tests_properties(original_production_function_lexicon PROPERTIES
+    LABELS "original-production-entry;source-identity;online-boundary")
   add_executable(original_lifecycle_subsystem_tests
     tests/original_lifecycle/test_subsystem_lifecycle.cpp)
   target_include_directories(original_lifecycle_subsystem_tests PRIVATE

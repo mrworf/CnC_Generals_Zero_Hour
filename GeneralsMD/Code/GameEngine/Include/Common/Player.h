@@ -86,7 +86,7 @@ class SpecialPowerModule;
 class BattlePlanBonuses;
 
 enum BattlePlanStatus : int;
-enum UpgradeStatusType;
+enum UpgradeStatusType : int;
 enum CommandSourceType : int;
 
 enum ScienceAvailabilityType

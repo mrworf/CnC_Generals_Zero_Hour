@@ -156,7 +156,8 @@ void ScriptConditions::init( void )
 void ScriptConditions::reset( void )
 {
 
-	s_transportStatuses->deleteInstance();
+	if (s_transportStatuses)
+		s_transportStatuses->deleteInstance();
 	s_transportStatuses = NULL;
 	// Empty for now.  jba.
 }  // end reset
@@ -2988,4 +2989,3 @@ Bool ScriptConditions::evaluateCondition( Condition *pCondition )
 		
 	}
 }
-

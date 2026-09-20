@@ -83,5 +83,6 @@ template<> const char* BitFlags<OBJECT_STATUS_COUNT>::s_bitNameList[] =
 };
 
 template void BitFlags<OBJECT_STATUS_COUNT>::parseSingleBitFromINI(INI*, void*, void*, const void*);
+template void BitFlags<OBJECT_STATUS_COUNT>::parseFromINI(INI*, void*, void*, const void*);
 
 ObjectStatusMaskType OBJECT_STATUS_MASK_NONE;	// inits to all zeroes

@@ -26,11 +26,11 @@
 
 #define WIN32_LEAN_AND_MEAN  // only bare bones windows stuff wanted
 
-#include "Common/CRC.h"
+#include "Common/crc.h"
 #include "Common/GameState.h"
 #include "Common/Registry.h"
 #include "GameNetwork/LANAPI.h"
-#include "GameNetwork/NetworkUtil.h"
+#include "GameNetwork/networkutil.h"
 #include "Common/GlobalData.h"
 #include "Common/RandomValue.h"
 #include "GameClient/GameText.h"
@@ -79,7 +79,7 @@ LANAPI::LANAPI( void ) : m_transport(NULL)
 	//
 	m_lobbyPlayers = NULL;
 	m_games = NULL;
-	m_name = L""; // safe default?
+	m_name = u""; // safe default?
 	m_pendingAction = ACT_NONE;
 	m_expiration = 0;
 	m_localIP = 0;
@@ -118,20 +118,11 @@ void LANAPI::init( void )
 	
 	m_lastGameopt = "";
 
-	unsigned long bufSize = UNLEN + 1;
-	char userName[UNLEN + 1];
-	if (!GetUserName(userName, &bufSize))
-	{
-		strcpy(userName, "unknown");
-	}
-	m_userName = userName;
-
-	bufSize = MAX_COMPUTERNAME_LENGTH + 1;
-	char computerName[MAX_COMPUTERNAME_LENGTH + 1];
-	if (!GetComputerName(computerName, &bufSize))
-	{
+	const char *userName = std::getenv("USER");
+	m_userName = userName && *userName ? userName : "unknown";
+	char computerName[256] = {};
+	if (gethostname(computerName, sizeof(computerName) - 1) != 0)
 		strcpy(computerName, "unknown");
-	}
 	m_hostName = computerName;
 }
 
@@ -681,7 +672,7 @@ void LANAPI::RequestGameLeave( void )
 	LANMessage msg;
 	msg.LANMessageType = LANMessage::MSG_REQUEST_GAME_LEAVE;
 	fillInLANMessage( &msg );
-	wcsncpy(msg.GameToLeave.gameName, (m_currentGame)?m_currentGame->getName().str():L"", g_lanGameNameLength);
+	wcsncpy(msg.GameToLeave.gameName, (m_currentGame)?m_currentGame->getName().str():u"", g_lanGameNameLength);
 	msg.GameToLeave.gameName[g_lanGameNameLength] = 0;
 	sendMessage(&msg);
 	m_transport->update();  // Send immediately, before OnPlayerLeave below resets everything.
@@ -764,20 +755,20 @@ void LANAPI::RequestHasMap( void )
 		Bool willTransfer = TRUE;
 		if (mapData)
 		{
-			mapDisplayName.format(L"%ls", mapData->m_displayName.str());
+			mapDisplayName = mapData->m_displayName;
 			if (mapData->m_isOfficial)
 				willTransfer = FALSE;
 		}
 		else
 		{
-			mapDisplayName.format(L"%hs", TheGameState->getMapLeafName(m_currentGame->getMap()).str());
+			mapDisplayName.translate(TheGameState->getMapLeafName(m_currentGame->getMap()));
 			willTransfer = WouldMapTransfer(m_currentGame->getMap());
 		}
 		if (willTransfer)
 			text.format(TheGameText->fetch("GUI:LocalPlayerNoMapWillTransfer"), mapDisplayName.str());
 		else
 			text.format(TheGameText->fetch("GUI:LocalPlayerNoMap"), mapDisplayName.str());
-		OnChat(UnicodeString(L"SYSTEM"), m_localIP, text, LANCHAT_SYSTEM);
+		OnChat(UnicodeString(u"SYSTEM"), m_localIP, text, LANCHAT_SYSTEM);
 	}
 }
 
@@ -785,7 +776,7 @@ void LANAPI::RequestChat( UnicodeString message, ChatType format )
 {
 	LANMessage msg;
 	fillInLANMessage( &msg );
-	wcsncpy(msg.Chat.gameName, (m_currentGame)?m_currentGame->getName().str():L"", g_lanGameNameLength);
+	wcsncpy(msg.Chat.gameName, (m_currentGame)?m_currentGame->getName().str():u"", g_lanGameNameLength);
 	msg.Chat.gameName[g_lanGameNameLength] = 0;
 	msg.LANMessageType = LANMessage::MSG_CHAT;
 	msg.Chat.chatType = format;
@@ -893,7 +884,7 @@ void LANAPI::RequestGameCreate( UnicodeString gameName, Bool isDirectConnect )
 //	myGame->setInProgress(false);
 	myGame->enterGame();
 	UnicodeString s;
-	s.format(L"%8.8X%8.8X", m_localIP, myGame->getSeed());
+	s.format(u"%8.8X%8.8X", m_localIP, myGame->getSeed());
 	if (gameName.isEmpty())
 		s.concat(m_name);
 	else

@@ -458,6 +458,7 @@ public:
 
 	Int getDmaMemoryPoolCount() const { return m_numPools; }
 	MemoryPool* getNthDmaMemoryPool(Int i) const { return m_pools[i]; }
+	Int getRawUsedBlockCount();
 
 	#ifdef MEMORYPOOL_DEBUG
 
@@ -540,6 +541,8 @@ public:
 	void reset();
 
 	void memoryPoolUsageReport( const char* filename, FILE *appendToFileInstead = NULL );
+	Int getLiveAllocationCount();
+	void writeLiveAllocationReport(FILE *output);
 
 	#ifdef MEMORYPOOL_DEBUG
 
@@ -781,7 +784,7 @@ public:
 	MemoryPoolObjectHolder(MemoryPoolObject *mpo = NULL) : m_mpo(mpo) { }
 	void hold(MemoryPoolObject *mpo) { DEBUG_ASSERTCRASH(!m_mpo, ("already holding")); m_mpo = mpo; }
 	void release() { m_mpo = NULL; }
-	~MemoryPoolObjectHolder() { m_mpo->deleteInstance(); }
+	~MemoryPoolObjectHolder() { if (m_mpo) m_mpo->deleteInstance(); }
 };
 
 

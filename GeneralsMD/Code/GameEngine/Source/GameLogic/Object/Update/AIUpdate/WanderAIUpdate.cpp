@@ -30,6 +30,7 @@
 
 #include "Common/RandomValue.h"
 #include "GameLogic/Module/WanderAIUpdate.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Object.h"
 
 //-------------------------------------------------------------------------------------------------

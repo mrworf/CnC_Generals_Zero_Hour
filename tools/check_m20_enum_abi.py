@@ -76,6 +76,10 @@ def main() -> int:
         source.write_text(
             '#include "PreRTS.h"\n'
             f'#include "{(root / "GeneralsMD/Code/GameEngine/Source/Common/GameEngine.cpp").as_posix()}"\n'
+            f'#include "{(root / "GeneralsMD/Code/GameEngine/Include/Common/ModelState.h").as_posix()}"\n'
+            f'#include "{(root / "GeneralsMD/Code/GameEngine/Include/Common/Upgrade.h").as_posix()}"\n'
+            f'#include "{(root / "GeneralsMD/Code/GameEngine/Include/GameClient/TerrainRoads.h").as_posix()}"\n'
+            f'#include "{(root / "GeneralsMD/Code/GameEngine/Include/GameLogic/AIStateMachine.h").as_posix()}"\n'
             f'#include "{(root / "GeneralsMD/Code/GameEngine/Include/Common/ThingSort.h").as_posix()}"\n'
             f'#include "{(root / "GeneralsMD/Code/GameEngine/Include/GameLogic/Module/ProductionUpdate.h").as_posix()}"\n'
             + "\n".join(f'static_assert(sizeof({name}) == sizeof(int), "{name} ABI");' for name in names)

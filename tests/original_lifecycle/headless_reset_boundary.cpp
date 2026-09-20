@@ -28,7 +28,3 @@ void GameWindowManager::winGetTextSize(GameFont *, UnicodeString, Int *width, In
 	if (height) *height = 0;
 }
 GameFont *GameWindowManager::winFindFont(AsciiString, Int, Bool) { return NULL; }
-
-void *FunctionLexicon::findFunction(NameKeyType, TableIndex) { return NULL; }
-GameWinDrawFunc FunctionLexicon::gameWinDrawFunc(NameKeyType, TableIndex) { return NULL; }
-WindowLayoutInitFunc FunctionLexicon::winLayoutInitFunc(NameKeyType, TableIndex) { return NULL; }

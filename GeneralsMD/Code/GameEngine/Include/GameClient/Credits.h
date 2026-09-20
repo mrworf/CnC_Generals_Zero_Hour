@@ -58,6 +58,7 @@
 #include "GameClient/FontDesc.h"
 #include "GameClient/Color.h"
 #include "Common/SubsystemInterface.h"
+#include "Common/INI.h"
 
 //-----------------------------------------------------------------------------
 // FORWARD REFERENCES /////////////////////////////////////////////////////////

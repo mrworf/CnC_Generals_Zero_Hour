@@ -4,6 +4,7 @@
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
 #include "Common/FileSystem.h"
+#include "Common/FunctionLexicon.h"
 #include "Common/GlobalData.h"
 #include "Common/MessageStream.h"
 #include "Common/NameKeyGenerator.h"
@@ -17,6 +18,7 @@
 #include "GameClient/GameText.h"
 #include "GameClient/InGameUI.h"
 #include "GameClient/GameWindowManager.h"
+#include "GameClient/GUICallbacks.h"
 #include "GameClient/HeaderTemplate.h"
 #include "GameClient/View.h"
 #include "GameLogic/AI.h"
@@ -375,6 +377,46 @@ int main()
 	NameKeyGenerator nameKeys;
 	TheNameKeyGenerator = &nameKeys;
 	nameKeys.init();
+	FunctionLexicon functionLexicon;
+	TheFunctionLexicon = &functionLexicon;
+	functionLexicon.init();
+	const NameKeyType offlineCallbackKey = nameKeys.nameToKey(AsciiString("MainMenuSystem"));
+	check(functionLexicon.gameWinSystemFunc(offlineCallbackKey) == MainMenuSystem,
+		"offline callback did not resolve to its actual original provider");
+	const NameKeyType onlineCallbackKey = nameKeys.nameToKey(AsciiString("WOLLoginMenuSystem"));
+	GameWinSystemFunc onlineCallback = functionLexicon.gameWinSystemFunc(onlineCallbackKey);
+	Bool onlineRejected = FALSE;
+	try
+	{
+		onlineCallback(NULL, 0, 0, 0);
+	}
+	catch (const std::runtime_error& error)
+	{
+		onlineRejected = std::string(error.what()) ==
+			"unsupported online callback: WOLLoginMenuSystem";
+	}
+	check(onlineRejected, "online callback did not fail closed with its exact name");
+	const auto rejectsLayout = [&](const char *name, WindowLayoutInitFunc callback) {
+		try
+		{
+			callback(NULL, NULL);
+		}
+		catch (const std::runtime_error& error)
+		{
+			return std::string(error.what()) == std::string("unsupported online callback: ") + name;
+		}
+		return false;
+	};
+	check(rejectsLayout("WOLLoginMenuInit", functionLexicon.winLayoutInitFunc(
+		nameKeys.nameToKey(AsciiString("WOLLoginMenuInit")))),
+		"online init callback did not fail closed with its exact name");
+	check(rejectsLayout("WOLLobbyMenuUpdate", reinterpret_cast<WindowLayoutInitFunc>(
+		functionLexicon.winLayoutUpdateFunc(nameKeys.nameToKey(AsciiString("WOLLobbyMenuUpdate"))))),
+		"online update callback did not fail closed with its exact name");
+	check(rejectsLayout("WOLStatusMenuShutdown", reinterpret_cast<WindowLayoutInitFunc>(
+		functionLexicon.winLayoutShutdownFunc(nameKeys.nameToKey(AsciiString("WOLStatusMenuShutdown"))))),
+		"online shutdown callback did not fail closed with its exact name");
+	TheFunctionLexicon = NULL;
 	PosixLocalFileSystem localFiles(input);
 	FileSystem files;
 	TheLocalFileSystem = &localFiles;

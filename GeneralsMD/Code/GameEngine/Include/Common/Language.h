@@ -94,7 +94,11 @@ typedef enum
 #define GameStrstr wcsstr 
 #define GameStrchr wcschr
 #define GameIsDigit iswdigit
+#if defined(_WIN32)
 #define GameIsAscii iswascii
+#else
+#define GameIsAscii(c) (static_cast<unsigned int>(c) <= 0x7fU)
+#endif
 #define GameIsAlNum iswalnum
 #define GameIsAlpha iswalpha
 #define GameArrayEnd(array) (array)[(sizeof(array)/sizeof((array)[0]))-1] = 0
@@ -105,4 +109,3 @@ typedef enum
 extern LanguageID OurLanguage;  ///< our current language definition
 
 #endif // __LANGUAGE_H_
-

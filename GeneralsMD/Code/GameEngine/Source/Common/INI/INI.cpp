@@ -395,8 +395,11 @@ void INI::load( AsciiString filename, INILoadType loadType, Xfer *pXfer )
 				else
 				{
 					DEBUG_ASSERTCRASH( 0, ("[LINE: %d - FILE: '%s'] Unknown block '%s'\n",
-														 getLineNum(), getFilename().str(), token ) );
-					throw INI_UNKNOWN_TOKEN;
+												 getLineNum(), getFilename().str(), token ) );
+					char buff[1024];
+					std::snprintf(buff, sizeof(buff), "Unknown INI block '%s' in '%s' at line %d",
+						token, getFilename().str(), getLineNum());
+					throw INIException(buff);
 				}
 				
 			}  // end if 

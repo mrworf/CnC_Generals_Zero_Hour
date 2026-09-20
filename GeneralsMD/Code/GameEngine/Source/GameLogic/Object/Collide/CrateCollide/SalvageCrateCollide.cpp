@@ -34,7 +34,7 @@
 
 #include "Common/AudioEventRTS.h"
 #include "Common/MiscAudio.h"
-#include "Common/Kindof.h"
+#include "Common/KindOf.h"
 #include "Common/RandomValue.h"
 #include "Common/Player.h"
 #include "Common/ThingTemplate.h"
@@ -42,6 +42,7 @@
 #include "GameClient/GameText.h"
 #include "GameClient/InGameUI.h"
 #include "GameLogic/ExperienceTracker.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Object.h"
 
 //-------------------------------------------------------------------------------------------------

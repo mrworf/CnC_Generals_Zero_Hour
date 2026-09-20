@@ -36,6 +36,7 @@
 #include "Common/RandomValue.h"
 #include "Common/Player.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Module/EMPUpdate.h"
 #include "GameLogic/ObjectIter.h"
 #include "GameLogic/PartitionManager.h"
@@ -562,7 +563,6 @@ void LeafletDropBehavior::loadPostProcess( void )
 {
 
 }  // end loadPostProcess
-
 
 
 

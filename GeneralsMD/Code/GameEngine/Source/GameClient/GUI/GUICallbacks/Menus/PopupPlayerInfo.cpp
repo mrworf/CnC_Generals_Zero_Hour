@@ -35,8 +35,8 @@
 #include "Common/BattleHonors.h"
 #include "Common/CustomMatchPreferences.h"
 #include "Common/GameSpyMiscPreferences.h"
-#include "Common/Filesystem.h"
-#include "GameClient/mouse.h"
+#include "Common/FileSystem.h"
+#include "GameClient/Mouse.h"
 #include "GameClient/GameText.h"
 #include "GameClient/WindowLayout.h"
 #include "GameClient/Gadget.h"
@@ -48,6 +48,7 @@
 #include "GameClient/GadgetStaticText.h"
 #include "GameClient/Display.h"
 #include "GameClient/MessageBox.h"
+#if !defined(ZH_BATTLE_HONOR_HELPERS_ONLY)
 #include "GameNetwork/GameSpyOverlay.h"
 #include "GameNetwork/GameSpy/PeerDefs.h"
 #include "GameNetwork/GameSpy/PeerThread.h"
@@ -59,6 +60,7 @@
 #include "GameNetwork/GameSpy/LobbyUtils.h"
 
 #include "WWDownload/Registry.h"
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -66,6 +68,7 @@
 //#pragma MESSAGE("************************************** WARNING, optimization disabled for debugging purposes")
 #endif
 
+#if !defined(ZH_BATTLE_HONOR_HELPERS_ONLY)
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
 // window ids ------------------------------------------------------------------------------
 static NameKeyType parentID = NAMEKEY_INVALID;
@@ -296,6 +299,8 @@ void SetLookAtPlayer( Int id, AsciiString nick)
 //	BATTLE_HONOR_SOLO_GLA_S			= 0x0800000,
 //	BATTLE_HONOR_SOLO_GLA_G			= 0x1000000,
 
+#endif
+
 void BattleHonorTooltip(GameWindow *window,
 												WinInstanceData *instData,
 												UnsignedInt mouse)
@@ -312,8 +317,8 @@ void BattleHonorTooltip(GameWindow *window,
 		return;
 	}
 
-	Int battleHonor = (Int)GadgetListBoxGetItemData( window, row, col );
-	Int extraValue = (Int)GadgetListBoxGetItemData( window, row - 1, col );
+	Int battleHonor = (Int)(intptr_t)GadgetListBoxGetItemData( window, row, col );
+	Int extraValue = (Int)(intptr_t)GadgetListBoxGetItemData( window, row - 1, col );
 	if (battleHonor == 0)
 	{
 		//DEBUG_CRASH(("No Battle Honor in listbox row %d, col %d!", row, col));
@@ -509,6 +514,7 @@ void InsertBattleHonor(GameWindow *list, const Image *image, Bool enabled, Int i
 	}
 }
 
+#if !defined(ZH_BATTLE_HONOR_HELPERS_ONLY)
 static void populateBattleHonors(const PSPlayerStats& stats, Int battleHonors, Int gamesInRow, Int lastGen, Int challenge, GameWindow *list)
 {
 	if( !list )
@@ -1537,3 +1543,4 @@ static void messageBoxYes( void )
 	TheGameSpyInfo->setLocalProfileID(0);
 	
 }
+#endif

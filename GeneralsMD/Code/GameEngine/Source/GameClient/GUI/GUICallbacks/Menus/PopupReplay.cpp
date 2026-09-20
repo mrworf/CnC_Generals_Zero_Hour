@@ -47,6 +47,9 @@
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#include <filesystem>
+#include <system_error>
+
 #include "Common/LocalFileSystem.h"
 #include "Common/MessageStream.h"
 #include "Common/Recorder.h"
@@ -285,12 +288,12 @@ void reallySaveReplay(void)
 
 	if (TheLocalFileSystem->doesFileExist(filename.str()))
 	{
-		if(DeleteFile(filename.str()) == 0)
+		std::error_code error;
+		if(!std::filesystem::remove(filename.str(), error))
 		{
-			wchar_t buffer[1024];
-			FormatMessageW ( FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), 0, buffer, sizeof(buffer), NULL);
 			UnicodeString errorStr;
-			errorStr.set(buffer);
+			AsciiString errorAscii(error ? error.message().c_str() : "unable to remove replay");
+			errorStr.translate(errorAscii);
 			errorStr.trim();
 			if(messageBoxWin)
 			{
@@ -310,12 +313,13 @@ void reallySaveReplay(void)
 	}
 
 	// copy the replay to the right place
-	if(CopyFile(oldFilename.str(),filename.str(), FALSE) == 0)
+	std::error_code error;
+	if(!std::filesystem::copy_file(oldFilename.str(), filename.str(),
+			std::filesystem::copy_options::overwrite_existing, error))
 	{
-		wchar_t buffer[1024];
-		FormatMessageW( FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), 0, buffer, sizeof(buffer), NULL);
 		UnicodeString errorStr;
-		errorStr.set(buffer);
+		AsciiString errorAscii(error ? error.message().c_str() : "unable to copy replay");
+		errorStr.translate(errorAscii);
 		errorStr.trim();
 		if(messageBoxWin)
 		{

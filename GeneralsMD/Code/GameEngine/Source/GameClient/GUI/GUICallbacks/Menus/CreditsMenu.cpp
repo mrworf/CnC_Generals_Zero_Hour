@@ -60,6 +60,7 @@
 #include "Common/GameAudio.h"
 #include "Common/AudioEventRTS.h"
 #include "Common/AudioHandleSpecialValues.h"
+#include "Common/NameKeyGenerator.h"
 
 #include "GameClient/Credits.h"
 #include "GameClient/WindowLayout.h"
@@ -253,4 +254,3 @@ WindowMsgHandledType CreditsMenuSystem( GameWindow *window, UnsignedInt msg,
 //-----------------------------------------------------------------------------
 // PRIVATE FUNCTIONS //////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-

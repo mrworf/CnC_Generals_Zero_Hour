@@ -1002,7 +1002,6 @@ Int parseCameraDebug(char *args[], int num)
 }
 #endif
 
-#if defined(_DEBUG) || defined(_INTERNAL)
 Int parseBenchmark(char *args[], int num)
 {
 	if (TheWritableGlobalData && num > 1)
@@ -1012,7 +1011,6 @@ Int parseBenchmark(char *args[], int num)
 	}
 	return 2;
 }
-#endif
 
 #if defined(_DEBUG) || defined(_INTERNAL)
 #ifdef DUMP_PERF_STATS
@@ -1159,6 +1157,8 @@ static CommandLineParam params[] =
 	{ "-mod", parseMod },
 	{ "-noshaders", parseNoShaders },
 	{ "-quickstart", parseQuickStart },
+	{ "-benchmark", parseBenchmark },
+	{ "-buildmapcache", parseBuildMapCache },
 
 #if (defined(_DEBUG) || defined(_INTERNAL))
 	{ "-noaudio", parseNoAudio },
@@ -1167,7 +1167,6 @@ static CommandLineParam params[] =
 	{ "-novideo", parseNoVideo },
 	{ "-noLogOrCrash", parseNoLogOrCrash },
 	{ "-FPUPreserve", parseFPUPreserve },
-	{ "-benchmark", parseBenchmark },
 #ifdef DUMP_PERF_STATS
 	{ "-stats", parseStats }, 
 #endif
@@ -1227,7 +1226,6 @@ static CommandLineParam params[] =
 	{ "-RunAhead", parseRunAhead },
 	{ "-noshroud", parseNoShroud },
 	{ "-forceBenchmark", parseForceBenchmark },
-	{ "-buildmapcache", parseBuildMapCache },
 	{ "-noshadowvolumes", parseNoShadows },
 	{ "-nofx", parseNoFX },
 	{ "-ignoresync", parseSync },

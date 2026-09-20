@@ -34,6 +34,7 @@
 #include "Common/ThingTemplate.h"
 
 #include "GameLogic/Locomotor.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Module/RailroadGuideAIUpdate.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
@@ -107,7 +108,7 @@ RailroadBehavior::RailroadBehavior( Thing *thing, const ModuleData *moduleData )
 {
 	const RailroadBehaviorModuleData *modData = getRailroadBehaviorModuleData();
 
-	m_carriageTemplateNameIterator = 0;
+	m_carriageTemplateNameIterator = modData->m_carriageTemplateNameData.begin();
 
 	m_nextStationTask = DO_NOTHING;
 	m_trailerID = INVALID_ID;
@@ -1643,7 +1644,6 @@ void RailroadBehavior::loadPostProcess( void )
 	m_clicketyClackSound.setObjectID( getObject()->getID() ) ;
 
 }  // end loadPostProcess
-
 
 
 

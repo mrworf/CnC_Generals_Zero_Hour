@@ -495,12 +495,12 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 	
 	{ "KeyboardCameraRotateSpeed", INI::parseReal, NULL, offsetof( GlobalData, m_keyboardCameraRotateSpeed ) },
 	{ "PlayStats",									INI::parseInt,				NULL,			offsetof( GlobalData, m_playStats ) },
+	{ "BenchmarkTimer",			INI::parseInt,				NULL,			offsetof( GlobalData, m_benchmarkTimer ) },
 
 #if defined(_DEBUG) || defined(_INTERNAL)
 	{ "DisableCameraFade",			INI::parseBool,				NULL,			offsetof( GlobalData, m_disableCameraFade ) },
 	{ "DisableScriptedInputDisabling",			INI::parseBool,		NULL,			offsetof( GlobalData, m_disableScriptedInputDisabling ) },
 	{ "DisableMilitaryCaption",			INI::parseBool,				NULL,			offsetof( GlobalData, m_disableMilitaryCaption ) },
-	{ "BenchmarkTimer",			INI::parseInt,				NULL,			offsetof( GlobalData, m_benchmarkTimer ) },
 	{ "CheckMemoryLeaks", INI::parseBool, NULL, offsetof(GlobalData, m_checkForLeaks) },
 	{ "Wireframe",								INI::parseBool,				NULL,			offsetof( GlobalData, m_wireframe ) },
 	{ "StateMachineDebug",				INI::parseBool,				NULL,			offsetof( GlobalData, m_stateMachineDebug ) },
@@ -555,6 +555,7 @@ GlobalData::GlobalData()
 	m_specialPowerUsesDelay = TRUE;
 #endif
   m_TiVOFastMode = FALSE;
+	m_benchmarkTimer = -1;
 
 #if defined(_DEBUG) || defined(_INTERNAL)
 	m_wireframe = 0;
@@ -583,7 +584,6 @@ GlobalData::GlobalData()
 	m_debugIgnoreStackTrace = FALSE;
 	m_vTune = false;
 	m_checkForLeaks = TRUE;
-	m_benchmarkTimer = -1;
   
 
 	m_allowUnselectableSelection = FALSE;
@@ -1106,7 +1106,10 @@ GlobalData::GlobalData()
     return std::string(value);
   };
   const auto dataRoot = zh::foundation::resolve_xdg_paths(lookup).data;
-  std::filesystem::create_directories(dataRoot);
+  std::error_code dataDirectoryError;
+  std::filesystem::create_directories(dataRoot, dataDirectoryError);
+  if (dataDirectoryError)
+    throw std::runtime_error("cannot create XDG data directory: " + dataDirectoryError.message());
   std::string nativeUserData = dataRoot.string();
   if (nativeUserData.empty() || nativeUserData.back() != '/') nativeUserData.push_back('/');
   m_userDataDir = nativeUserData.c_str();

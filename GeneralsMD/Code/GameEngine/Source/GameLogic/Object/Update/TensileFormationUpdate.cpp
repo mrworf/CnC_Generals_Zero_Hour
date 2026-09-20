@@ -39,7 +39,8 @@
 #include "GameLogic/Module/TensileFormationUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/PartitionManager.h"
-#include "GameLogic/GameLogic.h" 
+#include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/AI.h"
 #include "GameLogic/AIPathfind.h"
 

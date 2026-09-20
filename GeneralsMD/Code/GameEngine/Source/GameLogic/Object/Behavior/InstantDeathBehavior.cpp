@@ -42,6 +42,7 @@
 #include "GameClient/FXList.h"
 #include "GameClient/InGameUI.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/InstantDeathBehavior.h"
 #include "GameLogic/Module/AIUpdate.h"
