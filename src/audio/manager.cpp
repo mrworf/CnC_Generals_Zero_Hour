@@ -169,6 +169,7 @@ struct AudioManager::Impl {
             case CommandType::focused: focused = command.flag; break;
             case CommandType::shutdown:
                 for (auto& slot : slots) complete(slot, CompletionReason::shutdown);
+                output.store(AudioOutputState::stopped, std::memory_order_release);
                 stopped.store(true, std::memory_order_release);
                 break;
             }
@@ -184,6 +185,9 @@ struct AudioManager::Impl {
     std::atomic<std::size_t> active{0};
     std::atomic<bool> stopping{false};
     std::atomic<bool> stopped{false};
+    std::atomic<AudioOutputState> output{AudioOutputState::uninitialized};
+    std::atomic<std::size_t> warnings{0};
+    std::string warning;
     Vec3 listener{};
     bool paused = false;
     bool focused = true;
@@ -262,6 +266,44 @@ void AudioManager::set_focused(bool focused)
     Command command{CommandType::focused}; command.flag = focused; impl_->queue(command);
 }
 
+void AudioManager::configure_output(bool device_available) noexcept
+{
+    if (impl_->stopping.load(std::memory_order_acquire)) return;
+    if (device_available) {
+        impl_->output.store(AudioOutputState::device, std::memory_order_release);
+        return;
+    }
+    impl_->output.store(AudioOutputState::null_sink, std::memory_order_release);
+    if (impl_->warnings.fetch_add(1, std::memory_order_acq_rel) == 0) {
+        impl_->warning = "audio device unavailable; using silent null sink";
+    } else {
+        impl_->warnings.store(1, std::memory_order_release);
+    }
+}
+
+void AudioManager::notify_device_failure() noexcept
+{
+    if (impl_->stopping.load(std::memory_order_acquire)) return;
+    impl_->output.store(AudioOutputState::null_sink, std::memory_order_release);
+    if (impl_->warnings.fetch_add(1, std::memory_order_acq_rel) == 0) {
+        impl_->warning = "audio output device failed; continuing with silent null sink";
+    } else {
+        impl_->warnings.store(1, std::memory_order_release);
+    }
+}
+
+AudioOutputState AudioManager::output_state() const noexcept
+{
+    return impl_->output.load(std::memory_order_acquire);
+}
+
+std::size_t AudioManager::warning_count() const noexcept
+{
+    return impl_->warnings.load(std::memory_order_acquire);
+}
+
+std::string_view AudioManager::last_warning() const noexcept { return impl_->warning; }
+
 void AudioManager::render(float* output, std::size_t frame_count) noexcept
 {
     if (output == nullptr) return;
@@ -324,6 +366,8 @@ void AudioManager::shutdown() noexcept
     if (impl_->stopping.exchange(true, std::memory_order_acq_rel)) return;
     if (!impl_->commands.push({CommandType::shutdown})) impl_->stopped.store(true, std::memory_order_release);
 }
+
+bool AudioManager::is_stopped() const noexcept { return impl_->stopped.load(std::memory_order_acquire); }
 
 std::size_t AudioManager::active_voice_count() const noexcept { return impl_->active.load(std::memory_order_relaxed); }
 

@@ -90,3 +90,21 @@ For lifecycle testing, `--fail-init <stage>` injects a controlled failure at `pa
 ## What the bootstrap proves
 
 The `zh_main --bootstrap-smoke` test links project-owned stubs across the final engine/device, W3D, WWShade, support, compression, POSIX, SDL, renderer, audio, video, test, and null-backend boundaries. It compiles a project-owned GLSL shader to SPIR-V and reports build revision, architecture, compiler, SDL, and FFmpeg metadata. Invoking `zh_main` without `--bootstrap-smoke` fails so this milestone cannot be mistaken for a playable build.
+
+## Audio validation
+
+M12 vendors the reviewed miniaudio 0.11.25 single header at its pinned upstream
+commit; normal configuration never downloads it. Run the asset-free audio suite
+with `ctest --preset <preset> -L audio --output-on-failure`. It verifies PCM WAV,
+Microsoft and IMA ADPCM WAV, MP3, VFS/BIG seeking, voice scheduling and controls,
+queued completions, device-failure fallback, and race-free shutdown. If no audio
+device exists, the adapter emits one warning, selects its deterministic silent
+sink, and remains playable. Corrupt or missing media is still a data error and
+reports the logical asset path.
+
+The optional retail audio corpus probe uses the same separate retail build as
+data verification: enable `ZH_ENABLE_RETAIL_TESTS` and provide the two absolute
+data roots plus `ZH_RETAIL_LANGUAGE`. It reads media through the VFS without
+extraction and prints only committed logical names and detected encodings; it
+does not copy, hash, modify, or report physical retail paths. Audible device
+checking is optional and is not needed for the null-sink acceptance suite.

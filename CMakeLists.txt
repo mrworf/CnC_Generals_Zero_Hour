@@ -80,6 +80,7 @@ zh_add_bootstrap_component(zh_renderer_sdl_gpu ZH_EMPTY_LEGACY_SOURCES)
 add_library(zh_audio_miniaudio STATIC
   src/audio/manager.cpp
   src/audio/miniaudio_impl.cpp
+  src/audio/probe.cpp
   src/audio/vfs.cpp
 )
 target_include_directories(zh_audio_miniaudio PUBLIC
@@ -349,6 +350,12 @@ if(ZH_BUILD_TESTS)
   add_test(NAME audio_manager COMMAND audio_manager_tests)
   set_tests_properties(audio_manager PROPERTIES LABELS audio)
 
+  add_executable(audio_acceptance_tests tests/audio/test_audio_acceptance.cpp)
+  target_compile_definitions(audio_acceptance_tests PRIVATE ZH_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(audio_acceptance_tests PRIVATE zh_audio_miniaudio)
+  add_test(NAME audio_acceptance COMMAND audio_acceptance_tests)
+  set_tests_properties(audio_acceptance PROPERTIES LABELS audio TIMEOUT 20)
+
   add_executable(world_scene_tests tests/world/test_world_scene.cpp)
   target_link_libraries(world_scene_tests PRIVATE zh_world)
   add_test(NAME world_scene COMMAND world_scene_tests)
@@ -497,5 +504,13 @@ if(ZH_BUILD_TESTS)
     set_tests_properties(retail_data_verification PROPERTIES LABELS data
       WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
       PASS_REGULAR_EXPRESSION "devices skipped;corpus verification ok")
+
+    add_executable(audio_corpus_tests tests/audio/test_audio_corpus.cpp)
+    target_link_libraries(audio_corpus_tests PRIVATE zh_audio_miniaudio)
+    add_test(NAME audio_corpus COMMAND audio_corpus_tests
+      "${ZH_RETAIL_ZH_DATA}" "${ZH_RETAIL_GENERALS_DATA}" "${ZH_RETAIL_LANGUAGE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/data/corpus/english-manifest.tsv")
+    set_tests_properties(audio_corpus PROPERTIES LABELS audio
+      PASS_REGULAR_EXPRESSION "audio corpus verification ok")
   endif()
 endif()

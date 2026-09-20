@@ -22,6 +22,7 @@ struct Vec3 {
 
 enum class AudioKind { effect, speech, music };
 enum class CompletionReason { finished, stopped, evicted, rejected, shutdown };
+enum class AudioOutputState { uninitialized, device, null_sink, stopped };
 
 struct PlayRequest {
     std::string logical_path;
@@ -57,6 +58,13 @@ struct Completion {
     CompletionReason reason = CompletionReason::finished;
 };
 
+struct AudioMetadata {
+    std::string encoding;
+    std::uint32_t channels = 0;
+    std::uint32_t sample_rate = 0;
+    std::uint64_t frame_count = 0;
+};
+
 class AudioError : public std::runtime_error {
 public:
     using std::runtime_error::runtime_error;
@@ -78,6 +86,14 @@ public:
     void set_paused(bool paused);
     void set_focused(bool focused);
 
+    // Select output after device discovery. Device absence/failure degrades to
+    // the deterministic null sink and records one warning without rejecting play.
+    void configure_output(bool device_available) noexcept;
+    void notify_device_failure() noexcept;
+    AudioOutputState output_state() const noexcept;
+    std::size_t warning_count() const noexcept;
+    std::string_view last_warning() const noexcept;
+
     // Device/null-sink callback entry point. It performs no engine allocation,
     // simulation locking, or game-object dispatch.
     void render(float* interleaved_stereo, std::size_t frame_count) noexcept;
@@ -85,6 +101,7 @@ public:
     // Game-thread boundary. Decoder destruction and completion dispatch occur here.
     std::vector<Completion> drain_completions();
     void shutdown() noexcept;
+    bool is_stopped() const noexcept;
 
     std::size_t active_voice_count() const noexcept;
 
@@ -94,5 +111,6 @@ private:
 };
 
 std::string_view completion_reason_name(CompletionReason reason) noexcept;
+AudioMetadata probe_audio(const data::VirtualFileSystem& vfs, std::string_view logical_path);
 
 } // namespace zh::audio

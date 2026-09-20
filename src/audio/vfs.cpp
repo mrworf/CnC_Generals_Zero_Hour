@@ -4,17 +4,17 @@
 #include "miniaudio.h"
 
 #include <algorithm>
-#include <cstring>
+#include <fstream>
 #include <limits>
-#include <new>
-#include <vector>
 
 namespace zh::audio {
 namespace {
 
 struct OpenFile {
-    std::vector<foundation::UInt8> bytes;
-    std::size_t cursor = 0;
+    std::ifstream stream;
+    std::uint64_t base = 0;
+    std::uint64_t size = 0;
+    std::uint64_t cursor = 0;
 };
 
 } // namespace
@@ -30,9 +30,17 @@ struct MiniaudioVfs::Impl {
             auto& self = *static_cast<Impl*>(raw);
             try {
                 const auto* resource = self.vfs->find(path);
-                if (resource == nullptr || resource->size > std::numeric_limits<std::size_t>::max()) return MA_DOES_NOT_EXIST;
+                if (resource == nullptr) return MA_DOES_NOT_EXIST;
                 auto file = std::make_unique<OpenFile>();
-                file->bytes = self.vfs->read_prefix(path, static_cast<std::size_t>(resource->size));
+                file->size = resource->size;
+                if (resource->archive) {
+                    const auto& entry = resource->archive->entries()[resource->archive_entry];
+                    file->base = entry.offset;
+                    file->stream.open(resource->archive->path(), std::ios::binary);
+                } else {
+                    file->stream.open(resource->host_path, std::ios::binary);
+                }
+                if (!file->stream) return MA_ERROR;
                 *result = file.release();
                 return MA_SUCCESS;
             } catch (...) {
@@ -46,9 +54,14 @@ struct MiniaudioVfs::Impl {
         callbacks.onRead = [](ma_vfs*, ma_vfs_file raw_file, void* destination, std::size_t requested, std::size_t* read) {
             if (raw_file == nullptr || (requested != 0 && destination == nullptr)) return MA_INVALID_ARGS;
             auto& file = *static_cast<OpenFile*>(raw_file);
-            const auto available = file.bytes.size() - file.cursor;
-            const auto amount = std::min(requested, available);
-            if (amount != 0) std::memcpy(destination, file.bytes.data() + file.cursor, amount);
+            const auto available = file.size - file.cursor;
+            const auto amount = static_cast<std::size_t>(std::min<std::uint64_t>(requested, available));
+            if (amount != 0) {
+                file.stream.clear();
+                file.stream.seekg(static_cast<std::streamoff>(file.base + file.cursor));
+                file.stream.read(static_cast<char*>(destination), static_cast<std::streamsize>(amount));
+                if (file.stream.gcount() != static_cast<std::streamsize>(amount)) return MA_ERROR;
+            }
             file.cursor += amount;
             if (read != nullptr) *read = amount;
             return amount == requested ? MA_SUCCESS : MA_AT_END;
@@ -57,11 +70,11 @@ struct MiniaudioVfs::Impl {
             if (raw_file == nullptr) return MA_INVALID_ARGS;
             auto& file = *static_cast<OpenFile*>(raw_file);
             const auto base = origin == ma_seek_origin_start ? ma_int64{0} :
-                origin == ma_seek_origin_current ? static_cast<ma_int64>(file.cursor) : static_cast<ma_int64>(file.bytes.size());
+                origin == ma_seek_origin_current ? static_cast<ma_int64>(file.cursor) : static_cast<ma_int64>(file.size);
             if ((offset < 0 && base < -offset) || (offset > 0 && base > std::numeric_limits<ma_int64>::max() - offset)) return MA_BAD_SEEK;
             const auto next = base + offset;
-            if (next < 0 || static_cast<ma_uint64>(next) > file.bytes.size()) return MA_BAD_SEEK;
-            file.cursor = static_cast<std::size_t>(next);
+            if (next < 0 || static_cast<ma_uint64>(next) > file.size) return MA_BAD_SEEK;
+            file.cursor = static_cast<std::uint64_t>(next);
             return MA_SUCCESS;
         };
         callbacks.onTell = [](ma_vfs*, ma_vfs_file raw_file, ma_int64* cursor) {
@@ -71,7 +84,7 @@ struct MiniaudioVfs::Impl {
         };
         callbacks.onInfo = [](ma_vfs*, ma_vfs_file raw_file, ma_file_info* info) {
             if (raw_file == nullptr || info == nullptr) return MA_INVALID_ARGS;
-            info->sizeInBytes = static_cast<ma_uint64>(static_cast<OpenFile*>(raw_file)->bytes.size());
+            info->sizeInBytes = static_cast<OpenFile*>(raw_file)->size;
             return MA_SUCCESS;
         };
     }

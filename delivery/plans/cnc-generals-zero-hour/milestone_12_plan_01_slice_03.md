@@ -64,6 +64,18 @@ Run for all four canonical presets. When local retail roots are available, confi
 
 All four preset audio suites pass, all required encodings have positive evidence, null/no-device mode remains playable, failures name logical assets, and shutdown is race-free.
 
+## Delivered evidence
+
+- Full builds passed for `linux-gcc-debug`, `linux-clang-debug`, `linux-gcc-release`, and `linux-clang-release`.
+- `ctest --preset <preset> -L audio --output-on-failure` passed 4/4 on each canonical preset.
+- The project-owned fixture suite decoded and rendered PCM WAV, Microsoft ADPCM WAV, IMA ADPCM WAV, and MP3; hashes and generation provenance are recorded beside the fixtures.
+- The callback allocation audit observed zero C++ allocations while rendering every required encoding. Control/completion exchange uses fixed-capacity lock-free queues, and completions/decoder destruction stay on the game thread.
+- Null-device selection and injected runtime device failure each degraded to a playable silent sink with one warning. Focus/pause, idempotent shutdown, a concurrently running callback, and post-shutdown rejection passed.
+- Corrupt and missing media tests retained the logical asset name in diagnostics.
+- The opt-in read-only retail probe passed for two committed English logical assets: representative WAV reported `pcm-wav`, and representative music reported `mp3`; no retail bytes, hashes, or physical paths were recorded.
+- The full GCC debug suite passed 45/45 when rerun with loopback socket permission required by the pre-existing LAN tests.
+- No unsolicited audible playback was attempted; audible quality remains the contract's optional safe-device check, while deterministic null-sink acceptance is complete.
+
 ## Commit boundary
 
 Commit format/lifecycle implementation, generated synthetic fixtures/tests, corpus probe, docs, and final plan evidence as `delivery: M12 slice 03 complete audio acceptance`.
