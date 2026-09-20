@@ -6,7 +6,6 @@ namespace zh::foundation {
 
 ByteWriter::ByteWriter(std::size_t capacity_limit) : capacity_limit_(capacity_limit)
 {
-    bytes_.reserve(capacity_limit);
 }
 
 void ByteWriter::require(std::size_t count)
@@ -70,6 +69,7 @@ void ByteWriter::write_f32_le(float value)
 void ByteWriter::write_bytes(ByteView bytes)
 {
     require(bytes.size);
+    if (bytes.size == 0) return;
     if (bytes.size != 0 && bytes.data == nullptr) {
         throw CodecError("null byte source");
     }
@@ -167,6 +167,7 @@ float ByteReader::read_f32_le()
 std::vector<UInt8> ByteReader::read_bytes(std::size_t count)
 {
     require(count);
+    if (count == 0) return {};
     std::vector<UInt8> value(bytes_.data + position_, bytes_.data + position_ + count);
     position_ += count;
     return value;

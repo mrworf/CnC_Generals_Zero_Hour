@@ -33,7 +33,7 @@ The bootstrap graph gains a portable, asset-free foundation layer with fixed-wid
 |---|---|---|---|---|---|
 | 01 | [portable ABI and codecs](milestone_01_plan_01_slice_01.md) | Fixed widths, UTF, endian/bounded serialization, formatting, and numeric semantics | M0 | completed | slice commit |
 | 02 | [POSIX support](milestone_01_plan_01_slice_02.md) | XDG/path, files, clock, threading, atomic, and socket shared types | 01 | completed | slice commit |
-| 03 | [compression and matrix](milestone_01_plan_01_slice_03.md) | Bounded RefPack/zlib adapters and complete four-preset/sanitizer validation | 01, 02 | planned | pending |
+| 03 | [compression and matrix](milestone_01_plan_01_slice_03.md) | Bounded RefPack/zlib adapters and complete four-preset/sanitizer validation | 01, 02 | completed | slice commit |
 
 ## Cross-slice constraints
 
@@ -57,3 +57,5 @@ Each slice is independently revertible. The POSIX and compression slices consume
 ## Execution notes
 
 All slice plans were created before production edits. They were inspected together for dependency order, independently testable behavior, explicit negative cases, and commit boundaries.
+
+All four canonical presets configure and build the full M0/M1 graph. Each preset passes nine `foundation` tests and independently checks the same fixed serialization hex, so byte identity is enforced against a shared format contract rather than inferred from host memory. Combined ASan/UBSan builds pass under GCC 16.2.1 and Clang 22.1.8. The restricted execution environment cannot initialize LeakSanitizer under ptrace, so sanitizer test execution uses `ASAN_OPTIONS=detect_leaks=0`; address and undefined-behavior instrumentation remain enabled.

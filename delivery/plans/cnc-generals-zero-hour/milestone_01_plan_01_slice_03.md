@@ -57,3 +57,11 @@ Compression never trusts host size/alignment, malformed streams fail determinist
 ## Commit boundary
 
 Commit this plan, compression implementation/tests, and recorded matrix evidence as `delivery: M1 slice 03 add bounded compression`.
+
+## Completion evidence
+
+- System-zlib envelopes round-trip synthetic empty, binary, and small payloads at levels 1 through 9 while preserving `ZL1`-`ZL9` tags.
+- Bounded RefPack tests cover literal and overlapping back-reference commands; truncated/corrupt streams, invalid distances, trailing bytes, header disagreement, and allocation limits fail before returning partial output.
+- `NOX` produces a typed unsupported error containing the supplied archive/logical path; unknown and not-yet-adapted legacy tags do not fall through as uncompressed bytes.
+- GCC/Clang Debug/Release full builds each pass all nine `foundation` tests. Each preset emits the identical checked fixture `a534125678efcdab8910203040efcdab8967452301000000800000c03f0300000041003dd842de`.
+- Combined ASan/UBSan full builds and foundation suites pass with GCC 16.2.1 and Clang 22.1.8. Leak detection alone is disabled because LeakSanitizer reports that the restricted ptrace environment is unsupported.

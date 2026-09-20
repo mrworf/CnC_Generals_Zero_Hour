@@ -59,5 +59,5 @@ Commit this plan, ABI/codec/numeric implementation, CMake wiring, and focused te
 ## Completion evidence
 
 - `foundation_abi_codec_tests` passes and verifies the stable fixture `a534125678efcdab8910203040efcdab8967452301000000800000c03f0300000041003dd842de`.
-- The focused suite exercises exact-fit/overflow mutation, truncated read cursor stability, valid supplementary Unicode, malformed UTF-8/surrogates, ASCII loss, formatting bounds, signed zero, halves, NaN, infinity, and numeric overflow.
+- The focused suite exercises exact-fit/overflow mutation, a synthetic BIG header with mixed endian fields, truncated read cursor stability, valid supplementary Unicode, malformed UTF-8/surrogates, ASCII loss, formatting bounds, signed zero, halves, NaN, infinity, and numeric overflow.
 - GCC Debug `ctest -L foundation` passes all seven M0/M1 tests; broader compiler/build/sanitizer evidence is recorded by slice 03.

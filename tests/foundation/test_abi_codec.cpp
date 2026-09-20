@@ -72,6 +72,25 @@ void test_codec()
     check(short_reader.position() == 0, "truncated read advanced cursor");
 }
 
+void test_synthetic_big_header()
+{
+    const UInt8 big_header[] = {
+        'B', 'I', 'G', 'F',
+        0x40, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x02,
+        0x00, 0x00, 0x00, 0x20,
+    };
+    ByteReader reader({big_header, sizeof(big_header)});
+    check(reader.read_bytes(4) == std::vector<UInt8>({'B', 'I', 'G', 'F'}), "BIG identifier");
+    check(reader.read_u32_le() == 64, "BIG archive size");
+    check(reader.read_u32_be() == 2, "BIG file count");
+    check(reader.read_u32_be() == 32, "BIG directory size");
+    check(reader.remaining() == 0, "BIG header fully consumed");
+    ByteReader truncated({big_header, sizeof(big_header) - 1});
+    truncated.read_bytes(12);
+    rejects<CodecError>([&] { truncated.read_u32_be(); }, "truncated BIG header accepted");
+}
+
 void test_unicode_and_format()
 {
     const std::string utf8 = "Latin \xe6\xbc\xa2\xf0\x9f\x99\x82";
@@ -113,6 +132,7 @@ int main(int argc, char** argv)
         }
         check(argc == 1, "unknown test argument");
         test_codec();
+        test_synthetic_big_header();
         test_unicode_and_format();
         test_numeric();
         std::cout << "portable ABI and codec tests: ok\n";
