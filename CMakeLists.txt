@@ -55,9 +55,14 @@ if(ZH_ENABLE_ASAN)
 endif()
 
 add_library(zh_original_process STATIC
+  src/original_runtime/process_services.cpp
+  src/original_runtime/utf16_compat.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/version.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/GameMemory.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/MemoryInit.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/CriticalSection.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/AsciiString.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/UnicodeString.cpp
 )
 target_include_directories(zh_original_process
   PUBLIC
@@ -340,6 +345,17 @@ if(ZH_BUILD_TESTS)
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_runtime/test_pool_config.py"
     "$<TARGET_FILE:original_process_allocator_tests>")
   set_tests_properties(original_process_pool_config PROPERTIES LABELS "original-process" TIMEOUT 30)
+  add_executable(original_process_string_tests
+    tests/original_runtime/test_strings.cpp
+    tests/original_runtime/string_provider.cpp
+  )
+  target_include_directories(original_process_string_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include")
+  target_link_libraries(original_process_string_tests PRIVATE zh_original_process)
+  target_link_options(original_process_string_tests PRIVATE
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-process-strings.link.map")
+  add_test(NAME original_process_strings COMMAND original_process_string_tests)
+  set_tests_properties(original_process_strings PROPERTIES LABELS "original-process;source-identity")
   add_test(NAME m0_bootstrap_smoke COMMAND zh_main --bootstrap-smoke)
   set_tests_properties(m0_bootstrap_smoke PROPERTIES LABELS foundation PASS_REGULAR_EXPRESSION "asset-free bootstrap graph: ok")
   add_test(NAME m0_bootstrap_rejects_gameplay COMMAND zh_main)

@@ -333,7 +333,11 @@ Bool UnicodeString::nextToken(UnicodeString* tok, UnicodeString delimiters)
 		return false;
 
 	if (delimiters.isEmpty())
+#if defined(_WIN32)
 		delimiters = UnicodeString(L" \t\n\r");
+#else
+		delimiters = UnicodeString(u" \t\n\r");
+#endif
 
 	Int offset;
 

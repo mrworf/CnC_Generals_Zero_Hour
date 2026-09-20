@@ -59,8 +59,8 @@ M19 compiles ten bounded original WWLib/WWMath/WWSaveLoad and RefPack units, but
 
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
-| 01 | [Allocator bootstrap and ABI](milestone_26_plan_01_slice_01.md) | Actual original allocator and bounded pre-VFS pool configuration execute safely across process/target boundaries. | M19 | complete | this slice commit | 2 focused tests pass in all four presets |
-| 02 | [Strings and process services](milestone_26_plan_01_slice_02.md) | Actual original ASCII/UTF-16 strings, synchronization, logging seam, and Version lifetime execute on the allocator. | slice 01 | pending | | focused string/lifecycle tests |
+| 01 | [Allocator bootstrap and ABI](milestone_26_plan_01_slice_01.md) | Actual original allocator and bounded pre-VFS pool configuration execute safely across process/target boundaries. | M19 | complete | `1742a84f06d7b8b6e6c82e317e92c56b1cf16518` | 2 focused tests pass in all four presets |
+| 02 | [Strings and process services](milestone_26_plan_01_slice_02.md) | Actual original ASCII/UTF-16 strings, synchronization, logging seam, and Version lifetime execute on the allocator. | slice 01 | complete | this slice commit | 3 cumulative focused tests pass in all four presets |
 | 03 | [FPU and dependency evidence](milestone_26_plan_01_slice_03.md) | The original FPU body is shared and characterized; checked ledger and target-specific identity gates cover M26. | slices 01-02 | pending | | FPU, ledger, identity, negative controls, four presets, full CTest, sanitizers |
 
 ## Cross-slice concerns

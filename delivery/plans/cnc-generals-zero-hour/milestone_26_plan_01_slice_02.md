@@ -46,3 +46,7 @@ Focused commands: build and run string/process-service targets with the `origina
 ## Commit boundary
 
 Commit actual string/process provider portability, tests, evidence, and the updated plan index as one coherent slice.
+
+## Result
+
+Complete. Actual original `AsciiString.cpp`, `UnicodeString.cpp`, `version.cpp`, and `CriticalSection.cpp` methods run on the original allocator. Linux retains two-byte `WideChar` with bounded UTF-16 helpers, including surrogate-pair preservation, copy-on-write, token/format boundaries, and oversized-input rejection. The service owner initializes synchronization, diagnostic logging, and Version in order; all three injected failure stages and normal/repeated shutdown return service and worker counts to zero. The three cumulative focused tests pass in GCC/Clang Debug/Release without assets or devices.

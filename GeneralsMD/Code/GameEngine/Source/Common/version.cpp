@@ -28,8 +28,10 @@
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#if defined(_WIN32)
 #include "GameClient/GameText.h"
-#include "Common/Version.h"
+#endif
+#include "Common/version.h"
 
 Version *TheVersion = NULL;	///< The Version singleton
 
@@ -85,6 +87,11 @@ AsciiString Version::getAsciiVersion( void )
 
 UnicodeString Version::getUnicodeVersion( void )
 {
+#if !defined(_WIN32)
+	UnicodeString version;
+	version.translate(getAsciiVersion());
+	return version;
+#else
 	UnicodeString version;
 
 #if defined _DEBUG || defined _INTERNAL
@@ -106,10 +113,16 @@ UnicodeString Version::getUnicodeVersion( void )
 #endif
 
 	return version;
+#endif
 }
 
 UnicodeString Version::getFullUnicodeVersion( void )
 {
+#if !defined(_WIN32)
+	UnicodeString version;
+	version.translate(getAsciiVersion());
+	return version;
+#else
 	UnicodeString version;
 
 	if (!m_localBuildNum)
@@ -127,6 +140,7 @@ UnicodeString Version::getFullUnicodeVersion( void )
 #endif
 
 	return version;
+#endif
 }
 
 AsciiString Version::getAsciiBuildTime( void )
@@ -139,6 +153,11 @@ AsciiString Version::getAsciiBuildTime( void )
 
 UnicodeString Version::getUnicodeBuildTime( void )
 {
+#if !defined(_WIN32)
+	UnicodeString build;
+	build.translate(getAsciiBuildTime());
+	return build;
+#else
 	UnicodeString build;
 	UnicodeString dateStr;
 	UnicodeString timeStr;
@@ -148,6 +167,7 @@ UnicodeString Version::getUnicodeBuildTime( void )
 	build.format(TheGameText->fetch("Version:BuildTime").str(), dateStr.str(), timeStr.str());
 
 	return build;
+#endif
 }
 
 AsciiString Version::getAsciiBuildLocation( void )
@@ -157,6 +177,11 @@ AsciiString Version::getAsciiBuildLocation( void )
 
 UnicodeString Version::getUnicodeBuildLocation( void )
 {
+#if !defined(_WIN32)
+	UnicodeString build;
+	build.translate(getAsciiBuildLocation());
+	return build;
+#else
 	UnicodeString build;
 	UnicodeString machine;
 
@@ -164,6 +189,7 @@ UnicodeString Version::getUnicodeBuildLocation( void )
 	build.format(TheGameText->fetch("Version:BuildMachine").str(), machine.str());
 
 	return build;
+#endif
 }
 
 AsciiString Version::getAsciiBuildUser( void )
@@ -173,6 +199,11 @@ AsciiString Version::getAsciiBuildUser( void )
 
 UnicodeString Version::getUnicodeBuildUser( void )
 {
+#if !defined(_WIN32)
+	UnicodeString build;
+	build.translate(getAsciiBuildUser());
+	return build;
+#else
 	UnicodeString build;
 	UnicodeString user;
 
@@ -180,4 +211,5 @@ UnicodeString Version::getUnicodeBuildUser( void )
 	build.format(TheGameText->fetch("Version:BuildUser").str(), user.str());
 
 	return build;
+#endif
 }

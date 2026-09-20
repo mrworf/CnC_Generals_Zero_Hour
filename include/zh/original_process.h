@@ -23,8 +23,18 @@ struct PoolConfigStatus {
   const char* source;
 };
 
+struct ServiceCounts {
+  int synchronization;
+  int logging;
+  int version;
+  int workers;
+};
+
 PoolConfigStatus pool_config_status() noexcept;
 std::size_t live_raw_allocations() noexcept;
+bool initialize_services(int fail_after_stage, char* diagnostic, std::size_t diagnostic_size) noexcept;
+void shutdown_services() noexcept;
+ServiceCounts service_counts() noexcept;
 #if defined(ZH_ORIGINAL_RUNTIME_TEST_HOOKS)
 bool test_pool_config_reentry_guard() noexcept;
 #endif
