@@ -159,6 +159,11 @@ if(ZH_BUILD_TESTS)
     -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/m0/expect_probe_failure.cmake")
   set_tests_properties(m0_missing_glslc_probe PROPERTIES LABELS foundation)
 
+  add_test(NAME renderer_inventory COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer_inventory.py" --check)
+  set_tests_properties(renderer_inventory PROPERTIES LABELS renderer-contract)
+  add_test(NAME renderer_inventory_negative COMMAND "${Python3_EXECUTABLE}" -m unittest tests.m2.test_renderer_inventory)
+  set_tests_properties(renderer_inventory_negative PROPERTIES LABELS renderer-contract WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
   add_executable(foundation_abi_codec_tests tests/foundation/test_abi_codec.cpp)
   target_link_libraries(foundation_abi_codec_tests PRIVATE zh_wwsupport)
   add_test(NAME foundation_abi_codec COMMAND foundation_abi_codec_tests)
