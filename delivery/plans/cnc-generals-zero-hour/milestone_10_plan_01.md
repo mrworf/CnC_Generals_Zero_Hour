@@ -37,5 +37,5 @@ Hardware pixels and validation layers (M14), world geometry behavior (M9), retai
 
 ## Commit record
 
-- Slice 01: pending
-- Slice 02: pending
+- Slice 01: `552341db0bb415fef87598e7224166e5780a3503`
+- Slice 02: this slice's `delivery: M10 slice 02 record effects` commit (exact SHA is reported to the milestone orchestrator after commit creation)

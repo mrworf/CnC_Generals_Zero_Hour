@@ -127,9 +127,9 @@ add_library(zh_world STATIC src/world/scene.cpp src/world/recorder.cpp src/world
 target_include_directories(zh_world PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_world PUBLIC zh_renderer_sdl_gpu zh_build_options)
 
-add_library(zh_effects STATIC src/effects/registry.cpp)
+add_library(zh_effects STATIC src/effects/registry.cpp src/effects/recorder.cpp)
 target_include_directories(zh_effects PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
-target_link_libraries(zh_effects PUBLIC zh_wwshade zh_build_options)
+target_link_libraries(zh_effects PUBLIC zh_renderer_sdl_gpu zh_wwshade zh_build_options)
 
 target_sources(zh_platform_sdl PRIVATE src/platform/sdl_events.cpp src/platform/sdl_window.cpp)
 target_include_directories(zh_platform_sdl PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -155,7 +155,7 @@ target_link_libraries(zh_platform_sdl PUBLIC SDL3::SDL3)
 target_link_libraries(zh_renderer_sdl_gpu PUBLIC SDL3::SDL3 zh_w3d zh_wwshade)
 target_link_libraries(zh_video_ffmpeg PUBLIC FFmpeg::avformat FFmpeg::avcodec FFmpeg::avutil FFmpeg::swscale FFmpeg::swresample zh_audio_miniaudio)
 target_link_libraries(zh_os_posix PUBLIC Threads::Threads)
-target_link_libraries(zh_game_device PUBLIC zh_platform_sdl zh_renderer_sdl_gpu zh_audio_miniaudio zh_video_ffmpeg zh_os_posix)
+target_link_libraries(zh_game_device PUBLIC zh_platform_sdl zh_renderer_sdl_gpu zh_effects zh_audio_miniaudio zh_video_ffmpeg zh_os_posix)
 
 set(ZH_BOOTSTRAP_SHADER "${CMAKE_CURRENT_SOURCE_DIR}/shaders/bootstrap/bootstrap.vert")
 set(ZH_BOOTSTRAP_SPIRV "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/bootstrap.vert.spv")
@@ -336,6 +336,12 @@ if(ZH_BUILD_TESTS)
   add_dependencies(effects_registry_tests zh_renderer_shaders zh_effect_shaders)
   add_test(NAME effects_registry COMMAND effects_registry_tests)
   set_tests_properties(effects_registry PROPERTIES LABELS renderer-contract)
+
+  add_executable(effects_recorder_tests tests/effects/test_effect_recorder.cpp)
+  target_compile_definitions(effects_recorder_tests PRIVATE ZH_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(effects_recorder_tests PRIVATE zh_effects)
+  add_test(NAME effects_recorder COMMAND effects_recorder_tests)
+  set_tests_properties(effects_recorder PROPERTIES LABELS renderer-contract)
 
   add_executable(foundation_abi_codec_tests tests/foundation/test_abi_codec.cpp)
   target_link_libraries(foundation_abi_codec_tests PRIVATE zh_wwsupport)

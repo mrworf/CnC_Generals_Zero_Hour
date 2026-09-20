@@ -72,6 +72,14 @@ Then run the governing plan's four-preset milestone validation.
 
 All scoped effects record valid, ordered commands; diagnostics and lifecycle bounds pass; four-preset renderer-contract validation passes.
 
+## Delivered evidence
+
+- `cmake --preset` and `cmake --build --preset` passed for all four canonical GCC/Clang debug/release presets.
+- `ctest --preset <preset> -L renderer-contract --output-on-failure` passed 15/15 on each preset.
+- Focused `effects_recorder` coverage proves all seven logical corpus entries, two ordered WWShade passes, render-target dependency order, point size, depth bias, premultiplied alpha, deterministic caller-order normalization, stable pipeline count, actionable unknown-effect diagnostics, lifecycle recovery, bounded capacity failure, and zero-resource teardown.
+- Existing `renderer_texture_loader` coverage remained green, including DXT1 CPU fallback and DXT2/DXT4 premultiplied-alpha fallback semantics.
+- Validation used repository-owned logical/synthetic data only; no retail bytes, private paths, GPU, display, or network were used.
+
 ## Commit boundary
 
 Commit recorder API/implementation, focused tests, CMake wiring, and final plan evidence together as `delivery: M10 slice 02 record effects`.
