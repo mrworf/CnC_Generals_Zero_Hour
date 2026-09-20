@@ -107,22 +107,24 @@ milestones:
   - id: M8
     title: "UI, fonts, and input integration"
     file: delivery/milestones/cnc-generals-zero-hour/M8-ui-fonts.md
-    status: in_progress
+    status: completed
     dependencies: [M4, M6, M7]
     optional: false
     started_at: "2026-09-20T04:28:34Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_08_plan_01.md"
+    completed_at: "2026-09-20T04:37:53Z"
+    commit_hash: bd68c2b
+    evidence: "Three completed slices implement recorded UI scenes, retained FreeType memory faces with Fontconfig fallback, and SDL-driven UI flows. All four presets passed 13 platform|renderer-contract|ui tests and compiled UI shaders; GCC Debug passed 32 tests. Root acceptance reran the GCC Debug selected suite and verified source/packet freshness."
+    notes: "PRE-020 accepted. English corpus evidence selects simple LTR layout; HarfBuzz/FriBidi are not required. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_08_plan_01.md; slice commits: 672731d, 0ec4b11, bd68c2b."
   - id: M9
     title: "world rendering command generation"
     file: delivery/milestones/cnc-generals-zero-hour/M9-world-rendering.md
-    status: pending
+    status: in_progress
     dependencies: [M4, M7]
     optional: false
+    started_at: "2026-09-20T04:37:53Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_09_plan_01.md"
   - id: M10
     title: "effects, water, and WWShade command generation"
     file: delivery/milestones/cnc-generals-zero-hour/M10-effects.md
