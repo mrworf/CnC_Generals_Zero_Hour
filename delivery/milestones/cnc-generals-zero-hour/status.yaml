@@ -118,22 +118,24 @@ milestones:
   - id: M9
     title: "world rendering command generation"
     file: delivery/milestones/cnc-generals-zero-hour/M9-world-rendering.md
-    status: in_progress
+    status: completed
     dependencies: [M4, M7]
     optional: false
     started_at: "2026-09-20T04:37:53Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_09_plan_01.md"
+    completed_at: "2026-09-20T04:45:24Z"
+    commit_hash: d27c419
+    evidence: "Three completed slices plus evidence/qa/cnc-generals-zero-hour/M9-world-rendering.md cover the complete world vocabulary/fixed state, deterministic recorder commands, and logical-corpus lifecycle. All four presets passed 13 renderer-contract tests; a 64-frame teardown/reload proof stayed within fixed resource/pipeline bounds and returned live counts to zero. Root acceptance reran the GCC Debug renderer-contract suite and verified source/packet freshness."
+    notes: "PRE-021 accepted without pixel claims. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_09_plan_01.md; slice commits: e478c10, 49e0d78, d27c419."
   - id: M10
     title: "effects, water, and WWShade command generation"
     file: delivery/milestones/cnc-generals-zero-hour/M10-effects.md
-    status: pending
+    status: in_progress
     dependencies: [M4, M7]
     optional: false
+    started_at: "2026-09-20T04:45:24Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_10_plan_01.md"
   - id: M11
     title: "POSIX LAN transport and local peer harness"
     file: delivery/milestones/cnc-generals-zero-hour/M11-lan-transport.md
