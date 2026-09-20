@@ -112,6 +112,7 @@ target_include_directories(zh_wwsupport PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/incl
 
 target_sources(zh_renderer_sdl_gpu PRIVATE
   src/renderer/contract.cpp
+  src/renderer/dx8_state_cache.cpp
   src/renderer/recording_device.cpp
   src/renderer/shader_registry.cpp
   src/renderer/texture_loader.cpp
@@ -240,6 +241,11 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(renderer_texture_loader_tests PRIVATE zh_renderer_sdl_gpu)
   add_test(NAME renderer_texture_loader COMMAND renderer_texture_loader_tests)
   set_tests_properties(renderer_texture_loader PROPERTIES LABELS renderer-contract)
+
+  add_executable(renderer_dx8_state_cache_tests tests/renderer/test_dx8_state_cache.cpp)
+  target_link_libraries(renderer_dx8_state_cache_tests PRIVATE zh_renderer_sdl_gpu)
+  add_test(NAME renderer_dx8_state_cache COMMAND renderer_dx8_state_cache_tests)
+  set_tests_properties(renderer_dx8_state_cache PROPERTIES LABELS renderer-contract)
 
   add_executable(renderer_shader_registry_tests tests/renderer/test_shader_registry.cpp)
   target_compile_definitions(renderer_shader_registry_tests PRIVATE

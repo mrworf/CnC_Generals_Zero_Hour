@@ -28,4 +28,4 @@ Commits are recorded here after each completed slice.
 
 - Slice 01: this slice's commit (`delivery: M7 slice 01 add recording GPU device`)
 - Slice 02: this slice's commit (`delivery: M7 slice 02 add texture parsing fallback`)
-- Slice 03: pending
+- Slice 03: this slice's commit (`delivery: M7 slice 03 add DX8 state cache`)

@@ -101,6 +101,9 @@ std::string quoted(std::string_view text)
     return result;
 }
 
+template <typename Enum>
+std::string enum_value(Enum value) { return std::to_string(static_cast<unsigned>(value)); }
+
 } // namespace
 
 class RecordingGpuDevice::Impl {
@@ -139,6 +142,9 @@ public:
     std::size_t pipeline_capacity;
     bool in_pass = false;
     std::string active_pass_label;
+    std::array<TextureHandle, RendererLimits::color_targets> active_colors{};
+    UInt32 active_color_count = 0;
+    TextureHandle active_depth;
     std::string last_error;
     std::vector<std::string> commands;
     std::vector<Slot<BufferRecord>> buffers;
@@ -162,7 +168,8 @@ BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::stri
     auto handle = allocate<BufferHandle>(impl_->buffers, impl_->next_buffer, label, std::move(record));
     if (!handle) { impl_->fail("create_buffer", "resource table exhausted", label); return {}; }
     impl_->commands.push_back("create_buffer " + impl_->name(impl_->buffers, handle, 'B') + " label=" + quoted(label)
-        + " size=" + std::to_string(desc.size) + " dynamic=" + (desc.dynamic ? "true" : "false"));
+        + " size=" + std::to_string(desc.size) + " usage=" + enum_value(desc.usage)
+        + " dynamic=" + (desc.dynamic ? "true" : "false"));
     return handle;
 }
 
@@ -174,7 +181,9 @@ TextureHandle RecordingGpuDevice::create_texture(const TextureDesc& desc, std::s
     if (!handle) { impl_->fail("create_texture", "resource table exhausted", label); return {}; }
     impl_->commands.push_back("create_texture " + impl_->name(impl_->textures, handle, 'T') + " label=" + quoted(label)
         + " extent=" + std::to_string(desc.width) + "x" + std::to_string(desc.height)
-        + " rt=" + (desc.render_target ? "true" : "false"));
+        + " layers=" + std::to_string(desc.depth_or_layers) + " mips=" + std::to_string(desc.mip_levels)
+        + " dimension=" + enum_value(desc.dimension) + " format=" + enum_value(desc.format)
+        + " rt=" + (desc.render_target ? "true" : "false") + " sampled=" + (desc.sampled ? "true" : "false"));
     return handle;
 }
 
@@ -184,7 +193,10 @@ SamplerHandle RecordingGpuDevice::create_sampler(const SamplerDesc& desc, std::s
     if (label.empty()) { impl_->fail("create_sampler", "label must not be empty"); return {}; }
     auto handle = allocate<SamplerHandle>(impl_->samplers, impl_->next_sampler, label, SamplerRecord{desc});
     if (!handle) { impl_->fail("create_sampler", "resource table exhausted", label); return {}; }
-    impl_->commands.push_back("create_sampler " + impl_->name(impl_->samplers, handle, 'S') + " label=" + quoted(label));
+    impl_->commands.push_back("create_sampler " + impl_->name(impl_->samplers, handle, 'S') + " label=" + quoted(label)
+        + " filter=" + enum_value(desc.min_filter) + "/" + enum_value(desc.mag_filter) + "/" + enum_value(desc.mip_filter)
+        + " address=" + enum_value(desc.address_u) + "/" + enum_value(desc.address_v) + "/" + enum_value(desc.address_w)
+        + " aniso=" + std::to_string(desc.maximum_anisotropy));
     return handle;
 }
 
@@ -196,7 +208,8 @@ ShaderHandle RecordingGpuDevice::create_shader(const ShaderDesc& desc, std::stri
     auto handle = allocate<ShaderHandle>(impl_->shaders, impl_->next_shader, label, std::move(record));
     if (!handle) { impl_->fail("create_shader", "resource table exhausted", label); return {}; }
     impl_->commands.push_back("create_shader " + impl_->name(impl_->shaders, handle, 'H') + " label=" + quoted(label)
-        + " name=" + quoted(desc.name));
+        + " name=" + quoted(desc.name) + " stage=" + enum_value(desc.stage)
+        + " uniforms=" + std::to_string(desc.uniform_buffers) + " samplers=" + std::to_string(desc.samplers));
     return handle;
 }
 
@@ -220,7 +233,13 @@ PipelineHandle RecordingGpuDevice::create_pipeline(const PipelineKey& key, std::
     auto handle = allocate<PipelineHandle>(impl_->pipelines, impl_->next_pipeline, label, PipelineRecord(key));
     if (!handle) { impl_->fail("create_pipeline", "resource table exhausted", label); return {}; }
     impl_->commands.push_back("create_pipeline " + impl_->name(impl_->pipelines, handle, 'P') + " label=" + quoted(label)
-        + " key=" + std::to_string(key.stable_hash()));
+        + " key=" + std::to_string(key.stable_hash()) + " shaders=" + impl_->name(impl_->shaders, desc.vertex_shader, 'H')
+        + "/" + impl_->name(impl_->shaders, desc.fragment_shader, 'H') + " layout=" + enum_value(desc.vertex_layout)
+        + " topology=" + enum_value(desc.topology) + " color=" + enum_value(desc.color_format)
+        + " depth=" + enum_value(desc.depth_format) + " blend=" + (desc.blend.enabled ? "true" : "false")
+        + " point_size=" + (desc.uses_point_size ? "true" : "false")
+        + " premultiplied=" + (desc.premultiplied_alpha ? "true" : "false")
+        + " fog=" + (desc.fog_enabled ? "true" : "false"));
     return handle;
 }
 
@@ -256,8 +275,17 @@ ValidationResult RecordingGpuDevice::begin_pass(const RenderPassDesc& desc, std:
         return impl_->fail("begin_pass", "depth target extent does not match pass", depth->label);
     impl_->in_pass = true;
     impl_->active_pass_label.assign(label);
-    impl_->commands.push_back("begin_pass label=" + quoted(label) + " color=" + impl_->name(impl_->textures, desc.color_targets[0], 'T')
-        + " depth=" + impl_->name(impl_->textures, desc.depth_target, 'T'));
+    impl_->active_colors = desc.color_targets;
+    impl_->active_color_count = desc.color_target_count;
+    impl_->active_depth = desc.depth_target;
+    std::string command = "begin_pass label=" + quoted(label) + " colors=";
+    for (UInt32 index = 0; index < desc.color_target_count; ++index) {
+        if (index != 0) command += ",";
+        command += impl_->name(impl_->textures, desc.color_targets[index], 'T');
+    }
+    command += " depth=" + impl_->name(impl_->textures, desc.depth_target, 'T') + " extent="
+        + std::to_string(desc.width) + "x" + std::to_string(desc.height);
+    impl_->commands.push_back(std::move(command));
     return {};
 }
 
@@ -280,8 +308,15 @@ ValidationResult RecordingGpuDevice::draw(const DrawDesc& desc)
     const auto check_stage = [&](const StageBindings& bindings, const ShaderRecord& shader, std::string_view stage) -> ValidationResult {
         if (bindings.uniform_count < shader.uniforms || bindings.texture_count < shader.samplers)
             return impl_->fail("draw", std::string(stage) + " bindings do not satisfy shader requirements", impl_->active_pass_label);
-        for (UInt32 i = 0; i < bindings.uniform_count; ++i)
-            if (!lookup(impl_->buffers, bindings.uniforms[i].buffer)) return impl_->fail("draw", std::string(stage) + " uniform buffer is stale or destroyed", impl_->active_pass_label);
+        for (UInt32 i = 0; i < bindings.uniform_count; ++i) {
+            const auto* buffer = lookup(impl_->buffers, bindings.uniforms[i].buffer);
+            if (!buffer) return impl_->fail("draw", std::string(stage) + " uniform buffer is stale or destroyed", impl_->active_pass_label);
+            if (buffer->value.desc.usage != BufferUsage::uniform)
+                return impl_->fail("draw", std::string(stage) + " binding does not reference a uniform buffer", buffer->label);
+            if (bindings.uniforms[i].offset > buffer->value.desc.size
+                || bindings.uniforms[i].size > buffer->value.desc.size - bindings.uniforms[i].offset)
+                return impl_->fail("draw", std::string(stage) + " uniform range exceeds actual buffer", buffer->label);
+        }
         for (UInt32 i = 0; i < bindings.texture_count; ++i)
             if (!lookup(impl_->textures, bindings.textures[i]) || !lookup(impl_->samplers, bindings.samplers[i]))
                 return impl_->fail("draw", std::string(stage) + " texture or sampler is stale or destroyed", impl_->active_pass_label);
@@ -289,8 +324,27 @@ ValidationResult RecordingGpuDevice::draw(const DrawDesc& desc)
     };
     if (auto result = check_stage(desc.vertex_bindings, vertex_shader->value, "vertex"); !result) return result;
     if (auto result = check_stage(desc.fragment_bindings, fragment_shader->value, "fragment"); !result) return result;
-    impl_->commands.push_back("draw pipeline=" + impl_->name(impl_->pipelines, desc.pipeline, 'P') + " vertex="
-        + impl_->name(impl_->buffers, desc.vertex_buffer, 'B') + " count=" + std::to_string(desc.vertex_or_index_count));
+    std::string command = "draw pipeline=" + impl_->name(impl_->pipelines, desc.pipeline, 'P') + " vertex="
+        + impl_->name(impl_->buffers, desc.vertex_buffer, 'B') + " index="
+        + (desc.index_buffer ? impl_->name(impl_->buffers, desc.index_buffer, 'B') : "none")
+        + " count=" + std::to_string(desc.vertex_or_index_count) + " point_size=" + std::to_string(desc.point_size);
+    const auto append_bindings = [&](const StageBindings& bindings, std::string_view stage) {
+        command += " " + std::string(stage) + "_uniforms=";
+        for (UInt32 i = 0; i < bindings.uniform_count; ++i) {
+            if (i != 0) command += ",";
+            command += impl_->name(impl_->buffers, bindings.uniforms[i].buffer, 'B') + "@"
+                + std::to_string(bindings.uniforms[i].offset) + "+" + std::to_string(bindings.uniforms[i].size);
+        }
+        command += " " + std::string(stage) + "_textures=";
+        for (UInt32 i = 0; i < bindings.texture_count; ++i) {
+            if (i != 0) command += ",";
+            command += impl_->name(impl_->textures, bindings.textures[i], 'T') + "/"
+                + impl_->name(impl_->samplers, bindings.samplers[i], 'S');
+        }
+    };
+    append_bindings(desc.vertex_bindings, "vertex");
+    append_bindings(desc.fragment_bindings, "fragment");
+    impl_->commands.push_back(std::move(command));
     return {};
 }
 
@@ -300,11 +354,25 @@ ValidationResult RecordingGpuDevice::end_pass()
     impl_->commands.push_back("end_pass label=" + quoted(impl_->active_pass_label));
     impl_->in_pass = false;
     impl_->active_pass_label.clear();
+    impl_->active_color_count = 0;
+    impl_->active_depth = {};
     return {};
 }
 
 void RecordingGpuDevice::destroy(BufferHandle handle) { impl_->destroy_resource(impl_->buffers, handle, 'B', "buffer"); }
-void RecordingGpuDevice::destroy(TextureHandle handle) { impl_->destroy_resource(impl_->textures, handle, 'T', "texture"); }
+void RecordingGpuDevice::destroy(TextureHandle handle)
+{
+    if (impl_->in_pass) {
+        const bool active_color = std::find(impl_->active_colors.begin(), impl_->active_colors.begin() + impl_->active_color_count, handle)
+            != impl_->active_colors.begin() + impl_->active_color_count;
+        if (active_color || impl_->active_depth == handle) {
+            const auto* target = lookup(impl_->textures, handle);
+            impl_->fail("destroy", "texture is attached to the active render pass", target ? target->label : std::string_view{});
+            return;
+        }
+    }
+    impl_->destroy_resource(impl_->textures, handle, 'T', "texture");
+}
 void RecordingGpuDevice::destroy(SamplerHandle handle) { impl_->destroy_resource(impl_->samplers, handle, 'S', "sampler"); }
 void RecordingGpuDevice::destroy(ShaderHandle handle) { impl_->destroy_resource(impl_->shaders, handle, 'H', "shader"); }
 void RecordingGpuDevice::destroy(PipelineHandle handle) { impl_->destroy_resource(impl_->pipelines, handle, 'P', "pipeline"); }

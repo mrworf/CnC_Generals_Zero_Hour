@@ -96,6 +96,9 @@ void test_pass_rules_and_unsupported_descriptors()
     check(!scene.device.end_pass(), "end without pass accepted");
     check(scene.device.begin_pass(scene.pass(), "outer"), "outer pass failed");
     check(!scene.device.begin_pass(scene.pass(), "nested"), "nested pass accepted");
+    scene.device.destroy(scene.color);
+    check(scene.device.last_error().find("attached to the active") != std::string::npos,
+        "active render target destruction accepted");
     check(scene.device.end_pass(), "outer end failed");
     auto wrong = scene.pass(); wrong.width = 8;
     check(!scene.device.begin_pass(wrong, "wrong extent"), "attachment extent mismatch accepted");
