@@ -85,7 +85,7 @@ zh_add_bootstrap_component(zh_null_audio ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_null_video ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_test_support ZH_EMPTY_LEGACY_SOURCES)
 
-add_library(zh_data STATIC src/data/config.cpp)
+add_library(zh_data STATIC src/data/config.cpp src/data/big_archive.cpp src/data/vfs.cpp)
 target_include_directories(zh_data PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_data PUBLIC zh_os_posix zh_build_options)
 
@@ -265,4 +265,9 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(data_config_tests PRIVATE zh_data)
   add_test(NAME data_config COMMAND data_config_tests)
   set_tests_properties(data_config PROPERTIES LABELS data)
+
+  add_executable(data_vfs_tests tests/data/test_vfs.cpp)
+  target_link_libraries(data_vfs_tests PRIVATE zh_data)
+  add_test(NAME data_vfs COMMAND data_vfs_tests)
+  set_tests_properties(data_vfs PROPERTIES LABELS data)
 endif()

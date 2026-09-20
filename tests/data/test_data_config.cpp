@@ -71,6 +71,8 @@ int main()
     expect_error<DataUsageError>([] { parse_data_arguments({"--zh-data"}); }, "requires a value");
     expect_error<DataUsageError>([&] { parse_data_arguments({"--zh-data", zh.string(), "--zh-data", zh.string()}); }, "only once");
     expect_error<DataUsageError>([] { parse_data_arguments({"--scan"}); }, "unknown verification option");
+    const auto mod_args = parse_data_arguments({"--mod", "/tmp/one.big", "--mod", "/tmp/two.big"});
+    check(mod_args.mods.size() == 2, "multiple explicit mod archives accepted");
     auto relative = explicit_args; relative.zero_hour_root = "relative";
     expect_error<DataError>([&] { resolve_data_selection(relative, environment); }, "must be an absolute path");
     auto missing = explicit_args; missing.generals_root = root / "missing";

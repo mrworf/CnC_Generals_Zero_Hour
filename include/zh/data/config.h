@@ -26,12 +26,14 @@ struct DataArguments {
     std::optional<std::filesystem::path> zero_hour_root;
     std::optional<std::filesystem::path> generals_root;
     std::optional<std::string> language;
+    std::vector<std::filesystem::path> mods;
 };
 
 struct DataSelection {
     std::filesystem::path zero_hour_root;
     std::filesystem::path generals_root;
     std::string language;
+    std::vector<std::filesystem::path> mods;
 };
 
 DataArguments parse_data_arguments(const std::vector<std::string_view>& arguments);

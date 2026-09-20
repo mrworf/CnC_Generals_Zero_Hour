@@ -1,5 +1,6 @@
 #include "build_metadata.h"
 #include "zh/data/config.h"
+#include "zh/data/vfs.h"
 #include "zh/headless/runtime.h"
 
 extern "C" {
@@ -68,6 +69,9 @@ int main(int argc, char** argv)
         try {
             const auto selection = zh::data::resolve_data_selection(zh::data::parse_data_arguments(arguments));
             zh::data::print_data_selection(selection, std::cout);
+            const auto vfs = zh::data::VirtualFileSystem::mount(selection);
+            for (const auto& archive : vfs.archive_mount_order()) std::cout << "verification: mount=" << archive << '\n';
+            std::cout << "verification: resources=" << vfs.resources().size() << "\nverification: VFS ok\n";
             return 0;
         } catch (const zh::data::DataUsageError& error) {
             std::cerr << "data argument error: " << error.what() << '\n';
@@ -81,7 +85,7 @@ int main(int argc, char** argv)
         }
     }
     if (argc < 2 || std::string_view(argv[1]) != "--headless") {
-        std::cerr << "usage: zh_main --verify-data [--zh-data PATH] [--generals-data PATH] [--language NAME]\n"
+        std::cerr << "usage: zh_main --verify-data [--zh-data PATH] [--generals-data PATH] [--language NAME] [--mod BIG_OR_DIR]\n"
                      "       zh_main --headless [--ticks N] [--state-dir /absolute/path] [--fail-init stage]\n";
         return static_cast<int>(zh::headless::ExitCode::usage);
     }

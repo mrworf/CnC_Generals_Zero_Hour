@@ -163,11 +163,14 @@ DataArguments parse_data_arguments(const std::vector<std::string_view>& argument
     DataArguments parsed;
     for (std::size_t index = 0; index < arguments.size(); ++index) {
         const auto option = arguments[index];
-        if (option != "--zh-data" && option != "--generals-data" && option != "--language") {
+        if (option != "--zh-data" && option != "--generals-data" && option != "--language" && option != "--mod") {
             throw DataUsageError("unknown verification option '" + std::string(option) + "'");
         }
         if (++index == arguments.size()) throw DataUsageError(std::string(option) + " requires a value");
-        if (option == "--zh-data") {
+        if (option == "--mod") {
+            if (arguments[index].empty()) throw DataUsageError("--mod requires a non-empty value");
+            parsed.mods.emplace_back(arguments[index]);
+        } else if (option == "--zh-data") {
             set_once(parsed.zero_hour_root, option, arguments[index]);
         } else if (option == "--generals-data") {
             set_once(parsed.generals_root, option, arguments[index]);
@@ -190,7 +193,7 @@ DataSelection resolve_data_selection(
     const auto generals = require_root(arguments.generals_root ? arguments.generals_root : configured.generals_root,
         "--generals-data", "GeneralsDataPath");
     const auto language = select_language(arguments.language ? arguments.language : configured.language, zero_hour);
-    return {zero_hour, generals, language};
+    return {zero_hour, generals, language, arguments.mods};
 }
 
 void print_data_selection(const DataSelection& selection, std::ostream& output)

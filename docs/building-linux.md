@@ -67,6 +67,8 @@ M4 adds an in-process, device-free verification entry. Both data roots must be a
 
 If `--language` and `Language` are absent, verification accepts exactly one populated `Data/<language>` directory. Zero or multiple candidates are reported rather than guessed. This command does not initialize SDL, a window, GPU, audio, or video device and never writes either retail root.
 
+Repeat `--mod /absolute/path/to/mod.big` (or name a directory containing BIG files) to insert explicitly selected mod archives between Zero Hour loose files and the normal Zero Hour archives. Archive discovery is case-insensitive sorted and first-loaded wins. The verifier rejects ambiguous case-only names, traversal, malformed headers/tables, and out-of-range or oversized entries before exposing a resource.
+
 For lifecycle testing, `--fail-init <stage>` injects a controlled failure at `paths`, `logging`, `platform`, `renderer`, `audio`, `video`, or `engine`. It exits with code 4 after reporting the stage and tearing down only earlier initialized stages in reverse order. This option is a developer test seam, not a gameplay setting.
 
 `headless_process_isolation` launches two processes before waiting for either. They run from unrelated working directories, use different state roots and deliberately invalid SDL display/audio settings, and must produce disjoint logs and completion records. The test is asset-free and makes no network request.
