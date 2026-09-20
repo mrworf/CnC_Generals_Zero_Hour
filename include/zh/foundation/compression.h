@@ -30,4 +30,12 @@ std::vector<UInt8> decompress_tagged(
     std::size_t maximum_output_size,
     std::string_view logical_source);
 
+// Executes the original EAC RefPack translation units behind the bounded port boundary.
+std::vector<UInt8> original_refpack_encode(ByteView input, std::size_t maximum_output_size);
+std::vector<UInt8> original_refpack_decode(
+    ByteView input,
+    std::size_t maximum_output_size,
+    std::string_view logical_source);
+std::string original_refpack_provider();
+
 } // namespace zh::foundation

@@ -70,7 +70,19 @@ function(zh_add_bootstrap_component target inventory_variable)
   set_property(TARGET ${target} PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${${inventory_variable}}")
 endfunction()
 
-zh_add_bootstrap_component(zh_compression ZH_LEGACY_ZH_COMPRESSION_SOURCES)
+add_library(zh_compression STATIC
+  src/foundation/compression.cpp
+  src/original_support/compression.cpp
+  GeneralsMD/Code/Libraries/Source/Compression/EAC/refabout.cpp
+  GeneralsMD/Code/Libraries/Source/Compression/EAC/refdecode.cpp
+  GeneralsMD/Code/Libraries/Source/Compression/EAC/refencode.cpp
+)
+target_include_directories(zh_compression
+  PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/Compression/EAC"
+)
+target_link_libraries(zh_compression PUBLIC zh_build_options)
+set_property(TARGET zh_compression PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_LEGACY_ZH_COMPRESSION_SOURCES}")
 zh_add_bootstrap_component(zh_wwsupport ZH_LEGACY_ZH_WWSUPPORT_SOURCES)
 zh_add_bootstrap_component(zh_w3d ZH_LEGACY_ZH_W3D_SOURCES)
 zh_add_bootstrap_component(zh_wwshade ZH_LEGACY_ZH_WWSHADE_SOURCES)
@@ -137,9 +149,6 @@ add_library(zh_lan STATIC
 )
 target_include_directories(zh_lan PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_lan PUBLIC zh_wwsupport zh_os_posix zh_build_options)
-
-target_sources(zh_compression PRIVATE src/foundation/compression.cpp)
-target_include_directories(zh_compression PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 target_sources(zh_wwsupport PRIVATE
   src/foundation/byte_codec.cpp
@@ -477,6 +486,27 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(foundation_compression_tests PRIVATE zh_compression)
   add_test(NAME foundation_compression COMMAND foundation_compression_tests)
   set_tests_properties(foundation_compression PROPERTIES LABELS foundation)
+
+  add_executable(original_compression_tests tests/original_support/test_original_compression.cpp)
+  target_link_libraries(original_compression_tests PRIVATE zh_compression)
+  target_link_options(original_compression_tests PRIVATE
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-compression.link.map")
+  add_test(NAME original_compression_runtime COMMAND original_compression_tests)
+  set_tests_properties(original_compression_runtime PROPERTIES LABELS "original-support;source-identity")
+  add_test(NAME original_compression_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-compression.link.map"
+    --executable "$<TARGET_FILE:original_compression_tests>"
+    --required "GeneralsMD/Code/Libraries/Source/Compression/EAC/refabout.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/Compression/EAC/refdecode.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/Compression/EAC/refencode.cpp")
+  set_tests_properties(original_compression_identity PROPERTIES LABELS "original-support;source-identity")
+  add_test(NAME original_compression_identity_negative COMMAND "${Python3_EXECUTABLE}" -m unittest
+    tests.original_support.test_original_identity)
+  set_tests_properties(original_compression_identity_negative PROPERTIES
+    LABELS "original-support;source-identity"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
   add_executable(headless_runtime_tests
     tests/headless/test_headless_runtime.cpp

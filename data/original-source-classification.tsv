@@ -1396,10 +1396,10 @@ GeneralsMD/Code/Libraries/Source/Compression/EAC/huffabout.cpp	excluded	M19	defe
 GeneralsMD/Code/Libraries/Source/Compression/EAC/huffcodex.h	excluded	M19	deferred until the M19 original compression provider is linked	ZH_LEGACY_ZH_COMPRESSION_SOURCES
 GeneralsMD/Code/Libraries/Source/Compression/EAC/huffdecode.cpp	excluded	M19	deferred until the M19 original compression provider is linked	ZH_LEGACY_ZH_COMPRESSION_SOURCES
 GeneralsMD/Code/Libraries/Source/Compression/EAC/huffencode.cpp	excluded	M19	deferred until the M19 original compression provider is linked	ZH_LEGACY_ZH_COMPRESSION_SOURCES
-GeneralsMD/Code/Libraries/Source/Compression/EAC/refabout.cpp	excluded	M19	deferred until the M19 original compression provider is linked	ZH_LEGACY_ZH_COMPRESSION_SOURCES
+GeneralsMD/Code/Libraries/Source/Compression/EAC/refabout.cpp	production-compiled	GeneralsMD/Code/Libraries/Source/Compression/EAC/refabout.cpp	compiled and runtime-witnessed by the M19 original-support harness	ZH_LEGACY_ZH_COMPRESSION_SOURCES
 GeneralsMD/Code/Libraries/Source/Compression/EAC/refcodex.h	excluded	M19	deferred until the M19 original compression provider is linked	ZH_LEGACY_ZH_COMPRESSION_SOURCES
-GeneralsMD/Code/Libraries/Source/Compression/EAC/refdecode.cpp	excluded	M19	deferred until the M19 original compression provider is linked	ZH_LEGACY_ZH_COMPRESSION_SOURCES
-GeneralsMD/Code/Libraries/Source/Compression/EAC/refencode.cpp	excluded	M19	deferred until the M19 original compression provider is linked	ZH_LEGACY_ZH_COMPRESSION_SOURCES
+GeneralsMD/Code/Libraries/Source/Compression/EAC/refdecode.cpp	production-compiled	GeneralsMD/Code/Libraries/Source/Compression/EAC/refdecode.cpp	compiled and runtime-witnessed by the M19 original-support harness	ZH_LEGACY_ZH_COMPRESSION_SOURCES
+GeneralsMD/Code/Libraries/Source/Compression/EAC/refencode.cpp	production-compiled	GeneralsMD/Code/Libraries/Source/Compression/EAC/refencode.cpp	compiled and runtime-witnessed by the M19 original-support harness	ZH_LEGACY_ZH_COMPRESSION_SOURCES
 GeneralsMD/Code/Libraries/Source/Compression/LZHCompress/CompLibHeader/Lzhl.h	excluded	none	manifest input is absent from the repository or outside its source boundary	ZH_LEGACY_UNAVAILABLE_SOURCE_RECORDS
 GeneralsMD/Code/Libraries/Source/Compression/LZHCompress/CompLibHeader/Lzhl_tcp.h	excluded	none	manifest input is absent from the repository or outside its source boundary	ZH_LEGACY_UNAVAILABLE_SOURCE_RECORDS
 GeneralsMD/Code/Libraries/Source/Compression/LZHCompress/CompLibHeader/_huff.h	excluded	none	manifest input is absent from the repository or outside its source boundary	ZH_LEGACY_UNAVAILABLE_SOURCE_RECORDS

@@ -1,6 +1,6 @@
 # M19 slice 02: original compression runtime boundary
 
-Status: pending
+Status: completed
 
 ## Goal and observable outcome
 
@@ -50,3 +50,7 @@ Positive round-trip and boundary vectors; negative malformed/truncated buffers a
 ## Commit boundary
 
 One commit containing original-source portability changes, target wiring, harness/tests, evidence, and this slice's completion record.
+
+## Completion record
+
+`zh_compression` now compiles the original EAC RefPack about/encode/decode translation units and no longer compiles the generic bootstrap component. The bounded adapter validates the stream with the safe native decoder before calling the original decoder and compares both results. GCC and Clang Debug focused suites passed 5/5; the ASan/UBSan runtime test passed 1/1 with leak detection disabled for the established restricted environment. Compiler-command, link-map and runtime-witness identity gates passed, while the missing-provider negative control fails closed. Commit: pending.

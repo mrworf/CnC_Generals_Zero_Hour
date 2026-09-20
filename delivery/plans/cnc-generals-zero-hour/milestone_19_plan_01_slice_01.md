@@ -53,4 +53,4 @@ One commit containing policy/generator, generated classification/evidence, tests
 
 ## Completion record
 
-Implemented deterministic classification for all 3,293 unique canonical inventory paths, with provider/rationale and duplicate-origin consolidation. Added positive coverage and negative missing-policy/bootstrap/toy/fixture controls. GCC Debug configured and built successfully; focused CTest passed 2/2 and direct unit tests passed 4/4. Commit: pending.
+Implemented deterministic classification for all 3,293 unique canonical inventory paths, with provider/rationale and duplicate-origin consolidation. Added positive coverage and negative missing-policy/bootstrap/toy/fixture controls. GCC Debug configured and built successfully; focused CTest passed 2/2 and direct unit tests passed 4/4. Commit: `95a2c31`.

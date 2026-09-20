@@ -26,6 +26,12 @@ ACTIVE_POLICY = {
     "ZH_LEGACY_ZH_GAME_DEVICE_SOURCES": ("excluded", "M22-M23", "original device consumers are owned by M22 and M23"),
 }
 
+PRODUCTION_SOURCES = {
+    "GeneralsMD/Code/Libraries/Source/Compression/EAC/refabout.cpp",
+    "GeneralsMD/Code/Libraries/Source/Compression/EAC/refdecode.cpp",
+    "GeneralsMD/Code/Libraries/Source/Compression/EAC/refencode.cpp",
+}
+
 PRODUCTION_PROVIDER_RE = re.compile(r"^(?!.*(?:bootstrap|fixture|toy)).+\.(?:c|cc|cpp|cxx)$", re.IGNORECASE)
 
 
@@ -71,6 +77,10 @@ def classify(text: str) -> list[Record]:
                     disposition, provider, rationale = ACTIVE_POLICY[variable]
                 except KeyError as exc:
                     raise ValueError(f"missing classification policy for {variable}") from exc
+                if path in PRODUCTION_SOURCES:
+                    disposition = "production-compiled"
+                    provider = path
+                    rationale = "compiled and runtime-witnessed by the M19 original-support harness"
 
             if not path or "\t" in path or "\n" in path:
                 raise ValueError(f"invalid inventory path: {path!r}")

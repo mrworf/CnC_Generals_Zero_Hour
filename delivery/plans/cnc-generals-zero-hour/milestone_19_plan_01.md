@@ -17,8 +17,8 @@ Authority: `delivery/milestones/cnc-generals-zero-hour/M19-original-support.md`,
 
 ## Slice index
 
-1. [Slice 01 — auditable source classification and identity gate](milestone_19_plan_01_slice_01.md): completed (commit pending)
-2. [Slice 02 — original compression runtime boundary](milestone_19_plan_01_slice_02.md): pending
+1. [Slice 01 — auditable source classification and identity gate](milestone_19_plan_01_slice_01.md): completed (`95a2c31`)
+2. [Slice 02 — original compression runtime boundary](milestone_19_plan_01_slice_02.md): completed (commit pending)
 3. [Slice 03 — original WW support runtime boundary and milestone evidence](milestone_19_plan_01_slice_03.md): pending
 
 ## Validation strategy
@@ -33,4 +33,4 @@ Each slice runs focused positive and negative tests. At milestone completion, bu
 
 ## Completion record
 
-Slice 01 established complete source classification and negative bootstrap/toy provider controls. The outer orchestrator owns milestone status and delivery-goal transitions.
+Slices 01–02 established complete source classification and the bounded original EAC RefPack compile/link/runtime boundary. The outer orchestrator owns milestone status and delivery-goal transitions.
