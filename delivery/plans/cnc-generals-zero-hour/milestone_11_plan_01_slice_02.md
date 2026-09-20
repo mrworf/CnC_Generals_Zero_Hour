@@ -62,6 +62,12 @@ ctest --preset linux-gcc-debug -R lan_virtual --output-on-failure
 
 All deterministic scenarios pass without real time, real sockets, or unbounded queues, and failures expose actionable diagnostics.
 
+## Delivered evidence
+
+- `cmake --build --preset linux-gcc-debug --target lan_virtual_tests` passed.
+- `ctest --preset linux-gcc-debug -R '^lan_(protocol|virtual)$' --output-on-failure` passed (2/2).
+- Virtual tests cover broadcast discovery, direct connect, dropped-join retry, duplication, reordering, corruption/version rejection, delay, clock-wrap timeout, disconnect, and both data/map identity mismatch.
+
 ## Commit boundary
 
 Commit transport/session APIs, virtual implementation, tests, CMake wiring, and updated plan evidence as `delivery: M11 slice 02 simulate LAN sessions`.

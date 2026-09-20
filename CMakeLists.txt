@@ -99,7 +99,7 @@ add_library(zh_simulation STATIC src/simulation/determinism.cpp)
 target_include_directories(zh_simulation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_simulation PUBLIC zh_persistence zh_build_options)
 
-add_library(zh_lan STATIC src/lan/protocol.cpp)
+add_library(zh_lan STATIC src/lan/protocol.cpp src/lan/session.cpp src/lan/virtual_transport.cpp)
 target_include_directories(zh_lan PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_lan PUBLIC zh_wwsupport zh_os_posix zh_build_options)
 
@@ -388,6 +388,11 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(lan_protocol_tests PRIVATE zh_lan)
   add_test(NAME lan_protocol COMMAND lan_protocol_tests)
   set_tests_properties(lan_protocol PROPERTIES LABELS lan)
+
+  add_executable(lan_virtual_tests tests/lan/test_virtual_transport.cpp)
+  target_link_libraries(lan_virtual_tests PRIVATE zh_lan)
+  add_test(NAME lan_virtual COMMAND lan_virtual_tests)
+  set_tests_properties(lan_virtual PROPERTIES LABELS "lan;headless")
 
   add_executable(platform_sdl_event_tests tests/platform/test_sdl_events.cpp)
   target_link_libraries(platform_sdl_event_tests PRIVATE zh_platform_sdl)
