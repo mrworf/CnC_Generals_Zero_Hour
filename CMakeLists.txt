@@ -105,6 +105,14 @@ target_include_directories(zh_renderer_sdl_gpu PUBLIC "${CMAKE_CURRENT_SOURCE_DI
 target_sources(zh_os_posix PRIVATE src/foundation/platform.cpp)
 target_include_directories(zh_os_posix PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
+target_sources(zh_null_platform PRIVATE src/headless/null_platform.cpp)
+target_sources(zh_null_renderer PRIVATE src/headless/null_renderer.cpp)
+target_sources(zh_null_audio PRIVATE src/headless/null_audio.cpp)
+target_sources(zh_null_video PRIVATE src/headless/null_video.cpp)
+foreach(null_target zh_null_platform zh_null_renderer zh_null_audio zh_null_video)
+  target_include_directories(${null_target} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+endforeach()
+
 target_link_libraries(zh_compression PUBLIC ZLIB::ZLIB zh_wwsupport)
 target_link_libraries(zh_wwsupport PUBLIC Freetype::Freetype Fontconfig::Fontconfig)
 target_link_libraries(zh_w3d PUBLIC zh_wwsupport)
@@ -153,8 +161,8 @@ endforeach()
 add_custom_target(zh_renderer_shaders ALL DEPENDS ${ZH_RENDERER_SPIRV})
 add_dependencies(zh_renderer_sdl_gpu zh_renderer_shaders)
 
-add_executable(zh_main src/bootstrap/main.cpp)
-target_include_directories(zh_main PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+add_executable(zh_main src/bootstrap/main.cpp src/headless/runtime.cpp)
+target_include_directories(zh_main PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated" "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_main PRIVATE
   zh_build_options zh_game_engine zh_game_device zh_null_platform zh_null_renderer
   zh_null_audio zh_null_video zh_test_support
@@ -226,4 +234,21 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(foundation_compression_tests PRIVATE zh_compression)
   add_test(NAME foundation_compression COMMAND foundation_compression_tests)
   set_tests_properties(foundation_compression PROPERTIES LABELS foundation)
+
+  add_executable(headless_runtime_tests
+    tests/headless/test_headless_runtime.cpp
+    src/headless/runtime.cpp
+  )
+  target_link_libraries(headless_runtime_tests PRIVATE
+    zh_os_posix zh_null_platform zh_null_renderer zh_null_audio zh_null_video
+  )
+  add_test(NAME headless_runtime COMMAND headless_runtime_tests)
+  set_tests_properties(headless_runtime PROPERTIES LABELS headless)
+
+  add_test(NAME headless_process_smoke COMMAND zh_main --headless --ticks 2
+    --state-dir "${CMAKE_CURRENT_BINARY_DIR}/headless-process-smoke")
+  set_tests_properties(headless_process_smoke PROPERTIES
+    LABELS headless
+    PASS_REGULAR_EXPRESSION "headless: completed ticks=2"
+  )
 endif()

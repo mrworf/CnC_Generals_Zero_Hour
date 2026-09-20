@@ -42,6 +42,18 @@ The Vulkan validation package is listed for the eventual M14 hardware gate; M0 d
 
 `vulkan-validation-layers` was not installed during M0 and is required before M14, as recorded by the port plan.
 
+## Asset-free headless execution
+
+M3 adds a native process path that does not initialize SDL, a display, GPU, audio device, video presentation, networking, retail data, or any retired Windows service:
+
+```sh
+./build/linux-gcc-debug/zh_main --headless --ticks 60 --state-dir /absolute/writable/path
+```
+
+`--ticks` accepts 0 through 1,000,000 and defaults to one. When `--state-dir` is omitted, the process uses `$XDG_STATE_HOME/generals-zero-hour`, falling back to `$HOME/.local/state/generals-zero-hour`. It writes `logs/headless.log` and `last-headless-run.txt` only below that root. The command reports build, architecture, SDL, FFmpeg/Bink, data-root/locale, and intentionally skipped-device capabilities. Exit codes are 0 for success, 2 for command usage, 3 for path/log setup, 4 for initialization failure, and 5 for a runtime failure.
+
+The headless path is independent of the current working directory. It does not invoke a launcher, DRM/CD check, registry, splash window, named mutex, embedded browser, GameSpy, SEH, or `chdir`.
+
 ## What the bootstrap proves
 
 The `zh_main --bootstrap-smoke` test links project-owned stubs across the final engine/device, W3D, WWShade, support, compression, POSIX, SDL, renderer, audio, video, test, and null-backend boundaries. It compiles a project-owned GLSL shader to SPIR-V and reports build revision, architecture, compiler, SDL, and FFmpeg metadata. Invoking `zh_main` without `--bootstrap-smoke` fails so this milestone cannot be mistaken for a playable build.
