@@ -255,25 +255,26 @@ milestones:
   - id: M28
     title: "original CPU presentation and media resources"
     file: delivery/milestones/cnc-generals-zero-hour/M28-original-cpu-resources.md
-    status: in_progress
+    status: completed
     dependencies: [M27, M6, M7, M8, M12, M13]
     remediation_ids: [SE-005, SE-006, SE-010, RC-001, RC-002, RC-004, RC-006, RC-007, RC-009, RC-010]
     optional: false
     started_at: "2026-09-20T16:41:25Z"
-    completed_at: null
-    evidence: null
-    notes: "Original CPU/device seams and resource/audio consumers with owned fixtures; coupled GameClient and complete registry remain M20."
+    completed_at: "2026-09-20T17:01:31Z"
+    commit_hash: 5d6f8f490387548a94cfa95ecbefdd27b5000aa8
+    evidence: "evidence/qa/cnc-generals-zero-hour/m28-original-cpu-resources-2026-09-20.md; focused original-resources 10/10 and canonical asset-free 92/92 passed in each GCC/Clang Debug/Release preset; Clang Debug ASan/UBSan passed 10/10 with all device/resource/worker counts restored."
+    notes: "Accepted at the independent CPU/resource boundary without retail, window, GPU, or audio endpoint acquisition. Coupled GameClient and complete registries remain M20-owned; later domain owners remain explicit. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_28_plan_01.md; slice commits: fba3c422f41dade108eb86a0d62eca1d8f4edfeb, 4de7b13dcb84be94417d857e65ff798cb1c250bf, 5d6f8f490387548a94cfa95ecbefdd27b5000aa8."
   - id: M20
     title: "integrated original runtime and data lifecycle"
     file: delivery/milestones/cnc-generals-zero-hour/M20-original-lifecycle.md
-    status: pending
+    status: in_progress
     dependencies: [M28]
     remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-010, RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010]
     optional: false
     started_at: "2026-09-20T14:55:33Z"
     completed_at: null
     evidence: "evidence/qa/cnc-generals-zero-hour/M20-original-lifecycle-blocker.md proves an UPSTREAM_REQUIRED source-order dependency defect: original GameEngine::init requires real GameLogic, GameClient/W3D, module/object, particle and media providers assigned to M21-M23 before it can satisfy M20 lifecycle acceptance."
-    notes: "Blocked delivery history retained pending explicit packet adoption; RC007-RC010 add independent M26-M28 providers before coupled M20 closure. Prior governing plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md; blocker commit: 418b1e6. After readiness/committed handoff deliver prerequisites then create M20 plan 02. No reduced GameEngine, empty registry or parallel lifecycle. M21-M25 retain later domain completion/acceptance, never dependencies required for M20 completion."
+    notes: "Blocked delivery history remains preserved in delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md and blocker commit 418b1e6. M26-M28 are now accepted; resume under new governing plan 02 without reduced GameEngine, empty registry, or parallel lifecycle. M21-M25 retain later domain completion/acceptance, never dependencies required for M20 completion."
   - id: M21
     title: "original map and simulation execution"
     file: delivery/milestones/cnc-generals-zero-hour/M21-original-simulation.md

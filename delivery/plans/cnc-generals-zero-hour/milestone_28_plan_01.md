@@ -35,7 +35,7 @@ The provider preserves logical resource ownership, loader and callback registrat
 |---|---|---|---|---|---|---|
 | 01 | [CPU scene, loaders, and device lifecycle](milestone_28_plan_01_slice_01.md) | Original CPU scene/resource ownership drives the recording device through registered loaders with explicit DX8 initialization/destruction capabilities. | M27, M7 | complete | `fba3c422f41dade108eb86a0d62eca1d8f4edfeb` | 4/4 focused tests in all four presets |
 | 02 | [Font, image, and WND resources](milestone_28_plan_01_slice_02.md) | Original UI resource semantics load owned fonts/images/layouts through native providers, including `BlankWindow.wnd`. | slice 01, M8 | complete | `4de7b13dcb84be94417d857e65ff798cb1c250bf` | 6/6 cumulative focused tests in all four presets |
-| 03 | [Audio definitions, music, and assurance](milestone_28_plan_01_slice_03.md) | Original audio tables parse and resolve owned music without CD/modal waits, with full identity, lifecycle, and milestone evidence. | slices 01-02, M12/M13 | complete | recorded after commit | [M28 QA evidence](../../../evidence/qa/cnc-generals-zero-hour/m28-original-cpu-resources-2026-09-20.md) |
+| 03 | [Audio definitions, music, and assurance](milestone_28_plan_01_slice_03.md) | Original audio tables parse and resolve owned music without CD/modal waits, with full identity, lifecycle, and milestone evidence. | slices 01-02, M12/M13 | complete | `5d6f8f490387548a94cfa95ecbefdd27b5000aa8` | [M28 QA evidence](../../../evidence/qa/cnc-generals-zero-hour/m28-original-cpu-resources-2026-09-20.md) |
 
 ## Cross-slice constraints
 
