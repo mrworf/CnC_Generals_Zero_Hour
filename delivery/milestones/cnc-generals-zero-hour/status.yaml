@@ -19,12 +19,14 @@ milestones:
   - id: M0
     title: "reproducible build readiness"
     file: delivery/milestones/cnc-generals-zero-hour/M0-build-graph.md
-    status: pending
+    status: in_progress
     dependencies: []
     optional: false
+    started_at: "2026-09-20T03:11:19Z"
     completed_at: null
+    commit_hash: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_00_plan_01.md"
   - id: M1
     title: "portable ABI and support libraries"
     file: delivery/milestones/cnc-generals-zero-hour/M1-portable-foundations.md
