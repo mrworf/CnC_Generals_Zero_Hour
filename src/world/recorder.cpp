@@ -220,7 +220,13 @@ renderer::ValidationResult WorldRecorder::draw_item(const WorldItem& item, UInt3
     draw.fragment_bindings.uniforms[0] = {material_uniform_, 0, 128};
     draw.fragment_bindings.uniform_count = 1;
     for (UInt32 index = 0; index < 4; ++index) {
-        draw.fragment_bindings.textures[index] = index == 3 ? shadow_color_ : base_textures_[index];
+        // A shadow caster cannot sample the shadow target while that same
+        // texture is the active color attachment. Use the ordinary fallback
+        // texture in the dependency pass; later main-pass draws sample the
+        // completed shadow target.
+        draw.fragment_bindings.textures[index] = index == 3
+            ? (item.family == GeometryFamily::shadow ? base_textures_[0] : shadow_color_)
+            : base_textures_[index];
         draw.fragment_bindings.samplers[index] = samplers_[index];
     }
     draw.fragment_bindings.texture_count = 4;

@@ -103,16 +103,18 @@ renderer::ValidationResult EffectsRecorder::create_resources()
         renderer::TextureDesc desc;
         desc.width = 1;
         desc.height = 1;
-        if (index == 2) {
-            desc.dimension = renderer::TextureDimension::cube;
-            desc.depth_or_layers = 6;
-        }
         textures_[index] = device_.create_texture(desc, "effects texture " + std::to_string(index));
         renderer::SamplerDesc sampler;
         sampler.address_u = index == 3 ? renderer::AddressMode::clamp_border : renderer::AddressMode::repeat;
         sampler.address_v = sampler.address_u;
         samplers_[index] = device_.create_sampler(sampler, "effects sampler " + std::to_string(index));
     }
+    renderer::TextureDesc environment_desc;
+    environment_desc.width = 1;
+    environment_desc.height = 1;
+    environment_desc.dimension = renderer::TextureDimension::cube;
+    environment_desc.depth_or_layers = 6;
+    environment_texture_ = device_.create_texture(environment_desc, "effects environment cube");
     source_color_ = device_.create_texture(target_desc(renderer::TextureFormat::rgba8), "effects source color");
     source_depth_ = device_.create_texture(target_desc(renderer::TextureFormat::depth24_stencil8), "effects source depth");
     main_color_ = device_.create_texture(target_desc(renderer::TextureFormat::rgba8), "effects main color");
@@ -122,6 +124,7 @@ renderer::ValidationResult EffectsRecorder::create_resources()
     if (!vertex_buffer_) return fail(device_.last_error());
     for (auto handle : uniforms_) if (!handle) return fail(device_.last_error());
     for (auto handle : textures_) if (!handle) return fail(device_.last_error());
+    if (!environment_texture_) return fail(device_.last_error());
     for (auto handle : samplers_) if (!handle) return fail(device_.last_error());
     if (!source_color_ || !source_depth_ || !main_color_ || !main_depth_ || !output_color_ || !output_depth_)
         return fail(device_.last_error());
@@ -233,6 +236,8 @@ renderer::ValidationResult EffectsRecorder::draw_effect(const PreparedEffect& ef
         draw.fragment_bindings.uniform_count = mapping.fragment_uniforms;
         for (renderer::UInt32 slot = 0; slot < mapping.samplers; ++slot) {
             auto texture = textures_[slot % textures_.size()];
+            if (mapping.kind == EffectKind::bump_environment && slot == 2)
+                texture = environment_texture_;
             if (mapping.render_target_input && slot == 0)
                 texture = mapping.kind == EffectKind::post_effect ? main_color_ : source_color_;
             draw.fragment_bindings.textures[slot] = texture;
@@ -276,11 +281,12 @@ void EffectsRecorder::destroy_resources()
     if (source_depth_) device_.destroy(source_depth_);
     if (source_color_) device_.destroy(source_color_);
     for (auto handle : samplers_) if (handle) device_.destroy(handle);
+    if (environment_texture_) device_.destroy(environment_texture_);
     for (auto handle : textures_) if (handle) device_.destroy(handle);
     for (auto handle : uniforms_) if (handle) device_.destroy(handle);
     if (vertex_buffer_) device_.destroy(vertex_buffer_);
     output_depth_ = {}; output_color_ = {}; main_depth_ = {}; main_color_ = {};
-    source_depth_ = {}; source_color_ = {}; samplers_ = {}; textures_ = {}; uniforms_ = {};
+    source_depth_ = {}; source_color_ = {}; samplers_ = {}; environment_texture_ = {}; textures_ = {}; uniforms_ = {};
     vertex_buffer_ = {}; vertex_buffer_size_ = 0;
 }
 

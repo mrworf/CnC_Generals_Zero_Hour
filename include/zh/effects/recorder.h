@@ -55,6 +55,7 @@ private:
     renderer::UInt64 vertex_buffer_size_ = 0;
     std::array<renderer::BufferHandle, renderer::RendererLimits::uniform_buffers_per_stage> uniforms_{};
     std::array<renderer::TextureHandle, 4> textures_{};
+    renderer::TextureHandle environment_texture_;
     std::array<renderer::SamplerHandle, 4> samplers_{};
     renderer::TextureHandle source_color_;
     renderer::TextureHandle source_depth_;

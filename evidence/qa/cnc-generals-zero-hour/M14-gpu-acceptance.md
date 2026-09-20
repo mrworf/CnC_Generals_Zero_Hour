@@ -2,9 +2,9 @@
 
 ## Disposition
 
-**Blocked on external PRE-012 validation-layer installation.** The SDL_GPU Vulkan implementation and project-owned hardware scene matrix pass on the primary GPU. PRE-013 is not complete because `VK_LAYER_KHRONOS_validation` is not discoverable, so this record does not claim a validation-error-free run or final visual acceptance.
+**Accepted on the primary x86-64 Vulkan GPU.** The SDL_GPU Vulkan implementation and project-owned hardware scene matrix pass with `VK_LAYER_KHRONOS_validation` enabled. Both the generated GPU suite and the retail+GPU suite completed with zero `Validation Error` and zero VUID output, so PRE-013 is complete for the required single-GPU gate.
 
-No public SDL_GPU capability gap was observed. The section 9 backend fallback is not triggered; SDL_GPU remains the selected provisional backend pending the validation-layer rerun.
+No public SDL_GPU capability gap was observed. The section 9 backend fallback is not triggered; SDL_GPU remains the selected backend.
 
 ## Hardware and runtime context
 
@@ -17,9 +17,9 @@ No public SDL_GPU capability gap was observed. The section 9 backend fallback is
 | SDL_GPU backend | `vulkan` |
 | Texture capabilities | BC1, BC2, and BC3 supported |
 | Architecture | Linux x86-64 |
-| Validation layer | `VK_LAYER_KHRONOS_validation` absent |
+| Validation layer | `VK_LAYER_KHRONOS_validation`, Arch package `vulkan-validation-layers` 1.4.357.0-1 |
 
-The host `vulkaninfo --summary` probe found the RTX and six NVIDIA/Steam layers, but not the Khronos validation layer. `pacman -Q vulkan-validation-layers` also reported the package absent. The repository gate fails closed with the installation command context rather than treating SDL debug mode alone as validation coverage.
+The host `vulkaninfo --summary` probe found the RTX and Khronos validation layer, and `pacman -Q vulkan-validation-layers` reported version 1.4.357.0-1. Hardware commands explicitly set `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`. The GPU executable runs through a repository wrapper that combines stdout/stderr and fails even when the executable exits zero if it observes `Validation Error` or `VUID-`.
 
 ## Exercised backend paths
 
@@ -47,15 +47,24 @@ The hardware executable presents project-owned generated pixels only. It runs ea
 | View-space fog, explicit depth bias, top-left texture origin | World/effect paths exercised |
 | Video frame/audio-clock ordering | Headless video suite plus GPU movie presentation pass |
 
-The two complete 16-scene presentation loops took 696 ms and 681 ms in the recorded run, below the 10-second functional threshold. These timings are functional metrics, not a performance target.
+The two complete validation-enabled 16-scene presentation loops each took 97 ms in the recorded run, below the 10-second functional threshold. These timings are functional metrics, not a performance target.
+
+## Validation findings and disposition
+
+The first enabled run exposed two locally recoverable errors and was not accepted:
+
+- `VUID-vkCmdDraw-viewType-07752`: the shared effects texture slot placed a cube view in WWShade's 2D `projected_texture` binding. Effects now retain ordinary 2D slots and bind a dedicated cube only to the bump-environment cube sampler.
+- `VUID-vkCmdDrawIndexed-imageLayout-00344`: the shadow caster sampled `world shadow map` while that same texture was its active color attachment. The shadow dependency pass now binds a neutral 2D fallback; main-world draws continue to sample the completed shadow map.
+
+Focused command-stream tests pin both corrected bindings. The fail-closed output wrapper also has positive and negative unit coverage. The complete generated and retail-backed validation-enabled reruns emitted neither finding nor any other validation error.
 
 ## Retail and cross-build evidence
 
 - The retail-enabled `ui|video` selection passed 7/7, including bounded decode of all project-manifest Bink variants through the read-only user-owned corpus.
 - All four canonical GCC/Clang debug/release presets built, and their default `gpu|ui|video` selections passed. Default presets intentionally contain no hardware test because `ZH_ENABLE_GPU_TESTS` remains off.
-- The explicit GPU build passed `renderer_gpu_acceptance`; the complete `gpu` selection then failed only `renderer_gpu_validation_layer` with the absent-layer diagnostic.
+- The explicit validation-enabled GPU build passed 2/2 GPU tests. The validation-enabled retail+GPU `gpu|ui|video` selection passed 9/9, including bounded decode of the read-only retail movie corpus.
 - No retail bytes, digests, physical filenames, or private absolute paths are present in this record or the project-owned output.
 
-## Required rerun
+## Acceptance result
 
-Install Arch package `vulkan-validation-layers`, confirm `vulkaninfo --summary` lists `VK_LAYER_KHRONOS_validation`, then rerun the explicit GPU and retail+GPU commands in `docs/building-linux.md`. M14 may be accepted only if both GPU tests pass and the enabled Khronos validation stream reports zero errors for the complete scene/lifecycle matrix.
+The generated GPU suite passed 2/2 and the retail+GPU suite passed 9/9 with the Khronos layer explicitly enabled. Their combined output contained zero `Validation Error` and zero `VUID-`. Together with the scene, lifecycle, semantic, retail, and functional timing evidence above, this satisfies the M14 PRE-013 single-GPU acceptance gate.

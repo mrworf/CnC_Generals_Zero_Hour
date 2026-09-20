@@ -27,6 +27,7 @@ M14 cannot be accepted until `VK_LAYER_KHRONOS_validation` is installed and an e
 1. [Slice 01 — shared device contract and SDL_GPU resources](milestone_14_plan_01_slice_01.md)
 2. [Slice 02 — real Vulkan rendering, presentation, and lifecycle](milestone_14_plan_01_slice_02.md)
 3. [Slice 03 — representative scene matrix and acceptance evidence](milestone_14_plan_01_slice_03.md)
+4. [Slice 04 — validation-layer image-view and layout corrections](milestone_14_plan_01_slice_04.md)
 
 ## Milestone validation
 
@@ -45,4 +46,5 @@ All safe implementation and non-validation-layer checks may be committed. If the
 - Slice 01: `c17c0dc` — shared device contract and SDL_GPU resources.
 - Slice 02: `89de107` — real Vulkan rendering, presentation, and lifecycle.
 - Slice 03: `0440a4f` — representative scene matrix, evidence, and fail-closed validation gate.
-- Acceptance: blocked only on external PRE-012. Install `vulkan-validation-layers`, confirm `VK_LAYER_KHRONOS_validation` is discoverable, then rerun the existing GPU and retail+GPU acceptance suites.
+- Slice 04: validation-layer image binding corrections and fail-closed diagnostic scanning (this slice commit).
+- Acceptance evidence: PRE-012 is installed and both validation-enabled GPU suites rerun without validation diagnostics; outer milestone status remains owned by the delivery orchestrator.

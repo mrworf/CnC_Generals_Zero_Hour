@@ -138,7 +138,8 @@ cmake -S . -B build/m14-gpu -G Ninja \
   -DCMAKE_BUILD_TYPE=Debug \
   -DZH_ENABLE_GPU_TESTS=ON
 cmake --build build/m14-gpu
-ctest --test-dir build/m14-gpu -L gpu --output-on-failure
+VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation \
+  ctest --test-dir build/m14-gpu -L gpu --output-on-failure
 ```
 
 The `renderer_gpu_acceptance` test requires a local graphical session and uses
@@ -148,7 +149,9 @@ presentation, resize, focus, fullscreen, teardown, and device recreation; and
 prints device/driver/SDL capabilities and functional timing. The paired
 `renderer_gpu_validation_layer` test fails closed unless
 `VK_LAYER_KHRONOS_validation` is discoverable. SDL debug mode without that
-layer is not zero-error validation evidence.
+layer is not zero-error validation evidence. The acceptance executable is
+wrapped by a combined-output scanner that fails on any `Validation Error` or
+`VUID-` diagnostic even if the executable itself exits successfully.
 
 For the full retail check, add `ZH_ENABLE_RETAIL_TESTS=ON` and the three local
 retail cache values documented above to another untracked build directory.

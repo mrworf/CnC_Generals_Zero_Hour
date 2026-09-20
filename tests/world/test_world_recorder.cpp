@@ -78,6 +78,14 @@ void test_deterministic_complete_command_stream()
     check(first.find("alpha-test=on") != std::string::npos, "tree alpha-test state missing");
     check(first.find("world-camera handedness=left depth=0..1 winding=clockwise origin=top-left") != std::string::npos,
         "camera/coordinate conventions missing");
+    const auto shadow = first.find("family=shadow");
+    const auto shadow_draw = first.find("fragment_textures=T1/S1,T2/S2,T3/S3,T1/S4", shadow);
+    check(shadow != std::string::npos && shadow_draw != std::string::npos && shadow < shadow_draw,
+        "shadow pass sampled its active shadow-map attachment");
+    const auto terrain = first.find("family=terrain");
+    const auto terrain_draw = first.find("fragment_textures=T1/S1,T2/S2,T3/S3,T6/S4", terrain);
+    check(terrain != std::string::npos && terrain_draw != std::string::npos && terrain < terrain_draw,
+        "main world pass did not sample the completed shadow map");
 }
 
 void test_lifecycle_errors_recover()

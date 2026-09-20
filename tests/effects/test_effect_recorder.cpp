@@ -77,6 +77,14 @@ void test_complete_deterministic_command_sequence()
         "premultiplied particle state missing");
     check(ordered.find("effects-render-target dependency source -> main-effects -> post-output") != std::string::npos,
         "render-target dependency marker missing");
+    const auto bump = ordered.find("effect kind=bump-environment");
+    const auto bump_draw = ordered.find("fragment_textures=T1/S1,T2/S2,T5/S3", bump);
+    check(bump != std::string::npos && bump_draw != std::string::npos && bump < bump_draw,
+        "bump environment did not bind the dedicated cube texture");
+    const auto wwshade = ordered.find("effect kind=wwshade-multipass");
+    const auto wwshade_draw = ordered.find("fragment_textures=T1/S1,T2/S2,T3/S3", wwshade);
+    check(wwshade != std::string::npos && wwshade_draw != std::string::npos && wwshade < wwshade_draw,
+        "WWShade sampler2D slot inherited the environment cube texture");
 }
 
 void test_unknown_and_invalid_requests_are_actionable()
