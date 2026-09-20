@@ -32,9 +32,11 @@
 #define _CRC_H_
 
 #include "Lib/BaseType.h"
+#if defined(_WIN32)
 #include "winsock2.h" // for htonl
+#endif
 
-#ifdef _DEBUG
+#if defined(_DEBUG) || !defined(_MSC_VER)
 
 class CRC
 {

@@ -619,7 +619,7 @@ GeneralsMD/Code/GameEngine/Source/Common/RTS/ScoreKeeper.cpp	excluded	M20-M25	or
 GeneralsMD/Code/GameEngine/Source/Common/RTS/SpecialPower.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/RTS/Team.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/RTS/TunnelTracker.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
-GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
+GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp	production-compiled	GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp	compiled and runtime-witnessed by the M27 original-provider harness	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/Recorder.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/SkirmishBattleHonors.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/StateMachine.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
@@ -677,7 +677,7 @@ GeneralsMD/Code/GameEngine/Source/Common/Thing/Thing.cpp	excluded	M20-M25	origin
 GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingFactory.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingTemplate.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/UserPreferences.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
-GeneralsMD/Code/GameEngine/Source/Common/crc.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
+GeneralsMD/Code/GameEngine/Source/Common/crc.cpp	production-compiled	GeneralsMD/Code/GameEngine/Source/Common/crc.cpp	compiled and runtime-witnessed by the M27 original-provider harness	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/version.cpp	production-compiled	GeneralsMD/Code/GameEngine/Source/Common/version.cpp	compiled and runtime-witnessed by the M26 original-provider harness	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/GameClient/Color.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/GameClient/Credits.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES

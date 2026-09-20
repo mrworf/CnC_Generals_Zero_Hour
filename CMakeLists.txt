@@ -179,10 +179,18 @@ add_library(zh_original_data STATIC
   GeneralsMD/Code/GameEngine/Source/Common/System/OriginalFileSystem.cpp
   GeneralsMD/Code/GameEngine/Source/Common/INI/OriginalINI.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/OriginalCSF.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/OriginalXfer.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/OriginalDataChunk.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/OriginalRandomStreams.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/crc.cpp
 )
 target_include_directories(zh_original_data
   PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
 )
 target_link_libraries(zh_original_data PUBLIC zh_data zh_original_process zh_build_options)
 
@@ -363,6 +371,28 @@ if(ZH_BUILD_TESTS)
     --symbol "setFPMode()"
     --witness "original-data config: ok")
   set_tests_properties(original_data_config_identity PROPERTIES LABELS "original-data;source-identity")
+  add_executable(original_data_codec_tests tests/original_data/test_codecs.cpp)
+  target_link_libraries(original_data_codec_tests PRIVATE zh_original_data)
+  target_link_options(original_data_codec_tests PRIVATE
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-data-codecs.link.map")
+  add_test(NAME original_data_codecs COMMAND original_data_codec_tests)
+  set_tests_properties(original_data_codecs PROPERTIES LABELS "original-data;source-identity")
+  add_test(NAME original_data_codecs_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m26_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-data-codecs.link.map"
+    --executable "$<TARGET_FILE:original_data_codec_tests>"
+    --target zh_original_data
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/System/OriginalXfer.cpp"
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/System/OriginalDataChunk.cpp"
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp"
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/crc.cpp"
+    --symbol "zh::original_data::write_xfer_record"
+    --symbol "zh::original_data::read_data_chunks"
+    --symbol "GetGameLogicRandomSeedCRC()"
+    --symbol "GetGameClientRandomValue"
+    --witness "original-data codecs: ok")
+  set_tests_properties(original_data_codecs_identity PROPERTIES LABELS "original-data;source-identity")
   add_executable(original_process_allocator_tests
     tests/original_runtime/test_allocator.cpp
     tests/original_runtime/allocator_provider.cpp

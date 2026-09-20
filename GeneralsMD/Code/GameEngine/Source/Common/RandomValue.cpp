@@ -31,9 +31,11 @@
 
 #include "Lib/BaseType.h"
 #include "Common/RandomValue.h"
-#include "Common/CRC.h"
+#include "Common/crc.h"
 #include "Common/Debug.h"
-#include "GameLogic/GameLogic.h"
+#include "Common/AudioRandomValue.h"
+#include "GameClient/ClientRandomValue.h"
+#include "GameLogic/LogicRandomValue.h"
 
 //#define DETERMINISTIC				// to allow repetition for debugging
 
@@ -437,5 +439,4 @@ Real GameLogicRandomVariable::getValue( void ) const
 			return 0.0f;
 	}
 }
-
 

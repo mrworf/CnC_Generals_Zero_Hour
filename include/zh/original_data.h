@@ -76,8 +76,43 @@ struct CsfDocument {
 
 CsfDocument parse_csf(const std::vector<std::uint8_t>& bytes, const Limits& limits = {});
 
+struct XferRecord {
+    bool boolean = false;
+    std::int32_t integer = 0;
+    std::int64_t integer64 = 0;
+    float real = 0.0F;
+    std::string ascii;
+    std::u16string unicode;
+};
+
+std::vector<std::uint8_t> write_xfer_record(const XferRecord& record, const Limits& limits = {});
+XferRecord read_xfer_record(const std::vector<std::uint8_t>& bytes, const Limits& limits = {});
+
+struct DataChunk {
+    std::string label;
+    std::uint16_t version = 0;
+    std::vector<std::uint8_t> payload;
+};
+
+std::vector<std::uint8_t> write_data_chunks(const std::vector<DataChunk>& chunks, const Limits& limits = {});
+std::vector<DataChunk> read_data_chunks(const std::vector<std::uint8_t>& bytes, const Limits& limits = {});
+
+struct RandomCheckpoints {
+    std::uint32_t initial_logic_crc = 0;
+    std::uint32_t logic_crc_after_draws = 0;
+    std::vector<std::int32_t> logic_values;
+    std::vector<std::int32_t> client_values;
+    std::vector<std::int32_t> audio_values;
+};
+
+RandomCheckpoints characterize_random_streams(
+    std::uint32_t seed, std::size_t logic_draws, std::size_t client_draws, std::size_t audio_draws);
+
 const char* provider_file_identity() noexcept;
 const char* provider_ini_identity() noexcept;
 const char* provider_csf_identity() noexcept;
+const char* provider_xfer_identity() noexcept;
+const char* provider_chunk_identity() noexcept;
+const char* provider_random_identity() noexcept;
 
 } // namespace zh::original_data

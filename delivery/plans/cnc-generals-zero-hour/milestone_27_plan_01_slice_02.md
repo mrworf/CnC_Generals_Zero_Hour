@@ -56,3 +56,9 @@ Positive tests cover boundary values, two-byte UTF-16 including surrogates, nest
 ## Commit boundary
 
 One commit containing codec/chunk/random behavior, directly required portability, tests, ledger/classification changes, and plan result. Slice 03 is excluded.
+
+## Result
+
+Complete. Source-owned Xfer and DataChunk extractions round-trip explicit Bool/Int/Int64/Real/ASCII/UTF-16LE records and nested versioned chunks, rejecting malformed booleans, trailing/truncated input, empty labels, and bounded-output overflow. Actual `RandomValue.cpp` plus `crc.cpp` compile and execute in `zh_original_data`; the seed `0x12345678` produces characterized six-word CRC checkpoints `0x933b34ac` initially and `0xc4405f5c` after eight logic draws. Repeated logic output is unchanged when 17 client and 23 audio draws also occur.
+
+Cumulative focused runtime and compile/link/live-symbol identity tests passed 4/4 in GCC/Clang Debug/Release. The ledger and 3,293-path classification checks pass, with only actual manifest-listed `RandomValue.cpp` and `crc.cpp` promoted. Exact commit is recorded by the next slice's governing-plan update.

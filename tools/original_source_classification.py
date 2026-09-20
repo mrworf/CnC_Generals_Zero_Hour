@@ -43,6 +43,8 @@ PRODUCTION_SOURCES = {
     "GeneralsMD/Code/GameEngine/Source/Common/System/AsciiString.cpp": "M26",
     "GeneralsMD/Code/GameEngine/Source/Common/System/UnicodeString.cpp": "M26",
     "GeneralsMD/Code/GameEngine/Source/Common/version.cpp": "M26",
+    "GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp": "M27",
+    "GeneralsMD/Code/GameEngine/Source/Common/crc.cpp": "M27",
 }
 
 PRODUCTION_PROVIDER_RE = re.compile(r"^(?!.*(?:bootstrap|fixture|toy)).+\.(?:c|cc|cpp|cxx)$", re.IGNORECASE)

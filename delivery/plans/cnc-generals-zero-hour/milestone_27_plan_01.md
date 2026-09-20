@@ -34,8 +34,8 @@ Accordingly, M27 will use narrow source-owned extractions in the original source
 
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
-| 01 | [Logical files, INI and CSF](milestone_27_plan_01_slice_01.md) | Original-source data facade consumes native VFS with exact precedence, two-pass INI ordering, typed callbacks, CSF UTF-16LE, and bounded failures. | M26, M4 | complete | recorded after commit | 2/2 focused tests in all four presets |
-| 02 | [Transfer, chunks and random streams](milestone_27_plan_01_slice_02.md) | Source-owned fixed-width codecs/chunks round-trip bounded data and actual original random streams remain independent. | slice 01 | pending | pending | focused codec/random tests |
+| 01 | [Logical files, INI and CSF](milestone_27_plan_01_slice_01.md) | Original-source data facade consumes native VFS with exact precedence, two-pass INI ordering, typed callbacks, CSF UTF-16LE, and bounded failures. | M26, M4 | complete | `af04a8f8beffc620274f3f8524d7057fa3352363` | 2/2 focused tests in all four presets |
+| 02 | [Transfer, chunks and random streams](milestone_27_plan_01_slice_02.md) | Source-owned fixed-width codecs/chunks round-trip bounded data and actual original random streams remain independent. | slice 01 | complete | recorded after commit | 4/4 cumulative focused tests in all four presets |
 | 03 | [Map metadata, XDG cache and source gates](milestone_27_plan_01_slice_03.md) | Independent map metadata/cache operations handle lifecycle and precedence safely, with checked identity/ledger evidence. | slices 01-02 | pending | pending | focused map/identity tests and cumulative suite |
 
 ## Cross-slice constraints
@@ -64,3 +64,5 @@ Each slice is independently revertible. Slice 03 removes metadata/cache integrat
 Planning and all slice files were created before production edits. The transaction started from clean `HEAD` `a057410`.
 
 Slice 01 binds three named original-source extractions to the accepted M4 VFS and M26 FPU provider. Focused runtime and source-identity tests pass 2/2 in GCC/Clang Debug/Release; the checked dependency ledger and unchanged 3,293-path classification both pass. No manifest-listed legacy source was reclassified because this slice compiles new extraction units, not the coupled legacy translation units.
+
+Slice 02 compiles the actual `RandomValue.cpp` and its actual CRC provider after narrow case/include and non-MSVC portable-CRC corrections. It removes an unnecessary `GameLogic.h` dependency in favor of the three direct random interfaces. Named Xfer and DataChunk core extractions provide bounded, fixed-width little-endian primitives without claiming M24 snapshot compatibility. Cumulative focused runtime and identity tests pass 4/4 in all four presets; only the two manifest-listed original units actually compiled by this slice are promoted in classification.
