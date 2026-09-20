@@ -43,6 +43,7 @@ public:
     ShaderHandle create_shader(const ShaderDesc&, std::string_view label) override;
     PipelineHandle create_pipeline(const PipelineKey&, std::string_view label) override;
     ValidationResult upload(const UploadDesc&, const void* bytes) override;
+    ValidationResult upload_texture(const TextureUploadDesc&, const void* bytes) override;
     ValidationResult begin_pass(const RenderPassDesc&, std::string_view label) override;
     ValidationResult draw(const DrawDesc&) override;
     ValidationResult end_pass() override;
@@ -57,7 +58,8 @@ public:
 
     const SdlGpuCapabilities& capabilities() const noexcept;
     ValidationResult claim_window(SDL_Window* window);
-    ValidationResult present(TextureHandle source);
+    ValidationResult present(TextureHandle source) override;
+    ValidationResult present_last();
     ValidationResult wait_idle();
     void release_window() noexcept;
 

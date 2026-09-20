@@ -108,6 +108,7 @@ private:
     renderer::TextureHandle depth_target_;
     renderer::SamplerHandle sampler_;
     renderer::BufferHandle vertices_;
+    renderer::BufferHandle frame_uniform_;
     renderer::ShaderHandle vertex_shader_;
     renderer::ShaderHandle fragment_shader_;
     renderer::PipelineHandle pipeline_;

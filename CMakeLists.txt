@@ -207,6 +207,8 @@ add_dependencies(zh_renderer_sdl_gpu zh_bootstrap_shaders)
 
 set(ZH_RENDERER_SHADER_NAMES
   acceptance.vert acceptance.frag
+  world.vert world.frag
+  video.vert video.frag
   ui.vert ui.frag
   terrain.vert terrain.frag
   water.vert water.frag
@@ -341,12 +343,20 @@ if(ZH_BUILD_TESTS)
   if(ZH_ENABLE_GPU_TESTS)
     add_executable(renderer_gpu_acceptance tests/renderer/gpu_acceptance.cpp)
     target_compile_definitions(renderer_gpu_acceptance PRIVATE
-      ZH_GPU_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/renderer")
-    target_link_libraries(renderer_gpu_acceptance PRIVATE zh_renderer_sdl_gpu SDL3::SDL3)
-    add_dependencies(renderer_gpu_acceptance zh_renderer_shaders)
+      ZH_GPU_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/shaders")
+    target_link_libraries(renderer_gpu_acceptance PRIVATE zh_renderer_sdl_gpu zh_effects zh_ui zh_world zh_video_ffmpeg SDL3::SDL3)
+    add_dependencies(renderer_gpu_acceptance zh_renderer_shaders zh_effect_shaders)
     add_test(NAME renderer_gpu_acceptance COMMAND renderer_gpu_acceptance)
     set_tests_properties(renderer_gpu_acceptance PROPERTIES LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE)
+    add_test(NAME renderer_gpu_validation_layer COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_vulkan_validation.py")
+    set_tests_properties(renderer_gpu_validation_layer PROPERTIES LABELS gpu TIMEOUT 30 RUN_SERIAL TRUE)
   endif()
+
+  add_test(NAME renderer_gpu_validation_probe_unit COMMAND "${Python3_EXECUTABLE}" -m unittest
+    tests.m14.test_validation_layer)
+  set_tests_properties(renderer_gpu_validation_probe_unit PROPERTIES
+    LABELS renderer-contract WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
   add_executable(ui_renderer_tests tests/ui/test_ui_renderer.cpp)
   target_link_libraries(ui_renderer_tests PRIVATE zh_ui)

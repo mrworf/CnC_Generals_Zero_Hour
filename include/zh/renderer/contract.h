@@ -181,6 +181,14 @@ struct UploadDesc {
     UInt64 size = 0;
 };
 
+struct TextureUploadDesc {
+    TextureHandle destination;
+    UInt32 width = 0;
+    UInt32 height = 0;
+    UInt32 row_pitch = 0;
+    UInt64 size = 0;
+};
+
 struct DrawDesc {
     PipelineHandle pipeline;
     BufferHandle vertex_buffer;
@@ -255,9 +263,11 @@ public:
     virtual ShaderHandle create_shader(const ShaderDesc& desc, std::string_view label) = 0;
     virtual PipelineHandle create_pipeline(const PipelineKey& key, std::string_view label) = 0;
     virtual ValidationResult upload(const UploadDesc& desc, const void* bytes) = 0;
+    virtual ValidationResult upload_texture(const TextureUploadDesc& desc, const void* bytes) = 0;
     virtual ValidationResult begin_pass(const RenderPassDesc& desc, std::string_view label) = 0;
     virtual ValidationResult draw(const DrawDesc& desc) = 0;
     virtual ValidationResult end_pass() = 0;
+    virtual ValidationResult present(TextureHandle source) = 0;
     virtual void destroy(BufferHandle handle) = 0;
     virtual void destroy(TextureHandle handle) = 0;
     virtual void destroy(SamplerHandle handle) = 0;

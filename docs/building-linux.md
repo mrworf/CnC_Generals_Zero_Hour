@@ -127,3 +127,29 @@ leading frames for every observed English Bink dimension/audio-rate variant in
 names and derived codec/dimension/rate expectations—never media, hashes, or
 physical paths. Pause, focus loss, skip, EOS, failure, and shutdown all return
 cleanly to game rendering; physical presentation remains the M14 GPU gate.
+
+## GPU hardware acceptance
+
+M14 keeps hardware work opt-in. Configure a separate build so default presets
+remain usable without a display or GPU:
+
+```sh
+cmake -S . -B build/m14-gpu -G Ninja \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DZH_ENABLE_GPU_TESTS=ON
+cmake --build build/m14-gpu
+ctest --test-dir build/m14-gpu -L gpu --output-on-failure
+```
+
+The `renderer_gpu_acceptance` test requires a local graphical session and uses
+the Vulkan-only SDL_GPU backend. It renders project-owned UI, font, world,
+faction, effect, and movie scenes; exercises transfers, passes, pipelines,
+presentation, resize, focus, fullscreen, teardown, and device recreation; and
+prints device/driver/SDL capabilities and functional timing. The paired
+`renderer_gpu_validation_layer` test fails closed unless
+`VK_LAYER_KHRONOS_validation` is discoverable. SDL debug mode without that
+layer is not zero-error validation evidence.
+
+For the full retail check, add `ZH_ENABLE_RETAIL_TESTS=ON` and the three local
+retail cache values documented above to another untracked build directory.
+Retail inputs remain read-only; the GPU scenes and metrics are project-owned.

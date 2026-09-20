@@ -166,9 +166,10 @@ bool VideoPlayer::ensure_resources(const VideoFrame& frame)
     sampler_ = recorder_.create_sampler({renderer::Filter::linear, renderer::Filter::linear,
         renderer::Filter::linear, renderer::AddressMode::clamp_edge, renderer::AddressMode::clamp_edge,
         renderer::AddressMode::clamp_edge, 1}, "video sampler");
-    vertex_shader_ = recorder_.create_shader({renderer::ShaderStage::vertex, "video.vert", 0, 0}, "video vertex");
-    fragment_shader_ = recorder_.create_shader({renderer::ShaderStage::fragment, "video.frag", 0, 1}, "video fragment");
+    vertex_shader_ = recorder_.create_shader({renderer::ShaderStage::vertex, "renderer/video.vert", 1, 0}, "video vertex");
+    fragment_shader_ = recorder_.create_shader({renderer::ShaderStage::fragment, "renderer/video.frag", 0, 1}, "video fragment");
     vertices_ = recorder_.create_buffer({sizeof(Vertex) * 6U, renderer::BufferUsage::vertex, true}, "video quad vertices");
+    frame_uniform_ = recorder_.create_buffer({16, renderer::BufferUsage::uniform, true}, "video viewport");
     renderer::PipelineDesc desc;
     desc.vertex_shader = vertex_shader_; desc.fragment_shader = fragment_shader_;
     desc.vertex_layout = renderer::VertexLayout::position_color_uv;
@@ -176,7 +177,7 @@ bool VideoPlayer::ensure_resources(const VideoFrame& frame)
     desc.raster.cull = renderer::CullMode::none;
     pipeline_ = recorder_.create_pipeline(renderer::PipelineKey(desc), "video presentation");
     if (!color_target_ || !depth_target_ || !movie_texture_ || !sampler_ || !vertex_shader_
-        || !fragment_shader_ || !vertices_ || !pipeline_) {
+        || !fragment_shader_ || !vertices_ || !frame_uniform_ || !pipeline_) {
         fail("video recorder resource creation failed: " + recorder_.last_error());
         return false;
     }
@@ -203,6 +204,15 @@ bool VideoPlayer::present(const VideoFrame& frame)
     if (auto result = recorder_.upload({vertices_, sizeof(vertices), 0, sizeof(vertices)}, vertices.data()); !result) {
         fail(result.error); return false;
     }
+    const std::array<float, 4> viewport{{static_cast<float>(target_width_), static_cast<float>(target_height_),
+        1.0F / target_width_, 1.0F / target_height_}};
+    if (auto result = recorder_.upload({frame_uniform_, sizeof(viewport), 0, sizeof(viewport)}, viewport.data()); !result) {
+        fail(result.error); return false;
+    }
+    if (auto result = recorder_.upload_texture({movie_texture_, frame.width, frame.height, frame.width * 4U,
+            static_cast<renderer::UInt64>(frame.rgba.size())}, frame.rgba.data()); !result) {
+        fail(result.error); return false;
+    }
     recorder_.record_marker("video-texture-upload bytes=" + std::to_string(frame.rgba.size())
         + " pts=" + number(frame.timestamp_seconds));
     recorder_.record_marker("video-aspect rect=" + number(rect.x) + "," + number(rect.y) + ","
@@ -213,11 +223,14 @@ bool VideoPlayer::present(const VideoFrame& frame)
     if (auto result = recorder_.begin_pass(pass, "video pass"); !result) { fail(result.error); return false; }
     renderer::DrawDesc draw;
     draw.pipeline = pipeline_; draw.vertex_buffer = vertices_; draw.vertex_or_index_count = 6;
+    draw.vertex_bindings.uniforms[0] = {frame_uniform_, 0, 16};
+    draw.vertex_bindings.uniform_count = 1;
     draw.fragment_bindings.textures[0] = movie_texture_;
     draw.fragment_bindings.samplers[0] = sampler_;
     draw.fragment_bindings.texture_count = 1;
     if (auto result = recorder_.draw(draw); !result) { (void)recorder_.end_pass(); fail(result.error); return false; }
     if (auto result = recorder_.end_pass(); !result) { fail(result.error); return false; }
+    if (auto result = recorder_.present(color_target_); !result) { fail(result.error); return false; }
     ++presented_frames_;
     return true;
 }
@@ -248,6 +261,7 @@ void VideoPlayer::finish(PlaybackState final_state, std::string_view marker) noe
 void VideoPlayer::release_resources() noexcept
 {
     if (pipeline_) recorder_.destroy(pipeline_);
+    if (frame_uniform_) recorder_.destroy(frame_uniform_);
     if (vertices_) recorder_.destroy(vertices_);
     if (fragment_shader_) recorder_.destroy(fragment_shader_);
     if (vertex_shader_) recorder_.destroy(vertex_shader_);
@@ -255,7 +269,7 @@ void VideoPlayer::release_resources() noexcept
     if (movie_texture_) recorder_.destroy(movie_texture_);
     if (depth_target_) recorder_.destroy(depth_target_);
     if (color_target_) recorder_.destroy(color_target_);
-    pipeline_ = {}; vertices_ = {}; fragment_shader_ = {}; vertex_shader_ = {}; sampler_ = {};
+    pipeline_ = {}; vertices_ = {}; frame_uniform_ = {}; fragment_shader_ = {}; vertex_shader_ = {}; sampler_ = {};
     movie_texture_ = {}; depth_target_ = {}; color_target_ = {};
 }
 

@@ -84,8 +84,8 @@ renderer::ValidationResult WorldRecorder::create_resources()
         maximum_vertices = std::max(maximum_vertices, item.vertex_count);
         maximum_indices = std::max(maximum_indices, item.index_count);
     }
-    vertex_shader_ = device_.create_shader({renderer::ShaderStage::vertex, "world.vert", 2, 0}, "world vertex transform");
-    fragment_shader_ = device_.create_shader({renderer::ShaderStage::fragment, "world.frag", 1, 4}, "world fixed-function fragment");
+    vertex_shader_ = device_.create_shader({renderer::ShaderStage::vertex, "renderer/world.vert", 2, 0}, "world vertex transform");
+    fragment_shader_ = device_.create_shader({renderer::ShaderStage::fragment, "renderer/world.frag", 1, 4}, "world fixed-function fragment");
     vertex_stream_size_ = vertex_stride * maximum_vertices;
     index_stream_size_ = index_stride * maximum_indices;
     vertex_stream_ = device_.create_buffer({vertex_stream_size_, renderer::BufferUsage::vertex, true}, "world vertex stream");
@@ -169,14 +169,23 @@ renderer::ValidationResult WorldRecorder::record_frame(UInt32 tick)
 
 renderer::ValidationResult WorldRecorder::draw_item(const WorldItem& item, UInt32 tick)
 {
-    std::vector<UInt8> vertices(static_cast<std::size_t>(vertex_stride * item.vertex_count));
-    std::vector<UInt8> indices(static_cast<std::size_t>(index_stride * item.index_count));
+    std::vector<float> vertices(static_cast<std::size_t>(item.vertex_count) * 8U, 0.0F);
+    std::vector<UInt32> indices(item.index_count);
     const UInt8 seed = static_cast<UInt8>((tick + item.animation_frame + static_cast<UInt32>(item.family) * 17U) & 0xffU);
-    std::fill(vertices.begin(), vertices.end(), seed);
-    for (std::size_t index = 0; index < indices.size(); ++index) indices[index] = static_cast<UInt8>((seed + index) & 0xffU);
-    if (auto result = device_.upload({vertex_stream_, vertex_stream_size_, 0, vertex_stride * item.vertex_count}, vertices.data()); !result)
+    for (UInt32 index = 0; index < item.vertex_count; ++index) {
+        const std::size_t base = static_cast<std::size_t>(index) * 8U;
+        vertices[base] = index % 3U == 0 ? -0.5F : index % 3U == 1 ? 0.5F : 0.0F;
+        vertices[base + 1] = index % 3U == 2 ? 0.5F : -0.5F;
+        vertices[base + 2] = static_cast<float>(seed) / 1024.0F;
+        vertices[base + 5] = 1.0F;
+        vertices[base + 6] = index % 2U == 0 ? 0.0F : 1.0F;
+        vertices[base + 7] = index % 3U == 2 ? 1.0F : 0.0F;
+    }
+    for (std::size_t index = 0; index < indices.size(); ++index)
+        indices[index] = static_cast<UInt32>(index % item.vertex_count);
+    if (auto result = device_.upload({vertex_stream_, vertex_stream_size_, 0, vertices.size() * sizeof(float)}, vertices.data()); !result)
         return fail(item.label + ": " + result.error);
-    if (auto result = device_.upload({index_stream_, index_stream_size_, 0, index_stride * item.index_count}, indices.data()); !result)
+    if (auto result = device_.upload({index_stream_, index_stream_size_, 0, indices.size() * sizeof(UInt32)}, indices.data()); !result)
         return fail(item.label + ": " + result.error);
 
     std::array<UInt32, 32> object_data{};

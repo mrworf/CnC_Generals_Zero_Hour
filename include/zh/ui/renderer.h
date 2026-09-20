@@ -65,6 +65,10 @@ private:
     renderer::TextureHandle color_target_;
     renderer::TextureHandle depth_target_;
     renderer::BufferHandle vertex_buffer_;
+    renderer::BufferHandle frame_uniform_;
+    renderer::BufferHandle material_uniform_;
+    renderer::TextureHandle white_texture_;
+    renderer::SamplerHandle sampler_;
     renderer::ShaderHandle vertex_shader_;
     renderer::ShaderHandle fragment_shader_;
     renderer::PipelineHandle opaque_pipeline_;

@@ -259,6 +259,23 @@ ValidationResult RecordingGpuDevice::upload(const UploadDesc& desc, const void* 
     return {};
 }
 
+ValidationResult RecordingGpuDevice::upload_texture(const TextureUploadDesc& desc, const void* bytes)
+{
+    auto* texture = lookup(impl_->textures, desc.destination);
+    if (!texture) return impl_->fail("upload_texture", "destination texture handle is stale or destroyed");
+    if (!bytes) return impl_->fail("upload_texture", "source bytes are null", texture->label);
+    if (texture->value.desc.format != TextureFormat::rgba8 || texture->value.desc.dimension != TextureDimension::texture_2d)
+        return impl_->fail("upload_texture", "only RGBA8 2D uploads are supported", texture->label);
+    if (desc.width != texture->value.desc.width || desc.height != texture->value.desc.height)
+        return impl_->fail("upload_texture", "extent does not match destination texture", texture->label);
+    const UInt64 minimum_pitch = static_cast<UInt64>(desc.width) * 4U;
+    if (desc.row_pitch < minimum_pitch || desc.size != static_cast<UInt64>(desc.row_pitch) * desc.height)
+        return impl_->fail("upload_texture", "row pitch or byte count is invalid", texture->label);
+    impl_->commands.push_back("upload_texture " + impl_->name(impl_->textures, desc.destination, 'T') + " extent="
+        + std::to_string(desc.width) + "x" + std::to_string(desc.height) + " bytes=" + std::to_string(desc.size));
+    return {};
+}
+
 ValidationResult RecordingGpuDevice::begin_pass(const RenderPassDesc& desc, std::string_view label)
 {
     if (impl_->in_pass) return impl_->fail("begin_pass", "render pass is already active", label);
@@ -356,6 +373,16 @@ ValidationResult RecordingGpuDevice::end_pass()
     impl_->active_pass_label.clear();
     impl_->active_color_count = 0;
     impl_->active_depth = {};
+    return {};
+}
+
+ValidationResult RecordingGpuDevice::present(TextureHandle source)
+{
+    if (impl_->in_pass) return impl_->fail("present", "cannot present while a render pass is active");
+    const auto* texture = lookup(impl_->textures, source);
+    if (!texture || !texture->value.desc.render_target || texture->value.desc.format != TextureFormat::rgba8)
+        return impl_->fail("present", "source texture is stale or not a color render target");
+    impl_->commands.push_back("present " + impl_->name(impl_->textures, source, 'T') + " label=" + quoted(texture->label));
     return {};
 }
 

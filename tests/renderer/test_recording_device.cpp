@@ -51,6 +51,9 @@ void test_valid_stream_and_snapshot()
     const std::array<unsigned char, 4> bytes{1, 2, 3, 4};
     check(scene.device.upload({scene.vertices, 12, 4, bytes.size()}, bytes.data()), "valid upload failed");
     check(scene.device.buffer_bytes(scene.vertices)[6] == 3, "upload did not update CPU copy");
+    const std::array<unsigned char, 16 * 16 * 4> pixels{};
+    check(scene.device.upload_texture({scene.color, 16, 16, 64, pixels.size()}, pixels.data()),
+        "valid RGBA texture upload failed");
     check(scene.device.begin_pass(scene.pass(), "main pass"), "valid pass failed");
     DrawDesc draw;
     draw.pipeline = scene.pipeline; draw.vertex_buffer = scene.vertices; draw.vertex_or_index_count = 3;
@@ -58,10 +61,13 @@ void test_valid_stream_and_snapshot()
     draw.vertex_bindings.uniforms[0] = {uniforms, 0, 64}; draw.vertex_bindings.uniform_count = 1;
     check(scene.device.draw(draw), "valid draw failed");
     check(scene.device.end_pass(), "valid pass end failed");
+    check(scene.device.present(scene.color), "valid presentation failed");
     const auto snapshot = scene.device.snapshot();
     check(snapshot.find("create_buffer B1 label=\"vertices\"") != std::string::npos, "buffer id was not normalized");
     check(snapshot.find("begin_pass") < snapshot.find("draw pipeline="), "draw order not retained");
     check(snapshot.find("draw pipeline=") < snapshot.find("end_pass"), "pass order not retained");
+    check(snapshot.find("upload_texture") != std::string::npos && snapshot.find("present T") != std::string::npos,
+        "texture upload or presentation was not recorded");
 }
 
 void test_lifetimes_bindings_and_ranges()
@@ -71,6 +77,9 @@ void test_lifetimes_bindings_and_ranges()
     check(!scene.device.upload({scene.vertices, 11, 0, 4}, bytes.data()), "false destination size accepted");
     check(scene.device.last_error().find("vertices") != std::string::npos, "upload error lost label provenance");
     check(!scene.device.upload({scene.vertices, 12, 0, 4}, nullptr), "null upload accepted");
+    const std::array<unsigned char, 16 * 16 * 4> pixels{};
+    check(!scene.device.upload_texture({scene.color, 16, 16, 63, pixels.size()}, pixels.data()),
+        "undersized texture row pitch accepted");
     scene.device.destroy(scene.vertices);
     check(!scene.device.upload({scene.vertices, 12, 0, 4}, bytes.data()), "destroyed buffer upload accepted");
     scene.device.destroy(scene.vertices);

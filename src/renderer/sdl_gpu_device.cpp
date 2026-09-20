@@ -428,6 +428,10 @@ PipelineHandle SdlGpuDevice::create_pipeline(const PipelineKey& key, std::string
     const auto& desc = key.descriptor();
     if (auto result = validate(desc); !result) { impl_->fail("create_pipeline", result.error, label); return {}; }
     if (label.empty()) { impl_->fail("create_pipeline", "label must not be empty"); return {}; }
+    for (std::size_t index = 0; index < impl_->pipelines.size(); ++index) {
+        const auto& slot = impl_->pipelines[index];
+        if (slot.alive && slot.value.key == key) return make_handle<PipelineHandle>(index, slot.generation);
+    }
     if (desc.topology == PrimitiveTopology::triangle_fan) {
         impl_->fail("create_pipeline", "triangle-fan input must be CPU-expanded to triangle-list before SDL_GPU", label);
         return {};
@@ -512,6 +516,38 @@ ValidationResult SdlGpuDevice::upload(const UploadDesc& desc, const void* bytes)
     SDL_UploadToGPUBuffer(pass, &source, &destination, buffer->value.desc.dynamic);
     SDL_EndGPUCopyPass(pass);
     if (!SDL_SubmitGPUCommandBuffer(command)) { SDL_ReleaseGPUTransferBuffer(impl_->device, transfer); return impl_->fail("upload", sdl_error("SDL_SubmitGPUCommandBuffer"), buffer->label); }
+    SDL_ReleaseGPUTransferBuffer(impl_->device, transfer);
+    return {};
+}
+
+ValidationResult SdlGpuDevice::upload_texture(const TextureUploadDesc& desc, const void* bytes)
+{
+    auto* texture = lookup(impl_->textures, desc.destination);
+    if (!texture) return impl_->fail("upload_texture", "destination texture handle is stale or destroyed");
+    if (!bytes) return impl_->fail("upload_texture", "source bytes are null", texture->label);
+    if (texture->value.desc.format != TextureFormat::rgba8 || texture->value.desc.dimension != TextureDimension::texture_2d)
+        return impl_->fail("upload_texture", "only RGBA8 2D uploads are supported", texture->label);
+    if (desc.width != texture->value.desc.width || desc.height != texture->value.desc.height)
+        return impl_->fail("upload_texture", "extent does not match destination texture", texture->label);
+    const UInt64 minimum_pitch = static_cast<UInt64>(desc.width) * 4U;
+    if (desc.row_pitch < minimum_pitch || desc.size != static_cast<UInt64>(desc.row_pitch) * desc.height
+        || desc.size > std::numeric_limits<Uint32>::max())
+        return impl_->fail("upload_texture", "row pitch or byte count is invalid", texture->label);
+    SDL_GPUTransferBufferCreateInfo transfer_info{SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, static_cast<Uint32>(desc.size), 0};
+    auto* transfer = SDL_CreateGPUTransferBuffer(impl_->device, &transfer_info);
+    if (!transfer) return impl_->fail("upload_texture", sdl_error("SDL_CreateGPUTransferBuffer"), texture->label);
+    void* mapped = SDL_MapGPUTransferBuffer(impl_->device, transfer, false);
+    if (!mapped) { SDL_ReleaseGPUTransferBuffer(impl_->device, transfer); return impl_->fail("upload_texture", sdl_error("SDL_MapGPUTransferBuffer"), texture->label); }
+    std::memcpy(mapped, bytes, static_cast<std::size_t>(desc.size));
+    SDL_UnmapGPUTransferBuffer(impl_->device, transfer);
+    auto* command = SDL_AcquireGPUCommandBuffer(impl_->device);
+    if (!command) { SDL_ReleaseGPUTransferBuffer(impl_->device, transfer); return impl_->fail("upload_texture", sdl_error("SDL_AcquireGPUCommandBuffer"), texture->label); }
+    auto* pass = SDL_BeginGPUCopyPass(command);
+    SDL_GPUTextureTransferInfo source{transfer, 0, desc.row_pitch / 4U, desc.height};
+    SDL_GPUTextureRegion destination{texture->value.native, 0, 0, 0, 0, 0, desc.width, desc.height, 1};
+    SDL_UploadToGPUTexture(pass, &source, &destination, true);
+    SDL_EndGPUCopyPass(pass);
+    if (!SDL_SubmitGPUCommandBuffer(command)) { SDL_ReleaseGPUTransferBuffer(impl_->device, transfer); return impl_->fail("upload_texture", sdl_error("SDL_SubmitGPUCommandBuffer"), texture->label); }
     SDL_ReleaseGPUTransferBuffer(impl_->device, transfer);
     return {};
 }
@@ -717,6 +753,12 @@ ValidationResult SdlGpuDevice::present(TextureHandle source_handle)
     SDL_BlitGPUTexture(command, &blit);
     if (!SDL_SubmitGPUCommandBuffer(command)) return impl_->fail("present", sdl_error("SDL_SubmitGPUCommandBuffer"));
     return {};
+}
+
+ValidationResult SdlGpuDevice::present_last()
+{
+    if (!impl_->last_color) return impl_->fail("present", "no completed color target is available");
+    return present(impl_->last_color);
 }
 
 ValidationResult SdlGpuDevice::wait_idle()

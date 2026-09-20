@@ -40,9 +40,11 @@ public:
     ShaderHandle create_shader(const ShaderDesc& desc, std::string_view label) override;
     PipelineHandle create_pipeline(const PipelineKey& key, std::string_view label) override;
     ValidationResult upload(const UploadDesc& desc, const void* bytes) override;
+    ValidationResult upload_texture(const TextureUploadDesc& desc, const void* bytes) override;
     ValidationResult begin_pass(const RenderPassDesc& desc, std::string_view label) override;
     ValidationResult draw(const DrawDesc& desc) override;
     ValidationResult end_pass() override;
+    ValidationResult present(TextureHandle source) override;
     void destroy(BufferHandle handle) override;
     void destroy(TextureHandle handle) override;
     void destroy(SamplerHandle handle) override;

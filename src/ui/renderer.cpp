@@ -89,6 +89,10 @@ UiRecorder::~UiRecorder()
     if (color_target_) device_.destroy(color_target_);
     if (depth_target_) device_.destroy(depth_target_);
     if (vertex_buffer_) device_.destroy(vertex_buffer_);
+    if (frame_uniform_) device_.destroy(frame_uniform_);
+    if (material_uniform_) device_.destroy(material_uniform_);
+    if (sampler_) device_.destroy(sampler_);
+    if (white_texture_) device_.destroy(white_texture_);
     if (opaque_pipeline_) device_.destroy(opaque_pipeline_);
     if (alpha_pipeline_) device_.destroy(alpha_pipeline_);
     if (additive_pipeline_) device_.destroy(additive_pipeline_);
@@ -105,10 +109,17 @@ renderer::ValidationResult UiRecorder::fail(std::string message)
 bool UiRecorder::ensure_resources()
 {
     if (vertex_buffer_) return true;
-    vertex_shader_ = device_.create_shader({renderer::ShaderStage::vertex, "ui.vert", 0, 0}, "ui vertex");
-    fragment_shader_ = device_.create_shader({renderer::ShaderStage::fragment, "ui.frag", 0, 0}, "ui fragment");
+    vertex_shader_ = device_.create_shader({renderer::ShaderStage::vertex, "renderer/ui.vert", 1, 0}, "ui vertex");
+    fragment_shader_ = device_.create_shader({renderer::ShaderStage::fragment, "renderer/ui.frag", 1, 1}, "ui fragment");
     vertex_buffer_ = device_.create_buffer({sizeof(Vertex) * 6, renderer::BufferUsage::vertex, true}, "ui quad vertices");
-    if (!vertex_shader_ || !fragment_shader_ || !vertex_buffer_) return false;
+    frame_uniform_ = device_.create_buffer({16, renderer::BufferUsage::uniform, true}, "ui frame viewport");
+    material_uniform_ = device_.create_buffer({16, renderer::BufferUsage::uniform, true}, "ui material alpha");
+    renderer::TextureDesc texture;
+    texture.width = 1; texture.height = 1;
+    white_texture_ = device_.create_texture(texture, "ui white texture");
+    sampler_ = device_.create_sampler({}, "ui sampler");
+    if (!vertex_shader_ || !fragment_shader_ || !vertex_buffer_ || !frame_uniform_ || !material_uniform_
+        || !white_texture_ || !sampler_) return false;
 
     renderer::PipelineDesc desc;
     desc.vertex_shader = vertex_shader_;
@@ -166,6 +177,13 @@ renderer::ValidationResult UiRecorder::record(const Scene& scene)
     }
     if (!ensure_resources()) return fail("could not create UI resources: " + device_.last_error());
     if (!recreate_targets(scene.width, scene.height)) return fail("could not create UI targets: " + device_.last_error());
+    const std::array<float, 4> viewport{{static_cast<float>(scene.width), static_cast<float>(scene.height),
+        1.0F / scene.width, 1.0F / scene.height}};
+    const std::array<float, 4> material{{0.0F, 0.0F, 0.0F, 0.0F}};
+    if (auto result = device_.upload({frame_uniform_, sizeof(viewport), 0, sizeof(viewport)}, viewport.data()); !result)
+        return fail(result.error);
+    if (auto result = device_.upload({material_uniform_, sizeof(material), 0, sizeof(material)}, material.data()); !result)
+        return fail(result.error);
 
     std::vector<const UiElement*> ordered;
     ordered.reserve(scene.elements.size());
@@ -216,6 +234,13 @@ renderer::ValidationResult UiRecorder::record(const Scene& scene)
             : element->blend == BlendMode::additive ? additive_pipeline_ : alpha_pipeline_;
         draw.vertex_buffer = vertex_buffer_;
         draw.vertex_or_index_count = 6;
+        draw.vertex_bindings.uniforms[0] = {frame_uniform_, 0, 16};
+        draw.vertex_bindings.uniform_count = 1;
+        draw.fragment_bindings.uniforms[0] = {material_uniform_, 0, 16};
+        draw.fragment_bindings.uniform_count = 1;
+        draw.fragment_bindings.textures[0] = white_texture_;
+        draw.fragment_bindings.samplers[0] = sampler_;
+        draw.fragment_bindings.texture_count = 1;
         if (auto result = device_.draw(draw); !result) {
             (void)device_.end_pass();
             return fail(result.error);
