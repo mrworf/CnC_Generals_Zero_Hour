@@ -231,10 +231,11 @@ milestones:
   - id: M26
     title: "original process allocation and ABI foundation"
     file: delivery/milestones/cnc-generals-zero-hour/M26-original-process-foundation.md
-    status: pending
+    status: in_progress
     dependencies: [M19]
     remediation_ids: [SE-001, SE-002, SE-010, RC-001, RC-002, RC-004, RC-006, RC-007, RC-008, RC-011]
     optional: false
+    started_at: "2026-09-20T15:55:50Z"
     completed_at: null
     evidence: null
     notes: "Independent original allocation/string/process consumers; no whole-engine or retail requirement."
@@ -261,7 +262,7 @@ milestones:
   - id: M20
     title: "integrated original runtime and data lifecycle"
     file: delivery/milestones/cnc-generals-zero-hour/M20-original-lifecycle.md
-    status: blocked
+    status: pending
     dependencies: [M28]
     remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-010, RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010]
     optional: false

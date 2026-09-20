@@ -2,33 +2,30 @@ schema_version: 1
 workflow: milestone-delivery
 delivery_goal:
   product_id: cnc-generals-zero-hour
-  status: blocked
+  status: in_progress
   packet: delivery/milestones/cnc-generals-zero-hour/status.yaml
-  packet_revision: sha256:6a9d98bcec72db2b1c1658a305ffea8ea4dd004d76f8efcce4b43d166fbe3ace
-  source_commit: 38b608d9109d13ad1c6e3a527fe34893512d4d3f
-  planning_commit: 6bc4b5507be57d5787675e1391e48c77e48e146e
-  planning_closeout_commit: 06106c8f63e74dbd399149a9f5c88e6ac24adbdf
+  packet_revision: sha256:0d5f1fef5dcec3bbbbb26656c5aaf591d653e2454501b51cfb09059fbb6acd7a
+  source_commit: 8cf8f6ce3842cffe37505d02e610ca825ecdb532
+  planning_commit: 1370387ffb3c61c05a9044338a1811c185218289
+  planning_closeout_commit: b53700d92276a6c56beab936bc3d60b20184b282cd
   scope: remaining
-  start: M19
+  start: null
   end: null
-  milestone_ids: [M19, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+  milestone_ids: [M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
   execution: autonomous
-  current_milestone: M20
-  blocker_type: planning_stale
-  blocker: "M20_SOURCE_ORDER_DEFECT: the original GameEngine lifecycle requires concrete GameLogic, GameClient/W3D, module/object and media providers that the active packet places in dependent M21-M23 milestones"
-  blockers:
-    - type: UPSTREAM_REQUIRED
-      source: M20_SOURCE_ORDER_DEFECT
-      evidence_id: M20-LIFECYCLE-DEPENDENCY
-      requirement: "Reconcile M20-M23 contracts and dependency order against the actual original GameEngine::init/execute provider graph"
-      expected_artifact: "A readiness-approved replacement packet with an executable original-source lifecycle boundary and no reduced classes, empty registries, parallel globals or success-returning fake providers"
-      milestone: M20
-      slice: 01
-      required_workflow: "software architecture revalidation followed by delivery-planning-orchestrator"
-      unblock_condition: "Replacement packet either narrows pre-provider M20 and moves full lifecycle acceptance after real providers, or orders/combines real M21-M23 providers before lifecycle acceptance"
-  resume_point: "Deep dependency review and replanning completed in workflow/delivery-planning/handoff.yaml. On explicit delivery resume preserve this prior goal/history and all completions, adopt the replacement packet including M26-M28 before integrated M20, and begin milestone_26_plan_01.md. Preserve blocked M20 plan 01 and generate milestone_20_plan_02.md only after its prerequisites complete. The prior goal remains blocked until adoption; planning did not start implementation."
+  current_milestone: M26
+  blocker_type: null
+  blocker: null
+  blockers: []
+  resume_point: "Adopted the readiness-approved replacement packet. Generate and execute delivery/plans/cnc-generals-zero-hour/milestone_26_plan_01.md using minimal-slice delivery; M20 plan 01 remains superseded history and plan 02 is created only after M26-M28 complete."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
+  replacement_packet_adoption:
+    prior_packet_revision: sha256:6a9d98bcec72db2b1c1658a305ffea8ea4dd004d76f8efcce4b43d166fbe3ace
+    prior_milestone_ids: [M19, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+    prior_current_milestone: M20
+    prior_blocker: M20_SOURCE_ORDER_DEFECT
+    disposition: "Superseded by the readiness-approved packet at planning closeout b53700d92276a6c56beab936bc3d60b20184b282cd; M19 completion and blocked M20 plan 01 remain preserved in milestone history."
   adopted_from_prior_goal:
     packet_revision: sha256:7f486befe4e182f46fbc7f090d757ad7a19bcabddf53ce6b622b6ba90596de4d
     milestone_ids: [M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13, M14, M15, M16, M17, M18]
