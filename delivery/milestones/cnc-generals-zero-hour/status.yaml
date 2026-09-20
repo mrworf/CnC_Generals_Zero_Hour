@@ -74,22 +74,24 @@ milestones:
   - id: M5
     title: "Linux persistence and determinism"
     file: delivery/milestones/cnc-generals-zero-hour/M5-persistence.md
-    status: in_progress
+    status: completed
     dependencies: [M4]
     optional: false
     started_at: "2026-09-20T04:04:00Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_05_plan_01.md"
+    completed_at: "2026-09-20T04:12:51Z"
+    commit_hash: 8e01f675bdf8cd0655570107661968c7ed107dc8
+    evidence: "Three completed slices implement transactional Linux save/autosave, bounded replay/snapshot/CRC formats, and deterministic fenv-isolated scenarios. All four presets passed 13 foundation|determinism tests and emitted byte-identical four-checkpoint reports. Root acceptance reran GCC Debug and Clang Release builds plus 26 selected tests and verified source/packet freshness."
+    notes: "PRE-018 accepted for Linux-native persistence; Windows import remains explicitly unverified until optional M18. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_05_plan_01.md; slice commits: 94fd449, b211d44, 8e01f67."
   - id: M6
     title: "SDL platform and input without GPU"
     file: delivery/milestones/cnc-generals-zero-hour/M6-sdl-platform.md
-    status: pending
+    status: in_progress
     dependencies: [M1, M3]
     optional: false
+    started_at: "2026-09-20T04:12:51Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_06_plan_01.md"
   - id: M7
     title: "renderer core contracts with `RecordingGpuDevice`"
     file: delivery/milestones/cnc-generals-zero-hour/M7-renderer-core.md

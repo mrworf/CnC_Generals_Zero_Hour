@@ -20,9 +20,9 @@ Linux-native saves and replays use explicit, versioned, fixed-width encodings; m
 
 ## Slice index
 
-1. [Slice 01 — Linux saves and autosave metadata](milestone_05_plan_01_slice_01.md)
-2. [Slice 02 — replay commands and checkpoint snapshots](milestone_05_plan_01_slice_02.md)
-3. [Slice 03 — deterministic scenario matrix and floating environment](milestone_05_plan_01_slice_03.md)
+1. [Slice 01 — Linux saves and autosave metadata](milestone_05_plan_01_slice_01.md) — completed in `94fd449`.
+2. [Slice 02 — replay commands and checkpoint snapshots](milestone_05_plan_01_slice_02.md) — completed in `b211d44`.
+3. [Slice 03 — deterministic scenario matrix and floating environment](milestone_05_plan_01_slice_03.md) — completed in `8e01f67`.
 
 The slices are dependency ordered. Slice 01 establishes the versioned document envelope and transactional decode behavior. Slice 02 reuses that persistence boundary for replay commands and CRC-bearing snapshots. Slice 03 exercises both formats through a repeatable simulation and produces comparable cross-preset evidence.
 
