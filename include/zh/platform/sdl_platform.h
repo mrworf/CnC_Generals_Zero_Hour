@@ -5,9 +5,12 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <vector>
 
 namespace zh::platform {
 
@@ -90,6 +93,49 @@ public:
 
 private:
     InputSnapshot snapshot_;
+};
+
+struct WindowOptions {
+    std::string title = "Command & Conquer: Generals - Zero Hour";
+    int width = 1280;
+    int height = 720;
+    bool hidden = false;
+};
+
+class SdlWindow {
+public:
+    explicit SdlWindow(const WindowOptions& options = {});
+    ~SdlWindow();
+
+    SdlWindow(const SdlWindow&) = delete;
+    SdlWindow& operator=(const SdlWindow&) = delete;
+
+    std::vector<PlatformEvent> poll_events();
+    std::optional<PlatformEvent> translate_event(const SDL_Event& event);
+    const InputSnapshot& input() const noexcept { return translator_.snapshot(); }
+
+    void start_text_input();
+    void stop_text_input();
+    void set_clipboard_text(std::string_view text);
+    std::string clipboard_text() const;
+    void set_cursor_visible(bool visible);
+    void set_cursor_confined(bool confined);
+    void set_relative_capture(bool enabled);
+    void resize(int width, int height);
+    void set_fullscreen(bool enabled);
+
+    std::string video_driver() const;
+    bool text_input_active() const noexcept;
+    bool fullscreen() const noexcept;
+    bool cursor_confined() const noexcept;
+    bool relative_capture() const noexcept;
+    int width() const noexcept;
+    int height() const noexcept;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+    SdlEventTranslator translator_;
 };
 
 } // namespace zh::platform

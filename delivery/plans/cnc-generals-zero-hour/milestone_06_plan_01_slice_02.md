@@ -35,7 +35,7 @@ The interactive command needs access to the user's existing local display and cl
 
 ## Validation and error handling
 
-Positive validation covers real window creation, video driver, clipboard UTF-8 round trip, text mode, cursor, confinement, relative mode, resize, fullscreen toggle, event pump, injected input semantics, focus-loss release, close, and reverse-order shutdown. Negative validation removes `DISPLAY`, `WAYLAND_DISPLAY`, and `XDG_RUNTIME_DIR` and requires a diagnostic naming SDL video/window plus the library error. Invalid window dimensions and operations after shutdown are rejected.
+Positive validation covers real window creation, video driver, clipboard UTF-8 round trip, text mode, cursor, confinement, relative mode, resize, fullscreen toggle, event pump, injected input semantics, focus-loss release, close, and reverse-order shutdown. Negative validation removes `DISPLAY`, `WAYLAND_DISPLAY`, and `XDG_RUNTIME_DIR` and requires a diagnostic naming SDL video/window plus the library error. Invalid window dimensions and SDL operation failures are rejected.
 
 Required commands:
 

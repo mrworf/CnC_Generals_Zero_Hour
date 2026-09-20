@@ -4,6 +4,8 @@
 
 This plan delivers [M6](../../milestones/cnc-generals-zero-hour/M6-sdl-platform.md) under the accepted `docs/zero-hour-linux-port-plan.md`. The outcome is a GPU-free SDL3 platform boundary whose event translation is exhaustively injectable in headless tests and whose real window lifecycle passes one interactive display smoke.
 
+Transaction parent: `71021b66ec9f2951d2aaa4a7127aaf1753e979ae`.
+
 Dependencies M1 and M3 are accepted in the milestone packet. SDL3 3.4.14 is available. PRE-016 is closed only by the interactive evidence in slice 02; display environment variables alone are not acceptance.
 
 ## Constraints
@@ -16,7 +18,7 @@ Dependencies M1 and M3 are accepted in the milestone packet. SDL3 3.4.14 is avai
 
 ## Slice index
 
-1. [Slice 01 — injected SDL event and input state contract](milestone_06_plan_01_slice_01.md)
+1. [Slice 01 — injected SDL event and input state contract](milestone_06_plan_01_slice_01.md) — completed in `1746732`.
 2. [Slice 02 — SDL window lifecycle and interactive PRE-016 smoke](milestone_06_plan_01_slice_02.md)
 
 The slices are dependency ordered and all are defined before production edits. Slice 01 provides the translator/state model consumed by the real window in slice 02.

@@ -116,7 +116,7 @@ target_sources(zh_renderer_sdl_gpu PRIVATE
 )
 target_include_directories(zh_renderer_sdl_gpu PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-target_sources(zh_platform_sdl PRIVATE src/platform/sdl_events.cpp)
+target_sources(zh_platform_sdl PRIVATE src/platform/sdl_events.cpp src/platform/sdl_window.cpp)
 target_include_directories(zh_platform_sdl PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_platform_sdl PUBLIC zh_wwsupport)
 
@@ -280,6 +280,14 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(platform_sdl_event_tests PRIVATE zh_platform_sdl)
   add_test(NAME platform_sdl_events COMMAND platform_sdl_event_tests)
   set_tests_properties(platform_sdl_events PROPERTIES LABELS platform)
+
+  add_executable(platform_sdl_window_tests tests/platform/test_sdl_window.cpp)
+  target_link_libraries(platform_sdl_window_tests PRIVATE zh_platform_sdl)
+  add_test(NAME platform_sdl_window_errors COMMAND platform_sdl_window_tests)
+  set_tests_properties(platform_sdl_window_errors PROPERTIES LABELS platform)
+
+  add_executable(zh_platform_smoke tests/platform/platform_smoke.cpp)
+  target_link_libraries(zh_platform_smoke PRIVATE zh_platform_sdl)
 
   add_executable(data_config_tests tests/data/test_data_config.cpp)
   target_link_libraries(data_config_tests PRIVATE zh_data)
