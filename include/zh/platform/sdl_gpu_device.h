@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 
+struct SDL_Window;
+
 namespace zh::renderer {
 
 struct SdlGpuOptions {
@@ -54,6 +56,10 @@ public:
     void record_marker(std::string_view marker) override;
 
     const SdlGpuCapabilities& capabilities() const noexcept;
+    ValidationResult claim_window(SDL_Window* window);
+    ValidationResult present(TextureHandle source);
+    ValidationResult wait_idle();
+    void release_window() noexcept;
 
 private:
     class Impl;

@@ -206,6 +206,7 @@ add_custom_target(zh_bootstrap_shaders ALL DEPENDS "${ZH_BOOTSTRAP_SPIRV}")
 add_dependencies(zh_renderer_sdl_gpu zh_bootstrap_shaders)
 
 set(ZH_RENDERER_SHADER_NAMES
+  acceptance.vert acceptance.frag
   ui.vert ui.frag
   terrain.vert terrain.frag
   water.vert water.frag
@@ -336,6 +337,16 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(renderer_sdl_gpu_device_tests PRIVATE zh_renderer_sdl_gpu)
   add_test(NAME renderer_sdl_gpu_device COMMAND renderer_sdl_gpu_device_tests)
   set_tests_properties(renderer_sdl_gpu_device PROPERTIES LABELS renderer-contract)
+
+  if(ZH_ENABLE_GPU_TESTS)
+    add_executable(renderer_gpu_acceptance tests/renderer/gpu_acceptance.cpp)
+    target_compile_definitions(renderer_gpu_acceptance PRIVATE
+      ZH_GPU_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/renderer")
+    target_link_libraries(renderer_gpu_acceptance PRIVATE zh_renderer_sdl_gpu SDL3::SDL3)
+    add_dependencies(renderer_gpu_acceptance zh_renderer_shaders)
+    add_test(NAME renderer_gpu_acceptance COMMAND renderer_gpu_acceptance)
+    set_tests_properties(renderer_gpu_acceptance PROPERTIES LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE)
+  endif()
 
   add_executable(ui_renderer_tests tests/ui/test_ui_renderer.cpp)
   target_link_libraries(ui_renderer_tests PRIVATE zh_ui)

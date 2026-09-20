@@ -138,6 +138,117 @@ SDL_GPUSamplerAddressMode address_mode(AddressMode value)
     return SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
 }
 
+SDL_GPUPrimitiveType primitive_type(PrimitiveTopology value)
+{
+    switch (value) {
+    case PrimitiveTopology::point_list: return SDL_GPU_PRIMITIVETYPE_POINTLIST;
+    case PrimitiveTopology::triangle_list: return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+    case PrimitiveTopology::triangle_strip: return SDL_GPU_PRIMITIVETYPE_TRIANGLESTRIP;
+    case PrimitiveTopology::triangle_fan: return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+    }
+    return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+}
+
+SDL_GPUCompareOp compare_op(CompareOp value)
+{
+    switch (value) {
+    case CompareOp::never: return SDL_GPU_COMPAREOP_NEVER;
+    case CompareOp::less: return SDL_GPU_COMPAREOP_LESS;
+    case CompareOp::equal: return SDL_GPU_COMPAREOP_EQUAL;
+    case CompareOp::less_equal: return SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+    case CompareOp::greater: return SDL_GPU_COMPAREOP_GREATER;
+    case CompareOp::not_equal: return SDL_GPU_COMPAREOP_NOT_EQUAL;
+    case CompareOp::greater_equal: return SDL_GPU_COMPAREOP_GREATER_OR_EQUAL;
+    case CompareOp::always: return SDL_GPU_COMPAREOP_ALWAYS;
+    }
+    return SDL_GPU_COMPAREOP_ALWAYS;
+}
+
+SDL_GPUBlendFactor blend_factor(BlendFactor value)
+{
+    switch (value) {
+    case BlendFactor::zero: return SDL_GPU_BLENDFACTOR_ZERO;
+    case BlendFactor::one: return SDL_GPU_BLENDFACTOR_ONE;
+    case BlendFactor::src_color: return SDL_GPU_BLENDFACTOR_SRC_COLOR;
+    case BlendFactor::inv_src_color: return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR;
+    case BlendFactor::src_alpha: return SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+    case BlendFactor::inv_src_alpha: return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+    case BlendFactor::dst_color: return SDL_GPU_BLENDFACTOR_DST_COLOR;
+    case BlendFactor::inv_dst_color: return SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_COLOR;
+    case BlendFactor::dst_alpha: return SDL_GPU_BLENDFACTOR_DST_ALPHA;
+    case BlendFactor::inv_dst_alpha: return SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
+    case BlendFactor::src_alpha_saturate: return SDL_GPU_BLENDFACTOR_SRC_ALPHA_SATURATE;
+    }
+    return SDL_GPU_BLENDFACTOR_ONE;
+}
+
+SDL_GPUBlendOp blend_op(BlendOp value)
+{
+    switch (value) {
+    case BlendOp::add: return SDL_GPU_BLENDOP_ADD;
+    case BlendOp::subtract: return SDL_GPU_BLENDOP_SUBTRACT;
+    case BlendOp::reverse_subtract: return SDL_GPU_BLENDOP_REVERSE_SUBTRACT;
+    case BlendOp::minimum: return SDL_GPU_BLENDOP_MIN;
+    case BlendOp::maximum: return SDL_GPU_BLENDOP_MAX;
+    }
+    return SDL_GPU_BLENDOP_ADD;
+}
+
+SDL_GPUCullMode cull_mode(CullMode value)
+{
+    switch (value) {
+    case CullMode::none: return SDL_GPU_CULLMODE_NONE;
+    case CullMode::clockwise: return SDL_GPU_CULLMODE_FRONT;
+    case CullMode::counter_clockwise: return SDL_GPU_CULLMODE_BACK;
+    }
+    return SDL_GPU_CULLMODE_NONE;
+}
+
+SDL_GPUFillMode fill_mode(FillMode value)
+{
+    return value == FillMode::wireframe ? SDL_GPU_FILLMODE_LINE : SDL_GPU_FILLMODE_FILL;
+}
+
+SDL_GPUFrontFace front_face(Winding value)
+{
+    return value == Winding::clockwise ? SDL_GPU_FRONTFACE_CLOCKWISE : SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
+}
+
+void vertex_layout(VertexLayout layout, SDL_GPUVertexBufferDescription& buffer,
+    std::vector<SDL_GPUVertexAttribute>& attributes)
+{
+    buffer = {0, 32, SDL_GPU_VERTEXINPUTRATE_VERTEX, 0};
+    attributes.clear();
+    const auto add = [&](Uint32 location, SDL_GPUVertexElementFormat format, Uint32 offset) {
+        attributes.push_back({location, 0, format, offset});
+    };
+    switch (layout) {
+    case VertexLayout::position_color_uv:
+        buffer.pitch = 20;
+        add(0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, 0);
+        add(1, SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4_NORM, 8);
+        add(2, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, 12);
+        break;
+    case VertexLayout::water:
+        buffer.pitch = 20;
+        add(0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, 0);
+        add(1, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, 12);
+        break;
+    case VertexLayout::point_sprite:
+        buffer.pitch = 16;
+        add(0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, 0);
+        add(1, SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4_NORM, 12);
+        break;
+    case VertexLayout::world_mesh:
+    case VertexLayout::terrain:
+    case VertexLayout::wwshade:
+        add(0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, 0);
+        add(1, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, 12);
+        add(2, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, 24);
+        break;
+    }
+}
+
 std::vector<UInt8> read_shader(const std::filesystem::path& path)
 {
     std::ifstream input(path, std::ios::binary | std::ios::ate);
@@ -187,6 +298,7 @@ public:
 
     ~Impl()
     {
+        if (window) SDL_ReleaseWindowFromGPUDevice(device, window);
         for (auto& slot : pipelines) if (slot.alive && slot.value.native) SDL_ReleaseGPUGraphicsPipeline(device, slot.value.native);
         for (auto& slot : shaders) if (slot.alive && slot.value.native) SDL_ReleaseGPUShader(device, slot.value.native);
         for (auto& slot : samplers) if (slot.alive && slot.value.native) SDL_ReleaseGPUSampler(device, slot.value.native);
@@ -213,6 +325,12 @@ public:
     SdlGpuCapabilities capabilities;
     std::string last_error;
     bool in_pass = false;
+    SDL_Window* window = nullptr;
+    SDL_GPUCommandBuffer* command = nullptr;
+    SDL_GPURenderPass* render_pass = nullptr;
+    TextureHandle last_color;
+    UInt32 active_width = 0;
+    UInt32 active_height = 0;
     std::vector<Slot<BufferRecord>> buffers;
     std::vector<Slot<TextureRecord>> textures;
     std::vector<Slot<SamplerRecord>> samplers;
@@ -305,10 +423,65 @@ ShaderHandle SdlGpuDevice::create_shader(const ShaderDesc& desc, std::string_vie
     return handle;
 }
 
-PipelineHandle SdlGpuDevice::create_pipeline(const PipelineKey&, std::string_view label)
+PipelineHandle SdlGpuDevice::create_pipeline(const PipelineKey& key, std::string_view label)
 {
-    impl_->fail("create_pipeline", "graphics pipeline support is delivered by M14 slice 02", label);
-    return {};
+    const auto& desc = key.descriptor();
+    if (auto result = validate(desc); !result) { impl_->fail("create_pipeline", result.error, label); return {}; }
+    if (label.empty()) { impl_->fail("create_pipeline", "label must not be empty"); return {}; }
+    if (desc.topology == PrimitiveTopology::triangle_fan) {
+        impl_->fail("create_pipeline", "triangle-fan input must be CPU-expanded to triangle-list before SDL_GPU", label);
+        return {};
+    }
+    if (desc.raster.fill == FillMode::point) {
+        impl_->fail("create_pipeline", "point fill mode is not representable; use point-list topology", label);
+        return {};
+    }
+    auto* vertex = lookup(impl_->shaders, desc.vertex_shader);
+    auto* fragment = lookup(impl_->shaders, desc.fragment_shader);
+    if (!vertex || vertex->value.stage != ShaderStage::vertex || !fragment || fragment->value.stage != ShaderStage::fragment) {
+        impl_->fail("create_pipeline", "shader handles are stale or have the wrong stage", label); return {};
+    }
+    SDL_GPUVertexBufferDescription vertex_buffer{};
+    std::vector<SDL_GPUVertexAttribute> attributes;
+    vertex_layout(desc.vertex_layout, vertex_buffer, attributes);
+    SDL_GPUColorTargetDescription color{};
+    color.format = texture_format(desc.color_format);
+    color.blend_state.src_color_blendfactor = blend_factor(desc.blend.source_color);
+    color.blend_state.dst_color_blendfactor = blend_factor(desc.blend.destination_color);
+    color.blend_state.color_blend_op = blend_op(desc.blend.color_operation);
+    color.blend_state.src_alpha_blendfactor = blend_factor(desc.blend.source_alpha);
+    color.blend_state.dst_alpha_blendfactor = blend_factor(desc.blend.destination_alpha);
+    color.blend_state.alpha_blend_op = blend_op(desc.blend.alpha_operation);
+    color.blend_state.color_write_mask = desc.blend.color_write_mask;
+    color.blend_state.enable_blend = desc.blend.enabled;
+    color.blend_state.enable_color_write_mask = true;
+    SDL_GPUGraphicsPipelineCreateInfo info{};
+    info.vertex_shader = vertex->value.native;
+    info.fragment_shader = fragment->value.native;
+    info.vertex_input_state = {&vertex_buffer, 1, attributes.data(), static_cast<Uint32>(attributes.size())};
+    info.primitive_type = primitive_type(desc.topology);
+    info.rasterizer_state.fill_mode = fill_mode(desc.raster.fill);
+    info.rasterizer_state.cull_mode = cull_mode(desc.raster.cull);
+    info.rasterizer_state.front_face = front_face(desc.raster.front_face);
+    info.rasterizer_state.depth_bias_constant_factor = desc.raster.depth_bias;
+    info.rasterizer_state.enable_depth_bias = desc.raster.depth_bias != 0.0F;
+    info.rasterizer_state.enable_depth_clip = true;
+    info.multisample_state.sample_count = SDL_GPU_SAMPLECOUNT_1;
+    info.depth_stencil_state.compare_op = compare_op(desc.depth_stencil.depth_compare);
+    info.depth_stencil_state.compare_mask = desc.depth_stencil.stencil_read_mask;
+    info.depth_stencil_state.write_mask = desc.depth_stencil.stencil_write_mask;
+    info.depth_stencil_state.enable_depth_test = desc.depth_stencil.depth_test;
+    info.depth_stencil_state.enable_depth_write = desc.depth_stencil.depth_write;
+    info.depth_stencil_state.enable_stencil_test = desc.depth_stencil.stencil_test;
+    info.target_info = {&color, 1, texture_format(desc.depth_format), true, 0, 0, 0};
+    auto* native = SDL_CreateGPUGraphicsPipeline(impl_->device, &info);
+    if (!native) { impl_->fail("create_pipeline", sdl_error("SDL_CreateGPUGraphicsPipeline"), label); return {}; }
+    Impl::PipelineRecord record;
+    record.key = key;
+    record.native = native;
+    auto handle = allocate<PipelineHandle>(impl_->pipelines, label, std::move(record));
+    if (!handle) { SDL_ReleaseGPUGraphicsPipeline(impl_->device, native); impl_->fail("create_pipeline", "resource table exhausted", label); }
+    return handle;
 }
 
 ValidationResult SdlGpuDevice::upload(const UploadDesc& desc, const void* bytes)
@@ -343,12 +516,123 @@ ValidationResult SdlGpuDevice::upload(const UploadDesc& desc, const void* bytes)
     return {};
 }
 
-ValidationResult SdlGpuDevice::begin_pass(const RenderPassDesc&, std::string_view label)
+ValidationResult SdlGpuDevice::begin_pass(const RenderPassDesc& desc, std::string_view label)
 {
-    return impl_->fail("begin_pass", "render pass support is delivered by M14 slice 02", label);
+    if (impl_->in_pass) return impl_->fail("begin_pass", "render pass is already active", label);
+    if (auto result = validate(desc); !result) return impl_->fail("begin_pass", result.error, label);
+    std::array<SDL_GPUColorTargetInfo, RendererLimits::color_targets> colors{};
+    for (UInt32 index = 0; index < desc.color_target_count; ++index) {
+        auto* target = lookup(impl_->textures, desc.color_targets[index]);
+        if (!target || !target->value.desc.render_target || is_depth(target->value.desc.format))
+            return impl_->fail("begin_pass", "color target is stale, destroyed, or not color-renderable", label);
+        if (target->value.desc.width != desc.width || target->value.desc.height != desc.height)
+            return impl_->fail("begin_pass", "color target extent does not match pass", target->label);
+        colors[index].texture = target->value.native;
+        colors[index].clear_color = {0.02F, 0.02F, 0.04F, 1.0F};
+        colors[index].load_op = SDL_GPU_LOADOP_CLEAR;
+        colors[index].store_op = SDL_GPU_STOREOP_STORE;
+        colors[index].cycle = true;
+    }
+    auto* depth = lookup(impl_->textures, desc.depth_target);
+    if (!depth || !depth->value.desc.render_target || !is_depth(depth->value.desc.format))
+        return impl_->fail("begin_pass", "depth target is stale, destroyed, or not depth-renderable", label);
+    if (depth->value.desc.width != desc.width || depth->value.desc.height != desc.height)
+        return impl_->fail("begin_pass", "depth target extent does not match pass", depth->label);
+    SDL_GPUDepthStencilTargetInfo depth_info{};
+    depth_info.texture = depth->value.native;
+    depth_info.clear_depth = 1.0F;
+    depth_info.load_op = SDL_GPU_LOADOP_CLEAR;
+    depth_info.store_op = SDL_GPU_STOREOP_STORE;
+    depth_info.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
+    depth_info.stencil_store_op = SDL_GPU_STOREOP_STORE;
+    depth_info.cycle = true;
+    impl_->command = SDL_AcquireGPUCommandBuffer(impl_->device);
+    if (!impl_->command) return impl_->fail("begin_pass", sdl_error("SDL_AcquireGPUCommandBuffer"), label);
+    const std::string owned(label);
+    SDL_PushGPUDebugGroup(impl_->command, owned.c_str());
+    impl_->render_pass = SDL_BeginGPURenderPass(impl_->command, colors.data(), desc.color_target_count, &depth_info);
+    if (!impl_->render_pass) {
+        SDL_PopGPUDebugGroup(impl_->command);
+        SDL_CancelGPUCommandBuffer(impl_->command);
+        impl_->command = nullptr;
+        return impl_->fail("begin_pass", sdl_error("SDL_BeginGPURenderPass"), label);
+    }
+    SDL_GPUViewport viewport{0.0F, 0.0F, static_cast<float>(desc.width), static_cast<float>(desc.height), 0.0F, 1.0F};
+    SDL_SetGPUViewport(impl_->render_pass, &viewport);
+    impl_->in_pass = true;
+    impl_->last_color = desc.color_targets[0];
+    impl_->active_width = desc.width;
+    impl_->active_height = desc.height;
+    return {};
 }
-ValidationResult SdlGpuDevice::draw(const DrawDesc&) { return impl_->fail("draw", "draw support is delivered by M14 slice 02"); }
-ValidationResult SdlGpuDevice::end_pass() { return impl_->fail("end_pass", "render pass support is delivered by M14 slice 02"); }
+
+ValidationResult SdlGpuDevice::draw(const DrawDesc& desc)
+{
+    if (!impl_->in_pass) return impl_->fail("draw", "draw requires an active render pass");
+    auto* pipeline = lookup(impl_->pipelines, desc.pipeline);
+    if (!pipeline) return impl_->fail("draw", "pipeline handle is stale or destroyed");
+    if (auto result = validate(desc, pipeline->value.key.descriptor()); !result) return impl_->fail("draw", result.error);
+    auto* vertex = lookup(impl_->buffers, desc.vertex_buffer);
+    if (!vertex || !vertex->value.native || vertex->value.desc.usage != BufferUsage::vertex)
+        return impl_->fail("draw", "vertex buffer is stale, destroyed, or has wrong usage");
+    SDL_BindGPUGraphicsPipeline(impl_->render_pass, pipeline->value.native);
+    SDL_GPUBufferBinding vertex_binding{vertex->value.native, 0};
+    SDL_BindGPUVertexBuffers(impl_->render_pass, 0, &vertex_binding, 1);
+    const auto bind_stage = [&](const StageBindings& bindings, bool vertex_stage) -> ValidationResult {
+        for (UInt32 index = 0; index < bindings.uniform_count; ++index) {
+            auto* uniform = lookup(impl_->buffers, bindings.uniforms[index].buffer);
+            if (!uniform || uniform->value.desc.usage != BufferUsage::uniform)
+                return impl_->fail("draw", "uniform binding is stale, destroyed, or has wrong usage");
+            const auto& binding = bindings.uniforms[index];
+            if (binding.offset > uniform->value.shadow.size() || binding.size > uniform->value.shadow.size() - binding.offset)
+                return impl_->fail("draw", "uniform range exceeds uploaded shadow");
+            const void* bytes = uniform->value.shadow.data() + static_cast<std::size_t>(binding.offset);
+            if (vertex_stage) SDL_PushGPUVertexUniformData(impl_->command, index, bytes, static_cast<Uint32>(binding.size));
+            else SDL_PushGPUFragmentUniformData(impl_->command, index, bytes, static_cast<Uint32>(binding.size));
+        }
+        std::array<SDL_GPUTextureSamplerBinding, RendererLimits::sampled_textures_per_stage> native{};
+        for (UInt32 index = 0; index < bindings.texture_count; ++index) {
+            auto* texture = lookup(impl_->textures, bindings.textures[index]);
+            auto* sampler = lookup(impl_->samplers, bindings.samplers[index]);
+            if (!texture || !texture->value.desc.sampled || !sampler)
+                return impl_->fail("draw", "texture/sampler binding is stale, destroyed, or not sampleable");
+            native[index] = {texture->value.native, sampler->value.native};
+        }
+        if (bindings.texture_count != 0) {
+            if (vertex_stage) SDL_BindGPUVertexSamplers(impl_->render_pass, 0, native.data(), bindings.texture_count);
+            else SDL_BindGPUFragmentSamplers(impl_->render_pass, 0, native.data(), bindings.texture_count);
+        }
+        return {};
+    };
+    if (auto result = bind_stage(desc.vertex_bindings, true); !result) return result;
+    if (auto result = bind_stage(desc.fragment_bindings, false); !result) return result;
+    if (desc.index_buffer) {
+        auto* index = lookup(impl_->buffers, desc.index_buffer);
+        if (!index || !index->value.native || index->value.desc.usage != BufferUsage::index)
+            return impl_->fail("draw", "index buffer is stale, destroyed, or has wrong usage");
+        SDL_GPUBufferBinding index_binding{index->value.native, 0};
+        SDL_BindGPUIndexBuffer(impl_->render_pass, &index_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+        SDL_DrawGPUIndexedPrimitives(impl_->render_pass, desc.vertex_or_index_count, 1, 0, 0, 0);
+    } else {
+        SDL_DrawGPUPrimitives(impl_->render_pass, desc.vertex_or_index_count, 1, 0, 0);
+    }
+    return {};
+}
+
+ValidationResult SdlGpuDevice::end_pass()
+{
+    if (!impl_->in_pass) return impl_->fail("end_pass", "no render pass is active");
+    SDL_EndGPURenderPass(impl_->render_pass);
+    SDL_PopGPUDebugGroup(impl_->command);
+    impl_->render_pass = nullptr;
+    impl_->in_pass = false;
+    if (!SDL_SubmitGPUCommandBuffer(impl_->command)) {
+        impl_->command = nullptr;
+        return impl_->fail("end_pass", sdl_error("SDL_SubmitGPUCommandBuffer"));
+    }
+    impl_->command = nullptr;
+    return {};
+}
 
 void SdlGpuDevice::destroy(BufferHandle handle)
 {
@@ -388,7 +672,66 @@ void SdlGpuDevice::destroy(PipelineHandle handle)
 
 const std::string& SdlGpuDevice::last_error() const noexcept { return impl_->last_error; }
 bool SdlGpuDevice::pass_active() const noexcept { return impl_->in_pass; }
-void SdlGpuDevice::record_marker(std::string_view) {}
+void SdlGpuDevice::record_marker(std::string_view marker)
+{
+    if (impl_->command) {
+        const std::string owned(marker);
+        SDL_InsertGPUDebugLabel(impl_->command, owned.c_str());
+    }
+}
 const SdlGpuCapabilities& SdlGpuDevice::capabilities() const noexcept { return impl_->capabilities; }
+
+ValidationResult SdlGpuDevice::claim_window(SDL_Window* window)
+{
+    if (!window) return impl_->fail("claim_window", "SDL window is null");
+    if (impl_->window) return impl_->fail("claim_window", "a window is already claimed");
+    if (!SDL_ClaimWindowForGPUDevice(impl_->device, window))
+        return impl_->fail("claim_window", sdl_error("SDL_ClaimWindowForGPUDevice"));
+    impl_->window = window;
+    return {};
+}
+
+ValidationResult SdlGpuDevice::present(TextureHandle source_handle)
+{
+    if (impl_->in_pass) return impl_->fail("present", "cannot present while a render pass is active");
+    if (!impl_->window) return impl_->fail("present", "no SDL window is claimed");
+    auto* source = lookup(impl_->textures, source_handle);
+    if (!source || is_depth(source->value.desc.format)) return impl_->fail("present", "source texture is stale or not color-renderable");
+    auto* command = SDL_AcquireGPUCommandBuffer(impl_->device);
+    if (!command) return impl_->fail("present", sdl_error("SDL_AcquireGPUCommandBuffer"));
+    SDL_GPUTexture* swapchain = nullptr;
+    Uint32 width = 0, height = 0;
+    if (!SDL_WaitAndAcquireGPUSwapchainTexture(command, impl_->window, &swapchain, &width, &height)) {
+        SDL_CancelGPUCommandBuffer(command);
+        return impl_->fail("present", sdl_error("SDL_WaitAndAcquireGPUSwapchainTexture"));
+    }
+    if (!swapchain) {
+        if (!SDL_SubmitGPUCommandBuffer(command)) return impl_->fail("present", sdl_error("SDL_SubmitGPUCommandBuffer"));
+        return {};
+    }
+    SDL_GPUBlitInfo blit{};
+    blit.source = {source->value.native, 0, 0, 0, 0, source->value.desc.width, source->value.desc.height};
+    blit.destination = {swapchain, 0, 0, 0, 0, width, height};
+    blit.load_op = SDL_GPU_LOADOP_DONT_CARE;
+    blit.filter = SDL_GPU_FILTER_LINEAR;
+    SDL_BlitGPUTexture(command, &blit);
+    if (!SDL_SubmitGPUCommandBuffer(command)) return impl_->fail("present", sdl_error("SDL_SubmitGPUCommandBuffer"));
+    return {};
+}
+
+ValidationResult SdlGpuDevice::wait_idle()
+{
+    if (impl_->in_pass) return impl_->fail("wait_idle", "cannot wait while a render pass is active");
+    if (!SDL_WaitForGPUIdle(impl_->device)) return impl_->fail("wait_idle", sdl_error("SDL_WaitForGPUIdle"));
+    return {};
+}
+
+void SdlGpuDevice::release_window() noexcept
+{
+    if (impl_->window) {
+        SDL_ReleaseWindowFromGPUDevice(impl_->device, impl_->window);
+        impl_->window = nullptr;
+    }
+}
 
 } // namespace zh::renderer
