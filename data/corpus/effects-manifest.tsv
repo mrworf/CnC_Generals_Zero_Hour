@@ -1,0 +1,8 @@
+# Project-owned logical M10 coverage. No retail bytes, hashes, or host paths.
+effect	Art/Water/WaterPlane.w3d	water-surface	water-and-reflection
+effect	Data/INI/ParticleSystem.ini	particle-sprite	particle-point-list
+effect	Art/Textures/Projected.dds	projected-decal	projected-texture
+effect	Art/Textures/BumpEnv.dds	bump-environment	bump-environment
+effect	Art/Textures/Stealth.dds	stealth-shell	stealth-distortion
+effect	Post/SceneColor	post-process	scene-post-effect
+effect	Shaders/fterrain.pso	wwshade-terrain	wwshade-multipass

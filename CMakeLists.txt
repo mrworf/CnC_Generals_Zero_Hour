@@ -127,6 +127,10 @@ add_library(zh_world STATIC src/world/scene.cpp src/world/recorder.cpp src/world
 target_include_directories(zh_world PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_world PUBLIC zh_renderer_sdl_gpu zh_build_options)
 
+add_library(zh_effects STATIC src/effects/registry.cpp)
+target_include_directories(zh_effects PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(zh_effects PUBLIC zh_wwshade zh_build_options)
+
 target_sources(zh_platform_sdl PRIVATE src/platform/sdl_events.cpp src/platform/sdl_window.cpp)
 target_include_directories(zh_platform_sdl PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_platform_sdl PUBLIC zh_wwsupport)
@@ -190,6 +194,29 @@ endforeach()
 add_custom_target(zh_renderer_shaders ALL DEPENDS ${ZH_RENDERER_SPIRV})
 add_dependencies(zh_renderer_sdl_gpu zh_renderer_shaders)
 
+set(ZH_EFFECT_SHADER_NAMES
+  projected.vert projected.frag
+  bump_environment.vert bump_environment.frag
+  stealth.vert stealth.frag
+  post_effect.vert post_effect.frag
+)
+set(ZH_EFFECT_SPIRV)
+foreach(shader_name IN LISTS ZH_EFFECT_SHADER_NAMES)
+  set(shader_source "${CMAKE_CURRENT_SOURCE_DIR}/shaders/effects/${shader_name}")
+  set(shader_output "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/effects/${shader_name}.spv")
+  add_custom_command(
+    OUTPUT "${shader_output}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/effects"
+    COMMAND "${ZH_GLSLC_EXECUTABLE}" "${shader_source}" -o "${shader_output}"
+    DEPENDS "${shader_source}"
+    COMMENT "Compiling effect shader ${shader_name}"
+    VERBATIM
+  )
+  list(APPEND ZH_EFFECT_SPIRV "${shader_output}")
+endforeach()
+add_custom_target(zh_effect_shaders ALL DEPENDS ${ZH_EFFECT_SPIRV})
+add_dependencies(zh_effects zh_renderer_shaders zh_effect_shaders)
+
 add_executable(zh_main src/bootstrap/main.cpp src/headless/runtime.cpp)
 target_include_directories(zh_main PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated" "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_main PRIVATE
@@ -201,9 +228,11 @@ set_property(TARGET zh_main PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_LEGACY_ZH_
 install(TARGETS zh_main RUNTIME DESTINATION bin)
 install(FILES "${ZH_BOOTSTRAP_SPIRV}" DESTINATION share/generals-zero-hour/shaders)
 install(FILES ${ZH_RENDERER_SPIRV} DESTINATION share/generals-zero-hour/shaders/renderer)
+install(FILES ${ZH_EFFECT_SPIRV} DESTINATION share/generals-zero-hour/shaders/effects)
 install(FILES LICENSE.md DESTINATION share/licenses/generals-zero-hour)
 install(FILES data/corpus/english-manifest.tsv DESTINATION share/generals-zero-hour/corpus)
 install(FILES data/corpus/world-rendering-manifest.tsv DESTINATION share/generals-zero-hour/corpus)
+install(FILES data/corpus/effects-manifest.tsv DESTINATION share/generals-zero-hour/corpus)
 
 if(ZH_BUILD_TESTS)
   enable_testing()
@@ -297,6 +326,16 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(world_corpus_tests PRIVATE zh_world)
   add_test(NAME world_corpus COMMAND world_corpus_tests)
   set_tests_properties(world_corpus PROPERTIES LABELS renderer-contract)
+
+  add_executable(effects_registry_tests tests/effects/test_effect_registry.cpp)
+  target_compile_definitions(effects_registry_tests PRIVATE
+    ZH_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    ZH_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+  )
+  target_link_libraries(effects_registry_tests PRIVATE zh_effects)
+  add_dependencies(effects_registry_tests zh_renderer_shaders zh_effect_shaders)
+  add_test(NAME effects_registry COMMAND effects_registry_tests)
+  set_tests_properties(effects_registry PROPERTIES LABELS renderer-contract)
 
   add_executable(foundation_abi_codec_tests tests/foundation/test_abi_codec.cpp)
   target_link_libraries(foundation_abi_codec_tests PRIVATE zh_wwsupport)
