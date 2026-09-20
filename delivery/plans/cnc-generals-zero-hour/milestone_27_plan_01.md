@@ -36,7 +36,7 @@ Accordingly, M27 will use narrow source-owned extractions in the original source
 |---|---|---|---|---|---|---|
 | 01 | [Logical files, INI and CSF](milestone_27_plan_01_slice_01.md) | Original-source data facade consumes native VFS with exact precedence, two-pass INI ordering, typed callbacks, CSF UTF-16LE, and bounded failures. | M26, M4 | complete | `af04a8f8beffc620274f3f8524d7057fa3352363` | 2/2 focused tests in all four presets |
 | 02 | [Transfer, chunks and random streams](milestone_27_plan_01_slice_02.md) | Source-owned fixed-width codecs/chunks round-trip bounded data and actual original random streams remain independent. | slice 01 | complete | `2fb1a7dc1a2919be7ed43c0fee25e3f1e0fd353d` | 4/4 cumulative focused tests in all four presets |
-| 03 | [Map metadata, XDG cache and source gates](milestone_27_plan_01_slice_03.md) | Independent map metadata/cache operations handle lifecycle and precedence safely, with checked identity/ledger evidence. | slices 01-02 | complete | recorded by the slice commit | [M27 QA evidence](../../../evidence/qa/cnc-generals-zero-hour/m27-original-data-providers-2026-09-20.md) |
+| 03 | [Map metadata, XDG cache and source gates](milestone_27_plan_01_slice_03.md) | Independent map metadata/cache operations handle lifecycle and precedence safely, with checked identity/ledger evidence. | slices 01-02 | complete | `d46a6ed1e65e494421ed2c7f80e3b2107ca25569` | [M27 QA evidence](../../../evidence/qa/cnc-generals-zero-hour/m27-original-data-providers-2026-09-20.md) |
 
 ## Cross-slice constraints
 

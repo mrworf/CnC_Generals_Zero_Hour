@@ -243,21 +243,23 @@ milestones:
   - id: M27
     title: "original data codecs and map metadata providers"
     file: delivery/milestones/cnc-generals-zero-hour/M27-original-data-providers.md
-    status: in_progress
+    status: completed
     dependencies: [M26, M4]
     remediation_ids: [SE-002, SE-003, SE-007, SE-010, RC-001, RC-002, RC-004, RC-006, RC-007, RC-008, RC-009]
     optional: false
     started_at: "2026-09-20T16:18:08Z"
-    completed_at: null
-    evidence: null
-    notes: "Independent original parser/codec/map metadata consumers; full INI dispatch and coupled registry belong to M20."
+    completed_at: "2026-09-20T16:41:25Z"
+    commit_hash: d46a6ed1e65e494421ed2c7f80e3b2107ca25569
+    evidence: "evidence/qa/cnc-generals-zero-hour/m27-original-data-providers-2026-09-20.md; focused original-data 10/10 and canonical asset-free 82/82 passed in each GCC/Clang Debug/Release preset; Clang Debug ASan/UBSan passed 10/10 with allocation counts at baseline."
+    notes: "Accepted at the independent-provider boundary without retail or full engine startup. Complete INI dispatch, nonempty map objects, localization, and production MapCache equivalence remain M20-owned. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_27_plan_01.md; slice commits: af04a8f8beffc620274f3f8524d7057fa3352363, 2fb1a7dc1a2919be7ed43c0fee25e3f1e0fd353d, d46a6ed1e65e494421ed2c7f80e3b2107ca25569."
   - id: M28
     title: "original CPU presentation and media resources"
     file: delivery/milestones/cnc-generals-zero-hour/M28-original-cpu-resources.md
-    status: pending
+    status: in_progress
     dependencies: [M27, M6, M7, M8, M12, M13]
     remediation_ids: [SE-005, SE-006, SE-010, RC-001, RC-002, RC-004, RC-006, RC-007, RC-009, RC-010]
     optional: false
+    started_at: "2026-09-20T16:41:25Z"
     completed_at: null
     evidence: null
     notes: "Original CPU/device seams and resource/audio consumers with owned fixtures; coupled GameClient and complete registry remain M20."

@@ -13,11 +13,11 @@ delivery_goal:
   end: null
   milestone_ids: [M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
   execution: autonomous
-  current_milestone: M27
+  current_milestone: M28
   blocker_type: null
   blocker: null
   blockers: []
-  resume_point: "M26 accepted at 89eeca9506aff87649bb0ee23334af83f18a51b8. Generate and execute delivery/plans/cnc-generals-zero-hour/milestone_27_plan_01.md using minimal-slice delivery; M28 follows, and M20 plan 02 is created only after M26-M28 complete."
+  resume_point: "M27 accepted at d46a6ed1e65e494421ed2c7f80e3b2107ca25569. Generate and execute delivery/plans/cnc-generals-zero-hour/milestone_28_plan_01.md using minimal-slice delivery; create M20 plan 02 only after M28 completes."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
   replacement_packet_adoption:
