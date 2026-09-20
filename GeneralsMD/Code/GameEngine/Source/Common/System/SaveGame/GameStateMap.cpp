@@ -30,7 +30,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"
 
-#include "Common/File.h"
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/GameState.h"
 #include "Common/GameStateMap.h"
@@ -43,7 +43,6 @@
 #include "GameNetwork/GameInfo.h"
 
 // GLOBALS ////////////////////////////////////////////////////////////////////////////////////////
-GameStateMap *TheGameStateMap = NULL;
 
 #ifdef _INTERNAL
 // for occasional debugging...

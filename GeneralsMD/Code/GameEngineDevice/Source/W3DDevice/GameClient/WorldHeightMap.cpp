@@ -86,8 +86,6 @@ public:
 
 
 /* ********* MapObject class ****************************/
-/*static*/ MapObject *MapObject::TheMapObjectListPtr = NULL;
-/*static*/ Dict MapObject::TheWorldDict;
 
 MapObject::MapObject(Coord3D loc, AsciiString name, Real angle, Int flags, const Dict* props,
 										 const ThingTemplate *thingTemplate )
@@ -2575,4 +2573,3 @@ Bool  WorldHeightMap::getRawTileData(Short tileNdx, Int width,
 	}
 	return(false);
 }
-

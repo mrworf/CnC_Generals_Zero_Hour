@@ -27,7 +27,7 @@
 
 #include "GameClient/LanguageFilter.h"
 #include "Common/FileSystem.h"
-#include "Common/File.h"
+#include "Common/file.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -58,9 +58,10 @@ void LanguageFilter::init() {
 		return;
 	}
 
-	wchar_t word[128];
+	WideChar word[128];
 	while (readWord(file1, word)) {
-		Int wordLen = wcslen(word);
+		Int wordLen = 0;
+		while (word[wordLen] != 0) ++wordLen;
 		if (wordLen == 0) {
 			continue;
 		}
@@ -84,18 +85,23 @@ void LanguageFilter::reset() {
 void LanguageFilter::update() {
 }
 
-wchar_t ignoredChars[] = L"-_*'\"";
+WideChar ignoredChars[] = u"-_*'\"";
 
 void LanguageFilter::filterLine(UnicodeString &line) 
 {
 	WideChar *buf = NEW WideChar[line.getLength()+1];
-	wcscpy(buf, line.str());
+	for (Int i = 0; i <= line.getLength(); ++i) buf[i] = line.str()[i];
 
 	UnicodeString newLine(line);
-	UnicodeString token(L"");
+	UnicodeString token(u"");
 
-	while (newLine.nextToken(&token, UnicodeString(L" ;,.!?:=\\/><`~()&^%#\n\t"))) {
-		wchar_t *pos = wcsstr(buf, token.str());
+	while (newLine.nextToken(&token, UnicodeString(u" ;,.!?:=\\/><`~()&^%#\n\t"))) {
+		WideChar *pos = NULL;
+		for (Int offset = 0; offset + token.getLength() <= line.getLength(); ++offset) {
+			Int matched = 0;
+			while (matched < token.getLength() && buf[offset + matched] == token.getCharAt(matched)) ++matched;
+			if (matched == token.getLength()) { pos = buf + offset; break; }
+		}
 		if (pos == NULL) {
 			DEBUG_CRASH(("Couldn't find the token in its own string."));
 			continue;
@@ -108,7 +114,7 @@ void LanguageFilter::filterLine(UnicodeString &line)
 		if (iter != m_wordList.end()) {
 			DEBUG_LOG(("Found word %ls in bad word list. Token was %ls\n", (*iter).first.str(), token.str()));
 			for (Int i = 0; i < len; ++i) {
-				*pos = L'*';
+				*pos = u'*';
 				++pos;
 			}
 		}
@@ -120,38 +126,41 @@ void LanguageFilter::filterLine(UnicodeString &line)
 
 void LanguageFilter::unHaxor(UnicodeString &word) {
 	Int len = word.getLength();
-	UnicodeString newWord(L"");
+	UnicodeString newWord(u"");
 	for (Int i = 0; i < len; ++i) {
-		wchar_t c = word.getCharAt(i);
-		if ((c == L'p') || (c == L'P')) {
-			if (((i + 1) < len) && ((word.getCharAt(i+1) == L'h') || (word.getCharAt(i+1) == L'H'))) {
-				newWord.concat(L'f');
+		WideChar c = word.getCharAt(i);
+		if ((c == u'p') || (c == u'P')) {
+			if (((i + 1) < len) && ((word.getCharAt(i+1) == u'h') || (word.getCharAt(i+1) == u'H'))) {
+				newWord.concat(u'f');
 				++i; // skip the h
 			} else {
 				// not a problem at all.
 				newWord.concat(c);
 			}
-		} else if (c == L'1') {
-			newWord.concat(L'l');
-		} else if (c == L'3') {
-			newWord.concat(L'e');
-		} else if (c == L'4') {
-			newWord.concat(L'a');
-		} else if (c == L'5') {
-			newWord.concat(L's');
-		} else if (c == L'6') {
-			newWord.concat(L'b');
-		} else if (c == L'7') {
-			newWord.concat(L't');
-		} else if (c == L'0') {
-			newWord.concat(L'o');
-		} else if (c == L'@') {
-			newWord.concat(L'a');
-		} else if (c == L'$') {
-			newWord.concat(L's');
-		} else if (c == L'+') {
-			newWord.concat(L't');
-		} else if (wcsrchr(ignoredChars, c) == NULL) {
+		} else if (c == u'1') {
+			newWord.concat(u'l');
+		} else if (c == u'3') {
+			newWord.concat(u'e');
+		} else if (c == u'4') {
+			newWord.concat(u'a');
+		} else if (c == u'5') {
+			newWord.concat(u's');
+		} else if (c == u'6') {
+			newWord.concat(u'b');
+		} else if (c == u'7') {
+			newWord.concat(u't');
+		} else if (c == u'0') {
+			newWord.concat(u'o');
+		} else if (c == u'@') {
+			newWord.concat(u'a');
+		} else if (c == u'$') {
+			newWord.concat(u's');
+		} else if (c == u'+') {
+			newWord.concat(u't');
+		} else {
+			Bool ignored = FALSE;
+			for (Int j = 0; ignoredChars[j] != 0; ++j) if (ignoredChars[j] == c) ignored = TRUE;
+			if (!ignored)
 			newWord.concat(c);
 		}
 	}
@@ -159,7 +168,7 @@ void LanguageFilter::unHaxor(UnicodeString &word) {
 }
 
 // returning true means that there are more words in the file.
-Bool LanguageFilter::readWord(File *file1, UnsignedShort *buf) {
+Bool LanguageFilter::readWord(File *file1, WideChar *buf) {
 	Int index = 0;
 	Bool retval = TRUE;
 	Int val = 0;
@@ -173,16 +182,16 @@ Bool LanguageFilter::readWord(File *file1, UnsignedShort *buf) {
 	}
 	buf[index] = c;
 
-	while (buf[index] != L' ') {
+	while (buf[index] != u' ') {
 		++index;
 		val = file1->read(&c, sizeof(UnsignedShort));
 		if ((val == -1) || (val == 0)) {
-			c = WEOF;
+			c = 0xffff;
 		}
 
-		if ((c == WEOF) || (c == L' ')) {
+		if ((c == 0xffff) || (c == u' ')) {
 			buf[index] = 0;
-			if (c == WEOF) {
+			if (c == 0xffff) {
 				retval = FALSE;
 			}
 			break;

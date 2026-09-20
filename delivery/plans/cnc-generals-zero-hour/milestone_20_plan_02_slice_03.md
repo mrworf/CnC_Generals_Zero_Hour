@@ -27,3 +27,10 @@ Original filesystem/archive/INI/GameText/GlobalData/MapUtil/GameState/Xfer/CRC s
 ## Required validation and acceptance
 
 Focused data-startup tests pass in all four presets; source-owned localization, name-key, configured object, nonempty map/cache, Xfer and CRC values are observed; cold/warm results match; all writes are XDG-isolated; malformed/missing/unknown/denied cases fail nonzero without execute/reset. Commit as `delivery: M20 slice 03 integrate original data startup`.
+
+## Delivered implementation notes
+
+- The runtime test force-links the production INI dispatch and observes actual `GlobalData`, `NameKeyGenerator`, `GameTextManager`, `ThingFactory`/`ThingTemplate`, `INIMapCache`, `GameState`, `Snapshot`, and `XferCRC` state. The map catalog fixture is nonempty: localized metadata includes two starts plus tech and supply positions; it is not an empty-map or M27 proxy witness.
+- `PosixLocalFileSystem` now accepts an explicit read root, preserving original logical paths while making reads independent of the process CWD. Loose-file enumeration retains logical relative names and the archive provider remains an optional second source rather than a required null dereference.
+- Generated standard and user `MapCache.ini` files now use atomic replacement below the resolved XDG cache root. Cold, warm, absent, refreshed, malformed, and denied-write paths are exercised without changing source data.
+- The live-link identity test requires eight exact provider members and source symbols, and provider-removal deletes the actually extracted `XferCRC.cpp.o`; the real data-startup relink must then fail for the XferCRC symbol.

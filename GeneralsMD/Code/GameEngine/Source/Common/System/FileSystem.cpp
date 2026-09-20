@@ -224,8 +224,10 @@ Bool FileSystem::doesFileExist(const Char *filename) const
 void FileSystem::getFileListInDirectory(const AsciiString& directory, const AsciiString& searchName, FilenameList &filenameList, Bool searchSubdirectories) const
 {
 	USE_PERF_TIMER(FileSystem)
-	TheLocalFileSystem->getFileListInDirectory(AsciiString(""), directory, searchName, filenameList, searchSubdirectories);
-	TheArchiveFileSystem->getFileListInDirectory(AsciiString(""), directory, searchName, filenameList, searchSubdirectories);
+	if (TheLocalFileSystem != NULL)
+		TheLocalFileSystem->getFileListInDirectory(AsciiString(""), directory, searchName, filenameList, searchSubdirectories);
+	if (TheArchiveFileSystem != NULL)
+		TheArchiveFileSystem->getFileListInDirectory(AsciiString(""), directory, searchName, filenameList, searchSubdirectories);
 }
 
 //============================================================================

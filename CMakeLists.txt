@@ -261,6 +261,8 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/Common/UserPreferences.cpp
   GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp
   GeneralsMD/Code/GameEngine/Source/Common/NameKeyGenerator.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/WellKnownKeys.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/MapObjectGlobals.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/FileSystem.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/LocalFileSystem.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/LocalFile.cpp
@@ -272,8 +274,11 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/Common/System/ArchiveFileSystem.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/StreamingArchiveFile.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/XferCRC.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateGlobals.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GameText.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/LanguageFilter.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/Drawable.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/RadiusDecal.cpp
@@ -653,6 +658,49 @@ if(ZH_BUILD_TESTS)
     --library "$<TARGET_FILE:zh_data>"
     --library "$<TARGET_FILE:zh_os_posix>")
   set_tests_properties(original_config_provider_removal PROPERTIES LABELS "original-config;source-identity")
+  add_executable(original_data_startup_tests
+    tests/original_lifecycle/test_data_startup.cpp
+    $<TARGET_OBJECTS:zh_original_config_spine>)
+  target_include_directories(original_data_startup_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+  target_link_libraries(original_data_startup_tests PRIVATE
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_build_options)
+  target_link_options(original_data_startup_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-data-startup.link.map")
+  add_test(NAME original_data_startup COMMAND original_data_startup_tests)
+  set_tests_properties(original_data_startup PROPERTIES LABELS "original-data-startup;source-identity")
+  add_test(NAME original_data_startup_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_data_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-data-startup.link.map"
+    --executable "$<TARGET_FILE:original_data_startup_tests>"
+    --provider-target zh_original_config_providers)
+  set_tests_properties(original_data_startup_identity PROPERTIES LABELS "original-data-startup;source-identity")
+  add_test(NAME original_data_startup_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_config_provider_removal.py"
+    --compiler "${CMAKE_CXX_COMPILER}"
+    --archiver "${CMAKE_AR}"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-data-startup.link.map"
+    --dispatch-source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp"
+    --dispatch-target zh_original_config_spine
+    --probe-source "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_data_startup.cpp"
+    --probe-target original_data_startup_tests
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member XferCRC.cpp.o
+    --required-symbol XferCRC
+    --library "$<TARGET_FILE:zh_original_lifecycle>"
+    --library "$<TARGET_FILE:zh_original_data>"
+    --library "$<TARGET_FILE:zh_os_posix>"
+    --library "$<TARGET_FILE:zh_original_process>"
+    --library "$<TARGET_FILE:zh_data>"
+    --library "$<TARGET_FILE:zh_os_posix>")
+  set_tests_properties(original_data_startup_provider_removal PROPERTIES LABELS "original-data-startup;source-identity")
   add_executable(original_lifecycle_subsystem_tests
     tests/original_lifecycle/test_subsystem_lifecycle.cpp)
   target_include_directories(original_lifecycle_subsystem_tests PRIVATE

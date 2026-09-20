@@ -32,11 +32,13 @@ def main() -> int:
     parser.add_argument("--probe-source", type=pathlib.Path, required=True)
     parser.add_argument("--probe-target", required=True)
     parser.add_argument("--provider-archive", type=pathlib.Path, required=True)
+    parser.add_argument("--member", default="Chat.cpp.o")
+    parser.add_argument("--required-symbol", action="append", default=[])
     parser.add_argument("--library", action="append", type=pathlib.Path, default=[])
     args = parser.parse_args()
 
     included = args.link_map.read_text(encoding="utf-8", errors="replace").split("Discarded input sections", 1)[0]
-    if "libzh_original_config_providers.a(Chat.cpp.o)" not in included:
+    if f"libzh_original_config_providers.a({args.member})" not in included:
         print("selected removal member was not extracted by the passing executable", file=sys.stderr)
         return 1
 
@@ -49,7 +51,7 @@ def main() -> int:
         binary = temporary / "probe-with-provider-removed"
         shutil.copy2(args.provider_archive, archive)
         removed = subprocess.run(
-            [args.archiver, "d", str(archive), "Chat.cpp.o"], check=False, text=True,
+            [args.archiver, "d", str(archive), args.member], check=False, text=True,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         if removed.returncode:
@@ -61,13 +63,14 @@ def main() -> int:
             check=False, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         if result.returncode == 0:
-            print("real dispatch linked after extracted Chat.cpp provider removal", file=sys.stderr)
+            print(f"real probe linked after extracted {args.member} provider removal", file=sys.stderr)
             return 1
-        if "parseOnlineChatColorDefinition" not in result.stderr and "GameSpyColor" not in result.stderr:
+        required_symbols = args.required_symbol or ["parseOnlineChatColorDefinition", "GameSpyColor"]
+        if not any(symbol in result.stderr for symbol in required_symbols):
             print("negative link failed for an unrelated reason", file=sys.stderr)
             print(result.stderr, file=sys.stderr)
             return 1
-    print("M20 complete config provider-removal link control: ok")
+    print(f"M20 provider-removal link control: ok member={args.member}")
     return 0
 
 

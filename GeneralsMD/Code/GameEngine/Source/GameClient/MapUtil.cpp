@@ -61,6 +61,14 @@
 #include "GameNetwork/GameInfo.h"
 #include "GameNetwork/NetworkDefs.h"
 
+#ifndef _WIN32
+#include "zh/foundation/platform.h"
+#include <cstdlib>
+#include <filesystem>
+#include <optional>
+#include <string_view>
+#endif
+
 #ifdef _INTERNAL
 // for occasional debugging...
 //#pragma optimize("", off)
@@ -369,7 +377,28 @@ AsciiString MapCache::getMapExtension() const
 	return AsciiString("map");
 }
 
-void MapCache::writeCacheINI( Bool userDir )
+AsciiString MapCache::getCacheFilePath(Bool userDir) const
+{
+#ifdef _WIN32
+	AsciiString result = userDir ? getUserMapDir() : getMapDir();
+	result.concat('\\');
+	result.concat(m_mapCacheName);
+	return result;
+#else
+	const auto lookup = [](std::string_view name) -> std::optional<std::string> {
+		const std::string key(name);
+		const Char *value = std::getenv(key.c_str());
+		return value ? std::optional<std::string>(value) : std::nullopt;
+	};
+	std::filesystem::path path = zh::foundation::resolve_xdg_paths(lookup).cache;
+	path /= "Maps";
+	path /= userDir ? "User" : "Standard";
+	path /= m_mapCacheName;
+	return AsciiString(path.string().c_str());
+#endif
+}
+
+Bool MapCache::writeCacheINI( Bool userDir )
 {
 	AsciiString mapDir;
 	if (!userDir || TheGlobalData->m_buildMapCache)
@@ -381,20 +410,17 @@ void MapCache::writeCacheINI( Bool userDir )
 		mapDir = getUserMapDir();
 	}
 
-	AsciiString filepath = mapDir;
-#ifdef _WIN32
-	filepath.concat('\\');
-#else
-	filepath.concat('/');
-#endif
-
-	TheFileSystem->createDirectory(mapDir);
-
-	filepath.concat(m_mapCacheName);
-	FILE *fp = fopen(filepath.str(), "w");
+	AsciiString filepath = getCacheFilePath(userDir);
+	std::filesystem::path nativePath(filepath.str());
+	std::error_code directoryError;
+	std::filesystem::create_directories(nativePath.parent_path(), directoryError);
+	if (directoryError)
+		return FALSE;
+	const std::filesystem::path temporaryPath = nativePath.string() + ".tmp";
+	FILE *fp = fopen(temporaryPath.string().c_str(), "w");
 	DEBUG_ASSERTCRASH(fp != NULL, ("Failed to create %s", filepath.str()));
 	if (fp == NULL) {
-		return;
+		return FALSE;
 	}
 	fprintf(fp, "; FILE: %s /////////////////////////////////////////////////////////////\n", filepath.str());
 	fprintf(fp, "; This INI file is auto-generated - do not modify\n");
@@ -457,7 +483,22 @@ void MapCache::writeCacheINI( Bool userDir )
 		++it;
 	}
 
-	fclose(fp);
+	const Bool writeSucceeded = ferror(fp) == 0 && fclose(fp) == 0;
+	if (!writeSucceeded)
+	{
+		std::error_code ignored;
+		std::filesystem::remove(temporaryPath, ignored);
+		return FALSE;
+	}
+	std::error_code replaceError;
+	std::filesystem::rename(temporaryPath, nativePath, replaceError);
+	if (replaceError)
+	{
+		std::error_code ignored;
+		std::filesystem::remove(temporaryPath, ignored);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 void MapCache::updateCache( void )
@@ -521,6 +562,13 @@ void MapCache::loadStandardMaps(void)
 #if defined(_DEBUG) || defined(_INTERNAL)
 	}
 #endif
+	AsciiString generated = getCacheFilePath(FALSE);
+	File *generatedFile = TheFileSystem->openFile(generated.str(), File::READ);
+	if (generatedFile != NULL)
+	{
+		generatedFile->close();
+		ini.load(generated, INI_LOAD_OVERWRITE, NULL);
+	}
 }
 
 Bool MapCache::loadUserMaps()
@@ -536,8 +584,7 @@ Bool MapCache::loadUserMaps()
 		mapDir = getUserMapDir();
 
 		INI ini;
-		AsciiString fname;
-		fname.format("%s\\%s", mapDir.str(), m_mapCacheName);
+		AsciiString fname = getCacheFilePath(TRUE);
 		File *fp = TheFileSystem->openFile(fname.str(), File::READ);
 		if (fp)
 		{

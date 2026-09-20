@@ -48,6 +48,22 @@ PRODUCTION_SOURCES = {
     "GeneralsMD/Code/GameEngine/Source/Common/GameMain.cpp": "M20",
     "GeneralsMD/Code/GameEngine/Source/Common/GameEngine.cpp": "M20",
     "GeneralsMD/Code/GameEngine/Source/Common/System/SubsystemInterface.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/NameKeyGenerator.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/System/FileSystem.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/System/LocalFileSystem.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/System/XferCRC.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/INI/INIGameData.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/INI/INIMapCache.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/INI/INIObject.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingFactory.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingTemplate.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/GameClient/GameText.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/GameClient/LanguageFilter.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp": "M20",
 }
 
 PRODUCTION_PROVIDER_RE = re.compile(r"^(?!.*(?:bootstrap|fixture|toy)).+\.(?:c|cc|cpp|cxx)$", re.IGNORECASE)

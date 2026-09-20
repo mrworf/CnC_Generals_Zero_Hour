@@ -101,6 +101,8 @@ public:
 	AsciiString getMapDir() const;
 	AsciiString getUserMapDir() const;
 	AsciiString getMapExtension() const;
+	AsciiString getCacheFilePath(Bool userDir) const;
+	Bool writeCacheINI(Bool userDir);
 
 	const MapMetaData *findMap(AsciiString mapName);
 
@@ -114,8 +116,6 @@ private:
 //	Bool addMap( AsciiString dirName, AsciiString fname, WinTimeStamp timestamp,
 //		UnsignedInt filesize, Bool isOfficial );	///< returns true if it had to (re)parse the map
 	Bool addMap( AsciiString dirName, AsciiString fname, FileInfo *fileInfo, Bool isOfficial); ///< returns true if it had to (re)parse the map
-	void writeCacheINI( Bool userDir );
-
 	static const char * m_mapCacheName;
 	std::map<AsciiString, Bool> m_seen;
 

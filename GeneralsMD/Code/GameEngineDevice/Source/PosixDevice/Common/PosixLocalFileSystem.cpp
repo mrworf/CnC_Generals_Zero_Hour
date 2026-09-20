@@ -30,7 +30,17 @@ AsciiString logicalPath(const std::filesystem::path& path)
 }  // namespace
 
 PosixLocalFileSystem::PosixLocalFileSystem() = default;
+PosixLocalFileSystem::PosixLocalFileSystem(std::filesystem::path readRoot)
+	: m_readRoot(std::move(readRoot))
+{
+}
 PosixLocalFileSystem::~PosixLocalFileSystem() = default;
+
+std::filesystem::path PosixLocalFileSystem::resolveReadPath(const Char *path) const
+{
+	const std::filesystem::path native = nativePath(path);
+	return native.is_absolute() || m_readRoot.empty() ? native : (m_readRoot / native).lexically_normal();
+}
 
 void PosixLocalFileSystem::init() {}
 void PosixLocalFileSystem::reset() {}
@@ -41,7 +51,7 @@ File *PosixLocalFileSystem::openFile(const Char *filename, Int access)
 	if (filename == NULL || *filename == '\0')
 		return NULL;
 
-	const std::filesystem::path path = nativePath(filename);
+	const std::filesystem::path path = (access & File::WRITE) ? nativePath(filename) : resolveReadPath(filename);
 	if (access & File::WRITE)
 	{
 		std::error_code error;
@@ -65,7 +75,7 @@ File *PosixLocalFileSystem::openFile(const Char *filename, Int access)
 Bool PosixLocalFileSystem::doesFileExist(const Char *filename) const
 {
 	std::error_code error;
-	return std::filesystem::is_regular_file(nativePath(filename), error) && !error;
+	return std::filesystem::is_regular_file(resolveReadPath(filename), error) && !error;
 }
 
 void PosixLocalFileSystem::getFileListInDirectory(const AsciiString& currentDirectory,
@@ -74,7 +84,7 @@ void PosixLocalFileSystem::getFileListInDirectory(const AsciiString& currentDire
                                                    FilenameList& filenameList,
                                                    Bool searchSubdirectories) const
 {
-	const std::filesystem::path base = nativePath(originalDirectory.str());
+	const std::filesystem::path base = resolveReadPath(originalDirectory.str());
 	const std::filesystem::path current = nativePath(currentDirectory.str());
 	const std::filesystem::path directory = base / current;
 	std::error_code error;
@@ -87,7 +97,10 @@ void PosixLocalFileSystem::getFileListInDirectory(const AsciiString& currentDire
 		const std::string name = entry.path().filename().string();
 		if (fnmatch(searchName.str(), name.c_str(), FNM_CASEFOLD) != 0)
 			return;
-		filenameList.insert(logicalPath(entry.path()));
+		std::filesystem::path listed = entry.path();
+		if (!m_readRoot.empty() && !nativePath(originalDirectory.str()).is_absolute())
+			listed = listed.lexically_relative(m_readRoot);
+		filenameList.insert(logicalPath(listed));
 	};
 
 	if (searchSubdirectories)
@@ -108,7 +121,7 @@ Bool PosixLocalFileSystem::getFileInfo(const AsciiString& filename, FileInfo *fi
 {
 	if (fileInfo == NULL)
 		return FALSE;
-	const std::filesystem::path path = nativePath(filename.str());
+	const std::filesystem::path path = resolveReadPath(filename.str());
 	std::error_code error;
 	const std::uintmax_t size = std::filesystem::file_size(path, error);
 	if (error)

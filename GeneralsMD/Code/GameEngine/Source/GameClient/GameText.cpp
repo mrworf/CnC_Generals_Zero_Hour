@@ -875,7 +875,9 @@ Bool GameTextManager::getCSFInfo ( const Char *filename )
 	{
 		if ( file->read( &header, sizeof ( header )) == sizeof ( header ) )
 		{
-			if ( header.id == CSF_ID )
+			if ( header.id == CSF_ID && header.version >= 1 &&
+				header.num_labels > 0 && header.num_labels <= 1000000 &&
+				header.num_strings >= header.num_labels )
 			{
 				m_textCount = header.num_labels;
 
@@ -921,8 +923,10 @@ Bool GameTextManager::parseCSF( const Char *filename )
 
 	if (  file->read ( &header, sizeof ( CSFHeader)) != sizeof ( CSFHeader) )
 	{
-		return FALSE;
+		goto quit;
 	}
+	if (header.id != CSF_ID || header.num_labels != m_textCount)
+		goto quit;
 
 	while( file->read ( &id, sizeof (id)) == sizeof ( id) )
 	{
@@ -934,13 +938,16 @@ Bool GameTextManager::parseCSF( const Char *filename )
 			goto quit;
 		}
 
-		file->read ( &num_strings, sizeof ( Int ));
+		if (file->read(&num_strings, sizeof(Int)) != sizeof(Int) || num_strings < 1)
+			goto quit;
 
-		file->read ( &len, sizeof ( Int ) );
+		if (file->read(&len, sizeof(Int)) != sizeof(Int) || len < 0 || len >= MAX_UITEXT_LENGTH ||
+			listCount >= m_textCount)
+			goto quit;
 
 		if ( len )
 		{
-			file->read ( m_buffer, len );
+			if (file->read(m_buffer, len) != len) goto quit;
 		}
 
 		m_buffer[len] = 0;
@@ -957,18 +964,19 @@ Bool GameTextManager::parseCSF( const Char *filename )
 
 		while ( num < num_strings )
 		{
-		 	file->read ( &id, sizeof ( Int ) );
+			if (file->read(&id, sizeof(Int)) != sizeof(Int)) goto quit;
 
 			if ( id != CSF_STRING && id != CSF_STRINGWITHWAVE )
 			{
 				goto quit;
 			}
 
-		 	file->read ( &len, sizeof ( Int ) );
+			if (file->read(&len, sizeof(Int)) != sizeof(Int) || len < 0 || len >= MAX_UITEXT_LENGTH * 2)
+				goto quit;
 
 			if ( len )
 			{
-				file->read ( m_tbuffer, len*sizeof(WideChar) );
+				if (file->read(m_tbuffer, len * sizeof(WideChar)) != len * sizeof(WideChar)) goto quit;
 			}
 
 			if ( num == 0 )
@@ -994,10 +1002,11 @@ Bool GameTextManager::parseCSF( const Char *filename )
 
 			if ( id == CSF_STRINGWITHWAVE )
 			{
-			 	file->read ( &len, sizeof ( Int ) );
+				if (file->read(&len, sizeof(Int)) != sizeof(Int) || len < 0 || len >= MAX_UITEXT_LENGTH)
+					goto quit;
 				if ( len )
 				{
-					file->read ( m_buffer, len );
+					if (file->read(m_buffer, len) != len) goto quit;
 				}
 				m_buffer[len] = 0;
 
@@ -1015,7 +1024,7 @@ Bool GameTextManager::parseCSF( const Char *filename )
 		listCount++;
 	}
 
-	ok = TRUE;
+	ok = (listCount == m_textCount);
 
 quit:
 
