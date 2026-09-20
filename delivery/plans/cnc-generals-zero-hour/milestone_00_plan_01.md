@@ -51,8 +51,8 @@ An x86-64 contributor can configure, build, and test an asset-free bootstrap gra
 
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
-| 01 | [legacy manifest closure](milestone_00_plan_01_slice_01.md) | Every tracked legacy manifest source and project is explicitly classified and audit-checked | none | completed | recorded by slice commit | 1,889 candidates; 1,085 exclusions; 381 unavailable records; positive/negative audit tests pass |
-| 02 | [offline bootstrap graph](milestone_00_plan_01_slice_02.md) | Four presets configure/build/test an asset-free dependency-backed target graph | 01 | pending | | |
+| 01 | [legacy manifest closure](milestone_00_plan_01_slice_01.md) | Every tracked legacy manifest source and project is explicitly classified and audit-checked | none | completed | `d28b296` | 1,889 candidates; 1,085 exclusions; 381 unavailable records; positive/negative audit tests pass |
+| 02 | [offline bootstrap graph](milestone_00_plan_01_slice_02.md) | Four presets configure/build/test an asset-free dependency-backed target graph | 01 | completed | recorded by slice commit | Four preset builds and 24 aggregate CTest executions pass |
 
 ## Cross-slice concerns
 
@@ -80,6 +80,8 @@ Each slice is independently revertible. Removing slice 02 leaves the source inve
 All slice plans were generated and inspected before production edits. The outer orchestrator owns milestone/status completion.
 
 Slice 01 deduplicates repeated per-configuration `SOURCE=` declarations while retaining a unique classification for every manifest/source pair. Unavailable records include retail INI inputs named by `RTS.dsp` and absent third-party projects; they are documented inputs rather than bootstrap build requirements.
+
+Slice 02 uses the repository manifests directly during its audit so exported source trees do not depend on Git metadata. The Arch dependency-negative configure was also exercised with an empty `pkg-config` directory and failed by naming `sdl3>=3.2`.
 
 ## Deferred follow-ups
 

@@ -63,3 +63,12 @@ Not applicable. Normal configure/build writes only its preset build directory an
 ## Commit boundary
 
 Commit the CMake graph, presets, bootstrap implementation, tests, build guide, and completed plan evidence as `delivery: M0 slice 02 add bootstrap build graph`.
+
+## Completion evidence
+
+- All four canonical presets configured cleanly and built 16 bootstrap components plus the offline SPIR-V shader with GCC 16.2.1 and Clang 22.1.8 in Debug and Release.
+- All six foundation-labelled tests passed under every preset (24 aggregate executions): smoke, refusal of gameplay, inventory positive/negative, unsupported architecture, and missing glslc.
+- Each preset produced `compile_commands.json`; sampled GCC Debug and Clang Release commands contain `-fno-fast-math -ffp-contract=off`.
+- The bootstrap reported revision, x86-64, compiler, SDL 3.4.14, and FFmpeg 63.1.101 without retail/device access. The shader output was recognized as Khronos SPIR-V.
+- An empty `pkg-config` probe failed configure and named the missing `sdl3>=3.2` capability. Source configuration contains no fetch mechanism or URL.
+- `python3 tools/legacy_manifest_inventory.py --check`, its two unit tests, and `git diff --check` pass.

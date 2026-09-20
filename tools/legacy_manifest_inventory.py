@@ -8,7 +8,6 @@ import collections
 import os
 from pathlib import Path, PureWindowsPath
 import re
-import subprocess
 import sys
 
 
@@ -59,14 +58,7 @@ SOURCE_RE = re.compile(r"^SOURCE=(.+?)\s*$", re.MULTILINE)
 
 
 def tracked_manifests(root: Path) -> list[Path]:
-    result = subprocess.run(
-        ["git", "ls-files", "GeneralsMD/Code/*.dsp", "GeneralsMD/Code/**/*.dsp"],
-        cwd=root,
-        check=True,
-        text=True,
-        stdout=subprocess.PIPE,
-    )
-    return [root / line for line in sorted(set(result.stdout.splitlines())) if line]
+    return sorted((root / "GeneralsMD" / "Code").rglob("*.dsp"))
 
 
 def file_lookup(root: Path) -> dict[str, str]:

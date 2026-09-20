@@ -1,0 +1,6 @@
+function(zh_require_x86_64 processor)
+  string(TOLOWER "${processor}" normalized_processor)
+  if(NOT normalized_processor MATCHES "^(x86_64|amd64)$")
+    message(FATAL_ERROR "Unsupported architecture '${processor}'. Zero Hour native currently requires x86-64.")
+  endif()
+endfunction()
