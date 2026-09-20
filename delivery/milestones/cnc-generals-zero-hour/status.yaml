@@ -129,22 +129,24 @@ milestones:
   - id: M10
     title: "effects, water, and WWShade command generation"
     file: delivery/milestones/cnc-generals-zero-hour/M10-effects.md
-    status: in_progress
+    status: completed
     dependencies: [M4, M7]
     optional: false
     started_at: "2026-09-20T04:45:24Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_10_plan_01.md"
+    completed_at: "2026-09-20T04:52:44Z"
+    commit_hash: 25654e19f9b35e9ea9880a59b7f8099a5c613104
+    evidence: "Two completed slices close the checked seven-family effect/WWShade mapping and deterministic effects recorder. All four presets passed 15 renderer-contract tests with offline shader compilation, multipass ordering, CPU fallback coverage, and bounded lifecycle/cache behavior. Root acceptance reran the GCC Debug renderer-contract suite and verified source/packet freshness."
+    notes: "PRE-022 accepted without hardware pixel claims. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_10_plan_01.md; slice commits: 552341d, 25654e1."
   - id: M11
     title: "POSIX LAN transport and local peer harness"
     file: delivery/milestones/cnc-generals-zero-hour/M11-lan-transport.md
-    status: pending
+    status: in_progress
     dependencies: [M3, M4]
     optional: false
+    started_at: "2026-09-20T04:52:44Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_11_plan_01.md"
   - id: M12
     title: "audio"
     file: delivery/milestones/cnc-generals-zero-hour/M12-audio.md
