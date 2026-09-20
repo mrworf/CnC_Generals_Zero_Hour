@@ -303,6 +303,15 @@ if(ZH_BUILD_TESTS)
     -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/m0/expect_probe_failure.cmake")
   set_tests_properties(m0_missing_glslc_probe PROPERTIES LABELS foundation)
 
+  add_test(NAME original_source_classification COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/original_source_classification.py" --check)
+  set_tests_properties(original_source_classification PROPERTIES LABELS "original-support;source-identity")
+  add_test(NAME original_source_classification_negative COMMAND "${Python3_EXECUTABLE}" -m unittest
+    tests.original_support.test_source_classification)
+  set_tests_properties(original_source_classification_negative PROPERTIES
+    LABELS "original-support;source-identity"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
   add_test(NAME renderer_inventory COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer_inventory.py" --check)
   set_tests_properties(renderer_inventory PROPERTIES LABELS renderer-contract)
   add_test(NAME renderer_inventory_negative COMMAND "${Python3_EXECUTABLE}" -m unittest tests.m2.test_renderer_inventory)
