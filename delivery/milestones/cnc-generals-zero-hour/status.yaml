@@ -162,22 +162,24 @@ milestones:
   - id: M13
     title: "headless video decode and presentation commands"
     file: delivery/milestones/cnc-generals-zero-hour/M13-video.md
-    status: in_progress
+    status: completed
     dependencies: [M4, M7, M12]
     optional: false
     started_at: "2026-09-20T05:15:42Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_13_plan_01.md"
+    completed_at: "2026-09-20T05:28:23Z"
+    commit_hash: c316f1392b5045aa6bdec11ea4b96d00ff8527a7
+    evidence: "Three completed slices implement bounded VFS/FFmpeg Bink decode, synchronized recorder/audio commands, and locale fallback/corpus acceptance. All four presets passed 22 audio|video|renderer-contract tests; the gated corpus test decoded three ordered RGBA frames for all six observed derived variant classes. Root acceptance reran the GCC Debug 22-test suite and verified source/packet freshness."
+    notes: "PRE-024 accepted without physical A/V or pixel claims. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_13_plan_01.md; slice commits: 0f28076, 67f01a4, c316f13."
   - id: M14
     title: "first real-GPU integration and visual acceptance"
     file: delivery/milestones/cnc-generals-zero-hour/M14-gpu-acceptance.md
-    status: pending
+    status: in_progress
     dependencies: [M7, M8, M9, M10, M13]
     optional: false
+    started_at: "2026-09-20T05:28:23Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_14_plan_01.md"
   - id: M15
     title: "playable single-player"
     file: delivery/milestones/cnc-generals-zero-hour/M15-single-player.md
