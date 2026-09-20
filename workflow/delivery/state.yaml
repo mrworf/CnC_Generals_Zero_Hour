@@ -2,7 +2,7 @@ schema_version: 1
 workflow: milestone-delivery
 delivery_goal:
   product_id: cnc-generals-zero-hour
-  status: blocked
+  status: in_progress
   packet: delivery/milestones/cnc-generals-zero-hour/status.yaml
   packet_revision: sha256:7f486befe4e182f46fbc7f090d757ad7a19bcabddf53ce6b622b6ba90596de4d
   source_commit: 8dc0285ff6c3346273973dcd874e6983060bb3e7
@@ -13,17 +13,10 @@ delivery_goal:
   end: null
   milestone_ids: [M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13, M14, M15, M16, M17, M18]
   execution: autonomous
-  current_milestone: M14
-  blocker_type: EXTERNAL_OR_USER_ACTION
-  blocker: "PRE-012 requires the Arch vulkan-validation-layers package; sudo password entry is unavailable to this agent"
-  blockers:
-    - type: EXTERNAL_OR_USER_ACTION
-      evidence_id: PRE-012
-      requirement: "Install vulkan-validation-layers and expose VK_LAYER_KHRONOS_validation"
-      expected_artifact: evidence/qa/cnc-generals-zero-hour/M14-gpu-acceptance.md
-      milestone: M14
-      slice: acceptance
-      unblock_condition: "pacman -Q vulkan-validation-layers succeeds and vulkaninfo --summary enumerates VK_LAYER_KHRONOS_validation"
-  resume_point: "Resume delivery/plans/cnc-generals-zero-hour/milestone_14_plan_01.md at acceptance; rerun documented GPU and retail+GPU suites"
+  current_milestone: M15
+  blocker_type: null
+  blocker: null
+  blockers: []
+  resume_point: delivery/plans/cnc-generals-zero-hour/milestone_15_plan_01.md
   started_at: 2026-09-20T03:11:19Z
   completed_at: null

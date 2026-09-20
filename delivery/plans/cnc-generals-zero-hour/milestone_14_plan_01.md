@@ -46,5 +46,5 @@ All safe implementation and non-validation-layer checks may be committed. If the
 - Slice 01: `c17c0dc` — shared device contract and SDL_GPU resources.
 - Slice 02: `89de107` — real Vulkan rendering, presentation, and lifecycle.
 - Slice 03: `0440a4f` — representative scene matrix, evidence, and fail-closed validation gate.
-- Slice 04: validation-layer image binding corrections and fail-closed diagnostic scanning (this slice commit).
+- Slice 04: `2e0df9c` — validation-layer image binding corrections and fail-closed diagnostic scanning.
 - Acceptance evidence: PRE-012 is installed and both validation-enabled GPU suites rerun without validation diagnostics; outer milestone status remains owned by the delivery orchestrator.

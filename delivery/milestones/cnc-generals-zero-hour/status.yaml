@@ -173,23 +173,24 @@ milestones:
   - id: M14
     title: "first real-GPU integration and visual acceptance"
     file: delivery/milestones/cnc-generals-zero-hour/M14-gpu-acceptance.md
-    status: blocked
+    status: completed
     dependencies: [M7, M8, M9, M10, M13]
     optional: false
     started_at: "2026-09-20T05:28:23Z"
-    completed_at: null
-    commit_hash: 0440a4f
-    evidence: "All three implementation slices are complete; evidence/qa/cnc-generals-zero-hour/M14-gpu-acceptance.md records 16/16 RTX 4070 scenes passing twice, retail ui|video 7/7, canonical regression 50/50, and no SDL_GPU capability gap. GPU acceptance is intentionally 1/2 because the fail-closed Khronos validation-layer gate fails."
-    notes: "Blocked on EXTERNAL_OR_USER_ACTION PRE-012: install Arch package vulkan-validation-layers, verify vulkaninfo --summary enumerates VK_LAYER_KHRONOS_validation, then rerun the documented GPU and retail+GPU suites and require zero validation errors. Resume existing milestone_14_plan_01 acceptance; slice commits: c17c0dc, 89de107, 0440a4f."
+    completed_at: "2026-09-20T14:08:33Z"
+    commit_hash: 2e0df9c0912bcea54285fa9a9eca06ca0f37da07
+    evidence: "Four completed slices plus evidence/qa/cnc-generals-zero-hour/M14-gpu-acceptance.md. The Khronos layer is installed and explicitly enabled; GPU 2/2 and retail+GPU gpu|ui|video 9/9 passed with zero Validation Error/VUID output. All four preset selections passed 6/6 and the canonical suite passed 51/51 on the RTX 4070."
+    notes: "PRE-012 and PRE-013 accepted; no SDL_GPU capability gap. Initial validation findings were corrected in slice 04. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_14_plan_01.md; slice commits: c17c0dc, 89de107, 0440a4f, 2e0df9c."
   - id: M15
     title: "playable single-player"
     file: delivery/milestones/cnc-generals-zero-hour/M15-single-player.md
-    status: pending
+    status: in_progress
     dependencies: [M5, M8, M9, M10, M12, M13, M14]
     optional: false
+    started_at: "2026-09-20T14:08:33Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_15_plan_01.md"
   - id: M16
     title: "local multi-instance Linux LAN"
     file: delivery/milestones/cnc-generals-zero-hour/M16-lan-match.md
