@@ -5,15 +5,15 @@ status: ready_for_implementation
 source:
   mode: CHANGE_PLAN
   path: docs/zero-hour-runtime-closure-reconciliation.md
-  revision: sha256:463c74ffd2cb1763e7d16247b4e218d0437b5ac70ef7f22e9fbe9f2a09e40e80
-  repository_commit: 8cf8f6ce3842cffe37505d02e610ca825ecdb532
+  revision: sha256:847fa3b1cc5883cb0ebcedfd11bba715326c66dd4835e3a229a13e93cf96edd2
+  repository_commit: cb567c223beab5d63fa2f13d66718e670271d3d0
   change_id: RUNTIME-CLOSURE-2026-09-20
-  remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010, RC-011]
+  remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010, RC-011, RC-012]
 planning:
-  repository_commit: 1370387ffb3c61c05a9044338a1811c185218289
+  repository_commit: null
 milestones:
   manifest: delivery/milestones/cnc-generals-zero-hour/status.yaml
-  packet_revision: sha256:0d5f1fef5dcec3bbbbb26656c5aaf591d653e2454501b51cfb09059fbb6acd7a
+  packet_revision: sha256:21ce030a34f700bbcf7773983454f0b741f384956f1ff6568d7fc6782bc5bfe9
   revision_command: "find delivery/milestones/cnc-generals-zero-hour -maxdepth 1 -type f -name '*.md' -print0 | sort -z | xargs -0 sha256sum | sha256sum"
 readiness:
   status: READY_WITH_EXTERNAL_DEPENDENCIES
@@ -50,13 +50,13 @@ scope_adoption:
   previous_goal: workflow/delivery/state.yaml
   preserve_previous_goal_history: true
   packet_scope: delivery/milestones/cnc-generals-zero-hour/status.yaml#packet_adoption
-  remaining_milestone_ids: [M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+  remaining_milestone_ids: [M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
   optional_milestone_ids: [M18]
-  instruction: On explicit delivery resume, preserve prior goal history and all completions, adopt the replacement packet including M26-M28 before integrated M20, and begin M26 plan 01. Retain M20 plan 01 as superseded and generate M20 plan 02 only when reached. Use dependency order, not numeric sort. Do not resume the rejected reduced lifecycle.
-  next_governing_plan: delivery/plans/cnc-generals-zero-hour/milestone_26_plan_01.md
+  instruction: On explicit delivery resume, adopt the committed RC-012 packet and generate M20 plan 03 for the remaining coupled closure. Preserve completed M26-M28, M20 plan 01 history, plan 02 completed slices 01-05 and its blocker checkpoint. Reuse retained implementation with its actual evidence limits; do not claim W3D or BIG acceptance from prior fixture tests. Use dependency order, not numeric sort. Do not resume the rejected reduced lifecycle.
+  next_governing_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_03.md
 next:
   workflow: implementation
   recommended_skill: milestone-delivery-orchestrator
   action: adopt_replacement_packet_then_plan
-  milestone: M26
+  milestone: M20
   implementation_started: false

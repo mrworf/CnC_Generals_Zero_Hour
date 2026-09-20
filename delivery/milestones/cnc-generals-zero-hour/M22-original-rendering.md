@@ -39,6 +39,8 @@ Produces `PRE-031` (M22 original producers and real-scene Vulkan); inspect this 
 
 ## Functional Requirements
 
+RC-012: consume M20's canonical original W3D schema/data implementation unchanged in identity and semantics, and complete each ledger-deferred draw-instance/state/resource operation before a real-scene consumer executes it. Reconcile every deferred operation with its actual consuming path; no startup fail-closed guard may stand in for required rendering. Newly reachable CPU behavior remains owned by the earliest consuming milestone, never deferred solely by directory/classification. Original registry, inherited data, override and resource-ownership regressions remain active.
+
 Recording tests witness actual producers and reject unsupported required states/assets. Execute the same integrated scenes on RTX Vulkan with zero validation errors, captured visual review and bounded resize/resource recreation.
 
 ## UX Constraints
@@ -55,6 +57,7 @@ Preserve original engine interfaces and fixed-width, char16_t/UTF-16LE, bounded 
 
 ## Acceptance Criteria
 
+- [ ] All RC-012 ledger-deferred operations reached by rendering have real original behavior and consumer tests; canonical M20 schema/registry behavior is preserved and no reachable startup-only fail-closed guard remains.
 - [ ] The stated outcome and all scoped consumers execute original implementations with recorded source-owned transitions or outputs.
 - [ ] Recording tests witness actual producers and reject unsupported required states/assets. Execute the same integrated scenes on RTX Vulkan with zero validation errors, captured visual review and bounded resize/resource recreation.
 - [ ] Negative controls fail against the actual implementation; no toy/placeholder fallback satisfies acceptance.

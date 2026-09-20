@@ -16,11 +16,11 @@ compiled_from:
     remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-009, SE-010]
   runtime_reconciliation:
     path: docs/zero-hour-runtime-closure-reconciliation.md
-    revision: sha256:463c74ffd2cb1763e7d16247b4e218d0437b5ac70ef7f22e9fbe9f2a09e40e80
-    repository_commit: 8cf8f6ce3842cffe37505d02e610ca825ecdb532
+    revision: sha256:847fa3b1cc5883cb0ebcedfd11bba715326c66dd4835e3a229a13e93cf96edd2
+    repository_commit: cb567c223beab5d63fa2f13d66718e670271d3d0
     change_id: RUNTIME-CLOSURE-2026-09-20
-    remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010, RC-011]
-  baseline_repository_commit: 8cf8f6ce3842cffe37505d02e610ca825ecdb532
+    remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010, RC-011, RC-012]
+  baseline_repository_commit: cb567c223beab5d63fa2f13d66718e670271d3d0
   definition_package: null
   reconciliation: null
 compilation_status: complete
@@ -41,15 +41,16 @@ assurance:
     production_gameplay_release: [M15, M17]
 packet_adoption:
   required: true
-  previous_goal_membership: [M19, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
-  pending_execution_order: [M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
-  mandatory_remaining: [M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17]
+  previous_goal_membership: [M19, M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+  pending_execution_order: [M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+  mandatory_remaining: [M20, M21, M22, M23, M24, M25, M15, M16, M17]
   optional_remaining: [M18]
-  first_milestone: M26
+  first_milestone: M20
   preserved_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md
-  next_governing_plan: delivery/plans/cnc-generals-zero-hour/milestone_26_plan_01.md
-  integrated_successor_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_02.md
-  instruction: On later delivery resume explicitly adopt the committed readiness-approved replacement packet including M26-M28 before changed M20; preserve prior goal and blocked plan 01 history. Start M26 plan 01, then later generate M20 plan 02 only during delivery. Do not start implementation during replanning.
+  preserved_active_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_02.md
+  next_governing_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_03.md
+  integrated_successor_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_03.md
+  instruction: On later delivery resume explicitly adopt the committed readiness-approved RC-012 packet; preserve completed M26-M28, plan 01 history, plan 02 completed slices 01-05 and its blocker checkpoint. Generate M20 plan 03 for remaining coupled closure only during delivery. Do not restart completed providers or start implementation during replanning.
 milestones:
   - id: M0
     title: "reproducible build readiness"
@@ -269,12 +270,12 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M20-original-lifecycle.md
     status: blocked
     dependencies: [M28]
-    remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-010, RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010]
+    remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-010, RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010, RC-012]
     optional: false
     started_at: "2026-09-20T14:55:33Z"
     completed_at: null
-    evidence: "evidence/qa/cnc-generals-zero-hour/M20-plan02-retail-w3d-blocker.md proves an UPSTREAM_REQUIRED retail startup dependency: original Object.ini requires the authoritative 19-entry W3DModuleFactory provider closure, which reaches the excluded Direct3D 8 SDK still assigned to M22-M23. Prior plan-01 evidence remains at evidence/qa/cnc-generals-zero-hour/M20-original-lifecycle-blocker.md."
-    notes: "Plan 02 completed slices 01-05 at a424490a505c5a662d370d2e9f1bc8c4dab56b4a, 3fe448f6a157db79fd7fef99e5866c07f19e8a3b, b7c83dc34d441a093f5c31dad33e0c48bb6ab5d8, c4a2a4d9e5b8a07145860ce6f4213852ffa4fd47, and 4202b6b50eec9791bf6b78952bd904710bd06ec8. Blocker checkpoint 79294870c9eba83a50d49d860d2f0c224e4f46e6 retains a validated BIG adapter and no experimental W3D edits. Resume only from reconciled M20/M22-M23 authority; no reduced registry, generic parser, proxy success, or no-op draw provider."
+    evidence: "Historical evidence/qa/cnc-generals-zero-hour/M20-plan02-retail-w3d-blocker.md identifies missing original 19-entry W3DModuleFactory closure and Direct3D header coupling. RC-012 and evidence/qa/cnc-generals-zero-hour/architecture-w3d-reconciliation-2026-09-20.md supersede its authority/classification blocker diagnosis: required startup providers belong to M20, not later M22-M23. Prior plan-01 evidence remains at evidence/qa/cnc-generals-zero-hour/M20-original-lifecycle-blocker.md. No retail acceptance is claimed."
+    notes: "Plan 02 completed slices 01-05 at a424490a505c5a662d370d2e9f1bc8c4dab56b4a, 3fe448f6a157db79fd7fef99e5866c07f19e8a3b, b7c83dc34d441a093f5c31dad33e0c48bb6ab5d8, c4a2a4d9e5b8a07145860ce6f4213852ffa4fd47, and 4202b6b50eec9791bf6b78952bd904710bd06ec8 are preserved. Blocker checkpoint 79294870c9eba83a50d49d860d2f0c224e4f46e6 retains a BIG adapter with limited GCC Debug owned-entry evidence, not final archive acceptance, and no experimental W3D edits. Blocked delivery status remains until explicit readiness-approved adoption and fresh plan 03. No reduced registry, generic parser, proxy success or no-op draw provider."
   - id: M21
     title: "original map and simulation execution"
     file: delivery/milestones/cnc-generals-zero-hour/M21-original-simulation.md
@@ -290,7 +291,7 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M22-original-rendering.md
     status: pending
     dependencies: [M21, M14]
-    remediation_ids: [SE-005, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010]
+    remediation_ids: [SE-005, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010, RC-012]
     optional: false
     completed_at: null
     evidence: null
@@ -300,7 +301,7 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M23-original-interaction.md
     status: pending
     dependencies: [M22, M6, M8, M12, M13]
-    remediation_ids: [SE-006, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010]
+    remediation_ids: [SE-006, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010, RC-012]
     optional: false
     completed_at: null
     evidence: null

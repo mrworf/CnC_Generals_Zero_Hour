@@ -2,25 +2,25 @@
 
 ## 1. Overall readiness status
 
-**READY_WITH_EXTERNAL_DEPENDENCIES** — M26 can begin after committed packet adoption; independent original providers now precede coupled M20 integration, and later external validation gates have owners and completion evidence. Readiness does not assert that the original engine already builds or runs.
+**READY_WITH_EXTERNAL_DEPENDENCIES** — M20 can resume under a fresh governing plan after committed packet adoption; completed independent providers precede remaining coupled W3D/runtime integration, and later external validation gates have owners and completion evidence. Readiness does not assert that the original engine already builds or runs.
 
 ## 2. Scope and evidence basis
 
-Product `cnc-generals-zero-hour`; complete 29-contract packet, index, traceability and `delivery/milestones/cnc-generals-zero-hour/status.yaml` remain the audited boundary. This narrow RC-011 re-audit reuses the unchanged prior 37-prerequisite/source audit and checks changed M26/M17 contracts, provenance and graph/membership. Authority is `docs/zero-hour-runtime-closure-reconciliation.md` RC-001–RC-011, revision `sha256:463c74ffd2cb1763e7d16247b4e218d0437b5ac70ef7f22e9fbe9f2a09e40e80`, source/transaction-start commit `8cf8f6ce3842cffe37505d02e610ca825ecdb532`, plus the unchanged migration supplement and base plan. Parent records the final packet fingerprint and planning payload SHA in `workflow/delivery-planning/state.yaml` (`transaction.repository_commit`).
+Product `cnc-generals-zero-hour`; complete 29-contract packet, index, traceability and `delivery/milestones/cnc-generals-zero-hour/status.yaml` remain the audited boundary. This narrow RC-012 re-audit reuses unchanged historical readiness and checks the changed M20/M22/M23 contracts, M21 consumer boundary, completed M26–M28 evidence, provenance and the complete graph/membership. Authority is `docs/zero-hour-runtime-closure-reconciliation.md` RC-001–RC-012, revision `sha256:847fa3b1cc5883cb0ebcedfd11bba715326c66dd4835e3a229a13e93cf96edd2`, source/transaction-start commit `cb567c223beab5d63fa2f13d66718e670271d3d0`, plus the unchanged migration supplement and base plan. Parent records the final packet fingerprint and planning payload SHA in `workflow/delivery-planning/state.yaml` (`transaction.repository_commit`).
 
-FACT: starting worktree contained compiler-owned M17/M26/index/status/traceability and parent-owned planning workflow/blocker-review evidence edits; no unrelated dirty paths. No applicable AGENTS.md was found. This child owns the two readiness artifacts and index readiness paragraph; no commits. Prior RC-002/006–010 source findings remain retained below, not claimed as freshly rerun acceptance. This pass directly checked MemoryInit.cpp:754–805 against M26 and checked M17's installed-prefix/original hardware gates and transitive provider chain. Original runtime acceptance was not run.
+FACT: starting worktree contained compiler-owned M20/M22/M23/index/status/traceability and parent-owned planning workflow edits; no unrelated dirty paths. No applicable AGENTS.md was found. This child owns readiness artifacts, index/status readiness fields and one M21 readiness check; no commits. Prior source findings below remain retained, not freshly rerun acceptance. This pass checked W3DModuleFactory's 19 registrations, ThingTemplate's unchecked data dereference, the recorded blocker/reconciliation, and the M21 consumer boundary. Original runtime acceptance was not run.
 
-Historical M0–M14 contracts and their time-bound pending/package wording remain immutable snapshots; current index, status and readiness qualify that evidence as components. M19 remains accepted at its bounded ten-provider grade; original UnicodeString and GameEngine MemoryPool portability are M26 deliverables with integrated lifetime proved at M20.
+Historical M0–M14 contracts and their time-bound pending/package wording remain immutable snapshots; current index, status and readiness qualify that evidence as components. M19 remains accepted at its bounded ten-provider grade; M26–M28 are accepted at their scoped independent-provider grade. Full integrated lifetime and production W3D closure remain M20 deliverables.
 
 ## 3. Automatically completed prerequisites
 
-No product implementation or new bootstrap was required. The manifest retains 37 prerequisites; RC-011 refines PRE-035/PRE-027 without new IDs or external inputs. Parent reverified tool/module availability, four-preset enumeration and 3,293-path source classification for this transaction. Prior offline GCC Debug configuration and pinned miniaudio provenance remain evidence from preceding readiness audits; no configure/build was rerun for this documentation-only change.
+No product implementation or new bootstrap was required. The manifest retains 37 prerequisites; RC-012 refines PRE-029 and later consumer obligations without new IDs or external inputs. This child reverified tool/module availability, four-preset enumeration and 3,293-path source classification. Prior offline GCC Debug configuration and pinned miniaudio provenance remain evidence from preceding readiness audits; no configure/build was rerun for this documentation-only change.
 
-The old readiness assertion that M20 was next is superseded. No historical completed contract or acceptance was rewritten. PRE-035–037 precede PRE-029's complete integrated runtime; self-owned implementation is never an entry prerequisite.
+The preceding readiness assertion that M26 was next is superseded by completed M26–M28 evidence. No historical completed contract or acceptance was rewritten. PRE-035–037 precede PRE-029's complete integrated runtime; self-owned implementation is never an entry prerequisite.
 
 ## 4. Confirmation-gated work
 
-None at M26 entry. No package installation, dependency acquisition, persistent service, privileged command or product code change was needed. Later validation uses the declared host/environment facilities when available.
+None at M20 entry. No package installation, dependency acquisition, persistent service, privileged command or product code change was needed. Later validation uses the declared host/environment facilities when available.
 
 ## 5. Required user actions
 
@@ -32,7 +32,7 @@ PRE-008 retail roots were supplied and directory/ignore checks passed in prior r
 
 ## 6. Missing or unresolved prerequisites
 
-None blocking M26 start after parent finalization/adoption. Missing original implementations, ATL/PCH/compiler errors and source-classification/ledger changes are M26–M28/M20 work under the accepted resolution. PRE-029–037 and PRE-025–027 require future implementation/acceptance; no such success is claimed here.
+None blocking M20 start after parent finalization/adoption. Remaining original implementations, ATL/PCH/compiler errors and source-classification/ledger changes in the coupled startup closure are M20 work under the accepted resolution; completed M26–M28 are not reopened. PRE-029–034 and PRE-025–027 require future implementation/acceptance; no such success is claimed here.
 
 The source inventory still labels many deferred files by previous domain owners. RC-007 and M26–M28/M20 explicitly authorize updating classification and the checked ledger as providers enter their real targets; labels cannot override actual dependencies or defer required behavior to later domains. Scope size and routine link failures remain engineering work within those owners. Demonstrated required asset/backend limitations retain the base-plan evidence gate.
 
@@ -106,9 +106,11 @@ Paths abbreviated with `GameEngine/` or `GameEngineDevice/` are under `GeneralsM
 
 INFERENCE: these source-backed seams make the new topological order internally executable without a future acceptance supplying an earlier implementation. Required proof remains actual original-consumer compile/live-link/state tests with a freshness-checked ledger. Source-only inspection cannot enumerate every data-driven edge or prove those future tests pass; routine discoveries are assigned within the authorized provider/integration scope rather than assumed absent.
 
+RC-012 delta: the original W3D factory has 19 schema/instance registrations. Production currently lacks that extension and ThingTemplate dereferences its result. M20 owns canonical concrete schema extraction, all registrations, required reached instance behavior, controlled unknown-provider failures and BIG acceptance. A Direct3D SDK is not a prerequisite; header separation is assigned implementation. Deferred instances must be checked against M21 map/preload/prop paths before M22/M23: RC-010 already assigns that CPU behavior to M21. Added readiness inspection makes this handoff explicit without changing scope or graph. Four-preset/sanitizer/retail acceptance remains unproven until implementation.
+
 ## 8. Proposed milestone order
 
-Declared and proposed order agree: preserved M0–M14 and completed M19; remaining **M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17; optional M18**. The user authorized new/reordered unfinished milestones; compiler added three independent original-provider milestones before integrated M20. No further reorder is required. M20's historical blocked state/plan 01 are preserved. Later delivery adopts this packet and starts M26 plan 01; M20 plan 02 follows accepted prerequisites.
+Declared and proposed order agree: preserved M0–M14, completed M19 and M26–M28; remaining **M20, M21, M22, M23, M24, M25, M15, M16, M17; optional M18**. No new milestone or reorder is needed for RC-012's coupled startup closure. Preserve blocked M20 plans 01/02 and completed plan 02 slices 01–05. Later delivery adopts this packet and creates M20 plan 03 for remaining work.
 
 ## 9. Milestone 0
 
@@ -136,11 +138,11 @@ All 29 contracts contain Preconditions and Readiness checks; no historical compl
 | M13 | PRE-009/010/011/023, M4/M7/M12 | Available decoder/recording component; original required providers M20. |
 | M14 | PRE-010/020/021/022/024, host inputs | Historical RTX validation on component scenes; real-source M22 remains mandatory. |
 | M19 | PRE-001/002/004/005, M0/M1 | Completed bounded ten-provider acceptance; PRE-028 available. |
-| M26 | PRE-001/002/004/028, accepted M19 | Next entry clear after committed adoption; produces original PRE-035 without later INI/engine/retail/device prerequisites. |
-| M27 | PRE-035/009, M26/M4 | Waits for original process/ABI; produces independent PRE-036, not full production dispatch/cache. |
-| M28 | PRE-036/019/010/020/011/023/024, M27 and native components | Waits for original data; produces CPU PRE-037 without full GameClient/devices. |
-| M20 | PRE-037, transitively PRE-035/036 and native components; PRE-008 | Waits for M28; produces complete PRE-029 without later M21–M25 or GPU prerequisites. |
-| M21 | PRE-029, M20; PRE-008 | Waits for accepted original runtime, produces PRE-030. |
+| M26 | PRE-001/002/004/028, accepted M19 | Completed scoped PRE-035; recorded acceptance retained, not rerun. |
+| M27 | PRE-035/009, M26/M4 | Completed scoped PRE-036, not full production dispatch/cache. |
+| M28 | PRE-036/019/010/020/011/023/024, M27 and native components | Completed scoped PRE-037, not complete GameClient/W3D production integration. |
+| M20 | PRE-037, transitively PRE-035/036 and native components; PRE-008 | Next after committed adoption; M28 accepted. Remaining PRE-029 includes RC-012 W3D/BIG acceptance without later M21–M25/GPU prerequisites. |
+| M21 | PRE-029, M20; PRE-008 | Waits for PRE-029; audits deferred instances against map/preload/prop consumers and owns any newly reached CPU behavior before rendering. |
 | M22 | PRE-030/013, M21/M14; PRE-008/012/016 | Waits for original simulation; host access gates hardware acceptance; produces PRE-031. |
 | M23 | PRE-031/019/020/011/023/024, M22/M6/M8/M12/M13; PRE-008/016 | Waits for original scenes; session gates interaction; produces PRE-032. |
 | M24 | PRE-030/018, M21/M5; PRE-008 | Full source persistence scenarios; produces PRE-033; no Windows input needed. |
@@ -158,9 +160,9 @@ After accepted M20, M21 validates complete source scenarios. M22 receives host/G
 
 RC-006–010 sharpen this simulation: independent providers validate before the whole engine links; final M20 uses the same explicit offline profile across presets, original parsers/UI resources, then separately provisioned retail initialization. Fixture creation, cleanup repairs, ledger and identity/assertion strengthening are assigned implementation outputs, never user-supplied prerequisites. No new external edge or cycle appears. Full production callback table and full object/localized cache are not required to accept M27; complete GameClient is not required to accept M28.
 
-RC-011 preserves the simulation: M26 uses compiled pool defaults before data-root resolution and owns allocation-safe optional override tests without later filesystem services. At M17 the original hardware/interaction providers are already accepted transitively; original gameplay/LAN and actual installed-prefix execution are mandatory, with no source/build resource fallback. All new negative/boundary tests belong to the consuming milestone. The 12 mandatory and one optional remaining milestones and dependency order are unchanged.
+RC-011 preserves the simulation: M26 uses compiled pool defaults before data-root resolution and owns allocation-safe optional override tests without later filesystem services. At M17 the original hardware/interaction providers are already accepted transitively; original gameplay/LAN and actual installed-prefix execution are mandatory, with no source/build resource fallback. All new negative/boundary tests belong to the consuming milestone. Nine mandatory and one optional milestones remain after completed M26–M28; dependency edges are unchanged.
 
-The future source-port results, new hardware scenarios and clean distro runners were simulated, not executed. Observed tool/module availability and prior local configuration verify only installed dependencies. Missing packages on a fresh machine require the documented host provisioning before entry; no undeclared package or secret is assumed.
+RC-012 adds no external entry dependency. Conceptually M20 extracts/shared-compiles original schemas and connects the full factory, validates malformed archives and errors, and proves no-match reachability before acceptance. M21 checks the resulting deferred-operation ledger against actual map/preload/prop paths and implements anything reached there; it cannot wait for M22/M23. Later rendering/interaction replace remaining guards before use. New acceptance results, hardware scenarios and clean distro runners were simulated, not executed. Observed tool/module availability and prior local configuration verify only installed dependencies. Missing packages on a fresh machine require the documented host provisioning before entry; no undeclared package or secret is assumed.
 
 ## 12. Commands run and results
 
@@ -176,25 +178,28 @@ The future source-port results, new hardware scenarios and clean distro runners 
 | `python3 tools/original_source_classification.py --check` | 3,293 paths covered exactly once. Classification is inventory evidence, not runtime closure acceptance. |
 | Prior pinned miniaudio provenance test evidence (not rerun) | Retained 3/3 project dependency pin/license/provenance evidence. |
 | setFPMode/INI/MapUtil/W3DDisplay/GameAudio source, deep review and changed contract inspection | Independent extraction/CPU boundaries and complete M20 registry/cache ownership agree; no runtime success inferred. |
-| Compiler structural validator with evidenced completed/blocked states allowed | Passed all 29 milestone contracts. |
+| Packet metadata/graph/readiness/traceability inspection | All 29 contracts retained; dependencies precede consumers; all readiness sections present. |
 | Final contract/graph/PRE/link inspection and `git diff --check` | Passed: 29 contracts, backward-only graph, 37 PRE IDs, all readiness sections and preserved completed records/files; no whitespace errors. Final packet fingerprint returned to parent. |
 
-The tool/module/preset/classification rows above are parent-observed current-transaction checks, reused here. Detailed setFPMode/INI/MapUtil/W3DDisplay/GameAudio checks are retained from the preceding audit; this child's fresh source check is MemoryInit.cpp:754–805 plus M26/M17 contract and unchanged graph inspection. Structural validation and whitespace checks were rerun by this child; no broad implementation acceptance was repeated.
+Tool/module/preset/classification and structural/whitespace checks were run by this child. Earlier broad source checks remain historical; fresh source checks cover the 19-entry W3D registry and unchecked ThingTemplate access plus M21's explicit RC-010 map-start ownership. No broad implementation acceptance was repeated.
 
 No full build, milestone acceptance, retail traversal or physical device test was needed for this documentation audit.
 
 ## 13. Files changed
 
-- `delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md` — RC-011 provenance and PRE-035/PRE-027 boundary qualifications.
-- `delivery/readiness/cnc-generals-zero-hour/readiness-report.md` — narrow source-boundary re-audit and updated clean-environment simulation.
+- `delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md` — RC-012 provenance, PRE-029 boundary and completed PRE-035–037 qualifications.
+- `delivery/readiness/cnc-generals-zero-hour/readiness-report.md` — RC-012 source-boundary re-audit and current completed-provider simulation.
 - `delivery/milestones/cnc-generals-zero-hour/index.md` — readiness paragraph replaces stale pending wording after this audit.
 
-Compiler semantic changes and parent workflow/evidence edits remain parent-owned. Canonical status.yaml readiness already reads READY_WITH_EXTERNAL_DEPENDENCIES and needs no child edit. This child made only the readiness updates listed above; no workflow, product-source, retail or implementation-plan changes and no commits. No configure/build/runtime acceptance was executed in this review.
+- `delivery/milestones/cnc-generals-zero-hour/status.yaml` — readiness status only.
+- `delivery/milestones/cnc-generals-zero-hour/M21-original-simulation.md` — explicit existing-scope deferred-instance consumer readiness inspection.
+
+Compiler semantic changes and parent workflow edits remain parent-owned. This child made only the readiness updates listed above; no workflow, product-source, retail or implementation-plan changes and no commits. No configure/build/runtime acceptance was executed in this review.
 
 ## 14. Remaining blockers
 
-None blocking M26 planning/implementation after committed adoption. PRE-012/016 gate later original hardware/interactive validation, PRE-017 gates M17 validation, PRE-015 applies only to optional M18. Parent commit/provenance finalization is required before this becomes a consumable handoff.
+None blocking M20 planning/implementation after committed adoption. PRE-012/016 gate later original hardware/interactive validation, PRE-017 gates M17 validation, PRE-015 applies only to optional M18. Parent commit/provenance finalization is required before this becomes a consumable handoff.
 
 ## 15. Exact recommended next step
 
-Parent Delivery Planning finalizes the combined transaction and handoff. On the next delivery resume in `/home/ha/projects/CnC_Generals_Zero_Hour`, explicitly adopt the committed readiness-approved revision and create `delivery/plans/cnc-generals-zero-hour/milestone_26_plan_01.md`. Preserve blocked M20 plan 01; create M20 plan 02 later after accepted M26–M28. No implementation starts during this planning request.
+Parent Delivery Planning finalizes the combined transaction and handoff. On the next delivery resume in `/home/ha/projects/CnC_Generals_Zero_Hour`, explicitly adopt the committed readiness-approved RC-012 revision and create `delivery/plans/cnc-generals-zero-hour/milestone_20_plan_03.md` for remaining work. Preserve completed M26–M28 and historical M20 plans 01/02 with completed slices. No implementation starts during this planning request.

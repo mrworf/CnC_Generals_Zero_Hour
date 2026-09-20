@@ -32,6 +32,7 @@ Direct providers: M20. Consume evidenced contracts, not historical title/status 
 
 ## Readiness checks
 
+- Inspect M20's deferred-instance ledger against this milestone's map-start, GameClient preload and TerrainVisual prop consumers. Under RC-010/RC-012, any newly reached CPU constructor/state/method/destructor is owned here before its consumer runs; no required operation may wait for M22/M23. Unimplemented owned behavior is a deliverable, not an entry gate; missing owner/reachability evidence must be corrected before acceptance.
 - Run `cmake --list-presets` from the repository root: all four native presets must resolve. Inspect status.yaml and linked provider acceptance for the direct dependencies; require the original-source grade for new providers, not only historical component status.
 - Inspect [prerequisite manifest](../../readiness/cnc-generals-zero-hour/prerequisite-manifest.md) for the IDs above and their current verification. Use its retail/session checks only at the named validation boundary. No unfinished feature acceptance command is an entry requirement.
 

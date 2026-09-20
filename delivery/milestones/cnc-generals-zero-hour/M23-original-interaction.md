@@ -39,6 +39,8 @@ Produces `PRE-032` (M23 original UI/input/media); inspect this contract's source
 
 ## Functional Requirements
 
+RC-012: consume the canonical original W3D schema/data implementation and M22 rendering behavior; complete every remaining ledger-deferred draw/resource operation reached by menus, shell maps, cinematics or other interactive paths before that path executes. Keep the original registration/default/inheritance/override semantics and ownership tests. Unavailable guards permitted only for proven-unreachable M20 paths cannot satisfy interactive acceptance.
+
 Navigate original menu, mission/skirmish selection, loading, HUD commands, pause/options and return-to-menu. Prove input changes original state and media events originate from original managers; isolated XDG writes and silent audio remain supported.
 
 ## UX Constraints
@@ -55,6 +57,7 @@ Preserve original engine interfaces and fixed-width, char16_t/UTF-16LE, bounded 
 
 ## Acceptance Criteria
 
+- [ ] RC-012 ledger-deferred operations consumed by interactive flows execute original behavior with consumer tests; no required path terminates at a startup-only fail-closed guard, and canonical schema/registry regressions pass.
 - [ ] The stated outcome and all scoped consumers execute original implementations with recorded source-owned transitions or outputs.
 - [ ] Navigate original menu, mission/skirmish selection, loading, HUD commands, pause/options and return-to-menu. Prove input changes original state and media events originate from original managers; isolated XDG writes and silent audio remain supported.
 - [ ] Negative controls fail against the actual implementation; no toy/placeholder fallback satisfies acceptance.

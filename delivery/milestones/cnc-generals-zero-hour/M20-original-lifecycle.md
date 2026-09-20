@@ -22,7 +22,7 @@ Full map/mission/skirmish scenario acceptance is M21; hardware scenes M22; inter
 
 ## Source Requirements
 
-[Runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md): RC-001–RC-010, including independent provider allocation and full integrated acceptance. This supersedes conflicting ordering in the [migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-002 remaining original call sites, SE-003, reachable providers from SE-004–SE-008, SE-001/SE-010 identity and assurance. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 remain governing scope/compatibility authority. Revisions/commits are in status.yaml.
+[Runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md): RC-001–RC-010 and RC-012, including independent provider allocation, original W3D schema closure and full integrated acceptance. This supersedes conflicting ordering in the [migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-002 remaining original call sites, SE-003, reachable providers from SE-004–SE-008, SE-001/SE-010 identity and assurance. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 remain governing scope/compatibility authority. Revisions/commits are in status.yaml.
 
 ## Preconditions
 
@@ -64,6 +64,14 @@ Use M26's ledger and invalidation checks throughout coupled registry/startup/pos
 
 ## Architecture / Security Constraints
 
+### RC-012 production W3D schema and archive closure
+
+Use the original W3DModuleFactory extension with all 19 original registrations and original concrete ModuleData types, defaults, inherited field tables, callbacks, post-processing, allocation and destruction. Shared-compile/extract existing data declarations and methods away from physical rendering dependencies only where necessary; retain one canonical implementation consumed by native startup and later rendering. Preserve names, interface masks, tags, parsing and overrides. Exercise the production factory through original ThingTemplate/INI consumers, not a disconnected schema helper. Neither a generic replacement ModuleData, reduced registry, ignored field nor dummy D3D SDK is permitted.
+
+Separate schema creation from draw-instance creation at the existing factory boundary. An unavailable draw-instance operation may fail closed with an actionable error only if proven unreachable throughout the bounded no-match init/post-load/update/reset profile. Required constructors, state, methods and destruction discovered on these paths are implementation deliverables here with device-edge recording adapters; they cannot silently null required objects or return placeholder success. Maintain explicit deferred-operation names, callers, lifecycle/configuration reachability, owners and consumer tests in the dependency ledger. M22/M23 implement remaining draw behavior before their consuming paths run; M20 never depends on those later milestones.
+
+Missing/unknown required modules must fail with a preserved initialization diagnostic before ThingTemplate's unchecked ModuleData dereference, followed by exactly-once unwind. Complete the retained BIG adapter's own acceptance: owned malformed/truncated archive and range/overflow rejection, canonical lookup/override semantics, cleanup and four-configuration validation. Earlier fixture successes and the limited GCC Debug BIG check are not W3D/archive acceptance.
+
 Original engine owns authoritative state/lifecycle; native adapters own OS/device/library edges. Preserve original allocators except narrow characterized portability changes. Retail roots/symlinks are read-only; never commit retail bytes/hashes/private paths. Isolate XDG writes. No alternate reduced class hidden behind a platform macro, duplicate globals, empty registry, trace-only lifecycle stage, weak stub, unresolved-symbol suppression or linker collection that hides required behavior is acceptable. Narrow platform conditionals and shared-method refactoring must preserve source behavior.
 
 ## Interfaces and Compatibility
@@ -72,6 +80,8 @@ Preserve original engine interfaces and fixed-width, char16_t/UTF-16LE, bounded 
 
 ## Acceptance Criteria
 
+- [ ] RC-012's complete 19-entry original W3D production schema factory passes owned success/failure, inheritance/default/override and teardown tests without Direct3D dependencies; required-provider omission fails before unsafe dereference.
+- [ ] Any deferred draw-instance operation is ledger-owned and proven unreachable in bounded startup; every reachable original operation executes now. BIG adapter bounds/lookup/cleanup and four-preset/sanitizer/retail gates pass independently of earlier fixture evidence.
 - [ ] The stated outcome and all scoped consumers execute original implementations with recorded source-owned transitions or outputs.
 - [ ] Original entry/init/post-load/execute/update/reset/teardown run with all RC-002 providers; genuine source state changes before controlled quit.
 - [ ] Fixture and read-only retail INI/CSF initialize source-owned data; real registered modules instantiate/release; missing/malformed data and unknown modules fail.
@@ -92,6 +102,8 @@ Preserve original engine interfaces and fixed-width, char16_t/UTF-16LE, bounded 
 
 ## Required Validation
 
+RC-012: bounded owned success/failure fixtures cover all 19 production registrations, nontrivial inherited schemas, source-specific defaults/fields, malformed values, unknown/missing providers, overrides and teardown. Deliberately omit a required registration and require a real production-consumer failure. Prove target-specific compile/link identity, no legacy Direct3D headers/libraries in this closure, and no device acquisition. Test retained BIG malformed/truncated/range/overflow and canonical lookup/override/cleanup paths. Run all four presets, focused sanitizers and the full read-only retail init/update/reset gate; schema fixtures alone never establish retail success. Fail-closed deferred draw paths need reachability evidence and explicit later owners, not merely a test mode flag.
+
 Project-owned fixtures plus gated read-only retail initialization; absent/malformed config, missing factory/module, all-stage failure/reverse teardown, repeated reset; actual original string/pool boundary tests and sanitizers. Record compilation and linked provider identities separately from source-owned runtime state. Deliberately remove a required provider and assert failure at a real compile/link/runtime gate, not solely a filename policy. Assert no GPU/window acquisition in headless/verify modes, arbitrary CWD and isolated XDG roots. Offline entry rejects unsupported network operations. Full asset-free regressions and all four presets below are mandatory.
 
 Build applicable targets with linux-gcc-debug, linux-clang-debug, linux-gcc-release and linux-clang-release. Run full asset-free CTest regression at milestone acceptance plus relevant ASan/UBSan. Record exact commands/context and map formerly unproven historical obligations to real-source tests. Retail/GPU checks use explicit separate gates; defaults remain private-data/device independent. Only permitted logical/derived evidence is committed.
@@ -100,6 +112,6 @@ Derive before/after state expectations from the selected source path (for exampl
 
 ## Known Risks / Deferred Work
 
-This remains a substantial coupled source port after M26–M28 remove independently testable prerequisites. Routine missing symbols, portability or classification repairs do not justify another architecture referral. Actual scene/mission/save/network acceptance remains with M21–M25 and M15–M18 without supplying any code retroactively needed here. Preserve rejected plan 01 and its blocker evidence; after prerequisite delivery generate milestone_20_plan_02.md. Unexpected required asset/backend limits follow base-plan §9 evidence-gated escalation, never reduced silent coverage.
+This remains a substantial coupled source port after accepted M26–M28 remove independently testable prerequisites. Routine missing symbols, portability or classification repairs do not justify another architecture referral. Actual scene/mission/save/network acceptance remains with M21–M25 and M15–M18 without supplying any code retroactively needed here. Preserve rejected plan 01, plan 02 completed slices 01–05 and both blocker reports; on delivery adoption create milestone_20_plan_03.md for remaining work without rewriting historical slice artifacts. RC-012 resolves the plan 02 classification/authority blocker, not the missing implementation or retail acceptance. Unexpected required asset/backend limits follow base-plan §9 evidence-gated escalation, never reduced silent coverage.
 
 The governing plan must inventory actual providers and owned validation boundaries before implementation. Validate incremental support/data work without demanding a complete engine build as the first gate; milestone acceptance still requires the complete stated closure. Further reachable providers discovered during porting remain within this milestone's authorized scope.
