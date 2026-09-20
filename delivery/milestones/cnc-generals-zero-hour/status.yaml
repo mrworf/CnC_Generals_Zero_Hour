@@ -96,22 +96,24 @@ milestones:
   - id: M7
     title: "renderer core contracts with `RecordingGpuDevice`"
     file: delivery/milestones/cnc-generals-zero-hour/M7-renderer-core.md
-    status: in_progress
+    status: completed
     dependencies: [M2, M3, M4]
     optional: false
     started_at: "2026-09-20T04:19:59Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_07_plan_01.md"
+    completed_at: "2026-09-20T04:28:34Z"
+    commit_hash: 2fb446d
+    evidence: "Three completed slices implement RecordingGpuDevice/resource contracts, bounded DDS/TGA with BC fallback, and the DX8 state-cache/resize facade. All four presets passed eight renderer-contract tests; GCC Debug passed the full 29-test suite and source scans found no direct SDL_GPU/Vulkan calls. Root acceptance reran the GCC Debug renderer-contract suite and verified source/packet freshness."
+    notes: "PRE-010 accepted without display/GPU/retail/network access. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_07_plan_01.md; slice commits: 342810e, bcaee61, 2fb446d."
   - id: M8
     title: "UI, fonts, and input integration"
     file: delivery/milestones/cnc-generals-zero-hour/M8-ui-fonts.md
-    status: pending
+    status: in_progress
     dependencies: [M4, M6, M7]
     optional: false
+    started_at: "2026-09-20T04:28:34Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_08_plan_01.md"
   - id: M9
     title: "world rendering command generation"
     file: delivery/milestones/cnc-generals-zero-hour/M9-world-rendering.md
