@@ -10,7 +10,7 @@ source:
   change_id: SOURCE-ENGINE-2026-09-20
   remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-009, SE-010]
 planning:
-  repository_commit: null
+  repository_commit: 6bc4b5507be57d5787675e1391e48c77e48e146e
 milestones:
   manifest: delivery/milestones/cnc-generals-zero-hour/status.yaml
   packet_revision: sha256:6a9d98bcec72db2b1c1658a305ffea8ea4dd004d76f8efcce4b43d166fbe3ace
