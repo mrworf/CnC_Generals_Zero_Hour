@@ -1,0 +1,49 @@
+schema_version: 1
+workflow: delivery-planning
+product_id: cnc-generals-zero-hour
+status: ready_for_implementation
+source:
+  mode: CHANGE_PLAN
+  path: docs/zero-hour-linux-port-plan.md
+  revision: sha256:25554c2db1273e263b574b8563615c88ed48eb4f7672e5a21e19fe119eae7b33
+  repository_commit: 8dc0285ff6c3346273973dcd874e6983060bb3e7
+planning:
+  repository_commit: null
+milestones:
+  manifest: delivery/milestones/cnc-generals-zero-hour/status.yaml
+  packet_revision: sha256:7f486befe4e182f46fbc7f090d757ad7a19bcabddf53ce6b622b6ba90596de4d
+  revision_command: sha256sum delivery/milestones/cnc-generals-zero-hour/*.md | sha256sum
+readiness:
+  status: READY_WITH_EXTERNAL_DEPENDENCIES
+  prerequisite_manifest: delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md
+  result: delivery/readiness/cnc-generals-zero-hour/readiness-report.md
+m0:
+  present: true
+  milestone: M0
+  rationale: Shared build bootstrap already required by section 8 of the authoritative source.
+external_dependencies:
+  - id: PRE-016
+    owner: developer/user
+    first_consuming_milestone: M6
+    completion_evidence: SDL window receives input, focus and resize events in the host graphical session without a GPU device.
+    blocking_boundary: M6 interactive acceptance; headless event work can proceed.
+  - id: PRE-012
+    owner: developer/user
+    first_consuming_milestone: M14
+    completion_evidence: Khronos validation layer is installed and accessible; SDL_GPU opens the host RTX 4070 through Vulkan during M14 validation.
+    blocking_boundary: M14 device and visual acceptance.
+  - id: PRE-017
+    owner: maintainer/CI
+    first_consuming_milestone: M17
+    completion_evidence: Clean Ubuntu 26.04 and Fedora 44 x86-64 environments install documented packages and pass the required presets and asset-free suites.
+    blocking_boundary: M17 clean-build acceptance.
+  - id: PRE-015
+    owner: user
+    first_consuming_milestone: M18
+    optional: true
+    completion_evidence: Readable representative Windows 1.04 save/replay fixtures with recorded version/provenance and legal reference environment.
+    blocking_boundary: Optional M18 only; absent fixtures never block M0–M17.
+next:
+  workflow: implementation
+  recommended_skill: milestone-delivery-orchestrator
+  milestone: M0

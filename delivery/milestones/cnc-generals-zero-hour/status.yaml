@@ -1,0 +1,189 @@
+schema_version: 1
+product_id: cnc-generals-zero-hour
+compiled_from:
+  product_id: cnc-generals-zero-hour
+  input_mode: CHANGE_PLAN
+  authority_basis: accepted implementation-ready architecture and delivery migration plan; user authorized compilation
+  source_plan:
+    path: docs/zero-hour-linux-port-plan.md
+    revision: sha256:25554c2db1273e263b574b8563615c88ed48eb4f7672e5a21e19fe119eae7b33
+    repository_commit: 8dc0285ff6c3346273973dcd874e6983060bb3e7
+  baseline_repository_commit: 8dc0285ff6c3346273973dcd874e6983060bb3e7
+  definition_package: null
+  reconciliation: null
+compilation_status: complete
+readiness_status: READY_WITH_EXTERNAL_DEPENDENCIES
+readiness_report: delivery/readiness/cnc-generals-zero-hour/readiness-report.md
+prerequisite_manifest: delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md
+milestones:
+  - id: M0
+    title: "reproducible build readiness"
+    file: delivery/milestones/cnc-generals-zero-hour/M0-build-graph.md
+    status: pending
+    dependencies: []
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M1
+    title: "portable ABI and support libraries"
+    file: delivery/milestones/cnc-generals-zero-hour/M1-portable-foundations.md
+    status: pending
+    dependencies: [M0]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M2
+    title: "GPU-independent renderer API closure"
+    file: delivery/milestones/cnc-generals-zero-hour/M2-renderer-closure.md
+    status: pending
+    dependencies: [M0]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M3
+    title: "headless engine and staged startup"
+    file: delivery/milestones/cnc-generals-zero-hour/M3-headless-startup.md
+    status: pending
+    dependencies: [M1]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M4
+    title: "VFS, retail data, and corpus characterization"
+    file: delivery/milestones/cnc-generals-zero-hour/M4-retail-vfs.md
+    status: pending
+    dependencies: [M1, M3]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M5
+    title: "Linux persistence and determinism"
+    file: delivery/milestones/cnc-generals-zero-hour/M5-persistence.md
+    status: pending
+    dependencies: [M4]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M6
+    title: "SDL platform and input without GPU"
+    file: delivery/milestones/cnc-generals-zero-hour/M6-sdl-platform.md
+    status: pending
+    dependencies: [M1, M3]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M7
+    title: "renderer core contracts with `RecordingGpuDevice`"
+    file: delivery/milestones/cnc-generals-zero-hour/M7-renderer-core.md
+    status: pending
+    dependencies: [M2, M3, M4]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M8
+    title: "UI, fonts, and input integration"
+    file: delivery/milestones/cnc-generals-zero-hour/M8-ui-fonts.md
+    status: pending
+    dependencies: [M4, M6, M7]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M9
+    title: "world rendering command generation"
+    file: delivery/milestones/cnc-generals-zero-hour/M9-world-rendering.md
+    status: pending
+    dependencies: [M4, M7]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M10
+    title: "effects, water, and WWShade command generation"
+    file: delivery/milestones/cnc-generals-zero-hour/M10-effects.md
+    status: pending
+    dependencies: [M4, M7]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M11
+    title: "POSIX LAN transport and local peer harness"
+    file: delivery/milestones/cnc-generals-zero-hour/M11-lan-transport.md
+    status: pending
+    dependencies: [M3, M4]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M12
+    title: "audio"
+    file: delivery/milestones/cnc-generals-zero-hour/M12-audio.md
+    status: pending
+    dependencies: [M4]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M13
+    title: "headless video decode and presentation commands"
+    file: delivery/milestones/cnc-generals-zero-hour/M13-video.md
+    status: pending
+    dependencies: [M4, M7, M12]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M14
+    title: "first real-GPU integration and visual acceptance"
+    file: delivery/milestones/cnc-generals-zero-hour/M14-gpu-acceptance.md
+    status: pending
+    dependencies: [M7, M8, M9, M10, M13]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M15
+    title: "playable single-player"
+    file: delivery/milestones/cnc-generals-zero-hour/M15-single-player.md
+    status: pending
+    dependencies: [M5, M8, M9, M10, M12, M13, M14]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M16
+    title: "local multi-instance Linux LAN"
+    file: delivery/milestones/cnc-generals-zero-hour/M16-lan-match.md
+    status: pending
+    dependencies: [M8, M11, M15]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M17
+    title: "reproducible x86-64 release"
+    file: delivery/milestones/cnc-generals-zero-hour/M17-release.md
+    status: pending
+    dependencies: [M15, M16]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: null
+  - id: M18
+    title: "optional Windows save/replay compatibility"
+    file: delivery/milestones/cnc-generals-zero-hour/M18-windows-compatibility.md
+    status: pending
+    dependencies: [M17]
+    optional: true
+    completed_at: null
+    evidence: null
+    notes: "Optional compatibility; missing fixtures mean not validated and never block release."

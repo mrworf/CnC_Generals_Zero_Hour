@@ -1,0 +1,31 @@
+schema_version: 1
+workflow: delivery-planning
+product_id: cnc-generals-zero-hour
+status: ready_with_external_dependencies
+transaction:
+  parent_commit: 8dc0285ff6c3346273973dcd874e6983060bb3e7
+  repository_commit: null
+source:
+  mode: CHANGE_PLAN
+  type: accepted-migration-plan
+  path: docs/zero-hour-linux-port-plan.md
+  revision: sha256:25554c2db1273e263b574b8563615c88ed48eb4f7672e5a21e19fe119eae7b33
+  repository_commit: 8dc0285ff6c3346273973dcd874e6983060bb3e7
+stages:
+  compilation:
+    status: passed
+    packet_manifest: delivery/milestones/cnc-generals-zero-hour/status.yaml
+    result: delivery/milestones/cnc-generals-zero-hour/index.md
+    packet_revision: sha256:7f486befe4e182f46fbc7f090d757ad7a19bcabddf53ce6b622b6ba90596de4d
+  readiness:
+    status: READY_WITH_EXTERNAL_DEPENDENCIES
+    prerequisite_manifest: delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md
+    result: delivery/readiness/cnc-generals-zero-hour/readiness-report.md
+blockers: []
+corrections: []
+resume:
+  stage: implementation
+  milestone: M0
+handoff:
+  status: ready_for_implementation
+  path: workflow/delivery-planning/handoff.yaml
