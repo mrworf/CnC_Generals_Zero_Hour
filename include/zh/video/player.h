@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 
+namespace zh::audio { class AudioManager; }
+
 namespace zh::video {
 
 struct PresentationRect {
@@ -46,6 +48,18 @@ private:
     std::deque<Pending> chunks_;
     double clock_ = 0.0;
     bool paused_ = false;
+};
+
+class AudioManagerVideoSink final : public VideoAudioSink {
+public:
+    explicit AudioManagerVideoSink(audio::AudioManager& manager) : manager_(manager) {}
+    bool submit(VideoAudioChunk chunk) override;
+    void set_paused(bool paused) noexcept override;
+    void advance(double) noexcept override {}
+    double clock_seconds() const noexcept override;
+    void reset() noexcept override;
+private:
+    audio::AudioManager& manager_;
 };
 
 enum class PlaybackState { idle, playing, paused, completed, skipped, error, stopped };

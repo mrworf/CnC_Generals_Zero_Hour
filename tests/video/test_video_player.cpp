@@ -1,11 +1,15 @@
 #include "zh/video/player.h"
+#include "zh/audio/manager.h"
+#include "zh/data/vfs.h"
 
 #include <cmath>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <unistd.h>
 
 namespace {
 int failures = 0;
@@ -113,6 +117,24 @@ int main()
         VideoAudioChunk chunk; chunk.interleaved.assign(4800 * 2, 0.0F);
         check(sink.submit(chunk) && !sink.submit(chunk), "audio sink rejects bounded overflow");
         sink.advance(0.1); check(sink.queued_chunks() == 0 && std::abs(sink.clock_seconds() - 0.1) < 0.0001, "null sink clock consumes PCM");
+    }
+    {
+        namespace fs = std::filesystem;
+        const auto root = fs::temp_directory_path() / ("zh-video-audio-bridge-" + std::to_string(::getpid()));
+        std::error_code ignored; fs::remove_all(root, ignored);
+        const auto zh_root = root / "zh"; const auto generals_root = root / "generals";
+        fs::create_directories(zh_root); fs::create_directories(generals_root);
+        const auto vfs = zh::data::VirtualFileSystem::mount({zh_root, generals_root, "English", {}});
+        zh::audio::AudioManager manager(vfs);
+        AudioManagerVideoSink sink(manager);
+        VideoAudioChunk chunk; chunk.interleaved.assign(480 * 2, 0.25F);
+        check(sink.submit(std::move(chunk)), "decoded PCM enters existing audio adapter");
+        std::vector<float> output(480 * 2); manager.render(output.data(), 480);
+        check(std::abs(sink.clock_seconds() - 0.01) < 0.0001 && output.front() == 0.25F,
+            "existing audio adapter mixes PCM and owns master clock");
+        sink.reset(); manager.render(output.data(), 1);
+        check(sink.clock_seconds() == 0.0, "video audio adapter reset clears clock");
+        fs::remove_all(root, ignored);
     }
     return failures == 0 ? 0 : 1;
 }

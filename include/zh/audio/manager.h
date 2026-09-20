@@ -98,6 +98,12 @@ public:
     // simulation locking, or game-object dispatch.
     void render(float* interleaved_stereo, std::size_t frame_count) noexcept;
 
+    // Bounded 48 kHz stereo PCM ingress for FFmpeg-decoded movie audio.
+    // The game/video thread submits; render() consumes and advances the clock.
+    bool submit_video_pcm(const float* interleaved_stereo, std::size_t frame_count) noexcept;
+    double video_clock_seconds() const noexcept;
+    void reset_video_pcm() noexcept;
+
     // Game-thread boundary. Decoder destruction and completion dispatch occur here.
     std::vector<Completion> drain_completions();
     void shutdown() noexcept;

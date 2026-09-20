@@ -1,0 +1,7 @@
+# variant	logical_path	width	height	audio_rate	minimum_frames
+silent-96x120	Data/Movies/VS_small.bik	96	120	0	3
+silent-400x324	Data/English/Movies/Comp_AirGen_000.bik	400	324	0	3
+stereo-44100-640x480	Data/English/Movies/sizzle_review640.bik	640	480	44100	3
+stereo-48000-640x480	Data/English/Movies/EA_LOGO640.BIK	640	480	48000	3
+stereo-48000-720x486	Data/English/Movies/EA_LOGO.BIK	720	486	48000	3
+stereo-44100-800x600	Data/Movies/GC_Background.bik	800	600	44100	3

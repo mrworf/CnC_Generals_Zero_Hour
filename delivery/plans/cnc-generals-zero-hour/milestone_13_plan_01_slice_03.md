@@ -63,6 +63,16 @@ Run for all four canonical presets, plus a separate read-only retail build and i
 
 Fallback behavior and every observed variant class have headless evidence; errors remain actionable and private media/path data is absent from commits.
 
+## Delivered evidence
+
+- Full builds passed for `linux-gcc-debug`, `linux-clang-debug`, `linux-gcc-release`, and `linux-clang-release`.
+- `ctest --preset <preset> -L 'audio|video|renderer-contract' --output-on-failure` passed 22/22 on every canonical preset.
+- A separately configured, read-only retail build passed `video_corpus` for all six committed variant classes: 96x120 and 400x324 silent Bink, 640x480 at 44.1 kHz stereo, 640x480 and 720x486 at 48 kHz stereo, and 800x600 at 44.1 kHz stereo. Each case converted three ordered leading frames to bounded RGBA output.
+- Retail evidence records only variant labels, logical paths, dimensions, codec expectations, rates, and minimum frame counts. No retail bytes, hashes, or host paths are tracked.
+- Asset-free tests cover selected-locale precedence, neutral fallback, case folding, absent fallback, traversal rejection, decoder-unavailable injection, corruption/truncation, excessive dimensions/conversion sizes, pause/focus, skip, EOS, audio-clock sync, queue rejection, and shutdown.
+- Decoded 48 kHz stereo float PCM passed through the existing M12 `AudioManager`; its callback consumed bounded fixed-size blocks, mixed samples, and advanced the player-visible audio clock. The deterministic null sink remains available when no output device is used.
+- The complete GCC debug suite passed 48/48 when run with loopback socket permission required by the pre-existing LAN tests.
+
 ## Commit boundary
 
 Commit resolver, corpus manifest/tests, docs, acceptance evidence in the plan, and final validation changes as `delivery: M13 slice 03 prove Bink variants`.

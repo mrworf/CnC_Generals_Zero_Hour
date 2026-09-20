@@ -1,5 +1,7 @@
 #include "zh/video/player.h"
 
+#include "zh/audio/manager.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -65,6 +67,21 @@ void NullVideoAudioSink::reset() noexcept
     clock_ = 0.0;
     paused_ = false;
 }
+
+bool AudioManagerVideoSink::submit(VideoAudioChunk chunk)
+{
+    return chunk.sample_rate == 48000 && chunk.channels == 2 && !chunk.interleaved.empty()
+        && chunk.interleaved.size() % 2 == 0
+        && manager_.submit_video_pcm(chunk.interleaved.data(), chunk.interleaved.size() / 2);
+}
+
+void AudioManagerVideoSink::set_paused(bool paused) noexcept
+{
+    try { manager_.set_paused(paused); } catch (...) {}
+}
+
+double AudioManagerVideoSink::clock_seconds() const noexcept { return manager_.video_clock_seconds(); }
+void AudioManagerVideoSink::reset() noexcept { manager_.reset_video_pcm(); }
 
 VideoPlayer::VideoPlayer(std::unique_ptr<VideoDecoder> decoder, VideoAudioSink& audio,
     renderer::RecordingGpuDevice& recorder, std::uint32_t target_width, std::uint32_t target_height)

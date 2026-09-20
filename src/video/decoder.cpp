@@ -66,9 +66,10 @@ double normalize_media_timestamp(double candidate, double previous, double step)
 
 class FfmpegVideoDecoder::Impl {
 public:
-    Impl(const data::VirtualFileSystem& source, std::string path, VideoLimits configured, bool available) try
+    Impl(const data::VirtualFileSystem& source, std::string path, VideoLimits configured, bool available)
         : logical(std::move(path)), limits(configured), audio_queue(configured.maximum_audio_chunks)
     {
+        try {
         if (!available) fail(logical, "Bink decoder is unavailable in the distribution FFmpeg build");
         const auto* resource = source.find(logical);
         if (!resource) fail(logical, "logical resource is missing from the mounted VFS");
@@ -104,11 +105,11 @@ public:
         if (audio_stream >= 0) open_audio();
         packet = av_packet_alloc();
         decoded = av_frame_alloc();
-        if (!packet || !decoded) fail(logical, "cannot allocate bounded decode state");
-    }
-    catch (...) {
-        close();
-        throw;
+            if (!packet || !decoded) fail(logical, "cannot allocate bounded decode state");
+        } catch (...) {
+            close();
+            throw;
+        }
     }
 
     ~Impl() { close(); }

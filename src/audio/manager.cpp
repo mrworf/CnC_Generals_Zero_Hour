@@ -18,6 +18,8 @@ constexpr std::size_t command_capacity = 128;
 constexpr std::size_t completion_capacity = 256;
 constexpr std::size_t render_chunk_frames = 256;
 constexpr std::size_t maximum_groups = 32;
+constexpr std::size_t video_pcm_frames_per_block = 256;
+constexpr std::size_t video_pcm_queue_capacity = 257;
 
 template <typename T, std::size_t Capacity>
 class SpscQueue {
@@ -41,6 +43,13 @@ public:
         return true;
     }
 
+    std::size_t size_approx() const noexcept
+    {
+        const auto read = read_.load(std::memory_order_acquire);
+        const auto write = write_.load(std::memory_order_acquire);
+        return write >= read ? write - read : Capacity - read + write;
+    }
+
 private:
     std::array<T, Capacity> values_{};
     std::atomic<std::size_t> read_{0};
@@ -60,7 +69,12 @@ struct Voice {
     float filtered_right = 0.0F;
 };
 
-enum class CommandType { play, stop, control, group, listener, paused, focused, shutdown };
+struct VideoPcmBlock {
+    std::array<float, video_pcm_frames_per_block * 2> samples{};
+    std::size_t frames = 0;
+};
+
+enum class CommandType { play, stop, control, group, listener, paused, focused, video_reset, shutdown };
 
 struct Command {
     CommandType type = CommandType::play;
@@ -167,6 +181,14 @@ struct AudioManager::Impl {
             case CommandType::listener: listener = command.position; break;
             case CommandType::paused: paused = command.flag; break;
             case CommandType::focused: focused = command.flag; break;
+            case CommandType::video_reset: {
+                VideoPcmBlock block;
+                while (video_pcm.pop(block)) {}
+                current_video = {};
+                current_video_offset = 0;
+                video_frames_rendered.store(0, std::memory_order_release);
+                break;
+            }
             case CommandType::shutdown:
                 for (auto& slot : slots) complete(slot, CompletionReason::shutdown);
                 output.store(AudioOutputState::stopped, std::memory_order_release);
@@ -181,6 +203,10 @@ struct AudioManager::Impl {
     std::array<float, maximum_groups> group_volumes{};
     SpscQueue<Command, command_capacity> commands;
     SpscQueue<Retired, completion_capacity> retired;
+    SpscQueue<VideoPcmBlock, video_pcm_queue_capacity> video_pcm;
+    VideoPcmBlock current_video{};
+    std::size_t current_video_offset = 0;
+    std::atomic<std::uint64_t> video_frames_rendered{0};
     std::atomic<AudioHandle> next_handle{1};
     std::atomic<std::size_t> active{0};
     std::atomic<bool> stopping{false};
@@ -311,6 +337,25 @@ void AudioManager::render(float* output, std::size_t frame_count) noexcept
     impl_->apply_commands();
     if (impl_->paused || !impl_->focused || impl_->stopped.load(std::memory_order_acquire)) return;
 
+    std::size_t video_output = 0;
+    while (video_output < frame_count) {
+        if (impl_->current_video_offset >= impl_->current_video.frames) {
+            if (!impl_->video_pcm.pop(impl_->current_video)) break;
+            impl_->current_video_offset = 0;
+        }
+        const auto count = std::min(frame_count - video_output,
+            impl_->current_video.frames - impl_->current_video_offset);
+        for (std::size_t index = 0; index < count; ++index) {
+            output[(video_output + index) * 2] +=
+                impl_->current_video.samples[(impl_->current_video_offset + index) * 2];
+            output[(video_output + index) * 2 + 1] +=
+                impl_->current_video.samples[(impl_->current_video_offset + index) * 2 + 1];
+        }
+        impl_->current_video_offset += count;
+        video_output += count;
+        impl_->video_frames_rendered.fetch_add(count, std::memory_order_relaxed);
+    }
+
     std::array<float, render_chunk_frames * 2> scratch{};
     for (auto& slot : impl_->slots) {
         if (slot == nullptr || slot->control.paused) continue;
@@ -348,6 +393,34 @@ void AudioManager::render(float* output, std::size_t frame_count) noexcept
             }
         }
     }
+}
+
+bool AudioManager::submit_video_pcm(const float* interleaved_stereo, std::size_t frame_count) noexcept
+{
+    if (interleaved_stereo == nullptr || frame_count == 0
+        || impl_->stopping.load(std::memory_order_acquire)) return false;
+    const auto blocks = (frame_count + video_pcm_frames_per_block - 1) / video_pcm_frames_per_block;
+    if (blocks > video_pcm_queue_capacity - 1 - impl_->video_pcm.size_approx()) return false;
+    std::size_t offset = 0;
+    while (offset < frame_count) {
+        VideoPcmBlock block;
+        block.frames = std::min(video_pcm_frames_per_block, frame_count - offset);
+        std::copy_n(interleaved_stereo + offset * 2, block.frames * 2, block.samples.data());
+        if (!impl_->video_pcm.push(block)) return false;
+        offset += block.frames;
+    }
+    return true;
+}
+
+double AudioManager::video_clock_seconds() const noexcept
+{
+    return static_cast<double>(impl_->video_frames_rendered.load(std::memory_order_acquire)) / 48000.0;
+}
+
+void AudioManager::reset_video_pcm() noexcept
+{
+    if (impl_->stopping.load(std::memory_order_acquire)) return;
+    (void)impl_->commands.push({CommandType::video_reset});
 }
 
 std::vector<Completion> AudioManager::drain_completions()

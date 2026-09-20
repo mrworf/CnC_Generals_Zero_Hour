@@ -108,3 +108,22 @@ data roots plus `ZH_RETAIL_LANGUAGE`. It reads media through the VFS without
 extraction and prints only committed logical names and detected encodings; it
 does not copy, hash, modify, or report physical retail paths. Audible device
 checking is optional and is not needed for the null-sink acceptance suite.
+
+## Video validation
+
+M13 replaces the Bink SDK with the distribution FFmpeg shared libraries. Movies
+are opened by logical VFS path through custom FFmpeg I/O; retail files are never
+extracted or rewritten. The decoder bounds source and packet bytes, dimensions,
+RGBA conversion storage, resampled audio chunks, and output queues. The headless
+player sends stereo float batches through the existing bounded `AudioManager`
+adapter (or deterministic null sink), uses its audio clock when present, preserves aspect ratio, and emits
+normalized texture-upload/draw commands to the recording renderer.
+
+Run asset-free lifecycle, error, clock, fallback, and recorder coverage with
+`ctest --preset <preset> -L 'audio|video|renderer-contract' --output-on-failure`.
+The optional retail build described above adds `video_corpus`: it decodes bounded
+leading frames for every observed English Bink dimension/audio-rate variant in
+`data/corpus/video-variants.tsv`. The manifest and output contain only logical
+names and derived codec/dimension/rate expectations—never media, hashes, or
+physical paths. Pause, focus loss, skip, EOS, failure, and shutdown all return
+cleanly to game rendering; physical presentation remains the M14 GPU gate.

@@ -89,7 +89,17 @@ target_include_directories(zh_audio_miniaudio PUBLIC
 )
 target_compile_definitions(zh_audio_miniaudio PRIVATE MA_NO_FLAC MA_NO_ENCODING MA_NO_GENERATION)
 target_link_libraries(zh_audio_miniaudio PUBLIC zh_build_options Threads::Threads ${CMAKE_DL_LIBS} zh_data)
-add_library(zh_video_ffmpeg STATIC src/video/decoder.cpp src/video/player.cpp)
+add_library(zh_video_ffmpeg STATIC
+  src/bootstrap/component.cpp
+  src/video/decoder.cpp
+  src/video/player.cpp
+  src/video/resolver.cpp
+)
+target_compile_definitions(zh_video_ffmpeg PRIVATE
+  ZH_COMPONENT_NAME="zh_video_ffmpeg"
+  ZH_COMPONENT_SYMBOL=zh_video_ffmpeg_bootstrap_component
+)
+set_property(TARGET zh_video_ffmpeg PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_EMPTY_LEGACY_SOURCES}")
 target_include_directories(zh_video_ffmpeg PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_video_ffmpeg PUBLIC zh_build_options zh_data
   FFmpeg::avformat FFmpeg::avcodec FFmpeg::avutil FFmpeg::swscale FFmpeg::swresample)
@@ -258,6 +268,7 @@ install(FILES LICENSE.md DESTINATION share/licenses/generals-zero-hour)
 install(FILES data/corpus/english-manifest.tsv DESTINATION share/generals-zero-hour/corpus)
 install(FILES data/corpus/world-rendering-manifest.tsv DESTINATION share/generals-zero-hour/corpus)
 install(FILES data/corpus/effects-manifest.tsv DESTINATION share/generals-zero-hour/corpus)
+install(FILES data/corpus/video-variants.tsv DESTINATION share/generals-zero-hour/corpus)
 
 if(ZH_BUILD_TESTS)
   enable_testing()
@@ -368,6 +379,11 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(video_player_tests PRIVATE zh_video_ffmpeg zh_renderer_sdl_gpu)
   add_test(NAME video_player COMMAND video_player_tests)
   set_tests_properties(video_player PROPERTIES LABELS "video;renderer-contract;audio")
+
+  add_executable(video_acceptance_tests tests/video/test_video_acceptance.cpp)
+  target_link_libraries(video_acceptance_tests PRIVATE zh_video_ffmpeg)
+  add_test(NAME video_acceptance COMMAND video_acceptance_tests)
+  set_tests_properties(video_acceptance PROPERTIES LABELS video)
 
   add_executable(world_scene_tests tests/world/test_world_scene.cpp)
   target_link_libraries(world_scene_tests PRIVATE zh_world)
@@ -525,5 +541,13 @@ if(ZH_BUILD_TESTS)
       "${CMAKE_CURRENT_SOURCE_DIR}/data/corpus/english-manifest.tsv")
     set_tests_properties(audio_corpus PROPERTIES LABELS audio
       PASS_REGULAR_EXPRESSION "audio corpus verification ok")
+
+    add_executable(video_corpus_tests tests/video/test_video_corpus.cpp)
+    target_link_libraries(video_corpus_tests PRIVATE zh_video_ffmpeg)
+    add_test(NAME video_corpus COMMAND video_corpus_tests
+      "${ZH_RETAIL_ZH_DATA}" "${ZH_RETAIL_GENERALS_DATA}" "${ZH_RETAIL_LANGUAGE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/data/corpus/video-variants.tsv")
+    set_tests_properties(video_corpus PROPERTIES LABELS video TIMEOUT 60
+      PASS_REGULAR_EXPRESSION "video corpus verification ok")
   endif()
 endif()

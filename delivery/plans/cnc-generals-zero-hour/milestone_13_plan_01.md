@@ -39,6 +39,6 @@ Physical SDL_GPU presentation and pixel capture (M14), playback recording, retai
 
 ## Commit record
 
-- Slice 01: pending
-- Slice 02: pending
+- Slice 01: `0f280767e56d55baa795de4caa69090d3af83967`
+- Slice 02: `67f01a42e1f72c3e85ba230c5fe40b090e0ef91e`
 - Slice 03: pending
