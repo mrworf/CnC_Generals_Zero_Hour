@@ -42,6 +42,8 @@ endif()
 
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
 configure_file(cmake/build_metadata.h.in generated/build_metadata.h @ONLY)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/data/corpus/english-manifest.tsv" ZH_CORPUS_MANIFEST_TEXT)
+configure_file(cmake/corpus_manifest.h.in generated/corpus_manifest.h @ONLY)
 
 add_library(zh_build_options INTERFACE)
 target_compile_options(zh_build_options INTERFACE
@@ -85,7 +87,7 @@ zh_add_bootstrap_component(zh_null_audio ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_null_video ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_test_support ZH_EMPTY_LEGACY_SOURCES)
 
-add_library(zh_data STATIC src/data/config.cpp src/data/big_archive.cpp src/data/vfs.cpp)
+add_library(zh_data STATIC src/data/config.cpp src/data/big_archive.cpp src/data/vfs.cpp src/data/inventory.cpp)
 target_include_directories(zh_data PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_data PUBLIC zh_os_posix zh_build_options)
 
@@ -177,6 +179,7 @@ install(TARGETS zh_main RUNTIME DESTINATION bin)
 install(FILES "${ZH_BOOTSTRAP_SPIRV}" DESTINATION share/generals-zero-hour/shaders)
 install(FILES ${ZH_RENDERER_SPIRV} DESTINATION share/generals-zero-hour/shaders/renderer)
 install(FILES LICENSE.md DESTINATION share/licenses/generals-zero-hour)
+install(FILES data/corpus/english-manifest.tsv DESTINATION share/generals-zero-hour/corpus)
 
 if(ZH_BUILD_TESTS)
   enable_testing()
@@ -270,4 +273,20 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(data_vfs_tests PRIVATE zh_data)
   add_test(NAME data_vfs COMMAND data_vfs_tests)
   set_tests_properties(data_vfs PROPERTIES LABELS data)
+
+  add_executable(data_inventory_tests tests/data/test_inventory.cpp)
+  target_link_libraries(data_inventory_tests PRIVATE zh_data)
+  add_test(NAME data_inventory COMMAND data_inventory_tests)
+  set_tests_properties(data_inventory PROPERTIES LABELS data)
+
+  if(ZH_ENABLE_RETAIL_TESTS)
+    if(NOT IS_ABSOLUTE "${ZH_RETAIL_ZH_DATA}" OR NOT IS_ABSOLUTE "${ZH_RETAIL_GENERALS_DATA}" OR ZH_RETAIL_LANGUAGE STREQUAL "")
+      message(FATAL_ERROR "Retail tests require absolute ZH_RETAIL_ZH_DATA, absolute ZH_RETAIL_GENERALS_DATA, and ZH_RETAIL_LANGUAGE")
+    endif()
+    add_test(NAME retail_data_verification COMMAND zh_main --verify-data
+      --zh-data "${ZH_RETAIL_ZH_DATA}" --generals-data "${ZH_RETAIL_GENERALS_DATA}" --language "${ZH_RETAIL_LANGUAGE}")
+    set_tests_properties(retail_data_verification PROPERTIES LABELS data
+      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+      PASS_REGULAR_EXPRESSION "devices skipped;corpus verification ok")
+  endif()
 endif()

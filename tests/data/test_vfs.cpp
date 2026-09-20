@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <unistd.h>
 
 namespace {
 int failures = 0;
@@ -89,7 +90,8 @@ std::string text(const std::vector<zh::foundation::UInt8>& bytes)
 int main()
 {
     using namespace zh::data;
-    const auto root = std::filesystem::temp_directory_path() / "zh-vfs-test";
+    const auto root = std::filesystem::temp_directory_path() /
+        ("zh-vfs-test-" + std::to_string(static_cast<long long>(::getpid())));
     std::error_code ignored;
     std::filesystem::remove_all(root, ignored);
     const auto zh = root / "zh";
@@ -102,6 +104,7 @@ int main()
     write_big(mods / "mod.big", {{"same.txt", "mod"}, {"mod-only.txt", "mod-only"}});
     write_big(zh / "B.big", {{"Archive-Only.txt", "B"}});
     write_big(zh / "a.BIG", {{"archive-only.txt", "A"}, {"zh-big.txt", "zh-big"}});
+    write_big(zh / "Data/INI/Nested.big", {{"nested-only.txt", "nested"}});
     write_big(generals / "base.big", {{"same.txt", "base-big"}, {"base-big.txt", "base-big"}});
 
     DataSelection selection{zh, generals, "English", {mods}};
@@ -111,8 +114,11 @@ int main()
     check(text(vfs.read_prefix("archive-only.txt", 100)) == "A", "case-insensitive archive order is first-loaded wins");
     check(text(vfs.read_prefix("base-loose.txt", 100)) == "base", "Generals loose mounted");
     check(text(vfs.read_prefix("base-big.txt", 100)) == "base-big", "Generals BIG mounted");
-    check(vfs.archive_mount_order().size() == 4, "all archive layers reported");
+    check(text(vfs.read_prefix("nested-only.txt", 100)) == "nested", "nested Zero Hour BIG mounted");
+    check(vfs.archive_mount_order().size() == 5, "all archive layers reported");
     check(vfs.archive_mount_order()[1].find("a.BIG") != std::string::npos, "stable archive order reported");
+    check(vfs.archive_mount_order()[3].find("Data/INI/Nested.big") != std::string::npos,
+        "nested archive has root-relative mount label");
     expect_error([] { zh::foundation::normalize_logical_path("../escape"); }, "traversal");
     expect_error([] { zh::foundation::normalize_logical_path("/absolute"); }, "relative");
     expect_error([&] { vfs.read_prefix("missing.txt", 4); }, "missing logical resource");

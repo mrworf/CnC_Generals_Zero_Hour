@@ -1,0 +1,16 @@
+# Project-owned logical corpus expectations. No retail bytes, hashes, or host paths.
+locale	English
+@precedence	zh-loose > mod-big > zh-big > generals-loose > generals-big	case-insensitive FilenameList order; first-loaded archive wins
+@font	Arial Unicode MS	English uses a system family; LocalFontFile is not enabled
+@compression	RefPack and zlib	bounded in-process readers; no corpus conversion
+@effects	WWShade PSO/VSO	metadata remains archive-backed and is consumed at M10
+Data/INI/GameData.ini	ini	Zero Hour gameplay configuration
+Data/English/generals.csf	csf	selected-locale string database
+Data/English/Language.ini	ini	font and locale configuration
+Art/W3D/ABArFrcCmd.W3D	w3d	representative W3D model metadata
+Art/Textures/3_10cnvsshd03.dds	dds	representative block-compressed texture
+Art/Terrain/PTBlossom01.tga	tga	representative terrain texture
+Data/Audio/Sounds/aangr01a.wav	wav	representative speech/effect audio
+Data/Audio/Tracks/C_Chi01.mp3	mp3	representative streamed music
+Data/English/Movies/Comp_AirGen_000.bik	bink	representative selected-locale movie
+Shaders/fterrain.pso	wwshade	representative WWShade pixel program

@@ -69,6 +69,20 @@ If `--language` and `Language` are absent, verification accepts exactly one popu
 
 Repeat `--mod /absolute/path/to/mod.big` (or name a directory containing BIG files) to insert explicitly selected mod archives between Zero Hour loose files and the normal Zero Hour archives. Archive discovery is case-insensitive sorted and first-loaded wins. The verifier rejects ambiguous case-only names, traversal, malformed headers/tables, and out-of-range or oversized entries before exposing a resource.
 
+The embedded project manifest comes from `data/corpus/english-manifest.tsv`; it contains only logical names and format, locale, font, effect, compression, and precedence expectations. Verification bounds and validates INI, CSF, W3D, DDS, TGA, WAV, MP3, Bink, TrueType/OpenType, RefPack, zlib, and WWShade metadata. Unknown optional extensions are not treated as required content, while a missing, corrupt, or unsupported manifest entry fails by logical name. Detected NOX/LZH content is an explicit unsupported-format failure; Granny is reported and remains disabled unless a consuming gameplay path proves it required.
+
+Opt-in corpus coverage uses a separate local build so private paths never enter presets or tracked files:
+
+```sh
+cmake -S . -B build/retail -G Ninja \
+  -DZH_ENABLE_RETAIL_TESTS=ON \
+  -DZH_RETAIL_ZH_DATA=/absolute/path/to/zero-hour \
+  -DZH_RETAIL_GENERALS_DATA=/absolute/path/to/generals \
+  -DZH_RETAIL_LANGUAGE=English
+cmake --build build/retail
+ctest --test-dir build/retail -L data --output-on-failure
+```
+
 For lifecycle testing, `--fail-init <stage>` injects a controlled failure at `paths`, `logging`, `platform`, `renderer`, `audio`, `video`, or `engine`. It exits with code 4 after reporting the stage and tearing down only earlier initialized stages in reverse order. This option is a developer test seam, not a gameplay setting.
 
 `headless_process_isolation` launches two processes before waiting for either. They run from unrelated working directories, use different state roots and deliberately invalid SDL display/audio settings, and must produce disjoint logs and completion records. The test is asset-free and makes no network request.

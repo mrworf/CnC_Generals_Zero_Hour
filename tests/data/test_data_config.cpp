@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <unistd.h>
 
 namespace {
 int failures = 0;
@@ -31,12 +32,14 @@ void touch(const std::filesystem::path& path)
 int main()
 {
     using namespace zh::data;
-    const auto root = std::filesystem::temp_directory_path() / "zh-data-config-test";
+    const auto root = std::filesystem::temp_directory_path() /
+        ("zh-data-config-test-" + std::to_string(static_cast<long long>(::getpid())));
     std::error_code ignored;
     std::filesystem::remove_all(root, ignored);
     const auto zh = root / "retail-zh";
     const auto generals = root / "retail-generals";
-    touch(zh / "Data/English/marker");
+    touch(zh / "Data/English/generals.csf");
+    touch(zh / "Data/INI/not-a-locale.ini");
     std::filesystem::create_directories(generals);
     const auto config = root / "config/generals-zero-hour";
     std::filesystem::create_directories(config);
@@ -62,7 +65,7 @@ int main()
     { std::ofstream stream(config / "options.ini");
       stream << "ZeroHourDataPath=" << generals.string() << "\nGeneralsDataPath=" << generals.string()
              << "\nLanguage=Configured\n"; }
-    touch(generals / "Data/Configured/marker");
+    touch(generals / "Data/Configured/Language.ini");
     const auto configured = resolve_data_selection({}, environment);
     check(configured.zero_hour_root == generals && configured.generals_root == generals, "identical configured roots accepted");
     const auto overridden = resolve_data_selection(explicit_args, environment);
@@ -81,7 +84,7 @@ int main()
     expect_error<DataError>([&] { resolve_data_selection(bad_language, environment); }, "no viable");
 
     std::filesystem::remove(config / "options.ini", ignored);
-    touch(zh / "Data/French/marker");
+    touch(zh / "Data/French/Language.ini");
     auto ambiguous = explicit_args; ambiguous.language.reset();
     expect_error<DataError>([&] { resolve_data_selection(ambiguous, environment); }, "multiple viable locales");
     std::filesystem::remove_all(zh / "Data", ignored);

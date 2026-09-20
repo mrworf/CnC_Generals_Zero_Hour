@@ -1,5 +1,7 @@
 #include "build_metadata.h"
+#include "corpus_manifest.h"
 #include "zh/data/config.h"
+#include "zh/data/inventory.h"
 #include "zh/data/vfs.h"
 #include "zh/headless/runtime.h"
 
@@ -72,6 +74,8 @@ int main(int argc, char** argv)
             const auto vfs = zh::data::VirtualFileSystem::mount(selection);
             for (const auto& archive : vfs.archive_mount_order()) std::cout << "verification: mount=" << archive << '\n';
             std::cout << "verification: resources=" << vfs.resources().size() << "\nverification: VFS ok\n";
+            const auto manifest = zh::data::parse_corpus_manifest(ZH_CORPUS_MANIFEST);
+            zh::data::verify_corpus(vfs, manifest, selection.language, std::cout);
             return 0;
         } catch (const zh::data::DataUsageError& error) {
             std::cerr << "data argument error: " << error.what() << '\n';

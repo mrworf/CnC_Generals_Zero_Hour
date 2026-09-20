@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
+#include <map>
 #include <set>
 #include <sstream>
 
@@ -104,17 +105,51 @@ std::filesystem::path require_root(
 std::vector<std::string> discover_locales(const std::filesystem::path& root)
 {
     std::vector<std::string> locales;
+    const auto add_locale = [&](std::string name) {
+        const auto same = [&](const std::string& existing) {
+            return existing.size() == name.size() && std::equal(existing.begin(), existing.end(), name.begin(),
+                [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) ==
+                    std::tolower(static_cast<unsigned char>(b)); });
+        };
+        if (std::find_if(locales.begin(), locales.end(), same) == locales.end()) locales.push_back(std::move(name));
+    };
     const auto data = root / "Data";
     std::error_code error;
     std::filesystem::directory_iterator iterator(data, error);
-    if (error) return locales;
-    for (const auto& entry : iterator) {
+    if (!error) {
+        for (const auto& entry : iterator) {
+            std::error_code type_error;
+            if (!entry.is_directory(type_error) || type_error) continue;
+            if (std::filesystem::is_regular_file(entry.path() / "generals.csf", type_error) ||
+                std::filesystem::is_regular_file(entry.path() / "Language.ini", type_error)) {
+                add_locale(entry.path().filename().string());
+            }
+        }
+    }
+
+    std::map<std::string, std::string> archive_names;
+    error.clear();
+    for (std::filesystem::directory_iterator archives(root, error), end; !error && archives != end; archives.increment(error)) {
         std::error_code type_error;
-        if (!entry.is_directory(type_error) || type_error) continue;
-        const auto name = entry.path().filename().string();
-        std::error_code contents_error;
-        auto child = std::filesystem::directory_iterator(entry.path(), contents_error);
-        if (!contents_error && child != std::filesystem::directory_iterator()) locales.push_back(name);
+        if (!archives->is_regular_file(type_error) || type_error) continue;
+        const auto original = archives->path().filename().string();
+        std::string folded = original;
+        std::transform(folded.begin(), folded.end(), folded.begin(), [](unsigned char value) {
+            return static_cast<char>(std::tolower(value));
+        });
+        archive_names.emplace(folded, original);
+    }
+    for (const auto& [folded, original] : archive_names) {
+        constexpr std::string_view prefix = "audio";
+        constexpr std::string_view suffix = "zh.big";
+        if (folded.size() <= prefix.size() + suffix.size() || folded.compare(0, prefix.size(), prefix) != 0 ||
+            folded.compare(folded.size() - suffix.size(), suffix.size(), suffix) != 0) continue;
+        const auto language_folded = folded.substr(prefix.size(), folded.size() - prefix.size() - suffix.size());
+        const auto language = original.substr(prefix.size(), original.size() - prefix.size() - suffix.size());
+        if (archive_names.count(language_folded + std::string(suffix)) != 0 &&
+            archive_names.count("speech" + language_folded + std::string(suffix)) != 0) {
+            add_locale(language);
+        }
     }
     const auto folded_less = [](const std::string& left, const std::string& right) {
         auto fold = [](unsigned char value) { return static_cast<unsigned char>(std::tolower(value)); };

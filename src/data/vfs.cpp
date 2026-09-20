@@ -23,26 +23,43 @@ bool archive_path(const std::filesystem::path& path)
     return ascii_fold(path.extension().string()) == ".big";
 }
 
-std::vector<std::filesystem::path> discover_archives(const std::filesystem::path& root)
+std::vector<std::filesystem::path> discover_archives(
+    const std::filesystem::path& root,
+    const std::optional<std::filesystem::path>& excluded_root = std::nullopt)
 {
     std::vector<std::filesystem::path> archives;
     std::error_code error;
-    for (std::filesystem::directory_iterator iterator(root, error), end; !error && iterator != end; iterator.increment(error)) {
+    const auto excluded = excluded_root ? std::filesystem::weakly_canonical(*excluded_root, error) : std::filesystem::path{};
+    error.clear();
+    for (std::filesystem::recursive_directory_iterator iterator(root,
+             std::filesystem::directory_options::skip_permission_denied, error), end;
+         !error && iterator != end; iterator.increment(error)) {
+        if (excluded_root) {
+            std::error_code canonical_error;
+            const auto current = std::filesystem::weakly_canonical(iterator->path(), canonical_error);
+            if (!canonical_error && current == excluded) {
+                if (iterator->is_directory(canonical_error)) iterator.disable_recursion_pending();
+                continue;
+            }
+        }
         std::error_code type_error;
         if (iterator->is_regular_file(type_error) && !type_error && archive_path(iterator->path())) {
             archives.push_back(iterator->path());
         }
     }
     if (error) throw DataError("cannot enumerate archives below retail root: " + error.message());
-    std::sort(archives.begin(), archives.end(), [](const auto& left, const auto& right) {
-        const auto left_folded = ascii_fold(left.filename().string());
-        const auto right_folded = ascii_fold(right.filename().string());
-        return left_folded == right_folded ? left.filename().string() < right.filename().string() : left_folded < right_folded;
+    const auto relative_name = [&](const std::filesystem::path& path) {
+        return std::filesystem::relative(path, root).generic_string();
+    };
+    std::sort(archives.begin(), archives.end(), [&](const auto& left, const auto& right) {
+        const auto left_name = relative_name(left); const auto right_name = relative_name(right);
+        const auto left_folded = ascii_fold(left_name); const auto right_folded = ascii_fold(right_name);
+        return left_folded == right_folded ? left_name < right_name : left_folded < right_folded;
     });
     for (std::size_t index = 1; index < archives.size(); ++index) {
-        if (ascii_fold(archives[index - 1].filename().string()) == ascii_fold(archives[index].filename().string())) {
-            throw DataError("case-fold archive collision: '" + archives[index - 1].filename().string() + "' and '" +
-                archives[index].filename().string() + "'");
+        const auto previous = relative_name(archives[index - 1]); const auto current = relative_name(archives[index]);
+        if (previous != current && ascii_fold(previous) == ascii_fold(current)) {
+            throw DataError("case-fold archive collision: '" + previous + "' and '" + current + "'");
         }
     }
     return archives;
@@ -107,11 +124,17 @@ void mount_archives(
     std::vector<std::string>& order,
     const std::vector<std::filesystem::path>& paths,
     MountLayer layer,
-    const BigLimits& limits)
+    const BigLimits& limits,
+    const std::optional<std::filesystem::path>& label_root = std::nullopt)
 {
     for (const auto& path : paths) {
         auto archive = std::make_shared<BigArchive>(BigArchive::open(path, limits));
-        const auto label = std::string(mount_layer_name(layer)) + ":" + path.filename().string();
+        auto display_name = path.filename().generic_string();
+        if (label_root) {
+            const auto relative = path.lexically_relative(*label_root);
+            if (!relative.empty() && *relative.begin() != "..") display_name = relative.generic_string();
+        }
+        const auto label = std::string(mount_layer_name(layer)) + ":" + display_name;
         order.push_back(label);
         for (std::size_t index = 0; index < archive->entries().size(); ++index) {
             const auto& entry = archive->entries()[index];
@@ -167,12 +190,12 @@ VirtualFileSystem VirtualFileSystem::mount(const DataSelection& selection, const
     mount_loose(vfs.resources_, selection.zero_hour_root, MountLayer::zero_hour_loose, excluded);
     mount_archives(vfs.resources_, vfs.archive_mount_order_, resolve_mod_archives(selection.mods),
         MountLayer::mod_archive, limits);
-    mount_archives(vfs.resources_, vfs.archive_mount_order_, discover_archives(selection.zero_hour_root),
-        MountLayer::zero_hour_archive, limits);
+    mount_archives(vfs.resources_, vfs.archive_mount_order_, discover_archives(selection.zero_hour_root, excluded),
+        MountLayer::zero_hour_archive, limits, selection.zero_hour_root);
     if (generals_canonical != zh_canonical) {
         mount_loose(vfs.resources_, selection.generals_root, MountLayer::generals_loose, std::nullopt);
         mount_archives(vfs.resources_, vfs.archive_mount_order_, discover_archives(selection.generals_root),
-            MountLayer::generals_archive, limits);
+            MountLayer::generals_archive, limits, selection.generals_root);
     }
     return vfs;
 }
