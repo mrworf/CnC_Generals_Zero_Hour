@@ -85,22 +85,24 @@ milestones:
   - id: M6
     title: "SDL platform and input without GPU"
     file: delivery/milestones/cnc-generals-zero-hour/M6-sdl-platform.md
-    status: in_progress
+    status: completed
     dependencies: [M1, M3]
     optional: false
     started_at: "2026-09-20T04:12:51Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_06_plan_01.md"
+    completed_at: "2026-09-20T04:19:59Z"
+    commit_hash: fe01847
+    evidence: "Two completed slices plus evidence/platform/cnc-generals-zero-hour/M6-sdl-platform.md. All four presets passed two platform tests; GCC Debug passed the full 26-test suite. An approved interactive Wayland smoke exercised window/input/text/IME/clipboard/focus/resize/fullscreen/shutdown without GPU creation. Root acceptance reran the GCC Debug platform suite and verified source/packet freshness."
+    notes: "PRE-016/PRE-019 accepted on Wayland. A forced-X11 diagnostic retry under the Wayland session exited with signal 11 and makes no X11 claim; it does not invalidate the required one-session Wayland acceptance. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_06_plan_01.md; slice commits: 1746732, fe01847."
   - id: M7
     title: "renderer core contracts with `RecordingGpuDevice`"
     file: delivery/milestones/cnc-generals-zero-hour/M7-renderer-core.md
-    status: pending
+    status: in_progress
     dependencies: [M2, M3, M4]
     optional: false
+    started_at: "2026-09-20T04:19:59Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_07_plan_01.md"
   - id: M8
     title: "UI, fonts, and input integration"
     file: delivery/milestones/cnc-generals-zero-hour/M8-ui-fonts.md

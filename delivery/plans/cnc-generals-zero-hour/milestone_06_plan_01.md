@@ -19,7 +19,7 @@ Dependencies M1 and M3 are accepted in the milestone packet. SDL3 3.4.14 is avai
 ## Slice index
 
 1. [Slice 01 — injected SDL event and input state contract](milestone_06_plan_01_slice_01.md) — completed in `1746732`.
-2. [Slice 02 — SDL window lifecycle and interactive PRE-016 smoke](milestone_06_plan_01_slice_02.md)
+2. [Slice 02 — SDL window lifecycle and interactive PRE-016 smoke](milestone_06_plan_01_slice_02.md) — completed in `fe01847`.
 
 The slices are dependency ordered and all are defined before production edits. Slice 01 provides the translator/state model consumed by the real window in slice 02.
 
