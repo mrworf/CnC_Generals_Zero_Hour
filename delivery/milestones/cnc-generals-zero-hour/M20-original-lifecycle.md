@@ -22,7 +22,7 @@ Full map/mission/skirmish scenario acceptance is M21; hardware scenes M22; inter
 
 ## Source Requirements
 
-[Runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md): RC-001, RC-002, RC-004 and RC-005; RC-003 retains downstream acceptance. This supersedes conflicting ordering in the [migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-002 remaining original call sites, SE-003, reachable providers from SE-004–SE-008, SE-001/SE-010 identity and assurance. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 remain governing scope/compatibility authority. Revisions/commits are in status.yaml.
+[Runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md): RC-001, RC-002, RC-004, RC-005 and RC-006; RC-003 retains downstream acceptance. This supersedes conflicting ordering in the [migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-002 remaining original call sites, SE-003, reachable providers from SE-004–SE-008, SE-001/SE-010 identity and assurance. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 remain governing scope/compatibility authority. Revisions/commits are in status.yaml.
 
 ## Preconditions
 
@@ -46,6 +46,12 @@ Witness original GameMain -> GameEngine::init/postProcessLoadAll/execute/update 
 
 Null/recording sinks are allowed only at external graphics/audio device boundaries. Keep real original GameClient, resource ownership, registries and state. Verify-assets may exit before initialization as specified by the base plan. Any unavailable operation outside the offline closure must fail clearly when entered. Remove excluded retail deletion/protection/online-service behavior. Preserve useful native backend implementations.
 
+Use one explicit offline headless test profile across all four presets: no active match, existing `-noshellmap` semantics, intro/sizzle disabled through explicit test-mode GlobalData configuration, bounded genuine updates, original reset, then orderly quit. Release must not rely on a Debug-only command-line option. Preserve normal gameplay defaults and original GameClient, window manager, script/view and GameLogic updates. Full cinematics, shell maps and interactive flows retain their later domain acceptance owners.
+
+Enumerate logical resources as consumers are connected, including font/WND/INI/CSF dependencies and `Menus/BlankWindow.wnd` during reset. Original UI/layout objects and parsers remain required with null devices. Project-owned fixtures exercise real callbacks without retail-dependent skips; separately provision full read-only retail initialization without copying assets or changing data roots.
+
+Correct partial-initialization ownership: a pending subsystem that fails before registration must be released once and any published singleton cleared. Then unwind previously registered subsystems in reverse order. Safely handle not-yet-created globals in constructors/destructors and GameEngine destruction; preserve successful initialization order and memory-pool semantics. Stop/finalize workers before owner release and preserve the original error if teardown diagnostics also fail.
+
 ## Architecture / Security Constraints
 
 Original engine owns authoritative state/lifecycle; native adapters own OS/device/library edges. Preserve original allocators except narrow characterized portability changes. Retail roots/symlinks are read-only; never commit retail bytes/hashes/private paths. Isolate XDG writes. No alternate reduced class hidden behind a platform macro, duplicate globals, empty registry, trace-only lifecycle stage, weak stub, unresolved-symbol suppression or linker collection that hides required behavior is acceptable. Narrow platform conditionals and shared-method refactoring must preserve source behavior.
@@ -65,6 +71,10 @@ Preserve original engine interfaces and fixed-width, char16_t/UTF-16LE, bounded 
 - [ ] Removing a required original provider fails compile/link/runtime evidence; identity controls reject reduced alternate classes and witnesses without original state transitions.
 - [ ] Negative controls fail against the actual implementation; no toy/placeholder fallback satisfies acceptance.
 - [ ] Existing component tests pass; evidence names its grade: component/fixture, original-source compile/link, original-source integration or retail runtime.
+- [ ] The same explicit offline profile passes all four presets through genuine updates and original reset, using original UI/parser/resource providers without a GPU/window. Normal gameplay defaults remain unchanged.
+- [ ] Runtime witnesses compare original state before/after update and prove required provider execution; trace strings or separately incremented probe counters cannot establish success.
+- [ ] Construction/init, INI load before registration, post-load, and update/reset failures each preserve the initiating error and prove exactly-once ownership, cleared globals, and stopped workers.
+- [ ] New runtime tests retain active checks in every preset; evidence discloses existing NDEBUG settings and sanitizer leak-detection configuration, with explicit relevant allocator live-count and resource/worker ownership checks.
 
 ## Required Validation
 
@@ -72,6 +82,10 @@ Project-owned fixtures plus gated read-only retail initialization; absent/malfor
 
 Build applicable targets with linux-gcc-debug, linux-clang-debug, linux-gcc-release and linux-clang-release. Run full asset-free CTest regression at milestone acceptance plus relevant ASan/UBSan. Record exact commands/context and map formerly unproven historical obligations to real-source tests. Retail/GPU checks use explicit separate gates; defaults remain private-data/device independent. Only permitted logical/derived evidence is committed.
 
+Derive before/after state expectations from the selected source path (for example original GameLogic frame advancement together with an original message/client transition); do not create an active match solely to satisfy startup evidence. Verify target-specific compile commands and contributing objects/symbols, excluding discarded link-map sections and ambiguous basename matches; strengthen existing identity tooling and review consumed source conditional branches. Disclose assertions disabled by existing NDEBUG definitions and do not extend M19's unconditional workaround to the runtime. Leak-disabled sanitizers cannot establish leak freedom: record relevant allocator live counts and worker/resource ownership independently.
+
 ## Known Risks / Deferred Work
 
 This is a substantial coupled source port; multiple coherent tested slices belong inside this one milestone transaction. Routine missing symbols, portability or classification repairs do not justify another architecture referral. Actual scene/mission/save/network acceptance remains with M21–M25 and M15–M18 without supplying any code retroactively needed here. Preserve rejected plan 01 and its blocker evidence; on adoption generate milestone_20_plan_02.md. Unexpected required asset/backend limits follow base-plan §9 evidence-gated escalation, never reduced silent coverage.
+
+The governing plan must inventory actual providers and owned validation boundaries before implementation. Validate incremental support/data work without demanding a complete engine build as the first gate; milestone acceptance still requires the complete stated closure. Further reachable providers discovered during porting remain within this milestone's authorized scope.

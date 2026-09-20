@@ -2,7 +2,7 @@
 
 Input mode: **CHANGE_PLAN**. Product: `cnc-generals-zero-hour`. Change: `RUNTIME-CLOSURE-2026-09-20`.
 
-Current authority: [runtime dependency reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md), revision `sha256:b6a6138998e8aec0e6308f305c8d875f59e6925b136cabd2c51e54c307b18bfb`, committed at `40a1c383e04c931d938bdc5a0fe6671e0a4af249`. Its RC-001–RC-005 supersede conflicting engineering order/allocation in the supplement below and preserve every required behavior. It is an accepted architecture change plan, not a canonical Product Definition reconciliation result.
+Current authority: [runtime dependency reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md), revision `sha256:d531a7a52de8ee102a13d8d3369b7f76923e4b52b2e454782c5b47e0ded106c7`, committed at `0b10d439abed46555d80e79f539a2582add294cb`. Its RC-001–RC-006 supersede conflicting engineering order/allocation in the supplement below and preserve every required behavior. It is an accepted architecture change plan, not a canonical Product Definition reconciliation result.
 
 Authority: [original-engine migration supplement](../../../docs/zero-hour-source-engine-migration.md), revision `sha256:4e9523ec2854750b896716bfd4583e47fb65136a9a2188db9dcd4ac9b552c817`, committed at `38b608d9109d13ad1c6e3a527fe34893512d4d3f`. The [base plan](../../../docs/zero-hour-linux-port-plan.md) remains governing product/stack/compatibility authority at its revision recorded in status.yaml. No definition package or reconciliation result governs this directly authorized architecture remediation. The [review](../../../evidence/qa/cnc-generals-zero-hour/architecture-revalidation-2026-09-20.md) is evidence, not additional implementation authority.
 
@@ -49,6 +49,8 @@ M19's bounded ten-provider original support is preserved. M20 consumes it and ex
 
 ## Replacement-packet adoption
 
+The review delta RC-006 keeps the dependency graph unchanged and makes M20's offline test profile, logical resource dependencies, partial-initialization ownership and source identity evidence explicit. It requires incremental validation within the substantial integration milestone, active checks in all presets and precise sanitizer/allocator evidence. Completed M19 support evidence and all later domain gates are preserved.
+
 The active goal adopted M19–M25/M15–M18 and completed M19 before the M20 order blocker. Preserve this goal and all earlier history. On later delivery resume explicitly adopt the committed readiness-approved revision and changed M20 contract. Remaining order is M20, M21, M22, M23, M24, M25, M15, M16, M17, with optional M18 last. M20 is first; preserve blocked plan 01 and create plan 02 during delivery. M24 may run before the rendering branch when safe. Planning ends at the handoff; status.yaml records adoption and historical qualifications.
 
 ## Shared constraints and known gates
@@ -68,4 +70,4 @@ Retail data and Arch Vulkan/validation layers have prior component evidence; sou
 
 ## Validation and handoff
 
-The packet has 26 stable contracts: 15 historically completed component milestones, completed bounded-source M19, blocked M20 awaiting revised-packet adoption, pending M21–M25, blocked M15, pending M16/M17, and optional M18. [Traceability](traceability.md) maps all five RC and ten SE remediation IDs and preserves base-plan constraints. [Status](status.yaml) preserves history/provenance. Compiler checks structure, coverage and backward dependencies in list order; milestone-readiness owns prerequisite audit and approval. Parent planning orchestration must finalize readiness and commit provenance before downstream use.
+The packet has 26 stable contracts: 15 historically completed component milestones, completed bounded-source M19, blocked M20 awaiting revised-packet adoption, pending M21–M25, blocked M15, pending M16/M17, and optional M18. [Traceability](traceability.md) maps all six RC and ten SE remediation IDs and preserves base-plan constraints. [Status](status.yaml) preserves history/provenance. Compiler checks structure, coverage and backward dependencies in list order; milestone-readiness owns prerequisite audit and approval. Parent planning orchestration must finalize readiness and commit provenance before downstream use.

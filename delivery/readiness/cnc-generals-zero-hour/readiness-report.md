@@ -6,15 +6,15 @@
 
 ## 2. Scope and evidence basis
 
-Product `cnc-generals-zero-hour`; all 26 contracts, index, traceability and `delivery/milestones/cnc-generals-zero-hour/status.yaml` reviewed. Authority is `docs/zero-hour-runtime-closure-reconciliation.md` RC-001–RC-005, source/transaction-start commit `40a1c383e04c931d938bdc5a0fe6671e0a4af249`, plus the unchanged migration supplement and base plan. Parent records the final packet fingerprint and planning payload SHA in `workflow/delivery-planning/state.yaml` (`transaction.repository_commit`).
+Product `cnc-generals-zero-hour`; all 26 contracts, index, traceability and `delivery/milestones/cnc-generals-zero-hour/status.yaml` reviewed. Authority is `docs/zero-hour-runtime-closure-reconciliation.md` RC-001–RC-006, revision `sha256:d531a7a52de8ee102a13d8d3369b7f76923e4b52b2e454782c5b47e0ded106c7`, source/transaction-start commit `0b10d439abed46555d80e79f539a2582add294cb`, plus the unchanged migration supplement and base plan. Parent records the final packet fingerprint and planning payload SHA in `workflow/delivery-planning/state.yaml` (`transaction.repository_commit`).
 
-FACT: starting worktree contained parent/compiler-owned M20–M25, index/status/traceability and planning workflow edits; no unrelated dirty paths. No applicable AGENTS.md was found. This child owns readiness additions only and makes no commits. Original GameEngine methods, factory interface, module registration, subsystem traversal, recorder and GameState were inspected alongside setup/dependency manifests, build documentation and M19 evidence. Source references below use current repository lines.
+FACT: starting worktree contained parent/compiler-owned M20, index/status/traceability and planning workflow edits; no unrelated dirty paths. No applicable AGENTS.md was found. This child owns only the two readiness artifacts and makes no commits. The prior RC-002 source audit remains applicable; this review additionally checked original client updates, UI reset, subsystem registration/failure ownership, CommandLine intro controls, GameLogic state advancement, current identity tooling and CMake assertions alongside build documentation and presets. Source references below use current repository lines.
 
 Historical M0–M14 contracts and their time-bound pending/package wording remain immutable snapshots; current index, status and readiness qualify that evidence as components. M19 remains accepted at its bounded ten-provider grade; original UnicodeString and GameEngine MemoryPool portability are M20 deliverables under RC-004.
 
 ## 3. Automatically completed prerequisites
 
-No product implementation or new bootstrap was required. Refreshed the 34-prerequisite manifest, completed M20's component PRE references and source-semantic entry inspection, updated packet readiness, and recorded the actual runtime edges below. Tool/module availability, offline GCC Debug configuration, 3,293-path source classification and pinned miniaudio provenance passed.
+No product implementation or new bootstrap was required. Refreshed the 34-prerequisite manifest for RC-006 and recorded its concrete source-semantic checks below. Tool/module availability, four-preset enumeration, 3,293-path source classification and pinned miniaudio provenance passed. Prior offline GCC Debug configuration remains evidence from the preceding readiness audit; it was not rerun for this documentation-only change.
 
 The old readiness assertion that M19 was next is superseded. No historical completed contract or acceptance was rewritten. PRE-029 now means the complete required offline runtime, rather than a lifecycle shell depending on later domains.
 
@@ -85,6 +85,9 @@ Semantic audit below checks dependencies hidden by class declarations, registrie
 | `GameEngine/Source/Common/GameEngine.cpp:755–895` | Real update calls radar/audio/client/messages/logic; execute consults tactical-view/script time and recorder cleanup. Null sinks stay at graphics/audio device boundaries and preserve source CPU state/resources. | M22 real Vulkan and M23 interactive/media acceptance remain later; M20 never needs a physical GPU/display. |
 | `GameEngine/Source/Common/GameEngine.cpp:565–566,777–785` | Source explicitly sets offline TheNetwork = NULL and conditionally updates network. M20 resolves required symbols and rejects unsupported entry without fabricating a network; required non-network logic update still runs. | Full POSIX lobby/transport/lockstep is M25; no hidden network peer prerequisite for M20. |
 | `GameEngine/Source/Common/GameEngine.cpp:198–239,709–740`; `GameEngine/Source/Common/System/SubsystemInterface.cpp:159–205` | Destructor, reset, post-load and reverse shutdown traverse actual providers; init registers after init/data load, so failure ownership needs explicit repair/testing. M20 owns safe partial initialization and exactly-once reverse teardown, including source UI reset calls and removed-service edges. | Teardown cannot be postponed until interactive or save/network milestones. |
+| `GameEngine/Source/Common/CommandLine.cpp:779–791`; `GameEngine/Source/GameClient/GameClient.cpp:532–581`; `GameEngine.cpp:713–720` | RC-006 gives M20 one explicit profile across all presets. Debug-only `parseNoLogo` cannot configure Release; original client updates and reset still require real UI/layout/parser/resource providers, including `Menus/BlankWindow.wnd`. M20 enumerates required logical assets and creates ordinary project-owned fixtures independently of provisioned retail initialization. | No display/GPU entry dependency; normal defaults and later cinematic/shell-map/interactive acceptance remain unchanged. |
+| `GameEngine/Source/GameLogic/System/GameLogic.cpp:3572–3638,3824–3830`; `tools/check_original_identity.py:20–35` | Original logic publishes its frame to GameClient and advances source state when not starting a game. M20 derives before/after witnesses from the selected path. Current scanner checks the whole compilation database, basename text in link maps and stdout; RC-006 requires target-specific contributing-object/symbol identity, conditional-branch review and actual state evidence. | Current scanner is reusable scaffolding, not sufficient original-runtime acceptance; strengthening it belongs to M20. |
+| `GameEngine/Source/Common/System/SubsystemInterface.cpp:159–172`; `CMakeLists.txt:100` | Initialization/data load precede list registration, so pending objects/globals need explicit cleanup before prior-provider reverse unwind. M20 tests construction/init, pre-registration data load, post-load and update/reset failures, including worker ownership and original-error retention. Existing `zh_wwsupport` NDEBUG settings must be disclosed; new runtime tests need active checks and allocator/resource evidence separate from leak-disabled sanitizers. | No reopening of completed M19 or full-runtime-build entry requirement; incremental support/data validation is authorized inside M20. |
 
 Paths abbreviated with `GameEngine/` or `GameEngineDevice/` are under `GeneralsMD/Code/`. INFERENCE: the integrated ownership eliminates the recorded backward implementation dependency because every reachable provider, including newly discovered transitive providers, has one authorized owner. Validation needed before M20 completion remains actual compile/link/runtime witnesses, missing-provider negative control, real state transitions, all-stage failures and fixture/read-only-retail tests. The audit does not claim a static listing exhausts every translation unit.
 
@@ -135,7 +138,9 @@ All 26 contracts contain Preconditions and Readiness checks; no historical compl
 
 After accepted M20, M21 validates complete source scenarios. M22 receives host/GPU/layers for scenes and M23 receives session access for interactions; M24 independently consumes M21 state for full saves/replays. M25 consumes its CRC plus existing transport, then M15/M16 join complete gameplay/network behavior. M17 receives clean distro runners and Arch runtime evidence. Optional M18 never feeds the Linux release chain.
 
-The future source-port results, new hardware scenarios and clean distro runners were simulated, not executed. Observed local configuration only verifies currently installed dependencies. Missing packages on a fresh machine require the documented host provisioning before entry; no undeclared package or secret is assumed.
+RC-006 sharpens this simulation: first support/data slices validate their own providers before the whole engine links; final M20 acceptance uses the same explicit offline profile across all presets, ordinary fixtures for original parsers/UI resources, then separately provisioned retail initialization. Missing fixture resources, cleanup repairs and identity/assertion strengthening are M20 outputs, never user-supplied prerequisites. No new external edge or cycle appears.
+
+The future source-port results, new hardware scenarios and clean distro runners were simulated, not executed. Observed tool/module availability and prior local configuration verify only installed dependencies. Missing packages on a fresh machine require the documented host provisioning before entry; no undeclared package or secret is assumed.
 
 ## 12. Commands run and results
 
@@ -147,11 +152,11 @@ The future source-port results, new hardware scenarios and clean distro runners 
 | `pkg-config --modversion sdl3 freetype2 fontconfig zlib libavformat libavcodec libavutil libswscale libswresample` | All resolve; SDL 3.4.14 and required distribution modules present. |
 | `pacman -Q vulkan-validation-layers` | Installed 1.4.357.0-1; GPU not opened. |
 | Retail directory checks and `git check-ignore original_game_symlink` | Supplied roots exist and link is ignored; no copying/hashing/writing. |
-| `cmake --list-presets`, `cmake --preset linux-gcc-debug` | All four presets listed; offline configure/generate passed. |
+| `cmake --list-presets` | All four presets listed now; previous audit's offline GCC Debug configure remains retained evidence, not rerun. |
 | `python3 tools/original_source_classification.py --check` | 3,293 paths covered exactly once. Classification is inventory evidence, not runtime closure acceptance. |
 | `python3 tests/audio/test_miniaudio_provenance.py` | 3/3 pass for project dependency pin/license/provenance. |
-| Original factory/registry/subsystem/recorder/GameState inspection | Source-backed RC-002 ownership audit above; no runtime success inferred. |
-| Initial optional `scripts` directory search and multi-file patch | No scripts directory; initial patch context mismatch caused no change and corrected patch applied. |
+| Original client/reset/subsystem/CommandLine/GameLogic, identity scanner and CMake inspection | RC-006 source-backed profile/resource/failure/identity/assertion checks above; prior RC-002 audit remains applicable, no runtime success inferred. |
+| Initial identity-tool lookup | Guessed `tools/original_source_identity.py` did not exist; `rg --files` resolved `tools/check_original_identity.py`, which was then read. No artifact or prerequisite was inferred absent from the failed lookup. |
 | Compiler structural validator with evidenced completed/blocked states allowed | Passed all 26 milestone contracts. |
 | Final contract/graph/PRE/link inspection and `git diff --check` | Passed: 26 contracts, backward-only graph, 34 PRE IDs, all readiness sections/local links and preserved M19/M20 history; no whitespace errors. Final packet fingerprint returned to parent. |
 
@@ -159,13 +164,10 @@ No full build, milestone acceptance, retail traversal or physical device test wa
 
 ## 13. Files changed
 
-- `delivery/milestones/cnc-generals-zero-hour/M20-original-lifecycle.md` — precise component PREs, semantic audit and read-only-root entry checks.
-- `delivery/milestones/cnc-generals-zero-hour/index.md` — current readiness result and next boundary.
-- `delivery/milestones/cnc-generals-zero-hour/status.yaml` — readiness result only; historical statuses preserved.
-- `delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md` — current source/provenance, bounded M19, integrated M20 and consumers.
-- `delivery/readiness/cnc-generals-zero-hour/readiness-report.md` — complete current audit and semantic dependency proof.
+- `delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md` — current RC-006 source/provenance and precise M20-owned prerequisites.
+- `delivery/readiness/cnc-generals-zero-hour/readiness-report.md` — current audit and RC-006 semantic dependency/validation proof.
 
-Compiler changes to M20–M25/index/status/traceability and parent workflow edits remain parent-owned. This child made no workflow, product-source, retail or implementation-plan changes and no commits. Configure refreshed ignored build outputs only.
+Compiler changes to M20/index/status/traceability and parent workflow edits remain parent-owned. This child made no milestone, workflow, product-source, retail or implementation-plan changes and no commits. No configure/build/runtime acceptance was executed in this review.
 
 ## 14. Remaining blockers
 
