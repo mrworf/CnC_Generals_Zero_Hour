@@ -116,6 +116,10 @@ target_sources(zh_renderer_sdl_gpu PRIVATE
 )
 target_include_directories(zh_renderer_sdl_gpu PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
+target_sources(zh_platform_sdl PRIVATE src/platform/sdl_events.cpp)
+target_include_directories(zh_platform_sdl PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(zh_platform_sdl PUBLIC zh_wwsupport)
+
 target_sources(zh_os_posix PRIVATE src/foundation/platform.cpp)
 target_include_directories(zh_os_posix PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
@@ -271,6 +275,11 @@ if(ZH_BUILD_TESTS)
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/headless/test_process_isolation.py"
     --executable "$<TARGET_FILE:zh_main>")
   set_tests_properties(headless_process_isolation PROPERTIES LABELS headless TIMEOUT 30)
+
+  add_executable(platform_sdl_event_tests tests/platform/test_sdl_events.cpp)
+  target_link_libraries(platform_sdl_event_tests PRIVATE zh_platform_sdl)
+  add_test(NAME platform_sdl_events COMMAND platform_sdl_event_tests)
+  set_tests_properties(platform_sdl_events PROPERTIES LABELS platform)
 
   add_executable(data_config_tests tests/data/test_data_config.cpp)
   target_link_libraries(data_config_tests PRIVATE zh_data)
