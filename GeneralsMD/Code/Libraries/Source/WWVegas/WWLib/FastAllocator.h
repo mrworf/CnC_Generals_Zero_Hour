@@ -43,7 +43,14 @@
 // Include files
 //
 #include "always.h"
+#if defined(_MSC_VER)
 #include "wwdebug.h"
+#else
+#include <cassert>
+#ifndef WWASSERT
+#define WWASSERT(condition) assert(condition)
+#endif
+#endif
 #include "mutex.h"
 #include <malloc.h>
 #include <stddef.h> //size_t & ptrdiff_t definition
@@ -724,7 +731,6 @@ void main(){
 
 
 #endif //sentry
-
 
 
 

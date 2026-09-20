@@ -24,7 +24,12 @@
 #endif
 
 #include "always.h"
+#if defined(_MSC_VER)
 #include "thread.h"
+#else
+#include <atomic>
+#include <thread>
+#endif
 
 
 // Always use mutex or critical section when accessing the same data from multiple threads!
@@ -117,11 +122,19 @@ public:
 
 class FastCriticalSectionClass
 {
+#if defined(_MSC_VER)
 	unsigned Flag;
+#else
+	std::atomic_flag Flag = ATOMIC_FLAG_INIT;
+#endif
 
 public:
 	// Name can (and usually should) be NULL. Use name only if you wish to create a globally unique mutex
-	FastCriticalSectionClass() : Flag(0) {}
+	FastCriticalSectionClass()
+#if defined(_MSC_VER)
+		: Flag(0)
+#endif
+	{}
 
 	class LockClass
 	{
@@ -129,6 +142,7 @@ public:
 	public:
 		__forceinline LockClass(FastCriticalSectionClass& critical_section) : cs(critical_section)
 		{
+#if defined(_MSC_VER) && defined(_M_IX86)
 		  unsigned& nFlag=cs.Flag;
 
 		  #define ts_lock _emit 0xF0
@@ -159,11 +173,20 @@ public:
 
       BitSet:
         ;
+#else
+			while (cs.Flag.test_and_set(std::memory_order_acquire)) {
+				std::this_thread::yield();
+			}
+#endif
 		}
 
 		~LockClass()
 		{
+#if defined(_MSC_VER) && defined(_M_IX86)
       cs.Flag=0;
+#else
+			cs.Flag.clear(std::memory_order_release);
+#endif
 		}
     
 	private:

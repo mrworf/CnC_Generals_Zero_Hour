@@ -1,6 +1,6 @@
 # M19 slice 03: original WW support runtime boundary and milestone evidence
 
-Status: pending
+Status: completed
 
 ## Goal and observable outcome
 
@@ -51,3 +51,7 @@ Focused positive and negative support tests, all four preset builds and asset-fr
 ## Commit boundary
 
 One commit containing the WW support closure, tests, final classification/evidence, and completion records for this slice and governing plan.
+
+## Completion record
+
+`zh_wwsupport` now compiles seven actual repository-owned WWLib/WWMath/WWSaveLoad providers and no longer compiles the generic bootstrap component. Its asset-free probe exercises GCD/LCM, string duplication, allocator allocate/free teardown, triangle containment, fixed 32-bit little-endian chunk round-trip and truncated-input rejection, pointer remap success/failure, nearest-even rounding, and fixed-width `char16_t` UTF-16. Compiler-command, link-map, and runtime-witness identity gates prove the required objects execute. All four native preset suites passed 62/62, and the Clang ASan/UBSan original-support suite passed 7/7 with leak detection disabled for the established restricted environment. A pre-existing two-process LAN output race found during regression was repaired by preserving the accepted-peer witness when command and disconnect arrive in one pump. Commit: pending.

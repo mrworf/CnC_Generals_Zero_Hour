@@ -30,6 +30,13 @@ PRODUCTION_SOURCES = {
     "GeneralsMD/Code/Libraries/Source/Compression/EAC/refabout.cpp",
     "GeneralsMD/Code/Libraries/Source/Compression/EAC/refdecode.cpp",
     "GeneralsMD/Code/Libraries/Source/Compression/EAC/refencode.cpp",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/FastAllocator.cpp",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/chunkio.cpp",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/gcd_lcm.cpp",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/nstrdup.cpp",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ramfile.cpp",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/tri.cpp",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/pointerremap.cpp",
 }
 
 PRODUCTION_PROVIDER_RE = re.compile(r"^(?!.*(?:bootstrap|fixture|toy)).+\.(?:c|cc|cpp|cxx)$", re.IGNORECASE)

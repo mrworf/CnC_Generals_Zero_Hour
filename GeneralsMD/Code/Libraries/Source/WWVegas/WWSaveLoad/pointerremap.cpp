@@ -37,7 +37,12 @@
 
 #include "pointerremap.h"
 #include "refcount.h"
+#if defined(_MSC_VER)
 #include "wwdebug.h"
+#else
+#include <cassert>
+#define WWASSERT(condition) assert(condition)
+#endif
 
 
 const int POINTER_TABLES_GROWTH_STEP = 4096;
@@ -206,5 +211,3 @@ int __cdecl PointerRemapClass::ptr_request_compare_function(void const * ptr1, v
 	}
 	return(1);
 }
-
-

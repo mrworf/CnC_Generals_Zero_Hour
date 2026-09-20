@@ -10,7 +10,13 @@ import subprocess
 import sys
 
 
-def verify(compile_commands: pathlib.Path, link_map: pathlib.Path, executable: pathlib.Path, required: list[str]) -> None:
+def verify(
+    compile_commands: pathlib.Path,
+    link_map: pathlib.Path,
+    executable: pathlib.Path,
+    required: list[str],
+    witness: str = "original-support runtime provider=GeneralsMD EAC Refpack 1.01",
+) -> None:
     commands = json.loads(compile_commands.read_text(encoding="utf-8"))
     compiled = {pathlib.Path(entry["file"]).as_posix() for entry in commands}
     map_text = link_map.read_text(encoding="utf-8", errors="replace")
@@ -23,7 +29,7 @@ def verify(compile_commands: pathlib.Path, link_map: pathlib.Path, executable: p
     result = subprocess.run([str(executable)], text=True, capture_output=True, check=False)
     if result.returncode != 0:
         raise ValueError(f"original runtime witness failed: {result.stderr.strip()}")
-    if "original-support runtime provider=GeneralsMD EAC Refpack 1.01" not in result.stdout:
+    if witness not in result.stdout:
         raise ValueError("original runtime witness is missing")
 
 
@@ -33,9 +39,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--link-map", type=pathlib.Path, required=True)
     parser.add_argument("--executable", type=pathlib.Path, required=True)
     parser.add_argument("--required", action="append", default=[])
+    parser.add_argument("--witness", default="original-support runtime provider=GeneralsMD EAC Refpack 1.01")
     args = parser.parse_args(argv)
     try:
-        verify(args.compile_commands, args.link_map, args.executable, args.required)
+        verify(args.compile_commands, args.link_map, args.executable, args.required, args.witness)
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(f"original identity error: {error}", file=sys.stderr)
         return 1

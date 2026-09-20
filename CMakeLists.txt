@@ -83,7 +83,30 @@ target_include_directories(zh_compression
 )
 target_link_libraries(zh_compression PUBLIC zh_build_options)
 set_property(TARGET zh_compression PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_LEGACY_ZH_COMPRESSION_SOURCES}")
-zh_add_bootstrap_component(zh_wwsupport ZH_LEGACY_ZH_WWSUPPORT_SOURCES)
+add_library(zh_wwsupport STATIC
+  src/foundation/byte_codec.cpp
+  src/foundation/format.cpp
+  src/foundation/numeric.cpp
+  src/foundation/unicode.cpp
+  src/original_support/ww_support.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/FastAllocator.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/chunkio.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/gcd_lcm.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/nstrdup.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ramfile.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/tri.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/pointerremap.cpp
+)
+target_compile_definitions(zh_wwsupport PRIVATE NDEBUG)
+target_include_directories(zh_wwsupport
+  PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad"
+)
+target_link_libraries(zh_wwsupport PUBLIC zh_build_options)
+set_property(TARGET zh_wwsupport PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_LEGACY_ZH_WWSUPPORT_SOURCES}")
 zh_add_bootstrap_component(zh_w3d ZH_LEGACY_ZH_W3D_SOURCES)
 zh_add_bootstrap_component(zh_wwshade ZH_LEGACY_ZH_WWSHADE_SOURCES)
 zh_add_bootstrap_component(zh_game_engine ZH_LEGACY_ZH_GAME_ENGINE_SOURCES)
@@ -149,14 +172,6 @@ add_library(zh_lan STATIC
 )
 target_include_directories(zh_lan PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_lan PUBLIC zh_wwsupport zh_os_posix zh_build_options)
-
-target_sources(zh_wwsupport PRIVATE
-  src/foundation/byte_codec.cpp
-  src/foundation/format.cpp
-  src/foundation/numeric.cpp
-  src/foundation/unicode.cpp
-)
-target_include_directories(zh_wwsupport PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 target_sources(zh_renderer_sdl_gpu PRIVATE
   src/renderer/contract.cpp
@@ -476,6 +491,27 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(foundation_abi_codec_tests PRIVATE zh_wwsupport)
   add_test(NAME foundation_abi_codec COMMAND foundation_abi_codec_tests)
   set_tests_properties(foundation_abi_codec PROPERTIES LABELS foundation)
+
+  add_executable(original_wwsupport_tests tests/original_support/test_original_wwsupport.cpp)
+  target_link_libraries(original_wwsupport_tests PRIVATE zh_wwsupport)
+  target_link_options(original_wwsupport_tests PRIVATE
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-wwsupport.link.map")
+  add_test(NAME original_wwsupport_runtime COMMAND original_wwsupport_tests)
+  set_tests_properties(original_wwsupport_runtime PROPERTIES LABELS "original-support;source-identity")
+  add_test(NAME original_wwsupport_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-wwsupport.link.map"
+    --executable "$<TARGET_FILE:original_wwsupport_tests>"
+    --witness "original-support runtime provider=GeneralsMD WWLib/WWMath/WWSaveLoad"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/FastAllocator.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/chunkio.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/gcd_lcm.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/nstrdup.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ramfile.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/tri.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/pointerremap.cpp")
+  set_tests_properties(original_wwsupport_identity PROPERTIES LABELS "original-support;source-identity")
 
   add_executable(foundation_platform_tests tests/foundation/test_platform.cpp)
   target_link_libraries(foundation_platform_tests PRIVATE zh_os_posix)

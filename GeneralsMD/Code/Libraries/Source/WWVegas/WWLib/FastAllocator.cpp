@@ -16,8 +16,8 @@
 **	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "fastallocator.h"
-#include <new.h>
+#include "FastAllocator.h"
+#include <new>
 
 static FastAllocatorGeneral* generalAllocator; //This general allocator will do all allocations for us.
 
@@ -39,4 +39,3 @@ FastAllocatorGeneral::FastAllocatorGeneral() : MemoryLeakLogEnabled(false), Allo
 		alloc_size+=ALLOC_STEP;
 	}
 }
-

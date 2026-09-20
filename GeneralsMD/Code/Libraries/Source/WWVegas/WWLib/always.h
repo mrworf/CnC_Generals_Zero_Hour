@@ -41,6 +41,16 @@
 #define ALWAYS_H
 
 #include <assert.h>
+#include <cstddef>
+
+#if !defined(_MSC_VER)
+#ifndef __cdecl
+#define __cdecl
+#endif
+#ifndef __forceinline
+#define __forceinline inline
+#endif
+#endif
 
 // Disable warning about exception handling not being enabled. It's used as part of STL - in a part of STL we don't use.
 #pragma warning(disable : 4530)
@@ -73,7 +83,7 @@
 
 #if 1 // (gth) killing the Generals Memory Manager!
 
-#ifndef _OPERATOR_NEW_DEFINED_
+#if defined(_MSC_VER) && !defined(_OPERATOR_NEW_DEFINED_)
 
 	#define _OPERATOR_NEW_DEFINED_
 
@@ -96,7 +106,7 @@
 	inline void* __cdecl operator new[]						(size_t s, void *p) { return p; }
 	inline void __cdecl operator delete[]					(void *, void *p)		{ }
 
-#endif
+#endif // _MSC_VER && !_OPERATOR_NEW_DEFINED_
 
 #if (defined(_DEBUG) || defined(_INTERNAL)) 
 	#define MSGW3DNEW(MSG)					new( MSG, 0 )

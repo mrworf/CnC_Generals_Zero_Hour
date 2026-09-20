@@ -1806,7 +1806,7 @@ GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/CallbackHook.h	excluded	M19	defer
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/Convert.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/Except.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/FONT.H	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
-GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/FastAllocator.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
+GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/FastAllocator.cpp	production-compiled	GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/FastAllocator.cpp	compiled and runtime-witnessed by the M19 original-support harness	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/FastAllocator.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/HASHLIST.H	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/IFF.H	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
@@ -1871,7 +1871,7 @@ GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/bsurface.h	excluded	M19	deferred 
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/buff.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/bufffile.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/bufffile.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
-GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/chunkio.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
+GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/chunkio.cpp	production-compiled	GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/chunkio.cpp	compiled and runtime-witnessed by the M19 original-support harness	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/chunkio.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/convert.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/cpudetect.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
@@ -1886,7 +1886,7 @@ GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/dsurface.cpp	excluded	M19	deferre
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/dsurface.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ffactory.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ffactory.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
-GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/gcd_lcm.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
+GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/gcd_lcm.cpp	production-compiled	GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/gcd_lcm.cpp	compiled and runtime-witnessed by the M19 original-support harness	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/gcd_lcm.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/growmix.h	excluded	none	manifest input is absent from the repository or outside its source boundary	ZH_LEGACY_UNAVAILABLE_SOURCE_RECORDS
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/hash.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
@@ -1916,7 +1916,7 @@ GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/multilist.h	excluded	M19	deferred
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/mutex.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/mutex.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/notifier.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
-GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/nstrdup.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
+GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/nstrdup.cpp	production-compiled	GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/nstrdup.cpp	compiled and runtime-witnessed by the M19 original-support harness	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/nstrdup.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ntree.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/palette.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
@@ -1924,7 +1924,7 @@ GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/pcx.H	excluded	M19	deferred until
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/pcx.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/pipe.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/pk.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
-GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ramfile.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
+GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ramfile.cpp	production-compiled	GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ramfile.cpp	compiled and runtime-witnessed by the M19 original-support harness	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/random.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/rawfile.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/rc4.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
@@ -2057,7 +2057,7 @@ GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/rect.h	excluded	M19	deferred unt
 GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/sphere.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/tcbspline.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/tcbspline.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
-GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/tri.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
+GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/tri.cpp	production-compiled	GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/tri.cpp	compiled and runtime-witnessed by the M19 original-support harness	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/tri.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/v3_rnd.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/v3_rnd.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
@@ -2089,7 +2089,7 @@ GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/parametertypes.h	excluded	M1
 GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/persist.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/persistfactory.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/persistfactory.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
-GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/pointerremap.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
+GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/pointerremap.cpp	production-compiled	GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/pointerremap.cpp	compiled and runtime-witnessed by the M19 original-support harness	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/pointerremap.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/postloadable.h	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES
 GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/saveload.cpp	excluded	M19	deferred until the M19 original WW support provider is linked	ZH_LEGACY_ZH_WWSUPPORT_SOURCES

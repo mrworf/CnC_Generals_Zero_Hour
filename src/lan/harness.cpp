@@ -59,6 +59,12 @@ int run_headless_peer(const HarnessConfig& config, std::ostream& output, std::os
                 return 0;
             }
             if (config.role == HarnessRole::host && session.state() == SessionState::disconnected) {
+                if (!reported_connection && session.remote_address()) {
+                    output << "lan: joined peer=" << format_address(*session.remote_address())
+                           << " data-identity=" << config.data_identity
+                           << " map-identity=" << config.map_identity << '\n';
+                    reported_connection = true;
+                }
                 if (session.received_commands() != std::vector<std::string>{"m11-command"}) {
                     errors << "lan: peer disconnected without expected command\n";
                     return 4;
