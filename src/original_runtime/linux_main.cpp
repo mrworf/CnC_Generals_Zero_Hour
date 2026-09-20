@@ -53,6 +53,10 @@ void load_ini(const char *path, INILoadType type, Xfer *xfer)
 		throw std::runtime_error(error.mFailureMessage ? error.mFailureMessage :
 			(std::string("failed to parse INI: ") + path));
 	}
+	catch (const std::exception& error)
+	{
+		throw std::runtime_error(std::string("failed to load INI ") + path + ": " + error.what());
+	}
 	catch (...)
 	{
 		throw std::runtime_error(std::string("failed to load INI: ") + path);

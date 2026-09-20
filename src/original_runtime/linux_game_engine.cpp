@@ -1,6 +1,8 @@
 #include "PreRTS.h"
 
 #include "Common/ArchiveFileSystem.h"
+#include "Common/ArchiveFile.h"
+#include "Common/file.h"
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
 #include "Common/FunctionLexicon.h"
@@ -8,6 +10,8 @@
 #include "Common/ModuleFactory.h"
 #include "Common/Radar.h"
 #include "Common/ThingFactory.h"
+#include "Common/RAMFile.h"
+#include "Common/StreamingArchiveFile.h"
 #include "GameClient/Display.h"
 #include "GameClient/DisplayString.h"
 #include "GameClient/DisplayStringManager.h"
@@ -30,7 +34,11 @@
 #include <cstring>
 #include <cstdlib>
 #include <filesystem>
+#include <limits>
+#include <map>
+#include <memory>
 #include <stdexcept>
+#include <vector>
 
 namespace {
 
@@ -52,18 +60,196 @@ LifecycleReport g_lifecycleReport;
 Int g_benchmarkTimer = -1;
 UnsignedInt g_deviceAcquisitionAttempts = 0;
 
+UnsignedInt read_big_endian(File *file)
+{
+	UnsignedByte bytes[4]{};
+	if (file->read(bytes, sizeof(bytes)) != sizeof(bytes))
+		throw std::runtime_error("truncated BIG archive header");
+	return (UnsignedInt(bytes[0]) << 24U) | (UnsignedInt(bytes[1]) << 16U) |
+		(UnsignedInt(bytes[2]) << 8U) | UnsignedInt(bytes[3]);
+}
+
+UnsignedInt read_big_little_endian(File *file)
+{
+	UnsignedByte bytes[4]{};
+	if (file->read(bytes, sizeof(bytes)) != sizeof(bytes))
+		throw std::runtime_error("truncated BIG archive header");
+	return UnsignedInt(bytes[0]) | (UnsignedInt(bytes[1]) << 8U) |
+		(UnsignedInt(bytes[2]) << 16U) | (UnsignedInt(bytes[3]) << 24U);
+}
+
+class LinuxBIGFile final : public ArchiveFile
+{
+public:
+	LinuxBIGFile() { m_file = NULL; }
+	File *openFile(const Char *filename, Int access = 0) override
+	{
+		const ArchivedFileInfo *info = find(filename);
+		if (!info) return NULL;
+		RAMFile *file = BitTest(access, File::STREAMING) ?
+			static_cast<RAMFile *>(newInstance(StreamingArchiveFile)) : newInstance(RAMFile);
+		file->deleteOnClose();
+		if (!file->openFromArchive(m_file, info->m_filename, info->m_offset, info->m_size))
+		{
+			file->close();
+			return NULL;
+		}
+		if (!(access & File::WRITE)) return file;
+		File *local = TheLocalFileSystem->openFile(filename, access);
+		if (local) file->copyDataToFile(local);
+		file->close();
+		return local;
+	}
+	Bool getFileInfo(const AsciiString& filename, FileInfo *fileInfo) const override
+	{
+		const ArchivedFileInfo *info = find(filename.str());
+		if (!info || !fileInfo) return FALSE;
+		if (!TheLocalFileSystem->getFileInfo(AsciiString(m_file->getName()), fileInfo)) return FALSE;
+		fileInfo->sizeHigh = 0;
+		fileInfo->sizeLow = info->m_size;
+		return TRUE;
+	}
+	void closeAllFiles() override {}
+	AsciiString getName() override { return m_name; }
+	AsciiString getPath() override { return m_path; }
+	void setSearchPriority(Int) override {}
+	void close() override {}
+	void setIdentity(const Char *path)
+	{
+		m_path = path;
+		m_name = std::filesystem::path(path ? path : "").filename().string().c_str();
+	}
+	void addEntry(const std::string& logical, const AsciiString& path, const ArchivedFileInfo& info)
+	{
+		std::string key = logical;
+		std::replace(key.begin(), key.end(), '/', '\\');
+		std::transform(key.begin(), key.end(), key.begin(),
+			[](unsigned char value) { return static_cast<char>(std::tolower(value)); });
+		if (!m_entries.emplace(key, info).second)
+			throw std::runtime_error("duplicate BIG archive logical path");
+		addFile(path, &info);
+	}
+private:
+	const ArchivedFileInfo *find(const Char *filename) const
+	{
+		if (!filename) return NULL;
+		std::string key(filename);
+		std::replace(key.begin(), key.end(), '/', '\\');
+		std::transform(key.begin(), key.end(), key.begin(),
+			[](unsigned char value) { return static_cast<char>(std::tolower(value)); });
+		auto found = m_entries.find(key);
+		return found == m_entries.end() ? NULL : &found->second;
+	}
+	std::map<std::string, ArchivedFileInfo> m_entries;
+	AsciiString m_name;
+	AsciiString m_path;
+};
+
 class LinuxArchiveFileSystem final : public ArchiveFileSystem
 {
 public:
-	void init() override {}
+	void init() override { loadBigFilesFromDirectory(AsciiString(""), AsciiString("*.big"), FALSE); }
 	void update() override {}
 	void reset() override {}
 	void postProcessLoad() override {}
-	ArchiveFile *openArchiveFile(const Char *) override { return NULL; }
-	void closeArchiveFile(const Char *) override {}
-	void closeAllArchiveFiles() override {}
-	void closeAllFiles() override {}
-	Bool loadBigFilesFromDirectory(AsciiString, AsciiString, Bool) override { return FALSE; }
+	ArchiveFile *openArchiveFile(const Char *filename) override
+	{
+		File *input = TheLocalFileSystem->openFile(filename, File::READ | File::BINARY);
+		if (!input) return NULL;
+		try
+		{
+			const Int signedSize = input->size();
+			if (signedSize < 16)
+				throw std::runtime_error("truncated BIG archive header");
+			const UnsignedInt archiveSize = UnsignedInt(signedSize);
+			Char identifier[5]{};
+			if (input->read(identifier, 4) != 4 ||
+				(std::strcmp(identifier, "BIGF") != 0 && std::strcmp(identifier, "BIG4") != 0))
+				throw std::runtime_error("unsupported BIG archive header");
+			const UnsignedInt declaredSize = read_big_little_endian(input);
+			const UnsignedInt count = read_big_endian(input);
+			const UnsignedInt tableEnd = read_big_endian(input);
+			if (declaredSize != archiveSize || count > 1000000U ||
+				tableEnd < 16U || tableEnd > archiveSize)
+				throw std::runtime_error("invalid BIG archive table bounds");
+
+			auto archive = std::make_unique<LinuxBIGFile>();
+			archive->setIdentity(filename);
+			for (UnsignedInt index = 0; index < count; ++index)
+			{
+				if (input->position() < 0 || UnsignedInt(input->position()) > tableEnd ||
+					tableEnd - UnsignedInt(input->position()) < 9U)
+					throw std::runtime_error("truncated BIG archive entry table");
+				ArchivedFileInfo info;
+				info.m_archiveFilename = filename;
+				info.m_offset = read_big_endian(input);
+				info.m_size = read_big_endian(input);
+				if (info.m_offset > archiveSize || info.m_size > archiveSize - info.m_offset ||
+					(info.m_size != 0 && info.m_offset < tableEnd))
+					throw std::runtime_error("invalid BIG archive entry bounds");
+				std::string logical;
+				for (std::size_t length = 0; length != 1024; ++length)
+				{
+					if (input->position() < 0 || UnsignedInt(input->position()) >= tableEnd)
+						throw std::runtime_error("truncated BIG archive entry name");
+					Char character = 0;
+					if (input->read(&character, 1) != 1)
+						throw std::runtime_error("truncated BIG archive entry name");
+					if (!character) break;
+					logical.push_back(character);
+				}
+				if (logical.empty() || logical.size() == 1024)
+					throw std::runtime_error("invalid BIG archive entry name");
+				std::replace(logical.begin(), logical.end(), '/', '\\');
+				const std::size_t split = logical.find_last_of('\\');
+				std::string path = split == std::string::npos ? "" : logical.substr(0, split + 1);
+				std::string name = split == std::string::npos ? logical : logical.substr(split + 1);
+				std::transform(name.begin(), name.end(), name.begin(),
+					[](unsigned char value) { return static_cast<char>(std::tolower(value)); });
+				info.m_filename = name.c_str();
+				archive->addEntry(logical, AsciiString(path.c_str()), info);
+			}
+			archive->attachFile(input);
+			return archive.release();
+		}
+		catch (...)
+		{
+			input->close();
+			throw;
+		}
+	}
+	void closeArchiveFile(const Char *filename) override
+	{
+		auto found = m_archiveFileMap.find(AsciiString(filename));
+		if (found == m_archiveFileMap.end()) return;
+		delete found->second;
+		m_archiveFileMap.erase(found);
+	}
+	void closeAllArchiveFiles() override
+	{
+		for (auto& entry : m_archiveFileMap) delete entry.second;
+		m_archiveFileMap.clear();
+		m_rootDirectory.clear();
+	}
+	void closeAllFiles() override
+	{
+		for (auto& entry : m_archiveFileMap) entry.second->closeAllFiles();
+	}
+	Bool loadBigFilesFromDirectory(AsciiString directory, AsciiString mask, Bool overwrite) override
+	{
+		FilenameList files;
+		TheLocalFileSystem->getFileListInDirectory(directory, AsciiString(""), mask, files, TRUE);
+		Bool loaded = FALSE;
+		for (const AsciiString& filename : files)
+		{
+			ArchiveFile *archive = openArchiveFile(filename.str());
+			if (!archive) continue;
+			loadIntoDirectoryTree(archive, filename, overwrite);
+			m_archiveFileMap[filename] = archive;
+			loaded = TRUE;
+		}
+		return loaded;
+	}
 };
 
 class LinuxDisplay final : public Display

@@ -39,3 +39,7 @@ Every M20 milestone checkbox maps to command and runtime evidence. Original `Gam
 ## Commit boundary
 
 Commit assurance, final ledger/classification updates, completed plan index, and QA evidence as `delivery: M20 slice 06 accept original runtime lifecycle`.
+
+## Blocked checkpoint
+
+The read-only retail gate advanced through the new Linux BIG adapter into original object-template parsing, where `W3DDefaultDraw` requires the authoritative W3D module registry. That 19-provider registry remains assigned to M22-M23 and its original translation units reach the excluded Direct3D 8 SDK at compile time. The accepted packet neither authorizes a separated original data-provider boundary nor permits M22-M23 as prerequisites. See [M20 plan 02 retail W3D registry blocker](../../../evidence/qa/cnc-generals-zero-hour/M20-plan02-retail-w3d-blocker.md). This slice must not be accepted by substituting a generic parser, placeholder registry, or no-op draw success path.
