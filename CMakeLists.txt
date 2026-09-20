@@ -123,6 +123,10 @@ add_library(zh_simulation STATIC src/simulation/determinism.cpp)
 target_include_directories(zh_simulation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_simulation PUBLIC zh_persistence zh_build_options)
 
+add_library(zh_singleplayer STATIC src/singleplayer/session.cpp)
+target_include_directories(zh_singleplayer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(zh_singleplayer PUBLIC zh_simulation zh_data zh_os_posix zh_build_options)
+
 add_library(zh_lan STATIC
   src/lan/harness.cpp
   src/lan/posix_udp.cpp
@@ -555,6 +559,11 @@ if(ZH_BUILD_TESTS)
     LABELS determinism
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
   )
+
+  add_executable(singleplayer_session_tests tests/singleplayer/test_session.cpp)
+  target_link_libraries(singleplayer_session_tests PRIVATE zh_singleplayer)
+  add_test(NAME singleplayer_session COMMAND singleplayer_session_tests)
+  set_tests_properties(singleplayer_session PROPERTIES LABELS "singleplayer;determinism;foundation")
 
   if(ZH_ENABLE_RETAIL_TESTS)
     if(NOT IS_ABSOLUTE "${ZH_RETAIL_ZH_DATA}" OR NOT IS_ABSOLUTE "${ZH_RETAIL_GENERALS_DATA}" OR ZH_RETAIL_LANGUAGE STREQUAL "")
