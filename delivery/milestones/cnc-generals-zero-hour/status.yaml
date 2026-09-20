@@ -173,13 +173,14 @@ milestones:
   - id: M14
     title: "first real-GPU integration and visual acceptance"
     file: delivery/milestones/cnc-generals-zero-hour/M14-gpu-acceptance.md
-    status: in_progress
+    status: blocked
     dependencies: [M7, M8, M9, M10, M13]
     optional: false
     started_at: "2026-09-20T05:28:23Z"
     completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_14_plan_01.md"
+    commit_hash: 0440a4f
+    evidence: "All three implementation slices are complete; evidence/qa/cnc-generals-zero-hour/M14-gpu-acceptance.md records 16/16 RTX 4070 scenes passing twice, retail ui|video 7/7, canonical regression 50/50, and no SDL_GPU capability gap. GPU acceptance is intentionally 1/2 because the fail-closed Khronos validation-layer gate fails."
+    notes: "Blocked on EXTERNAL_OR_USER_ACTION PRE-012: install Arch package vulkan-validation-layers, verify vulkaninfo --summary enumerates VK_LAYER_KHRONOS_validation, then rerun the documented GPU and retail+GPU suites and require zero validation errors. Resume existing milestone_14_plan_01 acceptance; slice commits: c17c0dc, 89de107, 0440a4f."
   - id: M15
     title: "playable single-player"
     file: delivery/milestones/cnc-generals-zero-hour/M15-single-player.md

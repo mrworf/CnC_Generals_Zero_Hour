@@ -39,3 +39,10 @@ M14 cannot be accepted until `VK_LAYER_KHRONOS_validation` is installed and an e
 ## Completion boundary
 
 All safe implementation and non-validation-layer checks may be committed. If the Khronos layer remains unavailable, report M14 as blocked at PRE-012/PRE-013 acceptance with the exact probe result; do not label the milestone complete and do not claim zero validation errors.
+
+## Delivery checkpoint
+
+- Slice 01: `c17c0dc` — shared device contract and SDL_GPU resources.
+- Slice 02: `89de107` — real Vulkan rendering, presentation, and lifecycle.
+- Slice 03: `0440a4f` — representative scene matrix, evidence, and fail-closed validation gate.
+- Acceptance: blocked only on external PRE-012. Install `vulkan-validation-layers`, confirm `VK_LAYER_KHRONOS_validation` is discoverable, then rerun the existing GPU and retail+GPU acceptance suites.
