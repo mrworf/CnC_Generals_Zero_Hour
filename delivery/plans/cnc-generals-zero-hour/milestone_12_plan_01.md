@@ -41,4 +41,4 @@ Video delivery (M13), gameplay audio API redesign, redistribution of retail medi
 
 - Slice 01: `7d111bf66f1c83d77dd3b53764a2aa852603584a`
 - Slice 02: `620410a1f7b08c653c8a5be02c33a8584ee9c5bd`
-- Slice 03: this slice's commit, reported in the M12 implementation handoff
+- Slice 03: `fd6d98b8154ae113a2bef5ffe1d450ae22fb7010`

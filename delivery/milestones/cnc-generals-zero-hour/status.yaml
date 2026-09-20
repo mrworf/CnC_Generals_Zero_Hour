@@ -151,22 +151,24 @@ milestones:
   - id: M12
     title: "audio"
     file: delivery/milestones/cnc-generals-zero-hour/M12-audio.md
-    status: in_progress
+    status: completed
     dependencies: [M4]
     optional: false
     started_at: "2026-09-20T05:03:58Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_12_plan_01.md"
+    completed_at: "2026-09-20T05:15:42Z"
+    commit_hash: fd6d98b8154ae113a2bef5ffe1d450ae22fb7010
+    evidence: "Three completed slices pin/review miniaudio 0.11.25 offline, add the VFS-backed manager, and validate codecs/null-device/lifecycle/corpus behavior. All four presets passed four audio tests; synthetic PCM/MS ADPCM/IMA ADPCM/MP3 and read-only retail WAV/MP3 probes passed, with zero callback allocations and clean concurrent shutdown. Root acceptance reran the GCC Debug audio suite and verified source/packet freshness."
+    notes: "PRE-011 and PRE-023 accepted; audible playback remains optional and was not triggered. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_12_plan_01.md; slice commits: 7d111bf, 620410a, fd6d98b."
   - id: M13
     title: "headless video decode and presentation commands"
     file: delivery/milestones/cnc-generals-zero-hour/M13-video.md
-    status: pending
+    status: in_progress
     dependencies: [M4, M7, M12]
     optional: false
+    started_at: "2026-09-20T05:15:42Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_13_plan_01.md"
   - id: M14
     title: "first real-GPU integration and visual acceptance"
     file: delivery/milestones/cnc-generals-zero-hour/M14-gpu-acceptance.md
