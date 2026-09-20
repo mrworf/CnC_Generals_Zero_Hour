@@ -63,22 +63,24 @@ milestones:
   - id: M4
     title: "VFS, retail data, and corpus characterization"
     file: delivery/milestones/cnc-generals-zero-hour/M4-retail-vfs.md
-    status: in_progress
+    status: completed
     dependencies: [M1, M3]
     optional: false
     started_at: "2026-09-20T03:46:47Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_04_plan_01.md"
+    completed_at: "2026-09-20T04:04:00Z"
+    commit_hash: 6d7bcaffd6dd61a921708377bb290b4b94fbce48
+    evidence: "Three completed slices plus evidence/platform/cnc-generals-zero-hour/M4-retail-vfs.md. All four presets passed full 20-test and data suites. Read-only retail validation from a non-source CWD traversed 36 BIGs and verified 25,513 logical resources with no unexpected required format. Root acceptance reran the synthetic data suite and four-test retail-enabled suite, verified source/packet freshness, and found a clean worktree."
+    notes: "PRE-009 accepted. No retail bytes, hashes, or private paths committed. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_04_plan_01.md; slice commits: e15a527, e287326, 6d7bcaf."
   - id: M5
     title: "Linux persistence and determinism"
     file: delivery/milestones/cnc-generals-zero-hour/M5-persistence.md
-    status: pending
+    status: in_progress
     dependencies: [M4]
     optional: false
+    started_at: "2026-09-20T04:04:00Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_05_plan_01.md"
   - id: M6
     title: "SDL platform and input without GPU"
     file: delivery/milestones/cnc-generals-zero-hour/M6-sdl-platform.md

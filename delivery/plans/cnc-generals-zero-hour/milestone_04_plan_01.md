@@ -15,9 +15,9 @@ This plan implements [M4](../../milestones/cnc-generals-zero-hour/M4-retail-vfs.
 
 ## Slice index
 
-1. [Slice 01 — data selection and device-free verification entry](milestone_04_plan_01_slice_01.md)
-2. [Slice 02 — hardened BIG and deterministic VFS](milestone_04_plan_01_slice_02.md)
-3. [Slice 03 — metadata inventory and retail corpus manifest](milestone_04_plan_01_slice_03.md)
+1. [Slice 01 — data selection and device-free verification entry](milestone_04_plan_01_slice_01.md) — completed in `e15a527`.
+2. [Slice 02 — hardened BIG and deterministic VFS](milestone_04_plan_01_slice_02.md) — completed in `e287326`.
+3. [Slice 03 — metadata inventory and retail corpus manifest](milestone_04_plan_01_slice_03.md) — completed in `6d7bcaf`.
 
 Slices are dependency ordered. All three plan artifacts are created and reviewed before production edits. Each slice is committed separately after focused validation; the full four-preset build/data suite and owned-corpus verification run after slice 03.
 
