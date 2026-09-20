@@ -77,7 +77,10 @@ zh_add_bootstrap_component(zh_wwshade ZH_LEGACY_ZH_WWSHADE_SOURCES)
 zh_add_bootstrap_component(zh_game_engine ZH_LEGACY_ZH_GAME_ENGINE_SOURCES)
 zh_add_bootstrap_component(zh_platform_sdl ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_renderer_sdl_gpu ZH_EMPTY_LEGACY_SOURCES)
-zh_add_bootstrap_component(zh_audio_miniaudio ZH_EMPTY_LEGACY_SOURCES)
+add_library(zh_audio_miniaudio STATIC src/audio/miniaudio_impl.cpp)
+target_include_directories(zh_audio_miniaudio PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniaudio")
+target_compile_definitions(zh_audio_miniaudio PRIVATE MA_NO_FLAC MA_NO_ENCODING MA_NO_GENERATION)
+target_link_libraries(zh_audio_miniaudio PUBLIC zh_build_options Threads::Threads ${CMAKE_DL_LIBS})
 zh_add_bootstrap_component(zh_video_ffmpeg ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_os_posix ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_game_device ZH_LEGACY_ZH_GAME_DEVICE_SOURCES)
@@ -321,6 +324,18 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(ui_session_tests PRIVATE zh_ui)
   add_test(NAME ui_session COMMAND ui_session_tests)
   set_tests_properties(ui_session PROPERTIES LABELS "platform;renderer-contract;ui")
+
+  add_executable(audio_miniaudio_dependency_tests tests/audio/test_miniaudio_dependency.cpp)
+  target_link_libraries(audio_miniaudio_dependency_tests PRIVATE zh_audio_miniaudio)
+  add_test(NAME audio_miniaudio_dependency COMMAND audio_miniaudio_dependency_tests)
+  set_tests_properties(audio_miniaudio_dependency PROPERTIES LABELS audio)
+
+  add_test(NAME audio_miniaudio_provenance COMMAND "${Python3_EXECUTABLE}" -m unittest
+    tests.audio.test_miniaudio_provenance)
+  set_tests_properties(audio_miniaudio_provenance PROPERTIES
+    LABELS audio
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
 
   add_executable(world_scene_tests tests/world/test_world_scene.cpp)
   target_link_libraries(world_scene_tests PRIVATE zh_world)
