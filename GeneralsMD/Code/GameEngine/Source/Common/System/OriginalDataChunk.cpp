@@ -5,7 +5,7 @@
 */
 
 // M27 extraction provenance: DataChunkTableOfContents and
-// DataChunkInput::openDataChunk/closeDataChunk in DataChunk.cpp. The portable
+// DataChunkInput::openDataChunk and DataChunkInput::closeDataChunk in DataChunk.cpp. The portable
 // representation keeps label/version/size framing and bounded skip semantics.
 
 #include "zh/original_data.h"

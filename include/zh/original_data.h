@@ -3,6 +3,8 @@
 #include "zh/data/vfs.h"
 
 #include <cstdint>
+#include <filesystem>
+#include <functional>
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -108,11 +110,51 @@ struct RandomCheckpoints {
 RandomCheckpoints characterize_random_streams(
     std::uint32_t seed, std::size_t logic_draws, std::size_t client_draws, std::size_t audio_draws);
 
+struct MapBoundary {
+    std::int32_t x = 0;
+    std::int32_t y = 0;
+    bool operator==(const MapBoundary& other) const noexcept { return x == other.x && y == other.y; }
+};
+
+struct MapMetadata {
+    std::string identity;
+    std::string logical_name;
+    std::string display_name;
+    std::int32_t width = 0;
+    std::int32_t height = 0;
+    std::int32_t border = 0;
+    std::vector<MapBoundary> boundaries;
+    std::uint32_t crc = 0;
+    bool user_map = false;
+    bool operator==(const MapMetadata& other) const noexcept;
+};
+
+using CacheWriter = std::function<void(const std::filesystem::path&, const std::vector<std::uint8_t>&)>;
+
+struct MapCacheOptions {
+    std::filesystem::path xdg_cache_root;
+    CacheWriter writer;
+};
+
+struct MapCatalog {
+    std::vector<MapMetadata> maps;
+    std::filesystem::path cache_path;
+    bool warm_cache = false;
+};
+
+MapCatalog load_map_catalog(
+    const LogicalFiles& files,
+    std::string_view standard_directory,
+    std::string_view user_directory,
+    const MapCacheOptions& options,
+    const Limits& limits = {});
+
 const char* provider_file_identity() noexcept;
 const char* provider_ini_identity() noexcept;
 const char* provider_csf_identity() noexcept;
 const char* provider_xfer_identity() noexcept;
 const char* provider_chunk_identity() noexcept;
 const char* provider_random_identity() noexcept;
+const char* provider_map_identity() noexcept;
 
 } // namespace zh::original_data

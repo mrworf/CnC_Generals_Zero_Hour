@@ -1,4 +1,5 @@
 #include "zh/original_data.h"
+#include "zh/original_process.h"
 
 #include <cmath>
 #include <cstdint>
@@ -71,6 +72,9 @@ int main()
     check(noisy.initial_logic_crc == 0x933b34acU && noisy.logic_crc_after_draws == 0xc4405f5cU,
         "six-word source seed CRC is characterized");
     expect_error([&] { characterize_random_streams(1, 1000001, 0, 0); }, "draw count");
+    const auto raw_before = zh::original_process::live_raw_allocations();
+    { const auto ownership_probe = read_xfer_record(encoded); check(ownership_probe.ascii == "payload", "ownership probe decoded"); }
+    check(zh::original_process::live_raw_allocations() == raw_before, "codec consumer releases raw allocations");
 
     check(std::string_view(provider_xfer_identity()) == "OriginalXfer.cpp", "Xfer provider witness");
     check(std::string_view(provider_chunk_identity()) == "OriginalDataChunk.cpp", "chunk provider witness");
@@ -78,6 +82,7 @@ int main()
     std::cout << "original-data codecs: ok providers=" << provider_xfer_identity() << ','
               << provider_chunk_identity() << ',' << provider_random_identity()
               << " initial-crc=" << std::hex << noisy.initial_logic_crc
-              << " logic-crc=" << noisy.logic_crc_after_draws << std::dec << '\n';
+              << " logic-crc=" << noisy.logic_crc_after_draws << std::dec
+              << " raw=" << zh::original_process::live_raw_allocations() << '\n';
     return failures == 0 ? 0 : 1;
 }

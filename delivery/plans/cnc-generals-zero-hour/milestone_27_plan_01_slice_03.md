@@ -58,3 +58,9 @@ Positive tests cover empty-object independent maps, WorldInfo/height/borders, ma
 ## Commit boundary
 
 One commit containing map/cache behavior, assurance gates, cumulative evidence, and completed plan results. Outer milestone status files remain excluded for orchestrator-owned acceptance.
+
+## Result
+
+Complete. `OriginalMapMetadata.cpp` supplies the independently reusable MapUtil metadata, CRC, enumeration, and cache-path/output behavior through the shared production-facing M27 interface. Owned fixtures cover WorldInfo, height and borders, empty ObjectsList framing, unknown chunks, source rotate-add CRCs, standard/user precedence, and cold/warm/corrupt/stale cache lifecycle. Generated state is confined below an injected absolute XDG root and replaced atomically; injected writer denial exercises the failure path deterministically, arbitrary CWD succeeds, and read-root snapshots remain unchanged. Nonempty ObjectsList and every ThingFactory, registry, localization, and complete MapCache edge remain explicitly deferred to M20.
+
+The cumulative `original-data` label passes 10/10 in all four GCC/Clang Debug/Release presets. The complete asset-free suite passes 82/82 in every preset, and focused Clang Debug ASan/UBSan passes 10/10 with allocation counts returning to baseline. Extraction provenance, complete-registry preservation, dependency-ledger, 3,293-path classification, source-drift, and provider-removal controls pass. Detailed acceptance evidence is in `evidence/qa/cnc-generals-zero-hour/m27-original-data-providers-2026-09-20.md`. The exact commit is the commit containing this result.

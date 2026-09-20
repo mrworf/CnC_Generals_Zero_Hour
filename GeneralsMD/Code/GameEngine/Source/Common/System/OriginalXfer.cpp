@@ -4,8 +4,8 @@
 ** GPL-3.0-or-later
 */
 
-// M27 extraction provenance: Xfer::xferBool/xferInt/xferInt64/xferReal,
-// Xfer::xferAsciiString and Xfer::xferUnicodeString in Xfer.cpp. Explicit
+// M27 extraction provenance: Xfer::xferBool, Xfer::xferInt, Xfer::xferInt64,
+// Xfer::xferReal, Xfer::xferAsciiString and Xfer::xferUnicodeString in Xfer.cpp. Explicit
 // little-endian operations replace the original host-width implementation.
 
 #include "zh/original_data.h"

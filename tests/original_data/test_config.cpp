@@ -1,4 +1,5 @@
 #include "zh/original_data.h"
+#include "zh/original_process.h"
 
 #include <algorithm>
 #include <array>
@@ -124,10 +125,14 @@ int main()
     Limits tiny; tiny.maximum_file_bytes = 3;
     expect_error([&] { parse_csf(csf_fixture(), tiny); }, "limit");
     check(snapshot(zero_hour) == before_zh && snapshot(generals) == before_generals, "read roots unchanged");
+    const auto raw_before = zh::original_process::live_raw_allocations();
+    { const auto ownership_probe = parse_csf(csf_fixture()); check(!ownership_probe.entries.empty(), "ownership probe parsed"); }
+    check(zh::original_process::live_raw_allocations() == raw_before, "config consumer releases raw allocations");
 
     std::cout << "original-data config: ok providers=" << provider_file_identity() << ','
               << provider_ini_identity() << ',' << provider_csf_identity()
-              << " blocks=" << blocks.size() << " labels=" << csf.entries.size() << '\n';
+              << " blocks=" << blocks.size() << " labels=" << csf.entries.size()
+              << " raw=" << zh::original_process::live_raw_allocations() << '\n';
     std::filesystem::remove_all(root, ignored);
     return failures == 0 ? 0 : 1;
 }

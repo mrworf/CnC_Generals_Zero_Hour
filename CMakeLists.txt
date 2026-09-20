@@ -182,6 +182,7 @@ add_library(zh_original_data STATIC
   GeneralsMD/Code/GameEngine/Source/Common/System/OriginalXfer.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/OriginalDataChunk.cpp
   GeneralsMD/Code/GameEngine/Source/Common/OriginalRandomStreams.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/OriginalMapMetadata.cpp
   GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp
   GeneralsMD/Code/GameEngine/Source/Common/crc.cpp
 )
@@ -393,6 +394,41 @@ if(ZH_BUILD_TESTS)
     --symbol "GetGameClientRandomValue"
     --witness "original-data codecs: ok")
   set_tests_properties(original_data_codecs_identity PROPERTIES LABELS "original-data;source-identity")
+  add_executable(original_data_map_tests tests/original_data/test_map_metadata.cpp)
+  target_link_libraries(original_data_map_tests PRIVATE zh_original_data)
+  target_link_options(original_data_map_tests PRIVATE
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-data-map.link.map")
+  add_test(NAME original_data_map_metadata COMMAND original_data_map_tests)
+  set_tests_properties(original_data_map_metadata PROPERTIES LABELS "original-data;source-identity")
+  add_test(NAME original_data_map_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m26_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-data-map.link.map"
+    --executable "$<TARGET_FILE:original_data_map_tests>"
+    --target zh_original_data
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameClient/OriginalMapMetadata.cpp"
+    --symbol "zh::original_data::load_map_catalog"
+    --symbol "setFPMode()"
+    --witness "original-data map: ok")
+  set_tests_properties(original_data_map_identity PROPERTIES LABELS "original-data;source-identity")
+  add_test(NAME original_data_dependency_ledger COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_dependency_ledger.py"
+    --root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --ledger "${CMAKE_CURRENT_SOURCE_DIR}/docs/original-runtime-dependency-ledger.tsv")
+  set_tests_properties(original_data_dependency_ledger PROPERTIES LABELS "original-data;source-identity")
+  add_test(NAME original_data_extraction_provenance COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m27_original_provenance.py"
+    --root "${CMAKE_CURRENT_SOURCE_DIR}")
+  set_tests_properties(original_data_extraction_provenance PROPERTIES LABELS "original-data;source-identity")
+  add_test(NAME original_data_provenance_controls COMMAND "${Python3_EXECUTABLE}" -m unittest
+    tests.original_data.test_provenance_controls)
+  set_tests_properties(original_data_provenance_controls PROPERTIES
+    LABELS "original-data;source-identity"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+  add_test(NAME original_data_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_data/test_provider_removal.py"
+    "${CMAKE_CXX_COMPILER}" "${CMAKE_CURRENT_SOURCE_DIR}")
+  set_tests_properties(original_data_provider_removal PROPERTIES LABELS "original-data;source-identity")
   add_executable(original_process_allocator_tests
     tests/original_runtime/test_allocator.cpp
     tests/original_runtime/allocator_provider.cpp
