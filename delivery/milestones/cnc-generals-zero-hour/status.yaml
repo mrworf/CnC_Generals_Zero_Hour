@@ -19,23 +19,24 @@ milestones:
   - id: M0
     title: "reproducible build readiness"
     file: delivery/milestones/cnc-generals-zero-hour/M0-build-graph.md
-    status: in_progress
+    status: completed
     dependencies: []
     optional: false
     started_at: "2026-09-20T03:11:19Z"
-    completed_at: null
-    commit_hash: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_00_plan_01.md"
+    completed_at: "2026-09-20T03:20:07Z"
+    commit_hash: 445acb15a72a78e6dbc65edc023ddb5f6fa359ca
+    evidence: "Governing plan and two completed slices; all four presets configured/built and 24 aggregate foundation tests passed. Root acceptance reran GCC Debug and Clang Release configure/build/test (12 tests), verified source and packet freshness, and found a clean worktree."
+    notes: "Accepted. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_00_plan_01.md; slice commits: d28b296595bfd3c672d6d3f7a12a74057c47c369, 445acb15a72a78e6dbc65edc023ddb5f6fa359ca."
   - id: M1
     title: "portable ABI and support libraries"
     file: delivery/milestones/cnc-generals-zero-hour/M1-portable-foundations.md
-    status: pending
+    status: in_progress
     dependencies: [M0]
     optional: false
+    started_at: "2026-09-20T03:20:07Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_01_plan_01.md"
   - id: M2
     title: "GPU-independent renderer API closure"
     file: delivery/milestones/cnc-generals-zero-hour/M2-renderer-closure.md

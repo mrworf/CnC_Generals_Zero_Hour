@@ -52,7 +52,7 @@ An x86-64 contributor can configure, build, and test an asset-free bootstrap gra
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
 | 01 | [legacy manifest closure](milestone_00_plan_01_slice_01.md) | Every tracked legacy manifest source and project is explicitly classified and audit-checked | none | completed | `d28b296` | 1,889 candidates; 1,085 exclusions; 381 unavailable records; positive/negative audit tests pass |
-| 02 | [offline bootstrap graph](milestone_00_plan_01_slice_02.md) | Four presets configure/build/test an asset-free dependency-backed target graph | 01 | completed | recorded by slice commit | Four preset builds and 24 aggregate CTest executions pass |
+| 02 | [offline bootstrap graph](milestone_00_plan_01_slice_02.md) | Four presets configure/build/test an asset-free dependency-backed target graph | 01 | completed | `445acb1` | Four preset builds and 24 aggregate CTest executions pass |
 
 ## Cross-slice concerns
 
