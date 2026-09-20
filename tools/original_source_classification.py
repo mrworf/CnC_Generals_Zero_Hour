@@ -27,16 +27,22 @@ ACTIVE_POLICY = {
 }
 
 PRODUCTION_SOURCES = {
-    "GeneralsMD/Code/Libraries/Source/Compression/EAC/refabout.cpp",
-    "GeneralsMD/Code/Libraries/Source/Compression/EAC/refdecode.cpp",
-    "GeneralsMD/Code/Libraries/Source/Compression/EAC/refencode.cpp",
-    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/FastAllocator.cpp",
-    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/chunkio.cpp",
-    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/gcd_lcm.cpp",
-    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/nstrdup.cpp",
-    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ramfile.cpp",
-    "GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/tri.cpp",
-    "GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/pointerremap.cpp",
+    "GeneralsMD/Code/Libraries/Source/Compression/EAC/refabout.cpp": "M19",
+    "GeneralsMD/Code/Libraries/Source/Compression/EAC/refdecode.cpp": "M19",
+    "GeneralsMD/Code/Libraries/Source/Compression/EAC/refencode.cpp": "M19",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/FastAllocator.cpp": "M19",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/chunkio.cpp": "M19",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/gcd_lcm.cpp": "M19",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/nstrdup.cpp": "M19",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ramfile.cpp": "M19",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/tri.cpp": "M19",
+    "GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/pointerremap.cpp": "M19",
+    "GeneralsMD/Code/GameEngine/Source/Common/System/GameMemory.cpp": "M26",
+    "GeneralsMD/Code/GameEngine/Source/Common/System/MemoryInit.cpp": "M26",
+    "GeneralsMD/Code/GameEngine/Source/Common/System/CriticalSection.cpp": "M26",
+    "GeneralsMD/Code/GameEngine/Source/Common/System/AsciiString.cpp": "M26",
+    "GeneralsMD/Code/GameEngine/Source/Common/System/UnicodeString.cpp": "M26",
+    "GeneralsMD/Code/GameEngine/Source/Common/version.cpp": "M26",
 }
 
 PRODUCTION_PROVIDER_RE = re.compile(r"^(?!.*(?:bootstrap|fixture|toy)).+\.(?:c|cc|cpp|cxx)$", re.IGNORECASE)
@@ -87,7 +93,11 @@ def classify(text: str) -> list[Record]:
                 if path in PRODUCTION_SOURCES:
                     disposition = "production-compiled"
                     provider = path
-                    rationale = "compiled and runtime-witnessed by the M19 original-support harness"
+                    milestone = PRODUCTION_SOURCES[path]
+                    if milestone == "M19":
+                        rationale = "compiled and runtime-witnessed by the M19 original-support harness"
+                    else:
+                        rationale = f"compiled and runtime-witnessed by the {milestone} original-provider harness"
 
             if not path or "\t" in path or "\n" in path:
                 raise ValueError(f"invalid inventory path: {path!r}")

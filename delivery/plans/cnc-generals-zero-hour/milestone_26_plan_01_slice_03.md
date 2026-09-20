@@ -47,3 +47,7 @@ Run focused M26 tests in all four presets, then the canonical full asset-free CT
 ## Commit boundary
 
 Commit FPU extraction, dependency/identity controls, cumulative evidence, and final plan status/commit references as the final M26 slice.
+
+## Result
+
+Complete. The sole production `setFPMode` definition is extracted into lower shared original support and its actual x86-64 Linux body is runtime-characterized as nearest rounding with x87 24-bit precision. The checked ledger covers M26 runtime providers and retains explicit M27/M28/M20 ownership for deferred consumers; source drift and ownerless mutations fail. Compile-command, link-map, live-symbol, runtime-witness, and real provider-removal gates pass in GCC/Clang Debug/Release. Focused tests pass 10/10 and full asset-free CTest passes 72/72 in each preset. Clang Debug ASan/UBSan passes 10/10 with the exact options recorded in the evidence report; a sanitizer-discovered Linux pool alignment defect was fixed before final validation.

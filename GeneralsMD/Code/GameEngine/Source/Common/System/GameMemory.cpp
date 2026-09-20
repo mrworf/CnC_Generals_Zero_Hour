@@ -208,8 +208,13 @@ static std::atomic_size_t theLiveRawAllocationCount{0};
 // PRIVATE PROTOTYPES 
 // ----------------------------------------------------------------------------
 
-/// @todo srj -- make this work for 8
+#if defined(_WIN32)
+/// Preserve the original Win32 allocator ABI.
 #define MEM_BOUND_ALIGNMENT 4
+#else
+/// Linux allocations must satisfy the fundamental alignment promised by global new.
+#define MEM_BOUND_ALIGNMENT alignof(std::max_align_t)
+#endif
 
 static Int roundUpMemBound(Int i);
 static void *sysAllocateDoNotZero(Int numBytes);
@@ -415,7 +420,11 @@ public:
 	Note also that we directly allocate/free these with sysAllocate/sysFree, so ctors/dtors
 	are never executed, nor would virtual functions work -- I know, it's a little evil.
 */
-class MemoryPoolSingleBlock 
+#if defined(_WIN32)
+class MemoryPoolSingleBlock
+#else
+class alignas(std::max_align_t) MemoryPoolSingleBlock
+#endif
 {
 private:
 

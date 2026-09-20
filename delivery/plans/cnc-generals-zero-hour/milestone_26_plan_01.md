@@ -60,8 +60,8 @@ M19 compiles ten bounded original WWLib/WWMath/WWSaveLoad and RefPack units, but
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
 | 01 | [Allocator bootstrap and ABI](milestone_26_plan_01_slice_01.md) | Actual original allocator and bounded pre-VFS pool configuration execute safely across process/target boundaries. | M19 | complete | `1742a84f06d7b8b6e6c82e317e92c56b1cf16518` | 2 focused tests pass in all four presets |
-| 02 | [Strings and process services](milestone_26_plan_01_slice_02.md) | Actual original ASCII/UTF-16 strings, synchronization, logging seam, and Version lifetime execute on the allocator. | slice 01 | complete | this slice commit | 3 cumulative focused tests pass in all four presets |
-| 03 | [FPU and dependency evidence](milestone_26_plan_01_slice_03.md) | The original FPU body is shared and characterized; checked ledger and target-specific identity gates cover M26. | slices 01-02 | pending | | FPU, ledger, identity, negative controls, four presets, full CTest, sanitizers |
+| 02 | [Strings and process services](milestone_26_plan_01_slice_02.md) | Actual original ASCII/UTF-16 strings, synchronization, logging seam, and Version lifetime execute on the allocator. | slice 01 | complete | `1605a6487957b436fac1e949505847a0ca32161c` | 3 cumulative focused tests pass in all four presets |
+| 03 | [FPU and dependency evidence](milestone_26_plan_01_slice_03.md) | The original FPU body is shared and characterized; checked ledger and target-specific identity gates cover M26. | slices 01-02 | complete | this slice commit | 10 focused tests and 72 full-suite tests pass in all four presets; ASan/UBSan 10/10 |
 
 ## Cross-slice concerns
 
@@ -87,6 +87,8 @@ Each slice is independently revertible. Reverting slice 03 removes evidence/FPU 
 ## Execution notes
 
 Planning completed before production edits at transaction start `f84161fb666ec3a5092b46002094aca4f91c41ca`; the worktree was clean.
+
+Slice 03's first sanitizer pass exposed a 16-byte alignment violation caused by the inherited 24-byte pool header. The Linux header and stride now use `alignof(std::max_align_t)` while the Win32 ABI remains unchanged. The repeated focused sanitizer suite passed 10/10. Focused tests passed 10/10 and the canonical asset-free suite passed 72/72 in every required preset. The committed evidence is `evidence/qa/cnc-generals-zero-hour/m26-original-process-foundation-2026-09-20.md`.
 
 ## Deferred follow-ups
 

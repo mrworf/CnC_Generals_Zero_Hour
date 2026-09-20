@@ -61,6 +61,7 @@ add_library(zh_original_process STATIC
   GeneralsMD/Code/GameEngine/Source/Common/System/GameMemory.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/MemoryInit.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/CriticalSection.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/FPUControl.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/AsciiString.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/UnicodeString.cpp
 )
@@ -356,6 +357,65 @@ if(ZH_BUILD_TESTS)
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-process-strings.link.map")
   add_test(NAME original_process_strings COMMAND original_process_string_tests)
   set_tests_properties(original_process_strings PROPERTIES LABELS "original-process;source-identity")
+  add_executable(original_process_fpu_tests tests/original_runtime/test_fpu.cpp)
+  target_include_directories(original_process_fpu_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include")
+  target_link_libraries(original_process_fpu_tests PRIVATE zh_original_process)
+  target_link_options(original_process_fpu_tests PRIVATE
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-process-fpu.link.map")
+  add_test(NAME original_process_fpu COMMAND original_process_fpu_tests)
+  set_tests_properties(original_process_fpu PROPERTIES LABELS "original-process;source-identity")
+  add_test(NAME original_process_dependency_ledger COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_dependency_ledger.py"
+    --root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --ledger "${CMAKE_CURRENT_SOURCE_DIR}/docs/original-runtime-dependency-ledger.tsv")
+  set_tests_properties(original_process_dependency_ledger PROPERTIES LABELS "original-process;source-identity")
+  add_test(NAME original_process_dependency_controls COMMAND "${Python3_EXECUTABLE}" -m unittest
+    tests.original_runtime.test_dependency_controls)
+  set_tests_properties(original_process_dependency_controls PROPERTIES
+    LABELS "original-process;source-identity"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+  add_test(NAME original_process_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_runtime/test_provider_removal.py"
+    "${CMAKE_CXX_COMPILER}")
+  set_tests_properties(original_process_provider_removal PROPERTIES LABELS "original-process;source-identity")
+
+  add_test(NAME original_process_identity_allocator COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m26_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-process-allocator.link.map"
+    --executable "$<TARGET_FILE:original_process_allocator_tests>"
+    --target zh_original_process
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/System/GameMemory.cpp"
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/System/MemoryInit.cpp"
+    --symbol "initMemoryManager()"
+    --witness "original-process allocator: ok"
+    --argument defaults)
+  set_tests_properties(original_process_identity_allocator PROPERTIES LABELS "original-process;source-identity")
+  add_test(NAME original_process_identity_strings COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m26_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-process-strings.link.map"
+    --executable "$<TARGET_FILE:original_process_string_tests>"
+    --target zh_original_process
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/System/AsciiString.cpp"
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/System/UnicodeString.cpp"
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/version.cpp"
+    --symbol "AsciiString::ensureUniqueBufferOfSize"
+    --symbol "UnicodeString::concat"
+    --symbol "Version::getVersionNumber()"
+    --witness "original-process strings: ok")
+  set_tests_properties(original_process_identity_strings PROPERTIES LABELS "original-process;source-identity")
+  add_test(NAME original_process_identity_fpu COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m26_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-process-fpu.link.map"
+    --executable "$<TARGET_FILE:original_process_fpu_tests>"
+    --target zh_original_process
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/System/FPUControl.cpp"
+    --symbol "setFPMode()"
+    --witness "original-process fpu: ok")
+  set_tests_properties(original_process_identity_fpu PROPERTIES LABELS "original-process;source-identity")
   add_test(NAME m0_bootstrap_smoke COMMAND zh_main --bootstrap-smoke)
   set_tests_properties(m0_bootstrap_smoke PROPERTIES LABELS foundation PASS_REGULAR_EXPRESSION "asset-free bootstrap graph: ok")
   add_test(NAME m0_bootstrap_rejects_gameplay COMMAND zh_main)
