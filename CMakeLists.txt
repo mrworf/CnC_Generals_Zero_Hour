@@ -91,7 +91,7 @@ add_library(zh_data STATIC src/data/config.cpp src/data/big_archive.cpp src/data
 target_include_directories(zh_data PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_data PUBLIC zh_os_posix zh_build_options)
 
-add_library(zh_persistence STATIC src/persistence/save.cpp)
+add_library(zh_persistence STATIC src/persistence/save.cpp src/persistence/replay.cpp)
 target_include_directories(zh_persistence PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_persistence PUBLIC zh_wwsupport zh_build_options)
 
@@ -287,6 +287,11 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(persistence_save_tests PRIVATE zh_persistence)
   add_test(NAME persistence_save COMMAND persistence_save_tests)
   set_tests_properties(persistence_save PROPERTIES LABELS "foundation;determinism")
+
+  add_executable(persistence_replay_tests tests/persistence/test_replay.cpp)
+  target_link_libraries(persistence_replay_tests PRIVATE zh_persistence)
+  add_test(NAME persistence_replay COMMAND persistence_replay_tests)
+  set_tests_properties(persistence_replay PROPERTIES LABELS "foundation;determinism")
 
   if(ZH_ENABLE_RETAIL_TESTS)
     if(NOT IS_ABSOLUTE "${ZH_RETAIL_ZH_DATA}" OR NOT IS_ABSOLUTE "${ZH_RETAIL_GENERALS_DATA}" OR ZH_RETAIL_LANGUAGE STREQUAL "")
