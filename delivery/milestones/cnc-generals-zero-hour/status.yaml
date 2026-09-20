@@ -267,14 +267,14 @@ milestones:
   - id: M20
     title: "integrated original runtime and data lifecycle"
     file: delivery/milestones/cnc-generals-zero-hour/M20-original-lifecycle.md
-    status: in_progress
+    status: blocked
     dependencies: [M28]
     remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-010, RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010]
     optional: false
     started_at: "2026-09-20T14:55:33Z"
     completed_at: null
-    evidence: "evidence/qa/cnc-generals-zero-hour/M20-original-lifecycle-blocker.md proves an UPSTREAM_REQUIRED source-order dependency defect: original GameEngine::init requires real GameLogic, GameClient/W3D, module/object, particle and media providers assigned to M21-M23 before it can satisfy M20 lifecycle acceptance."
-    notes: "Blocked delivery history remains preserved in delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md and blocker commit 418b1e6. M26-M28 are now accepted; resume under new governing plan 02 without reduced GameEngine, empty registry, or parallel lifecycle. M21-M25 retain later domain completion/acceptance, never dependencies required for M20 completion."
+    evidence: "evidence/qa/cnc-generals-zero-hour/M20-plan02-retail-w3d-blocker.md proves an UPSTREAM_REQUIRED retail startup dependency: original Object.ini requires the authoritative 19-entry W3DModuleFactory provider closure, which reaches the excluded Direct3D 8 SDK still assigned to M22-M23. Prior plan-01 evidence remains at evidence/qa/cnc-generals-zero-hour/M20-original-lifecycle-blocker.md."
+    notes: "Plan 02 completed slices 01-05 at a424490a505c5a662d370d2e9f1bc8c4dab56b4a, 3fe448f6a157db79fd7fef99e5866c07f19e8a3b, b7c83dc34d441a093f5c31dad33e0c48bb6ab5d8, c4a2a4d9e5b8a07145860ce6f4213852ffa4fd47, and 4202b6b50eec9791bf6b78952bd904710bd06ec8. Blocker checkpoint 79294870c9eba83a50d49d860d2f0c224e4f46e6 retains a validated BIG adapter and no experimental W3D edits. Resume only from reconciled M20/M22-M23 authority; no reduced registry, generic parser, proxy success, or no-op draw provider."
   - id: M21
     title: "original map and simulation execution"
     file: delivery/milestones/cnc-generals-zero-hour/M21-original-simulation.md
