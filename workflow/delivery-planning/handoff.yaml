@@ -5,15 +5,15 @@ status: ready_for_implementation
 source:
   mode: CHANGE_PLAN
   path: docs/zero-hour-runtime-closure-reconciliation.md
-  revision: sha256:c1b11659795b0ac904decefd870f0af2abb378d7e06bbac765f174209e2841ed
-  repository_commit: a692153398bcb693d7c347d2a58d9beb63e4879c
+  revision: sha256:463c74ffd2cb1763e7d16247b4e218d0437b5ac70ef7f22e9fbe9f2a09e40e80
+  repository_commit: 8cf8f6ce3842cffe37505d02e610ca825ecdb532
   change_id: RUNTIME-CLOSURE-2026-09-20
-  remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010]
+  remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010, RC-011]
 planning:
-  repository_commit: c99fb6c1f096af73847514581d2ba24de9905b07
+  repository_commit: null
 milestones:
   manifest: delivery/milestones/cnc-generals-zero-hour/status.yaml
-  packet_revision: sha256:757fc6665b559640e40fc55f1b8997a09a568d568fa80e94a029409e1d908259
+  packet_revision: sha256:0d5f1fef5dcec3bbbbb26656c5aaf591d653e2454501b51cfb09059fbb6acd7a
   revision_command: "find delivery/milestones/cnc-generals-zero-hour -maxdepth 1 -type f -name '*.md' -print0 | sort -z | xargs -0 sha256sum | sha256sum"
 readiness:
   status: READY_WITH_EXTERNAL_DEPENDENCIES

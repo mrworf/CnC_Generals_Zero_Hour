@@ -13,7 +13,7 @@ a clean checkout builds with documented distribution dependencies, the Arch x86-
 - run clean x86-64 GCC and Clang Debug/Release builds and labeled asset-free suites without network access;
 - run ASan/UBSan, private retail-data smoke/acceptance, shader completeness, install/uninstall staging, arbitrary-CWD, read-only input-data, and missing-device tests;
 - install only executable/project assets/defaults/licenses and document data selection, XDG locations, limitations, troubleshooting, and verified hardware; and
-- verify the playable release on the primary Arch Linux x86-64 host and verify source builds on Ubuntu 26.04 LTS and Fedora 44. The latter may use clean containers/VMs for build and headless checks; the Arch M14 hardware result satisfies GPU evidence.
+- verify the playable release on the primary Arch Linux x86-64 host and verify source builds on Ubuntu 26.04 LTS and Fedora 44. The latter may use clean containers/VMs for build and headless checks; Arch original-engine M22/M23 hardware/interaction and M15/M16 integrated gameplay/LAN evidence are required. Historical M14 component results support but cannot satisfy this release gate.
 
 ## Explicit Exclusions
 
@@ -24,6 +24,7 @@ Only Zero Hour in GeneralsMD is ported. Base Generals executable, authoring tool
 ## Source Requirements
 
 - [Migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-001, SE-009, SE-010. Evidence-grade and anti-proxy rules apply.
+- [Runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md): RC-011 original-engine release evidence and installed-prefix execution.
 
 - [Authoritative port plan](../../../docs/zero-hour-linux-port-plan.md), §8 “M17 — reproducible x86-64 release”.
 - Governing sections: §1 Scope and completion criteria; §4 Target architecture and build graph; §9 Packaging after M17; §10 Validation matrix; PRE-017.
@@ -35,7 +36,7 @@ PRE-025/PRE-026 — accepted M15/M16 integrated gameplay; PRE-017 — maintainer
 
 Direct implementation dependencies: [M15](M15-single-player.md), [M16](M16-lan-match.md).
 
-Require integrated original-engine single-player/LAN evidence and final production compile/link closure without bootstrap or toy simulation. Host dependencies do not prove clean distro portability.
+Require original-engine M22/M23 hardware/interaction evidence through accepted M15, integrated M15/M16 single-player/LAN evidence and final production compile/link closure without bootstrap or toy simulation. Historical M14 component evidence alone cannot satisfy hardware acceptance. Host dependencies do not prove clean distro portability.
 
 Historical component completion is not original-source acceptance. Preserve prior evidence and existing M15 scaffolding; do not reuse their pass counts as proof of this contract. Existing external retail/device/distro/optional-fixture requirements remain at their consuming validation checks.
 
@@ -50,6 +51,8 @@ Inspect status.yaml and linked original-source acceptance for M15, M16; all dire
 Implement the scoped work above using the concrete interface contract below.
 
 Complete every scoped work item and its source exit together; preserve existing simulation, formats and engine-facing behavior except the explicitly replaced platform edges.
+
+Run the installed original executable from an installed prefix outside source/build trees, with explicit retail roots and isolated XDG writes. Resolve installed shaders and project resources from that installation, not source/build fallbacks. Staged copy success or a build-tree launch is not installed-prefix acceptance; no new packaging format is required.
 
 ## Architecture / Security Constraints
 
@@ -69,6 +72,8 @@ Use the canonical x86-64 presets `linux-gcc-debug`, `linux-clang-debug`, `linux-
 - [ ] Every scoped behavior and interface above has positive evidence; the listed negative/boundary cases fail with actionable diagnostics.
 - [ ] The required validation below passes; deferred work is not used to mask an unfinished path.
 - [ ] Evidence records compiler/build or device/corpus context as applicable without private media or absolute private paths.
+- [ ] Original-engine M22/M23 hardware/interaction and M15/M16 integrated gameplay/LAN gates support release acceptance; historical component GPU results are not promoted to original-engine proof.
+- [ ] The installed original executable launches outside source/build trees and resolves installed shaders/project resources using explicit retail roots and isolated XDG writes; missing installed resources fail actionably rather than silently falling back to a build tree.
 
 ## Required Validation
 
@@ -76,7 +81,7 @@ Record compile/link identity and source-owned runtime witnesses alongside observ
 
 Build/test every preset in clean Arch, Ubuntu and Fedora environments. Run all mandatory asset-free labels there; run explicitly provisioned retail/GPU acceptance on Arch. Optional `compatibility` fixtures never enter the mandatory release suite.
 
-Clean checkout builds all presets; run all asset-free labels and sanitizers, shader completeness, staged install/uninstall, arbitrary-CWD/read-only data/missing-device tests. Explicitly provision separate retail/GPU jobs; replay Arch M14–M16 acceptance.
+Clean checkout builds all presets; run all asset-free labels and sanitizers, shader completeness, staged install/uninstall, arbitrary-CWD/read-only data/missing-device tests. Run installed-prefix original-executable validation with source/build resources unavailable, installed-resource resolution and a missing-resource negative case. Explicitly provision separate retail/GPU jobs; replay Arch original-engine M22/M23 and integrated M15/M16 acceptance. M14 remains historical supporting component evidence only.
 
 Retail checks use a separate build directory with `ZH_ENABLE_RETAIL_TESTS=ON` and local `ZH_RETAIL_ZH_DATA`, `ZH_RETAIL_GENERALS_DATA`, `ZH_RETAIL_LANGUAGE`. Hardware jobs additionally enable `ZH_ENABLE_GPU_TESTS=ON`; defaults stay OFF. Do not claim future commands have run when compiling this packet.
 

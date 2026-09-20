@@ -14,11 +14,11 @@ Port the permitted WinMain-owned bootstrap services: synchronization, logging, a
 
 ## Explicit Exclusions
 
-No full engine or registry linkage, private assets, physical devices, Windows CWD mutation, protection or window creation. Original file/configuration consumers are M27; CPU resource adapters M28; integrated startup and final global teardown M20. Do not rebuild already-correct support components.
+No full engine or registry linkage, private assets, physical devices, Windows CWD mutation, protection or window creation. General original file/configuration consumers are M27; allocation-safe optional pool bootstrap configuration belongs here and must not depend on M27. CPU resource adapters are M28; integrated startup and final global teardown M20. Do not rebuild already-correct support components.
 
 ## Source Requirements
 
-[Runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md) RC-004, RC-006, RC-007 and RC-008; RC-001/002 original ABI obligations allocated here. [Migration supplement](../../../docs/zero-hour-source-engine-migration.md) SE-001/002/010 and [base plan](../../../docs/zero-hour-linux-port-plan.md) §§5–6/10 govern preservation. Revisions and commits are in status.yaml.
+[Runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md) RC-004, RC-006, RC-007, RC-008 and RC-011 bootstrap configuration; RC-001/002 original ABI obligations allocated here. [Migration supplement](../../../docs/zero-hour-source-engine-migration.md) SE-001/002/010 and [base plan](../../../docs/zero-hour-linux-port-plan.md) §§5–6/10 govern preservation. Revisions and commits are in status.yaml.
 
 ## Preconditions
 
@@ -36,6 +36,8 @@ M19 provides bounded original support and source inventory; it does not prove Ga
 
 Own services before original consumers and release them after consumers/workers, including pre-main allocation and static destruction. Preserve the real GameMemory new/delete linkage verification and conditional shutdown behavior; characterize pointer width, alignment and overload pairing rather than disable checks. Actual original string operations prove UTF-16 semantics; foundation helper tests alone do not count.
 
+Preserve the allocation bootstrap boundary in original `Common/System/MemoryInit.cpp:userMemoryManagerInitPools`: compiled pool defaults suffice before runtime data-root resolution; optional MemoryPools.ini is not required retail data. A characterized native override mechanism must use bounded, allocation-safe low-level path/read/parse operations, with explicit timing and source precedence, independent of CWD. It must not call M27 VFS/INI, engine-owned strings/logging or other pool-dependent consumers. Preserve supported override semantics and validation; never retune pools after live allocations. Characterize pre-main invocation and detect allocation re-entry rather than hiding a cycle behind fallback success.
+
 Move the one original setFPMode definition from GameLogic into lower shared support through narrow behavior-preserving extraction: INI::load and MapCache::updateCache must not force the whole simulation target into earlier providers. Characterize actual nearest-rounding/24-bit precision behavior rather than the stale CHOP comment and supply the Linux equivalent. M26 tests this actual original definition with bounded source-ABI consumers and preserves one production definition; M27 adds actual INI/map-caller integration using it. M26 does not require those later caller targets to pass.
 
 Maintain a checked-in ledger of source path/symbol, consumer, lifecycle/configuration branches, provider/target, callback/vtable/global edges, logical assets/writes, tests and evidence grade. Seed from the deep review, mark inspected versus compile/link/runtime-proven edges, invalidate affected checks when consumed sources or registry lists change, and fail for required providers without owners. Routine discoveries extend owned scope; actual product/backend incompatibility follows base-plan escalation.
@@ -52,6 +54,7 @@ Preserve original consumer interfaces and cross-target allocation/free compatibi
 
 - [ ] Original allocation/string consumer targets compile, link and run under all four presets, independently of full engine initialization.
 - [ ] Pre-main allocation, cross-target new/delete, required overloads, alignment, boundary UTF-16 operations and static destruction preserve characterized semantics; the real linkage check runs.
+- [ ] Optional MemoryPools.ini absence uses original compiled defaults; valid overrides preserve characterized semantics, while malformed/oversized/invalid-count inputs are handled safely with active validation. Pre-main invocation, arbitrary CWD and allocation re-entry controls prove no dependency on M27 or pool-dependent services; live allocations are never retuned.
 - [ ] Bootstrap failures preserve diagnostics and release initialized services exactly once; joined workers and explicit allocator/resource counts establish lifetime evidence.
 - [ ] Removing a required provider fails a real compile/link/runtime gate; active tests and conditional-source review reject proxy/reduced implementations.
 - [ ] Ledger entries identify each exercised edge, evidence grade and remaining M27/M28/M20 owner; source/registry drift and ownerless required edges fail checks.
@@ -60,6 +63,8 @@ Preserve original consumer interfaces and cross-target allocation/free compatibi
 ## Required Validation
 
 GCC/Clang Debug/Release original-consumer tests plus full asset-free CTest; focused ASan/UBSan with exact options disclosed and explicit ownership/live-count tests, not a leak-freedom claim from disabled leak detection. Exercise construction failure, static initialization/destruction and allocation/free in different original targets. Record source, compile/link and runtime evidence separately. Repository checks validate ledger freshness and negative controls. No complete engine build is required at this boundary.
+
+Use owned low-level bootstrap fixtures for absent, valid, malformed, oversized and invalid-count MemoryPools.ini cases across all presets; test arbitrary CWD, pre-main execution, source precedence/timing and allocation re-entry detection. No private file, VFS target or full engine initialization is needed to accept this boundary.
 
 ## Known Risks / Deferred Work
 

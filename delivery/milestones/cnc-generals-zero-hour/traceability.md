@@ -21,6 +21,8 @@ RC-007–RC-010 refine the older integrated-owner rows below: where they say M20
 | RC-010 network/return-to-menu | M25 | Map transfer/start/reset paths and actual setSawCRCMismatch ScriptActions/CRCMismatch.wnd/timer/Recorder/RNG; earlier CPU providers suffice, no later hardware dependency. Existing faulted local peers and full M16 match retained. |
 | RC-004/006 identity/assertions/ownership | M26–M28 independent; M20 final; M21–M25 domains | Four presets with active tests, live contributing target identity and provider-removal failures; no extending NDEBUG workaround; exact sanitizer options and explicit allocation/resource/worker counts. All integrated fixture/retail/reset/failure checks remain M20. |
 | RC-003/005 history/adoption | status/index; M15–M18 acceptance | Preserve all completed records/contracts and blocked plan 01; add M26–M28 goal membership, begin M26 plan 01, later M20 plan 02 only during delivery. No acceptance clause from prior packet is removed. |
+| RC-011 optional pool bootstrap | M26 | Preserve original compiled defaults and optional MemoryPools.ini semantics using bounded low-level allocation-safe operations before data-root/VFS/INI/engine-string/logging availability; characterize timing/precedence, no retuning live pools. Owned absent/valid/malformed/oversized/invalid-count fixtures, arbitrary CWD, pre-main and allocation re-entry tests avoid an M27 dependency. |
+| RC-011 final release evidence | M17 consumes M22/M23 through M15, plus M16 | Original-engine hardware/interaction and integrated gameplay/LAN evidence replace stale M14-only release wording; historical component results remain supporting evidence. Actual installed-prefix original-executable launch outside source/build trees resolves installed shaders/resources with explicit retail roots and isolated XDG; missing-resource negative case prevents build-tree fallback. No new format or changed external-gate timing. |
 
 | Required source | Current owner | Preserved/moved obligation |
 |---|---|---|
@@ -56,7 +58,7 @@ The allocation table supersedes earlier wording that deferred implementation sol
 | SE-009 | M15, M16, M17; optional M18 | Real campaign/skirmish/factions, persistence/media, original LAN, packaged launch and distro matrix; existing duration/soak requirements retained. |
 | SE-010 | packet index/status; M19–M25 and M15–M18 | Preserve historical facts, qualify component-only assurance, map reopened tests, explicitly adopt replacement goal scope after readiness. |
 
-Every affected pending milestone consumes the supplement's Fixed decisions and boundaries and Evidence grades and anti-proxy checks, with Engineering order superseded by RC-001–RC-010 and the explicit provider redistribution above. No required item is unmapped or blocked by an unresolved product decision.
+Every affected pending milestone consumes the supplement's Fixed decisions and boundaries and Evidence grades and anti-proxy checks, with Engineering order superseded by RC-001–RC-011 and the explicit provider redistribution above. No required item is unmapped or blocked by an unresolved product decision.
 
 ## Historical assurance reopening
 
@@ -151,4 +153,4 @@ M0/M1 support and M3/M4 engine-facing data assurance reopen through M19/M20; M5 
 - Conditional inclusion: Granny or unexpected formats only when ordinary required retail paths demonstrate necessity under §9. Locale and backend alternatives follow their evidence gates.
 - Current evidence: historical retail/archive and Vulkan/validation-layer component tests exist, but do not replace M20–M25 original-source integration. Readiness must re-audit host availability and future clean distro environments. Windows fixtures remain optional.
 - Blocked implementation-required source decisions: none at compilation. External prerequisites are explicit at their consumers and are audited by readiness after compilation.
-- Unmapped implementation-required items: none. RC-001–RC-010, SE-001–SE-010 and all base-plan obligations have providers/integrated acceptance owners above; M18 remains separately optional. No implementation work arises solely from review observations. RC-005 adoption awaits parent readiness and committed handoff; preserved blocked status is delivery history, not an unresolved source decision.
+- Unmapped implementation-required items: none. RC-001–RC-011, SE-001–SE-010 and all base-plan obligations have providers/integrated acceptance owners above; M18 remains separately optional. No implementation work arises solely from review observations. RC-005 adoption awaits parent readiness and committed handoff; preserved blocked status is delivery history, not an unresolved source decision.

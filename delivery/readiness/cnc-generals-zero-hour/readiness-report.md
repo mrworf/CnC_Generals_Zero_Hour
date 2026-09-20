@@ -6,15 +6,15 @@
 
 ## 2. Scope and evidence basis
 
-Product `cnc-generals-zero-hour`; all 29 contracts, index, traceability and `delivery/milestones/cnc-generals-zero-hour/status.yaml` reviewed. Authority is `docs/zero-hour-runtime-closure-reconciliation.md` RC-001–RC-010, revision `sha256:c1b11659795b0ac904decefd870f0af2abb378d7e06bbac765f174209e2841ed`, source/transaction-start commit `a692153398bcb693d7c347d2a58d9beb63e4879c`, plus the unchanged migration supplement and base plan. Parent records the final packet fingerprint and planning payload SHA in `workflow/delivery-planning/state.yaml` (`transaction.repository_commit`).
+Product `cnc-generals-zero-hour`; complete 29-contract packet, index, traceability and `delivery/milestones/cnc-generals-zero-hour/status.yaml` remain the audited boundary. This narrow RC-011 re-audit reuses the unchanged prior 37-prerequisite/source audit and checks changed M26/M17 contracts, provenance and graph/membership. Authority is `docs/zero-hour-runtime-closure-reconciliation.md` RC-001–RC-011, revision `sha256:463c74ffd2cb1763e7d16247b4e218d0437b5ac70ef7f22e9fbe9f2a09e40e80`, source/transaction-start commit `8cf8f6ce3842cffe37505d02e610ca825ecdb532`, plus the unchanged migration supplement and base plan. Parent records the final packet fingerprint and planning payload SHA in `workflow/delivery-planning/state.yaml` (`transaction.repository_commit`).
 
-FACT: starting worktree contained compiler-owned M20–M28 contracts/index/status/traceability and parent-owned planning workflow/deep-review evidence edits; no unrelated dirty paths. No applicable AGENTS.md was found. This child owns readiness artifacts, M26–M28 readiness additions, M20 prerequisite addition and status readiness metadata; no commits. Prior RC-002/006 source findings are retained below with allocation updated. This pass checked the deep-review source evidence plus actual setFPMode, INI static dispatch, MapUtil object/ThingFactory, W3D CPU initialization and GameAudio music lookup against the newly split boundaries. Build documentation, source inventory and current presets were inspected; original runtime acceptance was not run.
+FACT: starting worktree contained compiler-owned M17/M26/index/status/traceability and parent-owned planning workflow/blocker-review evidence edits; no unrelated dirty paths. No applicable AGENTS.md was found. This child owns the two readiness artifacts and index readiness paragraph; no commits. Prior RC-002/006–010 source findings remain retained below, not claimed as freshly rerun acceptance. This pass directly checked MemoryInit.cpp:754–805 against M26 and checked M17's installed-prefix/original hardware gates and transitive provider chain. Original runtime acceptance was not run.
 
 Historical M0–M14 contracts and their time-bound pending/package wording remain immutable snapshots; current index, status and readiness qualify that evidence as components. M19 remains accepted at its bounded ten-provider grade; original UnicodeString and GameEngine MemoryPool portability are M26 deliverables with integrated lifetime proved at M20.
 
 ## 3. Automatically completed prerequisites
 
-No product implementation or new bootstrap was required. Refreshed the manifest to 37 prerequisites and added concrete M26–M28 readiness checks. Tool/module availability, four-preset enumeration and 3,293-path source classification passed. Prior offline GCC Debug configuration and pinned miniaudio provenance remain evidence from preceding readiness audits; no configure/build was rerun for this documentation-only change.
+No product implementation or new bootstrap was required. The manifest retains 37 prerequisites; RC-011 refines PRE-035/PRE-027 without new IDs or external inputs. Parent reverified tool/module availability, four-preset enumeration and 3,293-path source classification for this transaction. Prior offline GCC Debug configuration and pinned miniaudio provenance remain evidence from preceding readiness audits; no configure/build was rerun for this documentation-only change.
 
 The old readiness assertion that M20 was next is superseded. No historical completed contract or acceptance was rewritten. PRE-035–037 precede PRE-029's complete integrated runtime; self-owned implementation is never an entry prerequisite.
 
@@ -97,10 +97,12 @@ Paths abbreviated with `GameEngine/` or `GameEngineDevice/` are under `GeneralsM
 | Boundary checked | Source-backed evidence and allocation | No-future-provider test |
 |---|---|---|
 | M26 before M27 | WinMain.cpp bootstrap and GameMemory lifetime precede engine entry; GameLogic.cpp:198–220 defines setFPMode with NEAR/24-bit behavior, called from INI/map cache. | M26 extracts/tests the single original helper with allocation/ABI consumers. Actual INI/map caller acceptance is M27, never required by M26. Full GameLogic linkage is not a lower-provider gate. |
+| M26 pre-VFS bootstrap | MemoryInit.cpp:754–805 explicitly requires low-level stdio before pools, forbids game filesystem/AsciiString, and treats MemoryPools.ini as optional. | RC-011/M26 owns compiled defaults and bounded allocation-safe override fixtures before main. No M27 parser/VFS, private config or pool-dependent service is required; re-entry, malformed input and timing are tested here. |
 | M27 before M20 | INI.cpp:78–160 holds cross-domain callback table; MapUtil.cpp:129–175 constructs MapObject through ThingFactory; map cache uses GameText/name keys. | M27 tests shared original parser/field/core and cache-path methods; production table remains complete for M20. No stubs or dead-strip proof. Full nonempty object/localized cache acceptance is M20, not silently claimed by empty fixtures. |
 | M28 before M20/M22/M23 | W3DDisplay.cpp:655 onward constructs CPU scenes/lights before devices; GameAudio.cpp:218–263 loads definitions then enters music/CD prompt loop. | M28 tests independent real CPU resources and bounded music lookup using earlier data providers without full GameClient/registry initialization. M20 integrates them. Physical rendering and interaction remain later, never required for CPU acceptance. |
 | M20 after M28 | GameEngine.cpp:581–704 includes Release fingerprints, cache update, initial map/replay dispatch and caught init failures before reset. | Complete production registries/cache/LOD/error propagation belong here, with no-match profile, XDG-only writes, nonzero failure and no accidental execute/reset continuation. M21/M24 own full supported map/replay scenarios, not this initialization closure. |
 | Later domains | Deep-review evidence traces GameLogic map start/client preload, GameState reset-before-load and Recorder invalid-header/debug identity, Network CRC mismatch UI/script/timer/RNG. | M21/M24/M25 consume earlier CPU/data interfaces and own their added paths; no dependency on future rendering/UI acceptance. Original failure paths and cleanup are explicit, not inferred from native component tests. |
+| M17 final evidence | RC-011/M17 now requires M22/M23 original hardware/interaction through M15, integrated M15/M16 gameplay/LAN, and installed-prefix execution with source/build resources unavailable. | Existing transitive providers precede M17; old M14 component evidence or staged copy success alone cannot pass. Installed-resource and missing-resource tests are M17 outputs, not a new external prerequisite. |
 
 INFERENCE: these source-backed seams make the new topological order internally executable without a future acceptance supplying an earlier implementation. Required proof remains actual original-consumer compile/live-link/state tests with a freshness-checked ledger. Source-only inspection cannot enumerate every data-driven edge or prove those future tests pass; routine discoveries are assigned within the authorized provider/integration scope rather than assumed absent.
 
@@ -156,6 +158,8 @@ After accepted M20, M21 validates complete source scenarios. M22 receives host/G
 
 RC-006–010 sharpen this simulation: independent providers validate before the whole engine links; final M20 uses the same explicit offline profile across presets, original parsers/UI resources, then separately provisioned retail initialization. Fixture creation, cleanup repairs, ledger and identity/assertion strengthening are assigned implementation outputs, never user-supplied prerequisites. No new external edge or cycle appears. Full production callback table and full object/localized cache are not required to accept M27; complete GameClient is not required to accept M28.
 
+RC-011 preserves the simulation: M26 uses compiled pool defaults before data-root resolution and owns allocation-safe optional override tests without later filesystem services. At M17 the original hardware/interaction providers are already accepted transitively; original gameplay/LAN and actual installed-prefix execution are mandatory, with no source/build resource fallback. All new negative/boundary tests belong to the consuming milestone. The 12 mandatory and one optional remaining milestones and dependency order are unchanged.
+
 The future source-port results, new hardware scenarios and clean distro runners were simulated, not executed. Observed tool/module availability and prior local configuration verify only installed dependencies. Missing packages on a fresh machine require the documented host provisioning before entry; no undeclared package or secret is assumed.
 
 ## 12. Commands run and results
@@ -175,17 +179,17 @@ The future source-port results, new hardware scenarios and clean distro runners 
 | Compiler structural validator with evidenced completed/blocked states allowed | Passed all 29 milestone contracts. |
 | Final contract/graph/PRE/link inspection and `git diff --check` | Passed: 29 contracts, backward-only graph, 37 PRE IDs, all readiness sections and preserved completed records/files; no whitespace errors. Final packet fingerprint returned to parent. |
 
+The tool/module/preset/classification rows above are parent-observed current-transaction checks, reused here. Detailed setFPMode/INI/MapUtil/W3DDisplay/GameAudio checks are retained from the preceding audit; this child's fresh source check is MemoryInit.cpp:754–805 plus M26/M17 contract and unchanged graph inspection. Structural validation and whitespace checks were rerun by this child; no broad implementation acceptance was repeated.
+
 No full build, milestone acceptance, retail traversal or physical device test was needed for this documentation audit.
 
 ## 13. Files changed
 
-- `delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md` — RC-001–010 source/provenance, PRE-035–037 and ordered provider boundaries.
-- `delivery/readiness/cnc-generals-zero-hour/readiness-report.md` — current source-boundary audit and clean-environment simulation.
-- `delivery/milestones/cnc-generals-zero-hour/M26-original-process-foundation.md`, `M27-original-data-providers.md`, `M28-original-cpu-resources.md` — readiness PRE IDs and concrete existing command/manual checks.
-- `delivery/milestones/cnc-generals-zero-hour/M20-original-lifecycle.md` — accepted PRE-037 prerequisite and transitive provider evidence.
-- `delivery/milestones/cnc-generals-zero-hour/status.yaml` — canonical readiness result only.
+- `delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md` — RC-011 provenance and PRE-035/PRE-027 boundary qualifications.
+- `delivery/readiness/cnc-generals-zero-hour/readiness-report.md` — narrow source-boundary re-audit and updated clean-environment simulation.
+- `delivery/milestones/cnc-generals-zero-hour/index.md` — readiness paragraph replaces stale pending wording after this audit.
 
-Compiler semantic changes and parent workflow/evidence edits remain parent-owned. This child made only the readiness additions/metadata listed above; no workflow, product-source, retail or implementation-plan changes and no commits. No configure/build/runtime acceptance was executed in this review.
+Compiler semantic changes and parent workflow/evidence edits remain parent-owned. Canonical status.yaml readiness already reads READY_WITH_EXTERNAL_DEPENDENCIES and needs no child edit. This child made only the readiness updates listed above; no workflow, product-source, retail or implementation-plan changes and no commits. No configure/build/runtime acceptance was executed in this review.
 
 ## 14. Remaining blockers
 

@@ -16,11 +16,11 @@ compiled_from:
     remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-009, SE-010]
   runtime_reconciliation:
     path: docs/zero-hour-runtime-closure-reconciliation.md
-    revision: sha256:c1b11659795b0ac904decefd870f0af2abb378d7e06bbac765f174209e2841ed
-    repository_commit: a692153398bcb693d7c347d2a58d9beb63e4879c
+    revision: sha256:463c74ffd2cb1763e7d16247b4e218d0437b5ac70ef7f22e9fbe9f2a09e40e80
+    repository_commit: 8cf8f6ce3842cffe37505d02e610ca825ecdb532
     change_id: RUNTIME-CLOSURE-2026-09-20
-    remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010]
-  baseline_repository_commit: a692153398bcb693d7c347d2a58d9beb63e4879c
+    remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010, RC-011]
+  baseline_repository_commit: 8cf8f6ce3842cffe37505d02e610ca825ecdb532
   definition_package: null
   reconciliation: null
 compilation_status: complete
@@ -233,7 +233,7 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M26-original-process-foundation.md
     status: pending
     dependencies: [M19]
-    remediation_ids: [SE-001, SE-002, SE-010, RC-001, RC-002, RC-004, RC-006, RC-007, RC-008]
+    remediation_ids: [SE-001, SE-002, SE-010, RC-001, RC-002, RC-004, RC-006, RC-007, RC-008, RC-011]
     optional: false
     completed_at: null
     evidence: null
@@ -344,6 +344,7 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M17-release.md
     status: pending
     dependencies: [M15, M16]
+    remediation_ids: [SE-001, SE-009, SE-010, RC-011]
     optional: false
     completed_at: null
     evidence: null

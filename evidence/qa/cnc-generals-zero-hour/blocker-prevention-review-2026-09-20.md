@@ -23,6 +23,8 @@ Good: M26–M28 now produce independently testable original providers before M20
 
 Change: RC-011 makes pre-filesystem pool configuration an explicit M26 contract with acyclic, allocation-safe defaults/optional override handling and boundary tests. It corrects M17 hardware evidence and clarifies installed-prefix execution. Compiler/readiness must preserve the current order unless their audit finds a concrete structural defect. Recheck full mandatory coverage and dependency closure against the adoption handoff; do not start implementation during this review.
 
+Read-only YAML validation of status.yaml and handoff.yaml passed: 29 unique milestones, 16 completed, 12 mandatory remaining and one optional. Every incomplete milestone occurs exactly once in the pending execution order; mandatory/optional membership matches the milestone records, every dependency precedes its consumer, no mandatory milestone directly depends on an optional one, and handoff membership matches. This verifies bookkeeping, not unimplemented source behavior. Compiler/readiness validate the final revised packet separately.
+
 ## What I Would Not Change Yet
 
 Do not add more milestones for these bounded obligations, repeat completed component acceptance, install host packages, acquire hardware or change product scope. Do not attempt to remove all future risk through repeated prose-only audits. Build/link/runtime evidence during the already-authorized provider milestones is the next stronger test of the plan.
