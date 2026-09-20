@@ -52,22 +52,24 @@ milestones:
   - id: M3
     title: "headless engine and staged startup"
     file: delivery/milestones/cnc-generals-zero-hour/M3-headless-startup.md
-    status: in_progress
+    status: completed
     dependencies: [M1]
     optional: false
     started_at: "2026-09-20T03:39:44Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_03_plan_01.md"
+    completed_at: "2026-09-20T03:46:47Z"
+    commit_hash: 856626b
+    evidence: "Three completed slices deliver staged headless startup, null devices, deterministic ticks, all-stage failure injection/reverse teardown, and simultaneous isolated state roots. All four presets passed 12 foundation|headless tests. Root acceptance reran GCC Debug and Clang Release builds plus 24 selected tests and verified source/packet freshness."
+    notes: "Accepted without display/audio/GPU/retail/network access. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_03_plan_01.md; slice commits: 631d7eb, 3b51378, 856626b."
   - id: M4
     title: "VFS, retail data, and corpus characterization"
     file: delivery/milestones/cnc-generals-zero-hour/M4-retail-vfs.md
-    status: pending
+    status: in_progress
     dependencies: [M1, M3]
     optional: false
+    started_at: "2026-09-20T03:46:47Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_04_plan_01.md"
   - id: M5
     title: "Linux persistence and determinism"
     file: delivery/milestones/cnc-generals-zero-hour/M5-persistence.md
