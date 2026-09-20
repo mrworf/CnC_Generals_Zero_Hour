@@ -53,6 +53,25 @@ if(ZH_ENABLE_ASAN)
   target_compile_options(zh_build_options INTERFACE -fsanitize=address -fno-omit-frame-pointer)
   target_link_options(zh_build_options INTERFACE -fsanitize=address)
 endif()
+
+add_library(zh_original_process STATIC
+  GeneralsMD/Code/GameEngine/Source/Common/System/GameMemory.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/MemoryInit.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/CriticalSection.cpp
+)
+target_include_directories(zh_original_process
+  PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
+)
+target_link_libraries(zh_original_process PUBLIC zh_build_options Threads::Threads)
+if(ZH_BUILD_TESTS)
+  target_compile_definitions(zh_original_process PUBLIC ZH_ORIGINAL_RUNTIME_TEST_HOOKS=1)
+endif()
 if(ZH_ENABLE_UBSAN)
   target_compile_options(zh_build_options INTERFACE -fsanitize=undefined -fno-omit-frame-pointer)
   target_link_options(zh_build_options INTERFACE -fsanitize=undefined)
@@ -306,6 +325,21 @@ install(FILES data/corpus/video-variants.tsv DESTINATION share/generals-zero-hou
 if(ZH_BUILD_TESTS)
   enable_testing()
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_executable(original_process_allocator_tests
+    tests/original_runtime/test_allocator.cpp
+    tests/original_runtime/allocator_provider.cpp
+  )
+  target_include_directories(original_process_allocator_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include")
+  target_link_libraries(original_process_allocator_tests PRIVATE zh_original_process)
+  target_link_options(original_process_allocator_tests PRIVATE
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-process-allocator.link.map")
+  add_test(NAME original_process_allocator COMMAND original_process_allocator_tests defaults)
+  set_tests_properties(original_process_allocator PROPERTIES LABELS "original-process;source-identity")
+  add_test(NAME original_process_pool_config COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_runtime/test_pool_config.py"
+    "$<TARGET_FILE:original_process_allocator_tests>")
+  set_tests_properties(original_process_pool_config PROPERTIES LABELS "original-process" TIMEOUT 30)
   add_test(NAME m0_bootstrap_smoke COMMAND zh_main --bootstrap-smoke)
   set_tests_properties(m0_bootstrap_smoke PROPERTIES LABELS foundation PASS_REGULAR_EXPRESSION "asset-free bootstrap graph: ok")
   add_test(NAME m0_bootstrap_rejects_gameplay COMMAND zh_main)

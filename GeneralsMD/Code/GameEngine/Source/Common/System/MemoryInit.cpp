@@ -48,6 +48,10 @@
 // USER INCLUDES 
 #include "Lib/BaseType.h"
 #include "Common/GameMemory.h"
+#if !defined(_WIN32)
+#include "zh/original_process.h"
+#include <unistd.h>
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -81,6 +85,14 @@ struct PoolSizeRec
 	Int initial;
 	Int overflow;
 };
+
+#if !defined(_WIN32)
+static zh::original_process::PoolConfigStatus s_poolConfigStatus = {
+	zh::original_process::PoolConfigCode::defaults, 0, 0, "compiled-defaults"
+};
+static Bool s_poolConfigEntering = false;
+static Bool s_poolConfigCompleted = false;
+#endif
 
 //-----------------------------------------------------------------------------
 // And please be careful of duplicates.  They are not rejected.
@@ -760,12 +772,13 @@ void userMemoryManagerInitPools()
 	
 	// since we're called prior to main, the cur dir might not be what
 	// we expect. so do it the hard way.
-	char buf[_MAX_PATH];
+	char buf[4096];
+#if defined(_WIN32)
 	::GetModuleFileName(NULL, buf, sizeof(buf));
 	char* pEnd = buf + strlen(buf);
-	while (pEnd != buf) 
+	while (pEnd != buf)
 	{
-		if (*pEnd == '\\') 
+		if (*pEnd == '\\')
 		{
 			*pEnd = 0;
 			break;
@@ -773,8 +786,149 @@ void userMemoryManagerInitPools()
 		--pEnd;
 	}
 	strcat(buf, "\\Data\\INI\\MemoryPools.ini");
+	FILE* fp = fopen(buf, "r");
+#else
+	using zh::original_process::PoolConfigCode;
+	struct OverrideRec { PoolSizeRec* pool; Int initial; Int overflow; };
+	if (s_poolConfigEntering)
+	{
+		s_poolConfigStatus.code = PoolConfigCode::reentrant;
+		return;
+	}
+	if (s_poolConfigCompleted)
+	{
+		s_poolConfigStatus.code = PoolConfigCode::too_late;
+		return;
+	}
+	s_poolConfigEntering = true;
+
+	const char* explicitPath = getenv("ZH_MEMORY_POOLS_INI");
+	Bool explicitSource = explicitPath && *explicitPath;
+	if (explicitSource)
+	{
+		if (strlen(explicitPath) >= sizeof(buf))
+		{
+			s_poolConfigStatus.code = PoolConfigCode::oversized;
+			s_poolConfigEntering = false;
+			s_poolConfigCompleted = true;
+			return;
+		}
+		strcpy(buf, explicitPath);
+		s_poolConfigStatus.source = "explicit";
+	}
+	else
+	{
+		const ssize_t count = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+		if (count <= 0 || static_cast<size_t>(count) >= sizeof(buf) - 1)
+		{
+			s_poolConfigStatus.code = PoolConfigCode::io_error;
+			s_poolConfigEntering = false;
+			s_poolConfigCompleted = true;
+			return;
+		}
+		buf[count] = 0;
+		char* slash = strrchr(buf, '/');
+		if (!slash || static_cast<size_t>(slash - buf) + sizeof("/Data/INI/MemoryPools.ini") > sizeof(buf))
+		{
+			s_poolConfigStatus.code = PoolConfigCode::oversized;
+			s_poolConfigEntering = false;
+			s_poolConfigCompleted = true;
+			return;
+		}
+		strcpy(slash, "/Data/INI/MemoryPools.ini");
+		s_poolConfigStatus.source = "executable-relative";
+	}
 
 	FILE* fp = fopen(buf, "r");
+	if (!fp)
+	{
+		s_poolConfigStatus.code = explicitSource ? PoolConfigCode::io_error : PoolConfigCode::defaults;
+		s_poolConfigEntering = false;
+		s_poolConfigCompleted = true;
+		return;
+	}
+	OverrideRec overrides[512];
+	Int overrideCount = 0;
+	Int ignoredCount = 0;
+	Bool valid = true;
+	size_t totalBytes = 0;
+	while (fgets(buf, sizeof(buf), fp))
+	{
+		totalBytes += strlen(buf);
+		if (totalBytes > 65536 || (!strchr(buf, '\n') && !feof(fp)))
+		{
+			s_poolConfigStatus.code = PoolConfigCode::oversized;
+			valid = false;
+			break;
+		}
+		char* cursor = buf;
+		while (*cursor && isspace(static_cast<unsigned char>(*cursor))) ++cursor;
+		if (!*cursor || *cursor == ';') continue;
+		char poolName[256];
+		char trailing = 0;
+		int initial = 0;
+		int overflow = 0;
+		const int fields = sscanf(cursor, "%255s %d %d %c", poolName, &initial, &overflow, &trailing);
+		if (fields != 3)
+		{
+			s_poolConfigStatus.code = PoolConfigCode::malformed;
+			valid = false;
+			break;
+		}
+		if (initial <= 0 || overflow <= 0 || initial > 10000000 || overflow > 10000000)
+		{
+			s_poolConfigStatus.code = PoolConfigCode::invalid_count;
+			valid = false;
+			break;
+		}
+		PoolSizeRec* match = NULL;
+		for (PoolSizeRec* p = sizes; p->name != NULL; ++p)
+			if (stricmp(p->name, poolName) == 0) { match = p; break; }
+		if (!match)
+		{
+			++ignoredCount;
+			continue;
+		}
+		for (Int i = 0; i < overrideCount; ++i)
+		{
+			if (overrides[i].pool == match)
+			{
+				s_poolConfigStatus.code = PoolConfigCode::duplicate;
+				valid = false;
+				break;
+			}
+		}
+		if (!valid) break;
+		if (overrideCount == static_cast<Int>(ELEMENTS_OF(overrides)))
+		{
+			s_poolConfigStatus.code = PoolConfigCode::oversized;
+			valid = false;
+			break;
+		}
+		overrides[overrideCount++] = {match, roundUpMemBound(initial), roundUpMemBound(overflow)};
+	}
+	if (ferror(fp) && valid)
+	{
+		s_poolConfigStatus.code = PoolConfigCode::io_error;
+		valid = false;
+	}
+	fclose(fp);
+	if (valid)
+	{
+		for (Int i = 0; i < overrideCount; ++i)
+		{
+			overrides[i].pool->initial = overrides[i].initial;
+			overrides[i].pool->overflow = overrides[i].overflow;
+		}
+		s_poolConfigStatus.code = overrideCount ? PoolConfigCode::applied : PoolConfigCode::defaults;
+		s_poolConfigStatus.recognized = overrideCount;
+		s_poolConfigStatus.ignored = ignoredCount;
+	}
+	s_poolConfigEntering = false;
+	s_poolConfigCompleted = true;
+	return;
+#endif
+#if defined(_WIN32)
 	if (fp)
 	{
 		char poolName[256];
@@ -799,5 +953,32 @@ void userMemoryManagerInitPools()
 		}
 		fclose(fp);
 	}
+#endif
 }
 
+#if !defined(_WIN32)
+namespace zh::original_process
+{
+PoolConfigStatus pool_config_status() noexcept
+{
+	return s_poolConfigStatus;
+}
+
+#if defined(ZH_ORIGINAL_RUNTIME_TEST_HOOKS)
+bool test_pool_config_reentry_guard() noexcept
+{
+	const PoolConfigStatus savedStatus = s_poolConfigStatus;
+	const Bool savedEntering = s_poolConfigEntering;
+	const Bool savedCompleted = s_poolConfigCompleted;
+	s_poolConfigEntering = true;
+	s_poolConfigCompleted = false;
+	userMemoryManagerInitPools();
+	const bool detected = s_poolConfigStatus.code == PoolConfigCode::reentrant;
+	s_poolConfigStatus = savedStatus;
+	s_poolConfigEntering = savedEntering;
+	s_poolConfigCompleted = savedCompleted;
+	return detected;
+}
+#endif
+}
+#endif

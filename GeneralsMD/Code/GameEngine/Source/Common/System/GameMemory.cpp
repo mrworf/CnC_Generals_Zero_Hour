@@ -50,8 +50,10 @@
 #include "Common/GameMemory.h"
 #include "Common/CriticalSection.h"
 #include "Common/Errors.h"
+#ifdef MEMORYPOOL_DEBUG
 #include "Common/GlobalData.h"
 #include "Common/PerfTimer.h"
+#endif
 #ifdef MEMORYPOOL_DEBUG
 #include "GameClient/ClientRandomValue.h"
 #endif
@@ -198,6 +200,9 @@ DECLARE_PERF_TIMER(MemoryPoolInitFilling)
 
 static Bool thePreMainInitFlag = false;
 static Bool theMainInitFlag = false;
+#if !defined(_WIN32)
+static std::atomic_size_t theLiveRawAllocationCount{0};
+#endif
 
 // ----------------------------------------------------------------------------
 // PRIVATE PROTOTYPES 
@@ -237,9 +242,16 @@ static Int roundUpMemBound(Int i)
 */
 static void* sysAllocateDoNotZero(Int numBytes)
 {
+#if defined(_WIN32)
 	void* p = ::GlobalAlloc(GMEM_FIXED, numBytes);
+#else
+	void* p = std::malloc(static_cast<size_t>(numBytes));
+#endif
 	if (!p)
 		throw ERROR_OUT_OF_MEMORY;
+#if !defined(_WIN32)
+	++theLiveRawAllocationCount;
+#endif
 #ifdef MEMORYPOOL_DEBUG
 	{
 		USE_PERF_TIMER(MemoryPoolDebugging)
@@ -273,7 +285,12 @@ static void sysFree(void* p)
 			theTotalSystemAllocationInBytes -= ::GlobalSize(p);
 		}
 #endif
+#if defined(_WIN32)
 		::GlobalFree(p);
+#else
+		std::free(p);
+		--theLiveRawAllocationCount;
+#endif
 	}
 }
 
@@ -1559,7 +1576,7 @@ MemoryPoolBlob* MemoryPool::createBlob(Int allocationCount)
 {
 	DEBUG_ASSERTCRASH(allocationCount > 0 && allocationCount%MEM_BOUND_ALIGNMENT==0, ("bad allocationCount (must be >0 and evenly divisible by %d)",MEM_BOUND_ALIGNMENT));
 
-	MemoryPoolBlob* blob = new (::sysAllocateDoNotZero(sizeof MemoryPoolBlob)) MemoryPoolBlob;	// will throw on failure
+	MemoryPoolBlob* blob = ::new (sysAllocateDoNotZero(sizeof(MemoryPoolBlob))) MemoryPoolBlob;	// will throw on failure
 
 	blob->initBlob(this, allocationCount);	// will throw on failure
 
@@ -1635,7 +1652,8 @@ void* MemoryPool::allocateBlockDoNotZeroImplementation(DECLARE_LITERALSTRING_ARG
 	{
 		// hmm... the current 'free' blob has nothing available. look and see if there
 		// are any other existing blobs with freespace.
-		for (MemoryPoolBlob *blob = m_firstBlob; blob != NULL; blob = blob->getNextInList()) 
+		MemoryPoolBlob *blob = m_firstBlob;
+		for (; blob != NULL; blob = blob->getNextInList())
 		{
 			if (blob->hasAnyFreeBlocks())
 			 	break;
@@ -2660,7 +2678,7 @@ MemoryPool *MemoryPoolFactory::createMemoryPool(const char *poolName, Int alloca
 		throw ERROR_OUT_OF_MEMORY;
 	}
 
-	pool = new (::sysAllocateDoNotZero(sizeof MemoryPool)) MemoryPool;	// will throw on failure
+	pool = ::new (sysAllocateDoNotZero(sizeof(MemoryPool))) MemoryPool;	// will throw on failure
 	pool->init(this, poolName, allocationSize, initialAllocationCount, overflowAllocationCount);	// will throw on failure
 
 	pool->addToList(&m_firstPoolInFactory);
@@ -2715,7 +2733,7 @@ DynamicMemoryAllocator *MemoryPoolFactory::createDynamicMemoryAllocator(Int numS
 {
 	DynamicMemoryAllocator *dma;
 
-	dma = new (::sysAllocateDoNotZero(sizeof DynamicMemoryAllocator)) DynamicMemoryAllocator;	// will throw on failure
+	dma = ::new (sysAllocateDoNotZero(sizeof(DynamicMemoryAllocator))) DynamicMemoryAllocator;	// will throw on failure
 	dma->init(this, numSubPools, pParms);	// will throw on failure
 
 	dma->addToList(&m_firstDmaInFactory);
@@ -3293,9 +3311,11 @@ void *operator new[](size_t size)
 /**
 	overload for global operator delete; send requests to TheDynamicMemoryAllocator.
 */
-void operator delete(void *p)
+void operator delete(void *p) noexcept
 {
 	++theLinkTester;
+	if (!p)
+		return;
 	preMainInitMemoryManager();
 	DEBUG_ASSERTCRASH(TheDynamicMemoryAllocator != NULL, ("must init memory manager before calling global operator delete"));
 	TheDynamicMemoryAllocator->freeBytes(p);
@@ -3305,9 +3325,11 @@ void operator delete(void *p)
 /**
 	overload for global operator delete[]; send requests to TheDynamicMemoryAllocator.
 */
-void operator delete[](void *p)
+void operator delete[](void *p) noexcept
 {
 	++theLinkTester;
+	if (!p)
+		return;
 	preMainInitMemoryManager();
 	DEBUG_ASSERTCRASH(TheDynamicMemoryAllocator != NULL, ("must init memory manager before calling global operator delete"));
 	TheDynamicMemoryAllocator->freeBytes(p);
@@ -3336,6 +3358,8 @@ void* operator new(size_t size, const char * fname, int)
 void operator delete(void * p, const char *, int)
 {
 	++theLinkTester;
+	if (!p)
+		return;
 	preMainInitMemoryManager();
 	DEBUG_ASSERTCRASH(TheDynamicMemoryAllocator != NULL, ("must init memory manager before calling global operator delete"));
 	TheDynamicMemoryAllocator->freeBytes(p);
@@ -3364,10 +3388,57 @@ void* operator new[](size_t size, const char * fname, int)
 void operator delete[](void * p, const char *, int)
 {
 	++theLinkTester;
+	if (!p)
+		return;
 	preMainInitMemoryManager();
 	DEBUG_ASSERTCRASH(TheDynamicMemoryAllocator != NULL, ("must init memory manager before calling global operator delete"));
 	TheDynamicMemoryAllocator->freeBytes(p);
 }
+
+#if !defined(_MSC_VER)
+void operator delete(void *p, size_t) noexcept { ::operator delete(p); }
+void operator delete[](void *p, size_t) noexcept { ::operator delete[](p); }
+
+namespace
+{
+struct AlignedAllocationHeader
+{
+	void *raw;
+	size_t alignment;
+};
+}
+
+void *operator new(size_t size, std::align_val_t alignment)
+{
+	const size_t align = static_cast<size_t>(alignment);
+	const size_t total = size + align - 1 + sizeof(AlignedAllocationHeader);
+	void *raw = TheDynamicMemoryAllocator
+		? TheDynamicMemoryAllocator->allocateBytesDoNotZero(static_cast<Int>(total), "aligned global operator new")
+		: (::preMainInitMemoryManager(), TheDynamicMemoryAllocator->allocateBytesDoNotZero(static_cast<Int>(total), "aligned global operator new"));
+	const uintptr_t start = reinterpret_cast<uintptr_t>(raw) + sizeof(AlignedAllocationHeader);
+	const uintptr_t aligned = (start + align - 1) & ~(static_cast<uintptr_t>(align) - 1);
+	auto *header = reinterpret_cast<AlignedAllocationHeader *>(aligned) - 1;
+	header->raw = raw;
+	header->alignment = align;
+	return reinterpret_cast<void *>(aligned);
+}
+
+void *operator new[](size_t size, std::align_val_t alignment)
+{
+	return ::operator new(size, alignment);
+}
+
+void operator delete(void *p, std::align_val_t) noexcept
+{
+	if (!p) return;
+	auto *header = reinterpret_cast<AlignedAllocationHeader *>(p) - 1;
+	TheDynamicMemoryAllocator->freeBytes(header->raw);
+}
+
+void operator delete[](void *p, std::align_val_t alignment) noexcept { ::operator delete(p, alignment); }
+void operator delete(void *p, size_t, std::align_val_t alignment) noexcept { ::operator delete(p, alignment); }
+void operator delete[](void *p, size_t, std::align_val_t alignment) noexcept { ::operator delete[](p, alignment); }
+#endif
 
 //-----------------------------------------------------------------------------
 #ifdef MEMORYPOOL_OVERRIDE_MALLOC
@@ -3422,7 +3493,7 @@ void initMemoryManager()
 		Int numSubPools;
 		const PoolInitRec *pParms;
 		userMemoryManagerGetDmaParms(&numSubPools, &pParms);
-		TheMemoryPoolFactory = new (::sysAllocateDoNotZero(sizeof MemoryPoolFactory)) MemoryPoolFactory;	// will throw on failure
+		TheMemoryPoolFactory = ::new (sysAllocateDoNotZero(sizeof(MemoryPoolFactory))) MemoryPoolFactory;	// will throw on failure
 		TheMemoryPoolFactory->init();	// will throw on failure
 		TheDynamicMemoryAllocator = TheMemoryPoolFactory->createDynamicMemoryAllocator(numSubPools, pParms);	// will throw on failure
 		userMemoryManagerInitPools();
@@ -3444,14 +3515,31 @@ void initMemoryManager()
 	
 	theLinkTester = 0; 
 
+#if !defined(_WIN32)
+	using NewFn = void* (*)(size_t);
+	using DeleteFn = void (*)(void*) noexcept;
+	using TaggedNewFn = void* (*)(size_t, const char*, int);
+	volatile NewFn scalarNew = static_cast<NewFn>(&::operator new);
+	volatile DeleteFn scalarDelete = static_cast<DeleteFn>(&::operator delete);
+	volatile NewFn arrayNew = static_cast<NewFn>(&::operator new[]);
+	volatile DeleteFn arrayDelete = static_cast<DeleteFn>(&::operator delete[]);
+	volatile TaggedNewFn taggedNew = static_cast<TaggedNewFn>(&::operator new);
+	linktest = static_cast<char*>(scalarNew(1));
+	scalarDelete(linktest);
+	linktest = static_cast<char*>(arrayNew(8));
+	arrayDelete(linktest);
+	linktest = static_cast<char*>(taggedNew(1, "", 1));
+	scalarDelete(linktest);
+#else
 	linktest = new char;
 	delete linktest;
 
 	linktest = new char[8];
 	delete [] linktest;
 
-	linktest = new char("",1);
+	linktest = static_cast<char*>(::operator new(1, "", 1));
 	delete linktest;
+#endif
 
 #ifdef MEMORYPOOL_OVERRIDE_MALLOC
 	linktest = (char*)malloc(1);
@@ -3497,7 +3585,7 @@ static void preMainInitMemoryManager()
 		Int numSubPools;
 		const PoolInitRec *pParms;
 		userMemoryManagerGetDmaParms(&numSubPools, &pParms);
-		TheMemoryPoolFactory = new (::sysAllocateDoNotZero(sizeof MemoryPoolFactory)) MemoryPoolFactory;	// will throw on failure
+		TheMemoryPoolFactory = ::new (sysAllocateDoNotZero(sizeof(MemoryPoolFactory))) MemoryPoolFactory;	// will throw on failure
 		TheMemoryPoolFactory->init();	// will throw on failure
 
 		TheDynamicMemoryAllocator = TheMemoryPoolFactory->createDynamicMemoryAllocator(numSubPools, pParms);	// will throw on failure
@@ -3581,3 +3669,13 @@ void freeFromW3DMemPool(void* pool, void* p)
 	DEBUG_ASSERTCRASH(pool, ("pool is null\n"));
 	((MemoryPool*)pool)->freeBlock(p);
 }
+
+#if !defined(_WIN32)
+namespace zh::original_process
+{
+std::size_t live_raw_allocations() noexcept
+{
+	return theLiveRawAllocationCount.load();
+}
+}
+#endif

@@ -131,13 +131,26 @@ typedef char							Byte;							// 1 byte		USED TO BE "SignedByte"
 typedef char							Char;							// 1 byte of text
 typedef bool							Bool;							// 
 // note, the types below should use "long long", but MSVC doesn't support it yet
-typedef __int64						Int64;							// 8 bytes 
-typedef unsigned __int64	UnsignedInt64;	  	// 8 bytes 
+#if defined(_MSC_VER)
+typedef __int64						Int64;							// 8 bytes
+typedef unsigned __int64	UnsignedInt64;	  	// 8 bytes
+#else
+typedef long long Int64;
+typedef unsigned long long UnsignedInt64;
+#endif
 
+#if defined(_WIN32)
 #include "Lib/Trig.h"
+#else
+#include "Lib/trig.h"
+#endif
 
 //-----------------------------------------------------------------------------
+#if defined(_WIN32)
 typedef wchar_t WideChar;  ///< multi-byte character representations
+#else
+typedef char16_t WideChar; ///< Generals strings retain the Windows UTF-16 code-unit ABI.
+#endif
 
 //-----------------------------------------------------------------------------
 template <typename NUM>
@@ -179,6 +192,7 @@ inline Real deg2rad(Real rad) { return rad * (PI/180); }
 // note, this function depends on the cpu rounding mode, which we set to CHOP every frame, 
 // but apparently tends to be left in unpredictable modes by various system bits of
 // code, so use this function with caution -- it might not round in the way you want.
+#if defined(_MSC_VER) && defined(_M_IX86)
 __forceinline long fast_float2long_round(float f)
 {
 	long i;
@@ -190,9 +204,16 @@ __forceinline long fast_float2long_round(float f)
 
 	return i;
 }
+#else
+inline long fast_float2long_round(float f)
+{
+	return __builtin_lrintf(f);
+}
+#endif
 
 // super fast float trunc routine, works always (independent of any FPU modes)
 // code courtesy of Martin Hoffesommer (grin)
+#if defined(_MSC_VER) && defined(_M_IX86)
 __forceinline float fast_float_trunc(float f)
 {
   _asm
@@ -208,6 +229,12 @@ __forceinline float fast_float_trunc(float f)
   }
   return f;
 }
+#else
+inline float fast_float_trunc(float f)
+{
+	return truncf(f);
+}
+#endif
 
 // same here, fast floor function
 __forceinline float fast_float_floor(float f)
