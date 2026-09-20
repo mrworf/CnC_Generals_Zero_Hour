@@ -54,6 +54,19 @@ M3 adds a native process path that does not initialize SDL, a display, GPU, audi
 
 The headless path is independent of the current working directory. It does not invoke a launcher, DRM/CD check, registry, splash window, named mutex, embedded browser, GameSpy, SEH, or `chdir`.
 
+## Retail data verification
+
+M4 adds an in-process, device-free verification entry. Both data roots must be absolute, readable directories; they may name the same combined installation. Command-line values override `ZeroHourDataPath`, `GeneralsDataPath`, and `Language` in `$XDG_CONFIG_HOME/generals-zero-hour/options.ini` (falling back below `$HOME/.config`). No registry, Steam, Wine, or working-directory scan is performed.
+
+```sh
+./build/linux-gcc-debug/zh_main --verify-data \
+  --zh-data /absolute/path/to/zero-hour \
+  --generals-data /absolute/path/to/generals \
+  --language English
+```
+
+If `--language` and `Language` are absent, verification accepts exactly one populated `Data/<language>` directory. Zero or multiple candidates are reported rather than guessed. This command does not initialize SDL, a window, GPU, audio, or video device and never writes either retail root.
+
 For lifecycle testing, `--fail-init <stage>` injects a controlled failure at `paths`, `logging`, `platform`, `renderer`, `audio`, `video`, or `engine`. It exits with code 4 after reporting the stage and tearing down only earlier initialized stages in reverse order. This option is a developer test seam, not a gameplay setting.
 
 `headless_process_isolation` launches two processes before waiting for either. They run from unrelated working directories, use different state roots and deliberately invalid SDL display/audio settings, and must produce disjoint logs and completion records. The test is asset-free and makes no network request.

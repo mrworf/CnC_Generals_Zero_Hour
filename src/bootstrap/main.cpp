@@ -1,4 +1,5 @@
 #include "build_metadata.h"
+#include "zh/data/config.h"
 #include "zh/headless/runtime.h"
 
 extern "C" {
@@ -61,8 +62,27 @@ int bootstrap_smoke()
 int main(int argc, char** argv)
 {
     if (argc == 2 && std::string_view(argv[1]) == "--bootstrap-smoke") return bootstrap_smoke();
+    if (argc >= 2 && std::string_view(argv[1]) == "--verify-data") {
+        std::vector<std::string_view> arguments;
+        for (int index = 2; index < argc; ++index) arguments.emplace_back(argv[index]);
+        try {
+            const auto selection = zh::data::resolve_data_selection(zh::data::parse_data_arguments(arguments));
+            zh::data::print_data_selection(selection, std::cout);
+            return 0;
+        } catch (const zh::data::DataUsageError& error) {
+            std::cerr << "data argument error: " << error.what() << '\n';
+            return 2;
+        } catch (const zh::data::DataError& error) {
+            std::cerr << "data verification error: " << error.what() << '\n';
+            return 3;
+        } catch (const zh::foundation::PlatformError& error) {
+            std::cerr << "data path error: " << error.what() << '\n';
+            return 3;
+        }
+    }
     if (argc < 2 || std::string_view(argv[1]) != "--headless") {
-        std::cerr << "usage: zh_main --headless [--ticks N] [--state-dir /absolute/path] [--fail-init stage]\n";
+        std::cerr << "usage: zh_main --verify-data [--zh-data PATH] [--generals-data PATH] [--language NAME]\n"
+                     "       zh_main --headless [--ticks N] [--state-dir /absolute/path] [--fail-init stage]\n";
         return static_cast<int>(zh::headless::ExitCode::usage);
     }
 

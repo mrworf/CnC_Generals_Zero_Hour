@@ -85,6 +85,10 @@ zh_add_bootstrap_component(zh_null_audio ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_null_video ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_test_support ZH_EMPTY_LEGACY_SOURCES)
 
+add_library(zh_data STATIC src/data/config.cpp)
+target_include_directories(zh_data PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(zh_data PUBLIC zh_os_posix zh_build_options)
+
 target_sources(zh_compression PRIVATE src/foundation/compression.cpp)
 target_include_directories(zh_compression PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
@@ -165,7 +169,7 @@ add_executable(zh_main src/bootstrap/main.cpp src/headless/runtime.cpp)
 target_include_directories(zh_main PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated" "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_main PRIVATE
   zh_build_options zh_game_engine zh_game_device zh_null_platform zh_null_renderer
-  zh_null_audio zh_null_video zh_test_support
+  zh_null_audio zh_null_video zh_test_support zh_data
 )
 set_property(TARGET zh_main PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_LEGACY_ZH_MAIN_SOURCES}")
 
@@ -256,4 +260,9 @@ if(ZH_BUILD_TESTS)
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/headless/test_process_isolation.py"
     --executable "$<TARGET_FILE:zh_main>")
   set_tests_properties(headless_process_isolation PROPERTIES LABELS headless TIMEOUT 30)
+
+  add_executable(data_config_tests tests/data/test_data_config.cpp)
+  target_link_libraries(data_config_tests PRIVATE zh_data)
+  add_test(NAME data_config COMMAND data_config_tests)
+  set_tests_properties(data_config PROPERTIES LABELS data)
 endif()
