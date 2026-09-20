@@ -119,9 +119,9 @@ target_sources(zh_renderer_sdl_gpu PRIVATE
 )
 target_include_directories(zh_renderer_sdl_gpu PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-add_library(zh_ui STATIC src/ui/renderer.cpp)
+add_library(zh_ui STATIC src/ui/renderer.cpp src/ui/font.cpp)
 target_include_directories(zh_ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
-target_link_libraries(zh_ui PUBLIC zh_renderer_sdl_gpu zh_build_options)
+target_link_libraries(zh_ui PUBLIC zh_renderer_sdl_gpu zh_build_options Freetype::Freetype Fontconfig::Fontconfig)
 
 target_sources(zh_platform_sdl PRIVATE src/platform/sdl_events.cpp src/platform/sdl_window.cpp)
 target_include_directories(zh_platform_sdl PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -265,6 +265,11 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(ui_renderer_tests PRIVATE zh_ui)
   add_test(NAME ui_renderer COMMAND ui_renderer_tests)
   set_tests_properties(ui_renderer PROPERTIES LABELS "renderer-contract;ui")
+
+  add_executable(ui_font_tests tests/ui/test_ui_font.cpp)
+  target_link_libraries(ui_font_tests PRIVATE zh_ui)
+  add_test(NAME ui_font COMMAND ui_font_tests)
+  set_tests_properties(ui_font PROPERTIES LABELS ui)
 
   add_executable(foundation_abi_codec_tests tests/foundation/test_abi_codec.cpp)
   target_link_libraries(foundation_abi_codec_tests PRIVATE zh_wwsupport)

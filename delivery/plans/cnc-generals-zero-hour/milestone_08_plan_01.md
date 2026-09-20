@@ -26,6 +26,6 @@ Automated streams cover menu, loading, tooltip, subtitle/caption, save/player/ga
 
 Commits are recorded after each completed slice.
 
-- Slice 01: pending (`delivery: M8 slice 01 record UI scenes`)
+- Slice 01: `672731d` (`delivery: M8 slice 01 record UI scenes`)
 - Slice 02: pending (`delivery: M8 slice 02 add font layout`)
 - Slice 03: pending (`delivery: M8 slice 03 integrate UI input flows`)
