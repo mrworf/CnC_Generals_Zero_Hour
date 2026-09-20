@@ -123,7 +123,7 @@ add_library(zh_ui STATIC src/ui/renderer.cpp src/ui/font.cpp src/ui/session.cpp)
 target_include_directories(zh_ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_ui PUBLIC zh_renderer_sdl_gpu zh_platform_sdl zh_data zh_build_options Freetype::Freetype Fontconfig::Fontconfig)
 
-add_library(zh_world STATIC src/world/scene.cpp src/world/recorder.cpp)
+add_library(zh_world STATIC src/world/scene.cpp src/world/recorder.cpp src/world/corpus.cpp)
 target_include_directories(zh_world PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_world PUBLIC zh_renderer_sdl_gpu zh_build_options)
 
@@ -203,6 +203,7 @@ install(FILES "${ZH_BOOTSTRAP_SPIRV}" DESTINATION share/generals-zero-hour/shade
 install(FILES ${ZH_RENDERER_SPIRV} DESTINATION share/generals-zero-hour/shaders/renderer)
 install(FILES LICENSE.md DESTINATION share/licenses/generals-zero-hour)
 install(FILES data/corpus/english-manifest.tsv DESTINATION share/generals-zero-hour/corpus)
+install(FILES data/corpus/world-rendering-manifest.tsv DESTINATION share/generals-zero-hour/corpus)
 
 if(ZH_BUILD_TESTS)
   enable_testing()
@@ -290,6 +291,12 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(world_recorder_tests PRIVATE zh_world)
   add_test(NAME world_recorder COMMAND world_recorder_tests)
   set_tests_properties(world_recorder PROPERTIES LABELS renderer-contract)
+
+  add_executable(world_corpus_tests tests/world/test_world_corpus.cpp)
+  target_compile_definitions(world_corpus_tests PRIVATE ZH_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(world_corpus_tests PRIVATE zh_world)
+  add_test(NAME world_corpus COMMAND world_corpus_tests)
+  set_tests_properties(world_corpus PROPERTIES LABELS renderer-contract)
 
   add_executable(foundation_abi_codec_tests tests/foundation/test_abi_codec.cpp)
   target_link_libraries(foundation_abi_codec_tests PRIVATE zh_wwsupport)

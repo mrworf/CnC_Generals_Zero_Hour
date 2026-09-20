@@ -1,0 +1,26 @@
+# Project-owned logical M9 coverage. No retail bytes, hashes, or host paths.
+map	Tournament Desert	representative skirmish terrain and object scene
+faction	usa	representative USA command geometry
+faction	china	representative China command geometry
+faction	gla	representative GLA command geometry
+family	mesh	static W3D mesh commands
+family	animated-mesh	animation-visible W3D geometry
+family	terrain	base and light-map terrain commands
+family	road-decal	road and projected decal commands
+family	tree	alpha-tested vegetation commands
+family	shadow	shadow render-target dependency commands
+family	faction-geometry	faction-specific geometry commands
+family	selection-marker	selected-object marker commands
+state	camera	left-handed view with 0..1 depth
+state	vertex-stream	bounded dynamic vertex upload
+state	index-stream	bounded dynamic index upload
+state	transform	per-object model transform
+state	lighting	fixed-function lighting translation
+state	fog	view-space fog translation
+state	alpha-test	fragment alpha-test feature
+state	texture-stages	bounded texture-stage translation
+state	addressing	repeat mirror clamp-edge and clamp-border descriptors
+state	cull	clockwise front-face and cull descriptor
+state	depth	depth test write compare and bias descriptor
+state	color-mask	RGBA write-mask descriptor
+state	render-target-dependency	shadow map precedes main world pass

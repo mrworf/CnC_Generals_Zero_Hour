@@ -39,5 +39,5 @@ ctest --preset linux-clang-release -L renderer-contract --output-on-failure
 Slice commits are recorded here after each validated transaction.
 
 - Slice 01: `e478c10` (`delivery: M9 slice 01 define world scene contract`)
-- Slice 02: pending
+- Slice 02: `49e0d78` (`delivery: M9 slice 02 record deterministic world commands`)
 - Slice 03: pending

@@ -388,6 +388,14 @@ std::size_t RecordingGpuDevice::pipeline_count() const noexcept
 {
     return static_cast<std::size_t>(std::count_if(impl_->pipelines.begin(), impl_->pipelines.end(), [](const auto& slot) { return slot.alive; }));
 }
+ResourceCounts RecordingGpuDevice::resource_counts() const noexcept
+{
+    const auto count = [](const auto& slots) {
+        return static_cast<std::size_t>(std::count_if(slots.begin(), slots.end(), [](const auto& slot) { return slot.alive; }));
+    };
+    return {count(impl_->buffers), count(impl_->textures), count(impl_->samplers),
+        count(impl_->shaders), count(impl_->pipelines)};
+}
 bool RecordingGpuDevice::pass_active() const noexcept { return impl_->in_pass; }
 std::vector<UInt8> RecordingGpuDevice::buffer_bytes(BufferHandle handle) const
 {

@@ -9,6 +9,22 @@
 
 namespace zh::renderer {
 
+struct ResourceCounts {
+    std::size_t buffers = 0;
+    std::size_t textures = 0;
+    std::size_t samplers = 0;
+    std::size_t shaders = 0;
+    std::size_t pipelines = 0;
+
+    std::size_t total() const noexcept { return buffers + textures + samplers + shaders + pipelines; }
+    friend bool operator==(const ResourceCounts& left, const ResourceCounts& right) noexcept
+    {
+        return left.buffers == right.buffers && left.textures == right.textures
+            && left.samplers == right.samplers && left.shaders == right.shaders && left.pipelines == right.pipelines;
+    }
+    friend bool operator!=(const ResourceCounts& left, const ResourceCounts& right) noexcept { return !(left == right); }
+};
+
 class RecordingGpuDevice final : public GpuDevice {
 public:
     explicit RecordingGpuDevice(std::size_t pipeline_capacity = 256);
@@ -36,6 +52,7 @@ public:
     const std::string& last_error() const noexcept;
     std::string snapshot() const;
     std::size_t pipeline_count() const noexcept;
+    ResourceCounts resource_counts() const noexcept;
     bool pass_active() const noexcept;
     std::vector<UInt8> buffer_bytes(BufferHandle handle) const;
 
