@@ -210,21 +210,23 @@ milestones:
   - id: M19
     title: "original support closure and source identity"
     file: delivery/milestones/cnc-generals-zero-hour/M19-original-support.md
-    status: in_progress
+    status: completed
     dependencies: [M0, M1]
     remediation_ids: [SE-001, SE-002, SE-010]
     optional: false
     started_at: "2026-09-20T14:39:13Z"
-    completed_at: null
-    evidence: null
-    notes: "New original-source provider; historical component tests do not establish this outcome."
+    completed_at: "2026-09-20T14:55:33Z"
+    commit_hash: b868418
+    evidence: "Three completed slices plus evidence/qa/cnc-generals-zero-hour/M19-original-support.md. All 3,293 inventory sources are classified; ten original support translation units have compile/link/runtime identity witnesses and negative provider controls. All four native preset suites passed 62/62; Clang ASan/UBSan original-support passed 7/7; root acceptance reran classification and focused identity tests (7/7) with unchanged source/packet revisions."
+    notes: "Accepted at original-source compile/link and bounded runtime grade, not whole-game integration. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_19_plan_01.md; slice commits: 95a2c31, 4679929, b868418; reference closeout: fa34ee9. M20-M25 retain production-game closure."
   - id: M20
     title: "original engine initialization and data lifecycle"
     file: delivery/milestones/cnc-generals-zero-hour/M20-original-lifecycle.md
-    status: pending
+    status: in_progress
     dependencies: [M19, M4]
     remediation_ids: [SE-003, SE-010]
     optional: false
+    started_at: "2026-09-20T14:55:33Z"
     completed_at: null
     evidence: null
     notes: "New original-source provider; historical component tests do not establish this outcome."
