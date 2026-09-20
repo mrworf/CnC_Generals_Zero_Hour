@@ -53,3 +53,9 @@ All seven stages report by name; teardown is exactly the reverse of successful e
 ## Commit boundary
 
 Commit injection, teardown evidence, and tests as `delivery: M3 slice 02 prove staged teardown`.
+
+## Completion evidence
+
+- The focused runtime test injects all seven stages, checks the named initialization exit, verifies no tick completion, checks reverse device shutdown, and performs a successful retry in the same state root.
+- Invalid, missing, and duplicate injection arguments fail as usage errors before initialization.
+- GCC Debug passes the complete `foundation|headless` selection after the lifecycle changes.

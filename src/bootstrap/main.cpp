@@ -62,7 +62,7 @@ int main(int argc, char** argv)
 {
     if (argc == 2 && std::string_view(argv[1]) == "--bootstrap-smoke") return bootstrap_smoke();
     if (argc < 2 || std::string_view(argv[1]) != "--headless") {
-        std::cerr << "usage: zh_main --headless [--ticks N] [--state-dir /absolute/path]\n";
+        std::cerr << "usage: zh_main --headless [--ticks N] [--state-dir /absolute/path] [--fail-init stage]\n";
         return static_cast<int>(zh::headless::ExitCode::usage);
     }
 

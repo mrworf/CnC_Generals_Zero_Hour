@@ -31,8 +31,8 @@ The native executable gains an asset-free headless mode with explicit argument p
 
 | Slice | Plan | Outcome | Dependency | Status | Commit |
 |---|---|---|---|---|---|
-| 01 | [headless entry and null devices](milestone_03_plan_01_slice_01.md) | Parsed headless entry, staged lifecycle, null devices, controlled ticks, logs, exit codes, and capability report | M1 | completed | recorded by slice 02 |
-| 02 | [failure-safe lifecycle](milestone_03_plan_01_slice_02.md) | Every initialization stage can fail deterministically and proves reverse partial teardown | 01 | pending | pending |
+| 01 | [headless entry and null devices](milestone_03_plan_01_slice_01.md) | Parsed headless entry, staged lifecycle, null devices, controlled ticks, logs, exit codes, and capability report | M1 | completed | `631d7eb` |
+| 02 | [failure-safe lifecycle](milestone_03_plan_01_slice_02.md) | Every initialization stage can fail deterministically and proves reverse partial teardown | 01 | completed | recorded by slice 03 |
 | 03 | [isolated concurrent processes](milestone_03_plan_01_slice_03.md) | Simultaneous processes use isolated writable roots and full GCC/Clang validation is documented | 01, 02 | pending | pending |
 
 ## Cross-slice constraints

@@ -25,9 +25,22 @@ public:
     using std::runtime_error::runtime_error;
 };
 
+enum class InitStage {
+    paths,
+    logging,
+    platform,
+    renderer,
+    audio,
+    video,
+    engine,
+};
+
+std::string_view stage_name(InitStage stage) noexcept;
+
 struct Options {
     std::uint32_t ticks = 1;
     std::optional<std::filesystem::path> state_directory;
+    std::optional<InitStage> fail_initialization;
 };
 
 struct BuildCapabilities {

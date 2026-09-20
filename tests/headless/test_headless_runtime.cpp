@@ -1,5 +1,6 @@
 #include "zh/headless/runtime.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -57,6 +58,9 @@ int main()
     expect_usage([] { parse_arguments({"--state-dir", "relative"}); }, "absolute path");
     expect_usage([] { parse_arguments({"--ticks", "1", "--ticks", "2"}); }, "only once");
     expect_usage([] { parse_arguments({"--unknown"}); }, "unknown headless option");
+    expect_usage([] { parse_arguments({"--fail-init"}); }, "requires a stage");
+    expect_usage([] { parse_arguments({"--fail-init", "database"}); }, "must be one of");
+    expect_usage([] { parse_arguments({"--fail-init", "paths", "--fail-init", "engine"}); }, "only once");
 
     const auto root = std::filesystem::temp_directory_path() / "zh-headless-runtime-test";
     std::error_code ignored;
@@ -105,6 +109,42 @@ int main()
         "unwritable state path has path exit code");
     check(bad_errors.str().find("cannot create headless state directory") != std::string::npos,
         "path error is actionable");
+
+    constexpr zh::headless::InitStage stages[]{zh::headless::InitStage::paths, zh::headless::InitStage::logging,
+        zh::headless::InitStage::platform, zh::headless::InitStage::renderer, zh::headless::InitStage::audio,
+        zh::headless::InitStage::video, zh::headless::InitStage::engine};
+    const std::vector<std::string> initialized_names{"platform", "renderer", "audio", "video"};
+    for (std::size_t stage_index = 0; stage_index < std::size(stages); ++stage_index) {
+        zh::headless::Options failure_options;
+        failure_options.state_directory = root / ("failure-" + std::string(zh::headless::stage_name(stages[stage_index])));
+        failure_options.fail_initialization = stages[stage_index];
+        std::ostringstream failure_output;
+        std::ostringstream failure_errors;
+        check(zh::headless::run(failure_options, capabilities(), failure_output, failure_errors) ==
+                zh::headless::ExitCode::initialization,
+            "injected stage has initialization exit code");
+        check(failure_errors.str().find("initialization failed at " +
+                  std::string(zh::headless::stage_name(stages[stage_index]))) != std::string::npos,
+            "injected stage is named in error");
+        check(failure_output.str().find("headless: completed") == std::string::npos,
+            "injected failure starts no completed tick run");
+
+        const std::size_t completed_devices = stage_index <= 2 ? 0 : std::min<std::size_t>(stage_index - 2, 4);
+        std::size_t previous = 0;
+        for (std::size_t count = completed_devices; count != 0; --count) {
+            const auto marker = "shutdown: " + initialized_names[count - 1];
+            const auto position = failure_output.str().find(marker);
+            check(position != std::string::npos && position >= previous, "device teardown is reverse ordered");
+            previous = position;
+        }
+
+        failure_options.fail_initialization.reset();
+        std::ostringstream retry_output;
+        std::ostringstream retry_errors;
+        check(zh::headless::run(failure_options, capabilities(), retry_output, retry_errors) ==
+                zh::headless::ExitCode::success,
+            "clean retry succeeds after injected failure");
+    }
 
     std::filesystem::remove_all(root, ignored);
     return failures == 0 ? 0 : 1;

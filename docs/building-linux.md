@@ -54,6 +54,8 @@ M3 adds a native process path that does not initialize SDL, a display, GPU, audi
 
 The headless path is independent of the current working directory. It does not invoke a launcher, DRM/CD check, registry, splash window, named mutex, embedded browser, GameSpy, SEH, or `chdir`.
 
+For lifecycle testing, `--fail-init <stage>` injects a controlled failure at `paths`, `logging`, `platform`, `renderer`, `audio`, `video`, or `engine`. It exits with code 4 after reporting the stage and tearing down only earlier initialized stages in reverse order. This option is a developer test seam, not a gameplay setting.
+
 ## What the bootstrap proves
 
 The `zh_main --bootstrap-smoke` test links project-owned stubs across the final engine/device, W3D, WWShade, support, compression, POSIX, SDL, renderer, audio, video, test, and null-backend boundaries. It compiles a project-owned GLSL shader to SPIR-V and reports build revision, architecture, compiler, SDL, and FFmpeg metadata. Invoking `zh_main` without `--bootstrap-smoke` fails so this milestone cannot be mistaken for a playable build.
