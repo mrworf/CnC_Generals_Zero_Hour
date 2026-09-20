@@ -67,6 +67,7 @@ public:
 //-------------------------------------------------------------------------------------------------
 /** W3D laser draw */
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 class W3DLaserDraw : public DrawModule, public LaserDrawInterface
 {
 
@@ -99,6 +100,6 @@ protected:
 	Bool m_selfDirty;								// not saved
 
 };
+#endif
 
 #endif // __W3DLASERDRAW_H_
-

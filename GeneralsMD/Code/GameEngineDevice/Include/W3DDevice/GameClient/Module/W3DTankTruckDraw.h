@@ -37,9 +37,11 @@
 #include "Common/AudioEventRTS.h"
 #include "GameClient/ParticleSys.h"
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "WW3D2/HAnim.h"
 #include "WW3D2/RendObj.h"
 #include "WW3D2/Part_Emt.h"
+#endif
 
 //-------------------------------------------------------------------------------------------------
 class W3DTankTruckDrawModuleData : public W3DModelDrawModuleData
@@ -76,6 +78,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 class W3DTankTruckDraw : public W3DModelDraw
 {
 
@@ -152,6 +155,6 @@ protected:
 	void updateTreadObjects(void);												///< update pointers to sub-objects like treads.
 	void updateTreadPositions(Real uvDelta);									///< update uv coordinates on each tread
 };
+#endif
 
 #endif // _W3D_TANKTRUCK_DRAW_H_
-

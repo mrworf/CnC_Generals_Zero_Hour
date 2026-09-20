@@ -62,7 +62,7 @@ class RenderObjClass;
 class Shadow;
 class TerrainTracksRenderObjClass;
 class HAnimClass;
-enum GameLODLevel;
+enum GameLODLevel : int;
 //-------------------------------------------------------------------------------------------------
 /** The default client update module */
 //-------------------------------------------------------------------------------------------------
@@ -337,6 +337,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 class W3DModelDraw : public DrawModule, public ObjectDrawInterface
 {
 
@@ -524,6 +525,6 @@ private:
 	void hideGarrisonFlags(Bool hide);
 #endif
 };
+#endif
 
 #endif // __W3DModelDraw_H_
-

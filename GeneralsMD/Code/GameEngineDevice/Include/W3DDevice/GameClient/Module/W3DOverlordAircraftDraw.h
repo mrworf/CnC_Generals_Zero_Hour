@@ -53,6 +53,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 class W3DOverlordAircraftDraw : public W3DModelDraw
 {
 
@@ -70,6 +71,6 @@ public:
 protected:
 
 };
-
 #endif
 
+#endif

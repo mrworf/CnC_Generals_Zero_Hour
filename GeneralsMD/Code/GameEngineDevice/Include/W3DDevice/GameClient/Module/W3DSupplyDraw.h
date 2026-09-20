@@ -47,6 +47,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 class W3DSupplyDraw : public W3DModelDraw
 {
 
@@ -65,6 +66,6 @@ protected:
 	Int m_totalBones;
 	Int m_lastNumberShown;
 };
+#endif
 
 #endif // _W3D_TRUCK_DRAW_H_
-

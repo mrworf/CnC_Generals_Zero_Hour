@@ -599,6 +599,12 @@ void ThingTemplate::parseModuleName(INI* ini, void *instance, void* store, const
 	}
 
 	ModuleData* data = TheModuleFactory->newModuleDataFromINI(ini, tokenStr, type, moduleTagStr);
+	if (data == NULL)
+	{
+		DEBUG_CRASH(("[LINE: %d - FILE: '%s'] Required module provider '%s' was not registered for thing template '%s'.\n",
+			ini->getLineNum(), ini->getFilename().str(), tokenStr.str(), self->getName().str()));
+		throw INI_INVALID_DATA;
+	}
 
 	if (data->isAiModuleData())
 	{

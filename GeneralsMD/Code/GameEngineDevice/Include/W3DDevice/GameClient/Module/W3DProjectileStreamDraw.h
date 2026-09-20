@@ -57,6 +57,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 class W3DProjectileStreamDraw : public DrawModule
 {
 
@@ -83,6 +84,6 @@ protected:
 	SegmentedLineClass *m_allLines[MAX_PROJECTILE_STREAM];	///< Persist, so I can ensure they live a full cycle, and minimize re-creates by holding on
 	Int m_linesValid;
 };
-
 #endif
 
+#endif

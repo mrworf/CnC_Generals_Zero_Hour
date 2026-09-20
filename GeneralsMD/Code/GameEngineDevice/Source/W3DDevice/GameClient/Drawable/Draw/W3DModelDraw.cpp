@@ -29,12 +29,14 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 
+#include "PreRTS.h"
+
 #define DEFINE_W3DANIMMODE_NAMES
 #define DEFINE_WEAPONSLOTTYPE_NAMES
 
 #define NO_DEBUG_CRC
 
-#include "Common/CRC.h"
+#include "Common/crc.h"
 #include "Common/CRCDebug.h"
 #include "Common/GameState.h"
 #include "Common/GlobalData.h"
@@ -55,6 +57,7 @@
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/PhysicsUpdate.h"
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
@@ -66,7 +69,14 @@
 #include "WW3D2/RendObj.h"
 #include "WW3D2/Mesh.h"
 #include "WW3D2/MeshMdl.h"
+#endif
 #include "Common/BitFlagsIO.h"
+
+#ifdef ZH_W3D_SCHEMA_ONLY
+static const char *TheAnimModeNames[] = {
+	"MANUAL", "LOOP", "ONCE", "LOOP_PINGPONG", "LOOP_BACKWARDS", "ONCE_BACKWARDS", NULL
+};
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -343,6 +353,7 @@ W3DAnimationInfo& W3DAnimationInfo::operator=(const W3DAnimationInfo &r)
 
 //-------------------------------------------------------------------------------------------------
 // note that this now returns an ADDREFED handle, which must be released by the caller!
+#ifndef ZH_W3D_SCHEMA_ONLY
 HAnimClass* W3DAnimationInfo::getAnimHandle() const
 { 
 #ifdef RETAIN_ANIM_HANDLES
@@ -373,6 +384,7 @@ HAnimClass* W3DAnimationInfo::getAnimHandle() const
 	return handle;
 #endif
 }
+#endif
 
 //-------------------------------------------------------------------------------------------------
 W3DAnimationInfo::~W3DAnimationInfo() 
@@ -384,6 +396,7 @@ W3DAnimationInfo::~W3DAnimationInfo()
 }
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 void ModelConditionInfo::preloadAssets( TimeOfDay timeOfDay, Real scale )
 {
 	// load this asset
@@ -398,6 +411,7 @@ void ModelConditionInfo::preloadAssets( TimeOfDay timeOfDay, Real scale )
 	//validateTurretInfo();
 	//validateWeaponBarrelInfo();
 }
+#endif
 
 //-------------------------------------------------------------------------------------------------
 void ModelConditionInfo::addPublicBone(const AsciiString& boneName) const
@@ -414,6 +428,7 @@ void ModelConditionInfo::addPublicBone(const AsciiString& boneName) const
 }
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 Bool ModelConditionInfo::matchesMode(Bool night, Bool snowy) const
 {
 	for (std::vector<ModelConditionFlags>::const_iterator it = m_conditionsYesVec.begin(); 
@@ -980,6 +995,7 @@ void ModelConditionInfo::loadAnimations() const
 }
 
 //-------------------------------------------------------------------------------------------------
+#endif
 void ModelConditionInfo::clear()
 { 
 	int i;
@@ -1046,6 +1062,7 @@ W3DModelDrawModuleData::W3DModelDrawModuleData() :
 }
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 void W3DModelDrawModuleData::validateStuffForTimeAndWeather(const Drawable* draw, Bool night, Bool snowy) const
 {
 	if (!isValidTimeToCalcLogicStuff())
@@ -1114,12 +1131,14 @@ void W3DModelDrawModuleData::validateStuffForTimeAndWeather(const Drawable* draw
 }
 
 //-------------------------------------------------------------------------------------------------
+#endif
 W3DModelDrawModuleData::~W3DModelDrawModuleData()
 {
 	m_conditionStateMap.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 void W3DModelDrawModuleData::preloadAssets( TimeOfDay timeOfDay, Real scale ) const
 {
 
@@ -1135,6 +1154,7 @@ void W3DModelDrawModuleData::preloadAssets( TimeOfDay timeOfDay, Real scale ) co
 }
 
 //-------------------------------------------------------------------------------------------------
+#endif
 AsciiString W3DModelDrawModuleData::getBestModelNameForWB(const ModelConditionFlags& c) const
 {
 	const ModelConditionInfo* info = findBestInfo(c);
@@ -1232,7 +1252,7 @@ enum AnimParseType
 //-------------------------------------------------------------------------------------------------
 static void parseAnimation(INI* ini, void *instance, void * /*store*/, const void* userData)
 {
-	AnimParseType animType = (AnimParseType)(UnsignedInt)userData;
+	AnimParseType animType = static_cast<AnimParseType>(reinterpret_cast<uintptr_t>(userData));
 
 	AsciiString animName = ini->getNextAsciiString();
 	animName.toLower();
@@ -1305,6 +1325,7 @@ static void parseShowHideSubObject(INI* ini, void *instance, void *store, const 
 }	
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 void W3DModelDraw::showSubObject( const AsciiString& name, Bool show )
 {
 	if( name.isNotEmpty() )
@@ -1328,6 +1349,7 @@ void W3DModelDraw::showSubObject( const AsciiString& name, Bool show )
 		}
 	}
 }
+#endif
 
 
 
@@ -1446,7 +1468,7 @@ void W3DModelDrawModuleData::parseConditionState(INI* ini, void *instance, void 
 
 	ModelConditionInfo info;
 	W3DModelDrawModuleData* self = (W3DModelDrawModuleData*)instance;
-	ParseCondStateType cst = (ParseCondStateType)(UnsignedInt)userData;
+	ParseCondStateType cst = static_cast<ParseCondStateType>(reinterpret_cast<uintptr_t>(userData));
 	switch (cst)
 	{
 		case PARSE_DEFAULT:
@@ -1717,6 +1739,7 @@ const ModelConditionInfo* W3DModelDrawModuleData::findBestInfo(const ModelCondit
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawModule(thing, moduleData)
 {
 	int i;
@@ -4274,6 +4297,7 @@ void W3DModelDraw::loadPostProcess( void )
 // ------------------------------------------------------------------------------------------------
 
 // ------------------------------------------------------------------------------------------------
+#endif
 void W3DModelDrawModuleData::crc( Xfer *x )
 {
 	xfer(x);
@@ -4308,7 +4332,7 @@ void W3DModelDrawModuleData::xfer( Xfer *x )
 				x->xferInt(&(info->m_turrets[i].m_turretAngleBone));
 				x->xferInt(&(info->m_turrets[i].m_turretPitchBone));
 			}
-			for (i=0; i<WEAPONSLOT_COUNT; ++i)
+			for (Int i=0; i<WEAPONSLOT_COUNT; ++i)
 			{
 				for (ModelConditionInfo::WeaponBarrelInfoVec::iterator wit = info->m_weaponBarrelInfoVec[i].begin(); wit != info->m_weaponBarrelInfoVec[i].end(); ++wit)
 				{
@@ -4323,4 +4347,3 @@ void W3DModelDrawModuleData::xfer( Xfer *x )
 void W3DModelDrawModuleData::loadPostProcess( void )
 {
 }
-

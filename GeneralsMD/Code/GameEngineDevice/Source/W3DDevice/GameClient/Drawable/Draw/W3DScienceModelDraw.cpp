@@ -27,6 +27,7 @@
 // Desc: Draw module just like Model, except it only draws if the local player has the specified science
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include "PreRTS.h"
 #include "W3DDevice/GameClient/Module/W3DScienceModelDraw.h"
 
 #include "Common/Player.h"
@@ -61,6 +62,7 @@ void W3DScienceModelDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DScienceModelDraw::W3DScienceModelDraw( Thing *thing, const ModuleData* moduleData ) : W3DModelDraw( thing, moduleData )
 {	 
 }
@@ -133,5 +135,5 @@ void W3DScienceModelDraw::loadPostProcess( void )
 	W3DModelDraw::loadPostProcess();
 
 }  // end loadPostProcess
-
+#endif
 

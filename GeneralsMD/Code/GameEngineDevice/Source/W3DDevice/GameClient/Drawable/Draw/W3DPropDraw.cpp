@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include "PreRTS.h"
 #include <stdlib.h>
 
 #include "Common/Thing.h"
@@ -36,7 +37,9 @@
 #include "GameLogic/Object.h"
 #include "GameClient/Drawable.h"
 #include "W3DDevice/GameClient/Module/W3DPropDraw.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "W3DDevice/GameClient/BaseHeightMap.h"
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -73,6 +76,7 @@ void W3DPropDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DPropDraw::W3DPropDraw( Thing *thing, const ModuleData* moduleData ) : DrawModule( thing, moduleData ),
 m_propAdded(false)
 {
@@ -159,3 +163,4 @@ void W3DPropDraw::loadPostProcess( void )
 	DrawModule::loadPostProcess();
 
 }  // end loadPostProcess
+#endif

@@ -53,6 +53,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 class W3DOverlordTankDraw : public W3DTankDraw
 {
 
@@ -70,6 +71,6 @@ public:
 protected:
 
 };
-
 #endif
 
+#endif

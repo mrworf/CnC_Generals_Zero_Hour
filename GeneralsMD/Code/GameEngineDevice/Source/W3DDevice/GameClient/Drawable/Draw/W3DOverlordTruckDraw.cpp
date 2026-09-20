@@ -29,6 +29,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include "PreRTS.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/Object.h"
@@ -59,6 +60,7 @@ void W3DOverlordTruckDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DOverlordTruckDraw::W3DOverlordTruckDraw( Thing *thing, const ModuleData* moduleData )
 : W3DTruckDraw( thing, moduleData )
 {
@@ -149,3 +151,4 @@ void W3DOverlordTruckDraw::loadPostProcess( void )
 	W3DTruckDraw::loadPostProcess();
 
 }  // end loadPostProcess
+#endif

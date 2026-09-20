@@ -34,7 +34,9 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/DrawModule.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "WW3D2/Line3D.h"
+#endif
 
 //-------------------------------------------------------------------------------------------------
 class W3DPropDrawModuleData : public ModuleData
@@ -52,6 +54,7 @@ public:
 //-------------------------------------------------------------------------------------------------
 /** W3D prop draw */
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 class W3DPropDraw : public DrawModule
 {
 
@@ -75,6 +78,6 @@ protected:
 	Bool m_propAdded;
 
 };
+#endif
 
 #endif // __W3DPropDraw_H_
-

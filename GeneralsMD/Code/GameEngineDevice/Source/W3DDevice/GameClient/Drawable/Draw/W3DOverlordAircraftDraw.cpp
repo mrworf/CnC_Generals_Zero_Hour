@@ -35,6 +35,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include "PreRTS.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/Object.h"
@@ -73,6 +74,7 @@ void W3DOverlordAircraftDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DOverlordAircraftDraw::W3DOverlordAircraftDraw( Thing *thing, const ModuleData* moduleData )
 : W3DModelDraw( thing, moduleData )
 {
@@ -170,3 +172,4 @@ void W3DOverlordAircraftDraw::loadPostProcess( void )
 	W3DModelDraw::loadPostProcess();
 
 }  // end loadPostProcess
+#endif

@@ -642,6 +642,11 @@ Module *ModuleFactory::newModule( Thing *thing, const AsciiString& name, const M
 	const ModuleTemplate* mt = findModuleTemplate(name, type);
 	if (mt)
 	{
+		if (mt->m_createProc == NULL)
+		{
+			DEBUG_CRASH(("Module '%s' requires an unavailable physical draw provider\n", name.str()));
+			throw ERROR_INVALID_D3D;
+		}
 		Module* mod = (*mt->m_createProc)( thing, moduleData );
 
 #ifdef _DEBUG

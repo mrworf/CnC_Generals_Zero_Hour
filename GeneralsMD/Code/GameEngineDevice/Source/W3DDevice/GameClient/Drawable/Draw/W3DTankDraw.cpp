@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include "PreRTS.h"
 #include <stdlib.h>
 #include <math.h>
 #include "Common/Thing.h"
@@ -43,9 +44,13 @@
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/ParticleSys.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "W3DDevice/GameClient/W3DGameClient.h"
+#endif
 #include "W3DDevice/GameClient/Module/W3DTankDraw.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "WW3D2/matinfo.h"
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -89,6 +94,7 @@ void W3DTankDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DTankDraw::W3DTankDraw( Thing *thing, const ModuleData* moduleData )
 : W3DModelDraw( thing, moduleData ),m_prevRenderObj(NULL), m_treadDebrisLeft(NULL), m_treadDebrisRight(NULL)
 {
@@ -450,3 +456,4 @@ void W3DTankDraw::loadPostProcess( void )
 	createEmitters();
 
 }  // end loadPostProcess
+#endif

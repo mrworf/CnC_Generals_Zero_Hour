@@ -26,6 +26,7 @@
 // Draw Trucks.  Actually, this draws rocket buggies.
 // Author: John Ahlquist, March 2002
 
+#include "PreRTS.h"
 #include <stdlib.h>
 #include <math.h>
 
@@ -46,7 +47,9 @@
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/ScriptEngine.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "W3DDevice/GameClient/W3DGameClient.h"
+#endif
 #include "W3DDevice/GameClient/Module/W3DTruckDraw.h"
 
 #ifdef _INTERNAL
@@ -102,6 +105,7 @@ void W3DTruckDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DTruckDraw::W3DTruckDraw( Thing *thing, const ModuleData* moduleData ) : W3DModelDraw( thing, moduleData ),
 m_dirtEffect(NULL), m_dustEffect(NULL), m_powerslideEffect(NULL), m_effectsInitialized(false),
 m_wasAirborne(false), m_isPowersliding(false), 
@@ -683,3 +687,4 @@ void W3DTruckDraw::loadPostProcess( void )
 	tossEmitters();
 
 }  // end loadPostProcess
+#endif

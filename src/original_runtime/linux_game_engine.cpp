@@ -8,6 +8,7 @@
 #include "Common/FunctionLexicon.h"
 #include "Common/GlobalData.h"
 #include "Common/ModuleFactory.h"
+#include "W3DDevice/Common/W3DModuleFactory.h"
 #include "Common/Radar.h"
 #include "Common/ThingFactory.h"
 #include "Common/RAMFile.h"
@@ -621,7 +622,7 @@ protected:
 	ArchiveFileSystem *createArchiveFileSystem() override { return new LinuxArchiveFileSystem; }
 	GameLogic *createGameLogic() override { return new GameLogic; }
 	GameClient *createGameClient() override { return new LinuxGameClient; }
-	ModuleFactory *createModuleFactory() override { return new ModuleFactory; }
+	ModuleFactory *createModuleFactory() override { return new W3DModuleFactory; }
 	ThingFactory *createThingFactory() override { return new ThingFactory; }
 	FunctionLexicon *createFunctionLexicon() override { return new FunctionLexicon; }
 	Radar *createRadar() override { return new LinuxRadar; }

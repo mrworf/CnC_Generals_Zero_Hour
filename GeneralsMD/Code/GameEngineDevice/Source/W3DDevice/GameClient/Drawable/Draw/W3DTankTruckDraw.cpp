@@ -26,6 +26,7 @@
 // Draw TankTrucks.  Actually, this draws quad cannon which has both treads and wheels.
 // Author: Mark Wilczynski, August 2002
 
+#include "PreRTS.h"
 #include <stdlib.h>
 #include <math.h>
 
@@ -43,9 +44,13 @@
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/ParticleSys.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "W3DDevice/GameClient/W3DGameClient.h"
+#endif
 #include "W3DDevice/GameClient/Module/W3DTankTruckDraw.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "WW3D2/matinfo.h"
+#endif
 
 //#define SHOW_TANK_DEBRIS
 //-------------------------------------------------------------------------------------------------
@@ -95,6 +100,7 @@ void W3DTankTruckDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DTankTruckDraw::W3DTankTruckDraw( Thing *thing, const ModuleData* moduleData ) : W3DModelDraw( thing, moduleData ),
 m_dirtEffect(NULL), m_dustEffect(NULL), m_powerslideEffect(NULL), m_effectsInitialized(false),
 m_wasAirborne(false), m_isPowersliding(false), m_frontWheelRotation(0), m_rearWheelRotation(0),
@@ -785,3 +791,4 @@ void W3DTankTruckDraw::loadPostProcess( void )
 	tossEmitters();
 
 }  // end loadPostProcess
+#endif

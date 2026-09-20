@@ -29,6 +29,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include "PreRTS.h"
 #include <stdlib.h>
 
 #include "Common/Thing.h"
@@ -43,6 +44,7 @@
 #include "GameLogic/TerrainLogic.h"
 #include "GameLogic/Module/LaserUpdate.h"
 #include "W3DDevice/GameClient/Module/W3DLaserDraw.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "WW3D2/RInfo.h"
@@ -50,6 +52,7 @@
 #include "WW3D2/Segline.h"
 #include "WWMath/Vector3.h"
 #include "WW3D2/AssetMgr.h"
+#endif
 
 
 #ifdef _INTERNAL
@@ -113,6 +116,7 @@ void W3DLaserDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DLaserDraw::W3DLaserDraw( Thing *thing, const ModuleData* moduleData ) : 
 	DrawModule( thing, moduleData ),
 	m_line3D(NULL),
@@ -467,3 +471,4 @@ void W3DLaserDraw::loadPostProcess( void )
 	m_selfDirty = true;	// so we update the first time after reload
 
 }  // end loadPostProcess
+#endif

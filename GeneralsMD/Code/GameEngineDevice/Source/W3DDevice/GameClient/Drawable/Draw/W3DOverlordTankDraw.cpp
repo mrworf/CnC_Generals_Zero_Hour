@@ -29,6 +29,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include "PreRTS.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/Object.h"
@@ -59,6 +60,7 @@ void W3DOverlordTankDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DOverlordTankDraw::W3DOverlordTankDraw( Thing *thing, const ModuleData* moduleData )
 : W3DTankDraw( thing, moduleData )
 {
@@ -149,3 +151,4 @@ void W3DOverlordTankDraw::loadPostProcess( void )
 	W3DTankDraw::loadPostProcess();
 
 }  // end loadPostProcess
+#endif

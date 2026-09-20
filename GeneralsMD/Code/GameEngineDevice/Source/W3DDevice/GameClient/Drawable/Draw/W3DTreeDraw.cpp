@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include "PreRTS.h"
 #include <stdlib.h>
 
 #include "Common/Thing.h"
@@ -36,7 +37,9 @@
 #include "GameLogic/Object.h"
 #include "GameClient/Drawable.h"
 #include "W3DDevice/GameClient/Module/W3DTreeDraw.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "W3DDevice/GameClient/BaseHeightMap.h"
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -114,6 +117,7 @@ void W3DTreeDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DTreeDraw::W3DTreeDraw( Thing *thing, const ModuleData* moduleData ) : DrawModule( thing, moduleData ),
 m_treeAdded(false)
 {
@@ -202,4 +206,4 @@ void W3DTreeDraw::loadPostProcess( void )
 	DrawModule::loadPostProcess();
 
 }  // end loadPostProcess
-
+#endif

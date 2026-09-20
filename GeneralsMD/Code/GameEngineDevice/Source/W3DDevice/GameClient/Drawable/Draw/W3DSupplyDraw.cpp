@@ -27,6 +27,7 @@
 // Desc: Draw module reacts to SupplyStatus setting by hiding an equal number of the specified bone array.
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include "PreRTS.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "W3DDevice/GameClient/Module/W3DSupplyDraw.h"
@@ -57,6 +58,7 @@ void W3DSupplyDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DSupplyDraw::W3DSupplyDraw( Thing *thing, const ModuleData* moduleData ) : W3DModelDraw( thing, moduleData )
 {	 
 	m_totalBones = -1;
@@ -151,5 +153,5 @@ void W3DSupplyDraw::loadPostProcess( void )
 	W3DModelDraw::loadPostProcess();
 
 }  // end loadPostProcess
-
+#endif
 

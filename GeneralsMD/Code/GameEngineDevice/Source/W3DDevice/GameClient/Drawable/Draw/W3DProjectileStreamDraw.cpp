@@ -27,15 +27,18 @@
 // Graham Smallwood, May 2002
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include "PreRTS.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/Object.h"
 #include "W3DDevice/GameClient/Module/W3DProjectileStreamDraw.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "WW3D2/AssetMgr.h"
 #include "WW3D2/Segline.h"
 #include "WWMath/Vector3.h"
+#endif
 
 //-------------------------------------------------------------------------------------------------
 W3DProjectileStreamDrawModuleData::W3DProjectileStreamDrawModuleData() 
@@ -71,6 +74,7 @@ void W3DProjectileStreamDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DProjectileStreamDraw::~W3DProjectileStreamDraw()
 {
 	for( Int lineIndex = 0; lineIndex < m_linesValid; lineIndex++ )
@@ -262,3 +266,4 @@ void W3DProjectileStreamDraw::loadPostProcess( void )
 	DrawModule::loadPostProcess();
 
 }  // end loadPostProcess
+#endif

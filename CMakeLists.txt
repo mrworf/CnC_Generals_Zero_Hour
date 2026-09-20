@@ -462,6 +462,21 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/Common/System/Radar.cpp
   GeneralsMD/Code/GameEngine/Source/Common/Thing/Module.cpp
   GeneralsMD/Code/GameEngine/Source/Common/Thing/ModuleFactory.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/Common/Thing/W3DModuleFactory.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DModelDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DDependencyModelDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DLaserDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DOverlordAircraftDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DOverlordTankDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DOverlordTruckDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DProjectileStreamDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DPropDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DScienceModelDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DSupplyDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTankDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTankTruckDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTreeDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTruckDraw.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/Display.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/DrawGroupInfo.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GameClient.cpp
@@ -611,6 +626,23 @@ foreach(config_target zh_original_config_spine zh_original_config_providers)
   target_compile_options(${config_target} PRIVATE
     $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-ffunction-sections;-fdata-sections>)
 endforeach()
+set_source_files_properties(
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/Common/Thing/W3DModuleFactory.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DModelDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DDependencyModelDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DLaserDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DOverlordAircraftDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DOverlordTankDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DOverlordTruckDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DProjectileStreamDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DPropDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DScienceModelDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DSupplyDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTankDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTankTruckDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTreeDraw.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTruckDraw.cpp
+  PROPERTIES COMPILE_DEFINITIONS "BRUTAL_TIMING_HACK;ZH_W3D_SCHEMA_ONLY")
 
 add_library(zh_persistence STATIC src/persistence/save.cpp src/persistence/replay.cpp)
 target_include_directories(zh_persistence PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -839,6 +871,41 @@ if(ZH_BUILD_TESTS)
     --library "$<TARGET_FILE:zh_data>"
     --library "$<TARGET_FILE:zh_os_posix>")
   set_tests_properties(original_config_provider_removal PROPERTIES LABELS "original-config;source-identity")
+  add_executable(original_w3d_schema_tests
+    tests/original_lifecycle/test_w3d_schema.cpp
+    $<TARGET_OBJECTS:zh_original_config_spine>)
+  target_include_directories(original_w3d_schema_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+  target_compile_definitions(original_w3d_schema_tests PRIVATE BRUTAL_TIMING_HACK ZH_W3D_SCHEMA_ONLY)
+  target_link_libraries(original_w3d_schema_tests PRIVATE
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
+  target_link_options(original_w3d_schema_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-schema.link.map")
+  add_test(NAME original_w3d_schema COMMAND original_w3d_schema_tests)
+  set_tests_properties(original_w3d_schema PROPERTIES LABELS "original-config;source-identity;w3d-schema")
+  add_test(NAME original_w3d_schema_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_w3d_identity.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map"
+    --executable "$<TARGET_FILE:zh_original_main>"
+    --factory-source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/Common/Thing/W3DModuleFactory.cpp"
+    --classification "${CMAKE_CURRENT_SOURCE_DIR}/data/original-source-classification.tsv")
+  set_tests_properties(original_w3d_schema_identity PROPERTIES LABELS "original-config;source-identity;w3d-schema")
+  add_test(NAME original_w3d_schema_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target zh_original_main
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member W3DModuleFactory.cpp.o
+    --required-symbol W3DModuleFactory)
+  set_tests_properties(original_w3d_schema_provider_removal PROPERTIES LABELS "original-config;source-identity;w3d-schema")
   add_executable(original_data_startup_tests
     tests/original_lifecycle/test_data_startup.cpp
     $<TARGET_OBJECTS:zh_original_config_spine>)

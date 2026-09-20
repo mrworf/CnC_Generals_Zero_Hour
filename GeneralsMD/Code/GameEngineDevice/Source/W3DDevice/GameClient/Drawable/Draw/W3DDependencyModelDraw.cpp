@@ -32,6 +32,7 @@
 // draw after he draws.
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include "PreRTS.h"
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
 #include "GameLogic/Object.h"
@@ -73,6 +74,7 @@ void W3DDependencyModelDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 W3DDependencyModelDraw::W3DDependencyModelDraw( Thing *thing, const ModuleData* moduleData ) : W3DModelDraw( thing, moduleData )
 {	 
 	m_dependencyCleared = FALSE;
@@ -198,5 +200,5 @@ void W3DDependencyModelDraw::loadPostProcess( void )
 	W3DModelDraw::loadPostProcess();
 
 }  // end loadPostProcess
-
+#endif
 

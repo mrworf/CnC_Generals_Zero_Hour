@@ -35,7 +35,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
 
-enum ScienceType;
+enum ScienceType : int;
 
 //-------------------------------------------------------------------------------------------------
 class W3DScienceModelDrawModuleData : public W3DModelDrawModuleData
@@ -49,6 +49,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 class W3DScienceModelDraw : public W3DModelDraw
 {
 
@@ -63,6 +64,6 @@ public:
 
 protected:
 };
-
 #endif
 
+#endif

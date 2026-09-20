@@ -34,7 +34,9 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/DrawModule.h"
+#ifndef ZH_W3D_SCHEMA_ONLY
 #include "WW3D2/Line3D.h"
+#endif
 
 //-------------------------------------------------------------------------------------------------
 class W3DTreeDrawModuleData : public ModuleData
@@ -73,6 +75,7 @@ public:
 //-------------------------------------------------------------------------------------------------
 /** W3D tree draw */
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 class W3DTreeDraw : public DrawModule
 {
 
@@ -96,6 +99,6 @@ protected:
 	Bool m_treeAdded;
 
 };
+#endif
 
 #endif // __W3DTreeDraw_H_
-

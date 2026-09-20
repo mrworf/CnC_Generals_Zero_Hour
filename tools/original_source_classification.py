@@ -64,6 +64,21 @@ PRODUCTION_SOURCES = {
     "GeneralsMD/Code/GameEngine/Source/GameClient/GameText.cpp": "M20",
     "GeneralsMD/Code/GameEngine/Source/GameClient/LanguageFilter.cpp": "M20",
     "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/Common/Thing/W3DModuleFactory.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DDependencyModelDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DLaserDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DModelDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DOverlordAircraftDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DOverlordTankDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DOverlordTruckDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DProjectileStreamDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DPropDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DScienceModelDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DSupplyDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTankDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTankTruckDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTreeDraw.cpp": "M20",
+    "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTruckDraw.cpp": "M20",
 }
 
 PRODUCTION_PROVIDER_RE = re.compile(r"^(?!.*(?:bootstrap|fixture|toy)).+\.(?:c|cc|cpp|cxx)$", re.IGNORECASE)

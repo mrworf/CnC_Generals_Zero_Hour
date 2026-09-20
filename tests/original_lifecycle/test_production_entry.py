@@ -117,6 +117,22 @@ def fixture(root: pathlib.Path) -> None:
           " SnowBoxDimensions = 1\n SnowBoxDensity = 1\n SnowVelocity = 0\n"
           " SnowPointSprites = No\n SnowEnabled = No\nEND\n")
     write(root / "Data/INI/Default/Water.ini", "WaterTransparency\nEND\n")
+    write(root / "Data/INI/Default/Object.ini",
+          "Object FixtureLaser\n"
+          " Draw = W3DLaserDraw ModuleTag_FixtureLaser\n"
+          "  NumBeams = 3\n"
+          "  InnerBeamWidth = 1.25\n"
+          "  OuterBeamWidth = 4.5\n"
+          "  InnerColor = R:255 G:64 B:32\n"
+          "  OuterColor = R:16 G:32 B:255\n"
+          "  Texture = FixtureLaserTexture\n"
+          "  Tile = Yes\n"
+          "  Segments = 7\n"
+          "  ArcHeight = 2.5\n"
+          "  SegmentOverlapRatio = 0.2\n"
+          "  TilingScalar = 3.0\n"
+          " End\n"
+          "End\n")
     write(root / "Data/English/Generals.csf", csf())
     write(root / "Maps/MapCache.ini",
           "MapCache Maps\\Fixture\\Fixture.map\n fileSize = 1234\n fileCRC = 305419896\n"
@@ -233,6 +249,23 @@ def main() -> int:
         fixture(unknown)
         write(unknown / "Data/INI/Rank.ini", "UnknownRequiredBlock Fixture\nEND\n")
         variants.append((unknown, "UnknownRequiredBlock"))
+        unknown_w3d = base / "unknown-w3d-input"
+        fixture(unknown_w3d)
+        write(unknown_w3d / "Data/INI/Default/Object.ini",
+              "Object FixtureUnknownW3D\n"
+              " Draw = W3DUnknownDraw ModuleTag_Missing\n"
+              " End\n"
+              "End\n")
+        variants.append((unknown_w3d, "Object FixtureUnknownW3D"))
+        malformed_w3d = base / "malformed-w3d-input"
+        fixture(malformed_w3d)
+        write(malformed_w3d / "Data/INI/Default/Object.ini",
+              "Object FixtureMalformedW3D\n"
+              " Draw = W3DLaserDraw ModuleTag_Malformed\n"
+              "  NumBeams = not-a-number\n"
+              " End\n"
+              "End\n")
+        variants.append((malformed_w3d, "Object FixtureMalformedW3D"))
         for variant, diagnostic in variants:
             make_read_only(variant)
             failure = run(executable, base / (variant.name + "-run"), variant)

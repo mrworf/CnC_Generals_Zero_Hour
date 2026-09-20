@@ -52,6 +52,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
+#ifndef ZH_W3D_SCHEMA_ONLY
 class W3DDependencyModelDraw : public W3DModelDraw
 {
 
@@ -69,6 +70,6 @@ public:
 protected:
 	Bool m_dependencyCleared; // The thing we depend on will clear this, and we will relatch it after we draw.
 };
+#endif
 
 #endif // _W3D_DEPENDENCY_MODEL_DRAW_H_
-

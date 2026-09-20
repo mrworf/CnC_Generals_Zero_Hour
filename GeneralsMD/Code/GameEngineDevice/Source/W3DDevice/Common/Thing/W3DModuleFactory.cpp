@@ -28,26 +28,32 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include "PreRTS.h"
 #include "W3DDevice/Common/W3DModuleFactory.h"
-#include "W3DDevice/GameClient/Module/W3DDebrisDraw.h"
-#include "W3DDevice/GameClient/Module/W3DDefaultDraw.h"
 #include "W3DDevice/GameClient/Module/W3DDependencyModelDraw.h"
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
 #include "W3DDevice/GameClient/Module/W3DLaserDraw.h"
 #include "W3DDevice/GameClient/Module/W3DOverlordTankDraw.h"
 #include "W3DDevice/GameClient/Module/W3DOverlordTruckDraw.h"
 #include "W3DDevice/GameClient/Module/W3DOverlordAircraftDraw.h"
-#include "W3DDevice/GameClient/Module/W3DPoliceCarDraw.h"
 #include "W3DDevice/GameClient/Module/W3DProjectileStreamDraw.h"
-#include "W3DDevice/GameClient/Module/W3DRopeDraw.h"
 #include "W3DDevice/GameClient/Module/W3DSupplyDraw.h"
 #include "W3DDevice/GameClient/Module/W3DScienceModelDraw.h"
 #include "W3DDevice/GameClient/Module/W3DTankDraw.h"
 #include "W3DDevice/GameClient/Module/W3DTruckDraw.h"
 #include "W3DDevice/GameClient/Module/W3DTankTruckDraw.h"
-#include "W3DDevice/GameClient/Module/W3DTracerDraw.h"
 #include "W3DDevice/GameClient/Module/W3DTreeDraw.h"
 #include "W3DDevice/GameClient/Module/W3DPropDraw.h"
+
+namespace {
+template <typename T> ModuleData *newW3DModuleData(INI *ini)
+{
+	T *data = MSGNEW("AllModuleData") T;
+	if (ini != NULL)
+		ini->initFromINIMultiProc(data, T::buildFieldParse);
+	return data;
+}
+}
 
 //-------------------------------------------------------------------------------------------------
 /** Initialize method */
@@ -58,25 +64,31 @@ void W3DModuleFactory::init( void )
 	// extending functionality
 	ModuleFactory::init();
 
-	// add the specific module templates we need for the draw methods
-	addModule( W3DDefaultDraw );
-	addModule( W3DDebrisDraw );
-	addModule( W3DModelDraw );
-	addModule( W3DLaserDraw );
-	addModule( W3DOverlordTankDraw );
-	addModule( W3DOverlordTruckDraw );
-	addModule( W3DOverlordAircraftDraw );
-	addModule( W3DProjectileStreamDraw );
-	addModule( W3DPoliceCarDraw );
-	addModule( W3DRopeDraw );
-	addModule( W3DScienceModelDraw );
-	addModule( W3DSupplyDraw );
-	addModule( W3DDependencyModelDraw );
-	addModule( W3DTankDraw );
-	addModule( W3DTruckDraw );
-	addModule( W3DTracerDraw );
-	addModule( W3DTankTruckDraw );
-	addModule( W3DTreeDraw );
-	addModule( W3DPropDraw );
+	// Keep the original complete registration set while separating the
+	// configuration schema from physical draw-instance construction. A null
+	// instance proc is an explicit unavailable device edge; ModuleFactory
+	// rejects attempts to cross it instead of returning placeholder success.
+#define addW3DSchema(name, dataType) \
+	addModuleInternal(NULL, newW3DModuleData<dataType>, MODULETYPE_DRAW, AsciiString(#name), MODULEINTERFACE_DRAW)
+	addW3DSchema(W3DDefaultDraw, ModuleData);
+	addW3DSchema(W3DDebrisDraw, ModuleData);
+	addW3DSchema(W3DModelDraw, W3DModelDrawModuleData);
+	addW3DSchema(W3DLaserDraw, W3DLaserDrawModuleData);
+	addW3DSchema(W3DOverlordTankDraw, W3DOverlordTankDrawModuleData);
+	addW3DSchema(W3DOverlordTruckDraw, W3DOverlordTruckDrawModuleData);
+	addW3DSchema(W3DOverlordAircraftDraw, W3DOverlordAircraftDrawModuleData);
+	addW3DSchema(W3DProjectileStreamDraw, W3DProjectileStreamDrawModuleData);
+	addW3DSchema(W3DPoliceCarDraw, W3DTruckDrawModuleData);
+	addW3DSchema(W3DRopeDraw, ModuleData);
+	addW3DSchema(W3DScienceModelDraw, W3DScienceModelDrawModuleData);
+	addW3DSchema(W3DSupplyDraw, W3DSupplyDrawModuleData);
+	addW3DSchema(W3DDependencyModelDraw, W3DDependencyModelDrawModuleData);
+	addW3DSchema(W3DTankDraw, W3DTankDrawModuleData);
+	addW3DSchema(W3DTruckDraw, W3DTruckDrawModuleData);
+	addW3DSchema(W3DTracerDraw, ModuleData);
+	addW3DSchema(W3DTankTruckDraw, W3DTankTruckDrawModuleData);
+	addW3DSchema(W3DTreeDraw, W3DTreeDrawModuleData);
+	addW3DSchema(W3DPropDraw, W3DPropDrawModuleData);
+#undef addW3DSchema
 
 }  // end init
