@@ -54,3 +54,9 @@ Source-owned UI extraction unit; provider header/CMake additions; owned UI fixtu
 ## Commit boundary
 
 One commit containing UI provider behavior, fixtures/tests, plan result, and relevant checked-ledger updates. Audio definitions remain excluded.
+
+## Result
+
+Complete. `UiResources` loads original image and WND semantics through `LogicalFiles`, retains a selected VFS font via the accepted M8 `FontFace`, validates all layout/window callback references before publication, and emits the resulting root/child/control scene through `UiRecorder`. The owned `Menus/BlankWindow.wnd` fixture observes normalized image dimensions including the original rotated-status swap.
+
+Cumulative focused runtime, live-symbol identity, extraction-provenance, and ledger tests pass 6/6 in GCC/Clang Debug/Release. Tests cover the reset layout plus button/static-text children, callback invocation and replacement rejection, missing callbacks/layouts, unsupported controls, four injected acquisition failures, arbitrary temporary roots, repeated teardown, and exact callback/font/layout/window/recording-resource cleanup. The resulting commit is recorded in the governing plan after creation.

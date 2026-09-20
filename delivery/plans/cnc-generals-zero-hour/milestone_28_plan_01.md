@@ -33,8 +33,8 @@ The provider preserves logical resource ownership, loader and callback registrat
 
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
-| 01 | [CPU scene, loaders, and device lifecycle](milestone_28_plan_01_slice_01.md) | Original CPU scene/resource ownership drives the recording device through registered loaders with explicit DX8 initialization/destruction capabilities. | M27, M7 | complete | recorded after commit | 4/4 focused tests in all four presets |
-| 02 | [Font, image, and WND resources](milestone_28_plan_01_slice_02.md) | Original UI resource semantics load owned fonts/images/layouts through native providers, including `BlankWindow.wnd`. | slice 01, M8 | pending | — | — |
+| 01 | [CPU scene, loaders, and device lifecycle](milestone_28_plan_01_slice_01.md) | Original CPU scene/resource ownership drives the recording device through registered loaders with explicit DX8 initialization/destruction capabilities. | M27, M7 | complete | `fba3c422f41dade108eb86a0d62eca1d8f4edfeb` | 4/4 focused tests in all four presets |
+| 02 | [Font, image, and WND resources](milestone_28_plan_01_slice_02.md) | Original UI resource semantics load owned fonts/images/layouts through native providers, including `BlankWindow.wnd`. | slice 01, M8 | complete | recorded after commit | 6/6 cumulative focused tests in all four presets |
 | 03 | [Audio definitions, music, and assurance](milestone_28_plan_01_slice_03.md) | Original audio tables parse and resolve owned music without CD/modal waits, with full identity, lifecycle, and milestone evidence. | slices 01-02, M12/M13 | pending | — | — |
 
 ## Cross-slice constraints
@@ -64,3 +64,5 @@ Each slice is independently revertible. Slice 03 removes media definitions and a
 Planning and all slice files were created before production edits. The transaction started from clean `HEAD` `3f97699af7674b3d05d6dbaa7e57066346574aff`.
 
 Slice 01 isolates original W3D CPU initialization, loader/resource ownership, scene/light lifetime, and DX8 CPU/device capability semantics behind the accepted VFS and recording-device interfaces. Owned model, texture, and animation fixtures reach a real recorded draw, while physical device and browser capabilities remain unavailable. Six partial-failure stages, duplicate/missing/malformed inputs, repeated shutdown, live-symbol identity, authoritative-source provenance, ledger freshness, and exact zero resource restoration pass in all four presets.
+
+Slice 02 extracts original image coordinate/rotated-status behavior and WND layout/callback ownership, then binds them to retained VFS font faces and the accepted UI recorder. The owned `Menus/BlankWindow.wnd` fixture includes root, button, and static-text controls; source callbacks and rotated image dimensions are visible in the recorded command stream. Callback replacement, missing callbacks/layouts, unsupported controls, four staged failures, repeated shutdown, and zero device/resource restoration are covered.

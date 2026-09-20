@@ -2,12 +2,14 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
 
+namespace zh::data { class VirtualFileSystem; }
 namespace zh::original_data { class LogicalFiles; }
 namespace zh::renderer { class GpuDevice; }
 
@@ -60,6 +62,31 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
+using WindowCallback = std::function<void(std::string_view)>;
+
+class UiResources {
+public:
+    UiResources(const data::VirtualFileSystem& vfs, renderer::GpuDevice& recorder);
+    ~UiResources();
+    UiResources(const UiResources&) = delete;
+    UiResources& operator=(const UiResources&) = delete;
+
+    bool register_callback(std::string name, WindowCallback callback);
+    bool load(std::string_view image_definitions, std::string_view layout,
+        std::string_view language, std::size_t fail_after_stage = 0);
+    bool record();
+    bool invoke(std::string_view window_name);
+    void shutdown() noexcept;
+    bool ready() const noexcept;
+    OwnershipCounts counts() const noexcept;
+    std::string_view last_error() const noexcept;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+};
+
 const char* provider_cpu_identity() noexcept;
+const char* provider_ui_identity() noexcept;
 
 } // namespace zh::original_resources

@@ -23,6 +23,9 @@ def main() -> int:
     extracted = root / "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/OriginalCpuPresentation.cpp"
     require(extracted, ["M28 extraction provenance", "W3DDisplay::init", "W3DAssetManager",
                         "DX8Wrapper", "provider_cpu_identity"], errors)
+    require(root / "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/OriginalUiResources.cpp",
+            ["M28 extraction provenance", "Image::parseImageCoords", "FontLibrary::getFont",
+             "WindowLayout::load", "provider_ui_identity"], errors)
     require(root / "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/W3DDisplay.cpp",
             ["void W3DDisplay::initAssets", "void W3DDisplay::init3DScene", "void W3DDisplay::init2DScene",
              "void W3DDisplay::init", "void W3DDisplay::reset"], errors)
@@ -30,13 +33,22 @@ def main() -> int:
             ["W3DAssetManager::W3DAssetManager", "WW3DAssetManager::Get_Texture"], errors)
     require(root / "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8wrapper.cpp",
             ["bool DX8Wrapper::Init", "void DX8Wrapper::Shutdown"], errors)
+    require(root / "GeneralsMD/Code/GameEngine/Source/GameClient/System/Image.cpp",
+            ["void Image::parseImageCoords", "void Image::parseImageStatus"], errors)
+    require(root / "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameFont.cpp",
+            ["GameFont *FontLibrary::getFont"], errors)
+    require(root / "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowLayout.cpp",
+            ["Bool WindowLayout::load", "void WindowLayout::destroyWindows"], errors)
+    require(root / "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManagerScript.cpp",
+            ["GameWindow *GameWindowManager::winCreateFromScript"], errors)
     require(root / "include/zh/original_resources.h",
-            ["class CpuPresentation", "physical_device", "web_browser"], errors)
+            ["class CpuPresentation", "class UiResources", "physical_device", "web_browser"], errors)
     require(root / "CMakeLists.txt",
-            ["add_library(zh_original_resources STATIC", "OriginalCpuPresentation.cpp"], errors)
+            ["add_library(zh_original_resources STATIC", "OriginalCpuPresentation.cpp", "OriginalUiResources.cpp"], errors)
     cmake = (root / "CMakeLists.txt").read_text(encoding="utf-8")
     target = cmake.split("add_library(zh_original_resources STATIC", 1)[1].split(")", 1)[0]
-    forbidden = ["W3DDisplay.cpp", "W3DAssetManager.cpp", "dx8wrapper.cpp", "dx8webbrowser.cpp"]
+    forbidden = ["W3DDisplay.cpp", "W3DAssetManager.cpp", "dx8wrapper.cpp", "dx8webbrowser.cpp",
+                 "GameWindowManagerScript.cpp", "WindowLayout.cpp", "GameFont.cpp", "Image.cpp"]
     for name in forbidden:
         if name in target:
             errors.append(f"coupled/device source entered independent M28 target: {name}")

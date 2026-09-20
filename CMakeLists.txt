@@ -197,6 +197,7 @@ target_link_libraries(zh_original_data PUBLIC zh_data zh_original_process zh_bui
 
 add_library(zh_original_resources STATIC
   GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/OriginalCpuPresentation.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/OriginalUiResources.cpp
 )
 target_include_directories(zh_original_resources PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_original_resources PUBLIC
@@ -375,6 +376,23 @@ if(ZH_BUILD_TESTS)
     --symbol "zh::original_resources::provider_cpu_identity"
     --witness "original-resources CPU: ok")
   set_tests_properties(original_resources_cpu_identity PROPERTIES LABELS "original-resources;source-identity")
+  add_executable(original_resources_ui_tests tests/original_resources/test_ui_resources.cpp)
+  target_link_libraries(original_resources_ui_tests PRIVATE zh_original_resources)
+  target_link_options(original_resources_ui_tests PRIVATE
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-resources-ui.link.map")
+  add_test(NAME original_resources_ui COMMAND original_resources_ui_tests)
+  set_tests_properties(original_resources_ui PROPERTIES LABELS "original-resources;source-identity")
+  add_test(NAME original_resources_ui_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m26_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-resources-ui.link.map"
+    --executable "$<TARGET_FILE:original_resources_ui_tests>"
+    --target zh_original_resources
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameClient/GUI/OriginalUiResources.cpp"
+    --symbol "zh::original_resources::UiResources::load"
+    --symbol "zh::original_resources::provider_ui_identity"
+    --witness "original-resources UI: ok")
+  set_tests_properties(original_resources_ui_identity PROPERTIES LABELS "original-resources;source-identity")
   add_test(NAME original_resources_extraction_provenance COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m28_original_provenance.py"
     --root "${CMAKE_CURRENT_SOURCE_DIR}")
