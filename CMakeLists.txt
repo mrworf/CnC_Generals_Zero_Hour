@@ -123,6 +123,10 @@ add_library(zh_ui STATIC src/ui/renderer.cpp src/ui/font.cpp src/ui/session.cpp)
 target_include_directories(zh_ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_ui PUBLIC zh_renderer_sdl_gpu zh_platform_sdl zh_data zh_build_options Freetype::Freetype Fontconfig::Fontconfig)
 
+add_library(zh_world STATIC src/world/scene.cpp)
+target_include_directories(zh_world PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(zh_world PUBLIC zh_renderer_sdl_gpu zh_build_options)
+
 target_sources(zh_platform_sdl PRIVATE src/platform/sdl_events.cpp src/platform/sdl_window.cpp)
 target_include_directories(zh_platform_sdl PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_platform_sdl PUBLIC zh_wwsupport)
@@ -276,6 +280,11 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(ui_session_tests PRIVATE zh_ui)
   add_test(NAME ui_session COMMAND ui_session_tests)
   set_tests_properties(ui_session PROPERTIES LABELS "platform;renderer-contract;ui")
+
+  add_executable(world_scene_tests tests/world/test_world_scene.cpp)
+  target_link_libraries(world_scene_tests PRIVATE zh_world)
+  add_test(NAME world_scene COMMAND world_scene_tests)
+  set_tests_properties(world_scene PROPERTIES LABELS renderer-contract)
 
   add_executable(foundation_abi_codec_tests tests/foundation/test_abi_codec.cpp)
   target_link_libraries(foundation_abi_codec_tests PRIVATE zh_wwsupport)
