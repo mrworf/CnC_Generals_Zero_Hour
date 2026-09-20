@@ -36,7 +36,9 @@
 #define DEFINE_LOCO_APPEARANCE_NAMES
 
 #include "Common/INI.h"
+#include "Common/GlobalData.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/Object.h"
@@ -2804,5 +2806,4 @@ Locomotor* LocomotorSet::findLocomotor(LocomotorSurfaceTypeMask t)
 	}
 	return NULL;
 }
-
 

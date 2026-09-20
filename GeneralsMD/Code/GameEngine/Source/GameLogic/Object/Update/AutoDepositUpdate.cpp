@@ -65,6 +65,7 @@
 #include "GameLogic/Object.h"
 #include "GameClient/InGameUI.h"
 #include "GameClient/Color.h"
+#include "GameClient/ClientRandomValue.h"
 #include "GameClient/GameText.h"
 
 //-------------------------------------------------------------------------------------------------

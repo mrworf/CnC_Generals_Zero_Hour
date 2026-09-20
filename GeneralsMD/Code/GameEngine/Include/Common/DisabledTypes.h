@@ -35,7 +35,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Lib/BaseType.h"
 #include "Common/BitFlags.h"
-#include "Common/BitFlagsIO.h"
+#include "Common/BitFlags.h"
 
 //-------------------------------------------------------------------------------------------------
 /** Kind of flags for determining groups of things that belong together
@@ -116,4 +116,3 @@ extern DisabledMaskType DISABLEDMASK_ALL;		// inits to all bits set.
 void initDisabledMasks();
 
 #endif	// __DISABLED_TYPES_H_
-

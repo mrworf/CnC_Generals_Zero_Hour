@@ -68,7 +68,7 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/TerrainLogic.h"
 
-#include "WWMath/Matrix3D.h"
+#include "WWMath/matrix3d.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef _INTERNAL
@@ -1167,4 +1167,3 @@ void parseSpeakerType( INI *ini, void *instance, void *store, const void* userDa
 
 	(*(UnsignedInt*)store) = TheAudio->translateSpeakerTypeToUnsignedInt(str);
 }
-

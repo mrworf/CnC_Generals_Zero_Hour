@@ -26,7 +26,7 @@
 
 #include "Common/Recorder.h"
 #include "Common/FileSystem.h"
-#include "Common/playerlist.h"
+#include "Common/PlayerList.h"
 #include "Common/Player.h"
 #include "Common/GlobalData.h"
 #include "Common/GameEngine.h"
@@ -356,7 +356,6 @@ void RecorderClass::cleanUpReplayFile( void )
 /**
  * The recorder object.
  */
-RecorderClass *TheRecorder = NULL;
 
 /**
  * Constructor
@@ -1568,10 +1567,6 @@ AsciiString RecorderClass::getLastReplayFileName()
 /**
  * return the current operating mode of TheRecorder.
  */
-RecorderModeType RecorderClass::getMode() {
-	return m_mode;
-}
-
 ///< Show or Hide the Replay controls
 void RecorderClass::initControls()
 {

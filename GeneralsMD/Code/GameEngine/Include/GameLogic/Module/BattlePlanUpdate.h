@@ -42,7 +42,7 @@ class ParticleSystem;
 class FXList;
 class AudioEventRTS;
 enum  MaxHealthChangeType;
-enum  CommandOption;
+enum  CommandOption : int;
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ enum TransitionStatus
 	TRANSITIONSTATUS_PACKING,
 };
 
-enum BattlePlanStatus
+enum BattlePlanStatus : int
 {
 	PLANSTATUS_NONE,
 	PLANSTATUS_BOMBARDMENT,
@@ -193,4 +193,3 @@ protected:
 
 
 #endif
-

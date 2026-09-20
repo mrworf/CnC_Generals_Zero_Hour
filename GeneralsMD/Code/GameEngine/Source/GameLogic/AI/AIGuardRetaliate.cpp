@@ -44,6 +44,7 @@
 #include "Common/ThingTemplate.h"
 #include "GameLogic/AI.h"
 #include "GameLogic/AIPathfind.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/AIGuardRetaliate.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
@@ -857,4 +858,3 @@ void AIGuardRetaliateAttackAggressorState::loadPostProcess()
 {
 	onEnter();
 }
-

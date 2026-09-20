@@ -32,6 +32,7 @@
 #define NO_DEBUG_CRC
 
 #include "Common/PerfTimer.h"
+#include "Common/GlobalData.h"
 #include "Common/ThingTemplate.h"
 #include "Common/Xfer.h"
 #include "GameLogic/GameLogic.h"

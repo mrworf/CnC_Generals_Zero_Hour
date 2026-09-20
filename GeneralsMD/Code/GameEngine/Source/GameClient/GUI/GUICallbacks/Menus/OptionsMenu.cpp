@@ -30,7 +30,19 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#include "Common/AudioSettings.h"
+#include "Common/GameAudio.h"
+#include "Common/GameLOD.h"
+#include "Common/GlobalData.h"
+#include "Common/UserPreferences.h"
+#include "GameNetwork/IPEnumeration.h"
+#include "GameLogic/ScriptEngine.h"
+
+#ifndef ZH_OPTION_PREFERENCES_ONLY
+
+#ifdef _WIN32
 #include "GameSpy/ghttp/ghttp.h"
+#endif
 
 #include "Common/AudioAffect.h"
 #include "Common/AudioSettings.h"
@@ -39,7 +51,7 @@
 #include "Common/UserPreferences.h"
 #include "Common/GameLOD.h"
 #include "Common/Registry.h"
-#include "Common/Version.h"
+#include "Common/version.h"
 
 #include "GameClient/GameClient.h"
 #include "GameClient/InGameUI.h"
@@ -63,8 +75,10 @@
 #include "GameClient/GUICallbacks.h"
 #include "GameNetwork/FirewallHelper.h"
 #include "GameNetwork/IPEnumeration.h"
+#ifdef _WIN32
 #include "GameNetwork/GameSpyOverlay.h"
 #include "GameNetwork/GameSpy/PeerDefs.h"
+#endif
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/ScriptEngine.h"
 #include "WWDownload/Registry.h"
@@ -228,6 +242,8 @@ enum Detail
 
 	DETAIL,
 };
+
+#endif
 
 
 OptionPreferences::OptionPreferences( void )
@@ -761,6 +777,7 @@ Real OptionPreferences::getMusicVolume(void)
 	return volume;
 }
 
+#ifndef ZH_OPTION_PREFERENCES_ONLY
 static OptionPreferences *pref = NULL;
 
 static void setDefaults( void )
@@ -2130,3 +2147,5 @@ WindowMsgHandledType OptionsMenuSystem( GameWindow *window, UnsignedInt msg,
 	return MSG_HANDLED;
 
 }  // end OptionsMenuSystem
+
+#endif

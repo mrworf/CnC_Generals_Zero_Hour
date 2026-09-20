@@ -31,6 +31,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 #include "Common/Thing.h"
+#include "Common/GlobalData.h"
 #include "Common/ThingTemplate.h"
 #include "Common/INI.h"
 #include "Common/Player.h"
@@ -41,6 +42,7 @@
 #include "GameLogic/Module/AutoHealBehavior.h"
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
 

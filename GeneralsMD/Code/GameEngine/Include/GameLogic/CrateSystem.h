@@ -33,6 +33,8 @@
 #define CRATE_SYSTEM_H
 
 #include "Common/INI.h"
+#include "Common/KindOf.h"
+#include "Common/SubsystemInterface.h"
 #include "Common/Overridable.h"
 #include "Common/Override.h"
 

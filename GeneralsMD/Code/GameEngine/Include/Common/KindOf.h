@@ -35,7 +35,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Lib/BaseType.h"
 #include "Common/BitFlags.h"
-#include "Common/BitFlagsIO.h"
+#include "Common/BitFlags.h"
 
 //-------------------------------------------------------------------------------------------------
 /** Kind of flags for determining groups of things that belong together
@@ -221,4 +221,3 @@ extern KindOfMaskType KINDOFMASK_FS;		// Initializes all FS types for faction st
 void initKindOfMasks();
 
 #endif	// __KINDOF_H_
-

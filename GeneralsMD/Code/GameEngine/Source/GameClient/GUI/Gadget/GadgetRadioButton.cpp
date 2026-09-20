@@ -48,7 +48,7 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////
 #include "Common/Language.h"
-#include "Gameclient/GameWindowManager.h"
+#include "GameClient/GameWindowManager.h"
 #include "GameClient/Gadget.h"
 
 // DEFINES ////////////////////////////////////////////////////////////////////
@@ -446,4 +446,3 @@ void GadgetRadioSetSelection( GameWindow *g, Bool sendMsg )
 	TheWindowManager->winSendSystemMsg( g, GBM_SET_SELECTION, (WindowMsgData)&sendMsg, 0 );
 
 }  // end GadgetRadioSetText
-

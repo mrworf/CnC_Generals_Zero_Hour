@@ -48,6 +48,8 @@
 #define _MONEY_H_
 
 #include "Lib/BaseType.h"
+
+class INI;
 #include "Common/Debug.h"
 #include "Common/Snapshot.h"
 
@@ -103,4 +105,3 @@ private:
 };
 
 #endif // _MONEY_H_
-

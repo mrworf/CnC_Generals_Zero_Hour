@@ -29,9 +29,10 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"
-#include "Common/File.h"
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/GameEngine.h"
+#include "Common/GlobalData.h"
 #include "Common/GameState.h"
 #include "Common/GameStateMap.h"
 #include "Common/LatchRestore.h"
@@ -212,6 +213,14 @@ GameState::SnapshotBlock *GameState::findBlockInfoByToken( AsciiString token, Sn
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 UnicodeString getUnicodeDateBuffer(SYSTEMTIME timeVal) 
 {
+	#ifndef _WIN32
+	char dateBuffer[32];
+	snprintf(dateBuffer, sizeof(dateBuffer), "%04u-%02u-%02u",
+		unsigned(timeVal.wYear), unsigned(timeVal.wMonth), unsigned(timeVal.wDay));
+	UnicodeString displayDateBuffer;
+	displayDateBuffer.translate(dateBuffer);
+	return displayDateBuffer;
+	#else
 	// setup date buffer for local region date format
 	#define DATE_BUFFER_SIZE 256
 	OSVERSIONINFO	osvi;
@@ -239,11 +248,20 @@ UnicodeString getUnicodeDateBuffer(SYSTEMTIME timeVal)
 								 dateBuffer, sizeof(dateBuffer) );
 	displayDateBuffer.set(dateBuffer);
 	return displayDateBuffer;
+	#endif
 	//displayDateBuffer.format( L"%ls", dateBuffer );
 }															
 
 UnicodeString getUnicodeTimeBuffer(SYSTEMTIME timeVal) 
 {
+	#ifndef _WIN32
+	char timeBuffer[16];
+	snprintf(timeBuffer, sizeof(timeBuffer), "%02u:%02u",
+		unsigned(timeVal.wHour), unsigned(timeVal.wMinute));
+	UnicodeString displayTimeBuffer;
+	displayTimeBuffer.translate(timeBuffer);
+	return displayTimeBuffer;
+	#else
 	// setup time buffer for local region time format
 	UnicodeString displayTimeBuffer;
 	OSVERSIONINFO	osvi;
@@ -273,6 +291,7 @@ UnicodeString getUnicodeTimeBuffer(SYSTEMTIME timeVal)
 								 sizeof(timeBuffer) );
 	displayTimeBuffer.set(timeBuffer);
 	return displayTimeBuffer;
+	#endif
 }
 
 
@@ -789,7 +808,7 @@ Bool GameState::isInSaveDirectory(const AsciiString& path) const
 // ------------------------------------------------------------------------------------------------
 AsciiString GameState::getMapLeafName(const AsciiString& in) const
 {
-	char* p = strrchr(in.str(), '\\');
+	const char* p = strrchr(in.str(), '\\');
 	if (p)
 	{
 		//
@@ -1211,7 +1230,7 @@ void GameState::populateSaveGameListbox( GameWindow *listbox, SaveLoadLayoutType
 			
 			displayLabel = TheGameText->fetch( saveGameInfo->mapLabel, &exists );
 			if( exists == FALSE )
-				displayLabel.format( L"%S", saveGameInfo->mapLabel.str() );
+				displayLabel.translate( saveGameInfo->mapLabel.str() );
 
 		}  // end if
 
@@ -1252,6 +1271,23 @@ void GameState::iterateSaveFiles( IterateSaveFileCallback callback, void *userDa
 	// sanity
 	if( callback == NULL )
 		return;
+
+#ifndef _WIN32
+	std::string nativeDirectory = getSaveDirectory().str();
+	std::replace(nativeDirectory.begin(), nativeDirectory.end(), '\\', '/');
+	std::error_code error;
+	for (const auto& entry : std::filesystem::directory_iterator(nativeDirectory, error))
+	{
+		if (!entry.is_regular_file(error) || error)
+			continue;
+		if (entry.path().extension() != ".sav")
+			continue;
+		AsciiString filename;
+		filename.set(entry.path().filename().string().c_str());
+		callback(filename, userData);
+	}
+	return;
+#else
 
 	// save the current directory
 	char currentDirectory[ _MAX_PATH ];
@@ -1313,6 +1349,8 @@ void GameState::iterateSaveFiles( IterateSaveFileCallback callback, void *userDa
 
 	// restore the current directory
 	SetCurrentDirectory( currentDirectory );
+
+#endif
 
 }  // end iterateSaveFiles
 

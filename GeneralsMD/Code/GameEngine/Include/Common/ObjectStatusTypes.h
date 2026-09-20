@@ -35,7 +35,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Lib/BaseType.h"
 #include "Common/BitFlags.h"
-#include "Common/BitFlagsIO.h"
+#include "Common/BitFlags.h"
 
 //-------------------------------------------------------------------------------------------------
 /** Object status types */

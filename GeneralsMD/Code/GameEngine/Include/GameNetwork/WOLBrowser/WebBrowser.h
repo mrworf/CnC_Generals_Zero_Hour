@@ -46,6 +46,7 @@
 #define __WEBBROWSER_H__
 
 #include "Common/SubsystemInterface.h"
+#include "GameNetwork/WOLBrowser/WebBrowserURL.h"
 #include <atlbase.h>
 #include <windows.h>
 #include <Common/GameMemory.h>
@@ -53,28 +54,6 @@
 #include "FEBDispatch.h"
 
 class GameWindow;
-
-class WebBrowserURL : public MemoryPoolObject
-{
-	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( WebBrowserURL, "WebBrowserURL" )
-
-public:
-
-	WebBrowserURL();
-	// virtual destructor prototype defined by memory pool object
-
-	const FieldParse *getFieldParse( void ) const { return m_URLFieldParseTable; }
-
-	AsciiString m_tag;
-	AsciiString m_url;
-
-	WebBrowserURL *m_next;
-
-	static const FieldParse m_URLFieldParseTable[];		///< the parse table for INI definition
-
-};
-
-
 
 class WebBrowser :
 		public FEBDispatch<WebBrowser, IBrowserDispatch, &IID_IBrowserDispatch>,

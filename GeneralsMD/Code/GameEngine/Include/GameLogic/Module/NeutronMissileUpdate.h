@@ -37,9 +37,9 @@
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/DieModule.h"
 #include "Common/INI.h"
-#include "WWMath/Matrix3D.h"
+#include "WWMath/matrix3d.h"
 
-enum ParticleSystemID;
+enum ParticleSystemID : int;
 class FXList;
 
 //-------------------------------------------------------------------------------------------------
@@ -142,4 +142,3 @@ private:
 };
 
 #endif // _MISSILE_UPDATE_H_
-

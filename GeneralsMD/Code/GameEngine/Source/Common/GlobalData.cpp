@@ -38,14 +38,15 @@
 #define DEFINE_BODYDAMAGETYPE_NAMES
 #define DEFINE_PANNING_NAMES
 
-#include "Common/CRC.h"
-#include "Common/File.h"
+#include "Common/crc.h"
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/GameAudio.h"
 #include "Common/INI.h"
-#include "Common/registry.h"
+#include "Common/GlobalData.h"
+#include "Common/Registry.h"
 #include "Common/UserPreferences.h"
-#include "Common/Version.h"
+#include "Common/version.h"
 
 #include "GameLogic/AI.h"
 #include "GameLogic/Weapon.h"
@@ -55,6 +56,13 @@
 #include "GameClient/TerrainVisual.h"
 
 #include "GameNetwork/FirewallHelper.h"
+
+#ifndef _WIN32
+#include "zh/foundation/platform.h"
+#include <cstdlib>
+#include <filesystem>
+#include <optional>
+#endif
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 GlobalData* TheWritableGlobalData = NULL;				///< The global data singleton
@@ -988,6 +996,7 @@ GlobalData::GlobalData()
 	
 	// lets CRC the executable!  Whee!
 	const Int blockSize = 65536;
+#ifdef _WIN32
 	Char buffer[ _MAX_PATH ];
 	CRC exeCRC;
 	GetModuleFileName( NULL, buffer, sizeof( buffer ) );
@@ -1002,6 +1011,13 @@ GlobalData::GlobalData()
 		fp->close();
 		fp = NULL;
 	}
+#else
+	// The retail executable fingerprint was a Win32 protection/compatibility
+	// edge.  Linux retains the gameplay-relevant version and script CRCs below
+	// without reading or hashing an executable image.
+	CRC exeCRC;
+	File *fp = NULL;
+#endif
 	if (TheVersion)
 	{
 		UnsignedInt version = TheVersion->getVersionNumber();
@@ -1039,7 +1055,11 @@ GlobalData::GlobalData()
 	m_shouldUpdateTGAToDDS = FALSE;
 	
 	// Default DoubleClickTime to System double click time.
+	#ifdef _WIN32
 	m_doubleClickTimeMS = GetDoubleClickTime(); // Note: This is actual MS, not frames.
+	#else
+	m_doubleClickTimeMS = 500;
+	#endif
 	
 #ifdef DUMP_PERF_STATS
 	m_dumpPerformanceStatistics = FALSE;
@@ -1053,6 +1073,7 @@ GlobalData::GlobalData()
 
   // Set user data directory based on registry settings instead of INI parameters. This allows us to 
   // localize the leaf name.
+  #ifdef _WIN32
   char temp[_MAX_PATH + 1];
   if (::SHGetSpecialFolderPath(NULL, temp, CSIDL_PERSONAL, true))
   {
@@ -1077,6 +1098,19 @@ GlobalData::GlobalData()
     CreateDirectory(myDocumentsDirectory.str(), NULL);
     m_userDataDir = myDocumentsDirectory;
   }
+  #else
+  const auto lookup = [](std::string_view name) -> std::optional<std::string> {
+    const std::string key(name);
+    const char *value = std::getenv(key.c_str());
+    if (!value) return std::nullopt;
+    return std::string(value);
+  };
+  const auto dataRoot = zh::foundation::resolve_xdg_paths(lookup).data;
+  std::filesystem::create_directories(dataRoot);
+  std::string nativeUserData = dataRoot.string();
+  if (nativeUserData.empty() || nativeUserData.back() != '/') nativeUserData.push_back('/');
+  m_userDataDir = nativeUserData.c_str();
+  #endif
 	
 	//-allAdvice feature
 	//m_allAdvice = FALSE;
@@ -1253,4 +1287,3 @@ void GlobalData::parseGameDataDefinition( INI* ini )
 	TheWritableGlobalData->m_xResolution = xres;
 	TheWritableGlobalData->m_yResolution = yres;
 }
-

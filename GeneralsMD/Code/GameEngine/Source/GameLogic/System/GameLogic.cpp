@@ -36,6 +36,7 @@
 #include "Common/CRCDebug.h"
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
+#include "Common/GlobalData.h"
 #include "Common/GameLOD.h"
 #include "Common/GameState.h"
 #include "Common/INI.h"
@@ -76,6 +77,9 @@
 #include "GameClient/ControlBar.h"
 #include "GameClient/CampaignManager.h"
 #include "GameClient/GameWindowTransitions.h"
+#include "GameClient/GameWindowManager.h"
+#include "GameClient/Shell.h"
+#include "GameClient/WindowLayout.h"
 
 #include "GameLogic/AI.h"
 #include "GameLogic/AIPathfind.h"
@@ -84,6 +88,7 @@
 #include "GameLogic/FPUControl.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Locomotor.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
@@ -103,14 +108,20 @@
 #include "Common/DataChunk.h"
 #include "GameLogic/Scripts.h"
 
-#include "GameNetwork/GameSpy/BuddyThread.h"
+#ifdef _WIN32
 #include "GameNetwork/GameSpy/PeerDefs.h"
+#include "GameNetwork/GameSpy/BuddyThread.h"
 #include "GameNetwork/GameSpy/ThreadUtils.h"
-#include "GameNetwork/LANAPICallbacks.h"
-#include "GameNetwork/NetworkInterface.h"
 #include "GameNetwork/GameSpy/PersistentStorageThread.h"
+#endif
+#include "GameNetwork/LANAPI.h"
+#include "GameNetwork/NetworkInterface.h"
 
+extern LANAPI *TheLAN;
+
+#ifdef _PROFILE
 #include <rts/profile.h>
+#endif
 
 DECLARE_PERF_TIMER(SleepyMaintenance)
 
@@ -1170,7 +1181,9 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		else
 		{
 			DEBUG_LOG(("Starting gamespy game\n"));
+#ifdef _WIN32
 			TheGameInfo = game = TheGameSpyGame;	/// @todo: MDC add back in after demo
+#endif
 		}
 	}
 	else
@@ -1443,7 +1456,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		Dict d;
 		d.setAsciiString(TheKey_playerName, "ReplayObserver");
 		d.setBool(TheKey_playerIsHuman, TRUE);
-		d.setUnicodeString(TheKey_playerDisplayName, UnicodeString(L"Observer"));
+		d.setUnicodeString(TheKey_playerDisplayName, UnicodeString(u"Observer"));
 		const PlayerTemplate* pt;
 		pt = ThePlayerTemplateStore->findPlayerTemplate( TheNameKeyGenerator->nameToKey("FactionObserver") );
 		if (pt)
@@ -2303,6 +2316,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	TheWritableGlobalData->m_loadScreenRender = FALSE;	///< mark to resume rendering as normal
 	
 	// if we're in a gamespy game, mark us as playing
+#ifdef _WIN32
 	if (TheGameSpyBuddyMessageQueue && TheGameSpyGame && isInInternetGame())
 	{
 		BuddyRequest req;
@@ -2312,6 +2326,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		sprintf(req.arg.status.locationString, "%s", WideCharStringToMultiByte(TheGameSpyGame->getGameName().str()).c_str());
 		TheGameSpyBuddyMessageQueue->addRequest(req);
 	}	
+#endif
 	
   if( loadingSaveGame == FALSE )
   {
@@ -2339,8 +2354,10 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 
 	//Assume that getting this far means we've successfully entered an online game.
 	//Add an additional disconnection to player stats in case he doesn't complete this game. -MW
+#ifdef _WIN32
 	if (TheGameSpyInfo)
 		TheGameSpyInfo->updateAdditionalGameSpyDisconnections(1);
+#endif
 
   
   if ( isInReplayGame() && TheInGameUI && TheGameText )
@@ -5075,4 +5092,3 @@ void GameLogic::loadPostProcess( void )
 	remakeSleepyUpdate();
 
 }  // end loadPostProcess
-

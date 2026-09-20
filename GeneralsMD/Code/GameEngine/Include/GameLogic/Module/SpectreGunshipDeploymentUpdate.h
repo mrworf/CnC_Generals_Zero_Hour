@@ -41,8 +41,8 @@ class SpecialPowerModule;
 class ParticleSystem;
 class FXList;
 class AudioEventRTS;
-enum ParticleSystemID;
-enum ScienceType;
+enum ParticleSystemID : int;
+enum ScienceType : int;
 
 //#define MAX_OUTER_NODES 16
 
@@ -148,4 +148,3 @@ protected:
 
 
 #endif // __SPECTRE_GUNSHIP_DEPLOYMENT_UPDATE_H_
-

@@ -30,6 +30,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "GameClient/ChallengeGenerals.h"
+#include "Common/INI.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...

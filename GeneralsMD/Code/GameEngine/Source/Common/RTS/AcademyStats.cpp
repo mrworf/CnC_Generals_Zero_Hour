@@ -47,6 +47,7 @@
 
 #include "Common/AcademyStats.h"
 #include "Common/Energy.h"
+#include "Common/GlobalData.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "Common/PlayerTemplate.h"
@@ -55,7 +56,9 @@
 #include "Common/Xfer.h"
 
 #include "GameClient/ControlBar.h"
+#include "GameClient/ClientRandomValue.h"
 #include "GameClient/GameText.h"
+#include "Common/RandomValue.h"
 
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
@@ -1083,7 +1086,7 @@ Bool AcademyStats::calculateAcademyAdvice( AcademyAdviceInfo *info )
 	//Build the header for each string.
 	for( Int i = 0; i < maxAdviceTips; i++ )
 	{
-		info->advice[ i ].format( UnicodeString( L"\n\n" ) );
+		info->advice[ i ].format( UnicodeString( u"\n\n" ) );
 	}
 
 	//First look at tier 1 basic advice and pick any advice we could benefit from.

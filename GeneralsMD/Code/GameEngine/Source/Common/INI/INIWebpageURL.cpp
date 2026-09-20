@@ -32,7 +32,9 @@
 
 #include "Common/INI.h"
 #include "Common/Registry.h"
+#ifdef _WIN32
 #include "GameNetwork/WOLBrowser/WebBrowser.h"
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -47,6 +49,22 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PUBLIC FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+#ifndef _WIN32
+struct PortableWebBrowserURL
+{
+	AsciiString m_tag;
+	AsciiString m_url;
+	static const FieldParse m_URLFieldParseTable[];
+	const FieldParse *getFieldParse() const { return m_URLFieldParseTable; }
+};
+
+const FieldParse PortableWebBrowserURL::m_URLFieldParseTable[] =
+{
+	{ "URL", INI::parseAsciiString, NULL, offsetof( PortableWebBrowserURL, m_url ) },
+	{ NULL, NULL, NULL, 0 },
+};
+#endif
 
 AsciiString encodeURL(AsciiString source)
 {
@@ -83,12 +101,18 @@ AsciiString encodeURL(AsciiString source)
 void INI::parseWebpageURLDefinition( INI* ini )
 {
 	AsciiString tag;
-	WebBrowserURL *url;
+#ifdef _WIN32
+	WebBrowserURL *url = NULL;
+#else
+	PortableWebBrowserURL localURL;
+	PortableWebBrowserURL *url = &localURL;
+#endif
 
 	// read the name
 	const char* c = ini->getNextToken();
 	tag.set( c );
 
+#ifdef _WIN32
 	if (TheWebBrowser != NULL)
 	{
 		url = TheWebBrowser->findURL(tag);
@@ -98,6 +122,9 @@ void INI::parseWebpageURLDefinition( INI* ini )
 			url = TheWebBrowser->makeNewURL(tag);
 		}
 	}
+#else
+	url->m_tag = tag;
+#endif
 
 	// find existing item if present
 //	track = TheAudio->Music->getTrack( name );
@@ -124,5 +151,3 @@ void INI::parseWebpageURLDefinition( INI* ini )
 		DEBUG_LOG(("INI::parseWebpageURLDefinition() - converted URL to [%s]\n", url->m_url.str()));
 	}
 }  // end parseMusicTrackDefinition
-
-

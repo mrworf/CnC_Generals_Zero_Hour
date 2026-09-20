@@ -53,9 +53,10 @@
 #include "PreRTS.h"
 
 #include "Common/INI.h"
+#include "Common/GlobalData.h"
 #include "Common/Registry.h"
 #include "GameClient/GlobalLanguage.h"
-#include "Common/Filesystem.h"
+#include "Common/FileSystem.h"
 
 //-----------------------------------------------------------------------------
 // DEFINES ////////////////////////////////////////////////////////////////////
@@ -127,7 +128,9 @@ GlobalLanguage::~GlobalLanguage()
 	while( it != m_localFonts.end())
 	{
 		AsciiString font = *it;
+#ifdef _WIN32
 		RemoveFontResource(font.str());
+#endif
 		//SendMessage( HWND_BROADCAST, WM_FONTCHANGE, 0, 0);
 		++it;
 	}
@@ -140,14 +143,17 @@ void GlobalLanguage::init( void )
 	AsciiString fname;
 	fname.format("Data\\%s\\Language.ini", GetRegistryLanguage().str());
 
-	OSVERSIONINFO	osvi;
-	osvi.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);
-
 	//GS NOTE: Must call doesFileExist in either case so that NameKeyGenerator will stay in sync
 	AsciiString tempName;
 	tempName.format("Data\\%s\\Language9x.ini", GetRegistryLanguage().str());
 	bool isExist = TheFileSystem->doesFileExist(tempName.str());
-	if (GetVersionEx(&osvi)  &&  osvi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS  && isExist)
+	Bool useLegacyLanguageFile = FALSE;
+#ifdef _WIN32
+	OSVERSIONINFO osvi;
+	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+	useLegacyLanguageFile = GetVersionEx(&osvi) && osvi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS;
+#endif
+	if (useLegacyLanguageFile && isExist)
 	{	//check if we're running Win9x variant since they may need different fonts
 		fname = tempName;
 	}
@@ -158,6 +164,7 @@ void GlobalLanguage::init( void )
 	while( it != m_localFonts.end())
 	{
 		AsciiString font = *it;
+#ifdef _WIN32
 		if(AddFontResource(font.str()) == 0)
 		{
 			DEBUG_ASSERTCRASH(FALSE,("GlobalLanguage::init Failed to add font %s", font.str()));
@@ -166,6 +173,9 @@ void GlobalLanguage::init( void )
 		{
 			//SendMessage( HWND_BROADCAST, WM_FONTCHANGE, 0, 0);
 		}
+#else
+		(void)font;
+#endif
 		++it;
 	}
 
@@ -208,4 +218,3 @@ FontDesc::FontDesc(void)
 //-----------------------------------------------------------------------------
 // PRIVATE FUNCTIONS //////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-

@@ -32,7 +32,7 @@
 #include "Common/ObjectStatusTypes.h"
 #include "Common/BitFlagsIO.h"
 
-const char* ObjectStatusMaskType::s_bitNameList[] = 
+template<> const char* BitFlags<OBJECT_STATUS_COUNT>::s_bitNameList[] =
 {
 	"NONE",
 	"DESTROYED",
@@ -81,5 +81,7 @@ const char* ObjectStatusMaskType::s_bitNameList[] =
 	"DEPLOYED",
 	NULL
 };
+
+template void BitFlags<OBJECT_STATUS_COUNT>::parseSingleBitFromINI(INI*, void*, void*, const void*);
 
 ObjectStatusMaskType OBJECT_STATUS_MASK_NONE;	// inits to all zeroes

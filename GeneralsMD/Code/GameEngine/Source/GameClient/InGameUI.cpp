@@ -43,6 +43,7 @@
 #include "Common/Team.h"
 #include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
+#include "Common/GlobalData.h"
 #include "Common/BuildAssistant.h"
 #include "Common/Recorder.h"
 #include "Common/BuildAssistant.h"
@@ -2391,21 +2392,21 @@ void InGameUI::createMouseoverHint( const GameMessage *msg )
 				{
 					if (!teamName.isEmpty())
 					{
-						str.format(L"%hs(%hs): %s", teamName.str(), objName.str(), str.str());
+						str.format(u"%hs(%hs): %s", teamName.str(), objName.str(), str.str());
 					}
 					else
 					{
-						str.format(L"%hs: %s", objName.str(), str.str());
+						str.format(u"%hs: %s", objName.str(), str.str());
 					}
 				}
 				else
 				{
 					if (!teamName.isEmpty())
 					{
-						str.format(L"%hs: %s", teamName.str(), str.str());
+						str.format(u"%hs: %s", teamName.str(), str.str());
 					}
 				}
-				str.format(L"%s - %hs", str.str(), stateName.str());
+				str.format(u"%s - %hs", str.str(), stateName.str());
 
 			}
 #endif
@@ -2426,7 +2427,7 @@ void InGameUI::createMouseoverHint( const GameMessage *msg )
 				UnicodeString tooltip;
 				//if (TheRecorder->isMultiplayer() && player->getPlayerType() == PLAYER_HUMAN)
 				if (TheRecorder->isMultiplayer() && player->isPlayableSide())
-					tooltip.format(L"%s\n%s", str.str(), ((Player *)player)->getPlayerDisplayName().str());
+					tooltip.format(u"%s\n%s", str.str(), ((Player *)player)->getPlayerDisplayName().str());
 				else
 					tooltip = str;
 
@@ -3540,7 +3541,7 @@ void InGameUI::postDraw( void )
 						if ( startY >= bottomMargin)
 						{
 							UnicodeString ellipsis;
-							ellipsis.format(L"...");
+							ellipsis.format(u"...");
 							info->setText( ellipsis, ellipsis );
 							info->setFont( m_superweaponReadyFont, m_superweaponNormalPointSize, m_superweaponNormalBold );
 							info->drawTime( startX,	startY, m_superweaponFlashColor, bgColor );
@@ -3670,8 +3671,8 @@ void InGameUI::postDraw( void )
                     AsciiString strIndex;
                     strIndex.format("GUI:%s", templateName.str());
                     UnicodeString name, time;
-                    name.format(L"%ls: ", TheGameText->fetch(strIndex.str()).str());
-                    time.format(L"%d:%2.2d", min, sec);
+                    name.format(u"%ls: ", TheGameText->fetch(strIndex.str()).str());
+                    time.format(u"%d:%2.2d", min, sec);
                     info->setText(name, time);
                   }
 
@@ -3765,13 +3766,13 @@ void InGameUI::postDraw( void )
 					Int sec = readySecs - min*60;
 					
 					if (!info->isCountdown)
-						line.format(L"%s %d", info->timerText.str(), framesLeft);
+						line.format(u"%s %d", info->timerText.str(), framesLeft);
 					else
 					{
 						if (sec >= 10)
-							line.format(L"%s %d:%d", info->timerText.str(), min, sec);
+							line.format(u"%s %d:%d", info->timerText.str(), min, sec);
 						else
-							line.format(L"%s %d:0%d", info->timerText.str(), min, sec);
+							line.format(u"%s %d:0%d", info->timerText.str(), min, sec);
 					}
 					info->displayString->setText(line);
 				}
@@ -5708,5 +5709,3 @@ WindowMsgHandledType IdleWorkerSystem( GameWindow *window, UnsignedInt msg,
 	return MSG_HANDLED;
 
 }
-
-

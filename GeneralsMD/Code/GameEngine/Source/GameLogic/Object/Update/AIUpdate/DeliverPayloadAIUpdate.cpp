@@ -31,6 +31,7 @@
 
 #include "Common/Player.h"
 #include "Common/RandomValue.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
 #include "Common/Xfer.h"
@@ -1243,4 +1244,3 @@ StateReturnType CleanUpState::onEnter() // Delete my successful butt
 
 	return STATE_CONTINUE;
 }
-

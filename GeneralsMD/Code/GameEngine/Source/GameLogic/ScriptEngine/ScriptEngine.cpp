@@ -28,11 +28,12 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
-#include "common/DataChunk.h"
-#include "Common/File.h"
+#include "Common/DataChunk.h"
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/GameEngine.h"
 #include "Common/GameState.h"
+#include "Common/GlobalData.h"
 #include "Common/LatchRestore.h"
 #include "Common/MessageStream.h"
 #include "Common/PerfTimer.h"
@@ -49,6 +50,7 @@
 #include "GameClient/CampaignManager.h"
 
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/ObjectTypes.h"
 #include "GameLogic/PartitionManager.h"
@@ -10350,4 +10352,3 @@ static void _cleanUpVTune()
 	VTResume = NULL;
 }
 #endif	// VTUNE
-

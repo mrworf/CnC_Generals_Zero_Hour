@@ -232,6 +232,221 @@ target_include_directories(zh_original_lifecycle
 )
 target_link_libraries(zh_original_lifecycle PUBLIC zh_original_process zh_build_options)
 
+# M20 forces the production dispatch object into the executable so the complete
+# INI type table is live.  Callback and runtime providers stay in a normal
+# archive: the link map therefore distinguishes providers actually reached by
+# that table from archive members that were merely compiled.
+add_library(zh_original_config_spine OBJECT
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp
+)
+add_library(zh_original_config_providers STATIC
+  GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Dict.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Audio/AudioEventRTS.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/DamageFX.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/MultiplayerSettings.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/Money.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/SpecialPower.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/GameType.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/Geometry.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/QuotedPrintable.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/Snapshot.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/Trig.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/Upgrade.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/TerrainTypes.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Thing/Thing.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingFactory.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingTemplate.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/UserPreferences.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/NameKeyGenerator.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/FileSystem.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/LocalFileSystem.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/LocalFile.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/PosixDevice/Common/PosixLocalFile.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/PosixDevice/Common/PosixLocalFileSystem.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/File.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/RAMFile.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/ArchiveFile.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/ArchiveFileSystem.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/StreamingArchiveFile.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GameText.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Drawable.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/RadiusDecal.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/System/Anim2D.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/System/Image.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Terrain/TerrainRoads.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Water.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AI.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/ScriptEngine.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIAiData.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIAnimation.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Armor.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIAudioEventInfo.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Audio/GameAudio.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INITerrainBridge.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/System/CampaignManager.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ChallengeGenerals.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INICommandButton.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INICommandSet.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIControlBarScheme.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarResizer.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INICrate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Credits.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIDamageFX.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIDrawGroupInfo.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Eva.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/FXList.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIGameData.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/HeaderTemplate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GlobalLanguage.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Locomotor.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIMapCache.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIMapData.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIMappedImage.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/MetaEvent.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIMiscAudio.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Input/Mouse.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIMultiplayer.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIObject.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/ObjectCreationList.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/ExperienceTracker.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Object.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/DeliverPayloadAIUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/PhysicsUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/RadiusDecalUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Weapon.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/WeaponSet.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/Scripts.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/System/CrateSystem.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogic.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/GameSpy/Chat.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIParticleSys.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/PlayerTemplate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/System/RankInfo.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/Science.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Shell/ShellMenuScheme.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INISpecialPower.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INITerrain.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INITerrainRoad.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIUpgrade.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIVideo.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIWater.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIWeapon.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Snow.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/INIWebpageURL.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowTransitions.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/BitFlags.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/DiscreteCircle.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/StateMachine.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/AcademyStats.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/ActionManager.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/Handicap.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/Player.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/PlayerList.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/ProductionPrerequisite.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/ResourceGatheringManager.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/Team.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/TunnelTracker.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/DisabledTypes.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/GameCommon.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/KindOf.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/ObjectStatusTypes.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/Radar.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Thing/Module.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Thing/ModuleFactory.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Display.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/DrawGroupInfo.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GameClient.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Line2D.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Terrain/TerrainVisual.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/VideoPlayer.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/View.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBar.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarScheme.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/OptionsMenu.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Shell/Shell.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIPathfind.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIDock.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIGuard.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIGuardRetaliate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AITNGuard.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/AI/Squad.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Map/TerrainLogic.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/FiringTracker.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/GhostObject.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SimpleObjectIterator.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/AutoHealBehavior.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/BehaviorModule.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/GenerateMinefieldBehavior.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/SpecialPowerCompletionDie.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/ObjectDefectionHelper.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/ObjectHelper.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/ObjectRepulsorHelper.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/ObjectSMCHelper.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/ObjectWeaponStatusHelper.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/StatusDamageHelper.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/SubdualDamageHelper.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/TempWeaponBonusHelper.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AssistedTargetingUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/LaserUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/LifetimeUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProjectileStreamUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/SmartBombTargetHomingUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/UpdateModule.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/System/Damage.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/matrix3d.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RecorderState.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/Energy.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/ScoreKeeper.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/BuildAssistant.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/DisplayStringManager.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Shadow.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindow.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManager.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowTransitionsStyles.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetStaticText.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIGroup.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIPlayer.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIStates.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/AI/TurretAI.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Map/PolygonTrigger.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Map/SidesList.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/HackInternetAIUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/SupplyTruckAIUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AutoDepositUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProneUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/VictoryConditions.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/IPEnumeration.cpp
+  src/original_runtime/posix_crash.cpp
+  src/original_runtime/well_known_keys.cpp
+)
+set_source_files_properties(
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/OptionsMenu.cpp
+  PROPERTIES COMPILE_DEFINITIONS ZH_OPTION_PREFERENCES_ONLY)
+foreach(config_target zh_original_config_spine zh_original_config_providers)
+  target_include_directories(${config_target} PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+  target_link_libraries(${config_target} PRIVATE zh_build_options)
+  target_compile_options(${config_target} PRIVATE
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-ffunction-sections;-fdata-sections>)
+endforeach()
+
 add_library(zh_persistence STATIC src/persistence/save.cpp src/persistence/replay.cpp)
 target_include_directories(zh_persistence PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_persistence PUBLIC zh_wwsupport zh_build_options)
@@ -388,6 +603,56 @@ install(FILES data/corpus/video-variants.tsv DESTINATION share/generals-zero-hou
 if(ZH_BUILD_TESTS)
   enable_testing()
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_executable(original_config_link_probe
+    tests/original_lifecycle/test_config_link_probe.cpp
+    $<TARGET_OBJECTS:zh_original_config_spine>)
+  target_include_directories(original_config_link_probe PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+  target_link_libraries(original_config_link_probe PRIVATE
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_build_options)
+  target_link_options(original_config_link_probe PRIVATE
+    -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-config-dispatch.link.map")
+  add_test(NAME original_config_dispatch_valid COMMAND original_config_link_probe valid
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/fixtures/config-valid.ini")
+  add_test(NAME original_config_dispatch_invalid COMMAND original_config_link_probe invalid
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/fixtures/config-invalid.ini")
+  set_tests_properties(original_config_dispatch_valid original_config_dispatch_invalid PROPERTIES
+    LABELS "original-config;source-identity")
+  add_test(NAME original_config_dispatch_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_config_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-config-dispatch.link.map"
+    --executable "$<TARGET_FILE:original_config_link_probe>"
+    --dispatch-source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp"
+    --dispatch-target zh_original_config_spine
+    --provider-target zh_original_config_providers
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --fixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/fixtures/config-valid.ini")
+  set_tests_properties(original_config_dispatch_identity PROPERTIES LABELS "original-config;source-identity")
+  add_test(NAME original_config_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_config_provider_removal.py"
+    --compiler "${CMAKE_CXX_COMPILER}"
+    --archiver "${CMAKE_AR}"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-config-dispatch.link.map"
+    --dispatch-source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp"
+    --dispatch-target zh_original_config_spine
+    --probe-source "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_config_link_probe.cpp"
+    --probe-target original_config_link_probe
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --library "$<TARGET_FILE:zh_original_lifecycle>"
+    --library "$<TARGET_FILE:zh_original_data>"
+    --library "$<TARGET_FILE:zh_os_posix>"
+    --library "$<TARGET_FILE:zh_original_process>"
+    --library "$<TARGET_FILE:zh_data>"
+    --library "$<TARGET_FILE:zh_os_posix>")
+  set_tests_properties(original_config_provider_removal PROPERTIES LABELS "original-config;source-identity")
   add_executable(original_lifecycle_subsystem_tests
     tests/original_lifecycle/test_subsystem_lifecycle.cpp)
   target_include_directories(original_lifecycle_subsystem_tests PRIVATE

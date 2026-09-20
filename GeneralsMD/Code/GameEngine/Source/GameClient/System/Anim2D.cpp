@@ -34,6 +34,7 @@
 #include "Common/RandomValue.h"
 #include "Common/Xfer.h"
 #include "GameClient/Anim2D.h"
+#include "GameClient/ClientRandomValue.h"
 #include "GameClient/Display.h"
 #include "GameClient/Image.h"
 #include "GameLogic/GameLogic.h"
@@ -880,4 +881,3 @@ void Anim2DCollection::unRegisterAnimation( Anim2D *anim )
 		m_instanceList = anim->m_collectionSystemNext;
 
 }  // end unRegisterAnimation
-

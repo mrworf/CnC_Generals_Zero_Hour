@@ -42,7 +42,7 @@
 #include "Common/ThingTemplate.h"
 #include "Common/ThingFactory.h"
 #include "Common/Xfer.h"
-#include "Common/XFerCRC.h"
+#include "Common/XferCRC.h"
 
 #include "GameClient/ControlBar.h"
 #include "GameClient/FXList.h"
@@ -53,6 +53,7 @@
 #include "GameLogic/AIGuardRetaliate.h"
 #include "GameLogic/AITNGuard.h"
 #include "GameLogic/AIStateMachine.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/PartitionManager.h"
@@ -1242,7 +1243,7 @@ Bool outOfWeaponRangePosition( State *thisState, void* userData )
  */
 static Bool cannotPossiblyAttackObject( State *thisState, void* userData )
 {
-	AbleToAttackType attackType = (AbleToAttackType)(UnsignedInt)userData;
+	AbleToAttackType attackType = static_cast<AbleToAttackType>(reinterpret_cast<uintptr_t>(userData));
 	Object *obj = thisState->getMachineOwner();
 	Object *victim = thisState->getMachineGoalObject();
 

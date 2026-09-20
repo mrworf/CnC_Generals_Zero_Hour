@@ -29,6 +29,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "Common/GameEngine.h"
+#include "Common/GlobalData.h"
 #include "Common/Xfer.h"
 #include "GameClient/View.h"
 #include "GameClient/Drawable.h"

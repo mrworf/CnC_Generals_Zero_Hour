@@ -38,6 +38,7 @@
 #include "Common/ModuleFactory.h"
 #include "Common/RandomValue.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Object.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"

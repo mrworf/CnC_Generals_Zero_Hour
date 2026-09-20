@@ -38,10 +38,11 @@
 #define DEFINE_WEAPONRELOAD_NAMES
 #define DEFINE_WEAPONPREFIRE_NAMES
 
-#include "Common/CRC.h"
+#include "Common/crc.h"
 #include "Common/CRCDebug.h"
 #include "Common/GameAudio.h"
 #include "Common/GameState.h"
+#include "Common/GlobalData.h"
 #include "Common/INI.h"
 #include "Common/PerfTimer.h"
 #include "Common/Player.h"
@@ -57,6 +58,7 @@
 #include "GameLogic/Damage.h"
 #include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/Module/BehaviorModule.h"
 #include "GameLogic/Module/BodyModule.h"
@@ -1618,7 +1620,7 @@ void WeaponStore::update()
 		if (curFrame >= ddi->m_delayDamageFrame)
 		{
 			// we never do projectile-detonation-damage via this code path.
-			const isProjectileDetonation = false;
+			const Bool isProjectileDetonation = false;
 			ddi->m_delayedWeapon->dealDamageInternal(ddi->m_delaySourceID, ddi->m_delayIntendedVictimID, &ddi->m_delayDamagePos, ddi->m_bonus, isProjectileDetonation);
 			ddi = m_weaponDDI.erase(ddi);
 		}
@@ -3528,4 +3530,3 @@ void WeaponBonusSet::appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus&
 		this->m_bonus[i].appendBonuses(bonus);
 	}
 }
-

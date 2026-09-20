@@ -31,6 +31,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "Common/RandomValue.h"
+#include "Common/GlobalData.h"
 #include "GameClient/Shell.h"
 #include "GameClient/WindowLayout.h"
 #include "GameClient/GameWindowManager.h"
@@ -39,10 +40,14 @@
 #include "GameClient/AnimateWindowManager.h"
 #include "GameClient/ShellMenuScheme.h"
 #include "GameLogic/GameLogic.h"
+#ifdef _WIN32
 #include "GameNetwork/GameSpyOverlay.h"
 #include "GameNetwork/GameSpy/PeerDefsImplementation.h"
+#endif
 
+#ifdef _PROFILE
 #include <rts/profile.h>
+#endif
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 Shell *TheShell = NULL;  ///< the shell singleton definition
@@ -267,8 +272,10 @@ void Shell::push( AsciiString filename, Bool shutdownImmediate )
 	// sanity
 	if( filename.isEmpty() )
 		return;
+#ifdef _WIN32
 	if(TheGameSpyInfo)
 			GameSpyCloseAllOverlays();
+#endif
 
 
 #ifdef DEBUG_LOGGING
@@ -330,8 +337,10 @@ void Shell::push( AsciiString filename, Bool shutdownImmediate )
 void Shell::pop( void )
 {
 	WindowLayout *screen = top();
+#ifdef _WIN32
 	if(TheGameSpyInfo)
 			GameSpyCloseAllOverlays();
+#endif
 
 
 	// sanity
@@ -606,8 +615,10 @@ void Shell::unlinkScreen( WindowLayout *screen )
 //-------------------------------------------------------------------------------------------------
 void Shell::doPush( AsciiString layoutFile )
 {
+#ifdef _WIN32
 	if(TheGameSpyInfo)
 			GameSpyCloseAllOverlays();
+#endif
 	WindowLayout *newScreen;
 	
 	// create new layout and load from window manager

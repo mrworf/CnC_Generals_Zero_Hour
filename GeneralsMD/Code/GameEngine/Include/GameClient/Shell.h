@@ -94,6 +94,8 @@
 
 #pragma once
 
+#include "Common/SubsystemInterface.h"
+
 #ifndef __SHELL_H_
 #define __SHELL_H_
 
@@ -202,4 +204,3 @@ protected:
 extern Shell *TheShell;  ///< the shell external interface
 
 #endif // __SHELL_H_
-

@@ -30,6 +30,7 @@
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "GameLogic/GameLogic.h"
+#include "GameClient/ClientRandomValue.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -567,4 +568,3 @@ void Eva::processPlayingMessages(UnsignedInt currentFrame)
 
 //-------------------------------------------------------------------------------------------------
 Eva *TheEva = NULL;
-

@@ -51,6 +51,7 @@
 // USER INCLUDES //////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 #include "GameClient/ControlBar.h"
+#include "Common/INI.h"
 #include "GameClient/ControlBarResizer.h"
 #include "GameClient/GameWindow.h"
 #include "GameClient/GameWindowManager.h"
@@ -242,4 +243,3 @@ void INI::parseControlBarResizerDefinition( INI* ini )
 //-----------------------------------------------------------------------------
 // PRIVATE FUNCTIONS //////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-

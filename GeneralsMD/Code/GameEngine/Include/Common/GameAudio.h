@@ -67,6 +67,7 @@ enum AudioType : int;
 struct AudioEventInfo;
 struct AudioRequest;
 struct AudioSettings;
+struct FieldParse;
 struct MiscAudio;
 
 typedef std::hash_map<AsciiString, AudioEventInfo*, rts::hash<AsciiString>, rts::equal_to<AsciiString> > AudioEventInfoHash;

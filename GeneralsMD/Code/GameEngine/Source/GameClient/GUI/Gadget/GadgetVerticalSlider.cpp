@@ -48,7 +48,7 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////
 #include "Common/Language.h"
-#include "Gameclient/GameWindowManager.h"
+#include "GameClient/GameWindowManager.h"
 #include "GameClient/Gadget.h"
 
 // DEFINES ////////////////////////////////////////////////////////////////////
@@ -469,4 +469,3 @@ WindowMsgHandledType GadgetVerticalSliderSystem( GameWindow *window, UnsignedInt
 	return MSG_HANDLED;
 
 }  // end GadgetVerticalSliderSystem
-

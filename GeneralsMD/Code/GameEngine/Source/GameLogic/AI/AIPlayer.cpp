@@ -46,6 +46,7 @@
 #include "GameClient/ControlBar.h"
 #include "GameClient/TerrainVisual.h"	
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/AIPlayer.h"
 #include "GameLogic/SidesList.h"

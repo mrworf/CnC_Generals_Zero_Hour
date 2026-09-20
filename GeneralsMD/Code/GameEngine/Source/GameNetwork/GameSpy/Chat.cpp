@@ -34,9 +34,12 @@
 #include "GameClient/GadgetListBox.h"
 #include "GameClient/LanguageFilter.h"
 #include "GameClient/GameWindowManager.h"
+#ifdef _WIN32
 #include "GameNetwork/GameSpy/PeerDefsImplementation.h"
 #include "GameNetwork/GameSpy/PeerThread.h"
+#endif
 #include "GameClient/InGameUI.h"
+#include "GameNetwork/GameSpy/GameSpyColors.h"
 #ifdef _INTERNAL
 // for occasional debugging...
 //#pragma optimize("", off)
@@ -116,6 +119,8 @@ Color GameSpyColor[GSCOLOR_MAX] =
 	GameMakeColor(255,255,255,255),	// GSCOLOR_MOTD,
 	GameMakeColor(255,255,  0,255),	// GSCOLOR_MOTD_HEADING,
 };
+
+#ifdef _WIN32
 
 Bool GameSpyInfo::sendChat( UnicodeString message, Bool isAction, GameWindow *playerListbox )
 {
@@ -345,4 +350,4 @@ void GameSpyInfo::unregisterTextWindow( GameWindow *win )
 {
 	m_textWindows.erase(win);
 }
-
+#endif

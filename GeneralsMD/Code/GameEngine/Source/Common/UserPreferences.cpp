@@ -42,6 +42,7 @@
 #include "Common/Player.h"
 #include "Common/PlayerTemplate.h"
 #include "Common/Registry.h"
+#include "Common/GlobalData.h"
 #include "Common/QuickmatchPreferences.h"
 #include "Common/CustomMatchPreferences.h"
 #include "Common/IgnorePreferences.h"
@@ -49,7 +50,19 @@
 #include "Common/MultiplayerSettings.h"
 #include "GameClient/MapUtil.h"
 #include "GameClient/ChallengeGenerals.h"
+#include "GameNetwork/GameInfo.h"
+#ifdef _WIN32
 #include "GameNetwork/GameSpy/PeerDefs.h"
+#endif
+
+static Int getLocalProfileIDForPreferences()
+{
+#ifdef _WIN32
+	return TheGameSpyInfo ? TheGameSpyInfo->getLocalProfileID() : 0;
+#else
+	return 0;
+#endif
+}
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -247,7 +260,7 @@ void UserPreferences::setAsciiString(AsciiString key, AsciiString val)
 QuickMatchPreferences::QuickMatchPreferences()
 {
 	AsciiString userPrefFilename;
-	Int localProfile = TheGameSpyInfo->getLocalProfileID();
+	Int localProfile = getLocalProfileIDForPreferences();
 	userPrefFilename.format("GeneralsOnline\\QMPref%d.ini", localProfile);
 	load(userPrefFilename);
 }
@@ -432,7 +445,7 @@ Int QuickMatchPreferences::getSide( void )
 CustomMatchPreferences::CustomMatchPreferences()
 {
 	AsciiString userPrefFilename;
-	Int localProfile = TheGameSpyInfo->getLocalProfileID();
+	Int localProfile = getLocalProfileIDForPreferences();
 	userPrefFilename.format("GeneralsOnline\\CustomPref%d.ini", localProfile);
 	load(userPrefFilename);
 }
@@ -781,7 +794,7 @@ void CustomMatchPreferences::setUseStats( Bool useStats )
 GameSpyMiscPreferences::GameSpyMiscPreferences()
 {
 	AsciiString userPrefFilename;
-	Int localProfile = TheGameSpyInfo->getLocalProfileID();
+	Int localProfile = getLocalProfileIDForPreferences();
 	userPrefFilename.format("GeneralsOnline\\GSMiscPref%d.ini", localProfile);
 	load(userPrefFilename);
 }
@@ -827,7 +840,7 @@ IgnorePreferences::IgnorePreferences()
 {
 	AsciiString userPrefFilename;
 //	if(!TheGameSpyInfo)
-	Int localProfile = TheGameSpyInfo->getLocalProfileID();
+	Int localProfile = getLocalProfileIDForPreferences();
 	userPrefFilename.format("GeneralsOnline\\IgnorePref%d.ini", localProfile);
 	load(userPrefFilename);
 }
@@ -916,7 +929,7 @@ Bool LadderPreferences::loadProfile( Int profileID )
 			continue;
 
 		p.lastPlayDate = atoi( ptr + 1 );
-		for (i=0; i<strlen(ptr); ++i)
+		for (Int i=0; i<strlen(ptr); ++i)
 		{
 			ladData.removeLastChar();
 		}

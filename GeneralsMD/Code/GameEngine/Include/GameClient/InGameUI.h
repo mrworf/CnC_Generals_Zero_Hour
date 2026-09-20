@@ -60,6 +60,7 @@ class WindowLayout;
 class Anim2DTemplate;
 class Anim2D;
 class Shadow;
+struct FieldParse;
 enum LegalBuildCode : int;
 enum KindOfType : int;
 enum ShadowType : int;

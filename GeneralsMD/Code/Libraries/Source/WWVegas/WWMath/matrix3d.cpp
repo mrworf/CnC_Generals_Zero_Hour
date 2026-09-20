@@ -65,7 +65,9 @@
 #include "matrix3.h"
 #include "matrix4.h"
 #include "quat.h"
+#ifdef _WIN32
 #include "D3dx8math.h"
+#endif
 
 // some static matrices which are sometimes useful
 const Matrix3D Matrix3D::Identity
@@ -516,6 +518,7 @@ void Matrix3D::Get_Inverse(Matrix3D & inv) const
 	// TODO: Implement the general purpose inverse function here (once we need it :-)
 	//Get_Orthogonal_Inverse(inv);
 
+#ifdef _WIN32
 	Matrix4x4	mat4(*this);
 	Matrix4x4	mat4Inv;
 
@@ -536,6 +539,25 @@ void Matrix3D::Get_Inverse(Matrix3D & inv) const
 	inv.Row[2][1]=mat4Inv[2][1];
 	inv.Row[2][2]=mat4Inv[2][2];
 	inv.Row[2][3]=mat4Inv[2][3];
+#else
+	const float a = Row[0][0], b = Row[0][1], c = Row[0][2];
+	const float d = Row[1][0], e = Row[1][1], f = Row[1][2];
+	const float g = Row[2][0], h = Row[2][1], i = Row[2][2];
+	const float det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+	WWASSERT(fabs(det) > 1.0e-12f);
+	const float inv_det = 1.0f / det;
+	inv.Row[0].Set((e * i - f * h) * inv_det, (c * h - b * i) * inv_det,
+		(b * f - c * e) * inv_det, 0.0f);
+	inv.Row[1].Set((f * g - d * i) * inv_det, (a * i - c * g) * inv_det,
+		(c * d - a * f) * inv_det, 0.0f);
+	inv.Row[2].Set((d * h - e * g) * inv_det, (b * g - a * h) * inv_det,
+		(a * e - b * d) * inv_det, 0.0f);
+	const Vector3 translation(Row[0][3], Row[1][3], Row[2][3]);
+	const Vector3 inverse_translation = inv.Rotate_Vector(-translation);
+	inv.Row[0][3] = inverse_translation.X;
+	inv.Row[1][3] = inverse_translation.Y;
+	inv.Row[2][3] = inverse_translation.Z;
+#endif
 }
 
 /*********************************************************************************************** 

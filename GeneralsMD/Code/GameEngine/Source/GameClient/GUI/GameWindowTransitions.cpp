@@ -56,7 +56,7 @@
 //-----------------------------------------------------------------------------
 // USER INCLUDES //////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-#include "Gamelogic/GameLogic.h"
+#include "GameLogic/GameLogic.h"
 #include "GameClient/GameWindowTransitions.h"
 #include "GameClient/GameWindow.h"
 #include "GameClient/GameWindowManager.h"
@@ -573,4 +573,3 @@ void GameWindowTransitionsHandler::parseWindow( INI* ini, void *instance, void *
 	ini->initFromINI(transWin, myFieldParse);
 	((TransitionGroup*)instance)->addWindow(transWin);
 }
-

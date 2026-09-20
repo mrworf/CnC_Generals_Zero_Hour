@@ -39,7 +39,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const char* DamageTypeFlags::s_bitNameList[] = 
+template<> const char* BitFlags<DAMAGE_NUM_TYPES>::s_bitNameList[] =
 {
 	"EXPLOSION",			
 	"CRUSH",					
@@ -82,6 +82,8 @@ const char* DamageTypeFlags::s_bitNameList[] =
 
 	NULL
 };
+
+template void BitFlags<DAMAGE_NUM_TYPES>::parseSingleBitFromINI(INI*, void*, void*, const void*);
 
 DamageTypeFlags DAMAGE_TYPE_FLAGS_NONE; 	// inits to all zeroes
 DamageTypeFlags DAMAGE_TYPE_FLAGS_ALL;
@@ -194,4 +196,3 @@ void DamageInfoOutput::xfer( Xfer *xfer )
 	xfer->xferBool( &m_noEffect );
 
 }  // end xfer
-

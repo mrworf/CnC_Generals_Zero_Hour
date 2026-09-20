@@ -34,6 +34,7 @@
 
 #include "GameClient/Color.h"
 #include "Common/Money.h"
+#include "Common/SubsystemInterface.h"
 
 // FORWARD DECLARATIONS ///////////////////////////////////////////////////////////////////////////
 struct FieldParse;

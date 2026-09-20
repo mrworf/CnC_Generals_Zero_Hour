@@ -35,6 +35,8 @@
 
 #include "Lib/BaseType.h"
 #include "Common/SubsystemInterface.h"
+
+class INI;
 #include "Common/GameMemory.h"
 #include "Common/AsciiString.h"
 
@@ -153,4 +155,3 @@ public:
 };
 
 #endif // __NAMEKEYGENERATOR_H_
-

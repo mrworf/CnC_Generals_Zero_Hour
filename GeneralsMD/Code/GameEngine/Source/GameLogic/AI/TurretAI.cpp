@@ -37,6 +37,7 @@
 #include "Common/Xfer.h"
 
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
@@ -721,7 +722,7 @@ UpdateSleepTime TurretAI::updateTurretAI()
 		if (m_didFire)
 		{
 			// if we fired, enable sweeping for a few frames.
-			const ENABLE_SWEEP_FRAME_COUNT = 3;
+			const UnsignedInt ENABLE_SWEEP_FRAME_COUNT = 3;
 			m_enableSweepUntil = now + ENABLE_SWEEP_FRAME_COUNT;
 			m_continuousFireExpirationFrame = now + ENABLE_SWEEP_FRAME_COUNT;// so the recent firing will not interrupt the moving sound
 		}

@@ -33,6 +33,7 @@
 #include "Common/RandomValue.h"
 #include "Common/Xfer.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Module/LifetimeUpdate.h"
 #include "GameLogic/Object.h"
 

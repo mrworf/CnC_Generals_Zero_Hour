@@ -31,6 +31,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "Common/INI.h"
+#include "Common/GlobalData.h"
 #include "Common/MessageStream.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -723,4 +724,3 @@ MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 {
 	MetaMap::parseMetaMap(ini);
 }
-

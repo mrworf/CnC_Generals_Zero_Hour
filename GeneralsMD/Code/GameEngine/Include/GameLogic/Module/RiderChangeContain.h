@@ -34,19 +34,18 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/TransportContain.h"
+#include "Common/ObjectStatusTypes.h"
+#include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/WeaponSetType.h"
 
 #define MAX_RIDERS 8 //***NOTE: If you change this, make sure you update the parsing section!
-
-enum WeaponSetType;
-enum ObjectStatusType;
-enum LocomotorSetType;
 
 struct RiderInfo
 {
 	AsciiString m_templateName;
 	WeaponSetType m_weaponSetFlag;
 	ModelConditionFlagType m_modelConditionFlagType; 
-	ObjectStatusType m_objectStatusType;
+	ObjectStatusTypes m_objectStatusType;
 	AsciiString m_commandSet;
 	LocomotorSetType m_locomotorSetType;
 };
@@ -118,4 +117,3 @@ private:
 };
 
 #endif // __RIDER_CHANGE_CONTAIN_H
-

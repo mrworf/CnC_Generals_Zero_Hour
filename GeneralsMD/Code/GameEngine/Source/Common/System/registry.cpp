@@ -30,6 +30,45 @@
 
 #include "Common/Registry.h"
 
+#ifndef _WIN32
+
+Bool GetStringFromGeneralsRegistry(AsciiString, AsciiString, AsciiString&)
+{
+	return FALSE;
+}
+
+Bool GetStringFromRegistry(AsciiString, AsciiString, AsciiString&)
+{
+	return FALSE;
+}
+
+Bool GetUnsignedIntFromRegistry(AsciiString, AsciiString, UnsignedInt&)
+{
+	return FALSE;
+}
+
+AsciiString GetRegistryLanguage(void)
+{
+	return AsciiString("english");
+}
+
+AsciiString GetRegistryGameName(void)
+{
+	return AsciiString("GeneralsMPTest");
+}
+
+UnsignedInt GetRegistryVersion(void)
+{
+	return 65536;
+}
+
+UnsignedInt GetRegistryMapPackVersion(void)
+{
+	return 65536;
+}
+
+#else
+
 #ifdef _INTERNAL
 // for occasional debugging...
 //#pragma optimize("", off)
@@ -195,3 +234,5 @@ UnsignedInt GetRegistryMapPackVersion(void)
 	GetUnsignedIntFromRegistry("", "MapPackVersion", val);
 	return val;
 }
+
+#endif

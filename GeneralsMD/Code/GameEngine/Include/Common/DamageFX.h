@@ -42,6 +42,7 @@
 class DamageFXStore;
 class FXList;
 class INI;
+struct FieldParse;
 
 //-------------------------------------------------------------------------------------------------
 typedef const FXList* ConstFXListPtr;
@@ -166,4 +167,3 @@ private:
 extern DamageFXStore *TheDamageFXStore;
 
 #endif // _DamageFX_H_
-

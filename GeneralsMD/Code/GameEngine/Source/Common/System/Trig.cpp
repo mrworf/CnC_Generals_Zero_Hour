@@ -33,7 +33,7 @@
 #include <limits.h>
 
 #include "Lib/BaseType.h"
-#include "Lib/Trig.h"
+#include "Lib/trig.h"
 
 #define TWOPI			6.28318530718f
 #define DEG2RAD 	0.0174532925199f
@@ -51,7 +51,7 @@
 // on Feb 12, 2002.  To regenerate, define REGENERATE_TRIG_TABLES, run the program, and copy the
 // resulting trig.txt file here.
 
-static Int sinLookup[TRIG_RES] = {
+static UnsignedInt sinLookup[TRIG_RES] = {
 	0x00000000, 0x00000006, 0x0000000C, 0x00000012, 0x00000019, 0x0000001F, 0x00000025, 0x0000002B,
 	0x00000032, 0x00000038, 0x0000003E, 0x00000045, 0x0000004B, 0x00000051, 0x00000057, 0x0000005E,
 	0x00000064, 0x0000006A, 0x00000071, 0x00000077, 0x0000007D, 0x00000083, 0x0000008A, 0x00000090,
@@ -1614,7 +1614,7 @@ static Int intSin( Int angle )
 	while (angle >= INT_TWOPI)
 		angle -= INT_TWOPI;
 
-	return sinLookup[(angle * TRIG_RES)/INT_TWOPI];
+	return static_cast<Int>(sinLookup[(angle * TRIG_RES)/INT_TWOPI]);
 }
 
 static Int intTan( Int angle )
@@ -1749,5 +1749,3 @@ public:
 TrigInit trigInitializer;
 
 #endif // REGENERATE_TRIG_TABLES
-
-

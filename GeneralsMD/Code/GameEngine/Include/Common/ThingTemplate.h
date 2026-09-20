@@ -279,7 +279,7 @@ public:
 	ModuleInfo() { }
 
 	void addModuleInfo( ThingTemplate *thingTemplate, const AsciiString& name, const AsciiString& moduleTag, const ModuleData* data, Int interfaceMask, Bool inheritable, Bool overrideableByLikeKind = FALSE );
-	const ModuleInfo::Nugget *ModuleInfo::getNuggetWithTag( const AsciiString& tag ) const;
+	const Nugget *getNuggetWithTag( const AsciiString& tag ) const;
 
 	Int getCount() const 
 	{ 
@@ -777,4 +777,3 @@ private:
 //-----------------------------------------------------------------------------
 
 #endif // __THINGTEMPLATE_H_
-

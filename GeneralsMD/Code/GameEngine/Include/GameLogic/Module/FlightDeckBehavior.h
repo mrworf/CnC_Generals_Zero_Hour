@@ -50,7 +50,7 @@ enum
 
 struct RunwayDefinition
 {
-	RunwayDefinition::RunwayDefinition()
+	RunwayDefinition()
 	{
 		m_catapultParticleSystem = NULL;
 	}
@@ -230,4 +230,3 @@ private:
 };
 
 #endif // __FLIGHT_DECK_BEHAVIOR_H
-

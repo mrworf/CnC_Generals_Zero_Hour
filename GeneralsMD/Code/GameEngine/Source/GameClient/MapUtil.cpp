@@ -30,10 +30,10 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
-#include "Common/CRC.h"
+#include "Common/crc.h"
 #include "Common/FileSystem.h"
 #include "Common/LocalFileSystem.h"
-#include "Common/File.h"
+#include "Common/file.h"
 #include "Common/GlobalData.h"
 #include "Common/GameState.h"
 #include "Common/GameEngine.h"
@@ -382,7 +382,11 @@ void MapCache::writeCacheINI( Bool userDir )
 	}
 
 	AsciiString filepath = mapDir;
+#ifdef _WIN32
 	filepath.concat('\\');
+#else
+	filepath.concat('/');
+#endif
 
 	TheFileSystem->createDirectory(mapDir);
 
@@ -670,7 +674,7 @@ Bool MapCache::addMap( AsciiString dirName, AsciiString fname, FileInfo *fileInf
 				if (md.m_numPlayers >= 2)
 				{
 					UnicodeString extension;
-					extension.format(L" (%d)", md.m_numPlayers);
+					extension.format(u" (%d)", md.m_numPlayers);
 					(*this)[lowerFname].m_displayName.concat(extension);
 				}
 			}
@@ -681,7 +685,7 @@ Bool MapCache::addMap( AsciiString dirName, AsciiString fname, FileInfo *fileInf
 				if (md.m_numPlayers >= 2)
 				{
 					UnicodeString extension;
-					extension.format(L" (%d)", md.m_numPlayers);
+					extension.format(u" (%d)", md.m_numPlayers);
 					(*this)[lowerFname].m_displayName.concat(extension);
 				}
 			}
@@ -726,7 +730,7 @@ Bool MapCache::addMap( AsciiString dirName, AsciiString fname, FileInfo *fileInf
 		if (md.m_numPlayers >= 2)
 		{
 			UnicodeString extension;
-			extension.format(L" (%d)", md.m_numPlayers);
+			extension.format(u" (%d)", md.m_numPlayers);
 			md.m_displayName.concat(extension);
 		}
 		TheGameText->reset();
@@ -743,7 +747,7 @@ Bool MapCache::addMap( AsciiString dirName, AsciiString fname, FileInfo *fileInf
 		if (md.m_numPlayers >= 2)
 		{
 			UnicodeString extension;
-			extension.format(L" (%d)", md.m_numPlayers);
+			extension.format(u" (%d)", md.m_numPlayers);
 			md.m_displayName.concat(extension);
 		}
 		DEBUG_LOG(("Map name is now '%ls'\n", md.m_displayName.str()));
@@ -1355,4 +1359,3 @@ void findDrawPositions( Int startX, Int startY, Int width, Int height, Region3D 
 	lr->y += startY;
 
 }  // end findDrawPositions
-

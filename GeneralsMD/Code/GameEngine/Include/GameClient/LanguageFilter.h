@@ -31,6 +31,7 @@
 #include "Common/STLTypedefs.h"
 #include "Common/AsciiString.h"
 #include "Common/UnicodeString.h"
+#include "Common/SubsystemInterface.h"
 
 class File;
 

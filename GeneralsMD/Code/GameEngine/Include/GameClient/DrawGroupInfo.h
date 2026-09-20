@@ -30,6 +30,10 @@
 #ifndef _H_DRAWGROUPINFO_
 #define _H_DRAWGROUPINFO_
 
+#include "GameClient/Color.h"
+
+struct FieldParse;
+
 struct DrawGroupInfo
 {
 	AsciiString m_fontName;

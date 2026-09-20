@@ -37,9 +37,10 @@
 
 #include "Common/ActionManager.h"
 #include "Common/GameType.h"
+#include "Common/GlobalData.h"
 #include "Common/MultiplayerSettings.h"
 #include "Common/NameKeyGenerator.h"
-#include "Common/OVERRIDE.h"
+#include "Common/Override.h"
 #include "Common/PlayerTemplate.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -386,7 +387,7 @@ void ControlBar::populatePurchaseScience( Player* player )
 	win = TheWindowManager->winGetWindowFromId( m_contextParent[ CP_PURCHASE_SCIENCE ], TheNameKeyGenerator->nameToKey( "GeneralsExpPoints.wnd:StaticTextRankPointsAvailable" ) );
 	if(win)
 	{
-		tempUS.format(L"%d", player->getSciencePurchasePoints());
+		tempUS.format(u"%d", player->getSciencePurchasePoints());
 		GadgetStaticTextSetText(win, tempUS);
 	}
 	
@@ -808,7 +809,7 @@ void CommandSet::parseCommandButton( INI* ini, void *instance, void *store, cons
 
 	// get the index to store the command at, and the command array itself
 	const CommandButton **buttonArray = (const CommandButton **)store;
-	Int buttonIndex = (Int)userData;
+	Int buttonIndex = static_cast<Int>(reinterpret_cast<intptr_t>(userData));
 
 	// sanity
 	DEBUG_ASSERTCRASH( buttonIndex < MAX_COMMANDS_PER_SET, ("parseCommandButton: button index '%d' out of range\n", 
@@ -2485,7 +2486,7 @@ void ControlBar::setControlCommand( GameWindow *button, const CommandButton *com
 		button->winSetTooltipFunc(commandButtonTooltip);
 	}
 	else
-		GadgetButtonSetText( button, UnicodeString( L"" ) );
+		GadgetButtonSetText( button, UnicodeString( u"" ) );
 
 	// save the command in the user data of the window
 	GadgetButtonSetData(button, (void*)commandButton);
@@ -3222,7 +3223,8 @@ void ControlBar::updateRadarAttackGlow ( void )
 void ControlBar::initSpecialPowershortcutBar( Player *player)
 {
 
-	for( Int i = 0; i < MAX_SPECIAL_POWER_SHORTCUTS; ++i )
+	Int i = 0;
+	for( ; i < MAX_SPECIAL_POWER_SHORTCUTS; ++i )
 	{
 		m_specialPowerShortcutButtonParents[i] = NULL;
 		m_specialPowerShortcutButtons[i] = NULL;
@@ -3695,7 +3697,7 @@ void ControlBar::drawSpecialPowerShortcutMultiplierText()
 			if( numReady > 1 ) // Lorenzen changed... Displaying a "1" is superfluous
 			{
 				UnicodeString unibuffer;
-				unibuffer.format( L"%d", numReady );
+				unibuffer.format( u"%d", numReady );
 				
 				GadgetButtonSetText( win, unibuffer );
 

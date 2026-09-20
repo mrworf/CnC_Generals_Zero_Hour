@@ -49,7 +49,11 @@
 
 #include <stdio.h>
 #include <fcntl.h>
+#ifdef _WIN32
 #include <io.h>
+#else
+#include <unistd.h>
+#endif
 #include <string.h>
 #include <sys/stat.h>
 
@@ -282,4 +286,3 @@ Int StreamingArchiveFile::seek( Int pos, seekMode mode)
 	return m_curPos;
 
 }
-

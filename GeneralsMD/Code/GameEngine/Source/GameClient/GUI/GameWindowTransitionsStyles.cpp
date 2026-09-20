@@ -65,7 +65,7 @@
 #include "GameClient/DisplayStringManager.h"
 #include "GameClient/GadgetPushButton.h"
 #include "GameClient/GadgetStaticText.h"
-#include "GameClient/Controlbar.h"
+#include "GameClient/ControlBar.h"
 
 //-----------------------------------------------------------------------------
 // DEFINES ////////////////////////////////////////////////////////////////////
@@ -1375,7 +1375,7 @@ void TextTypeTransition::init( GameWindow *win )
 	m_dStr = TheDisplayStringManager->newDisplayString();
 	m_fullText = GadgetStaticTextGetText(m_win);		
 	Int length = m_fullText.getLength();
-	m_frameLength = MIN(length, TEXTTYPETRANSITION_END);
+	m_frameLength = (std::min)(length, static_cast<Int>(TEXTTYPETRANSITION_END));
 }
 
 void TextTypeTransition::update( Int frame )
@@ -1498,22 +1498,22 @@ void CountUpTransition::init( GameWindow *win )
 	if(m_intValue < COUNTUPTRANSITION_END)
 	{
 		m_countState = COUNT_ONES;
-		m_frameLength = MIN(m_intValue, COUNTUPTRANSITION_END);
+		m_frameLength = (std::min)(m_intValue, static_cast<Int>(COUNTUPTRANSITION_END));
 	}
 	else if(m_intValue/100 < COUNTUPTRANSITION_END)
 	{
 		m_countState = COUNT_100S;
-		m_frameLength = MIN(m_intValue/100, COUNTUPTRANSITION_END);
+		m_frameLength = (std::min)(m_intValue/100, static_cast<Int>(COUNTUPTRANSITION_END));
 	}
 	else
 	{
 		m_countState = COUNT_1000S;
-		m_frameLength = MIN(m_intValue/1000, COUNTUPTRANSITION_END);
+		m_frameLength = (std::min)(m_intValue/1000, static_cast<Int>(COUNTUPTRANSITION_END));
 	}
 	
 	m_currentValue = 0;
 	UnicodeString currVal;
-	currVal.format(L"%d",m_currentValue);
+	currVal.format(u"%d",m_currentValue);
 	GadgetStaticTextSetText(m_win, currVal);
 }
 
@@ -1533,7 +1533,7 @@ void CountUpTransition::update( Int frame )
 				break;
 			m_currentValue = 0;
 			UnicodeString currVal;
-			currVal.format(L"%d",m_currentValue);
+			currVal.format(u"%d",m_currentValue);
 			GadgetStaticTextSetText(m_win, currVal);
 
 			m_win->winHide(TRUE);
@@ -1568,7 +1568,7 @@ void CountUpTransition::update( Int frame )
 			m_currentValue = m_intValue;
 
 		UnicodeString currVal;
-		currVal.format(L"%d",m_currentValue);
+		currVal.format(u"%d",m_currentValue);
 		GadgetStaticTextSetText(m_win, currVal);
 	}
 	if( frame == m_frameLength )
@@ -2174,7 +2174,7 @@ void PushButtonImageDrawThree(GameWindow *window, Int alpha )
 	
 }
 
-static void drawTypeText( GameWindow *window, DisplayString *str)
+void drawTypeText( GameWindow *window, DisplayString *str)
 {
 	TextData *tData = (TextData *)window->winGetUserData();
 	Int textColor = window->winGetEnabledTextColor();

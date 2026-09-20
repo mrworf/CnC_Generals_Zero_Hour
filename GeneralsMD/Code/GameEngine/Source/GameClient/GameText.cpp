@@ -53,7 +53,7 @@
 #include "Common/UnicodeString.h"
 #include "Common/AsciiString.h"
 #include "Common/GlobalData.h"
-#include "Common/File.h"
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 
 
@@ -257,7 +257,7 @@ GameTextManager::GameTextManager()
 #endif
 	m_mapStringInfo(NULL),
 	m_mapStringLUT(NULL),
-	m_failed(L"***FATAL*** String Manager failed to initilaize properly")
+	m_failed(u"***FATAL*** String Manager failed to initilaize properly")
 {
 	// Added By Sadullah Nader
 	// Initializations missing and needed
@@ -374,11 +374,13 @@ void GameTextManager::init( void )
 	ourNameA.translate(ourName);	//get ASCII version for Win 9x
 
 	extern HWND ApplicationHWnd;  ///< our application window handle
+	#ifdef _WIN32
 	if (ApplicationHWnd) {
 		//Set it twice because Win 9x does not support SetWindowTextW.
 		::SetWindowText(ApplicationHWnd, ourNameA.str());
 		::SetWindowTextW(ApplicationHWnd, ourName.str());
 	}
+	#endif
 
 }
 
@@ -755,7 +757,7 @@ void GameTextManager::translateCopy( WideChar *outbuf, Char *inbuf )
 	}
 	else if( m_munkee )
 	{
-		wcscpy(outbuf, L"Munkee");
+		wcscpy(outbuf, u"Munkee");
 		return;
 	}
 #endif
@@ -1298,7 +1300,7 @@ UnicodeString GameTextManager::fetch( const Char *label, Bool *exists )
 
 		// See if we already have the missing string
 		UnicodeString missingString;
-		missingString.format(L"MISSING: '%hs'", label);
+		missingString.format(u"MISSING: '%hs'", label);
 
 		NoString *noString = m_noStringList;
 

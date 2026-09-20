@@ -35,6 +35,8 @@
 #include "Common/GameState.h"
 #include "Common/Xfer.h"
 #include "Common/BitFlagsIO.h"
+#include "Common/KindOf.h"
+#include "WWMath/matrix3d.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -865,5 +867,4 @@ void Xfer::xferMatrix3D( Matrix3D* mtx )
 	xferReal(&tmp2.Z);
 	xferReal(&tmp2.W);
 }
-
 

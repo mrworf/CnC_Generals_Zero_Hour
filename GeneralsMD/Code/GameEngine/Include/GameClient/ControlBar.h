@@ -35,7 +35,9 @@
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "Common/AudioEventRTS.h"
 #include "Common/GameType.h"
+#include "Common/INI.h"
 #include "Common/Overridable.h"
+#include "Common/Override.h"
 #include "Common/Science.h"
 #include "GameClient/Color.h"
 
@@ -1039,4 +1041,3 @@ private:
 extern ControlBar *TheControlBar;
 
 #endif  // end __CONTROLBAR_H_
-
