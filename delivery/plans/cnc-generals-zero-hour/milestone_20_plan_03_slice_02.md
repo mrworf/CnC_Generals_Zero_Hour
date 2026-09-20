@@ -34,3 +34,14 @@ Positive cases cover BIGF/BIG4, mixed-case canonical lookup, directory ordering,
 - Every malformed/range/overflow case fails deterministically without publication or leaks.
 - Focused configure/build/CTest passes under all four native presets and focused sanitizers.
 - Commit boundary: `delivery: M20 plan03 slice 02 harden BIG archives`.
+
+## Delivered evidence
+
+Status: complete.
+
+- The retained adapter is now a production-shared provider used unchanged by `zh_original_main` and its focused executable. It validates the full header/table before publication, constrains all legacy `Int` conversions, rejects unsafe logical paths and canonical duplicates, and keeps malformed multi-archive loads transactional.
+- Owned BIGF and BIG4 fixtures prove case/slash canonical lookup, empty and missing entries, RAM reads, streaming seeks/read bounds, deterministic archive ordering, explicit overwrite behavior, loose-file precedence, close-time directory rebuilding, and repeated cleanup.
+- Negative fixtures cover short/invalid headers, declared-size mismatch, excessive or table-impossible counts, table bounds/mismatch, truncated and unterminated names, oversized/control/traversal names, canonical duplicates, offsets before data or after EOF, ranges crossing EOF or overflowing, missing archive files, and mixed valid/malformed directory loads with no partial publication.
+- The identity gate proves the one adapter object and factory symbol are live in both focused and production links. Removing `linux_big_archive.cpp.o` makes the production relink fail on the factory symbol.
+- Focused runtime/identity/removal tests pass under all four native presets. Clang Debug ASan+UBSan passes with `ASAN_OPTIONS=detect_leaks=0:abort_on_error=1:strict_string_checks=1` and `UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1`; exact original pool allocations return to baseline. LeakSanitizer is disabled and is not claimed as leak proof.
+- The first sanitizer run exposed overlap-unsafe `strcpy` when original `AsciiString::nextToken` shifts within its unique buffer. The shared original method now uses byte-identical `memmove`; original string runtime/identity tests pass in all four presets and under the same sanitizers.

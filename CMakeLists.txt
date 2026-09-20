@@ -242,6 +242,7 @@ add_library(zh_original_config_spine OBJECT
   GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp
 )
 add_library(zh_original_config_providers STATIC
+  src/original_runtime/linux_big_archive.cpp
   GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp
   GeneralsMD/Code/GameEngine/Source/Common/Language.cpp
   GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp
@@ -906,6 +907,40 @@ if(ZH_BUILD_TESTS)
     --member W3DModuleFactory.cpp.o
     --required-symbol W3DModuleFactory)
   set_tests_properties(original_w3d_schema_provider_removal PROPERTIES LABELS "original-config;source-identity;w3d-schema")
+  add_executable(original_big_archive_tests
+    tests/original_lifecycle/test_big_archive.cpp
+    $<TARGET_OBJECTS:zh_original_config_spine>)
+  target_include_directories(original_big_archive_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+  target_link_libraries(original_big_archive_tests PRIVATE
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
+  target_link_options(original_big_archive_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-big-archive.link.map")
+  add_test(NAME original_big_archive COMMAND original_big_archive_tests)
+  set_tests_properties(original_big_archive PROPERTIES LABELS "original-data-startup;source-identity;big-archive")
+  add_test(NAME original_big_archive_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_big_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/linux_big_archive.cpp"
+    --production-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map"
+    --test-map "${CMAKE_CURRENT_BINARY_DIR}/original-big-archive.link.map"
+    --production "$<TARGET_FILE:zh_original_main>"
+    --test "$<TARGET_FILE:original_big_archive_tests>")
+  set_tests_properties(original_big_archive_identity PROPERTIES LABELS "original-data-startup;source-identity;big-archive")
+  add_test(NAME original_big_archive_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target zh_original_main
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member linux_big_archive.cpp.o
+    --required-symbol createLinuxBIGArchiveFileSystem)
+  set_tests_properties(original_big_archive_provider_removal PROPERTIES LABELS "original-data-startup;source-identity;big-archive")
   add_executable(original_data_startup_tests
     tests/original_lifecycle/test_data_startup.cpp
     $<TARGET_OBJECTS:zh_original_config_spine>)
