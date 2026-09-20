@@ -148,6 +148,7 @@ target_sources(zh_renderer_sdl_gpu PRIVATE
   src/renderer/contract.cpp
   src/renderer/dx8_state_cache.cpp
   src/renderer/recording_device.cpp
+  src/renderer/sdl_gpu_device.cpp
   src/renderer/shader_registry.cpp
   src/renderer/texture_loader.cpp
 )
@@ -330,6 +331,11 @@ if(ZH_BUILD_TESTS)
   add_dependencies(renderer_shader_registry_tests zh_renderer_shaders)
   add_test(NAME renderer_shader_registry COMMAND renderer_shader_registry_tests)
   set_tests_properties(renderer_shader_registry PROPERTIES LABELS renderer-contract)
+
+  add_executable(renderer_sdl_gpu_device_tests tests/renderer/test_sdl_gpu_device.cpp)
+  target_link_libraries(renderer_sdl_gpu_device_tests PRIVATE zh_renderer_sdl_gpu)
+  add_test(NAME renderer_sdl_gpu_device COMMAND renderer_sdl_gpu_device_tests)
+  set_tests_properties(renderer_sdl_gpu_device PROPERTIES LABELS renderer-contract)
 
   add_executable(ui_renderer_tests tests/ui/test_ui_renderer.cpp)
   target_link_libraries(ui_renderer_tests PRIVATE zh_ui)

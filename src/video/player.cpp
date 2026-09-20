@@ -84,7 +84,7 @@ double AudioManagerVideoSink::clock_seconds() const noexcept { return manager_.v
 void AudioManagerVideoSink::reset() noexcept { manager_.reset_video_pcm(); }
 
 VideoPlayer::VideoPlayer(std::unique_ptr<VideoDecoder> decoder, VideoAudioSink& audio,
-    renderer::RecordingGpuDevice& recorder, std::uint32_t target_width, std::uint32_t target_height)
+    renderer::GpuDevice& recorder, std::uint32_t target_width, std::uint32_t target_height)
     : decoder_(std::move(decoder)), audio_(audio), recorder_(recorder),
       target_width_(target_width), target_height_(target_height)
 {

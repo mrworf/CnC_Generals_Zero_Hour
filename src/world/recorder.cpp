@@ -44,7 +44,7 @@ renderer::TextureDesc target_desc(UInt32 width, UInt32 height, renderer::Texture
 
 } // namespace
 
-WorldRecorder::WorldRecorder(renderer::RecordingGpuDevice& device) : device_(device) {}
+WorldRecorder::WorldRecorder(renderer::GpuDevice& device) : device_(device) {}
 
 renderer::ValidationResult WorldRecorder::fail(std::string message)
 {

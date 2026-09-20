@@ -44,7 +44,7 @@ struct InternetActionResult {
 
 class UiRecorder {
 public:
-    explicit UiRecorder(renderer::RecordingGpuDevice& device);
+    explicit UiRecorder(renderer::GpuDevice& device);
     ~UiRecorder();
 
     UiRecorder(const UiRecorder&) = delete;
@@ -59,7 +59,7 @@ private:
     bool recreate_targets(int width, int height);
     bool ensure_resources();
 
-    renderer::RecordingGpuDevice& device_;
+    renderer::GpuDevice& device_;
     int width_ = 0;
     int height_ = 0;
     renderer::TextureHandle color_target_;

@@ -39,7 +39,7 @@ renderer::RenderPassDesc pass_desc(renderer::TextureHandle color, renderer::Text
 
 } // namespace
 
-EffectsRecorder::EffectsRecorder(renderer::RecordingGpuDevice& device) : device_(device) {}
+EffectsRecorder::EffectsRecorder(renderer::GpuDevice& device) : device_(device) {}
 
 renderer::ValidationResult EffectsRecorder::fail(std::string message)
 {

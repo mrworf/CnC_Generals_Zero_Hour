@@ -82,7 +82,7 @@ std::string blend_name(BlendMode blend)
 
 } // namespace
 
-UiRecorder::UiRecorder(renderer::RecordingGpuDevice& device) : device_(device) {}
+UiRecorder::UiRecorder(renderer::GpuDevice& device) : device_(device) {}
 
 UiRecorder::~UiRecorder()
 {

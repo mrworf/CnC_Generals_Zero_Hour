@@ -11,7 +11,7 @@ namespace zh::renderer {
 // it intentionally exposes no platform graphics object.
 class Dx8StateCache {
 public:
-    Dx8StateCache(RecordingGpuDevice& device, UInt32 width, UInt32 height);
+    Dx8StateCache(GpuDevice& device, UInt32 width, UInt32 height);
 
     void set_shaders(ShaderHandle vertex, ShaderHandle fragment);
     void set_vertex_buffer(BufferHandle buffer);
@@ -35,7 +35,7 @@ private:
     ValidationResult fail(std::string message);
     StageBindings& bindings(ShaderStage stage);
 
-    RecordingGpuDevice& device_;
+    GpuDevice& device_;
     ResizeState resize_;
     PipelineDesc pipeline_state_;
     PipelineHandle pipeline_;

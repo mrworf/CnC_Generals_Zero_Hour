@@ -5,7 +5,7 @@
 
 namespace zh::renderer {
 
-Dx8StateCache::Dx8StateCache(RecordingGpuDevice& device, UInt32 width, UInt32 height)
+Dx8StateCache::Dx8StateCache(GpuDevice& device, UInt32 width, UInt32 height)
     : device_(device), resize_(width, height)
 {
 }

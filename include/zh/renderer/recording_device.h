@@ -49,16 +49,16 @@ public:
     void destroy(ShaderHandle handle) override;
     void destroy(PipelineHandle handle) override;
 
-    const std::string& last_error() const noexcept;
+    const std::string& last_error() const noexcept override;
     std::string snapshot() const;
     std::size_t pipeline_count() const noexcept;
     ResourceCounts resource_counts() const noexcept;
-    bool pass_active() const noexcept;
+    bool pass_active() const noexcept override;
     std::vector<UInt8> buffer_bytes(BufferHandle handle) const;
 
     // Records an engine-level transition in the same ordered stream. This is
     // deliberately backend-neutral and is used for resize/recreation evidence.
-    void record_marker(std::string_view marker);
+    void record_marker(std::string_view marker) override;
 
 private:
     class Impl;

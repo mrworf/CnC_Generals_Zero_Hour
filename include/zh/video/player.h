@@ -67,7 +67,7 @@ enum class PlaybackState { idle, playing, paused, completed, skipped, error, sto
 class VideoPlayer {
 public:
     VideoPlayer(std::unique_ptr<VideoDecoder> decoder, VideoAudioSink& audio,
-        renderer::RecordingGpuDevice& recorder, std::uint32_t target_width, std::uint32_t target_height);
+        renderer::GpuDevice& recorder, std::uint32_t target_width, std::uint32_t target_height);
     ~VideoPlayer();
     VideoPlayer(const VideoPlayer&) = delete;
     VideoPlayer& operator=(const VideoPlayer&) = delete;
@@ -92,7 +92,7 @@ private:
 
     std::unique_ptr<VideoDecoder> decoder_;
     VideoAudioSink& audio_;
-    renderer::RecordingGpuDevice& recorder_;
+    renderer::GpuDevice& recorder_;
     std::uint32_t target_width_;
     std::uint32_t target_height_;
     PlaybackState state_ = PlaybackState::playing;

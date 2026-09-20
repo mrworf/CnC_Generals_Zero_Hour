@@ -19,7 +19,7 @@ struct EffectRequest {
 
 class EffectsRecorder {
 public:
-    explicit EffectsRecorder(renderer::RecordingGpuDevice& device);
+    explicit EffectsRecorder(renderer::GpuDevice& device);
 
     renderer::ValidationResult load(std::vector<EffectRequest> requests);
     renderer::ValidationResult record_frame(renderer::UInt32 tick);
@@ -43,7 +43,7 @@ private:
     renderer::ValidationResult draw_effect(const PreparedEffect& effect, renderer::UInt32 tick);
     void destroy_resources();
 
-    renderer::RecordingGpuDevice& device_;
+    renderer::GpuDevice& device_;
     std::vector<PreparedEffect> effects_;
     std::vector<renderer::PipelineHandle> pipelines_;
     bool loaded_ = false;

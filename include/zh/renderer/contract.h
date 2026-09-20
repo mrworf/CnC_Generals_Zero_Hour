@@ -263,6 +263,9 @@ public:
     virtual void destroy(SamplerHandle handle) = 0;
     virtual void destroy(ShaderHandle handle) = 0;
     virtual void destroy(PipelineHandle handle) = 0;
+    virtual const std::string& last_error() const noexcept = 0;
+    virtual bool pass_active() const noexcept = 0;
+    virtual void record_marker(std::string_view marker) = 0;
 };
 
 } // namespace zh::renderer

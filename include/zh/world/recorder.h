@@ -11,7 +11,7 @@ namespace zh::world {
 
 class WorldRecorder {
 public:
-    explicit WorldRecorder(renderer::RecordingGpuDevice& device);
+    explicit WorldRecorder(renderer::GpuDevice& device);
 
     renderer::ValidationResult load(WorldScene scene);
     renderer::ValidationResult record_frame(UInt32 tick);
@@ -27,7 +27,7 @@ private:
     renderer::ValidationResult create_resources();
     renderer::ValidationResult draw_item(const WorldItem& item, UInt32 tick);
 
-    renderer::RecordingGpuDevice& device_;
+    renderer::GpuDevice& device_;
     WorldScene scene_;
     bool loaded_ = false;
     bool frame_recorded_ = false;
