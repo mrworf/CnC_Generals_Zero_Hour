@@ -85,6 +85,14 @@ zh_add_bootstrap_component(zh_null_audio ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_null_video ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_test_support ZH_EMPTY_LEGACY_SOURCES)
 
+target_sources(zh_wwsupport PRIVATE
+  src/foundation/byte_codec.cpp
+  src/foundation/format.cpp
+  src/foundation/numeric.cpp
+  src/foundation/unicode.cpp
+)
+target_include_directories(zh_wwsupport PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
 target_link_libraries(zh_compression PUBLIC ZLIB::ZLIB)
 target_link_libraries(zh_wwsupport PUBLIC Freetype::Freetype Fontconfig::Fontconfig)
 target_link_libraries(zh_w3d PUBLIC zh_wwsupport)
@@ -144,4 +152,9 @@ if(ZH_BUILD_TESTS)
     "-DZH_EXPECTED=Missing required program 'glslc'"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/m0/expect_probe_failure.cmake")
   set_tests_properties(m0_missing_glslc_probe PROPERTIES LABELS foundation)
+
+  add_executable(foundation_abi_codec_tests tests/foundation/test_abi_codec.cpp)
+  target_link_libraries(foundation_abi_codec_tests PRIVATE zh_wwsupport)
+  add_test(NAME foundation_abi_codec COMMAND foundation_abi_codec_tests)
+  set_tests_properties(foundation_abi_codec PROPERTIES LABELS foundation)
 endif()
