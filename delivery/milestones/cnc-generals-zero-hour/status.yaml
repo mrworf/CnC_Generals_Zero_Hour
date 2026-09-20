@@ -140,22 +140,24 @@ milestones:
   - id: M11
     title: "POSIX LAN transport and local peer harness"
     file: delivery/milestones/cnc-generals-zero-hour/M11-lan-transport.md
-    status: in_progress
+    status: completed
     dependencies: [M3, M4]
     optional: false
     started_at: "2026-09-20T04:52:44Z"
-    completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_11_plan_01.md"
+    completed_at: "2026-09-20T05:03:58Z"
+    commit_hash: dec6f041aa98df9ac3e158668cce3cfd05d888d8
+    evidence: "Three completed slices plus evidence/platform/cnc-generals-zero-hour/M11-lan-transport.md cover bounded packets, virtual fault transport, POSIX UDP and two real loopback peers. All four presets passed seven lan|headless tests; GCC Debug passed 41 tests. Root acceptance reran the seven-test local-network suite with loopback permission."
+    notes: "PRE-014 accepted. Loopback broadcast is explicitly unverified; the contract fallback of virtual discovery plus real direct-connect passed. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_11_plan_01.md; slice commits: 62ebbf9, 0ff7e62, dec6f04."
   - id: M12
     title: "audio"
     file: delivery/milestones/cnc-generals-zero-hour/M12-audio.md
-    status: pending
+    status: in_progress
     dependencies: [M4]
     optional: false
+    started_at: "2026-09-20T05:03:58Z"
     completed_at: null
     evidence: null
-    notes: null
+    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_12_plan_01.md"
   - id: M13
     title: "headless video decode and presentation commands"
     file: delivery/milestones/cnc-generals-zero-hour/M13-video.md
