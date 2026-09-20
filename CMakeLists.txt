@@ -99,6 +99,10 @@ add_library(zh_simulation STATIC src/simulation/determinism.cpp)
 target_include_directories(zh_simulation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_simulation PUBLIC zh_persistence zh_build_options)
 
+add_library(zh_lan STATIC src/lan/protocol.cpp)
+target_include_directories(zh_lan PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(zh_lan PUBLIC zh_wwsupport zh_os_posix zh_build_options)
+
 target_sources(zh_compression PRIVATE src/foundation/compression.cpp)
 target_include_directories(zh_compression PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
@@ -379,6 +383,11 @@ if(ZH_BUILD_TESTS)
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/headless/test_process_isolation.py"
     --executable "$<TARGET_FILE:zh_main>")
   set_tests_properties(headless_process_isolation PROPERTIES LABELS headless TIMEOUT 30)
+
+  add_executable(lan_protocol_tests tests/lan/test_protocol.cpp)
+  target_link_libraries(lan_protocol_tests PRIVATE zh_lan)
+  add_test(NAME lan_protocol COMMAND lan_protocol_tests)
+  set_tests_properties(lan_protocol PROPERTIES LABELS lan)
 
   add_executable(platform_sdl_event_tests tests/platform/test_sdl_events.cpp)
   target_link_libraries(platform_sdl_event_tests PRIVATE zh_platform_sdl)
