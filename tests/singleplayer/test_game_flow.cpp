@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <functional>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -58,7 +59,8 @@ singleplayer::FlowReport run_flow(const data::VirtualFileSystem& vfs, const std:
 
 int main()
 {
-    const auto root = std::filesystem::temp_directory_path() / ("zh-game-flow-" + std::to_string(::getpid()));
+    const auto root = std::filesystem::temp_directory_path() / ("zh-game-flow-" + std::to_string(::getpid()) +
+        "-" + std::to_string(std::hash<std::string>{}(ZH_BINARY_DIR)));
     std::error_code ignored; std::filesystem::remove_all(root, ignored);
     const auto zh_root = root / "zh"; const auto generals_root = root / "generals";
     write(zh_root / "Maps/User/Acceptance/map.ini", "synthetic-map");

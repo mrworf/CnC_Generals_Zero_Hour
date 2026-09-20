@@ -156,3 +156,23 @@ wrapped by a combined-output scanner that fails on any `Validation Error` or
 For the full retail check, add `ZH_ENABLE_RETAIL_TESTS=ON` and the three local
 retail cache values documented above to another untracked build directory.
 Retail inputs remain read-only; the GPU scenes and metrics are project-owned.
+
+## Single-player integration checkpoint
+
+M15 adds a developer integration harness for the already ported subsystem seams:
+
+```sh
+./build/linux-gcc-debug/zh_main --single-player-integration-smoke \
+  --mode skirmish --scenario integration-usa --faction usa --ticks 240 \
+  --zh-data /absolute/path/to/zero-hour \
+  --generals-data /absolute/path/to/generals --language English
+```
+
+The harness checks arbitrary-CWD startup, XDG-owned state, Linux save/load and
+replay, deterministic progression, UI/world/effect command generation, optional
+audio/movie resolution, outcome, unload, and clean exit. It uses the
+project-owned deterministic scenario model. It does **not** run the original
+Zero Hour `GameEngine`, `GameLogic`, campaign scripts, skirmish AI, WND UI, or
+retail mission simulation, and therefore is not a playable-game entry point.
+The actual M15 gameplay acceptance remains blocked as recorded in
+`evidence/qa/cnc-generals-zero-hour/M15-single-player.md`.

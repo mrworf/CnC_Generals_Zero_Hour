@@ -41,5 +41,7 @@ M15 is complete only when all three slice commits exist and mandatory validation
 
 ## Delivery checkpoint
 
-- Slice commits are recorded here after each validated commit.
+- Slice 01: `4bf8002` — XDG-owned lifecycle, Linux persistence/replay, progression, and recovery.
+- Slice 02: `a450164` — backend-neutral UI/world/effects/audio/video integration flows.
+- Slice 03: blocked — the integration smoke/process/stress/corpus work is valid, but source gameplay-engine execution is absent; see the acceptance evidence.
 - Milestone acceptance evidence: `evidence/qa/cnc-generals-zero-hour/M15-single-player.md`.

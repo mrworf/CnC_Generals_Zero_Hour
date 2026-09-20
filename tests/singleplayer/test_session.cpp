@@ -1,6 +1,7 @@
 #include "zh/singleplayer/session.h"
 
 #include <filesystem>
+#include <functional>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -43,7 +44,8 @@ void write_text(const std::filesystem::path& path, std::string_view text)
 
 int main()
 {
-    const auto root = std::filesystem::temp_directory_path() / ("zh-singleplayer-session-" + std::to_string(::getpid()));
+    const auto root = std::filesystem::temp_directory_path() / ("zh-singleplayer-session-" +
+        std::to_string(::getpid()) + "-" + std::to_string(std::hash<std::string>{}(ZH_BINARY_DIR)));
     std::error_code ignored;
     std::filesystem::remove_all(root, ignored);
     std::filesystem::create_directories(root);

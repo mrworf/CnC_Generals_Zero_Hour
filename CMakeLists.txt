@@ -265,7 +265,7 @@ target_include_directories(zh_main PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generate
 target_link_libraries(zh_main PRIVATE
   zh_build_options zh_game_engine zh_game_device zh_null_platform zh_null_renderer
   zh_null_audio zh_null_video zh_test_support zh_data
-  zh_lan
+  zh_lan zh_singleplayer
 )
 set_property(TARGET zh_main PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_LEGACY_ZH_MAIN_SOURCES}")
 
@@ -562,14 +562,26 @@ if(ZH_BUILD_TESTS)
   )
 
   add_executable(singleplayer_session_tests tests/singleplayer/test_session.cpp)
+  target_compile_definitions(singleplayer_session_tests PRIVATE ZH_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}")
   target_link_libraries(singleplayer_session_tests PRIVATE zh_singleplayer)
   add_test(NAME singleplayer_session COMMAND singleplayer_session_tests)
   set_tests_properties(singleplayer_session PROPERTIES LABELS "singleplayer;determinism;foundation")
 
   add_executable(singleplayer_game_flow_tests tests/singleplayer/test_game_flow.cpp)
+  target_compile_definitions(singleplayer_game_flow_tests PRIVATE ZH_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}")
   target_link_libraries(singleplayer_game_flow_tests PRIVATE zh_singleplayer zh_renderer_sdl_gpu)
   add_test(NAME singleplayer_game_flow COMMAND singleplayer_game_flow_tests)
   set_tests_properties(singleplayer_game_flow PROPERTIES LABELS "singleplayer;ui;renderer-contract;audio;video;determinism")
+
+  add_executable(singleplayer_stress_tests tests/singleplayer/test_acceptance.cpp)
+  target_compile_definitions(singleplayer_stress_tests PRIVATE ZH_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}")
+  target_link_libraries(singleplayer_stress_tests PRIVATE zh_singleplayer)
+  add_test(NAME singleplayer_stress COMMAND singleplayer_stress_tests)
+  set_tests_properties(singleplayer_stress PROPERTIES LABELS "singleplayer;determinism;long" TIMEOUT 60)
+
+  add_test(NAME singleplayer_process COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/singleplayer/test_process.py" --executable "$<TARGET_FILE:zh_main>")
+  set_tests_properties(singleplayer_process PROPERTIES LABELS "singleplayer;process" TIMEOUT 60)
 
   if(ZH_ENABLE_RETAIL_TESTS)
     if(NOT IS_ABSOLUTE "${ZH_RETAIL_ZH_DATA}" OR NOT IS_ABSOLUTE "${ZH_RETAIL_GENERALS_DATA}" OR ZH_RETAIL_LANGUAGE STREQUAL "")
@@ -596,5 +608,14 @@ if(ZH_BUILD_TESTS)
       "${CMAKE_CURRENT_SOURCE_DIR}/data/corpus/video-variants.tsv")
     set_tests_properties(video_corpus PROPERTIES LABELS video TIMEOUT 60
       PASS_REGULAR_EXPRESSION "video corpus verification ok")
+
+    add_executable(singleplayer_retail_integration_tests tests/singleplayer/test_retail_acceptance.cpp)
+    target_compile_definitions(singleplayer_retail_integration_tests PRIVATE ZH_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(singleplayer_retail_integration_tests PRIVATE zh_singleplayer zh_renderer_sdl_gpu)
+    add_test(NAME singleplayer_retail_integration COMMAND singleplayer_retail_integration_tests
+      "${ZH_RETAIL_ZH_DATA}" "${ZH_RETAIL_GENERALS_DATA}" "${ZH_RETAIL_LANGUAGE}")
+    set_tests_properties(singleplayer_retail_integration PROPERTIES
+      LABELS "singleplayer;data;audio;video;retail" TIMEOUT 120
+      PASS_REGULAR_EXPRESSION "single-player retail integration ok")
   endif()
 endif()
