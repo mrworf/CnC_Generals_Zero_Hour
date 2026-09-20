@@ -61,6 +61,24 @@ int main()
     expect_usage([] { parse_arguments({"--fail-init"}); }, "requires a stage");
     expect_usage([] { parse_arguments({"--fail-init", "database"}); }, "must be one of");
     expect_usage([] { parse_arguments({"--fail-init", "paths", "--fail-init", "engine"}); }, "only once");
+    expect_usage([] { parse_arguments({"--lan-bind-address", "127.0.0.2"}); }, "require --lan-role");
+    expect_usage([] { parse_arguments({"--lan-role", "server", "--lan-bind-address", "127.0.0.2"}); }, "host or joiner");
+    expect_usage([] { parse_arguments({"--lan-role", "host"}); }, "requires --lan-bind-address");
+    expect_usage([] { parse_arguments({"--lan-role", "joiner", "--lan-bind-address", "127.0.0.3"}); }, "requires --lan-direct-connect");
+    expect_usage([] { parse_arguments({"--lan-role", "host", "--lan-bind-address", "999.0.0.1"}); }, "numeric IPv4");
+    expect_usage([] { parse_arguments({"--lan-role", "host", "--lan-bind-address", "127.0.0.2",
+        "--lan-bind-address", "127.0.0.3"}); }, "only once");
+    expect_usage([] { parse_arguments({"--lan-role", "host", "--lan-bind-address", "127.0.0.2",
+        "--lan-direct-connect", "127.0.0.3"}); }, "only for");
+    expect_usage([] { parse_arguments({"--lan-role", "host", "--lan-bind-address", "127.0.0.2",
+        "--lan-timeout-ms", "99"}); }, "at least 100");
+    const auto lan = parse_arguments({"--lan-role", "joiner", "--lan-bind-address", "127.0.0.3",
+        "--lan-discovery-address", "127.255.255.255", "--lan-direct-connect", "127.0.0.2",
+        "--lan-data-identity", "111", "--lan-map-identity", "222", "--lan-timeout-ms", "500"});
+    check(lan.lan_role == zh::headless::LanRole::joiner, "LAN role parsed");
+    check(lan.lan_bind_address == "127.0.0.3" && lan.lan_direct_connect == "127.0.0.2", "LAN addresses parsed");
+    check(lan.lan_data_identity == 111 && lan.lan_map_identity == 222 && lan.lan_timeout_milliseconds == 500,
+        "LAN harness values parsed");
 
     const auto root = std::filesystem::temp_directory_path() / "zh-headless-runtime-test";
     std::error_code ignored;

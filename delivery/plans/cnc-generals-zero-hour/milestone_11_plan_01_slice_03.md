@@ -66,6 +66,14 @@ Then run the same configure/build/labeled test commands for all four canonical p
 
 The real process proof passes on distinct loopback identities and all socket paths are nonblocking, bounded, diagnostic, and cleanly released. Broadcast status is recorded without overstating physical discovery.
 
+## Delivered evidence
+
+- All four canonical presets configured and built, then passed `ctest --preset <preset> -L 'lan|headless' --output-on-failure` (7/7 each).
+- The `linux-gcc-debug` full suite passed (41/41).
+- Real direct UDP and two-process tests require local-network permission because the restricted sandbox denies `socket` with `EPERM`; unchanged tests pass with that permission.
+- The loopback-broadcast probe reported unverified on this host. Virtual discovery and real two-process direct-connect both pass, matching the contract fallback.
+- Durable context and acceptance details are recorded in `evidence/platform/cnc-generals-zero-hour/M11-lan-transport.md` without retail data or private paths.
+
 ## Commit boundary
 
 Commit the POSIX endpoint, CLI/runtime integration, real-process tests, evidence, CMake wiring, and completed plan records as `delivery: M11 slice 03 prove POSIX peers`.

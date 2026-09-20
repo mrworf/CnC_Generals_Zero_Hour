@@ -2,6 +2,7 @@
 
 #include "zh/foundation/types.h"
 #include "zh/headless/device.h"
+#include "zh/lan/harness.h"
 
 #include <charconv>
 #include <cstdlib>
@@ -15,6 +16,7 @@ namespace zh::headless {
 namespace {
 
 constexpr std::uint32_t maximum_ticks = 1'000'000;
+constexpr std::uint32_t maximum_lan_timeout = 30'000;
 
 class InitFailure : public std::runtime_error {
 public:
@@ -47,6 +49,34 @@ std::uint32_t parse_ticks(std::string_view text)
         throw UsageError("--ticks must be an integer from 0 through 1000000");
     }
     return value;
+}
+
+std::uint32_t parse_u32(std::string_view option, std::string_view text, std::uint32_t maximum)
+{
+    std::uint32_t value = 0;
+    const auto result = std::from_chars(text.data(), text.data() + text.size(), value);
+    if (text.empty() || result.ec != std::errc{} || result.ptr != text.data() + text.size() || value > maximum) {
+        throw UsageError(std::string(option) + " must be an integer from 0 through " + std::to_string(maximum));
+    }
+    return value;
+}
+
+bool numeric_ipv4(std::string_view text)
+{
+    if (text.empty()) return false;
+    std::size_t begin = 0;
+    unsigned fields = 0;
+    while (begin <= text.size()) {
+        const auto end = text.find('.', begin);
+        const auto field = text.substr(begin, end == std::string_view::npos ? text.size() - begin : end - begin);
+        unsigned value = 0;
+        const auto parsed = std::from_chars(field.data(), field.data() + field.size(), value);
+        if (field.empty() || parsed.ec != std::errc{} || parsed.ptr != field.data() + field.size() || value > 255) return false;
+        ++fields;
+        if (end == std::string_view::npos) break;
+        begin = end + 1;
+    }
+    return fields == 4;
 }
 
 InitStage parse_stage(std::string_view text)
@@ -88,7 +118,8 @@ void output_capabilities(
     EventLog& log,
     const BuildCapabilities& capabilities,
     const std::filesystem::path& state_directory,
-    const std::vector<std::unique_ptr<NullDevice>>& devices)
+    const std::vector<std::unique_ptr<NullDevice>>& devices,
+    bool lan_enabled)
 {
     log.write("capability: Zero Hour " + capabilities.project_version + " revision " + capabilities.revision);
     log.write("capability: architecture=" + capabilities.architecture + " compiler=" + capabilities.compiler);
@@ -98,7 +129,19 @@ void output_capabilities(
     log.write("capability: state-root=" + state_directory.string());
     log.write("capability: zh-data-root=not-configured generals-data-root=not-configured locale=not-selected");
     for (const auto& device : devices) log.write("capability: " + std::string(device->capability()));
-    log.write("capability: network skipped (headless asset-free mode)");
+    log.write(lan_enabled ? "capability: network=POSIX IPv4 UDP (headless LAN harness)" :
+                            "capability: network skipped (headless asset-free mode)");
+}
+
+void write_lines(EventLog& log, std::string_view text)
+{
+    std::size_t begin = 0;
+    while (begin < text.size()) {
+        const auto end = text.find('\n', begin);
+        log.write(text.substr(begin, end == std::string_view::npos ? text.size() - begin : end - begin));
+        if (end == std::string_view::npos) break;
+        begin = end + 1;
+    }
 }
 
 } // namespace
@@ -123,6 +166,13 @@ Options parse_arguments(const std::vector<std::string_view>& arguments)
     bool saw_ticks = false;
     bool saw_state = false;
     bool saw_failure = false;
+    bool saw_lan_role = false;
+    bool saw_lan_bind = false;
+    bool saw_lan_discovery = false;
+    bool saw_lan_direct = false;
+    bool saw_lan_data = false;
+    bool saw_lan_map = false;
+    bool saw_lan_timeout = false;
     for (std::size_t index = 0; index < arguments.size(); ++index) {
         const auto argument = arguments[index];
         if (argument == "--ticks") {
@@ -142,9 +192,53 @@ Options parse_arguments(const std::vector<std::string_view>& arguments)
             if (++index == arguments.size()) throw UsageError("--fail-init requires a stage");
             options.fail_initialization = parse_stage(arguments[index]);
             saw_failure = true;
+        } else if (argument == "--lan-role") {
+            if (saw_lan_role) throw UsageError("--lan-role may be specified only once");
+            if (++index == arguments.size()) throw UsageError("--lan-role requires host or joiner");
+            if (arguments[index] == "host") options.lan_role = LanRole::host;
+            else if (arguments[index] == "joiner") options.lan_role = LanRole::joiner;
+            else throw UsageError("--lan-role must be host or joiner");
+            saw_lan_role = true;
+        } else if (argument == "--lan-bind-address" || argument == "--lan-discovery-address" ||
+                   argument == "--lan-direct-connect") {
+            bool* seen = argument == "--lan-bind-address" ? &saw_lan_bind :
+                (argument == "--lan-discovery-address" ? &saw_lan_discovery : &saw_lan_direct);
+            if (*seen) throw UsageError(std::string(argument) + " may be specified only once");
+            if (++index == arguments.size()) throw UsageError(std::string(argument) + " requires an IPv4 address");
+            if (!numeric_ipv4(arguments[index])) throw UsageError(std::string(argument) + " requires a numeric IPv4 address");
+            if (argument == "--lan-bind-address") options.lan_bind_address = std::string(arguments[index]);
+            else if (argument == "--lan-discovery-address") options.lan_discovery_address = std::string(arguments[index]);
+            else options.lan_direct_connect = std::string(arguments[index]);
+            *seen = true;
+        } else if (argument == "--lan-data-identity" || argument == "--lan-map-identity" ||
+                   argument == "--lan-timeout-ms") {
+            bool* seen = argument == "--lan-data-identity" ? &saw_lan_data :
+                (argument == "--lan-map-identity" ? &saw_lan_map : &saw_lan_timeout);
+            if (*seen) throw UsageError(std::string(argument) + " may be specified only once");
+            if (++index == arguments.size()) throw UsageError(std::string(argument) + " requires a value");
+            const auto maximum = argument == "--lan-timeout-ms" ? maximum_lan_timeout :
+                std::numeric_limits<std::uint32_t>::max();
+            const auto value = parse_u32(argument, arguments[index], maximum);
+            if (argument == "--lan-data-identity") options.lan_data_identity = value;
+            else if (argument == "--lan-map-identity") options.lan_map_identity = value;
+            else options.lan_timeout_milliseconds = value;
+            *seen = true;
         } else {
             throw UsageError("unknown headless option: " + std::string(argument));
         }
+    }
+    const bool any_lan_option = saw_lan_role || saw_lan_bind || saw_lan_discovery || saw_lan_direct ||
+        saw_lan_data || saw_lan_map || saw_lan_timeout;
+    if (any_lan_option && !options.lan_role) throw UsageError("LAN options require --lan-role host or joiner");
+    if (options.lan_role && !options.lan_bind_address) throw UsageError("--lan-role requires --lan-bind-address");
+    if (options.lan_role == LanRole::joiner && !options.lan_direct_connect) {
+        throw UsageError("--lan-role joiner requires --lan-direct-connect");
+    }
+    if (options.lan_role == LanRole::host && options.lan_direct_connect) {
+        throw UsageError("--lan-direct-connect is valid only for --lan-role joiner");
+    }
+    if (options.lan_role && options.lan_timeout_milliseconds < 100) {
+        throw UsageError("--lan-timeout-ms must be at least 100");
     }
     return options;
 }
@@ -216,7 +310,27 @@ ExitCode run(
         trace("init: engine");
         inject_if_requested(options, InitStage::engine);
         engine_initialized = true;
-        output_capabilities(*log, capabilities, state_directory, devices);
+        output_capabilities(*log, capabilities, state_directory, devices, options.lan_role.has_value());
+
+        if (options.lan_role) {
+            lan::HarnessConfig lan_config;
+            lan_config.role = *options.lan_role == LanRole::host ? lan::HarnessRole::host : lan::HarnessRole::joiner;
+            lan_config.bind_address = lan::EndpointAddress{*options.lan_bind_address, lan::lobby_port};
+            lan_config.discovery_address = lan::EndpointAddress{options.lan_discovery_address, lan::lobby_port};
+            if (options.lan_direct_connect) lan_config.direct_connect = lan::EndpointAddress{*options.lan_direct_connect, lan::lobby_port};
+            lan_config.peer_id = *options.lan_role == LanRole::host ? 1U : 2U;
+            lan_config.data_identity = options.lan_data_identity;
+            lan_config.map_identity = options.lan_map_identity;
+            lan_config.timeout_milliseconds = options.lan_timeout_milliseconds;
+            std::ostringstream lan_output;
+            std::ostringstream lan_errors;
+            const int lan_result = lan::run_headless_peer(lan_config, lan_output, lan_errors);
+            write_lines(*log, lan_output.str());
+            if (lan_result != 0) {
+                write_lines(*log, lan_errors.str());
+                throw std::runtime_error(lan_errors.str());
+            }
+        }
 
         std::uint64_t tick_digest = 0xcbf29ce484222325ULL;
         for (std::uint32_t tick = 0; tick < options.ticks; ++tick) {

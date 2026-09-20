@@ -90,7 +90,9 @@ int main(int argc, char** argv)
     }
     if (argc < 2 || std::string_view(argv[1]) != "--headless") {
         std::cerr << "usage: zh_main --verify-data [--zh-data PATH] [--generals-data PATH] [--language NAME] [--mod BIG_OR_DIR]\n"
-                     "       zh_main --headless [--ticks N] [--state-dir /absolute/path] [--fail-init stage]\n";
+                     "       zh_main --headless [--ticks N] [--state-dir /absolute/path] [--fail-init stage]\n"
+                     "         [--lan-role host|joiner --lan-bind-address IPv4]\n"
+                     "         [--lan-discovery-address IPv4] [--lan-direct-connect IPv4]\n";
         return static_cast<int>(zh::headless::ExitCode::usage);
     }
 

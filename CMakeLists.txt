@@ -99,7 +99,13 @@ add_library(zh_simulation STATIC src/simulation/determinism.cpp)
 target_include_directories(zh_simulation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_simulation PUBLIC zh_persistence zh_build_options)
 
-add_library(zh_lan STATIC src/lan/protocol.cpp src/lan/session.cpp src/lan/virtual_transport.cpp)
+add_library(zh_lan STATIC
+  src/lan/harness.cpp
+  src/lan/posix_udp.cpp
+  src/lan/protocol.cpp
+  src/lan/session.cpp
+  src/lan/virtual_transport.cpp
+)
 target_include_directories(zh_lan PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_lan PUBLIC zh_wwsupport zh_os_posix zh_build_options)
 
@@ -226,6 +232,7 @@ target_include_directories(zh_main PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generate
 target_link_libraries(zh_main PRIVATE
   zh_build_options zh_game_engine zh_game_device zh_null_platform zh_null_renderer
   zh_null_audio zh_null_video zh_test_support zh_data
+  zh_lan
 )
 set_property(TARGET zh_main PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_LEGACY_ZH_MAIN_SOURCES}")
 
@@ -367,7 +374,7 @@ if(ZH_BUILD_TESTS)
     src/headless/runtime.cpp
   )
   target_link_libraries(headless_runtime_tests PRIVATE
-    zh_os_posix zh_null_platform zh_null_renderer zh_null_audio zh_null_video
+    zh_os_posix zh_null_platform zh_null_renderer zh_null_audio zh_null_video zh_lan
   )
   add_test(NAME headless_runtime COMMAND headless_runtime_tests)
   set_tests_properties(headless_runtime PROPERTIES LABELS headless)
@@ -393,6 +400,16 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(lan_virtual_tests PRIVATE zh_lan)
   add_test(NAME lan_virtual COMMAND lan_virtual_tests)
   set_tests_properties(lan_virtual PROPERTIES LABELS "lan;headless")
+
+  add_executable(lan_posix_udp_tests tests/lan/test_posix_udp.cpp)
+  target_link_libraries(lan_posix_udp_tests PRIVATE zh_lan)
+  add_test(NAME lan_posix_udp COMMAND lan_posix_udp_tests)
+  set_tests_properties(lan_posix_udp PROPERTIES LABELS "lan;headless" TIMEOUT 10)
+
+  add_test(NAME lan_two_processes COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/lan/test_two_processes.py"
+    --executable "$<TARGET_FILE:zh_main>")
+  set_tests_properties(lan_two_processes PROPERTIES LABELS "lan;headless" TIMEOUT 20 RUN_SERIAL TRUE)
 
   add_executable(platform_sdl_event_tests tests/platform/test_sdl_events.cpp)
   target_link_libraries(platform_sdl_event_tests PRIVATE zh_platform_sdl)

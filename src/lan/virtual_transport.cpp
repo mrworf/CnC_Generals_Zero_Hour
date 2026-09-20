@@ -79,11 +79,22 @@ void VirtualNetwork::send(
 {
     if (bytes.size > maximum_datagram_bytes) throw TransportError("virtual datagram exceeds packet limit");
     if (bytes.size != 0 && bytes.data == nullptr) throw TransportError("virtual datagram has null bytes");
-    if (queue_.size() >= maximum_queued_datagrams) throw TransportError("virtual datagram queue is full");
-
     const auto fault = next_fault_;
     next_fault_ = VirtualFault::none;
     if (fault == VirtualFault::drop) return;
+
+    std::vector<EndpointAddress> targets;
+    if (is_broadcast(destination)) {
+        for (const auto& target : endpoints_) {
+            if (target != source && target.port == destination.port) targets.push_back(target);
+        }
+    } else {
+        targets.push_back(destination);
+    }
+    const auto copies = fault == VirtualFault::duplicate ? 2U : 1U;
+    if (targets.size() * copies > maximum_queued_datagrams - queue_.size()) {
+        throw TransportError("virtual datagram queue is full");
+    }
 
     auto enqueue = [&](const EndpointAddress& target, std::uint32_t delay) {
         QueuedDatagram item;
@@ -97,17 +108,13 @@ void VirtualNetwork::send(
     };
 
     const std::uint32_t delay = (fault == VirtualFault::delay || fault == VirtualFault::reorder) ? next_delay_ : 0;
-    if (is_broadcast(destination)) {
-        for (const auto& target : endpoints_) {
-            if (target != source && target.port == destination.port) enqueue(target, delay);
+    for (const auto& target : targets) {
+        enqueue(target, delay);
+        if (fault == VirtualFault::duplicate) {
+            auto duplicate = queue_.back();
+            duplicate.order = next_order_++;
+            queue_.push_back(std::move(duplicate));
         }
-    } else {
-        enqueue(destination, delay);
-    }
-    if (fault == VirtualFault::duplicate && !queue_.empty()) {
-        auto duplicate = queue_.back();
-        duplicate.order = next_order_++;
-        queue_.push_back(std::move(duplicate));
     }
 }
 

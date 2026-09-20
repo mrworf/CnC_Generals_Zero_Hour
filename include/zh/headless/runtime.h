@@ -35,12 +35,21 @@ enum class InitStage {
     engine,
 };
 
+enum class LanRole { host, joiner };
+
 std::string_view stage_name(InitStage stage) noexcept;
 
 struct Options {
     std::uint32_t ticks = 1;
     std::optional<std::filesystem::path> state_directory;
     std::optional<InitStage> fail_initialization;
+    std::optional<LanRole> lan_role;
+    std::optional<std::string> lan_bind_address;
+    std::string lan_discovery_address = "255.255.255.255";
+    std::optional<std::string> lan_direct_connect;
+    std::uint32_t lan_data_identity = 0x5a484441U;
+    std::uint32_t lan_map_identity = 0x5a484d41U;
+    std::uint32_t lan_timeout_milliseconds = 3000;
 };
 
 struct BuildCapabilities {
