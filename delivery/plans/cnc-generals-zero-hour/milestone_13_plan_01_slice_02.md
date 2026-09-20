@@ -61,6 +61,13 @@ ctest --preset linux-gcc-debug -R '^video_player$' --output-on-failure
 
 Recorded commands prove bounded synchronized presentation policy and complete lifecycle recovery without a display or audio device.
 
+## Delivered evidence
+
+- `cmake --build --preset linux-gcc-debug --target video_player_tests` passed.
+- `ctest --preset linux-gcc-debug -R '^video_(decoder|player)$' --output-on-failure` passed (2/2).
+- The tests cover silent-media and audio-master clocks, ordered frames, 96x120 pillarboxing, 720x486 letterboxing, texture-upload and draw command recording, pause/focus resume, skip, EOS/game-render return, decoder corruption, bounded audio backpressure, and idempotent shutdown.
+- Every completion/error path closes the decoder, resets the audio adapter, and returns recorder resource counts to zero.
+
 ## Commit boundary
 
 Commit controller/audio-sink/recorder integration and focused tests as `delivery: M13 slice 02 synchronize video commands`.

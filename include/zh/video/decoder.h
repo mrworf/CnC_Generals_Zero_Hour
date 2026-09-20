@@ -89,7 +89,18 @@ private:
 void validate_video_dimensions(std::uint32_t width, std::uint32_t height, const VideoLimits& limits);
 double normalize_media_timestamp(double candidate, double previous, double step) noexcept;
 
-class FfmpegVideoDecoder {
+class VideoDecoder {
+public:
+    virtual ~VideoDecoder() = default;
+    virtual const VideoMetadata& metadata() const noexcept = 0;
+    virtual const std::string& logical_path() const noexcept = 0;
+    virtual bool read_frame(VideoFrame& frame) = 0;
+    virtual std::vector<VideoAudioChunk> drain_audio() = 0;
+    virtual bool end_of_stream() const noexcept = 0;
+    virtual void close() noexcept = 0;
+};
+
+class FfmpegVideoDecoder final : public VideoDecoder {
 public:
     FfmpegVideoDecoder(const data::VirtualFileSystem& vfs, std::string logical_path,
         VideoLimits limits = {}, bool decoder_available = true);
@@ -99,12 +110,12 @@ public:
     FfmpegVideoDecoder(const FfmpegVideoDecoder&) = delete;
     FfmpegVideoDecoder& operator=(const FfmpegVideoDecoder&) = delete;
 
-    const VideoMetadata& metadata() const noexcept;
-    const std::string& logical_path() const noexcept;
-    bool read_frame(VideoFrame& frame);
-    std::vector<VideoAudioChunk> drain_audio();
-    bool end_of_stream() const noexcept;
-    void close() noexcept;
+    const VideoMetadata& metadata() const noexcept override;
+    const std::string& logical_path() const noexcept override;
+    bool read_frame(VideoFrame& frame) override;
+    std::vector<VideoAudioChunk> drain_audio() override;
+    bool end_of_stream() const noexcept override;
+    void close() noexcept override;
 
 private:
     class Impl;
