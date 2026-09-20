@@ -39,6 +39,6 @@ Video delivery (M13), gameplay audio API redesign, redistribution of retail medi
 
 ## Commit record
 
-- Slice 01: pending
+- Slice 01: `7d111bf66f1c83d77dd3b53764a2aa852603584a`
 - Slice 02: pending
 - Slice 03: pending

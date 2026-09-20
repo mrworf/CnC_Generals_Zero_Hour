@@ -60,6 +60,13 @@ ctest --preset linux-gcc-debug -R '^audio_manager$' --output-on-failure
 
 Every required manager control is observable in focused tests, VFS streams seek without extraction, and completion dispatch is demonstrably game-thread queued.
 
+## Delivered evidence
+
+- `cmake --preset linux-gcc-debug` passed with the VFS-backed manager target.
+- `cmake --build --preset linux-gcc-debug --target audio_manager_tests` passed.
+- `ctest --preset linux-gcc-debug -R '^audio_manager$' --output-on-failure` passed (1/1).
+- The test covers effect/speech/music classes, loose and BIG-backed reads, streaming mode, 2D/3D distance, listener/group/voice controls, pan, pitch configuration, loop, delay, occlusion/low-pass, focus/pause, priority eviction/rejection, stop, queued completion drain, invalid parameters, and logical missing-path diagnostics.
+
 ## Commit boundary
 
 Commit manager/VFS APIs and implementation, CMake wiring, focused tests, documentation, and updated plan evidence as `delivery: M12 slice 02 add VFS audio manager`.
