@@ -32,8 +32,8 @@ The native executable gains an asset-free headless mode with explicit argument p
 | Slice | Plan | Outcome | Dependency | Status | Commit |
 |---|---|---|---|---|---|
 | 01 | [headless entry and null devices](milestone_03_plan_01_slice_01.md) | Parsed headless entry, staged lifecycle, null devices, controlled ticks, logs, exit codes, and capability report | M1 | completed | `631d7eb` |
-| 02 | [failure-safe lifecycle](milestone_03_plan_01_slice_02.md) | Every initialization stage can fail deterministically and proves reverse partial teardown | 01 | completed | recorded by slice 03 |
-| 03 | [isolated concurrent processes](milestone_03_plan_01_slice_03.md) | Simultaneous processes use isolated writable roots and full GCC/Clang validation is documented | 01, 02 | pending | pending |
+| 02 | [failure-safe lifecycle](milestone_03_plan_01_slice_02.md) | Every initialization stage can fail deterministically and proves reverse partial teardown | 01 | completed | `3b51378` |
+| 03 | [isolated concurrent processes](milestone_03_plan_01_slice_03.md) | Simultaneous processes use isolated writable roots and full GCC/Clang validation is documented | 01, 02 | completed | this slice's delivery commit |
 
 ## Cross-slice constraints
 
@@ -56,3 +56,5 @@ Each slice is independently revertible. Slice 01 is a complete successful headle
 ## Execution notes
 
 All slice plans were created and inspected before production edits. The boundaries retain one functioning positive path before adding exhaustive injected failures and then cross-process validation.
+
+All four canonical presets configured and built successfully. GCC Debug, Clang Debug, GCC Release, and Clang Release each passed the same twelve-test `foundation|headless` selection: nine preserved foundation tests and three headless tests. The process test confirms invalid SDL display/audio drivers are never consulted, two explicitly rooted runs remain isolated, and no current-working-directory file is created. New headless sources contain no SDL initialization, GPU, socket, launcher, DRM, registry, mutex, browser, GameSpy, CD, SEH, or `chdir` call path; they create no worker thread.

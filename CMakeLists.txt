@@ -251,4 +251,9 @@ if(ZH_BUILD_TESTS)
     LABELS headless
     PASS_REGULAR_EXPRESSION "headless: completed ticks=2"
   )
+
+  add_test(NAME headless_process_isolation COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/headless/test_process_isolation.py"
+    --executable "$<TARGET_FILE:zh_main>")
+  set_tests_properties(headless_process_isolation PROPERTIES LABELS headless TIMEOUT 30)
 endif()

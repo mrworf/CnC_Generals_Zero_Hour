@@ -53,3 +53,9 @@ Both processes overlap, succeed, and remain isolated; invalid SDL environment se
 ## Commit boundary
 
 Commit concurrency validation, documentation, and final evidence as `delivery: M3 slice 03 validate process isolation`.
+
+## Completion evidence
+
+- The integration test launches both processes before waiting, from unrelated working directories with distinct state roots and deliberately invalid display, Wayland, SDL video, and SDL audio environment values.
+- Each process reaches its distinct tick boundary, reports all skipped capabilities, writes only its own log/completion record, never names the other root, and leaves its working directory untouched.
+- GCC and Clang Debug/Release each build the complete graph and pass the full `foundation|headless` selection; exact command results are reported in the companion handoff.
