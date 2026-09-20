@@ -27,5 +27,5 @@ All M7 behaviors and named negative cases have deterministic automated evidence.
 Commits are recorded here after each completed slice.
 
 - Slice 01: this slice's commit (`delivery: M7 slice 01 add recording GPU device`)
-- Slice 02: pending
+- Slice 02: this slice's commit (`delivery: M7 slice 02 add texture parsing fallback`)
 - Slice 03: pending
