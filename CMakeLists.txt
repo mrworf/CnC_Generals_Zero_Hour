@@ -175,6 +175,17 @@ add_library(zh_data STATIC src/data/config.cpp src/data/big_archive.cpp src/data
 target_include_directories(zh_data PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_data PUBLIC zh_os_posix zh_build_options)
 
+add_library(zh_original_data STATIC
+  GeneralsMD/Code/GameEngine/Source/Common/System/OriginalFileSystem.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/INI/OriginalINI.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/OriginalCSF.cpp
+)
+target_include_directories(zh_original_data
+  PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+)
+target_link_libraries(zh_original_data PUBLIC zh_data zh_original_process zh_build_options)
+
 add_library(zh_persistence STATIC src/persistence/save.cpp src/persistence/replay.cpp)
 target_include_directories(zh_persistence PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_persistence PUBLIC zh_wwsupport zh_build_options)
@@ -331,6 +342,27 @@ install(FILES data/corpus/video-variants.tsv DESTINATION share/generals-zero-hou
 if(ZH_BUILD_TESTS)
   enable_testing()
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_executable(original_data_config_tests tests/original_data/test_config.cpp)
+  target_link_libraries(original_data_config_tests PRIVATE zh_original_data)
+  target_link_options(original_data_config_tests PRIVATE
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-data-config.link.map")
+  add_test(NAME original_data_config COMMAND original_data_config_tests)
+  set_tests_properties(original_data_config PROPERTIES LABELS "original-data;source-identity")
+  add_test(NAME original_data_config_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m26_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-data-config.link.map"
+    --executable "$<TARGET_FILE:original_data_config_tests>"
+    --target zh_original_data
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/System/OriginalFileSystem.cpp"
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/INI/OriginalINI.cpp"
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameClient/OriginalCSF.cpp"
+    --symbol "zh::original_data::LogicalFiles::read"
+    --symbol "zh::original_data::parse_ini"
+    --symbol "zh::original_data::parse_csf"
+    --symbol "setFPMode()"
+    --witness "original-data config: ok")
+  set_tests_properties(original_data_config_identity PROPERTIES LABELS "original-data;source-identity")
   add_executable(original_process_allocator_tests
     tests/original_runtime/test_allocator.cpp
     tests/original_runtime/allocator_provider.cpp
