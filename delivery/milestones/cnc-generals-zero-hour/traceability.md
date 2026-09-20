@@ -1,6 +1,27 @@
 # Source traceability
 
-Authority is the accepted [port plan](../../../docs/zero-hour-linux-port-plan.md) at the revision recorded in status.yaml. Current implementation baseline is legacy Windows source; observations alone do not authorize extra work. All required source sections are mapped below. Repeated mappings carry shared constraints or provider/consumer validation, not duplicate implementation.
+Authority is the accepted [migration supplement](../../../docs/zero-hour-source-engine-migration.md) with the [base plan](../../../docs/zero-hour-linux-port-plan.md) as governing behavior/stack authority; exact revisions and commits are in status.yaml. Baseline is existing native components plus unported original source. The architecture review is evidence only. The historical mappings below preserve initial intent, not implementation assurance.
+
+## Current remediation coverage
+
+| Required source ID | Provider / acceptance | Original-source evidence obligation |
+|---|---|---|
+| SE-001 | M19; final closure M17 | Every inventory source classified; actual compile/link records; runtime identity and missing-provider negative control; no bootstrap/toy production closure. |
+| SE-002 | M19 | Original portable support, allocators/strings/chunks/codecs; four compilers/configurations and real support sanitizers. |
+| SE-003 | M20 | Original factory/init/INI/CSF/VFS globals, null-device mode and reverse teardown with failures. |
+| SE-004 | M21; whole sessions M15 | Original maps, modules, scripts, AI/pathfinding, commands and victory; actual state checkpoints. |
+| SE-005 | M22; whole sessions M15 | Actual W3D/WWShade/GameClient consumers, real materials/assets, recording and zero-error Vulkan visual acceptance. |
+| SE-006 | M23; whole sessions M15 | Original WND/input/HUD/audio/video managers; real navigation, command transitions, locale and media failures. |
+| SE-007 | M24; gameplay M15; optional import M18 | Original Xfer/SaveGame/recorder/CRC, transactional corrupt-state rejection and cross-compiler replay. |
+| SE-008 | M25; full match M16 | Original network consumers/packets/lockstep, map transfer and independent processes with faults. |
+| SE-009 | M15, M16, M17; optional M18 | Real campaign/skirmish/factions, persistence/media, original LAN, packaged launch and distro matrix; existing duration/soak requirements retained. |
+| SE-010 | packet index/status; M19–M25 and M15–M18 | Preserve historical facts, qualify component-only assurance, map reopened tests, explicitly adopt replacement goal scope after readiness. |
+
+Every new and affected pending milestone also consumes the supplement's Fixed decisions and boundaries, Engineering order and readiness boundary, and Evidence grades and anti-proxy checks. Repeated mapping separates provider implementation from integrated acceptance, not duplicate implementation. No required item is unmapped or blocked by an unresolved product decision.
+
+## Historical assurance reopening
+
+M0/M1 support and M3/M4 engine-facing data assurance reopen through M19/M20; M5 persistence through M21/M24; M2/M7–M10 renderer/UI/effects and M14 real-source scenes through M22/M23; M6 input and M12/M13 original media consumers through M23; M11 original network consumers through M25/M16. M15/M17 prove integrated production closure. All completed contract files, commits and historical test results remain unchanged; no past fixture claim is promoted to original-source acceptance. Existing native APIs, pinned dependencies, VFS/media parsers, Vulkan device and test harnesses are preservation baseline, not wholesale replacement work.
 
 ## Required outcomes and governing sections
 
@@ -89,6 +110,6 @@ Authority is the accepted [port plan](../../../docs/zero-hour-linux-port-plan.md
 - Excluded by §1/§2: original Generals executable, authoring/utility tools, DRM/launcher/serial behavior, GameSpy/Internet replacement, browser/Windows Media/recording, controllers/IPv6/mod manager/conversion/remaster, non-x86-64, and unrelated simulation/ECS/ownership refactors. No milestone is created for them.
 - Deferred by authority: Windows 1.04 import validation is optional M18; mixed Windows/Linux LAN, extra GPU families and physical broadcast remain unverified unless separately evidenced. Flatpak/AppImage/superbuild follow M17 only under future authority.
 - Conditional inclusion: Granny or unexpected formats only when ordinary required retail paths demonstrate necessity under §9. Locale and backend alternatives follow their evidence gates.
-- Current evidence, not acceptance: supplied English retail symlink/initial archive scan and source-recorded RTX driver probe support planning but do not replace M4 or M14 validation. PRE-015 fixtures absent; PRE-012 validation layers remain to be provisioned.
+- Current evidence: historical retail/archive and Vulkan/validation-layer component tests exist, but do not replace M20–M25 original-source integration. Readiness must re-audit host availability and future clean distro environments. Windows fixtures remain optional.
 - Blocked implementation-required source decisions: none at compilation. External prerequisites are explicit at their consumers and are audited by readiness after compilation.
-- Unmapped implementation-required items: none. M0–M17 mandatory requirements and all §10 areas have owners; M18 remains separately optional.
+- Unmapped implementation-required items: none. SE-001–SE-010 and all base-plan obligations have providers/integrated acceptance owners above; M18 remains separately optional. No implementation work arises solely from review observations.

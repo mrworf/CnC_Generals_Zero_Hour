@@ -23,31 +23,27 @@ Only Zero Hour in GeneralsMD is ported. Base Generals executable, authoring tool
 
 ## Source Requirements
 
+- [Migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-001, SE-009, SE-010. Evidence-grade and anti-proxy rules apply.
+
 - [Authoritative port plan](../../../docs/zero-hour-linux-port-plan.md), §8 “M17 — reproducible x86-64 release”.
 - Governing sections: §1 Scope and completion criteria; §4 Target architecture and build graph; §9 Packaging after M17; §10 Validation matrix; PRE-017.
 - Shared §1 scope, §2 preservation rules, §3 selected stack, §7 dependency/check contract and §10 validation matrix apply. Source revision and commit are recorded in status.yaml; this contract cannot supersede that authority.
 
 ## Preconditions
 
-M15, M16, and PRE-017.
+PRE-025/PRE-026 — accepted M15/M16 integrated gameplay; PRE-017 — maintainer/CI-owned clean Ubuntu 26.04/Fedora 44 x86-64 environments before release validation; PRE-008/PRE-012/PRE-016 at Arch runtime checks. Produces PRE-027.
 
 Direct implementation dependencies: [M15](M15-single-player.md), [M16](M16-lan-match.md).
 
-If a precondition fails, retain completed evidence and stop only this milestone and dependants; do not claim acceptance from a partial demonstration.
+Require integrated original-engine single-player/LAN evidence and final production compile/link closure without bootstrap or toy simulation. Host dependencies do not prove clean distro portability.
 
-- `PRE-025` — complete playable single-player acceptance; provider M15; require completed acceptance evidence before entry (currently pending implementation).
-- `PRE-026` — complete two-process LAN match acceptance; provider M16; require completed acceptance evidence before entry (currently pending implementation).
-- `PRE-017` — maintainer/CI supplies clean Ubuntu 26.04 and Fedora 44 x86-64 environments with M0-documented packages; provision before release validation.
+Historical component completion is not original-source acceptance. Preserve prior evidence and existing M15 scaffolding; do not reuse their pass counts as proof of this contract. Existing external retail/device/distro/optional-fixture requirements remain at their consuming validation checks.
 
 ## Readiness checks
 
-- Inspect status.yaml and linked acceptance evidence for M15, M16 — each direct provider must have completed its contract; pending implementation is not completed evidence.
-- After M0 exists, run `cmake --list-presets` — all four source-defined presets are listed. Inspect provider test/evidence records and use their documented checks if freshness is in doubt; do not require this milestone's unfinished features at entry.
-- Inspect fresh Ubuntu/Fedora runner identity and M0 package provisioning logs; both must report x86-64 and the requested release. Run the documented presets after provisioning without retail/GPU inputs; runtime Arch acceptance remains separately required.
+Inspect status.yaml and linked original-source acceptance for M15, M16; all direct provider contracts must be complete. Verify current authoritative source revisions and accepted packet before creating a new milestone plan. The old M15 slice plan does not cover the new provider migration.
 
-Produces `PRE-027` (Arch playable release and clean distribution build evidence) as part of this milestone's acceptance, not as entry requirements.
-
-Readiness audit: [prerequisite manifest](../../readiness/cnc-generals-zero-hour/prerequisite-manifest.md). Unmet providers stop this milestone and dependants only; all implementation statuses remain pending.
+[Readiness manifest](../../readiness/cnc-generals-zero-hour/prerequisite-manifest.md) owns external-input auditing. Unmet providers stop only consumers; planning does not claim implementation completion.
 
 ## Functional Requirements
 
@@ -75,6 +71,8 @@ Use the canonical x86-64 presets `linux-gcc-debug`, `linux-clang-debug`, `linux-
 - [ ] Evidence records compiler/build or device/corpus context as applicable without private media or absolute private paths.
 
 ## Required Validation
+
+Record compile/link identity and source-owned runtime witnesses alongside observable outcomes. Removing a required original implementation, using missing/malformed actual assets, corrupting original save/replay state or introducing original peer-state mismatch must fail the relevant gate. Component/fixture evidence cannot substitute for original-source integration or retail runtime. Map historical unproven obligations to these real-source tests.
 
 Build/test every preset in clean Arch, Ubuntu and Fedora environments. Run all mandatory asset-free labels there; run explicitly provisioned retail/GPU acceptance on Arch. Optional `compatibility` fixtures never enter the mandatory release suite.
 

@@ -8,13 +8,39 @@ compiled_from:
     path: docs/zero-hour-linux-port-plan.md
     revision: sha256:25554c2db1273e263b574b8563615c88ed48eb4f7672e5a21e19fe119eae7b33
     repository_commit: 8dc0285ff6c3346273973dcd874e6983060bb3e7
-  baseline_repository_commit: 8dc0285ff6c3346273973dcd874e6983060bb3e7
+  migration_supplement:
+    path: docs/zero-hour-source-engine-migration.md
+    revision: sha256:4e9523ec2854750b896716bfd4583e47fb65136a9a2188db9dcd4ac9b552c817
+    repository_commit: 38b608d9109d13ad1c6e3a527fe34893512d4d3f
+    change_id: SOURCE-ENGINE-2026-09-20
+    remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-009, SE-010]
+  baseline_repository_commit: 38b608d9109d13ad1c6e3a527fe34893512d4d3f
   definition_package: null
   reconciliation: null
 compilation_status: complete
 readiness_status: READY_WITH_EXTERNAL_DEPENDENCIES
 readiness_report: delivery/readiness/cnc-generals-zero-hour/readiness-report.md
 prerequisite_manifest: delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md
+assurance:
+  historical_completed_ids: [M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13, M14]
+  historical_status_meaning: component acceptance only; original-engine integration unproven
+  evidence_grades: [component_fixture, original_source_compile_link, original_source_integration, retail_runtime]
+  review: evidence/qa/cnc-generals-zero-hour/architecture-revalidation-2026-09-20.md
+  closure_providers:
+    support_startup: [M19, M20]
+    persistence_determinism: [M21, M24]
+    ui_world_effects_gpu: [M22, M23]
+    network: [M25, M16]
+    media: [M23]
+    production_gameplay_release: [M15, M17]
+packet_adoption:
+  required: true
+  previous_goal_membership: [M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13, M14, M15, M16, M17, M18]
+  pending_execution_order: [M19, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+  mandatory_remaining: [M19, M20, M21, M22, M23, M24, M25, M15, M16, M17]
+  optional_remaining: [M18]
+  first_milestone: M19
+  instruction: On later delivery resume explicitly adopt the readiness-approved replacement packet as new remaining-work scope; preserve prior fixed-membership goal/history. Do not start implementation during replanning.
 milestones:
   - id: M0
     title: "reproducible build readiness"
@@ -181,22 +207,92 @@ milestones:
     commit_hash: 2e0df9c0912bcea54285fa9a9eca06ca0f37da07
     evidence: "Four completed slices plus evidence/qa/cnc-generals-zero-hour/M14-gpu-acceptance.md. The Khronos layer is installed and explicitly enabled; GPU 2/2 and retail+GPU gpu|ui|video 9/9 passed with zero Validation Error/VUID output. All four preset selections passed 6/6 and the canonical suite passed 51/51 on the RTX 4070."
     notes: "PRE-012 and PRE-013 accepted; no SDL_GPU capability gap. Initial validation findings were corrected in slice 04. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_14_plan_01.md; slice commits: c17c0dc, 89de107, 0440a4f, 2e0df9c."
+  - id: M19
+    title: "original support closure and source identity"
+    file: delivery/milestones/cnc-generals-zero-hour/M19-original-support.md
+    status: pending
+    dependencies: [M0, M1]
+    remediation_ids: [SE-001, SE-002, SE-010]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: "New original-source provider; historical component tests do not establish this outcome."
+  - id: M20
+    title: "original engine initialization and data lifecycle"
+    file: delivery/milestones/cnc-generals-zero-hour/M20-original-lifecycle.md
+    status: pending
+    dependencies: [M19, M4]
+    remediation_ids: [SE-003, SE-010]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: "New original-source provider; historical component tests do not establish this outcome."
+  - id: M21
+    title: "original map and simulation execution"
+    file: delivery/milestones/cnc-generals-zero-hour/M21-original-simulation.md
+    status: pending
+    dependencies: [M20]
+    remediation_ids: [SE-004, SE-010]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: "New original-source provider; historical component tests do not establish this outcome."
+  - id: M22
+    title: "original retail scene rendering on Vulkan"
+    file: delivery/milestones/cnc-generals-zero-hour/M22-original-rendering.md
+    status: pending
+    dependencies: [M21, M14]
+    remediation_ids: [SE-005, SE-010]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: "New original-source provider; historical component tests do not establish this outcome."
+  - id: M23
+    title: "original menus controls and media integration"
+    file: delivery/milestones/cnc-generals-zero-hour/M23-original-interaction.md
+    status: pending
+    dependencies: [M22, M6, M8, M12, M13]
+    remediation_ids: [SE-006, SE-010]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: "New original-source provider; historical component tests do not establish this outcome."
+  - id: M24
+    title: "original saves replay and deterministic state"
+    file: delivery/milestones/cnc-generals-zero-hour/M24-original-persistence.md
+    status: pending
+    dependencies: [M21, M5]
+    remediation_ids: [SE-007, SE-010]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: "New original-source provider; historical component tests do not establish this outcome."
+  - id: M25
+    title: "original network lockstep integration"
+    file: delivery/milestones/cnc-generals-zero-hour/M25-original-network.md
+    status: pending
+    dependencies: [M24, M11]
+    remediation_ids: [SE-008, SE-010]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: "New original-source provider; historical component tests do not establish this outcome."
   - id: M15
     title: "playable single-player"
     file: delivery/milestones/cnc-generals-zero-hour/M15-single-player.md
     status: blocked
-    dependencies: [M5, M8, M9, M10, M12, M13, M14]
+    dependencies: [M23, M24]
     optional: false
     started_at: "2026-09-20T14:08:33Z"
     completed_at: null
     commit_hash: ea0d9b6
     evidence: "evidence/qa/cnc-generals-zero-hour/M15-single-player.md records valid lifecycle/subsystem integration and 51/51 four-preset non-LAN tests, deterministic reports, retail 4/4, and sanitizer 4/4. It also proves zero original GameEngine sources are linked: native game targets remain bootstrap stubs and the 586-file legacy GameEngine path has no Linux factories/adapters. Synthetic orchestration is not playable retail gameplay."
-    notes: "Blocked on UPSTREAM_REQUIRED SOURCE_GAMEPLAY_ENGINE_NOT_PORTED. Revalidate architecture and produce a revised dependency-ordered source-engine migration packet covering legacy compilation, Linux GameEngine/factories, and adapters from the new VFS/renderer/audio/video/UI/persistence seams to original simulation/INI/object/map/script/AI/victory systems. Resume M15 only after those milestones complete; checkpoint commits: 4bf8002, a450164, ea0d9b6."
+    notes: "Replanned: blocked until original-source providers M23/M24 complete; preserve existing slice evidence as scaffolding only. Prior blocker: UPSTREAM_REQUIRED SOURCE_GAMEPLAY_ENGINE_NOT_PORTED. Revalidate architecture and produce a revised dependency-ordered source-engine migration packet covering legacy compilation, Linux GameEngine/factories, and adapters from the new VFS/renderer/audio/video/UI/persistence seams to original simulation/INI/object/map/script/AI/victory systems. Resume M15 only after those milestones complete; checkpoint commits: 4bf8002, a450164, ea0d9b6."
   - id: M16
     title: "local multi-instance Linux LAN"
     file: delivery/milestones/cnc-generals-zero-hour/M16-lan-match.md
     status: pending
-    dependencies: [M8, M11, M15]
+    dependencies: [M25, M15]
     optional: false
     completed_at: null
     evidence: null

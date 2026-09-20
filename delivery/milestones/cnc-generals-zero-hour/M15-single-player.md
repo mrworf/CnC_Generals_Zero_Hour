@@ -23,35 +23,27 @@ Only Zero Hour in GeneralsMD is ported. Base Generals executable, authoring tool
 
 ## Source Requirements
 
+- [Migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-009, SE-010; source providers SE-001–SE-007. Evidence-grade and anti-proxy rules apply.
+
 - [Authoritative port plan](../../../docs/zero-hour-linux-port-plan.md), §8 “M15 — playable single-player”.
 - Governing sections: §1 Scope and completion criteria; §6 runtime subsystem work; §10 Simulation / Process; PRE-013.
 - Shared §1 scope, §2 preservation rules, §3 selected stack, §7 dependency/check contract and §10 validation matrix apply. Source revision and commit are recorded in status.yaml; this contract cannot supersede that authority.
 
 ## Preconditions
 
-M5, M8-M10, M12-M14.
+PRE-032/PRE-033 — accepted M23 original UI/media and M24 original persistence; PRE-008/PRE-012/PRE-016 at integrated retail/device checks. Produces PRE-025.
 
-Direct implementation dependencies: [M5](M5-persistence.md), [M8](M8-ui-fonts.md), [M9](M9-world-rendering.md), [M10](M10-effects.md), [M12](M12-audio.md), [M13](M13-video.md), [M14](M14-gpu-acceptance.md).
+Direct implementation dependencies: [M23](M23-original-interaction.md), [M24](M24-original-persistence.md).
 
-If a precondition fails, retain completed evidence and stop only this milestone and dependants; do not claim acceptance from a partial demonstration.
+Source-integrated presentation/UI/media and original save/replay acceptance must complete first. M14 synthetic GPU acceptance is retained as component evidence, not real-scene acceptance; M22 supplies the latter.
 
-- `PRE-018` — Linux persistence and cross-compiler deterministic replay; provider M5; require completed acceptance evidence before entry (currently pending implementation).
-- `PRE-020` — UI/font/text command generation and locale decision; provider M8; require completed acceptance evidence before entry (currently pending implementation).
-- `PRE-021` — world rendering command generation; provider M9; require completed acceptance evidence before entry (currently pending implementation).
-- `PRE-022` — effects/WWShade command generation; provider M10; require completed acceptance evidence before entry (currently pending implementation).
-- `PRE-011` — reviewed, URL/hash/license-pinned miniaudio source; provider M12; require completed acceptance evidence before entry (currently pending implementation).
-- `PRE-023` — VFS-backed audio and null sink; provider M12; require completed acceptance evidence before entry (currently pending implementation).
-- `PRE-024` — headless Bink decode and synchronized presentation commands; provider M13; require completed acceptance evidence before entry (currently pending implementation).
-- `PRE-013` — Arch real-GPU capability, lifecycle and visual acceptance record; provider M14; require completed acceptance evidence before entry (currently pending implementation).
+Historical component completion is not original-source acceptance. Preserve prior evidence and existing M15 scaffolding; do not reuse their pass counts as proof of this contract. Existing external retail/device/distro/optional-fixture requirements remain at their consuming validation checks.
 
 ## Readiness checks
 
-- Inspect status.yaml and linked acceptance evidence for M5, M8, M9, M10, M12, M13, M14 — each direct provider must have completed its contract; pending implementation is not completed evidence.
-- After M0 exists, run `cmake --list-presets` — all four source-defined presets are listed. Inspect provider test/evidence records and use their documented checks if freshness is in doubt; do not require this milestone's unfinished features at entry.
+Inspect status.yaml and linked original-source acceptance for M23, M24; all direct provider contracts must be complete. Verify current authoritative source revisions and accepted packet before creating a new milestone plan. The old M15 slice plan does not cover the new provider migration.
 
-Produces `PRE-025` (complete playable single-player acceptance) as part of this milestone's acceptance, not as entry requirements.
-
-Readiness audit: [prerequisite manifest](../../readiness/cnc-generals-zero-hour/prerequisite-manifest.md). Unmet providers stop this milestone and dependants only; all implementation statuses remain pending.
+[Readiness manifest](../../readiness/cnc-generals-zero-hour/prerequisite-manifest.md) owns external-input auditing. Unmet providers stop only consumers; planning does not claim implementation completion.
 
 ## Functional Requirements
 
@@ -84,6 +76,8 @@ Preserve existing retail interaction and selected English locale behavior descri
 
 ## Required Validation
 
+Record compile/link identity and source-owned runtime witnesses alongside observable outcomes. Removing a required original implementation, using missing/malformed actual assets, corrupting original save/replay state or introducing original peer-state mismatch must fail the relevant gate. Component/fixture evidence cannot substitute for original-source integration or retail runtime. Map historical unproven obligations to these real-source tests.
+
 Build each preset and run the full non-LAN mandatory suite; keep GPU/retail tests in explicitly provisioned builds and exclude optional compatibility fixtures.
 
 Start from arbitrary CWD, complete representative missions and all-faction skirmishes, repeated load/unload and long games; verify English text/speech/music/effects/movies, Linux persistence/replay, controlled CRC consistency and ASan/UBSan.
@@ -92,6 +86,6 @@ Retail checks use a separate build directory with `ZH_ENABLE_RETAIL_TESTS=ON` an
 
 ## Known Risks / Deferred Work
 
-Windows artifacts/network peers are not prerequisites; LAN complete-match acceptance M16. Hardware gate M14 cannot be bypassed.
+Windows artifacts/network peers are not prerequisites; LAN complete-match acceptance M16. Original-scene hardware gate M22 cannot be bypassed; M14 remains supporting component evidence.
 
 Source §9 conditional gates remain evidence-driven; newly demonstrated blockers are recorded at the consuming milestone.

@@ -22,30 +22,27 @@ Only Zero Hour in GeneralsMD is ported. Base Generals executable, authoring tool
 
 ## Source Requirements
 
+- [Migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-007, SE-009, SE-010. Evidence-grade and anti-proxy rules apply.
+
 - [Authoritative port plan](../../../docs/zero-hour-linux-port-plan.md), §8 “M18 — optional Windows save/replay compatibility”.
 - Governing sections: §1 Scope and completion criteria; §5 Serialization and packets / Floating-point behavior; PRE-015.
 - Shared §1 scope, §2 preservation rules, §3 selected stack, §7 dependency/check contract and §10 validation matrix apply. Source revision and commit are recorded in status.yaml; this contract cannot supersede that authority.
 
 ## Preconditions
 
-M17 and PRE-015. This milestone is outside the release dependency chain.
+PRE-027 — accepted M17 release; PRE-015 — optional user-owned provenance-recorded Windows 1.04 fixtures. Missing optional fixtures means not validated and cannot block release.
 
 Direct implementation dependencies: [M17](M17-release.md).
 
-If a precondition fails, retain completed evidence and stop only this milestone and dependants; do not claim acceptance from a partial demonstration.
+Use original Xfer/recorder paths accepted at M24 and Linux regressions from M17; synthetic ZHSG is not a compatibility baseline. Windows fixtures remain optional.
 
-- `PRE-027` — Arch playable release and clean distribution build evidence; provider M17; require completed acceptance evidence before entry (currently pending implementation).
-- `PRE-015` — optional user-supplied Windows 1.04 fixtures with legal provenance; absent inputs yield not validated without blocking the release.
+Historical component completion is not original-source acceptance. Preserve prior evidence and existing M15 scaffolding; do not reuse their pass counts as proof of this contract. Existing external retail/device/distro/optional-fixture requirements remain at their consuming validation checks.
 
 ## Readiness checks
 
-- Inspect status.yaml and linked acceptance evidence for M17 — each direct provider must have completed its contract; pending implementation is not completed evidence.
-- After M0 exists, run `cmake --list-presets` — all four source-defined presets are listed. Inspect provider test/evidence records and use their documented checks if freshness is in doubt; do not require this milestone's unfinished features at entry.
-- Inspect fixture provenance, recorded Windows 1.04 version/configuration and local readability; if absent record not validated and leave M0–M17 unaffected.
+Inspect status.yaml and linked original-source acceptance for M17; all direct provider contracts must be complete. Verify current authoritative source revisions and accepted packet before creating a new milestone plan. The old M15 slice plan does not cover the new provider migration.
 
-Produces optional compatibility evidence only; no mandatory milestone consumes it.
-
-Readiness audit: [prerequisite manifest](../../readiness/cnc-generals-zero-hour/prerequisite-manifest.md). Unmet providers stop this milestone and dependants only; all implementation statuses remain pending.
+[Readiness manifest](../../readiness/cnc-generals-zero-hour/prerequisite-manifest.md) owns external-input auditing. Unmet providers stop only consumers; planning does not claim implementation completion.
 
 ## Functional Requirements
 
@@ -73,6 +70,8 @@ Use the canonical x86-64 presets `linux-gcc-debug`, `linux-clang-debug`, `linux-
 - [ ] Evidence records compiler/build or device/corpus context as applicable without private media or absolute private paths.
 
 ## Required Validation
+
+Record compile/link identity and source-owned runtime witnesses alongside observable outcomes. Removing a required original implementation, using missing/malformed actual assets, corrupting original save/replay state or introducing original peer-state mismatch must fail the relevant gate. Component/fixture evidence cannot substitute for original-source integration or retail runtime. Map historical unproven obligations to these real-source tests.
 
 Run `cmake --build --preset <preset>` and `ctest --preset <preset> -L 'compatibility' --output-on-failure` for applicable supported presets.
 

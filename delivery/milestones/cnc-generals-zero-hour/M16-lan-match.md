@@ -23,30 +23,27 @@ Only Zero Hour in GeneralsMD is ported. Base Generals executable, authoring tool
 
 ## Source Requirements
 
+- [Migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-008, SE-009, SE-010. Evidence-grade and anti-proxy rules apply.
+
 - [Authoritative port plan](../../../docs/zero-hour-linux-port-plan.md), §8 “M16 — local multi-instance Linux LAN”.
 - Governing sections: §6 LAN and removed online services; §9 Loopback discovery at M11/M16; §10 LAN.
 - Shared §1 scope, §2 preservation rules, §3 selected stack, §7 dependency/check contract and §10 validation matrix apply. Source revision and commit are recorded in status.yaml; this contract cannot supersede that authority.
 
 ## Preconditions
 
-M8, M11, and M15.
+PRE-034/PRE-025 — accepted M25 original lockstep and M15 gameplay; PRE-008 at actual-map checks; isolated local loopback processes as documented by M11. Produces PRE-026.
 
-Direct implementation dependencies: [M8](M8-ui-fonts.md), [M11](M11-lan-transport.md), [M15](M15-single-player.md).
+Direct implementation dependencies: [M25](M25-original-network.md), [M15](M15-single-player.md).
 
-If a precondition fails, retain completed evidence and stop only this milestone and dependants; do not claim acceptance from a partial demonstration.
+M25 supplies original network/lockstep assurance; M11 transport tests alone cannot admit this milestone.
 
-- `PRE-020` — UI/font/text command generation and locale decision; provider M8; require completed acceptance evidence before entry (currently pending implementation).
-- `PRE-014` — POSIX local peers, identity overrides and virtual transport; provider M11; require completed acceptance evidence before entry (currently pending implementation).
-- `PRE-025` — complete playable single-player acceptance; provider M15; require completed acceptance evidence before entry (currently pending implementation).
+Historical component completion is not original-source acceptance. Preserve prior evidence and existing M15 scaffolding; do not reuse their pass counts as proof of this contract. Existing external retail/device/distro/optional-fixture requirements remain at their consuming validation checks.
 
 ## Readiness checks
 
-- Inspect status.yaml and linked acceptance evidence for M8, M11, M15 — each direct provider must have completed its contract; pending implementation is not completed evidence.
-- After M0 exists, run `cmake --list-presets` — all four source-defined presets are listed. Inspect provider test/evidence records and use their documented checks if freshness is in doubt; do not require this milestone's unfinished features at entry.
+Inspect status.yaml and linked original-source acceptance for M25, M15; all direct provider contracts must be complete. Verify current authoritative source revisions and accepted packet before creating a new milestone plan. The old M15 slice plan does not cover the new provider migration.
 
-Produces `PRE-026` (complete two-process LAN match acceptance) as part of this milestone's acceptance, not as entry requirements.
-
-Readiness audit: [prerequisite manifest](../../readiness/cnc-generals-zero-hour/prerequisite-manifest.md). Unmet providers stop this milestone and dependants only; all implementation statuses remain pending.
+[Readiness manifest](../../readiness/cnc-generals-zero-hour/prerequisite-manifest.md) owns external-input auditing. Unmet providers stop only consumers; planning does not claim implementation completion.
 
 ## Functional Requirements
 
@@ -78,6 +75,8 @@ Preserve existing retail interaction and selected English locale behavior descri
 - [ ] Evidence records compiler/build or device/corpus context as applicable without private media or absolute private paths.
 
 ## Required Validation
+
+Record compile/link identity and source-owned runtime witnesses alongside observable outcomes. Removing a required original implementation, using missing/malformed actual assets, corrupting original save/replay state or introducing original peer-state mismatch must fail the relevant gate. Component/fixture evidence cannot substitute for original-source integration or retail runtime. Map historical unproven obligations to these real-source tests.
 
 Run `cmake --build --preset <preset>` and `ctest --preset <preset> -L 'lan|headless' --output-on-failure` for applicable supported presets.
 

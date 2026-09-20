@@ -26,6 +26,6 @@ delivery_goal:
       slice: 03
       required_workflow: "software architecture revalidation followed by delivery-planning-orchestrator"
       unblock_condition: "Required source-engine migration milestones are accepted and original campaign/skirmish execution reaches M15 acceptance"
-  resume_point: "Use evidence/qa/cnc-generals-zero-hour/M15-single-player.md for upstream architecture revalidation and delivery replanning; resume M15 plan 01 slice 03 only after source-engine migration dependencies complete"
+  resume_point: "Architecture revalidation and replanning completed. On explicit delivery resume, consume workflow/delivery-planning/handoff.yaml, preserve this prior fixed-membership goal as history, and explicitly adopt the readiness-approved replacement packet remaining scope starting at M19. Do not resume obsolete M15 plan 01 slice 03 as the source-migration plan. This prior goal remains blocked; no implementation was started by replanning."
   started_at: 2026-09-20T03:11:19Z
   completed_at: null
