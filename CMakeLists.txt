@@ -96,7 +96,10 @@ target_sources(zh_wwsupport PRIVATE
 )
 target_include_directories(zh_wwsupport PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-target_sources(zh_renderer_sdl_gpu PRIVATE src/renderer/contract.cpp)
+target_sources(zh_renderer_sdl_gpu PRIVATE
+  src/renderer/contract.cpp
+  src/renderer/shader_registry.cpp
+)
 target_include_directories(zh_renderer_sdl_gpu PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 target_sources(zh_os_posix PRIVATE src/foundation/platform.cpp)
@@ -126,6 +129,30 @@ add_custom_command(
 add_custom_target(zh_bootstrap_shaders ALL DEPENDS "${ZH_BOOTSTRAP_SPIRV}")
 add_dependencies(zh_renderer_sdl_gpu zh_bootstrap_shaders)
 
+set(ZH_RENDERER_SHADER_NAMES
+  ui.vert ui.frag
+  terrain.vert terrain.frag
+  water.vert water.frag
+  points.vert points.frag
+  wwshade.vert wwshade.frag
+)
+set(ZH_RENDERER_SPIRV)
+foreach(shader_name IN LISTS ZH_RENDERER_SHADER_NAMES)
+  set(shader_source "${CMAKE_CURRENT_SOURCE_DIR}/shaders/renderer/${shader_name}")
+  set(shader_output "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/renderer/${shader_name}.spv")
+  add_custom_command(
+    OUTPUT "${shader_output}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/renderer"
+    COMMAND "${ZH_GLSLC_EXECUTABLE}" "${shader_source}" -o "${shader_output}"
+    DEPENDS "${shader_source}"
+    COMMENT "Compiling renderer shader ${shader_name}"
+    VERBATIM
+  )
+  list(APPEND ZH_RENDERER_SPIRV "${shader_output}")
+endforeach()
+add_custom_target(zh_renderer_shaders ALL DEPENDS ${ZH_RENDERER_SPIRV})
+add_dependencies(zh_renderer_sdl_gpu zh_renderer_shaders)
+
 add_executable(zh_main src/bootstrap/main.cpp)
 target_include_directories(zh_main PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_link_libraries(zh_main PRIVATE
@@ -136,6 +163,7 @@ set_property(TARGET zh_main PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_LEGACY_ZH_
 
 install(TARGETS zh_main RUNTIME DESTINATION bin)
 install(FILES "${ZH_BOOTSTRAP_SPIRV}" DESTINATION share/generals-zero-hour/shaders)
+install(FILES ${ZH_RENDERER_SPIRV} DESTINATION share/generals-zero-hour/shaders/renderer)
 install(FILES LICENSE.md DESTINATION share/licenses/generals-zero-hour)
 
 if(ZH_BUILD_TESTS)
@@ -173,6 +201,16 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(renderer_contract_tests PRIVATE zh_renderer_sdl_gpu)
   add_test(NAME renderer_contract COMMAND renderer_contract_tests)
   set_tests_properties(renderer_contract PROPERTIES LABELS renderer-contract)
+
+  add_executable(renderer_shader_registry_tests tests/renderer/test_shader_registry.cpp)
+  target_compile_definitions(renderer_shader_registry_tests PRIVATE
+    ZH_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    ZH_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+  )
+  target_link_libraries(renderer_shader_registry_tests PRIVATE zh_renderer_sdl_gpu)
+  add_dependencies(renderer_shader_registry_tests zh_renderer_shaders)
+  add_test(NAME renderer_shader_registry COMMAND renderer_shader_registry_tests)
+  set_tests_properties(renderer_shader_registry PROPERTIES LABELS renderer-contract)
 
   add_executable(foundation_abi_codec_tests tests/foundation/test_abi_codec.cpp)
   target_link_libraries(foundation_abi_codec_tests PRIVATE zh_wwsupport)

@@ -22,6 +22,7 @@ REQUIRED_CATEGORIES = frozenset(
         "formats",
         "primitives-fvf",
         "fixed-function-state",
+        "curved-patch-state",
         "texture-stage-state",
         "resources",
         "render-targets",
@@ -34,7 +35,7 @@ REQUIRED_CATEGORIES = frozenset(
     }
 )
 REQUIRED_DISPOSITIONS = frozenset(
-    {"public-api", "repository-shader", "cpu-fallback", "compatibility-adapter"}
+    {"public-api", "repository-shader", "cpu-fallback", "compatibility-adapter", "explicit-unsupported"}
 )
 
 
