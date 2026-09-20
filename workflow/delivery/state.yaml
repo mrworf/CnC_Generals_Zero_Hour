@@ -2,7 +2,7 @@ schema_version: 1
 workflow: milestone-delivery
 delivery_goal:
   product_id: cnc-generals-zero-hour
-  status: in_progress
+  status: blocked
   packet: delivery/milestones/cnc-generals-zero-hour/status.yaml
   packet_revision: sha256:7f486befe4e182f46fbc7f090d757ad7a19bcabddf53ce6b622b6ba90596de4d
   source_commit: 8dc0285ff6c3346273973dcd874e6983060bb3e7
@@ -14,9 +14,18 @@ delivery_goal:
   milestone_ids: [M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13, M14, M15, M16, M17, M18]
   execution: autonomous
   current_milestone: M15
-  blocker_type: null
-  blocker: null
-  blockers: []
-  resume_point: delivery/plans/cnc-generals-zero-hour/milestone_15_plan_01.md
+  blocker_type: planning_stale
+  blocker: "SOURCE_GAMEPLAY_ENGINE_NOT_PORTED: the active packet assumed source-engine migration, but native game targets still link bootstrap stubs and no original GameEngine/GameLogic implementation"
+  blockers:
+    - type: UPSTREAM_REQUIRED
+      source: SOURCE_GAMEPLAY_ENGINE_NOT_PORTED
+      evidence_id: M15-SOURCE-GAP
+      requirement: "Revalidate the Linux source-engine architecture and replace the stale delivery assumptions with dependency-ordered migration milestones"
+      expected_artifact: "A readiness-approved milestone packet covering original GameEngine compilation, Linux factories, and legacy-interface adapters before playable single-player acceptance"
+      milestone: M15
+      slice: 03
+      required_workflow: "software architecture revalidation followed by delivery-planning-orchestrator"
+      unblock_condition: "Required source-engine migration milestones are accepted and original campaign/skirmish execution reaches M15 acceptance"
+  resume_point: "Use evidence/qa/cnc-generals-zero-hour/M15-single-player.md for upstream architecture revalidation and delivery replanning; resume M15 plan 01 slice 03 only after source-engine migration dependencies complete"
   started_at: 2026-09-20T03:11:19Z
   completed_at: null

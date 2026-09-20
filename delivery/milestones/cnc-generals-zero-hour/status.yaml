@@ -184,13 +184,14 @@ milestones:
   - id: M15
     title: "playable single-player"
     file: delivery/milestones/cnc-generals-zero-hour/M15-single-player.md
-    status: in_progress
+    status: blocked
     dependencies: [M5, M8, M9, M10, M12, M13, M14]
     optional: false
     started_at: "2026-09-20T14:08:33Z"
     completed_at: null
-    evidence: null
-    notes: "Active autonomous delivery milestone; governing plan: delivery/plans/cnc-generals-zero-hour/milestone_15_plan_01.md"
+    commit_hash: ea0d9b6
+    evidence: "evidence/qa/cnc-generals-zero-hour/M15-single-player.md records valid lifecycle/subsystem integration and 51/51 four-preset non-LAN tests, deterministic reports, retail 4/4, and sanitizer 4/4. It also proves zero original GameEngine sources are linked: native game targets remain bootstrap stubs and the 586-file legacy GameEngine path has no Linux factories/adapters. Synthetic orchestration is not playable retail gameplay."
+    notes: "Blocked on UPSTREAM_REQUIRED SOURCE_GAMEPLAY_ENGINE_NOT_PORTED. Revalidate architecture and produce a revised dependency-ordered source-engine migration packet covering legacy compilation, Linux GameEngine/factories, and adapters from the new VFS/renderer/audio/video/UI/persistence seams to original simulation/INI/object/map/script/AI/victory systems. Resume M15 only after those milestones complete; checkpoint commits: 4bf8002, a450164, ea0d9b6."
   - id: M16
     title: "local multi-instance Linux LAN"
     file: delivery/milestones/cnc-generals-zero-hour/M16-lan-match.md
