@@ -8,6 +8,8 @@
 #include <string_view>
 #include <vector>
 
+namespace zh::data { class VirtualFileSystem; }
+
 namespace zh::ui {
 
 class FontError : public std::runtime_error {
@@ -45,6 +47,15 @@ private:
     explicit FontFace(std::shared_ptr<Impl> impl) : impl_(std::move(impl)) {}
     std::shared_ptr<Impl> impl_;
 };
+
+struct FontSelection {
+    std::string unicode_font_name;
+    std::string local_font_file;
+};
+
+FontSelection parse_language_font_selection(std::string_view language_ini);
+FontFace load_selected_font(const FontSelection& selection, const data::VirtualFileSystem* vfs,
+    unsigned pixel_height, std::size_t maximum_font_bytes = 64U * 1024U * 1024U);
 
 struct LayoutOptions {
     int maximum_width = 0;

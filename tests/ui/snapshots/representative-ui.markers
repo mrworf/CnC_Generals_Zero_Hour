@@ -1,0 +1,14 @@
+# Ordered normalized markers required in the M8 recording stream.
+ui-transition menu-enter
+flow=menu
+flow=loading
+flow=tooltip
+flow=subtitle
+flow=caption
+flow=save-name
+flow=player-name
+flow=game-name
+flow=chat
+fallback=yes
+layer=cursor
+ui-resize 1280x720 -> 1024x768

@@ -1,5 +1,7 @@
 #include "zh/ui/font.h"
 
+#include "zh/data/vfs.h"
+
 #include <fontconfig/fontconfig.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -7,10 +9,23 @@
 #include <algorithm>
 #include <cstring>
 #include <limits>
+#include <sstream>
 #include <utility>
 
 namespace zh::ui {
 namespace {
+
+std::string trim(std::string value)
+{
+    const auto first = value.find_first_not_of(" \t\r");
+    if (first == std::string::npos) return {};
+    const auto last = value.find_last_not_of(" \t\r");
+    value = value.substr(first, last - first + 1);
+    if (value.size() >= 2 && ((value.front() == '"' && value.back() == '"')
+            || (value.front() == '\'' && value.back() == '\'')))
+        value = value.substr(1, value.size() - 2);
+    return value;
+}
 
 std::string ft_error(std::string_view operation, FT_Error code)
 {
@@ -151,6 +166,45 @@ std::string FontFace::source() const { return impl_ ? impl_->source : std::strin
 std::size_t FontFace::retained_byte_count() const noexcept
 {
     return impl_ && impl_->retained_bytes ? impl_->retained_bytes->size() : 0;
+}
+
+FontSelection parse_language_font_selection(std::string_view language_ini)
+{
+    if (language_ini.size() > 1024U * 1024U) throw FontError("language font configuration exceeds 1 MiB");
+    FontSelection selection;
+    std::istringstream lines{std::string(language_ini)};
+    for (std::string line; std::getline(lines, line);) {
+        const auto comment = line.find_first_of(";#");
+        if (comment != std::string::npos) line.resize(comment);
+        const auto equals = line.find('=');
+        if (equals == std::string::npos) continue;
+        const auto key = trim(line.substr(0, equals));
+        const auto value = trim(line.substr(equals + 1));
+        if (key == "UnicodeFontName") selection.unicode_font_name = value;
+        else if (key == "LocalFontFile") selection.local_font_file = value;
+    }
+    if (selection.local_font_file.empty() && selection.unicode_font_name.empty())
+        throw FontError("language font configuration has neither LocalFontFile nor UnicodeFontName");
+    return selection;
+}
+
+FontFace load_selected_font(const FontSelection& selection, const data::VirtualFileSystem* vfs,
+    unsigned pixel_height, std::size_t maximum_font_bytes)
+{
+    if (!selection.local_font_file.empty()) {
+        if (!vfs) throw FontError("LocalFontFile '" + selection.local_font_file + "' requires a mounted VFS");
+        const auto* resource = vfs->find(selection.local_font_file);
+        if (!resource) throw FontError("LocalFontFile is missing from VFS: " + selection.local_font_file);
+        if (resource->size == 0 || resource->size > maximum_font_bytes)
+            throw FontError("LocalFontFile size is outside configured bound: " + selection.local_font_file);
+        auto bytes = std::make_shared<std::vector<std::uint8_t>>(
+            vfs->read_prefix(selection.local_font_file, static_cast<std::size_t>(resource->size)));
+        if (bytes->size() != resource->size)
+            throw FontError("LocalFontFile read was incomplete: " + selection.local_font_file);
+        return FontFace::from_memory(std::move(bytes), pixel_height, selection.local_font_file);
+    }
+    if (selection.unicode_font_name.empty()) throw FontError("UnicodeFontName is empty and no LocalFontFile was selected");
+    return FontFace::from_system(selection.unicode_font_name, pixel_height);
 }
 
 TextLayout::TextLayout(FontFace primary, std::vector<FontFace> fallbacks)

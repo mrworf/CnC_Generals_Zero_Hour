@@ -1,12 +1,15 @@
 #include "zh/ui/font.h"
+#include "zh/data/vfs.h"
 
 #include <fstream>
+#include <filesystem>
 #include <iostream>
 #include <iterator>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <unistd.h>
 
 namespace {
 void check(bool condition, const char* message) { if (!condition) throw std::runtime_error(message); }
@@ -85,6 +88,35 @@ void test_english_locale_gate()
     check(zh::ui::selected_english_layout_reason().find("neither contextual") != std::string_view::npos,
         "locale decision lacks evidence rationale");
 }
+
+void test_language_selection_prefers_vfs_memory_face()
+{
+    const auto root = std::filesystem::temp_directory_path() /
+        ("zh-ui-font-selection-" + std::to_string(static_cast<long long>(::getpid())));
+    std::error_code ignored;
+    std::filesystem::remove_all(root, ignored);
+    const auto zh_root = root / "zh";
+    const auto generals_root = root / "generals";
+    std::filesystem::create_directories(zh_root / "Data/English");
+    std::filesystem::create_directories(generals_root);
+    const auto system_path = zh::ui::FontFace::resolve_system_font("sans-serif");
+    std::filesystem::copy_file(system_path, zh_root / "Data/English/Local.ttf");
+    const auto vfs = zh::data::VirtualFileSystem::mount({zh_root, generals_root, "English", {}});
+    const auto selection = zh::ui::parse_language_font_selection(
+        "UnicodeFontName = Arial Unicode MS\nLocalFontFile = Data/English/Local.ttf\n");
+    auto face = zh::ui::load_selected_font(selection, &vfs, 16);
+    check(face.source() == "memory:Data/English/Local.ttf", "LocalFontFile did not take precedence through VFS");
+    check(face.retained_byte_count() > 0, "VFS font bytes were not retained");
+    bool failed = false;
+    try { (void)zh::ui::load_selected_font(selection, nullptr, 16); }
+    catch (const zh::ui::FontError& error) { failed = std::string(error.what()).find("mounted VFS") != std::string::npos; }
+    check(failed, "LocalFontFile without VFS did not fail clearly");
+    failed = false;
+    try { (void)zh::ui::parse_language_font_selection("DrawGroupInfoFontSize=12\n"); }
+    catch (const zh::ui::FontError&) { failed = true; }
+    check(failed, "font-less language configuration accepted");
+    std::filesystem::remove_all(root, ignored);
+}
 } // namespace
 
 int main()
@@ -94,6 +126,7 @@ int main()
         test_system_fallback_wrap_truncate_and_mixed_text();
         test_missing_glyph_and_failures();
         test_english_locale_gate();
+        test_language_selection_prefers_vfs_memory_face();
         std::cout << "UI font tests: ok\n";
         return 0;
     } catch (const std::exception& error) {
