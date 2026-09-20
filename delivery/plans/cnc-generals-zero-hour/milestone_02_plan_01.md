@@ -32,8 +32,8 @@ The native-port graph gains a GPU-independent renderer contract, a mechanically 
 
 | Slice | Plan | Outcome | Dependency | Status | Commit |
 |---|---|---|---|---|---|
-| 01 | [legacy renderer inventory](milestone_02_plan_01_slice_01.md) | Complete, fail-closed D3D/D3DX inventory and mapping table | M0 | completed | this slice commit |
-| 02 | [engine renderer contract](milestone_02_plan_01_slice_02.md) | Descriptors, device interface, limits, pipeline keys, conventions, and resize state | 01, M1 | pending | pending |
+| 01 | [legacy renderer inventory](milestone_02_plan_01_slice_01.md) | Complete, fail-closed D3D/D3DX inventory and mapping table | M0 | completed | `3c2074d` |
+| 02 | [engine renderer contract](milestone_02_plan_01_slice_02.md) | Descriptors, device interface, limits, pipeline keys, conventions, and resize state | 01, M1 | completed | this slice commit |
 | 03 | [shader registry and offline compilation](milestone_02_plan_01_slice_03.md) | UI/terrain/water/points/WWShade shader closure across presets | 01, 02 | pending | pending |
 
 ## Cross-slice constraints

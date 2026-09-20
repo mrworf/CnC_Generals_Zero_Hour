@@ -96,6 +96,9 @@ target_sources(zh_wwsupport PRIVATE
 )
 target_include_directories(zh_wwsupport PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
+target_sources(zh_renderer_sdl_gpu PRIVATE src/renderer/contract.cpp)
+target_include_directories(zh_renderer_sdl_gpu PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
 target_sources(zh_os_posix PRIVATE src/foundation/platform.cpp)
 target_include_directories(zh_os_posix PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
@@ -163,6 +166,13 @@ if(ZH_BUILD_TESTS)
   set_tests_properties(renderer_inventory PROPERTIES LABELS renderer-contract)
   add_test(NAME renderer_inventory_negative COMMAND "${Python3_EXECUTABLE}" -m unittest tests.m2.test_renderer_inventory)
   set_tests_properties(renderer_inventory_negative PROPERTIES LABELS renderer-contract WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+  add_test(NAME renderer_public_headers COMMAND "${Python3_EXECUTABLE}" -m unittest tests.m2.test_renderer_public_headers)
+  set_tests_properties(renderer_public_headers PROPERTIES LABELS renderer-contract WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
+  add_executable(renderer_contract_tests tests/renderer/test_renderer_contract.cpp)
+  target_link_libraries(renderer_contract_tests PRIVATE zh_renderer_sdl_gpu)
+  add_test(NAME renderer_contract COMMAND renderer_contract_tests)
+  set_tests_properties(renderer_contract PROPERTIES LABELS renderer-contract)
 
   add_executable(foundation_abi_codec_tests tests/foundation/test_abi_codec.cpp)
   target_link_libraries(foundation_abi_codec_tests PRIVATE zh_wwsupport)
