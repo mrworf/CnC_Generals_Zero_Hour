@@ -50,7 +50,7 @@
 // USER INCLUDES //////////////////////////////////////////////////////////////
 #include "Lib/BaseType.h"
 #include "Common/Debug.h"
-#include "Common/File.h"
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/GameMemory.h"
 #include "Common/NameKeyGenerator.h"
@@ -485,7 +485,7 @@ static Bool parseTooltip( char *token, WinInstanceData *instData,
 													char *buffer, void *data )
 {
 	UnicodeString tooltip;
-	tooltip.set(L"Need tooltip translation");
+	tooltip.set(u"Need tooltip translation");
 	/// @todo need to parse the tooltip in multibyte here
 
 	instData->setTooltipText( tooltip );
@@ -2518,6 +2518,8 @@ cleanupAndExit:
 //-------------------------------------------------------------------------------------------------
 Bool parseInit( char *token, char *buffer, UnsignedInt version, WindowLayoutInfo *info )
 {
+	if (TheFunctionLexicon == NULL)
+		return FALSE;
 	char *c;
 	char *seps = " \n\r\t";
 
@@ -2537,6 +2539,8 @@ Bool parseInit( char *token, char *buffer, UnsignedInt version, WindowLayoutInfo
 //-------------------------------------------------------------------------------------------------
 Bool parseUpdate( char *token, char *buffer, UnsignedInt version, WindowLayoutInfo *info )
 {
+	if (TheFunctionLexicon == NULL)
+		return FALSE;
 	char *c;
 	char *seps = " \n\r\t";
 
@@ -2556,6 +2560,8 @@ Bool parseUpdate( char *token, char *buffer, UnsignedInt version, WindowLayoutIn
 //-------------------------------------------------------------------------------------------------
 Bool parseShutdown( char *token, char *buffer, UnsignedInt version, WindowLayoutInfo *info )
 {
+	if (TheFunctionLexicon == NULL)
+		return FALSE;
 	char *c;
 	char *seps = " \n\r\t";
 
@@ -2729,7 +2735,7 @@ GameWindow *GameWindowManager::winCreateFromScript( AsciiString filenameString,
 	// a filename only make sure the current directory is set to the right
 	// place for the window files subdirectory
 	//
-	if( strchr( filename, '\\' ) == NULL )
+	if( strchr( filename, '\\' ) == NULL && strchr( filename, '/' ) == NULL )
 		sprintf( filepath, "Window\\%s", filename );
 	else
 		strcpy( filepath, filename );
@@ -2759,7 +2765,7 @@ GameWindow *GameWindowManager::winCreateFromScript( AsciiString filenameString,
 		{
 
 			DEBUG_LOG(( "WinCreateFromScript: Error parsing layout block\n" ));
-			return FALSE;
+			return NULL;
 
 		}  // end if
 
@@ -2890,4 +2896,3 @@ GameWindow *GameWindowManager::winCreateFromScript( AsciiString filenameString,
 	return firstWindow;
 
 }  // end WinCreateFromScript
-

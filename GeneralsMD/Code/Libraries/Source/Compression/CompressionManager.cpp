@@ -21,10 +21,20 @@
 // LZH wrapper taken from Nox, originally from Jeff Brown
 //////////////////////////////////////////////////////////////////////////////
 
+#ifndef _WIN32
+#define __forceinline inline __attribute__((always_inline))
+#endif
+
 #include "Compression.h"
 #include "LZHCompress/NoxCompress.h"
 extern "C" {
+#ifdef _WIN32
 #include "ZLib/zlib.h"
+#else
+#define Byte ZlibByte
+#include <zlib.h>
+#undef Byte
+#endif
 }
 #include "EAC/codex.h"
 #include "EAC/btreecodex.h"
@@ -242,6 +252,9 @@ Int CompressionManager::compressData( CompressionType compType, void *srcVoid, I
 
 	if (compType == COMPRESSION_NOXLZH)
 	{
+		#ifndef _WIN32
+		return 0;
+		#else
 		memcpy(dest, "NOX\0", 4);
 		*(Int *)(dest+4) = 0;
 		Bool ret = CompressMemory(src, srcLen, dest+8, destLen);
@@ -252,6 +265,7 @@ Int CompressionManager::compressData( CompressionType compType, void *srcVoid, I
 		}
 		else
 			return 0;
+		#endif
 	}
 
 	if (compType >= COMPRESSION_ZLIB1 && compType <= COMPRESSION_ZLIB9)
@@ -262,7 +276,11 @@ Int CompressionManager::compressData( CompressionType compType, void *srcVoid, I
 		*(Int *)(dest+4) = 0;
 
 		unsigned long outLen = destLen;
+		#ifdef _WIN32
 		Int err = z_compress2( dest+8, &outLen, src, srcLen, level );
+		#else
+		Int err = compress2( dest+8, &outLen, src, srcLen, level );
+		#endif
 
 		if (err == Z_OK || err == Z_STREAM_END)
 		{
@@ -319,11 +337,15 @@ Int CompressionManager::decompressData( void *srcVoid, Int srcLen, void *destVoi
 
 	if (compType == COMPRESSION_NOXLZH)
 	{
+		#ifndef _WIN32
+		return 0;
+		#else
 		Bool ret = DecompressMemory(src+8, srcLen-8, dest, destLen);
 		if (ret)
 			return destLen;
 		else
 			return 0;
+		#endif
 	}
 
 	if (compType >= COMPRESSION_ZLIB1 && compType <= COMPRESSION_ZLIB9)
@@ -333,7 +355,11 @@ Int CompressionManager::decompressData( void *srcVoid, Int srcLen, void *destVoi
 #endif
 
 		unsigned long outLen = destLen;
+		#ifdef _WIN32
 		Int err = z_uncompress(dest, &outLen, src+8, srcLen-8);
+		#else
+		Int err = uncompress(dest, &outLen, src+8, srcLen-8);
+		#endif
 		if (err == Z_OK || err == Z_STREAM_END)
 		{
 			return outLen;

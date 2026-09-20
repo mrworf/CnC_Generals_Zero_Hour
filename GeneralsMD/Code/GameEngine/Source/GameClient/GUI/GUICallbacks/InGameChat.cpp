@@ -30,6 +30,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#include "Common/GlobalData.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "GameClient/DisconnectMenu.h"
@@ -176,9 +177,11 @@ Bool handleInGameSlashCommands(UnicodeString uText)
 
 	if (token == "host")
 	{
+		#ifdef _WIN32
 		UnicodeString s;
-		s.format(L"Hosting qr2:%d thread:%d", getQR2HostingStatus(), isThreadHosting);
+		s.format(u"Hosting qr2:%d thread:%d", getQR2HostingStatus(), isThreadHosting);
 		TheInGameUI->message(s);
+		#endif
 		return TRUE; // was a slash command
 	}
 
@@ -358,4 +361,3 @@ WindowMsgHandledType InGameChatSystem( GameWindow *window, UnsignedInt msg,
 	return MSG_HANDLED;
 
 }  // end InGameChatSystem
-

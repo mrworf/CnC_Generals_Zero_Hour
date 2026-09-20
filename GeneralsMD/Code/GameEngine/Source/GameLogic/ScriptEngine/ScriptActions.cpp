@@ -33,6 +33,7 @@
 #include "Common/AudioHandleSpecialValues.h"
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
+#include "Common/GlobalData.h"
 #include "Common/MapObject.h"							// For MAP_XY_FACTOR
 #include "Common/PartitionSolver.h"
 #include "Common/Player.h"
@@ -2575,9 +2576,9 @@ void ScriptActions::doDisplayCinematicText(const AsciiString& displayText, const
 	char buf[256];
 	char *c;
 	strcpy(buf, fontType.str());
-	for( c = buf; c != '\0'; *c++ )
+	for( c = buf; *c != '\0'; ++c )
 	{
-		if( *c != ' ' && *c++ != '-' ) 
+		if( *c != ' ' && *c != '-' )
 			fontName.concat(c);
 		else
 			break;
@@ -5316,7 +5317,7 @@ void ScriptActions::doMoveTeamTowardsNearest( const AsciiString& teamName, const
 			}
 		}
 	}
-	for( iter = team->iterate_TeamMemberList(); !iter.done(); iter.advance() )
+	for( DLINK_ITERATOR<Object> iter = team->iterate_TeamMemberList(); !iter.done(); iter.advance() )
 	{
 		Object *obj = iter.cur();
 		if( !obj )

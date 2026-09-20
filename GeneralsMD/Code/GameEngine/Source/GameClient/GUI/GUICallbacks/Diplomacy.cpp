@@ -55,7 +55,9 @@
 #include "GameNetwork/GameInfo.h"
 #include "GameNetwork/NetworkInterface.h"
 #include "GameNetwork/GameSpy/BuddyDefs.h"
-#include "GameNetwork/GameSpy/peerDefs.h"
+#ifdef _WIN32
+#include "GameNetwork/GameSpy/PeerDefs.h"
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -273,6 +275,7 @@ void ShowDiplomacy( Bool immediate )
 	grabWindowPointers();
 	PopulateInGameDiplomacyPopup();
 
+	#ifdef _WIN32
 	if(TheGameSpyInfo && TheGameSpyInfo->getLocalProfileID() != 0)
 	{
 		radioButtonInGame->winHide(FALSE);
@@ -281,6 +284,7 @@ void ShowDiplomacy( Bool immediate )
 		PopulateOldBuddyMessages();
 		updateBuddyInfo();
 	}
+	#endif
 	
 }
 
@@ -293,7 +297,9 @@ void ResetDiplomacy( void )
 		TheInGameUI->unregisterWindowLayout(theLayout);
 		theLayout->destroyWindows();
 		theLayout->deleteInstance();
+		#ifdef _WIN32
 		InitBuddyControls(-1);
+		#endif
 	}
 	theLayout = NULL;
 	theWindow = NULL;
@@ -599,6 +605,4 @@ void PopulateInGameDiplomacyPopup( void )
 		++rowNum;
 	}
 }
-
-
 

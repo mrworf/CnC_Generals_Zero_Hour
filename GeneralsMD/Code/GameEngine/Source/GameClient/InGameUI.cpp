@@ -1074,7 +1074,8 @@ InGameUI::~InGameUI()
 	removeMilitarySubtitle();
 
 	stopMovie();
-	stopCameoMovie();
+	if (m_cameoVideoStream || m_cameoVideoBuffer)
+		stopCameoMovie();
 
 	// remove any build available status
 	placeBuildAvailable( NULL, NULL );

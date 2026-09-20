@@ -83,8 +83,10 @@
 
 #include "GameNetwork/NetworkInterface.h"
 #include "GameNetwork/GameInfo.h"
+#ifdef _WIN32
 #include "GameNetwork/GameSpyOverlay.h"
 #include "GameNetwork/GameSpy/BuddyThread.h"
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -3078,8 +3080,10 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 			{
 				ToggleDiplomacy( FALSE );
 			}
+			#ifdef _WIN32
 			else if( TheShell && TheShell->isShellActive() && TheGameSpyBuddyMessageQueue)
 				GameSpyToggleOverlay(GSOVERLAY_BUDDY);
+			#endif
 			disp = DESTROY_MESSAGE;
 			break;
 
@@ -3250,8 +3254,8 @@ GameMessageDisposition CommandTranslator::translateGameMessage(const GameMessage
 				#endif
 				{
 					TheWritableGlobalData->m_TiVOFastMode = 1 - TheGlobalData->m_TiVOFastMode;
-					TheInGameUI->message( UnicodeString( L"m_TiVOFastMode: %s" ),
-																TheGlobalData->m_TiVOFastMode ? L"ON" : L"OFF" );
+					TheInGameUI->message( UnicodeString( u"m_TiVOFastMode: %s" ),
+														TheGlobalData->m_TiVOFastMode ? u"ON" : u"OFF" );
 				}
 			}  // end if
 

@@ -338,7 +338,8 @@ void PolygonTrigger::deleteTriggers(void)
 	PolygonTrigger *pList = ThePolygonTriggerListPtr;	
 	ThePolygonTriggerListPtr = NULL;
 	s_currentID = 1;
-	pList->deleteInstance();
+	if (pList)
+		pList->deleteInstance();
 }
 
 /**

@@ -613,6 +613,10 @@ static void placeNetworkBuildingsForPlayer(Int slotNum, const GameSlot *pSlot, P
 // ------------------------------------------------------------------------------------------------
 LoadScreen *GameLogic::getLoadScreen( Bool loadingSaveGame )
 {
+#ifndef _WIN32
+	(void)loadingSaveGame;
+	return NULL;
+#else
 	switch (m_gameMode) 
 	{
 	case GAME_SHELL:
@@ -649,6 +653,7 @@ LoadScreen *GameLogic::getLoadScreen( Bool loadingSaveGame )
 	default:
 		return NULL;
 	}
+#endif
 
 }
 

@@ -38,12 +38,14 @@
 
 #include "GameNetwork/LANAPICallbacks.h"
 #include "GameNetwork/GameMessageParser.h"
+#if defined(_WIN32)
 #include "GameNetwork/GameSpy/PeerDefs.h"
-#include "GameNetwork/NetworkUtil.h"
+#endif
+#include "GameNetwork/networkutil.h"
 #include "GameLogic/GameLogic.h"
 #include "Common/RandomValue.h"
 #include "Common/CRCDebug.h"
-#include "Common/Version.h"
+#include "Common/version.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -622,8 +624,13 @@ void RecorderClass::startRecording(GameDifficulty diff, Int originalGameMode, In
 		}
 		else
 		{
+#if defined(_WIN32)
 			theSlotList = GameInfoToAsciiString(TheGameSpyGame);
 			localIndex = TheGameSpyGame->getLocalSlotNum();
+#else
+			// Native Linux is explicitly offline until the accepted network milestone.
+			theSlotList = GameInfoToAsciiString(&m_gameInfo);
+#endif
 		}
 	}
 	else
@@ -1164,7 +1171,7 @@ Bool RecorderClass::playbackFile(AsciiString filename)
  * Read a unicode string from the current file position. The string is assumed to be 0-terminated.
  */
 UnicodeString RecorderClass::readUnicodeString() {
-	UnsignedShort str[1024] = L"";
+	WideChar str[1024] = u"";
 	Int index = 0;
 
 	Int c = fgetwc(m_file);
@@ -1182,7 +1189,7 @@ UnicodeString RecorderClass::readUnicodeString() {
 		}
 		str[index] = c;
 	}
-	str[1023] = L'\0';
+	str[1023] = u'\0';
 
 	UnicodeString retval(str);
 	return retval;
@@ -1500,7 +1507,7 @@ AsciiString RecorderClass::getReplayExtention() {
  */
 AsciiString RecorderClass::getLastReplayFileName() 
 {
-#if defined(_DEBUG) || defined(_INTERNAL)
+#if (defined(_DEBUG) || defined(_INTERNAL)) && defined(_WIN32)
 	if (TheNetwork && TheGlobalData->m_saveStats)
 	{
 		GameInfo *game = NULL;

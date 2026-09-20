@@ -42,6 +42,10 @@
 #include "GameLogic/GameLogic.h"
 #include "GameNetwork/GameInfo.h"
 
+#ifndef _WIN32
+#include <filesystem>
+#endif
+
 // GLOBALS ////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef _INTERNAL
@@ -458,6 +462,18 @@ void GameStateMap::xfer( Xfer *xfer )
 // ------------------------------------------------------------------------------------------------
 void GameStateMap::clearScratchPadMaps( void )
 {
+#ifndef _WIN32
+	const std::filesystem::path saveDirectory(TheGameState->getSaveDirectory().str());
+	std::error_code error;
+	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(saveDirectory, error))
+	{
+		if (!entry.is_regular_file(error))
+			continue;
+		AsciiString extension(entry.path().extension().string().c_str());
+		if (extension.compareNoCase(".map") == 0)
+			std::filesystem::remove(entry.path(), error);
+	}
+#else
 
 	// remember the current directory
 	char currentDirectory[ _MAX_PATH ];
@@ -522,5 +538,6 @@ void GameStateMap::clearScratchPadMaps( void )
 
 	// restore our directory to the current directory
 	SetCurrentDirectory( currentDirectory );
+#endif
 
 }  // end clearScratchPadMaps

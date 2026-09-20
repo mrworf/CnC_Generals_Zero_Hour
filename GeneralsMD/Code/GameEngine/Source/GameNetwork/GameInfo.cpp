@@ -29,9 +29,10 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "Common/CRCDebug.h"
-#include "Common/File.h"
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/GameState.h"
+#include "Common/GlobalData.h"
 #include "GameClient/GameText.h"
 #include "GameClient/MapUtil.h"
 #include "Common/MultiplayerSettings.h"
@@ -308,7 +309,7 @@ void GameInfo::reset( void )
 	m_gameID = 0;
 	m_mapName = AsciiString("NOMAP");
 	m_mapMask = 0;
-	m_seed = GetTickCount(); //GameClientRandomValue(0, INT_MAX - 1);
+	m_seed = timeGetTime(); //GameClientRandomValue(0, INT_MAX - 1);
 	m_useStats = TRUE;
 	m_surrendered = FALSE;
   m_oldFactionsOnly = FALSE;
@@ -782,7 +783,7 @@ void GameInfo::adjustSlotsForMap()
 		// now go through and close the appropriate number of slots.
 		// note that no players are kicked in this process, we leave
 		// that up to the user.
-		for (i = 0; i < MAX_SLOTS; ++i)
+		for (Int i = 0; i < MAX_SLOTS; ++i)
 		{
 			// we have room for more players, if this slot is unoccupied, set it to open.
 			GameSlot *slot = getSlot(i);
@@ -1154,7 +1155,7 @@ Bool ParseAsciiStringToGameInfo(GameInfo *game, AsciiString options)
 								break;
 							}
 							UnicodeString name;
-              				name.set(MultiByteToWideCharSingleLine(slotValue.str() +1).c_str());
+							name.translate(AsciiString(slotValue.str() + 1));
 
 							//DEBUG_LOG(("ParseAsciiStringToGameInfo - name is %s\n", slotValue.str()+1));
 							
@@ -1617,5 +1618,3 @@ void SkirmishGameInfo::xfer( Xfer *xfer )
 void SkirmishGameInfo::loadPostProcess( void )
 {
 }  // end loadPostProcess
-
-

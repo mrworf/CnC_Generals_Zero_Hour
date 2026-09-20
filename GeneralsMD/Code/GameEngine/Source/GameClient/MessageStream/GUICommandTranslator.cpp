@@ -54,7 +54,7 @@
 #endif
 
 // PRIVATE ////////////////////////////////////////////////////////////////////////////////////////
-static enum CommandStatus
+enum CommandStatus
 {
 	COMMAND_INCOMPLETE = 0,
 	COMMAND_COMPLETE
@@ -513,5 +513,4 @@ GameMessageDisposition GUICommandTranslator::translateGameMessage(const GameMess
 	return disp;
 
 }  // end translateMessage
-
 

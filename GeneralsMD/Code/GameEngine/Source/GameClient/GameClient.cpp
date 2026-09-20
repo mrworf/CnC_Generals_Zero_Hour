@@ -189,9 +189,12 @@ GameClient::~GameClient()
 	TheWindowManager = NULL;
 
 	// delete the font library
-	TheFontLibrary->reset();
-	delete TheFontLibrary;
-	TheFontLibrary = NULL;
+	if (TheFontLibrary)
+	{
+		TheFontLibrary->reset();
+		delete TheFontLibrary;
+		TheFontLibrary = NULL;
+	}
 
 	delete TheMouse;
 	TheMouse = NULL;

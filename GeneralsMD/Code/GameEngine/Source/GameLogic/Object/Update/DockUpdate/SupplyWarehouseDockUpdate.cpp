@@ -37,6 +37,7 @@
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/AIPathfind.h"
+#include "GameLogic/LogicRandomValue.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...

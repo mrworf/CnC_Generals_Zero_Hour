@@ -50,6 +50,7 @@
 
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/LogicRandomValue.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/Weapon.h"
@@ -827,7 +828,7 @@ Bool SpecialAbilityUpdate::isWithinStartAbilityRange() const
   //stopping.
   Real range = data->m_startAbilityRange;
   const Real UNDERSIZE = PATHFIND_CELL_SIZE_F * 0.25f;
-  range = __max( 0.0f, range - UNDERSIZE );
+  range = std::max( 0.0f, range - UNDERSIZE );
 
   if( m_withinStartAbilityRange )
   {
@@ -907,7 +908,7 @@ Bool SpecialAbilityUpdate::isWithinAbilityAbortRange() const
   //stopping.
   Real range = data->m_startAbilityRange;
   const Real UNDERSIZE = PATHFIND_CELL_SIZE_F * 0.25f;
-  range = __max( 0.0f, range - UNDERSIZE );
+  range = std::max( 0.0f, range - UNDERSIZE );
 
   Real fDistSquared = 0.0f;
   Object *target = NULL;

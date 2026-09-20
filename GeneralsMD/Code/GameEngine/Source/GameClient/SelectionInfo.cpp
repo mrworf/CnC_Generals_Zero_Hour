@@ -23,6 +23,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"
+#include "Common/GlobalData.h"
 
 #include "GameLogic/Damage.h"
 #include "GameLogic/Module/ContainModule.h"
@@ -72,7 +73,7 @@ PickDrawableStruct::PickDrawableStruct() : drawableListToFill(NULL)
 {
 	//Added By Sadullah Nader
 	//Initializations inserted
-	drawableListToFill = FALSE;
+	drawableListToFill = NULL;
 	//
 	forceAttackMode = TheInGameUI->isInForceAttackMode();
 	UnsignedInt pickType = getPickTypesForContext(forceAttackMode);

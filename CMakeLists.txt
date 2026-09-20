@@ -219,6 +219,8 @@ target_include_directories(zh_original_lifecycle_spine PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
 )
 target_link_libraries(zh_original_lifecycle_spine PRIVATE zh_build_options)
+target_compile_options(zh_original_lifecycle_spine PRIVATE
+  $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-ffunction-sections;-fdata-sections>)
 
 add_library(zh_original_lifecycle STATIC
   GeneralsMD/Code/GameEngine/Source/Common/System/SubsystemInterface.cpp
@@ -241,16 +243,22 @@ add_library(zh_original_config_spine OBJECT
 )
 add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Language.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp
   GeneralsMD/Code/GameEngine/Source/Common/Dict.cpp
   GeneralsMD/Code/GameEngine/Source/Common/Audio/AudioEventRTS.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Audio/DynamicAudioEventInfo.cpp
   GeneralsMD/Code/GameEngine/Source/Common/DamageFX.cpp
   GeneralsMD/Code/GameEngine/Source/Common/MultiplayerSettings.cpp
   GeneralsMD/Code/GameEngine/Source/Common/RTS/Money.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/RTS/MissionStats.cpp
   GeneralsMD/Code/GameEngine/Source/Common/RTS/SpecialPower.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/GameType.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/List.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/Geometry.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/QuotedPrintable.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/Snapshot.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/DataChunk.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/Trig.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/Upgrade.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp
@@ -275,20 +283,69 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/Common/System/StreamingArchiveFile.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/XferCRC.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/MessageStream.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Recorder.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/PartitionSolver.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/StatsCollector.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/CDManager.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateGlobals.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Audio/AudioRequest.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Audio/GameMusic.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Audio/GameSounds.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GameText.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Color.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameFont.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/LanguageFilter.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/Drawable.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindow.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowLayout.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetPushButton.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetCheckBox.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetHorizontalSlider.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetVerticalSlider.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetTabControl.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetComboBox.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetListBox.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetProgressBar.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetRadioButton.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetTextEntry.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WinInstanceData.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/AnimateWindowManager.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/SelectionInfo.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GameClientDispatch.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/CommandXlat.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/GUICommandTranslator.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/HintSpy.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/HotKey.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/LookAtXlat.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/PlaceEventTranslator.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/SelectionXlat.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/WindowXlat.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/RadiusDecal.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/System/Anim2D.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/System/RayEffect.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/System/Image.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/Terrain/TerrainRoads.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/Water.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AI.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/ScriptEngine.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/ScriptActions.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/ScriptConditions.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/ObjectTypes.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/CommandButtonHuntUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DockUpdate/SupplyWarehouseDockUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DockUpdate/DockUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProductionUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/SpecialAbilityUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/StickyBombUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/BattlePlanUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/OCLUpdate.cpp
   GeneralsMD/Code/GameEngine/Source/Common/INI/INIAiData.cpp
   GeneralsMD/Code/GameEngine/Source/Common/INI/INIAnimation.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Armor.cpp
@@ -332,6 +389,8 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/Scripts.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/System/CrateSystem.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogic.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogicDispatch.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/System/CaveSystem.cpp
   GeneralsMD/Code/GameEngine/Source/GameNetwork/GameSpy/Chat.cpp
   GeneralsMD/Code/GameEngine/Source/Common/INI/INIParticleSys.cpp
   GeneralsMD/Code/GameEngine/Source/Common/RTS/PlayerTemplate.cpp
@@ -375,6 +434,18 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/GameClient/VideoPlayer.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/View.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBar.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarBeacon.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarCommand.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarMultiSelect.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarOCLTimer.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarObserver.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarStructureInventory.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarUnderConstruction.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarCallback.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Diplomacy.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/InGameChat.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/QuitMenu.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarScheme.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/OptionsMenu.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Shell/Shell.cpp
@@ -390,6 +461,9 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SimpleObjectIterator.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/AutoHealBehavior.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/BehaviorModule.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/BridgeBehavior.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/BridgeTowerBehavior.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/RebuildHoleBehavior.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/GenerateMinefieldBehavior.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/SpecialPowerCompletionDie.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/ObjectDefectionHelper.cpp
@@ -407,6 +481,12 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/SmartBombTargetHomingUpdate.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/UpdateModule.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/System/Damage.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/Drawable/Update/BeaconClientUpdate.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/FileTransfer.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/GameSpy/Thread/ThreadUtils.cpp
+  GeneralsMD/Code/Libraries/Source/Compression/CompressionManager.cpp
+  GeneralsMD/Code/Libraries/Source/Compression/EAC/btreedecode.cpp
+  GeneralsMD/Code/Libraries/Source/Compression/EAC/huffdecode.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/matrix3d.cpp
   GeneralsMD/Code/GameEngine/Source/Common/RecorderState.cpp
   GeneralsMD/Code/GameEngine/Source/Common/RTS/Energy.cpp
@@ -416,10 +496,12 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/GameClient/Shadow.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindow.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManager.cpp
+  GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManagerScript.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowTransitionsStyles.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetStaticText.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIGroup.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIPlayer.cpp
+  GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AISkirmishPlayer.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIStates.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/AI/TurretAI.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/Map/PolygonTrigger.cpp
@@ -431,6 +513,10 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProneUpdate.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/VictoryConditions.cpp
   GeneralsMD/Code/GameEngine/Source/GameNetwork/IPEnumeration.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/GameInfo.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/GameMessageParser.cpp
+  GeneralsMD/Code/GameEngine/Source/GameNetwork/NetworkLinuxFactory.cpp
+  src/original_runtime/linux_legacy_boundary.cpp
   src/original_runtime/posix_crash.cpp
   src/original_runtime/well_known_keys.cpp
 )
@@ -445,6 +531,7 @@ foreach(config_target zh_original_config_spine zh_original_config_providers)
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/Compression"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
   target_link_libraries(${config_target} PRIVATE zh_build_options)
@@ -701,6 +788,41 @@ if(ZH_BUILD_TESTS)
     --library "$<TARGET_FILE:zh_data>"
     --library "$<TARGET_FILE:zh_os_posix>")
   set_tests_properties(original_data_startup_provider_removal PROPERTIES LABELS "original-data-startup;source-identity")
+  add_executable(original_headless_update_tests
+    tests/original_lifecycle/test_headless_update.cpp
+    tests/original_lifecycle/headless_reset_boundary.cpp
+    $<TARGET_OBJECTS:zh_original_lifecycle_spine>
+    $<TARGET_OBJECTS:zh_original_config_spine>)
+  target_include_directories(original_headless_update_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+  target_link_libraries(original_headless_update_tests PRIVATE
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
+  target_link_options(original_headless_update_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-headless-update.link.map")
+  add_test(NAME original_headless_update COMMAND original_headless_update_tests)
+  set_tests_properties(original_headless_update PROPERTIES LABELS "original-headless-update;source-identity")
+  add_test(NAME original_headless_update_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_headless_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-headless-update.link.map"
+    --executable "$<TARGET_FILE:original_headless_update_tests>"
+    --provider-target zh_original_config_providers
+    --spine-target zh_original_lifecycle_spine)
+  set_tests_properties(original_headless_update_identity PROPERTIES LABELS "original-headless-update;source-identity")
+  add_test(NAME original_headless_update_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target original_headless_update_tests
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-headless-update.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member GameLogic.cpp.o
+    --required-symbol TheGameLogic)
+  set_tests_properties(original_headless_update_provider_removal PROPERTIES LABELS "original-headless-update;source-identity")
   add_executable(original_lifecycle_subsystem_tests
     tests/original_lifecycle/test_subsystem_lifecycle.cpp)
   target_include_directories(original_lifecycle_subsystem_tests PRIVATE

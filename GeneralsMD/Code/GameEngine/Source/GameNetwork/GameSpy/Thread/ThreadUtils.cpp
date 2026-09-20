@@ -28,10 +28,22 @@
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
+#ifndef _WIN32
+#include <codecvt>
+#include <locale>
+#endif
+
 //-------------------------------------------------------------------------
 
 std::wstring MultiByteToWideCharSingleLine( const char *orig )
 {
+#ifndef _WIN32
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+	std::wstring ret = converter.from_bytes(orig ? orig : "");
+	for (wchar_t &value : ret)
+		if (value == L'\n' || value == L'\r') value = L' ';
+	return ret;
+#else
 	Int len = strlen(orig);
 	WideChar *dest = NEW WideChar[len+1];
 
@@ -60,10 +72,17 @@ std::wstring MultiByteToWideCharSingleLine( const char *orig )
 	std::wstring ret = dest;
 	delete dest;
 	return ret;
+#endif
 }
 
 std::string WideCharStringToMultiByte( const WideChar *orig )
 {
+#ifndef _WIN32
+	if (!orig) return std::string();
+	std::u16string value(orig);
+	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
+	return converter.to_bytes(value);
+#else
 	std::string ret;
 	Int len = WideCharToMultiByte( CP_UTF8, 0, orig, wcslen(orig), NULL, 0, NULL, NULL ) + 1;
 	if (len > 0)
@@ -75,7 +94,7 @@ std::string WideCharStringToMultiByte( const WideChar *orig )
 		delete dest;
 	}
 	return ret;
+#endif
 }
 
 //-------------------------------------------------------------------------
-

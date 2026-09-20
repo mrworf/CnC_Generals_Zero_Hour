@@ -28,10 +28,15 @@
 #include "Common/ArchiveFileSystem.h"
 #include "Common/CommandLine.h"
 #include "Common/CRCDebug.h"
+#include "Common/GlobalData.h"
 #include "Common/LocalFileSystem.h"
-#include "Common/Version.h"
+#include "Common/version.h"
 #include "GameClient/TerrainVisual.h" // for TERRAIN_LOD_MIN definition
 #include "GameClient/GameText.h"
+
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -1106,14 +1111,23 @@ Int parseMod(char *args[], Int num)
 		}
 
 		// now check for dir-ness
+		#ifdef _WIN32
 		struct _stat statBuf;
 		if (_stat(modPath.str(), &statBuf) != 0)
+		#else
+		struct stat statBuf;
+		if (stat(modPath.str(), &statBuf) != 0)
+		#endif
 		{
 			DEBUG_LOG(("Could not _stat() mod.\n"));
 			return 2; // could not stat the file/dir.
 		}
 
+		#ifdef _WIN32
 		if (statBuf.st_mode & _S_IFDIR)
+		#else
+		if (S_ISDIR(statBuf.st_mode))
+		#endif
 		{
 			if (!modPath.endsWith("\\") && !modPath.endsWith("/"))
 				modPath.concat('\\');
@@ -1293,5 +1307,3 @@ void parseCommandLine(int argc, char *argv[])
 
 	TheArchiveFileSystem->loadMods();
 }
-
-

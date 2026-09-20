@@ -197,7 +197,9 @@ GameEngine::GameEngine( void )
 	m_quitting = FALSE;
 	m_isActive = FALSE;
 
+#ifdef _WIN32
 	_Module.Init(NULL, ApplicationHInstance);
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -212,10 +214,14 @@ GameEngine::~GameEngine()
 //	delete TheShell;
 //	TheShell = NULL;
 
-	TheGameResultsQueue->endThreads();
+	if (TheGameResultsQueue)
+		TheGameResultsQueue->endThreads();
 
-	TheSubsystemList->shutdownAll();
-	delete TheSubsystemList;
+	if (TheSubsystemList)
+	{
+		TheSubsystemList->shutdownAll();
+		delete TheSubsystemList;
+	}
 	TheSubsystemList = NULL;
 
 	delete TheNetwork;
@@ -235,7 +241,9 @@ GameEngine::~GameEngine()
 
 	Drawable::killStaticImages();
 
+#ifdef _WIN32
 	_Module.Term();
+#endif
 
 #ifdef PERF_TIMERS
 	PerfGather::termPerfDump();
@@ -720,6 +728,8 @@ void GameEngine::reset( void )
 
 	WindowLayout *background = TheWindowManager->winCreateLayout("Menus/BlankWindow.wnd");
 	DEBUG_ASSERTCRASH(background,("We Couldn't Load Menus/BlankWindow.wnd"));
+	if (background == NULL)
+		throw std::runtime_error("could not load Menus/BlankWindow.wnd");
 	background->hide(FALSE);
 	background->bringForward();
 	background->getFirstWindow()->winClearStatus(WIN_STATUS_IMAGE);
