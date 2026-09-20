@@ -61,7 +61,7 @@ M19 compiles ten bounded original WWLib/WWMath/WWSaveLoad and RefPack units, but
 |---|---|---|---|---|---|---|
 | 01 | [Allocator bootstrap and ABI](milestone_26_plan_01_slice_01.md) | Actual original allocator and bounded pre-VFS pool configuration execute safely across process/target boundaries. | M19 | complete | `1742a84f06d7b8b6e6c82e317e92c56b1cf16518` | 2 focused tests pass in all four presets |
 | 02 | [Strings and process services](milestone_26_plan_01_slice_02.md) | Actual original ASCII/UTF-16 strings, synchronization, logging seam, and Version lifetime execute on the allocator. | slice 01 | complete | `1605a6487957b436fac1e949505847a0ca32161c` | 3 cumulative focused tests pass in all four presets |
-| 03 | [FPU and dependency evidence](milestone_26_plan_01_slice_03.md) | The original FPU body is shared and characterized; checked ledger and target-specific identity gates cover M26. | slices 01-02 | complete | this slice commit | 10 focused tests and 72 full-suite tests pass in all four presets; ASan/UBSan 10/10 |
+| 03 | [FPU and dependency evidence](milestone_26_plan_01_slice_03.md) | The original FPU body is shared and characterized; checked ledger and target-specific identity gates cover M26. | slices 01-02 | complete | `89eeca9506aff87649bb0ee23334af83f18a51b8` | 10 focused tests and 72 full-suite tests pass in all four presets; ASan/UBSan 10/10 |
 
 ## Cross-slice concerns
 

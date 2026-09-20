@@ -231,21 +231,23 @@ milestones:
   - id: M26
     title: "original process allocation and ABI foundation"
     file: delivery/milestones/cnc-generals-zero-hour/M26-original-process-foundation.md
-    status: in_progress
+    status: completed
     dependencies: [M19]
     remediation_ids: [SE-001, SE-002, SE-010, RC-001, RC-002, RC-004, RC-006, RC-007, RC-008, RC-011]
     optional: false
     started_at: "2026-09-20T15:55:50Z"
-    completed_at: null
-    evidence: null
-    notes: "Independent original allocation/string/process consumers; no whole-engine or retail requirement."
+    completed_at: "2026-09-20T16:18:08Z"
+    commit_hash: 89eeca9506aff87649bb0ee23334af83f18a51b8
+    evidence: "evidence/qa/cnc-generals-zero-hour/m26-original-process-foundation-2026-09-20.md; focused original-process 10/10 and canonical asset-free 72/72 passed in each GCC/Clang Debug/Release preset; Clang Debug ASan/UBSan passed 10/10 with explicit ownership counts."
+    notes: "Accepted without whole-engine, retail, GPU, display, audio-device, or network requirements. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_26_plan_01.md; slice commits: 1742a84f06d7b8b6e6c82e317e92c56b1cf16518, 1605a6487957b436fac1e949505847a0ca32161c, 89eeca9506aff87649bb0ee23334af83f18a51b8."
   - id: M27
     title: "original data codecs and map metadata providers"
     file: delivery/milestones/cnc-generals-zero-hour/M27-original-data-providers.md
-    status: pending
+    status: in_progress
     dependencies: [M26, M4]
     remediation_ids: [SE-002, SE-003, SE-007, SE-010, RC-001, RC-002, RC-004, RC-006, RC-007, RC-008, RC-009]
     optional: false
+    started_at: "2026-09-20T16:18:08Z"
     completed_at: null
     evidence: null
     notes: "Independent original parser/codec/map metadata consumers; full INI dispatch and coupled registry belong to M20."
