@@ -2,7 +2,7 @@ schema_version: 1
 workflow: milestone-delivery
 delivery_goal:
   product_id: cnc-generals-zero-hour
-  status: in_progress
+  status: blocked
   packet: delivery/milestones/cnc-generals-zero-hour/status.yaml
   packet_revision: sha256:6a9d98bcec72db2b1c1658a305ffea8ea4dd004d76f8efcce4b43d166fbe3ace
   source_commit: 38b608d9109d13ad1c6e3a527fe34893512d4d3f
@@ -14,10 +14,19 @@ delivery_goal:
   milestone_ids: [M19, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
   execution: autonomous
   current_milestone: M20
-  blocker_type: null
-  blocker: null
-  blockers: []
-  resume_point: "Run the M20 minimal-slice transaction from delivery/milestones/cnc-generals-zero-hour/M20-original-lifecycle.md; create delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md and its slice plans before production edits."
+  blocker_type: planning_stale
+  blocker: "M20_SOURCE_ORDER_DEFECT: the original GameEngine lifecycle requires concrete GameLogic, GameClient/W3D, module/object and media providers that the active packet places in dependent M21-M23 milestones"
+  blockers:
+    - type: UPSTREAM_REQUIRED
+      source: M20_SOURCE_ORDER_DEFECT
+      evidence_id: M20-LIFECYCLE-DEPENDENCY
+      requirement: "Reconcile M20-M23 contracts and dependency order against the actual original GameEngine::init/execute provider graph"
+      expected_artifact: "A readiness-approved replacement packet with an executable original-source lifecycle boundary and no reduced classes, empty registries, parallel globals or success-returning fake providers"
+      milestone: M20
+      slice: 01
+      required_workflow: "software architecture revalidation followed by delivery-planning-orchestrator"
+      unblock_condition: "Replacement packet either narrows pre-provider M20 and moves full lifecycle acceptance after real providers, or orders/combines real M21-M23 providers before lifecycle acceptance"
+  resume_point: "Use evidence/qa/cnc-generals-zero-hour/M20-original-lifecycle-blocker.md for architecture reconciliation and delivery replanning. Preserve M19 completion. Resume M20 only from a readiness-approved replacement packet and a new governing plan; do not resume the discarded synthetic lifecycle design."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
   adopted_from_prior_goal:

@@ -222,14 +222,14 @@ milestones:
   - id: M20
     title: "original engine initialization and data lifecycle"
     file: delivery/milestones/cnc-generals-zero-hour/M20-original-lifecycle.md
-    status: in_progress
+    status: blocked
     dependencies: [M19, M4]
     remediation_ids: [SE-003, SE-010]
     optional: false
     started_at: "2026-09-20T14:55:33Z"
     completed_at: null
-    evidence: null
-    notes: "New original-source provider; historical component tests do not establish this outcome."
+    evidence: "evidence/qa/cnc-generals-zero-hour/M20-original-lifecycle-blocker.md proves an UPSTREAM_REQUIRED source-order dependency defect: original GameEngine::init requires real GameLogic, GameClient/W3D, module/object, particle and media providers assigned to M21-M23 before it can satisfy M20 lifecycle acceptance."
+    notes: "Blocked without production changes. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md; blocker commit: 418b1e6. Requires delivery architecture reconciliation and readiness-approved replanning of M20-M23; do not use a reduced GameEngine, empty registry or parallel lifecycle."
   - id: M21
     title: "original map and simulation execution"
     file: delivery/milestones/cnc-generals-zero-hour/M21-original-simulation.md
