@@ -195,6 +195,13 @@ target_include_directories(zh_original_data
 )
 target_link_libraries(zh_original_data PUBLIC zh_data zh_original_process zh_build_options)
 
+add_library(zh_original_resources STATIC
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/OriginalCpuPresentation.cpp
+)
+target_include_directories(zh_original_resources PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(zh_original_resources PUBLIC
+  zh_original_data zh_renderer_sdl_gpu zh_ui zh_audio_miniaudio zh_build_options)
+
 add_library(zh_persistence STATIC src/persistence/save.cpp src/persistence/replay.cpp)
 target_include_directories(zh_persistence PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_persistence PUBLIC zh_wwsupport zh_build_options)
@@ -351,6 +358,32 @@ install(FILES data/corpus/video-variants.tsv DESTINATION share/generals-zero-hou
 if(ZH_BUILD_TESTS)
   enable_testing()
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_executable(original_resources_cpu_tests tests/original_resources/test_cpu_presentation.cpp)
+  target_link_libraries(original_resources_cpu_tests PRIVATE zh_original_resources)
+  target_link_options(original_resources_cpu_tests PRIVATE
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-resources-cpu.link.map")
+  add_test(NAME original_resources_cpu COMMAND original_resources_cpu_tests)
+  set_tests_properties(original_resources_cpu PROPERTIES LABELS "original-resources;source-identity")
+  add_test(NAME original_resources_cpu_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m26_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-resources-cpu.link.map"
+    --executable "$<TARGET_FILE:original_resources_cpu_tests>"
+    --target zh_original_resources
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/OriginalCpuPresentation.cpp"
+    --symbol "zh::original_resources::CpuPresentation::initialize"
+    --symbol "zh::original_resources::provider_cpu_identity"
+    --witness "original-resources CPU: ok")
+  set_tests_properties(original_resources_cpu_identity PROPERTIES LABELS "original-resources;source-identity")
+  add_test(NAME original_resources_extraction_provenance COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m28_original_provenance.py"
+    --root "${CMAKE_CURRENT_SOURCE_DIR}")
+  set_tests_properties(original_resources_extraction_provenance PROPERTIES LABELS "original-resources;source-identity")
+  add_test(NAME original_resources_dependency_ledger COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_dependency_ledger.py"
+    --root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --ledger "${CMAKE_CURRENT_SOURCE_DIR}/docs/original-runtime-dependency-ledger.tsv")
+  set_tests_properties(original_resources_dependency_ledger PROPERTIES LABELS "original-resources;source-identity")
   add_executable(original_data_config_tests tests/original_data/test_config.cpp)
   target_link_libraries(original_data_config_tests PRIVATE zh_original_data)
   target_link_options(original_data_config_tests PRIVATE
