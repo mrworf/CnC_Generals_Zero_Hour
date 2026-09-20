@@ -10,13 +10,17 @@ Independent local processes use original network consumers and simulation for sy
 
 ## Scope
 
-Adapt original packet/reliability/message consumers to POSIX transport. Audit enum/bool/coordinate/UTF-16 widths, bounds and timeouts; integrate discovery/direct-connect, lobby, map transfer, start synchronization and disconnect.
+Complete original packet/reliability/message integration with POSIX transport beyond M20's offline runtime/link closure. Audit enum/bool/coordinate/UTF-16 widths, bounds and timeouts; integrate discovery/direct-connect, lobby, map transfer, start synchronization and disconnect. M20 preserves source-defined offline TheNetwork = NULL and explicitly rejects unsupported network entry until this implementation exists.
+
+Allocation rule: the [runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md) RC-001–RC-004 overrides any historical allocation below. M20 owns every transitive implementation dependency of its accepted original offline initialization, post-load, update, reset and destruction. This contract may add later feature behavior and full domain acceptance, but cannot supply a deferred half of M20's runtime. Existing acceptance clauses and negative tests remain required in full.
 
 ## Explicit Exclusions
 
 Complete-match user acceptance is M16 after M15. No second host, Windows client or external matchmaking required. Preserve valid component implementations/tests. No ARM64, base Generals executable/tools, retail redistribution or gameplay rewrite.
 
 ## Source Requirements
+
+Runtime reconciliation RC-002/RC-003 preserves this domain's whole acceptance chain; RC-004 original-behavior identity rules apply. Exact authority revisions are recorded in status.yaml.
 
 [Migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-008; SE-010 assurance/evidence constraints. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 govern preservation, stack, formats and validation. Revisions/commits are in status.yaml.
 

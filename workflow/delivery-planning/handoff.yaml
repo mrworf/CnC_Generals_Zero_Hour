@@ -4,16 +4,16 @@ product_id: cnc-generals-zero-hour
 status: ready_for_implementation
 source:
   mode: CHANGE_PLAN
-  path: docs/zero-hour-source-engine-migration.md
-  revision: sha256:4e9523ec2854750b896716bfd4583e47fb65136a9a2188db9dcd4ac9b552c817
-  repository_commit: 38b608d9109d13ad1c6e3a527fe34893512d4d3f
-  change_id: SOURCE-ENGINE-2026-09-20
-  remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-009, SE-010]
+  path: docs/zero-hour-runtime-closure-reconciliation.md
+  revision: sha256:b6a6138998e8aec0e6308f305c8d875f59e6925b136cabd2c51e54c307b18bfb
+  repository_commit: 40a1c383e04c931d938bdc5a0fe6671e0a4af249
+  change_id: RUNTIME-CLOSURE-2026-09-20
+  remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005]
 planning:
-  repository_commit: 6bc4b5507be57d5787675e1391e48c77e48e146e
+  repository_commit: null
 milestones:
   manifest: delivery/milestones/cnc-generals-zero-hour/status.yaml
-  packet_revision: sha256:6a9d98bcec72db2b1c1658a305ffea8ea4dd004d76f8efcce4b43d166fbe3ace
+  packet_revision: sha256:682b86835511ae4e5eb370055bf1cd299dac86e4065a9f704566c95340564234
   revision_command: "find delivery/milestones/cnc-generals-zero-hour -maxdepth 1 -type f -name '*.md' -print0 | sort -z | xargs -0 sha256sum | sha256sum"
 readiness:
   status: READY_WITH_EXTERNAL_DEPENDENCIES
@@ -28,12 +28,12 @@ external_dependencies:
     owner: developer/host-session-owner
     first_consuming_milestone: M22
     completion_evidence: Fresh accessible RTX 4070 Vulkan session with Khronos validation and passing original-scene device checks. Layer installation and prior component evidence are already recorded.
-    blocking_boundary: M22 original-source GPU acceptance; not M19 entry.
+    blocking_boundary: M22 original-source GPU acceptance; not M20 entry.
   - id: PRE-016
     owner: developer/host-session-owner
     first_consuming_milestone: M22
     completion_evidence: Accessible graphical session for original-scene presentation at M22 and original UI/input acceptance at M23.
-    blocking_boundary: M22/M23 interactive validation; not M19 entry.
+    blocking_boundary: M22/M23 interactive validation; not M20 entry.
   - id: PRE-017
     owner: maintainer/CI
     first_consuming_milestone: M17
@@ -50,12 +50,13 @@ scope_adoption:
   previous_goal: workflow/delivery/state.yaml
   preserve_previous_goal_history: true
   packet_scope: delivery/milestones/cnc-generals-zero-hour/status.yaml#packet_adoption
-  remaining_milestone_ids: [M19, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+  remaining_milestone_ids: [M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
   optional_milestone_ids: [M18]
-  instruction: On explicit delivery resume, preserve the old fixed-membership goal as history and adopt this readiness-approved replacement packet as the remaining-work goal. Use dependency order, not numeric sort. Create fresh milestone plans; do not resume the obsolete M15 slice as if it covered source migration.
+  instruction: On explicit delivery resume, preserve prior goal history and M19 completion, adopt this readiness-approved revised M20 scope and remaining packet, retain M20 plan 01 as superseded and generate plan 02. Use dependency order, not numeric sort. Do not resume the rejected reduced lifecycle.
+  next_governing_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_02.md
 next:
   workflow: implementation
   recommended_skill: milestone-delivery-orchestrator
   action: adopt_replacement_packet_then_plan
-  milestone: M19
+  milestone: M20
   implementation_started: false

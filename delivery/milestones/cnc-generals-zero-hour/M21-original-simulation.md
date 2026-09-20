@@ -10,13 +10,17 @@ Original GameLogic loads maps and advances actual mission/skirmish state, comman
 
 ## Scope
 
-Compile original map/chunk loading, terrain logic, object modules, scripting, AI/pathfinding, player/side setup, command/message routing and victory/defeat. Preserve update order and source ownership.
+Complete original map/chunk loading, terrain logic, object modules, scripting, AI/pathfinding, player/side setup, command/message routing and victory/defeat beyond the runtime already accepted in M20. Preserve update order and source ownership; prove complete mission/skirmish behavior. Existing original GameLogic, registries and all startup/update dependencies come from M20.
+
+Allocation rule: the [runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md) RC-001–RC-004 overrides any historical allocation below. M20 owns every transitive implementation dependency of its accepted original offline initialization, post-load, update, reset and destruction. This contract may add later feature behavior and full domain acceptance, but cannot supply a deferred half of M20's runtime. Existing acceptance clauses and negative tests remain required in full.
 
 ## Explicit Exclusions
 
 Rendered sessions follow M22/M23/M15; full save/replay cross-compiler checks are M24. Preserve valid component implementations/tests. No ARM64, base Generals executable/tools, retail redistribution or gameplay rewrite.
 
 ## Source Requirements
+
+Runtime reconciliation RC-002/RC-003 preserves this domain's whole acceptance chain; RC-004 original-behavior identity rules apply. Exact authority revisions are recorded in status.yaml.
 
 [Migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-004; SE-010 assurance/evidence constraints. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 govern preservation, stack, formats and validation. Revisions/commits are in status.yaml.
 

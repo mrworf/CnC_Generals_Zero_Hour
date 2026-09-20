@@ -10,13 +10,17 @@ Original menus/HUD and input/audio/video managers operate together and route act
 
 ## Scope
 
-Bind SDL to original message translators, WND/gadget callbacks, command queues and camera; render supplied English fonts. Bind original audio/video interfaces to miniaudio/FFmpeg with voice categories, positional audio, ownership, cinematic completion/skip and source subtitles.
+Complete SDL integration with original message translators, WND/gadget callbacks, command queues and camera; render supplied English fonts. Complete original audio/video integration with miniaudio/FFmpeg, voice categories, positional audio, ownership, cinematic completion/skip and source subtitles. M20 already owns all these interfaces/providers required by offline startup/update; this milestone finishes interactive behavior and acceptance.
+
+Allocation rule: the [runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md) RC-001–RC-004 overrides any historical allocation below. M20 owns every transitive implementation dependency of its accepted original offline initialization, post-load, update, reset and destruction. This contract may add later feature behavior and full domain acceptance, but cannot supply a deferred half of M20's runtime. Existing acceptance clauses and negative tests remain required in full.
 
 ## Explicit Exclusions
 
 Persistence assurance is M24; long-session acceptance M15. Preserve original UX; no extra locale shaping without the existing evidence gate. Preserve valid component implementations/tests. No ARM64, base Generals executable/tools, retail redistribution or gameplay rewrite.
 
 ## Source Requirements
+
+Runtime reconciliation RC-002/RC-003 preserves this domain's whole acceptance chain; RC-004 original-behavior identity rules apply. Exact authority revisions are recorded in status.yaml.
 
 [Migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-006; SE-010 assurance/evidence constraints. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 govern preservation, stack, formats and validation. Revisions/commits are in status.yaml.
 

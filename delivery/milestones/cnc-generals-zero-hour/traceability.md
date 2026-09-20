@@ -1,23 +1,41 @@
 # Source traceability
 
-Authority is the accepted [migration supplement](../../../docs/zero-hour-source-engine-migration.md) with the [base plan](../../../docs/zero-hour-linux-port-plan.md) as governing behavior/stack authority; exact revisions and commits are in status.yaml. Baseline is existing native components plus unported original source. The architecture review is evidence only. The historical mappings below preserve initial intent, not implementation assurance.
+Authority is the accepted [runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md), superseding conflicting ordering/allocation in the [migration supplement](../../../docs/zero-hour-source-engine-migration.md), with the [base plan](../../../docs/zero-hour-linux-port-plan.md) as governing behavior/stack authority; exact revisions and commits are in status.yaml. Baseline includes existing native components and M19's bounded original support evidence. The architecture reviews and M20 blocker are evidence only. Historical mappings preserve initial intent, not implementation assurance.
+
+## Runtime reconciliation coverage and moved clauses
+
+| Required source | Current owner | Preserved/moved obligation |
+|---|---|---|
+| RC-001 | M20 | Complete original offline runtime implementation closure; required constructors, vtables, registry callbacks, parsers, update/reset/destruction providers cannot depend on M21–M25. Classification follows source dependencies. |
+| RC-002 original entry/factory and ABI rows | M20 | Original GameMain/GameEngine methods; remaining original UnicodeString/MemoryPool/PCH/CRT callers. M19 ten-provider acceptance preserved without extending its assurance. |
+| RC-002 data and registry rows | M20 | Original VFS/INI/CSF/GlobalData/name keys, object/module/function registries, weapons/locomotors/particles: every required registered provider, actual configuration consumption, ownership and failure behavior. |
+| RC-002 GameClient/GameLogic rows; moved M21 Scope | M20 implementation; M21 full scenarios | Original GameLogic/AI/team/player/crate/radar/victory and every startup/update dependency move into M20. M21 retains full maps, movement/attack, scripts, AI, victory/defeat, malformed map/commands and original-state checkpoints. |
+| RC-002 presentation rows; moved M22 Scope | M20 reachable providers; M22 complete scenes | Original GameClient/W3D/WWShade producers, CPU resources and renderer interface adapters required by offline closure belong to M20 with device-boundary recording/null tests. M22 retains every real scene family, resource/state completion, malformed assets/material failures and zero-error Vulkan visuals/recreation. |
+| RC-002 media/update rows; moved M23 Scope | M20 reachable providers; M23 interactive flows | Original UI/font/media manager interfaces and required audio/message/script/view updates belong to M20. M23 retains menu/HUD/input state transitions, cinematic/audio/subtitle behavior, fonts and focus/error recovery. |
+| RC-002 recorder/game-state rows; moved M24 Scope | M20 startup/post-load/required update; M24 full persistence | Original recorder, GameState/GameStateMap, Xfer/CRC relationships required at runtime belong to M20. M24 retains full round-trip/autosave/playback, corrupt/reference rejection with unchanged state, cross-compiler checkpoints and sanitizers. |
+| RC-002 offline network boundary; M25 Scope | M20 offline link/entry; M25 online match implementation | Required original symbols and source-defined offline null network belong to M20, unsupported entry fails clearly. POSIX lobby/discovery/map transfer/start/commands/disconnect/CRC and faulted local peers remain M25; full match remains M16. |
+| RC-003 | M21–M25, M15–M18 | All domain, playable gameplay, full-match, clean-release and optional Windows criteria retained. Later milestones add only behavior beyond M20's accepted reachable closure and full scenario acceptance. |
+| RC-004 | M20; M21–M25 identity constraints | Actual original class/method/provider/state evidence; real missing-provider failure; four presets, asset-free suite, original consumer sanitizers, fixture/retail init, malformed/factory failure, reverse teardown, CWD/XDG and no-window/GPU mode checks. No startup result counts as playable game completion. |
+| RC-005 | index/status/adoption; M20 successor plan during delivery | Preserve M0–M14/M19 history and blocked M20 plan 01. Adopt committed readiness-approved revision explicitly; create M20 plan 02 during delivery. Readiness checks actual RC-002 edges; no implementation/slice artifact produced by this packet. |
+
+The allocation table supersedes earlier wording that deferred implementation solely by domain label. Every pre-existing test/acceptance clause remains with its listed domain unless strengthened in M20 as a prerequisite runtime test; none is dropped. Shared SE/RC mappings describe implementation plus later integration acceptance, not repeated rewrites.
 
 ## Current remediation coverage
 
 | Required source ID | Provider / acceptance | Original-source evidence obligation |
 |---|---|---|
 | SE-001 | M19; final closure M17 | Every inventory source classified; actual compile/link records; runtime identity and missing-provider negative control; no bootstrap/toy production closure. |
-| SE-002 | M19 | Original portable support, allocators/strings/chunks/codecs; four compilers/configurations and real support sanitizers. |
+| SE-002 | M19 bounded completed support; M20 remaining original consumers | Preserve ten-provider support evidence; port original UnicodeString/MemoryPool and remaining ABI/PCH/CRT consumers in M20, with four configurations and original-consumer sanitizers. |
 | SE-003 | M20 | Original factory/init/INI/CSF/VFS globals, null-device mode and reverse teardown with failures. |
-| SE-004 | M21; whole sessions M15 | Original maps, modules, scripts, AI/pathfinding, commands and victory; actual state checkpoints. |
-| SE-005 | M22; whole sessions M15 | Actual W3D/WWShade/GameClient consumers, real materials/assets, recording and zero-error Vulkan visual acceptance. |
-| SE-006 | M23; whole sessions M15 | Original WND/input/HUD/audio/video managers; real navigation, command transitions, locale and media failures. |
-| SE-007 | M24; gameplay M15; optional import M18 | Original Xfer/SaveGame/recorder/CRC, transactional corrupt-state rejection and cross-compiler replay. |
-| SE-008 | M25; full match M16 | Original network consumers/packets/lockstep, map transfer and independent processes with faults. |
+| SE-004 | M20 required runtime; M21 full scenarios; M15 sessions | Original maps, modules, scripts, AI/pathfinding, commands and victory; actual state checkpoints. |
+| SE-005 | M20 required producers; M22 real scenes; M15 sessions | Actual W3D/WWShade/GameClient consumers, real materials/assets, recording and zero-error Vulkan visual acceptance. |
+| SE-006 | M20 required interfaces/providers; M23 interactive flows; M15 sessions | Original WND/input/HUD/audio/video managers; real navigation, command transitions, locale and media failures. |
+| SE-007 | M20 required recorder/game-state/Xfer/CRC; M24 full scenarios; M15; optional M18 | Original Xfer/SaveGame/recorder/CRC, transactional corrupt-state rejection and cross-compiler replay. |
+| SE-008 | M20 offline required symbols/entry; M25 networking; M16 full match | Original network consumers/packets/lockstep, map transfer and independent processes with faults. |
 | SE-009 | M15, M16, M17; optional M18 | Real campaign/skirmish/factions, persistence/media, original LAN, packaged launch and distro matrix; existing duration/soak requirements retained. |
 | SE-010 | packet index/status; M19–M25 and M15–M18 | Preserve historical facts, qualify component-only assurance, map reopened tests, explicitly adopt replacement goal scope after readiness. |
 
-Every new and affected pending milestone also consumes the supplement's Fixed decisions and boundaries, Engineering order and readiness boundary, and Evidence grades and anti-proxy checks. Repeated mapping separates provider implementation from integrated acceptance, not duplicate implementation. No required item is unmapped or blocked by an unresolved product decision.
+Every affected pending milestone consumes the supplement's Fixed decisions and boundaries and Evidence grades and anti-proxy checks, with Engineering order superseded by RC-001–RC-005. No required item is unmapped or blocked by an unresolved product decision.
 
 ## Historical assurance reopening
 
@@ -112,4 +130,4 @@ M0/M1 support and M3/M4 engine-facing data assurance reopen through M19/M20; M5 
 - Conditional inclusion: Granny or unexpected formats only when ordinary required retail paths demonstrate necessity under §9. Locale and backend alternatives follow their evidence gates.
 - Current evidence: historical retail/archive and Vulkan/validation-layer component tests exist, but do not replace M20–M25 original-source integration. Readiness must re-audit host availability and future clean distro environments. Windows fixtures remain optional.
 - Blocked implementation-required source decisions: none at compilation. External prerequisites are explicit at their consumers and are audited by readiness after compilation.
-- Unmapped implementation-required items: none. SE-001–SE-010 and all base-plan obligations have providers/integrated acceptance owners above; M18 remains separately optional. No implementation work arises solely from review observations.
+- Unmapped implementation-required items: none. RC-001–RC-005, SE-001–SE-010 and all base-plan obligations have providers/integrated acceptance owners above; M18 remains separately optional. No implementation work arises solely from review observations. RC-005 adoption awaits parent readiness and committed handoff; preserved blocked status is delivery history, not an unresolved source decision.

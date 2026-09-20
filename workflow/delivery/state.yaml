@@ -26,7 +26,7 @@ delivery_goal:
       slice: 01
       required_workflow: "software architecture revalidation followed by delivery-planning-orchestrator"
       unblock_condition: "Replacement packet either narrows pre-provider M20 and moves full lifecycle acceptance after real providers, or orders/combines real M21-M23 providers before lifecycle acceptance"
-  resume_point: "Use evidence/qa/cnc-generals-zero-hour/M20-original-lifecycle-blocker.md for architecture reconciliation and delivery replanning. Preserve M19 completion. Resume M20 only from a readiness-approved replacement packet and a new governing plan; do not resume the discarded synthetic lifecycle design."
+  resume_point: "Architecture reconciliation and replanning completed in workflow/delivery-planning/handoff.yaml. On explicit delivery resume preserve this prior goal/history and M19 completion, adopt the new packet and integrated M20 scope, preserve plan 01 and generate milestone_20_plan_02.md. The prior goal remains blocked until adoption; planning did not start implementation."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
   adopted_from_prior_goal:

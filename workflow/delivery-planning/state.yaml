@@ -3,21 +3,21 @@ workflow: delivery-planning
 product_id: cnc-generals-zero-hour
 status: ready_with_external_dependencies
 transaction:
-  parent_commit: 38b608d9109d13ad1c6e3a527fe34893512d4d3f
-  repository_commit: 6bc4b5507be57d5787675e1391e48c77e48e146e
+  parent_commit: 40a1c383e04c931d938bdc5a0fe6671e0a4af249
+  repository_commit: null
   pre_existing_dirty_paths: []
 source:
   mode: CHANGE_PLAN
   type: accepted-migration-plan
-  path: docs/zero-hour-source-engine-migration.md
-  revision: sha256:4e9523ec2854750b896716bfd4583e47fb65136a9a2188db9dcd4ac9b552c817
-  repository_commit: 38b608d9109d13ad1c6e3a527fe34893512d4d3f
+  path: docs/zero-hour-runtime-closure-reconciliation.md
+  revision: sha256:b6a6138998e8aec0e6308f305c8d875f59e6925b136cabd2c51e54c307b18bfb
+  repository_commit: 40a1c383e04c931d938bdc5a0fe6671e0a4af249
 stages:
   compilation:
     status: passed
     packet_manifest: delivery/milestones/cnc-generals-zero-hour/status.yaml
     result: delivery/milestones/cnc-generals-zero-hour/index.md
-    packet_revision: sha256:6a9d98bcec72db2b1c1658a305ffea8ea4dd004d76f8efcce4b43d166fbe3ace
+    packet_revision: sha256:682b86835511ae4e5eb370055bf1cd299dac86e4065a9f704566c95340564234
   readiness:
     status: READY_WITH_EXTERNAL_DEPENDENCIES
     prerequisite_manifest: delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md
@@ -26,7 +26,7 @@ blockers: []
 corrections: []
 resume:
   stage: implementation_scope_adoption
-  milestone: M19
+  milestone: M20
 handoff:
   status: ready_for_implementation
   path: workflow/delivery-planning/handoff.yaml

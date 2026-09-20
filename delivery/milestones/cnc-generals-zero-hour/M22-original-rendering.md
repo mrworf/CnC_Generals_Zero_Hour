@@ -10,13 +10,17 @@ Original W3D/WWShade/GameClient producers render actual retail scenes on the SDL
 
 ## Scope
 
-Port actual DX8Wrapper consumers and material/state/resource semantics. Load W3D/HLOD/animation/textures and map terrain; integrate original camera, terrain, object, lighting, fog/shroud, shadow, particle, water and effect producers.
+Complete actual DX8Wrapper material/state/resource semantics beyond M20's recording/null-device runtime closure. Load W3D/HLOD/animation/textures and map terrain; finish original camera, terrain, object, lighting, fog/shroud, shadow, particle, water and effect producers for complete real scenes on Vulkan. Original GameClient and required resource/registry startup providers already belong to M20.
+
+Allocation rule: the [runtime reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md) RC-001–RC-004 overrides any historical allocation below. M20 owns every transitive implementation dependency of its accepted original offline initialization, post-load, update, reset and destruction. This contract may add later feature behavior and full domain acceptance, but cannot supply a deferred half of M20's runtime. Existing acceptance clauses and negative tests remain required in full.
 
 ## Explicit Exclusions
 
 UI/media flows remain M23; complete sessions M15. Required SDL_GPU gaps follow existing backend escalation, never private API escape hatches. Preserve valid component implementations/tests. No ARM64, base Generals executable/tools, retail redistribution or gameplay rewrite.
 
 ## Source Requirements
+
+Runtime reconciliation RC-002/RC-003 preserves this domain's whole acceptance chain; RC-004 original-behavior identity rules apply. Exact authority revisions are recorded in status.yaml.
 
 [Migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-005; SE-010 assurance/evidence constraints. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 govern preservation, stack, formats and validation. Revisions/commits are in status.yaml.
 

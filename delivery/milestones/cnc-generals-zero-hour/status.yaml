@@ -14,7 +14,13 @@ compiled_from:
     repository_commit: 38b608d9109d13ad1c6e3a527fe34893512d4d3f
     change_id: SOURCE-ENGINE-2026-09-20
     remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-009, SE-010]
-  baseline_repository_commit: 38b608d9109d13ad1c6e3a527fe34893512d4d3f
+  runtime_reconciliation:
+    path: docs/zero-hour-runtime-closure-reconciliation.md
+    revision: sha256:b6a6138998e8aec0e6308f305c8d875f59e6925b136cabd2c51e54c307b18bfb
+    repository_commit: 40a1c383e04c931d938bdc5a0fe6671e0a4af249
+    change_id: RUNTIME-CLOSURE-2026-09-20
+    remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005]
+  baseline_repository_commit: 40a1c383e04c931d938bdc5a0fe6671e0a4af249
   definition_package: null
   reconciliation: null
 compilation_status: complete
@@ -28,19 +34,21 @@ assurance:
   review: evidence/qa/cnc-generals-zero-hour/architecture-revalidation-2026-09-20.md
   closure_providers:
     support_startup: [M19, M20]
-    persistence_determinism: [M21, M24]
-    ui_world_effects_gpu: [M22, M23]
-    network: [M25, M16]
-    media: [M23]
+    persistence_determinism: [M20, M21, M24]
+    ui_world_effects_gpu: [M20, M22, M23]
+    network: [M20, M25, M16]
+    media: [M20, M23]
     production_gameplay_release: [M15, M17]
 packet_adoption:
   required: true
-  previous_goal_membership: [M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13, M14, M15, M16, M17, M18]
-  pending_execution_order: [M19, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
-  mandatory_remaining: [M19, M20, M21, M22, M23, M24, M25, M15, M16, M17]
+  previous_goal_membership: [M19, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+  pending_execution_order: [M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+  mandatory_remaining: [M20, M21, M22, M23, M24, M25, M15, M16, M17]
   optional_remaining: [M18]
-  first_milestone: M19
-  instruction: On later delivery resume explicitly adopt the readiness-approved replacement packet as new remaining-work scope; preserve prior fixed-membership goal/history. Do not start implementation during replanning.
+  first_milestone: M20
+  preserved_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md
+  next_governing_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_02.md
+  instruction: On later delivery resume explicitly adopt the committed readiness-approved replacement packet and its changed M20 scope; preserve prior goal and blocked plan 01 history. Generate new M20 plan 02 only during delivery. Do not start implementation during replanning.
 milestones:
   - id: M0
     title: "reproducible build readiness"
@@ -220,22 +228,22 @@ milestones:
     evidence: "Three completed slices plus evidence/qa/cnc-generals-zero-hour/M19-original-support.md. All 3,293 inventory sources are classified; ten original support translation units have compile/link/runtime identity witnesses and negative provider controls. All four native preset suites passed 62/62; Clang ASan/UBSan original-support passed 7/7; root acceptance reran classification and focused identity tests (7/7) with unchanged source/packet revisions."
     notes: "Accepted at original-source compile/link and bounded runtime grade, not whole-game integration. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_19_plan_01.md; slice commits: 95a2c31, 4679929, b868418; reference closeout: fa34ee9. M20-M25 retain production-game closure."
   - id: M20
-    title: "original engine initialization and data lifecycle"
+    title: "integrated original runtime and data lifecycle"
     file: delivery/milestones/cnc-generals-zero-hour/M20-original-lifecycle.md
     status: blocked
-    dependencies: [M19, M4]
-    remediation_ids: [SE-003, SE-010]
+    dependencies: [M19, M4, M6, M7, M8, M12, M13]
+    remediation_ids: [SE-001, SE-002, SE-003, SE-004, SE-005, SE-006, SE-007, SE-008, SE-010, RC-001, RC-002, RC-003, RC-004, RC-005]
     optional: false
     started_at: "2026-09-20T14:55:33Z"
     completed_at: null
     evidence: "evidence/qa/cnc-generals-zero-hour/M20-original-lifecycle-blocker.md proves an UPSTREAM_REQUIRED source-order dependency defect: original GameEngine::init requires real GameLogic, GameClient/W3D, module/object, particle and media providers assigned to M21-M23 before it can satisfy M20 lifecycle acceptance."
-    notes: "Blocked without production changes. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md; blocker commit: 418b1e6. Requires delivery architecture reconciliation and readiness-approved replanning of M20-M23; do not use a reduced GameEngine, empty registry or parallel lifecycle."
+    notes: "Blocked delivery history retained pending explicit packet adoption; the accepted runtime reconciliation resolves M20_SOURCE_ORDER_DEFECT by moving all required runtime providers here. Prior governing plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md; blocker commit: 418b1e6. After readiness and committed handoff, adopt revised scope and create plan 02. No reduced GameEngine, empty registry or parallel lifecycle. M21-M25 retain later domain completion/acceptance, never dependencies required for M20 completion."
   - id: M21
     title: "original map and simulation execution"
     file: delivery/milestones/cnc-generals-zero-hour/M21-original-simulation.md
     status: pending
     dependencies: [M20]
-    remediation_ids: [SE-004, SE-010]
+    remediation_ids: [SE-004, SE-010, RC-002, RC-003, RC-004]
     optional: false
     completed_at: null
     evidence: null
@@ -245,7 +253,7 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M22-original-rendering.md
     status: pending
     dependencies: [M21, M14]
-    remediation_ids: [SE-005, SE-010]
+    remediation_ids: [SE-005, SE-010, RC-002, RC-003, RC-004]
     optional: false
     completed_at: null
     evidence: null
@@ -255,7 +263,7 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M23-original-interaction.md
     status: pending
     dependencies: [M22, M6, M8, M12, M13]
-    remediation_ids: [SE-006, SE-010]
+    remediation_ids: [SE-006, SE-010, RC-002, RC-003, RC-004]
     optional: false
     completed_at: null
     evidence: null
@@ -265,7 +273,7 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M24-original-persistence.md
     status: pending
     dependencies: [M21, M5]
-    remediation_ids: [SE-007, SE-010]
+    remediation_ids: [SE-007, SE-010, RC-002, RC-003, RC-004]
     optional: false
     completed_at: null
     evidence: null
@@ -275,7 +283,7 @@ milestones:
     file: delivery/milestones/cnc-generals-zero-hour/M25-original-network.md
     status: pending
     dependencies: [M24, M11]
-    remediation_ids: [SE-008, SE-010]
+    remediation_ids: [SE-008, SE-010, RC-002, RC-003, RC-004]
     optional: false
     completed_at: null
     evidence: null
