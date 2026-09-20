@@ -32,7 +32,7 @@ The bootstrap graph gains a portable, asset-free foundation layer with fixed-wid
 | Slice | Plan | Outcome | Dependency | Status | Commit |
 |---|---|---|---|---|---|
 | 01 | [portable ABI and codecs](milestone_01_plan_01_slice_01.md) | Fixed widths, UTF, endian/bounded serialization, formatting, and numeric semantics | M0 | completed | slice commit |
-| 02 | [POSIX support](milestone_01_plan_01_slice_02.md) | XDG/path, files, clock, threading, atomic, and socket shared types | 01 | planned | pending |
+| 02 | [POSIX support](milestone_01_plan_01_slice_02.md) | XDG/path, files, clock, threading, atomic, and socket shared types | 01 | completed | slice commit |
 | 03 | [compression and matrix](milestone_01_plan_01_slice_03.md) | Bounded RefPack/zlib adapters and complete four-preset/sanitizer validation | 01, 02 | planned | pending |
 
 ## Cross-slice constraints

@@ -55,3 +55,10 @@ All XDG fallbacks are exact and working-directory independent; unsafe logical pa
 ## Commit boundary
 
 Commit this plan, POSIX support implementation, wiring, and tests as `delivery: M1 slice 02 add POSIX support`.
+
+## Completion evidence
+
+- `foundation_platform_tests` passes with explicit and HOME-fallback XDG locations, including the all-explicit/no-HOME boundary.
+- Mixed path separators/case normalize deterministically; empty, absolute, drive-qualified, and parent-traversal inputs are rejected.
+- Exact-limit file round trip, oversized/missing/unwritable-path failures, 32-bit clock wrap, RAII thread join, atomics, and checked IPv4 port construction pass.
+- GCC Debug `ctest -L foundation` passes all eight M0/M1 tests; broader matrix evidence is recorded by slice 03.

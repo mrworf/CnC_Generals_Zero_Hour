@@ -93,6 +93,9 @@ target_sources(zh_wwsupport PRIVATE
 )
 target_include_directories(zh_wwsupport PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
+target_sources(zh_os_posix PRIVATE src/foundation/platform.cpp)
+target_include_directories(zh_os_posix PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
 target_link_libraries(zh_compression PUBLIC ZLIB::ZLIB)
 target_link_libraries(zh_wwsupport PUBLIC Freetype::Freetype Fontconfig::Fontconfig)
 target_link_libraries(zh_w3d PUBLIC zh_wwsupport)
@@ -157,4 +160,9 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(foundation_abi_codec_tests PRIVATE zh_wwsupport)
   add_test(NAME foundation_abi_codec COMMAND foundation_abi_codec_tests)
   set_tests_properties(foundation_abi_codec PROPERTIES LABELS foundation)
+
+  add_executable(foundation_platform_tests tests/foundation/test_platform.cpp)
+  target_link_libraries(foundation_platform_tests PRIVATE zh_os_posix)
+  add_test(NAME foundation_platform COMMAND foundation_platform_tests)
+  set_tests_properties(foundation_platform PROPERTIES LABELS foundation)
 endif()
