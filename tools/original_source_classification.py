@@ -45,6 +45,9 @@ PRODUCTION_SOURCES = {
     "GeneralsMD/Code/GameEngine/Source/Common/version.cpp": "M26",
     "GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp": "M27",
     "GeneralsMD/Code/GameEngine/Source/Common/crc.cpp": "M27",
+    "GeneralsMD/Code/GameEngine/Source/Common/GameMain.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/GameEngine.cpp": "M20",
+    "GeneralsMD/Code/GameEngine/Source/Common/System/SubsystemInterface.cpp": "M20",
 }
 
 PRODUCTION_PROVIDER_RE = re.compile(r"^(?!.*(?:bootstrap|fixture|toy)).+\.(?:c|cc|cpp|cxx)$", re.IGNORECASE)
@@ -98,6 +101,8 @@ def classify(text: str) -> list[Record]:
                     milestone = PRODUCTION_SOURCES[path]
                     if milestone == "M19":
                         rationale = "compiled and runtime-witnessed by the M19 original-support harness"
+                    elif milestone == "M20":
+                        rationale = "actual M20 lifecycle source compiled; live subsystem behavior is runtime-witnessed"
                     else:
                         rationale = f"compiled and runtime-witnessed by the {milestone} original-provider harness"
 

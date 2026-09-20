@@ -44,10 +44,11 @@
 class Object;
 class Player;
 class SpecialPowerTemplate;
-enum SpecialPowerType;
-enum WeaponSlotType;
-enum CommandSourceType;
-enum CanAttackResult;
+enum SpecialPowerType : int;
+enum WeaponSlotType : int;
+enum CommandSourceType : int;
+enum CanAttackResult : int;
+enum AbleToAttackType : int;
 
 enum CanEnterType
 {

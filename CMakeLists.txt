@@ -204,6 +204,34 @@ target_include_directories(zh_original_resources PUBLIC "${CMAKE_CURRENT_SOURCE_
 target_link_libraries(zh_original_resources PUBLIC
   zh_original_data zh_renderer_sdl_gpu zh_ui zh_audio_miniaudio zh_build_options)
 
+# Compile the actual source lifecycle bodies from the start of M20.  They are
+# an object target until the following slices provide the complete registry and
+# device closure; no alternate GameEngine or unresolved-symbol link is used.
+add_library(zh_original_lifecycle_spine OBJECT
+  GeneralsMD/Code/GameEngine/Source/Common/GameMain.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/GameEngine.cpp
+)
+target_include_directories(zh_original_lifecycle_spine PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
+)
+target_link_libraries(zh_original_lifecycle_spine PRIVATE zh_build_options)
+
+add_library(zh_original_lifecycle STATIC
+  GeneralsMD/Code/GameEngine/Source/Common/System/SubsystemInterface.cpp
+)
+target_include_directories(zh_original_lifecycle
+  PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+)
+target_link_libraries(zh_original_lifecycle PUBLIC zh_original_process zh_build_options)
+
 add_library(zh_persistence STATIC src/persistence/save.cpp src/persistence/replay.cpp)
 target_include_directories(zh_persistence PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_persistence PUBLIC zh_wwsupport zh_build_options)
@@ -360,6 +388,44 @@ install(FILES data/corpus/video-variants.tsv DESTINATION share/generals-zero-hou
 if(ZH_BUILD_TESTS)
   enable_testing()
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_executable(original_lifecycle_subsystem_tests
+    tests/original_lifecycle/test_subsystem_lifecycle.cpp)
+  target_include_directories(original_lifecycle_subsystem_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include")
+  target_link_libraries(original_lifecycle_subsystem_tests PRIVATE zh_original_lifecycle)
+  target_link_options(original_lifecycle_subsystem_tests PRIVATE
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-lifecycle-subsystem.link.map")
+  add_test(NAME original_lifecycle_subsystem COMMAND original_lifecycle_subsystem_tests)
+  set_tests_properties(original_lifecycle_subsystem PROPERTIES LABELS "original-lifecycle;source-identity")
+  add_test(NAME original_lifecycle_subsystem_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m26_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-lifecycle-subsystem.link.map"
+    --executable "$<TARGET_FILE:original_lifecycle_subsystem_tests>"
+    --target zh_original_lifecycle
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/Common/System/SubsystemInterface.cpp"
+    --symbol "SubsystemInterfaceList::initSubsystem"
+    --symbol "SubsystemInterfaceList::postProcessLoadAll"
+    --symbol "SubsystemInterfaceList::resetAll"
+    --witness "original-lifecycle subsystem: ok")
+  set_tests_properties(original_lifecycle_subsystem_identity PROPERTIES LABELS "original-lifecycle;source-identity")
+  add_test(NAME original_lifecycle_spine_objects COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_spine_objects.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json")
+  set_tests_properties(original_lifecycle_spine_objects PROPERTIES LABELS "original-lifecycle;source-identity")
+  add_test(NAME original_lifecycle_enum_abi COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_enum_abi.py"
+    --root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --manifest "${CMAKE_CURRENT_SOURCE_DIR}/docs/original-runtime-enum-abi.tsv"
+    --compiler "${CMAKE_CXX_COMPILER}")
+  set_tests_properties(original_lifecycle_enum_abi PROPERTIES LABELS "original-lifecycle;source-identity")
+  add_test(NAME original_lifecycle_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_provider_removal.py"
+    "${CMAKE_CXX_COMPILER}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include")
+  set_tests_properties(original_lifecycle_provider_removal PROPERTIES LABELS "original-lifecycle;source-identity")
   add_executable(original_resources_cpu_tests tests/original_resources/test_cpu_presentation.cpp)
   target_link_libraries(original_resources_cpu_tests PRIVATE zh_original_resources)
   target_link_options(original_resources_cpu_tests PRIVATE

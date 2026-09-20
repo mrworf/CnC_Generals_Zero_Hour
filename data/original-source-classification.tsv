@@ -564,9 +564,9 @@ GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp	excluded	M20-M25	origin
 GeneralsMD/Code/GameEngine/Source/Common/DamageFX.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/Dict.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/DiscreteCircle.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
-GeneralsMD/Code/GameEngine/Source/Common/GameEngine.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
+GeneralsMD/Code/GameEngine/Source/Common/GameEngine.cpp	production-compiled	GeneralsMD/Code/GameEngine/Source/Common/GameEngine.cpp	actual M20 lifecycle source compiled; live subsystem behavior is runtime-witnessed	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
-GeneralsMD/Code/GameEngine/Source/Common/GameMain.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
+GeneralsMD/Code/GameEngine/Source/Common/GameMain.cpp	production-compiled	GeneralsMD/Code/GameEngine/Source/Common/GameMain.cpp	actual M20 lifecycle source compiled; live subsystem behavior is runtime-witnessed	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/INI/INIAiData.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
@@ -659,7 +659,7 @@ GeneralsMD/Code/GameEngine/Source/Common/System/Snapshot.cpp	excluded	M20-M25	or
 GeneralsMD/Code/GameEngine/Source/Common/System/StackDump.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/System/StreamingArchiveFile.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/System/String.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
-GeneralsMD/Code/GameEngine/Source/Common/System/SubsystemInterface.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
+GeneralsMD/Code/GameEngine/Source/Common/System/SubsystemInterface.cpp	production-compiled	GeneralsMD/Code/GameEngine/Source/Common/System/SubsystemInterface.cpp	actual M20 lifecycle source compiled; live subsystem behavior is runtime-witnessed	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/System/Trig.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/System/UnicodeString.cpp	production-compiled	GeneralsMD/Code/GameEngine/Source/Common/System/UnicodeString.cpp	compiled and runtime-witnessed by the M26 original-provider harness	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES
 GeneralsMD/Code/GameEngine/Source/Common/System/Upgrade.cpp	excluded	M20-M25	original engine consumers are promoted by the owning source-integration milestone	ZH_LEGACY_ZH_GAME_ENGINE_SOURCES

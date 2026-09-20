@@ -222,7 +222,7 @@ extern const char *TheVeterancyNames[];
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-enum CommandSourceType 
+enum CommandSourceType : int
 { 
 
 	CMD_FROM_PLAYER = 0, 
@@ -234,7 +234,7 @@ enum CommandSourceType
 };		///< the source of a command
 
 //-------------------------------------------------------------------------------------------------
-enum AbleToAttackType
+enum AbleToAttackType : int
 {
 	_ATTACK_FORCED			= 0x01,
 	_ATTACK_CONTINUED		= 0x02,
@@ -318,7 +318,7 @@ public:																																								\
 	inline DLINK_ITERATOR<OBJCLASS> iterate_##LISTNAME() const													\
 	{																																										\
 		DEBUG_ASSERTCRASH(!BOGUSPTR(m_dlinkhead_##LISTNAME.m_head), ("bogus head ptr"));	\
-		return DLINK_ITERATOR<OBJCLASS>(m_dlinkhead_##LISTNAME.m_head, OBJCLASS::dlink_next_##LISTNAME);	\
+		return DLINK_ITERATOR<OBJCLASS>(m_dlinkhead_##LISTNAME.m_head, &OBJCLASS::dlink_next_##LISTNAME);	\
 	}																																										\
 	inline OBJCLASS *getFirstItemIn_##LISTNAME() const																	\
 	{																																										\
@@ -507,4 +507,3 @@ enum Relationship
 extern const char *TheRelationshipNames[];
 
 #endif // _GAMECOMMON_H_
-

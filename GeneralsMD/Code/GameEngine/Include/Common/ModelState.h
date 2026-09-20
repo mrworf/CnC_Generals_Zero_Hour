@@ -263,4 +263,3 @@ typedef BitFlags<MODELCONDITION_COUNT> ModelConditionFlags;
 //-------------------------------------------------------------------------------------------------
 
 #endif // _ModelState_H_
-

@@ -32,10 +32,14 @@
 #ifndef __SUBSYSTEMINTERFACE_H_
 #define __SUBSYSTEMINTERFACE_H_
 
-#include "Common/INI.h"
-#include "Common/STLTypedefs.h"	
+#include "Common/AsciiString.h"
+
+#include <vector>
 
 class Xfer;
+
+typedef void (*SubsystemINIDataLoader)(const char *path1, const char *path2, const char *dirpath, Xfer *pXfer);
+void installSubsystemINIDataLoader(SubsystemINIDataLoader loader);
 
 //-------------------------------------------------------------------------------------------------
 /** This is the abstract base class from which all game engine subsytems should derive from.

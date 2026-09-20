@@ -42,7 +42,7 @@
 #include "Common/INIException.h"
 #include "Common/MessageStream.h"
 #include "Common/ThingFactory.h"
-#include "Common/File.h"
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/ArchiveFileSystem.h"
 #include "Common/LocalFileSystem.h"
@@ -102,11 +102,13 @@
 #include "GameClient/GUICallbacks.h"
 
 #include "GameNetwork/NetworkInterface.h"
+#if defined(_WIN32)
 #include "GameNetwork/WOLBrowser/WebBrowser.h"
+#endif
 #include "GameNetwork/LANAPI.h"
 #include "GameNetwork/GameSpy/GameResultsThread.h"
 
-#include "Common/Version.h"
+#include "Common/version.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -156,15 +158,20 @@ void DeepCRCSanityCheck::reset(void)
 GameEngine *TheGameEngine = NULL;
 
 //-------------------------------------------------------------------------------------------------
-SubsystemInterfaceList* TheSubsystemList = NULL;
-
-//-------------------------------------------------------------------------------------------------
 template<class SUBSYSTEM>
 void initSubsystem(SUBSYSTEM*& sysref, AsciiString name, SUBSYSTEM* sys, Xfer *pXfer,  const char* path1 = NULL, 
 									 const char* path2 = NULL, const char* dirpath = NULL)
 {
 	sysref = sys;
-	TheSubsystemList->initSubsystem(sys, path1, path2, dirpath, pXfer, name);
+	try
+	{
+		TheSubsystemList->initSubsystem(sys, path1, path2, dirpath, pXfer, name);
+	}
+	catch (...)
+	{
+		sysref = NULL;
+		throw;
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -308,7 +315,9 @@ void GameEngine::init( int argc, char *argv[] )
 		//I was unable to resolve the RTPatch method of deleting a shipped file. English, Chinese, and Korean
 		//SKU's shipped with two INIZH.big files. One properly in the Run directory and the other in Run\INI\Data.
 		//We need to toast the latter in order for the game to patch properly.
+		#if defined(_WIN32)
 		DeleteFile( "Data\\INI\\INIZH.big" );
+		#endif
 
 		// not part of the subsystem list, because it should normally never be reset!
 		TheNameKeyGenerator = MSGNEW("GameEngineSubsystem") NameKeyGenerator;
@@ -1006,4 +1015,8 @@ void updateTGAtoDDS()
 // If we're using the Wide character version of MessageBox, then there's no additional
 // processing necessary. Please note that this is a sleazy way to get this information,
 // but pending a better one, this'll have to do.
+#if defined(_WIN32)
 extern const Bool TheSystemIsUnicode = (((void*) (::MessageBox)) == ((void*) (::MessageBoxW)));
+#else
+extern const Bool TheSystemIsUnicode = TRUE;
+#endif

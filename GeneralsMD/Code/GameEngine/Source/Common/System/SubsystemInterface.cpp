@@ -27,7 +27,6 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "Common/SubsystemInterface.h"
-#include "Common/Xfer.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -41,6 +40,14 @@
 
 Real SubsystemInterface::s_msConsumed = 0;
 #endif
+
+SubsystemInterfaceList* TheSubsystemList = NULL;
+static SubsystemINIDataLoader TheSubsystemINIDataLoader = NULL;
+
+void installSubsystemINIDataLoader(SubsystemINIDataLoader loader)
+{
+	TheSubsystemINIDataLoader = loader;
+}
 
 //-----------------------------------------------------------------------------
 SubsystemInterface::SubsystemInterface()
@@ -158,36 +165,58 @@ void SubsystemInterfaceList::removeSubsystem(SubsystemInterface* sys)
 //-----------------------------------------------------------------------------
 void SubsystemInterfaceList::initSubsystem(SubsystemInterface* sys, const char* path1, const char* path2, const char* dirpath, Xfer *pXfer, AsciiString name)
 {
-	sys->setName(name);
-	sys->init();
+	try
+	{
+		sys->setName(name);
+		sys->init();
 
-	INI ini;
-	if (path1)
-		ini.load(path1, INI_LOAD_OVERWRITE, pXfer );
-	if (path2)
-		ini.load(path2, INI_LOAD_OVERWRITE, pXfer );
-	if (dirpath)
-		ini.loadDirectory(dirpath, TRUE, INI_LOAD_OVERWRITE, pXfer );
+		if (path1 || path2 || dirpath)
+		{
+			if (!TheSubsystemINIDataLoader)
+				throw ERROR_BAD_INI;
+			TheSubsystemINIDataLoader(path1, path2, dirpath, pXfer);
+		}
 
-	m_subsystems.push_back(sys);
+		m_subsystems.push_back(sys);
+	}
+	catch (...)
+	{
+		delete sys;
+		throw;
+	}
 }
 
 //-----------------------------------------------------------------------------
 void SubsystemInterfaceList::postProcessLoadAll()
 {
-	for (SubsystemList::iterator it = m_subsystems.begin(); it != m_subsystems.end(); ++it)
+	try
 	{
-		(*it)->postProcessLoad();
+		for (SubsystemList::iterator it = m_subsystems.begin(); it != m_subsystems.end(); ++it)
+		{
+			(*it)->postProcessLoad();
+		}
+	}
+	catch (...)
+	{
+		shutdownAll();
+		throw;
 	}
 }
 
 //-----------------------------------------------------------------------------
 void SubsystemInterfaceList::resetAll()
 {
-//	for (SubsystemList::iterator it = m_subsystems.begin(); it != m_subsystems.end(); ++it)
-	for (SubsystemList::reverse_iterator it = m_subsystems.rbegin(); it != m_subsystems.rend(); ++it)
+	try
 	{
-		(*it)->reset();
+		for (SubsystemList::reverse_iterator it = m_subsystems.rbegin(); it != m_subsystems.rend(); ++it)
+		{
+			(*it)->reset();
+		}
+	}
+	catch (...)
+	{
+		shutdownAll();
+		throw;
 	}
 }
 
