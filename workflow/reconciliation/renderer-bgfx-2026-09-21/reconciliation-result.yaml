@@ -1,0 +1,48 @@
+schema_version: 1
+reconciliation_id: "REC-RUN-RENDERER-BGFX-2026-09-21"
+product_id: "cnc-generals-zero-hour"
+status: "RESOLVED"
+transaction:
+  parent_commit: "64c7632"
+  repository_commit: "PENDING_PAYLOAD_COMMIT"
+source:
+  invocation: "standalone"
+  triggering_findings: ["M22_VIEWPORT_CLEAR_BACKEND", "M24_DRAW_PROVIDER_DEPENDENCY"]
+  affected_requirements: ["zero-hour-linux-port-plan §9", "RB-01", "RB-02", "RB-03", "RB-04"]
+  artifact_revisions:
+    - artifact: "docs/zero-hour-renderer-backend-migration.md"
+      revision: "64c7632"
+findings:
+  resolved: ["REC-001"]
+  unresolved: []
+authoritative_changes:
+  changed: false
+  entries:
+    - change_id: "REC-CHANGE-001"
+      source_findings: ["REC-001"]
+      path: "docs/zero-hour-renderer-backend-migration.md"
+      requirements: ["RB-01", "RB-02", "RB-03", "RB-04"]
+      status: "NO_SOURCE_MUTATION"
+definition_changed: false
+implementation_required: true
+implementation_ready: true
+decisions_required: []
+change_impact:
+  change_id: "REC-IMPACT-001"
+  source_findings: ["REC-001"]
+  changed_artifacts: []
+  changed_requirements: []
+  change_types: ["architecture_boundary", "migration", "test_expectation"]
+  affected_domains:
+    product: false
+    user_journeys: false
+    ux: false
+    architecture: false
+    security: false
+  potentially_stale: []
+  revalidation_required: false
+handoff:
+  category: "DELIVERY_PLANNING"
+  definition_revalidation_required: false
+  delivery_planning_ready: true
+  next_workflow: "delivery-planning-orchestrator"

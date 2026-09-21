@@ -1,0 +1,1 @@
+No unresolved decisions. The conditional §9 branch is selected by the separately committed targeted architecture decision and exact GPU probe. A future, independently proven bgfx public-API gap would require a new §9 decision; it is not assumed here.
