@@ -483,12 +483,14 @@ int main(int argc, char **argv)
 		assert(unsupported_index);
 		DX8Wrapper::Set_Shader(model->Get_Shader(0));
 		assert(DX8Wrapper::Pending_Changes()&(1U<<9));
-		bool shader_edge=false;
+		bool null_texture_edge=false;
 		try { DX8Wrapper::Apply_Render_State_Changes(); }
 		catch (const std::runtime_error& error) {
-			shader_edge=std::strstr(error.what(),"ShaderClass::Apply")!=nullptr;
+			null_texture_edge=std::strstr(error.what(),"texture")!=nullptr;
 		}
-		assert(shader_edge && (DX8Wrapper::Pending_Changes()&(1U<<9)));
+		assert(null_texture_edge && (DX8Wrapper::Pending_Changes()&1U));
+		assert(!(DX8Wrapper::Pending_Changes()&(1U<<9)));
+		assert(device.snapshot().find("DX8Wrapper::Set_DX8_Texture_Stage_State=0:1")!=std::string::npos);
 		assert(!device.pass_active());
 	}
 	assert(DX8Wrapper::Peek_Texture(0)==nullptr);

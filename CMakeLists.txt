@@ -1931,6 +1931,40 @@ if(ZH_BUILD_TESTS)
   target_link_options(original_w3d_cpu_graph_tests PRIVATE
     "-Wl,--gc-sections" "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map")
   add_test(NAME original_w3d_cpu_graph COMMAND original_w3d_cpu_graph_tests)
+  add_executable(original_w3d_shader_source_tests tests/original_rendering/test_w3d_shader_source.cpp)
+  target_include_directories(original_w3d_shader_source_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug")
+  target_compile_options(original_w3d_shader_source_tests PRIVATE -fpermissive)
+  target_compile_definitions(original_w3d_shader_source_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
+  target_link_libraries(original_w3d_shader_source_tests PRIVATE
+    zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu)
+  target_link_options(original_w3d_shader_source_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-shader-source.link.map")
+  add_test(NAME original_w3d_shader_source COMMAND original_w3d_shader_source_tests)
+  set_tests_properties(original_w3d_shader_source PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_shader_source_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-shader-source.link.map"
+    --executable "$<TARGET_FILE:original_w3d_shader_source_tests>"
+    --witness "original ShaderClass software-profile source decisions and negative/retry: ok"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/shader.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8wrapper.cpp"
+    --required "src/original_runtime/original_gpu_edge.cpp")
+  set_tests_properties(original_w3d_shader_source_identity PROPERTIES
+    LABELS "original-rendering;source-identity")
+  add_test(NAME original_w3d_wwshade_branch_selection COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_wwshade_branch_selection.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --header "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/shdlib.h")
+  set_tests_properties(original_w3d_wwshade_branch_selection PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_first_gpu_edge COMMAND original_w3d_cpu_graph_tests --device-edge)
   set_tests_properties(original_w3d_first_gpu_edge PROPERTIES LABELS "original-rendering;renderer-contract")
   add_executable(original_w3d_gpu_edge_tests tests/original_rendering/test_original_gpu_edge.cpp)

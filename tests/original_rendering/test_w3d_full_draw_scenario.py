@@ -132,6 +132,11 @@ def main() -> int:
             if not aggregate or int(aggregate[1]) < 1 or int(aggregate[2]) < 1 or not re.fullmatch(
                     r"(?: mapper-\d+=\d+)*", aggregate[3]):
                 raise SystemExit("original retail material family aggregate is absent or malformed")
+            shaders = re.search(r"^original retail shader families: variants=(\d+)(.*)$",
+                                result.stdout, re.MULTILINE)
+            if not shaders or int(shaders[1]) < 1 or not re.fullmatch(
+                    r"(?: (?:primary|detail-color|detail-alpha|fog|blend)-\d+=\d+)+", shaders[2]):
+                raise SystemExit("original retail shader family aggregate is absent or malformed")
         if args.keep:
             print(result.stdout)
         os.environ.pop("ZH_M22_RETAIL_MODEL", None)

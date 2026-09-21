@@ -51,6 +51,7 @@
 
 #include <array>
 #include <map>
+#include <cstring>
 #include <stdexcept>
 #include <string>
 
@@ -63,6 +64,8 @@ struct DX8Wrapper::CpuState {
     std::map<unsigned,unsigned> render_states;
     std::array<std::map<unsigned,unsigned>,8> texture_states;
     std::map<int,Matrix4x4> transforms;
+    bool fog_enabled=false;
+    D3DCOLOR fog_color=0;
 };
 
 DX8Wrapper::CpuState& DX8Wrapper::state() { static CpuState source_state; return source_state; }
@@ -82,6 +85,9 @@ void DX8Wrapper::Reset_Source_State()
     selected.render_states.clear();
     for (auto& stage : selected.texture_states) stage.clear();
     selected.transforms.clear();
+    selected.fog_enabled=false;
+    selected.fog_color=0;
+    ShaderClass::Invalidate();
 }
 
 void DX8Wrapper::Set_Texture(unsigned stage,TextureBaseClass* texture)
@@ -127,8 +133,17 @@ unsigned DX8Wrapper::Pending_Changes() { return state().dirty; }
 void DX8Wrapper::Apply_Render_State_Changes()
 {
     auto& selected=state();
-    if (selected.dirty & (1U<<9))
-        throw std::runtime_error("original ShaderClass::Apply requires shader translation (M22 05B2B2B2)");
+    if (selected.dirty & (1U<<9)) {
+        const auto prior_render=selected.render_states;
+        const auto prior_stages=selected.texture_states;
+        try { selected.shader.Apply(); }
+        catch (...) {
+            selected.render_states=prior_render;
+            selected.texture_states=prior_stages;
+            throw;
+        }
+        selected.dirty &= ~(1U<<9);
+    }
     for (unsigned stage=0;stage<selected.textures.size();++stage)
         if (selected.dirty & (1U<<stage)) {
             if (selected.textures[stage]) selected.textures[stage]->Apply(stage);
@@ -157,9 +172,22 @@ void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
     if ((property==D3DRS_LIGHTING && value>1) ||
         ((property==D3DRS_AMBIENTMATERIALSOURCE || property==D3DRS_DIFFUSEMATERIALSOURCE ||
             property==D3DRS_EMISSIVEMATERIALSOURCE) && value>2) ||
+        ((property==D3DRS_ALPHABLENDENABLE || property==D3DRS_ALPHATESTENABLE ||
+            property==D3DRS_FOGENABLE || property==D3DRS_SPECULARENABLE ||
+            property==D3DRS_ZWRITEENABLE) && value>1) ||
+        (property==D3DRS_PATCHSEGMENTS && value!=0x3f800000U) ||
         (property!=D3DRS_LIGHTING && property!=D3DRS_AMBIENTMATERIALSOURCE &&
-            property!=D3DRS_DIFFUSEMATERIALSOURCE && property!=D3DRS_EMISSIVEMATERIALSOURCE))
-        throw std::runtime_error("original DX8 material render state is unsupported before shader translation");
+            property!=D3DRS_DIFFUSEMATERIALSOURCE && property!=D3DRS_EMISSIVEMATERIALSOURCE &&
+            property!=D3DRS_SRCBLEND && property!=D3DRS_DESTBLEND &&
+            property!=D3DRS_ALPHABLENDENABLE && property!=D3DRS_ALPHAREF &&
+            property!=D3DRS_ALPHAFUNC && property!=D3DRS_ALPHATESTENABLE &&
+            property!=D3DRS_FOGENABLE && property!=D3DRS_FOGCOLOR &&
+            property!=D3DRS_SPECULARENABLE && property!=D3DRS_ZFUNC &&
+            property!=D3DRS_ZWRITEENABLE && property!=D3DRS_CULLMODE &&
+            property!=D3DRS_FOGSTART && property!=D3DRS_FOGEND &&
+            property!=D3DRS_PATCHSEGMENTS))
+        throw std::runtime_error("original DX8 shader render state "+std::to_string(property)+
+            " is unsupported by Linux software profile");
     state().render_states[property]=value;
     edge.record_source_state(
         "DX8Wrapper::Set_DX8_Render_State="+std::to_string(property)+":"+std::to_string(value));
@@ -170,8 +198,19 @@ void DX8Wrapper::Set_DX8_Texture_Stage_State(unsigned stage,unsigned property,un
     if (stage>=state().texture_states.size()) throw std::runtime_error("original DX8 texture stage is invalid");
     if (property!=D3DTSS_TEXCOORDINDEX && property!=D3DTSS_TEXTURETRANSFORMFLAGS &&
         property!=D3DTSS_BUMPENVMAT00 && property!=D3DTSS_BUMPENVMAT01 &&
-        property!=D3DTSS_BUMPENVMAT10 && property!=D3DTSS_BUMPENVMAT11)
-        throw std::runtime_error("original DX8 mapper stage state is unsupported before shader translation");
+        property!=D3DTSS_BUMPENVMAT10 && property!=D3DTSS_BUMPENVMAT11 &&
+        property!=D3DTSS_COLOROP && property!=D3DTSS_ALPHAOP &&
+        property!=D3DTSS_COLORARG1 && property!=D3DTSS_COLORARG2 &&
+        property!=D3DTSS_ALPHAARG1 && property!=D3DTSS_ALPHAARG2)
+        throw std::runtime_error("original DX8 shader stage state is unsupported by Linux software profile");
+    if ((property==D3DTSS_COLOROP || property==D3DTSS_ALPHAOP) &&
+        value!=D3DTOP_DISABLE && value!=D3DTOP_SELECTARG1 &&
+        value!=D3DTOP_SELECTARG2 && value!=D3DTOP_MODULATE && value!=D3DTOP_ADD)
+        throw std::runtime_error("original DX8 combiner op is unsupported by Linux software profile");
+    if ((property==D3DTSS_COLORARG1 || property==D3DTSS_COLORARG2 ||
+        property==D3DTSS_ALPHAARG1 || property==D3DTSS_ALPHAARG2) &&
+        value!=D3DTA_DIFFUSE && value!=D3DTA_CURRENT && value!=D3DTA_TEXTURE)
+        throw std::runtime_error("original DX8 combiner argument is unsupported by Linux software profile");
     if (property==D3DTSS_TEXCOORDINDEX &&
         ((value&0xffffU)>=8 || (value&0xffff0000U)>D3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR))
         throw std::runtime_error("original DX8 mapper coordinate index is unsupported");
@@ -199,6 +238,37 @@ void DX8Wrapper::Get_Transform(D3DTRANSFORMSTATETYPE transform,Matrix4x4& matrix
     auto it=state().transforms.find(transform);
     if (it==state().transforms.end()) throw std::runtime_error("original DX8 source transform has not been set");
     matrix=it->second;
+}
+
+unsigned DX8Wrapper::Get_Texture_Op_Caps()
+{
+    // This is an explicit software-shader policy, not a report of legacy GPU
+    // hardware capabilities. Every offered operator is a B3 lowering obligation.
+    return D3DTEXOPCAPS_SELECTARG1 | D3DTEXOPCAPS_MODULATE | D3DTEXOPCAPS_ADD;
+}
+unsigned DX8Wrapper::Convert_Color(const Vector3& color,float alpha)
+{
+    auto component=[](float value) -> unsigned {
+        if (!(value>=0.0f && value<=1.0f))
+            throw std::runtime_error("original fog color component outside normalized range");
+        return static_cast<unsigned>(value*255.0f);
+    };
+    return (component(alpha)<<24U) | (component(color.X)<<16U) |
+        (component(color.Y)<<8U) | component(color.Z);
+}
+bool DX8Wrapper::Get_Fog_Enable() { return state().fog_enabled; }
+D3DCOLOR DX8Wrapper::Get_Fog_Color() { return state().fog_color; }
+void DX8Wrapper::Set_Fog(bool enabled,const Vector3& color,float start,float end)
+{
+    zh::original_runtime::OriginalGpuEdge::required();
+    state().fog_enabled=enabled;
+    state().fog_color=Convert_Color(color,0.0f);
+    ShaderClass::Invalidate();
+    DWORD start_bits=0,end_bits=0;
+    std::memcpy(&start_bits,&start,sizeof(start_bits));
+    std::memcpy(&end_bits,&end,sizeof(end_bits));
+    Set_DX8_Render_State(D3DRS_FOGSTART,start_bits);
+    Set_DX8_Render_State(D3DRS_FOGEND,end_bits);
 }
 
 #else

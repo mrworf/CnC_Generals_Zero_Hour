@@ -6,6 +6,7 @@
 #include "meshmdl.h"
 #include "mapper.h"
 #include "vertmaterial.h"
+#include "shader.h"
 
 #include <cstdio>
 #include <map>
@@ -19,6 +20,12 @@ struct Families
 	unsigned materials=0;
 	std::map<int,unsigned> mappers;
 	std::set<const VertexMaterialClass*> seen;
+	std::set<unsigned long> shader_bits;
+	std::map<int,unsigned> primary_gradients;
+	std::map<int,unsigned> detail_colors;
+	std::map<int,unsigned> detail_alphas;
+	std::map<int,unsigned> fog_modes;
+	std::map<int,unsigned> blend_modes;
 };
 
 void collect(RenderObjClass *object,Families &families,unsigned depth)
@@ -30,6 +37,18 @@ void collect(RenderObjClass *object,Families &families,unsigned depth)
 		++families.meshes;
 		const MeshModelClass *mesh=static_cast<MeshClass*>(object)->Peek_Model();
 		for (int pass=0;pass<mesh->Get_Pass_Count();++pass)
+		{
+			for (int polygon=0;polygon<mesh->Get_Polygon_Count();++polygon)
+			{
+				ShaderClass shader=mesh->Get_Shader(polygon,pass);
+				if (!families.shader_bits.insert(shader.Get_Bits()).second) continue;
+				++families.primary_gradients[shader.Get_Primary_Gradient()];
+				++families.detail_colors[shader.Get_Post_Detail_Color_Func()];
+				++families.detail_alphas[shader.Get_Post_Detail_Alpha_Func()];
+				++families.fog_modes[shader.Get_Fog_Func()];
+				++families.blend_modes[shader.Get_Src_Blend_Func()*
+					ShaderClass::DSTBLEND_MAX+shader.Get_Dst_Blend_Func()];
+			}
 			for (int vertex=0;vertex<mesh->Get_Vertex_Count();++vertex)
 			{
 			VertexMaterialClass *material=mesh->Peek_Material(vertex,pass);
@@ -45,6 +64,7 @@ void collect(RenderObjClass *object,Families &families,unsigned depth)
 					++families.mappers[id];
 				}
 			}
+		}
 	}
 	for (int index=0;index<object->Get_Num_Sub_Objects();++index)
 	{
@@ -64,5 +84,15 @@ extern "C" void zh_probe_retail_material_families(RenderObjClass *object)
 		families.meshes,families.materials);
 	for (const auto &[id,count]:families.mappers)
 		std::printf(" mapper-%d=%u",id,count);
+	std::puts("");
+	std::printf("original retail shader families: variants=%zu",families.shader_bits.size());
+	const auto report=[](const char* family,const std::map<int,unsigned>& counts) {
+		for (const auto &[id,count]:counts) std::printf(" %s-%d=%u",family,id,count);
+	};
+	report("primary",families.primary_gradients);
+	report("detail-color",families.detail_colors);
+	report("detail-alpha",families.detail_alphas);
+	report("fog",families.fog_modes);
+	report("blend",families.blend_modes);
 	std::puts("");
 }

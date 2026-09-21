@@ -48,8 +48,10 @@
 #include "Dx8Wrapper.h"
 #include "dx8caps.h"
 #else
+#include "dx8wrapper.h"
+#include "ww3d.h"
 #include <stdexcept>
-enum { D3DCULL_CW = 2, D3DCULL_CCW = 3 };
+#define SNAPSHOT_SAY(args) ((void)0)
 #endif
 
 
@@ -367,7 +369,6 @@ void ShaderClass::Report_Unable_To_Fog (const char *source)
 	#endif
 }
 
-#if !defined(ZH_WW3D_CPU_ONLY)
 class Blend
 {
 public:
@@ -417,7 +418,36 @@ void ShaderClass::Apply()
 {
 	unsigned long diff;
 
+#if defined(ZH_WW3D_CPU_ONLY)
+	unsigned int TextureOpCaps=DX8Wrapper::Get_Texture_Op_Caps();
+#else
 	unsigned int TextureOpCaps=DX8Wrapper::Get_Current_Caps()->Get_DX8_Caps().TextureOpCaps;
+#endif
+
+#if defined(ZH_WW3D_CPU_ONLY)
+	// Original unsupported-op branches sometimes only emit a warning and leave
+	// stage 1 disabled. Reject those required modes rather than treating that
+	// silent omission as a successful material translation.
+	if (Get_NPatch_Enable())
+		throw std::runtime_error("original shader NPATCH requires unsupported Linux tessellation");
+	if (Get_Texturing()==TEXTURING_ENABLE) {
+		switch (Get_Post_Detail_Color_Func()) {
+		case DETAILCOLOR_SUB: case DETAILCOLOR_SUBR:
+			throw std::runtime_error("original shader detail SUBTRACT unsupported by software combiner");
+		case DETAILCOLOR_BLEND:
+			throw std::runtime_error("original shader detail BLENDTEXTUREALPHA unsupported by software combiner");
+		case DETAILCOLOR_DETAILBLEND:
+			throw std::runtime_error("original shader detail BLENDCURRENTALPHA unsupported by software combiner");
+		default: break;
+		}
+		if (Get_Post_Detail_Alpha_Func()==DETAILALPHA_INVSCALE)
+			throw std::runtime_error("original shader alpha ADDSMOOTH unsupported by software combiner");
+		if (Get_Primary_Gradient()==GRADIENT_MODULATE2X)
+			throw std::runtime_error("original shader primary MODULATE2X unsupported by software combiner");
+	}
+	const unsigned long previous_shader=CurrentShader;
+	try {
+#endif
 
 	if (ShaderDirty)
 	{
@@ -499,7 +529,11 @@ void ShaderClass::Apply()
 	{
 		// Whenever fog is enabled or disabled, the entire shader is invalidated. This is why we
 		// can defer the "fog enabled" check inside the "fog settings changed" check.
-		if (DX8Wrapper::Get_Current_Caps()->Is_Fog_Allowed() && DX8Wrapper::Get_Fog_Enable()) {
+		if (
+#if !defined(ZH_WW3D_CPU_ONLY)
+			DX8Wrapper::Get_Current_Caps()->Is_Fog_Allowed() &&
+#endif
+			DX8Wrapper::Get_Fog_Enable()) {
 
 			BOOL fm = FALSE;
 			D3DCOLOR fogColor = DX8Wrapper::Get_Fog_Color();
@@ -556,8 +590,13 @@ void ShaderClass::Apply()
 	DWORD			SecaArg1 = D3DTA_TEXTURE;
 	DWORD			SecaArg2 = D3DTA_CURRENT;
 
+#if defined(ZH_WW3D_CPU_ONLY)
+	// The Linux software-combiner profile exposes no legacy 3DFX hardware.
+	bool voodoo3=false;
+#else
 	bool voodoo3=(DX8Wrapper::Get_Current_Caps()->Get_Vendor()==DX8Caps::VENDOR_3DFX) &&
 					 (DX8Wrapper::Get_Current_Caps()->Get_Device()==DX8Caps::DEVICE_3DFX_VOODOO_3);
+#endif
 	int pri_mask=ShaderClass::MASK_PRIGRADIENT|ShaderClass::MASK_TEXTURING;
 	int sec_mask=ShaderClass::MASK_POSTDETAILALPHAFUNC|ShaderClass::MASK_POSTDETAILCOLORFUNC|ShaderClass::MASK_TEXTURING;	
 
@@ -851,7 +890,13 @@ void ShaderClass::Apply()
 				break;
 
 			case ShaderClass::DETAILCOLOR_MODALPHAADDCOLOR:
-				if (DX8Wrapper::Get_Current_Caps()->Support_ModAlphaAddClr()) {
+				if (
+#if defined(ZH_WW3D_CPU_ONLY)
+					false
+#else
+					DX8Wrapper::Get_Current_Caps()->Support_ModAlphaAddClr()
+#endif
+				) {
 					SeccOp = D3DTOP_MODULATEALPHA_ADDCOLOR;
 					SeccArg1 = D3DTA_CURRENT;
 					SeccArg2 = D3DTA_TEXTURE;
@@ -925,6 +970,7 @@ void ShaderClass::Apply()
 	if (diff & pri_mask) {
 		// for voodoo3 supported blend modes, the stage 0 color and alpha are both diffuse
 		// or both not, so we can check for color diffuse only
+#if !defined(ZH_WW3D_CPU_ONLY)
 		if ( voodoo3 && (PricArg2==D3DTA_DIFFUSE) && 
 			  ( (SecaOp!=D3DTOP_DISABLE) || (SeccOp!=D3DTOP_DISABLE) )
 			) {
@@ -970,6 +1016,7 @@ void ShaderClass::Apply()
 				ShaderDirty=true;
 			}			
 		} else {
+#endif
 			
 #pragma message("(gth) Generals added a feature here WW3D::Is_Coloring_Enabled() which needs to be merged properly")
 #if 0
@@ -986,7 +1033,9 @@ void ShaderClass::Apply()
 			DX8Wrapper::Set_DX8_Texture_Stage_State(0,D3DTSS_ALPHAARG1,PriaArg1);
 			DX8Wrapper::Set_DX8_Texture_Stage_State(0,D3DTSS_ALPHAARG2,PriaArg2);
 			kill_stage_2=true;
+#if !defined(ZH_WW3D_CPU_ONLY)
 		}
+#endif
 		diff &= ~(ShaderClass::MASK_PRIGRADIENT);
 	}	
 
@@ -1005,6 +1054,7 @@ void ShaderClass::Apply()
 	// Make sure to disable stage 2 for voodoos since we don't have state tracking for
 	// stage 2
 	// bypass the wrapper since it only supports 2 texture stages
+#if !defined(ZH_WW3D_CPU_ONLY)
 	if (voodoo3 && kill_stage_2) {
 		if ((SeccOp!=D3DTOP_DISABLE)&&(SecaOp!=D3DTOP_DISABLE)) {
 			DX8CALL(SetTextureStageState(2,D3DTSS_COLOROP,D3DTOP_SELECTARG1));
@@ -1018,6 +1068,7 @@ void ShaderClass::Apply()
 		DX8CALL(SetTextureStageState(2,D3DTSS_TEXCOORDINDEX,D3DTSS_TCI_PASSTHRU));
 		DX8CALL(SetTexture(2,0));
 	}
+#endif
 
 	if(!diff)
 		return;
@@ -1048,13 +1099,14 @@ void ShaderClass::Apply()
 
 	// Enable/disable stencil test
 	// Not supported yet
-}
-#else
-void ShaderClass::Apply()
-{
-	throw std::runtime_error("original WW3D ShaderClass device application is unavailable before M22 slice 03");
-}
+#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		CurrentShader=previous_shader;
+		ShaderDirty=true;
+		throw;
+	}
 #endif
+}
 
 
 /***********************************************************************************************
