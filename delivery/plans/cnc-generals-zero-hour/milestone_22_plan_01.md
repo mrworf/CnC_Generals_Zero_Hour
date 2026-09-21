@@ -82,9 +82,10 @@ The production Linux original-engine path renders representative campaign and sk
 | 04C | [milestone_22_plan_01_slice_04c.md](milestone_22_plan_01_slice_04c.md) | Original mesh visibility/frustum/sort/overrides and category entry decisions plus canonical WW3D state stop at first typed physical edge; no completed pass claim. | slice 04B | complete | slice 04C commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_04c.md) |
 | 05A | [milestone_22_plan_01_slice_05a.md](milestone_22_plan_01_slice_05a.md) | Public 16-bit index/offset/base contract and source-issued original vertex/index buffer physical commands, typed at later texture edge. | slice 04C, M14 | complete | slice 05A commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05a.md) |
 | 05B1 | [milestone_22_plan_01_slice_05b1.md](milestone_22_plan_01_slice_05b1.md) | Canonical original Targa and DDS providers parse and decode reached owned/retail image families with bounded failure behavior; no texture/frame claim. | slice 05A | complete | slice 05B1 commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05b1.md) |
-| 05B2A | [milestone_22_plan_01_slice_05b2a.md](milestone_22_plan_01_slice_05b2a.md) | Original WW3D format/bitmap and TextureLoader selection, reduction, mip and pixel decisions stop at first typed texture-device edge. | slice 05B1 | pending | | |
-| 05B2B | [milestone_22_plan_01_slice_05b2b.md](milestone_22_plan_01_slice_05b2b.md) | Original source-issued texture lifecycle/upload/filter/material/shader physical commands; no synthetic pixels or complete pass claim. | slice 05B2A | pending | | |
-| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | Full interleaved original mesh/WWShade/WW3D material, rigid/skin/decal/static/sorting pass graph records owned fixture frames in authored call order. | slice 05B2B | pending | | |
+| 05B2A | [milestone_22_plan_01_slice_05b2a.md](milestone_22_plan_01_slice_05b2a.md) | Original WW3D format/bitmap and TextureLoader selection, reduction, mip and pixel decisions stop at first typed texture-device edge. | slice 05B1 | complete | slice 05B2A commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05b2a.md) |
+| 05B2B1 | [milestone_22_plan_01_slice_05b2b1.md](milestone_22_plan_01_slice_05b2b1.md) | Original TextureLoadTask Lock/Load/Unlock owns decoded mip bytes, source-issued GPU create/upload and texture lifetime/failure controls. | slice 05B2A | pending | | |
+| 05B2B2 | [milestone_22_plan_01_slice_05b2b2.md](milestone_22_plan_01_slice_05b2b2.md) | Original TextureClass/filter and original material/shader source-issued physical stage state; public Recording/SDL translation. | slice 05B2B1 | pending | | |
+| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | Full interleaved original mesh/WWShade/WW3D material, rigid/skin/decal/static/sorting pass graph records owned fixture frames in authored call order. | slice 05B2B2 | pending | | |
 | 07 | [milestone_22_plan_01_slice_07.md](milestone_22_plan_01_slice_07.md) | Original GameClient display/scene, 2D, terrain, track, shroud and selected shadow/effect routes integrate and switch production to full behavior. | slice 06 | pending | | |
 | 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | slice 07, PRE-008 | pending | | |
 | 09 | [milestone_22_plan_01_slice_09.md](milestone_22_plan_01_slice_09.md) | Same retail scenes present on validation-enabled SDL_GPU Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 08, PRE-012, PRE-016 | pending | | |
@@ -110,7 +111,7 @@ The production Linux original-engine path renders representative campaign and sk
 
 ## Rollback and recovery
 
-Each slice is independently revertible. Slices 01–04C add only original CPU producer behavior and do not claim a renderer. Slice 05A establishes original vertex/index physical commands, 05B1 proves original image providers, 05B2A preserves original image/format/mip selection before the first device operation, and 05B2B restores original image/material/shader physical entry; 06 closes the interleaved pass graph; 07 integrates production GameClient traversal. Slice 08 records retail scenes without requiring hardware. Slice 09's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
+Each slice is independently revertible. Slices 01–04C add only original CPU producer behavior and do not claim a renderer. Slice 05A establishes original vertex/index physical commands, 05B1 proves original image providers, 05B2A preserves original image/format/mip selection before the first device operation, 05B2B1 restores image resource/upload behavior, and 05B2B2 restores source-issued stage/filter/material/shader physical state; 06 closes the interleaved pass graph; 07 integrates production GameClient traversal. Slice 08 records retail scenes without requiring hardware. Slice 09's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
 
 ## Execution notes
 
@@ -231,6 +232,25 @@ normal 05B2 outcomes/negatives; no image bytes, mip choice, material, or
 shader state may originate in an adapter. Accepted 01–05B1 and downstream
 06–09 are unchanged. This checkpoint is committed as plans only before
 production changes.
+
+## Post-slice-05B2A physical texture/stage boundary
+
+Accepted 05B2A proves original metadata and `Begin_Compressed_Load`/
+`Begin_Uncompressed_Load` before typed creation. The next reached original
+methods are `TextureLoadTaskClass::Lock_Surfaces`, `Load_Compressed_Mipmap`/
+`Load_Uncompressed_Mipmap`, and `Unlock_Surfaces`; those methods produce the
+actual DDS/Targa decoded mip bytes, whereas the separate `TextureClass::Apply`
+and DX8 renderer material/shader calls require stage binding that the
+current public `GpuDevice` does not yet expose. One bounded slice cannot
+accept the source-owned mip output and the later stage consumer as a single
+independently testable transition. The former pending 05B2B is superseded
+by 05B2B1 (source-owned mip/decode, device-edge staging/create/upload and
+lifetime) then 05B2B2 (source-issued filter/stage/material/shader state
+through a narrowly extended public Recording/SDL contract). Staging must
+not select pixels; no dummy draw or pass may force stage binding. Both
+slices together retain all original 05B2B acceptance, including failure
+controls, and 06 now depends on 05B2B2. Accepted 01–05B2A and remaining
+07–09 are unchanged. Commit these plans alone before production edits.
 
 ## Deferred follow-ups
 

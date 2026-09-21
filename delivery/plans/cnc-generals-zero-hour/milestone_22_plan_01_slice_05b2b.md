@@ -1,4 +1,10 @@
-# M22 plan 01 slice 05B2B: original texture/material/shader physical entry
+# M22 plan 01 slice 05B2B: superseded physical entry contract
+
+This accepted contract is delivered by dependency-ordered
+[05B2B1](milestone_22_plan_01_slice_05b2b1.md) and
+[05B2B2](milestone_22_plan_01_slice_05b2b2.md), not by a standalone
+05B2B commit. Neither successor relaxes the outcomes or failure controls
+below; 06 requires both.
 
 ## Outcome and dependencies
 
@@ -32,6 +38,7 @@ semantics. Read-only retail family aggregate, provider-removal, ABI/link
 identity, GCC/Clang full suites, focused sanitizers and ledger freshness.
 No complete frame or scene success until 06–09.
 
-## Commit boundary
+## Historical commit boundary
 
-One independently validated commit: `delivery: M22 slice 05B2B translate original texture entry`.
+Superseded: the two current commit boundaries are defined in 05B2B1 and
+05B2B2 above. No standalone 05B2B commit is permitted.
