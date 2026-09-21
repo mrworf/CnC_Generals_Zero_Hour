@@ -45,6 +45,7 @@ OriginalGpuEdge::OriginalGpuEdge(renderer::GpuDevice& device)
 
 OriginalGpuEdge::~OriginalGpuEdge()
 {
+    abort_source_frame();
     release_prepared_state();
     DX8Wrapper::Reset_Source_State();
     for (auto& stage : pending_stages_) if (stage.sampler) device_.destroy(stage.sampler);
@@ -719,6 +720,67 @@ void OriginalGpuEdge::record_source_state(std::string_view label)
 {
     ++source_revision_;
     device_.record_marker(label);
+}
+
+void OriginalGpuEdge::bind_frame_targets(renderer::TextureHandle color,
+    renderer::TextureHandle depth,unsigned width,unsigned height)
+{
+    if (source_frame_active_ || !color || !depth || !width || !height)
+        throw std::runtime_error("original frame target binding requires idle, complete attachments");
+    bound_frame_=BoundFrame{color,depth,width,height};
+}
+
+std::pair<unsigned,unsigned> OriginalGpuEdge::bound_frame_extent() const
+{
+    if (!bound_frame_) throw std::runtime_error("original frame has no caller-owned render targets");
+    return {bound_frame_->width,bound_frame_->height};
+}
+
+void OriginalGpuEdge::begin_source_frame(bool clear_color,bool clear_depth,
+    float red,float green,float blue,float alpha)
+{
+    const auto [width,height]=bound_frame_extent();
+    if (source_frame_active_) throw std::runtime_error("original frame pass already active");
+    renderer::RenderPassDesc pass;
+    pass.color_targets[0]=bound_frame_->color;
+    pass.color_target_count=1;
+    pass.depth_target=bound_frame_->depth;
+    pass.width=width; pass.height=height;
+    pass.color_load=clear_color ? renderer::AttachmentLoad::clear : renderer::AttachmentLoad::load;
+    pass.depth_load=clear_depth ? renderer::AttachmentLoad::clear : renderer::AttachmentLoad::load;
+    pass.clear_color={red,green,blue,alpha};
+    if (clear_depth && !pass.depth_target)
+        throw std::runtime_error("original depth clear requires a caller-owned depth target");
+    if (auto result=device_.begin_pass(pass,"WW3D::Begin_Render source frame"); !result)
+        throw std::runtime_error("original source frame begin failed: "+result.error);
+    source_frame_active_=true;
+    if (clear_color || clear_depth) {
+        renderer::ViewportDesc viewport{0,0,static_cast<float>(width),
+            static_cast<float>(height),0,1};
+        if (auto result=device_.set_viewport(viewport); !result) {
+            abort_source_frame();
+            throw std::runtime_error("original full-target frame viewport failed: "+result.error);
+        }
+    }
+}
+
+void OriginalGpuEdge::end_source_frame(bool present)
+{
+    if (!source_frame_active_) throw std::runtime_error("original source frame is not active");
+    if (auto result=device_.end_pass(); !result)
+        throw std::runtime_error("original source frame end failed: "+result.error);
+    source_frame_active_=false;
+    if (present) {
+        if (auto result=device_.present(bound_frame_->color); !result)
+            throw std::runtime_error("original source frame presentation failed: "+result.error);
+    }
+}
+
+void OriginalGpuEdge::abort_source_frame() noexcept
+{
+    if (!source_frame_active_) return;
+    source_frame_active_=false;
+    (void)device_.end_pass();
 }
 
 std::pair<unsigned,unsigned> OriginalGpuEdge::active_render_target_extent() const noexcept

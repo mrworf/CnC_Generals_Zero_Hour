@@ -429,6 +429,152 @@ int main(int argc, char **argv)
 	WW3DAssetManager manager;
 	RAMFileClass input(bytes.data(), size);
 	assert(manager.Load_3D_Assets(input));
+#if defined(ZH_GPU_SHADER_DIR)
+	if (argc==2 && std::strcmp(argv[1],"--vulkan-source-frame")==0) {
+		assert(SDL_Init(SDL_INIT_VIDEO));
+		OwnedFactory factory;
+		FileFactoryClass* previous_factory=_TheFileFactory;
+		_TheFileFactory=&factory;
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		WW3D::Set_Thumbnail_Enabled(false);
+		for (unsigned width : {160U,240U}) {
+			const unsigned height=width*3/4;
+			zh::renderer::SdlGpuOptions options;
+			options.debug=true; options.shader_root=ZH_GPU_SHADER_DIR;
+			zh::renderer::SdlGpuDevice device(options);
+			assert(device.capabilities().backend=="vulkan");
+			zh::renderer::TextureDesc target;
+			target.width=width; target.height=height;
+			target.render_target=true; target.sampled=false;
+			const auto color=device.create_texture(target,"original WW3D source frame color");
+			target.format=zh::renderer::TextureFormat::depth24_stencil8;
+			const auto depth=device.create_texture(target,"original WW3D source frame depth");
+			assert(color && depth);
+			{
+				zh::original_runtime::OriginalGpuEdge edge(device);
+				assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
+				edge.bind_frame_targets(color,depth,width,height);
+				DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+				DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+				assert(WW3D::Begin_Render(true,true,Vector3(0.201f,0.403f,0.607f),0.77f)==WW3D_ERROR_OK);
+				assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+				const auto pixels=device.readback_rgba(color);
+				assert(pixels.size()==std::size_t(width)*height*4);
+				for (std::size_t i=0;i<pixels.size();i+=4)
+					assert(pixels[i]==51 && pixels[i+1]==102 && pixels[i+2]==154 && pixels[i+3]==196);
+				assert(WW3D::Shutdown()==WW3D_ERROR_OK);
+			}
+			device.destroy(depth); device.destroy(color);
+			assert(factory.owners==0);
+		}
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		_TheFileFactory=previous_factory;
+		SDL_Quit();
+		return 0;
+	}
+#endif
+	if (argc==2 && std::strcmp(argv[1],"--ww3d-source-frame")==0) {
+		OwnedFactory factory;
+		FileFactoryClass* previous_factory=_TheFileFactory;
+		_TheFileFactory=&factory;
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		WW3D::Set_Thumbnail_Enabled(false);
+		zh::renderer::RecordingGpuDevice recorder;
+		zh::renderer::TextureDesc target;
+		target.width=48; target.height=32; target.render_target=true; target.sampled=false;
+		const auto color=recorder.create_texture(target,"caller-owned source frame color");
+		target.format=zh::renderer::TextureFormat::depth24_stencil8;
+		auto depth=recorder.create_texture(target,"caller-owned source frame depth");
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			assert(!WW3D::Is_Initted());
+			const auto uninitialized_count=WW3D::Get_Frame_Count();
+			assert(WW3D::Begin_Render(true,true,Vector3(0,0,0),1)==WW3D_ERROR_OK);
+			assert(WW3D::End_Render(true)==WW3D_ERROR_OK);
+			assert(WW3D::Get_Frame_Count()==uninitialized_count && !recorder.pass_active());
+			assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
+			assert(!WW3D::Is_Rendering());
+			bool missing=false;
+			try { (void)WW3D::Begin_Render(true,true,Vector3(0.2f,0.4f,0.6f),0.8f); }
+			catch (const std::runtime_error&) { missing=true; }
+			assert(missing && !WW3D::Is_Rendering() && !recorder.pass_active());
+			edge.bind_frame_targets(color,depth,48,32);
+			WW3D::Test_Inject_Capture_For_Negative(true);
+			bool capture_unavailable=false;
+			try { (void)WW3D::Begin_Render(true,true,Vector3(0,0,0),1); }
+			catch (const std::runtime_error&) { capture_unavailable=true; }
+			assert(capture_unavailable && !WW3D::Is_Rendering() && !recorder.pass_active());
+			WW3D::Test_Inject_Capture_For_Negative(false);
+			const auto first_frame=WW3D::Get_Frame_Count();
+			bool bad_source_clear=false;
+			try { (void)WW3D::Begin_Render(true,true,Vector3(1.2f,0,0),1); }
+			catch (const std::runtime_error&) { bad_source_clear=true; }
+			assert(bad_source_clear && !WW3D::Is_Rendering() && !recorder.pass_active());
+			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+			DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+			assert(WW3D::Begin_Render(true,true,Vector3(0.201f,0.403f,0.607f),0.77f,
+				texture_frame_network_callback)==WW3D_ERROR_OK);
+			assert(WW3D::Is_Rendering() && recorder.pass_active());
+			assert(texture_frame_network_ticks==0 &&
+				WW3D::Get_Last_Frame_Memory_Allocation_Count()==0 &&
+				WW3D::Get_Last_Frame_Memory_Free_Count()==0);
+			bool reentrant=false;
+			try { (void)WW3D::Begin_Render(false,false,Vector3(0,0,0),1); }
+			catch (const std::runtime_error&) { reentrant=true; }
+			assert(reentrant && WW3D::Is_Rendering());
+			assert(WW3D::End_Render(true)==WW3D_ERROR_OK);
+			assert(!WW3D::Is_Rendering() && !recorder.pass_active());
+			assert(WW3D::Get_Frame_Count()==first_frame+1);
+			bool no_frame=false;
+			try { (void)WW3D::End_Render(false); }
+			catch (const std::runtime_error&) { no_frame=true; }
+			assert(no_frame);
+			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+			DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+			assert(WW3D::Begin_Render(false,false,Vector3(1,0,0),1)==WW3D_ERROR_OK);
+			assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+			DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+			assert(WW3D::Begin_Render(true,true,Vector3(0,0,0),1)==WW3D_ERROR_OK);
+			const auto before_failed_end=WW3D::Get_Frame_Count();
+			assert(recorder.end_pass()); // reject a stolen physical pass at original End
+			bool lost_pass=false;
+			try { (void)WW3D::End_Render(false); }
+			catch (const std::runtime_error&) { lost_pass=true; }
+			assert(lost_pass && !WW3D::Is_Rendering() && !recorder.pass_active() &&
+				WW3D::Get_Frame_Count()==before_failed_end);
+			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+			DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+			assert(WW3D::Begin_Render(true,true,Vector3(0,0,0),1)==WW3D_ERROR_OK);
+			assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+			recorder.destroy(depth);
+			bool stale=false;
+			try { (void)WW3D::Begin_Render(false,true,Vector3(0,0,0),1); }
+			catch (const std::runtime_error&) { stale=true; }
+			assert(stale && !WW3D::Is_Rendering() && !recorder.pass_active());
+			zh::renderer::TextureDesc replacement;
+			replacement.width=48; replacement.height=32;
+			replacement.render_target=true; replacement.sampled=false;
+			replacement.format=zh::renderer::TextureFormat::depth24_stencil8;
+			depth=recorder.create_texture(replacement,"recreated caller-owned source depth");
+			edge.bind_frame_targets(color,depth,48,32);
+			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+			DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+			assert(WW3D::Begin_Render(false,true,Vector3(0,0,0),1)==WW3D_ERROR_OK);
+			assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+			const auto commands=recorder.snapshot();
+			assert(commands.find("WW3D::Begin_Render source frame")!=std::string::npos &&
+				commands.find("color_load=0")!=std::string::npos &&
+				commands.find("color_load=1")!=std::string::npos &&
+				commands.find("clear=0.200000,0.400000,0.603922,0.768627")!=std::string::npos);
+			assert(WW3D::Shutdown()==WW3D_ERROR_OK);
+		}
+		recorder.destroy(depth); recorder.destroy(color);
+		assert(recorder.resource_counts().total()==0 && factory.owners==0);
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		_TheFileFactory=previous_factory;
+		return 0;
+	}
 	if (argc==2 && std::strcmp(argv[1],"--texture-frame-update")==0) {
 		OwnedFactory factory;
 		factory.files["mytex.tga"]=original_targa();

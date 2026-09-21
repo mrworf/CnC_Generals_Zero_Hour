@@ -290,6 +290,8 @@ public:
 	// Read-only CPU witness of the original pointers; excluded from production ABI.
 	static const StaticSortListClass* Test_Default_Static_Sort_List(void) { return DefaultStaticSortLists; }
 	static const StaticSortListClass* Test_Current_Static_Sort_List(void) { return CurrentStaticSortLists; }
+	// Negative-only CPU witness for the unsupported movie-capture frame route.
+	static void Test_Inject_Capture_For_Negative(bool active) { IsCapturing=active; }
 #endif
 
 	/*

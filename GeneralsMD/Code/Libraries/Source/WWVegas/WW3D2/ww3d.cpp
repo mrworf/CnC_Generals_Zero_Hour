@@ -114,6 +114,7 @@
 #include "bound.h"
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "original_gpu_edge.h"
+#include "dx8wrapper.h"
 #include "animatedsoundmgr.h"
 #include <stdexcept>
 #endif
@@ -821,6 +822,17 @@ void WW3D::_Invalidate_Textures()
 	}
 }
 
+#endif // device-only methods before the shared original frame entry
+
+#if defined(ZH_WW3D_CPU_ONLY)
+void WW3D::Get_Render_Target_Resolution(int & width,int & height,int & bits,bool & windowed)
+{
+	const auto extent=zh::original_runtime::OriginalGpuEdge::required().bound_frame_extent();
+	width=static_cast<int>(extent.first); height=static_cast<int>(extent.second);
+	bits=32; windowed=true;
+}
+#endif
+
 /***********************************************************************************************
  * WW3D::Begin_Render -- mark the start of rendering for a new frame                           *
  *                                                                                             *
@@ -841,12 +853,19 @@ WW3DErrorType WW3D::Begin_Render(bool clear,bool clearz,const Vector3 & color, f
 
 	WWPROFILE("WW3D::Begin_Render");
 	WWASSERT(IsInitted);
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (IsRendering) throw std::runtime_error("original WW3D frame is already rendering");
+	if (IsCapturing) throw std::runtime_error("original movie capture requires an unavailable readback edge");
+	zh::original_runtime::OriginalGpuEdge::required().bound_frame_extent();
+#else
 	HRESULT hr;
+#endif
 
 	SNAPSHOT_SAY(("==========================================\r\n"));
 	SNAPSHOT_SAY(("========== WW3D::Begin_Render ============\r\n"));
 	SNAPSHOT_SAY(("==========================================\r\n\r\n"));
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 	if (DX8Wrapper::_Get_D3D_Device8() && (hr=DX8Wrapper::_Get_D3D_Device8()->TestCooperativeLevel()) != D3D_OK)
 	{
         // If the device was lost, do not render until we get it back
@@ -861,6 +880,7 @@ WW3DErrorType WW3D::Begin_Render(bool clear,bool clearz,const Vector3 & color, f
 
 		return WW3D_ERROR_GENERIC;
 	}
+#endif
 
 	// Memory allocation statistics
 	LastFrameMemoryAllocations=WWMemoryLogClass::Get_Allocate_Count();
@@ -876,20 +896,28 @@ WW3DErrorType WW3D::Begin_Render(bool clear,bool clearz,const Vector3 & color, f
 #endif //WW3D_DX8
 	Debug_Statistics::Begin_Statistics();
 
+	#if !defined(ZH_WW3D_CPU_ONLY)
 	if (IsCapturing && (!PauseRecord || RecordNextFrame)) {
 		Update_Movie_Capture();
 		RecordNextFrame = false;
 	}
+	#endif
 
 	WWASSERT(!IsRendering);
 	IsRendering = true;
+	#if defined(ZH_WW3D_CPU_ONLY)
+	try {
+	#endif
 
 	// If we want to clear the screen, we need to set the viewport to include the entire screen:
 	if (clear || clearz) {
+	#if !defined(ZH_WW3D_CPU_ONLY)
 		D3DVIEWPORT8 vp;
+	#endif
 		int width, height, bits;
 		bool windowed;
 		WW3D::Get_Render_Target_Resolution(width, height, bits, windowed);
+	#if !defined(ZH_WW3D_CPU_ONLY)
 		vp.X = 0;
 		vp.Y = 0;
 		vp.Width = width;
@@ -898,13 +926,35 @@ WW3DErrorType WW3D::Begin_Render(bool clear,bool clearz,const Vector3 & color, f
 		vp.MaxZ = 1.0f;
 		DX8Wrapper::Set_Viewport(&vp);
 		DX8Wrapper::Clear(clear, clearz, color, dest_alpha);
+	#else
+		(void)width; (void)height; (void)bits; (void)windowed;
+	#endif
 	}
 
 	// Notify D3D that we are beginning to render the frame
+#if defined(ZH_WW3D_CPU_ONLY)
+	// DX8Wrapper::Clear packs the authored float color to eight-bit ARGB.
+	// Preserve that exact source quantization before public GPU translation.
+	const unsigned packed=(clear || clearz) ? DX8Wrapper::Convert_Color(color,dest_alpha) : 0U;
+	zh::original_runtime::OriginalGpuEdge::required().begin_source_frame(clear,clearz,
+		static_cast<float>((packed>>16)&255U)/255.0f,
+		static_cast<float>((packed>>8)&255U)/255.0f,
+		static_cast<float>(packed&255U)/255.0f,
+		static_cast<float>((packed>>24)&255U)/255.0f);
+#else
 	DX8Wrapper::Begin_Scene();
+#endif
+	#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		IsRendering=false;
+		throw;
+	}
+	#endif
 
 	return WW3D_ERROR_OK;
 }
+
+#if !defined(ZH_WW3D_CPU_ONLY)
 
 /***********************************************************************************************
  * WW3D::Render -- Render a list of layers, starting at the back.                              *
@@ -1163,9 +1213,6 @@ void WW3D::Flush(RenderInfoClass & rinfo)
 	TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
 }
 
-#if !defined(ZH_WW3D_CPU_ONLY)
-
-
 /***********************************************************************************************
  * WW3D::End_Render -- Mark the completion of a frame                                          *
  *                                                                                             *
@@ -1186,19 +1233,29 @@ WW3DErrorType WW3D::End_Render(bool flip_frame)
 
 	WWPROFILE("WW3D::End_Render");
 
+	#if defined(ZH_WW3D_CPU_ONLY)
+	if (!IsRendering) throw std::runtime_error("original WW3D end requires an active source frame");
+	#endif
 	WWASSERT(IsRendering);
 	WWASSERT(IsInitted);
 
 	// If sorting renderer flush isn't called from within any of the render functions
 	// the sorting arrays will overflow!
 
-	SortingRendererClass::Flush();
+	#if defined(ZH_WW3D_CPU_ONLY)
+	try {
+	#endif
+		SortingRendererClass::Flush();
 
 	IsRendering = false;
 
 	{
 		WWPROFILE("DX8Wrapper::End_Scene");
+	#if defined(ZH_WW3D_CPU_ONLY)
+		zh::original_runtime::OriginalGpuEdge::required().end_source_frame(flip_frame);
+	#else
 		DX8Wrapper::End_Scene(flip_frame);
+	#endif
 	}
 
 	FrameCount++;
@@ -1217,11 +1274,24 @@ WW3DErrorType WW3D::End_Render(bool flip_frame)
 	// (gth) I've found some cases where its not safe to rely on our "shadow" copy (of 
 	// matrices for example) across multiple frames.  So even though this is slightly
 	// less "optimal", lets just reset the caches each frame.
+	#if defined(ZH_WW3D_CPU_ONLY)
+	DX8Wrapper::Reset_Source_State();
+	#else
 	DX8Wrapper::Invalidate_Cached_Render_States();
+	#endif
+	#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		IsRendering=false;
+		zh::original_runtime::OriginalGpuEdge::required().abort_source_frame();
+		DX8Wrapper::Reset_Source_State();
+		throw;
+	}
+	#endif
 
 	return WW3D_ERROR_OK;
 }
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 
 /***********************************************************************************************
  * WW3D::Flip_To_Primary                                                                       *

@@ -1970,6 +1970,12 @@ if(ZH_BUILD_TESTS)
     target_compile_definitions(original_w3d_cpu_graph_tests PRIVATE
       ZH_GPU_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/shaders")
     add_dependencies(original_w3d_cpu_graph_tests zh_renderer_shaders)
+    add_test(NAME original_w3d_source_frame_gpu COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:original_w3d_cpu_graph_tests> --vulkan-source-frame)
+    set_tests_properties(original_w3d_source_frame_gpu PROPERTIES
+      LABELS "gpu;original-rendering;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE
+      ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
     add_test(NAME original_w3d_lit_category_gpu COMMAND "${Python3_EXECUTABLE}"
       "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
       $<TARGET_FILE:original_w3d_cpu_graph_tests> --vulkan-category)
@@ -2001,6 +2007,9 @@ if(ZH_BUILD_TESTS)
   add_test(NAME original_w3d_cpu_graph COMMAND original_w3d_cpu_graph_tests)
   add_test(NAME original_w3d_source_init COMMAND original_w3d_cpu_graph_tests --ww3d-init)
   set_tests_properties(original_w3d_source_init PROPERTIES LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_source_frame COMMAND original_w3d_cpu_graph_tests --ww3d-source-frame)
+  set_tests_properties(original_w3d_source_frame PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
   add_test(NAME original_w3d_texture_frame_update COMMAND original_w3d_cpu_graph_tests --texture-frame-update)
   set_tests_properties(original_w3d_texture_frame_update PROPERTIES LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_texture_frame_missing_manager COMMAND original_w3d_cpu_graph_tests --texture-frame-missing-manager)

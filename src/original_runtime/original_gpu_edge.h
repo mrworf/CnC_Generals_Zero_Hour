@@ -140,6 +140,15 @@ public:
     void set_filter_stage_state(unsigned stage, FilterStageState state, unsigned value);
     PendingStage pending_stage(unsigned stage) const;
     void record_source_state(std::string_view label);
+    // The caller owns both attachments. Only original WW3D::Begin/End selects
+    // their clear/load and presentation; this edge translates that selection.
+    void bind_frame_targets(renderer::TextureHandle color, renderer::TextureHandle depth,
+        unsigned width,unsigned height);
+    std::pair<unsigned,unsigned> bound_frame_extent() const;
+    void begin_source_frame(bool clear_color,bool clear_depth,
+        float red,float green,float blue,float alpha);
+    void end_source_frame(bool present);
+    void abort_source_frame() noexcept;
     std::pair<unsigned,unsigned> active_render_target_extent() const noexcept;
     void set_source_viewport(float x,float y,float width,float height,float min_depth,float max_depth);
     [[noreturn]] void texture_creation_unavailable(WW3DFormat format, unsigned width,
@@ -168,6 +177,9 @@ private:
         std::array<const TextureBaseClass*,2> sources{};
     };
     std::optional<PhysicalResources> physical_;
+    struct BoundFrame { renderer::TextureHandle color,depth; unsigned width=0,height=0; };
+    std::optional<BoundFrame> bound_frame_;
+    bool source_frame_active_=false;
 };
 
 } // namespace zh::original_runtime
