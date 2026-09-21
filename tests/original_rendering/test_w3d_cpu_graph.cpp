@@ -385,7 +385,8 @@ int main(int argc, char **argv)
 	else make_mesh(writer, false, false, true);
 	if (!supply_variant) make_mesh(writer,false,false,true,1,false,true);
 	if (argc == 2 && (std::strcmp(argv[1], "--device-edge") == 0 ||
-		std::strcmp(argv[1], "--vulkan-category") == 0)) {
+		std::strcmp(argv[1], "--vulkan-category") == 0 ||
+		std::strcmp(argv[1], "--vulkan-sorting") == 0)) {
 		make_mesh(writer, false, false, false, 0);
 		make_mesh(writer, false, false, false, 2);
 		make_mesh(writer, false, true);
@@ -489,7 +490,7 @@ int main(int argc, char **argv)
 		zh::renderer::RenderPassDesc pass;
 		pass.color_targets[0]=color; pass.color_target_count=1;
 		pass.depth_target=depth; pass.width=32; pass.height=32;
-		for (unsigned attempt=0;attempt<2;++attempt) {
+		for (unsigned attempt=0;attempt<6;++attempt) {
 			mesh->Render(render_info);
 			back_mesh->Render(render_info);
 			{
@@ -511,25 +512,87 @@ int main(int argc, char **argv)
 					invalid_depth=std::strstr(error.what(),"nonfinite depth")!=nullptr;
 				}
 				assert(invalid_index && invalid_depth);
-				bool typed_physical=false;
+				RenderStateStruct selected_sort_state;
+				DX8Wrapper::Get_Render_State(selected_sort_state);
+				assert(selected_sort_state.index_buffer &&
+					selected_sort_state.index_buffer_type==BUFFER_TYPE_SORTING);
+				bool invalid_source_element=false;
+				unsigned short original_element=0;
+				DX8Wrapper::Set_Index_Buffer(nullptr,0);
+				{
+					IndexBufferClass::WriteLockClass lock(selected_sort_state.index_buffer);
+					auto* elements=static_cast<unsigned short*>(lock.Get_Index_Array());
+					original_element=elements[0];
+					elements[0]=65000;
+				}
+				DX8Wrapper::Set_Index_Buffer(selected_sort_state.index_buffer,
+					selected_sort_state.index_base_offset);
+				try { SortingRendererClass::Insert_Triangles(0,1,0,3); }
+				catch (const std::runtime_error& error) {
+					invalid_source_element=std::strstr(error.what(),"index is outside")!=nullptr;
+				}
+				DX8Wrapper::Set_Index_Buffer(nullptr,0);
+				{
+					IndexBufferClass::WriteLockClass lock(selected_sort_state.index_buffer);
+					static_cast<unsigned short*>(lock.Get_Index_Array())[0]=original_element;
+				}
+				DX8Wrapper::Set_Index_Buffer(selected_sort_state.index_buffer,
+					selected_sort_state.index_base_offset);
+				assert(invalid_source_element);
+				float original_vertex_z=0;
+				if (attempt==0) {
+					DX8Wrapper::Set_Vertex_Buffer(nullptr);
+					VertexBufferClass::WriteLockClass lock(selected_sort_state.vertex_buffers[0]);
+					auto* vertices=static_cast<VertexFormatXYZNDUV2*>(lock.Get_Vertex_Array());
+					original_vertex_z=vertices[0].z;
+					vertices[0].z=std::numeric_limits<float>::quiet_NaN();
+				}
+				if (attempt==0) DX8Wrapper::Set_Vertex_Buffer(selected_sort_state.vertex_buffers[0]);
+				if (attempt==1) recorder.fail_next_buffer_upload();
+				if (attempt==2) recorder.fail_next_pipeline_create();
+				if (attempt==3) recorder.fail_next_draw();
+				bool rejected=false;
 				try { SortingRendererClass::Flush(); }
 				catch (const std::runtime_error& error) {
-					typed_physical=std::strstr(error.what(),
-						"original sorted pool requires physical GPU translation")!=nullptr;
+					rejected=attempt!=0 ||
+						std::strstr(error.what(),"sorting triangle has nonfinite depth")!=nullptr;
 				}
-				assert(typed_physical && recorder.end_pass());
+				assert(rejected==(attempt<4));
+				if (attempt==0) {
+					DX8Wrapper::Set_Vertex_Buffer(nullptr);
+					VertexBufferClass::WriteLockClass lock(selected_sort_state.vertex_buffers[0]);
+					static_cast<VertexFormatXYZNDUV2*>(lock.Get_Vertex_Array())[0].z=original_vertex_z;
+				}
+				assert(recorder.end_pass());
 				SortingRendererClass::SortedTriangleWitness sorted[8]{};
-				assert(SortingRendererClass::Copy_Last_Sorted_Triangles(sorted,8)==2);
+				assert(SortingRendererClass::Copy_Last_Sorted_Triangles(sorted,8)==(attempt==0 ? 0U : 2U));
+				if (attempt!=0) {
 				assert(sorted[0].depth<sorted[1].depth);
 				assert(std::abs(sorted[0].depth+12.0f)<0.01f);
 				assert(std::abs(sorted[1].depth+10.0f)<0.01f);
 				assert(sorted[0].node!=sorted[1].node);
+				if (!rejected) {
+					const auto commands=recorder.snapshot();
+					const auto first_draw=commands.find("draw pipeline=");
+					const auto next_draw=commands.find("draw pipeline=",first_draw+1);
+					const auto first_marker=commands.find("DX8Wrapper::Draw indexed first=");
+					const auto second_marker=commands.find("DX8Wrapper::Draw indexed first=",first_marker+1);
+					assert(first_draw!=std::string::npos && next_draw!=std::string::npos &&
+						first_marker!=std::string::npos && second_marker!=std::string::npos);
+					const auto last_indices=recorder.last_draw_index_bytes();
+					assert(last_indices.size()==3*sizeof(unsigned short));
+					unsigned short last_triangle[3]{};
+					std::memcpy(last_triangle,last_indices.data(),sizeof(last_triangle));
+					assert(last_triangle[0]==sorted[1].i &&
+						last_triangle[1]==sorted[1].j && last_triangle[2]==sorted[1].k);
+				}
+				}
 				WW3D::Enable_Sorting(false);
 				bool direct_boundary=false;
 				try { SortingRendererClass::Insert_Triangles(0,1,0,3); }
 				catch (const std::runtime_error&) { direct_boundary=true; }
 				assert(direct_boundary &&
-					SortingRendererClass::Copy_Last_Sorted_Triangles(nullptr,0)==2);
+					SortingRendererClass::Copy_Last_Sorted_Triangles(nullptr,0)==(attempt==0 ? 0U : 2U));
 				WW3D::Enable_Sorting(true);
 				DX8Wrapper::Set_Vertex_Buffer(nullptr);
 				bool invalid_type=false;
@@ -539,6 +602,7 @@ int main(int argc, char **argv)
 				}
 				assert(invalid_type);
 			}
+			assert(recorder.resource_counts().total()==2);
 			TheDX8MeshRenderer.Invalidate();
 			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
 			mesh->Peek_Model()->Register_For_Rendering();
@@ -645,6 +709,14 @@ int main(int argc, char **argv)
 			DX8Wrapper::Draw_Triangles(0,1,0,3);
 			assert(recorder.snapshot().find("draw pipeline=",before_replay)!=std::string::npos &&
 				recorder.last_draw_index_bytes()==source_indices);
+			const bool sorting_before=WW3D::Is_Sorting_Enabled();
+			WW3D::Enable_Sorting(false);
+			const auto before_direct=recorder.snapshot().size();
+			SortingRendererClass::Insert_Triangles(0,1,0,3);
+			assert(recorder.snapshot().find("draw pipeline=",before_direct)!=std::string::npos &&
+				recorder.last_draw_index_bytes()==source_indices &&
+				SortingRendererClass::Copy_Last_Sorted_Triangles(nullptr,0)==0);
+			WW3D::Enable_Sorting(sorting_before);
 			DX8Wrapper::Release_Render_State();
 			assert(recorder.end_pass() && textures.owners==0);
 		}
@@ -1198,6 +1270,91 @@ int main(int argc, char **argv)
 		return 0;
 	}
 #if defined(ZH_GPU_SHADER_DIR)
+	if (argc==2 && std::strcmp(argv[1],"--vulkan-sorting")==0) {
+		assert(SDL_Init(SDL_INIT_VIDEO));
+		OwnedFactory textures;
+		textures.files["mytex.tga"]=original_targa();
+		textures.files["MYTEX.TGA"]=textures.files["mytex.tga"];
+		auto* old_factory=_TheFileFactory;
+		_TheFileFactory=&textures;
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		const bool previous_sorting=WW3D::Is_Sorting_Enabled();
+		WW3D::Set_Thumbnail_Enabled(false);
+		TheDX8MeshRenderer.Init();
+		WW3D::Enable_Sorting(true);
+		TheDX8MeshRenderer.Set_Camera(&camera);
+		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,true);
+		mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+		mesh->Set_ObjectScale(5.0f);
+		mesh->Set_Position(Vector3(-1,0,-10));
+		RenderObjClass* back=manager.Create_Render_Obj("TEST.ZERO01");
+		assert(back && back->Class_ID()==RenderObjClass::CLASSID_MESH);
+		auto* back_mesh=static_cast<MeshClass*>(back);
+		back_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,true);
+		back_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+		back_mesh->Set_ObjectScale(5.0f);
+		back_mesh->Set_Position(Vector3(1,0,-12));
+		for (unsigned generation=0;generation<2;++generation) {
+			zh::renderer::SdlGpuOptions options;
+			options.debug=true; options.shader_root=ZH_GPU_SHADER_DIR;
+			zh::renderer::SdlGpuDevice device(options);
+			assert(device.capabilities().backend=="vulkan");
+			zh::renderer::TextureDesc target;
+			target.width=generation ? 240 : 160;
+			target.height=generation ? 160 : 120;
+			target.format=zh::renderer::TextureFormat::rgba8;
+			target.render_target=true;
+			const auto color=device.create_texture(target,"original sorted meshes Vulkan color");
+			target.format=zh::renderer::TextureFormat::depth24_stencil8;
+			const auto depth=device.create_texture(target,"original sorted meshes Vulkan depth");
+			assert(color && depth);
+			zh::renderer::RenderPassDesc pass;
+			pass.color_targets[0]=color; pass.color_target_count=1;
+			pass.depth_target=depth; pass.width=target.width; pass.height=target.height;
+			{
+				zh::original_runtime::OriginalGpuEdge edge(device);
+				DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+				Matrix4x4 projection;
+				camera.Get_D3D_Projection_Matrix(&projection);
+				DX8Wrapper::Set_Transform(D3DTS_PROJECTION,projection);
+				auto frame=[&](bool both) {
+					mesh->Render(render_info);
+					if (both) back_mesh->Render(render_info);
+					assert(device.begin_pass(pass,"original source sorted meshes Vulkan"));
+					TheDX8MeshRenderer.Flush();
+					SortingRendererClass::Flush();
+					assert(device.end_pass());
+					return device.readback_rgba(color);
+				};
+				const auto pixels=frame(true);
+				SortingRendererClass::SortedTriangleWitness order[8]{};
+				assert(SortingRendererClass::Copy_Last_Sorted_Triangles(order,8)==2 &&
+					order[0].depth<order[1].depth && order[0].node!=order[1].node);
+				assert(pixels.size()==static_cast<std::size_t>(pass.width)*pass.height*4U);
+				unsigned covered=0;
+				for (std::size_t i=0;i<pixels.size();i+=4)
+					if (pixels[i]!=5 || pixels[i+1]!=5 || pixels[i+2]!=10) ++covered;
+				assert(covered>0 && covered<pass.width*pass.height && textures.owners==0);
+				const auto single_pixels=frame(false);
+				assert(SortingRendererClass::Copy_Last_Sorted_Triangles(nullptr,0)==1 &&
+					pixels!=single_pixels);
+				TheDX8MeshRenderer.Invalidate();
+				TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+				mesh->Peek_Model()->Register_For_Rendering();
+				back_mesh->Peek_Model()->Register_For_Rendering();
+			}
+			device.destroy(depth); device.destroy(color);
+			assert(device.wait_idle());
+		}
+		SortingRendererClass::Deinit();
+		WW3D::Enable_Sorting(previous_sorting);
+		TheDX8MeshRenderer.Set_Camera(nullptr);
+		_TheFileFactory=old_factory;
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		back->Release_Ref(); object->Release_Ref(); manager.Free_Assets();
+		SDL_Quit();
+		return 0;
+	}
 	if (argc==2 && std::strcmp(argv[1],"--vulkan-category")==0) {
 		assert(SDL_Init(SDL_INIT_VIDEO));
 		{

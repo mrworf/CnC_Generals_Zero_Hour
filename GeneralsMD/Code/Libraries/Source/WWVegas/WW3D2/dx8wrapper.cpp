@@ -259,8 +259,8 @@ void DX8Wrapper::Set_Render_State(const RenderStateStruct& snapshot)
     Set_Material(snapshot.material);
     for (unsigned stage=0;stage<MAX_TEXTURE_STAGES;++stage)
         Set_Texture(stage,snapshot.Textures[stage]);
-    Set_Transform(D3DTS_WORLD,snapshot.world);
-    Set_Transform(D3DTS_VIEW,snapshot.view);
+    Set_Transform(D3DTS_WORLD,snapshot.world.Transpose());
+    Set_Transform(D3DTS_VIEW,snapshot.view.Transpose());
     for (unsigned slot=0;slot<4;++slot)
         Set_Light(slot,snapshot.LightEnable[slot] ? &snapshot.Lights[slot] : nullptr);
     Set_Vertex_Buffer(snapshot.vertex_buffers[0]);

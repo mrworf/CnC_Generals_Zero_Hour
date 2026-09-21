@@ -450,7 +450,16 @@ void SortingRendererClass::Insert_To_Sorting_Pool(SortingNodeStruct* state)
 static void Apply_Render_State(RenderStateStruct& render_state)
 {
 	#if defined(ZH_WW3D_CPU_ONLY)
-	throw std::runtime_error("original sorting physical state requires GPU translation");
+	DX8Wrapper::Set_Shader(render_state.shader);
+	DX8Wrapper::Set_Material(render_state.material);
+	for (unsigned i=0;i<MAX_TEXTURE_STAGES;++i)
+		DX8Wrapper::Set_Texture(i,render_state.Textures[i]);
+	DX8Wrapper::Set_Transform(D3DTS_WORLD,render_state.world.Transpose());
+	DX8Wrapper::Set_Transform(D3DTS_VIEW,render_state.view.Transpose());
+	if (render_state.material && render_state.material->Get_Lighting()) {
+		for (unsigned i=0;i<4;++i)
+			DX8Wrapper::Set_Light(i,render_state.LightEnable[i] ? &render_state.Lights[i] : nullptr);
+	}
 	#else
 
 
@@ -619,9 +628,6 @@ void SortingRendererClass::Flush_Sorting_Pool()
 	Sort(tis, tis + overlapping_polygon_count);
 	#if defined(ZH_WW3D_CPU_ONLY)
 	last_sorted_triangle_count=overlapping_polygon_count;
-	// Source triangle order is complete. Physical sorted buffer submission is
-	// the next slice; never report a completed frame at this device boundary.
-	throw std::runtime_error("original sorted pool requires physical GPU translation");
 	#endif
 
 /*	///@todo: Add code to break up rendering into multiple index buffer fills to allow more than 65536/3 triangles.  -MW
