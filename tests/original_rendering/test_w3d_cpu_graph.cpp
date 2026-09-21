@@ -592,6 +592,20 @@ int main(int argc, char **argv)
 			const auto additional_rigid_pixels=frame(mesh,Vector3(0.15f,0.2f,0.25f));
 			assert(additional_rigid_pixels!=ambient_pixels);
 			const auto additional_skin_pixels=skin_frame();
+			render_info.Push_Override_Flags(RenderInfoClass::RINFO_OVERRIDE_ADDITIONAL_PASSES_ONLY);
+			mesh->Render(render_info);
+			render_info.Pop_Override_Flags();
+			assert(device.begin_pass(pass,"original rigid delayed-only Vulkan frame"));
+			TheDX8MeshRenderer.Flush();
+			assert(device.end_pass());
+			const auto delayed_pixels=device.readback_rgba(color);
+			assert(delayed_pixels.size()==ambient_pixels.size() &&
+				delayed_pixels!=ambient_pixels && delayed_pixels!=original_skin_pixels);
+			unsigned delayed_coverage=0;
+			for (std::size_t i=0;i<delayed_pixels.size();i+=4)
+				if (delayed_pixels[i]!=5 || delayed_pixels[i+1]!=5 || delayed_pixels[i+2]!=10)
+					++delayed_coverage;
+			assert(delayed_coverage>0);
 			render_info.Pop_Material_Pass();
 			assert(additional_skin_pixels!=original_skin_pixels);
 			immediate->Release_Ref();
@@ -845,6 +859,31 @@ int main(int argc, char **argv)
 					additional_commands.find("original_applied_0.frag",installed)!=std::string::npos &&
 					additional_commands.find("index_bits=16",additional)!=std::string::npos);
 			}
+			auto* delayed_rigid=static_cast<MeshClass*>(variant_objects[0]);
+			render_info.Push_Override_Flags(RenderInfoClass::RINFO_OVERRIDE_ADDITIONAL_PASSES_ONLY);
+			delayed_rigid->Render(render_info);
+			render_info.Pop_Override_Flags();
+			original_skin_hlod->Render(render_info);
+			const auto before_delayed=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original skin-before-rigid-delayed source flush"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto delayed_commands=recorder.snapshot().substr(before_delayed);
+			const auto skin_dynamic=delayed_commands.find("DX8Wrapper::Set_Vertex_Buffer dynamic offset=");
+			const auto delayed_vertex=delayed_commands.find("DX8Wrapper::Set_Vertex_Buffer",skin_dynamic+1);
+			const auto delayed_install=delayed_commands.find("DX8Wrapper::Set_Material",delayed_vertex);
+			const auto first_skin_draw=delayed_commands.find("draw pipeline=",skin_dynamic);
+			const auto second_skin_draw=delayed_commands.find("draw pipeline=",first_skin_draw+1);
+			const auto delayed_draw=delayed_commands.find("draw pipeline=",delayed_install);
+			assert(count_draws(delayed_commands)==3 && skin_dynamic!=std::string::npos &&
+				first_skin_draw>skin_dynamic && second_skin_draw>first_skin_draw &&
+				second_skin_draw<delayed_vertex && delayed_vertex<delayed_install &&
+				delayed_draw>delayed_install);
+			const auto before_empty_delay=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original empty delayed queue"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass() &&
+				count_draws(recorder.snapshot().substr(before_empty_delay))==0);
 			render_info.Pop_Material_Pass();
 			immediate->Release_Ref();
 			original_skin_child->Release_Ref();
@@ -1172,6 +1211,57 @@ int main(int argc, char **argv)
 			culled_pass->Release_Ref();
 			TheDX8MeshRenderer.Invalidate();
 			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			auto* delayed_pass=NEW_REF(MaterialPassClass,());
+			auto* delayed_material=NEW_REF(VertexMaterialClass,());
+			delayed_material->Set_Lighting(true);
+			delayed_material->Set_Opacity(0.7f);
+			delayed_pass->Set_Material(delayed_material);
+			delayed_material->Release_Ref();
+			delayed_pass->Set_Shader(override_shader);
+			render_info.Push_Material_Pass(delayed_pass);
+			const auto queue_delayed=[&]() {
+				retry_mesh->Peek_Model()->Register_For_Rendering();
+				render_info.Push_Override_Flags(RenderInfoClass::RINFO_OVERRIDE_ADDITIONAL_PASSES_ONLY);
+				retry_mesh->Render(render_info);
+				render_info.Pop_Override_Flags();
+			};
+			queue_delayed();
+			recorder.fail_next_buffer_upload();
+			const auto before_delayed_upload=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original delayed upload failure"));
+			bool delayed_upload_rejected=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				delayed_upload_rejected=std::strstr(error.what(),"upload")!=nullptr;
+			}
+			assert(delayed_upload_rejected && recorder.end_pass() &&
+				recorder.snapshot().substr(before_delayed_upload).find("draw pipeline=")==
+					std::string::npos);
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			queue_delayed();
+			recorder.fail_next_draw();
+			const auto before_delayed_failure=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original delayed physical draw failure"));
+			bool delayed_draw_rejected=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				delayed_draw_rejected=std::strstr(error.what(),"draw")!=nullptr;
+			}
+			assert(delayed_draw_rejected && recorder.end_pass() &&
+				recorder.snapshot().substr(before_delayed_failure).find("draw pipeline=")==
+					std::string::npos &&
+				std::fabs(delayed_material->Get_Opacity()-0.7f)<0.0001f);
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			queue_delayed();
+			const auto before_delayed_retry=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original delayed owner reset and retry"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			assert(count_draws(recorder.snapshot().substr(before_delayed_retry))==1);
+			render_info.Pop_Material_Pass();
+			delayed_pass->Release_Ref();
 			render_info.light_environment=nullptr;
 			retry_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
 			RenderObjClass* bad_skin_hlod=manager.Create_Render_Obj("TEST.BADHLOD");

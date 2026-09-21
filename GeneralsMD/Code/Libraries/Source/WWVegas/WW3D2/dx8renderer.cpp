@@ -370,7 +370,20 @@ void DX8RigidFVFCategoryContainer::Render_Delayed_Procedural_Material_Passes(voi
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	if (!Any_Delayed_Passes_To_Render()) return;
-	throw std::runtime_error("original delayed mesh pass requires GPU translation");
+	DX8Wrapper::Set_Vertex_Buffer(vertex_buffer);
+	DX8Wrapper::Set_Index_Buffer(index_buffer,0);
+	SNAPSHOT_SAY(("DX8RigidFVFCategoryContainer::Render_Delayed_Procedural_Material_Passes()\n"));
+	// The source task remains owned by the original container until its draw
+	// succeeds. Linux device errors can unwind; keep the failed task linked
+	// so the enclosing scene can abort/reset without a dangling list head.
+	while (delayed_matpass_head != NULL) {
+		MatPassTaskClass * mpr=delayed_matpass_head;
+		mpr->Peek_Mesh()->Render_Material_Pass(mpr->Peek_Material_Pass(),index_buffer);
+		delayed_matpass_head=mpr->Get_Next_Visible();
+		if (delayed_matpass_head==NULL) delayed_matpass_tail=NULL;
+		delete mpr;
+	}
+	AnyDelayedPassesToRender=false;
 #else
 	if (!Any_Delayed_Passes_To_Render()) return;
 	AnyDelayedPassesToRender=false;
