@@ -1,4 +1,12 @@
-# M22 plan 01 slice 05B2: original texture/material/shader physical entry
+# M22 plan 01 slice 05B2: superseded by 05B2A and 05B2B
+
+This pending slice was split after 05B1: original WW3D format, bitmap and
+`TextureLoader` CPU decisions are independently testable before the first
+physical texture creation, which precedes material/shader commands. The
+complete outcomes and negatives below move to
+[05B2A](milestone_22_plan_01_slice_05b2a.md) and
+[05B2B](milestone_22_plan_01_slice_05b2b.md). Do not implement this
+superseded slice as a separate transaction.
 
 ## Outcome and dependencies
 

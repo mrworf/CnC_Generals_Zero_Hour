@@ -50,7 +50,7 @@ The production Linux original-engine path renders representative campaign and sk
 3. Recording and Vulkan runs invoke the same original producer entry point. Recording is the deterministic semantic witness and negative-control surface; hardware is the device, validation, resize, presentation, and visual-evidence gate.
 4. Retail logical input names are supplied privately by the gate and read through the existing VFS. Tests commit only logical/aggregate results and project-owned screenshots or derived visual observations permitted by the product contract; no retail bytes, hashes, or host paths are retained.
 5. Unsupported required legacy state, missing/malformed required assets, stale resources, and omitted original providers are hard failures. No placeholder texture/model, generated scene, ignored state, generic/no-op draw module, or silent successful null behavior can satisfy acceptance.
-6. Thirteen slices are the dependency-safe sequence after the source-order and texture-provider audits: accepted original WW3D assets, GameClient ownership and draw overrides; bounded FVF/visibility CPU gate; original buffer/category ownership; mesh entry and canonical WW3D state; public 16-bit index contract and original buffer physical entry; canonical TGA/DDS image providers; original texture loader/material/shader physical entry; complete interleaved pass graph; GameClient integration; retail recording; then validation-enabled Vulkan acceptance. An unavailable device edge during CPU slices never establishes successful pass scheduling or a frame.
+6. Fourteen slices are the dependency-safe sequence after the source-order and texture-provider audits: accepted original WW3D assets, GameClient ownership and draw overrides; bounded FVF/visibility CPU gate; original buffer/category ownership; mesh entry and canonical WW3D state; public 16-bit index contract and original buffer physical entry; canonical TGA/DDS image providers; original texture format/bitmap/loader CPU decisions; original texture loader/material/shader physical entry; complete interleaved pass graph; GameClient integration; retail recording; then validation-enabled Vulkan acceptance. An unavailable device edge during CPU slices never establishes successful pass scheduling or a frame.
 
 ## Scope
 
@@ -82,8 +82,9 @@ The production Linux original-engine path renders representative campaign and sk
 | 04C | [milestone_22_plan_01_slice_04c.md](milestone_22_plan_01_slice_04c.md) | Original mesh visibility/frustum/sort/overrides and category entry decisions plus canonical WW3D state stop at first typed physical edge; no completed pass claim. | slice 04B | complete | slice 04C commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_04c.md) |
 | 05A | [milestone_22_plan_01_slice_05a.md](milestone_22_plan_01_slice_05a.md) | Public 16-bit index/offset/base contract and source-issued original vertex/index buffer physical commands, typed at later texture edge. | slice 04C, M14 | complete | slice 05A commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05a.md) |
 | 05B1 | [milestone_22_plan_01_slice_05b1.md](milestone_22_plan_01_slice_05b1.md) | Canonical original Targa and DDS providers parse and decode reached owned/retail image families with bounded failure behavior; no texture/frame claim. | slice 05A | complete | slice 05B1 commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05b1.md) |
-| 05B2 | [milestone_22_plan_01_slice_05b2.md](milestone_22_plan_01_slice_05b2.md) | Original texture loader/image identity and first source-issued texture/material/shader physical commands; no synthetic pixels or complete pass claim. | slice 05B1 | pending | | |
-| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | Full interleaved original mesh/WWShade/WW3D material, rigid/skin/decal/static/sorting pass graph records owned fixture frames in authored call order. | slice 05B2 | pending | | |
+| 05B2A | [milestone_22_plan_01_slice_05b2a.md](milestone_22_plan_01_slice_05b2a.md) | Original WW3D format/bitmap and TextureLoader selection, reduction, mip and pixel decisions stop at first typed texture-device edge. | slice 05B1 | pending | | |
+| 05B2B | [milestone_22_plan_01_slice_05b2b.md](milestone_22_plan_01_slice_05b2b.md) | Original source-issued texture lifecycle/upload/filter/material/shader physical commands; no synthetic pixels or complete pass claim. | slice 05B2A | pending | | |
+| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | Full interleaved original mesh/WWShade/WW3D material, rigid/skin/decal/static/sorting pass graph records owned fixture frames in authored call order. | slice 05B2B | pending | | |
 | 07 | [milestone_22_plan_01_slice_07.md](milestone_22_plan_01_slice_07.md) | Original GameClient display/scene, 2D, terrain, track, shroud and selected shadow/effect routes integrate and switch production to full behavior. | slice 06 | pending | | |
 | 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | slice 07, PRE-008 | pending | | |
 | 09 | [milestone_22_plan_01_slice_09.md](milestone_22_plan_01_slice_09.md) | Same retail scenes present on validation-enabled SDL_GPU Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 08, PRE-012, PRE-016 | pending | | |
@@ -109,7 +110,7 @@ The production Linux original-engine path renders representative campaign and sk
 
 ## Rollback and recovery
 
-Each slice is independently revertible. Slices 01–04C add only original CPU producer behavior and do not claim a renderer. Slice 05A establishes original vertex/index physical commands, 05B1 proves original image providers, and 05B2 restores original image/material/shader physical entry; 06 closes the interleaved pass graph; 07 integrates production GameClient traversal. Slice 08 records retail scenes without requiring hardware. Slice 09's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
+Each slice is independently revertible. Slices 01–04C add only original CPU producer behavior and do not claim a renderer. Slice 05A establishes original vertex/index physical commands, 05B1 proves original image providers, 05B2A preserves original image/format/mip selection before the first device operation, and 05B2B restores original image/material/shader physical entry; 06 closes the interleaved pass graph; 07 integrates production GameClient traversal. Slice 08 records retail scenes without requiring hardware. Slice 09's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
 
 ## Execution notes
 
@@ -210,6 +211,26 @@ commands). Accepted 01–05A are unchanged, and downstream 06–09 retain their
 full acceptance. `TARGA.CPP`, `ddsfile.cpp`, and `textureloader.cpp` remain
 canonical providers, without a duplicate adapter-owned decode or invented
 fallback pixels. This is a plan-only checkpoint before provider acceptance.
+
+## Post-slice-05B1 source-owned format/bitmap/loader boundary
+
+Canonical `TextureLoader::Get_Texture_Information` consults original
+thumbnail metadata or original DDS/Targa providers, then WW3D requested
+reduction and minimum texture dimension; its compressed/uncompressed begin
+methods call original `Get_WW3D_Format`/`Get_Valid_Texture_Format`, device
+texture size normalization and mip policy *before* original
+`DX8Wrapper::_Create_DX8_Texture`. Original `BitmapHandlerClass::Copy_Image`
+owns conversion/mip output before physical upload. `ww3dformat.cpp` also
+contains DX8 capability lookups; `textureloader.cpp` owns a large native
+thread/surface state machine. A first device-creation witness cannot prove
+that original producer behavior without restoring those reached CPU methods
+first. Former pending 05B2 is superseded by 05B2A (original format/bitmap/
+loader CPU decisions and typed physical edge), then 05B2B (first source-issued
+physical texture lifecycle/material/shader). Preserve the authored order and
+normal 05B2 outcomes/negatives; no image bytes, mip choice, material, or
+shader state may originate in an adapter. Accepted 01–05B1 and downstream
+06–09 are unchanged. This checkpoint is committed as plans only before
+production changes.
 
 ## Deferred follow-ups
 
