@@ -10,6 +10,8 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
+#include <cstring>
 #include <stdexcept>
 #include <string>
 
@@ -105,6 +107,196 @@ renderer::OriginalFvfLayout OriginalGpuEdge::layout_for_fvf(unsigned source_fvf)
     probe.original_fvf = result;
     if (auto status = renderer::validate(probe); !status)
         throw std::runtime_error("unsupported original FVF device layout: " + status.error);
+    return result;
+}
+
+OriginalGpuEdge::AppliedState OriginalGpuEdge::map_applied_state(unsigned source_fvf)
+{
+    (void)required();
+    const auto source=DX8Wrapper::Snapshot_Source_State();
+    if (!source.material_applied)
+        throw std::runtime_error("original material has not issued its physical state");
+    AppliedState result;
+    result.pipeline.vertex_layout=renderer::VertexLayout::original_fvf;
+    result.pipeline.original_fvf=layout_for_fvf(source_fvf);
+    const auto render=[&](unsigned key) {
+        auto found=source.render.find(key);
+        if (found==source.render.end())
+            throw std::runtime_error("original applied render state is absent: "+std::to_string(key));
+        return found->second;
+    };
+    const auto boolean=[&](unsigned key) {
+        const unsigned value=render(key);
+        if (value>1) throw std::runtime_error("original applied boolean render state is invalid");
+        return value!=0;
+    };
+    const auto compare=[](unsigned value) {
+        switch (value) {
+        case 1: return renderer::CompareOp::never;
+        case 2: return renderer::CompareOp::less;
+        case 3: return renderer::CompareOp::equal;
+        case 4: return renderer::CompareOp::less_equal;
+        case 5: return renderer::CompareOp::greater;
+        case 6: return renderer::CompareOp::not_equal;
+        case 7: return renderer::CompareOp::greater_equal;
+        case 8: return renderer::CompareOp::always;
+        default: throw std::runtime_error("original comparison mode is unsupported by public GPU");
+        }
+    };
+    const auto blend=[](unsigned value) {
+        switch (value) {
+        case D3DBLEND_ZERO: return renderer::BlendFactor::zero;
+        case D3DBLEND_ONE: return renderer::BlendFactor::one;
+        case D3DBLEND_SRCCOLOR: return renderer::BlendFactor::src_color;
+        case D3DBLEND_INVSRCCOLOR: return renderer::BlendFactor::inv_src_color;
+        case D3DBLEND_SRCALPHA: return renderer::BlendFactor::src_alpha;
+        case D3DBLEND_INVSRCALPHA: return renderer::BlendFactor::inv_src_alpha;
+        case D3DBLEND_DESTCOLOR: return renderer::BlendFactor::dst_color;
+        default: throw std::runtime_error("original blend factor is unsupported by public GPU");
+        }
+    };
+    result.pipeline.blend.enabled=boolean(D3DRS_ALPHABLENDENABLE);
+    if (result.pipeline.blend.enabled) {
+        const auto src=blend(render(D3DRS_SRCBLEND));
+        const auto dst=blend(render(D3DRS_DESTBLEND));
+        result.pipeline.blend.source_color=result.pipeline.blend.source_alpha=src;
+        result.pipeline.blend.destination_color=result.pipeline.blend.destination_alpha=dst;
+    }
+    result.pipeline.depth_stencil.depth_compare=compare(render(D3DRS_ZFUNC));
+    result.pipeline.depth_stencil.depth_write=boolean(D3DRS_ZWRITEENABLE);
+    const auto cull=render(D3DRS_CULLMODE);
+    if (cull==D3DCULL_NONE) result.pipeline.raster.cull=renderer::CullMode::none;
+    else if (cull==D3DCULL_CW) result.pipeline.raster.cull=renderer::CullMode::clockwise;
+    else if (cull==D3DCULL_CCW) result.pipeline.raster.cull=renderer::CullMode::counter_clockwise;
+    else throw std::runtime_error("original cull mode is unsupported by public GPU");
+    result.lighting=boolean(D3DRS_LIGHTING);
+    result.specular_enabled=boolean(D3DRS_SPECULARENABLE);
+    result.ambient_source=render(D3DRS_AMBIENTMATERIALSOURCE);
+    result.diffuse_source=render(D3DRS_DIFFUSEMATERIALSOURCE);
+    result.emissive_source=render(D3DRS_EMISSIVEMATERIALSOURCE);
+    if (result.ambient_source>2 || result.diffuse_source>2 || result.emissive_source>2)
+        throw std::runtime_error("original material color selector is unsupported");
+    const auto material=[](const D3DCOLORVALUE& value) {
+        std::array<float,4> components{value.r,value.g,value.b,value.a};
+        for (float component:components) if (!std::isfinite(component))
+            throw std::runtime_error("original material color is not finite");
+        return components;
+    };
+    result.diffuse=material(source.material.Diffuse);
+    result.ambient=material(source.material.Ambient);
+    result.specular=material(source.material.Specular);
+    result.emissive=material(source.material.Emissive);
+    result.power=source.material.Power;
+    if (!std::isfinite(result.power) || result.power<0)
+        throw std::runtime_error("original material power is invalid");
+    result.alpha_test=boolean(D3DRS_ALPHATESTENABLE);
+    if (result.alpha_test) {
+        result.alpha_compare=compare(render(D3DRS_ALPHAFUNC));
+        const auto reference=render(D3DRS_ALPHAREF);
+        if (reference>255) throw std::runtime_error("original alpha reference exceeds byte range");
+        result.alpha_reference=static_cast<float>(reference)/255.0f;
+    }
+    result.pipeline.fog_enabled=boolean(D3DRS_FOGENABLE);
+    if (result.pipeline.fog_enabled) {
+        const auto color=render(D3DRS_FOGCOLOR);
+        result.fog_color={static_cast<float>((color>>16)&255)/255.0f,
+            static_cast<float>((color>>8)&255)/255.0f,
+            static_cast<float>(color&255)/255.0f,
+            static_cast<float>((color>>24)&255)/255.0f};
+        const unsigned start_bits=render(D3DRS_FOGSTART),end_bits=render(D3DRS_FOGEND);
+        std::memcpy(&result.fog_start,&start_bits,sizeof(float));
+        std::memcpy(&result.fog_end,&end_bits,sizeof(float));
+        if (!std::isfinite(result.fog_start) || !std::isfinite(result.fog_end)
+            || result.fog_end<=result.fog_start)
+            throw std::runtime_error("original fog range is invalid");
+    }
+    const auto operation=[](unsigned value) {
+        switch (value) {
+        case D3DTOP_DISABLE: return CombinerOp::disable;
+        case D3DTOP_SELECTARG1: return CombinerOp::select_first;
+        case D3DTOP_SELECTARG2: return CombinerOp::select_second;
+        case D3DTOP_MODULATE: return CombinerOp::modulate;
+        case D3DTOP_ADD: return CombinerOp::add;
+        default: throw std::runtime_error("original applied combiner operation is unsupported");
+        }
+    };
+    const auto argument=[](unsigned value) {
+        switch (value) {
+        case D3DTA_DIFFUSE: return CombinerArg::diffuse;
+        case D3DTA_CURRENT: return CombinerArg::current;
+        case D3DTA_TEXTURE: return CombinerArg::texture;
+        default: throw std::runtime_error("original applied combiner argument is unsupported");
+        }
+    };
+    for (unsigned stage=0; stage<result.stages.size(); ++stage) {
+        const auto& states=source.stages[stage];
+        const auto stage_value=[&](unsigned key) {
+            auto found=states.find(key);
+            if (found==states.end()) throw std::runtime_error(
+                "original applied combiner/mapper stage is absent: "+std::to_string(stage)+":"+std::to_string(key));
+            return found->second;
+        };
+        auto& out=result.stages[stage];
+        const auto channel=[&](unsigned op,unsigned first,unsigned second) {
+            CombinerChannel translated;
+            translated.op=operation(stage_value(op));
+            if (translated.op!=CombinerOp::disable) {
+                translated.first=argument(stage_value(first));
+                if (translated.op!=CombinerOp::select_first)
+                    translated.second=argument(stage_value(second));
+            }
+            return translated;
+        };
+        out.color=channel(D3DTSS_COLOROP,D3DTSS_COLORARG1,D3DTSS_COLORARG2);
+        out.alpha=channel(D3DTSS_ALPHAOP,D3DTSS_ALPHAARG1,D3DTSS_ALPHAARG2);
+        if (stage && result.stages[stage-1].color.op==CombinerOp::disable
+            && (out.color.op!=CombinerOp::disable || out.alpha.op!=CombinerOp::disable))
+            throw std::runtime_error("original enabled stage follows disabled color stage");
+        const auto needs_texture=[](const CombinerChannel& channel) {
+            if (channel.op==CombinerOp::disable) return false;
+            if (channel.op==CombinerOp::select_first) return channel.first==CombinerArg::texture;
+            if (channel.op==CombinerOp::select_second) return channel.second==CombinerArg::texture;
+            return channel.first==CombinerArg::texture || channel.second==CombinerArg::texture;
+        };
+        out.texture_required=needs_texture(out.color)||needs_texture(out.alpha);
+        const auto uv=stage_value(D3DTSS_TEXCOORDINDEX);
+        out.uv_source=uv&0xffffU;
+        out.coordinate_mode=uv&0xffff0000U;
+        if (out.uv_source>=8 || out.coordinate_mode>D3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR)
+            throw std::runtime_error("original mapper coordinate selection is unsupported");
+        const unsigned source_uv_count=(source_fvf>>8U)&0xfU;
+        if (out.texture_required && out.coordinate_mode==D3DTSS_TCI_PASSTHRU
+            && out.uv_source>=source_uv_count)
+            throw std::runtime_error("original textured stage requests absent source UV coordinates");
+        out.transform_flags=stage_value(D3DTSS_TEXTURETRANSFORMFLAGS);
+        if (out.transform_flags!=D3DTTFF_DISABLE && out.transform_flags!=D3DTTFF_COUNT2 &&
+            out.transform_flags!=D3DTTFF_COUNT3 &&
+            out.transform_flags!=(D3DTTFF_PROJECTED|D3DTTFF_COUNT3))
+            throw std::runtime_error("original mapper transform flags are unsupported");
+        auto transform=source.transforms.find(D3DTS_TEXTURE0+stage);
+        if (out.transform_flags!=D3DTTFF_DISABLE && transform==source.transforms.end())
+            throw std::runtime_error("original enabled mapper transform is missing");
+        if (transform!=source.transforms.end()) {
+            out.transform_set=true;
+            for (unsigned row=0;row<4;++row) {
+                const auto& r=transform->second[row];
+                const float values[]={r.X,r.Y,r.Z,r.W};
+                for (unsigned col=0;col<4;++col) {
+                    if (!std::isfinite(values[col])) throw std::runtime_error("original mapper transform is not finite");
+                    out.transform[row*4+col]=values[col];
+                }
+            }
+        }
+        constexpr unsigned bump_keys[]={D3DTSS_BUMPENVMAT00,D3DTSS_BUMPENVMAT01,
+            D3DTSS_BUMPENVMAT10,D3DTSS_BUMPENVMAT11};
+        for (unsigned i=0;i<4;++i) {
+            auto found=states.find(bump_keys[i]);
+            if (found!=states.end()) {
+                std::memcpy(&out.bump[i],&found->second,sizeof(float));
+                if (!std::isfinite(out.bump[i])) throw std::runtime_error("original bump matrix is not finite");
+            }
+        }
+    }
     return result;
 }
 

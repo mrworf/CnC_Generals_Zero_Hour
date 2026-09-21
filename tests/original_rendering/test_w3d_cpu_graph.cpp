@@ -499,10 +499,18 @@ int main(int argc, char **argv)
 		zh::renderer::RecordingGpuDevice retry_device;
 		zh::original_runtime::OriginalGpuEdge retry_edge(retry_device);
 		DX8Wrapper::Set_Material(stage_material);
+		DX8Wrapper::Set_Shader(model->Get_Shader(0));
 		Matrix4x4 projection;
 		camera.Get_D3D_Projection_Matrix(&projection);
 		DX8Wrapper::Set_Transform(D3DTS_PROJECTION,projection);
 		DX8Wrapper::Apply_Render_State_Changes();
+		const auto mapped=zh::original_runtime::OriginalGpuEdge::map_applied_state(
+			DX8FVFCategoryContainer::Define_FVF(model,true));
+		assert(mapped.stages[0].transform_set &&
+			mapped.stages[0].transform_flags==(D3DTTFF_PROJECTED|D3DTTFF_COUNT3) &&
+			mapped.stages[0].coordinate_mode==D3DTSS_TCI_CAMERASPACEPOSITION);
+		assert(mapped.lighting);
+		assert(std::fabs(mapped.diffuse[3]-0.75f)<0.0001f);
 		assert(retry_device.snapshot().find("DX8Wrapper::Set_DX8_Material")!=std::string::npos);
 		assert(DX8Wrapper::Pending_Changes()==0);
 	}

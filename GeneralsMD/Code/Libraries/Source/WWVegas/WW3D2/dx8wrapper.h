@@ -49,11 +49,13 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "vector4.h"
 #include "matrix4.h"
+#include "ww3d_cpu_boundary.h"
+#include <array>
+#include <map>
 
 class TextureBaseClass;
 class VertexMaterialClass;
 class ShaderClass;
-struct D3DMATERIAL8;
 using D3DTRANSFORMSTATETYPE = int;
 using FLOAT = float;
 using D3DBLEND = unsigned;
@@ -128,6 +130,16 @@ public:
     static TextureBaseClass* Peek_Texture(unsigned stage);
     static const VertexMaterialClass* Peek_Material();
     static unsigned Pending_Changes();
+    struct SourceStateSnapshot {
+        D3DMATERIAL8 material{};
+        std::map<unsigned,unsigned> render;
+        std::array<std::map<unsigned,unsigned>,8> stages{};
+        std::map<int,Matrix4x4> transforms;
+        bool fog_enabled=false;
+        D3DCOLOR fog_color=0;
+        bool material_applied=false;
+    };
+    static SourceStateSnapshot Snapshot_Source_State();
     static void Apply_Render_State_Changes();
     static void Reset_Source_State();
     static void Set_DX8_Material(const D3DMATERIAL8* material);

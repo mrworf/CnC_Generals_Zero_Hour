@@ -5,6 +5,7 @@
 
 #include <unordered_map>
 #include <array>
+#include <cstdint>
 
 class VertexBufferClass;
 class IndexBufferClass;
@@ -16,6 +17,44 @@ namespace zh::original_runtime {
 // buffers. Never selects geometry, material, shader or pass order.
 class OriginalGpuEdge final {
 public:
+    enum class CombinerOp : std::uint8_t { disable, select_first, select_second, modulate, add };
+    enum class CombinerArg : std::uint8_t { diffuse, current, texture };
+    struct CombinerChannel {
+        CombinerOp op = CombinerOp::disable;
+        CombinerArg first = CombinerArg::diffuse;
+        CombinerArg second = CombinerArg::diffuse;
+    };
+    struct AppliedStage {
+        CombinerChannel color;
+        CombinerChannel alpha;
+        unsigned uv_source=0;
+        unsigned coordinate_mode=0;
+        unsigned transform_flags=0;
+        std::array<float,16> transform{};
+        std::array<float,4> bump{};
+        bool transform_set=false;
+        bool texture_required=false;
+    };
+    struct AppliedState {
+        renderer::PipelineDesc pipeline;
+        std::array<AppliedStage,2> stages{};
+        std::array<float,4> diffuse{};
+        std::array<float,4> ambient{};
+        std::array<float,4> specular{};
+        std::array<float,4> emissive{};
+        float power=0;
+        bool lighting=false;
+        bool specular_enabled=false;
+        unsigned ambient_source=0;
+        unsigned diffuse_source=0;
+        unsigned emissive_source=0;
+        bool alpha_test=false;
+        renderer::CompareOp alpha_compare=renderer::CompareOp::always;
+        float alpha_reference=0;
+        std::array<float,4> fog_color{};
+        float fog_start=0;
+        float fog_end=0;
+    };
     explicit OriginalGpuEdge(renderer::GpuDevice& device);
     ~OriginalGpuEdge();
     OriginalGpuEdge(const OriginalGpuEdge&) = delete;
@@ -24,6 +63,7 @@ public:
     renderer::BufferHandle bind_vertex(const VertexBufferClass* source);
     renderer::BufferHandle bind_index(const IndexBufferClass* source);
     static renderer::OriginalFvfLayout layout_for_fvf(unsigned source_fvf);
+    static AppliedState map_applied_state(unsigned source_fvf);
     bool supports_texture_format(WW3DFormat format) const noexcept;
     renderer::TextureHandle create_texture(WW3DFormat format, unsigned width, unsigned height, unsigned& mips);
     void upload_texture(renderer::TextureHandle texture, unsigned level, unsigned width,

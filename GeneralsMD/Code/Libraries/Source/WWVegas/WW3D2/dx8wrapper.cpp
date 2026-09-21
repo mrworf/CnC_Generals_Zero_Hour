@@ -61,6 +61,7 @@ struct DX8Wrapper::CpuState {
     ShaderClass shader;
     unsigned dirty=0;
     D3DMATERIAL8 physical_material{};
+    bool material_applied=false;
     std::map<unsigned,unsigned> render_states;
     std::array<std::map<unsigned,unsigned>,8> texture_states;
     std::map<int,Matrix4x4> transforms;
@@ -82,6 +83,7 @@ void DX8Wrapper::Reset_Source_State()
     selected.shader=ShaderClass();
     selected.dirty=0;
     selected.physical_material={};
+    selected.material_applied=false;
     selected.render_states.clear();
     for (auto& stage : selected.texture_states) stage.clear();
     selected.transforms.clear();
@@ -130,6 +132,15 @@ TextureBaseClass* DX8Wrapper::Peek_Texture(unsigned stage)
 const VertexMaterialClass* DX8Wrapper::Peek_Material() { return state().material; }
 unsigned DX8Wrapper::Pending_Changes() { return state().dirty; }
 
+DX8Wrapper::SourceStateSnapshot DX8Wrapper::Snapshot_Source_State()
+{
+    auto& selected=state();
+    if (selected.dirty || ShaderClass::ShaderDirty)
+        throw std::runtime_error("original DX8 state is pending source application");
+    return {selected.physical_material,selected.render_states,selected.texture_states,
+        selected.transforms,selected.fog_enabled,selected.fog_color,selected.material_applied};
+}
+
 void DX8Wrapper::Apply_Render_State_Changes()
 {
     auto& selected=state();
@@ -164,6 +175,7 @@ void DX8Wrapper::Set_DX8_Material(const D3DMATERIAL8* material)
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     if (!material) throw std::runtime_error("original DX8 material source is missing");
     state().physical_material=*material;
+    state().material_applied=true;
     edge.record_source_state("DX8Wrapper::Set_DX8_Material");
 }
 void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
