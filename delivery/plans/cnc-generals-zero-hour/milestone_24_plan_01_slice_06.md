@@ -10,7 +10,7 @@ Own cumulative identity/ledger/failure checks, retail source replay, exact first
 
 ## Dependencies, entry and state
 
-Slices 01–05 complete. Retail mission/skirmish setup already works under M21. The first retail mission `GameEngine::update` currently segfaults in the headless runtime; locate its exact source consumer and either repair within M24 scope or report a proven dependency/authority blocker without bypassing the tick. Original `.rep` playback remains through `RecorderClass::playbackFile`, `MSG_NEW_GAME`, `InitRandom` and source command dispatch.
+Slices 01–05B complete, including M22 closure required by 05B. Retail mission/skirmish setup already works under M21. The first retail mission `GameEngine::update` currently segfaults in the headless runtime; locate its exact source consumer and either repair within M24 scope or report a proven dependency/authority blocker without bypassing the tick. Original `.rep` playback remains through `RecorderClass::playbackFile`, `MSG_NEW_GAME`, `InitRandom` and source command dispatch.
 
 ## Permissions, validation and errors
 

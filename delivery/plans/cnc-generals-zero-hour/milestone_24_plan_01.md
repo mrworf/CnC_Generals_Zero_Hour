@@ -54,10 +54,13 @@ The production Linux original engine saves and restores a real source-engine sce
 | 02 | [slice 02](milestone_24_plan_01_slice_02.md) | Original load restores source state; malformed/faulted loads leave exact pre-load state | 01 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice02-original-load.md` |
 | 03 | [slice 03](milestone_24_plan_01_slice_03.md) | Original commands record/play back safely with compatible cross-preset CRC/RNG | 02 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice03-original-replay.md` |
 | 04 | [slice 04](milestone_24_plan_01_slice_04.md) | Shipped special-power INI definitions survive original reset while map overrides remain temporary | 03 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice04-shipped-power-baseline.md` |
-| 05 | [slice 05](milestone_24_plan_01_slice_05.md) | Retail original PartitionManager/shroud state survives source load and repeated round-trips with exact CRC | 04 | pending | | |
-| 06 | [slice 06](milestone_24_plan_01_slice_06.md) | Retail save/replay/first-tick and four-preset cumulative M24 acceptance | 05 | pending | | |
+| 05A | [slice 05A](milestone_24_plan_01_slice_05.md) | Retail mission and owned visible shroud survive original load/repeated round-trips with exact CRC; late corrupt partition rolls back | 04 | pending | | |
+| 05B | [slice 05B](milestone_24_plan_01_slice_05b.md) | Retail skirmish exact source persistence through complete map/draw reconstruction | 05A + M22 §9 closure | pending — M22 provider blocked | | |
+| 06 | [slice 06](milestone_24_plan_01_slice_06.md) | Retail save/replay/first-tick and four-preset cumulative M24 acceptance | 05B | pending | | |
 
 The original four-slice split covered snapshot publication, destructive-load rollback, recorder protocol and cumulative acceptance. Read-only retail execution after slice 03 exposed two independent source behaviors absent from project-owned fixtures: the Linux global INI loader marks new shipped special-power definitions as transient overrides, and repeated original PartitionManager post-load updates change millions of shroud cells despite stable object/player/script state. The retail first simulation tick also faults in the headless path. The remainder is split into an independently tested bootstrap correction, a source shroud-state repair, and a separate cumulative retail/full-suite gate. No accepted slice is reopened and no exact-CRC or first-tick requirement is weakened.
+
+The slice 05 retail skirmish probe subsequently reached the exact M22 physical draw-provider boundary during original save-load map reconstruction: `GameStateMap::xfer -> GameLogic::startNewGame(TRUE) -> ThingFactory::newDrawable -> ModuleFactory::newModule(MODULETYPE_DRAW)`, where `m_createProc` is null and the source throws `ERROR_INVALID_D3D`. The remaining work is split into independently testable 05A mission/owned shroud and late-rollback repair, 05B skirmish persistence after M22 §9 closure, and 06 cumulative acceptance. This is a dependency correction, not a waived retail/CRC requirement.
 
 ## Cross-slice concerns
 
