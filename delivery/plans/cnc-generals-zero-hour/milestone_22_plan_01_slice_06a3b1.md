@@ -1,0 +1,11 @@
+# M22 plan 01 slice 06A3B1: original lit source state and semantic record
+
+## Dependency and outcome
+
+Requires accepted 06A3A. Inventory original DX8Wrapper/WW3D lighting defaults, selectors and material application. Preserve canonical source-authored `COLORVERTEX`, ambient/diffuse/specular/emissive material-source choices, local viewer, normalization and specular enablement, without inferring a missing source default. Original light/environment and VertexMaterial methods must issue the state; the device-boundary semantic record maps its exact transform, light type/color/position/direction/range/attenuation, material terms/power and vertex color/normal presence. Follow primary Direct3D fixed-function documentation for translation semantics: inverse-transpose world-view normal, vertex color material-source fallback, ambient/diffuse/specular/emissive contribution and point attenuation/range. Preserve original ordering and bounded four slots. Keep lit physical draw typed unavailable until B2; do not use an invented ambient, color, normal or shader draw as positive acceptance.
+
+## Validation and commit
+
+Original source-issued fixtures check defaults and changed selectors, nonwhite material and source vertex colors, directional/point/zero/four lights, inverse-transpose input, normalization and disabled specular. Recording verifies semantic fields/order and clean rejection of unsupported states or absent required normal/environment before cache mutation; negative lit physical draw remains typed. GCC/Clang cumulative tests, identity/provider-removal, focused sanitizers, ledger/evidence, one commit. B2 and C remain mandatory for pixels and original category issuance respectively.
+
+Primary translation references: [Microsoft ambient](https://learn.microsoft.com/en-us/windows/win32/direct3d9/ambient-lighting), [diffuse](https://learn.microsoft.com/en-us/windows/win32/direct3d9/diffuse-lighting), [specular](https://learn.microsoft.com/en-us/windows/win32/direct3d9/specular-lighting), [attenuation](https://learn.microsoft.com/en-us/windows/win32/direct3d9/attenuation-and-spotlight-factor), [camera-space transformations](https://learn.microsoft.com/en-us/windows/win32/direct3d9/camera-space-transformations).
