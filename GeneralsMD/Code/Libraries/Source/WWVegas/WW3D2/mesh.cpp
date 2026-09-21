@@ -855,10 +855,16 @@ void MeshClass::Render(RenderInfoClass & rinfo)
 void MeshClass::Render_Material_Pass(MaterialPassClass * pass,IndexBufferClass * ib)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	(void)pass;
-	(void)ib;
-	throw std::runtime_error("MeshClass::Render_Material_Pass requires an installed WW3D device translator");
-#else
+	if (!pass || !ib) throw std::runtime_error("original material pass requires its source pass and index owner");
+	VertexMaterialClass* original_material=pass->Peek_Material();
+	float original_opacity=0.0f;
+	Vector3 original_emissive;
+	if (original_material) {
+		original_opacity=original_material->Get_Opacity();
+		original_material->Get_Emissive(&original_emissive);
+	}
+	try {
+#endif
 	//Added to allow dynamic opacity on additional render passed
 	//without having to create a new material pass per object instance. -MW
 	float oldOpacity=-1.0f;
@@ -916,6 +922,9 @@ void MeshClass::Render_Material_Pass(MaterialPassClass * pass,IndexBufferClass *
 		pass->UnInstall_Materials();
 
 	} else if ((pass->Get_Cull_Volume() != NULL) && (MaterialPassClass::Is_Per_Polygon_Culling_Enabled())) {
+#if defined(ZH_WW3D_CPU_ONLY)
+		throw std::runtime_error("original cull-volume APT physical pass requires 06B3C translation");
+#else
 		
 		/*
 		** Generate the APT 
@@ -998,7 +1007,8 @@ void MeshClass::Render_Material_Pass(MaterialPassClass * pass,IndexBufferClass *
 			//MW: Need uninstall custom materials in case they leave D3D in unknown state
 			pass->UnInstall_Materials();
 		}
-	} else {		
+#endif
+	} else {
 		
 		/*
 		** Normal mesh case, render polys with this mesh's transform
@@ -1045,6 +1055,16 @@ void MeshClass::Render_Material_Pass(MaterialPassClass * pass,IndexBufferClass *
 		}
 		//MW: Need uninstall custom materials in case they leave D3D in unknown state
 		pass->UnInstall_Materials();
+	}
+#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		// A physical failure must not leave this instance's override on a
+		// shared original material when the owner aborts and requeues its pass.
+		if (original_material) {
+			original_material->Set_Opacity(original_opacity);
+			original_material->Set_Emissive(original_emissive);
+		}
+		throw;
 	}
 #endif
 }

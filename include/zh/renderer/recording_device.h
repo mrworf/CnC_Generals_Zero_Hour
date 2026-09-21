@@ -44,6 +44,7 @@ public:
     void fail_next_buffer_create();
     void fail_next_buffer_upload();
     void fail_next_draw();
+    void fail_draw_after(unsigned successful_draws);
 
     BufferHandle create_buffer(const BufferDesc& desc, std::string_view label) override;
     TextureHandle create_texture(const TextureDesc& desc, std::string_view label) override;

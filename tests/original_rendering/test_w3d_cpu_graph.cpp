@@ -9,6 +9,7 @@
 #include "w3d_file.h"
 #include "texture.h"
 #include "vertmaterial.h"
+#include "matpass.h"
 #include "mapper.h"
 #include "camera.h"
 #include "light.h"
@@ -577,6 +578,23 @@ int main(int argc, char **argv)
 				if (original_skin_pixels[i]!=5 || original_skin_pixels[i+1]!=5 ||
 					original_skin_pixels[i+2]!=10) ++skin_coverage;
 			assert(skin_coverage>0);
+			auto* immediate=NEW_REF(MaterialPassClass,());
+			auto* pass_material=NEW_REF(VertexMaterialClass,());
+			pass_material->Set_Lighting(true);
+			pass_material->Set_Emissive(Vector3(0.65f,0.05f,0.02f));
+			immediate->Set_Material(pass_material);
+			pass_material->Release_Ref();
+			ShaderClass pass_shader;
+			pass_shader.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+			pass_shader.Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
+			immediate->Set_Shader(pass_shader);
+			render_info.Push_Material_Pass(immediate);
+			const auto additional_rigid_pixels=frame(mesh,Vector3(0.15f,0.2f,0.25f));
+			assert(additional_rigid_pixels!=ambient_pixels);
+			const auto additional_skin_pixels=skin_frame();
+			render_info.Pop_Material_Pass();
+			assert(additional_skin_pixels!=original_skin_pixels);
+			immediate->Release_Ref();
 			skin_hlod->Set_Position(Vector3(1,0,-10));
 			const auto shifted_skin_pixels=skin_frame();
 			assert(shifted_skin_pixels!=original_skin_pixels);
@@ -776,6 +794,59 @@ int main(int argc, char **argv)
 				skin_identity_order!=std::string::npos && skin_draw_order>skin_identity_order &&
 				skin_commands.find("index_bits=16",skin_draw_order)!=std::string::npos &&
 				skin_commands.find("original_applied_nd2_lit.vert",dynamic_order)!=std::string::npos);
+			auto* immediate=NEW_REF(MaterialPassClass,());
+			auto* pass_material=NEW_REF(VertexMaterialClass,());
+			pass_material->Set_Lighting(true);
+			pass_material->Set_Emissive(Vector3(0.5f,0.1f,0.05f));
+			immediate->Set_Material(pass_material);
+			pass_material->Release_Ref();
+			ShaderClass pass_shader;
+			pass_shader.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+			pass_shader.Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
+			immediate->Set_Shader(pass_shader);
+			TextureClass* source_texture=mesh->Peek_Model()->Peek_Single_Texture();
+			assert(source_texture);
+			immediate->Set_Texture(source_texture,2);
+			const auto unsupported_stage_start=recorder.snapshot().size();
+			const auto* material_before_stage=DX8Wrapper::Peek_Material();
+			bool unsupported_stage_rejected=false;
+			try { immediate->Install_Materials(); }
+			catch (const std::runtime_error& error) {
+				unsupported_stage_rejected=std::strstr(error.what(),"texture stage")!=nullptr;
+			}
+			assert(unsupported_stage_rejected && DX8Wrapper::Peek_Material()==material_before_stage &&
+				recorder.snapshot().size()==unsupported_stage_start);
+			immediate->Set_Texture(nullptr,2);
+			auto* optional_material=NEW_REF(MaterialPassClass,());
+			optional_material->Set_Shader(pass_shader);
+			optional_material->Install_Materials();
+			DX8Wrapper::Apply_Render_State_Changes();
+			assert(DX8Wrapper::Snapshot_Source_State().material_applied);
+			optional_material->Release_Ref();
+			render_info.Push_Material_Pass(immediate);
+			const auto count_draws=[](const std::string& commands) {
+				unsigned count=0;
+				for (std::size_t pos=commands.find("draw pipeline=");pos!=std::string::npos;
+					pos=commands.find("draw pipeline=",pos+1)) ++count;
+				return count;
+			};
+			for (auto* owner : {original_skin_hlod,variant_objects[0]}) {
+				owner->Render(render_info);
+				const auto before_additional=recorder.snapshot().size();
+				assert(recorder.begin_pass(pass,"original source immediate additional material"));
+				TheDX8MeshRenderer.Flush();
+				assert(recorder.end_pass());
+				const auto additional_commands=recorder.snapshot().substr(before_additional);
+				const auto base=additional_commands.find("draw pipeline=");
+				const auto installed=additional_commands.find("DX8Wrapper::Set_Material",base);
+				const auto additional=additional_commands.find("draw pipeline=",installed);
+				assert(count_draws(additional_commands)==2 && base!=std::string::npos &&
+					installed>base && additional>installed &&
+					additional_commands.find("original_applied_0.frag",installed)!=std::string::npos &&
+					additional_commands.find("index_bits=16",additional)!=std::string::npos);
+			}
+			render_info.Pop_Material_Pass();
+			immediate->Release_Ref();
 			original_skin_child->Release_Ref();
 			original_skin_hlod->Release_Ref();
 			render_info.alphaOverride=0.5f;
@@ -1007,6 +1078,100 @@ int main(int argc, char **argv)
 			TheDX8MeshRenderer.Flush();
 			assert(recorder.end_pass() &&
 				recorder.snapshot().find("draw pipeline=",before_valid)!=std::string::npos);
+			auto* override_pass=NEW_REF(MaterialPassClass,());
+			auto* shared_material=NEW_REF(VertexMaterialClass,());
+			shared_material->Set_Lighting(true);
+			shared_material->Set_Opacity(0.75f);
+			shared_material->Set_Emissive(Vector3(0.3f,0.2f,0.1f));
+			override_pass->Set_Material(shared_material);
+			shared_material->Release_Ref();
+			ShaderClass override_shader;
+			override_shader.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+			override_pass->Set_Shader(override_shader);
+			render_info.Push_Material_Pass(override_pass);
+			render_info.materialPassAlphaOverride=0.4f;
+			render_info.materialPassEmissiveOverride=0.5f;
+			retry_mesh->Render(render_info);
+			recorder.fail_draw_after(1);
+			const auto before_pass_failure=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original additional material draw failure"));
+			bool additional_draw_rejected=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				additional_draw_rejected=std::strstr(error.what(),"draw")!=nullptr;
+			}
+			assert(additional_draw_rejected && recorder.end_pass());
+			const auto failed_pass=recorder.snapshot().substr(before_pass_failure);
+			assert(failed_pass.find("draw pipeline=")!=std::string::npos &&
+				failed_pass.find("draw pipeline=",failed_pass.find("draw pipeline=")+1)==
+					std::string::npos &&
+				std::fabs(shared_material->Get_Opacity()-0.75f)<0.0001f);
+			Vector3 restored_emissive;
+			shared_material->Get_Emissive(&restored_emissive);
+			assert(std::fabs(restored_emissive.X-0.3f)<0.0001f &&
+				std::fabs(restored_emissive.Y-0.2f)<0.0001f &&
+				std::fabs(restored_emissive.Z-0.1f)<0.0001f);
+			// A partially emitted frame is aborted; requeue through the original
+			// model/category owner rather than replaying an adapter-owned command.
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			retry_mesh->Peek_Model()->Register_For_Rendering();
+			retry_mesh->Render(render_info);
+			const auto before_pass_retry=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original additional material requeue"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto retried_pass=recorder.snapshot().substr(before_pass_retry);
+			assert(retried_pass.find("draw pipeline=")!=std::string::npos &&
+				retried_pass.find("draw pipeline=",retried_pass.find("draw pipeline=")+1)!=
+					std::string::npos &&
+				std::fabs(shared_material->Get_Opacity()-0.75f)<0.0001f);
+			render_info.materialPassAlphaOverride=1.0f;
+			render_info.materialPassEmissiveOverride=1.0f;
+			render_info.Pop_Material_Pass();
+			override_pass->Release_Ref();
+			// The original override branches intentionally skip absent material.
+			// The default material remains selected by the original wrapper.
+			auto* default_pass=NEW_REF(MaterialPassClass,());
+			default_pass->Set_Shader(override_shader);
+			render_info.Push_Material_Pass(default_pass);
+			render_info.materialPassAlphaOverride=0.4f;
+			render_info.materialPassEmissiveOverride=0.5f;
+			retry_mesh->Render(render_info);
+			const auto before_default=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original null material override guard"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto default_commands=recorder.snapshot().substr(before_default);
+			assert(default_commands.find("DX8Wrapper::Set_Material")!=std::string::npos &&
+				default_commands.find("draw pipeline=")!=std::string::npos &&
+				default_commands.find("draw pipeline=",default_commands.find("draw pipeline=")+1)!=
+					std::string::npos);
+			render_info.materialPassAlphaOverride=1.0f;
+			render_info.materialPassEmissiveOverride=1.0f;
+			render_info.Pop_Material_Pass();
+			default_pass->Release_Ref();
+			auto* culled_pass=NEW_REF(MaterialPassClass,());
+			OBBoxClass source_cull_volume;
+			culled_pass->Set_Cull_Volume(&source_cull_volume);
+			const bool old_per_polygon_culling=MaterialPassClass::Is_Per_Polygon_Culling_Enabled();
+			MaterialPassClass::Enable_Per_Polygon_Culling(true);
+			render_info.Push_Material_Pass(culled_pass);
+			retry_mesh->Render(render_info);
+			const auto before_cull_edge=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original cull-volume selected physical edge"));
+			bool cull_edge_rejected=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				cull_edge_rejected=std::strstr(error.what(),"cull-volume APT")!=nullptr;
+			}
+			assert(cull_edge_rejected && recorder.end_pass() &&
+				recorder.snapshot().find("draw pipeline=",before_cull_edge)!=std::string::npos);
+			render_info.Pop_Material_Pass();
+			MaterialPassClass::Enable_Per_Polygon_Culling(old_per_polygon_culling);
+			culled_pass->Release_Ref();
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
 			render_info.light_environment=nullptr;
 			retry_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
 			RenderObjClass* bad_skin_hlod=manager.Create_Render_Obj("TEST.BADHLOD");

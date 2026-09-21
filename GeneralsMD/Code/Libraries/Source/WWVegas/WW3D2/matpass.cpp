@@ -121,7 +121,15 @@ MaterialPassClass::~MaterialPassClass(void)
 void MaterialPassClass::Install_Materials(void) const
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	throw OriginalW3DDeviceUnavailable("original material-pass GPU installation pending");
+	// The Linux GPU translator has two physical texture stages. Reject a
+	// required higher stage before publishing source material/shader state;
+	// an authored null material still uses the original default fallback.
+	for (int i=2;i<MAX_TEX_STAGES;++i)
+		if (Peek_Texture(i))
+			throw OriginalW3DDeviceUnavailable("original material pass needs unsupported texture stage");
+	DX8Wrapper::Set_Material(Peek_Material());
+	DX8Wrapper::Set_Shader(Peek_Shader());
+	for (int i=0;i<2;++i) DX8Wrapper::Set_Texture(i,Peek_Texture(i));
 #else
 	DX8Wrapper::Set_Material(Peek_Material());
 	DX8Wrapper::Set_Shader(Peek_Shader());
