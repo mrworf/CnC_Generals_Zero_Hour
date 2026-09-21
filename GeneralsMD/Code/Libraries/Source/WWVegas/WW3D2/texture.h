@@ -328,6 +328,9 @@ public:
 
 	// Background texture loader will call this when texture has been loaded
 	virtual void Apply_New_Surface(IDirect3DBaseTexture8* tex, bool initialized, bool disable_auto_invalidation = false);	// If the parameter is true, the texture will be flagged as initialised
+#if defined(ZH_WW3D_CPU_ONLY)
+	void Apply_Gpu_Texture(WW3DFormat format, unsigned width, unsigned height);
+#endif
 
 	// Get the surface of one of the mipmap levels (defaults to highest-resolution one)
 	SurfaceClass *Get_Surface_Level(unsigned int level = 0);

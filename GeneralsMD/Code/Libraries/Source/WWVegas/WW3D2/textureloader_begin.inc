@@ -112,8 +112,8 @@ bool TextureLoadTaskClass::Begin_Compressed_Load(void)
 	}
 
 #if defined(ZH_WW3D_CPU_ONLY)
-	zh::original_runtime::OriginalGpuEdge::required().texture_creation_unavailable(
-		Format, reducedWidth, reducedHeight, mip_level_count, Reduction);
+	CpuTextureHandle = zh::original_runtime::OriginalGpuEdge::required().create_texture(
+		Format, reducedWidth, reducedHeight, mip_level_count);
 #else
 	D3DTexture	= DX8Wrapper::_Create_DX8_Texture
 	(
@@ -212,8 +212,10 @@ bool TextureLoadTaskClass::Begin_Uncompressed_Load(void)
 	}
 
 #if defined(ZH_WW3D_CPU_ONLY)
-	zh::original_runtime::OriginalGpuEdge::required().texture_creation_unavailable(
-		Format, reducedWidth, reducedHeight, reducedMipCount, Reduction);
+	unsigned physical_mips = static_cast<unsigned>(reducedMipCount);
+	CpuTextureHandle = zh::original_runtime::OriginalGpuEdge::required().create_texture(
+		Format, reducedWidth, reducedHeight, physical_mips);
+	MipLevelCount = physical_mips;
 #else
 	D3DTexture = DX8Wrapper::_Create_DX8_Texture
 	(

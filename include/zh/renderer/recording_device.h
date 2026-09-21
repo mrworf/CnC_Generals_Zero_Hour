@@ -36,6 +36,8 @@ public:
 
     bool supports_texture_format(TextureFormat, TextureDimension, bool sampled, bool render_target) const noexcept override;
     void set_texture_format_supported(TextureFormat format, bool supported);
+    void fail_next_texture_create();
+    void fail_next_texture_upload();
 
     BufferHandle create_buffer(const BufferDesc& desc, std::string_view label) override;
     TextureHandle create_texture(const TextureDesc& desc, std::string_view label) override;
@@ -60,6 +62,7 @@ public:
     ResourceCounts resource_counts() const noexcept;
     bool pass_active() const noexcept override;
     std::vector<UInt8> buffer_bytes(BufferHandle handle) const;
+    std::vector<UInt8> texture_bytes(TextureHandle handle, UInt32 mip_level = 0) const;
 
     // Records an engine-level transition in the same ordered stream. This is
     // deliberately backend-neutral and is used for resize/recreation evidence.

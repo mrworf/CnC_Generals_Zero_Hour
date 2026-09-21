@@ -188,6 +188,32 @@ void test_source_texture_format_capabilities()
     check(!device.supports_texture_format(static_cast<TextureFormat>(255),TextureDimension::texture_2d,true,false),
         "invalid format was reported supported");
 }
+
+void test_original_mip_upload_contract()
+{
+    RecordingGpuDevice device;
+    TextureDesc desc;
+    desc.width=8; desc.height=8; desc.mip_levels=2; desc.format=TextureFormat::bc1;
+    const auto texture=device.create_texture(desc,"owned BC1 mips");
+    check(static_cast<bool>(texture),"compressed texture creation failed");
+    std::array<UInt8,32> top{};
+    std::array<UInt8,8> lower{};
+    for (unsigned i=0;i<top.size();++i) top[i]=static_cast<UInt8>(i+1);
+    for (unsigned i=0;i<lower.size();++i) lower[i]=static_cast<UInt8>(80+i);
+    TextureUploadDesc upload;
+    upload.destination=texture; upload.width=8; upload.height=8; upload.row_pitch=16; upload.size=32;
+    check(device.upload_texture(upload,top.data()),"BC1 first mip rejected");
+    upload.mip_level=1; upload.width=4; upload.height=4; upload.row_pitch=8; upload.size=8;
+    check(device.upload_texture(upload,lower.data()),"BC1 second mip rejected");
+    check(device.texture_bytes(texture,0)==std::vector<UInt8>(top.begin(),top.end()),"BC1 source mip bytes changed");
+    check(device.texture_bytes(texture,1)==std::vector<UInt8>(lower.begin(),lower.end()),"BC1 reduced mip bytes changed");
+    upload.mip_level=2;
+    check(!device.upload_texture(upload,lower.data()),"out-of-range mip accepted");
+    upload.mip_level=1; upload.row_pitch=4;
+    check(!device.upload_texture(upload,lower.data()),"short block row accepted");
+    device.destroy(texture);
+    check(device.resource_counts().total()==0,"mip texture leaked");
+}
 } // namespace
 
 int main()
@@ -199,6 +225,7 @@ int main()
         test_pipeline_cache_is_immutable_and_bounded();
         test_original_16_bit_index_range_and_base_vertex();
         test_source_texture_format_capabilities();
+        test_original_mip_upload_contract();
         std::cout << "recording device tests: ok\n";
         return 0;
     } catch (const std::exception& error) {

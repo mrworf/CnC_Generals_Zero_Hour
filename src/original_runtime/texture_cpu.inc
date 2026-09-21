@@ -32,6 +32,7 @@ TextureBaseClass::TextureBaseClass(unsigned width, unsigned height, MipCountType
 
 TextureBaseClass::~TextureBaseClass()
 {
+	zh::original_runtime::OriginalGpuEdge::release_texture_if_owned(this);
 	// CPU-only objects never create background/device tasks.
 	WWASSERT(TextureLoadTask == nullptr && ThumbnailLoadTask == nullptr && D3DTexture == nullptr);
 }
@@ -45,8 +46,15 @@ void TextureBaseClass::Set_D3D_Base_Texture(IDirect3DBaseTexture8 *tex)
 	if (tex != nullptr) unavailable();
 	D3DTexture = nullptr;
 }
-bool TextureBaseClass::Is_Missing_Texture() { return false; }
-void TextureBaseClass::Invalidate() { Initialized = false; D3DTexture = nullptr; }
+bool TextureBaseClass::Is_Missing_Texture()
+{
+	return zh::original_runtime::OriginalGpuEdge::is_missing_texture(this);
+}
+void TextureBaseClass::Invalidate()
+{
+	zh::original_runtime::OriginalGpuEdge::release_texture_if_owned(this);
+	Initialized = false; D3DTexture = nullptr;
+}
 void TextureBaseClass::Set_HSV_Shift(const Vector3 &shift) { HSVShift = shift; Invalidate(); }
 unsigned TextureBaseClass::Get_Reduction() const
 {
@@ -108,5 +116,9 @@ void TextureClass::Init()
 	LastAccessed=WW3D::Get_Sync_Time();
 }
 void TextureClass::Apply_New_Surface(IDirect3DBaseTexture8 *, bool, bool) { unavailable(); }
+void TextureClass::Apply_Gpu_Texture(WW3DFormat format, unsigned width, unsigned height)
+{
+	TextureFormat=format; Width=width; Height=height; Initialized=true;
+}
 void TextureClass::Apply(unsigned int) { unavailable(); }
 unsigned TextureClass::Get_Texture_Memory_Usage() const { return 0; }

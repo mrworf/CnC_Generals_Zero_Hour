@@ -189,6 +189,7 @@ struct TextureUploadDesc {
     UInt32 height = 0;
     UInt32 row_pitch = 0;
     UInt64 size = 0;
+    UInt32 mip_level = 0;
 };
 
 struct DrawDesc {

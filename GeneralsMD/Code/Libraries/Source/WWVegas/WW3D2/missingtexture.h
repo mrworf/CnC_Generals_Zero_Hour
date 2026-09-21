@@ -24,6 +24,9 @@
 #define DX8_MISSING_TEXTURE_H
 
 #include "always.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "zh/renderer/contract.h"
+#endif
 
 struct IDirect3DTexture8;
 struct IDirect3DSurface8;
@@ -36,6 +39,9 @@ public:
 
 	static IDirect3DTexture8* _Get_Missing_Texture();		// Return a reference to missing texture
 	static IDirect3DSurface8* _Create_Missing_Surface();	// Create new surface which contain missing texture image
+#if defined(ZH_WW3D_CPU_ONLY)
+	static zh::renderer::TextureHandle _Create_Gpu_Missing_Texture();
+#endif
 };
 
 

@@ -17,6 +17,34 @@
 */
 
 // 08/05/02 KM Texture class redesign
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "missingtexture.h"
+#include "original_gpu_edge.h"
+#include "ww3dformat.h"
+#include <vector>
+#include <stdexcept>
+
+// Original _Init fills every top-level pixel with the authored constant;
+// its D3DX box mip operation preserves that uniform color at every level.
+// Only physical allocation/upload moves to the public GPU device edge.
+zh::renderer::TextureHandle MissingTexture::_Create_Gpu_Missing_Texture()
+{
+	auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+	unsigned levels=0;
+	auto handle=edge.create_texture(WW3D_FORMAT_A8R8G8B8,128,128,levels);
+	try {
+		unsigned width=128,height=128;
+		for (unsigned level=0;level<levels;++level) {
+			std::vector<unsigned> authored_pixels(static_cast<std::size_t>(width)*height,0x7FFF00FFu);
+			edge.upload_texture(handle,level,width,height,width*4,authored_pixels.data(),
+				authored_pixels.size()*sizeof(unsigned));
+			width=width>1 ? width/2 : 1;
+			height=height>1 ? height/2 : 1;
+		}
+	} catch (...) { edge.discard_texture(handle); throw; }
+	return handle;
+}
+#else
 #include "missingtexture.h"
 #include "texture.h"
 #include "dx8wrapper.h"
@@ -709,3 +737,4 @@ static unsigned int missing_image_pixels[]={
 0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,
 0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,
 0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0xA7A7A7A7,0x15151515,0x15151515};
+#endif // ZH_WW3D_CPU_ONLY

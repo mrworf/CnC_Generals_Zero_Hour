@@ -281,6 +281,7 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3dformat.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/bitmaphandler.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/textureloader.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/missingtexture.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3d.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/static_sort_list.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/sortingrenderer.cpp
@@ -1689,6 +1690,13 @@ if(ZH_BUILD_TESTS)
   set_tests_properties(renderer_sdl_gpu_device PROPERTIES LABELS renderer-contract)
 
   if(ZH_ENABLE_GPU_TESTS)
+    add_executable(original_w3d_texture_gpu_upload tests/original_rendering/test_original_texture_gpu_upload.cpp)
+    target_compile_definitions(original_w3d_texture_gpu_upload PRIVATE ZH_GPU_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/shaders")
+    target_link_libraries(original_w3d_texture_gpu_upload PRIVATE zh_renderer_sdl_gpu SDL3::SDL3)
+    add_test(NAME original_w3d_texture_gpu_upload COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py" $<TARGET_FILE:original_w3d_texture_gpu_upload>)
+    set_tests_properties(original_w3d_texture_gpu_upload PROPERTIES LABELS "gpu;original-rendering;renderer-contract"
+      TIMEOUT 60 RUN_SERIAL TRUE ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
     add_executable(renderer_gpu_acceptance tests/renderer/gpu_acceptance.cpp)
     target_compile_definitions(renderer_gpu_acceptance PRIVATE
       ZH_GPU_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/shaders")
@@ -1923,6 +1931,7 @@ if(ZH_BUILD_TESTS)
   target_compile_options(original_w3d_gpu_edge_tests PRIVATE -fpermissive)
   target_compile_definitions(original_w3d_gpu_edge_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
   target_link_libraries(original_w3d_gpu_edge_tests PRIVATE zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu)
+  target_link_options(original_w3d_gpu_edge_tests PRIVATE "-Wl,--gc-sections")
   add_test(NAME original_w3d_gpu_edge_failure COMMAND original_w3d_gpu_edge_tests)
   set_tests_properties(original_w3d_gpu_edge_failure PROPERTIES LABELS "original-rendering;renderer-contract;negative")
   add_executable(original_w3d_image_provider_tests tests/original_rendering/test_original_image_providers.cpp)
@@ -1984,6 +1993,7 @@ if(ZH_BUILD_TESTS)
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3dformat.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/bitmaphandler.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/missingtexture.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ddsfile.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/TARGA.CPP")
   add_test(NAME original_w3d_texture_provider_removal COMMAND "${Python3_EXECUTABLE}"
@@ -1995,7 +2005,8 @@ if(ZH_BUILD_TESTS)
     --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/textureloader.cpp"
     --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3dformat.cpp"
     --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/bitmaphandler.cpp"
-    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp")
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/missingtexture.cpp")
   set_tests_properties(original_w3d_texture_identity original_w3d_texture_provider_removal
     PROPERTIES LABELS "original-rendering;source-identity;negative")
   set_tests_properties(original_w3d_cpu_graph PROPERTIES LABELS "original-rendering;source-identity")

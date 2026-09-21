@@ -41,7 +41,7 @@ struct Slot {
 };
 
 struct BufferRecord { BufferDesc desc; std::vector<UInt8> bytes; };
-struct TextureRecord { TextureDesc desc; };
+struct TextureRecord { TextureDesc desc; std::vector<std::vector<UInt8>> mips; };
 struct SamplerRecord { SamplerDesc desc; };
 struct ShaderRecord { ShaderStage stage{}; std::string name; UInt32 uniforms = 0; UInt32 samplers = 0; };
 struct PipelineRecord {
@@ -141,6 +141,8 @@ public:
 
     std::size_t pipeline_capacity;
     std::array<bool,8> supported_texture_formats{true,true,true,true,true,true,true,true};
+    bool reject_next_texture_create=false;
+    bool reject_next_texture_upload=false;
     bool in_pass = false;
     std::string active_pass_label;
     std::array<TextureHandle, RendererLimits::color_targets> active_colors{};
@@ -179,6 +181,9 @@ void RecordingGpuDevice::set_texture_format_supported(TextureFormat format, bool
     impl_->supported_texture_formats[index]=supported;
 }
 
+void RecordingGpuDevice::fail_next_texture_create() { impl_->reject_next_texture_create=true; }
+void RecordingGpuDevice::fail_next_texture_upload() { impl_->reject_next_texture_upload=true; }
+
 BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::string_view label)
 {
     if (auto result = validate(desc); !result) { impl_->fail("create_buffer", result.error, label); return {}; }
@@ -194,6 +199,10 @@ BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::stri
 
 TextureHandle RecordingGpuDevice::create_texture(const TextureDesc& desc, std::string_view label)
 {
+    if (impl_->reject_next_texture_create) {
+        impl_->reject_next_texture_create=false;
+        impl_->fail("create_texture", "injected texture creation failure", label); return {};
+    }
     if (auto result = validate(desc); !result) { impl_->fail("create_texture", result.error, label); return {}; }
     if (desc.width>16384 || desc.height>16384 || desc.depth_or_layers>16384 ||
         static_cast<std::uint64_t>(desc.width)*desc.height*desc.depth_or_layers*4>64ULL*1024*1024) {
@@ -287,18 +296,39 @@ ValidationResult RecordingGpuDevice::upload(const UploadDesc& desc, const void* 
 
 ValidationResult RecordingGpuDevice::upload_texture(const TextureUploadDesc& desc, const void* bytes)
 {
+    if (impl_->reject_next_texture_upload) {
+        impl_->reject_next_texture_upload=false;
+        return impl_->fail("upload_texture", "injected texture upload failure");
+    }
     auto* texture = lookup(impl_->textures, desc.destination);
     if (!texture) return impl_->fail("upload_texture", "destination texture handle is stale or destroyed");
     if (!bytes) return impl_->fail("upload_texture", "source bytes are null", texture->label);
-    if (texture->value.desc.format != TextureFormat::rgba8 || texture->value.desc.dimension != TextureDimension::texture_2d)
-        return impl_->fail("upload_texture", "only RGBA8 2D uploads are supported", texture->label);
-    if (desc.width != texture->value.desc.width || desc.height != texture->value.desc.height)
+    if (texture->value.desc.dimension != TextureDimension::texture_2d ||
+        desc.mip_level >= texture->value.desc.mip_levels)
+        return impl_->fail("upload_texture", "unsupported dimension or mip level", texture->label);
+    const auto format=texture->value.desc.format;
+    UInt64 block_size=0;
+    UInt32 block_extent=1;
+    if (format==TextureFormat::rgba8 || format==TextureFormat::bgra8) block_size=4;
+    else if (format==TextureFormat::bc1) { block_size=8; block_extent=4; }
+    else if (format==TextureFormat::bc2 || format==TextureFormat::bc3) { block_size=16; block_extent=4; }
+    else return impl_->fail("upload_texture", "texture format has no color upload path", texture->label);
+    if (desc.width != std::max(1U,texture->value.desc.width >> desc.mip_level) ||
+        desc.height != std::max(1U,texture->value.desc.height >> desc.mip_level))
         return impl_->fail("upload_texture", "extent does not match destination texture", texture->label);
-    const UInt64 minimum_pitch = static_cast<UInt64>(desc.width) * 4U;
-    if (desc.row_pitch < minimum_pitch || desc.size != static_cast<UInt64>(desc.row_pitch) * desc.height)
+    const UInt64 minimum_pitch = static_cast<UInt64>((desc.width+block_extent-1)/block_extent)*block_size;
+    const auto rows=(desc.height+block_extent-1)/block_extent;
+    if (desc.row_pitch < minimum_pitch || desc.row_pitch%block_size ||
+        desc.size != static_cast<UInt64>(desc.row_pitch)*rows)
         return impl_->fail("upload_texture", "row pitch or byte count is invalid", texture->label);
+    if (texture->value.mips.size()<texture->value.desc.mip_levels)
+        texture->value.mips.resize(texture->value.desc.mip_levels);
+    auto& payload=texture->value.mips[desc.mip_level];
+    payload.resize(static_cast<std::size_t>(desc.size));
+    std::memcpy(payload.data(),bytes,payload.size());
     impl_->commands.push_back("upload_texture " + impl_->name(impl_->textures, desc.destination, 'T') + " extent="
-        + std::to_string(desc.width) + "x" + std::to_string(desc.height) + " bytes=" + std::to_string(desc.size));
+        + std::to_string(desc.width) + "x" + std::to_string(desc.height) + " bytes=" + std::to_string(desc.size)
+        + (desc.mip_level ? " mip="+std::to_string(desc.mip_level) : ""));
     return {};
 }
 
@@ -460,6 +490,13 @@ std::vector<UInt8> RecordingGpuDevice::buffer_bytes(BufferHandle handle) const
 {
     const auto* buffer = lookup(impl_->buffers, handle);
     return buffer ? buffer->value.bytes : std::vector<UInt8>{};
+}
+
+std::vector<UInt8> RecordingGpuDevice::texture_bytes(TextureHandle handle, UInt32 mip_level) const
+{
+    const auto* texture=lookup(impl_->textures,handle);
+    if (!texture || mip_level>=texture->value.mips.size()) return {};
+    return texture->value.mips[mip_level];
 }
 void RecordingGpuDevice::record_marker(std::string_view marker) { impl_->commands.push_back("marker " + quoted(marker)); }
 

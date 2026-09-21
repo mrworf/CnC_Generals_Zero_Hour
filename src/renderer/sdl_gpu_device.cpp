@@ -537,13 +537,24 @@ ValidationResult SdlGpuDevice::upload_texture(const TextureUploadDesc& desc, con
     auto* texture = lookup(impl_->textures, desc.destination);
     if (!texture) return impl_->fail("upload_texture", "destination texture handle is stale or destroyed");
     if (!bytes) return impl_->fail("upload_texture", "source bytes are null", texture->label);
-    if (texture->value.desc.format != TextureFormat::rgba8 || texture->value.desc.dimension != TextureDimension::texture_2d)
-        return impl_->fail("upload_texture", "only RGBA8 2D uploads are supported", texture->label);
-    if (desc.width != texture->value.desc.width || desc.height != texture->value.desc.height)
+    if (texture->value.desc.dimension != TextureDimension::texture_2d ||
+        desc.mip_level >= texture->value.desc.mip_levels)
+        return impl_->fail("upload_texture", "unsupported dimension or mip level", texture->label);
+    const auto format=texture->value.desc.format;
+    const bool compressed=format==TextureFormat::bc1 || format==TextureFormat::bc2 || format==TextureFormat::bc3;
+    if (format!=TextureFormat::rgba8 && format!=TextureFormat::bgra8 && !compressed)
+        return impl_->fail("upload_texture", "texture format has no color upload path", texture->label);
+    if (desc.width != std::max(1U,texture->value.desc.width >> desc.mip_level) ||
+        desc.height != std::max(1U,texture->value.desc.height >> desc.mip_level))
         return impl_->fail("upload_texture", "extent does not match destination texture", texture->label);
-    const UInt64 minimum_pitch = static_cast<UInt64>(desc.width) * 4U;
-    if (desc.row_pitch < minimum_pitch || desc.size != static_cast<UInt64>(desc.row_pitch) * desc.height
-        || desc.size > std::numeric_limits<Uint32>::max())
+    const UInt32 block_extent=compressed ? 4U : 1U;
+    const UInt32 block_size=SDL_GPUTextureFormatTexelBlockSize(texture_format(format));
+    if (!block_size) return impl_->fail("upload_texture", "texture texel block size unavailable", texture->label);
+    const UInt64 minimum_pitch=static_cast<UInt64>((desc.width+block_extent-1)/block_extent)*block_size;
+    const UInt32 rows=(desc.height+block_extent-1)/block_extent;
+    if (desc.row_pitch < minimum_pitch || desc.row_pitch%block_size ||
+        desc.size != static_cast<UInt64>(desc.row_pitch)*rows ||
+        desc.size > std::numeric_limits<Uint32>::max())
         return impl_->fail("upload_texture", "row pitch or byte count is invalid", texture->label);
     SDL_GPUTransferBufferCreateInfo transfer_info{SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, static_cast<Uint32>(desc.size), 0};
     auto* transfer = SDL_CreateGPUTransferBuffer(impl_->device, &transfer_info);
@@ -555,8 +566,8 @@ ValidationResult SdlGpuDevice::upload_texture(const TextureUploadDesc& desc, con
     auto* command = SDL_AcquireGPUCommandBuffer(impl_->device);
     if (!command) { SDL_ReleaseGPUTransferBuffer(impl_->device, transfer); return impl_->fail("upload_texture", sdl_error("SDL_AcquireGPUCommandBuffer"), texture->label); }
     auto* pass = SDL_BeginGPUCopyPass(command);
-    SDL_GPUTextureTransferInfo source{transfer, 0, desc.row_pitch / 4U, desc.height};
-    SDL_GPUTextureRegion destination{texture->value.native, 0, 0, 0, 0, 0, desc.width, desc.height, 1};
+    SDL_GPUTextureTransferInfo source{transfer, 0, desc.row_pitch / block_size * block_extent, rows * block_extent};
+    SDL_GPUTextureRegion destination{texture->value.native, desc.mip_level, 0, 0, 0, 0, desc.width, desc.height, 1};
     SDL_UploadToGPUTexture(pass, &source, &destination, true);
     SDL_EndGPUCopyPass(pass);
     if (!SDL_SubmitGPUCommandBuffer(command)) { SDL_ReleaseGPUTransferBuffer(impl_->device, transfer); return impl_->fail("upload_texture", sdl_error("SDL_SubmitGPUCommandBuffer"), texture->label); }

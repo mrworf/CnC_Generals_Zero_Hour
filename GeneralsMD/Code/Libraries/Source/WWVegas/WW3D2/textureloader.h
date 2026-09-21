@@ -47,6 +47,10 @@
 
 #include "always.h"
 #include "texture.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "zh/renderer/contract.h"
+#include <vector>
+#endif
 
 class StringClass;
 struct IDirect3DTexture8;
@@ -260,6 +264,10 @@ class TextureLoadTaskClass : public TextureLoadTaskListNodeClass
 		
 		TextureBaseClass*		Texture;
 		IDirect3DBaseTexture8*	D3DTexture;
+#if defined(ZH_WW3D_CPU_ONLY)
+		zh::renderer::TextureHandle CpuTextureHandle;
+		std::vector<std::vector<unsigned char>> CpuLockedMips;
+#endif
 		WW3DFormat				Format;
 
 		unsigned int			Width;

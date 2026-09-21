@@ -4,6 +4,7 @@
 #include "ww3dformat.h"
 #include "TARGA.H"
 #include "texture.h"
+#include "textureloader.h"
 #include "ww3d.h"
 #include "ddsfile.h"
 #include "ffactory.h"
@@ -58,24 +59,30 @@ public:
     void Return_File(FileClass* file) override { --owners; delete file; }
 };
 
-Bytes compressed_fixture(unsigned width,unsigned mip_count) {
+Bytes compressed_fixture(unsigned width,unsigned mip_count,unsigned fourcc=0x31545844) {
     LegacyDDSURFACEDESC2 header{};
     header.Size=sizeof(header); header.Width=header.Height=width;
-    header.MipMapCount=mip_count; header.PixelFormat.FourCC=0x31545844;
+    header.MipMapCount=mip_count; header.PixelFormat.FourCC=fourcc;
     unsigned bytes=0;
-    for (unsigned i=0;i<mip_count;++i) { const unsigned side=std::max(4u,width>>i); bytes+=side*side/2; }
+    const unsigned block_bytes=fourcc==0x31545844 ? 8 : 16;
+    for (unsigned i=0;i<mip_count;++i) {
+        const unsigned side=std::max(4u,width>>i);
+        bytes+=(side/4)*(side/4)*block_bytes;
+    }
     Bytes result(4+sizeof(header)+bytes);
     std::memcpy(result.data(),"DDS ",4);
     std::memcpy(result.data()+4,&header,sizeof(header));
+    for (unsigned i=0;i<bytes;++i) result[4+sizeof(header)+i]=static_cast<unsigned char>(i+1);
     return result;
 }
-Bytes targa_fixture() {
+Bytes targa_fixture(unsigned depth=24) {
     TGAHeader header{};
     header.ImageType=TGA_TRUECOLOR; header.Width=2; header.Height=2;
-    header.PixelDepth=24; header.ImageDescriptor=0x20;
-    Bytes result(sizeof(header)+26,0);
+    header.PixelDepth=depth; header.ImageDescriptor=0x20 | (depth==32 ? 8 : 0);
+    Bytes result(sizeof(header)+(depth/8)*4+14,0);
     std::memcpy(result.data(),&header,sizeof(header));
-    for (unsigned i=0;i<12;++i) result[sizeof(header)+i]=static_cast<unsigned char>(i);
+    for (unsigned i=0;i<(depth/8)*4;++i)
+        result[sizeof(header)+i]=static_cast<unsigned char>(i);
     return result;
 }
 
@@ -91,53 +98,96 @@ void original_loader_decisions() {
         zh::renderer::RecordingGpuDevice device;
         zh::original_runtime::OriginalGpuEdge edge(device);
         TextureClass texture("owned","owned.tga",MIP_LEVELS_ALL,WW3D_FORMAT_UNKNOWN,true,true);
-        bool physical=false;
-        try { texture.Init(); }
-        catch (const std::runtime_error& e) { physical=std::string(e.what()).find("GPU device translation")!=std::string::npos; }
-        check(physical && !texture.Is_Initialized());
-        check(factory.owners==0 && device.resource_counts().total()==0);
+        texture.Init();
+        check(texture.Is_Initialized());
+        check(factory.owners==0 && device.resource_counts().textures==1);
+        const auto first_handle=edge.texture_handle(&texture);
+        check(device.texture_bytes(first_handle,0).size()==32);
+        check(device.texture_bytes(first_handle,0).front()==static_cast<unsigned char>(129));
         const auto snapshot=device.snapshot();
         check(!snapshot.empty());
         // The original DDS provider removes two lowest mips, then the
         // original Begin_Load requests one reduction with an 8x8 destination.
         bool reduced=false;
-        if (snapshot.find("original TextureLoader selected")!=std::string::npos &&
-            snapshot.find("width=8")!=std::string::npos &&
-            snapshot.find("reduction=1")!=std::string::npos) reduced=true;
+        if (snapshot.find("create_texture")!=std::string::npos &&
+            snapshot.find("upload_texture")!=std::string::npos &&
+            texture.Get_Width()==8 && texture.Get_Height()==8) reduced=true;
         check(reduced);
-        factory.files["owned.dds"]={};
-        bool absent=false;
+        texture.Invalidate();
+        check(device.resource_counts().total()==0);
+        device.fail_next_texture_create();
+        bool create_failure=false;
         try { texture.Init(); } catch (const std::runtime_error& e) {
-            absent=std::string(e.what()).find("missing or invalid")!=std::string::npos;
+            create_failure=std::string(e.what()).find("creation failed")!=std::string::npos;
         }
-        check(absent && factory.owners==0);
+        check(create_failure && !texture.Is_Initialized() && factory.owners==0 &&
+            device.resource_counts().total()==0);
+        device.fail_next_texture_upload();
+        bool upload_failure=false;
+        try { texture.Init(); } catch (const std::runtime_error& e) {
+            upload_failure=std::string(e.what()).find("mip upload failed")!=std::string::npos;
+        }
+        check(upload_failure && !texture.Is_Initialized() && factory.owners==0 &&
+            device.resource_counts().total()==0);
         factory.files["owned.dds"]=compressed_fixture(16,4);
-        bool retry=false;
+        factory.files["owned.dds"].resize(128+3);
+        bool truncated=false;
         try { texture.Init(); } catch (const std::runtime_error& e) {
-            retry=std::string(e.what()).find("GPU device translation")!=std::string::npos;
+            truncated=std::string(e.what()).find("mip source is missing or malformed")!=std::string::npos;
         }
-        check(retry && factory.owners==0);
+        check(truncated && !texture.Is_Initialized() && factory.owners==0 &&
+            device.resource_counts().total()==0);
+        factory.files["owned.dds"]=compressed_fixture(16,4);
+        texture.Init();
+        check(texture.Is_Initialized() && factory.owners==0);
+        texture.Invalidate();
+        for (unsigned fourcc:{0x33545844u,0x35545844u}) {
+            factory.files["owned.dds"]=compressed_fixture(16,4,fourcc);
+            texture.Init();
+            const auto blocks=device.texture_bytes(edge.texture_handle(&texture),0);
+            check(blocks.size()==64 && blocks.front()==1);
+            texture.Invalidate();
+            check(factory.owners==0 && device.resource_counts().total()==0);
+        }
+        factory.files["owned.dds"]=compressed_fixture(16,4);
         TextureClass single_mip("owned-one","owned.tga",MIP_LEVELS_1,
             WW3D_FORMAT_UNKNOWN,true,true);
-        bool single_edge=false;
-        try { single_mip.Init(); } catch (const std::runtime_error& e) {
-            single_edge=std::string(e.what()).find("GPU device translation")!=std::string::npos;
-        }
-        check(single_edge && factory.owners==0);
-        check(device.snapshot().find("width=16 height=16 mips=1 reduction=0")!=std::string::npos);
+        single_mip.Init();
+        check(single_mip.Is_Initialized() && factory.owners==0);
+        check(device.texture_bytes(edge.texture_handle(&single_mip),0).size()==128);
         factory.files["owned.tga"]=targa_fixture();
         TextureClass uncompressed("owned-tga","owned.tga",MIP_LEVELS_ALL,
             WW3D_FORMAT_UNKNOWN,false,true);
-        bool uncompressed_edge=false;
-        try { uncompressed.Init(); } catch (const std::runtime_error& e) {
-            uncompressed_edge=std::string(e.what()).find("GPU device translation")!=std::string::npos;
-        }
-        check(uncompressed_edge && !uncompressed.Is_Initialized() && factory.owners==0);
-        check(device.snapshot().find("width=2 height=2")!=std::string::npos);
-        factory.files["owned.tga"]={1,2,3};
-        bool malformed=false;
-        try { uncompressed.Init(); } catch (const std::runtime_error&) { malformed=true; }
-        check(malformed && factory.owners==0);
+        uncompressed.Init();
+        check(uncompressed.Is_Initialized() && factory.owners==0);
+        const auto pixels=device.texture_bytes(edge.texture_handle(&uncompressed),0);
+        const Bytes expected{0,1,2,255,3,4,5,255,6,7,8,255,9,10,11,255};
+        check(pixels==expected);
+        const auto mip=device.texture_bytes(edge.texture_handle(&uncompressed),1);
+        check(mip==Bytes({3,4,5,255}));
+        uncompressed.Invalidate();
+        factory.files["owned.tga"]=targa_fixture(32);
+        TextureClass rgba("owned-rgba","owned.tga",MIP_LEVELS_ALL,
+            WW3D_FORMAT_UNKNOWN,false,true);
+        rgba.Init();
+        check(rgba.Get_Texture_Format()==WW3D_FORMAT_A8R8G8B8);
+        check(device.texture_bytes(edge.texture_handle(&rgba),0)==
+            Bytes({0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}));
+        rgba.Invalidate();
+        factory.files["owned.tga"]={};
+        uncompressed.Init();
+        check(uncompressed.Is_Missing_Texture() && factory.owners==0);
+        const auto missing_handle=edge.texture_handle(&uncompressed);
+        const auto missing_pixels=device.texture_bytes(missing_handle,0);
+        check(missing_pixels.size()==128*128*4);
+        check(Bytes(missing_pixels.begin(),missing_pixels.begin()+4)==Bytes({255,0,255,127}));
+        texture.Invalidate();
+        factory.files["owned.dds"]={};
+        texture.Init();
+        check(texture.Is_Missing_Texture() && edge.texture_handle(&texture)==missing_handle);
+        texture.Invalidate();
+        uncompressed.Invalidate();
+        check(device.resource_counts().textures==2); // shared source fallback and single-mip owner
         WW3D::Set_Thumbnail_Enabled(true);
         bool thumbnail=false;
         try { texture.Init(); } catch (const std::runtime_error& e) {
@@ -151,6 +201,100 @@ void original_loader_decisions() {
         WW3D::Set_Texture_Reduction(0,1);
         _TheFileFactory=prior; throw;
     }
+    _TheFileFactory=prior;
+}
+
+void original_texture_generation_lifetime() {
+    OwnedFactory factory;
+    factory.files["owned.dds"]=compressed_fixture(16,4);
+    auto* prior=_TheFileFactory;
+    _TheFileFactory=&factory;
+    WW3D::Set_Thumbnail_Enabled(false);
+    WW3D::Set_Texture_Reduction(0,1);
+    try {
+        zh::renderer::RecordingGpuDevice device;
+        TextureClass texture("owned-generation","owned.tga",MIP_LEVELS_1,
+            WW3D_FORMAT_UNKNOWN,true,true);
+        zh::renderer::TextureHandle stale;
+        std::uint64_t first_generation=0;
+        {
+            zh::original_runtime::OriginalGpuEdge first(device);
+            first_generation=first.generation();
+            texture.Init();
+            stale=first.texture_handle(&texture);
+            check(texture.Is_Initialized() && device.resource_counts().textures==1);
+        }
+        check(!texture.Is_Initialized() && device.resource_counts().total()==0);
+        check(device.texture_bytes(stale).empty());
+        {
+            zh::original_runtime::OriginalGpuEdge second(device);
+            check(second.generation()!=first_generation);
+            texture.Init();
+            check(second.texture_handle(&texture)!=stale);
+            check(device.resource_counts().textures==1 && factory.owners==0);
+        }
+        check(!texture.Is_Initialized() && device.resource_counts().total()==0);
+    } catch (...) { _TheFileFactory=prior; throw; }
+    _TheFileFactory=prior;
+}
+
+void original_texture_device_fallback() {
+    OwnedFactory factory;
+    factory.files["owned.dds"]=compressed_fixture(16,4);
+    auto* prior=_TheFileFactory;
+    _TheFileFactory=&factory;
+    WW3D::Set_Thumbnail_Enabled(false);
+    WW3D::Set_Texture_Reduction(1,4);
+    try {
+        zh::renderer::RecordingGpuDevice device;
+        zh::original_runtime::OriginalGpuEdge edge(device);
+        TextureClass texture("owned-fallback","owned.tga",MIP_LEVELS_ALL,
+            WW3D_FORMAT_UNKNOWN,true,true);
+        device.set_texture_format_supported(zh::renderer::TextureFormat::bc1,false);
+        texture.Init();
+        check(texture.Get_Texture_Format()==WW3D_FORMAT_DXT2);
+        const auto bc2=device.texture_bytes(edge.texture_handle(&texture),0);
+        check(bc2.size()==64 && bc2[0]==255 && bc2[7]==255 && bc2[8]==129);
+        texture.Invalidate();
+        device.set_texture_format_supported(zh::renderer::TextureFormat::bc2,false);
+        device.set_texture_format_supported(zh::renderer::TextureFormat::bc3,false);
+        texture.Init();
+        check(texture.Get_Texture_Format()==WW3D_FORMAT_X8R8G8B8);
+        check(device.texture_bytes(edge.texture_handle(&texture),0).size()==8*8*4);
+        texture.Invalidate();
+        device.set_texture_format_supported(zh::renderer::TextureFormat::bgra8,false);
+        bool unsupported=false;
+        try { texture.Init(); } catch (const std::runtime_error&) { unsupported=true; }
+        check(unsupported && !texture.Is_Initialized() && device.resource_counts().total()==0);
+        device.set_texture_format_supported(zh::renderer::TextureFormat::bgra8,true);
+        texture.Init();
+        check(texture.Is_Initialized() && factory.owners==0);
+    } catch (...) { WW3D::Set_Texture_Reduction(0,1); _TheFileFactory=prior; throw; }
+    WW3D::Set_Texture_Reduction(0,1);
+    _TheFileFactory=prior;
+}
+
+void original_dds_to_targa_fallback() {
+    OwnedFactory factory;
+    factory.files["owned.dds"]=compressed_fixture(16,4);
+    factory.files["owned.dds"][0]='!'; // rejected compressed source
+    factory.files["owned.tga"]=targa_fixture();
+    auto* prior=_TheFileFactory;
+    _TheFileFactory=&factory;
+    WW3D::Set_Thumbnail_Enabled(false);
+    WW3D::Set_Texture_Reduction(0,1);
+    try {
+        zh::renderer::RecordingGpuDevice device;
+        zh::original_runtime::OriginalGpuEdge edge(device);
+        TextureClass texture("owned-source-order","owned.tga",MIP_LEVELS_ALL,
+            WW3D_FORMAT_UNKNOWN,true,true);
+        texture.Init();
+        check(texture.Is_Initialized() && !texture.Is_Missing_Texture());
+        check(texture.Get_Texture_Format()==WW3D_FORMAT_X8R8G8B8);
+        check(device.texture_bytes(edge.texture_handle(&texture),0)==
+            Bytes({0,1,2,255,3,4,5,255,6,7,8,255,9,10,11,255}));
+        check(factory.owners==0);
+    } catch (...) { _TheFileFactory=prior; throw; }
     _TheFileFactory=prior;
 }
 
@@ -186,6 +330,16 @@ void format_fallbacks()
         check(unsupported);
     }
     check(device.resource_counts().total()==0);
+    unsigned width=0,height=1,depth=1;
+    bool invalid_dimension=false;
+    try { TextureLoader::Validate_Texture_Size(width,height,depth); }
+    catch (const std::runtime_error&) { invalid_dimension=true; }
+    check(invalid_dimension);
+    width=16385;
+    invalid_dimension=false;
+    try { TextureLoader::Validate_Texture_Size(width,height,depth); }
+    catch (const std::runtime_error&) { invalid_dimension=true; }
+    check(invalid_dimension);
 }
 
 void original_bitmap_pixels()
@@ -207,5 +361,8 @@ int main()
     format_fallbacks();
     original_bitmap_pixels();
     original_loader_decisions();
+    original_texture_generation_lifetime();
+    original_texture_device_fallback();
+    original_dds_to_targa_fallback();
     std::cout << "original-rendering runtime provider=GeneralsMD WW3D2 texture format bitmap decisions\n";
 }
