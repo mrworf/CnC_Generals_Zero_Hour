@@ -11,6 +11,12 @@ recording frame is claimed in this slice.
 
 ## Source closure and ownership
 
+- Restore the reached CPU `WW3D::Render`/`Flush` sequencing in original
+  `ww3d.cpp` including camera update, original DX8 mesh queue flush,
+  `SHD_FLUSH`, static sort and sorting renderer. The currently compiled
+  `ww3d_cpu_state.cpp` supplies only static defaults, not render behavior;
+  replace its duplicated state with one canonical mutually exclusive source
+  configuration when enabling `ww3d.cpp` to avoid two definitions.
 - Existing original `hlod.cpp`, `mesh.cpp`, `meshmdl.cpp`, `meshmatdesc.cpp`,
   `shader.cpp`, `vertmaterial.cpp`, `mapper.cpp`, `camera.cpp`, `scene.cpp`,
   `matpass.cpp`, and original GameClient `W3DScene.cpp` own decisions.

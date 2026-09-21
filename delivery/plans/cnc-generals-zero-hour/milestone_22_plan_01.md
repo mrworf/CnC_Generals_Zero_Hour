@@ -120,7 +120,11 @@ current CPU-only configuration throws *before* original frustum/sort/alpha,
 shadow/additional-pass and polygon task scheduling. Its authored continuation
 uses `MeshModelClass::Register_For_Rendering`,
 `DX8PolygonRendererClass`, `DX8FVFCategoryContainer` and shader/material
-routes; original `dx8wrapper.cpp` itself includes `<D3dx8core.h>` and physical
+routes. `WW3D::Flush` in original `ww3d.cpp` orders DX8 mesh, WWShade,
+static-sort, and sorting-renderer flushes; the currently linked
+`ww3d_cpu_state.cpp` covers static defaults only. Source-local extraction
+must eliminate duplicate static definitions when original `ww3d.cpp` joins
+the Linux build. Original `dx8wrapper.cpp` includes `<D3dx8core.h>` and physical
 Direct3D calls. None of these paths is proven by mere HLOD/child construction.
 Original pass scheduling must execute before a physical GpuDevice translation
 can faithfully record it. Thus prior slice 04 becomes slices 04/05, and its
