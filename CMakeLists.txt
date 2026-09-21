@@ -2009,6 +2009,9 @@ if(ZH_BUILD_TESTS)
   add_test(NAME original_w3d_sorting_cpu COMMAND original_w3d_cpu_graph_tests --sorting-cpu)
   set_tests_properties(original_w3d_sorting_cpu PROPERTIES
     LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_camera_apply COMMAND original_w3d_cpu_graph_tests --camera-apply)
+  set_tests_properties(original_w3d_camera_apply PROPERTIES
+    LABELS "original-rendering;source-identity;negative;renderer-contract")
   add_test(NAME original_w3d_sort_state_abi COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_sort_state_abi.py"
     --wrapper "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8wrapper.h"
@@ -2206,6 +2209,7 @@ if(ZH_BUILD_TESTS)
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/statistics.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8polygonrenderer.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3d.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/camera.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/static_sort_list.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/sortingrenderer.cpp"
     --required "src/original_runtime/original_gpu_edge.cpp"
@@ -2224,6 +2228,15 @@ if(ZH_BUILD_TESTS)
     --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map"
     --executable "$<TARGET_FILE:original_w3d_cpu_graph_tests>")
   set_tests_properties(original_w3d_provider_removal PROPERTIES LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_camera_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_provider_removal.py"
+    --checker "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map"
+    --executable "$<TARGET_FILE:original_w3d_cpu_graph_tests>"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/camera.cpp")
+  set_tests_properties(original_w3d_camera_provider_removal PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_decal_provider_removal COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_provider_removal.py"
     --checker "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"

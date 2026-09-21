@@ -140,6 +140,8 @@ public:
     void set_filter_stage_state(unsigned stage, FilterStageState state, unsigned value);
     PendingStage pending_stage(unsigned stage) const;
     void record_source_state(std::string_view label);
+    std::pair<unsigned,unsigned> active_render_target_extent() const noexcept;
+    void set_source_viewport(float x,float y,float width,float height,float min_depth,float max_depth);
     [[noreturn]] void texture_creation_unavailable(WW3DFormat format, unsigned width,
         unsigned height, unsigned mips, unsigned reduction);
     static OriginalGpuEdge& required();

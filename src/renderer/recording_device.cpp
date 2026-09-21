@@ -155,6 +155,7 @@ public:
     std::array<TextureHandle, RendererLimits::color_targets> active_colors{};
     UInt32 active_color_count = 0;
     TextureHandle active_depth;
+    UInt32 active_width=0,active_height=0;
     std::string last_error;
     std::vector<std::string> commands;
     std::vector<UInt8> last_draw_indices;
@@ -392,6 +393,8 @@ ValidationResult RecordingGpuDevice::begin_pass(const RenderPassDesc& desc, std:
     impl_->active_colors = desc.color_targets;
     impl_->active_color_count = desc.color_target_count;
     impl_->active_depth = desc.depth_target;
+    impl_->active_width=desc.width;
+    impl_->active_height=desc.height;
     std::string command = "begin_pass label=" + quoted(label) + " colors=";
     for (UInt32 index = 0; index < desc.color_target_count; ++index) {
         if (index != 0) command += ",";
@@ -400,6 +403,20 @@ ValidationResult RecordingGpuDevice::begin_pass(const RenderPassDesc& desc, std:
     command += " depth=" + impl_->name(impl_->textures, desc.depth_target, 'T') + " extent="
         + std::to_string(desc.width) + "x" + std::to_string(desc.height);
     impl_->commands.push_back(std::move(command));
+    return {};
+}
+
+std::pair<UInt32,UInt32> RecordingGpuDevice::active_pass_extent() const noexcept
+{ return impl_->in_pass ? std::pair{impl_->active_width,impl_->active_height} : std::pair<UInt32,UInt32>{0,0}; }
+
+ValidationResult RecordingGpuDevice::set_viewport(const ViewportDesc& desc)
+{
+    if (!impl_->in_pass) return impl_->fail("set_viewport","no render pass is active");
+    if (auto result=validate(desc,impl_->active_width,impl_->active_height); !result)
+        return impl_->fail("set_viewport",result.error,impl_->active_pass_label);
+    impl_->commands.push_back("viewport="+std::to_string(desc.x)+","+std::to_string(desc.y)+
+        ","+std::to_string(desc.width)+","+std::to_string(desc.height)+
+        " depth="+std::to_string(desc.min_depth)+":"+std::to_string(desc.max_depth));
     return {};
 }
 
@@ -497,6 +514,7 @@ ValidationResult RecordingGpuDevice::end_pass()
     impl_->active_pass_label.clear();
     impl_->active_color_count = 0;
     impl_->active_depth = {};
+    impl_->active_width=impl_->active_height=0;
     return {};
 }
 

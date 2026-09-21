@@ -49,6 +49,14 @@ void test_descriptors_and_limits()
     check(validate(upload), "in-range upload rejected");
     upload.size = 17;
     check(!validate(upload), "overflowing upload accepted");
+    ViewportDesc viewport{4,2,8,10,0.1F,0.9F};
+    check(validate(viewport,16,16),"bounded original viewport rejected");
+    viewport.width=13;
+    check(!validate(viewport,16,16),"out-of-target original viewport accepted");
+    viewport.width=8; viewport.min_depth=1;
+    check(!validate(viewport,16,16),"inverted original depth range accepted");
+    viewport.min_depth=0.1F; viewport.x=std::nanf("");
+    check(!validate(viewport,16,16),"nonfinite original viewport accepted");
 }
 
 void test_pipeline_key()

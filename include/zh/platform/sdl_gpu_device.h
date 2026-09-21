@@ -48,6 +48,8 @@ public:
     ValidationResult upload(const UploadDesc&, const void* bytes) override;
     ValidationResult upload_texture(const TextureUploadDesc&, const void* bytes) override;
     ValidationResult begin_pass(const RenderPassDesc&, std::string_view label) override;
+    std::pair<UInt32,UInt32> active_pass_extent() const noexcept override;
+    ValidationResult set_viewport(const ViewportDesc&) override;
     ValidationResult draw(const DrawDesc&) override;
     ValidationResult end_pass() override;
     void destroy(BufferHandle) override;

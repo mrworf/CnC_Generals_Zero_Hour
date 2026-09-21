@@ -721,6 +721,18 @@ void OriginalGpuEdge::record_source_state(std::string_view label)
     device_.record_marker(label);
 }
 
+std::pair<unsigned,unsigned> OriginalGpuEdge::active_render_target_extent() const noexcept
+{ return device_.active_pass_extent(); }
+
+void OriginalGpuEdge::set_source_viewport(float x,float y,float width,float height,
+    float min_depth,float max_depth)
+{
+    renderer::ViewportDesc viewport{x,y,width,height,min_depth,max_depth};
+    if (auto result=device_.set_viewport(viewport); !result)
+        throw std::runtime_error("original camera viewport GPU translation failed: "+result.error);
+    record_source_state("CameraClass::Apply viewport");
+}
+
 [[noreturn]] void OriginalGpuEdge::texture_creation_unavailable(WW3DFormat format,
     unsigned width, unsigned height, unsigned mips, unsigned reduction)
 {

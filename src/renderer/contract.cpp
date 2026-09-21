@@ -238,6 +238,22 @@ ValidationResult validate(const RenderPassDesc& desc)
     return {};
 }
 
+ValidationResult validate(const ViewportDesc& desc,UInt32 target_width,UInt32 target_height)
+{
+    if (!target_width || !target_height) return failure("viewport requires an active target extent");
+    if (!std::isfinite(desc.x) || !std::isfinite(desc.y) ||
+        !std::isfinite(desc.width) || !std::isfinite(desc.height) ||
+        !std::isfinite(desc.min_depth) || !std::isfinite(desc.max_depth))
+        return failure("viewport values must be finite");
+    if (desc.x<0 || desc.y<0 || desc.width<=0 || desc.height<=0 ||
+        desc.x>target_width || desc.y>target_height ||
+        desc.width>target_width-desc.x || desc.height>target_height-desc.y)
+        return failure("viewport exceeds the active target");
+    if (desc.min_depth<0 || desc.max_depth>1 || desc.min_depth>desc.max_depth)
+        return failure("viewport depth range must be ordered within 0..1");
+    return {};
+}
+
 ValidationResult validate(const UploadDesc& desc)
 {
     if (!desc.destination) return failure("upload destination is invalid");

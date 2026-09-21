@@ -648,6 +648,19 @@ ValidationResult SdlGpuDevice::begin_pass(const RenderPassDesc& desc, std::strin
     return {};
 }
 
+std::pair<UInt32,UInt32> SdlGpuDevice::active_pass_extent() const noexcept
+{ return impl_->in_pass ? std::pair{impl_->active_width,impl_->active_height} : std::pair<UInt32,UInt32>{0,0}; }
+
+ValidationResult SdlGpuDevice::set_viewport(const ViewportDesc& desc)
+{
+    if (!impl_->in_pass) return impl_->fail("set_viewport","no render pass is active");
+    if (auto result=validate(desc,impl_->active_width,impl_->active_height); !result)
+        return impl_->fail("set_viewport",result.error);
+    SDL_GPUViewport viewport{desc.x,desc.y,desc.width,desc.height,desc.min_depth,desc.max_depth};
+    SDL_SetGPUViewport(impl_->render_pass,&viewport);
+    return {};
+}
+
 ValidationResult SdlGpuDevice::draw(const DrawDesc& desc)
 {
     if (!impl_->in_pass) return impl_->fail("draw", "draw requires an active render pass");
@@ -724,6 +737,7 @@ ValidationResult SdlGpuDevice::end_pass()
     SDL_PopGPUDebugGroup(impl_->command);
     impl_->render_pass = nullptr;
     impl_->in_pass = false;
+    impl_->active_width=impl_->active_height=0;
     if (!SDL_SubmitGPUCommandBuffer(impl_->command)) {
         impl_->command = nullptr;
         return impl_->fail("end_pass", sdl_error("SDL_SubmitGPUCommandBuffer"));

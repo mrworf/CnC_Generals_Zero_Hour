@@ -77,6 +77,9 @@
 #if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
 #else
+#include "dx8wrapper.h"
+#include "original_gpu_edge.h"
+#include <cmath>
 #include <stdexcept>
 #endif
 
@@ -724,7 +727,36 @@ void CameraClass::Apply(void)
 {
 	Update_Frustum();
 #if defined(ZH_WW3D_CPU_ONLY)
-	throw std::runtime_error("CameraClass::Apply requires an installed WW3D device translator");
+	auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+	const auto [width,height]=edge.active_render_target_extent();
+	if (!width || !height ||
+		!std::isfinite(Viewport.Min.X) || !std::isfinite(Viewport.Min.Y) ||
+		!std::isfinite(Viewport.Max.X) || !std::isfinite(Viewport.Max.Y) ||
+		Viewport.Min.X<0 || Viewport.Min.Y<0 ||
+		Viewport.Max.X>1 || Viewport.Max.Y>1 ||
+		Viewport.Max.X<=Viewport.Min.X || Viewport.Max.Y<=Viewport.Min.Y ||
+		!std::isfinite(ZBufferMin) || !std::isfinite(ZBufferMax) ||
+		ZBufferMin<0 || ZBufferMax>1 || ZBufferMax<ZBufferMin ||
+		!std::isfinite(ZNear) || !std::isfinite(ZFar) ||
+		ZNear<=0 || ZFar<=ZNear)
+		throw std::runtime_error("original camera viewport, depth or clip range is invalid");
+	Matrix4x4 d3dprojection;
+	Get_D3D_Projection_Matrix(&d3dprojection);
+	for (unsigned row=0;row<4;++row)
+		for (unsigned col=0;col<4;++col)
+			if (!std::isfinite(d3dprojection[row][col]))
+				throw std::runtime_error("original camera projection is nonfinite");
+	const auto left=static_cast<unsigned>(Viewport.Min.X*width);
+	const auto top=static_cast<unsigned>(Viewport.Min.Y*height);
+	const auto viewport_width=static_cast<unsigned>((Viewport.Max.X-Viewport.Min.X)*width);
+	const auto viewport_height=static_cast<unsigned>((Viewport.Max.Y-Viewport.Min.Y)*height);
+	edge.set_source_viewport(static_cast<float>(left),static_cast<float>(top),
+		static_cast<float>(viewport_width),static_cast<float>(viewport_height),
+		ZBufferMin,ZBufferMax);
+	// The public backend supports the original source ZBIAS render-state path;
+	// the original projection is selected without the legacy no-ZBIAS fallback.
+	DX8Wrapper::Set_Transform(D3DTS_PROJECTION,d3dprojection);
+	DX8Wrapper::Set_Transform(D3DTS_VIEW,CameraInvTransform);
 #else
 
 	int width,height,bits;

@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <functional>
+#include <utility>
 #include <string>
 #include <string_view>
 
@@ -200,6 +201,11 @@ struct RenderPassDesc {
     UInt32 height = 0;
 };
 
+struct ViewportDesc {
+    float x=0, y=0, width=0, height=0;
+    float min_depth=0, max_depth=1;
+};
+
 struct UploadDesc {
     BufferHandle destination;
     UInt64 destination_size = 0;
@@ -241,6 +247,7 @@ ValidationResult validate(const SamplerDesc& desc);
 ValidationResult validate(const ShaderDesc& desc);
 ValidationResult validate(const PipelineDesc& desc);
 ValidationResult validate(const RenderPassDesc& desc);
+ValidationResult validate(const ViewportDesc& desc,UInt32 target_width,UInt32 target_height);
 ValidationResult validate(const UploadDesc& desc);
 ValidationResult validate(const DrawDesc& desc, const PipelineDesc& pipeline);
 ValidationResult validate_original_fvf_indexed_vertices(const DrawDesc& draw, const PipelineDesc& pipeline,
@@ -303,6 +310,10 @@ public:
     virtual ValidationResult upload(const UploadDesc& desc, const void* bytes) = 0;
     virtual ValidationResult upload_texture(const TextureUploadDesc& desc, const void* bytes) = 0;
     virtual ValidationResult begin_pass(const RenderPassDesc& desc, std::string_view label) = 0;
+    virtual std::pair<UInt32,UInt32> active_pass_extent() const noexcept { return {0,0}; }
+    virtual ValidationResult set_viewport(const ViewportDesc&) {
+        return {false,"physical viewport translation is unavailable"};
+    }
     virtual ValidationResult draw(const DrawDesc& desc) = 0;
     virtual ValidationResult end_pass() = 0;
     virtual ValidationResult present(TextureHandle source) = 0;

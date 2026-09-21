@@ -1,6 +1,7 @@
 #include "zh/renderer/recording_device.h"
 
 #include <array>
+#include <limits>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -113,6 +114,29 @@ void test_pass_rules_and_unsupported_descriptors()
     check(!scene.device.begin_pass(wrong, "wrong extent"), "attachment extent mismatch accepted");
     scene.device.destroy(scene.color);
     check(!scene.device.begin_pass(scene.pass(), "dead target"), "destroyed target accepted");
+}
+
+void test_original_camera_viewport_contract()
+{
+    Scene scene;
+    ViewportDesc viewport{4,2,8,10,0.1F,0.9F};
+    check(scene.device.active_pass_extent()==std::pair<UInt32,UInt32>{0,0},"inactive extent leaked");
+    check(!scene.device.set_viewport(viewport),"viewport without pass accepted");
+    check(scene.device.begin_pass(scene.pass(),"original camera viewport"),"camera pass rejected");
+    check(scene.device.active_pass_extent()==std::pair<UInt32,UInt32>{16,16},"active extent incorrect");
+    auto bad=viewport; bad.x=9;
+    check(!scene.device.set_viewport(bad),"out-of-target viewport accepted");
+    bad=viewport; bad.min_depth=0.95F;
+    check(!scene.device.set_viewport(bad),"inverted depth range accepted");
+    bad=viewport; bad.width=std::numeric_limits<float>::quiet_NaN();
+    check(!scene.device.set_viewport(bad),"nonfinite viewport accepted");
+    check(scene.device.snapshot().find("viewport=")==std::string::npos,"invalid viewport mutated state");
+    check(scene.device.set_viewport(viewport),"bounded camera viewport rejected");
+    check(scene.device.snapshot().find("viewport=4.000000,2.000000,8.000000,10.000000 depth=0.100000:0.900000")!=
+        std::string::npos,"viewport/depth recording differs from source");
+    check(scene.device.end_pass(),"camera pass end rejected");
+    check(scene.device.active_pass_extent()==std::pair<UInt32,UInt32>{0,0},"ended extent leaked");
+    check(!scene.device.set_viewport(viewport),"viewport after pass accepted");
 }
 
 void test_pipeline_cache_is_immutable_and_bounded()
@@ -242,6 +266,7 @@ int main()
         test_valid_stream_and_snapshot();
         test_lifetimes_bindings_and_ranges();
         test_pass_rules_and_unsupported_descriptors();
+        test_original_camera_viewport_contract();
         test_pipeline_cache_is_immutable_and_bounded();
         test_original_16_bit_index_range_and_base_vertex();
         test_source_texture_format_capabilities();

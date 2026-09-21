@@ -462,6 +462,78 @@ int main(int argc, char **argv)
 	auto *mesh = static_cast<MeshClass *>(object);
 	CameraClass camera;
 	RenderInfoClass render_info(camera);
+	if (argc==2 && std::strcmp(argv[1],"--camera-apply")==0) {
+		zh::renderer::RecordingGpuDevice recorder;
+		zh::renderer::TextureDesc target;
+		target.width=160; target.height=120; target.render_target=true; target.sampled=false;
+		const auto color=recorder.create_texture(target,"original camera target color");
+		target.format=zh::renderer::TextureFormat::depth24_stencil8;
+		const auto depth=recorder.create_texture(target,"original camera target depth");
+		zh::renderer::RenderPassDesc pass;
+		pass.color_targets[0]=color; pass.color_target_count=1;
+		pass.depth_target=depth; pass.width=160; pass.height=120;
+		camera.Set_Viewport(Vector2(0.125f,0.25f),Vector2(0.875f,0.75f));
+		camera.Set_Zbuffer_Range(0.2f,0.8f);
+		camera.Set_Clip_Planes(1.0f,100.0f);
+		Matrix3D moved(true); moved.Set_Translation(Vector3(1,2,3));
+		camera.Set_Transform(moved);
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			bool no_pass=false;
+			try { camera.Apply(); }
+			catch (const std::runtime_error&) { no_pass=true; }
+			assert(no_pass && !recorder.pass_active());
+			assert(recorder.begin_pass(pass,"original CameraClass::Apply source decisions"));
+			camera.Apply();
+			const auto marker=recorder.snapshot();
+			assert(marker.find("viewport=20.000000,30.000000,120.000000,60.000000 depth=0.200000:0.800000")!=
+				std::string::npos && marker.find("CameraClass::Apply viewport")!=std::string::npos);
+			Matrix4x4 source_view,source_projection,expected_projection;
+			DX8Wrapper::Get_Transform(D3DTS_VIEW,source_view);
+			DX8Wrapper::Get_Transform(D3DTS_PROJECTION,source_projection);
+			camera.Get_D3D_Projection_Matrix(&expected_projection);
+			for (unsigned row=0;row<4;++row)
+				for (unsigned col=0;col<4;++col)
+					assert(std::abs(source_projection[row][col]-expected_projection[row][col])<0.00001f);
+			assert(std::abs(source_view[0].W+1.0f)<0.00001f &&
+				std::abs(source_view[1].W+2.0f)<0.00001f &&
+				std::abs(source_view[2].W+3.0f)<0.00001f);
+			bool unsupported_bias=false;
+			try { DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,1); }
+			catch (const std::runtime_error&) { unsupported_bias=true; }
+			assert(unsupported_bias && recorder.snapshot()==marker);
+			camera.Set_Zbuffer_Range(-0.1f,0.9f);
+			bool invalid_depth=false;
+			try { camera.Apply(); }
+			catch (const std::runtime_error&) { invalid_depth=true; }
+			assert(invalid_depth && recorder.snapshot()==marker);
+			camera.Set_Zbuffer_Range(0.2f,0.8f);
+			camera.Set_Viewport(Vector2(0.75f,0.75f),Vector2(0.25f,0.25f));
+			bool invalid_viewport=false;
+			try { camera.Apply(); }
+			catch (const std::runtime_error&) { invalid_viewport=true; }
+			assert(invalid_viewport && recorder.snapshot()==marker);
+			camera.Set_Viewport(Vector2(0.125f,0.25f),Vector2(0.875f,0.75f));
+			camera.Set_Clip_Planes(1.0f,1.0f);
+			bool invalid_clip=false;
+			try { camera.Apply(); }
+			catch (const std::runtime_error&) { invalid_clip=true; }
+			assert(invalid_clip && recorder.snapshot()==marker);
+			camera.Set_Clip_Planes(1.0f,100.0f);
+			camera.Apply();
+			assert(recorder.snapshot().find("CameraClass::Apply viewport",marker.size())!=std::string::npos);
+			assert(recorder.end_pass());
+			camera.Set_Viewport(Vector2(0,0),Vector2(1,1));
+			bool ended=false;
+			try { camera.Apply(); }
+			catch (const std::runtime_error&) { ended=true; }
+			assert(ended);
+		}
+		recorder.destroy(color); recorder.destroy(depth);
+		assert(recorder.resource_counts().total()==0);
+		object->Release_Ref(); manager.Free_Assets();
+		return 0;
+	}
 	if (argc==2 && std::strcmp(argv[1],"--sorting-cpu")==0) {
 		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
 		const bool previous_sorting=WW3D::Is_Sorting_Enabled();
@@ -1294,6 +1366,11 @@ int main(int argc, char **argv)
 		back_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
 		back_mesh->Set_ObjectScale(5.0f);
 		back_mesh->Set_Position(Vector3(1,0,-12));
+		camera.Set_Viewport(Vector2(0.25f,0.25f),Vector2(0.75f,0.75f));
+		camera.Set_Zbuffer_Range(0.1f,0.9f);
+		Matrix3D camera_world(true);
+		camera_world.Set_Translation(Vector3(0.5f,0.0f,0.0f));
+		camera.Set_Transform(camera_world);
 		for (unsigned generation=0;generation<2;++generation) {
 			zh::renderer::SdlGpuOptions options;
 			options.debug=true; options.shader_root=ZH_GPU_SHADER_DIR;
@@ -1313,14 +1390,15 @@ int main(int argc, char **argv)
 			pass.depth_target=depth; pass.width=target.width; pass.height=target.height;
 			{
 				zh::original_runtime::OriginalGpuEdge edge(device);
-				DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
-				Matrix4x4 projection;
-				camera.Get_D3D_Projection_Matrix(&projection);
-				DX8Wrapper::Set_Transform(D3DTS_PROJECTION,projection);
 				auto frame=[&](bool both) {
+					assert(device.begin_pass(pass,"original source sorted meshes Vulkan"));
+					zh::renderer::ViewportDesc invalid_viewport;
+					invalid_viewport.width=static_cast<float>(pass.width+1);
+					invalid_viewport.height=static_cast<float>(pass.height);
+					assert(!device.set_viewport(invalid_viewport));
+					camera.Apply();
 					mesh->Render(render_info);
 					if (both) back_mesh->Render(render_info);
-					assert(device.begin_pass(pass,"original source sorted meshes Vulkan"));
 					TheDX8MeshRenderer.Flush();
 					SortingRendererClass::Flush();
 					assert(device.end_pass());
@@ -1335,6 +1413,13 @@ int main(int argc, char **argv)
 				for (std::size_t i=0;i<pixels.size();i+=4)
 					if (pixels[i]!=5 || pixels[i+1]!=5 || pixels[i+2]!=10) ++covered;
 				assert(covered>0 && covered<pass.width*pass.height && textures.owners==0);
+				for (unsigned y=0;y<pass.height;++y)
+					for (unsigned x=0;x<pass.width;++x)
+						if (x<pass.width/4 || x>=3*pass.width/4 ||
+							y<pass.height/4 || y>=3*pass.height/4) {
+							const auto p=4U*(y*pass.width+x);
+							assert(pixels[p]==5 && pixels[p+1]==5 && pixels[p+2]==10);
+						}
 				const auto single_pixels=frame(false);
 				assert(SortingRendererClass::Copy_Last_Sorted_Triangles(nullptr,0)==1 &&
 					pixels!=single_pixels);
