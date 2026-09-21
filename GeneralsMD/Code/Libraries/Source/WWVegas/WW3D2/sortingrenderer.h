@@ -36,6 +36,11 @@ class SortingRendererClass
 	static void Insert_To_Sorting_Pool(SortingNodeStruct* state);
 
 public:
+#if defined(ZH_WW3D_CPU_ONLY)
+	// Read-only original-sort witness for CPU tests; never a physical draw API.
+	struct SortedTriangleWitness { float depth; unsigned short i,j,k; unsigned short node; };
+	static unsigned Copy_Last_Sorted_Triangles(SortedTriangleWitness* out,unsigned capacity);
+#endif
 	static void Insert_Triangles(
 		const SphereClass& bounding_sphere,
 		unsigned short start_index, 
@@ -67,4 +72,3 @@ public:
 };
 
 #endif
-

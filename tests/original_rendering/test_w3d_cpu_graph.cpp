@@ -24,6 +24,7 @@
 #include "dx8wrapper.h"
 #include "statistics.h"
 #include "static_sort_list.h"
+#include "sortingrenderer.h"
 #include "ww3d.h"
 #include "original_gpu_edge.h"
 #include "zh/renderer/recording_device.h"
@@ -460,6 +461,98 @@ int main(int argc, char **argv)
 	auto *mesh = static_cast<MeshClass *>(object);
 	CameraClass camera;
 	RenderInfoClass render_info(camera);
+	if (argc==2 && std::strcmp(argv[1],"--sorting-cpu")==0) {
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		const bool previous_sorting=WW3D::Is_Sorting_Enabled();
+		WW3D::Set_Thumbnail_Enabled(false);
+		OwnedFactory textures;
+		textures.files["mytex.tga"]=original_targa();
+		textures.files["MYTEX.TGA"]=textures.files["mytex.tga"];
+		auto* old_factory=_TheFileFactory;
+		_TheFileFactory=&textures;
+		TheDX8MeshRenderer.Init();
+		WW3D::Enable_Sorting(true);
+		TheDX8MeshRenderer.Set_Camera(&camera);
+		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,true);
+		mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+		mesh->Set_Position(Vector3(0,0,-10));
+		RenderObjClass* back=manager.Create_Render_Obj("TEST.TRIANGLE");
+		assert(back && back->Class_ID()==RenderObjClass::CLASSID_MESH);
+		auto* back_mesh=static_cast<MeshClass*>(back);
+		back_mesh->Set_Position(Vector3(0,0,-12));
+		zh::renderer::RecordingGpuDevice recorder;
+		zh::renderer::TextureDesc target;
+		target.width=32; target.height=32; target.render_target=true; target.sampled=false;
+		const auto color=recorder.create_texture(target,"original sorted source color");
+		target.format=zh::renderer::TextureFormat::depth24_stencil8;
+		const auto depth=recorder.create_texture(target,"original sorted source depth");
+		zh::renderer::RenderPassDesc pass;
+		pass.color_targets[0]=color; pass.color_target_count=1;
+		pass.depth_target=depth; pass.width=32; pass.height=32;
+		for (unsigned attempt=0;attempt<2;++attempt) {
+			mesh->Render(render_info);
+			back_mesh->Render(render_info);
+			{
+				zh::original_runtime::OriginalGpuEdge edge(recorder);
+				DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+				DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+				assert(recorder.begin_pass(pass,"original queued CPU sorting source"));
+				TheDX8MeshRenderer.Flush();
+				const SphereClass bad_sphere(Vector3(0,0,
+					std::numeric_limits<float>::quiet_NaN()),1.0f);
+				bool invalid_index=false,invalid_depth=false;
+				try { SortingRendererClass::Insert_Triangles(
+					SphereClass(Vector3(0,0,0),1.0f),60000,1,0,3); }
+				catch (const std::runtime_error& error) {
+					invalid_index=std::strstr(error.what(),"sorting source range")!=nullptr;
+				}
+				try { SortingRendererClass::Insert_Triangles(bad_sphere,0,1,0,3); }
+				catch (const std::runtime_error& error) {
+					invalid_depth=std::strstr(error.what(),"nonfinite depth")!=nullptr;
+				}
+				assert(invalid_index && invalid_depth);
+				bool typed_physical=false;
+				try { SortingRendererClass::Flush(); }
+				catch (const std::runtime_error& error) {
+					typed_physical=std::strstr(error.what(),
+						"original sorted pool requires physical GPU translation")!=nullptr;
+				}
+				assert(typed_physical && recorder.end_pass());
+				SortingRendererClass::SortedTriangleWitness sorted[8]{};
+				assert(SortingRendererClass::Copy_Last_Sorted_Triangles(sorted,8)==2);
+				assert(sorted[0].depth<sorted[1].depth);
+				assert(std::abs(sorted[0].depth+12.0f)<0.01f);
+				assert(std::abs(sorted[1].depth+10.0f)<0.01f);
+				assert(sorted[0].node!=sorted[1].node);
+				WW3D::Enable_Sorting(false);
+				bool direct_boundary=false;
+				try { SortingRendererClass::Insert_Triangles(0,1,0,3); }
+				catch (const std::runtime_error&) { direct_boundary=true; }
+				assert(direct_boundary &&
+					SortingRendererClass::Copy_Last_Sorted_Triangles(nullptr,0)==2);
+				WW3D::Enable_Sorting(true);
+				DX8Wrapper::Set_Vertex_Buffer(nullptr);
+				bool invalid_type=false;
+				try { SortingRendererClass::Insert_Triangles(0,1,0,3); }
+				catch (const std::runtime_error& error) {
+					invalid_type=std::strstr(error.what(),"buffer type is unsupported")!=nullptr;
+				}
+				assert(invalid_type);
+			}
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			mesh->Peek_Model()->Register_For_Rendering();
+		}
+		SortingRendererClass::Deinit();
+		WW3D::Enable_Sorting(previous_sorting);
+		TheDX8MeshRenderer.Set_Camera(nullptr);
+		recorder.destroy(color); recorder.destroy(depth);
+		assert(recorder.resource_counts().total()==0 && textures.owners==0);
+		_TheFileFactory=old_factory;
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		back->Release_Ref(); object->Release_Ref(); manager.Free_Assets();
+		return 0;
+	}
 	if (argc==2 && std::strcmp(argv[1],"--sort-state")==0) {
 		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
 		WW3D::Set_Thumbnail_Enabled(false);

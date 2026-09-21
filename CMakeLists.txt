@@ -2000,6 +2000,9 @@ if(ZH_BUILD_TESTS)
   add_test(NAME original_w3d_sort_state COMMAND original_w3d_cpu_graph_tests --sort-state)
   set_tests_properties(original_w3d_sort_state PROPERTIES
     LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_sorting_cpu COMMAND original_w3d_cpu_graph_tests --sorting-cpu)
+  set_tests_properties(original_w3d_sorting_cpu PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_sort_state_abi COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_sort_state_abi.py"
     --wrapper "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8wrapper.h"

@@ -38,28 +38,21 @@
  * Functions:                                                                                  *
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#if defined(ZH_WW3D_CPU_ONLY)
-#include "sortingrenderer.h"
-#include <stdexcept>
-
-bool SortingRendererClass::_EnableTriangleDraw = true;
-
-void SortingRendererClass::Flush()
-{
-	// The original sorting pool's device commands are translated in M22/06.
-	// Never report successful flush while its physical implementation is absent.
-	throw std::runtime_error("original sorting pass requires GPU translation");
-}
-
-#else
 #include "sortingrenderer.h"
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
 #include "dx8wrapper.h"
+#include "dllist.h"
+#include "ww3d.h"
 #include "vertmaterial.h"
 #include "texture.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "d3d8.h"
 #include "D3dx8math.h"
+#else
+#include <cmath>
+#include <stdexcept>
+#endif
 #include "statistics.h"
 #include <wwprofile.h>
 #include <algorithm>
@@ -185,6 +178,8 @@ public:
 	unsigned short vertex_count;			// Number of vertices used in vb
 };
 
+void Release_Refs(SortingNodeStruct* state);
+
 static DLListClass<SortingNodeStruct> sorted_list;
 static DLListClass<SortingNodeStruct> clean_list;
 static unsigned total_sorting_vertices;
@@ -208,6 +203,19 @@ static SortingNodeStruct* Get_Sorting_Struct()
 // ----------------------------------------------------------------------------
 
 static TempIndexStruct* temp_index_array;
+#if defined(ZH_WW3D_CPU_ONLY)
+static unsigned last_sorted_triangle_count;
+unsigned SortingRendererClass::Copy_Last_Sorted_Triangles(SortedTriangleWitness* out,unsigned capacity)
+{
+	const unsigned count=last_sorted_triangle_count;
+	if (out && capacity>=count) {
+		for (unsigned i=0;i<count;++i)
+			out[i]={temp_index_array[i].z,temp_index_array[i].tri.i,
+				temp_index_array[i].tri.j,temp_index_array[i].tri.k,temp_index_array[i].idx};
+	}
+	return count;
+}
+#endif
 static unsigned temp_index_array_count;
 
 static TempIndexStruct* Get_Temp_Index_Array(unsigned count)
@@ -248,7 +256,46 @@ void SortingRendererClass::Insert_Triangles(
 
 	SortingNodeStruct* state=Get_Sorting_Struct();
 
+	#if defined(ZH_WW3D_CPU_ONLY)
+	try { DX8Wrapper::Get_Render_State(state->sorting_state); }
+	catch (...) {
+		Release_Refs(state);
+		clean_list.Add_Head(state);
+		throw;
+	}
+	#else
 	DX8Wrapper::Get_Render_State(state->sorting_state);
+	#endif
+	#if defined(ZH_WW3D_CPU_ONLY)
+	// The native code asserts these inputs before dereferencing the sorting
+	// buffers. At the Linux boundary reject bad source ranges and return the
+	// unpublished node without leaving retained snapshot references behind.
+	const auto fail_sort_insert=[&](const char* why) {
+		Release_Refs(state);
+		clean_list.Add_Head(state);
+		throw std::runtime_error(why);
+	};
+	if ((state->sorting_state.index_buffer_type!=BUFFER_TYPE_SORTING &&
+		state->sorting_state.index_buffer_type!=BUFFER_TYPE_DYNAMIC_SORTING) ||
+		(state->sorting_state.vertex_buffer_types[0]!=BUFFER_TYPE_SORTING &&
+		state->sorting_state.vertex_buffer_types[0]!=BUFFER_TYPE_DYNAMIC_SORTING))
+		fail_sort_insert("original sorting source buffer type is unsupported");
+	const auto* source_ib=static_cast<const SortingIndexBufferClass*>(state->sorting_state.index_buffer);
+	const auto* source_vb=static_cast<const SortingVertexBufferClass*>(state->sorting_state.vertex_buffers[0]);
+	const unsigned offset=static_cast<unsigned>(start_index)+state->sorting_state.iba_offset;
+	const unsigned base=static_cast<unsigned>(min_vertex_index)+state->sorting_state.vba_offset+
+		state->sorting_state.index_base_offset;
+	if (!source_ib || !source_vb || !source_ib->index_buffer || !source_vb->VertexBuffer ||
+		!polygon_count || vertex_count<3 || offset>source_ib->Get_Index_Count() ||
+		static_cast<unsigned>(polygon_count)*3>source_ib->Get_Index_Count()-offset ||
+		base>source_vb->Get_Vertex_Count() || vertex_count>source_vb->Get_Vertex_Count()-base)
+		fail_sort_insert("original sorting source range is invalid");
+	for (unsigned i=0;i<static_cast<unsigned>(polygon_count)*3;++i) {
+		const unsigned idx=source_ib->index_buffer[offset+i];
+		if (idx<min_vertex_index || idx-min_vertex_index>=vertex_count)
+			fail_sort_insert("original sorting source index is outside vertex range");
+	}
+	#endif
 
  	WWASSERT(
 		((state->sorting_state.index_buffer_type==BUFFER_TYPE_SORTING || state->sorting_state.index_buffer_type==BUFFER_TYPE_DYNAMIC_SORTING) &&
@@ -265,6 +312,21 @@ void SortingRendererClass::Insert_Triangles(
 	WWASSERT(vertex_buffer);
 	WWASSERT(state->vertex_count<=vertex_buffer->Get_Vertex_Count());
 
+	#if defined(ZH_WW3D_CPU_ONLY)
+	Matrix4x4 mtx=state->sorting_state.world*state->sorting_state.view;
+	const Vector3& center=state->bounding_sphere.Center;
+	state->transformed_center=Vector3(
+		mtx[0][0]*center.X+mtx[1][0]*center.Y+mtx[2][0]*center.Z+mtx[3][0],
+		mtx[0][1]*center.X+mtx[1][1]*center.Y+mtx[2][1]*center.Z+mtx[3][1],
+		mtx[0][2]*center.X+mtx[1][2]*center.Y+mtx[2][2]*center.Z+mtx[3][2]);
+	if (!std::isfinite(state->transformed_center.X) ||
+		!std::isfinite(state->transformed_center.Y) ||
+		!std::isfinite(state->transformed_center.Z)) {
+		Release_Refs(state);
+		clean_list.Add_Head(state);
+		throw std::runtime_error("original sorting center has nonfinite depth");
+	}
+	#else
 	D3DXMATRIX mtx=(D3DXMATRIX&)state->sorting_state.world*(D3DXMATRIX&)state->sorting_state.view;
 	D3DXVECTOR3 vec=(D3DXVECTOR3&)state->bounding_sphere.Center;
 	D3DXVECTOR4 transformed_vec;
@@ -273,6 +335,7 @@ void SortingRendererClass::Insert_Triangles(
 		&vec,
 		&mtx); 
 	state->transformed_center=Vector3(transformed_vec[0],transformed_vec[1],transformed_vec[2]);
+	#endif
 
 	
 	/// @todo lorenzen sez use a bucket sort here... and stop copying so much data so many times
@@ -340,7 +403,11 @@ void Release_Refs(SortingNodeStruct* state)
 	}
 	REF_PTR_RELEASE(state->sorting_state.index_buffer);
 	REF_PTR_RELEASE(state->sorting_state.material);
-	for (i=0;i<DX8Wrapper::Get_Current_Caps()->Get_Max_Textures_Per_Pass();++i) 
+	#if defined(ZH_WW3D_CPU_ONLY)
+	for (i=0;i<MAX_TEXTURE_STAGES;++i)
+	#else
+	for (i=0;i<DX8Wrapper::Get_Current_Caps()->Get_Max_Textures_Per_Pass();++i)
+	#endif
 	{
 		REF_PTR_RELEASE(state->sorting_state.Textures[i]);
 	}
@@ -356,6 +423,15 @@ static SortingNodeStruct* overlapping_nodes[MAX_OVERLAPPING_NODES];
 
 void SortingRendererClass::Insert_To_Sorting_Pool(SortingNodeStruct* state)
 {
+	#if defined(ZH_WW3D_CPU_ONLY)
+	if (overlapping_node_count>=MAX_OVERLAPPING_NODES ||
+		state->vertex_count>65535U-overlapping_vertex_count ||
+		state->polygon_count>21845U-overlapping_polygon_count) {
+		Release_Refs(state);
+		clean_list.Add_Head(state);
+		throw std::runtime_error("original sorting pool exceeds bounded 16-bit source range");
+	}
+	#endif
 	if (overlapping_node_count>=MAX_OVERLAPPING_NODES) {
 		Release_Refs(state);
 		WWASSERT(0);
@@ -373,6 +449,9 @@ void SortingRendererClass::Insert_To_Sorting_Pool(SortingNodeStruct* state)
 
 static void Apply_Render_State(RenderStateStruct& render_state)
 {
+	#if defined(ZH_WW3D_CPU_ONLY)
+	throw std::runtime_error("original sorting physical state requires GPU translation");
+	#else
 
 
 
@@ -417,6 +496,7 @@ static void Apply_Render_State(RenderStateStruct& render_state)
 	}
 	else 
 		DX8Wrapper::Set_DX8_Light(0,NULL);
+	#endif
 
 
 }
@@ -462,8 +542,12 @@ void SortingRendererClass::Flush_Sorting_Pool()
 			memcpy(dest_verts, src_verts, sizeof(VertexFormatXYZNDUV2)*state->vertex_count);
 			dest_verts += state->vertex_count;
 
+			#if defined(ZH_WW3D_CPU_ONLY)
+			const Matrix4x4 mtx=state->sorting_state.world*state->sorting_state.view;
+			#else
 			D3DXMATRIX d3d_mtx=(D3DXMATRIX&)state->sorting_state.world*(D3DXMATRIX&)state->sorting_state.view;
 			const Matrix4x4& mtx=(const Matrix4x4&)d3d_mtx;
+			#endif
 
 			unsigned short* indices=NULL;
 			SortingIndexBufferClass* index_buffer=static_cast<SortingIndexBufferClass*>(state->sorting_state.index_buffer);
@@ -527,7 +611,18 @@ void SortingRendererClass::Flush_Sorting_Pool()
 		}
 	}
 
+	#if defined(ZH_WW3D_CPU_ONLY)
+	for (unsigned i=0;i<overlapping_polygon_count;++i)
+		if (!std::isfinite(tis[i].z))
+			throw std::runtime_error("original sorting triangle has nonfinite depth");
+	#endif
 	Sort(tis, tis + overlapping_polygon_count);
+	#if defined(ZH_WW3D_CPU_ONLY)
+	last_sorted_triangle_count=overlapping_polygon_count;
+	// Source triangle order is complete. Physical sorted buffer submission is
+	// the next slice; never report a completed frame at this device boundary.
+	throw std::runtime_error("original sorted pool requires physical GPU translation");
+	#endif
 
 /*	///@todo: Add code to break up rendering into multiple index buffer fills to allow more than 65536/3 triangles.  -MW
 	int total_overlapping_polygon_count = overlapping_polygon_count;
@@ -626,10 +721,16 @@ void SortingRendererClass::Flush_Sorting_Pool()
 void SortingRendererClass::Flush()
 {
 	WWPROFILE("SortingRenderer::Flush");
+	#if defined(ZH_WW3D_CPU_ONLY)
+	last_sorted_triangle_count=0;
+	#endif
 	Matrix4x4 old_view;
 	Matrix4x4 old_world;
 	DX8Wrapper::Get_Transform(D3DTS_VIEW,old_view);
 	DX8Wrapper::Get_Transform(D3DTS_WORLD,old_world);
+	#if defined(ZH_WW3D_CPU_ONLY)
+	try {
+	#endif
 
 	while (SortingNodeStruct* state=sorted_list.Head()) {
 		state->Remove();
@@ -662,6 +763,29 @@ void SortingRendererClass::Flush()
 
 	DX8Wrapper::Set_Transform(D3DTS_VIEW,old_view);
 	DX8Wrapper::Set_Transform(D3DTS_WORLD,old_world);
+	#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		while (SortingNodeStruct* abandoned=sorted_list.Head()) {
+			abandoned->Remove();
+			Release_Refs(abandoned);
+			clean_list.Add_Head(abandoned);
+		}
+		for (unsigned i=0;i<overlapping_node_count;++i) {
+			Release_Refs(overlapping_nodes[i]);
+			clean_list.Add_Head(overlapping_nodes[i]);
+			overlapping_nodes[i]=nullptr;
+		}
+		overlapping_node_count=0;
+		overlapping_polygon_count=0;
+		overlapping_vertex_count=0;
+		total_sorting_vertices=0;
+		DynamicIBAccessClass::_Reset(false);
+		DynamicVBAccessClass::_Reset(false);
+		DX8Wrapper::Set_Transform(D3DTS_VIEW,old_view);
+		DX8Wrapper::Set_Transform(D3DTS_WORLD,old_world);
+		throw;
+	}
+	#endif
 
 }
 
@@ -690,6 +814,9 @@ void SortingRendererClass::Deinit()
 	delete[] temp_index_array;
 	temp_index_array=NULL;
 	temp_index_array_count=0;
+	#if defined(ZH_WW3D_CPU_ONLY)
+	last_sorted_triangle_count=0;
+	#endif
 }
 
 
@@ -735,6 +862,19 @@ void SortingRendererClass::Insert_VolumeParticle(
 
 	// Transform the center point to view space for sorting
 
+	#if defined(ZH_WW3D_CPU_ONLY)
+	Matrix4x4 mtx=state->sorting_state.world*state->sorting_state.view;
+	const Vector3& center=state->bounding_sphere.Center;
+	state->transformed_center=Vector3(
+		mtx[0][0]*center.X+mtx[1][0]*center.Y+mtx[2][0]*center.Z+mtx[3][0],
+		mtx[0][1]*center.X+mtx[1][1]*center.Y+mtx[2][1]*center.Z+mtx[3][1],
+		mtx[0][2]*center.X+mtx[1][2]*center.Y+mtx[2][2]*center.Z+mtx[3][2]);
+	if (!std::isfinite(state->transformed_center.Z)) {
+		Release_Refs(state);
+		clean_list.Add_Head(state);
+		throw std::runtime_error("original sorting volume center has nonfinite depth");
+	}
+	#else
 	D3DXMATRIX mtx=(D3DXMATRIX&)state->sorting_state.world*(D3DXMATRIX&)state->sorting_state.view;
 	D3DXVECTOR3 vec=(D3DXVECTOR3&)state->bounding_sphere.Center;
 	D3DXVECTOR4 transformed_vec;
@@ -743,6 +883,7 @@ void SortingRendererClass::Insert_VolumeParticle(
 		&vec,
 		&mtx); 
 	state->transformed_center=Vector3(transformed_vec[0],transformed_vec[1],transformed_vec[2]);
+	#endif
 
 
 	// BUT WHAT IS THE DEAL WITH THE VERTCOUNT AND POLYCOUNT BEING N BUT TRANSFORMED CENTER COUNT == 1
@@ -764,4 +905,3 @@ void SortingRendererClass::Insert_VolumeParticle(
 	}
 	if (!node) sorted_list.Add_Tail(state);
 }
-#endif // ZH_WW3D_CPU_ONLY

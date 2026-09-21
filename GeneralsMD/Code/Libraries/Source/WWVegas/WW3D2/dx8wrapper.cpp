@@ -48,6 +48,8 @@
 #include "shader.h"
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
+#include "sortingrenderer.h"
+#include "ww3d.h"
 #include "matrix3d.h"
 #include "lightenvironment.h"
 #include "ww3d_cpu_boundary.h"
@@ -213,8 +215,10 @@ void DX8Wrapper::Get_Render_State(RenderStateStruct& snapshot)
         copied.LightEnable[slot]=selected.light_enabled[slot];
         if (copied.LightEnable[slot]) copied.Lights[slot]=selected.lights[slot];
     }
-    copied.world=world->second;
-    copied.view=view->second;
+    // The source sorting ABI snapshots the DX8-native (transposed) matrices;
+    // the CPU selected-state map stays in Westwood convention for GPU lowering.
+    copied.world=world->second.Transpose();
+    copied.view=view->second.Transpose();
     copied.vertex_buffer_types[0]=selected.vertex_buffer ? selected.vertex_buffer->Type() : BUFFER_TYPE_INVALID;
     copied.vertex_buffer_types[1]=BUFFER_TYPE_INVALID;
     copied.index_buffer_type=selected.index_buffer ? selected.index_buffer->Type() : BUFFER_TYPE_INVALID;
@@ -535,6 +539,16 @@ void DX8Wrapper::Draw_Triangles(unsigned short first_index,unsigned short triang
     unsigned short min_vertex,unsigned short vertex_count)
 {
     if ((state().polygon_low_bound && state().polygon_low_bound>=triangle_count)) return;
+    const auto& source=state();
+    if (source.vertex_buffer && source.index_buffer &&
+        (source.vertex_buffer->Type()==BUFFER_TYPE_SORTING ||
+            source.vertex_buffer->Type()==BUFFER_TYPE_DYNAMIC_SORTING) &&
+        (source.index_buffer->Type()==BUFFER_TYPE_SORTING ||
+            source.index_buffer->Type()==BUFFER_TYPE_DYNAMIC_SORTING) &&
+        WW3D::Is_Sorting_Enabled()) {
+        SortingRendererClass::Insert_Triangles(first_index,triangle_count,min_vertex,vertex_count);
+        return;
+    }
     Apply_Render_State_Changes();
     if (!state().triangle_draw_enabled) return;
     auto& selected=state();
