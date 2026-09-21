@@ -344,7 +344,12 @@ semantic mapping/negative controls with no GPU resource, then B3B2, public
 Recording/SDL_GPU shader/pipeline/uniform execution and validation-layer
 pixels. Both retain the B3B acceptance together; category-issued world/light
 and actual source draw remain 06, retail/visual gates remain 08/09. This
-plan-only revision precedes further shader translation implementation.
+plan-only revision precedes further shader translation implementation. Owned
+original W3D material fixtures emit lighting-enabled state even before the
+category can emit its later light environment. B3B1 therefore preserves the
+lit requirement in its semantic output; B3B2 must reject that physical
+route until 06 restores source-owned category light/world decisions. An
+unlit state issued by original methods supplies B3B2's physical positive.
 
 ## Deferred follow-ups
 
