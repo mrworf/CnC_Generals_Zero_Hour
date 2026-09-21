@@ -446,6 +446,9 @@ void ScriptEngine::addConditionTemplateInfo( Template *actionTemplate)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+static UnsignedInt g_scriptEngineUpdateCount = 0;
+extern "C" UnsignedInt zh_original_script_engine_update_count() { return g_scriptEngineUpdateCount; }
+
 ScriptEngine::ScriptEngine():
 m_numCounters(0),
 m_numFlags(0),
@@ -5300,6 +5303,7 @@ void ScriptEngine::reset( void )
 	m_currentPlayer = NULL;
 	m_skirmishHumanPlayer = NULL;
 	m_frameObjectCountChanged = 0;
+	g_scriptEngineUpdateCount = 0;
 
 	m_shownMPLocalDefeatWindow = FALSE;
 
@@ -5504,6 +5508,7 @@ void ScriptEngine::newMap( void )
 DECLARE_PERF_TIMER(ScriptEngine)
 void ScriptEngine::update( void )
 {
+	++g_scriptEngineUpdateCount;
 	USE_PERF_TIMER(ScriptEngine)
 #ifdef SPECIAL_SCRIPT_PROFILING
 #ifdef DEBUG_LOGGING

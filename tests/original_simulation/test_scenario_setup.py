@@ -47,6 +47,7 @@ def owned_map() -> bytes:
         "HeightMapData", "WorldInfo", "ObjectsList", "Object", "SidesList",
         "PlayerScriptsList", "ScriptList", "originalOwner", "playerName",
         "playerIsHuman", "playerFaction", "playerAllies", "playerEnemies",
+        "multiplayerIsLocal",
     ]
     ids = {name: index + 1 for index, name in enumerate(names)}
     toc = bytearray(b"CkMp" + struct.pack("<I", len(names)))
@@ -55,21 +56,39 @@ def owned_map() -> bytes:
         toc.extend(struct.pack("<B", len(encoded)) + encoded + struct.pack("<I", value))
 
     height = struct.pack("<7i", 8, 8, 0, 1, 8, 8, 64) + bytes(range(64))
-    owner = dictionary([(ids["originalOwner"], 3, "")])
+    owners = {
+        "LogicFixture": "teamplayerA",
+        "EnemyFixture": "teamplayerB",
+        "AllyBase": "teamplayerA",
+        "FixtureProp": "teamplayerA",
+    }
     objects = bytearray()
-    for name, x in (("LogicFixture", 20.0), ("FixtureProp", 40.0)):
+    for name, x in (("LogicFixture", 20.0), ("EnemyFixture", 60.0),
+                    ("AllyBase", 10.0), ("FixtureProp", 40.0)):
+        owner = dictionary([(ids["originalOwner"], 3, owners[name])])
         body = struct.pack("<4fI", x, 20.0, 0.0, 0.0, 0) + ascii_string(name) + owner
         objects.extend(chunk(ids["Object"], 3, body))
 
-    neutral = dictionary([
-        (ids["playerName"], 3, ""),
-        (ids["playerIsHuman"], 0, False),
-        (ids["playerFaction"], 3, "FactionCivilian"),
+    player_a = dictionary([
+        (ids["playerName"], 3, "playerA"),
+        (ids["playerIsHuman"], 0, True),
+        (ids["playerFaction"], 3, "FactionPlayerA"),
         (ids["playerAllies"], 3, ""),
-        (ids["playerEnemies"], 3, ""),
+        (ids["playerEnemies"], 3, "playerB"),
+        (ids["multiplayerIsLocal"], 0, True),
     ])
-    sides = bytearray(struct.pack("<I", 1) + neutral + struct.pack("<II", 0, 0))
-    scripts = chunk(ids["ScriptList"], 1, b"")
+    player_b = dictionary([
+        (ids["playerName"], 3, "playerB"),
+        (ids["playerIsHuman"], 0, False),
+        (ids["playerFaction"], 3, "FactionPlayerB"),
+        (ids["playerAllies"], 3, ""),
+        (ids["playerEnemies"], 3, "playerA"),
+    ])
+    sides = bytearray(struct.pack("<I", 2))
+    sides.extend(player_a + struct.pack("<I", 0))
+    sides.extend(player_b + struct.pack("<I", 0))
+    sides.extend(struct.pack("<I", 0))
+    scripts = chunk(ids["ScriptList"], 1, b"") + chunk(ids["ScriptList"], 1, b"")
     sides.extend(chunk(ids["PlayerScriptsList"], 1, scripts))
 
     toc.extend(chunk(ids["HeightMapData"], 4, height))
@@ -97,6 +116,42 @@ def run(executable: pathlib.Path, base: pathlib.Path, source: pathlib.Path,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
 
 
+def prepare_owned_source(source: pathlib.Path, fixture) -> None:
+    fixture.fixture(source)
+    fixture.write(source / "Data/INI/Default/Multiplayer.ini",
+                  "MultiplayerColor Owned\n TooltipName = COLOR:Owned\n"
+                  " RGBColor = R:1 G:2 B:3\n RGBNightColor = R:1 G:2 B:3\nEND\n")
+    fixture.write(source / "Data/INI/Default/PlayerTemplate.ini",
+                  "PlayerTemplate FactionCivilian\n Side = Civilian\n PlayableSide = No\nEND\n"
+                  "PlayerTemplate FactionPlayerA\n Side = PlayerA\n PlayableSide = Yes\nEND\n"
+                  "PlayerTemplate FactionPlayerB\n Side = PlayerB\n PlayableSide = Yes\nEND\n"
+                  "PlayerTemplate FactionObserver\n Side = Observer\n PlayableSide = No\nEND\n")
+    fixture.write(source / "Data/INI/Default/Object.ini",
+                  "Object LogicFixture\n KindOf = SELECTABLE VEHICLE\n"
+                  " WeaponSet\n  Conditions = None\n  Weapon = PRIMARY FixtureWeapon\n End\n"
+                  " Body = ActiveBody ModuleTag_Body\n  MaxHealth = 100\n InitialHealth = 100\n End\n"
+                  " Behavior = AIUpdateInterface ModuleTag_AI\n"
+                  "  AutoAcquireEnemiesWhenIdle = No\n  MoodAttackCheckRate = 33\n End\n"
+                  " Locomotor = SET_NORMAL FixtureLocomotor\n"
+                  " Behavior = DestroyDie ModuleTag_Die\n End\nEnd\n"
+                  "Object EnemyFixture\n KindOf = SELECTABLE STRUCTURE MP_COUNT_FOR_VICTORY\n"
+                  " Body = ActiveBody ModuleTag_Body\n  MaxHealth = 100\n InitialHealth = 100\n End\nEnd\n"
+                  "Object AllyBase\n KindOf = SELECTABLE STRUCTURE MP_COUNT_FOR_VICTORY\n"
+                  " Body = ActiveBody ModuleTag_Body\n  MaxHealth = 100\n InitialHealth = 100\n End\nEnd\n"
+                  "Object FixtureProp\n KindOf = PROP\nEnd\n")
+    fixture.write(source / "Data/INI/Weapon.ini",
+                  "Weapon FixtureWeapon\n PrimaryDamage = 5\n PrimaryDamageRadius = 0\n"
+                  " AttackRange = 100\n DamageType = SMALL_ARMS\n DeathType = NORMAL\n"
+                  " WeaponSpeed = 999999\n ProjectileObject = NONE\n DelayBetweenShots = 100\n"
+                  " ClipSize = 0\n RadiusDamageAffects = ENEMIES\nEnd\n")
+    fixture.write(source / "Data/INI/Locomotor.ini",
+                  "Locomotor FixtureLocomotor\n Surfaces = GROUND\n Speed = 30\n SpeedDamaged = 30\n"
+                  " TurnRate = 360\n TurnRateDamaged = 360\n Acceleration = 30\n"
+                  " AccelerationDamaged = 30\n Braking = 30\n MinTurnSpeed = 0\n"
+                  " ZAxisBehavior = NO_Z_MOTIVE_FORCE\n Appearance = TWO_LEGS\nEnd\n")
+    fixture.write(source / "Maps/Owned/Owned.map", owned_map())
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--executable", type=pathlib.Path, required=True)
@@ -108,22 +163,7 @@ def main() -> int:
     try:
         base = pathlib.Path(context.name)
         source = base / "readonly-input"
-        fixture.fixture(source)
-        fixture.write(source / "Data/INI/Default/Multiplayer.ini",
-                      "MultiplayerColor Owned\n TooltipName = COLOR:Owned\n"
-                      " RGBColor = R:1 G:2 B:3\n RGBNightColor = R:1 G:2 B:3\nEND\n")
-        fixture.write(source / "Data/INI/Default/PlayerTemplate.ini",
-                      "PlayerTemplate FactionCivilian\n Side = Civilian\n"
-                      " PlayableSide = No\nEND\n"
-                      "PlayerTemplate FactionObserver\n Side = Observer\n"
-                      " PlayableSide = No\nEND\n")
-        fixture.write(source / "Data/INI/Default/Object.ini",
-                      "Object LogicFixture\n"
-                      " Body = InactiveBody ModuleTag_Body\n End\n"
-                      " Behavior = DestroyDie ModuleTag_Die\n End\n"
-                      "End\n"
-                      "Object FixtureProp\n KindOf = PROP\nEnd\n")
-        fixture.write(source / "Maps/Owned/Owned.map", owned_map())
+        prepare_owned_source(source, fixture)
         before = sorted((p.relative_to(source), p.read_bytes()) for p in source.rglob("*") if p.is_file())
 
         missing_template_root = base / "missing-template-input"
@@ -153,7 +193,7 @@ def main() -> int:
             marker = f"original scenario setup: mode={mode} "
             if result.returncode or marker not in result.stdout:
                 raise SystemExit(f"{scenario} setup failed ({result.returncode}):\n{combined}")
-            for witness in ("players=", "teams=", "objects=1", "props=1",
+            for witness in ("players=", "teams=", "objects=3", "props=1",
                             "texture-preloads=", "recorder-controls=1", "devices=0"):
                 if witness not in result.stdout:
                     raise SystemExit(f"{scenario} omitted {witness}:\n{combined}")

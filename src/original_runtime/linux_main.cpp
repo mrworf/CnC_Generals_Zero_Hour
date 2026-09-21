@@ -21,6 +21,7 @@
 
 extern "C" Bool zh_linux_lifecycle_report(UnsignedInt *values, std::size_t count);
 extern "C" Bool zh_linux_scenario_setup_report(UnsignedInt *values, std::size_t count);
+extern "C" Bool zh_linux_simulation_report(Int *values, std::size_t count);
 extern "C" Int zh_linux_benchmark_timer();
 extern "C" UnsignedInt zh_linux_device_acquisition_attempts();
 
@@ -152,6 +153,7 @@ int main(int argc, char **argv)
 	installSubsystemINIDataLoader(nullptr);
 	UnsignedInt lifecycle[8]{};
 	UnsignedInt scenario[8]{};
+	Int simulation[14]{};
 	if (result == 0 && std::getenv("ZH_M20_HEADLESS_PROFILE"))
 	{
 		const Bool lifecycleComplete = zh_linux_lifecycle_report(lifecycle, 8);
@@ -198,6 +200,22 @@ int main(int argc, char **argv)
 			result = 4;
 		}
 	}
+	if (result == 0 && std::getenv("ZH_M21_SIMULATION"))
+	{
+		if (!zh_linux_simulation_report(simulation, 14))
+		{
+			std::fprintf(stderr, "original simulation failed: checkpoint did not complete\n");
+			result = 4;
+		}
+		else if (simulation[1] <= simulation[0] || simulation[2] == 0 || simulation[3] == 0 ||
+			!simulation[8] || !simulation[9] || !simulation[10] || !simulation[11])
+		{
+			std::fprintf(stderr, "original simulation failed: source-owned checkpoint is incomplete (%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d)\n",
+				simulation[0], simulation[1], simulation[2], simulation[3], simulation[4], simulation[5],
+				simulation[6], simulation[7], simulation[8], simulation[9], simulation[10], simulation[11], simulation[12], simulation[13]);
+			result = 4;
+		}
+	}
 	zh::original_process::shutdown_services();
 	const zh::original_process::ServiceCounts services = zh::original_process::service_counts();
 	if (result == 0 && (services.synchronization != 0 || services.logging != 0 ||
@@ -219,5 +237,9 @@ int main(int argc, char **argv)
 	if (result == 0 && std::getenv("ZH_M21_SCENARIO"))
 		std::printf("original scenario setup: mode=%u players=%u teams=%u objects=%u props=%u model-preloads=%u texture-preloads=%u recorder-controls=%u devices=0\n",
 			scenario[0], scenario[1], scenario[2], scenario[3], scenario[4], scenario[5], scenario[6], scenario[7]);
+	if (result == 0 && std::getenv("ZH_M21_SIMULATION"))
+		std::printf("original simulation checkpoint: frames=%d>%d ai=%d scripts=%d position=%d>%d actor=%d target=%d moved=%d attacked=%d invalid-rejected=%d terminal=%d target-health=%d>%d\n",
+			simulation[0], simulation[1], simulation[2], simulation[3], simulation[4], simulation[5],
+			simulation[6], simulation[7], simulation[8], simulation[9], simulation[10], simulation[11], simulation[12], simulation[13]);
 	return result;
 }

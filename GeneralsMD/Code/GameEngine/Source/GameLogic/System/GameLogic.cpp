@@ -2834,7 +2834,10 @@ Int GameLogic::rebalanceChildSleepyUpdate(Int i)
 // balance down, not up), so this one is hand-unrolled for
 // max efficiency. I have left the pristine non-unrolled
 // version present for clarity. (Yes, this is worth doing.) (srj) 
-#if 1
+// The pointer-unrolled retail implementation forms vector elements beyond
+// one-past-the-end while probing leaf nodes. That trips checked libstdc++ and
+// is undefined C++; retain the original index implementation below on Linux.
+#if 0
 	UpdateModulePtr* pI = &m_sleepyUpdates[i];
 
 	// our children are i*2 and i*2+1

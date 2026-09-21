@@ -302,6 +302,8 @@ void AI::parseSkirmishBuildList(INI *ini, void *instance, void* /*store*/, const
 
 /// The AI system singleton
 AI *TheAI = NULL;
+static UnsignedInt g_aiUpdateCount = 0;
+extern "C" UnsignedInt zh_original_ai_update_count() { return g_aiUpdateCount; }
 
 
 /**
@@ -347,6 +349,7 @@ void AI::reset( void )
 	}
 	m_nextGroupID = 0;
 	m_nextFormationID = NO_FORMATION_ID;
+	g_aiUpdateCount = 0;
 	getNextFormationID(); // increment once past NO_FORMATION_ID.  jba.
 }
 
@@ -355,6 +358,7 @@ void AI::reset( void )
  */
 void AI::update( void )
 {
+	++g_aiUpdateCount;
 	// Do pathfinding.
 	m_pathfinder->processPathfindQueue();
 
@@ -1042,5 +1046,3 @@ void AI::loadPostProcess( void )
 {
 
 }  // end loadPostProcess
-
-

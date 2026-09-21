@@ -146,7 +146,8 @@ void VictoryConditions::reset( void )
 //-------------------------------------------------------------------------------------------------
 void VictoryConditions::update( void )
 {
-	if (!TheRecorder->isMultiplayer() || (m_localSlotNum == -1 && !m_isObserver))
+	const Bool directSkirmish = TheGameLogic->getGameMode() == GAME_SKIRMISH;
+	if ((!TheRecorder->isMultiplayer() && !directSkirmish) || (m_localSlotNum == -1 && !m_isObserver))
 		return;
 
 	// Check for a single winning alliance
@@ -307,7 +308,7 @@ Bool VictoryConditions::hasSinglePlayerBeenDefeated(Player *player)
 //-------------------------------------------------------------------------------------------------
 void VictoryConditions::cachePlayerPtrs( void )
 {
-	if (!TheRecorder->isMultiplayer())
+	if (!TheRecorder->isMultiplayer() && TheGameLogic->getGameMode() != GAME_SKIRMISH)
 		return;
 
 	Int playerCount = 0;
@@ -365,6 +366,5 @@ Bool VictoryConditions::isLocalDefeat( void )
 
 	return (m_localPlayerDefeated);
 }
-
 
 

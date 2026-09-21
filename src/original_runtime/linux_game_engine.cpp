@@ -6,13 +6,17 @@
 #include "Common/FunctionLexicon.h"
 #include "Common/GlobalData.h"
 #include "Common/ModuleFactory.h"
+#include "Common/NameKeyGenerator.h"
 #include "Common/OriginalMapLoader.h"
 #include "Common/MapReaderWriterInfo.h"
 #include "Common/PlayerList.h"
+#include "Common/Player.h"
 #include "Common/Recorder.h"
+#include "Common/AudioRandomValue.h"
 #include "W3DDevice/Common/W3DModuleFactory.h"
 #include "Common/Radar.h"
 #include "Common/ThingFactory.h"
+#include "Common/ThingTemplate.h"
 #include "GameClient/Display.h"
 #include "GameClient/DisplayString.h"
 #include "GameClient/DisplayStringManager.h"
@@ -28,9 +32,16 @@
 #include "GameClient/TerrainVisual.h"
 #include "GameClient/VideoPlayer.h"
 #include "GameClient/View.h"
+#include "GameClient/ClientRandomValue.h"
+#include "GameLogic/AI.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/BodyModule.h"
+#include "GameLogic/Object.h"
+#include "GameLogic/ScriptEngine.h"
 #include "GameLogic/SidesList.h"
 #include "GameLogic/TerrainLogic.h"
+#include "GameLogic/VictoryConditions.h"
 #include "PosixDevice/Common/PosixLocalFileSystem.h"
 
 #include <cstdlib>
@@ -39,6 +50,9 @@
 #include <vector>
 
 namespace {
+
+extern "C" UnsignedInt zh_original_ai_update_count();
+extern "C" UnsignedInt zh_original_script_engine_update_count();
 
 struct LifecycleReport
 {
@@ -68,6 +82,25 @@ struct ScenarioSetupReport
 	Bool complete = FALSE;
 };
 ScenarioSetupReport g_scenarioSetupReport;
+struct SimulationReport
+{
+	UnsignedInt frameBefore = 0;
+	UnsignedInt frameAfter = 0;
+	UnsignedInt aiUpdates = 0;
+	UnsignedInt scriptUpdates = 0;
+	Int startX = 0;
+	Int movedX = 0;
+	ObjectID actor = INVALID_ID;
+	ObjectID target = INVALID_ID;
+	Bool moved = FALSE;
+	Bool attacked = FALSE;
+	Bool invalidRejected = FALSE;
+	Bool terminal = FALSE;
+	Int targetHealthBefore = 0;
+	Int targetHealthAfter = 0;
+	Bool complete = FALSE;
+};
+SimulationReport g_simulationReport;
 Int g_benchmarkTimer = -1;
 UnsignedInt g_deviceAcquisitionAttempts = 0;
 UnsignedInt g_propCount = 0;
@@ -547,6 +580,8 @@ public:
 		{
 			m_scenarioStarted = TRUE;
 			TheGameLogic->startNewGame(FALSE);
+			// The original start path is intentionally two-phase: the first call
+			// requests/loads the map and the second finishes scenario construction.
 			TheGameLogic->startNewGame(FALSE);
 			g_scenarioSetupReport.mode = m_scenarioMode;
 			g_scenarioSetupReport.players = ThePlayerList->getPlayerCount();
@@ -557,6 +592,12 @@ public:
 			g_scenarioSetupReport.texturePreloads = g_texturePreloadCount;
 			g_scenarioSetupReport.recorderControls = TheRecorder->getControlsInitCount();
 			g_scenarioSetupReport.complete = TRUE;
+			if (m_simulationProfile)
+			{
+				runOriginalSimulation();
+				setQuitting(TRUE);
+				return;
+			}
 			setQuitting(TRUE);
 			return;
 		}
@@ -591,6 +632,98 @@ public:
 		++m_services;
 	}
 protected:
+	void appendSelection(PlayerIndex player, ObjectID object)
+	{
+		GameMessage *message = newInstance(GameMessage)(GameMessage::MSG_CREATE_SELECTED_GROUP);
+		message->friend_setPlayerIndex(player);
+		message->appendBooleanArgument(TRUE);
+		message->appendObjectIDArgument(object);
+		TheCommandList->appendMessage(message);
+	}
+	void appendMove(PlayerIndex player, const Coord3D& destination)
+	{
+		GameMessage *message = newInstance(GameMessage)(GameMessage::MSG_DO_MOVETO);
+		message->friend_setPlayerIndex(player);
+		message->appendLocationArgument(destination);
+		TheCommandList->appendMessage(message);
+	}
+	void appendAttack(PlayerIndex player, ObjectID target)
+	{
+		GameMessage *message = newInstance(GameMessage)(GameMessage::MSG_DO_FORCE_ATTACK_OBJECT);
+		message->friend_setPlayerIndex(player);
+		message->appendObjectIDArgument(target);
+		TheCommandList->appendMessage(message);
+	}
+	void appendSelfDestruct(PlayerIndex player)
+	{
+		GameMessage *message = newInstance(GameMessage)(GameMessage::MSG_SELF_DESTRUCT);
+		message->friend_setPlayerIndex(player);
+		message->appendBooleanArgument(FALSE);
+		TheCommandList->appendMessage(message);
+	}
+	void runOriginalSimulation()
+	{
+		Object *actor = NULL;
+		Object *target = NULL;
+		for (Object *object = TheGameLogic->getFirstObject(); object; object = object->getNextObject())
+		{
+			const AsciiString& name = object->getTemplate()->getName();
+			if (name == "LogicFixture") actor = object;
+			if (name == "EnemyFixture") target = object;
+		}
+		Player *playerA = ThePlayerList->findPlayerWithNameKey(TheNameKeyGenerator->nameToKey("playerA"));
+		Player *playerB = ThePlayerList->findPlayerWithNameKey(TheNameKeyGenerator->nameToKey("playerB"));
+		if (!actor) throw std::runtime_error("original simulation actor is missing");
+		if (!target) throw std::runtime_error("original simulation target is missing");
+		if (!playerA) throw std::runtime_error("original simulation playerA is missing");
+		if (!playerB) throw std::runtime_error("original simulation playerB is missing");
+		if (!actor->getAIUpdateInterface()) throw std::runtime_error("original simulation actor AI is missing");
+		Player *actorOwner = actor->getControllingPlayer();
+		if (!actorOwner) throw std::runtime_error("original simulation actor owner is missing");
+
+		const unsigned clientBurn = std::getenv("ZH_M21_CLIENT_RANDOM_BURN") ?
+			static_cast<unsigned>(std::strtoul(std::getenv("ZH_M21_CLIENT_RANDOM_BURN"), NULL, 10)) : 0;
+		const unsigned audioBurn = std::getenv("ZH_M21_AUDIO_RANDOM_BURN") ?
+			static_cast<unsigned>(std::strtoul(std::getenv("ZH_M21_AUDIO_RANDOM_BURN"), NULL, 10)) : 0;
+		for (unsigned i = 0; i < clientBurn; ++i) (void)GameClientRandomValue(0, 1000000);
+		for (unsigned i = 0; i < audioBurn; ++i) (void)GameAudioRandomValue(0, 1000000);
+
+		g_simulationReport.frameBefore = TheGameLogic->getFrame();
+		g_simulationReport.startX = static_cast<Int>(actor->getPosition()->x * 1000.0f);
+		g_simulationReport.actor = actor->getID();
+		g_simulationReport.target = target->getID();
+		const PlayerIndex actorPlayer = actorOwner->getPlayerIndex();
+		appendSelection(actorPlayer, actor->getID());
+		Coord3D destination = *actor->getPosition();
+		destination.x += 15.0f;
+		appendMove(actorPlayer, destination);
+		for (Int frame = 0; frame < 12; ++frame) GameEngine::update();
+		AIUpdateInterface *ai = actor->getAIUpdateInterface();
+		g_simulationReport.movedX = static_cast<Int>(actor->getPosition()->x * 1000.0f);
+		g_simulationReport.moved = g_simulationReport.movedX != g_simulationReport.startX || ai->isMoving();
+
+		ai->aiIdle(CMD_FROM_AI);
+		TheGameLogic->selectObject(actor, TRUE, actorOwner->getPlayerMask());
+		appendAttack(actorPlayer, INVALID_ID);
+		GameEngine::update();
+		g_simulationReport.invalidRejected = ai->getLastCommandSource() == CMD_FROM_AI;
+
+		g_simulationReport.targetHealthBefore = static_cast<Int>(target->getBodyModule()->getHealth() * 1000.0f);
+		TheGameLogic->selectObject(actor, TRUE, actorOwner->getPlayerMask());
+		appendAttack(actorPlayer, target->getID());
+		GameEngine::update();
+		g_simulationReport.targetHealthAfter = static_cast<Int>(target->getBodyModule()->getHealth() * 1000.0f);
+		g_simulationReport.attacked = ai->getLastCommandSource() == CMD_FROM_PLAYER;
+
+		appendSelfDestruct(playerB->getPlayerIndex());
+		for (Int frame = 0; frame < 3; ++frame) GameEngine::update();
+		g_simulationReport.terminal = m_scenarioMode == GAME_SKIRMISH ?
+			TheVictoryConditions->hasAchievedVictory(playerA) : TheVictoryConditions->hasSinglePlayerBeenDefeated(playerB);
+		g_simulationReport.frameAfter = TheGameLogic->getFrame();
+		g_simulationReport.aiUpdates = zh_original_ai_update_count();
+		g_simulationReport.scriptUpdates = zh_original_script_engine_update_count();
+		g_simulationReport.complete = TRUE;
+	}
 	LocalFileSystem *createLocalFileSystem() override
 	{
 		const char *root = std::getenv("ZH_DATA_ROOT");
@@ -614,6 +747,7 @@ private:
 	Int m_scenarioMode = m_scenarioName && std::strcmp(m_scenarioName, "skirmish") == 0 ?
 		GAME_SKIRMISH : GAME_SINGLE_PLAYER;
 	Bool m_scenarioStarted = FALSE;
+	Bool m_simulationProfile = std::getenv("ZH_M21_SIMULATION") != NULL;
 	unsigned m_updates = 0;
 	unsigned m_services = 0;
 };
@@ -642,6 +776,7 @@ GameEngine *CreateGameEngine()
 {
 	g_lifecycleReport = LifecycleReport{};
 	g_scenarioSetupReport = ScenarioSetupReport{};
+	g_simulationReport = SimulationReport{};
 	g_benchmarkTimer = -1;
 	g_deviceAcquisitionAttempts = 0;
 	g_propCount = 0;
@@ -687,5 +822,26 @@ extern "C" Bool zh_linux_scenario_setup_report(UnsignedInt *values, std::size_t 
 	values[5] = g_scenarioSetupReport.modelPreloads;
 	values[6] = g_scenarioSetupReport.texturePreloads;
 	values[7] = g_scenarioSetupReport.recorderControls;
+	return TRUE;
+}
+
+extern "C" Bool zh_linux_simulation_report(Int *values, std::size_t count)
+{
+	if (!g_simulationReport.complete || !values || count < 14)
+		return FALSE;
+	values[0] = static_cast<Int>(g_simulationReport.frameBefore);
+	values[1] = static_cast<Int>(g_simulationReport.frameAfter);
+	values[2] = static_cast<Int>(g_simulationReport.aiUpdates);
+	values[3] = static_cast<Int>(g_simulationReport.scriptUpdates);
+	values[4] = g_simulationReport.startX;
+	values[5] = g_simulationReport.movedX;
+	values[6] = static_cast<Int>(g_simulationReport.actor);
+	values[7] = static_cast<Int>(g_simulationReport.target);
+	values[8] = g_simulationReport.moved;
+	values[9] = g_simulationReport.attacked;
+	values[10] = g_simulationReport.invalidRejected;
+	values[11] = g_simulationReport.terminal;
+	values[12] = g_simulationReport.targetHealthBefore;
+	values[13] = g_simulationReport.targetHealthAfter;
 	return TRUE;
 }

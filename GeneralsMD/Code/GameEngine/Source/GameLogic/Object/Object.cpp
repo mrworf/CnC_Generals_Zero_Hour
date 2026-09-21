@@ -3974,7 +3974,11 @@ void Object::crc( Xfer *xfer )
 	}
 #endif DEBUG_CRC
 
-	Real health = getBodyModule()->getHealth();
+	BodyModuleInterface *body = getBodyModule();
+	// Props are source-owned Objects but may intentionally have no body module.
+	// Give that original state a stable CRC representation instead of
+	// dereferencing a null interface on Linux.
+	Real health = body ? body->getHealth() : 0.0f;
 	xfer->xferUser(&health,														sizeof(health));
 #ifdef DEBUG_CRC
 	if (doLogging)
@@ -3993,7 +3997,7 @@ void Object::crc( Xfer *xfer )
 	}
 #endif DEBUG_CRC
 
-	Real scalar = getBodyModule()->getDamageScalar();
+	Real scalar = body ? body->getDamageScalar() : 1.0f;
 	xfer->xferUser(&scalar,														sizeof(scalar));
 #ifdef DEBUG_CRC
 	if (doLogging)

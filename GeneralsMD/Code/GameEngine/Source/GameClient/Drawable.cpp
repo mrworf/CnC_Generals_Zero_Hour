@@ -4558,7 +4558,10 @@ void Drawable::startAmbientSound( Bool onlyIfPermanent )
   stopAmbientSound();
 	BodyDamageType bodyCondition = BODY_PRISTINE;
 	Object *obj = getObject();
-	if( obj )
+	// Map props and teardown/re-entry drawables can legitimately have no body.
+	// The original Windows build happened not to dereference that state here;
+	// keep the pristine default when no body module exists.
+	if( obj && obj->getBodyModule() )
 	{
 		bodyCondition = obj->getBodyModule()->getDamageState();
 	}
@@ -5647,4 +5650,3 @@ void TintEnvelope::loadPostProcess( void )
 {
 
 }  // end loadPostProcess
-

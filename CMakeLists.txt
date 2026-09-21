@@ -1122,6 +1122,28 @@ if(ZH_BUILD_TESTS)
     --required-symbol Drawable)
   set_tests_properties(original_simulation_setup_provider_removal PROPERTIES
     LABELS "original-simulation;source-identity")
+  add_test(NAME original_simulation_behavior COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_simulation/test_simulation_behavior.py"
+    --executable "$<TARGET_FILE:zh_original_main>"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}")
+  set_tests_properties(original_simulation_behavior PROPERTIES
+    LABELS "original-simulation;source-identity")
+  add_test(NAME original_simulation_behavior_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_simulation/test_simulation_identity.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map")
+  set_tests_properties(original_simulation_behavior_identity PROPERTIES
+    LABELS "original-simulation;source-identity")
+  add_test(NAME original_simulation_behavior_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target zh_original_main
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member GameLogicDispatch.cpp.o
+    --required-symbol logicMessageDispatcher)
+  set_tests_properties(original_simulation_behavior_provider_removal PROPERTIES
+    LABELS "original-simulation;source-identity")
   add_executable(original_lifecycle_subsystem_tests
     tests/original_lifecycle/test_subsystem_lifecycle.cpp)
   target_include_directories(original_lifecycle_subsystem_tests PRIVATE

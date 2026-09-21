@@ -48,3 +48,7 @@ Expected: original command/game-logic paths only where portability or test hooks
 ## Commit boundary
 
 Commit the complete original simulation behavior, tests, checkpoint contract, and plan/evidence updates as one slice.
+
+## Execution result
+
+Complete. The production Linux entry submits selection, move, force-attack, rejected invalid-target, and self-destruct messages through the original command stream, advances the original engine update loop, and reports only state derived from original frames, objects, AI, script, player, and victory providers. Mission defeat and skirmish victory pass with identical checkpoints under four independent client/audio random-consumption patterns. Source identity and provider-removal controls bind acceptance to the original dispatcher and simulation providers. Focused GCC Debug and strict Clang ASan/UBSan suites each pass all six setup/behavior, identity, and provider-removal tests.
