@@ -760,6 +760,25 @@ public:
 			}
 #endif
 			captureScenarioSetup();
+			if (const char *baseline = std::getenv("ZH_M24_GAMEDATA_BASELINE"))
+			{
+				float before = 0.0f, expectedAfter = 0.0f;
+				if (std::sscanf(baseline, "%f:%f", &before, &expectedAfter) != 2 ||
+					TheWritableGlobalData->m_partitionCellSize != before ||
+					TheWritableGlobalData->m_shellMapOn)
+					throw std::runtime_error("original GameData pre-reset override mismatch");
+				GameEngine::reset();
+				if (TheWritableGlobalData->m_partitionCellSize != expectedAfter ||
+					TheWritableGlobalData->m_shellMapOn)
+					throw std::runtime_error("original GameData reset lost shipped baseline");
+				GameEngine::reset();
+				if (TheWritableGlobalData->m_partitionCellSize != expectedAfter)
+					throw std::runtime_error("original GameData repeated reset changed baseline");
+				std::printf("original GameData baseline: before=%.0f reset=%.0f\n",
+					before, expectedAfter);
+				setQuitting(TRUE);
+				return;
+			}
 			if (const char *powerGate = std::getenv("ZH_M24_POWER_BASELINE"))
 			{
 				const Int countBefore = TheSpecialPowerStore->getNumSpecialPowers();

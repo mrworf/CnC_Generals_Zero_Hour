@@ -1171,7 +1171,16 @@ GlobalData *GlobalData::newOverride( void )
 
 	// copy the data from the latest override (TheWritableGlobalData) to the newly created instance
 	DEBUG_ASSERTCRASH( TheWritableGlobalData, ("GlobalData::newOverride() - no existing data\n") );
+#if defined(__linux__)
+	// The object owns this one pointer; preserve the new allocation while the
+	// remaining scalar/string/vector state receives an ordinary memberwise copy.
+	WeaponBonusSet *ownedBonuses = override->m_weaponBonusSet;
+	*ownedBonuses = *TheWritableGlobalData->m_weaponBonusSet;
+#endif
 	*override = *TheWritableGlobalData;
+#if defined(__linux__)
+	override->m_weaponBonusSet = ownedBonuses;
+#endif
 
 	//
 	// link the override to the previously created one, the link order is important here
@@ -1186,6 +1195,31 @@ GlobalData *GlobalData::newOverride( void )
 	return override;
 
 }  // end newOveride
+
+#if defined(__linux__)
+void GlobalData::commitShippedDefinitions()
+{
+	GlobalData *root = m_theOriginal;
+	GlobalData *shipped = TheWritableGlobalData;
+	if (!root || shipped == root)
+		return;
+
+	// The subsystem list owns root, while reset normally discards every override.
+	// Promote the installed INI layer into root before any map.ini is loaded.
+	WeaponBonusSet *rootBonuses = root->m_weaponBonusSet;
+	*rootBonuses = *shipped->m_weaponBonusSet;
+	*root = *shipped;
+	root->m_weaponBonusSet = rootBonuses;
+	root->m_next = NULL;
+	TheWritableGlobalData = root;
+	while (shipped != root)
+	{
+		GlobalData *next = shipped->m_next;
+		delete shipped;
+		shipped = next;
+	}
+}
+#endif
 
 //-------------------------------------------------------------------------------------------------
 void GlobalData::init( void )

@@ -77,6 +77,9 @@ public:
 	Bool setTimeOfDay( TimeOfDay tod );		///< Use this function to set the Time of day;
 
 	static void parseGameDataDefinition( INI* ini );
+#if defined(__linux__)
+	void commitShippedDefinitions();
+#endif
 
 	//-----------------------------------------------------------------------------------------------
 	struct TerrainLighting
@@ -532,11 +535,14 @@ private:
 	static GlobalData *m_theOriginal;		///< the original global data instance (no overrides)
 	GlobalData *m_next;									///< next instance (for overrides)
 	GlobalData *newOverride( void );		/** create a new override, copy data from previous
-																			override, and return it */
-
-
+													override, and return it */
+#if defined(__linux__)
+	GlobalData(const GlobalData& that) = default;
+	GlobalData& operator=(const GlobalData& that) = default;
+#else
 	GlobalData(const GlobalData& that) { DEBUG_CRASH(("unimplemented")); }
 	GlobalData& operator=(const GlobalData& that) { DEBUG_CRASH(("unimplemented")); return *this; }
+#endif
 
 };
 

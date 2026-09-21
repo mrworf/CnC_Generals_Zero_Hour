@@ -1,6 +1,7 @@
 #include "PreRTS.h"
 
 #include "Common/GameEngine.h"
+#include "Common/GlobalData.h"
 #include "Common/Errors.h"
 #include "Common/FileSystem.h"
 #include "Common/INI.h"
@@ -78,7 +79,18 @@ void load_subsystem_ini(const char *defaults, const char *overrides,
 	}
 	if (overrides && TheFileSystem->doesFileExist(overrides))
 	{
-		load_ini(overrides, loaded ? INI_LOAD_CREATE_OVERRIDES : INI_LOAD_OVERWRITE, xfer);
+		try
+		{
+			load_ini(overrides, loaded ? INI_LOAD_CREATE_OVERRIDES : INI_LOAD_OVERWRITE, xfer);
+		}
+		catch (...)
+		{
+			// A failed installed GameData parse can already have linked an override.
+			// The subsystem-list failure path deletes the root; unwind its layers first.
+			if (std::strcmp(overrides, "Data\\INI\\GameData.ini") == 0 && TheWritableGlobalData)
+				TheWritableGlobalData->reset();
+			throw;
+		}
 		loaded = TRUE;
 	}
 	else if (overrides && !loaded)
