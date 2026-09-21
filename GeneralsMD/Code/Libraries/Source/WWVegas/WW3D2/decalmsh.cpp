@@ -63,7 +63,9 @@
 #include "simplevec.h"
 #include "texture.h"
 #include "dx8wrapper.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8caps.h"
+#endif
 
 #define DISABLE_CLIPPING	0
 
@@ -424,7 +426,15 @@ bool RigidDecalMeshClass::Create_Decal
 	// on hardware "polygon offset" we could remove this code and we could make decals non-sorting
 	Vector3 zbias_offset(0.0f,0.0f,0.0f);
 	
-	if (!DX8Wrapper::Get_Current_Caps()->Support_ZBias()) {
+#if defined(ZH_WW3D_CPU_ONLY)
+	// SDL_GPU exposes rasterizer depth bias in the public pipeline contract.
+	// The original unsupported-capability polygon shift is therefore not
+	// selected; physical ZBIAS lowering is mandatory before this can draw.
+	const bool supports_zbias=true;
+#else
+	const bool supports_zbias=DX8Wrapper::Get_Current_Caps()->Support_ZBias();
+#endif
+	if (!supports_zbias) {
 		const float ZBIAS_DISTANCE = 0.01f;
 		generator->Get_Transform().Get_Z_Vector(&zbias_offset);
 		Matrix3D invtm;

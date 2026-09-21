@@ -560,10 +560,6 @@ void MeshClass::Get_Deformed_Vertices(Vector3 *dst_vert)
  *=============================================================================================*/
 void MeshClass::Create_Decal(DecalGeneratorClass * generator)
 {
-#if defined(ZH_WW3D_CPU_ONLY)
-	(void)generator;
-	throw std::runtime_error("MeshClass::Create_Decal requires an installed WW3D device translator");
-#else
 	WWMEMLOG(MEM_GEOMETRY);
 
 	if (WW3D::Are_Decals_Enabled() == false) {
@@ -573,6 +569,18 @@ void MeshClass::Create_Decal(DecalGeneratorClass * generator)
 	if (Is_Translucent() && (generator->Is_Applied_To_Translucent_Meshes() == false)) {
 		return;
 	}
+
+#if defined(ZH_WW3D_CPU_ONLY)
+	// A corrupt source index must not reach the original APT/plane/deformation
+	// routines, which dereference polygon vertices before any device boundary.
+	const TriIndex* source_polys=Model->Get_Polygon_Array();
+	const int source_vertices=Model->Get_Vertex_Count();
+	for (int polygon=0; polygon<Model->Get_Polygon_Count(); ++polygon) {
+		const TriIndex& tri=source_polys[polygon];
+		if (tri.I>=source_vertices || tri.J>=source_vertices || tri.K>=source_vertices)
+			throw std::runtime_error("original decal source polygon index exceeds model vertex count");
+	}
+#endif
 	
 	if (!Model->Get_Flag(MeshGeometryClass::SKIN)) {
 		
@@ -622,7 +630,6 @@ void MeshClass::Create_Decal(DecalGeneratorClass * generator)
 			DecalMesh->Create_Decal(generator, worldbox, temp_apt, &_TempVertexBuffer);
 		}
 	}
-#endif
 }
 
 

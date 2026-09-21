@@ -2345,6 +2345,11 @@ void DX8MeshRendererClass::Invalidate( bool shutdown)
 {
 	WWMEMLOG(MEM_RENDERER);
 	_RegisteredMeshList.Reset_List();
+#if defined(ZH_WW3D_CPU_ONLY)
+	// A Linux physical error unwinds through the original Flush. Discard the
+	// abandoned scene's source-owned decal links before their meshes release.
+	visible_decal_meshes=NULL;
+#endif
 
 	for (int i=0;i<texture_category_container_lists_rigid.Count();++i) {
 		Invalidate_FVF_Category_Container_List(*texture_category_container_lists_rigid[i]);

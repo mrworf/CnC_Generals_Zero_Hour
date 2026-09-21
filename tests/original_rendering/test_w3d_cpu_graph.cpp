@@ -10,6 +10,8 @@
 #include "texture.h"
 #include "vertmaterial.h"
 #include "matpass.h"
+#include "decalsys.h"
+#include "decalmsh.h"
 #include "mapper.h"
 #include "camera.h"
 #include "light.h"
@@ -458,6 +460,123 @@ int main(int argc, char **argv)
 	auto *mesh = static_cast<MeshClass *>(object);
 	CameraClass camera;
 	RenderInfoClass render_info(camera);
+	if (argc==2 && std::strcmp(argv[1],"--decal-cpu")==0) {
+		const bool previously_enabled=WW3D::Are_Decals_Enabled();
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		WW3D::Enable_Decals(true);
+		WW3D::Set_Thumbnail_Enabled(false);
+		mesh->Set_Position(Vector3(0,0,-10));
+		DecalSystemClass source_system;
+		DecalGeneratorClass* generator=source_system.Lock_Decal_Generator();
+		assert(generator && generator->Peek_Decal_System()==&source_system);
+		MaterialPassClass* authored_decal_material=generator->Get_Material();
+		assert(authored_decal_material && authored_decal_material->Peek_Material()==nullptr &&
+			authored_decal_material->Peek_Texture()==nullptr);
+		authored_decal_material->Release_Ref();
+		generator->Set_Ortho_Projection(-2,2,-2,2,0,20);
+		generator->Set_Transform(Matrix3D(true));
+		generator->Set_Backface_Threshhold(-1.0f);
+		WW3D::Enable_Decals(false);
+		mesh->Create_Decal(generator);
+		assert(generator->Get_Mesh_List().Peek_Head()==nullptr);
+		WW3D::Enable_Decals(true);
+		mesh->Create_Decal(generator);
+		assert(generator->Get_Mesh_List().Peek_Head()==nullptr);
+		generator->Apply_To_Translucent_Meshes(true);
+		Matrix3D far_projector(true);
+		far_projector.Set_Translation(Vector3(1000,1000,1000));
+		generator->Set_Transform(far_projector);
+		mesh->Create_Decal(generator);
+		assert(generator->Get_Mesh_List().Peek_Head()==nullptr);
+		generator->Set_Transform(Matrix3D(true));
+		TriIndex* mutable_polys=const_cast<TriIndex*>(mesh->Peek_Model()->Get_Polygon_Array());
+		const TriIndex original_poly=mutable_polys[0];
+		mutable_polys[0].I=mesh->Peek_Model()->Get_Vertex_Count();
+		bool invalid_decal_rejected=false;
+		try { mesh->Create_Decal(generator); }
+		catch (const std::runtime_error& error) {
+			invalid_decal_rejected=std::strstr(error.what(),"source polygon index")!=nullptr;
+		}
+		mutable_polys[0]=original_poly;
+		assert(invalid_decal_rejected && generator->Get_Mesh_List().Peek_Head()==nullptr);
+		mesh->Create_Decal(generator);
+		RenderObjClass* skin_hlod=manager.Create_Render_Obj("TEST.SKINHLOD");
+		assert(skin_hlod && skin_hlod->Get_HTree());
+		skin_hlod->Set_Position(Vector3(0,0,-10));
+		(void)static_cast<HLodClass*>(skin_hlod)->Get_Bone_Transform(0);
+		RenderObjClass* skin_child=skin_hlod->Get_Sub_Object(0);
+		assert(skin_child && skin_child->Class_ID()==RenderObjClass::CLASSID_MESH);
+		auto* skin_mesh=static_cast<MeshClass*>(skin_child);
+		skin_mesh->Create_Decal(generator);
+		unsigned authored_meshes=0;
+		NonRefRenderObjListIterator owned(&generator->Get_Mesh_List());
+		while (!owned.Is_Done()) { ++authored_meshes; owned.Next(); }
+		assert(authored_meshes==2);
+		TheDX8MeshRenderer.Init();
+		TheDX8MeshRenderer.Set_Camera(&camera);
+		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+		LightEnvironmentClass decal_environment;
+		decal_environment.Reset(Vector3(0,0,-10),Vector3(0.2f,0.2f,0.2f));
+		decal_environment.Pre_Render_Update(Matrix3D(true));
+		render_info.light_environment=&decal_environment;
+		mesh->Render(render_info);
+		OwnedFactory textures;
+		textures.files["mytex.tga"]=original_targa();
+		textures.files["MYTEX.TGA"]=textures.files["mytex.tga"];
+		auto* old_factory=_TheFileFactory;
+		_TheFileFactory=&textures;
+		zh::renderer::RecordingGpuDevice recorder;
+		zh::renderer::TextureDesc target;
+		target.width=32; target.height=32; target.render_target=true; target.sampled=false;
+		const auto color=recorder.create_texture(target,"original CPU decal edge color");
+		target.format=zh::renderer::TextureFormat::depth24_stencil8;
+		const auto depth=recorder.create_texture(target,"original CPU decal edge depth");
+		zh::renderer::RenderPassDesc pass;
+		pass.color_targets[0]=color; pass.color_target_count=1;
+		pass.depth_target=depth; pass.width=32; pass.height=32;
+		bool physical_decal_edge=false;
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+			DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+			assert(recorder.begin_pass(pass,"original decal CPU first physical edge"));
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				physical_decal_edge=std::strstr(error.what(),"decal mesh pass requires GPU translation")!=nullptr;
+			}
+			assert(recorder.end_pass());
+		}
+		assert(physical_decal_edge && recorder.snapshot().find("draw pipeline=")!=std::string::npos &&
+			textures.owners==0);
+		_TheFileFactory=old_factory;
+		TheDX8MeshRenderer.Invalidate();
+		TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+		TheDX8MeshRenderer.Set_Camera(nullptr);
+		recorder.destroy(color); recorder.destroy(depth);
+		assert(recorder.resource_counts().total()==0);
+		const uint32 decal_id=generator->Get_Decal_ID();
+		source_system.Unlock_Decal_Generator(generator);
+		mesh->Delete_Decal(decal_id);
+		skin_mesh->Delete_Decal(decal_id);
+		DecalGeneratorClass* retry_generator=source_system.Lock_Decal_Generator();
+		assert(retry_generator && retry_generator->Get_Decal_ID()!=decal_id);
+		retry_generator->Set_Ortho_Projection(-2,2,-2,2,0,20);
+		retry_generator->Set_Transform(Matrix3D(true));
+		retry_generator->Set_Backface_Threshhold(-1.0f);
+		retry_generator->Apply_To_Translucent_Meshes(true);
+		mesh->Create_Decal(retry_generator);
+		assert(retry_generator->Get_Mesh_List().Peek_Head()==mesh);
+		const uint32 retry_id=retry_generator->Get_Decal_ID();
+		source_system.Unlock_Decal_Generator(retry_generator);
+		mesh->Delete_Decal(retry_id);
+		skin_child->Release_Ref();
+		skin_hlod->Release_Ref();
+		WW3D::Enable_Decals(previously_enabled);
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		object->Release_Ref();
+		manager.Free_Assets();
+		return 0;
+	}
 #if defined(ZH_GPU_SHADER_DIR)
 	if (argc==2 && std::strcmp(argv[1],"--vulkan-category")==0) {
 		assert(SDL_Init(SDL_INIT_VIDEO));

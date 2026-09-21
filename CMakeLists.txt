@@ -277,6 +277,11 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/scene.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/light.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matpass.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/matrix4.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matrixmapper.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/projector.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/decalsys.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/decalmsh.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texturefilter.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8wrapper.cpp
@@ -1974,6 +1979,9 @@ if(ZH_BUILD_TESTS)
   target_link_options(original_w3d_cpu_graph_tests PRIVATE
     "-Wl,--gc-sections" "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map")
   add_test(NAME original_w3d_cpu_graph COMMAND original_w3d_cpu_graph_tests)
+  add_test(NAME original_w3d_decal_cpu COMMAND original_w3d_cpu_graph_tests --decal-cpu)
+  set_tests_properties(original_w3d_decal_cpu PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
   add_executable(original_w3d_shader_source_tests tests/original_rendering/test_w3d_shader_source.cpp)
   target_include_directories(original_w3d_shader_source_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
@@ -2165,6 +2173,11 @@ if(ZH_BUILD_TESTS)
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/sortingrenderer.cpp"
     --required "src/original_runtime/original_gpu_edge.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/stripoptimizer.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/matrix4.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matrixmapper.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/projector.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/decalsys.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/decalmsh.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/wwstring.cpp")
   set_tests_properties(original_w3d_cpu_identity PROPERTIES LABELS "original-rendering;source-identity")
   add_test(NAME original_w3d_provider_removal COMMAND "${Python3_EXECUTABLE}"
@@ -2174,6 +2187,19 @@ if(ZH_BUILD_TESTS)
     --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map"
     --executable "$<TARGET_FILE:original_w3d_cpu_graph_tests>")
   set_tests_properties(original_w3d_provider_removal PROPERTIES LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_decal_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_provider_removal.py"
+    --checker "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map"
+    --executable "$<TARGET_FILE:original_w3d_cpu_graph_tests>"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/matrix4.cpp"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matrixmapper.cpp"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/projector.cpp"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/decalsys.cpp"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/decalmsh.cpp")
+  set_tests_properties(original_w3d_decal_provider_removal PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
   target_link_libraries(original_wwsupport_tests PRIVATE zh_wwsupport)
   target_link_options(original_wwsupport_tests PRIVATE
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-wwsupport.link.map")
