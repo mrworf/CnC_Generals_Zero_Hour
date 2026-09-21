@@ -252,6 +252,13 @@ slices together retain all original 05B2B acceptance, including failure
 controls, and 06 now depends on 05B2B2. Accepted 01–05B2A and remaining
 07–09 are unchanged. Commit these plans alone before production edits.
 
+The source-order trace found `TextureLoadTaskClass::Apply_Missing_Texture`
+publishes an authored `MissingTexture` image for absent ordinary textures.
+05B2B1 therefore preserves that original optional path; the adapter may not
+invent fallback pixels. Required-resource failure is instead enforced by
+the owning scenario load/reset/retry boundary in 08, without changing the
+original loader's intermediate publication semantics.
+
 ## Deferred follow-ups
 
 - Interactive UI/media and user input remain M23.

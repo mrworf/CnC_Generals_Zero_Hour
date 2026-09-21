@@ -18,9 +18,12 @@ Keep one canonical implementation of the reached original methods in
 configurations. The device edge may allocate locked staging bytes and map
 original WW3D format/dimension/mip to `TextureDesc`/`TextureUploadDesc`, but
 may not decode, synthesize, resample, choose fallback pixels or reorder
-source calls. Preserve original DDS/TGA-first fallback and original missing
-texture semantics; a required missing or malformed resource fails before
-success. The Linux original task ownership and source `TextureClass`
+source calls. Preserve original DDS/TGA-first fallback and original
+`MissingTexture` producer/pink optional fallback; the Linux adapter may not
+generate or substitute those pixels. A missing or malformed **required
+scenario** resource fails at the owning scenario boundary in slice 08 before
+scene success, unwinds the authored optional loader's intermediate state and
+supports reset/retry. The Linux original task ownership and source `TextureClass`
 publication must match the authored sequence, apart from device-handle
 translation. The public device API and Recording/SDL implementations must
 validate exact pitches, block alignment, format and mip bounds; unsupported
@@ -32,9 +35,10 @@ preserved; unported Win32 mix routes remain typed negatives if unreachable.
 
 Owned TGA/DDS/W3D fixtures prove source-issued create and exact per-mip
 source-decoded bytes, dimensions, reduction, DDS DXT1/3/5 families, 24/32-bit
-Targa conversions and original mip rounding. Test unsupported format and
-dimension, missing/malformed/truncated required files, injected create and
-upload failures, partial-task cleanup, reset/retry, original and device
+Targa conversions, original mip rounding and original optional missing
+texture bytes. Test unsupported format and dimension, malformed/truncated
+load failures, injected create and upload failures, partial-task cleanup,
+reset/retry, original and device
 reference counts, and unsupported thumbnail route. Read-only retail family
 aggregates classify reached source formats; do not retain retail names,
 paths, bytes or hashes. Enforce canonical provider-removal, link-map ABI,
