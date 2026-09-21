@@ -46,8 +46,19 @@
 #include "wwprofile.h"
 
 #pragma warning(disable:4201) // warning C4201: nonstandard extension used : nameless struct/union
+#if defined(_WIN32)
 #include <windows.h>
+#endif
+#if defined(_WIN32)
 #include "systimer.h"
+#else
+#include <chrono>
+static unsigned long TIMEGETTIME()
+{
+	using namespace std::chrono;
+	return static_cast<unsigned long>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
+}
+#endif
 
 
 SaveLoadSubSystemClass *		SaveLoadSystemClass::SubSystemListHead = NULL;

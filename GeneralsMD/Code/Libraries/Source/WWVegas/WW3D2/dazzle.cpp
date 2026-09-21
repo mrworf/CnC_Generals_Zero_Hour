@@ -57,10 +57,15 @@
 #include "inisup.h"
 #include "persistfactory.h"
 #include "ww3dids.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
 #include "sortingrenderer.h"
+#else
+#include "ww3d_cpu_boundary.h"
+#include <stdexcept>
+#endif
 #include "texture.h"
 #include "scene.h"
 #include "wwprofile.h"
@@ -372,6 +377,11 @@ void LensflareTypeClass::Generate_Vertex_Buffers(
 	float dazzle_intensity,
 	const Vector4& transformed_location)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)vertex; (void)vertex_count; (void)screen_x_scale; (void)screen_y_scale;
+	(void)dazzle_intensity; (void)transformed_location;
+	throw std::runtime_error("LensflareTypeClass::Generate_Vertex_Buffers requires an installed WW3D device translator");
+#else
 // Lensflares are placed on a line 2D that goes through the lightsource and the center of the screen
 //	float scale=sqrt(transformed_location[0]*transformed_location[0]+transformed_location[1]*transformed_location[1]);
 
@@ -390,7 +400,11 @@ void LensflareTypeClass::Generate_Vertex_Buffers(
 		if (col[0]>1.0f) col[0]=1.0f;
 		if (col[1]>1.0f) col[1]=1.0f;
 		if (col[2]>1.0f) col[2]=1.0f;
+#if defined(ZH_WW3D_CPU_ONLY)
+		unsigned color=ZHWW3DCpuBoundary::Pack_ARGB8(Vector4(col.X, col.Y, col.Z, 1.0f));
+#else
 		unsigned color=DX8Wrapper::Convert_Color(col,1.0f);
+#endif
 
 		vertex->x=x+ix;
 		vertex->y=y-iy;
@@ -426,6 +440,7 @@ void LensflareTypeClass::Generate_Vertex_Buffers(
 
 		vertex_count+=4;
 	}
+#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -684,7 +699,8 @@ void DazzleRenderObjClass::Init_Type(const DazzleInitClass& i)
 	if (i.type>=type_count) {
 		unsigned new_count=i.type+1;
 		DazzleTypeClass** new_types=W3DNEWARRAY DazzleTypeClass*[new_count];
-		for (unsigned a=0;a<type_count;++a) {
+		unsigned a = 0;
+		for (;a<type_count;++a) {
 			new_types[a]=types[a];
 		}
 		for (;a<new_count;++a) {
@@ -707,7 +723,8 @@ void DazzleRenderObjClass::Init_Lensflare(const LensflareInitClass& i)
 	if (i.type>=lensflare_count) {
 		unsigned new_count=i.type+1;
 		LensflareTypeClass** new_lensflares=W3DNEWARRAY LensflareTypeClass*[new_count];
-		for (unsigned a=0;a<lensflare_count;++a) {
+		unsigned a = 0;
+		for (;a<lensflare_count;++a) {
 			new_lensflares[a]=lensflares[a];
 		}
 		for (;a<new_count;++a) {
@@ -914,11 +931,19 @@ RenderObjClass* DazzleRenderObjClass::Clone(void) const
 // ----------------------------------------------------------------------------
 void DazzleRenderObjClass::Render(RenderInfoClass & rinfo)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)rinfo;
+	throw std::runtime_error("DazzleRenderObjClass::Render requires an installed WW3D device translator");
+#else
 	WWPROFILE("Dazzle::Render");
 
 	if (	Is_Not_Hidden_At_All() &&
 			_dazzle_rendering_enabled &&
+#if defined(ZH_WW3D_CPU_ONLY)
+			true )
+#else
 			!DX8Wrapper::Is_Render_To_Texture()	)
+#endif
 	{
 		// First check if the dazzle is blinking and is "off"
 		bool is_on = true;
@@ -1010,10 +1035,15 @@ void DazzleRenderObjClass::Render(RenderInfoClass & rinfo)
 	else {
 		visibility=0.0f;
 	}
+#endif
 }
 
 void DazzleRenderObjClass::Render_Dazzle(CameraClass* camera)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)camera;
+	throw std::runtime_error("DazzleRenderObjClass::Render_Dazzle requires an installed WW3D device translator");
+#else
 	WWPROFILE("Dazzle::Render");
 	Matrix4x4 old_view_transform;
 	Matrix4x4 old_world_transform;
@@ -1254,6 +1284,7 @@ void DazzleRenderObjClass::Render_Dazzle(CameraClass* camera)
 	DX8Wrapper::Set_Transform(D3DTS_PROJECTION,old_projection_transform);
 	DX8Wrapper::Set_Transform(D3DTS_VIEW,old_view_transform);
 	DX8Wrapper::Set_Transform(D3DTS_WORLD,old_world_transform);
+#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -1579,6 +1610,10 @@ DazzleLayerClass::~DazzleLayerClass(void)
 
 void DazzleLayerClass::Render(CameraClass* camera)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)camera;
+	throw std::runtime_error("DazzleLayerClass::Render requires an installed WW3D device translator");
+#else
 	if (!camera) return;
 
 	camera->Apply();
@@ -1603,6 +1638,7 @@ void DazzleLayerClass::Render(CameraClass* camera)
 		// Must clear the visible list at the end of each render.
 		Clear_Visible_List(type);
 	}
+#endif
 }
 
 // ----------------------------------------------------------------------------

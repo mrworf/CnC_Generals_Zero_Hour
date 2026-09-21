@@ -88,7 +88,17 @@
 #include "assetmgr.h"
 #include "simplevec.h"
 #include "realcrc.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
+#else
+#include "ww3d_cpu_boundary.h"
+class DX8Wrapper
+{
+public:
+	static Vector4 Convert_Color(unsigned color) { return ZHWW3DCpuBoundary::Unpack_ARGB8(color); }
+	static unsigned Convert_Color(const Vector4 &color) { return ZHWW3DCpuBoundary::Pack_ARGB8(color); }
+};
+#endif
 
 #include <stdio.h>
 
@@ -257,6 +267,19 @@ WW3DErrorType MeshModelClass::Load_W3D(ChunkLoadClass & cload)
 	}
 	cload.Close_Chunk();
 
+#if defined(ZH_WW3D_CPU_ONLY)
+	// Counts originate in untrusted W3D data. Reject impossible allocation
+	// requests before Reset allocates the original model's arrays.
+	if (memchr(context->Header.MeshName, '\0', W3D_NAME_LEN) == NULL ||
+		memchr(context->Header.ContainerName, '\0', W3D_NAME_LEN) == NULL ||
+		context->Header.NumVertices > 1000000 ||
+		context->Header.NumTris > 1000000 ||
+		context->Header.NumVertices * sizeof(W3dVectorStruct) > cload.Cur_Chunk_Length() ||
+		context->Header.NumTris * sizeof(W3dTriStruct) > cload.Cur_Chunk_Length()) {
+		goto Error;
+	}
+#endif
+
 	/*
 	** Process the header
 	*/
@@ -423,7 +446,7 @@ WW3DErrorType MeshModelClass::Load_W3D(ChunkLoadClass & cload)
 	return WW3D_ERROR_OK;
 
 Error:
-
+	delete context;
 	return WW3D_ERROR_LOAD_FAILED;
 }
 
@@ -2090,7 +2113,8 @@ void MeshLoadContextClass::Add_Legacy_Material(ShaderClass shader,VertexMaterial
 	LegacyMaterialClass * mat = W3DNEW LegacyMaterialClass;
 
 	// add the shader if it is unique
-	for (int si=0; si<Shaders.Count(); si++) {
+	int si = 0;
+	for (; si<Shaders.Count(); si++) {
 		if (Shaders[si] == shader) break;
 	}
 	if (si == Shaders.Count()) {
@@ -2104,7 +2128,8 @@ void MeshLoadContextClass::Add_Legacy_Material(ShaderClass shader,VertexMaterial
 		mat->VertexMaterialIdx = -1;
 	} else {
 		unsigned long crc = vmat->Get_CRC();	
-		for (int vi=0; vi<VertexMaterialCrcs.Count(); vi++) {
+		int vi = 0;
+		for (; vi<VertexMaterialCrcs.Count(); vi++) {
 			if (VertexMaterialCrcs[vi] == crc) break;
 		}
 		if (vi == VertexMaterials.Count()) {
@@ -2120,7 +2145,8 @@ void MeshLoadContextClass::Add_Legacy_Material(ShaderClass shader,VertexMaterial
 	if (tex == NULL) {
 		mat->TextureIdx = -1;
 	} else {
-		for (int ti=0; ti<Textures.Count(); ti++) {
+		int ti = 0;
+		for (; ti<Textures.Count(); ti++) {
 			if (Textures[ti] == tex) break;
 			if (stricmp(Textures[ti]->Get_Texture_Name(),tex->Get_Texture_Name()) == 0) break;
 		}

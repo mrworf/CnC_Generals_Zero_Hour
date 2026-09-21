@@ -38,6 +38,7 @@
 #include "hash.h"
 #include "wwdebug.h"
 #include "realcrc.h"
+#include "tchar.h"
 #ifdef _UNIX
 #include "osdep.h"
 #endif
@@ -162,5 +163,4 @@ void	HashTableIteratorClass::Advance_Next(void)
 		NextEntry = Table.HashTable[ Index ];
 	}
 }
-
 

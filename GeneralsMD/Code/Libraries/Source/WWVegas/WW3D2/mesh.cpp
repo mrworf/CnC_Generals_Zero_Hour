@@ -113,14 +113,19 @@
 #include "inttest.h"
 #include "decalmsh.h"
 #include "decalsys.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8polygonrenderer.h"
 #include "dx8indexbuffer.h"
 #include "dx8renderer.h"
+#include "dx8rendererdebugger.h"
+#endif
 #include "visrasterizer.h"
 #include "wwmemlog.h"
-#include "dx8rendererdebugger.h"
 #include <stdio.h>
 #include <wwprofile.h>
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <stdexcept>
+#endif
 
 static unsigned MeshDebugIdCount;
 
@@ -539,6 +544,10 @@ void MeshClass::Get_Deformed_Vertices(Vector3 *dst_vert)
  *=============================================================================================*/
 void MeshClass::Create_Decal(DecalGeneratorClass * generator)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)generator;
+	throw std::runtime_error("MeshClass::Create_Decal requires an installed WW3D device translator");
+#else
 	WWMEMLOG(MEM_GEOMETRY);
 
 	if (WW3D::Are_Decals_Enabled() == false) {
@@ -597,6 +606,7 @@ void MeshClass::Create_Decal(DecalGeneratorClass * generator)
 			DecalMesh->Create_Decal(generator, worldbox, temp_apt, &_TempVertexBuffer);
 		}
 	}
+#endif
 }
 
 
@@ -659,6 +669,10 @@ int MeshClass::Get_Num_Polys(void) const
  *=============================================================================================*/
 void MeshClass::Render(RenderInfoClass & rinfo)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)rinfo;
+	throw std::runtime_error("MeshClass::Render requires an installed WW3D device translator");
+#else
 	WWPROFILE("Mesh::Render");
 	if (Is_Not_Hidden_At_All() == false) {
 		return;
@@ -805,6 +819,7 @@ void MeshClass::Render(RenderInfoClass & rinfo)
 			DX8RendererDebugger::Add_Mesh(this);
 		}
 	}
+#endif
 }
 
 
@@ -822,6 +837,11 @@ void MeshClass::Render(RenderInfoClass & rinfo)
  *=============================================================================================*/
 void MeshClass::Render_Material_Pass(MaterialPassClass * pass,IndexBufferClass * ib)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)pass;
+	(void)ib;
+	throw std::runtime_error("MeshClass::Render_Material_Pass requires an installed WW3D device translator");
+#else
 	//Added to allow dynamic opacity on additional render passed
 	//without having to create a new material pass per object instance. -MW
 	float oldOpacity=-1.0f;
@@ -1009,6 +1029,7 @@ void MeshClass::Render_Material_Pass(MaterialPassClass * pass,IndexBufferClass *
 		//MW: Need uninstall custom materials in case they leave D3D in unknown state
 		pass->UnInstall_Materials();
 	}
+#endif
 }
 
 
@@ -1597,8 +1618,6 @@ int MeshClass::Get_Draw_Call_Count(void) const
 		return 0;
 	}
 }
-
-
 
 
 

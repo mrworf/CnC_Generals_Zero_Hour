@@ -44,11 +44,20 @@
 #include <cstddef>
 
 #if !defined(_MSC_VER)
+#ifndef __int64
+typedef signed long long __int64;
+#endif
 #ifndef __cdecl
 #define __cdecl
 #endif
 #ifndef __forceinline
 #define __forceinline inline
+#endif
+#ifndef _MAX_FNAME
+#define _MAX_FNAME 256
+#endif
+#ifndef _MAX_EXT
+#define _MAX_EXT 256
 #endif
 #endif
 

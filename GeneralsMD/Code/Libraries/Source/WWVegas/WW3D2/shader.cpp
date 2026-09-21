@@ -43,8 +43,14 @@
 #include "shader.h"
 #include "w3d_file.h"
 #include "wwdebug.h"
+#include "wwstring.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "Dx8Wrapper.h"
 #include "dx8caps.h"
+#else
+#include <stdexcept>
+enum { D3DCULL_CW = 2, D3DCULL_CCW = 3 };
+#endif
 
 
 bool ShaderClass::ShaderDirty=true;
@@ -361,6 +367,7 @@ void ShaderClass::Report_Unable_To_Fog (const char *source)
 	#endif
 }
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 class Blend
 {
 public:
@@ -1042,6 +1049,12 @@ void ShaderClass::Apply()
 	// Enable/disable stencil test
 	// Not supported yet
 }
+#else
+void ShaderClass::Apply()
+{
+	throw std::runtime_error("original WW3D ShaderClass device application is unavailable before M22 slice 03");
+}
+#endif
 
 
 /***********************************************************************************************
@@ -1259,4 +1272,3 @@ const StringClass& ShaderClass::Get_Description(StringClass& str) const
 	}
 	return str;
 }
-

@@ -48,6 +48,7 @@
 #include "w3d_file.h"
 #include "chunkio.h"
 #include "vector.h"
+#include <cmath>
 #include "wwmath.h"
 #include "quat.h"
 #include "wwmath.h"
@@ -1280,9 +1281,10 @@ return;
 	float value_min=FLT_MAX;
 	float value_max=-FLT_MAX;
 	int count=datasize/sizeof(float);
-	for (int i=0;i<count;i++) {
+	int i = 0;
+	for (;i<count;i++) {
 		float value=Data[i];
-		if (_isnan(value)) value=0.0f;
+		if (std::isnan(value)) value=0.0f;
 		if (value>100000.0f) value=0.0f;
 		if (value<-100000.0f) value=0.0f;
 		Data[i]=value;
@@ -1308,7 +1310,7 @@ return;
 		value-=ValueOffset;
 		value*=inv_scale;
 		int ivalue=WWMath::Float_To_Int_Floor(value);
-		CompressedData[i]=unsigned short(ivalue);
+		CompressedData[i]=static_cast<unsigned short>(ivalue);
 
 		float new_scale=ValueScale/65535.0f;
 		float new_value=int(CompressedData[i]);
@@ -1326,4 +1328,3 @@ return;
 
 
 // EOF - motchan.cpp
-

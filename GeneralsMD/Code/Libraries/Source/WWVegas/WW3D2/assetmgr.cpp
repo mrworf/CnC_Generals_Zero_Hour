@@ -79,6 +79,7 @@
 
 #include "assetmgr.h"
 #include <assert.h>
+#include <stdexcept>
 
 #include "bittype.h"
 #include "chunkio.h"
@@ -107,14 +108,18 @@
 #include "wwstring.h"
 #include "wwmemlog.h"
 #include "dazzle.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
 #include "dx8renderer.h"
+#endif
 #include "metalmap.h"
 #include "w3dexclusionlist.h"
 #include <ini.h>
-#include <windows.h>
 #include <stdio.h>
+#if !defined(ZH_WW3D_CPU_ONLY)
+#include <windows.h>
 #include <D3dx8core.h>
+#endif
 #include "texture.h"
 #include "wwprofile.h"
 #include "assetstatus.h"
@@ -262,7 +267,13 @@ WW3DAssetManager::WW3DAssetManager(void) :
  *=============================================================================================*/
 WW3DAssetManager::~WW3DAssetManager(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	// Procedural textures are a device-backed facility and are rejected below.
+	// Keeping this invariant removes their retired D3D provider from the CPU graph.
+	assert(MetalManager == NULL);
+#else
 	if (MetalManager) delete MetalManager;
+#endif
 	Free();
 	TheInstance = NULL;
 
@@ -294,6 +305,9 @@ static void Create_Number_String(StringClass& number, unsigned value)
 
 void	WW3DAssetManager::Load_Procedural_Textures()
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw std::runtime_error("procedural textures require an installed WW3D device translator");
+#else
 	int i,count;
 	if (!MetalManager)
 	{
@@ -308,10 +322,14 @@ void	WW3DAssetManager::Load_Procedural_Textures()
 		TextureClass *tex=MetalManager->Get_Metal_Map(i);
 		TextureHash.Insert(tex->Get_Texture_Name(),tex);
 	}	
+#endif
 }
 
 static void Log_Textures(bool inited,unsigned& total_count, unsigned& total_mem)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)inited; (void)total_count; (void)total_mem;
+#else
 	HashTemplateIterator<StringClass,TextureClass*> ite(WW3DAssetManager::Get_Instance()->Texture_Hash());
 	for (ite.First();!ite.Is_Done();ite.Next()) {
 		TextureClass * tex=ite.Peek_Value();
@@ -378,7 +396,8 @@ static void Log_Textures(bool inited,unsigned& total_count, unsigned& total_mem)
 			number,
 			tex->Num_Refs()));
 
-	}	
+	}
+#endif
 }
 
 void WW3DAssetManager::Log_Texture_Statistics()
@@ -528,7 +547,9 @@ void WW3DAssetManager::Release_Unused_Assets(void)
 void WW3DAssetManager::Free_Assets_With_Exclusion_List(const DynamicVectorClass<StringClass> & exclusion_names)
 {
 	// Reset the dx8 mesh renderer
+#if !defined(ZH_WW3D_CPU_ONLY)
 	TheDX8MeshRenderer.Invalidate();
+#endif
 
 	// Build an exclusion list object that will do the real filtering work for us
 	W3DExclusionListClass exclusion_list(exclusion_names);
@@ -540,7 +561,8 @@ void WW3DAssetManager::Free_Assets_With_Exclusion_List(const DynamicVectorClass<
 	exclude_array.Set_Growth_Step(DEFAULT_EXCLUDE_ARRAY_SIZE);
 
 	// iterate the array of prototypes saving each one that should be excluded from deletion
-	for (int i=0; i<Prototypes.Count(); i++) {
+	int i = 0;
+	for (; i<Prototypes.Count(); i++) {
 
 		PrototypeClass * proto = Prototypes[i];
 		if (proto != NULL) {		
@@ -666,23 +688,24 @@ bool WW3DAssetManager::Load_3D_Assets(FileClass & w3dfile)
 	}
 
 	ChunkLoadClass cload(&w3dfile);
+	bool loaded = true;
 
 	while (cload.Open_Chunk()) {
 
 		switch (cload.Cur_Chunk_ID()) {
 
 			case W3D_CHUNK_HIERARCHY:
-				HTreeManager.Load_Tree(cload);
+				loaded = (HTreeManager.Load_Tree(cload) == 0) && loaded;
 				break;
 
 			case W3D_CHUNK_ANIMATION:
 			case W3D_CHUNK_COMPRESSED_ANIMATION:
 			case W3D_CHUNK_MORPH_ANIMATION:
-				HAnimManager.Load_Anim(cload);
+				loaded = (HAnimManager.Load_Anim(cload) == 0) && loaded;
 				break;
         
 			default:
-				Load_Prototype(cload);
+				loaded = Load_Prototype(cload) && loaded;
 				break;
 		}
 
@@ -691,7 +714,7 @@ bool WW3DAssetManager::Load_3D_Assets(FileClass & w3dfile)
 
 	w3dfile.Close();
 
-	return true;
+	return loaded;
 }
 
 
@@ -808,9 +831,9 @@ RenderObjClass * WW3DAssetManager::Create_Render_Obj(const char * name)
 		AssetStatusClass::Peek_Instance()->Report_Load_On_Demand_RObj(name);
 
 		char filename [MAX_PATH];
-		char *mesh_name = ::strchr (name, '.');
+		const char *mesh_name = ::strchr (name, '.');
 		if (mesh_name != NULL) {
-			::lstrcpyn (filename, name, ((int)mesh_name) - ((int)name) + 1);
+			::lstrcpyn (filename, name, static_cast<int>(mesh_name - name) + 1);
 			::lstrcat (filename, ".w3d");
 		} else {
 			sprintf( filename, "%s.w3d", name);
@@ -989,7 +1012,7 @@ HAnimClass *	WW3DAssetManager::Get_HAnim(const char * name)
 			AssetStatusClass::Peek_Instance()->Report_Load_On_Demand_HAnim(name);
 
 			char filename[ MAX_PATH ];
-			char *animname = strchr( name, '.');
+			const char *animname = strchr( name, '.');
 			if (animname != NULL) {
 				sprintf( filename, "%s.w3d", animname+1);
 			} else {
@@ -1123,11 +1146,19 @@ TextureClass * WW3DAssetManager::Get_Texture
 		}
 		else if (type==TextureBaseClass::TEX_CUBEMAP)
 		{
+#if defined(ZH_WW3D_CPU_ONLY)
+			throw std::runtime_error("cube textures require an installed WW3D device translator");
+#else
 			tex = NEW_REF (CubeTextureClass, (lower_case_name, NULL, mip_level_count, texture_format, allow_compression, allow_reduction));
+#endif
 		}
 		else if (type==TextureBaseClass::TEX_VOLUME)
 		{
+#if defined(ZH_WW3D_CPU_ONLY)
+			throw std::runtime_error("volume textures require an installed WW3D device translator");
+#else
 			tex = NEW_REF (VolumeTextureClass, (lower_case_name, NULL, mip_level_count, texture_format, allow_compression, allow_reduction));
+#endif
 		}
 		TextureHash.Insert(tex->Get_Texture_Name(),tex);
 	}
@@ -1330,7 +1361,12 @@ void WW3DAssetManager::Log_All_Textures(void)
 Font3DInstanceClass * WW3DAssetManager::Get_Font3DInstance( const char *name )
 {
 	WWPROFILE( "WW3DAssetManager::Get_Font3DInstance" );
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)name;
+	throw std::runtime_error("Font3D is outside the M22 world-rendering closure");
+#else
 	return NEW_REF( Font3DInstanceClass, ( name ));
+#endif
 }
 
 
@@ -1349,6 +1385,10 @@ Font3DInstanceClass * WW3DAssetManager::Get_Font3DInstance( const char *name )
 Font3DDataClass * WW3DAssetManager::Get_Font3DData( const char *name )
 {
 	WWPROFILE( "WW3DAssetManager::Get_Font3DData" );
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)name;
+	throw std::runtime_error("Font3D data is outside the M22 world-rendering closure");
+#else
 	// loop through and see if the Font3D we are looking for has already been
 	// allocated and thus we can just return it.
 	for (	SLNode<Font3DDataClass> *node = Font3DDatas.Head(); node; node = node->Next()) {
@@ -1366,6 +1406,7 @@ Font3DDataClass * WW3DAssetManager::Get_Font3DData( const char *name )
 
 	// return it
 	return font;
+#endif
 }
 
 /***********************************************************************************************
@@ -1457,6 +1498,10 @@ void	WW3DAssetManager::Release_Unused_Font3DDatas( void )
 FontCharsClass *	WW3DAssetManager::Get_FontChars( const char * name, int point_size, bool is_bold )
 {
 	WWPROFILE( "WW3DAssetManager::Get_FontChars" );
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)name; (void)point_size; (void)is_bold;
+	throw std::runtime_error("FontChars is outside the M22 world-rendering closure");
+#else
 
 	// loop through and see if we already have the font chars and we can just return it.
 	for ( int i = 0; i < FontCharsList.Count(); i++ ) {
@@ -1472,6 +1517,7 @@ FontCharsClass *	WW3DAssetManager::Get_FontChars( const char * name, int point_s
 	font->Add_Ref();
 	FontCharsList.Add( font );			// add it to the list	
 	return font;							// return it
+#endif
 }
 
 
@@ -1728,5 +1774,3 @@ const char * HTreeIterator::Current_Item_Name(void)
 {
 	return WW3DAssetManager::Get_Instance()->HTreeManager.Get_Tree(Index)->Get_Name();
 }
-
-

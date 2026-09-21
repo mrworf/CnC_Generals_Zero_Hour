@@ -96,6 +96,14 @@
 #include	"xstraw.h"
 #include	<stdio.h>
 #include <malloc.h>
+#include <alloca.h>
+#include <cctype>
+#include <cstdio>
+#if !defined(_MSC_VER)
+#define _alloca alloca
+#define _snprintf snprintf
+static inline void OutputDebugString(const char *) {}
+#endif
 #ifdef _UNIX
 #include <ctype.h>
 #endif
@@ -2372,4 +2380,3 @@ void	INIClass::Keep_Blank_Entries (bool keep_blanks)
 {
 	KeepBlankEntries = keep_blanks;
 }
-

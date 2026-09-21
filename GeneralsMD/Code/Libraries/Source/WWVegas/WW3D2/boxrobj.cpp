@@ -97,13 +97,18 @@
 #include "rinfo.h"
 #include "coltest.h"
 #include "inttest.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
 #include "dx8indexbuffer.h"
 #include "dx8vertexbuffer.h"
 #include "dx8fvf.h"
 #include "sortingrenderer.h"
+#endif
 #include "visrasterizer.h"
 #include "meshgeometry.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <stdexcept>
+#endif
 
 
 #define NUM_BOX_VERTS	8
@@ -443,6 +448,10 @@ int BoxRenderObjClass::Get_Box_Display_Mask(void)
  *=============================================================================================*/
 void BoxRenderObjClass::render_box(RenderInfoClass & rinfo,const Vector3 & center,const Vector3 & extent)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)rinfo; (void)center; (void)extent;
+	throw std::runtime_error("BoxRenderObjClass::render_box requires an installed WW3D device translator");
+#else
 	if (!IsInitted) return;
 	if (DisplayMask & Get_Collision_Type()) {
 
@@ -516,6 +525,7 @@ void BoxRenderObjClass::render_box(RenderInfoClass & rinfo,const Vector3 & cente
 
 		DX8Wrapper::Draw_Triangles(buffer_type,0,NUM_BOX_FACES,0,NUM_BOX_VERTS);
 	}
+#endif
 }
 
 
@@ -702,10 +712,15 @@ int AABoxRenderObjClass::Class_ID(void) const
  *=============================================================================================*/
 void AABoxRenderObjClass::Render(RenderInfoClass & rinfo)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)rinfo;
+	throw std::runtime_error("AABoxRenderObjClass::Render requires an installed WW3D device translator");
+#else
 	Matrix3D temp(1);
 	temp.Translate(Transform.Get_Translation());
 	DX8Wrapper::Set_Transform(D3DTS_WORLD,temp);
 	render_box(rinfo,ObjSpaceCenter,ObjSpaceExtent);
+#endif
 }
 
 
@@ -1088,8 +1103,13 @@ int OBBoxRenderObjClass::Class_ID(void) const
  *=============================================================================================*/
 void OBBoxRenderObjClass::Render(RenderInfoClass & rinfo)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)rinfo;
+	throw std::runtime_error("OBBoxRenderObjClass::Render requires an installed WW3D device translator");
+#else
 	DX8Wrapper::Set_Transform(D3DTS_WORLD,Transform);
 	render_box(rinfo,ObjSpaceCenter,ObjSpaceExtent);
+#endif
 }
 
 
@@ -1387,5 +1407,3 @@ RenderObjClass * BoxPrototypeClass::Create(void)
 ** Global instance of the box loader
 */
 BoxLoaderClass _BoxLoader;
-
-

@@ -88,12 +88,17 @@
 #include "camera.h"
 #include "statistics.h"
 #include "predlod.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
 #include "dx8indexbuffer.h"
 #include "dx8vertexbuffer.h"
 #include "sortingrenderer.h"
+#endif
 #include "vector3i.h"
 #include "visrasterizer.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <stdexcept>
+#endif
 
 
 static bool Ring_Array_Valid = false;
@@ -520,6 +525,10 @@ void RingRenderObjClass::Set_Name(const char * name)
  *=============================================================================================*/
 void RingRenderObjClass::render_ring(RenderInfoClass & rinfo,const Vector3 & center,const Vector3 & extent)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)rinfo; (void)center; (void)extent;
+	throw std::runtime_error("RingRenderObjClass::render_ring requires an installed WW3D device translator");
+#else
 	// Should never get here with NULL LOD
 	if (CurrentLOD == 0) {
 		WWASSERT(0);
@@ -597,6 +606,7 @@ void RingRenderObjClass::render_ring(RenderInfoClass & rinfo,const Vector3 & cen
 		DX8Wrapper::Draw_Triangles(0, ring.face_ct, 0, ring.Vertex_ct);
 	}
 
+#endif
 } // render_ring
 
 
@@ -670,6 +680,10 @@ int RingRenderObjClass::Class_ID(void) const
  *=============================================================================================*/
 void RingRenderObjClass::Render(RenderInfoClass & rinfo)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)rinfo;
+	throw std::runtime_error("RingRenderObjClass::Render requires an installed WW3D device translator");
+#else
 	// NULL LOD
 	if (CurrentLOD == 0) return;
 
@@ -734,6 +748,7 @@ void RingRenderObjClass::Render(RenderInfoClass & rinfo)
 		//
 		render_ring (rinfo, ObjSpaceCenter, ObjSpaceExtent);
 	}
+#endif
 }	// Render
 
 

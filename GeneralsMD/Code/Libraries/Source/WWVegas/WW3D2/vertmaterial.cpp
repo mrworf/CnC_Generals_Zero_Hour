@@ -45,7 +45,12 @@
 #include "w3derr.h"
 #include "ini.h"
 #include "xstraw.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
+#else
+#include "ww3d_cpu_boundary.h"
+#include <stdexcept>
+#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -463,6 +468,7 @@ WW3DErrorType VertexMaterialClass::Load_W3D(ChunkLoadClass & cload)
 	char name[256];
 
 	W3dVertexMaterialStruct vmat;
+	W3d_Vertex_Material_Reset(&vmat);
 	bool hasname = false;
 
 	char *mapping0_arg_buffer = NULL;
@@ -473,7 +479,9 @@ WW3DErrorType VertexMaterialClass::Load_W3D(ChunkLoadClass & cload)
 	while (cload.Open_Chunk()) {
 		switch (cload.Cur_Chunk_ID()) {
 			case W3D_CHUNK_VERTEX_MATERIAL_NAME:
-				cload.Read(&name,cload.Cur_Chunk_Length());
+				if (cload.Cur_Chunk_Length() == 0 || cload.Cur_Chunk_Length() > sizeof(name) ||
+					cload.Read(name,cload.Cur_Chunk_Length()) != cload.Cur_Chunk_Length() ||
+					memchr(name, '\0', cload.Cur_Chunk_Length()) == NULL) return WW3D_ERROR_LOAD_FAILED;
 				hasname = true;
 				break;
 
@@ -948,6 +956,9 @@ WW3DErrorType VertexMaterialClass::Save_W3D(ChunkSaveClass & csave)
 
 void VertexMaterialClass::Apply(void) const
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw std::runtime_error("VertexMaterialClass::Apply requires an installed WW3D device translator");
+#else
 	int i;
 
 	DX8Wrapper::Set_DX8_Material(Material);
@@ -969,10 +980,14 @@ void VertexMaterialClass::Apply(void) const
 			DX8Wrapper::Set_DX8_Texture_Stage_State(i,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);		
 		}
 	}
+#endif
 }
 
 void VertexMaterialClass::Apply_Null(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw std::runtime_error("VertexMaterialClass::Apply_Null requires an installed WW3D device translator");
+#else
 	int i;
 	static D3DMATERIAL8 default_settings = 
 	{
@@ -995,6 +1010,7 @@ void VertexMaterialClass::Apply_Null(void)
 		DX8Wrapper::Set_DX8_Texture_Stage_State(i,D3DTSS_TEXCOORDINDEX,D3DTSS_TCI_PASSTHRU | i);	
 		DX8Wrapper::Set_DX8_Texture_Stage_State(i,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);		
 	}
+#endif
 }
 
 

@@ -46,6 +46,7 @@
 #include "w3derr.h"
 #include "vector.h"
 #include "bittype.h"
+#include "tchar.h"
 #include <string.h>
 
 #ifdef _UNIX

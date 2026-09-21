@@ -74,9 +74,6 @@
 
 #include "rendobj.h"
 #include "assetmgr.h"
-#include "_mono.h"
-#include "bsurface.h"
-#include "pot.h"
 #include "scene.h"
 #include "colmath.h"
 #include "coltest.h"
@@ -119,9 +116,9 @@ Filename_From_Asset_Name (const char *asset_name)
 		//
 		// Do we need to strip off the model's suffix?
 		//
-		char *suffix = ::strchr (filename, '.');
+		const char *suffix = ::strchr (filename, '.');
 		if (suffix != NULL) {
-			suffix[0] = 0;
+			filename.Peek_Buffer()[suffix - static_cast<const char *>(filename)] = 0;
 		}
 
 		//
@@ -1315,5 +1312,3 @@ bool RenderObjClass::Load (ChunkLoadClass &cload)
 	WWASSERT(0); // this should never hit with the persist factory we're using.
 	return true;
 }
-
-

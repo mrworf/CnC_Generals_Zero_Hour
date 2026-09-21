@@ -40,8 +40,25 @@
 #include "texture.h"
 #include "vertmaterial.h"
 #include "realcrc.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include	"dx8wrapper.h"
 #include "dx8caps.h"
+#else
+#include "ww3d_cpu_boundary.h"
+class ZHCpuOnlyDX8Caps
+{
+public:
+	bool Support_NPatches() const { return false; }
+};
+class DX8Wrapper
+{
+public:
+	static bool Is_Initted() { return false; }
+	static ZHCpuOnlyDX8Caps *Get_Current_Caps() { static ZHCpuOnlyDX8Caps caps; return &caps; }
+	static Vector4 Convert_Color(unsigned color) { return ZHWW3DCpuBoundary::Unpack_ARGB8(color); }
+	static unsigned Convert_Color(const Vector4 &color) { return ZHWW3DCpuBoundary::Pack_ARGB8(color); }
+};
+#endif
 #include "meshmdl.h"
 
 
@@ -647,7 +664,8 @@ void MeshMatDescClass::Post_Load_Process(bool lighting_enabled,MeshModelClass * 
 	** Pre-multiply the vertex color arrays.
 	*/
 	bool set_lighting_to_false=true;
-	for (int pass=0; pass<PassCount; pass++) {
+	int pass = 0;
+	for (; pass<PassCount; pass++) {
 
 		/*
 		** If this pass doesn't have a vertex material, create one

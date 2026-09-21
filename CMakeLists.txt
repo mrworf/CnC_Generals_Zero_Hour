@@ -126,18 +126,58 @@ add_library(zh_wwsupport STATIC
   GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/gcd_lcm.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/nstrdup.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ramfile.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/wwstring.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/hash.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/multilist.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/realcrc.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/buff.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/slnode.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/straw.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ini.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/xstraw.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/cstraw.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/crc.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/readline.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/trim.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/random.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/tri.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/matrix3d.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/matrix3.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/lineseg.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/quat.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/vp.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/colmath.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/colmathaabox.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/colmathaabtri.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/colmathline.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/colmathobbobb.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/colmathobbox.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/colmathobbtri.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/colmathplane.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/colmathsphere.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/colmathfrustum.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/wwmath.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/frustum.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/pointerremap.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/persistfactory.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad/saveload.cpp
 )
 target_compile_definitions(zh_wwsupport PRIVATE NDEBUG)
 target_include_directories(zh_wwsupport
   PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
   PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad"
 )
 target_link_libraries(zh_wwsupport PUBLIC zh_build_options)
+target_compile_options(zh_wwsupport PRIVATE
+  $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-fpermissive;-ffunction-sections;-fdata-sections>
+  $<$<COMPILE_LANG_AND_ID:CXX,Clang>:-Wno-c++11-narrowing>)
 set_property(TARGET zh_wwsupport PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_LEGACY_ZH_WWSUPPORT_SOURCES}")
 zh_add_bootstrap_component(zh_w3d ZH_LEGACY_ZH_W3D_SOURCES)
 zh_add_bootstrap_component(zh_wwshade ZH_LEGACY_ZH_WWSHADE_SOURCES)
@@ -177,6 +217,74 @@ zh_add_bootstrap_component(zh_null_renderer ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_null_audio ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_null_video ZH_EMPTY_LEGACY_SOURCES)
 zh_add_bootstrap_component(zh_test_support ZH_EMPTY_LEGACY_SOURCES)
+
+# M22 restores the original CPU-side WW3D asset graph incrementally.  Keep the
+# list explicit: each translation unit must have a reached loader/object witness
+# before joining the production provider.
+target_sources(zh_w3d PRIVATE
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/assetmgr.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/proto.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/rendobj.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/mesh.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/meshmdl.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/meshmdlio.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/meshgeometry.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/meshmatdesc.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matinfo.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/vertmaterial.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/shader.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/htree.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/htreemgr.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hanim.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hanimmgr.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hrawanim.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hcanim.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hmorphanim.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/motchan.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hlod.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hmdldef.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/collect.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/boxrobj.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/distlod.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/agg_def.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/nullrobj.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dazzle.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ringobj.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/sphereobj.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/assetstatus.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/w3dexclusionlist.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/w3d_util.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/aabtree.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/lightenvironment.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/aabtreebuilder.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/animobj.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/composite.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/mapper.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/snappts.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/pivot.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/visrasterizer.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/coltest.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/predlod.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/camera.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp
+  src/original_runtime/ww3d_cpu_state.cpp
+)
+target_include_directories(zh_w3d PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad"
+)
+target_compile_definitions(zh_w3d PRIVATE ZH_WW3D_CPU_ONLY=1 NDEBUG)
+target_compile_options(zh_w3d PRIVATE
+  $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-fpermissive;-ffunction-sections;-fdata-sections>)
 
 add_library(zh_data STATIC src/data/config.cpp src/data/big_archive.cpp src/data/vfs.cpp src/data/inventory.cpp)
 target_include_directories(zh_data PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -1637,6 +1745,46 @@ if(ZH_BUILD_TESTS)
   set_tests_properties(foundation_abi_codec PROPERTIES LABELS foundation)
 
   add_executable(original_wwsupport_tests tests/original_support/test_original_wwsupport.cpp)
+  add_executable(original_w3d_cpu_graph_tests tests/original_rendering/test_w3d_cpu_graph.cpp)
+  target_include_directories(original_w3d_cpu_graph_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad")
+  target_compile_options(original_w3d_cpu_graph_tests PRIVATE -fpermissive)
+  target_compile_definitions(original_w3d_cpu_graph_tests PRIVATE NDEBUG)
+  target_link_libraries(original_w3d_cpu_graph_tests PRIVATE zh_w3d zh_wwsupport zh_original_process)
+  target_link_options(original_w3d_cpu_graph_tests PRIVATE
+    "-Wl,--gc-sections" "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map")
+  add_test(NAME original_w3d_cpu_graph COMMAND original_w3d_cpu_graph_tests)
+  set_tests_properties(original_w3d_cpu_graph PROPERTIES LABELS "original-rendering;source-identity")
+  add_test(NAME original_w3d_cpu_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map"
+    --executable "$<TARGET_FILE:original_w3d_cpu_graph_tests>"
+    --witness "original-rendering runtime provider=GeneralsMD WW3D2 CPU graph"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/assetmgr.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/meshmdlio.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hlod.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/htree.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hrawanim.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/shader.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/vertmaterial.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/mapper.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/wwstring.cpp")
+  set_tests_properties(original_w3d_cpu_identity PROPERTIES LABELS "original-rendering;source-identity")
+  add_test(NAME original_w3d_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_provider_removal.py"
+    --checker "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map"
+    --executable "$<TARGET_FILE:original_w3d_cpu_graph_tests>")
+  set_tests_properties(original_w3d_provider_removal PROPERTIES LABELS "original-rendering;source-identity;negative")
   target_link_libraries(original_wwsupport_tests PRIVATE zh_wwsupport)
   target_link_options(original_wwsupport_tests PRIVATE
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-wwsupport.link.map")

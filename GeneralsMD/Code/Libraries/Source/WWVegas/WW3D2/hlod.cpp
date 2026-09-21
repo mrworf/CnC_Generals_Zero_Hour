@@ -601,7 +601,7 @@ WW3DErrorType HLodDefClass::Load_W3D(ChunkLoadClass & cload)
 			return WW3D_ERROR_LOAD_FAILED;
 		}
 
-		Lod[iLOD].Load_W3D(cload);
+		if (!Lod[iLOD].Load_W3D(cload)) return WW3D_ERROR_LOAD_FAILED;
 
 		// Close-out the chunk
 		cload.Close_Chunk();
@@ -656,6 +656,9 @@ bool HLodDefClass::read_header(ChunkLoadClass & cload)
 		return false;
 	}
 	cload.Close_Chunk();
+	if (header.LodCount == 0 || header.LodCount > 1024 ||
+		memchr(header.Name, '\0', sizeof(header.Name)) == NULL ||
+		memchr(header.HierarchyName, '\0', sizeof(header.HierarchyName)) == NULL) return false;
 
 	// Copy the name into our internal variable
 	Name = ::_strdup(header.Name);
@@ -696,6 +699,8 @@ bool HLodDefClass::read_proxy_array(ChunkLoadClass & cload)
 	if (cload.Read(&header,sizeof(header)) != sizeof(header)) return false;
 	
 	if (!cload.Close_Chunk()) return false;
+	if (header.ModelCount > 100000 ||
+		header.ModelCount > cload.Cur_Chunk_Length() / (sizeof(W3dHLodSubObjectStruct) + 8)) return false;
 
 	ProxyArray = NEW_REF(ProxyArrayClass,(header.ModelCount));
 
@@ -810,10 +815,12 @@ bool HLodDefClass::SubObjectArrayClass::Load_W3D(ChunkLoadClass & cload)
 	if (cload.Read(&header,sizeof(header)) != sizeof(header)) return false;
 	
 	if (!cload.Close_Chunk()) return false;
+	if (header.ModelCount > 100000 ||
+		header.ModelCount > cload.Cur_Chunk_Length() / (sizeof(W3dHLodSubObjectStruct) + 8)) return false;
 
 	ModelCount = header.ModelCount;
 	MaxScreenSize = header.MaxScreenSize;
-	ModelName = W3DNEWARRAY char * [ModelCount];
+	ModelName = W3DNEWARRAY char * [ModelCount]();
 	BoneIndex = W3DNEWARRAY int [ModelCount];
 
 	/*
@@ -825,6 +832,7 @@ bool HLodDefClass::SubObjectArrayClass::Load_W3D(ChunkLoadClass & cload)
 
 		W3dHLodSubObjectStruct subobjdef;
 		if (cload.Read(&subobjdef,sizeof(subobjdef)) != sizeof(subobjdef)) return false;
+		if (memchr(subobjdef.Name, '\0', sizeof(subobjdef.Name)) == NULL) return false;
 
 		if (!cload.Close_Chunk()) return false;
 
@@ -3651,4 +3659,3 @@ void HLodClass::Set_Hidden(int onoff)
 	Animatable3DObjClass::Set_Hidden(onoff);
 	return ;
 }
-

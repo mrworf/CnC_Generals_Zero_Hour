@@ -43,7 +43,11 @@
 #ifndef COLORSPACE_H
 #define COLORSPACE_H
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
+#else
+#include "ww3d_cpu_boundary.h"
+#endif
 #include <wwmath.h>
 
 void RGB_To_HSV(Vector3 &hsv,const Vector3 &rgb);
@@ -151,11 +155,18 @@ inline void Recolor(Vector3 &rgb, const Vector3 &hsv_shift)
 
 inline void Recolor(unsigned& rgba, const Vector3 &hsv_shift)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	Vector4 rgba_v = ZHWW3DCpuBoundary::Unpack_ARGB8(rgba);
+#else
 	Vector4 rgba_v = DX8Wrapper::Convert_Color(rgba);
+#endif
 	Recolor((Vector3&)rgba_v, hsv_shift);
+#if defined(ZH_WW3D_CPU_ONLY)
+	rgba = ZHWW3DCpuBoundary::Pack_ARGB8(rgba_v);
+#else
 	rgba = DX8Wrapper::Convert_Color(rgba_v);
+#endif
 }
 
 
 #endif
-

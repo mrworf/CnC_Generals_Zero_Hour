@@ -85,11 +85,16 @@
 #include "wwstring.h"
 #include "camera.h"
 #include "statistics.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
 #include "sortingrenderer.h"
+#endif
 #include "visrasterizer.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <stdexcept>
+#endif
 
 static bool Sphere_Array_Valid = false;
 
@@ -457,6 +462,9 @@ void SphereRenderObjClass::Set_Name(const char * name)
  *=============================================================================================*/
 void SphereRenderObjClass::render_sphere()
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw std::runtime_error("SphereRenderObjClass::render_sphere requires an installed WW3D device translator");
+#else
 	// Should never get here with NULL LOD
 	if (CurrentLOD == 0) {
 		WWASSERT(0);
@@ -528,6 +536,7 @@ void SphereRenderObjClass::render_sphere()
 		DX8Wrapper::Draw_Triangles(0,mesh.face_ct,0,mesh.Vertex_ct);
 	}
 
+#endif
 } // render_sphere
 
 
@@ -600,6 +609,10 @@ int SphereRenderObjClass::Class_ID(void) const
  *=============================================================================================*/
 void SphereRenderObjClass::Render(RenderInfoClass & rinfo)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)rinfo;
+	throw std::runtime_error("SphereRenderObjClass::Render requires an installed WW3D device translator");
+#else
 	// NULL LOD
 	if (CurrentLOD == 0) return;
 
@@ -681,6 +694,7 @@ void SphereRenderObjClass::Render(RenderInfoClass & rinfo)
 			render_sphere();
 		}		
 	}
+#endif
 }
 
 
@@ -1591,7 +1605,8 @@ void SphereMeshClass::Generate(float radius, int slices, int stacks)
 	fans = W3DNEWARRAY int[fan_size * fan_ct];
 	
 	// Do Fan #1
-	for (int ct = 0; ct < fan_size; ct++) {
+	int ct = 0;
+	for (; ct < fan_size; ct++) {
 		fans[ct] = ct;
 	}
 	//fans[ct] = 1;
@@ -1750,4 +1765,3 @@ void SphereMeshClass::Free(void)
 }
 
 // EOF - sphereobj.cpp
-

@@ -40,6 +40,13 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "texture.h"
+#include "chunkio.h"
+#include "w3d_file.h"
+#include "assetmgr.h"
+
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "texture_cpu.inc"
+#else
 
 #include <d3d8.h>
 #include <stdio.h>
@@ -1048,12 +1055,13 @@ unsigned TextureClass::Get_Texture_Memory_Usage() const
 
 
 // Utility functions
+#endif // ZH_WW3D_CPU_ONLY: share the original W3D texture parser below.
 TextureClass* Load_Texture(ChunkLoadClass & cload)
 {
 	// Assume failure
 	TextureClass *newtex = NULL;
 
-	char name[256];
+	char name[256] = {};
 	if (cload.Open_Chunk () && (cload.Cur_Chunk_ID () == W3D_CHUNK_TEXTURE)) 
 	{
 
@@ -1066,10 +1074,25 @@ TextureClass* Load_Texture(ChunkLoadClass & cload)
 		while (cload.Open_Chunk()) {
 			switch (cload.Cur_Chunk_ID()) {
 				case W3D_CHUNK_TEXTURE_NAME:
+#if defined(ZH_WW3D_CPU_ONLY)
+					if (cload.Cur_Chunk_Length() == 0 || cload.Cur_Chunk_Length() > sizeof(name)) {
+						cload.Close_Chunk();
+						cload.Close_Chunk();
+						return NULL;
+					}
+#endif
 					cload.Read(&name,cload.Cur_Chunk_Length());
+					name[sizeof(name) - 1] = '\0';
 					break;
 
 				case W3D_CHUNK_TEXTURE_INFO:
+#if defined(ZH_WW3D_CPU_ONLY)
+					if (cload.Cur_Chunk_Length() != sizeof(texinfo)) {
+						cload.Close_Chunk();
+						cload.Close_Chunk();
+						return NULL;
+					}
+#endif
 					cload.Read(&texinfo,sizeof(W3dTextureInfoStruct));
 					hastexinfo = true;
 					break;
@@ -1077,6 +1100,7 @@ TextureClass* Load_Texture(ChunkLoadClass & cload)
 			cload.Close_Chunk();
 		}
 		cload.Close_Chunk();
+		if (name[0] == '\0') return NULL;
 
 		/*
 		** Get the texture from the asset manager
@@ -1130,6 +1154,10 @@ TextureClass* Load_Texture(ChunkLoadClass & cload)
 
 				case W3DTEXTURE_TYPE_BUMPMAP:
 				{
+#if defined(ZH_WW3D_CPU_ONLY)
+					// Format choice needs the device capability translator; retain
+					// the source texture identity and defer that choice.
+#else
 					if (DX8Wrapper::Is_Initted() && DX8Wrapper::Get_Current_Caps()->Support_Bump_Envmap()) 
 					{
 						// No mipmaps to bumpmap for now
@@ -1139,6 +1167,7 @@ TextureClass* Load_Texture(ChunkLoadClass & cload)
 						else if (DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(WW3D_FORMAT_X8L8V8U8)) format=WW3D_FORMAT_X8L8V8U8;
 						else if (DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(WW3D_FORMAT_L6V5U5)) format=WW3D_FORMAT_L6V5U5;
 					}
+#endif
 					break;
 				}
 
@@ -1170,6 +1199,7 @@ TextureClass* Load_Texture(ChunkLoadClass & cload)
 	return newtex;
 }
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 // Utility function used by Save_Texture
 void setup_texture_attributes(TextureClass * tex, W3dTextureInfoStruct * texinfo)
 {
@@ -1910,3 +1940,4 @@ void VolumeTextureClass::Apply_New_Surface
 		Depth=d3d_desc.Depth;
 	}
 }
+#endif // ZH_WW3D_CPU_ONLY

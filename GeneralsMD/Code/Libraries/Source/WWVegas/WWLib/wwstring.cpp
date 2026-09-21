@@ -35,6 +35,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "wwstring.h"
+#include <cstdint>
 #include "win.h"
 #include "wwmemlog.h"
 #include "mutex.h"
@@ -102,7 +103,7 @@ StringClass::Get_String (int length, bool is_temp)
 				//
 				//	Grab this unused buffer for our string
 				//
-				unsigned temp_string=reinterpret_cast<unsigned>(m_TempStrings);
+				uintptr_t temp_string=reinterpret_cast<uintptr_t>(m_TempStrings);
 				temp_string+=MAX_TEMP_BYTES*MAX_TEMP_STRING;
 				temp_string&=~(MAX_TEMP_BYTES*MAX_TEMP_STRING-1);
 				temp_string+=index*MAX_TEMP_BYTES;
@@ -197,8 +198,8 @@ StringClass::Free_String (void)
 {
 	if (m_Buffer != m_EmptyString) {
 
-		unsigned buffer_base=reinterpret_cast<unsigned>(m_Buffer-sizeof (StringClass::_HEADER));
-		unsigned temp_base=reinterpret_cast<unsigned>(m_TempStrings+MAX_TEMP_BYTES*MAX_TEMP_STRING);
+		uintptr_t buffer_base=reinterpret_cast<uintptr_t>(m_Buffer-sizeof (StringClass::_HEADER));
+		uintptr_t temp_base=reinterpret_cast<uintptr_t>(m_TempStrings+MAX_TEMP_BYTES*MAX_TEMP_STRING);
 
 		if ((buffer_base>>11)==(temp_base>>11)) {
 			m_Buffer[0] = 0;
@@ -238,22 +239,25 @@ StringClass::Free_String (void)
 //
 ///////////////////////////////////////////////////////////////////
 int _cdecl
-StringClass::Format_Args (const TCHAR *format, const va_list & arg_list )
+StringClass::Format_Args (const TCHAR *format, va_list arg_list )
 {
 	//
 	// Make a guess at the maximum length of the resulting string
 	//
 	TCHAR temp_buffer[512] = { 0 };
 	int retval = 0;
+	va_list formatting_args;
+	va_copy(formatting_args, arg_list);
 
 	//
 	//	Format the string
 	//
 	#ifdef _UNICODE
-		retval = _vsnwprintf (temp_buffer, 512, format, arg_list);
+		retval = _vsnwprintf (temp_buffer, 512, format, formatting_args);
 	#else
-		retval = _vsnprintf (temp_buffer, 512, format, arg_list);
+		retval = _vsnprintf (temp_buffer, 512, format, formatting_args);
 	#endif
+	va_end(formatting_args);
 	
 	//
 	//	Copy the string into our buffer
@@ -319,22 +323,11 @@ StringClass::Release_Resources (void)
 bool StringClass::Copy_Wide (const WCHAR *source)
 {
 	if (source != NULL) {
-
-		int  length;
-		BOOL unmapped;
-			
-		length = WideCharToMultiByte (CP_ACP, 0 , source, -1, NULL, 0, NULL, &unmapped);
-		if (length > 0) {
-
-			// Convert.
-			WideCharToMultiByte (CP_ACP, 0, source, -1, Get_Buffer (length), length, NULL, NULL);
-
-			// Update length.
-			Store_Length (length - 1);
-		}
-
-		// Were all characters successfully mapped?
-		return (!unmapped);
+		const size_t length = std::wcstombs(NULL, source, 0);
+		if (length == static_cast<size_t>(-1)) return false;
+		std::wcstombs(Get_Buffer(static_cast<int>(length + 1)), source, length + 1);
+		Store_Length(static_cast<int>(length));
+		return true;
 	}
 
 	// Failure.

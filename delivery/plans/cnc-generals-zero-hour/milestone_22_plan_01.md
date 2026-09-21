@@ -72,7 +72,7 @@ The production Linux original-engine path renders representative campaign and sk
 
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
-| 01 | [milestone_22_plan_01_slice_01.md](milestone_22_plan_01_slice_01.md) | Original WW3D loaders construct the reached CPU asset, render-object, material, hierarchy, and animation graph from W3D resources with exact ownership/failure behavior. | M20, M21 | pending | | |
+| 01 | [milestone_22_plan_01_slice_01.md](milestone_22_plan_01_slice_01.md) | Original WW3D loaders construct the reached CPU asset, render-object, material, hierarchy, and animation graph from W3D resources with exact ownership/failure behavior. | M20, M21 | complete | slice 01 commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_01.md) |
 | 02 | [milestone_22_plan_01_slice_02.md](milestone_22_plan_01_slice_02.md) | All ten reached concrete GameClient draw classes preserve original condition, transform, bone/tread/supply/rider, shroud, tint, and shadow behavior against that graph. | slice 01 | pending | | |
 | 03 | [milestone_22_plan_01_slice_03.md](milestone_22_plan_01_slice_03.md) | Original DX8Wrapper/WWShade outputs translate through `GpuDevice`, with actual-producer recording, negative controls, and lifecycle closure. | slice 02, M14 | pending | | |
 | 04 | [milestone_22_plan_01_slice_04.md](milestone_22_plan_01_slice_04.md) | Original campaign and skirmish consumers load and record complete retail scene families with source identity, failure, reset, and provider-removal evidence. | slice 03 | pending | | |

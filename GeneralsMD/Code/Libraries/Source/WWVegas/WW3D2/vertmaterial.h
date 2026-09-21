@@ -271,7 +271,7 @@ private:
 	** Apply the render states corresponding to a NULL vetex material to D3D
 	*/
 	static void			Apply_Null(void);
-	unsigned long		VertexMaterialClass::Compute_CRC(void) const;
+	unsigned long		Compute_CRC(void) const;
 
 	static VertexMaterialClass *Presets[PRESET_COUNT];
 };
@@ -321,4 +321,3 @@ inline bool VertexMaterialClass::Are_Mappers_Time_Variant(void) const
 }
 
 #endif //VERTMATERIAL_H
-

@@ -74,7 +74,11 @@
 #include "camera.h"
 #include "ww3d.h"
 #include "matrix4.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
+#else
+#include <stdexcept>
+#endif
 
 
 /***********************************************************************************************
@@ -719,6 +723,9 @@ void CameraClass::Device_To_World_Space(const Vector2 & device_coord,Vector3 * w
 void CameraClass::Apply(void)
 {
 	Update_Frustum();
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw std::runtime_error("CameraClass::Apply requires an installed WW3D device translator");
+#else
 
 	int width,height,bits;
 	bool windowed;
@@ -737,6 +744,7 @@ void CameraClass::Apply(void)
 	Get_D3D_Projection_Matrix(&d3dprojection);
 	DX8Wrapper::Set_Projection_Transform_With_Z_Bias(d3dprojection,ZNear,ZFar);
 	DX8Wrapper::Set_Transform(D3DTS_VIEW,CameraInvTransform);
+#endif
 }
 
 void CameraClass::Set_Clip_Planes(float znear,float zfar)						

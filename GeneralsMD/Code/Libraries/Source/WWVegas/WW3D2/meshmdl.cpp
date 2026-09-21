@@ -43,10 +43,14 @@
 #include "htree.h"
 #include "vp.h"
 #include "visrasterizer.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8polygonrenderer.h"
 #include "bwrender.h"
+#endif
 #include "camera.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8renderer.h"
+#endif
 #include "hashtemplate.h"
 
 
@@ -107,7 +111,9 @@ MeshModelClass::MeshModelClass(const MeshModelClass & that) :
 MeshModelClass::~MeshModelClass(void)
 {
 //	WWDEBUG_SAY(("Note: Mesh %s was never used\n",Get_Name()));
+#if !defined(ZH_WW3D_CPU_ONLY)
 	TheDX8MeshRenderer.Unregister_Mesh_Type(this);
+#endif
 
 	Reset(0,0,0);
 	REF_PTR_RELEASE(MatInfo);
@@ -126,7 +132,9 @@ MeshModelClass & MeshModelClass::operator = (const MeshModelClass & that)
 	if (this != &that) {
 		// Remove all polygon renderers, this will remove the mesh from the rendering system.
 		// The mesh will be initialized to rendering system the next time it is rendered.
+#if !defined(ZH_WW3D_CPU_ONLY)
 		TheDX8MeshRenderer.Unregister_Mesh_Type(this);
+#endif
 
 		MeshGeometryClass::operator = (that);
 
@@ -165,7 +173,9 @@ void MeshModelClass::Reset(int polycount,int vertcount,int passcount)
 
 	// Release everything we have and reset to initial state
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 	TheDX8MeshRenderer.Unregister_Mesh_Type(this);
+#endif
 
 	MatInfo->Reset();
 	DefMatDesc->Reset(polycount,vertcount,passcount);
@@ -201,7 +211,9 @@ void MeshModelClass::Register_For_Rendering()
 		}
 	}
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 	TheDX8MeshRenderer.Register_Mesh_Type(this);
+#endif
 }
 
 void MeshModelClass::Replace_Texture(TextureClass* texture,TextureClass* new_texture)
@@ -224,10 +236,12 @@ void MeshModelClass::Replace_Texture(TextureClass* texture,TextureClass* new_tex
 			}
 			// If this mesh model has been initialized for rendering we need to tell the rendering
 			// system to change texturing as well.
+#if !defined(ZH_WW3D_CPU_ONLY)
 			DX8FVFCategoryContainer* fvf_category=Peek_FVF_Category_Container();
 			if (fvf_category) {
 				fvf_category->Change_Polygon_Renderer_Texture(PolygonRendererList,texture,new_texture,pass,stage);
 			}
+#endif
 		}
 	}
 }
@@ -252,15 +266,20 @@ void MeshModelClass::Replace_VertexMaterial(VertexMaterialClass* vmat,VertexMate
 		}
 		// If this mesh model has been initialized for rendering we need to tell the rendering
 		// system to change texturing as well.
+#if !defined(ZH_WW3D_CPU_ONLY)
 		DX8FVFCategoryContainer* fvf_category=Peek_FVF_Category_Container();
 		if (fvf_category) {
 			fvf_category->Change_Polygon_Renderer_Material(PolygonRendererList,vmat,new_vmat,pass);
 		}
+#endif
 	}	
 }
 
 DX8FVFCategoryContainer* MeshModelClass::Peek_FVF_Category_Container()
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	return NULL;
+#else
 	if (PolygonRendererList.Is_Empty()) return NULL;
 	DX8PolygonRendererClass* polygon_renderer=PolygonRendererList.Get_Head();
 	WWASSERT(polygon_renderer);
@@ -269,10 +288,15 @@ DX8FVFCategoryContainer* MeshModelClass::Peek_FVF_Category_Container()
 	DX8FVFCategoryContainer* fvf_category=texture_category->Get_Container();
 	WWASSERT(fvf_category);
 	return fvf_category;
+#endif
 }
 
 void MeshModelClass::Shadow_Render(SpecialRenderInfoClass & rinfo,const Matrix3D & tm,const HTreeClass * htree)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	(void)rinfo; (void)tm; (void)htree;
+	return;
+#else
 	if (rinfo.BWRenderer != NULL) {
 		if (_TempTransformedVertexBuffer.Length() < VertexCount) _TempTransformedVertexBuffer.Resize(VertexCount);
 		Vector4* transf_ptr=&(_TempTransformedVertexBuffer[0]);
@@ -286,6 +310,7 @@ void MeshModelClass::Shadow_Render(SpecialRenderInfoClass & rinfo,const Matrix3D
 		rinfo.BWRenderer->Render_Triangles(reinterpret_cast<const unsigned long*>(Poly->Get_Array()),PolyCount*3);
 		return;
 	}
+#endif
 }
 
 void MeshModelClass::Make_Geometry_Unique()
@@ -330,7 +355,9 @@ void MeshModelClass::Enable_Alternate_Material_Description(bool onoff)
 				modify_for_overbright();
 			
 			// TODO: Invalidate just this meshes DX8 data!!!
+#if !defined(ZH_WW3D_CPU_ONLY)
 			TheDX8MeshRenderer.Invalidate();
+#endif
 		}
 	} else {
 		if (CurMatDesc != DefMatDesc) {
@@ -343,7 +370,9 @@ void MeshModelClass::Enable_Alternate_Material_Description(bool onoff)
 				modify_for_overbright();
 
 			// TODO: Invalidate this meshes DX8 data!!!
+#if !defined(ZH_WW3D_CPU_ONLY)
 			TheDX8MeshRenderer.Invalidate();
+#endif
 		}
 	}
 }
@@ -652,7 +681,11 @@ void GapFillerClass::Shrink_Buffers()
 
 void MeshModelClass::Init_For_NPatch_Rendering()
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	return;
+#else
 	if (!DX8Wrapper::Get_Current_Caps()->Support_NPatches()) return;
+#endif
 	if (!Get_Flag(MeshGeometryClass::ALLOW_NPATCHES)) return;
 	if (GapFiller) return;
 
@@ -676,7 +709,7 @@ void MeshModelClass::Init_For_NPatch_Rendering()
 		}
 	}
 
-	for (i=0;i<polygon_count;++i) {
+	for (unsigned i=0;i<polygon_count;++i) {
 		bool duplicates[3];
 		duplicates[0]=DuplicateLocationHash.Exists(locations[polygon_indices[i][0]]);
 		duplicates[1]=DuplicateLocationHash.Exists(locations[polygon_indices[i][1]]);
