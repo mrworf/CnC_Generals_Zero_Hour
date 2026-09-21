@@ -23,12 +23,17 @@
 #include "ww3d.h"
 #include "original_gpu_edge.h"
 #include "zh/renderer/recording_device.h"
+#if defined(ZH_GPU_SHADER_DIR)
+#include "zh/platform/sdl_gpu_device.h"
+#include <SDL3/SDL.h>
+#endif
 
 #include <cassert>
 #include <cstdlib>
 #include <cmath>
 #include <cstring>
 #include <cstdio>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -98,12 +103,13 @@ template <typename T> void chunk(ChunkSaveClass &writer, unsigned id, const T &v
 }
 
 void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant = false,
-	bool skin_variant = false, unsigned texture_stages = 1)
+	bool skin_variant = false, unsigned texture_stages = 1, bool lit_uv_variant = false)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_MESH));
 	W3dMeshHeader3Struct header{};
 	header.Version = W3D_CURRENT_MESH_VERSION;
-	std::strcpy(header.MeshName, texture_stages == 0 ? "ZERO01" : texture_stages == 2 ? "TWO01" :
+	std::strcpy(header.MeshName, lit_uv_variant ? (texture_stages==2 ? "LITTWO01" : "LITONE01") :
+		texture_stages == 0 ? "ZERO01" : texture_stages == 2 ? "TWO01" :
 		skin_variant ? "SKIN01" : tread_variant ? "TREADSL01" :
 		(supply_variant ? "SUPPLY01" : "TRIANGLE"));
 	if (skin_variant) header.Attributes = W3D_MESH_FLAG_GEOMETRY_TYPE_SKIN;
@@ -184,8 +190,9 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 	for (unsigned stage = 0; stage < texture_stages; ++stage) {
 		assert(writer.Begin_Chunk(W3D_CHUNK_TEXTURE_STAGE));
 		chunk(writer, W3D_CHUNK_TEXTURE_IDS, stage);
-		if (tread_variant && stage==0) {
-			const W3dTexCoordStruct texcoords[3]={{0,0},{1,0},{0,1}};
+		if (lit_uv_variant || (tread_variant && stage==0)) {
+			W3dTexCoordStruct texcoords[3]={{0,0},{1,0},{0,1}};
+			if (stage==1) { texcoords[0]={0.25f,0}; texcoords[1]={1,0.25f}; }
 			chunk(writer,W3D_CHUNK_STAGE_TEXCOORDS,texcoords);
 		}
 		assert(writer.End_Chunk());
@@ -276,10 +283,13 @@ int main(int argc, char **argv)
 	make_mesh(writer, supply_variant);
 	if (supply_variant) make_mesh(writer, true, true);
 	else make_mesh(writer, false, false, true);
-	if (argc == 2 && std::strcmp(argv[1], "--device-edge") == 0) {
+	if (argc == 2 && (std::strcmp(argv[1], "--device-edge") == 0 ||
+		std::strcmp(argv[1], "--vulkan-category") == 0)) {
 		make_mesh(writer, false, false, false, 0);
 		make_mesh(writer, false, false, false, 2);
 		make_mesh(writer, false, true);
+		make_mesh(writer, false, false, false, 1, true);
+		make_mesh(writer, false, false, false, 2, true);
 	}
 	make_hlod(writer, supply_variant);
 	const int size = file.Size();
@@ -311,6 +321,165 @@ int main(int argc, char **argv)
 	auto *mesh = static_cast<MeshClass *>(object);
 	CameraClass camera;
 	RenderInfoClass render_info(camera);
+#if defined(ZH_GPU_SHADER_DIR)
+	if (argc==2 && std::strcmp(argv[1],"--vulkan-category")==0) {
+		assert(SDL_Init(SDL_INIT_VIDEO));
+		{
+		zh::renderer::SdlGpuOptions options;
+		options.debug=true;
+		options.shader_root=ZH_GPU_SHADER_DIR;
+		zh::renderer::SdlGpuDevice device(options);
+		assert(device.capabilities().backend=="vulkan");
+		OwnedFactory textures;
+		textures.files["mytex.tga"]=original_targa();
+		textures.files["MYTEX.TGA"]=textures.files["mytex.tga"];
+		textures.files["mytex2.tga"]=original_targa();
+		textures.files["MYTEX2.TGA"]=textures.files["mytex2.tga"];
+		auto* old_factory=_TheFileFactory;
+		_TheFileFactory=&textures;
+		WW3D::Set_Thumbnail_Enabled(false);
+		DefaultStaticSortListClass active_sort_list;
+		WW3D::Override_Current_Static_Sort_Lists(&active_sort_list);
+		TheDX8MeshRenderer.Init();
+		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+		mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(true);
+		mesh->Set_ObjectScale(5.0f);
+		mesh->Set_Position(Vector3(0,0,-10));
+		zh::renderer::TextureDesc target;
+		target.width=160; target.height=120;
+		target.format=zh::renderer::TextureFormat::rgba8;
+		target.render_target=true;
+		auto color=device.create_texture(target,"original category lit color target");
+		target.format=zh::renderer::TextureFormat::depth24_stencil8;
+		auto depth=device.create_texture(target,"original category lit depth target");
+		assert(color && depth);
+		zh::renderer::RenderPassDesc pass;
+		pass.color_targets[0]=color; pass.color_target_count=1;
+		pass.depth_target=depth; pass.width=160; pass.height=120;
+		{
+			zh::original_runtime::OriginalGpuEdge edge(device);
+			TheDX8MeshRenderer.Set_Camera(&camera);
+			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+			Matrix4x4 projection;
+			camera.Get_D3D_Projection_Matrix(&projection);
+			DX8Wrapper::Set_Transform(D3DTS_PROJECTION,projection);
+			LightEnvironmentClass environment;
+			auto frame=[&](MeshClass* selected, const Vector3& ambient,
+				LightClass* light=nullptr,unsigned repeats=1) {
+				environment.Reset(Vector3(0,0,-10),ambient);
+				if (light) for (unsigned i=0;i<repeats;++i) environment.Add_Light(*light);
+				assert(environment.Get_Light_Count()==(light ? static_cast<int>(repeats):0));
+				environment.Pre_Render_Update(Matrix3D(true));
+				render_info.light_environment=&environment;
+				selected->Render(render_info);
+				assert(selected->Get_Lighting_Environment() &&
+					selected->Get_Lighting_Environment()->Get_Light_Count()==
+						environment.Get_Light_Count());
+				if (light) assert(selected->Get_Lighting_Environment()->isPointLight(0)==
+					(light->Get_Type()==LightClass::POINT));
+				assert(selected->Peek_Model()->Has_Polygon_Renderers());
+				assert(device.begin_pass(pass,"original owned W3D lit category Vulkan frame"));
+				TheDX8MeshRenderer.Flush();
+				// The original alpha-override tail restores a pending material and ALPHAREF
+				// *after* its draw; only inspect the settled source snapshot otherwise.
+				if (render_info.alphaOverride==1.0f) {
+					const auto source=DX8Wrapper::Snapshot_Source_State();
+					assert(source.light_environment_selected);
+					assert(source.light_enabled[0]==(light!=nullptr));
+					if (light) assert(source.lights[0].Type==
+						(light->Get_Type()==LightClass::POINT ? D3DLIGHT_POINT:D3DLIGHT_DIRECTIONAL));
+				}
+				assert(device.end_pass());
+				const auto pixels=device.readback_rgba(color);
+				assert(pixels.size()==static_cast<std::size_t>(pass.width)*pass.height*4U);
+				unsigned lit_pixels=0;
+				for (std::size_t i=0;i<pixels.size();i+=4)
+					if (pixels[i]!=5 || pixels[i+1]!=5 || pixels[i+2]!=10) ++lit_pixels;
+				assert(lit_pixels>0 && textures.owners==0);
+				return pixels;
+			};
+			auto* zero_mesh=static_cast<MeshClass*>(manager.Create_Render_Obj("TEST.ZERO01"));
+			assert(zero_mesh);
+			zero_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+			zero_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(true);
+			zero_mesh->Set_ObjectScale(5.0f);
+			zero_mesh->Set_Position(Vector3(0,0,-10));
+			zero_mesh->Peek_Model()->Register_For_Rendering();
+			std::array<MeshClass*,2> uv_meshes{};
+			for (unsigned family=0;family<uv_meshes.size();++family) {
+				uv_meshes[family]=static_cast<MeshClass*>(manager.Create_Render_Obj(
+					family==0 ? "TEST.LITONE01":"TEST.LITTWO01"));
+				assert(uv_meshes[family]);
+				uv_meshes[family]->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+				uv_meshes[family]->Peek_Model()->Peek_Single_Material()->Set_Lighting(true);
+				uv_meshes[family]->Set_ObjectScale(5.0f);
+				uv_meshes[family]->Set_Position(Vector3(0,0,-10));
+				uv_meshes[family]->Peek_Model()->Register_For_Rendering();
+			}
+			const auto ambient_pixels=frame(mesh,Vector3(0.15f,0.2f,0.25f));
+			const auto zero_ambient_pixels=frame(zero_mesh,Vector3(0.15f,0.2f,0.25f));
+			Matrix3D source_direction(true);
+			source_direction.Rotate_X(WWMATH_PI);
+			LightClass directional(LightClass::DIRECTIONAL);
+			directional.Set_Transform(source_direction);
+			directional.Set_Diffuse(Vector3(0.3f,0.2f,0.1f));
+			directional.Set_Ambient(Vector3(0,0,0));
+			const auto directional_pixels=frame(mesh,Vector3(0.15f,0.2f,0.25f),&directional);
+			assert(ambient_pixels!=directional_pixels);
+			const auto ambient_retry_pixels=frame(mesh,Vector3(0.15f,0.2f,0.25f));
+			assert(ambient_pixels==ambient_retry_pixels);
+			LightClass point(LightClass::POINT);
+			point.Set_Position(Vector3(0,0,-100));
+			point.Set_Diffuse(Vector3(0.06f,0.08f,0.9f));
+			point.Set_Ambient(Vector3(0,0,0));
+			point.Set_Near_Attenuation_Range(0,2);
+			point.Set_Far_Attenuation_Range(2,10);
+			const auto point_pixels=frame(mesh,Vector3(0.15f,0.2f,0.25f),&point);
+			const auto zero_point_pixels=frame(zero_mesh,Vector3(0.15f,0.2f,0.25f),&point);
+			assert(zero_point_pixels==zero_ambient_pixels);
+			assert(point_pixels==ambient_pixels && directional_pixels!=point_pixels);
+			point.Set_Position(Vector3(0,0,-9));
+			const auto near_point_pixels=frame(mesh,Vector3(0.15f,0.2f,0.25f),&point);
+			assert(near_point_pixels!=ambient_pixels && near_point_pixels!=directional_pixels);
+			const auto four_pixels=frame(zero_mesh,Vector3(0.15f,0.2f,0.25f),&directional,4);
+			assert(four_pixels!=zero_ambient_pixels);
+			render_info.alphaOverride=0.5f;
+			const auto alpha_pixels=frame(mesh,Vector3(0.15f,0.2f,0.25f),&directional);
+			assert(alpha_pixels!=directional_pixels);
+			render_info.alphaOverride=1.0f;
+			for (auto* selected:uv_meshes) {
+				const auto uv_pixels=frame(selected,Vector3(0.15f,0.2f,0.25f),&directional);
+				assert(uv_pixels!=ambient_pixels);
+			}
+			// Recreate physical attachments while original mesh/category owners remain live.
+			device.destroy(depth); device.destroy(color);
+			assert(device.wait_idle());
+			pass.width=240; pass.height=160;
+			target.width=pass.width; target.height=pass.height;
+			target.format=zh::renderer::TextureFormat::rgba8;
+			color=device.create_texture(target,"resized original lit color target");
+			target.format=zh::renderer::TextureFormat::depth24_stencil8;
+			depth=device.create_texture(target,"resized original lit depth target");
+			assert(color && depth);
+			pass.color_targets[0]=color; pass.depth_target=depth;
+			assert(frame(mesh,Vector3(0.15f,0.2f,0.25f),&directional).size()==
+				240U*160U*4U);
+			for (auto* selected:uv_meshes) selected->Release_Ref();
+			zero_mesh->Release_Ref();
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+		}
+		device.destroy(depth); device.destroy(color);
+		assert(device.wait_idle());
+		WW3D::Reset_Current_Static_Sort_Lists_To_Default();
+		_TheFileFactory=old_factory;
+		object->Release_Ref();
+		manager.Free_Assets();
+		}
+		SDL_Quit();
+		return 0;
+	}
+#endif
 	if (argc == 2 && std::strcmp(argv[1], "--device-edge") == 0)
 	{
 		OwnedFactory textures;
@@ -327,7 +496,7 @@ int main(int argc, char **argv)
 		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT, false);
 		mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
 		mesh->Set_Position(Vector3(0, 0, -10));
-		std::array<RenderObjClass *, 3> variant_objects{};
+		std::array<RenderObjClass *, 5> variant_objects{};
 		mesh->Render(render_info);
 		assert(mesh->Peek_Model()->Has_Polygon_Renderers());
 		TheDX8MeshRenderer.Set_Camera(&camera);
@@ -351,15 +520,22 @@ int main(int argc, char **argv)
 		pass.depth_target=depth; pass.width=32; pass.height=32;
 		{
 			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			const std::array<const char*,5> fixture_names{{
+				"TEST.ZERO01","TEST.TWO01","TEST.TREADSL01",
+				"TEST.LITONE01","TEST.LITTWO01"}};
 			for (unsigned i=0; i<variant_objects.size(); ++i) {
-				variant_objects[i]=manager.Create_Render_Obj(i==0 ? "TEST.ZERO01" :
-					i==1 ? "TEST.TWO01" : "TEST.TREADSL01");
+				variant_objects[i]=manager.Create_Render_Obj(fixture_names[i]);
 				assert(variant_objects[i] && variant_objects[i]->Class_ID()==RenderObjClass::CLASSID_MESH);
 				auto *variant_mesh=static_cast<MeshClass *>(variant_objects[i]);
 				variant_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
 				variant_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
 				variant_mesh->Set_Position(Vector3(0,0,-10));
 			}
+			const auto fvf_one=DX8FVFCategoryContainer::Define_FVF(
+				static_cast<MeshClass*>(variant_objects[3])->Peek_Model(),true);
+			const auto fvf_two=DX8FVFCategoryContainer::Define_FVF(
+				static_cast<MeshClass*>(variant_objects[4])->Peek_Model(),true);
+			assert(fvf_one==DX8_FVF_XYZNUV1 && fvf_two==DX8_FVF_XYZNUV2);
 			for (auto *variant_object : variant_objects)
 				static_cast<MeshClass *>(variant_object)->Peek_Model()->Register_For_Rendering();
 			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
@@ -503,9 +679,118 @@ int main(int argc, char **argv)
 			const auto light_world=light_commands.find("DX8Wrapper::Set_Transform=256",light_selection);
 			assert(light_selection!=std::string::npos && light_world!=std::string::npos &&
 				light_commands.find("draw pipeline=",light_world)!=std::string::npos);
+			retry_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(true);
+			retry_mesh->Render(render_info);
+			const auto before_category_lit=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original lit rigid mesh/category source frame"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto lit_commands=recorder.snapshot().substr(before_category_lit);
+			const auto original_light=lit_commands.find("DX8Wrapper::Set_Light_Environment");
+			const auto original_world=lit_commands.find("DX8Wrapper::Set_Transform=256",original_light);
+			const auto lit_pipeline=lit_commands.find("original_applied_n0_lit.vert",original_world);
+			assert(original_light!=std::string::npos && original_world!=std::string::npos &&
+				lit_pipeline!=std::string::npos &&
+				lit_commands.find("draw pipeline=",lit_pipeline)!=std::string::npos);
+			for (unsigned family=1;family<=2;++family) {
+				auto* lit_mesh=static_cast<MeshClass*>(variant_objects[family+2]);
+				lit_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(true);
+				lit_mesh->Render(render_info);
+				const auto before_family=recorder.snapshot().size();
+				assert(recorder.begin_pass(pass,family==1?
+					"original lit N1 single-stage category":"original lit N2 two-stage category"));
+				TheDX8MeshRenderer.Flush();
+				assert(recorder.end_pass());
+				const auto source_family=recorder.snapshot().substr(before_family);
+				const auto light=source_family.find("DX8Wrapper::Set_Light_Environment");
+				const auto world=source_family.find("DX8Wrapper::Set_Transform=256",light);
+				const auto variant=source_family.find(family==1 ?
+					"original_applied_n1_lit.vert":"original_applied_n2_lit.vert",world);
+				assert(light!=std::string::npos && world!=std::string::npos &&
+					variant!=std::string::npos &&
+					source_family.find(family==1 ? "original_applied_1.frag" :
+						"original_applied_3.frag",variant)!=std::string::npos &&
+					source_family.find("draw pipeline=",variant)!=std::string::npos);
+				lit_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+			}
+			Matrix3D source_direction(true);
+			source_direction.Rotate_X(WWMATH_PI);
+			LightClass lit_directional(LightClass::DIRECTIONAL);
+			lit_directional.Set_Transform(source_direction);
+			lit_directional.Set_Diffuse(Vector3(0.3f,0.2f,0.1f));
+			LightClass lit_point(LightClass::POINT);
+			lit_point.Set_Position(Vector3(0,0,-9));
+			lit_point.Set_Diffuse(Vector3(0.4f,0.3f,0.2f));
+			lit_point.Set_Near_Attenuation_Range(0,2);
+			lit_point.Set_Far_Attenuation_Range(2,10);
+			for (unsigned family=0;family<3;++family) {
+				selected_environment.Reset(Vector3(0,0,-10),Vector3(0.06f,0.12f,0.18f));
+				if (family==0) selected_environment.Add_Light(lit_directional);
+				else if (family==1) selected_environment.Add_Light(lit_point);
+				else for (unsigned i=0;i<4;++i) selected_environment.Add_Light(lit_directional);
+				selected_environment.Pre_Render_Update(Matrix3D(true));
+				retry_mesh->Render(render_info);
+				const auto before_lights=recorder.snapshot().size();
+				assert(recorder.begin_pass(pass,"original selected dynamic lit category frame"));
+				TheDX8MeshRenderer.Flush();
+				assert(recorder.end_pass());
+				const auto light_frame=recorder.snapshot().substr(before_lights);
+				const auto issued_light=light_frame.find("DX8Wrapper::Set_Light_Environment");
+				const auto issued_world=light_frame.find("DX8Wrapper::Set_Transform=256",issued_light);
+				const auto issued_lit=light_frame.find("original_applied_n0_lit.vert",issued_world);
+				assert(issued_light!=std::string::npos && issued_world!=std::string::npos &&
+					issued_lit!=std::string::npos &&
+					light_frame.find("draw pipeline=",issued_lit)!=std::string::npos &&
+					light_frame.find("DX8Wrapper::Set_Light slot=0 enabled",issued_light)!=
+						std::string::npos &&
+					(family!=2 || (selected_environment.Get_Light_Count()==4 &&
+						light_frame.find("DX8Wrapper::Set_Light slot=3 enabled",issued_light)!=
+							std::string::npos)));
+			}
+			retry_mesh->Render(render_info);
+			recorder.fail_next_buffer_upload();
+			const auto before_lit_failure=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original lit category injected upload failure"));
+			bool lit_upload_rejected=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				lit_upload_rejected=std::strstr(error.what(),"upload")!=nullptr;
+			}
+			assert(lit_upload_rejected && recorder.end_pass() &&
+				recorder.snapshot().find("draw pipeline=",before_lit_failure)==std::string::npos);
+			retry_mesh->Render(render_info);
+			const auto before_lit_retry=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original lit category original requeue"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto lit_retry=recorder.snapshot().substr(before_lit_retry);
+			const auto retry_light=lit_retry.find("DX8Wrapper::Set_Light_Environment");
+			const auto retry_world=lit_retry.find("DX8Wrapper::Set_Transform=256",retry_light);
+			assert(retry_light!=std::string::npos && retry_world!=std::string::npos &&
+				lit_retry.find("original_applied_n0_lit.vert",retry_world)!=std::string::npos &&
+				lit_retry.find("draw pipeline=",retry_world)!=std::string::npos);
+			Vector3 invalid_ambient(std::numeric_limits<float>::quiet_NaN(),0,0);
+			selected_environment.Set_Output_Ambient(invalid_ambient);
+			retry_mesh->Render(render_info);
+			const auto before_invalid=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original lit category invalid source ambient"));
+			bool invalid_light_rejected=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				invalid_light_rejected=std::strstr(error.what(),"source ambient")!=nullptr;
+			}
+			assert(invalid_light_rejected && recorder.end_pass() &&
+				recorder.snapshot().find("draw pipeline=",before_invalid)==std::string::npos);
+			selected_environment.Reset(Vector3(0,0,-10),Vector3(0.12f,0.24f,0.36f));
+			selected_environment.Pre_Render_Update(Matrix3D(true));
+			retry_mesh->Render(render_info);
+			const auto before_valid=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original lit category valid source replay"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass() &&
+				recorder.snapshot().find("draw pipeline=",before_valid)!=std::string::npos);
 			render_info.light_environment=nullptr;
-			// Physical lit draws are enabled by 06A3B2, but original category-issued
-			// lit ordering/teardown is independently accepted in 06A3C.
+			retry_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
 			assert(textures.owners==0);
 			TheDX8MeshRenderer.Invalidate();
 			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
