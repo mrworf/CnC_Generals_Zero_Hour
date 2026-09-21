@@ -1,70 +1,33 @@
-# M22 plan 01 slice 01: original producer and device translation closure
+# M22 plan 01 slice 01: original WW3D CPU asset and render-object graph
 
 ## Goal and observable outcome
 
-An original GameClient scene update reaches original W3D/WWShade draw instances and records its real resource, state, pass, and draw commands through `renderer::GpuDevice`. Every reached operation that was deferred in the RC-012 ledger either has implemented semantics or fails with a specific unsupported-state/asset error before a partial frame is accepted.
+The original `W3DAssetManager`/`WW3DAssetManager` path reads a project-owned byte-exact W3D corpus through the original file/chunk interfaces and constructs the same CPU mesh, HLOD, hierarchy, animation, texture-reference, vertex-material, mapper, and `ShaderClass` state later consumed by GameClient rendering. No GPU device or adapter-owned geometry/material authority is involved.
 
 ## Scope
 
-- Bind the existing Linux original-engine factory to a presentation service backed by `renderer::GpuDevice` without changing original simulation authority.
-- Port the original DX8Wrapper state/resource semantics and WWShade translation reached by rendering: transforms/camera, vertex/index resources, textures/samplers, material/blend/depth/cull/color/alpha/fog/light state, render targets, multipass ordering, uploads, draws, and explicit cleanup.
-- Replace M21's physical fail-closed methods for every actually reached original concrete draw class with source-preserving constructor/update/draw/destructor behavior and adapter calls.
-- Reconcile and update every M22-deferred dependency-ledger operation as it becomes implemented; preserve canonical M20 schema and original concrete class identity.
-- Add recording positive and negative tests, failure unwind, source-identity, and provider-removal controls.
-
-## Explicit non-scope
-
-- Retail scene completeness, GPU presentation, screenshots, interactive UI/media, or full-session acceptance.
-- A generic render module, copied schema, generated replacement scene, Direct3D compatibility layer, or private Vulkan implementation.
-
-## Dependencies and ordering
-
-- Requires accepted M20 schema/lifecycle, M21 simulation/concrete draw instances, and the M14 public renderer contract.
-- Must complete before retail scene integration because recording establishes the semantic and failure contract used by both retail and hardware tests.
+- Replace the bootstrap-only `zh_w3d` provider with the minimal transitive original source closure reached from `W3DAssetManager`, `WW3DAssetManager`, registered prototype loaders, and model creation.
+- Preserve original `ChunkLoadClass`, mesh/HLOD/hierarchy/animation parsing, texture identity, material passes, mapper parameters, `ShaderClass` values, render-object cloning, reference counting, and reverse teardown.
+- Port only OS/compiler boundaries required by those sources. Direct3D allocation/draw calls remain a typed unavailable edge until slice 03; they may not be reported as successful.
+- Maintain a checked closure manifest tying each compiled original translation unit to a reached symbol or explicit runtime witness; do not bulk-add the 244-file WW3D2 directory.
 
 ## Entry point and end-to-end behavior
 
-The production Linux `GameEngine`/`GameClient` creates the existing original `Drawable` and concrete W3D draw modules from a project-owned map/object fixture. The original view/display traversal invokes their actual render state. A bound `RecordingGpuDevice` receives resources and ordered commands. A frame is accepted only after all required original producer operations complete and the pass closes.
-
-## Data and state transitions
-
-- Unbound -> presentation adapter bound -> original resources loaded -> frame state accumulated -> pass recorded -> frame complete -> reset/device-generation invalidation -> reverse cleanup -> zero resources.
-- Any missing/malformed asset, unsupported required state, stale handle, incomplete pass, or injected allocation/upload failure transitions directly to failed/unwound with no successful-frame marker.
-
-## Authorization and permission behavior
-
-No privileged or user-data mutation applies. Fixture inputs are repository-owned and read-only during tests; outputs are temporary.
+A focused original-source integration executable mounts owned W3D/texture bytes through the original file factory, calls the original asset manager load/create APIs, inspects the resulting original render-object/material/hierarchy/animation state, releases clones and manager-owned prototypes, and observes zero live ownership.
 
 ## Validation and error handling
 
-- Positive: actual original concrete instances produce distinct resource/state/draw markers and balanced pass/resource ownership.
-- Negative: missing/malformed model/texture/animation, unsupported reached legacy state, absent provider, stale resource after reset, and injected failure all reject with contextual errors and zero retained resources.
-- Identity: compile/link and runtime checks name the original translation units, original concrete class types, canonical `W3DModuleFactory`, original GameClient consumer, and device adapter.
-- Provider removal: omission of the original bridge/representative W3D provider/DX8 state provider must fail compile, link, or the runtime gate.
-
-## Expected implementation surfaces
-
-- `CMakeLists.txt`
-- `docs/original-runtime-dependency-ledger.tsv`
-- original W3D/WWShade/DX8Wrapper sources and headers under `GeneralsMD/Code/Libraries/Source/WWVegas/` and `GeneralsMD/Code/GameEngineDevice/`
-- Linux device binding under `src/original_runtime/` and narrowly scoped public adapter headers under `include/zh/`
-- `tests/original_rendering/`, identity/provider-removal tools, and owned fixture data
-- `evidence/qa/cnc-generals-zero-hour/`
-
-## Required validation commands
-
-- Configure/build `linux-gcc-debug`; run focused `original-rendering` and existing `original-w3d`/`renderer-contract` labels.
-- Run focused Clang Debug ASan+UBSan with strict halt/abort settings after behavior stabilizes.
-- Run source identity, provider-removal, source-classification, ledger freshness, and `git diff --check`.
+- Positive fixtures cover mesh plus HLOD/hierarchy/animation and multiple material/shader/texture states using documented W3D chunks.
+- Missing/truncated/oversized/unknown-required chunks, unresolved hierarchy/model/texture references, duplicate prototype names, and allocation failure reject without partial publication.
+- Identity and provider-removal gates require original asset manager, loader, render-object, material, and shader translation units.
+- Existing canonical schema, M21 simulation, data/VFS, renderer-component, and source-classification tests remain green.
 
 ## Acceptance criteria
 
-- Recording commands originate from actual original W3D/WWShade/GameClient instances and cover every reached deferred state/resource/draw operation.
-- Canonical M20 schema/registry and M21 simulation behavior remain unchanged.
-- All negative controls fail the production path; no ignored state, placeholder, no-op/generic module, alternate scene, or successful null operation exists on a reached path.
-- Normal, reset, and all injected-failure paths return adapter and original ownership counts to zero.
-- Focused tests and sanitizers pass and the ledger precisely records implemented versus still-unreached operations.
+- Geometry, indices, hierarchy, animation, texture references, material passes, mapper state, and `ShaderClass` values originate in original WW3D objects and are inspectable without an adapter copy becoming authoritative.
+- The compiled closure is minimal and evidence-backed; unreached WW3D files remain excluded.
+- Normal and every injected failure path release all original objects exactly once.
 
 ## Commit boundary
 
-Commit the original producer/device translation, focused tests, ledger update, slice plan status, and slice evidence together as `delivery: M22 slice 01 bind original rendering`.
+Commit original WW3D CPU closure, owned fixtures, closure/identity/provider-removal tests, ledger update, slice status, and evidence as `delivery: M22 slice 01 restore original WW3D assets`.
