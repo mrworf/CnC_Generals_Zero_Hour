@@ -1,5 +1,7 @@
 # M22 plan 01 slice 06: original interleaved pass graph
 
+This is the unchanged aggregate acceptance contract, now delivered dependency-safely as [06A](milestone_22_plan_01_slice_06a.md), [06B](milestone_22_plan_01_slice_06b.md), and [06C](milestone_22_plan_01_slice_06c.md). None of the intermediate slices substitutes for the full original pass graph; 07 depends on completed 06C.
+
 ## Outcome and dependencies
 
 Requires slices 04C–05B2B2B3B2. Original HLOD/mesh, DX8 renderer, WW3D and enabled
