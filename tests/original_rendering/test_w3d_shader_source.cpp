@@ -15,7 +15,7 @@
 #include <cstring>
 
 #undef assert
-#define assert(condition) do { if (!(condition)) std::abort(); } while (false)
+#define assert(condition) do { if (!(condition)) { std::fprintf(stderr,"original shader source invariant %s:%d: %s\n",__FILE__,__LINE__,#condition); std::abort(); } } while (false)
 
 int main()
 {
@@ -173,7 +173,7 @@ int main()
 		catch (const std::runtime_error& error) {
 			lit_physical=std::string(error.what()).find("category-issued light")!=std::string::npos;
 		}
-		assert(lit_physical && device.resource_counts().total()==0);
+		assert(lit_physical && device.resource_counts().total()>0);
 		DX8Wrapper::Set_DX8_Render_State(D3DRS_LIGHTING,0);
 		D3DMATERIAL8 invalid_material{};
 		invalid_material.Power=std::numeric_limits<float>::quiet_NaN();

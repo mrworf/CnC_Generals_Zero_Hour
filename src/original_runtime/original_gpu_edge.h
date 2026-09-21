@@ -2,6 +2,7 @@
 
 #include "zh/renderer/contract.h"
 #include "ww3dformat.h"
+#include "ww3d_cpu_boundary.h"
 
 #include <unordered_map>
 #include <array>
@@ -46,9 +47,19 @@ public:
         float power=0;
         bool lighting=false;
         bool specular_enabled=false;
+        bool color_vertex=true;
+        bool local_viewer=true;
+        bool normalize_normals=false;
         unsigned ambient_source=0;
         unsigned diffuse_source=0;
+        unsigned specular_source=0;
         unsigned emissive_source=0;
+        std::array<float,4> global_ambient{};
+        std::array<D3DLIGHT8,4> lights{};
+        std::array<bool,4> light_enabled{};
+        bool light_environment_selected=false;
+        bool source_world_set=false,source_view_set=false;
+        std::array<float,16> source_world{}, source_view{};
         bool alpha_test=false;
         renderer::CompareOp alpha_compare=renderer::CompareOp::always;
         float alpha_reference=0;

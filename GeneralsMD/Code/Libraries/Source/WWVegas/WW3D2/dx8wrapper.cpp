@@ -116,6 +116,13 @@ void DX8Wrapper::Reset_Source_State()
     selected.physical_material={};
     selected.material_applied=false;
     selected.render_states.clear();
+    // The original global render-state setup explicitly selects these two.
+    selected.render_states[D3DRS_SPECULARMATERIALSOURCE]=D3DMCS_MATERIAL;
+    selected.render_states[D3DRS_COLORVERTEX]=TRUE;
+    // Reset device defaults: the original reset method leaves these unchanged.
+    // D3DRENDERSTATETYPE documents TRUE/FALSE respectively at device creation.
+    selected.render_states[D3DRS_LOCALVIEWER]=TRUE;
+    selected.render_states[D3DRS_NORMALIZENORMALS]=FALSE;
     for (auto& stage : selected.texture_states) stage.clear();
     selected.transforms.clear();
     selected.fog_enabled=false;
@@ -215,13 +222,16 @@ void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     if ((property==D3DRS_LIGHTING && value>1) ||
         ((property==D3DRS_AMBIENTMATERIALSOURCE || property==D3DRS_DIFFUSEMATERIALSOURCE ||
-            property==D3DRS_EMISSIVEMATERIALSOURCE) && value>2) ||
+            property==D3DRS_SPECULARMATERIALSOURCE || property==D3DRS_EMISSIVEMATERIALSOURCE) && value>2) ||
         ((property==D3DRS_ALPHABLENDENABLE || property==D3DRS_ALPHATESTENABLE ||
             property==D3DRS_FOGENABLE || property==D3DRS_SPECULARENABLE ||
-            property==D3DRS_ZWRITEENABLE || property==D3DRS_NORMALIZENORMALS) && value>1) ||
+            property==D3DRS_ZWRITEENABLE || property==D3DRS_NORMALIZENORMALS ||
+            property==D3DRS_LOCALVIEWER || property==D3DRS_COLORVERTEX) && value>1) ||
         (property==D3DRS_PATCHSEGMENTS && value!=0x3f800000U) ||
         (property!=D3DRS_LIGHTING && property!=D3DRS_AMBIENT && property!=D3DRS_AMBIENTMATERIALSOURCE &&
-            property!=D3DRS_DIFFUSEMATERIALSOURCE && property!=D3DRS_EMISSIVEMATERIALSOURCE &&
+            property!=D3DRS_DIFFUSEMATERIALSOURCE && property!=D3DRS_SPECULARMATERIALSOURCE &&
+            property!=D3DRS_EMISSIVEMATERIALSOURCE && property!=D3DRS_COLORVERTEX &&
+            property!=D3DRS_LOCALVIEWER &&
             property!=D3DRS_SRCBLEND && property!=D3DRS_DESTBLEND &&
             property!=D3DRS_ALPHABLENDENABLE && property!=D3DRS_ALPHAREF &&
             property!=D3DRS_ALPHAFUNC && property!=D3DRS_ALPHATESTENABLE &&

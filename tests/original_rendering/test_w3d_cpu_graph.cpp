@@ -781,8 +781,22 @@ int main(int argc, char **argv)
 	{
 		zh::renderer::RecordingGpuDevice lighting_device;
 		zh::original_runtime::OriginalGpuEdge lighting_edge(lighting_device);
+		DX8Wrapper::Set_Material(stage_material);
 		DX8Wrapper::Set_Shader(model->Get_Shader(0));
+		Matrix4x4 lighting_projection;
+		camera.Get_D3D_Projection_Matrix(&lighting_projection);
+		DX8Wrapper::Set_Transform(D3DTS_PROJECTION,lighting_projection);
+		Matrix4x4 lighting_world(true);
+		lighting_world[0].X=2.0f;
+		lighting_world[1].Y=0.5f;
+		DX8Wrapper::Set_Transform(D3DTS_WORLD,lighting_world);
+		DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
 		DX8Wrapper::Apply_Render_State_Changes();
+		const auto reset_lighting=DX8Wrapper::Snapshot_Source_State();
+		assert(reset_lighting.render.at(D3DRS_SPECULARMATERIALSOURCE)==D3DMCS_MATERIAL &&
+			reset_lighting.render.at(D3DRS_COLORVERTEX)==TRUE &&
+			reset_lighting.render.at(D3DRS_LOCALVIEWER)==TRUE &&
+			reset_lighting.render.at(D3DRS_NORMALIZENORMALS)==FALSE);
 		LightEnvironmentClass environment;
 		environment.Reset(Vector3(0,0,0),Vector3(0.2f,0.4f,0.6f));
 		environment.Pre_Render_Update(Matrix3D(true));
@@ -792,6 +806,54 @@ int main(int argc, char **argv)
 			empty_lights.render.at(D3DRS_AMBIENT)==0x00336699U &&
 			std::none_of(empty_lights.light_enabled.begin(),empty_lights.light_enabled.end(),
 				[](bool enabled) { return enabled; }));
+		const auto selected_lighting=zh::original_runtime::OriginalGpuEdge::map_applied_state(DX8_FVF_XYZNUV1);
+		bool absent_normal=false;
+		try { (void)zh::original_runtime::OriginalGpuEdge::map_applied_state(DX8_FVF_XYZDUV1); }
+		catch (const std::runtime_error& error) {
+			absent_normal=std::strstr(error.what(),"requires source FVF normal")!=nullptr;
+		}
+		assert(absent_normal && DX8Wrapper::Snapshot_Source_State().light_environment_selected);
+		assert(selected_lighting.lighting && selected_lighting.light_environment_selected &&
+			selected_lighting.source_world_set && selected_lighting.source_view_set &&
+			selected_lighting.source_world[0]==2.0f && selected_lighting.source_world[5]==0.5f &&
+			selected_lighting.color_vertex && selected_lighting.local_viewer &&
+			!selected_lighting.normalize_normals &&
+			selected_lighting.specular_source==D3DMCS_MATERIAL &&
+			selected_lighting.global_ambient[0]>0.19f &&
+			selected_lighting.global_ambient[2]>0.59f);
+		const auto prior_ambient=stage_material->Get_Ambient_Color_Source();
+		const auto prior_diffuse=stage_material->Get_Diffuse_Color_Source();
+		const auto prior_emissive=stage_material->Get_Emissive_Color_Source();
+		stage_material->Set_Ambient_Color_Source(VertexMaterialClass::COLOR1);
+		stage_material->Set_Diffuse_Color_Source(VertexMaterialClass::COLOR2);
+		stage_material->Set_Emissive_Color_Source(VertexMaterialClass::COLOR1);
+		DX8Wrapper::Set_Material(stage_material);
+		DX8Wrapper::Apply_Render_State_Changes();
+		const auto material_selection=zh::original_runtime::OriginalGpuEdge::map_applied_state(DX8_FVF_XYZNUV1);
+		assert(material_selection.ambient_source==D3DMCS_COLOR1 &&
+			material_selection.diffuse_source==D3DMCS_COLOR2 &&
+			material_selection.emissive_source==D3DMCS_COLOR1);
+		stage_material->Set_Ambient_Color_Source(prior_ambient);
+		stage_material->Set_Diffuse_Color_Source(prior_diffuse);
+		stage_material->Set_Emissive_Color_Source(prior_emissive);
+		DX8Wrapper::Set_Material(stage_material);
+		DX8Wrapper::Apply_Render_State_Changes();
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_NORMALIZENORMALS,TRUE);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_LOCALVIEWER,FALSE);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_COLORVERTEX,FALSE);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_SPECULARMATERIALSOURCE,D3DMCS_COLOR2);
+		const auto changed_lighting=zh::original_runtime::OriginalGpuEdge::map_applied_state(DX8_FVF_XYZNUV1);
+		assert(changed_lighting.normalize_normals && !changed_lighting.local_viewer &&
+			!changed_lighting.color_vertex && changed_lighting.specular_source==D3DMCS_COLOR2);
+		bool bad_lighting_state=false;
+		try { DX8Wrapper::Set_DX8_Render_State(D3DRS_LOCALVIEWER,2); }
+		catch (const std::runtime_error&) { bad_lighting_state=true; }
+		assert(bad_lighting_state && !zh::original_runtime::OriginalGpuEdge::map_applied_state(
+			DX8_FVF_XYZNUV1).local_viewer);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_NORMALIZENORMALS,FALSE);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_LOCALVIEWER,TRUE);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_COLORVERTEX,TRUE);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_SPECULARMATERIALSOURCE,D3DMCS_MATERIAL);
 		LightClass directional(LightClass::DIRECTIONAL);
 		directional.Set_Diffuse(Vector3(0.5f,0.25f,0.125f));
 		environment.Reset(Vector3(0,0,0),Vector3(0.1f,0.2f,0.3f));
@@ -813,6 +875,11 @@ int main(int argc, char **argv)
 		environment.Pre_Render_Update(Matrix3D(true));
 		DX8Wrapper::Set_Light_Environment(&environment);
 		auto mixed_lights=DX8Wrapper::Snapshot_Source_State();
+		const auto mapped_mixed=zh::original_runtime::OriginalGpuEdge::map_applied_state(DX8_FVF_XYZNUV1);
+		assert(mapped_mixed.light_enabled[0] && mapped_mixed.light_enabled[1] &&
+			mapped_mixed.lights[0].Type==mixed_lights.lights[0].Type &&
+			mapped_mixed.lights[1].Type==mixed_lights.lights[1].Type &&
+			mapped_mixed.lights[1].Attenuation2==mixed_lights.lights[1].Attenuation2);
 		assert(mixed_lights.light_enabled[0] && mixed_lights.light_enabled[1] &&
 			std::any_of(mixed_lights.lights.begin(),mixed_lights.lights.begin()+2,
 				[](const D3DLIGHT8 &light) { return light.Type==D3DLIGHT_POINT &&
@@ -834,6 +901,12 @@ int main(int argc, char **argv)
 		DX8Wrapper::Set_Light_Environment(nullptr);
 		assert(!DX8Wrapper::Snapshot_Source_State().light_environment_selected &&
 			DX8Wrapper::Snapshot_Source_State().light_enabled[3]);
+		assert(!zh::original_runtime::OriginalGpuEdge::map_applied_state(
+			DX8_FVF_XYZNUV1).light_environment_selected);
+		bool missing_lighting_environment=false;
+		try { (void)lighting_edge.prepare_applied_state(DX8_FVF_XYZNUV1); }
+		catch (const std::runtime_error&) { missing_lighting_environment=true; }
+		assert(missing_lighting_environment);
 		DX8Wrapper::Set_Light_Environment(&environment);
 		Vector3 invalid_ambient(NAN,0,0);
 		environment.Set_Output_Ambient(invalid_ambient);

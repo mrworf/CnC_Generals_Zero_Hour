@@ -172,11 +172,45 @@ OriginalGpuEdge::AppliedState OriginalGpuEdge::map_applied_state(unsigned source
     else throw std::runtime_error("original cull mode is unsupported by public GPU");
     result.lighting=boolean(D3DRS_LIGHTING);
     result.specular_enabled=boolean(D3DRS_SPECULARENABLE);
+    result.color_vertex=boolean(D3DRS_COLORVERTEX);
+    result.local_viewer=boolean(D3DRS_LOCALVIEWER);
+    result.normalize_normals=boolean(D3DRS_NORMALIZENORMALS);
     result.ambient_source=render(D3DRS_AMBIENTMATERIALSOURCE);
     result.diffuse_source=render(D3DRS_DIFFUSEMATERIALSOURCE);
+    result.specular_source=render(D3DRS_SPECULARMATERIALSOURCE);
     result.emissive_source=render(D3DRS_EMISSIVEMATERIALSOURCE);
-    if (result.ambient_source>2 || result.diffuse_source>2 || result.emissive_source>2)
+    if (result.ambient_source>2 || result.diffuse_source>2 ||
+        result.specular_source>2 || result.emissive_source>2)
         throw std::runtime_error("original material color selector is unsupported");
+    if (result.lighting) {
+        if (!(source_fvf&0x10U))
+            throw std::runtime_error("original lighting requires source FVF normal");
+        if (source.light_environment_selected) {
+            const unsigned ambient=render(D3DRS_AMBIENT);
+            result.global_ambient={static_cast<float>((ambient>>16)&255)/255.0f,
+                static_cast<float>((ambient>>8)&255)/255.0f,
+                static_cast<float>(ambient&255)/255.0f,1.0f};
+        }
+        result.lights=source.lights;
+        result.light_enabled=source.light_enabled;
+        result.light_environment_selected=source.light_environment_selected;
+        const auto source_matrix=[&](int key,std::array<float,16>& output) {
+            const auto found=source.transforms.find(key);
+            if (found==source.transforms.end()) return false;
+            for (unsigned row=0;row<4;++row) {
+                const auto& r=found->second[row];
+                const float components[]={r.X,r.Y,r.Z,r.W};
+                for (unsigned col=0;col<4;++col) {
+                    if (!std::isfinite(components[col]))
+                        throw std::runtime_error("original lit source transform is not finite");
+                    output[row*4+col]=components[col];
+                }
+            }
+            return true;
+        };
+        result.source_world_set=source_matrix(D3DTS_WORLD,result.source_world);
+        result.source_view_set=source_matrix(D3DTS_VIEW,result.source_view);
+    }
     const auto material=[](const D3DCOLORVALUE& value) {
         std::array<float,4> components{value.r,value.g,value.b,value.a};
         for (float component:components) if (!std::isfinite(component))
@@ -315,13 +349,17 @@ void OriginalGpuEdge::release_prepared_state() noexcept
 OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned source_fvf,
     renderer::PrimitiveTopology topology)
 {
+    const auto source_state=DX8Wrapper::Snapshot_Source_State();
+    const auto source_lighting=source_state.render.find(D3DRS_LIGHTING);
+    if (source_lighting!=source_state.render.end() && source_lighting->second==1) {
+        (void)map_applied_state(source_fvf);
+        throw std::runtime_error("original lit physical state requires category-issued light environment (M22 06)");
+    }
     release_prepared_state();
     const AppliedState mapped=map_applied_state(source_fvf);
     if (topology!=renderer::PrimitiveTopology::triangle_list &&
         topology!=renderer::PrimitiveTopology::triangle_strip)
         throw std::runtime_error("original indexed primitive topology is unsupported");
-    if (mapped.lighting)
-        throw std::runtime_error("original lit physical state requires category-issued light environment (M22 06)");
     const char* vertex_variant=nullptr;
     if (source_fvf==DX8_FVF_XYZDUV1) vertex_variant="renderer/original_applied_d1.vert";
     else if (source_fvf==DX8_FVF_XYZDUV2) vertex_variant="renderer/original_applied_d2.vert";
