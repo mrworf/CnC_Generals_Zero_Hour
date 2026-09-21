@@ -12,6 +12,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -728,6 +729,8 @@ void OriginalGpuEdge::bind_frame_targets(renderer::TextureHandle color,
     if (source_frame_active_ || !color || !depth || !width || !height)
         throw std::runtime_error("original frame target binding requires idle, complete attachments");
     bound_frame_=BoundFrame{color,depth,width,height};
+    ++frame_target_generation_;
+    source_viewport_.reset();
 }
 
 std::pair<unsigned,unsigned> OriginalGpuEdge::bound_frame_extent() const
@@ -749,11 +752,13 @@ void OriginalGpuEdge::begin_source_frame(bool clear_color,bool clear_depth,
     pass.color_load=clear_color ? renderer::AttachmentLoad::clear : renderer::AttachmentLoad::load;
     pass.depth_load=clear_depth ? renderer::AttachmentLoad::clear : renderer::AttachmentLoad::load;
     pass.clear_color={red,green,blue,alpha};
+    pass.target_generation=frame_target_generation_;
     if (clear_depth && !pass.depth_target)
         throw std::runtime_error("original depth clear requires a caller-owned depth target");
     if (auto result=device_.begin_pass(pass,"WW3D::Begin_Render source frame"); !result)
         throw std::runtime_error("original source frame begin failed: "+result.error);
     source_frame_active_=true;
+    source_viewport_.reset();
     if (clear_color || clear_depth) {
         renderer::ViewportDesc viewport{0,0,static_cast<float>(width),
             static_cast<float>(height),0,1};
@@ -761,6 +766,7 @@ void OriginalGpuEdge::begin_source_frame(bool clear_color,bool clear_depth,
             abort_source_frame();
             throw std::runtime_error("original full-target frame viewport failed: "+result.error);
         }
+        source_viewport_=viewport;
     }
 }
 
@@ -770,6 +776,7 @@ void OriginalGpuEdge::end_source_frame(bool present)
     if (auto result=device_.end_pass(); !result)
         throw std::runtime_error("original source frame end failed: "+result.error);
     source_frame_active_=false;
+    source_viewport_.reset();
     if (present) {
         if (auto result=device_.present(bound_frame_->color); !result)
             throw std::runtime_error("original source frame presentation failed: "+result.error);
@@ -780,6 +787,7 @@ void OriginalGpuEdge::abort_source_frame() noexcept
 {
     if (!source_frame_active_) return;
     source_frame_active_=false;
+    source_viewport_.reset();
     (void)device_.end_pass();
 }
 
@@ -792,7 +800,38 @@ void OriginalGpuEdge::set_source_viewport(float x,float y,float width,float heig
     renderer::ViewportDesc viewport{x,y,width,height,min_depth,max_depth};
     if (auto result=device_.set_viewport(viewport); !result)
         throw std::runtime_error("original camera viewport GPU translation failed: "+result.error);
+    source_viewport_=viewport;
     record_source_state("CameraClass::Apply viewport");
+}
+
+void OriginalGpuEdge::clear_source_viewport(bool color,bool depth,bool stencil,
+    std::array<float,4> rgba,float z,unsigned stencil_value)
+{
+    if (!source_frame_active_ || !source_viewport_ || !bound_frame_)
+        throw std::runtime_error("original camera clear requires an active source frame and viewport");
+    const auto& vp=*source_viewport_;
+    const auto integral=[](float value) { return std::isfinite(value) && std::trunc(value)==value; };
+    if (!integral(vp.x) || !integral(vp.y) || !integral(vp.width) || !integral(vp.height) ||
+        vp.x<0 || vp.y<0 || static_cast<double>(vp.x)>std::numeric_limits<renderer::Int32>::max() ||
+        static_cast<double>(vp.y)>std::numeric_limits<renderer::Int32>::max() ||
+        static_cast<double>(vp.width)>std::numeric_limits<renderer::UInt32>::max() ||
+        static_cast<double>(vp.height)>std::numeric_limits<renderer::UInt32>::max())
+        throw std::runtime_error("original camera clear requires an integral D3D viewport rectangle");
+    if (stencil_value>255U)
+        throw std::runtime_error("original camera clear stencil exceeds 8-bit attachment");
+    renderer::ViewportClearDesc clear;
+    clear.color_target=bound_frame_->color;
+    clear.depth_target=bound_frame_->depth;
+    clear.target_generation=frame_target_generation_;
+    clear.x=static_cast<renderer::Int32>(vp.x);
+    clear.y=static_cast<renderer::Int32>(vp.y);
+    clear.width=static_cast<renderer::UInt32>(vp.width);
+    clear.height=static_cast<renderer::UInt32>(vp.height);
+    clear.color=color; clear.depth=depth; clear.stencil=stencil;
+    clear.color_value=rgba; clear.depth_value=z;
+    clear.stencil_value=static_cast<renderer::UInt8>(stencil_value);
+    if (auto result=device_.clear_viewport(clear); !result)
+        throw std::runtime_error("original camera viewport clear failed: "+result.error);
 }
 
 [[noreturn]] void OriginalGpuEdge::texture_creation_unavailable(WW3DFormat format,

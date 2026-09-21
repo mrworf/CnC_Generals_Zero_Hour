@@ -151,6 +151,10 @@ public:
     void abort_source_frame() noexcept;
     std::pair<unsigned,unsigned> active_render_target_extent() const noexcept;
     void set_source_viewport(float x,float y,float width,float height,float min_depth,float max_depth);
+    // Records the original DX8Wrapper::Clear after CameraClass::Apply. The
+    // caller still owns whether/when the source invokes a scene clear.
+    void clear_source_viewport(bool color,bool depth,bool stencil,
+        std::array<float,4> rgba,float z,unsigned stencil_value);
     [[noreturn]] void texture_creation_unavailable(WW3DFormat format, unsigned width,
         unsigned height, unsigned mips, unsigned reduction);
     static OriginalGpuEdge& required();
@@ -180,6 +184,8 @@ private:
     struct BoundFrame { renderer::TextureHandle color,depth; unsigned width=0,height=0; };
     std::optional<BoundFrame> bound_frame_;
     bool source_frame_active_=false;
+    std::optional<renderer::ViewportDesc> source_viewport_;
+    std::uint64_t frame_target_generation_=0;
 };
 
 } // namespace zh::original_runtime

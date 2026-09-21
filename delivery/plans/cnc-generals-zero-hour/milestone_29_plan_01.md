@@ -43,8 +43,8 @@ bgfx device implementation/pixels (M30), original retail scene completion (M22),
 
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
-| 01 | [ordered clear](milestone_29_plan_01_slice_01.md) | Original-shaped full pass, draw, camera clear, draw stream with fail-closed recorder validation | none | completed | see slice commit in Git history | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_29_slice_01.md) |
-| 02 | [producer and inventory](milestone_29_plan_01_slice_02.md) | Affected source categories and CPU producers retain exact new command semantics | 01 | pending | | |
+| 01 | [ordered clear](milestone_29_plan_01_slice_01.md) | Original-shaped full pass, draw, camera clear, draw stream with fail-closed recorder validation | none | completed | `d79aed7` | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_29_slice_01.md) |
+| 02 | [producer and inventory](milestone_29_plan_01_slice_02.md) | Affected source categories and CPU producers retain exact new command semantics | 01 | completed | see slice commit in Git history | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_29_slice_02.md) |
 | 03 | [shader closure](milestone_29_plan_01_slice_03.md) | Pinned licensed offline bgfx shader route and complete family/state verification | 02 | pending | | |
 
 ## Cross-slice concerns

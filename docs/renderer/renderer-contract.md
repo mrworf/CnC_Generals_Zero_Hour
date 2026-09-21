@@ -10,7 +10,7 @@ Coordinates are left-handed, depth is 0 through 1, clockwise vertices are front-
 
 The checked shader registry contains UI, terrain, water, points/particles, and WWShade families. Each has explicit vertex and fragment GLSL modules compiled offline to SPIR-V. The points family writes point size; water covers projected render-target sampling; WWShade demonstrates multipass texture/projected/fog state within the four-uniform limit.
 
-SDL_GPU is the provisional implementation backend. M2 does not claim device support, synchronization correctness, pixels, or performance. M14 owns those claims on the local Vulkan-capable x86-64 system. A demonstrated abstraction gap follows the fallback decision in the authoritative port plan; no private Vulkan escape hatch is permitted.
+M2 provisionally selected SDL_GPU as the implementation backend and did not claim device support, synchronization correctness, pixels, or performance. Historical M14 acceptance covered that backend on the local Vulkan-capable x86-64 system. The later demonstrated viewport-clear gap selected the documented bgfx branch; M30 owns new physical acceptance. No private Vulkan escape hatch is permitted.
 
 The [2026-09-21 renderer backend decision](../zero-hour-renderer-backend-migration.md) selects bgfx for the device edge after M22 found and reproduced the camera-viewport clear gap. This does not retroactively reaccept the M2/M7–M10/M14 SDL_GPU-specific mappings or pixels. Their affected evidence is revalidated through the migration gate; this contract's engine-facing opacity and source-behavior invariants remain in force.
 
@@ -57,3 +57,11 @@ fails. Accepted pass, draw and viewport-clear commands consume a bounded
 ordered-view budget, reset only by successful presentation. SDL_GPU returns an
 explicit unsupported error for the new operation; physical bgfx submission is
 M30-owned, not implied by the recording contract.
+
+The source-facing `OriginalGpuEdge` retains the current successful camera
+viewport during a source frame, converts a selected original clear to the
+ordered descriptor with current frame-target generation, and propagates
+unsupported-device/invalid-state errors. This translation is exercised with
+owned CPU fixtures; M22 still owns connecting the complete original
+`WW3D::Render` scene producer and retail pixels. The [migration ledger](bgfx-migration-ledger.md)
+records affected source-category and evidence ownership.

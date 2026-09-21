@@ -446,6 +446,62 @@ void original_dynamic_access_owner()
         VertexBufferClass::Get_Total_Buffer_Count()==0 &&
         IndexBufferClass::Get_Total_Buffer_Count()==0);
 }
+
+void source_camera_clear_edge()
+{
+    RecordingGpuDevice device;
+    TextureDesc texture;
+    texture.width=48; texture.height=32; texture.render_target=true; texture.sampled=false;
+    const auto color=device.create_texture(texture,"source color");
+    texture.format=TextureFormat::depth24_stencil8;
+    const auto depth=device.create_texture(texture,"source depth-stencil");
+    const auto vertex=device.create_shader({ShaderStage::vertex,"source.vert",0,0},"source vertex");
+    const auto fragment=device.create_shader({ShaderStage::fragment,"source.frag",0,0},"source fragment");
+    PipelineDesc pipeline_desc; pipeline_desc.vertex_shader=vertex; pipeline_desc.fragment_shader=fragment;
+    const auto pipeline=device.create_pipeline(PipelineKey(pipeline_desc),"source pipeline");
+    const auto vertices=device.create_buffer({36,BufferUsage::vertex,true},"source vertices");
+    DrawDesc draw; draw.pipeline=pipeline; draw.vertex_buffer=vertices; draw.vertex_or_index_count=3;
+    {
+        zh::original_runtime::OriginalGpuEdge edge(device);
+        bool inactive=false;
+        try { edge.clear_source_viewport(true,true,true,{0,0,0,1},1,0); }
+        catch (const std::runtime_error&) { inactive=true; }
+        check(inactive);
+        edge.bind_frame_targets(color,depth,48,32);
+        edge.begin_source_frame(true,true,0.1F,0.2F,0.3F,1);
+        check(device.draw(draw));
+        edge.set_source_viewport(8,4,24,16,0,1);
+        const auto before=device.snapshot();
+        bool invalid=false;
+        try { edge.clear_source_viewport(true,true,true,{0,0,0,1},1,256); }
+        catch (const std::runtime_error&) { invalid=true; }
+        check(invalid && device.snapshot()==before);
+        edge.clear_source_viewport(true,true,true,{0.25F,0.5F,0.75F,1},0.5F,9);
+        check(device.draw(draw));
+        edge.end_source_frame(false);
+        const auto stream=device.snapshot();
+        const auto first=stream.find("draw pipeline=");
+        const auto clear=stream.find("clear_viewport rect=8,4,24,16");
+        const auto second=stream.find("draw pipeline=",first+1);
+        check(first!=std::string::npos && clear>first && second>clear);
+        check(stream.find("flags=CDS color=0.250000,0.500000,0.750000,1.000000 depth=0.500000 stencil=9")!=
+            std::string::npos);
+        bool ended=false;
+        try { edge.clear_source_viewport(true,false,false,{0,0,0,1},1,0); }
+        catch (const std::runtime_error&) { ended=true; }
+        check(ended);
+        edge.bind_frame_targets(color,depth,48,32);
+        edge.begin_source_frame(false,false,0,0,0,1);
+        bool no_viewport=false;
+        try { edge.clear_source_viewport(true,false,false,{0,0,0,1},1,0); }
+        catch (const std::runtime_error&) { no_viewport=true; }
+        check(no_viewport);
+        edge.abort_source_frame();
+    }
+    device.destroy(vertices); device.destroy(pipeline); device.destroy(fragment); device.destroy(vertex);
+    device.destroy(depth); device.destroy(color);
+    check(device.resource_counts().total()==0);
+}
 } // namespace
 
 int main()
@@ -455,4 +511,5 @@ int main()
     canonical_fvf_layouts();
     original_wrapper_indexed_methods();
     original_dynamic_access_owner();
+    source_camera_clear_edge();
 }

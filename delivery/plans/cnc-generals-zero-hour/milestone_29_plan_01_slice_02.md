@@ -33,3 +33,7 @@ Source edge keeps the current active frame/viewport and target generation, reset
 ## Acceptance and commit
 
 Meets M29 M2 and M7–M10 affected-category preservation with source-to-command traceability. One reviewable commit includes this plan, code/tests/docs and focused evidence.
+
+## Delivered evidence
+
+[Focused source and inventory evidence](../../evidence/cnc-generals-zero-hour/milestone_29_slice_02.md). Commit identity is the commit containing this slice file; the transaction handoff records its exact SHA without a self-referential Git field.
