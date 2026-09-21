@@ -1,5 +1,7 @@
 # M22 plan 01 slice 06A: original rigid/category interleaving
 
+This aggregate acceptance remains intact but is now delivered as [06A1](milestone_22_plan_01_slice_06a1.md) → [06A2](milestone_22_plan_01_slice_06a2.md) → [06A3](milestone_22_plan_01_slice_06a3.md). Only completion of 06A3 satisfies the full original category and lit draw gate before 06B.
+
 ## Dependency and behavior
 
 After accepted 05B2B2B3B2B, take the same original `DX8RigidFVFCategoryContainer::Render`, `DX8TextureCategoryClass::Render` and `DX8PolygonRendererClass::Render` source path from owned W3D mesh category insertion through indexed draw. Preserve original pass/category/task traversal, texture/material/shader order, per-mesh original `LightEnvironmentClass`, camera-facing and SKIN identity branch selection, scale/normalization, alpha/additive/material/UV override and sorting branch decisions in authored order. Translate only at original `DX8Wrapper` buffer/draw and physical device edges; reuse a shared canonical original method body under mutually exclusive CPU/device configuration, not a second renderer or precomputed adapter graph. No bypass of source `DX8TextureCategoryClass::Render` or test-created proxy decisions.
