@@ -105,13 +105,14 @@ std::string quoted(std::string_view text)
 template <typename Enum>
 std::string enum_value(Enum value) { return std::to_string(static_cast<unsigned>(value)); }
 
-bool is_depth(TextureFormat format) { return format==TextureFormat::depth24_stencil8; }
+bool is_depth(TextureFormat format)
+{ return format==TextureFormat::depth16 || format==TextureFormat::depth24_stencil8 || format==TextureFormat::depth32; }
 
 } // namespace
 
 class RecordingGpuDevice::Impl {
 public:
-    explicit Impl(std::size_t capacity) : pipeline_capacity(capacity) {}
+    explicit Impl(std::size_t capacity, std::size_t views) : pipeline_capacity(capacity), view_capacity(views) {}
 
     ValidationResult fail(std::string operation, std::string reason, std::string_view label = {})
     {
@@ -143,6 +144,8 @@ public:
     }
 
     std::size_t pipeline_capacity;
+    std::size_t view_capacity;
+    std::size_t view_count = 0;
     std::array<bool,8> supported_texture_formats{true,true,true,true,true,true,true,true};
     bool reject_next_texture_create=false;
     bool reject_next_texture_upload=false;
@@ -158,6 +161,7 @@ public:
     UInt32 active_color_count = 0;
     TextureHandle active_depth;
     UInt32 active_width=0,active_height=0;
+    UInt64 active_target_generation=0;
     std::string last_error;
     std::vector<std::string> commands;
     std::vector<UInt8> last_draw_indices;
@@ -169,7 +173,8 @@ public:
     std::size_t next_buffer = 0, next_texture = 0, next_sampler = 0, next_shader = 0, next_pipeline = 0;
 };
 
-RecordingGpuDevice::RecordingGpuDevice(std::size_t pipeline_capacity) : impl_(std::make_unique<Impl>(pipeline_capacity)) {}
+RecordingGpuDevice::RecordingGpuDevice(std::size_t pipeline_capacity, std::size_t view_capacity)
+    : impl_(std::make_unique<Impl>(pipeline_capacity, view_capacity)) {}
 RecordingGpuDevice::~RecordingGpuDevice() = default;
 RecordingGpuDevice::RecordingGpuDevice(RecordingGpuDevice&&) noexcept = default;
 RecordingGpuDevice& RecordingGpuDevice::operator=(RecordingGpuDevice&&) noexcept = default;
@@ -380,6 +385,8 @@ ValidationResult RecordingGpuDevice::upload_texture(const TextureUploadDesc& des
 ValidationResult RecordingGpuDevice::begin_pass(const RenderPassDesc& desc, std::string_view label)
 {
     if (impl_->in_pass) return impl_->fail("begin_pass", "render pass is already active", label);
+    if (impl_->view_count >= impl_->view_capacity)
+        return impl_->fail("begin_pass", "ordered view budget exhausted", label);
     if (auto result = validate(desc); !result) return impl_->fail("begin_pass", result.error, label);
     for (UInt32 index = 0; index < desc.color_target_count; ++index) {
         const auto* target = lookup(impl_->textures, desc.color_targets[index]);
@@ -404,6 +411,8 @@ ValidationResult RecordingGpuDevice::begin_pass(const RenderPassDesc& desc, std:
     impl_->active_depth = desc.depth_target;
     impl_->active_width=desc.width;
     impl_->active_height=desc.height;
+    impl_->active_target_generation=desc.target_generation;
+    ++impl_->view_count;
     std::string command = "begin_pass label=" + quoted(label) + " colors=";
     for (UInt32 index = 0; index < desc.color_target_count; ++index) {
         if (index != 0) command += ",";
@@ -436,9 +445,48 @@ ValidationResult RecordingGpuDevice::set_viewport(const ViewportDesc& desc)
     return {};
 }
 
+ValidationResult RecordingGpuDevice::clear_viewport(const ViewportClearDesc& desc)
+{
+    if (!impl_->in_pass) return impl_->fail("clear_viewport", "no render pass is active");
+    if (impl_->view_count >= impl_->view_capacity)
+        return impl_->fail("clear_viewport", "ordered view budget exhausted", impl_->active_pass_label);
+    if (auto result=validate(desc,impl_->active_width,impl_->active_height); !result)
+        return impl_->fail("clear_viewport",result.error,impl_->active_pass_label);
+    if (desc.target_generation != impl_->active_target_generation)
+        return impl_->fail("clear_viewport","target generation does not match active pass",impl_->active_pass_label);
+    if (desc.color && (std::find(impl_->active_colors.begin(),
+            impl_->active_colors.begin()+impl_->active_color_count,desc.color_target)==
+            impl_->active_colors.begin()+impl_->active_color_count ||
+            !lookup(impl_->textures,desc.color_target)))
+        return impl_->fail("clear_viewport","color target is stale or not attached",impl_->active_pass_label);
+    if ((desc.depth || desc.stencil) && (desc.depth_target!=impl_->active_depth ||
+            !lookup(impl_->textures,desc.depth_target)))
+        return impl_->fail("clear_viewport","depth target is stale or not attached",impl_->active_pass_label);
+    if (desc.stencil && lookup(impl_->textures,desc.depth_target)->value.desc.format!=TextureFormat::depth24_stencil8)
+        return impl_->fail("clear_viewport","stencil clear requires a stencil attachment",impl_->active_pass_label);
+    const auto left=std::max<std::int64_t>(0,desc.x);
+    const auto top=std::max<std::int64_t>(0,desc.y);
+    const auto right=std::min<std::int64_t>(impl_->active_width,static_cast<std::int64_t>(desc.x)+desc.width);
+    const auto bottom=std::min<std::int64_t>(impl_->active_height,static_cast<std::int64_t>(desc.y)+desc.height);
+    std::string command="clear_viewport rect="+std::to_string(left)+","+std::to_string(top)+","+
+        std::to_string(right-left)+","+std::to_string(bottom-top)+
+        " generation="+std::to_string(desc.target_generation)+
+        " flags="+(desc.color ? "C" : "-")+(desc.depth ? "D" : "-")+(desc.stencil ? "S" : "-");
+    if (desc.color) command+=" color="+std::to_string(desc.color_value[0])+","+
+        std::to_string(desc.color_value[1])+","+std::to_string(desc.color_value[2])+","+
+        std::to_string(desc.color_value[3]);
+    if (desc.depth) command+=" depth="+std::to_string(desc.depth_value);
+    if (desc.stencil) command+=" stencil="+std::to_string(desc.stencil_value);
+    impl_->commands.push_back(std::move(command));
+    ++impl_->view_count;
+    return {};
+}
+
 ValidationResult RecordingGpuDevice::draw(const DrawDesc& desc)
 {
     if (!impl_->in_pass) return impl_->fail("draw", "draw requires an active render pass");
+    if (impl_->view_count >= impl_->view_capacity)
+        return impl_->fail("draw", "ordered view budget exhausted", impl_->active_pass_label);
     const auto* pipeline = lookup(impl_->pipelines, desc.pipeline);
     if (!pipeline) return impl_->fail("draw", "pipeline handle is stale or destroyed", impl_->active_pass_label);
     if (auto result = validate(desc, pipeline->value.key.descriptor()); !result) return impl_->fail("draw", result.error, impl_->active_pass_label);
@@ -519,6 +567,7 @@ ValidationResult RecordingGpuDevice::draw(const DrawDesc& desc)
     append_bindings(desc.vertex_bindings, "vertex");
     append_bindings(desc.fragment_bindings, "fragment");
     impl_->commands.push_back(std::move(command));
+    ++impl_->view_count;
     return {};
 }
 
@@ -534,6 +583,7 @@ ValidationResult RecordingGpuDevice::end_pass()
     impl_->active_color_count = 0;
     impl_->active_depth = {};
     impl_->active_width=impl_->active_height=0;
+    impl_->active_target_generation=0;
     return {};
 }
 
@@ -545,6 +595,7 @@ ValidationResult RecordingGpuDevice::present(TextureHandle source)
         return impl_->fail("present", "source texture is stale or not a color render target");
     if (!texture->value.initialized) return impl_->fail("present", "source color target is not initialized");
     impl_->commands.push_back("present " + impl_->name(impl_->textures, source, 'T') + " label=" + quoted(texture->label));
+    impl_->view_count=0;
     return {};
 }
 

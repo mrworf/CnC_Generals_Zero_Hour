@@ -43,3 +43,17 @@ the original scene's camera-viewport clear or while a pass is active. B3
 will connect original `WW3D::Begin_Render`/`End_Render`; C3C owns the
 source scene-scoped clear. Physical presentation requires a completed
 color target, a claimed window for SDL_GPU, and no active pass.
+
+M29 adds `ViewportClearDesc` as a separate, ordered device operation while a
+pass is active. It carries the live color/depth handles, owner target
+generation, signed origin and unsigned extent, and independent color, depth
+and stencil flags/values. The recorder clips a partially overlapping rectangle
+to the target, rejects a disjoint/empty rectangle and stale attachment or
+generation, and preserves draw/clear/draw order without converting a clear to
+a proxy draw. Selected colors and depth must be finite in `[0,1]`; stencil
+requires a D24S8 attachment. A flagless clear is invalid. Full-target pass
+clear/load remains the default and a LOAD of an uninitialized attachment still
+fails. Accepted pass, draw and viewport-clear commands consume a bounded
+ordered-view budget, reset only by successful presentation. SDL_GPU returns an
+explicit unsupported error for the new operation; physical bgfx submission is
+M30-owned, not implied by the recording contract.

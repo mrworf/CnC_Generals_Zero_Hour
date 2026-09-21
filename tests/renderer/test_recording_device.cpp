@@ -303,6 +303,87 @@ void test_original_frame_attachment_semantics()
     loaded.color_targets[0]=replacement; loaded.depth_load=AttachmentLoad::load;
     check(!scene.device.begin_pass(loaded,"stale generation"),"new target loaded old generation's contents");
 }
+
+void test_ordered_viewport_clear()
+{
+    Scene scene;
+    auto pass=scene.pass();
+    pass.target_generation=42;
+    ViewportClearDesc clear;
+    clear.color_target=scene.color; clear.depth_target=scene.depth;
+    clear.target_generation=42;
+    clear.x=-2; clear.y=2; clear.width=10; clear.height=12;
+    clear.color=true; clear.depth=true; clear.stencil=true;
+    clear.color_value={0.1F,0.2F,0.3F,0.4F}; clear.depth_value=0.5F; clear.stencil_value=7;
+    check(!scene.device.clear_viewport(clear),"clear outside pass accepted");
+    check(scene.device.begin_pass(pass,"original full target"),"full target clear rejected");
+    auto uniform=scene.device.create_buffer({64,BufferUsage::uniform,true},"frame uniform");
+    DrawDesc draw;
+    draw.pipeline=scene.pipeline; draw.vertex_buffer=scene.vertices; draw.vertex_or_index_count=3;
+    draw.vertex_bindings.uniforms[0]={uniform,0,64}; draw.vertex_bindings.uniform_count=1;
+    check(scene.device.draw(draw),"first draw rejected");
+    const auto before=scene.device.snapshot();
+    auto bad=clear; bad.target_generation=41;
+    check(!scene.device.clear_viewport(bad),"stale target generation accepted");
+    bad=clear; bad.color_target=TextureHandle(12345);
+    check(!scene.device.clear_viewport(bad),"detached color target accepted");
+    bad=clear; bad.width=0;
+    check(!scene.device.clear_viewport(bad),"empty clear accepted");
+    bad=clear; bad.color_value[0]=std::numeric_limits<float>::quiet_NaN();
+    check(!scene.device.clear_viewport(bad),"nonfinite selected color accepted");
+    bad=clear; bad.depth_value=1.1F;
+    check(!scene.device.clear_viewport(bad),"out-of-range selected depth accepted");
+    bad=clear; bad.color=false; bad.depth=false; bad.stencil=false;
+    check(!scene.device.clear_viewport(bad),"flagless clear accepted");
+    check(scene.device.snapshot().find("clear_viewport rect=")==std::string::npos,
+        "invalid clear reached ordered command stream");
+    check(scene.device.clear_viewport(clear),"clipped selected clear rejected");
+    auto color_only=clear;
+    color_only.x=8; color_only.y=0; color_only.width=8; color_only.height=8;
+    color_only.depth=false; color_only.stencil=false;
+    color_only.depth_value=std::numeric_limits<float>::quiet_NaN();
+    check(scene.device.clear_viewport(color_only),"unselected depth value affected color-only clear");
+    check(scene.device.draw(draw),"second draw rejected");
+    check(scene.device.end_pass(),"end after clear rejected");
+    const auto snapshot=scene.device.snapshot();
+    const auto first=snapshot.find("draw pipeline=");
+    const auto camera=snapshot.find("clear_viewport rect=0,2,8,12 generation=42 flags=CDS");
+    const auto second=snapshot.find("draw pipeline=",first+1);
+    check(first!=std::string::npos && camera>first && second>camera,
+        "original draw/clear/draw order was not preserved");
+    check(snapshot.find("color=0.100000,0.200000,0.300000,0.400000 depth=0.500000 stencil=7")!=std::string::npos,
+        "independent attachment values missing from snapshot");
+    check(snapshot.find("rect=8,0,8,8 generation=42 flags=C--")!=std::string::npos,
+        "color-only clear flags or rectangle missing");
+    check(before.find("clear_viewport rect=")==std::string::npos,"pre-clear snapshot was mutated");
+    check(!scene.device.clear_viewport(clear),"clear after pass accepted");
+    auto loaded=pass; loaded.color_load=AttachmentLoad::load; loaded.depth_load=AttachmentLoad::load;
+    check(scene.device.begin_pass(loaded,"preserve unselected pixels"),"clear lost target initialization");
+    check(scene.device.end_pass(),"loaded pass failed");
+}
+
+void test_clear_format_and_view_budget()
+{
+    RecordingGpuDevice device(256,2);
+    auto color=device.create_texture({8,8,1,1,TextureDimension::texture_2d,TextureFormat::rgba8,true,false},"color");
+    auto depth=device.create_texture({8,8,1,1,TextureDimension::texture_2d,TextureFormat::depth16,true,false},"depth only");
+    RenderPassDesc pass;
+    pass.color_targets[0]=color; pass.color_target_count=1; pass.depth_target=depth;
+    pass.width=8; pass.height=8;
+    check(device.begin_pass(pass,"depth-only pass"),"depth-only pass rejected");
+    ViewportClearDesc clear;
+    clear.color_target=color; clear.depth_target=depth; clear.width=8; clear.height=8;
+    clear.stencil=true;
+    check(!device.clear_viewport(clear),"stencil clear on depth-only target accepted");
+    clear.stencil=false; clear.depth=true;
+    check(device.clear_viewport(clear),"depth-only clear rejected");
+    check(!device.clear_viewport(clear),"exhausted view budget accepted");
+    check(device.end_pass(),"depth-only pass end failed");
+    check(!device.begin_pass(pass,"before present"),"exhausted pass view budget accepted");
+    check(device.present(color),"completed color target did not present");
+    check(device.begin_pass(pass,"new frame"),"view budget did not reset on present");
+    check(device.end_pass(),"new frame end failed");
+}
 } // namespace
 
 int main()
@@ -318,6 +399,8 @@ int main()
         test_original_mip_upload_contract();
         test_original_sampler_lod_contract();
         test_original_frame_attachment_semantics();
+        test_ordered_viewport_clear();
+        test_clear_format_and_view_budget();
         std::cout << "recording device tests: ok\n";
         return 0;
     } catch (const std::exception& error) {

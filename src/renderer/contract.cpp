@@ -235,6 +235,7 @@ ValidationResult validate(const RenderPassDesc& desc)
     for (UInt32 index = 0; index < desc.color_target_count; ++index)
         if (!desc.color_targets[index]) return failure("render pass color target is invalid");
     if (!desc.depth_target) return failure("render pass requires a depth target");
+    if (!desc.target_generation) return failure("render pass target generation must be nonzero");
     if ((desc.color_load != AttachmentLoad::clear && desc.color_load != AttachmentLoad::load) ||
         (desc.depth_load != AttachmentLoad::clear && desc.depth_load != AttachmentLoad::load))
         return failure("unsupported attachment load operation");
@@ -243,6 +244,27 @@ ValidationResult validate(const RenderPassDesc& desc)
             return failure("render pass clear color must be finite and within 0..1");
     if (!std::isfinite(desc.clear_depth) || desc.clear_depth < 0.0F || desc.clear_depth > 1.0F)
         return failure("render pass clear depth must be finite and within 0..1");
+    return {};
+}
+
+ValidationResult validate(const ViewportClearDesc& desc, UInt32 target_width, UInt32 target_height)
+{
+    if (!desc.target_generation) return failure("viewport clear target generation must be nonzero");
+    if (!desc.color && !desc.depth && !desc.stencil)
+        return failure("viewport clear requires at least one attachment flag");
+    if ((desc.color && !desc.color_target) || ((desc.depth || desc.stencil) && !desc.depth_target))
+        return failure("viewport clear requires selected attachment handles");
+    if (!desc.width || !desc.height) return failure("viewport clear rectangle must be nonempty");
+    const auto right = static_cast<std::int64_t>(desc.x) + desc.width;
+    const auto bottom = static_cast<std::int64_t>(desc.y) + desc.height;
+    if (right <= 0 || bottom <= 0 || desc.x >= static_cast<std::int64_t>(target_width) ||
+        desc.y >= static_cast<std::int64_t>(target_height))
+        return failure("viewport clear rectangle does not intersect target");
+    if (desc.color) for (float value : desc.color_value)
+        if (!std::isfinite(value) || value < 0.0F || value > 1.0F)
+            return failure("viewport clear color must be finite and within 0..1");
+    if (desc.depth && (!std::isfinite(desc.depth_value) || desc.depth_value < 0.0F || desc.depth_value > 1.0F))
+        return failure("viewport clear depth must be finite and within 0..1");
     return {};
 }
 

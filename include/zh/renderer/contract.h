@@ -66,6 +66,7 @@ struct RendererLimits {
     static constexpr UInt32 color_targets = 4;
     static constexpr UInt32 vertex_attributes = 16;
     static constexpr UInt64 maximum_upload_bytes = 64ULL * 1024ULL * 1024ULL;
+    static constexpr UInt32 ordered_views = 256;
 };
 
 struct BufferDesc {
@@ -207,6 +208,25 @@ struct RenderPassDesc {
     AttachmentLoad depth_load = AttachmentLoad::clear;
     std::array<float,4> clear_color{0.02F,0.02F,0.04F,1.0F};
     float clear_depth = 1.0F;
+    // Changes when the owning render target is recreated, independently of
+    // the opaque texture-handle generation.
+    UInt64 target_generation = 1;
+};
+
+struct ViewportClearDesc {
+    TextureHandle color_target;
+    TextureHandle depth_target;
+    UInt64 target_generation = 1;
+    Int32 x = 0;
+    Int32 y = 0;
+    UInt32 width = 0;
+    UInt32 height = 0;
+    bool color = false;
+    bool depth = false;
+    bool stencil = false;
+    std::array<float,4> color_value{0,0,0,1};
+    float depth_value = 1.0F;
+    UInt8 stencil_value = 0;
 };
 
 struct ViewportDesc {
@@ -255,6 +275,7 @@ ValidationResult validate(const SamplerDesc& desc);
 ValidationResult validate(const ShaderDesc& desc);
 ValidationResult validate(const PipelineDesc& desc);
 ValidationResult validate(const RenderPassDesc& desc);
+ValidationResult validate(const ViewportClearDesc& desc, UInt32 target_width, UInt32 target_height);
 ValidationResult validate(const ViewportDesc& desc,UInt32 target_width,UInt32 target_height);
 ValidationResult validate(const UploadDesc& desc);
 ValidationResult validate(const DrawDesc& desc, const PipelineDesc& pipeline);
@@ -321,6 +342,9 @@ public:
     virtual std::pair<UInt32,UInt32> active_pass_extent() const noexcept { return {0,0}; }
     virtual ValidationResult set_viewport(const ViewportDesc&) {
         return {false,"physical viewport translation is unavailable"};
+    }
+    virtual ValidationResult clear_viewport(const ViewportClearDesc&) {
+        return {false,"ordered viewport clear is unavailable on this device"};
     }
     virtual ValidationResult draw(const DrawDesc& desc) = 0;
     virtual ValidationResult end_pass() = 0;

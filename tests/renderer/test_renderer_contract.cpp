@@ -57,6 +57,18 @@ void test_descriptors_and_limits()
     check(!validate(viewport,16,16),"inverted original depth range accepted");
     viewport.min_depth=0.1F; viewport.x=std::nanf("");
     check(!validate(viewport,16,16),"nonfinite original viewport accepted");
+    ViewportClearDesc clear;
+    clear.color_target=TextureHandle(1); clear.depth_target=TextureHandle(2);
+    clear.x=-4; clear.y=2; clear.width=8; clear.height=10; clear.color=true;
+    check(validate(clear,16,16),"clipped viewport clear rejected");
+    clear.x=16;
+    check(!validate(clear,16,16),"disjoint viewport clear accepted");
+    clear.x=-4; clear.width=0;
+    check(!validate(clear,16,16),"empty viewport clear accepted");
+    clear.width=8; clear.color=false;
+    check(!validate(clear,16,16),"flagless viewport clear accepted");
+    clear.depth=true; clear.depth_value=std::nanf("");
+    check(!validate(clear,16,16),"nonfinite depth clear accepted");
 }
 
 void test_pipeline_key()

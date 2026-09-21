@@ -27,7 +27,8 @@ struct ResourceCounts {
 
 class RecordingGpuDevice final : public GpuDevice {
 public:
-    explicit RecordingGpuDevice(std::size_t pipeline_capacity = 256);
+    explicit RecordingGpuDevice(std::size_t pipeline_capacity = 256,
+        std::size_t view_capacity = RendererLimits::ordered_views);
     ~RecordingGpuDevice() override;
     RecordingGpuDevice(RecordingGpuDevice&&) noexcept;
     RecordingGpuDevice& operator=(RecordingGpuDevice&&) noexcept;
@@ -57,6 +58,7 @@ public:
     ValidationResult begin_pass(const RenderPassDesc& desc, std::string_view label) override;
     std::pair<UInt32,UInt32> active_pass_extent() const noexcept override;
     ValidationResult set_viewport(const ViewportDesc& desc) override;
+    ValidationResult clear_viewport(const ViewportClearDesc& desc) override;
     ValidationResult draw(const DrawDesc& desc) override;
     ValidationResult end_pass() override;
     ValidationResult present(TextureHandle source) override;
