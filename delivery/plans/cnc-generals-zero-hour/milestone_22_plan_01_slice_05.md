@@ -2,7 +2,7 @@
 
 ## Outcome and dependencies
 
-Requires slice 04. Original WW3D/WWShade pass, shader, texture, geometry and
+Requires slice 04C. Original WW3D/WWShade pass, shader, texture, geometry and
 state outputs cross the narrow physical edge into public `renderer::GpuDevice`.
 The translator owns resource handles and uploads, not authoritative mesh,
 scene, pass, shader/material, or draw-order decisions. A recording device

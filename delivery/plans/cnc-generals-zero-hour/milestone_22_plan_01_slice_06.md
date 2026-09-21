@@ -2,7 +2,7 @@
 
 ## Outcome and dependencies
 
-Requires slices 04–05. Original `W3DDisplay::init` runs in authored order:
+Requires slices 04C–05. Original `W3DDisplay::init` runs in authored order:
 physical 2D status-circle, scene/asset creation, shroud, terrain, tracks
 and shadow owners. Linux display/view traverses original
 `GameClient`/`RTS3DScene` with a recording device; full-behavior original
