@@ -11,6 +11,8 @@
 #include "vertmaterial.h"
 #include "mapper.h"
 #include "camera.h"
+#include "light.h"
+#include "lightenvironment.h"
 #include "rinfo.h"
 #include "dx8fvf.h"
 #include "dx8vertexbuffer.h"
@@ -487,6 +489,21 @@ int main(int argc, char **argv)
 					facing_commands.find("draw pipeline=")!=std::string::npos);
 				retry_mesh->Peek_Model()->Set_Flag(flag,false);
 			}
+			LightEnvironmentClass selected_environment;
+			selected_environment.Reset(Vector3(0,0,-10),Vector3(0.12f,0.24f,0.36f));
+			selected_environment.Pre_Render_Update(Matrix3D(true));
+			render_info.light_environment=&selected_environment;
+			retry_mesh->Render(render_info);
+			const auto before_source_lights=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original category-selected source light environment"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto light_commands=recorder.snapshot().substr(before_source_lights);
+			const auto light_selection=light_commands.find("DX8Wrapper::Set_Light_Environment");
+			const auto light_world=light_commands.find("DX8Wrapper::Set_Transform=256",light_selection);
+			assert(light_selection!=std::string::npos && light_world!=std::string::npos &&
+				light_commands.find("draw pipeline=",light_world)!=std::string::npos);
+			render_info.light_environment=nullptr;
 			retry_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(true);
 			retry_mesh->Render(render_info);
 			const auto before_lit=recorder.snapshot().size();
@@ -761,10 +778,110 @@ int main(int argc, char **argv)
 		assert(DX8Wrapper::Pending_Changes()==0);
 	}
 	assert(DX8Wrapper::Peek_Material()==nullptr && DX8Wrapper::Pending_Changes()==0);
+	{
+		zh::renderer::RecordingGpuDevice lighting_device;
+		zh::original_runtime::OriginalGpuEdge lighting_edge(lighting_device);
+		DX8Wrapper::Set_Shader(model->Get_Shader(0));
+		DX8Wrapper::Apply_Render_State_Changes();
+		LightEnvironmentClass environment;
+		environment.Reset(Vector3(0,0,0),Vector3(0.2f,0.4f,0.6f));
+		environment.Pre_Render_Update(Matrix3D(true));
+		DX8Wrapper::Set_Light_Environment(&environment);
+		auto empty_lights=DX8Wrapper::Snapshot_Source_State();
+		assert(empty_lights.light_environment_selected &&
+			empty_lights.render.at(D3DRS_AMBIENT)==0x00336699U &&
+			std::none_of(empty_lights.light_enabled.begin(),empty_lights.light_enabled.end(),
+				[](bool enabled) { return enabled; }));
+		LightClass directional(LightClass::DIRECTIONAL);
+		directional.Set_Diffuse(Vector3(0.5f,0.25f,0.125f));
+		environment.Reset(Vector3(0,0,0),Vector3(0.1f,0.2f,0.3f));
+		environment.Add_Light(directional);
+		environment.Pre_Render_Update(Matrix3D(true));
+		DX8Wrapper::Set_Light_Environment(&environment);
+		auto directional_lights=DX8Wrapper::Snapshot_Source_State();
+		assert(directional_lights.light_enabled[0] && !directional_lights.light_enabled[1] &&
+			directional_lights.lights[0].Type==D3DLIGHT_DIRECTIONAL &&
+			std::fabs(directional_lights.lights[0].Diffuse.r-0.5f)<0.0001f &&
+			directional_lights.lights[0].Specular.r==1.0f);
+		LightClass point(LightClass::POINT);
+		point.Set_Position(Vector3(0,0,1));
+		point.Set_Diffuse(Vector3(0.6f,0.4f,0.2f));
+		point.Set_Ambient(Vector3(0.01f,0.02f,0.03f));
+		point.Set_Near_Attenuation_Range(0,2);
+		point.Set_Far_Attenuation_Range(2,10);
+		environment.Add_Light(point);
+		environment.Pre_Render_Update(Matrix3D(true));
+		DX8Wrapper::Set_Light_Environment(&environment);
+		auto mixed_lights=DX8Wrapper::Snapshot_Source_State();
+		assert(mixed_lights.light_enabled[0] && mixed_lights.light_enabled[1] &&
+			std::any_of(mixed_lights.lights.begin(),mixed_lights.lights.begin()+2,
+				[](const D3DLIGHT8 &light) { return light.Type==D3DLIGHT_POINT &&
+					light.Range==10.0f && light.Attenuation0==1.0f &&
+					std::fabs(light.Attenuation1-0.05f)<0.0001f &&
+					std::fabs(light.Attenuation2-0.08f)<0.0001f; }));
+		environment.Reset(Vector3(0,0,0),Vector3(0.05f,0.1f,0.15f));
+		for (int light_index=0;light_index<4;++light_index) {
+			LightClass selected(LightClass::DIRECTIONAL);
+			selected.Set_Diffuse(Vector3(0.2f+0.1f*light_index,0.1f,0.05f));
+			environment.Add_Light(selected);
+		}
+		environment.Pre_Render_Update(Matrix3D(true));
+		assert(environment.Get_Light_Count()==4);
+		DX8Wrapper::Set_Light_Environment(&environment);
+		const auto full_lights=DX8Wrapper::Snapshot_Source_State();
+		assert(std::all_of(full_lights.light_enabled.begin(),full_lights.light_enabled.end(),
+			[](bool enabled) { return enabled; }));
+		DX8Wrapper::Set_Light_Environment(nullptr);
+		assert(!DX8Wrapper::Snapshot_Source_State().light_environment_selected &&
+			DX8Wrapper::Snapshot_Source_State().light_enabled[3]);
+		DX8Wrapper::Set_Light_Environment(&environment);
+		Vector3 invalid_ambient(NAN,0,0);
+		environment.Set_Output_Ambient(invalid_ambient);
+		bool invalid_light_rejected=false;
+		try { DX8Wrapper::Set_Light_Environment(&environment); }
+		catch (const std::runtime_error&) { invalid_light_rejected=true; }
+		assert(invalid_light_rejected && DX8Wrapper::Snapshot_Source_State().lights[0].Type==
+			full_lights.lights[0].Type);
+		D3DLIGHT8 invalid_physical=full_lights.lights[0];
+		invalid_physical.Type=D3DLIGHT_POINT;
+		invalid_physical.Range=-1.0f;
+		invalid_light_rejected=false;
+		try { DX8Wrapper::Set_Light(0,&invalid_physical); }
+		catch (const std::runtime_error&) { invalid_light_rejected=true; }
+		assert(invalid_light_rejected && DX8Wrapper::Snapshot_Source_State().lights[0].Type==
+			full_lights.lights[0].Type);
+		bool out_of_bounds=false;
+		try { DX8Wrapper::Set_Light(4,&mixed_lights.lights[0]); }
+		catch (const std::runtime_error&) { out_of_bounds=true; }
+		assert(out_of_bounds);
+		DX8Wrapper::Set_Light_Environment(nullptr);
+		assert(!DX8Wrapper::Snapshot_Source_State().light_environment_selected &&
+			DX8Wrapper::Snapshot_Source_State().light_enabled[0]);
+		assert(lighting_device.snapshot().find("DX8Wrapper::Set_Light slot=0 enabled")!=
+			std::string::npos);
+	}
 	bool missing_gpu_edge=false;
 	try { DX8Wrapper::Set_Material(stage_material); }
 	catch (const std::runtime_error&) { missing_gpu_edge=true; }
 	assert(missing_gpu_edge && DX8Wrapper::Pending_Changes()==0);
+	LightEnvironmentClass orphan_environment;
+	orphan_environment.Reset(Vector3(0,0,0),Vector3(0.1f,0.2f,0.3f));
+	bool orphan_lights_rejected=false;
+	try { DX8Wrapper::Set_Light_Environment(&orphan_environment); }
+	catch (const std::runtime_error&) { orphan_lights_rejected=true; }
+	assert(orphan_lights_rejected);
+	{
+		zh::renderer::RecordingGpuDevice fresh_device;
+		zh::original_runtime::OriginalGpuEdge fresh_edge(fresh_device);
+		DX8Wrapper::Set_Shader(model->Get_Shader(0));
+		DX8Wrapper::Apply_Render_State_Changes();
+		orphan_environment.Pre_Render_Update(Matrix3D(true));
+		DX8Wrapper::Set_Light_Environment(&orphan_environment);
+		const auto fresh_lights=DX8Wrapper::Snapshot_Source_State();
+		assert(fresh_lights.light_environment_selected &&
+			std::none_of(fresh_lights.light_enabled.begin(),fresh_lights.light_enabled.end(),
+				[](bool enabled) { return enabled; }));
+	}
 	TextureClass *stage_texture = model->Peek_Texture(0);
 	assert(stage_texture != nullptr);
 	assert(std::strcmp(stage_texture->Get_Texture_Name(), "mytex.tga") == 0);

@@ -49,12 +49,14 @@
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
 #include "matrix3d.h"
+#include "lightenvironment.h"
 #include "ww3d_cpu_boundary.h"
 #include "original_gpu_edge.h"
 
 #include <array>
 #include <map>
 #include <cstring>
+#include <cmath>
 #include <stdexcept>
 #include <string>
 
@@ -77,6 +79,8 @@ struct DX8Wrapper::CpuState {
     unsigned polygon_low_bound=0;
     bool world_identity_selected=false;
     LightEnvironmentClass* light_environment=nullptr;
+    std::array<D3DLIGHT8,4> lights{};
+    std::array<bool,4> light_enabled{};
 };
 
 DX8Wrapper::CpuState& DX8Wrapper::state() { static CpuState source_state; return source_state; }
@@ -99,6 +103,8 @@ void DX8Wrapper::Reset_Source_State()
     selected.polygon_low_bound=0;
     selected.world_identity_selected=false;
     selected.light_environment=nullptr;
+    selected.lights={};
+    selected.light_enabled={};
     for (auto*& texture : selected.textures) {
         if (texture) texture->Release_Ref();
         texture=nullptr;
@@ -163,7 +169,8 @@ DX8Wrapper::SourceStateSnapshot DX8Wrapper::Snapshot_Source_State()
     if (selected.dirty || ShaderClass::ShaderDirty)
         throw std::runtime_error("original DX8 state is pending source application");
     return {selected.physical_material,selected.render_states,selected.texture_states,
-        selected.transforms,selected.fog_enabled,selected.fog_color,selected.material_applied};
+        selected.transforms,selected.fog_enabled,selected.fog_color,selected.material_applied,
+        selected.lights,selected.light_enabled,selected.light_environment!=nullptr};
 }
 
 void DX8Wrapper::Apply_Render_State_Changes()
@@ -213,7 +220,7 @@ void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
             property==D3DRS_FOGENABLE || property==D3DRS_SPECULARENABLE ||
             property==D3DRS_ZWRITEENABLE || property==D3DRS_NORMALIZENORMALS) && value>1) ||
         (property==D3DRS_PATCHSEGMENTS && value!=0x3f800000U) ||
-        (property!=D3DRS_LIGHTING && property!=D3DRS_AMBIENTMATERIALSOURCE &&
+        (property!=D3DRS_LIGHTING && property!=D3DRS_AMBIENT && property!=D3DRS_AMBIENTMATERIALSOURCE &&
             property!=D3DRS_DIFFUSEMATERIALSOURCE && property!=D3DRS_EMISSIVEMATERIALSOURCE &&
             property!=D3DRS_SRCBLEND && property!=D3DRS_DESTBLEND &&
             property!=D3DRS_ALPHABLENDENABLE && property!=D3DRS_ALPHAREF &&
@@ -281,14 +288,33 @@ void DX8Wrapper::Set_World_Identity()
     zh::original_runtime::OriginalGpuEdge::required().record_source_state(
         "DX8Wrapper::Set_World_Identity");
 }
-void DX8Wrapper::Set_Light_Environment(LightEnvironmentClass* environment)
+void DX8Wrapper::Set_Light(unsigned index,const D3DLIGHT8* light)
 {
-    // Source category selection runs in 06A2; the original ambient and four
-    // concrete lights become physical only with the lit closure in 06A3.
-    state().light_environment=environment;
-    zh::original_runtime::OriginalGpuEdge::required().record_source_state(
-        "DX8Wrapper::Set_Light_Environment");
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    if (index>=state().lights.size())
+        throw std::runtime_error("original light slot exceeds four source lights");
+    if (light) {
+        const auto finite=[](float value) { return std::isfinite(value); };
+        const auto color=[&](const D3DCOLORVALUE& c) {
+            return finite(c.r)&&finite(c.g)&&finite(c.b)&&finite(c.a);
+        };
+        const auto vector=[&](const D3DVECTOR& v) {
+            return finite(v.x)&&finite(v.y)&&finite(v.z);
+        };
+        if ((light->Type!=D3DLIGHT_DIRECTIONAL && light->Type!=D3DLIGHT_POINT) ||
+            !color(light->Diffuse)||!color(light->Ambient)||!color(light->Specular)||
+            !vector(light->Direction)||!vector(light->Position)||
+            (light->Type==D3DLIGHT_POINT && (!finite(light->Range)||light->Range<=0 ||
+                !finite(light->Attenuation0)||!finite(light->Attenuation1)||
+                !finite(light->Attenuation2))))
+            throw std::runtime_error("original source light outside bounded physical profile");
+        state().lights[index]=*light;
+    }
+    state().light_enabled[index]=light!=nullptr;
+    edge.record_source_state("DX8Wrapper::Set_Light slot="+std::to_string(index)+
+        (light ? " enabled" : " disabled"));
 }
+#include "dx8_light_environment.inc"
 void DX8Wrapper::Get_Transform(D3DTRANSFORMSTATETYPE transform,Matrix4x4& matrix)
 {
     auto it=state().transforms.find(transform);
@@ -3424,84 +3450,7 @@ void DX8Wrapper::Set_Light(unsigned index,const LightClass &light)
 //! directional lights to produce the lighting.
 /*! 5/27/02 KJM Added shader light environment support
 */
-void DX8Wrapper::Set_Light_Environment(LightEnvironmentClass* light_env)
-{
-	// Shader light environment support															*
-//	if (Light_Environment && light_env && (*Light_Environment)==(*light_env)) return;
-
-	Light_Environment=light_env;
-
-	if (light_env) 
-	{
-		int light_count = light_env->Get_Light_Count();
-		unsigned int color=Convert_Color(light_env->Get_Equivalent_Ambient(),0.0f);
-		if (RenderStates[D3DRS_AMBIENT]!=color)
-		{
-			Set_DX8_Render_State(D3DRS_AMBIENT,color);
-//buggy Radeon 9700 driver doesn't apply new ambient unless the material also changes.
-#if 1
-			render_state_changed|=MATERIAL_CHANGED;
-#endif
-		}
-
-		D3DLIGHT8 light;		
-		for (int l=0;l<light_count;++l) {
-			
-			::ZeroMemory(&light, sizeof(D3DLIGHT8));
-			
-			light.Type=D3DLIGHT_DIRECTIONAL;
-			(Vector3&)light.Diffuse=light_env->Get_Light_Diffuse(l);
-			Vector3 dir=-light_env->Get_Light_Direction(l);
-			light.Direction=(const D3DVECTOR&)(dir);
-
-			// (gth) TODO: put specular into LightEnvironment?  Much work to be done on lights :-)'
-			if (l==0) {
-				light.Specular.r = light.Specular.g = light.Specular.b = 1.0f;
-			}
-
-			if (light_env->isPointLight(l)) {
-				light.Type = D3DLIGHT_POINT;
-				(Vector3&)light.Diffuse=light_env->getPointDiffuse(l);
-				(Vector3&)light.Ambient=light_env->getPointAmbient(l);
-				light.Position = (const D3DVECTOR&)light_env->getPointCenter(l);
-				light.Range = light_env->getPointOrad(l);
-				
-				// Inverse linear light 1/(1+D)
-				double a,b;
-				b = light_env->getPointOrad(l);
-				a = light_env->getPointIrad(l);
-
-//(gth) CNC3 Generals code for the attenuation factors is causing the lights to over-brighten
-//I'm changing the Attenuation0 parameter to 1.0 to avoid this problem.				
-#if 0
-				light.Attenuation0=0.01f;
-#else
-				light.Attenuation0=1.0f;
-#endif
-				if (fabs(a-b)<1e-5)
-					// if the attenuation range is too small assume uniform with cutoff
-					light.Attenuation1=0.0f;
-				else
-					// this will cause the light to drop to half intensity at the first far attenuation
-					light.Attenuation1=(float) 0.1/a;
-	
-				light.Attenuation2=8.0f/(b*b);
-			}
-
-			Set_Light(l,&light);
-		}
-
-		for (;l<4;++l) {
-			Set_Light(l,NULL);
-		}
-	}
-/*	else {
-		for (int l=0;l<4;++l) {
-			Set_Light(l,NULL);
-		}
-	}
-*/
-}
+#include "dx8_light_environment.inc"
 
 IDirect3DSurface8 * DX8Wrapper::_Get_DX8_Front_Buffer()
 {

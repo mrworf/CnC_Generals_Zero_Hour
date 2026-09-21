@@ -84,14 +84,14 @@ enum {
     D3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR=0x30000,
     D3DTTFF_DISABLE=0, D3DTTFF_COUNT2=2, D3DTTFF_COUNT3=3,
     D3DTTFF_PROJECTED=256,
-    D3DRS_LIGHTING=137, D3DRS_AMBIENTMATERIALSOURCE=147,
+    D3DRS_LIGHTING=137, D3DRS_AMBIENT=26, D3DRS_AMBIENTMATERIALSOURCE=147,
     D3DRS_DIFFUSEMATERIALSOURCE=145, D3DRS_EMISSIVEMATERIALSOURCE=148,
     D3DRS_SRCBLEND=19, D3DRS_DESTBLEND=20, D3DRS_ALPHABLENDENABLE=27,
     D3DRS_ALPHAREF=24, D3DRS_ALPHAFUNC=25, D3DRS_ALPHATESTENABLE=15,
     D3DRS_FOGENABLE=28, D3DRS_FOGCOLOR=34, D3DRS_SPECULARENABLE=29,
     D3DRS_ZFUNC=23, D3DRS_ZWRITEENABLE=14, D3DRS_CULLMODE=22,
     D3DRS_PATCHSEGMENTS=164, D3DRS_FOGSTART=36, D3DRS_FOGEND=37,
-    D3DRS_NORMALIZENORMALS=143,
+    D3DRS_NORMALIZENORMALS=143, D3DLIGHT_POINT=1, D3DLIGHT_DIRECTIONAL=3,
     D3DBLEND_ZERO=1, D3DBLEND_ONE=2, D3DBLEND_SRCCOLOR=3,
     D3DBLEND_INVSRCCOLOR=4, D3DBLEND_SRCALPHA=5, D3DBLEND_INVSRCALPHA=6,
     D3DBLEND_DESTCOLOR=9, D3DCMP_LESSEQUAL=4, D3DCMP_GREATEREQUAL=7,
@@ -143,6 +143,9 @@ public:
         bool fog_enabled=false;
         D3DCOLOR fog_color=0;
         bool material_applied=false;
+        std::array<D3DLIGHT8,4> lights{};
+        std::array<bool,4> light_enabled{};
+        bool light_environment_selected=false;
     };
     static SourceStateSnapshot Snapshot_Source_State();
     static void Apply_Render_State_Changes();
@@ -154,6 +157,7 @@ public:
     static void Set_Transform(D3DTRANSFORMSTATETYPE state,const Matrix3D& matrix);
     static void Set_World_Identity();
     static void Set_Light_Environment(LightEnvironmentClass* environment);
+    static void Set_Light(unsigned index,const D3DLIGHT8* light);
     static void Get_Transform(D3DTRANSFORMSTATETYPE state,Matrix4x4& matrix);
     static unsigned Get_Texture_Op_Caps();
     static bool Get_Fog_Enable();

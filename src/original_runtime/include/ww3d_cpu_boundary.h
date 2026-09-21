@@ -30,4 +30,13 @@ struct D3DMATERIAL8
 	float Power;
 };
 
+struct D3DVECTOR { float x, y, z; };
+struct D3DLIGHT8
+{
+	unsigned Type;
+	D3DCOLORVALUE Diffuse, Specular, Ambient;
+	D3DVECTOR Position, Direction;
+	float Range, Falloff, Attenuation0, Attenuation1, Attenuation2, Theta, Phi;
+};
+
 enum { D3DMCS_MATERIAL = 0, D3DMCS_COLOR1 = 1, D3DMCS_COLOR2 = 2 };
