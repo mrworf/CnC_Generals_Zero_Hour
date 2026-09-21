@@ -100,6 +100,11 @@ class Overridable : public MemoryPoolObject
 			m_isOverride = true;
 		}
 
+#if defined(__linux__)
+		// Shipped INI layers are permanent; map.ini layers remain removable.
+		void markAsBase( void ) { m_isOverride = false; }
+#endif
+
 		// used in factory reset() calls at the end of a game to clean up overrides.  Can return NULL
 		// if the first Overridable is itself an override
 		Overridable *deleteOverrides( void )

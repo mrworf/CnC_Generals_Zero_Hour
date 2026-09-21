@@ -1403,6 +1403,12 @@ if(ZH_BUILD_TESTS)
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}")
   set_tests_properties(original_persistence_replay PROPERTIES
     LABELS "original-persistence;source-identity" TIMEOUT 90)
+  add_test(NAME original_persistence_power_baseline COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_persistence/test_power_baseline.py"
+    --executable "$<TARGET_FILE:zh_original_main>"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}")
+  set_tests_properties(original_persistence_power_baseline PROPERTIES
+    LABELS "original-persistence;source-identity" TIMEOUT 120)
   add_executable(original_lifecycle_subsystem_tests
     tests/original_lifecycle/test_subsystem_lifecycle.cpp)
   target_include_directories(original_lifecycle_subsystem_tests PRIVATE

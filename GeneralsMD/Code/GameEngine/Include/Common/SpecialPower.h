@@ -165,6 +165,9 @@ public:
 	virtual void init( void ) { };
 	virtual void update( void ) { };
 	virtual void reset( void );
+#if defined(__linux__)
+	void commitShippedDefinitions();
+#endif
 
 	const SpecialPowerTemplate *findSpecialPowerTemplate( AsciiString name ) { return findSpecialPowerTemplatePrivate(name); }
 	const SpecialPowerTemplate *findSpecialPowerTemplateByID( UnsignedInt id );

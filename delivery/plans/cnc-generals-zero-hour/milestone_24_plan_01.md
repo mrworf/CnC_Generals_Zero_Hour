@@ -53,7 +53,7 @@ The production Linux original engine saves and restores a real source-engine sce
 | 01 | [slice 01](milestone_24_plan_01_slice_01.md) | A real scenario writes a bounded, atomically published original snapshot and autosave metadata | M21/M5 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice01-original-save.md` |
 | 02 | [slice 02](milestone_24_plan_01_slice_02.md) | Original load restores source state; malformed/faulted loads leave exact pre-load state | 01 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice02-original-load.md` |
 | 03 | [slice 03](milestone_24_plan_01_slice_03.md) | Original commands record/play back safely with compatible cross-preset CRC/RNG | 02 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice03-original-replay.md` |
-| 04 | [slice 04](milestone_24_plan_01_slice_04.md) | Shipped special-power INI definitions survive original reset while map overrides remain temporary | 03 | pending | | |
+| 04 | [slice 04](milestone_24_plan_01_slice_04.md) | Shipped special-power INI definitions survive original reset while map overrides remain temporary | 03 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice04-shipped-power-baseline.md` |
 | 05 | [slice 05](milestone_24_plan_01_slice_05.md) | Retail original PartitionManager/shroud state survives source load and repeated round-trips with exact CRC | 04 | pending | | |
 | 06 | [slice 06](milestone_24_plan_01_slice_06.md) | Retail save/replay/first-tick and four-preset cumulative M24 acceptance | 05 | pending | | |
 

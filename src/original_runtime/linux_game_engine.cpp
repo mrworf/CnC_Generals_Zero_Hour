@@ -18,6 +18,7 @@
 #include "Common/PlayerTemplate.h"
 #include "Common/Recorder.h"
 #include "Common/RandomValue.h"
+#include "Common/SpecialPower.h"
 #include "Common/XferCRC.h"
 #include "Common/AudioRandomValue.h"
 #include "W3DDevice/Common/W3DModuleFactory.h"
@@ -759,6 +760,28 @@ public:
 			}
 #endif
 			captureScenarioSetup();
+			if (const char *powerGate = std::getenv("ZH_M24_POWER_BASELINE"))
+			{
+				const Int countBefore = TheSpecialPowerStore->getNumSpecialPowers();
+				const Bool owned = std::strcmp(powerGate, "owned") == 0;
+				const SpecialPowerTemplate *shipped = owned
+					? TheSpecialPowerStore->findSpecialPowerTemplate("ShippedFixturePower") : NULL;
+				if (countBefore < 2 ||
+					(owned && (!shipped || shipped->hasPublicTimer() ||
+						!TheSpecialPowerStore->findSpecialPowerTemplate("MapFixturePower"))))
+					throw std::runtime_error("original shipped/map special powers were not loaded");
+				GameEngine::reset();
+				const Int countAfter = TheSpecialPowerStore->getNumSpecialPowers();
+				if (countAfter != countBefore - (owned ? 1 : 0) ||
+					(owned && (!TheSpecialPowerStore->findSpecialPowerTemplate("ShippedFixturePower") ||
+						!TheSpecialPowerStore->findSpecialPowerTemplate("ShippedFixturePower")->hasPublicTimer() ||
+						TheSpecialPowerStore->findSpecialPowerTemplate("MapFixturePower"))))
+					throw std::runtime_error("original special-power reset lost shipped data or retained map data");
+				std::printf("original power baseline: shipped=%d map-overrides=%d reset=%d\n",
+					countBefore, owned ? 1 : 0, countAfter);
+				setQuitting(TRUE);
+				return;
+			}
 			if (const char *replayName = std::getenv("ZH_M24_REPLAY_EXISTING"))
 			{
 				const UnsignedInt beforeFrame = TheGameLogic->getFrame();

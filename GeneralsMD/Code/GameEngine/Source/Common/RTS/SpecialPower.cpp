@@ -379,3 +379,15 @@ void SpecialPowerStore::reset( void )
 		}
 	}
 }  // end reset
+
+#if defined(__linux__)
+void SpecialPowerStore::commitShippedDefinitions()
+{
+	// The Linux subsystem loader reads the shipped second INI as an override
+	// layer. New names in that layer must survive game reset; later map.ini
+	// overrides are still discarded by the original reset traversal.
+	for (SpecialPowerTemplate *power : m_specialPowerTemplates)
+		for (Overridable *layer = power; layer; layer = layer->friend_getNextOverride())
+			layer->markAsBase();
+}
+#endif
