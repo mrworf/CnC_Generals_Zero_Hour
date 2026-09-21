@@ -53,9 +53,11 @@ The production Linux original engine saves and restores a real source-engine sce
 | 01 | [slice 01](milestone_24_plan_01_slice_01.md) | A real scenario writes a bounded, atomically published original snapshot and autosave metadata | M21/M5 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice01-original-save.md` |
 | 02 | [slice 02](milestone_24_plan_01_slice_02.md) | Original load restores source state; malformed/faulted loads leave exact pre-load state | 01 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice02-original-load.md` |
 | 03 | [slice 03](milestone_24_plan_01_slice_03.md) | Original commands record/play back safely with compatible cross-preset CRC/RNG | 02 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice03-original-replay.md` |
-| 04 | [slice 04](milestone_24_plan_01_slice_04.md) | Source identity, retail and four-preset cumulative M24 acceptance | 03 | pending | | |
+| 04 | [slice 04](milestone_24_plan_01_slice_04.md) | Shipped special-power INI definitions survive original reset while map overrides remain temporary | 03 | pending | | |
+| 05 | [slice 05](milestone_24_plan_01_slice_05.md) | Retail original PartitionManager/shroud state survives source load and repeated round-trips with exact CRC | 04 | pending | | |
+| 06 | [slice 06](milestone_24_plan_01_slice_06.md) | Retail save/replay/first-tick and four-preset cumulative M24 acceptance | 05 | pending | | |
 
-Four slices are needed because source snapshot publication, destructive-load rollback, recorder protocol, and cumulative cross-preset/retail acceptance have distinct failure/review boundaries.
+The original four-slice split covered snapshot publication, destructive-load rollback, recorder protocol and cumulative acceptance. Read-only retail execution after slice 03 exposed two independent source behaviors absent from project-owned fixtures: the Linux global INI loader marks new shipped special-power definitions as transient overrides, and repeated original PartitionManager post-load updates change millions of shroud cells despite stable object/player/script state. The retail first simulation tick also faults in the headless path. The remainder is split into an independently tested bootstrap correction, a source shroud-state repair, and a separate cumulative retail/full-suite gate. No accepted slice is reopened and no exact-CRC or first-tick requirement is weakened.
 
 ## Cross-slice concerns
 
@@ -71,7 +73,7 @@ Four slices are needed because source snapshot publication, destructive-load rol
 - Every slice plan, test, evidence and commit is complete; original source identity/owner-removal controls pass.
 - Full original map round-trip, autosave, replay, corruption, rollback and deterministic cross-preset checks pass; client/audio random burns do not alter logic CRC.
 - Applicable targets build and the full asset-free CTest suite passes in all four presets; relevant Clang ASan/UBSan passes with limitations disclosed.
-- Read-only retail save/replay gate passes without writes to the retail root or private details in evidence; dependency ledger/source-drift checks pass.
+- Read-only retail mission/skirmish save/replay and first-tick gates pass without writes to the retail root or private details in evidence; dependency ledger/source-drift checks pass.
 
 ## Rollback and recovery
 
@@ -79,7 +81,7 @@ Each slice is reviewable/revertible. No rollback command may alter user saves or
 
 ## Execution notes
 
-Planning completed before production edits in `64aeb22`. Parent orchestration owns milestone/workflow status. Slices 01–03 source save/load/replay passed; cumulative acceptance remains slice 04.
+Planning completed before production edits in `64aeb22`. Parent orchestration owns milestone/workflow status. Slices 01–03 source save/load/replay passed. The post-slice-03 retail findings required a plan amendment before final repair; slices 04–06 remain pending and the exact retail CRC/first-tick gates remain binding.
 
 ## Deferred follow-ups
 
