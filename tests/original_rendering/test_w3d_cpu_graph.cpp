@@ -460,6 +460,132 @@ int main(int argc, char **argv)
 	auto *mesh = static_cast<MeshClass *>(object);
 	CameraClass camera;
 	RenderInfoClass render_info(camera);
+	if (argc==2 && std::strcmp(argv[1],"--sort-state")==0) {
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		WW3D::Set_Thumbnail_Enabled(false);
+		OwnedFactory textures;
+		textures.files["mytex.tga"]=original_targa();
+		textures.files["MYTEX.TGA"]=textures.files["mytex.tga"];
+		auto* old_factory=_TheFileFactory;
+		_TheFileFactory=&textures;
+		TheDX8MeshRenderer.Init();
+		TheDX8MeshRenderer.Set_Camera(&camera);
+		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+		mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+		mesh->Set_Position(Vector3(0,0,-10));
+		mesh->Render(render_info);
+		zh::renderer::RecordingGpuDevice recorder;
+		zh::renderer::TextureDesc target;
+		target.width=32; target.height=32; target.render_target=true; target.sampled=false;
+		const auto color=recorder.create_texture(target,"original sorting source state color");
+		target.format=zh::renderer::TextureFormat::depth24_stencil8;
+		const auto depth=recorder.create_texture(target,"original sorting source state depth");
+		zh::renderer::RenderPassDesc pass;
+		pass.color_targets[0]=color; pass.color_target_count=1;
+		pass.depth_target=depth; pass.width=32; pass.height=32;
+		RenderStateStruct source;
+		decltype(recorder.last_draw_index_bytes()) source_indices;
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+			DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+			assert(recorder.begin_pass(pass,"original selected render-state snapshot"));
+			TheDX8MeshRenderer.Flush();
+			source_indices=recorder.last_draw_index_bytes();
+			assert(source_indices.size()==3*sizeof(unsigned short));
+			DX8Wrapper::Apply_Render_State_Changes();
+			DX8Wrapper::Get_Render_State(source);
+			assert(source.vertex_buffers[0] && source.index_buffer &&
+				source.vertex_buffer_types[0]==source.vertex_buffers[0]->Type() &&
+				source.index_buffer_type==source.index_buffer->Type() &&
+				source.material && source.Textures[0] &&
+				source.vertex_buffers[0]->Engine_Refs()>0 &&
+				source.index_buffer->Engine_Refs()>0);
+			const auto vertex_refs=source.vertex_buffers[0]->Num_Refs();
+			const auto index_refs=source.index_buffer->Num_Refs();
+			const auto texture_refs=source.Textures[0]->Num_Refs();
+			{
+				RenderStateStruct copied;
+				copied=source;
+				assert(source.vertex_buffers[0]->Num_Refs()==vertex_refs+1 &&
+					source.index_buffer->Num_Refs()==index_refs+1 &&
+					source.Textures[0]->Num_Refs()==texture_refs+1);
+			}
+			assert(source.vertex_buffers[0]->Num_Refs()==vertex_refs &&
+				source.index_buffer->Num_Refs()==index_refs &&
+				source.Textures[0]->Num_Refs()==texture_refs);
+			const auto selected_before=DX8Wrapper::Peek_Material();
+			source.vertex_buffer_types[0]=BUFFER_TYPE_SORTING;
+			bool invalid_type=false;
+			try { DX8Wrapper::Set_Render_State(source); }
+			catch (const std::runtime_error&) { invalid_type=true; }
+			assert(invalid_type && DX8Wrapper::Peek_Material()==selected_before);
+			source.vertex_buffer_types[0]=source.vertex_buffers[0]->Type();
+			REF_PTR_SET(source.Textures[2],source.Textures[0]);
+			bool unsupported_stage=false;
+			try { DX8Wrapper::Set_Render_State(source); }
+			catch (const std::runtime_error&) { unsupported_stage=true; }
+			assert(unsupported_stage && DX8Wrapper::Peek_Texture(2)==nullptr);
+			REF_PTR_RELEASE(source.Textures[2]);
+			source.LightEnable[0]=true;
+			source.Lights[0]={};
+			bool invalid_light=false;
+			try { DX8Wrapper::Set_Render_State(source); }
+			catch (const std::runtime_error&) { invalid_light=true; }
+			assert(invalid_light && DX8Wrapper::Peek_Material()==selected_before);
+			source.LightEnable[0]=false;
+			DX8Wrapper::Reset_Source_State();
+			assert(source.vertex_buffers[0]->Num_Refs()>0 &&
+				source.index_buffer->Num_Refs()>0 &&
+				source.material->Num_Refs()>0);
+			DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+			DX8Wrapper::Set_Render_State(source);
+			DX8Wrapper::Apply_Render_State_Changes();
+			assert(DX8Wrapper::Peek_Material()==selected_before &&
+				DX8Wrapper::Peek_Texture(0)==source.Textures[0]);
+			recorder.fail_next_draw();
+			bool failed_draw=false;
+			try { DX8Wrapper::Draw_Triangles(0,1,0,3); }
+			catch (const std::runtime_error&) { failed_draw=true; }
+			assert(failed_draw && DX8Wrapper::Peek_Material()==selected_before);
+			const auto before_replay=recorder.snapshot().size();
+			DX8Wrapper::Draw_Triangles(0,1,0,3);
+			assert(recorder.snapshot().find("draw pipeline=",before_replay)!=std::string::npos &&
+				recorder.last_draw_index_bytes()==source_indices);
+			DX8Wrapper::Release_Render_State();
+			assert(recorder.end_pass() && textures.owners==0);
+		}
+		assert(recorder.resource_counts().total()==2);
+		DX8Wrapper::Reset_Source_State();
+		{
+			zh::original_runtime::OriginalGpuEdge recreated(recorder);
+			DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+			DX8Wrapper::Set_Render_State(source);
+			DX8Wrapper::Apply_Render_State_Changes();
+			const auto before_new_generation=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original source state reupload new edge generation"));
+			DX8Wrapper::Draw_Triangles(0,1,0,3);
+			assert(recorder.end_pass() &&
+				recorder.snapshot().find("draw pipeline=",before_new_generation)!=std::string::npos &&
+				recorder.last_draw_index_bytes()==source_indices);
+			DX8Wrapper::Release_Render_State();
+		}
+		assert(recorder.resource_counts().total()==2);
+		bool unbound=false;
+		try { DX8Wrapper::Get_Render_State(source); }
+		catch (const std::runtime_error&) { unbound=true; }
+		assert(unbound);
+		TheDX8MeshRenderer.Invalidate();
+		TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+		TheDX8MeshRenderer.Set_Camera(nullptr);
+		DX8Wrapper::Reset_Source_State();
+		recorder.destroy(color); recorder.destroy(depth);
+		assert(recorder.resource_counts().total()==0);
+		_TheFileFactory=old_factory;
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		object->Release_Ref(); manager.Free_Assets();
+		return 0;
+	}
 	if (argc==2 && (std::strcmp(argv[1],"--decal-cpu")==0 ||
 		std::strcmp(argv[1],"--decal-aggregate")==0 ||
 		std::strcmp(argv[1],"--vulkan-decal-aggregate")==0 ||

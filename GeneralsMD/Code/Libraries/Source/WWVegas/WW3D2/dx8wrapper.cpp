@@ -57,6 +57,7 @@
 #include <map>
 #include <cstring>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -188,6 +189,97 @@ DX8Wrapper::SourceStateSnapshot DX8Wrapper::Snapshot_Source_State()
         selected.lights,selected.light_enabled,selected.light_environment!=nullptr};
 }
 
+static void Validate_Cpu_Source_Light(const D3DLIGHT8& light);
+
+void DX8Wrapper::Get_Render_State(RenderStateStruct& snapshot)
+{
+    zh::original_runtime::OriginalGpuEdge::required();
+    const auto& selected=state();
+    const auto world=selected.transforms.find(D3DTS_WORLD);
+    const auto view=selected.transforms.find(D3DTS_VIEW);
+    if (world==selected.transforms.end() || view==selected.transforms.end())
+        throw std::runtime_error("original sorting source world/view is missing");
+    if (selected.vba_offset>std::numeric_limits<unsigned short>::max() ||
+        selected.vba_count>std::numeric_limits<unsigned short>::max() ||
+        selected.iba_offset>std::numeric_limits<unsigned short>::max() ||
+        selected.index_base_offset>std::numeric_limits<unsigned short>::max())
+        throw std::runtime_error("original sorting source range exceeds original 16-bit ABI");
+    RenderStateStruct copied;
+    copied.shader=selected.shader;
+    REF_PTR_SET(copied.material,const_cast<VertexMaterialClass*>(selected.material));
+    for (unsigned stage=0;stage<MAX_TEXTURE_STAGES;++stage)
+        REF_PTR_SET(copied.Textures[stage],selected.textures[stage]);
+    for (unsigned slot=0;slot<4;++slot) {
+        copied.LightEnable[slot]=selected.light_enabled[slot];
+        if (copied.LightEnable[slot]) copied.Lights[slot]=selected.lights[slot];
+    }
+    copied.world=world->second;
+    copied.view=view->second;
+    copied.vertex_buffer_types[0]=selected.vertex_buffer ? selected.vertex_buffer->Type() : BUFFER_TYPE_INVALID;
+    copied.vertex_buffer_types[1]=BUFFER_TYPE_INVALID;
+    copied.index_buffer_type=selected.index_buffer ? selected.index_buffer->Type() : BUFFER_TYPE_INVALID;
+    copied.vba_offset=static_cast<unsigned short>(selected.vba_offset);
+    copied.vba_count=static_cast<unsigned short>(selected.vba_count);
+    copied.iba_offset=static_cast<unsigned short>(selected.iba_offset);
+    copied.index_base_offset=static_cast<unsigned short>(selected.index_base_offset);
+    REF_PTR_SET(copied.vertex_buffers[0],const_cast<VertexBufferClass*>(selected.vertex_buffer));
+    REF_PTR_SET(copied.index_buffer,const_cast<IndexBufferClass*>(selected.index_buffer));
+    snapshot=copied;
+}
+
+void DX8Wrapper::Set_Render_State(const RenderStateStruct& snapshot)
+{
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    if (snapshot.vertex_buffers[1] || snapshot.vertex_buffer_types[1]!=BUFFER_TYPE_INVALID ||
+        (snapshot.vertex_buffers[0] &&
+            snapshot.vertex_buffer_types[0]!=snapshot.vertex_buffers[0]->Type()) ||
+        (snapshot.index_buffer && snapshot.index_buffer_type!=snapshot.index_buffer->Type()) ||
+        (!snapshot.vertex_buffers[0] && snapshot.vertex_buffer_types[0]!=BUFFER_TYPE_INVALID) ||
+        (!snapshot.index_buffer && snapshot.index_buffer_type!=BUFFER_TYPE_INVALID) ||
+        (snapshot.vertex_buffers[0] && !snapshot.index_buffer) ||
+        (!snapshot.vertex_buffers[0] && snapshot.index_buffer) ||
+        (snapshot.vertex_buffers[0] &&
+            (static_cast<unsigned>(snapshot.vba_offset)+snapshot.vba_count >
+                snapshot.vertex_buffers[0]->Get_Vertex_Count() ||
+             snapshot.index_base_offset>snapshot.vertex_buffers[0]->Get_Vertex_Count())) ||
+        (snapshot.index_buffer && snapshot.iba_offset>snapshot.index_buffer->Get_Index_Count()))
+        throw std::runtime_error("original sorting source buffer state is unsupported");
+    for (unsigned stage=2;stage<MAX_TEXTURE_STAGES;++stage)
+        if (snapshot.Textures[stage])
+            throw std::runtime_error("original sorting texture stage exceeds bounded profile");
+    for (unsigned slot=0;slot<4;++slot)
+        if (snapshot.LightEnable[slot]) Validate_Cpu_Source_Light(snapshot.Lights[slot]);
+    // This shared source snapshot has original 16-bit ranges; physical
+    // generation/buffer availability is still checked by the active edge.
+    Set_Shader(snapshot.shader);
+    Set_Material(snapshot.material);
+    for (unsigned stage=0;stage<MAX_TEXTURE_STAGES;++stage)
+        Set_Texture(stage,snapshot.Textures[stage]);
+    Set_Transform(D3DTS_WORLD,snapshot.world);
+    Set_Transform(D3DTS_VIEW,snapshot.view);
+    for (unsigned slot=0;slot<4;++slot)
+        Set_Light(slot,snapshot.LightEnable[slot] ? &snapshot.Lights[slot] : nullptr);
+    Set_Vertex_Buffer(snapshot.vertex_buffers[0]);
+    Set_Index_Buffer(snapshot.index_buffer,snapshot.index_base_offset);
+    auto& selected=state();
+    selected.vba_offset=snapshot.vba_offset;
+    selected.vba_count=snapshot.vba_count;
+    selected.iba_offset=snapshot.iba_offset;
+    selected.dirty=(1U<<MAX_TEXTURE_STAGES)-1U | (1U<<8) | (1U<<9);
+    edge.record_source_state("DX8Wrapper::Set_Render_State original snapshot");
+}
+
+void DX8Wrapper::Release_Render_State()
+{
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    Set_Vertex_Buffer(nullptr);
+    Set_Index_Buffer(nullptr,0);
+    Set_Material(nullptr);
+    for (unsigned stage=0;stage<MAX_TEXTURE_STAGES;++stage)
+        Set_Texture(stage,nullptr);
+    edge.record_source_state("DX8Wrapper::Release_Render_State");
+}
+
 void DX8Wrapper::Apply_Render_State_Changes()
 {
     auto& selected=state();
@@ -308,33 +400,36 @@ void DX8Wrapper::Set_World_Identity()
     zh::original_runtime::OriginalGpuEdge::required().record_source_state(
         "DX8Wrapper::Set_World_Identity");
 }
+static void Validate_Cpu_Source_Light(const D3DLIGHT8& light)
+{
+    const auto finite=[](float value) { return std::isfinite(value); };
+    const auto color=[&](const D3DCOLORVALUE& c) {
+        return finite(c.r)&&finite(c.g)&&finite(c.b)&&finite(c.a);
+    };
+    const auto vector=[&](const D3DVECTOR& v) {
+        return finite(v.x)&&finite(v.y)&&finite(v.z);
+    };
+    if ((light.Type!=D3DLIGHT_DIRECTIONAL && light.Type!=D3DLIGHT_POINT) ||
+        !color(light.Diffuse)||!color(light.Ambient)||!color(light.Specular)||
+        !vector(light.Direction)||!vector(light.Position)||
+        (light.Type==D3DLIGHT_DIRECTIONAL &&
+            light.Direction.x*light.Direction.x+
+            light.Direction.y*light.Direction.y+
+            light.Direction.z*light.Direction.z<=0.0f)||
+        (light.Type==D3DLIGHT_POINT && (!finite(light.Range)||light.Range<=0 ||
+            !finite(light.Attenuation0)||!finite(light.Attenuation1)||
+            !finite(light.Attenuation2)||light.Attenuation0<0 ||
+            light.Attenuation1<0 || light.Attenuation2<0 ||
+            (light.Attenuation0==0 && light.Attenuation1==0 && light.Attenuation2==0))))
+        throw std::runtime_error("original source light outside bounded physical profile");
+}
 void DX8Wrapper::Set_Light(unsigned index,const D3DLIGHT8* light)
 {
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     if (index>=state().lights.size())
         throw std::runtime_error("original light slot exceeds four source lights");
     if (light) {
-        const auto finite=[](float value) { return std::isfinite(value); };
-        const auto color=[&](const D3DCOLORVALUE& c) {
-            return finite(c.r)&&finite(c.g)&&finite(c.b)&&finite(c.a);
-        };
-        const auto vector=[&](const D3DVECTOR& v) {
-            return finite(v.x)&&finite(v.y)&&finite(v.z);
-        };
-        if ((light->Type!=D3DLIGHT_DIRECTIONAL && light->Type!=D3DLIGHT_POINT) ||
-            !color(light->Diffuse)||!color(light->Ambient)||!color(light->Specular)||
-            !vector(light->Direction)||!vector(light->Position)||
-            (light->Type==D3DLIGHT_DIRECTIONAL &&
-                light->Direction.x*light->Direction.x+
-                light->Direction.y*light->Direction.y+
-                light->Direction.z*light->Direction.z<=0.0f)||
-            (light->Type==D3DLIGHT_POINT && (!finite(light->Range)||light->Range<=0 ||
-                !finite(light->Attenuation0)||!finite(light->Attenuation1)||
-                !finite(light->Attenuation2)||light->Attenuation0<0 ||
-                light->Attenuation1<0 || light->Attenuation2<0 ||
-                (light->Attenuation0==0 && light->Attenuation1==0 &&
-                 light->Attenuation2==0))))
-            throw std::runtime_error("original source light outside bounded physical profile");
+        Validate_Cpu_Source_Light(*light);
         state().lights[index]=*light;
     }
     state().light_enabled[index]=light!=nullptr;
