@@ -3,6 +3,7 @@
 #include "LinuxBIGArchive.h"
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
+#include "Common/GameState.h"
 #include "Common/FunctionLexicon.h"
 #include "Common/GlobalData.h"
 #if defined(ZH_M22_FULL_DRAW_TEST)
@@ -887,6 +888,21 @@ public:
 			if (m_simulationProfile)
 			{
 				runOriginalSimulation();
+				if (const char *saveName = std::getenv("ZH_M24_SAVE_FILENAME"))
+				{
+					if (const char *testMap = std::getenv("ZH_M24_TEST_EMBEDDED_MAP"))
+						TheWritableGlobalData->m_mapName = testMap;
+					if (TheGameState->saveGame(AsciiString(saveName), UnicodeString(u"Original scenario"),
+						SAVE_FILE_TYPE_NORMAL) != SC_OK)
+						throw std::runtime_error("original scenario save failed");
+					const AsciiString savedLeaf(*saveName ? saveName : "00000000.sav");
+					SaveGameInfo savedInfo;
+					TheGameState->getSaveGameInfoFromFile(
+						TheGameState->getFilePathInSaveDirectory(savedLeaf), &savedInfo);
+					if (savedInfo.saveFileType != SAVE_FILE_TYPE_NORMAL ||
+						savedInfo.description.getLength() == 0 || savedInfo.mapLabel.isEmpty())
+						throw std::runtime_error("original save metadata did not round-trip");
+				}
 				if (m_reentryProfile)
 					runOriginalReentry();
 				GameEngine::reset();

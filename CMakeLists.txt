@@ -1391,6 +1391,12 @@ if(ZH_BUILD_TESTS)
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}")
   set_tests_properties(original_simulation_reentry PROPERTIES
     LABELS "original-simulation;source-identity" TIMEOUT 60)
+  add_test(NAME original_persistence_save COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_persistence/test_save_scenario.py"
+    --executable "$<TARGET_FILE:zh_original_main>"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}")
+  set_tests_properties(original_persistence_save PROPERTIES
+    LABELS "original-persistence;source-identity" TIMEOUT 90)
   add_executable(original_lifecycle_subsystem_tests
     tests/original_lifecycle/test_subsystem_lifecycle.cpp)
   target_include_directories(original_lifecycle_subsystem_tests PRIVATE

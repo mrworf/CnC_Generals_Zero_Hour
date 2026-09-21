@@ -147,11 +147,13 @@ void XferSave::close( void )
 	}  // end if
 
 	// close the file
-	fclose( m_fileFP );
+	const int closeResult = fclose( m_fileFP );
 	m_fileFP = NULL;
 
 	// erase the filename
 	m_identifier.clear();
+	if (closeResult != 0)
+		throw XFER_WRITE_ERROR;
 
 }  // end close
 

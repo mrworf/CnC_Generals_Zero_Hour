@@ -45,6 +45,7 @@
 #ifndef _WIN32
 #include <filesystem>
 #endif
+#include <vector>
 
 // GLOBALS ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -55,6 +56,10 @@
 #endif
 
 // METHODS ////////////////////////////////////////////////////////////////////////////////////////
+
+// The source format stores the embedded map size in a signed 32-bit block.
+// Bound allocations well below that representational limit.
+static const Int MAX_EMBEDDED_MAP_BYTES = 256 * 1024 * 1024;
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -94,40 +99,39 @@ static void embedPristineMap( AsciiString map, Xfer *xfer )
  
 	// how big is the map file
 	Int fileSize = file->seek( 0, File::END );
+	if (fileSize <= 0 || fileSize > MAX_EMBEDDED_MAP_BYTES)
+	{
+		file->close();
+		throw SC_INVALID_DATA;
+	}
  
 	// rewind to beginning of file
-	file->seek( 0, File::START );
+	if (file->seek( 0, File::START ) < 0)
+	{
+		file->close();
+		throw SC_INVALID_DATA;
+	}
 
 	// allocate buffer big enough to hold the entire map file
-	char *buffer = new char[ fileSize ];
-	if( buffer == NULL )
+	std::vector<char> buffer;
+	try
 	{
-
-		DEBUG_CRASH(( "embedPristineMap - Unable to allocate buffer for file '%s'\n", map.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // end if
- 
-	// copy the file to the buffer
-	if( file->read( buffer, fileSize ) != fileSize )
+		buffer.resize(fileSize);
+		if( file->read( buffer.data(), fileSize ) != fileSize )
+			throw SC_INVALID_DATA;
+	}
+	catch (...)
 	{
-
-		DEBUG_CRASH(( "embeddPristineMap - Error reading from file '%s'\n", map.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // end if
- 
-	// close the BIG file
+		file->close();
+		throw;
+	}
 	file->close();
  
 	// write the contents to the save file
 	DEBUG_ASSERTCRASH( xfer->getXferMode() == XFER_SAVE, ("embedPristineMap - Unsupposed xfer mode\n") );
 	xfer->beginBlock();
-	xfer->xferUser( buffer, fileSize );
+	xfer->xferUser( buffer.data(), fileSize );
 	xfer->endBlock();
-
-	// delete the buffer
-	delete [] buffer;
  
 }  // end embedPristineMap
 
@@ -149,41 +153,45 @@ static void embedInUseMap( AsciiString map, Xfer *xfer )
 	}  // end if
 
 	// how big is the file
-	fseek( fp, 0, SEEK_END );
-	Int fileSize = ftell( fp );
+	if (fseek(fp, 0, SEEK_END) != 0)
+	{
+		fclose(fp);
+		throw SC_INVALID_DATA;
+	}
+	const long measuredSize = ftell(fp);
+	if (measuredSize <= 0 || measuredSize > MAX_EMBEDDED_MAP_BYTES)
+	{
+		fclose(fp);
+		throw SC_INVALID_DATA;
+	}
+	Int fileSize = static_cast<Int>(measuredSize);
 
 	// rewind file back to start
-	fseek( fp, 0, SEEK_SET );
+	if (fseek(fp, 0, SEEK_SET) != 0)
+	{
+		fclose(fp);
+		throw SC_INVALID_DATA;
+	}
 
 	// allocate a buffer big enough for the entire file
-	char *buffer = new char[ fileSize ];
-	if( buffer == NULL )
+	std::vector<char> buffer;
+	try
 	{
-
-		DEBUG_CRASH(( "embedInUseMap - Unable to allocate buffer for file '%s'\n", map.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // end if
-
-	// read the entire file
-	if( fread( buffer, 1, fileSize, fp ) != fileSize )
+		buffer.resize(fileSize);
+		if( fread( buffer.data(), 1, fileSize, fp ) != static_cast<size_t>(fileSize) )
+			throw SC_INVALID_DATA;
+	}
+	catch (...)
 	{
-
-		DEBUG_CRASH(( "embedInUseMap - Error reading from file '%s'\n", map.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // end if
+		fclose(fp);
+		throw;
+	}
+	fclose(fp);
 
 	// embed file into xfer stream
 	xfer->beginBlock();
-	xfer->xferUser( buffer, fileSize );
+	xfer->xferUser( buffer.data(), fileSize );
 	xfer->endBlock();
-
-	// close the file
-	fclose( fp );
-
-	// delete buffer
-	delete [] buffer;
 
 }  // embedInUseMap
 

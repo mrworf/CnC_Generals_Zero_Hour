@@ -60,6 +60,12 @@
 #include "GameLogic/SidesList.h"
 #include "GameLogic/TerrainLogic.h"
 
+#if defined(__linux__)
+#include <cstdio>
+#include <string>
+#include <unistd.h>
+#endif
+
 #ifdef _INTERNAL
 // for occasional debugging...
 //#pragma optimize("", off)
@@ -559,7 +565,7 @@ AsciiString GameState::findNextSaveFilename( UnicodeString desc )
 	* NOTE: filename is a *filename only* */
 // ------------------------------------------------------------------------------------------------
 SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc, 
-															SaveFileType saveType, SnapshotType which )
+											SaveFileType saveType, SnapshotType which )
 {
 
 	// if there is no filename, this is a new file being created, find an appropriate filename
@@ -573,11 +579,30 @@ SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc,
 
 	}  // end if
 
+#if defined(__linux__)
+	// The original UI passes a leaf, never an arbitrary path.  Keep the same
+	// contract when a headless caller supplies the name directly.
+	for (const unsigned char *p = reinterpret_cast<const unsigned char *>(filename.str()); *p; ++p)
+		if (*p == '/' || *p == '\\' || *p == ':' || *p < 0x20 || *p == 0x7f)
+			return SC_INVALID_DATA;
+	if (filename == "." || filename == ".." || !filename.endsWithNoCase(SAVE_GAME_EXTENSION))
+		return SC_INVALID_DATA;
+#endif
+
 	// make absolutely sure the save directory exists
 	CreateDirectory( getSaveDirectory().str(), NULL );
 
 	// construct path to file
 	AsciiString filepath = getFilePathInSaveDirectory(filename);
+	AsciiString writepath = filepath;
+#if defined(__linux__)
+	std::string temporary = std::string(filepath.str()) + ".tmp.XXXXXX";
+	const int temporaryFD = mkstemp(temporary.data());
+	if (temporaryFD < 0)
+		return SC_UNABLE_TO_OPEN_FILE;
+	::close(temporaryFD);
+	writepath = temporary.c_str();
+#endif
 
 	// save description as current description in the game state
 	m_gameInfo.description = desc;
@@ -585,8 +610,11 @@ SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc,
 	// open the save file
 	XferSave xferSave;
 	try {
-		xferSave.open( filepath );
+		xferSave.open( writepath );
 	} catch(...) {
+#if defined(__linux__)
+		std::remove(writepath.str());
+#endif
 		// print error message to the user
 		TheInGameUI->message( "GUI:Error" );
 		DEBUG_LOG(( "Error opening file '%s'\n", filepath.str() ));
@@ -617,6 +645,12 @@ SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc,
 	}  // end try
 	catch( ... )
 	{
+		// Release the partially written file before any UI callback: a headless
+		// diagnostic may itself throw, and must not strand a transaction file.
+		try { xferSave.close(); } catch (...) { }
+#if defined(__linux__)
+		std::remove(writepath.str());
+#endif
 
 		UnicodeString ufilepath;
 		ufilepath.translate(filepath);
@@ -626,14 +660,25 @@ SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc,
 
 		MessageBoxOk(TheGameText->fetch("GUI:Error"), msg, NULL);
 
-		// close the file and get out of here
-		xferSave.close();
 		return SC_ERROR;
 		
 	}  // end catch
 
 	// close the file
-	xferSave.close();
+	try { xferSave.close(); } catch (...) {
+#if defined(__linux__)
+		std::remove(writepath.str());
+#endif
+		return SC_ERROR;
+	}
+
+#if defined(__linux__)
+	if (std::rename(writepath.str(), filepath.str()) != 0)
+	{
+		std::remove(writepath.str());
+		return SC_ERROR;
+	}
+#endif
 
 	// print message to the user for game successfully saved
 	UnicodeString msg = TheGameText->fetch( "GUI:GameSaveComplete" );

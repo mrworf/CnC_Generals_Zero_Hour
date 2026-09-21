@@ -29,3 +29,5 @@ No user authorization is needed in a local game. Validate basename, type/version
 ## Acceptance / commit
 
 Source-linked snapshot save and atomic publication pass positive/negative tests. Commit behavior, tests, plan update and slice evidence together as `delivery: M24 slice 01 publish original saves`.
+
+Completed with [evidence](../../../evidence/qa/cnc-generals-zero-hour/M24-plan01-slice01-original-save.md). The original save's embedded map is bounded to 256 MiB before allocation; no map payload or private path is committed.
