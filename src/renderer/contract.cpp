@@ -235,6 +235,14 @@ ValidationResult validate(const RenderPassDesc& desc)
     for (UInt32 index = 0; index < desc.color_target_count; ++index)
         if (!desc.color_targets[index]) return failure("render pass color target is invalid");
     if (!desc.depth_target) return failure("render pass requires a depth target");
+    if ((desc.color_load != AttachmentLoad::clear && desc.color_load != AttachmentLoad::load) ||
+        (desc.depth_load != AttachmentLoad::clear && desc.depth_load != AttachmentLoad::load))
+        return failure("unsupported attachment load operation");
+    for (float component : desc.clear_color)
+        if (!std::isfinite(component) || component < 0.0F || component > 1.0F)
+            return failure("render pass clear color must be finite and within 0..1");
+    if (!std::isfinite(desc.clear_depth) || desc.clear_depth < 0.0F || desc.clear_depth > 1.0F)
+        return failure("render pass clear depth must be finite and within 0..1");
     return {};
 }
 

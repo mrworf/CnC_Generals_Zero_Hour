@@ -7,9 +7,11 @@
 #include <SDL3/SDL.h>
 
 #include <array>
+#include <cmath>
 #include <chrono>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -121,6 +123,75 @@ void render_generation(SDL_Window* window, int generation)
         check(device.present(color), device.last_error());
         std::cout << "scene=" << scene << " status=pass generation=" << generation << '\n';
     }
+    // B2 public attachment semantics: the original WW3D source will select
+    // these loads/clears in B3. Exercise the physical edge independently now.
+    const unsigned frame_width=generation==1 ? 160U : 240U;
+    const unsigned frame_height=generation==1 ? 120U : 180U;
+    TextureDesc frame_desc=color_desc;
+    frame_desc.width=frame_width; frame_desc.height=frame_height;
+    const auto frame_color=device.create_texture(frame_desc,"M22 source-clear color");
+    frame_desc.format=TextureFormat::depth24_stencil8; frame_desc.sampled=false;
+    const auto frame_depth=device.create_texture(frame_desc,"M22 source-clear depth");
+    check(frame_color && frame_depth,device.last_error());
+    RenderPassDesc frame{};
+    frame.color_targets[0]=frame_color; frame.color_target_count=1;
+    frame.depth_target=frame_depth; frame.width=frame_width; frame.height=frame_height;
+    frame.color_load=AttachmentLoad::load;
+    check(!device.begin_pass(frame,"load untouched color") &&
+        device.last_error().find("uninitialized color")!=std::string::npos,
+        "uninitialized Vulkan color load accepted");
+    check(!device.present(frame_color),"uninitialized color presentation accepted");
+    frame.color_load=AttachmentLoad::clear; frame.depth_load=AttachmentLoad::load;
+    check(!device.begin_pass(frame,"load untouched depth") &&
+        device.last_error().find("uninitialized depth")!=std::string::npos,
+        "uninitialized Vulkan depth load accepted");
+    frame.depth_load=AttachmentLoad::clear;
+    frame.clear_color={0.125F,0.25F,0.375F,0.5F}; frame.clear_depth=0.25F;
+    check(device.begin_pass(frame,"M22 explicit full-target color alpha depth clear"),device.last_error());
+    check(!device.begin_pass(frame,"midpass clear"),"midpass Vulkan clear accepted");
+    check(device.draw(draw),device.last_error()); // original z=0.5 fails depth <=0.25
+    check(device.end_pass(),device.last_error());
+    frame.color_load=AttachmentLoad::load; frame.depth_load=AttachmentLoad::load;
+    check(device.begin_pass(frame,"M22 preserve color and depth"),device.last_error());
+    check(device.draw(draw),device.last_error());
+    check(device.end_pass(),device.last_error());
+    const auto preserved=device.readback_rgba(frame_color);
+    check(preserved.size()==frame_width*frame_height*4U,device.last_error());
+    const auto corner=preserved.data();
+    const auto frame_center=preserved.data()+((frame_height/2U)*frame_width+(frame_width/2U))*4U;
+    for (unsigned channel=0;channel<4;++channel)
+        check(std::abs(static_cast<int>(frame_center[channel])-static_cast<int>(corner[channel]))<=1,
+            "depth LOAD did not preserve source clear's occlusion");
+    check(std::abs(static_cast<int>(corner[0])-32)<=1 && std::abs(static_cast<int>(corner[1])-64)<=1 &&
+        std::abs(static_cast<int>(corner[2])-96)<=1 && std::abs(static_cast<int>(corner[3])-128)<=1,
+        "full-target source clear lost RGBA, including destination alpha");
+    frame.depth_load=AttachmentLoad::clear; frame.clear_depth=1.0F;
+    check(device.begin_pass(frame,"M22 preserve color reset depth"),device.last_error());
+    check(device.draw(draw),device.last_error());
+    check(device.end_pass(),device.last_error());
+    const auto revealed=device.readback_rgba(frame_color);
+    const auto* lit=revealed.data()+((frame_height/2U)*frame_width+(frame_width/2U))*4U;
+    check(std::abs(static_cast<int>(lit[0])-static_cast<int>(corner[0]))>20 ||
+          std::abs(static_cast<int>(lit[1])-static_cast<int>(corner[1]))>20,
+        "depth CLEAR did not permit same geometry after source depth LOAD");
+    frame.clear_color[3]=std::numeric_limits<float>::infinity();
+    check(!device.begin_pass(frame,"invalid alpha"),"infinite Vulkan clear alpha accepted");
+    frame.clear_color[3]=0.5F;
+    check(device.present(frame_color),device.last_error());
+    device.destroy(frame_color);
+    check(!device.begin_pass(frame,"stale color attachment") &&
+        device.last_error().find("stale")!=std::string::npos,
+        "destroyed GPU color generation remained loadable");
+    frame_desc.format=TextureFormat::rgba8; frame_desc.sampled=true;
+    const auto replacement=device.create_texture(frame_desc,"M22 next color generation");
+    check(replacement && replacement!=frame_color,device.last_error());
+    frame.color_targets[0]=replacement;
+    check(!device.begin_pass(frame,"new uninitialized generation") &&
+        device.last_error().find("uninitialized color")!=std::string::npos,
+        "replacement target inherited prior generation's LOAD contents");
+    device.destroy(replacement); device.destroy(frame_depth);
+    std::cout << "original-frame-attachment-clear-load-pixels=pass generation="<<generation
+              << " extent="<<frame_width<<"x"<<frame_height<<'\n';
     // Backend parity for original WW3D: its shared mesh index buffers are
     // 16-bit and each draw carries its own first index and base vertex.
     const auto indexed_vertices = device.create_buffer({sizeof(Vertex) * 4, BufferUsage::vertex, true}, "M22 indexed vertices");

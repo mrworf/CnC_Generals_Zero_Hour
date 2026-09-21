@@ -26,3 +26,18 @@ and draw offsets. Non-indexed draws reject index-only fields. This does not
 rebase or repack original mesh geometry and adds no platform graphics type
 to the public interface. M22 slice 05A verifies hardware parity with an
 owned indexed fixture; retail-scene rendering remains later acceptance.
+
+M22 slice 06C3B2 adds `RenderPassDesc::color_load`/`depth_load` and exact
+`clear_color` RGBA (including destination alpha) / `clear_depth` to the
+public pass boundary. The legacy default remains clear color
+`(0.02, 0.02, 0.04, 1)` and depth `1`; existing callers retain their
+behavior. `LOAD` requires a completed prior pass or whole-target upload
+on that same live texture generation, fails before acquiring a GPU pass on
+uninitialized attachments, and retains stored color/depth independently.
+Color, alpha and depth clear values must be finite in `[0,1]`; SDL_GPU
+attachment cycle is disabled for `LOAD` per the public SDL header contract.
+Clears occur at full-target pass begin, never as a silent replacement for
+the original scene's camera-viewport clear or while a pass is active. B3
+will connect original `WW3D::Begin_Render`/`End_Render`; C3C owns the
+source scene-scoped clear. Physical presentation requires a completed
+color target, a claimed window for SDL_GPU, and no active pass.

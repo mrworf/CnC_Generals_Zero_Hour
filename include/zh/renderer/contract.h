@@ -193,12 +193,20 @@ struct StageBindings {
     UInt32 texture_count = 0;
 };
 
+// LOAD is valid only after a completed write to the same live target. The
+// default CLEAR preserves the existing public-device callers' behavior.
+enum class AttachmentLoad : UInt8 { clear, load };
+
 struct RenderPassDesc {
     std::array<TextureHandle, RendererLimits::color_targets> color_targets{};
     UInt32 color_target_count = 0;
     TextureHandle depth_target;
     UInt32 width = 0;
     UInt32 height = 0;
+    AttachmentLoad color_load = AttachmentLoad::clear;
+    AttachmentLoad depth_load = AttachmentLoad::clear;
+    std::array<float,4> clear_color{0.02F,0.02F,0.04F,1.0F};
+    float clear_depth = 1.0F;
 };
 
 struct ViewportDesc {

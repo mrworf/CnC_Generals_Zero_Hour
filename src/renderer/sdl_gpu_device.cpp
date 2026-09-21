@@ -292,7 +292,7 @@ std::string version_string()
 class SdlGpuDevice::Impl {
 public:
     struct BufferRecord { BufferDesc desc; SDL_GPUBuffer* native = nullptr; std::vector<UInt8> shadow; };
-    struct TextureRecord { TextureDesc desc; SDL_GPUTexture* native = nullptr; };
+    struct TextureRecord { TextureDesc desc; SDL_GPUTexture* native = nullptr; bool initialized=false; };
     struct SamplerRecord { SamplerDesc desc; SDL_GPUSampler* native = nullptr; };
     struct ShaderRecord { ShaderStage stage{}; UInt32 uniforms = 0; UInt32 samplers = 0; SDL_GPUShader* native = nullptr; };
     struct PipelineRecord { PipelineRecord() : key(PipelineDesc{}) {} PipelineKey key; SDL_GPUGraphicsPipeline* native = nullptr; };
@@ -348,6 +348,9 @@ public:
     SDL_GPUCommandBuffer* command = nullptr;
     SDL_GPURenderPass* render_pass = nullptr;
     TextureHandle last_color;
+    std::array<TextureHandle,RendererLimits::color_targets> active_colors{};
+    UInt32 active_color_count=0;
+    TextureHandle active_depth;
     UInt32 active_width = 0;
     UInt32 active_height = 0;
     std::vector<Slot<BufferRecord>> buffers;
@@ -595,6 +598,7 @@ ValidationResult SdlGpuDevice::upload_texture(const TextureUploadDesc& desc, con
     SDL_EndGPUCopyPass(pass);
     if (!SDL_SubmitGPUCommandBuffer(command)) { SDL_ReleaseGPUTransferBuffer(impl_->device, transfer); return impl_->fail("upload_texture", sdl_error("SDL_SubmitGPUCommandBuffer"), texture->label); }
     SDL_ReleaseGPUTransferBuffer(impl_->device, transfer);
+    if (desc.mip_level==0 && texture->value.desc.render_target) texture->value.initialized=true;
     return {};
 }
 
@@ -609,25 +613,29 @@ ValidationResult SdlGpuDevice::begin_pass(const RenderPassDesc& desc, std::strin
             return impl_->fail("begin_pass", "color target is stale, destroyed, or not color-renderable", label);
         if (target->value.desc.width != desc.width || target->value.desc.height != desc.height)
             return impl_->fail("begin_pass", "color target extent does not match pass", target->label);
+        if (desc.color_load==AttachmentLoad::load && !target->value.initialized)
+            return impl_->fail("begin_pass", "cannot load an uninitialized color target", target->label);
         colors[index].texture = target->value.native;
-        colors[index].clear_color = {0.02F, 0.02F, 0.04F, 1.0F};
-        colors[index].load_op = SDL_GPU_LOADOP_CLEAR;
+        colors[index].clear_color = {desc.clear_color[0],desc.clear_color[1],desc.clear_color[2],desc.clear_color[3]};
+        colors[index].load_op = desc.color_load==AttachmentLoad::load ? SDL_GPU_LOADOP_LOAD : SDL_GPU_LOADOP_CLEAR;
         colors[index].store_op = SDL_GPU_STOREOP_STORE;
-        colors[index].cycle = true;
+        colors[index].cycle = desc.color_load==AttachmentLoad::clear;
     }
     auto* depth = lookup(impl_->textures, desc.depth_target);
     if (!depth || !depth->value.desc.render_target || !is_depth(depth->value.desc.format))
         return impl_->fail("begin_pass", "depth target is stale, destroyed, or not depth-renderable", label);
     if (depth->value.desc.width != desc.width || depth->value.desc.height != desc.height)
         return impl_->fail("begin_pass", "depth target extent does not match pass", depth->label);
+    if (desc.depth_load==AttachmentLoad::load && !depth->value.initialized)
+        return impl_->fail("begin_pass", "cannot load an uninitialized depth target", depth->label);
     SDL_GPUDepthStencilTargetInfo depth_info{};
     depth_info.texture = depth->value.native;
-    depth_info.clear_depth = 1.0F;
-    depth_info.load_op = SDL_GPU_LOADOP_CLEAR;
+    depth_info.clear_depth = desc.clear_depth;
+    depth_info.load_op = desc.depth_load==AttachmentLoad::load ? SDL_GPU_LOADOP_LOAD : SDL_GPU_LOADOP_CLEAR;
     depth_info.store_op = SDL_GPU_STOREOP_STORE;
-    depth_info.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
+    depth_info.stencil_load_op = depth_info.load_op;
     depth_info.stencil_store_op = SDL_GPU_STOREOP_STORE;
-    depth_info.cycle = true;
+    depth_info.cycle = desc.depth_load==AttachmentLoad::clear;
     impl_->command = SDL_AcquireGPUCommandBuffer(impl_->device);
     if (!impl_->command) return impl_->fail("begin_pass", sdl_error("SDL_AcquireGPUCommandBuffer"), label);
     const std::string owned(label);
@@ -642,7 +650,9 @@ ValidationResult SdlGpuDevice::begin_pass(const RenderPassDesc& desc, std::strin
     SDL_GPUViewport viewport{0.0F, 0.0F, static_cast<float>(desc.width), static_cast<float>(desc.height), 0.0F, 1.0F};
     SDL_SetGPUViewport(impl_->render_pass, &viewport);
     impl_->in_pass = true;
-    impl_->last_color = desc.color_targets[0];
+    impl_->active_colors=desc.color_targets;
+    impl_->active_color_count=desc.color_target_count;
+    impl_->active_depth=desc.depth_target;
     impl_->active_width = desc.width;
     impl_->active_height = desc.height;
     return {};
@@ -740,9 +750,17 @@ ValidationResult SdlGpuDevice::end_pass()
     impl_->active_width=impl_->active_height=0;
     if (!SDL_SubmitGPUCommandBuffer(impl_->command)) {
         impl_->command = nullptr;
+        impl_->active_color_count=0;
+        impl_->active_depth={};
         return impl_->fail("end_pass", sdl_error("SDL_SubmitGPUCommandBuffer"));
     }
     impl_->command = nullptr;
+    for (UInt32 index=0;index<impl_->active_color_count;++index)
+        lookup(impl_->textures,impl_->active_colors[index])->value.initialized=true;
+    lookup(impl_->textures,impl_->active_depth)->value.initialized=true;
+    impl_->last_color=impl_->active_colors[0];
+    impl_->active_color_count=0;
+    impl_->active_depth={};
     return {};
 }
 
@@ -755,6 +773,11 @@ void SdlGpuDevice::destroy(BufferHandle handle)
 }
 void SdlGpuDevice::destroy(TextureHandle handle)
 {
+    if (impl_->in_pass && (handle==impl_->active_depth ||
+        std::find(impl_->active_colors.begin(),impl_->active_colors.begin()+impl_->active_color_count,handle)!=
+            impl_->active_colors.begin()+impl_->active_color_count)) {
+        impl_->fail("destroy", "texture is attached to the active render pass"); return;
+    }
     auto* slot = lookup(impl_->textures, handle);
     if (!slot) { impl_->fail("destroy", "stale or destroyed texture handle"); return; }
     if (slot->value.native) SDL_ReleaseGPUTexture(impl_->device, slot->value.native);
@@ -809,6 +832,7 @@ ValidationResult SdlGpuDevice::present(TextureHandle source_handle)
     if (!impl_->window) return impl_->fail("present", "no SDL window is claimed");
     auto* source = lookup(impl_->textures, source_handle);
     if (!source || is_depth(source->value.desc.format)) return impl_->fail("present", "source texture is stale or not color-renderable");
+    if (!source->value.initialized) return impl_->fail("present", "source color target is not initialized");
     auto* command = SDL_AcquireGPUCommandBuffer(impl_->device);
     if (!command) return impl_->fail("present", sdl_error("SDL_AcquireGPUCommandBuffer"));
     SDL_GPUTexture* swapchain = nullptr;

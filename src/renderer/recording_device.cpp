@@ -42,7 +42,7 @@ struct Slot {
 };
 
 struct BufferRecord { BufferDesc desc; std::vector<UInt8> bytes; };
-struct TextureRecord { TextureDesc desc; std::vector<std::vector<UInt8>> mips; };
+struct TextureRecord { TextureDesc desc; std::vector<std::vector<UInt8>> mips; bool initialized=false; };
 struct SamplerRecord { SamplerDesc desc; };
 struct ShaderRecord { ShaderStage stage{}; std::string name; UInt32 uniforms = 0; UInt32 samplers = 0; };
 struct PipelineRecord {
@@ -104,6 +104,8 @@ std::string quoted(std::string_view text)
 
 template <typename Enum>
 std::string enum_value(Enum value) { return std::to_string(static_cast<unsigned>(value)); }
+
+bool is_depth(TextureFormat format) { return format==TextureFormat::depth24_stencil8; }
 
 } // namespace
 
@@ -371,6 +373,7 @@ ValidationResult RecordingGpuDevice::upload_texture(const TextureUploadDesc& des
     impl_->commands.push_back("upload_texture " + impl_->name(impl_->textures, desc.destination, 'T') + " extent="
         + std::to_string(desc.width) + "x" + std::to_string(desc.height) + " bytes=" + std::to_string(desc.size)
         + (desc.mip_level ? " mip="+std::to_string(desc.mip_level) : ""));
+    if (desc.mip_level==0 && texture->value.desc.render_target) texture->value.initialized=true;
     return {};
 }
 
@@ -380,14 +383,20 @@ ValidationResult RecordingGpuDevice::begin_pass(const RenderPassDesc& desc, std:
     if (auto result = validate(desc); !result) return impl_->fail("begin_pass", result.error, label);
     for (UInt32 index = 0; index < desc.color_target_count; ++index) {
         const auto* target = lookup(impl_->textures, desc.color_targets[index]);
-        if (!target || !target->value.desc.render_target) return impl_->fail("begin_pass", "color target is stale, destroyed, or not renderable", label);
+        if (!target || !target->value.desc.render_target || is_depth(target->value.desc.format))
+            return impl_->fail("begin_pass", "color target is stale, destroyed, or not renderable", label);
         if (target->value.desc.width != desc.width || target->value.desc.height != desc.height)
             return impl_->fail("begin_pass", "color target extent does not match pass", target->label);
+        if (desc.color_load==AttachmentLoad::load && !target->value.initialized)
+            return impl_->fail("begin_pass", "cannot load an uninitialized color target", target->label);
     }
     const auto* depth = lookup(impl_->textures, desc.depth_target);
-    if (!depth || !depth->value.desc.render_target) return impl_->fail("begin_pass", "depth target is stale, destroyed, or not renderable", label);
+    if (!depth || !depth->value.desc.render_target || !is_depth(depth->value.desc.format))
+        return impl_->fail("begin_pass", "depth target is stale, destroyed, or not renderable", label);
     if (depth->value.desc.width != desc.width || depth->value.desc.height != desc.height)
         return impl_->fail("begin_pass", "depth target extent does not match pass", depth->label);
+    if (desc.depth_load==AttachmentLoad::load && !depth->value.initialized)
+        return impl_->fail("begin_pass", "cannot load an uninitialized depth target", depth->label);
     impl_->in_pass = true;
     impl_->active_pass_label.assign(label);
     impl_->active_colors = desc.color_targets;
@@ -402,6 +411,13 @@ ValidationResult RecordingGpuDevice::begin_pass(const RenderPassDesc& desc, std:
     }
     command += " depth=" + impl_->name(impl_->textures, desc.depth_target, 'T') + " extent="
         + std::to_string(desc.width) + "x" + std::to_string(desc.height);
+    if (desc.color_load!=AttachmentLoad::clear || desc.depth_load!=AttachmentLoad::clear ||
+        desc.clear_color!=std::array<float,4>{0.02F,0.02F,0.04F,1.0F} || desc.clear_depth!=1.0F)
+        command += " color_load=" + std::to_string(static_cast<unsigned>(desc.color_load)) +
+            " depth_load=" + std::to_string(static_cast<unsigned>(desc.depth_load)) +
+            " clear=" + std::to_string(desc.clear_color[0])+","+std::to_string(desc.clear_color[1])+","+
+            std::to_string(desc.clear_color[2])+","+std::to_string(desc.clear_color[3])+","+
+            std::to_string(desc.clear_depth);
     impl_->commands.push_back(std::move(command));
     return {};
 }
@@ -509,6 +525,9 @@ ValidationResult RecordingGpuDevice::draw(const DrawDesc& desc)
 ValidationResult RecordingGpuDevice::end_pass()
 {
     if (!impl_->in_pass) return impl_->fail("end_pass", "no render pass is active");
+    for (UInt32 index=0; index<impl_->active_color_count; ++index)
+        lookup(impl_->textures,impl_->active_colors[index])->value.initialized=true;
+    lookup(impl_->textures,impl_->active_depth)->value.initialized=true;
     impl_->commands.push_back("end_pass label=" + quoted(impl_->active_pass_label));
     impl_->in_pass = false;
     impl_->active_pass_label.clear();
@@ -524,6 +543,7 @@ ValidationResult RecordingGpuDevice::present(TextureHandle source)
     const auto* texture = lookup(impl_->textures, source);
     if (!texture || !texture->value.desc.render_target || texture->value.desc.format != TextureFormat::rgba8)
         return impl_->fail("present", "source texture is stale or not a color render target");
+    if (!texture->value.initialized) return impl_->fail("present", "source color target is not initialized");
     impl_->commands.push_back("present " + impl_->name(impl_->textures, source, 'T') + " label=" + quoted(texture->label));
     return {};
 }

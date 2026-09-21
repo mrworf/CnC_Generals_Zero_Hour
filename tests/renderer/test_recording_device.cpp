@@ -258,6 +258,51 @@ void test_original_sampler_lod_contract()
     device.destroy(sampler);
     check(device.resource_counts().total()==0,"sampler contract leaked resources");
 }
+
+void test_original_frame_attachment_semantics()
+{
+    Scene scene;
+    auto pass=scene.pass();
+    pass.color_load=AttachmentLoad::load;
+    check(!scene.device.begin_pass(pass,"uninitialized color"),"uninitialized color LOAD accepted");
+    check(!scene.device.present(scene.color),"uninitialized presentation accepted");
+    pass.color_load=AttachmentLoad::clear;
+    pass.depth_load=AttachmentLoad::load;
+    check(!scene.device.begin_pass(pass,"uninitialized depth"),"uninitialized depth LOAD accepted");
+    pass.depth_load=AttachmentLoad::clear;
+    pass.clear_color={0.125F,0.25F,0.375F,0.5F};
+    pass.clear_depth=0.75F;
+    check(scene.device.begin_pass(pass,"authored full target clear"),"source color/alpha/depth clear rejected");
+    check(!scene.device.begin_pass(pass,"midpass clear"),"midpass clear accepted");
+    check(!scene.device.present(scene.color),"midpass presentation accepted");
+    check(scene.device.end_pass(),"source clear pass end failed");
+    auto loaded=scene.pass();
+    loaded.color_load=AttachmentLoad::load;
+    loaded.depth_load=AttachmentLoad::load;
+    check(scene.device.begin_pass(loaded,"preserve frame"),"initialized attachment LOAD rejected");
+    check(scene.device.end_pass(),"preserve frame pass end failed");
+    check(scene.device.present(scene.color),"completed source color presentation rejected");
+    const auto snapshot=scene.device.snapshot();
+    check(snapshot.find("color_load=0 depth_load=0 clear=0.125000,0.250000,0.375000,0.500000,0.750000")!=std::string::npos,
+        "source full target color/alpha/depth values lost");
+    check(snapshot.find("color_load=1 depth_load=1")!=std::string::npos,"source LOAD decisions lost");
+    const auto before=scene.device.active_pass_extent();
+    check(before.first==0 && before.second==0,"pass owner leaked after end");
+    loaded.clear_color[3]=std::numeric_limits<float>::quiet_NaN();
+    check(!scene.device.begin_pass(loaded,"nonfinite alpha"),"nonfinite alpha accepted");
+    loaded.clear_color[3]=1.01F;
+    check(!scene.device.begin_pass(loaded,"alpha out of range"),"out of range alpha accepted");
+    loaded.clear_color[3]=1.0F;
+    loaded.clear_depth=-0.1F;
+    check(!scene.device.begin_pass(loaded,"negative depth"),"out of range depth accepted");
+    loaded.clear_depth=1.0F;
+    loaded.depth_load=static_cast<AttachmentLoad>(99);
+    check(!scene.device.begin_pass(loaded,"bad load op"),"unsupported load op accepted");
+    scene.device.destroy(scene.color);
+    auto replacement=scene.device.create_texture({16,16,1,1,TextureDimension::texture_2d,TextureFormat::rgba8,true,false},"new generation");
+    loaded.color_targets[0]=replacement; loaded.depth_load=AttachmentLoad::load;
+    check(!scene.device.begin_pass(loaded,"stale generation"),"new target loaded old generation's contents");
+}
 } // namespace
 
 int main()
@@ -272,6 +317,7 @@ int main()
         test_source_texture_format_capabilities();
         test_original_mip_upload_contract();
         test_original_sampler_lod_contract();
+        test_original_frame_attachment_semantics();
         std::cout << "recording device tests: ok\n";
         return 0;
     } catch (const std::exception& error) {
