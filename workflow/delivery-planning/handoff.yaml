@@ -11,7 +11,7 @@ source:
   change_id: REC-IMPACT-001
   remediation_ids: [REC-RM-001]
 planning:
-  repository_commit: PENDING_PAYLOAD_COMMIT
+  repository_commit: c140a0ec8f11917e0e203afed03ff9f4a9e6a633
 milestones:
   manifest: delivery/milestones/cnc-generals-zero-hour/status.yaml
   packet_revision: sha256:0aafbac99ec645407cc89f3b80496e876c6efb5f4eae5d699ba9837dac90fd89
