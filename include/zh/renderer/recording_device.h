@@ -43,6 +43,7 @@ public:
     void fail_next_pipeline_create();
     void fail_next_buffer_create();
     void fail_next_buffer_upload();
+    void fail_buffer_upload_after(unsigned successful_uploads);
     void fail_next_draw();
     void fail_draw_after(unsigned successful_draws);
 
@@ -69,6 +70,7 @@ public:
     ResourceCounts resource_counts() const noexcept;
     bool pass_active() const noexcept override;
     std::vector<UInt8> buffer_bytes(BufferHandle handle) const;
+    std::vector<UInt8> last_draw_index_bytes() const;
     std::vector<UInt8> texture_bytes(TextureHandle handle, UInt32 mip_level = 0) const;
     SamplerDesc sampler_descriptor(SamplerHandle handle) const;
     PipelineDesc pipeline_descriptor(PipelineHandle handle) const;

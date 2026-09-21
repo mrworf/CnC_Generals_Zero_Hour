@@ -19,6 +19,10 @@ namespace {
 struct Families
 {
 	unsigned meshes=0;
+	unsigned cull_tree_meshes=0;
+	unsigned no_tree_meshes=0;
+	unsigned skin_meshes=0;
+	unsigned sorted_meshes=0;
 	unsigned materials=0;
 	std::map<int,unsigned> mappers;
 	std::set<const VertexMaterialClass*> seen;
@@ -39,8 +43,13 @@ void collect(RenderObjClass *object,Families &families,unsigned depth)
 	{
 		++families.meshes;
 		const MeshModelClass *mesh=static_cast<MeshClass*>(object)->Peek_Model();
+		MeshModelClass *source_mesh=const_cast<MeshModelClass*>(mesh);
+		if (source_mesh->Has_Cull_Tree()) ++families.cull_tree_meshes;
+		else ++families.no_tree_meshes;
+		if (source_mesh->Get_Flag(MeshGeometryClass::SKIN)) ++families.skin_meshes;
+		if (source_mesh->Get_Flag(MeshGeometryClass::SORT)) ++families.sorted_meshes;
 		const unsigned fvf=DX8FVFCategoryContainer::Define_FVF(
-			const_cast<MeshModelClass*>(mesh),true);
+			source_mesh,true);
 		(void)zh::original_runtime::OriginalGpuEdge::layout_for_fvf(fvf);
 		++families.fvf_formats[fvf];
 		for (int pass=0;pass<mesh->Get_Pass_Count();++pass)
@@ -106,4 +115,7 @@ extern "C" void zh_probe_retail_material_families(RenderObjClass *object)
 	for (const auto &[fvf,count]:families.fvf_formats)
 		std::printf(" fvf-%u=%u",fvf,count);
 	std::puts("");
+	std::printf("original retail geometry families: cull-tree=%u no-tree=%u skin=%u sorted=%u\n",
+		families.cull_tree_meshes,families.no_tree_meshes,
+		families.skin_meshes,families.sorted_meshes);
 }

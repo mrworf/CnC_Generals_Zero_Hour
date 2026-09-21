@@ -923,8 +923,21 @@ void MeshClass::Render_Material_Pass(MaterialPassClass * pass,IndexBufferClass *
 
 	} else if ((pass->Get_Cull_Volume() != NULL) && (MaterialPassClass::Is_Per_Polygon_Culling_Enabled())) {
 #if defined(ZH_WW3D_CPU_ONLY)
-		throw std::runtime_error("original cull-volume APT physical pass requires 06B3C translation");
-#else
+		// Generate_Rigid_APT dereferences original polygon vertex indices.
+		// Reject corrupt source geometry before the original decision executes.
+		const TriIndex* source_polys=Model->Get_Polygon_Array();
+		const int source_poly_count=Model->Get_Polygon_Count();
+		const int source_vertex_count=Model->Get_Vertex_Count();
+		if (source_poly_count<0 || source_vertex_count<0 ||
+			(source_poly_count && (!source_polys || source_vertex_count==0)))
+			throw std::runtime_error("invalid original cull-volume polygon owner");
+		for (int p=0;p<source_poly_count;++p) {
+			if (source_polys[p].I>=source_vertex_count ||
+				source_polys[p].J>=source_vertex_count ||
+				source_polys[p].K>=source_vertex_count)
+				throw std::runtime_error("original cull-volume polygon index exceeds source vertices");
+		}
+#endif
 		
 		/*
 		** Generate the APT 
@@ -949,10 +962,19 @@ void MeshClass::Render_Material_Pass(MaterialPassClass * pass,IndexBufferClass *
 	
 		if (temp_apt.Count() > 0) {
 
+#if defined(ZH_WW3D_CPU_ONLY)
+			if (temp_apt.Count()>65535/3)
+				throw std::runtime_error("original cull-volume dynamic index count exceeds 16-bit range");
+#endif
+
 			int buftype = BUFFER_TYPE_DYNAMIC_DX8;
 			if (Model->Get_Flag(MeshGeometryClass::SORT) && WW3D::Is_Sorting_Enabled()) {
 				buftype = BUFFER_TYPE_DYNAMIC_SORTING;
 			}
+#if defined(ZH_WW3D_CPU_ONLY)
+			if (buftype==BUFFER_TYPE_DYNAMIC_SORTING)
+				throw std::runtime_error("original cull-volume dynamic sorting index requires 06C sorting renderer");
+#endif
 
 			/*
 			** Spew triangles in the APT into the dynamic index buffer
@@ -965,9 +987,15 @@ void MeshClass::Render_Material_Pass(MaterialPassClass * pass,IndexBufferClass *
 				DynamicIBAccessClass::WriteLockClass lock(&dynamic_ib);
 				unsigned short * indices = lock.Get_Index_Array();
 				const TriIndex * polys = Model->Get_Polygon_Array();
+#if !defined(ZH_WW3D_CPU_ONLY)
 				try {
+#endif
 				for (int i=0; i < temp_apt.Count(); i++)
 				{
+#if defined(ZH_WW3D_CPU_ONLY)
+					if (temp_apt[i]>=static_cast<unsigned>(source_poly_count))
+						throw std::runtime_error("original cull-volume APT exceeds source polygons");
+#endif
 					unsigned v0 = polys[temp_apt[i]].I;
 					unsigned v1 = polys[temp_apt[i]].J;
 					unsigned v2 = polys[temp_apt[i]].K;
@@ -985,15 +1013,22 @@ void MeshClass::Render_Material_Pass(MaterialPassClass * pass,IndexBufferClass *
 					max_v = WWMath::Max(v2,max_v);
 				}
 				IndexBufferExceptionFunc();
+#if !defined(ZH_WW3D_CPU_ONLY)
 				} catch(...) {
 					IndexBufferExceptionFunc();
 				}
+#endif
 			}
 
 			/*
 			** Render
 			*/
 			int vertex_offset = Model->PolygonRendererList.Peek_Head()->Get_Vertex_Offset();
+#if defined(ZH_WW3D_CPU_ONLY)
+			if (vertex_offset<0 || vertex_offset>65535 || max_v<min_v ||
+				max_v-min_v+1>65535 || max_v>=source_vertex_count)
+				throw std::runtime_error("original cull-volume vertex range exceeds source 16-bit draw");
+#endif
 			pass->Install_Materials();
 			
 			DX8Wrapper::Set_Transform(D3DTS_WORLD,Get_Transform());
@@ -1007,7 +1042,6 @@ void MeshClass::Render_Material_Pass(MaterialPassClass * pass,IndexBufferClass *
 			//MW: Need uninstall custom materials in case they leave D3D in unknown state
 			pass->UnInstall_Materials();
 		}
-#endif
 	} else {
 		
 		/*

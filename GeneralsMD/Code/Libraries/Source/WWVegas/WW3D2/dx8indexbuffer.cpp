@@ -254,6 +254,16 @@ void DynamicIBAccessClass::_Reset(bool frame_changed)
 }
 unsigned short DynamicIBAccessClass::Get_Default_Index_Count() { return _DynamicDX8IndexBufferSize; }
 
+// Keep the original anti-optimization hook owned by its canonical index
+// buffer source; Linux C++ failures propagate instead of invoking the
+// original Windows kernel exception swallowing path.
+int IndexBufferExceptionFunc(void)
+{
+    int b=1;
+    b+=_IndexBufferTotalIndices;
+    return b;
+}
+
 #else // Original Windows device-backed buffer implementation follows unchanged.
 
 #define DEFAULT_IB_SIZE 5000

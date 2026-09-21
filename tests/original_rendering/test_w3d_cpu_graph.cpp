@@ -106,17 +106,20 @@ template <typename T> void chunk(ChunkSaveClass &writer, unsigned id, const T &v
 
 void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant = false,
 	bool skin_variant = false, unsigned texture_stages = 1, bool lit_uv_variant = false,
-	bool invalid_skin = false, unsigned large_vertex_count = 0, bool batch_second = false)
+	bool invalid_skin = false, unsigned large_vertex_count = 0, bool batch_second = false,
+	bool cull_tree_variant = false)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_MESH));
 	W3dMeshHeader3Struct header{};
 	header.Version = W3D_CURRENT_MESH_VERSION;
-	std::strcpy(header.MeshName, lit_uv_variant ? (texture_stages==2 ? "LITTWO01" : "LITONE01") :
+	std::strcpy(header.MeshName, cull_tree_variant ? "CULLTREE" :
+		lit_uv_variant ? (texture_stages==2 ? "LITTWO01" : "LITONE01") :
 		batch_second ? "SKIN02" : invalid_skin ? "BADSKIN" :
 		texture_stages == 0 && !skin_variant ? "ZERO01" : texture_stages == 2 && !skin_variant ? "TWO01" :
 		skin_variant ? "SKIN01" : tread_variant ? "TREADSL01" :
 		(supply_variant ? "SUPPLY01" : "TRIANGLE"));
 	if (skin_variant) header.Attributes = W3D_MESH_FLAG_GEOMETRY_TYPE_SKIN;
+	if (cull_tree_variant) header.Attributes |= W3D_MESH_FLAG_COLLISION_TYPE_PHYSICAL;
 	std::strcpy(header.ContainerName, "TEST");
 	header.NumVertices = large_vertex_count ? large_vertex_count : 3;
 	header.NumTris = 1;
@@ -385,6 +388,7 @@ int main(int argc, char **argv)
 		make_mesh(writer, false, true);
 		make_mesh(writer, false, false, false, 1, true);
 		make_mesh(writer, false, false, false, 2, true);
+		make_mesh(writer, false, false, false, 0, false, false, 0, false, true);
 	}
 	make_hlod(writer, supply_variant);
 	if (!supply_variant) {
@@ -478,6 +482,13 @@ int main(int argc, char **argv)
 		mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(true);
 		mesh->Set_ObjectScale(5.0f);
 		mesh->Set_Position(Vector3(0,0,-10));
+		auto* tree_gpu=static_cast<MeshClass*>(manager.Create_Render_Obj("TEST.CULLTREE"));
+		assert(tree_gpu && tree_gpu->Peek_Model()->Has_Cull_Tree());
+		tree_gpu->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+		tree_gpu->Peek_Model()->Peek_Single_Material()->Set_Lighting(true);
+		tree_gpu->Set_ObjectScale(5.0f);
+		tree_gpu->Set_Position(Vector3(0,0,-10));
+		tree_gpu->Peek_Model()->Register_For_Rendering();
 		zh::renderer::TextureDesc target;
 		target.width=160; target.height=120;
 		target.format=zh::renderer::TextureFormat::rgba8;
@@ -550,6 +561,7 @@ int main(int argc, char **argv)
 				uv_meshes[family]->Peek_Model()->Register_For_Rendering();
 			}
 			const auto ambient_pixels=frame(mesh,Vector3(0.15f,0.2f,0.25f));
+			const auto tree_base_pixels=frame(tree_gpu,Vector3(0.15f,0.2f,0.25f));
 			RenderObjClass* skin_hlod=manager.Create_Render_Obj("TEST.SKINHLOD");
 			assert(skin_hlod && skin_hlod->Get_HTree());
 			RenderObjClass* skin_child=skin_hlod->Get_Sub_Object(0);
@@ -606,6 +618,26 @@ int main(int argc, char **argv)
 				if (delayed_pixels[i]!=5 || delayed_pixels[i+1]!=5 || delayed_pixels[i+2]!=10)
 					++delayed_coverage;
 			assert(delayed_coverage>0);
+			const bool prior_per_polygon=MaterialPassClass::Is_Per_Polygon_Culling_Enabled();
+			MaterialPassClass::Enable_Per_Polygon_Culling(true);
+			OBBoxClass covered_volume(Vector3(0,0,-10),Vector3(100,100,100),Matrix3x3(true));
+			immediate->Set_Cull_Volume(&covered_volume);
+			const auto selected_apt_pixels=frame(mesh,Vector3(0.15f,0.2f,0.25f));
+			assert(selected_apt_pixels!=ambient_pixels);
+			const auto tree_covered_pixels=frame(tree_gpu,Vector3(0.15f,0.2f,0.25f));
+			assert(tree_covered_pixels!=tree_base_pixels);
+			OBBoxClass tree_outside(Vector3(1000,1000,-10),Vector3(1,1,1),Matrix3x3(true));
+			immediate->Set_Cull_Volume(&tree_outside);
+			assert(frame(tree_gpu,Vector3(0.15f,0.2f,0.25f))==tree_base_pixels);
+			Matrix3x3 backface_basis(true);
+			backface_basis.Rotate_X(WWMATH_PI);
+			OBBoxClass backface_cull(Vector3(0,0,-10),Vector3(100,100,100),backface_basis);
+			immediate->Set_Cull_Volume(&backface_cull);
+			const auto rejected_apt_pixels=frame(mesh,Vector3(0.15f,0.2f,0.25f));
+			assert(rejected_apt_pixels==ambient_pixels);
+			assert(frame(tree_gpu,Vector3(0.15f,0.2f,0.25f))==tree_base_pixels);
+			immediate->Set_Cull_Volume(nullptr);
+			MaterialPassClass::Enable_Per_Polygon_Culling(prior_per_polygon);
 			render_info.Pop_Material_Pass();
 			assert(additional_skin_pixels!=original_skin_pixels);
 			immediate->Release_Ref();
@@ -665,6 +697,7 @@ int main(int argc, char **argv)
 				240U*160U*4U);
 			for (auto* selected:uv_meshes) selected->Release_Ref();
 			zero_mesh->Release_Ref();
+			tree_gpu->Release_Ref();
 			TheDX8MeshRenderer.Invalidate();
 			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
 		}
@@ -737,6 +770,11 @@ int main(int argc, char **argv)
 			assert(fvf_one==DX8_FVF_XYZNUV1 && fvf_two==DX8_FVF_XYZNUV2);
 			for (auto *variant_object : variant_objects)
 				static_cast<MeshClass *>(variant_object)->Peek_Model()->Register_For_Rendering();
+			auto* tree_mesh=static_cast<MeshClass*>(manager.Create_Render_Obj("TEST.CULLTREE"));
+			assert(tree_mesh && tree_mesh->Peek_Model()->Has_Cull_Tree());
+			tree_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+			tree_mesh->Set_Position(Vector3(0,0,-10));
+			tree_mesh->Peek_Model()->Register_For_Rendering();
 			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
 			DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
 			assert(recorder.begin_pass(pass,"caller-owned original rigid/category frame"));
@@ -1155,6 +1193,7 @@ int main(int argc, char **argv)
 			TheDX8MeshRenderer.Invalidate();
 			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
 			retry_mesh->Peek_Model()->Register_For_Rendering();
+			tree_mesh->Peek_Model()->Register_For_Rendering();
 			retry_mesh->Render(render_info);
 			const auto before_pass_retry=recorder.snapshot().size();
 			assert(recorder.begin_pass(pass,"original additional material requeue"));
@@ -1191,24 +1230,177 @@ int main(int argc, char **argv)
 			render_info.Pop_Material_Pass();
 			default_pass->Release_Ref();
 			auto* culled_pass=NEW_REF(MaterialPassClass,());
-			OBBoxClass source_cull_volume;
+			OBBoxClass source_cull_volume(Vector3(0,0,-10),Vector3(100,100,100),Matrix3x3(true));
 			culled_pass->Set_Cull_Volume(&source_cull_volume);
 			const bool old_per_polygon_culling=MaterialPassClass::Is_Per_Polygon_Culling_Enabled();
 			MaterialPassClass::Enable_Per_Polygon_Culling(true);
 			render_info.Push_Material_Pass(culled_pass);
 			retry_mesh->Render(render_info);
 			const auto before_cull_edge=recorder.snapshot().size();
-			assert(recorder.begin_pass(pass,"original cull-volume selected physical edge"));
-			bool cull_edge_rejected=false;
+			assert(recorder.begin_pass(pass,"original cull-volume APT dynamic physical draw"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto cull_commands=recorder.snapshot().substr(before_cull_edge);
+			assert(count_draws(cull_commands)==2 &&
+				cull_commands.find("DX8Wrapper::Set_Index_Buffer dynamic offset=")!=std::string::npos);
+			assert(retry_mesh->Peek_Model()->Get_Polygon_Count()==1);
+			const auto dynamic_index_bytes=recorder.last_draw_index_bytes();
+			assert(dynamic_index_bytes.size()==3*sizeof(unsigned short));
+			unsigned short dynamic_indices[3]{};
+			std::memcpy(dynamic_indices,dynamic_index_bytes.data(),sizeof(dynamic_indices));
+			const auto selected_poly=retry_mesh->Peek_Model()->Get_Polygon_Array()[0];
+			assert(dynamic_indices[0]==selected_poly.I && dynamic_indices[1]==selected_poly.J &&
+				dynamic_indices[2]==selected_poly.K &&
+				cull_commands.find("index_bits=16")!=std::string::npos);
+			OBBoxClass outside_volume(Vector3(1000,1000,-10),Vector3(1,1,1),Matrix3x3(true));
+			culled_pass->Set_Cull_Volume(&outside_volume);
+			retry_mesh->Render(render_info);
+			const auto before_empty_apt=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original cull-volume empty APT"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto empty_apt_commands=recorder.snapshot().substr(before_empty_apt);
+			// This fixture has no original cull tree: the authored fallback uses
+			// view-facing APT, so moving the volume alone does not reject a poly.
+			assert(!retry_mesh->Peek_Model()->Has_Cull_Tree() &&
+				count_draws(empty_apt_commands)==2 &&
+				empty_apt_commands.find("DX8Wrapper::Set_Index_Buffer dynamic offset=")!=
+					std::string::npos);
+			Matrix3x3 flipped_basis(true);
+			flipped_basis.Rotate_X(WWMATH_PI);
+			OBBoxClass backface_volume(Vector3(0,0,-10),Vector3(100,100,100),flipped_basis);
+			culled_pass->Set_Cull_Volume(&backface_volume);
+			retry_mesh->Render(render_info);
+			const auto before_backface_apt=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original no-tree backface empty APT"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto backface_commands=recorder.snapshot().substr(before_backface_apt);
+			assert(count_draws(backface_commands)==1 &&
+				backface_commands.find("DX8Wrapper::Set_Index_Buffer dynamic offset=")==
+					std::string::npos);
+			culled_pass->Set_Cull_Volume(&source_cull_volume);
+			tree_mesh->Render(render_info);
+			const auto before_tree_apt=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original loader-built cull-tree APT"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto tree_apt_commands=recorder.snapshot().substr(before_tree_apt);
+			assert(count_draws(tree_apt_commands)==2 &&
+				tree_apt_commands.find("DX8Wrapper::Set_Index_Buffer dynamic offset=")!=
+					std::string::npos);
+			culled_pass->Set_Cull_Volume(&outside_volume);
+			tree_mesh->Render(render_info);
+			const auto before_tree_outside=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original cull-tree outside volume"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto tree_outside_commands=recorder.snapshot().substr(before_tree_outside);
+			assert(count_draws(tree_outside_commands)==1 &&
+				tree_outside_commands.find("DX8Wrapper::Set_Index_Buffer dynamic offset=")==
+					std::string::npos);
+			culled_pass->Set_Cull_Volume(&source_cull_volume);
+			auto* source_polygons=const_cast<TriIndex*>(retry_mesh->Peek_Model()->Get_Polygon_Array());
+			const auto authored_polygon=source_polygons[0];
+			source_polygons[0].I=retry_mesh->Peek_Model()->Get_Vertex_Count();
+			retry_mesh->Render(render_info);
+			const auto before_bad_polygon=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original malformed cull polygon rejection"));
+			bool bad_polygon_rejected=false;
 			try { TheDX8MeshRenderer.Flush(); }
 			catch (const std::runtime_error& error) {
-				cull_edge_rejected=std::strstr(error.what(),"cull-volume APT")!=nullptr;
+				bad_polygon_rejected=std::strstr(error.what(),"polygon index")!=nullptr;
 			}
-			assert(cull_edge_rejected && recorder.end_pass() &&
-				recorder.snapshot().find("draw pipeline=",before_cull_edge)!=std::string::npos);
+			assert(bad_polygon_rejected && recorder.end_pass() &&
+				count_draws(recorder.snapshot().substr(before_bad_polygon))==1);
+			source_polygons[0]=authored_polygon;
 			render_info.Pop_Material_Pass();
 			MaterialPassClass::Enable_Per_Polygon_Culling(old_per_polygon_culling);
 			culled_pass->Release_Ref();
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			const bool authored_sorting=WW3D::Is_Sorting_Enabled();
+			WW3D::Enable_Sorting(true);
+			retry_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,true);
+			auto* sorted_cull_pass=NEW_REF(MaterialPassClass,());
+			sorted_cull_pass->Set_Cull_Volume(&source_cull_volume);
+			render_info.Push_Material_Pass(sorted_cull_pass);
+			retry_mesh->Peek_Model()->Register_For_Rendering();
+			render_info.Push_Override_Flags(RenderInfoClass::RINFO_OVERRIDE_ADDITIONAL_PASSES_ONLY);
+			retry_mesh->Render(render_info);
+			render_info.Pop_Override_Flags();
+			const auto before_sorting_cull=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original sorted cull-volume typed route"));
+			bool sorting_cull_rejected=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				sorting_cull_rejected=std::strstr(error.what(),"06C sorting renderer")!=nullptr;
+			}
+			assert(sorting_cull_rejected && recorder.end_pass() &&
+				count_draws(recorder.snapshot().substr(before_sorting_cull))==0);
+			render_info.Pop_Material_Pass();
+			sorted_cull_pass->Release_Ref();
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			retry_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+			WW3D::Enable_Sorting(authored_sorting);
+			retry_mesh->Peek_Model()->Register_For_Rendering();
+			retry_mesh->Render(render_info);
+			assert(recorder.begin_pass(pass,"original cull owner warm base frame"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			auto* retry_cull_pass=NEW_REF(MaterialPassClass,());
+			retry_cull_pass->Set_Cull_Volume(&source_cull_volume);
+			render_info.Push_Material_Pass(retry_cull_pass);
+			retry_mesh->Render(render_info);
+			// Arm after the original base draw's uploads, then reject the
+			// APT-owned physical index upload.
+			const auto first_cull_draw=cull_commands.find("draw pipeline=");
+			unsigned base_uploads=0;
+			for (auto pos=cull_commands.find("upload B");pos!=std::string::npos &&
+				pos<first_cull_draw;pos=cull_commands.find("upload B",pos+1)) ++base_uploads;
+			assert(base_uploads>0);
+			recorder.fail_buffer_upload_after(base_uploads);
+			const auto before_cull_upload=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original dynamic APT index upload failure"));
+			bool cull_upload_rejected=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				cull_upload_rejected=std::strstr(error.what(),"upload")!=nullptr;
+			}
+			assert(cull_upload_rejected && recorder.end_pass() &&
+				count_draws(recorder.snapshot().substr(before_cull_upload))==1);
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			retry_mesh->Peek_Model()->Register_For_Rendering();
+			retry_mesh->Render(render_info);
+			const auto before_cull_retry=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original APT owner upload retry"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass() &&
+				count_draws(recorder.snapshot().substr(before_cull_retry))==2);
+			retry_mesh->Render(render_info);
+			recorder.fail_draw_after(1);
+			const auto before_cull_draw_failure=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original APT dynamic draw failure"));
+			bool cull_draw_rejected=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				cull_draw_rejected=std::strstr(error.what(),"draw")!=nullptr;
+			}
+			assert(cull_draw_rejected && recorder.end_pass() &&
+				count_draws(recorder.snapshot().substr(before_cull_draw_failure))==1);
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			retry_mesh->Peek_Model()->Register_For_Rendering();
+			retry_mesh->Render(render_info);
+			const auto before_cull_draw_retry=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original APT owner draw retry"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass() &&
+				count_draws(recorder.snapshot().substr(before_cull_draw_retry))==2);
+			render_info.Pop_Material_Pass();
+			retry_cull_pass->Release_Ref();
 			TheDX8MeshRenderer.Invalidate();
 			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
 			auto* delayed_pass=NEW_REF(MaterialPassClass,());
@@ -1288,6 +1480,7 @@ int main(int argc, char **argv)
 			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
 			bad_skin_child->Release_Ref();
 			bad_skin_hlod->Release_Ref();
+			tree_mesh->Release_Ref();
 			for (auto *variant_object : variant_objects) variant_object->Release_Ref();
 		}
 		recorder.destroy(color); recorder.destroy(depth);

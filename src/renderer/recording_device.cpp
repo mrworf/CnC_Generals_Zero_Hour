@@ -148,7 +148,7 @@ public:
     bool reject_next_shader_create=false;
     bool reject_next_pipeline_create=false;
     bool reject_next_buffer_create=false;
-    bool reject_next_buffer_upload=false;
+    unsigned buffer_upload_failure_countdown=std::numeric_limits<unsigned>::max();
     unsigned draw_failure_countdown=std::numeric_limits<unsigned>::max();
     bool in_pass = false;
     std::string active_pass_label;
@@ -157,6 +157,7 @@ public:
     TextureHandle active_depth;
     std::string last_error;
     std::vector<std::string> commands;
+    std::vector<UInt8> last_draw_indices;
     std::vector<Slot<BufferRecord>> buffers;
     std::vector<Slot<TextureRecord>> textures;
     std::vector<Slot<SamplerRecord>> samplers;
@@ -194,7 +195,9 @@ void RecordingGpuDevice::fail_next_sampler_create() { impl_->reject_next_sampler
 void RecordingGpuDevice::fail_next_shader_create() { impl_->reject_next_shader_create=true; }
 void RecordingGpuDevice::fail_next_pipeline_create() { impl_->reject_next_pipeline_create=true; }
 void RecordingGpuDevice::fail_next_buffer_create() { impl_->reject_next_buffer_create=true; }
-void RecordingGpuDevice::fail_next_buffer_upload() { impl_->reject_next_buffer_upload=true; }
+void RecordingGpuDevice::fail_next_buffer_upload() { impl_->buffer_upload_failure_countdown=0; }
+void RecordingGpuDevice::fail_buffer_upload_after(unsigned successful_uploads)
+{ impl_->buffer_upload_failure_countdown=successful_uploads; }
 void RecordingGpuDevice::fail_next_draw() { impl_->draw_failure_countdown=0; }
 void RecordingGpuDevice::fail_draw_after(unsigned successful_draws)
 { impl_->draw_failure_countdown=successful_draws; }
@@ -311,9 +314,12 @@ PipelineHandle RecordingGpuDevice::create_pipeline(const PipelineKey& key, std::
 
 ValidationResult RecordingGpuDevice::upload(const UploadDesc& desc, const void* bytes)
 {
-    if (impl_->reject_next_buffer_upload) {
-        impl_->reject_next_buffer_upload=false;
-        return impl_->fail("upload", "injected buffer upload failure");
+    if (impl_->buffer_upload_failure_countdown!=std::numeric_limits<unsigned>::max()) {
+        if (!impl_->buffer_upload_failure_countdown) {
+            impl_->buffer_upload_failure_countdown=std::numeric_limits<unsigned>::max();
+            return impl_->fail("upload", "injected buffer upload failure");
+        }
+        --impl_->buffer_upload_failure_countdown;
     }
     if (auto result = validate(desc); !result) return impl_->fail("upload", result.error);
     auto* buffer = lookup(impl_->buffers, desc.destination);
@@ -448,6 +454,14 @@ ValidationResult RecordingGpuDevice::draw(const DrawDesc& desc)
         }
         --impl_->draw_failure_countdown;
     }
+    impl_->last_draw_indices.clear();
+    if (desc.index_buffer) {
+        const auto* index=lookup(impl_->buffers,desc.index_buffer);
+        const auto element_size=static_cast<std::size_t>(static_cast<UInt8>(desc.index_element_size));
+        const auto first=static_cast<std::size_t>(desc.first_index)*element_size;
+        const auto last=first+static_cast<std::size_t>(desc.vertex_or_index_count)*element_size;
+        impl_->last_draw_indices.assign(index->value.bytes.begin()+first,index->value.bytes.begin()+last);
+    }
     std::string command = "draw pipeline=" + impl_->name(impl_->pipelines, desc.pipeline, 'P') + " vertex="
         + impl_->name(impl_->buffers, desc.vertex_buffer, 'B') + " index="
         + (desc.index_buffer ? impl_->name(impl_->buffers, desc.index_buffer, 'B') : "none")
@@ -539,6 +553,8 @@ std::vector<UInt8> RecordingGpuDevice::buffer_bytes(BufferHandle handle) const
     const auto* buffer = lookup(impl_->buffers, handle);
     return buffer ? buffer->value.bytes : std::vector<UInt8>{};
 }
+std::vector<UInt8> RecordingGpuDevice::last_draw_index_bytes() const
+{ return impl_->last_draw_indices; }
 
 std::vector<UInt8> RecordingGpuDevice::texture_bytes(TextureHandle handle, UInt32 mip_level) const
 {

@@ -143,6 +143,15 @@ def main() -> int:
                     r"(?: fvf-\d+=\d+)+", fvf[2]):
                 raise SystemExit("original retail FVF family aggregate is absent or malformed")
             print(f"validated original retail FVF aggregate: variants={fvf[1]}{fvf[2]}")
+            geometry = re.search(
+                r"^original retail geometry families: cull-tree=(\d+) no-tree=(\d+) skin=(\d+) sorted=(\d+)$",
+                result.stdout, re.MULTILINE)
+            if not geometry or int(geometry[1]) + int(geometry[2]) != int(aggregate[1]) or (
+                    int(geometry[3]) > int(aggregate[1]) or int(geometry[4]) > int(aggregate[1])):
+                raise SystemExit("original retail geometry family aggregate is absent or inconsistent")
+            print("validated original retail geometry aggregate: "
+                  f"cull-tree={geometry[1]} no-tree={geometry[2]} "
+                  f"skin={geometry[3]} sorted={geometry[4]}")
         if args.keep:
             print(result.stdout)
         os.environ.pop("ZH_M22_RETAIL_MODEL", None)
