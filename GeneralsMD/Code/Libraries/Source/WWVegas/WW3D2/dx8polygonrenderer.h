@@ -120,10 +120,6 @@ inline void DX8PolygonRendererClass::Set_Vertex_Index_Range(unsigned min_vertex_
 
 inline void DX8PolygonRendererClass::Render(/*const Matrix3D & tm,*/int base_vertex_offset)
 {
-#if defined(ZH_WW3D_CPU_ONLY)
-	(void)base_vertex_offset;
-	throw std::runtime_error("original polygon draw requires installed GPU translator");
-#else
 //	DX8Wrapper::Set_Transform(D3DTS_WORLD,tm);
 //	SNAPSHOT_SAY(("Set_Transform\n"));
 	SNAPSHOT_SAY(("Set_Index_Buffer_Index_Offset(%d)\n",base_vertex_offset));
@@ -145,7 +141,6 @@ inline void DX8PolygonRendererClass::Render(/*const Matrix3D & tm,*/int base_ver
 			min_vertex_index,
 			vertex_index_range);
 	}
-#endif
 }
 
 inline void DX8PolygonRendererClass::Render_Sorted(/*const Matrix3D & tm,*/int base_vertex_offset,const SphereClass & bounding_sphere)

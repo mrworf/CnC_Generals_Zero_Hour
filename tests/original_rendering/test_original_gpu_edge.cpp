@@ -2,6 +2,10 @@
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
 #include "dx8fvf.h"
+#include "dx8wrapper.h"
+#include "dx8polygonrenderer.h"
+#include "shader.h"
+#include "meshmdl.h"
 #include "zh/renderer/recording_device.h"
 
 #include <stdexcept>
@@ -9,13 +13,15 @@
 
 namespace {
 using namespace zh::renderer;
-void check(bool okay) { if (!okay) throw std::runtime_error("original first GPU edge invariant failed"); }
+#define check(okay) do { if (!(okay)) throw std::runtime_error( \
+    "original first GPU edge invariant failed at line " + std::to_string(__LINE__)); } while (false)
 
 class FaultDevice final : public GpuDevice {
 public:
     RecordingGpuDevice recorder;
     int reject_create = 0;
     int reject_upload = 0;
+    int reject_draw = 0;
     BufferHandle create_buffer(const BufferDesc& d, std::string_view l) override
     { if (reject_create && --reject_create == 0) return {}; return recorder.create_buffer(d,l); }
     TextureHandle create_texture(const TextureDesc& d, std::string_view l) override { return recorder.create_texture(d,l); }
@@ -26,7 +32,8 @@ public:
     { if (reject_upload && --reject_upload == 0) return {false,"injected original upload failure"}; return recorder.upload(d,b); }
     ValidationResult upload_texture(const TextureUploadDesc& d, const void* b) override { return recorder.upload_texture(d,b); }
     ValidationResult begin_pass(const RenderPassDesc& d, std::string_view l) override { return recorder.begin_pass(d,l); }
-    ValidationResult draw(const DrawDesc& d) override { return recorder.draw(d); }
+    ValidationResult draw(const DrawDesc& d) override
+    { if (reject_draw && --reject_draw == 0) return {false,"injected original draw failure"}; return recorder.draw(d); }
     ValidationResult end_pass() override { return recorder.end_pass(); }
     ValidationResult present(TextureHandle h) override { return recorder.present(h); }
     void destroy(BufferHandle h) override { recorder.destroy(h); }
@@ -187,6 +194,112 @@ void canonical_fvf_layouts()
     device.destroy(first); device.destroy(second); device.destroy(vertex); device.destroy(fragment);
     check(device.recorder.resource_counts().total() == 0);
 }
+
+void original_wrapper_indexed_methods()
+{
+    FaultDevice device;
+    auto* vb=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZDUV1,6));
+    auto* ib=NEW_REF(DX8IndexBufferClass,(6));
+    {
+        VertexBufferClass::WriteLockClass vertices(vb);
+        std::memset(vertices.Get_Vertex_Array(),0,vb->FVF_Info().Get_FVF_Size()*6);
+        IndexBufferClass::WriteLockClass indices(ib);
+        for (unsigned i=0;i<6;++i) indices.Get_Index_Array()[i]=i%3;
+    }
+    TextureDesc color_desc; color_desc.width=8; color_desc.height=8;
+    color_desc.render_target=true; color_desc.sampled=false;
+    const auto color=device.create_texture(color_desc,"original draw source-owned fixture target");
+    auto depth_desc=color_desc; depth_desc.format=TextureFormat::depth24_stencil8;
+    const auto depth=device.create_texture(depth_desc,"original draw source-owned fixture depth");
+    RenderPassDesc pass; pass.color_targets[0]=color; pass.color_target_count=1;
+    pass.depth_target=depth; pass.width=8; pass.height=8;
+    {
+        zh::original_runtime::OriginalGpuEdge edge(device);
+        ShaderClass unlit;
+        unlit.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+        DX8Wrapper::Set_Shader(unlit);
+        DX8Wrapper::Set_Material(nullptr);
+        DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+        DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+        DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+        DX8Wrapper::Set_Vertex_Buffer(vb);
+        DX8Wrapper::Set_Index_Buffer(ib,0);
+        check(vb->Engine_Refs()==1 && ib->Engine_Refs()==1);
+        MeshModelClass model;
+        DX8PolygonRendererClass polygon(3,&model,nullptr,0,3,false,0);
+        polygon.Set_Vertex_Index_Range(0,3);
+        bool missing_pass=false;
+        try { polygon.Render(1); }
+        catch (const std::runtime_error& error)
+        { missing_pass=std::string(error.what()).find("active render pass")!=std::string::npos; }
+        check(missing_pass && device.recorder.snapshot().find("draw pipeline=")==std::string::npos);
+        check(static_cast<bool>(device.begin_pass(pass,"original caller-owned indexed pass")));
+        polygon.Render(1);
+        const auto triangle_record=device.recorder.snapshot();
+        check(triangle_record.find("DX8Wrapper::Set_Index_Buffer_Index_Offset")!=std::string::npos &&
+            triangle_record.find("index_bits=16 first_index=3 base_vertex=1")!=std::string::npos);
+        DX8Wrapper::Set_Draw_Polygon_Low_Bound_Limit(1);
+        polygon.Render(1);
+        check(device.recorder.snapshot()==triangle_record);
+        DX8Wrapper::Set_Draw_Polygon_Low_Bound_Limit(0);
+        DX8Wrapper::_Enable_Triangle_Draw(false);
+        polygon.Render(1);
+        check(device.recorder.snapshot()==triangle_record &&
+            !DX8Wrapper::_Is_Triangle_Draw_Enabled());
+        DX8Wrapper::_Enable_Triangle_Draw(true);
+        DX8Wrapper::Set_Index_Buffer_Index_Offset(0);
+        DX8Wrapper::Draw_Strip(0,1,0,3);
+        check(device.recorder.snapshot().find("topology="+std::to_string(static_cast<unsigned>(
+            PrimitiveTopology::triangle_strip)))!=std::string::npos &&
+            device.recorder.snapshot().find("count=3")!=std::string::npos);
+        DX8Wrapper::Set_Index_Buffer_Index_Offset(4);
+        bool invalid_base=false;
+        try { DX8Wrapper::Draw_Triangles(0,1,0,3); }
+        catch (const std::runtime_error& error)
+        { invalid_base=std::string(error.what()).find("source range")!=std::string::npos; }
+        check(invalid_base);
+        DX8Wrapper::Set_Index_Buffer_Index_Offset(0);
+        bool invalid_index=false;
+        try { DX8Wrapper::Draw_Triangles(5,1,0,3); }
+        catch (const std::runtime_error& error)
+        { invalid_index=std::string(error.what()).find("source range")!=std::string::npos; }
+        check(invalid_index);
+        device.reject_draw=1;
+        bool draw_failure=false;
+        try { DX8Wrapper::Draw_Triangles(0,1,0,3); }
+        catch (const std::runtime_error& error)
+        { draw_failure=std::string(error.what()).find("injected original draw failure")!=std::string::npos; }
+        check(draw_failure);
+        DX8Wrapper::Draw_Triangles(0,1,0,3);
+        DX8Wrapper::Set_Index_Buffer(nullptr,0);
+        {
+            IndexBufferClass::WriteLockClass indices(ib);
+            indices.Get_Index_Array()[2]=5;
+        }
+        DX8Wrapper::Set_Index_Buffer(ib,0);
+        bool invalid_source_index=false;
+        try { DX8Wrapper::Draw_Triangles(0,1,0,3); }
+        catch (const std::runtime_error& error)
+        { invalid_source_index=std::string(error.what()).find("declared vertex range")!=std::string::npos; }
+        check(invalid_source_index);
+        DX8Wrapper::Set_Index_Buffer(nullptr,0);
+        {
+            IndexBufferClass::WriteLockClass indices(ib);
+            indices.Get_Index_Array()[2]=2;
+        }
+        DX8Wrapper::Set_Index_Buffer(ib,0);
+        DX8Wrapper::Draw_Triangles(0,1,0,3);
+        check(static_cast<bool>(device.end_pass()));
+        DX8Wrapper::Set_Vertex_Buffer(nullptr);
+        DX8Wrapper::Set_Index_Buffer(nullptr,0);
+        check(vb->Engine_Refs()==0 && ib->Engine_Refs()==0);
+    }
+    vb->Release_Ref(); ib->Release_Ref();
+    device.destroy(color); device.destroy(depth);
+    check(device.recorder.resource_counts().total()==0 &&
+        VertexBufferClass::Get_Total_Buffer_Count()==0 &&
+        IndexBufferClass::Get_Total_Buffer_Count()==0);
+}
 } // namespace
 
 int main()
@@ -194,4 +307,5 @@ int main()
     first_original_buffer_bytes();
     injected_device_failures();
     canonical_fvf_layouts();
+    original_wrapper_indexed_methods();
 }

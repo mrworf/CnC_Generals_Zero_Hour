@@ -46,6 +46,8 @@
 #include "texture.h"
 #include "vertmaterial.h"
 #include "shader.h"
+#include "dx8vertexbuffer.h"
+#include "dx8indexbuffer.h"
 #include "ww3d_cpu_boundary.h"
 #include "original_gpu_edge.h"
 
@@ -67,6 +69,11 @@ struct DX8Wrapper::CpuState {
     std::map<int,Matrix4x4> transforms;
     bool fog_enabled=false;
     D3DCOLOR fog_color=0;
+    const VertexBufferClass* vertex_buffer=nullptr;
+    const IndexBufferClass* index_buffer=nullptr;
+    unsigned index_base_offset=0;
+    bool triangle_draw_enabled=true;
+    unsigned polygon_low_bound=0;
 };
 
 DX8Wrapper::CpuState& DX8Wrapper::state() { static CpuState source_state; return source_state; }
@@ -74,6 +81,19 @@ DX8Wrapper::CpuState& DX8Wrapper::state() { static CpuState source_state; return
 void DX8Wrapper::Reset_Source_State()
 {
     auto& selected=state();
+    if (selected.vertex_buffer) {
+        selected.vertex_buffer->Release_Engine_Ref();
+        selected.vertex_buffer->Release_Ref();
+        selected.vertex_buffer=nullptr;
+    }
+    if (selected.index_buffer) {
+        selected.index_buffer->Release_Engine_Ref();
+        selected.index_buffer->Release_Ref();
+        selected.index_buffer=nullptr;
+    }
+    selected.index_base_offset=0;
+    selected.triangle_draw_enabled=true;
+    selected.polygon_low_bound=0;
     for (auto*& texture : selected.textures) {
         if (texture) texture->Release_Ref();
         texture=nullptr;
@@ -282,6 +302,79 @@ void DX8Wrapper::Set_Fog(bool enabled,const Vector3& color,float start,float end
     Set_DX8_Render_State(D3DRS_FOGSTART,start_bits);
     Set_DX8_Render_State(D3DRS_FOGEND,end_bits);
 }
+
+void DX8Wrapper::Set_Vertex_Buffer(const VertexBufferClass* buffer,unsigned stream)
+{
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    if (stream!=0) throw std::runtime_error("original secondary vertex stream is unsupported");
+    auto& current=state().vertex_buffer;
+    if (buffer) { buffer->Add_Ref(); buffer->Add_Engine_Ref(); }
+    if (current) { current->Release_Engine_Ref(); current->Release_Ref(); }
+    current=buffer;
+    edge.record_source_state("DX8Wrapper::Set_Vertex_Buffer");
+}
+
+void DX8Wrapper::Set_Index_Buffer(const IndexBufferClass* buffer,unsigned short base_offset)
+{
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    auto& current=state().index_buffer;
+    if (buffer) { buffer->Add_Ref(); buffer->Add_Engine_Ref(); }
+    if (current) { current->Release_Engine_Ref(); current->Release_Ref(); }
+    current=buffer;
+    state().index_base_offset=base_offset;
+    edge.record_source_state("DX8Wrapper::Set_Index_Buffer");
+}
+
+void DX8Wrapper::Set_Index_Buffer_Index_Offset(unsigned offset)
+{
+    if (state().index_base_offset==offset) return;
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    state().index_base_offset=offset;
+    edge.record_source_state("DX8Wrapper::Set_Index_Buffer_Index_Offset");
+}
+
+void DX8Wrapper::Draw_Triangles(unsigned short first_index,unsigned short triangle_count,
+    unsigned short min_vertex,unsigned short vertex_count)
+{
+    if ((state().polygon_low_bound && state().polygon_low_bound>=triangle_count)) return;
+    Apply_Render_State_Changes();
+    if (!state().triangle_draw_enabled) return;
+    auto& selected=state();
+    if (vertex_count<3) {
+        min_vertex=0;
+        vertex_count=selected.vertex_buffer &&
+            selected.index_base_offset<=selected.vertex_buffer->Get_Vertex_Count()
+            ? selected.vertex_buffer->Get_Vertex_Count()-selected.index_base_offset : 0;
+    }
+    zh::original_runtime::OriginalGpuEdge::required().draw_source_indexed(selected.vertex_buffer,
+        selected.index_buffer,first_index,static_cast<unsigned>(triangle_count)*3U,
+        selected.index_base_offset,min_vertex,vertex_count,
+        zh::renderer::PrimitiveTopology::triangle_list);
+}
+
+void DX8Wrapper::Draw_Strip(unsigned short first_index,unsigned short triangle_count,
+    unsigned short min_vertex,unsigned short vertex_count)
+{
+    if ((state().polygon_low_bound && state().polygon_low_bound>=triangle_count)) return;
+    Apply_Render_State_Changes();
+    if (!state().triangle_draw_enabled) return;
+    auto& selected=state();
+    if (vertex_count<3) {
+        min_vertex=0;
+        vertex_count=selected.vertex_buffer &&
+            selected.index_base_offset<=selected.vertex_buffer->Get_Vertex_Count()
+            ? selected.vertex_buffer->Get_Vertex_Count()-selected.index_base_offset : 0;
+    }
+    zh::original_runtime::OriginalGpuEdge::required().draw_source_indexed(selected.vertex_buffer,
+        selected.index_buffer,first_index,static_cast<unsigned>(triangle_count)+2U,
+        selected.index_base_offset,min_vertex,vertex_count,
+        zh::renderer::PrimitiveTopology::triangle_strip);
+}
+
+void DX8Wrapper::_Enable_Triangle_Draw(bool enabled) { state().triangle_draw_enabled=enabled; }
+bool DX8Wrapper::_Is_Triangle_Draw_Enabled() { return state().triangle_draw_enabled; }
+void DX8Wrapper::Set_Draw_Polygon_Low_Bound_Limit(unsigned limit)
+{ state().polygon_low_bound=limit; }
 
 #else
 //#define CREATE_DX8_MULTI_THREADED

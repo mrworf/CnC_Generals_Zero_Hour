@@ -90,8 +90,12 @@ public:
     renderer::BufferHandle bind_index(const IndexBufferClass* source);
     static renderer::OriginalFvfLayout layout_for_fvf(unsigned source_fvf);
     static AppliedState map_applied_state(unsigned source_fvf);
-    PhysicalState prepare_applied_state(unsigned source_fvf);
+    PhysicalState prepare_applied_state(unsigned source_fvf,
+        renderer::PrimitiveTopology topology=renderer::PrimitiveTopology::triangle_list);
     void validate_prepared_state(const PhysicalState& state) const;
+    void draw_source_indexed(const VertexBufferClass* vertex,const IndexBufferClass* index,
+        unsigned first_index,unsigned index_count,unsigned base_vertex,
+        unsigned min_vertex,unsigned vertex_count,renderer::PrimitiveTopology topology);
     bool supports_texture_format(WW3DFormat format) const noexcept;
     renderer::TextureHandle create_texture(WW3DFormat format, unsigned width, unsigned height, unsigned& mips);
     void upload_texture(renderer::TextureHandle texture, unsigned level, unsigned width,

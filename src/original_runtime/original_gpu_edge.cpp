@@ -312,10 +312,14 @@ void OriginalGpuEdge::release_prepared_state() noexcept
     physical_.reset();
 }
 
-OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned source_fvf)
+OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned source_fvf,
+    renderer::PrimitiveTopology topology)
 {
     release_prepared_state();
     const AppliedState mapped=map_applied_state(source_fvf);
+    if (topology!=renderer::PrimitiveTopology::triangle_list &&
+        topology!=renderer::PrimitiveTopology::triangle_strip)
+        throw std::runtime_error("original indexed primitive topology is unsupported");
     if (mapped.lighting)
         throw std::runtime_error("original lit physical state requires category-issued light environment (M22 06)");
     const char* vertex_variant=nullptr;
@@ -401,6 +405,7 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
             {renderer::ShaderStage::fragment,fragment_name,1,slot},"original applied fragment");
         if (!next.fragment_shader) throw std::runtime_error("original fragment shader creation failed: "+device_.last_error());
         auto pipeline=mapped.pipeline;
+        pipeline.topology=topology;
         pipeline.vertex_shader=next.vertex_shader;
         pipeline.fragment_shader=next.fragment_shader;
         next.pipeline=device_.create_pipeline(renderer::PipelineKey(pipeline),"original applied pipeline");
@@ -667,6 +672,52 @@ renderer::BufferHandle OriginalGpuEdge::bind_index(const IndexBufferClass* sourc
     if (auto result = device_.upload({it->second, size, 0, size}, bytes); !result)
         throw std::runtime_error("original index upload failed: " + result.error);
     return it->second;
+}
+
+void OriginalGpuEdge::draw_source_indexed(const VertexBufferClass* vertex,
+    const IndexBufferClass* index,unsigned first_index,unsigned index_count,
+    unsigned base_vertex,unsigned min_vertex,unsigned vertex_count,
+    renderer::PrimitiveTopology topology)
+{
+    if (!device_.pass_active())
+        throw std::runtime_error("original indexed draw requires a caller-owned active render pass");
+    if (!vertex || !index || !index_count || !vertex_count)
+        throw std::runtime_error("original indexed draw is missing a source buffer or range");
+    if (first_index>index->Get_Index_Count() ||
+        index_count>index->Get_Index_Count()-first_index ||
+        base_vertex>vertex->Get_Vertex_Count() ||
+        min_vertex>vertex->Get_Vertex_Count()-base_vertex ||
+        vertex_count>vertex->Get_Vertex_Count()-base_vertex-min_vertex)
+        throw std::runtime_error("original indexed draw source range exceeds its buffer");
+    if (vertex->Type()!=BUFFER_TYPE_DX8 || index->Type()!=BUFFER_TYPE_DX8)
+        throw std::runtime_error("original indexed draw cannot use sorting/dynamic source buffers yet");
+    const auto* source_indices=static_cast<const DX8IndexBufferClass*>(index)->Get_CPU_Index_Buffer();
+    if (!source_indices) throw std::runtime_error("original indexed draw is missing source indices");
+    for (unsigned i=0;i<index_count;++i) {
+        const unsigned element=source_indices[first_index+i];
+        if (element<min_vertex || element-min_vertex>=vertex_count)
+            throw std::runtime_error("original indexed draw source index escapes its declared vertex range");
+    }
+    auto bound_vertex=bind_vertex(vertex);
+    auto bound_index=bind_index(index);
+    const auto prepared=prepare_applied_state(vertex->FVF_Info().Get_FVF(),topology);
+    validate_prepared_state(prepared);
+    renderer::DrawDesc draw;
+    draw.pipeline=prepared.pipeline;
+    draw.vertex_buffer=bound_vertex;
+    draw.index_buffer=bound_index;
+    draw.vertex_or_index_count=index_count;
+    draw.index_element_size=renderer::IndexElementSize::uint16;
+    draw.first_index=first_index;
+    draw.base_vertex=static_cast<renderer::Int32>(base_vertex);
+    draw.vertex_bindings=prepared.vertex_bindings;
+    draw.fragment_bindings=prepared.fragment_bindings;
+    if (auto result=device_.draw(draw); !result) {
+        release_prepared_state();
+        throw std::runtime_error("original indexed draw GPU translation failed: "+result.error);
+    }
+    device_.record_marker("DX8Wrapper::Draw indexed first="+std::to_string(first_index)+
+        " count="+std::to_string(index_count)+" base="+std::to_string(base_vertex));
 }
 
 } // namespace zh::original_runtime

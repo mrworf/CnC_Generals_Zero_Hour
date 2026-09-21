@@ -56,6 +56,8 @@
 class TextureBaseClass;
 class VertexMaterialClass;
 class ShaderClass;
+class VertexBufferClass;
+class IndexBufferClass;
 using D3DTRANSFORMSTATETYPE = int;
 using FLOAT = float;
 using D3DBLEND = unsigned;
@@ -151,6 +153,16 @@ public:
     static bool Get_Fog_Enable();
     static D3DCOLOR Get_Fog_Color();
     static void Set_Fog(bool enabled,const Vector3& color,float start,float end);
+    static void Set_Vertex_Buffer(const VertexBufferClass* buffer,unsigned stream=0);
+    static void Set_Index_Buffer(const IndexBufferClass* buffer,unsigned short base_offset);
+    static void Set_Index_Buffer_Index_Offset(unsigned offset);
+    static void Draw_Triangles(unsigned short first_index,unsigned short triangle_count,
+        unsigned short min_vertex,unsigned short vertex_count);
+    static void Draw_Strip(unsigned short first_index,unsigned short triangle_count,
+        unsigned short min_vertex,unsigned short vertex_count);
+    static void _Enable_Triangle_Draw(bool enabled);
+    static bool _Is_Triangle_Draw_Enabled();
+    static void Set_Draw_Polygon_Low_Bound_Limit(unsigned limit);
     struct CpuState;
 private:
     static CpuState& state();
