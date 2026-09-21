@@ -1,5 +1,10 @@
 # M22 plan 01 slice 05B2B2B3B: lower original pending shader state
 
+Superseded by [B3B1](milestone_22_plan_01_slice_05b2b2b3b1.md) and
+[B3B2](milestone_22_plan_01_slice_05b2b2b3b2.md). This historical plan is
+not independently executable: exact original applied-state semantics must
+be verified before device shader/pipeline resource creation.
+
 ## Outcome and dependencies
 
 Requires accepted 05B2B2B3A. Original `ShaderClass::Apply`, mapper/material decisions, texture stage/filter, and `DX8Wrapper` ref-counted delayed state drive public Recording and SDL_GPU Vulkan shaders, pipeline and uniform data. Do not insert a dummy pass/draw, select geometry/material authority in an adapter, rearrange source commands or claim a scene: original interleaved category draw applies pending state in 06.

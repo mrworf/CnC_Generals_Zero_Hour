@@ -2,7 +2,7 @@
 
 ## Outcome and dependencies
 
-Requires slices 04C–05B2B2B3B. Original HLOD/mesh, DX8 renderer, WW3D and enabled
+Requires slices 04C–05B2B2B3B2. Original HLOD/mesh, DX8 renderer, WW3D and enabled
 WWShade owners perform every reached interleaved CPU decision and translated
 physical operation in their authored source order. The original
 `DX8TextureCategoryClass::Render` body must execute its source-ordered
@@ -10,7 +10,7 @@ texture/material/shader, mesh transform, alpha override and draw calls;
 its reached original light-environment, world identity/transform and normal
 normalization decisions must execute here rather than being inferred from
 independent B3B method probes;
-pending 05B2B2A/B1/B2/B3A/B3B state binds only at this actual pass/draw, including
+pending 05B2B2A/B1/B2/B3A/B3B1/B3B2 state binds only at this actual pass/draw, including
 pass-time bind failure negatives. Full fixture frames and
 sorting/static-sort/decal/material/skin flushes record through the same
 source path. No GameClient display or retail-frame claim yet.
