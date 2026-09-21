@@ -640,6 +640,8 @@ Only these decisions remain open because source analysis or user-supplied corpus
 
 ### Renderer backend at M14
 
+**Decision update (2026-09-21):** the second branch is selected. M22 exposed the source-required active-frame camera-viewport color/depth/stencil clear missing from SDL_GPU's public API, and an executable bgfx Vulkan probe passed the corresponding ordered inset/outer preservation test on the RTX 4070. The accepted [renderer backend migration](zero-hour-renderer-backend-migration.md) governs the device-edge replacement and M7–M10/M14 revalidation before M22 resumes. Earlier SDL_GPU descriptions in this plan record the provisional baseline, not current backend acceptance.
+
 - **SDL_GPU passes:** retain it. This remains the smallest integration and expected outcome.
 - **SDL_GPU has a demonstrated abstraction gap that bgfx covers:** replace only the device/backend layer with bgfx while retaining SDL3 for platform/input. Rework and rerun M7-M10 and M14.
 - **Both abstractions demonstrably fail:** implement raw Vulkan and explicitly budget device selection, swapchains, descriptors, synchronization, memory allocation, pipeline caching, and SDL window interop. Rework and rerun M7-M10 and M14.
