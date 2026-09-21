@@ -280,10 +280,11 @@ milestones:
   - id: M21
     title: "original map and simulation execution"
     file: delivery/milestones/cnc-generals-zero-hour/M21-original-simulation.md
-    status: pending
+    status: in_progress
     dependencies: [M20]
     remediation_ids: [SE-004, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010]
     optional: false
+    started_at: "2026-09-21T01:04:33Z"
     completed_at: null
     evidence: null
     notes: "New original-source provider; historical component tests do not establish this outcome."

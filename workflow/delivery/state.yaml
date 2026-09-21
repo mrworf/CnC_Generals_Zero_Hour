@@ -17,7 +17,7 @@ delivery_goal:
   blocker_type: null
   blocker: null
   blockers: []
-  resume_point: "M20 completed at b21d43076f01bfd4fc80091e8c70f67769035670. Begin dependency-ready M21 with a new governing plan and companion transaction."
+  resume_point: "M21 selected after accepted M20. Create delivery/plans/cnc-generals-zero-hour/milestone_21_plan_01.md and its complete slice set before implementation."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
   replacement_packet_adoption:
