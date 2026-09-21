@@ -292,10 +292,11 @@ milestones:
   - id: M22
     title: "original retail scene rendering on Vulkan"
     file: delivery/milestones/cnc-generals-zero-hour/M22-original-rendering.md
-    status: pending
+    status: in_progress
     dependencies: [M21, M14]
     remediation_ids: [SE-005, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010, RC-012]
     optional: false
+    started_at: "2026-09-21T04:25:51Z"
     completed_at: null
     evidence: null
     notes: "New original-source provider; historical component tests do not establish this outcome."

@@ -17,7 +17,7 @@ delivery_goal:
   blocker_type: null
   blocker: null
   blockers: []
-  resume_point: "M21 accepted. Verify M22 live PRE-012/PRE-016 GPU/session availability, then create delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md and its complete slice set before implementation."
+  resume_point: "M22 selected with live RTX 4070, Khronos validation layer, and Wayland session available. Create delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md and its complete slice set before implementation."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
   replacement_packet_adoption:
