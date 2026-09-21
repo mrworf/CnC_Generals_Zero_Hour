@@ -20,6 +20,10 @@ Local save names only; no retail writes. Reject truncated descriptor/body, unkno
 
 Original `XferLoad.cpp`, `GameState.cpp/.h`, `GameStateMap.cpp`, affected original snapshot loaders as source-evidenced, Linux scenario hook, focused tests/fixtures, ledger. Investigate block extents/reference semantics before edits.
 
+Investigation finding: the first valid source load failed because the original save path appended a Win32 backslash to an XDG directory and lowercased the resulting absolute path. Raw map extraction wrote a literal-backslash Linux filename while the production VFS normalized backslashes to separators. The narrow native correction is a slash-terminated XDG save directory, slash-aware map-leaf extraction, and preservation of absolute host path case; the portable `Save\\` token and original block schema remain unchanged. The original invalid-load modal message also dereferenced absent headless window chrome, so bounded Linux diagnostics must precede rollback/error return.
+
+Source traversal findings: GameLogic v10 omitted CRC-visible simulation RNG and prepending loaded objects reversed source update/CRC order. The source AI/pathfinder state was not in `SNAPSHOT_SAVELOAD` although it contributes to logic CRC. Linux v11 GameLogic now carries fixed-width random words, restores serialized object order, and includes a bounded source AI/pathfinder block. A corrupt TOC template reached unsafe partial-object teardown before rollback; preflight now validates source TOC and object IDs before reset. Extracted maps publish atomically; only transaction-owned scratch maps are cleaned, and a pre-existing user map collision is rejected before reset.
+
 ## Tests and commands
 
 - Positive: round-trip after commands, compare original object/player/team/script/AI and CRC/checkpoints, resume frames; repeated load/reset/re-entry.

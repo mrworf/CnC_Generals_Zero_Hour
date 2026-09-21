@@ -16,6 +16,8 @@
 #include "Common/PlayerList.h"
 #include "Common/Player.h"
 #include "Common/Recorder.h"
+#include "Common/RandomValue.h"
+#include "Common/XferCRC.h"
 #include "Common/AudioRandomValue.h"
 #include "W3DDevice/Common/W3DModuleFactory.h"
 #if defined(ZH_M22_FULL_DRAW_TEST)
@@ -64,12 +66,14 @@
 #endif
 #include "GameLogic/Object.h"
 #include "GameLogic/ScriptEngine.h"
+#include "GameLogic/PartitionManager.h"
 #include "GameLogic/SidesList.h"
 #include "GameLogic/TerrainLogic.h"
 #include "GameLogic/VictoryConditions.h"
 #include "PosixDevice/Common/PosixLocalFileSystem.h"
 
 #include <cstdlib>
+#include <array>
 #include <filesystem>
 #include <stdexcept>
 #if defined(ZH_M22_FULL_DRAW_TEST)
@@ -890,18 +894,81 @@ public:
 				runOriginalSimulation();
 				if (const char *saveName = std::getenv("ZH_M24_SAVE_FILENAME"))
 				{
-					if (const char *testMap = std::getenv("ZH_M24_TEST_EMBEDDED_MAP"))
-						TheWritableGlobalData->m_mapName = testMap;
-					if (TheGameState->saveGame(AsciiString(saveName), UnicodeString(u"Original scenario"),
-						SAVE_FILE_TYPE_NORMAL) != SC_OK)
-						throw std::runtime_error("original scenario save failed");
+					const Bool loadExisting = std::getenv("ZH_M24_LOAD_EXISTING") != NULL;
 					const AsciiString savedLeaf(*saveName ? saveName : "00000000.sav");
 					SaveGameInfo savedInfo;
-					TheGameState->getSaveGameInfoFromFile(
-						TheGameState->getFilePathInSaveDirectory(savedLeaf), &savedInfo);
-					if (savedInfo.saveFileType != SAVE_FILE_TYPE_NORMAL ||
-						savedInfo.description.getLength() == 0 || savedInfo.mapLabel.isEmpty())
-						throw std::runtime_error("original save metadata did not round-trip");
+					if (!loadExisting)
+					{
+						if (const char *testMap = std::getenv("ZH_M24_TEST_EMBEDDED_MAP"))
+							TheWritableGlobalData->m_mapName = testMap;
+						if (TheGameState->saveGame(AsciiString(saveName), UnicodeString(u"Original scenario"),
+							SAVE_FILE_TYPE_NORMAL) != SC_OK)
+							throw std::runtime_error("original scenario save failed");
+						TheGameState->getSaveGameInfoFromFile(
+							TheGameState->getFilePathInSaveDirectory(savedLeaf), &savedInfo);
+						if (savedInfo.saveFileType != SAVE_FILE_TYPE_NORMAL ||
+							savedInfo.description.getLength() == 0 || savedInfo.mapLabel.isEmpty())
+							throw std::runtime_error("original save metadata did not round-trip");
+					}
+					else savedInfo.saveFileType = SAVE_FILE_TYPE_NORMAL;
+					if (std::getenv("ZH_M24_LOAD_AFTER_SAVE"))
+					{
+						const auto checkpoint = []() {
+							return std::array<UnsignedInt, 5>{
+								TheGameLogic->getFrame(), TheGameLogic->getObjectCount(),
+								static_cast<UnsignedInt>(ThePlayerList->getPlayerCount()),
+								static_cast<UnsignedInt>(TheSidesList->getNumTeams()),
+								TheGameLogic->getCRC(CRC_RECALC)};
+						};
+						const auto before = checkpoint();
+						const auto components = []() {
+							const auto snapshotCRC = [](Snapshot *snapshot) {
+								XferCRC crc;
+								crc.open("M24");
+								crc.xferSnapshot(snapshot);
+								return crc.getCRC();
+							};
+							XferCRC objects;
+							objects.open("M24-objects");
+							std::array<UnsignedInt, 3> individual{};
+							std::size_t objectIndex = 0;
+							for (Object *object = TheGameLogic->getFirstObject(); object; object = object->getNextObject())
+							{
+								objects.xferSnapshot(object);
+								if (objectIndex < individual.size()) individual[objectIndex] = snapshotCRC(object);
+								++objectIndex;
+							}
+							return std::array<UnsignedInt, 8>{GetGameLogicRandomSeedCRC(), objects.getCRC(),
+								snapshotCRC(ThePartitionManager), snapshotCRC(ThePlayerList), snapshotCRC(TheAI),
+								individual[0], individual[1], individual[2]};
+						};
+						const auto partsBefore = components();
+						AvailableGameInfo game;
+						game.filename = savedLeaf;
+						game.saveGameInfo = savedInfo;
+						const SaveCode loadCode = TheGameState->loadGame(game);
+						const Bool fault = loadExisting || std::getenv("ZH_M24_TEST_LOAD_FAULT") != NULL;
+						if ((fault && loadCode != SC_INVALID_DATA) || (!fault && loadCode != SC_OK))
+							throw std::runtime_error("original scenario load returned unexpected status");
+						const auto after = checkpoint();
+						const auto partsAfter = components();
+						if (before != after)
+						{
+							char detail[768];
+							std::snprintf(detail, sizeof(detail),
+								"original scenario load changed checkpoint: frame %u>%u objects %u>%u players %u>%u teams %u>%u crc %u>%u seed %u>%u objcrc %u>%u part %u>%u player %u>%u ai %u>%u individual %u>%u %u>%u %u>%u",
+								before[0], after[0], before[1], after[1], before[2], after[2],
+								before[3], after[3], before[4], after[4],
+								partsBefore[0], partsAfter[0], partsBefore[1], partsAfter[1],
+								partsBefore[2], partsAfter[2], partsBefore[3], partsAfter[3],
+								partsBefore[4], partsAfter[4], partsBefore[5], partsAfter[5],
+								partsBefore[6], partsAfter[6], partsBefore[7], partsAfter[7]);
+							throw std::runtime_error(detail);
+						}
+						std::printf("original persistence load: objects=%u players=%u teams=%u crc=%u rollback=%u\n",
+							TheGameLogic->getObjectCount(), ThePlayerList->getPlayerCount(),
+							TheSidesList->getNumTeams(), after[4], fault);
+					}
 				}
 				if (m_reentryProfile)
 					runOriginalReentry();

@@ -35,6 +35,7 @@
 // INLCUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/Snapshot.h"
 #include "Common/SubsystemInterface.h"
+#include "Common/AsciiString.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Xfer;
@@ -61,6 +62,9 @@ public:
 	virtual void loadPostProcess( void ) { }
 
 	void clearScratchPadMaps( void );		///< clear any scratch pad maps from the save directory
+#ifndef _WIN32
+	Bool canExtractScratchMap(const AsciiString& path) const;
+#endif
 
 protected:
 

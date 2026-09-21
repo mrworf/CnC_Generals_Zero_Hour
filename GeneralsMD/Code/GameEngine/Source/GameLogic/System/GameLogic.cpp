@@ -4704,12 +4704,26 @@ void GameLogic::xfer( Xfer *xfer )
 {
   
 	// version
-	const XferVersion currentVersion = 10;
+	const XferVersion currentVersion = 11;
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
 
 	// logic frame number
 	xfer->xferUnsignedInt( &m_frame );
+	if (version >= 11)
+	{
+		UnsignedInt baseSeed;
+		UnsignedInt randomWords[6];
+		if (xfer->getXferMode() == XFER_SAVE)
+			CopyGameLogicRandomState(&baseSeed, randomWords);
+		xfer->xferUnsignedInt(&baseSeed);
+		for (Int i = 0; i < 6; ++i) xfer->xferUnsignedInt(&randomWords[i]);
+		if (xfer->getXferMode() == XFER_LOAD)
+		{
+			RestoreGameLogicRandomState(baseSeed, randomWords);
+			StageGameLogicRandomState(baseSeed, randomWords);
+		}
+	}
 
 	//
 	// note that we do not do the id counter here, we did it in the game state block because
@@ -4770,6 +4784,8 @@ void GameLogic::xfer( Xfer *xfer )
 	{
 		Team *defaultTeam = ThePlayerList->getNeutralPlayer()->getDefaultTeam();
 		const ThingTemplate *thingTemplate;
+		std::vector<Object *> loadedOrder;
+		loadedOrder.reserve(objectCount);
 
 		// read all objects
 		Int objectDataSize;
@@ -4801,8 +4817,13 @@ void GameLogic::xfer( Xfer *xfer )
 
 				DEBUG_CRASH(( "GameLogic::xfer - Unrecognized thing template name '%s', skipping.  ENGINEERS - Are you *sure* it's OK to be ignoring this object from the save file???  Think hard about it!\n",
 											tocEntry->name.str() ));
+#if defined(__linux__)
+				throw SC_INVALID_DATA;
+#else
 				xfer->skip( objectDataSize );
+				xfer->endBlock();
 				continue;
+#endif
 							
 			}  // end if
 
@@ -4811,6 +4832,7 @@ void GameLogic::xfer( Xfer *xfer )
 
 			// xfer the rest of the object data
 			xfer->xferSnapshot( obj );
+			loadedOrder.push_back(obj);
 
 			// end of block of data (not necessary in a load, but looks symettrically nice)
 			xfer->endBlock();
@@ -4820,6 +4842,14 @@ void GameLogic::xfer( Xfer *xfer )
 				TheAI->pathfinder()->addWallPiece( obj );
 
 		}  // end for, i
+		// registerObject prepends each reconstructed object.  Restore the
+		// serialized list order, which is also source update/CRC order.
+		for (std::vector<Object *>::reverse_iterator it = loadedOrder.rbegin();
+			it != loadedOrder.rend(); ++it)
+		{
+			(*it)->removeFromList(&m_objList);
+			(*it)->prependToList(&m_objList);
+		}
 
 	}  // end else
 

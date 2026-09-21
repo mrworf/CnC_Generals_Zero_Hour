@@ -41,6 +41,7 @@
 #include "Common/RandomValue.h"
 #include "Common/Radar.h"
 #include "Common/Team.h"
+#include "Common/ThingFactory.h"
 #include "Common/WellKnownKeys.h"
 #include "Common/XferLoad.h"
 #include "Common/XferSave.h"
@@ -54,6 +55,7 @@
 #include "GameClient/ParticleSys.h"
 #include "GameClient/TerrainVisual.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/AI.h"
 #include "GameLogic/GhostObject.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/ScriptEngine.h"
@@ -62,9 +64,13 @@
 
 #if defined(__linux__)
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <string>
+#include <set>
 #include <unistd.h>
 #endif
+#include <vector>
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -80,6 +86,17 @@ static const Char *SAVE_FILE_EOF       = "SG_EOF";
 static const Char *SAVE_GAME_EXTENSION = ".sav";
 static const Char *ZERO_NAME_ONLY      = "00000000";
 static const Int MAX_SAVE_FILE_NUMBER  =  99999999;
+
+#if defined(__linux__)
+static Bool validSaveLeaf(const AsciiString& filename)
+{
+	for (const unsigned char *p = reinterpret_cast<const unsigned char *>(filename.str()); *p; ++p)
+		if (*p == '/' || *p == '\\' || *p == ':' || *p < 0x20 || *p == 0x7f)
+			return FALSE;
+	return filename != "." && filename != ".." &&
+		filename.endsWithNoCase(SAVE_GAME_EXTENSION);
+}
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #define GAME_STATE_BLOCK_STRING "CHUNK_GameState"  // block of save game data with game info data
@@ -308,6 +325,7 @@ GameState::GameState( void )
 
 	m_availableGames = NULL;
 	m_isInLoadGame = FALSE;
+	m_isRestoringRollback = FALSE;
 
 }  // end GameState
 
@@ -342,6 +360,7 @@ void GameState::init( void )
 	addSnapshotBlock( "CHUNK_TeamFactory",						TheTeamFactory,						SNAPSHOT_SAVELOAD );
 	addSnapshotBlock( "CHUNK_Players",								ThePlayerList,						SNAPSHOT_SAVELOAD );
 	addSnapshotBlock( "CHUNK_GameLogic",							TheGameLogic,							SNAPSHOT_SAVELOAD );
+	addSnapshotBlock( "CHUNK_AI",								TheAI,								SNAPSHOT_SAVELOAD );
 	addSnapshotBlock( "CHUNK_Radar",									TheRadar,									SNAPSHOT_SAVELOAD );
 	addSnapshotBlock( "CHUNK_ScriptEngine",						TheScriptEngine,					SNAPSHOT_SAVELOAD );
 	addSnapshotBlock( "CHUNK_SidesList",							TheSidesList,							SNAPSHOT_SAVELOAD );
@@ -582,10 +601,7 @@ SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc,
 #if defined(__linux__)
 	// The original UI passes a leaf, never an arbitrary path.  Keep the same
 	// contract when a headless caller supplies the name directly.
-	for (const unsigned char *p = reinterpret_cast<const unsigned char *>(filename.str()); *p; ++p)
-		if (*p == '/' || *p == '\\' || *p == ':' || *p < 0x20 || *p == 0x7f)
-			return SC_INVALID_DATA;
-	if (filename == "." || filename == ".." || !filename.endsWithNoCase(SAVE_GAME_EXTENSION))
+	if (!validSaveLeaf(filename))
 		return SC_INVALID_DATA;
 #endif
 
@@ -713,80 +729,276 @@ SaveCode GameState::missionSave( void )
 // ------------------------------------------------------------------------------------------------
 /** Load the save game pointed to by filename */
 // ------------------------------------------------------------------------------------------------
+Bool GameState::validateSaveStructure(AsciiString filepath, SaveFileType saveType)
+{
+	if (saveType != SAVE_FILE_TYPE_NORMAL && saveType != SAVE_FILE_TYPE_MISSION)
+		return FALSE;
+	XferLoad scan;
+	Bool opened = FALSE;
+	try
+	{
+		scan.open(filepath);
+		opened = TRUE;
+		const SnapshotBlockList& blocks = m_snapshotBlockList[SNAPSHOT_SAVELOAD];
+		std::vector<Bool> seen(blocks.size(), FALSE);
+		Bool ended = FALSE;
+		for (unsigned int count = 0; count < 1024 && !ended; ++count)
+		{
+			AsciiString token;
+			scan.xferAsciiString(&token);
+			if (token.compareNoCase(SAVE_FILE_EOF) == 0)
+			{
+				ended = TRUE;
+				break;
+			}
+			if (token.isEmpty()) throw SC_INVALID_DATA;
+			std::size_t index = 0;
+			for (SnapshotBlockList::const_iterator it = blocks.begin(); it != blocks.end(); ++it, ++index)
+				if (token.compareNoCase(it->blockName) == 0) break;
+			if (index < seen.size())
+			{
+				if (seen[index]) throw SC_INVALID_DATA;
+				seen[index] = TRUE;
+			}
+			const Int size = scan.beginBlock();
+#if defined(__linux__)
+			if (token.compareNoCase("CHUNK_GameStateMap") == 0)
+			{
+				XferVersion version = 2;
+				scan.xferVersion(&version, 2);
+				AsciiString portableMap;
+				scan.xferAsciiString(&portableMap);
+				const Int consumed = 2 + portableMap.getLength();
+				if (consumed > size || !TheGameStateMap->canExtractScratchMap(
+					portableMapPathToRealMapPath(portableMap))) throw SC_INVALID_DATA;
+				scan.skip(size - consumed);
+			}
+			else if (token.compareNoCase("CHUNK_GameLogic") == 0)
+			{
+				XferVersion version = 11;
+				scan.xferVersion(&version, 11);
+				Int consumed = 1;
+				UnsignedInt word = 0;
+				scan.xferUnsignedInt(&word);
+				consumed += 4;
+				if (version >= 11)
+					for (Int i = 0; i < 7; ++i) { scan.xferUnsignedInt(&word); consumed += 4; }
+				XferVersion tocVersion = 1;
+				scan.xferVersion(&tocVersion, 1);
+				UnsignedInt tocCount = 0;
+				scan.xferUnsignedInt(&tocCount);
+				consumed += 5;
+				if (tocCount > 65535 || tocCount > static_cast<UnsignedInt>(size / 4))
+					throw SC_INVALID_DATA;
+				std::set<UnsignedShort> ids;
+				for (UnsignedInt i = 0; i < tocCount; ++i)
+				{
+					AsciiString templateName;
+					UnsignedShort id;
+					scan.xferAsciiString(&templateName);
+					scan.xferUnsignedShort(&id);
+					consumed += 3 + templateName.getLength();
+					if (id == 0 || !ids.insert(id).second ||
+						!TheThingFactory->findTemplate(templateName, FALSE)) throw SC_INVALID_DATA;
+				}
+				UnsignedInt objectCount = 0;
+				scan.xferUnsignedInt(&objectCount);
+				consumed += 4;
+				if (objectCount > 100000 || objectCount > static_cast<UnsignedInt>(size / 6))
+					throw SC_INVALID_DATA;
+				for (UnsignedInt i = 0; i < objectCount; ++i)
+				{
+					UnsignedShort id;
+					scan.xferUnsignedShort(&id);
+					if (ids.find(id) == ids.end()) throw SC_INVALID_DATA;
+					const Int objectSize = scan.beginBlock();
+					scan.skip(objectSize);
+					scan.endBlock();
+					consumed += 6 + objectSize;
+				}
+				if (consumed > size) throw SC_INVALID_DATA;
+				scan.skip(size - consumed);
+			}
+			else
+#endif
+				scan.skip(size);
+			scan.endBlock();
+		}
+		if (!ended || !scan.atEnd()) throw SC_INVALID_DATA;
+		std::size_t index = 0;
+		for (SnapshotBlockList::const_iterator it = blocks.begin(); it != blocks.end(); ++it, ++index)
+			if ((saveType == SAVE_FILE_TYPE_NORMAL ||
+				it->blockName.compareNoCase(GAME_STATE_BLOCK_STRING) == 0 ||
+				it->blockName.compareNoCase(CAMPAIGN_BLOCK_STRING) == 0) && !seen[index])
+				throw SC_INVALID_DATA;
+		scan.close();
+		return TRUE;
+	}
+	catch (...)
+	{
+		if (opened) { try { scan.close(); } catch (...) { } }
+		return FALSE;
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+/** Load the save game pointed to by filename */
+// ------------------------------------------------------------------------------------------------
 SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 {
+#if defined(__linux__)
+	if (!validSaveLeaf(gameInfo.filename)) return SC_INVALID_DATA;
+#endif
 
 	// sanity check for file
 	if( doesSaveGameExist( gameInfo.filename ) == FALSE )
 		return SC_FILE_NOT_FOUND;
 
-	// clear game data just like loading from the debug map load screen for mission saves
-	if( gameInfo.saveGameInfo.saveFileType == SAVE_FILE_TYPE_MISSION )
+	const AsciiString filepath = getFilePathInSaveDirectory(gameInfo.filename);
+	if (!validateSaveStructure(filepath, gameInfo.saveGameInfo.saveFileType))
+		return SC_INVALID_DATA;
+
+#if defined(__linux__)
+	// The source reset below destroys the live game.  Preserve it through the
+	// same original snapshot traversal before touching any source-owned state.
+	const SaveGameInfo previousInfo = m_gameInfo;
+	const AsciiString previousMap = TheGlobalData->m_mapName;
+	std::string rollbackPath;
+	if (TheGameLogic->isInGame())
 	{
-
-		if (TheGameLogic->isInGame())
-			TheGameLogic->clearGameData( FALSE );
-
-	}  // end if
-
-	//
-	// clear the save directory of any temporary "scratch pad" maps that were extracted
-	// from any previously loaded save game files
-	//
-	TheGameStateMap->clearScratchPadMaps();
-
-	// construct path to file
-	AsciiString filepath = getFilePathInSaveDirectory(gameInfo.filename);
-
-	// open the save file
-	XferLoad xferLoad;
-	xferLoad.open( filepath );
-
-	// clear out the game engine
-	TheGameEngine->reset();
-
-	// lock creation of new ghost objects
-	TheGhostObjectManager->saveLockGhostObjects( TRUE );
-
-	LatchRestore<Bool> inLoadGame(m_isInLoadGame, TRUE);
-
-	// load the save data
-	Bool error = FALSE;
-	try
-	{
-
-		// load file
-		xferSaveData( &xferLoad, SNAPSHOT_SAVELOAD );
-
-	}  // end try
-	catch( ... )
-	{
-		error = TRUE;
-	}  // end catch
-
-	// close the file
-	xferLoad.close();
-
-	// un-savelock the ghost objects
-	TheGhostObjectManager->saveLockGhostObjects( FALSE );
-
-	try
-	{
-		// do the post-process from a save game load
-		gameStatePostProcessLoad();
+		rollbackPath = std::string(getSaveDirectory().str()) + ".rollback.XXXXXX";
+		const int rollbackFD = mkstemp(rollbackPath.data());
+		if (rollbackFD < 0) return SC_UNABLE_TO_OPEN_FILE;
+		::close(rollbackFD);
+		XferSave rollbackSave;
+		try
+		{
+			rollbackSave.open(AsciiString(rollbackPath.c_str()));
+			xferSaveData(&rollbackSave, SNAPSHOT_SAVELOAD);
+			rollbackSave.close();
+			m_gameInfo = previousInfo;
+		}
+		catch (...)
+		{
+			try { rollbackSave.close(); } catch (...) { }
+			std::remove(rollbackPath.c_str());
+			m_gameInfo = previousInfo;
+			return SC_ERROR;
+		}
 	}
-	catch (...)
+#endif
+
+	XferLoad xferLoad;
+	Bool error = FALSE;
+	Bool opened = FALSE;
+	Bool ghostLocked = FALSE;
+	Bool resetAttempted = FALSE;
 	{
-		error = TRUE;
+		LatchRestore<Bool> inLoadGame(m_isInLoadGame, TRUE);
+		try
+		{
+			// Open before destroying the live game; structural validation above
+			// likewise performed no source-state mutation.
+			xferLoad.open(filepath);
+			opened = TRUE;
+			if (gameInfo.saveGameInfo.saveFileType == SAVE_FILE_TYPE_MISSION && TheGameLogic->isInGame())
+				TheGameLogic->clearGameData(FALSE);
+			TheGameStateMap->clearScratchPadMaps();
+			DiscardStagedGameLogicRandomState();
+			resetAttempted = TRUE;
+			TheGameEngine->reset();
+			TheGhostObjectManager->saveLockGhostObjects(TRUE);
+			ghostLocked = TRUE;
+#if defined(__linux__)
+			if (const char *fault = std::getenv("ZH_M24_TEST_LOAD_FAULT"))
+				if (std::strcmp(fault, "after-reset") == 0) throw SC_INVALID_DATA;
+#endif
+			xferSaveData(&xferLoad, SNAPSHOT_SAVELOAD);
+			if (!xferLoad.atEnd()) throw SC_INVALID_DATA;
+			TheGhostObjectManager->saveLockGhostObjects(FALSE);
+			ghostLocked = FALSE;
+			xferLoad.close();
+			opened = FALSE;
+			gameStatePostProcessLoad();
+#if defined(__linux__)
+			if (const char *fault = std::getenv("ZH_M24_TEST_LOAD_FAULT"))
+				if (std::strcmp(fault, "postprocess") == 0) throw SC_INVALID_DATA;
+#endif
+		}
+		catch (XferStatus status)
+		{
+#if defined(__linux__)
+			std::fprintf(stderr, "original load rejected xfer status %d\n", status);
+#endif
+			error = TRUE;
+		}
+		catch (SaveCode code)
+		{
+#if defined(__linux__)
+			std::fprintf(stderr, "original load rejected save status %d\n", code);
+#endif
+			error = TRUE;
+		}
+		catch (const std::exception& failure)
+		{
+#if defined(__linux__)
+			std::fprintf(stderr, "original load failed: %s\n", failure.what());
+#endif
+			error = TRUE;
+		}
+		catch (...)
+		{
+#if defined(__linux__)
+			std::fprintf(stderr, "original load failed with unknown exception\n");
+#endif
+			error = TRUE;
+		}
+		if (opened) { try { xferLoad.close(); } catch (...) { error = TRUE; } }
+		if (ghostLocked) TheGhostObjectManager->saveLockGhostObjects(FALSE);
 	}
 
 	// check for error
 	if( error == TRUE )
 	{
+#if defined(__linux__)
+		if (resetAttempted)
+		{
+			try
+			{
+				if (TheGameLogic->isInGame()) TheGameLogic->clearGameData(FALSE);
+				TheGameEngine->reset();
+				if (!rollbackPath.empty())
+				{
+					XferLoad rollback;
+					rollback.open(AsciiString(rollbackPath.c_str()));
+					TheGhostObjectManager->saveLockGhostObjects(TRUE);
+					{
+						LatchRestore<Bool> restoring(m_isInLoadGame, TRUE);
+						LatchRestore<Bool> rollbackGuard(m_isRestoringRollback, TRUE);
+						xferSaveData(&rollback, SNAPSHOT_SAVELOAD);
+						if (!rollback.atEnd()) throw SC_INVALID_DATA;
+					}
+					rollback.close();
+					TheGhostObjectManager->saveLockGhostObjects(FALSE);
+					gameStatePostProcessLoad();
+				}
+				m_gameInfo = previousInfo;
+				TheWritableGlobalData->m_mapName = previousMap;
+			}
+			catch (...)
+			{
+				TheGhostObjectManager->saveLockGhostObjects(FALSE);
+				std::fprintf(stderr, "original load rollback failed; recovery snapshot retained\n");
+				throw;
+			}
+		}
+		if (!rollbackPath.empty()) std::remove(rollbackPath.c_str());
+#else
 		// clear it out, again
 		if (TheGameLogic->isInGame())
 			TheGameLogic->clearGameData( FALSE );
 		TheGameEngine->reset();
+#endif
 
 		// print error message to the user
 		UnicodeString ufilepath;
@@ -795,7 +1007,14 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 		UnicodeString msg;
 		msg.format( TheGameText->fetch("GUI:ErrorLoadingGame"), ufilepath.str() );
 
+#if defined(__linux__)
+		// A headless load has no parent window for the original modal dialog.
+		// Preserve the diagnostic without dereferencing absent UI chrome.
+		std::fprintf(stderr, "original load rejected invalid save data\n");
+		TheInGameUI->message(msg);
+#else
 		MessageBoxOk(TheGameText->fetch("GUI:Error"), msg, NULL);
+#endif
 
 		return SC_INVALID_DATA;	// you can't use a naked "throw" outside of a catch statement!
 
@@ -824,6 +1043,9 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 
 	}  // end if
 		
+#if defined(__linux__)
+	if (!rollbackPath.empty()) std::remove(rollbackPath.c_str());
+#endif
 	return SC_OK;
 
 }  // end loadGame
@@ -832,7 +1054,11 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 AsciiString GameState::getSaveDirectory() const
 {
 	AsciiString tmp = TheGlobalData->getPath_UserData();
+#if defined(__linux__)
+	tmp.concat("Save/");
+#else
 	tmp.concat("Save\\");
+#endif
 	return tmp;
 }
 
@@ -853,7 +1079,11 @@ Bool GameState::isInSaveDirectory(const AsciiString& path) const
 // ------------------------------------------------------------------------------------------------
 AsciiString GameState::getMapLeafName(const AsciiString& in) const
 {
-	const char* p = strrchr(in.str(), '\\');
+const char* p = strrchr(in.str(), '\\');
+#if defined(__linux__)
+	const char* slash = strrchr(in.str(), '/');
+	if (slash && (!p || slash > p)) p = slash;
+#endif
 	if (p)
 	{
 		//
@@ -993,7 +1223,11 @@ AsciiString GameState::portableMapPathToRealMapPath(const AsciiString& in) const
 		// uncaught exceptions crash us. better to just use a bad path.
 		prefix = in;
 	}
+	// The portable token is case-folded when serialized.  A native XDG path
+	// is case-sensitive and must retain its actual directory spelling.
+#if !defined(__linux__)
 	prefix.toLower();
+#endif
 	return prefix;
 }
 
@@ -1528,6 +1762,7 @@ void GameState::xferSaveData( Xfer *xfer, SnapshotType which )
 					//
 					Int dataSize = xfer->beginBlock();
 					xfer->skip( dataSize );
+					xfer->endBlock();
 
 					// continue with while loop reading block tokens
 					continue;
@@ -1545,6 +1780,13 @@ void GameState::xferSaveData( Xfer *xfer, SnapshotType which )
 
 					// read block end
 					xfer->endBlock();
+#if defined(__linux__)
+					if (!m_isRestoringRollback)
+					if (const char *fault = std::getenv("ZH_M24_TEST_LOAD_FAULT"))
+						if (std::strcmp(fault, "traversal") == 0 &&
+							blockInfo->blockName.compareNoCase("CHUNK_GameStateMap") == 0)
+							throw SC_INVALID_DATA;
+#endif
 
 				}  // end try
 				catch( ... )
@@ -1634,6 +1876,7 @@ void GameState::gameStatePostProcessLoad( void )
 
 	// evil... must ensure this is updated prior to the script engine running the first time.
 	ThePartitionManager->update();
+	CommitStagedGameLogicRandomState();
 
 }  // end loadPostProcess
 

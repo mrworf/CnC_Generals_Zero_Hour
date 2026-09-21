@@ -41,6 +41,7 @@ XferLoad::XferLoad( void )
 
 	m_xferMode = XFER_LOAD;
 	m_fileFP = NULL;
+	m_fileSize = 0;
 
 }  // end XferLoad
 
@@ -88,6 +89,14 @@ void XferLoad::open( AsciiString identifier )
 		throw XFER_FILE_NOT_FOUND;
 
 	}  // end if
+	if (fseek(m_fileFP, 0, SEEK_END) != 0 || (m_fileSize = ftell(m_fileFP)) < 0 ||
+		fseek(m_fileFP, 0, SEEK_SET) != 0)
+	{
+		fclose(m_fileFP);
+		m_fileFP = NULL;
+		throw XFER_READ_ERROR;
+	}
+	m_blockEnds.clear();
 
 }  // end open
 
@@ -109,6 +118,8 @@ void XferLoad::close( void )
 	// close the file
 	fclose( m_fileFP );
 	m_fileFP = NULL;
+	m_fileSize = 0;
+	m_blockEnds.clear();
 
 	// erase the filename
 	m_identifier.clear();
@@ -127,13 +138,17 @@ Int XferLoad::beginBlock( void )
 
 	// read block size
 	XferBlockSize blockSize;
-	if( fread( &blockSize, sizeof( XferBlockSize ), 1, m_fileFP ) != 1 )
+	const long descriptor = ftell(m_fileFP);
+	const long parentEnd = m_blockEnds.empty() ? m_fileSize : m_blockEnds.back();
+	if (descriptor < 0 || descriptor > parentEnd - static_cast<long>(sizeof(XferBlockSize)) ||
+		fread( &blockSize, sizeof( XferBlockSize ), 1, m_fileFP ) != 1 )
 	{
-		
-		DEBUG_CRASH(( "Xfer - Error reading block size for '%s'\n", m_identifier.str() ));
-		return 0;
-
+		throw XFER_READ_ERROR;
 	}  // end if
+	const long payload = ftell(m_fileFP);
+	if (blockSize < 0 || payload < 0 || blockSize > parentEnd - payload)
+		throw XFER_READ_ERROR;
+	m_blockEnds.push_back(payload + blockSize);
 
 	// return the block size
 	return blockSize;
@@ -145,8 +160,15 @@ Int XferLoad::beginBlock( void )
 // ------------------------------------------------------------------------------------------------
 void XferLoad::endBlock( void )
 {
-
+	if (m_blockEnds.empty() || ftell(m_fileFP) != m_blockEnds.back())
+		throw XFER_BEGIN_END_MISMATCH;
+	m_blockEnds.pop_back();
 }  // end endBlock
+
+Bool XferLoad::atEnd() const
+{
+	return m_fileFP && m_blockEnds.empty() && ftell(m_fileFP) == m_fileSize;
+}
 
 //-------------------------------------------------------------------------------------------------
 /** Skip forward 'dataSize' bytes in the file */
@@ -163,7 +185,10 @@ void XferLoad::skip( Int dataSize )
 										 dataSize) );
 
 	// skip datasize in the file from the current position
-	if( fseek( m_fileFP, dataSize, SEEK_CUR ) != 0 )
+	const long position = ftell(m_fileFP);
+	const long parentEnd = m_blockEnds.empty() ? m_fileSize : m_blockEnds.back();
+	if (dataSize < 0 || position < 0 || dataSize > parentEnd - position ||
+		fseek( m_fileFP, dataSize, SEEK_CUR ) != 0 )
 		throw XFER_SKIP_ERROR;
 
 }  // end skip
@@ -248,7 +273,10 @@ void XferLoad::xferImplementation( void *data, Int dataSize )
 										 m_identifier.str()) );
 
 	// read data from file
-	if( fread( data, dataSize, 1, m_fileFP ) != 1 )
+	const long position = ftell(m_fileFP);
+	const long parentEnd = m_blockEnds.empty() ? m_fileSize : m_blockEnds.back();
+	if (dataSize < 0 || position < 0 || dataSize > parentEnd - position ||
+		fread( data, dataSize, 1, m_fileFP ) != 1 )
 	{
 
 		DEBUG_CRASH(( "XferLoad - Error reading from file '%s'\n", m_identifier.str() ));
@@ -257,4 +285,3 @@ void XferLoad::xferImplementation( void *data, Int dataSize )
 	}  // end if
 	
 }  // end xferImplementation
-

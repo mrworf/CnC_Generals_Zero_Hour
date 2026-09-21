@@ -44,10 +44,16 @@
 
 #ifndef _WIN32
 #include <filesystem>
+#include <set>
+#include <string>
+#include <unistd.h>
 #endif
 #include <vector>
 
 // GLOBALS ////////////////////////////////////////////////////////////////////////////////////////
+#ifndef _WIN32
+static std::set<std::string> s_extractedScratchMaps;
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -201,6 +207,33 @@ static void embedInUseMap( AsciiString map, Xfer *xfer )
 static void extractAndSaveMap( AsciiString mapToSave, Xfer *xfer )
 {
 	UnsignedInt dataSize;
+#ifndef _WIN32
+	const std::string target(mapToSave.str());
+	if (!TheGameStateMap->canExtractScratchMap(mapToSave)) throw SC_INVALID_DATA;
+	dataSize = xfer->beginBlock();
+	if (dataSize == 0 || dataSize > static_cast<UnsignedInt>(MAX_EMBEDDED_MAP_BYTES)) throw SC_INVALID_DATA;
+	std::vector<char> buffer(dataSize);
+	xfer->xferUser(buffer.data(), dataSize);
+	xfer->endBlock();
+	std::string temporary = target + ".tmp.XXXXXX";
+	const int fd = mkstemp(temporary.data());
+	if (fd < 0) throw SC_INVALID_DATA;
+	FILE *fp = fdopen(fd, "wb");
+	if (!fp)
+	{
+		close(fd);
+		std::remove(temporary.c_str());
+		throw SC_INVALID_DATA;
+	}
+	const bool written = fwrite(buffer.data(), 1, dataSize, fp) == dataSize;
+	const bool closed = fclose(fp) == 0;
+	if (!written || !closed || std::rename(temporary.c_str(), target.c_str()) != 0)
+	{
+		std::remove(temporary.c_str());
+		throw SC_INVALID_DATA;
+	}
+	s_extractedScratchMaps.insert(target);
+#else
 
 	// open handle to output file
 	FILE *fp = fopen( mapToSave.str(), "w+b" );
@@ -245,6 +278,7 @@ static void extractAndSaveMap( AsciiString mapToSave, Xfer *xfer )
 
 	// delete the buffer
 	delete [] buffer;
+#endif
 
 }  // end extractAndSaveMap
 
@@ -468,19 +502,26 @@ void GameStateMap::xfer( Xfer *xfer )
 	* their own file so that those map files could be loaded as a part of the load game
 	* process */
 // ------------------------------------------------------------------------------------------------
+#ifndef _WIN32
+Bool GameStateMap::canExtractScratchMap(const AsciiString& path) const
+{
+	const std::filesystem::path target(path.str());
+	std::filesystem::path saveDirectory(TheGameState->getSaveDirectory().str());
+	saveDirectory = saveDirectory.lexically_normal();
+	if (saveDirectory.filename().empty()) saveDirectory = saveDirectory.parent_path();
+	if (target.parent_path() != saveDirectory ||
+		target.extension() != ".map" || target.filename().empty()) return FALSE;
+	return s_extractedScratchMaps.find(target.string()) != s_extractedScratchMaps.end() ||
+		!std::filesystem::exists(target);
+}
+#endif
+
 void GameStateMap::clearScratchPadMaps( void )
 {
 #ifndef _WIN32
-	const std::filesystem::path saveDirectory(TheGameState->getSaveDirectory().str());
-	std::error_code error;
-	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(saveDirectory, error))
-	{
-		if (!entry.is_regular_file(error))
-			continue;
-		AsciiString extension(entry.path().extension().string().c_str());
-		if (extension.compareNoCase(".map") == 0)
-			std::filesystem::remove(entry.path(), error);
-	}
+	for (const std::string& name : s_extractedScratchMaps)
+		std::remove(name.c_str());
+	s_extractedScratchMaps.clear();
 #else
 
 	// remember the current directory

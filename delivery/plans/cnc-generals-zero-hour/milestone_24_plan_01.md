@@ -51,7 +51,7 @@ The production Linux original engine saves and restores a real source-engine sce
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
 | 01 | [slice 01](milestone_24_plan_01_slice_01.md) | A real scenario writes a bounded, atomically published original snapshot and autosave metadata | M21/M5 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice01-original-save.md` |
-| 02 | [slice 02](milestone_24_plan_01_slice_02.md) | Original load restores source state; malformed/faulted loads leave exact pre-load state | 01 | pending | | |
+| 02 | [slice 02](milestone_24_plan_01_slice_02.md) | Original load restores source state; malformed/faulted loads leave exact pre-load state | 01 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice02-original-load.md` |
 | 03 | [slice 03](milestone_24_plan_01_slice_03.md) | Original commands record/play back safely with compatible cross-preset CRC/RNG | 02 | pending | | |
 | 04 | [slice 04](milestone_24_plan_01_slice_04.md) | Source identity, retail and four-preset cumulative M24 acceptance | 03 | pending | | |
 
@@ -79,7 +79,7 @@ Each slice is reviewable/revertible. No rollback command may alter user saves or
 
 ## Execution notes
 
-Planning completed before production edits in `64aeb22`. Parent orchestration owns milestone/workflow status. Slice 01 source-save publication and negative controls passed; load/replay remain pending.
+Planning completed before production edits in `64aeb22`. Parent orchestration owns milestone/workflow status. Slice 01 source-save publication and slice 02 transactional source-load passed; replay remains pending.
 
 ## Deferred follow-ups
 

@@ -71,6 +71,9 @@ static UnsignedInt theGameLogicSeed[6] =
 {
     0xf22d0e56L, 0x883126e9L, 0xc624dd2fL, 0x702c49cL, 0x9e353f7dL, 0x6fdf3b64L
 };
+static Bool hasStagedGameLogicSeed = FALSE;
+static UnsignedInt stagedGameLogicBaseSeed = 0;
+static UnsignedInt stagedGameLogicSeed[6] = {};
 
 // Add with carry. SUM is replaced with A + B + C, C is replaced with 1  if there was a carry, 0 if there wasn't. A carry occurred if the sum is  less than one of the inputs. This is addition, so carry can never be  more than one.
 #define ADC(SUM, A, B, C)   SUM = (A) + (B) + (C); C = ((SUM < (A)) || (SUM < (B)))
@@ -153,6 +156,37 @@ UnsignedInt GetGameLogicRandomSeedCRC( void )
 	CRC c;
 	c.computeCRC(theGameLogicSeed, 6*sizeof(UnsignedInt));
 	return c.get();
+}
+
+void CopyGameLogicRandomState(UnsignedInt *baseSeed, UnsignedInt words[6])
+{
+	*baseSeed = theGameLogicBaseSeed;
+	for (Int i = 0; i < 6; ++i) words[i] = theGameLogicSeed[i];
+}
+
+void RestoreGameLogicRandomState(UnsignedInt baseSeed, const UnsignedInt words[6])
+{
+	theGameLogicBaseSeed = baseSeed;
+	for (Int i = 0; i < 6; ++i) theGameLogicSeed[i] = words[i];
+}
+
+void StageGameLogicRandomState(UnsignedInt baseSeed, const UnsignedInt words[6])
+{
+	stagedGameLogicBaseSeed = baseSeed;
+	for (Int i = 0; i < 6; ++i) stagedGameLogicSeed[i] = words[i];
+	hasStagedGameLogicSeed = TRUE;
+}
+
+void CommitStagedGameLogicRandomState()
+{
+	if (!hasStagedGameLogicSeed) return;
+	RestoreGameLogicRandomState(stagedGameLogicBaseSeed, stagedGameLogicSeed);
+	hasStagedGameLogicSeed = FALSE;
+}
+
+void DiscardStagedGameLogicRandomState()
+{
+	hasStagedGameLogicSeed = FALSE;
 }
 
 void InitRandom( void )
@@ -439,4 +473,3 @@ Real GameLogicRandomVariable::getValue( void ) const
 			return 0.0f;
 	}
 }
-

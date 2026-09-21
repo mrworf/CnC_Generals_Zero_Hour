@@ -34,6 +34,7 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include <stdio.h>
+#include <vector>
 #include "Common/Xfer.h"
 
 // FOWARD REFERNCES ///////////////////////////////////////////////////////////////////////////////
@@ -60,14 +61,16 @@ public:
 	// xfer methods
 	virtual void xferAsciiString( AsciiString *asciiStringData );  ///< xfer ascii string (need our own)
 	virtual void xferUnicodeString( UnicodeString *unicodeStringData );	///< xfer unicode string (need our own);
+	Bool atEnd() const;
 
 protected:
 
 	virtual void xferImplementation( void *data, Int dataSize );		///< the xfer implementation
 
 	FILE * m_fileFP;																					///< pointer to file
+	long m_fileSize;
+	std::vector<long> m_blockEnds;
 
 };
 
 #endif // __XFER_LOAD_H_
-

@@ -1035,9 +1035,11 @@ void AI::xfer( Xfer *xfer )
 {
 
 	// version
-	XferVersion currentVersion = 1;
+	XferVersion currentVersion = 2;
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
+	if (version >= 2)
+		xfer->xferSnapshot(m_pathfinder);
 
 }  // end xfer
 

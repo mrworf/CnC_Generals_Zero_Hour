@@ -38,6 +38,11 @@ extern void InitRandom( UnsignedInt seed );
 extern void InitGameLogicRandom( UnsignedInt seed ); ///< Set the GameLogic seed to a known value at game start
 extern UnsignedInt GetGameLogicRandomSeed( void );   ///< Get the seed (used for replays)
 extern UnsignedInt GetGameLogicRandomSeedCRC( void );///< Get the seed (used for CRCs)
+extern void CopyGameLogicRandomState(UnsignedInt *baseSeed, UnsignedInt words[6]);
+extern void RestoreGameLogicRandomState(UnsignedInt baseSeed, const UnsignedInt words[6]);
+extern void StageGameLogicRandomState(UnsignedInt baseSeed, const UnsignedInt words[6]);
+extern void CommitStagedGameLogicRandomState();
+extern void DiscardStagedGameLogicRandomState();
 
 //--------------------------------------------------------------------------------------------------------------
 

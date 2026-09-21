@@ -208,6 +208,7 @@ private:
 	void iterateSaveFiles( IterateSaveFileCallback callback, void *userData );	///< iterate save files on disk
 
 	void xferSaveData( Xfer *xfer, SnapshotType which );				///< save/load the file data
+	Bool validateSaveStructure(AsciiString filepath, SaveFileType saveType);
 
 	void gameStatePostProcessLoad( void );											///< post process entry point after a game load
 
@@ -234,6 +235,7 @@ private:
 	AvailableGameInfo *m_availableGames;		///< list of available games we can save over or load from
 
 	Bool m_isInLoadGame; // Brutal hack to allow bone pos validation while loading games
+	Bool m_isRestoringRollback;
 };
 
 // EXTERNALS //////////////////////////////////////////////////////////////////////////////////////

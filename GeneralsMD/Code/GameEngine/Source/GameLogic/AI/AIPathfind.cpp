@@ -11094,7 +11094,7 @@ void Pathfinder::crc( Xfer *xfer )
 	CRCDEBUG_LOG(("m_numWallPieces: %8.8X\n", ((XferCRC *)xfer)->getCRC()));
 	for (Int i=0; i<MAX_WALL_PIECES; ++i)
 	{
-		xfer->xferObjectID(&m_wallPieces[MAX_WALL_PIECES]);
+		xfer->xferObjectID(&m_wallPieces[i]);
 	}
 	CRCDEBUG_LOG(("m_wallPieces: %8.8X\n", ((XferCRC *)xfer)->getCRC()));
 
@@ -11110,9 +11110,30 @@ void Pathfinder::xfer( Xfer *xfer )
 {
 
 	// version
-	XferVersion currentVersion = 1;
+	XferVersion currentVersion = 2;
 	XferVersion version = currentVersion;
 	xfer->xferVersion( &version, currentVersion );
+	if (version >= 2)
+	{
+		xfer->xferIRegion2D(&m_extent);
+		xfer->xferBool(&m_isMapReady);
+		xfer->xferBool(&m_isTunneling);
+		xfer->xferObjectID(&m_ignoreObstacleID);
+		for (Int i = 0; i < PATHFIND_QUEUE_LEN; ++i)
+			xfer->xferObjectID(&m_queuedPathfindRequests[i]);
+		xfer->xferInt(&m_queuePRHead);
+		xfer->xferInt(&m_queuePRTail);
+		xfer->xferInt(&m_numWallPieces);
+		for (Int i = 0; i < MAX_WALL_PIECES; ++i)
+			xfer->xferObjectID(&m_wallPieces[i]);
+		xfer->xferReal(&m_wallHeight);
+		xfer->xferInt(&m_cumulativeCellsAllocated);
+		if (xfer->getXferMode() == XFER_LOAD &&
+			(m_queuePRHead < 0 || m_queuePRHead >= PATHFIND_QUEUE_LEN ||
+			 m_queuePRTail < 0 || m_queuePRTail >= PATHFIND_QUEUE_LEN ||
+			 m_numWallPieces < 0 || m_numWallPieces > MAX_WALL_PIECES))
+			throw XFER_INVALID_PARAMETERS;
+	}
 
 }  // end xfer
 
