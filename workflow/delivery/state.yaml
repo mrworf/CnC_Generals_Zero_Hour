@@ -2,38 +2,33 @@ schema_version: 1
 workflow: milestone-delivery
 delivery_goal:
   product_id: cnc-generals-zero-hour
-  status: blocked
+  status: in_progress
   packet: delivery/milestones/cnc-generals-zero-hour/status.yaml
-  packet_revision: sha256:21ce030a34f700bbcf7773983454f0b741f384956f1ff6568d7fc6782bc5bfe9
-  source_commit: cb567c223beab5d63fa2f13d66718e670271d3d0
-  planning_commit: cd2389e40aa89b1c2d1e02be638d084a95438f2d
-  planning_closeout_commit: 75da0520c91b14bbea21dd3b58c99e3eb3905aa3
+  packet_revision: sha256:0aafbac99ec645407cc89f3b80496e876c6efb5f4eae5d699ba9837dac90fd89
+  source_commit: 25ef60575bfc13aeac5a6aa7146da1af2626e59c
+  planning_commit: c140a0ec8f11917e0e203afed03ff9f4a9e6a633
+  planning_closeout_commit: 74a03e68f943dfeca7be7a8396626b7741c3438f
   scope: remaining
   start: null
   end: null
-  milestone_ids: [M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+  milestone_ids: [M26, M27, M28, M20, M21, M29, M30, M22, M23, M24, M25, M15, M16, M17, M18]
   execution: autonomous
-  current_milestone: M24
-  blocker_type: UPSTREAM_REQUIRED
-  blocker: "M22_VIEWPORT_CLEAR_BACKEND: original camera-subrect clear inside an active frame requires a tested section-9 renderer backend decision and revalidation."
-  blockers:
-    - type: UPSTREAM_REQUIRED
-      source: "M22_VIEWPORT_CLEAR_BACKEND; delivery/evidence/cnc-generals-zero-hour/milestone_22_backend_gap_06c3c.md"
-      expected_artifact: "Committed architecture decision and readiness-approved renderer migration/revalidation packet under docs/zero-hour-linux-port-plan.md section 9"
-      milestone: M22
-      slice: 06C3C
-      required_workflow: "architecture reconciliation followed by delivery replanning"
-      unblock_condition: "A public backend passes the exact viewport-scoped color/depth/stencil clear and interleaved frame reproducer, or a raw Vulkan fallback is explicitly authorized after both abstractions demonstrably fail; the impacted M7-M10/M14/M22 contracts are revalidated."
-    - type: UPSTREAM_REQUIRED
-      source: "M24_DRAW_PROVIDER_DEPENDENCY; delivery/plans/cnc-generals-zero-hour/milestone_24_plan_01.md"
-      expected_artifact: "Completed M22 original draw-provider and renderer scene acceptance after the section-9 backend decision"
-      milestone: M24
-      slice: "05C, 05D, 06"
-      required_workflow: "M22 architecture reconciliation and delivery replanning, then resumed milestone delivery"
-      unblock_condition: "M22 completed with the required original physical draw providers; retail mission first-tick and skirmish reconstruction no longer throw ERROR_INVALID_D3D, allowing exact persistence and cumulative validation."
-  resume_point: "No independent dependency-ready goal milestone remains. First obtain the section-9 architecture decision and readiness-approved renderer replan; resume existing M22 plan 01 at 06C3C, complete M22, then existing M24 plan 01 at 05C/05D/06. M23 and downstream milestones remain dependency-gated."
+  current_milestone: M29
+  blocker_type: null
+  blocker: null
+  blockers: []
+  resume_point: "Plan and deliver M29 using delivery/plans/cnc-generals-zero-hour/milestone_29_plan_01.md; then M30 before resuming preserved M22 plan 01 at 06C3C and M24 plan 01 at 05C."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
+  renderer_packet_adoption:
+    prior_packet_revision: sha256:21ce030a34f700bbcf7773983454f0b741f384956f1ff6568d7fc6782bc5bfe9
+    prior_milestone_ids: [M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+    prior_current_milestone: M24
+    prior_blocker: M22_VIEWPORT_CLEAR_BACKEND
+    source_commit: 25ef60575bfc13aeac5a6aa7146da1af2626e59c
+    planning_commit: c140a0ec8f11917e0e203afed03ff9f4a9e6a633
+    planning_closeout_commit: 74a03e68f943dfeca7be7a8396626b7741c3438f
+    disposition: "Adopted on explicit delivery resume. The tested section-9 bgfx branch is now an M29/M30 migration gate before blocked M22/M24 paths; completed milestone and slice histories remain intact."
   replacement_packet_adoption:
     prior_packet_revision: sha256:6a9d98bcec72db2b1c1658a305ffea8ea4dd004d76f8efcce4b43d166fbe3ace
     prior_milestone_ids: [M19, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]

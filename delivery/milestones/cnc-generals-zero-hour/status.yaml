@@ -304,10 +304,11 @@ milestones:
   - id: M29
     title: "ordered-clear renderer contract and shader closure"
     file: delivery/milestones/cnc-generals-zero-hour/M29-renderer-contract-migration.md
-    status: pending
+    status: in_progress
     dependencies: [M8, M9, M10]
     remediation_ids: [REC-RM-001]
     optional: false
+    started_at: "2026-09-21T23:44:21Z"
     completed_at: null
     evidence: null
     notes: "New backend-neutral contract/shader revalidation gate. RB-01/RB-03; preserve historical component acceptance and existing M22/M24 plans."
