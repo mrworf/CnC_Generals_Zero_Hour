@@ -4,7 +4,7 @@ product_id: "cnc-generals-zero-hour"
 status: "RESOLVED"
 transaction:
   parent_commit: "64c7632"
-  repository_commit: "PENDING_PAYLOAD_COMMIT"
+  repository_commit: "25ef60575bfc13aeac5a6aa7146da1af2626e59c"
 source:
   invocation: "standalone"
   triggering_findings: ["M22_VIEWPORT_CLEAR_BACKEND", "M24_DRAW_PROVIDER_DEPENDENCY"]
