@@ -318,6 +318,20 @@ The layout probe is not a source-driven pass, which remains 06; retail
 scene/visual acceptance remains 08/09. This plan-only revision precedes
 either B3 implementation, preserving all previously accepted contracts.
 
+## Post-slice-05B2B2B3A category light/world ordering
+
+Accepted `2c26632` proves canonical FVF physical layouts and indexed Vulkan
+pixels, not an original category draw. Source inspection of
+`DX8TextureCategoryClass::Render` shows its currently typed-unavailable
+entry precedes source-owned light environment, world transform/identity,
+normal normalization and actual category draw. B3B may lower original
+shader/material/pending state already issued by source methods and probe
+explicit original transform/light methods independently, but cannot claim
+the category issued those later decisions. Slice 06 restores and tests the
+complete original interleaving, including category-issued world/light
+before pass/draw; 07–09 retail and visual gates are unchanged. This
+plan-only clarification precedes B3B physical pipeline edits.
+
 ## Deferred follow-ups
 
 - Interactive UI/media and user input remain M23.
