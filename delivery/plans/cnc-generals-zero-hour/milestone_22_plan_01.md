@@ -89,8 +89,9 @@ The production Linux original-engine path renders representative campaign and sk
 | 05B2B2B2 | [milestone_22_plan_01_slice_05b2b2b2.md](milestone_22_plan_01_slice_05b2b2b2.md) | Original ShaderClass blend/alpha/fog/depth/cull and two-stage combiner/capability decisions. | slice 05B2B2B1 | complete | `6c68e11` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05b2b2b2.md) |
 | 05B2B2B3A | [milestone_22_plan_01_slice_05b2b2b3a.md](milestone_22_plan_01_slice_05b2b2b3a.md) | Public Recording/SDL_GPU canonical dynamic FVF layout, indexed Vulkan evidence and unsupported-format rejection. | slice 05B2B2B2 | complete | slice B3A commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05b2b2b3a.md) |
 | 05B2B2B3B1 | [milestone_22_plan_01_slice_05b2b2b3b1.md](milestone_22_plan_01_slice_05b2b2b3b1.md) | Original applied DX8 state snapshot, exact semantic mapping and unsupported negatives before physical resource creation. | slice 05B2B2B3A | complete | slice B3B1 commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05b2b2b3b1.md) |
-| 05B2B2B3B2 | [milestone_22_plan_01_slice_05b2b2b3b2.md](milestone_22_plan_01_slice_05b2b2b3b2.md) | Public shader/pipeline/uniform GPU execution of source decisions, indexed validation-layer pixels. | slice 05B2B2B3B1 | pending | | |
-| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | Full interleaved original mesh/WWShade/WW3D material, rigid/skin/decal/static/sorting pass graph records owned fixture frames in authored call order. | slice 05B2B2B3B2 | pending | | |
+| 05B2B2B3B2A | [milestone_22_plan_01_slice_05b2b2b3b2a.md](milestone_22_plan_01_slice_05b2b2b3b2a.md) | Source-issued Recording pipeline/uniform/stage binding descriptor, lifetime, error/replay and unsupported-state checks. | slice 05B2B2B3B1 | pending | | |
+| 05B2B2B3B2B | [milestone_22_plan_01_slice_05b2b2b3b2b.md](milestone_22_plan_01_slice_05b2b2b3b2b.md) | GLSL/SPIR-V public SDL_GPU lowering, exact source shader pixels under validation, bounded recreation. | slice 05B2B2B3B2A | pending | | |
+| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | Full interleaved original mesh/WWShade/WW3D material, rigid/skin/decal/static/sorting pass graph records owned fixture frames in authored call order. | slice 05B2B2B3B2B | pending | | |
 | 07 | [milestone_22_plan_01_slice_07.md](milestone_22_plan_01_slice_07.md) | Original GameClient display/scene, 2D, terrain, track, shroud and selected shadow/effect routes integrate and switch production to full behavior. | slice 06 | pending | | |
 | 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | slice 07, PRE-008 | pending | | |
 | 09 | [milestone_22_plan_01_slice_09.md](milestone_22_plan_01_slice_09.md) | Same retail scenes present on validation-enabled SDL_GPU Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 08, PRE-012, PRE-016 | pending | | |
@@ -116,7 +117,7 @@ The production Linux original-engine path renders representative campaign and sk
 
 ## Rollback and recovery
 
-Each slice is independently revertible. Slices 01–04C add only original CPU producer behavior and do not claim a renderer. Slice 05A establishes original vertex/index physical commands, 05B1 proves original image providers, 05B2A preserves original image/format/mip selection before the first device operation, 05B2B1 restores image resource/upload behavior, 05B2B2A restores source-issued texture stage/filter choices, and 05B2B2B1/B2 restore source mapper/material/delayed state and shader/combiner decisions. B3A proves original FVF physical layouts; B3B1 maps exact original applied state and B3B2 lowers shader/pipeline/uniform state through the public device. Slice 06 closes the interleaved pass graph and applies pending state only at actual original draw/pass entry; 07 integrates production GameClient traversal. Slice 08 records retail scenes without requiring hardware. Slice 09's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
+Each slice is independently revertible. Slices 01–04C add only original CPU producer behavior and do not claim a renderer. Slice 05A establishes original vertex/index physical commands, 05B1 proves original image providers, 05B2A preserves original image/format/mip selection before the first device operation, 05B2B1 restores image resource/upload behavior, 05B2B2A restores source-issued texture stage/filter choices, and 05B2B2B1/B2 restore source mapper/material/delayed state and shader/combiner decisions. B3A proves original FVF physical layouts; B3B1 maps exact original applied state, B3B2A verifies source-issued Recording physical binding descriptors and B3B2B executes the bounded shader on SDL_GPU Vulkan. Slice 06 closes the interleaved pass graph and applies pending state only at actual original draw/pass entry; 07 integrates production GameClient traversal. Slice 08 records retail scenes without requiring hardware. Slice 09's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
 
 ## Execution notes
 
@@ -350,6 +351,12 @@ category can emit its later light environment. B3B1 therefore preserves the
 lit requirement in its semantic output; B3B2 must reject that physical
 route until 06 restores source-owned category light/world decisions. An
 unlit state issued by original methods supplies B3B2's physical positive.
+B3B2 is further split before physical implementation: B3B2A constructs and
+verifies only original source-issued Recording pipeline/uniform/stage bindings
+with owner/generation/error controls; B3B2B adds exact GLSL/SPIR-V SDL_GPU
+pixel semantics for required zero-, one- and two-texture stage families and
+Khronos validation. Together these retain the former B3B2 acceptance;
+neither substitutes for 06 original category pass/draw ordering.
 
 ## Deferred follow-ups
 

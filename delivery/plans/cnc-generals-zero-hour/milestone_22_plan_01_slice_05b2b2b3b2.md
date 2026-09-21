@@ -1,4 +1,6 @@
-# M22 plan 01 slice 05B2B2B3B2: public GPU shader lowering
+# M22 historical 05B2B2B3B2: superseded by B3B2A and B3B2B
+
+This combined slice was split before implementation into [B3B2A](milestone_22_plan_01_slice_05b2b2b3b2a.md) followed by [B3B2B](milestone_22_plan_01_slice_05b2b2b3b2b.md). Its complete acceptance remains the union of the two successors; it is not independently deliverable.
 
 ## Outcome and dependencies
 
