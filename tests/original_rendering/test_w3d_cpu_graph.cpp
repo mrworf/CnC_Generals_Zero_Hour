@@ -27,12 +27,13 @@ template <typename T> void chunk(ChunkSaveClass &writer, unsigned id, const T &v
 	assert(writer.End_Chunk());
 }
 
-void make_mesh(ChunkSaveClass &writer)
+void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant = false)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_MESH));
 	W3dMeshHeader3Struct header{};
 	header.Version = W3D_CURRENT_MESH_VERSION;
-	std::strcpy(header.MeshName, "TRIANGLE");
+	std::strcpy(header.MeshName, tread_variant ? "TREADSL01" :
+		(supply_variant ? "SUPPLY01" : "TRIANGLE"));
 	std::strcpy(header.ContainerName, "TEST");
 	header.NumVertices = 3;
 	header.NumTris = 1;
@@ -68,7 +69,8 @@ void make_mesh(ChunkSaveClass &writer)
 	W3dVertexMaterialStruct material{};
 	W3d_Vertex_Material_Reset(&material);
 	material.Opacity = 0.75f;
-	material.Attributes = W3DVERTMAT_STAGE0_MAPPING_SCREEN;
+	material.Attributes = tread_variant ? W3DVERTMAT_STAGE0_MAPPING_LINEAR_OFFSET :
+		W3DVERTMAT_STAGE0_MAPPING_SCREEN;
 	chunk(writer, W3D_CHUNK_VERTEX_MATERIAL_INFO, material);
 	assert(writer.End_Chunk());
 	assert(writer.End_Chunk());
@@ -96,19 +98,32 @@ void make_mesh(ChunkSaveClass &writer)
 	assert(writer.End_Chunk());
 }
 
-void make_hierarchy(ChunkSaveClass &writer)
+void make_hierarchy(ChunkSaveClass &writer, bool supply_variant)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_HIERARCHY));
 	W3dHierarchyStruct header{};
 	header.Version = W3D_CURRENT_HTREE_VERSION;
 	std::strcpy(header.Name, "TESTTREE");
-	header.NumPivots = 1;
+	header.NumPivots = supply_variant ? 5 : 1;
 	chunk(writer, W3D_CHUNK_HIERARCHY_HEADER, header);
 	W3dPivotStruct pivot{};
-	std::strcpy(pivot.Name, "ROOT");
+	std::strcpy(pivot.Name, supply_variant ? "SUPPLY01" : "ROOT");
 	pivot.ParentIdx = 0xffffffffu;
 	pivot.Rotation.Q[0] = 1.0f;
-	chunk(writer, W3D_CHUNK_PIVOTS, pivot);
+	if (supply_variant)
+	{
+		W3dPivotStruct pivots[5]{};
+		pivots[0] = pivot;
+		const char *names[] = {"TIRE_FL", "TIRE_FR", "TIRE_RL", "TIRE_RR"};
+		for (int i = 1; i != 5; ++i)
+		{
+			std::strcpy(pivots[i].Name, names[i - 1]);
+			pivots[i].ParentIdx = 0;
+			pivots[i].Rotation.Q[0] = 1.0f;
+		}
+		chunk(writer, W3D_CHUNK_PIVOTS, pivots);
+	}
+	else chunk(writer, W3D_CHUNK_PIVOTS, pivot);
 	assert(writer.End_Chunk());
 }
 
@@ -125,7 +140,7 @@ void make_animation(ChunkSaveClass &writer)
 	assert(writer.End_Chunk());
 }
 
-void make_hlod(ChunkSaveClass &writer)
+void make_hlod(ChunkSaveClass &writer, bool supply_variant)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_HLOD));
 	W3dHLodHeaderStruct header{};
@@ -136,29 +151,45 @@ void make_hlod(ChunkSaveClass &writer)
 	chunk(writer, W3D_CHUNK_HLOD_HEADER, header);
 	assert(writer.Begin_Chunk(W3D_CHUNK_HLOD_LOD_ARRAY));
 	W3dHLodArrayHeaderStruct array{};
-	array.ModelCount = 1;
+	array.ModelCount = supply_variant ? 2 : 1;
 	array.MaxScreenSize = 1.0f;
 	chunk(writer, W3D_CHUNK_HLOD_SUB_OBJECT_ARRAY_HEADER, array);
 	W3dHLodSubObjectStruct subobject{};
-	std::strcpy(subobject.Name, "TEST.TRIANGLE");
+	std::strcpy(subobject.Name, supply_variant ? "TEST.SUPPLY01" : "TEST.TRIANGLE");
 	chunk(writer, W3D_CHUNK_HLOD_SUB_OBJECT, subobject);
+	if (supply_variant)
+	{
+		W3dHLodSubObjectStruct tread{};
+		std::strcpy(tread.Name, "TEST.TREADSL01");
+		chunk(writer, W3D_CHUNK_HLOD_SUB_OBJECT, tread);
+	}
 	assert(writer.End_Chunk());
 	assert(writer.End_Chunk());
 }
 }
 
-int main()
+int main(int argc, char **argv)
 {
 	std::vector<char> bytes(4096);
 	RAMFileClass file(bytes.data(), static_cast<int>(bytes.size()));
 	assert(file.Open(FileClass::WRITE));
 	ChunkSaveClass writer(&file);
-	make_hierarchy(writer);
+	const bool supply_variant = argc == 3 && std::strcmp(argv[1], "--emit") == 0;
+	make_hierarchy(writer, supply_variant);
 	make_animation(writer);
-	make_mesh(writer);
-	make_hlod(writer);
+	make_mesh(writer, supply_variant);
+	if (supply_variant) make_mesh(writer, true, true);
+	make_hlod(writer, supply_variant);
 	const int size = file.Size();
 	file.Close();
+	if (argc == 3 && std::strcmp(argv[1], "--emit") == 0)
+	{
+		FILE *output = std::fopen(argv[2], "wb");
+		assert(output != nullptr);
+		assert(std::fwrite(bytes.data(), 1, size, output) == static_cast<std::size_t>(size));
+		assert(std::fclose(output) == 0);
+		return 0;
+	}
 	WW3DAssetManager manager;
 	RAMFileClass input(bytes.data(), size);
 	assert(manager.Load_3D_Assets(input));

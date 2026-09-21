@@ -3581,6 +3581,12 @@ void GameLogic::update( void )
 	USE_PERF_TIMER(GameLogic_update)
 
 	LatchRestore<Bool> inUpdateLatch(m_isInUpdate, TRUE);
+#if defined(ZH_ORIGINAL_RUNTIME_TEST_HOOKS) && defined(__linux__)
+	// Optional observer for the original update phase. The weak symbol is absent
+	// outside the owned Linux delivery witness; no gameplay state is substituted.
+	extern void zh_linux_w3d_logic_witness() __attribute__((weak));
+	if (zh_linux_w3d_logic_witness) zh_linux_w3d_logic_witness();
+#endif
 #ifdef DO_UNIT_TIMINGS
 	unitTimings();
 #endif

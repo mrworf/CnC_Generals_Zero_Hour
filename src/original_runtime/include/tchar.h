@@ -17,8 +17,12 @@ using HDC = void *;
 #ifndef _cdecl
 #define _cdecl
 #endif
+#ifndef stricmp
 inline int stricmp(const char *lhs, const char *rhs) { return ::strcasecmp(lhs, rhs); }
+#endif
+#ifndef strnicmp
 inline int strnicmp(const char *lhs, const char *rhs, std::size_t count) { return ::strncasecmp(lhs, rhs, count); }
+#endif
 inline int lstrcmpi(const char *lhs, const char *rhs) { return ::strcasecmp(lhs, rhs); }
 inline int _wcsicmp(const wchar_t *lhs, const wchar_t *rhs) { return ::wcscasecmp(lhs, rhs); }
 inline char *_strlwr(char *value)

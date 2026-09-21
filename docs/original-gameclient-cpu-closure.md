@@ -48,3 +48,26 @@ The CPU `DX8Wrapper` color conversion preserves the original ARGB component
 order and x87 channel truncation after clamping; a focused source-parity
 witness covers half-channel and out-of-range values. This converts original
 CPU-selected color state only and does not expose a fake device.
+
+Slice 03 now constructs all ten original concrete draw classes through the
+original full-behavior `W3DModuleFactory` in an owned M21 scenario. An authored
+W3D hierarchy contains two meshes, a linear-offset tread material, four tire
+pivots, a public supply bone, and a two-frame original animation. The original
+client-before-logic bone query rejects access; the successful pristine-bone
+query executes during the actual original `GameLogic::update` latch through a
+test-only weak observer. The original PhysicsBehavior/FOUR_WHEELS locomotive
+drives tank tread UV state and wheel captures. Original supply hide/show and
+dependency block/release transitions are asserted on original render objects.
+An original `OverlordContain` creates a portable rider with a separate original
+`W3DDependencyModelDraw`; each of Tank, Aircraft, and Truck Overlord overrides
+independently releases its rider's blocked draw. A missing rider fails, while
+an absent optional model is distinguishable from a loaded HLOD. The original
+asset manager additionally loads `ABBarracks_AC` from read-only retail
+`W3DZH.big`; the file provider is original `W3DFileSystem`, not a test copy.
+
+The bounded full-draw test instrumentation is built only with
+`ZH_M22_FULL_DRAW_TEST` in the separate full-probe executable. Production
+`zh_original_main` still links the M20/M21 schema archive until slice 04
+provides real physical-device translation and switches production. The
+provider-removal test rejects removal of every concrete original draw class
+from the full probe; it also rejects mixed schema/full linked objects.

@@ -40,8 +40,9 @@
 // for now we maintain old legacy files
 // #define MAINTAIN_LEGACY_FILES
 
+#include "PreRTS.h"
 #include "Common/Debug.h"
-#include "Common/File.h"
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/GlobalData.h"
 #include "Common/MapObject.h"
@@ -49,7 +50,9 @@
 #include "W3DDevice/GameClient/W3DFileSystem.h"
 // DEFINES ////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef _WIN32
 #include <io.h>
+#endif
 
 //-------------------------------------------------------------------------------------------------
 /** Game file access.  At present this allows us to access test assets, assets from
@@ -480,4 +483,3 @@ void W3DFileSystem::Return_File( FileClass *file )
 {
 	delete file;
 }
-

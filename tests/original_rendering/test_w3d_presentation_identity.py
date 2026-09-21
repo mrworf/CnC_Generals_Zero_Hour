@@ -19,7 +19,7 @@ CLIENT_NAMES = (
 WW3D_NAMES = ("scene", "light", "matpass")
 
 
-def verify(commands, link_map, executable, removed=None):
+def verify(commands, link_map, executable, removed=None, skip_runtime_witness=False):
     full_prefix = "src/original_runtime/full_w3d/CMakeFiles/zh_original_w3d_draw_full.dir/"
     for name in DRAW_NAMES + CLIENT_NAMES:
         original_source = f"/GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/"
@@ -46,7 +46,7 @@ def verify(commands, link_map, executable, removed=None):
         path = f"/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/{name}.cpp"
         if not any(entry["file"].endswith(path) for entry in commands) or f"libzh_w3d.a({name}.cpp.o)" not in link_map:
             raise ValueError(f"original WW3D scene provider missing: {name}")
-    if removed:
+    if removed or skip_runtime_witness:
         return
     result = subprocess.run([str(executable)], capture_output=True, text=True, check=False)
     if result.returncode or "original-rendering runtime provider=GeneralsMD GameClient CPU presentation" not in result.stdout:
@@ -59,6 +59,7 @@ def main():
     parser.add_argument("--link-map", type=Path, required=True)
     parser.add_argument("--executable", type=Path, required=True)
     parser.add_argument("--provider-removal", action="store_true")
+    parser.add_argument("--skip-runtime-witness", action="store_true")
     args = parser.parse_args()
     commands = json.loads(args.compile_commands.read_text())
     raw_map = args.link_map.read_text(errors="replace")
@@ -72,7 +73,7 @@ def main():
         raw_map,
     ))))
     try:
-        verify(commands, linked, args.executable)
+        verify(commands, linked, args.executable, skip_runtime_witness=args.skip_runtime_witness)
         if args.provider_removal:
             for name in DRAW_NAMES + CLIENT_NAMES:
                 trimmed = [entry for entry in commands if not (

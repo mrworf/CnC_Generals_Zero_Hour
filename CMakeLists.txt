@@ -753,6 +753,9 @@ foreach(config_target zh_original_config_spine zh_original_config_providers)
   target_compile_options(${config_target} PRIVATE
     $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-ffunction-sections;-fdata-sections>)
 endforeach()
+if(ZH_BUILD_TESTS)
+  target_compile_definitions(zh_original_config_providers PRIVATE ZH_ORIGINAL_RUNTIME_TEST_HOOKS=1)
+endif()
 set_source_files_properties(
   GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/Common/Thing/W3DModuleFactory.cpp
   GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DModelDraw.cpp
@@ -941,12 +944,14 @@ target_link_options(zh_original_main PRIVATE -Wl,--gc-sections
 # M22 link probe: the exact Linux entry and original provider spine, but with
 # full-behavior draw objects selected explicitly. Production switches only after
 # the original GameClient scenario witness and provider identity tests pass.
-add_executable(zh_original_w3d_full_probe EXCLUDE_FROM_ALL
+add_executable(zh_original_w3d_full_probe
   src/original_runtime/linux_main.cpp
   src/original_runtime/linux_game_engine.cpp
   $<TARGET_OBJECTS:zh_original_lifecycle_spine>
   $<TARGET_OBJECTS:zh_original_config_spine>
+  $<TARGET_OBJECTS:zh_original_w3d_factory_full>
   $<TARGET_OBJECTS:zh_original_w3d_draw_full>)
+target_compile_definitions(zh_original_w3d_full_probe PRIVATE ZH_M22_FULL_DRAW_TEST=1)
 target_include_directories(zh_original_w3d_full_probe PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include/legacy"
@@ -955,6 +960,11 @@ target_include_directories(zh_original_w3d_full_probe PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
   "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
   "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+target_include_directories(zh_original_w3d_full_probe PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad")
 target_link_libraries(zh_original_w3d_full_probe PRIVATE
   zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix
   zh_compression zh_w3d zh_wwsupport zh_build_options)
@@ -1781,6 +1791,7 @@ if(ZH_BUILD_TESTS)
     tests/original_rendering/test_w3d_presentation.cpp
     $<TARGET_OBJECTS:zh_original_lifecycle_spine>
     $<TARGET_OBJECTS:zh_original_config_spine>
+    $<TARGET_OBJECTS:zh_original_w3d_factory_full>
     $<TARGET_OBJECTS:zh_original_w3d_draw_full>)
   target_include_directories(original_w3d_presentation_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
@@ -1802,6 +1813,28 @@ if(ZH_BUILD_TESTS)
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-presentation.link.map")
   add_test(NAME original_w3d_presentation COMMAND original_w3d_presentation_tests)
   set_tests_properties(original_w3d_presentation PROPERTIES LABELS "original-rendering;source-identity")
+  add_test(NAME original_w3d_full_draw_scenario COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_full_draw_scenario.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>"
+    --asset-producer "$<TARGET_FILE:original_w3d_cpu_graph_tests>"
+    --retail-archive "${CMAKE_CURRENT_SOURCE_DIR}/original_game_symlink/W3DZH.big")
+  set_tests_properties(original_w3d_full_draw_scenario PROPERTIES
+    LABELS "original-rendering;source-identity;retail")
+  foreach(w3d_probe_case IN ITEMS identity provider_removal)
+    set(w3d_probe_extra_arg)
+    if(w3d_probe_case STREQUAL "provider_removal")
+      list(APPEND w3d_probe_extra_arg --provider-removal)
+    endif()
+    add_test(NAME original_w3d_full_draw_${w3d_probe_case} COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_presentation_identity.py"
+      --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+      --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-w3d-full-probe.link.map"
+      --executable "$<TARGET_FILE:zh_original_w3d_full_probe>"
+      --skip-runtime-witness ${w3d_probe_extra_arg})
+    set_tests_properties(original_w3d_full_draw_${w3d_probe_case} PROPERTIES
+      LABELS "original-rendering;source-identity")
+  endforeach()
   foreach(w3d_identity_case IN ITEMS identity provider_removal)
     set(w3d_identity_extra_arg)
     if(w3d_identity_case STREQUAL "provider_removal")

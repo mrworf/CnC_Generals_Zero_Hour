@@ -5,6 +5,9 @@
 #include "Common/GameEngine.h"
 #include "Common/FunctionLexicon.h"
 #include "Common/GlobalData.h"
+#if defined(ZH_M22_FULL_DRAW_TEST)
+#include "Common/DrawModule.h"
+#endif
 #include "Common/ModuleFactory.h"
 #include "Common/NameKeyGenerator.h"
 #include "Common/OriginalMapLoader.h"
@@ -14,6 +17,23 @@
 #include "Common/Recorder.h"
 #include "Common/AudioRandomValue.h"
 #include "W3DDevice/Common/W3DModuleFactory.h"
+#if defined(ZH_M22_FULL_DRAW_TEST)
+#include "W3DDevice/GameClient/W3DAssetManager.h"
+#include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DFileSystem.h"
+#include "W3DDevice/GameClient/Module/W3DModelDraw.h"
+#include "W3DDevice/GameClient/Module/W3DDependencyModelDraw.h"
+#include "W3DDevice/GameClient/Module/W3DSupplyDraw.h"
+#include "W3DDevice/GameClient/Module/W3DTankDraw.h"
+#include "W3DDevice/GameClient/Module/W3DTankTruckDraw.h"
+#include "W3DDevice/GameClient/Module/W3DTruckDraw.h"
+#include "W3DDevice/GameClient/Module/W3DOverlordAircraftDraw.h"
+#include "W3DDevice/GameClient/Module/W3DOverlordTankDraw.h"
+#include "W3DDevice/GameClient/Module/W3DOverlordTruckDraw.h"
+#include "W3DDevice/GameClient/W3DScene.h"
+#include "WW3D2/RendObj.h"
+#include "WW3D2/HLod.h"
+#endif
 #include "Common/Radar.h"
 #include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
@@ -37,6 +57,10 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
+#if defined(ZH_M22_FULL_DRAW_TEST)
+#include "GameLogic/Module/ContainModule.h"
+#include "GameLogic/Module/PhysicsUpdate.h"
+#endif
 #include "GameLogic/Object.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/SidesList.h"
@@ -47,6 +71,10 @@
 #include <cstdlib>
 #include <filesystem>
 #include <stdexcept>
+#if defined(ZH_M22_FULL_DRAW_TEST)
+#include <string>
+#include <typeinfo>
+#endif
 #include <vector>
 
 namespace {
@@ -82,6 +110,10 @@ struct ScenarioSetupReport
 	Bool complete = FALSE;
 };
 ScenarioSetupReport g_scenarioSetupReport;
+#if defined(ZH_M22_FULL_DRAW_TEST)
+UnsignedInt g_logicSupplyBones = 0;
+UnsignedInt g_clientBeforeLogicBones = 0;
+#endif
 struct SimulationReport
 {
 	UnsignedInt frameBefore = 0;
@@ -632,11 +664,219 @@ public:
 		if (m_scenarioProfile && !m_scenarioStarted)
 		{
 			m_scenarioStarted = TRUE;
+#if defined(ZH_M22_FULL_DRAW_TEST)
+			struct OriginalDrawOwners
+			{
+				W3DAssetManager *assets = NULL;
+				RTS3DScene *scene = NULL;
+				W3DFileSystem *fileSystem = NULL;
+				explicit OriginalDrawOwners(Bool enabled)
+				{
+					if (!enabled) return;
+					fileSystem = new W3DFileSystem;
+					assets = new W3DAssetManager;
+					scene = new RTS3DScene;
+					W3DDisplay::m_assetManager = assets;
+					W3DDisplay::m_3DScene = scene;
+				}
+				~OriginalDrawOwners()
+				{
+					W3DDisplay::m_assetManager = NULL;
+					W3DDisplay::m_3DScene = NULL;
+					if (scene) scene->Release_Ref();
+					if (assets) { assets->Free_Assets(); delete assets; }
+					delete fileSystem;
+				}
+			} originalDrawOwners(std::getenv("ZH_M22_DRAW_PROFILE") != NULL);
+			try {
+			if (const char *retailModel = std::getenv("ZH_M22_RETAIL_MODEL"))
+			{
+				std::string filename = std::string(retailModel) + ".w3d";
+				if (!W3DDisplay::m_assetManager->Load_3D_Assets(filename.c_str()))
+					throw std::runtime_error("required original retail W3D preload failed");
+				RenderObjClass *retail = W3DDisplay::m_assetManager->Create_Render_Obj(
+					retailModel, 1.0f, 0);
+				if (!retail) throw std::runtime_error("required original retail W3D model is missing");
+				std::printf("original retail W3D model: %s class=%d subobjects=%d\n",
+					retailModel, retail->Class_ID(), retail->Get_Num_Sub_Objects());
+				retail->Release_Ref();
+			}
+#endif
 			TheGameLogic->startNewGame(FALSE);
 			// The original start path is intentionally two-phase: the first call
 			// requests/loads the map and the second finishes scenario construction.
 			TheGameLogic->startNewGame(FALSE);
+#if defined(ZH_M22_FULL_DRAW_TEST)
+			if (std::getenv("ZH_M22_DRAW_PROFILE"))
+			{
+				for (Drawable *drawable = TheGameClient->firstDrawable(); drawable;
+					drawable = drawable->getNextDrawable())
+				{
+					for (DrawModule **module = drawable->getDrawModules(); *module; ++module)
+					{
+						if (dynamic_cast<W3DSupplyDraw *>(*module))
+							g_clientBeforeLogicBones += drawable->getPristineBonePositions(
+								"SUPPLY", 1, NULL, NULL, INT_MAX);
+					}
+				}
+				TheGameLogic->update();
+			}
+#endif
 			captureScenarioSetup();
+#if defined(ZH_M22_FULL_DRAW_TEST)
+			if (std::getenv("ZH_M22_DRAW_PROFILE"))
+			{
+				UnsignedInt drawn = 0;
+				UnsignedInt hlods = 0;
+				UnsignedInt animations = 0;
+				UnsignedInt supplyTransitions = 0;
+				UnsignedInt dependencyBlocks = 0;
+				UnsignedInt dependencyReleases = 0;
+				UnsignedInt treadScrolls = 0;
+				UnsignedInt wheelControls = 0;
+				UnsignedInt riderDependencies = 0;
+				for (Drawable *drawable = TheGameClient->firstDrawable(); drawable;
+					drawable = drawable->getNextDrawable())
+				{
+					if (Object *actor = drawable->getObject())
+					{
+						if (PhysicsBehavior *physics = actor->getPhysics())
+						{
+							Coord3D velocity{18.0f, 0.0f, 0.0f};
+							Coord3D force{0.0f, 0.0f, 0.0f};
+							physics->addVelocityTo(&velocity);
+							physics->scrubVelocity2D(18.0f);
+							physics->applyMotiveForce(&force);
+							if (physics->getVelocityMagnitude() != 18.0f || !physics->isMotive())
+								throw std::runtime_error("original motive physics state missing");
+						}
+					}
+					for (DrawModule **module = drawable->getDrawModules(); *module; ++module)
+					{
+						std::printf("original full draw module: %s\n", typeid(**module).name());
+						if (auto *model = dynamic_cast<W3DModelDraw *>(*module))
+						{
+							RenderObjClass *render = model->getRenderObject();
+							if (render && render->Class_ID() == RenderObjClass::CLASSID_HLOD
+								&& render->Get_Num_Sub_Objects() == 2) ++hlods;
+						}
+					}
+					drawable->draw(NULL);
+				for (DrawModule **module = drawable->getDrawModules(); *module; ++module)
+				{
+					if (typeid(**module) == typeid(W3DOverlordTankDraw)
+						|| typeid(**module) == typeid(W3DOverlordAircraftDraw)
+						|| typeid(**module) == typeid(W3DOverlordTruckDraw))
+					{
+						Object *owner = drawable->getObject();
+						const Object *rider = owner && owner->getContain()
+							? owner->getContain()->friend_getRider() : NULL;
+						Drawable *riderDraw = rider ? rider->getDrawable() : NULL;
+					if (!owner->getContain()) throw std::runtime_error("original Overlord contain missing");
+						if (!rider) throw std::runtime_error("original Overlord rider missing");
+						if (!riderDraw) throw std::runtime_error("original Overlord rider Drawable missing");
+						if (!riderDraw->getDrawModules()[0])
+							throw std::runtime_error("original Overlord rider DrawModule missing");
+						auto *dependent = dynamic_cast<W3DDependencyModelDraw *>(riderDraw->getDrawModules()[0]);
+						RenderObjClass *riderModel = dependent ? dependent->getRenderObject() : NULL;
+						if (!riderModel) throw std::runtime_error("original rider dependency model is missing");
+						Matrix3D sentinel = *riderDraw->getTransformMatrix();
+						sentinel.Translate_X(333.0f);
+						riderModel->Set_Transform(sentinel);
+						dependent->doDrawModule(riderDraw->getTransformMatrix());
+						if (riderModel->Get_Transform().Get_Translation().X != sentinel.Get_Translation().X)
+							throw std::runtime_error("original rider dependency prematurely released");
+						(*module)->doDrawModule(drawable->getTransformMatrix());
+						if (riderModel->Get_Transform().Get_Translation().X == sentinel.Get_Translation().X)
+							throw std::runtime_error("original Overlord did not draw its dependent rider");
+						++riderDependencies;
+					}
+					if (auto *dependency = dynamic_cast<W3DDependencyModelDraw *>(*module))
+						{
+							RenderObjClass *model = dependency->getRenderObject();
+							if (!model) throw std::runtime_error("original dependency model missing");
+							const Vector3 before = model->Get_Transform().Get_Translation();
+							Matrix3D moved = *drawable->getTransformMatrix();
+							moved.Translate_X(3.0f);
+							const Vector3 target = moved.Get_Translation();
+							dependency->doDrawModule(&moved);
+							const Vector3 stillBlocked = model->Get_Transform().Get_Translation();
+							if (stillBlocked.X != before.X || stillBlocked.Y != before.Y)
+								throw std::runtime_error("original dependency draw was not gated");
+							++dependencyBlocks;
+							dependency->notifyDrawModuleDependencyCleared();
+							dependency->doDrawModule(&moved);
+							const Vector3 after = model->Get_Transform().Get_Translation();
+							if (after.X != target.X || after.Y != target.Y)
+								throw std::runtime_error("original dependency gate did not release");
+							++dependencyReleases;
+						}
+						if (auto *tank = dynamic_cast<W3DTankDraw *>(*module))
+						{
+							RenderObjClass *render = tank->getRenderObject();
+							RenderObjClass *tread = render ? render->Get_Sub_Object_By_Name("TREADSL01") : NULL;
+							if (!tread || !tread->Get_User_Data())
+								throw std::runtime_error("original tank tread material override missing");
+							auto *material = static_cast<RenderObjClass::Material_Override *>(tread->Get_User_Data());
+							if (material->customUVOffset.X == 0.0f)
+								throw std::runtime_error("original motive tread UV scrolling missing");
+							++treadScrolls;
+							tread->Release_Ref();
+						}
+						if (auto *wheels = dynamic_cast<W3DTankTruckDraw *>(*module))
+						{
+							RenderObjClass *model = wheels->getRenderObject();
+							int front = model ? model->Get_Bone_Index("TIRE_FL") : 0;
+							int rear = model ? model->Get_Bone_Index("TIRE_RL") : 0;
+							if (!front || !rear || !model->Is_Bone_Captured(front)
+								|| !model->Is_Bone_Captured(rear))
+								throw std::runtime_error("original tank-truck wheel control missing");
+							++wheelControls;
+						}
+						if (auto *wheels = dynamic_cast<W3DTruckDraw *>(*module))
+						{
+							RenderObjClass *model = wheels->getRenderObject();
+							int front = model ? model->Get_Bone_Index("TIRE_FL") : 0;
+							int rear = model ? model->Get_Bone_Index("TIRE_RL") : 0;
+							if (!front || !rear || !model->Is_Bone_Captured(front)
+								|| !model->Is_Bone_Captured(rear))
+								throw std::runtime_error("original truck wheel control missing");
+							++wheelControls;
+						}
+						if (auto *supply = dynamic_cast<W3DSupplyDraw *>(*module))
+						{
+							RenderObjClass *model = supply->getRenderObject();
+							RenderObjClass *bone = model ? model->Get_Sub_Object_By_Name("SUPPLY01") : NULL;
+							if (drawable->getPristineBonePositions("SUPPLY", 1, NULL, NULL, INT_MAX) != 1)
+								throw std::runtime_error("original supply pristine bone decision missing");
+							if (!bone) throw std::runtime_error("original supply bone is missing");
+							supply->updateDrawModuleSupplyStatus(10, 0);
+							if (!bone->Is_Hidden()) throw std::runtime_error("original supply hide decision missing");
+							supply->updateDrawModuleSupplyStatus(10, 10);
+							if (bone->Is_Hidden()) throw std::runtime_error("original supply show decision missing");
+							bone->Release_Ref();
+							supplyTransitions += 2;
+						}
+						if (typeid(**module) != typeid(W3DModelDraw)) continue;
+						auto *model = static_cast<W3DModelDraw *>(*module);
+						if (!model->getRenderObject() ||
+							model->getRenderObject()->Class_ID() != RenderObjClass::CLASSID_HLOD) continue;
+						float frame = 0, multiplier = 0;
+						int numFrames = 0, mode = 0;
+						auto *hlod = static_cast<HLodClass *>(model->getRenderObject());
+						if (hlod->Peek_Animation_And_Info(frame, numFrames, mode, multiplier)
+							&& numFrames == 2) ++animations;
+					}
+					++drawn;
+				}
+				std::printf("original full draw: drawables=%u hlods=%u animations=%u "
+					"supply-transitions=%u logic-bones=%u client-before-logic-bones=%u "
+					"dependency-blocks=%u dependency-releases=%u tread-scrolls=%u wheel-controls=%u rider-dependencies=%u\n",
+					drawn, hlods, animations, supplyTransitions,
+					g_logicSupplyBones, g_clientBeforeLogicBones,
+					dependencyBlocks, dependencyReleases, treadScrolls, wheelControls, riderDependencies);
+			}
+#endif
 			if (m_simulationProfile)
 			{
 				runOriginalSimulation();
@@ -649,6 +889,14 @@ public:
 			GameEngine::reset();
 			setQuitting(TRUE);
 			return;
+#if defined(ZH_M22_FULL_DRAW_TEST)
+			} catch (...) {
+				// Preserve the original CPU presentation owners until the original
+				// GameClient has released its partially built draw modules.
+				if (originalDrawOwners.scene) GameEngine::reset();
+				throw;
+			}
+#endif
 		}
 		if (m_boundedProfile && m_updates == 0)
 		{
@@ -846,6 +1094,28 @@ private:
 
 } // namespace
 
+// Invoked only by the test-build observer inside the original
+// GameLogic::update latch. This does not set, bypass, or emulate logic time.
+#if defined(ZH_M22_FULL_DRAW_TEST)
+void zh_linux_w3d_logic_witness()
+{
+	if (!std::getenv("ZH_M22_DRAW_PROFILE") || !TheGameClient || !W3DDisplay::m_3DScene)
+		return;
+	if (!TheGameLogic || !TheGameLogic->isInGameLogicUpdate())
+		throw std::runtime_error("original logic-phase draw witness escaped update");
+	for (Drawable *drawable = TheGameClient->firstDrawable(); drawable;
+		drawable = drawable->getNextDrawable())
+	{
+		for (DrawModule **module = drawable->getDrawModules(); *module; ++module)
+		{
+			if (dynamic_cast<W3DSupplyDraw *>(*module))
+				g_logicSupplyBones += drawable->getPristineBonePositions(
+					"SUPPLY", 1, NULL, NULL, INT_MAX);
+		}
+	}
+}
+#endif
+
 // The Linux keyboard is a physical-device edge. It intentionally produces no
 // events in the bounded startup profile, while retaining the original
 // GameClient ownership and update calls.
@@ -868,6 +1138,10 @@ GameEngine *CreateGameEngine()
 {
 	g_lifecycleReport = LifecycleReport{};
 	g_scenarioSetupReport = ScenarioSetupReport{};
+#if defined(ZH_M22_FULL_DRAW_TEST)
+	g_logicSupplyBones = 0;
+	g_clientBeforeLogicBones = 0;
+#endif
 	g_simulationReport = SimulationReport{};
 	g_reentryReport = ReentryReport{};
 	g_benchmarkTimer = -1;
