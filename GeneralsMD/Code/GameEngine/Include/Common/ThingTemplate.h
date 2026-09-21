@@ -618,6 +618,8 @@ public:
 	AsciiString getUpgradeCameoName( Int n)const{ return m_upgradeCameoUpgradeNames[n];	}
 
 	const WeaponTemplateSetVector& getWeaponTemplateSets(void) const {return m_weaponTemplateSets;}
+	void setAllowOrdinaryModulesInOverride(Bool allow) { m_allowOrdinaryModulesInOverride = allow; }
+	Bool allowOrdinaryModulesInOverride() const { return m_allowOrdinaryModulesInOverride; }
 
 protected:
 
@@ -752,6 +754,7 @@ private:
 	Bool					m_isForbidden;								///< useful when overriding in <mapfile>.ini
 	Bool					m_armorCopiedFromDefault;
 	Bool					m_weaponsCopiedFromDefault;
+	Bool					m_allowOrdinaryModulesInOverride;
 
 	// ---- Byte-sized things
 	Byte					m_radarPriority;						///< does object appear on radar, and if so at what priority

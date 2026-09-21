@@ -1,6 +1,6 @@
 # M20 plan 03: RC-012 W3D/archive closure and cumulative acceptance
 
-Status: in progress
+Status: complete
 
 ## Governing outcome
 
@@ -24,8 +24,8 @@ The W3D schema boundary is established first because retail object parsing canno
 | Slice | Outcome | Status | Commit |
 |---|---|---|---|
 | [01](milestone_20_plan_03_slice_01.md) | Complete original W3D schema registration and fail-closed instance boundary | complete | `e2d312a` |
-| [02](milestone_20_plan_03_slice_02.md) | Harden and verify BIGF/BIG4 archive behavior | complete | this slice commit (`delivery: M20 plan03 slice 02 harden BIG archives`) |
-| [03](milestone_20_plan_03_slice_03.md) | Close cumulative fixture, preset, sanitizer, identity, and retail acceptance | planned | — |
+| [02](milestone_20_plan_03_slice_02.md) | Harden and verify BIGF/BIG4 archive behavior | complete | `b90118a` |
+| [03](milestone_20_plan_03_slice_03.md) | Close cumulative fixture, preset, sanitizer, identity, and retail acceptance | complete | this slice commit (`delivery: M20 plan03 slice 03 accept original lifecycle`) |
 
 ## Cumulative acceptance
 

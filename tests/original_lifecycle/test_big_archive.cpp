@@ -60,6 +60,12 @@ void setLE(std::vector<unsigned char>& out, std::size_t offset, UnsignedInt valu
 		out[offset + index] = static_cast<unsigned char>(value >> (index * 8U));
 }
 
+UnsignedInt getBE(const std::vector<unsigned char>& bytes, std::size_t offset)
+{
+	return (UnsignedInt(bytes[offset]) << 24U) | (UnsignedInt(bytes[offset + 1U]) << 16U) |
+		(UnsignedInt(bytes[offset + 2U]) << 8U) | UnsignedInt(bytes[offset + 3U]);
+}
+
 using Entry = std::pair<std::string, std::string>;
 
 std::vector<unsigned char> makeBIG(std::string_view identifier, const std::vector<Entry>& entries)
@@ -84,6 +90,22 @@ std::vector<unsigned char> makeBIG(std::string_view identifier, const std::vecto
 	out.insert(out.end(), table.begin(), table.end());
 	for (const Entry& entry : entries) out.insert(out.end(), entry.second.begin(), entry.second.end());
 	return out;
+}
+
+std::vector<unsigned char> addTablePadding(std::vector<unsigned char> archive,
+	UnsignedInt count, UnsignedInt padding)
+{
+	UnsignedInt tableEnd = 16U;
+	for (UnsignedInt index = 0; index < count; ++index)
+	{
+		setBE(archive, tableEnd, getBE(archive, tableEnd) + padding);
+		tableEnd += 8U;
+		while (archive[tableEnd++] != 0) {}
+	}
+	archive.insert(archive.begin() + tableEnd, padding, 0);
+	setBE(archive, 12U, tableEnd + padding);
+	setLE(archive, 4U, static_cast<UnsignedInt>(archive.size()));
+	return archive;
 }
 
 void writeBytes(const std::filesystem::path& path, const std::vector<unsigned char>& bytes)
@@ -149,6 +171,26 @@ int run()
 	check(readFile(direct ? direct->openFile("empty.bin", File::READ) : NULL).empty(), "zero-length entry opens");
 	check(direct && direct->openFile("missing.ini", File::READ) == NULL, "missing entry returns null");
 	delete direct;
+	auto legacyEmpty = makeBIG("BIGF", {{"legacy-empty.bin", ""}});
+	setBE(legacyEmpty, 16U, 0U);
+	writeBytes(root / "valid-legacy-empty.big", legacyEmpty);
+	direct = archives->openArchiveFile("valid-legacy-empty.big");
+	check(readFile(direct ? direct->openFile("legacy-empty.bin", File::READ) : NULL).empty(),
+		"zero-sized legacy-offset entry opens without reading archive bytes");
+	delete direct;
+	auto advisoryBoundary = makeBIG("BIGF", {{"advisory.txt", "ok"}});
+	setBE(advisoryBoundary, 12U, getBE(advisoryBoundary, 16U) + 1U);
+	writeBytes(root / "valid-advisory-boundary.big", advisoryBoundary);
+	direct = archives->openArchiveFile("valid-advisory-boundary.big");
+	check(readFile(direct ? direct->openFile("advisory.txt", File::READ) : NULL) == "ok",
+		"retail advisory table boundary opens");
+	delete direct;
+	const auto padded = addTablePadding(makeBIG("BIGF", {{"padded.txt", "ok"}}), 1U, 4U);
+	writeBytes(root / "valid-padded.big", padded);
+	direct = archives->openArchiveFile("valid-padded.big");
+	check(readFile(direct ? direct->openFile("padded.txt", File::READ) : NULL) == "ok",
+		"zero-padded table opens");
+	delete direct;
 	direct = archives->openArchiveFile("valid-4.big");
 	File *stream = direct ? direct->openFile("STREAM\\PATH.BIN", File::READ | File::STREAMING) : NULL;
 	check(stream != NULL, "BIG4 streaming entry opens");
@@ -174,6 +216,9 @@ int run()
 	check(rejected(archives.get(), root, "table-low.big", malformed), "table before header rejected");
 	malformed = bigf; setBE(malformed, 12, static_cast<UnsignedInt>(malformed.size() + 1U));
 	check(rejected(archives.get(), root, "table-high.big", malformed), "table after EOF rejected");
+	malformed = bigf; setBE(malformed, 12, getBE(malformed, 16U) - 1U);
+	check(rejected(archives.get(), root, "table-short.big", malformed),
+		"entries beyond declared table boundary rejected");
 	malformed = bigf; setBE(malformed, 8, 100U);
 	check(rejected(archives.get(), root, "table-count.big", malformed), "count impossible for table rejected");
 	malformed = makeBIG("BIGF", {{"unterminated", "x"}}); malformed[16U + 8U + std::string("unterminated").size()] = 'x';

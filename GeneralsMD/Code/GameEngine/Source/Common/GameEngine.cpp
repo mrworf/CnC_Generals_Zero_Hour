@@ -244,6 +244,11 @@ GameEngine::~GameEngine()
 	// These process-global parsed settings are not subsystems, so the original
 	// subsystem shutdown cannot own them. Release their complete override chains
 	// before the original allocator is torn down.
+	for (Int timeOfDay = 0; timeOfDay < TIME_OF_DAY_COUNT; ++timeOfDay)
+	{
+		WaterSettings[timeOfDay].m_skyTextureFile.clear();
+		WaterSettings[timeOfDay].m_waterTextureFile.clear();
+	}
 	WaterTransparencySetting *water = const_cast<WaterTransparencySetting *>(
 		TheWaterTransparency.getNonOverloadedPointer());
 	if (water)

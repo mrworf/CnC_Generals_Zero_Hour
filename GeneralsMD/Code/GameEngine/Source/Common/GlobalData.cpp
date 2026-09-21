@@ -75,6 +75,7 @@ GlobalData* GlobalData::m_theOriginal = NULL;
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /*static*/ const FieldParse GlobalData::s_GlobalDataFieldParseTable[] = 
 {
+	{ "UserDataLeafName", INI::parseAsciiString, NULL, offsetof( GlobalData, m_retailUserDataLeafName ) },
 	{ "Windowed",									INI::parseBool,				NULL,			offsetof( GlobalData, m_windowed ) },
 	{ "XResolution",							INI::parseInt,				NULL,			offsetof( GlobalData, m_xResolution ) },
 	{ "YResolution",							INI::parseInt,				NULL,			offsetof( GlobalData, m_yResolution ) },

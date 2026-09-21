@@ -61,6 +61,18 @@
 	#include "Common/StackDump.h"
 #endif
 
+#if defined(__has_feature)
+	#if __has_feature(address_sanitizer)
+		#define ZH_MEMORY_ADDRESS_SANITIZER 1
+	#endif
+#elif defined(__SANITIZE_ADDRESS__)
+	#define ZH_MEMORY_ADDRESS_SANITIZER 1
+#endif
+
+#ifdef ZH_MEMORY_ADDRESS_SANITIZER
+extern "C" void __asan_unpoison_memory_region(void const volatile *address, size_t size);
+#endif
+
 #ifdef MEMORYPOOL_DEBUG
 DECLARE_PERF_TIMER(MemoryPoolDebugging)
 DECLARE_PERF_TIMER(MemoryPoolInitFilling)
@@ -1715,7 +1727,14 @@ void* MemoryPool::allocateBlockDoNotZeroImplementation(DECLARE_LITERALSTRING_ARG
 	#endif
 #endif
 
-	return block->getUserData();
+	void *userData = block->getUserData();
+#ifdef ZH_MEMORY_ADDRESS_SANITIZER
+	// Standard-library containers can leave their unused capacity poisoned when
+	// a pooled allocation is returned.  The next owner must see the complete
+	// fixed-size block as writable, just as it would after a fresh allocation.
+	__asan_unpoison_memory_region(userData, getAllocationSize());
+#endif
+	return userData;
 }
 
 //-----------------------------------------------------------------------------

@@ -88,8 +88,7 @@ void load_subsystem_ini(const char *defaults, const char *overrides,
 		try
 		{
 			INI ini;
-			ini.loadDirectory(AsciiString(directory), TRUE,
-				loaded ? INI_LOAD_CREATE_OVERRIDES : INI_LOAD_OVERWRITE, xfer);
+			ini.loadDirectory(AsciiString(directory), TRUE, INI_LOAD_MULTIFILE, xfer);
 		}
 		catch (const INIException& error)
 		{

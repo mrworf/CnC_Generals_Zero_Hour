@@ -1,5 +1,6 @@
 #include "PreRTS.h"
 #include "Common/version.h"
+#include "Common/STLTypedefs.h"
 #include "zh/original_process.h"
 
 #include <cstdio>
@@ -51,6 +52,9 @@ int main()
   ascii_copy.concat("-beta");
   if (std::strcmp(ascii.str(), "alpha") || std::strcmp(ascii_copy.str(), "alpha-beta"))
     return fail("ASCII copy-on-write semantics changed");
+  AsciiString independently_allocated("alpha");
+  if (rts::hash<AsciiString>{}(ascii) != rts::hash<AsciiString>{}(independently_allocated))
+    return fail("equal ASCII values did not produce an identity-stable content hash");
   ascii_copy.format("%s:%d", "value", 7);
   if (std::strcmp(ascii_copy.str(), "value:7"))
     return fail("ASCII formatting failed");

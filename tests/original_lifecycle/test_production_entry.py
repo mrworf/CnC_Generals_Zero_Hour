@@ -107,7 +107,7 @@ def fixture(root: pathlib.Path) -> None:
     for name in DIRECT_INIS:
         write(root / name, "")
     write(root / "Data/INI/Default/GameData.ini",
-          "GameData\n Windowed = Yes\n XResolution = 800\n YResolution = 600\n"
+          "GameData\n UserDataLeafName = Fixture User Data\n Windowed = Yes\n XResolution = 800\n YResolution = 600\n"
           " FramesPerSecondLimit = 1000\n AudioOn = No\n MusicOn = No\n SoundsOn = No\n"
           " SpeechOn = No\n ShellMapOn = No\n PlayIntro = No\nEND\n")
     write(root / "Data/INI/Default/Weather.ini",
@@ -116,7 +116,11 @@ def fixture(root: pathlib.Path) -> None:
           " SnowMaxPointSize = 1\n SnowMinPointSize = 1\n SnowQuadSize = 1\n"
           " SnowBoxDimensions = 1\n SnowBoxDensity = 1\n SnowVelocity = 0\n"
           " SnowPointSprites = No\n SnowEnabled = No\nEND\n")
-    write(root / "Data/INI/Default/Water.ini", "WaterTransparency\nEND\n")
+    write(root / "Data/INI/Default/Water.ini",
+          "WaterTransparency\nEND\n" +
+          "".join(f"WaterSet {name}\n SkyTexture = FixtureSky{name}\n"
+                  f" WaterTexture = FixtureWater{name}\nEND\n"
+                  for name in ("MORNING", "AFTERNOON", "EVENING", "NIGHT")))
     write(root / "Data/INI/Default/Object.ini",
           "Object FixtureLaser\n"
           " Draw = W3DLaserDraw ModuleTag_FixtureLaser\n"
@@ -133,6 +137,18 @@ def fixture(root: pathlib.Path) -> None:
           "  TilingScalar = 3.0\n"
           " End\n"
           "End\n")
+    write(root / "Data/INI/Object/DirectoryFixture.ini",
+          "Object DirectoryFixture\n"
+          " Draw = W3DDefaultDraw ModuleTag_DirectoryDraw\n End\n"
+          " Body = InactiveBody ModuleTag_DirectoryBody\n End\n"
+          " Behavior = DestroyDie ModuleTag_DirectoryDie\n End\n"
+          "End\n")
+    write(root / "Data/INI/Crate.ini",
+          "Object OverrideFileNewFixture\n"
+          " Draw = W3DDefaultDraw ModuleTag_OverrideDraw\n End\n"
+          " Body = InactiveBody ModuleTag_OverrideBody\n End\n"
+          " Behavior = DestroyDie ModuleTag_OverrideDie\n End\n"
+          "End\n")
     write(root / "Data/English/Generals.csf", csf())
     write(root / "Maps/MapCache.ini",
           "MapCache Maps\\Fixture\\Fixture.map\n fileSize = 1234\n fileCRC = 305419896\n"
@@ -141,11 +157,11 @@ def fixture(root: pathlib.Path) -> None:
           " nameLookupTag = MAP:Fixture\n Player_1_Start = X:10 Y:20 Z:0\n"
           " Player_2_Start = X:90 Y:60 Z:0\n techPosition = X:50 Y:40 Z:0\n"
           " supplyPosition = X:25 Y:30 Z:0\nEND\n")
-    write(root / "Menus/BlankWindow.wnd",
+    write(root / "Window/Menus/BlankWindow.wnd",
           "FILE_VERSION = 2\nSTARTLAYOUTBLOCK\nENDLAYOUTBLOCK\nWINDOW\nWINDOWTYPE = USER;\n"
           "SCREENRECT = UPPERLEFT: 0 0 BOTTOMRIGHT: 800 600 CREATIONRESOLUTION: 800 600;\n"
           "NAME = \"BlankWindow\";\nSTATUS = ENABLED IMAGE;\nSTYLE = USER;\nEND\n")
-    write(root / "Menus/MainMenu.wnd",
+    write(root / "Window/Menus/MainMenu.wnd",
           "FILE_VERSION = 2\nSTARTLAYOUTBLOCK\nENDLAYOUTBLOCK\nWINDOW\nWINDOWTYPE = USER;\n"
           "SCREENRECT = UPPERLEFT: 0 0 BOTTOMRIGHT: 800 600 CREATIONRESOLUTION: 800 600;\n"
           "NAME = \"MainMenu.wnd:MainMenuParent\";\nSTATUS = ENABLED;\nSTYLE = USER;\nEND\n")
@@ -266,6 +282,11 @@ def main() -> int:
               " End\n"
               "End\n")
         variants.append((malformed_w3d, "Object FixtureMalformedW3D"))
+        malformed_water = base / "malformed-water-input"
+        fixture(malformed_water)
+        write(malformed_water / "Data/INI/Default/Water.ini",
+              "WaterSet NOT_A_TIME_OF_DAY\n SkyTexture = Invalid\nEND\n")
+        variants.append((malformed_water, "Data\\INI\\Default\\Water.ini"))
         for variant, diagnostic in variants:
             make_read_only(variant)
             failure = run(executable, base / (variant.name + "-run"), variant)

@@ -15,10 +15,13 @@ option(ZH_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
 option(ZH_ENABLE_LAN "Build LAN support when its milestone is available" ON)
 option(ZH_ENABLE_GPU_TESTS "Enable tests that require a real GPU" OFF)
 option(ZH_ENABLE_RETAIL_TESTS "Enable tests that require user-owned retail data" OFF)
+option(ZH_ENABLE_M20_RETAIL_TESTS "Enable the private-safe M20 original lifecycle retail gate" OFF)
 
 set(ZH_RETAIL_ZH_DATA "" CACHE PATH "Local Zero Hour retail data root (retail tests only)")
 set(ZH_RETAIL_GENERALS_DATA "" CACHE PATH "Local Generals retail data root (retail tests only)")
 set(ZH_RETAIL_LANGUAGE "" CACHE STRING "Retail language name (retail tests only)")
+set(ZH_M20_RETAIL_ZH_DATA "" CACHE PATH "Local Zero Hour data root for the M20 lifecycle gate only")
+set(ZH_M20_RETAIL_GENERALS_DATA "" CACHE PATH "Local Generals data root for the M20 lifecycle gate only")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -809,7 +812,7 @@ target_link_options(zh_original_main PRIVATE -Wl,--gc-sections
   "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map")
 set_property(TARGET zh_main PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_LEGACY_ZH_MAIN_SOURCES}")
 
-install(TARGETS zh_main RUNTIME DESTINATION bin)
+install(TARGETS zh_main zh_original_main RUNTIME DESTINATION bin)
 install(FILES "${ZH_BOOTSTRAP_SPIRV}" DESTINATION share/generals-zero-hour/shaders)
 install(FILES ${ZH_RENDERER_SPIRV} DESTINATION share/generals-zero-hour/shaders/renderer)
 install(FILES ${ZH_EFFECT_SPIRV} DESTINATION share/generals-zero-hour/shaders/effects)
@@ -1024,6 +1027,19 @@ if(ZH_BUILD_TESTS)
     --executable "$<TARGET_FILE:zh_original_main>")
   set_tests_properties(original_production_entry PROPERTIES
     LABELS "original-production-entry;source-identity" TIMEOUT 30)
+  if(ZH_ENABLE_M20_RETAIL_TESTS)
+    if(NOT IS_ABSOLUTE "${ZH_M20_RETAIL_ZH_DATA}" OR
+       NOT IS_ABSOLUTE "${ZH_M20_RETAIL_GENERALS_DATA}")
+      message(FATAL_ERROR "M20 retail lifecycle test requires absolute Zero Hour and Generals data roots")
+    endif()
+    add_test(NAME original_production_entry_retail COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_retail_production_entry.py"
+      --executable "$<TARGET_FILE:zh_original_main>"
+      --zh-data-root "${ZH_M20_RETAIL_ZH_DATA}"
+      --generals-data-root "${ZH_M20_RETAIL_GENERALS_DATA}")
+    set_tests_properties(original_production_entry_retail PROPERTIES
+      LABELS "original-production-entry;retail;source-identity" TIMEOUT 300)
+  endif()
   add_test(NAME original_production_entry_identity COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_headless_identity.py"
     --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"

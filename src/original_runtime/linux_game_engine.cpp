@@ -377,6 +377,20 @@ private:
 class LinuxGameEngine final : public GameEngine
 {
 public:
+	void init(int argc, char *argv[]) override
+	{
+		GameEngine::init(argc, argv);
+		if (m_boundedProfile)
+		{
+			// The bounded M20 profile is deliberately not a shell or match. Keep
+			// normal parsed defaults intact outside this explicit test profile,
+			// but prevent retail intro/shell state from enqueueing a new game.
+			TheWritableGlobalData->m_shellMapOn = FALSE;
+			TheWritableGlobalData->m_playIntro = FALSE;
+			TheWritableGlobalData->m_playSizzle = FALSE;
+			TheWritableGlobalData->m_afterIntro = FALSE;
+		}
+	}
 	void update() override
 	{
 		if (m_boundedProfile && m_updates == 0)

@@ -351,9 +351,9 @@ int main()
 	setenv("XDG_CACHE_HOME", cache.c_str(), 1);
 	setenv("XDG_STATE_HOME", state.c_str(), 1);
 	const std::filesystem::path input = root / "input";
-	std::filesystem::create_directories(input / "Menus");
+	std::filesystem::create_directories(input / "Window/Menus");
 	{
-		std::ofstream blank(input / "Menus/BlankWindow.wnd");
+		std::ofstream blank(input / "Window/Menus/BlankWindow.wnd");
 		blank << "FILE_VERSION = 2\n"
 			"STARTLAYOUTBLOCK\nENDLAYOUTBLOCK\n"
 			"WINDOW\nWINDOWTYPE = USER;\n"
@@ -361,7 +361,7 @@ int main()
 			"NAME = \"BlankWindow\";\nSTATUS = ENABLED IMAGE;\nSTYLE = USER;\nEND\n";
 	}
 	{
-		std::ofstream callback(input / "Menus/CallbackWindow.wnd");
+		std::ofstream callback(input / "Window/Menus/CallbackWindow.wnd");
 		callback << "FILE_VERSION = 2\nSTARTLAYOUTBLOCK\n"
 			"LAYOUTINIT = MainMenuInit;\nENDLAYOUTBLOCK\n";
 	}
@@ -369,6 +369,10 @@ int main()
 	check(zh::original_process::initialize_services(0, diagnostic, sizeof(diagnostic)), diagnostic);
 	initMemoryManager();
 	{
+	PosixLocalFileSystem localFiles(input);
+	FileSystem files;
+	TheLocalFileSystem = &localFiles;
+	TheFileSystem = &files;
 	TheWritableGlobalData = new GlobalData;
 	TheWritableGlobalData->m_playIntro = TRUE;
 	TheWritableGlobalData->m_playSizzle = FALSE;
@@ -417,10 +421,6 @@ int main()
 		functionLexicon.winLayoutShutdownFunc(nameKeys.nameToKey(AsciiString("WOLStatusMenuShutdown"))))),
 		"online shutdown callback did not fail closed with its exact name");
 	TheFunctionLexicon = NULL;
-	PosixLocalFileSystem localFiles(input);
-	FileSystem files;
-	TheLocalFileSystem = &localFiles;
-	TheFileSystem = &files;
 	HeaderTemplateManager headers;
 	TheHeaderTemplateManager = &headers;
 	HeadlessWindowManager *windowManager = new HeadlessWindowManager;

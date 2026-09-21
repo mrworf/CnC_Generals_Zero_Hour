@@ -378,6 +378,7 @@ AsciiString TheThingTemplateBeingParsedName;
 
 	// find existing item if present
 	ThingTemplate *thingTemplate = TheThingFactory->findTemplateInternal( name, FALSE );
+	Bool newTemplateInOverrideFile = FALSE;
 	if( !thingTemplate )
 	{
 		// no item is present, create a new one
@@ -387,6 +388,8 @@ AsciiString TheThingTemplateBeingParsedName;
 			// This ThingTemplate is actually an override, so we will mark it as such so that it properly
 			// gets deleted on ::reset().
 			thingTemplate->markAsOverride();
+			thingTemplate->setAllowOrdinaryModulesInOverride(TRUE);
+			newTemplateInOverrideFile = TRUE;
 		}
 	}
 	else if( ini->getLoadType() != INI_LOAD_CREATE_OVERRIDES )
@@ -425,6 +428,8 @@ AsciiString TheThingTemplateBeingParsedName;
 	}
 
 	thingTemplate->validate();
+	if (newTemplateInOverrideFile)
+		thingTemplate->setAllowOrdinaryModulesInOverride(FALSE);
 	
 	if( ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES )
 	{

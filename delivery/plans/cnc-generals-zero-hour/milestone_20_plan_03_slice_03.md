@@ -36,3 +36,15 @@ M20 production providers/tests/CMake reached by cumulative validation, dependenc
 - The read-only retail gate completes bounded genuine update/reset/teardown, records no private details, and observes zero physical acquisitions/writes outside XDG.
 - Identity/provider-removal/ledger/classification controls reject reduced or missing providers.
 - Commit boundary: `delivery: M20 plan03 slice 03 accept original lifecycle`.
+
+## Delivered evidence
+
+Status: complete.
+
+- The production Linux entry now loads original loose and BIG data in its source-defined two-pass order, parses the full original configuration/module surface, advances genuine `GameLogic` state, executes original reset, and tears down process, worker, resource, and allocator ownership to zero. The bounded profile changes only explicit test-run dispatch; normal parsed defaults remain intact.
+- Newly reached source behavior is implemented rather than bypassed: override-directory object creation retains ordinary original modules, WND paths retain their logical `Window` root, water texture ownership is released, equal `AsciiString` values hash by content, and the original allocator makes a recycled pool block writable again under ASan container annotations. The legacy Body sentinel is classified before conversion to `ModuleType`, avoiding invalid-enum behavior without changing its effective behavior-module type.
+- The production BIG provider accepts the retail archives' valid legacy header conventions while retaining the independently tested malformed, truncation, range, overflow, lookup, transactional-publication, and cleanup rejection boundaries from slice 02.
+- Current full asset-free CTest passes `117/117` in each of GCC Debug, Clang Debug, GCC Release, and Clang Release. Existing Release flags define `NDEBUG`; all new acceptance checks are active runtime checks and do not depend on the standard `assert` macro.
+- Focused Clang Debug ASan+UBSan passes `27/27` with `ASAN_OPTIONS=detect_leaks=0:abort_on_error=1:strict_string_checks=1` and `UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1`. LeakSanitizer is disabled and is not used as leak evidence; original allocator live counts, workers, devices, and reset-owned resources are checked independently.
+- A clean GCC Release install passes the owned arbitrary-CWD/read-only-input lifecycle through its installed `bin/zh_original_main`. The separately gated, private-safe retail wrapper passes cold and warm init/update/reset/teardown through that installed executable with `devices=0`, `allocations=0`, and `workers=0`; no private path, hash, or byte is recorded.
+- Production identity, provider-removal, source-classification, and dependency-ledger gates pass. The ledger records the exact current source identities and preserves M21-M25 as later acceptance owners; this slice makes no scenario, hardware-scene, interactive-media, save/replay-scenario, or LAN acceptance claim.

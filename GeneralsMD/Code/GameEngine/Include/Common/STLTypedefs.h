@@ -77,6 +77,7 @@ enum DrawableID : int;
 #include <set>
 #include <stack>
 #include <string>
+#include <string_view>
 #include <vector>
 
 // List of AsciiStrings to allow list of ThingTemplate names from INI and such
@@ -190,10 +191,9 @@ namespace rts
 
 	template<> struct hash<AsciiString>
 	{
-		size_t operator()(AsciiString ast) const
+		size_t operator()(const AsciiString& ast) const
 		{ 
-			std::hash<const char *> tmp;
-			return tmp((const char *) ast.str());
+			return std::hash<std::string_view>{}(std::string_view(ast.str()));
 		}
 	};
 

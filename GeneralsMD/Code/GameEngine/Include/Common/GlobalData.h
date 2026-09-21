@@ -510,6 +510,9 @@ public:
 	Bool				m_breakTheMovie;								///< The user has hit escape!
 	AsciiString m_modDir;
 	AsciiString m_modBIG;
+	// Retained from shipped GameData for source/data compatibility. Linux keeps
+	// the value as metadata while writable storage remains rooted in XDG.
+	AsciiString m_retailUserDataLeafName;
 
 	//-allAdvice feature
 	//Bool m_allAdvice;

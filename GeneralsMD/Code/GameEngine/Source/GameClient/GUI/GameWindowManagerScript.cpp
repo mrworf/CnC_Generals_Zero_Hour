@@ -2729,16 +2729,18 @@ GameWindow *GameWindowManager::winCreateFromScript( AsciiString filenameString,
 	resetWindowDefaults();
 
 	//
-	// get the filename from the parameter, if it doesn't contain a '\' it is
-	// a it is assumed to be a filename only, which we will prefix a "window\"
-	// directory to, otherwise it is assumed to be an absolute path.  When using
-	// a filename only make sure the current directory is set to the right
-	// place for the window files subdirectory
+	// Retail layout names such as "Menus/BlankWindow.wnd" are logical paths
+	// below Window, not host-absolute paths. Preserve explicitly rooted and
+	// already-prefixed names while making every other logical name independent
+	// of the process working directory.
 	//
-	if( strchr( filename, '\\' ) == NULL && strchr( filename, '/' ) == NULL )
-		sprintf( filepath, "Window\\%s", filename );
-	else
-		strcpy( filepath, filename );
+	const Bool absolutePath = filename[0] == '/' || filename[0] == '\\' ||
+		(filename[0] && filename[1] == ':');
+	const Bool windowPrefixed = strnicmp(filename, "Window\\", 7) == 0 ||
+		strnicmp(filename, "Window/", 7) == 0;
+	const Int written = snprintf(filepath, sizeof(filepath), absolutePath || windowPrefixed ? "%s" : "Window\\%s", filename);
+	if (written < 0 || written >= static_cast<Int>(sizeof(filepath)))
+		return NULL;
 
   // Open the input file
 	inFile = TheFileSystem->openFile(filepath, File::READ);

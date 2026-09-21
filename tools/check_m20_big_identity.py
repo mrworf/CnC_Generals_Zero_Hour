@@ -48,8 +48,10 @@ def main() -> int:
 
     source = args.source.read_text(encoding="utf-8")
     for required in (
-        "invalid BIG archive entry bounds", "duplicate BIG archive logical path",
-        "BIG archive table size mismatch", "rebuildDirectoryTree", "m_loadOrder",
+        "BIG archive entry offset after EOF", "BIG archive entry size after EOF",
+        "BIG archive entry overlaps parsed table", "duplicate BIG archive logical path",
+        "BIG archive entries exceed declared table boundary", "truncated BIG archive entry table",
+        "rebuildDirectoryTree", "m_loadOrder",
     ):
         if required not in source:
             failures.append(f"BIG boundary check missing: {required}")

@@ -144,7 +144,13 @@ private:
 class LinuxArchiveFileSystem final : public ArchiveFileSystem
 {
 public:
-	void init() override { loadBigFilesFromDirectory(AsciiString(""), AsciiString("*.big"), FALSE); }
+	void init() override
+	{
+		loadBigFilesAtRoot(AsciiString(""), AsciiString("*.big"), FALSE);
+		const char *generalsRoot = std::getenv("ZH_GENERALS_DATA_ROOT");
+		if (generalsRoot && *generalsRoot)
+			loadBigFilesAtRoot(AsciiString(generalsRoot), AsciiString("*.big"), FALSE);
+	}
 	void update() override {}
 	void reset() override {}
 	void postProcessLoad() override {}
@@ -168,32 +174,36 @@ public:
 			if (declaredSize != archiveSize || archiveSize > UnsignedInt((std::numeric_limits<Int>::max)()) ||
 				count > kMaximumBIGEntries || tableEnd < kBIGHeaderSize || tableEnd > archiveSize)
 				throw std::runtime_error("invalid BIG archive table bounds");
-			if (count > (tableEnd - kBIGHeaderSize) / 9U)
+			if (count > (archiveSize - kBIGHeaderSize) / 9U)
 				throw std::runtime_error("invalid BIG archive entry count");
 
 			auto archive = std::make_unique<LinuxBIGFile>();
 			archive->setIdentity(filename);
+			std::vector<std::pair<std::string, ArchivedFileInfo>> pendingEntries;
+			pendingEntries.reserve(count);
 			for (UnsignedInt index = 0; index < count; ++index)
 			{
 				const Int signedPosition = input->position();
-				if (signedPosition < 0 || static_cast<UnsignedInt>(signedPosition) > tableEnd ||
-					tableEnd - static_cast<UnsignedInt>(signedPosition) < 9U)
+				if (signedPosition < 0 || static_cast<UnsignedInt>(signedPosition) > archiveSize ||
+					archiveSize - static_cast<UnsignedInt>(signedPosition) < 9U)
 					throw std::runtime_error("truncated BIG archive entry table");
 				ArchivedFileInfo info;
 				info.m_archiveFilename = filename;
 				info.m_offset = readBigEndian(input);
 				info.m_size = readBigEndian(input);
-				if (info.m_offset < tableEnd || info.m_offset > archiveSize ||
-					info.m_size > archiveSize - info.m_offset ||
-					info.m_offset > UnsignedInt((std::numeric_limits<Int>::max)()) ||
+				if (info.m_offset > archiveSize)
+					throw std::runtime_error("BIG archive entry offset after EOF");
+				if (info.m_size > archiveSize - info.m_offset)
+					throw std::runtime_error("BIG archive entry size after EOF");
+				if (info.m_offset > UnsignedInt((std::numeric_limits<Int>::max)()) ||
 					info.m_size > UnsignedInt((std::numeric_limits<Int>::max)()))
-					throw std::runtime_error("invalid BIG archive entry bounds");
+					throw std::runtime_error("BIG archive entry exceeds runtime integer range");
 				std::string logical;
 				Bool terminated = FALSE;
 				while (logical.size() <= kMaximumBIGLogicalName)
 				{
 					const Int namePosition = input->position();
-					if (namePosition < 0 || static_cast<UnsignedInt>(namePosition) >= tableEnd)
+					if (namePosition < 0 || static_cast<UnsignedInt>(namePosition) >= archiveSize)
 						throw std::runtime_error("truncated BIG archive entry name");
 					Char character = 0;
 					if (input->read(&character, 1) != 1)
@@ -206,10 +216,19 @@ public:
 				const std::string canonical = canonicalLogicalPath(std::move(logical));
 				const std::size_t split = canonical.find_last_of('\\');
 				info.m_filename = (split == std::string::npos ? canonical : canonical.substr(split + 1U)).c_str();
-				archive->addEntry(canonical, info);
+				pendingEntries.emplace_back(canonical, info);
 			}
-			if (input->position() < 0 || static_cast<UnsignedInt>(input->position()) != tableEnd)
-				throw std::runtime_error("BIG archive table size mismatch");
+			if (input->position() < 0)
+				throw std::runtime_error("BIG archive table position invalid");
+			const UnsignedInt parsedTableEnd = static_cast<UnsignedInt>(input->position());
+			if (parsedTableEnd > tableEnd)
+				throw std::runtime_error("BIG archive entries exceed declared table boundary");
+			for (const auto& entry : pendingEntries)
+			{
+				if (entry.second.m_size != 0 && entry.second.m_offset < parsedTableEnd)
+					throw std::runtime_error("BIG archive entry overlaps parsed table");
+				archive->addEntry(entry.first, entry.second);
+			}
 			archive->attachFile(input);
 			return archive.release();
 		}
@@ -242,8 +261,17 @@ public:
 	}
 	Bool loadBigFilesFromDirectory(AsciiString directory, AsciiString mask, Bool overwrite) override
 	{
+		return loadBigFiles(directory, mask, overwrite, TRUE);
+	}
+private:
+	Bool loadBigFilesAtRoot(AsciiString directory, AsciiString mask, Bool overwrite)
+	{
+		return loadBigFiles(directory, mask, overwrite, FALSE);
+	}
+	Bool loadBigFiles(AsciiString directory, AsciiString mask, Bool overwrite, Bool recursive)
+	{
 		FilenameList files;
-		TheLocalFileSystem->getFileListInDirectory(directory, AsciiString(""), mask, files, TRUE);
+		TheLocalFileSystem->getFileListInDirectory(directory, AsciiString(""), mask, files, recursive);
 		std::vector<std::pair<AsciiString, std::unique_ptr<ArchiveFile>>> pending;
 		try
 		{
@@ -266,7 +294,6 @@ public:
 		}
 		return pending.empty() ? FALSE : TRUE;
 	}
-private:
 	struct LoadedArchive { AsciiString filename; Bool overwrite; };
 	void rebuildDirectoryTree()
 	{

@@ -511,7 +511,9 @@ void ThingTemplate::parseModuleName(INI* ini, void *instance, void* store, const
 {
 	ThingTemplate* self = (ThingTemplate*)instance;
 	ModuleInfo* mi = (ModuleInfo*)store;
-	ModuleType type = static_cast<ModuleType>(reinterpret_cast<uintptr_t>(userData));
+	const uintptr_t rawType = reinterpret_cast<uintptr_t>(userData);
+	const Bool isBody = rawType == 999;
+	ModuleType type = isBody ? MODULETYPE_BEHAVIOR : static_cast<ModuleType>(rawType);
 	const char* token = ini->getNextToken();
 	AsciiString tokenStr = token;
 
@@ -534,9 +536,8 @@ void ThingTemplate::parseModuleName(INI* ini, void *instance, void* store, const
 	Int interfaceMask;
 
 	// ugh -- special case for "Body".
-	if (type == 999)
+	if (isBody)
 	{
-		type = MODULETYPE_BEHAVIOR;
 	// what interface(s) does this module support?
 		interfaceMask = TheModuleFactory->findModuleInterfaceMask(tokenStr, type);
 		if ((interfaceMask & (MODULEINTERFACE_BODY)) == 0)
@@ -556,7 +557,7 @@ void ThingTemplate::parseModuleName(INI* ini, void *instance, void* store, const
 	}
 	
 	// if we're overriding, we can totally skip over this block
-	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
+	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES && !self->allowOrdinaryModulesInOverride())
 	{	
 		if (self->m_moduleParsingMode == MODULEPARSE_ADD_REMOVE_REPLACE)
 		{
@@ -996,6 +997,7 @@ ThingTemplate::ThingTemplate() :
 	m_geometryInfo(GEOMETRY_SPHERE, FALSE, 1, 1, 1)
 {
 	m_moduleParsingMode = MODULEPARSE_NORMAL;
+	m_allowOrdinaryModulesInOverride = FALSE;
 	m_reskinnedFrom = NULL;
 	m_radarPriority = RADAR_PRIORITY_INVALID;
 
