@@ -419,6 +419,9 @@ public:
 	const PartitionData *friend_getConstPartitionData() const { return m_partitionData; }
 
 	void onPartitionCellChange();///< We have moved a 'significant' amount, so do maintenence that can be considered 'cell-based'
+#if defined(__linux__)
+	void onPartitionCellsRestored();///< Saved shroud is authoritative; rebuild only unsaved value/threat maps.
+#endif
 	void handlePartitionCellMaintenance();					///< Undo and redo all shroud actions.  Call when something has changed, like position or ownership or Death
 
 	Real getVisionRange() const;				///< How far can you see?  This is dynamic so it is in Object.

@@ -203,7 +203,8 @@ int main(int argc, char **argv)
 			result = 4;
 		}
 	}
-	if (result == 0 && std::getenv("ZH_M21_SIMULATION"))
+	if (result == 0 && std::getenv("ZH_M21_SIMULATION") &&
+		!std::getenv("ZH_M24_SAVE_AT_START"))
 	{
 		if (!zh_linux_simulation_report(simulation, 14))
 		{

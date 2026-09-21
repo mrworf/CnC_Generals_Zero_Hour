@@ -114,6 +114,10 @@ public:
 	virtual void reset( void );															///< Reset the logic system
 	virtual void update( void );														///< update the world
 
+#if defined(__linux__)
+	void prepareFailedLoadReset(); ///< Discard partial-load update indices before object destruction.
+#endif
+
 #if defined(_DEBUG) || defined(_INTERNAL)
 	Int getNumberSleepyUpdates() const {return m_sleepyUpdates.size();} //For profiling, so not in Release.
 #endif

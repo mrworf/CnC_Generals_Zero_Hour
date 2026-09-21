@@ -22,6 +22,8 @@ Read-only retail roots; all saves/extracted maps under isolated XDG. Preserve bo
 
 Original `PartitionManager`/`PartitionCell`, `GameState` postprocess only as necessary, targeted source-owned fixture, gated retail mission/skirmish test, ledger and slice evidence.
 
+Strict sanitizer execution of the visible-shroud fixture also reaches original `DiscreteCircle::generateEdgePairs` with a negative Bresenham seed. Replace its undefined left shift with equivalent arithmetic within supported radii; retain strict UBSan rather than excluding this check.
+
 ## Tests and commands
 
 - Characterize exact cell/shroud and dirty-list transition before and after source load/postprocess and repeated load; retain a failing control before the correction.

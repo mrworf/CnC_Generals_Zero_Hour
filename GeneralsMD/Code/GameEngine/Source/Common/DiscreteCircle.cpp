@@ -73,7 +73,9 @@ void DiscreteCircle::generateEdgePairs(Int xCenter, Int yCenter, Int radius)
 	// Uses Bresenham to generate points.
 	Int x = 0;
 	Int y = radius;
-	Int d = (1 - radius) << 1;
+	// Left-shifting a negative Bresenham seed is undefined in C++; arithmetic
+	// multiplication preserves the original value for supported radii.
+	Int d = 2 * (1 - radius);
 
 	while (y >= 0) {
 		HorzLine hl;
@@ -84,7 +86,7 @@ void DiscreteCircle::generateEdgePairs(Int xCenter, Int yCenter, Int radius)
 		
 		if (d + y > 0) {
 			--y;
-			d -= ((y << 1) - 1);
+			d -= ((2 * y) - 1);
 		} 
 
 		if (x > d) {

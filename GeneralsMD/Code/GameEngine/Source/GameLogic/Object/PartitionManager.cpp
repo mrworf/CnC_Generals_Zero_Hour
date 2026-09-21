@@ -2104,7 +2104,12 @@ void PartitionData::updateCellsTouched()
 		// To not expose PartitionCells, he will think in terms of points.  He will 
 		// unlook at a point and look at the new point.  We do the rounding and the 
 		// changing into PartitionCells
-		obj->onPartitionCellChange(); 
+#if defined(__linux__)
+		if (m_lastCell == NULL && ThePartitionManager->isRestoringSnapshotShroud())
+			obj->onPartitionCellsRestored();
+		else
+#endif
+			obj->onPartitionCellChange();
 		m_lastCell = currentCell;
 	}
 
@@ -2571,6 +2576,9 @@ PartitionManager::PartitionManager()
 	m_worldExtents.hi.zero();
 	m_dirtyModules = NULL;
 	m_updatedSinceLastReset = false;
+#if defined(__linux__)
+	m_restoringSnapshotShroud = false;
+#endif
 #ifdef FASTER_GCO
 	m_maxGcoRadius = 0;
 #endif
@@ -2700,6 +2708,9 @@ void PartitionManager::reset()
 void PartitionManager::shutdown()
 {
 	m_updatedSinceLastReset = false;
+#if defined(__linux__)
+	m_restoringSnapshotShroud = false;
+#endif
 	ThePartitionManager->removeAllDirtyModules();
 
 #ifdef _DEBUG
@@ -2785,6 +2796,9 @@ void PartitionManager::update()
 
 		processPendingUndoShroudRevealQueue();
 	}
+#if defined(__linux__)
+	m_restoringSnapshotShroud = false;
+#endif
 
 #if defined(_DEBUG) || defined(_INTERNAL)
 	if (TheGlobalData->m_debugThreatMap) 
@@ -4660,6 +4674,9 @@ void PartitionManager::xfer( Xfer *xfer )
 
 		// tell partition manager to re-evaluate shroud things when next asked
 		m_updatedSinceLastReset = FALSE;
+#if defined(__linux__)
+		m_restoringSnapshotShroud = TRUE;
+#endif
 
 		// refresh the shroud for the local player which will update the radar and everything
 		refreshShroudForLocalPlayer();

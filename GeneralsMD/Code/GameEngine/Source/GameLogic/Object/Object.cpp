@@ -4796,6 +4796,16 @@ void Object::onPartitionCellChange()
 	handlePartitionCellMaintenance();
 }
 
+#if defined(__linux__)
+void Object::onPartitionCellsRestored()
+{
+	// PartitionCell snapshots already contain every saved looker and shrouder.
+	// The value/threat maps are derived and are not serialized with the cells.
+	handleValueMap();
+	handleThreatMap();
+}
+#endif
+
 //-------------------------------------------------------------------------------------------------
 void Object::handlePartitionCellMaintenance()
 {

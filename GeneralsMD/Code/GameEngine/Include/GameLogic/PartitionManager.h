@@ -1249,6 +1249,9 @@ private:
 	PartitionCell*	m_cells;					///< array of cells
 	PartitionData*	m_dirtyModules;
 	Bool						m_updatedSinceLastReset;	///< Used to force a return of OBJECTSHROUD_INVALID before update has been called.
+#if defined(__linux__)
+	Bool						m_restoringSnapshotShroud;
+#endif
 
 	std::queue<SightingInfo *> m_pendingUndoShroudReveals;	///< Anything can queue up an Undo to happen later. This is a queue, because "later" is a constant
 
@@ -1326,6 +1329,9 @@ public:
 	void loadPostProcess( void );
 
 	inline Bool getUpdatedSinceLastReset( void ) const { return m_updatedSinceLastReset; }
+#if defined(__linux__)
+	Bool isRestoringSnapshotShroud() const { return m_restoringSnapshotShroud; }
+#endif
 
 	void registerObject( Object *object );				///< add thing to system
 	void unRegisterObject( Object *object );			///< remove thing from system

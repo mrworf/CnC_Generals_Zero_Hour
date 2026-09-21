@@ -965,6 +965,7 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 		{
 			try
 			{
+				TheGameLogic->prepareFailedLoadReset();
 				if (TheGameLogic->isInGame()) TheGameLogic->clearGameData(FALSE);
 				TheGameEngine->reset();
 				if (!rollbackPath.empty())

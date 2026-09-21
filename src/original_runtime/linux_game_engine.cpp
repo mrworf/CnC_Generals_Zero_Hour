@@ -984,7 +984,7 @@ public:
 				const Bool recordingReplay = std::getenv("ZH_M24_RECORD_REPLAY") != NULL;
 				if (recordingReplay) TheRecorder->beginScenarioRecording(replayInitialSeed);
 				if (recordingReplay) runOriginalReplayCommands();
-				else runOriginalSimulation();
+				else if (!std::getenv("ZH_M24_SAVE_AT_START")) runOriginalSimulation();
 				if (recordingReplay) TheRecorder->stopRecording();
 				if (recordingReplay)
 				{
@@ -1102,6 +1102,22 @@ public:
 						std::printf("original persistence load: objects=%u players=%u teams=%u crc=%u rollback=%u\n",
 							TheGameLogic->getObjectCount(), ThePlayerList->getPlayerCount(),
 							TheSidesList->getNumTeams(), after[4], fault);
+						if (!fault && std::getenv("ZH_M24_REPEAT_ROUNDTRIP"))
+						{
+							const AsciiString repeatName("repeated.sav");
+							if (TheGameState->saveGame(repeatName, UnicodeString(u"Repeated original scenario"),
+								SAVE_FILE_TYPE_NORMAL) != SC_OK)
+								throw std::runtime_error("repeated original scenario save failed");
+							AvailableGameInfo repeated;
+							repeated.filename = repeatName;
+							TheGameState->getSaveGameInfoFromFile(
+								TheGameState->getFilePathInSaveDirectory(repeatName), &repeated.saveGameInfo);
+							if (TheGameState->loadGame(repeated) != SC_OK ||
+								checkpoint() != before || components() != partsBefore)
+								throw std::runtime_error("repeated original scenario load changed checkpoint");
+							std::printf("original persistence repeated: frame=%u crc=%u\n",
+								before[0], before[4]);
+						}
 					}
 				}
 				if (m_reentryProfile)

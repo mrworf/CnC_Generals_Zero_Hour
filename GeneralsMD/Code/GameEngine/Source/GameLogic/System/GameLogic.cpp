@@ -316,6 +316,22 @@ void GameLogic::destroyAllObjectsImmediate()
 
 }  // end destroyAllObjectsImmediate
 
+#if defined(__linux__)
+void GameLogic::prepareFailedLoadReset()
+{
+	// A late Xfer failure can leave loaded UpdateModules in the sleepy vector
+	// before loadPostProcess assigns their heap indices. Reset destroys objects
+	// first and would otherwise index this vector with -1.
+	for (UpdateModulePtr update : m_sleepyUpdates)
+		update->friend_setIndexInLogic(-1);
+	m_sleepyUpdates.clear();
+#ifdef ALLOW_NONSLEEPY_UPDATES
+	m_normalUpdates.clear();
+#endif
+	m_curUpdateModule = NULL;
+}
+#endif
+
 //-------------------------------------------------------------------------------------------------
 /**GameLogic class destructor, the destruction order should mirror the
  * initialization order */
