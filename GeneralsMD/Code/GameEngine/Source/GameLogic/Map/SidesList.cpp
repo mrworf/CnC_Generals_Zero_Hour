@@ -304,12 +304,14 @@ Bool SidesList::ParseSidesDataChunk(DataChunkInput &file, DataChunkInfo *info, v
 	for (i=0; i<count; i++) {
 		if (i<TheSidesList->getNumSides()) {
 			ScriptList *pSL = TheSidesList->getSideInfo(i)->getScriptList();
-			pSL->deleteInstance();
+			if (pSL)
+				pSL->deleteInstance();
 			TheSidesList->getSideInfo(i)->setScriptList(scripts[i]);
 			scripts[i] = NULL;
 		} else {
 			// Read in more players worth than we have.
-			scripts[i]->deleteInstance();
+			if (scripts[i])
+				scripts[i]->deleteInstance();
 			scripts[i] = NULL;
 		}
 	}

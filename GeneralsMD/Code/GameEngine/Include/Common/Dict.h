@@ -267,10 +267,11 @@ private:
 	void releaseData();
 	DictPair *ensureUnique(int numPairsNeeded, Bool preserveData, DictPair *pairToTranslate);
 	
-	enum DictPairKeyType
-	{
-		DICTPAIRKEY_ILLEGAL = 0
-	};
+	// This is a packed (NameKeyType << 8) | DataType value, not a closed
+	// enumeration.  An integer representation avoids invalid-enum UB on the
+	// 64-bit native path while preserving the original bit layout.
+	typedef UnsignedInt DictPairKeyType;
+	static const DictPairKeyType DICTPAIRKEY_ILLEGAL = 0;
 
 	// danger... this is Plain Old Data and allocated in a skanky way;
 	// and thus the ctor/dtor for DictPair will never be called. so don't
@@ -310,7 +311,10 @@ private:
 		inline UnicodeString* asUnicodeString() { return (UnicodeString*)&m_value; }
 	};
 
-	struct DictPairData
+	// The pair array begins immediately after this header.  Keep the header
+	// rounded to DictPair alignment; the original 32-bit layout happened to
+	// satisfy this, while 64-bit pointers otherwise leave peek() misaligned.
+	struct alignas(DictPair) DictPairData
 	{
 		unsigned short	m_refCount;						// reference count
 		unsigned short	m_numPairsAllocated;  // length of data allocated
@@ -364,5 +368,3 @@ inline Dict::DataType Dict::getNthType(Int n) const
 }
 
 #endif // Dict_H
-
-

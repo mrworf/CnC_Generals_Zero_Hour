@@ -38,6 +38,7 @@
 #include "Common/FileSystem.h" // for LOAD_TEST_ASSETS
 #include "Common/GlobalData.h"
 #include "Common/MapReaderWriterInfo.h"
+#include "Common/OriginalMapLoader.h"
 #include "Common/TerrainTypes.h"
 #include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
@@ -505,28 +506,29 @@ WorldHeightMap::WorldHeightMap(ChunkInputStream *pStrm, Bool logicalDataOnly):
 		m_drawHeightY=STRETCH_DRAW_HEIGHT;
 	}
 
-	DataChunkInput file( pStrm );
-
 	if (logicalDataOnly) {
-		file.registerParser( AsciiString("HeightMapData"), AsciiString::TheEmptyString, ParseSizeOnlyInChunk );
-		file.registerParser( AsciiString("WorldInfo"), AsciiString::TheEmptyString, ParseWorldDictDataChunk );
-		file.registerParser( AsciiString("ObjectsList"), AsciiString::TheEmptyString, ParseObjectsDataChunk );
-		freeListOfMapObjects(); // just in case.
-		file.registerParser( AsciiString("PolygonTriggers"), AsciiString::TheEmptyString, PolygonTrigger::ParsePolygonTriggersDataChunk );
-		PolygonTrigger::deleteTriggers(); // just in case.
-		TheSidesList->emptySides();
-		file.registerParser(AsciiString("SidesList"), AsciiString::TheEmptyString,	SidesList::ParseSidesDataChunk );
-	}	else {
+		OriginalMapLoader loader;
+		if (!loader.load(pStrm))
+			throw ERROR_CORRUPT_FILE_FORMAT;
+		m_width = loader.width();
+		m_height = loader.height();
+		m_borderSize = loader.borderSize();
+		m_boundaries.assign(loader.boundaries().begin(), loader.boundaries().end());
+		m_dataSize = static_cast<Int>(loader.heights().size());
+		m_data = MSGNEW("WorldHeightMap_OriginalMapLoader") UnsignedByte[m_dataSize];
+		memcpy(m_data, loader.heights().data(), m_dataSize);
+	} else {
+		DataChunkInput file( pStrm );
 		file.registerParser( AsciiString("HeightMapData"), AsciiString::TheEmptyString, ParseHeightMapDataChunk );
 		file.registerParser( AsciiString("BlendTileData"), AsciiString::TheEmptyString, ParseBlendTileDataChunk );
 #ifdef EVAL_TILING_MODES
 		file.registerParser( AsciiString("FUNKY_TILING"), AsciiString::TheEmptyString, ParseFunkyTilingDataChunk );
 #endif
 		file.registerParser( AsciiString("GlobalLighting"), AsciiString::TheEmptyString, ParseLightingDataChunk );
-	}
-	if (!file.parse(this)) {
+		if (!file.parse(this)) {
     
-		throw(ERROR_CORRUPT_FILE_FORMAT);
+			throw(ERROR_CORRUPT_FILE_FORMAT);
+		}
 	}
 	// patch bad maps. 
 	if (!logicalDataOnly) {
@@ -758,18 +760,6 @@ void WorldHeightMap::setCliffState(Int xIndex, Int yIndex, Bool state)
 	m_cellCliffState[yIndex*m_flipStateWidth + (xIndex >> 3)] = flagByte;
 }
 
-Bool WorldHeightMap::ParseWorldDictDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
-{
-	Dict d = file.readDict();
-	*MapObject::getWorldDict() = d;
-	Bool exists;
-	Int theWeather = MapObject::getWorldDict()->getInt(TheKey_weather, &exists);
-	if (exists) {
-		TheWritableGlobalData->m_weather = (Weather) theWeather;
-	}
-	return true;
-}
-
 /**
 * WorldHeightMap::ParseLightingDataChunk - read a global lights chunk.
 * Format is the newer CHUNKY format.
@@ -849,20 +839,6 @@ Bool WorldHeightMap::ParseLightingDataChunk(DataChunkInput &file, DataChunkInfo 
 		}
 	DEBUG_ASSERTCRASH(file.atEndOfChunk(), ("Unexpected data left over."));
 	return true;
-}
-
-/**
-* WorldHeightMap::ParseObjectsDataChunk - read a height map chunk.
-* Format is the newer CHUNKY format.
-*	See WHeightMapEdit.cpp for the writer.
-*	Input: DataChunkInput 
-*		
-*/
-Bool WorldHeightMap::ParseObjectsDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
-{
-	file.m_currentObject = NULL;
-	file.registerParser( AsciiString("Object"), info->label, ParseObjectDataChunk );
-	return (file.parse(userData));
 }
 
 /**
@@ -946,64 +922,6 @@ Bool WorldHeightMap::ParseHeightMapData(DataChunkInput &file, DataChunkInfo *inf
 *	Input: DataChunkInput 
 *		
 */
-Bool WorldHeightMap::ParseSizeOnlyInChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
-{
-	WorldHeightMap *pThis = (WorldHeightMap *)userData;
-	return pThis->ParseSizeOnly(file, info, userData);
-}
-
-/**
-* WorldHeightMap::ParseHeightMapData - read a height map chunk.
-* Format is the newer CHUNKY format.
-*	See WHeightMapEdit.cpp for the writer.
-*	Input: DataChunkInput 
-*		
-*/
-Bool WorldHeightMap::ParseSizeOnly(DataChunkInput &file, DataChunkInfo *info, void *userData)
-{
-	m_width = file.readInt();
-	m_height = file.readInt();
-	if (info->version >= K_HEIGHT_MAP_VERSION_3) {
-		m_borderSize = file.readInt();
-	} else {
-		m_borderSize = 0;
-	}
-
-	if (info->version >= K_HEIGHT_MAP_VERSION_4) {
-		Int numBorders = file.readInt();
-		m_boundaries.resize(numBorders);
-		for (int i = 0; i < numBorders; ++i) {
-			m_boundaries[i].x = file.readInt();
-			m_boundaries[i].y = file.readInt();
-		}
-	} else {
-		m_boundaries.resize(1);
-		m_boundaries[0].x = m_width - 2 * m_borderSize;
-		m_boundaries[0].y = m_height - 2 * m_borderSize;
-	}
-
-	m_dataSize = file.readInt();
-	m_data = MSGNEW("WorldHeightMap_ParseSizeOnly") UnsignedByte[m_dataSize];
-	if (m_dataSize <= 0 || (m_dataSize != (m_width*m_height))) {
-		throw ERROR_CORRUPT_FILE_FORMAT	;
-	}
-	file.readArrayOfBytes((char *)m_data, m_dataSize);
-	// Resize me. 
-	if (info->version == K_HEIGHT_MAP_VERSION_1) {
-		Int newWidth = (m_width+1)/2;
-		Int newHeight = (m_height+1)/2;
-		Int i, j;
-		for (i=0; i<newHeight; i++) {
-			for (j=0; j<newWidth; j++) {
-				m_data[i*newWidth+j] = m_data[2*i*m_width+2*j];
-			}
-		}
-		m_width = newWidth;
-		m_height = newHeight;
-	}
-	return true;
-}
-
 /**
 * WorldHeightMap::ParseBlendTileDataChunk - read a blend tile info chunk.
 * Format is the newer CHUNKY format.
@@ -1224,87 +1142,6 @@ Bool WorldHeightMap::ParseBlendTileData(DataChunkInput &file, DataChunkInfo *inf
 	DEBUG_ASSERTCRASH(file.atEndOfChunk(), ("Unexpected data left over."));
 	return true;
 }
-
-
-/**
-* WorldHeightMap::ParseObjectData - read a object info chunk.
-* Format is the newer CHUNKY format.
-*	See WHeightMapEdit.cpp for the writer.
-*	Input: DataChunkInput 
-*		
-*/
-Bool WorldHeightMap::ParseObjectDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
-{
-	WorldHeightMap *pThis = (WorldHeightMap *)file.m_userData;
-	return pThis->ParseObjectData(file, info, userData, info->version >= K_OBJECTS_VERSION_2);
-}
-
-/**
-* WorldHeightMap::ParseObjectData - read a object info chunk.
-* Format is the newer CHUNKY format.
-*	See WHeightMapEdit.cpp for the writer.
-*	Input: DataChunkInput 
-*		
-*/
-Bool WorldHeightMap::ParseObjectData(DataChunkInput &file, DataChunkInfo *info, void *userData, Bool readDict)
-{
-	MapObject *pPrevious = (MapObject *)file.m_currentObject;
-
-	Coord3D loc;
-	loc.x = file.readReal();
-	loc.y = file.readReal();
-	loc.z = file.readReal();
-
-	Real minZ = -100*MAP_XY_FACTOR;
-	Real maxZ = (255*10)*MAP_HEIGHT_SCALE;
-
-	if (info->version <= K_OBJECTS_VERSION_2) {
-		loc.z = 0;
-	}
-
-	Real angle = file.readReal();
-	Int flags = file.readInt(); 
-	AsciiString name = file.readAsciiString();
-	Dict d;
-	if (readDict)
-	{
-		d = file.readDict();
-	}		 
-
-	if (loc.z<minZ || loc.z>maxZ) {
-		DEBUG_LOG(("Removing object at z height %f\n", loc.z));
-		return true;
-	}
-
-	MapObject *pThisOne;
-	
-	// create the map object
-	pThisOne = newInstance( MapObject )( loc, name, angle, flags, &d, 
-														TheThingFactory->findTemplate( name, FALSE ) );
-
-//DEBUG_LOG(("obj %s owner %s\n",name.str(),d.getAsciiString(TheKey_originalOwner).str()));
-
-	if (pThisOne->getProperties()->getType(TheKey_waypointID) == Dict::DICT_INT)
-		pThisOne->setIsWaypoint();
-
-	if (pThisOne->getProperties()->getType(TheKey_lightHeightAboveTerrain) == Dict::DICT_REAL)
-		pThisOne->setIsLight();
-
-	if (pThisOne->getProperties()->getType(TheKey_scorchType) == Dict::DICT_INT)
-		pThisOne->setIsScorch();
-	
-
-	if (pPrevious) {
-		DEBUG_ASSERTCRASH(MapObject::TheMapObjectListPtr != NULL && pPrevious->getNext() == NULL, ("Bad linkage."));
-		pPrevious->setNextMap(pThisOne);
-	}	else {
-		DEBUG_ASSERTCRASH(MapObject::TheMapObjectListPtr == NULL, ("Bad linkage."));
-		MapObject::TheMapObjectListPtr = pThisOne;
-	}
-	file.m_currentObject = pThisOne;
-	return true;
-}
-
 
 
 // Targa format:  Header

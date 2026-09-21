@@ -6,6 +6,8 @@
 #include "Common/FunctionLexicon.h"
 #include "Common/GlobalData.h"
 #include "Common/ModuleFactory.h"
+#include "Common/OriginalMapLoader.h"
+#include "Common/MapReaderWriterInfo.h"
 #include "W3DDevice/Common/W3DModuleFactory.h"
 #include "Common/Radar.h"
 #include "Common/ThingFactory.h"
@@ -24,11 +26,13 @@
 #include "GameClient/VideoPlayer.h"
 #include "GameClient/View.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/TerrainLogic.h"
 #include "PosixDevice/Common/PosixLocalFileSystem.h"
 
 #include <cstdlib>
 #include <filesystem>
 #include <stdexcept>
+#include <vector>
 
 namespace {
 
@@ -374,6 +378,96 @@ private:
 	void setFrameRate(Real) override {}
 };
 
+class LinuxTerrainLogic final : public TerrainLogic
+{
+public:
+	void reset() override
+	{
+		TerrainLogic::reset();
+		m_heights.clear();
+		m_mapDX = 0;
+		m_mapDY = 0;
+		m_boundaries.clear();
+		m_activeBoundary = 0;
+		if (MapObject::TheMapObjectListPtr)
+			MapObject::TheMapObjectListPtr->deleteInstance();
+		MapObject::TheMapObjectListPtr = NULL;
+		MapObject::getWorldDict()->clear();
+	}
+
+	Bool loadMap(AsciiString filename, Bool query) override
+	{
+		CachedFileInputStream stream;
+		if (!stream.open(filename))
+			return FALSE;
+		OriginalMapLoader loader;
+		try
+		{
+			if (!loader.load(&stream))
+				return FALSE;
+		}
+		catch (...)
+		{
+			return FALSE;
+		}
+		m_mapDX = loader.width();
+		m_mapDY = loader.height();
+		m_borderSize = loader.borderSize();
+		m_boundaries.assign(loader.boundaries().begin(), loader.boundaries().end());
+		m_activeBoundary = 0;
+		m_heights.assign(loader.heights().begin(), loader.heights().end());
+		return TerrainLogic::loadMap(filename, query);
+	}
+
+	Real getGroundHeight(Real x, Real y, Coord3D *normal = NULL) const override
+	{
+		if (normal) normal->set(0.0f, 0.0f, 1.0f);
+		if (m_heights.empty() || m_mapDX <= 0 || m_mapDY <= 0)
+			return 0.0f;
+		Int ix = static_cast<Int>(x / MAP_XY_FACTOR);
+		Int iy = static_cast<Int>(y / MAP_XY_FACTOR);
+		ix = std::max(0, std::min(ix, m_mapDX - 1));
+		iy = std::max(0, std::min(iy, m_mapDY - 1));
+		return m_heights[static_cast<std::size_t>(iy * m_mapDX + ix)] * MAP_HEIGHT_SCALE;
+	}
+
+	Real getLayerHeight(Real x, Real y, PathfindLayerEnum, Coord3D *normal = NULL,
+		Bool = TRUE) const override { return getGroundHeight(x, y, normal); }
+	Bool isCliffCell(Real, Real) const override { return FALSE; }
+	void getExtent(Region3D *extent) const override
+	{
+		extent->lo.set(0.0f, 0.0f, 0.0f);
+		extent->hi.set(m_mapDX * MAP_XY_FACTOR, m_mapDY * MAP_XY_FACTOR, 0.0f);
+		if (!m_boundaries.empty())
+		{
+			extent->hi.x = m_boundaries[m_activeBoundary].x * MAP_XY_FACTOR;
+			extent->hi.y = m_boundaries[m_activeBoundary].y * MAP_XY_FACTOR;
+		}
+		for (UnsignedByte value : m_heights)
+			extent->hi.z = std::max(extent->hi.z, value * MAP_HEIGHT_SCALE);
+	}
+	void getMaximumPathfindExtent(Region3D *extent) const override { getExtent(extent); }
+	void getExtentIncludingBorder(Region3D *extent) const override
+	{
+		const Real border = m_borderSize * MAP_XY_FACTOR;
+		extent->lo.set(-border, -border, 0.0f);
+		extent->hi.set(m_mapDX * MAP_XY_FACTOR - border,
+			m_mapDY * MAP_XY_FACTOR - border, 0.0f);
+		for (UnsignedByte value : m_heights)
+			extent->hi.z = std::max(extent->hi.z, value * MAP_HEIGHT_SCALE);
+	}
+
+private:
+	Int m_borderSize = 0;
+	std::vector<UnsignedByte> m_heights;
+};
+
+class LinuxGameLogic final : public GameLogic
+{
+protected:
+	TerrainLogic *createTerrainLogic() override { return new LinuxTerrainLogic; }
+};
+
 class LinuxGameEngine final : public GameEngine
 {
 public:
@@ -431,7 +525,7 @@ protected:
 		return new PosixLocalFileSystem(std::filesystem::path(root));
 	}
 	ArchiveFileSystem *createArchiveFileSystem() override { return zh::original_runtime::createLinuxBIGArchiveFileSystem(); }
-	GameLogic *createGameLogic() override { return new GameLogic; }
+	GameLogic *createGameLogic() override { return new LinuxGameLogic; }
 	GameClient *createGameClient() override { return new LinuxGameClient; }
 	ModuleFactory *createModuleFactory() override { return new W3DModuleFactory; }
 	ThingFactory *createThingFactory() override { return new ThingFactory; }

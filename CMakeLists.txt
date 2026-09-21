@@ -514,6 +514,7 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AITNGuard.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/AI/Squad.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/Map/TerrainLogic.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/System/OriginalMapLoader.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/FiringTracker.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/GhostObject.cpp
   GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SimpleObjectIterator.cpp
@@ -1067,6 +1068,38 @@ if(ZH_BUILD_TESTS)
     --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map")
   set_tests_properties(original_production_function_lexicon PROPERTIES
     LABELS "original-production-entry;source-identity;online-boundary")
+
+  add_executable(original_simulation_map_tests
+    tests/original_simulation/test_original_map.cpp
+    $<TARGET_OBJECTS:zh_original_config_spine>)
+  target_include_directories(original_simulation_map_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+  target_link_libraries(original_simulation_map_tests PRIVATE
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
+  target_link_options(original_simulation_map_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-simulation-map.link.map")
+  add_test(NAME original_simulation_map COMMAND original_simulation_map_tests)
+  set_tests_properties(original_simulation_map PROPERTIES LABELS "original-simulation;source-identity")
+  add_test(NAME original_simulation_map_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_simulation/test_map_identity.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map")
+  set_tests_properties(original_simulation_map_identity PROPERTIES LABELS "original-simulation;source-identity")
+  add_test(NAME original_simulation_map_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target zh_original_main
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member OriginalMapLoader.cpp.o
+    --required-symbol OriginalMapLoader)
+  set_tests_properties(original_simulation_map_provider_removal PROPERTIES
+    LABELS "original-simulation;source-identity")
   add_executable(original_lifecycle_subsystem_tests
     tests/original_lifecycle/test_subsystem_lifecycle.cpp)
   target_include_directories(original_lifecycle_subsystem_tests PRIVATE

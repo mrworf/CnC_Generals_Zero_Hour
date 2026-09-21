@@ -202,14 +202,8 @@ protected:
 protected:	 // file reader callbacks.
 	static Bool ParseHeightMapDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData);
 	Bool ParseHeightMapData(DataChunkInput &file, DataChunkInfo *info, void *userData);
-	static Bool ParseSizeOnlyInChunk(DataChunkInput &file, DataChunkInfo *info, void *userData);
-	Bool ParseSizeOnly(DataChunkInput &file, DataChunkInfo *info, void *userData);
 	static Bool ParseBlendTileDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData);
 	Bool ParseBlendTileData(DataChunkInput &file, DataChunkInfo *info, void *userData);
-	static Bool ParseWorldDictDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData);
-	static Bool ParseObjectsDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData);
-	static Bool ParseObjectDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData);
-	Bool ParseObjectData(DataChunkInput &file, DataChunkInfo *info, void *userData, Bool readDict);
 	static Bool ParseLightingDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData);
 
 protected:
