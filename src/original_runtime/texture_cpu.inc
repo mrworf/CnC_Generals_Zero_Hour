@@ -42,6 +42,7 @@ bool TextureBaseClass::Is_Missing_Texture()
 }
 void TextureBaseClass::Invalidate()
 {
+	if (TextureLoadTask || ThumbnailLoadTask || IsProcedural) return;
 	zh::original_runtime::OriginalGpuEdge::release_texture_if_owned(this);
 	Initialized = false; D3DTexture = nullptr;
 }
@@ -60,7 +61,6 @@ void TextureBaseClass::Apply_Null(unsigned int stage)
 	// Canonical texture.cpp clears the selected DX8 texture at this stage.
 	zh::original_runtime::OriginalGpuEdge::required().select_texture(stage, nullptr);
 }
-void TextureBaseClass::Invalidate_Old_Unused_Textures(unsigned) {}
 int TextureBaseClass::_Get_Total_Locked_Surface_Size() { return 0; }
 int TextureBaseClass::_Get_Total_Texture_Size() { return 0; }
 int TextureBaseClass::_Get_Total_Lightmap_Texture_Size() { return 0; }

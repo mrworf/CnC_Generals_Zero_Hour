@@ -121,6 +121,7 @@ add_library(zh_wwsupport STATIC
   src/foundation/numeric.cpp
   src/foundation/unicode.cpp
   src/original_support/ww_support.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug/wwmemlog.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/FastAllocator.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/chunkio.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/gcd_lcm.cpp
@@ -2000,6 +2001,10 @@ if(ZH_BUILD_TESTS)
   add_test(NAME original_w3d_cpu_graph COMMAND original_w3d_cpu_graph_tests)
   add_test(NAME original_w3d_source_init COMMAND original_w3d_cpu_graph_tests --ww3d-init)
   set_tests_properties(original_w3d_source_init PROPERTIES LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_texture_frame_update COMMAND original_w3d_cpu_graph_tests --texture-frame-update)
+  set_tests_properties(original_w3d_texture_frame_update PROPERTIES LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_texture_frame_missing_manager COMMAND original_w3d_cpu_graph_tests --texture-frame-missing-manager)
+  set_tests_properties(original_w3d_texture_frame_missing_manager PROPERTIES LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_decal_cpu COMMAND original_w3d_cpu_graph_tests --decal-cpu)
   set_tests_properties(original_w3d_decal_cpu PROPERTIES
     LABELS "original-rendering;source-identity;negative")
@@ -2196,6 +2201,8 @@ if(ZH_BUILD_TESTS)
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/meshmdlio.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hlod.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/textureloader.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug/wwmemlog.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/htree.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hrawanim.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/shader.cpp"
@@ -2233,6 +2240,17 @@ if(ZH_BUILD_TESTS)
     --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map"
     --executable "$<TARGET_FILE:original_w3d_cpu_graph_tests>")
   set_tests_properties(original_w3d_provider_removal PROPERTIES LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_texture_frame_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_provider_removal.py"
+    --checker "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map"
+    --executable "$<TARGET_FILE:original_w3d_cpu_graph_tests>"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/textureloader.cpp"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug/wwmemlog.cpp")
+  set_tests_properties(original_w3d_texture_frame_provider_removal PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_sound_provider_removal COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_provider_removal.py"
     --checker "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"

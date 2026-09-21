@@ -38,12 +38,20 @@
  *   WWMemoryLogClass::Release_Memory -- frees memory                                          *
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+#if defined(__linux__) && !defined(_UNIX)
+#define _UNIX
+#endif
 #include "always.h"
 #include "wwmemlog.h"
 #include "wwdebug.h"
 #include "vector.h"
-#include "fastallocator.h"
+#include "FastAllocator.h"
+#if !defined(_UNIX) && !defined(__linux__)
 #include <windows.h>
+#elif defined(__linux__)
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
 
 #define USE_FAST_ALLOCATOR
 
@@ -289,6 +297,7 @@ WWINLINE void * Get_Mem_Log_Mutex(void)
 	return _MemLogCriticalSectionHandle;
 
 #endif
+	return NULL; // authored disabled-memlog Unix configuration has no mutex
 }
 
 WWINLINE void Lock_Mem_Log_Mutex(void)
@@ -392,7 +401,11 @@ ActiveCategoryStackClass::operator = (const ActiveCategoryStackClass & that)
 ***************************************************************************************************/
 ActiveCategoryStackClass & ActiveCategoryClass::Get_Active_Stack(void)
 {
+#if defined(__linux__)
+	int current_thread = static_cast<int>(::syscall(SYS_gettid));
+#else
 	int current_thread = ::GetCurrentThreadId();
+#endif
 
 	/*
 	** If we already have an allocated category stack for the current thread,

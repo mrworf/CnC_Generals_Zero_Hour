@@ -132,6 +132,17 @@ void TextureLoadTaskClass::Unlock_Surfaces()
 }
 void TextureLoader::Flush_Pending_Load_Tasks() {}
 
+void TextureLoader::Update(void (*network_callback)(void))
+{
+	// Foreground loads complete synchronously in this configuration. The
+	// authored callback is only invoked while processing queued tasks.
+	(void)network_callback;
+	if (TextureLoadSuspended) return;
+	TextureBaseClass::Invalidate_Old_Unused_Textures(TextureInactiveOverrideTime);
+}
+void TextureLoader::Suspend_Texture_Load() { TextureLoadSuspended=true; }
+void TextureLoader::Continue_Texture_Load() { TextureLoadSuspended=false; }
+
 void TextureLoadTaskClass::Probe_Begin_Load(TextureBaseClass* texture)
 {
 	Texture = texture;

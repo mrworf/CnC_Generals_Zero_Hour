@@ -27,6 +27,8 @@
 #include "sortingrenderer.h"
 #include "ww3d.h"
 #include "animatedsoundmgr.h"
+#include "textureloader.h"
+#include "wwmemlog.h"
 #include "hanim.h"
 #include "trim.h"
 #include "original_gpu_edge.h"
@@ -53,6 +55,8 @@
 #define assert(condition) do { if (!(condition)) { std::fprintf(stderr,"original W3D CPU invariant %s:%d: %s\n",__FILE__,__LINE__,#condition); std::abort(); } } while (false)
 
 namespace {
+int texture_frame_network_ticks=0;
+void texture_frame_network_callback() { ++texture_frame_network_ticks; }
 class OwnedFile final : public FileClass {
 public:
 	OwnedFile(std::string name,std::vector<unsigned char> bytes)
@@ -412,9 +416,93 @@ int main(int argc, char **argv)
 		assert(std::fclose(output) == 0);
 		return 0;
 	}
+	if (argc==2 && std::strcmp(argv[1],"--texture-frame-missing-manager")==0) {
+		const bool previous=WW3D::Get_Thumbnail_Enabled();
+		WW3D::Set_Thumbnail_Enabled(true);
+		bool missing=false;
+		try { TextureLoader::Update(nullptr); }
+		catch (const std::runtime_error&) { missing=true; }
+		assert(missing);
+		WW3D::Set_Thumbnail_Enabled(previous);
+		return 0;
+	}
 	WW3DAssetManager manager;
 	RAMFileClass input(bytes.data(), size);
 	assert(manager.Load_3D_Assets(input));
+	if (argc==2 && std::strcmp(argv[1],"--texture-frame-update")==0) {
+		OwnedFactory factory;
+		factory.files["mytex.tga"]=original_targa();
+		FileFactoryClass* previous_factory=_TheFileFactory;
+		_TheFileFactory=&factory;
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		WW3D::Set_Thumbnail_Enabled(false); // original Win32 thumbnail lookup is not a CPU loader
+		zh::renderer::RecordingGpuDevice recorder;
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			TextureClass* texture=manager.Get_Texture("mytex.tga",MIP_LEVELS_1);
+			assert(texture && !texture->Is_Initialized());
+			texture->Set_Inactivation_Time(10);
+			WWMemoryLogClass::Reset_Counters();
+			assert(WWMemoryLogClass::Get_Allocate_Count()==0 && WWMemoryLogClass::Get_Free_Count()==0);
+			TextureClass procedural(2,2,WW3D_FORMAT_A8R8G8B8,MIP_LEVELS_1);
+			procedural.Apply_Gpu_Texture(WW3D_FORMAT_A8R8G8B8,2,2);
+			assert(procedural.Is_Initialized() && procedural.Is_Procedural());
+			procedural.Invalidate();
+			assert(procedural.Is_Initialized()); // authored procedural exclusion
+			WW3D::Sync(100);
+			texture->Init();
+			WW3D::Set_Thumbnail_Enabled(true);
+			assert(texture->Is_Initialized() && factory.owners==0);
+			const auto first_physical=edge.texture_handle(texture);
+			TextureLoader::Update(texture_frame_network_callback);
+			assert(texture->Is_Initialized());
+			assert(texture_frame_network_ticks==0);
+			TextureLoader::Suspend_Texture_Load();
+			WW3D::Sync(111);
+			TextureLoader::Update(texture_frame_network_callback);
+			assert(texture->Is_Initialized());
+			assert(texture_frame_network_ticks==0);
+			TextureLoader::Continue_Texture_Load();
+			TextureLoader::Update(nullptr);
+			assert(!texture->Is_Initialized());
+			bool invalidated_owner=false;
+			try { (void)edge.texture_handle(texture); }
+			catch (const std::runtime_error&) { invalidated_owner=true; }
+			assert(invalidated_owner);
+			WW3D::Sync(112);
+			WW3D::Set_Thumbnail_Enabled(false);
+			texture->Init();
+			WW3D::Set_Thumbnail_Enabled(true);
+			assert(texture->Is_Initialized());
+			assert(edge.texture_handle(texture)!=first_physical);
+			WW3D::Sync(135);
+			TextureLoader::Update(nullptr);
+			assert(texture->Is_Initialized()); // authored rapid-reload extension
+			WW3D::Sync(153);
+			TextureLoader::Update(nullptr);
+			assert(!texture->Is_Initialized());
+			WW3D::Set_Thumbnail_Enabled(false);
+			texture->Init();
+			WW3D::Set_Thumbnail_Enabled(true);
+			TextureLoader::Set_Texture_Inactive_Override_Time(2);
+			WW3D::Sync(156);
+			TextureLoader::Update(nullptr);
+			assert(!texture->Is_Initialized());
+			TextureLoader::Set_Texture_Inactive_Override_Time(0);
+			WW3D::Set_Thumbnail_Enabled(false);
+			texture->Init();
+			WW3D::Sync(1000);
+			TextureLoader::Update(nullptr);
+			assert(texture->Is_Initialized()); // original thumbnail-disabled gate
+			texture->Invalidate();
+			texture->Release_Ref();
+			manager.Release_All_Textures();
+			assert(recorder.resource_counts().total()==0 && factory.owners==0);
+		}
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		_TheFileFactory=previous_factory;
+		return 0;
+	}
 	if (argc==2 && std::strcmp(argv[1],"--ww3d-init")==0) {
 		char trim_fixture[]=" \t SOURCE \r\n";
 		assert(strtrim(trim_fixture)==trim_fixture && std::strcmp(trim_fixture,"SOURCE")==0);

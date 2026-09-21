@@ -43,6 +43,13 @@
 #include "chunkio.h"
 #include "w3d_file.h"
 #include "assetmgr.h"
+#include "ww3d.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <stdexcept>
+#endif
+
+// Reset by the original frame expiry walk in both device configurations.
+static unsigned TexturesAppliedPerFrame;
 
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "textureloader.h"
@@ -81,7 +88,6 @@ const unsigned DEFAULT_INACTIVATION_TIME=20000;
 static unsigned unused_texture_id;
 
 // This throttles submissions to the background texture loading queue.
-static unsigned TexturesAppliedPerFrame;
 const unsigned MAX_TEXTURES_APPLIED_PER_FRAME=2;
 
 
@@ -149,54 +155,6 @@ TextureBaseClass::~TextureBaseClass(void)
 //! Invalidate old unused textures
 /*! 
 */
-void TextureBaseClass::Invalidate_Old_Unused_Textures(unsigned invalidation_time_override)
-{
-	// (gth) If thumbnails are not enabled, then we don't run this code.
-	if (WW3D::Get_Thumbnail_Enabled() == false) {
-		return;
-	}
-
-	// Zero the texture apply count in this function because this is called every frame...(this wasn't in E&B main branch KJM)
-	TexturesAppliedPerFrame=0;
-
-	unsigned synctime=WW3D::Get_Sync_Time();
-	HashTemplateIterator<StringClass,TextureClass*> ite(WW3DAssetManager::Get_Instance()->Texture_Hash());
-	// Loop through all the textures in the manager
-
-	for (ite.First ();!ite.Is_Done();ite.Next ()) 
-	{
-		TextureClass* tex=ite.Peek_Value();
-
-		// Consider invalidating if texture has been initialized and defines inactivation time
-		if (tex->Initialized && tex->InactivationTime) 
-		{
-			unsigned age=synctime-tex->LastAccessed;
-
-			if (invalidation_time_override) 
-			{
-				if (age>invalidation_time_override) 
-				{
-					tex->Invalidate();
-					tex->LastInactivationSyncTime=synctime;
-				}
-			}
-			else 
-			{
-				// Not used in the last n milliseconds?
-				if (age>(tex->InactivationTime+tex->ExtendedInactivationTime)) 
-				{
-					tex->Invalidate();
-					tex->LastInactivationSyncTime=synctime;
-				}
-			}
-		}
-	}
-}
-
-
-
-
-
 //**********************************************************************************************
 //! Invalidate this texture
 /*! 
@@ -1011,6 +969,36 @@ unsigned TextureClass::Get_Texture_Memory_Usage() const
 
 // Utility functions
 #endif // ZH_WW3D_CPU_ONLY: share the original W3D texture parser below.
+
+// Authored per-frame expiration policy; both device configurations execute
+// this single source implementation after foreground texture processing.
+void TextureBaseClass::Invalidate_Old_Unused_Textures(unsigned invalidation_time_override)
+{
+	if (WW3D::Get_Thumbnail_Enabled() == false) return;
+	TexturesAppliedPerFrame=0;
+	unsigned synctime=WW3D::Get_Sync_Time();
+	WW3DAssetManager *manager=WW3DAssetManager::Get_Instance();
+#if defined(ZH_WW3D_CPU_ONLY)
+	// A thumbnail-enabled frame requires the original asset manager publication.
+	if (!manager) throw std::runtime_error("original texture frame update requires an asset manager");
+#endif
+	HashTemplateIterator<StringClass,TextureClass*> ite(manager->Texture_Hash());
+	for (ite.First();!ite.Is_Done();ite.Next()) {
+		TextureClass *tex=ite.Peek_Value();
+		if (tex->Initialized && tex->InactivationTime) {
+			unsigned age=synctime-tex->LastAccessed;
+			if (invalidation_time_override) {
+				if (age>invalidation_time_override) {
+					tex->Invalidate();
+					tex->LastInactivationSyncTime=synctime;
+				}
+			} else if (age>(tex->InactivationTime+tex->ExtendedInactivationTime)) {
+				tex->Invalidate();
+				tex->LastInactivationSyncTime=synctime;
+			}
+		}
+	}
+}
 TextureClass* Load_Texture(ChunkLoadClass & cload)
 {
 	// Assume failure
