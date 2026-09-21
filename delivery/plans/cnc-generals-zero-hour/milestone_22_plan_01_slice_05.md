@@ -1,28 +1,33 @@
-# M22 plan 01 slice 05: complete retail scenes on recording
+# M22 plan 01 slice 05: original DX8/WWShade outputs to GpuDevice
 
-## Goal and observable outcome
+## Outcome and dependencies
 
-The accepted retail campaign and skirmish scenarios traverse the same production original rendering entry point and complete representative terrain, camera, object, lighting, fog/shroud, shadow, particle, water, and effects families on the recording device.
+Requires slice 04. Original WW3D/WWShade pass, shader, texture, geometry and
+state outputs cross the narrow physical edge into public `renderer::GpuDevice`.
+The translator owns resource handles and uploads, not authoritative mesh,
+scene, pass, shader/material, or draw-order decisions. A recording device
+witnesses actual original producer markers.
 
-## Scope
+## Device closure
 
-- Add every newly reached original producer and ledger operation exposed by the two bounded real scenes; do not substitute component/generated scene implementations.
-- Record aggregate/private-safe family, producer, command, ownership, and bounded timing evidence.
-- Exercise reset/re-entry and device-resource invalidation between scenario families.
+Translate reached original DX8 wrapper vertex/index/texture resources,
+uploads/locks, camera transforms, original shader/material and texture-stage
+combinations, light/fog/shroud, blend/depth/cull/alpha, targets, multipass
+and draws. Do not compile `dx8wrapper.cpp` with Direct3D SDK headers or
+substitute a fake device. Characterize any public-GpuDevice capability gap
+against the original call and M14 backend before changing the contract.
+Unsupported required state rejects the frame before success marking.
 
-## Validation and error handling
+## Test and failure contracts
 
-- Required-family assertions reject omitted/no-op producers, placeholders, missing assets, malformed assets, unsupported material/effect state, partial frames, and incomplete teardown.
-- A failed required scenario asset/reference load unwinds resources and newly published scene assets, then a corrected retry succeeds; the original `WW3DAssetManager` intermediate-publication contract is not globally changed.
-- Runtime identity and provider-removal gates prove original terrain/object/effect producers and the slice 04 translation chain.
-- Retail roots remain read-only; recursive metadata is compared before/after and no private path/name/byte/hash is committed.
-
-## Acceptance criteria
-
-- Both real scenes complete all required families through actual original producers on recording.
-- Every newly reached dependency is implemented or explicitly classified as optional and not reached; required state cannot be ignored.
-- Normal, failed, reset, and re-entry runs end with zero original and device resources.
+Actual original HLOD/mesh traversal yields balanced recording passes,
+buffers, textures, samplers, shaders, pipelines and draws with original
+source-derived state; reject wrong shader/material/texture, nested or
+incomplete passes, malformed uploads and injected create/upload/draw
+failures. All handles return to zero after success, reset and each failure.
+Provider removal covers original pass owners, translator and `GpuDevice`.
+Only slice 06 may claim GameClient display/terrain/shadow/2D integration.
 
 ## Commit boundary
 
-Commit retail recording integration, private-safe gates, ledger update, slice status, and evidence as `delivery: M22 slice 05 record original retail scenes`.
+One independently validated commit: `delivery: M22 slice 05 translate original GPU edge`.
