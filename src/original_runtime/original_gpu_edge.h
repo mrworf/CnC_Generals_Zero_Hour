@@ -71,7 +71,7 @@ public:
         std::array<float,4> fog_parameters{}; // start, end, enabled, material power
         std::array<float,4> alpha_parameters{}; // enabled, compare, normalized ref, specular enabled
         std::array<std::int32_t,4> material_sources{}; // ambient, diffuse, emissive, lighting
-        std::array<std::array<std::int32_t,4>,2> stage_ops{}; // color, alpha, texture needed, UV mode
+        std::array<std::array<std::int32_t,4>,2> stage_ops{}; // color, alpha, texture needed, UV transform flags
         std::array<std::array<std::int32_t,4>,2> stage_args{}; // color 1/2, alpha 1/2
         std::array<std::array<float,4>,2> bump{};
     };

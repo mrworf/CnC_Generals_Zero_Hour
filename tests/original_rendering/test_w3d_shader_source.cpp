@@ -68,21 +68,29 @@ int main()
 		DX8Wrapper::Apply_Render_State_Changes();
 		const auto physical=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
 		retired=physical;
-		assert(physical.texture_mask==0 && physical.fragment_bindings.texture_count==0 &&
-			physical.vertex_bindings.uniform_count==1 && physical.fragment_bindings.uniform_count==1);
-		edge.validate_prepared_state(physical);
-		auto forged_binding=physical;
+		bool no_variant=false;
+		try { (void)edge.prepare_applied_state(DX8_FVF_XYZN); }
+		catch (const std::runtime_error& error) {
+			no_variant=std::string(error.what()).find("exact shader input variant")!=std::string::npos;
+		}
+		assert(no_variant && device.resource_counts().total()==0);
+		const auto variant_retry=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
+		retired=variant_retry;
+		assert(variant_retry.texture_mask==0 && variant_retry.fragment_bindings.texture_count==0 &&
+			variant_retry.vertex_bindings.uniform_count==1 && variant_retry.fragment_bindings.uniform_count==1);
+		edge.validate_prepared_state(variant_retry);
+		auto forged_binding=variant_retry;
 		forged_binding.vertex_bindings.uniforms[0].size=4;
 		bool rejected_binding=false;
 		try { edge.validate_prepared_state(forged_binding); }
 		catch (const std::runtime_error&) { rejected_binding=true; }
 		assert(rejected_binding);
-		const auto pipeline=device.pipeline_descriptor(physical.pipeline);
+		const auto pipeline=device.pipeline_descriptor(variant_retry.pipeline);
 		assert(pipeline.vertex_layout==zh::renderer::VertexLayout::original_fvf &&
 			pipeline.original_fvf.stride==32 && !pipeline.blend.enabled &&
 			pipeline.depth_stencil.depth_write);
-		const auto vertex_bytes=device.buffer_bytes(physical.vertex_bindings.uniforms[0].buffer);
-		const auto fragment_bytes=device.buffer_bytes(physical.fragment_bindings.uniforms[0].buffer);
+		const auto vertex_bytes=device.buffer_bytes(variant_retry.vertex_bindings.uniforms[0].buffer);
+		const auto fragment_bytes=device.buffer_bytes(variant_retry.fragment_bindings.uniforms[0].buffer);
 		assert(vertex_bytes.size()==sizeof(Edge::VertexUniform) &&
 			fragment_bytes.size()==sizeof(Edge::FragmentUniform));
 		Edge::VertexUniform vertex_uniform{};
@@ -109,12 +117,12 @@ int main()
 		const auto replay=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
 		edge.validate_prepared_state(replay);
 		bool superseded=false;
-		try { edge.validate_prepared_state(physical); }
+		try { edge.validate_prepared_state(variant_retry); }
 		catch (const std::runtime_error&) { superseded=true; }
 		assert(superseded);
 		DX8Wrapper::Set_Shader(shader);
 		bool invalid_physical=false;
-		try { edge.validate_prepared_state(physical); }
+		try { edge.validate_prepared_state(replay); }
 		catch (const std::runtime_error&) { invalid_physical=true; }
 		assert(invalid_physical);
 		DX8Wrapper::Apply_Render_State_Changes();

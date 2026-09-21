@@ -588,7 +588,10 @@ ValidationResult SdlGpuDevice::upload_texture(const TextureUploadDesc& desc, con
     auto* pass = SDL_BeginGPUCopyPass(command);
     SDL_GPUTextureTransferInfo source{transfer, 0, desc.row_pitch / block_size * block_extent, rows * block_extent};
     SDL_GPUTextureRegion destination{texture->value.native, desc.mip_level, 0, 0, 0, 0, desc.width, desc.height, 1};
-    SDL_UploadToGPUTexture(pass, &source, &destination, true);
+    // Each upload writes one mip/region. Cycling the *whole* texture here
+    // discards previously submitted mips (SDL_gpu.h explicitly documents
+    // the other levels as undefined after a cycle).
+    SDL_UploadToGPUTexture(pass, &source, &destination, false);
     SDL_EndGPUCopyPass(pass);
     if (!SDL_SubmitGPUCommandBuffer(command)) { SDL_ReleaseGPUTransferBuffer(impl_->device, transfer); return impl_->fail("upload_texture", sdl_error("SDL_SubmitGPUCommandBuffer"), texture->label); }
     SDL_ReleaseGPUTransferBuffer(impl_->device, transfer);

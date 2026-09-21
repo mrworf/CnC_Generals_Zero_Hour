@@ -886,6 +886,8 @@ add_dependencies(zh_renderer_sdl_gpu zh_bootstrap_shaders)
 set(ZH_RENDERER_SHADER_NAMES
   acceptance.vert acceptance.frag
   original_fvf_probe.vert
+  original_applied_0.frag original_applied_1.frag
+  original_applied_2.frag original_applied_3.frag
   world.vert world.frag
   video.vert video.frag
   ui.vert ui.frag
@@ -902,11 +904,24 @@ foreach(shader_name IN LISTS ZH_RENDERER_SHADER_NAMES)
     OUTPUT "${shader_output}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/renderer"
     COMMAND "${ZH_GLSLC_EXECUTABLE}" "${shader_source}" -o "${shader_output}"
-    DEPENDS "${shader_source}"
+    DEPENDS "${shader_source}" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/renderer/original_applied_core.glsl"
     COMMENT "Compiling renderer shader ${shader_name}"
     VERBATIM
   )
   list(APPEND ZH_RENDERER_SPIRV "${shader_output}")
+endforeach()
+foreach(fvf_variant IN ITEMS d1 d2 n1 n2)
+  string(TOUPPER "${fvf_variant}" fvf_define)
+  set(fvf_output "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/renderer/original_applied_${fvf_variant}.vert.spv")
+  add_custom_command(
+    OUTPUT "${fvf_output}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/renderer"
+    COMMAND "${ZH_GLSLC_EXECUTABLE}" -DORIGINAL_FVF_${fvf_define}
+      "${CMAKE_CURRENT_SOURCE_DIR}/shaders/renderer/original_applied.vert" -o "${fvf_output}"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/renderer/original_applied.vert"
+    COMMENT "Compiling original source FVF ${fvf_variant} vertex shader"
+    VERBATIM)
+  list(APPEND ZH_RENDERER_SPIRV "${fvf_output}")
 endforeach()
 add_custom_target(zh_renderer_shaders ALL DEPENDS ${ZH_RENDERER_SPIRV})
 add_dependencies(zh_renderer_sdl_gpu zh_renderer_shaders)
@@ -1951,6 +1966,32 @@ if(ZH_BUILD_TESTS)
   add_test(NAME original_w3d_shader_source COMMAND original_w3d_shader_source_tests)
   set_tests_properties(original_w3d_shader_source PROPERTIES
     LABELS "original-rendering;source-identity;negative")
+  if(ZH_ENABLE_GPU_TESTS)
+    add_executable(original_w3d_shader_gpu_acceptance
+      tests/original_rendering/test_original_shader_gpu.cpp)
+    target_include_directories(original_w3d_shader_gpu_acceptance PRIVATE
+      "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
+      "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug")
+    target_compile_options(original_w3d_shader_gpu_acceptance PRIVATE -fpermissive)
+    target_compile_definitions(original_w3d_shader_gpu_acceptance PRIVATE
+      NDEBUG ZH_WW3D_CPU_ONLY=1
+      ZH_GPU_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/shaders")
+    target_link_libraries(original_w3d_shader_gpu_acceptance PRIVATE
+      zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu SDL3::SDL3)
+    target_link_options(original_w3d_shader_gpu_acceptance PRIVATE -Wl,--gc-sections
+      "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-shader-gpu.link.map")
+    add_dependencies(original_w3d_shader_gpu_acceptance zh_renderer_shaders)
+    add_test(NAME original_w3d_shader_gpu_acceptance COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:original_w3d_shader_gpu_acceptance>)
+    set_tests_properties(original_w3d_shader_gpu_acceptance PROPERTIES
+      LABELS "gpu;original-rendering;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE
+      ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+  endif()
   add_test(NAME original_w3d_shader_source_identity COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
     --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"

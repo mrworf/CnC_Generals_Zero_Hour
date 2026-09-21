@@ -318,6 +318,17 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
     const AppliedState mapped=map_applied_state(source_fvf);
     if (mapped.lighting)
         throw std::runtime_error("original lit physical state requires category-issued light environment (M22 06)");
+    const char* vertex_variant=nullptr;
+    if (source_fvf==DX8_FVF_XYZDUV1) vertex_variant="renderer/original_applied_d1.vert";
+    else if (source_fvf==DX8_FVF_XYZDUV2) vertex_variant="renderer/original_applied_d2.vert";
+    else if (source_fvf==DX8_FVF_XYZNUV1) vertex_variant="renderer/original_applied_n1.vert";
+    else if (source_fvf==DX8_FVF_XYZNUV2) vertex_variant="renderer/original_applied_n2.vert";
+    else throw std::runtime_error("original physical FVF has no exact shader input variant");
+    for (const auto& stage:mapped.stages)
+        if ((stage.coordinate_mode==D3DTSS_TCI_CAMERASPACENORMAL ||
+             stage.coordinate_mode==D3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR) &&
+            !(source_fvf&0x10U) && stage.texture_required)
+            throw std::runtime_error("original camera-normal UV mapper requires source FVF normal");
     const auto source=DX8Wrapper::Snapshot_Source_State();
     VertexUniform vertex;
     const auto matrix=[&](int key,std::array<float,16>& output) {
@@ -362,7 +373,7 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
         vertex.transform_flags[stage]=static_cast<std::int32_t>(selected.transform_flags);
         fragment.stage_ops[stage]={static_cast<std::int32_t>(selected.color.op),
             static_cast<std::int32_t>(selected.alpha.op),selected.texture_required?1:0,
-            static_cast<std::int32_t>(selected.coordinate_mode)};
+            static_cast<std::int32_t>(selected.transform_flags)};
         fragment.stage_args[stage]={static_cast<std::int32_t>(selected.color.first),
             static_cast<std::int32_t>(selected.color.second),
             static_cast<std::int32_t>(selected.alpha.first),
@@ -383,9 +394,9 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
     PhysicalResources next;
     try {
         next.vertex_shader=device_.create_shader(
-            {renderer::ShaderStage::vertex,"original_applied.vert",1,0},"original applied vertex");
+            {renderer::ShaderStage::vertex,vertex_variant,1,0},"original applied vertex");
         if (!next.vertex_shader) throw std::runtime_error("original vertex shader creation failed: "+device_.last_error());
-        const std::string fragment_name="original_applied_"+std::to_string(mask)+".frag";
+        const std::string fragment_name="renderer/original_applied_"+std::to_string(mask)+".frag";
         next.fragment_shader=device_.create_shader(
             {renderer::ShaderStage::fragment,fragment_name,1,slot},"original applied fragment");
         if (!next.fragment_shader) throw std::runtime_error("original fragment shader creation failed: "+device_.last_error());
