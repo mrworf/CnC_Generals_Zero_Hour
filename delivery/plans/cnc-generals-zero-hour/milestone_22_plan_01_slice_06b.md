@@ -2,7 +2,7 @@
 
 ## Dependency and behavior
 
-Requires accepted 06A3 (the full 06A aggregate). Extend original `DX8SkinFVFCategoryContainer::Render`, `DX8MeshRendererClass::Render_Decal_Meshes`, `DX8RigidFVFCategoryContainer::Render_Delayed_Procedural_Material_Passes`, original mesh material-pass and dynamic-buffer owners. Original skin bone/vertex transform, per-pass texture/material/shader, decal depth bias and procedural pass scheduling issue their own draw commands via the same bounded public GPU edge. Preserve preexisting rigid behavior and native source device path; no adapter-owned skinning/decals/procedural scheduling.
+Requires accepted 06A3C (the full 06A aggregate). Extend original `DX8SkinFVFCategoryContainer::Render`, `DX8MeshRendererClass::Render_Decal_Meshes`, `DX8RigidFVFCategoryContainer::Render_Delayed_Procedural_Material_Passes`, original mesh material-pass and dynamic-buffer owners. Original skin bone/vertex transform, per-pass texture/material/shader, decal depth bias and procedural pass scheduling issue their own draw commands via the same bounded public GPU edge. Preserve preexisting rigid behavior and native source device path; no adapter-owned skinning/decals/procedural scheduling.
 
 ## Acceptance
 

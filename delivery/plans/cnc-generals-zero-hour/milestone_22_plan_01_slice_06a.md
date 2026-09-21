@@ -1,6 +1,6 @@
 # M22 plan 01 slice 06A: original rigid/category interleaving
 
-This aggregate acceptance remains intact but is now delivered as [06A1](milestone_22_plan_01_slice_06a1.md) → [06A2](milestone_22_plan_01_slice_06a2.md) → [06A3](milestone_22_plan_01_slice_06a3.md). Only completion of 06A3 satisfies the full original category and lit draw gate before 06B.
+This aggregate acceptance remains intact but is now delivered as [06A1](milestone_22_plan_01_slice_06a1.md) → [06A2](milestone_22_plan_01_slice_06a2.md) → [06A3A](milestone_22_plan_01_slice_06a3a.md) → [06A3B](milestone_22_plan_01_slice_06a3b.md) → [06A3C](milestone_22_plan_01_slice_06a3c.md). Only completion of 06A3C satisfies the full original category and lit draw gate before 06B.
 
 ## Dependency and behavior
 
