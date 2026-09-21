@@ -829,6 +829,62 @@ void original_lit_source_pixels(unsigned generation)
     device.destroy(depth); device.destroy(color);
     check(device.wait_idle(),device.last_error());
 }
+void original_dynamic_source_upload_boundary()
+{
+    DynamicVBAccessClass::_Deinit(); DynamicIBAccessClass::_Deinit();
+    DX8Wrapper::Reset_Source_State();
+    zh::renderer::SdlGpuOptions options;
+    options.debug=true;
+    options.shader_root=ZH_GPU_SHADER_DIR;
+    zh::renderer::SdlGpuDevice device(options);
+    check(device.capabilities().backend=="vulkan","dynamic source upload requires Vulkan");
+    zh::renderer::TextureDesc target;
+    target.width=8; target.height=8; target.render_target=true;
+    auto color=device.create_texture(target,"original dynamic upload target");
+    target.format=zh::renderer::TextureFormat::depth24_stencil8;
+    target.sampled=false;
+    auto depth=device.create_texture(target,"original dynamic upload depth");
+    check(color && depth,device.last_error());
+    zh::renderer::RenderPassDesc pass;
+    pass.color_targets[0]=color; pass.color_target_count=1;
+    pass.depth_target=depth; pass.width=8; pass.height=8;
+    bool correctly_unavailable=false;
+    std::string physical_reason;
+    {
+        zh::original_runtime::OriginalGpuEdge edge(device);
+        DynamicVBAccessClass vertices(BUFFER_TYPE_DYNAMIC_DX8,dynamic_fvf_type,3);
+        DynamicIBAccessClass indices(BUFFER_TYPE_DYNAMIC_DX8,3);
+        {
+            DynamicVBAccessClass::WriteLockClass lock(&vertices);
+            auto* source=lock.Get_Formatted_Vertex_Array();
+            source[0]={}; source[1]={}; source[2]={};
+            source[0].x=-0.5F; source[1].x=0.5F; source[2].y=0.5F;
+            DynamicIBAccessClass::WriteLockClass lock_index(&indices);
+            lock_index.Get_Index_Array()[0]=0;
+            lock_index.Get_Index_Array()[1]=1;
+            lock_index.Get_Index_Array()[2]=2;
+        }
+        DX8Wrapper::Set_Vertex_Buffer(vertices);
+        DX8Wrapper::Set_Index_Buffer(indices,0);
+        check(device.begin_pass(pass,"original dynamic source Vulkan buffer upload"),device.last_error());
+        try { DX8Wrapper::Draw_Triangles(0,1,0,3); }
+        catch (const std::runtime_error& error) {
+            physical_reason=error.what();
+            // Both source-state stops occur after canonical vertex/index upload:
+            // this probe intentionally supplies no skin material/category graph.
+            correctly_unavailable=physical_reason.find("original material")!=std::string::npos ||
+                physical_reason.find("pending source application")!=std::string::npos;
+        }
+        check(device.end_pass(),device.last_error());
+        DX8Wrapper::Set_Vertex_Buffer(nullptr);
+        DX8Wrapper::Set_Index_Buffer(nullptr,0);
+    }
+    DynamicVBAccessClass::_Deinit(); DynamicIBAccessClass::_Deinit();
+    DX8Wrapper::Reset_Source_State();
+    device.destroy(depth); device.destroy(color);
+    check(device.wait_idle(),device.last_error());
+    check(correctly_unavailable,"dynamic source upload unexpectedly reached physical draw: "+physical_reason);
+}
 }
 
 int main()
@@ -839,6 +895,7 @@ int main()
         original_unlit_source_pixels(2,240,160);
         original_lit_source_pixels(1);
         original_lit_source_pixels(2);
+        original_dynamic_source_upload_boundary();
         SDL_Quit();
         return 0;
     } catch (const std::exception& error) {

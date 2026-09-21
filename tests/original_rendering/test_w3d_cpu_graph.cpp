@@ -928,7 +928,7 @@ int main(int argc, char **argv)
 	assert(unsupported_usage_rejected);
 	unsupported_usage_rejected = false;
 	try { auto *invalid = NEW_REF(DX8IndexBufferClass,
-		(3, DX8IndexBufferClass::USAGE_DYNAMIC));
+		(3, DX8IndexBufferClass::USAGE_NPATCHES));
 		invalid->Release_Ref(); }
 	catch (const std::runtime_error &) { unsupported_usage_rejected = true; }
 	assert(unsupported_usage_rejected);

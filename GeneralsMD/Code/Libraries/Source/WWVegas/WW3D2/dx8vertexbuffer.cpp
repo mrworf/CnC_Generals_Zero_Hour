@@ -52,6 +52,8 @@
 #include <stdexcept>
 #endif
 
+static const FVFInfoClass _DynamicFVFInfo(dynamic_fvf_type);
+
 #if defined(ZH_WW3D_CPU_ONLY)
 // The original class owns the CPU upload bytes; only its D3D allocation and
 // lock operations are replaced at the physical device boundary.
@@ -121,8 +123,8 @@ DX8VertexBufferClass::DX8VertexBufferClass(unsigned FVF, unsigned short count,
 DX8VertexBufferClass::~DX8VertexBufferClass() { delete[] CpuVertexBuffer; }
 void DX8VertexBufferClass::Create_Vertex_Buffer(UsageType usage)
 {
-    if (usage != USAGE_DEFAULT)
-        throw std::runtime_error("original dynamic/NPatches vertex GPU edge unavailable");
+    if (usage != USAGE_DEFAULT && usage != USAGE_DYNAMIC)
+        throw std::runtime_error("original NPatches/software vertex GPU edge unavailable");
     CpuVertexBuffer = W3DNEWARRAY unsigned char[VertexCount * FVF_Info().Get_FVF_Size()]{};
 }
 SortingVertexBufferClass::SortingVertexBufferClass(unsigned short count)
@@ -131,6 +133,117 @@ SortingVertexBufferClass::SortingVertexBufferClass(unsigned short count)
     VertexBuffer = W3DNEWARRAY VertexFormatXYZNDUV2[count]{};
 }
 SortingVertexBufferClass::~SortingVertexBufferClass() { delete[] VertexBuffer; }
+
+// Original recycled dynamic access owns the offsets, locks and lifetime.
+// Only the D3D allocation/Lock operation is a Linux CPU-storage boundary.
+static constexpr unsigned short DEFAULT_VB_SIZE = 5000;
+static bool _DynamicDX8VertexBufferInUse = false;
+static DX8VertexBufferClass* _DynamicDX8VertexBuffer = nullptr;
+static unsigned short _DynamicDX8VertexBufferSize = DEFAULT_VB_SIZE;
+static unsigned short _DynamicDX8VertexBufferOffset = 0;
+static bool _DynamicSortingVertexArrayInUse = false;
+static SortingVertexBufferClass* _DynamicSortingVertexArray = nullptr;
+static unsigned short _DynamicSortingVertexArraySize = 0;
+static unsigned short _DynamicSortingVertexArrayOffset = 0;
+
+DynamicVBAccessClass::DynamicVBAccessClass(unsigned t,unsigned fvf,unsigned short count)
+    : Type(t), FVFInfo(_DynamicFVFInfo), VertexCount(count), VertexBufferOffset(0), VertexBuffer(nullptr)
+{
+    if (fvf!=dynamic_fvf_type || !count)
+        throw std::runtime_error("invalid original dynamic vertex FVF/count");
+    if (Type==BUFFER_TYPE_DYNAMIC_DX8) Allocate_DX8_Dynamic_Buffer();
+    else if (Type==BUFFER_TYPE_DYNAMIC_SORTING) Allocate_Sorting_Dynamic_Buffer();
+    else throw std::runtime_error("invalid original dynamic vertex buffer kind");
+}
+DynamicVBAccessClass::~DynamicVBAccessClass()
+{
+    if (Type==BUFFER_TYPE_DYNAMIC_DX8) {
+        _DynamicDX8VertexBufferInUse=false;
+        _DynamicDX8VertexBufferOffset+=VertexCount;
+    } else {
+        _DynamicSortingVertexArrayInUse=false;
+        _DynamicSortingVertexArrayOffset+=VertexCount;
+    }
+    REF_PTR_RELEASE(VertexBuffer);
+}
+void DynamicVBAccessClass::_Deinit()
+{
+    if ((_DynamicDX8VertexBuffer && _DynamicDX8VertexBuffer->Num_Refs()!=1) ||
+        (_DynamicSortingVertexArray && _DynamicSortingVertexArray->Num_Refs()!=1) ||
+        _DynamicDX8VertexBufferInUse || _DynamicSortingVertexArrayInUse)
+        throw std::runtime_error("original dynamic vertex pool still has live owners");
+    REF_PTR_RELEASE(_DynamicDX8VertexBuffer);
+    _DynamicDX8VertexBufferInUse=false;
+    _DynamicDX8VertexBufferSize=DEFAULT_VB_SIZE;
+    _DynamicDX8VertexBufferOffset=0;
+    REF_PTR_RELEASE(_DynamicSortingVertexArray);
+    _DynamicSortingVertexArrayInUse=false;
+    _DynamicSortingVertexArraySize=0;
+    _DynamicSortingVertexArrayOffset=0;
+}
+void DynamicVBAccessClass::Allocate_DX8_Dynamic_Buffer()
+{
+    if (_DynamicDX8VertexBufferInUse)
+        throw std::runtime_error("original dynamic vertex pool is already in use");
+    if (VertexCount>_DynamicDX8VertexBufferSize) {
+        if (_DynamicDX8VertexBuffer && _DynamicDX8VertexBuffer->Num_Refs()!=1)
+            throw std::runtime_error("original dynamic vertex growth has live owners");
+        REF_PTR_RELEASE(_DynamicDX8VertexBuffer);
+        _DynamicDX8VertexBufferSize=VertexCount;
+    }
+    if (!_DynamicDX8VertexBuffer) {
+        _DynamicDX8VertexBuffer=NEW_REF(DX8VertexBufferClass,(
+            dynamic_fvf_type,_DynamicDX8VertexBufferSize,DX8VertexBufferClass::USAGE_DYNAMIC));
+        _DynamicDX8VertexBufferOffset=0;
+    }
+    if (static_cast<unsigned>(VertexCount)+_DynamicDX8VertexBufferOffset>_DynamicDX8VertexBufferSize)
+        _DynamicDX8VertexBufferOffset=0;
+    REF_PTR_SET(VertexBuffer,_DynamicDX8VertexBuffer);
+    VertexBufferOffset=_DynamicDX8VertexBufferOffset;
+    _DynamicDX8VertexBufferInUse=true;
+}
+void DynamicVBAccessClass::Allocate_Sorting_Dynamic_Buffer()
+{
+    if (_DynamicSortingVertexArrayInUse)
+        throw std::runtime_error("original sorting dynamic vertex pool is already in use");
+    const unsigned next=static_cast<unsigned>(_DynamicSortingVertexArrayOffset)+VertexCount;
+    if (next>=65536)
+        throw std::runtime_error("original sorting dynamic vertex offset exceeds 16-bit range");
+    if (next>_DynamicSortingVertexArraySize) {
+        if (_DynamicSortingVertexArray && _DynamicSortingVertexArray->Num_Refs()!=1)
+            throw std::runtime_error("original sorting dynamic vertex growth has live owners");
+        REF_PTR_RELEASE(_DynamicSortingVertexArray);
+        _DynamicSortingVertexArraySize=static_cast<unsigned short>(next>DEFAULT_VB_SIZE?next:DEFAULT_VB_SIZE);
+    }
+    if (!_DynamicSortingVertexArray) {
+        _DynamicSortingVertexArray=NEW_REF(SortingVertexBufferClass,(_DynamicSortingVertexArraySize));
+        _DynamicSortingVertexArrayOffset=0;
+    }
+    REF_PTR_SET(VertexBuffer,_DynamicSortingVertexArray);
+    VertexBufferOffset=_DynamicSortingVertexArrayOffset;
+    _DynamicSortingVertexArrayInUse=true;
+}
+DynamicVBAccessClass::WriteLockClass::WriteLockClass(DynamicVBAccessClass* access)
+    : DynamicVBAccess(access), Vertices(nullptr)
+{
+    if (!access || !access->VertexBuffer ||
+        (access->Get_Type()==BUFFER_TYPE_DYNAMIC_DX8 && !_DynamicDX8VertexBufferInUse) ||
+        (access->Get_Type()==BUFFER_TYPE_DYNAMIC_SORTING && !_DynamicSortingVertexArrayInUse))
+        throw std::runtime_error("invalid original dynamic vertex lock");
+    if (access->Get_Type()==BUFFER_TYPE_DYNAMIC_DX8)
+        Vertices=reinterpret_cast<VertexFormatXYZNDUV2*>(
+            static_cast<DX8VertexBufferClass*>(access->VertexBuffer)->Get_CPU_Vertex_Buffer()+
+            access->VertexBufferOffset*access->FVFInfo.Get_FVF_Size());
+    else Vertices=static_cast<SortingVertexBufferClass*>(access->VertexBuffer)->VertexBuffer+
+        access->VertexBufferOffset;
+}
+DynamicVBAccessClass::WriteLockClass::~WriteLockClass() = default;
+void DynamicVBAccessClass::_Reset(bool frame_changed)
+{
+    _DynamicSortingVertexArrayOffset=0;
+    if (frame_changed) _DynamicDX8VertexBufferOffset=0;
+}
+unsigned short DynamicVBAccessClass::Get_Default_Vertex_Count() { return _DynamicDX8VertexBufferSize; }
 
 #else // Original Windows device-backed buffer implementation follows unchanged.
 
@@ -146,8 +259,6 @@ static bool _DynamicDX8VertexBufferInUse=false;
 static DX8VertexBufferClass* _DynamicDX8VertexBuffer=NULL;
 static unsigned short _DynamicDX8VertexBufferSize=DEFAULT_VB_SIZE;
 static unsigned short _DynamicDX8VertexBufferOffset=0;
-
-static const FVFInfoClass _DynamicFVFInfo(dynamic_fvf_type);
 
 static int _DX8VertexBufferCount=0;
 

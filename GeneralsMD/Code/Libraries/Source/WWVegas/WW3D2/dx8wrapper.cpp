@@ -75,6 +75,10 @@ struct DX8Wrapper::CpuState {
     const VertexBufferClass* vertex_buffer=nullptr;
     const IndexBufferClass* index_buffer=nullptr;
     unsigned index_base_offset=0;
+    unsigned vba_offset=0;
+    unsigned vba_count=0;
+    unsigned iba_offset=0;
+    unsigned iba_count=0;
     bool triangle_draw_enabled=true;
     unsigned polygon_low_bound=0;
     bool world_identity_selected=false;
@@ -99,6 +103,10 @@ void DX8Wrapper::Reset_Source_State()
         selected.index_buffer=nullptr;
     }
     selected.index_base_offset=0;
+    selected.vba_offset=0;
+    selected.vba_count=0;
+    selected.iba_offset=0;
+    selected.iba_count=0;
     selected.triangle_draw_enabled=true;
     selected.polygon_low_bound=0;
     selected.world_identity_selected=false;
@@ -378,7 +386,20 @@ void DX8Wrapper::Set_Vertex_Buffer(const VertexBufferClass* buffer,unsigned stre
     if (buffer) { buffer->Add_Ref(); buffer->Add_Engine_Ref(); }
     if (current) { current->Release_Engine_Ref(); current->Release_Ref(); }
     current=buffer;
+    state().vba_offset=0;
+    state().vba_count=0;
     edge.record_source_state("DX8Wrapper::Set_Vertex_Buffer");
+}
+
+void DX8Wrapper::Set_Vertex_Buffer(const DynamicVBAccessClass& access)
+{
+    if (!access.VertexBuffer || access.Get_Type()!=BUFFER_TYPE_DYNAMIC_DX8)
+        throw std::runtime_error("original dynamic sorting vertex draw requires sorting renderer");
+    Set_Vertex_Buffer(access.VertexBuffer);
+    state().vba_offset=access.VertexBufferOffset;
+    state().vba_count=access.VertexCount;
+    zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+        "DX8Wrapper::Set_Vertex_Buffer dynamic offset="+std::to_string(access.VertexBufferOffset));
 }
 
 void DX8Wrapper::Set_Index_Buffer(const IndexBufferClass* buffer,unsigned short base_offset)
@@ -389,7 +410,20 @@ void DX8Wrapper::Set_Index_Buffer(const IndexBufferClass* buffer,unsigned short 
     if (current) { current->Release_Engine_Ref(); current->Release_Ref(); }
     current=buffer;
     state().index_base_offset=base_offset;
+    state().iba_offset=0;
+    state().iba_count=0;
     edge.record_source_state("DX8Wrapper::Set_Index_Buffer");
+}
+
+void DX8Wrapper::Set_Index_Buffer(const DynamicIBAccessClass& access,unsigned short base_offset)
+{
+    if (!access.IndexBuffer || access.Get_Type()!=BUFFER_TYPE_DYNAMIC_DX8)
+        throw std::runtime_error("original dynamic sorting index draw requires sorting renderer");
+    Set_Index_Buffer(access.IndexBuffer,base_offset);
+    state().iba_offset=access.IndexBufferOffset;
+    state().iba_count=access.IndexCount;
+    zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+        "DX8Wrapper::Set_Index_Buffer dynamic offset="+std::to_string(access.IndexBufferOffset));
 }
 
 void DX8Wrapper::Set_Index_Buffer_Index_Offset(unsigned offset)
@@ -407,15 +441,23 @@ void DX8Wrapper::Draw_Triangles(unsigned short first_index,unsigned short triang
     Apply_Render_State_Changes();
     if (!state().triangle_draw_enabled) return;
     auto& selected=state();
+    if ((selected.vba_count && (selected.index_base_offset>selected.vba_count ||
+        min_vertex>selected.vba_count-selected.index_base_offset ||
+        (vertex_count>=3 && vertex_count>
+            selected.vba_count-selected.index_base_offset-min_vertex))) ||
+        (selected.iba_count && (first_index>selected.iba_count ||
+        static_cast<unsigned>(triangle_count)*3U>selected.iba_count-first_index)))
+        throw std::runtime_error("original dynamic triangle range exceeds source access");
     if (vertex_count<3) {
         min_vertex=0;
         vertex_count=selected.vertex_buffer &&
-            selected.index_base_offset<=selected.vertex_buffer->Get_Vertex_Count()
-            ? selected.vertex_buffer->Get_Vertex_Count()-selected.index_base_offset : 0;
+            selected.index_base_offset+selected.vba_offset<=selected.vertex_buffer->Get_Vertex_Count()
+            ? selected.vertex_buffer->Get_Vertex_Count()-selected.index_base_offset-selected.vba_offset : 0;
     }
     zh::original_runtime::OriginalGpuEdge::required().draw_source_indexed(selected.vertex_buffer,
-        selected.index_buffer,first_index,static_cast<unsigned>(triangle_count)*3U,
-        selected.index_base_offset,min_vertex,vertex_count,
+        selected.index_buffer,static_cast<unsigned>(first_index)+selected.iba_offset,
+        static_cast<unsigned>(triangle_count)*3U,
+        selected.index_base_offset+selected.vba_offset,min_vertex,vertex_count,
         zh::renderer::PrimitiveTopology::triangle_list);
 }
 
@@ -426,15 +468,23 @@ void DX8Wrapper::Draw_Strip(unsigned short first_index,unsigned short triangle_c
     Apply_Render_State_Changes();
     if (!state().triangle_draw_enabled) return;
     auto& selected=state();
+    if ((selected.vba_count && (selected.index_base_offset>selected.vba_count ||
+        min_vertex>selected.vba_count-selected.index_base_offset ||
+        (vertex_count>=3 && vertex_count>
+            selected.vba_count-selected.index_base_offset-min_vertex))) ||
+        (selected.iba_count && (first_index>selected.iba_count ||
+        static_cast<unsigned>(triangle_count)+2U>selected.iba_count-first_index)))
+        throw std::runtime_error("original dynamic strip range exceeds source access");
     if (vertex_count<3) {
         min_vertex=0;
         vertex_count=selected.vertex_buffer &&
-            selected.index_base_offset<=selected.vertex_buffer->Get_Vertex_Count()
-            ? selected.vertex_buffer->Get_Vertex_Count()-selected.index_base_offset : 0;
+            selected.index_base_offset+selected.vba_offset<=selected.vertex_buffer->Get_Vertex_Count()
+            ? selected.vertex_buffer->Get_Vertex_Count()-selected.index_base_offset-selected.vba_offset : 0;
     }
     zh::original_runtime::OriginalGpuEdge::required().draw_source_indexed(selected.vertex_buffer,
-        selected.index_buffer,first_index,static_cast<unsigned>(triangle_count)+2U,
-        selected.index_base_offset,min_vertex,vertex_count,
+        selected.index_buffer,static_cast<unsigned>(first_index)+selected.iba_offset,
+        static_cast<unsigned>(triangle_count)+2U,
+        selected.index_base_offset+selected.vba_offset,min_vertex,vertex_count,
         zh::renderer::PrimitiveTopology::triangle_strip);
 }
 

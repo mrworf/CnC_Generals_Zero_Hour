@@ -58,6 +58,8 @@ class VertexMaterialClass;
 class ShaderClass;
 class VertexBufferClass;
 class IndexBufferClass;
+class DynamicVBAccessClass;
+class DynamicIBAccessClass;
 class Matrix3D;
 class LightEnvironmentClass;
 using D3DTRANSFORMSTATETYPE = int;
@@ -166,7 +168,9 @@ public:
     static D3DCOLOR Get_Fog_Color();
     static void Set_Fog(bool enabled,const Vector3& color,float start,float end);
     static void Set_Vertex_Buffer(const VertexBufferClass* buffer,unsigned stream=0);
+    static void Set_Vertex_Buffer(const DynamicVBAccessClass& access);
     static void Set_Index_Buffer(const IndexBufferClass* buffer,unsigned short base_offset);
+    static void Set_Index_Buffer(const DynamicIBAccessClass& access,unsigned short base_offset);
     static void Set_Index_Buffer_Index_Offset(unsigned offset);
     static void Draw_Triangles(unsigned short first_index,unsigned short triangle_count,
         unsigned short min_vertex,unsigned short vertex_count);

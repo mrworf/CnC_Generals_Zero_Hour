@@ -131,8 +131,8 @@ IndexBufferClass::AppendLockClass::~AppendLockClass() { index_buffer->Release_Re
 DX8IndexBufferClass::DX8IndexBufferClass(unsigned short count, UsageType usage)
     : IndexBufferClass(BUFFER_TYPE_DX8, count), index_buffer(nullptr), cpu_index_buffer(nullptr)
 {
-    if (usage != USAGE_DEFAULT)
-        throw std::runtime_error("original dynamic/NPatches index GPU edge unavailable");
+    if (usage != USAGE_DEFAULT && usage != USAGE_DYNAMIC)
+        throw std::runtime_error("original NPatches/software index GPU edge unavailable");
     cpu_index_buffer = W3DNEWARRAY unsigned short[count]{};
 }
 DX8IndexBufferClass::~DX8IndexBufferClass() { delete[] cpu_index_buffer; }
@@ -142,6 +142,117 @@ SortingIndexBufferClass::SortingIndexBufferClass(unsigned short count)
     index_buffer = W3DNEWARRAY unsigned short[count]{};
 }
 SortingIndexBufferClass::~SortingIndexBufferClass() { delete[] index_buffer; }
+
+// Original recycled index access retains its owner/offset semantics; the
+// physical D3D lock is replaced by its original buffer's CPU upload bytes.
+static constexpr unsigned short DEFAULT_IB_SIZE = 5000;
+static bool _DynamicDX8IndexBufferInUse = false;
+static DX8IndexBufferClass* _DynamicDX8IndexBuffer = nullptr;
+static unsigned short _DynamicDX8IndexBufferSize = DEFAULT_IB_SIZE;
+static unsigned short _DynamicDX8IndexBufferOffset = 0;
+static bool _DynamicSortingIndexArrayInUse = false;
+static SortingIndexBufferClass* _DynamicSortingIndexArray = nullptr;
+static unsigned short _DynamicSortingIndexArraySize = 0;
+static unsigned short _DynamicSortingIndexArrayOffset = 0;
+
+DynamicIBAccessClass::DynamicIBAccessClass(unsigned short type_, unsigned short count)
+    : IndexCount(count), IndexBufferOffset(0), IndexBuffer(nullptr), Type(type_)
+{
+    if (!count) throw std::runtime_error("invalid original dynamic index count");
+    if (Type==BUFFER_TYPE_DYNAMIC_DX8) Allocate_DX8_Dynamic_Buffer();
+    else if (Type==BUFFER_TYPE_DYNAMIC_SORTING) Allocate_Sorting_Dynamic_Buffer();
+    else throw std::runtime_error("invalid original dynamic index kind");
+}
+DynamicIBAccessClass::~DynamicIBAccessClass()
+{
+    REF_PTR_RELEASE(IndexBuffer);
+    if (Type==BUFFER_TYPE_DYNAMIC_DX8) {
+        _DynamicDX8IndexBufferInUse=false;
+        _DynamicDX8IndexBufferOffset+=IndexCount;
+    } else {
+        _DynamicSortingIndexArrayInUse=false;
+        _DynamicSortingIndexArrayOffset+=IndexCount;
+    }
+}
+void DynamicIBAccessClass::_Deinit()
+{
+    if ((_DynamicDX8IndexBuffer && _DynamicDX8IndexBuffer->Num_Refs()!=1) ||
+        (_DynamicSortingIndexArray && _DynamicSortingIndexArray->Num_Refs()!=1) ||
+        _DynamicDX8IndexBufferInUse || _DynamicSortingIndexArrayInUse)
+        throw std::runtime_error("original dynamic index pool still has live owners");
+    REF_PTR_RELEASE(_DynamicDX8IndexBuffer);
+    _DynamicDX8IndexBufferInUse=false;
+    _DynamicDX8IndexBufferSize=DEFAULT_IB_SIZE;
+    _DynamicDX8IndexBufferOffset=0;
+    REF_PTR_RELEASE(_DynamicSortingIndexArray);
+    _DynamicSortingIndexArrayInUse=false;
+    _DynamicSortingIndexArraySize=0;
+    _DynamicSortingIndexArrayOffset=0;
+}
+void DynamicIBAccessClass::Allocate_DX8_Dynamic_Buffer()
+{
+    if (_DynamicDX8IndexBufferInUse)
+        throw std::runtime_error("original dynamic index pool is already in use");
+    if (IndexCount>_DynamicDX8IndexBufferSize) {
+        if (_DynamicDX8IndexBuffer && _DynamicDX8IndexBuffer->Num_Refs()!=1)
+            throw std::runtime_error("original dynamic index growth has live owners");
+        REF_PTR_RELEASE(_DynamicDX8IndexBuffer);
+        _DynamicDX8IndexBufferSize=IndexCount;
+    }
+    if (!_DynamicDX8IndexBuffer) {
+        _DynamicDX8IndexBuffer=NEW_REF(DX8IndexBufferClass,(
+            _DynamicDX8IndexBufferSize,DX8IndexBufferClass::USAGE_DYNAMIC));
+        _DynamicDX8IndexBufferOffset=0;
+    }
+    if (static_cast<unsigned>(IndexCount)+_DynamicDX8IndexBufferOffset>_DynamicDX8IndexBufferSize)
+        _DynamicDX8IndexBufferOffset=0;
+    REF_PTR_SET(IndexBuffer,_DynamicDX8IndexBuffer);
+    IndexBufferOffset=_DynamicDX8IndexBufferOffset;
+    _DynamicDX8IndexBufferInUse=true;
+}
+void DynamicIBAccessClass::Allocate_Sorting_Dynamic_Buffer()
+{
+    if (_DynamicSortingIndexArrayInUse)
+        throw std::runtime_error("original sorting dynamic index pool is already in use");
+    const unsigned next=static_cast<unsigned>(_DynamicSortingIndexArrayOffset)+IndexCount;
+    if (next>=65536)
+        throw std::runtime_error("original sorting dynamic index offset exceeds 16-bit range");
+    if (next>_DynamicSortingIndexArraySize) {
+        if (_DynamicSortingIndexArray && _DynamicSortingIndexArray->Num_Refs()!=1)
+            throw std::runtime_error("original sorting dynamic index growth has live owners");
+        REF_PTR_RELEASE(_DynamicSortingIndexArray);
+        _DynamicSortingIndexArraySize=static_cast<unsigned short>(next>DEFAULT_IB_SIZE?next:DEFAULT_IB_SIZE);
+    }
+    if (!_DynamicSortingIndexArray) {
+        _DynamicSortingIndexArray=NEW_REF(SortingIndexBufferClass,(_DynamicSortingIndexArraySize));
+        _DynamicSortingIndexArrayOffset=0;
+    }
+    REF_PTR_SET(IndexBuffer,_DynamicSortingIndexArray);
+    IndexBufferOffset=_DynamicSortingIndexArrayOffset;
+    _DynamicSortingIndexArrayInUse=true;
+}
+DynamicIBAccessClass::WriteLockClass::WriteLockClass(DynamicIBAccessClass* access)
+    : DynamicIBAccess(access), Indices(nullptr)
+{
+    if (!access || !access->IndexBuffer ||
+        (access->Type==BUFFER_TYPE_DYNAMIC_DX8 && !_DynamicDX8IndexBufferInUse) ||
+        (access->Type==BUFFER_TYPE_DYNAMIC_SORTING && !_DynamicSortingIndexArrayInUse))
+        throw std::runtime_error("invalid original dynamic index lock");
+    access->IndexBuffer->Add_Ref();
+    if (access->Type==BUFFER_TYPE_DYNAMIC_DX8)
+        Indices=static_cast<DX8IndexBufferClass*>(access->IndexBuffer)->Get_CPU_Index_Buffer()+
+            access->IndexBufferOffset;
+    else Indices=static_cast<SortingIndexBufferClass*>(access->IndexBuffer)->index_buffer+
+        access->IndexBufferOffset;
+}
+DynamicIBAccessClass::WriteLockClass::~WriteLockClass()
+{ DynamicIBAccess->IndexBuffer->Release_Ref(); }
+void DynamicIBAccessClass::_Reset(bool frame_changed)
+{
+    _DynamicSortingIndexArrayOffset=0;
+    if (frame_changed) _DynamicDX8IndexBufferOffset=0;
+}
+unsigned short DynamicIBAccessClass::Get_Default_Index_Count() { return _DynamicDX8IndexBufferSize; }
 
 #else // Original Windows device-backed buffer implementation follows unchanged.
 

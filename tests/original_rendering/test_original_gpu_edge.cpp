@@ -10,6 +10,7 @@
 
 #include <stdexcept>
 #include <cstring>
+#include <vector>
 
 namespace {
 using namespace zh::renderer;
@@ -22,8 +23,10 @@ public:
     int reject_create = 0;
     int reject_upload = 0;
     int reject_draw = 0;
+    std::vector<BufferHandle> created_buffers;
     BufferHandle create_buffer(const BufferDesc& d, std::string_view l) override
-    { if (reject_create && --reject_create == 0) return {}; return recorder.create_buffer(d,l); }
+    { if (reject_create && --reject_create == 0) return {}; auto h=recorder.create_buffer(d,l);
+      if (h) created_buffers.push_back(h); return h; }
     TextureHandle create_texture(const TextureDesc& d, std::string_view l) override { return recorder.create_texture(d,l); }
     SamplerHandle create_sampler(const SamplerDesc& d, std::string_view l) override { return recorder.create_sampler(d,l); }
     ShaderHandle create_shader(const ShaderDesc& d, std::string_view l) override { return recorder.create_shader(d,l); }
@@ -300,6 +303,149 @@ void original_wrapper_indexed_methods()
         VertexBufferClass::Get_Total_Buffer_Count()==0 &&
         IndexBufferClass::Get_Total_Buffer_Count()==0);
 }
+
+void original_dynamic_access_owner()
+{
+    check(VertexBufferClass::Get_Total_Buffer_Count()==0 &&
+        IndexBufferClass::Get_Total_Buffer_Count()==0);
+    DynamicVBAccessClass::_Deinit(); DynamicIBAccessClass::_Deinit();
+    DX8Wrapper::Reset_Source_State();
+    FaultDevice device;
+    TextureDesc target; target.width=8; target.height=8; target.render_target=true;
+    const auto color=device.create_texture(target,"original dynamic upload color");
+    target.format=TextureFormat::depth24_stencil8; target.sampled=false;
+    const auto depth=device.create_texture(target,"original dynamic upload depth");
+    RenderPassDesc pass; pass.color_targets[0]=color; pass.color_target_count=1;
+    pass.depth_target=depth; pass.width=8; pass.height=8;
+    {
+        zh::original_runtime::OriginalGpuEdge edge(device);
+        auto original_access=[&](unsigned start,bool fail_upload=false) {
+            DynamicVBAccessClass vb(BUFFER_TYPE_DYNAMIC_DX8,dynamic_fvf_type,3);
+            DynamicIBAccessClass ib(BUFFER_TYPE_DYNAMIC_DX8,3);
+            bool duplicate_vertex=false, duplicate_index=false;
+            try { DynamicVBAccessClass second(BUFFER_TYPE_DYNAMIC_DX8,dynamic_fvf_type,3); }
+            catch (const std::runtime_error&) { duplicate_vertex=true; }
+            try { DynamicIBAccessClass second(BUFFER_TYPE_DYNAMIC_DX8,3); }
+            catch (const std::runtime_error&) { duplicate_index=true; }
+            check(duplicate_vertex && duplicate_index);
+            bool live_vertex_deinit=false, live_index_deinit=false;
+            try { DynamicVBAccessClass::_Deinit(); }
+            catch (const std::runtime_error&) { live_vertex_deinit=true; }
+            try { DynamicIBAccessClass::_Deinit(); }
+            catch (const std::runtime_error&) { live_index_deinit=true; }
+            check(live_vertex_deinit && live_index_deinit);
+            {
+                DynamicVBAccessClass::WriteLockClass lock(&vb);
+                auto* vertices=lock.Get_Formatted_Vertex_Array();
+                for (unsigned i=0;i<3;++i) {
+                    vertices[i]={}; vertices[i].x=static_cast<float>(start+i);
+                    vertices[i].nx=1.0f; vertices[i].u1=static_cast<float>(i)/2.0f;
+                }
+                DynamicIBAccessClass::WriteLockClass indices(&ib);
+                indices.Get_Index_Array()[0]=0;
+                indices.Get_Index_Array()[1]=1;
+                indices.Get_Index_Array()[2]=2;
+            }
+            DX8Wrapper::Set_Vertex_Buffer(vb);
+            DX8Wrapper::Set_Index_Buffer(ib,0);
+            check(device.recorder.snapshot().find("Set_Vertex_Buffer dynamic offset="+
+                std::to_string(start))!=std::string::npos &&
+                device.recorder.snapshot().find("Set_Index_Buffer dynamic offset="+
+                std::to_string(start))!=std::string::npos);
+            check(static_cast<bool>(device.begin_pass(pass,"original dynamic source upload")));
+            bool vertex_range=false,index_range=false,base_range=false;
+            try { DX8Wrapper::Draw_Triangles(0,1,0,4); }
+            catch (const std::runtime_error& error) {
+                vertex_range=std::string(error.what()).find("dynamic triangle range")!=std::string::npos;
+            }
+            try { DX8Wrapper::Draw_Triangles(1,1,0,3); }
+            catch (const std::runtime_error& error) {
+                index_range=std::string(error.what()).find("dynamic triangle range")!=std::string::npos;
+            }
+            DX8Wrapper::Set_Index_Buffer_Index_Offset(1);
+            try { DX8Wrapper::Draw_Triangles(0,1,0,3); }
+            catch (const std::runtime_error& error) {
+                base_range=std::string(error.what()).find("dynamic triangle range")!=std::string::npos;
+            }
+            DX8Wrapper::Set_Index_Buffer_Index_Offset(0);
+            check(vertex_range && index_range && base_range &&
+                device.created_buffers.empty() == (start==0));
+            if (fail_upload) {
+                device.reject_upload=1;
+                bool failed=false;
+                try { DX8Wrapper::Draw_Triangles(0,1,0,3); }
+                catch (const std::runtime_error& error) {
+                    failed=std::string(error.what()).find("original vertex upload failed")!=std::string::npos;
+                }
+                check(failed && device.recorder.snapshot().find("draw pipeline=")==std::string::npos);
+            }
+            bool physical_unavailable=false;
+            try { DX8Wrapper::Draw_Triangles(0,1,0,3); }
+            catch (const std::runtime_error& error) {
+                const std::string reason(error.what());
+                physical_unavailable=reason.find("original material")!=std::string::npos ||
+                    reason.find("pending source application")!=std::string::npos;
+            }
+            check(physical_unavailable && device.created_buffers.size()==2);
+            const auto vertex_bytes=device.recorder.buffer_bytes(device.created_buffers[0]);
+            const auto index_bytes=device.recorder.buffer_bytes(device.created_buffers[1]);
+            check(vertex_bytes.size()==5000U*vb.FVF_Info().Get_FVF_Size() &&
+                index_bytes.size()==5000U*sizeof(unsigned short));
+            auto* selected=reinterpret_cast<const VertexFormatXYZNDUV2*>(vertex_bytes.data());
+            auto* selected_index=reinterpret_cast<const unsigned short*>(index_bytes.data());
+            check(selected[start].x==static_cast<float>(start) &&
+                selected[start+2].x==static_cast<float>(start+2) &&
+                selected_index[start]==0 && selected_index[start+2]==2);
+            check(static_cast<bool>(device.end_pass()));
+        };
+        original_access(0);
+        original_access(3,true);
+        const auto before_wrap=device.recorder.snapshot().size();
+        {
+            DynamicVBAccessClass wrapped(BUFFER_TYPE_DYNAMIC_DX8,dynamic_fvf_type,4995);
+            DynamicIBAccessClass wrapped_indices(BUFFER_TYPE_DYNAMIC_DX8,4995);
+            DX8Wrapper::Set_Vertex_Buffer(wrapped);
+            DX8Wrapper::Set_Index_Buffer(wrapped_indices,0);
+            const auto wrapped_state=device.recorder.snapshot().substr(before_wrap);
+            check(wrapped_state.find("Set_Vertex_Buffer dynamic offset=0")!=
+                std::string::npos && wrapped_state.find(
+                    "Set_Index_Buffer dynamic offset=0")!=std::string::npos);
+        }
+        bool sorting_draw_rejected=false;
+        {
+            DynamicVBAccessClass sorting(BUFFER_TYPE_DYNAMIC_SORTING,dynamic_fvf_type,3);
+            DynamicIBAccessClass sorting_indices(BUFFER_TYPE_DYNAMIC_SORTING,3);
+            {
+                DynamicVBAccessClass::WriteLockClass lock(&sorting);
+                lock.Get_Formatted_Vertex_Array()[0].x=42;
+                DynamicIBAccessClass::WriteLockClass indices(&sorting_indices);
+                indices.Get_Index_Array()[0]=1;
+            }
+            try { DX8Wrapper::Set_Vertex_Buffer(sorting); }
+            catch (const std::runtime_error& error) {
+                sorting_draw_rejected=std::string(error.what()).find("sorting renderer")!=std::string::npos;
+            }
+        }
+        check(sorting_draw_rejected);
+        DX8Wrapper::Set_Vertex_Buffer(nullptr);
+        DX8Wrapper::Set_Index_Buffer(nullptr,0);
+        check(device.recorder.snapshot().find("draw pipeline=")==std::string::npos);
+    }
+    DynamicVBAccessClass::_Deinit(); DynamicIBAccessClass::_Deinit();
+    {
+        DynamicVBAccessClass grown(BUFFER_TYPE_DYNAMIC_DX8,dynamic_fvf_type,5001);
+        DynamicIBAccessClass grown_indices(BUFFER_TYPE_DYNAMIC_DX8,5001);
+        check(DynamicVBAccessClass::Get_Default_Vertex_Count()==5001 &&
+            DynamicIBAccessClass::Get_Default_Index_Count()==5001);
+    }
+    DynamicVBAccessClass::_Reset(true); DynamicIBAccessClass::_Reset(true);
+    DynamicVBAccessClass::_Deinit(); DynamicIBAccessClass::_Deinit();
+    DX8Wrapper::Reset_Source_State();
+    device.destroy(color); device.destroy(depth);
+    check(device.recorder.resource_counts().total()==0 &&
+        VertexBufferClass::Get_Total_Buffer_Count()==0 &&
+        IndexBufferClass::Get_Total_Buffer_Count()==0);
+}
 } // namespace
 
 int main()
@@ -308,4 +454,5 @@ int main()
     injected_device_failures();
     canonical_fvf_layouts();
     original_wrapper_indexed_methods();
+    original_dynamic_access_owner();
 }
