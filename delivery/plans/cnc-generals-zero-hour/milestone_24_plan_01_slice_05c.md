@@ -1,25 +1,17 @@
-# M24 slice 05C: original retail skirmish persistence after draw-provider closure
+# M24 slice 05C: original retail mission first tick after draw-provider closure
 
 ## Goal and observable outcome
 
-The complete original retail skirmish save/load/re-save/re-load path reproduces exact frame, object/player/team/script/AI/partition and full GameLogic CRC without changing retail inputs. This is not eligible for implementation or acceptance until the original draw-provider contract in M22 is resolved.
+The real retail mission enters through original two-phase `GameLogic::startNewGame`, saves/loads with exact source checkpoint, then advances its first original `GameEngine::update` without huge partition allocation, retaining shipped `PartitionCellSize = 40.0` and bounded partition dimensions. No tick or drawable is bypassed.
 
-## Scope / non-scope
+## Dependencies and blocker
 
-Own skirmish GameInfo/MapCache setup and persistence integration only after the required original source draw provider exists. Do not add a synthetic `MODULETYPE_DRAW`, skip map objects, suppress `ERROR_INVALID_D3D`, alter renderer/M22 source, or accept a fixture-only skirmish witness as retail completion.
+Slice 05B and M22 original renderer backend §9 closure are prerequisites. A correct `GlobalData` override copy reaches an optimized-tree drawable in `GameLogic::startNewGame(FALSE):1868 -> ThingFactory::newDrawable -> Drawable::Drawable -> ModuleFactory::newModule(MODULETYPE_DRAW)`. The source draw factory has no `m_createProc`, throwing `ERROR_INVALID_D3D` before the tick. Without correct copy, the later tick previously reached `ScriptActions::doBorderSwitch -> PartitionManager::init` using a 1-unit cell and approximately 20.8 million cells. Both behaviors are source-traced; neither is waived.
 
-## Dependencies and blocker evidence
+## Scope, permission and errors
 
-Slices 05A and 05B and M22 original renderer backend §9 closure are prerequisites. The read-only retail skirmish load reached `GameStateMap::xfer -> GameLogic::startNewGame(TRUE) -> ThingFactory::newDrawable -> Drawable::Drawable -> ModuleFactory::newModule(MODULETYPE_DRAW)`; `ModuleFactory.cpp:648` throws `ERROR_INVALID_D3D` because `m_createProc` is null for the unavailable physical draw provider. Earlier missing MapCache/GameInfo and local-slot setup assumptions have been characterized, but source load cannot finish without the M22 provider. Parent owns dependency/workflow status.
+After M22 closure, own only M24 first-tick integration and any newly evidenced original persistence/runtime defect. Do not introduce synthetic draw modules, skip optimized trees, alter M22 source/API, freeze the game, or assert equal CRC across different frames. Retail roots remain read-only; all saves/maps go to isolated XDG. A failed load retains exact pre-load state and no transaction temporary.
 
-## Permissions, validation and errors
+## Tests and acceptance
 
-Retail roots remain read-only; all save/map extraction and replay output stays under isolated XDG. Fail closed on unavailable original provider and preserve the source exception as a blocker. No private retail asset bytes, names, hashes or paths in committed evidence.
-
-## Expected surfaces and tests
-
-After M22 closure, retest original skirmish GameInfo/MapCache setup, source map reconstruction, full exact CRC after first and repeated load, original save failure rollback and input metadata invariance in all four presets and Clang ASan/UBSan. Preserve M21 setup/reentry, M24 source-owned replay and mission tests. Update source ledger and skirmish evidence only for paths actually exercised.
-
-## Acceptance / commit
-
-An original retail skirmish roundtrip passes full exact source CRC and recovery gates without bypass or renderer substitution. Then commit one coherent 05C slice; otherwise remain pending with the exact M22 blocker.
+Run a gated read-only retail mission save/load and first original update; record frame, full source CRC, partition cell size and bounded X/Y cell counts, then repeat lifecycle. Cover invalid/corrupt source save and metadata invariance. Validate in GCC/Clang Debug/Release, Clang ASan/UBSan, ledger and applicable source-identity controls. Commit one coherent 05C slice only after real draw-provider closure and positive/negative source evidence; until then remain pending with exact M22 dependency.

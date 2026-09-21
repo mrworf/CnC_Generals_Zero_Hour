@@ -10,7 +10,7 @@ Own cumulative identity/ledger/failure checks, retail source replay, exact first
 
 ## Dependencies, entry and state
 
-Slices 01–05C complete, including M22 closure required by 05C. Retail mission setup works under M21, and 05B must prove the first original mission tick with shipped GameData survives reset; 05C must prove skirmish draw reconstruction. Original `.rep` playback remains through `RecorderClass::playbackFile`, `MSG_NEW_GAME`, `InitRandom` and source command dispatch.
+Slices 01–05D complete, including M22 closure required by 05C/05D. Slice 05B establishes the shipped GameData baseline; 05C must prove the first original retail mission tick with that baseline, and 05D must prove skirmish draw reconstruction. Original `.rep` playback remains through `RecorderClass::playbackFile`, `MSG_NEW_GAME`, `InitRandom` and source command dispatch.
 
 ## Permissions, validation and errors
 

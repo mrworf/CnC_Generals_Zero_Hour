@@ -1,29 +1,25 @@
-# M24 slice 05B: shipped GameData baseline and original first mission tick
+# M24 slice 05B: original shipped GameData ownership and override baseline
 
 ## Goal and observable outcome
 
-The original retail mission runs its first source `GameEngine::update` without a huge partition allocation, while shipped `PartitionCellSize = 40.0` remains effective after original reset and a temporary map override still clears on reset. Source frame/CRC and lifecycle observations remain deterministic; the tick is not bypassed.
+The original Linux `GlobalData` default, shipped, and map-specific layers hold complete source-defined values with independent owned memory. The installed shipped `PartitionCellSize = 40.0` survives repeated original reset; a temporary map.ini value is removed. This slice is asset-free and independently testable, not a retail first-tick acceptance claim.
 
 ## Scope / non-scope
 
-Own the Linux lifetime of shipped `GlobalData` definitions and the first-tick source test/harness needed to exercise it. Preserve source override semantics, ownership, copy behavior and transient map.ini overrides. Do not change M22 draw factories, substitute a physical renderer, reduce terrain boundaries artificially, or weaken exact source CRC. Retail skirmish remains 05C.
+Own the source `GlobalData` override copy/ownership and the Linux shipped-baseline promotion after installed INI parsing, plus source-owned lifecycle/negative tests. Preserve the original `INI_LOAD_CREATE_OVERRIDES` dispatch for shipped and map files and parser error semantics. Do not suppress `UseTrees`, skip drawables, change M22 renderer factories, invent an alternate partition size, or weaken exact source CRC.
 
-## Dependencies, source trace and state
+## Dependencies and source trace
 
-Slice 05A is required. `GameEngine::init` loads shipped default GameData and then shipped GameData with `INI_LOAD_CREATE_OVERRIDES`; the `GlobalData` root starts with `m_partitionCellSize = 0`, and `GlobalData::reset` deletes all overrides. The retail INI sources contain `PartitionCellSize = 40.0`, but after reset the source value is zero; `PartitionManager::init` clamps this to 1. On first mission tick, `ScriptActions::doBorderSwitch -> TerrainLogic::setActiveBoundary -> PartitionManager::init` then requests a 5371 × 3871 cell grid (~20.8 million cells), faulting in `PartitionCell` construction. Identify and preserve the shipped baseline without reclassifying later map overrides as durable. Investigate any further first-tick source failures revealed after correction.
+Slice 05A is complete. `GlobalData::newOverride` currently invokes an intentionally unimplemented copy assignment; a valid copy also needs independent `WeaponBonusSet` ownership. The subsystem list owns the original root, while Linux loads shipped GameData as an override; `GlobalData::reset` deletes all overrides and loses shipped `PartitionCellSize = 40.0`, leaving 0 and causing a 1-unit/20.8-million-cell partition on the original retail mission tick. Promote installed shipped values into the root before any map.ini load while retaining map override reset semantics. A correct copy newly exposes an optimized-tree draw request during retail mission `GameLogic::startNewGame(FALSE):1868`; that is an M22 §9 integration dependency assigned to 05C, not a reason to discard correct GameData values.
 
 ## Entry, transitions, permissions and recovery
 
-The original Linux bootstrap reads shipped INIs, enters the retail mission, resets/loads the source state, and advances one original update. During reset, shipped definitions persist; map-specific overrides are discarded. No write to retail roots is allowed; XDG owns output. A bad or missing GameData definition must use original parser/validation semantics and must not leave a mixed override chain, leaked/double-owned data, or partial source checkpoint.
+At source bootstrap, the default GameData populates the root and shipped GameData creates an override through the unchanged parser. After both finish successfully, Linux promotes the top installed value to the subsystem-owned root and destroys the temporary layer chain. Map.ini later creates independently owned transient layers; reset deletes them and returns to shipped root. Malformed shipped input fails the original loader without publishing a partial baseline. Owned fixture roots are read-only; all output is isolated under XDG.
 
-## Expected surfaces
+## Expected surfaces and tests
 
-`GlobalData` lifetime or Linux bootstrap, a source-owned default/shipped/map-override lifecycle test, gated first-tick retail mission test, original dependency ledger and slice evidence. No M22-specific source/API change.
+Original `GlobalData` copy/override logic, Linux `GameEngine` installed-layer commit point, a source-owned default/shipped/map fixture, the original dependency ledger, and slice evidence. Positive values: default 16, shipped 40, map 5, reset/repeated reset 40. Negative invalid shipped definition must reject; strict Clang ASan/UBSan must show no use-after-free/double-free. Re-run focused original persistence/simulation in all four presets, source identity/provider-removal and ledger checks. No private retail material enters fixture or evidence.
 
-## Tests and acceptance
+## Acceptance / commit
 
-- Prove source default before shipped load, shipped `PartitionCellSize = 40.0` after reset, and transient map override reset to shipped value, including a negative invalid/missing-definition path and repeated reset/lifecycle.
-- Read-only retail mission enters, saves/loads and runs the first original `GameEngine::update` without 1-unit/20.8-million-cell allocation; record frame, source CRC and bounded partition dimensions, then repeat lifecycle. Do not assert a CRC is equal across different frame counts.
-- Run focused persistence/simulation tests in GCC/Clang Debug/Release, Clang ASan/UBSan, source-ledger and retail metadata checks. Stop on a newly reached source failure with exact stack and ownership analysis.
-
-Commit one coherent slice as `delivery: M24 slice 05B retain shipped GameData for first tick` only after positive and negative evidence passes.
+Full `GlobalData` copy and ownership are correct; installed shipped values persist while map values remain temporary; malformed input rejects and original-source regressions pass. The genuine M22 retail draw dependency remains recorded for 05C/05D. Commit one coherent slice as `delivery: M24 slice 05B retain original shipped GameData`.
