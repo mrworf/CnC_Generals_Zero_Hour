@@ -6,13 +6,13 @@ A real retail mission save restores original PartitionManager cells, object sigh
 
 ## Scope / non-scope
 
-Own the source PartitionManager/PartitionCell/GameState post-load ordering or state correction required by evidence. Do not skip partition CRC, discard shroud fields, freeze the game before first tick, rewrite saves to a toy format, or alter renderer/M22 hardware. Retail skirmish exact load remains slice 05B after the M22 original draw-provider decision, not an acceptance claim of this slice.
+Own the source PartitionManager/PartitionCell/GameState post-load ordering or state correction required by evidence. Do not skip partition CRC, discard shroud fields, freeze the game before first tick, rewrite saves to a toy format, or alter renderer/M22 hardware. Retail first-tick GameData baseline is slice 05B; skirmish exact load remains slice 05C after the M22 original draw-provider decision, neither an acceptance claim of this slice.
 
 ## Dependencies, entry and state
 
 Slice 04 proves shipped special powers survive reset. Retail mission load reaches completion with identical frame, object/player/team counts and GameLogic/PlayerList/SidesList/ScriptEngine/AI component CRCs, but PartitionManager CRC changes across approximately 5.18 million of 6.38 million cells; a second round-trip changes it again. Source `PartitionManager::xfer` serializes cell shroud, then `GameState::gameStatePostProcessLoad` calls `PartitionManager::update`. Stage CRCs prove source snapshot/postprocess retain exact shroud but first dirty update calls `Object::onPartitionCellChange` against restored cells and queues 146 redundant unlooks. Repair that source restore transition while rebuilding unsaved derived maps.
 
-During the retail skirmish probe, a complete original load reached `GameStateMap::xfer -> GameLogic::startNewGame(TRUE) -> ThingFactory::newDrawable -> ModuleFactory::newModule(MODULETYPE_DRAW)` and failed on the M22 unavailable physical draw provider (`m_createProc == NULL`, `ERROR_INVALID_D3D`). That is a new exact dependency, not permission to bypass source rendering. Slice 05B owns skirmish acceptance after M22; 05A remains independently deliverable.
+During the retail skirmish probe, a complete original load reached `GameStateMap::xfer -> GameLogic::startNewGame(TRUE) -> ThingFactory::newDrawable -> ModuleFactory::newModule(MODULETYPE_DRAW)` and failed on the M22 unavailable physical draw provider (`m_createProc == NULL`, `ERROR_INVALID_D3D`). That is a new exact dependency, not permission to bypass source rendering. Slice 05C owns skirmish acceptance after M22; 05A remains independently deliverable.
 
 ## Permissions, validation and errors
 
