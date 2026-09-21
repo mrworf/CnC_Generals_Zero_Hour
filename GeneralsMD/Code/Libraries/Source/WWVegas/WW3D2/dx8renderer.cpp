@@ -46,8 +46,10 @@
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
 #include "dx8fvf.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8caps.h"
 #include "dx8rendererdebugger.h"
+#endif
 #include "wwdebug.h"
 #include "wwprofile.h"
 #include "wwmemlog.h"
@@ -60,6 +62,28 @@
 #include "camera.h"
 #include "stripoptimizer.h"
 #include "meshgeometry.h"
+#include "texture.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <stdexcept>
+#endif
+
+namespace {
+#if defined(ZH_WW3D_CPU_ONLY)
+constexpr unsigned fvf_xyz = 0x002, fvf_normal = 0x010;
+constexpr unsigned fvf_diffuse = 0x040, fvf_specular = 0x080;
+constexpr unsigned fvf_tex1 = 0x100, fvf_tex2 = 0x200;
+constexpr unsigned fvf_tex3 = 0x300, fvf_tex4 = 0x400;
+constexpr unsigned fvf_tex5 = 0x500, fvf_tex6 = 0x600;
+constexpr unsigned fvf_tex7 = 0x700, fvf_tex8 = 0x800;
+#else
+constexpr unsigned fvf_xyz = D3DFVF_XYZ, fvf_normal = D3DFVF_NORMAL;
+constexpr unsigned fvf_diffuse = D3DFVF_DIFFUSE, fvf_specular = D3DFVF_SPECULAR;
+constexpr unsigned fvf_tex1 = D3DFVF_TEX1, fvf_tex2 = D3DFVF_TEX2;
+constexpr unsigned fvf_tex3 = D3DFVF_TEX3, fvf_tex4 = D3DFVF_TEX4;
+constexpr unsigned fvf_tex5 = D3DFVF_TEX5, fvf_tex6 = D3DFVF_TEX6;
+constexpr unsigned fvf_tex7 = D3DFVF_TEX7, fvf_tex8 = D3DFVF_TEX8;
+#endif
+}
 
 /*
 ** Global Instance of the DX8MeshRender
@@ -261,7 +285,8 @@ void DX8TextureCategoryClass::Remove_Polygon_Renderer(DX8PolygonRendererClass* p
 
 void DX8FVFCategoryContainer::Remove_Texture_Category(DX8TextureCategoryClass* tex_category)
 {
-	for (unsigned pass=0;pass<passes;++pass) {
+	unsigned pass;
+	for (pass=0;pass<passes;++pass) {
 		texture_category_list[pass].Remove(tex_category);
 	}
 	for (pass=0; pass<passes; pass++) {
@@ -342,6 +367,9 @@ void DX8RigidFVFCategoryContainer::Add_Delayed_Visible_Material_Pass(MaterialPas
 
 void DX8RigidFVFCategoryContainer::Render_Delayed_Procedural_Material_Passes(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw std::runtime_error("original delayed mesh pass requires GPU translation");
+#else
 	if (!Any_Delayed_Passes_To_Render()) return;
 	AnyDelayedPassesToRender=false;
 
@@ -362,6 +390,7 @@ void DX8RigidFVFCategoryContainer::Render_Delayed_Procedural_Material_Passes(voi
 	}
 
 	delayed_matpass_head = delayed_matpass_tail = NULL;
+#endif
 }
 
 
@@ -431,14 +460,14 @@ DX8FVFCategoryContainer::DX8FVFCategoryContainer(unsigned FVF_,bool sorting_)
 	AnythingToRender(false),
 	AnyDelayedPassesToRender(false)
 {
-	if ((FVF&D3DFVF_TEX1)==D3DFVF_TEX1) uv_coordinate_channels=1;
-	if ((FVF&D3DFVF_TEX2)==D3DFVF_TEX2) uv_coordinate_channels=2;
-	if ((FVF&D3DFVF_TEX3)==D3DFVF_TEX3) uv_coordinate_channels=3;
-	if ((FVF&D3DFVF_TEX4)==D3DFVF_TEX4) uv_coordinate_channels=4;
-	if ((FVF&D3DFVF_TEX5)==D3DFVF_TEX5) uv_coordinate_channels=5;
-	if ((FVF&D3DFVF_TEX6)==D3DFVF_TEX6) uv_coordinate_channels=6;
-	if ((FVF&D3DFVF_TEX7)==D3DFVF_TEX7) uv_coordinate_channels=7;
-	if ((FVF&D3DFVF_TEX8)==D3DFVF_TEX8) uv_coordinate_channels=8;
+	if ((FVF&fvf_tex1)==fvf_tex1) uv_coordinate_channels=1;
+	if ((FVF&fvf_tex2)==fvf_tex2) uv_coordinate_channels=2;
+	if ((FVF&fvf_tex3)==fvf_tex3) uv_coordinate_channels=3;
+	if ((FVF&fvf_tex4)==fvf_tex4) uv_coordinate_channels=4;
+	if ((FVF&fvf_tex5)==fvf_tex5) uv_coordinate_channels=5;
+	if ((FVF&fvf_tex6)==fvf_tex6) uv_coordinate_channels=6;
+	if ((FVF&fvf_tex7)==fvf_tex7) uv_coordinate_channels=7;
+	if ((FVF&fvf_tex8)==fvf_tex8) uv_coordinate_channels=8;
 }
 
 // ----------------------------------------------------------------------------
@@ -703,36 +732,40 @@ unsigned DX8FVFCategoryContainer::Define_FVF(MeshModelClass* mmc,bool enable_lig
 		return dynamic_fvf_type;
 	}
 
-	unsigned fvf=D3DFVF_XYZ;
+	unsigned fvf=fvf_xyz;
 
 	int tex_coord_count=mmc->Get_UV_Array_Count();
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (tex_coord_count < 0 || tex_coord_count > 8)
+		throw std::runtime_error("unsupported original mesh texture-coordinate count");
+#endif
 
 	if (mmc->Get_Color_Array(0,false)) {
-		fvf|=D3DFVF_DIFFUSE;
+		fvf|=fvf_diffuse;
 	}
 	if (mmc->Get_Color_Array(1,false)) {
-		fvf|=D3DFVF_SPECULAR;
+		fvf|=fvf_specular;
 	}
 	
 	switch (tex_coord_count) {
 	default:
 	case 0:
 		break;
-	case 1: fvf|=D3DFVF_TEX1; break;
-	case 2: fvf|=D3DFVF_TEX2; break;
-	case 3: fvf|=D3DFVF_TEX3; break;
-	case 4: fvf|=D3DFVF_TEX4; break;
-	case 5: fvf|=D3DFVF_TEX5; break;
-	case 6: fvf|=D3DFVF_TEX6; break;
-	case 7: fvf|=D3DFVF_TEX7; break;
-	case 8: fvf|=D3DFVF_TEX8; break;
+	case 1: fvf|=fvf_tex1; break;
+	case 2: fvf|=fvf_tex2; break;
+	case 3: fvf|=fvf_tex3; break;
+	case 4: fvf|=fvf_tex4; break;
+	case 5: fvf|=fvf_tex5; break;
+	case 6: fvf|=fvf_tex6; break;
+	case 7: fvf|=fvf_tex7; break;
+	case 8: fvf|=fvf_tex8; break;
 	}
 
 	if (!mmc->Needs_Vertex_Normals()) {  //enable_lighting || mmc->Get_Flag(MeshModelClass::PRELIT_MASK)) {
 		return fvf;
 	}
 
-	fvf|=D3DFVF_NORMAL;	// Realtime-lit
+	fvf|=fvf_normal;	// Realtime-lit
 	return fvf;
 }
 
@@ -800,6 +833,9 @@ void DX8RigidFVFCategoryContainer::Log(bool only_visible)
 
 void DX8RigidFVFCategoryContainer::Render(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw std::runtime_error("original rigid mesh pass requires GPU translation");
+#else
 	if (!Anything_To_Render()) return;
 	AnythingToRender=false;
 
@@ -825,6 +861,7 @@ void DX8RigidFVFCategoryContainer::Render(void)
 	Render_Procedural_Material_Passes();
 
 	//DX8Wrapper::Set_DX8_ZBias(0);
+#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -866,11 +903,17 @@ public:
 		npatch_enable(false),
 		allocated_polygon_array(false)
 	{
+#if defined(ZH_WW3D_CPU_ONLY)
+		if (WW3D::Get_NPatches_Level() > 1 &&
+			mmc->Needs_Vertex_Normals() && mmc->Get_Flag(MeshGeometryClass::ALLOW_NPATCHES))
+			throw std::runtime_error("original NPatches mesh requires unsupported tessellation");
+#else
 		if (DX8Wrapper::Get_Current_Caps()->Support_NPatches() && mmc->Needs_Vertex_Normals()) {
 			if (mmc->Get_Flag(MeshGeometryClass::ALLOW_NPATCHES)) {
 				npatch_enable=true;
 			}
 		}
+#endif
 
 		const GapFillerClass* gap_filler=mmc->Get_Gap_Filler();
 		polygon_count=mmc->Get_Polygon_Count();
@@ -1020,7 +1063,11 @@ void DX8RigidFVFCategoryContainer::Add_Mesh(MeshModelClass* mmc_)
 			vertex_buffer=NEW_REF(DX8VertexBufferClass,(
 				FVF,
 				vb_size,
+#if defined(ZH_WW3D_CPU_ONLY)
+				DX8VertexBufferClass::USAGE_DEFAULT));
+#else
 				(DX8Wrapper::Get_Current_Caps()->Support_NPatches() && WW3D::Get_NPatches_Level()>1) ? DX8VertexBufferClass::USAGE_NPATCHES : DX8VertexBufferClass::USAGE_DEFAULT));
+#endif
 		}
 	}
 
@@ -1040,11 +1087,11 @@ void DX8RigidFVFCategoryContainer::Add_Mesh(MeshModelClass* mmc_)
 	{
 		*(Vector3*)(vb+fi.Get_Location_Offset())=locs[i];
 		
-		if ((FVF&D3DFVF_NORMAL)==D3DFVF_NORMAL && norms) {
+		if ((FVF&fvf_normal)==fvf_normal && norms) {
 			*(Vector3*)(vb+fi.Get_Normal_Offset())=norms[i];
 		}
 
-		if ((FVF&D3DFVF_DIFFUSE)==D3DFVF_DIFFUSE) {
+		if ((FVF&fvf_diffuse)==fvf_diffuse) {
 			if (diffuse) {
 				*(unsigned int*)(vb+fi.Get_Diffuse_Offset())=diffuse[i];
 			} else {
@@ -1052,7 +1099,7 @@ void DX8RigidFVFCategoryContainer::Add_Mesh(MeshModelClass* mmc_)
 			}
 		}
 		
-		if ((FVF&D3DFVF_SPECULAR)==D3DFVF_SPECULAR) {
+		if ((FVF&fvf_specular)==fvf_specular) {
 			if (specular) {
 				*(unsigned int*)(vb+fi.Get_Specular_Offset())=specular[i];
 			} else {
@@ -1068,28 +1115,28 @@ void DX8RigidFVFCategoryContainer::Add_Mesh(MeshModelClass* mmc_)
 	** Append the UV coordinates to the vertex buffer
 	*/
 	int uvcount = 0;
-	if ((FVF&D3DFVF_TEX1) == D3DFVF_TEX1) {
+	if ((FVF&fvf_tex1) == fvf_tex1) {
 		uvcount = 1;
 	}
-	if ((FVF&D3DFVF_TEX2) == D3DFVF_TEX2) {
+	if ((FVF&fvf_tex2) == fvf_tex2) {
 		uvcount = 2;
 	}
-	if ((FVF&D3DFVF_TEX3) == D3DFVF_TEX3) {
+	if ((FVF&fvf_tex3) == fvf_tex3) {
 		uvcount = 3;
 	}
-	if ((FVF&D3DFVF_TEX4) == D3DFVF_TEX4) {
+	if ((FVF&fvf_tex4) == fvf_tex4) {
 		uvcount = 4;
 	}
-	if ((FVF&D3DFVF_TEX5) == D3DFVF_TEX5) {
+	if ((FVF&fvf_tex5) == fvf_tex5) {
 		uvcount = 5;
 	}
-	if ((FVF&D3DFVF_TEX6) == D3DFVF_TEX6) {
+	if ((FVF&fvf_tex6) == fvf_tex6) {
 		uvcount = 6;
 	}
-	if ((FVF&D3DFVF_TEX7) == D3DFVF_TEX7) {
+	if ((FVF&fvf_tex7) == fvf_tex7) {
 		uvcount = 7;
 	}
-	if ((FVF&D3DFVF_TEX8) == D3DFVF_TEX8) {
+	if ((FVF&fvf_tex8) == fvf_tex8) {
 		uvcount = 8;
 	}
 	
@@ -1218,7 +1265,11 @@ void DX8FVFCategoryContainer::Generate_Texture_Categories(Vertex_Split_Table& sp
 		else {
 			index_buffer=NEW_REF(DX8IndexBufferClass,(
 				ib_size,
+#if defined(ZH_WW3D_CPU_ONLY)
+				DX8IndexBufferClass::USAGE_DEFAULT));
+#else
 				(DX8Wrapper::Get_Current_Caps()->Support_NPatches() && WW3D::Get_NPatches_Level()>1) ? DX8IndexBufferClass::USAGE_NPATCHES : DX8IndexBufferClass::USAGE_DEFAULT));
+#endif
 		}
 	}
 
@@ -1295,6 +1346,9 @@ void DX8SkinFVFCategoryContainer::Log(bool only_visible)
 
 void DX8SkinFVFCategoryContainer::Render(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw std::runtime_error("original skinned mesh pass requires GPU translation");
+#else
 	SNAPSHOT_SAY(("DX8SkinFVFCategoryContainer::Render()\n"));
 	if (!Anything_To_Render()) {
 		SNAPSHOT_SAY(("Nothing to render\n"));
@@ -1435,6 +1489,7 @@ void DX8SkinFVFCategoryContainer::Render(void)
 
 
 	clearVisibleSkinList();
+#endif
 }
 
 bool DX8SkinFVFCategoryContainer::Check_If_Mesh_Fits(MeshModelClass* mmc)
@@ -1547,7 +1602,7 @@ unsigned DX8TextureCategoryClass::Add_Mesh(
 		if (index_buffer->Type()==BUFFER_TYPE_SORTING || index_buffer->Type()==BUFFER_TYPE_DYNAMIC_SORTING) {
 			stripify=false;
 		}
-#endif;
+#endif
 		const TriIndex* src_indices=(const TriIndex*)split_table.Get_Polygon_Array(pass);//mmc->Get_Polygon_Array();
 
 		if (stripify) {
@@ -1602,7 +1657,7 @@ unsigned DX8TextureCategoryClass::Add_Mesh(
 					for (unsigned i=0;i<index_count;++i) {
 						unsigned short idx;
 
-						idx=unsigned short(strip[i+1]);
+						idx=static_cast<unsigned short>(strip[i+1]);
 						vmin=MIN(vmin,idx);
 						vmax=MAX(vmax,idx);
 						*dst_indices++=idx;
@@ -1649,19 +1704,19 @@ unsigned DX8TextureCategoryClass::Add_Mesh(
 				if (all_textures_same && Equal_Material(mat,material) && shd==shader) {
 					unsigned short idx;
 
-					idx=unsigned short(src_indices[i][0]+vertex_offset);
+					idx=static_cast<unsigned short>(src_indices[i][0]+vertex_offset);
 					vmin=MIN(vmin,idx);
 					vmax=MAX(vmax,idx);
 					*dst_indices++=idx;
 //					WWDEBUG_SAY(("%d, ",idx));
 
-					idx=unsigned short(src_indices[i][1]+vertex_offset);
+					idx=static_cast<unsigned short>(src_indices[i][1]+vertex_offset);
 					vmin=MIN(vmin,idx);
 					vmax=MAX(vmax,idx);
 					*dst_indices++=idx;
 //					WWDEBUG_SAY(("%d, ",idx));
 
-					idx=unsigned short(src_indices[i][2]+vertex_offset);
+					idx=static_cast<unsigned short>(src_indices[i][2]+vertex_offset);
 					vmin=MIN(vmin,idx);
 					vmax=MAX(vmax,idx);
 					*dst_indices++=idx;
@@ -1686,6 +1741,9 @@ unsigned DX8TextureCategoryClass::Add_Mesh(
 
 void DX8TextureCategoryClass::Render(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw std::runtime_error("original texture/material pass requires GPU translation");
+#else
 	#ifdef WWDEBUG
 	if (!WW3D::Expose_Prelit()) {
 	#endif
@@ -1960,6 +2018,7 @@ void DX8TextureCategoryClass::Render(void)
 	{	WWASSERT(!render_task_head);
 		Clear_Render_List();
 	}
+#endif
 }
 
 
@@ -2097,7 +2156,8 @@ void DX8MeshRendererClass::Register_Mesh_Type(MeshModelClass* mmc)
 			/*
 			** Search for an existing FVF Category Container that matches this mesh
 			*/
-			for (int i=0;i<texture_category_container_lists_rigid.Count();++i) {
+			int i;
+			for (i=0;i<texture_category_container_lists_rigid.Count();++i) {
 				FVFCategoryList * list=texture_category_container_lists_rigid[i];
 				WWASSERT(list);
 				DX8FVFCategoryContainer * container=list->Peek_Head();
@@ -2167,6 +2227,9 @@ static void Render_FVF_Category_Container_List_Delayed_Passes(FVFCategoryList& l
 
 void DX8MeshRendererClass::Flush(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw std::runtime_error("original mesh flush requires GPU translation");
+#else
 	int i;
 
 	WWPROFILE("DX8MeshRenderer::Flush");
@@ -2200,6 +2263,7 @@ void DX8MeshRendererClass::Flush(void)
 
 	DX8Wrapper::Set_Vertex_Buffer(NULL);
 	DX8Wrapper::Set_Index_Buffer(NULL,0);
+#endif
 }
 
 
@@ -2212,6 +2276,9 @@ void DX8MeshRendererClass::Add_To_Render_List(DecalMeshClass * decalmesh)
 
 void DX8MeshRendererClass::Render_Decal_Meshes(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw std::runtime_error("original decal mesh pass requires GPU translation");
+#else
 	DecalMeshClass * decal_mesh = visible_decal_meshes;
 	if (!decal_mesh) return;
 
@@ -2224,6 +2291,7 @@ void DX8MeshRendererClass::Render_Decal_Meshes(void)
 	visible_decal_meshes = NULL;
 
 	DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,0);
+#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -2275,10 +2343,3 @@ void DX8MeshRendererClass::Invalidate( bool shutdown)
 
 	texture_category_container_lists_rigid.Delete_All();
 }
-
-
-
-
-
-
-

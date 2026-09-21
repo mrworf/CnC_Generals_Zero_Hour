@@ -43,14 +43,12 @@
 #include "htree.h"
 #include "vp.h"
 #include "visrasterizer.h"
-#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8polygonrenderer.h"
+#include "dx8renderer.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "bwrender.h"
 #endif
 #include "camera.h"
-#if !defined(ZH_WW3D_CPU_ONLY)
-#include "dx8renderer.h"
-#endif
 #include "hashtemplate.h"
 
 
@@ -111,9 +109,7 @@ MeshModelClass::MeshModelClass(const MeshModelClass & that) :
 MeshModelClass::~MeshModelClass(void)
 {
 //	WWDEBUG_SAY(("Note: Mesh %s was never used\n",Get_Name()));
-#if !defined(ZH_WW3D_CPU_ONLY)
 	TheDX8MeshRenderer.Unregister_Mesh_Type(this);
-#endif
 
 	Reset(0,0,0);
 	REF_PTR_RELEASE(MatInfo);
@@ -132,9 +128,7 @@ MeshModelClass & MeshModelClass::operator = (const MeshModelClass & that)
 	if (this != &that) {
 		// Remove all polygon renderers, this will remove the mesh from the rendering system.
 		// The mesh will be initialized to rendering system the next time it is rendered.
-#if !defined(ZH_WW3D_CPU_ONLY)
 		TheDX8MeshRenderer.Unregister_Mesh_Type(this);
-#endif
 
 		MeshGeometryClass::operator = (that);
 
@@ -173,9 +167,7 @@ void MeshModelClass::Reset(int polycount,int vertcount,int passcount)
 
 	// Release everything we have and reset to initial state
 
-#if !defined(ZH_WW3D_CPU_ONLY)
 	TheDX8MeshRenderer.Unregister_Mesh_Type(this);
-#endif
 
 	MatInfo->Reset();
 	DefMatDesc->Reset(polycount,vertcount,passcount);
@@ -211,9 +203,7 @@ void MeshModelClass::Register_For_Rendering()
 		}
 	}
 
-#if !defined(ZH_WW3D_CPU_ONLY)
 	TheDX8MeshRenderer.Register_Mesh_Type(this);
-#endif
 }
 
 void MeshModelClass::Replace_Texture(TextureClass* texture,TextureClass* new_texture)

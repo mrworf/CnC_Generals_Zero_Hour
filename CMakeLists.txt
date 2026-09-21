@@ -268,6 +268,11 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/camera.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/rinfo.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8fvf.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8vertexbuffer.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8indexbuffer.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8polygonrenderer.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8renderer.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/stripoptimizer.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/scene.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/light.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matpass.cpp
@@ -1913,6 +1918,12 @@ if(ZH_BUILD_TESTS)
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/rinfo.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8fvf.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/mesh.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/meshmdl.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8vertexbuffer.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8indexbuffer.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8renderer.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8polygonrenderer.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/stripoptimizer.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/wwstring.cpp")
   set_tests_properties(original_w3d_cpu_identity PROPERTIES LABELS "original-rendering;source-identity")
   add_test(NAME original_w3d_provider_removal COMMAND "${Python3_EXECUTABLE}"

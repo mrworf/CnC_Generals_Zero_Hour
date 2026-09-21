@@ -180,9 +180,15 @@ public:
 	void Copy(unsigned short* indices,unsigned start_index,unsigned index_count);
 
 	inline IDirect3DIndexBuffer8* Get_DX8_Index_Buffer()	{ return index_buffer; }
+#if defined(ZH_WW3D_CPU_ONLY)
+	unsigned short* Get_CPU_Index_Buffer() { return cpu_index_buffer; }
+#endif
 	
 private:
 	IDirect3DIndexBuffer8*	index_buffer;		// actual dx8 index buffer
+#if defined(ZH_WW3D_CPU_ONLY)
+	unsigned short*		cpu_index_buffer;
+#endif
 };
 
 
@@ -207,4 +213,3 @@ protected:
 extern int IndexBufferExceptionFunc(void);
 
 #endif //DX8INDEXBUFFER_H
-

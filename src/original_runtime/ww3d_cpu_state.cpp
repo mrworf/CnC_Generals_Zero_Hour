@@ -20,6 +20,8 @@ bool WW3D::MungeSortOnLoad = false;
 bool WW3D::OverbrightModifyOnLoad = false;
 WW3D::PrelitModeEnum WW3D::PrelitMode = WW3D::PRELIT_MODE_LIGHTMAP_MULTI_PASS;
 float WW3D::DefaultNativeScreenSize = 1.0f;
+WW3D::NPatchesGapFillingModeEnum WW3D::NPatchesGapFillingMode = WW3D::NPATCHES_GAP_FILLING_ENABLED;
+unsigned WW3D::NPatchesLevel = 1;
 
 FileFactoryClass *_TheFileFactory = nullptr;
 RawFileFactoryClass *_TheWritingFileFactory = nullptr;

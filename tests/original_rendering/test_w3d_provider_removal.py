@@ -16,7 +16,8 @@ def main() -> int:
     parser.add_argument("--executable", type=Path, required=True)
     args = parser.parse_args()
     original = json.loads(args.compile_commands.read_text())
-    for name in ("texture", "rinfo", "dx8fvf", "mesh"):
+    for name in ("texture", "rinfo", "dx8fvf", "mesh", "meshmdl", "dx8vertexbuffer",
+                 "dx8indexbuffer", "dx8renderer", "dx8polygonrenderer", "stripoptimizer"):
         source = f"GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/{name}.cpp"
         assert any(item["file"].endswith(source) for item in original)
         with tempfile.TemporaryDirectory(prefix="m22-identity-") as tmp:

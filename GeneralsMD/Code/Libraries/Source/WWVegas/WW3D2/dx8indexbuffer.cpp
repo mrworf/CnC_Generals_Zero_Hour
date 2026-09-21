@@ -40,10 +40,110 @@
 
 #include "dx8indexbuffer.h"
 #include "dx8wrapper.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8caps.h"
-#include "sphere.h"
 #include "thread.h"
+#endif
+#include "sphere.h"
 #include "wwmemlog.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <stdexcept>
+#endif
+
+#if defined(ZH_WW3D_CPU_ONLY)
+static int _IndexBufferCount;
+static int _IndexBufferTotalIndices;
+static int _IndexBufferTotalSize;
+
+IndexBufferClass::IndexBufferClass(unsigned type_, unsigned short count)
+    : engine_refs(0), index_count(count), type(type_)
+{
+    if (!count) throw std::runtime_error("invalid original index buffer count");
+    ++_IndexBufferCount;
+    _IndexBufferTotalIndices += count;
+    _IndexBufferTotalSize += count * sizeof(unsigned short);
+}
+IndexBufferClass::~IndexBufferClass()
+{
+    --_IndexBufferCount;
+    _IndexBufferTotalIndices -= index_count;
+    _IndexBufferTotalSize -= index_count * sizeof(unsigned short);
+}
+unsigned IndexBufferClass::Get_Total_Buffer_Count() { return _IndexBufferCount; }
+unsigned IndexBufferClass::Get_Total_Allocated_Indices() { return _IndexBufferTotalIndices; }
+unsigned IndexBufferClass::Get_Total_Allocated_Memory() { return _IndexBufferTotalSize; }
+void IndexBufferClass::Add_Engine_Ref() const { ++engine_refs; }
+void IndexBufferClass::Release_Engine_Ref() const
+{
+    if (!engine_refs) throw std::runtime_error("stale original index buffer engine reference");
+    --engine_refs;
+}
+void IndexBufferClass::Copy(unsigned int* values, unsigned start, unsigned count)
+{
+    if (!values || start > index_count || count > index_count - start)
+        throw std::runtime_error("invalid original index copy range");
+    if (start) {
+        AppendLockClass lock(this, start, count);
+        for (unsigned i = 0; i < count; ++i) lock.Get_Index_Array()[i] = static_cast<unsigned short>(values[i]);
+    } else {
+        WriteLockClass lock(this);
+        for (unsigned i = 0; i < count; ++i) lock.Get_Index_Array()[i] = static_cast<unsigned short>(values[i]);
+    }
+}
+void IndexBufferClass::Copy(unsigned short* values, unsigned start, unsigned count)
+{
+    if (!values || start > index_count || count > index_count - start)
+        throw std::runtime_error("invalid original index copy range");
+    if (start) {
+        AppendLockClass lock(this, start, count);
+        for (unsigned i = 0; i < count; ++i) lock.Get_Index_Array()[i] = values[i];
+    } else {
+        WriteLockClass lock(this);
+        for (unsigned i = 0; i < count; ++i) lock.Get_Index_Array()[i] = values[i];
+    }
+}
+IndexBufferClass::WriteLockClass::WriteLockClass(IndexBufferClass* buffer, int)
+    : index_buffer(buffer), indices(nullptr)
+{
+	if (!buffer || buffer->Engine_Refs() ||
+		(buffer->Type() != BUFFER_TYPE_DX8 && buffer->Type() != BUFFER_TYPE_SORTING))
+		throw std::runtime_error("invalid original index buffer lock");
+    buffer->Add_Ref();
+    indices = buffer->Type() == BUFFER_TYPE_DX8
+        ? static_cast<DX8IndexBufferClass*>(buffer)->Get_CPU_Index_Buffer()
+        : static_cast<SortingIndexBufferClass*>(buffer)->index_buffer;
+}
+IndexBufferClass::WriteLockClass::~WriteLockClass() { index_buffer->Release_Ref(); }
+IndexBufferClass::AppendLockClass::AppendLockClass(IndexBufferClass* buffer,
+    unsigned start, unsigned range) : index_buffer(buffer), indices(nullptr)
+{
+	if (!buffer || buffer->Engine_Refs() ||
+		(buffer->Type() != BUFFER_TYPE_DX8 && buffer->Type() != BUFFER_TYPE_SORTING) ||
+		start > buffer->Get_Index_Count() ||
+        range > buffer->Get_Index_Count() - start)
+        throw std::runtime_error("invalid original index append lock");
+    buffer->Add_Ref();
+    indices = (buffer->Type() == BUFFER_TYPE_DX8
+        ? static_cast<DX8IndexBufferClass*>(buffer)->Get_CPU_Index_Buffer()
+        : static_cast<SortingIndexBufferClass*>(buffer)->index_buffer) + start;
+}
+IndexBufferClass::AppendLockClass::~AppendLockClass() { index_buffer->Release_Ref(); }
+DX8IndexBufferClass::DX8IndexBufferClass(unsigned short count, UsageType usage)
+    : IndexBufferClass(BUFFER_TYPE_DX8, count), index_buffer(nullptr), cpu_index_buffer(nullptr)
+{
+    if (usage != USAGE_DEFAULT)
+        throw std::runtime_error("original dynamic/NPatches index GPU edge unavailable");
+    cpu_index_buffer = W3DNEWARRAY unsigned short[count]{};
+}
+DX8IndexBufferClass::~DX8IndexBufferClass() { delete[] cpu_index_buffer; }
+SortingIndexBufferClass::SortingIndexBufferClass(unsigned short count)
+    : IndexBufferClass(BUFFER_TYPE_SORTING, count)
+{
+    index_buffer = W3DNEWARRAY unsigned short[count]{};
+}
+SortingIndexBufferClass::~SortingIndexBufferClass() { delete[] index_buffer; }
+
+#else // Original Windows device-backed buffer implementation follows unchanged.
 
 #define DEFAULT_IB_SIZE 5000
 
@@ -549,3 +649,4 @@ int IndexBufferExceptionFunc(void)
 	b += _IndexBufferTotalIndices;
 	return b;
 }
+#endif // ZH_WW3D_CPU_ONLY

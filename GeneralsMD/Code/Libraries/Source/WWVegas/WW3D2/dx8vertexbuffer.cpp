@@ -42,10 +42,97 @@
 #include "dx8vertexbuffer.h"
 #include "dx8wrapper.h"
 #include "dx8fvf.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8caps.h"
 #include "thread.h"
-#include "wwmemlog.h"
 #include <D3dx8core.h>
+#endif
+#include "wwmemlog.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <stdexcept>
+#endif
+
+#if defined(ZH_WW3D_CPU_ONLY)
+// The original class owns the CPU upload bytes; only its D3D allocation and
+// lock operations are replaced at the physical device boundary.
+static int _VertexBufferCount;
+static int _VertexBufferTotalVertices;
+static int _VertexBufferTotalSize;
+
+VertexBufferClass::VertexBufferClass(unsigned type_, unsigned FVF, unsigned short count, unsigned size)
+    : type(type_), VertexCount(count), engine_refs(0), fvf_info(nullptr)
+{
+    if (!count || ((FVF == 0) == (size == 0)))
+        throw std::runtime_error("invalid original vertex buffer layout/count");
+    fvf_info = W3DNEW FVFInfoClass(FVF, size);
+    ++_VertexBufferCount;
+    _VertexBufferTotalVertices += count;
+    _VertexBufferTotalSize += count * fvf_info->Get_FVF_Size();
+}
+VertexBufferClass::~VertexBufferClass()
+{
+    --_VertexBufferCount;
+    _VertexBufferTotalVertices -= VertexCount;
+    _VertexBufferTotalSize -= VertexCount * fvf_info->Get_FVF_Size();
+    delete fvf_info;
+}
+unsigned VertexBufferClass::Get_Total_Buffer_Count() { return _VertexBufferCount; }
+unsigned VertexBufferClass::Get_Total_Allocated_Vertices() { return _VertexBufferTotalVertices; }
+unsigned VertexBufferClass::Get_Total_Allocated_Memory() { return _VertexBufferTotalSize; }
+void VertexBufferClass::Add_Engine_Ref() const { ++engine_refs; }
+void VertexBufferClass::Release_Engine_Ref() const
+{
+    if (!engine_refs) throw std::runtime_error("stale original vertex buffer engine reference");
+    --engine_refs;
+}
+VertexBufferClass::WriteLockClass::WriteLockClass(VertexBufferClass* buffer, int)
+    : VertexBufferLockClass(buffer)
+{
+	if (!buffer || buffer->Engine_Refs() ||
+		(buffer->Type() != BUFFER_TYPE_DX8 && buffer->Type() != BUFFER_TYPE_SORTING))
+        throw std::runtime_error("original vertex buffer locked while in use");
+    buffer->Add_Ref();
+	Vertices = buffer->Type() == BUFFER_TYPE_DX8
+		? static_cast<DX8VertexBufferClass*>(buffer)->Get_CPU_Vertex_Buffer()
+		: static_cast<void*>(static_cast<SortingVertexBufferClass*>(buffer)->VertexBuffer);
+}
+VertexBufferClass::WriteLockClass::~WriteLockClass() { VertexBuffer->Release_Ref(); }
+VertexBufferClass::AppendLockClass::AppendLockClass(VertexBufferClass* buffer,
+    unsigned start, unsigned range) : VertexBufferLockClass(buffer)
+{
+	if (!buffer || buffer->Engine_Refs() ||
+		(buffer->Type() != BUFFER_TYPE_DX8 && buffer->Type() != BUFFER_TYPE_SORTING) ||
+		start > buffer->Get_Vertex_Count() ||
+        range > buffer->Get_Vertex_Count() - start)
+        throw std::runtime_error("invalid original vertex append lock");
+    buffer->Add_Ref();
+	Vertices = buffer->Type() == BUFFER_TYPE_DX8
+		? static_cast<DX8VertexBufferClass*>(buffer)->Get_CPU_Vertex_Buffer() +
+			start * buffer->FVF_Info().Get_FVF_Size()
+		: static_cast<void*>(static_cast<SortingVertexBufferClass*>(buffer)->VertexBuffer + start);
+}
+VertexBufferClass::AppendLockClass::~AppendLockClass() { VertexBuffer->Release_Ref(); }
+DX8VertexBufferClass::DX8VertexBufferClass(unsigned FVF, unsigned short count,
+    UsageType usage, unsigned size)
+    : VertexBufferClass(BUFFER_TYPE_DX8, FVF, count, size), VertexBuffer(nullptr), CpuVertexBuffer(nullptr)
+{
+    Create_Vertex_Buffer(usage);
+}
+DX8VertexBufferClass::~DX8VertexBufferClass() { delete[] CpuVertexBuffer; }
+void DX8VertexBufferClass::Create_Vertex_Buffer(UsageType usage)
+{
+    if (usage != USAGE_DEFAULT)
+        throw std::runtime_error("original dynamic/NPatches vertex GPU edge unavailable");
+    CpuVertexBuffer = W3DNEWARRAY unsigned char[VertexCount * FVF_Info().Get_FVF_Size()]{};
+}
+SortingVertexBufferClass::SortingVertexBufferClass(unsigned short count)
+    : VertexBufferClass(BUFFER_TYPE_SORTING, dynamic_fvf_type, count)
+{
+    VertexBuffer = W3DNEWARRAY VertexFormatXYZNDUV2[count]{};
+}
+SortingVertexBufferClass::~SortingVertexBufferClass() { delete[] VertexBuffer; }
+
+#else // Original Windows device-backed buffer implementation follows unchanged.
 
 #define DEFAULT_VB_SIZE 5000
 
@@ -907,4 +994,4 @@ unsigned short DynamicVBAccessClass::Get_Default_Vertex_Count(void)
 {
 	return _DynamicDX8VertexBufferSize;
 }
-
+#endif // ZH_WW3D_CPU_ONLY

@@ -49,6 +49,15 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "vector4.h"
 
+// These are original WW3D buffer kind identifiers, not D3D device types.
+enum {
+	BUFFER_TYPE_DX8,
+	BUFFER_TYPE_SORTING,
+	BUFFER_TYPE_DYNAMIC_DX8,
+	BUFFER_TYPE_DYNAMIC_SORTING,
+	BUFFER_TYPE_INVALID
+};
+
 // CPU color conversion retains the original ARGB component ordering; no DX8
 // device state is exposed in this configuration.
 class DX8Wrapper

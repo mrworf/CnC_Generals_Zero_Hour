@@ -10,6 +10,9 @@
 #include "camera.h"
 #include "rinfo.h"
 #include "dx8fvf.h"
+#include "dx8vertexbuffer.h"
+#include "dx8indexbuffer.h"
+#include "dx8renderer.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -30,13 +33,15 @@ template <typename T> void chunk(ChunkSaveClass &writer, unsigned id, const T &v
 	assert(writer.End_Chunk());
 }
 
-void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant = false)
+void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant = false,
+	bool skin_variant = false)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_MESH));
 	W3dMeshHeader3Struct header{};
 	header.Version = W3D_CURRENT_MESH_VERSION;
-	std::strcpy(header.MeshName, tread_variant ? "TREADSL01" :
+	std::strcpy(header.MeshName, skin_variant ? "SKIN01" : tread_variant ? "TREADSL01" :
 		(supply_variant ? "SUPPLY01" : "TRIANGLE"));
+	if (skin_variant) header.Attributes = W3D_MESH_FLAG_GEOMETRY_TYPE_SKIN;
 	std::strcpy(header.ContainerName, "TEST");
 	header.NumVertices = 3;
 	header.NumTris = 1;
@@ -59,6 +64,11 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 	triangle.Vindex[2] = 2;
 	triangle.Normal = {0, 0, 1};
 	chunk(writer, W3D_CHUNK_TRIANGLES, triangle);
+	if (skin_variant)
+	{
+		W3dVertInfStruct links[3]{};
+		chunk(writer, W3D_CHUNK_VERTEX_INFLUENCES, links);
+	}
 	W3dMaterialInfoStruct material_info{};
 	material_info.PassCount = 1;
 	material_info.ShaderCount = 1;
@@ -182,6 +192,7 @@ int main(int argc, char **argv)
 	make_animation(writer);
 	make_mesh(writer, supply_variant);
 	if (supply_variant) make_mesh(writer, true, true);
+	else make_mesh(writer, false, false, true);
 	make_hlod(writer, supply_variant);
 	const int size = file.Size();
 	file.Close();
@@ -220,6 +231,40 @@ int main(int argc, char **argv)
 	catch (const std::runtime_error &) { visible_device_rejected = true; }
 	assert(visible_device_rejected);
 	MeshModelClass *model = mesh->Peek_Model();
+	TheDX8MeshRenderer.Init();
+	model->Register_For_Rendering();
+	assert(model->Has_Polygon_Renderers());
+	assert(DX8FVFCategoryContainer::Define_FVF(model, true) == DX8_FVF_XYZNDUV2);
+	assert(VertexBufferClass::Get_Total_Buffer_Count() > 0);
+	assert(IndexBufferClass::Get_Total_Buffer_Count() > 0);
+	// Authored sorting and rigid registrations use different original category
+	// decisions; the second route must allocate the original DX8-kind CPU bytes.
+	TheDX8MeshRenderer.Unregister_Mesh_Type(model);
+	model->Set_Flag(MeshGeometryClass::SORT, false);
+	model->Register_For_Rendering();
+	assert(model->Has_Polygon_Renderers());
+	assert(DX8FVFCategoryContainer::Define_FVF(model, true) == DX8_FVF_XYZN);
+	assert(VertexBufferClass::Get_Total_Buffer_Count() > 1);
+	assert(manager.Render_Obj_Exists("TEST.SKIN01"));
+	RenderObjClass *skin_object = manager.Create_Render_Obj("TEST.SKIN01");
+	assert(skin_object != nullptr && skin_object->Class_ID() == RenderObjClass::CLASSID_MESH);
+	auto *skin_model = static_cast<MeshClass *>(skin_object)->Peek_Model();
+	assert(skin_model->Get_Flag(MeshGeometryClass::SKIN));
+	skin_model->Register_For_Rendering();
+	assert(skin_model->Has_Polygon_Renderers());
+	TheDX8MeshRenderer.Invalidate();
+	TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+	assert(VertexBufferClass::Get_Total_Buffer_Count() == 0);
+	assert(IndexBufferClass::Get_Total_Buffer_Count() == 0);
+	assert(!model->Has_Polygon_Renderers() && !skin_model->Has_Polygon_Renderers());
+	model->Register_For_Rendering();
+	skin_model->Register_For_Rendering();
+	assert(model->Has_Polygon_Renderers() && skin_model->Has_Polygon_Renderers());
+	skin_object->Release_Ref();
+	bool gpu_edge_rejected = false;
+	try { TheDX8MeshRenderer.Flush(); }
+	catch (const std::runtime_error &) { gpu_edge_rejected = true; }
+	assert(gpu_edge_rejected);
 	FVFInfoClass original_layout(DX8_FVF_XYZNUV2);
 	assert(original_layout.Get_FVF_Size() == 40);
 	assert(original_layout.Get_Location_Offset() == 0);
@@ -232,6 +277,52 @@ int main(int argc, char **argv)
 	try { FVFInfoClass invalid(0x002 | 0x900); (void)invalid; }
 	catch (const std::runtime_error &) { invalid_layout_rejected = true; }
 	assert(invalid_layout_rejected);
+	const unsigned buffers_before = VertexBufferClass::Get_Total_Buffer_Count();
+	const unsigned index_buffers_before = IndexBufferClass::Get_Total_Buffer_Count();
+	auto *vertex_buffer = NEW_REF(DX8VertexBufferClass, (DX8_FVF_XYZNUV2, 4));
+	auto *index_buffer = NEW_REF(DX8IndexBufferClass, (6));
+	assert(VertexBufferClass::Get_Total_Buffer_Count() == buffers_before + 1);
+	assert(IndexBufferClass::Get_Total_Buffer_Count() == index_buffers_before + 1);
+	{
+		VertexBufferClass::AppendLockClass lock(vertex_buffer, 2, 2);
+		auto *vertices = static_cast<unsigned char *>(lock.Get_Vertex_Array());
+		assert(vertices == vertex_buffer->Get_CPU_Vertex_Buffer() + 80);
+		vertices[0] = 17;
+		IndexBufferClass::AppendLockClass indices(index_buffer, 3, 3);
+		indices.Get_Index_Array()[0] = 2;
+	}
+	assert(vertex_buffer->Get_CPU_Vertex_Buffer()[80] == 17);
+	assert(index_buffer->Get_CPU_Index_Buffer()[3] == 2);
+	vertex_buffer->Add_Engine_Ref();
+	bool stale_lock_rejected = false;
+	try { VertexBufferClass::WriteLockClass invalid(vertex_buffer); }
+	catch (const std::runtime_error &) { stale_lock_rejected = true; }
+	assert(stale_lock_rejected);
+	vertex_buffer->Release_Engine_Ref();
+	bool bad_append_rejected = false;
+	try { VertexBufferClass::AppendLockClass invalid(vertex_buffer, 3, 2); }
+	catch (const std::runtime_error &) { bad_append_rejected = true; }
+	assert(bad_append_rejected);
+	bool unsupported_usage_rejected = false;
+	try { auto *invalid = NEW_REF(DX8VertexBufferClass,
+		(DX8_FVF_XYZ, 3, DX8VertexBufferClass::USAGE_NPATCHES));
+		invalid->Release_Ref(); }
+	catch (const std::runtime_error &) { unsupported_usage_rejected = true; }
+	assert(unsupported_usage_rejected);
+	unsupported_usage_rejected = false;
+	try { auto *invalid = NEW_REF(DX8IndexBufferClass,
+		(3, DX8IndexBufferClass::USAGE_DYNAMIC));
+		invalid->Release_Ref(); }
+	catch (const std::runtime_error &) { unsupported_usage_rejected = true; }
+	assert(unsupported_usage_rejected);
+	bad_append_rejected = false;
+	try { IndexBufferClass::AppendLockClass invalid(index_buffer, 5, 2); }
+	catch (const std::runtime_error &) { bad_append_rejected = true; }
+	assert(bad_append_rejected);
+	vertex_buffer->Release_Ref();
+	index_buffer->Release_Ref();
+	assert(VertexBufferClass::Get_Total_Buffer_Count() == buffers_before);
+	assert(IndexBufferClass::Get_Total_Buffer_Count() == index_buffers_before);
 	invalid_layout_rejected = false;
 	try { FVFInfoClass invalid(0x100); (void)invalid; }
 	catch (const std::runtime_error &) { invalid_layout_rejected = true; }
@@ -361,5 +452,8 @@ int main(int argc, char **argv)
 	RAMFileClass invalid_input(invalid_bytes.data(), invalid_size);
 	assert(!manager.Load_3D_Assets(invalid_input));
 	assert(!manager.Render_Obj_Exists("TEST.TRIANGLE"));
+	TheDX8MeshRenderer.Shutdown();
+	assert(VertexBufferClass::Get_Total_Buffer_Count() == 0);
+	assert(IndexBufferClass::Get_Total_Buffer_Count() == 0);
 	return 0;
 }
