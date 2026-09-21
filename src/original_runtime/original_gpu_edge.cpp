@@ -351,21 +351,37 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
 {
     const auto source_state=DX8Wrapper::Snapshot_Source_State();
     const auto source_lighting=source_state.render.find(D3DRS_LIGHTING);
+    std::optional<AppliedState> lit_state;
     if (source_lighting!=source_state.render.end() && source_lighting->second==1) {
-        (void)map_applied_state(source_fvf);
-        throw std::runtime_error("original lit physical state requires category-issued light environment (M22 06)");
+        lit_state=map_applied_state(source_fvf);
+        if (!lit_state->light_environment_selected)
+            throw std::runtime_error("original lighting requires selected source light environment");
+        if (source_fvf!=DX8_FVF_XYZN && source_fvf!=DX8_FVF_XYZNUV1 &&
+            source_fvf!=DX8_FVF_XYZNUV2)
+            throw std::runtime_error("original lit physical FVF has no exact shader input variant");
+        if (topology!=renderer::PrimitiveTopology::triangle_list &&
+            topology!=renderer::PrimitiveTopology::triangle_strip)
+            throw std::runtime_error("original lit indexed primitive topology is unsupported");
+        for (unsigned slot=0;slot<4;++slot)
+            if (lit_state->light_enabled[slot] &&
+                lit_state->lights[slot].Type!=D3DLIGHT_POINT &&
+                lit_state->lights[slot].Type!=D3DLIGHT_DIRECTIONAL)
+                throw std::runtime_error("original lit physical light type is unsupported");
     }
     release_prepared_state();
-    const AppliedState mapped=map_applied_state(source_fvf);
+    const AppliedState mapped=lit_state ? *lit_state : map_applied_state(source_fvf);
     if (topology!=renderer::PrimitiveTopology::triangle_list &&
         topology!=renderer::PrimitiveTopology::triangle_strip)
         throw std::runtime_error("original indexed primitive topology is unsupported");
     const char* vertex_variant=nullptr;
     if (source_fvf==DX8_FVF_XYZDUV1) vertex_variant="renderer/original_applied_d1.vert";
     else if (source_fvf==DX8_FVF_XYZDUV2) vertex_variant="renderer/original_applied_d2.vert";
-    else if (source_fvf==DX8_FVF_XYZN) vertex_variant="renderer/original_applied_n0.vert";
-    else if (source_fvf==DX8_FVF_XYZNUV1) vertex_variant="renderer/original_applied_n1.vert";
-    else if (source_fvf==DX8_FVF_XYZNUV2) vertex_variant="renderer/original_applied_n2.vert";
+    else if (source_fvf==DX8_FVF_XYZN) vertex_variant=mapped.lighting?
+        "renderer/original_applied_n0_lit.vert":"renderer/original_applied_n0.vert";
+    else if (source_fvf==DX8_FVF_XYZNUV1) vertex_variant=mapped.lighting?
+        "renderer/original_applied_n1_lit.vert":"renderer/original_applied_n1.vert";
+    else if (source_fvf==DX8_FVF_XYZNUV2) vertex_variant=mapped.lighting?
+        "renderer/original_applied_n2_lit.vert":"renderer/original_applied_n2.vert";
     else throw std::runtime_error("original physical FVF has no exact shader input variant: "+
         std::to_string(source_fvf));
     for (const auto& stage:mapped.stages)
@@ -392,6 +408,32 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
     matrix(D3DTS_WORLD,vertex.world);
     matrix(D3DTS_VIEW,vertex.view);
     matrix(D3DTS_PROJECTION,vertex.projection);
+    if (mapped.lighting) {
+        vertex.lit_diffuse=mapped.diffuse;
+        vertex.lit_ambient=mapped.ambient;
+        vertex.lit_specular=mapped.specular;
+        vertex.lit_specular[3]=mapped.power;
+        vertex.lit_emissive=mapped.emissive;
+        vertex.lit_global_ambient=mapped.global_ambient;
+        vertex.lit_switches={mapped.normalize_normals?1:0,mapped.local_viewer?1:0,
+            mapped.specular_enabled?1:0,mapped.color_vertex?1:0};
+        for (unsigned slot=0;slot<4;++slot) {
+            if (!mapped.light_enabled[slot]) continue;
+            const auto& light=mapped.lights[slot];
+            if (light.Type!=D3DLIGHT_POINT && light.Type!=D3DLIGHT_DIRECTIONAL)
+                throw std::runtime_error("original lit physical light type is unsupported");
+            vertex.light_position_range[slot]={light.Position.x,light.Position.y,
+                light.Position.z,light.Range};
+            vertex.light_direction_attenuation0[slot]={light.Direction.x,light.Direction.y,
+                light.Direction.z,light.Attenuation0};
+            vertex.light_diffuse_attenuation1[slot]={light.Diffuse.r,light.Diffuse.g,
+                light.Diffuse.b,light.Attenuation1};
+            vertex.light_ambient_attenuation2[slot]={light.Ambient.r,light.Ambient.g,
+                light.Ambient.b,light.Attenuation2};
+            vertex.light_specular_type[slot]={light.Specular.r,light.Specular.g,
+                light.Specular.b,static_cast<float>(light.Type)};
+        }
+    }
     FragmentUniform fragment;
     fragment.diffuse=mapped.diffuse;
     fragment.ambient=mapped.ambient;

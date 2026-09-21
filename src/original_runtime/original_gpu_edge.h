@@ -75,6 +75,16 @@ public:
         std::array<std::int32_t,4> coordinate_modes{};
         std::array<std::int32_t,4> uv_indices{};
         std::array<std::int32_t,4> transform_flags{};
+        // Only the original bounded light/material snapshot is translated here.
+        // Appended fields preserve the existing unlit uniform prefix.
+        std::array<float,4> lit_diffuse{},lit_ambient{},lit_specular{},lit_emissive{};
+        std::array<float,4> lit_global_ambient{};
+        std::array<std::int32_t,4> lit_switches{}; // normalize, local viewer, specular, color vertex
+        std::array<std::array<float,4>,4> light_position_range{};
+        std::array<std::array<float,4>,4> light_direction_attenuation0{};
+        std::array<std::array<float,4>,4> light_diffuse_attenuation1{};
+        std::array<std::array<float,4>,4> light_ambient_attenuation2{};
+        std::array<std::array<float,4>,4> light_specular_type{}; // 0 inactive, 1 point, 3 directional
     };
     struct alignas(16) FragmentUniform {
         std::array<float,4> diffuse{}, ambient{}, specular{}, emissive{};

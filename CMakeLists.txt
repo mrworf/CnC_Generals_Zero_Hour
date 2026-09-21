@@ -923,6 +923,19 @@ foreach(fvf_variant IN ITEMS d1 d2 n0 n1 n2)
     VERBATIM)
   list(APPEND ZH_RENDERER_SPIRV "${fvf_output}")
 endforeach()
+foreach(fvf_variant IN ITEMS n0 n1 n2)
+  string(TOUPPER "${fvf_variant}" fvf_define)
+  set(fvf_output "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/renderer/original_applied_${fvf_variant}_lit.vert.spv")
+  add_custom_command(
+    OUTPUT "${fvf_output}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/renderer"
+    COMMAND "${ZH_GLSLC_EXECUTABLE}" -DORIGINAL_FVF_${fvf_define} -DORIGINAL_LIT
+      "${CMAKE_CURRENT_SOURCE_DIR}/shaders/renderer/original_applied.vert" -o "${fvf_output}"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/renderer/original_applied.vert"
+    COMMENT "Compiling original source lit FVF ${fvf_variant} vertex shader"
+    VERBATIM)
+  list(APPEND ZH_RENDERER_SPIRV "${fvf_output}")
+endforeach()
 add_custom_target(zh_renderer_shaders ALL DEPENDS ${ZH_RENDERER_SPIRV})
 add_dependencies(zh_renderer_sdl_gpu zh_renderer_shaders)
 
@@ -1953,10 +1966,12 @@ if(ZH_BUILD_TESTS)
   target_include_directories(original_w3d_shader_source_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
-    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug")
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad")
   target_compile_options(original_w3d_shader_source_tests PRIVATE -fpermissive)
   target_compile_definitions(original_w3d_shader_source_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
   target_link_libraries(original_w3d_shader_source_tests PRIVATE
@@ -1972,10 +1987,12 @@ if(ZH_BUILD_TESTS)
     target_include_directories(original_w3d_shader_gpu_acceptance PRIVATE
       "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
       "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
       "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
       "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
       "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
-      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug")
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad")
     target_compile_options(original_w3d_shader_gpu_acceptance PRIVATE -fpermissive)
     target_compile_definitions(original_w3d_shader_gpu_acceptance PRIVATE
       NDEBUG ZH_WW3D_CPU_ONLY=1

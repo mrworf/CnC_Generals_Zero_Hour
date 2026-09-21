@@ -314,9 +314,16 @@ void DX8Wrapper::Set_Light(unsigned index,const D3DLIGHT8* light)
         if ((light->Type!=D3DLIGHT_DIRECTIONAL && light->Type!=D3DLIGHT_POINT) ||
             !color(light->Diffuse)||!color(light->Ambient)||!color(light->Specular)||
             !vector(light->Direction)||!vector(light->Position)||
+            (light->Type==D3DLIGHT_DIRECTIONAL &&
+                light->Direction.x*light->Direction.x+
+                light->Direction.y*light->Direction.y+
+                light->Direction.z*light->Direction.z<=0.0f)||
             (light->Type==D3DLIGHT_POINT && (!finite(light->Range)||light->Range<=0 ||
                 !finite(light->Attenuation0)||!finite(light->Attenuation1)||
-                !finite(light->Attenuation2))))
+                !finite(light->Attenuation2)||light->Attenuation0<0 ||
+                light->Attenuation1<0 || light->Attenuation2<0 ||
+                (light->Attenuation0==0 && light->Attenuation1==0 &&
+                 light->Attenuation2==0))))
             throw std::runtime_error("original source light outside bounded physical profile");
         state().lights[index]=*light;
     }

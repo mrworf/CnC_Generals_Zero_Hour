@@ -1,6 +1,8 @@
 #include "shader.h"
 #include "dx8wrapper.h"
 #include "vertmaterial.h"
+#include "lightenvironment.h"
+#include "matrix3d.h"
 #include "dx8fvf.h"
 #include "original_gpu_edge.h"
 #include "zh/renderer/recording_device.h"
@@ -171,9 +173,44 @@ int main()
 		bool lit_physical=false;
 		try { (void)edge.prepare_applied_state(DX8_FVF_XYZNUV1); }
 		catch (const std::runtime_error& error) {
-			lit_physical=std::string(error.what()).find("category-issued light")!=std::string::npos;
+			lit_physical=std::string(error.what()).find("selected source light environment")!=std::string::npos;
 		}
 		assert(lit_physical && device.resource_counts().total()>0);
+		DX8Wrapper::Set_Shader(untextured);
+		DX8Wrapper::Apply_Render_State_Changes();
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_LIGHTING,1);
+		LightEnvironmentClass lit_environment;
+		lit_environment.Reset(Vector3(0,0,0),Vector3(0.1f,0.2f,0.3f));
+		lit_environment.Pre_Render_Update(Matrix3D(true));
+		DX8Wrapper::Set_Light_Environment(&lit_environment);
+		device.fail_next_shader_create();
+		bool lit_create_failure=false;
+		try { (void)edge.prepare_applied_state(DX8_FVF_XYZNUV1); }
+		catch (const std::runtime_error& error) {
+			lit_create_failure=std::string(error.what()).find("shader creation failed")!=std::string::npos;
+		}
+		assert(lit_create_failure && device.resource_counts().total()==0 &&
+			DX8Wrapper::Snapshot_Source_State().light_environment_selected);
+		const auto lit_retry=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
+		edge.validate_prepared_state(lit_retry);
+		assert(device.resource_counts().total()>0);
+		bool unsupported_lit_fvf=false;
+		try { (void)edge.prepare_applied_state(DX8_FVF_XYZNDUV1); }
+		catch (const std::runtime_error& error) {
+			unsupported_lit_fvf=std::string(error.what()).find("exact shader input variant")!=std::string::npos;
+		}
+		assert(unsupported_lit_fvf && device.resource_counts().total()>0);
+		edge.validate_prepared_state(lit_retry);
+		device.fail_next_buffer_upload();
+		bool lit_upload_failure=false;
+		try { (void)edge.prepare_applied_state(DX8_FVF_XYZNUV1); }
+		catch (const std::runtime_error& error) {
+			lit_upload_failure=std::string(error.what()).find("uniform upload failed")!=std::string::npos;
+		}
+		assert(lit_upload_failure && device.resource_counts().total()==0);
+		const auto lit_upload_retry=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
+		edge.validate_prepared_state(lit_upload_retry);
+		DX8Wrapper::Set_Light_Environment(nullptr);
 		DX8Wrapper::Set_DX8_Render_State(D3DRS_LIGHTING,0);
 		D3DMATERIAL8 invalid_material{};
 		invalid_material.Power=std::numeric_limits<float>::quiet_NaN();
@@ -183,6 +220,8 @@ int main()
 		catch (const std::runtime_error& error) { bad_material=std::string(error.what()).find("material power")!=std::string::npos; }
 		assert(bad_material);
 		DX8Wrapper::Set_Material(nullptr);
+		DX8Wrapper::Apply_Render_State_Changes();
+		DX8Wrapper::Set_Shader(shader);
 		DX8Wrapper::Apply_Render_State_Changes();
 		const std::string initial=device.snapshot();
 		assert(initial.find("Set_DX8_Texture_Stage_State=0:1:4")!=std::string::npos);

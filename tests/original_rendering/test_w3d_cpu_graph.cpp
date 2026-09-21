@@ -37,7 +37,7 @@
 #include <array>
 
 #undef assert
-#define assert(condition) do { if (!(condition)) std::abort(); } while (false)
+#define assert(condition) do { if (!(condition)) { std::fprintf(stderr,"original W3D CPU invariant %s:%d: %s\n",__FILE__,__LINE__,#condition); std::abort(); } } while (false)
 
 namespace {
 class OwnedFile final : public FileClass {
@@ -504,18 +504,8 @@ int main(int argc, char **argv)
 			assert(light_selection!=std::string::npos && light_world!=std::string::npos &&
 				light_commands.find("draw pipeline=",light_world)!=std::string::npos);
 			render_info.light_environment=nullptr;
-			retry_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(true);
-			retry_mesh->Render(render_info);
-			const auto before_lit=recorder.snapshot().size();
-			assert(recorder.begin_pass(pass,"original lit category deferred to 06A3"));
-			bool lit_rejected=false;
-			try { TheDX8MeshRenderer.Flush(); }
-			catch (const std::runtime_error &error) {
-				lit_rejected=std::strstr(error.what(),"lit physical state")!=nullptr;
-			}
-			assert(lit_rejected && recorder.end_pass());
-			assert(recorder.snapshot().find("draw pipeline=",before_lit)==std::string::npos);
-			retry_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+			// Physical lit draws are enabled by 06A3B2, but original category-issued
+			// lit ordering/teardown is independently accepted in 06A3C.
 			assert(textures.owners==0);
 			TheDX8MeshRenderer.Invalidate();
 			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
@@ -915,7 +905,18 @@ int main(int argc, char **argv)
 		catch (const std::runtime_error&) { invalid_light_rejected=true; }
 		assert(invalid_light_rejected && DX8Wrapper::Snapshot_Source_State().lights[0].Type==
 			full_lights.lights[0].Type);
-		D3DLIGHT8 invalid_physical=full_lights.lights[0];
+		const auto point_source=std::find_if(mixed_lights.lights.begin(),
+			mixed_lights.lights.end(),[](const D3DLIGHT8& light){return light.Type==D3DLIGHT_POINT;});
+		assert(point_source!=mixed_lights.lights.end());
+		D3DLIGHT8 invalid_physical=*point_source;
+		invalid_physical.Attenuation0=invalid_physical.Attenuation1=
+			invalid_physical.Attenuation2=0;
+		invalid_light_rejected=false;
+		try { DX8Wrapper::Set_Light(0,&invalid_physical); }
+		catch (const std::runtime_error&) { invalid_light_rejected=true; }
+		assert(invalid_light_rejected && DX8Wrapper::Snapshot_Source_State().lights[0].Type==
+			full_lights.lights[0].Type);
+		invalid_physical=full_lights.lights[0];
 		invalid_physical.Type=D3DLIGHT_POINT;
 		invalid_physical.Range=-1.0f;
 		invalid_light_rejected=false;

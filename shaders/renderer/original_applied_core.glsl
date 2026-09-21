@@ -2,6 +2,7 @@ layout(location=0) in vec4 applied_diffuse;
 layout(location=1) in vec4 applied_tex0;
 layout(location=2) in vec4 applied_tex1;
 layout(location=3) in float view_depth;
+layout(location=4) in vec3 applied_specular;
 layout(location=0) out vec4 out_color;
 
 #if (ORIGINAL_STAGE_MASK & 1)
@@ -85,6 +86,8 @@ void main()
     }
     if (source.alpha_parameters.x!=0.0 && !alpha_pass(current.a,
         int(source.alpha_parameters.y),source.alpha_parameters.z)) discard;
+    // D3D adds the separate vertex specular term after texture stages, before fog.
+    current.rgb=clamp(current.rgb+applied_specular,0.0,1.0);
     if (source.fog_parameters.z!=0.0) {
         float amount=clamp((source.fog_parameters.y-view_depth)/
             (source.fog_parameters.y-source.fog_parameters.x),0.0,1.0);

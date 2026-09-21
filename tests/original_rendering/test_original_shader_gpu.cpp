@@ -9,6 +9,9 @@
 #include "ffactory.h"
 #include "wwfile.h"
 #include "ww3d.h"
+#include "vertmaterial.h"
+#include "light.h"
+#include "lightenvironment.h"
 #include "zh/platform/sdl_gpu_device.h"
 
 #include <SDL3/SDL.h>
@@ -33,6 +36,10 @@ struct SourceVertex { float position[3]; std::uint32_t diffuse; float uv[2]; };
 static_assert(sizeof(SourceVertex)==24);
 struct SourceVertex2 { float position[3]; std::uint32_t diffuse; float uv0[2],uv1[2]; };
 static_assert(sizeof(SourceVertex2)==32);
+struct LitVertex { float position[3],normal[3]; };
+struct LitVertex1 { float position[3],normal[3],uv[2]; };
+struct LitVertex2 { float position[3],normal[3],uv0[2],uv1[2]; };
+static_assert(sizeof(LitVertex)==24 && sizeof(LitVertex1)==32 && sizeof(LitVertex2)==40);
 
 class OwnedFile final : public FileClass {
 public:
@@ -414,6 +421,414 @@ void original_unlit_source_pixels(unsigned generation,unsigned width,unsigned he
     device.destroy(depth); device.destroy(color);
     check(device.wait_idle(),device.last_error());
 }
+
+void original_lit_source_pixels(unsigned generation)
+{
+    using namespace zh::renderer;
+    SdlGpuOptions options; options.shader_root=ZH_GPU_SHADER_DIR; options.debug=true;
+    SdlGpuDevice device(options);
+    check(device.capabilities().backend=="vulkan","original lit shader selected non-Vulkan backend");
+    TextureDesc target; target.width=160; target.height=120;
+    target.format=TextureFormat::rgba8; target.render_target=true;
+    const auto color=device.create_texture(target,"source lit target");
+    target.format=TextureFormat::depth24_stencil8;
+    const auto depth=device.create_texture(target,"source lit depth");
+    check(color && depth,device.last_error());
+    LightEnvironmentClass environment;
+    environment.Reset(Vector3(0,0,0),Vector3(0.1F,0.2F,0.3F));
+    environment.Pre_Render_Update(Matrix3D(true));
+    {
+        zh::original_runtime::OriginalGpuEdge edge(device);
+        ShaderClass shader;
+        shader.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+        shader.Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
+        auto* material=NEW_REF(VertexMaterialClass,());
+        material->Set_Lighting(true);
+        material->Set_Diffuse(Vector3(0.5F,0.4F,0.3F));
+        material->Set_Ambient(Vector3(0.2F,0.3F,0.4F));
+        material->Set_Emissive(Vector3(0.01F,0.02F,0.03F));
+        material->Set_Opacity(0.75F);
+        DX8Wrapper::Set_Material(material);
+        material->Release_Ref();
+        DX8Wrapper::Set_Shader(shader);
+        DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+        DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+        DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+        DX8Wrapper::Set_Light_Environment(&environment);
+        DX8Wrapper::Apply_Render_State_Changes();
+        auto* vb=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZN,3));
+        auto* ib=NEW_REF(DX8IndexBufferClass,(3));
+        const std::array<LitVertex,3> source_vertices{{
+            {{-0.8F,-0.8F,0.5F},{0,0,1}},
+            {{0.8F,-0.8F,0.5F},{0,0,1}},
+            {{0.0F,0.8F,0.5F},{0,0,1}},
+        }};
+        {
+            VertexBufferClass::WriteLockClass lock(vb);
+            check(vb->FVF_Info().Get_FVF_Size()==sizeof(LitVertex),"original lit FVF N0 stride differs");
+            std::memcpy(lock.Get_Vertex_Array(),source_vertices.data(),sizeof(source_vertices));
+            IndexBufferClass::WriteLockClass indices(ib);
+            for (unsigned i=0;i<3;++i) indices.Get_Index_Array()[i]=i;
+        }
+        const auto vertex=edge.bind_vertex(vb),index=edge.bind_index(ib);
+        vb->Release_Ref(); ib->Release_Ref();
+        RenderPassDesc pass;
+        pass.color_targets[0]=color; pass.color_target_count=1;
+        pass.depth_target=depth; pass.width=160; pass.height=120;
+        const auto draw_lit=[&](const char* label,BufferHandle selected_vertex,unsigned selected_fvf) {
+            const auto state=edge.prepare_applied_state(selected_fvf);
+            check(device.begin_pass(pass,label),device.last_error());
+            DrawDesc draw; draw.pipeline=state.pipeline;
+            draw.vertex_buffer=selected_vertex; draw.index_buffer=index;
+            draw.vertex_or_index_count=3; draw.index_element_size=IndexElementSize::uint16;
+            draw.vertex_bindings=state.vertex_bindings;
+            draw.fragment_bindings=state.fragment_bindings;
+            edge.validate_prepared_state(state);
+            check(device.draw(draw),device.last_error());
+            check(device.end_pass(),device.last_error());
+            const auto pixels=device.readback_rgba(color);
+            check(pixels.size()==160U*120U*4U,device.last_error());
+            const auto i=(60U*160U+80U)*4U;
+            return std::array<int,4>{pixels[i],pixels[i+1],pixels[i+2],pixels[i+3]};
+        };
+        const auto ambient=draw_lit("source original ambient-only lit physical probe",vertex,DX8_FVF_XYZN);
+        check(std::abs(ambient[0]-8)<=5 && std::abs(ambient[1]-20)<=5 &&
+              std::abs(ambient[2]-38)<=5 && std::abs(ambient[3]-191)<=5,
+              "original ambient/emissive/material source pixel differs");
+        LightClass directional(LightClass::DIRECTIONAL);
+        Matrix3D directional_transform(true);
+        directional_transform.Rotate_X(WWMATH_PI);
+        directional.Set_Transform(directional_transform);
+        directional.Set_Diffuse(Vector3(0.4F,0.5F,0.6F));
+        environment.Add_Light(directional);
+        environment.Pre_Render_Update(Matrix3D(true));
+        DX8Wrapper::Set_Light_Environment(&environment);
+        const auto lit=draw_lit("source original directional lit physical probe",vertex,DX8_FVF_XYZN);
+        const auto issued=DX8Wrapper::Snapshot_Source_State();
+        check(issued.light_enabled[0] && issued.lights[0].Type==D3DLIGHT_DIRECTIONAL &&
+              issued.lights[0].Direction.z<0.0F,
+              "original rotated directional source did not select the light");
+        const unsigned packed=issued.render.at(D3DRS_AMBIENT);
+        const std::array<float,3> global{{static_cast<float>((packed>>16)&255)/255.0F,
+            static_cast<float>((packed>>8)&255)/255.0F,
+            static_cast<float>(packed&255)/255.0F}};
+        const auto& source_light=issued.lights[0];
+        const std::array<float,3> expected{{
+            255.0F*(0.01F+0.2F*global[0]+0.5F*source_light.Diffuse.r),
+            255.0F*(0.02F+0.3F*global[1]+0.4F*source_light.Diffuse.g),
+            255.0F*(0.03F+0.4F*global[2]+0.3F*source_light.Diffuse.b),
+        }};
+        check(std::abs(lit[0]-expected[0])<=6 && std::abs(lit[1]-expected[1])<=6 &&
+              std::abs(lit[2]-expected[2])<=6 && std::abs(lit[3]-191)<=5,
+              "original directional diffuse/material source pixel differs");
+        LightClass point(LightClass::POINT);
+        point.Set_Position(Vector3(0,0,1));
+        point.Set_Diffuse(Vector3(0.6F,0.4F,0.2F));
+        point.Set_Ambient(Vector3(0.02F,0.03F,0.04F));
+        point.Set_Near_Attenuation_Range(0,2);
+        point.Set_Far_Attenuation_Range(2,10);
+        environment.Reset(Vector3(0,0,0),Vector3(0.1F,0.2F,0.3F));
+        environment.Add_Light(point);
+        environment.Pre_Render_Update(Matrix3D(true));
+        DX8Wrapper::Set_Light_Environment(&environment);
+        auto* point_vb=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZN,3));
+        auto point_vertices=source_vertices;
+        for (auto& selected:point_vertices) {
+            selected.position[0]*=0.125F;
+            selected.position[1]*=0.125F;
+        }
+        {
+            VertexBufferClass::WriteLockClass lock(point_vb);
+            std::memcpy(lock.Get_Vertex_Array(),point_vertices.data(),sizeof(point_vertices));
+        }
+        const auto point_vertex=edge.bind_vertex(point_vb);
+        point_vb->Release_Ref();
+        const auto point_pixel=draw_lit("source original point lit physical probe",point_vertex,DX8_FVF_XYZN);
+        const auto point_state=DX8Wrapper::Snapshot_Source_State();
+        const auto& point_light=point_state.lights[0];
+        check(point_light.Type==D3DLIGHT_POINT && point_state.light_enabled[0],
+              "original point light was not source-selected");
+        const float point_distance=std::fabs(point_light.Position.z-0.5F);
+        const float attenuation=1.0F/(point_light.Attenuation0+
+            point_light.Attenuation1*point_distance+
+            point_light.Attenuation2*point_distance*point_distance);
+        const auto global_point=point_state.render.at(D3DRS_AMBIENT);
+        const std::array<float,3> expected_point{{
+            255.0F*(0.01F+0.2F*(float((global_point>>16)&255)/255.0F+
+                point_light.Ambient.r*attenuation)+0.5F*point_light.Diffuse.r*attenuation),
+            255.0F*(0.02F+0.3F*(float((global_point>>8)&255)/255.0F+
+                point_light.Ambient.g*attenuation)+0.4F*point_light.Diffuse.g*attenuation),
+            255.0F*(0.03F+0.4F*(float(global_point&255)/255.0F+
+                point_light.Ambient.b*attenuation)+0.3F*point_light.Diffuse.b*attenuation),
+        }};
+        for (unsigned channel=0;channel<3;++channel)
+            check(std::abs(point_pixel[channel]-expected_point[channel])<=6,
+                  "original point attenuation/ambient/diffuse pixel differs");
+        D3DLIGHT8 out_of_range=point_light;
+        out_of_range.Range=0.1F;
+        DX8Wrapper::Set_Light(0,&out_of_range);
+        const auto clipped_point=draw_lit("source out-of-range point light physical probe",
+            point_vertex,DX8_FVF_XYZN);
+        const std::array<float,3> clipped_expected{{
+            255.0F*(0.01F+0.2F*float((global_point>>16)&255)/255.0F),
+            255.0F*(0.02F+0.3F*float((global_point>>8)&255)/255.0F),
+            255.0F*(0.03F+0.4F*float(global_point&255)/255.0F),
+        }};
+        for (unsigned channel=0;channel<3;++channel)
+            check(std::abs(clipped_point[channel]-clipped_expected[channel])<=5,
+                  "original source point range failed to suppress diffuse and ambient terms");
+        environment.Reset(Vector3(0,0,0),Vector3(0.02F,0.03F,0.04F));
+        for (unsigned light_index=0;light_index<4;++light_index) {
+            LightClass selected(LightClass::DIRECTIONAL);
+            selected.Set_Transform(directional_transform);
+            selected.Set_Diffuse(Vector3(0.10F,0.05F,0.025F));
+            environment.Add_Light(selected);
+        }
+        environment.Pre_Render_Update(Matrix3D(true));
+        DX8Wrapper::Set_Light_Environment(&environment);
+        const auto four=draw_lit("source four-light bound physical probe",vertex,DX8_FVF_XYZN);
+        const auto four_state=DX8Wrapper::Snapshot_Source_State();
+        const unsigned four_ambient=four_state.render.at(D3DRS_AMBIENT);
+        const std::array<float,3> four_expected{{
+            255.0F*(0.01F+0.2F*float((four_ambient>>16)&255)/255.0F),
+            255.0F*(0.02F+0.3F*float((four_ambient>>8)&255)/255.0F),
+            255.0F*(0.03F+0.4F*float(four_ambient&255)/255.0F),
+        }};
+        check(std::all_of(four_state.light_enabled.begin(),four_state.light_enabled.end(),
+            [](bool enabled){return enabled;}),"original four-light slots not all source enabled");
+        for (unsigned channel=0;channel<3;++channel) {
+            const auto diffuse=[](const D3DLIGHT8& light,unsigned component) {
+                return component==0?light.Diffuse.r:component==1?light.Diffuse.g:light.Diffuse.b;
+            };
+            float expected_four=four_expected[channel];
+            const float material_diffuse=channel==0?0.5F:channel==1?0.4F:0.3F;
+            for (const auto& light:four_state.lights)
+                expected_four+=255.0F*material_diffuse*diffuse(light,channel);
+            check(std::abs(four[channel]-expected_four)<=6,
+                  "original four-slot bounded directional pixel differs");
+        }
+        environment.Reset(Vector3(0,0,0),Vector3(0.05F,0.1F,0.15F));
+        environment.Add_Light(directional);
+        environment.Pre_Render_Update(Matrix3D(true));
+        DX8Wrapper::Set_Light_Environment(&environment);
+        auto* diagonal_vb=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZN,3));
+        auto diagonal_vertices=source_vertices;
+        for (auto& selected:diagonal_vertices) {
+            selected.normal[0]=0.70710678F;
+            selected.normal[2]=0.70710678F;
+        }
+        {
+            VertexBufferClass::WriteLockClass lock(diagonal_vb);
+            std::memcpy(lock.Get_Vertex_Array(),diagonal_vertices.data(),sizeof(diagonal_vertices));
+        }
+        const auto diagonal_vertex=edge.bind_vertex(diagonal_vb);
+        diagonal_vb->Release_Ref();
+        Matrix4x4 nonuniform(true);
+        nonuniform[0].X=2.0F;
+        DX8Wrapper::Set_Transform(D3DTS_WORLD,nonuniform);
+        DX8Wrapper::Set_DX8_Render_State(D3DRS_NORMALIZENORMALS,FALSE);
+        const auto unnormalized=draw_lit("source inverse-transpose unnormalized normal probe",
+            diagonal_vertex,DX8_FVF_XYZN);
+        DX8Wrapper::Set_DX8_Render_State(D3DRS_NORMALIZENORMALS,TRUE);
+        const auto normalized=draw_lit("source normalized inverse-transpose normal probe",
+            diagonal_vertex,DX8_FVF_XYZN);
+        const float incidence_raw=0.70710678F;
+        const float incidence_normalized=incidence_raw/std::sqrt(0.25F*0.5F+0.5F);
+        const auto normal_source=DX8Wrapper::Snapshot_Source_State();
+        const unsigned normal_ambient=normal_source.render.at(D3DRS_AMBIENT);
+        const float expected_raw=255.0F*(0.01F+0.2F*float((normal_ambient>>16)&255)/255.0F+
+            0.5F*normal_source.lights[0].Diffuse.r*incidence_raw);
+        const float expected_normalized=255.0F*(0.01F+0.2F*float((normal_ambient>>16)&255)/255.0F+
+            0.5F*normal_source.lights[0].Diffuse.r*incidence_normalized);
+        check(std::abs(unnormalized[0]-expected_raw)<=6 &&
+              std::abs(normalized[0]-expected_normalized)<=6 &&
+              normalized[0]>unnormalized[0]+6,
+              "original nonuniform world inverse-transpose or authored normal normalization differs");
+        DX8Wrapper::Set_DX8_Render_State(D3DRS_NORMALIZENORMALS,FALSE);
+        DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+        Matrix3D specular_transform(true);
+        specular_transform.Rotate_X(WWMATH_PI);
+        specular_transform.Rotate_Y(-0.9272952F);
+        directional.Set_Transform(specular_transform);
+        environment.Reset(Vector3(0,0,0),Vector3(0.05F,0.1F,0.15F));
+        environment.Add_Light(directional);
+        environment.Pre_Render_Update(Matrix3D(true));
+        DX8Wrapper::Set_Light_Environment(&environment);
+        auto* specular_vb=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZN,3));
+        auto specular_vertices=source_vertices;
+        for (auto& selected:specular_vertices) {
+            selected.normal[0]=1.0F;
+            selected.normal[2]=0.0F;
+        }
+        {
+            VertexBufferClass::WriteLockClass lock(specular_vb);
+            std::memcpy(lock.Get_Vertex_Array(),specular_vertices.data(),sizeof(specular_vertices));
+        }
+        const auto specular_vertex=edge.bind_vertex(specular_vb);
+        specular_vb->Release_Ref();
+        DX8Wrapper::Set_DX8_Render_State(D3DRS_LOCALVIEWER,FALSE);
+        material->Set_Specular(Vector3(0.3F,0.2F,0.1F));
+        material->Set_Shininess(4.0F);
+        DX8Wrapper::Set_Material(material);
+        DX8Wrapper::Apply_Render_State_Changes();
+        const auto specular_off=draw_lit("source authored specular disabled physical probe",
+            specular_vertex,DX8_FVF_XYZN);
+        shader.Set_Secondary_Gradient(ShaderClass::SECONDARY_GRADIENT_ENABLE);
+        DX8Wrapper::Set_Shader(shader);
+        DX8Wrapper::Apply_Render_State_Changes();
+        const auto specular_on=draw_lit("source authored specular enabled physical probe",
+            specular_vertex,DX8_FVF_XYZN);
+        const auto selected_specular=DX8Wrapper::Snapshot_Source_State();
+        check(selected_specular.render.at(D3DRS_SPECULARENABLE)==1 &&
+            selected_specular.render.at(D3DRS_SPECULARMATERIALSOURCE)==D3DMCS_MATERIAL &&
+            selected_specular.lights[0].Specular.r==1.0F,
+            "original specular producer did not select source material/light terms");
+        const float incoming_x=-selected_specular.lights[0].Direction.x;
+        const float incoming_z=-selected_specular.lights[0].Direction.z;
+        const float half_x=incoming_x/std::sqrt(incoming_x*incoming_x+
+            (incoming_z-1.0F)*(incoming_z-1.0F));
+        const float expected_specular=255.0F*selected_specular.material.Specular.r*
+            selected_specular.lights[0].Specular.r*std::pow(std::max(0.0F,half_x),
+                selected_specular.material.Power);
+        check(std::abs(float(specular_on[0]-specular_off[0])-expected_specular)<=6 &&
+              specular_on[0]>specular_off[0]+20 &&
+              specular_on[3]==specular_off[3],
+              "original source specular material/power/local-viewer switch differs");
+        material->Set_Ambient_Color_Source(VertexMaterialClass::COLOR1);
+        material->Set_Diffuse_Color_Source(VertexMaterialClass::COLOR2);
+        material->Set_Emissive_Color_Source(VertexMaterialClass::COLOR1);
+        DX8Wrapper::Set_Material(material);
+        DX8Wrapper::Apply_Render_State_Changes();
+        DX8Wrapper::Set_DX8_Render_State(D3DRS_SPECULARMATERIALSOURCE,D3DMCS_COLOR2);
+        const auto absent_vertex_colors=draw_lit("original absent COLOR1/COLOR2 material fallback",
+            specular_vertex,DX8_FVF_XYZN);
+        for (unsigned channel=0;channel<4;++channel)
+            check(std::abs(absent_vertex_colors[channel]-specular_on[channel])<=3,
+                  "normal-only source FVF failed documented vertex color material fallback");
+        material->Set_Ambient_Color_Source(VertexMaterialClass::MATERIAL);
+        material->Set_Diffuse_Color_Source(VertexMaterialClass::MATERIAL);
+        material->Set_Emissive_Color_Source(VertexMaterialClass::MATERIAL);
+        DX8Wrapper::Set_Material(material);
+        DX8Wrapper::Apply_Render_State_Changes();
+        DX8Wrapper::Set_DX8_Render_State(D3DRS_SPECULARMATERIALSOURCE,D3DMCS_MATERIAL);
+        shader.Set_Secondary_Gradient(ShaderClass::SECONDARY_GRADIENT_DISABLE);
+        DX8Wrapper::Set_Shader(shader);
+        DX8Wrapper::Set_DX8_Render_State(D3DRS_LOCALVIEWER,TRUE);
+        DX8Wrapper::Apply_Render_State_Changes();
+        directional.Set_Transform(directional_transform);
+        environment.Reset(Vector3(0,0,0),Vector3(0.05F,0.1F,0.15F));
+        environment.Add_Light(directional);
+        environment.Pre_Render_Update(Matrix3D(true));
+        DX8Wrapper::Set_Light_Environment(&environment);
+        const auto source_untextured=draw_lit("source retail-normal N0 lit stage-zero disabled",
+            vertex,DX8_FVF_XYZN);
+        OwnedFactory files;
+        files.files["lit-zero.tga"]=owned_targa({16,128,240,128});
+        files.files["lit-one.tga"]=owned_targa({96,64,128,255});
+        FactoryScope factory(files);
+        WW3D::Set_Thumbnail_Enabled(false);
+        WW3D::Set_Texture_Reduction(0,1);
+        WW3D::Enable_Texturing(true);
+        TextureClass texture_zero("lit-zero","lit-zero.tga",MIP_LEVELS_ALL,
+            WW3D_FORMAT_UNKNOWN,true,true);
+        TextureClass texture_one("lit-one","lit-one.tga",MIP_LEVELS_ALL,
+            WW3D_FORMAT_UNKNOWN,true,true);
+        texture_zero.Apply(0);
+        check(!texture_zero.Is_Missing_Texture() && files.owners==0,
+            "original lit stage zero did not decode owned source pixels");
+        shader.Set_Texturing(ShaderClass::TEXTURING_ENABLE);
+        DX8Wrapper::Set_Shader(shader);
+        DX8Wrapper::Apply_Render_State_Changes();
+        auto* one_vb=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZNUV1,3));
+        auto* two_vb=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZNUV2,3));
+        std::array<LitVertex1,3> one_vertices{};
+        std::array<LitVertex2,3> two_vertices{};
+        for (unsigned v=0;v<3;++v) {
+            std::memcpy(one_vertices[v].position,source_vertices[v].position,sizeof(source_vertices[v].position));
+            std::memcpy(one_vertices[v].normal,source_vertices[v].normal,sizeof(source_vertices[v].normal));
+            std::memcpy(two_vertices[v].position,source_vertices[v].position,sizeof(source_vertices[v].position));
+            std::memcpy(two_vertices[v].normal,source_vertices[v].normal,sizeof(source_vertices[v].normal));
+            one_vertices[v].uv[0]=two_vertices[v].uv0[0]=two_vertices[v].uv1[0]=0.25F;
+            one_vertices[v].uv[1]=two_vertices[v].uv0[1]=two_vertices[v].uv1[1]=0.25F;
+        }
+        {
+            VertexBufferClass::WriteLockClass lock(one_vb);
+            check(one_vb->FVF_Info().Get_FVF_Size()==sizeof(LitVertex1),
+                "original normal+UV1 FVF stride differs");
+            std::memcpy(lock.Get_Vertex_Array(),one_vertices.data(),sizeof(one_vertices));
+        }
+        {
+            VertexBufferClass::WriteLockClass lock(two_vb);
+            check(two_vb->FVF_Info().Get_FVF_Size()==sizeof(LitVertex2),
+                "original normal+UV2 FVF stride differs");
+            std::memcpy(lock.Get_Vertex_Array(),two_vertices.data(),sizeof(two_vertices));
+        }
+        const auto vertex_one=edge.bind_vertex(one_vb),vertex_two=edge.bind_vertex(two_vb);
+        one_vb->Release_Ref(); two_vb->Release_Ref();
+        bool missing_source_uv=false;
+        try { (void)edge.prepare_applied_state(DX8_FVF_XYZN); }
+        catch (const std::runtime_error& error) {
+            missing_source_uv=std::string(error.what()).find("source UV")!=std::string::npos;
+        }
+        check(missing_source_uv,"original N0 missing UV did not fail closed for texture stage");
+        const auto one_pixel=draw_lit("source retail normal+UV1 lit one-stage physical probe",
+            vertex_one,DX8_FVF_XYZNUV1);
+        check(std::abs(one_pixel[0]-source_untextured[0]*240.0F/255.0F)<=6 &&
+              std::abs(one_pixel[1]-source_untextured[1]*128.0F/255.0F)<=6 &&
+              std::abs(one_pixel[2]-source_untextured[2]*16.0F/255.0F)<=6 &&
+              std::abs(one_pixel[3]-source_untextured[3]*128.0F/255.0F)<=6,
+              "original normal+UV1 lit stage-one source pixel differs");
+        texture_one.Apply(1);
+        check(!texture_one.Is_Missing_Texture() && files.owners==0,
+            "original lit stage one did not decode owned source pixels");
+        shader.Set_Post_Detail_Color_Func(ShaderClass::DETAILCOLOR_ADD);
+        DX8Wrapper::Set_Shader(shader);
+        DX8Wrapper::Apply_Render_State_Changes();
+        const auto two_pixel=draw_lit("source normal+UV2 lit two-stage physical probe",
+            vertex_two,DX8_FVF_XYZNUV2);
+        check(std::abs(two_pixel[0]-std::min(255,one_pixel[0]+128))<=6 &&
+              std::abs(two_pixel[1]-std::min(255,one_pixel[1]+64))<=6 &&
+              std::abs(two_pixel[2]-std::min(255,one_pixel[2]+96))<=6 &&
+              std::abs(two_pixel[3]-one_pixel[3])<=6,
+              "original normal+UV2 lit two-stage source pixel differs");
+        shader.Set_Post_Detail_Color_Func(ShaderClass::DETAILCOLOR_DISABLE);
+        shader.Set_Fog_Func(ShaderClass::FOG_ENABLE);
+        DX8Wrapper::Set_Fog(true,Vector3(1.0F,0,0),0.0F,1.0F);
+        DX8Wrapper::Set_Shader(shader);
+        DX8Wrapper::Apply_Render_State_Changes();
+        const auto lit_fog=draw_lit("original lit view-fogged normal+UV1 source pixel",
+            vertex_one,DX8_FVF_XYZNUV1);
+        check(std::abs(lit_fog[0]-(one_pixel[0]+255)*0.5F)<=6 &&
+              std::abs(lit_fog[1]-one_pixel[1]*0.5F)<=6 &&
+              std::abs(lit_fog[2]-one_pixel[2]*0.5F)<=6 &&
+              std::abs(lit_fog[3]-one_pixel[3])<=3,
+              "original lit source view-space fog/opacity differs");
+        shader.Set_Fog_Func(ShaderClass::FOG_DISABLE);
+        DX8Wrapper::Set_Fog(false,Vector3(0,0,0),0.0F,1.0F);
+        shader.Set_Alpha_Test(ShaderClass::ALPHATEST_ENABLE);
+        shader.Set_Src_Blend_Func(ShaderClass::SRCBLEND_SRC_ALPHA);
+        shader.Set_Dst_Blend_Func(ShaderClass::DSTBLEND_ONE_MINUS_SRC_ALPHA);
+        DX8Wrapper::Set_Shader(shader);
+        DX8Wrapper::Apply_Render_State_Changes();
+        const auto lit_blended=draw_lit("original lit source alpha-test/blend pixel",
+            vertex_one,DX8_FVF_XYZNUV1);
+        const float coverage=float(one_pixel[3])/255.0F;
+        check(std::abs(lit_blended[0]-(coverage*one_pixel[0]+(1.0F-coverage)*5.0F))<=6 &&
+              std::abs(lit_blended[1]-(coverage*one_pixel[1]+(1.0F-coverage)*5.0F))<=6,
+              "original lit source opacity/blend pixel differs");
+        std::cout<<"original-applied-lit-pixels=pass generation="<<generation
+                 <<" ambient="<<ambient[0]<<":"<<ambient[1]<<":"<<ambient[2]
+                 <<" directional="<<lit[0]<<":"<<lit[1]<<":"<<lit[2]
+                 <<" point="<<point_pixel[0]<<":"<<point_pixel[1]<<":"<<point_pixel[2]
+                 <<" four="<<four[0]<<":"<<four[1]<<":"<<four[2]
+                 <<" normal="<<unnormalized[0]<<":"<<normalized[0]
+                 <<" specular="<<specular_off[0]<<":"<<specular_on[0]
+                 <<" stages="<<one_pixel[0]<<":"<<two_pixel[0]
+                 <<" fog="<<lit_fog[0]<<" blend="<<lit_blended[0]<<'\n';
+    }
+    device.destroy(depth); device.destroy(color);
+    check(device.wait_idle(),device.last_error());
+}
 }
 
 int main()
@@ -422,6 +837,8 @@ int main()
         check(SDL_Init(SDL_INIT_VIDEO),"SDL video initialization failed");
         original_unlit_source_pixels(1,160,120);
         original_unlit_source_pixels(2,240,160);
+        original_lit_source_pixels(1);
+        original_lit_source_pixels(2);
         SDL_Quit();
         return 0;
     } catch (const std::exception& error) {
