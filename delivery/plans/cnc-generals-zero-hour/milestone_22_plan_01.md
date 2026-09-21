@@ -84,9 +84,11 @@ The production Linux original-engine path renders representative campaign and sk
 | 05B1 | [milestone_22_plan_01_slice_05b1.md](milestone_22_plan_01_slice_05b1.md) | Canonical original Targa and DDS providers parse and decode reached owned/retail image families with bounded failure behavior; no texture/frame claim. | slice 05A | complete | slice 05B1 commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05b1.md) |
 | 05B2A | [milestone_22_plan_01_slice_05b2a.md](milestone_22_plan_01_slice_05b2a.md) | Original WW3D format/bitmap and TextureLoader selection, reduction, mip and pixel decisions stop at first typed texture-device edge. | slice 05B1 | complete | slice 05B2A commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05b2a.md) |
 | 05B2B1 | [milestone_22_plan_01_slice_05b2b1.md](milestone_22_plan_01_slice_05b2b1.md) | Original TextureLoadTask Lock/Load/Unlock owns decoded mip bytes, source-issued GPU create/upload and texture lifetime/failure controls. | slice 05B2A | complete | `4ec52aa` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05b2b1.md) |
-| 05B2B2A | [milestone_22_plan_01_slice_05b2b2a.md](milestone_22_plan_01_slice_05b2b2a.md) | Original TextureClass/TextureFilter source decisions and source-ordered pending stage/sampler/texture state at the device edge. | slice 05B2B1 | pending | | |
-| 05B2B2B | [milestone_22_plan_01_slice_05b2b2b.md](milestone_22_plan_01_slice_05b2b2b.md) | Original VertexMaterial/Shader/DX8Wrapper state semantics and typed public blend/depth/cull/fog/combiner translation. | slice 05B2B2A | pending | | |
-| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | Full interleaved original mesh/WWShade/WW3D material, rigid/skin/decal/static/sorting pass graph records owned fixture frames in authored call order. | slice 05B2B2B | pending | | |
+| 05B2B2A | [milestone_22_plan_01_slice_05b2b2a.md](milestone_22_plan_01_slice_05b2b2a.md) | Original TextureClass/TextureFilter source decisions and source-ordered pending stage/sampler/texture state at the device edge. | slice 05B2B1 | complete | `fbde148` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05b2b2a.md) |
+| 05B2B2B1 | [milestone_22_plan_01_slice_05b2b2b1.md](milestone_22_plan_01_slice_05b2b2b1.md) | Original mapper/VertexMaterial and DX8Wrapper source ref-counted delayed material/UV state. | slice 05B2B2A | pending | | |
+| 05B2B2B2 | [milestone_22_plan_01_slice_05b2b2b2.md](milestone_22_plan_01_slice_05b2b2b2.md) | Original ShaderClass blend/alpha/fog/depth/cull and two-stage combiner/capability decisions. | slice 05B2B2B1 | pending | | |
+| 05B2B2B3 | [milestone_22_plan_01_slice_05b2b2b3.md](milestone_22_plan_01_slice_05b2b2b3.md) | Public Recording/SDL_GPU Vulkan shader/pipeline/uniform lowering of required source material/shader state without a fake pass. | slice 05B2B2B2 | pending | | |
+| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | Full interleaved original mesh/WWShade/WW3D material, rigid/skin/decal/static/sorting pass graph records owned fixture frames in authored call order. | slice 05B2B2B3 | pending | | |
 | 07 | [milestone_22_plan_01_slice_07.md](milestone_22_plan_01_slice_07.md) | Original GameClient display/scene, 2D, terrain, track, shroud and selected shadow/effect routes integrate and switch production to full behavior. | slice 06 | pending | | |
 | 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | slice 07, PRE-008 | pending | | |
 | 09 | [milestone_22_plan_01_slice_09.md](milestone_22_plan_01_slice_09.md) | Same retail scenes present on validation-enabled SDL_GPU Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 08, PRE-012, PRE-016 | pending | | |
@@ -112,7 +114,7 @@ The production Linux original-engine path renders representative campaign and sk
 
 ## Rollback and recovery
 
-Each slice is independently revertible. Slices 01–04C add only original CPU producer behavior and do not claim a renderer. Slice 05A establishes original vertex/index physical commands, 05B1 proves original image providers, 05B2A preserves original image/format/mip selection before the first device operation, 05B2B1 restores image resource/upload behavior, 05B2B2A restores source-issued texture stage/filter choices, and 05B2B2B restores source-issued material/shader state; 06 closes the interleaved pass graph and applies pending state only at actual original draw/pass entry; 07 integrates production GameClient traversal. Slice 08 records retail scenes without requiring hardware. Slice 09's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
+Each slice is independently revertible. Slices 01–04C add only original CPU producer behavior and do not claim a renderer. Slice 05A establishes original vertex/index physical commands, 05B1 proves original image providers, 05B2A preserves original image/format/mip selection before the first device operation, 05B2B1 restores image resource/upload behavior, 05B2B2A restores source-issued texture stage/filter choices, and 05B2B2B1/B2/B3 respectively restore source mapper/material/delayed state, shader/combiner decisions and public shader/pipeline lowering; 06 closes the interleaved pass graph and applies pending state only at actual original draw/pass entry; 07 integrates production GameClient traversal. Slice 08 records retail scenes without requiring hardware. Slice 09's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
 
 ## Execution notes
 
@@ -277,6 +279,27 @@ actual pass/draw, not at a fabricated earlier pass. Both new slices retain
 all prior positive/negative 05B2B2 gates and no retail or full-frame claim;
 06 now depends on 05B2B2B. The original source and ABI selection do not
 fork. Commit this plan-only revision before production edits.
+
+## Post-slice-05B2B2A material/mapper/shader closure
+
+Accepted `fbde148` preserves original stage/filter state without a pass.
+Source inspection reveals that `VertexMaterialClass::Apply` invokes original
+mapper `Apply` methods (including reached screen/linear-offset W3D fixture
+families), whose Linux `mapper.cpp` DX8Wrapper shim currently throws;
+`ShaderClass::Apply` has a separate long caps-dependent blend/alpha/fog/
+two-stage combiner/depth/cull path, also typed unavailable on Linux.
+Original `DX8Wrapper::Set_Texture/Material/Shader` retain references and
+mark delayed changes that `Apply_Render_State_Changes` consumes at the
+original draw. SDL_GPU does not supply a fixed-function pipeline, so
+physical shader/pipeline lowering is another independent operation.
+Former 05B2B2B becomes B1 original mapper/material and ref-counted delayed
+state, B2 original shader/capability/combiner decisions, B3 Recording/SDL_GPU
+shader/pipeline/uniform lowering. Required shader variants are selected by
+read-only retail family evidence; an unsupported required variant is a
+contract escalation, never a skipped frame or substitute generic shader.
+06 must still execute category Render in interleaved source order, and
+depends on B3. Acceptance of A and the ultimate M22 contract are unchanged.
+Commit this plan-only change before B1 production edits.
 
 ## Deferred follow-ups
 

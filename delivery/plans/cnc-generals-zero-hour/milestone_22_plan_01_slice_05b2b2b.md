@@ -1,4 +1,13 @@
-# M22 plan 01 slice 05B2B2B: original material and shader state
+# Superseded M22 plan 01 slice 05B2B2B: original material and shader state
+
+This former single slice is now three dependency-safe commits:
+[05B2B2B1](milestone_22_plan_01_slice_05b2b2b1.md) for source mapper,
+material and delayed DX8Wrapper ownership,
+[05B2B2B2](milestone_22_plan_01_slice_05b2b2b2.md) for source shader and
+combiner decisions, and
+[05B2B2B3](milestone_22_plan_01_slice_05b2b2b3.md) for physical public
+GPU shader/pipeline lowering. Together they retain all acceptance below.
+No standalone 05B2B2B commit is permitted.
 
 ## Outcome and dependencies
 
