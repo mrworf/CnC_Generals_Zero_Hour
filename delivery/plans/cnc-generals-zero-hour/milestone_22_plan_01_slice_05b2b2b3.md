@@ -1,5 +1,10 @@
 # M22 plan 01 slice 05B2B2B3: lower original state to SDL_GPU
 
+Superseded by [B3A](milestone_22_plan_01_slice_05b2b2b3a.md) and
+[B3B](milestone_22_plan_01_slice_05b2b2b3b.md). This historical plan is not
+an independently executable slice: canonical original FVF geometry must
+first be represented in the public device contract.
+
 ## Outcome and dependencies
 
 Requires accepted B2. Source-owned texture/mapper/material/shader state

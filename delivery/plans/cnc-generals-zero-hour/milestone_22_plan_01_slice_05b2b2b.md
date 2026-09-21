@@ -5,7 +5,7 @@ This former single slice is now three dependency-safe commits:
 material and delayed DX8Wrapper ownership,
 [05B2B2B2](milestone_22_plan_01_slice_05b2b2b2.md) for source shader and
 combiner decisions, and
-[05B2B2B3](milestone_22_plan_01_slice_05b2b2b3.md) for physical public
+[05B2B2B3A](milestone_22_plan_01_slice_05b2b2b3a.md) for canonical FVF layout, then [05B2B2B3B](milestone_22_plan_01_slice_05b2b2b3b.md) for physical public
 GPU shader/pipeline lowering. Together they retain all acceptance below.
 No standalone 05B2B2B commit is permitted.
 

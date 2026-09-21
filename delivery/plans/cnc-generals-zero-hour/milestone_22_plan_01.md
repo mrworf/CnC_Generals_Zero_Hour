@@ -87,8 +87,9 @@ The production Linux original-engine path renders representative campaign and sk
 | 05B2B2A | [milestone_22_plan_01_slice_05b2b2a.md](milestone_22_plan_01_slice_05b2b2a.md) | Original TextureClass/TextureFilter source decisions and source-ordered pending stage/sampler/texture state at the device edge. | slice 05B2B1 | complete | `fbde148` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_05b2b2a.md) |
 | 05B2B2B1 | [milestone_22_plan_01_slice_05b2b2b1.md](milestone_22_plan_01_slice_05b2b2b1.md) | Original mapper/VertexMaterial and DX8Wrapper source ref-counted delayed material/UV state. | slice 05B2B2A | pending | | |
 | 05B2B2B2 | [milestone_22_plan_01_slice_05b2b2b2.md](milestone_22_plan_01_slice_05b2b2b2.md) | Original ShaderClass blend/alpha/fog/depth/cull and two-stage combiner/capability decisions. | slice 05B2B2B1 | pending | | |
-| 05B2B2B3 | [milestone_22_plan_01_slice_05b2b2b3.md](milestone_22_plan_01_slice_05b2b2b3.md) | Public Recording/SDL_GPU Vulkan shader/pipeline/uniform lowering of required source material/shader state without a fake pass. | slice 05B2B2B2 | pending | | |
-| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | Full interleaved original mesh/WWShade/WW3D material, rigid/skin/decal/static/sorting pass graph records owned fixture frames in authored call order. | slice 05B2B2B3 | pending | | |
+| 05B2B2B3A | [milestone_22_plan_01_slice_05b2b2b3a.md](milestone_22_plan_01_slice_05b2b2b3a.md) | Public Recording/SDL_GPU canonical dynamic FVF layout, indexed Vulkan evidence and unsupported-format rejection. | slice 05B2B2B2 | pending | | |
+| 05B2B2B3B | [milestone_22_plan_01_slice_05b2b2b3b.md](milestone_22_plan_01_slice_05b2b2b3b.md) | Public shader/pipeline/uniform lowering of original pending state without a fake pass. | slice 05B2B2B3A | pending | | |
+| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | Full interleaved original mesh/WWShade/WW3D material, rigid/skin/decal/static/sorting pass graph records owned fixture frames in authored call order. | slice 05B2B2B3B | pending | | |
 | 07 | [milestone_22_plan_01_slice_07.md](milestone_22_plan_01_slice_07.md) | Original GameClient display/scene, 2D, terrain, track, shroud and selected shadow/effect routes integrate and switch production to full behavior. | slice 06 | pending | | |
 | 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | slice 07, PRE-008 | pending | | |
 | 09 | [milestone_22_plan_01_slice_09.md](milestone_22_plan_01_slice_09.md) | Same retail scenes present on validation-enabled SDL_GPU Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 08, PRE-012, PRE-016 | pending | | |
@@ -114,7 +115,7 @@ The production Linux original-engine path renders representative campaign and sk
 
 ## Rollback and recovery
 
-Each slice is independently revertible. Slices 01–04C add only original CPU producer behavior and do not claim a renderer. Slice 05A establishes original vertex/index physical commands, 05B1 proves original image providers, 05B2A preserves original image/format/mip selection before the first device operation, 05B2B1 restores image resource/upload behavior, 05B2B2A restores source-issued texture stage/filter choices, and 05B2B2B1/B2/B3 respectively restore source mapper/material/delayed state, shader/combiner decisions and public shader/pipeline lowering; 06 closes the interleaved pass graph and applies pending state only at actual original draw/pass entry; 07 integrates production GameClient traversal. Slice 08 records retail scenes without requiring hardware. Slice 09's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
+Each slice is independently revertible. Slices 01–04C add only original CPU producer behavior and do not claim a renderer. Slice 05A establishes original vertex/index physical commands, 05B1 proves original image providers, 05B2A preserves original image/format/mip selection before the first device operation, 05B2B1 restores image resource/upload behavior, 05B2B2A restores source-issued texture stage/filter choices, and 05B2B2B1/B2 restore source mapper/material/delayed state and shader/combiner decisions. B3A proves original FVF physical layouts; B3B lowers shader/pipeline/uniform state through the public device. Slice 06 closes the interleaved pass graph and applies pending state only at actual original draw/pass entry; 07 integrates production GameClient traversal. Slice 08 records retail scenes without requiring hardware. Slice 09's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
 
 ## Execution notes
 
@@ -300,6 +301,22 @@ contract escalation, never a skipped frame or substitute generic shader.
 06 must still execute category Render in interleaved source order, and
 depends on B3. Acceptance of A and the ultimate M22 contract are unchanged.
 Commit this plan-only change before B1 production edits.
+
+## Post-slice-05B2B2B2 dynamic-layout closure
+
+Accepted B1/B2 retained original vertex/material/shader producers but the
+public SDL_GPU `world_mesh` layout still hardcodes position/normal/UV. The
+canonical `DX8FVFCategoryContainer::Define_FVF` uses `FVFInfoClass` offsets
+and stride selected from optional normal/diffuse/UV counts. Reinterpreting
+those source buffers through `world_mesh` corrupts the original geometry.
+Therefore the former B3 is superseded by B3A, a public dynamic vertex-layout
+contract with Recording/SDL parity, unsupported-format rejection and an
+actual indexed validation-layer Vulkan layout test, followed by B3B, exact
+shader/pipeline/uniform lowering of original pending state. Do not repack
+geometry, change original FVF selection or invent private Vulkan commands.
+The layout probe is not a source-driven pass, which remains 06; retail
+scene/visual acceptance remains 08/09. This plan-only revision precedes
+either B3 implementation, preserving all previously accepted contracts.
 
 ## Deferred follow-ups
 
