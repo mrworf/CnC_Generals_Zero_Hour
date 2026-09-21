@@ -226,6 +226,7 @@ public:
 	IDirect3DVertexBuffer8* Get_DX8_Vertex_Buffer() { return VertexBuffer; }
 #if defined(ZH_WW3D_CPU_ONLY)
 	unsigned char* Get_CPU_Vertex_Buffer() { return CpuVertexBuffer; }
+	const unsigned char* Get_CPU_Vertex_Buffer() const { return CpuVertexBuffer; }
 #endif
 
 	void Copy(const Vector3* loc, unsigned first_vertex, unsigned count);

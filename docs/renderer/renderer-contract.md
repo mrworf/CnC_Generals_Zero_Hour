@@ -15,3 +15,14 @@ SDL_GPU is the provisional implementation backend. M2 does not claim device supp
 M7 implements the GPU-independent execution contract through `RecordingGpuDevice`. Its generation-checked opaque resources, bounded immutable pipeline cache, CPU-backed dynamic uploads, pass validation, and normalized ordered snapshots make lifetime and command errors testable without a display or graphics device. DDS DXT1/2/3/4/5 and uncompressed true-color TGA inputs use fixed-width bounded parsing; DXT2/4 retain premultiplied-alpha semantics, and BC1/2/3 decode to RGBA8 when the public backend capability says the compressed format is unavailable.
 
 `Dx8StateCache` is the temporary legacy `DX8Wrapper` boundary. It converts cached engine state into immutable `PipelineKey` instances, suppresses redundant pipeline creation, propagates recorder failures with facade context, and records explicit resize transitions. It remains backend-neutral: engine callers and public headers may not expose or call SDL_GPU or Vulkan. Hardware submission, synchronization, presentation, and pixel acceptance remain M14 work.
+
+M22 adds the minimal original W3D indexed-draw capability to `DrawDesc`:
+`index_element_size` defaults to the existing 32-bit behavior, while an
+indexed draw may specify 16-bit elements, `first_index` and signed
+`base_vertex`. Original `DX8PolygonRendererClass::Render` supplies those
+source values from its shared category buffers; the recording backend
+validates format/range and SDL_GPU binds the selected public index width
+and draw offsets. Non-indexed draws reject index-only fields. This does not
+rebase or repack original mesh geometry and adds no platform graphics type
+to the public interface. M22 slice 05A verifies hardware parity with an
+owned indexed fixture; retail-scene rendering remains later acceptance.

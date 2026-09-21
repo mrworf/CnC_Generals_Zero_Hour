@@ -16,10 +16,14 @@ def main() -> int:
     parser.add_argument("--executable", type=Path, required=True)
     args = parser.parse_args()
     original = json.loads(args.compile_commands.read_text())
-    for name in ("texture", "rinfo", "dx8fvf", "mesh", "meshmdl", "dx8vertexbuffer",
-                 "dx8indexbuffer", "dx8renderer", "dx8polygonrenderer", "stripoptimizer",
-                 "ww3d", "static_sort_list", "sortingrenderer"):
-        source = f"GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/{name}.cpp"
+    source_names = [f"GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/{name}.cpp"
+                    for name in ("texture", "rinfo", "dx8fvf", "mesh", "meshmdl",
+                                 "dx8vertexbuffer", "dx8indexbuffer", "dx8renderer",
+                                 "dx8polygonrenderer", "stripoptimizer", "ww3d",
+                                 "static_sort_list", "sortingrenderer")]
+    source_names.append("src/original_runtime/original_gpu_edge.cpp")
+    for source in source_names:
+        name = Path(source).stem
         assert any(item["file"].endswith(source) for item in original)
         with tempfile.TemporaryDirectory(prefix="m22-identity-") as tmp:
             removed_compile = Path(tmp) / "compile_commands.json"

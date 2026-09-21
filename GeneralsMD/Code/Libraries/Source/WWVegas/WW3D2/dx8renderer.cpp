@@ -64,6 +64,7 @@
 #include "meshgeometry.h"
 #include "texture.h"
 #if defined(ZH_WW3D_CPU_ONLY)
+#include "original_gpu_edge.h"
 #include <stdexcept>
 #endif
 
@@ -836,7 +837,13 @@ void DX8RigidFVFCategoryContainer::Render(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	if (!Anything_To_Render()) return;
-	throw std::runtime_error("original rigid mesh pass requires GPU translation");
+	// These are the first two physical commands in the authored rigid path.
+	// Original geometry/category selection has already happened; translation
+	// consumes only the original buffers at their existing call sites.
+	auto& edge = zh::original_runtime::OriginalGpuEdge::required();
+	edge.bind_vertex(vertex_buffer);
+	edge.bind_index(index_buffer);
+	throw std::runtime_error("original texture/material pass requires GPU translation");
 #else
 	if (!Anything_To_Render()) return;
 	AnythingToRender=false;

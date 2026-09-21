@@ -131,6 +131,37 @@ void test_pipeline_cache_is_immutable_and_bounded()
     auto fourth = first; fourth.depth_stencil.depth_write = false;
     check(!scene.device.create_pipeline(PipelineKey(fourth), "stale shader"), "stale shader accepted");
 }
+
+void test_original_16_bit_index_range_and_base_vertex()
+{
+    Scene scene;
+    auto index = scene.device.create_buffer({12, BufferUsage::index, true}, "original 16-bit indices");
+    auto uniform = scene.device.create_buffer({64, BufferUsage::uniform, true}, "world constants");
+    check(scene.device.begin_pass(scene.pass(), "source mesh"), "source pass failed");
+    DrawDesc draw;
+    draw.pipeline = scene.pipeline;
+    draw.vertex_buffer = scene.vertices;
+    draw.index_buffer = index;
+    draw.index_element_size = IndexElementSize::uint16;
+    draw.first_index = 2;
+    draw.base_vertex = 4;
+    draw.vertex_or_index_count = 3;
+    draw.vertex_bindings.uniforms[0] = {uniform, 0, 64};
+    draw.vertex_bindings.uniform_count = 1;
+    check(scene.device.draw(draw), "valid original indexed range rejected");
+    check(scene.device.snapshot().find("index_bits=16 first_index=2 base_vertex=4") != std::string::npos,
+        "original index format or offsets lost from recording");
+    draw.first_index = 4;
+    check(!scene.device.draw(draw), "16-bit range beyond index buffer accepted");
+    draw.first_index = 0;
+    draw.index_element_size = static_cast<IndexElementSize>(3);
+    check(!scene.device.draw(draw), "unsupported index element width accepted");
+    draw.index_buffer = {};
+    draw.index_element_size = IndexElementSize::uint32;
+    draw.base_vertex = 1;
+    check(!scene.device.draw(draw), "non-indexed base vertex accepted");
+    check(scene.device.end_pass(), "source pass end failed");
+}
 } // namespace
 
 int main()
@@ -140,6 +171,7 @@ int main()
         test_lifetimes_bindings_and_ranges();
         test_pass_rules_and_unsupported_descriptors();
         test_pipeline_cache_is_immutable_and_bounded();
+        test_original_16_bit_index_range_and_base_vertex();
         std::cout << "recording device tests: ok\n";
         return 0;
     } catch (const std::exception& error) {

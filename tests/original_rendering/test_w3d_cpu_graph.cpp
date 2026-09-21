@@ -15,6 +15,8 @@
 #include "dx8renderer.h"
 #include "static_sort_list.h"
 #include "ww3d.h"
+#include "original_gpu_edge.h"
+#include "zh/renderer/recording_device.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -226,6 +228,39 @@ int main(int argc, char **argv)
 	auto *mesh = static_cast<MeshClass *>(object);
 	CameraClass camera;
 	RenderInfoClass render_info(camera);
+	if (argc == 2 && std::strcmp(argv[1], "--device-edge") == 0)
+	{
+		TheDX8MeshRenderer.Init();
+		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT, false);
+		mesh->Set_Position(Vector3(0, 0, -10));
+		mesh->Render(render_info);
+		assert(mesh->Peek_Model()->Has_Polygon_Renderers());
+		TheDX8MeshRenderer.Set_Camera(&camera);
+		zh::renderer::RecordingGpuDevice recorder(32);
+		bool unbound_rejected = false;
+		try { WW3D::Flush(render_info); }
+		catch (const std::runtime_error &error) {
+			unbound_rejected = std::strstr(error.what(), "GPU translation session") != nullptr;
+		}
+		assert(unbound_rejected && recorder.resource_counts().total() == 0);
+		bool physical_rejected = false;
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			try { WW3D::Flush(render_info); }
+			catch (const std::runtime_error &) { physical_rejected = true; }
+			assert(physical_rejected);
+			assert(recorder.resource_counts().buffers == 2);
+			assert(recorder.snapshot().find("original WW3D 16-bit index buffer") != std::string::npos);
+			assert(recorder.snapshot().find("upload B") != std::string::npos);
+		}
+		assert(recorder.resource_counts().total() == 0);
+		TheDX8MeshRenderer.Invalidate();
+		TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+		object->Release_Ref();
+		manager.Free_Assets();
+		std::puts("original-rendering runtime provider=GeneralsMD WW3D2 first GPU edge");
+		return 0;
+	}
 	mesh->Set_Hidden(1);
 	mesh->Render(render_info); // Original hidden state suppresses the device boundary.
 	assert(!mesh->Peek_Model()->Has_Polygon_Renderers());

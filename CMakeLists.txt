@@ -281,6 +281,7 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/static_sort_list.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/sortingrenderer.cpp
   src/original_runtime/ww3d_cpu_state.cpp
+  src/original_runtime/original_gpu_edge.cpp
 )
 target_include_directories(zh_w3d PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
@@ -1889,6 +1890,7 @@ if(ZH_BUILD_TESTS)
     --full "$<TARGET_FILE:original_w3d_abi_full>")
   set_tests_properties(original_w3d_abi PROPERTIES LABELS "original-rendering;source-identity")
   target_include_directories(original_w3d_cpu_graph_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
@@ -1898,10 +1900,25 @@ if(ZH_BUILD_TESTS)
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad")
   target_compile_options(original_w3d_cpu_graph_tests PRIVATE -fpermissive)
   target_compile_definitions(original_w3d_cpu_graph_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
-  target_link_libraries(original_w3d_cpu_graph_tests PRIVATE zh_w3d zh_wwsupport zh_original_process)
+  target_link_libraries(original_w3d_cpu_graph_tests PRIVATE zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu)
   target_link_options(original_w3d_cpu_graph_tests PRIVATE
     "-Wl,--gc-sections" "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map")
   add_test(NAME original_w3d_cpu_graph COMMAND original_w3d_cpu_graph_tests)
+  add_test(NAME original_w3d_first_gpu_edge COMMAND original_w3d_cpu_graph_tests --device-edge)
+  set_tests_properties(original_w3d_first_gpu_edge PROPERTIES LABELS "original-rendering;renderer-contract")
+  add_executable(original_w3d_gpu_edge_tests tests/original_rendering/test_original_gpu_edge.cpp)
+  target_include_directories(original_w3d_gpu_edge_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug")
+  target_compile_options(original_w3d_gpu_edge_tests PRIVATE -fpermissive)
+  target_compile_definitions(original_w3d_gpu_edge_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
+  target_link_libraries(original_w3d_gpu_edge_tests PRIVATE zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu)
+  add_test(NAME original_w3d_gpu_edge_failure COMMAND original_w3d_gpu_edge_tests)
+  set_tests_properties(original_w3d_gpu_edge_failure PROPERTIES LABELS "original-rendering;renderer-contract;negative")
   set_tests_properties(original_w3d_cpu_graph PROPERTIES LABELS "original-rendering;source-identity")
   add_test(NAME original_w3d_cpu_identity COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
@@ -1929,6 +1946,7 @@ if(ZH_BUILD_TESTS)
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3d.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/static_sort_list.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/sortingrenderer.cpp"
+    --required "src/original_runtime/original_gpu_edge.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/stripoptimizer.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/wwstring.cpp")
   set_tests_properties(original_w3d_cpu_identity PROPERTIES LABELS "original-rendering;source-identity")

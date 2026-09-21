@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <limits>
 #include <tuple>
 
 namespace zh::renderer {
@@ -193,6 +194,13 @@ ValidationResult validate(const DrawDesc& desc, const PipelineDesc& pipeline)
 {
     if (!desc.pipeline || !desc.vertex_buffer) return failure("draw requires pipeline and vertex buffer");
     if (desc.vertex_or_index_count == 0) return failure("draw count must be nonzero");
+    if (desc.index_element_size != IndexElementSize::uint16 && desc.index_element_size != IndexElementSize::uint32)
+        return failure("unsupported draw index element size");
+    if (!desc.index_buffer && (desc.first_index != 0 || desc.base_vertex != 0 ||
+        desc.index_element_size != IndexElementSize::uint32))
+        return failure("non-indexed draw cannot specify index format or offsets");
+    if (desc.index_buffer && desc.first_index > (std::numeric_limits<UInt32>::max)() - desc.vertex_or_index_count)
+        return failure("indexed draw range overflows");
     if (pipeline.topology == PrimitiveTopology::point_list && (!(desc.point_size > 0.0F) || !std::isfinite(desc.point_size)))
         return failure("point-list draw requires a finite positive point size");
     if (auto result = validate_bindings(desc.vertex_bindings, "vertex"); !result) return result;

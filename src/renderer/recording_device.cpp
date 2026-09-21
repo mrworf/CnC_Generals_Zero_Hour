@@ -317,6 +317,9 @@ ValidationResult RecordingGpuDevice::draw(const DrawDesc& desc)
     if (desc.index_buffer) {
         const auto* index = lookup(impl_->buffers, desc.index_buffer);
         if (!index || index->value.desc.usage != BufferUsage::index) return impl_->fail("draw", "index buffer is stale, destroyed, or has wrong usage", impl_->active_pass_label);
+        const UInt64 element_size = static_cast<UInt8>(desc.index_element_size);
+        if (static_cast<UInt64>(desc.first_index) + desc.vertex_or_index_count > index->value.desc.size / element_size)
+            return impl_->fail("draw", "indexed draw range exceeds index buffer", impl_->active_pass_label);
     }
     const auto& pipeline_desc = pipeline->value.key.descriptor();
     const auto* vertex_shader = lookup(impl_->shaders, pipeline_desc.vertex_shader);
@@ -345,6 +348,9 @@ ValidationResult RecordingGpuDevice::draw(const DrawDesc& desc)
         + impl_->name(impl_->buffers, desc.vertex_buffer, 'B') + " index="
         + (desc.index_buffer ? impl_->name(impl_->buffers, desc.index_buffer, 'B') : "none")
         + " count=" + std::to_string(desc.vertex_or_index_count) + " point_size=" + std::to_string(desc.point_size);
+    if (desc.index_buffer && (desc.index_element_size != IndexElementSize::uint32 || desc.first_index || desc.base_vertex))
+        command += " index_bits=" + std::to_string(8U * static_cast<UInt8>(desc.index_element_size))
+            + " first_index=" + std::to_string(desc.first_index) + " base_vertex=" + std::to_string(desc.base_vertex);
     const auto append_bindings = [&](const StageBindings& bindings, std::string_view stage) {
         command += " " + std::string(stage) + "_uniforms=";
         for (UInt32 i = 0; i < bindings.uniform_count; ++i) {

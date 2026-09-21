@@ -646,9 +646,14 @@ ValidationResult SdlGpuDevice::draw(const DrawDesc& desc)
         auto* index = lookup(impl_->buffers, desc.index_buffer);
         if (!index || !index->value.native || index->value.desc.usage != BufferUsage::index)
             return impl_->fail("draw", "index buffer is stale, destroyed, or has wrong usage");
+        const UInt64 element_size = static_cast<UInt8>(desc.index_element_size);
+        if (static_cast<UInt64>(desc.first_index) + desc.vertex_or_index_count > index->value.desc.size / element_size)
+            return impl_->fail("draw", "indexed draw range exceeds index buffer");
         SDL_GPUBufferBinding index_binding{index->value.native, 0};
-        SDL_BindGPUIndexBuffer(impl_->render_pass, &index_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
-        SDL_DrawGPUIndexedPrimitives(impl_->render_pass, desc.vertex_or_index_count, 1, 0, 0, 0);
+        SDL_BindGPUIndexBuffer(impl_->render_pass, &index_binding,
+            desc.index_element_size == IndexElementSize::uint16 ? SDL_GPU_INDEXELEMENTSIZE_16BIT : SDL_GPU_INDEXELEMENTSIZE_32BIT);
+        SDL_DrawGPUIndexedPrimitives(impl_->render_pass, desc.vertex_or_index_count, 1,
+            desc.first_index, desc.base_vertex, 0);
     } else {
         SDL_DrawGPUPrimitives(impl_->render_pass, desc.vertex_or_index_count, 1, 0, 0);
     }

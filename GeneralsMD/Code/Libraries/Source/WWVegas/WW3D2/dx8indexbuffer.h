@@ -182,6 +182,7 @@ public:
 	inline IDirect3DIndexBuffer8* Get_DX8_Index_Buffer()	{ return index_buffer; }
 #if defined(ZH_WW3D_CPU_ONLY)
 	unsigned short* Get_CPU_Index_Buffer() { return cpu_index_buffer; }
+	const unsigned short* Get_CPU_Index_Buffer() const { return cpu_index_buffer; }
 #endif
 	
 private:

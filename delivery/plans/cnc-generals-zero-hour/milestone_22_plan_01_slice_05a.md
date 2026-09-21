@@ -34,3 +34,7 @@ it is not a completed pass.
 ## Commit boundary
 
 One independently validated commit: `delivery: M22 slice 05A translate original buffer edge`.
+
+## Completion
+
+Complete. See `delivery/evidence/cnc-generals-zero-hour/milestone_22_slice_05a.md`.

@@ -8,6 +8,7 @@
 
 #include <array>
 #include <chrono>
+#include <cstdint>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -120,6 +121,33 @@ void render_generation(SDL_Window* window, int generation)
         check(device.present(color), device.last_error());
         std::cout << "scene=" << scene << " status=pass generation=" << generation << '\n';
     }
+    // Backend parity for original WW3D: its shared mesh index buffers are
+    // 16-bit and each draw carries its own first index and base vertex.
+    const auto indexed_vertices = device.create_buffer({sizeof(Vertex) * 4, BufferUsage::vertex, true}, "M22 indexed vertices");
+    const auto indexed_indices = device.create_buffer({sizeof(std::uint16_t) * 4, BufferUsage::index, true}, "M22 16-bit indices");
+    check(indexed_vertices && indexed_indices, device.last_error());
+    const std::array<Vertex, 4> indexed_geometry{{
+        {0.0F, 0.0F, 0xff000000U, 0.0F, 0.0F}, triangle[0], triangle[1], triangle[2],
+    }};
+    const std::array<std::uint16_t, 4> original_indices{{0, 0, 1, 2}};
+    check(device.upload({indexed_vertices, sizeof(indexed_geometry), 0, sizeof(indexed_geometry)}, indexed_geometry.data()), device.last_error());
+    check(device.upload({indexed_indices, sizeof(original_indices), 0, sizeof(original_indices)}, original_indices.data()), device.last_error());
+    DrawDesc indexed_draw = draw;
+    indexed_draw.vertex_buffer = indexed_vertices;
+    indexed_draw.index_buffer = indexed_indices;
+    indexed_draw.index_element_size = IndexElementSize::uint16;
+    indexed_draw.first_index = 1;
+    indexed_draw.base_vertex = 1;
+    check(device.begin_pass(pass, "M22 16-bit indexed contract"), device.last_error());
+    indexed_draw.first_index = 3;
+    check(!device.draw(indexed_draw) && device.last_error().find("index buffer") != std::string::npos,
+        "out-of-range original index offset was not rejected");
+    indexed_draw.first_index = 1;
+    check(device.draw(indexed_draw), device.last_error());
+    check(device.end_pass(), device.last_error());
+    check(device.present(color), device.last_error());
+    device.destroy(indexed_indices);
+    device.destroy(indexed_vertices);
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - started).count();
     check(!device.end_pass() && device.last_error().find("no render pass") != std::string::npos,

@@ -14,6 +14,7 @@ using foundation::UInt8;
 using foundation::UInt16;
 using foundation::UInt32;
 using foundation::UInt64;
+using foundation::Int32;
 
 template <typename Tag>
 class Handle {
@@ -46,6 +47,7 @@ enum class Filter : UInt8 { nearest, linear };
 enum class AddressMode : UInt8 { repeat, mirrored_repeat, clamp_edge, clamp_border };
 enum class ShaderStage : UInt8 { vertex, fragment };
 enum class PrimitiveTopology : UInt8 { point_list, triangle_list, triangle_strip, triangle_fan };
+enum class IndexElementSize : UInt8 { uint16 = 2, uint32 = 4 };
 enum class VertexLayout : UInt8 { position_color_uv, world_mesh, terrain, water, point_sprite, wwshade };
 enum class CompareOp : UInt8 { never, less, equal, less_equal, greater, not_equal, greater_equal, always };
 enum class BlendFactor : UInt8 { zero, one, src_color, inv_src_color, src_alpha, inv_src_alpha, dst_color, inv_dst_color, dst_alpha, inv_dst_alpha, src_alpha_saturate };
@@ -194,6 +196,9 @@ struct DrawDesc {
     BufferHandle vertex_buffer;
     BufferHandle index_buffer;
     UInt32 vertex_or_index_count = 0;
+    IndexElementSize index_element_size = IndexElementSize::uint32;
+    UInt32 first_index = 0;
+    Int32 base_vertex = 0;
     float point_size = 0.0F;
     StageBindings vertex_bindings;
     StageBindings fragment_bindings;
