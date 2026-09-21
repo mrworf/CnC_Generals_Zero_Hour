@@ -1,28 +1,26 @@
-# M22 plan 01 slice 02: reached original GameClient draw behavior
+# M22 plan 01 slice 02: original GameClient CPU presentation ownership
 
 ## Goal and observable outcome
 
-The selected campaign/skirmish consumer set constructs and exercises all ten reached concrete original draw classes against slice 01's original render-object graph. Their source-defined overrides execute before any device boundary and retain distinct state/ordering semantics.
+The original GameClient display, scene, asset-manager, shadow and terrain-track producers required by the ten retail-reached draw classes own their CPU lifecycle and decisions. A representative owned scene can acquire the original WW3D graph, attach/release original render objects, select an original shadow route and update original track edges without acquiring a physical GPU. Device operations are explicitly unavailable until slice 04.
 
-## Scope
+## Scope and dependency closure
 
-- Remove the M21 headless substitutions only for reached operations in `W3DDefaultDraw`, `W3DModelDraw`, `W3DTankDraw`, `W3DTankTruckDraw`, `W3DTruckDraw`, `W3DSupplyDraw`, `W3DOverlordTankDraw`, `W3DDependencyModelDraw`, `W3DOverlordAircraftDraw`, and `W3DOverlordTruckDraw`.
-- Preserve original condition/model selection, transforms/scaling, animations, recoil/turret/wheel/tread/bone work, supply-bone visibility, dependency gates, rider draw ordering/tint propagation, shroud/hidden state, color/tint, and shadow decisions.
-- Add only newly reached CPU dependencies required by these overrides. Device calls remain fail-closed until slice 03.
+- Compile only reached original `W3DDisplay`, `W3DScene`, `W3DAssetManager`, `W3DShadowManager` and terrain-track CPU methods, plus transitive original WW3D scene/reference-counting providers. Preserve their source identity and the authored order of asset, scene, shadow and track decisions. OS/device adapters may terminate at physical resource operations; they may not implement shadow/track/scene policies or invent geometry/material.
+- Canonical draw sources have two mutually exclusive build configurations: existing M20/M21 schema-only tests remain on `zh_original_config_providers`; M22 original production uses full-behavior objects without `ZH_W3D_SCHEMA_ONLY`, `ZH_W3D_HEADLESS_INSTANCE` or `BRUTAL_TIMING_HACK`. Compile both configurations from the same original source text, never link both definitions into one executable. Confirm class ABI and link-map provider selection. The production switch follows a green original runtime witness, not just a successful compile.
+- Keep Direct3D headers/libraries absent from Linux binaries; where a legacy header contains only opaque device fields, forward declarations may preserve layout. Physical device methods must fail explicitly until the slice-04 `GpuDevice` translation.
 
 ## Validation and error handling
 
-- An owned original-engine scenario creates representative instances through canonical `W3DModuleFactory`, drives state transitions, and records source-owned decisions immediately before the unavailable device edge.
-- Every reached concrete override has a distinct assertion or a source-proven inherited-equivalence assertion; a base-only call cannot stand in for omitted behavior.
-- Missing bones/riders/dependencies/models and invalid condition state fail according to original required/optional semantics without fabricated values.
-- Provider-removal covers representative base, vehicle, dependency, and rider providers.
+- Owned in-memory W3D fixture drives an original scene/asset-manager attach, hide/show or shadow route, track bind/edge/unbind and reverse release; assertions observe source-owned state before the device edge. Required missing original resources fail with actionable context, and a failed setup leaves no newly published scene ownership.
+- Source compile/link identity and provider-removal negative tests cover original display, scene, asset-manager, shadow and track TUs. Link-map checker rejects both schema and full objects defining any of the ten classes in one binary and rejects a production fallback to the schema versions.
+- Existing M20/M21 registry, headless simulation and WW3D CPU tests remain green in GCC/Clang; this CPU slice does not claim rendered frames.
 
 ## Acceptance criteria
 
-- Canonical 19-entry M20 registry and ten M21 concrete identities are unchanged.
-- All reached subclass-specific CPU behavior is restored and tested before device translation.
-- No generic draw module, alternate registry, no-op override, or adapter-owned scene state is accepted.
+- Original owners and CPU decisions, not boundary substitutes, produce scene attachment, shadow selection and track state. All reached required GPU calls are typed unavailable rather than no-op success.
+- Full-class declarations/layout match across M22 production consumers; schema-only test binaries continue selecting their existing source configuration.
 
 ## Commit boundary
 
-Commit reached concrete GameClient behavior, focused tests, ledger update, slice status, and evidence as `delivery: M22 slice 02 restore original draw behavior`.
+Commit original CPU presentation closure, focused positive/negative witnesses, identity/ABI gates, ledger/evidence and slice status as `delivery: M22 slice 02 restore original GameClient CPU owners`.

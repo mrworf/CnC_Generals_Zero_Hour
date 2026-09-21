@@ -8,7 +8,7 @@ The original `W3DAssetManager`/`WW3DAssetManager` path reads a project-owned byt
 
 - Replace the bootstrap-only `zh_w3d` provider with the minimal transitive original source closure reached from `W3DAssetManager`, `WW3DAssetManager`, registered prototype loaders, and model creation.
 - Preserve original `ChunkLoadClass`, mesh/HLOD/hierarchy/animation parsing, texture identity, material passes, mapper parameters, `ShaderClass` values, render-object cloning, reference counting, and reverse teardown.
-- Port only OS/compiler boundaries required by those sources. Direct3D allocation/draw calls remain a typed unavailable edge until slice 03; they may not be reported as successful.
+- Port only OS/compiler boundaries required by those sources. Direct3D allocation/draw calls remain a typed unavailable edge until slice 04; they may not be reported as successful.
 - Maintain a checked closure manifest tying each compiled original translation unit to a reached symbol or explicit runtime witness; do not bulk-add the 244-file WW3D2 directory.
 
 ## Entry point and end-to-end behavior
@@ -18,7 +18,7 @@ A focused original-source integration executable mounts owned W3D/texture bytes 
 ## Validation and error handling
 
 - Positive fixtures cover mesh plus HLOD/hierarchy/animation and multiple material/shader/texture states using documented W3D chunks.
-- Missing/truncated/oversized/unknown-required chunks and duplicate prototype names reject through the original loader's existing error contract. Preserve its authored intermediate-publication behavior; do not impose a new global transaction on `WW3DAssetManager`. Unresolved hierarchy/model/texture references and allocation failure at a required scene resource must fail the owning scenario load and unwind newly published scenario state (verified with a failure/retry witness in slice 04).
+- Missing/truncated/oversized/unknown-required chunks and duplicate prototype names reject through the original loader's existing error contract. Preserve its authored intermediate-publication behavior; do not impose a new global transaction on `WW3DAssetManager`. Unresolved hierarchy/model/texture references and allocation failure at a required scene resource must fail the owning scenario load and unwind newly published scenario state (verified with a failure/retry witness in slice 05).
 - Identity and provider-removal gates require original asset manager, loader, render-object, material, and shader translation units.
 - Existing canonical schema, M21 simulation, data/VFS, renderer-component, and source-classification tests remain green.
 

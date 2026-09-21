@@ -38,6 +38,8 @@ The production Linux original-engine path renders representative campaign and sk
 - `LinuxDisplay`, `LinuxView`, and `LinuxTerrainVisual` currently record/preload CPU state without acquiring a device or drawing. They are the Linux factory boundary through which the original GameClient must receive the M22 presentation adapter; they must not become a parallel authoritative scene implementation.
 - A rejected implementation probe demonstrated that calling `W3DModelDraw` and then supplying adapter-owned geometry/material data is not an original renderer closure. No part of that uncommitted probe is retained. Geometry, hierarchy, animation, texture identity, and `ShaderClass` state must first come from the original WW3D object graph.
 - The selected M21 retail campaign/skirmish pair reaches ten concrete GameClient draw classes. Its minimal upstream WW3D CPU closure begins at `W3DAssetManager`/`WW3DAssetManager`, `ChunkLoadClass`, the registered prototype loaders, mesh/HLOD/hierarchy/animation loaders, texture/material/mapper/`ShaderClass` state, and their render-object ownership graph. Only source files required by compile/link reachability and runtime witnesses are added; the unrelated remainder of the 244-file WW3D2 directory is not presumed in scope.
+- Slice 01 restored the original WW3D CPU graph (`8e8e12b`). A full-behavior compile of all ten concrete draw translation units then exposed original `W3DDisplay` scene/asset state, `W3DShadowManager` selection/lifetime, and terrain-track bind/edge/unbind as mandatory linked CPU owners. Their source TUs also contain Win32/DX8 physical operations, so original CPU presentation ownership must close before subclass runtime acceptance. A compile-only GameClient draw target is not acceptance.
+- `ZH_W3D_SCHEMA_ONLY`, `ZH_W3D_HEADLESS_INSTANCE` and `BRUTAL_TIMING_HACK` alter source bodies and, for the latter two, class layout/`RenderObjClass` declarations. M20/M21 schema tests and M22 production therefore need mutually exclusive executable configurations of the same canonical sources, verified against link-map and ABI selection; mixing those object definitions is forbidden.
 - Existing project-owned renderer contracts already cover explicit resources, immutable pipeline state, uploads, render passes, presentation, and public Vulkan-backed resize/recreation. M22 must bind original source state into that contract rather than reintroducing Direct3D or private Vulkan calls.
 - The ordinary four presets intentionally remain asset- and device-independent. Retail/GPU checks require separate options and must not leak paths, filenames chosen from the private corpus, bytes, or hashes into committed output.
 
@@ -48,7 +50,7 @@ The production Linux original-engine path renders representative campaign and sk
 3. Recording and Vulkan runs invoke the same original producer entry point. Recording is the deterministic semantic witness and negative-control surface; hardware is the device, validation, resize, presentation, and visual-evidence gate.
 4. Retail logical input names are supplied privately by the gate and read through the existing VFS. Tests commit only logical/aggregate results and project-owned screenshots or derived visual observations permitted by the product contract; no retail bytes, hashes, or host paths are retained.
 5. Unsupported required legacy state, missing/malformed required assets, stale resources, and omitted original providers are hard failures. No placeholder texture/model, generated scene, ignored state, generic/no-op draw module, or silent successful null behavior can satisfy acceptance.
-6. Five slices are the minimum dependency-safe sequence after the producer-authority probe: establish the original WW3D CPU asset/render-object graph; restore reached concrete GameClient override behavior; translate its DX8/WWShade outputs to `GpuDevice`; prove complete retail scenes on recording; then exercise that identical path on validation-enabled Vulkan and close cumulative acceptance.
+6. Six slices are the minimum dependency-safe sequence after the source-closure link probe: original WW3D CPU assets; original GameClient display/scene/shadow/track CPU owners; ten concrete draw override behaviors; DX8/WWShade device translation; complete retail recording scenes; then identical validation-enabled Vulkan scenes and cumulative acceptance. A GPU edge may be unavailable during CPU slices, but source-owned CPU decisions and error routing must execute first.
 
 ## Scope
 
@@ -72,11 +74,12 @@ The production Linux original-engine path renders representative campaign and sk
 
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
-| 01 | [milestone_22_plan_01_slice_01.md](milestone_22_plan_01_slice_01.md) | Original WW3D loaders construct the reached CPU asset, render-object, material, hierarchy, and animation graph from W3D resources with exact ownership/failure behavior. | M20, M21 | complete | slice 01 commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_01.md) |
-| 02 | [milestone_22_plan_01_slice_02.md](milestone_22_plan_01_slice_02.md) | All ten reached concrete GameClient draw classes preserve original condition, transform, bone/tread/supply/rider, shroud, tint, and shadow behavior against that graph. | slice 01 | pending | | |
-| 03 | [milestone_22_plan_01_slice_03.md](milestone_22_plan_01_slice_03.md) | Original DX8Wrapper/WWShade outputs translate through `GpuDevice`, with actual-producer recording, negative controls, and lifecycle closure. | slice 02, M14 | pending | | |
-| 04 | [milestone_22_plan_01_slice_04.md](milestone_22_plan_01_slice_04.md) | Original campaign and skirmish consumers load and record complete retail scene families with source identity, failure, reset, and provider-removal evidence. | slice 03 | pending | | |
-| 05 | [milestone_22_plan_01_slice_05.md](milestone_22_plan_01_slice_05.md) | The same original retail scenes render and present on validation-enabled SDL_GPU Vulkan, survive resize/recreation, produce reviewed visual evidence, and pass cumulative acceptance. | slice 04, PRE-008, PRE-012, PRE-016 | pending | | |
+| 01 | [milestone_22_plan_01_slice_01.md](milestone_22_plan_01_slice_01.md) | Original WW3D loaders construct the reached CPU asset, render-object, material, hierarchy, and animation graph from W3D resources with exact ownership/failure behavior. | M20, M21 | complete | `8e8e12b` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_01.md) |
+| 02 | [milestone_22_plan_01_slice_02.md](milestone_22_plan_01_slice_02.md) | Original GameClient display, scene, asset, shadow and track CPU owners close the draw-class link graph with a typed unavailable GPU edge and unmixed ABI. | slice 01 | pending | | |
+| 03 | [milestone_22_plan_01_slice_03.md](milestone_22_plan_01_slice_03.md) | All ten reached concrete GameClient draw classes preserve original condition, transform, bone/tread/supply/rider, shroud, tint, and shadow behavior against that graph. | slice 02 | pending | | |
+| 04 | [milestone_22_plan_01_slice_04.md](milestone_22_plan_01_slice_04.md) | Original DX8Wrapper/WWShade outputs translate through `GpuDevice`, with actual-producer recording, negative controls, and lifecycle closure. | slice 03, M14 | pending | | |
+| 05 | [milestone_22_plan_01_slice_05.md](milestone_22_plan_01_slice_05.md) | Original campaign and skirmish consumers load and record complete retail scene families with source identity, failure, reset, and provider-removal evidence. | slice 04 | pending | | |
+| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | The same original retail scenes render and present on validation-enabled SDL_GPU Vulkan, survive resize/recreation, produce reviewed visual evidence, and pass cumulative acceptance. | slice 05, PRE-008, PRE-012, PRE-016 | pending | | |
 
 ## Cross-slice concerns
 
@@ -85,7 +88,7 @@ The production Linux original-engine path renders representative campaign and sk
 - Invalidation and lifecycle effects: renderer reset must invalidate device resources without invalidating original simulation authority. Destruction is reverse, exactly once, bounded, and safe after partial failure, resize, reset, or device recreation.
 - Audit and observability: recording markers/commands identify the original producer and logical scene family, not merely adapter activity. Validation output is combined and rejected on `Validation Error` or `VUID-` even if the executable exits zero.
 - Performance and scale: selected scenes are bounded but retain real retail terrain/object/resource counts; no timeout increase or scene reduction hides quadratic behavior or leaks.
-- Environment or external services: Vulkan and a graphical session are required only for slice 03. Ordinary tests stay display/GPU/retail independent.
+- Environment or external services: Vulkan and a graphical session are required only for slice 06. Ordinary tests stay display/GPU/retail independent.
 
 ## Milestone completion gate
 
@@ -99,13 +102,14 @@ The production Linux original-engine path renders representative campaign and sk
 
 ## Rollback and recovery
 
-Each slice is independently revertible. Slices 01 and 02 add only original CPU producer behavior and do not claim a renderer. Slice 03 establishes the translated recording boundary. Slice 04 leaves retail recording acceptance without enabling hardware by default. Slice 05's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
+Each slice is independently revertible. Slices 01–03 add only original CPU producer behavior and do not claim a renderer. Slice 04 establishes the translated recording boundary. Slice 05 leaves retail recording acceptance without enabling hardware by default. Slice 06's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
 
 ## Execution notes
 
 - Planning phase completed before production changes at transaction-start HEAD `0c227ac924b163d9f0caf0e703e5610ed37fd9b2`; worktree was clean.
 - M14/M28 generated or fixture scenes may remain regression coverage but are explicitly non-acceptance for M22.
 - Replan checkpoint: an uncommitted adapter-owned resource probe was rejected and removed before this revision. The original three slices map to new slices 03, 04, and 05; new prerequisite slices 01 and 02 close the previously hidden producer dependencies.
+- Post-slice-01 replan checkpoint: canonical full draw TUs compile, but their link probe discovers original `W3DDisplay`, `W3DShadowManager`, and terrain-track CPU owners absent from the earlier boundary. Original slice 02 becomes slice 03; previous slices 03–05 become 04–06. New slice 02 owns that precise source closure, avoiding a dependency cycle in which subclass behavior would otherwise depend on the later device-translation slice. Only plans are committed at this checkpoint; the compile probe remains uncommitted and non-acceptance.
 
 ## Deferred follow-ups
 
