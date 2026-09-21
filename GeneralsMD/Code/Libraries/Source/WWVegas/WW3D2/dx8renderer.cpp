@@ -2293,15 +2293,13 @@ void DX8MeshRendererClass::Add_To_Render_List(DecalMeshClass * decalmesh)
 
 void DX8MeshRendererClass::Render_Decal_Meshes(void)
 {
-#if defined(ZH_WW3D_CPU_ONLY)
-	if (!visible_decal_meshes) return;
-	throw std::runtime_error("original decal mesh pass requires GPU translation");
-#else
 	DecalMeshClass * decal_mesh = visible_decal_meshes;
 	if (!decal_mesh) return;
 
 	DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,8);
-	
+	#if defined(ZH_WW3D_CPU_ONLY)
+	try {
+	#endif
 	while (decal_mesh != NULL) {
 		decal_mesh->Render();
 		decal_mesh = decal_mesh->Peek_Next_Visible();
@@ -2309,6 +2307,14 @@ void DX8MeshRendererClass::Render_Decal_Meshes(void)
 	visible_decal_meshes = NULL;
 
 	DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,0);
+	#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		// The caller must abort the frame and requeue through original Mesh::Render.
+		// Never retain a link into an owner it may release after the failed pass.
+		visible_decal_meshes=NULL;
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,0);
+		throw;
+	}
 #endif
 }
 

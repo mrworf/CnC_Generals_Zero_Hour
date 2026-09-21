@@ -690,11 +690,13 @@ int main(int argc, char **argv)
 		TheDX8MeshRenderer.Init();
 		TheDX8MeshRenderer.Set_Camera(&camera);
 		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+		skin_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
 		LightEnvironmentClass decal_environment;
 		decal_environment.Reset(Vector3(0,0,-10),Vector3(0.2f,0.2f,0.2f));
 		decal_environment.Pre_Render_Update(Matrix3D(true));
 		render_info.light_environment=&decal_environment;
 		mesh->Render(render_info);
+		skin_hlod->Render(render_info);
 		OwnedFactory textures;
 		textures.files["mytex.tga"]=original_targa();
 		textures.files["MYTEX.TGA"]=textures.files["mytex.tga"];
@@ -709,20 +711,75 @@ int main(int argc, char **argv)
 		zh::renderer::RenderPassDesc pass;
 		pass.color_targets[0]=color; pass.color_target_count=1;
 		pass.depth_target=depth; pass.width=32; pass.height=32;
-		bool physical_decal_edge=false;
 		{
 			zh::original_runtime::OriginalGpuEdge edge(recorder);
 			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
 			DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
 			assert(recorder.begin_pass(pass,"original decal CPU first physical edge"));
-			try { TheDX8MeshRenderer.Flush(); }
-			catch (const std::runtime_error& error) {
-				physical_decal_edge=std::strstr(error.what(),"decal mesh pass requires GPU translation")!=nullptr;
-			}
+			TheDX8MeshRenderer.Flush();
 			assert(recorder.end_pass());
 		}
-		assert(physical_decal_edge && recorder.snapshot().find("draw pipeline=")!=std::string::npos &&
+		const auto queue_commands=recorder.snapshot();
+		const auto first_queue_draw=queue_commands.find("draw pipeline=");
+		const auto bias_begin=queue_commands.find("DX8Wrapper::Set_DX8_Render_State=47:8");
+		const auto bias_end=queue_commands.find("DX8Wrapper::Set_DX8_Render_State=47:0",bias_begin);
+		assert(first_queue_draw!=std::string::npos && bias_begin!=std::string::npos &&
+			bias_end!=std::string::npos && first_queue_draw<bias_begin &&
+			queue_commands.find("draw pipeline=",first_queue_draw+1)<bias_begin &&
+			queue_commands.find("draw pipeline=",bias_begin)>bias_begin &&
+			queue_commands.find("draw pipeline=",queue_commands.find("draw pipeline=",bias_begin)+1)<bias_end &&
+			queue_commands.find("draw pipeline=",bias_end)==std::string::npos &&
 			textures.owners==0);
+		auto queue_original=[&] {
+			mesh->Render(render_info);
+			skin_hlod->Render(render_info);
+		};
+		for (unsigned decal_draw=0;decal_draw<2;++decal_draw) {
+			queue_original();
+			const auto before_failure=recorder.snapshot().size();
+			{
+				zh::original_runtime::OriginalGpuEdge edge(recorder);
+				DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+				DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+				recorder.fail_draw_after(2+decal_draw);
+				assert(recorder.begin_pass(pass,"original queued decal failed draw"));
+				bool rejected=false;
+				try { TheDX8MeshRenderer.Flush(); }
+				catch (const std::runtime_error& error) {
+					rejected=std::strstr(error.what(),"draw")!=nullptr;
+				}
+				assert(rejected && recorder.end_pass());
+			}
+			const auto failed=recorder.snapshot().substr(before_failure);
+			const auto failed_bias=failed.find("DX8Wrapper::Set_DX8_Render_State=47:8");
+			const auto reset_bias=failed.find("DX8Wrapper::Set_DX8_Render_State=47:0",failed_bias);
+			assert(failed_bias!=std::string::npos && reset_bias!=std::string::npos &&
+				failed.find("draw pipeline=",reset_bias)==std::string::npos &&
+				textures.owners==0);
+			// Abandon the partial source frame, then let the original mesh and
+			// HLOD owners rebuild their category/decal lists in a fresh session.
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			mesh->Peek_Model()->Register_For_Rendering();
+			skin_mesh->Peek_Model()->Register_For_Rendering();
+			queue_original();
+			const auto before_retry=recorder.snapshot().size();
+			{
+				zh::original_runtime::OriginalGpuEdge edge(recorder);
+				DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+				DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+				assert(recorder.begin_pass(pass,"original queued decal source retry"));
+				TheDX8MeshRenderer.Flush();
+				assert(recorder.end_pass());
+			}
+			const auto retried=recorder.snapshot().substr(before_retry);
+			const auto retry_bias=retried.find("DX8Wrapper::Set_DX8_Render_State=47:8");
+			assert(retry_bias!=std::string::npos &&
+				retried.find("draw pipeline=",retry_bias)!=std::string::npos &&
+				retried.find("draw pipeline=",retried.find("draw pipeline=",retry_bias)+1)!=std::string::npos &&
+				retried.find("DX8Wrapper::Set_DX8_Render_State=47:0",retry_bias)!=std::string::npos &&
+				textures.owners==0);
+		}
 		_TheFileFactory=old_factory;
 		TheDX8MeshRenderer.Invalidate();
 		TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
