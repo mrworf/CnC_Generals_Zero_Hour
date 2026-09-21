@@ -357,6 +357,11 @@ with owner/generation/error controls; B3B2B adds exact GLSL/SPIR-V SDL_GPU
 pixel semantics for required zero-, one- and two-texture stage families and
 Khronos validation. Together these retain the former B3B2 acceptance;
 neither substitutes for 06 original category pass/draw ordering.
+The first real validation-layer probe found Vulkan VUID-07904 when a shader
+declares original FVF attributes the source-selected buffer does not contain.
+B3B2B therefore compiles exact bounded vertex-input variants for reached
+canonical FVF families; it rejects unsupported families and does not add
+dummy geometry, assume unavailable Vulkan features or disable validation.
 
 ## Deferred follow-ups
 
