@@ -1,0 +1,5 @@
+# M22 plan 01 slice 06B3B: original delayed additional-pass timing
+
+Requires accepted 06B3A. Restore original `DX8RigidFVFCategoryContainer::Render_Delayed_Procedural_Material_Passes` only after original `DX8MeshRendererClass::Flush` base/skin/decal scheduling reaches it. Preserve source-owned delayed head/tail, per-task deletion after successful draw, original index/vertex buffers and material pass world/light/override restoration. A physical error must not turn a queued delayed pass into completed state or silently replay a partial pass; bounded scene abort/requeue/reset must be tested. Sorted geometry remains typed physical unavailable until 06C.
+
+Owned rigid W3D fixture with original delayed pass records base→skin precedence where present→delayed order, source material/texture decisions and indexed draw; validation-layer Vulkan pixels distinguish delayed contribution. Empty delay queue no-op, unsupported required pass and injected upload/draw failure produce no false completed frame and retry after owner reset. GCC/Clang full/LAN, sanitizers, provider/ABI/identity and GPU5 pass before B3B commit. Cull-volume APT/dynamic IB remains typed until B3C.
