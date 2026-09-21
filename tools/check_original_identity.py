@@ -23,7 +23,7 @@ def verify(
     for source in required:
         if not any(path.endswith(source) for path in compiled):
             raise ValueError(f"required original provider was not compiled: {source}")
-        object_stem = pathlib.Path(source).stem + ".cpp.o"
+        object_stem = pathlib.Path(source).name + ".o"
         if object_stem not in map_text:
             raise ValueError(f"required original provider was not linked: {source}")
     result = subprocess.run([str(executable)], text=True, capture_output=True, check=False)

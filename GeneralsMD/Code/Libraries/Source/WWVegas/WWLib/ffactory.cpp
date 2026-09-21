@@ -34,6 +34,22 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include	"ffactory.h"
+
+#if defined(ZH_WW3D_CPU_ONLY)
+// The full Linux runtime publishes its original FileFactoryClass through
+// ww3d_cpu_state.cpp. Keep the canonical RAII file ownership provider here;
+// do not instantiate the Win32 raw/interactive file factory on Linux.
+file_auto_ptr::file_auto_ptr(FileFactoryClass *fac, const char *filename) :
+	_Ptr(fac ? fac->Get_File(filename) : nullptr), _Fac(fac)
+{
+}
+
+file_auto_ptr::~file_auto_ptr()
+{
+	if (_Fac && _Ptr) _Fac->Return_File(_Ptr);
+}
+
+#else
 #include	"rawfile.h"
 #include "bufffile.h"
 #include "realcrc.h"
@@ -308,4 +324,4 @@ void SimpleFileFactoryClass::Return_File( FileClass *file )
 {
 	delete file;
 }
-
+#endif // ZH_WW3D_CPU_ONLY

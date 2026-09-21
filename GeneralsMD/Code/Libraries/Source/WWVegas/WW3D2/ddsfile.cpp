@@ -20,12 +20,16 @@
 #include "ddsfile.h"
 #include "ffactory.h"
 #include "bufffile.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "formconv.h"
 #include "dx8wrapper.h"
+#include <ddraw.h>
+#endif
 #include "bitmaphandler.h"
 #include "colorspace.h"
 #include <string.h>
-#include <ddraw.h>
+#include <cstdint>
+#include <limits>
 
 // ----------------------------------------------------------------------------
 
@@ -47,6 +51,7 @@ DDSFileClass::DDSFileClass(const char* name,unsigned reduction_factor)
 	DateTime(0),
 	CubeFaceSize(0)
 {
+	if (!name || strlen(name) < 3 || strlen(name) >= sizeof(Name)) return;
 	strncpy(Name,name,sizeof(Name));
 	// The name could be given in .tga or .dds format, so ensure we're opening .dds...
 	int len=strlen(Name);
@@ -71,7 +76,7 @@ DDSFileClass::DDSFileClass(const char* name,unsigned reduction_factor)
 	char header[4];
 
 	unsigned read_bytes=file->Read(header,4);
-	if (!read_bytes)
+	if (read_bytes!=4 || memcmp(header,"DDS ",4)!=0)
 	{
 		WWASSERT("File loading failed trying to read header\n");
 		return;
@@ -79,7 +84,7 @@ DDSFileClass::DDSFileClass(const char* name,unsigned reduction_factor)
 	// Now, we read DDSURFACEDESC2 defining the compressed data
 	read_bytes=file->Read(&SurfaceDesc,sizeof(LegacyDDSURFACEDESC2));
 	// Verify the structure size matches the read size
-	if (read_bytes==0 || read_bytes!=SurfaceDesc.Size) 
+	if (read_bytes!=sizeof(SurfaceDesc) || SurfaceDesc.Size!=sizeof(SurfaceDesc))
 	{
 		StringClass tmp(0,true);
 		tmp.Format("File %s loading failed.\nTried to read %d bytes, got %d. (SurfDesc.size=%d)\n",name,sizeof(LegacyDDSURFACEDESC2),read_bytes,SurfaceDesc.Size);
@@ -87,13 +92,32 @@ DDSFileClass::DDSFileClass(const char* name,unsigned reduction_factor)
 		return;
 	}
 
+#if defined(ZH_WW3D_CPU_ONLY)
+	// The original D3DFormat_To_WW3DFormat maps the same DXT FourCC values;
+	// the native branch retains that original D3D conversion table.
+	switch (SurfaceDesc.PixelFormat.FourCC) {
+	case 0x31545844: Format=WW3D_FORMAT_DXT1; break;
+	case 0x32545844: Format=WW3D_FORMAT_DXT2; break;
+	case 0x33545844: Format=WW3D_FORMAT_DXT3; break;
+	case 0x34545844: Format=WW3D_FORMAT_DXT4; break;
+	case 0x35545844: Format=WW3D_FORMAT_DXT5; break;
+	default: return;
+	}
+#else
 	Format=D3DFormat_To_WW3DFormat((D3DFORMAT)SurfaceDesc.PixelFormat.FourCC);
+#endif
 	WWASSERT(
 		Format==WW3D_FORMAT_DXT1 ||
 		Format==WW3D_FORMAT_DXT2 ||
 		Format==WW3D_FORMAT_DXT3 ||
 		Format==WW3D_FORMAT_DXT4 ||
 		Format==WW3D_FORMAT_DXT5);
+	// Malformed headers must never drive shifts, allocation sizes or block
+	// reads. The original mip policy below remains unchanged for valid files.
+	if (!SurfaceDesc.Width || !SurfaceDesc.Height || SurfaceDesc.Width>16384 ||
+		SurfaceDesc.Height>16384 || SurfaceDesc.Width%4 || SurfaceDesc.Height%4 ||
+		SurfaceDesc.MipMapCount>15 || ReductionFactor>15 ||
+		SurfaceDesc.Depth>16384) return;
 
 	MipLevels=SurfaceDesc.MipMapCount;
 	if (MipLevels==0) MipLevels=1;
@@ -109,11 +133,11 @@ DDSFileClass::DDSFileClass(const char* name,unsigned reduction_factor)
 	else MipLevels=1;
 
 	// check texture type, normal, cube or volume
-	if (SurfaceDesc.Caps.Caps2&DDSCAPS2_CUBEMAP)
+	if (SurfaceDesc.Caps.Caps2&0x200)
 	{
 		Type=DDS_CUBEMAP;
 	}
-	else if (SurfaceDesc.Caps.Caps2&DDSCAPS2_VOLUME)
+	else if (SurfaceDesc.Caps.Caps2&0x200000)
 	{
 		Type=DDS_VOLUME;
 	}
@@ -138,13 +162,16 @@ DDSFileClass::DDSFileClass(const char* name,unsigned reduction_factor)
 	if (Type==DDS_VOLUME)
 	{
 		// add slices to level data size
+		if (!SurfaceDesc.Depth ||
+			static_cast<std::uint64_t>(level_size)*SurfaceDesc.Depth > 256u*1024u*1024u) return;
 		level_size*=SurfaceDesc.Depth;
 		level_mip_dec=8;
 	}
 
 	LevelSizes=W3DNEWARRAY unsigned[MipLevels];
 	LevelOffsets=W3DNEWARRAY unsigned[MipLevels];
-	for (unsigned level=0;level<ReductionFactor;++level) 
+	unsigned level=0;
+	for (;level<ReductionFactor;++level)
 	{
 		if (level_size>16) 
 		{	// If surface is bigger than one block (8 or 16 bytes)...
@@ -153,6 +180,13 @@ DDSFileClass::DDSFileClass(const char* name,unsigned reduction_factor)
 	}
 	for (level=0;level<MipLevels;++level) 
 	{
+		if (level_offset>std::numeric_limits<unsigned>::max()-level_size) {
+			delete[] LevelSizes;
+			delete[] LevelOffsets;
+			LevelSizes=LevelOffsets=NULL;
+			MipLevels=0;
+			return;
+		}
 		LevelSizes[level]=level_size;
 		LevelOffsets[level]=level_offset;
 		level_offset+=level_size;
@@ -259,9 +293,12 @@ bool DDSFileClass::Load()
 		return false;
 	}
 
-	file->Open();
+	if (!file->Open()) return false;
 	// Data size is file size minus the header and info block
-	unsigned size=file->Size()-SurfaceDesc.Size-4;
+	const std::uint64_t file_size=file->Size();
+	const std::uint64_t data_start=static_cast<std::uint64_t>(SurfaceDesc.Size)+4;
+	if (file_size<=data_start || file_size>data_start+256u*1024u*1024u) return false;
+	std::uint64_t size=file_size-data_start;
 
 	if (!size)
 	{
@@ -276,9 +313,10 @@ bool DDSFileClass::Load()
 		Format
 	);
 
-	unsigned skipped_offset=0;
+	std::uint64_t skipped_offset=0;
 	for (unsigned i=0;i<ReductionFactor;++i) 
 	{
+		if (size<level_size) return false;
 		skipped_offset+=level_size;
 		size-=level_size;
 		if (level_size>16) 
@@ -288,17 +326,19 @@ bool DDSFileClass::Load()
 	}
 
 	// Skip the header and info block and possible unused mip levels
-	unsigned seek_size=file->Seek(SurfaceDesc.Size+4+skipped_offset);
-	WWASSERT(seek_size==(SurfaceDesc.Size+4+skipped_offset));
+	const std::uint64_t required_size=static_cast<std::uint64_t>(LevelOffsets[MipLevels-1])+LevelSizes[MipLevels-1];
+	if (size<required_size*(Type==DDS_CUBEMAP ? 6u : 1u) || size>256u*1024u*1024u) return false;
+	unsigned seek_size=file->Seek(static_cast<unsigned>(data_start+skipped_offset));
+	if (seek_size!=(data_start+skipped_offset)) return false;
 
-	if (size && size<0x80000000) 
+	if (size)
 	{
 		// Allocate memory for the data excluding the headers
-		DDSMemory=MSGW3DNEWARRAY("DDSMemory") unsigned char[size];
+		DDSMemory=MSGW3DNEWARRAY("DDSMemory") unsigned char[static_cast<unsigned>(size)];
 		// Read data
-		unsigned read_size=file->Read(DDSMemory,size);
+		unsigned read_size=file->Read(DDSMemory,static_cast<unsigned>(size));
 		// Verify we got all the data
-		WWASSERT(read_size==size);
+		if (read_size!=size) { delete[] DDSMemory; DDSMemory=NULL; return false; }
 	}
 	file->Close();
 	return true;
@@ -333,6 +373,7 @@ WWINLINE static unsigned short ARGB8888_To_RGB565(unsigned argb_)
 //
 // ----------------------------------------------------------------------------
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 void DDSFileClass::Copy_Level_To_Surface(unsigned level,IDirect3DSurface8* d3d_surface,const Vector3& hsv_shift)
 {
 	WWASSERT(d3d_surface);
@@ -356,6 +397,7 @@ void DDSFileClass::Copy_Level_To_Surface(unsigned level,IDirect3DSurface8* d3d_s
 	// Finally, unlock the surface
 	DX8_ErrorCode(d3d_surface->UnlockRect());
 }
+#endif
 
 // ----------------------------------------------------------------------------
 //
@@ -398,8 +440,8 @@ void DDSFileClass::Copy_Level_To_Surface
 				for (unsigned y=0;y<dest_height;y+=4) {
 					for (unsigned x=0;x<dest_width;x+=4) {
 						unsigned cols=*src_ptr++;		// Bytes 1-4 of color block
-						unsigned col0=RGB565_To_ARGB8888(unsigned short(cols>>16));
-						unsigned col1=RGB565_To_ARGB8888(unsigned short(cols&0xffff));
+						unsigned col0=RGB565_To_ARGB8888(static_cast<unsigned short>(cols>>16));
+						unsigned col1=RGB565_To_ARGB8888(static_cast<unsigned short>(cols&0xffff));
 						Recolor(col0,hsv_shift);
 						Recolor(col1,hsv_shift);
 						col0=ARGB8888_To_RGB565(col0);
@@ -419,8 +461,8 @@ void DDSFileClass::Copy_Level_To_Surface
 						*dest_ptr++=*src_ptr++;		// Bytes 1-4 of alpha block
 						*dest_ptr++=*src_ptr++;		// Bytes 5-8 of alpha block
 						unsigned cols=*src_ptr++;		// Bytes 1-4 of color block
-						unsigned col0=RGB565_To_ARGB8888(unsigned short(cols>>16));
-						unsigned col1=RGB565_To_ARGB8888(unsigned short(cols&0xffff));
+						unsigned col0=RGB565_To_ARGB8888(static_cast<unsigned short>(cols>>16));
+						unsigned col1=RGB565_To_ARGB8888(static_cast<unsigned short>(cols&0xffff));
 						Recolor(col0,hsv_shift);
 						Recolor(col1,hsv_shift);
 						col0=ARGB8888_To_RGB565(col0);
@@ -460,8 +502,8 @@ void DDSFileClass::Copy_Level_To_Surface
 //							*dest_ptr++=*src_ptr++;		// Bytes 1-4 of color block
 
 							unsigned cols=*src_ptr++;	// Bytes 1-4 of color block
-							unsigned col0=RGB565_To_ARGB8888(unsigned short(cols>>16));
-							unsigned col1=RGB565_To_ARGB8888(unsigned short(cols&0xffff));
+							unsigned col0=RGB565_To_ARGB8888(static_cast<unsigned short>(cols>>16));
+							unsigned col1=RGB565_To_ARGB8888(static_cast<unsigned short>(cols&0xffff));
 							Recolor(col0,hsv_shift);
 							Recolor(col1,hsv_shift);
 							col0=ARGB8888_To_RGB565(col0);
@@ -554,8 +596,8 @@ void DDSFileClass::Copy_CubeMap_Level_To_Surface
 					for (unsigned x=0;x<dest_width;x+=4) 
 					{
 						unsigned cols=*src_ptr++;		// Bytes 1-4 of color block
-						unsigned col0=RGB565_To_ARGB8888(unsigned short(cols>>16));
-						unsigned col1=RGB565_To_ARGB8888(unsigned short(cols&0xffff));
+						unsigned col0=RGB565_To_ARGB8888(static_cast<unsigned short>(cols>>16));
+						unsigned col1=RGB565_To_ARGB8888(static_cast<unsigned short>(cols&0xffff));
 						Recolor(col0,hsv_shift);
 						Recolor(col1,hsv_shift);
 						col0=ARGB8888_To_RGB565(col0);
@@ -578,8 +620,8 @@ void DDSFileClass::Copy_CubeMap_Level_To_Surface
 						*dest_ptr++=*src_ptr++;		// Bytes 1-4 of alpha block
 						*dest_ptr++=*src_ptr++;		// Bytes 5-8 of alpha block
 						unsigned cols=*src_ptr++;		// Bytes 1-4 of color block
-						unsigned col0=RGB565_To_ARGB8888(unsigned short(cols>>16));
-						unsigned col1=RGB565_To_ARGB8888(unsigned short(cols&0xffff));
+						unsigned col0=RGB565_To_ARGB8888(static_cast<unsigned short>(cols>>16));
+						unsigned col1=RGB565_To_ARGB8888(static_cast<unsigned short>(cols&0xffff));
 						Recolor(col0,hsv_shift);
 						Recolor(col1,hsv_shift);
 						col0=ARGB8888_To_RGB565(col0);
@@ -627,8 +669,8 @@ void DDSFileClass::Copy_CubeMap_Level_To_Surface
 //							*dest_ptr++=*src_ptr++;		// Bytes 1-4 of color block
 
 							unsigned cols=*src_ptr++;	// Bytes 1-4 of color block
-							unsigned col0=RGB565_To_ARGB8888(unsigned short(cols>>16));
-							unsigned col1=RGB565_To_ARGB8888(unsigned short(cols&0xffff));
+							unsigned col0=RGB565_To_ARGB8888(static_cast<unsigned short>(cols>>16));
+							unsigned col1=RGB565_To_ARGB8888(static_cast<unsigned short>(cols&0xffff));
 							Recolor(col0,hsv_shift);
 							Recolor(col1,hsv_shift);
 							col0=ARGB8888_To_RGB565(col0);
@@ -727,8 +769,8 @@ void DDSFileClass::Copy_Volume_Level_To_Surface
 					for (unsigned x=0;x<dest_width;x+=4) 
 					{
 						unsigned cols=*src_ptr++;		// Bytes 1-4 of color block
-						unsigned col0=RGB565_To_ARGB8888(unsigned short(cols>>16));
-						unsigned col1=RGB565_To_ARGB8888(unsigned short(cols&0xffff));
+						unsigned col0=RGB565_To_ARGB8888(static_cast<unsigned short>(cols>>16));
+						unsigned col1=RGB565_To_ARGB8888(static_cast<unsigned short>(cols&0xffff));
 						Recolor(col0,hsv_shift);
 						Recolor(col1,hsv_shift);
 						col0=ARGB8888_To_RGB565(col0);
@@ -751,8 +793,8 @@ void DDSFileClass::Copy_Volume_Level_To_Surface
 						*dest_ptr++=*src_ptr++;		// Bytes 1-4 of alpha block
 						*dest_ptr++=*src_ptr++;		// Bytes 5-8 of alpha block
 						unsigned cols=*src_ptr++;		// Bytes 1-4 of color block
-						unsigned col0=RGB565_To_ARGB8888(unsigned short(cols>>16));
-						unsigned col1=RGB565_To_ARGB8888(unsigned short(cols&0xffff));
+						unsigned col0=RGB565_To_ARGB8888(static_cast<unsigned short>(cols>>16));
+						unsigned col1=RGB565_To_ARGB8888(static_cast<unsigned short>(cols&0xffff));
 						Recolor(col0,hsv_shift);
 						Recolor(col1,hsv_shift);
 						col0=ARGB8888_To_RGB565(col0);
@@ -800,8 +842,8 @@ void DDSFileClass::Copy_Volume_Level_To_Surface
 //							*dest_ptr++=*src_ptr++;		// Bytes 1-4 of color block
 
 							unsigned cols=*src_ptr++;	// Bytes 1-4 of color block
-							unsigned col0=RGB565_To_ARGB8888(unsigned short(cols>>16));
-							unsigned col1=RGB565_To_ARGB8888(unsigned short(cols&0xffff));
+							unsigned col0=RGB565_To_ARGB8888(static_cast<unsigned short>(cols>>16));
+							unsigned col1=RGB565_To_ARGB8888(static_cast<unsigned short>(cols&0xffff));
 							Recolor(col0,hsv_shift);
 							Recolor(col1,hsv_shift);
 							col0=ARGB8888_To_RGB565(col0);

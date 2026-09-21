@@ -60,13 +60,14 @@
 *
 ****************************************************************************/
 
-#include "targa.h"
+#include "TARGA.H"
 #ifndef TGA_USES_WWLIB_FILE_CLASSES
 #include <stdio.h>
 #endif
 #include <malloc.h>
 #include <memory.h>
 #include <string.h>
+#include <algorithm>
 #ifdef TGA_USES_WWLIB_FILE_CLASSES
 #include "wwfile.h"
 #include "ffactory.h"
@@ -248,6 +249,7 @@ long Targa::Open(const char* name, long mode)
 			break;
 
 		/* Open targa file for write. */
+#if !defined(ZH_WW3D_CPU_ONLY)
 		case TGA_WRITEMODE:
 			if (!File_Open_Write(name)) {
 				error = TGAERR_OPEN;
@@ -277,6 +279,18 @@ long Targa::Open(const char* name, long mode)
 				error = TGAERR_OPEN;
 			}
 			break;
+#endif // original Targa read-only provider in the Linux rendering closure
+	}
+	// Keep the original image/origin handling, but reject invalid dimensions
+	// before either Load overload allocates or decodes user-controlled bytes.
+	if (!error && mode == TGA_READMODE &&
+		(Header.Width <= 0 || Header.Height <= 0 ||
+		 Header.Width > 16384 || Header.Height > 16384 ||
+		 Header.PixelDepth <= 0 || Header.PixelDepth > 32 ||
+		 Header.CMapLength < 0 || Header.CMapDepth > 32 ||
+		 static_cast<unsigned long long>(Header.Width) * Header.Height *
+		 TGA_BytesPerPixel(Header.PixelDepth) > 64u*1024u*1024u)) {
+		error = TGAERR_SYNTAX;
 	}
  
 	/* Close on any error! */
@@ -827,6 +841,7 @@ void Targa::XFlip(void)
 
 static __forceinline void _swapBytes(char *p1, char *p2, unsigned count)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
   _asm
   {
     mov esi,[p1]
@@ -865,6 +880,9 @@ static __forceinline void _swapBytes(char *p1, char *p2, unsigned count)
     jmp lpLessThan16
   done:
   }
+#else
+  for (unsigned i = 0; i < count; ++i) std::swap(p1[i], p2[i]);
+#endif
 }
 
 void Targa::YFlip(void)
@@ -1087,6 +1105,7 @@ long Targa::DecodeImage()
 				{
 				count &= 0x7F;
 				count++;
+				if (count > pixel_count) return TGAERR_SYNTAX;
 
 				/* Read in run pixel. */
 				if (File_Read(image, depth) == depth)
@@ -1105,6 +1124,7 @@ long Targa::DecodeImage()
 			else
 				{
 				count++;
+				if (count > pixel_count) return TGAERR_SYNTAX;
 				size = (count * depth);
 
 				/* Read in raw pixels. */

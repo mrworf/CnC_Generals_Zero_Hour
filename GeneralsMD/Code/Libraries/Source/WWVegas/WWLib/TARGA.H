@@ -38,6 +38,7 @@
 *
 ****************************************************************************/
 
+#include <cstdint>
 #pragma pack(push, 1)
 
 // If you wish to display loading error messages call targa functions inside of
@@ -133,8 +134,8 @@ typedef struct _TGAHeader
  */
 typedef struct _TGA2Footer
 	{
-	long Extension;
-	long Developer;
+	std::uint32_t Extension;
+	std::uint32_t Developer;
 	char Signature[16];
 	char RsvdChar;
 	char BZST;
@@ -224,12 +225,12 @@ typedef struct _TGA2Extension
 	TGA2TimeStamp JobTime;
 	char          SoftID[41];
 	TGA2SoftVer   SoftVer;
-	long          KeyColor;
+	std::uint32_t KeyColor;
 	TGA2Ratio     Aspect;
 	TGA2Ratio     Gamma;
-	long          ColorCor;
-	long          PostStamp;
-	long          ScanLine;
+	std::uint32_t ColorCor;
+	std::uint32_t PostStamp;
+	std::uint32_t ScanLine;
 	char          Attributes;
 	} TGA2Extension;
 
@@ -241,6 +242,9 @@ typedef struct _TGA2Extension
 #define EXTA_PREMULT 4  /* Pre-Multiplied alpha data */
 
 #pragma pack(pop)
+
+static_assert(sizeof(TGAHeader) == 18 && sizeof(TGA2Footer) == 26 &&
+	sizeof(TGA2Extension) == 495, "Targa on-disk structs must retain 32-bit layout");
 
 /*
 ** This define changes this code from code that works with standard IO calls,
@@ -317,4 +321,3 @@ class Targa
 	};
 
 #endif /* _TARGA_H_ */
-

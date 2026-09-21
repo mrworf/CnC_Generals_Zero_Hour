@@ -143,7 +143,10 @@ struct LegacyDDSURFACEDESC2 {
 	};
 	unsigned AlphaBitDepth;
 	unsigned Reserved;
-	void* Surface;
+	// The DDS file header is the 32-bit legacy wire format on every host.
+	// This field was a pointer in DDraw's in-memory structure, but never used
+	// as a pointer by the file loader; keep the disk offset stable on x86_64.
+	unsigned Surface;
 	union
 	{
 		LegacyDDCOLORKEY CKDestOverlay;
@@ -156,6 +159,8 @@ struct LegacyDDSURFACEDESC2 {
 	LegacyDDSCAPS2 Caps;
 	unsigned TextureStage;
 };
+
+static_assert(sizeof(LegacyDDSURFACEDESC2) == 124, "legacy DDS header must retain its on-disk layout");
 
 
 enum DDSType
