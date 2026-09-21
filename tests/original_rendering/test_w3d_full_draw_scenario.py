@@ -4,6 +4,7 @@
 import argparse
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -125,6 +126,12 @@ def main() -> int:
         if args.retail_archive and "original retail W3D model: ABBarracks_AC class=" not in result.stdout:
             raise SystemExit(f"retail W3D model did not load through original provider:\n"
                              f"{result.stdout}{result.stderr}")
+        if args.retail_archive:
+            aggregate = re.search(r"^original retail material families: meshes=(\d+) materials=(\d+)(.*)$",
+                                  result.stdout, re.MULTILINE)
+            if not aggregate or int(aggregate[1]) < 1 or int(aggregate[2]) < 1 or not re.fullmatch(
+                    r"(?: mapper-\d+=\d+)*", aggregate[3]):
+                raise SystemExit("original retail material family aggregate is absent or malformed")
         if args.keep:
             print(result.stdout)
         os.environ.pop("ZH_M22_RETAIL_MODEL", None)

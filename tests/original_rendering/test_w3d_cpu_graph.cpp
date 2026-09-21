@@ -7,12 +7,14 @@
 #include "w3d_file.h"
 #include "texture.h"
 #include "vertmaterial.h"
+#include "mapper.h"
 #include "camera.h"
 #include "rinfo.h"
 #include "dx8fvf.h"
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
 #include "dx8renderer.h"
+#include "dx8wrapper.h"
 #include "static_sort_list.h"
 #include "ww3d.h"
 #include "original_gpu_edge.h"
@@ -24,6 +26,7 @@
 #include <cstring>
 #include <cstdio>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #undef assert
@@ -409,6 +412,103 @@ int main(int argc, char **argv)
 	assert(stage_material != nullptr);
 	assert(std::fabs(stage_material->Get_Opacity() - 0.75f) < 0.0001f);
 	assert(stage_material->Get_Mapper(0) != nullptr);
+	{
+		zh::renderer::RecordingGpuDevice device;
+		zh::original_runtime::OriginalGpuEdge edge(device);
+		assert(stage_material->Num_Refs() >= 1);
+		const int initial_material_refs=stage_material->Num_Refs();
+		DX8Wrapper::Set_Material(stage_material);
+		assert(stage_material->Num_Refs()==initial_material_refs+1);
+		assert(DX8Wrapper::Peek_Material()==stage_material);
+		assert(DX8Wrapper::Pending_Changes() & (1U<<8));
+		bool missing_camera_source=false;
+		try { DX8Wrapper::Apply_Render_State_Changes(); }
+		catch (const std::runtime_error&) { missing_camera_source=true; }
+		assert(missing_camera_source && (DX8Wrapper::Pending_Changes() & (1U<<8)));
+		Matrix4x4 source_projection;
+		camera.Get_D3D_Projection_Matrix(&source_projection);
+		DX8Wrapper::Set_Transform(D3DTS_PROJECTION,source_projection);
+		DX8Wrapper::Apply_Render_State_Changes();
+		Matrix4x4 original_uv;
+		DX8Wrapper::Get_Transform(D3DTS_TEXTURE0,original_uv);
+		const std::string source_commands=device.snapshot();
+		assert(source_commands.find("DX8Wrapper::Set_DX8_Material")!=std::string::npos);
+		assert(source_commands.find("DX8Wrapper::Set_Transform=16")!=std::string::npos);
+		assert(source_commands.find("DX8Wrapper::Set_DX8_Texture_Stage_State=0:11")!=std::string::npos);
+		DX8Wrapper::Set_Material(nullptr);
+		DX8Wrapper::Apply_Render_State_Changes();
+		assert(stage_material->Num_Refs()==initial_material_refs);
+		assert(DX8Wrapper::Peek_Material()==nullptr);
+		WW3D::Sync(100);
+		auto* linear_material=NEW_REF(VertexMaterialClass,());
+		linear_material->Set_Lighting(false);
+		linear_material->Set_Diffuse_Color_Source(VertexMaterialClass::COLOR1);
+		linear_material->Set_UV_Source(1,1);
+		auto* linear_mapper=NEW_REF(LinearOffsetTextureMapperClass,
+			(Vector2(1.0f,2.0f),Vector2(0.0f,0.0f),false,Vector2(1.0f,1.0f),0));
+		linear_material->Set_Mapper(linear_mapper);
+		linear_mapper->Release_Ref();
+		assert(linear_material->Num_Refs()==1);
+		DX8Wrapper::Set_Material(linear_material);
+		assert(linear_material->Num_Refs()==2);
+		WW3D::Sync(350);
+		DX8Wrapper::Apply_Render_State_Changes();
+		DX8Wrapper::Get_Transform(D3DTS_TEXTURE0,original_uv);
+		assert(std::fabs(original_uv[0].Z-0.75f)<0.0001f);
+		assert(std::fabs(original_uv[1].Z-0.5f)<0.0001f);
+		const std::string linear_commands=device.snapshot();
+		assert(linear_commands.find("DX8Wrapper::Set_DX8_Render_State=137:0")!=std::string::npos);
+		assert(linear_commands.find("DX8Wrapper::Set_DX8_Render_State=145:1")!=std::string::npos);
+		assert(linear_commands.find("DX8Wrapper::Set_DX8_Texture_Stage_State=1:11:1")!=std::string::npos);
+		DX8Wrapper::Set_Material(nullptr);
+		DX8Wrapper::Apply_Render_State_Changes();
+		assert(linear_material->Num_Refs()==1);
+		linear_material->Release_Ref();
+		TextureClass *texture=model->Peek_Texture(0);
+		assert(texture!=nullptr);
+		const int initial_texture_refs=texture->Num_Refs();
+		DX8Wrapper::Set_Texture(0,texture);
+		assert(texture->Num_Refs()==initial_texture_refs+1);
+		assert(DX8Wrapper::Peek_Texture(0)==texture);
+		DX8Wrapper::Set_Texture(0,nullptr);
+		assert(texture->Num_Refs()==initial_texture_refs);
+		assert(DX8Wrapper::Pending_Changes()&1U);
+		bool unsupported_stage=false;
+		try { DX8Wrapper::Set_DX8_Texture_Stage_State(0,999,1); }
+		catch (const std::runtime_error&) { unsupported_stage=true; }
+		assert(unsupported_stage);
+		bool unsupported_index=false;
+		try { DX8Wrapper::Set_DX8_Texture_Stage_State(0,D3DTSS_TEXCOORDINDEX,8); }
+		catch (const std::runtime_error&) { unsupported_index=true; }
+		assert(unsupported_index);
+		DX8Wrapper::Set_Shader(model->Get_Shader(0));
+		assert(DX8Wrapper::Pending_Changes()&(1U<<9));
+		bool shader_edge=false;
+		try { DX8Wrapper::Apply_Render_State_Changes(); }
+		catch (const std::runtime_error& error) {
+			shader_edge=std::strstr(error.what(),"ShaderClass::Apply")!=nullptr;
+		}
+		assert(shader_edge && (DX8Wrapper::Pending_Changes()&(1U<<9)));
+		assert(!device.pass_active());
+	}
+	assert(DX8Wrapper::Peek_Texture(0)==nullptr);
+	assert(DX8Wrapper::Pending_Changes()==0);
+	{
+		zh::renderer::RecordingGpuDevice retry_device;
+		zh::original_runtime::OriginalGpuEdge retry_edge(retry_device);
+		DX8Wrapper::Set_Material(stage_material);
+		Matrix4x4 projection;
+		camera.Get_D3D_Projection_Matrix(&projection);
+		DX8Wrapper::Set_Transform(D3DTS_PROJECTION,projection);
+		DX8Wrapper::Apply_Render_State_Changes();
+		assert(retry_device.snapshot().find("DX8Wrapper::Set_DX8_Material")!=std::string::npos);
+		assert(DX8Wrapper::Pending_Changes()==0);
+	}
+	assert(DX8Wrapper::Peek_Material()==nullptr && DX8Wrapper::Pending_Changes()==0);
+	bool missing_gpu_edge=false;
+	try { DX8Wrapper::Set_Material(stage_material); }
+	catch (const std::runtime_error&) { missing_gpu_edge=true; }
+	assert(missing_gpu_edge && DX8Wrapper::Pending_Changes()==0);
 	TextureClass *stage_texture = model->Peek_Texture(0);
 	assert(stage_texture != nullptr);
 	assert(std::strcmp(stage_texture->Get_Texture_Name(), "mytex.tga") == 0);

@@ -18,7 +18,8 @@ def main() -> int:
     args = parser.parse_args()
     original = json.loads(args.compile_commands.read_text())
     source_names = args.provider or [f"GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/{name}.cpp"
-                                     for name in ("texture", "rinfo", "dx8fvf", "mesh", "meshmdl",
+                                     for name in ("texture", "vertmaterial", "mapper", "dx8wrapper",
+                                                  "rinfo", "dx8fvf", "mesh", "meshmdl",
                                                   "dx8vertexbuffer", "dx8indexbuffer", "dx8renderer",
                                                   "dx8polygonrenderer", "stripoptimizer", "ww3d",
                                                   "static_sort_list", "sortingrenderer")]

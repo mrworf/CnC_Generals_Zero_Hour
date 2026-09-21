@@ -79,6 +79,12 @@
 
 namespace {
 
+#if defined(ZH_M22_FULL_DRAW_TEST)
+// The material probe is a distinct TU compiled under the canonical WW3D CPU
+// layout; this GameClient host TU only passes the opaque RenderObj owner.
+extern "C" void zh_probe_retail_material_families(RenderObjClass *object);
+#endif
+
 extern "C" UnsignedInt zh_original_ai_update_count();
 extern "C" UnsignedInt zh_original_script_engine_update_count();
 
@@ -699,6 +705,7 @@ public:
 				if (!retail) throw std::runtime_error("required original retail W3D model is missing");
 				std::printf("original retail W3D model: %s class=%d subobjects=%d\n",
 					retailModel, retail->Class_ID(), retail->Get_Num_Sub_Objects());
+				zh_probe_retail_material_families(retail);
 				retail->Release_Ref();
 			}
 #endif

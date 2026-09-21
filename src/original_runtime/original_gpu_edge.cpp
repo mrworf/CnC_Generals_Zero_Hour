@@ -37,10 +37,12 @@ OriginalGpuEdge::OriginalGpuEdge(renderer::GpuDevice& device)
 {
     if (previous_) throw std::runtime_error("nested original GPU translation session");
     active_edge = this;
+    DX8Wrapper::Reset_Source_State();
 }
 
 OriginalGpuEdge::~OriginalGpuEdge()
 {
+    DX8Wrapper::Reset_Source_State();
     for (auto& stage : pending_stages_) if (stage.sampler) device_.destroy(stage.sampler);
     while (!textures_.empty()) {
         auto it=textures_.begin();
@@ -202,6 +204,11 @@ OriginalGpuEdge::PendingStage OriginalGpuEdge::pending_stage(unsigned stage) con
     if (stage>=pending_stages_.size() || pending_stages_[stage].generation!=generation_)
         throw std::runtime_error("original texture stage is absent from active device generation");
     return pending_stages_[stage];
+}
+
+void OriginalGpuEdge::record_source_state(std::string_view label)
+{
+    device_.record_marker(label);
 }
 
 [[noreturn]] void OriginalGpuEdge::texture_creation_unavailable(WW3DFormat format,

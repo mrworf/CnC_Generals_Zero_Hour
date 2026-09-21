@@ -278,6 +278,7 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matpass.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texturefilter.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8wrapper.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ddsfile.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3dformat.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/bitmaphandler.cpp
@@ -966,10 +967,14 @@ target_link_options(zh_original_main PRIVATE -Wl,--gc-sections
 add_executable(zh_original_w3d_full_probe
   src/original_runtime/linux_main.cpp
   src/original_runtime/linux_game_engine.cpp
+  tests/original_rendering/retail_material_probe.cpp
   $<TARGET_OBJECTS:zh_original_lifecycle_spine>
   $<TARGET_OBJECTS:zh_original_config_spine>
   $<TARGET_OBJECTS:zh_original_w3d_factory_full>
   $<TARGET_OBJECTS:zh_original_w3d_draw_full>)
+set_source_files_properties(tests/original_rendering/retail_material_probe.cpp PROPERTIES
+  COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
+  COMPILE_OPTIONS "-fpermissive")
 target_compile_definitions(zh_original_w3d_full_probe PRIVATE ZH_M22_FULL_DRAW_TEST=1)
 target_include_directories(zh_original_w3d_full_probe PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
@@ -1847,6 +1852,13 @@ if(ZH_BUILD_TESTS)
     --retail-archive "${CMAKE_CURRENT_SOURCE_DIR}/original_game_symlink/W3DZH.big")
   set_tests_properties(original_w3d_full_draw_scenario PROPERTIES
     LABELS "original-rendering;source-identity;retail")
+  add_test(NAME original_w3d_material_abi_isolation COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_abi_isolation.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --host-object "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zh_original_w3d_full_probe.dir/src/original_runtime/linux_game_engine.cpp.o"
+    --probe-object "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/zh_original_w3d_full_probe.dir/tests/original_rendering/retail_material_probe.cpp.o")
+  set_tests_properties(original_w3d_material_abi_isolation PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
   foreach(w3d_probe_case IN ITEMS identity provider_removal)
     set(w3d_probe_extra_arg)
     if(w3d_probe_case STREQUAL "provider_removal")
@@ -2028,6 +2040,7 @@ if(ZH_BUILD_TESTS)
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/shader.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/vertmaterial.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/mapper.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8wrapper.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/rinfo.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8fvf.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/mesh.cpp"

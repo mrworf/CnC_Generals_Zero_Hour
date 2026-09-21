@@ -41,31 +41,7 @@
 #include "chunkio.h"
 #include "w3derr.h"
 #include "meshmatdesc.h"
-#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
-#else
-#include <stdexcept>
-typedef int D3DTRANSFORMSTATETYPE;
-typedef float FLOAT;
-enum {
-	D3DTS_VIEW = 2, D3DTS_PROJECTION = 3, D3DTS_TEXTURE0 = 16,
-	D3DTSS_TEXCOORDINDEX = 11, D3DTSS_TEXTURETRANSFORMFLAGS = 24,
-	D3DTSS_BUMPENVMAT00 = 7, D3DTSS_BUMPENVMAT01 = 8,
-	D3DTSS_BUMPENVMAT10 = 9, D3DTSS_BUMPENVMAT11 = 10,
-	D3DTSS_TCI_PASSTHRU = 0, D3DTSS_TCI_CAMERASPACENORMAL = 0x10000,
-	D3DTSS_TCI_CAMERASPACEPOSITION = 0x20000,
-	D3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR = 0x30000,
-	D3DTTFF_COUNT2 = 2, D3DTTFF_COUNT3 = 3, D3DTTFF_PROJECTED = 256
-};
-class DX8Wrapper {
-public:
-	template <typename T> static void Set_Transform(D3DTRANSFORMSTATETYPE, const T &) { unavailable(); }
-	template <typename T> static void Get_Transform(D3DTRANSFORMSTATETYPE, T &) { unavailable(); }
-	static void Set_DX8_Texture_Stage_State(unsigned, int, unsigned) { unavailable(); }
-private:
-	[[noreturn]] static void unavailable() { throw std::runtime_error("texture mapper application requires an installed WW3D device translator"); }
-};
-#endif
 #include "wwdebug.h"
 #include "matinfo.h"
 #include "rendobj.h"

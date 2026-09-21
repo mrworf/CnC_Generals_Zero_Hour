@@ -49,6 +49,7 @@
 #include "dx8wrapper.h"
 #else
 #include "ww3d_cpu_boundary.h"
+#include "dx8wrapper.h"
 #include <stdexcept>
 #endif
 
@@ -956,9 +957,6 @@ WW3DErrorType VertexMaterialClass::Save_W3D(ChunkSaveClass & csave)
 
 void VertexMaterialClass::Apply(void) const
 {
-#if defined(ZH_WW3D_CPU_ONLY)
-	throw std::runtime_error("VertexMaterialClass::Apply requires an installed WW3D device translator");
-#else
 	int i;
 
 	DX8Wrapper::Set_DX8_Material(Material);
@@ -980,14 +978,10 @@ void VertexMaterialClass::Apply(void) const
 			DX8Wrapper::Set_DX8_Texture_Stage_State(i,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);		
 		}
 	}
-#endif
 }
 
 void VertexMaterialClass::Apply_Null(void)
 {
-#if defined(ZH_WW3D_CPU_ONLY)
-	throw std::runtime_error("VertexMaterialClass::Apply_Null requires an installed WW3D device translator");
-#else
 	int i;
 	static D3DMATERIAL8 default_settings = 
 	{
@@ -1010,7 +1004,6 @@ void VertexMaterialClass::Apply_Null(void)
 		DX8Wrapper::Set_DX8_Texture_Stage_State(i,D3DTSS_TEXCOORDINDEX,D3DTSS_TCI_PASSTHRU | i);	
 		DX8Wrapper::Set_DX8_Texture_Stage_State(i,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);		
 	}
-#endif
 }
 
 

@@ -48,6 +48,27 @@
 
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "vector4.h"
+#include "matrix4.h"
+
+class TextureBaseClass;
+class VertexMaterialClass;
+class ShaderClass;
+struct D3DMATERIAL8;
+using D3DTRANSFORMSTATETYPE = int;
+using FLOAT = float;
+enum {
+    D3DTS_VIEW=2, D3DTS_PROJECTION=3, D3DTS_TEXTURE0=16,
+    D3DTSS_TEXCOORDINDEX=11, D3DTSS_TEXTURETRANSFORMFLAGS=24,
+    D3DTSS_BUMPENVMAT00=7, D3DTSS_BUMPENVMAT01=8,
+    D3DTSS_BUMPENVMAT10=9, D3DTSS_BUMPENVMAT11=10,
+    D3DTSS_TCI_PASSTHRU=0, D3DTSS_TCI_CAMERASPACENORMAL=0x10000,
+    D3DTSS_TCI_CAMERASPACEPOSITION=0x20000,
+    D3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR=0x30000,
+    D3DTTFF_DISABLE=0, D3DTTFF_COUNT2=2, D3DTTFF_COUNT3=3,
+    D3DTTFF_PROJECTED=256,
+    D3DRS_LIGHTING=137, D3DRS_AMBIENTMATERIALSOURCE=147,
+    D3DRS_DIFFUSEMATERIALSOURCE=145, D3DRS_EMISSIVEMATERIALSOURCE=148
+};
 
 // These are original WW3D buffer kind identifiers, not D3D device types.
 enum {
@@ -62,6 +83,23 @@ enum {
 // device state is exposed in this configuration.
 class DX8Wrapper
 {
+public:
+    static void Set_Texture(unsigned stage,TextureBaseClass* texture);
+    static void Set_Material(const VertexMaterialClass* material);
+    static void Set_Shader(const ShaderClass& shader);
+    static TextureBaseClass* Peek_Texture(unsigned stage);
+    static const VertexMaterialClass* Peek_Material();
+    static unsigned Pending_Changes();
+    static void Apply_Render_State_Changes();
+    static void Reset_Source_State();
+    static void Set_DX8_Material(const D3DMATERIAL8* material);
+    static void Set_DX8_Render_State(unsigned state,unsigned value);
+    static void Set_DX8_Texture_Stage_State(unsigned stage,unsigned state,unsigned value);
+    static void Set_Transform(D3DTRANSFORMSTATETYPE state,const Matrix4x4& matrix);
+    static void Get_Transform(D3DTRANSFORMSTATETYPE state,Matrix4x4& matrix);
+    struct CpuState;
+private:
+    static CpuState& state();
 public:
 	static Vector4 Convert_Color(unsigned color)
 	{

@@ -44,6 +44,7 @@ public:
     enum class FilterStageState { min_filter, mag_filter, mip_filter, address_u, address_v };
     void set_filter_stage_state(unsigned stage, FilterStageState state, unsigned value);
     PendingStage pending_stage(unsigned stage) const;
+    void record_source_state(std::string_view label);
     [[noreturn]] void texture_creation_unavailable(WW3DFormat format, unsigned width,
         unsigned height, unsigned mips, unsigned reduction);
     static OriginalGpuEdge& required();

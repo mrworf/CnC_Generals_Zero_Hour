@@ -41,6 +41,167 @@
  *   DX8Wrapper::_Update_Texture -- Copies a texture from system memory to video memory        *
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "dx8wrapper.h"
+#include "texture.h"
+#include "vertmaterial.h"
+#include "shader.h"
+#include "ww3d_cpu_boundary.h"
+#include "original_gpu_edge.h"
+
+#include <array>
+#include <map>
+#include <stdexcept>
+#include <string>
+
+struct DX8Wrapper::CpuState {
+    std::array<TextureBaseClass*,8> textures{};
+    const VertexMaterialClass* material=nullptr;
+    ShaderClass shader;
+    unsigned dirty=0;
+    D3DMATERIAL8 physical_material{};
+    std::map<unsigned,unsigned> render_states;
+    std::array<std::map<unsigned,unsigned>,8> texture_states;
+    std::map<int,Matrix4x4> transforms;
+};
+
+DX8Wrapper::CpuState& DX8Wrapper::state() { static CpuState source_state; return source_state; }
+
+void DX8Wrapper::Reset_Source_State()
+{
+    auto& selected=state();
+    for (auto*& texture : selected.textures) {
+        if (texture) texture->Release_Ref();
+        texture=nullptr;
+    }
+    if (selected.material) const_cast<VertexMaterialClass*>(selected.material)->Release_Ref();
+    selected.material=nullptr;
+    selected.shader=ShaderClass();
+    selected.dirty=0;
+    selected.physical_material={};
+    selected.render_states.clear();
+    for (auto& stage : selected.texture_states) stage.clear();
+    selected.transforms.clear();
+}
+
+void DX8Wrapper::Set_Texture(unsigned stage,TextureBaseClass* texture)
+{
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    if (stage>=state().textures.size()) throw std::runtime_error("original DX8 texture stage is invalid");
+    auto& previous=state().textures[stage];
+    if (texture==previous) return;
+    if (texture) texture->Add_Ref();
+    if (previous) previous->Release_Ref();
+    previous=texture;
+    state().dirty|=(1U<<stage);
+    edge.record_source_state("DX8Wrapper::Set_Texture stage="+std::to_string(stage));
+}
+
+void DX8Wrapper::Set_Material(const VertexMaterialClass* material)
+{
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    if (material) const_cast<VertexMaterialClass*>(material)->Add_Ref();
+    if (state().material) const_cast<VertexMaterialClass*>(state().material)->Release_Ref();
+    state().material=material;
+    state().dirty|=(1U<<8);
+    edge.record_source_state("DX8Wrapper::Set_Material");
+}
+
+void DX8Wrapper::Set_Shader(const ShaderClass& shader)
+{
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    if (!ShaderClass::ShaderDirty && state().shader.Get_Bits()==shader.Get_Bits()) return;
+    state().shader=shader;
+    state().dirty|=(1U<<9);
+    edge.record_source_state("DX8Wrapper::Set_Shader");
+}
+
+TextureBaseClass* DX8Wrapper::Peek_Texture(unsigned stage)
+{
+    if (stage>=state().textures.size()) throw std::runtime_error("original DX8 texture stage is invalid");
+    return state().textures[stage];
+}
+const VertexMaterialClass* DX8Wrapper::Peek_Material() { return state().material; }
+unsigned DX8Wrapper::Pending_Changes() { return state().dirty; }
+
+void DX8Wrapper::Apply_Render_State_Changes()
+{
+    auto& selected=state();
+    if (selected.dirty & (1U<<9))
+        throw std::runtime_error("original ShaderClass::Apply requires shader translation (M22 05B2B2B2)");
+    for (unsigned stage=0;stage<selected.textures.size();++stage)
+        if (selected.dirty & (1U<<stage)) {
+            if (selected.textures[stage]) selected.textures[stage]->Apply(stage);
+            else TextureBaseClass::Apply_Null(stage);
+            selected.dirty &= ~(1U<<stage);
+        }
+    if (selected.dirty & (1U<<8)) {
+        if (selected.material) selected.material->Apply();
+        else VertexMaterialClass::Apply_Null();
+        selected.dirty &= ~(1U<<8);
+    }
+    if (selected.dirty)
+        throw std::runtime_error("original delayed DX8 state outside material/texture route is unsupported");
+}
+
+void DX8Wrapper::Set_DX8_Material(const D3DMATERIAL8* material)
+{
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    if (!material) throw std::runtime_error("original DX8 material source is missing");
+    state().physical_material=*material;
+    edge.record_source_state("DX8Wrapper::Set_DX8_Material");
+}
+void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
+{
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    if ((property==D3DRS_LIGHTING && value>1) ||
+        ((property==D3DRS_AMBIENTMATERIALSOURCE || property==D3DRS_DIFFUSEMATERIALSOURCE ||
+            property==D3DRS_EMISSIVEMATERIALSOURCE) && value>2) ||
+        (property!=D3DRS_LIGHTING && property!=D3DRS_AMBIENTMATERIALSOURCE &&
+            property!=D3DRS_DIFFUSEMATERIALSOURCE && property!=D3DRS_EMISSIVEMATERIALSOURCE))
+        throw std::runtime_error("original DX8 material render state is unsupported before shader translation");
+    state().render_states[property]=value;
+    edge.record_source_state(
+        "DX8Wrapper::Set_DX8_Render_State="+std::to_string(property)+":"+std::to_string(value));
+}
+void DX8Wrapper::Set_DX8_Texture_Stage_State(unsigned stage,unsigned property,unsigned value)
+{
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    if (stage>=state().texture_states.size()) throw std::runtime_error("original DX8 texture stage is invalid");
+    if (property!=D3DTSS_TEXCOORDINDEX && property!=D3DTSS_TEXTURETRANSFORMFLAGS &&
+        property!=D3DTSS_BUMPENVMAT00 && property!=D3DTSS_BUMPENVMAT01 &&
+        property!=D3DTSS_BUMPENVMAT10 && property!=D3DTSS_BUMPENVMAT11)
+        throw std::runtime_error("original DX8 mapper stage state is unsupported before shader translation");
+    if (property==D3DTSS_TEXCOORDINDEX &&
+        ((value&0xffffU)>=8 || (value&0xffff0000U)>D3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR))
+        throw std::runtime_error("original DX8 mapper coordinate index is unsupported");
+    if (property==D3DTSS_TEXTURETRANSFORMFLAGS &&
+        value!=D3DTTFF_DISABLE && value!=D3DTTFF_COUNT2 && value!=D3DTTFF_COUNT3 &&
+        value!=(D3DTTFF_PROJECTED | D3DTTFF_COUNT3))
+        throw std::runtime_error("original DX8 mapper transform flag is unsupported");
+    state().texture_states[stage][property]=value;
+    edge.record_source_state(
+        "DX8Wrapper::Set_DX8_Texture_Stage_State="+std::to_string(stage)+":"+
+        std::to_string(property)+":"+std::to_string(value));
+}
+void DX8Wrapper::Set_Transform(D3DTRANSFORMSTATETYPE transform,const Matrix4x4& matrix)
+{
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    if (transform<D3DTS_VIEW || (transform>D3DTS_PROJECTION &&
+        (transform<D3DTS_TEXTURE0 || transform>=D3DTS_TEXTURE0+8)))
+        throw std::runtime_error("original DX8 transform index is unsupported");
+    state().transforms.insert_or_assign(transform,matrix);
+    edge.record_source_state(
+        "DX8Wrapper::Set_Transform="+std::to_string(transform));
+}
+void DX8Wrapper::Get_Transform(D3DTRANSFORMSTATETYPE transform,Matrix4x4& matrix)
+{
+    auto it=state().transforms.find(transform);
+    if (it==state().transforms.end()) throw std::runtime_error("original DX8 source transform has not been set");
+    matrix=it->second;
+}
+
+#else
 //#define CREATE_DX8_MULTI_THREADED
 //#define CREATE_DX8_FPU_PRESERVE
 #define WW3D_DEVTYPE D3DDEVTYPE_HAL
@@ -4449,3 +4610,4 @@ WW3DFormat	DX8Wrapper::getBackBufferFormat( void )
 {
 	return D3DFormat_To_WW3DFormat( _PresentParameters.BackBufferFormat );
 }
+#endif // ZH_WW3D_CPU_ONLY

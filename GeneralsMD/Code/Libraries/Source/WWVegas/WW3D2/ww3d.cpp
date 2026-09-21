@@ -1222,6 +1222,8 @@ unsigned int WW3D::Get_Last_Frame_Vertex_Count(void)
 }
 
 
+#endif // !ZH_WW3D_CPU_ONLY
+
 /***********************************************************************************************
  * WW3D::Sync -- Time sychronization                                                           *
  *                                                                                             *
@@ -1240,6 +1242,7 @@ void WW3D::Sync(unsigned int sync_time)
    SyncTime = sync_time;
 }
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 
 /***********************************************************************************************
  * WW3D::Set_Ext_Swap_Interval -- Sets the swap interval the device should aim sync for.       *
