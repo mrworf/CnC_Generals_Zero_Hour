@@ -50,7 +50,7 @@ The production Linux original-engine path renders representative campaign and sk
 3. Recording and Vulkan runs invoke the same original producer entry point. Recording is the deterministic semantic witness and negative-control surface; hardware is the device, validation, resize, presentation, and visual-evidence gate.
 4. Retail logical input names are supplied privately by the gate and read through the existing VFS. Tests commit only logical/aggregate results and project-owned screenshots or derived visual observations permitted by the product contract; no retail bytes, hashes, or host paths are retained.
 5. Unsupported required legacy state, missing/malformed required assets, stale resources, and omitted original providers are hard failures. No placeholder texture/model, generated scene, ignored state, generic/no-op draw module, or silent successful null behavior can satisfy acceptance.
-6. Ten slices are the dependency-safe sequence after the mesh-render probe: accepted original WW3D assets, GameClient ownership, and draw overrides; bounded FVF/visibility CPU gate; original buffer/category ownership; original mesh/WWShade pass graph; physical translation; full GameClient integration; retail recording; then validation-enabled Vulkan acceptance. An unavailable device edge during CPU slices never establishes successful pass scheduling or a frame.
+6. Eleven slices are the dependency-safe sequence after the source-order audit: accepted original WW3D assets, GameClient ownership and draw overrides; bounded FVF/visibility CPU gate; original buffer/category ownership; mesh entry and canonical WW3D state; first physical translation; original interleaved complete pass graph; GameClient integration; retail recording; then validation-enabled Vulkan acceptance. An unavailable device edge during CPU slices never establishes successful pass scheduling or a frame.
 
 ## Scope
 
@@ -79,11 +79,12 @@ The production Linux original-engine path renders representative campaign and sk
 | 03 | [milestone_22_plan_01_slice_03.md](milestone_22_plan_01_slice_03.md) | All ten original concrete GameClient draw classes preserve source-owned hierarchy, animation, bone/tread/supply/rider and dependency behavior. | slice 02 | complete | `c9d9be6` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_03.md) |
 | 04A | [milestone_22_plan_01_slice_04a.md](milestone_22_plan_01_slice_04a.md) | Original FVF CPU layout and original MeshClass hidden/visible gate, explicitly not pass scheduling. | slice 03 | complete | slice 04A commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_04a.md) |
 | 04B | [milestone_22_plan_01_slice_04b.md](milestone_22_plan_01_slice_04b.md) | Original vertex/index CPU ownership, upload metadata and source-owned mesh/category registration before physical submission. | slice 04A | complete | slice 04B commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_04b.md) |
-| 04C | [milestone_22_plan_01_slice_04c.md](milestone_22_plan_01_slice_04c.md) | Original mesh/WWShade CPU visibility, sort, material, alpha/shadow, skin/decal and ordered pass decisions execute before a typed physical edge. | slice 04B | pending | | |
-| 05 | [milestone_22_plan_01_slice_05.md](milestone_22_plan_01_slice_05.md) | Source-owned original pass outputs translate through `GpuDevice`, with actual-producer recording, negative controls and lifecycle closure. | slice 04C, M14 | pending | | |
-| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | Original GameClient display/scene, 2D, terrain, track, shroud and all selected shadow/effect routes integrate and switch production to full behavior. | slice 05 | pending | | |
-| 07 | [milestone_22_plan_01_slice_07.md](milestone_22_plan_01_slice_07.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | slice 06, PRE-008 | pending | | |
-| 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Same retail scenes present on validation-enabled SDL_GPU Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 07, PRE-012, PRE-016 | pending | | |
+| 04C | [milestone_22_plan_01_slice_04c.md](milestone_22_plan_01_slice_04c.md) | Original mesh visibility/frustum/sort/overrides and category entry decisions plus canonical WW3D state stop at first typed physical edge; no completed pass claim. | slice 04B | pending | | |
+| 05 | [milestone_22_plan_01_slice_05.md](milestone_22_plan_01_slice_05.md) | Translate first source-issued physical DX8 resource/state/draw calls through `GpuDevice`; no synthetic precomputed pass graph. | slice 04C, M14 | pending | | |
+| 06 | [milestone_22_plan_01_slice_06.md](milestone_22_plan_01_slice_06.md) | Full interleaved original mesh/WWShade/WW3D material, rigid/skin/decal/static/sorting pass graph records owned fixture frames in authored call order. | slice 05 | pending | | |
+| 07 | [milestone_22_plan_01_slice_07.md](milestone_22_plan_01_slice_07.md) | Original GameClient display/scene, 2D, terrain, track, shroud and selected shadow/effect routes integrate and switch production to full behavior. | slice 06 | pending | | |
+| 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | slice 07, PRE-008 | pending | | |
+| 09 | [milestone_22_plan_01_slice_09.md](milestone_22_plan_01_slice_09.md) | Same retail scenes present on validation-enabled SDL_GPU Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 08, PRE-012, PRE-016 | pending | | |
 
 ## Cross-slice concerns
 
@@ -92,7 +93,7 @@ The production Linux original-engine path renders representative campaign and sk
 - Invalidation and lifecycle effects: renderer reset must invalidate device resources without invalidating original simulation authority. Destruction is reverse, exactly once, bounded, and safe after partial failure, resize, reset, or device recreation.
 - Audit and observability: recording markers/commands identify the original producer and logical scene family, not merely adapter activity. Validation output is combined and rejected on `Validation Error` or `VUID-` even if the executable exits zero.
 - Performance and scale: selected scenes are bounded but retain real retail terrain/object/resource counts; no timeout increase or scene reduction hides quadratic behavior or leaks.
-- Environment or external services: Vulkan and a graphical session are required only for slice 08; read-only retail material is required in 07–08. Ordinary tests stay display/GPU/retail independent.
+- Environment or external services: Vulkan and a graphical session are required only for slice 09; read-only retail material is required in 08–09. Ordinary tests stay display/GPU/retail independent.
 
 ## Milestone completion gate
 
@@ -106,7 +107,7 @@ The production Linux original-engine path renders representative campaign and sk
 
 ## Rollback and recovery
 
-Each slice is independently revertible. Slices 01–04C add only original CPU producer behavior and do not claim a renderer. Slice 05 establishes the translated recording boundary; 06 integrates production GameClient scene traversal. Slice 07 records retail scenes without requiring hardware. Slice 08's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
+Each slice is independently revertible. Slices 01–04C add only original CPU producer behavior and do not claim a renderer. Slice 05 establishes first translated physical commands; 06 closes the original interleaved pass graph; 07 integrates production GameClient traversal. Slice 08 records retail scenes without requiring hardware. Slice 09's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
 
 ## Execution notes
 
@@ -151,6 +152,28 @@ proxy geometry/material authority, duplicate source definitions or mixed
 M20-schema/M22-full ABI is permitted. Slices 05–08 retain their original
 acceptance and require 04C transitively. This replan is committed before
 additional production changes.
+
+## Post-slice-04B source-order correction
+
+The 04C source audit discovered a real dependency cycle in the previous
+wording: original `DX8TextureCategoryClass::Render` calls physical
+`DX8Wrapper::Set_Texture`, `Set_Material` and `Set_Shader` before its later
+alpha/material/per-mesh decisions; original skin rendering creates the
+dynamic vertex-buffer access before completing skin geometry; and original
+`WW3D::Flush` calls the physical mesh flush before WWShade, static-sort and
+sorting flush. Consequently it is impossible to run the *entire* authored
+ordered pass graph before first physical translation without reordering
+original source or inserting a surrogate scheduler. Accepted 01–04B stay
+unchanged. Slice 04C now owns independently testable mesh/category CPU entry
+decisions, canonical WW3D state and typed physical failure; 05 translates
+first source-issued physical commands; new 06 completes original interleaved
+mesh/WWShade/WW3D pass scheduling using that translated edge. Prior 06–08
+become 07–09 (GameClient, retail recording, Vulkan respectively). Each
+boundary preserves the final M22 acceptance; no generated substitute or
+partial frame may count as a successful retail scene. `USE_WWSHADE` remains
+authored configuration, and either enabled family encounters or the disabled
+branch and regular shader/material semantics require evidence. This replan
+is committed as plans only before further production implementation.
 
 ## Deferred follow-ups
 

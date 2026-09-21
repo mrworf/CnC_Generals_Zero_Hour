@@ -1,22 +1,26 @@
-# M22 plan 01 slice 08: Vulkan visual and cumulative milestone acceptance
+# M22 plan 01 slice 08: original retail scenes through recording device
 
 ## Outcome and dependencies
 
-Requires slice 07 and PRE-012/PRE-016. The same original retail campaign and
-skirmish scenes render and present through SDL_GPU Vulkan on this RTX/Wayland
-host with `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation` explicitly set.
+Requires slice 07 and read-only PRE-008 corpus. Original campaign/skirmish
+entry, logic, GameClient, WW3D and enabled WWShade producers load selected
+real retail scenes and emit complete frames through recording `GpuDevice`.
+Original graph owns reached terrain, model, HLOD, animation, texture,
+shroud, fog, lighting, shadow, particle, water, effects and pass decisions.
+Generated/test proxy scenes cannot substitute for retail acceptance.
 
-## Acceptance
+## Validation and error handling
 
-Scan combined output for zero `Validation Error` and `VUID-`, even on exit 0.
-Capture/review permitted visual evidence for each family; reject placeholders,
-missing required assets, wrong state or incomplete frames. Exercise both
-dimensions of resize/device recreation, idle/teardown, injected failure and
-zero owned resources after reset. Run four canonical presets and complete
-asset-free suites, focused GCC/Clang ASan+UBSan, installed/arbitrary-CWD
-fixtures with isolated XDG, source/provider-removal and fresh ledger checks.
-Prove retail corpus metadata unchanged and no Direct3D/private Vulkan calls.
+Retail roots remain read-only/private; no corpus bytes, private paths,
+hashes or sensitive screenshots in committed output. Record source identity,
+concrete families, aggregate sizes, pass/state/draw counts and ownership.
+Negative controls remove/corrupt required owned-fixture resources, inject
+failure at every device operation and exercise scenario-level required-asset
+failure/reset/retry with no stale track/texture/render owners. Optional
+missing models retain original optional semantics. Provider removal rejects
+loss of original consumer, WW3D, enabled WWShade, adapter or recorder.
+GCC/Clang and cumulative suites pass.
 
 ## Commit boundary
 
-One independently validated commit: `delivery: M22 slice 08 validate Vulkan retail presentation`.
+One independently validated commit: `delivery: M22 slice 08 record original retail scenes`.

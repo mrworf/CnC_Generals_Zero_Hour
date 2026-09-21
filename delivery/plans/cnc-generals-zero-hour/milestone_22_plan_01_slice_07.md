@@ -1,26 +1,35 @@
-# M22 plan 01 slice 07: original retail scenes through recording device
+# M22 plan 01 slice 07: original GameClient scene integration
 
 ## Outcome and dependencies
 
-Requires slice 06 and read-only PRE-008 corpus. Original campaign/skirmish
-entry, logic, GameClient, WW3D and WWShade producers load selected real retail
-scenes and emit complete frames through recording `GpuDevice`. The production
-source graph owns all terrain, model, HLOD, animation, texture, shroud, fog,
-lighting, shadow, particle, water, effects and pass decisions actually reached.
-Generated/test proxy scenes cannot substitute for retail acceptance.
+Requires slice 06. Original `W3DDisplay::init` runs in authored order:
+physical 2D status-circle, scene/asset creation, shroud, terrain, tracks
+and shadow owners. Linux display/view traverses original
+`GameClient`/`RTS3DScene` with recording `GpuDevice`; full-behavior original
+factory replaces schema-only factory in production `zh_original_main`.
+Retail acceptance remains slice 08.
 
-## Validation and error handling
+## Reached source closure
 
-Retail roots remain read-only/private; no corpus bytes, private paths,
-hashes or sensitive screenshots in committed output. Record source identity,
-concrete families, scene sizes, pass/state/draw counts and resource handles.
-Negative controls remove/corrupt required owned-fixture resources, inject
-failure at every device operation and exercise scenario-level required-asset
-failure/reset/retry with no stale track/texture/render owners. Optional
-missing models retain original optional semantics. Provider removal rejects
-loss of original consumer, WW3D, WWShade, adapter or recorder. GCC/Clang and
-cumulative suites pass.
+Translate reached original `W3DDisplay.cpp`, `W3DScene.cpp`,
+`W3DShroud.cpp`, `W3DTerrainTracks.cpp`, `Shadow/W3DShadow.cpp` and
+derived volume/projection/decal shadow managers, plus original 2D/terrain,
+camera, light/fog, water, particles and effect producers exercised by
+selected scenes. Every reached physical throw/guard either translates the
+original operation or fails before successful frame. Preserve source-owned
+selection and state; inventory disabled families and negative routes.
+
+## Test and failure contracts
+
+Original GameClient scene traversal emits source-identified balanced
+recording frames for owned scenarios including all selected shadow types,
+tracks, shroud, terrain and effects. Missing required owners and unsupported
+state reject the frame; reset/reentry/injected failures release all original
+and device resources. Prove production factory/GameClient identity, unmixed
+ABI, no reachable guarded no-op, no Direct3D dependency, GCC/Clang suites,
+focused sanitizers and ledger freshness. Do not substitute owned fixtures
+for retail acceptance.
 
 ## Commit boundary
 
-One independently validated commit: `delivery: M22 slice 07 record original retail scenes`.
+One independently validated commit: `delivery: M22 slice 07 integrate original GameClient scene`.

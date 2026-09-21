@@ -1,33 +1,32 @@
-# M22 plan 01 slice 05: original DX8/WWShade outputs to GpuDevice
+# M22 plan 01 slice 05: first original DX8 commands to GpuDevice
 
 ## Outcome and dependencies
 
-Requires slice 04C. Original WW3D/WWShade pass, shader, texture, geometry and
-state outputs cross the narrow physical edge into public `renderer::GpuDevice`.
-The translator owns resource handles and uploads, not authoritative mesh,
-scene, pass, shader/material, or draw-order decisions. A recording device
-witnesses actual original producer markers.
+Requires slice 04C and M14. Original DX8 wrapper physical resource and
+draw-state calls reached first in original category/material traversal cross
+into public `renderer::GpuDevice`. The translator owns resource handles and
+uploads, not authoritative mesh, scene, pass, shader/material or ordering.
+The first source-issued calls are witnessed by a recording device; later
+interleaved original decisions are completed in 06, not simulated here.
 
 ## Device closure
 
-Translate reached original DX8 wrapper vertex/index/texture resources,
-uploads/locks, camera transforms, original shader/material and texture-stage
-combinations, light/fog/shroud, blend/depth/cull/alpha, targets, multipass
-and draws. Do not compile `dx8wrapper.cpp` with Direct3D SDK headers or
-substitute a fake device. Characterize any public-GpuDevice capability gap
-against the original call and M14 backend before changing the contract.
-Unsupported required state rejects the frame before success marking.
+Translate reached initial DX8 wrapper vertex/index/texture resources,
+uploads/locks, camera state, first shader/material/texture-stage commands,
+blend/depth/cull/alpha, targets and draw entry. Do not compile
+`dx8wrapper.cpp` with Direct3D SDK headers or substitute a fake device.
+Characterize public-GpuDevice capability gaps against original source and
+M14 backend. Unsupported required state rejects before success marking.
 
 ## Test and failure contracts
 
-Actual original HLOD/mesh traversal yields balanced recording passes,
-buffers, textures, samplers, shaders, pipelines and draws with original
-source-derived state; reject wrong shader/material/texture, nested or
-incomplete passes, malformed uploads and injected create/upload/draw
-failures. All handles return to zero after success, reset and each failure.
-Provider removal covers original pass owners, translator and `GpuDevice`.
-Only slice 06 may claim GameClient display/terrain/shadow/2D integration.
+Original W3D fixture dispatches first source physical operations into
+balanced recording resources; assert source-derived state and reject wrong
+shader/material/texture, malformed uploads and injected create/upload/draw
+failures. All handles return to zero after success/reset/failure. Provider
+removal covers original caller, translator and `GpuDevice`. Do not claim a
+complete multi-pass graph or GameClient integration; both depend on 06–07.
 
 ## Commit boundary
 
-One independently validated commit: `delivery: M22 slice 05 translate original GPU edge`.
+One independently validated commit: `delivery: M22 slice 05 translate original physical entry`.

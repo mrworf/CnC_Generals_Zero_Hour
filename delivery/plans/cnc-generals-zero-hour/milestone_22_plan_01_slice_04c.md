@@ -1,36 +1,36 @@
-# M22 plan 01 slice 04C: original mesh and WWShade CPU pass graph
+# M22 plan 01 slice 04C: original mesh entry and source-local WW3D state
 
 ## Outcome and dependencies
 
-Requires 04B. Original HLOD/mesh, DX8 renderer, WWShade and WW3D source
-owners schedule visibility, frustum, sort, alpha/shadow overrides, base and
-additional passes, skin/decal/material, texture grouping and ordered flush
-before a typed physical edge. No recording frame is claimed until 05.
+Requires 04B. Original `MeshClass::Render` executes its visibility, frustum,
+static-sort, alpha/shadow, base/additional-pass, skin/decal and category-queue
+decisions. Original `ww3d.cpp` owns its own static state and render/flush
+entry order. Category/device calls still fail typed at their first physical
+operation; this slice cannot claim completed passes or frames.
 
 ## Source closure and ownership
 
-Restore reached original `WW3D::Render`/`Flush` in canonical `ww3d.cpp`,
-including camera, DX8 mesh queue, `SHD_FLUSH`, static-sort and sorting
-renderer; replace duplicated static defaults from `ww3d_cpu_state.cpp`
-with one mutually exclusive source configuration. Retain canonical
-`hlod.cpp`, `mesh.cpp`, `meshmdl.cpp`, `dx8renderer.cpp`,
-`dx8polygonrenderer.cpp`, shader/material/mapper and reached original
-WWShade sources. Select actual WWShade variants through owned and read-only
-retail encounters, not an assumed entire legacy inventory. Physical
-`dx8wrapper.cpp`/D3DX work belongs to 05; do not fake a Direct3D SDK or
-duplicate pass scheduling in an adapter.
+Compile canonical `ww3d.cpp` for CPU entry/state, remove duplicated static
+defaults from `ww3d_cpu_state.cpp`, and link canonical static-sort ownership
+for reached sort routing. Retain original `hlod.cpp`, `mesh.cpp`,
+`meshmdl.cpp`, `dx8renderer.cpp`, `dx8polygonrenderer.cpp` and shader/material
+owners. Source-local physical guards are allowed only where original code
+first needs the absent device; never precompute or reorder subsequent
+material/pass decisions. Characterize `USE_WWSHADE` build selection and
+read-only retail shader-family encounters; do not assert `SHD_FLUSH` in a
+configuration where the authored macro compiles it out. Physical commands
+begin in 05 and remaining interleaved source scheduling closes in 06.
 
 ## Test and failure contracts
 
-Drive original GameClient traversal through owned multi-pass, opaque/alpha,
-hidden, shadow, skin/decal variants and sampled read-only retail family
-closure. Assert original pass order and source-derived shader, texture,
-material and transform identity; reject missing shader/material and
-unsupported sort/override states; verify first physical command fails
-typed, teardown exact once, no mixed ABI, provider removal, GCC/Clang
-full suites, focused sanitizers and ledger freshness. Physical translation,
-retail recording and validation-layer Vulkan remain 05–08 acceptance.
+Use owned W3D fixtures to prove hidden and rigid-frustum negatives; positive
+skin and camera-visible rigid registration; selected sort, alpha/shadow,
+additional-pass and decal queues where reachable; explicit typed first
+physical operation, source-owned state, teardown/retry, no mixed ABI,
+provider removal, GCC/Clang full suites, focused sanitizers and ledger
+freshness. No claim about a complete pass or WWShade flush. Original
+interleaved pass ordering is mandatory 06 before GameClient/retail consumers.
 
 ## Commit boundary
 
-One independently validated commit: `delivery: M22 slice 04C restore original mesh pass graph`.
+One independently validated commit: `delivery: M22 slice 04C restore original mesh entry`.
