@@ -292,14 +292,14 @@ milestones:
   - id: M22
     title: "original retail scene rendering on Vulkan"
     file: delivery/milestones/cnc-generals-zero-hour/M22-original-rendering.md
-    status: in_progress
+    status: blocked
     dependencies: [M21, M14]
     remediation_ids: [SE-005, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010, RC-012]
     optional: false
     started_at: "2026-09-21T04:25:51Z"
     completed_at: null
-    evidence: null
-    notes: "New original-source provider; historical component tests do not establish this outcome."
+    evidence: "delivery/evidence/cnc-generals-zero-hour/milestone_22_backend_gap_06c3c.md; accepted source-owned slices through 06C3B3B (4f9b286) pass their recorded GCC/Clang, sanitizer and validation-enabled RTX gates. The original camera-subrect color/depth/stencil clear within an active frame has no equivalent in the public SDL_GPU 3.4.14 pass API; no complete scene/retail acceptance is claimed."
+    notes: "UPSTREAM_REQUIRED M22_VIEWPORT_CLEAR_BACKEND: docs/zero-hour-linux-port-plan.md §9 requires a tested backend decision, migration scope and renderer milestone revalidation. Prove the committed 06C3C reproducer on a public abstraction (bgfx candidate), or explicitly budget raw Vulkan if both fail; do not add private Vulkan under SDL_GPU. Resume the existing delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md at slice 06C3C after authorized architecture/replanning. No other independent blocker established."
   - id: M23
     title: "original menus controls and media integration"
     file: delivery/milestones/cnc-generals-zero-hour/M23-original-interaction.md
@@ -313,10 +313,11 @@ milestones:
   - id: M24
     title: "original saves replay and deterministic state"
     file: delivery/milestones/cnc-generals-zero-hour/M24-original-persistence.md
-    status: pending
+    status: in_progress
     dependencies: [M21, M5]
     remediation_ids: [SE-007, SE-010, RC-002, RC-003, RC-004, RC-007, RC-008, RC-010]
     optional: false
+    started_at: "2026-09-21T19:51:33Z"
     completed_at: null
     evidence: null
     notes: "New original-source provider; historical component tests do not establish this outcome."

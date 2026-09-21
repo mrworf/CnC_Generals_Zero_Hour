@@ -13,11 +13,18 @@ delivery_goal:
   end: null
   milestone_ids: [M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
   execution: autonomous
-  current_milestone: M22
-  blocker_type: null
-  blocker: null
-  blockers: []
-  resume_point: "M22 selected with live RTX 4070, Khronos validation layer, and Wayland session available. Create delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md and its complete slice set before implementation."
+  current_milestone: M24
+  blocker_type: UPSTREAM_REQUIRED
+  blocker: "M22_VIEWPORT_CLEAR_BACKEND: original camera-subrect clear inside an active frame requires a tested section-9 renderer backend decision and revalidation."
+  blockers:
+    - type: UPSTREAM_REQUIRED
+      source: "M22_VIEWPORT_CLEAR_BACKEND; delivery/evidence/cnc-generals-zero-hour/milestone_22_backend_gap_06c3c.md"
+      expected_artifact: "Committed architecture decision and readiness-approved renderer migration/revalidation packet under docs/zero-hour-linux-port-plan.md section 9"
+      milestone: M22
+      slice: 06C3C
+      required_workflow: "architecture reconciliation followed by delivery replanning"
+      unblock_condition: "A public backend passes the exact viewport-scoped color/depth/stencil clear and interleaved frame reproducer, or a raw Vulkan fallback is explicitly authorized after both abstractions demonstrably fail; the impacted M7-M10/M14/M22 contracts are revalidated."
+  resume_point: "M22 blocked at existing plan 01 slice 06C3C after accepted 06C3B3B; independent M24 selected because M21 and M5 are complete. Create M24 governing and full slice plans before its implementation."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
   replacement_packet_adoption:
