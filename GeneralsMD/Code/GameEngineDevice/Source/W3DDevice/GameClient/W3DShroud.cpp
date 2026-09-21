@@ -27,6 +27,27 @@
 // Desc:      Code to support rendering of shrouded units/terrain.
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "PreRTS.h"
+#include "OriginalW3DDeviceUnavailable.h"
+#include "W3DDevice/GameClient/W3DShroud.h"
+void W3DShroudMaterialPassClass::Install_Materials(void) const
+{
+	throw OriginalW3DDeviceUnavailable("original shroud material GPU installation pending");
+}
+void W3DShroudMaterialPassClass::UnInstall_Materials(void) const
+{
+	throw OriginalW3DDeviceUnavailable("original shroud material GPU uninstall pending");
+}
+void W3DMaskMaterialPassClass::Install_Materials(void) const
+{
+	throw OriginalW3DDeviceUnavailable("original mask material GPU installation pending");
+}
+void W3DMaskMaterialPassClass::UnInstall_Materials(void) const
+{
+	throw OriginalW3DDeviceUnavailable("original mask material GPU uninstall pending");
+}
+#else
 #include "Lib/BaseType.h"
 #include "camera.h"
 #include "simplevec.h"
@@ -814,3 +835,4 @@ void W3DMaskMaterialPassClass::UnInstall_Materials(void) const
 	if (m_allowUninstall)
 		W3DShaderManager::resetShader(W3DShaderManager::ST_MASK_TEXTURE);
 }
+#endif // ZH_WW3D_CPU_ONLY

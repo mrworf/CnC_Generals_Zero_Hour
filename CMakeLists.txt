@@ -266,6 +266,9 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/coltest.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/predlod.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/camera.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/scene.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/light.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matpass.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp
   src/original_runtime/ww3d_cpu_state.cpp
 )
@@ -768,6 +771,11 @@ set_source_files_properties(
   GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTruckDraw.cpp
   PROPERTIES COMPILE_DEFINITIONS "BRUTAL_TIMING_HACK;ZH_W3D_SCHEMA_ONLY;ZH_W3D_HEADLESS_INSTANCE")
 
+# This subdirectory compiles canonical GameClient draw sources in its own CMake
+# directory scope: the M20/M21 schema source properties above must not leak into
+# the mutually exclusive full-behavior production configuration.
+add_subdirectory(src/original_runtime/full_w3d)
+
 add_library(zh_persistence STATIC src/persistence/save.cpp src/persistence/replay.cpp)
 target_include_directories(zh_persistence PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_persistence PUBLIC zh_wwsupport zh_build_options)
@@ -930,6 +938,29 @@ target_link_libraries(zh_original_main PRIVATE
   zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
 target_link_options(zh_original_main PRIVATE -Wl,--gc-sections
   "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map")
+# M22 link probe: the exact Linux entry and original provider spine, but with
+# full-behavior draw objects selected explicitly. Production switches only after
+# the original GameClient scenario witness and provider identity tests pass.
+add_executable(zh_original_w3d_full_probe EXCLUDE_FROM_ALL
+  src/original_runtime/linux_main.cpp
+  src/original_runtime/linux_game_engine.cpp
+  $<TARGET_OBJECTS:zh_original_lifecycle_spine>
+  $<TARGET_OBJECTS:zh_original_config_spine>
+  $<TARGET_OBJECTS:zh_original_w3d_draw_full>)
+target_include_directories(zh_original_w3d_full_probe PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include/legacy"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+  "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+target_link_libraries(zh_original_w3d_full_probe PRIVATE
+  zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix
+  zh_compression zh_w3d zh_wwsupport zh_build_options)
+target_link_options(zh_original_w3d_full_probe PRIVATE -Wl,--gc-sections
+  -Wl,-u,_ZN10RTS3DSceneC1Ev
+  "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/zh-original-w3d-full-probe.link.map")
 set_property(TARGET zh_main PROPERTY ZH_LEGACY_SOURCE_INVENTORY "${ZH_LEGACY_ZH_MAIN_SOURCES}")
 
 install(TARGETS zh_main zh_original_main RUNTIME DESTINATION bin)
@@ -1746,6 +1777,74 @@ if(ZH_BUILD_TESTS)
 
   add_executable(original_wwsupport_tests tests/original_support/test_original_wwsupport.cpp)
   add_executable(original_w3d_cpu_graph_tests tests/original_rendering/test_w3d_cpu_graph.cpp)
+  add_executable(original_w3d_presentation_tests
+    tests/original_rendering/test_w3d_presentation.cpp
+    $<TARGET_OBJECTS:zh_original_lifecycle_spine>
+    $<TARGET_OBJECTS:zh_original_config_spine>
+    $<TARGET_OBJECTS:zh_original_w3d_draw_full>)
+  target_include_directories(original_w3d_presentation_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad")
+  target_compile_definitions(original_w3d_presentation_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
+  target_compile_options(original_w3d_presentation_tests PRIVATE -fpermissive -ffunction-sections -fdata-sections)
+  target_link_libraries(original_w3d_presentation_tests PRIVATE
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix
+    zh_compression zh_w3d zh_wwsupport zh_original_process zh_build_options)
+  target_link_options(original_w3d_presentation_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-presentation.link.map")
+  add_test(NAME original_w3d_presentation COMMAND original_w3d_presentation_tests)
+  set_tests_properties(original_w3d_presentation PROPERTIES LABELS "original-rendering;source-identity")
+  foreach(w3d_identity_case IN ITEMS identity provider_removal)
+    set(w3d_identity_extra_arg)
+    if(w3d_identity_case STREQUAL "provider_removal")
+      list(APPEND w3d_identity_extra_arg --provider-removal)
+    endif()
+    add_test(NAME original_w3d_presentation_${w3d_identity_case}
+      COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_presentation_identity.py"
+        --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+        --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-presentation.link.map"
+        --executable "$<TARGET_FILE:original_w3d_presentation_tests>"
+        ${w3d_identity_extra_arg})
+    set_tests_properties(original_w3d_presentation_${w3d_identity_case} PROPERTIES
+      LABELS "original-rendering;source-identity")
+  endforeach()
+  foreach(w3d_abi_mode IN ITEMS schema full)
+    add_executable(original_w3d_abi_${w3d_abi_mode} tests/original_rendering/test_w3d_abi.cpp)
+    target_include_directories(original_w3d_abi_${w3d_abi_mode} PRIVATE
+      "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
+      "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad")
+    if(w3d_abi_mode STREQUAL "full")
+      target_compile_definitions(original_w3d_abi_full PRIVATE NDEBUG)
+    endif()
+    target_compile_options(original_w3d_abi_${w3d_abi_mode} PRIVATE
+      -fpermissive -ffunction-sections -fdata-sections)
+    target_link_options(original_w3d_abi_${w3d_abi_mode} PRIVATE -Wl,--gc-sections)
+  endforeach()
+  target_compile_definitions(original_w3d_abi_schema PRIVATE
+    BRUTAL_TIMING_HACK ZH_W3D_SCHEMA_ONLY ZH_W3D_HEADLESS_INSTANCE)
+  target_compile_definitions(original_w3d_abi_full PRIVATE ZH_WW3D_CPU_ONLY=1)
+  add_test(NAME original_w3d_abi COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_abi.py"
+    --schema "$<TARGET_FILE:original_w3d_abi_schema>"
+    --full "$<TARGET_FILE:original_w3d_abi_full>")
+  set_tests_properties(original_w3d_abi PROPERTIES LABELS "original-rendering;source-identity")
   target_include_directories(original_w3d_cpu_graph_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"

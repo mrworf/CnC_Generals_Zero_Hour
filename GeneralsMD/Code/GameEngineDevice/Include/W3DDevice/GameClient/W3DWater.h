@@ -32,14 +32,27 @@
 #include "always.h"
 #include "rendobj.h"
 #include "w3d_file.h"
-#include "dx8vertexbuffer.h"			 
+#if !defined(ZH_WW3D_CPU_ONLY)
+#include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
+#endif
 #include "shader.h"
 #include "vertmaterial.h"
 #include "light.h"
 #include "Lib/BaseType.h"
 #include "Common/GameType.h"
 #include "Common/Snapshot.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+class DX8IndexBufferClass;
+struct IDirect3DDevice8;
+struct IDirect3DVertexBuffer8;
+struct IDirect3DIndexBuffer8;
+struct IDirect3DTexture8;
+typedef IDirect3DDevice8 *LPDIRECT3DDEVICE8;
+typedef IDirect3DVertexBuffer8 *LPDIRECT3DVERTEXBUFFER8;
+typedef IDirect3DIndexBuffer8 *LPDIRECT3DINDEXBUFFER8;
+typedef IDirect3DTexture8 *LPDIRECT3DTEXTURE8;
+#endif
 
 #define INVALID_WATER_HEIGHT 0.0f	///water height guaranteed to be below all terrain.
 

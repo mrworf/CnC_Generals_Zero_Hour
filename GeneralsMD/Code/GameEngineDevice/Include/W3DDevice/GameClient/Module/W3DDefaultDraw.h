@@ -70,7 +70,9 @@ public:
 
 private:
 
-#if defined(LOAD_TEST_ASSETS) && !defined(ZH_W3D_HEADLESS_INSTANCE)
+#if defined(LOAD_TEST_ASSETS)
+	// Keep the canonical instance layout even when the headless test skips
+	// physical W3D creation; full M22 and M20/M21 binaries are unmixed.
 	RenderObjClass*		m_renderObject;										///< W3D Render object for this drawable
 	Shadow*				m_shadow;													///< Updates/Renders shadows of this object
 #endif

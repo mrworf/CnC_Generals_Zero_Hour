@@ -30,8 +30,6 @@
 #include "always.h"
 #include "rendobj.h"
 #include "w3d_file.h"
-#include "dx8vertexbuffer.h"
-#include "dx8indexbuffer.h"
 #include "shader.h"
 #include "vertmaterial.h"
 #include "Lib/BaseType.h"
@@ -42,6 +40,8 @@
 
 class TerrainTracksRenderObjClassSystem;
 class Drawable;
+class DX8VertexBufferClass;
+class DX8IndexBufferClass;
 
 /// Custom render object that draws tracks on the terrain.
 /**
@@ -121,6 +121,9 @@ public:
 
 	void ReleaseResources(void);	///< Release all dx8 resources so the device can be reset.
 	void ReAcquireResources(void);  ///< Reacquire all resources after device reset.
+#if defined(ZH_WW3D_CPU_ONLY)
+	Bool hasPendingGpuResources(void) const { return m_gpuResourcesPending; }
+#endif
 
 	void setDetail(void);
 
@@ -137,6 +140,9 @@ public:
 protected:
 	DX8VertexBufferClass		*m_vertexBuffer;	///<vertex buffer used to draw all tracks
 	DX8IndexBufferClass			*m_indexBuffer;	///<indices defining triangles in maximum length track
+#if defined(ZH_WW3D_CPU_ONLY)
+	Bool m_gpuResourcesPending;
+#endif
 	VertexMaterialClass	  	  *m_vertexMaterialClass;	///< vertex lighting material
 	ShaderClass m_shaderClass; ///<shader or rendering state for heightmap
 

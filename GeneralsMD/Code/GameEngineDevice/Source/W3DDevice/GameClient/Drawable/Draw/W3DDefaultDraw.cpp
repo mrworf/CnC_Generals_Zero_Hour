@@ -58,9 +58,11 @@
 //-------------------------------------------------------------------------------------------------
 W3DDefaultDraw::W3DDefaultDraw(Thing *thing, const ModuleData* moduleData) : DrawModule(thing, moduleData)
 {
-#if defined(LOAD_TEST_ASSETS) && !defined(ZH_W3D_HEADLESS_INSTANCE)
+#if defined(LOAD_TEST_ASSETS)
 	m_renderObject = NULL;
 	m_shadow = NULL;
+#endif
+#if defined(LOAD_TEST_ASSETS) && !defined(ZH_W3D_HEADLESS_INSTANCE)
 	if (!getDrawable()->getTemplate()->getLTAName().isEmpty())
 	{
 		m_renderObject = W3DDisplay::m_assetManager->Create_Render_Obj(getDrawable()->getTemplate()->getLTAName().str(), getDrawable()->getScale(), 0);

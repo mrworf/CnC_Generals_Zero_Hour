@@ -48,7 +48,6 @@
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/ScriptEngine.h"
 #ifndef ZH_W3D_SCHEMA_ONLY
-#include "W3DDevice/GameClient/W3DGameClient.h"
 #endif
 #include "W3DDevice/GameClient/Module/W3DTruckDraw.h"
 

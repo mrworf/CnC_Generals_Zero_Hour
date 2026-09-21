@@ -43,6 +43,12 @@
  * Functions:                                                                                  *
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+#include <cstddef>
+#include <stdexcept>
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "PreRTS.h"
+#include "OriginalW3DDeviceUnavailable.h"
+#endif
 #include <always.h>
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "proto.h"
@@ -66,7 +72,9 @@
 #include "font3d.h"
 #include "render2dsentence.h"
 #include <stdio.h>
+#ifdef INCLUDE_GRANNY_IN_BUILD
 #include "W3DDevice/GameClient/W3DGranny.h"
+#endif
 #include "Common/PerfTimer.h"
 #include "Common/GlobalData.h"
 #include "Common/GameCommon.h"
@@ -182,7 +190,7 @@ TextureClass *	W3DAssetManager::Get_Texture
 	//Just call the base implementation after adjusting reduction to deal
 	//with our special types.
 
-	if (filename && *filename && _strnicmp(filename,"ZHC",3) == 0)
+	if (filename && *filename && strnicmp(filename,"ZHC",3) == 0)
 		allow_reduction = false;	//don't allow reduction on our infantry textures.
 
 	return WW3DAssetManager::Get_Texture(	filename, 
@@ -449,7 +457,7 @@ static void remapTexture16Bit(Int dx, Int dy, Int pitch, SurfaceClass::SurfaceDe
 		Convert_Pixel((unsigned char *)&pal[y],*sd,rgb);
 	}
 
-	for (y=0; y<dy; y++)
+	for (Int y=0; y<dy; y++)
 	{	for (Int x=0; x<dx; x++)
 		{	//check if this pixel is part of team color palette
 			for (Int p=0; p<TEAM_COLOR_PALETTE_SIZE; p++)
@@ -485,7 +493,7 @@ static void remapAlphaTexture16Bit(Int dx, Int dy, Int pitch, SurfaceClass::Surf
 	RGB_To_HSV(hsv_color,v_color);
 #endif
 
-	for (y=0; y<dy; y++)
+	for (Int y=0; y<dy; y++)
 	{	
 		for (x=0; x<dx; x++)
 		{
@@ -552,7 +560,7 @@ static void remapTexture32Bit(Int dx, Int dy, Int pitch, SurfaceClass::SurfaceDe
 		Convert_Pixel((unsigned char *)&pal[y],*sd,rgb);
 	}
 
-	for (y=0; y<dy; y++)
+	for (Int y=0; y<dy; y++)
 	{	for (Int x=0; x<dx; x++)
 		{	//check if this pixel is part of team color palette
 			for (Int p=0; p<TEAM_COLOR_PALETTE_SIZE; p++)
@@ -582,7 +590,7 @@ static void remapAlphaTexture32Bit(Int dx, Int dy, Int pitch, SurfaceClass::Surf
 	RGB_To_HSV(hsv_color,v_color);
 #endif
 
-	for (y=0; y<dy; y++)
+	for (Int y=0; y<dy; y++)
 	{	for (x=0; x<dx; x++)
 		{
 			pixel=data[x];
@@ -618,6 +626,9 @@ will be remapped using a pre-defined formula.
 */
 void W3DAssetManager::Remap_Palette(SurfaceClass *surface, const int color, Bool doPaletteOnly, Bool useAlpha)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw OriginalW3DDeviceUnavailable("original palette surface GPU lock translation pending");
+#else
 //	unsigned int x;
 	SurfaceClass::SurfaceDescription sd;
 	surface->Get_Description(sd);
@@ -656,6 +667,7 @@ void W3DAssetManager::Remap_Palette(SurfaceClass *surface, const int color, Bool
 	}
 
 	surface->Unlock();
+#endif
 }
 
 //---------------------------------------------------------------------
@@ -666,6 +678,9 @@ TextureClass * W3DAssetManager::Recolor_Texture_One_Time(TextureClass *texture, 
 	// if texture is procedural return NULL
 	if (name && name[0]=='!') return NULL;
 
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw OriginalW3DDeviceUnavailable("original recolor texture GPU surface loading pending");
+#else
 	// make sure texture is loaded
 	if (!texture->Is_Initialized())	
 		TextureLoader::Request_Foreground_Loading(texture);
@@ -707,6 +722,7 @@ TextureClass * W3DAssetManager::Recolor_Texture_One_Time(TextureClass *texture, 
 	REF_PTR_RELEASE(newsurf);
 
 	return newtex;
+#endif
 }
 
 #ifdef DUMP_PERF_STATS
@@ -796,10 +812,13 @@ RenderObjClass * W3DAssetManager::Create_Render_Obj(
 	{	
 		// If we didn't find one, try to load on demand
 		char filename [MAX_PATH];
-		char *mesh_name = ::strchr (name, '.');
+		const char *mesh_name = ::strchr (name, '.');
 		if (mesh_name != NULL) 
 		{
-			::lstrcpyn(filename, name, ((int)mesh_name) - ((int)name) + 1);
+			const std::ptrdiff_t prefixLength = mesh_name - name;
+			if (prefixLength < 0 || prefixLength >= static_cast<std::ptrdiff_t>(sizeof(filename) - 5))
+				throw std::runtime_error("original W3D model filename exceeds loader buffer");
+			::lstrcpyn(filename, name, static_cast<int>(prefixLength) + 1);
 #ifdef	INCLUDE_GRANNY_IN_BUILD
 			if (isGranny)
 				::lstrcat(filename, ".gr2");
@@ -928,7 +947,7 @@ int W3DAssetManager::Recolor_Mesh(RenderObjClass *robj, const int color)
 
 	// recolor vertex material (assuming mesh is housecolor)
 	if ( (( (meshName=strchr(mesh->Get_Name(),'.') ) != 0 && *(meshName++)) || ( (meshName=mesh->Get_Name()) != NULL)) &&
-		_strnicmp(meshName,"HOUSECOLOR", 10) == 0)
+		strnicmp(meshName,"HOUSECOLOR", 10) == 0)
 	{	for (i=0; i<material->Vertex_Material_Count(); i++)
 			Recolor_Vertex_Material(material->Peek_Vertex_Material(i),color);
 		didRecolor=1;
@@ -939,7 +958,7 @@ int W3DAssetManager::Recolor_Mesh(RenderObjClass *robj, const int color)
 	for (i=0; i<material->Texture_Count(); i++)
 	{
 		oldtex=material->Peek_Texture(i);
-		if (_strnicmp(oldtex->Get_Texture_Name(),"ZHC", 3) == 0)
+		if (strnicmp(oldtex->Get_Texture_Name(),"ZHC", 3) == 0)
 		{	//This texture needs to be adjusted for housecolor
 			newtex=Recolor_Texture(oldtex,color);
 			if (newtex)
@@ -1206,7 +1225,7 @@ static Bool getMeshColorMethods(MeshClass *mesh, Bool &vertexColor, Bool &textur
 	MaterialInfoClass *material = mesh->Get_Material_Info();
 	if (material)
 	{	for (int j=0; j<material->Texture_Count(); j++)
-			if (_strnicmp(material->Peek_Texture(j)->Get_Texture_Name(),"ZHC",3) == 0)
+			if (strnicmp(material->Peek_Texture(j)->Get_Texture_Name(),"ZHC",3) == 0)
 			{	textureColor = true;
 				break;
 			}
@@ -1219,7 +1238,7 @@ static Bool getMeshColorMethods(MeshClass *mesh, Bool &vertexColor, Bool &textur
 	const char *meshName;
 	if ( ( (meshName=strchr(mesh->Get_Name(),'.') ) != 0 && *(meshName++)) || ( (meshName=mesh->Get_Name()) != NULL) )
 	{	//Check if this object has housecolors on mesh
-		if ( _strnicmp(meshName,"HOUSECOLOR", 10) == 0)
+		if ( strnicmp(meshName,"HOUSECOLOR", 10) == 0)
 			vertexColor = true;
 	}
 

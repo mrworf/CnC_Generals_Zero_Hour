@@ -32,6 +32,10 @@
 //
 
 // USER INCLUDES //////////////////////////////////////////////////////////////
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "PreRTS.h"
+#include "OriginalW3DDeviceUnavailable.h"
+#endif
 #include "always.h"
 #include "GameClient/View.h"
 #include "WW3D2/Camera.h"
@@ -41,12 +45,17 @@
 #include "WW3D2/mesh.h"
 #include "WW3D2/meshmdl.h"
 #include "Lib/BaseType.h"
+#if defined(INCLUDE_GRANNY_IN_BUILD)
 #include "W3DDevice/GameClient/W3DGranny.h"
-#include "W3DDevice/GameClient/Heightmap.h"
+#endif
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "D3dx8math.h"
-#include "common/GlobalData.h"
+#endif
+#include "Common/GlobalData.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "W3DDevice/GameClient/W3DVolumetricShadow.h"
 #include "W3DDevice/GameClient/W3DProjectedShadow.h"
+#endif
 #include "W3DDevice/GameClient/W3DShadow.h"
 #include "WW3D2/statistics.h"
 #include "Common/Debug.h"
@@ -69,6 +78,10 @@ void DoShadows(RenderInfoClass & rinfo, Bool stencilPass)
 {
 	//USE_PERF_TIMER(shadowsRender)
 	shadowCameraFrustum=&rinfo.Camera.Get_Frustum();
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (TheW3DShadowManager && TheW3DShadowManager->isShadowScene())
+		throw OriginalW3DDeviceUnavailable("original shadow GPU render pending");
+#else
 	Int projectionCount=0;
 
 	//Projected shadows render first because they may fill the stencil buffer
@@ -91,13 +104,16 @@ void DoShadows(RenderInfoClass & rinfo, Bool stencilPass)
 	}
 	if (TheW3DShadowManager && stencilPass)	//reset so no more shadow processing this frame.
 		TheW3DShadowManager->queueShadows(FALSE);
+#endif
 
 }
 	
 W3DShadowManager::W3DShadowManager( void )
 {
+#if !defined(ZH_WW3D_CPU_ONLY)
 	DEBUG_ASSERTCRASH(TheW3DVolumetricShadowManager == NULL && TheW3DProjectedShadowManager == NULL,
 		("Creating new shadow managers without deleting old ones"));
+#endif
 
 	m_shadowColor = 0x7fa0a0a0;
 	m_isShadowScene = FALSE;
@@ -109,22 +125,29 @@ W3DShadowManager::W3DShadowManager( void )
 
 	LightPosWorld[0]=lightRay*SUN_DISTANCE_FROM_GROUND;
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 	TheW3DVolumetricShadowManager = NEW W3DVolumetricShadowManager;
 	TheProjectedShadowManager = TheW3DProjectedShadowManager = NEW W3DProjectedShadowManager;
+#endif
 }
 
 W3DShadowManager::~W3DShadowManager( void )
 {
+#if !defined(ZH_WW3D_CPU_ONLY)
 	delete TheW3DVolumetricShadowManager;
 	TheW3DVolumetricShadowManager = NULL;
 	delete TheW3DProjectedShadowManager;
 	TheProjectedShadowManager = TheW3DProjectedShadowManager = NULL;
+#endif
 }
 
 /** Do one-time initilalization of shadow systems that need to be
 active for full duration of game*/
 Bool W3DShadowManager::init( void )
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw OriginalW3DDeviceUnavailable("original shadow derived-manager GPU resource init pending");
+#else
 	Bool result=TRUE;
 
 	if	(TheW3DVolumetricShadowManager && TheW3DVolumetricShadowManager->init())
@@ -139,21 +162,28 @@ Bool W3DShadowManager::init( void )
 	}
 
 	return result;
+#endif
 }
 
 /** Do per-map reset.  This frees up shadows from all objects since
 they may not exist on the next map*/
 void W3DShadowManager::Reset( void )
 {
-
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw OriginalW3DDeviceUnavailable("original shadow derived-manager reset pending");
+#else
 	if (TheW3DVolumetricShadowManager)
 		TheW3DVolumetricShadowManager->reset();
 	if (TheW3DProjectedShadowManager)
 		TheW3DProjectedShadowManager->reset();
+#endif
 }
 
 Bool W3DShadowManager::ReAcquireResources()
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw OriginalW3DDeviceUnavailable("original shadow GPU resource acquire pending");
+#else
 	Bool result = TRUE;
 
 	if (TheW3DVolumetricShadowManager && !TheW3DVolumetricShadowManager->ReAcquireResources())
@@ -162,14 +192,19 @@ Bool W3DShadowManager::ReAcquireResources()
 		result = FALSE;
 
 	return result;
+#endif
 }
 
 void W3DShadowManager::ReleaseResources(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw OriginalW3DDeviceUnavailable("original shadow GPU resource release pending");
+#else
 	if (TheW3DVolumetricShadowManager)
 		TheW3DVolumetricShadowManager->ReleaseResources();
 	if (TheW3DProjectedShadowManager)
 		TheW3DProjectedShadowManager->ReleaseResources();
+#endif
 }
 
 Shadow *W3DShadowManager::addShadow( RenderObjClass *robj, Shadow::ShadowTypeInfo *shadowInfo, Drawable *draw)
@@ -182,13 +217,23 @@ Shadow *W3DShadowManager::addShadow( RenderObjClass *robj, Shadow::ShadowTypeInf
 	switch(type)
 	{
 		case	SHADOW_VOLUME:
+#if defined(ZH_WW3D_CPU_ONLY)
+			throw OriginalW3DDeviceUnavailable("original volumetric shadow derived-manager creation pending");
+#else
 			if (TheW3DVolumetricShadowManager)
 				return (Shadow *)TheW3DVolumetricShadowManager->addShadow(robj, shadowInfo, draw);
+#endif
 			break;
 		case	SHADOW_PROJECTION:
 		case	SHADOW_DECAL:
+#if defined(ZH_WW3D_CPU_ONLY)
+			throw OriginalW3DDeviceUnavailable(type == SHADOW_DECAL
+				? "original decal shadow derived-manager creation pending"
+				: "original projected shadow derived-manager creation pending");
+#else
 			if (TheW3DProjectedShadowManager)
 				return (Shadow *)TheW3DProjectedShadowManager->addShadow(robj, shadowInfo, draw);
+#endif
 			break;
 		default:
 			return NULL;
@@ -204,19 +249,27 @@ void W3DShadowManager::removeShadow(Shadow *shadow)
 
 void W3DShadowManager::removeAllShadows(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw OriginalW3DDeviceUnavailable("original shadow derived-manager remove-all pending");
+#else
 	if (TheW3DVolumetricShadowManager)
 		TheW3DVolumetricShadowManager->removeAllShadows();
 	if (TheW3DProjectedShadowManager)
 		TheW3DProjectedShadowManager->removeAllShadows();
+#endif
 }
 
 /**Force update of all shadows even when light source and object have not moved*/
 void W3DShadowManager::invalidateCachedLightPositions(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw OriginalW3DDeviceUnavailable("original shadow derived-manager light-cache invalidation pending");
+#else
 	if (TheW3DVolumetricShadowManager)
 		TheW3DVolumetricShadowManager->invalidateCachedLightPositions();
 	if (TheW3DProjectedShadowManager)
 		TheW3DProjectedShadowManager->invalidateCachedLightPositions();
+#endif
 }
 
 Vector3 &W3DShadowManager::getLightPosWorld(Int lightIndex)

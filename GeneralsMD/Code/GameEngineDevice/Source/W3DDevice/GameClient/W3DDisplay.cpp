@@ -31,6 +31,16 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#if defined(ZH_WW3D_CPU_ONLY)
+// The CPU asset/scene graph retains its original W3DDisplay ownership slots.
+// Physical presentation is deliberately unavailable before the device edge.
+#include "PreRTS.h"
+#include "W3DDevice/GameClient/W3DDisplay.h"
+RTS3DScene *W3DDisplay::m_3DScene = NULL;
+RTS2DScene *W3DDisplay::m_2DScene = NULL;
+RTS3DInterfaceScene *W3DDisplay::m_3DInterfaceScene = NULL;
+W3DAssetManager *W3DDisplay::m_assetManager = NULL;
+#else
 static void drawFramerateBar(void);
 
 // SYSTEM INCLUDES ////////////////////////////////////////////////////////////
@@ -3337,3 +3347,4 @@ static void drawFramerateBar(void)
 	TheDisplay->drawFillRect(1, 1, width, 15, colorToUse);
 	prevTime = now;
 }
+#endif // ZH_WW3D_CPU_ONLY

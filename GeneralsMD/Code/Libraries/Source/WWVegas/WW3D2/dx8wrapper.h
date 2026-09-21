@@ -46,6 +46,34 @@
 #ifndef DX8_WRAPPER_H
 #define DX8_WRAPPER_H
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "vector4.h"
+
+// CPU color conversion retains the original ARGB component ordering; no DX8
+// device state is exposed in this configuration.
+class DX8Wrapper
+{
+public:
+	static Vector4 Convert_Color(unsigned color)
+	{
+		return Vector4(((color >> 16) & 255) / 255.0f,
+			((color >> 8) & 255) / 255.0f, (color & 255) / 255.0f,
+			((color >> 24) & 255) / 255.0f);
+	}
+	static unsigned int Convert_Color_Clamp(const Vector4 &color)
+	{
+		auto byte = [](float value) -> unsigned {
+			if (value <= 0.0f) return 0;
+			if (value >= 1.0f) return 255;
+			// The original x87 conversion explicitly sets truncate mode.
+			return static_cast<unsigned>(value * 255.0f);
+		};
+		return (byte(color[3]) << 24) | (byte(color[0]) << 16) |
+			(byte(color[1]) << 8) | byte(color[2]);
+	}
+};
+#else
+
 #include "always.h"
 #include "dllist.h"
 #include "d3d8.h"
@@ -1505,4 +1533,5 @@ WWINLINE RenderStateStruct& RenderStateStruct::operator= (const RenderStateStruc
 }
 
 
-#endif
+#endif // ZH_WW3D_CPU_ONLY
+#endif // DX8_WRAPPER_H

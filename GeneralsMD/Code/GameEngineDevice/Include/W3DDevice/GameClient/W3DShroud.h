@@ -30,8 +30,15 @@
 
 #include "WW3D2/matpass.h"
 #include "WW3D2/dx8wrapper.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "WW3D2/texturefilter.h"
+struct IDirect3DSurface8;
+struct RECT;
+class SurfaceClass;
+#endif
 
 class AABoxClass;
+class CameraClass;
 class WorldHeightMap;
 
 typedef UnsignedByte W3DShroudLevel;

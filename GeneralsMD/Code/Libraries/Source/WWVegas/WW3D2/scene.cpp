@@ -67,10 +67,17 @@
 #include "ww3d.h"
 #include "rinfo.h"
 #include "chunkio.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8renderer.h"
+#endif
 #include "dx8wrapper.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "sortingrenderer.h"
+#endif
 #include "coltest.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "OriginalW3DDeviceUnavailable.h"
+#endif
 
 
 /*
@@ -215,6 +222,9 @@ void SceneClass::Render(RenderInfoClass & rinfo)
 	// Any stuff that needs to get done before anything else
 	Pre_Render_Processing(rinfo);
 
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw OriginalW3DDeviceUnavailable("original WW3D scene fog/render-state GPU translation pending");
+#else
 	DX8Wrapper::Set_Fog(FogEnabled, FogColor, FogStart, FogEnd);
 
 	if (Get_Extra_Pass_Polygon_Mode()==EXTRA_PASS_DISABLE) {
@@ -246,6 +256,7 @@ void SceneClass::Render(RenderInfoClass & rinfo)
 
 	// Any stuff that needs to get done after anything else
 	Post_Render_Processing(rinfo);
+#endif
 }
 
 /***********************************************************************************************
@@ -556,6 +567,9 @@ void SimpleSceneClass::Customized_Render(RenderInfoClass & rinfo)
 	// derived classes should use light environment
 	WWASSERT(rinfo.light_environment==NULL);
 	int count=0;
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw OriginalW3DDeviceUnavailable("original WW3D scene light GPU installation pending");
+#else
 	// Turn off lights in case we have none
 	DX8Wrapper::Set_Light(0,NULL);
 	DX8Wrapper::Set_Light(1,NULL);
@@ -614,6 +628,7 @@ void SimpleSceneClass::Customized_Render(RenderInfoClass & rinfo)
 			}
 		}
 	}
+#endif
 }
 
 void SimpleSceneClass::Post_Render_Processing(RenderInfoClass& rinfo)

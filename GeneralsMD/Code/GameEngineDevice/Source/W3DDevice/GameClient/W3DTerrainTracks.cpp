@@ -43,11 +43,15 @@
 //			  moves.
 //-----------------------------------------------------------------------------
 
+#include "PreRTS.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
-#include "W3DDevice/GameClient/heightmap.h"
 #include "Common/PerfTimer.h"
-#include "common/GlobalData.h"
-#include "common/Debug.h"
+#include "Common/GlobalData.h"
+#include "Common/MapObject.h"
+#include "Common/Debug.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "OriginalW3DDeviceUnavailable.h"
+#endif
 #include "texture.h"
 #include "colmath.h"
 #include "coltest.h"
@@ -560,6 +564,9 @@ TerrainTracksRenderObjClassSystem::TerrainTracksRenderObjClassSystem()
 	m_TerrainTracksScene = NULL;
 	m_edgesToFlush = 0;
 	m_indexBuffer = NULL;
+#if defined(ZH_WW3D_CPU_ONLY)
+	m_gpuResourcesPending = false;
+#endif
 	m_vertexMaterialClass = NULL;
 	m_vertexBuffer = NULL;
 
@@ -591,6 +598,11 @@ TerrainTracksRenderObjClassSystem::~TerrainTracksRenderObjClassSystem( void )
 //=============================================================================
 void TerrainTracksRenderObjClassSystem::ReAcquireResources(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	// CPU track pooling remains active, but GPU buffers are explicitly pending.
+	m_gpuResourcesPending = true;
+	return;
+#else
 	Int i;
 	const Int numModules=TheGlobalData->m_maxTerrainTracks;
 
@@ -619,6 +631,7 @@ void TerrainTracksRenderObjClassSystem::ReAcquireResources(void)
 	DEBUG_ASSERTCRASH(numModules*m_maxTankTrackEdges*2 < 65535, ("Too many terrain track edges"));
 
 	m_vertexBuffer=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZDUV1,numModules*m_maxTankTrackEdges*2,DX8VertexBufferClass::USAGE_DYNAMIC));
+#endif
 }
 
 //=============================================================================
@@ -628,8 +641,12 @@ void TerrainTracksRenderObjClassSystem::ReAcquireResources(void)
 //=============================================================================
 void TerrainTracksRenderObjClassSystem::ReleaseResources(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	m_gpuResourcesPending = false;
+#else
 	REF_PTR_RELEASE(m_indexBuffer);
 	REF_PTR_RELEASE(m_vertexBuffer);
+#endif
 	// Note - it is ok to not release the material, as it is a w3d object that
 	// has no dx8 resources. jba.
 }
@@ -726,9 +743,14 @@ void TerrainTracksRenderObjClassSystem::shutdown( void )
 
 	}  // end while
 
+#if defined(ZH_WW3D_CPU_ONLY)
+	ReleaseResources();
+	REF_PTR_RELEASE(m_vertexMaterialClass);
+#else
 	REF_PTR_RELEASE(m_indexBuffer);
 	REF_PTR_RELEASE(m_vertexMaterialClass);
 	REF_PTR_RELEASE(m_vertexBuffer);
+#endif
 
 }  // end shutdown
 
@@ -794,6 +816,10 @@ void TerrainTracksRenderObjClassSystem::update()
 //=============================================================================
 void TerrainTracksRenderObjClassSystem::flush()
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (m_usedModules) throw OriginalW3DDeviceUnavailable("original terrain track GPU resources pending");
+	return;
+#else
 /** @todo: Optimize system by drawing tracks as triangle strips and use dynamic vertex buffer access.
 May also try rendering all tracks with one call to W3D/D3D by grouping them by texture.
 Try improving the fit to vertical surfaces like cliffs.
@@ -917,6 +943,7 @@ Try improving the fit to vertical surfaces like cliffs.
 	}	//there are some edges to render in pool.
 
 	m_edgesToFlush=0;	//reset count for next flush
+#endif
 }
 
 /**Removes all remaining tracks from the rendering system*/

@@ -32,6 +32,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES ////////////////////////////////////////////////////////////
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "PreRTS.h"
+#include "OriginalW3DDeviceUnavailable.h"
+#endif
 #include <stdlib.h>
 
 // USER INCLUDES //////////////////////////////////////////////////////////////
@@ -46,22 +50,30 @@
 #include "GameClient/ParticleSys.h"
 #include "GameClient/Color.h"
 #include "GameClient/View.h"
-#include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DDynamicLight.h"
+#if defined(INCLUDE_GRANNY_IN_BUILD)
 #include "W3DDevice/GameClient/W3DGranny.h"
+#endif
 #include "W3DDevice/GameClient/W3DShadow.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "W3DDevice/GameClient/W3DStatusCircle.h"
+#endif
 #include "W3DDevice/GameClient/W3DCustomScene.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "WW3D2/camera.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "WW3D2/dx8renderer.h"
 #include "WW3D2/sortingrenderer.h"
+#endif
 #include "WW3D2/dx8wrapper.h"
 #include "WW3D2/Light.h"
 #include "WW3D2/matpass.h"
+#include "WW3D2/vertmaterial.h"
 #include "WW3D2/shader.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "WW3D2/DX8Caps.h"
+#endif
 #include "WW3D2/colorspace.h"
 
 #include "WW3D2/shdlib.h"
@@ -94,10 +106,11 @@ static ShaderClass PlayerColorShader(SC_PLAYER_COLOR);
 //=============================================================================
 RTS3DScene::RTS3DScene()
 {
+	Int i;
 	setName("RTS3DScene");
 	m_drawTerrainOnly = false;
 	m_numGlobalLights=0;
-	for (Int i=0; i<LightEnvironmentClass::MAX_LIGHTS; i++)
+	for (i=0; i<LightEnvironmentClass::MAX_LIGHTS; i++)
 	{	m_globalLight[i]=NULL;
 		m_infantryLight[i]=NEW_REF( LightClass, (LightClass::DIRECTIONAL) );
 	}
@@ -200,7 +213,8 @@ RTS3DScene::RTS3DScene()
 //=============================================================================
 RTS3DScene::~RTS3DScene()
 {
-	for (Int i=0; i<LightEnvironmentClass::MAX_LIGHTS; i++)
+	Int i;
+	for (i=0; i<LightEnvironmentClass::MAX_LIGHTS; i++)
 	{
 		REF_PTR_RELEASE(m_globalLight[i]);
 		REF_PTR_RELEASE(m_infantryLight[i]);
@@ -832,6 +846,11 @@ void RTS3DScene::renderOneObject(RenderInfoClass &rinfo, RenderObjClass *robj, I
 /**Draw everything that was submitted from this scene*/
 void RTS3DScene::Flush(RenderInfoClass & rinfo)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (m_customPassMode == SCENE_PASS_DEFAULT && Get_Extra_Pass_Polygon_Mode() == EXTRA_PASS_DISABLE)
+		DoShadows(rinfo, false);
+	throw OriginalW3DDeviceUnavailable("original scene DX8 mesh/shadow flush translation pending");
+#else
 	//don't draw shadows in this mode because they interfere with destination alpha or are invisible (wireframe)
 	if (m_customPassMode == SCENE_PASS_DEFAULT && Get_Extra_Pass_Polygon_Mode() == EXTRA_PASS_DISABLE)
 		DoShadows(rinfo, false);	//draw all non-stencil shadows (decals) since they fall under other objects.
@@ -869,6 +888,7 @@ void RTS3DScene::Flush(RenderInfoClass & rinfo)
 		SortingRendererClass::Flush();	//draw sorted translucent polys like particles.
 	}
 	TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+#endif
 }
 
 /**Generate a predefined light environment(s) that will be applied to many objects.  Useful for things like totally fogged
@@ -949,6 +969,7 @@ void RTS3DScene::updatePlayerColorPasses(void)
 #define ZBias 0.0001f
 
 //DECLARE_PERF_TIMER(NonTerrainRender)
+#if !defined(ZH_WW3D_CPU_ONLY)
 void RTS3DScene::Render(RenderInfoClass & rinfo)
 {
 	//USE_PERF_TIMER(NonTerrainRender)
@@ -1639,6 +1660,28 @@ void RTS3DScene::flushTranslucentObjects(RenderInfoClass & rinfo)
 //=============================================================================
 /** Returns an iterator of the lights in the scene. */
 //=============================================================================
+#else
+void RTS3DScene::Render(RenderInfoClass &)
+{
+	throw OriginalW3DDeviceUnavailable("original scene fog/render-state GPU translation pending");
+}
+void RTS3DScene::Customized_Render(RenderInfoClass &)
+{
+	throw OriginalW3DDeviceUnavailable("original scene custom-pass GPU translation pending");
+}
+void RTS3DScene::flushOccludedObjectsIntoStencil(RenderInfoClass &)
+{
+	throw OriginalW3DDeviceUnavailable("original scene stencil GPU translation pending");
+}
+void RTS3DScene::flushOccludedObjects(RenderInfoClass &)
+{
+	throw OriginalW3DDeviceUnavailable("original scene occluded-object GPU translation pending");
+}
+void RTS3DScene::flushTranslucentObjects(RenderInfoClass &)
+{
+	throw OriginalW3DDeviceUnavailable("original scene translucent GPU translation pending");
+}
+#endif
 RefRenderObjListIterator * RTS3DScene::createLightsIterator(void)
 {
 	RefRenderObjListIterator * it = NEW RefRenderObjListIterator(&LightList);	// poolify
@@ -1722,12 +1765,18 @@ void RTS3DScene::doRender( CameraClass * cam )
 //=============================================================================
 void RTS3DScene::draw( )
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (m_camera == NULL)
+		throw OriginalW3DDeviceUnavailable("original 3D scene camera missing");
+	throw OriginalW3DDeviceUnavailable("original 3D scene WW3D render translation pending");
+#else
 
 	if (m_camera == NULL) {
 		DEBUG_CRASH(("Null m_camera in RTS3DScene::draw"));
 		return;
 	}
 	WW3D::Render( this, m_camera );
+#endif
 
 
 }  // end Customized_Render
@@ -1745,8 +1794,12 @@ void RTS3DScene::draw( )
 RTS2DScene::RTS2DScene()
 {
 	setName("RTS2DScene");
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw OriginalW3DDeviceUnavailable("original 2D status-circle GPU object creation pending");
+#else
 	m_status = NEW_REF( W3DStatusCircle, () );
 	Add_Render_Object( m_status );
+#endif
 }  // end RTS2DScene
 
 //=============================================================================
@@ -1756,8 +1809,10 @@ RTS2DScene::RTS2DScene()
 //=============================================================================
 RTS2DScene::~RTS2DScene()
 {
+#if !defined(ZH_WW3D_CPU_ONLY)
 	this->Remove_Render_Object(m_status);
 	REF_PTR_RELEASE(m_status);
+#endif
 }  // end ~RTS2DScene
 
 //=============================================================================
@@ -1794,12 +1849,16 @@ void RTS2DScene::doRender( CameraClass * cam )
 //=============================================================================
 void RTS2DScene::draw( )
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	throw OriginalW3DDeviceUnavailable("original 2D scene WW3D render translation pending");
+#else
 
 	if (m_camera == NULL) {
 		DEBUG_CRASH(("Null m_camera in RTS2DScene::draw"));
 		return;
 	}
 	WW3D::Render( this, m_camera );
+#endif
 
 
 }  // end Customized_Render
@@ -1997,4 +2056,3 @@ void RTS3DScene::Visibility_Check(CameraClass * camera)
 
  *
  */
-

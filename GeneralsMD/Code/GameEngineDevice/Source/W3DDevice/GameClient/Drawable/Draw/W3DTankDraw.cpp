@@ -44,9 +44,7 @@
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/ParticleSys.h"
-#ifndef ZH_W3D_SCHEMA_ONLY
-#include "W3DDevice/GameClient/W3DGameClient.h"
-#endif
+#include "GameClient/View.h"
 
 #include "W3DDevice/GameClient/Module/W3DTankDraw.h"
 #ifndef ZH_W3D_SCHEMA_ONLY
@@ -291,7 +289,7 @@ void W3DTankDraw::updateTreadObjects(void)
 			//Check if subobject name starts with "TREADS".
 			if (subObj && subObj->Class_ID() == RenderObjClass::CLASSID_MESH && subObj->Get_Name()
 				&& ( (meshName=strchr(subObj->Get_Name(),'.') ) != 0 && *(meshName++))
-				&&_strnicmp(meshName,"TREADS", 6) == 0)
+				&&strnicmp(meshName,"TREADS", 6) == 0)
 			{	//check if sub-object has the correct material to do texture scrolling.
 				MaterialInfoClass *mat=subObj->Get_Material_Info();
 				if (mat)
