@@ -383,6 +383,12 @@ ValidationResult RecordingGpuDevice::draw(const DrawDesc& desc)
         const UInt64 element_size = static_cast<UInt8>(desc.index_element_size);
         if (static_cast<UInt64>(desc.first_index) + desc.vertex_or_index_count > index->value.desc.size / element_size)
             return impl_->fail("draw", "indexed draw range exceeds index buffer", impl_->active_pass_label);
+        if (auto result = validate_original_fvf_indexed_vertices(desc, pipeline->value.key.descriptor(),
+                vertex->value.desc.size, index->value.bytes.data(), index->value.bytes.size()); !result)
+            return impl_->fail("draw", result.error, impl_->active_pass_label);
+    } else if (auto result = validate_original_fvf_indexed_vertices(desc, pipeline->value.key.descriptor(),
+                   vertex->value.desc.size, nullptr, 0); !result) {
+        return impl_->fail("draw", result.error, impl_->active_pass_label);
     }
     const auto& pipeline_desc = pipeline->value.key.descriptor();
     const auto* vertex_shader = lookup(impl_->shaders, pipeline_desc.vertex_shader);

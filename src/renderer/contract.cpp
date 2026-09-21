@@ -1,6 +1,7 @@
 #include "zh/renderer/contract.h"
 
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <tuple>
@@ -55,6 +56,45 @@ bool raster_equal(const RasterState& a, const RasterState& b) noexcept
         && float_bits(a.depth_bias) == float_bits(b.depth_bias);
 }
 
+UInt32 vertex_element_size(VertexElementFormat format) noexcept
+{
+    switch (format) {
+    case VertexElementFormat::float1: return 4;
+    case VertexElementFormat::float2: return 8;
+    case VertexElementFormat::float3: return 12;
+    case VertexElementFormat::float4: return 16;
+    case VertexElementFormat::ubyte4_norm: return 4;
+    }
+    return 0;
+}
+
+ValidationResult validate_original_fvf(const OriginalFvfLayout& layout)
+{
+    if (layout.stride == 0 || layout.stride > 2048 || layout.stride % 4 != 0)
+        return failure("original FVF stride must be aligned and in range 4..2048");
+    if (layout.attribute_count == 0 || layout.attribute_count > RendererLimits::vertex_attributes)
+        return failure("original FVF attribute count exceeds device limit");
+    if (layout.attributes[0].location != 0 || layout.attributes[0].format != VertexElementFormat::float3
+        || layout.attributes[0].offset != 0)
+        return failure("original FVF must begin with canonical XYZ position");
+    std::array<bool, RendererLimits::vertex_attributes> locations{};
+    for (UInt32 i = 0; i < layout.attribute_count; ++i) {
+        const auto& attr = layout.attributes[i];
+        const auto size = vertex_element_size(attr.format);
+        if (attr.location >= RendererLimits::vertex_attributes || locations[attr.location] || !size
+            || attr.offset % 4 != 0 || attr.offset > layout.stride || size > layout.stride - attr.offset)
+            return failure("original FVF attribute has unsupported format, duplicate location or out-of-stride offset");
+        locations[attr.location] = true;
+        for (UInt32 j = 0; j < i; ++j) {
+            const auto& other = layout.attributes[j];
+            if (attr.offset < other.offset + vertex_element_size(other.format)
+                && other.offset < attr.offset + size)
+                return failure("original FVF attributes overlap");
+        }
+    }
+    return {};
+}
+
 ValidationResult validate_bindings(const StageBindings& bindings, std::string_view stage)
 {
     if (bindings.uniform_count > RendererLimits::uniform_buffers_per_stage)
@@ -82,6 +122,16 @@ PipelineKey::PipelineKey(const PipelineDesc& desc) noexcept : descriptor_(desc)
     hash_value(hash_, desc.vertex_shader.value());
     hash_value(hash_, desc.fragment_shader.value());
     hash_value(hash_, static_cast<UInt8>(desc.vertex_layout));
+    if (desc.vertex_layout == VertexLayout::original_fvf) {
+        hash_value(hash_, desc.original_fvf.stride);
+        hash_value(hash_, desc.original_fvf.attribute_count);
+        for (UInt32 i = 0; i < desc.original_fvf.attribute_count && i < RendererLimits::vertex_attributes; ++i) {
+            const auto& attr = desc.original_fvf.attributes[i];
+            hash_value(hash_, attr.location);
+            hash_value(hash_, static_cast<UInt8>(attr.format));
+            hash_value(hash_, attr.offset);
+        }
+    }
     hash_value(hash_, static_cast<UInt8>(desc.topology));
     hash_value(hash_, desc.blend.enabled);
     hash_value(hash_, static_cast<UInt8>(desc.blend.source_color));
@@ -113,7 +163,9 @@ bool operator==(const PipelineKey& left, const PipelineKey& right) noexcept
     const auto& a = left.descriptor_;
     const auto& b = right.descriptor_;
     return a.vertex_shader == b.vertex_shader && a.fragment_shader == b.fragment_shader
-        && a.vertex_layout == b.vertex_layout && a.topology == b.topology
+        && a.vertex_layout == b.vertex_layout
+        && (a.vertex_layout != VertexLayout::original_fvf || a.original_fvf == b.original_fvf)
+        && a.topology == b.topology
         && blend_equal(a.blend, b.blend) && depth_equal(a.depth_stencil, b.depth_stencil)
         && raster_equal(a.raster, b.raster) && a.color_format == b.color_format
         && a.depth_format == b.depth_format && a.uses_point_size == b.uses_point_size
@@ -168,6 +220,10 @@ ValidationResult validate(const PipelineDesc& desc)
         return failure("point-list pipeline requires explicit point-size shader behavior");
     if ((desc.blend.color_write_mask & 0xf0U) != 0) return failure("pipeline color mask uses undefined channels");
     if (!std::isfinite(desc.raster.depth_bias)) return failure("pipeline depth bias must be finite");
+    if (desc.vertex_layout == VertexLayout::original_fvf) {
+        if (auto result = validate_original_fvf(desc.original_fvf); !result) return result;
+    } else if (static_cast<UInt8>(desc.vertex_layout) > static_cast<UInt8>(VertexLayout::original_fvf))
+        return failure("unsupported vertex layout");
     return {};
 }
 
@@ -207,6 +263,31 @@ ValidationResult validate(const DrawDesc& desc, const PipelineDesc& pipeline)
         return failure("point-list draw requires a finite positive point size");
     if (auto result = validate_bindings(desc.vertex_bindings, "vertex"); !result) return result;
     return validate_bindings(desc.fragment_bindings, "fragment");
+}
+
+ValidationResult validate_original_fvf_indexed_vertices(const DrawDesc& draw, const PipelineDesc& pipeline,
+    UInt64 vertex_bytes, const UInt8* index_bytes, UInt64 index_size)
+{
+    if (pipeline.vertex_layout != VertexLayout::original_fvf) return {};
+    const UInt64 stride = pipeline.original_fvf.stride;
+    if (!stride || vertex_bytes < stride) return failure("original FVF vertex buffer is shorter than stride");
+    if (!draw.index_buffer) {
+        if (draw.vertex_or_index_count > vertex_bytes / stride)
+            return failure("original FVF draw exceeds vertex buffer");
+        return {};
+    }
+    const UInt64 width = static_cast<UInt8>(draw.index_element_size);
+    if (!index_bytes || (width != 2 && width != 4)
+        || static_cast<UInt64>(draw.first_index) + draw.vertex_or_index_count > index_size / width)
+        return failure("original FVF index range exceeds index buffer");
+    for (UInt64 i = draw.first_index; i < static_cast<UInt64>(draw.first_index) + draw.vertex_or_index_count; ++i) {
+        UInt32 index = 0;
+        std::memcpy(&index, index_bytes + i * width, static_cast<std::size_t>(width));
+        const auto vertex = static_cast<std::int64_t>(index) + draw.base_vertex;
+        if (vertex < 0 || static_cast<UInt64>(vertex) >= vertex_bytes / stride)
+            return failure("original FVF indexed vertex exceeds source vertex buffer");
+    }
+    return {};
 }
 
 bool requires_bc_fallback(TextureFormat format, bool backend_supports_format) noexcept

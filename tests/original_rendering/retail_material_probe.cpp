@@ -7,6 +7,8 @@
 #include "mapper.h"
 #include "vertmaterial.h"
 #include "shader.h"
+#include "dx8renderer.h"
+#include "original_gpu_edge.h"
 
 #include <cstdio>
 #include <map>
@@ -26,6 +28,7 @@ struct Families
 	std::map<int,unsigned> detail_alphas;
 	std::map<int,unsigned> fog_modes;
 	std::map<int,unsigned> blend_modes;
+	std::map<unsigned,unsigned> fvf_formats;
 };
 
 void collect(RenderObjClass *object,Families &families,unsigned depth)
@@ -36,6 +39,10 @@ void collect(RenderObjClass *object,Families &families,unsigned depth)
 	{
 		++families.meshes;
 		const MeshModelClass *mesh=static_cast<MeshClass*>(object)->Peek_Model();
+		const unsigned fvf=DX8FVFCategoryContainer::Define_FVF(
+			const_cast<MeshModelClass*>(mesh),true);
+		(void)zh::original_runtime::OriginalGpuEdge::layout_for_fvf(fvf);
+		++families.fvf_formats[fvf];
 		for (int pass=0;pass<mesh->Get_Pass_Count();++pass)
 		{
 			for (int polygon=0;polygon<mesh->Get_Polygon_Count();++polygon)
@@ -94,5 +101,9 @@ extern "C" void zh_probe_retail_material_families(RenderObjClass *object)
 	report("detail-alpha",families.detail_alphas);
 	report("fog",families.fog_modes);
 	report("blend",families.blend_modes);
+	std::puts("");
+	std::printf("original retail FVF families: variants=%zu",families.fvf_formats.size());
+	for (const auto &[fvf,count]:families.fvf_formats)
+		std::printf(" fvf-%u=%u",fvf,count);
 	std::puts("");
 }

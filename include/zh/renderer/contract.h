@@ -48,7 +48,8 @@ enum class AddressMode : UInt8 { repeat, mirrored_repeat, clamp_edge, clamp_bord
 enum class ShaderStage : UInt8 { vertex, fragment };
 enum class PrimitiveTopology : UInt8 { point_list, triangle_list, triangle_strip, triangle_fan };
 enum class IndexElementSize : UInt8 { uint16 = 2, uint32 = 4 };
-enum class VertexLayout : UInt8 { position_color_uv, world_mesh, terrain, water, point_sprite, wwshade };
+enum class VertexLayout : UInt8 { position_color_uv, world_mesh, terrain, water, point_sprite, wwshade, original_fvf };
+enum class VertexElementFormat : UInt8 { float1, float2, float3, float4, ubyte4_norm };
 enum class CompareOp : UInt8 { never, less, equal, less_equal, greater, not_equal, greater_equal, always };
 enum class BlendFactor : UInt8 { zero, one, src_color, inv_src_color, src_alpha, inv_src_alpha, dst_color, inv_dst_color, dst_alpha, inv_dst_alpha, src_alpha_saturate };
 enum class BlendOp : UInt8 { add, subtract, reverse_subtract, minimum, maximum };
@@ -128,10 +129,32 @@ struct RasterState {
     float depth_bias = 0.0F;
 };
 
+struct VertexAttributeDesc {
+    UInt8 location = 0;
+    VertexElementFormat format = VertexElementFormat::float3;
+    UInt32 offset = 0;
+    friend bool operator==(const VertexAttributeDesc& a, const VertexAttributeDesc& b) noexcept
+    { return a.location == b.location && a.format == b.format && a.offset == b.offset; }
+};
+
+struct OriginalFvfLayout {
+    UInt32 stride = 0;
+    UInt8 attribute_count = 0;
+    std::array<VertexAttributeDesc, RendererLimits::vertex_attributes> attributes{};
+    friend bool operator==(const OriginalFvfLayout& a, const OriginalFvfLayout& b) noexcept
+    {
+        if (a.stride != b.stride || a.attribute_count != b.attribute_count) return false;
+        for (UInt32 i = 0; i < a.attribute_count && i < RendererLimits::vertex_attributes; ++i)
+            if (!(a.attributes[i] == b.attributes[i])) return false;
+        return true;
+    }
+};
+
 struct PipelineDesc {
     ShaderHandle vertex_shader;
     ShaderHandle fragment_shader;
     VertexLayout vertex_layout = VertexLayout::world_mesh;
+    OriginalFvfLayout original_fvf{};
     PrimitiveTopology topology = PrimitiveTopology::triangle_list;
     BlendState blend;
     DepthStencilState depth_stencil;
@@ -220,6 +243,8 @@ ValidationResult validate(const PipelineDesc& desc);
 ValidationResult validate(const RenderPassDesc& desc);
 ValidationResult validate(const UploadDesc& desc);
 ValidationResult validate(const DrawDesc& desc, const PipelineDesc& pipeline);
+ValidationResult validate_original_fvf_indexed_vertices(const DrawDesc& draw, const PipelineDesc& pipeline,
+    UInt64 vertex_bytes, const UInt8* index_bytes, UInt64 index_size);
 bool requires_bc_fallback(TextureFormat format, bool backend_supports_format) noexcept;
 
 struct RendererConventions {

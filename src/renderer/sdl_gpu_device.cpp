@@ -214,7 +214,19 @@ SDL_GPUFrontFace front_face(Winding value)
     return value == Winding::clockwise ? SDL_GPU_FRONTFACE_CLOCKWISE : SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
 }
 
-void vertex_layout(VertexLayout layout, SDL_GPUVertexBufferDescription& buffer,
+SDL_GPUVertexElementFormat vertex_element(VertexElementFormat format)
+{
+    switch (format) {
+    case VertexElementFormat::float1: return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT;
+    case VertexElementFormat::float2: return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
+    case VertexElementFormat::float3: return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+    case VertexElementFormat::float4: return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
+    case VertexElementFormat::ubyte4_norm: return SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4_NORM;
+    }
+    return SDL_GPU_VERTEXELEMENTFORMAT_INVALID;
+}
+
+void vertex_layout(const PipelineDesc& desc, SDL_GPUVertexBufferDescription& buffer,
     std::vector<SDL_GPUVertexAttribute>& attributes)
 {
     buffer = {0, 32, SDL_GPU_VERTEXINPUTRATE_VERTEX, 0};
@@ -222,7 +234,14 @@ void vertex_layout(VertexLayout layout, SDL_GPUVertexBufferDescription& buffer,
     const auto add = [&](Uint32 location, SDL_GPUVertexElementFormat format, Uint32 offset) {
         attributes.push_back({location, 0, format, offset});
     };
-    switch (layout) {
+    switch (desc.vertex_layout) {
+    case VertexLayout::original_fvf:
+        buffer.pitch = desc.original_fvf.stride;
+        for (UInt32 i = 0; i < desc.original_fvf.attribute_count; ++i) {
+            const auto& attr = desc.original_fvf.attributes[i];
+            add(attr.location, vertex_element(attr.format), attr.offset);
+        }
+        break;
     case VertexLayout::position_color_uv:
         buffer.pitch = 20;
         add(0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, 0);
@@ -460,7 +479,7 @@ PipelineHandle SdlGpuDevice::create_pipeline(const PipelineKey& key, std::string
     }
     SDL_GPUVertexBufferDescription vertex_buffer{};
     std::vector<SDL_GPUVertexAttribute> attributes;
-    vertex_layout(desc.vertex_layout, vertex_buffer, attributes);
+    vertex_layout(desc, vertex_buffer, attributes);
     SDL_GPUColorTargetDescription color{};
     color.format = texture_format(desc.color_format);
     color.blend_state.src_color_blendfactor = blend_factor(desc.blend.source_color);
@@ -635,6 +654,17 @@ ValidationResult SdlGpuDevice::draw(const DrawDesc& desc)
     auto* vertex = lookup(impl_->buffers, desc.vertex_buffer);
     if (!vertex || !vertex->value.native || vertex->value.desc.usage != BufferUsage::vertex)
         return impl_->fail("draw", "vertex buffer is stale, destroyed, or has wrong usage");
+    if (!desc.index_buffer) {
+        if (auto result = validate_original_fvf_indexed_vertices(desc, pipeline->value.key.descriptor(),
+                vertex->value.desc.size, nullptr, 0); !result) return impl_->fail("draw", result.error);
+    } else {
+        auto* index = lookup(impl_->buffers, desc.index_buffer);
+        if (!index || index->value.desc.usage != BufferUsage::index)
+            return impl_->fail("draw", "index buffer is stale, destroyed, or has wrong usage");
+        if (auto result = validate_original_fvf_indexed_vertices(desc, pipeline->value.key.descriptor(),
+                vertex->value.desc.size, index->value.shadow.data(), index->value.shadow.size()); !result)
+            return impl_->fail("draw", result.error);
+    }
     SDL_BindGPUGraphicsPipeline(impl_->render_pass, pipeline->value.native);
     SDL_GPUBufferBinding vertex_binding{vertex->value.native, 0};
     SDL_BindGPUVertexBuffers(impl_->render_pass, 0, &vertex_binding, 1);
@@ -795,6 +825,48 @@ ValidationResult SdlGpuDevice::wait_idle()
     if (impl_->in_pass) return impl_->fail("wait_idle", "cannot wait while a render pass is active");
     if (!SDL_WaitForGPUIdle(impl_->device)) return impl_->fail("wait_idle", sdl_error("SDL_WaitForGPUIdle"));
     return {};
+}
+
+std::vector<UInt8> SdlGpuDevice::readback_rgba(TextureHandle source)
+{
+    if (impl_->in_pass) { impl_->fail("readback_rgba", "cannot read during a render pass"); return {}; }
+    auto* texture = lookup(impl_->textures, source);
+    if (!texture || !texture->value.desc.render_target || texture->value.desc.format != TextureFormat::rgba8)
+    { impl_->fail("readback_rgba", "source must be a live RGBA8 color target"); return {}; }
+    const auto width = texture->value.desc.width;
+    const auto height = texture->value.desc.height;
+    const UInt64 size = static_cast<UInt64>(width) * height * 4;
+    if (size > RendererLimits::maximum_upload_bytes || size > std::numeric_limits<Uint32>::max())
+    { impl_->fail("readback_rgba", "color target exceeds bounded diagnostic readback"); return {}; }
+    SDL_GPUTransferBufferCreateInfo info{SDL_GPU_TRANSFERBUFFERUSAGE_DOWNLOAD, static_cast<Uint32>(size), 0};
+    auto* transfer = SDL_CreateGPUTransferBuffer(impl_->device, &info);
+    if (!transfer) { impl_->fail("readback_rgba", sdl_error("SDL_CreateGPUTransferBuffer")); return {}; }
+    auto* command = SDL_AcquireGPUCommandBuffer(impl_->device);
+    if (!command) {
+        impl_->fail("readback_rgba", sdl_error("SDL_AcquireGPUCommandBuffer"));
+        SDL_ReleaseGPUTransferBuffer(impl_->device, transfer); return {};
+    }
+    auto* pass = SDL_BeginGPUCopyPass(command);
+    SDL_GPUTextureRegion region{texture->value.native, 0, 0, 0, 0, 0, width, height, 1};
+    SDL_GPUTextureTransferInfo destination{transfer, 0, width, height};
+    SDL_DownloadFromGPUTexture(pass, &region, &destination);
+    SDL_EndGPUCopyPass(pass);
+    auto* fence = SDL_SubmitGPUCommandBufferAndAcquireFence(command);
+    if (!fence) {
+        impl_->fail("readback_rgba", sdl_error("SDL_SubmitGPUCommandBufferAndAcquireFence"));
+        SDL_ReleaseGPUTransferBuffer(impl_->device, transfer); return {};
+    }
+    std::vector<UInt8> pixels;
+    if (!SDL_WaitForGPUFences(impl_->device, true, &fence, 1))
+        impl_->fail("readback_rgba", sdl_error("SDL_WaitForGPUFences"));
+    else if (void* mapped = SDL_MapGPUTransferBuffer(impl_->device, transfer, false)) {
+        const auto* bytes = static_cast<const UInt8*>(mapped);
+        pixels.assign(bytes, bytes + size);
+        SDL_UnmapGPUTransferBuffer(impl_->device, transfer);
+    } else impl_->fail("readback_rgba", sdl_error("SDL_MapGPUTransferBuffer"));
+    SDL_ReleaseGPUFence(impl_->device, fence);
+    SDL_ReleaseGPUTransferBuffer(impl_->device, transfer);
+    return pixels;
 }
 
 void SdlGpuDevice::release_window() noexcept

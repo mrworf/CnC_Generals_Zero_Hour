@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <vector>
 
 struct SDL_Window;
 
@@ -63,6 +64,9 @@ public:
     ValidationResult present(TextureHandle source) override;
     ValidationResult present_last();
     ValidationResult wait_idle();
+    // Bounded diagnostic readback of an owned RGBA8 render target; never an
+    // alternative draw path or source of game geometry/material decisions.
+    std::vector<UInt8> readback_rgba(TextureHandle source);
     void release_window() noexcept;
 
 private:

@@ -148,6 +148,52 @@ void render_generation(SDL_Window* window, int generation)
     check(device.present(color), device.last_error());
     device.destroy(indexed_indices);
     device.destroy(indexed_vertices);
+    // Canonical original XYZ + diffuse + UV1: original FVFInfoClass reports
+    // offsets 0, 12, 16 and stride 24. Prove SDL consumes those original
+    // indexed bytes directly, not the fixed world_mesh reinterpretation.
+    struct OriginalVertex { float xyz[3]; std::uint32_t diffuse; float uv[2]; };
+    static_assert(sizeof(OriginalVertex) == 24);
+    PipelineDesc original_pipeline = pipeline_desc;
+    original_pipeline.vertex_shader = device.create_shader(
+        {ShaderStage::vertex, "renderer/original_fvf_probe.vert", 0, 0}, "source FVF layout probe");
+    original_pipeline.vertex_layout = VertexLayout::original_fvf;
+    original_pipeline.original_fvf.stride = sizeof(OriginalVertex);
+    original_pipeline.original_fvf.attribute_count = 3;
+    original_pipeline.original_fvf.attributes[0] = {0, VertexElementFormat::float3, 0};
+    original_pipeline.original_fvf.attributes[1] = {2, VertexElementFormat::ubyte4_norm, 12};
+    original_pipeline.original_fvf.attributes[2] = {4, VertexElementFormat::float2, 16};
+    const auto original_pipeline_handle = device.create_pipeline(PipelineKey(original_pipeline), "original FVF indexed layout");
+    check(original_pipeline.vertex_shader && original_pipeline_handle, device.last_error());
+    const std::array<OriginalVertex, 4> source_vertices{{
+        {{0.0F, 0.0F, 0.5F}, 0xff000000U, {0.0F, 0.0F}},
+        {{-0.8F, 0.7F, 0.5F}, 0xff2020ffU, {0.0F, 0.0F}},
+        {{0.8F, 0.7F, 0.5F}, 0xff20ff20U, {1.0F, 0.0F}},
+        {{0.0F, -0.8F, 0.5F}, 0xffff2020U, {0.5F, 1.0F}},
+    }};
+    const auto source_vb = device.create_buffer({sizeof(source_vertices), BufferUsage::vertex, true}, "original FVF bytes");
+    const auto source_ib = device.create_buffer({sizeof(original_indices), BufferUsage::index, true}, "original FVF indices");
+    check(source_vb && source_ib, device.last_error());
+    check(device.upload({source_vb, sizeof(source_vertices), 0, sizeof(source_vertices)}, source_vertices.data()), device.last_error());
+    check(device.upload({source_ib, sizeof(original_indices), 0, sizeof(original_indices)}, original_indices.data()), device.last_error());
+    indexed_draw.pipeline = original_pipeline_handle;
+    indexed_draw.vertex_buffer = source_vb;
+    indexed_draw.index_buffer = source_ib;
+    check(device.begin_pass(pass, "original FVF indexed Vulkan layout"), device.last_error());
+    check(device.draw(indexed_draw), device.last_error());
+    check(device.end_pass(), device.last_error());
+    const auto fvf_pixels = device.readback_rgba(color);
+    check(fvf_pixels.size() == 320U * 240U * 4U, device.last_error());
+    const auto pixel = [&](unsigned x, unsigned y, unsigned channel) {
+        return fvf_pixels[(y * 320U + x) * 4U + channel];
+    };
+    const unsigned center = pixel(160, 120, 0) + pixel(160, 120, 1) + pixel(160, 120, 2);
+    const unsigned clear = pixel(0, 0, 0) + pixel(0, 0, 1) + pixel(0, 0, 2);
+    check(center > clear + 25, "original indexed FVF layout did not shade center against clear corner");
+    std::cout << "original-fvf-indexed-pixels=pass generation=" << generation
+              << " center-rgb-sum=" << center << " clear-rgb-sum=" << clear << '\n';
+    check(device.present(color), device.last_error());
+    device.destroy(source_ib); device.destroy(source_vb);
+    device.destroy(original_pipeline_handle); device.destroy(original_pipeline.vertex_shader);
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - started).count();
     check(!device.end_pass() && device.last_error().find("no render pass") != std::string::npos,
@@ -232,6 +278,8 @@ void render_generation(SDL_Window* window, int generation)
 
     device.destroy(pipeline); device.destroy(vertices); device.destroy(fragment_shader); device.destroy(vertex_shader);
     device.destroy(depth); device.destroy(color);
+    check(device.readback_rgba(color).empty() && device.last_error().find("live RGBA8") != std::string::npos,
+        "stale original FVF readback was not rejected after device resource teardown");
     device.release_window();
 }
 

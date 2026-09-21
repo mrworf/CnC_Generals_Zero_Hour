@@ -2,6 +2,7 @@
 
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
+#include "dx8fvf.h"
 #include "dx8wrapper.h"
 #include "ww3dformat.h"
 #include "texture.h"
@@ -61,6 +62,50 @@ OriginalGpuEdge& OriginalGpuEdge::required()
 {
     if (!active_edge) throw std::runtime_error("original physical call requires a GPU translation session");
     return *active_edge;
+}
+
+renderer::OriginalFvfLayout OriginalGpuEdge::layout_for_fvf(unsigned source_fvf)
+{
+    // The original FVFInfoClass computes the offsets/stride; these bits only
+    // select which source-owned attributes exist and their dimensionality.
+    const unsigned coordinates = source_fvf & 0x400eU;
+    const unsigned count = (source_fvf >> 8U) & 0xfU;
+    if (coordinates != 0x002U || count > 8 || (source_fvf & 0x1000U)
+        || (source_fvf & 0x000020U))
+        throw std::runtime_error("unsupported original FVF position or blend layout");
+    constexpr unsigned known = 0x002U | 0x010U | 0x040U | 0x080U | 0xf00U;
+    unsigned dimension_bits = 0;
+    for (unsigned i = 0; i < count; ++i) dimension_bits |= 3U << (16U + 2U * i);
+    if (source_fvf & ~(known | dimension_bits))
+        throw std::runtime_error("unsupported original FVF element combination");
+    const FVFInfoClass source(source_fvf);
+    renderer::OriginalFvfLayout result;
+    result.stride = source.Get_FVF_Size();
+    const auto add = [&](unsigned location, renderer::VertexElementFormat format, unsigned offset) {
+        if (result.attribute_count >= result.attributes.size())
+            throw std::runtime_error("original FVF exceeds vertex attribute limit");
+        result.attributes[result.attribute_count++] = {static_cast<renderer::UInt8>(location), format, offset};
+    };
+    add(0, renderer::VertexElementFormat::float3, source.Get_Location_Offset());
+    if (source_fvf & 0x010U) add(1, renderer::VertexElementFormat::float3, source.Get_Normal_Offset());
+    if (source_fvf & 0x040U) add(2, renderer::VertexElementFormat::ubyte4_norm, source.Get_Diffuse_Offset());
+    if (source_fvf & 0x080U) add(3, renderer::VertexElementFormat::ubyte4_norm, source.Get_Specular_Offset());
+    for (unsigned i = 0; i < count; ++i) {
+        const unsigned size_code = (source_fvf >> (16U + 2U * i)) & 3U;
+        const auto format = size_code == 3 ? renderer::VertexElementFormat::float1
+            : size_code == 1 ? renderer::VertexElementFormat::float3
+            : size_code == 2 ? renderer::VertexElementFormat::float4
+            : renderer::VertexElementFormat::float2;
+        add(4 + i, format, source.Get_Tex_Offset(i));
+    }
+    renderer::PipelineDesc probe;
+    probe.vertex_shader = renderer::ShaderHandle(1);
+    probe.fragment_shader = renderer::ShaderHandle(2);
+    probe.vertex_layout = renderer::VertexLayout::original_fvf;
+    probe.original_fvf = result;
+    if (auto status = renderer::validate(probe); !status)
+        throw std::runtime_error("unsupported original FVF device layout: " + status.error);
+    return result;
 }
 
 bool OriginalGpuEdge::supports_texture_format(WW3DFormat format) const noexcept

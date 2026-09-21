@@ -137,6 +137,12 @@ def main() -> int:
             if not shaders or int(shaders[1]) < 1 or not re.fullmatch(
                     r"(?: (?:primary|detail-color|detail-alpha|fog|blend)-\d+=\d+)+", shaders[2]):
                 raise SystemExit("original retail shader family aggregate is absent or malformed")
+            fvf = re.search(r"^original retail FVF families: variants=(\d+)(.*)$",
+                            result.stdout, re.MULTILINE)
+            if not fvf or int(fvf[1]) < 1 or not re.fullmatch(
+                    r"(?: fvf-\d+=\d+)+", fvf[2]):
+                raise SystemExit("original retail FVF family aggregate is absent or malformed")
+            print(f"validated original retail FVF aggregate: variants={fvf[1]}{fvf[2]}")
         if args.keep:
             print(result.stdout)
         os.environ.pop("ZH_M22_RETAIL_MODEL", None)

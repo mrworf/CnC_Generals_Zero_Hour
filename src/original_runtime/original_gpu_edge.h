@@ -23,6 +23,7 @@ public:
 
     renderer::BufferHandle bind_vertex(const VertexBufferClass* source);
     renderer::BufferHandle bind_index(const IndexBufferClass* source);
+    static renderer::OriginalFvfLayout layout_for_fvf(unsigned source_fvf);
     bool supports_texture_format(WW3DFormat format) const noexcept;
     renderer::TextureHandle create_texture(WW3DFormat format, unsigned width, unsigned height, unsigned& mips);
     void upload_texture(renderer::TextureHandle texture, unsigned level, unsigned width,

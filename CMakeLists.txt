@@ -885,6 +885,7 @@ add_dependencies(zh_renderer_sdl_gpu zh_bootstrap_shaders)
 
 set(ZH_RENDERER_SHADER_NAMES
   acceptance.vert acceptance.frag
+  original_fvf_probe.vert
   world.vert world.frag
   video.vert video.frag
   ui.vert ui.frag
@@ -977,6 +978,7 @@ set_source_files_properties(tests/original_rendering/retail_material_probe.cpp P
   COMPILE_OPTIONS "-fpermissive")
 target_compile_definitions(zh_original_w3d_full_probe PRIVATE ZH_M22_FULL_DRAW_TEST=1)
 target_include_directories(zh_original_w3d_full_probe PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include/legacy"
   "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
@@ -991,7 +993,7 @@ target_include_directories(zh_original_w3d_full_probe PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad")
 target_link_libraries(zh_original_w3d_full_probe PRIVATE
   zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix
-  zh_compression zh_w3d zh_wwsupport zh_build_options)
+  zh_compression zh_w3d zh_wwsupport zh_renderer_sdl_gpu zh_build_options)
 target_link_options(zh_original_w3d_full_probe PRIVATE -Wl,--gc-sections
   -Wl,-u,_ZN10RTS3DSceneC1Ev
   "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/zh-original-w3d-full-probe.link.map")
@@ -1710,7 +1712,8 @@ if(ZH_BUILD_TESTS)
     add_dependencies(renderer_gpu_acceptance zh_renderer_shaders zh_effect_shaders)
     add_test(NAME renderer_gpu_acceptance COMMAND "${Python3_EXECUTABLE}"
       "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py" $<TARGET_FILE:renderer_gpu_acceptance>)
-    set_tests_properties(renderer_gpu_acceptance PROPERTIES LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE)
+    set_tests_properties(renderer_gpu_acceptance PROPERTIES LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE
+      ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
     add_test(NAME renderer_gpu_validation_layer COMMAND "${Python3_EXECUTABLE}"
       "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_vulkan_validation.py")
     set_tests_properties(renderer_gpu_validation_layer PROPERTIES LABELS gpu TIMEOUT 30 RUN_SERIAL TRUE)
