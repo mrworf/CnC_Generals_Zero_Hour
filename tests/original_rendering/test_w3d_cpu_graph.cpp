@@ -461,9 +461,14 @@ int main(int argc, char **argv)
 	CameraClass camera;
 	RenderInfoClass render_info(camera);
 	if (argc==2 && (std::strcmp(argv[1],"--decal-cpu")==0 ||
+		std::strcmp(argv[1],"--decal-aggregate")==0 ||
+		std::strcmp(argv[1],"--vulkan-decal-aggregate")==0 ||
 		std::strcmp(argv[1],"--decal-physical")==0 ||
 		std::strcmp(argv[1],"--vulkan-decal-physical")==0)) {
 		const bool vulkan_decal=std::strcmp(argv[1],"--vulkan-decal-physical")==0;
+		const bool aggregate_decal=std::strcmp(argv[1],"--decal-aggregate")==0 ||
+			std::strcmp(argv[1],"--vulkan-decal-aggregate")==0;
+		const bool vulkan_aggregate=std::strcmp(argv[1],"--vulkan-decal-aggregate")==0;
 		const bool decal_physical=vulkan_decal || std::strcmp(argv[1],"--decal-physical")==0;
 		const bool previously_enabled=WW3D::Are_Decals_Enabled();
 		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
@@ -779,6 +784,170 @@ int main(int argc, char **argv)
 				retried.find("draw pipeline=",retried.find("draw pipeline=",retry_bias)+1)!=std::string::npos &&
 				retried.find("DX8Wrapper::Set_DX8_Render_State=47:0",retry_bias)!=std::string::npos &&
 				textures.owners==0);
+		}
+		if (aggregate_decal) {
+			auto* immediate=NEW_REF(MaterialPassClass,());
+			auto* unlit=NEW_REF(VertexMaterialClass,());
+			unlit->Set_Lighting(false);
+			unlit->Set_Diffuse_Color_Source(VertexMaterialClass::COLOR1);
+			immediate->Set_Material(unlit);
+			unlit->Release_Ref();
+			ShaderClass shader;
+			shader.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+			immediate->Set_Shader(shader);
+			auto* culled=NEW_REF(MaterialPassClass,());
+			culled->Set_Shader(shader);
+			OBBoxClass source_volume(Vector3(0,0,-10),Vector3(100,100,100),Matrix3x3(true));
+			culled->Set_Cull_Volume(&source_volume);
+			const bool old_culling=MaterialPassClass::Is_Per_Polygon_Culling_Enabled();
+			MaterialPassClass::Enable_Per_Polygon_Culling(true);
+			RenderObjClass* delayed_object=manager.Create_Render_Obj("TEST.TRIANGLE");
+			assert(delayed_object && delayed_object->Class_ID()==RenderObjClass::CLASSID_MESH);
+			auto* delayed_mesh=static_cast<MeshClass*>(delayed_object);
+			delayed_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+			delayed_mesh->Set_Position(Vector3(0,0,-10));
+			auto queue_aggregate=[&] {
+				render_info.Push_Material_Pass(immediate);
+				skin_hlod->Render(render_info);
+				render_info.Pop_Material_Pass();
+				render_info.Push_Material_Pass(immediate);
+				render_info.Push_Material_Pass(culled);
+				mesh->Render(render_info);
+				render_info.Pop_Material_Pass();
+				render_info.Pop_Material_Pass();
+				render_info.Push_Material_Pass(immediate);
+				render_info.Push_Override_Flags(RenderInfoClass::RINFO_OVERRIDE_ADDITIONAL_PASSES_ONLY);
+				delayed_mesh->Render(render_info);
+				render_info.Pop_Override_Flags();
+				render_info.Pop_Material_Pass();
+			};
+			queue_aggregate();
+			const auto before_aggregate=recorder.snapshot().size();
+			{
+				zh::original_runtime::OriginalGpuEdge edge(recorder);
+				DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+				DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+				assert(recorder.begin_pass(pass,"original complete decal/material aggregate"));
+				TheDX8MeshRenderer.Flush();
+				assert(recorder.end_pass());
+			}
+			const auto aggregate=recorder.snapshot().substr(before_aggregate);
+			const auto first_bias=aggregate.find("DX8Wrapper::Set_DX8_Render_State=47:8");
+			const auto last_bias=aggregate.find("DX8Wrapper::Set_DX8_Render_State=47:0",first_bias);
+			const auto count_draws=[](const std::string& commands) {
+				unsigned count=0;
+				for (auto pos=commands.find("draw pipeline=");pos!=std::string::npos;
+					pos=commands.find("draw pipeline=",pos+1)) ++count;
+				return count;
+			};
+			const unsigned category_draws=count_draws(aggregate.substr(0,first_bias));
+			assert(first_bias!=std::string::npos && last_bias!=std::string::npos &&
+				category_draws>=5 &&
+				aggregate.find("DX8Wrapper::Set_Vertex_Buffer dynamic offset=")<first_bias &&
+				aggregate.find("DX8Wrapper::Set_Index_Buffer dynamic offset=")<first_bias &&
+				count_draws(aggregate.substr(first_bias,last_bias-first_bias))==2 &&
+				aggregate.find("draw pipeline=",last_bias)!=std::string::npos &&
+				mesh->Peek_Model()->Peek_Single_Texture()!=nullptr &&
+				!mesh->Peek_Model()->Peek_Single_Texture()->Is_Missing_Texture() &&
+				recorder.last_draw_index_bytes().size()==3*sizeof(unsigned short) &&
+				textures.owners==0);
+			queue_aggregate();
+			const auto before_failure=recorder.snapshot().size();
+			{
+				zh::original_runtime::OriginalGpuEdge edge(recorder);
+				DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+				DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+				recorder.fail_draw_after(category_draws+1);
+				assert(recorder.begin_pass(pass,"original aggregate later decal failure"));
+				bool rejected=false;
+				try { TheDX8MeshRenderer.Flush(); }
+				catch (const std::runtime_error& error) {
+					rejected=std::strstr(error.what(),"draw")!=nullptr;
+				}
+				assert(rejected && recorder.end_pass());
+			}
+			const auto failed=recorder.snapshot().substr(before_failure);
+			const auto failed_bias=failed.find("DX8Wrapper::Set_DX8_Render_State=47:8");
+			const auto failed_reset=failed.find("DX8Wrapper::Set_DX8_Render_State=47:0",failed_bias);
+			assert(failed_bias!=std::string::npos && failed_reset!=std::string::npos &&
+				count_draws(failed.substr(failed_bias,failed_reset-failed_bias))==1 &&
+				count_draws(failed.substr(failed_reset))==0);
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			mesh->Peek_Model()->Register_For_Rendering();
+			skin_mesh->Peek_Model()->Register_For_Rendering();
+			delayed_mesh->Peek_Model()->Register_For_Rendering();
+			queue_aggregate();
+			const auto before_retry=recorder.snapshot().size();
+			{
+				zh::original_runtime::OriginalGpuEdge edge(recorder);
+				DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+				DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+				assert(recorder.begin_pass(pass,"original complete aggregate requeued"));
+				TheDX8MeshRenderer.Flush();
+				assert(recorder.end_pass());
+			}
+			const auto retried=recorder.snapshot().substr(before_retry);
+			const auto retry_bias=retried.find("DX8Wrapper::Set_DX8_Render_State=47:8");
+			const auto retry_reset=retried.find("DX8Wrapper::Set_DX8_Render_State=47:0",retry_bias);
+			assert(retry_bias!=std::string::npos && retry_reset!=std::string::npos &&
+				count_draws(retried.substr(retry_bias,retry_reset-retry_bias))==2 &&
+				count_draws(retried.substr(retry_reset))>0 && textures.owners==0);
+#if defined(ZH_GPU_SHADER_DIR)
+			if (vulkan_aggregate) {
+				assert(SDL_Init(SDL_INIT_VIDEO));
+				for (unsigned width : {160U,240U}) {
+					zh::renderer::SdlGpuOptions options;
+					options.debug=true;
+					options.shader_root=ZH_GPU_SHADER_DIR;
+					zh::renderer::SdlGpuDevice device(options);
+					assert(device.capabilities().backend=="vulkan");
+					const unsigned height=width*3/4;
+					zh::renderer::TextureDesc target;
+					target.width=width; target.height=height;
+					target.render_target=true; target.sampled=false;
+					const auto gpu_color=device.create_texture(target,"original full aggregate color");
+					target.format=zh::renderer::TextureFormat::depth24_stencil8;
+					const auto gpu_depth=device.create_texture(target,"original full aggregate depth");
+					assert(gpu_color && gpu_depth);
+					zh::renderer::RenderPassDesc gpu_pass;
+					gpu_pass.color_targets[0]=gpu_color; gpu_pass.color_target_count=1;
+					gpu_pass.depth_target=gpu_depth; gpu_pass.width=width; gpu_pass.height=height;
+					TheDX8MeshRenderer.Invalidate();
+					TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+					mesh->Peek_Model()->Register_For_Rendering();
+					skin_mesh->Peek_Model()->Register_For_Rendering();
+					delayed_mesh->Peek_Model()->Register_For_Rendering();
+					queue_aggregate();
+					{
+						zh::original_runtime::OriginalGpuEdge edge(device);
+						DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+						Matrix4x4 projection;
+						camera.Get_D3D_Projection_Matrix(&projection);
+						DX8Wrapper::Set_Transform(D3DTS_PROJECTION,projection);
+						assert(device.begin_pass(gpu_pass,"original full aggregate Vulkan Flush"));
+						TheDX8MeshRenderer.Flush();
+						assert(device.end_pass());
+					}
+					const auto pixels=device.readback_rgba(gpu_color);
+					assert(pixels.size()==width*height*4U);
+					unsigned covered=0;
+					for (size_t pixel=0;pixel<pixels.size();pixel+=4)
+						if (pixels[pixel]>100 || pixels[pixel+1]>100 || pixels[pixel+2]>100)
+							++covered;
+					assert(covered>0 && covered<width*height && textures.owners==0);
+					std::printf("original-full-aggregate-%ux%u-covered=%u\n",width,height,covered);
+					device.destroy(gpu_color); device.destroy(gpu_depth);
+				}
+				SDL_Quit();
+			}
+#else
+			assert(!vulkan_aggregate);
+#endif
+			MaterialPassClass::Enable_Per_Polygon_Culling(old_culling);
+			delayed_object->Release_Ref();
+			culled->Release_Ref();
+			immediate->Release_Ref();
 		}
 		_TheFileFactory=old_factory;
 		TheDX8MeshRenderer.Invalidate();

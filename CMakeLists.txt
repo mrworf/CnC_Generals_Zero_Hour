@@ -1980,6 +1980,12 @@ if(ZH_BUILD_TESTS)
     set_tests_properties(original_w3d_decal_physical_gpu PROPERTIES
       LABELS "gpu;original-rendering;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE
       ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+    add_test(NAME original_w3d_decal_aggregate_gpu COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:original_w3d_cpu_graph_tests> --vulkan-decal-aggregate)
+    set_tests_properties(original_w3d_decal_aggregate_gpu PROPERTIES
+      LABELS "gpu;original-rendering;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE
+      ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
   endif()
   target_link_libraries(original_w3d_cpu_graph_tests PRIVATE zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu)
   target_link_options(original_w3d_cpu_graph_tests PRIVATE
@@ -1988,6 +1994,9 @@ if(ZH_BUILD_TESTS)
   add_test(NAME original_w3d_decal_cpu COMMAND original_w3d_cpu_graph_tests --decal-cpu)
   set_tests_properties(original_w3d_decal_cpu PROPERTIES
     LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_decal_aggregate COMMAND original_w3d_cpu_graph_tests --decal-aggregate)
+  set_tests_properties(original_w3d_decal_aggregate PROPERTIES
+    LABELS "original-rendering;renderer-contract;negative")
   add_test(NAME original_w3d_decal_physical COMMAND original_w3d_cpu_graph_tests --decal-physical)
   set_tests_properties(original_w3d_decal_physical PROPERTIES
     LABELS "original-rendering;renderer-contract;negative")
