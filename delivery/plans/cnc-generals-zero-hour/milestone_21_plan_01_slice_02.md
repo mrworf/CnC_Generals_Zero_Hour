@@ -47,3 +47,13 @@ Expected: production Linux factory adapters, original GameLogic/GameClient/Terra
 ## Commit boundary
 
 Commit production setup behavior, adapters, tests, plan status/evidence, and directly required source-ledger changes together.
+
+## Delivered evidence
+
+Status: complete.
+
+- Owned mission and skirmish maps complete the original two-phase `GameLogic::startNewGame` path with original players, teams, object Body/Behavior modules, script/AI services, a CPU `Drawable`, logical terrain prop, asset preload requests, and recorder controls.
+- Missing/malformed maps, a required missing object template, and a missing behavior module fail before setup success; removing the original `Drawable` provider breaks the production link.
+- Linux preserves the primary original update failure and the reached player/team/script/side and adapter destructor paths are sanitizer-clean.
+- GCC setup/identity/provider gates passed 3/3, related lifecycle gates passed 14/14, and strict Clang ASan/UBSan setup gates passed 3/3.
+- Evidence: `evidence/qa/cnc-generals-zero-hour/M21-plan01-slice02-scenario-setup.md`.

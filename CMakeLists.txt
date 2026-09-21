@@ -1100,6 +1100,28 @@ if(ZH_BUILD_TESTS)
     --required-symbol OriginalMapLoader)
   set_tests_properties(original_simulation_map_provider_removal PROPERTIES
     LABELS "original-simulation;source-identity")
+  add_test(NAME original_simulation_setup COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_simulation/test_scenario_setup.py"
+    --executable "$<TARGET_FILE:zh_original_main>"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}")
+  set_tests_properties(original_simulation_setup PROPERTIES
+    LABELS "original-simulation;source-identity")
+  add_test(NAME original_simulation_setup_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_simulation/test_setup_identity.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map")
+  set_tests_properties(original_simulation_setup_identity PROPERTIES
+    LABELS "original-simulation;source-identity")
+  add_test(NAME original_simulation_setup_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target zh_original_main
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member Drawable.cpp.o
+    --required-symbol Drawable)
+  set_tests_properties(original_simulation_setup_provider_removal PROPERTIES
+    LABELS "original-simulation;source-identity")
   add_executable(original_lifecycle_subsystem_tests
     tests/original_lifecycle/test_subsystem_lifecycle.cpp)
   target_include_directories(original_lifecycle_subsystem_tests PRIVATE

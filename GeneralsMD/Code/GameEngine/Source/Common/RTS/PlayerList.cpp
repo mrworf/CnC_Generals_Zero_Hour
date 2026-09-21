@@ -83,6 +83,12 @@ PlayerList::PlayerList() :
 //-----------------------------------------------------------------------------
 PlayerList::~PlayerList() 
 {
+	// PlayerList is registered after TeamFactory, so reverse subsystem shutdown
+	// reaches this destructor first.  Release live teams while their Player
+	// callbacks and relationships are still valid; the later TeamFactory
+	// destructor then observes an empty prototype map.
+	if (TheTeamFactory)
+		TheTeamFactory->clear();
 	try {
 		// the world is happier if we reinit things before destroying them,
 		// to avoid debug warnings
@@ -90,6 +96,11 @@ PlayerList::~PlayerList()
 	} catch (...) {
 		// nothing
 	}
+	// TeamFactory is registered immediately before PlayerList and therefore
+	// shuts down after it.  Do not leave its destruction callbacks a dangling
+	// global through which to visit these players.
+	if (ThePlayerList == this)
+		ThePlayerList = NULL;
 	for( Int i = 0; i < MAX_PLAYER_COUNT; ++i )
 		delete m_players[ i ];
 }
@@ -490,4 +501,3 @@ void PlayerList::loadPostProcess( void )
 {
 
 }  // end postProcessLoad
-

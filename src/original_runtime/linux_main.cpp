@@ -1,6 +1,7 @@
 #include "PreRTS.h"
 
 #include "Common/GameEngine.h"
+#include "Common/Errors.h"
 #include "Common/FileSystem.h"
 #include "Common/INI.h"
 #include "Common/INIException.h"
@@ -19,6 +20,7 @@
 #include <string>
 
 extern "C" Bool zh_linux_lifecycle_report(UnsignedInt *values, std::size_t count);
+extern "C" Bool zh_linux_scenario_setup_report(UnsignedInt *values, std::size_t count);
 extern "C" Int zh_linux_benchmark_timer();
 extern "C" UnsignedInt zh_linux_device_acquisition_attempts();
 
@@ -137,6 +139,11 @@ int main(int argc, char **argv)
 		std::fprintf(stderr, "original startup failed: %s\n", error.what());
 		result = 3;
 	}
+	catch (ErrorCode error)
+	{
+		std::fprintf(stderr, "original startup failed: original error 0x%x\n", static_cast<unsigned>(error));
+		result = 3;
+	}
 	catch (...)
 	{
 		std::fprintf(stderr, "original startup failed: unknown original runtime exception\n");
@@ -144,6 +151,7 @@ int main(int argc, char **argv)
 	}
 	installSubsystemINIDataLoader(nullptr);
 	UnsignedInt lifecycle[8]{};
+	UnsignedInt scenario[8]{};
 	if (result == 0 && std::getenv("ZH_M20_HEADLESS_PROFILE"))
 	{
 		const Bool lifecycleComplete = zh_linux_lifecycle_report(lifecycle, 8);
@@ -170,6 +178,26 @@ int main(int argc, char **argv)
 			result = 4;
 		}
 	}
+	if (result == 0 && std::getenv("ZH_M21_SCENARIO"))
+	{
+		if (!zh_linux_scenario_setup_report(scenario, 8))
+		{
+			std::fprintf(stderr, "original scenario failed: setup did not complete\n");
+			result = 4;
+		}
+		else if (scenario[1] == 0 || scenario[2] == 0 || scenario[3] == 0 ||
+			scenario[4] == 0 || scenario[6] == 0 || scenario[7] == 0)
+		{
+			std::fprintf(stderr, "original scenario failed: source-owned setup witness is incomplete (%u,%u,%u,%u,%u,%u,%u,%u)\n",
+				scenario[0], scenario[1], scenario[2], scenario[3], scenario[4], scenario[5], scenario[6], scenario[7]);
+			result = 4;
+		}
+		else if (zh_linux_device_acquisition_attempts() != 0)
+		{
+			std::fprintf(stderr, "original scenario failed: physical device acquisition attempted\n");
+			result = 4;
+		}
+	}
 	zh::original_process::shutdown_services();
 	const zh::original_process::ServiceCounts services = zh::original_process::service_counts();
 	if (result == 0 && (services.synchronization != 0 || services.logging != 0 ||
@@ -188,5 +216,8 @@ int main(int argc, char **argv)
 				lifecycle[0], lifecycle[1], lifecycle[4], lifecycle[6],
 				lifecycle[2], lifecycle[3], lifecycle[5], lifecycle[7], zh_linux_benchmark_timer());
 	}
+	if (result == 0 && std::getenv("ZH_M21_SCENARIO"))
+		std::printf("original scenario setup: mode=%u players=%u teams=%u objects=%u props=%u model-preloads=%u texture-preloads=%u recorder-controls=%u devices=0\n",
+			scenario[0], scenario[1], scenario[2], scenario[3], scenario[4], scenario[5], scenario[6], scenario[7]);
 	return result;
 }

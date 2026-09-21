@@ -890,11 +890,15 @@ void GameEngine::execute( void )
 				}
 				catch (INIException e)
 				{
+#if !defined(_WIN32)
+					throw;
+#else
 					// Release CRASH doesn't return, so don't worry about executing additional code.
 					if (e.mFailureMessage)
 						RELEASE_CRASH((e.mFailureMessage));
 					else
 						RELEASE_CRASH(("Uncaught Exception in GameEngine::update"));
+#endif
 				}
 				catch (...)
 				{
@@ -907,7 +911,11 @@ void GameEngine::execute( void )
 					catch (...)
 					{
 					}
+#if !defined(_WIN32)
+					throw;
+#else
 					RELEASE_CRASH(("Uncaught Exception in GameEngine::update"));
+#endif
 				}	// catch
 			}	// perf
 

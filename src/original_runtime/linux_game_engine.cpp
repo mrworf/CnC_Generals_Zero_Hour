@@ -8,12 +8,15 @@
 #include "Common/ModuleFactory.h"
 #include "Common/OriginalMapLoader.h"
 #include "Common/MapReaderWriterInfo.h"
+#include "Common/PlayerList.h"
+#include "Common/Recorder.h"
 #include "W3DDevice/Common/W3DModuleFactory.h"
 #include "Common/Radar.h"
 #include "Common/ThingFactory.h"
 #include "GameClient/Display.h"
 #include "GameClient/DisplayString.h"
 #include "GameClient/DisplayStringManager.h"
+#include "GameClient/Drawable.h"
 #include "GameClient/GameClient.h"
 #include "GameClient/GameFont.h"
 #include "GameClient/GameWindowManager.h"
@@ -26,6 +29,7 @@
 #include "GameClient/VideoPlayer.h"
 #include "GameClient/View.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/SidesList.h"
 #include "GameLogic/TerrainLogic.h"
 #include "PosixDevice/Common/PosixLocalFileSystem.h"
 
@@ -51,8 +55,24 @@ struct LifecycleReport
 };
 
 LifecycleReport g_lifecycleReport;
+struct ScenarioSetupReport
+{
+	UnsignedInt mode = GAME_NONE;
+	UnsignedInt players = 0;
+	UnsignedInt teams = 0;
+	UnsignedInt objects = 0;
+	UnsignedInt props = 0;
+	UnsignedInt modelPreloads = 0;
+	UnsignedInt texturePreloads = 0;
+	UnsignedInt recorderControls = 0;
+	Bool complete = FALSE;
+};
+ScenarioSetupReport g_scenarioSetupReport;
 Int g_benchmarkTimer = -1;
 UnsignedInt g_deviceAcquisitionAttempts = 0;
+UnsignedInt g_propCount = 0;
+UnsignedInt g_modelPreloadCount = 0;
+UnsignedInt g_texturePreloadCount = 0;
 
 class LinuxDisplay final : public Display
 {
@@ -80,8 +100,8 @@ public:
 	void setShroudLevel(Int, Int, CellShroudStatus) override {}
 	void clearShroud() override {}
 	void setBorderShroudLevel(UnsignedByte) override {}
-	void preloadModelAssets(AsciiString) override {}
-	void preloadTextureAssets(AsciiString) override {}
+	void preloadModelAssets(AsciiString) override { ++g_modelPreloadCount; }
+	void preloadTextureAssets(AsciiString) override { ++g_texturePreloadCount; }
 	void takeScreenShot() override {}
 	void toggleMovieCapture() override {}
 	void toggleLetterBox() override {}
@@ -250,6 +270,7 @@ public:
 class LinuxTerrainVisual final : public TerrainVisual
 {
 public:
+	~LinuxTerrainVisual() override { reset(); }
 	void getTerrainColorAt(Real, Real, RGBColor *color) override { if (color) *color = RGBColor{}; }
 	TerrainType *getTerrainTile(Real, Real) override { return NULL; }
 	void enableWaterGrid(Bool) override {}
@@ -272,7 +293,12 @@ public:
 	void removeAllBibs() override {}
 	void removeBibHighlighting() override {}
 	void removeTreesAndPropsForConstruction(const Coord3D *, const GeometryInfo&, Real) override {}
-	void addProp(const ThingTemplate *, const Coord3D *, Real) override {}
+	void addProp(const ThingTemplate *thing, const Coord3D *position, Real) override
+	{
+		if (!thing || !position)
+			throw std::runtime_error("invalid terrain prop request");
+		++g_propCount;
+	}
 	void setRawMapHeight(const ICoord2D *, Int) override {}
 	Int getRawMapHeight(const ICoord2D *) override { return 0; }
 	void replaceSkyboxTextures(const AsciiString *[NumSkyboxTextures], const AsciiString *[NumSkyboxTextures]) override {}
@@ -360,7 +386,10 @@ class LinuxGameClient final : public GameClient
 public:
 	void createRayEffectByTemplate(const Coord3D *, const Coord3D *, const ThingTemplate *) override {}
 	void addScorch(const Coord3D *, Real, Scorches) override {}
-	Drawable *friend_createDrawable(const ThingTemplate *, DrawableStatus) override { return NULL; }
+	Drawable *friend_createDrawable(const ThingTemplate *thing, DrawableStatus status) override
+	{
+		return thing ? newInstance(Drawable)(thing, status) : NULL;
+	}
 	void setTeamColor(Int, Int, Int) override {}
 	void adjustLOD(Int) override {}
 	void notifyTerrainObjectMoved(Object *) override {}
@@ -381,6 +410,7 @@ private:
 class LinuxTerrainLogic final : public TerrainLogic
 {
 public:
+	~LinuxTerrainLogic() override { reset(); }
 	void reset() override
 	{
 		TerrainLogic::reset();
@@ -399,16 +429,28 @@ public:
 	{
 		CachedFileInputStream stream;
 		if (!stream.open(filename))
-			return FALSE;
+		{
+			if (query) return FALSE;
+			throw std::runtime_error("original map is missing");
+		}
 		OriginalMapLoader loader;
 		try
 		{
 			if (!loader.load(&stream))
-				return FALSE;
+			{
+				if (query) return FALSE;
+				throw std::runtime_error("original map is malformed");
+			}
 		}
 		catch (...)
 		{
-			return FALSE;
+			if (query) return FALSE;
+			throw;
+		}
+		for (MapObject *object = MapObject::getFirstMapObject(); object; object = object->getNext())
+		{
+			if (!object->getThingTemplate() && !object->isWaypoint() && !object->isLight() && !object->isScorch())
+				throw std::runtime_error("required map object template is missing");
 		}
 		m_mapDX = loader.width();
 		m_mapDY = loader.height();
@@ -484,9 +526,40 @@ public:
 			TheWritableGlobalData->m_playSizzle = FALSE;
 			TheWritableGlobalData->m_afterIntro = FALSE;
 		}
+		if (m_scenarioProfile)
+		{
+			const char *map = std::getenv("ZH_M21_MAP");
+			if (!map || !*map)
+				throw std::runtime_error("ZH_M21_MAP is required");
+			TheWritableGlobalData->m_shellMapOn = FALSE;
+			TheWritableGlobalData->m_playIntro = FALSE;
+			TheWritableGlobalData->m_playSizzle = FALSE;
+			TheWritableGlobalData->m_afterIntro = FALSE;
+			TheWritableGlobalData->m_preloadAssets = TRUE;
+			TheWritableGlobalData->m_preloadEverything = FALSE;
+			TheWritableGlobalData->m_mapName = map;
+			TheGameLogic->setGameMode(m_scenarioMode);
+		}
 	}
 	void update() override
 	{
+		if (m_scenarioProfile && !m_scenarioStarted)
+		{
+			m_scenarioStarted = TRUE;
+			TheGameLogic->startNewGame(FALSE);
+			TheGameLogic->startNewGame(FALSE);
+			g_scenarioSetupReport.mode = m_scenarioMode;
+			g_scenarioSetupReport.players = ThePlayerList->getPlayerCount();
+			g_scenarioSetupReport.teams = TheSidesList->getNumTeams();
+			g_scenarioSetupReport.objects = TheGameLogic->getObjectCount();
+			g_scenarioSetupReport.props = g_propCount;
+			g_scenarioSetupReport.modelPreloads = g_modelPreloadCount;
+			g_scenarioSetupReport.texturePreloads = g_texturePreloadCount;
+			g_scenarioSetupReport.recorderControls = TheRecorder->getControlsInitCount();
+			g_scenarioSetupReport.complete = TRUE;
+			setQuitting(TRUE);
+			return;
+		}
 		if (m_boundedProfile && m_updates == 0)
 		{
 			g_benchmarkTimer = TheGlobalData->m_benchmarkTimer;
@@ -536,6 +609,11 @@ protected:
 	AudioManager *createAudioManager() override { return new LinuxAudio; }
 private:
 	Bool m_boundedProfile = std::getenv("ZH_M20_HEADLESS_PROFILE") != NULL;
+	const char *m_scenarioName = std::getenv("ZH_M21_SCENARIO");
+	Bool m_scenarioProfile = m_scenarioName != NULL;
+	Int m_scenarioMode = m_scenarioName && std::strcmp(m_scenarioName, "skirmish") == 0 ?
+		GAME_SKIRMISH : GAME_SINGLE_PLAYER;
+	Bool m_scenarioStarted = FALSE;
 	unsigned m_updates = 0;
 	unsigned m_services = 0;
 };
@@ -563,8 +641,12 @@ void Keyboard::createStreamMessages() {}
 GameEngine *CreateGameEngine()
 {
 	g_lifecycleReport = LifecycleReport{};
+	g_scenarioSetupReport = ScenarioSetupReport{};
 	g_benchmarkTimer = -1;
 	g_deviceAcquisitionAttempts = 0;
+	g_propCount = 0;
+	g_modelPreloadCount = 0;
+	g_texturePreloadCount = 0;
 	return new LinuxGameEngine;
 }
 
@@ -590,5 +672,20 @@ extern "C" Bool zh_linux_lifecycle_report(UnsignedInt *values, std::size_t count
 	values[5] = g_lifecycleReport.clientAfterReset;
 	values[6] = g_lifecycleReport.finalLogic;
 	values[7] = g_lifecycleReport.finalClient;
+	return TRUE;
+}
+
+extern "C" Bool zh_linux_scenario_setup_report(UnsignedInt *values, std::size_t count)
+{
+	if (!g_scenarioSetupReport.complete || !values || count < 8)
+		return FALSE;
+	values[0] = g_scenarioSetupReport.mode;
+	values[1] = g_scenarioSetupReport.players;
+	values[2] = g_scenarioSetupReport.teams;
+	values[3] = g_scenarioSetupReport.objects;
+	values[4] = g_scenarioSetupReport.props;
+	values[5] = g_scenarioSetupReport.modelPreloads;
+	values[6] = g_scenarioSetupReport.texturePreloads;
+	values[7] = g_scenarioSetupReport.recorderControls;
 	return TRUE;
 }

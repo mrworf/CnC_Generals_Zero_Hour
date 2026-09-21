@@ -213,6 +213,9 @@ SidesList::SidesList(void) : m_numSides(0), m_numSkirmishSides(0)
 */
 SidesList::~SidesList(void)
 {
+	clear();
+	if (TheSidesList == this)
+		TheSidesList = NULL;
 }
 
 /**

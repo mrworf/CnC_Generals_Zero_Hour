@@ -61,7 +61,7 @@ The production Linux original-engine entry loads project-owned and read-only ret
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
 | 01 | [slice 01](milestone_21_plan_01_slice_01.md) | Original CPU map/chunk dispatch publishes map objects, world, terrain, sides, and scripts transactionally | M20 | complete | pending commit | `evidence/qa/cnc-generals-zero-hour/M21-plan01-slice01-original-map.md` |
-| 02 | [slice 02](milestone_21_plan_01_slice_02.md) | Production mission/skirmish entry creates original players, objects, and reached client CPU state | 01 | pending | | |
+| 02 | [slice 02](milestone_21_plan_01_slice_02.md) | Production mission/skirmish entry creates original players, objects, and reached client CPU state | 01 | complete | pending commit | `evidence/qa/cnc-generals-zero-hour/M21-plan01-slice02-scenario-setup.md` |
 | 03 | [slice 03](milestone_21_plan_01_slice_03.md) | Original commands, updates, scripts, AI, and victory produce deterministic checkpoints | 02 | pending | | |
 | 04 | [slice 04](milestone_21_plan_01_slice_04.md) | Return/reset/re-entry, identity, retail gate, and cumulative milestone acceptance pass | 03 | pending | | |
 

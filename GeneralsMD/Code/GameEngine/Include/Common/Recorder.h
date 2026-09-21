@@ -55,6 +55,7 @@ class CRCInfo;
 
 class RecorderClass : public SubsystemInterface {
 public:
+	UnsignedInt getControlsInitCount() const { return m_controlsInitCount; }
 	RecorderClass();																	///< Constructor.
 	virtual ~RecorderClass();													///< Destructor.
 
@@ -79,6 +80,7 @@ public:
 public:
 	void handleCRCMessage(UnsignedInt newCRC, Int playerIndex, Bool fromPlayback);
 protected:
+	UnsignedInt m_controlsInitCount;
 	CRCInfo *m_crcInfo;
 public:
 

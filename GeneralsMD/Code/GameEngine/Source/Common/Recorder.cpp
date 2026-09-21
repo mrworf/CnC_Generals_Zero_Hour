@@ -374,6 +374,7 @@ RecorderClass::RecorderClass()
 	m_doingAnalysis = FALSE;
 	m_nextFrame = 0;
 	m_wasDesync = FALSE;
+	m_controlsInitCount = 0;
 	//
 
 	init(); // just for the heck of it.
@@ -407,6 +408,7 @@ void RecorderClass::init() {
 	m_gameInfo.setSeed(GetGameLogicRandomSeed());
 	m_wasDesync = FALSE;
 	m_doingAnalysis = FALSE;
+	m_controlsInitCount = 0;
 }
 
 /**
@@ -1577,6 +1579,7 @@ AsciiString RecorderClass::getLastReplayFileName()
 ///< Show or Hide the Replay controls
 void RecorderClass::initControls()
 {
+	++m_controlsInitCount;
 	NameKeyType parentReplayControlID = TheNameKeyGenerator->nameToKey( AsciiString("ReplayControl.wnd:ParentReplayControl") );
 	GameWindow *parentReplayControl = TheWindowManager->winGetWindowFromId( NULL, parentReplayControlID );
 
