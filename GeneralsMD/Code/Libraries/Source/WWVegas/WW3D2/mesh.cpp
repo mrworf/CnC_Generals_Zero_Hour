@@ -669,14 +669,16 @@ int MeshClass::Get_Num_Polys(void) const
  *=============================================================================================*/
 void MeshClass::Render(RenderInfoClass & rinfo)
 {
+	// Authored visibility gate precedes every physical draw operation. Keep
+	// it shared across the native and Linux device configurations.
+	if (Is_Not_Hidden_At_All() == false) {
+		return;
+	}
 #if defined(ZH_WW3D_CPU_ONLY)
 	(void)rinfo;
 	throw std::runtime_error("MeshClass::Render requires an installed WW3D device translator");
 #else
 	WWPROFILE("Mesh::Render");
-	if (Is_Not_Hidden_At_All() == false) {
-		return;
-	}
 
 	// If static sort lists are enabled and this mesh has a sort level, put it on the list instead
 	// of rendering it.
@@ -1618,6 +1620,5 @@ int MeshClass::Get_Draw_Call_Count(void) const
 		return 0;
 	}
 }
-
 
 

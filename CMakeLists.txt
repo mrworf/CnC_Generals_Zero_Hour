@@ -266,6 +266,8 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/coltest.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/predlod.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/camera.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/rinfo.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8fvf.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/scene.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/light.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matpass.cpp
@@ -1887,7 +1889,7 @@ if(ZH_BUILD_TESTS)
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad")
   target_compile_options(original_w3d_cpu_graph_tests PRIVATE -fpermissive)
-  target_compile_definitions(original_w3d_cpu_graph_tests PRIVATE NDEBUG)
+  target_compile_definitions(original_w3d_cpu_graph_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
   target_link_libraries(original_w3d_cpu_graph_tests PRIVATE zh_w3d zh_wwsupport zh_original_process)
   target_link_options(original_w3d_cpu_graph_tests PRIVATE
     "-Wl,--gc-sections" "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map")
@@ -1908,6 +1910,9 @@ if(ZH_BUILD_TESTS)
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/shader.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/vertmaterial.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/mapper.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/rinfo.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8fvf.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/mesh.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/wwstring.cpp")
   set_tests_properties(original_w3d_cpu_identity PROPERTIES LABELS "original-rendering;source-identity")
   add_test(NAME original_w3d_provider_removal COMMAND "${Python3_EXECUTABLE}"

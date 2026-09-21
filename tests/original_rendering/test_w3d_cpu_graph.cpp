@@ -7,6 +7,9 @@
 #include "w3d_file.h"
 #include "texture.h"
 #include "vertmaterial.h"
+#include "camera.h"
+#include "rinfo.h"
+#include "dx8fvf.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -207,7 +210,32 @@ int main(int argc, char **argv)
 	RenderObjClass *object = manager.Create_Render_Obj("TEST.TRIANGLE");
 	assert(object != nullptr && object->Class_ID() == RenderObjClass::CLASSID_MESH);
 	auto *mesh = static_cast<MeshClass *>(object);
+	CameraClass camera;
+	RenderInfoClass render_info(camera);
+	mesh->Set_Hidden(1);
+	mesh->Render(render_info); // Original hidden state suppresses the device boundary.
+	mesh->Set_Hidden(0);
+	bool visible_device_rejected = false;
+	try { mesh->Render(render_info); }
+	catch (const std::runtime_error &) { visible_device_rejected = true; }
+	assert(visible_device_rejected);
 	MeshModelClass *model = mesh->Peek_Model();
+	FVFInfoClass original_layout(DX8_FVF_XYZNUV2);
+	assert(original_layout.Get_FVF_Size() == 40);
+	assert(original_layout.Get_Location_Offset() == 0);
+	assert(original_layout.Get_Normal_Offset() == 12);
+	assert(original_layout.Get_Tex_Offset(0) == 24);
+	assert(original_layout.Get_Tex_Offset(1) == 32);
+	FVFInfoClass multi_stage_layout(DX8_FVF_XYZNDUV1TG3);
+	assert(multi_stage_layout.Get_FVF_Size() == 72);
+	bool invalid_layout_rejected = false;
+	try { FVFInfoClass invalid(0x002 | 0x900); (void)invalid; }
+	catch (const std::runtime_error &) { invalid_layout_rejected = true; }
+	assert(invalid_layout_rejected);
+	invalid_layout_rejected = false;
+	try { FVFInfoClass invalid(0x100); (void)invalid; }
+	catch (const std::runtime_error &) { invalid_layout_rejected = true; }
+	assert(invalid_layout_rejected);
 	assert(model->Get_Vertex_Count() == 3 && model->Get_Polygon_Count() == 1);
 	assert(std::fabs(model->Get_Vertex_Array()[1].X - 1.0f) < 0.0001f);
 	assert(model->Get_Polygon_Array()[0].K == 2);

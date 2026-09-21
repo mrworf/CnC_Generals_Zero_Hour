@@ -48,13 +48,36 @@
 #define DX8_FVF_H
 
 #include "always.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include <d3d8.h>
+#endif
 #ifdef WWDEBUG
 #include "wwdebug.h"
 #endif
 
 class StringClass;
 
+#if defined(ZH_WW3D_CPU_ONLY)
+// Original FVF layout bit patterns, retained as CPU data identifiers only;
+// the Linux build does not import a Direct3D SDK or device interface.
+enum {
+	DX8_FVF_XYZ = 0x002,
+	DX8_FVF_XYZN = 0x002 | 0x010,
+	DX8_FVF_XYZNUV1 = 0x002 | 0x010 | 0x100,
+	DX8_FVF_XYZNUV2 = 0x002 | 0x010 | 0x200,
+	DX8_FVF_XYZNDUV1 = 0x002 | 0x010 | 0x100 | 0x040,
+	DX8_FVF_XYZNDUV2 = 0x002 | 0x010 | 0x200 | 0x040,
+	DX8_FVF_XYZDUV1 = 0x002 | 0x100 | 0x040,
+	DX8_FVF_XYZDUV2 = 0x002 | 0x200 | 0x040,
+	DX8_FVF_XYZUV1 = 0x002 | 0x100,
+	DX8_FVF_XYZUV2 = 0x002 | 0x200,
+	DX8_FVF_XYZNDUV1TG3 = 0x002 | 0x010 | 0x040 | 0x400
+		| (1 << 18) | (1 << 20) | (1 << 22),
+	DX8_FVF_XYZNUV2DMAP = 0x002 | 0x010 | 0x300
+		| (3 << 16) | (2 << 18),
+	DX8_FVF_XYZNDCUBEMAP = 0x002 | 0x010 | 0x040,
+};
+#else
 enum {
 	DX8_FVF_XYZ				= D3DFVF_XYZ,
 	DX8_FVF_XYZN			= D3DFVF_XYZ|D3DFVF_NORMAL,
@@ -70,6 +93,7 @@ enum {
  	DX8_FVF_XYZNUV2DMAP	= (D3DFVF_XYZ|D3DFVF_NORMAL|D3DFVF_TEX3 | D3DFVF_TEXCOORDSIZE1(0) | D3DFVF_TEXCOORDSIZE4(1) | D3DFVF_TEXCOORDSIZE2(2) ),
 	DX8_FVF_XYZNDCUBEMAP	= D3DFVF_XYZ|D3DFVF_NORMAL|D3DFVF_DIFFUSE //|D3DFVF_TEX1|D3DFVF_TEXCOORDSIZE3(0)
 };
+#endif
 
 // ----------------------------------------------------------------------------
 //
@@ -253,6 +277,7 @@ struct VertexFormatXYZNDCUBEMAP
 class FVFInfoClass : public W3DMPO
 {
 	W3DMPO_GLUE(FVFInfoClass)
+	static constexpr unsigned max_texcoord_sets = 8;
 
 	mutable unsigned						FVF;
 	mutable unsigned						fvf_size;
@@ -260,7 +285,7 @@ class FVFInfoClass : public W3DMPO
 	unsigned							location_offset;
 	unsigned							normal_offset;
 	unsigned							blend_offset;
-	unsigned							texcoord_offset[D3DDP_MAXTEXCOORD];	
+	unsigned							texcoord_offset[max_texcoord_sets];
 	unsigned							diffuse_offset;
 	unsigned							specular_offset;
 public:
@@ -269,7 +294,7 @@ public:
 	inline unsigned Get_Location_Offset() const { return location_offset; }
 	inline unsigned Get_Normal_Offset() const { return normal_offset; }
 #ifdef WWDEBUG
-	inline unsigned Get_Tex_Offset(unsigned int n) const { WWASSERT(n<D3DDP_MAXTEXCOORD); return texcoord_offset[n]; }	
+	inline unsigned Get_Tex_Offset(unsigned int n) const { WWASSERT(n<max_texcoord_sets); return texcoord_offset[n]; }
 #else
 	inline unsigned Get_Tex_Offset(unsigned int n) const { return texcoord_offset[n]; }	
 #endif
