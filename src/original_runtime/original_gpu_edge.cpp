@@ -357,7 +357,7 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
         if (!lit_state->light_environment_selected)
             throw std::runtime_error("original lighting requires selected source light environment");
         if (source_fvf!=DX8_FVF_XYZN && source_fvf!=DX8_FVF_XYZNUV1 &&
-            source_fvf!=DX8_FVF_XYZNUV2)
+            source_fvf!=DX8_FVF_XYZNUV2 && source_fvf!=DX8_FVF_XYZNDUV2)
             throw std::runtime_error("original lit physical FVF has no exact shader input variant");
         if (topology!=renderer::PrimitiveTopology::triangle_list &&
             topology!=renderer::PrimitiveTopology::triangle_strip)
@@ -382,6 +382,8 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
         "renderer/original_applied_n1_lit.vert":"renderer/original_applied_n1.vert";
     else if (source_fvf==DX8_FVF_XYZNUV2) vertex_variant=mapped.lighting?
         "renderer/original_applied_n2_lit.vert":"renderer/original_applied_n2.vert";
+    else if (source_fvf==DX8_FVF_XYZNDUV2) vertex_variant=mapped.lighting?
+        "renderer/original_applied_nd2_lit.vert":"renderer/original_applied_nd2.vert";
     else throw std::runtime_error("original physical FVF has no exact shader input variant: "+
         std::to_string(source_fvf));
     for (const auto& stage:mapped.stages)
@@ -417,6 +419,10 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
         vertex.lit_global_ambient=mapped.global_ambient;
         vertex.lit_switches={mapped.normalize_normals?1:0,mapped.local_viewer?1:0,
             mapped.specular_enabled?1:0,mapped.color_vertex?1:0};
+        vertex.lit_material_sources={static_cast<std::int32_t>(mapped.ambient_source),
+            static_cast<std::int32_t>(mapped.diffuse_source),
+            static_cast<std::int32_t>(mapped.specular_source),
+            static_cast<std::int32_t>(mapped.emissive_source)};
         for (unsigned slot=0;slot<4;++slot) {
             if (!mapped.light_enabled[slot]) continue;
             const auto& light=mapped.lights[slot];

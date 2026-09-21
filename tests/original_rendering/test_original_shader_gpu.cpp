@@ -705,6 +705,81 @@ void original_lit_source_pixels(unsigned generation)
         for (unsigned channel=0;channel<4;++channel)
             check(std::abs(absent_vertex_colors[channel]-specular_on[channel])<=3,
                   "normal-only source FVF failed documented vertex color material fallback");
+        // The skin container emits exactly XYZNDUV2, including a source COLOR1.
+        // This is a direct physical source-state probe; the original HLOD skin
+        // category and its bone deformation are verified in the next slice.
+        shader.Set_Secondary_Gradient(ShaderClass::SECONDARY_GRADIENT_DISABLE);
+        DX8Wrapper::Set_Shader(shader);
+        environment.Reset(Vector3(0,0,0),Vector3(0,0,0));
+        environment.Add_Light(directional);
+        environment.Pre_Render_Update(Matrix3D(true));
+        DX8Wrapper::Set_Light_Environment(&environment);
+        material->Set_Ambient(Vector3(0,0,0));
+        material->Set_Emissive(Vector3(0,0,0));
+        material->Set_Ambient_Color_Source(VertexMaterialClass::MATERIAL);
+        material->Set_Diffuse_Color_Source(VertexMaterialClass::MATERIAL);
+        material->Set_Emissive_Color_Source(VertexMaterialClass::MATERIAL);
+        DX8Wrapper::Set_Material(material);
+        DX8Wrapper::Apply_Render_State_Changes();
+        auto* color_vb=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZNDUV2,3));
+        std::array<VertexFormatXYZNDUV2,3> colored{};
+        check(color_vb->FVF_Info().Get_FVF_Size()==sizeof(VertexFormatXYZNDUV2),
+              "original XYZNDUV2 skin stride differs");
+        for (unsigned i=0;i<3;++i) {
+            colored[i].x=source_vertices[i].position[0];
+            colored[i].y=source_vertices[i].position[1];
+            colored[i].z=source_vertices[i].position[2];
+            colored[i].nx=0; colored[i].ny=0; colored[i].nz=1;
+            colored[i].diffuse=0x802070d0U;
+            colored[i].u1=0.1F; colored[i].v1=0.2F;
+            colored[i].u2=0.3F; colored[i].v2=0.4F;
+        }
+        {
+            VertexBufferClass::WriteLockClass lock(color_vb);
+            std::memcpy(lock.Get_Vertex_Array(),colored.data(),sizeof(colored));
+        }
+        const auto color_vertex=edge.bind_vertex(color_vb);
+        color_vb->Release_Ref();
+        const auto material_pixel=draw_lit("original XYZNDUV2 material color source",
+            color_vertex,DX8_FVF_XYZNDUV2);
+        material->Set_Diffuse_Color_Source(VertexMaterialClass::COLOR1);
+        DX8Wrapper::Set_Material(material);
+        DX8Wrapper::Apply_Render_State_Changes();
+        const auto vertex_pixel=draw_lit("original XYZNDUV2 diffuse COLOR1 source",
+            color_vertex,DX8_FVF_XYZNDUV2);
+        const auto color_selection=DX8Wrapper::Snapshot_Source_State();
+        check(color_selection.render.at(D3DRS_COLORVERTEX)==1 &&
+              color_selection.render.at(D3DRS_DIFFUSEMATERIALSOURCE)==D3DMCS_COLOR1,
+              "original material did not select the COLOR1 diffuse producer");
+        const std::array<float,3> color_expected{{
+            material_pixel[0]*(32.0F/255.0F)/color_selection.material.Diffuse.r,
+            material_pixel[1]*(112.0F/255.0F)/color_selection.material.Diffuse.g,
+            material_pixel[2]*(208.0F/255.0F)/color_selection.material.Diffuse.b}};
+        std::fprintf(stdout,"original-skin-fvf-color1 generation=%u vertex=%d:%d:%d:%d material=%d:%d:%d:%d expected=%.1f:%.1f:%.1f\n",
+            generation,vertex_pixel[0],vertex_pixel[1],vertex_pixel[2],vertex_pixel[3],
+            material_pixel[0],material_pixel[1],material_pixel[2],material_pixel[3],
+            color_expected[0],color_expected[1],color_expected[2]);
+        check(std::abs(vertex_pixel[0]-color_expected[0])<=6 &&
+              std::abs(vertex_pixel[1]-color_expected[1])<=6 &&
+              std::abs(vertex_pixel[2]-color_expected[2])<=6 &&
+              vertex_pixel[0]<material_pixel[0] && vertex_pixel[2]>material_pixel[2] &&
+              std::abs(vertex_pixel[3]-128)<=3 && std::abs(material_pixel[3]-191)<=3,
+              "original XYZNDUV2 COLOR1/material pixels or alpha differ");
+        DX8Wrapper::Set_DX8_Render_State(D3DRS_COLORVERTEX,0);
+        const auto disabled_vertex_color=draw_lit("original COLORVERTEX-disabled material fallback",
+            color_vertex,DX8_FVF_XYZNDUV2);
+        for (unsigned channel=0;channel<4;++channel)
+            check(std::abs(disabled_vertex_color[channel]-material_pixel[channel])<=3,
+                  "original disabled COLORVERTEX did not restore material terms");
+        DX8Wrapper::Set_DX8_Render_State(D3DRS_COLORVERTEX,1);
+        material->Set_Diffuse_Color_Source(VertexMaterialClass::COLOR2);
+        DX8Wrapper::Set_Material(material);
+        DX8Wrapper::Apply_Render_State_Changes();
+        const auto absent_color2=draw_lit("original XYZNDUV2 absent COLOR2 fallback",
+            color_vertex,DX8_FVF_XYZNDUV2);
+        for (unsigned channel=0;channel<4;++channel)
+            check(std::abs(absent_color2[channel]-material_pixel[channel])<=3,
+                  "XYZNDUV2 absent COLOR2 failed material fallback");
         material->Set_Ambient_Color_Source(VertexMaterialClass::MATERIAL);
         material->Set_Diffuse_Color_Source(VertexMaterialClass::MATERIAL);
         material->Set_Emissive_Color_Source(VertexMaterialClass::MATERIAL);
@@ -773,6 +848,11 @@ void original_lit_source_pixels(unsigned generation)
         check(missing_source_uv,"original N0 missing UV did not fail closed for texture stage");
         const auto one_pixel=draw_lit("source retail normal+UV1 lit one-stage physical probe",
             vertex_one,DX8_FVF_XYZNUV1);
+        const auto one_skin_fvf=draw_lit("source XYZNDUV2 lit one-stage physical probe",
+            color_vertex,DX8_FVF_XYZNDUV2);
+        for (unsigned channel=0;channel<4;++channel)
+            check(std::abs(one_skin_fvf[channel]-one_pixel[channel])<=3,
+                  "source XYZNDUV2 one-stage material/UV pixel differs");
         check(std::abs(one_pixel[0]-source_untextured[0]*240.0F/255.0F)<=6 &&
               std::abs(one_pixel[1]-source_untextured[1]*128.0F/255.0F)<=6 &&
               std::abs(one_pixel[2]-source_untextured[2]*16.0F/255.0F)<=6 &&
@@ -786,6 +866,11 @@ void original_lit_source_pixels(unsigned generation)
         DX8Wrapper::Apply_Render_State_Changes();
         const auto two_pixel=draw_lit("source normal+UV2 lit two-stage physical probe",
             vertex_two,DX8_FVF_XYZNUV2);
+        const auto two_skin_fvf=draw_lit("source XYZNDUV2 lit two-stage physical probe",
+            color_vertex,DX8_FVF_XYZNDUV2);
+        for (unsigned channel=0;channel<4;++channel)
+            check(std::abs(two_skin_fvf[channel]-two_pixel[channel])<=3,
+                  "source XYZNDUV2 two-stage material/UV pixel differs");
         check(std::abs(two_pixel[0]-std::min(255,one_pixel[0]+128))<=6 &&
               std::abs(two_pixel[1]-std::min(255,one_pixel[1]+64))<=6 &&
               std::abs(two_pixel[2]-std::min(255,one_pixel[2]+96))<=6 &&

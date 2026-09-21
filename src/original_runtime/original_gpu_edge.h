@@ -85,6 +85,7 @@ public:
         std::array<std::array<float,4>,4> light_diffuse_attenuation1{};
         std::array<std::array<float,4>,4> light_ambient_attenuation2{};
         std::array<std::array<float,4>,4> light_specular_type{}; // 0 inactive, 1 point, 3 directional
+        std::array<std::int32_t,4> lit_material_sources{}; // ambient, diffuse, specular, emissive
     };
     struct alignas(16) FragmentUniform {
         std::array<float,4> diffuse{}, ambient{}, specular{}, emissive{};

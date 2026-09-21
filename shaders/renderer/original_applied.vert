@@ -3,16 +3,16 @@
 // The original FVFInfoClass chooses the locations and offsets. Unbound FVF
 // attributes are never repacked by this device-edge shader.
 layout(location=0) in vec3 source_position;
-#if defined(ORIGINAL_FVF_N0) || defined(ORIGINAL_FVF_N1) || defined(ORIGINAL_FVF_N2)
+#if defined(ORIGINAL_FVF_N0) || defined(ORIGINAL_FVF_N1) || defined(ORIGINAL_FVF_N2) || defined(ORIGINAL_FVF_ND2)
 layout(location=1) in vec3 source_normal;
 #endif
-#if defined(ORIGINAL_FVF_D1) || defined(ORIGINAL_FVF_D2)
+#if defined(ORIGINAL_FVF_D1) || defined(ORIGINAL_FVF_D2) || defined(ORIGINAL_FVF_ND2)
 layout(location=2) in vec4 source_diffuse_bgra;
 #endif
 #if !defined(ORIGINAL_FVF_N0)
 layout(location=4) in vec4 source_uv0;
 #endif
-#if defined(ORIGINAL_FVF_D2) || defined(ORIGINAL_FVF_N2)
+#if defined(ORIGINAL_FVF_D2) || defined(ORIGINAL_FVF_N2) || defined(ORIGINAL_FVF_ND2)
 layout(location=5) in vec4 source_uv1;
 #endif
 layout(location=0) out vec4 applied_diffuse;
@@ -37,6 +37,7 @@ layout(set=1,binding=0,std140) uniform OriginalTransforms {
     vec4 light_diffuse_attenuation1[4];
     vec4 light_ambient_attenuation2[4];
     vec4 light_specular_type[4];
+    ivec4 lit_material_sources;
 } source;
 
 mat4 source_matrix(vec4 a, vec4 b, vec4 c, vec4 d)
@@ -55,7 +56,7 @@ vec4 selected_uv(int stage,vec4 camera_position,vec3 camera_normal)
 #if !defined(ORIGINAL_FVF_N0)
     coordinate=source_uv0;
 #endif
-#if defined(ORIGINAL_FVF_D2) || defined(ORIGINAL_FVF_N2)
+#if defined(ORIGINAL_FVF_D2) || defined(ORIGINAL_FVF_N2) || defined(ORIGINAL_FVF_ND2)
     if (index==1) coordinate=source_uv1;
 #endif
     if (mode==65536) coordinate=vec4(camera_normal,1.0);
@@ -83,7 +84,7 @@ void main()
     gl_Position=projection*camera_position;
     view_depth=camera_position.z;
     vec3 camera_normal=vec3(0.0);
-#if defined(ORIGINAL_FVF_N0) || defined(ORIGINAL_FVF_N1) || defined(ORIGINAL_FVF_N2)
+#if defined(ORIGINAL_FVF_N0) || defined(ORIGINAL_FVF_N1) || defined(ORIGINAL_FVF_N2) || defined(ORIGINAL_FVF_ND2)
     camera_normal=mat3(view*world)*source_normal;
 #endif
     applied_specular=vec3(0.0);
@@ -125,15 +126,30 @@ void main()
                 pow(max(dot(camera_normal,half_vector),0.0),source.lit_specular.a)*attenuation;
         }
     }
-    // Normal-bearing original FVF variants supply no COLOR1/COLOR2 attribute.
-    // Direct3D falls back to the corresponding material term even when a
-    // material-source selector requests an absent per-vertex color.
-    applied_diffuse=vec4(clamp(source.lit_emissive.rgb+
-        source.lit_ambient.rgb*ambient+source.lit_diffuse.rgb*diffuse,0.0,1.0),
-        source.lit_diffuse.a);
-    applied_specular=clamp(source.lit_specular.rgb*specular,0.0,1.0);
+    vec4 color1=vec4(1.0);
+#if defined(ORIGINAL_FVF_ND2)
+    color1=source_diffuse_bgra.zyxw;
+#endif
+    // The original material/source selector remains authoritative. COLOR2 is
+    // absent in this bounded FVF family; D3D falls back to material then.
+    vec4 diffuse_material=source.lit_diffuse;
+    vec4 ambient_material=source.lit_ambient;
+    vec4 specular_material=source.lit_specular;
+    vec4 emissive_material=source.lit_emissive;
+#if defined(ORIGINAL_FVF_ND2)
+    if (source.lit_switches.w!=0) {
+        if (source.lit_material_sources.y==1) diffuse_material=color1;
+        if (source.lit_material_sources.x==1) ambient_material=color1;
+        if (source.lit_material_sources.z==1) specular_material=color1;
+        if (source.lit_material_sources.w==1) emissive_material=color1;
+    }
+#endif
+    applied_diffuse=vec4(clamp(emissive_material.rgb+
+        ambient_material.rgb*ambient+diffuse_material.rgb*diffuse,0.0,1.0),
+        diffuse_material.a);
+    applied_specular=clamp(specular_material.rgb*specular,0.0,1.0);
 #else
-#if defined(ORIGINAL_FVF_D1) || defined(ORIGINAL_FVF_D2)
+#if defined(ORIGINAL_FVF_D1) || defined(ORIGINAL_FVF_D2) || defined(ORIGINAL_FVF_ND2)
     applied_diffuse=source_diffuse_bgra.zyxw;
 #else
     applied_diffuse=vec4(1.0);

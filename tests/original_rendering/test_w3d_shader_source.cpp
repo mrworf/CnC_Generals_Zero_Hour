@@ -194,13 +194,50 @@ int main()
 		const auto lit_retry=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
 		edge.validate_prepared_state(lit_retry);
 		assert(device.resource_counts().total()>0);
+		const auto skin_layout=Edge::layout_for_fvf(DX8_FVF_XYZNDUV2);
+		const FVFInfoClass source_skin_layout(DX8_FVF_XYZNDUV2);
+		assert(skin_layout.stride==sizeof(VertexFormatXYZNDUV2) &&
+			skin_layout.attribute_count==5 &&
+			skin_layout.attributes[1].offset==source_skin_layout.Get_Normal_Offset() &&
+			skin_layout.attributes[2].offset==source_skin_layout.Get_Diffuse_Offset() &&
+			skin_layout.attributes[3].offset==source_skin_layout.Get_Tex_Offset(0) &&
+			skin_layout.attributes[4].offset==source_skin_layout.Get_Tex_Offset(1));
+		auto* skin_material=NEW_REF(VertexMaterialClass,());
+		skin_material->Set_Lighting(true);
+		skin_material->Set_Ambient_Color_Source(VertexMaterialClass::COLOR1);
+		skin_material->Set_Diffuse_Color_Source(VertexMaterialClass::COLOR1);
+		skin_material->Set_Emissive_Color_Source(VertexMaterialClass::COLOR2);
+		DX8Wrapper::Set_Material(skin_material);
+		skin_material->Release_Ref();
+		DX8Wrapper::Apply_Render_State_Changes();
+		const auto skin_state=edge.prepare_applied_state(DX8_FVF_XYZNDUV2);
+		edge.validate_prepared_state(skin_state);
+		const auto skin_pipeline=device.pipeline_descriptor(skin_state.pipeline);
+		assert(skin_pipeline.original_fvf.stride==skin_layout.stride &&
+			skin_pipeline.original_fvf.attribute_count==5);
+		const auto skin_uniform_bytes=device.buffer_bytes(skin_state.vertex_bindings.uniforms[0].buffer);
+		Edge::VertexUniform skin_uniform{};
+		std::memcpy(&skin_uniform,skin_uniform_bytes.data(),skin_uniform_bytes.size());
+		assert((skin_uniform.lit_material_sources==std::array<std::int32_t,4>{1,1,0,2}) &&
+			skin_uniform.lit_switches[3]==1);
+		const auto skin_source=DX8Wrapper::Snapshot_Source_State();
+		assert(skin_source.render.at(D3DRS_AMBIENTMATERIALSOURCE)==D3DMCS_COLOR1 &&
+			skin_source.render.at(D3DRS_DIFFUSEMATERIALSOURCE)==D3DMCS_COLOR1);
+		bool invalid_skin_source=false;
+		try { DX8Wrapper::Set_DX8_Render_State(D3DRS_DIFFUSEMATERIALSOURCE,99); }
+		catch (const std::runtime_error& error) {
+			invalid_skin_source=std::string(error.what()).find("unsupported")!=std::string::npos;
+		}
+		assert(invalid_skin_source);
+		const auto skin_retry=edge.prepare_applied_state(DX8_FVF_XYZNDUV2);
+		edge.validate_prepared_state(skin_retry);
 		bool unsupported_lit_fvf=false;
 		try { (void)edge.prepare_applied_state(DX8_FVF_XYZNDUV1); }
 		catch (const std::runtime_error& error) {
 			unsupported_lit_fvf=std::string(error.what()).find("exact shader input variant")!=std::string::npos;
 		}
 		assert(unsupported_lit_fvf && device.resource_counts().total()>0);
-		edge.validate_prepared_state(lit_retry);
+		edge.validate_prepared_state(skin_retry);
 		device.fail_next_buffer_upload();
 		bool lit_upload_failure=false;
 		try { (void)edge.prepare_applied_state(DX8_FVF_XYZNUV1); }
@@ -210,6 +247,8 @@ int main()
 		assert(lit_upload_failure && device.resource_counts().total()==0);
 		const auto lit_upload_retry=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
 		edge.validate_prepared_state(lit_upload_retry);
+		DX8Wrapper::Set_Material(nullptr);
+		DX8Wrapper::Apply_Render_State_Changes();
 		DX8Wrapper::Set_Light_Environment(nullptr);
 		DX8Wrapper::Set_DX8_Render_State(D3DRS_LIGHTING,0);
 		D3DMATERIAL8 invalid_material{};
