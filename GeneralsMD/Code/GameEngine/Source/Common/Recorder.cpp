@@ -35,6 +35,9 @@
 #include "GameClient/InGameUI.h"
 #include "GameClient/Shell.h"
 #include "GameClient/GameText.h"
+#if defined(__linux__)
+#include "GameClient/MapUtil.h"
+#endif
 
 #include "GameNetwork/LANAPICallbacks.h"
 #include "GameNetwork/GameMessageParser.h"
@@ -46,6 +49,12 @@
 #include "Common/RandomValue.h"
 #include "Common/CRCDebug.h"
 #include "Common/version.h"
+#if defined(__linux__)
+#include <vector>
+#include <string>
+#include <cstring>
+#include <unistd.h>
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -57,6 +66,166 @@ Int REPLAY_CRC_INTERVAL = 100;
 
 const char *replayExtention = ".rep";
 const char *lastReplayFileName = "00000000";	// a name the user is unlikely to ever type, but won't cause panic & confusion
+
+#if defined(__linux__)
+namespace {
+struct ReplayCursor
+{
+	const std::vector<unsigned char>& bytes;
+	size_t position = 0;
+	bool take(void *target, size_t count)
+	{
+		if (count > bytes.size() - position) return false;
+		std::memcpy(target, bytes.data() + position, count);
+		position += count;
+		return true;
+	}
+	bool skip(size_t count)
+	{
+		if (count > bytes.size() - position) return false;
+		position += count;
+		return true;
+	}
+	bool ascii(std::string& result)
+	{
+		result.clear();
+		while (result.size() < 1023 && position < bytes.size())
+		{
+			const char value = static_cast<char>(bytes[position++]);
+			if (!value) return true;
+			result += value;
+		}
+		return false;
+	}
+	bool utf16()
+	{
+		for (size_t count = 0; count < 1023; ++count)
+		{
+			UnsignedShort codeUnit;
+			if (!take(&codeUnit, sizeof(codeUnit))) return false;
+			if (!codeUnit) return true;
+		}
+		return false;
+	}
+};
+
+static bool validReplayLeaf(const AsciiString& name)
+{
+	const std::string leaf(name.str());
+	return !leaf.empty() && leaf.size() <= 200 && leaf != "." && leaf != ".." &&
+		leaf.find_first_of("/\\:") == std::string::npos &&
+		leaf.find("..") == std::string::npos && name.endsWithNoCase(".rep");
+}
+
+static size_t replayArgumentWidth(UnsignedByte kind)
+{
+	switch (kind)
+	{
+		case ARGUMENTDATATYPE_INTEGER: return sizeof(Int);
+		case ARGUMENTDATATYPE_REAL: return sizeof(Real);
+		case ARGUMENTDATATYPE_BOOLEAN: return sizeof(Bool);
+		case ARGUMENTDATATYPE_OBJECTID: return sizeof(ObjectID);
+		case ARGUMENTDATATYPE_DRAWABLEID: return sizeof(DrawableID);
+		case ARGUMENTDATATYPE_TEAMID: return sizeof(UnsignedInt);
+		case ARGUMENTDATATYPE_LOCATION: return sizeof(Coord3D);
+		case ARGUMENTDATATYPE_PIXEL: return sizeof(ICoord2D);
+		case ARGUMENTDATATYPE_PIXELREGION: return sizeof(IRegion2D);
+		case ARGUMENTDATATYPE_TIMESTAMP: return sizeof(UnsignedInt);
+		case ARGUMENTDATATYPE_WIDECHAR: return sizeof(WideChar);
+		default: return 0;
+	}
+}
+
+static bool validateReplayFile(const AsciiString& filename, const AsciiString& directory)
+{
+	if (!validReplayLeaf(filename)) return false;
+	const std::string path = std::string(directory.str()) + filename.str();
+	FILE *file = fopen(path.c_str(), "rb");
+	if (!file) return false;
+	bool valid = false;
+	do {
+		if (fseek(file, 0, SEEK_END) != 0) break;
+		const long length = ftell(file);
+		if (length < 128 || length > 256L * 1024L * 1024L || fseek(file, 0, SEEK_SET) != 0) break;
+		std::vector<unsigned char> bytes(static_cast<size_t>(length));
+		if (fread(bytes.data(), 1, bytes.size(), file) != bytes.size()) break;
+		ReplayCursor cursor{bytes};
+		char magic[6];
+		if (!cursor.take(magic, sizeof(magic)) || std::memcmp(magic, "GENREP", 6) != 0) break;
+		if (!cursor.skip(2 * sizeof(time_t) + sizeof(UnsignedInt) + (2 + MAX_SLOTS) * sizeof(Bool)) ||
+			!cursor.utf16() || !cursor.skip(sizeof(SYSTEMTIME)) || !cursor.utf16() || !cursor.utf16()) break;
+		UnsignedInt version, exeCRC, iniCRC;
+		if (!cursor.take(&version, 4) || !cursor.take(&exeCRC, 4) || !cursor.take(&iniCRC, 4) ||
+			version != TheVersion->getVersionNumber() || exeCRC != TheGlobalData->m_exeCRC ||
+			iniCRC != TheGlobalData->m_iniCRC) break;
+		std::string gameInfo, player;
+		if (!cursor.ascii(gameInfo) || gameInfo.empty() || !cursor.ascii(player) || player.empty()) break;
+		ReplayGameInfo candidate;
+		candidate.reset();
+		candidate.enterGame();
+		const bool parsed = ParseAsciiStringToGameInfo(&candidate, AsciiString(gameInfo.c_str()));
+		const AsciiString map = candidate.getMap();
+		candidate.endGame();
+		if (!parsed || map.isEmpty() || !TheMapCache || !TheMapCache->findMap(map)) break;
+		char *end = NULL;
+		const long localIndex = std::strtol(player.c_str(), &end, 10);
+		if (*end || localIndex < -1 || localIndex >= MAX_SLOTS) break;
+		Int difficulty, mode, rankPoints, maxFPS;
+		if (!cursor.take(&difficulty, 4) || !cursor.take(&mode, 4) ||
+			!cursor.take(&rankPoints, 4) || !cursor.take(&maxFPS, 4) ||
+			(mode != GAME_SKIRMISH && mode != GAME_LAN && mode != GAME_INTERNET &&
+			 mode != GAME_SINGLE_PLAYER)) break;
+		UnsignedInt priorFrame = 0;
+		bool commandsValid = true;
+		while (cursor.position < bytes.size())
+		{
+			UnsignedInt frame;
+			GameMessage::Type type;
+			Int playerIndex;
+			UnsignedByte typeCount;
+			if (!cursor.take(&frame, 4) || !cursor.take(&type, sizeof(type)) ||
+				!cursor.take(&playerIndex, 4) || !cursor.take(&typeCount, 1) ||
+				frame < priorFrame || frame > 10000000 ||
+				!(type == GameMessage::MSG_CLEAR_GAME_DATA ||
+				  (type >= GameMessage::MSG_BEGIN_NETWORK_MESSAGES &&
+				   type < GameMessage::MSG_END_NETWORK_MESSAGES)) ||
+				playerIndex < -1 || playerIndex >= MAX_PLAYER_COUNT)
+			{
+				commandsValid = false;
+				break;
+			}
+			priorFrame = frame;
+			size_t argumentBytes = 0;
+			unsigned argumentCount = 0;
+			for (unsigned i = 0; i < typeCount; ++i)
+			{
+				UnsignedByte kind, count;
+				if (!cursor.take(&kind, 1) || !cursor.take(&count, 1) ||
+					!replayArgumentWidth(kind) || argumentCount + count > 256)
+				{ commandsValid = false; break; }
+				argumentCount += count;
+				argumentBytes += replayArgumentWidth(kind) * count;
+			}
+			if (!commandsValid || !cursor.skip(argumentBytes)) { commandsValid = false; break; }
+		}
+		valid = commandsValid;
+	} while (false);
+	fclose(file);
+	return valid;
+}
+
+static void writeReplayUnicode(FILE *file, const UnicodeString& value)
+{
+	for (Int i = 0; i < value.getLength(); ++i)
+	{
+		const WideChar codeUnit = value.getCharAt(i);
+		fwrite(&codeUnit, sizeof(codeUnit), 1, file);
+	}
+	const WideChar terminator = 0;
+	fwrite(&terminator, sizeof(terminator), 1, file);
+}
+}
+#endif
 
 static time_t startTime;
 static const UnsignedInt startTimeOffset = 6;
@@ -368,6 +537,9 @@ RecorderClass::RecorderClass()
 	m_mode = RECORDERMODETYPE_RECORD;
 	m_file = NULL;
 	m_fileName.clear();
+#if defined(__linux__)
+	m_recordingTempPath.clear();
+#endif
 	m_currentFilePosition = 0;
 	//Added By Sadullah Nader
 	//Initializtion(s) inserted
@@ -419,6 +591,11 @@ void RecorderClass::reset() {
 		fclose(m_file);
 		m_file = NULL;
 	}
+#if defined(__linux__)
+	if (!m_recordingTempPath.isEmpty())
+		unlink(m_recordingTempPath.str());
+	m_recordingTempPath.clear();
+#endif
 	m_fileName.clear();
 
 	init();
@@ -533,10 +710,12 @@ void RecorderClass::updateRecord()
  * Start a new file for recording. This will always overwrite the "LastReplay.rep" file with the new one.
  * So don't call this unless you really mean it.
  */
-void RecorderClass::startRecording(GameDifficulty diff, Int originalGameMode, Int rankPoints, Int maxFPS) {
+void RecorderClass::startRecording(GameDifficulty diff, Int originalGameMode, Int rankPoints, Int maxFPS,
+	UnsignedInt initialSeed) {
 	DEBUG_ASSERTCRASH(m_file == NULL, ("Starting to record game while game is in progress."));
 
 	reset();
+	if (initialSeed != ~0U) m_gameInfo.setSeed(initialSeed);
 
 	m_mode = RECORDERMODETYPE_RECORD;
 
@@ -548,7 +727,22 @@ void RecorderClass::startRecording(GameDifficulty diff, Int originalGameMode, In
 	m_fileName = getLastReplayFileName();
 	m_fileName.concat(getReplayExtention());
 	filepath.concat(m_fileName);
+#if defined(__linux__)
+	std::string staging = std::string(filepath.str()) + ".part-XXXXXX";
+	std::vector<char> stagingName(staging.begin(), staging.end());
+	stagingName.push_back(0);
+	const int descriptor = mkstemp(stagingName.data());
+	if (descriptor < 0) return;
+	m_recordingTempPath = stagingName.data();
+	m_file = fdopen(descriptor, "wb+");
+	if (!m_file) {
+		close(descriptor);
+		unlink(m_recordingTempPath.str());
+		m_recordingTempPath.clear();
+	}
+#else
 	m_file = fopen(filepath.str(), "wb");
+#endif
 	if (m_file == NULL) {
 		DEBUG_ASSERTCRASH(m_file != NULL, ("Failed to create replay file"));
 		return;
@@ -578,8 +772,12 @@ void RecorderClass::startRecording(GameDifficulty diff, Int originalGameMode, In
 	// Print out the name of the replay.
 	UnicodeString replayName;
 	replayName = TheGameText->fetch("GUI:LastReplay");
+#if defined(__linux__)
+	writeReplayUnicode(m_file, replayName);
+#else
 	fwprintf(m_file, L"%ws", replayName.str());
 	fputwc(0, m_file);
+#endif
 
 	// Date and Time
 	SYSTEMTIME systemTime;
@@ -590,10 +788,15 @@ void RecorderClass::startRecording(GameDifficulty diff, Int originalGameMode, In
 	UnicodeString versionString = TheVersion->getUnicodeVersion();
 	UnicodeString versionTimeString = TheVersion->getUnicodeBuildTime();
 	UnsignedInt versionNumber = TheVersion->getVersionNumber();
+#if defined(__linux__)
+	writeReplayUnicode(m_file, versionString);
+	writeReplayUnicode(m_file, versionTimeString);
+#else
 	fwprintf(m_file, L"%ws", versionString.str());
 	fputwc(0, m_file);
 	fwprintf(m_file, L"%ws", versionTimeString.str());
 	fputwc(0, m_file);
+#endif
 	fwrite(&versionNumber, sizeof(UnsignedInt), 1, m_file);
 	fwrite(&(TheGlobalData->m_exeCRC), sizeof(UnsignedInt), 1, m_file);
 	fwrite(&(TheGlobalData->m_iniCRC), sizeof(UnsignedInt), 1, m_file);
@@ -720,11 +923,34 @@ void RecorderClass::stopRecording() {
 		}
 	}
 	if (m_file != NULL) {
+#if defined(__linux__)
+		const bool written = fflush(m_file) == 0 && ferror(m_file) == 0;
+		const int descriptor = fileno(m_file);
+		const bool synced = written && fsync(descriptor) == 0;
+		const bool closed = fclose(m_file) == 0;
+		m_file = NULL;
+		if (!m_recordingTempPath.isEmpty()) {
+			AsciiString finalPath = getReplayDir();
+			finalPath.concat(m_fileName);
+			if (!(synced && closed && rename(m_recordingTempPath.str(), finalPath.str()) == 0))
+				unlink(m_recordingTempPath.str());
+			m_recordingTempPath.clear();
+		}
+#else
 		fclose(m_file);
 		m_file = NULL;
+#endif
 	}
 	m_fileName.clear();
 }
+
+#if defined(__linux__)
+void RecorderClass::beginScenarioRecording(UnsignedInt initialSeed)
+{
+	if (TheSkirmishGameInfo) TheSkirmishGameInfo->setSeed(initialSeed);
+	startRecording(DIFFICULTY_NORMAL, GAME_SKIRMISH, 0, 30, initialSeed);
+}
+#endif
 
 /**
  * Write this game message to the record file. This also writes the game message's execution frame.
@@ -1060,11 +1286,20 @@ Bool RecorderClass::testVersionPlayback(AsciiString filename)
  */
 Bool RecorderClass::playbackFile(AsciiString filename) 
 {
+#if defined(__linux__)
+	// Validate the entire original header and command stream before touching the
+	// live game, recorder mode, map, RNG, or command queue.
+	if (!validateReplayFile(filename, getReplayDir())) return FALSE;
+#endif
 	if (!m_doingAnalysis)
 	{
 		if (TheGameLogic->isInGame())
 		{
+#if defined(__linux__)
+			TheGameLogic->clearGameData(FALSE);
+#else
 			TheGameLogic->clearGameData();
+#endif
 		}
 	}
 
@@ -1176,6 +1411,17 @@ UnicodeString RecorderClass::readUnicodeString() {
 	WideChar str[1024] = u"";
 	Int index = 0;
 
+#if defined(__linux__)
+	for (; index < 1023; ++index)
+	{
+		UnsignedShort codeUnit = 0;
+		if (fread(&codeUnit, sizeof(codeUnit), 1, m_file) != 1 || codeUnit == 0) break;
+		str[index] = static_cast<WideChar>(codeUnit);
+	}
+	str[index] = 0;
+	return UnicodeString(str);
+#else
+
 	Int c = fgetwc(m_file);
 	if (c == EOF) {
 		str[index] = 0;
@@ -1195,6 +1441,7 @@ UnicodeString RecorderClass::readUnicodeString() {
 
 	UnicodeString retval(str);
 	return retval;
+#endif
 }
 
 /**
@@ -1490,7 +1737,11 @@ void RecorderClass::cullBadCommands() {
  */
 AsciiString RecorderClass::getReplayDir() 
 {
+#if defined(__linux__)
+	const char* replayDir = "Replays/";
+#else
 	const char* replayDir = "Replays\\";
+#endif
 
 	AsciiString tmp = TheGlobalData->getPath_UserData();
 	tmp.concat(replayDir);

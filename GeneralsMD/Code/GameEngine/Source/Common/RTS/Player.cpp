@@ -2085,7 +2085,11 @@ void Player::killPlayer(void)
 	if (isLocalPlayer() && !TheGameLogic->isInShellGame())
 	{
 		becomingLocalPlayer(TRUE); // recalc disguises, etc
-		if (TheControlBar )
+		if (TheControlBar
+#if defined(__linux__)
+			&& TheControlBar->hasObserverButtons()
+#endif
+		)
 		{
 			if (isPlayerActive())
 			{

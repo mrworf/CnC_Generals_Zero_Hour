@@ -105,6 +105,9 @@ public:
 	Bool writeCacheINI(Bool userDir);
 
 	const MapMetaData *findMap(AsciiString mapName);
+#if defined(__linux__)
+	Bool addScenarioMapForReplay(AsciiString mapName);
+#endif
 
 	// allow us to create a set of shippable maps to be in mapcache.ini.  For use with -buildMapCache.
 	void addShippingMap(AsciiString mapName) { mapName.toLower(); m_allowedMaps.insert(mapName); }

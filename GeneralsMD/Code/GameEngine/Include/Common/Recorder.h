@@ -55,6 +55,9 @@ class CRCInfo;
 
 class RecorderClass : public SubsystemInterface {
 public:
+#if defined(__linux__)
+	void beginScenarioRecording(UnsignedInt initialSeed);	///< Source recorder capture for the headless original-scenario gate.
+#endif
 	UnsignedInt getControlsInitCount() const { return m_controlsInitCount; }
 	RecorderClass();																	///< Constructor.
 	virtual ~RecorderClass();													///< Destructor.
@@ -126,7 +129,8 @@ public:
 
 	void stopRecording();															///< Stop recording and close m_file.
 protected:
-	void startRecording(GameDifficulty diff, Int originalGameMode, Int rankPoints, Int maxFPS);					///< Start recording to m_file.
+	void startRecording(GameDifficulty diff, Int originalGameMode, Int rankPoints, Int maxFPS,
+		UnsignedInt initialSeed = ~0U);					///< Start recording to m_file.
 	void writeToFile(GameMessage *msg);								///< Write this GameMessage to m_file.
 
 	void logGameStart(AsciiString options);
@@ -143,6 +147,9 @@ protected:
 
 	FILE *m_file;
 	AsciiString m_fileName;
+#if defined(__linux__)
+	AsciiString m_recordingTempPath;
+#endif
 	Int m_currentFilePosition;
 	RecorderModeType m_mode;
 	AsciiString m_currentReplayFilename;							///< valid during playback only

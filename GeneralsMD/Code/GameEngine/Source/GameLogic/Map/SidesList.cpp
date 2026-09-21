@@ -561,10 +561,18 @@ void SidesList::prepareForMP_or_Skirmish(void)
 				for (i=0; i<MAX_PLAYER_COUNT; i++) {
 					static_readPlayerNames[i].clear();
 				}
-		}
+	}
 
 
 	}
+#if defined(__linux__)
+	// A map may define playable skirmish sides without a script list or the
+	// optional standard SkirmishScripts.scb.  Player::initFromDict duplicates
+	// this list unconditionally; represent the valid empty-script case.
+	for (i = 0; i < m_numSkirmishSides; ++i)
+		if (!m_skirmishSides[i].getScriptList())
+			m_skirmishSides[i].setScriptList(newInstance(ScriptList));
+#endif
 }
 
 

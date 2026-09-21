@@ -15,6 +15,7 @@
 #include "Common/MapReaderWriterInfo.h"
 #include "Common/PlayerList.h"
 #include "Common/Player.h"
+#include "Common/PlayerTemplate.h"
 #include "Common/Recorder.h"
 #include "Common/RandomValue.h"
 #include "Common/XferCRC.h"
@@ -49,12 +50,14 @@
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/InGameUI.h"
 #include "GameClient/Keyboard.h"
+#include "GameClient/MapUtil.h"
 #include "GameClient/Mouse.h"
 #include "GameClient/ParticleSys.h"
 #include "GameClient/Snow.h"
 #include "GameClient/TerrainVisual.h"
 #include "GameClient/VideoPlayer.h"
 #include "GameClient/View.h"
+#include "GameNetwork/GameInfo.h"
 #include "GameClient/ClientRandomValue.h"
 #include "GameLogic/AI.h"
 #include "GameLogic/GameLogic.h"
@@ -714,6 +717,27 @@ public:
 				retail->Release_Ref();
 			}
 #endif
+			const Bool replayScenario = std::getenv("ZH_M24_RECORD_REPLAY") ||
+				std::getenv("ZH_M24_REPLAY_EXISTING");
+			if (replayScenario) InitRandom(0);
+			if (replayScenario &&
+				!TheMapCache->addScenarioMapForReplay(TheGlobalData->m_mapName))
+				throw std::runtime_error("original replay scenario map cache registration failed");
+			const UnsignedInt replayInitialSeed = GetGameLogicRandomSeed();
+			if (replayScenario)
+			{
+				TheSkirmishGameInfo = NEW SkirmishGameInfo;
+				TheSkirmishGameInfo->reset();
+				TheSkirmishGameInfo->enterGame();
+				TheSkirmishGameInfo->setMap(TheGlobalData->m_mapName);
+				TheSkirmishGameInfo->setSeed(replayInitialSeed);
+				GameSlot *human = TheSkirmishGameInfo->getSlot(0);
+				human->setState(SLOT_PLAYER, UnicodeString(u"playerA"), 1);
+				TheSkirmishGameInfo->setLocalIP(1);
+				human->setPlayerTemplate(ThePlayerTemplateStore->getTemplateNumByName("FactionPlayerA"));
+				human->setColor(0);
+				human->setStartPos(0);
+			}
 			TheGameLogic->startNewGame(FALSE);
 			// The original start path is intentionally two-phase: the first call
 			// requests/loads the map and the second finishes scenario construction.
@@ -735,6 +759,49 @@ public:
 			}
 #endif
 			captureScenarioSetup();
+			if (const char *replayName = std::getenv("ZH_M24_REPLAY_EXISTING"))
+			{
+				const UnsignedInt beforeFrame = TheGameLogic->getFrame();
+				const UnsignedInt beforeObjects = TheGameLogic->getObjectCount();
+				const UnsignedInt beforeCRC = TheGameLogic->getCRC(CRC_RECALC);
+				const RecorderModeType beforeMode = TheRecorder->getMode();
+				const Bool accepted = TheRecorder->playbackFile(AsciiString(replayName));
+				if (std::getenv("ZH_M24_REPLAY_REJECT"))
+				{
+					if (accepted || TheGameLogic->getFrame() != beforeFrame ||
+						TheGameLogic->getObjectCount() != beforeObjects ||
+						TheGameLogic->getCRC(CRC_RECALC) != beforeCRC ||
+						TheRecorder->getMode() != beforeMode)
+						throw std::runtime_error("invalid original replay changed live source state");
+					std::printf("original replay rejected: frame=%u crc=%u mode=%d\n",
+						beforeFrame, beforeCRC, beforeMode);
+				}
+				else
+				{
+					if (!accepted) throw std::runtime_error("valid original replay was rejected");
+					const char *frameText = std::getenv("ZH_M24_REPLAY_EXPECTED_FRAME");
+					const char *crcText = std::getenv("ZH_M24_REPLAY_EXPECTED_CRC");
+					const char *seedText = std::getenv("ZH_M24_REPLAY_EXPECTED_SEED_CRC");
+					if (!frameText || !crcText || !seedText)
+						throw std::runtime_error("expected replay checkpoint is required");
+					const UnsignedInt expectedFrame = static_cast<UnsignedInt>(std::strtoul(frameText, NULL, 10));
+					const UnsignedInt expectedCRC = static_cast<UnsignedInt>(std::strtoul(crcText, NULL, 10));
+					const UnsignedInt expectedSeedCRC = static_cast<UnsignedInt>(std::strtoul(seedText, NULL, 10));
+					for (UnsignedInt attempt = 0; attempt < expectedFrame + 8 &&
+						TheGameLogic->getFrame() < expectedFrame; ++attempt)
+						GameEngine::update();
+					const UnsignedInt actualCRC = TheGameLogic->getCRC(CRC_RECALC);
+					if (TheGameLogic->getFrame() != expectedFrame || actualCRC != expectedCRC ||
+						GetGameLogicRandomSeedCRC() != expectedSeedCRC ||
+						TheGameLogic->getGameMode() != GAME_REPLAY)
+						throw std::runtime_error("separate-process original replay CRC diverged");
+					std::printf("original replay existing: frame=%u crc=%u seedcrc=%u mode=%d\n",
+						expectedFrame, actualCRC, expectedSeedCRC, TheGameLogic->getGameMode());
+				}
+				GameEngine::reset();
+				setQuitting(TRUE);
+				return;
+			}
 #if defined(ZH_M22_FULL_DRAW_TEST)
 			if (std::getenv("ZH_M22_DRAW_PROFILE"))
 			{
@@ -891,7 +958,51 @@ public:
 #endif
 			if (m_simulationProfile)
 			{
-				runOriginalSimulation();
+				const Bool recordingReplay = std::getenv("ZH_M24_RECORD_REPLAY") != NULL;
+				if (recordingReplay) TheRecorder->beginScenarioRecording(replayInitialSeed);
+				if (recordingReplay) runOriginalReplayCommands();
+				else runOriginalSimulation();
+				if (recordingReplay) TheRecorder->stopRecording();
+				if (recordingReplay)
+				{
+					const auto replayState = []() {
+						Int actorX = -1, targetHealth = -1;
+						for (Object *object = TheGameLogic->getFirstObject(); object; object = object->getNextObject())
+						{
+							if (object->getTemplate()->getName() == "LogicFixture")
+								actorX = static_cast<Int>(object->getPosition()->x * 1000.0f);
+							if (object->getTemplate()->getName() == "EnemyFixture")
+								targetHealth = static_cast<Int>(object->getBodyModule()->getHealth() * 1000.0f);
+						}
+						return std::array<Int, 3>{actorX, targetHealth,
+							static_cast<Int>(GetGameLogicRandomSeedCRC())};
+					};
+					const auto beforeReplay = replayState();
+					const UnsignedInt expectedFrame = TheGameLogic->getFrame();
+					const UnsignedInt expectedCRC = TheGameLogic->getCRC(CRC_RECALC);
+					if (!TheRecorder->playbackFile(AsciiString("00000000.rep")))
+						throw std::runtime_error("original replay playback rejected source recording");
+					for (UnsignedInt attempt = 0; attempt < expectedFrame + 8 &&
+						TheGameLogic->getFrame() < expectedFrame; ++attempt)
+						GameEngine::update();
+					const UnsignedInt replayCRC = TheGameLogic->getCRC(CRC_RECALC);
+					const auto afterReplay = replayState();
+					if (TheGameLogic->getFrame() != expectedFrame || replayCRC != expectedCRC ||
+						afterReplay[2] != beforeReplay[2] || TheGameLogic->getGameMode() != GAME_REPLAY)
+					{
+						char detail[320];
+						std::snprintf(detail, sizeof(detail),
+							"original replay divergence: frame %u>%u crc %u>%u objects=%u mode=%d actorX %d>%d targetHealth %d>%d seedcrc %d>%d",
+							expectedFrame, TheGameLogic->getFrame(), expectedCRC, replayCRC,
+							TheGameLogic->getObjectCount(), TheGameLogic->getGameMode(),
+							beforeReplay[0], afterReplay[0], beforeReplay[1], afterReplay[1],
+							beforeReplay[2], afterReplay[2]);
+						throw std::runtime_error(detail);
+					}
+					std::printf("original replay checkpoint: frame=%u crc=%u seedcrc=%u mode=%d\n",
+						expectedFrame, replayCRC, static_cast<UnsignedInt>(afterReplay[2]),
+						TheGameLogic->getGameMode());
+				}
 				if (const char *saveName = std::getenv("ZH_M24_SAVE_FILENAME"))
 				{
 					const Bool loadExisting = std::getenv("ZH_M24_LOAD_EXISTING") != NULL;
@@ -1059,6 +1170,45 @@ protected:
 		message->friend_setPlayerIndex(player);
 		message->appendBooleanArgument(FALSE);
 		TheCommandList->appendMessage(message);
+	}
+	void runOriginalReplayCommands()
+	{
+		Object *actor = NULL, *target = NULL;
+		for (Object *object = TheGameLogic->getFirstObject(); object; object = object->getNextObject())
+		{
+			if (object->getTemplate()->getName() == "LogicFixture") actor = object;
+			if (object->getTemplate()->getName() == "EnemyFixture") target = object;
+		}
+		if (!actor || !target || !actor->getControllingPlayer())
+			throw std::runtime_error("original replay source command actors are unavailable");
+		// The source replay start consumes frame zero for MSG_NEW_GAME; network
+		// commands recorded on that frame would be discarded during map setup.
+		GameEngine::update();
+		const PlayerIndex player = actor->getControllingPlayer()->getPlayerIndex();
+		g_simulationReport.frameBefore = TheGameLogic->getFrame();
+		g_simulationReport.startX = static_cast<Int>(actor->getPosition()->x * 1000.0f);
+		g_simulationReport.actor = actor->getID();
+		g_simulationReport.target = target->getID();
+		appendSelection(player, actor->getID());
+		Coord3D destination = *actor->getPosition();
+		destination.x += 15.0f;
+		appendMove(player, destination);
+		for (Int i = 0; i < 12; ++i) GameEngine::update();
+		g_simulationReport.movedX = static_cast<Int>(actor->getPosition()->x * 1000.0f);
+		g_simulationReport.moved = g_simulationReport.movedX != g_simulationReport.startX;
+		g_simulationReport.targetHealthBefore =
+			static_cast<Int>(target->getBodyModule()->getHealth() * 1000.0f);
+		appendSelection(player, actor->getID());
+		appendAttack(player, target->getID());
+		for (Int i = 0; i < 4; ++i) GameEngine::update();
+		g_simulationReport.targetHealthAfter =
+			static_cast<Int>(target->getBodyModule()->getHealth() * 1000.0f);
+		g_simulationReport.attacked =
+			g_simulationReport.targetHealthAfter < g_simulationReport.targetHealthBefore;
+		g_simulationReport.frameAfter = TheGameLogic->getFrame();
+		g_simulationReport.aiUpdates = zh_original_ai_update_count();
+		g_simulationReport.scriptUpdates = zh_original_script_engine_update_count();
+		g_simulationReport.complete = TRUE;
 	}
 	void runOriginalSimulation()
 	{

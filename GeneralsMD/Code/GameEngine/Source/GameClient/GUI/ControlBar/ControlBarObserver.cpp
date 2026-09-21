@@ -209,6 +209,9 @@ WindowMsgHandledType ControlBarObserverSystem( GameWindow *window, UnsignedInt m
 
 void ControlBar::populateObserverList( void )
 {
+#if defined(__linux__)
+	if (!hasObserverButtons()) return;
+#endif
 	Int currentButton = 0, i;
 	if(TheRecorder->isMultiplayer())
 	{
@@ -291,6 +294,13 @@ void ControlBar::populateObserverList( void )
 		}
 	}
 }
+
+#if defined(__linux__)
+Bool ControlBar::hasObserverButtons() const
+{
+	return buttonPlayer[0] != NULL;
+}
+#endif
 
 void ControlBar::populateObserverInfoWindow ( void )
 {

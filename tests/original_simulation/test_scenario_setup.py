@@ -42,13 +42,15 @@ def chunk(chunk_id: int, version: int, payload: bytes) -> bytes:
     return struct.pack("<IHI", chunk_id, version, len(payload)) + payload
 
 
-def owned_map(actor_x: float = 20.0) -> bytes:
+def owned_map(actor_x: float = 20.0, skirmish: bool = False) -> bytes:
     names = [
         "HeightMapData", "WorldInfo", "ObjectsList", "Object", "SidesList",
         "PlayerScriptsList", "ScriptList", "originalOwner", "playerName",
         "playerIsHuman", "playerFaction", "playerAllies", "playerEnemies",
         "multiplayerIsLocal",
     ]
+    if skirmish:
+        names.extend(("waypointID", "waypointName"))
     ids = {name: index + 1 for index, name in enumerate(names)}
     toc = bytearray(b"CkMp" + struct.pack("<I", len(names)))
     for name, value in ids.items():
@@ -68,6 +70,12 @@ def owned_map(actor_x: float = 20.0) -> bytes:
         owner = dictionary([(ids["originalOwner"], 3, owners[name])])
         body = struct.pack("<4fI", x, 20.0, 0.0, 0.0, 0) + ascii_string(name) + owner
         objects.extend(chunk(ids["Object"], 3, body))
+    if skirmish:
+        for index, x in ((1, 10.0), (2, 70.0)):
+            waypoint = dictionary([(ids["waypointID"], 1, index),
+                                   (ids["waypointName"], 3, f"Player_{index}_Start")])
+            body = struct.pack("<4fI", x, 5.0, 0.0, 0.0, 0) + ascii_string("") + waypoint
+            objects.extend(chunk(ids["Object"], 3, body))
 
     player_a = dictionary([
         (ids["playerName"], 3, "playerA"),

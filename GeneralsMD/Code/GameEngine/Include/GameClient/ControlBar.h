@@ -654,6 +654,9 @@ class ControlBar : public SubsystemInterface
 {
 
 public:
+#if defined(__linux__)
+	Bool hasObserverButtons() const;
+#endif
 
 	ControlBar( void );
 	virtual ~ControlBar( void );

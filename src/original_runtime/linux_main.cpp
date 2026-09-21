@@ -210,8 +210,12 @@ int main(int argc, char **argv)
 			std::fprintf(stderr, "original simulation failed: checkpoint did not complete\n");
 			result = 4;
 		}
-		else if (simulation[1] <= simulation[0] || simulation[2] == 0 || simulation[3] == 0 ||
-			!simulation[8] || !simulation[9] || !simulation[10] || !simulation[11])
+		else if (std::getenv("ZH_M24_RECORD_REPLAY") ?
+			(simulation[1] <= simulation[0] || simulation[2] == 0 || simulation[3] == 0 ||
+			 simulation[6] == 0 || simulation[7] == 0 || !simulation[9] ||
+			 simulation[13] >= simulation[12]) :
+			(simulation[1] <= simulation[0] || simulation[2] == 0 || simulation[3] == 0 ||
+			 !simulation[8] || !simulation[9] || !simulation[10] || !simulation[11]))
 		{
 			std::fprintf(stderr, "original simulation failed: source-owned checkpoint is incomplete (%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d)\n",
 				simulation[0], simulation[1], simulation[2], simulation[3], simulation[4], simulation[5],

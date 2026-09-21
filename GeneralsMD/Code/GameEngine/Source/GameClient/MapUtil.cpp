@@ -1141,6 +1141,16 @@ const MapMetaData *MapCache::findMap(AsciiString mapName)
 	return &(it->second);
 }
 
+#if defined(__linux__)
+Bool MapCache::addScenarioMapForReplay(AsciiString mapName)
+{
+	FileInfo info;
+	if (!TheFileSystem->getFileInfo(mapName, &info)) return FALSE;
+	addMap(getMapDir(), mapName, &info, FALSE);
+	return findMap(mapName) != NULL;
+}
+#endif
+
 // ------------------------------------------------------------------------------------------------
 /** Embed the pristine map into the xfer stream */
 // ------------------------------------------------------------------------------------------------
