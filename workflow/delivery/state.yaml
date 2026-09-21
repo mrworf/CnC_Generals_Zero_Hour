@@ -13,11 +13,11 @@ delivery_goal:
   end: null
   milestone_ids: [M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
   execution: autonomous
-  current_milestone: M20
+  current_milestone: M21
   blocker_type: null
   blocker: null
   blockers: []
-  resume_point: "Create M20 plan 03 for the RC-012 remaining closure. Preserve plans 01/02, completed plan-02 slices 01-05, and blocker checkpoint 79294870c9eba83a50d49d860d2f0c224e4f46e6; resume from retained BIG adapter and W3D evidence without claiming prior acceptance."
+  resume_point: "M20 completed at b21d43076f01bfd4fc80091e8c70f67769035670. Begin dependency-ready M21 with a new governing plan and companion transaction."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
   replacement_packet_adoption:
