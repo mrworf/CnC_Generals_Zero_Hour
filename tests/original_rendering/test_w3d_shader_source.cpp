@@ -68,7 +68,23 @@ int main()
 		DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
 		DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
 		DX8Wrapper::Apply_Render_State_Changes();
+		const auto base_pipeline=Edge::map_applied_state(DX8_FVF_XYZNUV1).pipeline;
 		const auto physical=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
+		assert(device.pipeline_descriptor(physical.pipeline).raster.depth_bias==0.0f);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,8);
+		const auto biased=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
+		assert(device.pipeline_descriptor(biased.pipeline).raster.depth_bias==-8.0f &&
+			DX8Wrapper::Snapshot_Source_State().render.at(D3DRS_ZBIAS)==8);
+		bool unsupported_bias=false;
+		try { DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,7); }
+		catch (const std::runtime_error&) { unsupported_bias=true; }
+		assert(unsupported_bias && DX8Wrapper::Snapshot_Source_State().render.at(D3DRS_ZBIAS)==8);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,0);
+		const auto unbiased=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
+		assert(device.pipeline_descriptor(unbiased.pipeline).raster.depth_bias==0.0f &&
+			zh::renderer::PipelineKey(
+				zh::original_runtime::OriginalGpuEdge::map_applied_state(DX8_FVF_XYZNUV1).pipeline)==
+			zh::renderer::PipelineKey(base_pipeline));
 		retired=physical;
 		bool no_variant=false;
 		try { (void)edge.prepare_applied_state(DX8_FVF_XYZNDUV1); }

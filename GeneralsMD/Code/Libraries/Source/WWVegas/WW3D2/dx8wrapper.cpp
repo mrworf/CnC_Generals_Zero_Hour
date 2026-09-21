@@ -236,6 +236,7 @@ void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
             property==D3DRS_ZWRITEENABLE || property==D3DRS_NORMALIZENORMALS ||
             property==D3DRS_LOCALVIEWER || property==D3DRS_COLORVERTEX) && value>1) ||
         (property==D3DRS_PATCHSEGMENTS && value!=0x3f800000U) ||
+        (property==D3DRS_ZBIAS && value!=0U && value!=8U) ||
         (property!=D3DRS_LIGHTING && property!=D3DRS_AMBIENT && property!=D3DRS_AMBIENTMATERIALSOURCE &&
             property!=D3DRS_DIFFUSEMATERIALSOURCE && property!=D3DRS_SPECULARMATERIALSOURCE &&
             property!=D3DRS_EMISSIVEMATERIALSOURCE && property!=D3DRS_COLORVERTEX &&
@@ -247,7 +248,8 @@ void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
             property!=D3DRS_SPECULARENABLE && property!=D3DRS_ZFUNC &&
             property!=D3DRS_ZWRITEENABLE && property!=D3DRS_CULLMODE &&
             property!=D3DRS_FOGSTART && property!=D3DRS_FOGEND &&
-            property!=D3DRS_PATCHSEGMENTS && property!=D3DRS_NORMALIZENORMALS))
+            property!=D3DRS_PATCHSEGMENTS && property!=D3DRS_NORMALIZENORMALS &&
+            property!=D3DRS_ZBIAS))
         throw std::runtime_error("original DX8 shader render state "+std::to_string(property)+
             " is unsupported by Linux software profile");
     state().render_states[property]=value;

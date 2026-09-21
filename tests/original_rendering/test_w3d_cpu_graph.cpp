@@ -1840,6 +1840,21 @@ int main(int argc, char **argv)
 		assert(DX8Wrapper::Pending_Changes()&(1U<<9));
 		DX8Wrapper::Apply_Render_State_Changes();
 		assert(DX8Wrapper::Pending_Changes()==0);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,8);
+		const auto biased_source=zh::original_runtime::OriginalGpuEdge::map_applied_state(DX8_FVF_XYZNUV1);
+		assert(biased_source.pipeline.raster.depth_bias==-8.0f &&
+			DX8Wrapper::Snapshot_Source_State().render.at(D3DRS_ZBIAS)==8);
+		bool invalid_source_bias=false;
+		try { DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,7); }
+		catch (const std::runtime_error&) { invalid_source_bias=true; }
+		assert(invalid_source_bias && DX8Wrapper::Snapshot_Source_State().render.at(D3DRS_ZBIAS)==8);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,0);
+		const auto unbiased_source=zh::original_runtime::OriginalGpuEdge::map_applied_state(DX8_FVF_XYZNUV1);
+		assert(unbiased_source.pipeline.raster.depth_bias==0.0f &&
+			zh::renderer::PipelineKey(biased_source.pipeline)!=
+			zh::renderer::PipelineKey(unbiased_source.pipeline));
+		assert(device.snapshot().find("DX8Wrapper::Set_DX8_Render_State=47:8")!=std::string::npos &&
+			device.snapshot().find("DX8Wrapper::Set_DX8_Render_State=47:0")!=std::string::npos);
 		assert(device.snapshot().find("original TextureClass::Apply stage=0 disabled")!=
 			std::string::npos);
 		assert(device.snapshot().find("DX8Wrapper::Set_DX8_Texture_Stage_State=0:1")!=std::string::npos);

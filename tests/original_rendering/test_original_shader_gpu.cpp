@@ -201,6 +201,70 @@ void original_unlit_source_pixels(unsigned generation,unsigned width,unsigned he
                  <<" center-rgb="<<static_cast<unsigned>(pixels[center])<<":"
                  <<static_cast<unsigned>(pixels[center+1])<<":"
                  <<static_cast<unsigned>(pixels[center+2])<<'\n';
+        // Coplanar original source geometry: positive legacy ZBIAS=8 must
+        // pull the later fragment toward the camera with public SDL_GPU depth.
+        auto red_vertices=source_vertices;
+        for (auto& v:red_vertices) v.diffuse=0xffc03020U;
+        auto* red_vb=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZDUV1,3));
+        {
+            VertexBufferClass::WriteLockClass lock(red_vb);
+            std::memcpy(lock.Get_Vertex_Array(),red_vertices.data(),sizeof(red_vertices));
+        }
+        const auto red_vertex=edge.bind_vertex(red_vb);
+        red_vb->Release_Ref();
+        DX8Wrapper::Set_DX8_Render_State(D3DRS_ZFUNC,D3DCMP_LESS);
+        const auto base_bias_descriptor=zh::original_runtime::OriginalGpuEdge::map_applied_state(
+            DX8_FVF_XYZDUV1).pipeline;
+        check(base_bias_descriptor.raster.depth_bias==0.0f,
+            "original reset bias was not zero at base draw");
+        const auto depth_frame=[&](bool biased) {
+            const auto base_bias_state=edge.prepare_applied_state(DX8_FVF_XYZDUV1);
+            check(device.begin_pass(pass,biased ? "source coplanar ZBIAS=8" :
+                "source coplanar ZBIAS=0"),device.last_error());
+            draw.pipeline=base_bias_state.pipeline;
+            draw.vertex_buffer=vertex;
+            draw.vertex_bindings=base_bias_state.vertex_bindings;
+            draw.fragment_bindings=base_bias_state.fragment_bindings;
+            check(device.draw(draw),device.last_error());
+            if (biased) DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,8);
+            const auto selected=edge.prepare_applied_state(DX8_FVF_XYZDUV1);
+            const auto selected_descriptor=zh::original_runtime::OriginalGpuEdge::map_applied_state(
+                DX8_FVF_XYZDUV1).pipeline;
+            check(selected_descriptor.raster.depth_bias==(biased ? -8.0f : 0.0f),
+                "source bias sign/value did not reach the public pipeline");
+            check((PipelineKey(selected_descriptor)==PipelineKey(base_bias_descriptor)) == !biased,
+                "original depth-bias pipeline key did not distinguish source state");
+            draw.pipeline=selected.pipeline;
+            draw.vertex_buffer=red_vertex;
+            draw.vertex_bindings=selected.vertex_bindings;
+            draw.fragment_bindings=selected.fragment_bindings;
+            check(device.draw(draw),device.last_error());
+            check(device.end_pass(),device.last_error());
+            const auto output=device.readback_rgba(color);
+            check(output.size()==static_cast<std::size_t>(width)*height*4,device.last_error());
+            return std::array<int,3>{output[center],output[center+1],output[center+2]};
+        };
+        const auto no_bias_pixel=depth_frame(false);
+        check(std::abs(no_bias_pixel[0]-64)<=5 && std::abs(no_bias_pixel[1]-192)<=5,
+            "unbiased coplanar original decal passed a strict depth comparison");
+        const auto biased_pixel=depth_frame(true);
+        check(std::abs(biased_pixel[0]-192)<=5 && std::abs(biased_pixel[1]-48)<=5 &&
+              std::abs(biased_pixel[2]-32)<=5,
+            "source ZBIAS=8 failed to draw coplanar decal in front");
+        DX8Wrapper::Set_DX8_Render_State(D3DRS_ZBIAS,0);
+        const auto restored_bias_state=edge.prepare_applied_state(DX8_FVF_XYZDUV1);
+        const auto restored_descriptor=zh::original_runtime::OriginalGpuEdge::map_applied_state(
+            DX8_FVF_XYZDUV1).pipeline;
+        check(restored_descriptor.raster.depth_bias==0.0f &&
+              PipelineKey(restored_descriptor)==PipelineKey(base_bias_descriptor),
+            "original ZBIAS=0 did not restore the base pipeline");
+        const auto restored_pixel=depth_frame(false);
+        check(restored_pixel==no_bias_pixel,
+            "original ZBIAS=0 did not restore unbiased coplanar depth pixels");
+        DX8Wrapper::Set_DX8_Render_State(D3DRS_ZFUNC,D3DCMP_LESSEQUAL);
+        std::cout<<"original-source-depth-bias-pixels=pass generation="<<generation
+                 <<" unbiased="<<no_bias_pixel[0]<<":"<<no_bias_pixel[1]
+                 <<" biased="<<biased_pixel[0]<<":"<<biased_pixel[1]<<'\n';
         OwnedFactory files;
         files.files["owned-zero.tga"]=owned_targa({16,128,240,128});
         files.files["owned-one.tga"]=owned_targa({96,64,128,255});

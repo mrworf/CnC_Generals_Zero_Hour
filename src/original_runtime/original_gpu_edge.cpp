@@ -170,6 +170,15 @@ OriginalGpuEdge::AppliedState OriginalGpuEdge::map_applied_state(unsigned source
     else if (cull==D3DCULL_CW) result.pipeline.raster.cull=renderer::CullMode::clockwise;
     else if (cull==D3DCULL_CCW) result.pipeline.raster.cull=renderer::CullMode::counter_clockwise;
     else throw std::runtime_error("original cull mode is unsupported by public GPU");
+    // D3D8's positive integer ZBIAS pulls coplanar decals toward the viewer;
+    // public SDL_GPU/Vulkan depth-bias constant factors have the opposite sign.
+    // The canonical wrapper admits only source 0 and the decal renderer's 8.
+    const auto zbias=source.render.find(D3DRS_ZBIAS);
+    if (zbias!=source.render.end()) {
+        if (zbias->second!=0U && zbias->second!=8U)
+            throw std::runtime_error("original ZBIAS has no bounded public GPU mapping");
+        result.pipeline.raster.depth_bias=zbias->second ? -static_cast<float>(zbias->second) : 0.0f;
+    }
     result.lighting=boolean(D3DRS_LIGHTING);
     result.specular_enabled=boolean(D3DRS_SPECULARENABLE);
     result.color_vertex=boolean(D3DRS_COLORVERTEX);
