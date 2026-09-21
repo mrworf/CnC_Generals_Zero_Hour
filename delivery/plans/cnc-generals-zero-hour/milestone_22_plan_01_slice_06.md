@@ -2,7 +2,7 @@
 
 ## Outcome and dependencies
 
-Requires slices 04C–05B. Original HLOD/mesh, DX8 renderer, WW3D and enabled
+Requires slices 04C–05B2. Original HLOD/mesh, DX8 renderer, WW3D and enabled
 WWShade owners perform every reached interleaved CPU decision and translated
 physical operation in their authored source order. Full fixture frames and
 sorting/static-sort/decal/material/skin flushes record through the same

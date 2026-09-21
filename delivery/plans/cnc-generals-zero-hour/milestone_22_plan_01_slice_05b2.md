@@ -1,20 +1,13 @@
-# M22 plan 01 slice 05B: superseded by 05B1 and 05B2
-
-This pending slice was split after 05A because canonical Targa/DDS CPU image
-providers have an independent validation boundary before original texture
-loader/device entry. The complete, unchanged outcome and negatives below are
-assigned to [05B1](milestone_22_plan_01_slice_05b1.md) and
-[05B2](milestone_22_plan_01_slice_05b2.md). Do not implement or commit this
-superseded slice as a separate transaction.
+# M22 plan 01 slice 05B2: original texture/material/shader physical entry
 
 ## Outcome and dependencies
 
-Requires 05A. Original `TextureClass::Init`/`Apply`, its reached
-`TextureLoader` and image-file providers retain source-owned texture
-selection, decode, mip/filter, stage and missing-resource decisions. The
-first original DX8 texture, material and shader physical commands translate
-to public `GpuDevice` resources/state in the exact source order. Remaining
-interleaved pass decisions are mandatory slice 06.
+Requires 05B1. Original `TextureClass::Init`/`Apply`, its reached
+`TextureLoader` and canonical 05B1 image providers retain source-owned
+texture selection, decode, mip/filter, stage and missing-resource decisions.
+The first original DX8 texture, material and shader physical commands
+translate to public `GpuDevice` resources/state in exact source order.
+Remaining interleaved pass decisions remain mandatory slice 06.
 
 ## Source closure
 
@@ -40,4 +33,4 @@ sanitizers and ledger freshness. No full frame or scene claim until 06–09.
 
 ## Commit boundary
 
-One independently validated commit: `delivery: M22 slice 05B translate original texture entry`.
+One independently validated commit: `delivery: M22 slice 05B2 translate original texture entry`.
