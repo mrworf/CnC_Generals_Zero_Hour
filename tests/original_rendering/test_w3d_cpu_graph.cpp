@@ -19,6 +19,7 @@
 #include "dx8indexbuffer.h"
 #include "dx8renderer.h"
 #include "dx8wrapper.h"
+#include "statistics.h"
 #include "static_sort_list.h"
 #include "ww3d.h"
 #include "original_gpu_edge.h"
@@ -103,31 +104,36 @@ template <typename T> void chunk(ChunkSaveClass &writer, unsigned id, const T &v
 }
 
 void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant = false,
-	bool skin_variant = false, unsigned texture_stages = 1, bool lit_uv_variant = false)
+	bool skin_variant = false, unsigned texture_stages = 1, bool lit_uv_variant = false,
+	bool invalid_skin = false, unsigned large_vertex_count = 0, bool batch_second = false)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_MESH));
 	W3dMeshHeader3Struct header{};
 	header.Version = W3D_CURRENT_MESH_VERSION;
 	std::strcpy(header.MeshName, lit_uv_variant ? (texture_stages==2 ? "LITTWO01" : "LITONE01") :
-		texture_stages == 0 ? "ZERO01" : texture_stages == 2 ? "TWO01" :
+		batch_second ? "SKIN02" : invalid_skin ? "BADSKIN" :
+		texture_stages == 0 && !skin_variant ? "ZERO01" : texture_stages == 2 && !skin_variant ? "TWO01" :
 		skin_variant ? "SKIN01" : tread_variant ? "TREADSL01" :
 		(supply_variant ? "SUPPLY01" : "TRIANGLE"));
 	if (skin_variant) header.Attributes = W3D_MESH_FLAG_GEOMETRY_TYPE_SKIN;
 	std::strcpy(header.ContainerName, "TEST");
-	header.NumVertices = 3;
+	header.NumVertices = large_vertex_count ? large_vertex_count : 3;
 	header.NumTris = 1;
 	header.Min = {0, 0, 0};
 	header.Max = {1, 1, 0};
 	header.SphCenter = {0.5f, 0.5f, 0};
 	header.SphRadius = 1;
 	chunk(writer, W3D_CHUNK_MESH_HEADER3, header);
-	const W3dVectorStruct vertices[3] = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}};
+	std::vector<W3dVectorStruct> vertices(header.NumVertices);
+	vertices[0]={0,0,0}; vertices[1]={1,0,0}; vertices[2]={0,1,0};
 	assert(writer.Begin_Chunk(W3D_CHUNK_VERTICES));
-	assert(writer.Write(vertices, sizeof(vertices)) == sizeof(vertices));
+	assert(writer.Write(vertices.data(), vertices.size()*sizeof(vertices[0])) ==
+		static_cast<int>(vertices.size()*sizeof(vertices[0])));
 	assert(writer.End_Chunk());
-	const W3dVectorStruct normals[3] = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
+	std::vector<W3dVectorStruct> normals(header.NumVertices,{0,0,1});
 	assert(writer.Begin_Chunk(W3D_CHUNK_VERTEX_NORMALS));
-	assert(writer.Write(normals, sizeof(normals)) == sizeof(normals));
+	assert(writer.Write(normals.data(), normals.size()*sizeof(normals[0])) ==
+		static_cast<int>(normals.size()*sizeof(normals[0])));
 	assert(writer.End_Chunk());
 	W3dTriStruct triangle{};
 	triangle.Vindex[0] = 0;
@@ -137,8 +143,12 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 	chunk(writer, W3D_CHUNK_TRIANGLES, triangle);
 	if (skin_variant)
 	{
-		W3dVertInfStruct links[3]{};
-		chunk(writer, W3D_CHUNK_VERTEX_INFLUENCES, links);
+		std::vector<W3dVertInfStruct> links(header.NumVertices);
+		if (invalid_skin) links[0].BoneIdx=7;
+		assert(writer.Begin_Chunk(W3D_CHUNK_VERTEX_INFLUENCES));
+		assert(writer.Write(links.data(), links.size()*sizeof(links[0])) ==
+			static_cast<int>(links.size()*sizeof(links[0])));
+		assert(writer.End_Chunk());
 	}
 	W3dMaterialInfoStruct material_info{};
 	material_info.PassCount = 1;
@@ -243,22 +253,25 @@ void make_animation(ChunkSaveClass &writer)
 	assert(writer.End_Chunk());
 }
 
-void make_hlod(ChunkSaveClass &writer, bool supply_variant)
+void make_hlod(ChunkSaveClass &writer, bool supply_variant, bool skin_variant = false,
+	bool invalid_skin = false, bool batch_skin = false)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_HLOD));
 	W3dHLodHeaderStruct header{};
 	header.Version = W3D_CURRENT_HLOD_VERSION;
 	header.LodCount = 1;
-	std::strcpy(header.Name, "TEST.HLOD");
+	std::strcpy(header.Name, batch_skin ? "TEST.BATCHHLOD" : invalid_skin ? "TEST.BADHLOD" :
+		(skin_variant ? "TEST.SKINHLOD" : "TEST.HLOD"));
 	std::strcpy(header.HierarchyName, "TESTTREE");
 	chunk(writer, W3D_CHUNK_HLOD_HEADER, header);
 	assert(writer.Begin_Chunk(W3D_CHUNK_HLOD_LOD_ARRAY));
 	W3dHLodArrayHeaderStruct array{};
-	array.ModelCount = supply_variant ? 2 : 1;
+	array.ModelCount = (supply_variant || batch_skin) ? 2 : 1;
 	array.MaxScreenSize = 1.0f;
 	chunk(writer, W3D_CHUNK_HLOD_SUB_OBJECT_ARRAY_HEADER, array);
 	W3dHLodSubObjectStruct subobject{};
-	std::strcpy(subobject.Name, supply_variant ? "TEST.SUPPLY01" : "TEST.TRIANGLE");
+	std::strcpy(subobject.Name, invalid_skin ? "TEST.BADSKIN" : skin_variant ? "TEST.SKIN01" :
+		(supply_variant ? "TEST.SUPPLY01" : "TEST.TRIANGLE"));
 	chunk(writer, W3D_CHUNK_HLOD_SUB_OBJECT, subobject);
 	if (supply_variant)
 	{
@@ -266,14 +279,94 @@ void make_hlod(ChunkSaveClass &writer, bool supply_variant)
 		std::strcpy(tread.Name, "TEST.TREADSL01");
 		chunk(writer, W3D_CHUNK_HLOD_SUB_OBJECT, tread);
 	}
+	if (batch_skin) {
+		W3dHLodSubObjectStruct second{};
+		std::strcpy(second.Name,"TEST.SKIN02");
+		chunk(writer,W3D_CHUNK_HLOD_SUB_OBJECT,second);
+	}
 	assert(writer.End_Chunk());
 	assert(writer.End_Chunk());
+}
+
+int test_original_skin_batch()
+{
+	// Two authentic HLOD skin children exceed the original 16-bit batch cap
+	// together while each child remains below it. No forged container or VB.
+	std::vector<char> bytes(4U*1024U*1024U);
+	RAMFileClass file(bytes.data(),static_cast<int>(bytes.size()));
+	assert(file.Open(FileClass::WRITE));
+	ChunkSaveClass writer(&file);
+	make_hierarchy(writer,false);
+	make_mesh(writer,false,false,true,0,false,false,32769);
+	make_mesh(writer,false,false,true,0,false,false,32769,true);
+	make_hlod(writer,false,true,false,true);
+	const int size=file.Size();
+	file.Close();
+	WW3DAssetManager manager;
+	RAMFileClass input(bytes.data(),size);
+	assert(manager.Load_3D_Assets(input));
+	RenderObjClass* hlod=manager.Create_Render_Obj("TEST.BATCHHLOD");
+	assert(hlod && hlod->Get_HTree() && hlod->Get_Num_Sub_Objects()==2);
+	CameraClass camera;
+	RenderInfoClass render_info(camera);
+	TheDX8MeshRenderer.Init();
+	TheDX8MeshRenderer.Set_Camera(&camera);
+	for (unsigned i=0;i<2;++i) {
+		RenderObjClass* child=hlod->Get_Sub_Object(i);
+		assert(child && child->Class_ID()==RenderObjClass::CLASSID_MESH);
+		auto* skin=static_cast<MeshClass*>(child);
+		assert(skin->Peek_Model()->Get_Vertex_Count()==32769);
+		skin->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+		skin->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+		skin->Peek_Model()->Register_For_Rendering();
+		child->Release_Ref();
+	}
+	hlod->Set_Position(Vector3(0,0,-10));
+	zh::renderer::RecordingGpuDevice recorder(32);
+	zh::renderer::TextureDesc target;
+	target.width=32; target.height=32; target.render_target=true; target.sampled=false;
+	const auto color=recorder.create_texture(target,"source 16-bit skin batch color");
+	target.format=zh::renderer::TextureFormat::depth24_stencil8;
+	const auto depth=recorder.create_texture(target,"source 16-bit skin batch depth");
+	zh::renderer::RenderPassDesc pass;
+	pass.color_targets[0]=color; pass.color_target_count=1;
+	pass.depth_target=depth; pass.width=32; pass.height=32;
+	{
+		zh::original_runtime::OriginalGpuEdge edge(recorder);
+		DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+		DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+		Debug_Statistics::Begin_Statistics();
+		hlod->Render(render_info);
+		assert(recorder.begin_pass(pass,"source 65535 skin batch partition"));
+		TheDX8MeshRenderer.Flush();
+		assert(recorder.end_pass());
+		Debug_Statistics::End_Statistics();
+		assert(Debug_Statistics::Get_DX8_Skin_Renders()==2 &&
+			Debug_Statistics::Get_DX8_Skin_Vertices()==65538);
+		const auto commands=recorder.snapshot();
+		const auto first=commands.find("draw pipeline=");
+		const auto second=commands.find("draw pipeline=",first+1);
+		assert(first!=std::string::npos && second!=std::string::npos &&
+			commands.find("draw pipeline=",second+1)==std::string::npos &&
+			commands.find("index_bits=16",first)!=std::string::npos &&
+			commands.find("index_bits=16",second)!=std::string::npos);
+		TheDX8MeshRenderer.Invalidate();
+		TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+	}
+	recorder.destroy(depth); recorder.destroy(color);
+	assert(recorder.resource_counts().total()==0);
+	hlod->Release_Ref();
+	manager.Free_Assets();
+	std::puts("original HLOD skin 16-bit partition: 2 source draws/65538 vertices");
+	return 0;
 }
 }
 
 int main(int argc, char **argv)
 {
-	std::vector<char> bytes(8192);
+	if (argc==2 && std::strcmp(argv[1],"--skin-batch")==0)
+		return test_original_skin_batch();
+	std::vector<char> bytes(16384);
 	RAMFileClass file(bytes.data(), static_cast<int>(bytes.size()));
 	assert(file.Open(FileClass::WRITE));
 	ChunkSaveClass writer(&file);
@@ -283,6 +376,7 @@ int main(int argc, char **argv)
 	make_mesh(writer, supply_variant);
 	if (supply_variant) make_mesh(writer, true, true);
 	else make_mesh(writer, false, false, true);
+	if (!supply_variant) make_mesh(writer,false,false,true,1,false,true);
 	if (argc == 2 && (std::strcmp(argv[1], "--device-edge") == 0 ||
 		std::strcmp(argv[1], "--vulkan-category") == 0)) {
 		make_mesh(writer, false, false, false, 0);
@@ -292,6 +386,10 @@ int main(int argc, char **argv)
 		make_mesh(writer, false, false, false, 2, true);
 	}
 	make_hlod(writer, supply_variant);
+	if (!supply_variant) {
+		make_hlod(writer,false,true);
+		make_hlod(writer,false,true,true);
+	}
 	const int size = file.Size();
 	file.Close();
 	if (argc == 3 && std::strcmp(argv[1], "--emit") == 0)
@@ -309,10 +407,44 @@ int main(int argc, char **argv)
 	assert(manager.Get_HAnim("TESTTREE.IDLE") != nullptr);
 	assert(manager.Render_Obj_Exists("TEST.TRIANGLE"));
 	assert(manager.Render_Obj_Exists("TEST.HLOD"));
+	if (!supply_variant) assert(manager.Render_Obj_Exists("TEST.SKINHLOD"));
 	RenderObjClass *hlod = manager.Create_Render_Obj("TEST.HLOD");
 	assert(hlod != nullptr);
 	assert(hlod->Get_Num_Sub_Objects() == 1);
 	hlod->Release_Ref();
+	if (!supply_variant) {
+		// The original HLOD publishes its own HTree and assigns the skin child
+		// Container. A bare MeshClass would not have an authoritative bone tree.
+		RenderObjClass* original_skin_hlod=manager.Create_Render_Obj("TEST.SKINHLOD");
+		assert(original_skin_hlod && original_skin_hlod->Get_HTree() &&
+			original_skin_hlod->Get_Num_Sub_Objects()==1);
+		RenderObjClass* original_skin_child=original_skin_hlod->Get_Sub_Object(0);
+		assert(original_skin_child && original_skin_child->Class_ID()==RenderObjClass::CLASSID_MESH);
+		auto* original_skin_mesh=static_cast<MeshClass*>(original_skin_child);
+		assert(original_skin_mesh->Peek_Model()->Get_Flag(MeshGeometryClass::SKIN));
+		std::array<Vector3,3> rest{}, moved{}, normal{};
+		(void)static_cast<HLodClass*>(original_skin_hlod)->Get_Bone_Transform(0);
+		original_skin_mesh->Get_Deformed_Vertices(rest.data(),normal.data());
+		original_skin_hlod->Set_Position(Vector3(0,0,-10));
+		(void)static_cast<HLodClass*>(original_skin_hlod)->Get_Bone_Transform(0);
+		original_skin_mesh->Get_Deformed_Vertices(moved.data(),normal.data());
+		for (unsigned i=0;i<3;++i) assert(std::abs(moved[i].Z-rest[i].Z+10.0f)<0.01f);
+		original_skin_child->Release_Ref();
+		original_skin_hlod->Release_Ref();
+		RenderObjClass* invalid_skin_hlod=manager.Create_Render_Obj("TEST.BADHLOD");
+		assert(invalid_skin_hlod && invalid_skin_hlod->Get_HTree());
+		RenderObjClass* invalid_skin_child=invalid_skin_hlod->Get_Sub_Object(0);
+		assert(invalid_skin_child && invalid_skin_child->Class_ID()==RenderObjClass::CLASSID_MESH);
+		bool invalid_bone_rejected=false;
+		try {
+			static_cast<MeshClass*>(invalid_skin_child)->Get_Deformed_Vertices(moved.data(),normal.data());
+		} catch (const std::runtime_error& error) {
+			invalid_bone_rejected=std::strstr(error.what(),"bone index")!=nullptr;
+		}
+		assert(invalid_bone_rejected);
+		invalid_skin_child->Release_Ref();
+		invalid_skin_hlod->Release_Ref();
+	}
 	RAMFileClass duplicate_input(bytes.data(), size);
 	assert(!manager.Load_3D_Assets(duplicate_input));
 	assert(manager.Render_Obj_Exists("TEST.TRIANGLE"));
@@ -417,6 +549,41 @@ int main(int argc, char **argv)
 				uv_meshes[family]->Peek_Model()->Register_For_Rendering();
 			}
 			const auto ambient_pixels=frame(mesh,Vector3(0.15f,0.2f,0.25f));
+			RenderObjClass* skin_hlod=manager.Create_Render_Obj("TEST.SKINHLOD");
+			assert(skin_hlod && skin_hlod->Get_HTree());
+			RenderObjClass* skin_child=skin_hlod->Get_Sub_Object(0);
+			assert(skin_child && skin_child->Class_ID()==RenderObjClass::CLASSID_MESH);
+			auto* owned_skin=static_cast<MeshClass*>(skin_child);
+			owned_skin->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+			owned_skin->Peek_Model()->Peek_Single_Material()->Set_Lighting(true);
+			owned_skin->Peek_Model()->Register_For_Rendering();
+			skin_hlod->Set_ObjectScale(5.0f);
+			skin_hlod->Set_Position(Vector3(0,0,-10));
+			auto skin_frame=[&]() {
+				environment.Reset(Vector3(0,0,-10),Vector3(0.15f,0.2f,0.25f));
+				environment.Pre_Render_Update(Matrix3D(true));
+				render_info.light_environment=&environment;
+				skin_hlod->Render(render_info);
+				assert(device.begin_pass(pass,"original HLOD skin category Vulkan frame"));
+				TheDX8MeshRenderer.Flush();
+				assert(device.end_pass());
+				const auto pixels=device.readback_rgba(color);
+				assert(pixels.size()==static_cast<std::size_t>(pass.width)*pass.height*4U);
+				return pixels;
+			};
+			const auto original_skin_pixels=skin_frame();
+			unsigned skin_coverage=0;
+			for (std::size_t i=0;i<original_skin_pixels.size();i+=4)
+				if (original_skin_pixels[i]!=5 || original_skin_pixels[i+1]!=5 ||
+					original_skin_pixels[i+2]!=10) ++skin_coverage;
+			assert(skin_coverage>0);
+			skin_hlod->Set_Position(Vector3(1,0,-10));
+			const auto shifted_skin_pixels=skin_frame();
+			assert(shifted_skin_pixels!=original_skin_pixels);
+			skin_hlod->Set_Position(Vector3(0,0,-10));
+			assert(skin_frame()==original_skin_pixels);
+			skin_child->Release_Ref();
+			skin_hlod->Release_Ref();
 			const auto zero_ambient_pixels=frame(zero_mesh,Vector3(0.15f,0.2f,0.25f));
 			Matrix3D source_direction(true);
 			source_direction.Rotate_X(WWMATH_PI);
@@ -560,6 +727,57 @@ int main(int argc, char **argv)
 				commands.find("fragment_textures=T",draw_order)!=std::string::npos &&
 				mesh->Peek_Model()->Peek_Single_Texture()!=nullptr &&
 				!mesh->Peek_Model()->Peek_Single_Texture()->Is_Missing_Texture());
+			RenderObjClass* original_skin_hlod=manager.Create_Render_Obj("TEST.SKINHLOD");
+			assert(original_skin_hlod && original_skin_hlod->Get_HTree());
+			RenderObjClass* original_skin_child=original_skin_hlod->Get_Sub_Object(0);
+			assert(original_skin_child && original_skin_child->Class_ID()==RenderObjClass::CLASSID_MESH);
+			auto* original_skin_mesh=static_cast<MeshClass*>(original_skin_child);
+			original_skin_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+			original_skin_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(true);
+			original_skin_mesh->Peek_Model()->Register_For_Rendering();
+			original_skin_hlod->Set_Position(Vector3(0,0,-10));
+			LightEnvironmentClass skin_environment;
+			skin_environment.Reset(Vector3(0,0,-10),Vector3(0.1f,0.2f,0.3f));
+			skin_environment.Pre_Render_Update(Matrix3D(true));
+			render_info.light_environment=&skin_environment;
+			original_skin_hlod->Render(render_info);
+			const auto skin_failure_start=recorder.snapshot().size();
+			recorder.fail_next_buffer_upload();
+			assert(recorder.begin_pass(pass,"original HLOD skin rejected upload"));
+			bool rejected_skin_upload=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				rejected_skin_upload=std::strstr(error.what(),"upload")!=nullptr;
+			}
+			assert(rejected_skin_upload && recorder.end_pass());
+			assert(recorder.snapshot().substr(skin_failure_start).find("draw pipeline=")==
+				std::string::npos);
+			const auto skin_draw_failure_start=recorder.snapshot().size();
+			recorder.fail_next_draw();
+			assert(recorder.begin_pass(pass,"original HLOD skin rejected physical draw"));
+			bool rejected_skin_draw=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				rejected_skin_draw=std::strstr(error.what(),"draw")!=nullptr;
+			}
+			assert(rejected_skin_draw && recorder.end_pass());
+			assert(recorder.snapshot().substr(skin_draw_failure_start).find("draw pipeline=")==
+				std::string::npos);
+			const auto skin_log_start=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original HLOD-owned skin category frame"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto skin_commands=recorder.snapshot().substr(skin_log_start);
+			const auto dynamic_order=skin_commands.find("DX8Wrapper::Set_Vertex_Buffer dynamic offset=");
+			const auto skin_material_order=skin_commands.find("DX8Wrapper::Set_Material",dynamic_order);
+			const auto skin_identity_order=skin_commands.find("DX8Wrapper::Set_Transform=16",skin_material_order);
+			const auto skin_draw_order=skin_commands.find("draw pipeline=",skin_material_order);
+			assert(dynamic_order!=std::string::npos && skin_material_order!=std::string::npos &&
+				skin_identity_order!=std::string::npos && skin_draw_order>skin_identity_order &&
+				skin_commands.find("index_bits=16",skin_draw_order)!=std::string::npos &&
+				skin_commands.find("original_applied_nd2_lit.vert",dynamic_order)!=std::string::npos);
+			original_skin_child->Release_Ref();
+			original_skin_hlod->Release_Ref();
 			render_info.alphaOverride=0.5f;
 			mesh->Render(render_info);
 			assert(recorder.begin_pass(pass,"caller-owned original alpha-override frame"));
@@ -791,9 +1009,30 @@ int main(int argc, char **argv)
 				recorder.snapshot().find("draw pipeline=",before_valid)!=std::string::npos);
 			render_info.light_environment=nullptr;
 			retry_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+			RenderObjClass* bad_skin_hlod=manager.Create_Render_Obj("TEST.BADHLOD");
+			assert(bad_skin_hlod && bad_skin_hlod->Get_HTree());
+			RenderObjClass* bad_skin_child=bad_skin_hlod->Get_Sub_Object(0);
+			assert(bad_skin_child && bad_skin_child->Class_ID()==RenderObjClass::CLASSID_MESH);
+			auto* bad_skin_mesh=static_cast<MeshClass*>(bad_skin_child);
+			bad_skin_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+			bad_skin_mesh->Peek_Model()->Register_For_Rendering();
+			bad_skin_hlod->Set_Position(Vector3(0,0,-10));
+			bad_skin_hlod->Render(render_info);
+			const auto bad_skin_start=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original invalid HLOD bone link rejection"));
+			bool bad_skin_rejected=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				bad_skin_rejected=std::strstr(error.what(),"bone index")!=nullptr;
+			}
+			assert(bad_skin_rejected && recorder.end_pass());
+			assert(recorder.snapshot().substr(bad_skin_start).find("draw pipeline=")==
+				std::string::npos);
 			assert(textures.owners==0);
 			TheDX8MeshRenderer.Invalidate();
 			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			bad_skin_child->Release_Ref();
+			bad_skin_hlod->Release_Ref();
 			for (auto *variant_object : variant_objects) variant_object->Release_Ref();
 		}
 		recorder.destroy(color); recorder.destroy(depth);
@@ -831,6 +1070,14 @@ int main(int argc, char **argv)
 	assert(skin_object != nullptr && skin_object->Class_ID() == RenderObjClass::CLASSID_MESH);
 	auto *skin_model = static_cast<MeshClass *>(skin_object)->Peek_Model();
 	assert(skin_model->Get_Flag(MeshGeometryClass::SKIN));
+	std::array<Vector3,3> orphan_positions{},orphan_normals{};
+	bool missing_skin_hierarchy=false;
+	try { static_cast<MeshClass*>(skin_object)->Get_Deformed_Vertices(
+		orphan_positions.data(),orphan_normals.data()); }
+	catch (const std::runtime_error& error) {
+		missing_skin_hierarchy=std::strstr(error.what(),"HLOD hierarchy")!=nullptr;
+	}
+	assert(missing_skin_hierarchy);
 	static_cast<MeshClass *>(skin_object)->Render(render_info); // Skins bypass rigid frustum rejection.
 	assert(skin_model->Has_Polygon_Renderers());
 	skin_model->Register_For_Rendering();

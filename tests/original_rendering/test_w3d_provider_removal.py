@@ -20,7 +20,7 @@ def main() -> int:
     source_names = args.provider or [f"GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/{name}.cpp"
                                      for name in ("texture", "vertmaterial", "mapper", "shader", "dx8wrapper",
                                                   "rinfo", "dx8fvf", "mesh", "meshmdl",
-                                                  "dx8vertexbuffer", "dx8indexbuffer", "dx8renderer",
+                                                  "dx8vertexbuffer", "dx8indexbuffer", "dx8renderer", "statistics",
                                                   "dx8polygonrenderer", "stripoptimizer", "ww3d",
                                                   "static_sort_list", "sortingrenderer")]
     if not args.provider:

@@ -43,6 +43,7 @@ public:
     void fail_next_pipeline_create();
     void fail_next_buffer_create();
     void fail_next_buffer_upload();
+    void fail_next_draw();
 
     BufferHandle create_buffer(const BufferDesc& desc, std::string_view label) override;
     TextureHandle create_texture(const TextureDesc& desc, std::string_view label) override;

@@ -149,6 +149,7 @@ public:
     bool reject_next_pipeline_create=false;
     bool reject_next_buffer_create=false;
     bool reject_next_buffer_upload=false;
+    bool reject_next_draw=false;
     bool in_pass = false;
     std::string active_pass_label;
     std::array<TextureHandle, RendererLimits::color_targets> active_colors{};
@@ -194,6 +195,7 @@ void RecordingGpuDevice::fail_next_shader_create() { impl_->reject_next_shader_c
 void RecordingGpuDevice::fail_next_pipeline_create() { impl_->reject_next_pipeline_create=true; }
 void RecordingGpuDevice::fail_next_buffer_create() { impl_->reject_next_buffer_create=true; }
 void RecordingGpuDevice::fail_next_buffer_upload() { impl_->reject_next_buffer_upload=true; }
+void RecordingGpuDevice::fail_next_draw() { impl_->reject_next_draw=true; }
 
 BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::string_view label)
 {
@@ -437,6 +439,10 @@ ValidationResult RecordingGpuDevice::draw(const DrawDesc& desc)
     };
     if (auto result = check_stage(desc.vertex_bindings, vertex_shader->value, "vertex"); !result) return result;
     if (auto result = check_stage(desc.fragment_bindings, fragment_shader->value, "fragment"); !result) return result;
+    if (impl_->reject_next_draw) {
+        impl_->reject_next_draw=false;
+        return impl_->fail("draw","injected physical draw failure",impl_->active_pass_label);
+    }
     std::string command = "draw pipeline=" + impl_->name(impl_->pipelines, desc.pipeline, 'P') + " vertex="
         + impl_->name(impl_->buffers, desc.vertex_buffer, 'B') + " index="
         + (desc.index_buffer ? impl_->name(impl_->buffers, desc.index_buffer, 'B') : "none")

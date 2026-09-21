@@ -272,6 +272,7 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8indexbuffer.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8polygonrenderer.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8renderer.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/statistics.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/stripoptimizer.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/scene.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/light.cpp
@@ -2039,6 +2040,8 @@ if(ZH_BUILD_TESTS)
     LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_first_gpu_edge COMMAND original_w3d_cpu_graph_tests --device-edge)
   set_tests_properties(original_w3d_first_gpu_edge PROPERTIES LABELS "original-rendering;renderer-contract")
+  add_test(NAME original_w3d_skin_batch COMMAND original_w3d_cpu_graph_tests --skin-batch)
+  set_tests_properties(original_w3d_skin_batch PROPERTIES LABELS "original-rendering;source-identity")
   add_executable(original_w3d_gpu_edge_tests tests/original_rendering/test_original_gpu_edge.cpp)
   target_include_directories(original_w3d_gpu_edge_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
@@ -2155,6 +2158,7 @@ if(ZH_BUILD_TESTS)
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8vertexbuffer.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8indexbuffer.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8renderer.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/statistics.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8polygonrenderer.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3d.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/static_sort_list.cpp"

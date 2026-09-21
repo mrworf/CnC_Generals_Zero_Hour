@@ -21,7 +21,11 @@
 #include "simplevec.h"
 #include "dx8renderer.h"
 #include "dx8wrapper.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8caps.h"
+#else
+#include <stdexcept>
+#endif
 #include "textureloader.h"
 #include "texture.h"
 #include <cstdio>
@@ -94,7 +98,7 @@ static void Record_Texture_End()
 	texture_statistics_string="";
 	if (record_texture_mode==Debug_Statistics::RECORD_TEXTURE_DETAILS) {
 		char tmp_text[1024];
-		_snprintf(tmp_text,sizeof(tmp_text),
+		std::snprintf(tmp_text,sizeof(tmp_text),
 			"Set_DX8_Texture count: %d\nactual changes: %d\n\n"
 			"id      refs changes  size      name\n"
 			"--------------------------------------\n",
@@ -293,11 +297,16 @@ void Debug_Statistics::Record_DX8_Skin_Polys_And_Vertices(int pcount,int vcount)
 
 void Debug_Statistics::Record_DX8_Polys_And_Vertices(int pcount,int vcount,const ShaderClass& shader)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (shader.Get_NPatch_Enable()==ShaderClass::NPATCH_ENABLE)
+		throw std::runtime_error("original NPatch statistics require unavailable D3D caps");
+#else
 	if (shader.Get_NPatch_Enable()==ShaderClass::NPATCH_ENABLE && DX8Wrapper::Get_Current_Caps()->Support_NPatches()) {
 		unsigned level=WW3D::Get_NPatches_Level();
 		level*=level;
 		pcount*=level;
 	}
+#endif
 	dx8_polygons+=pcount;
 	dx8_vertices+=vcount;
 	draw_calls++;
@@ -367,7 +376,9 @@ void Debug_Statistics::Begin_Statistics()
 	sorting_vertices=0;
 	draw_calls=0;
 	Record_Texture_Begin();
+#if !defined(ZH_WW3D_CPU_ONLY)
 	DX8Wrapper::Begin_Statistics();
+#endif
 //	DX8MeshRendererClass::Begin_Statistics();
 }
 
@@ -383,7 +394,9 @@ void Debug_Statistics::End_Statistics()
 	last_frame_sorting_vertices=sorting_vertices;
 	last_frame_draw_calls=draw_calls;
 //	DX8MeshRendererClass::End_Statistics();
+#if !defined(ZH_WW3D_CPU_ONLY)
 	DX8Wrapper::End_Statistics();
+#endif
 }
 
 void Debug_Statistics::Shutdown_Statistics()
@@ -391,4 +404,3 @@ void Debug_Statistics::Shutdown_Statistics()
 	texture_statistics_string.Release_Resources();
 }
 // ----------------------------------------------------------------------------
-

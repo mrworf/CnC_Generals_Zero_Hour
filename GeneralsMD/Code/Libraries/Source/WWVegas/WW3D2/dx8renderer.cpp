@@ -1344,16 +1344,18 @@ void DX8SkinFVFCategoryContainer::Log(bool only_visible)
 
 void DX8SkinFVFCategoryContainer::Render(void)
 {
-#if defined(ZH_WW3D_CPU_ONLY)
-	if (!Anything_To_Render()) return;
-	throw std::runtime_error("original skinned mesh pass requires GPU translation");
-#else
 	SNAPSHOT_SAY(("DX8SkinFVFCategoryContainer::Render()\n"));
 	if (!Anything_To_Render()) {
 		SNAPSHOT_SAY(("Nothing to render\n"));
 		return;
 	}
 	AnythingToRender=false;
+	// The Linux physical edge can reject a pending upload/draw. Keep the
+	// original skin/category queues live until a successful flush, so the
+	// owning scene can abort the pass and retry the same source submission.
+#if defined(ZH_WW3D_CPU_ONLY)
+	try {
+#endif
 
 	DX8Wrapper::Set_Vertex_Buffer(NULL);	// Free up the reference to the current vertex buffer
 														// (in case it is the dynamic, which may have to be resized)
@@ -1488,6 +1490,11 @@ void DX8SkinFVFCategoryContainer::Render(void)
 
 
 	clearVisibleSkinList();
+#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		AnythingToRender=true;
+		throw;
+	}
 #endif
 }
 

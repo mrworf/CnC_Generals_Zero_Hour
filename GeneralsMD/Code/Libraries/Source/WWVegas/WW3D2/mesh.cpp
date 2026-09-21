@@ -505,6 +505,14 @@ void MeshClass::Scale(float scalex, float scaley, float scalez)
 void	MeshClass::Get_Deformed_Vertices(Vector3 *dst_vert, Vector3 *dst_norm)
 {
 	WWASSERT(Model->Get_Flag(MeshGeometryClass::SKIN));
+#if defined(ZH_WW3D_CPU_ONLY)
+	const HTreeClass* tree=Container ? Container->Get_HTree() : NULL;
+	const uint16* links=Model->Get_Vertex_Bone_Links();
+	if (!tree || !links) throw std::runtime_error("original skin requires HLOD hierarchy and bone links");
+	for (int i=0;i<Model->Get_Vertex_Count();++i)
+		if (links[i]>=tree->Num_Pivots())
+			throw std::runtime_error("original skin bone index exceeds HLOD hierarchy");
+#endif
 	Model->get_deformed_vertices(dst_vert,dst_norm,Container->Get_HTree());
 }
 
@@ -526,6 +534,14 @@ void MeshClass::Get_Deformed_Vertices(Vector3 *dst_vert)
 	WWASSERT(Model->Get_Flag(MeshGeometryClass::SKIN));
 	WWASSERT(Container != NULL);
 	WWASSERT(Container->Get_HTree() != NULL);
+#if defined(ZH_WW3D_CPU_ONLY)
+	const HTreeClass* tree=Container ? Container->Get_HTree() : NULL;
+	const uint16* links=Model->Get_Vertex_Bone_Links();
+	if (!tree || !links) throw std::runtime_error("original skin requires HLOD hierarchy and bone links");
+	for (int i=0;i<Model->Get_Vertex_Count();++i)
+		if (links[i]>=tree->Num_Pivots())
+			throw std::runtime_error("original skin bone index exceeds HLOD hierarchy");
+#endif
 
 	Model->get_deformed_vertices(dst_vert,Container->Get_HTree());
 }
