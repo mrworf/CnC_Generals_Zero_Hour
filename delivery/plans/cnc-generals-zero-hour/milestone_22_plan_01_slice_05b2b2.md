@@ -1,4 +1,10 @@
-# M22 plan 01 slice 05B2B2: original texture stage, material and shader state
+# Superseded M22 plan 01 slice 05B2B2: original stage, material and shader state
+
+This previous single slice is now a dependency-ordered pair:
+[05B2B2A](milestone_22_plan_01_slice_05b2b2a.md) preserves source-owned
+texture/filter stage decisions and pending state; [05B2B2B](milestone_22_plan_01_slice_05b2b2b.md)
+preserves original material/shader/DX8Wrapper state. The combined pair
+retains every acceptance item below. No standalone 05B2B2 commit is allowed.
 
 ## Outcome and dependencies
 
