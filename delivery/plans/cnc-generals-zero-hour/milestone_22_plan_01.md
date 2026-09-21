@@ -1,0 +1,108 @@
+# M22: original retail scene rendering on Vulkan
+
+This plan governs exactly one milestone transaction.
+
+## Outcome
+
+The production Linux original-engine path renders representative campaign and skirmish scenes from the user-owned retail corpus through the original W3D, WWShade, and GameClient producers onto the public SDL_GPU Vulkan backend. The same producer path is observable through the recording device, fails closed for unsupported state or malformed/missing assets, survives resize/device-resource recreation, and returns all owned renderer resources to zero at teardown.
+
+## Delivery-goal context
+
+- Goal status record: `workflow/delivery/state.yaml`
+- Product ID: `cnc-generals-zero-hour`
+- Active packet and revision: `delivery/milestones/cnc-generals-zero-hour/status.yaml`, `sha256:21ce030a34f700bbcf7773983454f0b741f384956f1ff6568d7fc6782bc5bfe9`
+- Source transaction: `cb567c223beab5d63fa2f13d66718e670271d3d0`
+- Planning transaction: `cd2389e40aa89b1c2d1e02be638d084a95438f2d` (closeout `75da0520c91b14bbea21d3d58c99e3eb3905aa3`)
+- Fixed goal scope: `M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18` (context only)
+- Current milestone: `M22`
+- Resume mode: new
+- Transaction-start HEAD: `0c227ac924b163d9f0caf0e703e5610ed37fd9b2`
+- Pre-existing dirty paths: none
+
+## Governing contracts
+
+- PRD requirements: `docs/zero-hour-linux-port-plan.md` §§1–6 and §10; `docs/zero-hour-source-engine-migration.md` SE-005 and SE-010.
+- Milestone acceptance: `delivery/milestones/cnc-generals-zero-hour/M22-original-rendering.md` in full.
+- Architecture decisions: `docs/zero-hour-runtime-closure-reconciliation.md` RC-002, RC-003, RC-004, RC-007, RC-010, and especially RC-012.
+- Renderer contracts: `docs/renderer/renderer-contract.md` and `docs/renderer/legacy-api-mapping.tsv`.
+- Dependency and source identity: `docs/original-runtime-dependency-ledger.tsv`.
+- Accepted providers: `evidence/qa/cnc-generals-zero-hour/M20-plan03-original-lifecycle-acceptance.md`, `evidence/qa/cnc-generals-zero-hour/M21-original-simulation.md`, and `evidence/qa/cnc-generals-zero-hour/M14-gpu-acceptance.md`.
+- External gates: PRE-008 retail roots plus freshly verified PRE-012/PRE-016 (RTX 4070, NVIDIA 610.57.04, Vulkan 1.4.341, `VK_LAYER_KHRONOS_validation` 1.4.357, Wayland session).
+- Repository instructions: no `AGENTS.md` is present; the retail symlink and all user-owned corpus content are read-only.
+
+## Current-state findings
+
+- M20 provides the canonical 19-entry original W3D schema and production factory identity. M21 enabled ten original concrete draw classes only for CPU construction/state/preload/destruction; their physical model, bone, shadow, and draw operations remain explicit unavailable-device edges.
+- The dependency ledger has two M22-owned rows: original `DX8Wrapper` physical device/drawing semantics and all deferred original W3D draw-instance constructors/vtables and their render consumers.
+- M14 proves the public SDL_GPU Vulkan backend and validation harness with generated/component scenes. M28's `OriginalCpuPresentation.cpp` is an independently accepted resource extraction, not the full original producer and not retail-scene acceptance.
+- `LinuxDisplay`, `LinuxView`, and `LinuxTerrainVisual` currently record/preload CPU state without acquiring a device or drawing. They are the Linux factory boundary through which the original GameClient must receive the M22 presentation adapter; they must not become a parallel authoritative scene implementation.
+- Existing project-owned renderer contracts already cover explicit resources, immutable pipeline state, uploads, render passes, presentation, and public Vulkan-backed resize/recreation. M22 must bind original source state into that contract rather than reintroducing Direct3D or private Vulkan calls.
+- The ordinary four presets intentionally remain asset- and device-independent. Retail/GPU checks require separate options and must not leak paths, filenames chosen from the private corpus, bytes, or hashes into committed output.
+
+## Decisions
+
+1. Preserve `W3DModuleFactory` and all concrete `ModuleData` identities from M20. M22 removes a fail-closed operation only when the actual rendering consumer is implemented and tested; it does not add another registry, generic draw class, or reduced schema.
+2. The adapter boundary is the existing public `renderer::GpuDevice` contract. Original W3D/WWShade/GameClient code remains the producer of model selection, transforms, animation/material state, camera, terrain, fog/shroud, lighting, shadows, particles, water, and effects. Adapter code translates those reached legacy states and resources into explicit device commands; it may not synthesize a replacement scene.
+3. Recording and Vulkan runs invoke the same original producer entry point. Recording is the deterministic semantic witness and negative-control surface; hardware is the device, validation, resize, presentation, and visual-evidence gate.
+4. Retail logical input names are supplied privately by the gate and read through the existing VFS. Tests commit only logical/aggregate results and project-owned screenshots or derived visual observations permitted by the product contract; no retail bytes, hashes, or host paths are retained.
+5. Unsupported required legacy state, missing/malformed required assets, stale resources, and omitted original providers are hard failures. No placeholder texture/model, generated scene, ignored state, generic/no-op draw module, or silent successful null behavior can satisfy acceptance.
+6. Three slices are the minimum coherent sequence: establish the original producer/device translation closure; prove complete original retail scenes on recording with negative controls; then exercise that identical path on validation-enabled Vulkan and close cumulative acceptance.
+
+## Scope
+
+### Included
+
+- Original DX8Wrapper/WWShade state and resource translation needed by reached M22 rendering consumers.
+- Every ledger-deferred W3D draw operation reached by the selected campaign and skirmish scene families, including all newly reachable CPU dependencies.
+- Original model/HLOD/animation/texture, terrain, camera, object, lighting, fog/shroud, shadow, particle, water, and effects producers required by representative real scenes.
+- Recording-device semantic/ownership evidence, source identity and provider-removal controls, missing/malformed/unsupported negative controls, and clean reset/re-entry.
+- SDL_GPU Vulkan presentation on the verified RTX, explicit Khronos validation-layer scanning, visual evidence, resize/recreation, wait-idle, and bounded teardown.
+- Four canonical preset builds/full asset-free CTest suites, focused ASan/UBSan, installed/arbitrary-CWD and dependency-ledger freshness checks.
+
+### Excluded and deferred
+
+- Menus, controls, interactive UI, music/audio/video flows (M23).
+- Complete playable sessions and gameplay acceptance (M15), save/replay (M24), and LAN (M25/M16).
+- ARM64, base Generals, tools, online services, private Vulkan calls, Direct3D dependencies, and redistribution of retail content.
+- Replacing original producers with M14 generated scenes, M28 fixture parsers, or other toy/proxy scene implementations.
+
+## Slice index
+
+| Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
+|---|---|---|---|---|---|---|
+| 01 | [milestone_22_plan_01_slice_01.md](milestone_22_plan_01_slice_01.md) | Reached original W3D/WWShade producers translate complete state/resource/draw semantics through `GpuDevice`, with recording negative controls and lifecycle closure. | M20, M21, M14 | pending | | |
+| 02 | [milestone_22_plan_01_slice_02.md](milestone_22_plan_01_slice_02.md) | Original campaign and skirmish consumers load and record complete retail scene families with source identity, failure, reset, and provider-removal evidence. | slice 01 | pending | | |
+| 03 | [milestone_22_plan_01_slice_03.md](milestone_22_plan_01_slice_03.md) | The same original retail scenes render and present on validation-enabled SDL_GPU Vulkan, survive resize/recreation, produce reviewed visual evidence, and pass cumulative acceptance. | slice 02, PRE-008, PRE-012, PRE-016 | pending | | |
+
+## Cross-slice concerns
+
+- Compatibility and migration: keep the 19 original registry names, concrete data types, tags, defaults, inherited fields, and runtime class identities. Preserve left-handed coordinates, 0..1 depth, clockwise winding, top-left texture origin, ARGB8/premultiplied-alpha, fog, bias, and WWShade multipass semantics.
+- Authorization and security: retail roots are read-only; outputs are isolated under temporary/XDG locations. Evidence must redact private paths and must not store retail bytes, filenames selected from the private corpus, or hashes.
+- Invalidation and lifecycle effects: renderer reset must invalidate device resources without invalidating original simulation authority. Destruction is reverse, exactly once, bounded, and safe after partial failure, resize, reset, or device recreation.
+- Audit and observability: recording markers/commands identify the original producer and logical scene family, not merely adapter activity. Validation output is combined and rejected on `Validation Error` or `VUID-` even if the executable exits zero.
+- Performance and scale: selected scenes are bounded but retain real retail terrain/object/resource counts; no timeout increase or scene reduction hides quadratic behavior or leaks.
+- Environment or external services: Vulkan and a graphical session are required only for slice 03. Ordinary tests stay display/GPU/retail independent.
+
+## Milestone completion gate
+
+- Configure and build `linux-gcc-debug`, `linux-clang-debug`, `linux-gcc-release`, and `linux-clang-release`; run the complete asset-free CTest suite in each preset, with repository-required UDP exceptions run under the established local-socket procedure.
+- Run focused original-rendering positive/negative, source-identity, provider-removal, dependency-ledger, and lifecycle tests in GCC Debug and Clang Debug ASan+UBSan.
+- Run installed-form owned fixtures from arbitrary CWD with isolated XDG state.
+- Run read-only retail campaign and skirmish recording gates and verify the corpus metadata is unchanged.
+- Run the same retail scenes on SDL_GPU Vulkan with `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`; fail on any `Validation Error` or `VUID-` output.
+- Capture/review the permitted visual evidence for every required scene family and both dimensions of resize/resource recreation; verify no placeholders or missing required assets.
+- Verify zero live original allocations/workers/device resources after normal and injected-failure teardown, `git diff --check`, source classification, provider-removal, and dependency-ledger freshness.
+
+## Rollback and recovery
+
+Each slice is independently revertible. Slice 01 leaves the bounded headless path available but does not claim retail scenes. Slice 02 leaves recording acceptance without enabling hardware by default. Slice 03's device-gated tests remain opt-in. Reverting never writes or migrates retail or XDG user data. A partial producer/resource failure unwinds adapter resources and original draw instances before returning an actionable error.
+
+## Execution notes
+
+- Planning phase completed before production changes at transaction-start HEAD `0c227ac924b163d9f0caf0e703e5610ed37fd9b2`; worktree was clean.
+- M14/M28 generated or fixture scenes may remain regression coverage but are explicitly non-acceptance for M22.
+
+## Deferred follow-ups
+
+- Interactive UI/media and user input remain M23.
+- Full playable-session evidence remains M15.
