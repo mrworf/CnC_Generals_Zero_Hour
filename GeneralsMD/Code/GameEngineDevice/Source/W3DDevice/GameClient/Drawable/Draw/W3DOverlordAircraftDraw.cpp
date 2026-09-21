@@ -49,6 +49,19 @@
 //#pragma MESSAGE("************************************** WARNING, optimization disabled for debugging purposes")
 #endif
 
+#if defined(ZH_W3D_HEADLESS_INSTANCE)
+W3DOverlordAircraftDraw::W3DOverlordAircraftDraw(Thing *thing, const ModuleData *moduleData) :
+	W3DModelDraw(thing, moduleData)
+{
+}
+W3DOverlordAircraftDraw::~W3DOverlordAircraftDraw() = default;
+void W3DOverlordAircraftDraw::setHidden(Bool hidden) { W3DModelDraw::setHidden(hidden); }
+void W3DOverlordAircraftDraw::doDrawModule(const Matrix3D *transform) { W3DModelDraw::doDrawModule(transform); }
+void W3DOverlordAircraftDraw::crc(Xfer *xfer) { W3DModelDraw::crc(xfer); }
+void W3DOverlordAircraftDraw::xfer(Xfer *xfer) { W3DModelDraw::xfer(xfer); }
+void W3DOverlordAircraftDraw::loadPostProcess() { W3DModelDraw::loadPostProcess(); }
+#endif
+
 
 //-------------------------------------------------------------------------------------------------
 W3DOverlordAircraftDrawModuleData::W3DOverlordAircraftDrawModuleData()

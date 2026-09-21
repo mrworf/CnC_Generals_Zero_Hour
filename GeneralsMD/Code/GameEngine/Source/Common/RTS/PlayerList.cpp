@@ -54,6 +54,7 @@
 #include "Common/Team.h"
 #include "Common/WellKnownKeys.h"
 #include "Common/Xfer.h"
+#include "GameLogic/GameLogic.h"
 #ifdef _DEBUG
 #include "GameLogic/Object.h"
 #endif
@@ -83,6 +84,12 @@ PlayerList::PlayerList() :
 //-----------------------------------------------------------------------------
 PlayerList::~PlayerList() 
 {
+	// GameLogic is registered before PlayerList and therefore shuts down after
+	// it. Destroy any reset-surviving objects while player/team ownership and
+	// UI callbacks are still available; GameLogic's later destructor then sees
+	// an empty object list.
+	if (TheGameLogic)
+		TheGameLogic->destroyAllObjectsImmediate();
 	// PlayerList is registered after TeamFactory, so reverse subsystem shutdown
 	// reaches this destructor first.  Release live teams while their Player
 	// callbacks and relationships are still valid; the later TeamFactory

@@ -70,11 +70,10 @@ public:
 
 private:
 
-#ifdef LOAD_TEST_ASSETS
+#if defined(LOAD_TEST_ASSETS) && !defined(ZH_W3D_HEADLESS_INSTANCE)
 	RenderObjClass*		m_renderObject;										///< W3D Render object for this drawable
 	Shadow*				m_shadow;													///< Updates/Renders shadows of this object
 #endif
 };
 
 #endif // __W3DDEFAULTDRAW_H_
-

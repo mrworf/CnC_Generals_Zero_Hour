@@ -47,9 +47,35 @@
 #ifndef ZH_W3D_SCHEMA_ONLY
 #include "W3DDevice/GameClient/W3DGameClient.h"
 #endif
+
 #include "W3DDevice/GameClient/Module/W3DTankDraw.h"
 #ifndef ZH_W3D_SCHEMA_ONLY
 #include "WW3D2/matinfo.h"
+#endif
+
+#if defined(ZH_W3D_HEADLESS_INSTANCE)
+W3DTankDraw::W3DTankDraw(Thing *thing, const ModuleData *moduleData) :
+	W3DModelDraw(thing, moduleData), m_treadDebrisLeft(NULL), m_treadDebrisRight(NULL), m_prevRenderObj(NULL)
+{
+	for (Int i = 0; i < MAX_TREADS_PER_TANK; ++i)
+		m_treads[i].m_robj = NULL;
+	m_treadCount = 0;
+	m_lastDirection.set(1.0f, 0.0f, 0.0f);
+}
+W3DTankDraw::~W3DTankDraw() = default;
+void W3DTankDraw::setHidden(Bool hidden) { W3DModelDraw::setHidden(hidden); }
+void W3DTankDraw::doDrawModule(const Matrix3D *transform) { W3DModelDraw::doDrawModule(transform); }
+void W3DTankDraw::setFullyObscuredByShroud(Bool obscured) { W3DModelDraw::setFullyObscuredByShroud(obscured); }
+void W3DTankDraw::onRenderObjRecreated() {}
+void W3DTankDraw::crc(Xfer *xfer) { W3DModelDraw::crc(xfer); }
+void W3DTankDraw::xfer(Xfer *xfer) { W3DModelDraw::xfer(xfer); }
+void W3DTankDraw::loadPostProcess() { W3DModelDraw::loadPostProcess(); }
+void W3DTankDraw::createEmitters() {}
+void W3DTankDraw::tossEmitters() {}
+void W3DTankDraw::startMoveDebris() {}
+void W3DTankDraw::stopMoveDebris() {}
+void W3DTankDraw::updateTreadObjects() {}
+void W3DTankDraw::updateTreadPositions(Real) {}
 #endif
 
 #ifdef _INTERNAL

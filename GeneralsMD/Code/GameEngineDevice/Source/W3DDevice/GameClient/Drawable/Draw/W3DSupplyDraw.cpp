@@ -32,6 +32,28 @@
 #include "GameClient/Drawable.h"
 #include "W3DDevice/GameClient/Module/W3DSupplyDraw.h"
 
+#if defined(ZH_W3D_HEADLESS_INSTANCE)
+W3DSupplyDraw::W3DSupplyDraw(Thing *thing, const ModuleData *moduleData) :
+	W3DModelDraw(thing, moduleData), m_totalBones(-1), m_lastNumberShown(0)
+{
+}
+W3DSupplyDraw::~W3DSupplyDraw() = default;
+void W3DSupplyDraw::updateDrawModuleSupplyStatus(Int maxSupply, Int currentSupply)
+{
+	W3DModelDraw::updateDrawModuleSupplyStatus(maxSupply, currentSupply);
+	// Bone discovery is a physical-model adapter edge. No render object means
+	// there are no verified bones to hide, while the original supply state is
+	// still represented by this concrete module instance.
+	if (m_totalBones == -1)
+		m_totalBones = 0;
+	m_lastNumberShown = maxSupply > 0 ? min(m_totalBones,
+		static_cast<Int>(ceil(m_totalBones * (currentSupply / static_cast<float>(maxSupply))))) : 0;
+}
+void W3DSupplyDraw::crc(Xfer *xfer) { W3DModelDraw::crc(xfer); }
+void W3DSupplyDraw::xfer(Xfer *xfer) { W3DModelDraw::xfer(xfer); }
+void W3DSupplyDraw::loadPostProcess() { W3DModelDraw::loadPostProcess(); }
+#endif
+
 //-------------------------------------------------------------------------------------------------
 W3DSupplyDrawModuleData::W3DSupplyDrawModuleData() 
 {
@@ -154,4 +176,3 @@ void W3DSupplyDraw::loadPostProcess( void )
 
 }  // end loadPostProcess
 #endif
-

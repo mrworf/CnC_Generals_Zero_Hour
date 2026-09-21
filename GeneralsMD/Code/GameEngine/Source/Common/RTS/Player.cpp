@@ -3150,7 +3150,10 @@ void Player::removeUpgrade( const UpgradeTemplate *upgradeTemplate )
 Bool Player::okToPlayRadarEdgeSound( void )
 {
 	return (
-		! TheVictoryConditions->hasSinglePlayerBeenDefeated( this ) 
+		TheVictoryConditions != NULL
+		&& TheInGameUI != NULL
+		&& TheGameLogic != NULL
+		&& ! TheVictoryConditions->hasSinglePlayerBeenDefeated( this )
 		&& ! m_isPlayerDead 
 		&& ! TheInGameUI->isClientQuiet()
 		&& TheGameLogic->isInGameLogicUpdate() 

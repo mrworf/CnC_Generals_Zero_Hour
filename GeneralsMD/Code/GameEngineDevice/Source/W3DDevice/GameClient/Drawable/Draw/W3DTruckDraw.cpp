@@ -58,6 +58,42 @@
 //#pragma MESSAGE("************************************** WARNING, optimization disabled for debugging purposes")
 #endif
 
+#if defined(ZH_W3D_HEADLESS_INSTANCE)
+W3DTruckDraw::W3DTruckDraw(Thing *thing, const ModuleData *moduleData) :
+	W3DModelDraw(thing, moduleData),
+	m_effectsInitialized(false), m_wasAirborne(false), m_isPowersliding(false),
+	m_dustEffect(NULL), m_dirtEffect(NULL), m_powerslideEffect(NULL),
+	m_frontWheelRotation(0), m_rearWheelRotation(0),
+	m_midFrontWheelRotation(0), m_midRearWheelRotation(0),
+	m_frontLeftTireBone(0), m_frontRightTireBone(0),
+	m_rearLeftTireBone(0), m_rearRightTireBone(0),
+	m_midFrontLeftTireBone(0), m_midFrontRightTireBone(0),
+	m_midRearLeftTireBone(0), m_midRearRightTireBone(0),
+	m_midMidLeftTireBone(0), m_midMidRightTireBone(0),
+	m_cabBone(0), m_curCabRotation(0), m_trailerBone(0),
+	m_curTrailerRotation(0), m_prevNumBones(0), m_prevRenderObj(NULL)
+{
+	const AudioEventRTS *event = thing->getTemplate()->getPerUnitSound("TruckLandingSound");
+	if (event)
+		m_landingSound = *event;
+	event = thing->getTemplate()->getPerUnitSound("TruckPowerslideSound");
+	if (event)
+		m_powerslideSound = *event;
+}
+W3DTruckDraw::~W3DTruckDraw() = default;
+void W3DTruckDraw::setHidden(Bool hidden) { W3DModelDraw::setHidden(hidden); }
+void W3DTruckDraw::doDrawModule(const Matrix3D *transform) { W3DModelDraw::doDrawModule(transform); }
+void W3DTruckDraw::setFullyObscuredByShroud(Bool obscured) { W3DModelDraw::setFullyObscuredByShroud(obscured); }
+void W3DTruckDraw::onRenderObjRecreated() {}
+void W3DTruckDraw::crc(Xfer *xfer) { W3DModelDraw::crc(xfer); }
+void W3DTruckDraw::xfer(Xfer *xfer) { W3DModelDraw::xfer(xfer); }
+void W3DTruckDraw::loadPostProcess() { W3DModelDraw::loadPostProcess(); }
+void W3DTruckDraw::createEmitters() {}
+void W3DTruckDraw::tossEmitters() {}
+void W3DTruckDraw::enableEmitters(Bool) {}
+void W3DTruckDraw::updateBones() {}
+#endif
+
 //-------------------------------------------------------------------------------------------------
 W3DTruckDrawModuleData::W3DTruckDrawModuleData() 
 {

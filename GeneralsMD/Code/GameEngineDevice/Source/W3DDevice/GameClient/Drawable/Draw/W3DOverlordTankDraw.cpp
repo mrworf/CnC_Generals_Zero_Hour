@@ -36,6 +36,19 @@
 #include "GameLogic/Module/ContainModule.h"
 #include "W3DDevice/GameClient/Module/W3DOverlordTankDraw.h"
 
+#if defined(ZH_W3D_HEADLESS_INSTANCE)
+W3DOverlordTankDraw::W3DOverlordTankDraw(Thing *thing, const ModuleData *moduleData) :
+	W3DTankDraw(thing, moduleData)
+{
+}
+W3DOverlordTankDraw::~W3DOverlordTankDraw() = default;
+void W3DOverlordTankDraw::setHidden(Bool hidden) { W3DTankDraw::setHidden(hidden); }
+void W3DOverlordTankDraw::doDrawModule(const Matrix3D *transform) { W3DTankDraw::doDrawModule(transform); }
+void W3DOverlordTankDraw::crc(Xfer *xfer) { W3DTankDraw::crc(xfer); }
+void W3DOverlordTankDraw::xfer(Xfer *xfer) { W3DTankDraw::xfer(xfer); }
+void W3DOverlordTankDraw::loadPostProcess() { W3DTankDraw::loadPostProcess(); }
+#endif
+
 //-------------------------------------------------------------------------------------------------
 W3DOverlordTankDrawModuleData::W3DOverlordTankDrawModuleData()
 {

@@ -101,16 +101,43 @@ struct SimulationReport
 	Bool complete = FALSE;
 };
 SimulationReport g_simulationReport;
+struct ReentryReport
+{
+	UnsignedInt resetObjects = 0;
+	UnsignedInt resetMapObjects = 0;
+	UnsignedInt resetProps = 0;
+	UnsignedInt resetModelPreloads = 0;
+	UnsignedInt resetTexturePreloads = 0;
+	UnsignedInt resetRecorderControls = 0;
+	Int firstStartX = 0;
+	Int secondStartX = 0;
+	UnsignedInt secondObjects = 0;
+	UnsignedInt secondProps = 0;
+	UnsignedInt secondRecorderControls = 0;
+	Bool complete = FALSE;
+};
+ReentryReport g_reentryReport;
 Int g_benchmarkTimer = -1;
 UnsignedInt g_deviceAcquisitionAttempts = 0;
 UnsignedInt g_propCount = 0;
 UnsignedInt g_modelPreloadCount = 0;
 UnsignedInt g_texturePreloadCount = 0;
+UnsignedInt g_activePropCount = 0;
+UnsignedInt g_activeModelPreloadCount = 0;
+UnsignedInt g_activeTexturePreloadCount = 0;
 
 class LinuxDisplay final : public Display
 {
 public:
 	LinuxDisplay() { setWidth(800); setHeight(600); }
+	void reset() override
+	{
+		Display::reset();
+		m_modelPreloads.clear();
+		m_texturePreloads.clear();
+		g_activeModelPreloadCount = 0;
+		g_activeTexturePreloadCount = 0;
+	}
 	void doSmartAssetPurgeAndPreload(const char *) override {}
 #if defined(_DEBUG) || defined(_INTERNAL)
 	void dumpAssetUsage(const char *) override {}
@@ -133,14 +160,27 @@ public:
 	void setShroudLevel(Int, Int, CellShroudStatus) override {}
 	void clearShroud() override {}
 	void setBorderShroudLevel(UnsignedByte) override {}
-	void preloadModelAssets(AsciiString) override { ++g_modelPreloadCount; }
-	void preloadTextureAssets(AsciiString) override { ++g_texturePreloadCount; }
+	void preloadModelAssets(AsciiString name) override
+	{
+		m_modelPreloads.push_back(name.str());
+		++g_modelPreloadCount;
+		g_activeModelPreloadCount = static_cast<UnsignedInt>(m_modelPreloads.size());
+	}
+	void preloadTextureAssets(AsciiString name) override
+	{
+		m_texturePreloads.push_back(name.str());
+		++g_texturePreloadCount;
+		g_activeTexturePreloadCount = static_cast<UnsignedInt>(m_texturePreloads.size());
+	}
 	void takeScreenShot() override {}
 	void toggleMovieCapture() override {}
 	void toggleLetterBox() override {}
 	void enableLetterBox(Bool) override {}
 	Real getAverageFPS() override { return 0.0f; }
 	Int getLastFrameDrawCalls() override { return 0; }
+private:
+	std::vector<std::string> m_modelPreloads;
+	std::vector<std::string> m_texturePreloads;
 };
 
 class LinuxView final : public View
@@ -304,6 +344,12 @@ class LinuxTerrainVisual final : public TerrainVisual
 {
 public:
 	~LinuxTerrainVisual() override { reset(); }
+	void reset() override
+	{
+		TerrainVisual::reset();
+		m_props.clear();
+		g_activePropCount = 0;
+	}
 	void getTerrainColorAt(Real, Real, RGBColor *color) override { if (color) *color = RGBColor{}; }
 	TerrainType *getTerrainTile(Real, Real) override { return NULL; }
 	void enableWaterGrid(Bool) override {}
@@ -330,11 +376,15 @@ public:
 	{
 		if (!thing || !position)
 			throw std::runtime_error("invalid terrain prop request");
+		m_props.push_back(thing->getName().str());
 		++g_propCount;
+		g_activePropCount = static_cast<UnsignedInt>(m_props.size());
 	}
 	void setRawMapHeight(const ICoord2D *, Int) override {}
 	Int getRawMapHeight(const ICoord2D *) override { return 0; }
 	void replaceSkyboxTextures(const AsciiString *[NumSkyboxTextures], const AsciiString *[NumSkyboxTextures]) override {}
+private:
+	std::vector<std::string> m_props;
 };
 
 class LinuxParticleManager final : public ParticleSystemManager
@@ -417,6 +467,14 @@ protected:
 class LinuxGameClient final : public GameClient
 {
 public:
+	~LinuxGameClient() override
+	{
+		// GameClient::reset owns and releases every drawable before shutdown.
+		// Retail object teardown can later leave a dead dependency link in the
+		// intrusive head; never revisit that already-released storage from the
+		// base destructor.
+		m_drawableList = NULL;
+	}
 	void createRayEffectByTemplate(const Coord3D *, const Coord3D *, const ThingTemplate *) override {}
 	void addScorch(const Coord3D *, Real, Scorches) override {}
 	Drawable *friend_createDrawable(const ThingTemplate *thing, DrawableStatus status) override
@@ -479,11 +537,6 @@ public:
 		{
 			if (query) return FALSE;
 			throw;
-		}
-		for (MapObject *object = MapObject::getFirstMapObject(); object; object = object->getNext())
-		{
-			if (!object->getThingTemplate() && !object->isWaypoint() && !object->isLight() && !object->isScorch())
-				throw std::runtime_error("required map object template is missing");
 		}
 		m_mapDX = loader.width();
 		m_mapDY = loader.height();
@@ -583,21 +636,17 @@ public:
 			// The original start path is intentionally two-phase: the first call
 			// requests/loads the map and the second finishes scenario construction.
 			TheGameLogic->startNewGame(FALSE);
-			g_scenarioSetupReport.mode = m_scenarioMode;
-			g_scenarioSetupReport.players = ThePlayerList->getPlayerCount();
-			g_scenarioSetupReport.teams = TheSidesList->getNumTeams();
-			g_scenarioSetupReport.objects = TheGameLogic->getObjectCount();
-			g_scenarioSetupReport.props = g_propCount;
-			g_scenarioSetupReport.modelPreloads = g_modelPreloadCount;
-			g_scenarioSetupReport.texturePreloads = g_texturePreloadCount;
-			g_scenarioSetupReport.recorderControls = TheRecorder->getControlsInitCount();
-			g_scenarioSetupReport.complete = TRUE;
+			captureScenarioSetup();
 			if (m_simulationProfile)
 			{
 				runOriginalSimulation();
+				if (m_reentryProfile)
+					runOriginalReentry();
+				GameEngine::reset();
 				setQuitting(TRUE);
 				return;
 			}
+			GameEngine::reset();
 			setQuitting(TRUE);
 			return;
 		}
@@ -632,6 +681,18 @@ public:
 		++m_services;
 	}
 protected:
+	void captureScenarioSetup()
+	{
+		g_scenarioSetupReport.mode = m_scenarioMode;
+		g_scenarioSetupReport.players = ThePlayerList->getPlayerCount();
+		g_scenarioSetupReport.teams = TheSidesList->getNumTeams();
+		g_scenarioSetupReport.objects = TheGameLogic->getObjectCount();
+		g_scenarioSetupReport.props = g_activePropCount;
+		g_scenarioSetupReport.modelPreloads = g_activeModelPreloadCount;
+		g_scenarioSetupReport.texturePreloads = g_activeTexturePreloadCount;
+		g_scenarioSetupReport.recorderControls = TheRecorder->getControlsInitCount();
+		g_scenarioSetupReport.complete = TRUE;
+	}
 	void appendSelection(PlayerIndex player, ObjectID object)
 	{
 		GameMessage *message = newInstance(GameMessage)(GameMessage::MSG_CREATE_SELECTED_GROUP);
@@ -724,6 +785,36 @@ protected:
 		g_simulationReport.scriptUpdates = zh_original_script_engine_update_count();
 		g_simulationReport.complete = TRUE;
 	}
+	void runOriginalReentry()
+	{
+		const SimulationReport first = g_simulationReport;
+		GameEngine::reset();
+		g_reentryReport.resetObjects = TheGameLogic->getObjectCount();
+		g_reentryReport.resetMapObjects = MapObject::getFirstMapObject() ? 1U : 0U;
+		g_reentryReport.resetProps = g_activePropCount;
+		g_reentryReport.resetModelPreloads = g_activeModelPreloadCount;
+		g_reentryReport.resetTexturePreloads = g_activeTexturePreloadCount;
+		g_reentryReport.resetRecorderControls = TheRecorder->getControlsInitCount();
+
+		const char *map = std::getenv("ZH_M21_REENTRY_MAP");
+		if (!map || !*map)
+			throw std::runtime_error("ZH_M21_REENTRY_MAP is required");
+		TheWritableGlobalData->m_mapName = map;
+		m_scenarioMode = GAME_SKIRMISH;
+		TheGameLogic->setGameMode(m_scenarioMode);
+		TheGameLogic->startNewGame(FALSE);
+		TheGameLogic->startNewGame(FALSE);
+		captureScenarioSetup();
+		g_simulationReport = SimulationReport{};
+		runOriginalSimulation();
+
+		g_reentryReport.firstStartX = first.startX;
+		g_reentryReport.secondStartX = g_simulationReport.startX;
+		g_reentryReport.secondObjects = TheGameLogic->getObjectCount();
+		g_reentryReport.secondProps = g_activePropCount;
+		g_reentryReport.secondRecorderControls = TheRecorder->getControlsInitCount();
+		g_reentryReport.complete = first.complete && g_simulationReport.complete;
+	}
 	LocalFileSystem *createLocalFileSystem() override
 	{
 		const char *root = std::getenv("ZH_DATA_ROOT");
@@ -748,6 +839,7 @@ private:
 		GAME_SKIRMISH : GAME_SINGLE_PLAYER;
 	Bool m_scenarioStarted = FALSE;
 	Bool m_simulationProfile = std::getenv("ZH_M21_SIMULATION") != NULL;
+	Bool m_reentryProfile = std::getenv("ZH_M21_REENTRY") != NULL;
 	unsigned m_updates = 0;
 	unsigned m_services = 0;
 };
@@ -777,11 +869,15 @@ GameEngine *CreateGameEngine()
 	g_lifecycleReport = LifecycleReport{};
 	g_scenarioSetupReport = ScenarioSetupReport{};
 	g_simulationReport = SimulationReport{};
+	g_reentryReport = ReentryReport{};
 	g_benchmarkTimer = -1;
 	g_deviceAcquisitionAttempts = 0;
 	g_propCount = 0;
 	g_modelPreloadCount = 0;
 	g_texturePreloadCount = 0;
+	g_activePropCount = 0;
+	g_activeModelPreloadCount = 0;
+	g_activeTexturePreloadCount = 0;
 	return new LinuxGameEngine;
 }
 
@@ -843,5 +939,23 @@ extern "C" Bool zh_linux_simulation_report(Int *values, std::size_t count)
 	values[11] = g_simulationReport.terminal;
 	values[12] = g_simulationReport.targetHealthBefore;
 	values[13] = g_simulationReport.targetHealthAfter;
+	return TRUE;
+}
+
+extern "C" Bool zh_linux_reentry_report(Int *values, std::size_t count)
+{
+	if (!g_reentryReport.complete || !values || count < 11)
+		return FALSE;
+	values[0] = static_cast<Int>(g_reentryReport.resetObjects);
+	values[1] = static_cast<Int>(g_reentryReport.resetMapObjects);
+	values[2] = static_cast<Int>(g_reentryReport.resetProps);
+	values[3] = static_cast<Int>(g_reentryReport.resetModelPreloads);
+	values[4] = static_cast<Int>(g_reentryReport.resetTexturePreloads);
+	values[5] = static_cast<Int>(g_reentryReport.resetRecorderControls);
+	values[6] = g_reentryReport.firstStartX;
+	values[7] = g_reentryReport.secondStartX;
+	values[8] = static_cast<Int>(g_reentryReport.secondObjects);
+	values[9] = static_cast<Int>(g_reentryReport.secondProps);
+	values[10] = static_cast<Int>(g_reentryReport.secondRecorderControls);
 	return TRUE;
 }

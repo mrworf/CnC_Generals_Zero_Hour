@@ -82,7 +82,11 @@ if(ZH_BUILD_TESTS)
   target_compile_definitions(zh_original_process PUBLIC ZH_ORIGINAL_RUNTIME_TEST_HOOKS=1)
 endif()
 if(ZH_ENABLE_UBSAN)
-  target_compile_options(zh_build_options INTERFACE -fsanitize=undefined -fno-omit-frame-pointer)
+  # The Linux runtime intentionally excludes retired platform/service provider
+  # key functions. UBSan's vptr mode requires their RTTI even when those device
+  # edges are never instantiated; keep every executable undefined-behavior
+  # check while excluding only that non-linkable provider-identity check.
+  target_compile_options(zh_build_options INTERFACE -fsanitize=undefined -fno-sanitize=vptr -fno-omit-frame-pointer)
   target_link_options(zh_build_options INTERFACE -fsanitize=undefined)
 endif()
 
@@ -465,8 +469,10 @@ add_library(zh_original_config_providers STATIC
   GeneralsMD/Code/GameEngine/Source/Common/System/ObjectStatusTypes.cpp
   GeneralsMD/Code/GameEngine/Source/Common/System/Radar.cpp
   GeneralsMD/Code/GameEngine/Source/Common/Thing/Module.cpp
+  GeneralsMD/Code/GameEngine/Source/Common/Thing/DrawModule.cpp
   GeneralsMD/Code/GameEngine/Source/Common/Thing/ModuleFactory.cpp
   GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/Common/Thing/W3DModuleFactory.cpp
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DDefaultDraw.cpp
   GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DModelDraw.cpp
   GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DDependencyModelDraw.cpp
   GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DLaserDraw.cpp
@@ -610,6 +616,9 @@ target_sources(zh_original_config_providers PRIVATE
   GeneralsMD/Code/GameEngine/Source/GameClient/Drawable/Update/SwayClientUpdate.cpp
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowGlobal.cpp)
 set_source_files_properties(
+  GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DDefaultDraw.cpp
+  PROPERTIES COMPILE_DEFINITIONS "ZH_W3D_HEADLESS_INSTANCE")
+set_source_files_properties(
   GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupPlayerInfo.cpp
   PROPERTIES COMPILE_DEFINITIONS ZH_BATTLE_HONOR_HELPERS_ONLY)
 set_source_files_properties(
@@ -624,6 +633,8 @@ foreach(config_target zh_original_config_spine zh_original_config_providers)
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/Compression"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
@@ -647,7 +658,7 @@ set_source_files_properties(
   GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTankTruckDraw.cpp
   GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTreeDraw.cpp
   GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DTruckDraw.cpp
-  PROPERTIES COMPILE_DEFINITIONS "BRUTAL_TIMING_HACK;ZH_W3D_SCHEMA_ONLY")
+  PROPERTIES COMPILE_DEFINITIONS "BRUTAL_TIMING_HACK;ZH_W3D_SCHEMA_ONLY;ZH_W3D_HEADLESS_INSTANCE")
 
 add_library(zh_persistence STATIC src/persistence/save.cpp src/persistence/replay.cpp)
 target_include_directories(zh_persistence PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -1122,6 +1133,25 @@ if(ZH_BUILD_TESTS)
     --required-symbol Drawable)
   set_tests_properties(original_simulation_setup_provider_removal PROPERTIES
     LABELS "original-simulation;source-identity")
+  add_test(NAME original_simulation_draw_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target zh_original_main
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-main.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member W3DModelDraw.cpp.o
+    --required-symbol W3DModelDraw)
+  set_tests_properties(original_simulation_draw_provider_removal PROPERTIES
+    LABELS "original-simulation;source-identity")
+  if(ZH_ENABLE_M20_RETAIL_TESTS)
+    add_test(NAME original_simulation_retail COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_simulation/test_retail_scenarios.py"
+      --executable "$<TARGET_FILE:zh_original_main>"
+      --zh-data-root "${ZH_M20_RETAIL_ZH_DATA}"
+      --generals-data-root "${ZH_M20_RETAIL_GENERALS_DATA}")
+    set_tests_properties(original_simulation_retail PROPERTIES
+      LABELS "original-simulation;retail;source-identity" TIMEOUT 300)
+  endif()
   add_test(NAME original_simulation_behavior COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_simulation/test_simulation_behavior.py"
     --executable "$<TARGET_FILE:zh_original_main>"
@@ -1144,6 +1174,12 @@ if(ZH_BUILD_TESTS)
     --required-symbol logicMessageDispatcher)
   set_tests_properties(original_simulation_behavior_provider_removal PROPERTIES
     LABELS "original-simulation;source-identity")
+  add_test(NAME original_simulation_reentry COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_simulation/test_scenario_reentry.py"
+    --executable "$<TARGET_FILE:zh_original_main>"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}")
+  set_tests_properties(original_simulation_reentry PROPERTIES
+    LABELS "original-simulation;source-identity" TIMEOUT 60)
   add_executable(original_lifecycle_subsystem_tests
     tests/original_lifecycle/test_subsystem_lifecycle.cpp)
   target_include_directories(original_lifecycle_subsystem_tests PRIVATE

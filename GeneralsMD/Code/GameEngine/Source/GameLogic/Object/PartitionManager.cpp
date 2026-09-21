@@ -1755,11 +1755,15 @@ void PartitionData::addSubPixToCoverage(PartitionCell *cell)
 	if (cell)
 	{			
 		// see if we already have a coi for this cell.
-		CellAndObjectIntersection *coi = m_coiArray;
 		CellAndObjectIntersection *coiToUse = NULL;
-		for (Int i = (std::min)(m_coiInUseCount,m_coiArrayCount); i; --i, ++coi)
+		// Search the cell's occupants instead of rescanning every cell already
+		// covered by this object. Both lists identify the same unique (cell,
+		// module) intersection, but the local list avoids quadratic setup for
+		// large retail geometry footprints.
+		for (CellAndObjectIntersection *coi = cell->getFirstCoiInCell();
+			coi; coi = coi->getNextCoi())
 		{
-			if (coi->getCell() == cell)
+			if (coi->getModule() == this)
 			{
 				coiToUse = coi;
 				break;

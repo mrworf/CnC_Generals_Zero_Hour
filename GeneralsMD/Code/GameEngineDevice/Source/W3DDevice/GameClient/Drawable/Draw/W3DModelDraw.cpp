@@ -48,6 +48,7 @@
 #include "Common/GameState.h"
 #include "Common/QuickTrig.h"
 #include "GameClient/Drawable.h"
+#include "GameClient/Display.h"
 #include "GameClient/FXList.h"
 #include "GameClient/Shadow.h"
 #include "GameLogic/GameLogic.h"		// for real-time frame
@@ -396,7 +397,7 @@ W3DAnimationInfo::~W3DAnimationInfo()
 }
 
 //-------------------------------------------------------------------------------------------------
-#ifndef ZH_W3D_SCHEMA_ONLY
+#if !defined(ZH_W3D_SCHEMA_ONLY) || defined(ZH_W3D_HEADLESS_INSTANCE)
 void ModelConditionInfo::preloadAssets( TimeOfDay timeOfDay, Real scale )
 {
 	// load this asset
@@ -1138,7 +1139,7 @@ W3DModelDrawModuleData::~W3DModelDrawModuleData()
 }
 
 //-------------------------------------------------------------------------------------------------
-#ifndef ZH_W3D_SCHEMA_ONLY
+#if !defined(ZH_W3D_SCHEMA_ONLY) || defined(ZH_W3D_HEADLESS_INSTANCE)
 void W3DModelDrawModuleData::preloadAssets( TimeOfDay timeOfDay, Real scale ) const
 {
 
@@ -4347,3 +4348,94 @@ void W3DModelDrawModuleData::xfer( Xfer *x )
 void W3DModelDrawModuleData::loadPostProcess( void )
 {
 }
+
+#if defined(ZH_W3D_HEADLESS_INSTANCE)
+// The Linux simulation target preserves the concrete original W3DModelDraw
+// object, parsed ModuleData, and CPU state. Operations that require a physical
+// render object fail closed instead of manufacturing model/bone/shadow output.
+W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData *moduleData) : DrawModule(thing, moduleData)
+{
+	m_animationMode = 1; // RenderObjClass::ANIM_MODE_LOOP
+	m_hideHeadlights = TRUE;
+	m_pauseAnimation = FALSE;
+	m_curState = NULL;
+	m_hexColor = 0;
+	m_renderObject = NULL;
+	m_shadow = NULL;
+	m_shadowEnabled = TRUE;
+	m_terrainDecal = NULL;
+	m_trackRenderObject = NULL;
+	m_whichAnimInCurState = -1;
+	m_nextState = NULL;
+	m_nextStateAnimLoopDuration = NO_NEXT_DURATION;
+	for (Int i = 0; i < WEAPONSLOT_COUNT; ++i)
+		m_weaponRecoilInfoVec[i].clear();
+	m_needRecalcBoneParticleSystems = FALSE;
+	m_fullyObscuredByShroud = FALSE;
+	ModelConditionFlags empty;
+	m_curState = getW3DModelDrawModuleData()->findBestInfo(empty);
+	if (!m_curState)
+		throw INI_INVALID_DATA;
+}
+
+W3DModelDraw::~W3DModelDraw() = default;
+void W3DModelDraw::preloadAssets(TimeOfDay timeOfDay)
+{
+	const W3DModelDrawModuleData *modData = getW3DModelDrawModuleData();
+	if (modData)
+		modData->preloadAssets(timeOfDay, getDrawable()->getScale());
+}
+void W3DModelDraw::doDrawModule(const Matrix3D *) { throw ERROR_INVALID_D3D; }
+void W3DModelDraw::setShadowsEnabled(Bool enabled) { m_shadowEnabled = enabled; }
+void W3DModelDraw::releaseShadows() { m_shadow = NULL; m_terrainDecal = NULL; }
+void W3DModelDraw::allocateShadows() { throw ERROR_INVALID_D3D; }
+#if defined(_DEBUG) || defined(_INTERNAL)
+void W3DModelDraw::getRenderCost(RenderCost &) const {}
+void W3DModelDraw::getRenderCostRecursive(RenderCost &, RenderObjClass *) const {}
+#endif
+void W3DModelDraw::setFullyObscuredByShroud(Bool value) { m_fullyObscuredByShroud = value; }
+void W3DModelDraw::setTerrainDecal(TerrainDecalType) { throw ERROR_INVALID_D3D; }
+Bool W3DModelDraw::isVisible() const { return FALSE; }
+void W3DModelDraw::reactToTransformChange(const Matrix3D *, const Coord3D *, Real) {}
+Bool W3DModelDraw::clientOnly_getRenderObjInfo(Coord3D *, Real *, Matrix3D *) const { return FALSE; }
+Bool W3DModelDraw::clientOnly_getRenderObjBoundBox(OBBoxClass *) const { return FALSE; }
+Bool W3DModelDraw::clientOnly_getRenderObjBoneTransform(const AsciiString &, Matrix3D *) const { return FALSE; }
+Int W3DModelDraw::getPristineBonePositionsForConditionState(const ModelConditionFlags &, const char *, Int, Coord3D *, Matrix3D *, Int) const { return 0; }
+Int W3DModelDraw::getCurrentBonePositions(const char *, Int, Coord3D *, Matrix3D *, Int) const { return 0; }
+Bool W3DModelDraw::getCurrentWorldspaceClientBonePositions(const char *, Matrix3D &) const { return FALSE; }
+Bool W3DModelDraw::getProjectileLaunchOffset(const ModelConditionFlags &, WeaponSlotType, Int, Matrix3D *, WhichTurretType, Coord3D *, Coord3D *) const { return FALSE; }
+void W3DModelDraw::updateProjectileClipStatus(UnsignedInt, UnsignedInt, WeaponSlotType) {}
+void W3DModelDraw::updateDrawModuleSupplyStatus(Int, Int) {}
+void W3DModelDraw::setHidden(Bool) {}
+void W3DModelDraw::replaceModelConditionState(const ModelConditionFlags& conditions)
+{
+	const ModelConditionInfo *state = findBestInfo(conditions);
+	if (state) m_curState = state;
+}
+void W3DModelDraw::replaceIndicatorColor(Color color) { m_hexColor = color; }
+Bool W3DModelDraw::handleWeaponFireFX(WeaponSlotType, Int, const FXList *, Real, const Coord3D *, Real) { return FALSE; }
+Int W3DModelDraw::getBarrelCount(WeaponSlotType) const { return 0; }
+void W3DModelDraw::setSelectable(Bool) {}
+void W3DModelDraw::setAnimationLoopDuration(UnsignedInt) {}
+void W3DModelDraw::setAnimationCompletionTime(UnsignedInt) {}
+void W3DModelDraw::setPauseAnimation(Bool pause) { m_pauseAnimation = pause; }
+void W3DModelDraw::setAnimationFrame(Int) { throw ERROR_INVALID_D3D; }
+void W3DModelDraw::updateSubObjects() {}
+void W3DModelDraw::showSubObject(const AsciiString &, Bool) { throw ERROR_INVALID_D3D; }
+Bool W3DModelDraw::updateBonesForClientParticleSystems() { return FALSE; }
+void W3DModelDraw::onDrawableBoundToObject()
+{
+	// Physical time/weather asset validation is deferred until a renderer owns
+	// the corresponding model resources. Parsed condition state remains intact.
+}
+void W3DModelDraw::setTerrainDecalSize(Real, Real) { throw ERROR_INVALID_D3D; }
+void W3DModelDraw::setTerrainDecalOpacity(Real) { throw ERROR_INVALID_D3D; }
+const ModelConditionInfo *W3DModelDraw::findBestInfo(const ModelConditionFlags& conditions) const
+{
+	return getW3DModelDrawModuleData()->findBestInfo(conditions);
+}
+void W3DModelDraw::adjustTransformMtx(Matrix3D&) const {}
+void W3DModelDraw::crc(Xfer *xfer) { DrawModule::crc(xfer); }
+void W3DModelDraw::xfer(Xfer *xfer) { DrawModule::xfer(xfer); }
+void W3DModelDraw::loadPostProcess() { DrawModule::loadPostProcess(); }
+#endif

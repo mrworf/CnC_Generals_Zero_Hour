@@ -50,3 +50,10 @@ Expected: reset/teardown corrections, cumulative tests and scripts, source class
 ## Commit boundary
 
 Commit lifecycle corrections, cumulative tests, final evidence, and completed plan status as the final M21 slice commit. Milestone and workflow status remain parent-orchestrator owned.
+
+## Completion
+
+Complete in this slice commit. The four-preset matrix, focused strict sanitizer
+run, owned arbitrary-CWD lifecycle, provider-removal controls, recursive
+read-only retail gate, and cumulative acceptance are recorded in
+`evidence/qa/cnc-generals-zero-hour/M21-original-simulation.md`.

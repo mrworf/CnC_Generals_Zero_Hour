@@ -78,7 +78,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
-#ifndef ZH_W3D_SCHEMA_ONLY
+#if !defined(ZH_W3D_SCHEMA_ONLY) || defined(ZH_W3D_HEADLESS_INSTANCE)
 class W3DTankTruckDraw : public W3DModelDraw
 {
 
@@ -133,11 +133,24 @@ protected:
 	enum TreadType { TREAD_LEFT, TREAD_RIGHT, TREAD_MIDDLE };	//types of treads for different vehicles
 	enum {MAX_TREADS_PER_TANK=4};
 
+#if defined(ZH_W3D_HEADLESS_INSTANCE)
+	struct MaterialOverrideState
+	{
+		MaterialOverrideState() : Struct_ID(0x01234567), customUVOffset(0, 0) {}
+		Int Struct_ID;
+		Vector2 customUVOffset;
+	};
+#endif
+
 	struct TreadObjectInfo
 	{
 		RenderObjClass	*m_robj;	///<sub-object for tread
 		TreadType	m_type;			///<kind of tread
+#if defined(ZH_W3D_HEADLESS_INSTANCE)
+		MaterialOverrideState m_materialSettings;
+#else
 		RenderObjClass::Material_Override m_materialSettings;	///<used to set current uv scroll amount.
+#endif
 	};
 
 	TreadObjectInfo m_treads[MAX_TREADS_PER_TANK];

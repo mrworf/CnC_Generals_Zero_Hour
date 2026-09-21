@@ -337,7 +337,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
-#ifndef ZH_W3D_SCHEMA_ONLY
+#if !defined(ZH_W3D_SCHEMA_ONLY) || defined(ZH_W3D_HEADLESS_INSTANCE)
 class W3DModelDraw : public DrawModule, public ObjectDrawInterface
 {
 

@@ -80,6 +80,7 @@ class VictoryConditions : public VictoryConditionsInterface
 {
 public:
 	VictoryConditions();
+	~VictoryConditions() override;
 	
 	void init( void );
 	void reset( void );
@@ -117,6 +118,15 @@ VictoryConditionsInterface * createVictoryConditions( void )
 VictoryConditions::VictoryConditions()
 {
 	reset();
+}
+
+// The subsystem list destroys later-created systems first. Clear the global
+// before PlayerList/Team teardown can query victory state through a stale
+// interface while removing the last power-producing objects.
+VictoryConditions::~VictoryConditions()
+{
+	if (TheVictoryConditions == this)
+		TheVictoryConditions = NULL;
 }
 	
 //-------------------------------------------------------------------------------------------------
@@ -366,5 +376,4 @@ Bool VictoryConditions::isLocalDefeat( void )
 
 	return (m_localPlayerDefeated);
 }
-
 

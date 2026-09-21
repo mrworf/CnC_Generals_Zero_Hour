@@ -53,6 +53,44 @@
 #endif
 
 //#define SHOW_TANK_DEBRIS
+
+#if defined(ZH_W3D_HEADLESS_INSTANCE)
+W3DTankTruckDraw::W3DTankTruckDraw(Thing *thing, const ModuleData *moduleData) :
+	W3DModelDraw(thing, moduleData),
+	m_effectsInitialized(false), m_wasAirborne(false), m_isPowersliding(false),
+	m_dustEffect(NULL), m_dirtEffect(NULL), m_powerslideEffect(NULL),
+	m_frontWheelRotation(0), m_rearWheelRotation(0),
+	m_midFrontWheelRotation(0), m_midRearWheelRotation(0),
+	m_frontLeftTireBone(0), m_frontRightTireBone(0),
+	m_rearLeftTireBone(0), m_rearRightTireBone(0),
+	m_midFrontLeftTireBone(0), m_midFrontRightTireBone(0),
+	m_midRearLeftTireBone(0), m_midRearRightTireBone(0),
+	m_treadDebrisLeft(NULL), m_treadDebrisRight(NULL), m_treadCount(0),
+	m_prevRenderObj(NULL)
+{
+	m_landingSound = *(thing->getTemplate()->getPerUnitSound("TruckLandingSound"));
+	m_powerslideSound = *(thing->getTemplate()->getPerUnitSound("TruckPowerslideSound"));
+	for (Int i = 0; i < MAX_TREADS_PER_TANK; ++i)
+		m_treads[i].m_robj = NULL;
+}
+W3DTankTruckDraw::~W3DTankTruckDraw() = default;
+void W3DTankTruckDraw::setHidden(Bool hidden) { W3DModelDraw::setHidden(hidden); }
+void W3DTankTruckDraw::doDrawModule(const Matrix3D *transform) { W3DModelDraw::doDrawModule(transform); }
+void W3DTankTruckDraw::setFullyObscuredByShroud(Bool obscured) { W3DModelDraw::setFullyObscuredByShroud(obscured); }
+void W3DTankTruckDraw::onRenderObjRecreated() {}
+void W3DTankTruckDraw::crc(Xfer *xfer) { W3DModelDraw::crc(xfer); }
+void W3DTankTruckDraw::xfer(Xfer *xfer) { W3DModelDraw::xfer(xfer); }
+void W3DTankTruckDraw::loadPostProcess() { W3DModelDraw::loadPostProcess(); }
+void W3DTankTruckDraw::createEmitters() {}
+void W3DTankTruckDraw::tossEmitters() {}
+void W3DTankTruckDraw::enableEmitters(Bool) {}
+void W3DTankTruckDraw::updateBones() {}
+void W3DTankTruckDraw::startMoveDebris() {}
+void W3DTankTruckDraw::stopMoveDebris() {}
+void W3DTankTruckDraw::updateTreadObjects() {}
+void W3DTankTruckDraw::updateTreadPositions(Real) {}
+#endif
+
 //-------------------------------------------------------------------------------------------------
 W3DTankTruckDrawModuleData::W3DTankTruckDrawModuleData():
 	m_treadDebrisNameLeft("TrackDebrisDirtLeft"),

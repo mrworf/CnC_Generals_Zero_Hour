@@ -75,7 +75,7 @@ int main()
 		AsciiString("missing")) != NULL)
 		return fail("unknown provider was accepted");
 	bool rejected = false;
-	try { factory.newModule(NULL, AsciiString("W3DDefaultDraw"), NULL, MODULETYPE_DRAW); }
+	try { factory.newModule(NULL, AsciiString("W3DDebrisDraw"), NULL, MODULETYPE_DRAW); }
 	catch (ErrorCode error) { rejected = error == ERROR_INVALID_D3D; }
 	if (!rejected)
 		return fail("physical draw instance did not fail closed");

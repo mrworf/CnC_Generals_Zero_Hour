@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 
+#include "PreRTS.h"
 #include "Common/FileSystem.h"	// this is only here to pull in LOAD_TEST_ASSETS
 #include "Common/GlobalData.h"
 #include "Common/ThingTemplate.h"
@@ -39,21 +40,25 @@
 #include "GameClient/FXList.h"
 #include "GameLogic/TerrainLogic.h"
 
+#if !defined(ZH_W3D_HEADLESS_INSTANCE)
 #include "WW3D2/HAnim.h"
 #include "WW3D2/HLod.h"
 #include "WW3D2/RendObj.h"
+#endif
 #include "W3DDevice/GameClient/Module/W3DDefaultDraw.h"
+#if !defined(ZH_W3D_HEADLESS_INSTANCE)
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
+#endif
 
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 W3DDefaultDraw::W3DDefaultDraw(Thing *thing, const ModuleData* moduleData) : DrawModule(thing, moduleData)
 {
-#ifdef LOAD_TEST_ASSETS
+#if defined(LOAD_TEST_ASSETS) && !defined(ZH_W3D_HEADLESS_INSTANCE)
 	m_renderObject = NULL;
 	m_shadow = NULL;
 	if (!getDrawable()->getTemplate()->getLTAName().isEmpty())
@@ -95,8 +100,10 @@ void W3DDefaultDraw::reactToTransformChange( const Matrix3D *oldMtx,
 																						 Real oldAngle )
 {
 
+#if defined(LOAD_TEST_ASSETS) && !defined(ZH_W3D_HEADLESS_INSTANCE)
 	if( m_renderObject )
 		m_renderObject->Set_Transform( *getDrawable()->getTransformMatrix() );
+#endif
 
 }
 
@@ -104,7 +111,7 @@ void W3DDefaultDraw::reactToTransformChange( const Matrix3D *oldMtx,
 //-------------------------------------------------------------------------------------------------
 W3DDefaultDraw::~W3DDefaultDraw(void)
 {
-#ifdef LOAD_TEST_ASSETS
+#if defined(LOAD_TEST_ASSETS) && !defined(ZH_W3D_HEADLESS_INSTANCE)
 	if (TheW3DShadowManager && m_shadow)
 	{	
 		TheW3DShadowManager->removeShadow(m_shadow);
@@ -122,7 +129,7 @@ W3DDefaultDraw::~W3DDefaultDraw(void)
 //-------------------------------------------------------------------------------------------------
 void W3DDefaultDraw::setShadowsEnabled(Bool enable)
 {
-#ifdef LOAD_TEST_ASSETS
+#if defined(LOAD_TEST_ASSETS) && !defined(ZH_W3D_HEADLESS_INSTANCE)
 	if (m_shadow)
 		m_shadow->enableShadowRender(enable);
 #endif
@@ -131,7 +138,7 @@ void W3DDefaultDraw::setShadowsEnabled(Bool enable)
 //-------------------------------------------------------------------------------------------------
 void W3DDefaultDraw::setFullyObscuredByShroud(Bool fullyObscured)
 {
-#ifdef LOAD_TEST_ASSETS
+#if defined(LOAD_TEST_ASSETS) && !defined(ZH_W3D_HEADLESS_INSTANCE)
 	if (m_shadow)
 		m_shadow->enableShadowInvisible(fullyObscured);
 #endif
@@ -140,7 +147,7 @@ void W3DDefaultDraw::setFullyObscuredByShroud(Bool fullyObscured)
 //-------------------------------------------------------------------------------------------------
 void W3DDefaultDraw::doDrawModule(const Matrix3D* transformMtx)
 {
-#ifdef LOAD_TEST_ASSETS
+#if defined(LOAD_TEST_ASSETS) && !defined(ZH_W3D_HEADLESS_INSTANCE)
 	if(m_renderObject)
 	{
 		Matrix3D scaledTransform;

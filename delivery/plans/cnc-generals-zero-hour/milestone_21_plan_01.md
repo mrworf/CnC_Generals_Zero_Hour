@@ -62,8 +62,8 @@ The production Linux original-engine entry loads project-owned and read-only ret
 |---|---|---|---|---|---|---|
 | 01 | [slice 01](milestone_21_plan_01_slice_01.md) | Original CPU map/chunk dispatch publishes map objects, world, terrain, sides, and scripts transactionally | M20 | complete | `8e43e63` | `evidence/qa/cnc-generals-zero-hour/M21-plan01-slice01-original-map.md` |
 | 02 | [slice 02](milestone_21_plan_01_slice_02.md) | Production mission/skirmish entry creates original players, objects, and reached client CPU state | 01 | complete | `d3cff5f` | `evidence/qa/cnc-generals-zero-hour/M21-plan01-slice02-scenario-setup.md` |
-| 03 | [slice 03](milestone_21_plan_01_slice_03.md) | Original commands, updates, scripts, AI, and victory produce deterministic checkpoints | 02 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M21-plan01-slice03-original-simulation.md` |
-| 04 | [slice 04](milestone_21_plan_01_slice_04.md) | Return/reset/re-entry, identity, retail gate, and cumulative milestone acceptance pass | 03 | pending | | |
+| 03 | [slice 03](milestone_21_plan_01_slice_03.md) | Original commands, updates, scripts, AI, and victory produce deterministic checkpoints | 02 | complete | `ca06d76` | `evidence/qa/cnc-generals-zero-hour/M21-plan01-slice03-original-simulation.md` |
+| 04 | [slice 04](milestone_21_plan_01_slice_04.md) | Return/reset/re-entry, identity, retail gate, and cumulative milestone acceptance pass | 03 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M21-original-simulation.md` |
 
 ## Cross-slice concerns
 
@@ -90,6 +90,10 @@ Each slice is independently revertible. Shared source extraction must leave a si
 ## Execution notes
 
 Planning completed before production edits. Investigation found that original CPU map-object parsing is co-located with W3D `WorldHeightMap`; slice 01 owns the narrow source refactor rather than introducing a parallel parser.
+
+All four slices are complete. The cumulative M21 acceptance record is
+`evidence/qa/cnc-generals-zero-hour/M21-original-simulation.md`; parent orchestration
+owns the milestone and workflow status transition.
 
 ## Deferred follow-ups
 

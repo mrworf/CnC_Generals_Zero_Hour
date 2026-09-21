@@ -154,12 +154,11 @@ GameClient::~GameClient()
 	TheCampaignManager = NULL;
 
 	// destroy all Drawables
-	Drawable *draw, *nextDraw;
-	for( draw = m_drawableList; draw; draw = nextDraw )
-	{
-		nextDraw = draw->getNextDrawable();
-		destroyDrawable( draw );
-	}
+	Drawable *draw;
+	// A Drawable destructor may release dependent drawables too. Always consume
+	// the current list head so a cached next pointer cannot become stale.
+	while ((draw = m_drawableList) != NULL)
+		destroyDrawable(draw);
 	m_drawableList = NULL;
 
 	// delete the ray effects
@@ -452,7 +451,7 @@ void GameClient::init( void )
 /** Reset the game client for a new game */
 void GameClient::reset( void )
 {
-	Drawable *draw, *nextDraw;
+	Drawable *draw;
 //	m_drawableHash.clear();
 //	m_drawableHash.resize(DRAWABLE_HASH_SIZE);
 
@@ -463,11 +462,10 @@ void GameClient::reset( void )
 	TheInGameUI->reset();
 
 	// destroy all Drawables
-	for( draw = m_drawableList; draw; draw = nextDraw )
-	{
-		nextDraw = draw->getNextDrawable();
-		destroyDrawable( draw );
-	}
+	// Destruction can recursively remove a dependent drawable from this list.
+	// Re-read the head instead of following a potentially freed next pointer.
+	while ((draw = m_drawableList) != NULL)
+		destroyDrawable(draw);
 	m_drawableList = NULL;
 
 	TheDisplay->reset();

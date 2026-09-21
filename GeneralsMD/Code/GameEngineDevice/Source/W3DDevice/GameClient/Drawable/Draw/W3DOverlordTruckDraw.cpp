@@ -36,6 +36,19 @@
 #include "GameLogic/Module/ContainModule.h"
 #include "W3DDevice/GameClient/Module/W3DOverlordTruckDraw.h"
 
+#if defined(ZH_W3D_HEADLESS_INSTANCE)
+W3DOverlordTruckDraw::W3DOverlordTruckDraw(Thing *thing, const ModuleData *moduleData) :
+	W3DTruckDraw(thing, moduleData)
+{
+}
+W3DOverlordTruckDraw::~W3DOverlordTruckDraw() = default;
+void W3DOverlordTruckDraw::setHidden(Bool hidden) { W3DTruckDraw::setHidden(hidden); }
+void W3DOverlordTruckDraw::doDrawModule(const Matrix3D *transform) { W3DTruckDraw::doDrawModule(transform); }
+void W3DOverlordTruckDraw::crc(Xfer *xfer) { W3DTruckDraw::crc(xfer); }
+void W3DOverlordTruckDraw::xfer(Xfer *xfer) { W3DTruckDraw::xfer(xfer); }
+void W3DOverlordTruckDraw::loadPostProcess() { W3DTruckDraw::loadPostProcess(); }
+#endif
+
 //-------------------------------------------------------------------------------------------------
 W3DOverlordTruckDrawModuleData::W3DOverlordTruckDrawModuleData()
 {

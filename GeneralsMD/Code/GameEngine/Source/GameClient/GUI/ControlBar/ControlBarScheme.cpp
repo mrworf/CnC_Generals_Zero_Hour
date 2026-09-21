@@ -1004,7 +1004,7 @@ void ControlBarSchemeManager::preloadAssets( TimeOfDay timeOfDay )
 
 		if (CBScheme->m_rightHUDImage)
 		{
-			TheDisplay->preloadTextureAssets(CBScheme->m_buttonQueueImage->getFilename());
+			TheDisplay->preloadTextureAssets(CBScheme->m_rightHUDImage->getFilename());
 		}
 
 		for (Int layer = 0; layer < MAX_CONTROL_BAR_SCHEME_IMAGE_LAYERS; ++layer)
@@ -1266,4 +1266,3 @@ static void animSlideRight( ControlBarSchemeAnimation *anim )
 
 
 }
-

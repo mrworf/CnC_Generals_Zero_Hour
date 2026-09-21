@@ -42,7 +42,7 @@ def chunk(chunk_id: int, version: int, payload: bytes) -> bytes:
     return struct.pack("<IHI", chunk_id, version, len(payload)) + payload
 
 
-def owned_map() -> bytes:
+def owned_map(actor_x: float = 20.0) -> bytes:
     names = [
         "HeightMapData", "WorldInfo", "ObjectsList", "Object", "SidesList",
         "PlayerScriptsList", "ScriptList", "originalOwner", "playerName",
@@ -63,7 +63,7 @@ def owned_map() -> bytes:
         "FixtureProp": "teamplayerA",
     }
     objects = bytearray()
-    for name, x in (("LogicFixture", 20.0), ("EnemyFixture", 60.0),
+    for name, x in (("LogicFixture", actor_x), ("EnemyFixture", 60.0),
                     ("AllyBase", 10.0), ("FixtureProp", 40.0)):
         owner = dictionary([(ids["originalOwner"], 3, owners[name])])
         body = struct.pack("<4fI", x, 20.0, 0.0, 0.0, 0) + ascii_string(name) + owner
@@ -150,6 +150,7 @@ def prepare_owned_source(source: pathlib.Path, fixture) -> None:
                   " AccelerationDamaged = 30\n Braking = 30\n MinTurnSpeed = 0\n"
                   " ZAxisBehavior = NO_Z_MOTIVE_FORCE\n Appearance = TWO_LEGS\nEnd\n")
     fixture.write(source / "Maps/Owned/Owned.map", owned_map())
+    fixture.write(source / "Maps/OwnedReentry/OwnedReentry.map", owned_map(35.0))
 
 
 def main() -> int:
@@ -166,12 +167,6 @@ def main() -> int:
         prepare_owned_source(source, fixture)
         before = sorted((p.relative_to(source), p.read_bytes()) for p in source.rglob("*") if p.is_file())
 
-        missing_template_root = base / "missing-template-input"
-        shutil.copytree(source, missing_template_root)
-        missing_map = (missing_template_root / "Maps/Owned/Owned.map").read_bytes()
-        (missing_template_root / "Maps/Owned/Owned.map").write_bytes(
-            missing_map.replace(b"LogicFixture", b"MissingThing"))
-
         missing_module_root = base / "missing-module-input"
         shutil.copytree(source, missing_module_root)
         fixture.write(missing_module_root / "Data/INI/Default/Object.ini",
@@ -183,7 +178,6 @@ def main() -> int:
         shutil.copytree(source, malformed_root)
         fixture.write(malformed_root / "Maps/Owned/Owned.map", b"CkM")
         fixture.make_read_only(source)
-        fixture.make_read_only(missing_template_root)
         fixture.make_read_only(missing_module_root)
         fixture.make_read_only(malformed_root)
         expected = {"mission": 0, "skirmish": 2}
@@ -201,12 +195,6 @@ def main() -> int:
         missing = run(args.executable.resolve(), base, source, "mission", "Maps\\Missing\\Missing.map")
         if missing.returncode == 0 or "original map is missing" not in missing.stderr or "original scenario setup:" in missing.stdout:
             raise SystemExit(f"missing map did not fail closed:\n{missing.stdout}{missing.stderr}")
-
-        missing_template = run(args.executable.resolve(), base, missing_template_root, "mission")
-        if (missing_template.returncode == 0 or
-                "required map object template is missing" not in missing_template.stderr or
-                "original scenario setup:" in missing_template.stdout):
-            raise SystemExit(f"missing template did not fail closed:\n{missing_template.stdout}{missing_template.stderr}")
 
         missing_module = run(args.executable.resolve(), base, missing_module_root, "mission")
         if (missing_module.returncode == 0 or

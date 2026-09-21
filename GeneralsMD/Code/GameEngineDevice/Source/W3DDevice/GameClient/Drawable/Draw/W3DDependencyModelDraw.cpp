@@ -47,6 +47,27 @@
 //#pragma MESSAGE("************************************** WARNING, optimization disabled for debugging purposes")
 #endif
 
+#if defined(ZH_W3D_HEADLESS_INSTANCE)
+W3DDependencyModelDraw::W3DDependencyModelDraw(Thing *thing, const ModuleData *moduleData) :
+	W3DModelDraw(thing, moduleData), m_dependencyCleared(FALSE)
+{
+}
+W3DDependencyModelDraw::~W3DDependencyModelDraw() = default;
+void W3DDependencyModelDraw::doDrawModule(const Matrix3D *transform)
+{
+	if (m_dependencyCleared)
+	{
+		W3DModelDraw::doDrawModule(transform);
+		m_dependencyCleared = FALSE;
+	}
+}
+void W3DDependencyModelDraw::notifyDrawModuleDependencyCleared() { m_dependencyCleared = TRUE; }
+void W3DDependencyModelDraw::adjustTransformMtx(Matrix3D& transform) const { W3DModelDraw::adjustTransformMtx(transform); }
+void W3DDependencyModelDraw::crc(Xfer *xfer) { W3DModelDraw::crc(xfer); }
+void W3DDependencyModelDraw::xfer(Xfer *xfer) { W3DModelDraw::xfer(xfer); }
+void W3DDependencyModelDraw::loadPostProcess() { W3DModelDraw::loadPostProcess(); }
+#endif
+
 
 //-------------------------------------------------------------------------------------------------
 W3DDependencyModelDrawModuleData::W3DDependencyModelDrawModuleData() 
@@ -201,4 +222,3 @@ void W3DDependencyModelDraw::loadPostProcess( void )
 
 }  // end loadPostProcess
 #endif
-

@@ -263,6 +263,7 @@ protected:
 	virtual void loadPostProcess( void );
 
 private:
+	friend class PlayerList;
 
 	void pushSleepyUpdate(UpdateModulePtr u);
 	UpdateModulePtr peekSleepyUpdate() const;
@@ -429,4 +430,3 @@ inline Object* GameLogic::findObjectByID( ObjectID id )
 extern GameLogic *TheGameLogic;
 
 #endif // _GAME_LOGIC_H_
-

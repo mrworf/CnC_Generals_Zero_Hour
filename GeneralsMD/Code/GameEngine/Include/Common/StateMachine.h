@@ -64,10 +64,12 @@ typedef Bool (*StateTransFuncPtr)( State *state, void* userData );
 /**
  * State return codes
  */
-enum StateReturnType 
-{ 
-	// note that all positive values are reserved for STATE_SLEEP!
-
+// This protocol deliberately reserves every positive integer for a sleep-frame
+// count, not merely the named values of an enum. Keep the original 32-bit ABI
+// without manufacturing out-of-range enum values (undefined in modern C++).
+typedef Int StateReturnType;
+enum
+{
 	STATE_CONTINUE	= 0,						///< stay in this state (only for update method)
 	STATE_SUCCESS		= -1,						///< state finished successfully, go to next state
 	STATE_FAILURE		= -2,						///< state finished abnormally, go to next state

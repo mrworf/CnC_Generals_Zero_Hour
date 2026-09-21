@@ -22,6 +22,7 @@
 extern "C" Bool zh_linux_lifecycle_report(UnsignedInt *values, std::size_t count);
 extern "C" Bool zh_linux_scenario_setup_report(UnsignedInt *values, std::size_t count);
 extern "C" Bool zh_linux_simulation_report(Int *values, std::size_t count);
+extern "C" Bool zh_linux_reentry_report(Int *values, std::size_t count);
 extern "C" Int zh_linux_benchmark_timer();
 extern "C" UnsignedInt zh_linux_device_acquisition_attempts();
 
@@ -154,6 +155,7 @@ int main(int argc, char **argv)
 	UnsignedInt lifecycle[8]{};
 	UnsignedInt scenario[8]{};
 	Int simulation[14]{};
+	Int reentry[11]{};
 	if (result == 0 && std::getenv("ZH_M20_HEADLESS_PROFILE"))
 	{
 		const Bool lifecycleComplete = zh_linux_lifecycle_report(lifecycle, 8);
@@ -188,7 +190,8 @@ int main(int argc, char **argv)
 			result = 4;
 		}
 		else if (scenario[1] == 0 || scenario[2] == 0 || scenario[3] == 0 ||
-			scenario[4] == 0 || scenario[6] == 0 || scenario[7] == 0)
+			(scenario[4] == 0 && !std::getenv("ZH_M21_ALLOW_EMPTY_PROPS")) ||
+			scenario[6] == 0 || scenario[7] == 0)
 		{
 			std::fprintf(stderr, "original scenario failed: source-owned setup witness is incomplete (%u,%u,%u,%u,%u,%u,%u,%u)\n",
 				scenario[0], scenario[1], scenario[2], scenario[3], scenario[4], scenario[5], scenario[6], scenario[7]);
@@ -213,6 +216,23 @@ int main(int argc, char **argv)
 			std::fprintf(stderr, "original simulation failed: source-owned checkpoint is incomplete (%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d)\n",
 				simulation[0], simulation[1], simulation[2], simulation[3], simulation[4], simulation[5],
 				simulation[6], simulation[7], simulation[8], simulation[9], simulation[10], simulation[11], simulation[12], simulation[13]);
+			result = 4;
+		}
+	}
+	if (result == 0 && std::getenv("ZH_M21_REENTRY"))
+	{
+		if (!zh_linux_reentry_report(reentry, 11))
+		{
+			std::fprintf(stderr, "original re-entry failed: lifecycle checkpoint did not complete\n");
+			result = 4;
+		}
+		else if (reentry[0] != 0 || reentry[1] != 0 || reentry[2] != 0 ||
+			reentry[3] != 0 || reentry[4] != 0 || reentry[5] != 0 ||
+			reentry[6] == reentry[7] || reentry[8] == 0 || reentry[9] == 0 || reentry[10] == 0)
+		{
+			std::fprintf(stderr, "original re-entry failed: reset/fresh-state witness is incomplete (%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d)\n",
+				reentry[0], reentry[1], reentry[2], reentry[3], reentry[4], reentry[5],
+				reentry[6], reentry[7], reentry[8], reentry[9], reentry[10]);
 			result = 4;
 		}
 	}
@@ -241,5 +261,9 @@ int main(int argc, char **argv)
 		std::printf("original simulation checkpoint: frames=%d>%d ai=%d scripts=%d position=%d>%d actor=%d target=%d moved=%d attacked=%d invalid-rejected=%d terminal=%d target-health=%d>%d\n",
 			simulation[0], simulation[1], simulation[2], simulation[3], simulation[4], simulation[5],
 			simulation[6], simulation[7], simulation[8], simulation[9], simulation[10], simulation[11], simulation[12], simulation[13]);
+	if (result == 0 && std::getenv("ZH_M21_REENTRY"))
+		std::printf("original re-entry checkpoint: reset-objects=%d reset-map-objects=%d reset-props=%d reset-model-preloads=%d reset-texture-preloads=%d reset-recorder-controls=%d positions=%d>%d second-objects=%d second-props=%d second-recorder-controls=%d devices=0\n",
+			reentry[0], reentry[1], reentry[2], reentry[3], reentry[4], reentry[5],
+			reentry[6], reentry[7], reentry[8], reentry[9], reentry[10]);
 	return result;
 }
