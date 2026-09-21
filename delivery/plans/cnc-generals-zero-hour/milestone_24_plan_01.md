@@ -20,10 +20,10 @@ The production Linux original engine saves and restores a real source-engine sce
 
 ## Current-state findings
 
-- M21 production `zh_original_main` can enter, advance and re-enter original mission/skirmish scenarios with source-owned checkpoints. The headless profile has no physical device and uses isolated XDG roots.
+- M21 production `zh_original_main` provides original mission/skirmish scenario setup and source-owned checkpoints on owned fixtures. Correct M24 `GlobalData` copying now reaches an original retail optimized-tree draw module during mission construction; retail mission first-tick and skirmish load require M22 §9 draw-provider closure. The headless owned-test profile has no physical device and uses isolated XDG roots.
 - Original `GameState::init` registers 17 snapshot blocks and six deep-CRC blocks. `GameState::loadGame` currently resets the engine before parsing; failures clear it again, so the requested unchanged-live-state guarantee is not present. `GameStateMap` writes an extracted map directly and has unbounded allocation/error paths.
 - Original `XferLoad` throws on short data reads but does not enforce block extents and its `beginBlock` returns zero on a short descriptor. Original `Recorder::playbackFile` changes mode/clears game before header validation; header and command readers have unchecked reads and native-width/string assumptions.
-- M5 `ZHSG` remains a component fixture, not a game save or source-engine witness. No M24 production save/replay scenario tests yet exist. M22 hardware rendering is not an M24 dependency and its currently blocked work is excluded.
+- M5 `ZHSG` remains a component fixture, not a game save or source-engine witness. M24 original save/replay scenario tests now exist and pass on owned fixtures. M22 renderer implementation remains excluded from M24, but original retail mission/skirmish integration is now dependent on its §9 draw-provider closure.
 
 ## Decisions
 
@@ -50,15 +50,15 @@ The production Linux original engine saves and restores a real source-engine sce
 
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
-| 01 | [slice 01](milestone_24_plan_01_slice_01.md) | A real scenario writes a bounded, atomically published original snapshot and autosave metadata | M21/M5 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice01-original-save.md` |
-| 02 | [slice 02](milestone_24_plan_01_slice_02.md) | Original load restores source state; malformed/faulted loads leave exact pre-load state | 01 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice02-original-load.md` |
-| 03 | [slice 03](milestone_24_plan_01_slice_03.md) | Original commands record/play back safely with compatible cross-preset CRC/RNG | 02 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice03-original-replay.md` |
-| 04 | [slice 04](milestone_24_plan_01_slice_04.md) | Shipped special-power INI definitions survive original reset while map overrides remain temporary | 03 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice04-shipped-power-baseline.md` |
-| 05A | [slice 05A](milestone_24_plan_01_slice_05.md) | Retail mission and owned visible shroud survive original load/repeated round-trips with exact CRC; late corrupt partition rolls back | 04 | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice05a-original-shroud.md` |
-| 05B | [slice 05B](milestone_24_plan_01_slice_05b.md) | Original GlobalData correctly owns copied default/shipped/map layers; shipped partition size survives reset | 05A | complete | this slice commit | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice05b-shipped-gamedata.md` |
-| 05C | [slice 05C](milestone_24_plan_01_slice_05c.md) | Retail mission exact load and first source tick with bounded partition allocation | 05B + M22 §9 closure | pending — M22 provider blocked | | |
-| 05D | [slice 05D](milestone_24_plan_01_slice_05d.md) | Retail skirmish exact source persistence through complete map/draw reconstruction | 05B + M22 §9 closure | pending — M22 provider blocked | | |
-| 06 | [slice 06](milestone_24_plan_01_slice_06.md) | Retail save/replay/first-tick and four-preset cumulative M24 acceptance | 05C + 05D | pending | | |
+| 01 | [slice 01](milestone_24_plan_01_slice_01.md) | A real scenario writes a bounded, atomically published original snapshot and autosave metadata | M21/M5 | complete | `1e3899d` | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice01-original-save.md` |
+| 02 | [slice 02](milestone_24_plan_01_slice_02.md) | Original load restores source state; malformed/faulted loads leave exact pre-load state | 01 | complete | `fe90bab` | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice02-original-load.md` |
+| 03 | [slice 03](milestone_24_plan_01_slice_03.md) | Original commands record/play back safely with compatible cross-preset CRC/RNG | 02 | complete | `5ff9c82` | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice03-original-replay.md` |
+| 04 | [slice 04](milestone_24_plan_01_slice_04.md) | Shipped special-power INI definitions survive original reset while map overrides remain temporary | 03 | complete | `3a73dd4` | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice04-shipped-power-baseline.md` |
+| 05A | [slice 05A](milestone_24_plan_01_slice_05.md) | Retail mission and owned visible shroud survive original load/repeated round-trips with exact CRC; late corrupt partition rolls back | 04 | complete | `8087c74` | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice05a-original-shroud.md` |
+| 05B | [slice 05B](milestone_24_plan_01_slice_05b.md) | Original GlobalData correctly owns copied default/shipped/map layers; shipped partition size survives reset | 05A | complete | `dc75bc1` | `evidence/qa/cnc-generals-zero-hour/M24-plan01-slice05b-shipped-gamedata.md` |
+| 05C | [slice 05C](milestone_24_plan_01_slice_05c.md) | Retail mission exact load and first source tick with bounded partition allocation | 05B + M22 §9 closure | blocked — M22 draw provider | — | [source stack](milestone_24_plan_01_slice_05c.md) |
+| 05D | [slice 05D](milestone_24_plan_01_slice_05d.md) | Retail skirmish exact source persistence through complete map/draw reconstruction | 05B + M22 §9 closure | blocked — M22 draw provider | — | [source stack](milestone_24_plan_01_slice_05d.md) |
+| 06 | [slice 06](milestone_24_plan_01_slice_06.md) | Retail save/replay/first-tick and four-preset cumulative M24 acceptance | 05C + 05D | blocked — M22-dependent prerequisites | — | — |
 
 The original four-slice split covered snapshot publication, destructive-load rollback, recorder protocol and cumulative acceptance. Read-only retail execution after slice 03 exposed two independent source behaviors absent from project-owned fixtures: the Linux global INI loader marks new shipped special-power definitions as transient overrides, and repeated original PartitionManager post-load updates change millions of shroud cells despite stable object/player/script state. The retail first simulation tick also faults in the headless path. The remainder is split into an independently tested bootstrap correction, a source shroud-state repair, and a separate cumulative retail/full-suite gate. No accepted slice is reopened and no exact-CRC or first-tick requirement is weakened.
 
@@ -71,7 +71,7 @@ The slice 05 retail skirmish probe reached the M22 physical draw-provider bounda
 - Lifecycle: failed load/recording/playback must close files, remove private transaction temporaries and restore mode/state; reset remains original-engine-owned.
 - Observability: source state and linked object identity, command/RNG/CRC witnesses, not counters from a substitute store.
 - Performance: large maps and snapshots stream or enforce characterized limits; test failure paths as well as success.
-- Environment: default tests are asset-free/headless; retail gate has explicit local provisioned roots, no GPU/window required.
+- Environment: default tests are asset-free/headless; retail gates use explicit local provisioned roots and cannot complete until the M22 original draw-provider contract is resolved.
 
 ## Milestone completion gate
 
@@ -86,7 +86,9 @@ Each slice is reviewable/revertible. No rollback command may alter user saves or
 
 ## Execution notes
 
-Planning completed before production edits in `64aeb22`. Parent orchestration owns milestone/workflow status. Slices 01–03 source save/load/replay passed. The post-slice-03 retail findings required a plan amendment before final repair; slices 04–06 remain pending and the exact retail CRC/first-tick gates remain binding.
+Planning completed before production edits in `64aeb22`; dependency corrections were recorded in plan-only commits `04049bd`, `598455c`, and `c388397` (with the initial retail split in `13a5c03`). Parent orchestration owns milestone/workflow status. Slices 01–05B are implemented and committed with the evidence linked above. Focused original persistence/simulation suites passed in GCC/Clang Debug/Release (15/15 for 05A, 16/16 for 05B); 05A read-only retail mission first and repeated save/load retained exact full source CRC and unchanged corpus metadata. 05A/05B owned strict Clang ASan/UBSan checks passed with LeakSanitizer unavailable under sandbox ptrace; the source ledger passed. The required four-preset cumulative full suite, retail mission first tick, retail skirmish and retail replay remain unaccepted.
+
+Resume only after M22 §9 supplies the original `MODULETYPE_DRAW` provider: validate 05C mission construction/first tick and 05D skirmish reconstruction with exact source CRC and read-only retail isolation, then execute 06 cumulative gates. Do not substitute draw modules, suppress optimized trees, or mark M24 complete from owned fixtures alone.
 
 ## Deferred follow-ups
 
