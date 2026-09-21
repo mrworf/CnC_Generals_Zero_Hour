@@ -55,7 +55,11 @@ unsigned TextureBaseClass::Get_Reduction() const
 	if (MipLevelCount && reduction > MipLevelCount) reduction = MipLevelCount;
 	return reduction;
 }
-void TextureBaseClass::Apply_Null(unsigned int) { unavailable(); }
+void TextureBaseClass::Apply_Null(unsigned int stage)
+{
+	// Canonical texture.cpp clears the selected DX8 texture at this stage.
+	zh::original_runtime::OriginalGpuEdge::required().select_texture(stage, nullptr);
+}
 void TextureBaseClass::Invalidate_Old_Unused_Textures(unsigned) {}
 int TextureBaseClass::_Get_Total_Locked_Surface_Size() { return 0; }
 int TextureBaseClass::_Get_Total_Texture_Size() { return 0; }

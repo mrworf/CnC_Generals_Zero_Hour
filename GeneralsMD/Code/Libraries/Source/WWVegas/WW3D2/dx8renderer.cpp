@@ -835,16 +835,6 @@ void DX8RigidFVFCategoryContainer::Log(bool only_visible)
 
 void DX8RigidFVFCategoryContainer::Render(void)
 {
-#if defined(ZH_WW3D_CPU_ONLY)
-	if (!Anything_To_Render()) return;
-	// These are the first two physical commands in the authored rigid path.
-	// Original geometry/category selection has already happened; translation
-	// consumes only the original buffers at their existing call sites.
-	auto& edge = zh::original_runtime::OriginalGpuEdge::required();
-	edge.bind_vertex(vertex_buffer);
-	edge.bind_index(index_buffer);
-	throw std::runtime_error("original texture/material pass requires GPU translation");
-#else
 	if (!Anything_To_Render()) return;
 	AnythingToRender=false;
 
@@ -870,7 +860,6 @@ void DX8RigidFVFCategoryContainer::Render(void)
 	Render_Procedural_Material_Passes();
 
 	//DX8Wrapper::Set_DX8_ZBias(0);
-#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -1751,9 +1740,6 @@ unsigned DX8TextureCategoryClass::Add_Mesh(
 
 void DX8TextureCategoryClass::Render(void)
 {
-#if defined(ZH_WW3D_CPU_ONLY)
-	throw std::runtime_error("original texture/material pass requires GPU translation");
-#else
 	#ifdef WWDEBUG
 	if (!WW3D::Expose_Prelit()) {
 	#endif
@@ -1942,7 +1928,11 @@ void DX8TextureCategoryClass::Render(void)
 		** Render mesh using either sorting or immediate pipeline
 		*/
 		//(gth) this if statement's contents are not tabbed to avoid perforce merge problems...
-		if (!DX8RendererDebugger::Is_Enabled() || !mesh->Is_Disabled_By_Debugger()) {
+		if (
+#if !defined(ZH_WW3D_CPU_ONLY)
+			!DX8RendererDebugger::Is_Enabled() ||
+#endif
+			!mesh->Is_Disabled_By_Debugger()) {
 
 		if ((!!mesh->Peek_Model()->Get_Flag(MeshGeometryClass::SORT)) && WW3D::Is_Sorting_Enabled()) {
 			renderer->Render_Sorted(mesh->Get_Base_Vertex_Offset(),mesh->Get_Bounding_Sphere());
@@ -2028,7 +2018,6 @@ void DX8TextureCategoryClass::Render(void)
 	{	WWASSERT(!render_task_head);
 		Clear_Render_List();
 	}
-#endif
 }
 
 

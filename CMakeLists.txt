@@ -910,7 +910,7 @@ foreach(shader_name IN LISTS ZH_RENDERER_SHADER_NAMES)
   )
   list(APPEND ZH_RENDERER_SPIRV "${shader_output}")
 endforeach()
-foreach(fvf_variant IN ITEMS d1 d2 n1 n2)
+foreach(fvf_variant IN ITEMS d1 d2 n0 n1 n2)
   string(TOUPPER "${fvf_variant}" fvf_define)
   set(fvf_output "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders/renderer/original_applied_${fvf_variant}.vert.spv")
   add_custom_command(
@@ -1857,7 +1857,7 @@ if(ZH_BUILD_TESTS)
   target_compile_options(original_w3d_presentation_tests PRIVATE -fpermissive -ffunction-sections -fdata-sections)
   target_link_libraries(original_w3d_presentation_tests PRIVATE
     zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix
-    zh_compression zh_w3d zh_wwsupport zh_original_process zh_build_options)
+    zh_compression zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu zh_build_options)
   target_link_options(original_w3d_presentation_tests PRIVATE -Wl,--gc-sections
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-presentation.link.map")
   add_test(NAME original_w3d_presentation COMMAND original_w3d_presentation_tests)
@@ -2035,7 +2035,7 @@ if(ZH_BUILD_TESTS)
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug")
   target_compile_options(original_w3d_image_provider_tests PRIVATE -fpermissive)
   target_compile_definitions(original_w3d_image_provider_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
-  target_link_libraries(original_w3d_image_provider_tests PRIVATE zh_w3d zh_wwsupport zh_original_process)
+  target_link_libraries(original_w3d_image_provider_tests PRIVATE zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu)
   target_link_options(original_w3d_image_provider_tests PRIVATE
     "-Wl,--gc-sections" "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-images.link.map")
   add_test(NAME original_w3d_image_providers COMMAND original_w3d_image_provider_tests)

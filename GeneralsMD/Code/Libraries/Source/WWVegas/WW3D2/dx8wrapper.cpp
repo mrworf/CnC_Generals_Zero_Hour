@@ -48,6 +48,7 @@
 #include "shader.h"
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
+#include "matrix3d.h"
 #include "ww3d_cpu_boundary.h"
 #include "original_gpu_edge.h"
 
@@ -74,6 +75,8 @@ struct DX8Wrapper::CpuState {
     unsigned index_base_offset=0;
     bool triangle_draw_enabled=true;
     unsigned polygon_low_bound=0;
+    bool world_identity_selected=false;
+    LightEnvironmentClass* light_environment=nullptr;
 };
 
 DX8Wrapper::CpuState& DX8Wrapper::state() { static CpuState source_state; return source_state; }
@@ -94,6 +97,8 @@ void DX8Wrapper::Reset_Source_State()
     selected.index_base_offset=0;
     selected.triangle_draw_enabled=true;
     selected.polygon_low_bound=0;
+    selected.world_identity_selected=false;
+    selected.light_environment=nullptr;
     for (auto*& texture : selected.textures) {
         if (texture) texture->Release_Ref();
         texture=nullptr;
@@ -206,7 +211,7 @@ void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
             property==D3DRS_EMISSIVEMATERIALSOURCE) && value>2) ||
         ((property==D3DRS_ALPHABLENDENABLE || property==D3DRS_ALPHATESTENABLE ||
             property==D3DRS_FOGENABLE || property==D3DRS_SPECULARENABLE ||
-            property==D3DRS_ZWRITEENABLE) && value>1) ||
+            property==D3DRS_ZWRITEENABLE || property==D3DRS_NORMALIZENORMALS) && value>1) ||
         (property==D3DRS_PATCHSEGMENTS && value!=0x3f800000U) ||
         (property!=D3DRS_LIGHTING && property!=D3DRS_AMBIENTMATERIALSOURCE &&
             property!=D3DRS_DIFFUSEMATERIALSOURCE && property!=D3DRS_EMISSIVEMATERIALSOURCE &&
@@ -217,7 +222,7 @@ void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
             property!=D3DRS_SPECULARENABLE && property!=D3DRS_ZFUNC &&
             property!=D3DRS_ZWRITEENABLE && property!=D3DRS_CULLMODE &&
             property!=D3DRS_FOGSTART && property!=D3DRS_FOGEND &&
-            property!=D3DRS_PATCHSEGMENTS))
+            property!=D3DRS_PATCHSEGMENTS && property!=D3DRS_NORMALIZENORMALS))
         throw std::runtime_error("original DX8 shader render state "+std::to_string(property)+
             " is unsupported by Linux software profile");
     state().render_states[property]=value;
@@ -262,8 +267,27 @@ void DX8Wrapper::Set_Transform(D3DTRANSFORMSTATETYPE transform,const Matrix4x4& 
         (transform<D3DTS_TEXTURE0 || transform>=D3DTS_TEXTURE0+8)))
         throw std::runtime_error("original DX8 transform index is unsupported");
     state().transforms.insert_or_assign(transform,matrix);
+    if (transform==D3DTS_WORLD) state().world_identity_selected=false;
     edge.record_source_state(
         "DX8Wrapper::Set_Transform="+std::to_string(transform));
+}
+void DX8Wrapper::Set_Transform(D3DTRANSFORMSTATETYPE transform,const Matrix3D& matrix)
+{ Set_Transform(transform,Matrix4x4(matrix)); }
+void DX8Wrapper::Set_World_Identity()
+{
+    if (state().world_identity_selected) return;
+    Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+    state().world_identity_selected=true;
+    zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+        "DX8Wrapper::Set_World_Identity");
+}
+void DX8Wrapper::Set_Light_Environment(LightEnvironmentClass* environment)
+{
+    // Source category selection runs in 06A2; the original ambient and four
+    // concrete lights become physical only with the lit closure in 06A3.
+    state().light_environment=environment;
+    zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+        "DX8Wrapper::Set_Light_Environment");
 }
 void DX8Wrapper::Get_Transform(D3DTRANSFORMSTATETYPE transform,Matrix4x4& matrix)
 {

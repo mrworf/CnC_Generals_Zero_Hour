@@ -123,7 +123,8 @@ void original_unlit_source_pixels(unsigned generation,unsigned width,unsigned he
         // Retail normal/UV1 and already accepted source fixture normal/UV2
         // require exact input-location variants. Their lit pixels belong to
         // original category issuance in 06, not this device-only probe.
-        for (const auto& [fvf,variant] : {std::pair{DX8_FVF_XYZNUV1,"n1"},
+        for (const auto& [fvf,variant] : {std::pair{DX8_FVF_XYZN,"n0"},
+                                         std::pair{DX8_FVF_XYZNUV1,"n1"},
                                          std::pair{DX8_FVF_XYZNUV2,"n2"}}) {
             const std::string vertex_name="renderer/original_applied_"+std::string(variant)+".vert";
             const auto normal_shader=device.create_shader(
@@ -228,7 +229,16 @@ void original_unlit_source_pixels(unsigned generation,unsigned width,unsigned he
             check(output.size()==static_cast<std::size_t>(width)*height*4,device.last_error());
             return std::array<int,4>{output[center],output[center+1],output[center+2],output[center+3]};
         };
-        const auto textured=shade(one_state,vertex,"original source one-stage shader physical probe");
+        Matrix4x4 world_shift(true);
+        world_shift[0].W=0.7f;
+        DX8Wrapper::Set_Transform(D3DTS_WORLD,world_shift);
+        const auto shifted_state=edge.prepare_applied_state(DX8_FVF_XYZDUV1);
+        const auto shifted=shade(shifted_state,vertex,"original source world-translation probe");
+        check(shifted[0]==5 && shifted[1]==5 && shifted[2]==10,
+            "original nonidentity Matrix4x4 world transform did not preserve native DX8 transpose");
+        DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+        const auto restored_one=edge.prepare_applied_state(DX8_FVF_XYZDUV1);
+        const auto textured=shade(restored_one,vertex,"original source one-stage shader physical probe");
         check(std::abs(textured[0]-60)<=5 && std::abs(textured[1]-96)<=5 &&
               std::abs(textured[2]-8)<=5 && std::abs(textured[3]-128)<=5,
               "original decoded BGRA stage-zero modulate pixel differs from authored source");
@@ -389,7 +399,7 @@ void original_unlit_source_pixels(unsigned generation,unsigned width,unsigned he
         const auto uv_original=edge.prepare_applied_state(DX8_FVF_XYZDUV1);
         const auto left=shade(uv_original,uv_vertex,"original untransformed UV source probe");
         Matrix4x4 uv_shift(true);
-        uv_shift[3].X=0.5f;
+        uv_shift[0].W=0.5f;
         DX8Wrapper::Set_Transform(D3DTS_TEXTURE0,uv_shift);
         DX8Wrapper::Set_DX8_Texture_Stage_State(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_COUNT2);
         const auto uv_transformed=edge.prepare_applied_state(DX8_FVF_XYZDUV1);

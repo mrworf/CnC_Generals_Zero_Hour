@@ -58,6 +58,8 @@ class VertexMaterialClass;
 class ShaderClass;
 class VertexBufferClass;
 class IndexBufferClass;
+class Matrix3D;
+class LightEnvironmentClass;
 using D3DTRANSFORMSTATETYPE = int;
 using FLOAT = float;
 using D3DBLEND = unsigned;
@@ -89,6 +91,7 @@ enum {
     D3DRS_FOGENABLE=28, D3DRS_FOGCOLOR=34, D3DRS_SPECULARENABLE=29,
     D3DRS_ZFUNC=23, D3DRS_ZWRITEENABLE=14, D3DRS_CULLMODE=22,
     D3DRS_PATCHSEGMENTS=164, D3DRS_FOGSTART=36, D3DRS_FOGEND=37,
+    D3DRS_NORMALIZENORMALS=143,
     D3DBLEND_ZERO=1, D3DBLEND_ONE=2, D3DBLEND_SRCCOLOR=3,
     D3DBLEND_INVSRCCOLOR=4, D3DBLEND_SRCALPHA=5, D3DBLEND_INVSRCALPHA=6,
     D3DBLEND_DESTCOLOR=9, D3DCMP_LESSEQUAL=4, D3DCMP_GREATEREQUAL=7,
@@ -148,6 +151,9 @@ public:
     static void Set_DX8_Render_State(unsigned state,unsigned value);
     static void Set_DX8_Texture_Stage_State(unsigned stage,unsigned state,unsigned value);
     static void Set_Transform(D3DTRANSFORMSTATETYPE state,const Matrix4x4& matrix);
+    static void Set_Transform(D3DTRANSFORMSTATETYPE state,const Matrix3D& matrix);
+    static void Set_World_Identity();
+    static void Set_Light_Environment(LightEnvironmentClass* environment);
     static void Get_Transform(D3DTRANSFORMSTATETYPE state,Matrix4x4& matrix);
     static unsigned Get_Texture_Op_Caps();
     static bool Get_Fog_Enable();

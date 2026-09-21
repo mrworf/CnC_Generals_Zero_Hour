@@ -69,7 +69,7 @@ int main()
 		const auto physical=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
 		retired=physical;
 		bool no_variant=false;
-		try { (void)edge.prepare_applied_state(DX8_FVF_XYZN); }
+		try { (void)edge.prepare_applied_state(DX8_FVF_XYZNDUV1); }
 		catch (const std::runtime_error& error) {
 			no_variant=std::string(error.what()).find("exact shader input variant")!=std::string::npos;
 		}

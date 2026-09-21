@@ -325,9 +325,11 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
     const char* vertex_variant=nullptr;
     if (source_fvf==DX8_FVF_XYZDUV1) vertex_variant="renderer/original_applied_d1.vert";
     else if (source_fvf==DX8_FVF_XYZDUV2) vertex_variant="renderer/original_applied_d2.vert";
+    else if (source_fvf==DX8_FVF_XYZN) vertex_variant="renderer/original_applied_n0.vert";
     else if (source_fvf==DX8_FVF_XYZNUV1) vertex_variant="renderer/original_applied_n1.vert";
     else if (source_fvf==DX8_FVF_XYZNUV2) vertex_variant="renderer/original_applied_n2.vert";
-    else throw std::runtime_error("original physical FVF has no exact shader input variant");
+    else throw std::runtime_error("original physical FVF has no exact shader input variant: "+
+        std::to_string(source_fvf));
     for (const auto& stage:mapped.stages)
         if ((stage.coordinate_mode==D3DTSS_TCI_CAMERASPACENORMAL ||
              stage.coordinate_mode==D3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR) &&

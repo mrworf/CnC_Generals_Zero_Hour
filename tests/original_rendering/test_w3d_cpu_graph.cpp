@@ -4,6 +4,8 @@
 #include "hlod.h"
 #include "chunkio.h"
 #include "RAMFILE.H"
+#include "ffactory.h"
+#include "TARGA.H"
 #include "w3d_file.h"
 #include "texture.h"
 #include "vertmaterial.h"
@@ -28,11 +30,64 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <map>
+#include <algorithm>
+#include <array>
 
 #undef assert
 #define assert(condition) do { if (!(condition)) std::abort(); } while (false)
 
 namespace {
+class OwnedFile final : public FileClass {
+public:
+	OwnedFile(std::string name,std::vector<unsigned char> bytes)
+		:name_(std::move(name)),bytes_(std::move(bytes)) {}
+	const char* File_Name() const override { return name_.c_str(); }
+	const char* Set_Name(const char* name) override { name_=name; return name_.c_str(); }
+	int Create() override { return 0; }
+	int Delete() override { return 0; }
+	bool Is_Available(int=0) override { return !bytes_.empty(); }
+	bool Is_Open() const override { return open_; }
+	int Open(const char* name,int rights=READ) override { Set_Name(name); return Open(rights); }
+	int Open(int rights=READ) override { open_=!bytes_.empty() && rights==READ; pos_=0; return open_; }
+	int Read(void* out,int count) override {
+		if (!open_ || count<0) return 0;
+		const size_t n=std::min(static_cast<size_t>(count),bytes_.size()-pos_);
+		std::memcpy(out,bytes_.data()+pos_,n); pos_+=n; return static_cast<int>(n);
+	}
+	int Seek(int offset,int mode=SEEK_CUR) override {
+		const auto base=mode==SEEK_SET?0LL:mode==SEEK_END?
+			static_cast<long long>(bytes_.size()):static_cast<long long>(pos_);
+		const auto next=base+offset;
+		if (next<0 || next>static_cast<long long>(bytes_.size())) throw std::runtime_error("owned file seek");
+		pos_=static_cast<size_t>(next); return static_cast<int>(pos_);
+	}
+	int Size() override { return static_cast<int>(bytes_.size()); }
+	int Write(const void*,int) override { return 0; }
+	void Close() override { open_=false; }
+private:
+	std::string name_; std::vector<unsigned char> bytes_; size_t pos_=0; bool open_=false;
+};
+class OwnedFactory final : public FileFactoryClass {
+public:
+	std::map<std::string,std::vector<unsigned char>> files;
+	int owners=0;
+	FileClass* Get_File(const char* name) override { ++owners; return new OwnedFile(name,files[name]); }
+	void Return_File(FileClass* file) override { --owners; delete file; }
+};
+std::vector<unsigned char> original_targa()
+{
+	TGAHeader header{};
+	header.ImageType=TGA_TRUECOLOR; header.Width=2; header.Height=2;
+	header.PixelDepth=32; header.ImageDescriptor=0x28;
+	std::vector<unsigned char> bytes(sizeof(header)+16+14,0);
+	std::memcpy(bytes.data(),&header,sizeof(header));
+	for (unsigned i=0;i<4;++i) {
+		const std::array<unsigned char,4> pixel{{0,96,160,255}};
+		std::memcpy(bytes.data()+sizeof(header)+4*i,pixel.data(),4);
+	}
+	return bytes;
+}
 template <typename T> void chunk(ChunkSaveClass &writer, unsigned id, const T &value)
 {
 	assert(writer.Begin_Chunk(id));
@@ -41,12 +96,13 @@ template <typename T> void chunk(ChunkSaveClass &writer, unsigned id, const T &v
 }
 
 void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant = false,
-	bool skin_variant = false)
+	bool skin_variant = false, unsigned texture_stages = 1)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_MESH));
 	W3dMeshHeader3Struct header{};
 	header.Version = W3D_CURRENT_MESH_VERSION;
-	std::strcpy(header.MeshName, skin_variant ? "SKIN01" : tread_variant ? "TREADSL01" :
+	std::strcpy(header.MeshName, texture_stages == 0 ? "ZERO01" : texture_stages == 2 ? "TWO01" :
+		skin_variant ? "SKIN01" : tread_variant ? "TREADSL01" :
 		(supply_variant ? "SUPPLY01" : "TRIANGLE"));
 	if (skin_variant) header.Attributes = W3D_MESH_FLAG_GEOMETRY_TYPE_SKIN;
 	std::strcpy(header.ContainerName, "TEST");
@@ -80,7 +136,7 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 	material_info.PassCount = 1;
 	material_info.ShaderCount = 1;
 	material_info.VertexMaterialCount = 1;
-	material_info.TextureCount = 1;
+	material_info.TextureCount = texture_stages;
 	chunk(writer, W3D_CHUNK_MATERIAL_INFO, material_info);
 	assert(writer.Begin_Chunk(W3D_CHUNK_VERTEX_MATERIALS));
 	assert(writer.Begin_Chunk(W3D_CHUNK_VERTEX_MATERIAL));
@@ -89,32 +145,49 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 	W3dVertexMaterialStruct material{};
 	W3d_Vertex_Material_Reset(&material);
 	material.Opacity = 0.75f;
-	material.Attributes = tread_variant ? W3DVERTMAT_STAGE0_MAPPING_LINEAR_OFFSET :
-		W3DVERTMAT_STAGE0_MAPPING_SCREEN;
+	material.Attributes = (tread_variant ? W3DVERTMAT_STAGE0_MAPPING_LINEAR_OFFSET :
+		W3DVERTMAT_STAGE0_MAPPING_SCREEN) |
+		(texture_stages == 2 ? W3DVERTMAT_STAGE1_MAPPING_SCREEN : 0);
 	chunk(writer, W3D_CHUNK_VERTEX_MATERIAL_INFO, material);
 	assert(writer.End_Chunk());
 	assert(writer.End_Chunk());
-	assert(writer.Begin_Chunk(W3D_CHUNK_TEXTURES));
-	assert(writer.Begin_Chunk(W3D_CHUNK_TEXTURE));
-	const char texture_name[] = "MYTEX.TGA";
-	chunk(writer, W3D_CHUNK_TEXTURE_NAME, texture_name);
-	W3dTextureInfoStruct texture_info{};
-	texture_info.Attributes = W3DTEXTURE_NO_LOD | W3DTEXTURE_CLAMP_U;
-	chunk(writer, W3D_CHUNK_TEXTURE_INFO, texture_info);
-	assert(writer.End_Chunk());
-	assert(writer.End_Chunk());
+	if (texture_stages) {
+		assert(writer.Begin_Chunk(W3D_CHUNK_TEXTURES));
+		for (unsigned stage = 0; stage < texture_stages; ++stage) {
+			assert(writer.Begin_Chunk(W3D_CHUNK_TEXTURE));
+			const char *texture_name = stage == 0 ? "MYTEX.TGA" : "MYTEX2.TGA";
+			assert(writer.Begin_Chunk(W3D_CHUNK_TEXTURE_NAME));
+			assert(writer.Write(texture_name, std::strlen(texture_name) + 1) ==
+				static_cast<int>(std::strlen(texture_name) + 1));
+			assert(writer.End_Chunk());
+			W3dTextureInfoStruct texture_info{};
+			texture_info.Attributes = W3DTEXTURE_NO_LOD | W3DTEXTURE_CLAMP_U;
+			chunk(writer, W3D_CHUNK_TEXTURE_INFO, texture_info);
+			assert(writer.End_Chunk());
+		}
+		assert(writer.End_Chunk());
+	}
 	W3dShaderStruct shader{};
 	W3d_Shader_Reset(&shader);
 	W3d_Shader_Set_Dest_Blend_Func(&shader, W3DSHADER_DESTBLENDFUNC_ONE);
+	W3d_Shader_Set_Texturing(&shader, texture_stages ? W3DSHADER_TEXTURING_ENABLE :
+		W3DSHADER_TEXTURING_DISABLE);
+	if (texture_stages == 2) W3d_Shader_Set_Detail_Color_Func(&shader, W3DSHADER_DETAILCOLORFUNC_ADD);
 	if (skin_variant) W3d_Shader_Set_Src_Blend_Func(&shader, W3DSHADER_SRCBLENDFUNC_SRC_ALPHA);
 	chunk(writer, W3D_CHUNK_SHADERS, shader);
 	assert(writer.Begin_Chunk(W3D_CHUNK_MATERIAL_PASS));
 	const uint32 shader_index = 0;
 	chunk(writer, W3D_CHUNK_SHADER_IDS, shader_index);
 	chunk(writer, W3D_CHUNK_VERTEX_MATERIAL_IDS, shader_index);
-	assert(writer.Begin_Chunk(W3D_CHUNK_TEXTURE_STAGE));
-	chunk(writer, W3D_CHUNK_TEXTURE_IDS, shader_index);
-	assert(writer.End_Chunk());
+	for (unsigned stage = 0; stage < texture_stages; ++stage) {
+		assert(writer.Begin_Chunk(W3D_CHUNK_TEXTURE_STAGE));
+		chunk(writer, W3D_CHUNK_TEXTURE_IDS, stage);
+		if (tread_variant && stage==0) {
+			const W3dTexCoordStruct texcoords[3]={{0,0},{1,0},{0,1}};
+			chunk(writer,W3D_CHUNK_STAGE_TEXCOORDS,texcoords);
+		}
+		assert(writer.End_Chunk());
+	}
 	assert(writer.End_Chunk());
 	assert(writer.End_Chunk());
 }
@@ -191,7 +264,7 @@ void make_hlod(ChunkSaveClass &writer, bool supply_variant)
 
 int main(int argc, char **argv)
 {
-	std::vector<char> bytes(4096);
+	std::vector<char> bytes(8192);
 	RAMFileClass file(bytes.data(), static_cast<int>(bytes.size()));
 	assert(file.Open(FileClass::WRITE));
 	ChunkSaveClass writer(&file);
@@ -201,6 +274,11 @@ int main(int argc, char **argv)
 	make_mesh(writer, supply_variant);
 	if (supply_variant) make_mesh(writer, true, true);
 	else make_mesh(writer, false, false, true);
+	if (argc == 2 && std::strcmp(argv[1], "--device-edge") == 0) {
+		make_mesh(writer, false, false, false, 0);
+		make_mesh(writer, false, false, false, 2);
+		make_mesh(writer, false, true);
+	}
 	make_hlod(writer, supply_variant);
 	const int size = file.Size();
 	file.Close();
@@ -233,32 +311,203 @@ int main(int argc, char **argv)
 	RenderInfoClass render_info(camera);
 	if (argc == 2 && std::strcmp(argv[1], "--device-edge") == 0)
 	{
+		OwnedFactory textures;
+		textures.files["mytex.tga"]=original_targa();
+		textures.files["MYTEX.TGA"]=textures.files["mytex.tga"];
+		textures.files["mytex2.tga"]=original_targa();
+		textures.files["MYTEX2.TGA"]=textures.files["mytex2.tga"];
+		auto* old_factory=_TheFileFactory;
+		_TheFileFactory=&textures;
+		WW3D::Set_Thumbnail_Enabled(false);
+		DefaultStaticSortListClass active_sort_list;
+		WW3D::Override_Current_Static_Sort_Lists(&active_sort_list);
 		TheDX8MeshRenderer.Init();
 		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT, false);
+		mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
 		mesh->Set_Position(Vector3(0, 0, -10));
+		std::array<RenderObjClass *, 3> variant_objects{};
 		mesh->Render(render_info);
 		assert(mesh->Peek_Model()->Has_Polygon_Renderers());
 		TheDX8MeshRenderer.Set_Camera(&camera);
 		zh::renderer::RecordingGpuDevice recorder(32);
 		bool unbound_rejected = false;
-		try { WW3D::Flush(render_info); }
+		try { TheDX8MeshRenderer.Flush(); }
 		catch (const std::runtime_error &error) {
 			unbound_rejected = std::strstr(error.what(), "GPU translation session") != nullptr;
 		}
 		assert(unbound_rejected && recorder.resource_counts().total() == 0);
-		bool physical_rejected = false;
+		mesh->Render(render_info);
+		zh::renderer::TextureDesc color_desc;
+		color_desc.width=32; color_desc.height=32;
+		color_desc.render_target=true; color_desc.sampled=false;
+		const auto color=recorder.create_texture(color_desc,"owned original category pass target");
+		auto depth_desc=color_desc;
+		depth_desc.format=zh::renderer::TextureFormat::depth24_stencil8;
+		const auto depth=recorder.create_texture(depth_desc,"owned original category depth");
+		zh::renderer::RenderPassDesc pass;
+		pass.color_targets[0]=color; pass.color_target_count=1;
+		pass.depth_target=depth; pass.width=32; pass.height=32;
 		{
 			zh::original_runtime::OriginalGpuEdge edge(recorder);
-			try { WW3D::Flush(render_info); }
-			catch (const std::runtime_error &) { physical_rejected = true; }
-			assert(physical_rejected);
-			assert(recorder.resource_counts().buffers == 2);
-			assert(recorder.snapshot().find("original WW3D 16-bit index buffer") != std::string::npos);
-			assert(recorder.snapshot().find("upload B") != std::string::npos);
+			for (unsigned i=0; i<variant_objects.size(); ++i) {
+				variant_objects[i]=manager.Create_Render_Obj(i==0 ? "TEST.ZERO01" :
+					i==1 ? "TEST.TWO01" : "TEST.TREADSL01");
+				assert(variant_objects[i] && variant_objects[i]->Class_ID()==RenderObjClass::CLASSID_MESH);
+				auto *variant_mesh=static_cast<MeshClass *>(variant_objects[i]);
+				variant_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+				variant_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+				variant_mesh->Set_Position(Vector3(0,0,-10));
+			}
+			for (auto *variant_object : variant_objects)
+				static_cast<MeshClass *>(variant_object)->Peek_Model()->Register_For_Rendering();
+			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+			DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+			assert(recorder.begin_pass(pass,"caller-owned original rigid/category frame"));
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error& error) {
+				std::fprintf(stderr,"original category diagnostic: %s\n",error.what());
+				throw;
+			}
+			assert(recorder.end_pass());
+			const auto commands=recorder.snapshot();
+			const auto texture_order=commands.find("DX8Wrapper::Set_Texture stage=0");
+			const auto material_order=commands.find("DX8Wrapper::Set_Material",texture_order);
+			const auto shader_order=commands.find("DX8Wrapper::Set_Shader",material_order);
+			const auto world_order=commands.find("DX8Wrapper::Set_Transform=256",shader_order);
+			const auto draw_order=commands.find("draw pipeline=",world_order);
+			assert(texture_order!=std::string::npos && material_order!=std::string::npos &&
+				shader_order!=std::string::npos && world_order!=std::string::npos &&
+				draw_order!=std::string::npos &&
+				commands.find("original_applied_1.frag",world_order)!=std::string::npos &&
+				commands.find("fragment_textures=T",draw_order)!=std::string::npos &&
+				mesh->Peek_Model()->Peek_Single_Texture()!=nullptr &&
+				!mesh->Peek_Model()->Peek_Single_Texture()->Is_Missing_Texture());
+			render_info.alphaOverride=0.5f;
+			mesh->Render(render_info);
+			assert(recorder.begin_pass(pass,"caller-owned original alpha-override frame"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto alpha_commands=recorder.snapshot();
+			assert(alpha_commands.find("DX8Wrapper::Set_DX8_Render_State=24:48",draw_order)!=
+				std::string::npos &&
+				alpha_commands.find("draw pipeline=",draw_order+1)!=std::string::npos);
+			for (unsigned i=0; i<2; ++i) {
+				const auto *variant=i==0 ? "TEST.ZERO01" : "TEST.TWO01";
+				auto *variant_mesh=static_cast<MeshClass *>(variant_objects[i]);
+				variant_mesh->Render(render_info);
+				const auto before=recorder.snapshot().size();
+				assert(recorder.begin_pass(pass,variant));
+				TheDX8MeshRenderer.Flush();
+				assert(recorder.end_pass());
+				const auto issued=recorder.snapshot().substr(before);
+				assert(issued.find("DX8Wrapper::Set_Texture stage=0")!=std::string::npos &&
+					issued.find("DX8Wrapper::Set_Material")!=std::string::npos &&
+					issued.find("DX8Wrapper::Set_Shader")!=std::string::npos &&
+					issued.find("draw pipeline=")!=std::string::npos);
+				assert(issued.find(i==0 ? "original_applied_0.frag" :
+					"original_applied_3.frag")!=std::string::npos);
+				if (i==0) assert(issued.find("fragment_textures=")!=std::string::npos &&
+					issued.find("fragment_textures=T")==std::string::npos);
+				else {
+					const auto bindings=issued.substr(issued.find("fragment_textures=T"));
+					assert(bindings.find("fragment_textures=T")==0 &&
+						bindings.find("/S")!=std::string::npos &&
+						bindings.find(",T")!=std::string::npos &&
+						bindings.find("/S",bindings.find(",T"))!=std::string::npos);
+				}
+			}
+			auto *override_mesh=static_cast<MeshClass *>(variant_objects[2]);
+			auto *mapper=static_cast<LinearOffsetTextureMapperClass *>(
+				override_mesh->Peek_Model()->Peek_Single_Material()->Peek_Mapper());
+			assert(mapper && mapper->Mapper_ID()==TextureMapperClass::MAPPER_ID_LINEAR_OFFSET);
+			Vector2 original_offset;
+			mapper->Get_Current_UV_Offset(original_offset);
+			RenderObjClass::Material_Override material_override;
+			material_override.customUVOffset=Vector2(0.25f,0.5f);
+			override_mesh->Set_User_Data(&material_override);
+			override_mesh->Set_Additive(true);
+			override_mesh->Set_ObjectScale(1.25f);
+			override_mesh->Render(render_info);
+			const auto before_override=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original additive/material/UV override"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto override_commands=recorder.snapshot().substr(before_override);
+			assert(override_commands.find("DX8Wrapper::Set_DX8_Render_State=143:1")!=std::string::npos &&
+				override_commands.find("DX8Wrapper::Set_DX8_Render_State=143:0")!=std::string::npos &&
+				override_commands.find("DX8Wrapper::Set_Transform=16")!=std::string::npos &&
+				override_commands.find("draw pipeline=")!=std::string::npos);
+			Matrix4x4 override_uv;
+			DX8Wrapper::Get_Transform(D3DTS_TEXTURE0,override_uv);
+			assert(std::fabs(override_uv[0].Z-0.25f)<0.0001f &&
+				std::fabs(override_uv[1].Z-0.5f)<0.0001f);
+			Vector2 restored_offset;
+			mapper->Get_Current_UV_Offset(restored_offset);
+			assert(restored_offset.X==original_offset.X && restored_offset.Y==original_offset.Y);
+			override_mesh->Set_User_Data(nullptr);
+			auto *retry_mesh=static_cast<MeshClass *>(variant_objects[0]);
+			retry_mesh->Render(render_info);
+			recorder.fail_next_buffer_upload();
+			const auto before_failure=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original category injected upload failure"));
+			bool upload_rejected=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error &error) {
+				upload_rejected=std::strstr(error.what(),"upload")!=nullptr;
+			}
+			assert(upload_rejected && recorder.end_pass());
+			assert(recorder.snapshot().find("draw pipeline=",before_failure)==std::string::npos);
+			retry_mesh->Render(render_info);
+			const auto before_retry=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original category retry"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			assert(recorder.snapshot().find("draw pipeline=",before_retry)!=std::string::npos);
+			camera.Set_Position(Vector3(0,0,10));
+			retry_mesh->Set_Transform(Matrix3D(true));
+			retry_mesh->Render(render_info);
+			const auto before_identity=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original rigid identity world"));
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+			const auto identity_commands=recorder.snapshot().substr(before_identity);
+			assert(identity_commands.find("DX8Wrapper::Set_World_Identity")!=std::string::npos &&
+				identity_commands.find("draw pipeline=")!=std::string::npos);
+			camera.Set_Position(Vector3(3,1,10));
+			retry_mesh->Set_Position(Vector3(0,0,-10));
+			for (auto flag : {MeshGeometryClass::ALIGNED,MeshGeometryClass::ORIENTED}) {
+				retry_mesh->Peek_Model()->Set_Flag(flag,true);
+				retry_mesh->Render(render_info);
+				const auto before_facing=recorder.snapshot().size();
+				assert(recorder.begin_pass(pass,"original camera-facing category"));
+				TheDX8MeshRenderer.Flush();
+				assert(recorder.end_pass());
+				const auto facing_commands=recorder.snapshot().substr(before_facing);
+				assert(facing_commands.find("DX8Wrapper::Set_Transform=256")!=std::string::npos &&
+					facing_commands.find("draw pipeline=")!=std::string::npos);
+				retry_mesh->Peek_Model()->Set_Flag(flag,false);
+			}
+			retry_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(true);
+			retry_mesh->Render(render_info);
+			const auto before_lit=recorder.snapshot().size();
+			assert(recorder.begin_pass(pass,"original lit category deferred to 06A3"));
+			bool lit_rejected=false;
+			try { TheDX8MeshRenderer.Flush(); }
+			catch (const std::runtime_error &error) {
+				lit_rejected=std::strstr(error.what(),"lit physical state")!=nullptr;
+			}
+			assert(lit_rejected && recorder.end_pass());
+			assert(recorder.snapshot().find("draw pipeline=",before_lit)==std::string::npos);
+			retry_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+			assert(textures.owners==0);
+			TheDX8MeshRenderer.Invalidate();
+			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+			for (auto *variant_object : variant_objects) variant_object->Release_Ref();
 		}
+		recorder.destroy(color); recorder.destroy(depth);
 		assert(recorder.resource_counts().total() == 0);
-		TheDX8MeshRenderer.Invalidate();
-		TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+		WW3D::Reset_Current_Static_Sort_Lists_To_Default();
+		_TheFileFactory=old_factory;
 		object->Release_Ref();
 		manager.Free_Assets();
 		std::puts("original-rendering runtime provider=GeneralsMD WW3D2 first GPU edge");
@@ -483,13 +732,10 @@ int main(int argc, char **argv)
 		assert(unsupported_index);
 		DX8Wrapper::Set_Shader(model->Get_Shader(0));
 		assert(DX8Wrapper::Pending_Changes()&(1U<<9));
-		bool null_texture_edge=false;
-		try { DX8Wrapper::Apply_Render_State_Changes(); }
-		catch (const std::runtime_error& error) {
-			null_texture_edge=std::strstr(error.what(),"texture")!=nullptr;
-		}
-		assert(null_texture_edge && (DX8Wrapper::Pending_Changes()&1U));
-		assert(!(DX8Wrapper::Pending_Changes()&(1U<<9)));
+		DX8Wrapper::Apply_Render_State_Changes();
+		assert(DX8Wrapper::Pending_Changes()==0);
+		assert(device.snapshot().find("original TextureClass::Apply stage=0 disabled")!=
+			std::string::npos);
 		assert(device.snapshot().find("DX8Wrapper::Set_DX8_Texture_Stage_State=0:1")!=std::string::npos);
 		assert(!device.pass_active());
 	}
