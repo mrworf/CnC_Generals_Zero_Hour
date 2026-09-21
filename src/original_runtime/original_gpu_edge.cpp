@@ -3,8 +3,10 @@
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
 #include "dx8wrapper.h"
+#include "ww3dformat.h"
 
 #include <stdexcept>
+#include <string>
 
 namespace zh::original_runtime {
 namespace {
@@ -29,6 +31,31 @@ OriginalGpuEdge& OriginalGpuEdge::required()
 {
     if (!active_edge) throw std::runtime_error("original physical call requires a GPU translation session");
     return *active_edge;
+}
+
+bool OriginalGpuEdge::supports_texture_format(WW3DFormat format) const noexcept
+{
+    renderer::TextureFormat translated;
+    switch (format) {
+    case WW3D_FORMAT_DXT1: translated=renderer::TextureFormat::bc1; break;
+    case WW3D_FORMAT_DXT2:
+    case WW3D_FORMAT_DXT3: translated=renderer::TextureFormat::bc2; break;
+    case WW3D_FORMAT_DXT4:
+    case WW3D_FORMAT_DXT5: translated=renderer::TextureFormat::bc3; break;
+    case WW3D_FORMAT_A8R8G8B8:
+    case WW3D_FORMAT_X8R8G8B8: translated=renderer::TextureFormat::bgra8; break;
+    default: return false;
+    }
+    return device_.supports_texture_format(translated,renderer::TextureDimension::texture_2d,true,false);
+}
+
+[[noreturn]] void OriginalGpuEdge::texture_creation_unavailable(WW3DFormat format,
+    unsigned width, unsigned height, unsigned mips, unsigned reduction)
+{
+    device_.record_marker("original TextureLoader selected format=" + std::to_string(format) +
+        " width=" + std::to_string(width) + " height=" + std::to_string(height) +
+        " mips=" + std::to_string(mips) + " reduction=" + std::to_string(reduction));
+    throw std::runtime_error("original texture creation requires a GPU device translation (M22 05B2B)");
 }
 
 renderer::BufferHandle OriginalGpuEdge::bind_vertex(const VertexBufferClass* source)

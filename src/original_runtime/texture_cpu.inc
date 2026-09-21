@@ -48,7 +48,15 @@ void TextureBaseClass::Set_D3D_Base_Texture(IDirect3DBaseTexture8 *tex)
 bool TextureBaseClass::Is_Missing_Texture() { return false; }
 void TextureBaseClass::Invalidate() { Initialized = false; D3DTexture = nullptr; }
 void TextureBaseClass::Set_HSV_Shift(const Vector3 &shift) { HSVShift = shift; Invalidate(); }
-unsigned TextureBaseClass::Get_Reduction() const { return 0; }
+unsigned TextureBaseClass::Get_Reduction() const
+{
+	if (MipLevelCount == MIP_LEVELS_1 || Width <= 32 || Height <= 32) return 0;
+	int reduction = WW3D::Get_Texture_Reduction();
+	if (WW3D::Is_Large_Texture_Extra_Reduction_Enabled() && (Width > 256 || Height > 256))
+		++reduction;
+	if (MipLevelCount && reduction > MipLevelCount) reduction = MipLevelCount;
+	return reduction;
+}
 void TextureBaseClass::Apply_Null(unsigned int) { unavailable(); }
 void TextureBaseClass::Invalidate_Old_Unused_Textures(unsigned) {}
 int TextureBaseClass::_Get_Total_Locked_Surface_Size() { return 0; }
@@ -82,7 +90,23 @@ TextureClass::TextureClass(unsigned width, unsigned height, WW3DFormat format,
 	IsProcedural = true;
 }
 
-void TextureClass::Init() { unavailable(); }
+void TextureClass::Init()
+{
+	if (Initialized) return;
+	if (InactivationTime && LastInactivationSyncTime) {
+		if ((WW3D::Get_Sync_Time()-LastInactivationSyncTime)<InactivationTime)
+			ExtendedInactivationTime=3*InactivationTime;
+		LastInactivationSyncTime=0;
+	}
+	if (!Peek_D3D_Base_Texture()) {
+		if (!WW3D::Get_Thumbnail_Enabled() || MipLevelCount==MIP_LEVELS_1)
+			TextureLoader::Request_Foreground_Loading(this);
+		else
+			throw std::runtime_error("original thumbnail load requires an unavailable Win32 mix-file route");
+	}
+	if (!Initialized) TextureLoader::Request_Background_Loading(this);
+	LastAccessed=WW3D::Get_Sync_Time();
+}
 void TextureClass::Apply_New_Surface(IDirect3DBaseTexture8 *, bool, bool) { unavailable(); }
 void TextureClass::Apply(unsigned int) { unavailable(); }
 unsigned TextureClass::Get_Texture_Memory_Usage() const { return 0; }

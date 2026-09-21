@@ -37,6 +37,8 @@ public:
     SdlGpuDevice(const SdlGpuDevice&) = delete;
     SdlGpuDevice& operator=(const SdlGpuDevice&) = delete;
 
+    bool supports_texture_format(TextureFormat, TextureDimension, bool sampled, bool render_target) const noexcept override;
+
     BufferHandle create_buffer(const BufferDesc&, std::string_view label) override;
     TextureHandle create_texture(const TextureDesc&, std::string_view label) override;
     SamplerHandle create_sampler(const SamplerDesc&, std::string_view label) override;

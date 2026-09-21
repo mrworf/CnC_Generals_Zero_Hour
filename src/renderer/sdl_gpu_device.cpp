@@ -343,6 +343,18 @@ SdlGpuDevice::~SdlGpuDevice() = default;
 SdlGpuDevice::SdlGpuDevice(SdlGpuDevice&&) noexcept = default;
 SdlGpuDevice& SdlGpuDevice::operator=(SdlGpuDevice&&) noexcept = default;
 
+bool SdlGpuDevice::supports_texture_format(TextureFormat format, TextureDimension dimension, bool sampled, bool render_target) const noexcept
+{
+    if (texture_format(format)==SDL_GPU_TEXTUREFORMAT_INVALID ||
+        (dimension!=TextureDimension::texture_2d && dimension!=TextureDimension::cube &&
+         dimension!=TextureDimension::texture_3d)) return false;
+    SDL_GPUTextureUsageFlags usage=0;
+    if (sampled) usage|=SDL_GPU_TEXTUREUSAGE_SAMPLER;
+    if (render_target) usage|=is_depth(format) ? SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET : SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
+    if (!usage) return false;
+    return SDL_GPUTextureSupportsFormat(impl_->device, texture_format(format), texture_type(dimension), usage);
+}
+
 BufferHandle SdlGpuDevice::create_buffer(const BufferDesc& desc, std::string_view label)
 {
     if (auto result = validate(desc); !result) { impl_->fail("create_buffer", result.error, label); return {}; }

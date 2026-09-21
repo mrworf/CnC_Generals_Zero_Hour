@@ -278,6 +278,9 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matpass.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ddsfile.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3dformat.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/bitmaphandler.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/textureloader.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3d.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/static_sort_list.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/sortingrenderer.cpp
@@ -1955,6 +1958,45 @@ if(ZH_BUILD_TESTS)
     --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ddsfile.cpp"
     --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ffactory.cpp")
   set_tests_properties(original_w3d_image_identity original_w3d_image_provider_removal
+    PROPERTIES LABELS "original-rendering;source-identity;negative")
+  add_executable(original_w3d_texture_decision_tests tests/original_rendering/test_original_texture_decisions.cpp)
+  target_include_directories(original_w3d_texture_decision_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug")
+  target_compile_options(original_w3d_texture_decision_tests PRIVATE -fpermissive)
+  target_compile_definitions(original_w3d_texture_decision_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
+  target_link_libraries(original_w3d_texture_decision_tests PRIVATE zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu)
+  target_link_options(original_w3d_texture_decision_tests PRIVATE
+    "-Wl,--gc-sections" "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-texture-decisions.link.map")
+  add_test(NAME original_w3d_texture_decisions COMMAND original_w3d_texture_decision_tests)
+  set_tests_properties(original_w3d_texture_decisions PROPERTIES LABELS "original-rendering;renderer-contract;negative")
+  add_test(NAME original_w3d_texture_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-texture-decisions.link.map"
+    --executable "$<TARGET_FILE:original_w3d_texture_decision_tests>"
+    --witness "original-rendering runtime provider=GeneralsMD WW3D2 texture format bitmap decisions"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/textureloader.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3dformat.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/bitmaphandler.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ddsfile.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/TARGA.CPP")
+  add_test(NAME original_w3d_texture_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_provider_removal.py"
+    --checker "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-texture-decisions.link.map"
+    --executable "$<TARGET_FILE:original_w3d_texture_decision_tests>"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/textureloader.cpp"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3dformat.cpp"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/bitmaphandler.cpp"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp")
+  set_tests_properties(original_w3d_texture_identity original_w3d_texture_provider_removal
     PROPERTIES LABELS "original-rendering;source-identity;negative")
   set_tests_properties(original_w3d_cpu_graph PROPERTIES LABELS "original-rendering;source-identity")
   add_test(NAME original_w3d_cpu_identity COMMAND "${Python3_EXECUTABLE}"

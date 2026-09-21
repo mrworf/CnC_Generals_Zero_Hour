@@ -162,6 +162,32 @@ void test_original_16_bit_index_range_and_base_vertex()
     check(!scene.device.draw(draw), "non-indexed base vertex accepted");
     check(scene.device.end_pass(), "source pass end failed");
 }
+
+void test_source_texture_format_capabilities()
+{
+    RecordingGpuDevice device;
+    check(device.supports_texture_format(TextureFormat::bc1,TextureDimension::texture_2d,true,false),
+        "recording device must expose BC1 source profile");
+    check(!device.supports_texture_format(TextureFormat::bc1,TextureDimension::texture_2d,true,true),
+        "compressed render target was reported supported");
+    device.set_texture_format_supported(TextureFormat::bc1,false);
+    check(!device.supports_texture_format(TextureFormat::bc1,TextureDimension::texture_2d,true,false),
+        "unsupported BC1 profile was reported supported");
+    TextureDesc desc;
+    desc.width=4; desc.height=4; desc.format=TextureFormat::bc1;
+    check(!device.create_texture(desc,"source BC1"), "unsupported texture profile was created");
+    device.set_texture_format_supported(TextureFormat::bc1,true);
+    auto texture=device.create_texture(desc,"source BC1 retry");
+    check(static_cast<bool>(texture), "supported texture profile was rejected");
+    device.destroy(texture);
+    check(device.resource_counts().total()==0, "texture profile retry leaked resources");
+    TextureDesc oversized=desc;
+    oversized.width=0xFFFFFFFFu;
+    check(!device.create_texture(oversized,"oversized source"),
+        "oversized texture create was accepted despite the physical boundary");
+    check(!device.supports_texture_format(static_cast<TextureFormat>(255),TextureDimension::texture_2d,true,false),
+        "invalid format was reported supported");
+}
 } // namespace
 
 int main()
@@ -172,6 +198,7 @@ int main()
         test_pass_rules_and_unsupported_descriptors();
         test_pipeline_cache_is_immutable_and_bounded();
         test_original_16_bit_index_range_and_base_vertex();
+        test_source_texture_format_capabilities();
         std::cout << "recording device tests: ok\n";
         return 0;
     } catch (const std::exception& error) {

@@ -140,6 +140,7 @@ public:
     }
 
     std::size_t pipeline_capacity;
+    std::array<bool,8> supported_texture_formats{true,true,true,true,true,true,true,true};
     bool in_pass = false;
     std::string active_pass_label;
     std::array<TextureHandle, RendererLimits::color_targets> active_colors{};
@@ -160,6 +161,24 @@ RecordingGpuDevice::~RecordingGpuDevice() = default;
 RecordingGpuDevice::RecordingGpuDevice(RecordingGpuDevice&&) noexcept = default;
 RecordingGpuDevice& RecordingGpuDevice::operator=(RecordingGpuDevice&&) noexcept = default;
 
+bool RecordingGpuDevice::supports_texture_format(TextureFormat format, TextureDimension dimension, bool sampled, bool render_target) const noexcept
+{
+    if (dimension!=TextureDimension::texture_2d && dimension!=TextureDimension::cube &&
+        dimension!=TextureDimension::texture_3d) return false;
+    const auto index=static_cast<std::size_t>(format);
+    if (index>=impl_->supported_texture_formats.size() || !impl_->supported_texture_formats[index]) return false;
+    if (!sampled && !render_target) return false;
+    if (render_target && (format==TextureFormat::bc1 || format==TextureFormat::bc2 || format==TextureFormat::bc3)) return false;
+    return true;
+}
+
+void RecordingGpuDevice::set_texture_format_supported(TextureFormat format, bool supported)
+{
+    const auto index=static_cast<std::size_t>(format);
+    if (index>=impl_->supported_texture_formats.size()) throw std::invalid_argument("unsupported texture format enum");
+    impl_->supported_texture_formats[index]=supported;
+}
+
 BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::string_view label)
 {
     if (auto result = validate(desc); !result) { impl_->fail("create_buffer", result.error, label); return {}; }
@@ -176,6 +195,13 @@ BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::stri
 TextureHandle RecordingGpuDevice::create_texture(const TextureDesc& desc, std::string_view label)
 {
     if (auto result = validate(desc); !result) { impl_->fail("create_texture", result.error, label); return {}; }
+    if (desc.width>16384 || desc.height>16384 || desc.depth_or_layers>16384 ||
+        static_cast<std::uint64_t>(desc.width)*desc.height*desc.depth_or_layers*4>64ULL*1024*1024) {
+        impl_->fail("create_texture", "texture exceeds bounded recording upload budget", label); return {};
+    }
+    if (!supports_texture_format(desc.format, desc.dimension, desc.sampled, desc.render_target)) {
+        impl_->fail("create_texture", "format/dimension/usage unsupported by recording device", label); return {};
+    }
     if (label.empty()) { impl_->fail("create_texture", "label must not be empty"); return {}; }
     auto handle = allocate<TextureHandle>(impl_->textures, impl_->next_texture, label, TextureRecord{desc});
     if (!handle) { impl_->fail("create_texture", "resource table exhausted", label); return {}; }

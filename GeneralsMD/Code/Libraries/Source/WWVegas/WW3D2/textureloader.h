@@ -238,6 +238,9 @@ class TextureLoadTaskClass : public TextureLoadTaskListNodeClass
 		void						Set_State					(StateType s)		{ State		= s;			}
 
 		bool						Begin_Load					(void);
+#if defined(ZH_WW3D_CPU_ONLY)
+		void                    Probe_Begin_Load(TextureBaseClass *texture);
+#endif
 		bool						Load							(void);
 		void						End_Load						(void);
 		void						Finish_Load					(void);

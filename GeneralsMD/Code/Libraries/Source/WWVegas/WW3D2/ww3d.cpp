@@ -1009,6 +1009,39 @@ WW3DErrorType WW3D::Render(SceneClass * scene,CameraClass * cam,bool clear,bool 
  * HISTORY:                                                                                    *
  *   4/4/2001   gth : Created.                                                                 *
  *=============================================================================================*/
+#else
+// Same canonical texture reduction state in the mutually exclusive Linux
+// configuration. Physical texture work remains in TextureLoader/GpuDevice.
+void WW3D::_Invalidate_Textures()
+{
+	if (!WW3DAssetManager::Get_Instance()) return;
+	TextureLoader::Flush_Pending_Load_Tasks();
+	HashTemplateIterator<StringClass,TextureClass*> ite(WW3DAssetManager::Get_Instance()->Texture_Hash());
+	for (ite.First();!ite.Is_Done();ite.Next()) ite.Peek_Value()->Invalidate();
+}
+
+void WW3D::Set_Texture_Reduction(int value, int minDim)
+{
+	if (_TextureReduction!=value || _TextureMinDim!=minDim) {
+		_TextureReduction=value;
+		_TextureMinDim=minDim;
+		_Invalidate_Textures();
+	}
+}
+
+int WW3D::Get_Texture_Reduction() { return _TextureReduction; }
+int WW3D::Get_Texture_Min_Dimension() { return _TextureMinDim; }
+void WW3D::Enable_Large_Texture_Extra_Reduction(bool onoff)
+{
+	if (_LargeTextureExtraReductionEnabled != onoff) {
+		_LargeTextureExtraReductionEnabled = onoff;
+		_Invalidate_Textures();
+	}
+}
+bool WW3D::Is_Large_Texture_Extra_Reduction_Enabled()
+{
+	return _LargeTextureExtraReductionEnabled;
+}
 #endif // !ZH_WW3D_CPU_ONLY
 
 WW3DErrorType WW3D::Render(

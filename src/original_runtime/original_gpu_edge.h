@@ -1,6 +1,7 @@
 #pragma once
 
 #include "zh/renderer/contract.h"
+#include "ww3dformat.h"
 
 #include <unordered_map>
 
@@ -20,6 +21,9 @@ public:
 
     renderer::BufferHandle bind_vertex(const VertexBufferClass* source);
     renderer::BufferHandle bind_index(const IndexBufferClass* source);
+    bool supports_texture_format(WW3DFormat format) const noexcept;
+    [[noreturn]] void texture_creation_unavailable(WW3DFormat format, unsigned width,
+        unsigned height, unsigned mips, unsigned reduction);
     static OriginalGpuEdge& required();
 
 private:

@@ -45,6 +45,8 @@
 #include "assetmgr.h"
 
 #if defined(ZH_WW3D_CPU_ONLY)
+#include "textureloader.h"
+#include "ww3d.h"
 #include "texture_cpu.inc"
 #else
 

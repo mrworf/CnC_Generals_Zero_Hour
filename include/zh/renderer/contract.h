@@ -262,6 +262,12 @@ private:
 class GpuDevice {
 public:
     virtual ~GpuDevice() = default;
+    // A preflight query for the exact texture dimension and usage requested
+    // by a source producer. Unknown implementations fail closed. The backend has
+    // no public maximum-extent query; texture creation remains authoritative
+    // for that hardware limit and must reject an oversized request.
+    virtual bool supports_texture_format(TextureFormat, TextureDimension, bool sampled, bool render_target) const noexcept
+    { return false; }
     virtual BufferHandle create_buffer(const BufferDesc& desc, std::string_view label) = 0;
     virtual TextureHandle create_texture(const TextureDesc& desc, std::string_view label) = 0;
     virtual SamplerHandle create_sampler(const SamplerDesc& desc, std::string_view label) = 0;

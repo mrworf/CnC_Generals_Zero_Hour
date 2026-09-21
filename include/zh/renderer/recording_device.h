@@ -34,6 +34,9 @@ public:
     RecordingGpuDevice(const RecordingGpuDevice&) = delete;
     RecordingGpuDevice& operator=(const RecordingGpuDevice&) = delete;
 
+    bool supports_texture_format(TextureFormat, TextureDimension, bool sampled, bool render_target) const noexcept override;
+    void set_texture_format_supported(TextureFormat format, bool supported);
+
     BufferHandle create_buffer(const BufferDesc& desc, std::string_view label) override;
     TextureHandle create_texture(const TextureDesc& desc, std::string_view label) override;
     SamplerHandle create_sampler(const SamplerDesc& desc, std::string_view label) override;

@@ -39,11 +39,17 @@
 
 #include "ww3dformat.h"
 #include "vector4.h"
+#include <stdexcept>
 #include "wwdebug.h"
-#include "targa.h"
+#include "TARGA.H"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "original_gpu_edge.h"
+#include "ww3d_cpu_boundary.h"
+#else
 #include "dx8wrapper.h"
 #include "dx8caps.h"
 #include <d3d8.h>
+#endif
 
  /*
 	WW3D_FORMAT_UNKNOWN=0,
@@ -134,7 +140,11 @@ unsigned char RGB_to_CIEY(Vector4 color)
 void Vector4_to_Color(unsigned int *outc,const Vector4 &inc,const WW3DFormat format)
 {
 	// convert to ARGB 32-bit
+#if defined(ZH_WW3D_CPU_ONLY)
+	unsigned int color=ZHWW3DCpuBoundary::Pack_ARGB8(inc);
+#else
 	unsigned int color=DX8Wrapper::Convert_Color(inc);
+#endif
 	unsigned char *argb=(unsigned char*) &color;
 	unsigned char r,g,b,a,lum;
 
@@ -312,8 +322,22 @@ WW3DFormat Get_Valid_Texture_Format(WW3DFormat format, bool is_compression_allow
 {
 	int w,h,bits;
 	bool windowed;
+	// The authored fallback order below remains the only format decision
+	// authority. The Linux branch queries the public device for its actual
+	// sampled-2D support; no adapter selects an alternative format.
+#if defined(ZH_WW3D_CPU_ONLY)
+	auto supports = [](WW3DFormat choice) {
+		return zh::original_runtime::OriginalGpuEdge::required().supports_texture_format(choice);
+	};
+	const bool supports_dxtc = supports(WW3D_FORMAT_DXT1) || supports(WW3D_FORMAT_DXT3) || supports(WW3D_FORMAT_DXT5);
+#else
+	auto supports = [](WW3DFormat choice) {
+		return DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(choice);
+	};
+	const bool supports_dxtc = DX8Wrapper::Get_Current_Caps()->Support_DXTC();
+#endif
 
-	if (!DX8Wrapper::Get_Current_Caps()->Support_DXTC() || 
+	if (!supports_dxtc ||
 		!is_compression_allowed) {
 		switch (format) {
 		case WW3D_FORMAT_DXT1: format=WW3D_FORMAT_R8G8B8; break;
@@ -328,8 +352,8 @@ WW3DFormat Get_Valid_Texture_Format(WW3DFormat format, bool is_compression_allow
 		switch (format) {
 		case WW3D_FORMAT_DXT1:
 			// NVidia hack - switch to DXT2 is there is no DXT1 support (which is disabled on NVidia cards)
-			if (!DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(WW3D_FORMAT_DXT1) && 
-				DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(WW3D_FORMAT_DXT2)) {
+			if (!supports(WW3D_FORMAT_DXT1) &&
+				supports(WW3D_FORMAT_DXT2)) {
 				format=WW3D_FORMAT_DXT2;
 			}
 			break;
@@ -337,7 +361,7 @@ WW3DFormat Get_Valid_Texture_Format(WW3DFormat format, bool is_compression_allow
 		case WW3D_FORMAT_DXT3:
 		case WW3D_FORMAT_DXT4:
 		case WW3D_FORMAT_DXT5:
-			if (!DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(format)) format=WW3D_FORMAT_A8R8G8B8;
+			if (!supports(format)) format=WW3D_FORMAT_A8R8G8B8;
 			break;
 		}
 	}
@@ -346,8 +370,14 @@ WW3DFormat Get_Valid_Texture_Format(WW3DFormat format, bool is_compression_allow
 		format=WW3D_FORMAT_X8R8G8B8;
 	}
 
+#if defined(ZH_WW3D_CPU_ONLY)
+	// The renderer exposes ARGB8/BGRA8 presentation, not a legacy 16-bit
+	// display mode. Do not manufacture a DX8 bit-depth override.
+	w=h=0; windowed=true; bits=32;
+#else
 	WW3D::Get_Device_Resolution(w,h,bits,windowed);
 	if (WW3D::Get_Texture_Bitdepth()==16) bits=16;
+#endif
 
 	// if the device bitdepth is 16, don't allow 32 bit textures
 	if (bits<=16) {
@@ -369,18 +399,21 @@ WW3DFormat Get_Valid_Texture_Format(WW3DFormat format, bool is_compression_allow
 	}
 
 	// Fallback if the hardware doesn't support the texture format
-	if (!DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(format)) {
+	if (!supports(format)) {
 		format=WW3D_FORMAT_A8R8G8B8;
-		if (!DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(format)) {
+		if (!supports(format)) {
 			format=WW3D_FORMAT_A4R4G4B4;
-			if (!DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(format)) {
+			if (!supports(format)) {
 				// If still no luck, try non-alpha formats
 
 				format=WW3D_FORMAT_X8R8G8B8;
-				if (!DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(format)) {
+				if (!supports(format)) {
 					format=WW3D_FORMAT_R5G6B5;
-					if (!DX8Wrapper::Get_Current_Caps()->Support_Texture_Format(format)) {
+					if (!supports(format)) {
 						WWASSERT_PRINT(0,("No valid texture format found"));
+						#if defined(ZH_WW3D_CPU_ONLY)
+						throw std::runtime_error("original texture format has no supported public GPU fallback");
+						#endif
 					}
 				}
 			}
