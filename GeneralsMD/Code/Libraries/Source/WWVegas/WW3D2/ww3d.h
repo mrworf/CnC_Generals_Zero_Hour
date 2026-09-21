@@ -286,6 +286,11 @@ public:
 	static void					Render_And_Clear_Static_Sort_Lists(RenderInfoClass & rinfo);
 	static void					Override_Current_Static_Sort_Lists(StaticSortListClass * sort_list);
 	static void					Reset_Current_Static_Sort_Lists_To_Default(void);
+#if defined(ZH_ORIGINAL_RUNTIME_TEST_HOOKS) && defined(ZH_WW3D_CPU_ONLY)
+	// Read-only CPU witness of the original pointers; excluded from production ABI.
+	static const StaticSortListClass* Test_Default_Static_Sort_List(void) { return DefaultStaticSortLists; }
+	static const StaticSortListClass* Test_Current_Static_Sort_List(void) { return CurrentStaticSortLists; }
+#endif
 
 	/*
 	** Overbright modify on load - when this mode is set meshes will be

@@ -47,13 +47,32 @@
 #include "definition.h"
 #include "definitionmgr.h"
 #include "definitionclassids.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "wwaudio.h"
 #include "audiblesound.h"
+#endif
 #include "htree.h"
 #include "hanim.h"
 #include "soundlibrarybridge.h"
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "wwdebug.h"
+#else
 #include "WWDebug.h"
+#endif
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <cctype>
+#include <stdexcept>
+#include <strings.h>
+// Same in-place uppercase normalization as the source's Win32 strupr.
+static char* original_sound_upper(char* value)
+{
+	for (char* p=value; *p; ++p) *p=static_cast<char>(std::toupper(static_cast<unsigned char>(*p)));
+	return value;
+}
+#define strupr original_sound_upper
+#define strnicmp strncasecmp
+#endif
 
 //////////////////////////////////////////////////////////////////////
 //	Static member initialization
@@ -69,6 +88,7 @@ static WWINLINE INIClass *
 Get_INI (const char *filename)
 {
 	INIClass *ini = NULL;
+	if (_TheFileFactory == NULL) return NULL;
 
 	//
 	//	Get the file from our filefactory
@@ -114,7 +134,8 @@ Build_List_From_String
 		//
 		// Determine how many entries there will be in the list
 		//
-		for (const char *entry = buffer;
+		const char *entry;
+		for (entry = buffer;
 			  (entry != NULL) && (entry[1] != 0);
 			  entry = ::strstr (entry, delimiter))
 		{
@@ -157,7 +178,7 @@ Build_List_From_String
 				// Copy this entry into its own string
 				//
 				StringClass entry_string = entry;
-				char *delim_start = ::strstr (entry_string, delimiter);				
+				char *delim_start = ::strstr (entry_string.Peek_Buffer(), delimiter);
 				if (delim_start != NULL) {
 					delim_start[0] = 0;
 				}
@@ -335,6 +356,13 @@ AnimatedSoundMgrClass::Initialize (const char *ini_filename)
 					//
 					StringClass *param_list = NULL;
 					int param_count = ::Build_List_From_String (value, ",", &param_list);
+					if (param_count < 2) {
+						delete [] param_list;
+						delete sound_list;
+						delete ini_file;
+						AnimatedSoundMgrClass::Shutdown();
+						throw std::runtime_error("original animation sound entry is missing frame or name");
+					}
 
 					// if ((param_count >= 2) && (param_count <= 3)) 
 					{

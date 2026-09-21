@@ -68,7 +68,9 @@ char* strtrim(char* buffer)
 		}
 
 		if (source != buffer) {
-			strcpy(buffer, source);
+			// Source points inside buffer; copying these overlapping ranges with
+			// strcpy is undefined (and triggered by source-owned INI parsing).
+			memmove(buffer, source, strlen(source) + 1);
 		}
 
 		/* Clip trailing white space from the string. */

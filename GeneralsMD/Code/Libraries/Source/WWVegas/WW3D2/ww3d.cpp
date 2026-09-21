@@ -112,6 +112,11 @@
 #include "sortingrenderer.h"
 #include "render2d.h"
 #include "bound.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "original_gpu_edge.h"
+#include "animatedsoundmgr.h"
+#include <stdexcept>
+#endif
 #if !defined(ZH_WW3D_CPU_ONLY)
 #include "rddesc.h"
 #endif
@@ -263,8 +268,6 @@ void WW3D::Set_NPatches_Level(unsigned level)
 	NPatchesLevel = level;
 }
 
-#if !defined(ZH_WW3D_CPU_ONLY)
-
 /***********************************************************************************************
  * WW3D::Init -- Initialize the WW3D Library                                                   *
  *                                                                                             *
@@ -281,29 +284,51 @@ WW3DErrorType WW3D::Init(void *hwnd, char *defaultpal, bool lite)
 {
 	assert(IsInitted == false);
 	WWDEBUG_SAY(("WW3D::Init hwnd = %p\n",hwnd));
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (hwnd != NULL || DefaultStaticSortLists != NULL) return WW3D_ERROR_INITIALIZATION_FAILED;
+	if (!lite) {
+		// Physical device selection belongs to W3DDisplay (07). A full
+		// source instance requires a live, externally owned public device.
+		zh::original_runtime::OriginalGpuEdge::required();
+	}
+#else
 	_Hwnd = (HWND)hwnd;
+#endif
 	Lite = lite;
 
 	/*
 	** Initialize d3d, this also enumerates the available devices and resolutions.
 	*/
+	#if !defined(ZH_WW3D_CPU_ONLY)
 	Init_D3D_To_WW3_Conversion();
+	#endif
 	WWDEBUG_SAY(("Init DX8Wrapper\n"));
+	#if !defined(ZH_WW3D_CPU_ONLY)
 	if (!DX8Wrapper::Init(_Hwnd, lite)) {
 		return(WW3D_ERROR_INITIALIZATION_FAILED);
 	}
+	#endif
 	WWDEBUG_SAY(("Allocate Debug Resources\n"));
 	Allocate_Debug_Resources();
 
+	#if !defined(ZH_WW3D_CPU_ONLY)
  	MMRESULT r=timeBeginPeriod(1);
 	WWASSERT(r==TIMERR_NOERROR);
+	#endif
 
 	/*
 	** Initialize the dazzle system
 	*/
+	#if defined(ZH_WW3D_CPU_ONLY)
+	try {
+	#endif
 	if (!lite) {
 		WWDEBUG_SAY(("Init Dazzles\n"));
+		#if defined(ZH_WW3D_CPU_ONLY)
+		FileClass * dazzle_ini_file = _TheFileFactory ? _TheFileFactory->Get_File(DAZZLE_INI_FILENAME) : NULL;
+		#else
 		FileClass * dazzle_ini_file = _TheFileFactory->Get_File(DAZZLE_INI_FILENAME);
+		#endif
 		if (dazzle_ini_file) {
 			INIClass dazzle_ini(*dazzle_ini_file);
 			DazzleRenderObjClass::Init_From_INI(&dazzle_ini);
@@ -324,6 +349,12 @@ WW3DErrorType WW3D::Init(void *hwnd, char *defaultpal, bool lite)
 		AnimatedSoundMgrClass::Initialize ();
 		IsInitted = true;
 	}
+	#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		Shutdown();
+		throw;
+	}
+	#endif
 	WWDEBUG_SAY(("WW3D Init completed\n"));
 	return WW3D_ERROR_OK;
 }
@@ -353,8 +384,10 @@ WW3DErrorType WW3D::Shutdown(void)
 #endif //WW3D_DX8
 
 	//restore the previous timer resolution
+	#if !defined(ZH_WW3D_CPU_ONLY)
 	MMRESULT r=timeEndPeriod(1);
 	WWASSERT(r==TIMERR_NOERROR);
+	#endif
 	/*
 	** Free memory in predictive LOD optimizer
 	*/
@@ -375,15 +408,23 @@ WW3DErrorType WW3D::Shutdown(void)
 		WW3DAssetManager::Get_Instance()->Free_Assets();
 	}
 
+	#if !defined(ZH_WW3D_CPU_ONLY)
 	DX8TextureManagerClass::Shutdown();
 	if (!Lite) {
 		DX8Wrapper::Shutdown();
 	}
+	#else
+	DX8Wrapper::Reset_Source_State();
+	#endif
 
 	/*
 	** Clear the default static sort lists
 	*/
 	delete DefaultStaticSortLists;
+	#if defined(ZH_WW3D_CPU_ONLY)
+	DefaultStaticSortLists = NULL;
+	CurrentStaticSortLists = NULL;
+	#endif
 
 	/*
 	** Release the animation-triggered sound data
@@ -394,6 +435,7 @@ WW3DErrorType WW3D::Shutdown(void)
 	return WW3D_ERROR_OK;
 }
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 
 /***********************************************************************************************
  * WW3D::Set_Render_Device -- set the render device being currently used                       *
@@ -1936,6 +1978,8 @@ ShaderClass	WW3D::Peek_Lightmap_Debug_Shader(void)
 	return LightmapDebugShader;
 }
 
+#endif // native-only WW3D helpers
+
 /***********************************************************************************************
  * WW3D::Allocate_Debug_Resources -- allocates the debug resources									  *
  *                                                                                             *
@@ -1982,6 +2026,7 @@ void WW3D::Release_Debug_Resources(void)
 #endif
 }
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 
 WW3DErrorType WW3D::On_Deactivate_App(void)
 {

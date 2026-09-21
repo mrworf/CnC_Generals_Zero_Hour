@@ -26,6 +26,9 @@
 #include "static_sort_list.h"
 #include "sortingrenderer.h"
 #include "ww3d.h"
+#include "animatedsoundmgr.h"
+#include "hanim.h"
+#include "trim.h"
 #include "original_gpu_edge.h"
 #include "zh/renderer/recording_device.h"
 #if defined(ZH_GPU_SHADER_DIR)
@@ -412,6 +415,67 @@ int main(int argc, char **argv)
 	WW3DAssetManager manager;
 	RAMFileClass input(bytes.data(), size);
 	assert(manager.Load_3D_Assets(input));
+	if (argc==2 && std::strcmp(argv[1],"--ww3d-init")==0) {
+		char trim_fixture[]=" \t SOURCE \r\n";
+		assert(strtrim(trim_fixture)==trim_fixture && std::strcmp(trim_fixture,"SOURCE")==0);
+		OwnedFactory factory;
+		const std::string ini="[TESTTREE.IDLE]\nBoneName=root\nping=1, beep,2D\n";
+		factory.files["w3danimsound.ini"]={ini.begin(),ini.end()};
+		factory.files["DAZZLE.INI"]={'\n'};
+		FileFactoryClass* previous=_TheFileFactory;
+		_TheFileFactory=&factory;
+		assert(!WW3D::Is_Initted());
+		assert(WW3D::Init(nullptr,nullptr,true)==WW3D_ERROR_OK);
+		assert(!WW3D::Is_Initted()); // authored lite semantics
+		assert(WW3D::Test_Default_Static_Sort_List()!=nullptr);
+		assert(WW3D::Test_Current_Static_Sort_List()==WW3D::Test_Default_Static_Sort_List());
+		assert(WW3D::Shutdown()==WW3D_ERROR_OK);
+		assert(WW3D::Test_Default_Static_Sort_List()==nullptr);
+		assert(WW3D::Test_Current_Static_Sort_List()==nullptr);
+		assert(factory.owners==0);
+		assert(manager.Load_3D_Assets(input));
+		bool unavailable=false;
+		try { (void)WW3D::Init(nullptr,nullptr,false); }
+		catch (const std::runtime_error&) { unavailable=true; }
+		assert(unavailable && !WW3D::Is_Initted());
+		zh::renderer::RecordingGpuDevice recorder;
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			assert(WW3D::Init(reinterpret_cast<void*>(1),nullptr,false)==WW3D_ERROR_INITIALIZATION_FAILED);
+			assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
+			assert(WW3D::Is_Initted() && !WW3D::Is_Rendering());
+			assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_INITIALIZATION_FAILED);
+			assert(WW3D::Is_Initted());
+			assert(WW3D::Test_Default_Static_Sort_List()!=nullptr);
+			assert(WW3D::Test_Current_Static_Sort_List()==WW3D::Test_Default_Static_Sort_List());
+			HAnimClass* anim=manager.Get_HAnim("TESTTREE.IDLE");
+			assert(anim && std::strcmp(AnimatedSoundMgrClass::Get_Embedded_Sound_Name(anim),"root")==0);
+			assert(AnimatedSoundMgrClass::Trigger_Sound(anim,0,2,Matrix3D(true))==0);
+			assert(WW3D::Shutdown()==WW3D_ERROR_OK);
+			assert(!WW3D::Is_Initted() && factory.owners==0);
+			assert(WW3D::Test_Default_Static_Sort_List()==nullptr);
+			assert(WW3D::Test_Current_Static_Sort_List()==nullptr);
+			assert(manager.Get_HAnim("TESTTREE.IDLE")==nullptr);
+			const std::string malformed="[TESTTREE.IDLE]\nping=malformed\n";
+			factory.files["w3danimsound.ini"]={malformed.begin(),malformed.end()};
+			bool rejected=false;
+			try { (void)WW3D::Init(nullptr,nullptr,false); }
+			catch (const std::runtime_error&) { rejected=true; }
+			assert(rejected && !WW3D::Is_Initted());
+			assert(WW3D::Test_Default_Static_Sort_List()==nullptr && factory.owners==0);
+			factory.files["w3danimsound.ini"]={ini.begin(),ini.end()};
+			assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
+			assert(WW3D::Shutdown()==WW3D_ERROR_OK);
+			factory.files.erase("w3danimsound.ini");
+			factory.files.erase("DAZZLE.INI");
+			assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
+			assert(WW3D::Shutdown()==WW3D_ERROR_OK);
+		}
+		assert(recorder.resource_counts().total()==0);
+		_TheFileFactory=previous;
+		assert(factory.owners==0);
+		return 0;
+	}
 	assert(manager.Get_HTree("TESTTREE") != nullptr);
 	assert(manager.Get_HAnim("TESTTREE.IDLE") != nullptr);
 	assert(manager.Render_Obj_Exists("TEST.TRIANGLE"));
