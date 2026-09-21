@@ -1,4 +1,5 @@
 #include "zh/renderer/recording_device.h"
+#include <stdexcept>
 
 #include <algorithm>
 #include <cstring>
@@ -143,6 +144,7 @@ public:
     std::array<bool,8> supported_texture_formats{true,true,true,true,true,true,true,true};
     bool reject_next_texture_create=false;
     bool reject_next_texture_upload=false;
+    bool reject_next_sampler_create=false;
     bool in_pass = false;
     std::string active_pass_label;
     std::array<TextureHandle, RendererLimits::color_targets> active_colors{};
@@ -183,6 +185,7 @@ void RecordingGpuDevice::set_texture_format_supported(TextureFormat format, bool
 
 void RecordingGpuDevice::fail_next_texture_create() { impl_->reject_next_texture_create=true; }
 void RecordingGpuDevice::fail_next_texture_upload() { impl_->reject_next_texture_upload=true; }
+void RecordingGpuDevice::fail_next_sampler_create() { impl_->reject_next_sampler_create=true; }
 
 BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::string_view label)
 {
@@ -224,6 +227,10 @@ TextureHandle RecordingGpuDevice::create_texture(const TextureDesc& desc, std::s
 
 SamplerHandle RecordingGpuDevice::create_sampler(const SamplerDesc& desc, std::string_view label)
 {
+    if (impl_->reject_next_sampler_create) {
+        impl_->reject_next_sampler_create=false;
+        impl_->fail("create_sampler", "injected sampler creation failure", label); return {};
+    }
     if (auto result = validate(desc); !result) { impl_->fail("create_sampler", result.error, label); return {}; }
     if (label.empty()) { impl_->fail("create_sampler", "label must not be empty"); return {}; }
     auto handle = allocate<SamplerHandle>(impl_->samplers, impl_->next_sampler, label, SamplerRecord{desc});
@@ -497,6 +504,13 @@ std::vector<UInt8> RecordingGpuDevice::texture_bytes(TextureHandle handle, UInt3
     const auto* texture=lookup(impl_->textures,handle);
     if (!texture || mip_level>=texture->value.mips.size()) return {};
     return texture->value.mips[mip_level];
+}
+
+SamplerDesc RecordingGpuDevice::sampler_descriptor(SamplerHandle handle) const
+{
+    const auto* sampler=lookup(impl_->samplers,handle);
+    if (!sampler) throw std::runtime_error("recording sampler handle is stale or destroyed");
+    return sampler->value.desc;
 }
 void RecordingGpuDevice::record_marker(std::string_view marker) { impl_->commands.push_back("marker " + quoted(marker)); }
 

@@ -939,55 +939,7 @@ void TextureClass::Apply_New_Surface
 //! Apply texture states
 /*! 
 */
-void TextureClass::Apply(unsigned int stage)
-{
-	// Initialization needs to be done when texture is used if it hasn't been done before.
-	// XBOX always initializes textures at creation time.
-	if (!Initialized) 
-	{
-		Init();
-
-		/* was in battlefield// Non-thumbnailed textures are always initialized when used
-		if (MipLevelCount==MIP_LEVELS_1) 
-		{
-		}
-		// Thumbnailed textures have delayed initialization and a background loading system
-		else 
-		{
-			// Limit the number of texture initializations per frame to reduce stuttering
-			if (TexturesAppliedPerFrame<MAX_TEXTURES_APPLIED_PER_FRAME) 
-			{
-				TexturesAppliedPerFrame++;
-				Init();
-			}
-			else 
-			{
-				// If texture can't be initialized in this frame, at least make sure we have the thumbnail.
-				if (!Peek_Texture()) 
-				{
-					WW3DFormat format=TextureFormat;
-					Load_Locked_Surface();
-					TextureFormat=format;
-				}
-			}
-		}*/
-	}
-	LastAccessed=WW3D::Get_Sync_Time();
-
-	DX8_RECORD_TEXTURE(this);
-
-	// Set texture itself
-	if (WW3D::Is_Texturing_Enabled()) 
-	{
-		DX8Wrapper::Set_DX8_Texture(stage, Peek_D3D_Base_Texture());
-	}
-	else 
-	{
-		DX8Wrapper::Set_DX8_Texture(stage, NULL);
-	}
-
-	Filter.Apply(stage);
-}
+#include "texture_apply.inc"
 
 //**********************************************************************************************
 //! Get surface from mip level

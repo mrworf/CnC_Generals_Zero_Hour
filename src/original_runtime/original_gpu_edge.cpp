@@ -41,6 +41,7 @@ OriginalGpuEdge::OriginalGpuEdge(renderer::GpuDevice& device)
 
 OriginalGpuEdge::~OriginalGpuEdge()
 {
+    for (auto& stage : pending_stages_) if (stage.sampler) device_.destroy(stage.sampler);
     while (!textures_.empty()) {
         auto it=textures_.begin();
         TextureBaseClass* source=it->first;
@@ -133,8 +134,74 @@ void OriginalGpuEdge::release_texture_if_owned(TextureBaseClass* source) noexcep
     if (!active_edge) return;
     const auto it=active_edge->textures_.find(source);
     if (it==active_edge->textures_.end()) return;
+    for (unsigned index=0;index<active_edge->pending_stages_.size();++index) {
+        auto& stage=active_edge->pending_stages_[index];
+        if (stage.source==source) {
+            if (stage.sampler) active_edge->device_.destroy(stage.sampler);
+            stage={};
+            active_edge->pending_filter_values_[index]={};
+        }
+    }
     if (!it->second.shared_missing) active_edge->device_.destroy(it->second.handle);
     active_edge->textures_.erase(it);
+}
+
+void OriginalGpuEdge::select_texture(unsigned stage, const TextureBaseClass* source)
+{
+    if (stage>=pending_stages_.size()) throw std::runtime_error("original texture stage exceeds DX8 stage count");
+    auto handle=source ? texture_handle(source) : renderer::TextureHandle{};
+    if (pending_stages_[stage].source!=source) {
+        if (pending_stages_[stage].sampler) device_.destroy(pending_stages_[stage].sampler);
+        pending_stages_[stage]={};
+        pending_filter_values_[stage]={};
+    }
+    pending_stages_[stage].texture=handle;
+    pending_stages_[stage].generation=generation_;
+    pending_stages_[stage].source=source;
+    device_.record_marker("original TextureClass::Apply stage="+std::to_string(stage)+
+        (source ? " selected" : " disabled"));
+}
+
+void OriginalGpuEdge::set_filter_stage_state(unsigned stage, FilterStageState state, unsigned value)
+{
+    if (stage>=pending_stages_.size()) throw std::runtime_error("original filter stage exceeds DX8 stage count");
+    if (value>(state==FilterStageState::min_filter || state==FilterStageState::mag_filter ||
+        state==FilterStageState::mip_filter ? 2U : 1U))
+        throw std::runtime_error("original texture filter/address mode unsupported by physical device");
+    auto& selected=pending_filter_values_[stage];
+    switch (state) {
+    case FilterStageState::min_filter: selected.min=value; break;
+    case FilterStageState::mag_filter: selected.mag=value; break;
+    case FilterStageState::mip_filter: selected.mip=value; break;
+    case FilterStageState::address_u: selected.u=value; break;
+    case FilterStageState::address_v: selected.v=value; break;
+    }
+    device_.record_marker("original TextureFilterClass stage="+std::to_string(stage)+
+        " property="+std::to_string(static_cast<unsigned>(state))+" value="+std::to_string(value));
+    if (state!=FilterStageState::address_v) return;
+    if (selected.min<0 || selected.mag<0 || selected.mip<0 || selected.u<0 || selected.v<0)
+        throw std::runtime_error("original filter state sequence is incomplete");
+    renderer::SamplerDesc desc;
+    desc.min_filter=selected.min ? renderer::Filter::linear : renderer::Filter::nearest;
+    desc.mag_filter=selected.mag ? renderer::Filter::linear : renderer::Filter::nearest;
+    desc.mip_filter=selected.mip==2 ? renderer::Filter::linear : renderer::Filter::nearest;
+    desc.maximum_anisotropy=selected.min==2 || selected.mag==2 ? 2 : 1;
+    desc.maximum_lod=selected.mip ? 1000.0F : 0.0F;
+    desc.address_u=selected.u ? renderer::AddressMode::clamp_edge : renderer::AddressMode::repeat;
+    desc.address_v=selected.v ? renderer::AddressMode::clamp_edge : renderer::AddressMode::repeat;
+    auto sampler=device_.create_sampler(desc,"original TextureFilterClass stage");
+    if (!sampler) throw std::runtime_error("original texture sampler creation failed: "+device_.last_error());
+    auto& pending=pending_stages_[stage];
+    if (pending.sampler) device_.destroy(pending.sampler);
+    pending.sampler=sampler;
+    pending.generation=generation_;
+}
+
+OriginalGpuEdge::PendingStage OriginalGpuEdge::pending_stage(unsigned stage) const
+{
+    if (stage>=pending_stages_.size() || pending_stages_[stage].generation!=generation_)
+        throw std::runtime_error("original texture stage is absent from active device generation");
+    return pending_stages_[stage];
 }
 
 [[noreturn]] void OriginalGpuEdge::texture_creation_unavailable(WW3DFormat format,

@@ -779,15 +779,6 @@ void WW3D::_Invalidate_Textures()
 	}
 }
 
-void WW3D::Set_Texture_Filter(int texture_filter)
-{
-	if (texture_filter<0) texture_filter=0;
-	if (texture_filter>TextureFilterClass::TEXTURE_FILTER_ANISOTROPIC) texture_filter=TextureFilterClass::TEXTURE_FILTER_ANISOTROPIC;
-	TextureFilter=texture_filter;
-	TextureFilterClass::_Init_Filters((TextureFilterClass::TextureFilterMode)TextureFilter);
-}
-
-
 /***********************************************************************************************
  * WW3D::Begin_Render -- mark the start of rendering for a new frame                           *
  *                                                                                             *
@@ -1043,6 +1034,21 @@ bool WW3D::Is_Large_Texture_Extra_Reduction_Enabled()
 	return _LargeTextureExtraReductionEnabled;
 }
 #endif // !ZH_WW3D_CPU_ONLY
+
+void WW3D::Set_Texture_Filter(int texture_filter)
+{
+	if (texture_filter<0) texture_filter=0;
+	if (texture_filter>TextureFilterClass::TEXTURE_FILTER_ANISOTROPIC) texture_filter=TextureFilterClass::TEXTURE_FILTER_ANISOTROPIC;
+	TextureFilter=texture_filter;
+	TextureFilterClass::_Init_Filters((TextureFilterClass::TextureFilterMode)TextureFilter);
+}
+
+void WW3D::Enable_Texturing(bool b)
+{
+	if (b==IsTexturingEnabled) return;
+	IsTexturingEnabled=b;
+//	_Invalidate_Textures();
+}
 
 WW3DErrorType WW3D::Render(
 	RenderObjClass & obj,
@@ -1818,12 +1824,6 @@ void	WW3D::Set_Texture_Reduction( int value, int minDim )
 }
 
 
-void WW3D::Enable_Texturing(bool b)
-{
-	if (b==IsTexturingEnabled) return;
-	IsTexturingEnabled=b;
-//	_Invalidate_Textures();
-}
 
 void WW3D::Enable_Coloring(unsigned int color)
 {

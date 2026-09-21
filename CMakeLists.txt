@@ -277,6 +277,7 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/light.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matpass.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texturefilter.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ddsfile.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3dformat.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/bitmaphandler.cpp
@@ -1993,6 +1994,7 @@ if(ZH_BUILD_TESTS)
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3dformat.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/bitmaphandler.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texturefilter.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/missingtexture.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ddsfile.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/TARGA.CPP")
@@ -2006,6 +2008,7 @@ if(ZH_BUILD_TESTS)
     --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3dformat.cpp"
     --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/bitmaphandler.cpp"
     --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp"
+    --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texturefilter.cpp"
     --provider "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/missingtexture.cpp")
   set_tests_properties(original_w3d_texture_identity original_w3d_texture_provider_removal
     PROPERTIES LABELS "original-rendering;source-identity;negative")

@@ -410,6 +410,7 @@ SamplerHandle SdlGpuDevice::create_sampler(const SamplerDesc& desc, std::string_
     info.address_mode_u = address_mode(desc.address_u); info.address_mode_v = address_mode(desc.address_v);
     info.address_mode_w = address_mode(desc.address_w); info.max_anisotropy = static_cast<float>(desc.maximum_anisotropy);
     info.enable_anisotropy = desc.maximum_anisotropy > 1;
+    info.max_lod = desc.maximum_lod;
     auto* native = SDL_CreateGPUSampler(impl_->device, &info);
     if (!native) { impl_->fail("create_sampler", sdl_error("SDL_CreateGPUSampler"), label); return {}; }
     auto handle = allocate<SamplerHandle>(impl_->samplers, label, Impl::SamplerRecord{desc, native});

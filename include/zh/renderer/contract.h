@@ -91,6 +91,7 @@ struct SamplerDesc {
     AddressMode address_v = AddressMode::repeat;
     AddressMode address_w = AddressMode::repeat;
     UInt8 maximum_anisotropy = 1;
+    float maximum_lod = 1000.0F;
 };
 
 struct ShaderDesc {

@@ -214,6 +214,26 @@ void test_original_mip_upload_contract()
     device.destroy(texture);
     check(device.resource_counts().total()==0,"mip texture leaked");
 }
+
+void test_original_sampler_lod_contract()
+{
+    RecordingGpuDevice device;
+    SamplerDesc source;
+    source.maximum_lod=0.0F;
+    auto sampler=device.create_sampler(source,"original no-mip sampler");
+    check(static_cast<bool>(sampler) && device.sampler_descriptor(sampler).maximum_lod==0.0F,
+        "source no-mip clamp was not preserved");
+    device.destroy(sampler);
+    source.maximum_lod=-1.0F;
+    check(!device.create_sampler(source,"invalid original LOD"),"negative sampler LOD was accepted");
+    source.maximum_lod=1000.0F;
+    device.fail_next_sampler_create();
+    check(!device.create_sampler(source,"injected sampler failure"),"injected sampler failure was ignored");
+    sampler=device.create_sampler(source,"retry sampler");
+    check(static_cast<bool>(sampler),"sampler retry failed");
+    device.destroy(sampler);
+    check(device.resource_counts().total()==0,"sampler contract leaked resources");
+}
 } // namespace
 
 int main()
@@ -226,6 +246,7 @@ int main()
         test_original_16_bit_index_range_and_base_vertex();
         test_source_texture_format_capabilities();
         test_original_mip_upload_contract();
+        test_original_sampler_lod_contract();
         std::cout << "recording device tests: ok\n";
         return 0;
     } catch (const std::exception& error) {

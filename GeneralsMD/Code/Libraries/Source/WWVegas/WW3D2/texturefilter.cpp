@@ -38,7 +38,13 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "texturefilter.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "original_gpu_edge.h"
+#include <stdexcept>
+static constexpr unsigned MAX_TEXTURE_STAGES=8;
+#else
 #include "dx8wrapper.h"
+#endif
 
 unsigned _MinTextureFilters[MAX_TEXTURE_STAGES][TextureFilterClass::FILTER_TYPE_COUNT];
 unsigned _MagTextureFilters[MAX_TEXTURE_STAGES][TextureFilterClass::FILTER_TYPE_COUNT];
@@ -47,7 +53,7 @@ unsigned _MipMapFilters[MAX_TEXTURE_STAGES][TextureFilterClass::FILTER_TYPE_COUN
 /*************************************************************************
 **                             TextureFilterClass
 *************************************************************************/
-TextureFilterClass::TextureFilterClass(MipCountType mip_level_count=MIP_LEVELS_1)
+TextureFilterClass::TextureFilterClass(MipCountType mip_level_count)
 :	TextureMinFilter(FILTER_TYPE_DEFAULT),
 	TextureMagFilter(FILTER_TYPE_DEFAULT),
 	UAddressMode(TEXTURE_ADDRESS_REPEAT),
@@ -69,6 +75,26 @@ TextureFilterClass::TextureFilterClass(MipCountType mip_level_count=MIP_LEVELS_1
 */
 void TextureFilterClass::Apply(unsigned int stage)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    if (stage>=MAX_TEXTURE_STAGES || TextureMinFilter>=FILTER_TYPE_COUNT ||
+        TextureMagFilter>=FILTER_TYPE_COUNT || MipMapFilter>=FILTER_TYPE_COUNT)
+        throw std::runtime_error("original texture filter or stage is invalid");
+    using State=zh::original_runtime::OriginalGpuEdge::FilterStageState;
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    edge.set_filter_stage_state(stage,State::min_filter,_MinTextureFilters[stage][TextureMinFilter]);
+    edge.set_filter_stage_state(stage,State::mag_filter,_MagTextureFilters[stage][TextureMagFilter]);
+    edge.set_filter_stage_state(stage,State::mip_filter,_MipMapFilters[stage][MipMapFilter]);
+    switch (Get_U_Addr_Mode()) {
+    case TEXTURE_ADDRESS_REPEAT: edge.set_filter_stage_state(stage,State::address_u,0); break;
+    case TEXTURE_ADDRESS_CLAMP: edge.set_filter_stage_state(stage,State::address_u,1); break;
+    default: throw std::runtime_error("original U address mode unsupported");
+    }
+    switch (Get_V_Addr_Mode()) {
+    case TEXTURE_ADDRESS_REPEAT: edge.set_filter_stage_state(stage,State::address_v,0); break;
+    case TEXTURE_ADDRESS_CLAMP: edge.set_filter_stage_state(stage,State::address_v,1); break;
+    default: throw std::runtime_error("original V address mode unsupported");
+    }
+#else
 	DX8Wrapper::Set_DX8_Texture_Stage_State(stage,D3DTSS_MINFILTER,_MinTextureFilters[stage][TextureMinFilter]);
 	DX8Wrapper::Set_DX8_Texture_Stage_State(stage,D3DTSS_MAGFILTER,_MagTextureFilters[stage][TextureMagFilter]);
 	DX8Wrapper::Set_DX8_Texture_Stage_State(stage,D3DTSS_MIPFILTER,_MipMapFilters[stage][MipMapFilter]);
@@ -94,6 +120,7 @@ void TextureFilterClass::Apply(unsigned int stage)
 		DX8Wrapper::Set_DX8_Texture_Stage_State(stage, D3DTSS_ADDRESSV, D3DTADDRESS_CLAMP);
 		break;
 	}
+#endif
 }
 
 //**********************************************************************************************
@@ -102,6 +129,29 @@ void TextureFilterClass::Apply(unsigned int stage)
 */
 void TextureFilterClass::_Init_Filters(TextureFilterMode filter_type)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    if (filter_type!=TEXTURE_FILTER_BILINEAR && filter_type!=TEXTURE_FILTER_TRILINEAR &&
+        filter_type!=TEXTURE_FILTER_ANISOTROPIC)
+        throw std::runtime_error("original texture filter profile is invalid");
+    for (unsigned stage=0;stage<MAX_TEXTURE_STAGES;++stage) {
+        _MinTextureFilters[stage][FILTER_TYPE_NONE]=0;
+        _MagTextureFilters[stage][FILTER_TYPE_NONE]=0;
+        _MipMapFilters[stage][FILTER_TYPE_NONE]=0;
+        _MinTextureFilters[stage][FILTER_TYPE_FAST]=1;
+        _MagTextureFilters[stage][FILTER_TYPE_FAST]=1;
+        _MipMapFilters[stage][FILTER_TYPE_FAST]=1;
+        // The original stage-zero anisotropic request downgrades subsequent
+        // stages to linear; the SDL device validates the actual request.
+        _MinTextureFilters[stage][FILTER_TYPE_BEST]=
+            filter_type==TEXTURE_FILTER_ANISOTROPIC && stage==0 ? 2 : 1;
+        _MagTextureFilters[stage][FILTER_TYPE_BEST]=
+            filter_type==TEXTURE_FILTER_ANISOTROPIC && stage==0 ? 2 : 1;
+        _MipMapFilters[stage][FILTER_TYPE_BEST]=filter_type==TEXTURE_FILTER_BILINEAR ? 1 : 2;
+        _MinTextureFilters[stage][FILTER_TYPE_DEFAULT]=_MinTextureFilters[stage][FILTER_TYPE_BEST];
+        _MagTextureFilters[stage][FILTER_TYPE_DEFAULT]=_MagTextureFilters[stage][FILTER_TYPE_BEST];
+        _MipMapFilters[stage][FILTER_TYPE_DEFAULT]=_MipMapFilters[stage][FILTER_TYPE_BEST];
+    }
+#else
 	const D3DCAPS8& dx8caps=DX8Wrapper::Get_Current_Caps()->Get_DX8_Caps();
 
 #ifndef _XBOX
@@ -195,6 +245,7 @@ void TextureFilterClass::_Init_Filters(TextureFilterMode filter_type)
 		DX8Wrapper::Set_DX8_Texture_Stage_State(i,D3DTSS_MAXANISOTROPY,2);
 	}
 
+#endif
 }
 
 

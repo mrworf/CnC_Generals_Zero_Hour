@@ -4,6 +4,7 @@
 #include "ww3dformat.h"
 
 #include <unordered_map>
+#include <array>
 
 class VertexBufferClass;
 class IndexBufferClass;
@@ -33,6 +34,16 @@ public:
     renderer::TextureHandle texture_handle(const TextureBaseClass* source) const;
     std::uint64_t generation() const noexcept { return generation_; }
     static void release_texture_if_owned(TextureBaseClass* source) noexcept;
+    struct PendingStage {
+        renderer::TextureHandle texture;
+        renderer::SamplerHandle sampler;
+        std::uint64_t generation = 0;
+        const TextureBaseClass* source = nullptr;
+    };
+    void select_texture(unsigned stage, const TextureBaseClass* source);
+    enum class FilterStageState { min_filter, mag_filter, mip_filter, address_u, address_v };
+    void set_filter_stage_state(unsigned stage, FilterStageState state, unsigned value);
+    PendingStage pending_stage(unsigned stage) const;
     [[noreturn]] void texture_creation_unavailable(WW3DFormat format, unsigned width,
         unsigned height, unsigned mips, unsigned reduction);
     static OriginalGpuEdge& required();
@@ -45,6 +56,9 @@ private:
     struct TextureOwnership { renderer::TextureHandle handle; std::uint64_t generation; bool shared_missing; };
     std::unordered_map<TextureBaseClass*, TextureOwnership> textures_;
     renderer::TextureHandle missing_texture_;
+    std::array<PendingStage, 8> pending_stages_{};
+    struct PendingFilterValues { int min=-1,mag=-1,mip=-1,u=-1,v=-1; };
+    std::array<PendingFilterValues,8> pending_filter_values_{};
     std::uint64_t generation_;
 };
 

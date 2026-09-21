@@ -9,16 +9,6 @@ unsigned next_texture_id = 0;
 }
 }
 
-TextureFilterClass::TextureFilterClass(MipCountType mip_count) :
-	TextureMinFilter(FILTER_TYPE_DEFAULT), TextureMagFilter(FILTER_TYPE_DEFAULT),
-	MipMapFilter(mip_count == MIP_LEVELS_1 ? FILTER_TYPE_NONE : FILTER_TYPE_DEFAULT),
-	UAddressMode(TEXTURE_ADDRESS_REPEAT), VAddressMode(TEXTURE_ADDRESS_REPEAT)
-{
-}
-
-void TextureFilterClass::Set_Mip_Mapping(FilterType filter) { MipMapFilter = filter; }
-void TextureFilterClass::Apply(unsigned int) { unavailable(); }
-
 TextureBaseClass::TextureBaseClass(unsigned width, unsigned height, MipCountType mip_level_count,
 	PoolType pool, bool, bool reducible) :
 	MipLevelCount(mip_level_count), Initialized(false), IsLightmap(false),
@@ -120,5 +110,5 @@ void TextureClass::Apply_Gpu_Texture(WW3DFormat format, unsigned width, unsigned
 {
 	TextureFormat=format; Width=width; Height=height; Initialized=true;
 }
-void TextureClass::Apply(unsigned int) { unavailable(); }
+#include "texture_apply.inc"
 unsigned TextureClass::Get_Texture_Memory_Usage() const { return 0; }

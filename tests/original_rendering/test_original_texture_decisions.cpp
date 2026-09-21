@@ -5,6 +5,10 @@
 #include "TARGA.H"
 #include "texture.h"
 #include "textureloader.h"
+#include "assetmgr.h"
+#include "chunkio.h"
+#include "RAMFILE.H"
+#include "w3d_file.h"
 #include "ww3d.h"
 #include "ddsfile.h"
 #include "ffactory.h"
@@ -298,6 +302,156 @@ void original_dds_to_targa_fallback() {
     _TheFileFactory=prior;
 }
 
+void original_stage_filter_state() {
+    OwnedFactory factory;
+    factory.files["stage.dds"]=compressed_fixture(16,4);
+    auto* prior=_TheFileFactory;
+    _TheFileFactory=&factory;
+    WW3D::Set_Thumbnail_Enabled(false);
+    WW3D::Set_Texture_Reduction(0,1);
+    WW3D::Enable_Texturing(true);
+    try {
+        zh::renderer::RecordingGpuDevice device;
+        zh::original_runtime::OriginalGpuEdge edge(device);
+        WW3D::Set_Texture_Filter(TextureFilterClass::TEXTURE_FILTER_TRILINEAR);
+        TextureClass texture("stage","stage.tga",MIP_LEVELS_ALL,WW3D_FORMAT_UNKNOWN,true,true);
+        TextureClass orphan("orphan","stage.tga",MIP_LEVELS_ALL,WW3D_FORMAT_UNKNOWN,true,true);
+        bool no_owner=false;
+        try { edge.select_texture(0,&orphan); } catch (const std::runtime_error&) { no_owner=true; }
+        check(no_owner);
+        texture.Get_Filter().Set_U_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_CLAMP);
+        texture.Apply(0);
+        const auto zero=edge.pending_stage(0);
+        check(zero.texture==edge.texture_handle(&texture) && zero.sampler);
+        const auto filter=device.sampler_descriptor(zero.sampler);
+        check(filter.min_filter==zh::renderer::Filter::linear &&
+            filter.mag_filter==zh::renderer::Filter::linear &&
+            filter.mip_filter==zh::renderer::Filter::linear &&
+            filter.address_u==zh::renderer::AddressMode::clamp_edge &&
+            filter.address_v==zh::renderer::AddressMode::repeat);
+        texture.Get_Filter().Set_Mip_Mapping(TextureFilterClass::FILTER_TYPE_NONE);
+        texture.Get_Filter().Set_V_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_CLAMP);
+        texture.Apply(1);
+        const auto one=edge.pending_stage(1);
+        check(one.texture==zero.texture && one.sampler!=zero.sampler);
+        check(device.sampler_descriptor(one.sampler).maximum_lod==0.0F);
+        WW3D::Enable_Texturing(false);
+        texture.Apply(0);
+        check(!edge.pending_stage(0).texture && edge.pending_stage(0).sampler);
+        WW3D::Enable_Texturing(true);
+        device.fail_next_sampler_create();
+        bool injected=false;
+        try { texture.Apply(0); } catch (const std::runtime_error& e) {
+            injected=std::string(e.what()).find("sampler creation failed")!=std::string::npos;
+        }
+        check(injected);
+        texture.Apply(0);
+        check(edge.pending_stage(0).texture==edge.texture_handle(&texture));
+        texture.Get_Filter().Set_U_Addr_Mode(static_cast<TextureFilterClass::TxtAddrMode>(9));
+        bool unsupported=false;
+        try { texture.Apply(0); } catch (const std::runtime_error&) { unsupported=true; }
+        check(unsupported);
+        texture.Get_Filter().Set_U_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_REPEAT);
+        bool stage_out_of_bounds=false;
+        try { texture.Apply(8); } catch (const std::runtime_error&) { stage_out_of_bounds=true; }
+        check(stage_out_of_bounds);
+        texture.Invalidate();
+        bool released_stage=false;
+        try { (void)edge.pending_stage(0); }
+        catch (const std::runtime_error&) { released_stage=true; }
+        check(released_stage);
+        released_stage=false;
+        try { (void)edge.pending_stage(1); }
+        catch (const std::runtime_error&) { released_stage=true; }
+        check(released_stage);
+        check(device.resource_counts().textures==0 && !device.pass_active());
+        const auto snapshot=device.snapshot();
+        auto prior_state=snapshot.find("original TextureClass::Apply stage=0 selected");
+        check(prior_state!=std::string::npos);
+        for (unsigned state=0;state<5;++state) {
+            const auto next=snapshot.find("original TextureFilterClass stage=0 property="+
+                std::to_string(state),prior_state);
+            check(next!=std::string::npos && next>prior_state);
+            prior_state=next;
+        }
+        check(snapshot.find("begin_pass")==std::string::npos &&
+            snapshot.find("draw ")==std::string::npos);
+        WW3D::Set_Texture_Filter(TextureFilterClass::TEXTURE_FILTER_ANISOTROPIC);
+        texture.Apply(0);
+        texture.Apply(1);
+        check(device.sampler_descriptor(edge.pending_stage(0).sampler).maximum_anisotropy==2);
+        check(device.sampler_descriptor(edge.pending_stage(1).sampler).maximum_anisotropy==1);
+        texture.Invalidate();
+        bool unavailable=false;
+        try { TextureFilterClass::_Init_Filters(static_cast<TextureFilterClass::TextureFilterMode>(99)); }
+        catch (const std::runtime_error&) { unavailable=true; }
+        check(unavailable);
+        WW3D::Set_Texture_Filter(TextureFilterClass::TEXTURE_FILTER_BILINEAR);
+        TextureClass optional("optional","absent.tga",MIP_LEVELS_ALL,WW3D_FORMAT_UNKNOWN,false,true);
+        optional.Apply(0);
+        check(optional.Is_Missing_Texture() &&
+            edge.pending_stage(0).texture==edge.texture_handle(&optional));
+        optional.Invalidate();
+        released_stage=false;
+        try { (void)edge.pending_stage(0); }
+        catch (const std::runtime_error&) { released_stage=true; }
+        check(released_stage && device.resource_counts().textures==1);
+    } catch (...) {
+        WW3D::Enable_Texturing(true);
+        _TheFileFactory=prior; throw;
+    }
+    _TheFileFactory=prior;
+}
+
+void original_w3d_texture_stage() {
+    OwnedFactory factory;
+    factory.files["owned-stage.tga"]=targa_fixture();
+    auto* prior=_TheFileFactory;
+    _TheFileFactory=&factory;
+    WW3D::Set_Thumbnail_Enabled(false);
+    WW3D::Set_Texture_Filter(TextureFilterClass::TEXTURE_FILTER_BILINEAR);
+    try {
+        zh::renderer::RecordingGpuDevice device;
+        {
+            zh::original_runtime::OriginalGpuEdge edge(device);
+            WW3DAssetManager manager;
+            std::array<char,512> storage{};
+            RAMFileClass output(storage.data(),storage.size());
+            check(output.Open(FileClass::WRITE));
+            ChunkSaveClass writer(&output);
+            check(writer.Begin_Chunk(W3D_CHUNK_TEXTURE));
+            constexpr char name[]="owned-stage.tga";
+            check(writer.Begin_Chunk(W3D_CHUNK_TEXTURE_NAME));
+            check(writer.Write(name,sizeof(name))==sizeof(name));
+            check(writer.End_Chunk());
+            W3dTextureInfoStruct info{};
+            info.Attributes=W3DTEXTURE_NO_LOD | W3DTEXTURE_CLAMP_U;
+            check(writer.Begin_Chunk(W3D_CHUNK_TEXTURE_INFO));
+            check(writer.Write(&info,sizeof(info))==sizeof(info));
+            check(writer.End_Chunk() && writer.End_Chunk());
+            const auto size=output.Size();
+            output.Close();
+            RAMFileClass input(storage.data(),size);
+            check(input.Open(FileClass::READ));
+            ChunkLoadClass loader(&input);
+            TextureClass* source=Load_Texture(loader);
+            check(source!=nullptr);
+            check(source->Get_Filter().Get_U_Addr_Mode()==TextureFilterClass::TEXTURE_ADDRESS_CLAMP);
+            check(source->Get_Filter().Get_Mip_Mapping()==TextureFilterClass::FILTER_TYPE_NONE);
+            source->Apply(1);
+            auto selected=edge.pending_stage(1);
+            check(selected.texture==edge.texture_handle(source));
+            const auto sampler=device.sampler_descriptor(selected.sampler);
+            check(sampler.address_u==zh::renderer::AddressMode::clamp_edge &&
+                sampler.maximum_lod==0.0F);
+            source->Release_Ref();
+            check(factory.owners==0);
+        }
+        check(device.resource_counts().total()==0);
+    } catch (...) { _TheFileFactory=prior; throw; }
+    _TheFileFactory=prior;
+}
+
 void format_fallbacks()
 {
     zh::renderer::RecordingGpuDevice device;
@@ -364,5 +518,7 @@ int main()
     original_texture_generation_lifetime();
     original_texture_device_fallback();
     original_dds_to_targa_fallback();
+    original_stage_filter_state();
+    original_w3d_texture_stage();
     std::cout << "original-rendering runtime provider=GeneralsMD WW3D2 texture format bitmap decisions\n";
 }

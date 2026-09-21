@@ -144,6 +144,8 @@ ValidationResult validate(const SamplerDesc& desc)
 {
     if (desc.maximum_anisotropy == 0 || desc.maximum_anisotropy > 16)
         return failure("sampler anisotropy must be in range 1..16");
+    if (!std::isfinite(desc.maximum_lod) || desc.maximum_lod < 0.0F)
+        return failure("sampler maximum LOD must be finite and nonnegative");
     return {};
 }
 

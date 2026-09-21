@@ -42,8 +42,37 @@ int main() {
         check(device.upload_texture({texture,2,2,8,pixels.size(),0},pixels.data()),
             "BGRA upload failed");
         device.destroy(texture);
+        SamplerDesc source_filter;
+        source_filter.min_filter=Filter::linear;
+        source_filter.mag_filter=Filter::linear;
+        source_filter.mip_filter=Filter::nearest;
+        source_filter.address_u=AddressMode::clamp_edge;
+        source_filter.maximum_lod=0.0F;
+        auto sampler=device.create_sampler(source_filter,"original source no-mip clamp sampler");
+        check(static_cast<bool>(sampler),"source no-mip sampler creation failed");
+        device.destroy(sampler);
+        source_filter.maximum_lod=1000.0F;
+        sampler=device.create_sampler(source_filter,"original source enabled-mip sampler");
+        check(static_cast<bool>(sampler),"source enabled-mip sampler creation failed");
+        device.destroy(sampler);
+        source_filter.maximum_anisotropy=2;
+        sampler=device.create_sampler(source_filter,"original source anisotropic stage-zero sampler");
+        check(static_cast<bool>(sampler),"source anisotropic sampler creation failed");
+        device.destroy(sampler);
         check(device.wait_idle(),"texture upload did not complete");
         std::cout << "original W3D texture GPU upload: vulkan BC1 BGRA mips ok\n";
+        }
+        {
+        zh::renderer::SdlGpuOptions options;
+        options.shader_root=ZH_GPU_SHADER_DIR;
+        options.debug=true;
+        zh::renderer::SdlGpuDevice recreated(options);
+        zh::renderer::SamplerDesc source_filter;
+        source_filter.maximum_lod=0.0F;
+        auto sampler=recreated.create_sampler(source_filter,"original source recreated device sampler");
+        check(static_cast<bool>(sampler),"recreated GPU sampler failed");
+        recreated.destroy(sampler);
+        check(recreated.wait_idle(),"recreated GPU sampler teardown failed");
         }
         SDL_Quit();
         return 0;
