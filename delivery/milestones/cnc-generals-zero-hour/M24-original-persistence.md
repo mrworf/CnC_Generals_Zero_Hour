@@ -16,7 +16,7 @@ Allocation rule: the [runtime reconciliation](../../../docs/zero-hour-runtime-cl
 
 ## Explicit Exclusions
 
-Windows fixture compatibility remains optional M18; no compatibility promise for synthetic ZHSG. Preserve valid component implementations/tests. No ARM64, base Generals executable/tools, retail redistribution or gameplay rewrite.
+Windows fixture compatibility remains optional M18; no compatibility promise for synthetic ZHSG. Preserve valid component implementations/tests. M22 supplies the original draw provider needed by the remaining mission first-tick and skirmish restore checks; do not substitute a fake draw or reopen completed persistence slices. No ARM64, base Generals executable/tools, retail redistribution or gameplay rewrite.
 
 ## Source Requirements
 
@@ -26,9 +26,9 @@ Runtime reconciliation RC-002/RC-003 preserves this domain's whole acceptance ch
 
 ## Preconditions
 
-Direct providers: M21, M5. Consume evidenced contracts, not historical title/status alone. Historical providers supply qualified component evidence; this contract provides the missing original-source assurance. Its unfinished deliverables are not entry prerequisites. Readiness separately audits external inputs.
+Direct providers: M5 and M22. M22 supplies the original draw provider reached by first-tick mission setup and skirmish save-load reconstruction; it also transitively consumes M21 simulation. Consume evidenced contracts, not historical title/status alone. This contract provides the missing original-source assurance. Its unfinished deliverables are not entry prerequisites. Readiness separately audits external inputs.
 
-- `PRE-030` — M21 original simulation; PRE-018 — qualified M5 codec/fixture component, not game snapshots; PRE-008 at real-map validation. PRE-033 is produced here; Windows PRE-015 is not required.
+- `PRE-030` — M21 original simulation through M22; `PRE-031` — M22's original draw-provider acceptance; PRE-018 — qualified M5 codec/fixture component, not game snapshots; PRE-008 at real-map validation. PRE-033 is produced here; Windows PRE-015 is not required.
 
 ## Readiness checks
 
@@ -40,6 +40,8 @@ Produces `PRE-033` (M24 original Xfer/replay/CRC); inspect this contract's sourc
 ## Functional Requirements
 
 Round-trip a real source-engine map with objects, script/AI/player state and commands; resume and compare original checkpoints. Replay actual source commands across GCC/Clang Debug/Release rather than a parallel synthetic snapshot.
+
+Preserve completed plan 01 slices 01–05B and their evidence. Resume 05C mission first-tick, 05D skirmish restore and 06 cumulative acceptance only after M22's required original draw provider is accepted.
 
 RC-010: ledger the original GameState reset/load/postprocess/catch path and Recorder::playbackFile mode/header/MSG_NEW_GAME/InitRandom flow. GameState currently resets before load, so implement and prove rollback/transactional preservation rather than infer it from a parser rejection. Invalid headers must restore recorder mode and leave no mixed state; startup .rep dispatch uses the same validated path. Preserve cross-preset playback despite DEBUG_LOGGING version/build/exeCRC branches with explicit characterized compatibility handling, not blanket validation removal. Source/UI error resources come from prior providers; headless diagnostics remain bounded and noninteractive.
 

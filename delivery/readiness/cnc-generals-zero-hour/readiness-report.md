@@ -1,205 +1,135 @@
-# Milestone readiness report
+# Milestone readiness report — renderer migration
 
 ## 1. Overall readiness status
 
-**READY_WITH_EXTERNAL_DEPENDENCIES** — M20 can resume under a fresh governing plan after committed packet adoption; completed independent providers precede remaining coupled W3D/runtime integration, and later external validation gates have owners and completion evidence. Readiness does not assert that the original engine already builds or runs.
+**READY_WITH_EXTERNAL_DEPENDENCIES** — M29 is executable from the completed repository contracts; M30 follows M29 and needs the declared developer RTX/Vulkan/graphical session only at its hardware acceptance boundary. This does not claim bgfx or original retail rendering is implemented. If that session is unavailable when M30 reaches acceptance, its gate becomes `BLOCKED_BY_USER_ACTION`.
 
 ## 2. Scope and evidence basis
 
-Product `cnc-generals-zero-hour`; complete 29-contract packet, index, traceability and `delivery/milestones/cnc-generals-zero-hour/status.yaml` remain the audited boundary. This narrow RC-012 re-audit reuses unchanged historical readiness and checks the changed M20/M22/M23 contracts, M21 consumer boundary, completed M26–M28 evidence, provenance and the complete graph/membership. Authority is `docs/zero-hour-runtime-closure-reconciliation.md` RC-001–RC-012, revision `sha256:847fa3b1cc5883cb0ebcedfd11bba715326c66dd4835e3a229a13e93cf96edd2`, source/transaction-start commit `cb567c223beab5d63fa2f13d66718e670271d3d0`, plus the unchanged migration supplement and base plan. Parent records the final packet fingerprint and planning payload SHA in `workflow/delivery-planning/state.yaml` (`transaction.repository_commit`).
+Product `cnc-generals-zero-hour`; selected 31-contract packet `delivery/milestones/cnc-generals-zero-hour/status.yaml` and its `index.md`. Declared list order, `dependencies`, and `packet_adoption.pending_execution_order` govern, not numeric IDs. Source authority: accepted `docs/zero-hour-renderer-backend-migration.md` RB-01–RB-04 at `64c7632dcc93a5a5d9fc1519467140828a3a8813`, canonical `workflow/reconciliation/renderer-bgfx-2026-09-21/reconciliation-result.yaml` at `25ef60575bfc13aeac5a6aa7146da1af2626e59c`, and preserved earlier runtime/source authority recorded in status. Parent-owned transaction-start HEAD `c19f79fc71f72b33e37e8080a6d5f0a78a1bee1a`; final packet fingerprint and planning commit remain parent-owned/pending. At invocation the worktree contained only compiler-owned M22/M24/index/status/traceability edits and new M29/M30; no unrelated dirty paths were observed. No applicable AGENTS.md was found.
 
-FACT: starting worktree contained compiler-owned M20/M22/M23/index/status/traceability and parent-owned planning workflow edits; no unrelated dirty paths. No applicable AGENTS.md was found. This child owns readiness artifacts, index/status readiness fields and one M21 readiness check; no commits. Prior source findings below remain retained, not freshly rerun acceptance. This pass checked W3DModuleFactory's 19 registrations, ThingTemplate's unchecked data dereference, the recorded blocker/reconciliation, and the M21 consumer boundary. Original runtime acceptance was not run.
-
-Historical M0–M14 contracts and their time-bound pending/package wording remain immutable snapshots; current index, status and readiness qualify that evidence as components. M19 remains accepted at its bounded ten-provider grade; M26–M28 are accepted at their scoped independent-provider grade. Full integrated lifetime and production W3D closure remain M20 deliverables.
+FACT: M0–M14, M19, M26–M28, M20–M21 are completed at their recorded grades. M22 and M24 retain unfinished plans and completed slices. FACT: the public bgfx probe source exists; its accepted result proves the exact camera clear abstraction on the prior host, not integrated device/retail acceptance. FACT: `third_party/` contains miniaudio but no bgfx/bx/bimg or committed bgfx shader compiler. INFERENCE: source pinning, license review and integration can be performed as M29/M30 work because RB-03/RB-02 allocate them there; no clean-checkout configure may assume a global bgfx install. This does not preapprove an unreviewed license or host package installation.
 
 ## 3. Automatically completed prerequisites
 
-No product implementation or new bootstrap was required. The manifest retains 37 prerequisites; RC-012 refines PRE-029 and later consumer obligations without new IDs or external inputs. This child reverified tool/module availability, four-preset enumeration and 3,293-path source classification. Prior offline GCC Debug configuration and pinned miniaudio provenance remain evidence from preceding readiness audits; no configure/build was rerun for this documentation-only change.
-
-The preceding readiness assertion that M26 was next is superseded by completed M26–M28 evidence. No historical completed contract or acceptance was rewritten. PRE-035–037 precede PRE-029's complete integrated runtime; self-owned implementation is never an entry prerequisite.
+No product code, dependency installation, service or new bootstrap was changed. PRE-001–011, PRE-013/014, PRE-018–024, PRE-028–030 and PRE-035–037 retain their recorded, bounded accepted evidence. M29 enters with M8/M9/M10 command families (PRE-020–022), M2/M7 transitive contracts (PRE-006/010), four presets and baseline tools (PRE-002). This audit observed all four presets, compiler/build/shader tools, SDL3/FFmpeg/font/zlib modules, and the project-owned public probe; it did not rerun milestone acceptance. PRE-038/039/040 are newly normalized outputs, not already satisfied inputs.
 
 ## 4. Confirmation-gated work
 
-None at M20 entry. No package installation, dependency acquisition, persistent service, privileged command or product code change was needed. Later validation uses the declared host/environment facilities when available.
+None before M29 entry: accepted RB-02/RB-03 already authorize a bgfx dependency and its shader tooling within the device migration. M29 must document a pinned, licensed, repository-compatible toolchain and reproducible acquisition; M30 integrates the pinned runtime. A materially different vendoring footprint, incompatible license term, OS package installation, or developer-workflow change beyond that accepted scope would require a new gate with exact files/effects/reversal. No dependency was acquired or changed by readiness.
 
 ## 5. Required user actions
 
-1. **PRE-012/PRE-016 at M22/M23 validation:** developer/session owner supplies accessible Arch RTX 4070 Vulkan and graphical-session facilities. Verify `vulkaninfo --summary` identifies the device and `VK_LAYER_KHRONOS_validation`, then run milestone-produced original-scene and original-interaction tests with validation enabled. Record device/driver/SDL, zero Validation Error/VUID output and real-source scene/UI evidence. Installed layers and previous M14 component scenes do not discharge these later tests.
-2. **PRE-017 at M17 validation:** maintainer/CI runner owner supplies clean Ubuntu 26.04 and Fedora 44 x86-64 environments, installs documented distribution dependencies, and retains OS/architecture/package and all-four-preset configure/build/test logs. These may be disposable build/headless runners; a second physical GPU is not required.
-3. **PRE-015 only for optional M18:** fixture owner supplies legally readable Windows 1.04 saves/replays with version/configuration provenance. Recordings may exist in original content; their suitability has not been inspected. Without suitable fixtures, record not validated and leave Linux release acceptance unaffected.
-
-PRE-008 retail roots were supplied and directory/ignore checks passed in prior readiness; no traversal or fresh content checks were performed here. M26–M28 accept owned fixtures without those roots. M20 consumes them read-only at initialization acceptance and rechecks availability then. Local independent loopback peers at M25/M16 use the established M11 developer environment; no remote service, credential, Windows peer or second machine is required.
+1. `PRE-012`/`PRE-016`, first consuming hardware boundary **M30 acceptance**: developer/session owner provides an accessible RTX 4070 Vulkan graphical session and Khronos validation layer. Run `vulkaninfo --summary` in that session and inspect device/layer output; execute M30's exact public probe and bgfx GPU tests with `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`. Retain driver/device/layer and zero relevant validation-error evidence. Prior M14/probe results do not establish a fresh M30 backend.
+2. `PRE-008`, M22 original retail validation: owner supplies the existing ignored Zero Hour/base Generals English roots read-only via local opt-in inputs; rerun availability/ignore checks and M22 source-scene tests. Never write, copy into tracked files, hash or expose physical retail paths. M29/M30 ordinary tests do not consume retail assets.
+3. `PRE-017`, M17 release acceptance: maintainer/CI owner supplies disposable clean Ubuntu 26.04 and Fedora 44 x86-64 runners with documented dependencies and captures OS/package/all-four-preset configure/build/test and installed-prefix results. No second physical GPU is required.
+4. `PRE-015`, optional M18 only: fixture owner supplies legally readable Windows 1.04 saves/replays with provenance. Existing recordings may be suitable but were not inspected; missing fixtures mean optional compatibility is not validated, never a Linux release blocker.
 
 ## 6. Missing or unresolved prerequisites
 
-None blocking M20 start after parent finalization/adoption. Remaining original implementations, ATL/PCH/compiler errors and source-classification/ledger changes in the coupled startup closure are M20 work under the accepted resolution; completed M26–M28 are not reopened. PRE-029–034 and PRE-025–027 require future implementation/acceptance; no such success is claimed here.
+None at M29 entry. PRE-038/039 are M29 outputs, PRE-040 is M30 output, PRE-031 is M22 output, and PRE-033 is M24 output; they are not circular entry preconditions. Current lack of a committed bgfx dependency is implementation scope, not proof of an external package requirement. If M29 cannot establish a licensed/pinned offline toolchain or another required public API behavior fails, reopen the source §9 evidence gate with a named reproducer rather than silently weakening coverage. Current owner is M29/M30 as applicable.
 
-The source inventory still labels many deferred files by previous domain owners. RC-007 and M26–M28/M20 explicitly authorize updating classification and the checked ledger as providers enter their real targets; labels cannot override actual dependencies or defer required behavior to later domains. Scope size and routine link failures remain engineering work within those owners. Demonstrated required asset/backend limitations retain the base-plan evidence gate.
+## 7. Dependency graph
 
-## 7. Dependency graph and source semantic audit
+Provider-to-consumer edges, labeled by the normalized manifest IDs (transitive/historical edges remain in `status.yaml`):
 
-Each edge below names its prerequisite. Historical branches preserve component history; M19 has bounded original support assurance. Self-owned implementation is not an entry dependency or graph cycle.
-
-| Provider | Edge labels | Direct consumers |
+| Provider | IDs | Direct consumers |
 |---|---|---|
-| Existing repository/developer packages | PRE-001/002 | M0 historically; M19 completed; all remaining |
-| Read-only retail owner | PRE-008 | M4 historically; M20–M25/M15–M17 validation |
-| External host/session owner | PRE-012/016 | M6/M14 historically; M22/M23/M15–M17 validation |
-| External clean runner owner | PRE-017 | M17 validation |
+| Repository/toolchain | PRE-001/002 | M0, M19, remaining implementation |
+| Retail owner | PRE-008 | M4 historically; M22–M25, M15–M17 validation |
+| Host GPU/session owner | PRE-012/016 | M14 historically; M30, M22/M23, M15–M17 hardware/interaction validation |
+| Clean runner owner | PRE-017 | M17 acceptance |
 | Optional Windows fixture owner | PRE-015 | M18 only |
-| M0 | PRE-003/004 | M1, M2, M19 |
-| M1 | PRE-005 | M3, M4, M6, M19 |
-| M2 | PRE-006 | M7 |
-| M3 | PRE-007 | M4, M6, M7, M11 |
-| M4 | PRE-009 | M5, M7, M8, M9, M10, M11, M12, M13, M27; transitively M20 |
-| M5 | PRE-018 | M24 |
-| M6 | PRE-019 | M8, M28, M23 |
-| M7 | PRE-010 | M8, M9, M10, M13, M14, M28 |
-| M8 | PRE-020 | M14, M28, M23 |
-| M9 | PRE-021 | M14 |
-| M10 | PRE-022 | M14 |
-| M11 | PRE-014 | M25 |
-| M12 | PRE-011/023 | M13, M28, M23 |
-| M13 | PRE-024 | M14, M28, M23 |
-| M14 | PRE-013 (component only) | M22 |
-| M19 | PRE-028 (bounded support) | M26 |
-| M26 | PRE-035 (original process/ABI/ledger) | M27 |
-| M27 | PRE-036 (independent original data) | M28 |
-| M28 | PRE-037 (independent original CPU resources) | M20 |
-| M20 | PRE-029 (complete offline runtime) | M21 |
-| M21 | PRE-030 | M22, M24 |
-| M22 | PRE-031 | M23 |
+| M0–M7 | PRE-003–010, PRE-018/019 as recorded | Historical native and original providers |
+| M8 | PRE-020 | M14, M28, M29, M23 |
+| M9 | PRE-021 | M14, M29 |
+| M10 | PRE-022 | M14, M29 |
+| M11–M14 | PRE-011/013/014/023/024 | Historical consumers; PRE-013 to M30 comparison |
+| M19→M26→M27→M28→M20→M21 | PRE-028/035/036/037/029/030 | Original-source chain; M21 to M22 |
+| M29 | PRE-038/039 | M30; PRE-038 also M22 |
+| M30 | PRE-040 | M22 |
+| M22 | PRE-031 | M23 and M24 (original draw provider) |
 | M23 | PRE-032 | M15 |
-| M24 | PRE-033 | M25, M15 |
+| M24 | PRE-033 | M25 and M15 |
 | M25 | PRE-034 | M16 |
-| M15 | PRE-025 | M16, M17 |
-| M16 | PRE-026 | M17 |
-| M17 | PRE-027 | M18 |
+| M15→M16→M17 | PRE-025/026/027 | M16→M17→optional M18 |
 
-Semantic audit below checks dependencies hidden by class declarations, registries and lifecycle calls, beyond the milestone DAG. The retained RC-002/006 audit describes integrated PRE-029 responsibility; independent portions now come from PRE-035–037 as explicitly qualified in the new boundary table below. This is source-backed allocation evidence; implementation still must prove complete compilation/linkage and runtime identity.
-
-| Source evidence (FACT) | Required edge / M20 allocation | Later boundary preserved |
-|---|---|---|
-| `GeneralsMD/Code/GameEngine/Source/Common/GameMain.cpp:40–48`; `GameEngine/Include/Common/GameEngine.h:64–103` | Entry calls original factory/init/execute; original virtual methods and pure virtual factories require concrete providers, including source client/logic/modules and permitted removed-service adapters. Original classes and method bodies remain authoritative. | No lifecycle acceptance can wait for M21–M25 or use reduced replacement classes. |
-| `GameEngine/Source/Common/GameEngine.cpp:301–354,412–482` | FS/local/archive, INI/CSF/GlobalData/name keys and data stores call real parsers, constructors and factories; M20 owns required portability and adapters. | Later scenarios consume already initialized source state. |
-| `GameEngine/Source/Common/Thing/ModuleFactory.cpp:328–565,585–602,632–735`; `GameEngineDevice/Source/W3DDevice/Common/Thing/W3DModuleFactory.cpp:55–82` | Behavior and W3D registration retains construction/data callbacks; INI lookup invokes them, module instances use virtual interfaces and CRC/Xfer traverse module data. M20 owns each required registered provider and lifecycle. | M21/M22 can finish domain behavior beyond this closure, never supply missing required registry/vtable code. |
-| `GameEngine/Source/Common/GameEngine.cpp:493–512` | GameClient, AI, GameLogic, teams, crates, players, recorder, radar and victory are instantiated before runtime acceptance. | M21 retains full real map/mission/skirmish scenarios. |
-| `GameEngine/Source/Common/Recorder.cpp:394–433`; `GameEngine/Source/Common/System/SaveGame/GameState.cpp:309–340`; `GameEngine.cpp:539–553` | Recorder init/reset/update uses original mode/game info; GameState registers real campaign, terrain, team/player/logic/script/client/UI/particle and related snapshot instances; startup XferCRC and post-load run now. M20 owns these relationships and required implementations. | M24 retains full saves/replay/autosave/corruption/cross-compiler acceptance; its later status is no excuse to omit startup types or methods. |
-| `GameEngine/Source/Common/GameEngine.cpp:755–895` | Real update calls radar/audio/client/messages/logic; execute consults tactical-view/script time and recorder cleanup. Null sinks stay at graphics/audio device boundaries and preserve source CPU state/resources. | M22 real Vulkan and M23 interactive/media acceptance remain later; M20 never needs a physical GPU/display. |
-| `GameEngine/Source/Common/GameEngine.cpp:565–566,777–785` | Source explicitly sets offline TheNetwork = NULL and conditionally updates network. M20 resolves required symbols and rejects unsupported entry without fabricating a network; required non-network logic update still runs. | Full POSIX lobby/transport/lockstep is M25; no hidden network peer prerequisite for M20. |
-| `GameEngine/Source/Common/GameEngine.cpp:198–239,709–740`; `GameEngine/Source/Common/System/SubsystemInterface.cpp:159–205` | Destructor, reset, post-load and reverse shutdown traverse actual providers; init registers after init/data load, so failure ownership needs explicit repair/testing. M20 owns safe partial initialization and exactly-once reverse teardown, including source UI reset calls and removed-service edges. | Teardown cannot be postponed until interactive or save/network milestones. |
-| `GameEngine/Source/Common/CommandLine.cpp:779–791`; `GameEngine/Source/GameClient/GameClient.cpp:532–581`; `GameEngine.cpp:713–720` | RC-006 gives M20 one explicit profile across all presets. Debug-only `parseNoLogo` cannot configure Release; original client updates and reset still require real UI/layout/parser/resource providers, including `Menus/BlankWindow.wnd`. M20 enumerates required logical assets and creates ordinary project-owned fixtures independently of provisioned retail initialization. | No display/GPU entry dependency; normal defaults and later cinematic/shell-map/interactive acceptance remain unchanged. |
-| `GameEngine/Source/GameLogic/System/GameLogic.cpp:3572–3638,3824–3830`; `tools/check_original_identity.py:20–35` | Original logic publishes its frame to GameClient and advances source state when not starting a game. M20 derives before/after witnesses from the selected path. Current scanner checks the whole compilation database, basename text in link maps and stdout; RC-006 requires target-specific contributing-object/symbol identity, conditional-branch review and actual state evidence. | Current scanner is reusable scaffolding, not sufficient original-runtime acceptance; strengthening it belongs to M20. |
-| `GameEngine/Source/Common/System/SubsystemInterface.cpp:159–172`; `CMakeLists.txt:100` | Initialization/data load precede list registration, so pending objects/globals need explicit cleanup before prior-provider reverse unwind. M20 tests construction/init, pre-registration data load, post-load and update/reset failures, including worker ownership and original-error retention. Existing `zh_wwsupport` NDEBUG settings must be disclosed; new runtime tests need active checks and allocator/resource evidence separate from leak-disabled sanitizers. | No reopening of completed M19 or full-runtime-build entry requirement; incremental support/data validation is authorized inside M20. |
-
-Paths abbreviated with `GameEngine/` or `GameEngineDevice/` are under `GeneralsMD/Code/`. Identity tooling and original process/string/pool support in the retained audit move to M26, independent parsers/data to M27 and CPU resource seams to M28; M20 consumes them and proves full integrated behavior.
-
-| Boundary checked | Source-backed evidence and allocation | No-future-provider test |
-|---|---|---|
-| M26 before M27 | WinMain.cpp bootstrap and GameMemory lifetime precede engine entry; GameLogic.cpp:198–220 defines setFPMode with NEAR/24-bit behavior, called from INI/map cache. | M26 extracts/tests the single original helper with allocation/ABI consumers. Actual INI/map caller acceptance is M27, never required by M26. Full GameLogic linkage is not a lower-provider gate. |
-| M26 pre-VFS bootstrap | MemoryInit.cpp:754–805 explicitly requires low-level stdio before pools, forbids game filesystem/AsciiString, and treats MemoryPools.ini as optional. | RC-011/M26 owns compiled defaults and bounded allocation-safe override fixtures before main. No M27 parser/VFS, private config or pool-dependent service is required; re-entry, malformed input and timing are tested here. |
-| M27 before M20 | INI.cpp:78–160 holds cross-domain callback table; MapUtil.cpp:129–175 constructs MapObject through ThingFactory; map cache uses GameText/name keys. | M27 tests shared original parser/field/core and cache-path methods; production table remains complete for M20. No stubs or dead-strip proof. Full nonempty object/localized cache acceptance is M20, not silently claimed by empty fixtures. |
-| M28 before M20/M22/M23 | W3DDisplay.cpp:655 onward constructs CPU scenes/lights before devices; GameAudio.cpp:218–263 loads definitions then enters music/CD prompt loop. | M28 tests independent real CPU resources and bounded music lookup using earlier data providers without full GameClient/registry initialization. M20 integrates them. Physical rendering and interaction remain later, never required for CPU acceptance. |
-| M20 after M28 | GameEngine.cpp:581–704 includes Release fingerprints, cache update, initial map/replay dispatch and caught init failures before reset. | Complete production registries/cache/LOD/error propagation belong here, with no-match profile, XDG-only writes, nonzero failure and no accidental execute/reset continuation. M21/M24 own full supported map/replay scenarios, not this initialization closure. |
-| Later domains | Deep-review evidence traces GameLogic map start/client preload, GameState reset-before-load and Recorder invalid-header/debug identity, Network CRC mismatch UI/script/timer/RNG. | M21/M24/M25 consume earlier CPU/data interfaces and own their added paths; no dependency on future rendering/UI acceptance. Original failure paths and cleanup are explicit, not inferred from native component tests. |
-| M17 final evidence | RC-011/M17 now requires M22/M23 original hardware/interaction through M15, integrated M15/M16 gameplay/LAN, and installed-prefix execution with source/build resources unavailable. | Existing transitive providers precede M17; old M14 component evidence or staged copy success alone cannot pass. Installed-resource and missing-resource tests are M17 outputs, not a new external prerequisite. |
-
-INFERENCE: these source-backed seams make the new topological order internally executable without a future acceptance supplying an earlier implementation. Required proof remains actual original-consumer compile/live-link/state tests with a freshness-checked ledger. Source-only inspection cannot enumerate every data-driven edge or prove those future tests pass; routine discoveries are assigned within the authorized provider/integration scope rather than assumed absent.
-
-RC-012 delta: the original W3D factory has 19 schema/instance registrations. Production currently lacks that extension and ThingTemplate dereferences its result. M20 owns canonical concrete schema extraction, all registrations, required reached instance behavior, controlled unknown-provider failures and BIG acceptance. A Direct3D SDK is not a prerequisite; header separation is assigned implementation. Deferred instances must be checked against M21 map/preload/prop paths before M22/M23: RC-010 already assigns that CPU behavior to M21. Added readiness inspection makes this handoff explicit without changing scope or graph. Four-preset/sanitizer/retail acceptance remains unproven until implementation.
+There is no backward provider edge or cycle. M23 and M24 are both downstream of M22 and can execute in either dependency-safe order; the declared order retains M23 then M24. M24's retained early slices do not waive M22's draw-provider gate for its remaining slices.
 
 ## 8. Proposed milestone order
 
-Declared and proposed order agree: preserved M0–M14, completed M19 and M26–M28; remaining **M20, M21, M22, M23, M24, M25, M15, M16, M17; optional M18**. No new milestone or reorder is needed for RC-012's coupled startup closure. Preserve blocked M20 plans 01/02 and completed plan 02 slices 01–05. Later delivery adopts this packet and creates M20 plan 03 for remaining work.
+Declared and proposed order agree: completed **M0–M14, M19, M26–M28, M20–M21**; remaining **M29 → M30 → M22 → M23 → M24 → M25 → M15 → M16 → M17**, then optional **M18**. `status.yaml` and `index.md` declare this order; no renumbering. M29 can be planned before blocked M22 without discarding M22 or M24 slice history.
 
 ## 9. Milestone 0
 
-**Not required** as a new readiness milestone. Existing M0 toolchain/build foundations are available. M26–M28 are source-port capabilities authorized by architecture, not an invented environment bootstrap.
+**Not required.** Historical M0 is completed. Shader/toolchain pinning belongs to M29; bgfx device integration belongs to M30. Neither is shared pre-feature repository bootstrap or a reason to restart M0.
 
 ## 10. Per-milestone readiness
 
-All 29 contracts contain Preconditions and Readiness checks; no historical completion claim is broadened. Pending entry checks use recorded provider acceptance and `cmake --list-presets`, plus the declared environment inspection. Product acceptance tests remain implementation deliverables.
+All 31 contracts now contain `Preconditions` and `Readiness checks`. Historical contract wording is retained as time-bound history and is qualified by status/index/this report. Each row's check is the contract's concrete command or inspection; `cmake --list-presets` is the common clean-entry check. Future acceptance tests are not treated as preconditions.
 
-| Milestone | Preconditions/providers | Current readiness result |
+| Milestone(s) | Preconditions and check | Current boundary result |
 |---|---|---|
-| M0 | PRE-001/002 | Historical bootstrap; sources/tools/configuration verified. |
-| M1 | PRE-003/004, M0 | Historical components; remaining original consumers owned M20. |
-| M2 | PRE-003/004, M0 | Historical renderer descriptors/shaders; original consumers M20/M22. |
-| M3 | PRE-005, M1 | Historical fixture lifecycle; original runtime M20. |
-| M4 | PRE-005/007/008, M1/M3 | Historical VFS/corpus; source-facing binding M20. |
-| M5 | PRE-009, M4 | Historical codec/toy persistence; original full scenarios M24. |
-| M6 | PRE-005/007/016, M1/M3 | Historical SDL/Wayland component; binding M20/interaction M23. |
-| M7 | PRE-006/007/009, M2/M3/M4 | Available recording device; source producers bind in M20. |
-| M8 | PRE-009/019/010, M4/M6/M7 | Available font/UI components; source startup M20, flows M23. |
-| M9 | PRE-009/010, M4/M7 | Historical synthetic commands; real scenes M22. |
-| M10 | PRE-009/010, M4/M7 | Historical effects; real producers M20/M22. |
-| M11 | PRE-007/009, M3/M4 | Available local transport; original lockstep M25. |
-| M12 | PRE-009/011, M4 | Available pinned audio component; original manager binding M20. |
-| M13 | PRE-009/010/011/023, M4/M7/M12 | Available decoder/recording component; original required providers M20. |
-| M14 | PRE-010/020/021/022/024, host inputs | Historical RTX validation on component scenes; real-source M22 remains mandatory. |
-| M19 | PRE-001/002/004/005, M0/M1 | Completed bounded ten-provider acceptance; PRE-028 available. |
-| M26 | PRE-001/002/004/028, accepted M19 | Completed scoped PRE-035; recorded acceptance retained, not rerun. |
-| M27 | PRE-035/009, M26/M4 | Completed scoped PRE-036, not full production dispatch/cache. |
-| M28 | PRE-036/019/010/020/011/023/024, M27 and native components | Completed scoped PRE-037, not complete GameClient/W3D production integration. |
-| M20 | PRE-037, transitively PRE-035/036 and native components; PRE-008 | Next after committed adoption; M28 accepted. Remaining PRE-029 includes RC-012 W3D/BIG acceptance without later M21–M25/GPU prerequisites. |
-| M21 | PRE-029, M20; PRE-008 | Waits for PRE-029; audits deferred instances against map/preload/prop consumers and owns any newly reached CPU behavior before rendering. |
-| M22 | PRE-030/013, M21/M14; PRE-008/012/016 | Waits for original simulation; host access gates hardware acceptance; produces PRE-031. |
-| M23 | PRE-031/019/020/011/023/024, M22/M6/M8/M12/M13; PRE-008/016 | Waits for original scenes; session gates interaction; produces PRE-032. |
-| M24 | PRE-030/018, M21/M5; PRE-008 | Full source persistence scenarios; produces PRE-033; no Windows input needed. |
-| M25 | PRE-033/014, M24/M11; PRE-008 | Original local networking; produces PRE-034. |
-| M15 | PRE-032/033, M23/M24; retail/session/GPU | Blocked on original providers, then integrated gameplay produces PRE-025. |
-| M16 | PRE-034/025, M25/M15 | Real two-process complete match produces PRE-026. |
-| M17 | PRE-025/026, M15/M16; PRE-017 plus Arch inputs | Clean distro provisioning gates release validation, produces PRE-027. |
-| M18 | PRE-027, M17; optional PRE-015 | Suitable fixtures unverified; missing means not validated, release unaffected. |
+| M0 | PRE-001/002; source/tool/package and preset checks | Completed historical bootstrap. |
+| M1–M2 | M0 PRE-003/004; provider evidence/presets | Completed native ABI/renderer component contracts. |
+| M3 | M1 PRE-005; provider evidence/presets | Completed headless component. |
+| M4 | M1/M3 PRE-005/007 and retail PRE-008 for corpus; provider/retail checks | Completed; retail check must be repeated at later gates. |
+| M5–M6 | M4 PRE-009; M6 also M1/M3 and display PRE-016; provider/preset/session checks | Completed component contracts. |
+| M7 | M2/M3/M4 PRE-006/007/009; provider/presets | Completed historical recorder, not ordered clear. |
+| M8–M10 | M4/M6/M7 or M4/M7 PRE-009/010/019; provider/presets | Completed command/shader baselines. |
+| M11–M13 | Recorded M3/M4/M7/M12 edges and PRE-011/014/023/024; provider/presets | Completed component transport/audio/video. |
+| M14 | M7–M10/M13 plus PRE-008/012/016; prior RTX/layer/pixel evidence | Completed historical SDL_GPU component acceptance only. |
+| M19 | M0/M1 PRE-001/002/004/005; source identity check | Completed bounded original support. |
+| M26→M27→M28 | PRE-028→035→036 plus existing M4/M6/M7/M8/M12/M13 components; acceptance/ledger checks | Completed scoped original providers. |
+| M20→M21 | PRE-037→029, retail PRE-008; original runtime/simulation evidence | Completed at recorded source-owned grades. |
+| M29 | M8/M9/M10 PRE-020/021/022 and transitive PRE-006/010, PRE-002; inspect completed evidence, run `cmake --list-presets`, inspect RB-01/03 and public probe source | **First executable milestone.** PRE-038/039 are its work/acceptance. No GPU/retail entry gate. |
+| M30 | M29 PRE-038/039 and historical M14 PRE-013; inspect acceptance/pin/license, run `cmake --list-presets`; at hardware gate run `vulkaninfo --summary` and validation-enabled new tests | Waits for M29; PRE-012/016 external at hardware acceptance; produces PRE-040. |
+| M22 | M21 PRE-030 and M30 PRE-040; inspect source/device acceptance/presets; retail/GPU/session PRE-008/012/016 at real-scene gate | Blocked until M30; preserves plan 01 through 06C3B3B; produces PRE-031 at scene/draw acceptance. |
+| M23 | M22 PRE-031 and M6/M8/M12/M13; inspect evidence/presets/session | Waits for M22; produces PRE-032. |
+| M24 | M22 PRE-031 plus M5 PRE-018 and M21 PRE-030; inspect draw evidence/presets/retail at real-map gate | Blocked until M22; preserves slices 01–05B; produces PRE-033. |
+| M25 | M24 PRE-033 and M11 PRE-014; inspect original persistence/local transport evidence | Waits for M24; produces PRE-034. |
+| M15 | M23 PRE-032 and M24 PRE-033, retail/session/GPU; inspect original gameplay evidence | Waits for both original providers; produces PRE-025. |
+| M16 | M25 PRE-034 and M15 PRE-025; inspect local peer/gameplay evidence | Waits for both; produces PRE-026. |
+| M17 | M15 PRE-025, M16 PRE-026, PRE-017 clean runners and Arch evidence; inspect all preset/installed-prefix logs | Waits for integrated release and external runner acceptance; produces PRE-027. |
+| M18 | M17 PRE-027 and optional PRE-015; inspect fixture provenance | Optional, not a Linux release prerequisite. |
 
 ## 11. Clean-environment simulation
 
-**Pass with declared later external dependencies.** Conceptual clean checkout starts with documented x86-64 packages, committed source/dependencies/shaders and the four presets; no build cache, downloaded binary or private media is required by ordinary tests. M19's committed support providers and retained native components are available. M26 accepts allocation/string/bootstrap/shared FP consumers; M27 accepts original independent parser/codecs/metadata pieces with shared-method extraction; M28 accepts original CPU resources/music lookup. Each creates its fixtures/tests and requires only earlier accepted providers. M20 then owns remaining coupled fixture startup/update/reset/teardown and separately supplied read-only retail initialization. Real full registries/cache/recorder/game-state relationships and offline network symbols cannot be deferred. Null/recording sinks remove physical-device prerequisites without replacing source subsystems.
-
-After accepted M20, M21 validates complete source scenarios. M22 receives host/GPU/layers for scenes and M23 receives session access for interactions; M24 independently consumes M21 state for full saves/replays. M25 consumes its CRC plus existing transport, then M15/M16 join complete gameplay/network behavior. M17 receives clean distro runners and Arch runtime evidence. Optional M18 never feeds the Linux release chain.
-
-RC-006–010 sharpen this simulation: independent providers validate before the whole engine links; final M20 uses the same explicit offline profile across presets, original parsers/UI resources, then separately provisioned retail initialization. Fixture creation, cleanup repairs, ledger and identity/assertion strengthening are assigned implementation outputs, never user-supplied prerequisites. No new external edge or cycle appears. Full production callback table and full object/localized cache are not required to accept M27; complete GameClient is not required to accept M28.
-
-RC-011 preserves the simulation: M26 uses compiled pool defaults before data-root resolution and owns allocation-safe optional override tests without later filesystem services. At M17 the original hardware/interaction providers are already accepted transitively; original gameplay/LAN and actual installed-prefix execution are mandatory, with no source/build resource fallback. All new negative/boundary tests belong to the consuming milestone. Nine mandatory and one optional milestones remain after completed M26–M28; dependency edges are unchanged.
-
-RC-012 adds no external entry dependency. Conceptually M20 extracts/shared-compiles original schemas and connects the full factory, validates malformed archives and errors, and proves no-match reachability before acceptance. M21 checks the resulting deferred-operation ledger against actual map/preload/prop paths and implements anything reached there; it cannot wait for M22/M23. Later rendering/interaction replace remaining guards before use. New acceptance results, hardware scenarios and clean distro runners were simulated, not executed. Observed tool/module availability and prior local configuration verify only installed dependencies. Missing packages on a fresh machine require the documented host provisioning before entry; no undeclared package or secret is assumed.
+**Pass with declared later external dependencies.** Conceptual x86-64 checkout starts with only documented `docs/building-linux.md` distribution packages, tracked source, four presets, no cache/global bgfx install, no retail files or active GPU/session. Historical completed providers are committed. M29 can inspect source, implement PRE-038 and establish PRE-039 through pinned/reviewed source and offline shader generation; its ordinary acceptance needs no physical GPU or retail assets. M30 consumes these committed outputs, implements PRE-040 with no configure-time download, runs asset-free builds first, then requires the declared PRE-012/016 hardware session to close its GPU acceptance. M22 consumes accepted M21 and M30 and adds read-only retail scenes, producing the original draw path required by M24. M23 and M24 then reach independent original interaction/persistence gates, followed by M25/M15/M16. M17 receives declared clean runners; optional M18 never feeds Linux acceptance. No milestone depends on its own unfinished output at entry, and no future milestone provides an earlier provider. Host-specific and future test outcomes were simulated, not run.
 
 ## 12. Commands run and results
 
-| Command / inspection | Observed result |
+| Command/inspection | Observed result |
 |---|---|
-| `git status --short`, `git rev-parse HEAD` | Parent/compiler-owned paths only; source HEAD above. |
-| `rg --files -g AGENTS.md -g '!original_game_symlink/**'` | No applicable file found (expected no-match). |
-| `command -v cmake ninja gcc g++ clang clang++ pkg-config glslc` | All eight tools resolve. |
-| `pkg-config --modversion sdl3 freetype2 fontconfig zlib libavformat libavcodec libavutil libswscale libswresample` | All resolve; SDL 3.4.14 and required distribution modules present. |
-| Prior `pacman -Q vulkan-validation-layers` evidence (not rerun) | Retained installed 1.4.357.0-1 evidence; no current GPU-access claim. |
-| Prior retail directory/ignore evidence (not rerun) | Supplied roots available at prior audit; recheck at M20. No retail traversal/copy/hash/write here. |
-| `cmake --list-presets` | All four presets listed now; previous audit's offline GCC Debug configure remains retained evidence, not rerun. |
-| `python3 tools/original_source_classification.py --check` | 3,293 paths covered exactly once. Classification is inventory evidence, not runtime closure acceptance. |
-| Prior pinned miniaudio provenance test evidence (not rerun) | Retained 3/3 project dependency pin/license/provenance evidence. |
-| setFPMode/INI/MapUtil/W3DDisplay/GameAudio source, deep review and changed contract inspection | Independent extraction/CPU boundaries and complete M20 registry/cache ownership agree; no runtime success inferred. |
-| Packet metadata/graph/readiness/traceability inspection | All 29 contracts retained; dependencies precede consumers; all readiness sections present. |
-| Final contract/graph/PRE/link inspection and `git diff --check` | Passed: 29 contracts, backward-only graph, 37 PRE IDs, all readiness sections and preserved completed records/files; no whitespace errors. Final packet fingerprint returned to parent. |
+| `git rev-parse HEAD`, `git status --short --untracked-files=all` | HEAD above; parent/compiler dirty paths only at invocation; no child commit. |
+| `rg --files -g AGENTS.md` | No applicable AGENTS.md found. |
+| `command -v cmake ninja gcc g++ clang clang++ pkg-config glslc vulkaninfo` | All listed host executables resolve; no GPU access inferred. |
+| `pkg-config --modversion sdl3 freetype2 fontconfig zlib libavformat libavcodec libavutil libswscale libswresample` | All modules resolve; SDL3 3.4.14 observed. |
+| `cmake --list-presets` | Four native GCC/Clang Debug/Release presets listed. |
+| `rg --files tools/renderer third_party` and contract/authority inspection | Public probe source and pinned miniaudio present; no repository bgfx/bx/bimg/toolchain integration yet. |
+| `ruby -ryaml` structural check | Not run: `ruby` is not installed; no dependency was added for this audit. |
+| `python3 -c` YAML graph check | 31 unique milestones; all declared dependencies precede consumers; M29 is first remaining. |
+| `python3 -c` manifest row check and shell heading loop | 40 sequential unique PRE rows; all 31 contracts have both readiness headings. |
+| Packet graph/readiness/manifest structural inspection | 31 stable contracts, backward-only dependency edges, PRE-001–040, both readiness headings in every contract. |
+| `git diff --check` | Passed after readiness edits. |
 
-Tool/module/preset/classification and structural/whitespace checks were run by this child. Earlier broad source checks remain historical; fresh source checks cover the 19-entry W3D registry and unchecked ThingTemplate access plus M21's explicit RC-010 map-start ownership. No broad implementation acceptance was repeated.
-
-No full build, milestone acceptance, retail traversal or physical device test was needed for this documentation audit.
+No full build, retail traversal, GPU invocation, package installation, network fetch or milestone acceptance ran in this documentation audit. Historical evidence remains historical.
 
 ## 13. Files changed
 
-- `delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md` — RC-012 provenance, PRE-029 boundary and completed PRE-035–037 qualifications.
-- `delivery/readiness/cnc-generals-zero-hour/readiness-report.md` — RC-012 source-boundary re-audit and current completed-provider simulation.
-- `delivery/milestones/cnc-generals-zero-hour/index.md` — readiness paragraph replaces stale pending wording after this audit.
+- `delivery/milestones/cnc-generals-zero-hour/M29-renderer-contract-migration.md` — PRE-038/039 and concrete first-gate readiness checks.
+- `delivery/milestones/cnc-generals-zero-hour/M30-bgfx-device-validation.md` — PRE-040 and explicit M30 hardware gate/checks.
+- `delivery/milestones/cnc-generals-zero-hour/M22-original-rendering.md` — explicit PRE-040 consumption.
+- `delivery/milestones/cnc-generals-zero-hour/M24-original-persistence.md` — explicit PRE-031 draw-provider consumption.
+- `delivery/readiness/cnc-generals-zero-hour/prerequisite-manifest.md` — current provenance, classifications, consumers and PRE-038–040.
+- `delivery/readiness/cnc-generals-zero-hour/readiness-report.md` — complete re-audit and clean-checkout simulation.
 
-- `delivery/milestones/cnc-generals-zero-hour/status.yaml` — readiness status only.
-- `delivery/milestones/cnc-generals-zero-hour/M21-original-simulation.md` — explicit existing-scope deferred-instance consumer readiness inspection.
-
-Compiler semantic changes and parent workflow edits remain parent-owned. This child made only the readiness updates listed above; no workflow, product-source, retail or implementation-plan changes and no commits. No configure/build/runtime acceptance was executed in this review.
+Compiler's other packet changes and parent workflow state/handoff remain parent-owned. This child made no implementation edits or commit.
 
 ## 14. Remaining blockers
 
-None blocking M20 planning/implementation after committed adoption. PRE-012/016 gate later original hardware/interactive validation, PRE-017 gates M17 validation, PRE-015 applies only to optional M18. Parent commit/provenance finalization is required before this becomes a consumable handoff.
+None at M29 entry. PRE-012/016 are declared later M30 hardware-acceptance user-action gates, PRE-008 is a later M22 retail-validation gate, PRE-017 gates M17 and PRE-015 only optional M18. M22 and M24 remain blocked in delivery until their provider acceptances. Parent planning commit/provenance is required before this packet is consumable.
 
 ## 15. Exact recommended next step
 
-Parent Delivery Planning finalizes the combined transaction and handoff. On the next delivery resume in `/home/ha/projects/CnC_Generals_Zero_Hour`, explicitly adopt the committed readiness-approved RC-012 revision and create `delivery/plans/cnc-generals-zero-hour/milestone_20_plan_03.md` for remaining work. Preserve completed M26–M28 and historical M20 plans 01/02 with completed slices. No implementation starts during this planning request.
+Parent Delivery Planning validates and commits the combined packet/readiness transaction, finalizes provenance/handoff, and permits Delivery to create M29's governing implementation plan in `/home/ha/projects/CnC_Generals_Zero_Hour`; implementation does not start during this planning transaction.

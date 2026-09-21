@@ -4,16 +4,17 @@ product_id: cnc-generals-zero-hour
 status: ready_for_implementation
 source:
   mode: CHANGE_PLAN
-  path: docs/zero-hour-runtime-closure-reconciliation.md
-  revision: sha256:847fa3b1cc5883cb0ebcedfd11bba715326c66dd4835e3a229a13e93cf96edd2
-  repository_commit: cb567c223beab5d63fa2f13d66718e670271d3d0
-  change_id: RUNTIME-CLOSURE-2026-09-20
-  remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010, RC-011, RC-012]
+  path: workflow/reconciliation/renderer-bgfx-2026-09-21/reconciliation-result.yaml
+  revision: sha256:18cf27fe72ba3b0982e184443da423d1b71a9a960184d8ca304f26da09e029dc
+  repository_commit: 25ef60575bfc13aeac5a6aa7146da1af2626e59c
+  reconciliation_id: REC-RUN-RENDERER-BGFX-2026-09-21
+  change_id: REC-IMPACT-001
+  remediation_ids: [REC-RM-001]
 planning:
-  repository_commit: cd2389e40aa89b1c2d1e02be638d084a95438f2d
+  repository_commit: PENDING_PAYLOAD_COMMIT
 milestones:
   manifest: delivery/milestones/cnc-generals-zero-hour/status.yaml
-  packet_revision: sha256:21ce030a34f700bbcf7773983454f0b741f384956f1ff6568d7fc6782bc5bfe9
+  packet_revision: sha256:0aafbac99ec645407cc89f3b80496e876c6efb5f4eae5d699ba9837dac90fd89
   revision_command: "find delivery/milestones/cnc-generals-zero-hour -maxdepth 1 -type f -name '*.md' -print0 | sort -z | xargs -0 sha256sum | sha256sum"
 readiness:
   status: READY_WITH_EXTERNAL_DEPENDENCIES
@@ -22,18 +23,23 @@ readiness:
 m0:
   present: true
   milestone: M0
-  rationale: Historical bootstrap retained; no new M0 required by readiness.
+  rationale: Historical M0 is complete; no new M0 required for renderer migration.
 external_dependencies:
   - id: PRE-012
     owner: developer/host-session-owner
-    first_consuming_milestone: M22
-    completion_evidence: Fresh accessible RTX 4070 Vulkan session with Khronos validation and passing original-scene device checks. Layer installation and prior component evidence are already recorded.
-    blocking_boundary: M22 original-source GPU acceptance; not M20 entry.
+    first_consuming_milestone: M30
+    completion_evidence: Accessible RTX 4070 Vulkan session with Khronos validation and passing M30 bgfx device/pixel/lifecycle tests; prior probe and M14 evidence do not discharge this gate.
+    blocking_boundary: M30 hardware acceptance; not M29 entry.
   - id: PRE-016
     owner: developer/host-session-owner
+    first_consuming_milestone: M30
+    completion_evidence: Accessible graphical session for M30 presentation, later M22 original scenes and M23 original UI/input acceptance.
+    blocking_boundary: M30 hardware acceptance; not M29 entry.
+  - id: PRE-008
+    owner: user/retail-root-owner
     first_consuming_milestone: M22
-    completion_evidence: Accessible graphical session for original-scene presentation at M22 and original UI/input acceptance at M23.
-    blocking_boundary: M22/M23 interactive validation; not M20 entry.
+    completion_evidence: Existing ignored Zero Hour/base Generals English roots are readable, remain read-only and are exercised by M22 source-scene tests.
+    blocking_boundary: M22 original retail validation; not M29/M30 ordinary tests.
   - id: PRE-017
     owner: maintainer/CI
     first_consuming_milestone: M17
@@ -50,13 +56,13 @@ scope_adoption:
   previous_goal: workflow/delivery/state.yaml
   preserve_previous_goal_history: true
   packet_scope: delivery/milestones/cnc-generals-zero-hour/status.yaml#packet_adoption
-  remaining_milestone_ids: [M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
+  remaining_milestone_ids: [M29, M30, M22, M23, M24, M25, M15, M16, M17, M18]
   optional_milestone_ids: [M18]
-  instruction: On explicit delivery resume, adopt the committed RC-012 packet and generate M20 plan 03 for the remaining coupled closure. Preserve completed M26-M28, M20 plan 01 history, plan 02 completed slices 01-05 and its blocker checkpoint. Reuse retained implementation with its actual evidence limits; do not claim W3D or BIG acceptance from prior fixture tests. Use dependency order, not numeric sort. Do not resume the rejected reduced lifecycle.
-  next_governing_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_03.md
+  instruction: On explicit delivery resume, adopt this committed readiness-approved renderer packet. Plan M29 then M30 separately; preserve all completed milestone histories, M22 plan 01 through 06C3B3B and M24 plan 01 through 05B. Resume M22 at 06C3C only after M30, then M24 at 05C only after M22. Use dependency order, not numeric sort. Do not count the synthetic probe as retail scene acceptance.
+  next_governing_plan: null
 next:
   workflow: implementation
   recommended_skill: milestone-delivery-orchestrator
   action: adopt_replacement_packet_then_plan
-  milestone: M20
+  milestone: M29
   implementation_started: false

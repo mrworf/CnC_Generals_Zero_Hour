@@ -3,11 +3,11 @@ product_id: cnc-generals-zero-hour
 compiled_from:
   product_id: cnc-generals-zero-hour
   input_mode: CHANGE_PLAN
-  authority_basis: accepted implementation-ready architecture and delivery migration plan; user authorized compilation
+  authority_basis: canonical implementation-ready renderer reconciliation and accepted section-9 bgfx migration; prior runtime and source migrations preserved
   source_plan:
     path: docs/zero-hour-linux-port-plan.md
-    revision: sha256:25554c2db1273e263b574b8563615c88ed48eb4f7672e5a21e19fe119eae7b33
-    repository_commit: 8dc0285ff6c3346273973dcd874e6983060bb3e7
+    revision: sha256:244d2c3b7768eefe6197fc572dbdc02c7c3bdf379634d7fff497a84dfde180b6
+    repository_commit: 64c7632dcc93a5a5d9fc1519467140828a3a8813
   migration_supplement:
     path: docs/zero-hour-source-engine-migration.md
     revision: sha256:4e9523ec2854750b896716bfd4583e47fb65136a9a2188db9dcd4ac9b552c817
@@ -20,9 +20,21 @@ compiled_from:
     repository_commit: cb567c223beab5d63fa2f13d66718e670271d3d0
     change_id: RUNTIME-CLOSURE-2026-09-20
     remediation_ids: [RC-001, RC-002, RC-003, RC-004, RC-005, RC-006, RC-007, RC-008, RC-009, RC-010, RC-011, RC-012]
-  baseline_repository_commit: cb567c223beab5d63fa2f13d66718e670271d3d0
+  renderer_migration:
+    path: docs/zero-hour-renderer-backend-migration.md
+    revision: sha256:a5502daef646d73e9c4d6e1f07c9551db1add367b6e0a632cd35b2b0d177d717
+    repository_commit: 64c7632dcc93a5a5d9fc1519467140828a3a8813
+    change_id: RENDERER-BGFX-2026-09-21
+    requirement_ids: [RB-01, RB-02, RB-03, RB-04]
+  baseline_repository_commit: 64c7632dcc93a5a5d9fc1519467140828a3a8813
   definition_package: null
-  reconciliation: null
+  reconciliation:
+    result: workflow/reconciliation/renderer-bgfx-2026-09-21/reconciliation-result.yaml
+    repository_commit: 25ef60575bfc13aeac5a6aa7146da1af2626e59c
+    schema_version: 1
+    reconciliation_id: REC-RUN-RENDERER-BGFX-2026-09-21
+    change_id: REC-IMPACT-001
+    remediation_ids: [REC-RM-001]
 compilation_status: complete
 readiness_status: READY_WITH_EXTERNAL_DEPENDENCIES
 readiness_report: delivery/readiness/cnc-generals-zero-hour/readiness-report.md
@@ -35,22 +47,22 @@ assurance:
   closure_providers:
     support_startup: [M19, M26, M27, M28, M20]
     persistence_determinism: [M26, M27, M20, M21, M24]
-    ui_world_effects_gpu: [M28, M20, M21, M22, M23]
+    ui_world_effects_gpu: [M28, M20, M21, M29, M30, M22, M23]
     network: [M20, M25, M16]
     media: [M28, M20, M23]
     production_gameplay_release: [M15, M17]
 packet_adoption:
   required: true
   previous_goal_membership: [M19, M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
-  pending_execution_order: [M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
-  mandatory_remaining: [M20, M21, M22, M23, M24, M25, M15, M16, M17]
+  pending_execution_order: [M29, M30, M22, M23, M24, M25, M15, M16, M17, M18]
+  mandatory_remaining: [M29, M30, M22, M23, M24, M25, M15, M16, M17]
   optional_remaining: [M18]
-  first_milestone: M20
-  preserved_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_01.md
-  preserved_active_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_02.md
-  next_governing_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_03.md
-  integrated_successor_plan: delivery/plans/cnc-generals-zero-hour/milestone_20_plan_03.md
-  instruction: On later delivery resume explicitly adopt the committed readiness-approved RC-012 packet; preserve completed M26-M28, plan 01 history, plan 02 completed slices 01-05 and its blocker checkpoint. Generate M20 plan 03 for remaining coupled closure only during delivery. Do not restart completed providers or start implementation during replanning.
+  first_milestone: M29
+  preserved_plan: delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md
+  preserved_active_plan: delivery/plans/cnc-generals-zero-hour/milestone_24_plan_01.md
+  next_governing_plan: null
+  integrated_successor_plan: null
+  instruction: Await refreshed readiness and parent-owned planning handoff. Then plan M29 and M30 separately during delivery, preserve completed M2/M7-M10/M14/M20/M21 and all existing M22/M24 slice history, resume M22 plan 01 at 06C3C only after M30, and resume M24 plan 01 at 05C only after M22. Do not start implementation during replanning.
 milestones:
   - id: M0
     title: "reproducible build readiness"
@@ -289,17 +301,37 @@ milestones:
     commit_hash: 1f55f575e97039519c6d683e17d6c161e222379f
     evidence: "evidence/qa/cnc-generals-zero-hour/M21-original-simulation.md; all four GCC/Clang Debug/Release suites passed 128/128, focused GCC and Clang ASan+UBSan passed 11/11 with strict runtime cases 4/4, and owned plus read-only retail campaign/skirmish lifecycle, identity, provider-removal, determinism, and clean re-entry checks passed with zero physical devices."
     notes: "Accepted. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_21_plan_01.md; slice commits: 8e43e63, d3cff5f, ca06d76, 1f55f575e97039519c6d683e17d6c161e222379f. UBSan vptr instrumentation is excluded for the intentionally partial runtime; ASan and all other undefined checks remain enabled."
+  - id: M29
+    title: "ordered-clear renderer contract and shader closure"
+    file: delivery/milestones/cnc-generals-zero-hour/M29-renderer-contract-migration.md
+    status: pending
+    dependencies: [M8, M9, M10]
+    remediation_ids: [REC-RM-001]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: "New backend-neutral contract/shader revalidation gate. RB-01/RB-03; preserve historical component acceptance and existing M22/M24 plans."
+  - id: M30
+    title: "public bgfx device and renderer revalidation"
+    file: delivery/milestones/cnc-generals-zero-hour/M30-bgfx-device-validation.md
+    status: pending
+    dependencies: [M29, M14]
+    remediation_ids: [REC-RM-001]
+    optional: false
+    completed_at: null
+    evidence: null
+    notes: "New public-bgfx device and M7-M10/M14 revalidation gate. RB-02/RB-04; retail scene acceptance remains M22."
   - id: M22
     title: "original retail scene rendering on Vulkan"
     file: delivery/milestones/cnc-generals-zero-hour/M22-original-rendering.md
     status: blocked
-    dependencies: [M21, M14]
-    remediation_ids: [SE-005, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010, RC-012]
+    dependencies: [M21, M30]
+    remediation_ids: [SE-005, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010, RC-012, REC-RM-001]
     optional: false
     started_at: "2026-09-21T04:25:51Z"
     completed_at: null
     evidence: "delivery/evidence/cnc-generals-zero-hour/milestone_22_backend_gap_06c3c.md; accepted source-owned slices through 06C3B3B (4f9b286) pass their recorded GCC/Clang, sanitizer and validation-enabled RTX gates. The original camera-subrect color/depth/stencil clear within an active frame has no equivalent in the public SDL_GPU 3.4.14 pass API; no complete scene/retail acceptance is claimed."
-    notes: "UPSTREAM_REQUIRED M22_VIEWPORT_CLEAR_BACKEND: docs/zero-hour-linux-port-plan.md §9 requires a tested backend decision, migration scope and renderer milestone revalidation. Prove the committed 06C3C reproducer on a public abstraction (bgfx candidate), or explicitly budget raw Vulkan if both fail; do not add private Vulkan under SDL_GPU. Resume the existing delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md at slice 06C3C after authorized architecture/replanning. No other independent blocker established."
+    notes: "UPSTREAM_REQUIRED M22_VIEWPORT_CLEAR_BACKEND: accepted §9 bgfx migration is assigned to M29/M30. Resume the preserved delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md at slice 06C3C only after M30 is accepted; original retail scenes remain M22-owned. No other independent blocker established."
   - id: M23
     title: "original menus controls and media integration"
     file: delivery/milestones/cnc-generals-zero-hour/M23-original-interaction.md
@@ -314,13 +346,13 @@ milestones:
     title: "original saves replay and deterministic state"
     file: delivery/milestones/cnc-generals-zero-hour/M24-original-persistence.md
     status: blocked
-    dependencies: [M21, M5]
+    dependencies: [M22, M5]
     remediation_ids: [SE-007, SE-010, RC-002, RC-003, RC-004, RC-007, RC-008, RC-010]
     optional: false
     started_at: "2026-09-21T19:51:33Z"
     completed_at: null
     evidence: "delivery/plans/cnc-generals-zero-hour/milestone_24_plan_01.md; slices 01–05B committed with original save, transactional load, cross-preset replay, exact repeated retail mission shroud CRC, and shipped definition lifecycle evidence. Four presets passed focused 16/16 each; strict Clang ASan/UBSan owned checks passed with the disclosed sandbox LeakSanitizer limitation."
-    notes: "UPSTREAM_REQUIRED M24_DRAW_PROVIDER_DEPENDENCY: correct original mission tree creation during first-tick setup and skirmish save-load reconstruction both reach ModuleFactory::newModule(MODULETYPE_DRAW), whose required createProc is null and throws ERROR_INVALID_D3D. This is the M22 provider path already blocked on the section-9 renderer decision; no substitute draw is allowed. Resume existing plan 01 at 05C mission, then 05D skirmish and 06 cumulative only after M22 is completed; commits 1e3899d, fe90bab, 5ff9c82, 3a73dd4, 8087c74, dc75bc1; plan closeout f683ac1."
+    notes: "UPSTREAM_REQUIRED M24_DRAW_PROVIDER_DEPENDENCY: correct original mission tree creation during first-tick setup and skirmish save-load reconstruction both reach ModuleFactory::newModule(MODULETYPE_DRAW), whose required createProc is null and throws ERROR_INVALID_D3D. M22 must provide the original draw path after M29/M30 migration; no substitute draw is allowed. Preserve completed plan 01 slices 01-05B and resume 05C mission, 05D skirmish and 06 cumulative only after M22 acceptance; commits 1e3899d, fe90bab, 5ff9c82, 3a73dd4, 8087c74, dc75bc1; plan closeout f683ac1."
   - id: M25
     title: "original network lockstep integration"
     file: delivery/milestones/cnc-generals-zero-hour/M25-original-network.md

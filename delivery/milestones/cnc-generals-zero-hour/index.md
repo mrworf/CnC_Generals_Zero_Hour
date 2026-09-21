@@ -1,10 +1,12 @@
 # Zero Hour native Linux delivery milestones
 
-Input mode: **CHANGE_PLAN**. Product: `cnc-generals-zero-hour`. Change: `RUNTIME-CLOSURE-2026-09-20`.
+Input mode: **CHANGE_PLAN**. Product: `cnc-generals-zero-hour`. Current change: `RENDERER-BGFX-2026-09-21`, canonical reconciliation `REC-RUN-RENDERER-BGFX-2026-09-21`, resolved remediation `REC-RM-001`.
 
-Current authority: [runtime dependency reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md), revision `sha256:847fa3b1cc5883cb0ebcedfd11bba715326c66dd4835e3a229a13e93cf96edd2`, committed at `cb567c223beab5d63fa2f13d66718e670271d3d0`. Its RC-001–RC-012 supersede conflicting engineering order/allocation in the supplement below and preserve every required behavior. It is an accepted architecture change plan, not a canonical Product Definition reconciliation result.
+The current implementation authority is the accepted [renderer backend migration](../../../docs/zero-hour-renderer-backend-migration.md) RB-01–RB-04 at `64c7632dcc93a5a5d9fc1519467140828a3a8813`, under [port plan §9](../../../docs/zero-hour-linux-port-plan.md). The [canonical reconciliation result](../../../workflow/reconciliation/renderer-bgfx-2026-09-21/reconciliation-result.yaml) at `25ef60575bfc13aeac5a6aa7146da1af2626e59c` clears definition revalidation and delivery-planning gates; its [resolved backlog](../../../workflow/reconciliation/renderer-bgfx-2026-09-21/03-remediation-backlog.md) is the compilable delta. M22's backend-gap report and the public bgfx probe are evidence, not independent implementation authority. Exact revisions and IDs are in `status.yaml`.
 
-Authority: [original-engine migration supplement](../../../docs/zero-hour-source-engine-migration.md), revision `sha256:4e9523ec2854750b896716bfd4583e47fb65136a9a2188db9dcd4ac9b552c817`, committed at `38b608d9109d13ad1c6e3a527fe34893512d4d3f`. The [base plan](../../../docs/zero-hour-linux-port-plan.md) remains governing product/stack/compatibility authority at its revision recorded in status.yaml. No definition package or reconciliation result governs this directly authorized architecture remediation. The [review](../../../evidence/qa/cnc-generals-zero-hour/architecture-revalidation-2026-09-20.md) is evidence, not additional implementation authority.
+Preserved earlier authority: [runtime dependency reconciliation](../../../docs/zero-hour-runtime-closure-reconciliation.md), revision `sha256:847fa3b1cc5883cb0ebcedfd11bba715326c66dd4835e3a229a13e93cf96edd2`, committed at `cb567c223beab5d63fa2f13d66718e670271d3d0`. Its RC-001–RC-012 supersede conflicting engineering order/allocation in the supplement below and preserve every required behavior. It is an accepted architecture change plan, not the current canonical Product Definition reconciliation result.
+
+Preserved earlier authority: [original-engine migration supplement](../../../docs/zero-hour-source-engine-migration.md), revision `sha256:4e9523ec2854750b896716bfd4583e47fb65136a9a2188db9dcd4ac9b552c817`, committed at `38b608d9109d13ad1c6e3a527fe34893512d4d3f`. The [base plan](../../../docs/zero-hour-linux-port-plan.md) remains governing product/stack/compatibility authority at its revision recorded in status.yaml. No definition package governed the earlier directly authorized migration; the current renderer delta has the canonical reconciliation above. The [review](../../../evidence/qa/cnc-generals-zero-hour/architecture-revalidation-2026-09-20.md) is evidence, not additional implementation authority.
 
 ## Historical assurance correction
 
@@ -12,7 +14,7 @@ M0–M14 completion history, commits, tests and contract files are preserved. Th
 
 ## Contracts in dependency-safe execution order
 
-Numeric IDs remain stable; list order, not numeric sorting, determines execution. M19 and M26–M28 are completed with scoped independent-provider evidence. Revised M20 owns remaining coupled runtime integration, M21–M25 complete domain scenarios, and M15–M18 retain integrated acceptance.
+Numeric IDs remain stable; list order, not numeric sorting, determines execution. M0–M14, M19, M26–M28 and M20–M21 retain their completed histories. New M29 supplies the backend-neutral clear/shader contract; M30 consumes it and revalidates the public bgfx device. M22 then resumes original retail scenes, M24 resumes dependent first-tick/restore checks, and later integrated outcomes retain their existing boundaries. The current packet has 31 contracts; only two are new.
 
 | ID | Outcome / contract | Direct dependencies | Status |
 |---|---|---|---|
@@ -35,11 +37,13 @@ Numeric IDs remain stable; list order, not numeric sorting, determines execution
 | M26 | [original process allocation and ABI foundation](M26-original-process-foundation.md) | M19 | completed; scoped provider evidence |
 | M27 | [original data codecs and map metadata providers](M27-original-data-providers.md) | M26, M4 | completed; scoped provider evidence |
 | M28 | [original CPU presentation and media resources](M28-original-cpu-resources.md) | M27, M6, M7, M8, M12, M13 | completed; scoped provider evidence |
-| M20 | [integrated original runtime and data lifecycle](M20-original-lifecycle.md) | M28 | blocked delivery checkpoint; revised scope awaits adoption |
-| M21 | [original map and simulation execution](M21-original-simulation.md) | M20 | pending |
-| M22 | [original retail scene rendering on Vulkan](M22-original-rendering.md) | M21, M14 | pending |
+| M20 | [integrated original runtime and data lifecycle](M20-original-lifecycle.md) | M28 | completed; original runtime evidence |
+| M21 | [original map and simulation execution](M21-original-simulation.md) | M20 | completed; original simulation evidence |
+| M29 | [ordered-clear renderer contract and shader closure](M29-renderer-contract-migration.md) | M8, M9, M10 | pending; RB-01/RB-03 |
+| M30 | [public bgfx device and renderer revalidation](M30-bgfx-device-validation.md) | M29, M14 | pending; RB-02/RB-04 |
+| M22 | [original retail scene rendering on Vulkan](M22-original-rendering.md) | M21, M30 | blocked; resume after M30 |
 | M23 | [original menus controls and media integration](M23-original-interaction.md) | M22, M6, M8, M12, M13 | pending |
-| M24 | [original saves replay and deterministic state](M24-original-persistence.md) | M21, M5 | pending |
+| M24 | [original saves replay and deterministic state](M24-original-persistence.md) | M22, M5 | blocked; completed slices retained |
 | M25 | [original network lockstep integration](M25-original-network.md) | M24, M11 | pending |
 | M15 | [playable single-player](M15-single-player.md) | M23, M24 | blocked on providers |
 | M16 | [local multi-instance Linux LAN](M16-lan-match.md) | M25, M15 | pending |
@@ -48,7 +52,7 @@ Numeric IDs remain stable; list order, not numeric sorting, determines execution
 
 ## Dependency rationale
 
-M19's bounded ten-provider original support is preserved. M26 proves original process/allocation/ABI and the shared FP helper; M27 proves independent original data/codec/metadata operations, and M28 proves CPU resource/device seams and audio definitions. Their small original-consumer targets do not require a whole engine: full INI dispatch, ThingFactory-dependent map classification and complete registries stay with M20. M20 consumes these providers and integrates complete original offline startup/post-load/update/reset/destruction, including process ownership, MapCache/GameLOD side effects and noninteractive failures. M21 adds full map start/simulation (including CPU preload/props/recorder), never deferred to hardware milestones. M22 hardware and M24 save/replay branch from M21; M23 interaction uses M22; M25 networking uses M24. M15 requires M23/M24, M16 M25/M15, M17 the integrated release. Null sinks are device-only; source-defined offline network remains null. No new M0 or implementation slices are created.
+M19's bounded ten-provider original support is preserved. M26–M28 and M20–M21 have completed their scoped provider/runtime/simulation gates. The renderer migration branches from accepted M8–M10 component commands: M29 establishes the backend-neutral ordered-clear and offline shader contract, then M30 consumes it and revalidates M14-grade hardware behavior on bgfx. M22 consumes M21 original simulation and M30 device acceptance; M24's remaining mission/skirmish paths require M22's original draw provider, while its completed persistence slices remain intact. M23 interaction uses M22; M25 networking uses M24. M15 requires M23/M24, M16 M25/M15, M17 integrated release. No generic M0, renumbering, or implementation slices are created. M29 can be planned before M22 without implying that M22's historical work is discarded.
 
 ## Replacement-packet adoption
 
@@ -56,9 +60,9 @@ RC-007–RC-010 authorize three independently executable prerequisites and a che
 
 RC-011 preserves this order: M26 owns optional allocation-safe MemoryPools.ini bootstrap before the game filesystem exists, without a backward dependency on M27. M17 requires original-engine M22/M23 plus integrated M15/M16 evidence and actual installed-prefix execution; historical M14 component evidence or staged copying alone is insufficient. These are strengthened existing outcomes, not separate milestones.
 
-RC-012 clarifies the original 19-registration W3D schema factory and draw-instance boundary within M20, plus the retained BIG adapter's incomplete acceptance. These share production ThingTemplate/INI and full startup lifecycle acceptance; a separate schema-only milestone would split that coupled outcome without an independent integrated gate. M22/M23 consume the same canonical schemas and replace ledger-deferred draw operations before their paths execute. No new milestone, backward dependency or weaker retail gate is introduced.
+RC-012 clarified the original 19-registration W3D schema factory and draw-instance boundary within now-completed M20, plus the retained BIG adapter's incomplete acceptance. These shared production ThingTemplate/INI and full startup lifecycle acceptance; a separate schema-only milestone would have split that coupled outcome without an independent integrated gate. M22/M23 consume the same canonical schemas and replace ledger-deferred draw operations before their paths execute. The present M29/M30 migration does not weaken the retail gate.
 
-The active goal completed M19 and M26–M28, and M20 plan 02 slices 01–05 before its retail W3D blocker. Preserve this history and explicitly adopt the committed readiness-approved RC-012 packet. Remaining order is M20, M21, M22, M23, M24, M25, M15, M16, M17, optional M18. Generate M20 plan 03 for remaining work only during delivery; preserve plan 01 and plan 02 artifacts and evidence. M24/M25 may run before the independent rendering branch only after their declared dependencies are accepted. Planning ends at handoff; no implementation starts here.
+The prior RC-012 adoption and subsequent M20/M21 acceptances remain history, not work to rerun. Preserve M22 plan 01 and its completed source-owned slices through 06C3B3B, and M24 plan 01 with completed slices 01–05B. New planning order is M29 → M30 → M22; M24 cannot complete before M22's draw provider. M23 may branch after M22, and all later dependencies remain. Create M29/M30 implementation plans only during delivery, resume M22 at 06C3C after M30, and resume M24 at 05C after M22. Planning ends at handoff; no implementation starts here.
 
 ## Shared constraints and known gates
 
@@ -69,12 +73,12 @@ Use `$XDG_CONFIG_HOME/generals-zero-hour/` for configuration, `$XDG_DATA_HOME/ge
 
 ## Current readiness
 
-**READY_WITH_EXTERNAL_DEPENDENCIES** for this RC-012 revision; see the refreshed [readiness report](../../readiness/cnc-generals-zero-hour/readiness-report.md) and [manifest](../../readiness/cnc-generals-zero-hour/prerequisite-manifest.md). Completed M26–M28 remain preserved; M20 is the next implementation owner after committed adoption. Its deferred-instance ledger must also cover M21 map/preload/prop consumers before later rendering. Retail/display/GPU/clean-distro and optional Windows gates retain their acceptance boundaries. Readiness is permission to begin the port, not runtime acceptance, and does not itself clear blocked delivery state.
+The renderer-migration packet is **READY_WITH_EXTERNAL_DEPENDENCIES** under the refreshed [readiness report](../../readiness/cnc-generals-zero-hour/readiness-report.md) and [prerequisite manifest](../../readiness/cnc-generals-zero-hour/prerequisite-manifest.md). M29 is the first executable milestone; M30's renewed GPU acceptance requires the declared RTX/Vulkan/graphical session, and M22 still owns original retail scenes. Clean-distro and optional Windows gates retain their boundaries. Readiness is consumable only after the parent planning transaction commits and finalizes its handoff; it does not clear blocked delivery state by itself.
 
 Preserve original engine/simulation/UI/asset/serialization semantics, Linux x86-64 and the selected stack. All writes use isolated XDG roots, never CWD/retail; the original symlink remains read-only. Ordinary tests remain asset/device independent; real-source retail and hardware tests are explicitly gated. Never commit retail bytes/hashes/private paths. Historical tests remain useful regression evidence. Each new acceptance result names its evidence grade and proves compile, link and actual source execution separately; missing required original providers must fail, never fall back to toys.
 
-Retail data and Arch Vulkan/validation layers have prior component evidence; full original-source retail integration remains unaccepted. Clean Ubuntu/Fedora release environments remain later external gates. Optional Windows fixtures never block release. Remaining startup header coupling and unported providers are M20-owned implementation deliverables, not an external Direct3D SDK prerequisite.
+Retail data and Arch Vulkan/validation layers have prior component evidence; full original-source retail integration remains unaccepted. Clean Ubuntu/Fedora release environments remain later external gates. Optional Windows fixtures never block release. M20 startup/provider closure is completed history; remaining renderer device and original draw work is assigned to M29/M30/M22, not an external Direct3D SDK prerequisite.
 
 ## Validation and handoff
 
-The packet has 29 stable contracts: 15 historically completed component milestones, completed bounded-source M19 and scoped M26–M28, blocked M20 awaiting adoption, pending M21–M25, blocked M15, pending M16/M17 and optional M18. [Traceability](traceability.md) maps all twelve RC and ten SE IDs and preserves every base-plan obligation. [Status](status.yaml) preserves history/provenance. Compiler checks structure, coverage and backward dependencies in list order; readiness owns prerequisite audit. Parent planning must finalize readiness and commit provenance before downstream use.
+The packet has 31 stable contracts: 29 prior contracts plus M29/M30. [Traceability](traceability.md) maps REC-RM-001/RB-01–RB-04 and preserves all prior RC, SE and base-plan obligations. [Status](status.yaml) preserves completed history and records reconciliation provenance. Compiler checks structure, coverage and backward dependencies in list order; readiness owns prerequisite audit. Parent planning must finalize readiness and commit provenance before downstream use.

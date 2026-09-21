@@ -2,11 +2,11 @@
 
 ## Objective
 
-Original W3D/WWShade/GameClient producers render actual retail scenes on the SDL_GPU Vulkan device.
+Original W3D/WWShade/GameClient producers render actual retail scenes on the bgfx Vulkan device.
 
 ## User/System Outcome
 
-Original W3D/WWShade/GameClient producers render actual retail scenes on the SDL_GPU Vulkan device.
+Original W3D/WWShade/GameClient producers render actual retail scenes on the bgfx Vulkan device.
 
 ## Scope
 
@@ -16,7 +16,7 @@ Allocation rule: the [runtime reconciliation](../../../docs/zero-hour-runtime-cl
 
 ## Explicit Exclusions
 
-UI/media flows remain M23; complete sessions M15. Required SDL_GPU gaps follow existing backend escalation, never private API escape hatches. Preserve valid component implementations/tests. No ARM64, base Generals executable/tools, retail redistribution or gameplay rewrite.
+UI/media flows remain M23; complete sessions M15. M29/M30 own the accepted bgfx contract/device migration and revalidation; do not repeat it here. New required public-backend gaps follow §9 evidence-gated escalation, never private API escape hatches. Preserve valid component implementations/tests. No ARM64, base Generals executable/tools, retail redistribution or gameplay rewrite.
 
 ## Source Requirements
 
@@ -24,11 +24,13 @@ Runtime reconciliation RC-002/RC-003 preserves this domain's whole acceptance ch
 
 [Migration supplement](../../../docs/zero-hour-source-engine-migration.md): SE-005; SE-010 assurance/evidence constraints. [Base port plan](../../../docs/zero-hour-linux-port-plan.md) §§1–6 and §10 govern preservation, stack, formats and validation. Revisions/commits are in status.yaml.
 
+[Renderer backend migration](../../../docs/zero-hour-renderer-backend-migration.md) RB-04: consume M29/M30's accepted public-bgfx ordered-clear and device handoff, then complete the remaining original retail scene acceptance. Its synthetic probe does not replace this milestone's real scenes.
+
 ## Preconditions
 
-Direct providers: M21, M14. Consume evidenced contracts, not historical title/status alone. Historical providers supply qualified component evidence; this contract provides the missing original-source assurance. Its unfinished deliverables are not entry prerequisites. Readiness separately audits external inputs.
+Direct providers: M21, M30. M30 consumes and revalidates historical M14 component GPU behavior; M14 alone is not a current backend acceptance gate. Consume evidenced contracts, not historical title/status alone. This contract provides the missing original-source retail-scene assurance. Its unfinished deliverables are not entry prerequisites. Readiness separately audits external inputs.
 
-- `PRE-030` — M21 original simulation; PRE-013 — M14 component GPU backend only. PRE-008/PRE-012/PRE-016 — retail, developer Vulkan/layers and graphical session required at real-scene validation, not asset-free implementation. PRE-031 is produced here.
+- `PRE-030` — M21 original simulation; `PRE-040` — M30 public-bgfx backend and renewed M14-grade GPU evidence. PRE-008/PRE-012/PRE-016 — retail, developer Vulkan/layers and graphical session required at real-scene validation, not asset-free implementation. PRE-031 is produced here.
 
 ## Readiness checks
 
@@ -42,6 +44,8 @@ Produces `PRE-031` (M22 original producers and real-scene Vulkan); inspect this 
 RC-012: consume M20's canonical original W3D schema/data implementation unchanged in identity and semantics, and complete each ledger-deferred draw-instance/state/resource operation before a real-scene consumer executes it. Reconcile every deferred operation with its actual consuming path; no startup fail-closed guard may stand in for required rendering. Newly reachable CPU behavior remains owned by the earliest consuming milestone, never deferred solely by directory/classification. Original registry, inherited data, override and resource-ownership regressions remain active.
 
 Recording tests witness actual producers and reject unsupported required states/assets. Execute the same integrated scenes on RTX Vulkan with zero validation errors, captured visual review and bounded resize/resource recreation.
+
+Resume the preserved M22 implementation plan at its blocked 06C3C source-scoped camera-clear work only after M30 acceptance. The original clear must be applied within the camera viewport and ordered among source draws; the M30 synthetic probe is a prerequisite, not a substitute for the original retail scenes.
 
 ## UX Constraints
 
@@ -71,4 +75,4 @@ Build applicable targets with linux-gcc-debug, linux-clang-debug, linux-gcc-rele
 
 ## Known Risks / Deferred Work
 
-UI/media flows remain M23; complete sessions M15. Required SDL_GPU gaps follow existing backend escalation, never private API escape hatches. Component tests do not establish original execution. Unexpected required asset/backend limits follow base-plan §9 evidence-gated escalation, never reduced silent coverage.
+UI/media flows remain M23; complete sessions M15. Component tests and M30's synthetic probe do not establish original retail scenes. Unexpected required asset/backend limits follow base-plan §9 evidence-gated escalation, never reduced silent coverage.
