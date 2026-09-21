@@ -280,14 +280,15 @@ milestones:
   - id: M21
     title: "original map and simulation execution"
     file: delivery/milestones/cnc-generals-zero-hour/M21-original-simulation.md
-    status: in_progress
+    status: completed
     dependencies: [M20]
     remediation_ids: [SE-004, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010]
     optional: false
     started_at: "2026-09-21T01:04:33Z"
-    completed_at: null
-    evidence: null
-    notes: "New original-source provider; historical component tests do not establish this outcome."
+    completed_at: "2026-09-21T04:24:57Z"
+    commit_hash: 1f55f575e97039519c6d683e17d6c161e222379f
+    evidence: "evidence/qa/cnc-generals-zero-hour/M21-original-simulation.md; all four GCC/Clang Debug/Release suites passed 128/128, focused GCC and Clang ASan+UBSan passed 11/11 with strict runtime cases 4/4, and owned plus read-only retail campaign/skirmish lifecycle, identity, provider-removal, determinism, and clean re-entry checks passed with zero physical devices."
+    notes: "Accepted. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_21_plan_01.md; slice commits: 8e43e63, d3cff5f, ca06d76, 1f55f575e97039519c6d683e17d6c161e222379f. UBSan vptr instrumentation is excluded for the intentionally partial runtime; ASan and all other undefined checks remain enabled."
   - id: M22
     title: "original retail scene rendering on Vulkan"
     file: delivery/milestones/cnc-generals-zero-hour/M22-original-rendering.md

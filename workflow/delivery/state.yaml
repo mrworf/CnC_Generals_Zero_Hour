@@ -13,11 +13,11 @@ delivery_goal:
   end: null
   milestone_ids: [M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18]
   execution: autonomous
-  current_milestone: M21
+  current_milestone: M22
   blocker_type: null
   blocker: null
   blockers: []
-  resume_point: "M21 selected after accepted M20. Create delivery/plans/cnc-generals-zero-hour/milestone_21_plan_01.md and its complete slice set before implementation."
+  resume_point: "M21 accepted. Verify M22 live PRE-012/PRE-016 GPU/session availability, then create delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md and its complete slice set before implementation."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
   replacement_packet_adoption:
