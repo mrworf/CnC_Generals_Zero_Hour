@@ -45,6 +45,7 @@ OriginalGpuEdge::OriginalGpuEdge(renderer::GpuDevice& device)
 
 OriginalGpuEdge::~OriginalGpuEdge()
 {
+    release_prepared_state();
     DX8Wrapper::Reset_Source_State();
     for (auto& stage : pending_stages_) if (stage.sampler) device_.destroy(stage.sampler);
     while (!textures_.empty()) {
@@ -300,6 +301,161 @@ OriginalGpuEdge::AppliedState OriginalGpuEdge::map_applied_state(unsigned source
     return result;
 }
 
+void OriginalGpuEdge::release_prepared_state() noexcept
+{
+    if (!physical_) return;
+    device_.destroy(physical_->pipeline);
+    device_.destroy(physical_->vertex_uniform);
+    device_.destroy(physical_->fragment_uniform);
+    device_.destroy(physical_->vertex_shader);
+    device_.destroy(physical_->fragment_shader);
+    physical_.reset();
+}
+
+OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned source_fvf)
+{
+    release_prepared_state();
+    const AppliedState mapped=map_applied_state(source_fvf);
+    if (mapped.lighting)
+        throw std::runtime_error("original lit physical state requires category-issued light environment (M22 06)");
+    const auto source=DX8Wrapper::Snapshot_Source_State();
+    VertexUniform vertex;
+    const auto matrix=[&](int key,std::array<float,16>& output) {
+        auto found=source.transforms.find(key);
+        if (found==source.transforms.end())
+            throw std::runtime_error("original physical state is missing a source-issued world/view/projection transform");
+        for (unsigned row=0;row<4;++row) {
+            const auto& r=found->second[row];
+            const float values[]={r.X,r.Y,r.Z,r.W};
+            for (unsigned col=0;col<4;++col) {
+                if (!std::isfinite(values[col]))
+                    throw std::runtime_error("original physical transform is not finite");
+                output[row*4+col]=values[col];
+            }
+        }
+    };
+    matrix(D3DTS_WORLD,vertex.world);
+    matrix(D3DTS_VIEW,vertex.view);
+    matrix(D3DTS_PROJECTION,vertex.projection);
+    FragmentUniform fragment;
+    fragment.diffuse=mapped.diffuse;
+    fragment.ambient=mapped.ambient;
+    fragment.specular=mapped.specular;
+    fragment.emissive=mapped.emissive;
+    fragment.fog_color=mapped.fog_color;
+    fragment.fog_parameters={mapped.fog_start,mapped.fog_end,
+        mapped.pipeline.fog_enabled?1.0f:0.0f,mapped.power};
+    fragment.alpha_parameters={mapped.alpha_test?1.0f:0.0f,
+        static_cast<float>(static_cast<unsigned>(mapped.alpha_compare)),
+        mapped.alpha_reference,mapped.specular_enabled?1.0f:0.0f};
+    fragment.material_sources={static_cast<std::int32_t>(mapped.ambient_source),
+        static_cast<std::int32_t>(mapped.diffuse_source),
+        static_cast<std::int32_t>(mapped.emissive_source),mapped.lighting?1:0};
+    unsigned mask=0,slot=0;
+    renderer::StageBindings fragment_bindings;
+    std::array<const TextureBaseClass*,2> stage_sources{};
+    for (unsigned stage=0;stage<2;++stage) {
+        const auto& selected=mapped.stages[stage];
+        vertex.texture_transform[stage]=selected.transform;
+        vertex.coordinate_modes[stage]=static_cast<std::int32_t>(selected.coordinate_mode);
+        vertex.uv_indices[stage]=static_cast<std::int32_t>(selected.uv_source);
+        vertex.transform_flags[stage]=static_cast<std::int32_t>(selected.transform_flags);
+        fragment.stage_ops[stage]={static_cast<std::int32_t>(selected.color.op),
+            static_cast<std::int32_t>(selected.alpha.op),selected.texture_required?1:0,
+            static_cast<std::int32_t>(selected.coordinate_mode)};
+        fragment.stage_args[stage]={static_cast<std::int32_t>(selected.color.first),
+            static_cast<std::int32_t>(selected.color.second),
+            static_cast<std::int32_t>(selected.alpha.first),
+            static_cast<std::int32_t>(selected.alpha.second)};
+        fragment.bump[stage]=selected.bump;
+        if (!selected.texture_required) continue;
+        const auto pending=pending_stage(stage);
+        if (!pending.source || !pending.texture || !pending.sampler ||
+            pending.texture!=texture_handle(pending.source))
+            throw std::runtime_error("original physical stage has no resident TextureClass/filter owner");
+        mask |= 1U<<stage;
+        fragment_bindings.textures[slot]=pending.texture;
+        fragment_bindings.samplers[slot]=pending.sampler;
+        stage_sources[stage]=pending.source;
+        ++slot;
+    }
+    fragment_bindings.texture_count=slot;
+    PhysicalResources next;
+    try {
+        next.vertex_shader=device_.create_shader(
+            {renderer::ShaderStage::vertex,"original_applied.vert",1,0},"original applied vertex");
+        if (!next.vertex_shader) throw std::runtime_error("original vertex shader creation failed: "+device_.last_error());
+        const std::string fragment_name="original_applied_"+std::to_string(mask)+".frag";
+        next.fragment_shader=device_.create_shader(
+            {renderer::ShaderStage::fragment,fragment_name,1,slot},"original applied fragment");
+        if (!next.fragment_shader) throw std::runtime_error("original fragment shader creation failed: "+device_.last_error());
+        auto pipeline=mapped.pipeline;
+        pipeline.vertex_shader=next.vertex_shader;
+        pipeline.fragment_shader=next.fragment_shader;
+        next.pipeline=device_.create_pipeline(renderer::PipelineKey(pipeline),"original applied pipeline");
+        if (!next.pipeline) throw std::runtime_error("original applied pipeline creation failed: "+device_.last_error());
+        next.vertex_uniform=device_.create_buffer({sizeof(vertex),renderer::BufferUsage::uniform,true},
+            "original world/view/projection and UV state");
+        if (!next.vertex_uniform) throw std::runtime_error("original vertex uniform creation failed: "+device_.last_error());
+        next.fragment_uniform=device_.create_buffer({sizeof(fragment),renderer::BufferUsage::uniform,true},
+            "original material/shader/fog state");
+        if (!next.fragment_uniform) throw std::runtime_error("original fragment uniform creation failed: "+device_.last_error());
+        if (auto result=device_.upload({next.vertex_uniform,sizeof(vertex),0,sizeof(vertex)},&vertex); !result)
+            throw std::runtime_error("original vertex uniform upload failed: "+result.error);
+        if (auto result=device_.upload({next.fragment_uniform,sizeof(fragment),0,sizeof(fragment)},&fragment); !result)
+            throw std::runtime_error("original fragment uniform upload failed: "+result.error);
+        next.state.pipeline=next.pipeline;
+        next.state.vertex_bindings.uniforms[0]={next.vertex_uniform,0,sizeof(vertex)};
+        next.state.vertex_bindings.uniform_count=1;
+        next.state.fragment_bindings=fragment_bindings;
+        next.state.fragment_bindings.uniforms[0]={next.fragment_uniform,0,sizeof(fragment)};
+        next.state.fragment_bindings.uniform_count=1;
+        next.state.generation=generation_;
+        next.state.serial=++physical_serial_;
+        next.state.source_revision=source_revision_;
+        next.state.texture_mask=mask;
+        next.sources=stage_sources;
+        physical_=next;
+        return next.state;
+    } catch (...) {
+        if (next.pipeline) device_.destroy(next.pipeline);
+        if (next.vertex_uniform) device_.destroy(next.vertex_uniform);
+        if (next.fragment_uniform) device_.destroy(next.fragment_uniform);
+        if (next.vertex_shader) device_.destroy(next.vertex_shader);
+        if (next.fragment_shader) device_.destroy(next.fragment_shader);
+        throw;
+    }
+}
+
+void OriginalGpuEdge::validate_prepared_state(const PhysicalState& state) const
+{
+    if (!physical_ || state.generation!=generation_ || state.serial!=physical_->state.serial ||
+        state.source_revision!=source_revision_ || state.pipeline!=physical_->pipeline ||
+        state.texture_mask!=physical_->state.texture_mask ||
+        state.vertex_bindings.uniform_count!=1 ||
+        state.vertex_bindings.uniforms[0].buffer!=physical_->vertex_uniform ||
+        state.vertex_bindings.uniforms[0].offset!=0 ||
+        state.vertex_bindings.uniforms[0].size!=sizeof(VertexUniform) ||
+        state.vertex_bindings.texture_count!=0 ||
+        state.fragment_bindings.uniform_count!=1 ||
+        state.fragment_bindings.uniforms[0].buffer!=physical_->fragment_uniform ||
+        state.fragment_bindings.uniforms[0].offset!=0 ||
+        state.fragment_bindings.uniforms[0].size!=sizeof(FragmentUniform) ||
+        state.fragment_bindings.texture_count!=physical_->state.fragment_bindings.texture_count)
+        throw std::runtime_error("original prepared physical state is stale or from another source/device generation");
+    for (unsigned binding=0;binding<state.fragment_bindings.texture_count;++binding)
+        if (state.fragment_bindings.textures[binding]!=physical_->state.fragment_bindings.textures[binding] ||
+            state.fragment_bindings.samplers[binding]!=physical_->state.fragment_bindings.samplers[binding])
+            throw std::runtime_error("original prepared physical texture bindings are stale");
+    for (unsigned stage=0;stage<2;++stage) {
+        if (!(state.texture_mask&(1U<<stage))) continue;
+        const auto selected=pending_stage(stage);
+        if (selected.source!=physical_->sources[stage] ||
+            selected.texture!=texture_handle(selected.source) || !selected.sampler)
+            throw std::runtime_error("original prepared TextureClass owner is stale");
+    }
+}
+
 bool OriginalGpuEdge::supports_texture_format(WW3DFormat format) const noexcept
 {
     try { return device_.supports_texture_format(translate_format(format),renderer::TextureDimension::texture_2d,true,false); }
@@ -373,6 +529,7 @@ void OriginalGpuEdge::release_texture_if_owned(TextureBaseClass* source) noexcep
     if (!active_edge) return;
     const auto it=active_edge->textures_.find(source);
     if (it==active_edge->textures_.end()) return;
+    ++active_edge->source_revision_;
     for (unsigned index=0;index<active_edge->pending_stages_.size();++index) {
         auto& stage=active_edge->pending_stages_[index];
         if (stage.source==source) {
@@ -397,6 +554,7 @@ void OriginalGpuEdge::select_texture(unsigned stage, const TextureBaseClass* sou
     pending_stages_[stage].texture=handle;
     pending_stages_[stage].generation=generation_;
     pending_stages_[stage].source=source;
+    ++source_revision_;
     device_.record_marker("original TextureClass::Apply stage="+std::to_string(stage)+
         (source ? " selected" : " disabled"));
 }
@@ -415,6 +573,7 @@ void OriginalGpuEdge::set_filter_stage_state(unsigned stage, FilterStageState st
     case FilterStageState::address_u: selected.u=value; break;
     case FilterStageState::address_v: selected.v=value; break;
     }
+    ++source_revision_;
     device_.record_marker("original TextureFilterClass stage="+std::to_string(stage)+
         " property="+std::to_string(static_cast<unsigned>(state))+" value="+std::to_string(value));
     if (state!=FilterStageState::address_v) return;
@@ -445,6 +604,7 @@ OriginalGpuEdge::PendingStage OriginalGpuEdge::pending_stage(unsigned stage) con
 
 void OriginalGpuEdge::record_source_state(std::string_view label)
 {
+    ++source_revision_;
     device_.record_marker(label);
 }
 

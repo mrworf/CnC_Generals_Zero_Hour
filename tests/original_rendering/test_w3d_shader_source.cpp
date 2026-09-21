@@ -12,6 +12,7 @@
 #include <string>
 #include <utility>
 #include <limits>
+#include <cstring>
 
 #undef assert
 #define assert(condition) do { if (!(condition)) std::abort(); } while (false)
@@ -19,6 +20,7 @@
 int main()
 {
 	zh::renderer::RecordingGpuDevice device;
+	zh::original_runtime::OriginalGpuEdge::PhysicalState retired;
 	{
 		zh::original_runtime::OriginalGpuEdge edge(device);
 		using Edge=zh::original_runtime::OriginalGpuEdge;
@@ -50,6 +52,72 @@ int main()
 		assert(original.stages[0].texture_required &&
 			original.stages[1].color.op==zh::original_runtime::OriginalGpuEdge::CombinerOp::disable);
 		assert((original.diffuse==std::array<float,4>{1,1,1,1}));
+		ShaderClass untextured=shader;
+		untextured.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+		DX8Wrapper::Set_Shader(untextured);
+		DX8Wrapper::Apply_Render_State_Changes();
+		bool missing_world=false;
+		try { (void)edge.prepare_applied_state(DX8_FVF_XYZNUV1); }
+		catch (const std::runtime_error& error) {
+			missing_world=std::string(error.what()).find("world/view/projection")!=std::string::npos;
+		}
+		assert(missing_world && device.resource_counts().total()==0);
+		DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+		DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+		DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+		DX8Wrapper::Apply_Render_State_Changes();
+		const auto physical=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
+		retired=physical;
+		assert(physical.texture_mask==0 && physical.fragment_bindings.texture_count==0 &&
+			physical.vertex_bindings.uniform_count==1 && physical.fragment_bindings.uniform_count==1);
+		edge.validate_prepared_state(physical);
+		auto forged_binding=physical;
+		forged_binding.vertex_bindings.uniforms[0].size=4;
+		bool rejected_binding=false;
+		try { edge.validate_prepared_state(forged_binding); }
+		catch (const std::runtime_error&) { rejected_binding=true; }
+		assert(rejected_binding);
+		const auto pipeline=device.pipeline_descriptor(physical.pipeline);
+		assert(pipeline.vertex_layout==zh::renderer::VertexLayout::original_fvf &&
+			pipeline.original_fvf.stride==32 && !pipeline.blend.enabled &&
+			pipeline.depth_stencil.depth_write);
+		const auto vertex_bytes=device.buffer_bytes(physical.vertex_bindings.uniforms[0].buffer);
+		const auto fragment_bytes=device.buffer_bytes(physical.fragment_bindings.uniforms[0].buffer);
+		assert(vertex_bytes.size()==sizeof(Edge::VertexUniform) &&
+			fragment_bytes.size()==sizeof(Edge::FragmentUniform));
+		Edge::VertexUniform vertex_uniform{};
+		Edge::FragmentUniform fragment_uniform{};
+		std::memcpy(&vertex_uniform,vertex_bytes.data(),vertex_bytes.size());
+		std::memcpy(&fragment_uniform,fragment_bytes.data(),fragment_bytes.size());
+		assert(vertex_uniform.world[0]==1.0f && vertex_uniform.view[5]==1.0f &&
+			vertex_uniform.projection[10]==1.0f && fragment_uniform.diffuse[0]==1.0f &&
+			fragment_uniform.stage_ops[0][0]==static_cast<int>(Edge::CombinerOp::select_second));
+		assert(device.snapshot().find("begin_pass")==std::string::npos &&
+			device.snapshot().find("draw ")==std::string::npos);
+		for (unsigned failure=0;failure<4;++failure) {
+			switch (failure) {
+			case 0: device.fail_next_shader_create(); break;
+			case 1: device.fail_next_pipeline_create(); break;
+			case 2: device.fail_next_buffer_create(); break;
+			case 3: device.fail_next_buffer_upload(); break;
+			}
+			bool rejected=false;
+			try { (void)edge.prepare_applied_state(DX8_FVF_XYZNUV1); }
+			catch (const std::runtime_error&) { rejected=true; }
+			assert(rejected && device.resource_counts().total()==0);
+		}
+		const auto replay=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
+		edge.validate_prepared_state(replay);
+		bool superseded=false;
+		try { edge.validate_prepared_state(physical); }
+		catch (const std::runtime_error&) { superseded=true; }
+		assert(superseded);
+		DX8Wrapper::Set_Shader(shader);
+		bool invalid_physical=false;
+		try { edge.validate_prepared_state(physical); }
+		catch (const std::runtime_error&) { invalid_physical=true; }
+		assert(invalid_physical);
+		DX8Wrapper::Apply_Render_State_Changes();
 		const std::array<std::pair<unsigned,Edge::CombinerOp>,5> all_ops{{
 			{D3DTOP_DISABLE,Edge::CombinerOp::disable},
 			{D3DTOP_SELECTARG1,Edge::CombinerOp::select_first},
@@ -92,6 +160,12 @@ int main()
 		DX8Wrapper::Set_DX8_Render_State(D3DRS_CULLMODE,D3DCULL_CW);
 		DX8Wrapper::Set_DX8_Render_State(D3DRS_LIGHTING,1);
 		assert(Edge::map_applied_state(DX8_FVF_XYZNUV1).lighting);
+		bool lit_physical=false;
+		try { (void)edge.prepare_applied_state(DX8_FVF_XYZNUV1); }
+		catch (const std::runtime_error& error) {
+			lit_physical=std::string(error.what()).find("category-issued light")!=std::string::npos;
+		}
+		assert(lit_physical && device.resource_counts().total()==0);
 		DX8Wrapper::Set_DX8_Render_State(D3DRS_LIGHTING,0);
 		D3DMATERIAL8 invalid_material{};
 		invalid_material.Power=std::numeric_limits<float>::quiet_NaN();
@@ -249,5 +323,12 @@ int main()
 	try { (void)zh::original_runtime::OriginalGpuEdge::map_applied_state(DX8_FVF_XYZNUV1); }
 	catch (const std::runtime_error& error) { stale_state=std::string(error.what()).find("session")!=std::string::npos; }
 	assert(stale_state);
+	{
+		zh::original_runtime::OriginalGpuEdge recreated(device);
+		bool wrong_generation=false;
+		try { recreated.validate_prepared_state(retired); }
+		catch (const std::runtime_error&) { wrong_generation=true; }
+		assert(wrong_generation && device.resource_counts().total()==0);
+	}
 	std::puts("original ShaderClass software-profile source decisions and negative/retry: ok");
 }

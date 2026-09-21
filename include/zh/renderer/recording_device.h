@@ -39,6 +39,10 @@ public:
     void fail_next_texture_create();
     void fail_next_texture_upload();
     void fail_next_sampler_create();
+    void fail_next_shader_create();
+    void fail_next_pipeline_create();
+    void fail_next_buffer_create();
+    void fail_next_buffer_upload();
 
     BufferHandle create_buffer(const BufferDesc& desc, std::string_view label) override;
     TextureHandle create_texture(const TextureDesc& desc, std::string_view label) override;
@@ -65,6 +69,7 @@ public:
     std::vector<UInt8> buffer_bytes(BufferHandle handle) const;
     std::vector<UInt8> texture_bytes(TextureHandle handle, UInt32 mip_level = 0) const;
     SamplerDesc sampler_descriptor(SamplerHandle handle) const;
+    PipelineDesc pipeline_descriptor(PipelineHandle handle) const;
 
     // Records an engine-level transition in the same ordered stream. This is
     // deliberately backend-neutral and is used for resize/recreation evidence.

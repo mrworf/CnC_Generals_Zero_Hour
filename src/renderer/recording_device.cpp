@@ -145,6 +145,10 @@ public:
     bool reject_next_texture_create=false;
     bool reject_next_texture_upload=false;
     bool reject_next_sampler_create=false;
+    bool reject_next_shader_create=false;
+    bool reject_next_pipeline_create=false;
+    bool reject_next_buffer_create=false;
+    bool reject_next_buffer_upload=false;
     bool in_pass = false;
     std::string active_pass_label;
     std::array<TextureHandle, RendererLimits::color_targets> active_colors{};
@@ -186,9 +190,17 @@ void RecordingGpuDevice::set_texture_format_supported(TextureFormat format, bool
 void RecordingGpuDevice::fail_next_texture_create() { impl_->reject_next_texture_create=true; }
 void RecordingGpuDevice::fail_next_texture_upload() { impl_->reject_next_texture_upload=true; }
 void RecordingGpuDevice::fail_next_sampler_create() { impl_->reject_next_sampler_create=true; }
+void RecordingGpuDevice::fail_next_shader_create() { impl_->reject_next_shader_create=true; }
+void RecordingGpuDevice::fail_next_pipeline_create() { impl_->reject_next_pipeline_create=true; }
+void RecordingGpuDevice::fail_next_buffer_create() { impl_->reject_next_buffer_create=true; }
+void RecordingGpuDevice::fail_next_buffer_upload() { impl_->reject_next_buffer_upload=true; }
 
 BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::string_view label)
 {
+    if (impl_->reject_next_buffer_create) {
+        impl_->reject_next_buffer_create=false;
+        impl_->fail("create_buffer", "injected buffer creation failure", label); return {};
+    }
     if (auto result = validate(desc); !result) { impl_->fail("create_buffer", result.error, label); return {}; }
     if (label.empty()) { impl_->fail("create_buffer", "label must not be empty"); return {}; }
     BufferRecord record{desc, std::vector<UInt8>(static_cast<std::size_t>(desc.size), 0)};
@@ -244,6 +256,10 @@ SamplerHandle RecordingGpuDevice::create_sampler(const SamplerDesc& desc, std::s
 
 ShaderHandle RecordingGpuDevice::create_shader(const ShaderDesc& desc, std::string_view label)
 {
+    if (impl_->reject_next_shader_create) {
+        impl_->reject_next_shader_create=false;
+        impl_->fail("create_shader", "injected shader creation failure", label); return {};
+    }
     if (auto result = validate(desc); !result) { impl_->fail("create_shader", result.error, label); return {}; }
     if (label.empty()) { impl_->fail("create_shader", "label must not be empty"); return {}; }
     ShaderRecord record{desc.stage, std::string(desc.name), desc.uniform_buffers, desc.samplers};
@@ -257,6 +273,10 @@ ShaderHandle RecordingGpuDevice::create_shader(const ShaderDesc& desc, std::stri
 
 PipelineHandle RecordingGpuDevice::create_pipeline(const PipelineKey& key, std::string_view label)
 {
+    if (impl_->reject_next_pipeline_create) {
+        impl_->reject_next_pipeline_create=false;
+        impl_->fail("create_pipeline", "injected pipeline creation failure", label); return {};
+    }
     const auto& desc = key.descriptor();
     if (auto result = validate(desc); !result) { impl_->fail("create_pipeline", result.error, label); return {}; }
     const auto* vertex = lookup(impl_->shaders, desc.vertex_shader);
@@ -287,6 +307,10 @@ PipelineHandle RecordingGpuDevice::create_pipeline(const PipelineKey& key, std::
 
 ValidationResult RecordingGpuDevice::upload(const UploadDesc& desc, const void* bytes)
 {
+    if (impl_->reject_next_buffer_upload) {
+        impl_->reject_next_buffer_upload=false;
+        return impl_->fail("upload", "injected buffer upload failure");
+    }
     if (auto result = validate(desc); !result) return impl_->fail("upload", result.error);
     auto* buffer = lookup(impl_->buffers, desc.destination);
     if (!buffer) return impl_->fail("upload", "destination buffer handle is stale or destroyed");
@@ -517,6 +541,12 @@ SamplerDesc RecordingGpuDevice::sampler_descriptor(SamplerHandle handle) const
     const auto* sampler=lookup(impl_->samplers,handle);
     if (!sampler) throw std::runtime_error("recording sampler handle is stale or destroyed");
     return sampler->value.desc;
+}
+PipelineDesc RecordingGpuDevice::pipeline_descriptor(PipelineHandle handle) const
+{
+    const auto* pipeline=lookup(impl_->pipelines,handle);
+    if (!pipeline) throw std::runtime_error("recording pipeline handle is stale or destroyed");
+    return pipeline->value.key.descriptor();
 }
 void RecordingGpuDevice::record_marker(std::string_view marker) { impl_->commands.push_back("marker " + quoted(marker)); }
 

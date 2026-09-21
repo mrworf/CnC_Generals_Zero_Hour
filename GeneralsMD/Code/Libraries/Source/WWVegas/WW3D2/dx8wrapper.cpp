@@ -238,7 +238,7 @@ void DX8Wrapper::Set_DX8_Texture_Stage_State(unsigned stage,unsigned property,un
 void DX8Wrapper::Set_Transform(D3DTRANSFORMSTATETYPE transform,const Matrix4x4& matrix)
 {
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
-    if (transform<D3DTS_VIEW || (transform>D3DTS_PROJECTION &&
+    if (transform<D3DTS_VIEW || (transform>D3DTS_PROJECTION && transform!=D3DTS_WORLD &&
         (transform<D3DTS_TEXTURE0 || transform>=D3DTS_TEXTURE0+8)))
         throw std::runtime_error("original DX8 transform index is unsupported");
     state().transforms.insert_or_assign(transform,matrix);

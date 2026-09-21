@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <array>
 #include <cstdint>
+#include <optional>
 
 class VertexBufferClass;
 class IndexBufferClass;
@@ -55,6 +56,31 @@ public:
         float fog_start=0;
         float fog_end=0;
     };
+    // std140-compatible source-state ABI. Matrices retain original row order;
+    // the B3B2B vertex shader performs the D3D row-vector composition.
+    struct alignas(16) VertexUniform {
+        std::array<float,16> world{}, view{}, projection{};
+        std::array<std::array<float,16>,2> texture_transform{};
+        std::array<std::int32_t,4> coordinate_modes{};
+        std::array<std::int32_t,4> uv_indices{};
+        std::array<std::int32_t,4> transform_flags{};
+    };
+    struct alignas(16) FragmentUniform {
+        std::array<float,4> diffuse{}, ambient{}, specular{}, emissive{};
+        std::array<float,4> fog_color{};
+        std::array<float,4> fog_parameters{}; // start, end, enabled, material power
+        std::array<float,4> alpha_parameters{}; // enabled, compare, normalized ref, specular enabled
+        std::array<std::int32_t,4> material_sources{}; // ambient, diffuse, emissive, lighting
+        std::array<std::array<std::int32_t,4>,2> stage_ops{}; // color, alpha, texture needed, UV mode
+        std::array<std::array<std::int32_t,4>,2> stage_args{}; // color 1/2, alpha 1/2
+        std::array<std::array<float,4>,2> bump{};
+    };
+    struct PhysicalState {
+        renderer::PipelineHandle pipeline;
+        renderer::StageBindings vertex_bindings,fragment_bindings;
+        std::uint64_t generation=0,serial=0,source_revision=0;
+        unsigned texture_mask=0;
+    };
     explicit OriginalGpuEdge(renderer::GpuDevice& device);
     ~OriginalGpuEdge();
     OriginalGpuEdge(const OriginalGpuEdge&) = delete;
@@ -64,6 +90,8 @@ public:
     renderer::BufferHandle bind_index(const IndexBufferClass* source);
     static renderer::OriginalFvfLayout layout_for_fvf(unsigned source_fvf);
     static AppliedState map_applied_state(unsigned source_fvf);
+    PhysicalState prepare_applied_state(unsigned source_fvf);
+    void validate_prepared_state(const PhysicalState& state) const;
     bool supports_texture_format(WW3DFormat format) const noexcept;
     renderer::TextureHandle create_texture(WW3DFormat format, unsigned width, unsigned height, unsigned& mips);
     void upload_texture(renderer::TextureHandle texture, unsigned level, unsigned width,
@@ -91,6 +119,7 @@ public:
     static OriginalGpuEdge& required();
 
 private:
+    void release_prepared_state() noexcept;
     renderer::GpuDevice& device_;
     OriginalGpuEdge* previous_;
     std::unordered_map<const VertexBufferClass*, renderer::BufferHandle> vertices_;
@@ -102,6 +131,15 @@ private:
     struct PendingFilterValues { int min=-1,mag=-1,mip=-1,u=-1,v=-1; };
     std::array<PendingFilterValues,8> pending_filter_values_{};
     std::uint64_t generation_;
+    std::uint64_t source_revision_=0,physical_serial_=0;
+    struct PhysicalResources {
+        renderer::ShaderHandle vertex_shader,fragment_shader;
+        renderer::PipelineHandle pipeline;
+        renderer::BufferHandle vertex_uniform,fragment_uniform;
+        PhysicalState state;
+        std::array<const TextureBaseClass*,2> sources{};
+    };
+    std::optional<PhysicalResources> physical_;
 };
 
 } // namespace zh::original_runtime

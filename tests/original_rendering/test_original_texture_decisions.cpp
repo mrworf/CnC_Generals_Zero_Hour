@@ -13,6 +13,9 @@
 #include "ddsfile.h"
 #include "ffactory.h"
 #include "wwfile.h"
+#include "shader.h"
+#include "dx8wrapper.h"
+#include "dx8fvf.h"
 
 #include <array>
 #include <algorithm>
@@ -314,15 +317,62 @@ void original_stage_filter_state() {
         zh::renderer::RecordingGpuDevice device;
         zh::original_runtime::OriginalGpuEdge edge(device);
         WW3D::Set_Texture_Filter(TextureFilterClass::TEXTURE_FILTER_TRILINEAR);
+        ShaderClass shader;
+        shader.Set_Texturing(ShaderClass::TEXTURING_ENABLE);
+        DX8Wrapper::Set_Shader(shader);
+        DX8Wrapper::Set_Material(nullptr);
+        DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+        DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+        DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+        DX8Wrapper::Apply_Render_State_Changes();
         TextureClass texture("stage","stage.tga",MIP_LEVELS_ALL,WW3D_FORMAT_UNKNOWN,true,true);
         TextureClass orphan("orphan","stage.tga",MIP_LEVELS_ALL,WW3D_FORMAT_UNKNOWN,true,true);
         bool no_owner=false;
         try { edge.select_texture(0,&orphan); } catch (const std::runtime_error&) { no_owner=true; }
         check(no_owner);
+        bool absent_stage=false;
+        try { (void)edge.prepare_applied_state(DX8_FVF_XYZNUV1); }
+        catch (const std::runtime_error& e) {
+            absent_stage=std::string(e.what()).find("stage is absent")!=std::string::npos;
+        }
+        check(absent_stage && device.resource_counts().total()==0);
         texture.Get_Filter().Set_U_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_CLAMP);
         texture.Apply(0);
         const auto zero=edge.pending_stage(0);
         check(zero.texture==edge.texture_handle(&texture) && zero.sampler);
+        const auto source_one=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
+        check(source_one.texture_mask==1 && source_one.fragment_bindings.texture_count==1 &&
+            source_one.fragment_bindings.textures[0]==zero.texture &&
+            source_one.fragment_bindings.samplers[0]==zero.sampler);
+        edge.validate_prepared_state(source_one);
+        for (unsigned op : {D3DTOP_DISABLE,D3DTOP_SELECTARG1,D3DTOP_SELECTARG2,
+                            D3DTOP_MODULATE,D3DTOP_ADD}) {
+            DX8Wrapper::Set_DX8_Texture_Stage_State(0,D3DTSS_COLOROP,op);
+            DX8Wrapper::Set_DX8_Texture_Stage_State(0,D3DTSS_ALPHAOP,op);
+            for (unsigned arg : {D3DTA_DIFFUSE,D3DTA_CURRENT,D3DTA_TEXTURE}) {
+                for (unsigned field : {D3DTSS_COLORARG1,D3DTSS_COLORARG2,
+                                       D3DTSS_ALPHAARG1,D3DTSS_ALPHAARG2})
+                    DX8Wrapper::Set_DX8_Texture_Stage_State(0,field,arg);
+                const auto mapped=edge.prepare_applied_state(DX8_FVF_XYZNUV1);
+                const auto bytes=device.buffer_bytes(mapped.fragment_bindings.uniforms[0].buffer);
+                check(bytes.size()==sizeof(zh::original_runtime::OriginalGpuEdge::FragmentUniform));
+                zh::original_runtime::OriginalGpuEdge::FragmentUniform uniform{};
+                std::memcpy(&uniform,bytes.data(),bytes.size());
+                check(uniform.stage_ops[0][0]==static_cast<int>(op==D3DTOP_DISABLE?0:
+                    op==D3DTOP_SELECTARG1?1:op==D3DTOP_SELECTARG2?2:op==D3DTOP_MODULATE?3:4) &&
+                    uniform.stage_ops[0][1]==uniform.stage_ops[0][0]);
+                if (op!=D3DTOP_DISABLE) {
+                    const auto mapped_arg=arg==D3DTA_DIFFUSE?0:arg==D3DTA_CURRENT?1:2;
+                    check(uniform.stage_args[0][0]==mapped_arg &&
+                        (op==D3DTOP_SELECTARG1 || uniform.stage_args[0][1]==mapped_arg) &&
+                        uniform.stage_args[0][2]==mapped_arg);
+                }
+                edge.validate_prepared_state(mapped);
+            }
+        }
+        ShaderClass::Invalidate();
+        DX8Wrapper::Set_Shader(shader);
+        DX8Wrapper::Apply_Render_State_Changes();
         const auto filter=device.sampler_descriptor(zero.sampler);
         check(filter.min_filter==zh::renderer::Filter::linear &&
             filter.mag_filter==zh::renderer::Filter::linear &&
@@ -334,9 +384,35 @@ void original_stage_filter_state() {
         texture.Apply(1);
         const auto one=edge.pending_stage(1);
         check(one.texture==zero.texture && one.sampler!=zero.sampler);
+        shader.Set_Post_Detail_Color_Func(ShaderClass::DETAILCOLOR_ADD);
+        DX8Wrapper::Set_Shader(shader);
+        DX8Wrapper::Apply_Render_State_Changes();
+        const auto source_two=edge.prepare_applied_state(DX8_FVF_XYZNUV2);
+        check(source_two.texture_mask==3 && source_two.fragment_bindings.texture_count==2 &&
+            source_two.fragment_bindings.textures[0]==zero.texture &&
+            source_two.fragment_bindings.textures[1]==one.texture &&
+            source_two.fragment_bindings.samplers[0]==zero.sampler &&
+            source_two.fragment_bindings.samplers[1]==one.sampler);
+        edge.validate_prepared_state(source_two);
+        bool missing_uv=false;
+        try { (void)edge.prepare_applied_state(DX8_FVF_XYZNUV1); }
+        catch (const std::runtime_error& e) {
+            missing_uv=std::string(e.what()).find("source UV")!=std::string::npos;
+        }
+        check(missing_uv);
+        bool superseded=false;
+        try { edge.validate_prepared_state(source_two); }
+        catch (const std::runtime_error&) { superseded=true; }
+        check(superseded);
+        const auto retry_two=edge.prepare_applied_state(DX8_FVF_XYZNUV2);
+        edge.validate_prepared_state(retry_two);
         check(device.sampler_descriptor(one.sampler).maximum_lod==0.0F);
         WW3D::Enable_Texturing(false);
         texture.Apply(0);
+        bool stale_texture=false;
+        try { edge.validate_prepared_state(retry_two); }
+        catch (const std::runtime_error&) { stale_texture=true; }
+        check(stale_texture);
         check(!edge.pending_stage(0).texture && edge.pending_stage(0).sampler);
         WW3D::Enable_Texturing(true);
         device.fail_next_sampler_create();

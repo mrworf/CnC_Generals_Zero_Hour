@@ -71,7 +71,7 @@ using BOOL = int;
 // Source-state tokens are semantic names for the canonical WW3D decisions;
 // the Linux edge never sends these integer values to SDL_GPU or Vulkan.
 enum {
-    D3DTS_VIEW=2, D3DTS_PROJECTION=3, D3DTS_TEXTURE0=16,
+    D3DTS_VIEW=2, D3DTS_PROJECTION=3, D3DTS_TEXTURE0=16, D3DTS_WORLD=256,
     D3DTSS_TEXCOORDINDEX=11, D3DTSS_TEXTURETRANSFORMFLAGS=24,
     D3DTSS_BUMPENVMAT00=7, D3DTSS_BUMPENVMAT01=8,
     D3DTSS_BUMPENVMAT10=9, D3DTSS_BUMPENVMAT11=10,
