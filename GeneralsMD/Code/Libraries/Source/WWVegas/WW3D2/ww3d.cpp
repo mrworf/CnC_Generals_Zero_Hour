@@ -89,8 +89,12 @@
 #include "camera.h"
 #include "scene.h"
 #include "texfcach.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "registry.h"
+#endif
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "segline.h"
+#endif
 #include "shader.h"
 #include "vertmaterial.h"
 #include "wwdebug.h"
@@ -105,24 +109,28 @@
 #include "dazzle.h"
 #include "meshmdl.h"
 #include "dx8renderer.h"
+#include "sortingrenderer.h"
 #include "render2d.h"
 #include "bound.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "rddesc.h"
+#endif
 #include "vector3i.h"
 #include <cstdio>
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
 #include "targa.h"
-#include "sortingrenderer.h"
 #include "thread.h"
 #include "cpudetect.h"
 #include "dx8texman.h"
 #include "formconv.h"
 #include "animatedsoundmgr.h"
+#endif
 #include "static_sort_list.h"
 
 #include "shdlib.h"
 
-#ifndef _UNIX
+#if !defined(_UNIX) && !defined(ZH_WW3D_CPU_ONLY)
 #include "framgrab.h"
 #endif
 
@@ -219,7 +227,9 @@ unsigned													WW3D::NPatchesLevel=1;
 bool														WW3D::IsTexturingEnabled=true;
 bool										WW3D::IsColoringEnabled=false;
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 static HWND												_Hwnd = NULL;		// Not a member to hide windows from WW3D users
+#endif
 static int												_TextureReduction = 0;
 static int												_TextureMinDim = 1;
 static bool												_LargeTextureExtraReductionEnabled = false;
@@ -252,6 +262,8 @@ void WW3D::Set_NPatches_Level(unsigned level)
 	if (NPatchesLevel>1 && level==1) TheDX8MeshRenderer.Invalidate();
 	NPatchesLevel = level;
 }
+
+#if !defined(ZH_WW3D_CPU_ONLY)
 
 /***********************************************************************************************
  * WW3D::Init -- Initialize the WW3D Library                                                   *
@@ -997,6 +1009,8 @@ WW3DErrorType WW3D::Render(SceneClass * scene,CameraClass * cam,bool clear,bool 
  * HISTORY:                                                                                    *
  *   4/4/2001   gth : Created.                                                                 *
  *=============================================================================================*/
+#endif // !ZH_WW3D_CPU_ONLY
+
 WW3DErrorType WW3D::Render(
 	RenderObjClass & obj,
 	RenderInfoClass & rinfo
@@ -1016,6 +1030,7 @@ WW3DErrorType WW3D::Render(
 	}
 
 	// Apply the camera and viewport (including depth range)
+#if !defined(ZH_WW3D_CPU_ONLY)
 	rinfo.Camera.Apply();
 
 	// set the rendering mode
@@ -1025,6 +1040,7 @@ WW3DErrorType WW3D::Render(
 	if (rinfo.light_environment != NULL) {
 		DX8Wrapper::Set_Light_Environment(rinfo.light_environment);
 	}
+#endif
 
 	// Render the object
 	TheDX8MeshRenderer.Set_Camera(&rinfo.Camera);
@@ -1065,6 +1081,8 @@ void WW3D::Flush(RenderInfoClass & rinfo)
 	SortingRendererClass::Flush();
 	TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
 }
+
+#if !defined(ZH_WW3D_CPU_ONLY)
 
 
 /***********************************************************************************************
@@ -1981,6 +1999,8 @@ int WW3D::Get_Texture_Bitdepth()
 	return DX8Wrapper::Get_Texture_Bitdepth();
 }
 
+#endif // !ZH_WW3D_CPU_ONLY
+
 void WW3D::Add_To_Static_Sort_List(RenderObjClass *robj, unsigned int sort_level)
 {
 	CurrentStaticSortLists->Add_To_List(robj, sort_level);
@@ -2019,7 +2039,10 @@ void WW3D::Reset_Current_Static_Sort_Lists_To_Default(void)
 	CurrentStaticSortLists = DefaultStaticSortLists;
 }
 
+#if !defined(ZH_WW3D_CPU_ONLY)
+
 void WW3D::Set_Gamma(float gamma,float bright,float contrast,bool calibrate)
 {
 	DX8Wrapper::Set_Gamma(gamma,bright,contrast,calibrate);
 }
+#endif // !ZH_WW3D_CPU_ONLY

@@ -34,3 +34,7 @@ interleaved pass ordering is mandatory 06 before GameClient/retail consumers.
 ## Commit boundary
 
 One independently validated commit: `delivery: M22 slice 04C restore original mesh entry`.
+
+## Completion
+
+Complete. See `delivery/evidence/cnc-generals-zero-hour/milestone_22_slice_04c.md`.

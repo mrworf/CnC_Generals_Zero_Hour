@@ -38,6 +38,20 @@
  * Functions:                                                                                  *
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "sortingrenderer.h"
+#include <stdexcept>
+
+bool SortingRendererClass::_EnableTriangleDraw = true;
+
+void SortingRendererClass::Flush()
+{
+	// The original sorting pool's device commands are translated in M22/06.
+	// Never report successful flush while its physical implementation is absent.
+	throw std::runtime_error("original sorting pass requires GPU translation");
+}
+
+#else
 #include "sortingrenderer.h"
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
@@ -750,3 +764,4 @@ void SortingRendererClass::Insert_VolumeParticle(
 	}
 	if (!node) sorted_list.Add_Tail(state);
 }
+#endif // ZH_WW3D_CPU_ONLY

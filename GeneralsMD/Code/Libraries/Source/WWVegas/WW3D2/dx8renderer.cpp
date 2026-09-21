@@ -368,6 +368,7 @@ void DX8RigidFVFCategoryContainer::Add_Delayed_Visible_Material_Pass(MaterialPas
 void DX8RigidFVFCategoryContainer::Render_Delayed_Procedural_Material_Passes(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
+	if (!Any_Delayed_Passes_To_Render()) return;
 	throw std::runtime_error("original delayed mesh pass requires GPU translation");
 #else
 	if (!Any_Delayed_Passes_To_Render()) return;
@@ -834,6 +835,7 @@ void DX8RigidFVFCategoryContainer::Log(bool only_visible)
 void DX8RigidFVFCategoryContainer::Render(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
+	if (!Anything_To_Render()) return;
 	throw std::runtime_error("original rigid mesh pass requires GPU translation");
 #else
 	if (!Anything_To_Render()) return;
@@ -1347,6 +1349,7 @@ void DX8SkinFVFCategoryContainer::Log(bool only_visible)
 void DX8SkinFVFCategoryContainer::Render(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
+	if (!Anything_To_Render()) return;
 	throw std::runtime_error("original skinned mesh pass requires GPU translation");
 #else
 	SNAPSHOT_SAY(("DX8SkinFVFCategoryContainer::Render()\n"));
@@ -2227,9 +2230,6 @@ static void Render_FVF_Category_Container_List_Delayed_Passes(FVFCategoryList& l
 
 void DX8MeshRendererClass::Flush(void)
 {
-#if defined(ZH_WW3D_CPU_ONLY)
-	throw std::runtime_error("original mesh flush requires GPU translation");
-#else
 	int i;
 
 	WWPROFILE("DX8MeshRenderer::Flush");
@@ -2261,6 +2261,7 @@ void DX8MeshRendererClass::Flush(void)
 		Render_FVF_Category_Container_List_Delayed_Passes(*texture_category_container_lists_rigid[i]);
 	}
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 	DX8Wrapper::Set_Vertex_Buffer(NULL);
 	DX8Wrapper::Set_Index_Buffer(NULL,0);
 #endif
@@ -2277,6 +2278,7 @@ void DX8MeshRendererClass::Add_To_Render_List(DecalMeshClass * decalmesh)
 void DX8MeshRendererClass::Render_Decal_Meshes(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
+	if (!visible_decal_meshes) return;
 	throw std::runtime_error("original decal mesh pass requires GPU translation");
 #else
 	DecalMeshClass * decal_mesh = visible_decal_meshes;

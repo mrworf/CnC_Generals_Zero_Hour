@@ -13,6 +13,8 @@
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
 #include "dx8renderer.h"
+#include "static_sort_list.h"
+#include "ww3d.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -99,6 +101,7 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 	W3dShaderStruct shader{};
 	W3d_Shader_Reset(&shader);
 	W3d_Shader_Set_Dest_Blend_Func(&shader, W3DSHADER_DESTBLENDFUNC_ONE);
+	if (skin_variant) W3d_Shader_Set_Src_Blend_Func(&shader, W3DSHADER_SRCBLENDFUNC_SRC_ALPHA);
 	chunk(writer, W3D_CHUNK_SHADERS, shader);
 	assert(writer.Begin_Chunk(W3D_CHUNK_MATERIAL_PASS));
 	const uint32 shader_index = 0;
@@ -225,13 +228,12 @@ int main(int argc, char **argv)
 	RenderInfoClass render_info(camera);
 	mesh->Set_Hidden(1);
 	mesh->Render(render_info); // Original hidden state suppresses the device boundary.
+	assert(!mesh->Peek_Model()->Has_Polygon_Renderers());
 	mesh->Set_Hidden(0);
-	bool visible_device_rejected = false;
-	try { mesh->Render(render_info); }
-	catch (const std::runtime_error &) { visible_device_rejected = true; }
-	assert(visible_device_rejected);
 	MeshModelClass *model = mesh->Peek_Model();
 	TheDX8MeshRenderer.Init();
+	mesh->Render(render_info); // Original frustum rejects this default-camera rigid fixture.
+	assert(!model->Has_Polygon_Renderers());
 	model->Register_For_Rendering();
 	assert(model->Has_Polygon_Renderers());
 	assert(DX8FVFCategoryContainer::Define_FVF(model, true) == DX8_FVF_XYZNDUV2);
@@ -250,8 +252,23 @@ int main(int argc, char **argv)
 	assert(skin_object != nullptr && skin_object->Class_ID() == RenderObjClass::CLASSID_MESH);
 	auto *skin_model = static_cast<MeshClass *>(skin_object)->Peek_Model();
 	assert(skin_model->Get_Flag(MeshGeometryClass::SKIN));
+	static_cast<MeshClass *>(skin_object)->Render(render_info); // Skins bypass rigid frustum rejection.
+	assert(skin_model->Has_Polygon_Renderers());
 	skin_model->Register_For_Rendering();
 	assert(skin_model->Has_Polygon_Renderers());
+	DefaultStaticSortListClass sort_list;
+	WW3D::Override_Current_Static_Sort_Lists(&sort_list);
+	WW3D::Enable_Static_Sort_Lists(true);
+	TheDX8MeshRenderer.Set_Camera(&camera);
+	skin_model->Set_Sort_Level(1);
+	static_cast<MeshClass *>(skin_object)->Render(render_info); // Source defers this sorted instance.
+	bool sorted_physical_edge = false;
+	try { WW3D::Render_And_Clear_Static_Sort_Lists(render_info); }
+	catch (const std::runtime_error &) { sorted_physical_edge = true; }
+	assert(sorted_physical_edge); // Original list re-enters mesh then reaches physical flush.
+	WW3D::Enable_Static_Sort_Lists(false);
+	WW3D::Reset_Current_Static_Sort_Lists_To_Default();
+	skin_model->Set_Sort_Level(0);
 	TheDX8MeshRenderer.Invalidate();
 	TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
 	assert(VertexBufferClass::Get_Total_Buffer_Count() == 0);
@@ -260,11 +277,32 @@ int main(int argc, char **argv)
 	model->Register_For_Rendering();
 	skin_model->Register_For_Rendering();
 	assert(model->Has_Polygon_Renderers() && skin_model->Has_Polygon_Renderers());
-	skin_object->Release_Ref();
-	bool gpu_edge_rejected = false;
+	render_info.alphaOverride = 0.25f;
+	render_info.Push_Override_Flags(RenderInfoClass::RINFO_OVERRIDE_ADDITIONAL_PASSES_ONLY);
+	static_cast<MeshClass *>(skin_object)->Render(render_info);
+	render_info.Pop_Override_Flags();
+	assert(static_cast<MeshClass *>(skin_object)->Get_Alpha_Override() == 0.25f);
+	TheDX8MeshRenderer.Set_Camera(&camera);
+	TheDX8MeshRenderer.Flush(); // No base or additional pass: no physical submission.
+	assert(skin_model->Get_Single_Shader().Get_Src_Blend_Func() == ShaderClass::SRCBLEND_SRC_ALPHA);
+	render_info.Push_Override_Flags(static_cast<RenderInfoClass::RINFO_OVERRIDE_FLAGS>(
+		RenderInfoClass::RINFO_OVERRIDE_ADDITIONAL_PASSES_ONLY |
+		RenderInfoClass::RINFO_OVERRIDE_SHADOW_RENDERING));
+	static_cast<MeshClass *>(skin_object)->Render(render_info);
+	render_info.Pop_Override_Flags();
+	bool shadow_alpha_edge = false;
 	try { TheDX8MeshRenderer.Flush(); }
+	catch (const std::runtime_error &) { shadow_alpha_edge = true; }
+	assert(shadow_alpha_edge); // Original alpha-shadow exception restores base passes.
+	static_cast<MeshClass *>(skin_object)->Render(render_info);
+	TheDX8MeshRenderer.Set_Camera(nullptr);
+	TheDX8MeshRenderer.Flush(); // Original no-camera branch cannot submit a pass.
+	TheDX8MeshRenderer.Set_Camera(&camera);
+	bool gpu_edge_rejected = false;
+	try { WW3D::Flush(render_info); }
 	catch (const std::runtime_error &) { gpu_edge_rejected = true; }
 	assert(gpu_edge_rejected);
+	skin_object->Release_Ref();
 	FVFInfoClass original_layout(DX8_FVF_XYZNUV2);
 	assert(original_layout.Get_FVF_Size() == 40);
 	assert(original_layout.Get_Location_Offset() == 0);

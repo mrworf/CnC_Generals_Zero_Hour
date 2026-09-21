@@ -277,6 +277,9 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/light.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matpass.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3d.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/static_sort_list.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/sortingrenderer.cpp
   src/original_runtime/ww3d_cpu_state.cpp
 )
 target_include_directories(zh_w3d PRIVATE
@@ -1923,6 +1926,9 @@ if(ZH_BUILD_TESTS)
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8indexbuffer.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8renderer.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8polygonrenderer.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ww3d.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/static_sort_list.cpp"
+    --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/sortingrenderer.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/stripoptimizer.cpp"
     --required "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/wwstring.cpp")
   set_tests_properties(original_w3d_cpu_identity PROPERTIES LABELS "original-rendering;source-identity")

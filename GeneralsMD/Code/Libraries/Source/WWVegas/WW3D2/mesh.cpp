@@ -113,10 +113,10 @@
 #include "inttest.h"
 #include "decalmsh.h"
 #include "decalsys.h"
-#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8polygonrenderer.h"
 #include "dx8indexbuffer.h"
 #include "dx8renderer.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8rendererdebugger.h"
 #endif
 #include "visrasterizer.h"
@@ -674,10 +674,6 @@ void MeshClass::Render(RenderInfoClass & rinfo)
 	if (Is_Not_Hidden_At_All() == false) {
 		return;
 	}
-#if defined(ZH_WW3D_CPU_ONLY)
-	(void)rinfo;
-	throw std::runtime_error("MeshClass::Render requires an installed WW3D device translator");
-#else
 	WWPROFILE("Mesh::Render");
 
 	// If static sort lists are enabled and this mesh has a sort level, put it on the list instead
@@ -818,10 +814,13 @@ void MeshClass::Render(RenderInfoClass & rinfo)
 				}
 			}
 
+			// Debugger capture observes the device, not the original mesh
+			// visibility/material scheduling decisions.
+#if !defined(ZH_WW3D_CPU_ONLY)
 			DX8RendererDebugger::Add_Mesh(this);
+#endif
 		}
 	}
-#endif
 }
 
 
@@ -1620,5 +1619,3 @@ int MeshClass::Get_Draw_Call_Count(void) const
 		return 0;
 	}
 }
-
-
