@@ -65,6 +65,8 @@
 #include "dx8wrapper.h"
 #if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8caps.h"
+#else
+#include <stdexcept>
 #endif
 
 #define DISABLE_CLIPPING	0
@@ -294,6 +296,13 @@ RigidDecalMeshClass::~RigidDecalMeshClass(void)
 void RigidDecalMeshClass::Render(void)
 {
 	if ((Decals.Count() == 0) || (WW3D::Are_Decals_Enabled() == false)) return;
+	#if defined(ZH_WW3D_CPU_ONLY)
+	if (Verts.Count()>65535 || Polys.Count()>21845)
+		throw std::runtime_error("original rigid decal exceeds 16-bit dynamic draw bounds");
+	for (int i=0;i<Polys.Count();++i)
+		if (Polys[i].I>=Verts.Count() || Polys[i].J>=Verts.Count() || Polys[i].K>=Verts.Count())
+			throw std::runtime_error("original rigid decal index exceeds source vertices");
+	#endif
 	
 	/*
 	** Install the mesh'es transform.  NOTE, this could go wrong if someone changes the
@@ -455,6 +464,14 @@ bool RigidDecalMeshClass::Create_Decal
 	if (apt.Count() == 0) {
 		return false;
 	}
+#if defined(ZH_WW3D_CPU_ONLY)
+	// A triangle clipped against four projector planes emits at most seven
+	// vertices/five triangles. Reject before mutating the original owner so
+	// its 16-bit TriIndex/DecalStruct fields cannot silently wrap.
+	if (Verts.Count()>65535 || Polys.Count()>65535 ||
+		apt.Count()>(65535-Verts.Count())/7 || apt.Count()>(65535-Polys.Count())/5)
+		throw std::runtime_error("original rigid decal exceeds 16-bit source geometry bounds");
+#endif
 
 	DecalStruct newdecal;
 	newdecal.DecalID = generator->Get_Decal_ID();
@@ -794,6 +811,17 @@ void SkinDecalMeshClass::Render(void)
 		WWDEBUG_SAY(("ERROR: decals applied to a sorted mesh!\n"));
 		return;
 	}
+	#if defined(ZH_WW3D_CPU_ONLY)
+	if (ParentVertexIndices.Count()>65535 || Polys.Count()>21845)
+		throw std::runtime_error("original skin decal exceeds 16-bit dynamic draw bounds");
+	for (int i=0;i<ParentVertexIndices.Count();++i)
+		if (ParentVertexIndices[i]>=static_cast<uint32>(model->Get_Vertex_Count()))
+			throw std::runtime_error("original skin decal source vertex index exceeds model");
+	for (int i=0;i<Polys.Count();++i)
+		if (Polys[i].I>=ParentVertexIndices.Count() || Polys[i].J>=ParentVertexIndices.Count() ||
+			Polys[i].K>=ParentVertexIndices.Count())
+			throw std::runtime_error("original skin decal index exceeds source vertices");
+	#endif
 
 	/*
 	** Skin decals coordinates are in world space
@@ -936,6 +964,12 @@ bool SkinDecalMeshClass::Create_Decal(DecalGeneratorClass * generator,
 	if (apt.Count() == 0) {
 		return false;
 	}
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (ParentVertexIndices.Count()>65535 || Polys.Count()>65535 ||
+		apt.Count()>(65535-ParentVertexIndices.Count())/3 ||
+		apt.Count()>65535-Polys.Count())
+		throw std::runtime_error("original skin decal exceeds 16-bit source geometry bounds");
+#endif
 
 	DecalStruct newdecal;
 	newdecal.DecalID = generator->Get_Decal_ID();

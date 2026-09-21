@@ -124,6 +124,11 @@ public:
 	/////////////////////////////////////////////////////////////////////////////
 	virtual void					Create_Decal(DecalGeneratorClass * generator);
 	virtual void					Delete_Decal(uint32 decal_id);
+#if defined(ZH_WW3D_CPU_ONLY)
+	// Layout-neutral inspection of the original owner for direct edge tests;
+	// production scenes use the renderer's canonical Flush queue.
+	DecalMeshClass *				Peek_Decal_Mesh(void) const { return DecalMesh; }
+#endif
 	
 	/////////////////////////////////////////////////////////////////////////////
 	// MeshClass Interface
@@ -205,4 +210,3 @@ inline MeshModelClass * MeshClass::Peek_Model(void)
 void Set_MeshModel_Flag(RenderObjClass *robj, int flag, int onoff);
 
 #endif /*MESH_H*/
-

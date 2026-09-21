@@ -460,7 +460,11 @@ int main(int argc, char **argv)
 	auto *mesh = static_cast<MeshClass *>(object);
 	CameraClass camera;
 	RenderInfoClass render_info(camera);
-	if (argc==2 && std::strcmp(argv[1],"--decal-cpu")==0) {
+	if (argc==2 && (std::strcmp(argv[1],"--decal-cpu")==0 ||
+		std::strcmp(argv[1],"--decal-physical")==0 ||
+		std::strcmp(argv[1],"--vulkan-decal-physical")==0)) {
+		const bool vulkan_decal=std::strcmp(argv[1],"--vulkan-decal-physical")==0;
+		const bool decal_physical=vulkan_decal || std::strcmp(argv[1],"--decal-physical")==0;
 		const bool previously_enabled=WW3D::Are_Decals_Enabled();
 		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
 		WW3D::Enable_Decals(true);
@@ -472,6 +476,17 @@ int main(int argc, char **argv)
 		MaterialPassClass* authored_decal_material=generator->Get_Material();
 		assert(authored_decal_material && authored_decal_material->Peek_Material()==nullptr &&
 			authored_decal_material->Peek_Texture()==nullptr);
+		if (decal_physical) {
+			auto* authored_vertex_material=NEW_REF(VertexMaterialClass,());
+			authored_vertex_material->Set_Lighting(false);
+			authored_vertex_material->Set_Diffuse_Color_Source(VertexMaterialClass::COLOR1);
+			authored_decal_material->Set_Material(authored_vertex_material);
+			authored_vertex_material->Release_Ref();
+			ShaderClass authored_shader;
+			authored_shader.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+			authored_shader.Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
+			authored_decal_material->Set_Shader(authored_shader);
+		}
 		authored_decal_material->Release_Ref();
 		generator->Set_Ortho_Projection(-2,2,-2,2,0,20);
 		generator->Set_Transform(Matrix3D(true));
@@ -512,6 +527,166 @@ int main(int argc, char **argv)
 		NonRefRenderObjListIterator owned(&generator->Get_Mesh_List());
 		while (!owned.Is_Done()) { ++authored_meshes; owned.Next(); }
 		assert(authored_meshes==2);
+		if (decal_physical) {
+			assert(mesh->Peek_Decal_Mesh() && skin_mesh->Peek_Decal_Mesh());
+			WW3D::Enable_Decals(false);
+			mesh->Peek_Decal_Mesh()->Render();
+			WW3D::Enable_Decals(true);
+			skin_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,true);
+			skin_mesh->Peek_Decal_Mesh()->Render();
+			mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+			skin_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+			zh::renderer::RecordingGpuDevice recorder;
+			zh::renderer::TextureDesc target;
+			target.width=32; target.height=32; target.render_target=true; target.sampled=false;
+			const auto color=recorder.create_texture(target,"original direct decal color");
+			target.format=zh::renderer::TextureFormat::depth24_stencil8;
+			const auto depth=recorder.create_texture(target,"original direct decal depth");
+			zh::renderer::RenderPassDesc pass;
+			pass.color_targets[0]=color; pass.color_target_count=1;
+			pass.depth_target=depth; pass.width=32; pass.height=32;
+			auto select_camera=[&] {
+				DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+				Matrix4x4 projection;
+				camera.Get_D3D_Projection_Matrix(&projection);
+				DX8Wrapper::Set_Transform(D3DTS_PROJECTION,projection);
+			};
+			RenderObjClass* missing_object=manager.Create_Render_Obj("TEST.TRIANGLE");
+			assert(missing_object && missing_object->Class_ID()==RenderObjClass::CLASSID_MESH);
+			auto* missing_mesh=static_cast<MeshClass*>(missing_object);
+			missing_mesh->Set_Position(Vector3(0,0,-10));
+			DecalGeneratorClass* missing_generator=source_system.Lock_Decal_Generator();
+			missing_generator->Set_Ortho_Projection(-2,2,-2,2,0,20);
+			missing_generator->Set_Transform(Matrix3D(true));
+			missing_generator->Set_Backface_Threshhold(-1.0f);
+			missing_generator->Apply_To_Translucent_Meshes(true);
+			MaterialPassClass* missing_pass=missing_generator->Get_Material();
+			ShaderClass missing_shader;
+			missing_shader.Set_Texturing(ShaderClass::TEXTURING_ENABLE);
+			missing_shader.Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
+			missing_pass->Set_Shader(missing_shader);
+			missing_pass->Release_Ref();
+			missing_mesh->Create_Decal(missing_generator);
+			assert(missing_mesh->Peek_Decal_Mesh());
+			{
+				zh::original_runtime::OriginalGpuEdge edge(recorder);
+				select_camera();
+				assert(recorder.begin_pass(pass,"original required decal source texture missing"));
+				bool missing_required_texture=false;
+				try { missing_mesh->Peek_Decal_Mesh()->Render(); }
+				catch (const std::runtime_error& error) {
+					missing_required_texture=std::strstr(error.what(),
+						"texture stage is absent from active device generation")!=nullptr;
+				}
+				assert(missing_required_texture && recorder.end_pass());
+			}
+			const uint32 missing_id=missing_generator->Get_Decal_ID();
+			source_system.Unlock_Decal_Generator(missing_generator);
+			missing_mesh->Delete_Decal(missing_id);
+			missing_object->Release_Ref();
+			assert(recorder.resource_counts().total()==2);
+			for (unsigned failure=0;failure<2;++failure) {
+				zh::original_runtime::OriginalGpuEdge edge(recorder);
+				select_camera();
+				if (failure==0) recorder.fail_next_buffer_upload();
+				else recorder.fail_draw_after(1);
+				const auto before=recorder.snapshot().size();
+				assert(recorder.begin_pass(pass,"original direct decal injected failure"));
+				bool rejected=false;
+				try {
+					mesh->Peek_Decal_Mesh()->Render();
+					skin_mesh->Peek_Decal_Mesh()->Render();
+				} catch (const std::runtime_error&) { rejected=true; }
+				assert(rejected && recorder.end_pass());
+				const auto partial=recorder.snapshot().substr(before);
+				assert((partial.find("draw pipeline=")!=std::string::npos)==(failure==1));
+			}
+			assert(recorder.resource_counts().total()==2);
+			const auto before_success=recorder.snapshot().size();
+			{
+				zh::original_runtime::OriginalGpuEdge edge(recorder);
+				select_camera();
+				assert(recorder.begin_pass(pass,"direct original concrete decal mesh owners"));
+				mesh->Peek_Decal_Mesh()->Render();
+				assert(std::fabs(DX8Wrapper::Snapshot_Source_State().transforms.at(D3DTS_WORLD)[2].W+10.0f)<0.001f);
+				skin_mesh->Peek_Decal_Mesh()->Render();
+				assert(std::fabs(DX8Wrapper::Snapshot_Source_State().transforms.at(D3DTS_WORLD)[2].W)<0.001f);
+				assert(recorder.end_pass());
+				const auto commands=recorder.snapshot().substr(before_success);
+				const auto first=commands.find("draw pipeline=");
+				const auto second=commands.find("draw pipeline=",first+1);
+				assert(first!=std::string::npos && second!=std::string::npos &&
+					commands.find("draw pipeline=",second+1)==std::string::npos &&
+					commands.find("DX8Wrapper::Set_Transform=256")<first &&
+					commands.find("DX8Wrapper::Set_Transform=256",first)<second &&
+					commands.find("index_bits=16",first)<second &&
+					commands.find("index_bits=16",second)!=std::string::npos);
+				const auto drawn_indices=recorder.last_draw_index_bytes();
+				assert(drawn_indices.size()==3*sizeof(unsigned short));
+				unsigned short source_indices[3]{};
+				std::memcpy(source_indices,drawn_indices.data(),sizeof(source_indices));
+				assert(source_indices[0]==0 && source_indices[1]==1 && source_indices[2]==2);
+			}
+			recorder.destroy(color); recorder.destroy(depth);
+			assert(recorder.resource_counts().total()==0);
+#if defined(ZH_GPU_SHADER_DIR)
+			if (vulkan_decal) {
+				assert(SDL_Init(SDL_INIT_VIDEO));
+				{
+				zh::renderer::SdlGpuOptions options;
+				options.shader_root=ZH_GPU_SHADER_DIR;
+				options.debug=true;
+				zh::renderer::SdlGpuDevice device(options);
+				assert(device.capabilities().backend=="vulkan");
+				zh::renderer::TextureDesc target;
+				target.width=160; target.height=120; target.render_target=true; target.sampled=false;
+				const auto color=device.create_texture(target,"original direct decal Vulkan color");
+				target.format=zh::renderer::TextureFormat::depth24_stencil8;
+				const auto depth=device.create_texture(target,"original direct decal Vulkan depth");
+				assert(color && depth);
+				zh::renderer::RenderPassDesc pass;
+				pass.color_targets[0]=color; pass.color_target_count=1;
+				pass.depth_target=depth; pass.width=160; pass.height=120;
+				{
+					zh::original_runtime::OriginalGpuEdge edge(device);
+					DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+					Matrix4x4 projection;
+					camera.Get_D3D_Projection_Matrix(&projection);
+					DX8Wrapper::Set_Transform(D3DTS_PROJECTION,projection);
+					unsigned decal_owner_index=0;
+					for (DecalMeshClass* original_owner :
+						{mesh->Peek_Decal_Mesh(),skin_mesh->Peek_Decal_Mesh()}) {
+						assert(device.begin_pass(pass,"original direct concrete decal Vulkan owner"));
+						original_owner->Render();
+						assert(device.end_pass());
+						const auto pixels=device.readback_rgba(color);
+						assert(pixels.size()==160U*120U*4U);
+						unsigned covered=0;
+						for (size_t pixel=0;pixel<pixels.size();pixel+=4)
+							if (pixels[pixel]>100 || pixels[pixel+1]>100 || pixels[pixel+2]>100)
+								++covered;
+						assert(covered>0 && covered<160U*120U);
+						std::printf("original-decal-vulkan-%s-covered=%u\n",
+							decal_owner_index++==0 ? "rigid" : "skin",covered);
+					}
+				}
+				device.destroy(color); device.destroy(depth);
+			}
+				SDL_Quit();
+			}
+#else
+			assert(!vulkan_decal);
+#endif
+			const uint32 id=generator->Get_Decal_ID();
+			source_system.Unlock_Decal_Generator(generator);
+			mesh->Delete_Decal(id);
+			skin_mesh->Delete_Decal(id);
+			skin_child->Release_Ref(); skin_hlod->Release_Ref();
+			WW3D::Enable_Decals(previously_enabled);
+			WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+			object->Release_Ref(); manager.Free_Assets();
+			return 0;
+		}
 		TheDX8MeshRenderer.Init();
 		TheDX8MeshRenderer.Set_Camera(&camera);
 		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
