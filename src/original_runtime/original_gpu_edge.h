@@ -155,6 +155,7 @@ public:
     // caller still owns whether/when the source invokes a scene clear.
     void clear_source_viewport(bool color,bool depth,bool stencil,
         std::array<float,4> rgba,float z,unsigned stencil_value);
+    bool source_depth_has_stencil() const;
     [[noreturn]] void texture_creation_unavailable(WW3DFormat format, unsigned width,
         unsigned height, unsigned mips, unsigned reduction);
     static OriginalGpuEdge& required();

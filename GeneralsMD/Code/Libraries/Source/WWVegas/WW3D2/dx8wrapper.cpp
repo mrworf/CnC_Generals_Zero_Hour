@@ -604,6 +604,28 @@ bool DX8Wrapper::_Is_Triangle_Draw_Enabled() { return state().triangle_draw_enab
 void DX8Wrapper::Set_Draw_Polygon_Low_Bound_Limit(unsigned limit)
 { state().polygon_low_bound=limit; }
 
+void DX8Wrapper::Clear(bool clear_color,bool clear_z_stencil,const Vector3& color,
+    float dest_alpha,float z,unsigned int stencil)
+{
+    // The authored D3D8 Clear(0, NULL, ...) uses the active camera viewport.
+    // Keep source flag/color selection here; the device edge only translates
+    // the resulting ordered viewport-scoped operation.
+    if (!clear_color && !clear_z_stencil) return;
+    if (clear_z_stencil && (!std::isfinite(z) || z<0.0f || z>1.0f))
+        throw std::runtime_error("original DX8 viewport clear depth is invalid");
+    const unsigned packed=clear_color ? Convert_Color(color,dest_alpha) : 0U;
+    auto component=[&](unsigned shift) {
+        return static_cast<float>((packed>>shift)&0xffU)/255.0f;
+    };
+    // The original queries the active depth surface and only adds the
+    // stencil flag when that surface format contains stencil bits.
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    const bool clear_stencil=clear_z_stencil && edge.source_depth_has_stencil();
+    edge.clear_source_viewport(
+        clear_color,clear_z_stencil,clear_stencil,
+        {component(16),component(8),component(0),component(24)},z,stencil);
+}
+
 #else
 //#define CREATE_DX8_MULTI_THREADED
 //#define CREATE_DX8_FPU_PRESERVE

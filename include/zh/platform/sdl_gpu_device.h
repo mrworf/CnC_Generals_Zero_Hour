@@ -42,6 +42,7 @@ public:
 
     BufferHandle create_buffer(const BufferDesc&, std::string_view label) override;
     TextureHandle create_texture(const TextureDesc&, std::string_view label) override;
+    std::optional<TextureFormat> describe_texture_format(TextureHandle) const noexcept override;
     SamplerHandle create_sampler(const SamplerDesc&, std::string_view label) override;
     ShaderHandle create_shader(const ShaderDesc&, std::string_view label) override;
     PipelineHandle create_pipeline(const PipelineKey&, std::string_view label) override;

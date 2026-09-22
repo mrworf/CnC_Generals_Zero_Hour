@@ -438,6 +438,12 @@ TextureHandle SdlGpuDevice::create_texture(const TextureDesc& desc, std::string_
     return handle;
 }
 
+std::optional<TextureFormat> SdlGpuDevice::describe_texture_format(TextureHandle handle) const noexcept
+{
+    const auto* slot=lookup(impl_->textures,handle);
+    return slot ? std::optional<TextureFormat>(slot->value.desc.format) : std::nullopt;
+}
+
 SamplerHandle SdlGpuDevice::create_sampler(const SamplerDesc& desc, std::string_view label)
 {
     if (auto result = validate(desc); !result) { impl_->fail("create_sampler", result.error, label); return {}; }

@@ -4,19 +4,19 @@ This plan governs exactly one milestone transaction.
 
 ## Outcome
 
-The production Linux original-engine path renders representative campaign and skirmish scenes from the user-owned retail corpus through the original W3D, WWShade, and GameClient producers onto the public SDL_GPU Vulkan backend. The same producer path is observable through the recording device, fails closed for unsupported state or malformed/missing assets, survives resize/device-resource recreation, and returns all owned renderer resources to zero at teardown.
+The production Linux original-engine path renders representative campaign and skirmish scenes from the user-owned retail corpus through the original W3D, WWShade, and GameClient producers onto the public bgfx Vulkan backend. The same producer path is observable through the recording device, fails closed for unsupported state or malformed/missing assets, survives resize/device-resource recreation, and returns all owned renderer resources to zero at teardown.
 
 ## Delivery-goal context
 
 - Goal status record: `workflow/delivery/state.yaml`
 - Product ID: `cnc-generals-zero-hour`
-- Active packet and revision: `delivery/milestones/cnc-generals-zero-hour/status.yaml`, `sha256:21ce030a34f700bbcf7773983454f0b741f384956f1ff6568d7fc6782bc5bfe9`
+- Active packet and revision: `delivery/milestones/cnc-generals-zero-hour/status.yaml`, `sha256:0aafbac99ec645407cc89f3b80496e876c6efb5f4eae5d699ba9837dac90fd89`
 - Source transaction: `cb567c223beab5d63fa2f13d66718e670271d3d0`
 - Planning transaction: `cd2389e40aa89b1c2d1e02be638d084a95438f2d` (closeout `75da0520c91b14bbea21d3d58c99e3eb3905aa3`)
-- Fixed goal scope: `M26, M27, M28, M20, M21, M22, M23, M24, M25, M15, M16, M17, M18` (context only)
+- Fixed goal scope: `M26, M27, M28, M20, M21, M29, M30, M22, M23, M24, M25, M15, M16, M17, M18` (context only)
 - Current milestone: `M22`
-- Resume mode: new
-- Transaction-start HEAD: `0c227ac924b163d9f0caf0e703e5610ed37fd9b2`
+- Resume mode: preserved plan at 06C3C after accepted M29/M30
+- Resume transaction-start HEAD: `03e93354512dc47c77cb7563ebea9d5f3f55fb5c`; initial transaction-start HEAD `0c227ac924b163d9f0caf0e703e5610ed37fd9b2` remains historical
 - Pre-existing dirty paths: none
 
 ## Governing contracts
@@ -26,7 +26,7 @@ The production Linux original-engine path renders representative campaign and sk
 - Architecture decisions: `docs/zero-hour-runtime-closure-reconciliation.md` RC-002, RC-003, RC-004, RC-007, RC-010, and especially RC-012.
 - Renderer contracts: `docs/renderer/renderer-contract.md` and `docs/renderer/legacy-api-mapping.tsv`.
 - Dependency and source identity: `docs/original-runtime-dependency-ledger.tsv`.
-- Accepted providers: `evidence/qa/cnc-generals-zero-hour/M20-plan03-original-lifecycle-acceptance.md`, `evidence/qa/cnc-generals-zero-hour/M21-original-simulation.md`, and `evidence/qa/cnc-generals-zero-hour/M14-gpu-acceptance.md`.
+- Accepted providers: `evidence/qa/cnc-generals-zero-hour/M20-plan03-original-lifecycle-acceptance.md`, `evidence/qa/cnc-generals-zero-hour/M21-original-simulation.md`, `delivery/evidence/cnc-generals-zero-hour/milestone_29_slice_03.md`, and `delivery/evidence/cnc-generals-zero-hour/milestone_30_slice_04.md`. M14 SDL_GPU evidence is historical, not current physical acceptance.
 - External gates: PRE-008 retail roots plus freshly verified PRE-012/PRE-016 (RTX 4070, NVIDIA 610.57.04, Vulkan 1.4.341, `VK_LAYER_KHRONOS_validation` 1.4.357, Wayland session).
 - Repository instructions: no `AGENTS.md` is present; the retail symlink and all user-owned corpus content are read-only.
 
@@ -34,7 +34,7 @@ The production Linux original-engine path renders representative campaign and sk
 
 - M20 provides the canonical 19-entry original W3D schema and production factory identity. M21 enabled ten original concrete draw classes only for CPU construction/state/preload/destruction; their physical model, bone, shadow, and draw operations remain explicit unavailable-device edges.
 - The dependency ledger has two M22-owned rows: original `DX8Wrapper` physical device/drawing semantics and all deferred original W3D draw-instance constructors/vtables and their render consumers.
-- M14 proves the public SDL_GPU Vulkan backend and validation harness with generated/component scenes. M28's `OriginalCpuPresentation.cpp` is an independently accepted resource extraction, not the full original producer and not retail-scene acceptance.
+- M29/M30 provide the accepted public bgfx Vulkan device, ordered camera clear, shaders, and renewed synthetic physical acceptance. M14's SDL_GPU backend is historical component evidence. M28's `OriginalCpuPresentation.cpp` is an independently accepted resource extraction, not the full original producer and not retail-scene acceptance.
 - `LinuxDisplay`, `LinuxView`, and `LinuxTerrainVisual` currently record/preload CPU state without acquiring a device or drawing. They are the Linux factory boundary through which the original GameClient must receive the M22 presentation adapter; they must not become a parallel authoritative scene implementation.
 - A rejected implementation probe demonstrated that calling `W3DModelDraw` and then supplying adapter-owned geometry/material data is not an original renderer closure. No part of that uncommitted probe is retained. Geometry, hierarchy, animation, texture identity, and `ShaderClass` state must first come from the original WW3D object graph.
 - The selected M21 retail campaign/skirmish pair reaches ten concrete GameClient draw classes. Its minimal upstream WW3D CPU closure begins at `W3DAssetManager`/`WW3DAssetManager`, `ChunkLoadClass`, the registered prototype loaders, mesh/HLOD/hierarchy/animation loaders, texture/material/mapper/`ShaderClass` state, and their render-object ownership graph. Only source files required by compile/link reachability and runtime witnesses are added; the unrelated remainder of the 244-file WW3D2 directory is not presumed in scope.
@@ -60,7 +60,7 @@ The production Linux original-engine path renders representative campaign and sk
 - Every ledger-deferred W3D draw operation reached by the selected campaign and skirmish scene families, including all newly reachable CPU dependencies.
 - Original model/HLOD/animation/texture, terrain, camera, object, lighting, fog/shroud, shadow, particle, water, and effects producers required by representative real scenes.
 - Recording-device semantic/ownership evidence, source identity and provider-removal controls, missing/malformed/unsupported negative controls, and clean reset/re-entry.
-- SDL_GPU Vulkan presentation on the verified RTX, explicit Khronos validation-layer scanning, visual evidence, resize/recreation, wait-idle, and bounded teardown.
+- Public bgfx Vulkan presentation on the verified RTX, explicit Khronos validation-layer scanning, visual evidence, resize/recreation, wait-idle, and bounded teardown.
 - Four canonical preset builds/full asset-free CTest suites, focused ASan/UBSan, installed/arbitrary-CWD and dependency-ledger freshness checks.
 
 ### Excluded and deferred
@@ -116,23 +116,25 @@ The production Linux original-engine path renders representative campaign and sk
 | 06B4D1 | [milestone_22_plan_01_slice_06b4d1.md](milestone_22_plan_01_slice_06b4d1.md) | Original Flush queue and source ZBIAS bracket, physical failure abort/reset/requeue, no aggregate claim. | slice 06B4C | complete for original queued rigid/HLOD skin decals; aggregate remains 06B4D2 | slice 06B4D1 commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_06b4d1.md) |
 | 06B4D2 | [milestone_22_plan_01_slice_06b4d2.md](milestone_22_plan_01_slice_06b4d2.md) | Same-Flush complete owned scene with original category, skin, additional/cull, delayed, both decal owners, validation pixels, 06B aggregate. | slice 06B4D1 | complete for owned source routes; retail reachability 08 | slice 06B4D2 commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_06b4d2.md) |
 | 06C | [milestone_22_plan_01_slice_06c.md](milestone_22_plan_01_slice_06c.md) | Aggregate original sorting/static passes, authored WWShade behavior and complete owned interleaved fixture frames with rollback/teardown via 06C1→C2→C3→C4. | slice 06B | pending | aggregate 06C4 | |
-| 06C1 | [milestone_22_plan_01_slice_06c1.md](milestone_22_plan_01_slice_06c1.md) | Aggregate original sort source state/refcount, transformed-depth queue and overlap/pool CPU decisions via 06C1A→B; typed physical edge. | slice 06B | pending | aggregate 06C1B | |
+| 06C1 | [milestone_22_plan_01_slice_06c1.md](milestone_22_plan_01_slice_06c1.md) | Aggregate original sort source state/refcount, transformed-depth queue and overlap/pool CPU decisions via 06C1A→B; typed physical edge. | slice 06B | complete for owned CPU routes | aggregate `44a7003` | C1A evidence and C1B commit/tests |
 | 06C1A | [milestone_22_plan_01_slice_06c1a.md](milestone_22_plan_01_slice_06c1a.md) | Shared original RenderStateStruct ABI/refcounts and canonical CPU selected-state snapshot/restore. | slice 06B | complete for source state bridge; original sorting queue remains C1B | slice 06C1A commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_06c1a.md) |
-| 06C1B | [milestone_22_plan_01_slice_06c1b.md](milestone_22_plan_01_slice_06c1b.md) | Original sorting source list/transform/depth and pool/triangle ordering to typed physical edge. | slice 06C1A | pending | | |
-| 06C2 | [milestone_22_plan_01_slice_06c2.md](milestone_22_plan_01_slice_06c2.md) | Original sorting VB/IB physical uploads and sorted pool/nonpool GPU submission with rollback, pixels. | slice 06C1 | pending | | |
+| 06C1B | [milestone_22_plan_01_slice_06c1b.md](milestone_22_plan_01_slice_06c1b.md) | Original sorting source list/transform/depth and pool/triangle ordering to typed physical edge. | slice 06C1A | complete | `44a7003` | commit source/tests |
+| 06C2 | [milestone_22_plan_01_slice_06c2.md](milestone_22_plan_01_slice_06c2.md) | Original sorting VB/IB physical uploads and sorted pool/nonpool GPU submission with rollback, pixels. | slice 06C1 | complete on historical SDL_GPU; bgfx physical parity remains M30/M22 source scene gate | `f33ffa3` | commit source/tests |
 | 06C3 | [milestone_22_plan_01_slice_06c3.md](milestone_22_plan_01_slice_06c3.md) | Aggregate original WW3D camera, frame lifecycle and scene/object/static-sort scheduling in source order; accepted only after A→B→C. | slice 06C2 | pending | aggregate 06C3C | |
-| 06C3A | [milestone_22_plan_01_slice_06c3a.md](milestone_22_plan_01_slice_06c3a.md) | Original CameraClass::Apply with viewport/depth and projection/view through a public device viewport edge. | slice 06C2 | pending | | |
-| 06C3B | [milestone_22_plan_01_slice_06c3b.md](milestone_22_plan_01_slice_06c3b.md) | Aggregate source-owned WW3D init, public pass semantics and Begin/End lifecycle through B1→B2→B3A→B3B. | slice 06C3A | pending | aggregate 06C3B3B | |
+| 06C3A | [milestone_22_plan_01_slice_06c3a.md](milestone_22_plan_01_slice_06c3a.md) | Original CameraClass::Apply with viewport/depth and projection/view through a public device viewport edge. | slice 06C2 | complete on historical SDL_GPU; bgfx physical parity remains M30/M22 source scene gate | `748052c` | commit source/tests |
+| 06C3B | [milestone_22_plan_01_slice_06c3b.md](milestone_22_plan_01_slice_06c3b.md) | Aggregate source-owned WW3D init, public pass semantics and Begin/End lifecycle through B1→B2→B3A→B3B. | slice 06C3A | complete for owned source frame lifecycle | aggregate `4f9b286` | B-series leaf evidence |
 | 06C3B1 | [milestone_22_plan_01_slice_06c3b1.md](milestone_22_plan_01_slice_06c3b1.md) | Canonical WW3D full/lite initialization, static-list/audio-source publication and teardown with physical device/window edge. | slice 06C3A | complete for original source CPU init, not frame/device selection | slice 06C3B1 commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_06c3b1.md) |
 | 06C3B2 | [milestone_22_plan_01_slice_06c3b2.md](milestone_22_plan_01_slice_06c3b2.md) | Public Recording/SDL_GPU pass attachment clear/load/depth/presentation semantics, preserving existing defaults. | slice 06C3B1 | complete for direct public edge; original source call remains B3 | slice 06C3B2 commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_06c3b2.md) |
-| 06C3B3 | [milestone_22_plan_01_slice_06c3b3.md](milestone_22_plan_01_slice_06c3b3.md) | Aggregate original WW3D Begin/End source ordering with reached texture expiry and frame statistics through B3A→B3B. | slice 06C3B2 | pending | aggregate 06C3B3B | |
-| 06C3B3A | [milestone_22_plan_01_slice_06c3b3a.md](milestone_22_plan_01_slice_06c3b3a.md) | Canonical original TextureLoader frame update, source texture expiry and original memory/statistics counters; no frame claim. | slice 06C3B2 | pending | | |
-| 06C3B3B | [milestone_22_plan_01_slice_06c3b3b.md](milestone_22_plan_01_slice_06c3b3b.md) | Original WW3D Begin/End frame body and source clear/alpha/presentation at public attachment edge with rollback and Vulkan. | slice 06C3B3A | pending | accepts 06C3B3 and 06C3B | |
-| 06C3C | [milestone_22_plan_01_slice_06c3c.md](milestone_22_plan_01_slice_06c3c.md) | Original WW3D scene/object camera/ambient/lighting/static-sort queue/Flush source order including camera-viewport clear, owned mixed fixture Vulkan pixels and bounded rollback. | slice 06C3B3B | pending | accepts 06C3 | |
+| 06C3B3 | [milestone_22_plan_01_slice_06c3b3.md](milestone_22_plan_01_slice_06c3b3.md) | Aggregate original WW3D Begin/End source ordering with reached texture expiry and frame statistics through B3A→B3B. | slice 06C3B2 | complete for source frame lifecycle | aggregate `4f9b286` | B3A/B3B evidence |
+| 06C3B3A | [milestone_22_plan_01_slice_06c3b3a.md](milestone_22_plan_01_slice_06c3b3a.md) | Canonical original TextureLoader frame update, source texture expiry and original memory/statistics counters; no frame claim. | slice 06C3B2 | complete for owned source frame-update routes | `e16c24c` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_06c3b3a.md) |
+| 06C3B3B | [milestone_22_plan_01_slice_06c3b3b.md](milestone_22_plan_01_slice_06c3b3b.md) | Original WW3D Begin/End frame body and source clear/alpha/presentation at public attachment edge with rollback and Vulkan. | slice 06C3B3A | complete for source frame lifecycle; does not by itself accept C1B/C2/C3A or C3 aggregate | `4f9b286` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_06c3b3b.md) |
+| 06C3C | [milestone_22_plan_01_slice_06c3c.md](milestone_22_plan_01_slice_06c3c.md) | Aggregate original WW3D scene/object camera/ambient/lighting/static-sort queue/Flush, source camera-viewport clear and bgfx pixels via C1→C2. | slice 06C3B3B, M29, M30 | pending | aggregate C2 accepts 06C3 | |
+| 06C3C1 | [milestone_22_plan_01_slice_06c3c1.md](milestone_22_plan_01_slice_06c3c1.md) | Original DX8Wrapper camera viewport clear physically reaches public bgfx in a source frame, preserving draw/clear/draw and failure/retry. | slice 06C3B3B, M29, M30 | complete for source clear; full scene/depth-stencil aggregate C2 pending | this slice commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_06c3c1.md) |
+| 06C3C2 | [milestone_22_plan_01_slice_06c3c2.md](milestone_22_plan_01_slice_06c3c2.md) | Original WW3D scene/object render and static/sort mixed frame invokes C1 in source order and passes cumulative owned Vulkan acceptance. | slice 06C3C1 | pending | accepts 06C3 | |
 | 06C4 | [milestone_22_plan_01_slice_06c4.md](milestone_22_plan_01_slice_06c4.md) | Authored WWShade build-branch and retail-family audit, full owned W3D interleaving/Vulkan validation and 06C acceptance. | slice 06C3 | pending | | |
 | 07 | [milestone_22_plan_01_slice_07.md](milestone_22_plan_01_slice_07.md) | Original GameClient display/scene, 2D, terrain, track, shroud and selected shadow/effect routes integrate and switch production to full behavior. | slice 06C | pending | | |
 | 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | slice 07, PRE-008 | pending | | |
-| 09 | [milestone_22_plan_01_slice_09.md](milestone_22_plan_01_slice_09.md) | Same retail scenes present on validation-enabled SDL_GPU Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 08, PRE-012, PRE-016 | pending | | |
+| 09 | [milestone_22_plan_01_slice_09.md](milestone_22_plan_01_slice_09.md) | Same retail scenes present on validation-enabled public bgfx Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 08, PRE-012, PRE-016 | pending | | |
 
 ## Cross-slice concerns
 
@@ -149,7 +151,7 @@ The production Linux original-engine path renders representative campaign and sk
 - Run focused original-rendering positive/negative, source-identity, provider-removal, dependency-ledger, and lifecycle tests in GCC Debug and Clang Debug ASan+UBSan.
 - Run installed-form owned fixtures from arbitrary CWD with isolated XDG state.
 - Run read-only retail campaign and skirmish recording gates and verify the corpus metadata is unchanged.
-- Run the same retail scenes on SDL_GPU Vulkan with `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`; fail on any `Validation Error` or `VUID-` output.
+- Run the same retail scenes on public bgfx Vulkan with `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`; fail on any `Validation Error` or `VUID-` output.
 - Capture/review the permitted visual evidence for every required scene family and both dimensions of resize/resource recreation; verify no placeholders or missing required assets.
 - Verify zero live original allocations/workers/device resources after normal and injected-failure teardown, `git diff --check`, source classification, provider-removal, and dependency-ledger freshness.
 
@@ -402,6 +404,10 @@ canonical FVF families; it rejects unsupported families and does not add
 dummy geometry, assume unavailable Vulkan features or disable validation.
 
 ## Deferred follow-ups
+
+## 2026-09-21 public-bgfx resume and index reconciliation
+
+The replacement packet explicitly accepted M29 (`26aa5c9`) and M30 (`5a45a06`) before M22 resumed. Original M22 source slices 06C1B (`44a7003`), 06C2 (`f33ffa3`), 06C3A (`748052c`), and B-series leaves through 06C3B3B (`4f9b286`) are all commit ancestors. Their governing-index rows were stale; absence of a separate evidence Markdown file for 06C1B/C2/C3A did not mean their source/tests were absent. Historical SDL_GPU physical pixels remain historical, while their original-source behavior is preserved. Only 06C3C and later acceptance is pending. C3C now has separately testable C1 original `DX8Wrapper::Clear`→accepted public bgfx and C2 full original WW3D scene/static-sort aggregation; both plans were written before any resumed production edit. No accepted source slice is replayed or renumbered, and no M30 synthetic probe substitutes for M22 original-source or retail acceptance.
 
 - Interactive UI/media and user input remain M23.
 - Full playable-session evidence remains M15.

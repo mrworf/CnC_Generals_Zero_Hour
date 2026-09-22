@@ -34,6 +34,9 @@
 #include "trim.h"
 #include "original_gpu_edge.h"
 #include "zh/renderer/recording_device.h"
+#if defined(ZH_BGFX_SHADER_DIR)
+#include "zh/platform/bgfx_device.h"
+#endif
 #if defined(ZH_GPU_SHADER_DIR)
 #include "zh/platform/sdl_gpu_device.h"
 #include <SDL3/SDL.h>
@@ -434,6 +437,94 @@ int main(int argc, char **argv)
 	WW3DAssetManager manager;
 	RAMFileClass input(bytes.data(), size);
 	assert(manager.Load_3D_Assets(input));
+#if defined(ZH_BGFX_SHADER_DIR)
+	if (argc==2 && std::strcmp(argv[1],"--bgfx-source-viewport-clear")==0) {
+		OwnedFactory factory;
+		FileFactoryClass* previous_factory=_TheFileFactory;
+		_TheFileFactory=&factory;
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		WW3D::Set_Thumbnail_Enabled(false);
+		struct Vertex { float x,y; unsigned color; float u,v; };
+		for (unsigned width : {160U,200U}) {
+			const unsigned height=width*3/4;
+			zh::renderer::BgfxOptions options;
+			options.shader_root=ZH_BGFX_SHADER_DIR;
+			zh::renderer::BgfxGpuDevice device(options);
+			auto vertex=device.create_shader({zh::renderer::ShaderStage::vertex,
+				"renderer/acceptance.vert",0,0},"source clear vertex");
+			auto fragment=device.create_shader({zh::renderer::ShaderStage::fragment,
+				"renderer/acceptance.frag",0,0},"source clear fragment");
+			assert(vertex && fragment);
+			zh::renderer::PipelineDesc pipeline_desc;
+			pipeline_desc.vertex_shader=vertex; pipeline_desc.fragment_shader=fragment;
+			pipeline_desc.vertex_layout=zh::renderer::VertexLayout::position_color_uv;
+			pipeline_desc.color_format=zh::renderer::TextureFormat::bgra8;
+			pipeline_desc.raster.cull=zh::renderer::CullMode::none;
+			auto pipeline=device.create_pipeline(zh::renderer::PipelineKey(pipeline_desc),"source clear pipeline");
+			const std::array<Vertex,3> triangle{{
+				{-0.9f,0.9f,0xff00ff00U,0,0},
+				{-0.6f,0.9f,0xff00ff00U,1,0},
+				{-0.75f,0.6f,0xff00ff00U,0.5f,1},
+			}};
+			auto vertex_buffer=device.create_buffer({sizeof(triangle),zh::renderer::BufferUsage::vertex,true},
+				"source clear triangles");
+			assert(pipeline && vertex_buffer);
+			assert(device.upload({vertex_buffer,sizeof(triangle),0,sizeof(triangle)},triangle.data()));
+			zh::renderer::DrawDesc draw;
+			draw.pipeline=pipeline; draw.vertex_buffer=vertex_buffer; draw.vertex_or_index_count=3;
+			zh::renderer::TextureDesc target;
+			target.width=width; target.height=height; target.render_target=true;
+			target.format=zh::renderer::TextureFormat::bgra8;
+			auto color=device.create_texture(target,"source clear color");
+			target.format=zh::renderer::TextureFormat::depth24_stencil8;
+			auto depth=device.create_texture(target,"source clear depth");
+			target.format=zh::renderer::TextureFormat::depth32;
+			auto depth_only=device.create_texture(target,"source clear depth without stencil");
+			assert(color && depth && depth_only);
+			{
+				zh::original_runtime::OriginalGpuEdge edge(device);
+				assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
+				edge.bind_frame_targets(color,depth,width,height);
+				DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+				assert(WW3D::Begin_Render(true,true,Vector3(1,0,0),1)==WW3D_ERROR_OK);
+				assert(device.draw(draw));
+				CameraClass source_camera;
+				source_camera.Set_Viewport(Vector2(0.25f,0.25f),Vector2(0.75f,0.75f));
+				source_camera.Set_Clip_Planes(1,100);
+				source_camera.Apply();
+				DX8Wrapper::Clear(true,true,Vector3(0,0,1));
+				assert(device.draw(draw));
+				assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+				auto pixels=device.readback_rgba(color);
+				assert(pixels.size()==static_cast<std::size_t>(width)*height*4);
+				auto pixel=[&](unsigned x,unsigned y) { return pixels.data()+(y*width+x)*4; };
+				const auto* outer=pixel(width-1,height-1);
+				const auto* inner=pixel(width/2,height/2);
+				assert(outer[0]==255 && outer[1]==0 && outer[2]==0 && outer[3]==255);
+				// The original DX8Wrapper::Clear default destination alpha is zero.
+				assert(inner[0]==0 && inner[1]==0 && inner[2]==255 && inner[3]==0);
+				edge.bind_frame_targets(color,depth_only,width,height);
+				DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+				assert(WW3D::Begin_Render(true,true,Vector3(1,0,0),1)==WW3D_ERROR_OK);
+				source_camera.Apply();
+				DX8Wrapper::Clear(false,true,Vector3(2,2,2),2,0.5f);
+				assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+				pixels=device.readback_rgba(color);
+				const auto* retained=pixels.data()+((height/2)*width+width/2)*4;
+				assert(retained[0]==255 && retained[1]==0 && retained[2]==0 && retained[3]==255);
+				assert(WW3D::Shutdown()==WW3D_ERROR_OK);
+			}
+			device.destroy(depth_only); device.destroy(depth); device.destroy(color); device.destroy(vertex_buffer);
+			device.destroy(pipeline); device.destroy(fragment); device.destroy(vertex);
+			assert(device.wait_idle());
+			assert(factory.owners==0);
+		}
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		_TheFileFactory=previous_factory;
+		manager.Free_Assets();
+		return 0;
+	}
+#endif
 #if defined(ZH_GPU_SHADER_DIR)
 	if (argc==2 && std::strcmp(argv[1],"--vulkan-source-frame")==0) {
 		assert(SDL_Init(SDL_INIT_VIDEO));
@@ -576,6 +667,29 @@ int main(int argc, char **argv)
 		}
 		recorder.destroy(depth); recorder.destroy(color);
 		assert(recorder.resource_counts().total()==0 && factory.owners==0);
+		// The original device clears only depth for a surface without stencil.
+		zh::renderer::TextureDesc depth_only;
+		depth_only.width=160; depth_only.height=120;
+		depth_only.render_target=true; depth_only.format=zh::renderer::TextureFormat::depth32;
+		zh::renderer::TextureDesc color_only=depth_only;
+		color_only.format=zh::renderer::TextureFormat::bgra8;
+		const auto no_stencil_color=recorder.create_texture(color_only,"depth-only clear color");
+		const auto no_stencil_depth=recorder.create_texture(depth_only,"depth-only clear depth");
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			edge.bind_frame_targets(no_stencil_color,no_stencil_depth,160,120);
+			edge.begin_source_frame(true,true,0,0,0,1);
+			edge.set_source_viewport(40,30,80,60,0,1);
+			DX8Wrapper::Clear(false,true,Vector3(2,2,2),2,0.5f);
+			const auto trace=recorder.snapshot();
+			const auto depth_clear=trace.find("clear_viewport rect=40,30,80,60");
+			assert(depth_clear!=std::string::npos && trace.find("flags=-D-",depth_clear)!=std::string::npos);
+			edge.abort_source_frame();
+		}
+		recorder.destroy(no_stencil_depth); recorder.destroy(no_stencil_color);
+		assert(!recorder.describe_texture_format(no_stencil_depth) &&
+			!recorder.describe_texture_format(no_stencil_color));
+		assert(recorder.resource_counts().total()==0);
 		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
 		_TheFileFactory=previous_factory;
 		return 0;
@@ -765,6 +879,78 @@ int main(int argc, char **argv)
 	auto *mesh = static_cast<MeshClass *>(object);
 	CameraClass camera;
 	RenderInfoClass render_info(camera);
+	if (argc==2 && std::strcmp(argv[1],"--source-viewport-clear")==0) {
+		OwnedFactory factory;
+		FileFactoryClass* previous_factory=_TheFileFactory;
+		_TheFileFactory=&factory;
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		WW3D::Set_Thumbnail_Enabled(false);
+		zh::renderer::RecordingGpuDevice recorder;
+		zh::renderer::TextureDesc target;
+		target.width=160; target.height=120; target.render_target=true; target.sampled=false;
+		const auto color=recorder.create_texture(target,"source clear color");
+		target.format=zh::renderer::TextureFormat::depth24_stencil8;
+		const auto depth=recorder.create_texture(target,"source clear depth");
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
+			edge.bind_frame_targets(color,depth,160,120);
+			DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+			camera.Set_Viewport(Vector2(0.25f,0.25f),Vector2(0.75f,0.75f));
+			camera.Set_Clip_Planes(1.0f,100.0f);
+			bool inactive=false;
+			try { DX8Wrapper::Clear(true,true,Vector3(0,0,1)); }
+			catch (const std::runtime_error&) { inactive=true; }
+			assert(inactive);
+			assert(WW3D::Begin_Render(true,true,Vector3(1,0,0),1)==WW3D_ERROR_OK);
+			camera.Apply();
+			const auto before=recorder.snapshot();
+			bool invalid=false;
+			try { DX8Wrapper::Clear(true,true,Vector3(2,0,0)); }
+			catch (const std::runtime_error&) { invalid=true; }
+			assert(invalid && recorder.snapshot()==before);
+			invalid=false;
+			try { DX8Wrapper::Clear(true,true,Vector3(0,0,1),0,2); }
+			catch (const std::runtime_error&) { invalid=true; }
+			assert(invalid && recorder.snapshot()==before);
+			// Depth-only does not read color/alpha; color-only does not read Z.
+			DX8Wrapper::Clear(false,false,Vector3(2,2,2),2,2);
+			assert(recorder.snapshot()==before);
+			DX8Wrapper::Clear(true,false,Vector3(0,0,1),0,2);
+			DX8Wrapper::Clear(true,true,Vector3(0,0,1));
+			assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+			const auto commands=recorder.snapshot();
+			const auto begin=commands.find("WW3D::Begin_Render source frame");
+			const auto camera_marker=commands.find("CameraClass::Apply viewport");
+			const auto source_clear=commands.find("clear_viewport rect=40,30,80,60");
+			assert(begin!=std::string::npos && camera_marker>begin &&
+				source_clear>camera_marker && commands.find("flags=CDS",source_clear)!=std::string::npos);
+			DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+			assert(WW3D::Begin_Render(true,true,Vector3(1,0,0),1)==WW3D_ERROR_OK);
+			camera.Apply();
+			assert(recorder.end_pass()); // inject a lost physical pass at source Clear
+			bool lost_clear=false;
+			try { DX8Wrapper::Clear(true,true,Vector3(0,0,1)); }
+			catch (const std::runtime_error&) { lost_clear=true; }
+			assert(lost_clear);
+			bool lost_frame=false;
+			try { (void)WW3D::End_Render(false); }
+			catch (const std::runtime_error&) { lost_frame=true; }
+			assert(lost_frame && !WW3D::Is_Rendering() && !recorder.pass_active());
+			DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+			assert(WW3D::Begin_Render(true,true,Vector3(1,0,0),1)==WW3D_ERROR_OK);
+			camera.Apply();
+			DX8Wrapper::Clear(true,true,Vector3(0,0,1));
+			assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+			assert(WW3D::Shutdown()==WW3D_ERROR_OK);
+		}
+		recorder.destroy(depth); recorder.destroy(color);
+		assert(recorder.resource_counts().total()==0 && factory.owners==0);
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		_TheFileFactory=previous_factory;
+		object->Release_Ref(); manager.Free_Assets();
+		return 0;
+	}
 	if (argc==2 && std::strcmp(argv[1],"--camera-apply")==0) {
 		zh::renderer::RecordingGpuDevice recorder;
 		zh::renderer::TextureDesc target;

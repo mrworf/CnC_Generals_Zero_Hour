@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <functional>
+#include <optional>
 #include <utility>
 #include <string>
 #include <string_view>
@@ -337,6 +338,9 @@ public:
     // for that hardware limit and must reject an oversized request.
     virtual bool supports_texture_format(TextureFormat, TextureDimension, bool sampled, bool render_target) const noexcept
     { return false; }
+    // Inspect the format of an owned live handle without exposing backend
+    // resources. Unknown/stale handles return no format and fail closed.
+    virtual std::optional<TextureFormat> describe_texture_format(TextureHandle) const noexcept { return std::nullopt; }
     virtual BufferHandle create_buffer(const BufferDesc& desc, std::string_view label) = 0;
     virtual TextureHandle create_texture(const TextureDesc& desc, std::string_view label) = 0;
     virtual SamplerHandle create_sampler(const SamplerDesc& desc, std::string_view label) = 0;

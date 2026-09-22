@@ -3,7 +3,7 @@
 ## Outcome and dependencies
 
 Requires slice 08 and PRE-012/PRE-016. The same original retail campaign and
-skirmish scenes render and present through SDL_GPU Vulkan on this RTX/Wayland
+skirmish scenes render and present through public bgfx Vulkan on this RTX/Wayland
 host with `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation` explicitly set.
 
 ## Acceptance

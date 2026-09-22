@@ -482,6 +482,12 @@ TextureHandle BgfxGpuDevice::create_texture(const TextureDesc& desc, std::string
     return handle;
 }
 
+std::optional<TextureFormat> BgfxGpuDevice::describe_texture_format(TextureHandle handle) const noexcept
+{
+    const auto* slot=lookup(impl_->textures,handle);
+    return slot ? std::optional<TextureFormat>(slot->record.desc.format) : std::nullopt;
+}
+
 SamplerHandle BgfxGpuDevice::create_sampler(const SamplerDesc& desc, std::string_view)
 {
     if (auto result = validate(desc); !result) { impl_->fail("create_sampler", result.error); return {}; }

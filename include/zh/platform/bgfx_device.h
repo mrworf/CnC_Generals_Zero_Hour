@@ -33,6 +33,7 @@ public:
     bool supports_texture_format(TextureFormat, TextureDimension, bool sampled, bool render_target) const noexcept override;
     BufferHandle create_buffer(const BufferDesc&, std::string_view) override;
     TextureHandle create_texture(const TextureDesc&, std::string_view) override;
+    std::optional<TextureFormat> describe_texture_format(TextureHandle) const noexcept override;
     SamplerHandle create_sampler(const SamplerDesc&, std::string_view) override;
     ShaderHandle create_shader(const ShaderDesc&, std::string_view) override;
     PipelineHandle create_pipeline(const PipelineKey&, std::string_view) override;

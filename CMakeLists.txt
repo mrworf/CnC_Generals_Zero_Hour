@@ -2141,6 +2141,10 @@ if(ZH_BUILD_TESTS)
       ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
   endif()
   target_link_libraries(original_w3d_cpu_graph_tests PRIVATE zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu)
+  target_link_libraries(original_w3d_cpu_graph_tests PRIVATE zh_renderer_bgfx)
+  target_compile_definitions(original_w3d_cpu_graph_tests PRIVATE
+    ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx")
+  add_dependencies(original_w3d_cpu_graph_tests zh_bgfx_shaders)
   target_link_options(original_w3d_cpu_graph_tests PRIVATE
     "-Wl,--gc-sections" "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map")
   add_test(NAME original_w3d_cpu_graph COMMAND original_w3d_cpu_graph_tests)
@@ -2149,6 +2153,17 @@ if(ZH_BUILD_TESTS)
   add_test(NAME original_w3d_source_frame COMMAND original_w3d_cpu_graph_tests --ww3d-source-frame)
   set_tests_properties(original_w3d_source_frame PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")
+  add_test(NAME original_w3d_source_viewport_clear COMMAND original_w3d_cpu_graph_tests --source-viewport-clear)
+  set_tests_properties(original_w3d_source_viewport_clear PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
+  if(ZH_ENABLE_GPU_TESTS)
+    add_test(NAME original_w3d_source_viewport_clear_bgfx COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:original_w3d_cpu_graph_tests> --bgfx-source-viewport-clear)
+    set_tests_properties(original_w3d_source_viewport_clear_bgfx PROPERTIES
+      LABELS "gpu;original-rendering;renderer-contract;source-identity" TIMEOUT 60 RUN_SERIAL TRUE
+      ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+  endif()
   add_test(NAME original_w3d_texture_frame_update COMMAND original_w3d_cpu_graph_tests --texture-frame-update)
   set_tests_properties(original_w3d_texture_frame_update PROPERTIES LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_texture_frame_missing_manager COMMAND original_w3d_cpu_graph_tests --texture-frame-missing-manager)

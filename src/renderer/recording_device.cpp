@@ -252,6 +252,12 @@ TextureHandle RecordingGpuDevice::create_texture(const TextureDesc& desc, std::s
     return handle;
 }
 
+std::optional<TextureFormat> RecordingGpuDevice::describe_texture_format(TextureHandle handle) const noexcept
+{
+    const auto* slot=lookup(impl_->textures,handle);
+    return slot ? std::optional<TextureFormat>(slot->value.desc.format) : std::nullopt;
+}
+
 SamplerHandle RecordingGpuDevice::create_sampler(const SamplerDesc& desc, std::string_view label)
 {
     if (impl_->reject_next_sampler_create) {

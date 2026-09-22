@@ -1,0 +1,19 @@
+# M22 slice 06C3C1 — original camera-clear device edge
+
+Status: source-call and public-bgfx device-edge acceptance for the bounded camera-clear behavior. Full `WW3D::Render(scene)`/static-sort aggregate is C2; WWShade, GameClient and retail scenes remain 06C4/07/08/09. No retail content was read, copied, hashed or modified.
+
+The canonical Linux `DX8Wrapper::Clear` body now preserves the original flag selection and ARGB8 truncation, including destination-alpha default zero. It queries the active caller-owned depth target format through a generation-checked, backend-neutral `GpuDevice` query: D24S8 issues color/depth/stencil when selected; depth16/depth32 issue depth without stencil. Stale/unknown formats fail. Values for unselected flags are ignored, as in the source; invalid selected color/depth/stencil values fail. `OriginalGpuEdge` translates only the resulting ordered viewport command, not geometry, a scene, or a scheduler. Native Direct3D code remains in its original branch.
+
+An owned original `WW3D::Init`/`Begin_Render` frame calls original `CameraClass::Apply` then original `DX8Wrapper::Clear`. Recording shows the original full-target Begin, camera marker, then the exact inset `clear_viewport rect=40,30,80,60` with CDS flags. A depth32 target records `-D-` with invalid unused color/alpha; color-only accepts unused Z. Inactive clear, invalid selected color/Z, a stolen physical pass and failed source End reject; original rendering state resets and a repeat frame succeeds. Stale resource format queries return no format. Owned resource counts return to zero.
+
+On the RTX 4070, the same original source call ran through public `BgfxGpuDevice` with `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation` at 160×120 and 200×150 on separate device generations. An earlier owned draw, original camera inset clear and later owned draw execute in order. Readback verifies red outer pixels survive, the blue inset has the source default alpha **0**, and the depth32 source depth-only clear leaves the red color unchanged. The validation-clean wrapper exited zero with no `Validation Error` or `VUID-`. M30's accepted device test independently covers the public command's depth/stencil preservation and tested pixels; this slice does not relabel that synthetic test as an original scene. Full original scene depth/stencil ordering remains C2.
+
+Validation:
+
+- GCC and Clang Debug focused source/ABI/provider sets: 8/8 each (`original_w3d_abi`, `sort_state`, `sort_state_abi`, `cpu_identity`, `provider_removal`, `camera_provider_removal`, `source_frame`, `source_viewport_clear`).
+- GCC Debug original-rendering related suite: 39/39; renderer contract/recorder/historical SDL/bgfx contract and dependency-ledger focused set: 5/5.
+- GCC and Clang focused ASan+UBSan+LSan source frame/camera/clear: 3/3 each outside sandbox. The identical GCC sanitizer command under ptrace-restricted sandbox failed before tests with LeakSanitizer's ptrace error; this was classified as environment, not an implementation defect, and the unchanged command passed with needed permission.
+- `env VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation python3 tools/run_validation_clean.py build/linux-{gcc,clang}-debug/original_w3d_cpu_graph_tests --bgfx-source-viewport-clear`: pass for each compiler with host GPU access. In the sandbox the same GPU binary failed at bgfx initialization because the NVIDIA ICD was hidden; unchanged host run passed.
+- `python3 tools/check_original_dependency_ledger.py --root . --ledger docs/original-runtime-dependency-ledger.tsv`, `git diff --check`: pass. Four-preset full suites and retail visual gates remain M22 completion work, not claimed here.
+
+Evidence grade: original-source integration through the physical public bgfx edge for camera clear, plus explicit negative controls. No full original scene, complete pass graph, retail recording or retail visual claim.

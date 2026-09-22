@@ -817,7 +817,7 @@ void OriginalGpuEdge::clear_source_viewport(bool color,bool depth,bool stencil,
         static_cast<double>(vp.width)>std::numeric_limits<renderer::UInt32>::max() ||
         static_cast<double>(vp.height)>std::numeric_limits<renderer::UInt32>::max())
         throw std::runtime_error("original camera clear requires an integral D3D viewport rectangle");
-    if (stencil_value>255U)
+    if (stencil && stencil_value>255U)
         throw std::runtime_error("original camera clear stencil exceeds 8-bit attachment");
     renderer::ViewportClearDesc clear;
     clear.color_target=bound_frame_->color;
@@ -832,6 +832,21 @@ void OriginalGpuEdge::clear_source_viewport(bool color,bool depth,bool stencil,
     clear.stencil_value=static_cast<renderer::UInt8>(stencil_value);
     if (auto result=device_.clear_viewport(clear); !result)
         throw std::runtime_error("original camera viewport clear failed: "+result.error);
+}
+
+bool OriginalGpuEdge::source_depth_has_stencil() const
+{
+    if (!bound_frame_ || !source_frame_active_)
+        throw std::runtime_error("original source depth-format query requires an active frame");
+    const auto format=device_.describe_texture_format(bound_frame_->depth);
+    if (!format)
+        throw std::runtime_error("original source depth target is stale or lacks a format query");
+    switch (*format) {
+    case renderer::TextureFormat::depth24_stencil8: return true;
+    case renderer::TextureFormat::depth16:
+    case renderer::TextureFormat::depth32: return false;
+    default: throw std::runtime_error("original source depth target format is unsupported");
+    }
 }
 
 [[noreturn]] void OriginalGpuEdge::texture_creation_unavailable(WW3DFormat format,

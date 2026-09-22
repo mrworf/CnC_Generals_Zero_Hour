@@ -75,7 +75,7 @@ using BOOL = int;
 #define TRUE 1
 #endif
 // Source-state tokens are semantic names for the canonical WW3D decisions;
-// the Linux edge never sends these integer values to SDL_GPU or Vulkan.
+// the Linux edge never sends these integer values to a device backend.
 enum {
     D3DTS_VIEW=2, D3DTS_PROJECTION=3, D3DTS_TEXTURE0=16, D3DTS_WORLD=256,
     D3DTSS_TEXCOORDINDEX=11, D3DTSS_TEXTURETRANSFORMFLAGS=24,
@@ -192,6 +192,8 @@ public:
     static void _Enable_Triangle_Draw(bool enabled);
     static bool _Is_Triangle_Draw_Enabled();
     static void Set_Draw_Polygon_Low_Bound_Limit(unsigned limit);
+    static void Clear(bool clear_color,bool clear_z_stencil,const Vector3& color,
+        float dest_alpha=0.0f,float z=1.0f,unsigned int stencil=0);
     struct CpuState;
 private:
     static CpuState& state();
