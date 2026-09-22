@@ -106,6 +106,7 @@ extern "C" void zh_probe_display_owner();
 extern "C" void zh_probe_view_scene();
 extern "C" void zh_probe_world_height_map();
 extern "C" void zh_probe_shroud_data();
+extern "C" void zh_probe_base_terrain_map();
 #endif
 
 extern "C" UnsignedInt zh_original_ai_update_count();
@@ -830,6 +831,7 @@ public:
 			if (std::getenv("ZH_M22_VIEW_SCENE_PROFILE")) zh_probe_view_scene();
 			if (std::getenv("ZH_M22_HEIGHT_MAP_PROFILE")) zh_probe_world_height_map();
 			if (std::getenv("ZH_M22_SHROUD_DATA_PROFILE")) zh_probe_shroud_data();
+			if (std::getenv("ZH_M22_BASE_TERRAIN_PROFILE")) zh_probe_base_terrain_map();
 #endif
 			if (const char *baseline = std::getenv("ZH_M24_GAMEDATA_BASELINE"))
 			{

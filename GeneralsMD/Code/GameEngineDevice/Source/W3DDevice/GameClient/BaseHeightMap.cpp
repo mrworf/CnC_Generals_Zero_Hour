@@ -48,8 +48,10 @@
 
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "PreRTS.h"
+#include "Common/GlobalData.h"
 #include "W3DDevice/GameClient/BaseHeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DShroud.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
 
@@ -79,7 +81,7 @@ BaseHeightMapRenderObjClass::BaseHeightMapRenderObjClass()
 	m_waypointBuffer = NULL;
 	m_roadBuffer = NULL;
 	m_bridgeBuffer = NULL;
-	m_shroud = NULL;
+	m_shroud = NEW W3DShroud;
 	m_shoreLineTilePositions = NULL;
 	m_shoreLineSortInfos = NULL;
 	m_numShoreLineTiles = m_numVisibleShoreLineTiles = 0;
@@ -97,6 +99,9 @@ BaseHeightMapRenderObjClass::BaseHeightMapRenderObjClass()
 
 BaseHeightMapRenderObjClass::~BaseHeightMapRenderObjClass()
 {
+	freeMapResources();
+	delete m_shroud;
+	m_shroud = NULL;
 	if (TheTerrainRenderObject == this) TheTerrainRenderObject = NULL;
 }
 
@@ -121,11 +126,41 @@ void BaseHeightMapRenderObjClass::Notify_Added(SceneClass*)
 {
 	throw OriginalW3DDeviceUnavailable("original empty terrain scene registration pending");
 }
-int BaseHeightMapRenderObjClass::initHeightData(Int, Int, WorldHeightMap*, RefRenderObjListIterator*, Bool)
+int BaseHeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *map,
+	RefRenderObjListIterator*, Bool update_extra_pass_tiles)
 {
-	throw OriginalW3DDeviceUnavailable("original terrain map data pending");
+	if (!map || !m_shroud || m_map || update_extra_pass_tiles || x <= 0 || y <= 0 ||
+		x != map->getDrawWidth() || y != map->getDrawHeight() || !TheGlobalData ||
+		TheGlobalData->m_partitionCellSize <= 0)
+		throw OriginalW3DDeviceUnavailable("original base terrain map binding unavailable");
+	Int min_height = map->getMaxHeightValue();
+	Int max_height = 0;
+	for (Int map_y = 0; map_y < map->getYExtent(); ++map_y) {
+		for (Int map_x = 0; map_x < map->getXExtent(); ++map_x) {
+			const Int height = map->getHeight(map_x, map_y);
+			if (height < min_height) min_height = height;
+			if (height > max_height) max_height = height;
+		}
+	}
+	m_shroud->init(map, TheGlobalData->m_partitionCellSize,
+		TheGlobalData->m_partitionCellSize);
+	REF_PTR_SET(m_map, map);
+	m_x = x;
+	m_y = y;
+	m_minHeight = min_height * MAP_HEIGHT_SCALE;
+	m_maxHeight = max_height * MAP_HEIGHT_SCALE;
+	m_needFullUpdate = true;
+	Set_Force_Visible(TRUE);
+	return 0;
 }
-Int BaseHeightMapRenderObjClass::freeMapResources() { return 0; }
+Int BaseHeightMapRenderObjClass::freeMapResources()
+{
+	if (m_shroud) m_shroud->reset();
+	REF_PTR_RELEASE(m_map);
+	m_x = m_y = 0;
+	m_needFullUpdate = false;
+	return 0;
+}
 void BaseHeightMapRenderObjClass::updateCenter(CameraClass*, RefRenderObjListIterator*) {}
 void BaseHeightMapRenderObjClass::adjustTerrainLOD(Int)
 {
@@ -139,7 +174,15 @@ void BaseHeightMapRenderObjClass::oversizeTerrain(Int)
 {
 	throw OriginalW3DDeviceUnavailable("original terrain oversize pending");
 }
-void BaseHeightMapRenderObjClass::reset() { m_needFullUpdate = false; }
+void BaseHeightMapRenderObjClass::reset()
+{
+	if (m_shroud) {
+		m_shroud->reset();
+		m_shroud->setBorderShroudLevel(static_cast<W3DShroudLevel>(
+			TheGlobalData ? TheGlobalData->m_shroudAlpha : 0));
+	}
+	m_needFullUpdate = false;
+}
 void BaseHeightMapRenderObjClass::crc(Xfer*)
 {
 	throw OriginalW3DDeviceUnavailable("original terrain snapshot pending");
