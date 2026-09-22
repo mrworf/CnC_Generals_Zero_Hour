@@ -304,21 +304,23 @@ milestones:
   - id: M29
     title: "ordered-clear renderer contract and shader closure"
     file: delivery/milestones/cnc-generals-zero-hour/M29-renderer-contract-migration.md
-    status: in_progress
+    status: completed
     dependencies: [M8, M9, M10]
     remediation_ids: [REC-RM-001]
     optional: false
     started_at: "2026-09-21T23:44:21Z"
-    completed_at: null
-    evidence: null
-    notes: "New backend-neutral contract/shader revalidation gate. RB-01/RB-03; preserve historical component acceptance and existing M22/M24 plans."
+    completed_at: "2026-09-22T00:31:47Z"
+    commit_hash: 26aa5c9
+    evidence: "delivery/evidence/cnc-generals-zero-hour/milestone_29_slice_01.md; milestone_29_slice_02.md; milestone_29_slice_03.md. Three slices committed; four GCC/Clang Debug/Release builds and 39 shader families per preset passed deterministic offline format/reflection checks; full asset-free GCC Debug CTest passed 172/172 with local UDP permission."
+    notes: "Accepted RB-01/RB-03 at CPU/offline shader grade. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_29_plan_01.md; slice commits d79aed7, e3b4d7f, 26aa5c9. Physical bgfx backend and pixels remain M30; original retail scenes remain M22."
   - id: M30
     title: "public bgfx device and renderer revalidation"
     file: delivery/milestones/cnc-generals-zero-hour/M30-bgfx-device-validation.md
-    status: pending
+    status: in_progress
     dependencies: [M29, M14]
     remediation_ids: [REC-RM-001]
     optional: false
+    started_at: "2026-09-22T00:31:47Z"
     completed_at: null
     evidence: null
     notes: "New public-bgfx device and M7-M10/M14 revalidation gate. RB-02/RB-04; retail scene acceptance remains M22."
