@@ -17,6 +17,7 @@
 #include "WW3D2/ww3d.h"
 #include "WW3D2/camera.h"
 #include "mempool.h"
+#include "multilist.h"
 #include "original_gpu_edge.h"
 #include "zh/renderer/recording_device.h"
 
@@ -64,12 +65,33 @@ int main()
             for (int i = 0; i != 22; ++i) nodes.push_back(pool.Allocate_Object());
             require(pool.totalCount() == 28 && pool.freeCount() == 6,
                 "original x86_64 WWLib pool allocation counts mismatch");
+            require(!pool.Release_Empty_Blocks(),
+                "active original WWLib pool retired a live node");
+            require(pool.totalCount() == 28 && pool.freeCount() == 6,
+                "active original WWLib pool changed on retirement refusal");
             for (auto *node : nodes) pool.Free_Object(node);
             require(pool.freeCount() == pool.totalCount(),
                 "original WWLib pool teardown retained allocated nodes");
+            require(pool.Release_Empty_Blocks() && pool.totalCount() == 0 && pool.freeCount() == 0,
+                "empty original WWLib pool did not retire its blocks");
+            require(pool.Release_Empty_Blocks(), "empty original WWLib pool retirement was not idempotent");
+            auto *second_generation = pool.Allocate_Object();
+            require(second_generation && pool.totalCount() == 7 && pool.freeCount() == 6,
+                "original WWLib pool failed after retirement");
+            pool.Free_Object(second_generation);
+            require(pool.Release_Empty_Blocks() && pool.totalCount() == 0,
+                "second-generation original WWLib pool blocks survived retirement");
         }
         WritableTestDirectory writable;
         initMemoryManager();
+        auto *live_multilist_node = new MultiListNodeClass;
+        require(!MultiListNodeClass::Release_Empty_Blocks(),
+            "original multilist cache retired an active node");
+        require(live_multilist_node->Next == nullptr && live_multilist_node->Object == nullptr,
+            "original multilist node was damaged by refused retirement");
+        delete live_multilist_node;
+        require(MultiListNodeClass::Release_Empty_Blocks(),
+            "original multilist cache retained its empty slab");
         TheWritableGlobalData = new GlobalData;
         TheWritableGlobalData->m_terrainLightPos[0].z = 1;
         TheWritableGlobalData->m_clearAlpha = 255;

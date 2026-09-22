@@ -48,6 +48,7 @@
 #include "WW3D2/ww3d.h"
 #include "WW3D2/rendobj.h"
 #include "WW3D2/light.h"
+#include "WW3D2/statistics.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #include <stdexcept>
@@ -84,6 +85,7 @@ W3DDisplay::~W3DDisplay()
 	REF_PTR_RELEASE(m_3DInterfaceScene);
 	for (Int i = 0; i < LightEnvironmentClass::MAX_LIGHTS; ++i)
 		REF_PTR_RELEASE(m_myLight[i]);
+	Debug_Statistics::Shutdown_Statistics();
 	m_assetManager->Free_Assets();
 	delete m_assetManager;
 	m_assetManager = NULL;

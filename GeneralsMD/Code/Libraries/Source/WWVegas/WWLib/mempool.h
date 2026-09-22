@@ -87,6 +87,7 @@ public:
 
 	T *		Allocate_Object_Memory(void);
 	void		Free_Object_Memory(T * obj);
+	bool	Release_Empty_Blocks(void);
 
 protected:
 
@@ -140,6 +141,7 @@ public:
 
 	static void *	operator new(size_t size);
 	static void		operator delete(void * memory);
+	static bool		Release_Empty_Blocks(void) { return Allocator.Release_Empty_Blocks(); }
 
 private:
 
@@ -211,6 +213,24 @@ ObjectPoolClass<T,BLOCK_SIZE>::~ObjectPoolClass(void)
 		block_count++;
 	}
 	WWASSERT(block_count == TotalObjectCount / BLOCK_SIZE);
+}
+
+// A process-static AutoPool may outlive a WW3D generation. Retire its blocks
+// only after every owner has returned its node; an active pool is untouched.
+template<class T,int BLOCK_SIZE>
+bool ObjectPoolClass<T,BLOCK_SIZE>::Release_Empty_Blocks(void)
+{
+	FastCriticalSectionClass::LockClass lock(ObjectPoolCS);
+	if (FreeObjectCount != TotalObjectCount) return false;
+	while (BlockListHead != NULL) {
+		uint32 * next_block = *(uint32 **)BlockListHead;
+		::operator delete(BlockListHead);
+		BlockListHead = next_block;
+	}
+	FreeListHead = NULL;
+	FreeObjectCount = 0;
+	TotalObjectCount = 0;
+	return true;
 }
 
 

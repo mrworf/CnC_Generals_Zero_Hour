@@ -103,6 +103,9 @@
 #include "shattersystem.h"
 #include "textureloader.h"
 #include "statistics.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "multilist.h"
+#endif
 #include "pointgr.h"
 #include "ffactory.h"
 #include "ini.h"
@@ -454,6 +457,11 @@ WW3DErrorType WW3D::Shutdown(void)
 	** Release the animation-triggered sound data
 	*/
 	AnimatedSoundMgrClass::Shutdown ();
+	#if defined(ZH_WW3D_CPU_ONLY)
+	// Scenes and sort lists have released their nodes. Preserve any still-live
+	// node; a later clean generation can retire the pool instead.
+	MultiListNodeClass::Release_Empty_Blocks();
+	#endif
 
 	IsInitted = false;
 	return WW3D_ERROR_OK;
