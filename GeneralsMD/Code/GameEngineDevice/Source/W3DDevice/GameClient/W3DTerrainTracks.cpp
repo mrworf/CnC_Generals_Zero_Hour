@@ -51,6 +51,10 @@
 #include "Common/Debug.h"
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "OriginalW3DDeviceUnavailable.h"
+#include "original_gpu_edge.h"
+#include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DScene.h"
+static TerrainTracksRenderObjClassSystem *s_zeroTrackOwner = NULL;
 #endif
 #include "texture.h"
 #include "colmath.h"
@@ -585,6 +589,11 @@ TerrainTracksRenderObjClassSystem::~TerrainTracksRenderObjClassSystem( void )
 
 	// free all data
 	shutdown();
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (s_zeroTrackOwner == this) s_zeroTrackOwner = NULL;
+	if (TheTerrainTracksRenderObjClassSystem == this)
+		TheTerrainTracksRenderObjClassSystem = NULL;
+#endif
 
 	m_vertexMaterialClass=NULL;
 	m_TerrainTracksScene=NULL;
@@ -600,7 +609,7 @@ void TerrainTracksRenderObjClassSystem::ReAcquireResources(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	// CPU track pooling remains active, but GPU buffers are explicitly pending.
-	m_gpuResourcesPending = true;
+	m_gpuResourcesPending = s_zeroTrackOwner != this;
 	return;
 #else
 	Int i;
@@ -659,6 +668,26 @@ void TerrainTracksRenderObjClassSystem::ReleaseResources(void)
 void TerrainTracksRenderObjClassSystem::init( SceneClass *TerrainTracksScene )
 {
 	const Int numModules=TheGlobalData->m_maxTerrainTracks;
+
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (numModules == 0) {
+		if (!zh::original_runtime::OriginalGpuEdge::active() ||
+			!W3DDisplay::m_3DScene || TerrainTracksScene != W3DDisplay::m_3DScene ||
+			(m_TerrainTracksScene && m_TerrainTracksScene != TerrainTracksScene) ||
+			(TheTerrainTracksRenderObjClassSystem &&
+			 TheTerrainTracksRenderObjClassSystem != this) ||
+			(s_zeroTrackOwner && s_zeroTrackOwner != this)) {
+			if (TheTerrainTracksRenderObjClassSystem == this && s_zeroTrackOwner != this)
+				TheTerrainTracksRenderObjClassSystem = NULL;
+			throw OriginalW3DDeviceUnavailable("original zero-track owner bootstrap pending");
+		}
+		m_TerrainTracksScene = TerrainTracksScene;
+		m_gpuResourcesPending = false;
+		TheTerrainTracksRenderObjClassSystem = this;
+		s_zeroTrackOwner = this;
+		return;
+	}
+#endif
 
 	Int i;
 	TerrainTracksRenderObjClass *mod;

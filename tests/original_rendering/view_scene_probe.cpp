@@ -8,6 +8,7 @@
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
+#include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "WW3D2/assetmgr.h"
 #include "WW3D2/camera.h"
 #include "WW3D2/dx8wrapper.h"
@@ -74,6 +75,15 @@ extern "C" void zh_probe_view_scene()
             catch (const std::runtime_error&) { shadow_edge_rejected = true; }
             require(shadow_edge_rejected && !TheW3DShadowManager,
                 "original disabled-shadow owner initialized without device edge");
+            const Int saved_no_edge_tracks = TheGlobalData->m_maxTerrainTracks;
+            TheWritableGlobalData->m_maxTerrainTracks = 0;
+            TerrainTracksRenderObjClassSystem no_track_edge;
+            bool track_edge_rejected = false;
+            try { no_track_edge.init(NULL); }
+            catch (const std::runtime_error&) { track_edge_rejected = true; }
+            require(track_edge_rejected && !TheTerrainTracksRenderObjClassSystem,
+                "original zero-track owner initialized without device edge");
+            TheWritableGlobalData->m_maxTerrainTracks = saved_no_edge_tracks;
         }
         {
             zh::original_runtime::OriginalGpuEdge edge(device);
@@ -90,6 +100,35 @@ extern "C" void zh_probe_view_scene()
                 const Bool saved_decals = TheGlobalData->m_useShadowDecals;
                 TheWritableGlobalData->m_useShadowVolumes = FALSE;
                 TheWritableGlobalData->m_useShadowDecals = FALSE;
+                const Int saved_track_count = TheGlobalData->m_maxTerrainTracks;
+                TheWritableGlobalData->m_maxTerrainTracks = 0;
+                TerrainTracksRenderObjClassSystem tracks;
+                tracks.init(W3DDisplay::m_3DScene);
+                require(TheTerrainTracksRenderObjClassSystem == &tracks &&
+                    !tracks.hasPendingGpuResources(),
+                    "original zero-track system published GPU resources");
+                tracks.init(W3DDisplay::m_3DScene);
+                TerrainTracksRenderObjClassSystem duplicate_tracks;
+                bool duplicate_track_rejected = false;
+                try { duplicate_tracks.init(W3DDisplay::m_3DScene); }
+                catch (const std::runtime_error&) { duplicate_track_rejected = true; }
+                require(duplicate_track_rejected && TheTerrainTracksRenderObjClassSystem == &tracks,
+                    "original zero-track duplicate displaced owner");
+                TerrainTracksRenderObjClassSystem wrong_scene_tracks;
+                bool wrong_scene_rejected = false;
+                try { wrong_scene_tracks.init(NULL); }
+                catch (const std::runtime_error&) { wrong_scene_rejected = true; }
+                require(wrong_scene_rejected && TheTerrainTracksRenderObjClassSystem == &tracks,
+                    "original zero-track owner accepted wrong scene");
+                require(!tracks.bindTrack(NULL, 1.0f, ""),
+                    "original zero-track owner allocated a module");
+                tracks.update();
+                tracks.flush();
+                tracks.Reset();
+                tracks.ReleaseResources();
+                tracks.ReAcquireResources();
+                require(!tracks.hasPendingGpuResources(),
+                    "original zero-track reset acquired GPU resources");
                 TheWritableGlobalData->m_useShadowVolumes = TRUE;
                 W3DShadowManager enabled_only;
                 bool volume_init_rejected = false;
@@ -268,9 +307,10 @@ extern "C" void zh_probe_view_scene()
                 shadows.Reset();
                 TheWritableGlobalData->m_useShadowVolumes = saved_volumes;
                 TheWritableGlobalData->m_useShadowDecals = saved_decals;
+                TheWritableGlobalData->m_maxTerrainTracks = saved_track_count;
             }
             require(!W3DDisplay::m_3DScene && !WW3D::Is_Initted() &&
-                !TheW3DShadowManager,
+                !TheW3DShadowManager && !TheTerrainTracksRenderObjClassSystem,
                 "original W3DView display teardown retained source owners");
             bool stale_terrain_owner = false;
             try { auto* terrain = NEW_REF(HeightMapRenderObjClass, ()); terrain->Release_Ref(); }
@@ -289,6 +329,15 @@ extern "C" void zh_probe_view_scene()
                 "original disabled-shadow owner accepted torn-down display");
             TheWritableGlobalData->m_useShadowVolumes = stale_volumes;
             TheWritableGlobalData->m_useShadowDecals = stale_decals;
+            const Int stale_track_count = TheGlobalData->m_maxTerrainTracks;
+            TheWritableGlobalData->m_maxTerrainTracks = 0;
+            TerrainTracksRenderObjClassSystem stale_tracks;
+            bool stale_track_owner = false;
+            try { stale_tracks.init(NULL); }
+            catch (const std::runtime_error&) { stale_track_owner = true; }
+            require(stale_track_owner && !TheTerrainTracksRenderObjClassSystem,
+                "original zero-track owner accepted torn-down display");
+            TheWritableGlobalData->m_maxTerrainTracks = stale_track_count;
         }
         device.destroy(depth);
         device.destroy(color);
