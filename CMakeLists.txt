@@ -5,6 +5,7 @@ project(GeneralsZeroHourNative VERSION 0.0.0 LANGUAGES C CXX)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(ZhHostChecks)
 include(ZhDependencies)
+include(ZhBgfxRuntime)
 
 zh_require_x86_64("${CMAKE_SYSTEM_PROCESSOR}")
 message(STATUS "Zero Hour host architecture: ${CMAKE_SYSTEM_PROCESSOR}")
@@ -839,6 +840,10 @@ target_sources(zh_renderer_sdl_gpu PRIVATE
   src/renderer/texture_loader.cpp
 )
 target_include_directories(zh_renderer_sdl_gpu PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+add_library(zh_renderer_bgfx STATIC src/renderer/bgfx_device.cpp)
+target_include_directories(zh_renderer_bgfx PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(zh_renderer_bgfx PUBLIC zh_renderer_sdl_gpu zh_bgfx_runtime zh_build_options)
 
 add_library(zh_ui STATIC src/ui/renderer.cpp src/ui/font.cpp src/ui/session.cpp)
 target_include_directories(zh_ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -1854,6 +1859,15 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(renderer_sdl_gpu_device_tests PRIVATE zh_renderer_sdl_gpu)
   add_test(NAME renderer_sdl_gpu_device COMMAND renderer_sdl_gpu_device_tests)
   set_tests_properties(renderer_sdl_gpu_device PROPERTIES LABELS renderer-contract)
+
+  add_executable(renderer_bgfx_device_tests tests/renderer/test_bgfx_device.cpp)
+  target_link_libraries(renderer_bgfx_device_tests PRIVATE zh_renderer_bgfx)
+  add_test(NAME renderer_bgfx_device_contract COMMAND renderer_bgfx_device_tests)
+  set_tests_properties(renderer_bgfx_device_contract PROPERTIES LABELS renderer-contract)
+  if(ZH_ENABLE_GPU_TESTS)
+    add_test(NAME renderer_bgfx_resource_gpu COMMAND renderer_bgfx_device_tests --gpu)
+    set_tests_properties(renderer_bgfx_resource_gpu PROPERTIES LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE)
+  endif()
 
   if(ZH_ENABLE_GPU_TESTS)
     add_executable(original_w3d_texture_gpu_upload tests/original_rendering/test_original_texture_gpu_upload.cpp)
