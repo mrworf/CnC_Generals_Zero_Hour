@@ -24,6 +24,7 @@
 #include "zh/renderer/recording_device.h"
 
 #include <cstdio>
+#include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <iterator>
@@ -529,6 +530,28 @@ extern "C" void zh_probe_view_scene()
             {
                 W3DDisplay composed_display;
                 composed_display.init();
+                require(composed_display.getWidth() == 800 && composed_display.getHeight() == 600,
+                    "original display lost Linux startup dimensions");
+                Display *saved_display = TheDisplay;
+                TheDisplay = &composed_display;
+                composed_display.setWidth(width);
+                composed_display.setHeight(target.height);
+                const auto display_width = composed_display.getWidth();
+                const auto display_height = composed_display.getHeight();
+                bool zero_display_width_rejected = false;
+                try { composed_display.setWidth(0); }
+                catch (const std::runtime_error&) { zero_display_width_rejected = true; }
+                bool zero_display_height_rejected = false;
+                try { composed_display.setHeight(0); }
+                catch (const std::runtime_error&) { zero_display_height_rejected = true; }
+                bool oversized_display_rejected = false;
+                try { composed_display.setWidth(16385); }
+                catch (const std::runtime_error&) { oversized_display_rejected = true; }
+                require(zero_display_width_rejected && zero_display_height_rejected &&
+                    oversized_display_rejected &&
+                    composed_display.getWidth() == display_width &&
+                    composed_display.getHeight() == display_height,
+                    "original display invalid dimensions mutated viewport");
                 TerrainVisual *saved_visual = TheTerrainVisual;
                 auto* composed = new W3DTerrainVisual;
                 TheTerrainVisual = composed;
@@ -566,17 +589,68 @@ extern "C" void zh_probe_view_scene()
                 require(map_visual_rejected && !TheHeightMap->getMap(),
                     "original empty terrain visual accepted map load");
                 auto* composed_view = new W3DView;
+                View *saved_tactical_view = TheTacticalView;
+                TheTacticalView = composed_view;
                 composed_view->init();
+                composed_display.attachView(composed_view);
+                composed_view->setWidth(composed_display.getWidth());
+                const Int ui_height = static_cast<Int>(composed_display.getHeight() * 0.77f);
+                composed_view->setHeight(ui_height);
+                composed_view->setDefaultView(0, 0, 1);
+                W3DView unpublished_view;
+                unpublished_view.init();
+                bool unpublished_view_rejected = false;
+                try { unpublished_view.setWidth(composed_display.getWidth()); }
+                catch (const std::runtime_error&) { unpublished_view_rejected = true; }
+                require(unpublished_view_rejected,
+                    "original tactical UI dimensions accepted unpublished view");
+                require(composed_view->getWidth() == static_cast<Int>(display_width) &&
+                    composed_view->getHeight() == ui_height,
+                    "original tactical UI dimensions diverged from source order");
                 auto* composed_camera = composed_view->get3DCamera();
+                Vector2 viewport_min, viewport_max;
+                composed_camera->Get_Viewport(viewport_min, viewport_max);
+                require(std::fabs(viewport_max.X - 1.0f) < 0.0001f &&
+                    std::fabs(viewport_max.Y - static_cast<Real>(ui_height) / display_height) < 0.0001f &&
+                    std::fabs(composed_camera->Get_Aspect_Ratio() -
+                        static_cast<Real>(display_width) / ui_height) < 0.0001f,
+                    "original tactical camera viewport/aspect did not follow UI dimensions");
+                bool bad_view_width_rejected = false;
+                try { composed_view->setWidth(0); }
+                catch (const std::runtime_error&) { bad_view_width_rejected = true; }
+                bool bad_view_height_rejected = false;
+                try { composed_view->setHeight(display_height + 1); }
+                catch (const std::runtime_error&) { bad_view_height_rejected = true; }
+                bool advanced_default_rejected = false;
+                try { composed_view->setDefaultView(1, 0, 1); }
+                catch (const std::runtime_error&) { advanced_default_rejected = true; }
+                require(bad_view_width_rejected && bad_view_height_rejected &&
+                    advanced_default_rejected &&
+                    composed_view->getWidth() == static_cast<Int>(display_width) &&
+                    composed_view->getHeight() == ui_height,
+                    "original tactical invalid UI mode mutated view dimensions");
+                composed_view->updateView();
+                composed_view->View::setCameraLock(static_cast<ObjectID>(1));
+                bool locked_update_rejected = false;
+                try { composed_view->updateView(); }
+                catch (const std::runtime_error&) { locked_update_rejected = true; }
+                composed_view->View::setCameraLock(INVALID_ID);
+                require(locked_update_rejected,
+                    "original tactical camera-lock update silently succeeded");
+                composed_view->updateView();
                 composed_camera->Set_Position(Vector3(0, 0, 1));
                 composed_camera->Set_View_Plane(Vector2(-1, -0.75f), Vector2(1, 0.75f));
                 composed_camera->Set_Clip_Planes(0.995f, 2.0f);
-                composed_display.attachView(composed_view);
                 auto* composed_recorder = dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
                 const auto composed_marker = composed_recorder ? composed_recorder->snapshot().size() : 0;
                 edge.bind_frame_targets(color, depth, width, target.height);
                 require(WW3D::Begin_Render(true, true, Vector3(0.2f, 0.4f, 0.6f), 1) ==
                     WW3D_ERROR_OK, "original composed terrain visual frame did not begin");
+                bool active_resize_rejected = false;
+                try { composed_display.setWidth(display_width); }
+                catch (const std::runtime_error&) { active_resize_rejected = true; }
+                require(active_resize_rejected && composed_display.getWidth() == display_width,
+                    "original tactical display resized during active frame");
                 DX8Wrapper::Set_Transform(D3DTS_WORLD, Matrix3D(true));
                 composed_display.drawViews();
                 require(WW3D::End_Render(false) == WW3D_ERROR_OK,
@@ -594,6 +668,8 @@ extern "C" void zh_probe_view_scene()
                     !TheWaterRenderObj && !TheSmudgeManager,
                     "original composed terrain visual teardown retained owners");
                 TheTerrainVisual = saved_visual;
+                TheTacticalView = saved_tactical_view;
+                TheDisplay = saved_display;
             }
             require(!W3DDisplay::m_3DScene && !WW3D::Is_Initted(),
                 "original composed terrain visual display teardown retained WW3D");

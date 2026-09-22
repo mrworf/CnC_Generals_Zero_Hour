@@ -54,6 +54,8 @@ W3DDisplay::W3DDisplay()
 {
 	if (m_3DScene || m_2DScene || m_3DInterfaceScene || m_assetManager)
 		throw OriginalW3DDeviceUnavailable("original display owners already published");
+	m_width = 800;
+	m_height = 600;
 	m_initialized = false;
 	m_averageFPS = 0;
 	m_2DRender = NULL;
@@ -138,8 +140,20 @@ void W3DDisplay::reset()
 }
 
 #define ZH_DISPLAY_PENDING() throw OriginalW3DDeviceUnavailable("original display physical method pending")
-void W3DDisplay::setWidth(UnsignedInt) { ZH_DISPLAY_PENDING(); }
-void W3DDisplay::setHeight(UnsignedInt) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::setWidth(UnsignedInt width)
+{
+	if (!m_initialized || TheDisplay != this || !zh::original_runtime::OriginalGpuEdge::active() ||
+		WW3D::Is_Rendering() || width == 0 || width > 16384)
+		throw OriginalW3DDeviceUnavailable("original display width unavailable");
+	Display::setWidth(width);
+}
+void W3DDisplay::setHeight(UnsignedInt height)
+{
+	if (!m_initialized || TheDisplay != this || !zh::original_runtime::OriginalGpuEdge::active() ||
+		WW3D::Is_Rendering() || height == 0 || height > 16384)
+		throw OriginalW3DDeviceUnavailable("original display height unavailable");
+	Display::setHeight(height);
+}
 Bool W3DDisplay::setDisplayMode(UnsignedInt, UnsignedInt, UnsignedInt, Bool) { ZH_DISPLAY_PENDING(); }
 Int W3DDisplay::getDisplayModeCount() { ZH_DISPLAY_PENDING(); }
 void W3DDisplay::getDisplayModeDescription(Int, Int*, Int*, Int*) { ZH_DISPLAY_PENDING(); }

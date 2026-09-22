@@ -35,10 +35,13 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "PreRTS.h"
 #include "Common/SubsystemInterface.h"
+#include "Common/GlobalData.h"
 #include "GameClient/CommandXlat.h"
 #include "W3DDevice/GameClient/W3DView.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
+#include "W3DDevice/GameClient/W3DTerrainVisual.h"
+#include "W3DDevice/GameClient/HeightMap.h"
 #include "WW3D2/ww3d.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
@@ -60,6 +63,7 @@ W3DView::W3DView()
 	m_cameraHasMovedSinceRequest = true;
 	m_locationRequests.reserve(MAX_REQUEST_CACHE_SIZE + 10);
 	m_CameraArrivedAtWaypointOnPathFlag = false;
+	m_doingMoveCameraOnWaypointPath = false;
 	m_isCameraSlaved = m_useRealZoomCam = false;
 	m_shakerAngles = Vector3(0, 0, 0);
 	m_cameraConstraintValid = false;
@@ -122,12 +126,61 @@ void W3DView::draw()
 }
 
 #define ZH_VIEW_PENDING() throw OriginalW3DDeviceUnavailable("original view tactical method pending")
-void W3DView::updateView() { ZH_VIEW_PENDING(); }
+void W3DView::updateView()
+{
+	auto *display = dynamic_cast<W3DDisplay *>(TheDisplay);
+	if (!display || TheTacticalView != this || display->getFirstView() != this ||
+		getNextView() || !zh::original_runtime::OriginalGpuEdge::active() ||
+		!W3DDisplay::m_3DScene || !m_3DCamera || !m_2DCamera ||
+		!dynamic_cast<W3DTerrainVisual *>(TheTerrainVisual) ||
+		!TheTerrainRenderObject || TheTerrainRenderObject->doesNeedFullUpdate() ||
+		getCameraLock() != INVALID_ID || m_doingMoveCameraOnWaypointPath ||
+		m_pos.x != 0 || m_pos.y != 0 || m_angle != 0 || m_pitchAngle != 0 ||
+		m_viewFilterMode != FM_VIEW_DEFAULT || m_viewFilter != FT_VIEW_DEFAULT ||
+		m_isWireFrameEnabled || m_nextWireFrameEnabled)
+		throw OriginalW3DDeviceUnavailable("original tactical map or camera update pending");
+}
 void W3DView::update() { ZH_VIEW_PENDING(); }
 Drawable* W3DView::pickDrawable(const ICoord2D*, Bool, PickType) { ZH_VIEW_PENDING(); }
 Int W3DView::iterateDrawablesInRegion(IRegion2D*, Bool (*)(Drawable*, void*), void*) { ZH_VIEW_PENDING(); }
-void W3DView::setWidth(Int) { ZH_VIEW_PENDING(); }
-void W3DView::setHeight(Int) { ZH_VIEW_PENDING(); }
+void W3DView::setWidth(Int width)
+{
+	auto *display = dynamic_cast<W3DDisplay *>(TheDisplay);
+	if (!display || TheTacticalView != this || display->getFirstView() != this ||
+		getNextView() || !m_3DCamera || !m_2DCamera ||
+		!zh::original_runtime::OriginalGpuEdge::active() || !W3DDisplay::m_3DScene ||
+		width <= 0 || m_height <= 0 || m_originX < 0 ||
+		m_originX > static_cast<Int>(display->getWidth()) ||
+		width > static_cast<Int>(display->getWidth()) - m_originX ||
+		!display->getWidth() || !display->getHeight())
+		throw OriginalW3DDeviceUnavailable("original tactical view width unavailable");
+	View::setWidth(width);
+	Vector2 min, max;
+	m_3DCamera->Set_Aspect_Ratio(static_cast<Real>(width) / m_height);
+	m_3DCamera->Get_Viewport(min, max);
+	max.X = static_cast<Real>(m_originX + width) / display->getWidth();
+	m_3DCamera->Set_Viewport(min, max);
+	m_3DCamera->Set_View_Plane(static_cast<Real>(width) / display->getWidth() *
+		(50.0f * PI / 180.0f), -1);
+}
+void W3DView::setHeight(Int height)
+{
+	auto *display = dynamic_cast<W3DDisplay *>(TheDisplay);
+	if (!display || TheTacticalView != this || display->getFirstView() != this ||
+		getNextView() || !m_3DCamera || !m_2DCamera ||
+		!zh::original_runtime::OriginalGpuEdge::active() || !W3DDisplay::m_3DScene ||
+		height <= 0 || m_width <= 0 || m_originY < 0 ||
+		m_originY > static_cast<Int>(display->getHeight()) ||
+		height > static_cast<Int>(display->getHeight()) - m_originY ||
+		!display->getWidth() || !display->getHeight())
+		throw OriginalW3DDeviceUnavailable("original tactical view height unavailable");
+	View::setHeight(height);
+	Vector2 min, max;
+	m_3DCamera->Set_Aspect_Ratio(static_cast<Real>(m_width) / height);
+	m_3DCamera->Get_Viewport(min, max);
+	max.Y = static_cast<Real>(m_originY + height) / display->getHeight();
+	m_3DCamera->Set_Viewport(min, max);
+}
 void W3DView::setOrigin(Int, Int) { ZH_VIEW_PENDING(); }
 void W3DView::scrollBy(Coord2D*) { ZH_VIEW_PENDING(); }
 void W3DView::forceRedraw() { ZH_VIEW_PENDING(); }
@@ -157,7 +210,17 @@ void W3DView::cameraDisableSlaveMode() { ZH_VIEW_PENDING(); }
 void W3DView::cameraEnableRealZoomMode() { ZH_VIEW_PENDING(); }
 void W3DView::cameraDisableRealZoomMode() { ZH_VIEW_PENDING(); }
 void W3DView::Add_Camera_Shake(const Coord3D&, float, float, float) { ZH_VIEW_PENDING(); }
-void W3DView::setDefaultView(Real, Real, Real) { ZH_VIEW_PENDING(); }
+void W3DView::setDefaultView(Real pitch, Real angle, Real maxHeight)
+{
+	auto *display = dynamic_cast<W3DDisplay *>(TheDisplay);
+	if (!display || TheTacticalView != this || display->getFirstView() != this ||
+		getNextView() || !m_3DCamera || pitch != 0 || angle != 0 || maxHeight != 1)
+		throw OriginalW3DDeviceUnavailable("original tactical default camera mode pending");
+	m_defaultPitchAngle = pitch;
+	m_maxHeightAboveGround = TheGlobalData->m_maxCameraHeight * maxHeight;
+	if (m_minHeightAboveGround > m_maxHeightAboveGround)
+		m_maxHeightAboveGround = m_minHeightAboveGround;
+}
 void W3DView::zoomCamera(Real, Int, Real, Real) { ZH_VIEW_PENDING(); }
 void W3DView::pitchCamera(Real, Int, Real, Real) { ZH_VIEW_PENDING(); }
 void W3DView::setHeightAboveGround(Real) { ZH_VIEW_PENDING(); }
