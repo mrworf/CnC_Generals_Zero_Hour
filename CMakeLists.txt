@@ -2313,6 +2313,11 @@ if(ZH_BUILD_TESTS)
     --header "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/shdlib.h")
   set_tests_properties(original_w3d_wwshade_branch_selection PROPERTIES
     LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_wwshade_enabled_compile COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_wwshade_enabled_compile.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json")
+  set_tests_properties(original_w3d_wwshade_enabled_compile PROPERTIES
+    LABELS "original-rendering;source-identity;negative" TIMEOUT 180)
   add_test(NAME original_w3d_chunk_family_audit COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_chunk_family_audit.py")
   set_tests_properties(original_w3d_chunk_family_audit PROPERTIES
