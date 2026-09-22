@@ -17,7 +17,7 @@ delivery_goal:
   blocker_type: null
   blocker: null
   blockers: []
-  resume_point: "M30 accepted in four slice commits through 5a45a06 with host RTX/Vulkan physical-device evidence. M22 plan 01 audit found 06C1B, 06C2 and 06C3A still pending despite later evidenced B-series leaf slices; resume the earliest missing dependency 06C1B, then C2/C3A before 06C3C and aggregates. Preserve accepted B-series leaf commits. M23 and M24 follow M22; M24 resumes plan 01 at 05C."
+  resume_point: "M30 accepted in four slice commits through 5a45a06 with host RTX/Vulkan physical-device evidence. Git ancestry verifies M22 06C1B (44a7003), 06C2 (f33ffa3) and 06C3A (748052c) are implemented; their governing index was stale. Resume preserved M22 plan 01 at 06C3C, split into C1/C2 for source-owned bgfx integration, without replaying accepted slices. M23 and M24 follow M22; M24 resumes plan 01 at 05C."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
   renderer_packet_adoption:

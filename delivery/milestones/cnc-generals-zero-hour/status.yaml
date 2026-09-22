@@ -335,7 +335,7 @@ milestones:
     started_at: "2026-09-21T04:25:51Z"
     completed_at: null
     evidence: "delivery/evidence/cnc-generals-zero-hour/milestone_22_backend_gap_06c3c.md; accepted source-owned slices through 06C3B3B (4f9b286) pass their recorded GCC/Clang, sanitizer and validation-enabled RTX gates. The original camera-subrect color/depth/stencil clear within an active frame has no equivalent in the public SDL_GPU 3.4.14 pass API; no complete scene/retail acceptance is claimed."
-    notes: "M22_VIEWPORT_CLEAR_BACKEND resolved by accepted M29/M30 public-bgfx device and hardware evidence. A plan dependency audit found 06C1B/06C2/06C3A still pending; resume preserved delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md at earliest missing slice 06C1B before 06C3C. Later B-series leaf commits/evidence and blocker history remain preserved; no 06C3 aggregate or retail-scene acceptance is claimed."
+    notes: "M22_VIEWPORT_CLEAR_BACKEND resolved by accepted M29/M30 public-bgfx device and hardware evidence. Git ancestry verifies 06C1B/06C2/06C3A implementation commits 44a7003/f33ffa3/748052c despite stale governing index; resume preserved delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md at 06C3C split C1/C2. Prior accepted leaf commits and blocker history remain preserved; no 06C3 aggregate or retail-scene acceptance is claimed."
   - id: M23
     title: "original menus controls and media integration"
     file: delivery/milestones/cnc-generals-zero-hour/M23-original-interaction.md
