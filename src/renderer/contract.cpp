@@ -45,9 +45,11 @@ bool blend_equal(const BlendState& a, const BlendState& b) noexcept
 bool depth_equal(const DepthStencilState& a, const DepthStencilState& b) noexcept
 {
     return std::tie(a.depth_test, a.depth_write, a.depth_compare, a.stencil_test,
-               a.stencil_read_mask, a.stencil_write_mask)
+               a.stencil_compare, a.stencil_reference, a.stencil_read_mask, a.stencil_write_mask,
+               a.stencil_fail, a.depth_fail, a.depth_pass)
         == std::tie(b.depth_test, b.depth_write, b.depth_compare, b.stencil_test,
-               b.stencil_read_mask, b.stencil_write_mask);
+               b.stencil_compare, b.stencil_reference, b.stencil_read_mask, b.stencil_write_mask,
+               b.stencil_fail, b.depth_fail, b.depth_pass);
 }
 
 bool raster_equal(const RasterState& a, const RasterState& b) noexcept
@@ -145,8 +147,13 @@ PipelineKey::PipelineKey(const PipelineDesc& desc) noexcept : descriptor_(desc)
     hash_value(hash_, desc.depth_stencil.depth_write);
     hash_value(hash_, static_cast<UInt8>(desc.depth_stencil.depth_compare));
     hash_value(hash_, desc.depth_stencil.stencil_test);
+    hash_value(hash_, static_cast<UInt8>(desc.depth_stencil.stencil_compare));
+    hash_value(hash_, desc.depth_stencil.stencil_reference);
     hash_value(hash_, desc.depth_stencil.stencil_read_mask);
     hash_value(hash_, desc.depth_stencil.stencil_write_mask);
+    hash_value(hash_, static_cast<UInt8>(desc.depth_stencil.stencil_fail));
+    hash_value(hash_, static_cast<UInt8>(desc.depth_stencil.depth_fail));
+    hash_value(hash_, static_cast<UInt8>(desc.depth_stencil.depth_pass));
     hash_value(hash_, static_cast<UInt8>(desc.raster.cull));
     hash_value(hash_, static_cast<UInt8>(desc.raster.fill));
     hash_value(hash_, static_cast<UInt8>(desc.raster.front_face));
@@ -218,6 +225,12 @@ ValidationResult validate(const PipelineDesc& desc)
     if (!is_depth(desc.depth_format)) return failure("pipeline depth format must be a depth format");
     if (desc.topology == PrimitiveTopology::point_list && !desc.uses_point_size)
         return failure("point-list pipeline requires explicit point-size shader behavior");
+    if (static_cast<UInt8>(desc.depth_stencil.depth_compare) > static_cast<UInt8>(CompareOp::always)
+        || static_cast<UInt8>(desc.depth_stencil.stencil_compare) > static_cast<UInt8>(CompareOp::always)
+        || static_cast<UInt8>(desc.depth_stencil.stencil_fail) > static_cast<UInt8>(StencilOp::decrement_wrap)
+        || static_cast<UInt8>(desc.depth_stencil.depth_fail) > static_cast<UInt8>(StencilOp::decrement_wrap)
+        || static_cast<UInt8>(desc.depth_stencil.depth_pass) > static_cast<UInt8>(StencilOp::decrement_wrap))
+        return failure("pipeline depth/stencil compare or operation is unsupported");
     if ((desc.blend.color_write_mask & 0xf0U) != 0) return failure("pipeline color mask uses undefined channels");
     if (!std::isfinite(desc.raster.depth_bias)) return failure("pipeline depth bias must be finite");
     if (desc.vertex_layout == VertexLayout::original_fvf) {

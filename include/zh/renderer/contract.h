@@ -52,6 +52,7 @@ enum class IndexElementSize : UInt8 { uint16 = 2, uint32 = 4 };
 enum class VertexLayout : UInt8 { position_color_uv, world_mesh, terrain, water, point_sprite, wwshade, original_fvf };
 enum class VertexElementFormat : UInt8 { float1, float2, float3, float4, ubyte4_norm };
 enum class CompareOp : UInt8 { never, less, equal, less_equal, greater, not_equal, greater_equal, always };
+enum class StencilOp : UInt8 { keep, zero, replace, increment_clamp, decrement_clamp, invert, increment_wrap, decrement_wrap };
 enum class BlendFactor : UInt8 { zero, one, src_color, inv_src_color, src_alpha, inv_src_alpha, dst_color, inv_dst_color, dst_alpha, inv_dst_alpha, src_alpha_saturate };
 enum class BlendOp : UInt8 { add, subtract, reverse_subtract, minimum, maximum };
 enum class CullMode : UInt8 { none, clockwise, counter_clockwise };
@@ -120,8 +121,13 @@ struct DepthStencilState {
     bool depth_write = true;
     CompareOp depth_compare = CompareOp::less_equal;
     bool stencil_test = false;
+    CompareOp stencil_compare = CompareOp::always;
+    UInt8 stencil_reference = 0;
     UInt8 stencil_read_mask = 0xff;
     UInt8 stencil_write_mask = 0xff;
+    StencilOp stencil_fail = StencilOp::keep;
+    StencilOp depth_fail = StencilOp::keep;
+    StencilOp depth_pass = StencilOp::keep;
 };
 
 struct RasterState {

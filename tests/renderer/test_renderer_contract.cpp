@@ -84,6 +84,19 @@ void test_pipeline_key()
     std::unordered_set<PipelineKey> keys{first, same, other};
     check(keys.size() == 2, "pipeline hash does not support bounded cache identity");
 
+    changed = desc;
+    changed.depth_stencil.stencil_test = true;
+    changed.depth_stencil.stencil_compare = CompareOp::equal;
+    changed.depth_stencil.stencil_reference = 0x87;
+    changed.depth_stencil.stencil_read_mask = 0xff;
+    changed.depth_stencil.stencil_write_mask = 0x80;
+    changed.depth_stencil.depth_pass = StencilOp::replace;
+    const PipelineKey stencil(changed);
+    check(stencil != first && stencil.stable_hash() != first.stable_hash(),
+        "stencil compare/reference/write-mask operation missing from pipeline identity");
+    changed.depth_stencil.depth_pass = static_cast<StencilOp>(255);
+    check(!validate(changed), "unknown stencil operation accepted");
+
     auto points = desc;
     points.topology = PrimitiveTopology::point_list;
     check(!validate(points), "point pipeline without point-size behavior accepted");

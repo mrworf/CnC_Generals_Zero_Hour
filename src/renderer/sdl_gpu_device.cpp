@@ -226,6 +226,21 @@ SDL_GPUVertexElementFormat vertex_element(VertexElementFormat format)
     return SDL_GPU_VERTEXELEMENTFORMAT_INVALID;
 }
 
+SDL_GPUStencilOp stencil_op(StencilOp value)
+{
+    switch (value) {
+    case StencilOp::keep: return SDL_GPU_STENCILOP_KEEP;
+    case StencilOp::zero: return SDL_GPU_STENCILOP_ZERO;
+    case StencilOp::replace: return SDL_GPU_STENCILOP_REPLACE;
+    case StencilOp::increment_clamp: return SDL_GPU_STENCILOP_INCREMENT_AND_CLAMP;
+    case StencilOp::decrement_clamp: return SDL_GPU_STENCILOP_DECREMENT_AND_CLAMP;
+    case StencilOp::invert: return SDL_GPU_STENCILOP_INVERT;
+    case StencilOp::increment_wrap: return SDL_GPU_STENCILOP_INCREMENT_AND_WRAP;
+    case StencilOp::decrement_wrap: return SDL_GPU_STENCILOP_DECREMENT_AND_WRAP;
+    }
+    return SDL_GPU_STENCILOP_INVALID;
+}
+
 void vertex_layout(const PipelineDesc& desc, SDL_GPUVertexBufferDescription& buffer,
     std::vector<SDL_GPUVertexAttribute>& attributes)
 {
@@ -509,6 +524,10 @@ PipelineHandle SdlGpuDevice::create_pipeline(const PipelineKey& key, std::string
     info.depth_stencil_state.compare_op = compare_op(desc.depth_stencil.depth_compare);
     info.depth_stencil_state.compare_mask = desc.depth_stencil.stencil_read_mask;
     info.depth_stencil_state.write_mask = desc.depth_stencil.stencil_write_mask;
+    info.depth_stencil_state.front_stencil_state = {
+        stencil_op(desc.depth_stencil.stencil_fail), stencil_op(desc.depth_stencil.depth_pass),
+        stencil_op(desc.depth_stencil.depth_fail), compare_op(desc.depth_stencil.stencil_compare)};
+    info.depth_stencil_state.back_stencil_state = info.depth_stencil_state.front_stencil_state;
     info.depth_stencil_state.enable_depth_test = desc.depth_stencil.depth_test;
     info.depth_stencil_state.enable_depth_write = desc.depth_stencil.depth_write;
     info.depth_stencil_state.enable_stencil_test = desc.depth_stencil.stencil_test;
@@ -692,6 +711,9 @@ ValidationResult SdlGpuDevice::draw(const DrawDesc& desc)
             return impl_->fail("draw", result.error);
     }
     SDL_BindGPUGraphicsPipeline(impl_->render_pass, pipeline->value.native);
+    if (pipeline->value.key.descriptor().depth_stencil.stencil_test)
+        SDL_SetGPUStencilReference(impl_->render_pass,
+            pipeline->value.key.descriptor().depth_stencil.stencil_reference);
     SDL_GPUBufferBinding vertex_binding{vertex->value.native, 0};
     SDL_BindGPUVertexBuffers(impl_->render_pass, 0, &vertex_binding, 1);
     const auto bind_stage = [&](const StageBindings& bindings, bool vertex_stage) -> ValidationResult {

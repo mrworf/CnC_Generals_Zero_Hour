@@ -1862,6 +1862,9 @@ if(ZH_BUILD_TESTS)
 
   add_executable(renderer_bgfx_device_tests tests/renderer/test_bgfx_device.cpp)
   target_link_libraries(renderer_bgfx_device_tests PRIVATE zh_renderer_bgfx)
+  target_compile_definitions(renderer_bgfx_device_tests PRIVATE
+    ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx")
+  add_dependencies(renderer_bgfx_device_tests zh_bgfx_shaders)
   add_test(NAME renderer_bgfx_device_contract COMMAND renderer_bgfx_device_tests)
   set_tests_properties(renderer_bgfx_device_contract PROPERTIES LABELS renderer-contract)
   if(ZH_ENABLE_GPU_TESTS)

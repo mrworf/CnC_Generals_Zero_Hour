@@ -42,8 +42,8 @@ Excluded: original WW3D retail scene/pixel acceptance (M22), gameplay/save/netwo
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
 | 01 | [runtime/resources](milestone_30_plan_01_slice_01.md) | Pinned bgfx runtime and generation-safe resource/lifecycle path | M29 | completed | `64febec` | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_30_slice_01.md) |
-| 02 | [ordered targets](milestone_30_plan_01_slice_02.md) | Real target/pass/viewport clears in command order | 01 | completed | recorded in next index update | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_30_slice_02.md) |
-| 03 | [shader draws](milestone_30_plan_01_slice_03.md) | Physical shader, pipeline, bindings and indexed draw behavior | 02 | pending | | |
+| 02 | [ordered targets](milestone_30_plan_01_slice_02.md) | Real target/pass/viewport clears in command order | 01 | completed | `ba4e343` | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_30_slice_02.md) |
+| 03 | [shader draws](milestone_30_plan_01_slice_03.md) | Physical shader, pipeline, bindings and indexed draw behavior | 02 | completed | recorded in next index update | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_30_slice_03.md) |
 | 04 | [presentation and revalidation](milestone_30_plan_01_slice_04.md) | SDL3-window present, lifecycle and full host evidence | 03 | pending | | |
 
 Four slices are necessary because each has a distinct independently observable GPU boundary and failure mode; combining all into one commit would hide the clear-vs-draw dependency and hardware acceptance results.
@@ -71,6 +71,8 @@ Planning phase completed before production edits. Update this index and slice pl
 Slice 01 delivers offline runtime pin/check, physically allocated RGBA8 texture uploads and two-cycle Vulkan lifecycle. Buffers/samplers remain validated descriptors until layout and binding information exists at slice 03; no renderer pixels or ordered clears are accepted yet. The physical resource test passed only with host GPU access (sandbox hid NVIDIA ICD). The exact slice 01 commit is written into this index with the next slice update, avoiding a self-referential commit hash.
 
 Slice 02 finding: bgfx view rectangles are frame-global state. A physical test proved mutating the begin-pass view for `set_viewport` clipped the earlier full-target clear; each source camera viewport now consumes a new ordered view. Independent depth-only and stencil-only device clears preserve color on a LOAD pass; the standalone checked public probe proves independent depth/stencil-tested pixels. Device-level post-clear draw proof remains slice 03, not accepted by this slice.
+
+Slice 03 integration finding: M29's offline shaderc package was compile-grade, not a physical public-bgfx binding proof. Its length-prefixed reflected uniform names can contain `.` for nested UBO members, which public bgfx rejects as identifiers. M30 copies the shader envelope, converts only interior `.` to `_` in reflection-name bytes, rejects other malformed characters/counts/collisions, and leaves SPIR-V payload and M29 outputs untouched. Physical create/destroy of all 39 families and uniform/texture-driven pixels now pass. The original source requires stencil MSB write-mask behavior; pinned public `setStencil`'s second word maps to the Vulkan write mask, and physical pixels prove 0x80 writes preserve the lower bits. The source-owned point shader, alpha blend, original-FVF indexed/base-vertex path and post-clear draws also pass. Presentation and broad revalidation remain slice 04.
 
 ## Deferred follow-ups
 

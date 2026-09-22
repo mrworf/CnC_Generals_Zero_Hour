@@ -36,3 +36,20 @@ rerun directly; M7 recorder and M8–M10 UI/world/effects CPU tests are rerun as
 affected command evidence. Prior SDL_GPU shader binaries and physical tests
 are retained only as historical preservation evidence. bgfx physical evidence
 remains M30; retail scene evidence remains M22.
+
+## M30 focused backend renewal (slices 01–03)
+
+M29's shader package passed offline compilation and descriptor checks; it had
+not passed public-bgfx shader creation or uniform binding. M30's pinned Vulkan
+runtime now physically creates all 39 family binaries. A bounded runtime copy
+normalizes interior dots in length-prefixed nested uniform reflection names to
+bgfx identifiers; malformed metadata rejects and the SPIR-V/pinned M29 files
+remain unchanged. Video and point pixels prove the normalized uniform fields,
+texture stages and multi-block bindings are live, not merely accepted handles.
+
+The RTX 4070 validation-layer tests additionally prove ordered draw/clear/draw,
+independent stencil MSB write-mask preservation, original FVF indexed/base
+vertex, source-alpha blend and point-size behavior. These are focused synthetic
+device-grade pixels, not original WW3D scene/retail pixels. Earlier SDL_GPU
+hardware checks remain historical. SDL3 presentation, full preset/suite and
+M14 comparison are still M30 slice-04 work; original scene acceptance is M22.
