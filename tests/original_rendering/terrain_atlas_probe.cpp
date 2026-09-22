@@ -3,6 +3,8 @@
 #include "Common/MapReaderWriterInfo.h"
 #include "W3DDevice/GameClient/TerrainTex.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
+#include "WW3D2/dx8wrapper.h"
+#include "WW3D2/ww3d.h"
 #include "original_gpu_edge.h"
 #include "zh/original_process.h"
 #include "zh/renderer/recording_device.h"
@@ -104,6 +106,45 @@ void successful_generation(const char *path)
 		device.texture_bytes(edge_handle, 2).size() == 512U * 4U,
 		"original terrain edge atlas gradient or mip chain changed");
 	require(!map->getFlipState(0, 0), "original flat terrain flip table changed");
+	WW3D::Set_Texture_Filter(TextureFilterClass::TEXTURE_FILTER_BILINEAR);
+	DX8Wrapper::Set_Texture(0, base);
+	device.fail_next_sampler_create();
+	bool sampler_failure = false;
+	try { DX8Wrapper::Apply_Render_State_Changes(); }
+	catch (const std::runtime_error &error) {
+		sampler_failure = std::string(error.what()).find("sampler creation failed") != std::string::npos;
+	}
+	require(sampler_failure && device.resource_counts().samplers == 0,
+		"original terrain base material sampler failure did not roll back");
+	DX8Wrapper::Apply_Render_State_Changes();
+	const auto selected = edge.pending_stage(0);
+	const auto sampler = device.sampler_descriptor(selected.sampler);
+	require(selected.source == base && selected.texture == base_handle &&
+		sampler.min_filter == zh::renderer::Filter::linear &&
+		sampler.mag_filter == zh::renderer::Filter::linear &&
+		sampler.mip_filter == zh::renderer::Filter::nearest &&
+		sampler.address_u == zh::renderer::AddressMode::repeat &&
+		sampler.address_v == zh::renderer::AddressMode::repeat,
+		"original terrain base material selection changed");
+	DX8Wrapper::Apply_Render_State_Changes();
+	require(device.resource_counts().samplers == 1,
+		"original terrain base material idempotence changed");
+	DX8Wrapper::Set_Texture(0, nullptr);
+	DX8Wrapper::Apply_Render_State_Changes();
+	WW3D::Enable_Texturing(false);
+	DX8Wrapper::Set_Texture(0, base);
+	DX8Wrapper::Apply_Render_State_Changes();
+	require(!edge.pending_stage(0).texture,
+		"original terrain base ignored disabled texturing");
+	WW3D::Enable_Texturing(true);
+	DX8Wrapper::Set_Texture(0, nullptr);
+	DX8Wrapper::Apply_Render_State_Changes();
+	DX8Wrapper::Set_Texture(0, base);
+	DX8Wrapper::Apply_Render_State_Changes();
+	DX8Wrapper::Release_Render_State();
+	DX8Wrapper::Apply_Render_State_Changes();
+	require(device.resource_counts().samplers == 0,
+		"original terrain base delayed state retained a sampler");
 	require(device.snapshot().find("draw ") == std::string::npos,
 		"original terrain atlas ownership emitted a draw");
 	map->Release_Ref(); map = nullptr;

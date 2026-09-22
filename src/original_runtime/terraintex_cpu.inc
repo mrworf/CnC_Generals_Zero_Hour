@@ -183,7 +183,7 @@ Bool TerrainTextureClass::updateFlat(WorldHeightMap *, Int, Int, Int, Int)
 	throw std::runtime_error("original flat terrain atlas update is pending");
 }
 void TerrainTextureClass::setLOD(Int) {}
-void TerrainTextureClass::Apply(unsigned int) { terrain_material_pending(); }
+void TerrainTextureClass::Apply(unsigned int stage) { TextureClass::Apply(stage); }
 
 AlphaTerrainTextureClass::AlphaTerrainTextureClass(TextureClass *base) :
 	TextureClass(8, 8, WW3D_FORMAT_A1R5G5B5, MIP_LEVELS_1)
