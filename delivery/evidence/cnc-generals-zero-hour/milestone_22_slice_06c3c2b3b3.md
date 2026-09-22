@@ -1,0 +1,13 @@
+# M22 06C3C2B3B3 public bgfx readback-completion evidence
+
+## Contract and independent cause
+
+Pinned bgfx `Context::readTexture` (`bgfx_p.h:6849-6867`) enqueues the caller's `_data` pointer and returns `m_submit->m_frameNum + 2`. Pinned `Context::frame` (`bgfx.cpp:2798-2843`) waits for the *previous* render frame, swaps/submits the current frame, and returns its captured frame number. The prior `BgfxGpuDevice::readback_rgba` loop stopped when `current == ready`; at that instant the ready frame was submitted, but its worker could still write the local pixel vector. One further public `bgfx::frame()` waits for completion before channel conversion, target destruction, vector access or return. This fixes a caller-buffer lifetime contract independently of B3B2: the accepted-B3A fixture with process-service locks passed 30/30 validation-enabled full static scenes even with the old readback loop.
+
+## Physical and negative gates
+
+New opt-in `renderer_bgfx_readback_completion_gpu` drives 32 clear/readback/retire cycles per BGRA8/RGBA8 format in each of two device generations and extents (128 readbacks total per process). Each return is checked pixel-by-pixel for exact RGB and alpha; caller heap storage is immediately reused and every generation ends at zero public resources. Uninitialized color, depth-as-color and retired-target readbacks remain rejected. GCC and Clang Debug each pass 30/30 fresh-process direct tests on the host Vulkan device with Khronos validation enabled and output scanned for `Validation Error:`/`VUID-`.
+
+With the corrected boundary, GCC and Clang Debug original static source scenes each pass 30/30 fresh-process four-format/extent/device-generation runs under Vulkan validation. GCC and Clang direct readback and source-scene physical ASan+UBSan runs pass with host leak scanning disabled; source-only original-scene controls pass leak-capable ASan+UBSan outside the sandbox. Physical leak scanning is separately noisy from host libdbus (see B3B2 evidence); the sandbox's ptrace restriction cannot run LSan. This slice does not alter `wait_idle()`, whose broader advertised idle semantics require separate caller/worker evidence, nor does it accept pending B3B mixed categories.
+
+GCC/Clang Debug/Release full builds pass. Each canonical 180-test suite passes all but the three dependency-ledger checks for separately pending B3B `original_gpu_edge.cpp`/`ww3d.cpp` drift. Two GCC LAN cases failed during concurrent four-suite execution, then each passed alone on host; Clang LAN cases passed in the suites. Full clean ledger remains a B3B acceptance gate. No retail symlink content was modified.

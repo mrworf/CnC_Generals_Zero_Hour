@@ -107,6 +107,58 @@ void test_decal_depth_bias()
     check(device.wait_idle() && device.live_resource_count()==0,"depth-bias resources leaked");
 }
 
+void test_readback_completion()
+{
+    using namespace zh::renderer;
+    BgfxOptions options; options.shader_root=ZH_BGFX_SHADER_DIR;
+    for (int generation=0; generation<2; ++generation) {
+        BgfxGpuDevice device(options);
+        for (auto format:{TextureFormat::bgra8,TextureFormat::rgba8}) {
+            for (unsigned frame=0; frame<32; ++frame) {
+                TextureDesc target;
+                target.width=64+16U*generation; target.height=48+16U*generation;
+                target.format=format; target.render_target=true;
+                auto color=device.create_texture(target,"asynchronous readback target");
+                target.format=TextureFormat::depth24_stencil8;
+                auto depth=device.create_texture(target,"asynchronous readback depth");
+                check(bool(color) && bool(depth),"readback target allocation failed");
+                check(device.readback_rgba(color).empty() &&
+                    device.last_error().find("uninitialized")!=std::string::npos,
+                    "uninitialized asynchronous readback accepted");
+                check(device.readback_rgba(depth).empty(),"depth readback accepted as color");
+                RenderPassDesc pass;
+                pass.color_targets[0]=color; pass.color_target_count=1;
+                pass.depth_target=depth;
+                pass.width=target.width; pass.height=target.height;
+                const unsigned channel=frame%3;
+                pass.clear_color={channel==0 ? 1.0f:0.0f,
+                    channel==1 ? 1.0f:0.0f,channel==2 ? 1.0f:0.0f,1.0f};
+                if (!device.begin_pass(pass,"asynchronous readback clear"))
+                    throw std::runtime_error("asynchronous clear begin: "+device.last_error());
+                if (!device.end_pass())
+                    throw std::runtime_error("asynchronous clear end: "+device.last_error());
+                {
+                    const auto pixels=device.readback_rgba(color);
+                    check(pixels.size()==std::size_t(target.width)*target.height*4U,
+                        "asynchronous readback returned incomplete storage");
+                    for (std::size_t i=0; i<pixels.size(); i+=4)
+                        check(pixels[i]==(channel==0 ? 255:0) &&
+                            pixels[i+1]==(channel==1 ? 255:0) &&
+                            pixels[i+2]==(channel==2 ? 255:0) && pixels[i+3]==255,
+                            "asynchronous readback pixels changed before caller consumption");
+                }
+                device.destroy(depth); device.destroy(color);
+                check(device.readback_rgba(color).empty(),
+                    "retired asynchronous readback target accepted");
+                std::vector<UInt8> reused(1024*1024,static_cast<UInt8>(frame));
+                check(reused.front()==static_cast<UInt8>(frame),"caller storage reuse failed");
+            }
+        }
+        check(device.wait_idle() && device.live_resource_count()==0,
+            "asynchronous readback resources leaked across generations");
+    }
+}
+
 void test_resources()
 {
     using namespace zh::renderer;
@@ -752,6 +804,7 @@ int main(int argc, char** argv)
     try {
         test_options();
         if (argc > 1 && std::string(argv[1]) == "--depth-bias") test_decal_depth_bias();
+        if (argc > 1 && std::string(argv[1]) == "--readback-completion") test_readback_completion();
         if (argc > 1 && std::string(argv[1]) == "--gpu") {
             test_resources();
             test_shader_envelope_negatives();

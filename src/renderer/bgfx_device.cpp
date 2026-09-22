@@ -1153,6 +1153,10 @@ std::vector<UInt8> BgfxGpuDevice::readback_rgba(TextureHandle source)
     std::vector<UInt8> pixels(static_cast<std::size_t>(desc.width) * desc.height * 4U);
     const auto ready = bgfx::read(destination, pixels.data());
     while (current < ready) current = bgfx::frame();
+    // bgfx::frame() returns the frame it just submitted after waiting for the
+    // preceding render frame. The read command retains pixels.data(), so the
+    // ready frame must finish before we inspect or release this vector.
+    bgfx::frame();
     bgfx::destroy(target);
     impl_->next_view = 0;
     if (desc.format == TextureFormat::bgra8)

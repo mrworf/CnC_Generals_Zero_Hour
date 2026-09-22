@@ -1873,6 +1873,12 @@ if(ZH_BUILD_TESTS)
     set_tests_properties(renderer_bgfx_resource_gpu PROPERTIES LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE)
     add_test(NAME renderer_bgfx_depth_bias_gpu COMMAND renderer_bgfx_device_tests --depth-bias)
     set_tests_properties(renderer_bgfx_depth_bias_gpu PROPERTIES LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE)
+    add_test(NAME renderer_bgfx_readback_completion_gpu COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:renderer_bgfx_device_tests> --readback-completion)
+    set_tests_properties(renderer_bgfx_readback_completion_gpu PROPERTIES
+      LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE
+      ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
   endif()
 
   if(ZH_ENABLE_GPU_TESTS)
