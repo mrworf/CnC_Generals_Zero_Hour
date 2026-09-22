@@ -17,7 +17,7 @@ delivery_goal:
   blocker_type: null
   blocker: null
   blockers: []
-  resume_point: "M30 accepted in four slice commits through 5a45a06 with host RTX/Vulkan physical-device evidence. Resume preserved M22 plan 01 at slice 06C3C, then M23 and M24 when dependency-ready; M24 resumes plan 01 at 05C. Actual original-source/retail scene acceptance remains M22-owned."
+  resume_point: "M30 accepted in four slice commits through 5a45a06 with host RTX/Vulkan physical-device evidence. M22 plan 01 audit found 06C1B, 06C2 and 06C3A still pending despite later evidenced B-series leaf slices; resume the earliest missing dependency 06C1B, then C2/C3A before 06C3C and aggregates. Preserve accepted B-series leaf commits. M23 and M24 follow M22; M24 resumes plan 01 at 05C."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
   renderer_packet_adoption:
