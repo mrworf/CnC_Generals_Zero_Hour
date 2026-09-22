@@ -16,7 +16,7 @@ from test_w3d_status_scene import has_validation_diagnostic
 
 MARKER = re.compile(
     r"original graphics bootstrap: mode=(original|device-only) "
-    r"display=(\d+) view=(\d+) terrain=(\d+) empty=(\d+) aliases=(\d+) "
+    r"display=(\d+) view=(\d+) terrain=(\d+) empty=(\d+) changed=(\d+) aliases=(\d+) "
     r"ready=(\d+) engine=(\d+) residual=(\d+) baseline=(\d+)"
 )
 
@@ -53,18 +53,18 @@ def main() -> int:
         device, output = invoke("device-only")
         device_marker = MARKER.search(device.stdout)
         if device.returncode or not device_marker or device_marker.group(1) != "device-only" or \
-                tuple(map(int, device_marker.groups()[1:6])) != (0, 0, 0, 0, 0):
+                tuple(map(int, device_marker.groups()[1:7])) != (0, 0, 0, 0, 0, 0):
             raise SystemExit(f"device-only control failed ({device.returncode}):\n{output}")
-        device_counts = tuple(map(int, device_marker.groups()[6:]))
+        device_counts = tuple(map(int, device_marker.groups()[7:]))
 
         for generation in range(2):
             original, output = invoke("original")
             original_marker = MARKER.search(original.stdout)
             if original.returncode or not original_marker or original_marker.group(1) != "original" or \
-                    tuple(map(int, original_marker.groups()[1:6])) != (1, 1, 1, 1, 0):
+                    tuple(map(int, original_marker.groups()[1:7])) != (1, 1, 1, 1, 0, 0):
                 raise SystemExit(f"original factory generation {generation} failed "
                                  f"({original.returncode}):\n{output}")
-            original_counts = tuple(map(int, original_marker.groups()[6:]))
+            original_counts = tuple(map(int, original_marker.groups()[7:]))
             if original_counts[2:] != device_counts[2:] or \
                     original_counts[1] - original_counts[0] != \
                     device_counts[1] - device_counts[0] or \

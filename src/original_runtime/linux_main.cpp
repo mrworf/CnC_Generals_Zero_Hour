@@ -172,6 +172,7 @@ int main(int argc, char **argv)
 	std::size_t graphicsResidualAllocations = 0;
 	UnsignedInt originalFactoryCounts[3]{};
 	bool originalEmptyPixels = false;
+	std::size_t originalChangedPixels = 0;
 #endif
 	try
 	{
@@ -244,10 +245,14 @@ int main(int argc, char **argv)
 		{
 			const auto pixels = originalDisplayDevice->readback_rgba(originalDisplayColor);
 			const std::size_t center = (300U * 800U + 400U) * 4U;
+			for (std::size_t i = 0; i < pixels.size(); i += 4)
+				originalChangedPixels += pixels[i] != 0 || pixels[i + 1] != 0 || pixels[i + 2] != 0;
 			originalEmptyPixels = pixels.size() == 800U * 600U * 4U &&
 				pixels[center] == 0 && pixels[center + 1] == 0 &&
 				pixels[center + 2] == 0 && pixels[center + 3] == 255;
-			if (!originalEmptyPixels || originalFactoryCounts[0] != 1 ||
+			const bool rigidProfile = std::getenv("ZH_M22_FACTORY_RIGID_ASSET") != nullptr;
+			if ((rigidProfile ? originalChangedPixels == 0 : !originalEmptyPixels) ||
+				originalFactoryCounts[0] != 1 ||
 				originalFactoryCounts[1] != 1 || originalFactoryCounts[2] != 1)
 			{
 				std::fprintf(stderr, "original graphics factory empty frame or owner identity failed\n");
@@ -378,10 +383,10 @@ int main(int argc, char **argv)
 	{
 #if defined(ZH_M22_FULL_DRAW_TEST)
 		if (graphicsProfile)
-			std::printf("original graphics bootstrap: mode=%s display=%u view=%u terrain=%u empty=%u aliases=%u ready=%zu engine=%zu residual=%zu baseline=%zu\n",
+			std::printf("original graphics bootstrap: mode=%s display=%u view=%u terrain=%u empty=%u changed=%zu aliases=%u ready=%zu engine=%zu residual=%zu baseline=%zu\n",
 				originalFactoryProfile ? "original" : "device-only",
 				originalFactoryCounts[0], originalFactoryCounts[1], originalFactoryCounts[2],
-				originalEmptyPixels ? 1U : 0U,
+				originalEmptyPixels ? 1U : 0U, originalChangedPixels,
 				(TheGameClient || TheTacticalView) ? 1U : 0U, graphicsReadyAllocations,
 				graphicsEngineAllocations, graphicsResidualAllocations, allocationBaseline);
 		else

@@ -42,6 +42,8 @@
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "WW3D2/RendObj.h"
 #include "WW3D2/HLod.h"
+#include "WW3D2/camera.h"
+#include "WWLib/RAMFILE.H"
 #undef ZH_WW3D_CPU_ONLY
 #endif
 #include "Common/Radar.h"
@@ -82,6 +84,7 @@
 #include "PosixDevice/Common/PosixLocalFileSystem.h"
 
 #include <cstdlib>
+#include <cstdio>
 #include <array>
 #include <filesystem>
 #include <stdexcept>
@@ -1223,6 +1226,48 @@ public:
 		}
 		if (m_boundedProfile && m_updates == 0)
 		{
+		#if defined(ZH_M22_FULL_DRAW_TEST)
+			if (const char *rigidPath = std::getenv("ZH_M22_FACTORY_RIGID_ASSET"))
+			{
+				if (!std::getenv("ZH_M22_ORIGINAL_FACTORY_PROFILE") ||
+					!dynamic_cast<W3DDisplay *>(TheDisplay) ||
+					!W3DDisplay::m_3DScene || !W3DDisplay::m_assetManager)
+					throw std::runtime_error("factory rigid asset requires original owners");
+				std::FILE *input = std::fopen(rigidPath, "rb");
+				if (!input)
+					throw std::runtime_error("factory rigid packet unreadable");
+				if (std::fseek(input, 0, SEEK_END) != 0)
+				{
+					std::fclose(input);
+					throw std::runtime_error("factory rigid packet unreadable");
+				}
+				const long length = std::ftell(input);
+				std::rewind(input);
+				if (length <= 0)
+				{
+					std::fclose(input);
+					throw std::runtime_error("factory rigid packet unreadable");
+				}
+				std::vector<char> bytes(static_cast<std::size_t>(length));
+				const std::size_t count = std::fread(bytes.data(), 1, bytes.size(), input);
+				std::fclose(input);
+				if (count != bytes.size())
+					throw std::runtime_error("factory rigid packet unreadable");
+				RAMFileClass packet(bytes.data(), static_cast<int>(bytes.size()));
+				if (!static_cast<WW3DAssetManager *>(W3DDisplay::m_assetManager)->Load_3D_Assets(packet))
+					throw std::runtime_error("factory rigid packet rejected");
+				RenderObjClass *mesh = W3DDisplay::m_assetManager->Create_Render_Obj("TEST.ZERO01");
+				if (!mesh) throw std::runtime_error("factory rigid object missing");
+				W3DDisplay::m_3DScene->Add_Render_Object(mesh);
+				mesh->Release_Ref();
+				auto *view = dynamic_cast<W3DView *>(TheTacticalView);
+				if (!view || !view->get3DCamera())
+					throw std::runtime_error("factory rigid camera missing");
+				view->get3DCamera()->Set_Position(Vector3(0, 0, 1));
+				view->get3DCamera()->Set_View_Plane(Vector2(-1, -0.75f), Vector2(1, 0.75f));
+				view->get3DCamera()->Set_Clip_Planes(0.995f, 2.0f);
+			}
+		#endif
 			g_benchmarkTimer = TheGlobalData->m_benchmarkTimer;
 			g_lifecycleReport.firstLogicBefore = TheGameLogic->getFrame();
 			g_lifecycleReport.firstClientBefore = TheGameClient->getFrame();
@@ -1238,6 +1283,16 @@ public:
 			g_lifecycleReport.logicAfterReset = TheGameLogic->getFrame();
 			g_lifecycleReport.clientAfterReset = TheGameClient->getFrame();
 			g_lifecycleReport.resetRan = TRUE;
+		#if defined(ZH_M22_FULL_DRAW_TEST)
+			if (std::getenv("ZH_M22_FACTORY_RIGID_ASSET"))
+			{
+				g_lifecycleReport.finalLogic = g_lifecycleReport.logicAfterReset;
+				g_lifecycleReport.finalClient = g_lifecycleReport.clientAfterReset;
+				g_lifecycleReport.complete = TRUE;
+				setQuitting(TRUE);
+				return;
+			}
+		#endif
 		}
 		if (m_updates >= 2)
 		{
