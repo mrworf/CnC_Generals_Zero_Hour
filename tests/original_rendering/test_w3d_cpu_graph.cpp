@@ -440,6 +440,7 @@ int main(int argc, char **argv)
 	assert(file.Open(FileClass::WRITE));
 	ChunkSaveClass writer(&file);
 	const bool supply_variant = argc == 3 && std::strcmp(argv[1], "--emit") == 0;
+	const bool emit_rigid = argc == 3 && std::strcmp(argv[1], "--emit-rigid") == 0;
 	const bool focused_static_scene = argc==2 &&
 		(std::strcmp(argv[1],"--source-static-scene")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
@@ -462,7 +463,9 @@ int main(int argc, char **argv)
 	const bool focused_fault_scene = argc==2 &&
 		(std::strcmp(argv[1],"--source-mixed-fault-matrix")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0);
-	if (focused_static_scene) {
+	if (emit_rigid) {
+		make_mesh(writer,false,false,false,0); // TEST.ZERO01, original untextured rigid mesh
+	} else if (focused_static_scene) {
 		// This gate owns only the three original W3D mesh families it renders.
 		make_mesh(writer,false); // TEST.TRIANGLE
 		make_mesh(writer,false,false,false,0); // TEST.ZERO01
@@ -500,7 +503,7 @@ int main(int argc, char **argv)
 	}
 	const int size = file.Size();
 	file.Close();
-	if (argc == 3 && std::strcmp(argv[1], "--emit") == 0)
+	if (argc == 3 && (std::strcmp(argv[1], "--emit") == 0 || emit_rigid))
 	{
 		FILE *output = std::fopen(argv[2], "wb");
 		assert(output != nullptr);

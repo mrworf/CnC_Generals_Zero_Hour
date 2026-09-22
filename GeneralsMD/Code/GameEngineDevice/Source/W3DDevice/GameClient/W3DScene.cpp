@@ -847,9 +847,17 @@ void RTS3DScene::renderOneObject(RenderInfoClass &rinfo, RenderObjClass *robj, I
 void RTS3DScene::Flush(RenderInfoClass & rinfo)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	if (!RenderList.Is_Empty() || !UpdateList.Is_Empty() || !LightList.Is_Empty() ||
-		!m_dynamicLightList.Is_Empty() || m_translucentObjectsCount || m_occludedObjectsCount)
-		throw OriginalW3DDeviceUnavailable("original 3D populated scene flush translation pending");
+	if (!LightList.Is_Empty() || !m_dynamicLightList.Is_Empty() ||
+		m_translucentObjectsCount || m_occludedObjectsCount)
+		throw OriginalW3DDeviceUnavailable("original 3D advanced scene flush translation pending");
+	RefRenderObjListIterator supported(&RenderList);
+	Int rigidCount = 0;
+	for (supported.First(); !supported.Is_Done(); supported.Next()) {
+		RenderObjClass *object = supported.Peek_Obj();
+		if (++rigidCount > 1 || object->Class_ID() != RenderObjClass::CLASSID_MESH ||
+			object->Get_User_Data() != NULL)
+			throw OriginalW3DDeviceUnavailable("original 3D non-rigid flush translation pending");
+	}
 	TheDX8MeshRenderer.Flush();
 	WW3D::Render_And_Clear_Static_Sort_Lists(rinfo);
 	SortingRendererClass::Flush();
@@ -1670,9 +1678,16 @@ void RTS3DScene::Render(RenderInfoClass &rinfo)
 	if (m_customPassMode != SCENE_PASS_DEFAULT ||
 		Get_Extra_Pass_Polygon_Mode() != EXTRA_PASS_DISABLE)
 		throw OriginalW3DDeviceUnavailable("original 3D custom scene pass translation pending");
-	if (!RenderList.Is_Empty() || !UpdateList.Is_Empty() || !LightList.Is_Empty() ||
-		!m_dynamicLightList.Is_Empty())
-		throw OriginalW3DDeviceUnavailable("original 3D populated scene translation pending");
+	if (!LightList.Is_Empty() || !m_dynamicLightList.Is_Empty())
+		throw OriginalW3DDeviceUnavailable("original 3D scene lights translation pending");
+	RefRenderObjListIterator supported(&RenderList);
+	Int rigidCount = 0;
+	for (supported.First(); !supported.Is_Done(); supported.Next()) {
+		RenderObjClass *object = supported.Peek_Obj();
+		if (++rigidCount > 1 || object->Class_ID() != RenderObjClass::CLASSID_MESH ||
+			object->Get_User_Data() != NULL)
+			throw OriginalW3DDeviceUnavailable("original 3D non-rigid scene translation pending");
+	}
 	if (TheW3DShadowManager ||
 		(TheParticleSystemManager && TheParticleSystemManager->getParticleCount() != 0))
 		throw OriginalW3DDeviceUnavailable("original 3D shadow or particle scene translation pending");
@@ -1687,13 +1702,31 @@ void RTS3DScene::Render(RenderInfoClass &rinfo)
 }
 void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 {
-	if (!RenderList.Is_Empty() || !UpdateList.Is_Empty() || !LightList.Is_Empty() ||
-		!m_dynamicLightList.Is_Empty())
-		throw OriginalW3DDeviceUnavailable("original 3D populated custom traversal pending");
+	if (!LightList.Is_Empty() || !m_dynamicLightList.Is_Empty())
+		throw OriginalW3DDeviceUnavailable("original 3D light traversal pending");
 	m_translucentObjectsCount = 0;
 	m_occludedObjectsCount = 0;
 	if (!Visibility_Checked) Visibility_Check(&rinfo.Camera);
 	Visibility_Checked = false;
+	RefRenderObjListIterator updates(&UpdateList);
+	for (updates.First(); !updates.Is_Done(); updates.Next()) {
+		RenderObjClass *object = updates.Peek_Obj();
+		if (object->Class_ID() != RenderObjClass::CLASSID_MESH ||
+			object->Get_User_Data() != NULL)
+			throw OriginalW3DDeviceUnavailable("original 3D non-rigid update pending");
+		if (!ShaderClass::Is_Backface_Culling_Inverted()) object->On_Frame_Update();
+	}
+	RefRenderObjListIterator objects(&RenderList);
+	Int rigidCount = 0;
+	const Int localPlayerIndex = ThePlayerList ?
+		ThePlayerList->getLocalPlayer()->getPlayerIndex() : 0;
+	for (objects.First(); !objects.Is_Done(); objects.Next()) {
+		RenderObjClass *object = objects.Peek_Obj();
+		if (++rigidCount > 1 || object->Class_ID() != RenderObjClass::CLASSID_MESH ||
+			object->Get_User_Data() != NULL)
+			throw OriginalW3DDeviceUnavailable("original 3D non-rigid object traversal pending");
+		if (object->Is_Really_Visible()) renderOneObject(rinfo, object, localPlayerIndex);
+	}
 }
 void RTS3DScene::flushOccludedObjectsIntoStencil(RenderInfoClass &)
 {

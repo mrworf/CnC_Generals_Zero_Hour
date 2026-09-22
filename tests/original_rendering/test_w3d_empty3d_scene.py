@@ -3,6 +3,7 @@
 
 import argparse
 import os
+import subprocess
 from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
@@ -17,6 +18,7 @@ def main() -> int:
     parser.add_argument("--executable", type=Path, required=True)
     parser.add_argument("--source-root", type=Path, required=True)
     parser.add_argument("--physical", action="store_true")
+    parser.add_argument("--rigid-producer", type=Path)
     args = parser.parse_args()
     fixture = load_m20_fixture(args.source_root.resolve())
     with TemporaryDirectory(prefix="zh-m22-empty3d-scene-") as scratch:
@@ -24,12 +26,20 @@ def main() -> int:
         source = base / "readonly-input"
         prepare_owned_source(source, fixture)
         fixture.make_read_only(source)
+        if args.rigid_producer:
+            packet = base / "rigid.w3d"
+            subprocess.run([str(args.rigid_producer.resolve()), "--emit-rigid", str(packet)],
+                           check=True)
+            os.environ["ZH_M22_RIGID_3D_ASSET"] = str(packet)
         os.environ["ZH_M22_EMPTY_3D_PROFILE"] = "1"
         if args.physical:
             os.environ["ZH_M22_EMPTY_3D_PHYSICAL"] = "1"
         result = run(args.executable.resolve(), base, source, "mission")
-        marker = ("original empty 3D scene: physical generations=4 resources=0"
-                  if args.physical else "original empty 3D scene: source draws=0 resources=0")
+        family = "rigid" if args.rigid_producer else "empty"
+        marker = (f"original {family} 3D scene: physical generations=4 resources=0"
+                  if args.physical else f"original {family} 3D scene: " +
+                  ("source draw=1 resources=0" if args.rigid_producer else
+                   "source draws=0 resources=0"))
         combined_output = result.stdout + result.stderr
         if result.returncode or marker not in result.stdout or has_validation_diagnostic(combined_output):
             raise SystemExit(f"original empty 3D scene failed ({result.returncode}):\n"

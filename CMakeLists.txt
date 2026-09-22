@@ -2080,6 +2080,21 @@ if(ZH_BUILD_TESTS)
   set_tests_properties(original_w3d_empty3d_scene_bgfx PROPERTIES
     LABELS "gpu;original-rendering;renderer-contract;source-identity"
     TIMEOUT 60 RUN_SERIAL TRUE ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+  add_test(NAME original_w3d_rigid3d_scene COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_empty3d_scene.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>"
+    --rigid-producer "$<TARGET_FILE:original_w3d_cpu_graph_tests>")
+  set_tests_properties(original_w3d_rigid3d_scene PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity")
+  add_test(NAME original_w3d_rigid3d_scene_bgfx COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_empty3d_scene.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>" --physical
+    --rigid-producer "$<TARGET_FILE:original_w3d_cpu_graph_tests>")
+  set_tests_properties(original_w3d_rigid3d_scene_bgfx PROPERTIES
+    LABELS "gpu;original-rendering;renderer-contract;source-identity"
+    TIMEOUT 60 RUN_SERIAL TRUE ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
   add_test(NAME original_w3d_full_draw_scenario COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_full_draw_scenario.py"
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
