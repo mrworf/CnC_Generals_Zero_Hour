@@ -32,14 +32,147 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #if defined(ZH_WW3D_CPU_ONLY)
-// The CPU asset/scene graph retains its original W3DDisplay ownership slots.
-// Physical presentation is deliberately unavailable before the device edge.
+// Preserve the original display's owner graph without claiming its native
+// window, terrain or draw paths on the public-device CPU branch.
 #include "PreRTS.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DAssetManager.h"
+#include "W3DDevice/GameClient/W3DScene.h"
+#include "WW3D2/ww3d.h"
+#include "WW3D2/rendobj.h"
+#include "WW3D2/light.h"
+#include "original_gpu_edge.h"
+#include "OriginalW3DDeviceUnavailable.h"
+#include <stdexcept>
+
 RTS3DScene *W3DDisplay::m_3DScene = NULL;
 RTS2DScene *W3DDisplay::m_2DScene = NULL;
 RTS3DInterfaceScene *W3DDisplay::m_3DInterfaceScene = NULL;
 W3DAssetManager *W3DDisplay::m_assetManager = NULL;
+
+W3DDisplay::W3DDisplay()
+{
+	if (m_3DScene || m_2DScene || m_3DInterfaceScene || m_assetManager)
+		throw OriginalW3DDeviceUnavailable("original display owners already published");
+	m_initialized = false;
+	m_averageFPS = 0;
+	m_2DRender = NULL;
+	m_isClippedEnabled = FALSE;
+	m_clipRegion.lo.x = m_clipRegion.lo.y = 0;
+	m_clipRegion.hi.x = m_clipRegion.hi.y = 0;
+	m_nativeDebugDisplay = NULL;
+	m_benchmarkDisplayString = NULL;
+	for (Int i = 0; i < LightEnvironmentClass::MAX_LIGHTS; ++i) m_myLight[i] = NULL;
+	for (Int i = 0; i < DisplayStringCount; ++i) m_displayStrings[i] = NULL;
+}
+
+W3DDisplay::~W3DDisplay()
+{
+	if (!m_initialized) return;
+	Display::deleteViews();
+	REF_PTR_RELEASE(m_3DScene);
+	REF_PTR_RELEASE(m_2DScene);
+	REF_PTR_RELEASE(m_3DInterfaceScene);
+	for (Int i = 0; i < LightEnvironmentClass::MAX_LIGHTS; ++i)
+		REF_PTR_RELEASE(m_myLight[i]);
+	m_assetManager->Free_Assets();
+	delete m_assetManager;
+	m_assetManager = NULL;
+	WW3D::Shutdown();
+	m_initialized = false;
+}
+
+void W3DDisplay::init()
+{
+	if (m_initialized) return;
+	if (!zh::original_runtime::OriginalGpuEdge::active())
+		throw OriginalW3DDeviceUnavailable("original display bootstrap requires device edge");
+	if (m_3DScene || m_2DScene || m_3DInterfaceScene || m_assetManager)
+		throw OriginalW3DDeviceUnavailable("original display owners already published");
+	RTS3DInterfaceScene *interface_scene = NULL;
+	RTS2DScene *scene_2d = NULL;
+	RTS3DScene *scene_3d = NULL;
+	W3DAssetManager *assets = NULL;
+	bool ww3d_started = false;
+	try {
+		interface_scene = NEW_REF(RTS3DInterfaceScene, ());
+		interface_scene->Set_Ambient_Light(Vector3(1, 1, 1));
+		scene_2d = NEW_REF(RTS2DScene, ());
+		scene_2d->Set_Ambient_Light(Vector3(1, 1, 1));
+		scene_3d = NEW_REF(RTS3DScene, ());
+		assets = NEW W3DAssetManager;
+		assets->Set_WW3D_Load_On_Demand(true);
+		if (WW3D::Init(NULL, NULL, false) != WW3D_ERROR_OK)
+			throw OriginalW3DDeviceUnavailable("original display WW3D bootstrap failed");
+		ww3d_started = true;
+		m_3DInterfaceScene = interface_scene;
+		m_2DScene = scene_2d;
+		m_3DScene = scene_3d;
+		m_assetManager = assets;
+		m_initialized = true;
+	} catch (...) {
+		REF_PTR_RELEASE(scene_3d);
+		REF_PTR_RELEASE(scene_2d);
+		REF_PTR_RELEASE(interface_scene);
+		delete assets;
+		if (ww3d_started) WW3D::Shutdown();
+		throw;
+	}
+}
+
+void W3DDisplay::reset()
+{
+	if (!m_initialized)
+		throw OriginalW3DDeviceUnavailable("original display reset before bootstrap");
+	Display::reset();
+	SceneIterator *iterator = m_3DScene->Create_Iterator();
+	for (iterator->First(); !iterator->Is_Done(); iterator->Next()) {
+		RenderObjClass *object = iterator->Current_Item();
+		object->Add_Ref();
+		m_3DScene->Remove_Render_Object(object);
+		object->Release_Ref();
+	}
+	m_3DScene->Destroy_Iterator(iterator);
+	m_isClippedEnabled = FALSE;
+	m_assetManager->Release_Unused_Assets();
+}
+
+#define ZH_DISPLAY_PENDING() throw OriginalW3DDeviceUnavailable("original display physical method pending")
+void W3DDisplay::setWidth(UnsignedInt) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::setHeight(UnsignedInt) { ZH_DISPLAY_PENDING(); }
+Bool W3DDisplay::setDisplayMode(UnsignedInt, UnsignedInt, UnsignedInt, Bool) { ZH_DISPLAY_PENDING(); }
+Int W3DDisplay::getDisplayModeCount() { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::getDisplayModeDescription(Int, Int*, Int*, Int*) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::setGamma(Real, Real, Real, Bool) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::doSmartAssetPurgeAndPreload(const char*) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::setClipRegion(IRegion2D*) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::draw() { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::createLightPulse(const Coord3D*, const RGBColor*, Real, Real,
+	UnsignedInt, UnsignedInt) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::setTimeOfDay(TimeOfDay) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::drawLine(Int, Int, Int, Int, Real, UnsignedInt) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::drawLine(Int, Int, Int, Int, Real, UnsignedInt, UnsignedInt) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::drawOpenRect(Int, Int, Int, Int, Real, UnsignedInt) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::drawFillRect(Int, Int, Int, Int, UnsignedInt) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::drawRectClock(Int, Int, Int, Int, Int, UnsignedInt) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::drawRemainingRectClock(Int, Int, Int, Int, Int, UnsignedInt) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::drawImage(const Image*, Int, Int, Int, Int, Color, DrawImageMode) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::drawVideoBuffer(VideoBuffer*, Int, Int, Int, Int) { ZH_DISPLAY_PENDING(); }
+VideoBuffer* W3DDisplay::createVideoBuffer() { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::takeScreenShot() { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::toggleMovieCapture() { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::toggleLetterBox() { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::enableLetterBox(Bool) { ZH_DISPLAY_PENDING(); }
+Bool W3DDisplay::isLetterBoxFading() { ZH_DISPLAY_PENDING(); }
+Bool W3DDisplay::isLetterBoxed() { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::clearShroud() { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::setShroudLevel(Int, Int, CellShroudStatus) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::setBorderShroudLevel(UnsignedByte) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::preloadModelAssets(AsciiString) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::preloadTextureAssets(AsciiString) { ZH_DISPLAY_PENDING(); }
+Real W3DDisplay::getAverageFPS() { ZH_DISPLAY_PENDING(); }
+Int W3DDisplay::getLastFrameDrawCalls() { ZH_DISPLAY_PENDING(); }
+#undef ZH_DISPLAY_PENDING
 #else
 static void drawFramerateBar(void);
 
