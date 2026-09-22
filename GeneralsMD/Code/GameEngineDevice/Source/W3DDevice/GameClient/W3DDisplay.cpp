@@ -38,6 +38,13 @@
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/W3DScene.h"
+#include "W3DDevice/GameClient/W3DView.h"
+#include "W3DDevice/GameClient/W3DTerrainVisual.h"
+#include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/W3DTerrainTracks.h"
+#include "W3DDevice/GameClient/W3DShadow.h"
+#include "W3DDevice/GameClient/W3DSmudge.h"
+#include "Common/GlobalData.h"
 #include "WW3D2/ww3d.h"
 #include "WW3D2/rendobj.h"
 #include "WW3D2/light.h"
@@ -160,7 +167,43 @@ void W3DDisplay::getDisplayModeDescription(Int, Int*, Int*, Int*) { ZH_DISPLAY_P
 void W3DDisplay::setGamma(Real, Real, Real, Bool) { ZH_DISPLAY_PENDING(); }
 void W3DDisplay::doSmartAssetPurgeAndPreload(const char*) { ZH_DISPLAY_PENDING(); }
 void W3DDisplay::setClipRegion(IRegion2D*) { ZH_DISPLAY_PENDING(); }
-void W3DDisplay::draw() { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::draw()
+{
+	auto *view = dynamic_cast<W3DView *>(getFirstView());
+	if (!m_initialized || TheDisplay != this ||
+		!zh::original_runtime::OriginalGpuEdge::active() || WW3D::Is_Rendering() ||
+		!m_3DScene || !m_2DScene || !m_3DInterfaceScene || !m_assetManager ||
+		!view || getNextView(view) || TheTacticalView != view ||
+		!view->get3DCamera() ||
+		!dynamic_cast<W3DTerrainVisual *>(TheTerrainVisual) ||
+		!TheTerrainRenderObject || !TheHeightMap || TheHeightMap->getMap() ||
+		!TheTerrainTracksRenderObjClassSystem || !TheW3DShadowManager ||
+		!TheWaterRenderObj || !TheSmudgeManager ||
+		TheGlobalData->m_maxTerrainTracks != 0 || TheGlobalData->m_useShadowVolumes ||
+		TheGlobalData->m_useShadowDecals || TheGlobalData->m_useWaterPlane ||
+		TheGlobalData->m_useCloudPlane || m_isClippedEnabled || m_letterBoxEnabled ||
+		m_videoBuffer || m_videoStream || m_debugDisplayCallback)
+		throw OriginalW3DDeviceUnavailable("original display advanced frame pending");
+	const auto extent = zh::original_runtime::OriginalGpuEdge::required().bound_frame_extent();
+	if (!extent.first || !extent.second || extent.first != getWidth() ||
+		extent.second != getHeight())
+		throw OriginalW3DDeviceUnavailable("original display frame target extent mismatch");
+	updateViews();
+	if (WW3D::Begin_Render(true, true, Vector3(0, 0, 0), 1) != WW3D_ERROR_OK)
+		throw OriginalW3DDeviceUnavailable("original display frame did not begin");
+	try {
+		DX8Wrapper::Set_Transform(D3DTS_WORLD, Matrix3D(true));
+		Display::drawViews();
+		if (WW3D::End_Render(false) != WW3D_ERROR_OK)
+			throw OriginalW3DDeviceUnavailable("original display frame did not end");
+	} catch (...) {
+		if (WW3D::Is_Rendering()) {
+			try { (void)WW3D::End_Render(false); }
+			catch (...) { }
+		}
+		throw;
+	}
+}
 void W3DDisplay::createLightPulse(const Coord3D*, const RGBColor*, Real, Real,
 	UnsignedInt, UnsignedInt) { ZH_DISPLAY_PENDING(); }
 void W3DDisplay::setTimeOfDay(TimeOfDay) { ZH_DISPLAY_PENDING(); }

@@ -662,7 +662,115 @@ extern "C" void zh_probe_view_scene()
                 else
                     require(composed_recorder->snapshot().substr(composed_marker).find("draw pipeline=") ==
                         std::string::npos, "original composed empty terrain visual emitted a draw");
+                auto display_frame = [&]() {
+                    edge.bind_frame_targets(color, depth, width, target.height);
+                    composed_display.draw();
+                    require(!WW3D::Is_Rendering() &&
+                        (!composed_recorder || !composed_recorder->pass_active()),
+                        "original display draw retained a source frame");
+                    return readback(color);
+                };
+                bool mismatched_target_rejected = false;
+                edge.bind_frame_targets(color, depth, width, target.height);
+                composed_display.setWidth(width + 1);
+                try { composed_display.draw(); }
+                catch (const std::runtime_error&) { mismatched_target_rejected = true; }
+                composed_display.setWidth(width);
+                require(mismatched_target_rejected && !WW3D::Is_Rendering(),
+                    "original display draw accepted mismatched target extent");
+                const auto direct_absent_marker = composed_recorder ? composed_recorder->snapshot().size() : 0;
+                const auto direct_absent = display_frame();
+                if (physical) {
+                    require(direct_absent.size() == std::size_t(width) * target.height * 4,
+                        "original display empty readback extent drift");
+                    for (std::size_t i = 0; i < direct_absent.size(); i += 4)
+                        require(!direct_absent[i] && !direct_absent[i+1] && !direct_absent[i+2],
+                            "original display empty frame did not clear black");
+                } else
+                    require(composed_recorder->snapshot().substr(direct_absent_marker).find("draw pipeline=") ==
+                        std::string::npos, "original display empty draw emitted geometry");
+                RAMFileClass direct_packet(bytes.data(), static_cast<int>(bytes.size()));
+                auto* direct_assets = static_cast<WW3DAssetManager*>(W3DDisplay::m_assetManager);
+                require(direct_assets->Load_3D_Assets(direct_packet),
+                    "original display rigid packet rejected");
+                auto* direct_mesh = W3DDisplay::m_assetManager->Create_Render_Obj("TEST.ZERO01");
+                require(direct_mesh && direct_mesh->Num_Refs() == 1,
+                    "original display rigid mesh absent");
+                W3DDisplay::m_3DScene->Add_Render_Object(direct_mesh);
+                require(direct_mesh->Num_Refs() == 2,
+                    "original display rigid scene ref absent");
+                const auto direct_present_marker = composed_recorder ? composed_recorder->snapshot().size() : 0;
+                const auto direct_present = display_frame();
+                if (physical) {
+                    require(direct_present.size() == direct_absent.size() &&
+                        direct_present.size() == std::size_t(width) * target.height * 4,
+                        "original display physical readback extent drift");
+                    unsigned changed = 0;
+                    for (std::size_t i = 0; i < direct_present.size(); i += 4)
+                        changed += direct_present[i] != direct_absent[i] ||
+                            direct_present[i+1] != direct_absent[i+1] ||
+                            direct_present[i+2] != direct_absent[i+2];
+                    require(changed > 0,
+                        "original display rigid draw left no physical pixels");
+                } else {
+                    require(composed_recorder->snapshot().substr(direct_present_marker).find("draw pipeline=") !=
+                        std::string::npos, "original display rigid draw omitted source geometry");
+                    composed_recorder->fail_next_draw();
+                    bool failed_draw_rejected = false;
+                    try { (void)display_frame(); }
+                    catch (const std::runtime_error&) { failed_draw_rejected = true; }
+                    require(failed_draw_rejected && !WW3D::Is_Rendering() &&
+                        !composed_recorder->pass_active() && direct_mesh->Num_Refs() == 2,
+                        "original display failed draw retained frame or owner");
+                    (void)display_frame();
+                }
+                W3DDisplay::m_3DScene->Remove_Render_Object(direct_mesh);
+                require(direct_mesh->Num_Refs() == 1,
+                    "original display rigid detach retained scene ref");
+                direct_mesh->Release_Ref();
+                const auto direct_detached = display_frame();
+                if (physical)
+                    require(direct_detached == direct_absent,
+                        "original display rigid detach retained physical pixels");
+                if (composed_recorder) {
+                    TheWritableGlobalData->m_useWaterPlane = TRUE;
+                    bool unsupported_mode_rejected = false;
+                    try { (void)display_frame(); }
+                    catch (const std::runtime_error&) { unsupported_mode_rejected = true; }
+                    TheWritableGlobalData->m_useWaterPlane = FALSE;
+                    require(unsupported_mode_rejected && !WW3D::Is_Rendering() &&
+                        !composed_recorder->pass_active(),
+                        "original display accepted unsupported water mode");
+                    edge.bind_frame_targets(color, depth, width, target.height);
+                    require(WW3D::Begin_Render(true, true, Vector3(0, 0, 0), 1) ==
+                        WW3D_ERROR_OK, "original display active-frame control did not begin");
+                    bool active_frame_rejected = false;
+                    try { composed_display.draw(); }
+                    catch (const std::runtime_error&) { active_frame_rejected = true; }
+                    require(active_frame_rejected && WW3D::Is_Rendering(),
+                        "original display accepted an active WW3D frame");
+                    DX8Wrapper::Set_Transform(D3DTS_WORLD, Matrix3D(true));
+                    composed_display.drawViews();
+                    require(WW3D::End_Render(false) == WW3D_ERROR_OK,
+                        "original display active-frame control did not end");
+                    device.destroy(depth);
+                    bool stale_depth_rejected = false;
+                    try { composed_display.draw(); }
+                    catch (const std::runtime_error&) { stale_depth_rejected = true; }
+                    require(stale_depth_rejected && !WW3D::Is_Rendering() &&
+                        !composed_recorder->pass_active(),
+                        "original display accepted stale depth target");
+                    depth = device.create_texture(target, "rebound original display depth");
+                    require(static_cast<bool>(depth),
+                        "original display depth rebind failed");
+                    (void)display_frame();
+                }
                 delete composed;
+                bool missing_terrain_rejected = false;
+                try { (void)display_frame(); }
+                catch (const std::runtime_error&) { missing_terrain_rejected = true; }
+                require(missing_terrain_rejected && !WW3D::Is_Rendering(),
+                    "original display accepted missing terrain owner");
                 require(!TheTerrainVisual && !TheTerrainRenderObject && !TheHeightMap &&
                     !TheTerrainTracksRenderObjClassSystem && !TheW3DShadowManager &&
                     !TheWaterRenderObj && !TheSmudgeManager,
