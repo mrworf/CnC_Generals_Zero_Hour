@@ -1688,7 +1688,9 @@ void RTS3DScene::Render(RenderInfoClass &rinfo)
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid scene translation pending");
 	}
-	if (TheW3DShadowManager ||
+	if ((TheW3DShadowManager &&
+		(TheGlobalData->m_useShadowVolumes || TheGlobalData->m_useShadowDecals ||
+		TheW3DShadowManager->isShadowScene())) ||
 		(TheParticleSystemManager && TheParticleSystemManager->getParticleCount() != 0))
 		throw OriginalW3DDeviceUnavailable("original 3D shadow or particle scene translation pending");
 	DX8Wrapper::Set_Fog(FogEnabled, FogColor, FogStart, FogEnd);

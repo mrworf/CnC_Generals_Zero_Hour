@@ -35,6 +35,8 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "PreRTS.h"
 #include "OriginalW3DDeviceUnavailable.h"
+#include "original_gpu_edge.h"
+#include "W3DDevice/GameClient/W3DDisplay.h"
 #endif
 #include "always.h"
 #include "GameClient/View.h"
@@ -65,6 +67,18 @@
 
 // Global Variables and Functions /////////////////////////////////////////////
 W3DShadowManager *TheW3DShadowManager=NULL;
+#if defined(ZH_WW3D_CPU_ONLY)
+static W3DShadowManager *s_emptyShadowOwner = NULL;
+
+static void requireEmptyShadowOwner(W3DShadowManager *owner)
+{
+	if (s_emptyShadowOwner != owner || TheW3DShadowManager != owner ||
+		!zh::original_runtime::OriginalGpuEdge::active() ||
+		!W3DDisplay::m_3DScene || TheGlobalData->m_useShadowVolumes ||
+		TheGlobalData->m_useShadowDecals)
+		throw OriginalW3DDeviceUnavailable("original disabled-shadow owner unavailable");
+}
+#endif
 const FrustumClass *shadowCameraFrustum;
 
 Vector3 LightPosWorld[ MAX_SHADOW_LIGHTS ] =
@@ -133,6 +147,10 @@ W3DShadowManager::W3DShadowManager( void )
 
 W3DShadowManager::~W3DShadowManager( void )
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (s_emptyShadowOwner == this) s_emptyShadowOwner = NULL;
+	if (TheW3DShadowManager == this) TheW3DShadowManager = NULL;
+#endif
 #if !defined(ZH_WW3D_CPU_ONLY)
 	delete TheW3DVolumetricShadowManager;
 	TheW3DVolumetricShadowManager = NULL;
@@ -146,7 +164,18 @@ active for full duration of game*/
 Bool W3DShadowManager::init( void )
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	throw OriginalW3DDeviceUnavailable("original shadow derived-manager GPU resource init pending");
+	if (!zh::original_runtime::OriginalGpuEdge::active() ||
+		!W3DDisplay::m_3DScene || TheGlobalData->m_useShadowVolumes ||
+		TheGlobalData->m_useShadowDecals ||
+		(TheW3DShadowManager && TheW3DShadowManager != this) ||
+		(s_emptyShadowOwner && s_emptyShadowOwner != this)) {
+		if (TheW3DShadowManager == this && s_emptyShadowOwner != this)
+			TheW3DShadowManager = NULL;
+		throw OriginalW3DDeviceUnavailable("original enabled-shadow or owner bootstrap pending");
+	}
+	TheW3DShadowManager = this;
+	s_emptyShadowOwner = this;
+	return TRUE;
 #else
 	Bool result=TRUE;
 
@@ -170,7 +199,9 @@ they may not exist on the next map*/
 void W3DShadowManager::Reset( void )
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	throw OriginalW3DDeviceUnavailable("original shadow derived-manager reset pending");
+	requireEmptyShadowOwner(this);
+	m_isShadowScene = FALSE;
+	m_stencilShadowMask = 0;
 #else
 	if (TheW3DVolumetricShadowManager)
 		TheW3DVolumetricShadowManager->reset();
@@ -182,7 +213,8 @@ void W3DShadowManager::Reset( void )
 Bool W3DShadowManager::ReAcquireResources()
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	throw OriginalW3DDeviceUnavailable("original shadow GPU resource acquire pending");
+	requireEmptyShadowOwner(this);
+	return TRUE;
 #else
 	Bool result = TRUE;
 
@@ -198,7 +230,7 @@ Bool W3DShadowManager::ReAcquireResources()
 void W3DShadowManager::ReleaseResources(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	throw OriginalW3DDeviceUnavailable("original shadow GPU resource release pending");
+	requireEmptyShadowOwner(this);
 #else
 	if (TheW3DVolumetricShadowManager)
 		TheW3DVolumetricShadowManager->ReleaseResources();
@@ -250,7 +282,7 @@ void W3DShadowManager::removeShadow(Shadow *shadow)
 void W3DShadowManager::removeAllShadows(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	throw OriginalW3DDeviceUnavailable("original shadow derived-manager remove-all pending");
+	requireEmptyShadowOwner(this);
 #else
 	if (TheW3DVolumetricShadowManager)
 		TheW3DVolumetricShadowManager->removeAllShadows();
@@ -263,7 +295,7 @@ void W3DShadowManager::removeAllShadows(void)
 void W3DShadowManager::invalidateCachedLightPositions(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	throw OriginalW3DDeviceUnavailable("original shadow derived-manager light-cache invalidation pending");
+	requireEmptyShadowOwner(this);
 #else
 	if (TheW3DVolumetricShadowManager)
 		TheW3DVolumetricShadowManager->invalidateCachedLightPositions();

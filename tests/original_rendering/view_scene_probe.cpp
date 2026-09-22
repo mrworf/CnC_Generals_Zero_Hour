@@ -1,11 +1,13 @@
 #include "PreRTS.h"
 #include "GameLogic/GameLogic.h"
+#include "Common/GlobalData.h"
 #include "GameClient/CommandXlat.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DView.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/W3DShadow.h"
 #include "WW3D2/assetmgr.h"
 #include "WW3D2/camera.h"
 #include "WW3D2/dx8wrapper.h"
@@ -66,6 +68,12 @@ extern "C" void zh_probe_view_scene()
             catch (const std::runtime_error&) { no_terrain_edge = true; }
             require(no_terrain_edge && !TheTerrainRenderObject && !TheHeightMap,
                 "original empty terrain published without device edge");
+            W3DShadowManager no_shadow_edge;
+            bool shadow_edge_rejected = false;
+            try { no_shadow_edge.init(); }
+            catch (const std::runtime_error&) { shadow_edge_rejected = true; }
+            require(shadow_edge_rejected && !TheW3DShadowManager,
+                "original disabled-shadow owner initialized without device edge");
         }
         {
             zh::original_runtime::OriginalGpuEdge edge(device);
@@ -78,6 +86,58 @@ extern "C" void zh_probe_view_scene()
             {
                 W3DDisplay display;
                 display.init();
+                const Bool saved_volumes = TheGlobalData->m_useShadowVolumes;
+                const Bool saved_decals = TheGlobalData->m_useShadowDecals;
+                TheWritableGlobalData->m_useShadowVolumes = FALSE;
+                TheWritableGlobalData->m_useShadowDecals = FALSE;
+                TheWritableGlobalData->m_useShadowVolumes = TRUE;
+                W3DShadowManager enabled_only;
+                bool volume_init_rejected = false;
+                try { enabled_only.init(); }
+                catch (const std::runtime_error&) { volume_init_rejected = true; }
+                require(volume_init_rejected && !TheW3DShadowManager,
+                    "original volume-shadow owner initialized without derived manager");
+                TheWritableGlobalData->m_useShadowVolumes = FALSE;
+                TheWritableGlobalData->m_useShadowDecals = TRUE;
+                bool decal_init_rejected = false;
+                try { enabled_only.init(); }
+                catch (const std::runtime_error&) { decal_init_rejected = true; }
+                require(decal_init_rejected && !TheW3DShadowManager,
+                    "original decal-shadow owner initialized without derived manager");
+                TheWritableGlobalData->m_useShadowDecals = FALSE;
+                W3DShadowManager shadows;
+                require(shadows.init() && TheW3DShadowManager == &shadows &&
+                    shadows.init(), "original disabled-shadow manager owner missing");
+                W3DShadowManager duplicate_shadows;
+                bool duplicate_shadow_rejected = false;
+                try { duplicate_shadows.init(); }
+                catch (const std::runtime_error&) { duplicate_shadow_rejected = true; }
+                require(duplicate_shadow_rejected && TheW3DShadowManager == &shadows,
+                    "original disabled-shadow duplicate displaced owner");
+                shadows.queueShadows(TRUE);
+                shadows.Reset();
+                require(!shadows.isShadowScene() && shadows.ReAcquireResources(),
+                    "original disabled-shadow reset/acquire retained render queue");
+                shadows.ReleaseResources();
+                TheWritableGlobalData->m_useShadowVolumes = TRUE;
+                W3DShadowManager enabled_shadows;
+                bool enabled_shadow_rejected = false;
+                try { enabled_shadows.init(); }
+                catch (const std::runtime_error&) { enabled_shadow_rejected = true; }
+                require(enabled_shadow_rejected && TheW3DShadowManager == &shadows,
+                    "original enabled-shadow path replaced disabled owner");
+                bool enabled_reset_rejected = false;
+                try { shadows.Reset(); }
+                catch (const std::runtime_error&) { enabled_reset_rejected = true; }
+                require(enabled_reset_rejected, "original enabled-shadow reset silently succeeded");
+                TheWritableGlobalData->m_useShadowVolumes = FALSE;
+                TheWritableGlobalData->m_useShadowDecals = TRUE;
+                bool decal_shadow_rejected = false;
+                try { enabled_shadows.init(); }
+                catch (const std::runtime_error&) { decal_shadow_rejected = true; }
+                require(decal_shadow_rejected && TheW3DShadowManager == &shadows,
+                    "original decal-shadow path replaced disabled owner");
+                TheWritableGlobalData->m_useShadowDecals = FALSE;
                 auto* terrain = NEW_REF(HeightMapRenderObjClass, ());
                 require(TheTerrainRenderObject == terrain && TheHeightMap == terrain &&
                     terrain->getMap() == NULL && !terrain->doesNeedFullUpdate() &&
@@ -132,6 +192,16 @@ extern "C" void zh_probe_view_scene()
                         "original view frame did not end");
                     return readback(color);
                 };
+                if (recorder) {
+                    shadows.queueShadows(TRUE);
+                    bool queued_shadow_rejected = false;
+                    try { (void)frame(); }
+                    catch (const std::runtime_error&) { queued_shadow_rejected = true; }
+                    require(queued_shadow_rejected && !WW3D::Is_Rendering() &&
+                        !recorder->pass_active(),
+                        "original queued shadow escaped no-shadow scene guard");
+                    shadows.Reset();
+                }
                 const auto absent_marker = recorder ? recorder->snapshot().size() : 0;
                 const auto absent = frame();
                 if (recorder)
@@ -195,14 +265,30 @@ extern "C" void zh_probe_view_scene()
                 terrain->Release_Ref();
                 require(!TheTerrainRenderObject && !TheHeightMap,
                     "original empty terrain teardown retained singleton");
+                shadows.Reset();
+                TheWritableGlobalData->m_useShadowVolumes = saved_volumes;
+                TheWritableGlobalData->m_useShadowDecals = saved_decals;
             }
-            require(!W3DDisplay::m_3DScene && !WW3D::Is_Initted(),
+            require(!W3DDisplay::m_3DScene && !WW3D::Is_Initted() &&
+                !TheW3DShadowManager,
                 "original W3DView display teardown retained source owners");
             bool stale_terrain_owner = false;
             try { auto* terrain = NEW_REF(HeightMapRenderObjClass, ()); terrain->Release_Ref(); }
             catch (const std::runtime_error&) { stale_terrain_owner = true; }
             require(stale_terrain_owner && !TheTerrainRenderObject && !TheHeightMap,
                 "original empty terrain accepted torn-down display owners");
+            const Bool stale_volumes = TheGlobalData->m_useShadowVolumes;
+            const Bool stale_decals = TheGlobalData->m_useShadowDecals;
+            TheWritableGlobalData->m_useShadowVolumes = FALSE;
+            TheWritableGlobalData->m_useShadowDecals = FALSE;
+            W3DShadowManager stale_shadows;
+            bool stale_shadow_owner = false;
+            try { stale_shadows.init(); }
+            catch (const std::runtime_error&) { stale_shadow_owner = true; }
+            require(stale_shadow_owner && !TheW3DShadowManager,
+                "original disabled-shadow owner accepted torn-down display");
+            TheWritableGlobalData->m_useShadowVolumes = stale_volumes;
+            TheWritableGlobalData->m_useShadowDecals = stale_decals;
         }
         device.destroy(depth);
         device.destroy(color);
