@@ -1406,6 +1406,9 @@ int main(int argc, char **argv)
 		_TheFileFactory=&factory;
 		assert(!WW3D::Is_Initted());
 		assert(WW3D::Init(nullptr,nullptr,true)==WW3D_ERROR_OK);
+		VertexMaterialClass* lite_preset=VertexMaterialClass::Get_Preset(VertexMaterialClass::PRELIT_DIFFUSE);
+		assert(lite_preset && lite_preset->Num_Refs()==2 && !lite_preset->Get_Lighting());
+		lite_preset->Release_Ref();
 		assert(!WW3D::Is_Initted()); // authored lite semantics
 		assert(WW3D::Test_Default_Static_Sort_List()!=nullptr);
 		assert(WW3D::Test_Current_Static_Sort_List()==WW3D::Test_Default_Static_Sort_List());
@@ -1423,6 +1426,9 @@ int main(int argc, char **argv)
 			zh::original_runtime::OriginalGpuEdge edge(recorder);
 			assert(WW3D::Init(reinterpret_cast<void*>(1),nullptr,false)==WW3D_ERROR_INITIALIZATION_FAILED);
 			assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
+			VertexMaterialClass* full_preset=VertexMaterialClass::Get_Preset(VertexMaterialClass::PRELIT_DIFFUSE);
+			assert(full_preset && full_preset->Num_Refs()==2 && !full_preset->Get_Lighting());
+			full_preset->Release_Ref();
 			assert(WW3D::Is_Initted() && !WW3D::Is_Rendering());
 			assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_INITIALIZATION_FAILED);
 			assert(WW3D::Is_Initted());
@@ -1445,6 +1451,9 @@ int main(int argc, char **argv)
 			assert(WW3D::Test_Default_Static_Sort_List()==nullptr && factory.owners==0);
 			factory.files["w3danimsound.ini"]={ini.begin(),ini.end()};
 			assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
+			VertexMaterialClass* retry_preset=VertexMaterialClass::Get_Preset(VertexMaterialClass::PRELIT_DIFFUSE);
+			assert(retry_preset && retry_preset->Num_Refs()==2);
+			retry_preset->Release_Ref();
 			assert(WW3D::Shutdown()==WW3D_ERROR_OK);
 			factory.files.erase("w3danimsound.ini");
 			factory.files.erase("DAZZLE.INI");

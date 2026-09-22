@@ -124,6 +124,9 @@
 #endif
 #include "vector3i.h"
 #include <cstdio>
+#if defined(ZH_WW3D_CPU_ONLY)
+static bool CpuVertexMaterialPresetsInitted = false;
+#endif
 #if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
 #include "targa.h"
@@ -327,6 +330,11 @@ WW3DErrorType WW3D::Init(void *hwnd, char *defaultpal, bool lite)
 		// The CPU device boundary omits DX8Wrapper::Init, so keep the same
 		// lifetime at the enclosing original WW3D source boundary.
 		TheDX8MeshRenderer.Init();
+		// DX8Wrapper::Do_Onetime_Device_Dependent_Inits owns these
+		// presets on Windows. The CPU device path still runs original
+		// source renderers that request them.
+		CpuVertexMaterialPresetsInitted = true;
+		VertexMaterialClass::Init();
 	#endif
 	if (!lite) {
 		WWDEBUG_SAY(("Init Dazzles\n"));
@@ -421,6 +429,10 @@ WW3DErrorType WW3D::Shutdown(void)
 	}
 	#else
 	TheDX8MeshRenderer.Shutdown();
+	if (CpuVertexMaterialPresetsInitted) {
+		VertexMaterialClass::Shutdown();
+		CpuVertexMaterialPresetsInitted = false;
+	}
 	DX8Wrapper::Reset_Source_State();
 	if (auto* edge=zh::original_runtime::OriginalGpuEdge::active())
 		edge->release_source_buffers();
