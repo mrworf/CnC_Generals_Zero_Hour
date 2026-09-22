@@ -49,8 +49,12 @@
 
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "PreRTS.h"
+#include "Common/GlobalData.h"
 #include "W3DDevice/GameClient/HeightMap.h"
+#include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
+
+#include <cstring>
 
 HeightMapRenderObjClass *TheHeightMap = NULL;
 
@@ -68,6 +72,7 @@ HeightMapRenderObjClass::HeightMapRenderObjClass() :
 
 HeightMapRenderObjClass::~HeightMapRenderObjClass()
 {
+	freeMapResources();
 	if (TheHeightMap == this) TheHeightMap = NULL;
 	if (TheTerrainRenderObject == this) TheTerrainRenderObject = NULL;
 }
@@ -79,11 +84,81 @@ void HeightMapRenderObjClass::Render(RenderInfoClass&)
 	throw OriginalW3DDeviceUnavailable("original empty terrain render pending");
 }
 void HeightMapRenderObjClass::On_Frame_Update() {}
-int HeightMapRenderObjClass::initHeightData(Int, Int, WorldHeightMap*, RefRenderObjListIterator*, Bool)
+int HeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *map,
+	RefRenderObjListIterator *lights, Bool update_extra_pass_tiles)
 {
-	throw OriginalW3DDeviceUnavailable("original terrain map data pending");
+	if (!map || m_map || x != map->getDrawWidth() || y != map->getDrawHeight() ||
+		x < 2 || y < 2 || x > VERTEX_BUFFER_TILE_LENGTH + 1 ||
+		y > VERTEX_BUFFER_TILE_LENGTH + 1 || !zh::original_runtime::OriginalGpuEdge::active())
+		throw OriginalW3DDeviceUnavailable("original flat terrain geometry unavailable");
+	for (Int cell_y = 0; cell_y < y - 1; ++cell_y) {
+		for (Int cell_x = 0; cell_x < x - 1; ++cell_x) {
+			float u[4]{}, v[4]{};
+			UnsignedByte alpha[4]{};
+			Bool flip = FALSE;
+			if (map->getTextureClass(cell_x, cell_y) != 0)
+				throw OriginalW3DDeviceUnavailable("original active terrain tile metadata pending");
+			map->getAlphaUVData(cell_x, cell_y, u, v, alpha, &flip, FALSE);
+			if (flip || alpha[0] || alpha[1] || alpha[2] || alpha[3])
+				throw OriginalW3DDeviceUnavailable("original active terrain blend pending");
+		}
+	}
+	try {
+		BaseHeightMapRenderObjClass::initHeightData(x, y, map, lights, FALSE);
+		m_numExtraBlendTiles = m_numVisibleExtraBlendTiles = 0;
+		m_originX = m_originY = 0;
+		m_numVBTilesX = m_numVBTilesY = m_numVertexBufferTiles = 1;
+		m_numBlockColumnsInLastVB = x - 1;
+		m_numBlockRowsInLastVB = y - 1;
+		m_indexBuffer = NEW_REF(DX8IndexBufferClass,
+			(VERTEX_BUFFER_TILE_LENGTH * VERTEX_BUFFER_TILE_LENGTH * 2 * 3));
+		{
+			DX8IndexBufferClass::WriteLockClass lock(m_indexBuffer);
+			UnsignedShort *indices = lock.Get_Index_Array();
+			for (Int row = 0; row < VERTEX_BUFFER_TILE_LENGTH; ++row) {
+				for (Int column = 0; column < VERTEX_BUFFER_TILE_LENGTH; ++column) {
+					const UnsignedShort base = static_cast<UnsignedShort>((row * VERTEX_BUFFER_TILE_LENGTH + column) * 4);
+					*indices++ = base; *indices++ = base + 2; *indices++ = base + 3;
+					*indices++ = base; *indices++ = base + 1; *indices++ = base + 2;
+				}
+			}
+		}
+		const Int vertex_count = VERTEX_BUFFER_TILE_LENGTH * VERTEX_BUFFER_TILE_LENGTH * 4;
+		m_vertexBufferTiles = NEW DX8VertexBufferClass *[1];
+		m_vertexBufferBackup = NEW char *[1];
+		m_vertexBufferTiles[0] = NEW_REF(DX8VertexBufferClass,
+			(DX8_VERTEX_FORMAT, vertex_count, DX8VertexBufferClass::USAGE_DEFAULT));
+		m_vertexBufferBackup[0] = NEW char[vertex_count * sizeof(VERTEX_FORMAT)]();
+		updateBlock(0, 0, x - 1, y - 1, map, lights);
+		auto& edge = zh::original_runtime::OriginalGpuEdge::required();
+		(void)edge.bind_index(m_indexBuffer);
+		(void)edge.bind_vertex(m_vertexBufferTiles[0]);
+		return 0;
+	} catch (...) {
+		freeMapResources();
+		throw;
+	}
 }
-Int HeightMapRenderObjClass::freeMapResources() { return BaseHeightMapRenderObjClass::freeMapResources(); }
+void HeightMapRenderObjClass::freeIndexVertexBuffers()
+{
+	REF_PTR_RELEASE(m_indexBuffer);
+	if (m_vertexBufferTiles) {
+		for (Int i = 0; i < m_numVertexBufferTiles; ++i) REF_PTR_RELEASE(m_vertexBufferTiles[i]);
+		delete [] m_vertexBufferTiles;
+		m_vertexBufferTiles = NULL;
+	}
+	if (m_vertexBufferBackup) {
+		for (Int i = 0; i < m_numVertexBufferTiles; ++i) delete [] m_vertexBufferBackup[i];
+		delete [] m_vertexBufferBackup;
+		m_vertexBufferBackup = NULL;
+	}
+	m_numVBTilesX = m_numVBTilesY = m_numVertexBufferTiles = 0;
+}
+Int HeightMapRenderObjClass::freeMapResources()
+{
+	freeIndexVertexBuffers();
+	return BaseHeightMapRenderObjClass::freeMapResources();
+}
 void HeightMapRenderObjClass::updateCenter(CameraClass* camera, RefRenderObjListIterator* lights)
 {
 	BaseHeightMapRenderObjClass::updateCenter(camera, lights);
@@ -105,9 +180,39 @@ void HeightMapRenderObjClass::oversizeTerrain(Int amount)
 {
 	BaseHeightMapRenderObjClass::oversizeTerrain(amount);
 }
-int HeightMapRenderObjClass::updateBlock(Int, Int, Int, Int, WorldHeightMap*, RefRenderObjListIterator*)
+int HeightMapRenderObjClass::updateBlock(Int x0, Int y0, Int x1, Int y1,
+	WorldHeightMap *map, RefRenderObjListIterator*)
 {
-	throw OriginalW3DDeviceUnavailable("original terrain block update pending");
+	if (!map || map != m_map || !m_vertexBufferTiles || !m_vertexBufferBackup ||
+		x0 < 0 || y0 < 0 || x1 <= x0 || y1 <= y0 || x1 >= m_x || y1 >= m_y)
+		throw OriginalW3DDeviceUnavailable("original terrain block update rejected");
+	VERTEX_FORMAT *backup = reinterpret_cast<VERTEX_FORMAT *>(m_vertexBufferBackup[0]);
+	for (Int y = y0; y < y1; ++y) {
+		for (Int x = x0; x < x1; ++x) {
+			float u[4]{}, v[4]{};
+			UnsignedByte alpha[4]{};
+			Bool flip = FALSE;
+			map->getUVData(x, y, u, v, FALSE);
+			map->getAlphaUVData(x, y, u, v, alpha, &flip, FALSE);
+			const Int positions[4][2] = {{x,y},{x+1,y},{x+1,y+1},{x,y+1}};
+			VERTEX_FORMAT *cell = backup + (y * VERTEX_BUFFER_TILE_LENGTH + x) * 4;
+			for (Int corner = 0; corner < 4; ++corner) {
+				cell[corner].x = (positions[corner][0] - map->getBorderSizeInline()) * MAP_XY_FACTOR;
+				cell[corner].y = (positions[corner][1] - map->getBorderSizeInline()) * MAP_XY_FACTOR;
+				cell[corner].z = map->getDisplayHeight(positions[corner][0], positions[corner][1]) * MAP_HEIGHT_SCALE;
+				cell[corner].diffuse = 0xffffffffu;
+				cell[corner].u1 = u[corner]; cell[corner].v1 = v[corner];
+				cell[corner].u2 = u[corner]; cell[corner].v2 = v[corner];
+			}
+		}
+	}
+	{
+		DX8VertexBufferClass::WriteLockClass lock(m_vertexBufferTiles[0]);
+		std::memcpy(lock.Get_Vertex_Array(), backup,
+			VERTEX_BUFFER_TILE_LENGTH * VERTEX_BUFFER_TILE_LENGTH * 4 * sizeof(VERTEX_FORMAT));
+	}
+	(void)zh::original_runtime::OriginalGpuEdge::required().bind_vertex(m_vertexBufferTiles[0]);
+	return 0;
 }
 
 #else

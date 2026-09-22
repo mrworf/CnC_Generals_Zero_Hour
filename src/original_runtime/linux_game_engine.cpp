@@ -106,6 +106,7 @@ extern "C" void zh_probe_display_owner();
 extern "C" void zh_probe_view_scene();
 extern "C" void zh_probe_world_height_map();
 extern "C" void zh_probe_visual_height_map();
+extern "C" void zh_probe_flat_terrain_geometry();
 extern "C" void zh_probe_shroud_data();
 extern "C" void zh_probe_base_terrain_map();
 #endif
@@ -832,6 +833,7 @@ public:
 			if (std::getenv("ZH_M22_VIEW_SCENE_PROFILE")) zh_probe_view_scene();
 			if (std::getenv("ZH_M22_HEIGHT_MAP_PROFILE")) zh_probe_world_height_map();
 			if (std::getenv("ZH_M22_VISUAL_HEIGHT_MAP_PROFILE")) zh_probe_visual_height_map();
+			if (std::getenv("ZH_M22_FLAT_TERRAIN_PROFILE")) zh_probe_flat_terrain_geometry();
 			if (std::getenv("ZH_M22_SHROUD_DATA_PROFILE")) zh_probe_shroud_data();
 			if (std::getenv("ZH_M22_BASE_TERRAIN_PROFILE")) zh_probe_base_terrain_map();
 #endif
