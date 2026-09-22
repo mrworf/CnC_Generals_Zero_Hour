@@ -11,6 +11,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "original_simulatio
 from test_scenario_setup import load_m20_fixture, prepare_owned_source, run
 
 
+def has_validation_diagnostic(output: str) -> bool:
+    return "Validation Error" in output or "VUID-" in output
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
@@ -29,9 +33,10 @@ def main() -> int:
         result = run(args.executable.resolve(), base, source, "mission")
         marker = ("original 2D status scene: physical generations=4 resources=0"
                   if args.physical else "original 2D status scene: source draw=1 resources=0")
-        if result.returncode or marker not in result.stdout:
+        combined_output = result.stdout + result.stderr
+        if result.returncode or marker not in result.stdout or has_validation_diagnostic(combined_output):
             raise SystemExit(f"original 2D status scene failed ({result.returncode}):\n"
-                             f"{result.stdout}{result.stderr}")
+                             f"{combined_output}")
     print("original GameClient 2D status source frame: ok")
     return 0
 

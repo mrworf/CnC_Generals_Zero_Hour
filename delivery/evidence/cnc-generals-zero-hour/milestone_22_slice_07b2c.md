@@ -1,0 +1,5 @@
+# M22 07B2C status-scene validation output gate evidence
+
+The 07B2 status-scene runner previously accepted a successful pixel marker without inspecting non-fatal Vulkan validation output. It now checks combined child stdout/stderr for `Validation Error` and `VUID-` before reporting success. Direct unit controls prove ordinary successful output remains accepted and each diagnostic token is rejected even when accompanied by the successful source marker. The CTest test for this gate passes.
+
+Four GCC/Clang Debug and GCC/Clang ASan+UBSan full asset-free suites pass 190/190 each, including source identity, provider-removal and clean ledgers; source-only sanitizer controls retain leak detection. The corrected runner passes 30/30 fresh-process GCC Debug and 30/30 Clang Debug physical tests with `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`, four public-bgfx generations per run, pixel absence controls, and combined child-output inspection. This test-only correction changes no source rendering behavior and does not accept full 07 or retail scenes.

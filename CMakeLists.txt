@@ -2052,6 +2052,10 @@ if(ZH_BUILD_TESTS)
     --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
   set_tests_properties(original_w3d_status_scene PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity")
+  add_test(NAME original_w3d_status_scene_validation COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_status_scene_validation.py")
+  set_tests_properties(original_w3d_status_scene_validation PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
   add_test(NAME original_w3d_status_scene_bgfx COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_status_scene.py"
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
