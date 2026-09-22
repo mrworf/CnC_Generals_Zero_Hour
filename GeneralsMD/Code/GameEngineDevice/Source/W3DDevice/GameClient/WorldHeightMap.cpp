@@ -26,6 +26,85 @@
 // Class to encapsulate height map.
 // Author: John Ahlquist, April 2001
 
+#if defined(ZH_WW3D_CPU_ONLY)
+
+#include "PreRTS.h"
+#include "Common/OriginalMapLoader.h"
+#include "W3DDevice/GameClient/WorldHeightMap.h"
+#include "OriginalW3DDeviceUnavailable.h"
+#include <cstring>
+
+TileData *WorldHeightMap::m_alphaTiles[NUM_ALPHA_TILES]{};
+
+WorldHeightMap::WorldHeightMap() :
+	m_width(0), m_height(0), m_borderSize(0), m_dataSize(0), m_data(NULL),
+	m_seismicUpdateFlag(NULL), m_seismicUpdateWidth(0), m_seismicZVelocities(NULL),
+	m_cellFlipState(NULL), m_flipStateWidth(0), m_cellCliffState(NULL),
+	m_tileNdxes(NULL), m_blendTileNdxes(NULL), m_cliffInfoNdxes(NULL),
+	m_extraBlendTileNdxes(NULL), m_numBitmapTiles(0), m_numEdgeTiles(0),
+	m_numBlendedTiles(1), m_numCliffInfo(1), m_numTextureClasses(0),
+	m_numEdgeTextureClasses(0), m_terrainTex(NULL), m_terrainTexHeight(1),
+	m_alphaTerrainTex(NULL), m_alphaTexHeight(1), m_alphaEdgeTex(NULL),
+	m_alphaEdgeHeight(1), m_drawOriginX(0), m_drawOriginY(0),
+	m_drawWidthX(NORMAL_DRAW_WIDTH), m_drawHeightY(NORMAL_DRAW_HEIGHT)
+{
+	for (Int i = 0; i < NUM_SOURCE_TILES; ++i) {
+		m_sourceTiles[i] = NULL;
+		m_edgeTiles[i] = NULL;
+	}
+}
+
+WorldHeightMap::WorldHeightMap(ChunkInputStream *input, Bool logical_only) : WorldHeightMap()
+{
+	if (!input || !logical_only)
+		throw OriginalW3DDeviceUnavailable("original visual terrain map payload pending");
+	OriginalMapLoader loader;
+	if (!loader.load(input))
+		throw OriginalW3DDeviceUnavailable("original logical height map rejected");
+	m_width = loader.width();
+	m_height = loader.height();
+	m_borderSize = loader.borderSize();
+	m_boundaries.assign(loader.boundaries().begin(), loader.boundaries().end());
+	if (m_width <= 0 || m_height <= 0 || loader.heights().size() !=
+		static_cast<std::size_t>(m_width) * m_height)
+		throw OriginalW3DDeviceUnavailable("original logical height map dimensions invalid");
+	m_dataSize = static_cast<Int>(loader.heights().size());
+	m_data = NEW UnsignedByte[m_dataSize];
+	std::memcpy(m_data, loader.heights().data(), static_cast<std::size_t>(m_dataSize));
+	m_drawWidthX = m_width;
+	m_drawHeightY = m_height;
+}
+
+WorldHeightMap::~WorldHeightMap()
+{
+	delete [] m_data;
+	delete [] m_tileNdxes;
+	delete [] m_blendTileNdxes;
+	delete [] m_extraBlendTileNdxes;
+	delete [] m_cliffInfoNdxes;
+	delete [] m_cellFlipState;
+	delete [] m_seismicUpdateFlag;
+	delete [] m_seismicZVelocities;
+	delete [] m_cellCliffState;
+}
+
+Real WorldHeightMap::getSeismicZVelocity(Int, Int) const
+{
+	throw OriginalW3DDeviceUnavailable("original visual terrain seismic data pending");
+}
+
+void WorldHeightMap::setSeismicZVelocity(Int, Int, Real)
+{
+	throw OriginalW3DDeviceUnavailable("original visual terrain seismic data pending");
+}
+
+Real WorldHeightMap::getBilinearSampleSeismicZVelocity(Int, Int)
+{
+	throw OriginalW3DDeviceUnavailable("original visual terrain seismic data pending");
+}
+
+#else
+
 #define INSTANTIATE_WELL_KNOWN_KEYS
 
 #include "windows.h"
@@ -2410,3 +2489,5 @@ Bool  WorldHeightMap::getRawTileData(Short tileNdx, Int width,
 	}
 	return(false);
 }
+
+#endif // ZH_WW3D_CPU_ONLY

@@ -21,6 +21,7 @@ add_library(zh_original_w3d_draw_full OBJECT EXCLUDE_FROM_ALL
   "${PROJECT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameClient/System/Smudge.cpp"
   "${client_root}/W3DSmudge.cpp"
   "${client_root}/W3DTerrainVisual.cpp"
+  "${client_root}/WorldHeightMap.cpp"
   "${PROJECT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameClient/ParabolicEase.cpp"
   "${client_root}/W3DScene.cpp"
   "${client_root}/W3DStatusCircle.cpp"
