@@ -200,7 +200,16 @@ void W3DTerrainVisual::addFactionBib(Object *, Bool, Real) { ORIGINAL_TERRAIN_PE
 void W3DTerrainVisual::removeFactionBib(Object *) { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
 void W3DTerrainVisual::addFactionBibDrawable(Drawable *, Bool, Real) { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
 void W3DTerrainVisual::removeFactionBibDrawable(Drawable *) { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
-void W3DTerrainVisual::removeAllBibs() { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
+void W3DTerrainVisual::removeAllBibs()
+{
+	// Native cleanup also returns when terrain has not been installed yet.
+	if (!m_terrainRenderObject) return;
+	if (s_emptyTerrainVisual != this || TheTerrainVisual != this ||
+		TheTerrainRenderObject != m_terrainRenderObject ||
+		TheHeightMap != m_terrainRenderObject || m_terrainRenderObject->getMap())
+		throw OriginalW3DDeviceUnavailable("original map-loaded terrain bib cleanup pending");
+	// The no-map owner cannot create a bib: every creation path remains guarded.
+}
 void W3DTerrainVisual::removeBibHighlighting() { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
 void W3DTerrainVisual::removeTreesAndPropsForConstruction(const Coord3D *, const GeometryInfo &, Real)
 { ORIGINAL_TERRAIN_PENDING("original terrain prop pending"); }

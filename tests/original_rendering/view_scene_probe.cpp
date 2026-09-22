@@ -1,6 +1,7 @@
 #include "PreRTS.h"
 #include "GameLogic/GameLogic.h"
 #include "Common/GlobalData.h"
+#include "GameClient/InGameUI.h"
 #include "GameClient/CommandXlat.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
@@ -117,6 +118,7 @@ extern "C" void zh_probe_view_scene()
             require(visual_edge_rejected && !TheTerrainRenderObject && !TheHeightMap &&
                 !TheWaterRenderObj && !TheSmudgeManager,
                 "original empty terrain visual initialized without device edge");
+            no_visual_edge->removeAllBibs();
             delete no_visual_edge;
             TheTerrainVisual = saved_visual;
         }
@@ -592,6 +594,19 @@ extern "C" void zh_probe_view_scene()
                 composed->init();
                 composed->reset();
                 composed->update();
+                const auto empty_bib_refs = TheTerrainRenderObject->Num_Refs();
+                composed->removeAllBibs();
+                composed->removeAllBibs();
+                bool bib_creation_rejected = false;
+                try { composed->addFactionBib(NULL, TRUE); }
+                catch (const std::runtime_error&) { bib_creation_rejected = true; }
+                require(bib_creation_rejected && TheTerrainRenderObject->Num_Refs() == empty_bib_refs &&
+                    !TheHeightMap->getMap(),
+                    "original empty bib cleanup changed owner or admitted creation");
+                TheInGameUI->placeBuildAvailable(NULL, NULL);
+                require(TheTerrainRenderObject->Num_Refs() == empty_bib_refs &&
+                    !TheHeightMap->getMap(),
+                    "original UI placement cleanup changed no-map bib owner");
                 W3DTerrainVisual duplicate_visual;
                 bool duplicate_visual_rejected = false;
                 try { duplicate_visual.init(); }
@@ -599,6 +614,14 @@ extern "C" void zh_probe_view_scene()
                 require(duplicate_visual_rejected && TheTerrainVisual == composed &&
                     TheWaterRenderObj->Num_Refs() == 2,
                     "original empty terrain visual duplicate displaced owner");
+                TheTerrainVisual = &duplicate_visual;
+                bool mismatched_bib_owner_rejected = false;
+                try { composed->removeAllBibs(); }
+                catch (const std::runtime_error&) { mismatched_bib_owner_rejected = true; }
+                TheTerrainVisual = composed;
+                require(mismatched_bib_owner_rejected &&
+                    TheTerrainRenderObject->Num_Refs() == empty_bib_refs,
+                    "original bib cleanup accepted mismatched published visual");
                 bool map_visual_rejected = false;
                 try { (void)composed->load(AsciiString("unsupported.map")); }
                 catch (const std::runtime_error&) { map_visual_rejected = true; }

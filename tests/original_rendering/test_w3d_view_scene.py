@@ -20,6 +20,19 @@ def main() -> int:
     parser.add_argument("--source-root", type=Path, required=True)
     parser.add_argument("--physical", action="store_true")
     args = parser.parse_args()
+    game_client = (args.source_root / "GeneralsMD/Code/GameEngine/Source/GameClient/GameClient.cpp").read_text()
+    teardown = game_client.split("GameClient::~GameClient()", 1)[1].split("void GameClient::init", 1)[0]
+    if not (teardown.index("delete TheInGameUI;") <
+            teardown.index("delete TheTerrainVisual;") <
+            teardown.index("delete TheDisplay;")):
+        raise SystemExit("original GameClient UI/visual/display destructor order changed")
+    ui_source = (args.source_root / "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp").read_text()
+    ui_destructor = ui_source.split("InGameUI::~InGameUI()", 1)[1].split("void InGameUI::init", 1)[0]
+    placement_cleanup = ui_source.split("void InGameUI::destroyPlacementIcons", 1)[1].split(
+        "void InGameUI::", 1)[0]
+    if "placeBuildAvailable( NULL, NULL );" not in ui_destructor or \
+            "TheTerrainVisual->removeAllBibs();" not in placement_cleanup:
+        raise SystemExit("original UI destructor no longer reaches terrain bib cleanup")
     fixture = load_m20_fixture(args.source_root.resolve())
     with TemporaryDirectory(prefix="zh-m22-view-scene-") as scratch:
         base = Path(scratch)

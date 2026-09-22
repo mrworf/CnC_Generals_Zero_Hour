@@ -1,0 +1,7 @@
+# M22 slice 07E0D1 evidence: original no-map bib cleanup
+
+CPU `W3DTerrainVisual::removeAllBibs` returns idempotently only with no terrain owner or its own published original no-map `HeightMapRenderObjClass`; it rejects a mismatched published visual, and all bib-creation paths remain guarded. The source fixture repeats cleanup, invokes real `InGameUI::placeBuildAvailable(NULL,NULL)` with the original visual published, checks unchanged owner refs and no map, and rejects bib creation and mismatched owner publication. The view-scene source-order check confirms `GameClient::~GameClient` destroys UI before terrain visual before display, and `InGameUI::~InGameUI` reaches placement-icon cleanup and `removeAllBibs`.
+
+The pending E0E opt-in factory diagnostic separately reached past original `GameMain`/GameClient destruction after D3 with no bib exception. Its remaining exit 4 is precisely the unchanged M20 allocation assertion `26 != 22`; this is not a D1 acceptance pass or a device-policy exemption. No production factory switch is claimed here.
+
+With E0E and the unrelated renderer diagnostic isolated, fully rebuilt GCC Debug, GCC Release, Clang Release, GCC ASan+UBSan and Clang ASan+UBSan non-GPU suites pass 194/194 each, including source/provider/ABI and a clean dependency ledger. GCC Debug and Clang Release each pass 30/30 fresh-process host Vulkan view-scene repetitions under validation (BGRA8/RGBA8, two extents, four generations). `git diff --check` passes. Retail symlink content is untouched.
