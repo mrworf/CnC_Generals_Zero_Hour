@@ -54,6 +54,12 @@ def main() -> int:
             raise SystemExit("owned W3D family aggregate is incorrect")
         if wwshade_requirement(counts, opaque) != "yes" or wwshade_requirement(Counter(), 0) != "no":
             raise SystemExit("WWShade requirement signal is incorrect")
+        empty = bytearray(archive([(b"valid.w3d", chunk(0x0000)), (b"ignored.bin", b"")]))
+        struct.pack_into(">I", empty, 16 + 9 + len(b"valid.w3d"), 0)
+        path.write_bytes(empty)
+        entries, counts, opaque = audit_archives([path])
+        if entries != 1 or counts != Counter({0x0000: 1}) or opaque:
+            raise SystemExit("source-compatible zero-length BIG entry was rejected")
         if not rejected(path, good[:12]):
             raise SystemExit("truncated BIG header was accepted")
         bad_range = bytearray(good)

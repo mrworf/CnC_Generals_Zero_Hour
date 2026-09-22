@@ -1,0 +1,9 @@
+# M22 plan 01 slice 06C4B1: complete supplied-retail archive family scope
+
+## Outcome and boundary
+
+Requires 06C4B0. Complete the read-only W3D top-level *chunk* family/WWShade requirement audit over every BIG archive, including nested archives, in both already configured user-owned base Generals and Zero Hour roots, rather than assuming the two named W3D archives are the entire source corpus. Check for loose `.w3d` files and fail closed if present until included. Derive the base root from an existing retail-enabled CMake cache or explicit caller argument; do not print or commit private paths, names, bytes or hashes. This is a retail-scope prerequisite only: no source renderer, shader behavior, game logic, symlink or retail file edit. It does not accept C4.
+
+## Input, classification and negative controls
+
+Enumerate only the two explicit roots, require each to be a directory and at least one BIG, and pass sorted recursive `.big` paths to the bounded 06C4A/B0 checker. Archive header/table errors fail closed; opaque W3D payloads are reported and classified by fresh original source-loader processes with bounded stdin/time, with unknown outcomes blocking a `no` decision. All parseable top-level SHDMESH and valid-prefix candidates must be counted across archives. An owned two-root fixture with a nested secondary BIG containing SHDMESH proves that the aggregate cannot silently scan only top-level or primary archives; an owned loose-W3D negative proves fail-closed scope. Report only archive/entry/chunk/opaque counts and the source-qualified yes/no/unknown result. If result is `no`, it applies only to these supplied roots and does not remove the C4 enabled-branch compile witness or all-family owned frame gate. Run GCC/Clang focused and four full asset-free suites plus sanitizer controls, then one independent commit with plan, evidence and tests.

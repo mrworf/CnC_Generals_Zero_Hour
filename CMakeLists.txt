@@ -2322,6 +2322,11 @@ if(ZH_BUILD_TESTS)
     --source-loader $<TARGET_FILE:original_w3d_cpu_graph_tests>)
   set_tests_properties(original_w3d_opaque_source_loader PROPERTIES
     LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_retail_root_family_scope COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_retail_w3d_root_audit.py"
+    --source-loader $<TARGET_FILE:original_w3d_cpu_graph_tests>)
+  set_tests_properties(original_w3d_retail_root_family_scope PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_first_gpu_edge COMMAND original_w3d_cpu_graph_tests --device-edge)
   set_tests_properties(original_w3d_first_gpu_edge PROPERTIES LABELS "original-rendering;renderer-contract")
   add_test(NAME original_w3d_skin_batch COMMAND original_w3d_cpu_graph_tests --skin-batch)

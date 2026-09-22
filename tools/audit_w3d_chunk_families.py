@@ -67,7 +67,7 @@ def audit_archive(path: Path, report_opaque: bool = False,
                     raise InvalidArchive("BIG entry name range is invalid")
                 is_w3d = data[cursor:end_name].lower().endswith(b".w3d")
                 cursor = end_name + 1
-                if offset < table_end or offset > size or length > size - offset:
+                if offset > size or length > size - offset or (length and offset < table_end):
                     raise InvalidArchive("BIG entry payload range is invalid")
                 if not is_w3d:
                     continue
