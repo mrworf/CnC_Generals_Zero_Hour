@@ -58,6 +58,9 @@ class StaticSortListClass
 
 		virtual void 	Add_To_List(RenderObjClass * robj, unsigned int sort_level) = 0;
 		virtual void 	Render_And_Clear(RenderInfoClass & rinfo) = 0;
+		#if defined(ZH_WW3D_CPU_ONLY)
+		virtual void 	Discard_Without_Rendering(void) = 0;
+		#endif
 
 }; // end StaticSortListClass
 
@@ -72,6 +75,9 @@ class DefaultStaticSortListClass : public StaticSortListClass
 
 		virtual void 	Add_To_List(RenderObjClass * robj, unsigned int sort_level);
 		virtual void 	Render_And_Clear(RenderInfoClass & rinfo);
+		#if defined(ZH_WW3D_CPU_ONLY)
+		virtual void 	Discard_Without_Rendering(void);
+		#endif
 
 
 		unsigned int 	Get_Min_Sort(void) const 			{return MinSort;};
@@ -96,4 +102,3 @@ class DefaultStaticSortListClass : public StaticSortListClass
 
 
 #endif //STATIC_SORT_LIST_H
-

@@ -1097,6 +1097,8 @@ WW3DErrorType WW3D::Render(SceneClass * scene,CameraClass * cam,bool clear,bool 
 	} catch (...) {
 		IsRendering=false;
 		zh::original_runtime::OriginalGpuEdge::required().abort_source_frame();
+		if (CurrentStaticSortLists) CurrentStaticSortLists->Discard_Without_Rendering();
+		TheDX8MeshRenderer.Invalidate();
 		DX8Wrapper::Reset_Source_State();
 		throw;
 	}
@@ -2190,7 +2192,16 @@ void WW3D::Render_And_Clear_Static_Sort_Lists(RenderInfoClass & rinfo)
 	// Render() function will just dump the objects right back on the same lists.
 	bool old_enable = AreStaticSortListsEnabled;
 	AreStaticSortListsEnabled = false;
+	#if defined(ZH_WW3D_CPU_ONLY)
+	try {
+	#endif
 	CurrentStaticSortLists->Render_And_Clear(rinfo);
+	#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		AreStaticSortListsEnabled = old_enable;
+		throw;
+	}
+	#endif
 	AreStaticSortListsEnabled = old_enable;
 }
 

@@ -80,6 +80,9 @@ void DefaultStaticSortListClass::Render_And_Clear(RenderInfoClass & rinfo)
 		for (	RenderObjClass *robj = SortLists[sort_level].Remove_Head(); robj;
 				robj->Release_Ref(), robj = SortLists[sort_level].Remove_Head())
 		{
+			#if defined(ZH_WW3D_CPU_ONLY)
+			try {
+			#endif
 			if (robj->Get_Render_Hook()) {
 				if (robj->Get_Render_Hook()->Pre_Render(robj, rinfo)) {
 					robj->Render(rinfo);
@@ -90,8 +93,23 @@ void DefaultStaticSortListClass::Render_And_Clear(RenderInfoClass & rinfo)
 				robj->Render(rinfo);
 				render = true;
 			}
+			#if defined(ZH_WW3D_CPU_ONLY)
+			} catch (...) {
+				// Remove_Head transferred the list's ref to this loop. The
+				// increment expression will not run when a callback throws.
+				robj->Release_Ref();
+				throw;
+			}
+			#endif
 		}
 		if (render) TheDX8MeshRenderer.Flush();
 	}
 }
 
+#if defined(ZH_WW3D_CPU_ONLY)
+void DefaultStaticSortListClass::Discard_Without_Rendering(void)
+{
+	for (unsigned int level=1; level<=MAX_SORT_LEVEL; ++level)
+		while (SortLists[level].Release_Head()) {}
+}
+#endif

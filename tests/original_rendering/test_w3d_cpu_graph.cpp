@@ -880,6 +880,128 @@ int main(int argc, char **argv)
 	auto *mesh = static_cast<MeshClass *>(object);
 	CameraClass camera;
 	RenderInfoClass render_info(camera);
+	if (argc==2 && std::strcmp(argv[1],"--static-sort-failure")==0) {
+		struct CountingLight final : LightClass {
+			int renders=0;
+			bool saw_disabled=false;
+			bool throw_render=false;
+			CountingLight():LightClass(LightClass::DIRECTIONAL) {}
+			void Render(RenderInfoClass&) override {
+				++renders;
+				saw_disabled=!WW3D::Are_Static_Sort_Lists_Enabled();
+				if (throw_render) throw std::runtime_error("injected static sort object");
+			}
+		};
+		struct FailHook final : RenderHookClass {
+			bool fail=true;
+			bool fail_post=false;
+			int pre=0,post=0;
+			bool Pre_Render(RenderObjClass*,RenderInfoClass&) override {
+				++pre;
+				if (fail) throw std::runtime_error("injected static sort hook");
+				return true;
+			}
+			void Post_Render(RenderObjClass*,RenderInfoClass&) override {
+				++post;
+				if (fail_post) throw std::runtime_error("injected static sort post hook");
+			}
+		};
+		auto* top=new CountingLight;
+		auto* lower=new CountingLight;
+		auto* hook=new FailHook;
+		top->Set_Render_Hook(hook);
+		const int top_refs=top->Num_Refs(),lower_refs=lower->Num_Refs();
+		DefaultStaticSortListClass list;
+		WW3D::Override_Current_Static_Sort_Lists(&list);
+		WW3D::Enable_Static_Sort_Lists(true);
+		list.Add_To_List(top,2);
+		list.Add_To_List(lower,1);
+		assert(top->Num_Refs()==top_refs+1 && lower->Num_Refs()==lower_refs+1);
+		bool failed=false;
+		try { WW3D::Render_And_Clear_Static_Sort_Lists(render_info); }
+		catch (const std::runtime_error&) { failed=true; }
+		assert(failed && WW3D::Are_Static_Sort_Lists_Enabled() &&
+			top->Num_Refs()==top_refs && lower->Num_Refs()==lower_refs+1 &&
+			top->renders==0 && lower->renders==0 && hook->pre==1 && hook->post==0);
+		hook->fail=false;
+		WW3D::Render_And_Clear_Static_Sort_Lists(render_info);
+		assert(lower->renders==1 && lower->saw_disabled &&
+			top->renders==0 && lower->Num_Refs()==lower_refs);
+		WW3D::Enable_Static_Sort_Lists(false);
+		list.Add_To_List(top,2);
+		hook->fail=true;
+		failed=false;
+		try { WW3D::Render_And_Clear_Static_Sort_Lists(render_info); }
+		catch (const std::runtime_error&) { failed=true; }
+		assert(failed && !WW3D::Are_Static_Sort_Lists_Enabled() && top->Num_Refs()==top_refs);
+		hook->fail=false;
+		hook->fail_post=true;
+		list.Add_To_List(top,2);
+		failed=false;
+		try { WW3D::Render_And_Clear_Static_Sort_Lists(render_info); }
+		catch (const std::runtime_error&) { failed=true; }
+		assert(failed && top->Num_Refs()==top_refs && !WW3D::Are_Static_Sort_Lists_Enabled());
+		hook->fail_post=false;
+		lower->throw_render=true;
+		list.Add_To_List(lower,1);
+		failed=false;
+		try { WW3D::Render_And_Clear_Static_Sort_Lists(render_info); }
+		catch (const std::runtime_error&) { failed=true; }
+		assert(failed && lower->Num_Refs()==lower_refs && !WW3D::Are_Static_Sort_Lists_Enabled());
+		lower->throw_render=false;
+		list.Add_To_List(top,2);
+		list.Add_To_List(lower,1);
+		list.Discard_Without_Rendering();
+		assert(top->Num_Refs()==top_refs && lower->Num_Refs()==lower_refs);
+		hook->fail=true;
+		WW3D::Reset_Current_Static_Sort_Lists_To_Default();
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		WW3D::Set_Thumbnail_Enabled(false);
+		OwnedFactory factory;
+		factory.files["mytex.tga"]=original_targa();
+		factory.files["MYTEX.TGA"]=factory.files["mytex.tga"];
+		auto* previous_factory=_TheFileFactory;
+		_TheFileFactory=&factory;
+		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+		mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+		mesh->Set_Position(Vector3(0,0,-10));
+		SimpleSceneClass scene;
+		scene.Add_Render_Object(mesh);
+		zh::renderer::RecordingGpuDevice recorder;
+		zh::renderer::TextureDesc target;
+		target.width=32; target.height=32; target.render_target=true; target.sampled=false;
+		const auto color=recorder.create_texture(target,"static failure color");
+		target.format=zh::renderer::TextureFormat::depth24_stencil8;
+		const auto depth=recorder.create_texture(target,"static failure depth");
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
+			edge.bind_frame_targets(color,depth,32,32);
+			camera.Set_Clip_Planes(1,100);
+			WW3D::Enable_Static_Sort_Lists(true);
+			WW3D::Add_To_Static_Sort_List(top,2);
+			WW3D::Add_To_Static_Sort_List(lower,1);
+			assert(WW3D::Begin_Render(true,true,Vector3(0,0,0),1)==WW3D_ERROR_OK);
+			failed=false;
+			try { (void)WW3D::Render(&scene,&camera,false,false,Vector3(0,0,0)); }
+			catch (const std::runtime_error&) { failed=true; }
+			assert(failed && !WW3D::Is_Rendering() &&
+				WW3D::Are_Static_Sort_Lists_Enabled() &&
+				top->Num_Refs()==top_refs && lower->Num_Refs()==lower_refs);
+			assert(WW3D::Begin_Render(true,true,Vector3(0,0,0),1)==WW3D_ERROR_OK);
+			assert(WW3D::Render(&scene,&camera,false,false,Vector3(0,0,0))==WW3D_ERROR_OK);
+			assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+			assert(WW3D::Shutdown()==WW3D_ERROR_OK);
+		}
+		scene.Remove_All_Render_Objects();
+		recorder.destroy(depth); recorder.destroy(color);
+		assert(recorder.resource_counts().total()==0);
+		_TheFileFactory=previous_factory;
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		top->Release_Ref(); lower->Release_Ref();
+		object->Release_Ref(); manager.Free_Assets();
+		return 0;
+	}
 	if (argc==2 && std::strcmp(argv[1],"--ww3d-scene-wrapper")==0) {
 		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
 		WW3D::Set_Thumbnail_Enabled(false);
