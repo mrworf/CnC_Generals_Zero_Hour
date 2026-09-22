@@ -9,6 +9,7 @@
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
+#include "W3DDevice/GameClient/W3DWater.h"
 #include "WW3D2/assetmgr.h"
 #include "WW3D2/camera.h"
 #include "WW3D2/dx8wrapper.h"
@@ -84,6 +85,14 @@ extern "C" void zh_probe_view_scene()
             require(track_edge_rejected && !TheTerrainTracksRenderObjClassSystem,
                 "original zero-track owner initialized without device edge");
             TheWritableGlobalData->m_maxTerrainTracks = saved_no_edge_tracks;
+            auto* no_water_edge = NEW_REF(WaterRenderObjClass, ());
+            bool water_edge_rejected = false;
+            try { no_water_edge->init(0, 0, 0, NULL,
+                WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT); }
+            catch (const std::runtime_error&) { water_edge_rejected = true; }
+            require(water_edge_rejected && !TheWaterRenderObj,
+                "original no-water owner initialized without device edge");
+            no_water_edge->Release_Ref();
         }
         {
             zh::original_runtime::OriginalGpuEdge edge(device);
@@ -129,6 +138,70 @@ extern "C" void zh_probe_view_scene()
                 tracks.ReAcquireResources();
                 require(!tracks.hasPendingGpuResources(),
                     "original zero-track reset acquired GPU resources");
+                const Bool saved_water_plane = TheGlobalData->m_useWaterPlane;
+                const Bool saved_cloud_plane = TheGlobalData->m_useCloudPlane;
+                TheWritableGlobalData->m_useWaterPlane = TRUE;
+                TheWritableGlobalData->m_useCloudPlane = FALSE;
+                auto* enabled_water = NEW_REF(WaterRenderObjClass, ());
+                bool water_mode_rejected = false;
+                try { enabled_water->init(0, 0, 0, W3DDisplay::m_3DScene,
+                    WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT); }
+                catch (const std::runtime_error&) { water_mode_rejected = true; }
+                require(water_mode_rejected && !TheWaterRenderObj,
+                    "original enabled water plane initialized without rendering support");
+                enabled_water->Release_Ref();
+                TheWritableGlobalData->m_useWaterPlane = FALSE;
+                auto* wrong_water = NEW_REF(WaterRenderObjClass, ());
+                bool wrong_water_scene = false;
+                try { wrong_water->init(0, 0, 0, NULL,
+                    WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT); }
+                catch (const std::runtime_error&) { wrong_water_scene = true; }
+                require(wrong_water_scene && !TheWaterRenderObj,
+                    "original no-water owner accepted wrong parent scene");
+                wrong_water->Release_Ref();
+                auto* water = NEW_REF(WaterRenderObjClass, ());
+                require(water->init(0, 0, 0, W3DDisplay::m_3DScene,
+                    WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT) == 0 &&
+                    TheWaterRenderObj == water &&
+                    water->Class_ID() == RenderObjClass::CLASSID_UNKNOWN,
+                    "original no-water owner publication failed");
+                require(water->init(0, 0, 0, W3DDisplay::m_3DScene,
+                    WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT) == 0,
+                    "original no-water owner re-entry failed");
+                auto* duplicate_water = NEW_REF(WaterRenderObjClass, ());
+                bool duplicate_water_rejected = false;
+                try { duplicate_water->init(0, 0, 0, W3DDisplay::m_3DScene,
+                    WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT); }
+                catch (const std::runtime_error&) { duplicate_water_rejected = true; }
+                require(duplicate_water_rejected && TheWaterRenderObj == water,
+                    "original no-water duplicate displaced owner");
+                duplicate_water->Release_Ref();
+                bool water_extent_rejected = false;
+                try { water->init(0, 1, 0, W3DDisplay::m_3DScene,
+                    WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT); }
+                catch (const std::runtime_error&) { water_extent_rejected = true; }
+                require(water_extent_rejected && TheWaterRenderObj == water,
+                    "original positive water extent silently succeeded");
+                bool water_type_rejected = false;
+                try { water->init(0, 0, 0, W3DDisplay::m_3DScene,
+                    WaterRenderObjClass::WATER_TYPE_1_FB_REFLECTION); }
+                catch (const std::runtime_error&) { water_type_rejected = true; }
+                require(water_type_rejected && TheWaterRenderObj == water,
+                    "original unsupported water type silently succeeded");
+                water->setGridHeightClamps(0, 0);
+                water->setGridTransform(0, 0, 0, 0);
+                water->setGridResolution(0, 0, 0);
+                water->setGridChangeAttenuationFactors(0, 0, 0, 0);
+                water->reset();
+                water->update();
+                water->load();
+                water->ReleaseResources();
+                water->ReAcquireResources();
+                bool water_grid_rejected = false;
+                try { water->enableWaterGrid(TRUE); }
+                catch (const std::runtime_error&) { water_grid_rejected = true; }
+                require(water_grid_rejected && water->getWaterHeight(0, 0) == INVALID_WATER_HEIGHT,
+                    "original no-water owner accepted grid rendering");
                 TheWritableGlobalData->m_useShadowVolumes = TRUE;
                 W3DShadowManager enabled_only;
                 bool volume_init_rejected = false;
@@ -211,6 +284,11 @@ extern "C" void zh_probe_view_scene()
                 catch (const std::runtime_error&) { terrain_render_rejected = true; }
                 require(terrain_render_rejected && !WW3D::Is_Rendering(),
                     "original empty terrain emitted a draw");
+                bool water_render_rejected = false;
+                try { water->Render(terrain_info); }
+                catch (const std::runtime_error&) { water_render_rejected = true; }
+                require(water_render_rejected && !WW3D::Is_Rendering(),
+                    "original no-water owner emitted a draw");
                 view->init();
                 require(view->get3DCamera() == camera && camera->Num_Refs() == 1,
                     "original W3DView re-entry replaced 3D camera");
@@ -304,13 +382,19 @@ extern "C" void zh_probe_view_scene()
                 terrain->Release_Ref();
                 require(!TheTerrainRenderObject && !TheHeightMap,
                     "original empty terrain teardown retained singleton");
+                water->Release_Ref();
+                require(!TheWaterRenderObj,
+                    "original no-water teardown retained singleton");
                 shadows.Reset();
                 TheWritableGlobalData->m_useShadowVolumes = saved_volumes;
                 TheWritableGlobalData->m_useShadowDecals = saved_decals;
                 TheWritableGlobalData->m_maxTerrainTracks = saved_track_count;
+                TheWritableGlobalData->m_useWaterPlane = saved_water_plane;
+                TheWritableGlobalData->m_useCloudPlane = saved_cloud_plane;
             }
             require(!W3DDisplay::m_3DScene && !WW3D::Is_Initted() &&
-                !TheW3DShadowManager && !TheTerrainTracksRenderObjClassSystem,
+                !TheW3DShadowManager && !TheTerrainTracksRenderObjClassSystem &&
+                !TheWaterRenderObj,
                 "original W3DView display teardown retained source owners");
             bool stale_terrain_owner = false;
             try { auto* terrain = NEW_REF(HeightMapRenderObjClass, ()); terrain->Release_Ref(); }
@@ -338,6 +422,20 @@ extern "C" void zh_probe_view_scene()
             require(stale_track_owner && !TheTerrainTracksRenderObjClassSystem,
                 "original zero-track owner accepted torn-down display");
             TheWritableGlobalData->m_maxTerrainTracks = stale_track_count;
+            const Bool stale_water_plane = TheGlobalData->m_useWaterPlane;
+            const Bool stale_cloud_plane = TheGlobalData->m_useCloudPlane;
+            TheWritableGlobalData->m_useWaterPlane = FALSE;
+            TheWritableGlobalData->m_useCloudPlane = FALSE;
+            auto* stale_water = NEW_REF(WaterRenderObjClass, ());
+            bool stale_water_owner = false;
+            try { stale_water->init(0, 0, 0, NULL,
+                WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT); }
+            catch (const std::runtime_error&) { stale_water_owner = true; }
+            require(stale_water_owner && !TheWaterRenderObj,
+                "original no-water owner accepted torn-down display");
+            stale_water->Release_Ref();
+            TheWritableGlobalData->m_useWaterPlane = stale_water_plane;
+            TheWritableGlobalData->m_useCloudPlane = stale_cloud_plane;
         }
         device.destroy(depth);
         device.destroy(color);
