@@ -415,6 +415,8 @@ int main(int argc, char **argv)
 			assert(!TheDmaCriticalSection && !TheMemoryPoolCriticalSection);
 		}
 	} services;
+	// Keep every threaded source-GPU mode here: original allocator locks must
+	// exist before bgfx workers, asset loading, or device-owned allocations.
 	const bool threaded_source_device=argc==2 &&
 		(std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0 ||
@@ -596,6 +598,7 @@ int main(int argc, char **argv)
 			std::vector<unsigned char> baseline,with_both,without_one;
 			std::vector<unsigned char> with_skin,with_decal,with_sorted,with_front,with_back,with_mixed;
 			std::vector<unsigned char> pass_base,pass_immediate,pass_delayed,pass_culled,pass_outside;
+			std::vector<unsigned char> pass_recovered,pass_removed;
 			{
 				zh::original_runtime::OriginalGpuEdge edge(device);
 				assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
@@ -821,6 +824,7 @@ int main(int argc, char **argv)
 					with_back=frame();
 					scene.Remove_Render_Object(front);
 					if (focused_owned_pass_scene) {
+						assert(manager.Create_Render_Obj("TEST.MISSING")==nullptr);
 						auto* pass_mesh=static_cast<MeshClass*>(manager.Create_Render_Obj("TEST.CULLTREE"));
 						assert(pass_mesh && pass_mesh->Peek_Model()->Has_Cull_Tree());
 						pass_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
@@ -882,10 +886,26 @@ int main(int argc, char **argv)
 						hook->mode=OwnedPassHook::culled_outside;
 						edge.record_source_state("fixture owned outside cull pass");
 						pass_outside=frame();
+						device.destroy(depth);
+						bool stale_target=false;
+						try { (void)frame(); }
+						catch (const std::runtime_error&) { stale_target=true; }
+						assert(stale_target && !WW3D::Is_Rendering());
+						if (!physical) {
+							auto* recorder=dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
+							assert(recorder && !recorder->pass_active());
+						}
+						depth=device.create_texture(target,"rebound owned-pass depth");
+						assert(depth);
+						edge.bind_frame_targets(color,depth,width,height);
+						edge.record_source_state("fixture owned stale target recovery");
+						pass_recovered=frame();
 						MaterialPassClass::Enable_Per_Polygon_Culling(old_culling);
 						scene.Remove_Render_Object(pass_mesh);
 						assert(pass_mesh->Num_Refs()==1);
 						pass_mesh->Release_Ref();
+						edge.record_source_state("fixture owned pass removed");
+						pass_removed=frame();
 					}
 					assert(skin_hlod->Num_Refs()==1 && sorted->Num_Refs()==1 && front->Num_Refs()==1);
 					front->Release_Ref(); sorted->Release_Ref(); skin_hlod->Release_Ref();
@@ -947,14 +967,17 @@ int main(int argc, char **argv)
 							pass_immediate.size()==baseline.size() &&
 							pass_delayed.size()==baseline.size() &&
 							pass_culled.size()==baseline.size() &&
-							pass_outside.size()==baseline.size());
+							pass_outside.size()==baseline.size() &&
+							pass_recovered.size()==baseline.size() &&
+							pass_removed.size()==baseline.size());
 						const auto center_left=width*3/8;
 						const auto center_right=width*5/8;
 						assert(changed(baseline,pass_base,center_left,center_right)>0 &&
 							changed(pass_base,pass_immediate,center_left,center_right)>0 &&
 							changed(pass_base,pass_delayed,center_left,center_right)>0 &&
 							changed(pass_base,pass_culled,center_left,center_right)>0 &&
-							pass_outside==pass_base &&
+							pass_outside==pass_base && pass_recovered==pass_outside &&
+							pass_removed==baseline &&
 							outer_unchanged(pass_immediate) && outer_unchanged(pass_delayed) &&
 							outer_unchanged(pass_culled) && outer_unchanged(pass_outside));
 					}
@@ -982,8 +1005,10 @@ int main(int argc, char **argv)
 						const auto delayed=trace.find("fixture owned delayed pass");
 						const auto cull=trace.find("fixture owned cull pass");
 						const auto outside=trace.find("fixture owned outside cull pass");
+						const auto recovery=trace.find("fixture owned stale target recovery");
+						const auto removed=trace.find("fixture owned pass removed");
 						assert(sorted<base && base<immediate && immediate<delayed &&
-							delayed<cull && cull<outside);
+							delayed<cull && cull<outside && outside<recovery && recovery<removed);
 						const auto draws=[&](std::size_t first,std::size_t last) {
 							unsigned count=0;
 							for (auto at=trace.find("draw pipeline=",first);at!=std::string::npos && at<last;
@@ -992,7 +1017,9 @@ int main(int argc, char **argv)
 						};
 						assert(draws(base,immediate)>0 && draws(immediate,delayed)>draws(base,immediate) &&
 							draws(delayed,cull)>0 && draws(cull,outside)>draws(base,immediate) &&
-							draws(outside,trace.size())==draws(base,immediate));
+							draws(outside,recovery)==draws(base,immediate) &&
+							draws(recovery,removed)==draws(base,immediate) &&
+							draws(removed,trace.size())<draws(base,immediate));
 					}
 				}
 			}
