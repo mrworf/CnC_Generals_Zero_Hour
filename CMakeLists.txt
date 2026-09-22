@@ -1103,6 +1103,7 @@ add_executable(zh_original_w3d_full_probe
   tests/original_rendering/display_owner_probe.cpp
   tests/original_rendering/view_scene_probe.cpp
   tests/original_rendering/world_height_map_probe.cpp
+  tests/original_rendering/shroud_data_probe.cpp
   $<TARGET_OBJECTS:zh_original_lifecycle_spine>
   $<TARGET_OBJECTS:zh_original_config_spine>
   $<TARGET_OBJECTS:zh_original_w3d_factory_full>
@@ -1123,6 +1124,9 @@ set_source_files_properties(tests/original_rendering/view_scene_probe.cpp PROPER
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/world_height_map_probe.cpp PROPERTIES
+  COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
+  COMPILE_OPTIONS "-fpermissive")
+set_source_files_properties(tests/original_rendering/shroud_data_probe.cpp PROPERTIES
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 target_compile_definitions(zh_original_w3d_full_probe PRIVATE ZH_M22_FULL_DRAW_TEST=1)
@@ -2134,6 +2138,12 @@ if(ZH_BUILD_TESTS)
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
     --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
   set_tests_properties(original_w3d_world_height_map PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_shroud_data COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_shroud_data.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
+  set_tests_properties(original_w3d_shroud_data PROPERTIES
     LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_view_scene_bgfx COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_view_scene.py"

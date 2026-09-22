@@ -29,8 +29,153 @@
 
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "PreRTS.h"
+#include "Common/GlobalData.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
+#include "W3DDevice/GameClient/WorldHeightMap.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
+namespace {
+constexpr std::size_t MAX_CPU_SHROUD_CELLS = 16U * 1024U * 1024U;
+}
+
+W3DShroud::W3DShroud() :
+	m_numCellsX(0), m_numCellsY(0), m_numMaxVisibleCellsX(0),
+	m_numMaxVisibleCellsY(0), m_cellWidth(MAP_XY_FACTOR),
+	m_cellHeight(MAP_XY_FACTOR), m_shroudData(NULL), m_pSrcTexture(NULL),
+	m_srcTextureData(NULL), m_srcTexturePitch(0), m_pDstTexture(NULL),
+	m_dstTextureWidth(0), m_dstTextureHeight(0),
+	m_shroudFilter(TextureFilterClass::FILTER_TYPE_DEFAULT),
+	m_drawOriginX(0), m_drawOriginY(0), m_drawFogOfWar(FALSE),
+	m_clearDstTexture(TRUE),
+	m_boderShroudLevel(TheGlobalData ?
+		static_cast<W3DShroudLevel>(TheGlobalData->m_shroudAlpha) : 0),
+	m_finalFogData(NULL), m_currentFogData(NULL)
+{
+}
+
+W3DShroud::~W3DShroud()
+{
+	reset();
+}
+
+void W3DShroud::init(WorldHeightMap *map, Real cell_width, Real cell_height)
+{
+	if (!map || cell_width <= 0 || cell_height <= 0 || m_currentFogData ||
+		m_numCellsX || m_numCellsY)
+		throw OriginalW3DDeviceUnavailable("original shroud map initialization unavailable");
+	const Int playable_x = map->getXExtent() - 1 - map->getBorderSizeInline() * 2;
+	const Int playable_y = map->getYExtent() - 1 - map->getBorderSizeInline() * 2;
+	if (playable_x <= 0 || playable_y <= 0)
+		throw OriginalW3DDeviceUnavailable("original shroud map extent invalid");
+	const double cells_x = std::ceil(static_cast<double>(playable_x) * MAP_XY_FACTOR / cell_width);
+	const double cells_y = std::ceil(static_cast<double>(playable_y) * MAP_XY_FACTOR / cell_height);
+	if (cells_x <= 0 || cells_y <= 0 || cells_x > std::numeric_limits<Int>::max() ||
+		cells_y > std::numeric_limits<Int>::max() ||
+		cells_x * cells_y > static_cast<double>(MAX_CPU_SHROUD_CELLS))
+		throw OriginalW3DDeviceUnavailable("original shroud map extent too large");
+	const Int count_x = static_cast<Int>(cells_x);
+	const Int count_y = static_cast<Int>(cells_y);
+	W3DShroudLevel *current = NULL;
+	W3DShroudLevel *final = NULL;
+	try {
+		const std::size_t count = static_cast<std::size_t>(count_x) * count_y;
+		current = NEW W3DShroudLevel[count];
+		final = NEW W3DShroudLevel[count];
+		std::fill_n(current, count, m_boderShroudLevel);
+		std::fill_n(final, count, m_boderShroudLevel);
+	} catch (...) {
+		delete [] current;
+		delete [] final;
+		throw;
+	}
+	m_cellWidth = cell_width;
+	m_cellHeight = cell_height;
+	m_numCellsX = count_x;
+	m_numCellsY = count_y;
+	m_numMaxVisibleCellsX = std::min(count_x, static_cast<Int>(
+		REAL_TO_INT_FLOOR(static_cast<Real>(map->getDrawWidth() - 1) * MAP_XY_FACTOR / cell_width) + 1));
+	m_numMaxVisibleCellsY = std::min(count_y, static_cast<Int>(
+		REAL_TO_INT_FLOOR(static_cast<Real>(map->getDrawHeight() - 1) * MAP_XY_FACTOR / cell_height) + 1));
+	m_dstTextureWidth = count_x + 2;
+	m_dstTextureHeight = count_y + 2;
+	m_currentFogData = current;
+	m_finalFogData = final;
+	m_clearDstTexture = TRUE;
+}
+
+void W3DShroud::reset()
+{
+	delete [] m_finalFogData;
+	m_finalFogData = NULL;
+	delete [] m_currentFogData;
+	m_currentFogData = NULL;
+	m_numCellsX = m_numCellsY = 0;
+	m_numMaxVisibleCellsX = m_numMaxVisibleCellsY = 0;
+	m_dstTextureWidth = m_dstTextureHeight = 0;
+	m_drawOriginX = m_drawOriginY = 0;
+	m_srcTextureData = NULL;
+	m_srcTexturePitch = 0;
+	m_clearDstTexture = TRUE;
+}
+
+void W3DShroud::ReleaseResources() {}
+Bool W3DShroud::ReAcquireResources()
+{
+	if (m_dstTextureWidth || m_dstTextureHeight)
+		throw OriginalW3DDeviceUnavailable("original shroud projection resource pending");
+	return TRUE;
+}
+
+W3DShroudLevel W3DShroud::getShroudLevel(Int x, Int y)
+{
+	if (!m_currentFogData)
+		throw OriginalW3DDeviceUnavailable("original shroud read before map initialization");
+	if (x < 0 || y < 0 || x >= m_numCellsX || y >= m_numCellsY)
+		return m_boderShroudLevel;
+	return m_currentFogData[x + y * m_numCellsX];
+}
+
+void W3DShroud::setShroudLevel(Int x, Int y, W3DShroudLevel level, Bool)
+{
+	if (!m_currentFogData || x < 0 || y < 0 || x >= m_numCellsX || y >= m_numCellsY)
+		throw OriginalW3DDeviceUnavailable("original shroud cell mutation unavailable");
+	if (TheGlobalData && level < TheGlobalData->m_shroudAlpha)
+		level = static_cast<W3DShroudLevel>(TheGlobalData->m_shroudAlpha);
+	m_currentFogData[x + y * m_numCellsX] = level;
+	m_finalFogData[x + y * m_numCellsX] = level;
+}
+
+void W3DShroud::fillShroudData(W3DShroudLevel level)
+{
+	if (!m_currentFogData)
+		throw OriginalW3DDeviceUnavailable("original shroud fill before map initialization");
+	if (TheGlobalData && level < TheGlobalData->m_shroudAlpha)
+		level = static_cast<W3DShroudLevel>(TheGlobalData->m_shroudAlpha);
+	const std::size_t count = static_cast<std::size_t>(m_numCellsX) * m_numCellsY;
+	std::fill_n(m_currentFogData, count, level);
+	std::fill_n(m_finalFogData, count, level);
+}
+
+void W3DShroud::setBorderShroudLevel(W3DShroudLevel level)
+{
+	m_boderShroudLevel = level;
+	m_clearDstTexture = TRUE;
+}
+
+void W3DShroud::setShroudFilter(Bool enable)
+{
+	m_shroudFilter = enable ? TextureFilterClass::FILTER_TYPE_DEFAULT :
+		TextureFilterClass::FILTER_TYPE_NONE;
+}
+
+void W3DShroud::render(CameraClass *)
+{
+	throw OriginalW3DDeviceUnavailable("original shroud projection pending");
+}
+
 void W3DShroudMaterialPassClass::Install_Materials(void) const
 {
 	throw OriginalW3DDeviceUnavailable("original shroud material GPU installation pending");
