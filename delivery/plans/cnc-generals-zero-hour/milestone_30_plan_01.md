@@ -41,8 +41,8 @@ Excluded: original WW3D retail scene/pixel acceptance (M22), gameplay/save/netwo
 
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
-| 01 | [runtime/resources](milestone_30_plan_01_slice_01.md) | Pinned bgfx runtime and generation-safe resource/lifecycle path | M29 | completed | recorded in next index update | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_30_slice_01.md) |
-| 02 | [ordered targets](milestone_30_plan_01_slice_02.md) | Real target/pass/viewport clears in command order | 01 | pending | | |
+| 01 | [runtime/resources](milestone_30_plan_01_slice_01.md) | Pinned bgfx runtime and generation-safe resource/lifecycle path | M29 | completed | `64febec` | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_30_slice_01.md) |
+| 02 | [ordered targets](milestone_30_plan_01_slice_02.md) | Real target/pass/viewport clears in command order | 01 | completed | recorded in next index update | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_30_slice_02.md) |
 | 03 | [shader draws](milestone_30_plan_01_slice_03.md) | Physical shader, pipeline, bindings and indexed draw behavior | 02 | pending | | |
 | 04 | [presentation and revalidation](milestone_30_plan_01_slice_04.md) | SDL3-window present, lifecycle and full host evidence | 03 | pending | | |
 
@@ -69,6 +69,8 @@ Slice commits isolate physical migration. Reverting the device/build commits res
 Planning phase completed before production edits. Update this index and slice plans with findings and commits. If public bgfx lacks another required behavior, preserve a minimal repro and stop for §9 architecture decision; do not add a private escape.
 
 Slice 01 delivers offline runtime pin/check, physically allocated RGBA8 texture uploads and two-cycle Vulkan lifecycle. Buffers/samplers remain validated descriptors until layout and binding information exists at slice 03; no renderer pixels or ordered clears are accepted yet. The physical resource test passed only with host GPU access (sandbox hid NVIDIA ICD). The exact slice 01 commit is written into this index with the next slice update, avoiding a self-referential commit hash.
+
+Slice 02 finding: bgfx view rectangles are frame-global state. A physical test proved mutating the begin-pass view for `set_viewport` clipped the earlier full-target clear; each source camera viewport now consumes a new ordered view. Independent depth-only and stencil-only device clears preserve color on a LOAD pass; the standalone checked public probe proves independent depth/stencil-tested pixels. Device-level post-clear draw proof remains slice 03, not accepted by this slice.
 
 ## Deferred follow-ups
 

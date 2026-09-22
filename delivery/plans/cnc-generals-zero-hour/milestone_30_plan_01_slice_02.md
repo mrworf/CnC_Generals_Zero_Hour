@@ -30,6 +30,10 @@ Expected: bgfx device implementation, target/clear tests, checked public probe i
 - Negative: inactive clear, stale target, invalid/incompatible attachments, view exhaustion and uninitialized LOAD reject with no silent submission.
 - Run focused bgfx target tests and exact checked probe on RTX with validation layer where available; compare trace order with M29 recorder.
 
+Implementation fact: the public bgfx view rectangle belongs to a view, not an immediate command. Changing the preceding view after `touch` retroactively clips that clear. `set_viewport` must allocate a new ordered view, and `clear_viewport` another, preserving the original full clear and source order. The source-shaped device test catches this regression with outer/inset pixels. Device-level depth/stencil-tested draw is deferred to slice 03 because the draw implementation and shader program do not exist yet; the exact checked public probe independently exercises that preservation now.
+
+Focused evidence: `delivery/evidence/cnc-generals-zero-hour/milestone_30_slice_02.md`.
+
 ## Acceptance / commit boundary
 
 One coherent commit includes physical target/clear behavior, positive/negative tests and evidence. Do not count only the standalone checked probe as device acceptance.

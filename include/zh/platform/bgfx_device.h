@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <vector>
 
 struct SDL_Window;
 
@@ -51,6 +52,7 @@ public:
 
     ValidationResult claim_window(SDL_Window*);
     ValidationResult wait_idle();
+    std::vector<UInt8> readback_rgba(TextureHandle source);
     void release_window() noexcept;
 
 private:
