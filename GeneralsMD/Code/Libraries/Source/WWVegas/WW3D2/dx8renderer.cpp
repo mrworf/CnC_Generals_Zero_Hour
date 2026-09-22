@@ -2099,6 +2099,13 @@ void DX8MeshRendererClass::Shutdown(void)
 	Clear_Pending_Delete_Lists();
 	_TempVertexBuffer.Clear();	//free memory
 	_TempNormalBuffer.Clear();
+	#if defined(ZH_WW3D_CPU_ONLY)
+	// Rendering has returned every per-draw task. Retain an active pool on a
+	// failed/incomplete frame; otherwise retire its process-static slab before
+	// the next original WW3D generation.
+	const bool render_tasks_drained = PolyRenderTaskClass::Release_Empty_Blocks();
+	WWASSERT(render_tasks_drained);
+	#endif
 }
 
 // ----------------------------------------------------------------------------
