@@ -419,12 +419,23 @@ int main(int argc, char **argv)
 	const bool supply_variant = argc == 3 && std::strcmp(argv[1], "--emit") == 0;
 	const bool focused_static_scene = argc==2 &&
 		(std::strcmp(argv[1],"--source-static-scene")==0 ||
-		 std::strcmp(argv[1],"--bgfx-source-static-scene")==0);
+		 std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
+		 std::strcmp(argv[1],"--source-mixed-scene")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0);
+	const bool focused_mixed_scene = argc==2 &&
+		(std::strcmp(argv[1],"--source-mixed-scene")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0);
 	if (focused_static_scene) {
 		// This gate owns only the three original W3D mesh families it renders.
 		make_mesh(writer,false); // TEST.TRIANGLE
 		make_mesh(writer,false,false,false,0); // TEST.ZERO01
 		make_mesh(writer,true); // TEST.SUPPLY01
+		if (focused_mixed_scene) {
+			make_hierarchy(writer,false);
+			make_mesh(writer,false,false,true,0); // TEST.SKIN01
+			make_hlod(writer,false,true); // TEST.SKINHLOD
+			make_mesh(writer,false,false,false,2); // TEST.TWO01
+		}
 	} else {
 	make_hierarchy(writer, supply_variant);
 	make_animation(writer);
@@ -471,12 +482,16 @@ int main(int argc, char **argv)
 	WW3DAssetManager manager;
 	RAMFileClass input(bytes.data(), size);
 	assert(manager.Load_3D_Assets(input));
-	if (argc==2 && (std::strcmp(argv[1],"--source-static-scene")==0 ||
-		std::strcmp(argv[1],"--bgfx-source-static-scene")==0)) {
-		const bool physical=std::strcmp(argv[1],"--bgfx-source-static-scene")==0;
+	if (focused_static_scene) {
+		const bool physical=std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
+			std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0;
 		OwnedFactory factory;
 		factory.files["mytex.tga"]=original_targa();
 		factory.files["MYTEX.TGA"]=factory.files["mytex.tga"];
+		if (focused_mixed_scene) {
+			factory.files["mytex2.tga"]=factory.files["mytex.tga"];
+			factory.files["MYTEX2.TGA"]=factory.files["mytex.tga"];
+		}
 		auto* previous_factory=_TheFileFactory;
 		_TheFileFactory=&factory;
 		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
@@ -507,6 +522,7 @@ int main(int argc, char **argv)
 			const auto depth=device.create_texture(target,"original source static scene depth");
 			assert(color && depth);
 			std::vector<unsigned char> baseline,with_both,without_one;
+			std::vector<unsigned char> with_skin,with_decal,with_sorted,with_front,with_back,with_mixed;
 			{
 				zh::original_runtime::OriginalGpuEdge edge(device);
 				assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
@@ -516,6 +532,34 @@ int main(int argc, char **argv)
 				auto* level1=static_cast<MeshClass*>(manager.Create_Render_Obj("TEST.ZERO01"));
 				auto* level2=static_cast<MeshClass*>(manager.Create_Render_Obj("TEST.SUPPLY01"));
 				assert(rigid && level1 && level2);
+				RenderObjClass* skin_hlod=nullptr;
+				MeshClass* sorted=nullptr;
+				MeshClass* front=nullptr;
+				if (focused_mixed_scene) {
+					skin_hlod=manager.Create_Render_Obj("TEST.SKINHLOD");
+					sorted=static_cast<MeshClass*>(manager.Create_Render_Obj("TEST.TWO01"));
+					front=static_cast<MeshClass*>(manager.Create_Render_Obj("TEST.ZERO01"));
+					assert(skin_hlod && sorted && front && skin_hlod->Get_HTree());
+					auto* skin_child=skin_hlod->Get_Sub_Object(0);
+					assert(skin_child && skin_child->Class_ID()==RenderObjClass::CLASSID_MESH);
+					static_cast<MeshClass*>(skin_child)->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+					auto* skin_model=static_cast<MeshClass*>(skin_child)->Peek_Model();
+					auto* skin_material=skin_model->Peek_Single_Material();
+					skin_material->Set_Lighting(false);
+					skin_material->Set_Diffuse_Color_Source(VertexMaterialClass::MATERIAL);
+					skin_material->Set_Diffuse(Vector3(0,1,0));
+					ShaderClass skin_shader;
+					skin_shader.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+					skin_shader.Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
+						skin_model->Set_Single_Shader(skin_shader);
+						skin_child->Release_Ref();
+						skin_hlod->Set_ObjectScale(5.0f);
+						skin_hlod->Set_Position(Vector3(0,0,-10));
+						sorted->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,true);
+						sorted->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+						sorted->Set_Position(Vector3(1,0,-10));
+						WW3D::Enable_Sorting(true);
+				}
 				for (auto* mesh:{rigid,level1,level2}) {
 					mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
 					mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
@@ -537,6 +581,12 @@ int main(int argc, char **argv)
 				WW3D::Enable_Static_Sort_Lists(true);
 					auto frame=[&]() {
 						assert(WW3D::Begin_Render(true,true,Vector3(0.8f,0.1f,0.1f),1)==WW3D_ERROR_OK);
+						if (focused_mixed_scene && !physical) {
+							bool refused=false;
+							try { edge.release_source_buffers(); }
+							catch (const std::runtime_error&) { refused=true; }
+							assert(refused); // An active source frame still owns its bound buffers.
+						}
 				assert(WW3D::Render(&scene,&camera,true,true,Vector3(0.05f,0.05f,0.2f))==WW3D_ERROR_OK);
 				assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
 				return readback(color);
@@ -574,6 +624,70 @@ int main(int argc, char **argv)
 					assert(drained.size()==1 && drained[0]==2);
 					scene.Remove_Render_Object(level2);
 				}
+				if (focused_mixed_scene) {
+					assert(skin_hlod && sorted && front);
+					const bool old_decals=WW3D::Are_Decals_Enabled();
+					WW3D::Enable_Decals(true);
+					DecalSystemClass decal_system;
+					auto* generator=decal_system.Lock_Decal_Generator();
+					assert(generator);
+					auto* decal_material=generator->Get_Material();
+					assert(decal_material);
+					auto* vertex_material=NEW_REF(VertexMaterialClass,());
+					vertex_material->Set_Lighting(true);
+					vertex_material->Set_Diffuse_Color_Source(VertexMaterialClass::MATERIAL);
+					vertex_material->Set_Diffuse(Vector3(0.0f,0.0f,0.0f));
+					vertex_material->Set_Emissive(Vector3(0.0f,1.0f,0.0f));
+					decal_material->Set_Material(vertex_material);
+					vertex_material->Release_Ref();
+					ShaderClass decal_shader;
+					decal_shader.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+					decal_shader.Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
+					decal_material->Set_Shader(decal_shader);
+					decal_material->Release_Ref();
+					generator->Set_Ortho_Projection(-2,2,-2,2,0,20);
+					generator->Set_Transform(Matrix3D(true));
+					generator->Set_Backface_Threshhold(-1.0f);
+					generator->Apply_To_Translucent_Meshes(true);
+					rigid->Create_Decal(generator);
+					assert(generator->Get_Mesh_List().Peek_Head()==rigid);
+					edge.record_source_state("fixture mixed decal frame");
+					with_decal=frame();
+					scene.Add_Render_Object(level1);
+					scene.Add_Render_Object(level2);
+					scene.Add_Render_Object(skin_hlod);
+					scene.Add_Render_Object(sorted);
+					drained.clear();
+					edge.record_source_state("fixture mixed all frame");
+					with_mixed=frame();
+					assert(drained.size()==2 && drained[0]==2 && drained[1]==1);
+					scene.Remove_Render_Object(sorted);
+					scene.Remove_Render_Object(skin_hlod);
+					scene.Remove_Render_Object(level2);
+					scene.Remove_Render_Object(level1);
+					const uint32 decal_id=generator->Get_Decal_ID();
+					decal_system.Unlock_Decal_Generator(generator);
+					rigid->Delete_Decal(decal_id);
+					WW3D::Enable_Decals(old_decals);
+					scene.Add_Render_Object(skin_hlod);
+					edge.record_source_state("fixture mixed skin frame");
+					with_skin=frame();
+					scene.Remove_Render_Object(skin_hlod);
+					scene.Add_Render_Object(sorted);
+					edge.record_source_state("fixture mixed sort frame");
+					with_sorted=frame();
+					scene.Remove_Render_Object(sorted);
+					front->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+					front->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+					front->Set_Position(Vector3(-1,0,-9));
+					scene.Add_Render_Object(front);
+					with_front=frame();
+					front->Set_Position(Vector3(-1,0,-11));
+					with_back=frame();
+					scene.Remove_Render_Object(front);
+					assert(skin_hlod->Num_Refs()==1 && sorted->Num_Refs()==1 && front->Num_Refs()==1);
+					front->Release_Ref(); sorted->Release_Ref(); skin_hlod->Release_Ref();
+				}
 				scene.Remove_Render_Object(rigid);
 				assert(rigid->Num_Refs()==1 && level1->Num_Refs()==1 && level2->Num_Refs()==1);
 				level2->Release_Ref(); level1->Release_Ref(); rigid->Release_Ref();
@@ -588,6 +702,10 @@ int main(int argc, char **argv)
 #endif
 				assert(baseline.size()==std::size_t(width)*height*4 &&
 					(rigid_only || (with_both.size()==baseline.size() && without_one.size()==baseline.size())));
+				if (focused_mixed_scene) assert(with_skin.size()==baseline.size() &&
+					with_decal.size()==baseline.size() && with_sorted.size()==baseline.size() &&
+					with_front.size()==baseline.size() && with_back.size()==baseline.size() &&
+					with_mixed.size()==baseline.size());
 				const auto outer=(height-1)*width*4U+(width-1)*4U;
 				assert(baseline[outer]==204 && baseline[outer+1]==25 && baseline[outer+2]==25);
 				unsigned rigid_pixels=0,static_pixels=0,level1_pixels=0;
@@ -599,6 +717,30 @@ int main(int argc, char **argv)
 						if (!rigid_only && (with_both[i]!=without_one[i] || with_both[i+1]!=without_one[i+1] || with_both[i+2]!=without_one[i+2])) ++level1_pixels;
 					}
 				assert(rigid_pixels>0 && (rigid_only || (static_pixels>0 && level1_pixels>0)));
+				if (focused_mixed_scene) {
+					auto changed=[&](const auto& a,const auto& b,unsigned x_begin,unsigned x_end) {
+						unsigned count=0;
+						for (unsigned y=height/8;y<height*7/8;++y)
+							for (unsigned x=x_begin;x<x_end;++x) {
+								const auto i=(y*width+x)*4U;
+								if (a[i]!=b[i] || a[i+1]!=b[i+1] || a[i+2]!=b[i+2]) ++count;
+							}
+						return count;
+					};
+					const auto outer_unchanged=[&](const auto& pixels) {
+						return pixels[outer]==baseline[outer] && pixels[outer+1]==baseline[outer+1] &&
+							pixels[outer+2]==baseline[outer+2];
+					};
+					assert(changed(baseline,with_skin,width*3/8,width*5/8)>0 &&
+						changed(baseline,with_decal,width/8,width/2)>0 &&
+						changed(baseline,with_sorted,width/2,width*7/8)>0 &&
+						changed(with_front,with_back,width/8,width/2)>0 &&
+						changed(baseline,with_mixed,width/8,width*7/8)>0 &&
+						outer_unchanged(with_skin) && outer_unchanged(with_decal) &&
+						outer_unchanged(with_sorted) && outer_unchanged(with_mixed) &&
+						outer_unchanged(with_front) &&
+						outer_unchanged(with_back));
+				}
 			} else {
 				auto* recorder=dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
 				assert(recorder);
@@ -606,6 +748,17 @@ int main(int argc, char **argv)
 				assert(trace.find("CameraClass::Apply viewport")!=std::string::npos &&
 					trace.find("clear_viewport")!=std::string::npos &&
 					trace.find("DX8Wrapper::Draw indexed")!=std::string::npos);
+				if (focused_mixed_scene) {
+					const auto decal=trace.find("fixture mixed decal frame");
+					const auto skin=trace.find("fixture mixed skin frame");
+					const auto sorted=trace.find("fixture mixed sort frame");
+					const auto all=trace.find("fixture mixed all frame");
+					assert(decal!=std::string::npos && skin>decal && sorted>skin &&
+						all>decal && all<skin && trace.find("draw pipeline=",all)<skin &&
+						trace.find("draw pipeline=",decal)<skin &&
+						trace.find("draw pipeline=",skin)<sorted &&
+						trace.find("draw pipeline=",sorted)!=std::string::npos);
+				}
 			}
 			device.destroy(depth); device.destroy(color);
 			assert(!device.describe_texture_format(color));

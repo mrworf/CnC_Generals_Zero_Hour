@@ -57,10 +57,19 @@ OriginalGpuEdge::~OriginalGpuEdge()
         textures_.erase(it);
         source->Invalidate();
     }
-    for (auto& entry : indices_) { device_.destroy(entry.second); entry.first->Release_Ref(); }
-    for (auto& entry : vertices_) { device_.destroy(entry.second); entry.first->Release_Ref(); }
+    release_source_buffers();
     if (missing_texture_) device_.destroy(missing_texture_);
     active_edge = previous_;
+}
+
+void OriginalGpuEdge::release_source_buffers()
+{
+    if (source_frame_active_)
+        throw std::runtime_error("original source buffers cannot retire during a frame");
+    for (auto& entry : indices_) { device_.destroy(entry.second); entry.first->Release_Ref(); }
+    indices_.clear();
+    for (auto& entry : vertices_) { device_.destroy(entry.second); entry.first->Release_Ref(); }
+    vertices_.clear();
 }
 
 OriginalGpuEdge& OriginalGpuEdge::required()

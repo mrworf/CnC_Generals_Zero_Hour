@@ -110,6 +110,8 @@ public:
 
     renderer::BufferHandle bind_vertex(const VertexBufferClass* source);
     renderer::BufferHandle bind_index(const IndexBufferClass* source);
+    // WW3D shutdown retires source pools while this device session may remain alive.
+    void release_source_buffers();
     static renderer::OriginalFvfLayout layout_for_fvf(unsigned source_fvf);
     static AppliedState map_applied_state(unsigned source_fvf);
     PhysicalState prepare_applied_state(unsigned source_fvf,

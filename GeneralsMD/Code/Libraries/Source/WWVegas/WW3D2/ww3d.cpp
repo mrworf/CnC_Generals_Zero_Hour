@@ -422,6 +422,11 @@ WW3DErrorType WW3D::Shutdown(void)
 	#else
 	TheDX8MeshRenderer.Shutdown();
 	DX8Wrapper::Reset_Source_State();
+	if (auto* edge=zh::original_runtime::OriginalGpuEdge::active())
+		edge->release_source_buffers();
+	SortingRendererClass::Deinit();
+	DynamicVBAccessClass::_Deinit();
+	DynamicIBAccessClass::_Deinit();
 	#endif
 
 	/*
