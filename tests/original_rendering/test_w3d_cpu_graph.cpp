@@ -14,6 +14,7 @@
 #include "decalmsh.h"
 #include "mapper.h"
 #include "camera.h"
+#include "scene.h"
 #include "light.h"
 #include "lightenvironment.h"
 #include "rinfo.h"
@@ -879,6 +880,106 @@ int main(int argc, char **argv)
 	auto *mesh = static_cast<MeshClass *>(object);
 	CameraClass camera;
 	RenderInfoClass render_info(camera);
+	if (argc==2 && std::strcmp(argv[1],"--scene-traversal")==0) {
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		WW3D::Set_Thumbnail_Enabled(false);
+		OwnedFactory textures;
+		textures.files["mytex.tga"]=original_targa();
+		textures.files["MYTEX.TGA"]=textures.files["mytex.tga"];
+		auto* previous_factory=_TheFileFactory;
+		_TheFileFactory=&textures;
+		struct Hook final : RenderHookClass {
+			int pre=0,post=0;
+			bool fail=false;
+			bool Pre_Render(RenderObjClass*,RenderInfoClass&) override {
+				++pre;
+				if (fail) throw std::runtime_error("injected source render hook");
+				return true;
+			}
+			void Post_Render(RenderObjClass*,RenderInfoClass&) override { ++post; }
+		};
+		auto* hook=new Hook;
+		mesh->Set_Render_Hook(hook);
+		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+		mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+		mesh->Set_Position(Vector3(0,0,-10));
+		RenderObjClass* hidden=manager.Create_Render_Obj("TEST.TRIANGLE");
+		assert(hidden);
+		hidden->Set_Position(Vector3(10000,0,-10));
+		struct ExposedSimpleScene final : SimpleSceneClass { using SceneClass::Render; } scene;
+		scene.Add_Render_Object(mesh);
+		scene.Add_Render_Object(hidden);
+		scene.Register(mesh,SceneClass::ON_FRAME_UPDATE);
+		auto* source_light=new LightClass(LightClass::DIRECTIONAL);
+		const int initial_light_refs=source_light->Num_Refs();
+		scene.Add_Render_Object(source_light);
+		assert(source_light->Num_Refs()>initial_light_refs);
+		scene.Set_Fog_Enable(true);
+		scene.Set_Fog_Color(Vector3(0.1f,0.2f,0.3f));
+		scene.Set_Fog_Range(1,100);
+		bool missing=false;
+		try { scene.Render(render_info); }
+		catch (const std::runtime_error&) { missing=true; }
+		assert(missing && hook->pre==0);
+		scene.Set_Extra_Pass_Polygon_Mode(SceneClass::EXTRA_PASS_LINE);
+		bool extra=false;
+		try { scene.Render(render_info); }
+		catch (const std::runtime_error&) { extra=true; }
+		assert(extra && hook->pre==0);
+		scene.Set_Extra_Pass_Polygon_Mode(SceneClass::EXTRA_PASS_DISABLE);
+		zh::renderer::RecordingGpuDevice recorder;
+		zh::renderer::TextureDesc target;
+		target.width=32; target.height=32; target.render_target=true; target.sampled=false;
+		const auto color=recorder.create_texture(target,"source scene color");
+		target.format=zh::renderer::TextureFormat::depth24_stencil8;
+		const auto depth=recorder.create_texture(target,"source scene depth");
+		zh::renderer::RenderPassDesc pass;
+		pass.color_targets[0]=color; pass.color_target_count=1;
+		pass.depth_target=depth; pass.width=32; pass.height=32;
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			TheDX8MeshRenderer.Init();
+			TheDX8MeshRenderer.Set_Camera(&camera);
+			DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+			DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+			assert(recorder.begin_pass(pass,"original scene traversal"));
+			const auto before_bad_fog=recorder.snapshot();
+			const auto selected_fog=DX8Wrapper::Get_Fog_Color();
+			scene.Set_Fog_Color(Vector3(2,0,0));
+			bool invalid_fog=false;
+			try { scene.Render(render_info); }
+			catch (const std::runtime_error&) { invalid_fog=true; }
+			assert(invalid_fog && hook->pre==0 && recorder.snapshot()==before_bad_fog &&
+				DX8Wrapper::Get_Fog_Color()==selected_fog);
+			scene.Set_Fog_Color(Vector3(0.1f,0.2f,0.3f));
+			hook->fail=true;
+			bool injected=false;
+			try { scene.Render(render_info); }
+			catch (const std::runtime_error&) { injected=true; }
+			assert(injected && hook->pre==1 && hook->post==0 && !render_info.light_environment);
+			hook->fail=false;
+			scene.Render(render_info);
+			assert(hook->pre==2 && hook->post==1 && render_info.light_environment &&
+				render_info.light_environment->Get_Light_Count()==1);
+			assert(mesh->Is_Really_Visible() && !hidden->Is_Really_Visible());
+			assert(DX8Wrapper::Get_Fog_Enable());
+			const auto commands=recorder.snapshot();
+			assert(commands.find("DX8Wrapper::Set_Light slot=0 disabled")!=std::string::npos);
+			TheDX8MeshRenderer.Flush();
+			assert(recorder.end_pass());
+		}
+		scene.Unregister(mesh,SceneClass::ON_FRAME_UPDATE);
+		scene.Remove_All_Render_Objects();
+		assert(source_light->Num_Refs()==initial_light_refs);
+		TheDX8MeshRenderer.Shutdown();
+		recorder.destroy(depth); recorder.destroy(color);
+		assert(recorder.resource_counts().total()==0);
+		source_light->Release_Ref(); hidden->Release_Ref(); object->Release_Ref(); manager.Free_Assets();
+		_TheFileFactory=previous_factory;
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		return 0;
+	}
 	if (argc==2 && std::strcmp(argv[1],"--source-viewport-clear")==0) {
 		OwnedFactory factory;
 		FileFactoryClass* previous_factory=_TheFileFactory;

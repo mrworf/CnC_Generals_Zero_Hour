@@ -469,8 +469,11 @@ D3DCOLOR DX8Wrapper::Get_Fog_Color() { return state().fog_color; }
 void DX8Wrapper::Set_Fog(bool enabled,const Vector3& color,float start,float end)
 {
     zh::original_runtime::OriginalGpuEdge::required();
+    if (!std::isfinite(start) || !std::isfinite(end))
+        throw std::runtime_error("original fog range is nonfinite");
+    const auto packed_color=Convert_Color(color,0.0f);
     state().fog_enabled=enabled;
-    state().fog_color=Convert_Color(color,0.0f);
+    state().fog_color=packed_color;
     ShaderClass::Invalidate();
     DWORD start_bits=0,end_bits=0;
     std::memcpy(&start_bits,&start,sizeof(start_bits));

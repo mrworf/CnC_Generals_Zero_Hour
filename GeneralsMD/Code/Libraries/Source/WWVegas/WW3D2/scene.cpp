@@ -64,6 +64,8 @@
 #include "scene.h"
 #include "plane.h"
 #include "camera.h"
+#include "light.h"
+#include "lightenvironment.h"
 #include "ww3d.h"
 #include "rinfo.h"
 #include "chunkio.h"
@@ -219,12 +221,17 @@ void SceneClass::Remove_Render_Object(RenderObjClass * obj)
  *=============================================================================================*/
 void SceneClass::Render(RenderInfoClass & rinfo)
 {
+	#if defined(ZH_WW3D_CPU_ONLY)
+	// These authored extra passes select wireframe/ZBIAS 7. Preserve their
+	// source identity, but reject before callbacks until that physical state
+	// family is characterized; the default scene path below is shared.
+	if (Get_Extra_Pass_Polygon_Mode()!=EXTRA_PASS_DISABLE)
+		throw OriginalW3DDeviceUnavailable("original scene extra polygon pass is not translated");
+	LightEnvironmentClass * const incoming_environment=rinfo.light_environment;
+	try {
+	#endif
 	// Any stuff that needs to get done before anything else
 	Pre_Render_Processing(rinfo);
-
-#if defined(ZH_WW3D_CPU_ONLY)
-	throw OriginalW3DDeviceUnavailable("original WW3D scene fog/render-state GPU translation pending");
-#else
 	DX8Wrapper::Set_Fog(FogEnabled, FogColor, FogStart, FogEnd);
 
 	if (Get_Extra_Pass_Polygon_Mode()==EXTRA_PASS_DISABLE) {
@@ -256,7 +263,14 @@ void SceneClass::Render(RenderInfoClass & rinfo)
 
 	// Any stuff that needs to get done after anything else
 	Post_Render_Processing(rinfo);
-#endif
+	#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		// A failed Linux source traversal may be retried with the same render
+		// info; do not retain the scene's temporary light selection on failure.
+		rinfo.light_environment=incoming_environment;
+		throw;
+	}
+	#endif
 }
 
 /***********************************************************************************************
@@ -567,9 +581,6 @@ void SimpleSceneClass::Customized_Render(RenderInfoClass & rinfo)
 	// derived classes should use light environment
 	WWASSERT(rinfo.light_environment==NULL);
 	int count=0;
-#if defined(ZH_WW3D_CPU_ONLY)
-	throw OriginalW3DDeviceUnavailable("original WW3D scene light GPU installation pending");
-#else
 	// Turn off lights in case we have none
 	DX8Wrapper::Set_Light(0,NULL);
 	DX8Wrapper::Set_Light(1,NULL);
@@ -628,7 +639,6 @@ void SimpleSceneClass::Customized_Render(RenderInfoClass & rinfo)
 			}
 		}
 	}
-#endif
 }
 
 void SimpleSceneClass::Post_Render_Processing(RenderInfoClass& rinfo)

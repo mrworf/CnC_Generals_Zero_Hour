@@ -1,5 +1,7 @@
 # M22 plan 01 slice 06C3C2: original WW3D scene and static-sort frame
 
+This is the aggregate acceptance contract, delivered in dependency order by [C2A](milestone_22_plan_01_slice_06c3c2a.md) source `SceneClass`/`SimpleSceneClass` traversal and [C2B](milestone_22_plan_01_slice_06c3c2b.md) canonical WW3D Render/static-sort/full-frame integration. No aggregate completion is claimed from either child alone.
+
 ## Goal and observable outcome
 
 Requires accepted 06C3C1. Original `WW3D::Render(SceneClass*,CameraClass*,...)` and `Render(RenderObjClass&,RenderInfoClass&)` produce complete owned scene/object frames with canonical camera, source viewport clear, fill/ambient/light environment, scene/object calls and original Flush/static/sort order on Recording and public bgfx Vulkan. This closes aggregate 06C3, not WWShade family or retail GameClient acceptance.

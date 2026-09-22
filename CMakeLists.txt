@@ -2156,6 +2156,9 @@ if(ZH_BUILD_TESTS)
   add_test(NAME original_w3d_source_viewport_clear COMMAND original_w3d_cpu_graph_tests --source-viewport-clear)
   set_tests_properties(original_w3d_source_viewport_clear PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")
+  add_test(NAME original_w3d_scene_traversal COMMAND original_w3d_cpu_graph_tests --scene-traversal)
+  set_tests_properties(original_w3d_scene_traversal PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
   if(ZH_ENABLE_GPU_TESTS)
     add_test(NAME original_w3d_source_viewport_clear_bgfx COMMAND "${Python3_EXECUTABLE}"
       "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
