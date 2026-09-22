@@ -26,6 +26,18 @@ REGISTRATIONS = (
 )
 
 
+def has_direct3d_dependency(ldd_output: str) -> bool:
+    """Inspect DSO names, not ASLR mapping addresses or loader paths."""
+    for line in ldd_output.splitlines():
+        fields = line.split("=>", 1)[0].split()
+        if not fields:
+            continue
+        name = pathlib.PurePosixPath(fields[0]).name.lower()
+        if "d3d" in name or "direct3d" in name:
+            return True
+    return False
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source-root", type=pathlib.Path, required=True)
@@ -79,8 +91,8 @@ def main() -> int:
     dynamic = subprocess.run(
         ["ldd", str(args.executable)], check=True, text=True,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-    ).stdout.lower()
-    if "d3d" in dynamic or "direct3d" in dynamic:
+    ).stdout
+    if has_direct3d_dependency(dynamic):
         failures.append("production executable acquired a Direct3D dependency")
 
     with args.classification.open(encoding="utf-8", newline="") as stream:
