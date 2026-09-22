@@ -231,7 +231,15 @@ View::WorldToScreenReturn W3DView::worldToScreenTriReturn(const Coord3D*, ICoord
 void W3DView::screenToWorld(const ICoord2D*, Coord3D*) { ZH_VIEW_PENDING(); }
 void W3DView::screenToTerrain(const ICoord2D*, Coord3D*) { ZH_VIEW_PENDING(); }
 void W3DView::screenToWorldAtZ(const ICoord2D*, Coord3D*, Real) { ZH_VIEW_PENDING(); }
-const Coord3D& W3DView::get3DCameraPosition() const { ZH_VIEW_PENDING(); }
+const Coord3D& W3DView::get3DCameraPosition() const
+{
+	if (!m_3DCamera)
+		throw OriginalW3DDeviceUnavailable("original tactical 3D camera position unavailable");
+	const Vector3 camera = m_3DCamera->Get_Position();
+	static Coord3D pos;
+	pos.set(camera.X, camera.Y, camera.Z);
+	return pos;
+}
 void W3DView::setCameraLock(ObjectID) { ZH_VIEW_PENDING(); }
 void W3DView::setSnapMode(CameraLockType, Real) { ZH_VIEW_PENDING(); }
 void W3DView::shake(const Coord3D*, CameraShakeType) { ZH_VIEW_PENDING(); }

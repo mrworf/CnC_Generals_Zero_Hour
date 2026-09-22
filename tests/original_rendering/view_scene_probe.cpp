@@ -69,6 +69,11 @@ extern "C" void zh_probe_view_scene()
             catch (const std::runtime_error&) { rejected = true; }
             require(rejected && !no_edge.get3DCamera(),
                 "original W3DView initialized without source display/edge");
+            bool no_camera_position = false;
+            try { (void)no_edge.get3DCameraPosition(); }
+            catch (const std::runtime_error&) { no_camera_position = true; }
+            require(no_camera_position,
+                "original W3DView returned camera position before init");
             bool no_terrain_edge = false;
             try { auto* terrain = NEW_REF(HeightMapRenderObjClass, ()); terrain->Release_Ref(); }
             catch (const std::runtime_error&) { no_terrain_edge = true; }
@@ -350,6 +355,17 @@ extern "C" void zh_probe_view_scene()
                 view->init();
                 require(view->get3DCamera() == camera && camera->Num_Refs() == 1,
                     "original W3DView re-entry replaced 3D camera");
+                camera->Set_Position(Vector3(0, 0, 1));
+                const Coord3D& first_camera_position = view->get3DCameraPosition();
+                require(first_camera_position.x == 0 && first_camera_position.y == 0 &&
+                    first_camera_position.z == 1,
+                    "original W3DView camera-position accessor diverged from owned camera");
+                camera->Set_Position(Vector3(2, 3, 4));
+                const Coord3D& moved_camera_position = view->get3DCameraPosition();
+                require(&moved_camera_position == &first_camera_position &&
+                    moved_camera_position.x == 2 && moved_camera_position.y == 3 &&
+                    moved_camera_position.z == 4,
+                    "original W3DView camera-position reference did not track camera");
                 camera->Set_Position(Vector3(0, 0, 1));
                 camera->Set_View_Plane(Vector2(-1, -0.75f), Vector2(1, 0.75f));
                 camera->Set_Clip_Planes(0.995f, 2.0f);
