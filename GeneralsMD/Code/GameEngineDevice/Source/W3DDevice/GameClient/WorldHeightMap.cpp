@@ -29,6 +29,9 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 
 #include "PreRTS.h"
+#include "Common/DataChunk.h"
+#include "Common/GlobalData.h"
+#include "Common/MapReaderWriterInfo.h"
 #include "Common/OriginalMapLoader.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "OriginalW3DDeviceUnavailable.h"
@@ -56,8 +59,31 @@ WorldHeightMap::WorldHeightMap() :
 
 WorldHeightMap::WorldHeightMap(ChunkInputStream *input, Bool logical_only) : WorldHeightMap()
 {
-	if (!input || !logical_only)
-		throw OriginalW3DDeviceUnavailable("original visual terrain map payload pending");
+	if (!input)
+		throw OriginalW3DDeviceUnavailable("original terrain map input missing");
+	if (!logical_only) {
+		try {
+			DataChunkInput file(input);
+			file.registerParser(AsciiString("HeightMapData"), AsciiString::TheEmptyString,
+				ParseHeightMapDataChunk);
+			file.registerParser(AsciiString("BlendTileData"), AsciiString::TheEmptyString,
+				ParseBlendTileDataChunk);
+			if (!file.parse(this) || !m_data || !m_tileNdxes)
+				throw OriginalW3DDeviceUnavailable("original visual terrain map incomplete");
+			m_drawWidthX = m_width;
+			m_drawHeightY = m_height;
+			return;
+		} catch (...) {
+			delete [] m_data; m_data = NULL;
+			delete [] m_tileNdxes; m_tileNdxes = NULL;
+			delete [] m_blendTileNdxes; m_blendTileNdxes = NULL;
+			delete [] m_extraBlendTileNdxes; m_extraBlendTileNdxes = NULL;
+			delete [] m_cliffInfoNdxes; m_cliffInfoNdxes = NULL;
+			delete [] m_cellFlipState; m_cellFlipState = NULL;
+			delete [] m_cellCliffState; m_cellCliffState = NULL;
+			throw;
+		}
+	}
 	OriginalMapLoader loader;
 	if (!loader.load(input))
 		throw OriginalW3DDeviceUnavailable("original logical height map rejected");
@@ -75,6 +101,99 @@ WorldHeightMap::WorldHeightMap(ChunkInputStream *input, Bool logical_only) : Wor
 	m_drawHeightY = m_height;
 }
 
+Bool WorldHeightMap::ParseHeightMapDataChunk(DataChunkInput &file, DataChunkInfo *info, void *owner)
+{
+	return static_cast<WorldHeightMap *>(owner)->ParseHeightMapData(file, info, owner);
+}
+
+Bool WorldHeightMap::ParseHeightMapData(DataChunkInput &file, DataChunkInfo *info, void *)
+{
+	if (m_data || !info || info->version < K_HEIGHT_MAP_VERSION_3 ||
+		info->version > K_HEIGHT_MAP_VERSION_4)
+		throw OriginalW3DDeviceUnavailable("original visual height data rejected");
+	m_width = file.readInt();
+	m_height = file.readInt();
+	m_borderSize = file.readInt();
+	if (m_width <= 1 || m_height <= 1 || m_width > 4096 || m_height > 4096 ||
+		m_width > 16777216 / m_height)
+		throw OriginalW3DDeviceUnavailable("original visual height dimensions rejected");
+	if (info->version >= K_HEIGHT_MAP_VERSION_4) {
+		const Int count = file.readInt();
+		if (count < 0 || count > 1024)
+			throw OriginalW3DDeviceUnavailable("original visual map boundaries rejected");
+		m_boundaries.resize(static_cast<std::size_t>(count));
+		for (Int i = 0; i < count; ++i) {
+			m_boundaries[i].x = file.readInt();
+			m_boundaries[i].y = file.readInt();
+		}
+	}
+	m_dataSize = file.readInt();
+	if (m_dataSize != m_width * m_height)
+		throw OriginalW3DDeviceUnavailable("original visual height shape rejected");
+	m_data = NEW UnsignedByte[m_dataSize];
+	file.readArrayOfBytes(reinterpret_cast<char *>(m_data), m_dataSize);
+	if (!file.atEndOfChunk())
+		throw OriginalW3DDeviceUnavailable("original visual height tail rejected");
+	return TRUE;
+}
+
+Bool WorldHeightMap::ParseBlendTileDataChunk(DataChunkInput &file, DataChunkInfo *info, void *owner)
+{
+	return static_cast<WorldHeightMap *>(owner)->ParseBlendTileData(file, info, owner);
+}
+
+Bool WorldHeightMap::ParseBlendTileData(DataChunkInput &file, DataChunkInfo *info, void *)
+{
+	if (!m_data || m_tileNdxes || !info || info->version != K_BLEND_TILE_VERSION_8)
+		throw OriginalW3DDeviceUnavailable("original visual tile metadata rejected");
+	const Int length = file.readInt();
+	if (length != m_dataSize)
+		throw OriginalW3DDeviceUnavailable("original visual tile shape rejected");
+	m_tileNdxes = NEW Short[m_dataSize];
+	m_blendTileNdxes = NEW Short[m_dataSize];
+	m_extraBlendTileNdxes = NEW Short[m_dataSize];
+	m_cliffInfoNdxes = NEW Short[m_dataSize];
+	file.readArrayOfBytes(reinterpret_cast<char *>(m_tileNdxes), m_dataSize * sizeof(Short));
+	file.readArrayOfBytes(reinterpret_cast<char *>(m_blendTileNdxes), m_dataSize * sizeof(Short));
+	file.readArrayOfBytes(reinterpret_cast<char *>(m_extraBlendTileNdxes), m_dataSize * sizeof(Short));
+	file.readArrayOfBytes(reinterpret_cast<char *>(m_cliffInfoNdxes), m_dataSize * sizeof(Short));
+	m_flipStateWidth = (m_width + 7) / 8;
+	m_cellFlipState = NEW UnsignedByte[m_flipStateWidth * m_height]();
+	m_cellCliffState = NEW UnsignedByte[m_flipStateWidth * m_height];
+	file.readArrayOfBytes(reinterpret_cast<char *>(m_cellCliffState), m_flipStateWidth * m_height);
+	m_numBitmapTiles = file.readInt();
+	m_numBlendedTiles = file.readInt();
+	m_numCliffInfo = file.readInt();
+	m_numTextureClasses = file.readInt();
+	if (m_numBitmapTiles != 1 || m_numBlendedTiles != 1 || m_numCliffInfo != 1 ||
+		m_numTextureClasses != 1)
+		throw OriginalW3DDeviceUnavailable("original active terrain blend metadata pending");
+	m_textureClasses[0].globalTextureClass = -1;
+	m_textureClasses[0].firstTile = file.readInt();
+	m_textureClasses[0].numTiles = file.readInt();
+	m_textureClasses[0].width = file.readInt();
+	(void)file.readInt();
+	m_textureClasses[0].name = file.readAsciiString();
+	m_numEdgeTiles = file.readInt();
+	m_numEdgeTextureClasses = file.readInt();
+	if (m_textureClasses[0].firstTile != 0 || m_textureClasses[0].numTiles != 1 ||
+		m_textureClasses[0].width != 1 || m_textureClasses[0].name.isEmpty() ||
+		m_numEdgeTiles != 0 || m_numEdgeTextureClasses != 0)
+		throw OriginalW3DDeviceUnavailable("original terrain texture class rejected");
+	for (Int i = 0; i < m_dataSize; ++i) {
+		if (m_tileNdxes[i] < 0 || m_tileNdxes[i] > 3 || m_blendTileNdxes[i] != 0 ||
+			m_extraBlendTileNdxes[i] != 0 || m_cliffInfoNdxes[i] != 0)
+			throw OriginalW3DDeviceUnavailable("original active terrain cell metadata pending");
+	}
+	for (Int i = 0; i < m_flipStateWidth * m_height; ++i) {
+		if (m_cellCliffState[i] != 0)
+			throw OriginalW3DDeviceUnavailable("original active terrain cliff metadata pending");
+	}
+	if (!file.atEndOfChunk())
+		throw OriginalW3DDeviceUnavailable("original visual tile tail rejected");
+	return TRUE;
+}
+
 WorldHeightMap::~WorldHeightMap()
 {
 	delete [] m_data;
@@ -86,6 +205,87 @@ WorldHeightMap::~WorldHeightMap()
 	delete [] m_seismicUpdateFlag;
 	delete [] m_seismicZVelocities;
 	delete [] m_cellCliffState;
+}
+
+Bool WorldHeightMap::getFlipState(Int x, Int y) const
+{
+	if (x < 0 || y < 0 || x >= m_width || y >= m_height || !m_cellFlipState) return FALSE;
+	return (m_cellFlipState[y * m_flipStateWidth + (x >> 3)] & (1 << (x & 7))) != 0;
+}
+
+Bool WorldHeightMap::getCliffState(Int x, Int y) const
+{
+	if (x < 0 || y < 0 || x >= m_width || y >= m_height || !m_cellCliffState) return FALSE;
+	return (m_cellCliffState[y * m_flipStateWidth + (x >> 3)] & (1 << (x & 7))) != 0;
+}
+
+Int WorldHeightMap::getTextureClassFromNdx(Int tile_index)
+{
+	const Int source_tile = tile_index >> 2;
+	for (Int i = 0; i < m_numTextureClasses; ++i) {
+		if (source_tile >= m_textureClasses[i].firstTile &&
+			source_tile < m_textureClasses[i].firstTile + m_textureClasses[i].numTiles)
+			return i;
+	}
+	return -1;
+}
+
+Int WorldHeightMap::getTextureClassNoBlend(Int x, Int y, Bool)
+{
+	if (x < 0 || y < 0 || x >= m_width || y >= m_height || !m_tileNdxes) return -1;
+	return getTextureClassFromNdx(m_tileNdxes[y * m_width + x]);
+}
+
+Int WorldHeightMap::getTextureClass(Int x, Int y, Bool base_class)
+{
+	if (x < 0 || y < 0 || x >= m_width || y >= m_height || !m_tileNdxes) return -1;
+	const Int index = y * m_width + x;
+	if (!base_class && (m_blendTileNdxes[index] || m_extraBlendTileNdxes[index])) return -1;
+	return getTextureClassFromNdx(m_tileNdxes[index]);
+}
+
+Bool WorldHeightMap::getUVData(Int x, Int y, float u[4], float v[4], Bool)
+{
+	if (!u || !v || x < 0 || y < 0 || x >= m_drawWidthX - 1 ||
+		y >= m_drawHeightY - 1 || !m_tileNdxes)
+		return FALSE;
+	// The source returns zero UVs when the tile bitmap has not been loaded.  07F3
+	// deliberately owns metadata only; texture files and atlas resources stay closed.
+	for (Int i = 0; i < 4; ++i) u[i] = v[i] = 0.0f;
+	return FALSE;
+}
+
+void WorldHeightMap::getAlphaUVData(Int x, Int y, float u[4], float v[4],
+	UnsignedByte alpha[4], Bool *flip, Bool full_tile)
+{
+	if (!alpha || !flip || !getUVData(x, y, u, v, full_tile)) {
+		if (alpha) for (Int i = 0; i < 4; ++i) alpha[i] = 0;
+		if (flip) *flip = FALSE;
+		if (x < 0 || y < 0 || x >= m_drawWidthX - 1 || y >= m_drawHeightY - 1 || !m_tileNdxes)
+			throw OriginalW3DDeviceUnavailable("original terrain UV query out of range");
+		return;
+	}
+}
+
+Bool WorldHeightMap::isCliffMappedTexture(Int x, Int y)
+{
+	if (x < 0 || y < 0 || x >= m_width || y >= m_height || !m_cliffInfoNdxes) return FALSE;
+	return m_cliffInfoNdxes[y * m_width + x] != 0;
+}
+
+TextureClass *WorldHeightMap::getTerrainTexture()
+{
+	throw OriginalW3DDeviceUnavailable("original terrain texture resource pending");
+}
+
+TextureClass *WorldHeightMap::getAlphaTerrainTexture()
+{
+	throw OriginalW3DDeviceUnavailable("original terrain alpha resource pending");
+}
+
+TextureClass *WorldHeightMap::getEdgeTerrainTexture()
+{
+	throw OriginalW3DDeviceUnavailable("original terrain edge resource pending");
 }
 
 Real WorldHeightMap::getSeismicZVelocity(Int, Int) const
