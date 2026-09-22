@@ -3427,45 +3427,11 @@ void operator delete[](void * p, const char *, int)
 void operator delete(void *p, size_t) noexcept { ::operator delete(p); }
 void operator delete[](void *p, size_t) noexcept { ::operator delete[](p); }
 
-namespace
-{
-struct AlignedAllocationHeader
-{
-	void *raw;
-	size_t alignment;
-};
-}
-
-void *operator new(size_t size, std::align_val_t alignment)
-{
-	const size_t align = static_cast<size_t>(alignment);
-	const size_t total = size + align - 1 + sizeof(AlignedAllocationHeader);
-	void *raw = TheDynamicMemoryAllocator
-		? TheDynamicMemoryAllocator->allocateBytesDoNotZero(static_cast<Int>(total), "aligned global operator new")
-		: (::preMainInitMemoryManager(), TheDynamicMemoryAllocator->allocateBytesDoNotZero(static_cast<Int>(total), "aligned global operator new"));
-	const uintptr_t start = reinterpret_cast<uintptr_t>(raw) + sizeof(AlignedAllocationHeader);
-	const uintptr_t aligned = (start + align - 1) & ~(static_cast<uintptr_t>(align) - 1);
-	auto *header = reinterpret_cast<AlignedAllocationHeader *>(aligned) - 1;
-	header->raw = raw;
-	header->alignment = align;
-	return reinterpret_cast<void *>(aligned);
-}
-
-void *operator new[](size_t size, std::align_val_t alignment)
-{
-	return ::operator new(size, alignment);
-}
-
-void operator delete(void *p, std::align_val_t) noexcept
-{
-	if (!p) return;
-	auto *header = reinterpret_cast<AlignedAllocationHeader *>(p) - 1;
-	TheDynamicMemoryAllocator->freeBytes(header->raw);
-}
-
-void operator delete[](void *p, std::align_val_t alignment) noexcept { ::operator delete(p, alignment); }
-void operator delete(void *p, size_t, std::align_val_t alignment) noexcept { ::operator delete(p, alignment); }
-void operator delete[](void *p, size_t, std::align_val_t alignment) noexcept { ::operator delete[](p, alignment); }
+// Leave process-wide aligned allocation/deallocation to the C++ runtime. A
+// Vulkan/LLVM DSO may allocate with its own aligned-new overload and resolve
+// aligned delete here; a private preceding-header scheme cannot safely free
+// that foreign allocation. Ordinary original allocations still use the
+// original dynamic allocator above.
 #endif
 
 //-----------------------------------------------------------------------------

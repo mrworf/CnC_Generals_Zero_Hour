@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <new>
 
 extern "C" void* m26_allocate_across_target(std::size_t size);
 extern "C" void m26_free_across_target(void* memory);
@@ -67,7 +68,20 @@ int main(int argc, char** argv)
   void* aligned = m26_allocate_aligned(37, 64);
   if ((reinterpret_cast<std::uintptr_t>(aligned) & 63U) != 0)
     return fail("aligned allocation did not meet requested alignment");
+  if (zh::original_process::live_raw_allocations() != raw_before)
+    return fail("aligned allocation unexpectedly entered original raw allocator");
   m26_free_aligned(aligned, 64);
+  if (zh::original_process::live_raw_allocations() != raw_before)
+    return fail("aligned cross-target free changed original raw allocation count");
+
+  // This overload is used by third-party DSOs and can pair with the process's
+  // aligned delete. It must not be interpreted as an original private header.
+  void* foreign_style = ::operator new(1536, std::align_val_t{64}, std::nothrow);
+  if (!foreign_style || (reinterpret_cast<std::uintptr_t>(foreign_style) & 63U) != 0)
+    return fail("aligned nothrow allocation did not meet requested alignment");
+  ::operator delete(foreign_style, std::align_val_t{64});
+  if (zh::original_process::live_raw_allocations() != raw_before)
+    return fail("aligned nothrow pair changed original raw allocation count");
 
   if (!zh::original_process::test_pool_config_reentry_guard())
     return fail("pool configuration allocation re-entry was not detected");
