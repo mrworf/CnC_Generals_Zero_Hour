@@ -34,6 +34,7 @@
 #include "hanim.h"
 #include "trim.h"
 #include "original_gpu_edge.h"
+#include "zh/original_process.h"
 #include "zh/renderer/recording_device.h"
 #if defined(ZH_BGFX_SHADER_DIR)
 #include "zh/platform/bgfx_device.h"
@@ -55,6 +56,10 @@
 #include <map>
 #include <algorithm>
 #include <array>
+
+class CriticalSection;
+extern CriticalSection* TheDmaCriticalSection;
+extern CriticalSection* TheMemoryPoolCriticalSection;
 
 #undef assert
 #define assert(condition) do { if (!(condition)) { std::fprintf(stderr,"original W3D CPU invariant %s:%d: %s\n",__FILE__,__LINE__,#condition); std::abort(); } } while (false)
@@ -383,6 +388,24 @@ int test_original_skin_batch()
 
 int main(int argc, char **argv)
 {
+	struct ProcessServicesGuard {
+		bool active=false;
+		~ProcessServicesGuard() {
+			if (!active) return;
+			zh::original_process::shutdown_services();
+			assert(!TheDmaCriticalSection && !TheMemoryPoolCriticalSection);
+		}
+	} services;
+	const bool threaded_source_device=argc==2 &&
+		(std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-viewport-clear")==0);
+	if (threaded_source_device) {
+		assert(!TheDmaCriticalSection && !TheMemoryPoolCriticalSection);
+		char reason[128]{};
+		services.active=zh::original_process::initialize_services(-1,reason,sizeof reason);
+		assert(services.active && TheDmaCriticalSection && TheMemoryPoolCriticalSection);
+	}
 	if (argc==2 && std::strcmp(argv[1],"--skin-batch")==0)
 		return test_original_skin_batch();
 	// Keep the original strip provider runtime-witnessed even in optimized

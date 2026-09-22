@@ -1,0 +1,15 @@
+# M22 06C3C2B3B2 threaded source-fixture bootstrap evidence
+
+## Cause and boundary
+
+The accepted B3A `dc80dea` source-scene test linked original `GameMemory.cpp` process-global new/delete but did not call `zh::original_process::initialize_services()`. Its `TheDmaCriticalSection` and `TheMemoryPoolCriticalSection` remained null. `ScopedCriticalSection` explicitly skips locking for a null pointer. A bgfx Vulkan render/validation worker and the source API thread therefore reached the same original allocator without the production process-service locks. The clean B3A fixture failed even in its first rigid-only generation without readback; the direct bgfx GPU test passed 30/30. The crash was not caused by B3B mixed categories, re-entry, or bgfx readback timing.
+
+Isolated accepted-B3A worktree `/tmp/m22-b3a-baseline.v4LdRo`, same pinned bgfx and host Vulkan: with original GameMemory and the old readback loop unchanged, the no-services rigid/no-readback validation-on run failed by attempt 5, while an early `initialize_services()`/late `shutdown_services()` passed 30/30 fresh-process rigid/no-readback first generations and 30/30 full four-generation static scenes. Validation-off with no services had passed 30/30; this was timing-sensitive, not a valid lifecycle. Exploratory removal of global operators passed physical diagnostics but broke production zero-fill and explicit ownership; ELF localization broke inline/out-of-line libstdc++ allocation pairing. Neither exploratory policy was retained.
+
+## Accepted change and controls
+
+Only the original-source bgfx test fixture now boots process services before generated assets and any device, asserts both allocator locks are installed, and tears services down after later asset, edge, and device destructors. It asserts both pointers are null before bootstrap and after teardown. This covers static, mixed, and viewport-clear source GPU modes. Product `GameMemory.cpp`, original global operators, WW3D class layout, and retail symlinks are unchanged. Source-only Recording mode remains independent of the threaded bootstrap.
+
+Host RTX 4070 / Vulkan validation enabled: current GCC Debug static source scene 30/30 fresh-process four-generation runs; mixed diagnostic 30/30 four-generation runs; Clang Debug static source scene 30/30. The original source viewport-clear gate passes. Both format/extent combinations and resource/accounting assertions remain active in every static generation. GCC and Clang source-only `--source-static-scene` pass leak-capable ASan+UBSan outside the sandbox; the sandbox's ptrace restriction prevents LSan there. GCC and Clang physical ASan+UBSan source scenes pass with `detect_leaks=0`; GCC physical leak scan reports 7,760 bytes in 12 host libdbus allocations, not source/edge allocations.
+
+GCC/Clang Debug/Release complete builds pass. All four canonical 180-test suites pass 177 tests; their only three failures are the same dependency-ledger drift from separately pending B3B edits to `original_gpu_edge.cpp` and `ww3d.cpp`. No B3B product source or diagnostic scene change is included in this slice. Full clean ledger remains required at B3B acceptance.
