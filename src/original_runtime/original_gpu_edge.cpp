@@ -31,6 +31,7 @@ renderer::TextureFormat translate_format(WW3DFormat source)
     case WW3D_FORMAT_DXT5: return renderer::TextureFormat::bc3;
     case WW3D_FORMAT_A8R8G8B8:
     case WW3D_FORMAT_X8R8G8B8: return renderer::TextureFormat::bgra8;
+    case WW3D_FORMAT_A1R5G5B5: return renderer::TextureFormat::bgr5a1;
     default: throw std::runtime_error("original texture format has no physical GPU mapping");
     }
 }

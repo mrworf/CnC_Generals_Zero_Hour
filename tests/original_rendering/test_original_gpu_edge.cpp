@@ -28,6 +28,8 @@ public:
     { if (reject_create && --reject_create == 0) return {}; auto h=recorder.create_buffer(d,l);
       if (h) created_buffers.push_back(h); return h; }
     TextureHandle create_texture(const TextureDesc& d, std::string_view l) override { return recorder.create_texture(d,l); }
+    bool supports_texture_format(TextureFormat f, TextureDimension d, bool s, bool r) const noexcept override
+    { return recorder.supports_texture_format(f,d,s,r); }
     SamplerHandle create_sampler(const SamplerDesc& d, std::string_view l) override { return recorder.create_sampler(d,l); }
     ShaderHandle create_shader(const ShaderDesc& d, std::string_view l) override { return recorder.create_shader(d,l); }
     PipelineHandle create_pipeline(const PipelineKey& d, std::string_view l) override { return recorder.create_pipeline(d,l); }
@@ -127,6 +129,43 @@ void injected_device_failures()
     vb->Release_Ref();
     ib->Release_Ref();
     check(VertexBufferClass::Get_Total_Buffer_Count() == 0 && IndexBufferClass::Get_Total_Buffer_Count() == 0);
+}
+
+void packed_terrain_texture_edge()
+{
+    for (int generation=0; generation!=2; ++generation) {
+        FaultDevice device;
+        zh::original_runtime::OriginalGpuEdge edge(device);
+        unsigned mips=1;
+        bool rejected=false;
+        try { edge.create_texture(WW3D_FORMAT_R8G8B8,2,2,mips); }
+        catch (const std::runtime_error&) { rejected=true; }
+        check(rejected && device.recorder.resource_counts().total()==0);
+        device.recorder.fail_next_texture_create();
+        rejected=false;
+        try { edge.create_texture(WW3D_FORMAT_A1R5G5B5,2,2,mips); }
+        catch (const std::runtime_error&) { rejected=true; }
+        check(rejected && device.recorder.resource_counts().total()==0);
+        const auto texture=edge.create_texture(WW3D_FORMAT_A1R5G5B5,2,2,mips);
+        const std::array<unsigned short,4> channels{{0x8000,0xfc00,0x83e0,0x801f}};
+        check(texture && mips==1);
+        check(device.recorder.describe_texture_format(texture)==TextureFormat::bgr5a1);
+        device.recorder.fail_next_texture_upload();
+        rejected=false;
+        try { edge.upload_texture(texture,0,2,2,4,channels.data(),sizeof(channels)); }
+        catch (const std::runtime_error&) { rejected=true; }
+        check(rejected);
+        edge.upload_texture(texture,0,2,2,4,channels.data(),sizeof(channels));
+        check(device.recorder.texture_bytes(texture,0)==std::vector<UInt8>(
+            reinterpret_cast<const UInt8*>(channels.data()),
+            reinterpret_cast<const UInt8*>(channels.data()+channels.size())));
+        rejected=false;
+        try { edge.upload_texture(texture,0,2,2,2,channels.data(),sizeof(channels)); }
+        catch (const std::runtime_error&) { rejected=true; }
+        check(rejected);
+        edge.discard_texture(texture);
+        check(device.recorder.resource_counts().total()==0);
+    }
 }
 
 void canonical_fvf_layouts()
@@ -508,6 +547,7 @@ int main()
 {
     first_original_buffer_bytes();
     injected_device_failures();
+    packed_terrain_texture_edge();
     canonical_fvf_layouts();
     original_wrapper_indexed_methods();
     original_dynamic_access_owner();

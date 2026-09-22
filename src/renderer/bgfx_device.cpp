@@ -69,6 +69,7 @@ bgfx::TextureFormat::Enum physical_format(TextureFormat format)
     switch (format) {
     case TextureFormat::rgba8: return bgfx::TextureFormat::RGBA8;
     case TextureFormat::bgra8: return bgfx::TextureFormat::BGRA8;
+    case TextureFormat::bgr5a1: return bgfx::TextureFormat::BGR5A1;
     case TextureFormat::bc1: return bgfx::TextureFormat::BC1;
     case TextureFormat::bc2: return bgfx::TextureFormat::BC2;
     case TextureFormat::bc3: return bgfx::TextureFormat::BC3;
@@ -94,7 +95,8 @@ UInt32 clear_rgba(const std::array<float,4>& value)
 
 UInt64 required_texture_bytes(const TextureUploadDesc& upload, TextureFormat format)
 {
-    if (format == TextureFormat::rgba8 || format == TextureFormat::bgra8)
+    if (format == TextureFormat::rgba8 || format == TextureFormat::bgra8 ||
+        format == TextureFormat::bgr5a1)
         return static_cast<UInt64>(upload.height) * upload.row_pitch;
     return 0; // Compressed and depth uploads are admitted only with later format-specific proof.
 }
@@ -445,6 +447,7 @@ BgfxGpuDevice::~BgfxGpuDevice() = default;
 bool BgfxGpuDevice::supports_texture_format(TextureFormat format, TextureDimension dimension,
     bool sampled, bool render_target) const noexcept
 {
+    if (format == TextureFormat::bgr5a1 && render_target) return false;
     if (dimension != TextureDimension::texture_2d || (!sampled && !render_target)) return false;
     const auto native = physical_format(format);
     if (native == bgfx::TextureFormat::Unknown) return false;
@@ -518,7 +521,8 @@ ValidationResult BgfxGpuDevice::upload_texture(const TextureUploadDesc& desc, co
     const UInt64 required = required_texture_bytes(desc, texture.format);
     if (!bytes || desc.mip_level != 0 || !desc.width || !desc.height
         || desc.width != texture.width || desc.height != texture.height
-        || desc.row_pitch < static_cast<UInt64>(desc.width) * 4U || desc.row_pitch > UINT16_MAX
+        || desc.row_pitch < static_cast<UInt64>(desc.width) *
+            (texture.format == TextureFormat::bgr5a1 ? 2U : 4U) || desc.row_pitch > UINT16_MAX
         || !required || desc.size < required || desc.size > RendererLimits::maximum_upload_bytes)
         return impl_->fail("upload_texture", "unsupported or out-of-bounds texture upload");
     bgfx::updateTexture2D(slot->record.native, 0, 0, 0, 0,

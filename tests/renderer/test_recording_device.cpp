@@ -190,6 +190,32 @@ void test_original_16_bit_index_range_and_base_vertex()
 void test_source_texture_format_capabilities()
 {
     RecordingGpuDevice device;
+    check(device.supports_texture_format(TextureFormat::bgr5a1,TextureDimension::texture_2d,true,false),
+        "recording device must expose packed terrain source profile");
+    check(!device.supports_texture_format(TextureFormat::bgr5a1,TextureDimension::texture_2d,true,true),
+        "packed terrain render target was reported supported");
+    TextureDesc packed;
+    packed.width=2; packed.height=2; packed.format=TextureFormat::bgr5a1;
+    auto packed_target=packed;
+    packed_target.render_target=true;
+    check(!device.create_texture(packed_target,"invalid packed target"),
+        "packed terrain render target was created");
+    device.fail_next_texture_create();
+    check(!device.create_texture(packed,"injected packed create"),
+        "injected packed texture creation failure was ignored");
+    const auto packed_texture=device.create_texture(packed,"source packed terrain");
+    const std::array<UInt16,4> channels{{0x8000,0xfc00,0x83e0,0x801f}};
+    device.fail_next_texture_upload();
+    check(!device.upload_texture({packed_texture,2,2,4,sizeof(channels),0},channels.data()),
+        "injected packed texture upload failure was ignored");
+    check(packed_texture && device.upload_texture({packed_texture,2,2,4,sizeof(channels),0},channels.data()),
+        "packed terrain channel/alpha patterns were rejected");
+    check(device.texture_bytes(packed_texture,0)==std::vector<UInt8>(
+        reinterpret_cast<const UInt8*>(channels.data()),reinterpret_cast<const UInt8*>(channels.data()+channels.size())),
+        "packed terrain channel/alpha patterns changed");
+    check(!device.upload_texture({packed_texture,2,2,2,sizeof(channels),0},channels.data()),
+        "short packed terrain row was accepted");
+    device.destroy(packed_texture);
     check(device.supports_texture_format(TextureFormat::bc1,TextureDimension::texture_2d,true,false),
         "recording device must expose BC1 source profile");
     check(!device.supports_texture_format(TextureFormat::bc1,TextureDimension::texture_2d,true,true),

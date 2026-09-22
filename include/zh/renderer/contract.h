@@ -44,7 +44,7 @@ using PipelineHandle = Handle<PipelineTag>;
 
 enum class BufferUsage : UInt8 { vertex, index, uniform, transfer };
 enum class TextureDimension : UInt8 { texture_2d, cube, texture_3d };
-enum class TextureFormat : UInt8 { rgba8, bgra8, bc1, bc2, bc3, depth16, depth24_stencil8, depth32 };
+enum class TextureFormat : UInt8 { rgba8, bgra8, bc1, bc2, bc3, depth16, depth24_stencil8, depth32, bgr5a1 };
 enum class Filter : UInt8 { nearest, linear };
 enum class AddressMode : UInt8 { repeat, mirrored_repeat, clamp_edge, clamp_border };
 enum class ShaderStage : UInt8 { vertex, fragment };

@@ -146,7 +146,7 @@ public:
     std::size_t pipeline_capacity;
     std::size_t view_capacity;
     std::size_t view_count = 0;
-    std::array<bool,8> supported_texture_formats{true,true,true,true,true,true,true,true};
+    std::array<bool,9> supported_texture_formats{true,true,true,true,true,true,true,true,true};
     bool reject_next_texture_create=false;
     bool reject_next_texture_upload=false;
     bool reject_next_sampler_create=false;
@@ -186,7 +186,8 @@ bool RecordingGpuDevice::supports_texture_format(TextureFormat format, TextureDi
     const auto index=static_cast<std::size_t>(format);
     if (index>=impl_->supported_texture_formats.size() || !impl_->supported_texture_formats[index]) return false;
     if (!sampled && !render_target) return false;
-    if (render_target && (format==TextureFormat::bc1 || format==TextureFormat::bc2 || format==TextureFormat::bc3)) return false;
+    if (render_target && (format==TextureFormat::bgr5a1 || format==TextureFormat::bc1 ||
+        format==TextureFormat::bc2 || format==TextureFormat::bc3)) return false;
     return true;
 }
 
@@ -365,6 +366,7 @@ ValidationResult RecordingGpuDevice::upload_texture(const TextureUploadDesc& des
     UInt64 block_size=0;
     UInt32 block_extent=1;
     if (format==TextureFormat::rgba8 || format==TextureFormat::bgra8) block_size=4;
+    else if (format==TextureFormat::bgr5a1) block_size=2;
     else if (format==TextureFormat::bc1) { block_size=8; block_extent=4; }
     else if (format==TextureFormat::bc2 || format==TextureFormat::bc3) { block_size=16; block_extent=4; }
     else return impl_->fail("upload_texture", "texture format has no color upload path", texture->label);

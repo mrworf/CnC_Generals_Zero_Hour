@@ -899,6 +899,7 @@ add_dependencies(zh_renderer_sdl_gpu zh_bootstrap_shaders)
 
 set(ZH_RENDERER_SHADER_NAMES
   acceptance.vert acceptance.frag
+  packed_texture_probe.vert packed_texture_probe.frag
   original_fvf_probe.vert
   original_applied_0.frag original_applied_1.frag
   original_applied_2.frag original_applied_3.frag
@@ -1878,6 +1879,24 @@ if(ZH_BUILD_TESTS)
   target_link_libraries(renderer_recording_device_tests PRIVATE zh_renderer_sdl_gpu)
   add_test(NAME renderer_recording_device COMMAND renderer_recording_device_tests)
   set_tests_properties(renderer_recording_device PROPERTIES LABELS renderer-contract)
+
+  add_executable(renderer_packed_texture_gpu tests/renderer/packed_texture_gpu.cpp)
+  target_compile_definitions(renderer_packed_texture_gpu PRIVATE
+    ZH_GPU_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/shaders"
+    ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx")
+  target_link_libraries(renderer_packed_texture_gpu PRIVATE
+    zh_renderer_sdl_gpu zh_renderer_bgfx SDL3::SDL3)
+  add_dependencies(renderer_packed_texture_gpu zh_renderer_shaders zh_bgfx_shaders)
+  if(ZH_ENABLE_GPU_TESTS)
+    foreach(packed_backend IN ITEMS sdl bgfx)
+      add_test(NAME renderer_packed_texture_${packed_backend}_gpu COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+        $<TARGET_FILE:renderer_packed_texture_gpu> ${packed_backend})
+      set_tests_properties(renderer_packed_texture_${packed_backend}_gpu PROPERTIES
+        LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE
+        ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+    endforeach()
+  endif()
 
   add_executable(renderer_texture_loader_tests tests/renderer/test_texture_loader.cpp)
   target_link_libraries(renderer_texture_loader_tests PRIVATE zh_renderer_sdl_gpu)

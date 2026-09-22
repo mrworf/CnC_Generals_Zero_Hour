@@ -96,6 +96,7 @@ SDL_GPUTextureFormat texture_format(TextureFormat format)
     switch (format) {
     case TextureFormat::rgba8: return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
     case TextureFormat::bgra8: return SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM;
+    case TextureFormat::bgr5a1: return SDL_GPU_TEXTUREFORMAT_B5G5R5A1_UNORM;
     case TextureFormat::bc1: return SDL_GPU_TEXTUREFORMAT_BC1_RGBA_UNORM;
     case TextureFormat::bc2: return SDL_GPU_TEXTUREFORMAT_BC2_RGBA_UNORM;
     case TextureFormat::bc3: return SDL_GPU_TEXTUREFORMAT_BC3_RGBA_UNORM;
@@ -382,6 +383,7 @@ SdlGpuDevice& SdlGpuDevice::operator=(SdlGpuDevice&&) noexcept = default;
 
 bool SdlGpuDevice::supports_texture_format(TextureFormat format, TextureDimension dimension, bool sampled, bool render_target) const noexcept
 {
+    if (format==TextureFormat::bgr5a1 && render_target) return false;
     if (texture_format(format)==SDL_GPU_TEXTUREFORMAT_INVALID ||
         (dimension!=TextureDimension::texture_2d && dimension!=TextureDimension::cube &&
          dimension!=TextureDimension::texture_3d)) return false;
@@ -418,13 +420,13 @@ TextureHandle SdlGpuDevice::create_texture(const TextureDesc& desc, std::string_
 {
     if (auto result = validate(desc); !result) { impl_->fail("create_texture", result.error, label); return {}; }
     if (label.empty()) { impl_->fail("create_texture", "label must not be empty"); return {}; }
+    if (!supports_texture_format(desc.format,desc.dimension,desc.sampled,desc.render_target)) {
+        impl_->fail("create_texture", "format/usage combination is unsupported by SDL_GPU", label); return {};
+    }
     const auto format = texture_format(desc.format);
     SDL_GPUTextureUsageFlags usage = 0;
     if (desc.sampled) usage |= SDL_GPU_TEXTUREUSAGE_SAMPLER;
     if (desc.render_target) usage |= is_depth(desc.format) ? SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET : SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
-    if (!SDL_GPUTextureSupportsFormat(impl_->device, format, texture_type(desc.dimension), usage)) {
-        impl_->fail("create_texture", "format/usage combination is unsupported by SDL_GPU", label); return {};
-    }
     SDL_GPUTextureCreateInfo info{};
     info.type = texture_type(desc.dimension); info.format = format; info.usage = usage;
     info.width = desc.width; info.height = desc.height; info.layer_count_or_depth = desc.depth_or_layers;
@@ -590,7 +592,8 @@ ValidationResult SdlGpuDevice::upload_texture(const TextureUploadDesc& desc, con
         return impl_->fail("upload_texture", "unsupported dimension or mip level", texture->label);
     const auto format=texture->value.desc.format;
     const bool compressed=format==TextureFormat::bc1 || format==TextureFormat::bc2 || format==TextureFormat::bc3;
-    if (format!=TextureFormat::rgba8 && format!=TextureFormat::bgra8 && !compressed)
+    if (format!=TextureFormat::rgba8 && format!=TextureFormat::bgra8 &&
+        format!=TextureFormat::bgr5a1 && !compressed)
         return impl_->fail("upload_texture", "texture format has no color upload path", texture->label);
     if (desc.width != std::max(1U,texture->value.desc.width >> desc.mip_level) ||
         desc.height != std::max(1U,texture->value.desc.height >> desc.mip_level))
