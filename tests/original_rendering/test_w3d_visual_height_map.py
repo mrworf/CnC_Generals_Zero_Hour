@@ -21,7 +21,7 @@ def chunk(chunk_id: int, version: int, payload: bytes) -> bytes:
     return struct.pack("<IHI", chunk_id, version, len(payload)) + payload
 
 
-def visual_map(kind: str = "valid") -> bytes:
+def visual_map(kind: str = "valid", texture_name: str = "Void") -> bytes:
     names = ["HeightMapData", "BlendTileData"]
     toc = bytearray(b"CkMp" + struct.pack("<I", len(names)))
     for index, name in enumerate(names, 1):
@@ -38,7 +38,7 @@ def visual_map(kind: str = "valid") -> bytes:
     counts = (1, 1, 1, 201 if kind == "oversize" else 1)
     blend = bytearray(struct.pack("<i", length))
     blend.extend(b"".join(arrays) + cliffs + struct.pack("<4i", *counts))
-    blend.extend(struct.pack("<4i", 0, 1, 1, 0) + ascii_string("Flat"))
+    blend.extend(struct.pack("<4i", 0, 1, 1, 0) + ascii_string(texture_name))
     blend.extend(struct.pack("<2i", 0, 0))
     toc.extend(chunk(1, 4, height))
     if kind != "missing":
@@ -46,7 +46,7 @@ def visual_map(kind: str = "valid") -> bytes:
     if kind == "duplicate":
         toc.extend(chunk(2, 8, bytes(blend)))
     result = bytes(toc)
-    return result[:-7] if kind == "truncated" else result
+    return result[:-12] if kind == "truncated" else result
 
 
 def main() -> int:

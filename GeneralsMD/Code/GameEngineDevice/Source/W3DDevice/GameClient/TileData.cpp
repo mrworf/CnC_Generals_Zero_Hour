@@ -26,6 +26,7 @@
 // Class to handle tile data.
 // Author: John Ahlquist, April 2001
 
+#include "PreRTS.h"
 #include "W3DDevice/GameClient/TileData.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 
@@ -104,4 +105,3 @@ void TileData::doMip(UnsignedByte *pHiRes, Int hiRow, UnsignedByte *pLoRes)
 	}
 
 }
-

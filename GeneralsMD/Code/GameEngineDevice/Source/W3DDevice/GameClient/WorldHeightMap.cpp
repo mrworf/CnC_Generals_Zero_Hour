@@ -30,9 +30,13 @@
 
 #include "PreRTS.h"
 #include "Common/DataChunk.h"
+#include "Common/FileSystem.h"
+#include "Common/file.h"
 #include "Common/GlobalData.h"
 #include "Common/MapReaderWriterInfo.h"
 #include "Common/OriginalMapLoader.h"
+#include "Common/TerrainTypes.h"
+#include "W3DDevice/GameClient/TileData.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #include <cstring>
@@ -174,6 +178,7 @@ Bool WorldHeightMap::ParseBlendTileData(DataChunkInput &file, DataChunkInfo *inf
 	m_textureClasses[0].width = file.readInt();
 	(void)file.readInt();
 	m_textureClasses[0].name = file.readAsciiString();
+	readTexClass(&m_textureClasses[0], m_sourceTiles);
 	m_numEdgeTiles = file.readInt();
 	m_numEdgeTextureClasses = file.readInt();
 	if (m_textureClasses[0].firstTile != 0 || m_textureClasses[0].numTiles != 1 ||
@@ -205,6 +210,48 @@ WorldHeightMap::~WorldHeightMap()
 	delete [] m_seismicUpdateFlag;
 	delete [] m_seismicZVelocities;
 	delete [] m_cellCliffState;
+	for (Int i = 0; i < NUM_SOURCE_TILES; ++i) {
+		REF_PTR_RELEASE(m_sourceTiles[i]);
+		REF_PTR_RELEASE(m_edgeTiles[i]);
+	}
+}
+
+void WorldHeightMap::readTexClass(TXTextureClass *texture_class, TileData **tiles)
+{
+	if (!texture_class || !tiles || !TheTerrainTypes || !TheFileSystem) return;
+	TerrainType *terrain = TheTerrainTypes->findTerrain(texture_class->name);
+	if (!terrain) return; // Retain the accepted metadata-only missing-class boundary.
+	const AsciiString texture_name = terrain->getTexture();
+	if (texture_name.isEmpty())
+		throw OriginalW3DDeviceUnavailable("original terrain source texture name missing");
+	AsciiString path(TERRAIN_TGA_DIR_PATH);
+	path.concat(texture_name);
+	File *file = TheFileSystem->openFile(path.str(), File::READ | File::BINARY);
+	if (!file)
+		throw OriginalW3DDeviceUnavailable("original terrain source texture missing");
+	struct TgaHeader {
+		UnsignedByte id_length, color_map_type, image_type, color_map_info[5];
+		Short x_origin, y_origin, width, height;
+		UnsignedByte depth, flags;
+	} header{};
+	try {
+		if (file->read(&header, sizeof(header)) != sizeof(header) || header.id_length != 0 ||
+			header.color_map_type != 0 || header.image_type != 2 || header.width != TILE_PIXEL_EXTENT ||
+			header.height != TILE_PIXEL_EXTENT || header.depth != 32 || texture_class->firstTile != 0 ||
+			texture_class->numTiles != 1 || texture_class->width != 1)
+			throw OriginalW3DDeviceUnavailable("original terrain source texture format rejected");
+		TileData *tile = NEW_REF(TileData, ());
+		if (file->read(tile->getDataPtr(), TileData::dataLen()) != TileData::dataLen()) {
+			tile->Release_Ref();
+			throw OriginalW3DDeviceUnavailable("original terrain source texture truncated");
+		}
+		tile->updateMips();
+		tiles[0] = tile;
+		file->close();
+	} catch (...) {
+		file->close();
+		throw;
+	}
 }
 
 Bool WorldHeightMap::getFlipState(Int x, Int y) const
