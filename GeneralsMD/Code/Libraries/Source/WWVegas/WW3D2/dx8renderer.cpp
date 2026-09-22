@@ -498,6 +498,16 @@ DX8FVFCategoryContainer::DX8FVFCategoryContainer(unsigned FVF_,bool sorting_)
 
 DX8FVFCategoryContainer::~DX8FVFCategoryContainer()
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	// An aborted source frame invalidates the container without reaching the
+	// procedural-pass flush. Each abandoned task still owns its mesh and pass.
+	while (visible_matpass_head != NULL) {
+		MatPassTaskClass * task=visible_matpass_head;
+		visible_matpass_head=task->Get_Next_Visible();
+		delete task;
+	}
+	visible_matpass_tail=NULL;
+#endif
 	REF_PTR_RELEASE(index_buffer);
 
 	for (unsigned p=0;p<passes;++p) {
@@ -809,6 +819,14 @@ DX8RigidFVFCategoryContainer::DX8RigidFVFCategoryContainer(unsigned FVF,bool sor
 
 DX8RigidFVFCategoryContainer::~DX8RigidFVFCategoryContainer()
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	while (delayed_matpass_head != NULL) {
+		MatPassTaskClass * task=delayed_matpass_head;
+		delayed_matpass_head=task->Get_Next_Visible();
+		delete task;
+	}
+	delayed_matpass_tail=NULL;
+#endif
 	REF_PTR_RELEASE(vertex_buffer);
 }
 

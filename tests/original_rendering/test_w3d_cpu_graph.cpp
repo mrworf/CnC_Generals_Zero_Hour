@@ -418,6 +418,7 @@ int main(int argc, char **argv)
 	const bool threaded_source_device=argc==2 &&
 		(std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-owned-pass-scene")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-viewport-clear")==0);
 	if (threaded_source_device) {
@@ -442,13 +443,20 @@ int main(int argc, char **argv)
 		 std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
 		 std::strcmp(argv[1],"--source-mixed-scene")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0 ||
+		 std::strcmp(argv[1],"--source-owned-pass-scene")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-owned-pass-scene")==0 ||
 		 std::strcmp(argv[1],"--source-mixed-fault-matrix")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0);
 	const bool focused_mixed_scene = argc==2 &&
 		(std::strcmp(argv[1],"--source-mixed-scene")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0 ||
+		 std::strcmp(argv[1],"--source-owned-pass-scene")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-owned-pass-scene")==0 ||
 		 std::strcmp(argv[1],"--source-mixed-fault-matrix")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0);
+	const bool focused_owned_pass_scene = argc==2 &&
+		(std::strcmp(argv[1],"--source-owned-pass-scene")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-owned-pass-scene")==0);
 	const bool focused_fault_scene = argc==2 &&
 		(std::strcmp(argv[1],"--source-mixed-fault-matrix")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0);
@@ -462,6 +470,8 @@ int main(int argc, char **argv)
 			make_mesh(writer,false,false,true,0); // TEST.SKIN01
 			make_hlod(writer,false,true); // TEST.SKINHLOD
 			make_mesh(writer,false,false,false,2); // TEST.TWO01
+			if (focused_owned_pass_scene)
+				make_mesh(writer,false,false,false,0,false,false,0,false,true); // TEST.CULLTREE
 		}
 	} else {
 	make_hierarchy(writer, supply_variant);
@@ -512,6 +522,7 @@ int main(int argc, char **argv)
 	if (focused_static_scene) {
 		const bool physical=std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
 			std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0 ||
+			std::strcmp(argv[1],"--bgfx-source-owned-pass-scene")==0 ||
 			std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0;
 		OwnedFactory factory;
 		factory.files["mytex.tga"]=original_targa();
@@ -535,6 +546,39 @@ int main(int argc, char **argv)
 			}
 			void Post_Render(RenderObjClass*,RenderInfoClass&) override {}
 		};
+		struct OwnedPassHook final : RenderHookClass {
+			enum Mode { disabled, immediate, delayed, culled, culled_outside } mode=disabled;
+			MaterialPassClass* pass=NEW_REF(MaterialPassClass,());
+			OBBoxClass inside{Vector3(0,0,-10),Vector3(100,100,100),Matrix3x3(true)};
+			OBBoxClass outside{Vector3(1000,1000,-10),Vector3(1,1,1),Matrix3x3(true)};
+			OwnedPassHook() {
+				auto* material=NEW_REF(VertexMaterialClass,());
+				material->Set_Lighting(true);
+				material->Set_Diffuse_Color_Source(VertexMaterialClass::MATERIAL);
+				material->Set_Diffuse(Vector3(0,0,0));
+				material->Set_Emissive(Vector3(0,1,0));
+				pass->Set_Material(material);
+				material->Release_Ref();
+				ShaderClass shader;
+				shader.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+				shader.Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
+				pass->Set_Shader(shader);
+			}
+			~OwnedPassHook() override { pass->Release_Ref(); }
+			bool Pre_Render(RenderObjClass*,RenderInfoClass& info) override {
+				if (mode==disabled) return true;
+				pass->Set_Cull_Volume(mode==culled ? &inside :
+					mode==culled_outside ? &outside : nullptr);
+				info.Push_Material_Pass(pass);
+				if (mode==delayed) info.Push_Override_Flags(RenderInfoClass::RINFO_OVERRIDE_ADDITIONAL_PASSES_ONLY);
+				return true;
+			}
+			void Post_Render(RenderObjClass*,RenderInfoClass& info) override {
+				if (mode==disabled) return;
+				if (mode==delayed) info.Pop_Override_Flags();
+				info.Pop_Material_Pass();
+			}
+		};
 		auto run=[&](zh::renderer::GpuDevice& device,auto readback,unsigned width,
 			zh::renderer::TextureFormat color_format) {
 			const char* control=std::getenv("ZH_M22_STATIC_CONTROL");
@@ -551,6 +595,7 @@ int main(int argc, char **argv)
 			assert(color && depth);
 			std::vector<unsigned char> baseline,with_both,without_one;
 			std::vector<unsigned char> with_skin,with_decal,with_sorted,with_front,with_back,with_mixed;
+			std::vector<unsigned char> pass_base,pass_immediate,pass_delayed,pass_culled,pass_outside;
 			{
 				zh::original_runtime::OriginalGpuEdge edge(device);
 				assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
@@ -775,6 +820,73 @@ int main(int argc, char **argv)
 					front->Set_Position(Vector3(-1,0,-11));
 					with_back=frame();
 					scene.Remove_Render_Object(front);
+					if (focused_owned_pass_scene) {
+						auto* pass_mesh=static_cast<MeshClass*>(manager.Create_Render_Obj("TEST.CULLTREE"));
+						assert(pass_mesh && pass_mesh->Peek_Model()->Has_Cull_Tree());
+						pass_mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+						pass_mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+						pass_mesh->Set_Position(Vector3(0,0,-10));
+						auto* hook=new OwnedPassHook();
+						pass_mesh->Set_Render_Hook(hook);
+						scene.Add_Render_Object(pass_mesh);
+						edge.record_source_state("fixture owned base pass");
+						pass_base=frame();
+						hook->mode=OwnedPassHook::immediate;
+						edge.record_source_state("fixture owned immediate pass");
+						pass_immediate=frame();
+						hook->mode=OwnedPassHook::delayed;
+						edge.record_source_state("fixture owned delayed pass");
+						pass_delayed=frame();
+						if (!physical) {
+							auto* recorder=dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
+							assert(recorder && pass_mesh->Num_Refs()==2 && hook->pass->Num_Refs()==1);
+							edge.record_source_state("fixture owned delayed draw reject");
+							recorder->fail_draw_after(1);
+							bool rejected=false;
+							try { (void)frame(); }
+							catch (const std::runtime_error& error) {
+								rejected=std::strstr(error.what(),"draw")!=nullptr;
+							}
+							assert(rejected && !WW3D::Is_Rendering() && !recorder->pass_active() &&
+								pass_mesh->Num_Refs()==2 && hook->pass->Num_Refs()==1);
+							(void)frame();
+							assert(pass_mesh->Num_Refs()==2 && hook->pass->Num_Refs()==1);
+						}
+						const bool old_culling=MaterialPassClass::Is_Per_Polygon_Culling_Enabled();
+						MaterialPassClass::Enable_Per_Polygon_Culling(true);
+						hook->mode=OwnedPassHook::culled;
+						edge.record_source_state("fixture owned cull pass");
+						pass_culled=frame();
+						if (!physical) {
+							auto* recorder=dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
+							assert(recorder);
+							for (unsigned failure=0;failure<2;++failure) {
+								const auto marker=recorder->snapshot().size();
+								edge.record_source_state(failure==0 ?
+									"fixture owned cull upload reject" : "fixture owned cull draw reject");
+								if (failure==0) recorder->fail_next_buffer_upload();
+								else recorder->fail_draw_after(2);
+								bool rejected=false;
+								try { (void)frame(); }
+								catch (const std::runtime_error& error) {
+									rejected=std::strstr(error.what(),failure==0 ? "upload" : "draw")!=nullptr;
+								}
+								const auto trace=recorder->snapshot().substr(marker);
+								assert(rejected && trace.find("fixture owned cull")!=std::string::npos &&
+									!WW3D::Is_Rendering() && !recorder->pass_active() &&
+									pass_mesh->Num_Refs()==2 && hook->pass->Num_Refs()==1);
+								(void)frame(); // Original scene rebuilds its owned pass after an aborted frame.
+								assert(pass_mesh->Num_Refs()==2 && hook->pass->Num_Refs()==1);
+							}
+						}
+						hook->mode=OwnedPassHook::culled_outside;
+						edge.record_source_state("fixture owned outside cull pass");
+						pass_outside=frame();
+						MaterialPassClass::Enable_Per_Polygon_Culling(old_culling);
+						scene.Remove_Render_Object(pass_mesh);
+						assert(pass_mesh->Num_Refs()==1);
+						pass_mesh->Release_Ref();
+					}
 					assert(skin_hlod->Num_Refs()==1 && sorted->Num_Refs()==1 && front->Num_Refs()==1);
 					front->Release_Ref(); sorted->Release_Ref(); skin_hlod->Release_Ref();
 				}
@@ -830,6 +942,22 @@ int main(int argc, char **argv)
 						outer_unchanged(with_sorted) && outer_unchanged(with_mixed) &&
 						outer_unchanged(with_front) &&
 						outer_unchanged(with_back));
+					if (focused_owned_pass_scene) {
+						assert(pass_base.size()==baseline.size() &&
+							pass_immediate.size()==baseline.size() &&
+							pass_delayed.size()==baseline.size() &&
+							pass_culled.size()==baseline.size() &&
+							pass_outside.size()==baseline.size());
+						const auto center_left=width*3/8;
+						const auto center_right=width*5/8;
+						assert(changed(baseline,pass_base,center_left,center_right)>0 &&
+							changed(pass_base,pass_immediate,center_left,center_right)>0 &&
+							changed(pass_base,pass_delayed,center_left,center_right)>0 &&
+							changed(pass_base,pass_culled,center_left,center_right)>0 &&
+							pass_outside==pass_base &&
+							outer_unchanged(pass_immediate) && outer_unchanged(pass_delayed) &&
+							outer_unchanged(pass_culled) && outer_unchanged(pass_outside));
+					}
 				}
 			} else {
 				auto* recorder=dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
@@ -848,6 +976,24 @@ int main(int argc, char **argv)
 						trace.find("draw pipeline=",decal)<skin &&
 						trace.find("draw pipeline=",skin)<sorted &&
 						trace.find("draw pipeline=",sorted)!=std::string::npos);
+					if (focused_owned_pass_scene) {
+						const auto base=trace.find("fixture owned base pass");
+						const auto immediate=trace.find("fixture owned immediate pass");
+						const auto delayed=trace.find("fixture owned delayed pass");
+						const auto cull=trace.find("fixture owned cull pass");
+						const auto outside=trace.find("fixture owned outside cull pass");
+						assert(sorted<base && base<immediate && immediate<delayed &&
+							delayed<cull && cull<outside);
+						const auto draws=[&](std::size_t first,std::size_t last) {
+							unsigned count=0;
+							for (auto at=trace.find("draw pipeline=",first);at!=std::string::npos && at<last;
+								at=trace.find("draw pipeline=",at+1)) ++count;
+							return count;
+						};
+						assert(draws(base,immediate)>0 && draws(immediate,delayed)>draws(base,immediate) &&
+							draws(delayed,cull)>0 && draws(cull,outside)>draws(base,immediate) &&
+							draws(outside,trace.size())==draws(base,immediate));
+					}
 				}
 			}
 			device.destroy(depth); device.destroy(color);

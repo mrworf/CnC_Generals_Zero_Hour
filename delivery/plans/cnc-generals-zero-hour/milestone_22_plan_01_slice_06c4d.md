@@ -1,0 +1,9 @@
+# M22 plan 01 slice 06C4D: owned original scene procedural-pass frame
+
+## Outcome and boundary
+
+Requires accepted 06C4D0. Extend the existing generated, asset-free original `WW3D::Render(SimpleSceneClass, CameraClass)` mixed-scene fixture through its authored `RenderHookClass`/`RenderInfoClass` path. Prove immediate and delayed `MaterialPassClass` scheduling and cull-volume APT within an owned scene, alongside the already accepted rigid, skin, decal, static, translucent and sorted categories. Preserve original scheduler and shader semantics. This is not an enabled WWShade runtime claim, a retail GameClient scene, or C4 aggregate acceptance.
+
+## Entry, negatives and verification
+
+Create representative source-owned procedural material passes from generated fixture materials, with a hook that pushes/pops each pass and delayed override in the original scene's `Pre_Render`/`Post_Render` callbacks. Supply an authored cull-tree mesh and bounded cull volumes; an outside-volume negative must omit its dynamic APT draw while an inside volume produces it. For immediate and delayed passes, use source draw/order counters plus category-specific pixel differences and absence controls so an accidental base-only frame fails. Exercise two target formats, two extents, four generations and host Vulkan validation on GCC/Clang; keep corresponding Recording traces and source-only sanitizers leak-capable. Reject wrong ordering, missing scene object/material, stale frame targets and injected upload/draw/flush failures with abort/requeue. Complete four full asset-free suites, source identity/ABI/provider/ledger gates and 30/30 physical runs before one independent plan/test/evidence commit. If a route requires product changes, split its proven prerequisite first rather than silently relaxing this gate.
