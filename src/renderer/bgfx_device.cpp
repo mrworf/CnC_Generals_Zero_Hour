@@ -824,7 +824,9 @@ ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
             auto* image = lookup(impl_->textures, bindings.textures[texture.binding]);
             auto* sampler = lookup(impl_->samplers, bindings.samplers[texture.binding]);
             if (!image || !image->record.desc.sampled || !image->record.color_initialized || !sampler
-                || sampler->record.desc.maximum_lod != 1000.0f)
+                || (sampler->record.desc.maximum_lod != 1000.0f
+                    && !(sampler->record.desc.maximum_lod == 0.0f
+                        && image->record.desc.mip_levels == 1)))
                 return impl_->fail("draw", "missing/stale texture, sampler or unsupported sampler LOD");
         }
         return {};
@@ -1107,6 +1109,16 @@ ValidationResult BgfxGpuDevice::wait_idle()
     bgfx::frame();
     impl_->next_view = 0;
     return {};
+}
+
+std::size_t BgfxGpuDevice::live_resource_count() const noexcept
+{
+    const auto live=[](const auto& slots) {
+        return static_cast<std::size_t>(std::count_if(slots.begin(),slots.end(),
+            [](const auto& slot) { return slot.alive; }));
+    };
+    return live(impl_->buffers)+live(impl_->textures)+live(impl_->samplers)+
+        live(impl_->shaders)+live(impl_->pipelines);
 }
 
 std::vector<UInt8> BgfxGpuDevice::readback_rgba(TextureHandle source)

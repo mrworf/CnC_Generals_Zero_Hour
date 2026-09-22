@@ -237,6 +237,15 @@ DX8TextureCategoryClass::DX8TextureCategoryClass(
 
 DX8TextureCategoryClass::~DX8TextureCategoryClass()
 {
+	#if defined(ZH_WW3D_CPU_ONLY)
+	// A failed physical draw leaves the current task linked. Invalidation must
+	// retire its mesh ref before unregistering the polygon renderer/model.
+	while (render_task_head) {
+		PolyRenderTaskClass* task=render_task_head;
+		render_task_head=task->Get_Next_Visible();
+		delete task;
+	}
+	#endif
 	// Unregistering the mesh where polygon renderers are connected to kills all polygon renderers
 	while (DX8PolygonRendererClass* p_renderer=PolygonRendererList.Get_Head()) {
 		TheDX8MeshRenderer.Unregister_Mesh_Type(p_renderer->Get_Mesh_Model_Class());
@@ -2250,7 +2259,10 @@ void DX8MeshRendererClass::Flush(void)
 
 	WWPROFILE("DX8MeshRenderer::Flush");
 	if (!camera) return;
-	Log_Statistics_String(true);	
+	#if defined(ZH_WW3D_CPU_ONLY)
+	try {
+	#endif
+	Log_Statistics_String(true);
 
 	/*
 	** Render the FVF categories.  Note that it is critical that skins be 
@@ -2276,11 +2288,16 @@ void DX8MeshRendererClass::Flush(void)
 	for (i=0;i<texture_category_container_lists_rigid.Count();++i) {
 		Render_FVF_Category_Container_List_Delayed_Passes(*texture_category_container_lists_rigid[i]);
 	}
+	#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		DX8Wrapper::Set_Vertex_Buffer(NULL);
+		DX8Wrapper::Set_Index_Buffer(NULL,0);
+		throw;
+	}
+	#endif
 
-#if !defined(ZH_WW3D_CPU_ONLY)
 	DX8Wrapper::Set_Vertex_Buffer(NULL);
 	DX8Wrapper::Set_Index_Buffer(NULL,0);
-#endif
 }
 
 

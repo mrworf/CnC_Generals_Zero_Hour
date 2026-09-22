@@ -69,6 +69,11 @@ OriginalGpuEdge& OriginalGpuEdge::required()
     return *active_edge;
 }
 
+OriginalGpuEdge* OriginalGpuEdge::active() noexcept
+{
+    return active_edge;
+}
+
 renderer::OriginalFvfLayout OriginalGpuEdge::layout_for_fvf(unsigned source_fvf)
 {
     // The original FVFInfoClass computes the offsets/stride; these bits only
@@ -505,6 +510,17 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
         if (!next.fragment_shader) throw std::runtime_error("original fragment shader creation failed: "+device_.last_error());
         auto pipeline=mapped.pipeline;
         pipeline.topology=topology;
+        if (source_frame_active_ && bound_frame_) {
+            const auto color_format=device_.describe_texture_format(bound_frame_->color);
+            const auto depth_format=device_.describe_texture_format(bound_frame_->depth);
+            if (!color_format || !depth_format)
+                throw std::runtime_error("original source pipeline target is stale");
+            if (*color_format!=renderer::TextureFormat::rgba8 &&
+                *color_format!=renderer::TextureFormat::bgra8)
+                throw std::runtime_error("original source pipeline color target is unsupported");
+            pipeline.color_format=*color_format;
+            pipeline.depth_format=*depth_format;
+        }
         pipeline.vertex_shader=next.vertex_shader;
         pipeline.fragment_shader=next.fragment_shader;
         next.pipeline=device_.create_pipeline(renderer::PipelineKey(pipeline),"original applied pipeline");

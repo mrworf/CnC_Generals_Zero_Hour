@@ -57,6 +57,7 @@ public:
 
     ValidationResult claim_window(SDL_Window*);
     ValidationResult wait_idle();
+    std::size_t live_resource_count() const noexcept;
     std::vector<UInt8> readback_rgba(TextureHandle source);
     void release_window() noexcept;
 

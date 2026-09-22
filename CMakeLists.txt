@@ -2166,12 +2166,21 @@ if(ZH_BUILD_TESTS)
   add_test(NAME original_w3d_static_sort_failure COMMAND original_w3d_cpu_graph_tests --static-sort-failure)
   set_tests_properties(original_w3d_static_sort_failure PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")
+  add_test(NAME original_w3d_source_static_scene COMMAND original_w3d_cpu_graph_tests --source-static-scene)
+  set_tests_properties(original_w3d_source_static_scene PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
   if(ZH_ENABLE_GPU_TESTS)
     add_test(NAME original_w3d_source_viewport_clear_bgfx COMMAND "${Python3_EXECUTABLE}"
       "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
       $<TARGET_FILE:original_w3d_cpu_graph_tests> --bgfx-source-viewport-clear)
     set_tests_properties(original_w3d_source_viewport_clear_bgfx PROPERTIES
       LABELS "gpu;original-rendering;renderer-contract;source-identity" TIMEOUT 60 RUN_SERIAL TRUE
+      ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+    add_test(NAME original_w3d_source_static_scene_bgfx COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:original_w3d_cpu_graph_tests> --bgfx-source-static-scene)
+    set_tests_properties(original_w3d_source_static_scene_bgfx PROPERTIES
+      LABELS "gpu;original-rendering;renderer-contract;source-identity" TIMEOUT 120 RUN_SERIAL TRUE
       ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
   endif()
   add_test(NAME original_w3d_texture_frame_update COMMAND original_w3d_cpu_graph_tests --texture-frame-update)

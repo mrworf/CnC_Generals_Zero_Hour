@@ -394,6 +394,15 @@ int main(int argc, char **argv)
 	assert(file.Open(FileClass::WRITE));
 	ChunkSaveClass writer(&file);
 	const bool supply_variant = argc == 3 && std::strcmp(argv[1], "--emit") == 0;
+	const bool focused_static_scene = argc==2 &&
+		(std::strcmp(argv[1],"--source-static-scene")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-static-scene")==0);
+	if (focused_static_scene) {
+		// This gate owns only the three original W3D mesh families it renders.
+		make_mesh(writer,false); // TEST.TRIANGLE
+		make_mesh(writer,false,false,false,0); // TEST.ZERO01
+		make_mesh(writer,true); // TEST.SUPPLY01
+	} else {
 	make_hierarchy(writer, supply_variant);
 	make_animation(writer);
 	make_mesh(writer, supply_variant);
@@ -414,6 +423,7 @@ int main(int argc, char **argv)
 	if (!supply_variant) {
 		make_hlod(writer,false,true);
 		make_hlod(writer,false,true,true);
+	}
 	}
 	const int size = file.Size();
 	file.Close();
@@ -438,6 +448,179 @@ int main(int argc, char **argv)
 	WW3DAssetManager manager;
 	RAMFileClass input(bytes.data(), size);
 	assert(manager.Load_3D_Assets(input));
+	if (argc==2 && (std::strcmp(argv[1],"--source-static-scene")==0 ||
+		std::strcmp(argv[1],"--bgfx-source-static-scene")==0)) {
+		const bool physical=std::strcmp(argv[1],"--bgfx-source-static-scene")==0;
+		OwnedFactory factory;
+		factory.files["mytex.tga"]=original_targa();
+		factory.files["MYTEX.TGA"]=factory.files["mytex.tga"];
+		auto* previous_factory=_TheFileFactory;
+		_TheFileFactory=&factory;
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		WW3D::Set_Thumbnail_Enabled(false);
+		manager.Free_Assets(); // Each WW3D::Shutdown owns its asset-manager generation.
+		struct LevelHook final : RenderHookClass {
+			int level;
+			std::vector<int>& drained;
+			LevelHook(int value,std::vector<int>& out):level(value),drained(out) {}
+			bool Pre_Render(RenderObjClass*,RenderInfoClass&) override {
+				if (!WW3D::Are_Static_Sort_Lists_Enabled()) drained.push_back(level);
+				return true;
+			}
+			void Post_Render(RenderObjClass*,RenderInfoClass&) override {}
+		};
+		auto run=[&](zh::renderer::GpuDevice& device,auto readback,unsigned width,
+			zh::renderer::TextureFormat color_format) {
+			const char* control=std::getenv("ZH_M22_STATIC_CONTROL");
+			const bool rigid_only=control && std::strcmp(control,"rigid_only")==0;
+			assert(!control || rigid_only);
+			const unsigned height=width*3/4;
+			zh::renderer::TextureDesc target;
+			target.width=width; target.height=height; target.render_target=true;
+			target.format=color_format;
+			const auto color=device.create_texture(target,"original source static scene color");
+			assert(device.describe_texture_format(color)==color_format);
+			target.format=zh::renderer::TextureFormat::depth24_stencil8;
+			const auto depth=device.create_texture(target,"original source static scene depth");
+			assert(color && depth);
+			std::vector<unsigned char> baseline,with_both,without_one;
+			{
+				zh::original_runtime::OriginalGpuEdge edge(device);
+				assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
+				RAMFileClass generated(bytes.data(),size);
+				assert(manager.Load_3D_Assets(generated));
+				auto* rigid=static_cast<MeshClass*>(manager.Create_Render_Obj("TEST.TRIANGLE"));
+				auto* level1=static_cast<MeshClass*>(manager.Create_Render_Obj("TEST.ZERO01"));
+				auto* level2=static_cast<MeshClass*>(manager.Create_Render_Obj("TEST.SUPPLY01"));
+				assert(rigid && level1 && level2);
+				for (auto* mesh:{rigid,level1,level2}) {
+					mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+					mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+				}
+				rigid->Set_Position(Vector3(-1,0,-10));
+				level1->Set_Position(Vector3(0,0,-10));
+				level2->Set_Position(Vector3(1,0,-10));
+				level1->Set_Sort_Level(1);
+				level2->Set_Sort_Level(2);
+				std::vector<int> drained;
+				level1->Set_Render_Hook(new LevelHook(1,drained));
+				level2->Set_Render_Hook(new LevelHook(2,drained));
+				edge.bind_frame_targets(color,depth,width,height);
+				CameraClass camera;
+				camera.Set_Clip_Planes(1,100);
+				camera.Set_Viewport(Vector2(0.125f,0.125f),Vector2(0.875f,0.875f));
+				SimpleSceneClass scene;
+				scene.Add_Render_Object(rigid);
+				WW3D::Enable_Static_Sort_Lists(true);
+					auto frame=[&]() {
+						assert(WW3D::Begin_Render(true,true,Vector3(0.8f,0.1f,0.1f),1)==WW3D_ERROR_OK);
+				assert(WW3D::Render(&scene,&camera,true,true,Vector3(0.05f,0.05f,0.2f))==WW3D_ERROR_OK);
+				assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+				return readback(color);
+				};
+				baseline=frame();
+				if (!physical) {
+					auto* recorder=dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
+					assert(recorder);
+					recorder->fail_next_draw();
+					assert(WW3D::Begin_Render(true,true,Vector3(0.8f,0.1f,0.1f),1)==WW3D_ERROR_OK);
+					bool failed=false;
+					try { WW3D::Render(&scene,&camera,true,true,Vector3(0.05f,0.05f,0.2f)); }
+					catch (const std::runtime_error& error) {
+						failed=std::strstr(error.what(),"draw")!=nullptr;
+					}
+					assert(failed && !recorder->pass_active());
+					RenderStateStruct released;
+					DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+					DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+					DX8Wrapper::Get_Render_State(released);
+					assert(!released.vertex_buffers[0] && !released.index_buffer &&
+						VertexBufferClass::Get_Total_Buffer_Count()==1 &&
+						IndexBufferClass::Get_Total_Buffer_Count()==1);
+					assert(frame().empty()); // Fresh source registration and frame retry.
+				}
+				if (!rigid_only) {
+					scene.Add_Render_Object(level1);
+					scene.Add_Render_Object(level2);
+					drained.clear();
+					with_both=frame();
+					assert(drained.size()==2 && drained[0]==2 && drained[1]==1);
+					scene.Remove_Render_Object(level1);
+					drained.clear();
+					without_one=frame();
+					assert(drained.size()==1 && drained[0]==2);
+					scene.Remove_Render_Object(level2);
+				}
+				scene.Remove_Render_Object(rigid);
+				assert(rigid->Num_Refs()==1 && level1->Num_Refs()==1 && level2->Num_Refs()==1);
+				level2->Release_Ref(); level1->Release_Ref(); rigid->Release_Ref();
+				assert(WW3D::Shutdown()==WW3D_ERROR_OK);
+			}
+			if (physical) {
+#if defined(ZH_BGFX_SHADER_DIR)
+				auto* bgfx=dynamic_cast<zh::renderer::BgfxGpuDevice*>(&device);
+				assert(bgfx && bgfx->live_resource_count()==2 &&
+					VertexBufferClass::Get_Total_Buffer_Count()==0 &&
+					IndexBufferClass::Get_Total_Buffer_Count()==0);
+#endif
+				assert(baseline.size()==std::size_t(width)*height*4 &&
+					(rigid_only || (with_both.size()==baseline.size() && without_one.size()==baseline.size())));
+				const auto outer=(height-1)*width*4U+(width-1)*4U;
+				assert(baseline[outer]==204 && baseline[outer+1]==25 && baseline[outer+2]==25);
+				unsigned rigid_pixels=0,static_pixels=0,level1_pixels=0;
+				for (unsigned y=height/8;y<height*7/8;++y)
+					for (unsigned x=width/8;x<width*7/8;++x) {
+						const auto i=(y*width+x)*4U;
+						if (baseline[i]!=12 || baseline[i+1]!=12 || baseline[i+2]!=51) ++rigid_pixels;
+						if (!rigid_only && (baseline[i]!=with_both[i] || baseline[i+1]!=with_both[i+1] || baseline[i+2]!=with_both[i+2])) ++static_pixels;
+						if (!rigid_only && (with_both[i]!=without_one[i] || with_both[i+1]!=without_one[i+1] || with_both[i+2]!=without_one[i+2])) ++level1_pixels;
+					}
+				assert(rigid_pixels>0 && (rigid_only || (static_pixels>0 && level1_pixels>0)));
+			} else {
+				auto* recorder=dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
+				assert(recorder);
+				const auto trace=recorder->snapshot();
+				assert(trace.find("CameraClass::Apply viewport")!=std::string::npos &&
+					trace.find("clear_viewport")!=std::string::npos &&
+					trace.find("DX8Wrapper::Draw indexed")!=std::string::npos);
+			}
+			device.destroy(depth); device.destroy(color);
+			assert(!device.describe_texture_format(color));
+			if (physical) {
+#if defined(ZH_BGFX_SHADER_DIR)
+				auto* bgfx=dynamic_cast<zh::renderer::BgfxGpuDevice*>(&device);
+				assert(bgfx && bgfx->live_resource_count()==0);
+#endif
+			}
+		};
+		if (!physical) {
+				zh::renderer::RecordingGpuDevice device;
+				run(device,[](auto) { return std::vector<unsigned char>{}; },160,
+					zh::renderer::TextureFormat::bgra8);
+				assert(device.resource_counts().total()==0);
+		}
+#if defined(ZH_BGFX_SHADER_DIR)
+		else {
+			unsigned completed_generations=0;
+			for (unsigned width:{160U,200U}) {
+			for (auto format:{zh::renderer::TextureFormat::bgra8,
+				zh::renderer::TextureFormat::rgba8}) {
+				zh::renderer::BgfxOptions options;
+				options.shader_root=ZH_BGFX_SHADER_DIR;
+				zh::renderer::BgfxGpuDevice device(options);
+				run(device,[&](auto color) { return device.readback_rgba(color); },width,format);
+				assert(device.wait_idle());
+				++completed_generations;
+			}
+			}
+			assert(completed_generations==4);
+		}
+#endif
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		_TheFileFactory=previous_factory;
+		assert(factory.owners==0);
+		return 0;
+	}
 #if defined(ZH_BGFX_SHADER_DIR)
 	if (argc==2 && std::strcmp(argv[1],"--bgfx-source-viewport-clear")==0) {
 		OwnedFactory factory;
@@ -1384,7 +1567,7 @@ int main(int argc, char **argv)
 		zh::renderer::RenderPassDesc pass;
 		pass.color_targets[0]=color; pass.color_target_count=1;
 		pass.depth_target=depth; pass.width=32; pass.height=32;
-		for (unsigned attempt=0;attempt<6;++attempt) {
+		for (unsigned attempt=0;attempt<5;++attempt) {
 			mesh->Render(render_info);
 			back_mesh->Render(render_info);
 			{
@@ -1393,6 +1576,23 @@ int main(int argc, char **argv)
 				DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
 				assert(recorder.begin_pass(pass,"original queued CPU sorting source"));
 				TheDX8MeshRenderer.Flush();
+				// Original Flush now unbinds its buffers. Bind separate bounded
+				// sorting inputs only for Insert_Triangles negative controls;
+				// queued source-mesh draws retain their own original snapshots.
+				auto* control_vb=NEW_REF(SortingVertexBufferClass,(3));
+				auto* control_ib=NEW_REF(SortingIndexBufferClass,(3));
+				{
+					VertexBufferClass::WriteLockClass lock(control_vb);
+					auto* vertices=static_cast<VertexFormatXYZNDUV2*>(lock.Get_Vertex_Array());
+					for (int i=0;i<3;++i) vertices[i].x=vertices[i].y=vertices[i].z=0;
+				}
+				{
+					IndexBufferClass::WriteLockClass lock(control_ib);
+					auto* indices=static_cast<unsigned short*>(lock.Get_Index_Array());
+					indices[0]=0; indices[1]=1; indices[2]=2;
+				}
+				DX8Wrapper::Set_Vertex_Buffer(control_vb);
+				DX8Wrapper::Set_Index_Buffer(control_ib,0);
 				const SphereClass bad_sphere(Vector3(0,0,
 					std::numeric_limits<float>::quiet_NaN()),1.0f);
 				bool invalid_index=false,invalid_depth=false;
@@ -1433,34 +1633,22 @@ int main(int argc, char **argv)
 				DX8Wrapper::Set_Index_Buffer(selected_sort_state.index_buffer,
 					selected_sort_state.index_base_offset);
 				assert(invalid_source_element);
-				float original_vertex_z=0;
-				if (attempt==0) {
-					DX8Wrapper::Set_Vertex_Buffer(nullptr);
-					VertexBufferClass::WriteLockClass lock(selected_sort_state.vertex_buffers[0]);
-					auto* vertices=static_cast<VertexFormatXYZNDUV2*>(lock.Get_Vertex_Array());
-					original_vertex_z=vertices[0].z;
-					vertices[0].z=std::numeric_limits<float>::quiet_NaN();
-				}
-				if (attempt==0) DX8Wrapper::Set_Vertex_Buffer(selected_sort_state.vertex_buffers[0]);
-				if (attempt==1) recorder.fail_next_buffer_upload();
-				if (attempt==2) recorder.fail_next_pipeline_create();
-				if (attempt==3) recorder.fail_next_draw();
+				DX8Wrapper::Set_Index_Buffer(nullptr,0);
+				DX8Wrapper::Set_Vertex_Buffer(nullptr);
+				control_ib->Release_Ref(); control_vb->Release_Ref();
+				if (attempt==0) recorder.fail_next_buffer_upload();
+				if (attempt==1) recorder.fail_next_pipeline_create();
+				if (attempt==2) recorder.fail_next_draw();
 				bool rejected=false;
 				try { SortingRendererClass::Flush(); }
 				catch (const std::runtime_error& error) {
-					rejected=attempt!=0 ||
-						std::strstr(error.what(),"sorting triangle has nonfinite depth")!=nullptr;
+					rejected=true;
 				}
-				assert(rejected==(attempt<4));
-				if (attempt==0) {
-					DX8Wrapper::Set_Vertex_Buffer(nullptr);
-					VertexBufferClass::WriteLockClass lock(selected_sort_state.vertex_buffers[0]);
-					static_cast<VertexFormatXYZNDUV2*>(lock.Get_Vertex_Array())[0].z=original_vertex_z;
-				}
+				assert(rejected==(attempt<3));
 				assert(recorder.end_pass());
 				SortingRendererClass::SortedTriangleWitness sorted[8]{};
-				assert(SortingRendererClass::Copy_Last_Sorted_Triangles(sorted,8)==(attempt==0 ? 0U : 2U));
-				if (attempt!=0) {
+				assert(SortingRendererClass::Copy_Last_Sorted_Triangles(sorted,8)==2U);
+				{
 				assert(sorted[0].depth<sorted[1].depth);
 				assert(std::abs(sorted[0].depth+12.0f)<0.01f);
 				assert(std::abs(sorted[1].depth+10.0f)<0.01f);
@@ -1486,7 +1674,7 @@ int main(int argc, char **argv)
 				try { SortingRendererClass::Insert_Triangles(0,1,0,3); }
 				catch (const std::runtime_error&) { direct_boundary=true; }
 				assert(direct_boundary &&
-					SortingRendererClass::Copy_Last_Sorted_Triangles(nullptr,0)==(attempt==0 ? 0U : 2U));
+					SortingRendererClass::Copy_Last_Sorted_Triangles(nullptr,0)==2U);
 				WW3D::Enable_Sorting(true);
 				DX8Wrapper::Set_Vertex_Buffer(nullptr);
 				bool invalid_type=false;
@@ -1500,6 +1688,38 @@ int main(int argc, char **argv)
 			TheDX8MeshRenderer.Invalidate();
 			TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
 			mesh->Peek_Model()->Register_For_Rendering();
+		}
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+			DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+			DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+			assert(recorder.begin_pass(pass,"original sorting nonfinite triangle negative"));
+			auto* vertices=NEW_REF(SortingVertexBufferClass,(3));
+			auto* indices=NEW_REF(SortingIndexBufferClass,(3));
+			{
+				VertexBufferClass::WriteLockClass lock(vertices);
+				auto* values=static_cast<VertexFormatXYZNDUV2*>(lock.Get_Vertex_Array());
+				for (int i=0;i<3;++i) values[i].x=values[i].y=values[i].z=0;
+				values[0].z=std::numeric_limits<float>::quiet_NaN();
+			}
+			{
+				IndexBufferClass::WriteLockClass lock(indices);
+				auto* values=static_cast<unsigned short*>(lock.Get_Index_Array());
+				values[0]=0; values[1]=1; values[2]=2;
+			}
+			DX8Wrapper::Set_Vertex_Buffer(vertices);
+			DX8Wrapper::Set_Index_Buffer(indices,0);
+			SortingRendererClass::Insert_Triangles(SphereClass(Vector3(0,0,0),1),0,1,0,3);
+			DX8Wrapper::Set_Index_Buffer(nullptr,0);
+			DX8Wrapper::Set_Vertex_Buffer(nullptr);
+			bool rejected_nonfinite_triangle=false;
+			try { SortingRendererClass::Flush(); }
+			catch (const std::runtime_error& error) {
+				rejected_nonfinite_triangle=std::strstr(error.what(),"sorting triangle has nonfinite depth")!=nullptr;
+			}
+			assert(rejected_nonfinite_triangle && recorder.end_pass());
+			indices->Release_Ref(); vertices->Release_Ref();
 		}
 		SortingRendererClass::Deinit();
 		WW3D::Enable_Sorting(previous_sorting);
@@ -1544,6 +1764,23 @@ int main(int argc, char **argv)
 			TheDX8MeshRenderer.Flush();
 			source_indices=recorder.last_draw_index_bytes();
 			assert(source_indices.size()==3*sizeof(unsigned short));
+			// Canonical source Flush releases its selected VB/IB. Exercise the
+			// state snapshot/replay contract with explicitly owned source buffers.
+			DX8Wrapper::Get_Render_State(source);
+			assert(!source.vertex_buffers[0] && !source.index_buffer);
+			auto* snapshot_vb=new DX8VertexBufferClass(DX8_FVF_XYZN,3,
+				DX8VertexBufferClass::USAGE_DEFAULT);
+			auto* snapshot_ib=new DX8IndexBufferClass(3);
+			const float vertices[3][6]={{-1,-1,-10,0,0,1},
+				{1,-1,-10,0,0,1},{0,1,-10,0,0,1}};
+			std::memcpy(snapshot_vb->Get_CPU_Vertex_Buffer(),vertices,sizeof(vertices));
+			unsigned short indices[3]{};
+			std::memcpy(indices,source_indices.data(),sizeof(indices));
+			std::memcpy(snapshot_ib->Get_CPU_Index_Buffer(),indices,sizeof(indices));
+			DX8Wrapper::Set_Vertex_Buffer(snapshot_vb);
+			DX8Wrapper::Set_Index_Buffer(snapshot_ib,0);
+			snapshot_vb->Release_Ref();
+			snapshot_ib->Release_Ref();
 			DX8Wrapper::Apply_Render_State_Changes();
 			DX8Wrapper::Get_Render_State(source);
 			assert(source.vertex_buffers[0] && source.index_buffer &&
@@ -3348,6 +3585,9 @@ int main(int argc, char **argv)
 	skin_model->Set_Sort_Level(0);
 	TheDX8MeshRenderer.Invalidate();
 	TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
+	// The source static-sort retry reached and retained its recyclable dynamic
+	// sorting VB. Retire that source pool before asserting full test teardown.
+	DynamicVBAccessClass::_Deinit();
 	assert(VertexBufferClass::Get_Total_Buffer_Count() == 0);
 	assert(IndexBufferClass::Get_Total_Buffer_Count() == 0);
 	assert(!model->Has_Polygon_Renderers() && !skin_model->Has_Polygon_Renderers());
@@ -3871,6 +4111,7 @@ int main(int argc, char **argv)
 	assert(!manager.Load_3D_Assets(invalid_input));
 	assert(!manager.Render_Obj_Exists("TEST.TRIANGLE"));
 	TheDX8MeshRenderer.Shutdown();
+	DynamicVBAccessClass::_Deinit();
 	assert(VertexBufferClass::Get_Total_Buffer_Count() == 0);
 	assert(IndexBufferClass::Get_Total_Buffer_Count() == 0);
 	return 0;

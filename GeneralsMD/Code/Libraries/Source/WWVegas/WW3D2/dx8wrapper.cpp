@@ -490,7 +490,8 @@ void DX8Wrapper::Set_Ambient(const Vector3& color)
 
 void DX8Wrapper::Set_Vertex_Buffer(const VertexBufferClass* buffer,unsigned stream)
 {
-    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    auto* edge=buffer ? &zh::original_runtime::OriginalGpuEdge::required() :
+        zh::original_runtime::OriginalGpuEdge::active();
     if (stream!=0) throw std::runtime_error("original secondary vertex stream is unsupported");
     auto& current=state().vertex_buffer;
     if (buffer) { buffer->Add_Ref(); buffer->Add_Engine_Ref(); }
@@ -498,7 +499,7 @@ void DX8Wrapper::Set_Vertex_Buffer(const VertexBufferClass* buffer,unsigned stre
     current=buffer;
     state().vba_offset=0;
     state().vba_count=0;
-    edge.record_source_state("DX8Wrapper::Set_Vertex_Buffer");
+    if (edge) edge->record_source_state("DX8Wrapper::Set_Vertex_Buffer");
 }
 
 void DX8Wrapper::Set_Vertex_Buffer(const DynamicVBAccessClass& access)
@@ -514,7 +515,8 @@ void DX8Wrapper::Set_Vertex_Buffer(const DynamicVBAccessClass& access)
 
 void DX8Wrapper::Set_Index_Buffer(const IndexBufferClass* buffer,unsigned short base_offset)
 {
-    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    auto* edge=buffer ? &zh::original_runtime::OriginalGpuEdge::required() :
+        zh::original_runtime::OriginalGpuEdge::active();
     auto& current=state().index_buffer;
     if (buffer) { buffer->Add_Ref(); buffer->Add_Engine_Ref(); }
     if (current) { current->Release_Engine_Ref(); current->Release_Ref(); }
@@ -522,7 +524,7 @@ void DX8Wrapper::Set_Index_Buffer(const IndexBufferClass* buffer,unsigned short 
     state().index_base_offset=base_offset;
     state().iba_offset=0;
     state().iba_count=0;
-    edge.record_source_state("DX8Wrapper::Set_Index_Buffer");
+    if (edge) edge->record_source_state("DX8Wrapper::Set_Index_Buffer");
 }
 
 void DX8Wrapper::Set_Index_Buffer(const DynamicIBAccessClass& access,unsigned short base_offset)

@@ -159,6 +159,7 @@ public:
     [[noreturn]] void texture_creation_unavailable(WW3DFormat format, unsigned width,
         unsigned height, unsigned mips, unsigned reduction);
     static OriginalGpuEdge& required();
+    static OriginalGpuEdge* active() noexcept;
 
 private:
     void release_prepared_state() noexcept;

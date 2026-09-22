@@ -518,12 +518,24 @@ void test_resources()
         effect_draw.fragment_bindings.texture_count = 1;
         effect_draw.fragment_bindings.textures[0] = sample;
         effect_draw.fragment_bindings.samplers[0] = sampler;
+        SamplerDesc no_mip_desc;
+        no_mip_desc.maximum_lod = 0.0f;
+        auto no_mip_sampler = device.create_sampler(no_mip_desc, "one-level source no-mip sampler");
+        SamplerDesc unsupported_lod_desc;
+        unsupported_lod_desc.maximum_lod = 1.0f;
+        auto unsupported_lod_sampler = device.create_sampler(unsupported_lod_desc, "unsupported bounded LOD sampler");
+        check(bool(no_mip_sampler) && bool(unsupported_lod_sampler), "LOD sampler allocation failed");
         check(device.begin_pass(pass,"effect material physical proof"), "effect pass failed");
+        effect_draw.fragment_bindings.samplers[0] = unsupported_lod_sampler;
+        check(!device.draw(effect_draw) && device.last_error().find("unsupported sampler LOD") != std::string::npos,
+            "unsupported bounded sampler LOD accepted");
+        effect_draw.fragment_bindings.samplers[0] = no_mip_sampler;
         check(device.draw(effect_draw), device.last_error().c_str());
         check(device.end_pass(), "effect pass end failed");
         result = device.readback_rgba(color);
         check(result.size() == 160U * 120U * 4U && green(20,15) && red(150,110),
-            "effect sampler/color-scale pixels differ");
+            "one-mip LOD0 effect sampler/color-scale pixels differ");
+        device.destroy(no_mip_sampler); device.destroy(unsupported_lod_sampler);
         device.destroy(effect_vertices); device.destroy(effect_frame); device.destroy(effect_scale);
         device.destroy(effect_pipeline); device.destroy(effect_vertex_shader); device.destroy(effect_fragment_shader);
         device.destroy(video_vertices); device.destroy(sampler); device.destroy(sample);
