@@ -15,6 +15,7 @@ add_library(zh_original_w3d_draw_full OBJECT EXCLUDE_FROM_ALL
   "${client_root}/W3DFileSystem.cpp"
   "${client_root}/W3DDisplay.cpp"
   "${client_root}/W3DScene.cpp"
+  "${client_root}/W3DStatusCircle.cpp"
   "${client_root}/W3DShroud.cpp"
   "${client_root}/W3DTerrainTracks.cpp"
   "${client_root}/Shadow/W3DShadow.cpp")

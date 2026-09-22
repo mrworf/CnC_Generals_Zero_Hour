@@ -2031,6 +2031,13 @@ if(ZH_BUILD_TESTS)
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-presentation.link.map")
   add_test(NAME original_w3d_presentation COMMAND original_w3d_presentation_tests)
   set_tests_properties(original_w3d_presentation PROPERTIES LABELS "original-rendering;source-identity")
+  add_test(NAME original_w3d_status_circle_compile COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_status_circle_compile.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --full-link-map "${CMAKE_CURRENT_BINARY_DIR}/zh-original-w3d-full-probe.link.map"
+    --production "$<TARGET_FILE:zh_original_main>")
+  set_tests_properties(original_w3d_status_circle_compile PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_full_draw_scenario COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_full_draw_scenario.py"
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
