@@ -1871,6 +1871,8 @@ if(ZH_BUILD_TESTS)
   if(ZH_ENABLE_GPU_TESTS)
     add_test(NAME renderer_bgfx_resource_gpu COMMAND renderer_bgfx_device_tests --gpu)
     set_tests_properties(renderer_bgfx_resource_gpu PROPERTIES LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE)
+    add_test(NAME renderer_bgfx_depth_bias_gpu COMMAND renderer_bgfx_device_tests --depth-bias)
+    set_tests_properties(renderer_bgfx_depth_bias_gpu PROPERTIES LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE)
   endif()
 
   if(ZH_ENABLE_GPU_TESTS)

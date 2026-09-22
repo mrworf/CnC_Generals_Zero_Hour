@@ -40,6 +40,73 @@ void test_options()
         "empty shader root did not fail closed");
 }
 
+void test_decal_depth_bias()
+{
+    using namespace zh::renderer;
+    struct Vertex { float x,y; std::uint32_t color; float u,v; };
+    BgfxOptions options; options.shader_root=ZH_BGFX_SHADER_DIR;
+    BgfxGpuDevice device(options);
+    auto vs=device.create_shader({ShaderStage::vertex,"renderer/acceptance.vert",0,0},"bias vertex");
+    auto fs=device.create_shader({ShaderStage::fragment,"renderer/acceptance.frag",0,0},"bias fragment");
+    check(vs && fs,"depth-bias shaders unavailable");
+    PipelineDesc base;
+    base.vertex_shader=vs; base.fragment_shader=fs;
+    base.vertex_layout=VertexLayout::position_color_uv;
+    base.color_format=TextureFormat::bgra8;
+    base.raster.cull=CullMode::none;
+    auto biased=base; biased.raster.depth_bias=-8.0f;
+    auto equal=base; equal.depth_stencil.depth_compare=CompareOp::equal;
+    equal.depth_stencil.depth_write=false;
+    auto unsupported=base; unsupported.raster.depth_bias=-7.0f;
+    auto p_base=device.create_pipeline(PipelineKey(base),"unbiased depth control");
+    auto p_bias=device.create_pipeline(PipelineKey(biased),"original decal depth control");
+    auto p_equal=device.create_pipeline(PipelineKey(equal),"unbiased equality probe");
+    auto p_bad=device.create_pipeline(PipelineKey(unsupported),"unsupported depth control");
+    check(p_base && p_bias && p_equal && p_bad,"depth-bias pipelines unavailable");
+    const std::array<Vertex,3> red_vertices{{
+        {-0.8f,-0.8f,0xff0000ffU,0,0},{0.8f,-0.8f,0xff0000ffU,0,0},{0,0.8f,0xff0000ffU,0,0},
+        }};
+    auto green_vertices=red_vertices;
+    for (auto& vertex:green_vertices) vertex.color=0xff00ff00U;
+    auto vb=device.create_buffer({sizeof(red_vertices),BufferUsage::vertex,true},"bias red triangle");
+    auto green_vb=device.create_buffer({sizeof(green_vertices),BufferUsage::vertex,true},"bias green triangle");
+    check(vb && green_vb && device.upload({vb,sizeof(red_vertices),0,sizeof(red_vertices)},red_vertices.data()) &&
+        device.upload({green_vb,sizeof(green_vertices),0,sizeof(green_vertices)},green_vertices.data()),
+        "bias vertices unavailable");
+    TextureDesc target; target.width=64; target.height=64; target.format=TextureFormat::bgra8;
+    target.render_target=true;
+    auto color=device.create_texture(target,"bias color");
+    target.format=TextureFormat::depth24_stencil8;
+    auto depth=device.create_texture(target,"bias depth");
+    check(color && depth,"bias targets unavailable");
+    RenderPassDesc pass; pass.color_targets[0]=color; pass.color_target_count=1;
+    pass.depth_target=depth; pass.width=64; pass.height=64;
+    pass.clear_color={0,0,0,1}; pass.clear_depth=1;
+    DrawDesc red; red.pipeline=p_bias; red.vertex_buffer=vb; red.vertex_or_index_count=3;
+    DrawDesc green=red; green.pipeline=p_equal; green.vertex_buffer=green_vb;
+    check(device.begin_pass(pass,"bounded original decal depth bias"),"bias pass unavailable");
+    check(device.draw(red),"source decal depth bias rejected");
+    auto bad=green; bad.pipeline=p_bad;
+    check(!device.draw(bad) && device.last_error().find("not yet mapped")!=std::string::npos,
+        "unsupported depth bias accepted");
+    check(device.draw(green),"zero-bias equality probe rejected");
+    check(device.end_pass(),"bias pass end failed");
+    auto pixels=device.readback_rgba(color);
+    const auto center=(32U*64U+32U)*4U;
+    check(pixels.size()==64U*64U*4U && pixels[center]==255 && pixels[center+1]==0 &&
+        pixels[center+2]==0,"decal bias or per-draw zero reset did not preserve red pixel");
+    red.pipeline=p_base;
+    check(device.begin_pass(pass,"unbiased equality control"),"control pass unavailable");
+    check(device.draw(red) && device.draw(green) && device.end_pass(),"unbiased control draws failed");
+    pixels=device.readback_rgba(color);
+    check(pixels[center]==0 && pixels[center+1]==255 && pixels[center+2]==0,
+        "unbiased equality control did not turn green");
+    device.destroy(depth); device.destroy(color); device.destroy(green_vb); device.destroy(vb);
+    device.destroy(p_bad); device.destroy(p_equal); device.destroy(p_bias); device.destroy(p_base);
+    device.destroy(fs); device.destroy(vs);
+    check(device.wait_idle() && device.live_resource_count()==0,"depth-bias resources leaked");
+}
+
 void test_resources()
 {
     using namespace zh::renderer;
@@ -684,6 +751,7 @@ int main(int argc, char** argv)
 {
     try {
         test_options();
+        if (argc > 1 && std::string(argv[1]) == "--depth-bias") test_decal_depth_bias();
         if (argc > 1 && std::string(argv[1]) == "--gpu") {
             test_resources();
             test_shader_envelope_negatives();

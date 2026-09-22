@@ -1,0 +1,7 @@
+# M22 06C3C2B3B0 public bgfx decal depth-bias evidence
+
+The pinned public bgfx API exposes `setDepthControl` per draw. The renderer now maps only zero and the original GPU edge's D3D8 ZBIAS=8 translation (-8), selecting zero on every subsequent draw. Fill modes and unsupported bias values still reject before submission. No source geometry, retail symlink, or rendering defaults changed.
+
+The direct `renderer_bgfx_device_tests --depth-bias` physical Vulkan probe passed under GCC and Clang Debug and GCC/Clang ASan+UBSan with `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`. It rendered a biased coplanar red triangle, rejected unsupported -7, then proved per-draw zero reset with an unbiased equal-depth green draw. Red remained visible; an otherwise identical unbiased control turned green. All public resource handles retired. The original source mixed-scene diagnostic independently reached an authored decal through `SimpleSceneClass`, and the same bias mapping made its source draw and visible emissive pixel delta possible; B3B owns acceptance of that mixed scene.
+
+All four GCC/Clang Debug/Release full builds passed. The canonical asset-free CTest suites passed 176/179 in each preset; the only three failures in each were original resources/data/process source-identity ledger checks because the separately pending B3B `ww3d.cpp` CPU shutdown edit is present but its ledger hashes have not yet been accepted. That unrelated ledger drift must be cleared before B3B acceptance. No other suite failures occurred. `git diff --check` passed before staging.

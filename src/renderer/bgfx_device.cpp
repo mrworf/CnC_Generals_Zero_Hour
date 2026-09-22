@@ -795,7 +795,8 @@ ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
         || lookup(impl_->textures, impl_->colors[0])->record.desc.format != state.color_format
         || lookup(impl_->textures, impl_->depth)->record.desc.format != state.depth_format)
         return impl_->fail("draw", "pipeline and active target formats differ");
-    if (state.raster.fill != FillMode::solid || state.raster.depth_bias != 0.0f
+    if (state.raster.fill != FillMode::solid ||
+        (state.raster.depth_bias != 0.0f && state.raster.depth_bias != -8.0f)
         || state.topology == PrimitiveTopology::triangle_fan)
         return impl_->fail("draw", "required pipeline or binding state is not yet mapped to public bgfx");
     if (state.topology == PrimitiveTopology::point_list
@@ -915,6 +916,9 @@ ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
             blend_operation(state.blend.color_operation), blend_operation(state.blend.alpha_operation));
     }
     bgfx::setState(flags);
+    // Pinned public bgfx provides per-draw depth control.  Reset it on every
+    // draw so a source decal's D3D8 ZBIAS=8 cannot affect a later mesh.
+    bgfx::setDepthControl(static_cast<Int32>(state.raster.depth_bias), 0.0f);
     if (state.depth_stencil.stencil_test) {
         if (state.depth_format != TextureFormat::depth24_stencil8) {
             if (index) bgfx::destroy(native_index);
