@@ -23,6 +23,7 @@
 #include "dx8renderer.h"
 #include "dx8wrapper.h"
 #include "statistics.h"
+#include "stripoptimizer.h"
 #include "static_sort_list.h"
 #include "sortingrenderer.h"
 #include "ww3d.h"
@@ -380,6 +381,10 @@ int main(int argc, char **argv)
 {
 	if (argc==2 && std::strcmp(argv[1],"--skin-batch")==0)
 		return test_original_skin_batch();
+	// Keep the original strip provider runtime-witnessed even in optimized
+	// builds where the mesh path can inline away its only other reference.
+	const int source_strips[] = {3, 0, 1, 2, 2, 3, 4};
+	assert(StripOptimizerClass::Get_Strip_Index_Count(source_strips, 2) == 5);
 	std::vector<char> bytes(16384);
 	RAMFileClass file(bytes.data(), static_cast<int>(bytes.size()));
 	assert(file.Open(FileClass::WRITE));

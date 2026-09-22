@@ -1,6 +1,7 @@
 #include "zh/platform/bgfx_device.h"
 
 #include <bgfx/bgfx.h>
+#include <SDL3/SDL.h>
 
 #include <algorithm>
 #include <atomic>
@@ -372,6 +373,9 @@ public:
         init.swapChain.width = 0;
         init.swapChain.height = 0;
         init.debug = options.debug;
+        if (const char* driver = SDL_GetCurrentVideoDriver(); driver && std::strcmp(driver, "wayland") == 0)
+            init.platformData.type = bgfx::NativeWindowHandleType::Wayland;
+        native_type = init.platformData.type;
         if (!bgfx::init(init)) {
             runtime_owned.store(false);
             throw std::runtime_error("public bgfx Vulkan initialization failed");
@@ -381,6 +385,8 @@ public:
     ~Impl()
     {
         if (bgfx::isValid(framebuffer)) bgfx::destroy(framebuffer);
+        if (bgfx::isValid(window_framebuffer)) bgfx::destroy(window_framebuffer);
+        if (bgfx::isValid(present_program)) bgfx::destroy(present_program);
         for (auto& slot : pipelines)
             if (slot.alive && bgfx::isValid(slot.record.native)) bgfx::destroy(slot.record.native);
         for (auto& slot : shaders)
@@ -398,6 +404,13 @@ public:
         return {false, last_error};
     }
 
+    bool query_window_pixels(SDL_Window* window, int* width, int* height) const
+    {
+        return options.pixel_extent_query
+            ? options.pixel_extent_query(window, width, height)
+            : SDL_GetWindowSizeInPixels(window, width, height);
+    }
+
     BgfxOptions options;
     std::string last_error;
     std::vector<Slot<BufferRecord>> buffers;
@@ -413,6 +426,17 @@ public:
     UInt64 target_generation = 0;
     UInt32 next_view = 0;
     bool in_pass = false;
+    SDL_Window* window = nullptr;
+    bgfx::FrameBufferHandle window_framebuffer = BGFX_INVALID_HANDLE;
+    bgfx::ProgramHandle present_program = BGFX_INVALID_HANDLE;
+    ShaderHandle present_vertex;
+    ShaderHandle present_fragment;
+    bgfx::UniformHandle present_viewport = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle present_texture = BGFX_INVALID_HANDLE;
+    UInt32 window_width = 0, window_height = 0;
+    void* window_nwh = nullptr;
+    void* window_ndt = nullptr;
+    bgfx::NativeWindowHandleType::Enum native_type = bgfx::NativeWindowHandleType::Default;
 };
 
 BgfxGpuDevice::BgfxGpuDevice(BgfxOptions options) : impl_(std::make_unique<Impl>(std::move(options))) {}
@@ -922,8 +946,69 @@ ValidationResult BgfxGpuDevice::end_pass()
     impl_->target_generation = 0;
     return {};
 }
-ValidationResult BgfxGpuDevice::present(TextureHandle)
-{ return impl_->fail("present", "window presentation is not installed"); }
+ValidationResult BgfxGpuDevice::present(TextureHandle source)
+{
+    if (impl_->in_pass) return impl_->fail("present", "cannot present during an active pass");
+    if (!impl_->window || !bgfx::isValid(impl_->window_framebuffer))
+        return impl_->fail("present", "no SDL3 window is claimed");
+    auto* image = lookup(impl_->textures, source);
+    if (!image || !image->record.desc.render_target || !image->record.desc.sampled
+        || !image->record.color_initialized || is_depth(image->record.desc.format))
+        return impl_->fail("present", "stale, uninitialized or unsampleable color source");
+    int width = 0, height = 0;
+    if (!impl_->query_window_pixels(impl_->window, &width, &height) || width < 0 || height < 0)
+        return impl_->fail("present", "SDL3 window pixel size is unavailable");
+    if (width == 0 || height == 0) {
+        bgfx::frame();
+        impl_->next_view = 0;
+        return {}; // Suspended/minimized surface; source resources remain live.
+    }
+    if (width > UINT16_MAX || height > UINT16_MAX || impl_->next_view >= RendererLimits::ordered_views)
+        return impl_->fail("present", "window extent or ordered view budget exceeded");
+    if (impl_->window_width != static_cast<UInt32>(width)
+        || impl_->window_height != static_cast<UInt32>(height)) {
+        bgfx::SwapChain swapchain;
+        swapchain.nwh = impl_->window_nwh;
+        swapchain.ndt = impl_->window_ndt;
+        swapchain.width = static_cast<UInt32>(width);
+        swapchain.height = static_cast<UInt32>(height);
+        swapchain.formatColor = bgfx::TextureFormat::BGRA8;
+        swapchain.formatDepthStencil = bgfx::TextureFormat::Count;
+        bgfx::updateSwapChain(impl_->window_framebuffer, swapchain);
+        impl_->window_width = static_cast<UInt32>(width);
+        impl_->window_height = static_cast<UInt32>(height);
+    }
+    bgfx::VertexLayout layout;
+    layout.begin().add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
+        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float).end();
+    if (layout.getStride() != 20 || !bgfx::getAvailTransientVertexBuffer(3, layout))
+        return impl_->fail("present", "public bgfx transient presentation vertices unavailable");
+    bgfx::TransientVertexBuffer vertices;
+    bgfx::allocTransientVertexBuffer(&vertices, 3, layout);
+    struct Vertex { float x, y; UInt32 color; float u, v; };
+    const std::array<Vertex,3> triangle{{
+        {0,0,0xffffffffU,0,0},
+        {2.0f * width,0,0xffffffffU,2,0},
+        {0,2.0f * height,0xffffffffU,0,2},
+    }};
+    std::memcpy(vertices.data, triangle.data(), sizeof(triangle));
+    const auto view = static_cast<bgfx::ViewId>(impl_->next_view++);
+    bgfx::setViewFrameBuffer(view, impl_->window_framebuffer);
+    bgfx::setViewMode(view, bgfx::ViewMode::Sequential);
+    bgfx::setViewRect(view, 0, 0, static_cast<UInt16>(width), static_cast<UInt16>(height));
+    bgfx::setViewClear(view, BGFX_CLEAR_COLOR, 0x000000ff);
+    bgfx::setVertexBuffer(0, &vertices);
+    const std::array<float,4> viewport{static_cast<float>(width),static_cast<float>(height),0,0};
+    bgfx::setUniform(impl_->present_viewport, viewport.data());
+    bgfx::setTexture(8, impl_->present_texture, image->record.native,
+        BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP);
+    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
+    bgfx::submit(view, impl_->present_program);
+    bgfx::frame();
+    impl_->next_view = 0;
+    return {};
+}
 void BgfxGpuDevice::destroy(ShaderHandle handle)
 {
     auto* slot = lookup(impl_->shaders, handle);
@@ -942,8 +1027,74 @@ void BgfxGpuDevice::destroy(PipelineHandle handle)
 const std::string& BgfxGpuDevice::last_error() const noexcept { return impl_->last_error; }
 bool BgfxGpuDevice::pass_active() const noexcept { return impl_->in_pass; }
 void BgfxGpuDevice::record_marker(std::string_view) {}
-ValidationResult BgfxGpuDevice::claim_window(SDL_Window*)
-{ return impl_->fail("claim_window", "window presentation is not installed"); }
+ValidationResult BgfxGpuDevice::claim_window(SDL_Window* window)
+{
+    if (!window) return impl_->fail("claim_window", "SDL3 window is null");
+    if (impl_->window) return impl_->fail("claim_window", "an SDL3 window is already claimed");
+    if (impl_->in_pass) return impl_->fail("claim_window", "cannot claim during an active pass");
+    if (!(bgfx::getCaps()->supported & BGFX_CAPS_SWAP_CHAIN))
+        return impl_->fail("claim_window", "public bgfx Vulkan swap chains are unavailable");
+    const auto properties = SDL_GetWindowProperties(window);
+    if (!properties) return impl_->fail("claim_window", "invalid SDL3 window properties");
+    void* nwh = nullptr;
+    void* ndt = nullptr;
+    bgfx::NativeWindowHandleType::Enum type = bgfx::NativeWindowHandleType::Default;
+    const char* driver = SDL_GetCurrentVideoDriver();
+    if (driver && std::strcmp(driver, "wayland") == 0) {
+        nwh = SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr);
+        ndt = SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, nullptr);
+        type = bgfx::NativeWindowHandleType::Wayland;
+    } else if (driver && std::strcmp(driver, "x11") == 0) {
+        nwh = reinterpret_cast<void*>(static_cast<std::uintptr_t>(
+            SDL_GetNumberProperty(properties, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0)));
+        ndt = SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, nullptr);
+    }
+    if (!nwh || !ndt || type != impl_->native_type)
+        return impl_->fail("claim_window", "SDL3 native window/display or video driver is unsupported");
+    int width = 0, height = 0;
+    if (!impl_->query_window_pixels(window, &width, &height) || width <= 0 || height <= 0
+        || width > UINT16_MAX || height > UINT16_MAX)
+        return impl_->fail("claim_window", "SDL3 window has unsupported pixel extent");
+    auto vertex = create_shader({ShaderStage::vertex,"renderer/video.vert",1,0}, "presentation vertex");
+    auto fragment = create_shader({ShaderStage::fragment,"renderer/video.frag",0,1}, "presentation fragment");
+    if (!vertex || !fragment) {
+        destroy(vertex); destroy(fragment);
+        return impl_->fail("claim_window", "presentation shaders are unavailable");
+    }
+    auto* vertex_slot = lookup(impl_->shaders, vertex);
+    auto* fragment_slot = lookup(impl_->shaders, fragment);
+    if (vertex_slot->record.fields.size() != 1 || fragment_slot->record.textures.size() != 1) {
+        destroy(vertex); destroy(fragment);
+        return impl_->fail("claim_window", "presentation shader reflection differs");
+    }
+    auto program = bgfx::createProgram(vertex_slot->record.native, fragment_slot->record.native, false);
+    if (!bgfx::isValid(program)) {
+        destroy(vertex); destroy(fragment);
+        return impl_->fail("claim_window", "public bgfx presentation program failed");
+    }
+    bgfx::SwapChain swapchain;
+    swapchain.nwh = nwh; swapchain.ndt = ndt;
+    swapchain.width = static_cast<UInt32>(width);
+    swapchain.height = static_cast<UInt32>(height);
+    swapchain.formatColor = bgfx::TextureFormat::BGRA8;
+    swapchain.formatDepthStencil = bgfx::TextureFormat::Count;
+    auto framebuffer = bgfx::createFrameBuffer(swapchain);
+    if (!bgfx::isValid(framebuffer)) {
+        bgfx::destroy(program); destroy(vertex); destroy(fragment);
+        return impl_->fail("claim_window", "public bgfx swap-chain framebuffer failed");
+    }
+    impl_->window = window;
+    impl_->window_framebuffer = framebuffer;
+    impl_->present_program = program;
+    impl_->present_vertex = vertex;
+    impl_->present_fragment = fragment;
+    impl_->present_viewport = vertex_slot->record.fields.front().handle;
+    impl_->present_texture = fragment_slot->record.textures.front().handle;
+    impl_->window_width = static_cast<UInt32>(width);
+    impl_->window_height = static_cast<UInt32>(height);
+    impl_->window_nwh = nwh; impl_->window_ndt = ndt;
+    return {};
+}
 ValidationResult BgfxGpuDevice::wait_idle()
 {
     if (impl_->in_pass) return impl_->fail("wait_idle", "pass remains active");
@@ -986,6 +1137,20 @@ std::vector<UInt8> BgfxGpuDevice::readback_rgba(TextureHandle source)
         for (std::size_t i = 0; i < pixels.size(); i += 4) std::swap(pixels[i], pixels[i + 2]);
     return pixels;
 }
-void BgfxGpuDevice::release_window() noexcept {}
+void BgfxGpuDevice::release_window() noexcept
+{
+    if (impl_->in_pass) return;
+    if (bgfx::isValid(impl_->window_framebuffer)) bgfx::destroy(impl_->window_framebuffer);
+    if (bgfx::isValid(impl_->present_program)) bgfx::destroy(impl_->present_program);
+    destroy(impl_->present_vertex); destroy(impl_->present_fragment);
+    impl_->window = nullptr;
+    impl_->window_framebuffer = BGFX_INVALID_HANDLE;
+    impl_->present_program = BGFX_INVALID_HANDLE;
+    impl_->present_vertex = {}; impl_->present_fragment = {};
+    impl_->present_viewport = BGFX_INVALID_HANDLE;
+    impl_->present_texture = BGFX_INVALID_HANDLE;
+    impl_->window_width = impl_->window_height = 0;
+    impl_->window_nwh = impl_->window_ndt = nullptr;
+}
 
 } // namespace zh::renderer

@@ -1,6 +1,7 @@
 #include "zh/platform/bgfx_device.h"
 
 #include <bgfx/bgfx.h>
+#include <SDL3/SDL.h>
 
 #include <algorithm>
 #include <array>
@@ -351,6 +352,38 @@ void test_resources()
         check(blended[0] >= 125 && blended[0] <= 130 && blended[1] >= 125 && blended[1] <= 130
             && blended[2] == 0 && red(150,110), "public bgfx source-alpha blend pixels differ");
         device.destroy(blended_pipeline);
+        auto ui_vertex_shader = device.create_shader({ShaderStage::vertex,"renderer/ui.vert",1,0}, "UI vertex");
+        auto ui_fragment_shader = device.create_shader({ShaderStage::fragment,"renderer/ui.frag",1,1}, "UI fragment");
+        check(bool(ui_vertex_shader) && bool(ui_fragment_shader), device.last_error().c_str());
+        auto ui_pipeline_desc = pipeline_desc;
+        ui_pipeline_desc.vertex_shader = ui_vertex_shader;
+        ui_pipeline_desc.fragment_shader = ui_fragment_shader;
+        auto ui_pipeline = device.create_pipeline(PipelineKey(ui_pipeline_desc), "UI half-pixel alpha pipeline");
+        auto ui_alpha = device.create_buffer({16,BufferUsage::uniform,true}, "UI alpha reference");
+        check(bool(ui_pipeline) && bool(ui_alpha), device.last_error().c_str());
+        const std::array<float,4> reject_alpha{{0.75f,0,0,0}};
+        check(device.upload({ui_alpha,16,0,16},reject_alpha.data()), "UI alpha reference upload failed");
+        auto ui_draw = video_draw;
+        ui_draw.pipeline = ui_pipeline;
+        ui_draw.fragment_bindings.uniform_count = 1;
+        ui_draw.fragment_bindings.uniforms[0] = {ui_alpha,0,16};
+        check(device.begin_pass(pass,"UI alpha rejection"), "UI alpha pass failed");
+        check(device.draw(ui_draw), device.last_error().c_str());
+        check(device.end_pass(), "UI alpha pass end failed");
+        result = device.readback_rgba(color);
+        check(result.size() == 160U * 120U * 4U && red(20,20),
+            "UI alpha-reference discard changed background");
+        check(device.upload_texture({sample,2,2,8,16,0},green_texels.data()), "UI opaque texture update failed");
+        const std::array<float,4> allow_alpha{{0,0,0,0}};
+        check(device.upload({ui_alpha,16,0,16},allow_alpha.data()), "UI permissive alpha upload failed");
+        check(device.begin_pass(pass,"UI half-pixel green proof"), "UI pixel pass failed");
+        check(device.draw(ui_draw), device.last_error().c_str());
+        check(device.end_pass(), "UI pixel pass end failed");
+        result = device.readback_rgba(color);
+        check(result.size() == 160U * 120U * 4U && green(20,20) && red(150,110),
+            "UI half-pixel/texture/alpha pixels differ");
+        device.destroy(ui_alpha); device.destroy(ui_pipeline);
+        device.destroy(ui_vertex_shader); device.destroy(ui_fragment_shader);
         struct PointVertex { float xyz[3]; std::uint32_t color; };
         auto point_vertex_shader = device.create_shader({ShaderStage::vertex,"renderer/points.vert",2,0}, "point vertex");
         auto point_fragment_shader = device.create_shader({ShaderStage::fragment,"renderer/points.frag",1,1}, "point fragment");
@@ -404,6 +437,95 @@ void test_resources()
         device.destroy(point_vb); device.destroy(point_frame); device.destroy(point_object);
         device.destroy(point_material); device.destroy(point_pipeline);
         device.destroy(point_vertex_shader); device.destroy(point_fragment_shader);
+        struct WorldVertex { float xyz[3], normal[3], uv[2]; };
+        const std::array<WorldVertex,3> world_triangle{{
+            {{-0.9f,0.9f,0.5f},{0,0,1},{0,0}},
+            {{-0.6f,0.9f,0.5f},{0,0,1},{1,0}},
+            {{-0.75f,0.6f,0.5f},{0,0,1},{0.5f,1}},
+        }};
+        auto world_vertex_shader = device.create_shader({ShaderStage::vertex,"renderer/world.vert",2,0}, "world vertex");
+        auto world_fragment_shader = device.create_shader({ShaderStage::fragment,"renderer/world.frag",1,4}, "world fragment");
+        check(bool(world_vertex_shader) && bool(world_fragment_shader), device.last_error().c_str());
+        auto world_pipeline_desc = pipeline_desc;
+        world_pipeline_desc.vertex_shader = world_vertex_shader;
+        world_pipeline_desc.fragment_shader = world_fragment_shader;
+        world_pipeline_desc.vertex_layout = VertexLayout::world_mesh;
+        auto world_pipeline = device.create_pipeline(PipelineKey(world_pipeline_desc), "world material");
+        auto world_vertices = device.create_buffer({sizeof(world_triangle),BufferUsage::vertex,true}, "world vertex bytes");
+        check(bool(world_pipeline) && bool(world_vertices)
+            && device.upload({world_vertices,sizeof(world_triangle),0,sizeof(world_triangle)},world_triangle.data()),
+            "world pipeline or vertices unavailable");
+        auto world_frame = device.create_buffer({64,BufferUsage::uniform,true}, "world view projection");
+        auto world_object = device.create_buffer({64,BufferUsage::uniform,true}, "world model");
+        auto world_material = device.create_buffer({16,BufferUsage::uniform,true}, "world material color");
+        const std::array<float,16> identity{{1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1}};
+        const std::array<float,4> world_diffuse{{0,0,0,0}};
+        check(device.upload({world_frame,64,0,64},identity.data())
+            && device.upload({world_object,64,0,64},identity.data())
+            && device.upload({world_material,16,0,16},world_diffuse.data()), "world uniform upload failed");
+        DrawDesc world_draw;
+        world_draw.pipeline = world_pipeline;
+        world_draw.vertex_buffer = world_vertices;
+        world_draw.vertex_or_index_count = 3;
+        world_draw.vertex_bindings.uniform_count = 2;
+        world_draw.vertex_bindings.uniforms[0] = {world_frame,0,64};
+        world_draw.vertex_bindings.uniforms[1] = {world_object,0,64};
+        world_draw.fragment_bindings.uniform_count = 1;
+        world_draw.fragment_bindings.uniforms[0] = {world_material,0,16};
+        world_draw.fragment_bindings.texture_count = 4;
+        for (int texture_index = 0; texture_index != 4; ++texture_index) {
+            world_draw.fragment_bindings.textures[texture_index] = sample;
+            world_draw.fragment_bindings.samplers[texture_index] = sampler;
+        }
+        check(device.begin_pass(pass,"world material physical proof"), "world pass failed");
+        check(device.draw(world_draw), device.last_error().c_str());
+        check(device.end_pass(), "world pass end failed");
+        result = device.readback_rgba(color);
+        check(result.size() == 160U * 120U * 4U && green(20,15) && red(150,110),
+            "world material texture/matrix pixels differ");
+        device.destroy(world_vertices); device.destroy(world_frame); device.destroy(world_object);
+        device.destroy(world_material); device.destroy(world_pipeline);
+        device.destroy(world_vertex_shader); device.destroy(world_fragment_shader);
+        struct EffectVertex { float xyz[3], uv[2]; };
+        const std::array<EffectVertex,3> effect_triangle{{
+            {{-0.9f,0.9f,0},{0,0}}, {{-0.6f,0.9f,0},{1,0}}, {{-0.75f,0.6f,0},{0.5f,1}},
+        }};
+        auto effect_vertex_shader = device.create_shader({ShaderStage::vertex,"effects/post_effect.vert",1,0}, "effect vertex");
+        auto effect_fragment_shader = device.create_shader({ShaderStage::fragment,"effects/post_effect.frag",1,1}, "effect fragment");
+        check(bool(effect_vertex_shader) && bool(effect_fragment_shader), device.last_error().c_str());
+        auto effect_pipeline_desc = pipeline_desc;
+        effect_pipeline_desc.vertex_shader = effect_vertex_shader;
+        effect_pipeline_desc.fragment_shader = effect_fragment_shader;
+        effect_pipeline_desc.vertex_layout = VertexLayout::water;
+        auto effect_pipeline = device.create_pipeline(PipelineKey(effect_pipeline_desc), "post-effect pipeline");
+        auto effect_vertices = device.create_buffer({sizeof(effect_triangle),BufferUsage::vertex,true}, "effect vertices");
+        check(bool(effect_pipeline) && bool(effect_vertices)
+            && device.upload({effect_vertices,sizeof(effect_triangle),0,sizeof(effect_triangle)},effect_triangle.data()),
+            "effect pipeline or vertices unavailable");
+        auto effect_frame = device.create_buffer({16,BufferUsage::uniform,true}, "effect frame");
+        auto effect_scale = device.create_buffer({16,BufferUsage::uniform,true}, "effect scale");
+        const std::array<float,4> unity{{1,1,1,1}};
+        check(device.upload({effect_frame,16,0,16},viewport_uniform.data())
+            && device.upload({effect_scale,16,0,16},unity.data()), "effect uniforms unavailable");
+        DrawDesc effect_draw;
+        effect_draw.pipeline = effect_pipeline;
+        effect_draw.vertex_buffer = effect_vertices;
+        effect_draw.vertex_or_index_count = 3;
+        effect_draw.vertex_bindings.uniform_count = 1;
+        effect_draw.vertex_bindings.uniforms[0] = {effect_frame,0,16};
+        effect_draw.fragment_bindings.uniform_count = 1;
+        effect_draw.fragment_bindings.uniforms[0] = {effect_scale,0,16};
+        effect_draw.fragment_bindings.texture_count = 1;
+        effect_draw.fragment_bindings.textures[0] = sample;
+        effect_draw.fragment_bindings.samplers[0] = sampler;
+        check(device.begin_pass(pass,"effect material physical proof"), "effect pass failed");
+        check(device.draw(effect_draw), device.last_error().c_str());
+        check(device.end_pass(), "effect pass end failed");
+        result = device.readback_rgba(color);
+        check(result.size() == 160U * 120U * 4U && green(20,15) && red(150,110),
+            "effect sampler/color-scale pixels differ");
+        device.destroy(effect_vertices); device.destroy(effect_frame); device.destroy(effect_scale);
+        device.destroy(effect_pipeline); device.destroy(effect_vertex_shader); device.destroy(effect_fragment_shader);
         device.destroy(video_vertices); device.destroy(sampler); device.destroy(sample);
         device.destroy(frame_uniform); device.destroy(video_pipeline);
         device.destroy(video_vertex); device.destroy(video_fragment);
@@ -472,6 +594,78 @@ void test_shader_envelope_negatives()
         "shader/manifest stage mismatch accepted");
 }
 
+void test_window_presentation()
+{
+    using namespace zh::renderer;
+    check(SDL_Init(SDL_INIT_VIDEO), SDL_GetError());
+    SDL_Window* window = SDL_CreateWindow("M30 public bgfx presentation", 160, 120, SDL_WINDOW_RESIZABLE);
+    check(window != nullptr, SDL_GetError());
+    for (int generation = 0; generation != 2; ++generation) {
+        BgfxOptions options;
+        options.shader_root = ZH_BGFX_SHADER_DIR;
+        bool suspended = false;
+        bool unavailable = false;
+        options.pixel_extent_query = [&](SDL_Window* target, int* width, int* height) {
+            if (unavailable) return false;
+            if (suspended) { *width = *height = 0; return true; }
+            return SDL_GetWindowSizeInPixels(target, width, height);
+        };
+        BgfxGpuDevice device(options);
+        check(!device.claim_window(nullptr), "null SDL window accepted");
+        check(device.claim_window(window), device.last_error().c_str());
+        check(!device.claim_window(window), "double SDL window claim accepted");
+        check(!device.present({}), "stale presentation source accepted");
+        TextureDesc color_desc;
+        color_desc.width = 160; color_desc.height = 120;
+        color_desc.format = TextureFormat::bgra8;
+        color_desc.render_target = true;
+        auto color = device.create_texture(color_desc, "SDL3 presentation source");
+        check(bool(color), "presentation target allocation failed");
+        auto depth_desc = color_desc;
+        depth_desc.format = TextureFormat::depth24_stencil8;
+        auto depth = device.create_texture(depth_desc, "SDL3 presentation depth");
+        check(bool(depth), "presentation depth allocation failed");
+        check(!device.present(color), "uninitialized presentation source accepted");
+        RenderPassDesc pass;
+        pass.color_targets[0] = color; pass.color_target_count = 1;
+        pass.depth_target = depth;
+        pass.width = 160; pass.height = 120;
+        pass.clear_color = {0,1,0,1};
+        check(device.begin_pass(pass, "SDL3 green frame"), "presentation source pass failed");
+        check(!device.present(color), "mid-pass present accepted");
+        check(device.end_pass(), "presentation source end failed");
+        check(device.present(color), device.last_error().c_str());
+        suspended = true;
+        check(device.present(color), "zero-pixel SDL window suspension failed");
+        suspended = false;
+        unavailable = true;
+        check(!device.present(color) && device.last_error().find("pixel size is unavailable") != std::string::npos,
+            "SDL pixel-size query failure was not propagated");
+        unavailable = false;
+        check(device.present(color), "presentation did not recover after zero extent/query failure");
+        if (generation == 0) {
+            int previous_width = 0, previous_height = 0;
+            check(SDL_GetWindowSizeInPixels(window, &previous_width, &previous_height), SDL_GetError());
+            check(SDL_SetWindowSize(window, 200, 140) && SDL_SyncWindow(window), SDL_GetError());
+            int resized_width = 0, resized_height = 0;
+            check(SDL_GetWindowSizeInPixels(window, &resized_width, &resized_height), SDL_GetError());
+            check(resized_width > 0 && resized_height > 0
+                && (resized_width != previous_width || resized_height != previous_height),
+                "SDL3 pixel extent did not change for public bgfx swap-chain resize");
+        }
+        check(device.present(color), device.last_error().c_str());
+        device.release_window();
+        check(!device.present(color), "present after release accepted");
+        check(device.claim_window(window), device.last_error().c_str());
+        check(device.present(color), device.last_error().c_str());
+        device.release_window();
+        device.destroy(color); device.destroy(depth);
+        check(device.wait_idle(), "presentation lifecycle idle failed");
+    }
+    SDL_DestroyWindow(window);
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+}
+
 } // namespace
 
 int main(int argc, char** argv)
@@ -481,6 +675,7 @@ int main(int argc, char** argv)
         if (argc > 1 && std::string(argv[1]) == "--gpu") {
             test_resources();
             test_shader_envelope_negatives();
+            test_window_presentation();
         }
         std::cout << "bgfx resource/device contract tests: ok\n";
         return 0;

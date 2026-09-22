@@ -3,6 +3,7 @@
 #include "zh/renderer/contract.h"
 
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -15,6 +16,9 @@ struct BgfxOptions {
     std::filesystem::path shader_root;
     bool debug = true;
     std::string driver = "vulkan";
+    // Optional SDL3 pixel-extent query seam for deterministic suspension/loss
+    // tests. Production leaves it empty and uses SDL_GetWindowSizeInPixels.
+    std::function<bool(SDL_Window*, int*, int*)> pixel_extent_query;
 };
 
 // The public engine device contract stays backend-neutral. bgfx owns only the

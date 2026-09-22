@@ -51,5 +51,20 @@ The RTX 4070 validation-layer tests additionally prove ordered draw/clear/draw,
 independent stencil MSB write-mask preservation, original FVF indexed/base
 vertex, source-alpha blend and point-size behavior. These are focused synthetic
 device-grade pixels, not original WW3D scene/retail pixels. Earlier SDL_GPU
-hardware checks remain historical. SDL3 presentation, full preset/suite and
-M14 comparison are still M30 slice-04 work; original scene acceptance is M22.
+hardware checks remain historical. Original scene acceptance is M22.
+
+M30 slice 04 renews direct device-grade UI (half-pixel and alpha discard),
+world (matrix/material/four texture slots), video, point and post-effect pixels;
+it also presents through an SDL3-owned Wayland/X11 window via public bgfx,
+resizes its swap chain, and shuts down/re-enters. All four native builds and
+174/174 asset-free tests per preset pass on the host. The exact checked 160×120
+public probe was rerun. Focused ASan and UBSan suites pass with the external
+DBus/Wayland leak-detection caveat documented in
+`delivery/evidence/cnc-generals-zero-hour/milestone_30_slice_04.md`.
+
+The M14 16-scene SDL_GPU/retail+GPU matrix is not renamed as bgfx acceptance:
+individual shader-family creation and representative pixels are proven here,
+while M22 must drive the complete original WW3D call path and retail scene
+families into this backend. The `zh_renderer_bgfx` target's transitive link to
+`zh_renderer_sdl_gpu` supplies existing backend-neutral contract/validation
+symbols and SDL3 dependencies, not the physical GPU path exercised by M30.
