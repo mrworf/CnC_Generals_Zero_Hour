@@ -186,8 +186,8 @@ void DynamicVBAccessClass::Allocate_DX8_Dynamic_Buffer()
     if (_DynamicDX8VertexBufferInUse)
         throw std::runtime_error("original dynamic vertex pool is already in use");
     if (VertexCount>_DynamicDX8VertexBufferSize) {
-        if (_DynamicDX8VertexBuffer && _DynamicDX8VertexBuffer->Num_Refs()!=1)
-            throw std::runtime_error("original dynamic vertex growth has live owners");
+        // Edge snapshots may still own the submitted bytes. Retire only the
+        // pool's reference; the old buffer lives until its final owner exits.
         REF_PTR_RELEASE(_DynamicDX8VertexBuffer);
         _DynamicDX8VertexBufferSize=VertexCount;
     }
@@ -210,8 +210,6 @@ void DynamicVBAccessClass::Allocate_Sorting_Dynamic_Buffer()
     if (next>=65536)
         throw std::runtime_error("original sorting dynamic vertex offset exceeds 16-bit range");
     if (next>_DynamicSortingVertexArraySize) {
-        if (_DynamicSortingVertexArray && _DynamicSortingVertexArray->Num_Refs()!=1)
-            throw std::runtime_error("original sorting dynamic vertex growth has live owners");
         REF_PTR_RELEASE(_DynamicSortingVertexArray);
         _DynamicSortingVertexArraySize=static_cast<unsigned short>(next>DEFAULT_VB_SIZE?next:DEFAULT_VB_SIZE);
     }

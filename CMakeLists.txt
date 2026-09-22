@@ -2151,6 +2151,17 @@ if(ZH_BUILD_TESTS)
   target_link_options(original_w3d_cpu_graph_tests PRIVATE
     "-Wl,--gc-sections" "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-cpu.link.map")
   add_test(NAME original_w3d_cpu_graph COMMAND original_w3d_cpu_graph_tests)
+  add_executable(original_w3d_dynamic_growth_tests tests/original_rendering/test_original_dynamic_growth.cpp)
+  target_include_directories(original_w3d_dynamic_growth_tests PRIVATE
+    $<TARGET_PROPERTY:original_w3d_cpu_graph_tests,INCLUDE_DIRECTORIES>)
+  target_compile_options(original_w3d_dynamic_growth_tests PRIVATE -fpermissive)
+  target_compile_definitions(original_w3d_dynamic_growth_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
+  target_link_libraries(original_w3d_dynamic_growth_tests PRIVATE
+    zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu zh_renderer_bgfx)
+  target_link_options(original_w3d_dynamic_growth_tests PRIVATE "-Wl,--gc-sections")
+  add_test(NAME original_w3d_dynamic_growth COMMAND original_w3d_dynamic_growth_tests)
+  set_tests_properties(original_w3d_dynamic_growth PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_source_init COMMAND original_w3d_cpu_graph_tests --ww3d-init)
   set_tests_properties(original_w3d_source_init PROPERTIES LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_source_frame COMMAND original_w3d_cpu_graph_tests --ww3d-source-frame)

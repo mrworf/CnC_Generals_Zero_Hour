@@ -194,8 +194,7 @@ void DynamicIBAccessClass::Allocate_DX8_Dynamic_Buffer()
     if (_DynamicDX8IndexBufferInUse)
         throw std::runtime_error("original dynamic index pool is already in use");
     if (IndexCount>_DynamicDX8IndexBufferSize) {
-        if (_DynamicDX8IndexBuffer && _DynamicDX8IndexBuffer->Num_Refs()!=1)
-            throw std::runtime_error("original dynamic index growth has live owners");
+        // Submitted snapshots can outlive this reusable pool generation.
         REF_PTR_RELEASE(_DynamicDX8IndexBuffer);
         _DynamicDX8IndexBufferSize=IndexCount;
     }
@@ -218,8 +217,6 @@ void DynamicIBAccessClass::Allocate_Sorting_Dynamic_Buffer()
     if (next>=65536)
         throw std::runtime_error("original sorting dynamic index offset exceeds 16-bit range");
     if (next>_DynamicSortingIndexArraySize) {
-        if (_DynamicSortingIndexArray && _DynamicSortingIndexArray->Num_Refs()!=1)
-            throw std::runtime_error("original sorting dynamic index growth has live owners");
         REF_PTR_RELEASE(_DynamicSortingIndexArray);
         _DynamicSortingIndexArraySize=static_cast<unsigned short>(next>DEFAULT_IB_SIZE?next:DEFAULT_IB_SIZE);
     }
