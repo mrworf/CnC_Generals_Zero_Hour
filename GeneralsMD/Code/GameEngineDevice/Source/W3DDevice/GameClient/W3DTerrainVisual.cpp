@@ -27,6 +27,195 @@
 // Author: Colin Day, April 2001
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "PreRTS.h"
+#include "W3DDevice/GameClient/W3DTerrainVisual.h"
+#include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DScene.h"
+#include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/W3DTerrainTracks.h"
+#include "W3DDevice/GameClient/W3DShadow.h"
+#include "W3DDevice/GameClient/W3DSmudge.h"
+#include "Common/GlobalData.h"
+#include "original_gpu_edge.h"
+#include "OriginalW3DDeviceUnavailable.h"
+
+static W3DTerrainVisual *s_emptyTerrainVisual = NULL;
+static TerrainTracksRenderObjClassSystem *s_ownedTracks = NULL;
+static W3DShadowManager *s_ownedShadows = NULL;
+static W3DSmudgeManager *s_ownedSmudges = NULL;
+
+W3DTerrainVisual::W3DTerrainVisual()
+	: m_terrainRenderObject(NULL), m_waterRenderObject(NULL),
+	  m_logicHeightMap(NULL), m_isWaterGridRenderingEnabled(FALSE)
+{
+}
+
+void W3DTerrainVisual::releaseEmptyOwners()
+{
+	if (s_emptyTerrainVisual != this) return;
+	delete s_ownedSmudges;
+	s_ownedSmudges = NULL;
+	if (m_waterRenderObject) {
+		if (m_waterRenderObject->Peek_Scene() == W3DDisplay::m_3DScene &&
+			W3DDisplay::m_3DScene)
+			W3DDisplay::m_3DScene->Remove_Render_Object(m_waterRenderObject);
+		m_waterRenderObject->Release_Ref();
+		m_waterRenderObject = NULL;
+	}
+	delete s_ownedShadows;
+	s_ownedShadows = NULL;
+	delete s_ownedTracks;
+	s_ownedTracks = NULL;
+	if (m_terrainRenderObject) {
+		m_terrainRenderObject->Release_Ref();
+		m_terrainRenderObject = NULL;
+	}
+	s_emptyTerrainVisual = NULL;
+}
+
+W3DTerrainVisual::~W3DTerrainVisual()
+{
+	releaseEmptyOwners();
+	if (TheTerrainVisual == this) TheTerrainVisual = NULL;
+}
+
+void W3DTerrainVisual::init()
+{
+	if (s_emptyTerrainVisual == this) {
+		if (TheTerrainVisual != this || !zh::original_runtime::OriginalGpuEdge::active() ||
+			!W3DDisplay::m_3DScene)
+			throw OriginalW3DDeviceUnavailable("original empty terrain visual re-entry unavailable");
+		return;
+	}
+	if (s_emptyTerrainVisual || TheTerrainVisual != this ||
+		!zh::original_runtime::OriginalGpuEdge::active() || !W3DDisplay::m_3DScene ||
+		TheTerrainRenderObject || TheHeightMap || TheTerrainTracksRenderObjClassSystem ||
+		TheW3DShadowManager || TheWaterRenderObj || TheSmudgeManager ||
+		TheGlobalData->m_maxTerrainTracks != 0 || TheGlobalData->m_useShadowVolumes ||
+		TheGlobalData->m_useShadowDecals || TheGlobalData->m_useWaterPlane ||
+		TheGlobalData->m_useCloudPlane || TheGlobalData->m_waterExtentX != 0 ||
+		TheGlobalData->m_waterExtentY != 0 || TheGlobalData->m_waterType != 0)
+		throw OriginalW3DDeviceUnavailable("original map or enabled terrain visual pending");
+	s_emptyTerrainVisual = this;
+	try {
+		TerrainVisual::init();
+		m_terrainRenderObject = NEW_REF(HeightMapRenderObjClass, ());
+		m_terrainRenderObject->Set_Collision_Type(PICK_TYPE_TERRAIN);
+		TheTerrainTracksRenderObjClassSystem = s_ownedTracks = NEW TerrainTracksRenderObjClassSystem;
+		TheTerrainTracksRenderObjClassSystem->init(W3DDisplay::m_3DScene);
+		TheW3DShadowManager = s_ownedShadows = NEW W3DShadowManager;
+		if (!TheW3DShadowManager->init())
+			throw OriginalW3DDeviceUnavailable("original disabled-shadow owner failed");
+		m_waterRenderObject = NEW_REF(WaterRenderObjClass, ());
+		m_waterRenderObject->init(TheGlobalData->m_waterPositionZ, 0, 0,
+			W3DDisplay::m_3DScene, WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT);
+		m_waterRenderObject->Set_Position(Vector3(TheGlobalData->m_waterPositionX,
+			TheGlobalData->m_waterPositionY, TheGlobalData->m_waterPositionZ));
+		TheSmudgeManager = s_ownedSmudges = NEW W3DSmudgeManager;
+		TheSmudgeManager->init();
+		W3DDisplay::m_3DScene->Add_Render_Object(m_waterRenderObject);
+		setWaterGridHeightClamps(NULL, TheGlobalData->m_vertexWaterHeightClampLow[0],
+			TheGlobalData->m_vertexWaterHeightClampHi[0]);
+		setWaterTransform(NULL, TheGlobalData->m_vertexWaterAngle[0],
+			TheGlobalData->m_vertexWaterXPosition[0], TheGlobalData->m_vertexWaterYPosition[0],
+			TheGlobalData->m_vertexWaterZPosition[0]);
+		setWaterGridResolution(NULL, TheGlobalData->m_vertexWaterXGridCells[0],
+			TheGlobalData->m_vertexWaterYGridCells[0], TheGlobalData->m_vertexWaterGridSize[0]);
+		setWaterAttenuationFactors(NULL, TheGlobalData->m_vertexWaterAttenuationA[0],
+			TheGlobalData->m_vertexWaterAttenuationB[0], TheGlobalData->m_vertexWaterAttenuationC[0],
+			TheGlobalData->m_vertexWaterAttenuationRange[0]);
+	} catch (...) {
+		releaseEmptyOwners();
+		throw;
+	}
+}
+
+void W3DTerrainVisual::reset()
+{
+	if (s_emptyTerrainVisual != this || TheTerrainVisual != this)
+		throw OriginalW3DDeviceUnavailable("original empty terrain visual reset unavailable");
+	TerrainVisual::reset();
+	m_terrainRenderObject->reset();
+	TheW3DShadowManager->Reset();
+	TheSmudgeManager->reset();
+	TheTerrainTracksRenderObjClassSystem->Reset();
+	m_waterRenderObject->reset();
+}
+
+void W3DTerrainVisual::update()
+{
+	if (s_emptyTerrainVisual != this || TheTerrainVisual != this)
+		throw OriginalW3DDeviceUnavailable("original empty terrain visual update unavailable");
+	TerrainVisual::update();
+	m_waterRenderObject->update();
+}
+
+Bool W3DTerrainVisual::load(AsciiString)
+{
+	throw OriginalW3DDeviceUnavailable("original map-loaded terrain visual pending");
+}
+void W3DTerrainVisual::getTerrainColorAt(Real, Real, RGBColor *)
+{ throw OriginalW3DDeviceUnavailable("original terrain color pending"); }
+TerrainType *W3DTerrainVisual::getTerrainTile(Real, Real)
+{ throw OriginalW3DDeviceUnavailable("original terrain tile pending"); }
+Bool W3DTerrainVisual::intersectTerrain(Coord3D *, Coord3D *, Coord3D *)
+{ throw OriginalW3DDeviceUnavailable("original terrain intersection pending"); }
+void W3DTerrainVisual::enableWaterGrid(Bool enabled)
+{
+	if (!m_waterRenderObject) throw OriginalW3DDeviceUnavailable("original water owner missing");
+	m_waterRenderObject->enableWaterGrid(enabled);
+}
+void W3DTerrainVisual::setWaterGridHeightClamps(const WaterHandle *table, Real low, Real high)
+{
+	if (table || !m_waterRenderObject) throw OriginalW3DDeviceUnavailable("original water table pending");
+	m_waterRenderObject->setGridHeightClamps(low, high);
+}
+void W3DTerrainVisual::setWaterAttenuationFactors(const WaterHandle *table, Real a, Real b, Real c, Real range)
+{
+	if (table || !m_waterRenderObject) throw OriginalW3DDeviceUnavailable("original water table pending");
+	m_waterRenderObject->setGridChangeAttenuationFactors(a, b, c, range);
+}
+void W3DTerrainVisual::setWaterTransform(const WaterHandle *table, Real a, Real x, Real y, Real z)
+{
+	if (table || !m_waterRenderObject) throw OriginalW3DDeviceUnavailable("original water table pending");
+	m_waterRenderObject->setGridTransform(a, x, y, z);
+}
+void W3DTerrainVisual::setWaterGridResolution(const WaterHandle *table, Real x, Real y, Real size)
+{
+	if (table || !m_waterRenderObject) throw OriginalW3DDeviceUnavailable("original water table pending");
+	m_waterRenderObject->setGridResolution(x, y, size);
+}
+
+#define ORIGINAL_TERRAIN_PENDING(message) throw OriginalW3DDeviceUnavailable(message)
+void W3DTerrainVisual::setWaterTransform(const Matrix3D *) { ORIGINAL_TERRAIN_PENDING("original water transform pending"); }
+void W3DTerrainVisual::getWaterTransform(const WaterHandle *, Matrix3D *) { ORIGINAL_TERRAIN_PENDING("original water transform pending"); }
+void W3DTerrainVisual::getWaterGridResolution(const WaterHandle *, Real *, Real *, Real *) { ORIGINAL_TERRAIN_PENDING("original water grid pending"); }
+void W3DTerrainVisual::changeWaterHeight(Real, Real, Real) { ORIGINAL_TERRAIN_PENDING("original water height pending"); }
+void W3DTerrainVisual::addWaterVelocity(Real, Real, Real, Real) { ORIGINAL_TERRAIN_PENDING("original water velocity pending"); }
+Bool W3DTerrainVisual::getWaterGridHeight(Real, Real, Real *) { ORIGINAL_TERRAIN_PENDING("original water grid pending"); }
+void W3DTerrainVisual::setTerrainTracksDetail() { ORIGINAL_TERRAIN_PENDING("original terrain track detail pending"); }
+void W3DTerrainVisual::setShoreLineDetail() { ORIGINAL_TERRAIN_PENDING("original shoreline detail pending"); }
+void W3DTerrainVisual::addFactionBib(Object *, Bool, Real) { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
+void W3DTerrainVisual::removeFactionBib(Object *) { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
+void W3DTerrainVisual::addFactionBibDrawable(Drawable *, Bool, Real) { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
+void W3DTerrainVisual::removeFactionBibDrawable(Drawable *) { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
+void W3DTerrainVisual::removeAllBibs() { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
+void W3DTerrainVisual::removeBibHighlighting() { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
+void W3DTerrainVisual::removeTreesAndPropsForConstruction(const Coord3D *, const GeometryInfo &, Real)
+{ ORIGINAL_TERRAIN_PENDING("original terrain prop pending"); }
+void W3DTerrainVisual::addProp(const ThingTemplate *, const Coord3D *, Real)
+{ ORIGINAL_TERRAIN_PENDING("original terrain prop pending"); }
+void W3DTerrainVisual::setRawMapHeight(const ICoord2D *, Int) { ORIGINAL_TERRAIN_PENDING("original map height pending"); }
+Int W3DTerrainVisual::getRawMapHeight(const ICoord2D *) { ORIGINAL_TERRAIN_PENDING("original map height pending"); }
+void W3DTerrainVisual::replaceSkyboxTextures(const AsciiString *[NumSkyboxTextures],
+	const AsciiString *[NumSkyboxTextures]) { ORIGINAL_TERRAIN_PENDING("original skybox pending"); }
+void W3DTerrainVisual::crc(Xfer *) { ORIGINAL_TERRAIN_PENDING("original terrain snapshot pending"); }
+void W3DTerrainVisual::xfer(Xfer *) { ORIGINAL_TERRAIN_PENDING("original terrain snapshot pending"); }
+void W3DTerrainVisual::loadPostProcess() { ORIGINAL_TERRAIN_PENDING("original terrain snapshot pending"); }
+#undef ORIGINAL_TERRAIN_PENDING
+
+#else
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
@@ -1308,3 +1497,4 @@ void W3DTerrainVisual::loadPostProcess( void )
 
 }  // end loadPostProcess
 
+#endif // ZH_WW3D_CPU_ONLY

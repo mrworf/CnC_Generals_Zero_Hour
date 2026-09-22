@@ -11,6 +11,7 @@
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "W3DDevice/GameClient/W3DWater.h"
 #include "W3DDevice/GameClient/W3DSmudge.h"
+#include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "WW3D2/assetmgr.h"
 #include "WW3D2/camera.h"
 #include "WW3D2/dx8wrapper.h"
@@ -59,6 +60,7 @@ extern "C" void zh_probe_view_scene()
         target.format = zh::renderer::TextureFormat::depth24_stencil8;
         auto depth = device.create_texture(target, "original W3DView depth");
         require(color && depth, "original W3DView frame targets missing");
+        std::vector<unsigned char> empty_baseline;
         {
             W3DView no_edge;
             bool rejected = false;
@@ -100,6 +102,17 @@ extern "C" void zh_probe_view_scene()
             catch (const std::runtime_error&) { smudge_edge_rejected = true; }
             require(smudge_edge_rejected && !TheSmudgeManager,
                 "original empty smudge owner initialized without device edge");
+            TerrainVisual *saved_visual = TheTerrainVisual;
+            auto* no_visual_edge = new W3DTerrainVisual;
+            TheTerrainVisual = no_visual_edge;
+            bool visual_edge_rejected = false;
+            try { no_visual_edge->init(); }
+            catch (const std::runtime_error&) { visual_edge_rejected = true; }
+            require(visual_edge_rejected && !TheTerrainRenderObject && !TheHeightMap &&
+                !TheWaterRenderObj && !TheSmudgeManager,
+                "original empty terrain visual initialized without device edge");
+            delete no_visual_edge;
+            TheTerrainVisual = saved_visual;
         }
         {
             zh::original_runtime::OriginalGpuEdge edge(device);
@@ -373,6 +386,7 @@ extern "C" void zh_probe_view_scene()
                 }
                 const auto absent_marker = recorder ? recorder->snapshot().size() : 0;
                 const auto absent = frame();
+                empty_baseline = absent;
                 if (recorder)
                     require(recorder->snapshot().substr(absent_marker).find("draw pipeline=") ==
                         std::string::npos, "original empty W3DView frame drew");
@@ -512,6 +526,77 @@ extern "C" void zh_probe_view_scene()
             catch (const std::runtime_error&) { stale_smudge_owner = true; }
             require(stale_smudge_owner && !TheSmudgeManager,
                 "original empty smudge owner accepted torn-down display");
+            {
+                W3DDisplay composed_display;
+                composed_display.init();
+                TerrainVisual *saved_visual = TheTerrainVisual;
+                auto* composed = new W3DTerrainVisual;
+                TheTerrainVisual = composed;
+                const Bool visual_saved_water = TheGlobalData->m_useWaterPlane;
+                TheWritableGlobalData->m_useWaterPlane = TRUE;
+                bool enabled_visual_rejected = false;
+                try { composed->init(); }
+                catch (const std::runtime_error&) { enabled_visual_rejected = true; }
+                TheWritableGlobalData->m_useWaterPlane = visual_saved_water;
+                require(enabled_visual_rejected && TheTerrainVisual == composed &&
+                    !TheTerrainRenderObject && !TheHeightMap &&
+                    !TheTerrainTracksRenderObjClassSystem && !TheW3DShadowManager &&
+                    !TheWaterRenderObj && !TheSmudgeManager,
+                    "original enabled-water visual published partial owners");
+                composed->init();
+                require(TheTerrainVisual == composed && TheTerrainRenderObject && TheHeightMap &&
+                    !TheHeightMap->getMap() && TheTerrainTracksRenderObjClassSystem &&
+                    TheW3DShadowManager && TheWaterRenderObj && TheSmudgeManager &&
+                    TheWaterRenderObj->Peek_Scene() == W3DDisplay::m_3DScene &&
+                    TheWaterRenderObj->Num_Refs() == 2,
+                    "original empty terrain visual did not compose native owners");
+                composed->init();
+                composed->reset();
+                composed->update();
+                W3DTerrainVisual duplicate_visual;
+                bool duplicate_visual_rejected = false;
+                try { duplicate_visual.init(); }
+                catch (const std::runtime_error&) { duplicate_visual_rejected = true; }
+                require(duplicate_visual_rejected && TheTerrainVisual == composed &&
+                    TheWaterRenderObj->Num_Refs() == 2,
+                    "original empty terrain visual duplicate displaced owner");
+                bool map_visual_rejected = false;
+                try { (void)composed->load(AsciiString("unsupported.map")); }
+                catch (const std::runtime_error&) { map_visual_rejected = true; }
+                require(map_visual_rejected && !TheHeightMap->getMap(),
+                    "original empty terrain visual accepted map load");
+                auto* composed_view = new W3DView;
+                composed_view->init();
+                auto* composed_camera = composed_view->get3DCamera();
+                composed_camera->Set_Position(Vector3(0, 0, 1));
+                composed_camera->Set_View_Plane(Vector2(-1, -0.75f), Vector2(1, 0.75f));
+                composed_camera->Set_Clip_Planes(0.995f, 2.0f);
+                composed_display.attachView(composed_view);
+                auto* composed_recorder = dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
+                const auto composed_marker = composed_recorder ? composed_recorder->snapshot().size() : 0;
+                edge.bind_frame_targets(color, depth, width, target.height);
+                require(WW3D::Begin_Render(true, true, Vector3(0.2f, 0.4f, 0.6f), 1) ==
+                    WW3D_ERROR_OK, "original composed terrain visual frame did not begin");
+                DX8Wrapper::Set_Transform(D3DTS_WORLD, Matrix3D(true));
+                composed_display.drawViews();
+                require(WW3D::End_Render(false) == WW3D_ERROR_OK,
+                    "original composed terrain visual frame did not end");
+                const auto composed_pixels = readback(color);
+                if (physical)
+                    require(composed_pixels == empty_baseline,
+                        "original composed empty terrain visual changed physical pixels");
+                else
+                    require(composed_recorder->snapshot().substr(composed_marker).find("draw pipeline=") ==
+                        std::string::npos, "original composed empty terrain visual emitted a draw");
+                delete composed;
+                require(!TheTerrainVisual && !TheTerrainRenderObject && !TheHeightMap &&
+                    !TheTerrainTracksRenderObjClassSystem && !TheW3DShadowManager &&
+                    !TheWaterRenderObj && !TheSmudgeManager,
+                    "original composed terrain visual teardown retained owners");
+                TheTerrainVisual = saved_visual;
+            }
+            require(!W3DDisplay::m_3DScene && !WW3D::Is_Initted(),
+                "original composed terrain visual display teardown retained WW3D");
         }
         device.destroy(depth);
         device.destroy(color);

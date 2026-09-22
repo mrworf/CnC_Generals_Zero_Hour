@@ -15,7 +15,7 @@ DRAW_NAMES = (
 )
 CLIENT_NAMES = (
     "W3DDisplay", "W3DView", "W3DAssetManager", "W3DScene", "W3DTerrainTracks", "W3DShroud",
-    "BaseHeightMap", "HeightMap", "W3DWater", "W3DSmudge",
+    "BaseHeightMap", "HeightMap", "W3DWater", "W3DSmudge", "W3DTerrainVisual",
 )
 WW3D_NAMES = ("scene", "light", "matpass")
 

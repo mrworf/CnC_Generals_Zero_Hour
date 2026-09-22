@@ -157,6 +157,9 @@ public:
 
 
 protected:
+#if defined(ZH_WW3D_CPU_ONLY)
+	void releaseEmptyOwners();
+#endif
 
 	// snapshot methods
 	virtual void crc( Xfer *xfer );
