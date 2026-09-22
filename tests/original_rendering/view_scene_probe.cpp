@@ -10,6 +10,7 @@
 #include "W3DDevice/GameClient/W3DShadow.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "W3DDevice/GameClient/W3DWater.h"
+#include "W3DDevice/GameClient/W3DSmudge.h"
 #include "WW3D2/assetmgr.h"
 #include "WW3D2/camera.h"
 #include "WW3D2/dx8wrapper.h"
@@ -93,6 +94,12 @@ extern "C" void zh_probe_view_scene()
             require(water_edge_rejected && !TheWaterRenderObj,
                 "original no-water owner initialized without device edge");
             no_water_edge->Release_Ref();
+            W3DSmudgeManager no_smudge_edge;
+            bool smudge_edge_rejected = false;
+            try { no_smudge_edge.init(); }
+            catch (const std::runtime_error&) { smudge_edge_rejected = true; }
+            require(smudge_edge_rejected && !TheSmudgeManager,
+                "original empty smudge owner initialized without device edge");
         }
         {
             zh::original_runtime::OriginalGpuEdge edge(device);
@@ -202,6 +209,30 @@ extern "C" void zh_probe_view_scene()
                 catch (const std::runtime_error&) { water_grid_rejected = true; }
                 require(water_grid_rejected && water->getWaterHeight(0, 0) == INVALID_WATER_HEIGHT,
                     "original no-water owner accepted grid rendering");
+                auto* smudges = new W3DSmudgeManager;
+                smudges->init();
+                require(TheSmudgeManager == smudges &&
+                    smudges->getSmudgeCountLastFrame() == 0 &&
+                    !smudges->getHardwareSupport(),
+                    "original empty smudge owner publication failed");
+                smudges->init();
+                W3DSmudgeManager duplicate_smudges;
+                bool duplicate_smudge_rejected = false;
+                try { duplicate_smudges.init(); }
+                catch (const std::runtime_error&) { duplicate_smudge_rejected = true; }
+                require(duplicate_smudge_rejected && TheSmudgeManager == smudges,
+                    "original empty smudge duplicate displaced owner");
+                smudges->reset();
+                smudges->ReleaseResources();
+                smudges->ReAcquireResources();
+                auto* active_smudge_set = smudges->addSmudgeSet();
+                bool active_smudge_reset_rejected = false;
+                try { smudges->reset(); }
+                catch (const std::runtime_error&) { active_smudge_reset_rejected = true; }
+                require(active_smudge_reset_rejected && TheSmudgeManager == smudges,
+                    "original active smudge set silently reset");
+                smudges->removeSmudgeSet(*active_smudge_set);
+                smudges->reset();
                 TheWritableGlobalData->m_useShadowVolumes = TRUE;
                 W3DShadowManager enabled_only;
                 bool volume_init_rejected = false;
@@ -289,6 +320,15 @@ extern "C" void zh_probe_view_scene()
                 catch (const std::runtime_error&) { water_render_rejected = true; }
                 require(water_render_rejected && !WW3D::Is_Rendering(),
                     "original no-water owner emitted a draw");
+                smudges->render(terrain_info);
+                active_smudge_set = smudges->addSmudgeSet();
+                bool active_smudge_render_rejected = false;
+                try { smudges->render(terrain_info); }
+                catch (const std::runtime_error&) { active_smudge_render_rejected = true; }
+                require(active_smudge_render_rejected && !WW3D::Is_Rendering(),
+                    "original active smudge set silently rendered");
+                smudges->removeSmudgeSet(*active_smudge_set);
+                smudges->reset();
                 view->init();
                 require(view->get3DCamera() == camera && camera->Num_Refs() == 1,
                     "original W3DView re-entry replaced 3D camera");
@@ -385,6 +425,9 @@ extern "C" void zh_probe_view_scene()
                 water->Release_Ref();
                 require(!TheWaterRenderObj,
                     "original no-water teardown retained singleton");
+                delete smudges;
+                require(!TheSmudgeManager,
+                    "original empty smudge teardown retained singleton");
                 shadows.Reset();
                 TheWritableGlobalData->m_useShadowVolumes = saved_volumes;
                 TheWritableGlobalData->m_useShadowDecals = saved_decals;
@@ -394,7 +437,7 @@ extern "C" void zh_probe_view_scene()
             }
             require(!W3DDisplay::m_3DScene && !WW3D::Is_Initted() &&
                 !TheW3DShadowManager && !TheTerrainTracksRenderObjClassSystem &&
-                !TheWaterRenderObj,
+                !TheWaterRenderObj && !TheSmudgeManager,
                 "original W3DView display teardown retained source owners");
             bool stale_terrain_owner = false;
             try { auto* terrain = NEW_REF(HeightMapRenderObjClass, ()); terrain->Release_Ref(); }
@@ -436,6 +479,12 @@ extern "C" void zh_probe_view_scene()
             stale_water->Release_Ref();
             TheWritableGlobalData->m_useWaterPlane = stale_water_plane;
             TheWritableGlobalData->m_useCloudPlane = stale_cloud_plane;
+            W3DSmudgeManager stale_smudges;
+            bool stale_smudge_owner = false;
+            try { stale_smudges.init(); }
+            catch (const std::runtime_error&) { stale_smudge_owner = true; }
+            require(stale_smudge_owner && !TheSmudgeManager,
+                "original empty smudge owner accepted torn-down display");
         }
         device.destroy(depth);
         device.destroy(color);

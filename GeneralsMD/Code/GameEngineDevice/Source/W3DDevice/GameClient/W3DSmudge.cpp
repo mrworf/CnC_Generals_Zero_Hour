@@ -27,6 +27,80 @@
 // Author: Mark Wilczynski, June 2003
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "PreRTS.h"
+#include "W3DDevice/GameClient/W3DSmudge.h"
+#include "W3DDevice/GameClient/W3DDisplay.h"
+#include "original_gpu_edge.h"
+#include "OriginalW3DDeviceUnavailable.h"
+
+SmudgeManager *TheSmudgeManager = NULL;
+static W3DSmudgeManager *s_emptySmudgeOwner = NULL;
+
+static void requireEmptySmudgeOwner(W3DSmudgeManager *owner)
+{
+	if (s_emptySmudgeOwner != owner || TheSmudgeManager != owner ||
+		!zh::original_runtime::OriginalGpuEdge::active() || !W3DDisplay::m_3DScene)
+		throw OriginalW3DDeviceUnavailable("original empty smudge owner unavailable");
+}
+
+W3DSmudgeManager::W3DSmudgeManager()
+	: m_smudgeGroup(NULL), m_posBuffer(NULL), m_RGBABuffer(NULL),
+	  m_sizeBuffer(NULL), m_indexBuffer(NULL), m_backBufferWidth(0),
+	  m_backBufferHeight(0)
+{
+}
+
+W3DSmudgeManager::~W3DSmudgeManager()
+{
+	if (s_emptySmudgeOwner == this) s_emptySmudgeOwner = NULL;
+	if (TheSmudgeManager == this) TheSmudgeManager = NULL;
+}
+
+void W3DSmudgeManager::init()
+{
+	if (!zh::original_runtime::OriginalGpuEdge::active() || !W3DDisplay::m_3DScene ||
+		(TheSmudgeManager && TheSmudgeManager != this) ||
+		(s_emptySmudgeOwner && s_emptySmudgeOwner != this) ||
+		m_usedSmudgeSetList.Head()) {
+		if (TheSmudgeManager == this && s_emptySmudgeOwner != this)
+			TheSmudgeManager = NULL;
+		throw OriginalW3DDeviceUnavailable("original active smudge bootstrap pending");
+	}
+	SmudgeManager::init();
+	m_hardwareSupportStatus = SMUDGE_SUPPORT_NO;
+	TheSmudgeManager = this;
+	s_emptySmudgeOwner = this;
+}
+
+void W3DSmudgeManager::reset()
+{
+	requireEmptySmudgeOwner(this);
+	if (m_usedSmudgeSetList.Head())
+		throw OriginalW3DDeviceUnavailable("original active smudge reset pending");
+	SmudgeManager::reset();
+	m_smudgeCountLastFrame = 0;
+}
+
+void W3DSmudgeManager::ReleaseResources()
+{
+	requireEmptySmudgeOwner(this);
+	if (m_usedSmudgeSetList.Head())
+		throw OriginalW3DDeviceUnavailable("original active smudge resources pending");
+}
+
+void W3DSmudgeManager::ReAcquireResources() { ReleaseResources(); }
+
+Bool W3DSmudgeManager::testHardwareSupport() { return FALSE; }
+
+void W3DSmudgeManager::render(RenderInfoClass&)
+{
+	requireEmptySmudgeOwner(this);
+	if (m_usedSmudgeSetList.Head())
+		throw OriginalW3DDeviceUnavailable("original smudge render pending");
+}
+
+#else
 #include "Lib/Basetype.h"
 #include "always.h"
 #include "W3DDevice/GameClient/W3DSmudge.h"
@@ -555,3 +629,4 @@ flushSmudges:
 	DX8Wrapper::Set_DX8_Texture_Stage_State(0,D3DTSS_ALPHAOP,D3DTOP_MODULATE);			
 
 }
+#endif // ZH_WW3D_CPU_ONLY
