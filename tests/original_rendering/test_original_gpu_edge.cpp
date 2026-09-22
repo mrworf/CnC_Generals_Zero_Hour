@@ -6,6 +6,7 @@
 #include "dx8polygonrenderer.h"
 #include "shader.h"
 #include "meshmdl.h"
+#include "texture.h"
 #include "zh/renderer/recording_device.h"
 
 #include <stdexcept>
@@ -166,6 +167,46 @@ void packed_terrain_texture_edge()
         edge.discard_texture(texture);
         check(device.recorder.resource_counts().total()==0);
     }
+}
+
+void shared_texture_alias_owner()
+{
+    FaultDevice device;
+    auto *owner=NEW_REF(TextureClass,("alias-owner",nullptr,MIP_LEVELS_1));
+    auto *alias=NEW_REF(TextureClass,("alias-view",nullptr,MIP_LEVELS_1));
+    auto *unknown=NEW_REF(TextureClass,("alias-unknown",nullptr,MIP_LEVELS_1));
+    {
+        zh::original_runtime::OriginalGpuEdge edge(device);
+        unsigned mips=1;
+        const auto handle=edge.create_texture(WW3D_FORMAT_A1R5G5B5,4,4,mips);
+        edge.publish_texture(owner,handle);
+        edge.publish_texture_alias(alias,owner);
+        check(edge.texture_handle(owner)==edge.texture_handle(alias));
+        check(device.recorder.resource_counts().textures==1);
+        bool duplicate=false;
+        try { edge.publish_texture_alias(alias,owner); } catch (const std::runtime_error&) { duplicate=true; }
+        check(duplicate);
+        bool self=false;
+        try { edge.publish_texture_alias(unknown,unknown); } catch (const std::runtime_error&) { self=true; }
+        check(self);
+        auto *unpublished=NEW_REF(TextureClass,("alias-unpublished",nullptr,MIP_LEVELS_1));
+        bool missing=false;
+        try { edge.publish_texture_alias(unknown,unpublished); } catch (const std::runtime_error&) { missing=true; }
+        unpublished->Release_Ref();
+        check(missing);
+        owner->Invalidate();
+        check(device.recorder.resource_counts().textures==1 && edge.texture_handle(alias)==handle);
+        alias->Invalidate();
+        check(device.recorder.resource_counts().textures==0);
+    }
+    {
+        zh::original_runtime::OriginalGpuEdge edge(device);
+        bool prior_generation=false;
+        try { edge.publish_texture_alias(alias,owner); } catch (const std::runtime_error&) { prior_generation=true; }
+        check(prior_generation);
+    }
+    owner->Release_Ref(); alias->Release_Ref(); unknown->Release_Ref();
+    check(device.recorder.resource_counts().total()==0);
 }
 
 void canonical_fvf_layouts()
@@ -548,6 +589,7 @@ int main()
     first_original_buffer_bytes();
     injected_device_failures();
     packed_terrain_texture_edge();
+    shared_texture_alias_owner();
     canonical_fvf_layouts();
     original_wrapper_indexed_methods();
     original_dynamic_access_owner();

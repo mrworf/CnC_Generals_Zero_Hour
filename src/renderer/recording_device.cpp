@@ -147,8 +147,8 @@ public:
     std::size_t view_capacity;
     std::size_t view_count = 0;
     std::array<bool,9> supported_texture_formats{true,true,true,true,true,true,true,true,true};
-    bool reject_next_texture_create=false;
-    bool reject_next_texture_upload=false;
+    unsigned texture_create_failure_countdown=std::numeric_limits<unsigned>::max();
+    unsigned texture_upload_failure_countdown=std::numeric_limits<unsigned>::max();
     bool reject_next_sampler_create=false;
     bool reject_next_shader_create=false;
     bool reject_next_pipeline_create=false;
@@ -198,8 +198,12 @@ void RecordingGpuDevice::set_texture_format_supported(TextureFormat format, bool
     impl_->supported_texture_formats[index]=supported;
 }
 
-void RecordingGpuDevice::fail_next_texture_create() { impl_->reject_next_texture_create=true; }
-void RecordingGpuDevice::fail_next_texture_upload() { impl_->reject_next_texture_upload=true; }
+void RecordingGpuDevice::fail_next_texture_create() { impl_->texture_create_failure_countdown=0; }
+void RecordingGpuDevice::fail_next_texture_upload() { impl_->texture_upload_failure_countdown=0; }
+void RecordingGpuDevice::fail_texture_create_after(unsigned successful_creates)
+{ impl_->texture_create_failure_countdown=successful_creates; }
+void RecordingGpuDevice::fail_texture_upload_after(unsigned successful_uploads)
+{ impl_->texture_upload_failure_countdown=successful_uploads; }
 void RecordingGpuDevice::fail_next_sampler_create() { impl_->reject_next_sampler_create=true; }
 void RecordingGpuDevice::fail_next_shader_create() { impl_->reject_next_shader_create=true; }
 void RecordingGpuDevice::fail_next_pipeline_create() { impl_->reject_next_pipeline_create=true; }
@@ -230,9 +234,13 @@ BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::stri
 
 TextureHandle RecordingGpuDevice::create_texture(const TextureDesc& desc, std::string_view label)
 {
-    if (impl_->reject_next_texture_create) {
-        impl_->reject_next_texture_create=false;
-        impl_->fail("create_texture", "injected texture creation failure", label); return {};
+    if (impl_->texture_create_failure_countdown!=std::numeric_limits<unsigned>::max()) {
+        if (impl_->texture_create_failure_countdown) {
+            --impl_->texture_create_failure_countdown;
+        } else {
+            impl_->texture_create_failure_countdown=std::numeric_limits<unsigned>::max();
+            impl_->fail("create_texture", "injected texture creation failure", label); return {};
+        }
     }
     if (auto result = validate(desc); !result) { impl_->fail("create_texture", result.error, label); return {}; }
     if (desc.width>16384 || desc.height>16384 || desc.depth_or_layers>16384 ||
@@ -352,9 +360,12 @@ ValidationResult RecordingGpuDevice::upload(const UploadDesc& desc, const void* 
 
 ValidationResult RecordingGpuDevice::upload_texture(const TextureUploadDesc& desc, const void* bytes)
 {
-    if (impl_->reject_next_texture_upload) {
-        impl_->reject_next_texture_upload=false;
-        return impl_->fail("upload_texture", "injected texture upload failure");
+    if (impl_->texture_upload_failure_countdown!=std::numeric_limits<unsigned>::max()) {
+        if (!impl_->texture_upload_failure_countdown) {
+            impl_->texture_upload_failure_countdown=std::numeric_limits<unsigned>::max();
+            return impl_->fail("upload_texture", "injected texture upload failure");
+        }
+        --impl_->texture_upload_failure_countdown;
     }
     auto* texture = lookup(impl_->textures, desc.destination);
     if (!texture) return impl_->fail("upload_texture", "destination texture handle is stale or destroyed");
@@ -658,6 +669,13 @@ std::vector<UInt8> RecordingGpuDevice::texture_bytes(TextureHandle handle, UInt3
     const auto* texture=lookup(impl_->textures,handle);
     if (!texture || mip_level>=texture->value.mips.size()) return {};
     return texture->value.mips[mip_level];
+}
+
+TextureDesc RecordingGpuDevice::texture_descriptor(TextureHandle handle) const
+{
+    const auto* texture=lookup(impl_->textures,handle);
+    if (!texture) throw std::runtime_error("recording texture handle is stale or destroyed");
+    return texture->value.desc;
 }
 
 SamplerDesc RecordingGpuDevice::sampler_descriptor(SamplerHandle handle) const

@@ -126,6 +126,7 @@ public:
         unsigned height, unsigned pitch, const void* bytes, std::size_t size);
     void discard_texture(renderer::TextureHandle texture) noexcept;
     void publish_texture(TextureBaseClass* source, renderer::TextureHandle texture, bool shared_missing = false);
+    void publish_texture_alias(TextureBaseClass* source, const TextureBaseClass* owner);
     renderer::TextureHandle missing_texture();
     static bool is_missing_texture(const TextureBaseClass* source) noexcept;
     renderer::TextureHandle texture_handle(const TextureBaseClass* source) const;
@@ -171,6 +172,7 @@ private:
     std::unordered_map<const IndexBufferClass*, renderer::BufferHandle> indices_;
     struct TextureOwnership { renderer::TextureHandle handle; std::uint64_t generation; bool shared_missing; };
     std::unordered_map<TextureBaseClass*, TextureOwnership> textures_;
+    std::unordered_map<renderer::UInt32, unsigned> texture_owner_refs_;
     renderer::TextureHandle missing_texture_;
     std::array<PendingStage, 8> pending_stages_{};
     struct PendingFilterValues { int min=-1,mag=-1,mip=-1,u=-1,v=-1; };

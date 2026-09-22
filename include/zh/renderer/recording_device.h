@@ -39,6 +39,8 @@ public:
     void set_texture_format_supported(TextureFormat format, bool supported);
     void fail_next_texture_create();
     void fail_next_texture_upload();
+    void fail_texture_create_after(unsigned successful_creates);
+    void fail_texture_upload_after(unsigned successful_uploads);
     void fail_next_sampler_create();
     void fail_next_shader_create();
     void fail_next_pipeline_create();
@@ -77,6 +79,7 @@ public:
     std::vector<UInt8> buffer_bytes(BufferHandle handle) const;
     std::vector<UInt8> last_draw_index_bytes() const;
     std::vector<UInt8> texture_bytes(TextureHandle handle, UInt32 mip_level = 0) const;
+    TextureDesc texture_descriptor(TextureHandle handle) const;
     SamplerDesc sampler_descriptor(SamplerHandle handle) const;
     PipelineDesc pipeline_descriptor(PipelineHandle handle) const;
 

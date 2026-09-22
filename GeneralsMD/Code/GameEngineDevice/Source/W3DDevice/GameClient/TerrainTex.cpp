@@ -45,14 +45,22 @@
 //-----------------------------------------------------------------------------
 //         Includes                                                      
 //-----------------------------------------------------------------------------
+#include "PreRTS.h"
+
 #include <stdlib.h>
 
 #include "W3DDevice/GameClient/TerrainTex.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "W3DDevice/GameClient/TileData.h"
-#include "common/GlobalData.h"
+#include "Common/GlobalData.h"
 #include "WW3D2/dx8wrapper.h"
+#if !defined(ZH_WW3D_CPU_ONLY)
 #include "d3dx8tex.h"
+#endif
+
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "terraintex_cpu.inc"
+#else
 
 /******************************************************************************
 						TerrainTextureClass
@@ -1138,5 +1146,4 @@ void ScorchTextureClass::Apply(unsigned int stage)
 	DX8Wrapper::Set_DX8_Texture_Stage_State( 1, D3DTSS_COLOROP,   D3DTOP_DISABLE );
 	DX8Wrapper::Set_DX8_Texture_Stage_State( 1, D3DTSS_ALPHAOP,   D3DTOP_DISABLE );
 }
-
-
+#endif

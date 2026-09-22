@@ -1107,6 +1107,7 @@ add_executable(zh_original_w3d_full_probe
   tests/original_rendering/visual_height_map_probe.cpp
   tests/original_rendering/flat_terrain_geometry_probe.cpp
   tests/original_rendering/terrain_source_bitmap_probe.cpp
+  tests/original_rendering/terrain_atlas_probe.cpp
   tests/original_rendering/shroud_data_probe.cpp
   tests/original_rendering/base_terrain_map_probe.cpp
   $<TARGET_OBJECTS:zh_original_lifecycle_spine>
@@ -1138,6 +1139,9 @@ set_source_files_properties(tests/original_rendering/flat_terrain_geometry_probe
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/terrain_source_bitmap_probe.cpp PROPERTIES
+  COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
+  COMPILE_OPTIONS "-fpermissive")
+set_source_files_properties(tests/original_rendering/terrain_atlas_probe.cpp PROPERTIES
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/shroud_data_probe.cpp PROPERTIES
@@ -2192,6 +2196,12 @@ if(ZH_BUILD_TESTS)
     --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
   set_tests_properties(original_w3d_terrain_source_bitmap PROPERTIES
     LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_w3d_terrain_atlas COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_terrain_atlas.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
+  set_tests_properties(original_w3d_terrain_atlas PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
   add_test(NAME original_w3d_shroud_data COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_shroud_data.py"
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"

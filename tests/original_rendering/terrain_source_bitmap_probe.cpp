@@ -39,10 +39,6 @@ extern "C" void zh_probe_terrain_source_bitmap()
 			require(bytes && bytes[0] == 3 && bytes[1] == 2 && bytes[2] == 1 && bytes[3] == 4,
 				"original terrain source tile mip changed");
 		}
-		bool atlas = false;
-		try { (void)map->getTerrainTexture(); }
-		catch (...) { atlas = true; }
-		require(atlas, "original terrain bitmap claimed atlas resource");
 		map->Release_Ref();
 		require(zh::original_process::live_pool_allocations() == baseline,
 			"original terrain source tile teardown retained allocation");

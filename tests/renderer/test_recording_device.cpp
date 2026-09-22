@@ -203,16 +203,28 @@ void test_source_texture_format_capabilities()
     device.fail_next_texture_create();
     check(!device.create_texture(packed,"injected packed create"),
         "injected packed texture creation failure was ignored");
+    device.fail_texture_create_after(1);
+    const auto before_delayed_create=device.create_texture(packed,"delayed packed create survivor");
+    check(before_delayed_create && !device.create_texture(packed,"delayed packed create failure"),
+        "delayed packed texture creation failure was ignored");
+    device.destroy(before_delayed_create);
     const auto packed_texture=device.create_texture(packed,"source packed terrain");
     const std::array<UInt16,4> channels{{0x8000,0xfc00,0x83e0,0x801f}};
     device.fail_next_texture_upload();
     check(!device.upload_texture({packed_texture,2,2,4,sizeof(channels),0},channels.data()),
         "injected packed texture upload failure was ignored");
+    device.fail_texture_upload_after(1);
+    check(device.upload_texture({packed_texture,2,2,4,sizeof(channels),0},channels.data()) &&
+        !device.upload_texture({packed_texture,2,2,4,sizeof(channels),0},channels.data()),
+        "delayed packed texture upload failure was ignored");
     check(packed_texture && device.upload_texture({packed_texture,2,2,4,sizeof(channels),0},channels.data()),
         "packed terrain channel/alpha patterns were rejected");
     check(device.texture_bytes(packed_texture,0)==std::vector<UInt8>(
         reinterpret_cast<const UInt8*>(channels.data()),reinterpret_cast<const UInt8*>(channels.data()+channels.size())),
         "packed terrain channel/alpha patterns changed");
+    const auto packed_desc=device.texture_descriptor(packed_texture);
+    check(packed_desc.width==2 && packed_desc.height==2 && packed_desc.format==TextureFormat::bgr5a1,
+        "packed terrain texture descriptor changed");
     check(!device.upload_texture({packed_texture,2,2,2,sizeof(channels),0},channels.data()),
         "short packed terrain row was accepted");
     device.destroy(packed_texture);

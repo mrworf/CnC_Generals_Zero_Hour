@@ -52,12 +52,11 @@ OriginalGpuEdge::~OriginalGpuEdge()
     DX8Wrapper::Reset_Source_State();
     for (auto& stage : pending_stages_) if (stage.sampler) device_.destroy(stage.sampler);
     while (!textures_.empty()) {
-        auto it=textures_.begin();
-        TextureBaseClass* source=it->first;
-        if (!it->second.shared_missing) device_.destroy(it->second.handle);
-        textures_.erase(it);
-        source->Invalidate();
+		const auto before = textures_.size();
+        textures_.begin()->first->Invalidate();
+		if (textures_.size() == before) std::terminate();
     }
+    if (!texture_owner_refs_.empty()) std::terminate();
     release_source_buffers();
     if (missing_texture_) device_.destroy(missing_texture_);
     active_edge = previous_;
@@ -642,6 +641,18 @@ void OriginalGpuEdge::publish_texture(TextureBaseClass* source, renderer::Textur
     if (!source || !texture || textures_.count(source))
         throw std::runtime_error("original texture physical publication is invalid");
     textures_.emplace(source,TextureOwnership{texture,generation_,shared_missing});
+    if (!shared_missing) ++texture_owner_refs_[texture.value()];
+}
+
+void OriginalGpuEdge::publish_texture_alias(TextureBaseClass* source, const TextureBaseClass* owner)
+{
+    if (!source || !owner || source==owner || textures_.count(source))
+        throw std::runtime_error("original texture alias publication is invalid");
+    const auto found=textures_.find(const_cast<TextureBaseClass*>(owner));
+    if (found==textures_.end() || found->second.generation!=generation_ || found->second.shared_missing)
+        throw std::runtime_error("original texture alias owner is unavailable");
+    textures_.emplace(source,TextureOwnership{found->second.handle,generation_,false});
+    ++texture_owner_refs_[found->second.handle.value()];
 }
 
 renderer::TextureHandle OriginalGpuEdge::missing_texture()
@@ -679,7 +690,14 @@ void OriginalGpuEdge::release_texture_if_owned(TextureBaseClass* source) noexcep
             active_edge->pending_filter_values_[index]={};
         }
     }
-    if (!it->second.shared_missing) active_edge->device_.destroy(it->second.handle);
+    if (!it->second.shared_missing) {
+        auto ref=active_edge->texture_owner_refs_.find(it->second.handle.value());
+        if (ref==active_edge->texture_owner_refs_.end() || !ref->second) std::terminate();
+        if (--ref->second==0) {
+            active_edge->device_.destroy(it->second.handle);
+            active_edge->texture_owner_refs_.erase(ref);
+        }
+    }
     active_edge->textures_.erase(it);
 }
 

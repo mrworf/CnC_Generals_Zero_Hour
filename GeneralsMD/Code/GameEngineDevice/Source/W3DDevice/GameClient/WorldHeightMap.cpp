@@ -37,6 +37,7 @@
 #include "Common/OriginalMapLoader.h"
 #include "Common/TerrainTypes.h"
 #include "W3DDevice/GameClient/TileData.h"
+#include "W3DDevice/GameClient/TerrainTex.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #include <cstring>
@@ -214,6 +215,9 @@ WorldHeightMap::~WorldHeightMap()
 		REF_PTR_RELEASE(m_sourceTiles[i]);
 		REF_PTR_RELEASE(m_edgeTiles[i]);
 	}
+	REF_PTR_RELEASE(m_terrainTex);
+	REF_PTR_RELEASE(m_alphaTerrainTex);
+	REF_PTR_RELEASE(m_alphaEdgeTex);
 }
 
 void WorldHeightMap::readTexClass(TXTextureClass *texture_class, TileData **tiles)
@@ -296,10 +300,25 @@ Bool WorldHeightMap::getUVData(Int x, Int y, float u[4], float v[4], Bool)
 	if (!u || !v || x < 0 || y < 0 || x >= m_drawWidthX - 1 ||
 		y >= m_drawHeightY - 1 || !m_tileNdxes)
 		return FALSE;
-	// The source returns zero UVs when the tile bitmap has not been loaded.  07F3
-	// deliberately owns metadata only; texture files and atlas resources stay closed.
-	for (Int i = 0; i < 4; ++i) u[i] = v[i] = 0.0f;
-	return FALSE;
+	const Short tile_index = m_tileNdxes[(y + m_drawOriginY) * m_width + x + m_drawOriginX];
+	const Int source_index = tile_index >> 2;
+	if (source_index < 0 || source_index >= m_numBitmapTiles || !m_sourceTiles[source_index] ||
+		m_sourceTiles[source_index]->m_tileLocationInTexture.x <= 0) {
+		for (Int i = 0; i < 4; ++i) u[i] = v[i] = 0.0f;
+		return FALSE;
+	}
+	const ICoord2D position = m_sourceTiles[source_index]->m_tileLocationInTexture;
+	float min_u = float(position.x) / TEXTURE_WIDTH;
+	float max_u = float(position.x + TILE_PIXEL_EXTENT) / TEXTURE_WIDTH;
+	float min_v = float(position.y) / m_terrainTexHeight;
+	float max_v = float(position.y + TILE_PIXEL_EXTENT) / m_terrainTexHeight;
+	const float mid_u = (min_u + max_u) * 0.5f;
+	const float mid_v = (min_v + max_v) * 0.5f;
+	if (tile_index & 1) min_u = mid_u; else max_u = mid_u;
+	if (tile_index & 2) max_v = mid_v; else min_v = mid_v;
+	u[0] = min_u; u[1] = max_u; u[2] = max_u; u[3] = min_u;
+	v[0] = max_v; v[1] = max_v; v[2] = min_v; v[3] = min_v;
+	return TRUE;
 }
 
 void WorldHeightMap::getAlphaUVData(Int x, Int y, float u[4], float v[4],
@@ -320,19 +339,72 @@ Bool WorldHeightMap::isCliffMappedTexture(Int x, Int y)
 	return m_cliffInfoNdxes[y * m_width + x] != 0;
 }
 
+Int WorldHeightMap::updateTileTexturePositions(Int *edge_height)
+{
+	if (edge_height) *edge_height = 0;
+	if (m_numTextureClasses != 1 || m_numBitmapTiles != 1 || !m_sourceTiles[0] ||
+		m_textureClasses[0].width != 1 || m_textureClasses[0].firstTile != 0)
+		throw OriginalW3DDeviceUnavailable("original active terrain atlas packing pending");
+	m_textureClasses[0].positionInTexture.x = TILE_OFFSET / 2;
+	m_textureClasses[0].positionInTexture.y = TILE_OFFSET / 2;
+	m_sourceTiles[0]->m_tileLocationInTexture.x = TILE_OFFSET / 2;
+	m_sourceTiles[0]->m_tileLocationInTexture.y = TILE_OFFSET / 2;
+	return TILE_OFFSET + TILE_PIXEL_EXTENT;
+}
+
 TextureClass *WorldHeightMap::getTerrainTexture()
 {
-	throw OriginalW3DDeviceUnavailable("original terrain texture resource pending");
+	if (m_terrainTex) return m_terrainTex;
+	Int edge_height = 0;
+	const Int packed_height = updateTileTexturePositions(&edge_height);
+	Int terrain_height = 1;
+	while (terrain_height < packed_height) terrain_height *= 2;
+	Int alpha_edge_height = 1;
+	while (alpha_edge_height < edge_height) alpha_edge_height *= 2;
+	TerrainTextureClass *terrain = NULL;
+	AlphaTerrainTextureClass *alpha_terrain = NULL;
+	AlphaEdgeTextureClass *alpha_edge = NULL;
+	try {
+		terrain = MSGNEW("WorldHeightMap_getTerrainTexture") TerrainTextureClass(terrain_height);
+		const Int actual_terrain_height = terrain->update(this);
+		alpha_terrain = MSGNEW("WorldHeightMap_getTerrainTexture") AlphaTerrainTextureClass(terrain);
+		alpha_edge = MSGNEW("WorldHeightMap_getTerrainTexture") AlphaEdgeTextureClass(alpha_edge_height);
+		const Int actual_edge_height = alpha_edge->update(this);
+		m_terrainTexHeight = actual_terrain_height;
+		m_alphaEdgeHeight = actual_edge_height;
+		m_terrainTex = terrain; terrain = NULL;
+		m_alphaTerrainTex = alpha_terrain; alpha_terrain = NULL;
+		m_alphaEdgeTex = alpha_edge; alpha_edge = NULL;
+		for (Int y = 0; y < m_height - 1; ++y) {
+			for (Int x = 0; x < m_width - 1; ++x) {
+				UnsignedByte alpha[4]; float u[4], v[4]; Bool flip = FALSE;
+				getAlphaUVData(x, y, u, v, alpha, &flip, FALSE);
+				if (flip) m_cellFlipState[y * m_flipStateWidth + (x >> 3)] |= 1 << (x & 7);
+			}
+		}
+	} catch (...) {
+		REF_PTR_RELEASE(alpha_edge);
+		REF_PTR_RELEASE(alpha_terrain);
+		REF_PTR_RELEASE(terrain);
+		REF_PTR_RELEASE(m_alphaEdgeTex);
+		REF_PTR_RELEASE(m_alphaTerrainTex);
+		REF_PTR_RELEASE(m_terrainTex);
+		m_terrainTexHeight = m_alphaTexHeight = m_alphaEdgeHeight = 1;
+		throw;
+	}
+	return m_terrainTex;
 }
 
 TextureClass *WorldHeightMap::getAlphaTerrainTexture()
 {
-	throw OriginalW3DDeviceUnavailable("original terrain alpha resource pending");
+	if (!m_alphaTerrainTex) getTerrainTexture();
+	return m_alphaTerrainTex;
 }
 
 TextureClass *WorldHeightMap::getEdgeTerrainTexture()
 {
-	throw OriginalW3DDeviceUnavailable("original terrain edge resource pending");
+	if (!m_alphaEdgeTex) getTerrainTexture();
+	return m_alphaEdgeTex;
 }
 
 Real WorldHeightMap::getSeismicZVelocity(Int, Int) const
