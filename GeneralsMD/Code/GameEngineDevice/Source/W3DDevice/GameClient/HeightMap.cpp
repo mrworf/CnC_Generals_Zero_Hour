@@ -47,6 +47,70 @@
 //-----------------------------------------------------------------------------
 
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "PreRTS.h"
+#include "W3DDevice/GameClient/HeightMap.h"
+#include "OriginalW3DDeviceUnavailable.h"
+
+HeightMapRenderObjClass *TheHeightMap = NULL;
+
+HeightMapRenderObjClass::HeightMapRenderObjClass() :
+	m_extraBlendTilePositions(NULL), m_numExtraBlendTiles(0),
+	m_numVisibleExtraBlendTiles(0), m_extraBlendTilePositionsSize(0),
+	m_vertexBufferTiles(NULL), m_vertexBufferBackup(NULL),
+	m_originX(0), m_originY(0), m_indexBuffer(NULL),
+	m_numVBTilesX(0), m_numVBTilesY(0), m_numVertexBufferTiles(0),
+	m_numBlockColumnsInLastVB(0), m_numBlockRowsInLastVB(0)
+{
+	TheTerrainRenderObject = this;
+	TheHeightMap = this;
+}
+
+HeightMapRenderObjClass::~HeightMapRenderObjClass()
+{
+	if (TheHeightMap == this) TheHeightMap = NULL;
+	if (TheTerrainRenderObject == this) TheTerrainRenderObject = NULL;
+}
+
+void HeightMapRenderObjClass::ReleaseResources() {}
+void HeightMapRenderObjClass::ReAcquireResources() {}
+void HeightMapRenderObjClass::Render(RenderInfoClass&)
+{
+	throw OriginalW3DDeviceUnavailable("original empty terrain render pending");
+}
+void HeightMapRenderObjClass::On_Frame_Update() {}
+int HeightMapRenderObjClass::initHeightData(Int, Int, WorldHeightMap*, RefRenderObjListIterator*, Bool)
+{
+	throw OriginalW3DDeviceUnavailable("original terrain map data pending");
+}
+Int HeightMapRenderObjClass::freeMapResources() { return BaseHeightMapRenderObjClass::freeMapResources(); }
+void HeightMapRenderObjClass::updateCenter(CameraClass* camera, RefRenderObjListIterator* lights)
+{
+	BaseHeightMapRenderObjClass::updateCenter(camera, lights);
+}
+void HeightMapRenderObjClass::staticLightingChanged()
+{
+	BaseHeightMapRenderObjClass::staticLightingChanged();
+}
+void HeightMapRenderObjClass::adjustTerrainLOD(Int adj)
+{
+	BaseHeightMapRenderObjClass::adjustTerrainLOD(adj);
+}
+void HeightMapRenderObjClass::reset() { BaseHeightMapRenderObjClass::reset(); }
+void HeightMapRenderObjClass::doPartialUpdate(const IRegion2D&, WorldHeightMap*, RefRenderObjListIterator*)
+{
+	throw OriginalW3DDeviceUnavailable("original terrain partial update pending");
+}
+void HeightMapRenderObjClass::oversizeTerrain(Int amount)
+{
+	BaseHeightMapRenderObjClass::oversizeTerrain(amount);
+}
+int HeightMapRenderObjClass::updateBlock(Int, Int, Int, Int, WorldHeightMap*, RefRenderObjListIterator*)
+{
+	throw OriginalW3DDeviceUnavailable("original terrain block update pending");
+}
+
+#else
 #include "W3DDevice/GameClient/heightmap.h"
 
 #ifndef USE_FLAT_HEIGHT_MAP // Flat height map uses flattened textures. jba. [3/20/2003]
@@ -2459,3 +2523,5 @@ void HeightMapRenderObjClass::renderExtraBlendTiles(void)
   }
 }
 #endif
+
+#endif // ZH_WW3D_CPU_ONLY

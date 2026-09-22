@@ -37,8 +37,11 @@
 #include "shader.h"
 #include "vertmaterial.h"
 #include "Lib/BaseType.h"
-#include "common/GameType.h"
+#include "Common/GameType.h"
 #include "WorldHeightMap.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "OriginalW3DDeviceUnavailable.h"
+#endif
 
 #define MAX_ENABLED_DYNAMIC_LIGHTS 20
 typedef UnsignedByte HeightSampleType;	//type of data to store in heightmap
@@ -132,13 +135,23 @@ public:
 
   void redirectToHeightmap( WorldHeightMap *pMap ) 
   {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (pMap)
+		throw OriginalW3DDeviceUnavailable("original terrain map redirect pending");
+	return;
+#else
     REF_PTR_RELEASE( m_map );
 	  REF_PTR_SET(m_map, pMap);	//update our heightmap pointer in case it changed since last call.
+#endif
   }
 
 
 	inline UnsignedByte getClipHeight(Int x, Int y) const
 	{
+#if defined(ZH_WW3D_CPU_ONLY)
+		if (!m_map)
+			throw OriginalW3DDeviceUnavailable("original terrain height sample without map");
+#endif
 		Int xextent = m_map->getXExtent() - 1;
 		Int yextent = m_map->getYExtent() - 1;
 

@@ -46,6 +46,114 @@
 //         Includes                                                      
 //-----------------------------------------------------------------------------
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "PreRTS.h"
+#include "W3DDevice/GameClient/BaseHeightMap.h"
+#include "W3DDevice/GameClient/W3DDisplay.h"
+#include "original_gpu_edge.h"
+#include "OriginalW3DDeviceUnavailable.h"
+
+BaseHeightMapRenderObjClass *TheTerrainRenderObject = NULL;
+
+BaseHeightMapRenderObjClass::BaseHeightMapRenderObjClass()
+{
+	if (!zh::original_runtime::OriginalGpuEdge::active() ||
+		!W3DDisplay::m_3DScene || !W3DDisplay::m_assetManager)
+		throw OriginalW3DDeviceUnavailable("original empty terrain requires display owners and device edge");
+	if (TheTerrainRenderObject)
+		throw OriginalW3DDeviceUnavailable("original terrain owner already published");
+	m_x = m_y = 0;
+	m_map = NULL;
+	m_needFullUpdate = false;
+	m_updating = false;
+	m_useDepthFade = false;
+	m_disableTextures = false;
+	m_showImpassableAreas = false;
+	m_minHeight = m_maxHeight = 0;
+	m_vertexMaterialClass = NULL;
+	m_stageZeroTexture = m_stageOneTexture = m_stageThreeTexture = m_destAlphaTexture = NULL;
+	m_stageTwoTexture = NULL;
+	m_treeBuffer = NULL;
+	m_propBuffer = NULL;
+	m_bibBuffer = NULL;
+	m_waypointBuffer = NULL;
+	m_roadBuffer = NULL;
+	m_bridgeBuffer = NULL;
+	m_shroud = NULL;
+	m_shoreLineTilePositions = NULL;
+	m_shoreLineSortInfos = NULL;
+	m_numShoreLineTiles = m_numVisibleShoreLineTiles = 0;
+	m_shoreLineTilePositionsSize = m_shoreLineSortInfosSize = 0;
+	m_shoreLineSortInfosXMajor = false;
+	m_shoreLineTileSortMaxCoordinate = m_shoreLineTileSortMinCoordinate = 0;
+	m_currentMinWaterOpacity = -1;
+	m_vertexScorch = NULL;
+	m_indexScorch = NULL;
+	m_scorchTexture = NULL;
+	m_curNumScorchVertices = m_curNumScorchIndices = 0;
+	m_numScorches = m_scorchesInBuffer = 0;
+	m_curImpassableSlope = 45;
+}
+
+BaseHeightMapRenderObjClass::~BaseHeightMapRenderObjClass()
+{
+	if (TheTerrainRenderObject == this) TheTerrainRenderObject = NULL;
+}
+
+void BaseHeightMapRenderObjClass::ReleaseResources() {}
+void BaseHeightMapRenderObjClass::ReAcquireResources() {}
+RenderObjClass *BaseHeightMapRenderObjClass::Clone() const
+{
+	throw OriginalW3DDeviceUnavailable("original empty terrain clone pending");
+}
+int BaseHeightMapRenderObjClass::Class_ID() const { return RenderObjClass::CLASSID_TILEMAP; }
+bool BaseHeightMapRenderObjClass::Cast_Ray(RayCollisionTestClass&) { return false; }
+void BaseHeightMapRenderObjClass::Get_Obj_Space_Bounding_Sphere(SphereClass&) const
+{
+	throw OriginalW3DDeviceUnavailable("original empty terrain bounds pending");
+}
+void BaseHeightMapRenderObjClass::Get_Obj_Space_Bounding_Box(AABoxClass&) const
+{
+	throw OriginalW3DDeviceUnavailable("original empty terrain bounds pending");
+}
+void BaseHeightMapRenderObjClass::On_Frame_Update() {}
+void BaseHeightMapRenderObjClass::Notify_Added(SceneClass*)
+{
+	throw OriginalW3DDeviceUnavailable("original empty terrain scene registration pending");
+}
+int BaseHeightMapRenderObjClass::initHeightData(Int, Int, WorldHeightMap*, RefRenderObjListIterator*, Bool)
+{
+	throw OriginalW3DDeviceUnavailable("original terrain map data pending");
+}
+Int BaseHeightMapRenderObjClass::freeMapResources() { return 0; }
+void BaseHeightMapRenderObjClass::updateCenter(CameraClass*, RefRenderObjListIterator*) {}
+void BaseHeightMapRenderObjClass::adjustTerrainLOD(Int)
+{
+	throw OriginalW3DDeviceUnavailable("original terrain LOD pending");
+}
+void BaseHeightMapRenderObjClass::staticLightingChanged()
+{
+	throw OriginalW3DDeviceUnavailable("original terrain static lighting pending");
+}
+void BaseHeightMapRenderObjClass::oversizeTerrain(Int)
+{
+	throw OriginalW3DDeviceUnavailable("original terrain oversize pending");
+}
+void BaseHeightMapRenderObjClass::reset() { m_needFullUpdate = false; }
+void BaseHeightMapRenderObjClass::crc(Xfer*)
+{
+	throw OriginalW3DDeviceUnavailable("original terrain snapshot pending");
+}
+void BaseHeightMapRenderObjClass::xfer(Xfer*)
+{
+	throw OriginalW3DDeviceUnavailable("original terrain snapshot pending");
+}
+void BaseHeightMapRenderObjClass::loadPostProcess()
+{
+	throw OriginalW3DDeviceUnavailable("original terrain snapshot pending");
+}
+
+#else
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -3020,3 +3128,4 @@ void BaseHeightMapRenderObjClass::loadPostProcess( void )
 	// empty. jba [8/11/2003]	
 }  // end loadPostProcess
 
+#endif // ZH_WW3D_CPU_ONLY

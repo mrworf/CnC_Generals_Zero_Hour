@@ -5,10 +5,12 @@
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DView.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
+#include "W3DDevice/GameClient/HeightMap.h"
 #include "WW3D2/assetmgr.h"
 #include "WW3D2/camera.h"
 #include "WW3D2/dx8wrapper.h"
 #include "WW3D2/rendobj.h"
+#include "WW3D2/rinfo.h"
 #include "WW3D2/ww3d.h"
 #include "WWLib/RAMFILE.H"
 #include "original_gpu_edge.h"
@@ -59,6 +61,11 @@ extern "C" void zh_probe_view_scene()
             catch (const std::runtime_error&) { rejected = true; }
             require(rejected && !no_edge.get3DCamera(),
                 "original W3DView initialized without source display/edge");
+            bool no_terrain_edge = false;
+            try { auto* terrain = NEW_REF(HeightMapRenderObjClass, ()); terrain->Release_Ref(); }
+            catch (const std::runtime_error&) { no_terrain_edge = true; }
+            require(no_terrain_edge && !TheTerrainRenderObject && !TheHeightMap,
+                "original empty terrain published without device edge");
         }
         {
             zh::original_runtime::OriginalGpuEdge edge(device);
@@ -71,11 +78,40 @@ extern "C" void zh_probe_view_scene()
             {
                 W3DDisplay display;
                 display.init();
+                auto* terrain = NEW_REF(HeightMapRenderObjClass, ());
+                require(TheTerrainRenderObject == terrain && TheHeightMap == terrain &&
+                    terrain->getMap() == NULL && !terrain->doesNeedFullUpdate() &&
+                    terrain->Class_ID() == RenderObjClass::CLASSID_TILEMAP,
+                    "original empty terrain owner publication failed");
+                bool duplicate_terrain = false;
+                try { auto* duplicate = NEW_REF(HeightMapRenderObjClass, ()); duplicate->Release_Ref(); }
+                catch (const std::runtime_error&) { duplicate_terrain = true; }
+                require(duplicate_terrain && TheTerrainRenderObject == terrain &&
+                    TheHeightMap == terrain, "original empty terrain duplicate displaced owner");
+                bool terrain_map_rejected = false;
+                try { terrain->initHeightData(1, 1, NULL, NULL); }
+                catch (const std::runtime_error&) { terrain_map_rejected = true; }
+                require(terrain_map_rejected && !terrain->getMap(),
+                    "original empty terrain accepted map data");
+                bool height_rejected = false;
+                try { (void)terrain->getClipHeight(0, 0); }
+                catch (const std::runtime_error&) { height_rejected = true; }
+                require(height_rejected, "original empty terrain sampled without map");
+                terrain->updateCenter(NULL, NULL);
+                terrain->reset();
+                require(!terrain->doesNeedFullUpdate(),
+                    "original empty terrain reset requested a map update");
                 auto* view = new W3DView;
                 view->init();
                 auto* camera = view->get3DCamera();
                 require(camera && camera->Num_Refs() == 1,
                     "original W3DView 3D camera owner missing");
+                RenderInfoClass terrain_info(*camera);
+                bool terrain_render_rejected = false;
+                try { terrain->Render(terrain_info); }
+                catch (const std::runtime_error&) { terrain_render_rejected = true; }
+                require(terrain_render_rejected && !WW3D::Is_Rendering(),
+                    "original empty terrain emitted a draw");
                 view->init();
                 require(view->get3DCamera() == camera && camera->Num_Refs() == 1,
                     "original W3DView re-entry replaced 3D camera");
@@ -156,9 +192,17 @@ extern "C" void zh_probe_view_scene()
                 try { (void)view->setViewFilter(FT_VIEW_DEFAULT); }
                 catch (const std::runtime_error&) { filter = true; }
                 require(filter, "original W3DView filter setter unexpectedly succeeded");
+                terrain->Release_Ref();
+                require(!TheTerrainRenderObject && !TheHeightMap,
+                    "original empty terrain teardown retained singleton");
             }
             require(!W3DDisplay::m_3DScene && !WW3D::Is_Initted(),
                 "original W3DView display teardown retained source owners");
+            bool stale_terrain_owner = false;
+            try { auto* terrain = NEW_REF(HeightMapRenderObjClass, ()); terrain->Release_Ref(); }
+            catch (const std::runtime_error&) { stale_terrain_owner = true; }
+            require(stale_terrain_owner && !TheTerrainRenderObject && !TheHeightMap,
+                "original empty terrain accepted torn-down display owners");
         }
         device.destroy(depth);
         device.destroy(color);

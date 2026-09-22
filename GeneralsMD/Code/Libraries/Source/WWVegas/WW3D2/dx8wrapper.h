@@ -47,6 +47,12 @@
 #define DX8_WRAPPER_H
 
 #if defined(ZH_WW3D_CPU_ONLY)
+class DX8_CleanupHook
+{
+public:
+	virtual void ReleaseResources(void) = 0;
+	virtual void ReAcquireResources(void) = 0;
+};
 #include "vector4.h"
 #include "matrix4.h"
 #include "ww3d_cpu_boundary.h"
