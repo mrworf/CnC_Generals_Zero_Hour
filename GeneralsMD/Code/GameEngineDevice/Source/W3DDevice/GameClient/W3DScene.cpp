@@ -52,6 +52,10 @@
 #include "GameClient/Color.h"
 #include "GameClient/View.h"
 #include "W3DDevice/GameClient/W3DScene.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DWater.h"
+#endif
 #include "W3DDevice/GameClient/W3DDynamicLight.h"
 #if defined(INCLUDE_GRANNY_IN_BUILD)
 #include "W3DDevice/GameClient/W3DGranny.h"
@@ -74,6 +78,16 @@
 #include "WW3D2/colorspace.h"
 
 #include "WW3D2/shdlib.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+static bool isDisabledWaterSceneObject(RenderObjClass *object)
+{
+	if (object != TheWaterRenderObj || !object) return false;
+	if (object->Peek_Scene() != W3DDisplay::m_3DScene ||
+		TheGlobalData->m_useWaterPlane || TheGlobalData->m_useCloudPlane)
+		throw OriginalW3DDeviceUnavailable("original enabled or foreign water scene pending");
+	return true;
+}
+#endif
 #ifdef _INTERNAL
 // for occasional debugging...
 //#pragma optimize("", off)
@@ -436,6 +450,12 @@ void RTS3DScene::Visibility_Check(CameraClass * camera)
 		for (it.First(); !it.Is_Done(); it.Next()) {
 
 			robj = it.Peek_Obj();
+#if defined(ZH_WW3D_CPU_ONLY)
+			if (isDisabledWaterSceneObject(robj)) {
+				robj->Set_Visible(false);
+				continue;
+			}
+#endif
 
 			draw=NULL;
 			drawInfo = (DrawableInfo *)robj->Get_User_Data();
@@ -468,6 +488,12 @@ void RTS3DScene::Visibility_Check(CameraClass * camera)
 		for (it.First(); !it.Is_Done(); it.Next()) {
 
 			robj = it.Peek_Obj();
+#if defined(ZH_WW3D_CPU_ONLY)
+			if (isDisabledWaterSceneObject(robj)) {
+				robj->Set_Visible(false);
+				continue;
+			}
+#endif
 
 			if (robj->Is_Force_Visible()) {
 				robj->Set_Visible(true);
@@ -854,6 +880,7 @@ void RTS3DScene::Flush(RenderInfoClass & rinfo)
 	Int rigidCount = 0;
 	for (supported.First(); !supported.Is_Done(); supported.Next()) {
 		RenderObjClass *object = supported.Peek_Obj();
+		if (isDisabledWaterSceneObject(object)) continue;
 		if (++rigidCount > 1 || object->Class_ID() != RenderObjClass::CLASSID_MESH ||
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid flush translation pending");
@@ -1684,6 +1711,7 @@ void RTS3DScene::Render(RenderInfoClass &rinfo)
 	Int rigidCount = 0;
 	for (supported.First(); !supported.Is_Done(); supported.Next()) {
 		RenderObjClass *object = supported.Peek_Obj();
+		if (isDisabledWaterSceneObject(object)) continue;
 		if (++rigidCount > 1 || object->Class_ID() != RenderObjClass::CLASSID_MESH ||
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid scene translation pending");
@@ -1713,6 +1741,7 @@ void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 	RefRenderObjListIterator updates(&UpdateList);
 	for (updates.First(); !updates.Is_Done(); updates.Next()) {
 		RenderObjClass *object = updates.Peek_Obj();
+		if (isDisabledWaterSceneObject(object)) continue;
 		if (object->Class_ID() != RenderObjClass::CLASSID_MESH ||
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid update pending");
@@ -1724,6 +1753,7 @@ void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 		ThePlayerList->getLocalPlayer()->getPlayerIndex() : 0;
 	for (objects.First(); !objects.Is_Done(); objects.Next()) {
 		RenderObjClass *object = objects.Peek_Obj();
+		if (isDisabledWaterSceneObject(object)) continue;
 		if (++rigidCount > 1 || object->Class_ID() != RenderObjClass::CLASSID_MESH ||
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid object traversal pending");

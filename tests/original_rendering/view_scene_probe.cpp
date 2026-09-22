@@ -175,6 +175,10 @@ extern "C" void zh_probe_view_scene()
                 require(water->init(0, 0, 0, W3DDisplay::m_3DScene,
                     WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT) == 0,
                     "original no-water owner re-entry failed");
+                W3DDisplay::m_3DScene->Add_Render_Object(water);
+                require(water->Peek_Scene() == W3DDisplay::m_3DScene &&
+                    water->Num_Refs() == 2,
+                    "original disabled-water scene membership lost owner ref");
                 auto* duplicate_water = NEW_REF(WaterRenderObjClass, ());
                 bool duplicate_water_rejected = false;
                 try { duplicate_water->init(0, 0, 0, W3DDisplay::m_3DScene,
@@ -350,6 +354,14 @@ extern "C" void zh_probe_view_scene()
                     return readback(color);
                 };
                 if (recorder) {
+                    TheWritableGlobalData->m_useWaterPlane = TRUE;
+                    bool active_water_scene_rejected = false;
+                    try { (void)frame(); }
+                    catch (const std::runtime_error&) { active_water_scene_rejected = true; }
+                    TheWritableGlobalData->m_useWaterPlane = FALSE;
+                    require(active_water_scene_rejected && water->Num_Refs() == 2 &&
+                        !WW3D::Is_Rendering() && !recorder->pass_active(),
+                        "original enabled-water scene silently rendered or lost owner");
                     shadows.queueShadows(TRUE);
                     bool queued_shadow_rejected = false;
                     try { (void)frame(); }
@@ -384,6 +396,18 @@ extern "C" void zh_probe_view_scene()
                 } else {
                     require(recorder->snapshot().substr(present_marker).find("draw pipeline=") !=
                         std::string::npos, "original W3DView source path omitted rigid draw");
+                    auto* extra_mesh = W3DDisplay::m_assetManager->Create_Render_Obj("TEST.ZERO01");
+                    require(extra_mesh && extra_mesh->Num_Refs() == 1,
+                        "original disabled-water second-mesh control absent");
+                    W3DDisplay::m_3DScene->Add_Render_Object(extra_mesh);
+                    bool extra_rigid_rejected = false;
+                    try { (void)frame(); }
+                    catch (const std::runtime_error&) { extra_rigid_rejected = true; }
+                    W3DDisplay::m_3DScene->Remove_Render_Object(extra_mesh);
+                    require(extra_rigid_rejected && extra_mesh->Num_Refs() == 1 &&
+                        !WW3D::Is_Rendering() && !recorder->pass_active(),
+                        "original disabled-water exemption admitted second rigid object");
+                    extra_mesh->Release_Ref();
                     recorder->fail_next_draw();
                     bool rejected_draw = false;
                     try { (void)frame(); }
@@ -422,6 +446,9 @@ extern "C" void zh_probe_view_scene()
                 terrain->Release_Ref();
                 require(!TheTerrainRenderObject && !TheHeightMap,
                     "original empty terrain teardown retained singleton");
+                W3DDisplay::m_3DScene->Remove_Render_Object(water);
+                require(!water->Peek_Scene() && water->Num_Refs() == 1,
+                    "original disabled-water scene detach retained owner ref");
                 water->Release_Ref();
                 require(!TheWaterRenderObj,
                     "original no-water teardown retained singleton");
