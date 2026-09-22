@@ -7,19 +7,39 @@ import mmap
 import os
 from pathlib import Path
 import struct
+import subprocess
 import sys
 
 
 MAX_ENTRIES = 1_000_000
 MAX_TABLE_BYTES = 128 * 1024 * 1024
 MAX_NAME_BYTES = 4096
+MAX_OPAQUE_LOADER_BYTES = 32 * 1024 * 1024
 
 
 class InvalidArchive(ValueError):
     pass
 
 
-def audit_archive(path: Path, report_opaque: bool = False) -> tuple[int, Counter[int], int]:
+def classify_opaque(payload: bytes, loader: Path) -> str:
+    if len(payload) > MAX_OPAQUE_LOADER_BYTES:
+        return "unresolved"
+    try:
+        process = subprocess.run(
+            [str(loader), "--load-w3d-stdin"], input=payload,
+            capture_output=True, timeout=15,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return "unresolved"
+    if process.returncode == 0 and process.stdout in (b"accepted\n", b"rejected\n"):
+        return process.stdout.decode("ascii").strip()
+    return "unresolved"
+
+
+def audit_archive(path: Path, report_opaque: bool = False,
+                  loader: Path | None = None,
+                  loader_counts: Counter[str] | None = None,
+                  opaque_context: Counter[str] | None = None) -> tuple[int, Counter[int], int]:
     with path.open("rb") as stream:
         size = os.fstat(stream.fileno()).st_size
         if size < 16:
@@ -60,6 +80,10 @@ def audit_archive(path: Path, report_opaque: bool = False) -> tuple[int, Counter
                         if not report_opaque:
                             raise InvalidArchive("W3D top-level chunk header is truncated")
                         opaque_entries += 1
+                        if opaque_context is not None:
+                            opaque_context["shdmesh_candidates"] += found[0x0B00]
+                        if loader is not None and loader_counts is not None:
+                            loader_counts[classify_opaque(data[offset:payload_end], loader)] += 1
                         break
                     kind, encoded_length = struct.unpack_from("<II", data, position)
                     chunk_length = encoded_length & 0x7FFF_FFFF
@@ -68,6 +92,10 @@ def audit_archive(path: Path, report_opaque: bool = False) -> tuple[int, Counter
                         if not report_opaque:
                             raise InvalidArchive("W3D top-level chunk range is invalid")
                         opaque_entries += 1
+                        if opaque_context is not None:
+                            opaque_context["shdmesh_candidates"] += found[0x0B00] + (kind == 0x0B00)
+                        if loader is not None and loader_counts is not None:
+                            loader_counts[classify_opaque(data[offset:payload_end], loader)] += 1
                         break
                     found[kind] += 1
                     position += chunk_length
@@ -76,12 +104,16 @@ def audit_archive(path: Path, report_opaque: bool = False) -> tuple[int, Counter
             return w3d_entries, chunks, opaque_entries
 
 
-def audit_archives(paths: list[Path], report_opaque: bool = False) -> tuple[int, Counter[int], int]:
+def audit_archives(paths: list[Path], report_opaque: bool = False,
+                   loader: Path | None = None,
+                   loader_counts: Counter[str] | None = None,
+                   opaque_context: Counter[str] | None = None) -> tuple[int, Counter[int], int]:
     entries = 0
     opaque = 0
     chunks: Counter[int] = Counter()
     for path in paths:
-        found, family, excluded = audit_archive(path, report_opaque)
+        found, family, excluded = audit_archive(
+            path, report_opaque, loader, loader_counts, opaque_context)
         entries += found
         opaque += excluded
         chunks.update(family)
@@ -94,14 +126,32 @@ def wwshade_requirement(chunks: Counter[int], opaque: int) -> str:
     return "yes" if chunks[0x0B00] else ("unknown" if opaque else "no")
 
 
+def source_wwshade_requirement(chunks: Counter[int], opaque: int,
+                               context: Counter[str], loader_counts: Counter[str]) -> str:
+    if chunks[0x0B00]:
+        return "yes"
+    if (context["shdmesh_candidates"] or loader_counts["accepted"] or
+            loader_counts["unresolved"] or loader_counts["rejected"] != opaque):
+        return "unknown"
+    return "no"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, action="append", required=True)
     parser.add_argument("--report-opaque", action="store_true",
                         help="count malformed W3D payloads explicitly instead of failing the aggregate")
+    parser.add_argument("--classify-opaque-with", type=Path,
+                        help="pass only opaque payloads to a bounded original W3D stdin loader")
     args = parser.parse_args()
+    if args.classify_opaque_with and not args.report_opaque:
+        parser.error("original-loader classification requires --report-opaque")
+    loader_counts: Counter[str] = Counter()
+    opaque_context: Counter[str] = Counter()
     try:
-        entries, chunks, opaque = audit_archives(args.archive, args.report_opaque)
+        entries, chunks, opaque = audit_archives(
+            args.archive, args.report_opaque, args.classify_opaque_with,
+            loader_counts, opaque_context)
     except InvalidArchive as error:
         # No caller-supplied path or private BIG entry name is echoed.
         print(f"W3D family audit failed: {error}", file=sys.stderr)
@@ -113,6 +163,13 @@ def main() -> int:
     print(f"archives={len(args.archive)} w3d_entries={entries} opaque_w3d_entries={opaque} "
           f"top_level_chunks={sum(chunks.values())} {families}")
     print(f"wwshade_required={wwshade_requirement(chunks, opaque)}")
+    if args.classify_opaque_with:
+        print(f"opaque_source_loader accepted={loader_counts['accepted']} "
+              f"rejected={loader_counts['rejected']} unresolved={loader_counts['unresolved']} "
+              f"shdmesh_candidates={opaque_context['shdmesh_candidates']}")
+        print(f"source_wwshade_required={source_wwshade_requirement(chunks, opaque, opaque_context, loader_counts)}")
+        if loader_counts["unresolved"]:
+            return 2
     return 0
 
 

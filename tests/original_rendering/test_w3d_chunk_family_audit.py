@@ -73,6 +73,14 @@ def main() -> int:
             raise SystemExit("explicit opaque W3D classification is incorrect")
         if wwshade_requirement(counts, opaque) != "unknown":
             raise SystemExit("opaque W3D requirement was silently reported absent")
+        prefix = archive([(b"prefix.w3d", chunk(0x0B00) +
+                           struct.pack("<II", 0x7FFF_FFFE, 16))])
+        path.write_bytes(prefix)
+        context: Counter[str] = Counter()
+        entries, counts, opaque = audit_archives(
+            [path], report_opaque=True, opaque_context=context)
+        if entries != 1 or counts or opaque != 1 or context["shdmesh_candidates"] != 1:
+            raise SystemExit("opaque W3D valid-prefix shader candidate was hidden")
         if not rejected(path, archive([(b"other.bin", b"ignored")])):
             raise SystemExit("archive without W3D entries was accepted")
         unavailable = Path(scratch) / "private-input-must-not-echo.big"

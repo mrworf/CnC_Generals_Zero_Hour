@@ -388,6 +388,25 @@ int test_original_skin_batch()
 
 int main(int argc, char **argv)
 {
+	if (argc==2 && std::strcmp(argv[1],"--load-w3d-stdin")==0) {
+		std::vector<char> input;
+		char block[4096];
+		for (;;) {
+			const auto count=std::fread(block,1,sizeof block,stdin);
+			if (input.size()+count>32U*1024U*1024U) return 2;
+			input.insert(input.end(),block,block+count);
+			if (count<sizeof block) {
+				if (std::ferror(stdin) || input.empty()) return 2;
+				break;
+			}
+		}
+		WW3DAssetManager manager;
+		RAMFileClass source(input.data(),static_cast<int>(input.size()));
+		const bool accepted=manager.Load_3D_Assets(source);
+		manager.Free_Assets();
+		std::puts(accepted ? "accepted" : "rejected");
+		return 0;
+	}
 	struct ProcessServicesGuard {
 		bool active=false;
 		~ProcessServicesGuard() {
