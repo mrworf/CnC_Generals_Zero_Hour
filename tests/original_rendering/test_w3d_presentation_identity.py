@@ -14,7 +14,7 @@ DRAW_NAMES = (
     "W3DDependencyModelDraw", "W3DOverlordAircraftDraw", "W3DOverlordTruckDraw",
 )
 CLIENT_NAMES = (
-    "W3DDisplay", "W3DAssetManager", "W3DScene", "W3DTerrainTracks", "W3DShroud",
+    "W3DDisplay", "W3DView", "W3DAssetManager", "W3DScene", "W3DTerrainTracks", "W3DShroud",
 )
 WW3D_NAMES = ("scene", "light", "matpass")
 
@@ -46,6 +46,11 @@ def verify(commands, link_map, executable, removed=None, skip_runtime_witness=Fa
         path = f"/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/{name}.cpp"
         if not any(entry["file"].endswith(path) for entry in commands) or f"libzh_w3d.a({name}.cpp.o)" not in link_map:
             raise ValueError(f"original WW3D scene provider missing: {name}")
+    ease_path = "/GeneralsMD/Code/GameEngine/Source/GameClient/ParabolicEase.cpp"
+    if not any(entry["file"].endswith(ease_path) for entry in commands) or not any(
+        full_prefix in line and "/ParabolicEase.cpp.o" in line for line in link_map.splitlines()
+    ):
+        raise ValueError("original W3DView ease provider missing")
     if removed or skip_runtime_witness:
         return
     result = subprocess.run([str(executable)], capture_output=True, text=True, check=False)
@@ -125,6 +130,21 @@ def main():
                     pass
                 else:
                     raise ValueError(f"WW3D scene link provider removal was accepted: {name}")
+            without_ease = [entry for entry in commands if not entry["file"].endswith(
+                "/GameClient/ParabolicEase.cpp")]
+            try:
+                verify(without_ease, linked, args.executable, removed="ParabolicEase")
+            except ValueError:
+                pass
+            else:
+                raise ValueError("W3DView ease source removal was accepted")
+            try:
+                verify(commands, linked.replace("/ParabolicEase.cpp.o", "/removed-ease.o"),
+                       args.executable, removed="ParabolicEase")
+            except ValueError:
+                pass
+            else:
+                raise ValueError("W3DView ease link removal was accepted")
     except ValueError as error:
         print(f"original GameClient identity error: {error}", file=sys.stderr)
         return 1

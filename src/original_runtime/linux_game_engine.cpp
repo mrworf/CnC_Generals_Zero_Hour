@@ -95,6 +95,7 @@ extern "C" void zh_probe_retail_material_families(RenderObjClass *object);
 extern "C" void zh_probe_status_scene();
 extern "C" void zh_probe_empty_3d_scene();
 extern "C" void zh_probe_display_owner();
+extern "C" void zh_probe_view_scene();
 #endif
 
 extern "C" UnsignedInt zh_original_ai_update_count();
@@ -767,6 +768,7 @@ public:
 			if (std::getenv("ZH_M22_STATUS_2D_PROFILE")) zh_probe_status_scene();
 			if (std::getenv("ZH_M22_EMPTY_3D_PROFILE")) zh_probe_empty_3d_scene();
 			if (std::getenv("ZH_M22_DISPLAY_OWNER_PROFILE")) zh_probe_display_owner();
+			if (std::getenv("ZH_M22_VIEW_SCENE_PROFILE")) zh_probe_view_scene();
 #endif
 			if (const char *baseline = std::getenv("ZH_M24_GAMEDATA_BASELINE"))
 			{

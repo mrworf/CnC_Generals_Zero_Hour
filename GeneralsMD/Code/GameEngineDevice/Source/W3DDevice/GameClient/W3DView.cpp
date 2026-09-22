@@ -32,6 +32,157 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "PreRTS.h"
+#include "Common/SubsystemInterface.h"
+#include "GameClient/CommandXlat.h"
+#include "W3DDevice/GameClient/W3DView.h"
+#include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DScene.h"
+#include "WW3D2/ww3d.h"
+#include "original_gpu_edge.h"
+#include "OriginalW3DDeviceUnavailable.h"
+
+Int TheW3DFrameLengthInMsec = 1000 / LOGICFRAMES_PER_SECOND;
+static const Int MAX_REQUEST_CACHE_SIZE = 40;
+
+W3DView::W3DView()
+{
+	m_3DCamera = NULL;
+	m_2DCamera = NULL;
+	m_groundLevel = 10.0f;
+	m_viewFilterMode = FM_VIEW_DEFAULT;
+	m_viewFilter = FT_VIEW_DEFAULT;
+	m_isWireFrameEnabled = m_nextWireFrameEnabled = FALSE;
+	m_shakeOffset.x = m_shakeOffset.y = m_shakeIntensity = 0;
+	m_FXPitch = 1;
+	m_freezeTimeForCameraMovement = false;
+	m_cameraHasMovedSinceRequest = true;
+	m_locationRequests.reserve(MAX_REQUEST_CACHE_SIZE + 10);
+	m_CameraArrivedAtWaypointOnPathFlag = false;
+	m_isCameraSlaved = m_useRealZoomCam = false;
+	m_shakerAngles = Vector3(0, 0, 0);
+	m_cameraConstraintValid = false;
+	m_timeMultiplier = 1;
+}
+
+W3DView::~W3DView()
+{
+	REF_PTR_RELEASE(m_2DCamera);
+	REF_PTR_RELEASE(m_3DCamera);
+}
+
+void W3DView::init()
+{
+	if (m_3DCamera && m_2DCamera) return;
+	if (!zh::original_runtime::OriginalGpuEdge::active() ||
+		!W3DDisplay::m_3DScene || !W3DDisplay::m_2DScene ||
+		!W3DDisplay::m_3DInterfaceScene || !W3DDisplay::m_assetManager)
+		throw OriginalW3DDeviceUnavailable("original view requires display owners and device edge");
+	View::init();
+	setName("W3DView");
+	CameraClass *camera3d = NULL;
+	CameraClass *camera2d = NULL;
+	try {
+		camera3d = NEW_REF(CameraClass, ());
+		camera2d = NEW_REF(CameraClass, ());
+		camera2d->Set_Position(Vector3(0, 0, 1));
+		camera2d->Set_View_Plane(Vector2(-1, -0.75f), Vector2(1, 0.75f));
+		camera2d->Set_Clip_Planes(0.995f, 2.0f);
+		m_3DCamera = camera3d;
+		m_2DCamera = camera2d;
+	} catch (...) {
+		REF_PTR_RELEASE(camera2d);
+		REF_PTR_RELEASE(camera3d);
+		throw;
+	}
+}
+
+void W3DView::reset()
+{
+	if (!m_3DCamera || !m_2DCamera)
+		throw OriginalW3DDeviceUnavailable("original view reset before init");
+	View::reset();
+	m_timeMultiplier = 1;
+	m_viewFilterMode = FM_VIEW_DEFAULT;
+	m_viewFilter = FT_VIEW_DEFAULT;
+}
+
+void W3DView::drawView() { DRAW(); }
+void W3DView::draw()
+{
+	if (!zh::original_runtime::OriginalGpuEdge::active() ||
+		!W3DDisplay::m_3DScene || !m_3DCamera || !m_2DCamera ||
+		!WW3D::Is_Rendering())
+		throw OriginalW3DDeviceUnavailable("original view frame owners missing");
+	if (m_viewFilterMode != FM_VIEW_DEFAULT || m_viewFilter != FT_VIEW_DEFAULT ||
+		m_isWireFrameEnabled || m_nextWireFrameEnabled || getCameraLock() != INVALID_ID)
+		throw OriginalW3DDeviceUnavailable("original view advanced pass pending");
+	W3DDisplay::m_3DScene->doRender(m_3DCamera);
+}
+
+#define ZH_VIEW_PENDING() throw OriginalW3DDeviceUnavailable("original view tactical method pending")
+void W3DView::updateView() { ZH_VIEW_PENDING(); }
+void W3DView::update() { ZH_VIEW_PENDING(); }
+Drawable* W3DView::pickDrawable(const ICoord2D*, Bool, PickType) { ZH_VIEW_PENDING(); }
+Int W3DView::iterateDrawablesInRegion(IRegion2D*, Bool (*)(Drawable*, void*), void*) { ZH_VIEW_PENDING(); }
+void W3DView::setWidth(Int) { ZH_VIEW_PENDING(); }
+void W3DView::setHeight(Int) { ZH_VIEW_PENDING(); }
+void W3DView::setOrigin(Int, Int) { ZH_VIEW_PENDING(); }
+void W3DView::scrollBy(Coord2D*) { ZH_VIEW_PENDING(); }
+void W3DView::forceRedraw() { ZH_VIEW_PENDING(); }
+void W3DView::setAngle(Real) { ZH_VIEW_PENDING(); }
+void W3DView::setPitch(Real) { ZH_VIEW_PENDING(); }
+void W3DView::setAngleAndPitchToDefault() { ZH_VIEW_PENDING(); }
+void W3DView::lookAt(const Coord3D*) { ZH_VIEW_PENDING(); }
+void W3DView::initHeightForMap() { ZH_VIEW_PENDING(); }
+void W3DView::moveCameraTo(const Coord3D*, Int, Int, Bool, Real, Real) { ZH_VIEW_PENDING(); }
+void W3DView::moveCameraAlongWaypointPath(Waypoint*, Int, Int, Bool, Real, Real) { ZH_VIEW_PENDING(); }
+Bool W3DView::isCameraMovementFinished() { ZH_VIEW_PENDING(); }
+Bool W3DView::isCameraMovementAtWaypointAlongPath() { ZH_VIEW_PENDING(); }
+void W3DView::resetCamera(const Coord3D*, Int, Real, Real) { ZH_VIEW_PENDING(); }
+void W3DView::rotateCamera(Real, Int, Real, Real) { ZH_VIEW_PENDING(); }
+void W3DView::rotateCameraTowardObject(ObjectID, Int, Int, Real, Real) { ZH_VIEW_PENDING(); }
+void W3DView::rotateCameraTowardPosition(const Coord3D*, Int, Real, Real, Bool) { ZH_VIEW_PENDING(); }
+void W3DView::cameraModFreezeAngle() { ZH_VIEW_PENDING(); }
+void W3DView::cameraModFinalZoom(Real, Real, Real) { ZH_VIEW_PENDING(); }
+void W3DView::cameraModRollingAverage(Int) { ZH_VIEW_PENDING(); }
+void W3DView::cameraModFinalTimeMultiplier(Int) { ZH_VIEW_PENDING(); }
+void W3DView::cameraModFinalPitch(Real, Real, Real) { ZH_VIEW_PENDING(); }
+void W3DView::cameraModLookToward(Coord3D*) { ZH_VIEW_PENDING(); }
+void W3DView::cameraModFinalLookToward(Coord3D*) { ZH_VIEW_PENDING(); }
+void W3DView::cameraModFinalMoveTo(Coord3D*) { ZH_VIEW_PENDING(); }
+void W3DView::cameraEnableSlaveMode(const AsciiString&, const AsciiString&) { ZH_VIEW_PENDING(); }
+void W3DView::cameraDisableSlaveMode() { ZH_VIEW_PENDING(); }
+void W3DView::cameraEnableRealZoomMode() { ZH_VIEW_PENDING(); }
+void W3DView::cameraDisableRealZoomMode() { ZH_VIEW_PENDING(); }
+void W3DView::Add_Camera_Shake(const Coord3D&, float, float, float) { ZH_VIEW_PENDING(); }
+void W3DView::setDefaultView(Real, Real, Real) { ZH_VIEW_PENDING(); }
+void W3DView::zoomCamera(Real, Int, Real, Real) { ZH_VIEW_PENDING(); }
+void W3DView::pitchCamera(Real, Int, Real, Real) { ZH_VIEW_PENDING(); }
+void W3DView::setHeightAboveGround(Real) { ZH_VIEW_PENDING(); }
+void W3DView::setZoom(Real) { ZH_VIEW_PENDING(); }
+void W3DView::setZoomToDefault() { ZH_VIEW_PENDING(); }
+void W3DView::setFieldOfView(Real) { ZH_VIEW_PENDING(); }
+View::WorldToScreenReturn W3DView::worldToScreenTriReturn(const Coord3D*, ICoord2D*) { ZH_VIEW_PENDING(); }
+void W3DView::screenToWorld(const ICoord2D*, Coord3D*) { ZH_VIEW_PENDING(); }
+void W3DView::screenToTerrain(const ICoord2D*, Coord3D*) { ZH_VIEW_PENDING(); }
+void W3DView::screenToWorldAtZ(const ICoord2D*, Coord3D*, Real) { ZH_VIEW_PENDING(); }
+const Coord3D& W3DView::get3DCameraPosition() const { ZH_VIEW_PENDING(); }
+void W3DView::setCameraLock(ObjectID) { ZH_VIEW_PENDING(); }
+void W3DView::setSnapMode(CameraLockType, Real) { ZH_VIEW_PENDING(); }
+void W3DView::shake(const Coord3D*, CameraShakeType) { ZH_VIEW_PENDING(); }
+Bool W3DView::setViewFilterMode(FilterModes) { ZH_VIEW_PENDING(); }
+Bool W3DView::setViewFilter(FilterTypes) { ZH_VIEW_PENDING(); }
+void W3DView::setViewFilterPos(const Coord3D*) { ZH_VIEW_PENDING(); }
+void W3DView::setFadeParameters(Int, Int) { ZH_VIEW_PENDING(); }
+void W3DView::set3DWireFrameMode(Bool) { ZH_VIEW_PENDING(); }
+Bool W3DView::updateCameraMovements() { ZH_VIEW_PENDING(); }
+void W3DView::calcCameraConstraints() { ZH_VIEW_PENDING(); }
+#undef ZH_VIEW_PENDING
+
+#else
+
 // SYSTEM INCLUDES ////////////////////////////////////////////////////////////////////////////////
 #include <stdlib.h>
 #include <windows.h>
@@ -3360,4 +3511,4 @@ void W3DView::Add_Camera_Shake (const Coord3D & position,float radius,float dura
 
 	CameraShakerSystem.Add_Camera_Shake(vpos,radius,duration,power);
 }
-
+#endif // ZH_WW3D_CPU_ONLY
