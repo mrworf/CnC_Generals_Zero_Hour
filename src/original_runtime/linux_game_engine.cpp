@@ -23,9 +23,13 @@
 #include "Common/AudioRandomValue.h"
 #include "W3DDevice/Common/W3DModuleFactory.h"
 #if defined(ZH_M22_FULL_DRAW_TEST)
+#define ZH_WW3D_CPU_ONLY 1
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DView.h"
+#include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "W3DDevice/GameClient/W3DFileSystem.h"
+#include "original_gpu_edge.h"
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
 #include "W3DDevice/GameClient/Module/W3DDependencyModelDraw.h"
 #include "W3DDevice/GameClient/Module/W3DSupplyDraw.h"
@@ -38,6 +42,7 @@
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "WW3D2/RendObj.h"
 #include "WW3D2/HLod.h"
+#undef ZH_WW3D_CPU_ONLY
 #endif
 #include "Common/Radar.h"
 #include "Common/ThingFactory.h"
@@ -116,6 +121,11 @@ struct LifecycleReport
 };
 
 LifecycleReport g_lifecycleReport;
+#if defined(ZH_M22_FULL_DRAW_TEST)
+UnsignedInt g_originalFactoryDisplayCount = 0;
+UnsignedInt g_originalFactoryViewCount = 0;
+UnsignedInt g_originalFactoryTerrainCount = 0;
+#endif
 struct ScenarioSetupReport
 {
 	UnsignedInt mode = GAME_NONE;
@@ -257,7 +267,21 @@ class LinuxInGameUI final : public InGameUI
 public:
 	void draw() override {}
 protected:
-	View *createView() override { return new LinuxView; }
+	View *createView() override
+	{
+#if defined(ZH_M22_FULL_DRAW_TEST)
+		if (std::getenv("ZH_M22_ORIGINAL_FACTORY_PROFILE"))
+		{
+			if (!zh::original_runtime::OriginalGpuEdge::active() ||
+				!dynamic_cast<W3DDisplay *>(TheDisplay))
+				throw std::runtime_error("original tactical factory requires ready display edge");
+			auto *view = new W3DView;
+			++g_originalFactoryViewCount;
+			return view;
+		}
+#endif
+		return new LinuxView;
+	}
 };
 
 class LinuxGameWindow final : public GameWindow
@@ -536,13 +560,43 @@ public:
 	void adjustLOD(Int) override {}
 	void notifyTerrainObjectMoved(Object *) override {}
 private:
-	Display *createGameDisplay() override { return new LinuxDisplay; }
+	Display *createGameDisplay() override
+	{
+#if defined(ZH_M22_FULL_DRAW_TEST)
+		if (std::getenv("ZH_M22_ORIGINAL_FACTORY_PROFILE"))
+		{
+			if (!zh::original_runtime::OriginalGpuEdge::active())
+				throw std::runtime_error("original display factory requires ready device edge");
+			auto *display = new W3DDisplay;
+			++g_originalFactoryDisplayCount;
+			return display;
+		}
+#endif
+		return new LinuxDisplay;
+	}
 	InGameUI *createInGameUI() override { return new LinuxInGameUI; }
 	GameWindowManager *createWindowManager() override { return new LinuxWindowManager; }
 	FontLibrary *createFontLibrary() override { return new LinuxFontLibrary; }
 	DisplayStringManager *createDisplayStringManager() override { return new LinuxDisplayStringManager; }
 	VideoPlayerInterface *createVideoPlayer() override { return new VideoPlayer; }
-	TerrainVisual *createTerrainVisual() override { return new LinuxTerrainVisual; }
+	TerrainVisual *createTerrainVisual() override
+	{
+#if defined(ZH_M22_FULL_DRAW_TEST)
+		if (std::getenv("ZH_M22_ORIGINAL_FACTORY_PROFILE"))
+		{
+			if (!zh::original_runtime::OriginalGpuEdge::active() ||
+				!dynamic_cast<W3DDisplay *>(TheDisplay) ||
+				!dynamic_cast<W3DView *>(TheTacticalView))
+				throw std::runtime_error("original terrain factory requires ready tactical owners");
+			if (std::getenv("ZH_M22_FACTORY_FAIL_TERRAIN"))
+				throw std::runtime_error("forced original terrain factory failure");
+			auto *terrain = new W3DTerrainVisual;
+			++g_originalFactoryTerrainCount;
+			return terrain;
+		}
+#endif
+		return new LinuxTerrainVisual;
+	}
 	Keyboard *createKeyboard() override { return new LinuxKeyboard; }
 	Mouse *createMouse() override { return new LinuxMouse; }
 	SnowManager *createSnowManager() override { return new LinuxSnowManager; }
@@ -1449,6 +1503,9 @@ GameEngine *CreateGameEngine()
 #if defined(ZH_M22_FULL_DRAW_TEST)
 	g_logicSupplyBones = 0;
 	g_clientBeforeLogicBones = 0;
+	g_originalFactoryDisplayCount = 0;
+	g_originalFactoryViewCount = 0;
+	g_originalFactoryTerrainCount = 0;
 #endif
 	g_simulationReport = SimulationReport{};
 	g_reentryReport = ReentryReport{};
@@ -1472,6 +1529,17 @@ extern "C" UnsignedInt zh_linux_device_acquisition_attempts()
 {
 	return g_deviceAcquisitionAttempts;
 }
+
+#if defined(ZH_M22_FULL_DRAW_TEST)
+extern "C" Bool zh_linux_original_factory_counts(UnsignedInt *values, std::size_t count)
+{
+	if (!values || count < 3) return FALSE;
+	values[0] = g_originalFactoryDisplayCount;
+	values[1] = g_originalFactoryViewCount;
+	values[2] = g_originalFactoryTerrainCount;
+	return TRUE;
+}
+#endif
 
 extern "C" Bool zh_linux_lifecycle_report(UnsignedInt *values, std::size_t count)
 {
