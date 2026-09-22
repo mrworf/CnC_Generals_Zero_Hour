@@ -1099,6 +1099,7 @@ add_executable(zh_original_w3d_full_probe
   src/original_runtime/linux_game_engine.cpp
   tests/original_rendering/retail_material_probe.cpp
   tests/original_rendering/status_scene_probe.cpp
+  tests/original_rendering/empty3d_scene_probe.cpp
   $<TARGET_OBJECTS:zh_original_lifecycle_spine>
   $<TARGET_OBJECTS:zh_original_config_spine>
   $<TARGET_OBJECTS:zh_original_w3d_factory_full>
@@ -1107,6 +1108,9 @@ set_source_files_properties(tests/original_rendering/retail_material_probe.cpp P
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/status_scene_probe.cpp PROPERTIES
+  COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
+  COMPILE_OPTIONS "-fpermissive")
+set_source_files_properties(tests/original_rendering/empty3d_scene_probe.cpp PROPERTIES
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 target_compile_definitions(zh_original_w3d_full_probe PRIVATE ZH_M22_FULL_DRAW_TEST=1)
@@ -2061,6 +2065,19 @@ if(ZH_BUILD_TESTS)
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
     --executable "$<TARGET_FILE:zh_original_w3d_full_probe>" --physical)
   set_tests_properties(original_w3d_status_scene_bgfx PROPERTIES
+    LABELS "gpu;original-rendering;renderer-contract;source-identity"
+    TIMEOUT 60 RUN_SERIAL TRUE ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+  add_test(NAME original_w3d_empty3d_scene COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_empty3d_scene.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
+  set_tests_properties(original_w3d_empty3d_scene PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity")
+  add_test(NAME original_w3d_empty3d_scene_bgfx COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_empty3d_scene.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>" --physical)
+  set_tests_properties(original_w3d_empty3d_scene_bgfx PROPERTIES
     LABELS "gpu;original-rendering;renderer-contract;source-identity"
     TIMEOUT 60 RUN_SERIAL TRUE ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
   add_test(NAME original_w3d_full_draw_scenario COMMAND "${Python3_EXECUTABLE}"

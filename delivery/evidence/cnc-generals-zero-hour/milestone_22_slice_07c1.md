@@ -1,0 +1,7 @@
+# M22 07C1 default empty original RTS3DScene frame evidence
+
+The original CPU `RTS3DScene::draw` now takes a live edge and camera through `WW3D::Render(this,m_camera)` for the default empty/no-terrain branch. Its guarded `Render` uses original fog, behind-building marker stencil choice, fixed-light and flush entry points; custom passes, populated lists, shadows and non-empty particle scenes reject before frame success. `doRender` clears its camera pointer on exceptions. Native source branch and class layout remain unchanged.
+
+The original presentation fixture checks no-edge/no-camera, custom-pass and populated-list frame abort/retry, stale depth target/rebind, D24S8 versus depth16 marker selection, no draw, and zero Recording resources. The initialized GameClient scenario probe checks the same canonical source scene's clear-only public output in BGRA8/RGBA8 at 160×120 and 200×150, with child `Validation Error`/`VUID-` rejection under the explicit Khronos layer.
+
+Four rebuilt GCC/Clang Debug and GCC/Clang ASan+UBSan asset-free suites pass 191/191 each, including leak-capable source tests, source identity, provider-removal and clean aggregate ledgers. Fresh-process explicit Khronos-layer public Vulkan passes 30/30 GCC Debug and 30/30 Clang Debug, four format/extent/device generations per process, with child `Validation Error`/`VUID-` rejection. This does not translate original 3D objects, terrain, shroud, shadows, effects, custom passes or production `W3DDisplay`; those remain later 07 slices.

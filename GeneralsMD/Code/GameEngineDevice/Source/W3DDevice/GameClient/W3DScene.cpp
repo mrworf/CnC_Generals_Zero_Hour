@@ -61,10 +61,8 @@
 #include "W3DDevice/GameClient/W3DCustomScene.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "WW3D2/camera.h"
-#if !defined(ZH_WW3D_CPU_ONLY)
 #include "WW3D2/dx8renderer.h"
 #include "WW3D2/sortingrenderer.h"
-#endif
 #include "WW3D2/dx8wrapper.h"
 #include "WW3D2/Light.h"
 #include "WW3D2/matpass.h"
@@ -107,6 +105,9 @@ RTS3DScene::RTS3DScene()
 {
 	Int i;
 	setName("RTS3DScene");
+#if defined(ZH_WW3D_CPU_ONLY)
+	m_camera = NULL;
+#endif
 	m_drawTerrainOnly = false;
 	m_numGlobalLights=0;
 	for (i=0; i<LightEnvironmentClass::MAX_LIGHTS; i++)
@@ -846,9 +847,13 @@ void RTS3DScene::renderOneObject(RenderInfoClass &rinfo, RenderObjClass *robj, I
 void RTS3DScene::Flush(RenderInfoClass & rinfo)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	if (m_customPassMode == SCENE_PASS_DEFAULT && Get_Extra_Pass_Polygon_Mode() == EXTRA_PASS_DISABLE)
-		DoShadows(rinfo, false);
-	throw OriginalW3DDeviceUnavailable("original scene DX8 mesh/shadow flush translation pending");
+	if (!RenderList.Is_Empty() || !UpdateList.Is_Empty() || !LightList.Is_Empty() ||
+		!m_dynamicLightList.Is_Empty() || m_translucentObjectsCount || m_occludedObjectsCount)
+		throw OriginalW3DDeviceUnavailable("original 3D populated scene flush translation pending");
+	TheDX8MeshRenderer.Flush();
+	WW3D::Render_And_Clear_Static_Sort_Lists(rinfo);
+	SortingRendererClass::Flush();
+	TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
 #else
 	//don't draw shadows in this mode because they interfere with destination alpha or are invisible (wireframe)
 	if (m_customPassMode == SCENE_PASS_DEFAULT && Get_Extra_Pass_Polygon_Mode() == EXTRA_PASS_DISABLE)
@@ -1660,13 +1665,35 @@ void RTS3DScene::flushTranslucentObjects(RenderInfoClass & rinfo)
 /** Returns an iterator of the lights in the scene. */
 //=============================================================================
 #else
-void RTS3DScene::Render(RenderInfoClass &)
+void RTS3DScene::Render(RenderInfoClass &rinfo)
 {
-	throw OriginalW3DDeviceUnavailable("original scene fog/render-state GPU translation pending");
+	if (m_customPassMode != SCENE_PASS_DEFAULT ||
+		Get_Extra_Pass_Polygon_Mode() != EXTRA_PASS_DISABLE)
+		throw OriginalW3DDeviceUnavailable("original 3D custom scene pass translation pending");
+	if (!RenderList.Is_Empty() || !UpdateList.Is_Empty() || !LightList.Is_Empty() ||
+		!m_dynamicLightList.Is_Empty())
+		throw OriginalW3DDeviceUnavailable("original 3D populated scene translation pending");
+	if (TheW3DShadowManager ||
+		(TheParticleSystemManager && TheParticleSystemManager->getParticleCount() != 0))
+		throw OriginalW3DDeviceUnavailable("original 3D shadow or particle scene translation pending");
+	DX8Wrapper::Set_Fog(FogEnabled, FogColor, FogStart, FogEnd);
+	TheWritableGlobalData->m_enableBehindBuildingMarkers =
+		TheWritableGlobalData->m_enableBehindBuildingMarkers &&
+		zh::original_runtime::OriginalGpuEdge::required().source_depth_has_stencil();
+	updatePlayerColorPasses();
+	updateFixedLightEnvironments(rinfo);
+	Customized_Render(rinfo);
+	Flush(rinfo);
 }
-void RTS3DScene::Customized_Render(RenderInfoClass &)
+void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 {
-	throw OriginalW3DDeviceUnavailable("original scene custom-pass GPU translation pending");
+	if (!RenderList.Is_Empty() || !UpdateList.Is_Empty() || !LightList.Is_Empty() ||
+		!m_dynamicLightList.Is_Empty())
+		throw OriginalW3DDeviceUnavailable("original 3D populated custom traversal pending");
+	m_translucentObjectsCount = 0;
+	m_occludedObjectsCount = 0;
+	if (!Visibility_Checked) Visibility_Check(&rinfo.Camera);
+	Visibility_Checked = false;
 }
 void RTS3DScene::flushOccludedObjectsIntoStencil(RenderInfoClass &)
 {
@@ -1752,7 +1779,12 @@ void RTS3DScene::removeDynamicLight(W3DDynamicLight * obj)
 void RTS3DScene::doRender( CameraClass * cam )
 {
 	m_camera = cam;
+#if defined(ZH_WW3D_CPU_ONLY)
+	try { DRAW(); }
+	catch (...) { m_camera = NULL; throw; }
+#else
 	DRAW();
+#endif
 	m_camera = NULL;
 
 }  // end Customized_Render
@@ -1765,9 +1797,12 @@ void RTS3DScene::doRender( CameraClass * cam )
 void RTS3DScene::draw( )
 {
 #if defined(ZH_WW3D_CPU_ONLY)
+	if (!zh::original_runtime::OriginalGpuEdge::active())
+		throw OriginalW3DDeviceUnavailable("original 3D scene GPU session missing");
 	if (m_camera == NULL)
 		throw OriginalW3DDeviceUnavailable("original 3D scene camera missing");
-	throw OriginalW3DDeviceUnavailable("original 3D scene WW3D render translation pending");
+	if (WW3D::Render(this, m_camera) != WW3D_ERROR_OK)
+		throw OriginalW3DDeviceUnavailable("original 3D scene WW3D render failed");
 #else
 
 	if (m_camera == NULL) {

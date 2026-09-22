@@ -7,12 +7,15 @@
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DStatusCircle.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
+#include "W3DDevice/GameClient/W3DCustomScene.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "GameLogic/TerrainLogic.h"
 #include "WW3D2/nullrobj.h"
 #include "WW3D2/vertmaterial.h"
 #include "WW3D2/DX8Wrapper.h"
+#include "WW3D2/ww3d.h"
+#include "WW3D2/camera.h"
 #include "mempool.h"
 #include "original_gpu_edge.h"
 #include "zh/renderer/recording_device.h"
@@ -133,6 +136,95 @@ int main()
         require(renderObject->Get_Scene() == scene, "original scene attach missing");
         scene->Remove_Render_Object(renderObject);
         require(renderObject->Get_Scene() == nullptr, "original scene detach missing");
+        try {
+            scene->draw();
+            throw std::runtime_error("original 3D draw accepted a missing GPU edge");
+        } catch (const OriginalW3DDeviceUnavailable &error) {
+            require(std::string(error.what()).find("GPU session missing") != std::string::npos,
+                "original 3D scene selected wrong missing-edge guard");
+        }
+        {
+            zh::renderer::RecordingGpuDevice device;
+            zh::renderer::TextureDesc target;
+            target.width = 160; target.height = 120; target.render_target = true;
+            target.format = zh::renderer::TextureFormat::bgra8;
+            const auto color = device.create_texture(target, "original empty 3D color");
+            target.format = zh::renderer::TextureFormat::depth24_stencil8;
+            auto depth = device.create_texture(target, "original empty 3D depth");
+            require(color && depth, "original empty 3D frame targets missing");
+            {
+                zh::original_runtime::OriginalGpuEdge edge(device);
+                require(WW3D::Init(nullptr, nullptr, false) == WW3D_ERROR_OK,
+                    "original empty 3D WW3D init failed");
+                try {
+                    scene->draw();
+                    throw std::runtime_error("original 3D draw accepted a missing camera");
+                } catch (const OriginalW3DDeviceUnavailable &error) {
+                    require(std::string(error.what()).find("camera missing") != std::string::npos,
+                        "original 3D scene selected wrong missing-camera guard");
+                }
+                CameraClass camera;
+                camera.Set_Position(Vector3(0, 0, 1));
+                camera.Set_View_Plane(Vector2(-1, -0.75f), Vector2(1, 0.75f));
+                camera.Set_Clip_Planes(0.995f, 2.0f);
+                auto frame = [&] {
+                    edge.bind_frame_targets(color, depth, 160, 120);
+                    require(WW3D::Begin_Render(true, true, Vector3(0, 0, 0), 1) == WW3D_ERROR_OK,
+                        "original empty 3D frame did not begin");
+                    DX8Wrapper::Set_Transform(D3DTS_WORLD, Matrix3D(true));
+                    scene->doRender(&camera);
+                    require(WW3D::End_Render(false) == WW3D_ERROR_OK,
+                        "original empty 3D frame did not end");
+                };
+                const Bool old_markers = TheWritableGlobalData->m_enableBehindBuildingMarkers;
+                TheWritableGlobalData->m_enableBehindBuildingMarkers = TRUE;
+                frame();
+                require(TheWritableGlobalData->m_enableBehindBuildingMarkers,
+                    "original 3D D24S8 lost stencil-backed markers");
+                require(!device.pass_active() &&
+                    device.snapshot().find("draw pipeline=") == std::string::npos,
+                    "original empty 3D scene submitted a draw");
+                scene->setCustomPassMode(SCENE_PASS_ALPHA_MASK);
+                bool unsupported = false;
+                try { frame(); }
+                catch (const OriginalW3DDeviceUnavailable&) { unsupported = true; }
+                require(unsupported && !WW3D::Is_Rendering() && !device.pass_active(),
+                    "original 3D custom pass did not abort source frame");
+                scene->setCustomPassMode(SCENE_PASS_DEFAULT);
+                frame();
+                scene->Add_Render_Object(renderObject);
+                bool populated = false;
+                try { frame(); }
+                catch (const OriginalW3DDeviceUnavailable&) { populated = true; }
+                require(populated && !WW3D::Is_Rendering() && !device.pass_active(),
+                    "original populated 3D scene bypassed narrow source gate");
+                scene->Remove_Render_Object(renderObject);
+                frame();
+                device.destroy(depth);
+                bool stale = false;
+                try { frame(); }
+                catch (const std::runtime_error&) { stale = true; }
+                require(stale && !WW3D::Is_Rendering(),
+                    "original empty 3D stale depth target was accepted");
+                depth = device.create_texture(target, "rebound empty 3D depth");
+                require(static_cast<bool>(depth), "original empty 3D rebound depth missing");
+                frame();
+                device.destroy(depth);
+                target.format = zh::renderer::TextureFormat::depth16;
+                depth = device.create_texture(target, "original empty 3D stencil-free depth");
+                require(static_cast<bool>(depth), "original empty 3D stencil-free depth missing");
+                TheWritableGlobalData->m_enableBehindBuildingMarkers = TRUE;
+                frame();
+                require(!TheWritableGlobalData->m_enableBehindBuildingMarkers,
+                    "original 3D stencil-free frame retained behind-building markers");
+                TheWritableGlobalData->m_enableBehindBuildingMarkers = old_markers;
+                require(WW3D::Shutdown() == WW3D_ERROR_OK,
+                    "original empty 3D WW3D shutdown failed");
+            }
+            device.destroy(depth); device.destroy(color);
+            require(device.resource_counts().total() == 0,
+                "original empty 3D teardown retained device resources");
+        }
         W3DShroudMaterialPassClass shroudPass;
         try {
             shroudPass.Install_Materials();
