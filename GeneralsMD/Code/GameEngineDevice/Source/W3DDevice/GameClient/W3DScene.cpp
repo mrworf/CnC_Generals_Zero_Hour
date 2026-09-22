@@ -1794,6 +1794,7 @@ RTS2DScene::RTS2DScene()
 {
 	setName("RTS2DScene");
 #if defined(ZH_WW3D_CPU_ONLY)
+	m_camera = NULL;
 	if (!zh::original_runtime::OriginalGpuEdge::active())
 		throw OriginalW3DDeviceUnavailable("original 2D status-circle GPU session missing");
 #endif
@@ -1847,7 +1848,12 @@ void RTS2DScene::doRender( CameraClass * cam )
 void RTS2DScene::draw( )
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	throw OriginalW3DDeviceUnavailable("original 2D scene WW3D render translation pending");
+	if (!zh::original_runtime::OriginalGpuEdge::active())
+		throw OriginalW3DDeviceUnavailable("original 2D scene GPU session missing");
+	if (m_camera == NULL)
+		throw OriginalW3DDeviceUnavailable("original 2D scene camera missing");
+	if (WW3D::Render(this, m_camera) != WW3D_ERROR_OK)
+		throw OriginalW3DDeviceUnavailable("original 2D scene WW3D render failed");
 #else
 
 	if (m_camera == NULL) {

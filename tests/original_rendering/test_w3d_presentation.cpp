@@ -104,6 +104,13 @@ int main()
                     statusScene.status()->Get_Scene() == &statusScene &&
                     statusScene.status()->Num_Refs() == 2,
                     "original 2D status-circle owner was not attached exactly once");
+                try {
+                    statusScene.draw();
+                    throw std::runtime_error("original 2D draw accepted a missing camera");
+                } catch (const OriginalW3DDeviceUnavailable &error) {
+                    require(std::string(error.what()).find("camera missing") != std::string::npos,
+                        "original 2D scene selected wrong missing-camera guard");
+                }
             }
             require(device.resource_counts().total() == 0,
                 "original 2D owner teardown retained device resources");

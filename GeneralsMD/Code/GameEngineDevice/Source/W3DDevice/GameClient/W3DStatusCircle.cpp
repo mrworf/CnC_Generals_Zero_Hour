@@ -178,6 +178,12 @@ Int W3DStatusCircle::initData(void)
 	m_vertexMaterialClass=VertexMaterialClass::Get_Preset(VertexMaterialClass::PRELIT_DIFFUSE);
 
 	m_shaderClass = ShaderClass(SC_ALPHA);// _PresetOpaque2DShader;//; //_PresetOpaqueShader;
+#if defined(ZH_WW3D_CPU_ONLY)
+	// This original draw binds a null stage-0 texture and uses only its
+	// vertex diffuse color. Express that intent to the physical CPU edge;
+	// other source draws still reject a missing required texture.
+	m_shaderClass.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+#endif
 
 
 	return 0;
@@ -357,7 +363,13 @@ void W3DStatusCircle::Render(RenderInfoClass & rinfo)
 	Int diffuse = (0xff<<24)|(clr<<16)|(clr<<8)|clr;	 // b g<<8 r<<16 a<<24.		 
 	updateScreenVB(diffuse);
 	DX8Wrapper::Set_Transform(D3DTS_WORLD,tm);
-	DX8Wrapper::Set_Shader(ShaderClass(SC_ADD));
+	ShaderClass fadeShader(SC_ADD);
+#if defined(ZH_WW3D_CPU_ONLY)
+	// The source fade quad also binds no texture; its color comes from
+	// the updated vertex diffuse data.
+	fadeShader.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+#endif
+	DX8Wrapper::Set_Shader(fadeShader);
 	DX8Wrapper::Set_Vertex_Buffer(m_vertexBufferScreen);
 	DX8Wrapper::Apply_Render_State_Changes();
 	switch (fade) {
