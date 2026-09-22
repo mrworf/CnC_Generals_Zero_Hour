@@ -2012,6 +2012,7 @@ if(ZH_BUILD_TESTS)
     $<TARGET_OBJECTS:zh_original_w3d_factory_full>
     $<TARGET_OBJECTS:zh_original_w3d_draw_full>)
   target_include_directories(original_w3d_presentation_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
     "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"

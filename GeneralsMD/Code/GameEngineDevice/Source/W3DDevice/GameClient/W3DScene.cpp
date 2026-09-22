@@ -35,6 +35,7 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "PreRTS.h"
 #include "OriginalW3DDeviceUnavailable.h"
+#include "original_gpu_edge.h"
 #endif
 #include <stdlib.h>
 
@@ -56,9 +57,7 @@
 #include "W3DDevice/GameClient/W3DGranny.h"
 #endif
 #include "W3DDevice/GameClient/W3DShadow.h"
-#if !defined(ZH_WW3D_CPU_ONLY)
 #include "W3DDevice/GameClient/W3DStatusCircle.h"
-#endif
 #include "W3DDevice/GameClient/W3DCustomScene.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "WW3D2/camera.h"
@@ -1795,11 +1794,11 @@ RTS2DScene::RTS2DScene()
 {
 	setName("RTS2DScene");
 #if defined(ZH_WW3D_CPU_ONLY)
-	throw OriginalW3DDeviceUnavailable("original 2D status-circle GPU object creation pending");
-#else
+	if (!zh::original_runtime::OriginalGpuEdge::active())
+		throw OriginalW3DDeviceUnavailable("original 2D status-circle GPU session missing");
+#endif
 	m_status = NEW_REF( W3DStatusCircle, () );
 	Add_Render_Object( m_status );
-#endif
 }  // end RTS2DScene
 
 //=============================================================================
@@ -1809,10 +1808,8 @@ RTS2DScene::RTS2DScene()
 //=============================================================================
 RTS2DScene::~RTS2DScene()
 {
-#if !defined(ZH_WW3D_CPU_ONLY)
 	this->Remove_Render_Object(m_status);
 	REF_PTR_RELEASE(m_status);
-#endif
 }  // end ~RTS2DScene
 
 //=============================================================================

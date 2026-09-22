@@ -22,6 +22,7 @@ add_library(zh_original_w3d_draw_full OBJECT EXCLUDE_FROM_ALL
 target_include_directories(zh_original_w3d_draw_full PRIVATE
   "${PROJECT_SOURCE_DIR}/include"
   "${PROJECT_SOURCE_DIR}/src/original_runtime/include"
+  "${PROJECT_SOURCE_DIR}/src/original_runtime"
   "${PROJECT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
   "${PROJECT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
   "${PROJECT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"

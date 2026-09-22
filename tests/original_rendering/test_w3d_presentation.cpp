@@ -5,6 +5,7 @@
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
+#include "W3DDevice/GameClient/W3DStatusCircle.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
@@ -13,6 +14,8 @@
 #include "WW3D2/vertmaterial.h"
 #include "WW3D2/DX8Wrapper.h"
 #include "mempool.h"
+#include "original_gpu_edge.h"
+#include "zh/renderer/recording_device.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -25,6 +28,9 @@ struct PoolProbeNode { void *next; std::uint64_t originalPayload; };
 struct PoolProbe : ObjectPoolClass<PoolProbeNode, 7> {
     int freeCount() const { return FreeObjectCount; }
     int totalCount() const { return TotalObjectCount; }
+};
+struct Inspect2DScene : RTS2DScene {
+    RenderObjClass *status() const { return m_status; }
 };
 struct WritableTestDirectory {
     char path[sizeof("/tmp/zh-m22-presentation-XXXXXX")] = "/tmp/zh-m22-presentation-XXXXXX";
@@ -87,6 +93,24 @@ int main()
         }
         require(W3DDisplay::m_3DScene == nullptr && W3DDisplay::m_assetManager == nullptr,
             "failed 2D setup published original 3D scene owners");
+
+        for (int generation = 0; generation != 2; ++generation) {
+            zh::renderer::RecordingGpuDevice device;
+            {
+                zh::original_runtime::OriginalGpuEdge edge(device);
+                Inspect2DScene statusScene;
+                require(statusScene.status() != nullptr &&
+                    dynamic_cast<W3DStatusCircle *>(statusScene.status()) != nullptr &&
+                    statusScene.status()->Get_Scene() == &statusScene &&
+                    statusScene.status()->Num_Refs() == 2,
+                    "original 2D status-circle owner was not attached exactly once");
+            }
+            require(device.resource_counts().total() == 0,
+                "original 2D owner teardown retained device resources");
+        }
+        require(W3DDisplay::m_2DScene == nullptr && W3DDisplay::m_3DScene == nullptr &&
+            W3DDisplay::m_assetManager == nullptr,
+            "owned 2D fixture published production display slots");
 
         // This is test-only publication in the original display's ownership
         // slots. Production init() still stops at the earlier 2D device edge.
