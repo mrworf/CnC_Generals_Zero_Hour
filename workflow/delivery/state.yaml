@@ -13,11 +13,11 @@ delivery_goal:
   end: null
   milestone_ids: [M26, M27, M28, M20, M21, M29, M30, M22, M23, M24, M25, M15, M16, M17, M18]
   execution: autonomous
-  current_milestone: M30
+  current_milestone: M22
   blocker_type: null
   blocker: null
   blockers: []
-  resume_point: "M29 accepted in three slice commits. Plan and deliver M30 using delivery/plans/cnc-generals-zero-hour/milestone_30_plan_01.md; then resume preserved M22 plan 01 at 06C3C and M24 plan 01 at 05C after their dependencies."
+  resume_point: "M30 accepted in four slice commits through 5a45a06 with host RTX/Vulkan physical-device evidence. Resume preserved M22 plan 01 at slice 06C3C, then M23 and M24 when dependency-ready; M24 resumes plan 01 at 05C. Actual original-source/retail scene acceptance remains M22-owned."
   started_at: "2026-09-20T14:39:13Z"
   completed_at: null
   renderer_packet_adoption:

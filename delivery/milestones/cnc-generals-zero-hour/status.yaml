@@ -316,25 +316,26 @@ milestones:
   - id: M30
     title: "public bgfx device and renderer revalidation"
     file: delivery/milestones/cnc-generals-zero-hour/M30-bgfx-device-validation.md
-    status: in_progress
+    status: completed
     dependencies: [M29, M14]
     remediation_ids: [REC-RM-001]
     optional: false
     started_at: "2026-09-22T00:31:47Z"
-    completed_at: null
-    evidence: null
-    notes: "New public-bgfx device and M7-M10/M14 revalidation gate. RB-02/RB-04; retail scene acceptance remains M22."
+    completed_at: "2026-09-22T01:42:57Z"
+    commit_hash: 5a45a06
+    evidence: "delivery/evidence/cnc-generals-zero-hour/milestone_30_slice_01.md; milestone_30_slice_02.md; milestone_30_slice_03.md; milestone_30_slice_04.md. Four native builds and host full asset-free suites passed 174/174 each; RTX Vulkan validation-layer public probe and physical UI/world/effects/device/presentation tests passed."
+    notes: "Accepted RB-02/RB-04 at synthetic physical-device grade. Governing plan: delivery/plans/cnc-generals-zero-hour/milestone_30_plan_01.md; slice commits 64febece, ba4e343, a5ca9cf, 5a45a06. CPU LSan passes; physical ASan address-only due external libdbus/Wayland allocations. Actual original WW3D call path and retail scene pixels remain M22."
   - id: M22
     title: "original retail scene rendering on Vulkan"
     file: delivery/milestones/cnc-generals-zero-hour/M22-original-rendering.md
-    status: blocked
+    status: in_progress
     dependencies: [M21, M30]
     remediation_ids: [SE-005, SE-010, RC-002, RC-003, RC-004, RC-007, RC-010, RC-012, REC-RM-001]
     optional: false
     started_at: "2026-09-21T04:25:51Z"
     completed_at: null
     evidence: "delivery/evidence/cnc-generals-zero-hour/milestone_22_backend_gap_06c3c.md; accepted source-owned slices through 06C3B3B (4f9b286) pass their recorded GCC/Clang, sanitizer and validation-enabled RTX gates. The original camera-subrect color/depth/stencil clear within an active frame has no equivalent in the public SDL_GPU 3.4.14 pass API; no complete scene/retail acceptance is claimed."
-    notes: "UPSTREAM_REQUIRED M22_VIEWPORT_CLEAR_BACKEND: accepted §9 bgfx migration is assigned to M29/M30. Resume the preserved delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md at slice 06C3C only after M30 is accepted; original retail scenes remain M22-owned. No other independent blocker established."
+    notes: "M22_VIEWPORT_CLEAR_BACKEND resolved by accepted M29/M30 public-bgfx device and hardware evidence. Resume preserved delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md at slice 06C3C; original-source call-path wiring and full retail scene acceptance remain M22-owned. Prior accepted slices through 06C3B3B and blocker evidence remain preserved."
   - id: M23
     title: "original menus controls and media integration"
     file: delivery/milestones/cnc-generals-zero-hour/M23-original-interaction.md

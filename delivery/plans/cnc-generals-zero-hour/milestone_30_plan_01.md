@@ -44,7 +44,7 @@ Excluded: original WW3D retail scene/pixel acceptance (M22), gameplay/save/netwo
 | 01 | [runtime/resources](milestone_30_plan_01_slice_01.md) | Pinned bgfx runtime and generation-safe resource/lifecycle path | M29 | completed | `64febec` | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_30_slice_01.md) |
 | 02 | [ordered targets](milestone_30_plan_01_slice_02.md) | Real target/pass/viewport clears in command order | 01 | completed | `ba4e343` | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_30_slice_02.md) |
 | 03 | [shader draws](milestone_30_plan_01_slice_03.md) | Physical shader, pipeline, bindings and indexed draw behavior | 02 | completed | `a5ca9cf` | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_30_slice_03.md) |
-| 04 | [presentation and revalidation](milestone_30_plan_01_slice_04.md) | SDL3-window present, lifecycle and full host evidence | 03 | completed | recorded in next index update | [acceptance evidence](../../evidence/cnc-generals-zero-hour/milestone_30_slice_04.md) |
+| 04 | [presentation and revalidation](milestone_30_plan_01_slice_04.md) | SDL3-window present, lifecycle and full host evidence | 03 | completed | `5a45a06` | [acceptance evidence](../../evidence/cnc-generals-zero-hour/milestone_30_slice_04.md) |
 
 Four slices are necessary because each has a distinct independently observable GPU boundary and failure mode; combining all into one commit would hide the clear-vs-draw dependency and hardware acceptance results.
 
