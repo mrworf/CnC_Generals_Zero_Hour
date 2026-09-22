@@ -15,7 +15,7 @@ their tests remain accepted. M30 must replace backend-specific evidence.
 | texture-stage state | `SamplerDesc` and shader variants retain combine/projected/bump semantics; unrepresented modes reject | CPU runtime | M30 sampler/uniform texture pixels |
 | resources | Opaque generation-checked buffers/textures, bounded uploads, CPU fallbacks | CPU runtime | M30 public bgfx resource lifetime |
 | render targets | Full-target pass clear/load and new ordered, clipped `ViewportClearDesc` with independent C/D/S selection | CPU runtime | M30 public ordered bgfx view clear and pixels |
-| shader assembly | Repository-owned portable shader families; offline bgfx binary closure is M29 slice 03 | pending | M30 physical shader programs |
+| shader assembly | All 39 owned renderer/effects and original-FVF GLSL variants compile offline through pinned public bgfx shaderc; manifest/envelope/SPIR-V/descriptor checks cover set-0 stage UBOs, separate image/sampler pairs and vertex attributes | offline CPU/build | M30 physical shader programs and pixels |
 | D3DX math | Engine/source math types and coordinate conventions, no graphics type in public headers | CPU runtime | M30 transforms/pixels |
 | image/font helpers | Existing CPU image/font providers and fail-closed decode | CPU runtime | M30 upload/display |
 | device/lifecycle | `GpuDevice`/resize contract; bgfx public device ownership selected, SDL3 remains platform/input | source inspected | M30 init/reset/loss/present |

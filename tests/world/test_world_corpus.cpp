@@ -89,17 +89,21 @@ void test_resources_are_bounded_across_frames_and_reload()
         "world load exceeded declared resource bounds");
     for (renderer::UInt32 tick = 0; tick < 64; ++tick) {
         check(recorder.record_frame(tick), "repeated world frame failed");
+        check(device.present(recorder.color_target()), "completed world frame was not presented");
         check(device.resource_counts() == first_load, "repeated frame grew the live resource set");
     }
     check(recorder.teardown(), "first teardown failed");
+    check(!recorder.color_target(), "teardown exposed a stale world color target");
     check(device.resource_counts().total() == 0, "first teardown leaked renderer handles");
 
     check(recorder.load(scene), "world reload failed");
     const auto second_load = device.resource_counts();
     check(second_load == first_load, "reload changed the bounded live resource set");
-    check(recorder.record_frame(0) && recorder.record_frame(1), "reloaded frames failed");
+    check(recorder.record_frame(0) && device.present(recorder.color_target())
+            && recorder.record_frame(1) && device.present(recorder.color_target()), "reloaded frames failed");
     check(device.resource_counts() == first_load, "reload frames grew the live resource set");
     check(recorder.teardown(), "reload teardown failed");
+    check(!recorder.color_target(), "reload teardown exposed a stale world color target");
     check(device.resource_counts().total() == 0, "reload teardown leaked renderer handles");
 }
 

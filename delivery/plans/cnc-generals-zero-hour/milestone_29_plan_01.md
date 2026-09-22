@@ -27,7 +27,7 @@ The backend-neutral command stream records original W3D camera-scoped color/dept
 - A clear is a first-class ordered command scoped to the currently attached live target generation. It does not mutate the viewport or substitute a draw.
 - A bounded view-order counter models bgfx's public ordered-view budget before physical submission; M30 consumes it.
 - Keep historical SDL_GPU binaries/tests as preservation evidence; add bgfx packaging and semantic checks, rather than silently relabeling SPIR-V as bgfx format.
-- Source acquisition and toolchain details are an investigation item in slice 03. Do not assume a global bgfx install or vendor unreviewed binaries.
+- Slice 03 pins bgfx/bx/bimg public source and license digests, stages supplied sources read-only into an ignored owned cache, and builds a narrowly patched upstream shaderc once. Configure/build/test consume that local tool fully offline; no global bgfx install or unreviewed binary is assumed.
 
 ## Scope
 
@@ -44,8 +44,8 @@ bgfx device implementation/pixels (M30), original retail scene completion (M22),
 | Slice | Plan | Outcome | Dependencies | Status | Commit | Evidence |
 |---|---|---|---|---|---|---|
 | 01 | [ordered clear](milestone_29_plan_01_slice_01.md) | Original-shaped full pass, draw, camera clear, draw stream with fail-closed recorder validation | none | completed | `d79aed7` | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_29_slice_01.md) |
-| 02 | [producer and inventory](milestone_29_plan_01_slice_02.md) | Affected source categories and CPU producers retain exact new command semantics | 01 | completed | see slice commit in Git history | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_29_slice_02.md) |
-| 03 | [shader closure](milestone_29_plan_01_slice_03.md) | Pinned licensed offline bgfx shader route and complete family/state verification | 02 | pending | | |
+| 02 | [producer and inventory](milestone_29_plan_01_slice_02.md) | Affected source categories and CPU producers retain exact new command semantics | 01 | completed | `e3b4d7f` | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_29_slice_02.md) |
+| 03 | [shader closure](milestone_29_plan_01_slice_03.md) | Pinned licensed offline bgfx shader route and complete family/state verification | 02 | completed | this slice commit | [focused evidence](../../evidence/cnc-generals-zero-hour/milestone_29_slice_03.md) |
 
 ## Cross-slice concerns
 

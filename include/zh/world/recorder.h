@@ -20,6 +20,7 @@ public:
     bool loaded() const noexcept { return loaded_; }
     const std::string& last_error() const noexcept { return last_error_; }
     std::size_t owned_pipeline_count() const noexcept { return pipelines_.size(); }
+    renderer::TextureHandle color_target() const noexcept { return loaded_ ? main_color_ : renderer::TextureHandle{}; }
 
 private:
     renderer::ValidationResult fail(std::string message);

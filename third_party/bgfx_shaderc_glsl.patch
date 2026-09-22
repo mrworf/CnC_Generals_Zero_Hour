@@ -1,0 +1,105 @@
+diff --git a/tools/shaderc/shaderc.cpp b/tools/shaderc/shaderc.cpp
+index debc20a..aa19541 100644
+--- a/tools/shaderc/shaderc.cpp
++++ b/tools/shaderc/shaderc.cpp
+@@ -2643,7 +2643,7 @@ namespace bgfx
+ 			const char* varying = NULL;
+ 			File attribdef;
+ 
+-			if ('c' != options.shaderType)
++			if ('c' != options.shaderType && !options.raw)
+ 			{
+ 				std::string defaultVarying = dir + "varying.def.sc";
+ 				const char* varyingdef = cmdLine.findOption("varyingdef", defaultVarying.c_str() );
+diff --git a/tools/shaderc/shaderc_spirv.cpp b/tools/shaderc/shaderc_spirv.cpp
+index 4955245..893857f 100644
+--- a/tools/shaderc/shaderc_spirv.cpp
++++ b/tools/shaderc/shaderc_spirv.cpp
+@@ -23,6 +23,7 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wshadow") // warning: declaration of 'u
+ 
+ #define ENABLE_OPT 1
+ #include <ShaderLang.h>
++#include <glslang/Include/Types.h>
+ #include <ResourceLimits.h>
+ #include <SPIRV/GlslangToSpv.h>
+ #include <SPIRV/SpvTools.h>
+@@ -315,6 +316,16 @@ namespace bgfx { namespace spirv
+ 
+ 	bgfx::Attrib::Enum toAttribEnum(const bx::StringView& _name)
+ 	{
++		const struct { const char* source; Attrib::Enum target; } aliases[] = {
++			{"in_position", Attrib::Position}, {"source_position", Attrib::Position},
++			{"in_normal", Attrib::Normal}, {"source_normal", Attrib::Normal},
++			{"in_color", Attrib::Color0}, {"source_diffuse", Attrib::Color0},
++			{"source_diffuse_bgra", Attrib::Color0},
++			{"in_uv", Attrib::TexCoord0}, {"source_uv", Attrib::TexCoord0},
++			{"source_uv0", Attrib::TexCoord0}, {"source_uv1", Attrib::TexCoord1},
++		};
++		for (const auto& alias : aliases)
++			if (0 == bx::strCmp(alias.source, _name)) return alias.target;
+ 		for (uint8_t ii = 0; ii < Attrib::Count; ++ii)
+ 		{
+ 			if (0 == bx::strCmp(s_attribName[ii], _name) )
+@@ -487,7 +498,8 @@ namespace bgfx { namespace spirv
+ 
+ 		shader->setEntryPoint("main");
+ 		shader->setAutoMapBindings(true);
+-		shader->setEnvInput(glslang::EShSourceHlsl, stage, glslang::EShClientVulkan, s_GLSL_VULKAN_CLIENT_VERSION);
++		shader->setEnvInput(_options.raw ? glslang::EShSourceGlsl : glslang::EShSourceHlsl,
++			stage, glslang::EShClientVulkan, s_GLSL_VULKAN_CLIENT_VERSION);
+ 		shader->setEnvClient(glslang::EShClientVulkan, getGlslangTargetVulkanVersion(_version, _messageWriter));
+ 		shader->setEnvTarget(glslang::EShTargetSpv, getGlslangTargetSpirvVersion(_version, _messageWriter));
+ 
+@@ -566,7 +578,7 @@ namespace bgfx { namespace spirv
+ 			{
+ 				program->buildReflection();
+ 
+-				if (_firstPass)
++				if (_firstPass && !_options.raw)
+ 				{
+ 					// first time through, we just find unused uniforms and get rid of them
+ 					std::string output;
+@@ -694,6 +706,7 @@ namespace bgfx { namespace spirv
+ 							break;
+ 
+ 						case 0x8B52: // GL_FLOAT_VEC4:
++						case 0x8B55: // GL_INT_VEC4 (preserve the 16-byte uniform payload):
+ 							un.type = UniformType::Vec4;
+ 							break;
+ 
+@@ -875,21 +888,23 @@ namespace bgfx { namespace spirv
+ 					uint8_t nul = 0;
+ 					bx::write(_shaderWriter, nul, &err);
+ 
+-					const uint8_t numAttr = (uint8_t)program->getNumLiveAttributes();
+-					bx::write(_shaderWriter, numAttr, &err);
+-
+-					for (uint8_t ii = 0; ii < numAttr; ++ii)
++					const uint8_t numLiveAttr = (uint8_t)program->getNumLiveAttributes();
++					std::vector<uint16_t> attributes;
++					for (uint8_t ii = 0; ii < numLiveAttr; ++ii)
+ 					{
+ 						bgfx::Attrib::Enum attr = toAttribEnum(program->getAttributeName(ii) );
+-						if (bgfx::Attrib::Count != attr)
+-						{
+-							bx::write(_shaderWriter, bgfx::attribToId(attr), &err);
+-						}
+-						else
+-						{
+-							bx::write(_shaderWriter, uint16_t(UINT16_MAX), &err);
+-						}
++						const auto& qualifier = program->getAttributeTType(ii)->getQualifier();
++						const uint32_t location = _options.raw && qualifier.hasLocation()
++							? qualifier.layoutLocation : ii;
++						if (location >= 16 || bgfx::Attrib::Count == attr)
++							return false;
++						if (attributes.size() <= location) attributes.resize(location + 1, UINT16_MAX);
++						if (attributes[location] != UINT16_MAX) return false;
++						attributes[location] = bgfx::attribToId(attr);
+ 					}
++					const uint8_t numAttr = (uint8_t)attributes.size();
++					bx::write(_shaderWriter, numAttr, &err);
++					for (uint16_t attr : attributes) bx::write(_shaderWriter, attr, &err);
+ 
+ 					bx::write(_shaderWriter, size, &err);
+ 				}

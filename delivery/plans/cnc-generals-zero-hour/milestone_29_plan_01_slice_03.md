@@ -33,3 +33,14 @@ Generated binaries stay in build directories, not retail roots. Only public perm
 ## Acceptance and commit
 
 Meets M29 offline shader and cumulative validation clauses. One reviewable commit contains this plan, toolchain/shader build path, tests and evidence; record any genuine dependency blocker at this exact slice rather than waiving the gate.
+
+## Resolved investigation
+
+The pinned public shaderc accepts HLSL by default in its raw Vulkan path, and
+the owned GLSL source uses multiple descriptor sets and combined samplers
+that bgfx Vulkan cannot bind directly. The reviewed source patch enables raw
+GLSL, sparse source vertex locations and integer-vector reflection. A bounded
+build-only lowering maps the owned descriptor grammar to bgfx's set-0 stage
+UBO and separate image/sampler slots; per-family manifests plus SPIR-V and
+bgfx-envelope checks enforce that result. This does not implement M30's
+physical binding/program/pixel path.

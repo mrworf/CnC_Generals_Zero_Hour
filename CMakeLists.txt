@@ -970,6 +970,93 @@ endforeach()
 add_custom_target(zh_effect_shaders ALL DEPENDS ${ZH_EFFECT_SPIRV})
 add_dependencies(zh_effects zh_renderer_shaders zh_effect_shaders)
 
+# M29's bgfx Vulkan shader path is strictly offline after the explicit
+# pinned-source bootstrap. The previous SPIR-V outputs remain historical
+# SDL_GPU evidence until M30 changes device ownership.
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+find_program(ZH_SPIRV_VAL_EXECUTABLE NAMES spirv-val REQUIRED)
+set(ZH_BGFX_SHADERC_EXECUTABLE
+  "${CMAKE_CURRENT_SOURCE_DIR}/build/bgfx-toolchain/bin/shaderc"
+  CACHE FILEPATH "Pinned bgfx shaderc built by tools/renderer/bootstrap_bgfx_shaderc.sh")
+if(NOT EXISTS "${ZH_BGFX_SHADERC_EXECUTABLE}")
+  message(FATAL_ERROR "Missing pinned bgfx shaderc. Run tools/renderer/bootstrap_bgfx_shaderc.sh --acquire once, then configure/build offline.")
+endif()
+set(ZH_BGFX_SHADER_BINARIES)
+foreach(shader_group IN ITEMS renderer effects)
+  if(shader_group STREQUAL "renderer")
+    set(shader_names ${ZH_RENDERER_SHADER_NAMES})
+  else()
+    set(shader_names ${ZH_EFFECT_SHADER_NAMES})
+  endif()
+  foreach(shader_name IN LISTS shader_names)
+    if(shader_name MATCHES "\\.vert$")
+      set(shader_type vertex)
+    else()
+      set(shader_type fragment)
+    endif()
+    set(shader_source "${CMAKE_CURRENT_SOURCE_DIR}/shaders/${shader_group}/${shader_name}")
+    set(shader_preprocessed "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/${shader_group}/${shader_name}.pre")
+    set(shader_lowered "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/${shader_group}/${shader_name}.lower")
+    set(shader_manifest "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/${shader_group}/${shader_name}.json")
+    set(shader_output "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/${shader_group}/${shader_name}.bin")
+    add_custom_command(OUTPUT "${shader_output}"
+      BYPRODUCTS "${shader_preprocessed}" "${shader_lowered}" "${shader_manifest}"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/${shader_group}"
+      COMMAND "${ZH_GLSLC_EXECUTABLE}" -E "${shader_source}" -o "${shader_preprocessed}"
+      COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/prepare_bgfx_glsl.py"
+        --input "${shader_preprocessed}" --output "${shader_lowered}"
+        --manifest "${shader_manifest}" --stage "${shader_type}"
+      COMMAND "${ZH_BGFX_SHADERC_EXECUTABLE}" -f "${shader_lowered}" -o "${shader_output}"
+        --type "${shader_type}" --platform linux --profile spirv --raw
+      DEPENDS "${shader_source}" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/renderer/original_applied_core.glsl"
+        "${ZH_BGFX_SHADERC_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx_shaderc_glsl.patch"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/prepare_bgfx_glsl.py"
+      COMMENT "Building bgfx ${shader_group} shader ${shader_name}"
+      VERBATIM)
+    list(APPEND ZH_BGFX_SHADER_BINARIES "${shader_output}")
+    install(FILES "${shader_output}" "${shader_manifest}"
+      DESTINATION "share/generals-zero-hour/bgfx/${shader_group}")
+  endforeach()
+endforeach()
+foreach(fvf_variant IN ITEMS d1 d2 n0 n1 n2 nd2)
+  string(TOUPPER "${fvf_variant}" fvf_define)
+  foreach(lit IN ITEMS false true)
+    if(lit AND NOT fvf_variant MATCHES "^(n0|n1|n2|nd2)$")
+      continue()
+    endif()
+    if(lit)
+      set(shader_suffix "${fvf_variant}_lit")
+      set(shader_defines "-DORIGINAL_FVF_${fvf_define}" "-DORIGINAL_LIT")
+    else()
+      set(shader_suffix "${fvf_variant}")
+      set(shader_defines "-DORIGINAL_FVF_${fvf_define}")
+    endif()
+    set(shader_source "${CMAKE_CURRENT_SOURCE_DIR}/shaders/renderer/original_applied.vert")
+    set(shader_preprocessed "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/renderer/original_applied_${shader_suffix}.vert.pre")
+    set(shader_lowered "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/renderer/original_applied_${shader_suffix}.vert.lower")
+    set(shader_manifest "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/renderer/original_applied_${shader_suffix}.vert.json")
+    set(shader_output "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/renderer/original_applied_${shader_suffix}.vert.bin")
+    add_custom_command(OUTPUT "${shader_output}"
+      BYPRODUCTS "${shader_preprocessed}" "${shader_lowered}" "${shader_manifest}"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/renderer"
+      COMMAND "${ZH_GLSLC_EXECUTABLE}" -E ${shader_defines} "${shader_source}" -o "${shader_preprocessed}"
+      COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/prepare_bgfx_glsl.py"
+        --input "${shader_preprocessed}" --output "${shader_lowered}"
+        --manifest "${shader_manifest}" --stage vertex
+      COMMAND "${ZH_BGFX_SHADERC_EXECUTABLE}" -f "${shader_lowered}" -o "${shader_output}"
+        --type vertex --platform linux --profile spirv --raw
+      DEPENDS "${shader_source}" "${ZH_BGFX_SHADERC_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx_shaderc_glsl.patch"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/prepare_bgfx_glsl.py"
+      COMMENT "Building bgfx original FVF ${shader_suffix}"
+      VERBATIM)
+    list(APPEND ZH_BGFX_SHADER_BINARIES "${shader_output}")
+    install(FILES "${shader_output}" "${shader_manifest}"
+      DESTINATION share/generals-zero-hour/bgfx/renderer)
+  endforeach()
+endforeach()
+add_custom_target(zh_bgfx_shaders ALL DEPENDS ${ZH_BGFX_SHADER_BINARIES})
+
 add_executable(zh_main src/bootstrap/main.cpp src/headless/runtime.cpp)
 target_include_directories(zh_main PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated" "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_main PRIVATE
@@ -1047,7 +1134,12 @@ install(FILES data/corpus/video-variants.tsv DESTINATION share/generals-zero-hou
 
 if(ZH_BUILD_TESTS)
   enable_testing()
-  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_test(NAME bgfx_shader_bridge_contract COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/test_bgfx_shader_pipeline.py")
+  add_test(NAME bgfx_shader_family_closure COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/verify_bgfx_shaders.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}" --build-root "${CMAKE_CURRENT_BINARY_DIR}"
+    --spirv-val "${ZH_SPIRV_VAL_EXECUTABLE}")
   add_executable(original_config_link_probe
     tests/original_lifecycle/test_config_link_probe.cpp
     $<TARGET_OBJECTS:zh_original_config_spine>)
