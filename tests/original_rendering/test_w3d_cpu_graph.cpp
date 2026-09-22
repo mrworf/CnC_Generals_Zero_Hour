@@ -880,6 +880,116 @@ int main(int argc, char **argv)
 	auto *mesh = static_cast<MeshClass *>(object);
 	CameraClass camera;
 	RenderInfoClass render_info(camera);
+	if (argc==2 && std::strcmp(argv[1],"--ww3d-scene-wrapper")==0) {
+		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
+		WW3D::Set_Thumbnail_Enabled(false);
+		OwnedFactory factory;
+		factory.files["mytex.tga"]=original_targa();
+		factory.files["MYTEX.TGA"]=factory.files["mytex.tga"];
+		auto* previous_factory=_TheFileFactory;
+		_TheFileFactory=&factory;
+		mesh->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
+		mesh->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
+		mesh->Set_Position(Vector3(0,0,-10));
+		SimpleSceneClass scene;
+		scene.Add_Render_Object(mesh);
+		zh::renderer::RecordingGpuDevice recorder;
+		zh::renderer::TextureDesc target;
+		target.width=64; target.height=64; target.render_target=true; target.sampled=false;
+		const auto color=recorder.create_texture(target,"source WW3D scene color");
+		target.format=zh::renderer::TextureFormat::depth24_stencil8;
+		const auto depth=recorder.create_texture(target,"source WW3D scene depth");
+		{
+			zh::original_runtime::OriginalGpuEdge edge(recorder);
+			assert(WW3D::Init(nullptr,nullptr,false)==WW3D_ERROR_OK);
+			edge.bind_frame_targets(color,depth,64,64);
+			camera.Set_Clip_Planes(1,100);
+			bool inactive=false;
+			try { (void)WW3D::Render(&scene,&camera,true,true,Vector3(0,0,0)); }
+			catch (const std::runtime_error&) { inactive=true; }
+			assert(inactive);
+			assert(WW3D::Begin_Render(true,true,Vector3(0,0,0),1)==WW3D_ERROR_OK);
+			scene.Set_Polygon_Mode(SceneClass::LINE);
+			const auto pre_line=recorder.snapshot();
+			bool unsupported=false;
+			try { (void)WW3D::Render(&scene,&camera,true,true,Vector3(0,0,0)); }
+			catch (const std::runtime_error&) { unsupported=true; }
+			assert(unsupported && WW3D::Is_Rendering() && recorder.snapshot()==pre_line);
+			scene.Set_Polygon_Mode(SceneClass::POINT);
+			unsupported=false;
+			try { (void)WW3D::Render(&scene,&camera,false,false,Vector3(0,0,0)); }
+			catch (const std::runtime_error&) { unsupported=true; }
+			assert(unsupported && recorder.snapshot()==pre_line);
+			scene.Set_Polygon_Mode(SceneClass::FILL);
+			bool missing_camera=false;
+			try { (void)WW3D::Render(&scene,nullptr,false,false,Vector3(0,0,0)); }
+			catch (const std::runtime_error&) { missing_camera=true; }
+			assert(missing_camera && recorder.snapshot()==pre_line);
+			camera.Set_Viewport(Vector2(0,0),Vector2(0.5f,1));
+			assert(WW3D::Render(&scene,&camera,true,true,Vector3(0.1f,0.2f,0.3f))==WW3D_ERROR_OK);
+			camera.Set_Viewport(Vector2(0.5f,0),Vector2(1,1));
+			assert(WW3D::Render(&scene,&camera,true,true,Vector3(0.3f,0.2f,0.1f))==WW3D_ERROR_OK);
+			assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+			const auto trace=recorder.snapshot();
+			const auto first=trace.find("CameraClass::Apply viewport");
+			const auto first_clear=trace.find("clear_viewport",first);
+			const auto fill=trace.find("DX8Wrapper::Set_DX8_Render_State=8:3",first_clear);
+			const auto first_draw=trace.find("draw pipeline=",fill);
+			const auto second=trace.find("CameraClass::Apply viewport",first_draw);
+			const auto second_clear=trace.find("clear_viewport",second);
+			assert(first!=std::string::npos && first_clear!=std::string::npos &&
+				fill!=std::string::npos && first_draw!=std::string::npos &&
+				second!=std::string::npos && second_clear!=std::string::npos);
+			assert(WW3D::Begin_Render(false,false,Vector3(0,0,0),1)==WW3D_ERROR_OK);
+			LayerClass missing_layer;
+			bool missing_scene=false;
+			try { (void)WW3D::Render(missing_layer); }
+			catch (const std::runtime_error&) { missing_scene=true; }
+			assert(missing_scene && WW3D::Is_Rendering());
+			{
+				LayerListClass layers;
+				LayerClass back(&scene,&camera,false,false,Vector3(0,0,0));
+				LayerClass front(&scene,&camera,false,false,Vector3(0,0,0));
+				layers.Add_Head(&back);
+				layers.Add_Head(&front);
+				assert(WW3D::Render(layers)==WW3D_ERROR_OK);
+			}
+			RenderInfoClass object_info(camera);
+			assert(WW3D::Render(*mesh,object_info)==WW3D_ERROR_OK);
+			assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+			const auto wrappers=recorder.snapshot();
+			assert(wrappers.find("draw pipeline=",trace.size())!=std::string::npos);
+			struct RejectOnce final : RenderHookClass {
+				bool reject=true;
+				bool Pre_Render(RenderObjClass*,RenderInfoClass&) override {
+					if (reject) throw std::runtime_error("injected WW3D scene hook");
+					return true;
+				}
+				void Post_Render(RenderObjClass*,RenderInfoClass&) override {}
+			};
+			auto* reject=new RejectOnce;
+			mesh->Set_Render_Hook(reject);
+			assert(WW3D::Begin_Render(false,false,Vector3(0,0,0),1)==WW3D_ERROR_OK);
+			const auto before_failure=recorder.snapshot();
+			bool hook_failed=false;
+			try { (void)WW3D::Render(&scene,&camera,false,false,Vector3(0,0,0)); }
+			catch (const std::runtime_error&) { hook_failed=true; }
+			assert(hook_failed && !WW3D::Is_Rendering() &&
+				recorder.snapshot().find("draw pipeline=",before_failure.size())==std::string::npos);
+			reject->reject=false;
+			assert(WW3D::Begin_Render(false,false,Vector3(0,0,0),1)==WW3D_ERROR_OK);
+			assert(WW3D::Render(&scene,&camera,false,false,Vector3(0,0,0))==WW3D_ERROR_OK);
+			assert(WW3D::End_Render(false)==WW3D_ERROR_OK);
+			assert(WW3D::Shutdown()==WW3D_ERROR_OK);
+		}
+		scene.Remove_All_Render_Objects();
+		recorder.destroy(depth); recorder.destroy(color);
+		assert(recorder.resource_counts().total()==0);
+		object->Release_Ref(); manager.Free_Assets();
+		_TheFileFactory=previous_factory;
+		WW3D::Set_Thumbnail_Enabled(previous_thumbnail);
+		return 0;
+	}
 	if (argc==2 && std::strcmp(argv[1],"--scene-traversal")==0) {
 		const bool previous_thumbnail=WW3D::Get_Thumbnail_Enabled();
 		WW3D::Set_Thumbnail_Enabled(false);

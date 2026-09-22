@@ -325,6 +325,7 @@ void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
 {
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     if ((property==D3DRS_LIGHTING && value>1) ||
+        (property==D3DRS_FILLMODE && value!=D3DFILL_SOLID) ||
         ((property==D3DRS_AMBIENTMATERIALSOURCE || property==D3DRS_DIFFUSEMATERIALSOURCE ||
             property==D3DRS_SPECULARMATERIALSOURCE || property==D3DRS_EMISSIVEMATERIALSOURCE) && value>2) ||
         ((property==D3DRS_ALPHABLENDENABLE || property==D3DRS_ALPHATESTENABLE ||
@@ -333,7 +334,7 @@ void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
             property==D3DRS_LOCALVIEWER || property==D3DRS_COLORVERTEX) && value>1) ||
         (property==D3DRS_PATCHSEGMENTS && value!=0x3f800000U) ||
         (property==D3DRS_ZBIAS && value!=0U && value!=8U) ||
-        (property!=D3DRS_LIGHTING && property!=D3DRS_AMBIENT && property!=D3DRS_AMBIENTMATERIALSOURCE &&
+        (property!=D3DRS_FILLMODE && property!=D3DRS_LIGHTING && property!=D3DRS_AMBIENT && property!=D3DRS_AMBIENTMATERIALSOURCE &&
             property!=D3DRS_DIFFUSEMATERIALSOURCE && property!=D3DRS_SPECULARMATERIALSOURCE &&
             property!=D3DRS_EMISSIVEMATERIALSOURCE && property!=D3DRS_COLORVERTEX &&
             property!=D3DRS_LOCALVIEWER &&
@@ -480,6 +481,11 @@ void DX8Wrapper::Set_Fog(bool enabled,const Vector3& color,float start,float end
     std::memcpy(&end_bits,&end,sizeof(end_bits));
     Set_DX8_Render_State(D3DRS_FOGSTART,start_bits);
     Set_DX8_Render_State(D3DRS_FOGEND,end_bits);
+}
+void DX8Wrapper::Set_Ambient(const Vector3& color)
+{
+    const auto packed=Convert_Color(color,0.0f);
+    Set_DX8_Render_State(D3DRS_AMBIENT,packed);
 }
 
 void DX8Wrapper::Set_Vertex_Buffer(const VertexBufferClass* buffer,unsigned stream)

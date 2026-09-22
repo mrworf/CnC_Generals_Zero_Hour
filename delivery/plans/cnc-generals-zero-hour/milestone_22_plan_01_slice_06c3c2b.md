@@ -4,6 +4,8 @@
 
 Requires accepted C2A. Restore canonical `WW3D::Render(SceneClass*,CameraClass*,...)`, object and layer call paths in the Linux full configuration. The original source calls C1 camera clear and C2A scene traversal, then owns mesh/WWShade/static-sort/sorting Flush in the authored order. An owned mixed frame records original source provenance and produces validation-enabled public-bgfx Vulkan pixels, accepting C2 and aggregate C3C/C3 only after every fixture/error condition passes.
 
+Delivery order: B1 restores the canonical WW3D wrappers and source-solid recording path; B2 repairs and tests exception-safe static-list disable/refcount drain; B3 proves the complete source scene/static-sort path against public-bgfx Vulkan pixels. No B1/B2 success by itself accepts this aggregate.
+
 ## Scope and state
 
 Preserve source camera `On_Frame_Update`/`Apply`, source clear flags/color/depth/stencil, fill mode, ambient and light-environment, scene/object `Render`, and `TheDX8MeshRenderer.Flush()` → authored `SHD_FLUSH` → descending static-sort drain → sorting Flush → pending deletes. Restore the exact source methods, no adapter-owned scheduler or scene. Keep source static-list publication/refcount/reentrant disabling; make enable restoration and dequeued node ref releases exception-safe without reordering successful behavior. Wireframe/point fill and extra-pass family must either have exact physical support and tests or explicit pre-publication rejection; C4/08 audit retail reachability. No authorization beyond caller-owned device/fixture resources; retail root remains read-only.

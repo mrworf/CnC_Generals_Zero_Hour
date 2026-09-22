@@ -181,6 +181,7 @@ public:
     static bool Get_Fog_Enable();
     static D3DCOLOR Get_Fog_Color();
     static void Set_Fog(bool enabled,const Vector3& color,float start,float end);
+    static void Set_Ambient(const Vector3& color);
     static void Set_Vertex_Buffer(const VertexBufferClass* buffer,unsigned stream=0);
     static void Set_Vertex_Buffer(const DynamicVBAccessClass& access);
     static void Set_Index_Buffer(const IndexBufferClass* buffer,unsigned short base_offset);

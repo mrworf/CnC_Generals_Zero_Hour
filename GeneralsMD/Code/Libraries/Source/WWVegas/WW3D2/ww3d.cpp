@@ -114,6 +114,7 @@
 #include "bound.h"
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "original_gpu_edge.h"
+#include "OriginalW3DDeviceUnavailable.h"
 #include "dx8wrapper.h"
 #include "animatedsoundmgr.h"
 #include <stdexcept>
@@ -322,6 +323,10 @@ WW3DErrorType WW3D::Init(void *hwnd, char *defaultpal, bool lite)
 	*/
 	#if defined(ZH_WW3D_CPU_ONLY)
 	try {
+		// Native DX8Wrapper::Init owns this one-time source renderer init.
+		// The CPU device boundary omits DX8Wrapper::Init, so keep the same
+		// lifetime at the enclosing original WW3D source boundary.
+		TheDX8MeshRenderer.Init();
 	#endif
 	if (!lite) {
 		WWDEBUG_SAY(("Init Dazzles\n"));
@@ -415,6 +420,7 @@ WW3DErrorType WW3D::Shutdown(void)
 		DX8Wrapper::Shutdown();
 	}
 	#else
+	TheDX8MeshRenderer.Shutdown();
 	DX8Wrapper::Reset_Source_State();
 	#endif
 
@@ -954,8 +960,6 @@ WW3DErrorType WW3D::Begin_Render(bool clear,bool clearz,const Vector3 & color, f
 	return WW3D_ERROR_OK;
 }
 
-#if !defined(ZH_WW3D_CPU_ONLY)
-
 /***********************************************************************************************
  * WW3D::Render -- Render a list of layers, starting at the back.                              *
  *                                                                                             *
@@ -975,6 +979,9 @@ WW3DErrorType WW3D::Render(const LayerListClass &LayerList)
 	}
 
 	WWASSERT(IsRendering);
+	#if defined(ZH_WW3D_CPU_ONLY)
+	if (!IsRendering) throw std::runtime_error("original WW3D layer render requires an active source frame");
+	#endif
 
 	LayerClass *layer = LayerList.Last();
 
@@ -1010,6 +1017,9 @@ WW3DErrorType WW3D::Render(const LayerClass &Layer)
 	}
 
 	WWASSERT(IsRendering);
+	#if defined(ZH_WW3D_CPU_ONLY)
+	if (!IsRendering) throw std::runtime_error("original WW3D layer render requires an active source frame");
+	#endif
 	return Render(Layer.Scene, Layer.Camera, Layer.Clear, Layer.ClearZ, Layer.ClearColor);
 
 }
@@ -1039,6 +1049,14 @@ WW3DErrorType WW3D::Render(SceneClass * scene,CameraClass * cam,bool clear,bool 
 	WWASSERT(IsRendering);
 	WWASSERT(scene);
 	WWASSERT(cam);
+	#if defined(ZH_WW3D_CPU_ONLY)
+	if (!IsRendering || !scene || !cam)
+		throw std::runtime_error("original WW3D scene render requires active frame, scene and camera");
+	if (scene->Get_Polygon_Mode()!=SceneClass::FILL ||
+		scene->Get_Extra_Pass_Polygon_Mode()!=SceneClass::EXTRA_PASS_DISABLE)
+		throw OriginalW3DDeviceUnavailable("original WW3D non-solid scene mode is not translated");
+	try {
+	#endif
 
 	cam->On_Frame_Update();
 	RenderInfoClass rinfo(*cam);
@@ -1075,6 +1093,14 @@ WW3DErrorType WW3D::Render(SceneClass * scene,CameraClass * cam,bool clear,bool 
 	scene->Render(rinfo);
 
 	Flush(rinfo);
+	#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		IsRendering=false;
+		zh::original_runtime::OriginalGpuEdge::required().abort_source_frame();
+		DX8Wrapper::Reset_Source_State();
+		throw;
+	}
+	#endif
 
 	return WW3D_ERROR_OK;
 }
@@ -1092,7 +1118,7 @@ WW3DErrorType WW3D::Render(SceneClass * scene,CameraClass * cam,bool clear,bool 
  * HISTORY:                                                                                    *
  *   4/4/2001   gth : Created.                                                                 *
  *=============================================================================================*/
-#else
+#if defined(ZH_WW3D_CPU_ONLY)
 // Same canonical texture reduction state in the mutually exclusive Linux
 // configuration. Physical texture work remains in TextureLoader/GpuDevice.
 void WW3D::_Invalidate_Textures()
@@ -1125,7 +1151,7 @@ bool WW3D::Is_Large_Texture_Extra_Reduction_Enabled()
 {
 	return _LargeTextureExtraReductionEnabled;
 }
-#endif // !ZH_WW3D_CPU_ONLY
+#endif // ZH_WW3D_CPU_ONLY
 
 void WW3D::Set_Texture_Filter(int texture_filter)
 {
@@ -1154,6 +1180,9 @@ WW3DErrorType WW3D::Render(
 	WWPROFILE("WW3D::Render");
 	WWASSERT(IsInitted);
 	WWASSERT(IsRendering);
+	#if defined(ZH_WW3D_CPU_ONLY)
+	if (!IsRendering) throw std::runtime_error("original WW3D object render requires active source frame");
+	#endif
 
 	{
 		WWPROFILE("On_Frame_Update");
@@ -1161,7 +1190,6 @@ WW3DErrorType WW3D::Render(
 	}
 
 	// Apply the camera and viewport (including depth range)
-#if !defined(ZH_WW3D_CPU_ONLY)
 	rinfo.Camera.Apply();
 
 	// set the rendering mode
@@ -1171,7 +1199,6 @@ WW3DErrorType WW3D::Render(
 	if (rinfo.light_environment != NULL) {
 		DX8Wrapper::Set_Light_Environment(rinfo.light_environment);
 	}
-#endif
 
 	// Render the object
 	TheDX8MeshRenderer.Set_Camera(&rinfo.Camera);

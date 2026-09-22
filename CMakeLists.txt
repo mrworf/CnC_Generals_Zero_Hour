@@ -277,6 +277,7 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/statistics.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/stripoptimizer.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/scene.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/layer.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/light.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matpass.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WWMath/matrix4.cpp
@@ -2158,6 +2159,9 @@ if(ZH_BUILD_TESTS)
     LABELS "original-rendering;renderer-contract;source-identity;negative")
   add_test(NAME original_w3d_scene_traversal COMMAND original_w3d_cpu_graph_tests --scene-traversal)
   set_tests_properties(original_w3d_scene_traversal PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
+  add_test(NAME original_w3d_scene_wrapper COMMAND original_w3d_cpu_graph_tests --ww3d-scene-wrapper)
+  set_tests_properties(original_w3d_scene_wrapper PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")
   if(ZH_ENABLE_GPU_TESTS)
     add_test(NAME original_w3d_source_viewport_clear_bgfx COMMAND "${Python3_EXECUTABLE}"
