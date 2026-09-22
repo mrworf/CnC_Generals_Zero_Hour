@@ -1,0 +1,9 @@
+# M22 A1 Linux W3D allocation evidence
+
+`W3DMPO_GLUE` retains the virtual `glueEnforcer` slot and class shape on Linux but omits the fixed per-class pool operators, so W3D objects use the process C++ allocator. Non-Linux source policy remains unchanged. No `ZH_WW3D_ASAN_DIRECT_NEW` definition is present in any of the four ordinary preset compile-command files. The earlier diagnostic direct-new build passing 10/10 was a hypothesis only, not source-scene acceptance.
+
+Clang ASan+UBSan, Vulkan validation enabled on the host RTX: the focused original source scene passed 30/30 fresh processes before the failed-task repair, a further 30/30 after that repair, and a final 30/30 after diagnostic controls were removed. Each process covers two extents and BGRA8/RGBA8 with original rigid/static geometry, two device generations, color readback, teardown, and zero public handles. The CTest validation-output scanner also passed the final source-scene case. A failed-draw Recording refcount leak was traced to B3A source task invalidation, not allocation policy; after its separate uncommitted B3A repair, both GCC and Clang leak-capable source-only controls passed with all three fixture mesh refcounts exactly one before release.
+
+All four Debug/Release GCC/Clang preset builds and 174/174 asset-free non-ledger/non-LAN tests per preset passed. LAN tests passed in all four presets with host loopback permission (the sandbox denies UDP socket creation). The three dependency-ledger checks remain temporarily red only because B3A source files are still uncommitted and their hashes are intentionally not updated in this allocation-policy slice; B3A must close them before its acceptance. GCC/Clang ASan+UBSan focused original graph, static-sort failure, sorting, and Recording scene checks pass. No retail files or symlink content changed.
+
+No claim is made that the legacy pool's first corrupting write was identified.

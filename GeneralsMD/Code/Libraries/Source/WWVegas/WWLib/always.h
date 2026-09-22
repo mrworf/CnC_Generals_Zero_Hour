@@ -136,6 +136,15 @@ extern void* allocateFromW3DMemPool(void* p, int allocationSize, const char* msg
 extern void freeFromW3DMemPool(void* pool, void* p);
 
 // ----------------------------------------------------------------------------
+#if defined(__linux__)
+// The Linux CPU-only W3D port retains W3DMPO's source virtual layout but uses
+// the process-wide C++ allocator instead of the legacy fixed per-class pools.
+// All W3D translation units must use the same policy.
+#define W3DMPO_GLUE(ARGCLASS) \
+protected: \
+	virtual int glueEnforcer() const { return sizeof(this); } \
+public:
+#else
 #define W3DMPO_GLUE(ARGCLASS) \
 private: \
 	static void* getClassMemoryPool() \
@@ -156,6 +165,8 @@ public: \
 	inline void operator delete(void *p) { freeFromW3DMemPool(getClassMemoryPool(), p); } \
 	inline void* operator new(size_t s, const char* msg, int unused) { return allocateFromW3DMemPool(getClassMemoryPool(), s, msg, unused); } \
 	inline void operator delete(void *p, const char* msg, int unused) { freeFromW3DMemPool(getClassMemoryPool(), p); } \
+
+#endif
 
 // ----------------------------------------------------------------------------
 class W3DMPO
