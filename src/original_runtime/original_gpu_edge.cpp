@@ -705,7 +705,9 @@ void OriginalGpuEdge::select_texture(unsigned stage, const TextureBaseClass* sou
 {
     if (stage>=pending_stages_.size()) throw std::runtime_error("original texture stage exceeds DX8 stage count");
     auto handle=source ? texture_handle(source) : renderer::TextureHandle{};
-    if (pending_stages_[stage].source!=source) {
+    // An explicit null selection is also the source-equivalent release point
+    // for a sampler configured on a disabled legacy stage.
+    if (pending_stages_[stage].source!=source || !source) {
         if (pending_stages_[stage].sampler) device_.destroy(pending_stages_[stage].sampler);
         pending_stages_[stage]={};
         pending_filter_values_[stage]={};

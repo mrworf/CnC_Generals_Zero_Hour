@@ -53,6 +53,15 @@
 //
 //-----------------------------------------------------------------------------
 
+#if defined(ZH_WW3D_CPU_ONLY)
+
+#include "PreRTS.h"
+#include "w3d_shader_manager_cpu_types.h"
+#include "W3DDevice/GameClient/W3DShaderManager.h"
+#include "w3d_shader_manager_cpu.inc"
+
+#else
+
 #include "dx8wrapper.h"
 #include "assetmgr.h"
 #include "Lib/BaseType.h"
@@ -3730,7 +3739,7 @@ void FlatTerrainShaderPixelShader::reset(void)
 	DX8Wrapper::Invalidate_Cached_Render_States();
 }
 
-
+#endif
 
 
 

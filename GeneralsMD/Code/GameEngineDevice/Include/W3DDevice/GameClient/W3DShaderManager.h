@@ -37,12 +37,14 @@
 #define __W3DSHADERMANAGER_H_
 
 #include "WW3D2/Texture.h"
-enum FilterTypes;
 enum CustomScenePassModes : int;
+#if !defined(ZH_WW3D_CPU_ONLY)
+enum FilterTypes;
 enum StaticGameLODLevel;
 enum ChipsetType;
 enum CpuType;
 enum GraphicsVenderID;
+#endif
 
 class TextureClass;	///forward reference
 /** System for managing complex rendering settings which are either not handled by
@@ -82,7 +84,7 @@ public:
 	static void shutdown(void);	///<release resources used by shaders
 	static ChipsetType getChipset(void);	///<return current device chipset.
 	static GraphicsVenderID getCurrentVendor(void) {return m_currentVendor;}	///<return current card vendor.
-	static getCurrentDriverVersion(void) {return m_driverVersion; }	///<return current driver version.
+	static __int64 getCurrentDriverVersion(void) {return m_driverVersion; }	///<return current driver version.
 	static Int getShaderPasses(ShaderTypes shader);	///<rendering passes required for shader
 	static Int setShader(ShaderTypes shader, Int pass);	///<enable specific shader pass.
 	static Int setShroudTex(Int stage);	///<Set shroud in a texture stage.

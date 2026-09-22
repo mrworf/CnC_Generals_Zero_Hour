@@ -1,7 +1,10 @@
 #include "PreRTS.h"
 
 #include "Common/MapReaderWriterInfo.h"
+#include "Common/GlobalData.h"
+#include "w3d_shader_manager_cpu_types.h"
 #include "W3DDevice/GameClient/TerrainTex.h"
+#include "W3DDevice/GameClient/W3DShaderManager.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "WW3D2/dx8wrapper.h"
 #include "WW3D2/ww3d.h"
@@ -34,6 +37,125 @@ TestVisualMap *open_map(const char *path)
 	auto *map = NEW_REF(TestVisualMap, (&input));
 	input.close();
 	return map;
+}
+
+template <typename Operation>
+void require_rejected(Operation operation, const char *message)
+{
+	bool rejected = false;
+	try { operation(); } catch (const std::runtime_error &) { rejected = true; }
+	require(rejected, message);
+}
+
+void verify_terrain_shader(RecordingGpuDevice &device,
+	zh::original_runtime::OriginalGpuEdge &edge, TextureClass *base, TextureClass *alpha)
+{
+	using Edge = zh::original_runtime::OriginalGpuEdge;
+	using Op = Edge::CombinerOp;
+	using Arg = Edge::CombinerArg;
+	require_rejected([] { (void)W3DShaderManager::getShaderPasses(W3DShaderManager::ST_TERRAIN_BASE); },
+		"original terrain shader query before init was accepted");
+	W3DShaderManager::init();
+	require_rejected([] { W3DShaderManager::init(); },
+		"original terrain shader duplicate init was accepted");
+	require(W3DShaderManager::getShaderPasses(W3DShaderManager::ST_TERRAIN_BASE) == 2,
+		"original minimum terrain shader pass count changed");
+	require_rejected([] {
+		(void)W3DShaderManager::getShaderPasses(W3DShaderManager::ST_TERRAIN_BASE_NOISE1);
+	}, "original optional terrain noise shader was exposed");
+	require_rejected([] {
+		(void)W3DShaderManager::setShader(W3DShaderManager::ST_SHROUD_TEXTURE, 0);
+	}, "original optional effect shader was exposed");
+	require_rejected([] {
+		(void)W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, 2);
+	}, "original terrain shader accepted an invalid pass");
+	require_rejected([] {
+		(void)W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, 0);
+	}, "original terrain shader accepted an absent atlas pair");
+
+	ShaderClass baseline;
+	baseline.Set_Texturing(ShaderClass::TEXTURING_ENABLE);
+	DX8Wrapper::Set_Shader(baseline);
+	DX8Wrapper::Set_Material(nullptr);
+	DX8Wrapper::Set_Transform(D3DTS_WORLD, Matrix4x4(true));
+	DX8Wrapper::Set_Transform(D3DTS_VIEW, Matrix4x4(true));
+	DX8Wrapper::Set_Transform(D3DTS_PROJECTION, Matrix4x4(true));
+	DX8Wrapper::Apply_Render_State_Changes();
+	W3DShaderManager::setTexture(0, base);
+	W3DShaderManager::setTexture(1, alpha);
+	TextureClass unpublished("unpublished", "unpublished.tga", MIP_LEVELS_ALL,
+		WW3D_FORMAT_UNKNOWN, true, true);
+	W3DShaderManager::setTexture(1, &unpublished);
+	require_rejected([] {
+		(void)W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, 0);
+	}, "original terrain shader accepted an unpublished alias owner");
+	W3DShaderManager::setTexture(1, alpha);
+	device.fail_next_sampler_create();
+	require_rejected([] {
+		(void)W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, 0);
+	}, "original terrain shader sampler failure was ignored");
+	require(!edge.pending_stage(0).source && !edge.pending_stage(1).source &&
+		device.resource_counts().samplers == 0 &&
+		W3DShaderManager::getCurrentShader() == W3DShaderManager::ST_INVALID,
+		"original terrain shader failure retained delayed state");
+
+	require(W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, 0),
+		"original terrain base pass zero failed after rollback");
+	const auto pass0_texture = edge.pending_stage(0);
+	const auto pass0_sampler = device.sampler_descriptor(pass0_texture.sampler);
+	const auto pass0 = Edge::map_applied_state(DX8_FVF_XYZNUV2);
+	require(pass0_texture.source == base && pass0_texture.texture == edge.texture_handle(base) &&
+		pass0_sampler.min_filter == zh::renderer::Filter::linear &&
+		pass0_sampler.mag_filter == zh::renderer::Filter::linear &&
+		pass0_sampler.mip_filter == zh::renderer::Filter::nearest &&
+		pass0_sampler.address_u == zh::renderer::AddressMode::clamp_edge &&
+		pass0_sampler.address_v == zh::renderer::AddressMode::clamp_edge,
+		"original terrain base pass zero selected the wrong atlas/filter");
+	require(pass0.stages[0].uv_source == 0 && pass0.stages[0].color.op == Op::modulate &&
+		pass0.stages[0].color.first == Arg::texture &&
+		pass0.stages[0].color.second == Arg::diffuse &&
+		pass0.stages[0].alpha.op == Op::disable &&
+		pass0.stages[1].color.op == Op::disable && !pass0.pipeline.blend.enabled,
+		"original terrain base pass zero state changed");
+	const auto active_sampler = pass0_texture.sampler;
+	require(W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, 0) &&
+		edge.pending_stage(0).sampler == active_sampler && device.resource_counts().samplers == 2,
+		"original terrain shader idempotence cleared an active stage");
+	require_rejected([] { W3DShaderManager::shutdown(); },
+		"original terrain shader shutdown accepted an active pass");
+	W3DShaderManager::resetShader(W3DShaderManager::ST_TERRAIN_BASE);
+	if (edge.pending_stage(0).source || edge.pending_stage(1).source ||
+		device.resource_counts().samplers != 0)
+		throw std::runtime_error("original terrain pass zero reset retained texture state: samplers=" +
+			std::to_string(device.resource_counts().samplers));
+
+	DX8Wrapper::Set_Shader(baseline);
+	DX8Wrapper::Apply_Render_State_Changes();
+	require(W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, 1),
+		"original terrain alpha pass failed");
+	const auto pass1_texture = edge.pending_stage(0);
+	const auto pass1 = Edge::map_applied_state(DX8_FVF_XYZNUV2);
+	require(pass1_texture.source == alpha &&
+		pass1_texture.texture == edge.texture_handle(base) &&
+		pass1_texture.texture == edge.texture_handle(alpha),
+		"original terrain alpha pass did not select the shared alias handle");
+	require(pass1.stages[0].uv_source == 1 && pass1.stages[0].color.op == Op::modulate &&
+		pass1.stages[0].alpha.op == Op::modulate && pass1.pipeline.blend.enabled &&
+		pass1.pipeline.blend.source_color == zh::renderer::BlendFactor::src_alpha &&
+		pass1.pipeline.blend.destination_color == zh::renderer::BlendFactor::inv_src_alpha &&
+		pass1.stages[1].color.op == Op::disable,
+		"original terrain alpha pass state changed");
+	W3DShaderManager::resetShader(W3DShaderManager::ST_TERRAIN_BASE);
+	W3DShaderManager::resetShader(W3DShaderManager::ST_TERRAIN_BASE);
+	DX8Wrapper::Set_Shader(baseline);
+	DX8Wrapper::Apply_Render_State_Changes();
+	require(!Edge::map_applied_state(DX8_FVF_XYZNUV2).pipeline.blend.enabled,
+		"original terrain shader reset did not restore delayed shader selection");
+	W3DShaderManager::shutdown();
+	W3DShaderManager::shutdown();
+	require_rejected([] {
+		(void)W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, 0);
+	}, "original terrain shader accepted a pass after shutdown");
 }
 
 void expect_rollback(const char *path, unsigned create_after, unsigned upload_after)
@@ -106,6 +228,14 @@ void successful_generation(const char *path)
 		device.texture_bytes(edge_handle, 2).size() == 512U * 4U,
 		"original terrain edge atlas gradient or mip chain changed");
 	require(!map->getFlipState(0, 0), "original flat terrain flip table changed");
+	require(TheGlobalData, "original terrain shader global settings are absent");
+	const Bool old_bilinear = TheGlobalData->m_bilinearTerrainTex;
+	const Bool old_trilinear = TheGlobalData->m_trilinearTerrainTex;
+	TheWritableGlobalData->m_bilinearTerrainTex = true;
+	TheWritableGlobalData->m_trilinearTerrainTex = false;
+	verify_terrain_shader(device, edge, base, alpha);
+	TheWritableGlobalData->m_bilinearTerrainTex = old_bilinear;
+	TheWritableGlobalData->m_trilinearTerrainTex = old_trilinear;
 	WW3D::Set_Texture_Filter(TextureFilterClass::TEXTURE_FILTER_BILINEAR);
 	DX8Wrapper::Set_Texture(0, base);
 	device.fail_next_sampler_create();
