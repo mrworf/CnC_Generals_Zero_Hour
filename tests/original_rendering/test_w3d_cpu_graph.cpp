@@ -399,6 +399,7 @@ int main(int argc, char **argv)
 	const bool threaded_source_device=argc==2 &&
 		(std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-viewport-clear")==0);
 	if (threaded_source_device) {
 		assert(!TheDmaCriticalSection && !TheMemoryPoolCriticalSection);
@@ -421,10 +422,17 @@ int main(int argc, char **argv)
 		(std::strcmp(argv[1],"--source-static-scene")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
 		 std::strcmp(argv[1],"--source-mixed-scene")==0 ||
-		 std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0);
+		 std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0 ||
+		 std::strcmp(argv[1],"--source-mixed-fault-matrix")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0);
 	const bool focused_mixed_scene = argc==2 &&
 		(std::strcmp(argv[1],"--source-mixed-scene")==0 ||
-		 std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0);
+		 std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0 ||
+		 std::strcmp(argv[1],"--source-mixed-fault-matrix")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0);
+	const bool focused_fault_scene = argc==2 &&
+		(std::strcmp(argv[1],"--source-mixed-fault-matrix")==0 ||
+		 std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0);
 	if (focused_static_scene) {
 		// This gate owns only the three original W3D mesh families it renders.
 		make_mesh(writer,false); // TEST.TRIANGLE
@@ -484,7 +492,8 @@ int main(int argc, char **argv)
 	assert(manager.Load_3D_Assets(input));
 	if (focused_static_scene) {
 		const bool physical=std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
-			std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0;
+			std::strcmp(argv[1],"--bgfx-source-mixed-scene")==0 ||
+			std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0;
 		OwnedFactory factory;
 		factory.files["mytex.tga"]=original_targa();
 		factory.files["MYTEX.TGA"]=factory.files["mytex.tga"];
@@ -519,7 +528,7 @@ int main(int argc, char **argv)
 			const auto color=device.create_texture(target,"original source static scene color");
 			assert(device.describe_texture_format(color)==color_format);
 			target.format=zh::renderer::TextureFormat::depth24_stencil8;
-			const auto depth=device.create_texture(target,"original source static scene depth");
+			auto depth=device.create_texture(target,"original source static scene depth");
 			assert(color && depth);
 			std::vector<unsigned char> baseline,with_both,without_one;
 			std::vector<unsigned char> with_skin,with_decal,with_sorted,with_front,with_back,with_mixed;
@@ -592,6 +601,65 @@ int main(int argc, char **argv)
 				return readback(color);
 				};
 				baseline=frame();
+				if (focused_fault_scene) {
+					if (!physical) {
+						auto* recorder=dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
+						assert(recorder);
+						bool bad_clear=false;
+						try { (void)WW3D::Begin_Render(true,true,Vector3(1.2f,0,0),1); }
+						catch (const std::runtime_error&) { bad_clear=true; }
+						assert(bad_clear && !WW3D::Is_Rendering() && !recorder->pass_active());
+						assert(frame().empty());
+					}
+					device.destroy(depth);
+					bool stale=false;
+					try { (void)frame(); }
+					catch (const std::runtime_error&) { stale=true; }
+					assert(stale && !WW3D::Is_Rendering());
+					if (!physical) {
+						auto* recorder=dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
+						assert(recorder && !recorder->pass_active());
+					}
+					depth=device.create_texture(target,"recreated original scene depth");
+					assert(depth);
+					edge.bind_frame_targets(color,depth,width,height);
+					const auto recovered=frame();
+					assert(physical ? recovered==baseline : recovered.empty());
+				}
+				auto reject_scene_draw=[&](const char* stage) {
+					assert(focused_fault_scene && !physical);
+					auto* recorder=dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
+					assert(recorder);
+					const auto marker=recorder->snapshot().size();
+					edge.record_source_state(stage);
+					recorder->fail_draw_after(1); // First rigid succeeds; next category/static/sort draw fails.
+					bool rejected=false;
+					try { (void)frame(); }
+					catch (const std::runtime_error& error) {
+						rejected=std::strstr(error.what(),"draw")!=nullptr;
+					}
+					const auto failure=recorder->snapshot().substr(marker);
+					assert(rejected && failure.find(stage)!=std::string::npos &&
+						failure.find("injected physical draw failure")!=std::string::npos &&
+						!WW3D::Is_Rendering() && !recorder->pass_active());
+					RenderStateStruct released;
+					DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+					DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+					DX8Wrapper::Get_Render_State(released);
+					assert(!released.vertex_buffers[0] && !released.index_buffer);
+					assert(rigid->Num_Refs()==2);
+					if (std::strcmp(stage,"static")==0)
+						assert(level1->Num_Refs()==2 && level2->Num_Refs()==2);
+					else if (std::strcmp(stage,"category")==0)
+						assert(skin_hlod && skin_hlod->Num_Refs()==2);
+					else if (std::strcmp(stage,"sorting")==0)
+						assert(sorted && sorted->Num_Refs()==2);
+					else assert(false);
+					if (std::strcmp(stage,"static")==0) drained.clear();
+					assert(frame().empty());
+					if (std::strcmp(stage,"static")==0)
+						assert(drained.size()==2 && drained[0]==2 && drained[1]==1);
+				};
 				if (!physical) {
 					auto* recorder=dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
 					assert(recorder);
@@ -618,6 +686,7 @@ int main(int argc, char **argv)
 					drained.clear();
 					with_both=frame();
 					assert(drained.size()==2 && drained[0]==2 && drained[1]==1);
+					if (focused_fault_scene && !physical) reject_scene_draw("static");
 					scene.Remove_Render_Object(level1);
 					drained.clear();
 					without_one=frame();
@@ -672,10 +741,12 @@ int main(int argc, char **argv)
 					scene.Add_Render_Object(skin_hlod);
 					edge.record_source_state("fixture mixed skin frame");
 					with_skin=frame();
+					if (focused_fault_scene && !physical) reject_scene_draw("category");
 					scene.Remove_Render_Object(skin_hlod);
 					scene.Add_Render_Object(sorted);
 					edge.record_source_state("fixture mixed sort frame");
 					with_sorted=frame();
+					if (focused_fault_scene && !physical) reject_scene_draw("sorting");
 					scene.Remove_Render_Object(sorted);
 					front->Peek_Model()->Set_Flag(MeshGeometryClass::SORT,false);
 					front->Peek_Model()->Peek_Single_Material()->Set_Lighting(false);
@@ -762,6 +833,10 @@ int main(int argc, char **argv)
 			}
 			device.destroy(depth); device.destroy(color);
 			assert(!device.describe_texture_format(color));
+			if (focused_fault_scene && !physical) {
+				auto* recorder=dynamic_cast<zh::renderer::RecordingGpuDevice*>(&device);
+				assert(recorder && recorder->resource_counts().total()==0);
+			}
 			if (physical) {
 #if defined(ZH_BGFX_SHADER_DIR)
 				auto* bgfx=dynamic_cast<zh::renderer::BgfxGpuDevice*>(&device);

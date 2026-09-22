@@ -2191,6 +2191,9 @@ if(ZH_BUILD_TESTS)
   add_test(NAME original_w3d_source_mixed_scene COMMAND original_w3d_cpu_graph_tests --source-mixed-scene)
   set_tests_properties(original_w3d_source_mixed_scene PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")
+  add_test(NAME original_w3d_source_mixed_fault_matrix COMMAND original_w3d_cpu_graph_tests --source-mixed-fault-matrix)
+  set_tests_properties(original_w3d_source_mixed_fault_matrix PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
   if(ZH_ENABLE_GPU_TESTS)
     add_test(NAME original_w3d_source_viewport_clear_bgfx COMMAND "${Python3_EXECUTABLE}"
       "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
@@ -2209,6 +2212,12 @@ if(ZH_BUILD_TESTS)
       $<TARGET_FILE:original_w3d_cpu_graph_tests> --bgfx-source-mixed-scene)
     set_tests_properties(original_w3d_source_mixed_scene_bgfx PROPERTIES
       LABELS "gpu;original-rendering;renderer-contract;source-identity" TIMEOUT 120 RUN_SERIAL TRUE
+      ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+    add_test(NAME original_w3d_source_mixed_fault_retry_bgfx COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:original_w3d_cpu_graph_tests> --bgfx-source-mixed-fault-retry)
+    set_tests_properties(original_w3d_source_mixed_fault_retry_bgfx PROPERTIES
+      LABELS "gpu;original-rendering;renderer-contract;source-identity;negative" TIMEOUT 120 RUN_SERIAL TRUE
       ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
   endif()
   add_test(NAME original_w3d_texture_frame_update COMMAND original_w3d_cpu_graph_tests --texture-frame-update)
