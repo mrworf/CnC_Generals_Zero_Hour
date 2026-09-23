@@ -52,6 +52,7 @@
 #include "W3DDevice/GameClient/BaseHeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
+#include "WW3D2/scene.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
 
@@ -113,18 +114,51 @@ RenderObjClass *BaseHeightMapRenderObjClass::Clone() const
 }
 int BaseHeightMapRenderObjClass::Class_ID() const { return RenderObjClass::CLASSID_TILEMAP; }
 bool BaseHeightMapRenderObjClass::Cast_Ray(RayCollisionTestClass&) { return false; }
-void BaseHeightMapRenderObjClass::Get_Obj_Space_Bounding_Sphere(SphereClass&) const
+void BaseHeightMapRenderObjClass::Get_Obj_Space_Bounding_Sphere(SphereClass & sphere) const
 {
-	throw OriginalW3DDeviceUnavailable("original empty terrain bounds pending");
+	Int x = 0;
+	Int y = 0;
+	if (m_map) {
+		x = m_map->getXExtent();
+		y = m_map->getYExtent();
+	}
+	Vector3 center(static_cast<float>(x) * 0.5f * MAP_XY_FACTOR,
+		static_cast<float>(y) * 0.5f * MAP_XY_FACTOR,
+		static_cast<float>(m_minHeight + (m_maxHeight - m_minHeight) * 0.5f));
+	const float radius = center.Length();
+	if (m_map) {
+		center.X += m_map->getDrawOrgX() * MAP_XY_FACTOR;
+		center.Y += m_map->getDrawOrgY() * MAP_XY_FACTOR;
+	}
+	sphere.Init(center, radius);
 }
-void BaseHeightMapRenderObjClass::Get_Obj_Space_Bounding_Box(AABoxClass&) const
+void BaseHeightMapRenderObjClass::Get_Obj_Space_Bounding_Box(AABoxClass & box) const
 {
-	throw OriginalW3DDeviceUnavailable("original empty terrain bounds pending");
+	Int x = 0;
+	Int y = 0;
+	if (m_map) {
+		x = m_map->getXExtent();
+		y = m_map->getYExtent();
+	}
+	const Vector3 min_point(0.0f, 0.0f, static_cast<float>(m_minHeight));
+	const Vector3 max_point(static_cast<float>(x) * MAP_XY_FACTOR,
+		static_cast<float>(y) * MAP_XY_FACTOR, static_cast<float>(m_maxHeight));
+	box.Init(MinMaxAABoxClass(min_point, max_point));
 }
 void BaseHeightMapRenderObjClass::On_Frame_Update() {}
-void BaseHeightMapRenderObjClass::Notify_Added(SceneClass*)
+void BaseHeightMapRenderObjClass::Notify_Added(SceneClass *scene)
 {
-	throw OriginalW3DDeviceUnavailable("original empty terrain scene registration pending");
+	if (!scene || Peek_Scene())
+		throw OriginalW3DDeviceUnavailable("original terrain scene attachment unavailable");
+	RenderObjClass::Notify_Added(scene);
+	scene->Register(this, SceneClass::ON_FRAME_UPDATE);
+}
+void BaseHeightMapRenderObjClass::Notify_Removed(SceneClass *scene)
+{
+	if (!scene || scene != Peek_Scene())
+		throw OriginalW3DDeviceUnavailable("original terrain scene detachment unavailable");
+	scene->Unregister(this, SceneClass::ON_FRAME_UPDATE);
+	RenderObjClass::Notify_Removed(scene);
 }
 int BaseHeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *map,
 	RefRenderObjListIterator*, Bool update_extra_pass_tiles)

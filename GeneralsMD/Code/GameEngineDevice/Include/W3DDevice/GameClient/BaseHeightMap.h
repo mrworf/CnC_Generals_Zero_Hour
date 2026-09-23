@@ -120,6 +120,9 @@ public:
 
 	virtual void					On_Frame_Update(void); 
 	virtual void					Notify_Added(SceneClass * scene);
+#if defined(ZH_WW3D_CPU_ONLY)
+	virtual void					Notify_Removed(SceneClass * scene);
+#endif
 
   // Other VIRTUAL methods. [3/20/2003]
 

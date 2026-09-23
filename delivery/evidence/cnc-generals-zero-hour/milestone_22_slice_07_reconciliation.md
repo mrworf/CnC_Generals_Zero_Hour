@@ -26,9 +26,10 @@ they cannot be postponed to retail slice 08 or silently treated as absent.
 
 ## Replanned graph
 
-`07F8 -> 07F9 -> {07FA, 07FB, 07FC, 07FD, 07FE} -> 07FF -> 07FG -> 08 -> 09`
+`07F8 -> 07F8A -> 07F9 -> {07FA, 07FB, 07FC, 07FD, 07FE} -> 07FF -> 07FG -> 08 -> 09`
 
-The braces are independent source-producer children after transactional map
+07F8A is the reusable terrain bounds and rigid scene-update registration
+prerequisite exposed by the first 07F9 probe. The braces are independent source-producer children after transactional map
 load. 07FA owns map frame/shroud traversal; 07FB tracks; 07FC water; 07FD
 shadows; and 07FE particles/smudges. 07FF is the generated full-feature
 Recording integration gate, and 07FG is production publication. 08 may read

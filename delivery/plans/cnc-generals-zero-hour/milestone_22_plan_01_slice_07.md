@@ -41,5 +41,5 @@ the [07 reconciliation](../../evidence/cnc-generals-zero-hour/milestone_22_slice
 publication, shroud-before-view update, track flush, water, shadow and active
 particle/smudge routes, while the current Linux view/display branches still
 reject loaded maps. The required pre-retail closure is
-`07F9 -> {07FA, 07FB, 07FC, 07FD, 07FE} -> 07FF -> 07FG`; only after 07FG may
+`07F8A -> 07F9 -> {07FA, 07FB, 07FC, 07FD, 07FE} -> 07FF -> 07FG`; only after 07FG may
 slice 08 read private retail data. Slice 07 remains pending.

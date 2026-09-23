@@ -2,7 +2,7 @@
 
 ## Outcome and dependency
 
-Requires 07F8 and the accepted empty `W3DTerrainVisual` owner chain. Implement
+Requires 07F8A and the accepted empty `W3DTerrainVisual` owner chain. Implement
 the smallest source-equivalent `W3DTerrainVisual::load` transaction using a
 generated, read-only map: construct the source `WorldHeightMap`, initialise the
 existing `HeightMapRenderObjClass`, attach it to the original 3D scene, and
