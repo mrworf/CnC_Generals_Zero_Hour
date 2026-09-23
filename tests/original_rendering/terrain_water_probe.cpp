@@ -16,7 +16,9 @@
 #include "zh/renderer/recording_device.h"
 
 #include <cstdio>
+#include <cmath>
 #include <cstdlib>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -25,6 +27,16 @@ void require(bool value, const char *message) { if (!value) throw std::runtime_e
 template <typename F> bool rejected(F f) { try { f(); } catch (const std::runtime_error &) { return true; } return false; }
 unsigned draws(const std::string &trace) { unsigned n=0; for (std::size_t p=trace.find("draw pipeline="); p!=std::string::npos; p=trace.find("draw pipeline=",p+1)) ++n; return n; }
 unsigned before(const std::string &trace, const char *needle, std::size_t end) { unsigned n=0; for (std::size_t p=trace.find(needle);p!=std::string::npos&&p<end;p=trace.find(needle,p+1)) ++n; return n; }
+bool near(Real left, Real right) { return std::fabs(left-right)<0.0001f; }
+class ScalarProbeWater final : public WaterRenderObjClass {
+public:
+	bool scalar_state_is(Real low, Real high, Real a, Real b, Real c, Real range) const {
+		return near(m_minGridHeight,low) && near(m_maxGridHeight,high) &&
+			near(m_gridChangeAtt0,a) && near(m_gridChangeAtt1,b) && near(m_gridChangeAtt2,c) &&
+			near(m_gridChangeMaxRange,range/m_gridCellSize) && near(m_gridCellsX,4) &&
+			near(m_gridCellsY,5) && near(m_gridCellSize,2);
+	}
+};
 }
 
 extern "C" void zh_probe_terrain_water()
@@ -121,20 +133,40 @@ extern "C" void zh_probe_terrain_water()
 	TheWritableGlobalData->m_useWaterPlane=FALSE; TheWritableGlobalData->m_useCloudPlane=TRUE;
 	TheWritableGlobalData->m_waterExtentX=0; TheWritableGlobalData->m_waterExtentY=0;
 	TheWritableGlobalData->m_waterType=WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT;
-	{
+	for (Int generation=0; generation!=2; ++generation) {
 		zh::original_runtime::OriginalGpuEdge edge(device); W3DDisplay display; display.init();
-		WaterRenderObjClass cloud;
-		unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE");
-		require(rejected([&]{cloud.init(0,0,0,W3DDisplay::m_3DScene,WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT);}),
-			"original default zero-extent cloud owner was accepted");
-		setenv("ZH_M22_RETAIL_CONFIG_ROUTE","1",1);
-		require(cloud.init(0,0,0,W3DDisplay::m_3DScene,WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT)==0 &&
-			TheWaterRenderObj==&cloud && cloud.hasPendingGpuResources(),
-			"original selected fixed cloud owner failed");
-		unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE"); edge.release_source_buffers();
+		{
+			ScalarProbeWater cloud;
+			unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE");
+			require(rejected([&]{cloud.init(0,0,0,W3DDisplay::m_3DScene,WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT);}),
+				"original default zero-extent cloud owner was accepted");
+			setenv("ZH_M22_RETAIL_CONFIG_ROUTE","1",1);
+			require(cloud.init(0,0,0,W3DDisplay::m_3DScene,WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT)==0 &&
+				TheWaterRenderObj==&cloud && cloud.hasPendingGpuResources(),
+				"original selected fixed cloud owner failed");
+			unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE");
+			require(rejected([&]{cloud.setGridHeightClamps(-3,7);}), "original cloud clamps accepted without selector");
+			setenv("ZH_M22_RETAIL_CONFIG_ROUTE","1",1);
+			cloud.setGridHeightClamps(-3,7);
+			cloud.setGridTransform(.25f,4,5,6);
+			cloud.setGridResolution(4,5,2);
+			cloud.setGridChangeAttenuationFactors(.1f,.2f,.3f,8);
+			const Matrix3D &transform=cloud.Get_Transform();
+			require(near(transform.Get_Translation().X,4) && near(transform.Get_Translation().Y,5) && near(transform.Get_Translation().Z,6) &&
+				cloud.scalar_state_is(-3,7,.1f,.2f,.3f,8), "original cloud scalar order/state changed");
+			require(rejected([&]{cloud.setGridResolution(-1,1,1);}) &&
+				rejected([&]{cloud.setGridTransform(std::numeric_limits<Real>::infinity(),0,0,0);}) &&
+				rejected([&]{cloud.setGridChangeAttenuationFactors(0,0,0,-1);}),
+				"original cloud scalar bounds changed");
+			ScalarProbeWater foreign;
+			require(rejected([&]{foreign.setGridHeightClamps(0,0);}), "original foreign cloud owner was accepted");
+			cloud.reset(); cloud.load(); cloud.update();
+			unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE");
+		}
+		edge.release_source_buffers();
 	}
 	TheWritableGlobalData->m_partitionCellSize=saved_partition; TheWritableGlobalData->m_maxTerrainTracks=saved_tracks; TheWritableGlobalData->m_makeTrackMarks=saved_marks;
 	TheWritableGlobalData->m_useWaterPlane=saved_water; TheWritableGlobalData->m_useCloudPlane=saved_cloud; TheWritableGlobalData->m_waterExtentX=saved_x; TheWritableGlobalData->m_waterExtentY=saved_y; TheWritableGlobalData->m_waterType=saved_type;
 	require(device.resource_counts().total()==0,"original water teardown retained Recording resources");
-	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 ordering=1 retry=2 tracks=1 siblings=0 generations=3 resources=0");
+	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 scalar-transaction=1 ordering=1 retry=2 tracks=1 siblings=0 generations=5 resources=0");
 }

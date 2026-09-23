@@ -19,7 +19,7 @@ RECORDING = re.compile(
 )
 AUDIT = re.compile(r"original retail terrain configuration: mask=(\d+)")
 REACHABILITY = re.compile(r"original retail terrain reachability: mask=(\d+) families=(\d+) owners=(\d+)")
-ROUTE_STAGE = re.compile(r"original retail terrain route: stage=([a-z]+)")
+SETUP = "original retail cloud setup: scalar-transaction=1"
 
 
 def snapshot(root: Path):
@@ -129,20 +129,18 @@ def main() -> int:
                     result = subprocess.run([str(executable)], cwd=state, env=environment, text=True,
                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
                     marker = REACHABILITY.search(result.stdout)
-                    stages = ROUTE_STAGE.findall(result.stdout)
                     teardown = "original recording factory teardown: resources=0" in result.stdout
                     rollback = "original graphics rollback:" in result.stderr and "owners=0" in result.stderr
-                    if (result.returncode != 3 or not marker or marker.groups() != ("30", "4", "1") or
+                    if (result.returncode != 3 or not marker or marker.groups() != ("30", "4", "1") or SETUP not in result.stdout or
                             not teardown or not rollback):
                         reason = "other"
                         for candidate in ("retail cloud owner foreign", "terrain-guard", "enabled-shadow", "volume", "water", "display"):
                             if candidate in result.stderr:
                                 reason = candidate
                                 break
-                        raise SystemExit("M22 08B retail reachability contract failed; "
+                        raise SystemExit("M22 08C retail scalar transaction contract failed; "
                                          f"status={result.returncode} marker={int(bool(marker))} "
-                                         f"teardown={int(teardown)} rollback={int(rollback)} "
-                                         f"stage={stages[-1] if stages else 'none'} reason={reason}; private output redacted")
+                                         f"teardown={int(teardown)} rollback={int(rollback)} reason={reason}; private output redacted")
                     reached.append(marker.groups())
             if len(set(reached)) != 1 or before != tuple(snapshot(root) for root in roots):
                 raise SystemExit("M22 08B retail reachability changed input or diverged")

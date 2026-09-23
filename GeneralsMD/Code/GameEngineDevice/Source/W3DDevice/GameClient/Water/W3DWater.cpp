@@ -43,6 +43,7 @@
 #include "WW3D2/dx8indexbuffer.h"
 #include "WW3D2/dx8vertexbuffer.h"
 #include <cstring>
+#include <cmath>
 
 WaterRenderObjClass *TheWaterRenderObj = NULL;
 static WaterRenderObjClass *s_emptyWaterOwner = NULL;
@@ -63,6 +64,18 @@ static void requireBoundedWaterOwner(WaterRenderObjClass *owner)
 	if (TheWaterRenderObj != owner || !zh::original_runtime::OriginalGpuEdge::active() ||
 		!W3DDisplay::m_3DScene || owner->Peek_Scene() != W3DDisplay::m_3DScene)
 		throw OriginalW3DDeviceUnavailable("original water owner unavailable");
+}
+
+static bool isRetailCloudOwner(WaterRenderObjClass *owner)
+{
+	return std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") && owner &&
+		TheWaterRenderObj == owner;
+}
+
+static void requireFiniteCloudScalar(Real value)
+{
+	if (!std::isfinite(value))
+		throw OriginalW3DDeviceUnavailable("original cloud setup scalar pending");
 }
 
 WaterRenderObjClass::WaterRenderObjClass()
@@ -224,12 +237,23 @@ void WaterRenderObjClass::enableWaterGrid(Bool state)
 }
 void WaterRenderObjClass::setGridHeightClamps(Real minz, Real maxz)
 {
+	if (isRetailCloudOwner(this)) {
+		requireFiniteCloudScalar(minz); requireFiniteCloudScalar(maxz);
+		m_minGridHeight=minz; m_maxGridHeight=maxz; return;
+	}
 	if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); if (minz || maxz) throw OriginalW3DDeviceUnavailable("original water grid height pending"); return; }
 	requireEmptyWaterOwner(this);
 	if (minz != 0 || maxz != 0) throw OriginalW3DDeviceUnavailable("original water grid height pending");
 }
 void WaterRenderObjClass::setGridChangeAttenuationFactors(Real a, Real b, Real c, Real range)
 {
+	if (isRetailCloudOwner(this)) {
+		requireFiniteCloudScalar(a); requireFiniteCloudScalar(b); requireFiniteCloudScalar(c); requireFiniteCloudScalar(range);
+		if (range < 0 || (m_gridCellSize == 0 && range != 0))
+			throw OriginalW3DDeviceUnavailable("original cloud setup attenuation pending");
+		m_gridChangeAtt0=a; m_gridChangeAtt1=b; m_gridChangeAtt2=c;
+		m_gridChangeMaxRange=m_gridCellSize == 0 ? 0 : range/m_gridCellSize; return;
+	}
 	if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); if (a || b || c || range) throw OriginalW3DDeviceUnavailable("original water grid attenuation pending"); return; }
 	requireEmptyWaterOwner(this);
 	if (a != 0 || b != 0 || c != 0 || range != 0)
@@ -237,6 +261,13 @@ void WaterRenderObjClass::setGridChangeAttenuationFactors(Real a, Real b, Real c
 }
 void WaterRenderObjClass::setGridTransform(Real angle, Real x, Real y, Real z)
 {
+	if (isRetailCloudOwner(this)) {
+		requireFiniteCloudScalar(angle); requireFiniteCloudScalar(x); requireFiniteCloudScalar(y); requireFiniteCloudScalar(z);
+		m_gridDirectionX=Vector2(1.0f,0.0f); m_gridOrigin.X=x; m_gridOrigin.Y=y;
+		Matrix3D xform(1); xform.Rotate_Z(angle); m_gridDirectionX.X=xform.Get_X_Vector().X; m_gridDirectionX.Y=xform.Get_X_Vector().Y;
+		m_gridDirectionY.X=xform.Get_Y_Vector().X; m_gridDirectionY.Y=xform.Get_Y_Vector().Y;
+		xform.Set_Translation(Vector3(x,y,z)); Set_Transform(xform); return;
+	}
 	if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); if (angle || x || y || z) throw OriginalW3DDeviceUnavailable("original water grid transform pending"); return; }
 	requireEmptyWaterOwner(this);
 	if (angle != 0 || x != 0 || y != 0 || z != 0)
@@ -244,6 +275,11 @@ void WaterRenderObjClass::setGridTransform(Real angle, Real x, Real y, Real z)
 }
 void WaterRenderObjClass::setGridResolution(Real x, Real y, Real size)
 {
+	if (isRetailCloudOwner(this)) {
+		requireFiniteCloudScalar(x); requireFiniteCloudScalar(y); requireFiniteCloudScalar(size);
+		if (x < 0 || y < 0 || size < 0 || x > 1024 || y > 1024) throw OriginalW3DDeviceUnavailable("original cloud setup resolution pending");
+		m_gridCellsX=static_cast<Int>(x); m_gridCellsY=static_cast<Int>(y); m_gridCellSize=size; return;
+	}
 	if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); if (x || y || size) throw OriginalW3DDeviceUnavailable("original water grid resolution pending"); return; }
 	requireEmptyWaterOwner(this);
 	if (x != 0 || y != 0 || size != 0)

@@ -182,6 +182,10 @@ void W3DTerrainVisual::init()
 		setWaterAttenuationFactors(NULL, TheGlobalData->m_vertexWaterAttenuationA[0],
 			TheGlobalData->m_vertexWaterAttenuationB[0], TheGlobalData->m_vertexWaterAttenuationC[0],
 			TheGlobalData->m_vertexWaterAttenuationRange[0]);
+		if (retailConfigRoute) {
+			std::puts("original retail cloud setup: scalar-transaction=1");
+			throw OriginalW3DDeviceUnavailable("original cloud-water setup next boundary pending");
+		}
 	} catch (...) {
 		releaseEmptyOwners();
 		throw;
