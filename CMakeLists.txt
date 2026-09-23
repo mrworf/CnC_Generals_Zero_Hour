@@ -1098,6 +1098,7 @@ target_link_options(zh_original_main PRIVATE -Wl,--gc-sections
 add_executable(zh_original_w3d_full_probe
   src/original_runtime/linux_main.cpp
   src/original_runtime/linux_game_engine.cpp
+  src/original_runtime/volume_stencil_contract.cpp
   tests/original_rendering/retail_material_probe.cpp
   tests/original_rendering/status_scene_probe.cpp
   tests/original_rendering/empty3d_scene_probe.cpp
@@ -1115,6 +1116,7 @@ add_executable(zh_original_w3d_full_probe
 	tests/original_rendering/volumetric_buffer_probe.cpp
 	tests/original_rendering/volumetric_geometry_probe.cpp
 	tests/original_rendering/volumetric_cpu_closure_probe.cpp
+	tests/original_rendering/volumetric_stencil_contract_probe.cpp
 	tests/original_rendering/shadow_source_owner_probe.cpp
 	tests/original_rendering/shadow_decal_route_probe.cpp
 	tests/original_rendering/particle_provider_probe.cpp
@@ -1175,6 +1177,9 @@ set_source_files_properties(tests/original_rendering/volumetric_geometry_probe.c
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/volumetric_cpu_closure_probe.cpp PROPERTIES
+  COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
+  COMPILE_OPTIONS "-fpermissive")
+set_source_files_properties(tests/original_rendering/volumetric_stencil_contract_probe.cpp PROPERTIES
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/shadow_source_owner_probe.cpp PROPERTIES
@@ -1960,6 +1965,25 @@ if(ZH_BUILD_TESTS)
     endforeach()
   endif()
 
+  add_executable(renderer_volume_stencil_gpu
+    tests/renderer/volume_stencil_gpu.cpp
+    src/original_runtime/volume_stencil_contract.cpp)
+  target_include_directories(renderer_volume_stencil_gpu PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime")
+  target_compile_definitions(renderer_volume_stencil_gpu PRIVATE
+    ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx")
+  target_link_libraries(renderer_volume_stencil_gpu PRIVATE
+    zh_renderer_sdl_gpu zh_renderer_bgfx SDL3::SDL3)
+  add_dependencies(renderer_volume_stencil_gpu zh_renderer_shaders zh_bgfx_shaders)
+  if(ZH_ENABLE_GPU_TESTS)
+    add_test(NAME renderer_volume_stencil_bgfx_gpu COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:renderer_volume_stencil_gpu>)
+    set_tests_properties(renderer_volume_stencil_bgfx_gpu PROPERTIES
+      LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE
+      ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+  endif()
+
   add_executable(renderer_texture_loader_tests tests/renderer/test_texture_loader.cpp)
   target_link_libraries(renderer_texture_loader_tests PRIVATE zh_renderer_sdl_gpu)
   add_test(NAME renderer_texture_loader COMMAND renderer_texture_loader_tests)
@@ -2312,6 +2336,11 @@ if(ZH_BUILD_TESTS)
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
     --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
   set_tests_properties(original_w3d_volumetric_cpu_closure PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
+  add_test(NAME original_w3d_volumetric_stencil_contract COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_volumetric_stencil_contract.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}" --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
+  set_tests_properties(original_w3d_volumetric_stencil_contract PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")
   add_test(NAME original_w3d_shadow_source_owner COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_shadow_source_owner.py"

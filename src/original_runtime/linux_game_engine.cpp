@@ -120,6 +120,7 @@ extern "C" void zh_probe_terrain_water();
 extern "C" void zh_probe_volumetric_buffer();
 extern "C" void zh_probe_volumetric_geometry();
 extern "C" void zh_probe_volumetric_cpu_closure();
+extern "C" void zh_probe_volumetric_stencil_contract();
 extern "C" void zh_probe_shadow_source_owner();
 extern "C" void zh_probe_shadow_decal_route();
 extern "C" void zh_probe_particle_provider();
@@ -792,6 +793,7 @@ public:
 				std::getenv("ZH_M22_VOLUME_BUFFER_PROFILE") != NULL ||
 				std::getenv("ZH_M22_VOLUME_GEOMETRY_PROFILE") != NULL ||
 				std::getenv("ZH_M22_VOLUME_CPU_CLOSURE_PROFILE") != NULL ||
+				std::getenv("ZH_M22_VOLUME_STENCIL_PROFILE") != NULL ||
 				std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") != NULL ||
 				std::getenv("ZH_M22_FULL_FEATURE_PROFILE") != NULL);
 			try {
@@ -868,6 +870,7 @@ public:
 			if (std::getenv("ZH_M22_VOLUME_BUFFER_PROFILE")) zh_probe_volumetric_buffer();
 			if (std::getenv("ZH_M22_VOLUME_GEOMETRY_PROFILE")) zh_probe_volumetric_geometry();
 			if (std::getenv("ZH_M22_VOLUME_CPU_CLOSURE_PROFILE")) zh_probe_volumetric_cpu_closure();
+			if (std::getenv("ZH_M22_VOLUME_STENCIL_PROFILE")) zh_probe_volumetric_stencil_contract();
 			if (std::getenv("ZH_M22_SHADOW_SOURCE_PROFILE")) zh_probe_shadow_source_owner();
 			if (std::getenv("ZH_M22_SHADOW_DECAL_PROFILE")) {
 				// The source drawable is constructed against the scenario's original
