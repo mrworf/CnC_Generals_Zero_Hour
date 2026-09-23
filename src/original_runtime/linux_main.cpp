@@ -19,6 +19,7 @@
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "original_gpu_edge.h"
 #include "zh/platform/bgfx_device.h"
+#include "zh/renderer/recording_device.h"
 #undef ZH_WW3D_CPU_ONLY
 #endif
 
@@ -162,9 +163,12 @@ int main(int argc, char **argv)
 	int result = 0;
 #if defined(ZH_M22_FULL_DRAW_TEST)
 	const bool originalFactoryProfile = std::getenv("ZH_M22_ORIGINAL_FACTORY_PROFILE") != nullptr;
+	const bool recordingFactoryProfile = std::getenv("ZH_M22_RECORDING_FACTORY_PROFILE") != nullptr;
 	const bool graphicsProfile = originalFactoryProfile ||
-		std::getenv("ZH_M22_GPU_DEVICE_ONLY_PROFILE") != nullptr;
+		std::getenv("ZH_M22_GPU_DEVICE_ONLY_PROFILE") != nullptr || recordingFactoryProfile;
 	std::unique_ptr<zh::renderer::BgfxGpuDevice> originalDisplayDevice;
+	std::unique_ptr<zh::renderer::RecordingGpuDevice> originalRecordingDevice;
+	zh::renderer::GpuDevice *originalGraphicsDevice = nullptr;
 	std::unique_ptr<zh::original_runtime::OriginalGpuEdge> originalDisplayEdge;
 	zh::renderer::TextureHandle originalDisplayColor;
 	zh::renderer::TextureHandle originalDisplayDepth;
@@ -184,20 +188,32 @@ int main(int argc, char **argv)
 			if (cacheBuild || (originalFactoryProfile &&
 				std::getenv("ZH_M22_GPU_DEVICE_ONLY_PROFILE")))
 				throw std::runtime_error("original graphics profile requires one normal startup mode");
+			if (recordingFactoryProfile && (!originalFactoryProfile ||
+				std::getenv("ZH_M22_GPU_DEVICE_ONLY_PROFILE")))
+				throw std::runtime_error("recording factory selector requires original factory profile only");
 			if (std::getenv("ZH_M22_FACTORY_FAIL_DEVICE"))
 				throw std::runtime_error("forced original graphics device failure");
-			zh::renderer::BgfxOptions options;
-			options.shader_root = ZH_BGFX_SHADER_DIR;
-			originalDisplayDevice = std::make_unique<zh::renderer::BgfxGpuDevice>(options);
-			originalDisplayEdge = std::make_unique<zh::original_runtime::OriginalGpuEdge>(*originalDisplayDevice);
+			if (recordingFactoryProfile)
+			{
+				originalRecordingDevice = std::make_unique<zh::renderer::RecordingGpuDevice>();
+				originalGraphicsDevice = originalRecordingDevice.get();
+			}
+			else
+			{
+				zh::renderer::BgfxOptions options;
+				options.shader_root = ZH_BGFX_SHADER_DIR;
+				originalDisplayDevice = std::make_unique<zh::renderer::BgfxGpuDevice>(options);
+				originalGraphicsDevice = originalDisplayDevice.get();
+			}
+			originalDisplayEdge = std::make_unique<zh::original_runtime::OriginalGpuEdge>(*originalGraphicsDevice);
 			zh::renderer::TextureDesc target;
 			target.width = 800;
 			target.height = 600;
 			target.render_target = true;
 			target.format = zh::renderer::TextureFormat::bgra8;
-			originalDisplayColor = originalDisplayDevice->create_texture(target, "original factory color");
+			originalDisplayColor = originalGraphicsDevice->create_texture(target, "original factory color");
 			target.format = zh::renderer::TextureFormat::depth24_stencil8;
-			originalDisplayDepth = originalDisplayDevice->create_texture(target, "original factory depth");
+			originalDisplayDepth = originalGraphicsDevice->create_texture(target, "original factory depth");
 			if (!originalDisplayColor || !originalDisplayDepth)
 				throw std::runtime_error("original factory render targets unavailable");
 			originalDisplayEdge->bind_frame_targets(originalDisplayColor, originalDisplayDepth, 800, 600);
@@ -222,7 +238,7 @@ int main(int argc, char **argv)
 		result = 3;
 	}
 #if defined(ZH_M22_FULL_DRAW_TEST)
-	if (graphicsProfile && originalDisplayDevice)
+	if (graphicsProfile && originalGraphicsDevice)
 	{
 		graphicsEngineAllocations = zh::original_process::live_pool_allocations();
 		// GameMain has returned after deleting GameEngine, whose subsystem list
@@ -246,18 +262,32 @@ int main(int argc, char **argv)
 		originalFactoryMapFrames = zh_linux_original_factory_map_frames();
 		if (originalFactoryProfile && result == 0)
 		{
-			const auto pixels = originalDisplayDevice->readback_rgba(originalDisplayColor);
-			const std::size_t center = (300U * 800U + 400U) * 4U;
-			for (std::size_t i = 0; i < pixels.size(); i += 4)
-				originalChangedPixels += pixels[i] != 0 || pixels[i + 1] != 0 || pixels[i + 2] != 0;
-			originalEmptyPixels = pixels.size() == 800U * 600U * 4U &&
-				pixels[center] == 0 && pixels[center + 1] == 0 &&
-				pixels[center + 2] == 0 && pixels[center + 3] == 255;
 			const bool rigidProfile = std::getenv("ZH_M22_FACTORY_RIGID_ASSET") != nullptr;
-			if ((rigidProfile ? originalChangedPixels == 0 : !originalEmptyPixels) ||
-				originalFactoryCounts[0] != 1 ||
+			bool factoryInvalid = originalFactoryCounts[0] != 1 ||
 				originalFactoryCounts[1] != 1 || originalFactoryCounts[2] != 1 ||
-				(std::getenv("ZH_M22_FACTORY_MAP") && originalFactoryMapFrames != 1))
+				(std::getenv("ZH_M22_FACTORY_MAP") && originalFactoryMapFrames != 1);
+			if (recordingFactoryProfile)
+			{
+				const auto operations = originalRecordingDevice->operation_counts();
+				const auto resources = originalRecordingDevice->resource_counts();
+				std::printf("original recording factory: commands=%zu creates=%zu uploads=%zu passes=%zu draws=%zu presents=%zu failures=%zu resources=%zu\n",
+					operations.commands, operations.creates, operations.uploads, operations.passes,
+					operations.draws, operations.presents, operations.failures, resources.total());
+				factoryInvalid = factoryInvalid || operations.commands == 0 || operations.creates < 2 ||
+					resources.textures != 2 || resources.total() != 2;
+			}
+			else
+			{
+				const auto pixels = originalDisplayDevice->readback_rgba(originalDisplayColor);
+				const std::size_t center = (300U * 800U + 400U) * 4U;
+				for (std::size_t i = 0; i < pixels.size(); i += 4)
+					originalChangedPixels += pixels[i] != 0 || pixels[i + 1] != 0 || pixels[i + 2] != 0;
+				originalEmptyPixels = pixels.size() == 800U * 600U * 4U &&
+					pixels[center] == 0 && pixels[center + 1] == 0 &&
+					pixels[center + 2] == 0 && pixels[center + 3] == 255;
+				factoryInvalid = factoryInvalid || (rigidProfile ? originalChangedPixels == 0 : !originalEmptyPixels);
+			}
+			if (factoryInvalid)
 			{
 				std::fprintf(stderr, "original graphics factory empty frame or owner identity failed: rendered=%u empty=%u changed=%zu owners=%u/%u/%u\n",
 					rigidProfile ? 1U : 0U, originalEmptyPixels ? 1U : 0U, originalChangedPixels,
@@ -266,13 +296,20 @@ int main(int argc, char **argv)
 			}
 		}
 	}
-	if (originalDisplayDevice)
+	if (originalGraphicsDevice)
 	{
-		if (originalDisplayDepth) originalDisplayDevice->destroy(originalDisplayDepth);
-		if (originalDisplayColor) originalDisplayDevice->destroy(originalDisplayColor);
+		if (originalDisplayDepth) originalGraphicsDevice->destroy(originalDisplayDepth);
+		if (originalDisplayColor) originalGraphicsDevice->destroy(originalDisplayColor);
 	}
 	originalDisplayEdge.reset();
 	originalDisplayDevice.reset();
+	if (originalRecordingDevice)
+	{
+		const auto resources = originalRecordingDevice->resource_counts();
+		std::printf("original recording factory teardown: resources=%zu\n", resources.total());
+		if (resources.total() != 0) result = 4;
+		originalRecordingDevice.reset();
+	}
 	if (graphicsProfile)
 		graphicsResidualAllocations = zh::original_process::live_pool_allocations();
 	if (graphicsProfile && result != 0)

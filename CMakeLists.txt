@@ -1544,6 +1544,16 @@ if(ZH_BUILD_TESTS)
       --generals-data-root "${ZH_M20_RETAIL_GENERALS_DATA}")
     set_tests_properties(original_simulation_retail PROPERTIES
       LABELS "original-simulation;retail;source-identity" TIMEOUT 300)
+
+    add_test(NAME original_w3d_retail_recording_audit COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_retail_recording_audit.py"
+      --executable "$<TARGET_FILE:zh_original_w3d_full_probe>"
+      --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+      --zh-data-root "${ZH_M20_RETAIL_ZH_DATA}"
+      --generals-data-root "${ZH_M20_RETAIL_GENERALS_DATA}")
+    set_tests_properties(original_w3d_retail_recording_audit PROPERTIES
+      LABELS "retail;original-rendering;renderer-contract;source-identity;negative"
+      TIMEOUT 300 RUN_SERIAL TRUE)
   endif()
   add_test(NAME original_simulation_behavior COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_simulation/test_simulation_behavior.py"

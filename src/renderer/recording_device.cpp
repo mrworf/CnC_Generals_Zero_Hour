@@ -655,6 +655,25 @@ ResourceCounts RecordingGpuDevice::resource_counts() const noexcept
     return {count(impl_->buffers), count(impl_->textures), count(impl_->samplers),
         count(impl_->shaders), count(impl_->pipelines)};
 }
+
+RecordingOperationCounts RecordingGpuDevice::operation_counts() const noexcept
+{
+    RecordingOperationCounts counts;
+    counts.commands = impl_->commands.size();
+    for (const auto& command : impl_->commands) {
+        const auto begins = [&command](const char* prefix) {
+            const std::size_t length = std::char_traits<char>::length(prefix);
+            return command.size() >= length && command.compare(0, length, prefix) == 0;
+        };
+        if (begins("create_")) ++counts.creates;
+        else if (begins("upload ") || begins("upload_texture ")) ++counts.uploads;
+        else if (begins("begin_pass ")) ++counts.passes;
+        else if (begins("draw ")) ++counts.draws;
+        else if (begins("present ")) ++counts.presents;
+        else if (begins("error ")) ++counts.failures;
+    }
+    return counts;
+}
 bool RecordingGpuDevice::pass_active() const noexcept { return impl_->in_pass; }
 std::vector<UInt8> RecordingGpuDevice::buffer_bytes(BufferHandle handle) const
 {

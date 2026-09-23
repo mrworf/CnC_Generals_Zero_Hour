@@ -25,6 +25,19 @@ struct ResourceCounts {
     friend bool operator!=(const ResourceCounts& left, const ResourceCounts& right) noexcept { return !(left == right); }
 };
 
+// A label-free summary for host-selected integration witnesses.  Unlike
+// snapshot(), this deliberately exposes no resource name, marker text, or
+// command payload and is therefore suitable for private-input acceptance.
+struct RecordingOperationCounts {
+    std::size_t commands = 0;
+    std::size_t creates = 0;
+    std::size_t uploads = 0;
+    std::size_t passes = 0;
+    std::size_t draws = 0;
+    std::size_t presents = 0;
+    std::size_t failures = 0;
+};
+
 class RecordingGpuDevice final : public GpuDevice {
 public:
     explicit RecordingGpuDevice(std::size_t pipeline_capacity = 256,
@@ -75,6 +88,7 @@ public:
     std::string snapshot() const;
     std::size_t pipeline_count() const noexcept;
     ResourceCounts resource_counts() const noexcept;
+    RecordingOperationCounts operation_counts() const noexcept;
     bool pass_active() const noexcept override;
     std::vector<UInt8> buffer_bytes(BufferHandle handle) const;
     std::vector<UInt8> last_draw_index_bytes() const;

@@ -31,6 +31,7 @@
 #include "PreRTS.h"
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include <cstdlib>
+#include <cstdio>
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/HeightMap.h"
@@ -99,18 +100,30 @@ void W3DTerrainVisual::init()
 			throw OriginalW3DDeviceUnavailable("original empty terrain visual re-entry unavailable");
 		return;
 	}
-	if (s_emptyTerrainVisual || TheTerrainVisual != this ||
+	const bool ownersUnavailable = s_emptyTerrainVisual || TheTerrainVisual != this ||
 		!zh::original_runtime::OriginalGpuEdge::active() || !W3DDisplay::m_3DScene ||
 		TheTerrainRenderObject || TheHeightMap || TheTerrainTracksRenderObjClassSystem ||
-		TheW3DShadowManager || TheWaterRenderObj || TheSmudgeManager ||
-		(TheGlobalData->m_maxTerrainTracks != 0 && TheGlobalData->m_maxTerrainTracks != 1) ||
-		TheGlobalData->m_useShadowVolumes ||
-		(TheGlobalData->m_useShadowDecals && !std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") && !std::getenv("ZH_M22_FULL_FEATURE_PROFILE")) ||
-		TheGlobalData->m_useCloudPlane ||
-		(TheGlobalData->m_useWaterPlane && (TheGlobalData->m_waterExtentX <= 0 ||
-		TheGlobalData->m_waterExtentY <= 0 || TheGlobalData->m_waterType != WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT)) ||
-		(!TheGlobalData->m_useWaterPlane && (TheGlobalData->m_waterExtentX != 0 ||
-		TheGlobalData->m_waterExtentY != 0 || TheGlobalData->m_waterType != 0)))
+		TheW3DShadowManager || TheWaterRenderObj || TheSmudgeManager;
+	const bool unsupportedTracks = TheGlobalData->m_maxTerrainTracks != 0 &&
+		TheGlobalData->m_maxTerrainTracks != 1;
+	const bool shadowVolumes = TheGlobalData->m_useShadowVolumes;
+	const bool shadowDecals = TheGlobalData->m_useShadowDecals &&
+		!std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") && !std::getenv("ZH_M22_FULL_FEATURE_PROFILE");
+	const bool cloudPlane = TheGlobalData->m_useCloudPlane;
+	const bool invalidEnabledWater = TheGlobalData->m_useWaterPlane &&
+		(TheGlobalData->m_waterExtentX <= 0 || TheGlobalData->m_waterExtentY <= 0 ||
+		TheGlobalData->m_waterType != WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT);
+	const bool invalidDisabledWater = !TheGlobalData->m_useWaterPlane &&
+		(TheGlobalData->m_waterExtentX != 0 || TheGlobalData->m_waterExtentY != 0 ||
+		TheGlobalData->m_waterType != 0);
+	const unsigned retailAuditMask = (ownersUnavailable ? 1U : 0U) |
+		(unsupportedTracks ? 2U : 0U) | (shadowVolumes ? 4U : 0U) |
+		(shadowDecals ? 8U : 0U) | (cloudPlane ? 16U : 0U) |
+		(invalidEnabledWater ? 32U : 0U) | (invalidDisabledWater ? 64U : 0U);
+	if (std::getenv("ZH_M22_RETAIL_CONFIG_AUDIT"))
+		std::printf("original retail terrain configuration: mask=%u\n", retailAuditMask);
+	if (ownersUnavailable || unsupportedTracks || shadowVolumes || shadowDecals || cloudPlane ||
+		invalidEnabledWater || invalidDisabledWater)
 		throw OriginalW3DDeviceUnavailable("original map or enabled terrain visual pending");
 	s_emptyTerrainVisual = this;
 	try {
