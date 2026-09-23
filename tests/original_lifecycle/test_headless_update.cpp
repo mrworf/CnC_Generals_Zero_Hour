@@ -12,6 +12,7 @@
 #include "Common/Recorder.h"
 #include "Common/Radar.h"
 #include "GameClient/Display.h"
+#include "GameClient/DisplayStringManager.h"
 #include "GameClient/Anim2D.h"
 #include "GameClient/Eva.h"
 #include "GameClient/GameClient.h"
@@ -20,6 +21,7 @@
 #include "GameClient/InGameUI.h"
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/GadgetProgressBar.h"
+#include "GameClient/GadgetStaticText.h"
 #include "GameClient/GUICallbacks.h"
 #include "GameClient/HeaderTemplate.h"
 #include "GameClient/View.h"
@@ -240,6 +242,7 @@ HeadlessGameWindow::~HeadlessGameWindow() = default;
 class HeadlessWindowManager final : public GameWindowManager
 {
 public:
+	void drainDestroyedWindows() { processDestroyList(); }
 	void update() override { if (presentation_tracking) { check(presentation_step == 1, "load-screen window update order changed"); presentation_step = 2; } GameWindowManager::update(); }
 	GameWindow *allocateNewWindow() override { return newInstance(HeadlessGameWindow); }
 #define ZH_HEADLESS_DRAW_GETTER(name) GameWinDrawFunc name() override { return NULL; }
@@ -329,6 +332,59 @@ private:
 	AsciiStringVec strings;
 };
 
+class HeadlessDisplayString final : public DisplayString
+{
+	MEMORY_POOL_GLUE_WITH_EXPLICIT_CREATE(HeadlessDisplayString, "HeadlessDisplayString", 8, 8)
+public:
+	void setWordWrap(Int width) override { wrap = width; }
+	void setWordWrapCentered(Bool value) override { centered = value; }
+	void draw(Int, Int, Color, Color) override {}
+	void draw(Int, Int, Color, Color, Int, Int) override {}
+	void getSize(Int *width, Int *height) override
+	{
+		if (width) *width = getWidth();
+		if (height) *height = 1;
+	}
+	Int getWidth(Int charPos = -1) override
+	{
+		return (charPos < 0 ? getTextLength() : std::min(charPos, getTextLength()));
+	}
+	void setUseHotkey(Bool, Color) override {}
+private:
+	Int wrap = 0;
+	Bool centered = FALSE;
+};
+HeadlessDisplayString::~HeadlessDisplayString() = default;
+
+class HeadlessDisplayStringManager final : public DisplayStringManager
+{
+public:
+	~HeadlessDisplayStringManager() override
+	{
+		while (m_stringList) freeDisplayString(m_stringList);
+	}
+	DisplayString *newDisplayString() override
+	{
+		DisplayString *value = newInstance(HeadlessDisplayString);
+		link(value);
+		return value;
+	}
+	void freeDisplayString(DisplayString *value) override
+	{
+		if (!value) return;
+		unLink(value);
+		value->deleteInstance();
+	}
+	DisplayString *getGroupNumeralString(Int) override { return newDisplayString(); }
+	DisplayString *getFormationLetterString() override { return newDisplayString(); }
+	Int count() const
+	{
+		Int total = 0;
+		for (DisplayString *value = m_stringList; value; value = value->next()) ++total;
+		return total;
+	}
+};
+
 class HeadlessScriptEngine final : public ScriptEngine { public: void update() override { ++updates; } int updates = 0; };
 class HeadlessTerrain final : public TerrainLogic { public: void update() override { ++updates; } int updates = 0; };
 class HeadlessAI final : public AI { public: void update() override { ++updates; } int updates = 0; };
@@ -393,6 +449,10 @@ int main()
 			"WINDOW\nWINDOWTYPE = PROGRESSBAR;\n"
 			"SCREENRECT = UPPERLEFT: 10 10 BOTTOMRIGHT: 110 30 CREATIONRESOLUTION: 800 600;\n"
 			"NAME = \"GeneratedSinglePlayer:Progress\";\nSTATUS = ENABLED IMAGE;\nSTYLE = PROGRESSBAR;\nEND\n"
+			"CHILD\nWINDOW\nWINDOWTYPE = STATICTEXT;\n"
+			"SCREENRECT = UPPERLEFT: 10 40 BOTTOMRIGHT: 210 60 CREATIONRESOLUTION: 800 600;\n"
+			"NAME = \"GeneratedSinglePlayer:Objective\";\nSTATUS = ENABLED IMAGE;\nSTYLE = STATICTEXT;\n"
+			"STATICTEXTDATA = CENTERED:No;\nEND\n"
 			"ENDALLCHILDREN\nEND\n";
 	}
 	char diagnostic[128]{};
@@ -473,6 +533,8 @@ int main()
 	HeadlessPartition *partition = new HeadlessPartition;
 	HeadlessGameText gameText;
 	TheGameText = &gameText;
+	HeadlessDisplayStringManager displayStrings;
+	TheDisplayStringManager = &displayStrings;
 	Anim2DCollection animations;
 	TheAnim2DCollection = &animations;
 	Eva eva;
@@ -511,6 +573,7 @@ int main()
 	TheGameEngine = engine;
 	TheNetwork = NULL;
 
+	const Int displayStringBaseline = displayStrings.count();
 	for (int generation = 0; generation != 2; ++generation)
 	{
 		CampaignManager campaigns;
@@ -618,24 +681,49 @@ int main()
 	}
 	check(windowManager->winGetWindowList() == NULL,
 		"cold BlankWindow resource did not detach from the actual manager");
-	WindowLayout *generatedTree = windowManager->winCreateLayout("Menus/GeneratedSinglePlayerTree.wnd");
-	check(generatedTree != NULL && generatedTree->getFirstWindow() != NULL,
-		"generated named SinglePlayer tree did not parse through the original layout owner");
-	if (generatedTree)
+	for (int generation = 0; generation != 2; ++generation)
 	{
-		GameWindow *rootWindow = generatedTree->getFirstWindow();
-		GameWindow *progressWindow = windowManager->winGetWindowFromId(rootWindow,
-			nameKeys.nameToKey(AsciiString("GeneratedSinglePlayer:Progress")));
-		check(progressWindow != NULL,
-			"generated named child lookup lost original NameKey identity");
-		GadgetProgressBarSetProgress(progressWindow, 37);
-		check(progressWindow && progressWindow->winGetUserData() == reinterpret_cast<void *>(37),
-			"generated progress gadget did not retain its source state");
-		generatedTree->destroyWindows();
-		generatedTree->deleteInstance();
+		WindowLayout *generatedTree = windowManager->winCreateLayout("Menus/GeneratedSinglePlayerTree.wnd");
+		check(generatedTree != NULL && generatedTree->getFirstWindow() != NULL,
+			"generated named SinglePlayer tree did not parse through the original layout owner");
+		if (generatedTree)
+		{
+			GameWindow *rootWindow = generatedTree->getFirstWindow();
+			GameWindow *progressWindow = windowManager->winGetWindowFromId(rootWindow,
+				nameKeys.nameToKey(AsciiString("GeneratedSinglePlayer:Progress")));
+			GameWindow *objectiveWindow = windowManager->winGetWindowFromId(rootWindow,
+				nameKeys.nameToKey(AsciiString("GeneratedSinglePlayer:Objective")));
+			check(progressWindow != NULL && objectiveWindow != NULL,
+				"generated named SinglePlayer child lookup lost original NameKey identity");
+			GadgetProgressBarSetProgress(progressWindow, 37);
+			check(progressWindow && progressWindow->winGetUserData() == reinterpret_cast<void *>(37),
+				"generated progress gadget did not retain its source state");
+			Mission *generatedMission = newInstance(Mission);
+			check(generatedMission != NULL, "generated mission label fixture did not allocate");
+			if (generatedMission)
+				generatedMission->m_missionObjectivesLabel[0].set("GeneratedObjectiveLabel");
+			UnicodeString translated = gameText.fetch(generatedMission ?
+				generatedMission->m_missionObjectivesLabel[0] : AsciiString::TheEmptyString);
+			GadgetStaticTextSetText(objectiveWindow, translated);
+			check(GadgetStaticTextGetText(objectiveWindow) == translated,
+				"generated mission label did not reach source static TextData");
+			UnicodeString replacement;
+			replacement.translate(AsciiString("GeneratedReplacementLabel"));
+			GadgetStaticTextSetText(objectiveWindow, replacement);
+			check(GadgetStaticTextGetText(objectiveWindow) == replacement,
+				"duplicate generated static label did not replace source text");
+			GadgetStaticTextSetText(objectiveWindow, UnicodeString::TheEmptyString);
+			check(GadgetStaticTextGetText(objectiveWindow).getLength() == 0,
+				"empty generated label did not clear source static text");
+			GadgetStaticTextSetText(NULL, replacement);
+			if (generatedMission) generatedMission->deleteInstance();
+			generatedTree->destroyWindows();
+			windowManager->drainDestroyedWindows();
+			generatedTree->deleteInstance();
+		}
+		check(windowManager->winGetWindowList() == NULL && displayStrings.count() == displayStringBaseline,
+			"generated static TextData retained a window or display string after destruction");
 	}
-	check(windowManager->winGetWindowList() == NULL,
-		"generated named SinglePlayer tree retained windows after destruction");
 	const std::size_t allocationsBeforeReset = zh::original_process::live_raw_allocations();
 	engine->GameEngine::reset();
 	check(windowManager->winGetWindowList() == NULL,
@@ -675,6 +763,7 @@ int main()
 	TheGameText = NULL;
 	delete windowManager;
 	TheWindowManager = NULL;
+	TheDisplayStringManager = NULL;
 	TheHeaderTemplateManager = NULL;
 	TheFileSystem = NULL;
 	TheLocalFileSystem = NULL;

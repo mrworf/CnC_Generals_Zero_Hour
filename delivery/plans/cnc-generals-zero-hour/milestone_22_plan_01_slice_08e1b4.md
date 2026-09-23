@@ -22,8 +22,10 @@ This is therefore split before implementation:
    mapped-image assignment, mode owner, retail layout, or pixels.
 2. **08E1B4B** — original generated CampaignManager/Mission descriptor
    ownership for the bounded label/movie/voice fields used by this screen.
-3. **08E1B4C** — generated GameText lookup and source static/progress gadget
-   text application for the bounded mission labels.
+3. **08E1B4C** — generated GameText lookup and source static-gadget
+   text application for the bounded mission labels; the `TextData`/
+   `DisplayStringManager` prerequisite is included in this bounded source
+   gadget transaction.
 4. **08E1B4D** — generated AudioEventRTS ambient/briefing registration,
    removal, and failure/re-entry lifecycle.
 5. **08E1B4** — original `SinglePlayerLoadScreen` owner composition using
