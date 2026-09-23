@@ -18,6 +18,7 @@
 #include "GameClient/GameText.h"
 #include "GameClient/InGameUI.h"
 #include "GameClient/GameWindowManager.h"
+#include "GameClient/GadgetProgressBar.h"
 #include "GameClient/GUICallbacks.h"
 #include "GameClient/HeaderTemplate.h"
 #include "GameClient/View.h"
@@ -382,6 +383,17 @@ int main()
 		callback << "FILE_VERSION = 2\nSTARTLAYOUTBLOCK\n"
 			"LAYOUTINIT = MainMenuInit;\nENDLAYOUTBLOCK\n";
 	}
+	{
+		std::ofstream generated(input / "Window/Menus/GeneratedSinglePlayerTree.wnd");
+		generated << "FILE_VERSION = 2\nSTARTLAYOUTBLOCK\nENDLAYOUTBLOCK\n"
+			"WINDOW\nWINDOWTYPE = USER;\n"
+			"SCREENRECT = UPPERLEFT: 0 0 BOTTOMRIGHT: 800 600 CREATIONRESOLUTION: 800 600;\n"
+			"NAME = \"GeneratedSinglePlayerRoot\";\nSTATUS = ENABLED IMAGE;\nSTYLE = USER;\nCHILD\n"
+			"WINDOW\nWINDOWTYPE = PROGRESSBAR;\n"
+			"SCREENRECT = UPPERLEFT: 10 10 BOTTOMRIGHT: 110 30 CREATIONRESOLUTION: 800 600;\n"
+			"NAME = \"GeneratedSinglePlayer:Progress\";\nSTATUS = ENABLED IMAGE;\nSTYLE = PROGRESSBAR;\nEND\n"
+			"ENDALLCHILDREN\nEND\n";
+	}
 	char diagnostic[128]{};
 	check(zh::original_process::initialize_services(0, diagnostic, sizeof(diagnostic)), diagnostic);
 	initMemoryManager();
@@ -546,6 +558,24 @@ int main()
 	}
 	check(windowManager->winGetWindowList() == NULL,
 		"cold BlankWindow resource did not detach from the actual manager");
+	WindowLayout *generatedTree = windowManager->winCreateLayout("Menus/GeneratedSinglePlayerTree.wnd");
+	check(generatedTree != NULL && generatedTree->getFirstWindow() != NULL,
+		"generated named SinglePlayer tree did not parse through the original layout owner");
+	if (generatedTree)
+	{
+		GameWindow *rootWindow = generatedTree->getFirstWindow();
+		GameWindow *progressWindow = windowManager->winGetWindowFromId(rootWindow,
+			nameKeys.nameToKey(AsciiString("GeneratedSinglePlayer:Progress")));
+		check(progressWindow != NULL,
+			"generated named child lookup lost original NameKey identity");
+		GadgetProgressBarSetProgress(progressWindow, 37);
+		check(progressWindow && progressWindow->winGetUserData() == reinterpret_cast<void *>(37),
+			"generated progress gadget did not retain its source state");
+		generatedTree->destroyWindows();
+		generatedTree->deleteInstance();
+	}
+	check(windowManager->winGetWindowList() == NULL,
+		"generated named SinglePlayer tree retained windows after destruction");
 	const std::size_t allocationsBeforeReset = zh::original_process::live_raw_allocations();
 	engine->GameEngine::reset();
 	check(windowManager->winGetWindowList() == NULL,
