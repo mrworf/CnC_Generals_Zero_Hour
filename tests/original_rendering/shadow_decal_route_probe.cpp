@@ -144,6 +144,8 @@ extern "C" void zh_probe_shadow_decal_route()
 	require(device.resource_counts().total()==0,"original decal teardown retained Recording resources");
 	if (volume)
 		std::puts("original volume shadow: source=1 ordering=1 retry=2 tracks-water=1 negatives=1 removal=1 generations=2 resources=0");
+	if (volume && std::getenv("ZH_M22_VOLUME_SHADOW_AGGREGATE_PROFILE"))
+		std::puts("original volume aggregate: slots-geometry-edge-owner=1 source-order=1 rollback=1 default-guard=1 generations=2 resources=0");
 	else if (std::getenv("ZH_M22_FULL_FEATURE_PROFILE"))
 		std::puts("original full feature map: terrain-tracks-shadow-water-particle-smudge=1 failures=2 generations=2 resources=0");
 	else

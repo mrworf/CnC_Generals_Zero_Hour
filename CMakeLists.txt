@@ -2378,6 +2378,12 @@ if(ZH_BUILD_TESTS)
     --asset-producer "$<TARGET_FILE:original_w3d_cpu_graph_tests>" --volume)
   set_tests_properties(original_w3d_shadow_volume_route PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")
+  add_test(NAME original_w3d_volumetric_shadow_aggregate COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_shadow_decal_route.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}" --executable "$<TARGET_FILE:zh_original_w3d_full_probe>"
+    --asset-producer "$<TARGET_FILE:original_w3d_cpu_graph_tests>" --volume --aggregate)
+  set_tests_properties(original_w3d_volumetric_shadow_aggregate PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
   add_test(NAME original_w3d_particle_provider COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_particle_provider.py"
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
