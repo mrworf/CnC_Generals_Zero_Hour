@@ -38,6 +38,16 @@ void require(bool value, const char* message)
 {
     if (!value) throw std::runtime_error(message);
 }
+
+template <typename Owner>
+class PublishedOwnerRestore final {
+public:
+    PublishedOwnerRestore(Owner *&published, Owner *saved) : published_(published), saved_(saved) {}
+    ~PublishedOwnerRestore() { published_ = saved_; }
+private:
+    Owner *&published_;
+    Owner *saved_;
+};
 }
 
 extern "C" void zh_probe_view_scene()
@@ -552,6 +562,7 @@ extern "C" void zh_probe_view_scene()
                     "original display lost Linux startup dimensions");
                 Display *saved_display = TheDisplay;
                 TheDisplay = &composed_display;
+                PublishedOwnerRestore<Display> restore_display(TheDisplay, saved_display);
                 composed_display.setWidth(width);
                 composed_display.setHeight(target.height);
                 const auto display_width = composed_display.getWidth();
@@ -573,6 +584,7 @@ extern "C" void zh_probe_view_scene()
                 TerrainVisual *saved_visual = TheTerrainVisual;
                 auto* composed = new W3DTerrainVisual;
                 TheTerrainVisual = composed;
+                PublishedOwnerRestore<TerrainVisual> restore_visual(TheTerrainVisual, saved_visual);
                 const Bool visual_saved_water = TheGlobalData->m_useWaterPlane;
                 TheWritableGlobalData->m_useWaterPlane = TRUE;
                 bool enabled_visual_rejected = false;
@@ -622,14 +634,12 @@ extern "C" void zh_probe_view_scene()
                 require(mismatched_bib_owner_rejected &&
                     TheTerrainRenderObject->Num_Refs() == empty_bib_refs,
                     "original bib cleanup accepted mismatched published visual");
-                bool map_visual_rejected = false;
-                try { (void)composed->load(AsciiString("unsupported.map")); }
-                catch (const std::runtime_error&) { map_visual_rejected = true; }
-                require(map_visual_rejected && !TheHeightMap->getMap(),
-                    "original empty terrain visual accepted map load");
+				require(!composed->load(AsciiString("unsupported.map")) && !TheHeightMap->getMap(),
+					"original empty terrain visual missing map changed source publication");
                 auto* composed_view = new W3DView;
                 View *saved_tactical_view = TheTacticalView;
                 TheTacticalView = composed_view;
+                PublishedOwnerRestore<View> restore_tactical_view(TheTacticalView, saved_tactical_view);
                 composed_view->init();
                 composed_display.attachView(composed_view);
                 composed_view->setWidth(composed_display.getWidth());

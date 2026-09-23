@@ -2,7 +2,7 @@
 
 ## Outcome and dependency
 
-Requires 07F9. Restore the source map-frame route needed before any map-loaded
+Requires 07F9A. Restore the source map-frame route needed before any map-loaded
 scene can be observed: the bounded `W3DShroud::render` projection/update,
 stationary map `W3DView` update, and map-aware `W3DDisplay`/scene traversal
 through Recording. The terrain owner is the 07F9 source owner and emits its
@@ -11,7 +11,8 @@ existing 07F8 passes; no adapter terrain draw is permitted.
 ## Boundaries
 
 The native display updates shroud before views, and the native view/display
-branches currently reject a loaded map. Implement only the default, one-view,
+branches currently reject a loaded map. 07F9A must first own the projected
+shroud texture consumed by the source scene material pass. Implement only the default, one-view,
 no-filter, no-motion camera state and the source shroud state needed for that
 frame. Unsupported movement, reflections, extra passes and unloaded/stale
 shroud state must reject before a successful frame. This remains Recording

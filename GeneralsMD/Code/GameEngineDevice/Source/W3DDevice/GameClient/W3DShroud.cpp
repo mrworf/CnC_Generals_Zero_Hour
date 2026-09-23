@@ -32,7 +32,11 @@
 #include "Common/GlobalData.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
+#include "W3DDevice/GameClient/HeightMap.h"
+#include "w3d_shader_manager_cpu_types.h"
+#include "W3DDevice/GameClient/W3DShaderManager.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
+#include "original_gpu_edge.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -108,6 +112,7 @@ void W3DShroud::init(WorldHeightMap *map, Real cell_width, Real cell_height)
 
 void W3DShroud::reset()
 {
+	ReleaseResources();
 	delete [] m_finalFogData;
 	m_finalFogData = NULL;
 	delete [] m_currentFogData;
@@ -121,12 +126,40 @@ void W3DShroud::reset()
 	m_clearDstTexture = TRUE;
 }
 
-void W3DShroud::ReleaseResources() {}
+void W3DShroud::ReleaseResources()
+{
+	REF_PTR_RELEASE(m_pDstTexture);
+}
 Bool W3DShroud::ReAcquireResources()
 {
-	if (m_dstTextureWidth || m_dstTextureHeight)
-		throw OriginalW3DDeviceUnavailable("original shroud projection resource pending");
-	return TRUE;
+	if (!m_dstTextureWidth || !m_dstTextureHeight) return TRUE;
+	if (m_pDstTexture)
+		throw OriginalW3DDeviceUnavailable("original shroud projection re-acquire unavailable");
+	TextureClass *texture = NULL;
+	try {
+		texture = NEW_REF(TextureClass, (m_dstTextureWidth, m_dstTextureHeight,
+			WW3D_FORMAT_A8R8G8B8, MIP_LEVELS_1));
+		unsigned mips = MIP_LEVELS_1;
+		auto handle = zh::original_runtime::OriginalGpuEdge::required().create_texture(
+			WW3D_FORMAT_A8R8G8B8, m_dstTextureWidth, m_dstTextureHeight, mips);
+		try {
+			zh::original_runtime::OriginalGpuEdge::required().publish_texture(texture, handle);
+		} catch (...) {
+			zh::original_runtime::OriginalGpuEdge::required().discard_texture(handle);
+			throw;
+		}
+		texture->Apply_Gpu_Texture(WW3D_FORMAT_A8R8G8B8, m_dstTextureWidth, m_dstTextureHeight);
+		texture->Get_Filter().Set_U_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_CLAMP);
+		texture->Get_Filter().Set_V_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_CLAMP);
+		texture->Get_Filter().Set_Mip_Mapping(TextureFilterClass::FILTER_TYPE_NONE);
+		m_pDstTexture = texture;
+		texture = NULL;
+		m_clearDstTexture = TRUE;
+		return TRUE;
+	} catch (...) {
+		REF_PTR_RELEASE(texture);
+		throw;
+	}
 }
 
 W3DShroudLevel W3DShroud::getShroudLevel(Int x, Int y)
@@ -171,18 +204,34 @@ void W3DShroud::setShroudFilter(Bool enable)
 		TextureFilterClass::FILTER_TYPE_NONE;
 }
 
-void W3DShroud::render(CameraClass *)
+void W3DShroud::render(CameraClass *camera)
 {
-	throw OriginalW3DDeviceUnavailable("original shroud projection pending");
+	if (!camera || !m_currentFogData || !m_finalFogData || m_numCellsX <= 0 ||
+		m_numCellsY <= 0 || m_shroudFilter != TextureFilterClass::FILTER_TYPE_DEFAULT ||
+		!zh::original_runtime::OriginalGpuEdge::active())
+		throw OriginalW3DDeviceUnavailable("original shroud projection unavailable");
+	if (!m_pDstTexture && !ReAcquireResources())
+		throw OriginalW3DDeviceUnavailable("original shroud projection allocation failed");
+	try {
+		m_pDstTexture->Apply(0);
+		m_clearDstTexture = FALSE;
+	} catch (...) {
+		ReleaseResources();
+		m_clearDstTexture = TRUE;
+		throw;
+	}
 }
 
 void W3DShroudMaterialPassClass::Install_Materials(void) const
 {
-	throw OriginalW3DDeviceUnavailable("original shroud material GPU installation pending");
+	if (!TheTerrainRenderObject || !TheTerrainRenderObject->getShroud() ||
+		!TheTerrainRenderObject->getShroud()->getShroudTexture())
+		throw OriginalW3DDeviceUnavailable("original shroud material texture unavailable");
+	W3DShaderManager::setTexture(0, TheTerrainRenderObject->getShroud()->getShroudTexture());
 }
 void W3DShroudMaterialPassClass::UnInstall_Materials(void) const
 {
-	throw OriginalW3DDeviceUnavailable("original shroud material GPU uninstall pending");
+	W3DShaderManager::setTexture(0, NULL);
 }
 void W3DMaskMaterialPassClass::Install_Materials(void) const
 {
