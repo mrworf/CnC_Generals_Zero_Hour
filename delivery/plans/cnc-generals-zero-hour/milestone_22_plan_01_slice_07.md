@@ -33,3 +33,13 @@ for retail acceptance.
 ## Commit boundary
 
 One independently validated commit: `delivery: M22 slice 07 integrate original GameClient scene`.
+
+## Reconciled closure
+
+The accepted no-map and 07F8 terrain children do not satisfy this slice. See
+the [07 reconciliation](../../evidence/cnc-generals-zero-hour/milestone_22_slice_07_reconciliation.md): source map loading reaches terrain visual/map
+publication, shroud-before-view update, track flush, water, shadow and active
+particle/smudge routes, while the current Linux view/display branches still
+reject loaded maps. The required pre-retail closure is
+`07F9 -> {07FA, 07FB, 07FC, 07FD, 07FE} -> 07FF -> 07FG`; only after 07FG may
+slice 08 read private retail data. Slice 07 remains pending.
