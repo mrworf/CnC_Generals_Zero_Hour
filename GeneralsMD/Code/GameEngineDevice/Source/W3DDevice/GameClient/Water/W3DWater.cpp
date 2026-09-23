@@ -110,7 +110,7 @@ WaterRenderObjClass::~WaterRenderObjClass()
 
 Int WaterRenderObjClass::init(Real level, Real dx, Real dy, SceneClass *parent, WaterType type)
 {
-	const bool active_plane = TheGlobalData->m_useWaterPlane && !TheGlobalData->m_useCloudPlane &&
+	const bool active_plane = TheGlobalData->m_useWaterPlane &&
 		dx > 0 && dy > 0 && type == WATER_TYPE_0_TRANSLUCENT;
 	if (!zh::original_runtime::OriginalGpuEdge::active() ||
 		!W3DDisplay::m_3DScene || parent != W3DDisplay::m_3DScene ||
@@ -128,6 +128,7 @@ Int WaterRenderObjClass::init(Real level, Real dx, Real dy, SceneClass *parent, 
 	m_dy = dy;
 	m_parentScene = parent;
 	m_waterType = type;
+	m_useCloudLayer = TheGlobalData->m_useCloudPlane;
 	TheWaterRenderObj = this;
 	s_emptyWaterOwner = this;
 	if (active_plane) {
@@ -146,7 +147,7 @@ void WaterRenderObjClass::Render(RenderInfoClass&)
 {
 	if (!TheGlobalData->m_useWaterPlane)
 		throw OriginalW3DDeviceUnavailable("original no-water render pending");
-	if (TheGlobalData->m_useCloudPlane || TheGlobalData->m_waterType != m_waterType ||
+	if (TheGlobalData->m_useCloudPlane != m_useCloudLayer || TheGlobalData->m_waterType != m_waterType ||
 		TheGlobalData->m_waterExtentX != m_dx || TheGlobalData->m_waterExtentY != m_dy ||
 		m_waterType != WATER_TYPE_0_TRANSLUCENT ||
 		m_dx <= 0 || m_dy <= 0 || !m_cpuVertexBuffer || !m_indexBuffer ||
@@ -157,7 +158,9 @@ void WaterRenderObjClass::Render(RenderInfoClass&)
 	DX8Wrapper::Set_Shader(m_shaderClass);
 	DX8Wrapper::Set_Index_Buffer(m_indexBuffer, 0);
 	DX8Wrapper::Set_Vertex_Buffer(m_cpuVertexBuffer);
-	zh::original_runtime::OriginalGpuEdge::required().record_source_state("original WaterRenderObjClass::Render translucent plane");
+	zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+		m_useCloudLayer ? "original WaterRenderObjClass::Render cloud plane" :
+		"original WaterRenderObjClass::Render translucent plane");
 	DX8Wrapper::Draw_Triangles(0, 2, 0, 4);
 }
 void WaterRenderObjClass::Get_Obj_Space_Bounding_Sphere(SphereClass &sphere) const

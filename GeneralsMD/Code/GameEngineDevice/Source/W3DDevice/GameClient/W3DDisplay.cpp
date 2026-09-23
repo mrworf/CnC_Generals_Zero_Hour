@@ -195,11 +195,11 @@ void W3DDisplay::draw()
 		(TheGlobalData->m_useShadowDecals &&
 			(!TheW3DShadowManager->hasBoundedDecalCasters() || !TheHeightMap->getMap())) ||
 		(TheGlobalData->m_useWaterPlane &&
-			(TheGlobalData->m_useCloudPlane || TheGlobalData->m_waterExtentX <= 0 ||
+			(TheGlobalData->m_waterExtentX <= 0 ||
 			TheGlobalData->m_waterExtentY <= 0 ||
 			TheGlobalData->m_waterType != WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT ||
 			TheWaterRenderObj->Peek_Scene() != m_3DScene)) ||
-		TheGlobalData->m_useCloudPlane || m_isClippedEnabled || m_letterBoxEnabled ||
+		m_isClippedEnabled || m_letterBoxEnabled ||
 		m_videoBuffer || m_videoStream || m_debugDisplayCallback)
 		throw OriginalW3DDeviceUnavailable("original display advanced frame pending");
 	const auto extent = zh::original_runtime::OriginalGpuEdge::required().bound_frame_extent();

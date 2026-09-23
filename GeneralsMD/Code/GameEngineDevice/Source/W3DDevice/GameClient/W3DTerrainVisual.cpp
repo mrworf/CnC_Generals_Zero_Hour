@@ -125,7 +125,7 @@ void W3DTerrainVisual::init()
 		(invalidEnabledWater ? 32U : 0U) | (invalidDisabledWater ? 64U : 0U);
 	if (std::getenv("ZH_M22_RETAIL_CONFIG_AUDIT"))
 		std::printf("original retail terrain configuration: mask=%u\n", retailAuditMask);
-	if (ownersUnavailable || shadowVolumes || shadowDecals || cloudPlane ||
+	if (ownersUnavailable || shadowVolumes || shadowDecals ||
 		invalidEnabledWater || invalidDisabledWater)
 		throw OriginalW3DDeviceUnavailable("original map or enabled terrain visual pending");
 	s_emptyTerrainVisual = this;
@@ -143,6 +143,7 @@ void W3DTerrainVisual::init()
 			TheGlobalData->m_useWaterPlane ? TheGlobalData->m_waterExtentX : 0,
 			TheGlobalData->m_useWaterPlane ? TheGlobalData->m_waterExtentY : 0,
 			W3DDisplay::m_3DScene, static_cast<WaterRenderObjClass::WaterType>(TheGlobalData->m_waterType));
+		m_waterRenderObject->toggleCloudLayer(TheGlobalData->m_useCloudPlane);
 		m_waterRenderObject->Set_Position(Vector3(TheGlobalData->m_waterPositionX,
 			TheGlobalData->m_waterPositionY, TheGlobalData->m_waterPositionZ));
 		TheSmudgeManager = s_ownedSmudges = NEW W3DSmudgeManager;

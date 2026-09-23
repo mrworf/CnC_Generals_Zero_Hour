@@ -40,11 +40,13 @@ extern "C" void zh_probe_terrain_water()
 	const Int saved_type = TheGlobalData->m_waterType;
 	TheWritableGlobalData->m_partitionCellSize=MAP_XY_FACTOR;
 	TheWritableGlobalData->m_maxTerrainTracks=1; TheWritableGlobalData->m_makeTrackMarks=TRUE;
-	TheWritableGlobalData->m_useWaterPlane=TRUE; TheWritableGlobalData->m_useCloudPlane=FALSE;
+	TheWritableGlobalData->m_useWaterPlane=TRUE;
 	TheWritableGlobalData->m_waterExtentX=32; TheWritableGlobalData->m_waterExtentY=24;
 	TheWritableGlobalData->m_waterType=WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT;
 	zh::renderer::RecordingGpuDevice device;
-	for (Int generation=0; generation!=2; ++generation) {
+	for (Int generation=0; generation!=3; ++generation) {
+		const Bool cloud = generation != 0;
+		TheWritableGlobalData->m_useCloudPlane=cloud;
 		zh::original_runtime::OriginalGpuEdge edge(device);
 		{
 			W3DDisplay display; display.init(); Display *saved_display=TheDisplay; TheDisplay=&display;
@@ -76,7 +78,8 @@ extern "C" void zh_probe_terrain_water()
 				auto depth=device.create_texture(target,"original terrain-water depth"); require(color&&depth,"original water targets missing");
 				auto frame=[&]{ edge.bind_frame_targets(color,depth,32,24); display.draw(); require(!WW3D::Is_Rendering()&&!device.pass_active(),"original water frame retained state"); };
 				const std::string start=device.snapshot(); frame(); const std::string active=device.snapshot().substr(start.size());
-				const std::size_t terrain=active.find("original RTS3DScene::Render map terrain"), track_mark=active.find("original TerrainTracksRenderObjClassSystem::flush"), water_mark=active.find("original WaterRenderObjClass::Render translucent plane");
+				const char *water_name = cloud ? "original WaterRenderObjClass::Render cloud plane" : "original WaterRenderObjClass::Render translucent plane";
+				const std::size_t terrain=active.find("original RTS3DScene::Render map terrain"), track_mark=active.find("original TerrainTracksRenderObjClassSystem::flush"), water_mark=active.find(water_name);
 				require(draws(active)==4 && terrain<track_mark && track_mark<water_mark &&
 					active.find("DX8Wrapper::Draw indexed first=0 count=6 base=0",water_mark)!=std::string::npos,
 					"original terrain-track-water source ordering/range failed");
@@ -89,17 +92,17 @@ extern "C" void zh_probe_terrain_water()
 				const std::string effect_start=device.snapshot(); frame(); const std::string effect=device.snapshot().substr(effect_start.size());
 				const auto particle=effect.find("original W3DParticleSystemManager::doParticles smudge request"), smudge_draw=effect.find("original W3DSmudgeManager::render bounded batch");
 				require(terrain!=std::string::npos && effect.find("original RTS3DScene::Render map terrain") < effect.find("original TerrainTracksRenderObjClassSystem::flush") &&
-					effect.find("original TerrainTracksRenderObjClassSystem::flush") < effect.find("original WaterRenderObjClass::Render translucent plane") &&
-					effect.find("original WaterRenderObjClass::Render translucent plane") < particle && particle < smudge_draw &&
+					effect.find("original TerrainTracksRenderObjClassSystem::flush") < effect.find(water_name) &&
+					effect.find(water_name) < particle && particle < smudge_draw &&
 					effect.find("DX8Wrapper::Draw indexed first=0 count=12 base=0",smudge_draw)!=std::string::npos,
 					"original terrain-track-water-particle-smudge ordering failed");
 				device.fail_buffer_upload_after(before(active,"upload ",water_mark));
 				require(rejected(frame)&&!WW3D::Is_Rendering()&&!device.pass_active()&&!water->hasPendingGpuResources(),"original water upload rollback failed");
 				device.fail_draw_after(draws(active.substr(0,water_mark)));
 				require(rejected(frame)&&!WW3D::Is_Rendering()&&!device.pass_active(),"original water draw rollback failed"); frame();
-				TheWritableGlobalData->m_useWaterPlane=FALSE; const std::string off=device.snapshot(); frame();
+				TheWritableGlobalData->m_useCloudPlane=FALSE; TheWritableGlobalData->m_useWaterPlane=FALSE; const std::string off=device.snapshot(); frame();
 				require(draws(device.snapshot().substr(off.size()))==3,"original disabled water emitted a draw"); TheWritableGlobalData->m_useWaterPlane=TRUE;
-				TheWritableGlobalData->m_useCloudPlane=TRUE; require(rejected(frame),"original cloud sibling activated water"); TheWritableGlobalData->m_useCloudPlane=FALSE;
+				TheWritableGlobalData->m_useCloudPlane=!cloud; require(rejected(frame),"original cloud owner mutation was accepted"); TheWritableGlobalData->m_useCloudPlane=cloud;
 				TheWritableGlobalData->m_waterExtentX=0; require(rejected(frame),"original zero-extent water activated"); TheWritableGlobalData->m_waterExtentX=32;
 				TheWritableGlobalData->m_waterType=WaterRenderObjClass::WATER_TYPE_1_FB_REFLECTION; require(rejected(frame),"original reflection water activated"); TheWritableGlobalData->m_waterType=WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT;
 				W3DDisplay::m_3DScene->Remove_Render_Object(water); require(rejected(frame),"original water accepted mismatched scene"); W3DDisplay::m_3DScene->Add_Render_Object(water); frame();
@@ -115,5 +118,5 @@ extern "C" void zh_probe_terrain_water()
 	TheWritableGlobalData->m_partitionCellSize=saved_partition; TheWritableGlobalData->m_maxTerrainTracks=saved_tracks; TheWritableGlobalData->m_makeTrackMarks=saved_marks;
 	TheWritableGlobalData->m_useWaterPlane=saved_water; TheWritableGlobalData->m_useCloudPlane=saved_cloud; TheWritableGlobalData->m_waterExtentX=saved_x; TheWritableGlobalData->m_waterExtentY=saved_y; TheWritableGlobalData->m_waterType=saved_type;
 	require(device.resource_counts().total()==0,"original water teardown retained Recording resources");
-	std::puts("original terrain water: plane=1 ordering=1 retry=2 tracks=1 siblings=0 generations=2 resources=0");
+	std::puts("original terrain water: plane=1 cloud=1 ordering=1 retry=2 tracks=1 siblings=0 generations=3 resources=0");
 }

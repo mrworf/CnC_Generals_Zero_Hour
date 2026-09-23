@@ -86,11 +86,7 @@ static bool isBoundedWaterSceneObject(RenderObjClass *object)
 	if (object != TheWaterRenderObj || !object) return false;
 	if (object->Peek_Scene() != W3DDisplay::m_3DScene)
 		throw OriginalW3DDeviceUnavailable("original enabled or foreign water scene pending");
-	if (TheGlobalData->m_useWaterPlane) {
-		if (TheGlobalData->m_useCloudPlane)
-			throw OriginalW3DDeviceUnavailable("original cloud water scene pending");
-		return true;
-	}
+	if (TheGlobalData->m_useWaterPlane) return true;
 	if (TheGlobalData->m_useCloudPlane)
 		throw OriginalW3DDeviceUnavailable("original enabled or foreign water scene pending");
 	return true;
