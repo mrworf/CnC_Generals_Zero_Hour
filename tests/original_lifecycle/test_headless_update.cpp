@@ -15,6 +15,7 @@
 #include "GameClient/Anim2D.h"
 #include "GameClient/Eva.h"
 #include "GameClient/GameClient.h"
+#include "GameClient/CampaignManager.h"
 #include "GameClient/GameText.h"
 #include "GameClient/InGameUI.h"
 #include "GameClient/GameWindowManager.h"
@@ -509,6 +510,65 @@ int main()
 	TheCDManager = &cdManager;
 	TheGameEngine = engine;
 	TheNetwork = NULL;
+
+	for (int generation = 0; generation != 2; ++generation)
+	{
+		CampaignManager campaigns;
+		TheCampaignManager = &campaigns;
+		Campaign *campaign = campaigns.newCampaign(AsciiString("GeneratedCampaign"));
+		check(campaign != NULL, "generated campaign factory did not return an owner");
+		Mission *mission = campaign ? campaign->newMission(AsciiString("GeneratedMission")) : NULL;
+		check(mission != NULL, "generated mission factory did not return an owner");
+		if (mission)
+		{
+			mission->m_mapName.set("GeneratedMap");
+			mission->m_movieLabel.set("GeneratedMovie");
+			mission->m_missionObjectivesLabel[0].set("GeneratedObjective");
+			mission->m_unitNames[0].set("GeneratedUnit");
+			mission->m_locationNameLabel.set("GeneratedLocation");
+			mission->m_voiceLength = generation + 1;
+		}
+		campaigns.setCampaignAndMission(AsciiString("generatedcampaign"), AsciiString("generatedmission"));
+		check(campaigns.getCurrentCampaign() == campaign && campaigns.getCurrentMission() == mission,
+			"generated campaign selection did not retain source identity");
+		check(mission && mission->m_mapName.compare("GeneratedMap") == 0 &&
+			mission->m_movieLabel.compare("GeneratedMovie") == 0 &&
+			mission->m_missionObjectivesLabel[0].compare("GeneratedObjective") == 0 &&
+			mission->m_unitNames[0].compare("GeneratedUnit") == 0 &&
+			mission->m_locationNameLabel.compare("GeneratedLocation") == 0 &&
+			mission->m_voiceLength == generation + 1,
+			"generated mission field descriptor was not retained by the source owner");
+		check(campaigns.gotoNextMission() == NULL,
+			"generated mission without a next edge did not stop source traversal");
+		campaigns.setCampaign(AsciiString("MissingGeneratedCampaign"));
+		check(campaigns.getCurrentCampaign() == NULL && campaigns.getCurrentMission() == NULL,
+			"unknown generated campaign did not fail closed");
+		campaigns.setCampaignAndMission(AsciiString("GENERATEDCAMPAIGN"), AsciiString("generatedmission"));
+		check(campaigns.getCurrentMission() == mission,
+			"generated campaign did not re-enter after a failed selection");
+		check(campaign && campaign->getMission(AsciiString::TheEmptyString) == NULL,
+			"empty generated mission lookup did not fail closed");
+		Mission *replacement = campaign ? campaign->newMission(AsciiString("GENERATEDMISSION")) : NULL;
+		if (replacement)
+			replacement->m_movieLabel.set("GeneratedReplacementMovie");
+		check(replacement != NULL && campaign->getMission(AsciiString("generatedmission")) == replacement &&
+			replacement->m_movieLabel.compare("GeneratedReplacementMovie") == 0,
+			"duplicate generated mission did not replace through the source owner");
+		campaigns.setCampaignAndMission(AsciiString("GeneratedCampaign"), AsciiString("generatedmission"));
+		check(campaigns.getCurrentMission() == replacement,
+			"duplicate generated mission was not republished through source selection");
+		Campaign *replacementCampaign = campaigns.newCampaign(AsciiString("GENERATEDCAMPAIGN"));
+		Mission *replacementMission = replacementCampaign ? replacementCampaign->newMission(AsciiString("GeneratedMission")) : NULL;
+		check(replacementCampaign != NULL && replacementMission != NULL,
+			"duplicate generated campaign did not replace through the source owner");
+		campaigns.setCampaignAndMission(AsciiString("generatedcampaign"), AsciiString("generatedmission"));
+		check(campaigns.getCurrentCampaign() == replacementCampaign &&
+			campaigns.getCurrentMission() == replacementMission,
+			"replacement generated campaign did not publish its owned mission");
+		TheCampaignManager = NULL;
+	}
+	check(TheCampaignManager == NULL,
+		"generated campaign/mission provider remained published after both generations");
 
 	for (int generation = 0; generation != 2; ++generation)
 	{

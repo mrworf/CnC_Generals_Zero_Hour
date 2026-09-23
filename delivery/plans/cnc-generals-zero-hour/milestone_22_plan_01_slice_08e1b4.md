@@ -32,7 +32,16 @@ This is therefore split before implementation:
 No retail layout, media, names, bytes, audio fidelity, raw Direct3D, or pixel
 claim is admitted by these slices.  Every generated asset is project-owned.
 
-## Current executable slice: 08E1B4A
+## 08E1B4B: generated Campaign/Mission descriptor ownership
+
+The current executable slice uses the source `CampaignManager`/
+`Campaign`/`Mission` factory and current-selection transaction with only
+project-owned in-memory descriptor values.  It deliberately excludes the
+file-backed INI parse edge, GameText, static gadget data, audio, and the
+`SinglePlayerLoadScreen` mode owner.  The detailed acceptance contract is
+persisted in `milestone_22_plan_01_slice_08e1b4b.md`.
+
+## Completed 08E1B4A
 
 The first slice validates only a generated root/progress child through the
 actual original parse and NameKey lookup edge.  The existing missing-file and
