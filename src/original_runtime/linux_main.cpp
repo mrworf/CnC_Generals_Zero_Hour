@@ -40,6 +40,7 @@ extern "C" Int zh_linux_benchmark_timer();
 extern "C" UnsignedInt zh_linux_device_acquisition_attempts();
 #if defined(ZH_M22_FULL_DRAW_TEST)
 extern "C" Bool zh_linux_original_factory_counts(UnsignedInt *values, std::size_t count);
+extern "C" UnsignedInt zh_linux_original_factory_map_frames();
 #endif
 
 namespace {
@@ -171,6 +172,7 @@ int main(int argc, char **argv)
 	std::size_t graphicsEngineAllocations = 0;
 	std::size_t graphicsResidualAllocations = 0;
 	UnsignedInt originalFactoryCounts[3]{};
+	UnsignedInt originalFactoryMapFrames = 0;
 	bool originalEmptyPixels = false;
 	std::size_t originalChangedPixels = 0;
 #endif
@@ -241,6 +243,7 @@ int main(int argc, char **argv)
 		}
 		if (!zh_linux_original_factory_counts(originalFactoryCounts, 3))
 			result = 4;
+		originalFactoryMapFrames = zh_linux_original_factory_map_frames();
 		if (originalFactoryProfile && result == 0)
 		{
 			const auto pixels = originalDisplayDevice->readback_rgba(originalDisplayColor);
@@ -253,9 +256,12 @@ int main(int argc, char **argv)
 			const bool rigidProfile = std::getenv("ZH_M22_FACTORY_RIGID_ASSET") != nullptr;
 			if ((rigidProfile ? originalChangedPixels == 0 : !originalEmptyPixels) ||
 				originalFactoryCounts[0] != 1 ||
-				originalFactoryCounts[1] != 1 || originalFactoryCounts[2] != 1)
+				originalFactoryCounts[1] != 1 || originalFactoryCounts[2] != 1 ||
+				(std::getenv("ZH_M22_FACTORY_MAP") && originalFactoryMapFrames != 1))
 			{
-				std::fprintf(stderr, "original graphics factory empty frame or owner identity failed\n");
+				std::fprintf(stderr, "original graphics factory empty frame or owner identity failed: rendered=%u empty=%u changed=%zu owners=%u/%u/%u\n",
+					rigidProfile ? 1U : 0U, originalEmptyPixels ? 1U : 0U, originalChangedPixels,
+					originalFactoryCounts[0], originalFactoryCounts[1], originalFactoryCounts[2]);
 				result = 4;
 			}
 		}
@@ -383,12 +389,12 @@ int main(int argc, char **argv)
 	{
 #if defined(ZH_M22_FULL_DRAW_TEST)
 		if (graphicsProfile)
-			std::printf("original graphics bootstrap: mode=%s display=%u view=%u terrain=%u empty=%u changed=%zu aliases=%u ready=%zu engine=%zu residual=%zu baseline=%zu\n",
+			std::printf("original graphics bootstrap: mode=%s display=%u view=%u terrain=%u empty=%u changed=%zu aliases=%u ready=%zu engine=%zu residual=%zu baseline=%zu map=%u\n",
 				originalFactoryProfile ? "original" : "device-only",
 				originalFactoryCounts[0], originalFactoryCounts[1], originalFactoryCounts[2],
 				originalEmptyPixels ? 1U : 0U, originalChangedPixels,
 				(TheGameClient || TheTacticalView) ? 1U : 0U, graphicsReadyAllocations,
-				graphicsEngineAllocations, graphicsResidualAllocations, allocationBaseline);
+				graphicsEngineAllocations, graphicsResidualAllocations, allocationBaseline, originalFactoryMapFrames);
 		else
 #endif
 		if (cacheBuild)

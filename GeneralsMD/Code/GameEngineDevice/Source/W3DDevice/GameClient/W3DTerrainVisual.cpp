@@ -263,8 +263,16 @@ void W3DTerrainVisual::removeAllBibs()
 	if (!m_terrainRenderObject) return;
 	if (s_emptyTerrainVisual != this || TheTerrainVisual != this ||
 		TheTerrainRenderObject != m_terrainRenderObject ||
-		TheHeightMap != m_terrainRenderObject || m_terrainRenderObject->getMap())
+		TheHeightMap != m_terrainRenderObject)
 		throw OriginalW3DDeviceUnavailable("original map-loaded terrain bib cleanup pending");
+	if (m_terrainRenderObject->getMap()) {
+		// The bounded factory map has no bib producer.  Reset may therefore pass
+		// through this native cleanup hook only for that explicit, known-empty
+		// owner; all bib creation/removal APIs above remain fail-closed.
+		if (!std::getenv("ZH_M22_FACTORY_MAP"))
+			throw OriginalW3DDeviceUnavailable("original map-loaded terrain bib cleanup pending");
+		return;
+	}
 	// The no-map owner cannot create a bib: every creation path remains guarded.
 }
 void W3DTerrainVisual::removeBibHighlighting() { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }

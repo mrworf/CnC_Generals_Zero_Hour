@@ -31,6 +31,7 @@
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DView.h"
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
+#include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DFileSystem.h"
 #include "original_gpu_edge.h"
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
@@ -147,6 +148,7 @@ LifecycleReport g_lifecycleReport;
 UnsignedInt g_originalFactoryDisplayCount = 0;
 UnsignedInt g_originalFactoryViewCount = 0;
 UnsignedInt g_originalFactoryTerrainCount = 0;
+UnsignedInt g_originalFactoryMapFrameCount = 0;
 #endif
 struct ScenarioSetupReport
 {
@@ -1290,6 +1292,23 @@ public:
 		if (m_boundedProfile && m_updates == 0)
 		{
 		#if defined(ZH_M22_FULL_DRAW_TEST)
+			if (const char *factoryMap = std::getenv("ZH_M22_FACTORY_MAP"))
+			{
+				if (!std::getenv("ZH_M22_ORIGINAL_FACTORY_PROFILE") || !*factoryMap ||
+					!dynamic_cast<W3DDisplay *>(TheDisplay) ||
+					!dynamic_cast<W3DView *>(TheTacticalView) ||
+					!dynamic_cast<W3DTerrainVisual *>(TheTerrainVisual) ||
+					!W3DDisplay::m_3DScene || !TheTerrainRenderObject ||
+					TheHeightMap != TheTerrainRenderObject || TheHeightMap->getMap())
+					throw std::runtime_error("factory map requires unclaimed original terrain owners");
+				// The generated visual map carries tile coordinates, while the normal
+				// no-map factory has no partition scale requirement.  Keep this
+				// map-specific input at the sole production load boundary.
+				TheWritableGlobalData->m_partitionCellSize = MAP_XY_FACTOR;
+				if (!static_cast<W3DTerrainVisual *>(TheTerrainVisual)->load(AsciiString(factoryMap)))
+					throw std::runtime_error("factory map packet unreadable or rejected");
+				static_cast<W3DView *>(TheTacticalView)->setDefaultView(0, 0, 1);
+			}
 			if (const char *rigidPath = std::getenv("ZH_M22_FACTORY_RIGID_ASSET"))
 			{
 				if (!std::getenv("ZH_M22_ORIGINAL_FACTORY_PROFILE") ||
@@ -1336,6 +1355,10 @@ public:
 			g_lifecycleReport.firstClientBefore = TheGameClient->getFrame();
 		}
 		GameEngine::update();
+	#if defined(ZH_M22_FULL_DRAW_TEST)
+		if (std::getenv("ZH_M22_FACTORY_MAP") && TheHeightMap && TheHeightMap->getMap())
+			++g_originalFactoryMapFrameCount;
+	#endif
 		if (!m_boundedProfile) return;
 		++m_updates;
 		if (m_updates == 1)
@@ -1347,7 +1370,7 @@ public:
 			g_lifecycleReport.clientAfterReset = TheGameClient->getFrame();
 			g_lifecycleReport.resetRan = TRUE;
 		#if defined(ZH_M22_FULL_DRAW_TEST)
-			if (std::getenv("ZH_M22_FACTORY_RIGID_ASSET"))
+			if (std::getenv("ZH_M22_FACTORY_RIGID_ASSET") || std::getenv("ZH_M22_FACTORY_MAP"))
 			{
 				g_lifecycleReport.finalLogic = g_lifecycleReport.logicAfterReset;
 				g_lifecycleReport.finalClient = g_lifecycleReport.clientAfterReset;
@@ -1630,6 +1653,7 @@ GameEngine *CreateGameEngine()
 	g_originalFactoryDisplayCount = 0;
 	g_originalFactoryViewCount = 0;
 	g_originalFactoryTerrainCount = 0;
+	g_originalFactoryMapFrameCount = 0;
 #endif
 	g_simulationReport = SimulationReport{};
 	g_reentryReport = ReentryReport{};
@@ -1662,6 +1686,11 @@ extern "C" Bool zh_linux_original_factory_counts(UnsignedInt *values, std::size_
 	values[1] = g_originalFactoryViewCount;
 	values[2] = g_originalFactoryTerrainCount;
 	return TRUE;
+}
+
+extern "C" UnsignedInt zh_linux_original_factory_map_frames()
+{
+	return g_originalFactoryMapFrameCount;
 }
 #endif
 

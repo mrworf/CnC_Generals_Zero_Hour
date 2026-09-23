@@ -2338,6 +2338,13 @@ if(ZH_BUILD_TESTS)
   set_tests_properties(original_w3d_factory_rigid PROPERTIES
     LABELS "gpu;original-rendering;renderer-contract;source-identity"
     TIMEOUT 90 RUN_SERIAL TRUE ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+  add_test(NAME original_w3d_factory_map COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_factory_map.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
+  set_tests_properties(original_w3d_factory_map PROPERTIES
+    LABELS "gpu;original-rendering;renderer-contract;source-identity;negative"
+    TIMEOUT 120 RUN_SERIAL TRUE ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
   add_test(NAME original_w3d_full_draw_scenario COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_full_draw_scenario.py"
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
