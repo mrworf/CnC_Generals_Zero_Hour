@@ -37,6 +37,19 @@
 #include "OriginalW3DDeviceUnavailable.h"
 #include "original_gpu_edge.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/W3DAssetManager.h"
+#include "W3DDevice/GameClient/Module/W3DModelDraw.h"
+#include "GameClient/GameClient.h"
+#include "GameClient/Drawable.h"
+#include "WW3D2/dx8indexbuffer.h"
+#include "WW3D2/dx8vertexbuffer.h"
+#include "WW3D2/vertmaterial.h"
+#include "WW3D2/texture.h"
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <vector>
 #endif
 #include "always.h"
 #include "GameClient/View.h"
@@ -70,12 +83,86 @@ W3DShadowManager *TheW3DShadowManager=NULL;
 #if defined(ZH_WW3D_CPU_ONLY)
 static W3DShadowManager *s_emptyShadowOwner = NULL;
 
+class BoundedDecalShadow;
+static std::vector<BoundedDecalShadow *> s_boundedDecals;
+
+static bool hasPublishedModelRenderObject(RenderObjClass *robj)
+{
+	if (!TheGameClient || !robj || static_cast<void *>(robj->Get_Scene()) != static_cast<void *>(W3DDisplay::m_3DScene))
+		return false;
+	for (Drawable *drawable = TheGameClient->firstDrawable(); drawable;
+		drawable = drawable->getNextDrawable()) {
+		for (DrawModule **module = drawable->getDrawModules(); module && *module; ++module) {
+			auto *model = dynamic_cast<W3DModelDraw *>(*module);
+			if (model && model->getRenderObject() == robj) return true;
+		}
+	}
+	return false;
+}
+
+class BoundedDecalShadow final : public Shadow
+{
+public:
+	BoundedDecalShadow(RenderObjClass *robj, const Shadow::ShadowTypeInfo &info) :
+		m_robj(robj), m_index(NULL), m_vertex(NULL), m_material(NULL), m_texture(NULL), m_info(info)
+	{
+		m_type = SHADOW_DECAL; m_isEnabled = TRUE; m_isInvisibleEnabled = FALSE; reacquire();
+	}
+	~BoundedDecalShadow() { releaseResources(); }
+	void release() override;
+	void releaseResources() { REF_PTR_RELEASE(m_index); REF_PTR_RELEASE(m_vertex); REF_PTR_RELEASE(m_material); REF_PTR_RELEASE(m_texture); }
+	void reacquire()
+	{
+		releaseResources();
+		try {
+			m_index = NEW_REF(DX8IndexBufferClass, (6));
+			DX8IndexBufferClass::WriteLockClass indices(m_index);
+			const UnsignedShort quad[6] = {3, 0, 2, 2, 0, 1}; std::memcpy(indices.Get_Index_Array(), quad, sizeof(quad));
+			m_vertex = NEW_REF(DX8VertexBufferClass, (DX8_FVF_XYZDUV1, 4, DX8VertexBufferClass::USAGE_DYNAMIC));
+			DX8VertexBufferClass::WriteLockClass vertices(m_vertex);
+			auto *vb = static_cast<VertexFormatXYZDUV1 *>(vertices.Get_Vertex_Array());
+			const Vector3 origin = m_robj->Get_Position(); const Real x = m_info.m_sizeX * .5f, y = m_info.m_sizeY * .5f;
+			const Vector3 points[4] = {Vector3(origin.X-x+m_info.m_offsetX,origin.Y-y+m_info.m_offsetY,origin.Z), Vector3(origin.X+x+m_info.m_offsetX,origin.Y-y+m_info.m_offsetY,origin.Z), Vector3(origin.X+x+m_info.m_offsetX,origin.Y+y+m_info.m_offsetY,origin.Z), Vector3(origin.X-x+m_info.m_offsetX,origin.Y+y+m_info.m_offsetY,origin.Z)};
+			for (Int i=0; i!=4; ++i) { vb[i].x=points[i].X; vb[i].y=points[i].Y; vb[i].z=points[i].Z; vb[i].u1=(i==1||i==2); vb[i].v1=(i>=2); vb[i].diffuse=0x7f000000; }
+			m_material = VertexMaterialClass::Get_Preset(VertexMaterialClass::PRELIT_DIFFUSE);
+			Char texture_name[sizeof(m_info.m_ShadowName)+5];
+			std::snprintf(texture_name,sizeof(texture_name),"%s.tga",m_info.m_ShadowName);
+			m_texture=WW3DAssetManager::Get_Instance()->Get_Texture(texture_name);
+			if (!m_texture) throw OriginalW3DDeviceUnavailable("original bounded decal shadow texture unavailable");
+			m_shader = ShaderClass::_PresetAlphaShader;
+			auto &edge=zh::original_runtime::OriginalGpuEdge::required(); (void)edge.bind_index(m_index); (void)edge.bind_vertex(m_vertex);
+		} catch (...) { releaseResources(); throw; }
+	}
+	bool owns(RenderObjClass *robj) const { return m_robj == robj; }
+	void draw()
+	{
+		if (!m_isEnabled || m_isInvisibleEnabled) return;
+		if (!m_index || !m_vertex || !m_material || !m_texture || !m_robj || static_cast<void *>(m_robj->Get_Scene())!=static_cast<void *>(W3DDisplay::m_3DScene))
+			throw OriginalW3DDeviceUnavailable("original bounded decal shadow resource or owner unavailable");
+		DX8Wrapper::Set_Material(m_material); DX8Wrapper::Set_Texture(0,m_texture); DX8Wrapper::Set_Shader(m_shader); DX8Wrapper::Set_Index_Buffer(m_index,0); DX8Wrapper::Set_Vertex_Buffer(m_vertex);
+		zh::original_runtime::OriginalGpuEdge::required().record_source_state("original W3DShadowManager::RenderShadows decal");
+		DX8Wrapper::Draw_Triangles(0,2,0,4);
+	}
+private:
+	RenderObjClass *m_robj; DX8IndexBufferClass *m_index; DX8VertexBufferClass *m_vertex; VertexMaterialClass *m_material; TextureClass *m_texture; ShaderClass m_shader; Shadow::ShadowTypeInfo m_info;
+};
+
+static void eraseBoundedDecal(BoundedDecalShadow *shadow)
+{
+	auto found=std::find(s_boundedDecals.begin(),s_boundedDecals.end(),shadow);
+	// The original drawable may be torn down after a map-level Reset removed its
+	// manager entry.  Its release edge is intentionally idempotent; admission,
+	// rather than destruction, is where stale/foreign objects fail closed.
+	if (found==s_boundedDecals.end()) return;
+	s_boundedDecals.erase(found); delete shadow;
+}
+void BoundedDecalShadow::release() { eraseBoundedDecal(this); }
+
 static void requireEmptyShadowOwner(W3DShadowManager *owner)
 {
 	if (s_emptyShadowOwner != owner || TheW3DShadowManager != owner ||
 		!zh::original_runtime::OriginalGpuEdge::active() ||
-		!W3DDisplay::m_3DScene || TheGlobalData->m_useShadowVolumes ||
-		TheGlobalData->m_useShadowDecals)
+		!W3DDisplay::m_3DScene || TheGlobalData->m_useShadowVolumes)
 		throw OriginalW3DDeviceUnavailable("original disabled-shadow owner unavailable");
 }
 #endif
@@ -93,8 +180,9 @@ void DoShadows(RenderInfoClass & rinfo, Bool stencilPass)
 	//USE_PERF_TIMER(shadowsRender)
 	shadowCameraFrustum=&rinfo.Camera.Get_Frustum();
 #if defined(ZH_WW3D_CPU_ONLY)
-	if (TheW3DShadowManager && TheW3DShadowManager->isShadowScene())
-		throw OriginalW3DDeviceUnavailable("original shadow GPU render pending");
+	if (!stencilPass && TheW3DShadowManager && TheW3DShadowManager->isShadowScene())
+		TheW3DShadowManager->RenderShadows();
+	if (stencilPass && TheW3DShadowManager) TheW3DShadowManager->queueShadows(FALSE);
 #else
 	Int projectionCount=0;
 
@@ -148,6 +236,7 @@ W3DShadowManager::W3DShadowManager( void )
 W3DShadowManager::~W3DShadowManager( void )
 {
 #if defined(ZH_WW3D_CPU_ONLY)
+	removeAllShadows();
 	if (s_emptyShadowOwner == this) s_emptyShadowOwner = NULL;
 	if (TheW3DShadowManager == this) TheW3DShadowManager = NULL;
 #endif
@@ -166,7 +255,7 @@ Bool W3DShadowManager::init( void )
 #if defined(ZH_WW3D_CPU_ONLY)
 	if (!zh::original_runtime::OriginalGpuEdge::active() ||
 		!W3DDisplay::m_3DScene || TheGlobalData->m_useShadowVolumes ||
-		TheGlobalData->m_useShadowDecals ||
+		(TheGlobalData->m_useShadowDecals && !std::getenv("ZH_M22_SHADOW_DECAL_PROFILE")) ||
 		(TheW3DShadowManager && TheW3DShadowManager != this) ||
 		(s_emptyShadowOwner && s_emptyShadowOwner != this)) {
 		if (TheW3DShadowManager == this && s_emptyShadowOwner != this)
@@ -200,6 +289,11 @@ void W3DShadowManager::Reset( void )
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	requireEmptyShadowOwner(this);
+	// Source draw modules retain their Shadow pointer across a terrain reset.
+	// Keep the admitted owner list intact and let the normal release/reacquire
+	// lifecycle rebuild its resources; removing it here would strand that source
+	// pointer and make its next allocateShadows call silently skip re-admission.
+	for (auto *shadow : s_boundedDecals) shadow->releaseResources();
 	m_isShadowScene = FALSE;
 	m_stencilShadowMask = 0;
 #else
@@ -214,6 +308,7 @@ Bool W3DShadowManager::ReAcquireResources()
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	requireEmptyShadowOwner(this);
+	for (auto *shadow : s_boundedDecals) shadow->reacquire();
 	return TRUE;
 #else
 	Bool result = TRUE;
@@ -231,6 +326,7 @@ void W3DShadowManager::ReleaseResources(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	requireEmptyShadowOwner(this);
+	for (auto *shadow : s_boundedDecals) shadow->releaseResources();
 #else
 	if (TheW3DVolumetricShadowManager)
 		TheW3DVolumetricShadowManager->ReleaseResources();
@@ -259,9 +355,22 @@ Shadow *W3DShadowManager::addShadow( RenderObjClass *robj, Shadow::ShadowTypeInf
 		case	SHADOW_PROJECTION:
 		case	SHADOW_DECAL:
 #if defined(ZH_WW3D_CPU_ONLY)
-			throw OriginalW3DDeviceUnavailable(type == SHADOW_DECAL
-				? "original decal shadow derived-manager creation pending"
-				: "original projected shadow derived-manager creation pending");
+			if (type != SHADOW_DECAL)
+				throw OriginalW3DDeviceUnavailable("original projected shadow derived-manager creation pending");
+			if (!TheGlobalData->m_useShadowDecals)
+				throw OriginalW3DDeviceUnavailable("original decal shadow derived-manager creation pending");
+			if (TheGlobalData->m_useShadowVolumes ||
+				TheW3DShadowManager != this || !shadowInfo || shadowInfo->m_sizeX <= 0 ||
+				shadowInfo->m_sizeY <= 0 || !hasPublishedModelRenderObject(robj))
+				throw OriginalW3DDeviceUnavailable("original bounded decal shadow owner or state unavailable");
+			for (auto *shadow : s_boundedDecals)
+				if (shadow->owns(robj))
+					throw OriginalW3DDeviceUnavailable("original duplicate decal shadow owner");
+			{
+				auto *shadow=NEW BoundedDecalShadow(robj,*shadowInfo);
+				s_boundedDecals.push_back(shadow);
+				return shadow;
+			}
 #else
 			if (TheW3DProjectedShadowManager)
 				return (Shadow *)TheW3DProjectedShadowManager->addShadow(robj, shadowInfo, draw);
@@ -276,13 +385,16 @@ Shadow *W3DShadowManager::addShadow( RenderObjClass *robj, Shadow::ShadowTypeInf
 
 void W3DShadowManager::removeShadow(Shadow *shadow)
 {
-	shadow->release();
+	if (shadow) shadow->release();
 }
 
 void W3DShadowManager::removeAllShadows(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	requireEmptyShadowOwner(this);
+	if (TheW3DShadowManager != this) return;
+	while (!s_boundedDecals.empty()) {
+		auto *shadow=s_boundedDecals.back(); s_boundedDecals.pop_back(); delete shadow;
+	}
 #else
 	if (TheW3DVolumetricShadowManager)
 		TheW3DVolumetricShadowManager->removeAllShadows();
@@ -328,4 +440,39 @@ void W3DShadowManager::setTimeOfDay(TimeOfDay tod)
 	lightRay *= SUN_DISTANCE_FROM_GROUND;
 
 	setLightPosition(0, lightRay.X, lightRay.Y, lightRay.Z);
+}
+
+Bool W3DShadowManager::ownsBoundedDecalCaster(RenderObjClass *robj) const
+{
+#if defined(ZH_WW3D_CPU_ONLY)
+	return TheW3DShadowManager == this && std::any_of(s_boundedDecals.begin(),s_boundedDecals.end(),
+		[robj](const BoundedDecalShadow *shadow) { return shadow->owns(robj); });
+#else
+	return FALSE;
+#endif
+}
+
+Bool W3DShadowManager::hasBoundedDecalCasters() const
+{
+#if defined(ZH_WW3D_CPU_ONLY)
+	return TheW3DShadowManager == this && !s_boundedDecals.empty();
+#else
+	return FALSE;
+#endif
+}
+
+void W3DShadowManager::RenderShadows(void)
+{
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (TheW3DShadowManager != this || !m_isShadowScene) return;
+	if (!TheGlobalData->m_useShadowDecals || TheGlobalData->m_useShadowVolumes ||
+		!TheHeightMap || !TheHeightMap->getMap())
+		throw OriginalW3DDeviceUnavailable("original bounded decal shadow scene unavailable");
+	try {
+		for (auto *shadow : s_boundedDecals) shadow->draw();
+		m_isShadowScene=FALSE;
+	} catch (...) { m_isShadowScene=FALSE; throw; }
+#else
+	throw OriginalW3DDeviceUnavailable("original shadow physical render pending");
+#endif
 }

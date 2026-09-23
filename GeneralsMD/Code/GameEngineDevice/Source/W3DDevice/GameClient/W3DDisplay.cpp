@@ -122,6 +122,7 @@ void W3DDisplay::init()
 		if (WW3D::Init(NULL, NULL, false) != WW3D_ERROR_OK)
 			throw OriginalW3DDeviceUnavailable("original display WW3D bootstrap failed");
 		ww3d_started = true;
+		WW3D::Set_Thumbnail_Enabled(false);
 		W3DShaderManager::init();
 		shader_manager_started = true;
 		m_3DInterfaceScene = interface_scene;
@@ -192,7 +193,8 @@ void W3DDisplay::draw()
 		!TheWaterRenderObj || !TheSmudgeManager ||
 		(TheGlobalData->m_maxTerrainTracks != 0 && TheGlobalData->m_maxTerrainTracks != 1) ||
 		TheGlobalData->m_useShadowVolumes ||
-		TheGlobalData->m_useShadowDecals ||
+		(TheGlobalData->m_useShadowDecals &&
+			(!TheW3DShadowManager->hasBoundedDecalCasters() || !TheHeightMap->getMap())) ||
 		(TheGlobalData->m_useWaterPlane &&
 			(TheGlobalData->m_useCloudPlane || TheGlobalData->m_waterExtentX <= 0 ||
 			TheGlobalData->m_waterExtentY <= 0 ||

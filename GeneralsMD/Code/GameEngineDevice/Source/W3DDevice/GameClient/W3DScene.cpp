@@ -112,6 +112,13 @@ static bool isBoundedMapTrackSceneObject(RenderObjClass *object)
 		TheTerrainTracksRenderObjClassSystem->ownsActiveModule(track) &&
 		object->Peek_Scene() == W3DDisplay::m_3DScene;
 }
+
+static bool isBoundedDecalCasterSceneObject(RenderObjClass *object)
+{
+	return object && TheW3DShadowManager &&
+		TheW3DShadowManager->ownsBoundedDecalCaster(object) &&
+		object->Peek_Scene() == W3DDisplay::m_3DScene;
+}
 #endif
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -909,6 +916,7 @@ void RTS3DScene::Flush(RenderInfoClass & rinfo)
 	Int trackCount = 0;
 	for (supported.First(); !supported.Is_Done(); supported.Next()) {
 		RenderObjClass *object = supported.Peek_Obj();
+		if (isBoundedDecalCasterSceneObject(object)) continue;
 		if (isBoundedWaterSceneObject(object)) continue;
 		if (isBoundedMapTerrainSceneObject(object)) {
 			if (++terrainCount > 1)
@@ -1757,6 +1765,7 @@ void RTS3DScene::Render(RenderInfoClass &rinfo)
 	Int waterCount = 0;
 	for (supported.First(); !supported.Is_Done(); supported.Next()) {
 		RenderObjClass *object = supported.Peek_Obj();
+		if (isBoundedDecalCasterSceneObject(object)) continue;
 		if (isBoundedWaterSceneObject(object)) { if (++waterCount > 1) throw OriginalW3DDeviceUnavailable("original duplicate water scene pending"); continue; }
 		if (isBoundedMapTerrainSceneObject(object)) {
 			if (++terrainCount > 1)
@@ -1781,8 +1790,7 @@ void RTS3DScene::Render(RenderInfoClass &rinfo)
 	if (TheGlobalData->m_useWaterPlane && (!map_frame || waterCount != 1))
 		throw OriginalW3DDeviceUnavailable("original active water scene owner missing");
 	if ((TheW3DShadowManager &&
-		(TheGlobalData->m_useShadowVolumes || TheGlobalData->m_useShadowDecals ||
-		TheW3DShadowManager->isShadowScene())) ||
+		(TheGlobalData->m_useShadowVolumes || TheW3DShadowManager->isShadowScene())) ||
 		(TheParticleSystemManager && TheParticleSystemManager->getParticleCount() != 0))
 		throw OriginalW3DDeviceUnavailable("original 3D shadow or particle scene translation pending");
 	DX8Wrapper::Set_Fog(FogEnabled, FogColor, FogStart, FogEnd);
@@ -1805,6 +1813,7 @@ void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 	RefRenderObjListIterator updates(&UpdateList);
 	for (updates.First(); !updates.Is_Done(); updates.Next()) {
 		RenderObjClass *object = updates.Peek_Obj();
+		if (isBoundedDecalCasterSceneObject(object)) continue;
 		if (isBoundedWaterSceneObject(object)) continue;
 		if (isBoundedMapTerrainSceneObject(object)) continue;
 		if (isBoundedMapTrackSceneObject(object)) continue;
@@ -1825,11 +1834,14 @@ void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 	RefRenderObjListIterator objects(&RenderList);
 	Int rigidCount = 0;
 	Int terrainCount = 0;
+	const bool map_frame = TheTerrainRenderObject && TheTerrainRenderObject == TheHeightMap &&
+		TheHeightMap->getMap();
 	WaterRenderObjClass *water = NULL;
 	const Int localPlayerIndex = ThePlayerList ?
 		ThePlayerList->getLocalPlayer()->getPlayerIndex() : 0;
 	for (objects.First(); !objects.Is_Done(); objects.Next()) {
 		RenderObjClass *object = objects.Peek_Obj();
+		if (isBoundedDecalCasterSceneObject(object)) continue;
 		if (isBoundedWaterSceneObject(object)) { water = static_cast<WaterRenderObjClass *>(object); continue; }
 		if (isBoundedMapTerrainSceneObject(object)) {
 			if (++terrainCount > 1 || !m_shroudMaterialPass)
@@ -1864,6 +1876,10 @@ void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid object traversal pending");
 		if (object->Is_Really_Visible()) renderOneObject(rinfo, object, localPlayerIndex);
+	}
+	if (map_frame && TheGlobalData->m_useShadowDecals && TheW3DShadowManager && TheW3DShadowManager->hasBoundedDecalCasters()) {
+		TheW3DShadowManager->queueShadows(TRUE);
+		DoShadows(rinfo, FALSE);
 	}
 	if (water && TheGlobalData->m_useWaterPlane && water->Is_Really_Visible()) water->Render(rinfo);
 }

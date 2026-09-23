@@ -114,6 +114,7 @@ extern "C" void zh_probe_terrain_map_frame();
 extern "C" void zh_probe_terrain_tracks();
 extern "C" void zh_probe_terrain_water();
 extern "C" void zh_probe_shadow_source_owner();
+extern "C" void zh_probe_shadow_decal_route();
 extern "C" void zh_probe_terrain_source_bitmap();
 extern "C" void zh_probe_terrain_atlas();
 extern "C" void zh_probe_shroud_data();
@@ -778,7 +779,8 @@ public:
 					delete fileSystem;
 				}
 			} originalDrawOwners(std::getenv("ZH_M22_DRAW_PROFILE") != NULL ||
-				std::getenv("ZH_M22_SHADOW_SOURCE_PROFILE") != NULL);
+				std::getenv("ZH_M22_SHADOW_SOURCE_PROFILE") != NULL ||
+				std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") != NULL);
 			try {
 			if (const char *retailModel = std::getenv("ZH_M22_RETAIL_MODEL"))
 			{
@@ -851,6 +853,19 @@ public:
 			if (std::getenv("ZH_M22_TERRAIN_TRACKS_PROFILE")) zh_probe_terrain_tracks();
 			if (std::getenv("ZH_M22_TERRAIN_WATER_PROFILE")) zh_probe_terrain_water();
 			if (std::getenv("ZH_M22_SHADOW_SOURCE_PROFILE")) zh_probe_shadow_source_owner();
+			if (std::getenv("ZH_M22_SHADOW_DECAL_PROFILE")) {
+				// The source drawable is constructed against the scenario's original
+				// asset/scene owners.  The bounded map-frame probe must instead own a
+				// real display under an active edge, so temporarily unpublish only the
+				// static aliases; it moves the witnessed render object itself and
+				// restores these source owners before scenario teardown.
+				auto *sourceAssets=originalDrawOwners.assets;
+				auto *sourceScene=originalDrawOwners.scene;
+				W3DDisplay::m_assetManager=NULL; W3DDisplay::m_3DScene=NULL;
+				try { zh_probe_shadow_decal_route(); }
+				catch (...) { W3DDisplay::m_assetManager=sourceAssets; W3DDisplay::m_3DScene=sourceScene; throw; }
+				W3DDisplay::m_assetManager=sourceAssets; W3DDisplay::m_3DScene=sourceScene;
+			}
 			if (std::getenv("ZH_M22_TERRAIN_BITMAP_PROFILE")) zh_probe_terrain_source_bitmap();
 			if (std::getenv("ZH_M22_TERRAIN_ATLAS_PROFILE")) zh_probe_terrain_atlas();
 			if (std::getenv("ZH_M22_SHROUD_DATA_PROFILE")) zh_probe_shroud_data();
