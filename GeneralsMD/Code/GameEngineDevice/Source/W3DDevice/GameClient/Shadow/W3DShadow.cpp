@@ -255,7 +255,7 @@ Bool W3DShadowManager::init( void )
 #if defined(ZH_WW3D_CPU_ONLY)
 	if (!zh::original_runtime::OriginalGpuEdge::active() ||
 		!W3DDisplay::m_3DScene || TheGlobalData->m_useShadowVolumes ||
-		(TheGlobalData->m_useShadowDecals && !std::getenv("ZH_M22_SHADOW_DECAL_PROFILE")) ||
+		(TheGlobalData->m_useShadowDecals && !std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") && !std::getenv("ZH_M22_FULL_FEATURE_PROFILE")) ||
 		(TheW3DShadowManager && TheW3DShadowManager != this) ||
 		(s_emptyShadowOwner && s_emptyShadowOwner != this)) {
 		if (TheW3DShadowManager == this && s_emptyShadowOwner != this)

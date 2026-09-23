@@ -105,7 +105,7 @@ void W3DTerrainVisual::init()
 		TheW3DShadowManager || TheWaterRenderObj || TheSmudgeManager ||
 		(TheGlobalData->m_maxTerrainTracks != 0 && TheGlobalData->m_maxTerrainTracks != 1) ||
 		TheGlobalData->m_useShadowVolumes ||
-		(TheGlobalData->m_useShadowDecals && !std::getenv("ZH_M22_SHADOW_DECAL_PROFILE")) ||
+		(TheGlobalData->m_useShadowDecals && !std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") && !std::getenv("ZH_M22_FULL_FEATURE_PROFILE")) ||
 		TheGlobalData->m_useCloudPlane ||
 		(TheGlobalData->m_useWaterPlane && (TheGlobalData->m_waterExtentX <= 0 ||
 		TheGlobalData->m_waterExtentY <= 0 || TheGlobalData->m_waterType != WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT)) ||

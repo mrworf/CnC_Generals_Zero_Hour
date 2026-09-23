@@ -11,6 +11,8 @@
 #include "W3DDevice/GameClient/W3DShadow.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
+#include "W3DDevice/GameClient/W3DParticleSys.h"
+#include "W3DDevice/GameClient/W3DSmudge.h"
 #include "W3DDevice/GameClient/W3DView.h"
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
 #include "W3DDevice/GameClient/W3DWater.h"
@@ -81,6 +83,21 @@ extern "C" void zh_probe_shadow_decal_route()
 					const std::string start=device.snapshot(); frame(); const std::string active=device.snapshot().substr(start.size());
 					const std::size_t terrain=active.find("original RTS3DScene::Render map terrain"), track_mark=active.find("original TerrainTracksRenderObjClassSystem::flush"), shadow=active.find("original W3DShadowManager::RenderShadows decal"), water=active.find("original WaterRenderObjClass::Render translucent plane");
 					require(terrain<track_mark&&track_mark<shadow&&shadow<water&&draws(active)>=4&&active.find("DX8Wrapper::Draw indexed first=0 count=6 base=0",shadow)!=std::string::npos,"original terrain-shadow-water order or range failed");
+					if (std::getenv("ZH_M22_FULL_FEATURE_PROFILE")) {
+						auto *smudges=dynamic_cast<W3DSmudgeManager *>(TheSmudgeManager);
+						require(smudges && dynamic_cast<W3DParticleSystemManager *>(TheParticleSystemManager), "original full feature providers missing");
+						auto *set=smudges->addSmudgeSet(); auto *smudge=set->addSmudgeToSet();
+						smudge->m_size=4; smudge->m_opacity=.5f;
+						const Vector3 points[5]={Vector3(14,18,0),Vector3(14,14,0),Vector3(18,14,0),Vector3(18,18,0),Vector3(16,16,0)};
+						for (Int i=0;i!=5;++i) { smudge->m_verts[i].pos=points[i]; smudge->m_verts[i].uv.Set((i==2||i==3)?1:0,(i==0||i==3)?0:1); }
+						const std::string full_start=device.snapshot(); frame(); const std::string full=device.snapshot().substr(full_start.size());
+						require(full.find("original RTS3DScene::Render map terrain") < full.find("original TerrainTracksRenderObjClassSystem::flush") &&
+							full.find("original TerrainTracksRenderObjClassSystem::flush") < full.find("original W3DShadowManager::RenderShadows decal") &&
+							full.find("original W3DShadowManager::RenderShadows decal") < full.find("original WaterRenderObjClass::Render translucent plane") &&
+							full.find("original WaterRenderObjClass::Render translucent plane") < full.find("original W3DParticleSystemManager::doParticles smudge request") &&
+							full.find("original W3DSmudgeManager::render bounded batch") != std::string::npos,
+							"original full feature source ordering failed");
+					}
 					TheW3DShadowManager->ReleaseResources(); device.fail_next_buffer_create(); require(rejected([&]{TheW3DShadowManager->ReAcquireResources();}),"original decal reacquire create rollback failed"); TheW3DShadowManager->ReAcquireResources();
 					device.fail_draw_after(draws(active.substr(0,shadow))); require(rejected(frame)&&!WW3D::Is_Rendering()&&!device.pass_active(),"original decal draw rollback failed"); frame();
 					TheWritableGlobalData->m_useShadowDecals=FALSE; const std::string off=device.snapshot(); frame(); require(device.snapshot().substr(off.size()).find("original W3DShadowManager::RenderShadows decal")==std::string::npos,"original disabled decals emitted a draw"); TheWritableGlobalData->m_useShadowDecals=TRUE;
@@ -95,5 +112,8 @@ extern "C" void zh_probe_shadow_decal_route()
 	} catch (...) { TheWritableGlobalData->m_partitionCellSize=saved_partition; TheWritableGlobalData->m_makeTrackMarks=saved_marks; TheWritableGlobalData->m_useShadowDecals=saved_decals; TheWritableGlobalData->m_useShadowVolumes=saved_volumes; TheWritableGlobalData->m_maxTerrainTracks=saved_tracks; TheWritableGlobalData->m_useWaterPlane=saved_water; TheWritableGlobalData->m_useCloudPlane=saved_cloud; TheWritableGlobalData->m_waterExtentX=saved_x; TheWritableGlobalData->m_waterExtentY=saved_y; TheWritableGlobalData->m_waterType=saved_type; throw; }
 	TheWritableGlobalData->m_partitionCellSize=saved_partition; TheWritableGlobalData->m_makeTrackMarks=saved_marks; TheWritableGlobalData->m_useShadowDecals=saved_decals; TheWritableGlobalData->m_useShadowVolumes=saved_volumes; TheWritableGlobalData->m_maxTerrainTracks=saved_tracks; TheWritableGlobalData->m_useWaterPlane=saved_water; TheWritableGlobalData->m_useCloudPlane=saved_cloud; TheWritableGlobalData->m_waterExtentX=saved_x; TheWritableGlobalData->m_waterExtentY=saved_y; TheWritableGlobalData->m_waterType=saved_type;
 	require(device.resource_counts().total()==0,"original decal teardown retained Recording resources");
-	std::puts("original decal shadow: source=1 ordering=1 retry=2 tracks-water=1 negatives=1 removal=1 generations=2 resources=0");
+	if (std::getenv("ZH_M22_FULL_FEATURE_PROFILE"))
+		std::puts("original full feature map: terrain-tracks-shadow-water-particle-smudge=1 failures=2 generations=2 resources=0");
+	else
+		std::puts("original decal shadow: source=1 ordering=1 retry=2 tracks-water=1 negatives=1 removal=1 generations=2 resources=0");
 }

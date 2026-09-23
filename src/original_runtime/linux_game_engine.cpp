@@ -784,7 +784,8 @@ public:
 				}
 			} originalDrawOwners(std::getenv("ZH_M22_DRAW_PROFILE") != NULL ||
 				std::getenv("ZH_M22_SHADOW_SOURCE_PROFILE") != NULL ||
-				std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") != NULL);
+				std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") != NULL ||
+				std::getenv("ZH_M22_FULL_FEATURE_PROFILE") != NULL);
 			try {
 			if (const char *retailModel = std::getenv("ZH_M22_RETAIL_MODEL"))
 			{
@@ -863,6 +864,14 @@ public:
 				// real display under an active edge, so temporarily unpublish only the
 				// static aliases; it moves the witnessed render object itself and
 				// restores these source owners before scenario teardown.
+				auto *sourceAssets=originalDrawOwners.assets;
+				auto *sourceScene=originalDrawOwners.scene;
+				W3DDisplay::m_assetManager=NULL; W3DDisplay::m_3DScene=NULL;
+				try { zh_probe_shadow_decal_route(); }
+				catch (...) { W3DDisplay::m_assetManager=sourceAssets; W3DDisplay::m_3DScene=sourceScene; throw; }
+				W3DDisplay::m_assetManager=sourceAssets; W3DDisplay::m_3DScene=sourceScene;
+			}
+			if (std::getenv("ZH_M22_FULL_FEATURE_PROFILE")) {
 				auto *sourceAssets=originalDrawOwners.assets;
 				auto *sourceScene=originalDrawOwners.scene;
 				W3DDisplay::m_assetManager=NULL; W3DDisplay::m_3DScene=NULL;
@@ -1551,7 +1560,7 @@ protected:
 	ParticleSystemManager *createParticleSystemManager() override
 	{
 #if defined(ZH_M22_FULL_DRAW_TEST)
-		if (std::getenv("ZH_M22_PARTICLE_PROFILE") || std::getenv("ZH_M22_SMUDGE_EFFECT_PROFILE")) return new W3DParticleSystemManager;
+		if (std::getenv("ZH_M22_PARTICLE_PROFILE") || std::getenv("ZH_M22_SMUDGE_EFFECT_PROFILE") || std::getenv("ZH_M22_FULL_FEATURE_PROFILE")) return new W3DParticleSystemManager;
 #endif
 		return new LinuxParticleManager;
 	}
