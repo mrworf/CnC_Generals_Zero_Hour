@@ -247,6 +247,8 @@ int main()
             require(device.resource_counts().total() == 0,
                 "original empty 3D teardown retained device resources");
         }
+        require(!zh::original_runtime::OriginalGpuEdge::active(),
+            "original shroud material retained a stale fixture edge");
         W3DShroudMaterialPassClass shroudPass;
         try {
             shroudPass.Install_Materials();

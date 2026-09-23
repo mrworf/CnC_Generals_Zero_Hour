@@ -133,12 +133,22 @@ void W3DView::updateView()
 		getNextView() || !zh::original_runtime::OriginalGpuEdge::active() ||
 		!W3DDisplay::m_3DScene || !m_3DCamera || !m_2DCamera ||
 		!dynamic_cast<W3DTerrainVisual *>(TheTerrainVisual) ||
-		!TheTerrainRenderObject || TheTerrainRenderObject->doesNeedFullUpdate() ||
+		!TheTerrainRenderObject || !TheHeightMap ||
 		getCameraLock() != INVALID_ID || m_doingMoveCameraOnWaypointPath ||
 		m_pos.x != 0 || m_pos.y != 0 || m_angle != 0 || m_pitchAngle != 0 ||
 		m_viewFilterMode != FM_VIEW_DEFAULT || m_viewFilter != FT_VIEW_DEFAULT ||
 		m_isWireFrameEnabled || m_nextWireFrameEnabled)
 		throw OriginalW3DDeviceUnavailable("original tactical map or camera update pending");
+	RefRenderObjListIterator *lights = W3DDisplay::m_3DScene->createLightsIterator();
+	try {
+		TheTerrainRenderObject->updateCenter(m_3DCamera, lights);
+		if (lights) W3DDisplay::m_3DScene->destroyLightsIterator(lights);
+		zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+			"original W3DView::updateView terrain center");
+	} catch (...) {
+		if (lights) W3DDisplay::m_3DScene->destroyLightsIterator(lights);
+		throw;
+	}
 }
 void W3DView::update() { ZH_VIEW_PENDING(); }
 Drawable* W3DView::pickDrawable(const ICoord2D*, Bool, PickType) { ZH_VIEW_PENDING(); }

@@ -91,7 +91,6 @@ extern "C" void zh_probe_terrain_visual_map()
 		DX8Wrapper::Set_Transform(D3DTS_VIEW, Matrix4x4(true));
 		DX8Wrapper::Set_Transform(D3DTS_PROJECTION, Matrix4x4(true));
 		DX8Wrapper::Apply_Render_State_Changes();
-		W3DShaderManager::init();
 		CameraClass camera;
 		RenderInfoClass render_info(camera);
 		const std::string before_no_frame = device.snapshot();
@@ -124,7 +123,6 @@ extern "C" void zh_probe_terrain_visual_map()
 		require(draw_count(draws) == 2 && draws.find(range) != std::string::npos &&
 			draws.find(range, draws.find(range) + 1) != std::string::npos,
 			"original terrain visual changed two-pass terrain submission");
-		W3DShaderManager::shutdown();
 		DX8Wrapper::Set_Vertex_Buffer(NULL);
 		DX8Wrapper::Set_Index_Buffer(NULL, 0);
 		device.destroy(depth);

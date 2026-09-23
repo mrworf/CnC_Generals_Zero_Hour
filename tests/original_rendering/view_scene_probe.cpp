@@ -679,6 +679,8 @@ extern "C" void zh_probe_view_scene()
                     composed_view->getHeight() == ui_height,
                     "original tactical invalid UI mode mutated view dimensions");
                 composed_view->updateView();
+				require(!TheHeightMap->getMap() && !TheHeightMap->doesNeedFullUpdate(),
+					"original map-less tactical update requested terrain work");
                 composed_view->View::setCameraLock(static_cast<ObjectID>(1));
                 bool locked_update_rejected = false;
                 try { composed_view->updateView(); }

@@ -55,6 +55,8 @@ void verify_terrain_shader(RecordingGpuDevice &device,
 	using Arg = Edge::CombinerArg;
 	require_rejected([] { (void)W3DShaderManager::getShaderPasses(W3DShaderManager::ST_TERRAIN_BASE); },
 		"original terrain shader query before init was accepted");
+	// This probe deliberately has no W3DDisplay, so it owns the otherwise
+	// display-owned shader-manager fixture explicitly.
 	W3DShaderManager::init();
 	require_rejected([] { W3DShaderManager::init(); },
 		"original terrain shader duplicate init was accepted");
@@ -151,7 +153,6 @@ void verify_terrain_shader(RecordingGpuDevice &device,
 	DX8Wrapper::Apply_Render_State_Changes();
 	require(!Edge::map_applied_state(DX8_FVF_XYZNUV2).pipeline.blend.enabled,
 		"original terrain shader reset did not restore delayed shader selection");
-	W3DShaderManager::shutdown();
 	W3DShaderManager::shutdown();
 	require_rejected([] {
 		(void)W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, 0);

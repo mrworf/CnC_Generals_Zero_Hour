@@ -36,8 +36,11 @@
 // window, terrain or draw paths on the public-device CPU branch.
 #include "PreRTS.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DShroud.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/W3DScene.h"
+#include "w3d_shader_manager_cpu_types.h"
+#include "W3DDevice/GameClient/W3DShaderManager.h"
 #include "W3DDevice/GameClient/W3DView.h"
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "W3DDevice/GameClient/HeightMap.h"
@@ -89,6 +92,7 @@ W3DDisplay::~W3DDisplay()
 	m_assetManager->Free_Assets();
 	delete m_assetManager;
 	m_assetManager = NULL;
+	W3DShaderManager::shutdown();
 	WW3D::Shutdown();
 	m_initialized = false;
 }
@@ -105,6 +109,7 @@ void W3DDisplay::init()
 	RTS3DScene *scene_3d = NULL;
 	W3DAssetManager *assets = NULL;
 	bool ww3d_started = false;
+	bool shader_manager_started = false;
 	try {
 		interface_scene = NEW_REF(RTS3DInterfaceScene, ());
 		interface_scene->Set_Ambient_Light(Vector3(1, 1, 1));
@@ -116,6 +121,8 @@ void W3DDisplay::init()
 		if (WW3D::Init(NULL, NULL, false) != WW3D_ERROR_OK)
 			throw OriginalW3DDeviceUnavailable("original display WW3D bootstrap failed");
 		ww3d_started = true;
+		W3DShaderManager::init();
+		shader_manager_started = true;
 		m_3DInterfaceScene = interface_scene;
 		m_2DScene = scene_2d;
 		m_3DScene = scene_3d;
@@ -126,6 +133,7 @@ void W3DDisplay::init()
 		REF_PTR_RELEASE(scene_2d);
 		REF_PTR_RELEASE(interface_scene);
 		delete assets;
+		if (shader_manager_started) W3DShaderManager::shutdown();
 		if (ww3d_started) WW3D::Shutdown();
 		throw;
 	}
@@ -178,7 +186,7 @@ void W3DDisplay::draw()
 		!view || getNextView(view) || TheTacticalView != view ||
 		!view->get3DCamera() ||
 		!dynamic_cast<W3DTerrainVisual *>(TheTerrainVisual) ||
-		!TheTerrainRenderObject || !TheHeightMap || TheHeightMap->getMap() ||
+		!TheTerrainRenderObject || !TheHeightMap ||
 		!TheTerrainTracksRenderObjClassSystem || !TheW3DShadowManager ||
 		!TheWaterRenderObj || !TheSmudgeManager ||
 		TheGlobalData->m_maxTerrainTracks != 0 || TheGlobalData->m_useShadowVolumes ||
@@ -190,6 +198,14 @@ void W3DDisplay::draw()
 	if (!extent.first || !extent.second || extent.first != getWidth() ||
 		extent.second != getHeight())
 		throw OriginalW3DDeviceUnavailable("original display frame target extent mismatch");
+	// Empty, published terrain is the native pre-load state.  It still owns a
+	// view and can present the bounded empty/rigid scene; only a loaded map
+	// projects shroud data before the terrain-center update.
+	if (TheHeightMap->getMap()) {
+		auto *shroud = TheTerrainRenderObject->getShroud();
+		if (!shroud) throw OriginalW3DDeviceUnavailable("original display shroud owner missing");
+		shroud->render(view->get3DCamera());
+	}
 	updateViews();
 	if (WW3D::Begin_Render(true, true, Vector3(0, 0, 0), 1) != WW3D_ERROR_OK)
 		throw OriginalW3DDeviceUnavailable("original display frame did not begin");

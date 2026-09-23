@@ -54,6 +54,7 @@
 #include "W3DDevice/GameClient/W3DScene.h"
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DWater.h"
 #endif
 #include "W3DDevice/GameClient/W3DDynamicLight.h"
@@ -85,6 +86,15 @@ static bool isDisabledWaterSceneObject(RenderObjClass *object)
 	if (object->Peek_Scene() != W3DDisplay::m_3DScene ||
 		TheGlobalData->m_useWaterPlane || TheGlobalData->m_useCloudPlane)
 		throw OriginalW3DDeviceUnavailable("original enabled or foreign water scene pending");
+	return true;
+}
+
+static bool isBoundedMapTerrainSceneObject(RenderObjClass *object)
+{
+	if (object != TheTerrainRenderObject || !object || !TheHeightMap ||
+		object != TheHeightMap || !TheHeightMap->getMap() ||
+		object->Peek_Scene() != W3DDisplay::m_3DScene)
+		return false;
 	return true;
 }
 #endif
@@ -878,9 +888,17 @@ void RTS3DScene::Flush(RenderInfoClass & rinfo)
 		throw OriginalW3DDeviceUnavailable("original 3D advanced scene flush translation pending");
 	RefRenderObjListIterator supported(&RenderList);
 	Int rigidCount = 0;
+	Int terrainCount = 0;
 	for (supported.First(); !supported.Is_Done(); supported.Next()) {
 		RenderObjClass *object = supported.Peek_Obj();
 		if (isDisabledWaterSceneObject(object)) continue;
+		if (isBoundedMapTerrainSceneObject(object)) {
+			if (++terrainCount > 1)
+				throw OriginalW3DDeviceUnavailable("original duplicate map terrain pending");
+			continue;
+		}
+		if (object == TheTerrainRenderObject)
+			throw OriginalW3DDeviceUnavailable("original map terrain scene binding pending");
 		if (++rigidCount > 1 || object->Class_ID() != RenderObjClass::CLASSID_MESH ||
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid flush translation pending");
@@ -1707,15 +1725,29 @@ void RTS3DScene::Render(RenderInfoClass &rinfo)
 		throw OriginalW3DDeviceUnavailable("original 3D custom scene pass translation pending");
 	if (!LightList.Is_Empty() || !m_dynamicLightList.Is_Empty())
 		throw OriginalW3DDeviceUnavailable("original 3D scene lights translation pending");
+	const bool map_frame = TheTerrainRenderObject && TheTerrainRenderObject == TheHeightMap &&
+		TheHeightMap->getMap();
 	RefRenderObjListIterator supported(&RenderList);
 	Int rigidCount = 0;
+	Int terrainCount = 0;
 	for (supported.First(); !supported.Is_Done(); supported.Next()) {
 		RenderObjClass *object = supported.Peek_Obj();
 		if (isDisabledWaterSceneObject(object)) continue;
+		if (isBoundedMapTerrainSceneObject(object)) {
+			if (++terrainCount > 1)
+				throw OriginalW3DDeviceUnavailable("original duplicate map terrain pending");
+			continue;
+		}
+		if (object == TheTerrainRenderObject)
+			throw OriginalW3DDeviceUnavailable("original map terrain scene binding pending");
+		if (map_frame)
+			throw OriginalW3DDeviceUnavailable("original map scene sibling pending");
 		if (++rigidCount > 1 || object->Class_ID() != RenderObjClass::CLASSID_MESH ||
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid scene translation pending");
 	}
+	if (map_frame && terrainCount != 1)
+		throw OriginalW3DDeviceUnavailable("original map terrain scene owner missing");
 	if ((TheW3DShadowManager &&
 		(TheGlobalData->m_useShadowVolumes || TheGlobalData->m_useShadowDecals ||
 		TheW3DShadowManager->isShadowScene())) ||
@@ -1742,6 +1774,9 @@ void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 	for (updates.First(); !updates.Is_Done(); updates.Next()) {
 		RenderObjClass *object = updates.Peek_Obj();
 		if (isDisabledWaterSceneObject(object)) continue;
+		if (isBoundedMapTerrainSceneObject(object)) continue;
+		if (object == TheTerrainRenderObject)
+			throw OriginalW3DDeviceUnavailable("original map terrain update binding pending");
 		if (object->Class_ID() != RenderObjClass::CLASSID_MESH ||
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid update pending");
@@ -1749,11 +1784,40 @@ void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 	}
 	RefRenderObjListIterator objects(&RenderList);
 	Int rigidCount = 0;
+	Int terrainCount = 0;
 	const Int localPlayerIndex = ThePlayerList ?
 		ThePlayerList->getLocalPlayer()->getPlayerIndex() : 0;
 	for (objects.First(); !objects.Is_Done(); objects.Next()) {
 		RenderObjClass *object = objects.Peek_Obj();
 		if (isDisabledWaterSceneObject(object)) continue;
+		if (isBoundedMapTerrainSceneObject(object)) {
+			if (++terrainCount > 1 || !m_shroudMaterialPass)
+				throw OriginalW3DDeviceUnavailable("original map terrain material pass pending");
+			rinfo.light_environment = NULL;
+			rinfo.Camera.Set_User_Data(this);
+			zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+				"original RTS3DScene::Render map terrain");
+			bool materialPassPushed = false;
+			rinfo.Push_Material_Pass(m_shroudMaterialPass);
+			materialPassPushed = true;
+			try {
+				object->Render(rinfo);
+				rinfo.Pop_Material_Pass();
+				materialPassPushed = false;
+			} catch (...) {
+				try {
+					if (materialPassPushed) rinfo.Pop_Material_Pass();
+				}
+				catch (...) { }
+				throw;
+			}
+			continue;
+		}
+		if (object == TheTerrainRenderObject)
+			throw OriginalW3DDeviceUnavailable("original map terrain traversal binding pending");
+		if (TheTerrainRenderObject && TheTerrainRenderObject == TheHeightMap &&
+			TheHeightMap->getMap())
+			throw OriginalW3DDeviceUnavailable("original map scene sibling traversal pending");
 		if (++rigidCount > 1 || object->Class_ID() != RenderObjClass::CLASSID_MESH ||
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid object traversal pending");

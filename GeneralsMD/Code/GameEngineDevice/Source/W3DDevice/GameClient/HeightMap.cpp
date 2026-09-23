@@ -197,7 +197,23 @@ Int HeightMapRenderObjClass::freeMapResources()
 }
 void HeightMapRenderObjClass::updateCenter(CameraClass* camera, RefRenderObjListIterator* lights)
 {
-	BaseHeightMapRenderObjClass::updateCenter(camera, lights);
+	// A newly composed terrain visual deliberately owns an empty HeightMap
+	// until it has loaded a map.  Keep its native update path a no-op; only a
+	// published map enters the bounded Linux terrain update below.
+	if (!m_map) return;
+	if (!camera || !m_vertexBufferTiles || !m_vertexBufferBackup ||
+		m_x <= 1 || m_y <= 1)
+		throw OriginalW3DDeviceUnavailable("original terrain center update unavailable");
+	// The bounded Linux terrain route has no bridge, road, tree, prop, bib or
+	// waypoint sub-owner yet.  The native base update would dispatch those
+	// owners (and assumes its bridge owner exists), so fail closed if any is
+	// present and retain the source height-map full-update operation here.
+	if (m_treeBuffer || m_propBuffer || m_bibBuffer || m_waypointBuffer ||
+		m_roadBuffer || m_bridgeBuffer)
+		throw OriginalW3DDeviceUnavailable("original terrain sibling update pending");
+	if (!m_needFullUpdate) return;
+	updateBlock(0, 0, m_x - 1, m_y - 1, m_map, lights);
+	m_needFullUpdate = FALSE;
 }
 void HeightMapRenderObjClass::staticLightingChanged()
 {

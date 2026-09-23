@@ -103,7 +103,6 @@ extern "C" void zh_probe_flat_terrain_geometry()
 		DX8Wrapper::Set_Transform(D3DTS_VIEW, Matrix4x4(true));
 		DX8Wrapper::Set_Transform(D3DTS_PROJECTION, Matrix4x4(true));
 		DX8Wrapper::Apply_Render_State_Changes();
-		W3DShaderManager::init();
 		CameraClass camera;
 		RenderInfoClass render_info(camera);
 		bool missing_frame_rejected = false;
@@ -191,7 +190,6 @@ extern "C" void zh_probe_flat_terrain_geometry()
 		TheWritableGlobalData->m_useLightMap = TRUE;
 		require_no_draw("original deferred light-map terrain submitted a draw", [&] { terrain.Render(render_info); });
 		TheWritableGlobalData->m_useLightMap = saved_light_map;
-		W3DShaderManager::shutdown();
 		DX8Wrapper::Set_Vertex_Buffer(NULL);
 		DX8Wrapper::Set_Index_Buffer(NULL, 0);
 		terrain.freeMapResources();

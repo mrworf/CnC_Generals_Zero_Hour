@@ -215,6 +215,8 @@ void W3DShroud::render(CameraClass *camera)
 	try {
 		m_pDstTexture->Apply(0);
 		m_clearDstTexture = FALSE;
+		zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+			"original W3DShroud::render projected");
 	} catch (...) {
 		ReleaseResources();
 		m_clearDstTexture = TRUE;
@@ -224,6 +226,11 @@ void W3DShroud::render(CameraClass *camera)
 
 void W3DShroudMaterialPassClass::Install_Materials(void) const
 {
+	// Material installation is a source-GPU operation.  Validate the current
+	// edge before consulting singleton terrain state so an unpublished/stale
+	// owner cannot select an arbitrary earlier device session.
+	if (!zh::original_runtime::OriginalGpuEdge::active())
+		throw OriginalW3DDeviceUnavailable("original shroud material GPU installation pending");
 	if (!TheTerrainRenderObject || !TheTerrainRenderObject->getShroud() ||
 		!TheTerrainRenderObject->getShroud()->getShroudTexture())
 		throw OriginalW3DDeviceUnavailable("original shroud material texture unavailable");
