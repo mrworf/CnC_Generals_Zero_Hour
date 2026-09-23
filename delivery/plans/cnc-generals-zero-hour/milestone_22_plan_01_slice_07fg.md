@@ -2,12 +2,17 @@
 
 ## Outcome and dependency
 
-Requires 07FF. Promote the already accepted opt-in original factory path from
+Requires 07FG0. Promote the already accepted opt-in original factory path from
 the empty/generated-rigid diagnostic to the bounded generated map profile,
 without changing default headless behavior. The real GameClient factory,
 display, tactical view and terrain visual must publish atomically and drive
 the 07FF source-owned map frame; a map-loaded guard or a parallel Linux
 renderer is a failure.
+
+07FG0 supplies only the public bgfx sampled 2D mip allocation/upload/recreate
+transport required by the generated atlas. This slice remains responsible for
+the production factory boundary; it must not replace physical device evidence
+with a Recording-backed shortcut.
 
 ## Acceptance
 

@@ -101,6 +101,17 @@ UInt64 required_texture_bytes(const TextureUploadDesc& upload, TextureFormat for
     return 0; // Compressed and depth uploads are admitted only with later format-specific proof.
 }
 
+UInt32 maximum_2d_mip_levels(UInt32 width, UInt32 height)
+{
+    UInt32 levels = 1;
+    while (width > 1 || height > 1) {
+        width = std::max(1U, width >> 1U);
+        height = std::max(1U, height >> 1U);
+        ++levels;
+    }
+    return levels;
+}
+
 bool vertex_layout_for(const PipelineDesc& desc, bgfx::VertexLayout& layout, UInt32& stride)
 {
     layout.begin();
@@ -472,13 +483,15 @@ TextureHandle BgfxGpuDevice::create_texture(const TextureDesc& desc, std::string
 {
     if (auto result = validate(desc); !result) { impl_->fail("create_texture", result.error); return {}; }
     if (desc.dimension != TextureDimension::texture_2d || desc.width > UINT16_MAX || desc.height > UINT16_MAX
-        || desc.mip_levels != 1 || !supports_texture_format(desc.format, desc.dimension, desc.sampled, desc.render_target)) {
+        || desc.mip_levels > maximum_2d_mip_levels(desc.width, desc.height)
+        || (desc.render_target && desc.mip_levels != 1)
+        || !supports_texture_format(desc.format, desc.dimension, desc.sampled, desc.render_target)) {
         impl_->fail("create_texture", "unsupported public bgfx texture dimension, extent, mip or format/usage");
         return {};
     }
     const auto flags = desc.render_target ? BGFX_TEXTURE_RT : BGFX_TEXTURE_NONE;
     auto native = bgfx::createTexture2D(static_cast<UInt16>(desc.width), static_cast<UInt16>(desc.height),
-        false, 1, physical_format(desc.format), flags);
+        desc.mip_levels > 1, 1, physical_format(desc.format), flags);
     if (!bgfx::isValid(native)) { impl_->fail("create_texture", "public bgfx texture allocation failed"); return {}; }
     auto handle = insert<TextureHandle>(impl_->textures, {desc, native, false, false, false});
     if (!handle) { bgfx::destroy(native); impl_->fail("create_texture", "opaque resource slot budget exhausted"); }
@@ -519,13 +532,17 @@ ValidationResult BgfxGpuDevice::upload_texture(const TextureUploadDesc& desc, co
     if (!slot) return impl_->fail("upload_texture", "stale or foreign texture handle");
     const auto& texture = slot->record.desc;
     const UInt64 required = required_texture_bytes(desc, texture.format);
-    if (!bytes || desc.mip_level != 0 || !desc.width || !desc.height
-        || desc.width != texture.width || desc.height != texture.height
+    const UInt32 mip_width = desc.mip_level < texture.mip_levels
+        ? std::max(1U, texture.width >> desc.mip_level) : 0;
+    const UInt32 mip_height = desc.mip_level < texture.mip_levels
+        ? std::max(1U, texture.height >> desc.mip_level) : 0;
+    if (!bytes || desc.mip_level >= texture.mip_levels || !desc.width || !desc.height
+        || desc.width != mip_width || desc.height != mip_height
         || desc.row_pitch < static_cast<UInt64>(desc.width) *
             (texture.format == TextureFormat::bgr5a1 ? 2U : 4U) || desc.row_pitch > UINT16_MAX
-        || !required || desc.size < required || desc.size > RendererLimits::maximum_upload_bytes)
+        || !required || desc.size != required || desc.size > RendererLimits::maximum_upload_bytes)
         return impl_->fail("upload_texture", "unsupported or out-of-bounds texture upload");
-    bgfx::updateTexture2D(slot->record.native, 0, 0, 0, 0,
+    bgfx::updateTexture2D(slot->record.native, 0, static_cast<UInt8>(desc.mip_level), 0, 0,
         static_cast<UInt16>(desc.width), static_cast<UInt16>(desc.height),
         bgfx::copy(bytes, static_cast<UInt32>(desc.size)), static_cast<UInt16>(desc.row_pitch));
     slot->record.color_initialized = true;
