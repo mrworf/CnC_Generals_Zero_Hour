@@ -1112,6 +1112,7 @@ add_executable(zh_original_w3d_full_probe
 	 tests/original_rendering/terrain_map_frame_probe.cpp
 	 tests/original_rendering/terrain_tracks_probe.cpp
 	 tests/original_rendering/terrain_water_probe.cpp
+	tests/original_rendering/shadow_source_owner_probe.cpp
   tests/original_rendering/terrain_source_bitmap_probe.cpp
   tests/original_rendering/terrain_atlas_probe.cpp
   tests/original_rendering/shroud_data_probe.cpp
@@ -1160,6 +1161,9 @@ set_source_files_properties(tests/original_rendering/terrain_tracks_probe.cpp PR
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/terrain_water_probe.cpp PROPERTIES
+  COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
+  COMPILE_OPTIONS "-fpermissive")
+set_source_files_properties(tests/original_rendering/shadow_source_owner_probe.cpp PROPERTIES
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/terrain_source_bitmap_probe.cpp PROPERTIES
@@ -2249,6 +2253,13 @@ if(ZH_BUILD_TESTS)
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
     --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
   set_tests_properties(original_w3d_terrain_water PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
+  add_test(NAME original_w3d_shadow_source_owner COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_shadow_source_owner.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>"
+    --asset-producer "$<TARGET_FILE:original_w3d_cpu_graph_tests>")
+  set_tests_properties(original_w3d_shadow_source_owner PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")
   add_test(NAME original_w3d_terrain_source_bitmap COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_terrain_source_bitmap.py"

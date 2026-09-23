@@ -2,11 +2,13 @@
 
 ## Outcome and dependency
 
-Requires 07F9 and the accepted original scene mesh route. Implement each
-source shadow type reached by the selected scene-family contract, beginning
-from `W3DShadowManager::addShadow` and the original drawable/scene ownership
-path through its map-aware recording pass. The disabled-shadow owner is not
-an accepting substitute once a source drawable requests a shadow.
+Requires 07FD0 and the accepted original scene mesh route. Implement the
+smallest source-requested shadow type: bounded `SHADOW_DECAL` requests, which
+`W3DDebrisDraw` and `W3DModelDraw` submit through
+`W3DShadowManager::addShadow`. `W3DDefaultDraw` is the contrasting source
+volume caller, not a decal caller. Preserve volume and projection-derived
+routes as typed pending. The disabled-shadow owner is not an accepting
+substitute once a source drawable requests the admitted decal.
 
 ## Boundaries and acceptance
 
