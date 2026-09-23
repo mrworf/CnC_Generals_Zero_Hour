@@ -55,6 +55,7 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "W3DDevice/GameClient/W3DWater.h"
 #endif
 #include "W3DDevice/GameClient/W3DDynamicLight.h"
@@ -96,6 +97,14 @@ static bool isBoundedMapTerrainSceneObject(RenderObjClass *object)
 		object->Peek_Scene() != W3DDisplay::m_3DScene)
 		return false;
 	return true;
+}
+
+static bool isBoundedMapTrackSceneObject(RenderObjClass *object)
+{
+	auto *track = dynamic_cast<TerrainTracksRenderObjClass *>(object);
+	return track && TheTerrainTracksRenderObjClassSystem &&
+		TheTerrainTracksRenderObjClassSystem->ownsActiveModule(track) &&
+		object->Peek_Scene() == W3DDisplay::m_3DScene;
 }
 #endif
 #ifdef _INTERNAL
@@ -889,12 +898,20 @@ void RTS3DScene::Flush(RenderInfoClass & rinfo)
 	RefRenderObjListIterator supported(&RenderList);
 	Int rigidCount = 0;
 	Int terrainCount = 0;
+	const bool map_frame = TheTerrainRenderObject && TheTerrainRenderObject == TheHeightMap &&
+		TheHeightMap->getMap();
+	Int trackCount = 0;
 	for (supported.First(); !supported.Is_Done(); supported.Next()) {
 		RenderObjClass *object = supported.Peek_Obj();
 		if (isDisabledWaterSceneObject(object)) continue;
 		if (isBoundedMapTerrainSceneObject(object)) {
 			if (++terrainCount > 1)
 				throw OriginalW3DDeviceUnavailable("original duplicate map terrain pending");
+			continue;
+		}
+		if (isBoundedMapTrackSceneObject(object)) {
+			if (!map_frame || ++trackCount > 1)
+				throw OriginalW3DDeviceUnavailable("original map terrain-track scene binding pending");
 			continue;
 		}
 		if (object == TheTerrainRenderObject)
@@ -1730,12 +1747,18 @@ void RTS3DScene::Render(RenderInfoClass &rinfo)
 	RefRenderObjListIterator supported(&RenderList);
 	Int rigidCount = 0;
 	Int terrainCount = 0;
+	Int trackCount = 0;
 	for (supported.First(); !supported.Is_Done(); supported.Next()) {
 		RenderObjClass *object = supported.Peek_Obj();
 		if (isDisabledWaterSceneObject(object)) continue;
 		if (isBoundedMapTerrainSceneObject(object)) {
 			if (++terrainCount > 1)
 				throw OriginalW3DDeviceUnavailable("original duplicate map terrain pending");
+			continue;
+		}
+		if (isBoundedMapTrackSceneObject(object)) {
+			if (!map_frame || ++trackCount > 1)
+				throw OriginalW3DDeviceUnavailable("original map terrain-track scene binding pending");
 			continue;
 		}
 		if (object == TheTerrainRenderObject)
@@ -1775,12 +1798,20 @@ void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 		RenderObjClass *object = updates.Peek_Obj();
 		if (isDisabledWaterSceneObject(object)) continue;
 		if (isBoundedMapTerrainSceneObject(object)) continue;
+		if (isBoundedMapTrackSceneObject(object)) continue;
 		if (object == TheTerrainRenderObject)
 			throw OriginalW3DDeviceUnavailable("original map terrain update binding pending");
 		if (object->Class_ID() != RenderObjClass::CLASSID_MESH ||
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid update pending");
 		if (!ShaderClass::Is_Backface_Culling_Inverted()) object->On_Frame_Update();
+	}
+	// The source track object accumulates its visible edges before HeightMap
+	// flushes them after its two terrain passes, regardless of render-list order.
+	RefRenderObjListIterator queued_tracks(&RenderList);
+	for (queued_tracks.First(); !queued_tracks.Is_Done(); queued_tracks.Next()) {
+		RenderObjClass *object = queued_tracks.Peek_Obj();
+		if (isBoundedMapTrackSceneObject(object)) object->Render(rinfo);
 	}
 	RefRenderObjListIterator objects(&RenderList);
 	Int rigidCount = 0;
@@ -1813,6 +1844,7 @@ void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 			}
 			continue;
 		}
+		if (isBoundedMapTrackSceneObject(object)) continue;
 		if (object == TheTerrainRenderObject)
 			throw OriginalW3DDeviceUnavailable("original map terrain traversal binding pending");
 		if (TheTerrainRenderObject && TheTerrainRenderObject == TheHeightMap &&

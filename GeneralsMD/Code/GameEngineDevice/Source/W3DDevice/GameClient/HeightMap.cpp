@@ -51,6 +51,7 @@
 #include "PreRTS.h"
 #include "Common/GlobalData.h"
 #include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "w3d_shader_manager_cpu_types.h"
 #include "W3DDevice/GameClient/W3DShaderManager.h"
 #include "original_gpu_edge.h"
@@ -111,6 +112,8 @@ void HeightMapRenderObjClass::Render(RenderInfoClass&)
 		}
 		W3DShaderManager::resetShader(W3DShaderManager::ST_TERRAIN_BASE);
 		active_shader = FALSE;
+		if (TheTerrainTracksRenderObjClassSystem)
+			TheTerrainTracksRenderObjClassSystem->flush();
 	} catch (...) {
 		if (active_shader) {
 			try { W3DShaderManager::resetShader(W3DShaderManager::ST_TERRAIN_BASE); }

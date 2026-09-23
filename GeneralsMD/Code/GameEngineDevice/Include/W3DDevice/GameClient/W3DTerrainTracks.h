@@ -123,6 +123,7 @@ public:
 	void ReAcquireResources(void);  ///< Reacquire all resources after device reset.
 #if defined(ZH_WW3D_CPU_ONLY)
 	Bool hasPendingGpuResources(void) const { return m_gpuResourcesPending; }
+	Bool ownsActiveModule(const TerrainTracksRenderObjClass *module) const;
 #endif
 
 	void setDetail(void);

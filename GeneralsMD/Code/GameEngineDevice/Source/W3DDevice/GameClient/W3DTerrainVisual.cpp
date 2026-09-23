@@ -102,7 +102,8 @@ void W3DTerrainVisual::init()
 		!zh::original_runtime::OriginalGpuEdge::active() || !W3DDisplay::m_3DScene ||
 		TheTerrainRenderObject || TheHeightMap || TheTerrainTracksRenderObjClassSystem ||
 		TheW3DShadowManager || TheWaterRenderObj || TheSmudgeManager ||
-		TheGlobalData->m_maxTerrainTracks != 0 || TheGlobalData->m_useShadowVolumes ||
+		(TheGlobalData->m_maxTerrainTracks != 0 && TheGlobalData->m_maxTerrainTracks != 1) ||
+		TheGlobalData->m_useShadowVolumes ||
 		TheGlobalData->m_useShadowDecals || TheGlobalData->m_useWaterPlane ||
 		TheGlobalData->m_useCloudPlane || TheGlobalData->m_waterExtentX != 0 ||
 		TheGlobalData->m_waterExtentY != 0 || TheGlobalData->m_waterType != 0)
@@ -188,6 +189,9 @@ Bool W3DTerrainVisual::load(AsciiString filename)
 		file_stream.close();
 		m_terrainRenderObject->initHeightData(loaded_map->getDrawWidth(),
 			loaded_map->getDrawHeight(), loaded_map, NULL, TRUE);
+		// Active tracks are constructed before a map exists. Re-acquire their
+		// source buffers only after the map has published its authored texture.
+		TheTerrainTracksRenderObjClassSystem->ReAcquireResources();
 		W3DDisplay::m_3DScene->Add_Render_Object(m_terrainRenderObject);
 		m_logicHeightMap = loaded_map;
 		loaded_map = NULL; // transfer the constructor reference to the visual owner

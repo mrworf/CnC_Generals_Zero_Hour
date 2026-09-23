@@ -189,7 +189,8 @@ void W3DDisplay::draw()
 		!TheTerrainRenderObject || !TheHeightMap ||
 		!TheTerrainTracksRenderObjClassSystem || !TheW3DShadowManager ||
 		!TheWaterRenderObj || !TheSmudgeManager ||
-		TheGlobalData->m_maxTerrainTracks != 0 || TheGlobalData->m_useShadowVolumes ||
+		(TheGlobalData->m_maxTerrainTracks != 0 && TheGlobalData->m_maxTerrainTracks != 1) ||
+		TheGlobalData->m_useShadowVolumes ||
 		TheGlobalData->m_useShadowDecals || TheGlobalData->m_useWaterPlane ||
 		TheGlobalData->m_useCloudPlane || m_isClippedEnabled || m_letterBoxEnabled ||
 		m_videoBuffer || m_videoStream || m_debugDisplayCallback)

@@ -54,8 +54,10 @@
 #include "original_gpu_edge.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
+#include "W3DDevice/GameClient/HeightMap.h"
 static TerrainTracksRenderObjClassSystem *s_zeroTrackOwner = NULL;
 #endif
+#include <algorithm>
 #include "texture.h"
 #include "colmath.h"
 #include "coltest.h"
@@ -600,6 +602,17 @@ TerrainTracksRenderObjClassSystem::~TerrainTracksRenderObjClassSystem( void )
 
 }
 
+#if defined(ZH_WW3D_CPU_ONLY)
+Bool TerrainTracksRenderObjClassSystem::ownsActiveModule(
+	const TerrainTracksRenderObjClass *module) const
+{
+	for (const TerrainTracksRenderObjClass *current = m_usedModules; current;
+		current = current->m_nextSystem)
+		if (current == module) return TRUE;
+	return FALSE;
+}
+#endif
+
 //=============================================================================
 // TerrainTracksRenderObjClassSystem::ReAcquireResources
 //=============================================================================
@@ -608,8 +621,50 @@ TerrainTracksRenderObjClassSystem::~TerrainTracksRenderObjClassSystem( void )
 void TerrainTracksRenderObjClassSystem::ReAcquireResources(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	// CPU track pooling remains active, but GPU buffers are explicitly pending.
-	m_gpuResourcesPending = s_zeroTrackOwner != this;
+	// The accepted zero-module owner has no source buffers to restore.  Keep its
+	// map-less lifecycle a no-op; a real module is deliberately held pending
+	// until the authored map texture has been published by HeightMap.
+	if (TheGlobalData->m_maxTerrainTracks == 0 && s_zeroTrackOwner == this) {
+		m_gpuResourcesPending = FALSE;
+		return;
+	}
+	if (!zh::original_runtime::OriginalGpuEdge::active() ||
+		!m_TerrainTracksScene || m_TerrainTracksScene != W3DDisplay::m_3DScene ||
+		!TheHeightMap || !TheHeightMap->getMap() ||
+		m_maxTankTrackEdges < 2 || m_maxTankTrackEdges > MAX_TRACK_EDGE_COUNT ||
+		m_maxTankTrackOpaqueEdges < 1 || m_maxTankTrackOpaqueEdges > m_maxTankTrackEdges ||
+		m_maxTankTrackFadeDelay <= 0) {
+		m_gpuResourcesPending = TRUE;
+		return;
+	}
+	REF_PTR_RELEASE(m_indexBuffer);
+	REF_PTR_RELEASE(m_vertexBuffer);
+	try {
+		m_indexBuffer = NEW_REF(DX8IndexBufferClass, ((m_maxTankTrackEdges - 1) * 6));
+		{
+			DX8IndexBufferClass::WriteLockClass lock(m_indexBuffer);
+			UnsignedShort *indices = lock.Get_Index_Array();
+			for (Int edge = 0; edge < m_maxTankTrackEdges - 1; ++edge) {
+				const UnsignedShort base = static_cast<UnsignedShort>(edge * 2);
+				*indices++ = base; *indices++ = base + 1; *indices++ = base + 3;
+				*indices++ = base; *indices++ = base + 3; *indices++ = base + 2;
+			}
+		}
+		const Int count = TheGlobalData->m_maxTerrainTracks * m_maxTankTrackEdges * 2;
+		if (count <= 0 || count >= 65535)
+			throw OriginalW3DDeviceUnavailable("original terrain track capacity unavailable");
+		m_vertexBuffer = NEW_REF(DX8VertexBufferClass,
+			(DX8_FVF_XYZDUV1, count, DX8VertexBufferClass::USAGE_DYNAMIC));
+		auto &edge = zh::original_runtime::OriginalGpuEdge::required();
+		(void)edge.bind_index(m_indexBuffer);
+		(void)edge.bind_vertex(m_vertexBuffer);
+		m_gpuResourcesPending = FALSE;
+	} catch (...) {
+		REF_PTR_RELEASE(m_indexBuffer);
+		REF_PTR_RELEASE(m_vertexBuffer);
+		m_gpuResourcesPending = TRUE;
+		throw;
+	}
 	return;
 #else
 	Int i;
@@ -651,7 +706,9 @@ void TerrainTracksRenderObjClassSystem::ReAcquireResources(void)
 void TerrainTracksRenderObjClassSystem::ReleaseResources(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	m_gpuResourcesPending = false;
+	REF_PTR_RELEASE(m_indexBuffer);
+	REF_PTR_RELEASE(m_vertexBuffer);
+	m_gpuResourcesPending = TRUE;
 #else
 	REF_PTR_RELEASE(m_indexBuffer);
 	REF_PTR_RELEASE(m_vertexBuffer);
@@ -687,6 +744,35 @@ void TerrainTracksRenderObjClassSystem::init( SceneClass *TerrainTracksScene )
 		s_zeroTrackOwner = this;
 		return;
 	}
+	if (!W3DDisplay::m_3DScene || TerrainTracksScene != W3DDisplay::m_3DScene ||
+		(m_TerrainTracksScene && m_TerrainTracksScene != TerrainTracksScene) ||
+		(TheTerrainTracksRenderObjClassSystem &&
+		 TheTerrainTracksRenderObjClassSystem != this) ||
+		(s_zeroTrackOwner && s_zeroTrackOwner != this) || numModules != 1 ||
+		m_maxTankTrackEdges < 2 || m_maxTankTrackEdges > MAX_TRACK_EDGE_COUNT ||
+		m_maxTankTrackOpaqueEdges < 1 || m_maxTankTrackOpaqueEdges > m_maxTankTrackEdges ||
+		m_maxTankTrackFadeDelay <= 0)
+		throw OriginalW3DDeviceUnavailable("original active terrain-track bootstrap pending");
+	m_TerrainTracksScene = TerrainTracksScene;
+	TheTerrainTracksRenderObjClassSystem = this;
+	s_zeroTrackOwner = this;
+	m_gpuResourcesPending = TRUE;
+	m_vertexMaterialClass = VertexMaterialClass::Get_Preset(VertexMaterialClass::PRELIT_DIFFUSE);
+	m_shaderClass = ShaderClass::_PresetAlphaShader;
+	try {
+		TerrainTracksRenderObjClass *mod = NEW_REF(TerrainTracksRenderObjClass, ());
+		mod->m_prevSystem = NULL;
+		mod->m_nextSystem = NULL;
+		m_freeModules = mod;
+		ReAcquireResources();
+	} catch (...) {
+		shutdown();
+		if (TheTerrainTracksRenderObjClassSystem == this)
+			TheTerrainTracksRenderObjClassSystem = NULL;
+		if (s_zeroTrackOwner == this) s_zeroTrackOwner = NULL;
+		throw;
+	}
+	return;
 #endif
 
 	Int i;
@@ -846,7 +932,58 @@ void TerrainTracksRenderObjClassSystem::update()
 void TerrainTracksRenderObjClassSystem::flush()
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	if (m_usedModules) throw OriginalW3DDeviceUnavailable("original terrain track GPU resources pending");
+	if (!m_usedModules) return;
+	if (m_gpuResourcesPending || !m_indexBuffer || !m_vertexBuffer ||
+		!zh::original_runtime::OriginalGpuEdge::active() || !WW3D::Is_Rendering())
+		throw OriginalW3DDeviceUnavailable("original terrain track GPU resources pending");
+	if (ShaderClass::Is_Backface_Culling_Inverted())
+		throw OriginalW3DDeviceUnavailable("original reflected terrain tracks pending");
+	if (m_edgesToFlush < 2) return;
+	Int vertex_offset = 0;
+	{
+		DX8VertexBufferClass::WriteLockClass lock(m_vertexBuffer);
+		VertexFormatXYZDUV1 *vertices =
+			static_cast<VertexFormatXYZDUV1 *>(lock.Get_Vertex_Array());
+		for (TerrainTracksRenderObjClass *mod = m_usedModules; mod; mod = mod->m_nextSystem) {
+			if (mod->m_activeEdgeCount < 2 || !mod->Is_Really_Visible()) continue;
+			for (Int edge = 0, index = mod->m_bottomIndex; edge < mod->m_activeEdgeCount;
+				++edge, ++index) {
+				if (index >= m_maxTankTrackEdges) index = 0;
+				const TerrainTracksRenderObjClass::edgeInfo &source = mod->m_edges[index];
+				for (Int side = 0; side < 2; ++side) {
+					vertices[vertex_offset].x = source.endPointPos[side].X;
+					vertices[vertex_offset].y = source.endPointPos[side].Y;
+					vertices[vertex_offset].z = source.endPointPos[side].Z;
+					vertices[vertex_offset].u1 = source.endPointUV[side].X;
+					vertices[vertex_offset].v1 = source.endPointUV[side].Y;
+					vertices[vertex_offset].diffuse = 0x00FFFFFFu |
+						(static_cast<UnsignedInt>(std::max(0.0f, std::min(1.0f, source.alpha)) * 255.0f) << 24);
+					++vertex_offset;
+				}
+			}
+		}
+	}
+	DX8Wrapper::Set_Material(m_vertexMaterialClass);
+	DX8Wrapper::Set_Shader(m_shaderClass);
+	DX8Wrapper::Set_Index_Buffer(m_indexBuffer, 0);
+	DX8Wrapper::Set_Vertex_Buffer(m_vertexBuffer);
+	Int start = 0;
+	for (TerrainTracksRenderObjClass *mod = m_usedModules; mod; mod = mod->m_nextSystem) {
+		if (mod->m_activeEdgeCount < 2 || !mod->Is_Really_Visible()) continue;
+		TextureClass *texture = mod->m_stageZeroTexture;
+		if (!texture && TheHeightMap && TheHeightMap->getMap())
+			texture = TheHeightMap->getMap()->getTerrainTexture();
+		if (!texture)
+			throw OriginalW3DDeviceUnavailable("original terrain track texture unavailable");
+		DX8Wrapper::Set_Texture(0, texture);
+		DX8Wrapper::Set_Index_Buffer_Index_Offset(start);
+		zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+			"original TerrainTracksRenderObjClassSystem::flush");
+		DX8Wrapper::Draw_Triangles(0, (mod->m_activeEdgeCount - 1) * 2, 0,
+			mod->m_activeEdgeCount * 2);
+		start += mod->m_activeEdgeCount * 2;
+	}
+	m_edgesToFlush = 0;
 	return;
 #else
 /** @todo: Optimize system by drawing tracks as triangle strips and use dynamic vertex buffer access.
