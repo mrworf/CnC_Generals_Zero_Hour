@@ -11,6 +11,7 @@
 #include "Common/PlayerList.h"
 #include "Common/Recorder.h"
 #include "Common/Radar.h"
+#include "Common/AudioHandleSpecialValues.h"
 #include "GameClient/Display.h"
 #include "GameClient/DisplayStringManager.h"
 #include "GameClient/Anim2D.h"
@@ -189,6 +190,29 @@ public:
 	Bool doesViolateLimit(AudioEventRTS *) const override { return FALSE; }
 	Bool isPlayingLowerPriority(AudioEventRTS *) const override { return FALSE; }
 	Bool isPlayingAlready(AudioEventRTS *) const override { return FALSE; }
+	AudioHandle addAudioEvent(const AudioEventRTS *event) override
+	{
+		if (failNextAdd || !event || event->getEventName().isEmpty())
+		{
+			failNextAdd = FALSE;
+			++rejectedAdds;
+			return AHSV_Error;
+		}
+		PlayingEvent entry;
+		entry.handle = nextHandle++;
+		entry.name = event->getEventName();
+		active.push_back(entry);
+		return entry.handle;
+	}
+	void removeAudioEvent(AudioHandle handle) override
+	{
+		if (handle < AHSV_FirstHandle) { ++rejectedRemoves; return; }
+		for (std::vector<PlayingEvent>::iterator it = active.begin(); it != active.end(); ++it)
+		{
+			if (it->handle == handle) { active.erase(it); ++removed; return; }
+		}
+		++rejectedRemoves;
+	}
 	Bool isObjectPlayingVoice(UnsignedInt) const override { return FALSE; }
 	void adjustVolumeOfPlayingAudio(AsciiString, Real) override {}
 	void removePlayingAudio(AsciiString) override {}
@@ -196,14 +220,31 @@ public:
 	Bool has3DSensitiveStreamsPlaying() const override { return FALSE; }
 	void *getHandleForBink() override { return NULL; }
 	void releaseHandleForBink() override {}
-	void friend_forcePlayAudioEventRTS(const AudioEventRTS *) override {}
+	void friend_forcePlayAudioEventRTS(const AudioEventRTS *event) override
+	{
+		if (!event || event->getEventName().isEmpty()) { ++rejectedBriefings; return; }
+		briefings.push_back(event->getEventName());
+	}
 	void setPreferredProvider(AsciiString) override {}
 	void setPreferredSpeaker(AsciiString) override {}
 	Real getFileLengthMS(AsciiString) const override { return 0.0f; }
 	void closeAnySamplesUsingFile(const void *) override {}
 	int deviceOpens = 0;
+	Bool failNextAdd = FALSE;
+	Int rejectedAdds = 0;
+	Int rejectedRemoves = 0;
+	Int rejectedBriefings = 0;
+	Int removed = 0;
+	Int activeCount() const { return static_cast<Int>(active.size()); }
+	Int briefingCount() const { return static_cast<Int>(briefings.size()); }
+	const AsciiString &lastBriefing() const { return briefings.back(); }
 protected:
 	void setDeviceListenerPosition() override {}
+	private:
+	struct PlayingEvent { AudioHandle handle; AsciiString name; };
+	AudioHandle nextHandle = AHSV_FirstHandle;
+	std::vector<PlayingEvent> active;
+	std::vector<AsciiString> briefings;
 };
 
 class HeadlessCDManager final : public CDManager
@@ -628,6 +669,28 @@ int main()
 		check(campaigns.getCurrentCampaign() == replacementCampaign &&
 			campaigns.getCurrentMission() == replacementMission,
 			"replacement generated campaign did not publish its owned mission");
+		if (replacementMission)
+			replacementMission->m_briefingVoice = AudioEventRTS(AsciiString("GeneratedBriefing"));
+		AudioEventRTS emptyBriefing;
+		audio.friend_forcePlayAudioEventRTS(&emptyBriefing);
+		audio.friend_forcePlayAudioEventRTS(replacementMission ? &replacementMission->m_briefingVoice : NULL);
+		check(audio.rejectedBriefings == generation + 1 && audio.briefingCount() == generation + 1 &&
+			audio.lastBriefing().compare("GeneratedBriefing") == 0,
+			"generated source mission briefing did not reach the bounded audio provider");
+		AudioEventRTS ambient(AsciiString("GeneratedAmbient"));
+		AudioEventRTS ambientCopy(ambient);
+		audio.failNextAdd = TRUE;
+		check(audio.addAudioEvent(&ambientCopy) == AHSV_Error && audio.activeCount() == 0,
+			"injected generated ambient registration failure retained provider state");
+		const AudioHandle ambientHandle = audio.addAudioEvent(&ambientCopy);
+		check(ambientHandle >= AHSV_FirstHandle && audio.activeCount() == 1,
+			"generated ambient did not register through the bounded audio provider");
+		audio.removeAudioEvent(AHSV_NoSound);
+		check(audio.activeCount() == 1,
+			"special generated audio handle mutated active provider state");
+		audio.removeAudioEvent(ambientHandle);
+		check(audio.activeCount() == 0,
+			"generated ambient removal did not release bounded provider state");
 		TheCampaignManager = NULL;
 	}
 	check(TheCampaignManager == NULL,

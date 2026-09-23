@@ -26,8 +26,11 @@ This is therefore split before implementation:
    text application for the bounded mission labels; the `TextData`/
    `DisplayStringManager` prerequisite is included in this bounded source
    gadget transaction.
-4. **08E1B4D** — generated AudioEventRTS ambient/briefing registration,
-   removal, and failure/re-entry lifecycle.
+4. **08E1B4D** — generated source `AudioEventRTS` value and project-owned
+   AudioManager registration/removal/briefing-provider lifecycle.  The actual
+   `SinglePlayerLoadScreen` member calls remain unavailable until the final
+   B4 composition has the required source WND, mapped-image, video, display,
+   GameInfo, and mode-owner prerequisites.
 5. **08E1B4** — original `SinglePlayerLoadScreen` owner composition using
    accepted B1–B3 and B4A–B4D, with a generated profile only.
 

@@ -1594,6 +1594,15 @@ if(ZH_BUILD_TESTS)
     --member GadgetStaticText.cpp.o
     --required-symbol "GadgetStaticTextSetText(GameWindow*, UnicodeString)")
   set_tests_properties(original_static_text_provider_removal PROPERTIES LABELS "original-headless-update;source-identity;negative")
+  add_test(NAME original_audio_event_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target original_headless_update_tests
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-headless-update.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member AudioEventRTS.cpp.o
+    --required-symbol "AudioEventRTS::AudioEventRTS(AsciiString const&)")
+  set_tests_properties(original_audio_event_provider_removal PROPERTIES LABELS "original-headless-update;source-identity;negative")
   add_test(NAME original_production_entry COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_production_entry.py"
     --executable "$<TARGET_FILE:zh_original_main>")
