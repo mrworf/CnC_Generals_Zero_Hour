@@ -51,6 +51,8 @@
 #include "PreRTS.h"
 #include "Common/GlobalData.h"
 #include "W3DDevice/GameClient/HeightMap.h"
+#include "w3d_shader_manager_cpu_types.h"
+#include "W3DDevice/GameClient/W3DShaderManager.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
 
@@ -81,7 +83,41 @@ void HeightMapRenderObjClass::ReleaseResources() {}
 void HeightMapRenderObjClass::ReAcquireResources() {}
 void HeightMapRenderObjClass::Render(RenderInfoClass&)
 {
-	throw OriginalW3DDeviceUnavailable("original empty terrain render pending");
+	if (!m_map || !m_indexBuffer || !m_vertexBufferTiles || !m_vertexBufferTiles[0] ||
+		!zh::original_runtime::OriginalGpuEdge::active())
+		throw OriginalW3DDeviceUnavailable("original base terrain draw is unavailable");
+	if (Is_Hidden()) return;
+	if (!TheGlobalData || m_disableTextures || TheGlobalData->m_useCloudMap ||
+		TheGlobalData->m_useLightMap)
+		throw OriginalW3DDeviceUnavailable("original non-base terrain draw pending");
+	TextureClass *base = m_map->getTerrainTexture();
+	TextureClass *alpha = m_map->getAlphaTerrainTexture();
+	if (!base || !alpha || W3DShaderManager::getShaderPasses(W3DShaderManager::ST_TERRAIN_BASE) != 2)
+		throw OriginalW3DDeviceUnavailable("original base terrain shader route is unavailable");
+	DX8Wrapper::Set_Transform(D3DTS_WORLD, Matrix3D(true));
+	DX8Wrapper::Set_Material(m_vertexMaterialClass);
+	DX8Wrapper::Set_Shader(m_shaderClass);
+	DX8Wrapper::Set_Index_Buffer(m_indexBuffer, 0);
+	W3DShaderManager::setTexture(0, base);
+	W3DShaderManager::setTexture(1, alpha);
+	Bool active_shader = FALSE;
+	try {
+		for (Int pass = 0; pass < 2; ++pass) {
+			W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, pass);
+			active_shader = TRUE;
+			DX8Wrapper::Set_Vertex_Buffer(m_vertexBufferTiles[0]);
+			DX8Wrapper::Draw_Triangles(0, VERTEX_BUFFER_TILE_LENGTH * VERTEX_BUFFER_TILE_LENGTH * 2,
+				0, VERTEX_BUFFER_TILE_LENGTH * VERTEX_BUFFER_TILE_LENGTH * 4);
+		}
+		W3DShaderManager::resetShader(W3DShaderManager::ST_TERRAIN_BASE);
+		active_shader = FALSE;
+	} catch (...) {
+		if (active_shader) {
+			try { W3DShaderManager::resetShader(W3DShaderManager::ST_TERRAIN_BASE); }
+			catch (...) {}
+		}
+		throw;
+	}
 }
 void HeightMapRenderObjClass::On_Frame_Update() {}
 int HeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *map,
