@@ -104,9 +104,11 @@ void W3DTerrainVisual::init()
 		TheW3DShadowManager || TheWaterRenderObj || TheSmudgeManager ||
 		(TheGlobalData->m_maxTerrainTracks != 0 && TheGlobalData->m_maxTerrainTracks != 1) ||
 		TheGlobalData->m_useShadowVolumes ||
-		TheGlobalData->m_useShadowDecals || TheGlobalData->m_useWaterPlane ||
-		TheGlobalData->m_useCloudPlane || TheGlobalData->m_waterExtentX != 0 ||
-		TheGlobalData->m_waterExtentY != 0 || TheGlobalData->m_waterType != 0)
+		TheGlobalData->m_useShadowDecals || TheGlobalData->m_useCloudPlane ||
+		(TheGlobalData->m_useWaterPlane && (TheGlobalData->m_waterExtentX <= 0 ||
+		TheGlobalData->m_waterExtentY <= 0 || TheGlobalData->m_waterType != WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT)) ||
+		(!TheGlobalData->m_useWaterPlane && (TheGlobalData->m_waterExtentX != 0 ||
+		TheGlobalData->m_waterExtentY != 0 || TheGlobalData->m_waterType != 0)))
 		throw OriginalW3DDeviceUnavailable("original map or enabled terrain visual pending");
 	s_emptyTerrainVisual = this;
 	try {
@@ -119,8 +121,10 @@ void W3DTerrainVisual::init()
 		if (!TheW3DShadowManager->init())
 			throw OriginalW3DDeviceUnavailable("original disabled-shadow owner failed");
 		m_waterRenderObject = NEW_REF(WaterRenderObjClass, ());
-		m_waterRenderObject->init(TheGlobalData->m_waterPositionZ, 0, 0,
-			W3DDisplay::m_3DScene, WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT);
+		m_waterRenderObject->init(TheGlobalData->m_waterPositionZ,
+			TheGlobalData->m_useWaterPlane ? TheGlobalData->m_waterExtentX : 0,
+			TheGlobalData->m_useWaterPlane ? TheGlobalData->m_waterExtentY : 0,
+			W3DDisplay::m_3DScene, static_cast<WaterRenderObjClass::WaterType>(TheGlobalData->m_waterType));
 		m_waterRenderObject->Set_Position(Vector3(TheGlobalData->m_waterPositionX,
 			TheGlobalData->m_waterPositionY, TheGlobalData->m_waterPositionZ));
 		TheSmudgeManager = s_ownedSmudges = NEW W3DSmudgeManager;

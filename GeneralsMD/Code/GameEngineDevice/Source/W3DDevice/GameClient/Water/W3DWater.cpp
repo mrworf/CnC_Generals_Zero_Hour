@@ -39,6 +39,9 @@
 #include "Common/GlobalData.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
+#include "WW3D2/DX8Wrapper.h"
+#include "WW3D2/dx8indexbuffer.h"
+#include "WW3D2/dx8vertexbuffer.h"
 #include <cstring>
 
 WaterRenderObjClass *TheWaterRenderObj = NULL;
@@ -53,12 +56,23 @@ static void requireEmptyWaterOwner(WaterRenderObjClass *owner)
 		throw OriginalW3DDeviceUnavailable("original no-water owner unavailable");
 }
 
+static void requireBoundedWaterOwner(WaterRenderObjClass *owner)
+{
+	if (TheWaterRenderObj != owner || !zh::original_runtime::OriginalGpuEdge::active() ||
+		!W3DDisplay::m_3DScene || owner->Peek_Scene() != W3DDisplay::m_3DScene)
+		throw OriginalW3DDeviceUnavailable("original water owner unavailable");
+}
+
 WaterRenderObjClass::WaterRenderObjClass()
 {
 	std::memset(m_settings, 0, sizeof(m_settings));
 	std::memset(m_pBumpTexture, 0, sizeof(m_pBumpTexture));
 	std::memset(m_pBumpTexture2, 0, sizeof(m_pBumpTexture2));
 	m_indexBuffer = NULL;
+#if defined(ZH_WW3D_CPU_ONLY)
+	m_cpuVertexBuffer = NULL;
+	m_cpuResourcesPending = TRUE;
+#endif
 	m_parentScene = NULL;
 	m_vertexMaterialClass = m_meshVertexMaterialClass = NULL;
 	m_meshLight = NULL;
@@ -85,16 +99,23 @@ WaterRenderObjClass::WaterRenderObjClass()
 
 WaterRenderObjClass::~WaterRenderObjClass()
 {
+	REF_PTR_RELEASE(m_indexBuffer);
+#if defined(ZH_WW3D_CPU_ONLY)
+	REF_PTR_RELEASE(m_cpuVertexBuffer);
+#endif
+	REF_PTR_RELEASE(m_vertexMaterialClass);
 	if (s_emptyWaterOwner == this) s_emptyWaterOwner = NULL;
 	if (TheWaterRenderObj == this) TheWaterRenderObj = NULL;
 }
 
 Int WaterRenderObjClass::init(Real level, Real dx, Real dy, SceneClass *parent, WaterType type)
 {
+	const bool active_plane = TheGlobalData->m_useWaterPlane && !TheGlobalData->m_useCloudPlane &&
+		dx > 0 && dy > 0 && type == WATER_TYPE_0_TRANSLUCENT;
 	if (!zh::original_runtime::OriginalGpuEdge::active() ||
 		!W3DDisplay::m_3DScene || parent != W3DDisplay::m_3DScene ||
-		TheGlobalData->m_useWaterPlane || TheGlobalData->m_useCloudPlane ||
-		dx != 0 || dy != 0 || type != WATER_TYPE_0_TRANSLUCENT ||
+		(!active_plane && (TheGlobalData->m_useWaterPlane || TheGlobalData->m_useCloudPlane ||
+			dx != 0 || dy != 0 || type != WATER_TYPE_0_TRANSLUCENT)) ||
 		(TheWaterRenderObj && TheWaterRenderObj != this) ||
 		(s_emptyWaterOwner && s_emptyWaterOwner != this) ||
 		(m_parentScene && m_parentScene != parent)) {
@@ -109,6 +130,10 @@ Int WaterRenderObjClass::init(Real level, Real dx, Real dy, SceneClass *parent, 
 	m_waterType = type;
 	TheWaterRenderObj = this;
 	s_emptyWaterOwner = this;
+	if (active_plane) {
+		Set_Force_Visible(TRUE);
+		ReAcquireResources();
+	}
 	return 0;
 }
 
@@ -119,45 +144,94 @@ RenderObjClass *WaterRenderObjClass::Clone() const
 int WaterRenderObjClass::Class_ID() const { return RenderObjClass::CLASSID_UNKNOWN; }
 void WaterRenderObjClass::Render(RenderInfoClass&)
 {
-	throw OriginalW3DDeviceUnavailable("original water render pending");
+	if (!TheGlobalData->m_useWaterPlane)
+		throw OriginalW3DDeviceUnavailable("original no-water render pending");
+	if (TheGlobalData->m_useCloudPlane || TheGlobalData->m_waterType != m_waterType ||
+		TheGlobalData->m_waterExtentX != m_dx || TheGlobalData->m_waterExtentY != m_dy ||
+		m_waterType != WATER_TYPE_0_TRANSLUCENT ||
+		m_dx <= 0 || m_dy <= 0 || !m_cpuVertexBuffer || !m_indexBuffer ||
+		m_cpuResourcesPending || !zh::original_runtime::OriginalGpuEdge::active() ||
+		!WW3D::Is_Rendering() || Peek_Scene() != W3DDisplay::m_3DScene)
+		throw OriginalW3DDeviceUnavailable("original active water route pending");
+	DX8Wrapper::Set_Material(m_vertexMaterialClass);
+	DX8Wrapper::Set_Shader(m_shaderClass);
+	DX8Wrapper::Set_Index_Buffer(m_indexBuffer, 0);
+	DX8Wrapper::Set_Vertex_Buffer(m_cpuVertexBuffer);
+	zh::original_runtime::OriginalGpuEdge::required().record_source_state("original WaterRenderObjClass::Render translucent plane");
+	DX8Wrapper::Draw_Triangles(0, 2, 0, 4);
 }
-void WaterRenderObjClass::Get_Obj_Space_Bounding_Sphere(SphereClass&) const
+void WaterRenderObjClass::Get_Obj_Space_Bounding_Sphere(SphereClass &sphere) const
 {
-	throw OriginalW3DDeviceUnavailable("original no-water bounds pending");
+	sphere.Init(Vector3(0, 0, m_level), Vector3(m_dx * 0.5f, m_dy * 0.5f, 0).Length());
 }
-void WaterRenderObjClass::Get_Obj_Space_Bounding_Box(AABoxClass&) const
+void WaterRenderObjClass::Get_Obj_Space_Bounding_Box(AABoxClass &box) const
 {
-	throw OriginalW3DDeviceUnavailable("original no-water bounds pending");
+	box.Init(MinMaxAABoxClass(Vector3(-m_dx * 0.5f, -m_dy * 0.5f, m_level),
+		Vector3(m_dx * 0.5f, m_dy * 0.5f, m_level)));
 }
-void WaterRenderObjClass::reset() { requireEmptyWaterOwner(this); }
-void WaterRenderObjClass::load() { requireEmptyWaterOwner(this); }
-void WaterRenderObjClass::update() { requireEmptyWaterOwner(this); }
-void WaterRenderObjClass::ReleaseResources() { requireEmptyWaterOwner(this); }
-void WaterRenderObjClass::ReAcquireResources() { requireEmptyWaterOwner(this); }
+void WaterRenderObjClass::reset() { if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); return; } requireEmptyWaterOwner(this); }
+void WaterRenderObjClass::load() { if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); return; } requireEmptyWaterOwner(this); }
+void WaterRenderObjClass::update() { if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); return; } requireEmptyWaterOwner(this); }
+void WaterRenderObjClass::ReleaseResources()
+{
+	if (!TheGlobalData->m_useWaterPlane) { requireEmptyWaterOwner(this); return; }
+	REF_PTR_RELEASE(m_indexBuffer); REF_PTR_RELEASE(m_cpuVertexBuffer); m_cpuResourcesPending = TRUE;
+}
+void WaterRenderObjClass::ReAcquireResources()
+{
+	if (!TheGlobalData->m_useWaterPlane) { requireEmptyWaterOwner(this); return; }
+	if (!zh::original_runtime::OriginalGpuEdge::active() || m_waterType != WATER_TYPE_0_TRANSLUCENT ||
+		m_dx <= 0 || m_dy <= 0 || !m_parentScene || m_parentScene != W3DDisplay::m_3DScene) {
+		m_cpuResourcesPending = TRUE; return;
+	}
+	REF_PTR_RELEASE(m_indexBuffer); REF_PTR_RELEASE(m_cpuVertexBuffer);
+	try {
+		m_indexBuffer = NEW_REF(DX8IndexBufferClass, (6));
+		DX8IndexBufferClass::WriteLockClass indices(m_indexBuffer);
+		UnsignedShort *ib = indices.Get_Index_Array();
+		const UnsignedShort quad[6] = {3, 0, 2, 2, 0, 1}; std::memcpy(ib, quad, sizeof(quad));
+		m_cpuVertexBuffer = NEW_REF(DX8VertexBufferClass, (DX8_FVF_XYZDUV1, 4, DX8VertexBufferClass::USAGE_DYNAMIC));
+		DX8VertexBufferClass::WriteLockClass vertices(m_cpuVertexBuffer);
+		VertexFormatXYZDUV1 *vb = static_cast<VertexFormatXYZDUV1 *>(vertices.Get_Vertex_Array());
+		const Real x = m_dx * 0.5f, y = m_dy * 0.5f;
+		const Vector3 points[4] = {Vector3(-x,-y,m_level), Vector3(x,-y,m_level), Vector3(x,y,m_level), Vector3(-x,y,m_level)};
+		for (Int i = 0; i != 4; ++i) { vb[i].x=points[i].X; vb[i].y=points[i].Y; vb[i].z=points[i].Z; vb[i].u1=(i==1||i==2); vb[i].v1=(i>=2); vb[i].diffuse=0x80ffffff; }
+		REF_PTR_RELEASE(m_vertexMaterialClass);
+		m_vertexMaterialClass = VertexMaterialClass::Get_Preset(VertexMaterialClass::PRELIT_DIFFUSE);
+		m_shaderClass = ShaderClass::_PresetAlphaShader;
+		auto &edge = zh::original_runtime::OriginalGpuEdge::required(); (void)edge.bind_index(m_indexBuffer); (void)edge.bind_vertex(m_cpuVertexBuffer);
+		m_cpuResourcesPending = FALSE;
+	} catch (...) { REF_PTR_RELEASE(m_indexBuffer); REF_PTR_RELEASE(m_cpuVertexBuffer); m_cpuResourcesPending = TRUE; throw; }
+}
 void WaterRenderObjClass::enableWaterGrid(Bool state)
 {
+	if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); if (state) throw OriginalW3DDeviceUnavailable("original water grid pending"); return; }
 	requireEmptyWaterOwner(this);
 	if (state) throw OriginalW3DDeviceUnavailable("original water grid pending");
 }
 void WaterRenderObjClass::setGridHeightClamps(Real minz, Real maxz)
 {
+	if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); if (minz || maxz) throw OriginalW3DDeviceUnavailable("original water grid height pending"); return; }
 	requireEmptyWaterOwner(this);
 	if (minz != 0 || maxz != 0) throw OriginalW3DDeviceUnavailable("original water grid height pending");
 }
 void WaterRenderObjClass::setGridChangeAttenuationFactors(Real a, Real b, Real c, Real range)
 {
+	if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); if (a || b || c || range) throw OriginalW3DDeviceUnavailable("original water grid attenuation pending"); return; }
 	requireEmptyWaterOwner(this);
 	if (a != 0 || b != 0 || c != 0 || range != 0)
 		throw OriginalW3DDeviceUnavailable("original water grid attenuation pending");
 }
 void WaterRenderObjClass::setGridTransform(Real angle, Real x, Real y, Real z)
 {
+	if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); if (angle || x || y || z) throw OriginalW3DDeviceUnavailable("original water grid transform pending"); return; }
 	requireEmptyWaterOwner(this);
 	if (angle != 0 || x != 0 || y != 0 || z != 0)
 		throw OriginalW3DDeviceUnavailable("original water grid transform pending");
 }
 void WaterRenderObjClass::setGridResolution(Real x, Real y, Real size)
 {
+	if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); if (x || y || size) throw OriginalW3DDeviceUnavailable("original water grid resolution pending"); return; }
 	requireEmptyWaterOwner(this);
 	if (x != 0 || y != 0 || size != 0)
 		throw OriginalW3DDeviceUnavailable("original water grid resolution pending");
@@ -3658,4 +3732,3 @@ void WaterRenderObjClass::loadPostProcess( void )
 }  // end loadPostProcess
 
 #endif // ZH_WW3D_CPU_ONLY
-

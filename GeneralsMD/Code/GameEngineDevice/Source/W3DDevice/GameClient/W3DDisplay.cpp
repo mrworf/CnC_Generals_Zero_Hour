@@ -45,6 +45,7 @@
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
+#include "W3DDevice/GameClient/W3DWater.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
 #include "W3DDevice/GameClient/W3DSmudge.h"
 #include "Common/GlobalData.h"
@@ -191,7 +192,12 @@ void W3DDisplay::draw()
 		!TheWaterRenderObj || !TheSmudgeManager ||
 		(TheGlobalData->m_maxTerrainTracks != 0 && TheGlobalData->m_maxTerrainTracks != 1) ||
 		TheGlobalData->m_useShadowVolumes ||
-		TheGlobalData->m_useShadowDecals || TheGlobalData->m_useWaterPlane ||
+		TheGlobalData->m_useShadowDecals ||
+		(TheGlobalData->m_useWaterPlane &&
+			(TheGlobalData->m_useCloudPlane || TheGlobalData->m_waterExtentX <= 0 ||
+			TheGlobalData->m_waterExtentY <= 0 ||
+			TheGlobalData->m_waterType != WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT ||
+			TheWaterRenderObj->Peek_Scene() != m_3DScene)) ||
 		TheGlobalData->m_useCloudPlane || m_isClippedEnabled || m_letterBoxEnabled ||
 		m_videoBuffer || m_videoStream || m_debugDisplayCallback)
 		throw OriginalW3DDeviceUnavailable("original display advanced frame pending");

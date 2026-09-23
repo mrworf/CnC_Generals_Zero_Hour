@@ -67,6 +67,9 @@ typedef IDirect3DTexture8 *LPDIRECT3DTEXTURE8;
 class PolygonTrigger;
 class WaterTracksRenderSystem;
 class Xfer;
+#if defined(ZH_WW3D_CPU_ONLY)
+class DX8VertexBufferClass;
+#endif
 /// Custom render object that draws mirrors, water, and skies.
 /**
 This render object handles drawing reflected W3D scenes.  It will only work
@@ -124,6 +127,9 @@ public:
 	void updateRenderTargetTextures(CameraClass *cam);	///< renders into any required textures.	
 	void ReleaseResources(void);	///< Release all dx8 resources so the device can be reset.
 	void ReAcquireResources(void);  ///< Reacquire all resources after device reset.
+#if defined(ZH_WW3D_CPU_ONLY)
+	Bool hasPendingGpuResources(void) const { return m_cpuResourcesPending; }
+#endif
 	Real getWaterHeight(Real x, Real y);	///<return water height at given point - for use by WB.
 	void setGridHeightClamps(Real minz, Real maxz);	///<set min/max height values alllowed in grid
 	void addVelocity( Real worldX, Real worldY, Real zVelocity, Real preferredHeight );	///< add velocity value
@@ -143,6 +149,10 @@ public:
 
 protected:
 	DX8IndexBufferClass			*m_indexBuffer;	///<indices defining quad
+#if defined(ZH_WW3D_CPU_ONLY)
+	DX8VertexBufferClass		*m_cpuVertexBuffer;	///<bounded CPU route plane vertices
+	Bool						m_cpuResourcesPending;
+#endif
 	SceneClass							*m_parentScene;	///<scene to be reflected
 	ShaderClass m_shaderClass; ///<shader or rendering state for heightmap
 	VertexMaterialClass	  		*m_vertexMaterialClass;	///<vertex lighting material

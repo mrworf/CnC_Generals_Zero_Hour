@@ -112,6 +112,7 @@ extern "C" void zh_probe_terrain_visual_map();
 extern "C" void zh_probe_terrain_shroud_projection();
 extern "C" void zh_probe_terrain_map_frame();
 extern "C" void zh_probe_terrain_tracks();
+extern "C" void zh_probe_terrain_water();
 extern "C" void zh_probe_terrain_source_bitmap();
 extern "C" void zh_probe_terrain_atlas();
 extern "C" void zh_probe_shroud_data();
@@ -846,6 +847,7 @@ public:
 			if (std::getenv("ZH_M22_TERRAIN_SHROUD_PROJECTION_PROFILE")) zh_probe_terrain_shroud_projection();
 			if (std::getenv("ZH_M22_TERRAIN_MAP_FRAME_PROFILE")) zh_probe_terrain_map_frame();
 			if (std::getenv("ZH_M22_TERRAIN_TRACKS_PROFILE")) zh_probe_terrain_tracks();
+			if (std::getenv("ZH_M22_TERRAIN_WATER_PROFILE")) zh_probe_terrain_water();
 			if (std::getenv("ZH_M22_TERRAIN_BITMAP_PROFILE")) zh_probe_terrain_source_bitmap();
 			if (std::getenv("ZH_M22_TERRAIN_ATLAS_PROFILE")) zh_probe_terrain_atlas();
 			if (std::getenv("ZH_M22_SHROUD_DATA_PROFILE")) zh_probe_shroud_data();
