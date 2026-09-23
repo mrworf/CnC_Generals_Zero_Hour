@@ -1459,6 +1459,33 @@ if(ZH_BUILD_TESTS)
     --member INIMappedImage.cpp.o
     --required-symbol "INI::parseMappedImageDefinition(INI*)")
   set_tests_properties(original_mapped_image_provider_removal PROPERTIES LABELS "original-rendering;source-identity")
+  add_executable(original_mouse_provider_tests
+    tests/original_lifecycle/test_mouse_provider.cpp
+    tests/original_lifecycle/headless_reset_boundary.cpp
+    $<TARGET_OBJECTS:zh_original_lifecycle_spine>
+    $<TARGET_OBJECTS:zh_original_config_spine>)
+  target_include_directories(original_mouse_provider_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+  target_link_libraries(original_mouse_provider_tests PRIVATE
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
+  target_link_options(original_mouse_provider_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-mouse-provider.link.map")
+  add_test(NAME original_mouse_provider COMMAND original_mouse_provider_tests)
+  set_tests_properties(original_mouse_provider PROPERTIES LABELS "original-rendering;source-identity")
+  add_test(NAME original_mouse_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target original_mouse_provider_tests
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-mouse-provider.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member Mouse.cpp.o
+    --required-symbol "Mouse::setCursorTooltip(UnicodeString, int, RGBColor const*, float)")
+  set_tests_properties(original_mouse_provider_removal PROPERTIES LABELS "original-rendering;source-identity")
   add_test(NAME original_headless_update_identity COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_headless_identity.py"
     --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
