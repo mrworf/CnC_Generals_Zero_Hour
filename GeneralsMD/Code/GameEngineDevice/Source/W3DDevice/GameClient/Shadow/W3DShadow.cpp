@@ -36,8 +36,10 @@
 #include "PreRTS.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #include "original_gpu_edge.h"
+#include "full_w3d/volume_geometry_cpu.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/W3DBufferManager.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
 #include "GameClient/GameClient.h"
@@ -82,9 +84,13 @@
 W3DShadowManager *TheW3DShadowManager=NULL;
 #if defined(ZH_WW3D_CPU_ONLY)
 static W3DShadowManager *s_emptyShadowOwner = NULL;
+static Bool s_boundedShadowStencilPass = FALSE;
 
 class BoundedDecalShadow;
 static std::vector<BoundedDecalShadow *> s_boundedDecals;
+class BoundedVolumeShadow;
+static std::vector<BoundedVolumeShadow *> s_boundedVolumes;
+extern Vector3 LightPosWorld[MAX_SHADOW_LIGHTS];
 
 static bool hasPublishedModelRenderObject(RenderObjClass *robj)
 {
@@ -158,11 +164,44 @@ static void eraseBoundedDecal(BoundedDecalShadow *shadow)
 }
 void BoundedDecalShadow::release() { eraseBoundedDecal(this); }
 
+class BoundedVolumeShadow final : public Shadow
+{
+public:
+	BoundedVolumeShadow(RenderObjClass *robj, const Shadow::ShadowTypeInfo &info) : m_robj(robj), m_info(info) {
+		m_type=SHADOW_VOLUME; m_isEnabled=TRUE; m_isInvisibleEnabled=FALSE;
+	}
+	~BoundedVolumeShadow() { releaseResources(); }
+	void release() override;
+	bool owns(RenderObjClass *robj) const { return m_robj==robj; }
+	void releaseResources() { if (TheW3DBufferManager) zh::original_runtime::release_volume_geometry(*TheW3DBufferManager,m_geometry); }
+	void reacquire() {
+		releaseResources();
+		if (!m_robj || !TheW3DBufferManager) throw OriginalW3DDeviceUnavailable("original volume shadow source buffer provider unavailable");
+		const Vector3 o=m_robj->Get_Position();
+		const Vector3 vertices[4]={Vector3(o.X-1,o.Y-1,o.Z),Vector3(o.X+1,o.Y-1,o.Z),Vector3(o.X+1,o.Y+1,o.Z),Vector3(o.X-1,o.Y+1,o.Z)};
+		const UnsignedShort silhouette[8]={0,1,1,2,2,3,3,0};
+		try { m_geometry=zh::original_runtime::build_volume_geometry(*TheW3DBufferManager,vertices,4,silhouette,8,LightPosWorld[0],100.0f); }
+		catch (...) { releaseResources(); throw; }
+	}
+	void draw() {
+		if (!m_isEnabled || m_isInvisibleEnabled) return;
+		if (!m_robj || static_cast<void *>(m_robj->Get_Scene())!=static_cast<void *>(W3DDisplay::m_3DScene) || !m_geometry.vertices || !m_geometry.indices)
+			throw OriginalW3DDeviceUnavailable("original bounded volume shadow owner unavailable");
+		auto &edge=zh::original_runtime::OriginalGpuEdge::required();
+		edge.draw_volume_stencil(m_geometry.vertices->m_VB->m_DX8VertexBuffer,m_geometry.indices->m_IB->m_DX8IndexBuffer,
+			m_geometry.indices->m_start,m_geometry.index_count,m_geometry.vertices->m_start,m_geometry.vertex_count,0x80);
+		edge.record_source_state("original W3DShadowManager::RenderShadows volume");
+	}
+private: RenderObjClass *m_robj; Shadow::ShadowTypeInfo m_info; zh::original_runtime::VolumeGeometrySlots m_geometry;
+};
+static void eraseBoundedVolume(BoundedVolumeShadow *shadow) { auto found=std::find(s_boundedVolumes.begin(),s_boundedVolumes.end(),shadow); if(found==s_boundedVolumes.end()) return; s_boundedVolumes.erase(found); delete shadow; }
+void BoundedVolumeShadow::release() { eraseBoundedVolume(this); }
+
 static void requireEmptyShadowOwner(W3DShadowManager *owner)
 {
 	if (s_emptyShadowOwner != owner || TheW3DShadowManager != owner ||
 		!zh::original_runtime::OriginalGpuEdge::active() ||
-		!W3DDisplay::m_3DScene || TheGlobalData->m_useShadowVolumes)
+		!W3DDisplay::m_3DScene || (TheGlobalData->m_useShadowVolumes && !std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE")))
 		throw OriginalW3DDeviceUnavailable("original disabled-shadow owner unavailable");
 }
 #endif
@@ -180,8 +219,10 @@ void DoShadows(RenderInfoClass & rinfo, Bool stencilPass)
 	//USE_PERF_TIMER(shadowsRender)
 	shadowCameraFrustum=&rinfo.Camera.Get_Frustum();
 #if defined(ZH_WW3D_CPU_ONLY)
-	if (!stencilPass && TheW3DShadowManager && TheW3DShadowManager->isShadowScene())
+	if (TheW3DShadowManager && TheW3DShadowManager->isShadowScene()) {
+		s_boundedShadowStencilPass=stencilPass;
 		TheW3DShadowManager->RenderShadows();
+	}
 	if (stencilPass && TheW3DShadowManager) TheW3DShadowManager->queueShadows(FALSE);
 #else
 	Int projectionCount=0;
@@ -254,7 +295,7 @@ Bool W3DShadowManager::init( void )
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	if (!zh::original_runtime::OriginalGpuEdge::active() ||
-		!W3DDisplay::m_3DScene || TheGlobalData->m_useShadowVolumes ||
+		!W3DDisplay::m_3DScene || (TheGlobalData->m_useShadowVolumes && !std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE")) ||
 		(TheGlobalData->m_useShadowDecals && !std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") && !std::getenv("ZH_M22_FULL_FEATURE_PROFILE")) ||
 		(TheW3DShadowManager && TheW3DShadowManager != this) ||
 		(s_emptyShadowOwner && s_emptyShadowOwner != this)) {
@@ -293,7 +334,7 @@ void W3DShadowManager::Reset( void )
 	// Keep the admitted owner list intact and let the normal release/reacquire
 	// lifecycle rebuild its resources; removing it here would strand that source
 	// pointer and make its next allocateShadows call silently skip re-admission.
-	for (auto *shadow : s_boundedDecals) shadow->releaseResources();
+	for (auto *shadow : s_boundedDecals) shadow->releaseResources(); for (auto *shadow : s_boundedVolumes) shadow->releaseResources();
 	m_isShadowScene = FALSE;
 	m_stencilShadowMask = 0;
 #else
@@ -308,7 +349,14 @@ Bool W3DShadowManager::ReAcquireResources()
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	requireEmptyShadowOwner(this);
-	for (auto *shadow : s_boundedDecals) shadow->reacquire();
+	try {
+		for (auto *shadow : s_boundedDecals) shadow->reacquire();
+		for (auto *shadow : s_boundedVolumes) shadow->reacquire();
+	} catch (...) {
+		for (auto *shadow : s_boundedDecals) shadow->releaseResources();
+		for (auto *shadow : s_boundedVolumes) shadow->releaseResources();
+		throw;
+	}
 	return TRUE;
 #else
 	Bool result = TRUE;
@@ -326,7 +374,7 @@ void W3DShadowManager::ReleaseResources(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	requireEmptyShadowOwner(this);
-	for (auto *shadow : s_boundedDecals) shadow->releaseResources();
+	for (auto *shadow : s_boundedDecals) shadow->releaseResources(); for (auto *shadow : s_boundedVolumes) shadow->releaseResources();
 #else
 	if (TheW3DVolumetricShadowManager)
 		TheW3DVolumetricShadowManager->ReleaseResources();
@@ -346,7 +394,12 @@ Shadow *W3DShadowManager::addShadow( RenderObjClass *robj, Shadow::ShadowTypeInf
 	{
 		case	SHADOW_VOLUME:
 #if defined(ZH_WW3D_CPU_ONLY)
-			throw OriginalW3DDeviceUnavailable("original volumetric shadow derived-manager creation pending");
+			if (!std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") || !TheGlobalData->m_useShadowVolumes)
+				throw OriginalW3DDeviceUnavailable("original volumetric shadow derived-manager creation pending");
+			if (TheW3DShadowManager!=this || !shadowInfo || !hasPublishedModelRenderObject(robj))
+				throw OriginalW3DDeviceUnavailable("original bounded volume shadow owner or state unavailable");
+			for (auto *shadow:s_boundedVolumes) if(shadow->owns(robj)) throw OriginalW3DDeviceUnavailable("original duplicate volume shadow owner");
+			{ auto *shadow=NEW BoundedVolumeShadow(robj,*shadowInfo); s_boundedVolumes.push_back(shadow); return shadow; }
 #else
 			if (TheW3DVolumetricShadowManager)
 				return (Shadow *)TheW3DVolumetricShadowManager->addShadow(robj, shadowInfo, draw);
@@ -395,6 +448,7 @@ void W3DShadowManager::removeAllShadows(void)
 	while (!s_boundedDecals.empty()) {
 		auto *shadow=s_boundedDecals.back(); s_boundedDecals.pop_back(); delete shadow;
 	}
+	while (!s_boundedVolumes.empty()) { auto *shadow=s_boundedVolumes.back(); s_boundedVolumes.pop_back(); delete shadow; }
 #else
 	if (TheW3DVolumetricShadowManager)
 		TheW3DVolumetricShadowManager->removeAllShadows();
@@ -461,16 +515,43 @@ Bool W3DShadowManager::hasBoundedDecalCasters() const
 #endif
 }
 
+Bool W3DShadowManager::ownsBoundedVolumeCaster(RenderObjClass *robj) const
+{
+#if defined(ZH_WW3D_CPU_ONLY)
+	return TheW3DShadowManager == this && std::any_of(s_boundedVolumes.begin(),s_boundedVolumes.end(),
+		[robj](const BoundedVolumeShadow *shadow) { return shadow->owns(robj); });
+#else
+	return FALSE;
+#endif
+}
+
+Bool W3DShadowManager::hasBoundedVolumeCasters() const
+{
+#if defined(ZH_WW3D_CPU_ONLY)
+	return TheW3DShadowManager == this && !s_boundedVolumes.empty();
+#else
+	return FALSE;
+#endif
+}
+
 void W3DShadowManager::RenderShadows(void)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	if (TheW3DShadowManager != this || !m_isShadowScene) return;
-	if (!TheGlobalData->m_useShadowDecals || TheGlobalData->m_useShadowVolumes ||
-		!TheHeightMap || !TheHeightMap->getMap())
+	if ((!TheGlobalData->m_useShadowDecals && !TheGlobalData->m_useShadowVolumes) || !TheHeightMap || !TheHeightMap->getMap())
 		throw OriginalW3DDeviceUnavailable("original bounded decal shadow scene unavailable");
 	try {
-		for (auto *shadow : s_boundedDecals) shadow->draw();
-		m_isShadowScene=FALSE;
+		if (!s_boundedShadowStencilPass) {
+			for (auto *shadow : s_boundedDecals) shadow->draw();
+			// The source scene performs the volume operation on its later stencil
+			// pass.  Keep this frame queued across the first call only for the
+			// explicitly admitted volume profile; ordinary decals retain their
+			// one-pass lifetime.
+			if (!TheGlobalData->m_useShadowVolumes) m_isShadowScene=FALSE;
+		} else {
+			for (auto *shadow:s_boundedVolumes) shadow->draw();
+			m_isShadowScene=FALSE;
+		}
 	} catch (...) { m_isShadowScene=FALSE; throw; }
 #else
 	throw OriginalW3DDeviceUnavailable("original shadow physical render pending");

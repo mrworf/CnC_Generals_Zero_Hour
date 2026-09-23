@@ -796,6 +796,7 @@ public:
 				std::getenv("ZH_M22_VOLUME_CPU_CLOSURE_PROFILE") != NULL ||
 				std::getenv("ZH_M22_VOLUME_STENCIL_PROFILE") != NULL ||
 				std::getenv("ZH_M22_VOLUME_STENCIL_EDGE_PROFILE") != NULL ||
+				std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") != NULL ||
 				std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") != NULL ||
 				std::getenv("ZH_M22_FULL_FEATURE_PROFILE") != NULL);
 			try {
@@ -883,6 +884,13 @@ public:
 				// restores these source owners before scenario teardown.
 				auto *sourceAssets=originalDrawOwners.assets;
 				auto *sourceScene=originalDrawOwners.scene;
+				W3DDisplay::m_assetManager=NULL; W3DDisplay::m_3DScene=NULL;
+				try { zh_probe_shadow_decal_route(); }
+				catch (...) { W3DDisplay::m_assetManager=sourceAssets; W3DDisplay::m_3DScene=sourceScene; throw; }
+				W3DDisplay::m_assetManager=sourceAssets; W3DDisplay::m_3DScene=sourceScene;
+			}
+			if (std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE")) {
+				auto *sourceAssets=originalDrawOwners.assets; auto *sourceScene=originalDrawOwners.scene;
 				W3DDisplay::m_assetManager=NULL; W3DDisplay::m_3DScene=NULL;
 				try { zh_probe_shadow_decal_route(); }
 				catch (...) { W3DDisplay::m_assetManager=sourceAssets; W3DDisplay::m_3DScene=sourceScene; throw; }

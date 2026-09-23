@@ -44,12 +44,13 @@ W3DModelDraw *sourceModel()
 extern "C" void zh_probe_shadow_decal_route()
 {
 	const char *map=std::getenv("ZH_M22_SHADOW_DECAL_MAP"); require(map,"original decal map fixture missing");
+	const bool volume=std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE")!=NULL;
 	const Real saved_partition=TheGlobalData->m_partitionCellSize;
 	const Bool saved_marks=TheGlobalData->m_makeTrackMarks;
 	const Bool saved_decals=TheGlobalData->m_useShadowDecals, saved_volumes=TheGlobalData->m_useShadowVolumes;
 	const Int saved_tracks=TheGlobalData->m_maxTerrainTracks; const Bool saved_water=TheGlobalData->m_useWaterPlane, saved_cloud=TheGlobalData->m_useCloudPlane;
 	const Real saved_x=TheGlobalData->m_waterExtentX, saved_y=TheGlobalData->m_waterExtentY; const Int saved_type=TheGlobalData->m_waterType;
-	TheWritableGlobalData->m_partitionCellSize=MAP_XY_FACTOR; TheWritableGlobalData->m_makeTrackMarks=TRUE; TheWritableGlobalData->m_useShadowDecals=TRUE; TheWritableGlobalData->m_useShadowVolumes=FALSE;
+	TheWritableGlobalData->m_partitionCellSize=MAP_XY_FACTOR; TheWritableGlobalData->m_makeTrackMarks=TRUE; TheWritableGlobalData->m_useShadowDecals=!volume; TheWritableGlobalData->m_useShadowVolumes=volume;
 	TheWritableGlobalData->m_maxTerrainTracks=1; TheWritableGlobalData->m_useWaterPlane=TRUE; TheWritableGlobalData->m_useCloudPlane=FALSE;
 	TheWritableGlobalData->m_waterExtentX=32; TheWritableGlobalData->m_waterExtentY=24; TheWritableGlobalData->m_waterType=WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT;
 	zh::renderer::RecordingGpuDevice device;
@@ -67,12 +68,25 @@ extern "C" void zh_probe_shadow_decal_route()
 					SceneClass *source_scene=render->Get_Scene(); require(source_scene,"original decal source owner had no source scene");
 					source_scene->Remove_Render_Object(render); W3DDisplay::m_3DScene->Add_Render_Object(render);
 					Shadow::ShadowTypeInfo negative{}; negative.m_type=SHADOW_VOLUME;
-					require(rejected([&]{TheW3DShadowManager->addShadow(render,&negative);}),"original volume shadow entered decal route");
+					if (!volume) require(rejected([&]{TheW3DShadowManager->addShadow(render,&negative);}),"original volume shadow entered decal route");
 					negative.m_type=SHADOW_PROJECTION; require(rejected([&]{TheW3DShadowManager->addShadow(render,&negative);}),"original projection shadow entered decal route");
 					negative.m_type=SHADOW_NONE; require(!TheW3DShadowManager->addShadow(render,&negative),"original none shadow entered decal route");
-					device.fail_next_buffer_create(); require(rejected([&]{model->allocateShadows();})&&!TheW3DShadowManager->hasBoundedDecalCasters(),"original decal create rollback failed");
-					model->allocateShadows(); require(TheW3DShadowManager->hasBoundedDecalCasters()&&TheW3DShadowManager->ownsBoundedDecalCaster(render),"original source decal owner was not admitted");
-					require(rejected([&]{model->allocateShadows(); TheW3DShadowManager->addShadow(render,NULL);}),"original duplicate decal owner accepted");
+					if (!volume) {
+						device.fail_next_buffer_create();
+						require(rejected([&]{model->allocateShadows();}),"original decal create rollback failed");
+					}
+					model->allocateShadows();
+					if (volume) require(TheW3DShadowManager->hasBoundedVolumeCasters()&&TheW3DShadowManager->ownsBoundedVolumeCaster(render),"original source volume owner was not admitted");
+					else require(TheW3DShadowManager->hasBoundedDecalCasters()&&TheW3DShadowManager->ownsBoundedDecalCaster(render),"original source decal owner was not admitted");
+					// W3DModelDraw admits the owner while the source asset scene is being
+					// assembled.  Slots become available only after map visual loading,
+					// so resource acquisition is deliberately deferred to this source
+					// lifecycle boundary.
+					TheW3DShadowManager->ReAcquireResources();
+					if (volume) {
+						Shadow::ShadowTypeInfo duplicate{}; duplicate.m_type=SHADOW_VOLUME;
+						require(rejected([&]{TheW3DShadowManager->addShadow(render,&duplicate);}),"original duplicate volume owner accepted");
+					} else require(rejected([&]{model->allocateShadows(); TheW3DShadowManager->addShadow(render,NULL);}),"original duplicate decal owner accepted");
 					W3DDisplay::m_3DScene->Remove_Render_Object(render); require(rejected([&]{TheW3DShadowManager->addShadow(render,NULL);}),"original detached decal owner accepted"); W3DDisplay::m_3DScene->Add_Render_Object(render);
 					view=new W3DView; TheTacticalView=view; view->init(); display.attachView(view); view->setWidth(32); view->setHeight(24); view->setDefaultView(0,0,1);
 					auto *track=TheTerrainTracksRenderObjClassSystem->bindTrack(TheHeightMap,MAP_XY_FACTOR,""); require(track,"original decal tracks compatibility owner missing");
@@ -80,8 +94,13 @@ extern "C" void zh_probe_shadow_decal_route()
 					zh::renderer::TextureDesc target; target.width=32; target.height=24; target.render_target=true; target.sampled=false; target.format=zh::renderer::TextureFormat::bgra8;
 					auto color=device.create_texture(target,"original decal color"); target.format=zh::renderer::TextureFormat::depth24_stencil8; auto depth=device.create_texture(target,"original decal depth"); require(color&&depth,"original decal targets missing");
 					auto frame=[&]{edge.bind_frame_targets(color,depth,32,24); display.draw(); require(!WW3D::Is_Rendering()&&!device.pass_active(),"original decal frame retained state");};
+					if (volume) {
+						device.fail_next_buffer_create();
+						require(rejected(frame)&&!WW3D::Is_Rendering()&&!device.pass_active(),"original volume source create rollback failed");
+					}
 					const std::string start=device.snapshot(); frame(); const std::string active=device.snapshot().substr(start.size());
-					const std::size_t terrain=active.find("original RTS3DScene::Render map terrain"), track_mark=active.find("original TerrainTracksRenderObjClassSystem::flush"), shadow=active.find("original W3DShadowManager::RenderShadows decal"), water=active.find("original WaterRenderObjClass::Render translucent plane");
+					const char *shadow_marker=volume ? "original W3DShadowManager::RenderShadows volume" : "original W3DShadowManager::RenderShadows decal";
+					const std::size_t terrain=active.find("original RTS3DScene::Render map terrain"), track_mark=active.find("original TerrainTracksRenderObjClassSystem::flush"), shadow=active.find(shadow_marker), water=active.find("original WaterRenderObjClass::Render translucent plane");
 					require(terrain<track_mark&&track_mark<shadow&&shadow<water&&draws(active)>=4&&active.find("DX8Wrapper::Draw indexed first=0 count=6 base=0",shadow)!=std::string::npos,"original terrain-shadow-water order or range failed");
 					if (std::getenv("ZH_M22_FULL_FEATURE_PROFILE")) {
 						auto *smudges=dynamic_cast<W3DSmudgeManager *>(TheSmudgeManager);
@@ -98,10 +117,21 @@ extern "C" void zh_probe_shadow_decal_route()
 							full.find("original W3DSmudgeManager::render bounded batch") != std::string::npos,
 							"original full feature source ordering failed");
 					}
-					TheW3DShadowManager->ReleaseResources(); device.fail_next_buffer_create(); require(rejected([&]{TheW3DShadowManager->ReAcquireResources();}),"original decal reacquire create rollback failed"); TheW3DShadowManager->ReAcquireResources();
+					TheW3DShadowManager->ReleaseResources();
+					if (!volume) { device.fail_next_buffer_create(); require(rejected([&]{TheW3DShadowManager->ReAcquireResources();}),"original decal reacquire create rollback failed"); }
+					TheW3DShadowManager->ReAcquireResources();
 					device.fail_draw_after(draws(active.substr(0,shadow))); require(rejected(frame)&&!WW3D::Is_Rendering()&&!device.pass_active(),"original decal draw rollback failed"); frame();
-					TheWritableGlobalData->m_useShadowDecals=FALSE; const std::string off=device.snapshot(); frame(); require(device.snapshot().substr(off.size()).find("original W3DShadowManager::RenderShadows decal")==std::string::npos,"original disabled decals emitted a draw"); TheWritableGlobalData->m_useShadowDecals=TRUE;
-					model->releaseShadows(); require(!TheW3DShadowManager->hasBoundedDecalCasters(),"original source decal removal retained manager owner");
+					if (volume) {
+						TheWritableGlobalData->m_useShadowVolumes=FALSE;
+						const std::string off=device.snapshot(); frame();
+						require(device.snapshot().substr(off.size()).find("original W3DShadowManager::RenderShadows volume")==std::string::npos,"original disabled volumes emitted a draw");
+						TheWritableGlobalData->m_useShadowVolumes=TRUE;
+					} else {
+						TheWritableGlobalData->m_useShadowDecals=FALSE; const std::string off=device.snapshot(); frame();
+						require(device.snapshot().substr(off.size()).find("original W3DShadowManager::RenderShadows decal")==std::string::npos,"original disabled decals emitted a draw"); TheWritableGlobalData->m_useShadowDecals=TRUE;
+					}
+					model->releaseShadows();
+					require(volume ? !TheW3DShadowManager->hasBoundedVolumeCasters() : !TheW3DShadowManager->hasBoundedDecalCasters(),"original source shadow removal retained manager owner");
 					W3DDisplay::m_3DScene->Remove_Render_Object(render); source_scene->Add_Render_Object(render);
 					device.destroy(depth); device.destroy(color);
 				} catch (...) { TheTacticalView=saved_view; TheTerrainVisual=saved_visual; TheDisplay=saved_display; throw; }
@@ -112,7 +142,9 @@ extern "C" void zh_probe_shadow_decal_route()
 	} catch (...) { TheWritableGlobalData->m_partitionCellSize=saved_partition; TheWritableGlobalData->m_makeTrackMarks=saved_marks; TheWritableGlobalData->m_useShadowDecals=saved_decals; TheWritableGlobalData->m_useShadowVolumes=saved_volumes; TheWritableGlobalData->m_maxTerrainTracks=saved_tracks; TheWritableGlobalData->m_useWaterPlane=saved_water; TheWritableGlobalData->m_useCloudPlane=saved_cloud; TheWritableGlobalData->m_waterExtentX=saved_x; TheWritableGlobalData->m_waterExtentY=saved_y; TheWritableGlobalData->m_waterType=saved_type; throw; }
 	TheWritableGlobalData->m_partitionCellSize=saved_partition; TheWritableGlobalData->m_makeTrackMarks=saved_marks; TheWritableGlobalData->m_useShadowDecals=saved_decals; TheWritableGlobalData->m_useShadowVolumes=saved_volumes; TheWritableGlobalData->m_maxTerrainTracks=saved_tracks; TheWritableGlobalData->m_useWaterPlane=saved_water; TheWritableGlobalData->m_useCloudPlane=saved_cloud; TheWritableGlobalData->m_waterExtentX=saved_x; TheWritableGlobalData->m_waterExtentY=saved_y; TheWritableGlobalData->m_waterType=saved_type;
 	require(device.resource_counts().total()==0,"original decal teardown retained Recording resources");
-	if (std::getenv("ZH_M22_FULL_FEATURE_PROFILE"))
+	if (volume)
+		std::puts("original volume shadow: source=1 ordering=1 retry=2 tracks-water=1 negatives=1 removal=1 generations=2 resources=0");
+	else if (std::getenv("ZH_M22_FULL_FEATURE_PROFILE"))
 		std::puts("original full feature map: terrain-tracks-shadow-water-particle-smudge=1 failures=2 generations=2 resources=0");
 	else
 		std::puts("original decal shadow: source=1 ordering=1 retry=2 tracks-water=1 negatives=1 removal=1 generations=2 resources=0");

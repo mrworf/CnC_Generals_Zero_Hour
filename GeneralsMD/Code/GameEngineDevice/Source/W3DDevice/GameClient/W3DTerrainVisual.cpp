@@ -38,6 +38,7 @@
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
+#include "W3DDevice/GameClient/W3DBufferManager.h"
 #include "W3DDevice/GameClient/W3DSmudge.h"
 #include "Common/GlobalData.h"
 #include "Common/MapReaderWriterInfo.h"
@@ -47,6 +48,10 @@
 static W3DTerrainVisual *s_emptyTerrainVisual = NULL;
 static TerrainTracksRenderObjClassSystem *s_ownedTracks = NULL;
 static W3DShadowManager *s_ownedShadows = NULL;
+// Volume geometry uses the original manager's source slots.  Keep this
+// provider map-owned and publish it only for the explicit volume profile;
+// normal map and fixture paths remain provider-free.
+static W3DBufferManager *s_ownedVolumeBuffers = NULL;
 static W3DSmudgeManager *s_ownedSmudges = NULL;
 
 W3DTerrainVisual::W3DTerrainVisual()
@@ -69,6 +74,9 @@ void W3DTerrainVisual::releaseEmptyOwners()
 	}
 	delete s_ownedShadows;
 	s_ownedShadows = NULL;
+	if (TheW3DBufferManager == s_ownedVolumeBuffers) TheW3DBufferManager = NULL;
+	delete s_ownedVolumeBuffers;
+	s_ownedVolumeBuffers = NULL;
 	delete s_ownedTracks;
 	s_ownedTracks = NULL;
 	if (m_terrainRenderObject) {
@@ -125,7 +133,7 @@ void W3DTerrainVisual::init()
 		(invalidEnabledWater ? 32U : 0U) | (invalidDisabledWater ? 64U : 0U);
 	if (std::getenv("ZH_M22_RETAIL_CONFIG_AUDIT"))
 		std::printf("original retail terrain configuration: mask=%u\n", retailAuditMask);
-	if (ownersUnavailable || shadowVolumes || shadowDecals ||
+	if (ownersUnavailable || (shadowVolumes && !std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE")) || shadowDecals ||
 		invalidEnabledWater || invalidDisabledWater)
 		throw OriginalW3DDeviceUnavailable("original map or enabled terrain visual pending");
 	s_emptyTerrainVisual = this;
@@ -135,6 +143,10 @@ void W3DTerrainVisual::init()
 		m_terrainRenderObject->Set_Collision_Type(PICK_TYPE_TERRAIN);
 		TheTerrainTracksRenderObjClassSystem = s_ownedTracks = NEW TerrainTracksRenderObjClassSystem;
 		TheTerrainTracksRenderObjClassSystem->init(W3DDisplay::m_3DScene);
+		if (std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE")) {
+			if (TheW3DBufferManager) throw OriginalW3DDeviceUnavailable("original volume source buffer provider already published");
+			TheW3DBufferManager = s_ownedVolumeBuffers = NEW W3DBufferManager;
+		}
 		TheW3DShadowManager = s_ownedShadows = NEW W3DShadowManager;
 		if (!TheW3DShadowManager->init())
 			throw OriginalW3DDeviceUnavailable("original disabled-shadow owner failed");
