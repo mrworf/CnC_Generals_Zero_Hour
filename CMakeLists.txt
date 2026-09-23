@@ -1533,6 +1533,26 @@ if(ZH_BUILD_TESTS)
     --build-dir "${CMAKE_CURRENT_BINARY_DIR}" --target original_video_buffer_tests --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-video-buffer.link.map"
     --provider-archive "$<TARGET_FILE:zh_original_config_providers>" --member VideoPlayer.cpp.o --required-symbol "VideoBuffer::free()")
   set_tests_properties(original_video_buffer_removal PROPERTIES LABELS "original-rendering;source-identity")
+  add_executable(original_video_stream_buffer_tests
+    tests/original_lifecycle/test_video_stream_buffer.cpp
+    tests/original_lifecycle/headless_reset_boundary.cpp
+    $<TARGET_OBJECTS:zh_original_lifecycle_spine>
+    $<TARGET_OBJECTS:zh_original_config_spine>)
+  target_include_directories(original_video_stream_buffer_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+  target_link_libraries(original_video_stream_buffer_tests PRIVATE zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
+  target_link_options(original_video_stream_buffer_tests PRIVATE -Wl,--gc-sections "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-video-stream-buffer.link.map")
+  add_test(NAME original_video_stream_buffer COMMAND original_video_stream_buffer_tests)
+  set_tests_properties(original_video_stream_buffer PROPERTIES LABELS "original-rendering;source-identity")
+  add_test(NAME original_video_stream_buffer_removal COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}" --target original_video_stream_buffer_tests --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-video-stream-buffer.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>" --member VideoPlayer.cpp.o --required-symbol "VideoStream::close()")
+  set_tests_properties(original_video_stream_buffer_removal PROPERTIES LABELS "original-rendering;source-identity")
   add_test(NAME original_headless_update_identity COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_headless_identity.py"
     --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
