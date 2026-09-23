@@ -1553,6 +1553,12 @@ if(ZH_BUILD_TESTS)
     --build-dir "${CMAKE_CURRENT_BINARY_DIR}" --target original_video_stream_buffer_tests --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-video-stream-buffer.link.map"
     --provider-archive "$<TARGET_FILE:zh_original_config_providers>" --member VideoPlayer.cpp.o --required-symbol "VideoStream::close()")
   set_tests_properties(original_video_stream_buffer_removal PROPERTIES LABELS "original-rendering;source-identity")
+  add_test(NAME original_video_stream_buffer_aggregate COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_video_stream_buffer_aggregate.py"
+    --registry "$<TARGET_FILE:original_video_stream_registry_tests>"
+    --buffer "$<TARGET_FILE:original_video_buffer_tests>"
+    --stream-buffer "$<TARGET_FILE:original_video_stream_buffer_tests>")
+  set_tests_properties(original_video_stream_buffer_aggregate PROPERTIES LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_headless_update_identity COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_headless_identity.py"
     --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
