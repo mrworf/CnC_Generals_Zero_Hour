@@ -23,13 +23,42 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "PreRTS.h"
+#endif
 #include "Common/Debug.h"
 #include "W3DDevice/GameClient/W3DBufferManager.h"
+#include "WW3D2/dx8fvf.h"
+
+#include <stdexcept>
 
 W3DBufferManager *TheW3DBufferManager=NULL;	//singleton
 
 static int FVFTypeIndexList[W3DBufferManager::MAX_FVF]=
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	// Keep the original source slot categories, but use the existing CPU FVF
+	// identifiers rather than importing a D3D SDK/device interface.  The
+	// transformed entries retain their original data-layout bit patterns.
+	DX8_FVF_XYZ,
+	DX8_FVF_XYZ|0x040,
+	DX8_FVF_XYZ|0x100,
+	DX8_FVF_XYZ|0x040|0x100,
+	DX8_FVF_XYZ|0x200,
+	DX8_FVF_XYZ|0x040|0x200,
+	DX8_FVF_XYZN,
+	DX8_FVF_XYZN|0x040,
+	DX8_FVF_XYZN|0x100,
+	DX8_FVF_XYZN|0x040|0x100,
+	DX8_FVF_XYZN|0x200,
+	DX8_FVF_XYZN|0x040|0x200,
+	0x004,
+	0x004|0x040,
+	0x004|0x100,
+	0x004|0x040|0x100,
+	0x004|0x200,
+	0x004|0x040|0x200
+#else
 	D3DFVF_XYZ,
 	D3DFVF_XYZ|D3DFVF_DIFFUSE,
 	D3DFVF_XYZ|D3DFVF_TEX1,
@@ -48,6 +77,7 @@ static int FVFTypeIndexList[W3DBufferManager::MAX_FVF]=
 	D3DFVF_XYZRHW|D3DFVF_DIFFUSE|D3DFVF_TEX1,
 	D3DFVF_XYZRHW|D3DFVF_TEX2,
 	D3DFVF_XYZRHW|D3DFVF_DIFFUSE|D3DFVF_TEX2
+#endif
 };
 
 Int W3DBufferManager::getDX8Format(VBM_FVF_TYPES format)
@@ -57,12 +87,13 @@ Int W3DBufferManager::getDX8Format(VBM_FVF_TYPES format)
 
 W3DBufferManager::W3DBufferManager(void)
 {
+	Int i;
 	m_numEmptySlotsAllocated=0;
 	m_numEmptyVertexBuffersAllocated=0;
 	m_numEmptyIndexSlotsAllocated=0;
 	m_numEmptyIndexBuffersAllocated=0;
 
-	for (Int i=0; i<MAX_FVF; i++)
+	for (i=0; i<MAX_FVF; i++)
 		m_W3DVertexBuffers[i]=NULL;
 	for (i=0; i<MAX_FVF; i++)
 		for (Int j=0; j<MAX_VB_SIZES; j++)
@@ -215,6 +246,9 @@ Bool W3DBufferManager::ReAcquireResources(void)
 W3DBufferManager::W3DVertexBufferSlot *W3DBufferManager::getSlot(VBM_FVF_TYPES fvfType, Int size)
 {
 	W3DVertexBufferSlot *vbSlot=NULL;
+	if (static_cast<unsigned>(fvfType)>=MAX_FVF || size<=0 ||
+		size>MAX_VB_SIZES*MIN_SLOT_SIZE)
+		throw std::runtime_error("original W3D buffer vertex slot format or size unsupported");
 
 	//round size to next multiple of minimum slot size.
 	//should help avoid fragmentation.
@@ -241,7 +275,18 @@ W3DBufferManager::W3DVertexBufferSlot *W3DBufferManager::getSlot(VBM_FVF_TYPES f
 /**Returns vertex buffer space back to pool so it can be reused later*/
 void W3DBufferManager::releaseSlot(W3DVertexBufferSlot *vbSlot)
 {
+	if (vbSlot < m_W3DVertexBufferEmptySlots ||
+		vbSlot >= m_W3DVertexBufferEmptySlots+MAX_NUMBER_SLOTS)
+		throw std::runtime_error("original W3D buffer foreign vertex slot");
+	Bool owned=FALSE;
+	for (Int format=0; format<MAX_FVF; ++format)
+		for (W3DVertexBuffer *buffer=m_W3DVertexBuffers[format]; buffer; buffer=buffer->m_nextVB)
+			for (W3DVertexBufferSlot *slot=buffer->m_usedSlots; slot; slot=slot->m_nextSameVB)
+				if (slot==vbSlot) owned=TRUE;
+	if (!owned) throw std::runtime_error("original W3D buffer inactive vertex slot");
 	Int sizeIndex = (vbSlot->m_size >> MIN_SLOT_SIZE_SHIFT)-1;
+	for (W3DVertexBufferSlot *slot=m_W3DVertexBufferSlots[vbSlot->m_VB->m_format][sizeIndex]; slot; slot=slot->m_nextSameSize)
+		if (slot==vbSlot) throw std::runtime_error("original W3D buffer duplicate vertex slot release");
 
 	vbSlot->m_nextSameSize=m_W3DVertexBufferSlots[vbSlot->m_VB->m_format][sizeIndex];
 	if (m_W3DVertexBufferSlots[vbSlot->m_VB->m_format][sizeIndex])
@@ -301,7 +346,7 @@ W3DBufferManager::W3DVertexBufferSlot * W3DBufferManager::allocateSlotStorage(VB
 		
 		pVB=m_W3DVertexBuffers[fvfType];	//get new list head
 
-		Int vbSize=__max(DEFAULT_VERTEX_BUFFER_SIZE,size);
+		Int vbSize=DEFAULT_VERTEX_BUFFER_SIZE>size ? DEFAULT_VERTEX_BUFFER_SIZE : size;
 
 		pVB->m_DX8VertexBuffer=NEW_REF(DX8VertexBufferClass,(FVFTypeIndexList[fvfType],vbSize,DX8VertexBufferClass::USAGE_DEFAULT));
 		pVB->m_format=fvfType;
@@ -329,6 +374,8 @@ W3DBufferManager::W3DVertexBufferSlot * W3DBufferManager::allocateSlotStorage(VB
 W3DBufferManager::W3DIndexBufferSlot *W3DBufferManager::getSlot(Int size)
 {
 	W3DIndexBufferSlot *ibSlot=NULL;
+	if (size<=0 || size>MAX_IB_SIZES*MIN_SLOT_SIZE)
+		throw std::runtime_error("original W3D buffer index slot size unsupported");
 
 	//round size to next multiple of minimum slot size.
 	//should help avoid fragmentation.
@@ -355,7 +402,17 @@ W3DBufferManager::W3DIndexBufferSlot *W3DBufferManager::getSlot(Int size)
 /**Returns index buffer space back to pool so it can be reused later*/
 void W3DBufferManager::releaseSlot(W3DIndexBufferSlot *ibSlot)
 {
+	if (ibSlot < m_W3DIndexBufferEmptySlots ||
+		ibSlot >= m_W3DIndexBufferEmptySlots+MAX_NUMBER_SLOTS)
+		throw std::runtime_error("original W3D buffer foreign index slot");
+	Bool owned=FALSE;
+	for (W3DIndexBuffer *buffer=m_W3DIndexBuffers; buffer; buffer=buffer->m_nextIB)
+		for (W3DIndexBufferSlot *slot=buffer->m_usedSlots; slot; slot=slot->m_nextSameIB)
+			if (slot==ibSlot) owned=TRUE;
+	if (!owned) throw std::runtime_error("original W3D buffer inactive index slot");
 	Int sizeIndex = (ibSlot->m_size >> MIN_SLOT_SIZE_SHIFT)-1;
+	for (W3DIndexBufferSlot *slot=m_W3DIndexBufferSlots[sizeIndex]; slot; slot=slot->m_nextSameSize)
+		if (slot==ibSlot) throw std::runtime_error("original W3D buffer duplicate index slot release");
 
 	ibSlot->m_nextSameSize=m_W3DIndexBufferSlots[sizeIndex];
 	if (m_W3DIndexBufferSlots[sizeIndex])
@@ -415,7 +472,7 @@ W3DBufferManager::W3DIndexBufferSlot * W3DBufferManager::allocateSlotStorage(Int
 		
 		pIB=m_W3DIndexBuffers;	//get new list head
 
-		Int ibSize=__max(DEFAULT_INDEX_BUFFER_SIZE,size);
+		Int ibSize=DEFAULT_INDEX_BUFFER_SIZE>size ? DEFAULT_INDEX_BUFFER_SIZE : size;
 
 		pIB->m_DX8IndexBuffer=NEW_REF(DX8IndexBufferClass,(ibSize,DX8IndexBufferClass::USAGE_DEFAULT));
 		pIB->m_startFreeIndex=size;
