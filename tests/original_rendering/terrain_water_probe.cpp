@@ -6,6 +6,7 @@
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
+#include "W3DDevice/GameClient/W3DShadow.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "W3DDevice/GameClient/W3DSmudge.h"
@@ -127,6 +128,38 @@ extern "C" void zh_probe_terrain_water()
 		}
 		edge.release_source_buffers();
 	}
+	// Retail reaches a real translucent water plane, not the generated fixed
+	// cloud-only control below.  Source GameClient reset detaches display objects
+	// before terrain reaches that owner.
+	TheWritableGlobalData->m_useWaterPlane=TRUE; TheWritableGlobalData->m_useCloudPlane=TRUE;
+	TheWritableGlobalData->m_waterExtentX=32; TheWritableGlobalData->m_waterExtentY=24;
+	TheWritableGlobalData->m_waterType=WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT;
+	for (Int generation=0; generation!=2; ++generation) {
+		zh::original_runtime::OriginalGpuEdge edge(device); W3DDisplay display; display.init();
+		Display *saved_display=TheDisplay; TerrainVisual *saved_visual=TheTerrainVisual; TheDisplay=&display;
+		try {
+			W3DTerrainVisual visual; TheTerrainVisual=&visual;
+			setenv("ZH_M22_RETAIL_CONFIG_ROUTE","1",1); setenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE","1",1);
+			visual.init(); WaterRenderObjClass *water=TheWaterRenderObj;
+			require(water && !water->hasPendingGpuResources() && water->Peek_Scene()==W3DDisplay::m_3DScene,
+				"original active water reset bootstrap failed");
+			require(rejected([&]{visual.reset();}), "original active water reset accepted before display detach");
+			display.reset();
+			require(water->Peek_Scene()!=W3DDisplay::m_3DScene, "original display did not detach active water");
+			visual.reset();
+			unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE");
+			require(rejected([&]{visual.reset();}), "original detached active water accepted without selector");
+			setenv("ZH_M22_RETAIL_CONFIG_ROUTE","1",1);
+			WaterRenderObjClass *saved_owner=TheWaterRenderObj; TheWaterRenderObj=NULL;
+			require(rejected([&]{visual.reset();}), "original detached active water accepted removed provider");
+			TheWaterRenderObj=saved_owner; visual.reset();
+			unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE"); unsetenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE");
+			TheTerrainVisual=saved_visual;
+		} catch (...) { unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE"); unsetenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE"); TheTerrainVisual=saved_visual; TheDisplay=saved_display; throw; }
+		TheDisplay=saved_display; edge.release_source_buffers();
+		require(!TheWaterRenderObj && !TheTerrainTracksRenderObjClassSystem && !TheW3DShadowManager && !TheSmudgeManager,
+			"original detached active water retained source providers");
+	}
 	// The aggregate retail route is the sole cloud-only exception: without its
 	// selector a zero-extent cloud owner stays rejected, while with it the
 	// source owner is a fixed internal 1x1 lifecycle object (not a water draw).
@@ -168,5 +201,5 @@ extern "C" void zh_probe_terrain_water()
 	TheWritableGlobalData->m_partitionCellSize=saved_partition; TheWritableGlobalData->m_maxTerrainTracks=saved_tracks; TheWritableGlobalData->m_makeTrackMarks=saved_marks;
 	TheWritableGlobalData->m_useWaterPlane=saved_water; TheWritableGlobalData->m_useCloudPlane=saved_cloud; TheWritableGlobalData->m_waterExtentX=saved_x; TheWritableGlobalData->m_waterExtentY=saved_y; TheWritableGlobalData->m_waterType=saved_type;
 	require(device.resource_counts().total()==0,"original water teardown retained Recording resources");
-	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 scalar-transaction=1 ordering=1 retry=2 tracks=1 siblings=0 generations=5 resources=0");
+	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 scalar-transaction=1 active-reset=1 ordering=1 retry=2 tracks=1 siblings=0 generations=7 resources=0");
 }

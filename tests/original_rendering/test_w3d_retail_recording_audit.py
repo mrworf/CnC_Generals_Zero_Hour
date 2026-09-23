@@ -20,6 +20,7 @@ RECORDING = re.compile(
 AUDIT = re.compile(r"original retail terrain configuration: mask=(\d+)")
 REACHABILITY = re.compile(r"original retail terrain reachability: mask=(\d+) families=(\d+) owners=(\d+)")
 SETUP = "original retail cloud setup: scalar-transaction=1"
+RESET = "original retail water reset: complete=1"
 
 
 def snapshot(root: Path):
@@ -121,6 +122,7 @@ def main() -> int:
                         "ZH_M22_RECORDING_FACTORY_PROFILE": "1",
                         "ZH_M22_RETAIL_CONFIG_AUDIT": "1",
                         "ZH_M22_RETAIL_CONFIG_ROUTE": "1",
+                        "ZH_M22_RETAIL_CONFIG_RESET_PROFILE": "1",
                         "XDG_CONFIG_HOME": str(state / "xdg/config"),
                         "XDG_CACHE_HOME": str(state / "xdg/cache"),
                         "XDG_DATA_HOME": str(state / "xdg/data"),
@@ -131,7 +133,7 @@ def main() -> int:
                     marker = REACHABILITY.search(result.stdout)
                     teardown = "original recording factory teardown: resources=0" in result.stdout
                     rollback = "original graphics rollback:" in result.stderr and "owners=0" in result.stderr
-                    if (result.returncode != 3 or not marker or marker.groups() != ("30", "4", "1") or SETUP not in result.stdout or
+                    if (result.returncode != 3 or not marker or marker.groups() != ("30", "4", "1") or SETUP not in result.stdout or RESET not in result.stderr or
                             not teardown or not rollback):
                         reason = "other"
                         for candidate in ("retail cloud owner foreign", "terrain-guard", "enabled-shadow", "volume", "water", "display"):

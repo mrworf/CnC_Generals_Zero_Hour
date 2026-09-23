@@ -736,6 +736,9 @@ public:
 	void init(int argc, char *argv[]) override
 	{
 		GameEngine::init(argc, argv);
+		if (std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") &&
+			std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE"))
+			throw std::runtime_error("original active-water reset next boundary pending");
 		if (m_boundedProfile)
 		{
 			// The bounded M20 profile is deliberately not a shell or match. Keep

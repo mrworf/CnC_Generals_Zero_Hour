@@ -195,7 +195,22 @@ void WaterRenderObjClass::Get_Obj_Space_Bounding_Box(AABoxClass &box) const
 	box.Init(MinMaxAABoxClass(Vector3(-m_dx * 0.5f, -m_dy * 0.5f, m_level),
 		Vector3(m_dx * 0.5f, m_dy * 0.5f, m_level)));
 }
-void WaterRenderObjClass::reset() { if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); return; } requireEmptyWaterOwner(this); }
+void WaterRenderObjClass::reset()
+{
+	const bool retailResetProfile = std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") != NULL &&
+		std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE") != NULL;
+	if (retailResetProfile) {
+		const bool detachedActiveOwner = s_emptyWaterOwner == this && TheWaterRenderObj == this &&
+			m_parentScene == W3DDisplay::m_3DScene && Peek_Scene() != W3DDisplay::m_3DScene &&
+			!m_cpuResourcesPending && m_cpuVertexBuffer && m_indexBuffer &&
+			m_dx > 0 && m_dy > 0 && m_waterType == WATER_TYPE_0_TRANSLUCENT;
+		if (!detachedActiveOwner)
+			throw OriginalW3DDeviceUnavailable("original active-water reset lifecycle unavailable");
+		return;
+	}
+	if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); return; }
+	requireEmptyWaterOwner(this);
+}
 void WaterRenderObjClass::load() { if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); return; } requireEmptyWaterOwner(this); }
 void WaterRenderObjClass::update() { if (TheGlobalData->m_useWaterPlane) { requireBoundedWaterOwner(this); return; } requireEmptyWaterOwner(this); }
 void WaterRenderObjClass::ReleaseResources()

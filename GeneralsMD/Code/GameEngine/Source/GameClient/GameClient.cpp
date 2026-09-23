@@ -30,6 +30,8 @@
 // SYSTEM INCLUDES ////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 #include "GameClient/GameClient.h"
+#include <cstdlib>
+#include <cstdio>
 
 // USER INCLUDES //////////////////////////////////////////////////////////////
 #include "Common/ActionManager.h"
@@ -452,6 +454,8 @@ void GameClient::init( void )
 void GameClient::reset( void )
 {
 	Drawable *draw;
+	const Bool retailWaterReset = std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") != NULL &&
+		std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE") != NULL;
 //	m_drawableHash.clear();
 //	m_drawableHash.resize(DRAWABLE_HASH_SIZE);
 
@@ -470,6 +474,9 @@ void GameClient::reset( void )
 
 	TheDisplay->reset();
 	TheTerrainVisual->reset();
+	if (retailWaterReset) {
+		std::fputs("original retail water reset: complete=1\n", stderr);
+	}
 	TheRayEffects->reset();
 	TheVideoPlayer->reset();
 	TheEva->reset();

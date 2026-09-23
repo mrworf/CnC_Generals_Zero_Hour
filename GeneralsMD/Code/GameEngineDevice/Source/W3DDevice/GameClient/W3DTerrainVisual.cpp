@@ -121,6 +121,7 @@ void W3DTerrainVisual::init()
 	// audited mask-30 configuration.  It admits no new settings: the source
 	// owners below remain their own cardinality/type authorities.
 	const bool retailConfigRoute = std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") != NULL;
+	const bool retailWaterResetProfile = std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE") != NULL;
 	const bool shadowVolumes = TheGlobalData->m_useShadowVolumes;
 	const bool shadowDecals = TheGlobalData->m_useShadowDecals &&
 		!std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") && !std::getenv("ZH_M22_FULL_FEATURE_PROFILE") && !retailConfigRoute;
@@ -184,7 +185,8 @@ void W3DTerrainVisual::init()
 			TheGlobalData->m_vertexWaterAttenuationRange[0]);
 		if (retailConfigRoute) {
 			std::puts("original retail cloud setup: scalar-transaction=1");
-			throw OriginalW3DDeviceUnavailable("original cloud-water setup next boundary pending");
+			if (!retailWaterResetProfile)
+				throw OriginalW3DDeviceUnavailable("original cloud-water setup next boundary pending");
 		}
 	} catch (...) {
 		releaseEmptyOwners();
@@ -201,6 +203,11 @@ void W3DTerrainVisual::reset()
 	TheW3DShadowManager->Reset();
 	TheSmudgeManager->reset();
 	TheTerrainTracksRenderObjClassSystem->Reset();
+	if (std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") != NULL &&
+		std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE") != NULL &&
+		m_waterRenderObject == TheWaterRenderObj && !m_waterRenderObject->hasPendingGpuResources() &&
+		m_waterRenderObject->Peek_Scene() == W3DDisplay::m_3DScene)
+		throw OriginalW3DDeviceUnavailable("original active-water reset requires display detachment");
 	m_waterRenderObject->reset();
 }
 
