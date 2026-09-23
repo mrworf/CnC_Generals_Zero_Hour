@@ -192,7 +192,7 @@ void W3DDisplay::draw()
 		!TheTerrainTracksRenderObjClassSystem || !TheW3DShadowManager ||
 		!TheWaterRenderObj || !TheSmudgeManager ||
 		(TheGlobalData->m_useShadowVolumes &&
-			(!std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") ||
+			(!(std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") || std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE")) ||
 			 !TheW3DShadowManager->hasBoundedVolumeCasters() || !TheHeightMap->getMap())) ||
 		(TheGlobalData->m_useShadowDecals &&
 			(!TheW3DShadowManager->hasBoundedDecalCasters() || !TheHeightMap->getMap())) ||

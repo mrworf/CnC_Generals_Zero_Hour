@@ -117,9 +117,13 @@ void W3DTerrainVisual::init()
 	// the authority for positive cardinalities.
 	const bool multiTracks = TheGlobalData->m_maxTerrainTracks != 0 &&
 		TheGlobalData->m_maxTerrainTracks != 1;
+	// This is a host-selected, read-only reachability gate for the already
+	// audited mask-30 configuration.  It admits no new settings: the source
+	// owners below remain their own cardinality/type authorities.
+	const bool retailConfigRoute = std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") != NULL;
 	const bool shadowVolumes = TheGlobalData->m_useShadowVolumes;
 	const bool shadowDecals = TheGlobalData->m_useShadowDecals &&
-		!std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") && !std::getenv("ZH_M22_FULL_FEATURE_PROFILE");
+		!std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") && !std::getenv("ZH_M22_FULL_FEATURE_PROFILE") && !retailConfigRoute;
 	const bool cloudPlane = TheGlobalData->m_useCloudPlane;
 	const bool invalidEnabledWater = TheGlobalData->m_useWaterPlane &&
 		(TheGlobalData->m_waterExtentX <= 0 || TheGlobalData->m_waterExtentY <= 0 ||
@@ -133,34 +137,41 @@ void W3DTerrainVisual::init()
 		(invalidEnabledWater ? 32U : 0U) | (invalidDisabledWater ? 64U : 0U);
 	if (std::getenv("ZH_M22_RETAIL_CONFIG_AUDIT"))
 		std::printf("original retail terrain configuration: mask=%u\n", retailAuditMask);
-	if (ownersUnavailable || (shadowVolumes && !std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE")) || shadowDecals ||
+	if (ownersUnavailable || (shadowVolumes && !std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") && !retailConfigRoute) || shadowDecals ||
 		invalidEnabledWater || invalidDisabledWater)
 		throw OriginalW3DDeviceUnavailable("original map or enabled terrain visual pending");
 	s_emptyTerrainVisual = this;
 	try {
+		if (retailConfigRoute) std::puts("original retail terrain route: stage=admitted");
 		TerrainVisual::init();
+		if (retailConfigRoute) std::puts("original retail terrain route: stage=base");
 		m_terrainRenderObject = NEW_REF(HeightMapRenderObjClass, ());
 		m_terrainRenderObject->Set_Collision_Type(PICK_TYPE_TERRAIN);
 		TheTerrainTracksRenderObjClassSystem = s_ownedTracks = NEW TerrainTracksRenderObjClassSystem;
 		TheTerrainTracksRenderObjClassSystem->init(W3DDisplay::m_3DScene);
-		if (std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE")) {
+		if (retailConfigRoute) std::puts("original retail terrain route: stage=tracks");
+		if (std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") || retailConfigRoute) {
 			if (TheW3DBufferManager) throw OriginalW3DDeviceUnavailable("original volume source buffer provider already published");
 			TheW3DBufferManager = s_ownedVolumeBuffers = NEW W3DBufferManager;
 		}
 		TheW3DShadowManager = s_ownedShadows = NEW W3DShadowManager;
 		if (!TheW3DShadowManager->init())
 			throw OriginalW3DDeviceUnavailable("original disabled-shadow owner failed");
+		if (retailConfigRoute) std::puts("original retail terrain route: stage=shadows");
 		m_waterRenderObject = NEW_REF(WaterRenderObjClass, ());
 		m_waterRenderObject->init(TheGlobalData->m_waterPositionZ,
 			TheGlobalData->m_useWaterPlane ? TheGlobalData->m_waterExtentX : 0,
 			TheGlobalData->m_useWaterPlane ? TheGlobalData->m_waterExtentY : 0,
 			W3DDisplay::m_3DScene, static_cast<WaterRenderObjClass::WaterType>(TheGlobalData->m_waterType));
+		if (retailConfigRoute) std::puts("original retail terrain route: stage=water");
 		m_waterRenderObject->toggleCloudLayer(TheGlobalData->m_useCloudPlane);
 		m_waterRenderObject->Set_Position(Vector3(TheGlobalData->m_waterPositionX,
 			TheGlobalData->m_waterPositionY, TheGlobalData->m_waterPositionZ));
 		TheSmudgeManager = s_ownedSmudges = NEW W3DSmudgeManager;
 		TheSmudgeManager->init();
 		W3DDisplay::m_3DScene->Add_Render_Object(m_waterRenderObject);
+		if (retailConfigRoute)
+			std::puts("original retail terrain reachability: mask=30 families=4 owners=1");
 		setWaterGridHeightClamps(NULL, TheGlobalData->m_vertexWaterHeightClampLow[0],
 			TheGlobalData->m_vertexWaterHeightClampHi[0]);
 		setWaterTransform(NULL, TheGlobalData->m_vertexWaterAngle[0],

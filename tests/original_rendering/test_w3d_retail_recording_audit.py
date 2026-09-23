@@ -18,6 +18,8 @@ RECORDING = re.compile(
     r"passes=(\d+) draws=(\d+) presents=(\d+) failures=(\d+) resources=(\d+)"
 )
 AUDIT = re.compile(r"original retail terrain configuration: mask=(\d+)")
+REACHABILITY = re.compile(r"original retail terrain reachability: mask=(\d+) families=(\d+) owners=(\d+)")
+ROUTE_STAGE = re.compile(r"original retail terrain route: stage=([a-z]+)")
 
 
 def snapshot(root: Path):
@@ -32,6 +34,8 @@ def main() -> int:
     parser.add_argument("--source-root", type=Path, required=True)
     parser.add_argument("--zh-data-root", type=Path, required=True)
     parser.add_argument("--generals-data-root", type=Path, required=True)
+    parser.add_argument("--reachability", action="store_true",
+                        help="also require the source-owned mask-30 consumer boundary")
     args = parser.parse_args()
     executable = args.executable.resolve()
     roots = (args.zh_data_root.resolve(), args.generals_data_root.resolve())
@@ -99,7 +103,54 @@ def main() -> int:
         if masks[0] != masks[1] or before != tuple(snapshot(root) for root in roots):
             raise SystemExit("M22 08A retail configuration audit changed input or diverged")
 
-    print("M22 08A recording factory and retail configuration audit: ok; private input unchanged")
+        if args.reachability:
+            reached = []
+            for mode, logical_map in (("mission", r"Maps\\MD_USA01\\MD_USA01.map"),
+                                      ("skirmish", r"Maps\\BarrenBadlands\\BarrenBadlands.map")):
+                for generation in range(2):
+                    state = base / f"route-{mode}-{generation}"
+                    state.mkdir()
+                    environment = os.environ.copy()
+                    environment.update({
+                        "ZH_DATA_ROOT": str(roots[0]),
+                        "ZH_GENERALS_DATA_ROOT": str(roots[1]),
+                        "ZH_M20_HEADLESS_PROFILE": "1",
+                        "ZH_M21_SCENARIO": mode,
+                        "ZH_M21_MAP": logical_map,
+                        "ZH_M22_ORIGINAL_FACTORY_PROFILE": "1",
+                        "ZH_M22_RECORDING_FACTORY_PROFILE": "1",
+                        "ZH_M22_RETAIL_CONFIG_AUDIT": "1",
+                        "ZH_M22_RETAIL_CONFIG_ROUTE": "1",
+                        "XDG_CONFIG_HOME": str(state / "xdg/config"),
+                        "XDG_CACHE_HOME": str(state / "xdg/cache"),
+                        "XDG_DATA_HOME": str(state / "xdg/data"),
+                        "XDG_STATE_HOME": str(state / "xdg/state"),
+                    })
+                    result = subprocess.run([str(executable)], cwd=state, env=environment, text=True,
+                                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
+                    marker = REACHABILITY.search(result.stdout)
+                    stages = ROUTE_STAGE.findall(result.stdout)
+                    teardown = "original recording factory teardown: resources=0" in result.stdout
+                    rollback = "original graphics rollback:" in result.stderr and "owners=0" in result.stderr
+                    if (result.returncode != 3 or not marker or marker.groups() != ("30", "4", "1") or
+                            not teardown or not rollback):
+                        reason = "other"
+                        for candidate in ("retail cloud owner foreign", "terrain-guard", "enabled-shadow", "volume", "water", "display"):
+                            if candidate in result.stderr:
+                                reason = candidate
+                                break
+                        raise SystemExit("M22 08B retail reachability contract failed; "
+                                         f"status={result.returncode} marker={int(bool(marker))} "
+                                         f"teardown={int(teardown)} rollback={int(rollback)} "
+                                         f"stage={stages[-1] if stages else 'none'} reason={reason}; private output redacted")
+                    reached.append(marker.groups())
+            if len(set(reached)) != 1 or before != tuple(snapshot(root) for root in roots):
+                raise SystemExit("M22 08B retail reachability changed input or diverged")
+
+    if args.reachability:
+        print("M22 08B retail Recording reachability: mask=30 families=4 modes=2 generations=2 input=unchanged")
+    else:
+        print("M22 08A recording factory and retail configuration audit: ok; private input unchanged")
     return 0
 
 

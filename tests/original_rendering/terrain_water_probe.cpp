@@ -115,8 +115,26 @@ extern "C" void zh_probe_terrain_water()
 		}
 		edge.release_source_buffers();
 	}
+	// The aggregate retail route is the sole cloud-only exception: without its
+	// selector a zero-extent cloud owner stays rejected, while with it the
+	// source owner is a fixed internal 1x1 lifecycle object (not a water draw).
+	TheWritableGlobalData->m_useWaterPlane=FALSE; TheWritableGlobalData->m_useCloudPlane=TRUE;
+	TheWritableGlobalData->m_waterExtentX=0; TheWritableGlobalData->m_waterExtentY=0;
+	TheWritableGlobalData->m_waterType=WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT;
+	{
+		zh::original_runtime::OriginalGpuEdge edge(device); W3DDisplay display; display.init();
+		WaterRenderObjClass cloud;
+		unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE");
+		require(rejected([&]{cloud.init(0,0,0,W3DDisplay::m_3DScene,WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT);}),
+			"original default zero-extent cloud owner was accepted");
+		setenv("ZH_M22_RETAIL_CONFIG_ROUTE","1",1);
+		require(cloud.init(0,0,0,W3DDisplay::m_3DScene,WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT)==0 &&
+			TheWaterRenderObj==&cloud && cloud.hasPendingGpuResources(),
+			"original selected fixed cloud owner failed");
+		unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE"); edge.release_source_buffers();
+	}
 	TheWritableGlobalData->m_partitionCellSize=saved_partition; TheWritableGlobalData->m_maxTerrainTracks=saved_tracks; TheWritableGlobalData->m_makeTrackMarks=saved_marks;
 	TheWritableGlobalData->m_useWaterPlane=saved_water; TheWritableGlobalData->m_useCloudPlane=saved_cloud; TheWritableGlobalData->m_waterExtentX=saved_x; TheWritableGlobalData->m_waterExtentY=saved_y; TheWritableGlobalData->m_waterType=saved_type;
 	require(device.resource_counts().total()==0,"original water teardown retained Recording resources");
-	std::puts("original terrain water: plane=1 cloud=1 ordering=1 retry=2 tracks=1 siblings=0 generations=3 resources=0");
+	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 ordering=1 retry=2 tracks=1 siblings=0 generations=3 resources=0");
 }

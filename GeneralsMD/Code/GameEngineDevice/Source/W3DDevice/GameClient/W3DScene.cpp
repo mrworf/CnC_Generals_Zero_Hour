@@ -113,8 +113,8 @@ static bool isBoundedShadowCasterSceneObject(RenderObjClass *object)
 {
 	return object && TheW3DShadowManager &&
 		(TheW3DShadowManager->ownsBoundedDecalCaster(object) ||
-		 (std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") &&
-		  TheW3DShadowManager->ownsBoundedVolumeCaster(object))) &&
+		 (std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") || std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE")) &&
+			  TheW3DShadowManager->ownsBoundedVolumeCaster(object)) &&
 		object->Peek_Scene() == W3DDisplay::m_3DScene;
 }
 #endif
@@ -1789,7 +1789,7 @@ void RTS3DScene::Render(RenderInfoClass &rinfo)
 		throw OriginalW3DDeviceUnavailable("original active water scene owner missing");
 	if ((TheW3DShadowManager &&
 		((TheGlobalData->m_useShadowVolumes &&
-			(!std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") || !TheW3DShadowManager->hasBoundedVolumeCasters())) ||
+			(!(std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") || std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE")) || !TheW3DShadowManager->hasBoundedVolumeCasters())) ||
 		 TheW3DShadowManager->isShadowScene())) ||
 		(TheParticleSystemManager && TheParticleSystemManager->getParticleCount() != 0))
 		throw OriginalW3DDeviceUnavailable("original 3D shadow or particle scene translation pending");

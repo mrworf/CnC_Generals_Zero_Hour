@@ -201,7 +201,7 @@ static void requireEmptyShadowOwner(W3DShadowManager *owner)
 {
 	if (s_emptyShadowOwner != owner || TheW3DShadowManager != owner ||
 		!zh::original_runtime::OriginalGpuEdge::active() ||
-		!W3DDisplay::m_3DScene || (TheGlobalData->m_useShadowVolumes && !std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE")))
+		!W3DDisplay::m_3DScene || (TheGlobalData->m_useShadowVolumes && !std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") && !std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE")))
 		throw OriginalW3DDeviceUnavailable("original disabled-shadow owner unavailable");
 }
 #endif
@@ -295,8 +295,8 @@ Bool W3DShadowManager::init( void )
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	if (!zh::original_runtime::OriginalGpuEdge::active() ||
-		!W3DDisplay::m_3DScene || (TheGlobalData->m_useShadowVolumes && !std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE")) ||
-		(TheGlobalData->m_useShadowDecals && !std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") && !std::getenv("ZH_M22_FULL_FEATURE_PROFILE")) ||
+		!W3DDisplay::m_3DScene || (TheGlobalData->m_useShadowVolumes && !std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") && !std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE")) ||
+		(TheGlobalData->m_useShadowDecals && !std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") && !std::getenv("ZH_M22_FULL_FEATURE_PROFILE") && !std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE")) ||
 		(TheW3DShadowManager && TheW3DShadowManager != this) ||
 		(s_emptyShadowOwner && s_emptyShadowOwner != this)) {
 		if (TheW3DShadowManager == this && s_emptyShadowOwner != this)
@@ -394,7 +394,7 @@ Shadow *W3DShadowManager::addShadow( RenderObjClass *robj, Shadow::ShadowTypeInf
 	{
 		case	SHADOW_VOLUME:
 #if defined(ZH_WW3D_CPU_ONLY)
-			if (!std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") || !TheGlobalData->m_useShadowVolumes)
+			if (!(std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") || std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE")) || !TheGlobalData->m_useShadowVolumes)
 				throw OriginalW3DDeviceUnavailable("original volumetric shadow derived-manager creation pending");
 			if (TheW3DShadowManager!=this || !shadowInfo || !hasPublishedModelRenderObject(robj))
 				throw OriginalW3DDeviceUnavailable("original bounded volume shadow owner or state unavailable");

@@ -49,10 +49,12 @@ static WaterRenderObjClass *s_emptyWaterOwner = NULL;
 
 static void requireEmptyWaterOwner(WaterRenderObjClass *owner)
 {
+	const bool cloud_only = std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") &&
+		!TheGlobalData->m_useWaterPlane && TheGlobalData->m_useCloudPlane;
 	if (s_emptyWaterOwner != owner || TheWaterRenderObj != owner ||
 		!zh::original_runtime::OriginalGpuEdge::active() ||
 		!W3DDisplay::m_3DScene || TheGlobalData->m_useWaterPlane ||
-		TheGlobalData->m_useCloudPlane)
+		(TheGlobalData->m_useCloudPlane && !cloud_only))
 		throw OriginalW3DDeviceUnavailable("original no-water owner unavailable");
 }
 
@@ -112,9 +114,17 @@ Int WaterRenderObjClass::init(Real level, Real dx, Real dy, SceneClass *parent, 
 {
 	const bool active_plane = TheGlobalData->m_useWaterPlane &&
 		dx > 0 && dy > 0 && type == WATER_TYPE_0_TRANSLUCENT;
+	// The audited cloud-only configuration has no water-plane extent.  Keep its
+	// generated owner bounded and creation-fixed; it is not an implicit water
+	// route and remains unavailable outside the host-selected retail boundary.
+	const bool cloud_only = std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") &&
+		!TheGlobalData->m_useWaterPlane && TheGlobalData->m_useCloudPlane &&
+		dx == 0 && dy == 0 && type == WATER_TYPE_0_TRANSLUCENT;
+	if (cloud_only && TheWaterRenderObj && TheWaterRenderObj != this)
+		throw OriginalW3DDeviceUnavailable("original retail cloud owner foreign");
 	if (!zh::original_runtime::OriginalGpuEdge::active() ||
 		!W3DDisplay::m_3DScene || parent != W3DDisplay::m_3DScene ||
-		(!active_plane && (TheGlobalData->m_useWaterPlane || TheGlobalData->m_useCloudPlane ||
+		(!active_plane && !cloud_only && (TheGlobalData->m_useWaterPlane || TheGlobalData->m_useCloudPlane ||
 			dx != 0 || dy != 0 || type != WATER_TYPE_0_TRANSLUCENT)) ||
 		(TheWaterRenderObj && TheWaterRenderObj != this) ||
 		(s_emptyWaterOwner && s_emptyWaterOwner != this) ||
@@ -124,11 +134,11 @@ Int WaterRenderObjClass::init(Real level, Real dx, Real dy, SceneClass *parent, 
 		throw OriginalW3DDeviceUnavailable("original enabled-water or owner bootstrap pending");
 	}
 	m_level = level;
-	m_dx = dx;
-	m_dy = dy;
+	m_dx = cloud_only ? 1.0f : dx;
+	m_dy = cloud_only ? 1.0f : dy;
 	m_parentScene = parent;
 	m_waterType = type;
-	m_useCloudLayer = TheGlobalData->m_useCloudPlane;
+	m_useCloudLayer = cloud_only || TheGlobalData->m_useCloudPlane;
 	TheWaterRenderObj = this;
 	s_emptyWaterOwner = this;
 	if (active_plane) {
