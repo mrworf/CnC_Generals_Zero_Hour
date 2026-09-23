@@ -110,6 +110,10 @@ public:
 
     renderer::BufferHandle bind_vertex(const VertexBufferClass* source);
     renderer::BufferHandle bind_index(const IndexBufferClass* source);
+    // A source owner may retire one buffer while the device session remains
+    // live; do not force unrelated source owners out of the same session.
+    void release_vertex(const VertexBufferClass* source);
+    void release_index(const IndexBufferClass* source);
     // WW3D shutdown retires source pools while this device session may remain alive.
     void release_source_buffers();
     static renderer::OriginalFvfLayout layout_for_fvf(unsigned source_fvf);

@@ -2,11 +2,13 @@
 #include "Common/GlobalData.h"
 #include "GameClient/Display.h"
 #include "GameClient/View.h"
+#include "GameClient/Smudge.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
+#include "W3DDevice/GameClient/W3DSmudge.h"
 #include "W3DDevice/GameClient/W3DView.h"
 #include "W3DDevice/GameClient/W3DWater.h"
 #include "WW3D2/ww3d.h"
@@ -78,6 +80,19 @@ extern "C" void zh_probe_terrain_water()
 				require(draws(active)==4 && terrain<track_mark && track_mark<water_mark &&
 					active.find("DX8Wrapper::Draw indexed first=0 count=6 base=0",water_mark)!=std::string::npos,
 					"original terrain-track-water source ordering/range failed");
+				auto *smudges=dynamic_cast<W3DSmudgeManager *>(TheSmudgeManager);
+				require(smudges,"original terrain-water particle smudge owner missing");
+				auto *set=smudges->addSmudgeSet(); auto *smudge=set->addSmudgeToSet();
+				smudge->m_pos=Vector3(16,16,0); smudge->m_offset=Vector2(0,0); smudge->m_size=4; smudge->m_opacity=.5f;
+				const Vector3 smudge_points[5]={Vector3(14,18,0),Vector3(14,14,0),Vector3(18,14,0),Vector3(18,18,0),Vector3(16,16,0)};
+				for (Int i=0;i!=5;++i) { smudge->m_verts[i].pos=smudge_points[i]; smudge->m_verts[i].uv.Set((i==2||i==3)?1:0,(i==0||i==3)?0:1); }
+				const std::string effect_start=device.snapshot(); frame(); const std::string effect=device.snapshot().substr(effect_start.size());
+				const auto particle=effect.find("original W3DParticleSystemManager::doParticles smudge request"), smudge_draw=effect.find("original W3DSmudgeManager::render bounded batch");
+				require(terrain!=std::string::npos && effect.find("original RTS3DScene::Render map terrain") < effect.find("original TerrainTracksRenderObjClassSystem::flush") &&
+					effect.find("original TerrainTracksRenderObjClassSystem::flush") < effect.find("original WaterRenderObjClass::Render translucent plane") &&
+					effect.find("original WaterRenderObjClass::Render translucent plane") < particle && particle < smudge_draw &&
+					effect.find("DX8Wrapper::Draw indexed first=0 count=12 base=0",smudge_draw)!=std::string::npos,
+					"original terrain-track-water-particle-smudge ordering failed");
 				device.fail_buffer_upload_after(before(active,"upload ",water_mark));
 				require(rejected(frame)&&!WW3D::Is_Rendering()&&!device.pass_active()&&!water->hasPendingGpuResources(),"original water upload rollback failed");
 				device.fail_draw_after(draws(active.substr(0,water_mark)));

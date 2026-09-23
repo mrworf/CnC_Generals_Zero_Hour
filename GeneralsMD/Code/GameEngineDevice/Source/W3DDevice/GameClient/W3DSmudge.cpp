@@ -31,6 +31,12 @@
 #include "PreRTS.h"
 #include "W3DDevice/GameClient/W3DSmudge.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/WorldHeightMap.h"
+#include "WW3D2/dx8indexbuffer.h"
+#include "WW3D2/dx8vertexbuffer.h"
+#include "WW3D2/dx8wrapper.h"
+#include "WW3D2/vertmaterial.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
 
@@ -46,13 +52,15 @@ static void requireEmptySmudgeOwner(W3DSmudgeManager *owner)
 
 W3DSmudgeManager::W3DSmudgeManager()
 	: m_smudgeGroup(NULL), m_posBuffer(NULL), m_RGBABuffer(NULL),
-	  m_sizeBuffer(NULL), m_indexBuffer(NULL), m_backBufferWidth(0),
+	  m_sizeBuffer(NULL), m_indexBuffer(NULL), m_vertexBuffer(NULL),
+	  m_vertexMaterialClass(NULL), m_backBufferWidth(0),
 	  m_backBufferHeight(0)
 {
 }
 
 W3DSmudgeManager::~W3DSmudgeManager()
 {
+	ReleaseResources();
 	if (s_emptySmudgeOwner == this) s_emptySmudgeOwner = NULL;
 	if (TheSmudgeManager == this) TheSmudgeManager = NULL;
 }
@@ -61,43 +69,81 @@ void W3DSmudgeManager::init()
 {
 	if (!zh::original_runtime::OriginalGpuEdge::active() || !W3DDisplay::m_3DScene ||
 		(TheSmudgeManager && TheSmudgeManager != this) ||
-		(s_emptySmudgeOwner && s_emptySmudgeOwner != this) ||
-		m_usedSmudgeSetList.Head()) {
+		(s_emptySmudgeOwner && s_emptySmudgeOwner != this)) {
 		if (TheSmudgeManager == this && s_emptySmudgeOwner != this)
 			TheSmudgeManager = NULL;
 		throw OriginalW3DDeviceUnavailable("original active smudge bootstrap pending");
 	}
 	SmudgeManager::init();
-	m_hardwareSupportStatus = SMUDGE_SUPPORT_NO;
+	m_hardwareSupportStatus = SMUDGE_SUPPORT_YES;
 	TheSmudgeManager = this;
 	s_emptySmudgeOwner = this;
+	ReAcquireResources();
 }
 
 void W3DSmudgeManager::reset()
 {
 	requireEmptySmudgeOwner(this);
-	if (m_usedSmudgeSetList.Head())
-		throw OriginalW3DDeviceUnavailable("original active smudge reset pending");
 	SmudgeManager::reset();
 	m_smudgeCountLastFrame = 0;
 }
 
 void W3DSmudgeManager::ReleaseResources()
 {
-	requireEmptySmudgeOwner(this);
-	if (m_usedSmudgeSetList.Head())
-		throw OriginalW3DDeviceUnavailable("original active smudge resources pending");
+	if (auto *edge=zh::original_runtime::OriginalGpuEdge::active()) {
+		edge->release_index(m_indexBuffer);
+		edge->release_vertex(m_vertexBuffer);
+	}
+	REF_PTR_RELEASE(m_indexBuffer);
+	REF_PTR_RELEASE(m_vertexBuffer);
+	REF_PTR_RELEASE(m_vertexMaterialClass);
 }
 
-void W3DSmudgeManager::ReAcquireResources() { ReleaseResources(); }
+void W3DSmudgeManager::ReAcquireResources()
+{
+	requireEmptySmudgeOwner(this);
+	ReleaseResources();
+	try {
+		m_indexBuffer=NEW_REF(DX8IndexBufferClass,(12));
+		DX8IndexBufferClass::WriteLockClass indices(m_indexBuffer);
+		const UnsignedShort source_indices[12]={0,4,3,3,4,2,2,4,1,1,4,0};
+		std::memcpy(indices.Get_Index_Array(),source_indices,sizeof(source_indices));
+		m_vertexBuffer=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZDUV1,5,DX8VertexBufferClass::USAGE_DYNAMIC));
+		m_vertexMaterialClass=NEW_REF(VertexMaterialClass,());
+		m_vertexMaterialClass->Set_Diffuse_Color_Source(VertexMaterialClass::COLOR1);
+		m_vertexMaterialClass->Set_Lighting(false);
+	} catch (...) { ReleaseResources(); throw; }
+}
 
-Bool W3DSmudgeManager::testHardwareSupport() { return FALSE; }
+Bool W3DSmudgeManager::testHardwareSupport() { return TRUE; }
 
 void W3DSmudgeManager::render(RenderInfoClass&)
 {
 	requireEmptySmudgeOwner(this);
-	if (m_usedSmudgeSetList.Head())
-		throw OriginalW3DDeviceUnavailable("original smudge render pending");
+	SmudgeSet *set=m_usedSmudgeSetList.Head();
+	if (!set) return;
+	if (set->Succ() || set->getUsedSmudgeCount()!=1)
+		throw OriginalW3DDeviceUnavailable("original bounded smudge set unavailable");
+	if (!m_indexBuffer || !m_vertexBuffer || !m_vertexMaterialClass)
+		throw OriginalW3DDeviceUnavailable("original bounded smudge resource unavailable");
+	if (!WW3D::Is_Rendering())
+		throw OriginalW3DDeviceUnavailable("original bounded smudge draw phase unavailable");
+	Smudge *smudge=set->getUsedSmudgeList().Head();
+	if (!smudge || smudge->Succ() || smudge->m_size<=0 || smudge->m_opacity<0 || smudge->m_opacity>1)
+		throw OriginalW3DDeviceUnavailable("original bounded smudge input unavailable");
+	TextureClass *texture=TheHeightMap && TheHeightMap->getMap() ? TheHeightMap->getMap()->getTerrainTexture() : NULL;
+	if (!texture) throw OriginalW3DDeviceUnavailable("original bounded smudge texture unavailable");
+	DX8VertexBufferClass::WriteLockClass lock(m_vertexBuffer);
+	auto *vertices=static_cast<VertexFormatXYZDUV1 *>(lock.Get_Vertex_Array());
+	for (Int i=0;i!=5;++i) {
+		vertices[i].x=smudge->m_verts[i].pos.X; vertices[i].y=smudge->m_verts[i].pos.Y; vertices[i].z=smudge->m_verts[i].pos.Z;
+		vertices[i].u1=smudge->m_verts[i].uv.X; vertices[i].v1=smudge->m_verts[i].uv.Y;
+		vertices[i].diffuse=(i==4 ? static_cast<UnsignedInt>(smudge->m_opacity*255.0f)<<24 : 0);
+	}
+	DX8Wrapper::Set_Material(m_vertexMaterialClass); DX8Wrapper::Set_Texture(0,texture); DX8Wrapper::Set_Shader(ShaderClass::_PresetAlphaShader);
+	DX8Wrapper::Set_Index_Buffer(m_indexBuffer,0); DX8Wrapper::Set_Vertex_Buffer(m_vertexBuffer);
+	zh::original_runtime::OriginalGpuEdge::required().record_source_state("original W3DSmudgeManager::render bounded batch");
+	DX8Wrapper::Draw_Triangles(0,4,0,5); m_smudgeCountLastFrame=1;
 }
 
 #else

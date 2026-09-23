@@ -37,7 +37,7 @@ def main() -> int:
             result = run(args.executable.resolve(), root / f"generation-{generation}", source, "mission")
             if result.returncode or marker not in result.stdout:
                 raise SystemExit(f"original terrain visual map generation {generation} failed "
-                                 f"({result.returncode}); private output redacted")
+                                 f"({result.returncode}):\n{result.stdout}{result.stderr}")
     print("original terrain visual map: transaction/rollback/attachment/reentry ok")
     return 0
 

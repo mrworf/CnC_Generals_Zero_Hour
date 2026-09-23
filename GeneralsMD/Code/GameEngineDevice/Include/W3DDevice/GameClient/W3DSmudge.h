@@ -32,6 +32,8 @@ class Vector4;
 class TextureClass;
 class RenderInfoClass;
 class DX8IndexBufferClass;
+class DX8VertexBufferClass;
+class VertexMaterialClass;
 
 //#define USE_COPY_RECTS	1	//this was the old method that didn't render to texture. Just copied backbuffer into texture. Slow on Nvidia.
 
@@ -62,6 +64,8 @@ private:
 	TextureClass *m_backgroundTexture;
 #endif
 	DX8IndexBufferClass	*m_indexBuffer;
+	DX8VertexBufferClass *m_vertexBuffer;
+	VertexMaterialClass *m_vertexMaterialClass;
 	Int m_backBufferWidth;
 	Int m_backBufferHeight;
 };

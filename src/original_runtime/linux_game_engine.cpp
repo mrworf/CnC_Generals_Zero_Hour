@@ -1551,7 +1551,7 @@ protected:
 	ParticleSystemManager *createParticleSystemManager() override
 	{
 #if defined(ZH_M22_FULL_DRAW_TEST)
-		if (std::getenv("ZH_M22_PARTICLE_PROFILE")) return new W3DParticleSystemManager;
+		if (std::getenv("ZH_M22_PARTICLE_PROFILE") || std::getenv("ZH_M22_SMUDGE_EFFECT_PROFILE")) return new W3DParticleSystemManager;
 #endif
 		return new LinuxParticleManager;
 	}

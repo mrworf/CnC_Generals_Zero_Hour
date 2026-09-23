@@ -58,6 +58,7 @@ extern "C" void zh_probe_terrain_visual_map()
 		visual->init();
 		require(TheHeightMap && !TheHeightMap->getMap() && !TheHeightMap->Peek_Scene(),
 			"original terrain visual init published a map");
+		const auto owner_resources = device.resource_counts().total();
 
 		require(!visual->load(AsciiString("missing-generated-terrain.map")),
 			"original terrain visual missing map succeeded");
@@ -75,8 +76,8 @@ extern "C" void zh_probe_terrain_visual_map()
 		catch (const std::runtime_error &) { buffer_rejected = true; }
 		require(buffer_rejected, "original terrain visual buffer failure accepted");
 		require_rolled_back(visual.get(), "original terrain visual buffer failure retained owner");
-		require(device.resource_counts().total() == 0,
-			"original terrain visual failed transaction retained Recording resource");
+		require(device.resource_counts().total() == owner_resources,
+			"original terrain visual failed transaction retained bounded smudge resource");
 
 		require(visual->load(AsciiString(map_path)) && visual->getLogicHeightMap() &&
 			TheHeightMap && TheHeightMap->getMap() == visual->getLogicHeightMap() &&

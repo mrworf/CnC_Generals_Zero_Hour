@@ -248,8 +248,8 @@ extern "C" void zh_probe_view_scene()
                 smudges->init();
                 require(TheSmudgeManager == smudges &&
                     smudges->getSmudgeCountLastFrame() == 0 &&
-                    !smudges->getHardwareSupport(),
-                    "original empty smudge owner publication failed");
+                    smudges->getHardwareSupport(),
+                    "original bounded smudge owner publication failed");
                 smudges->init();
                 W3DSmudgeManager duplicate_smudges;
                 bool duplicate_smudge_rejected = false;
@@ -261,12 +261,10 @@ extern "C" void zh_probe_view_scene()
                 smudges->ReleaseResources();
                 smudges->ReAcquireResources();
                 auto* active_smudge_set = smudges->addSmudgeSet();
-                bool active_smudge_reset_rejected = false;
-                try { smudges->reset(); }
-                catch (const std::runtime_error&) { active_smudge_reset_rejected = true; }
-                require(active_smudge_reset_rejected && TheSmudgeManager == smudges,
-                    "original active smudge set silently reset");
-                smudges->removeSmudgeSet(*active_smudge_set);
+                smudges->reset();
+                require(TheSmudgeManager == smudges &&
+                    smudges->getSmudgeCountLastFrame() == 0,
+                    "original bounded smudge reset retained a set");
                 smudges->reset();
                 TheWritableGlobalData->m_useShadowVolumes = TRUE;
                 W3DShadowManager enabled_only;
@@ -357,12 +355,11 @@ extern "C" void zh_probe_view_scene()
                     "original no-water owner emitted a draw");
                 smudges->render(terrain_info);
                 active_smudge_set = smudges->addSmudgeSet();
-                bool active_smudge_render_rejected = false;
+                bool empty_smudge_render_rejected = false;
                 try { smudges->render(terrain_info); }
-                catch (const std::runtime_error&) { active_smudge_render_rejected = true; }
-                require(active_smudge_render_rejected && !WW3D::Is_Rendering(),
-                    "original active smudge set silently rendered");
-                smudges->removeSmudgeSet(*active_smudge_set);
+                catch (const std::runtime_error&) { empty_smudge_render_rejected = true; }
+                require(empty_smudge_render_rejected && !WW3D::Is_Rendering(),
+                    "original empty bounded smudge set silently rendered");
                 smudges->reset();
                 view->init();
                 require(view->get3DCamera() == camera && camera->Num_Refs() == 1,

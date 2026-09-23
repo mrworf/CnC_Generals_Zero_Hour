@@ -945,6 +945,30 @@ renderer::BufferHandle OriginalGpuEdge::bind_index(const IndexBufferClass* sourc
     return it->second;
 }
 
+void OriginalGpuEdge::release_vertex(const VertexBufferClass* source)
+{
+    if (source_frame_active_)
+        throw std::runtime_error("original source vertex buffer cannot retire during a frame");
+    const auto it=vertices_.find(source);
+    if (it==vertices_.end()) return;
+    device_.destroy(it->second);
+    it->first->Release_Ref();
+    vertices_.erase(it);
+    ++source_revision_;
+}
+
+void OriginalGpuEdge::release_index(const IndexBufferClass* source)
+{
+    if (source_frame_active_)
+        throw std::runtime_error("original source index buffer cannot retire during a frame");
+    const auto it=indices_.find(source);
+    if (it==indices_.end()) return;
+    device_.destroy(it->second);
+    it->first->Release_Ref();
+    indices_.erase(it);
+    ++source_revision_;
+}
+
 void OriginalGpuEdge::draw_source_indexed(const VertexBufferClass* vertex,
     const IndexBufferClass* index,unsigned first_index,unsigned index_count,
     unsigned base_vertex,unsigned min_vertex,unsigned vertex_count,

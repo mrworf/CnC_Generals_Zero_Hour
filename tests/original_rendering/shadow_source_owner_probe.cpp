@@ -107,6 +107,7 @@ extern "C" void zh_probe_shadow_source_owner()
 				visual.init();
 				require(TheW3DShadowManager && !TheW3DShadowManager->isShadowScene(),
 					"generated source-shadow fixture did not publish the disabled original manager");
+				const auto owner_resources = device.resource_counts().total();
 
 				// These are negative controls only. They mirror the default source
 				// volume route and unsupported projection route; no direct manager
@@ -130,8 +131,9 @@ extern "C" void zh_probe_shadow_source_owner()
 					require(std::string(error.what()).find("original decal shadow derived-manager creation pending") != std::string::npos,
 						"source W3DModelDraw did not reach the pending decal manager route");
 				}
-				require(!TheW3DShadowManager->isShadowScene() && device.resource_counts().total() == 0,
-					"rejected source decal request published a shadow pass or Recording resource");
+				require(!TheW3DShadowManager->isShadowScene() &&
+					device.resource_counts().total() == owner_resources,
+					"rejected source decal request changed bounded owner Recording resources");
 				TheTerrainVisual = saved_visual;
 			} catch (...) {
 				TheTerrainVisual = saved_visual;

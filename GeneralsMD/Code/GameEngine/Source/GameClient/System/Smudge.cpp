@@ -118,6 +118,7 @@ void SmudgeSet::reset(void)
 		m_usedSmudgeList.Remove_Head ();
 		m_freeSmudgeList.Add_Head(head);	//add to free list
 	}
+	m_usedSmudgeCount=0;
 }
 
 Smudge *SmudgeSet::addSmudgeToSet(void)

@@ -6,6 +6,7 @@
 #include "GameClient/Smudge.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DParticleSys.h"
+#include "W3DDevice/GameClient/W3DSmudge.h"
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "W3DDevice/GameClient/W3DView.h"
 #include "WW3D2/ww3d.h"
@@ -48,6 +49,34 @@ extern "C" void zh_probe_particle_provider()
 			const auto terrain=active.find("original RTS3DScene::Render map terrain"), queue=active.find("original W3DParticleSystemManager::queueParticleRender"), request=active.find("original W3DParticleSystemManager::doParticles smudge request");
 			if (!(terrain<queue&&queue<request&&occurrences(active,"original W3DParticleSystemManager::queueParticleRender")==1))
 				throw std::runtime_error("original particle queue/order did not coalesce: terrain=" + std::to_string(terrain) + " queue=" + std::to_string(queue) + " request=" + std::to_string(request) + " count=" + std::to_string(occurrences(active,"original W3DParticleSystemManager::queueParticleRender")));
+			// The bounded active child admits exactly one source SmudgeSet: its
+			// five source vertices and static twelve-index fan draw after the
+			// particle request, then the manager reset returns it to the free list.
+			auto *smudges=static_cast<W3DSmudgeManager *>(TheSmudgeManager);
+			auto populate_smudge=[&] {
+				auto *set=smudges->addSmudgeSet(); auto *smudge=set->addSmudgeToSet();
+				smudge->m_pos=Vector3(16,16,0); smudge->m_offset=Vector2(0,0); smudge->m_size=4; smudge->m_opacity=0.5f;
+				const Vector3 points[5]={Vector3(14,18,0),Vector3(14,14,0),Vector3(18,14,0),Vector3(18,18,0),Vector3(16,16,0)};
+				for (Int i=0;i!=5;++i) { smudge->m_verts[i].pos=points[i]; smudge->m_verts[i].uv.Set((i==2||i==3)?1:0,(i==0||i==3)?0:1); }
+			};
+			populate_smudge();
+			const std::string smudge_before=device.snapshot(); frame(); const std::string smudge_active=device.snapshot().substr(smudge_before.size());
+			const auto smudge_request=smudge_active.find("original W3DParticleSystemManager::doParticles smudge request"), smudge_draw=smudge_active.find("original W3DSmudgeManager::render bounded batch");
+			require(smudge_request<smudge_draw && smudge_active.find("DX8Wrapper::Draw indexed first=0 count=12 base=0",smudge_draw)!=std::string::npos,
+				"original bounded smudge ordering or five-vertex draw failed");
+			// Releasing the bounded owner retires only its two source handles, so
+			// the next scene frame reaches the smudge create boundary after the
+			// already-resident terrain/tracks/water owners.  A failed create leaves
+			// the batch intact; one requeue is the explicit retry contract.
+			smudges->ReleaseResources();
+			smudges->ReAcquireResources();
+			populate_smudge(); device.fail_next_buffer_create();
+			require(rejected(frame),"original smudge source create did not fail closed");
+			smudges->reset(); populate_smudge();
+			manager->queueParticleRender(); frame();
+			const std::string drained_before=device.snapshot(); frame();
+			require(device.snapshot().substr(drained_before.size()).find("original W3DSmudgeManager::render bounded batch")==std::string::npos,
+				"original smudge reset repeated a consumed batch");
 			// A producer may queue twice before the scene consumes it; the original
 			// one-shot bit preserves one source request rather than a duplicate draw.
 			const std::string queued_before=device.snapshot(); manager->queueParticleRender(); manager->queueParticleRender(); frame();
