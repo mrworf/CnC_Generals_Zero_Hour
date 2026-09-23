@@ -1882,6 +1882,13 @@ void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 		DoShadows(rinfo, FALSE);
 	}
 	if (water && TheGlobalData->m_useWaterPlane && water->Is_Really_Visible()) water->Render(rinfo);
+	// Match the original final translucent-stage boundary: particles are queued
+	// only for a terrain frame and consume their one-shot request after static
+	// map siblings (including the accepted water route) have rendered.
+	if (map_frame && TheParticleSystemManager) {
+		TheParticleSystemManager->queueParticleRender();
+		DoParticles(rinfo);
+	}
 }
 void RTS3DScene::flushOccludedObjectsIntoStencil(RenderInfoClass &)
 {

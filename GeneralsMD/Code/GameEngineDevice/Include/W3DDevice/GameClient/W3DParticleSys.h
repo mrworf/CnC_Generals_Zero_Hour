@@ -30,11 +30,18 @@
 #ifndef __W3DParticleSys_H_
 #define __W3DParticleSys_H_
 
+class File;
 #include "GameClient/ParticleSys.h"
-#include "WW3D2/PointGr.h"
-#include "WW3D2/streak.h"
 #include "WW3D2/RInfo.h"
 #include "WWLib/BitType.h"
+#include "WWLib/sharebuf.h"
+#if defined(ZH_WW3D_CPU_ONLY) || defined(ZH_M22_FULL_DRAW_TEST)
+class PointGroupClass;
+class StreakLineClass;
+#else
+#include "WW3D2/PointGr.h"
+#include "WW3D2/streak.h"
+#endif
 
 //=============================================================================
 /** W3D implementation of the game display which is responsible for creating

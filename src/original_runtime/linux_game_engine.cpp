@@ -1,4 +1,7 @@
 #include "PreRTS.h"
+#if defined(ZH_M22_FULL_DRAW_TEST)
+#include "W3DDevice/GameClient/W3DParticleSys.h"
+#endif
 
 #include "LinuxBIGArchive.h"
 #include "Common/GameAudio.h"
@@ -115,6 +118,7 @@ extern "C" void zh_probe_terrain_tracks();
 extern "C" void zh_probe_terrain_water();
 extern "C" void zh_probe_shadow_source_owner();
 extern "C" void zh_probe_shadow_decal_route();
+extern "C" void zh_probe_particle_provider();
 extern "C" void zh_probe_terrain_source_bitmap();
 extern "C" void zh_probe_terrain_atlas();
 extern "C" void zh_probe_shroud_data();
@@ -866,6 +870,12 @@ public:
 				catch (...) { W3DDisplay::m_assetManager=sourceAssets; W3DDisplay::m_3DScene=sourceScene; throw; }
 				W3DDisplay::m_assetManager=sourceAssets; W3DDisplay::m_3DScene=sourceScene;
 			}
+			if (std::getenv("ZH_M22_PARTICLE_PROFILE")) zh_probe_particle_provider();
+			if (std::getenv("ZH_M22_PARTICLE_DEFAULT_PROFILE")) {
+				if (dynamic_cast<W3DParticleSystemManager *>(TheParticleSystemManager))
+					throw std::runtime_error("original particle default factory selected test provider");
+				std::puts("original particle default factory: linux=1");
+			}
 			if (std::getenv("ZH_M22_TERRAIN_BITMAP_PROFILE")) zh_probe_terrain_source_bitmap();
 			if (std::getenv("ZH_M22_TERRAIN_ATLAS_PROFILE")) zh_probe_terrain_atlas();
 			if (std::getenv("ZH_M22_SHROUD_DATA_PROFILE")) zh_probe_shroud_data();
@@ -1538,7 +1548,13 @@ protected:
 	FunctionLexicon *createFunctionLexicon() override { return new FunctionLexicon; }
 	Radar *createRadar() override { return new LinuxRadar; }
 	WebBrowser *createWebBrowser() override { return NULL; }
-	ParticleSystemManager *createParticleSystemManager() override { return new LinuxParticleManager; }
+	ParticleSystemManager *createParticleSystemManager() override
+	{
+#if defined(ZH_M22_FULL_DRAW_TEST)
+		if (std::getenv("ZH_M22_PARTICLE_PROFILE")) return new W3DParticleSystemManager;
+#endif
+		return new LinuxParticleManager;
+	}
 	AudioManager *createAudioManager() override { return new LinuxAudio; }
 private:
 	Bool m_boundedProfile = std::getenv("ZH_M20_HEADLESS_PROFILE") != NULL;

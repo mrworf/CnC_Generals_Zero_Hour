@@ -49,6 +49,7 @@
 class Particle;
 class ParticleSystem;
 class ParticleSystemManager;
+class File;
 class Drawable;
 class Object;
 struct FieldParse;

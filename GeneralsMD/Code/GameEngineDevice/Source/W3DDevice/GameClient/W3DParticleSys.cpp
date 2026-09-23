@@ -26,6 +26,69 @@
 // W3D Particle System implementation
 // Author: Michael S. Booth, November 2001
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "PreRTS.h"
+class File;
+#include "W3DDevice/GameClient/W3DParticleSys.h"
+#include "W3DDevice/GameClient/W3DSmudge.h"
+#include "W3DDevice/GameClient/HeightMap.h"
+#include "OriginalW3DDeviceUnavailable.h"
+#include "original_gpu_edge.h"
+
+W3DParticleSystemManager::W3DParticleSystemManager()
+    : m_pointGroup(NULL), m_streakLine(NULL), m_posBuffer(NULL),
+      m_RGBABuffer(NULL), m_sizeBuffer(NULL), m_angleBuffer(NULL),
+      m_readyToRender(FALSE)
+{
+}
+
+W3DParticleSystemManager::~W3DParticleSystemManager()
+{
+    // The bounded CPU route owns no GPU-side particle buffers.  The canonical
+    // ParticleSystemManager destructor performs the source list teardown.
+}
+
+void W3DParticleSystemManager::queueParticleRender()
+{
+    if (!zh::original_runtime::OriginalGpuEdge::active())
+        throw OriginalW3DDeviceUnavailable("original particle queue requires active GPU edge");
+    if (m_readyToRender) return;
+    m_readyToRender = TRUE;
+    zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+        "original W3DParticleSystemManager::queueParticleRender");
+}
+
+void W3DParticleSystemManager::doParticles(RenderInfoClass &rinfo)
+{
+    if (!m_readyToRender) return;
+    if (!zh::original_runtime::OriginalGpuEdge::active())
+        throw OriginalW3DDeviceUnavailable("original particle render requires active GPU edge");
+    m_readyToRender = FALSE;
+    m_onScreenParticleCount = 0;
+
+    // This closes the source queue -> source smudge request boundary without
+    // pretending that particle point/streak/volume geometry has been ported.
+    // Once a generated producer has populated either original list, fail
+    // before any partial effect draw can escape.
+    if (!TheTerrainRenderObject || !TheHeightMap || !TheHeightMap->getMap() ||
+        !TheSmudgeManager || !dynamic_cast<W3DSmudgeManager *>(TheSmudgeManager) ||
+        getParticleCount() != 0 || getParticleSystemCount() != 0)
+        throw OriginalW3DDeviceUnavailable("original active particle geometry pending");
+
+    zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+        "original W3DParticleSystemManager::doParticles smudge request");
+    static_cast<W3DSmudgeManager *>(TheSmudgeManager)->render(rinfo);
+    TheSmudgeManager->reset();
+    TheSmudgeManager->setSmudgeCountLastFrame(0);
+}
+
+void DoParticles(RenderInfoClass &rinfo)
+{
+    if (TheParticleSystemManager)
+        TheParticleSystemManager->doParticles(rinfo);
+}
+
+#else
 #include "common/GlobalData.h"
 #include "GameClient/Color.h"
 #include "W3DDevice/GameClient/W3DParticleSys.h"
@@ -386,3 +449,4 @@ void W3DParticleSystemManager::doParticles(RenderInfoClass &rinfo)
 		TheSmudgeManager->setSmudgeCountLastFrame(visibleSmudgeCount);
 	}
 }
+#endif // ZH_WW3D_CPU_ONLY
