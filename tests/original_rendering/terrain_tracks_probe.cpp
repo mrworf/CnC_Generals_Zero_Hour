@@ -13,6 +13,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <climits>
 #include <stdexcept>
 #include <string>
 
@@ -49,7 +50,6 @@ extern "C" void zh_probe_terrain_tracks()
 	const Int saved_edges = TheGlobalData->m_maxTankTrackEdges;
 	const Int saved_opaque = TheGlobalData->m_maxTankTrackOpaqueEdges;
 	const Int saved_fade = TheGlobalData->m_maxTankTrackFadeDelay;
-	TheWritableGlobalData->m_maxTerrainTracks = 1;
 	TheWritableGlobalData->m_partitionCellSize = MAP_XY_FACTOR;
 	TheWritableGlobalData->m_makeTrackMarks = TRUE;
 	TheWritableGlobalData->m_maxTankTrackEdges = 8;
@@ -57,6 +57,8 @@ extern "C" void zh_probe_terrain_tracks()
 	TheWritableGlobalData->m_maxTankTrackFadeDelay = 1;
 	zh::renderer::RecordingGpuDevice device;
 	for (Int generation = 0; generation != 2; ++generation) {
+		const Int module_count = generation + 1;
+		TheWritableGlobalData->m_maxTerrainTracks = module_count;
 		zh::original_runtime::OriginalGpuEdge edge(device);
 		{
 			W3DDisplay display; display.init();
@@ -74,7 +76,8 @@ extern "C" void zh_probe_terrain_tracks()
 				auto *tracks = TheTerrainTracksRenderObjClassSystem;
 				const std::string allocated = device.snapshot();
 				require(allocated.find("label=\"original WW3D 16-bit index buffer\" size=84 usage=1 dynamic=true") != std::string::npos &&
-					allocated.find("label=\"original WW3D vertex buffer\" size=384 usage=0 dynamic=true") != std::string::npos,
+					allocated.find(std::string("label=\"original WW3D vertex buffer\" size=") +
+						(module_count == 1 ? "384" : "768") + " usage=0 dynamic=true") != std::string::npos,
 					"original terrain-track source buffer descriptors failed");
 				tracks->ReleaseResources();
 				device.fail_next_buffer_create();
@@ -88,9 +91,17 @@ extern "C" void zh_probe_terrain_tracks()
 				require(track && tracks->ownsActiveModule(track) &&
 					static_cast<void *>(track->Peek_Scene()) == static_cast<void *>(W3DDisplay::m_3DScene),
 					"original terrain-track module singleton/publication failed");
-				require(!tracks->bindTrack(TheHeightMap, MAP_XY_FACTOR, ""),
-					"original terrain-track capacity accepted a sibling module");
+				auto *sibling = module_count == 2 ? tracks->bindTrack(TheHeightMap, MAP_XY_FACTOR, "") : NULL;
+				if (sibling) require(tracks->ownsActiveModule(sibling) &&
+					static_cast<void *>(sibling->Peek_Scene()) == static_cast<void *>(W3DDisplay::m_3DScene),
+					"original terrain-track sibling publication failed");
+				require((module_count == 1 ? !sibling : !!sibling) &&
+					!tracks->bindTrack(TheHeightMap, MAP_XY_FACTOR, ""),
+					"original terrain-track capacity boundary failed");
+				require(rejected([&] { tracks->init(NULL); }),
+					"original terrain-track foreign scene bootstrap was accepted");
 				track->addEdgeToTrack(0, 0); track->addEdgeToTrack(24, 0); track->addEdgeToTrack(48, 0);
+				if (sibling) { sibling->addEdgeToTrack(0, 8); sibling->addEdgeToTrack(24, 8); sibling->addEdgeToTrack(48, 8); }
 				zh::renderer::TextureDesc target;
 				target.width = 32; target.height = 24; target.format = zh::renderer::TextureFormat::bgra8;
 				target.render_target = true; target.sampled = false;
@@ -103,7 +114,7 @@ extern "C" void zh_probe_terrain_tracks()
 				const std::string before = device.snapshot(); frame();
 				const std::string active = device.snapshot().substr(before.size());
 				const std::size_t track_marker = active.find("original TerrainTracksRenderObjClassSystem::flush");
-				require(draws(active) == 3 && active.find("original RTS3DScene::Render map terrain") < track_marker &&
+				require(draws(active) == 2 + module_count && active.find("original RTS3DScene::Render map terrain") < track_marker &&
 					active.find("DX8Wrapper::Draw indexed first=0 count=6 base=0", track_marker) != std::string::npos,
 					"original terrain-track flush ordering/range failed");
 				device.fail_buffer_upload_after(occurrences_before(active, "upload ", track_marker));
@@ -118,7 +129,7 @@ extern "C" void zh_probe_terrain_tracks()
 				require(draws(device.snapshot().substr(disabled_before.size())) == 2,
 					"original disabled terrain tracks emitted a draw");
 				TheWritableGlobalData->m_makeTrackMarks = TRUE;
-				tracks->unbindTrack(track); tracks->Reset();
+				tracks->unbindTrack(track); if (sibling) tracks->unbindTrack(sibling); tracks->Reset();
 				const std::string expired_before = device.snapshot(); frame();
 				require(draws(device.snapshot().substr(expired_before.size())) == 2,
 					"original expired terrain tracks emitted a draw");
@@ -128,6 +139,25 @@ extern "C" void zh_probe_terrain_tracks()
 		}
 		edge.release_source_buffers();
 	}
+	// The source vertex offset is 16-bit.  Verify an impossible cardinality
+	// unwinds before any track owner or Recording resource is published.
+	TheWritableGlobalData->m_maxTerrainTracks = INT_MAX;
+	{
+		zh::renderer::RecordingGpuDevice overflow_device;
+		zh::original_runtime::OriginalGpuEdge edge(overflow_device);
+		W3DDisplay display; display.init();
+		Display *saved_display = TheDisplay; TheDisplay = &display;
+		TerrainVisual *saved_visual = TheTerrainVisual;
+		W3DTerrainVisual visual; TheTerrainVisual = &visual;
+		try {
+			require(rejected([&] { visual.init(); }) && !TheTerrainTracksRenderObjClassSystem,
+				"original terrain-track overflow owner was published");
+		} catch (...) { TheTerrainVisual = saved_visual; TheDisplay = saved_display; throw; }
+		TheTerrainVisual = saved_visual; TheDisplay = saved_display;
+		edge.release_source_buffers();
+		require(overflow_device.resource_counts().total() == 0,
+			"original terrain-track overflow retained Recording resources");
+	}
 	TheWritableGlobalData->m_maxTerrainTracks = saved_modules;
 	TheWritableGlobalData->m_partitionCellSize = saved_partition;
 	TheWritableGlobalData->m_makeTrackMarks = saved_marks;
@@ -135,5 +165,5 @@ extern "C" void zh_probe_terrain_tracks()
 	TheWritableGlobalData->m_maxTankTrackOpaqueEdges = saved_opaque;
 	TheWritableGlobalData->m_maxTankTrackFadeDelay = saved_fade;
 	require(device.resource_counts().total() == 0, "original terrain-track teardown retained resources");
-	std::puts("original terrain tracks: queue=1 retry=2 disabled=1 expired=1 generations=2 resources=0");
+	std::puts("original terrain tracks: single=1 multi=2 capacity=1 retry=2 disabled=1 expired=1 generations=2 resources=0");
 }

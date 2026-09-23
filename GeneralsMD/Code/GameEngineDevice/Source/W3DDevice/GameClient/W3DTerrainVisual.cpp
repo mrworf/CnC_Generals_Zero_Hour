@@ -104,7 +104,10 @@ void W3DTerrainVisual::init()
 		!zh::original_runtime::OriginalGpuEdge::active() || !W3DDisplay::m_3DScene ||
 		TheTerrainRenderObject || TheHeightMap || TheTerrainTracksRenderObjClassSystem ||
 		TheW3DShadowManager || TheWaterRenderObj || TheSmudgeManager;
-	const bool unsupportedTracks = TheGlobalData->m_maxTerrainTracks != 0 &&
+	// Keep the audit bit stable while admitting only the original track system's
+	// bounded, source-owned module pool.  Its own 16-bit vertex budget remains
+	// the authority for positive cardinalities.
+	const bool multiTracks = TheGlobalData->m_maxTerrainTracks != 0 &&
 		TheGlobalData->m_maxTerrainTracks != 1;
 	const bool shadowVolumes = TheGlobalData->m_useShadowVolumes;
 	const bool shadowDecals = TheGlobalData->m_useShadowDecals &&
@@ -117,12 +120,12 @@ void W3DTerrainVisual::init()
 		(TheGlobalData->m_waterExtentX != 0 || TheGlobalData->m_waterExtentY != 0 ||
 		TheGlobalData->m_waterType != 0);
 	const unsigned retailAuditMask = (ownersUnavailable ? 1U : 0U) |
-		(unsupportedTracks ? 2U : 0U) | (shadowVolumes ? 4U : 0U) |
+		(multiTracks ? 2U : 0U) | (shadowVolumes ? 4U : 0U) |
 		(shadowDecals ? 8U : 0U) | (cloudPlane ? 16U : 0U) |
 		(invalidEnabledWater ? 32U : 0U) | (invalidDisabledWater ? 64U : 0U);
 	if (std::getenv("ZH_M22_RETAIL_CONFIG_AUDIT"))
 		std::printf("original retail terrain configuration: mask=%u\n", retailAuditMask);
-	if (ownersUnavailable || unsupportedTracks || shadowVolumes || shadowDecals || cloudPlane ||
+	if (ownersUnavailable || shadowVolumes || shadowDecals || cloudPlane ||
 		invalidEnabledWater || invalidDisabledWater)
 		throw OriginalW3DDeviceUnavailable("original map or enabled terrain visual pending");
 	s_emptyTerrainVisual = this;

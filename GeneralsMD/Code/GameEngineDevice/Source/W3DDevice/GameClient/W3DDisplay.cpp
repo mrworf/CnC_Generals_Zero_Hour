@@ -191,7 +191,6 @@ void W3DDisplay::draw()
 		!TheTerrainRenderObject || !TheHeightMap ||
 		!TheTerrainTracksRenderObjClassSystem || !TheW3DShadowManager ||
 		!TheWaterRenderObj || !TheSmudgeManager ||
-		(TheGlobalData->m_maxTerrainTracks != 0 && TheGlobalData->m_maxTerrainTracks != 1) ||
 		TheGlobalData->m_useShadowVolumes ||
 		(TheGlobalData->m_useShadowDecals &&
 			(!TheW3DShadowManager->hasBoundedDecalCasters() || !TheHeightMap->getMap())) ||

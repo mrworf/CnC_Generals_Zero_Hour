@@ -611,6 +611,14 @@ Bool TerrainTracksRenderObjClassSystem::ownsActiveModule(
 		if (current == module) return TRUE;
 	return FALSE;
 }
+
+static Bool hasBoundedTrackCapacity(Int modules, Int edges)
+{
+	// The native pool is indexed by 16-bit vertex offsets.  Keep exactly that
+	// finite resource boundary instead of inventing a test-profile cardinality.
+	return modules > 0 && edges >= 2 && edges <= MAX_TRACK_EDGE_COUNT &&
+		static_cast<long long>(modules) * edges * 2 < 65535;
+}
 #endif
 
 //=============================================================================
@@ -650,9 +658,9 @@ void TerrainTracksRenderObjClassSystem::ReAcquireResources(void)
 				*indices++ = base; *indices++ = base + 3; *indices++ = base + 2;
 			}
 		}
-		const Int count = TheGlobalData->m_maxTerrainTracks * m_maxTankTrackEdges * 2;
-		if (count <= 0 || count >= 65535)
+		if (!hasBoundedTrackCapacity(TheGlobalData->m_maxTerrainTracks, m_maxTankTrackEdges))
 			throw OriginalW3DDeviceUnavailable("original terrain track capacity unavailable");
+		const Int count = TheGlobalData->m_maxTerrainTracks * m_maxTankTrackEdges * 2;
 		m_vertexBuffer = NEW_REF(DX8VertexBufferClass,
 			(DX8_FVF_XYZDUV1, count, DX8VertexBufferClass::USAGE_DYNAMIC));
 		auto &edge = zh::original_runtime::OriginalGpuEdge::required();
@@ -748,7 +756,8 @@ void TerrainTracksRenderObjClassSystem::init( SceneClass *TerrainTracksScene )
 		(m_TerrainTracksScene && m_TerrainTracksScene != TerrainTracksScene) ||
 		(TheTerrainTracksRenderObjClassSystem &&
 		 TheTerrainTracksRenderObjClassSystem != this) ||
-		(s_zeroTrackOwner && s_zeroTrackOwner != this) || numModules != 1 ||
+		(s_zeroTrackOwner && s_zeroTrackOwner != this) ||
+		!hasBoundedTrackCapacity(numModules, m_maxTankTrackEdges) ||
 		m_maxTankTrackEdges < 2 || m_maxTankTrackEdges > MAX_TRACK_EDGE_COUNT ||
 		m_maxTankTrackOpaqueEdges < 1 || m_maxTankTrackOpaqueEdges > m_maxTankTrackEdges ||
 		m_maxTankTrackFadeDelay <= 0)
@@ -760,10 +769,13 @@ void TerrainTracksRenderObjClassSystem::init( SceneClass *TerrainTracksScene )
 	m_vertexMaterialClass = VertexMaterialClass::Get_Preset(VertexMaterialClass::PRELIT_DIFFUSE);
 	m_shaderClass = ShaderClass::_PresetAlphaShader;
 	try {
-		TerrainTracksRenderObjClass *mod = NEW_REF(TerrainTracksRenderObjClass, ());
-		mod->m_prevSystem = NULL;
-		mod->m_nextSystem = NULL;
-		m_freeModules = mod;
+		for (Int index = 0; index < numModules; ++index) {
+			TerrainTracksRenderObjClass *mod = NEW_REF(TerrainTracksRenderObjClass, ());
+			mod->m_prevSystem = NULL;
+			mod->m_nextSystem = m_freeModules;
+			if (m_freeModules) m_freeModules->m_prevSystem = mod;
+			m_freeModules = mod;
+		}
 		ReAcquireResources();
 	} catch (...) {
 		shutdown();

@@ -29,7 +29,7 @@ def main() -> int:
         os.environ["ZH_M22_TERRAIN_TRACKS_MAP"] = str(packet)
         source = source_tree(root / "source", fixture, "valid")
         result = run(args.executable.resolve(), root / "run", source, "mission")
-        marker = "original terrain tracks: queue=1 retry=2 disabled=1 expired=1 generations=2 resources=0"
+        marker = "original terrain tracks: single=1 multi=2 capacity=1 retry=2 disabled=1 expired=1 generations=2 resources=0"
         if result.returncode or marker not in result.stdout:
             raise SystemExit(f"original terrain tracks failed ({result.returncode}); private output redacted")
     print("original terrain tracks: active/rollback/reentry ok")

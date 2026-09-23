@@ -924,7 +924,7 @@ void RTS3DScene::Flush(RenderInfoClass & rinfo)
 			continue;
 		}
 		if (isBoundedMapTrackSceneObject(object)) {
-			if (!map_frame || ++trackCount > 1)
+			if (!map_frame || ++trackCount > TheGlobalData->m_maxTerrainTracks)
 				throw OriginalW3DDeviceUnavailable("original map terrain-track scene binding pending");
 			continue;
 		}
@@ -1773,7 +1773,7 @@ void RTS3DScene::Render(RenderInfoClass &rinfo)
 			continue;
 		}
 		if (isBoundedMapTrackSceneObject(object)) {
-			if (!map_frame || ++trackCount > 1)
+			if (!map_frame || ++trackCount > TheGlobalData->m_maxTerrainTracks)
 				throw OriginalW3DDeviceUnavailable("original map terrain-track scene binding pending");
 			continue;
 		}
