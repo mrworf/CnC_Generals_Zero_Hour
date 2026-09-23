@@ -29,6 +29,7 @@
 #include "Common/Debug.h"
 #include "W3DDevice/GameClient/W3DBufferManager.h"
 #include "WW3D2/dx8fvf.h"
+#include "volume_buffer_provider.h"
 
 #include <stdexcept>
 
@@ -83,6 +84,30 @@ static int FVFTypeIndexList[W3DBufferManager::MAX_FVF]=
 Int W3DBufferManager::getDX8Format(VBM_FVF_TYPES format)
 {
 	return FVFTypeIndexList[format];
+}
+
+Bool W3DBufferManager::ownsVertexBuffer(const DX8VertexBufferClass *buffer) const
+{
+	if (!buffer) return FALSE;
+	for (Int type=0;type<MAX_FVF;++type)
+		for (W3DVertexBuffer *current=m_W3DVertexBuffers[type];current;current=current->m_nextVB)
+			if (current->m_DX8VertexBuffer==buffer) return TRUE;
+	return FALSE;
+}
+
+Bool W3DBufferManager::ownsIndexBuffer(const DX8IndexBufferClass *buffer) const
+{
+	if (!buffer) return FALSE;
+	for (W3DIndexBuffer *current=m_W3DIndexBuffers;current;current=current->m_nextIB)
+		if (current->m_DX8IndexBuffer==buffer) return TRUE;
+	return FALSE;
+}
+
+Bool zh_w3d_volume_provider_owns(const VertexBufferClass *vertex, const IndexBufferClass *index)
+{
+	return TheW3DBufferManager &&
+		TheW3DBufferManager->ownsVertexBuffer(static_cast<const DX8VertexBufferClass *>(vertex)) &&
+		TheW3DBufferManager->ownsIndexBuffer(static_cast<const DX8IndexBufferClass *>(index));
 }
 
 W3DBufferManager::W3DBufferManager(void)

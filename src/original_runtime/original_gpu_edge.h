@@ -124,6 +124,13 @@ public:
     void draw_source_indexed(const VertexBufferClass* vertex,const IndexBufferClass* index,
         unsigned first_index,unsigned index_count,unsigned base_vertex,
         unsigned min_vertex,unsigned vertex_count,renderer::PrimitiveTopology topology);
+    // B3C0's source-buffer bridge: it consumes only an original XYZ/16-bit
+    // volume range inside a caller-owned D24S8 source frame. It creates no
+    // Shadow owner, geometry, scheduling, target, or presentation path.
+    void draw_volume_stencil(const VertexBufferClass* vertex, const IndexBufferClass* index,
+        unsigned first_index, unsigned index_count, unsigned base_vertex, unsigned vertex_count,
+        renderer::UInt8 shadow_mask);
+    void release_volume_stencil() noexcept;
     bool supports_texture_format(WW3DFormat format) const noexcept;
     renderer::TextureHandle create_texture(WW3DFormat format, unsigned width, unsigned height, unsigned& mips);
     void upload_texture(renderer::TextureHandle texture, unsigned level, unsigned width,
@@ -191,6 +198,12 @@ private:
         std::array<const TextureBaseClass*,2> sources{};
     };
     std::optional<PhysicalResources> physical_;
+    struct VolumeStencilResources {
+        renderer::ShaderHandle vertex_shader,fragment_shader;
+        renderer::PipelineHandle increment,decrement,composite;
+        renderer::TextureFormat color_format=renderer::TextureFormat::rgba8;
+    };
+    std::optional<VolumeStencilResources> volume_stencil_;
     struct BoundFrame { renderer::TextureHandle color,depth; unsigned width=0,height=0; };
     std::optional<BoundFrame> bound_frame_;
     bool source_frame_active_=false;

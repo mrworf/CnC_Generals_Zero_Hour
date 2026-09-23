@@ -143,6 +143,10 @@ public:
 			return m_W3DVertexBuffers[type];
 		return pVb->m_nextVB;
 	};
+	// CPU public-edge admission checks. These expose ownership only; callers
+	// still cannot allocate or mutate slots through this query.
+	Bool ownsVertexBuffer(const DX8VertexBufferClass *buffer) const;
+	Bool ownsIndexBuffer(const DX8IndexBufferClass *buffer) const;
 
 	static Int getDX8Format(VBM_FVF_TYPES format);	///<translates our vertex format into D3D equivalent
 

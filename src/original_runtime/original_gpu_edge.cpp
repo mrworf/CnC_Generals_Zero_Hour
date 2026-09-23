@@ -7,6 +7,8 @@
 #include "ww3dformat.h"
 #include "texture.h"
 #include "missingtexture.h"
+#include "volume_stencil_contract.h"
+#include "volume_buffer_provider.h"
 
 #include <algorithm>
 #include <atomic>
@@ -49,6 +51,7 @@ OriginalGpuEdge::~OriginalGpuEdge()
 {
     abort_source_frame();
     release_prepared_state();
+    release_volume_stencil();
     DX8Wrapper::Reset_Source_State();
     for (auto& stage : pending_stages_) if (stage.sampler) device_.destroy(stage.sampler);
     while (!textures_.empty()) {
@@ -369,6 +372,17 @@ void OriginalGpuEdge::release_prepared_state() noexcept
     device_.destroy(physical_->vertex_shader);
     device_.destroy(physical_->fragment_shader);
     physical_.reset();
+}
+
+void OriginalGpuEdge::release_volume_stencil() noexcept
+{
+    if (!volume_stencil_) return;
+    device_.destroy(volume_stencil_->composite);
+    device_.destroy(volume_stencil_->decrement);
+    device_.destroy(volume_stencil_->increment);
+    device_.destroy(volume_stencil_->fragment_shader);
+    device_.destroy(volume_stencil_->vertex_shader);
+    volume_stencil_.reset();
 }
 
 OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned source_fvf,
@@ -1013,6 +1027,88 @@ void OriginalGpuEdge::draw_source_indexed(const VertexBufferClass* vertex,
     }
     device_.record_marker("DX8Wrapper::Draw indexed first="+std::to_string(first_index)+
         " count="+std::to_string(index_count)+" base="+std::to_string(base_vertex));
+}
+
+void OriginalGpuEdge::draw_volume_stencil(const VertexBufferClass* vertex,
+    const IndexBufferClass* index, unsigned first_index, unsigned index_count,
+    unsigned base_vertex, unsigned vertex_count, renderer::UInt8 shadow_mask)
+{
+    if (!source_frame_active_ || !bound_frame_ || !device_.pass_active())
+        throw std::runtime_error("original volume stencil requires an active caller-owned source frame");
+    if (!vertex || !index || vertex->Type()!=BUFFER_TYPE_DX8 || index->Type()!=BUFFER_TYPE_DX8 ||
+        vertex->FVF_Info().Get_FVF()!=DX8_FVF_XYZ || !index_count || !vertex_count)
+        throw std::runtime_error("original volume stencil source layout or range is unsupported");
+    if (!zh_w3d_volume_provider_owns(vertex,index))
+        throw std::runtime_error("original volume stencil source buffer provider is foreign or absent");
+    if (first_index>index->Get_Index_Count() || index_count>index->Get_Index_Count()-first_index ||
+        base_vertex>vertex->Get_Vertex_Count() || vertex_count>vertex->Get_Vertex_Count()-base_vertex)
+        throw std::runtime_error("original volume stencil source range exceeds its buffers");
+    const auto* source_indices=static_cast<const DX8IndexBufferClass*>(index)->Get_CPU_Index_Buffer();
+    if (!source_indices) throw std::runtime_error("original volume stencil is missing source indices");
+    for (unsigned offset=0;offset<index_count;++offset)
+        if (source_indices[first_index+offset]>=vertex_count)
+            throw std::runtime_error("original volume stencil source index escapes its declared range");
+    const auto color_format=device_.describe_texture_format(bound_frame_->color);
+    const auto depth_format=device_.describe_texture_format(bound_frame_->depth);
+    if (!color_format || !depth_format || *depth_format!=renderer::TextureFormat::depth24_stencil8 ||
+        !device_.supports_texture_format(renderer::TextureFormat::depth24_stencil8,
+            renderer::TextureDimension::texture_2d,false,true))
+        throw std::runtime_error("original volume stencil requires a supported D24S8 source target");
+    if (*color_format!=renderer::TextureFormat::rgba8 && *color_format!=renderer::TextureFormat::bgra8)
+        throw std::runtime_error("original volume stencil source color target is unsupported");
+    if (volume_stencil_ && volume_stencil_->color_format!=*color_format)
+        throw std::runtime_error("original volume stencil target recreation is pending");
+    if (!volume_stencil_) {
+        VolumeStencilResources next;
+        try {
+            next.vertex_shader=device_.create_shader({renderer::ShaderStage::vertex,
+                "renderer/original_volume.vert",0,0},"original volume XYZ vertex");
+            next.fragment_shader=device_.create_shader({renderer::ShaderStage::fragment,
+                "renderer/original_volume.frag",0,0},"original volume composite fragment");
+            if (!next.vertex_shader || !next.fragment_shader)
+                throw std::runtime_error("original volume stencil shader creation failed: "+device_.last_error());
+            auto protocol=make_volume_stencil_protocol(next.vertex_shader,next.fragment_shader,*color_format,shadow_mask);
+            for (auto *pass : {&protocol.increment,&protocol.decrement,&protocol.composite}) {
+                pass->vertex_layout=renderer::VertexLayout::original_fvf;
+                pass->original_fvf=layout_for_fvf(DX8_FVF_XYZ);
+            }
+            next.increment=device_.create_pipeline(renderer::PipelineKey(protocol.increment),"original volume stencil increment");
+            next.decrement=device_.create_pipeline(renderer::PipelineKey(protocol.decrement),"original volume stencil decrement");
+            next.composite=device_.create_pipeline(renderer::PipelineKey(protocol.composite),"original volume stencil composite");
+            if (!next.increment || !next.decrement || !next.composite)
+                throw std::runtime_error("original volume stencil pipeline creation failed: "+device_.last_error());
+            next.color_format=*color_format;
+            volume_stencil_=next;
+        } catch (...) {
+            device_.destroy(next.composite); device_.destroy(next.decrement); device_.destroy(next.increment);
+            device_.destroy(next.fragment_shader); device_.destroy(next.vertex_shader);
+            throw;
+        }
+    }
+    const bool new_vertex=!vertices_.count(vertex), new_index=!indices_.count(index);
+    try {
+        renderer::DrawDesc draw;
+        draw.vertex_buffer=bind_vertex(vertex); draw.index_buffer=bind_index(index);
+        draw.vertex_or_index_count=index_count; draw.index_element_size=renderer::IndexElementSize::uint16;
+        draw.first_index=first_index; draw.base_vertex=static_cast<renderer::Int32>(base_vertex);
+        const renderer::PipelineHandle passes[]={volume_stencil_->increment,volume_stencil_->decrement,volume_stencil_->composite};
+        const char* names[]={"increment","decrement","composite"};
+        for (unsigned pass=0;pass<3;++pass) {
+            draw.pipeline=passes[pass];
+            if (auto result=device_.draw(draw); !result)
+                throw std::runtime_error("original volume stencil "+std::string(names[pass])+" draw failed: "+result.error);
+            device_.record_marker("OriginalGpuEdge::volume_stencil "+std::string(names[pass]));
+        }
+    } catch (...) {
+        // A source frame owns its in-flight buffer lifetime. It is ended by
+        // the caller before the normal retry/retirement boundary, so do not
+        // violate the established no-retire-during-frame invariant here.
+        if (!source_frame_active_) {
+            if (new_index) release_index(index);
+            if (new_vertex) release_vertex(vertex);
+        }
+        throw;
+    }
 }
 
 } // namespace zh::original_runtime
