@@ -1111,8 +1111,9 @@ add_executable(zh_original_w3d_full_probe
   tests/original_rendering/terrain_shroud_projection_probe.cpp
 	 tests/original_rendering/terrain_map_frame_probe.cpp
 	 tests/original_rendering/terrain_tracks_probe.cpp
-	 tests/original_rendering/terrain_water_probe.cpp
+	tests/original_rendering/terrain_water_probe.cpp
 	tests/original_rendering/volumetric_buffer_probe.cpp
+	tests/original_rendering/volumetric_geometry_probe.cpp
 	tests/original_rendering/shadow_source_owner_probe.cpp
 	tests/original_rendering/shadow_decal_route_probe.cpp
 	tests/original_rendering/particle_provider_probe.cpp
@@ -1167,6 +1168,9 @@ set_source_files_properties(tests/original_rendering/terrain_water_probe.cpp PRO
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/volumetric_buffer_probe.cpp PROPERTIES
+  COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
+  COMPILE_OPTIONS "-fpermissive")
+set_source_files_properties(tests/original_rendering/volumetric_geometry_probe.cpp PROPERTIES
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/shadow_source_owner_probe.cpp PROPERTIES
@@ -2292,6 +2296,12 @@ if(ZH_BUILD_TESTS)
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
     --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
   set_tests_properties(original_w3d_volumetric_buffer PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
+  add_test(NAME original_w3d_volumetric_geometry COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_volumetric_geometry.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
+  set_tests_properties(original_w3d_volumetric_geometry PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")
   add_test(NAME original_w3d_shadow_source_owner COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_shadow_source_owner.py"
