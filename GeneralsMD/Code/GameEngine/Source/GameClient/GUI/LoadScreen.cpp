@@ -166,6 +166,8 @@ LoadScreen::~LoadScreen( void )
 
 void LoadScreen::update( Int percent )
 {
+	if (!TheGameEngine || !TheWindowManager || !TheDisplay)
+		throw std::runtime_error("original load-screen presentation owner unavailable");
 	TheGameEngine->serviceWindowsOS();
 	if (TheGameEngine->getQuitting())
 		return;	//don't bother with any of this if the player is exiting game.

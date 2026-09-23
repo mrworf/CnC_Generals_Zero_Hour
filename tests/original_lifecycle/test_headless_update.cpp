@@ -23,6 +23,7 @@
 #include "GameClient/View.h"
 #include "GameLogic/AI.h"
 #include "GameLogic/GameLogic.h"
+#include "GameClient/LoadScreen.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/RankInfo.h"
@@ -44,6 +45,8 @@
 namespace {
 int failures;
 int client_ticks;
+int presentation_step;
+bool presentation_tracking;
 
 void check(bool condition, const char *message)
 {
@@ -54,8 +57,8 @@ class HeadlessDisplay final : public Display
 {
 public:
 	HeadlessDisplay() { setWidth(800); setHeight(600); }
-	void update() override { ++updates; }
-	void draw() override { ++draws; }
+	void update() override { if (presentation_tracking) { check(presentation_step == 2, "load-screen display update order changed"); presentation_step = 3; } ++updates; }
+	void draw() override { if (presentation_tracking) { check(presentation_step == 3, "load-screen display draw order changed"); presentation_step = 4; } ++draws; }
 	Bool isMoviePlaying() override { return TRUE; }
 	void doSmartAssetPurgeAndPreload(const char *) override {}
 #if defined(_DEBUG) || defined(_INTERNAL)
@@ -207,6 +210,8 @@ protected:
 
 class HeadlessEngine final : public GameEngine
 {
+public:
+	void serviceWindowsOS() override { if (presentation_tracking) { check(presentation_step == 0, "load-screen OS service order changed"); presentation_step = 1; } }
 protected:
 	LocalFileSystem *createLocalFileSystem() override { return NULL; }
 	ArchiveFileSystem *createArchiveFileSystem() override { return NULL; }
@@ -233,6 +238,7 @@ HeadlessGameWindow::~HeadlessGameWindow() = default;
 class HeadlessWindowManager final : public GameWindowManager
 {
 public:
+	void update() override { if (presentation_tracking) { check(presentation_step == 1, "load-screen window update order changed"); presentation_step = 2; } GameWindowManager::update(); }
 	GameWindow *allocateNewWindow() override { return newInstance(HeadlessGameWindow); }
 #define ZH_HEADLESS_DRAW_GETTER(name) GameWinDrawFunc name() override { return NULL; }
 	ZH_HEADLESS_DRAW_GETTER(getPushButtonImageDrawFunc)
@@ -278,6 +284,17 @@ public:
 		if (height) *height = 0;
 	}
 	GameFont *winFindFont(AsciiString, Int, Bool) override { return NULL; }
+};
+
+class BaseLoadScreenProbe final : public LoadScreen
+{
+public:
+	void init(GameInfo *) override {}
+	void reset() override {}
+	void update() override {}
+	void processProgress(Int, Int) override {}
+	void setProgressRange(Int, Int) override {}
+	void present(Int percent) { LoadScreen::update(percent); }
 };
 
 class TickTranslator final : public GameMessageTranslator
@@ -481,6 +498,26 @@ int main()
 	TheGameEngine = engine;
 	TheNetwork = NULL;
 
+	for (int generation = 0; generation != 2; ++generation)
+	{
+		BaseLoadScreenProbe loadScreen;
+		presentation_step = 0;
+		presentation_tracking = true;
+		loadScreen.present(0);
+		presentation_tracking = false;
+		check(presentation_step == 4, "load-screen source presentation did not complete");
+		loadScreen.reset();
+	}
+	Display *savedPresentationDisplay = TheDisplay;
+	TheDisplay = NULL;
+	Bool missingPresentationRejected = FALSE;
+	try { BaseLoadScreenProbe loadScreen; loadScreen.present(0); }
+	catch (const std::runtime_error &) { missingPresentationRejected = TRUE; }
+	TheDisplay = savedPresentationDisplay;
+	check(missingPresentationRejected, "load-screen missing display did not fail closed");
+	const int presentationUpdates = display.updates;
+	const int presentationDraws = display.draws;
+
 	for (int frame = 0; frame != 2; ++frame) {
 		engine->GameEngine::update();
 	}
@@ -493,7 +530,7 @@ int main()
 		partition->updates == 2 && victory.updates == 2, "logic service update chain was incomplete");
 	check(NetworkInterface::createNetwork() == NULL && TheNetwork == NULL,
 		"unsupported Linux network entry did not fail offline-null");
-	check(display.updates == 2 && display.draws == 2, "headless display edge did not receive client updates");
+	check(display.updates == presentationUpdates + 2 && display.draws == presentationDraws + 2, "headless display edge did not receive client updates");
 	check(audio.deviceOpens == 0, "headless lifecycle acquired a physical audio device");
 	TheSubsystemList = new SubsystemInterfaceList;
 	WindowLayout *unsupportedCallbackLayout = windowManager->winCreateLayout("Menus/CallbackWindow.wnd");
