@@ -55,3 +55,34 @@ duplicate semantics are preserved for later bounded validation rather than
 rewritten.  Its destruction joins the existing two-generation reset/removal
 proof with no linked windows.  It will use no source `SinglePlayerLoadScreen`
 owner until the Mission, text, and audio prerequisites are present.
+
+## Final B4 owner transaction
+
+The final transaction composes the accepted providers with the actual source
+`SinglePlayerLoadScreen` in the existing process-owned lifecycle probe.  Its
+only inputs are a project-generated complete named WND, a generated current
+USA Campaign/Mission, generated mapped-image descriptors, a 2x1 generated
+VideoPlayer/VideoBuffer, and the existing headless Mouse, GameText, Display,
+and Audio providers.  `voiceLength` is zero and no LOD manager is published,
+so the original min-spec branch validates allocation/ownership without a
+decoder, pixels, delay, or retail media.
+
+Two generations first inject an ambient-registration rejection, drain the
+source queued window destruction, and then retry with a new owner.  The retry
+must prove the exact named nodes, USA image bindings, mission text, progress
+and percent update, tooltip clear, presentation, one ambient entry, video
+open, destructor removal, and zero windows/display strings/audio entries
+after the destroy queue drains.  The source's `moveWindows` movie-loop call is
+commented out, therefore this slice does not invent direct private access to
+it; B4D remains the bounded briefing-provider evidence.
+
+The identity check must require `LoadScreen.cpp` and
+`SinglePlayerLoadScreen::init(GameInfo*)`; a provider-removal negative relink
+must fail on that exact symbol.  No retail content, decoder, audio fidelity,
+pixel output, normal LOD movie playback, reset ownership claim, or multiplayer
+path is included.
+
+Acceptance requires focused GCC/Clang source, identity, and removal checks;
+fresh six-configuration non-GPU/non-LAN CTest suites; host leak-enabled GCC
+and Clang focus; proportional host Vulkan; serial LAN in every configuration;
+ledger/diff review; a generated evidence record; and one exact scoped commit.

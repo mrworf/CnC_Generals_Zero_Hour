@@ -15,6 +15,7 @@
 #include "GameClient/Display.h"
 #include "GameClient/DisplayStringManager.h"
 #include "GameClient/Anim2D.h"
+#include "GameClient/Image.h"
 #include "GameClient/Eva.h"
 #include "GameClient/GameClient.h"
 #include "GameClient/CampaignManager.h"
@@ -29,6 +30,8 @@
 #include "GameLogic/AI.h"
 #include "GameLogic/GameLogic.h"
 #include "GameClient/LoadScreen.h"
+#include "GameClient/Mouse.h"
+#include "GameClient/VideoPlayer.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/RankInfo.h"
@@ -58,6 +61,8 @@ void check(bool condition, const char *message)
 	if (!condition) { std::fprintf(stderr, "FAIL: %s\n", message); ++failures; }
 }
 
+class GeneratedLoadVideoBuffer;
+
 class HeadlessDisplay final : public Display
 {
 public:
@@ -70,7 +75,7 @@ public:
 	void dumpAssetUsage(const char *) override {}
 	void dumpModelAssets(const char *) override {}
 #endif
-	VideoBuffer *createVideoBuffer() override { return NULL; }
+	VideoBuffer *createVideoBuffer() override;
 	void setClipRegion(IRegion2D *) override {}
 	Bool isClippingEnabled() override { return FALSE; }
 	void enableClipping(Bool) override {}
@@ -97,6 +102,54 @@ public:
 	Int getLastFrameDrawCalls() override { return 0; }
 	int updates = 0;
 	int draws = 0;
+};
+
+class GeneratedLoadVideoBuffer final : public VideoBuffer
+{
+public:
+	GeneratedLoadVideoBuffer() : VideoBuffer(TYPE_X8R8G8B8), allocated(FALSE) {}
+	Bool allocate(UnsignedInt width, UnsignedInt height) override
+	{
+		if (width != 2 || height != 1) return FALSE;
+		allocated = TRUE;
+		m_width = m_textureWidth = width;
+		m_height = m_textureHeight = height;
+		m_pitch = 8;
+		return TRUE;
+	}
+	void free() override { allocated = FALSE; m_width = m_height = m_textureWidth = m_textureHeight = m_pitch = 0; }
+	void *lock() override { return NULL; }
+	void unlock() override {}
+	Bool valid() override { return allocated; }
+private:
+	Bool allocated;
+};
+
+VideoBuffer *HeadlessDisplay::createVideoBuffer()
+{
+	return new GeneratedLoadVideoBuffer;
+}
+
+class GeneratedLoadVideoStream final : public VideoStream
+{
+public:
+	explicit GeneratedLoadVideoStream(VideoPlayer *player) { m_player = player; }
+	Int width() override { return 2; }
+	Int height() override { return 1; }
+	Int frameCount() override { return 1; }
+};
+
+class GeneratedLoadVideoPlayer final : public VideoPlayer
+{
+public:
+	VideoStreamInterface *open(AsciiString movie) override
+	{
+		if (movie.compare("GeneratedLoadMovie") != 0 || m_firstStream != NULL) return NULL;
+		m_firstStream = new GeneratedLoadVideoStream(this);
+		++opens;
+		return m_firstStream;
+	}
+	int opens = 0;
 };
 
 class HeadlessClient final : public GameClient
@@ -245,6 +298,18 @@ protected:
 	AudioHandle nextHandle = AHSV_FirstHandle;
 	std::vector<PlayingEvent> active;
 	std::vector<AsciiString> briefings;
+};
+
+class HeadlessMouse final : public Mouse
+{
+public:
+	void initCursorResources() override {}
+	void setCursor(MouseCursor cursor) override { m_currentCursor = cursor; }
+	void capture() override {}
+	void releaseCapture() override {}
+	Bool tooltipEmpty() const { return m_isTooltipEmpty; }
+protected:
+	UnsignedByte getMouseEvent(MouseIO *, Bool) override { return 0; }
 };
 
 class HeadlessCDManager final : public CDManager
@@ -496,6 +561,32 @@ int main()
 			"STATICTEXTDATA = CENTERED:No;\nEND\n"
 			"ENDALLCHILDREN\nEND\n";
 	}
+	{
+		std::ofstream generated(input / "Window/Menus/SinglePlayerLoadScreen.wnd");
+		generated << "FILE_VERSION = 2\nSTARTLAYOUTBLOCK\nENDLAYOUTBLOCK\n"
+			"WINDOW\nWINDOWTYPE = USER;\n"
+			"SCREENRECT = UPPERLEFT: 0 0 BOTTOMRIGHT: 800 600 CREATIONRESOLUTION: 800 600;\n"
+			"NAME = \"SinglePlayerLoadScreen.wnd:ParentSinglePlayerLoadScreen\";\n"
+			"STATUS = ENABLED IMAGE;\nSTYLE = USER;\nCHILD\n";
+		auto child = [&](const char *type, const char *name, const char *style) {
+			generated << "WINDOW\nWINDOWTYPE = " << type << ";\n"
+				"SCREENRECT = UPPERLEFT: 10 10 BOTTOMRIGHT: 210 30 CREATIONRESOLUTION: 800 600;\n"
+				"NAME = \"" << name << "\";\nSTATUS = ENABLED IMAGE;\nSTYLE = " << style << ";\n";
+			if (std::string(type) == "STATICTEXT") generated << "STATICTEXTDATA = CENTERED:No;\n";
+			generated << "END\n";
+		};
+		child("PROGRESSBAR", "SinglePlayerLoadScreen.wnd:ProgressLoad", "PROGRESSBAR");
+		child("STATICTEXT", "SinglePlayerLoadScreen.wnd:Percent", "STATICTEXT");
+		child("USER", "SinglePlayerLoadScreen.wnd:ObjectivesWin", "USER");
+		child("STATICTEXT", "SinglePlayerLoadScreen.wnd:StaticTextLine0", "STATICTEXT");
+		child("STATICTEXT", "SinglePlayerLoadScreen.wnd:StaticTextLine1", "STATICTEXT");
+		child("STATICTEXT", "SinglePlayerLoadScreen.wnd:StaticTextLine2", "STATICTEXT");
+		child("STATICTEXT", "SinglePlayerLoadScreen.wnd:StaticTextCameoText0", "STATICTEXT");
+		child("STATICTEXT", "SinglePlayerLoadScreen.wnd:StaticTextCameoText1", "STATICTEXT");
+		child("STATICTEXT", "SinglePlayerLoadScreen.wnd:StaticTextCameoText2", "STATICTEXT");
+		child("STATICTEXT", "SinglePlayerLoadScreen.wnd:StaticTextCameoText3", "STATICTEXT");
+		generated << "ENDALLCHILDREN\nEND\n";
+	}
 	char diagnostic[128]{};
 	check(zh::original_process::initialize_services(0, diagnostic, sizeof(diagnostic)), diagnostic);
 	initMemoryManager();
@@ -508,10 +599,19 @@ int main()
 	TheWritableGlobalData->m_playIntro = TRUE;
 	TheWritableGlobalData->m_playSizzle = FALSE;
 	HeadlessDisplay display;
+	GeneratedLoadVideoPlayer videoPlayer;
+	ImageCollection mappedImages;
+	auto addGeneratedImage = [&](const char *name) {
+		Image *image = newInstance(Image);
+		check(image != NULL, "generated mapped-image fixture did not allocate");
+		if (image) { image->setName(AsciiString(name)); mappedImages.addImage(image); }
+	};
 	HeadlessClient client;
 	NameKeyGenerator nameKeys;
 	TheNameKeyGenerator = &nameKeys;
 	nameKeys.init();
+	addGeneratedImage("MissionLoad_USA");
+	addGeneratedImage("LoadingBar_ProgressCenter2");
 	FunctionLexicon functionLexicon;
 	TheFunctionLexicon = &functionLexicon;
 	functionLexicon.init();
@@ -590,10 +690,14 @@ int main()
 	GameLogic logic;
 	HeadlessRadar *radar = new HeadlessRadar;
 	HeadlessAudio audio;
+	HeadlessMouse mouse;
 	HeadlessCDManager cdManager;
 	HeadlessEngine *engine = new HeadlessEngine;
 
 	TheDisplay = &display;
+	TheVideoPlayer = &videoPlayer;
+	TheMappedImageCollection = &mappedImages;
+	TheMouse = &mouse;
 	TheGameClient = &client;
 	TheMessageStream = &messages;
 	TheCommandList = &commands;
@@ -695,6 +799,87 @@ int main()
 	}
 	check(TheCampaignManager == NULL,
 		"generated campaign/mission provider remained published after both generations");
+
+	const Int audioRejectedAddsBeforeOwner = audio.rejectedAdds;
+	const Int audioRemovedBeforeOwner = audio.removed;
+	for (int generation = 0; generation != 2; ++generation)
+	{
+		CampaignManager campaigns;
+		TheCampaignManager = &campaigns;
+		Campaign *campaign = campaigns.newCampaign(AsciiString("USA"));
+		Mission *mission = campaign ? campaign->newMission(AsciiString("GeneratedLoadMission")) : NULL;
+		check(campaign != NULL && mission != NULL,
+			"generated SinglePlayer owner fixture did not create its source campaign/mission");
+		if (mission)
+		{
+			mission->m_movieLabel.set("GeneratedLoadMovie");
+			mission->m_missionObjectivesLabel[0].set("GeneratedObjective");
+			mission->m_unitNames[0].set("GeneratedUnit");
+			mission->m_locationNameLabel.set("GeneratedLocation");
+			mission->m_voiceLength = 0;
+		}
+		campaigns.setCampaignAndMission(AsciiString("usa"), AsciiString("generatedloadmission"));
+		check(campaigns.getCurrentCampaign() == campaign && campaigns.getCurrentMission() == mission,
+			"generated SinglePlayer owner did not publish the selected source mission");
+
+		audio.failNextAdd = TRUE;
+		{
+			SinglePlayerLoadScreen screen;
+			screen.init(NULL);
+			check(audio.activeCount() == 0 && audio.rejectedAdds == audioRejectedAddsBeforeOwner + generation + 1,
+				"injected SinglePlayer ambient failure retained source audio state");
+		}
+		windowManager->drainDestroyedWindows();
+		check(windowManager->winGetWindowList() == NULL && displayStrings.count() == displayStringBaseline,
+			"failed SinglePlayer owner retry setup retained a window or display string");
+
+		const int updatesBeforeOwner = display.updates;
+		const int drawsBeforeOwner = display.draws;
+		{
+			SinglePlayerLoadScreen screen;
+			screen.init(NULL);
+			GameWindow *rootWindow = windowManager->winGetWindowList();
+			GameWindow *progressWindow = windowManager->winGetWindowFromId(rootWindow,
+				nameKeys.nameToKey(AsciiString("SinglePlayerLoadScreen.wnd:ProgressLoad")));
+			GameWindow *percentWindow = windowManager->winGetWindowFromId(rootWindow,
+				nameKeys.nameToKey(AsciiString("SinglePlayerLoadScreen.wnd:Percent")));
+			GameWindow *unitWindow = windowManager->winGetWindowFromId(rootWindow,
+				nameKeys.nameToKey(AsciiString("SinglePlayerLoadScreen.wnd:StaticTextCameoText0")));
+			GameWindow *locationWindow = windowManager->winGetWindowFromId(rootWindow,
+				nameKeys.nameToKey(AsciiString("SinglePlayerLoadScreen.wnd:StaticTextCameoText3")));
+			GameWindow *backgroundWindow = windowManager->winGetWindowFromId(rootWindow,
+				nameKeys.nameToKey(AsciiString("SinglePlayerLoadScreen.wnd:ParentSinglePlayerLoadScreen")));
+			check(rootWindow != NULL && progressWindow != NULL && percentWindow != NULL && unitWindow != NULL &&
+				locationWindow != NULL && backgroundWindow != NULL,
+				"SinglePlayer owner did not retain every required generated source node");
+			check(backgroundWindow && backgroundWindow->winGetEnabledImage(0) ==
+				mappedImages.findImageByName(AsciiString("MissionLoad_USA")) &&
+				progressWindow && progressWindow->winGetEnabledImage(6) ==
+				mappedImages.findImageByName(AsciiString("LoadingBar_ProgressCenter2")),
+				"SinglePlayer owner did not bind generated USA mapped images through the source route");
+			check(unitWindow && GadgetStaticTextGetText(unitWindow) == gameText.fetch("GeneratedUnit") &&
+				locationWindow && GadgetStaticTextGetText(locationWindow) == gameText.fetch("GeneratedLocation"),
+				"SinglePlayer owner did not translate generated mission text through source gadgets");
+			screen.update(25);
+			UnicodeString expectedPercent;
+			expectedPercent.format(u"%d%%", 42);
+			check(progressWindow && progressWindow->winGetUserData() == reinterpret_cast<void *>(42) &&
+				percentWindow && GadgetStaticTextGetText(percentWindow) == expectedPercent && mouse.tooltipEmpty(),
+				"SinglePlayer owner update did not apply its generated progress/text/mouse state");
+			check(audio.activeCount() == 1 && audio.removed == audioRemovedBeforeOwner + generation && videoPlayer.opens == (generation + 1) * 2,
+				"SinglePlayer owner did not retry to one ambient/video owner after injected failure");
+			check(display.updates > updatesBeforeOwner && display.draws > drawsBeforeOwner,
+				"SinglePlayer owner update did not reach the source presentation route");
+		}
+		windowManager->drainDestroyedWindows();
+		check(audio.activeCount() == 0 && windowManager->winGetWindowList() == NULL &&
+			displayStrings.count() == displayStringBaseline,
+			"SinglePlayer owner destruction did not release generated audio/window/text ownership");
+		TheCampaignManager = NULL;
+	}
+	check(TheCampaignManager == NULL && TheVideoPlayer == &videoPlayer && TheMappedImageCollection == &mappedImages,
+		"SinglePlayer owner re-entry retained or replaced a generated provider publication");
+	TheMouse = NULL;
 
 	for (int generation = 0; generation != 2; ++generation)
 	{
@@ -822,6 +1007,9 @@ int main()
 	TheNameKeyGenerator = NULL;
 	TheRankInfoStore = NULL;
 	TheGameClient = NULL;
+	TheVideoPlayer = NULL;
+	TheMappedImageCollection = NULL;
+	TheMouse = NULL;
 	TheDisplay = NULL;
 	TheGameText = NULL;
 	delete windowManager;

@@ -24,6 +24,8 @@ def main() -> int:
     parser.add_argument("--executable", type=pathlib.Path, required=True)
     parser.add_argument("--provider-target", required=True)
     parser.add_argument("--spine-target", required=True)
+    parser.add_argument("--extra-provider", action="append", default=[],
+                        metavar="MEMBER=SYMBOL")
     args = parser.parse_args()
 
     commands = json.loads(args.compile_commands.read_text(encoding="utf-8"))
@@ -45,7 +47,13 @@ def main() -> int:
         if symbol not in symbols:
             failures.append(f"actual lifecycle symbol is not live: {symbol}")
     provider_marker = f"CMakeFiles/{args.provider_target}.dir/"
-    for member, symbol in REQUIRED_PROVIDERS.items():
+    required_providers = dict(REQUIRED_PROVIDERS)
+    for item in args.extra_provider:
+        if "=" not in item:
+            parser.error("--extra-provider must be MEMBER=SYMBOL")
+        member, symbol = item.split("=", 1)
+        required_providers[member] = symbol
+    for member, symbol in required_providers.items():
         if not any(name == member and provider_marker in output for name, output in compiled):
             failures.append(f"missing production compile unit: {member}")
         if f"lib{args.provider_target}.a({member}.o)" not in included:
