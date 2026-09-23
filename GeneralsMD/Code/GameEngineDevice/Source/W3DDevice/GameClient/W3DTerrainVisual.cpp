@@ -33,10 +33,12 @@
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
 #include "W3DDevice/GameClient/W3DSmudge.h"
 #include "Common/GlobalData.h"
+#include "Common/MapReaderWriterInfo.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
 
@@ -68,9 +70,17 @@ void W3DTerrainVisual::releaseEmptyOwners()
 	delete s_ownedTracks;
 	s_ownedTracks = NULL;
 	if (m_terrainRenderObject) {
+		// A map-loaded terrain is registered with the primary scene.  Unpublish it
+		// before releasing the map, so the inherited RenderObj scene link and the
+		// CPU-only ON_FRAME_UPDATE registration leave together.
+		if (m_terrainRenderObject->Peek_Scene() == W3DDisplay::m_3DScene &&
+			W3DDisplay::m_3DScene)
+			W3DDisplay::m_3DScene->Remove_Render_Object(m_terrainRenderObject);
+		m_terrainRenderObject->freeMapResources();
 		m_terrainRenderObject->Release_Ref();
 		m_terrainRenderObject = NULL;
 	}
+	REF_PTR_RELEASE(m_logicHeightMap);
 	s_emptyTerrainVisual = NULL;
 }
 
@@ -151,9 +161,46 @@ void W3DTerrainVisual::update()
 	m_waterRenderObject->update();
 }
 
-Bool W3DTerrainVisual::load(AsciiString)
+Bool W3DTerrainVisual::load(AsciiString filename)
 {
-	throw OriginalW3DDeviceUnavailable("original map-loaded terrain visual pending");
+	if (s_emptyTerrainVisual != this || TheTerrainVisual != this || !m_terrainRenderObject ||
+		!zh::original_runtime::OriginalGpuEdge::active() || !W3DDisplay::m_3DScene ||
+		m_logicHeightMap || m_terrainRenderObject->getMap() || m_terrainRenderObject->Peek_Scene() ||
+		filename.isEmpty())
+		throw OriginalW3DDeviceUnavailable("original map-loaded terrain visual unavailable");
+
+	if (TerrainVisual::load(filename) == FALSE)
+		return FALSE;
+
+	CachedFileInputStream file_stream;
+	if (!file_stream.open(filename)) {
+		// The native route publishes the TerrainVisual filename before opening its
+		// stream.  The CPU port keeps the generated-map transaction recoverable:
+		// a failed open leaves no successful visual publication behind.
+		TerrainVisual::reset();
+		return FALSE;
+	}
+
+	WorldHeightMap *loaded_map = NULL;
+	try {
+		ChunkInputStream *stream = &file_stream;
+		loaded_map = NEW_REF(WorldHeightMap, (stream, FALSE));
+		file_stream.close();
+		m_terrainRenderObject->initHeightData(loaded_map->getDrawWidth(),
+			loaded_map->getDrawHeight(), loaded_map, NULL, TRUE);
+		W3DDisplay::m_3DScene->Add_Render_Object(m_terrainRenderObject);
+		m_logicHeightMap = loaded_map;
+		loaded_map = NULL; // transfer the constructor reference to the visual owner
+		return TRUE;
+	} catch (...) {
+		file_stream.close();
+		if (m_terrainRenderObject->Peek_Scene() == W3DDisplay::m_3DScene)
+			W3DDisplay::m_3DScene->Remove_Render_Object(m_terrainRenderObject);
+		m_terrainRenderObject->freeMapResources();
+		REF_PTR_RELEASE(loaded_map);
+		TerrainVisual::reset();
+		throw;
+	}
 }
 void W3DTerrainVisual::getTerrainColorAt(Real, Real, RGBColor *)
 { throw OriginalW3DDeviceUnavailable("original terrain color pending"); }
