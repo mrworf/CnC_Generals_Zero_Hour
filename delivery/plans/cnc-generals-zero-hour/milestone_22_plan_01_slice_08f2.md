@@ -20,6 +20,23 @@ grid requests reject without alias or resource changes. Do not synthesize a
 height, grid, polygon water area, radar result, map frame, or retail scene.
 The default factory and accepted 08D/08F0 stops remain unchanged.
 
+## Enabled and edge decision
+
+The native getter returns `FALSE` immediately when its grid-enabled flag is
+clear, without reading coordinates or writing the caller's height. The Linux
+branch will require the live original terrain/display/water aliases and active
+original GPU edge (Recording in the generated probe) even for this disabled
+result, then leave the output untouched.
+Both a scene-attached water owner and the accepted 08D reset-detached owner
+are valid for the query; scene attachment is not a query precondition. The
+disabled setter still delegates to the water owner, which rejects a detached
+owner; 08F must resolve any later map-load reattachment handoff in its own
+source transition. The accepted bounded water owner rejects
+`enableWaterGrid(TRUE)`, so this slice must preserve the
+flag on that failure and reject any inconsistent enabled flag at query time.
+There is no active-grid sampling implementation. Missing edge, foreign or
+removed provider, and pre-init/retired owner reject before state access.
+
 Use generated read-only inputs. A focused source probe should verify disabled
 query returns `FALSE` before and after a native disable call, active-grid
 selection rejects, missing owner rejects, and reset/retry across two fresh
@@ -33,3 +50,14 @@ images, or raw process output are excluded.
 Requires accepted 08F0. 08F post-map construction resumes only after this
 slice is independently accepted. One production/test/evidence commit for
 08F2; this discovery plan alone is not implementation acceptance.
+
+## Result
+
+Complete. The source visual now answers a disabled-grid height query with
+`FALSE` and leaves the caller's height untouched for an exact published
+original owner, including the accepted reset-detached water state. The
+enabled request, inconsistent enabled flag, missing/foreign/pending provider,
+and pre-init call reject. The generated terrain-water source probe checks
+recovery after a failed provider acquire and zero-resource teardown. No 08F
+selector or post-map scenario construction was admitted. Full acceptance is
+recorded in [08F2 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08f2.md).

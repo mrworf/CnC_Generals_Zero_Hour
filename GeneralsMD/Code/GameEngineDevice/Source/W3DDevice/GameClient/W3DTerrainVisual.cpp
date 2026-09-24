@@ -281,8 +281,12 @@ Bool W3DTerrainVisual::intersectTerrain(Coord3D *, Coord3D *, Coord3D *)
 { throw OriginalW3DDeviceUnavailable("original terrain intersection pending"); }
 void W3DTerrainVisual::enableWaterGrid(Bool enabled)
 {
-	if (!m_waterRenderObject) throw OriginalW3DDeviceUnavailable("original water owner missing");
+	if (s_emptyTerrainVisual != this || TheTerrainVisual != this ||
+		!zh::original_runtime::OriginalGpuEdge::active() ||
+		!m_waterRenderObject || m_waterRenderObject != TheWaterRenderObj)
+		throw OriginalW3DDeviceUnavailable("original water owner missing");
 	m_waterRenderObject->enableWaterGrid(enabled);
+	m_isWaterGridRenderingEnabled = enabled;
 }
 void W3DTerrainVisual::setWaterGridHeightClamps(const WaterHandle *table, Real low, Real high)
 {
@@ -311,7 +315,24 @@ void W3DTerrainVisual::getWaterTransform(const WaterHandle *, Matrix3D *) { ORIG
 void W3DTerrainVisual::getWaterGridResolution(const WaterHandle *, Real *, Real *, Real *) { ORIGINAL_TERRAIN_PENDING("original water grid pending"); }
 void W3DTerrainVisual::changeWaterHeight(Real, Real, Real) { ORIGINAL_TERRAIN_PENDING("original water height pending"); }
 void W3DTerrainVisual::addWaterVelocity(Real, Real, Real, Real) { ORIGINAL_TERRAIN_PENDING("original water velocity pending"); }
-Bool W3DTerrainVisual::getWaterGridHeight(Real, Real, Real *) { ORIGINAL_TERRAIN_PENDING("original water grid pending"); }
+Bool W3DTerrainVisual::getWaterGridHeight(Real, Real, Real *)
+{
+	if (s_emptyTerrainVisual != this || TheTerrainVisual != this ||
+		!zh::original_runtime::OriginalGpuEdge::active() ||
+		!dynamic_cast<W3DDisplay *>(TheDisplay) || !W3DDisplay::m_3DScene ||
+		!m_terrainRenderObject || TheTerrainRenderObject != m_terrainRenderObject ||
+		TheHeightMap != m_terrainRenderObject || !m_waterRenderObject ||
+		m_waterRenderObject != TheWaterRenderObj ||
+		m_waterRenderObject->hasPendingGpuResources() ||
+		(m_waterRenderObject->Peek_Scene() &&
+		m_waterRenderObject->Peek_Scene() != W3DDisplay::m_3DScene))
+		throw OriginalW3DDeviceUnavailable("original water grid owner unavailable");
+	if (m_isWaterGridRenderingEnabled)
+		throw OriginalW3DDeviceUnavailable("original water grid pending");
+	// Native getWaterGridHeight returns FALSE without touching height when the
+	// grid is disabled. The active grid and its transform remain unsupported.
+	return FALSE;
+}
 void W3DTerrainVisual::setTerrainTracksDetail() { ORIGINAL_TERRAIN_PENDING("original terrain track detail pending"); }
 void W3DTerrainVisual::setShoreLineDetail() { ORIGINAL_TERRAIN_PENDING("original shoreline detail pending"); }
 void W3DTerrainVisual::addFactionBib(Object *, Bool, Real) { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }

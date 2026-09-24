@@ -38,6 +38,10 @@ public:
 			near(m_gridCellsY,5) && near(m_gridCellSize,2);
 	}
 };
+class GridProbeVisual final : public W3DTerrainVisual {
+public:
+	void forceGridState(Bool enabled) { m_isWaterGridRenderingEnabled = enabled; }
+};
 }
 
 extern "C" void zh_probe_terrain_water()
@@ -63,10 +67,33 @@ extern "C" void zh_probe_terrain_water()
 		zh::original_runtime::OriginalGpuEdge edge(device);
 		{
 			W3DDisplay display; display.init(); Display *saved_display=TheDisplay; TheDisplay=&display;
-			TerrainVisual *saved_visual=TheTerrainVisual; W3DTerrainVisual visual; TheTerrainVisual=&visual;
+			TerrainVisual *saved_visual=TheTerrainVisual; GridProbeVisual visual; TheTerrainVisual=&visual;
 			View *saved_view=TheTacticalView; W3DView *view=NULL;
 			try {
+				Real grid_height=31337;
+				require(rejected([&]{visual.getWaterGridHeight(0,0,&grid_height);}),
+					"original pre-init water grid query accepted");
 				display.setWidth(32); display.setHeight(24); visual.init();
+				require(!visual.getWaterGridHeight(0,0,&grid_height) && grid_height==31337 &&
+					!visual.getWaterGridHeight(0,0,NULL),
+					"original disabled water grid query changed height");
+				visual.enableWaterGrid(FALSE);
+				require(!visual.getWaterGridHeight(0,0,&grid_height) && grid_height==31337 &&
+					rejected([&]{visual.enableWaterGrid(TRUE);}) &&
+					!visual.getWaterGridHeight(0,0,&grid_height),
+					"original disabled grid state changed after active request");
+				visual.forceGridState(TRUE);
+				require(rejected([&]{visual.getWaterGridHeight(0,0,&grid_height);}) &&
+					grid_height==31337, "original active grid query accepted");
+				visual.forceGridState(FALSE);
+				WaterRenderObjClass *published_water=TheWaterRenderObj; TheWaterRenderObj=NULL;
+				require(rejected([&]{visual.getWaterGridHeight(0,0,&grid_height);}),
+					"original missing water provider accepted");
+				TheWaterRenderObj=published_water;
+				TheTerrainVisual=saved_visual;
+				require(rejected([&]{visual.getWaterGridHeight(0,0,&grid_height);}),
+					"original foreign terrain provider accepted");
+				TheTerrainVisual=&visual;
 				require(TheWaterRenderObj && TheWaterRenderObj->hasPendingGpuResources()==FALSE,
 					"original active water did not publish source resources");
 				require(visual.load(AsciiString(map)) && TheHeightMap && TheHeightMap->getMap(),
@@ -81,7 +108,11 @@ extern "C" void zh_probe_terrain_water()
 				water->ReleaseResources(); device.fail_next_buffer_create();
 				require(rejected([&]{water->ReAcquireResources();}) && water->hasPendingGpuResources(),
 					"original water create rollback was not pending");
+				require(rejected([&]{visual.getWaterGridHeight(0,0,&grid_height);}),
+					"original pending water provider accepted");
 				water->ReAcquireResources(); require(!water->hasPendingGpuResources(), "original water create retry failed");
+				require(!visual.getWaterGridHeight(0,0,&grid_height) && grid_height==31337,
+					"original water grid query did not recover after provider retry");
 				view=new W3DView; TheTacticalView=view; view->init(); display.attachView(view);
 				view->setWidth(32); view->setHeight(24); view->setDefaultView(0,0,1);
 				auto *track=tracks->bindTrack(TheHeightMap,MAP_XY_FACTOR,""); require(track,"original water compatibility track missing");
@@ -146,6 +177,9 @@ extern "C" void zh_probe_terrain_water()
 			require(rejected([&]{visual.reset();}), "original active water reset accepted before display detach");
 			display.reset();
 			require(water->Peek_Scene()!=W3DDisplay::m_3DScene, "original display did not detach active water");
+			Real grid_height=31337;
+			require(!visual.getWaterGridHeight(0,0,&grid_height) && grid_height==31337,
+				"original reset-detached water grid query failed");
 			visual.reset();
 			unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE");
 			require(rejected([&]{visual.reset();}), "original detached active water accepted without selector");
@@ -201,5 +235,5 @@ extern "C" void zh_probe_terrain_water()
 	TheWritableGlobalData->m_partitionCellSize=saved_partition; TheWritableGlobalData->m_maxTerrainTracks=saved_tracks; TheWritableGlobalData->m_makeTrackMarks=saved_marks;
 	TheWritableGlobalData->m_useWaterPlane=saved_water; TheWritableGlobalData->m_useCloudPlane=saved_cloud; TheWritableGlobalData->m_waterExtentX=saved_x; TheWritableGlobalData->m_waterExtentY=saved_y; TheWritableGlobalData->m_waterType=saved_type;
 	require(device.resource_counts().total()==0,"original water teardown retained Recording resources");
-	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 scalar-transaction=1 active-reset=1 ordering=1 retry=2 tracks=1 siblings=0 generations=7 resources=0");
+	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 scalar-transaction=1 active-reset=1 ordering=1 retry=2 tracks=1 siblings=0 grid-query=1 generations=7 resources=0");
 }
