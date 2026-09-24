@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <stdexcept>
 
 #include "Common/AudioAffect.h"
 #include "Common/AudioHandleSpecialValues.h"
@@ -1311,6 +1312,10 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	if (std::getenv("ZH_M22_RETAIL_SCENE_ROUTE"))
 		std::fputs("original retail Recording scene: logic=map-ini\n", stderr);
 	loadMapINI( TheGlobalData->m_mapName );
+	if (std::getenv("ZH_M22_GENERATED_SCENE_ROUTE")) {
+		std::fputs("original generated scene boundary: mapini=complete terrain=not-loaded\n", stderr);
+		throw std::runtime_error("original generated scene terrain boundary pending");
+	}
 	if (std::getenv("ZH_M22_RETAIL_SCENE_ROUTE"))
 		std::fputs("original retail Recording scene: logic=terrain\n", stderr);
 

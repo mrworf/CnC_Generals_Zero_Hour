@@ -216,6 +216,16 @@ void W3DTerrainVisual::update()
 	if (s_emptyTerrainVisual != this || TheTerrainVisual != this)
 		throw OriginalW3DDeviceUnavailable("original empty terrain visual update unavailable");
 	TerrainVisual::update();
+	// The accepted reset detaches active water before the next new-game tick.
+	// Only the explicit generated parser transition may pass this pre-map tick.
+	if (std::getenv("ZH_M22_GENERATED_SCENE_ROUTE") &&
+		std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") &&
+		std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE") &&
+		m_waterRenderObject && m_waterRenderObject == TheWaterRenderObj &&
+		m_terrainRenderObject && !m_terrainRenderObject->getMap() &&
+		m_waterRenderObject->Peek_Scene() == NULL &&
+		!m_waterRenderObject->hasPendingGpuResources())
+		return;
 	m_waterRenderObject->update();
 }
 

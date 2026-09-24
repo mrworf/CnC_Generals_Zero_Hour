@@ -735,9 +735,16 @@ class LinuxGameEngine final : public GameEngine
 public:
 	void init(int argc, char *argv[]) override
 	{
+		const bool generatedScene = std::getenv("ZH_M22_GENERATED_SCENE_ROUTE") != NULL;
+		const bool configuredReset = std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") &&
+			std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE");
+		if (generatedScene && (!configuredReset || !m_boundedProfile || !m_scenarioProfile ||
+			!std::getenv("ZH_M22_ORIGINAL_FACTORY_PROFILE") ||
+			!std::getenv("ZH_M22_RECORDING_FACTORY_PROFILE") ||
+			std::getenv("ZH_M22_DRAW_PROFILE")))
+			throw std::runtime_error("original generated scene selector requires bounded Recording reset owners");
 		GameEngine::init(argc, argv);
-		if (std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") &&
-			std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE"))
+		if (configuredReset && !generatedScene)
 			throw std::runtime_error("original active-water reset next boundary pending");
 		if (m_boundedProfile)
 		{
@@ -766,8 +773,9 @@ public:
 	}
 	void update() override
 	{
+		const Bool generatedScene = std::getenv("ZH_M22_GENERATED_SCENE_ROUTE") != NULL;
 		const Bool scenarioStartThisUpdate = m_scenarioProfile && !m_scenarioStarted &&
-			std::getenv("ZH_M22_DRAW_PROFILE") != NULL;
+			(std::getenv("ZH_M22_DRAW_PROFILE") != NULL || generatedScene);
 		if (m_scenarioProfile && !m_scenarioStarted)
 		{
 			m_scenarioStarted = TRUE;
@@ -777,9 +785,19 @@ public:
 				W3DAssetManager *assets = NULL;
 				RTS3DScene *scene = NULL;
 				W3DFileSystem *fileSystem = NULL;
-				explicit OriginalDrawOwners(Bool enabled)
+				Bool borrowed = FALSE;
+				OriginalDrawOwners(Bool enabled, Bool borrow)
 				{
 					if (!enabled) return;
+					if (borrow) {
+						if (!dynamic_cast<W3DDisplay *>(TheDisplay) ||
+							!W3DDisplay::m_assetManager || !W3DDisplay::m_3DScene)
+							throw std::runtime_error("original generated scene display owners missing");
+						assets = W3DDisplay::m_assetManager;
+						scene = W3DDisplay::m_3DScene;
+						borrowed = TRUE;
+						return;
+					}
 					fileSystem = new W3DFileSystem;
 					assets = new W3DAssetManager;
 					scene = new RTS3DScene;
@@ -788,13 +806,14 @@ public:
 				}
 				~OriginalDrawOwners()
 				{
+					if (borrowed) return;
 					W3DDisplay::m_assetManager = NULL;
 					W3DDisplay::m_3DScene = NULL;
 					if (scene) scene->Release_Ref();
 					if (assets) { assets->Free_Assets(); delete assets; }
 					delete fileSystem;
 				}
-			} originalDrawOwners(std::getenv("ZH_M22_DRAW_PROFILE") != NULL ||
+			} originalDrawOwners(generatedScene || std::getenv("ZH_M22_DRAW_PROFILE") != NULL ||
 				std::getenv("ZH_M22_SHADOW_SOURCE_PROFILE") != NULL ||
 				std::getenv("ZH_M22_VOLUME_BUFFER_PROFILE") != NULL ||
 				std::getenv("ZH_M22_VOLUME_GEOMETRY_PROFILE") != NULL ||
@@ -803,7 +822,7 @@ public:
 				std::getenv("ZH_M22_VOLUME_STENCIL_EDGE_PROFILE") != NULL ||
 				std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") != NULL ||
 				std::getenv("ZH_M22_SHADOW_DECAL_PROFILE") != NULL ||
-				std::getenv("ZH_M22_FULL_FEATURE_PROFILE") != NULL);
+				std::getenv("ZH_M22_FULL_FEATURE_PROFILE") != NULL, generatedScene);
 			try {
 			if (const char *retailModel = std::getenv("ZH_M22_RETAIL_MODEL"))
 			{
