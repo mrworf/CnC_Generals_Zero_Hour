@@ -1761,6 +1761,15 @@ if(ZH_BUILD_TESTS)
     --labels "$<TARGET_FILE:original_map_start_marker_update_tests>"
     --placement "$<TARGET_FILE:original_map_start_marker_placement_tests>")
   set_tests_properties(original_multiplayer_persona_map_helper_aggregate PROPERTIES LABELS "original-multiplayer;source-identity;negative")
+  add_test(NAME original_multiplayer_provider_aggregate COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_multiplayer_provider_aggregate.py"
+    --slots "$<TARGET_FILE:original_gameinfo_slot_provider_tests>"
+    --settings "$<TARGET_FILE:original_multiplayer_settings_provider_tests>"
+    --metadata "$<TARGET_FILE:original_persona_mapcache_provider_tests>"
+    --preview "$<TARGET_FILE:original_map_preview_provider_tests>"
+    --labels "$<TARGET_FILE:original_map_start_marker_update_tests>"
+    --placement "$<TARGET_FILE:original_map_start_marker_placement_tests>")
+  set_tests_properties(original_multiplayer_provider_aggregate PROPERTIES LABELS "original-multiplayer;source-identity;negative")
   add_test(NAME original_singleplayer_loadscreen_aggregate COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_singleplayer_loadscreen_aggregate.py"
     --images "$<TARGET_FILE:original_mapped_image_provider_tests>"
