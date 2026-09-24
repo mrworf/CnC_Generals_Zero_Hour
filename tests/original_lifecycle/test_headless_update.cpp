@@ -918,6 +918,11 @@ int main()
 	}
 	check(TheCampaignManager == NULL && TheVideoPlayer == &videoPlayer && TheMappedImageCollection == &mappedImages,
 		"SinglePlayer owner re-entry retained or replaced a generated provider publication");
+	check(windowManager->winGetWindowList() == NULL && displayStrings.count() == displayStringBaseline &&
+		TheCampaignManager == NULL && TheGameInfo == NULL && ThePlayerTemplateStore == NULL &&
+		TheMultiplayerSettings == NULL && TheMapCache == NULL && TheGameState == NULL &&
+		TheMappedImageCollection == &mappedImages,
+		"single-player to multiplayer mode transition retained source UI or provider ownership");
 	const std::filesystem::path multiplayerIni = input / "generated-multiplayer-loadscreen.ini";
 	{
 		std::ofstream generated(multiplayerIni);
@@ -1204,6 +1209,8 @@ int main()
 	std::printf("M20 original headless update: %s frames=2 ticks=2 network=offline-null devices=0\n",
 		failures ? "failed" : "ok");
 	std::printf("M22 original multiplayer loadscreen: %s generations=2 windows=0 display_strings=0 pixels=0\n",
+		failures ? "failed" : "ok");
+	std::printf("M22 original mode-exclusive loadscreen aggregate: %s singleplayer_generations=2 multiplayer_generations=2 windows=0 display_strings=0 pixels=0\n",
 		failures ? "failed" : "ok");
 	return failures ? 1 : 0;
 }

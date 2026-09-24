@@ -1781,6 +1781,10 @@ if(ZH_BUILD_TESTS)
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_multiplayer_loadscreen_owner.py"
     --owner "$<TARGET_FILE:original_headless_update_tests>")
   set_tests_properties(original_multiplayer_loadscreen PROPERTIES LABELS "original-multiplayer;source-identity;negative")
+  add_test(NAME original_loadscreen_mode_aggregate COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_loadscreen_mode_aggregate.py"
+    --owner "$<TARGET_FILE:original_headless_update_tests>")
+  set_tests_properties(original_loadscreen_mode_aggregate PROPERTIES LABELS "original-headless-update;original-multiplayer;source-identity;negative")
   add_test(NAME original_headless_update_identity COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_headless_identity.py"
     --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
