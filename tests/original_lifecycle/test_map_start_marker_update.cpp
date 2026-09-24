@@ -19,7 +19,7 @@ namespace { int failures; void check(bool ok, const char *m) { if (!ok) { std::f
 class Text final : public GameTextInterface { public: void init() override {} void reset() override {} void update() override {} UnicodeString fetch(const Char *s, Bool *e=NULL) override { if(e)*e=TRUE; UnicodeString v; v.translate(AsciiString(s?s:"")); return v; } UnicodeString fetch(AsciiString s, Bool *e=NULL) override{return fetch(s.str(),e);} AsciiStringVec& getStringsWithLabelPrefix(AsciiString) override{return v;} void initMapStringFile(const AsciiString&) override{} private: AsciiStringVec v; };
 class Button final : public GameWindow { public: void winDrawBorder() override {} };
 class String final : public DisplayString { MEMORY_POOL_GLUE_WITH_EXPLICIT_CREATE(String,"MapMarkerString",8,8) public: void setWordWrap(Int) override {} void setWordWrapCentered(Bool) override {} void draw(Int,Int,Color,Color) override {} void draw(Int,Int,Color,Color,Int,Int) override {} void getSize(Int *x,Int *y) override {if(x)*x=getWidth();if(y)*y=1;} Int getWidth(Int p=-1) override{return p<0?getTextLength():p;} void setUseHotkey(Bool,Color) override {} }; String::~String()=default;
-class Strings final : public DisplayStringManager { public: ~Strings() override{while(m_stringList)freeDisplayString(m_stringList);} DisplayString *newDisplayString() override{DisplayString *s=newInstance(String);link(s);return s;} void freeDisplayString(DisplayString *s) override{if(s){unLink(s);s->deleteInstance();}} DisplayString *getGroupNumeralString(Int) override{return newDisplayString();} DisplayString *getFormationLetterString() override{return newDisplayString();} };
+class Strings final : public DisplayStringManager { public: ~Strings() override{while(m_stringList)freeDisplayString(m_stringList);} DisplayString *newDisplayString() override{++allocated; DisplayString *s=newInstance(String);link(s);return s;} void freeDisplayString(DisplayString *s) override{if(s){unLink(s);++freed;s->deleteInstance();}} DisplayString *getGroupNumeralString(Int) override{return newDisplayString();} DisplayString *getFormationLetterString() override{return newDisplayString();} static Int allocated,freed; }; Int Strings::allocated=0; Int Strings::freed=0;
 class Windows final : public GameWindowManager { public:
  GameWindow *allocateNewWindow() override{return NULL;}
 #define DRAW(name) GameWinDrawFunc name() override{return NULL;}
@@ -40,7 +40,26 @@ int main() {
   GadgetButtonSetText(marker[0], one); GadgetButtonSetText(marker[1], two); GadgetButtonSetText(NULL, one);
   check(buttons[0].winGetText()==one && buttons[1].winGetText()==two, "source push-button label message contract changed");
   GadgetButtonSetText(marker[0], two); check(buttons[0].winGetText()==two, "source push-button label re-entry changed");
+	MapCache cache; TheMapCache=&cache; MapMetaData map; map.m_numPlayers=2; map.m_isMultiplayer=TRUE; cache["generated.map"]=map;
+	GameInfo game; game.init(); game.setMap("Generated.map"); GameSlot first, second, ownedFirst, ownedSecond;
+	first.setState(SLOT_PLAYER); first.setPlayerTemplate(1); first.setStartPos(1);
+	second.setState(SLOT_EASY_AI); second.setPlayerTemplate(1); second.setStartPos(0);
+	game.setSlotPointer(0,&ownedFirst); game.setSlotPointer(1,&ownedSecond); game.setSlot(0,first); game.setSlot(1,second);
+	updateMapStartSpots(&game,marker,FALSE);
+	check(buttons[0].winGetText()==two && buttons[1].winGetText()==one,
+		"source updateMapStartSpots did not route slot labels through live gadgets");
+	game.getSlot(0)->setStartPos(2); updateMapStartSpots(&game,marker,FALSE); UnicodeString empty;
+	check(game.getSlot(0)->getStartPos()==2, "generated out-of-range source slot was not published");
+	check(buttons[0].winGetText()==two, "source valid sibling start-marker changed during rejection");
+	check(buttons[1].winGetText()==empty, "source out-of-range start-marker rejection changed");
+	game.getSlot(0)->setStartPos(1); updateMapStartSpots(&game,marker,FALSE);
+	check(buttons[0].winGetText()==two && buttons[1].winGetText()==one,
+		"source start-marker re-entry changed");
+	game.setMap("missing.map"); updateMapStartSpots(&game,marker,FALSE);
+	check(buttons[0].winIsHidden() && buttons[1].winIsHidden(), "source missing-map start-marker rejection changed");
+	TheMapCache=NULL;
 	}
+	check(Strings::allocated==Strings::freed, "source start-marker teardown retained display strings");
   TheWindowManager=NULL; TheDisplayStringManager=NULL; TheGameText=NULL; TheWritableGlobalData=NULL;
  }
  TheFileSystem=NULL; TheLocalFileSystem=NULL; TheNameKeyGenerator=NULL; zh::original_process::shutdown_services(); shutdownMemoryManager();

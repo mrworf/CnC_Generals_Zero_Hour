@@ -1702,13 +1702,21 @@ if(ZH_BUILD_TESTS)
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-map-start-marker-update.link.map")
   add_test(NAME original_map_start_marker_update COMMAND original_map_start_marker_update_tests)
   set_tests_properties(original_map_start_marker_update PROPERTIES LABELS "original-multiplayer;source-identity;negative")
+  add_test(NAME original_map_start_marker_update_source COMMAND original_map_start_marker_update_tests)
+  set_tests_properties(original_map_start_marker_update_source PROPERTIES LABELS "original-multiplayer;source-identity;negative")
   add_test(NAME original_map_start_marker_gadget_removal COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
     --build-dir "${CMAKE_CURRENT_BINARY_DIR}" --target original_map_start_marker_update_tests
     --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-map-start-marker-update.link.map"
     --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
     --member GadgetPushButton.cpp.o --required-symbol "GadgetButtonSetText(GameWindow*, UnicodeString)")
-  set_tests_properties(original_map_start_marker_gadget_removal PROPERTIES LABELS "original-multiplayer;source-identity;negative")
+  add_test(NAME original_map_start_marker_update_source_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}" --target original_map_start_marker_update_tests
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-map-start-marker-update.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member SkirmishGameOptionsMenu.cpp.o --required-symbol "updateMapStartSpots(GameInfo*, GameWindow**, bool)")
+  set_tests_properties(original_map_start_marker_gadget_removal original_map_start_marker_update_source_removal PROPERTIES LABELS "original-multiplayer;source-identity;negative")
   add_test(NAME original_singleplayer_loadscreen_aggregate COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_singleplayer_loadscreen_aggregate.py"
     --images "$<TARGET_FILE:original_mapped_image_provider_tests>"
