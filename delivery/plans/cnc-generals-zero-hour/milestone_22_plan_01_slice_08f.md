@@ -42,8 +42,15 @@ mission/skirmish controls; no retail provider is opened. Any missing owner
 reached after terrain load is a prerequisite rather than a selector-local
 bypass. Evidence uses fixed stage categories and aggregate ownership only.
 The generated-only probe exposed the missing disabled-water-grid query in
-source `Radar::newMap`; [08F2](milestone_22_plan_01_slice_08f2.md) must be
-completed first. The probe edits were removed at the discovery checkpoint.
+source `Radar::newMap`; [08F2](milestone_22_plan_01_slice_08f2.md) is now
+accepted. The next native source chain in `W3DTerrainVisual::load` attaches
+the water object to the primary scene, calls `enableWaterGrid(FALSE)`, then
+calls `updateMapOverrides`. Accepted 08D reset leaves water detached, so 08F
+owns exact reattachment before the disabled setter, with failure rollback.
+The CPU water owner does not yet define `updateMapOverrides`; the independent
+[08F3](milestone_22_plan_01_slice_08f3.md) prerequisite closes only that
+owner method before 08F resumes. Neither prerequisite admits the 08F
+construction selector. The probe edits were removed at discovery checkpoints.
 The map-loaded `removeAllBibs` cleanup is a separate, selector-scoped 08F
 handoff: the generated fixture has no bib producer and every creation API is
 still fail-closed, so empty-list cleanup can be admitted with exact owner
