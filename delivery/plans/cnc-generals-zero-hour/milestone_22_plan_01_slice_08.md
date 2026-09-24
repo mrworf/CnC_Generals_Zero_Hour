@@ -12,6 +12,14 @@ Original graph owns reached terrain, model, HLOD, animation, texture,
 shroud, fog, lighting, shadow, particle, water, effects and pass decisions.
 Generated/test proxy scenes cannot substitute for retail acceptance.
 
+The first post-08F redacted probe found two independent source-initialization
+defects before scene construction: zero-based veterancy flags used a negative
+shift, then an audio event was copied with indeterminate initial playback
+portion. Slices [08G1](milestone_22_plan_01_slice_08g1.md) and
+[08G2](milestone_22_plan_01_slice_08g2.md) close those owners in that observed
+order before this slice resumes. Trial diagnostics were removed and no retail
+identifier or raw output is retained.
+
 ## Validation and error handling
 
 Retail roots remain read-only/private; no corpus bytes, private paths,
@@ -55,3 +63,13 @@ must preserve the old stop behavior when the new scene selector is absent.
 If any further original map service rejects after this bounded continuation,
 record that exact stage as a new dependency rather than admitting unsupported
 terrain APIs or substituting generated content for retail acceptance.
+
+The retail scene transaction must also treat its live display/scene owners as
+borrowed. The current disabled `OriginalDrawOwners` guard unconditionally
+clears the live static aliases on unwind, which converts an earlier source
+failure into a null teardown. Correct the enabled/borrowed state machine in
+this slice: inactive guards do nothing, active retail/generated scene guards
+borrow and never release the display-owned aliases, and guards that actually
+allocate fixture owners remain solely responsible for them. Cover inactive,
+borrowed and owned success/failure/re-entry paths. This correction is part of
+08's explicit scene admission transaction, not either source-init prerequisite.
