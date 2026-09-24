@@ -10,7 +10,9 @@ MAX_SLOTS named layout, performs map-cache/preview and map-start helpers, and
 initializes GameLogic timeout state. Its update route separately needs either
 Network progress publication or GameLogic/GameInfo progress processing.
 
-This prerequisite must first provide one generated, project-owned provider
+This prerequisite is dependency-split: **08E1C0A** supplies GameInfo/slots/
+templates/settings; **08E1C0B** supplies persona/map helpers after A; only
+then may 08E1C compose the owner. The prerequisite must first provide one generated, project-owned provider
 transaction for those exact source values, with occupied/empty/AI slots,
 template/persona fallback, color/image fallback, map-preview absent/present,
 network/logic selection, two-generation removal and zero ownership. It must
