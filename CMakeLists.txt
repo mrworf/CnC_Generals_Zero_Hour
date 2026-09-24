@@ -1559,6 +1559,13 @@ if(ZH_BUILD_TESTS)
     --buffer "$<TARGET_FILE:original_video_buffer_tests>"
     --stream-buffer "$<TARGET_FILE:original_video_stream_buffer_tests>")
   set_tests_properties(original_video_stream_buffer_aggregate PROPERTIES LABELS "original-rendering;source-identity;negative")
+  add_test(NAME original_singleplayer_loadscreen_aggregate COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_singleplayer_loadscreen_aggregate.py"
+    --images "$<TARGET_FILE:original_mapped_image_provider_tests>"
+    --mouse "$<TARGET_FILE:original_mouse_provider_tests>"
+    --video "$<TARGET_FILE:original_video_stream_buffer_tests>"
+    --owner "$<TARGET_FILE:original_headless_update_tests>")
+  set_tests_properties(original_singleplayer_loadscreen_aggregate PROPERTIES LABELS "original-headless-update;source-identity;negative")
   add_test(NAME original_headless_update_identity COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_headless_identity.py"
     --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
