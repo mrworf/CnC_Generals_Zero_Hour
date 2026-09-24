@@ -298,8 +298,44 @@ void W3DDisplay::toggleLetterBox() { ZH_DISPLAY_PENDING(); }
 void W3DDisplay::enableLetterBox(Bool) { ZH_DISPLAY_PENDING(); }
 Bool W3DDisplay::isLetterBoxFading() { ZH_DISPLAY_PENDING(); }
 Bool W3DDisplay::isLetterBoxed() { ZH_DISPLAY_PENDING(); }
-void W3DDisplay::clearShroud() { ZH_DISPLAY_PENDING(); }
-void W3DDisplay::setShroudLevel(Int, Int, CellShroudStatus) { ZH_DISPLAY_PENDING(); }
+namespace {
+W3DShroud *requireMappedDisplayShroud(W3DDisplay *display)
+{
+	if (TheDisplay != display || !zh::original_runtime::OriginalGpuEdge::active() ||
+		!W3DDisplay::m_3DScene || !W3DDisplay::m_2DScene ||
+		!W3DDisplay::m_3DInterfaceScene || !W3DDisplay::m_assetManager ||
+		!TheTerrainRenderObject || !TheHeightMap ||
+		TheTerrainRenderObject != TheHeightMap ||
+		!TheTerrainRenderObject->canNotifyShroudChanged())
+		throw OriginalW3DDeviceUnavailable("original display shroud owner unavailable");
+	return TheTerrainRenderObject->getShroud();
+}
+}
+void W3DDisplay::clearShroud()
+{
+	if (!m_initialized)
+		throw OriginalW3DDeviceUnavailable("original display shroud before bootstrap");
+	(void)requireMappedDisplayShroud(this);
+	// Native clear is intentionally empty; source refresh sets every cell.
+}
+void W3DDisplay::setShroudLevel(Int x, Int y, CellShroudStatus setting)
+{
+	if (!m_initialized || !TheGlobalData)
+		throw OriginalW3DDeviceUnavailable("original display shroud before bootstrap");
+	W3DShroud *shroud = requireMappedDisplayShroud(this);
+	if (x < 0 || y < 0 || x >= shroud->getNumShroudCellsX() ||
+		y >= shroud->getNumShroudCellsY())
+		throw OriginalW3DDeviceUnavailable("original display shroud cell unavailable");
+	W3DShroudLevel level;
+	switch (setting) {
+		case CELLSHROUD_SHROUDED: level = TheGlobalData->m_shroudAlpha; break;
+		case CELLSHROUD_FOGGED: level = TheGlobalData->m_fogAlpha; break;
+		case CELLSHROUD_CLEAR: level = TheGlobalData->m_clearAlpha; break;
+		default: throw OriginalW3DDeviceUnavailable("original display shroud category unavailable");
+	}
+	shroud->setShroudLevel(x, y, level);
+	TheTerrainRenderObject->notifyShroudChanged();
+}
 void W3DDisplay::setBorderShroudLevel(UnsignedByte) { ZH_DISPLAY_PENDING(); }
 void W3DDisplay::preloadModelAssets(AsciiString) { ZH_DISPLAY_PENDING(); }
 void W3DDisplay::preloadTextureAssets(AsciiString) { ZH_DISPLAY_PENDING(); }

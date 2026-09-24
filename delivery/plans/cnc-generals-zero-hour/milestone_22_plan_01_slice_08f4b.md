@@ -34,3 +34,23 @@ GCC/Clang, six configured builds and canonical `-LE 'gpu|lan|retail'` suites,
 canonical sanitizer `detect_leaks=0`, strict host LSan both, physical Vulkan,
 serial LAN all six, ledger and diff gates. One separate 08F4B
 production/test/evidence commit after acceptance; only then resume 08F.
+
+## Source-order implementation detail
+
+The accepted 08F4A notification is deliberately a no-op for its valid
+no-prop owner, but throws for a malformed non-null prop. Calling it only
+after the shroud write could therefore leave a partial cell mutation.
+Add a CPU-only side-effect-free readiness predicate to the terrain owner;
+both the accepted notification and display validation use it. The display
+still calls `notifyShroudChanged` exactly once, after the native-ordered
+grid write. Do not pre-call notification or attempt to reconstruct the
+shroud's private current/final state for rollback. Test forced malformed
+prop and other broken owners leave an existing cell unchanged.
+
+## Result
+
+Complete. Source-ordered display clear/per-cell shroud dispatch, generated
+negative/retry/two-generation ownership tests, source ledger updates and all
+required acceptance gates are recorded in
+[08F4B evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08f4b.md).
+The 08F construction selector remains unadmitted.

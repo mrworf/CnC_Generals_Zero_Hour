@@ -36,3 +36,12 @@ its own focused tests, full six configured builds and canonical
 `-LE 'gpu|lan|retail'` suites after production change, strict GCC/Clang host
 LSan, physical Vulkan control, serial LAN, ledger and diff gates, and one
 independent commit. 08F resumes only after both children are accepted.
+
+## Result
+
+Complete as an owner prerequisite: [08F4A](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08f4a.md)
+and [08F4B](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08f4b.md)
+each passed its independent generated controls and full required acceptance.
+The [aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08f4.md)
+records the boundary. 08F still owns water reattachment and scenario
+construction; no selector or retail route is accepted by this aggregate.

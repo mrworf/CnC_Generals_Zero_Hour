@@ -30,7 +30,7 @@ def main() -> int:
         for generation in range(2):
             source = source_tree(root / f"source-{generation}", fixture, "valid")
             result = run(args.executable.resolve(), root / f"generation-{generation}", source, "mission")
-            marker = "original terrain scene attachment: bounds=8x8 registrations=2 shroud=2 generations=2 resources=0"
+            marker = "original terrain scene attachment: bounds=8x8 registrations=2 shroud=2 display-cells=3 generations=2 resources=0"
             if result.returncode or marker not in result.stdout:
                 raise SystemExit(f"original terrain scene attachment generation {generation} failed "
                                  f"({result.returncode}); private output redacted")

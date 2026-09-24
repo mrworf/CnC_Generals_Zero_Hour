@@ -191,6 +191,9 @@ public:
 
 	void unitMoved( Object *unit );
 	void notifyShroudChanged(void);
+#if defined(ZH_WW3D_CPU_ONLY)
+	bool canNotifyShroudChanged();
+#endif
 	void removeTreesAndPropsForConstruction(
 		const Coord3D* pos, 
 		const GeometryInfo& geom,
