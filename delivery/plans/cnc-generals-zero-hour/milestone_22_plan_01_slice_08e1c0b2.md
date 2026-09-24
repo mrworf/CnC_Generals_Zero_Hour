@@ -1,8 +1,9 @@
 # M22 08E1C0B2: generated map-preview and start-marker helper closure
 
-After C0B1, exercise the actual source map-preview file/copy/mapped-image route
-and the source start-marker helpers only with generated map data and live
-project-owned source GUI windows. Cover missing preview/map/waypoint, retry,
-two-generation resource/gadget teardown and provider removal. This slice must
-not compose the multiplayer load-screen owner or claim retail maps, pixels,
-media, or network service behavior.
+After C0B1, C0B2 is dependency-split. **C0B2A** proves the actual source
+map-preview file/copy/mapped-image resource route with generated data. **C0B2B**
+then consumes that route from the source start-marker helpers with live
+project-owned source GUI windows, GameInfo, and GameText. The resource copy can
+fail/retry and release independently, while the GUI consumer cannot be proven
+without it. Neither slice composes the multiplayer load-screen owner or claims
+retail maps, pixels, media, or network service behavior.
