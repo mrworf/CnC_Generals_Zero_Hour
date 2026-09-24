@@ -9,3 +9,5 @@ retail/pixel/decoder/multiplayer claim was added.
 - Fresh non-GPU/non-LAN suites: 229/229 in all six configurations; sanitizer
   broad runs use `ASAN_OPTIONS=detect_leaks=0` for the established ptrace limit.
 - Host `detect_leaks=1` aggregate focus: 4/4 in GCC and Clang.
+- Physical Vulkan validation: 9/9. Serial LAN: 4/4 in each of GCC Debug,
+  GCC Release, Clang Debug, Clang Release, GCC sanitizer and Clang sanitizer.
