@@ -1971,6 +1971,12 @@ if(ZH_BUILD_TESTS)
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}")
   set_tests_properties(original_simulation_setup PROPERTIES
     LABELS "original-simulation;source-identity")
+  add_test(NAME original_map_override_parser_aggregate COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_map_override_parser_aggregate.py"
+    --executable "$<TARGET_FILE:zh_original_main>"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}")
+  set_tests_properties(original_map_override_parser_aggregate PROPERTIES
+    LABELS "original-simulation;source-identity;negative" TIMEOUT 360 RUN_SERIAL TRUE)
   add_test(NAME original_simulation_setup_identity COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_simulation/test_setup_identity.py"
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"

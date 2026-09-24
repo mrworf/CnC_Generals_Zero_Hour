@@ -21,6 +21,11 @@ AUDIT = re.compile(r"original retail terrain configuration: mask=(\d+)")
 REACHABILITY = re.compile(r"original retail terrain reachability: mask=(\d+) families=(\d+) owners=(\d+)")
 SETUP = "original retail cloud setup: scalar-transaction=1"
 RESET = "original retail water reset: complete=1"
+SCENE = "original retail Recording scene: stage=loaded owners=1"
+SCENE_STAGES = ("requested", "map", "constructed")
+SCENE_INIT = ("entered", "base", "configured")
+SCENE_LOGIC = ("entered", "defaults", "map-ini", "terrain", "map-loaded")
+SCENE_MAPINI = ("entered", "ini", "text", "display")
 
 
 def snapshot(root: Path):
@@ -37,6 +42,10 @@ def main() -> int:
     parser.add_argument("--generals-data-root", type=Path, required=True)
     parser.add_argument("--reachability", action="store_true",
                         help="also require the source-owned mask-30 consumer boundary")
+    parser.add_argument("--scene", action="store_true",
+                        help="continue the redacted consumer boundary through map loading")
+    parser.add_argument("--scene-once", action="store_true",
+                        help="run one scene generation for local redacted diagnosis")
     args = parser.parse_args()
     executable = args.executable.resolve()
     roots = (args.zh_data_root.resolve(), args.generals_data_root.resolve())
@@ -104,11 +113,11 @@ def main() -> int:
         if masks[0] != masks[1] or before != tuple(snapshot(root) for root in roots):
             raise SystemExit("M22 08A retail configuration audit changed input or diverged")
 
-        if args.reachability:
+        if args.reachability or args.scene:
             reached = []
             for mode, logical_map in (("mission", r"Maps\\MD_USA01\\MD_USA01.map"),
                                       ("skirmish", r"Maps\\BarrenBadlands\\BarrenBadlands.map")):
-                for generation in range(2):
+                for generation in range(1 if args.scene_once else 2):
                     state = base / f"route-{mode}-{generation}"
                     state.mkdir()
                     environment = os.environ.copy()
@@ -128,12 +137,56 @@ def main() -> int:
                         "XDG_DATA_HOME": str(state / "xdg/data"),
                         "XDG_STATE_HOME": str(state / "xdg/state"),
                     })
+                    if args.scene:
+                        environment["ZH_M22_RETAIL_SCENE_ROUTE"] = "1"
                     result = subprocess.run([str(executable)], cwd=state, env=environment, text=True,
                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
                     marker = REACHABILITY.search(result.stdout)
                     teardown = "original recording factory teardown: resources=0" in result.stdout
                     rollback = "original graphics rollback:" in result.stderr and "owners=0" in result.stderr
-                    if (result.returncode != 3 or not marker or marker.groups() != ("30", "4", "1") or SETUP not in result.stdout or RESET not in result.stderr or
+                    if args.scene:
+                        recording = RECORDING.search(result.stdout)
+                        stage_count = sum(
+                            f"original retail Recording scene: stage={stage}" in result.stderr
+                            for stage in SCENE_STAGES)
+                        init_count = sum(
+                            f"original retail Recording scene: init={stage}" in result.stderr
+                            for stage in SCENE_INIT)
+                        logic_count = sum(
+                            f"original retail Recording scene: logic={stage}" in result.stderr
+                            for stage in SCENE_LOGIC)
+                        mapini_count = sum(
+                            f"original retail Recording scene: mapini={stage}" in result.stderr
+                            for stage in SCENE_MAPINI)
+                        if (result.returncode or not marker or marker.groups() != ("30", "4", "1") or
+                                SETUP not in result.stdout or SCENE not in result.stdout or
+                                not recording or int(recording.group(1)) < 3 or
+                                int(recording.group(4)) < 1 or int(recording.group(5)) < 1 or
+                                not teardown):
+                            origins = ("linux_game_engine.cpp", "GameLogic.cpp", "INI.cpp",
+                                       "GameData.cpp", "W3DTerrainVisual.cpp", "W3DWater.cpp",
+                                       "W3DShadow.cpp")
+                            origin = next((index + 1 for index, value in enumerate(origins)
+                                           if value in result.stderr), 0)
+                            ub_kinds = ("member call on address", "member access within",
+                                        "null pointer", "invalid vptr", "misaligned address")
+                            ub_kind = next((index + 1 for index, value in enumerate(ub_kinds)
+                                            if value in result.stderr), 0)
+                            ub_site = re.search(r"([^/\\s:]+\\.(?:cpp|h)):\\d+:\\d+: runtime error:",
+                                                result.stderr)
+                            frames = ("INI::load", "INI::parse", "GameData::",
+                                      "W3DTerrainVisual::", "LinuxGameEngine::")
+                            frame = next((index + 1 for index, value in enumerate(frames)
+                                          if value in result.stderr), 0)
+                            raise SystemExit(
+                                "M22 08 retail scene Recording contract failed; private output redacted "
+                                f"status={result.returncode} reach={int(bool(marker))} "
+                                f"setup={int(SETUP in result.stdout)} scene={int(SCENE in result.stdout)} "
+                                f"init={init_count} logic={logic_count} mapini={mapini_count} stages={stage_count} record={int(bool(recording))} teardown={int(teardown)} "
+                                f"asan={int('AddressSanitizer' in result.stderr)} "
+                                f"ubsan={int('runtime error:' in result.stderr)} ubkind={ub_kind} "
+                                f"ubsite={ub_site.group(1) if ub_site else 'none'} origin={origin} frame={frame}")
+                    elif (result.returncode != 3 or not marker or marker.groups() != ("30", "4", "1") or SETUP not in result.stdout or RESET not in result.stderr or
                             not teardown or not rollback):
                         reason = "other"
                         for candidate in ("retail cloud owner foreign", "terrain-guard", "enabled-shadow", "volume", "water", "display"):
@@ -144,10 +197,25 @@ def main() -> int:
                                          f"status={result.returncode} marker={int(bool(marker))} "
                                          f"teardown={int(teardown)} rollback={int(rollback)} reason={reason}; private output redacted")
                     reached.append(marker.groups())
+                if args.scene_once:
+                    break
             if len(set(reached)) != 1 or before != tuple(snapshot(root) for root in roots):
                 raise SystemExit("M22 08B retail reachability changed input or diverged")
+            if args.scene:
+                invalid = run(str(executable), base / "scene-invalid-selector", source,
+                              env_overrides={"ZH_M22_RETAIL_SCENE_ROUTE": "1"})
+                if invalid.returncode != 3:
+                    raise SystemExit("M22 08 retail scene selector did not fail closed")
+                failure = run(str(executable), base / "scene-device-failure", source,
+                              env_overrides={**profile, "ZH_M22_RETAIL_CONFIG_ROUTE": "1",
+                                             "ZH_M22_RETAIL_CONFIG_RESET_PROFILE": "1",
+                                             "ZH_M22_RETAIL_SCENE_ROUTE": "1", "ZH_M22_FACTORY_FAIL_DEVICE": "1"})
+                if failure.returncode != 3 or "original graphics rollback:" not in failure.stderr or "owners=0" not in failure.stderr:
+                    raise SystemExit("M22 08 retail scene device rollback changed")
 
-    if args.reachability:
+    if args.scene:
+        print("M22 08 retail scene Recording: modes=2 generations=2 input=unchanged")
+    elif args.reachability:
         print("M22 08B retail Recording reachability: mask=30 families=4 modes=2 generations=2 input=unchanged")
     else:
         print("M22 08A recording factory and retail configuration audit: ok; private input unchanged")

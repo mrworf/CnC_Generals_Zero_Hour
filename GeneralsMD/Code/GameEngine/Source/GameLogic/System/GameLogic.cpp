@@ -1176,7 +1176,11 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	}  // end if
 
 	m_rankLevelLimit = 1000;	// this is reset every game.
+	if (std::getenv("ZH_M22_RETAIL_SCENE_ROUTE"))
+		std::fputs("original retail Recording scene: logic=entered\n", stderr);
 	setDefaults( loadingSaveGame );
+	if (std::getenv("ZH_M22_RETAIL_SCENE_ROUTE"))
+		std::fputs("original retail Recording scene: logic=defaults\n", stderr);
 	TheWritableGlobalData->m_loadScreenRender = TRUE;	///< mark it so only a few select things are rendered during load	
 	TheWritableGlobalData->m_TiVOFastMode = FALSE;	//always disable the TIVO fast-forward mode at the start of a new game.
 
@@ -1304,10 +1308,16 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	m_frame = 0;
 
 	// before loading the map, load the map.ini file in the same directory.
+	if (std::getenv("ZH_M22_RETAIL_SCENE_ROUTE"))
+		std::fputs("original retail Recording scene: logic=map-ini\n", stderr);
 	loadMapINI( TheGlobalData->m_mapName );
+	if (std::getenv("ZH_M22_RETAIL_SCENE_ROUTE"))
+		std::fputs("original retail Recording scene: logic=terrain\n", stderr);
 
 	// load a map
 	TheTerrainLogic->loadMap( TheGlobalData->m_mapName, false );
+	if (std::getenv("ZH_M22_RETAIL_SCENE_ROUTE"))
+		std::fputs("original retail Recording scene: logic=map-loaded\n", stderr);
 	// anytime the world's size changes, must reset the partition mgr
 	//ThePartitionManager->init();
 
@@ -2410,6 +2420,9 @@ static void findAndSelectCommandCenter(Object *obj, void* alreadyFound)
 // ------------------------------------------------------------------------------------------------
 void GameLogic::loadMapINI( AsciiString mapName )
 {
+	const Bool retailSceneRoute = std::getenv("ZH_M22_RETAIL_SCENE_ROUTE") != NULL;
+	if (retailSceneRoute)
+		std::fputs("original retail Recording scene: mapini=entered\n", stderr);
 
 	if (!TheMapCache) {
 		// Need the map cache to get the map and user map directories.
@@ -2451,6 +2464,8 @@ void GameLogic::loadMapINI( AsciiString mapName )
 		INI ini;
 		ini.load( AsciiString(fullFledgeFilename), INI_LOAD_CREATE_OVERRIDES, NULL );
 	}
+	if (retailSceneRoute)
+		std::fputs("original retail Recording scene: mapini=ini\n", stderr);
 
 	sprintf(fullFledgeFilename, "%s\\solo.ini", filename);
 	if (TheFileSystem->doesFileExist(fullFledgeFilename)) {
@@ -2467,6 +2482,8 @@ void GameLogic::loadMapINI( AsciiString mapName )
 	if (TheFileSystem->doesFileExist(fullFledgeFilename)) {
 		TheGameText->initMapStringFile(fullFledgeFilename);
 	}
+	if (retailSceneRoute)
+		std::fputs("original retail Recording scene: mapini=text\n", stderr);
 
 	// we want to do this before doing the actual map load!
 	if (TheDisplay)
@@ -2476,6 +2493,8 @@ void GameLogic::loadMapINI( AsciiString mapName )
 		// note: call this EVEN IF THE FILE IN QUESTION DOES NOT EXIST.
 		TheDisplay->doSmartAssetPurgeAndPreload(fullFledgeFilename);
 	}
+	if (retailSceneRoute)
+		std::fputs("original retail Recording scene: mapini=display\n", stderr);
 
 }
 
