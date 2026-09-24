@@ -6,8 +6,12 @@
 #include "Common/FileSystem.h"
 #include "Common/FunctionLexicon.h"
 #include "Common/GlobalData.h"
+#include "Common/GameState.h"
+#include "Common/INI.h"
 #include "Common/MessageStream.h"
+#include "Common/MultiplayerSettings.h"
 #include "Common/NameKeyGenerator.h"
+#include "Common/PlayerTemplate.h"
 #include "Common/PlayerList.h"
 #include "Common/Recorder.h"
 #include "Common/Radar.h"
@@ -32,6 +36,7 @@
 #include "GameClient/LoadScreen.h"
 #include "GameClient/Mouse.h"
 #include "GameClient/VideoPlayer.h"
+#include "GameClient/MapUtil.h"
 #include "GameLogic/Locomotor.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/RankInfo.h"
@@ -587,6 +592,38 @@ int main()
 		child("STATICTEXT", "SinglePlayerLoadScreen.wnd:StaticTextCameoText3", "STATICTEXT");
 		generated << "ENDALLCHILDREN\nEND\n";
 	}
+	{
+		std::ofstream generated(input / "Window/Menus/MultiplayerLoadScreen.wnd");
+		generated << "FILE_VERSION = 2\nSTARTLAYOUTBLOCK\nENDLAYOUTBLOCK\n"
+			"WINDOW\nWINDOWTYPE = USER;\n"
+			"SCREENRECT = UPPERLEFT: 0 0 BOTTOMRIGHT: 800 600 CREATIONRESOLUTION: 800 600;\n"
+			"NAME = \"MultiplayerLoadScreen.wnd:Parent\";\nSTATUS = ENABLED IMAGE;\nSTYLE = USER;\nCHILD\n";
+		auto child = [&](const char *type, const std::string &name, const char *style) {
+			generated << "WINDOW\nWINDOWTYPE = " << type << ";\n"
+				"SCREENRECT = UPPERLEFT: 10 10 BOTTOMRIGHT: 210 30 CREATIONRESOLUTION: 800 600;\n"
+				"NAME = \"" << name << "\";\nSTATUS = ENABLED IMAGE;\nSTYLE = " << style << ";\n";
+			if (std::string(type) == "STATICTEXT") generated << "STATICTEXTDATA = CENTERED:No;\n";
+			generated << "END\n";
+		};
+		child("USER", "MultiplayerLoadScreen.wnd:WinMapPreview", "USER");
+		child("USER", "MultiplayerLoadScreen.wnd:LocalGeneralPortrait", "USER");
+		child("STATICTEXT", "MultiplayerLoadScreen.wnd:LocalGeneralFeatures", "STATICTEXT");
+		child("STATICTEXT", "MultiplayerLoadScreen.wnd:LocalGeneralName", "STATICTEXT");
+		for (Int i = 0; i < MAX_SLOTS; ++i)
+		{
+			child("PROGRESSBAR", "MultiplayerLoadScreen.wnd:ProgressLoad" + std::to_string(i), "PROGRESSBAR");
+			child("PUSHBUTTON", "MultiplayerLoadScreen.wnd:ButtonMapStartPosition" + std::to_string(i), "PUSHBUTTON");
+			child("STATICTEXT", "MultiplayerLoadScreen.wnd:StaticTextPlayer" + std::to_string(i), "STATICTEXT");
+			child("STATICTEXT", "MultiplayerLoadScreen.wnd:StaticTextSide" + std::to_string(i), "STATICTEXT");
+			child("STATICTEXT", "MultiplayerLoadScreen.wnd:StaticTextTeam" + std::to_string(i), "STATICTEXT");
+		}
+		generated << "ENDALLCHILDREN\nEND\n";
+	}
+	std::filesystem::create_directories(input / "Maps");
+	{
+		std::ofstream preview(input / "Maps/Generated.tga", std::ios::binary);
+		preview << "generated-multiplayer-preview";
+	}
 	char diagnostic[128]{};
 	check(zh::original_process::initialize_services(0, diagnostic, sizeof(diagnostic)), diagnostic);
 	initMemoryManager();
@@ -612,6 +649,8 @@ int main()
 	nameKeys.init();
 	addGeneratedImage("MissionLoad_USA");
 	addGeneratedImage("LoadingBar_ProgressCenter2");
+	addGeneratedImage("LoadingBar_ProgressCenter0");
+	addGeneratedImage("SAFactionLogoLg_US");
 	FunctionLexicon functionLexicon;
 	TheFunctionLexicon = &functionLexicon;
 	functionLexicon.init();
@@ -879,6 +918,139 @@ int main()
 	}
 	check(TheCampaignManager == NULL && TheVideoPlayer == &videoPlayer && TheMappedImageCollection == &mappedImages,
 		"SinglePlayer owner re-entry retained or replaced a generated provider publication");
+	const std::filesystem::path multiplayerIni = input / "generated-multiplayer-loadscreen.ini";
+	{
+		std::ofstream generated(multiplayerIni);
+		generated << "PlayerTemplate FactionAmerica\n"
+			" Side = GeneratedAmerica\n"
+			" BaseSide = GeneratedAmerica\n"
+			" PlayableSide = Yes\n"
+			" PreferredColor = R:17 G:34 B:51\n"
+			" StartingBuilding = GeneratedBuilding\nEND\n"
+			"MultiplayerSettings\n ShowRandomPlayerTemplate = No\n ShowRandomStartPos = No\n ShowRandomColor = No\nEND\n"
+			"MultiplayerColor GeneratedColor\n TooltipName = GeneratedColor\n"
+			" RGBColor = R:17 G:34 B:51\n RGBNightColor = R:3 G:2 B:1\nEND\n"
+			"MapCache Maps\\Generated.map\n isOfficial = No\n isMultiplayer = Yes\n"
+			" extentMin = X:0 Y:0 Z:0\n extentMax = X:100 Y:200 Z:0\n numPlayers = 2\n"
+			" Player_1_Start = X:10 Y:20 Z:0\n Player_2_Start = X:30 Y:40 Z:0\nEND\n";
+	}
+	check(windowManager->winCreateFromScript("Menus/MissingMultiplayerLoadScreen.wnd") == NULL,
+		"missing generated multiplayer layout was accepted");
+	for (int generation = 0; generation != 2; ++generation)
+	{
+		check(TheGameInfo == NULL && ThePlayerTemplateStore == NULL && TheMultiplayerSettings == NULL &&
+			TheMapCache == NULL && TheGameState == NULL,
+			"stale generated multiplayer owner/provider survived a generation boundary");
+		PlayerTemplateStore templates;
+		templates.init();
+		ChallengeGenerals challenges;
+		MapCache mapCache;
+		GameState gameState;
+		GameInfo game;
+		GameSlot ownedSlots[MAX_SLOTS];
+		ImageCollection multiplayerImages;
+		auto addMultiplayerImage = [&](const char *name) {
+			Image *image = newInstance(Image);
+			check(image != NULL, "generated multiplayer mapped-image fixture did not allocate");
+			if (image) { image->setName(AsciiString(name)); multiplayerImages.addImage(image); }
+		};
+		ThePlayerTemplateStore = &templates;
+		TheChallengeGenerals = &challenges;
+		TheMapCache = &mapCache;
+		TheGameState = &gameState;
+		TheGameInfo = &game;
+		TheMappedImageCollection = &multiplayerImages;
+		addMultiplayerImage("LoadingBar_ProgressCenter0");
+		addMultiplayerImage("SAFactionLogoLg_US");
+		Bool loaded = TRUE;
+		try { INI ini; ini.load(AsciiString(multiplayerIni.string().c_str()), INI_LOAD_OVERWRITE, NULL); }
+		catch (...) { loaded = FALSE; }
+		check(loaded && TheMultiplayerSettings != NULL && templates.getPlayerTemplateCount() == 1 &&
+			mapCache.findMap("Maps\\Generated.map") != NULL,
+			"generated multiplayer source providers did not parse before owner construction");
+		game.init();
+		game.setLocalIP(0x7f000001);
+		game.enterGame();
+		GameSlot local;
+		local.setState(SLOT_PLAYER);
+		local.setIP(0x7f000001);
+		local.setPlayerTemplate(0);
+		local.setColor(0);
+		local.setStartPos(0);
+		local.setTeamNumber(0);
+		UnicodeString localName;
+		localName.translate(AsciiString("GeneratedLocal"));
+		local.setName(localName);
+		GameSlot ai;
+		ai.setState(SLOT_EASY_AI);
+		ai.setPlayerTemplate(0);
+		ai.setColor(0);
+		ai.setStartPos(1);
+		ai.setTeamNumber(1);
+		for (Int i = 0; i < MAX_SLOTS; ++i)
+		{
+			GameSlot closed;
+			closed.setState(SLOT_CLOSED);
+			game.setSlotPointer(i, &ownedSlots[i]);
+			game.setSlot(i, closed);
+		}
+		game.setSlot(0, local);
+		game.setSlot(1, ai);
+		game.setMap("Maps\\Generated.map");
+		check(game.getLocalSlotNum() == 0 && game.getSlot(0) && game.getSlot(1) && game.getSlot(1)->isAI(),
+			"generated multiplayer GameInfo did not publish its local/AI slots");
+		const Int windowsBeforeOwner = displayStrings.count();
+		{
+			MultiPlayerLoadScreen screen;
+			screen.init(&game);
+			GameWindow *rootWindow = windowManager->winGetWindowList();
+			GameWindow *localProgress = windowManager->winGetWindowFromId(rootWindow,
+				nameKeys.nameToKey(AsciiString("MultiplayerLoadScreen.wnd:ProgressLoad0")));
+			GameWindow *aiProgress = windowManager->winGetWindowFromId(rootWindow,
+				nameKeys.nameToKey(AsciiString("MultiplayerLoadScreen.wnd:ProgressLoad1")));
+			GameWindow *localNameWindow = windowManager->winGetWindowFromId(rootWindow,
+				nameKeys.nameToKey(AsciiString("MultiplayerLoadScreen.wnd:StaticTextPlayer0")));
+			GameWindow *previewWindow = windowManager->winGetWindowFromId(rootWindow,
+				nameKeys.nameToKey(AsciiString("MultiplayerLoadScreen.wnd:WinMapPreview")));
+			check(rootWindow && localProgress && aiProgress && localNameWindow && previewWindow,
+				"original multiplayer owner did not retain its generated source nodes");
+			check(localProgress && localProgress->winGetEnabledImage(6) == multiplayerImages.findImageByName("LoadingBar_ProgressCenter0"),
+				"original multiplayer owner did not bind the generated house progress image");
+			check(localNameWindow && GadgetStaticTextGetText(localNameWindow) == localName,
+				"original multiplayer owner did not publish the generated local player name");
+			check(aiProgress && aiProgress->winIsHidden(),
+				"original multiplayer owner did not hide the generated AI progress bar");
+			check(previewWindow && previewWindow->winGetEnabledImage(0) == multiplayerImages.findImageByName("maps_maps_generated"),
+				"original multiplayer owner did not bind the generated map preview");
+			screen.update(37);
+			check(mouse.tooltipEmpty(),
+				"original multiplayer offline-null update did not clear the source mouse tooltip");
+			screen.processProgress(1, 63);
+			check(aiProgress->winGetUserData() == reinterpret_cast<void *>(63),
+				"original multiplayer mapped AI progress did not reach its source progress bar");
+			GameWindow *foreignProgress = windowManager->winGetWindowFromId(rootWindow,
+				nameKeys.nameToKey(AsciiString("MultiplayerLoadScreen.wnd:ProgressLoad2")));
+			check(foreignProgress && foreignProgress->winIsHidden() && foreignProgress->winGetUserData() == NULL,
+				"unoccupied generated multiplayer slot did not remain inactive");
+			screen.reset();
+			windowManager->winDestroy(rootWindow);
+		}
+		windowManager->drainDestroyedWindows();
+		check(windowManager->winGetWindowList() == NULL && displayStrings.count() == windowsBeforeOwner &&
+			multiplayerImages.findImageByName("maps_maps_generated") != NULL && audio.deviceOpens == 0,
+			"original multiplayer owner reset/destructor did not release UI ownership or retained a physical device");
+		delete TheMultiplayerSettings;
+		TheMultiplayerSettings = NULL;
+		TheGameInfo = NULL;
+		TheGameState = NULL;
+		TheMapCache = NULL;
+		TheChallengeGenerals = NULL;
+		ThePlayerTemplateStore = NULL;
+		TheMappedImageCollection = &mappedImages;
+	}
+	check(TheGameInfo == NULL && ThePlayerTemplateStore == NULL && TheMultiplayerSettings == NULL &&
+		TheMapCache == NULL && TheGameState == NULL,
+		"generated multiplayer owner left a stale singleton after two generations");
 	TheMouse = NULL;
 
 	for (int generation = 0; generation != 2; ++generation)
@@ -1030,6 +1202,8 @@ int main()
 		"process services retained live ownership");
 	std::filesystem::remove_all(root);
 	std::printf("M20 original headless update: %s frames=2 ticks=2 network=offline-null devices=0\n",
+		failures ? "failed" : "ok");
+	std::printf("M22 original multiplayer loadscreen: %s generations=2 windows=0 display_strings=0 pixels=0\n",
 		failures ? "failed" : "ok");
 	return failures ? 1 : 0;
 }

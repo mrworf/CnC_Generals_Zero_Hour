@@ -1777,6 +1777,10 @@ if(ZH_BUILD_TESTS)
     --video "$<TARGET_FILE:original_video_stream_buffer_tests>"
     --owner "$<TARGET_FILE:original_headless_update_tests>")
   set_tests_properties(original_singleplayer_loadscreen_aggregate PROPERTIES LABELS "original-headless-update;source-identity;negative")
+  add_test(NAME original_multiplayer_loadscreen COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_multiplayer_loadscreen_owner.py"
+    --owner "$<TARGET_FILE:original_headless_update_tests>")
+  set_tests_properties(original_multiplayer_loadscreen PROPERTIES LABELS "original-multiplayer;source-identity;negative")
   add_test(NAME original_headless_update_identity COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_headless_identity.py"
     --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
@@ -1786,6 +1790,15 @@ if(ZH_BUILD_TESTS)
     --spine-target zh_original_lifecycle_spine
     --extra-provider "LoadScreen.cpp=SinglePlayerLoadScreen::init(GameInfo*)")
   set_tests_properties(original_headless_update_identity PROPERTIES LABELS "original-headless-update;source-identity")
+  add_test(NAME original_multiplayer_loadscreen_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_m20_headless_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-headless-update.link.map"
+    --executable "$<TARGET_FILE:original_headless_update_tests>"
+    --provider-target zh_original_config_providers
+    --spine-target zh_original_lifecycle_spine
+    --extra-provider "LoadScreen.cpp=MultiPlayerLoadScreen::init(GameInfo*)")
+  set_tests_properties(original_multiplayer_loadscreen_identity PROPERTIES LABELS "original-multiplayer;source-identity")
   add_test(NAME original_headless_update_provider_removal COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
     --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
@@ -1831,6 +1844,15 @@ if(ZH_BUILD_TESTS)
     --member LoadScreen.cpp.o
     --required-symbol "SinglePlayerLoadScreen::init(GameInfo*)")
   set_tests_properties(original_singleplayer_loadscreen_provider_removal PROPERTIES LABELS "original-headless-update;source-identity;negative")
+  add_test(NAME original_multiplayer_loadscreen_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target original_headless_update_tests
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-headless-update.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member LoadScreen.cpp.o
+    --required-symbol "MultiPlayerLoadScreen::init(GameInfo*)")
+  set_tests_properties(original_multiplayer_loadscreen_provider_removal PROPERTIES LABELS "original-multiplayer;source-identity;negative")
   add_test(NAME original_production_entry COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_production_entry.py"
     --executable "$<TARGET_FILE:zh_original_main>")
