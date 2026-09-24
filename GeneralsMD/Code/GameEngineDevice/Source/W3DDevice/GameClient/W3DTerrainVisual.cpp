@@ -253,6 +253,7 @@ Bool W3DTerrainVisual::load(AsciiString filename)
 	}
 
 	WorldHeightMap *loaded_map = NULL;
+	Bool constructionWaterAttached = FALSE;
 	try {
 		ChunkInputStream *stream = &file_stream;
 		loaded_map = NEW_REF(WorldHeightMap, (stream, FALSE));
@@ -263,11 +264,24 @@ Bool W3DTerrainVisual::load(AsciiString filename)
 		// source buffers only after the map has published its authored texture.
 		TheTerrainTracksRenderObjClassSystem->ReAcquireResources();
 		W3DDisplay::m_3DScene->Add_Render_Object(m_terrainRenderObject);
+		if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE")) {
+			if (!m_waterRenderObject || m_waterRenderObject != TheWaterRenderObj ||
+				m_waterRenderObject->Peek_Scene() || m_waterRenderObject->hasPendingGpuResources())
+				throw OriginalW3DDeviceUnavailable("original construction water owner unavailable");
+			W3DDisplay::m_3DScene->Add_Render_Object(m_waterRenderObject);
+			constructionWaterAttached = TRUE;
+			m_waterRenderObject->enableWaterGrid(FALSE);
+			m_isWaterGridRenderingEnabled = FALSE;
+			m_waterRenderObject->updateMapOverrides();
+		}
 		m_logicHeightMap = loaded_map;
 		loaded_map = NULL; // transfer the constructor reference to the visual owner
 		return TRUE;
 	} catch (...) {
 		file_stream.close();
+		if (constructionWaterAttached && m_waterRenderObject &&
+			m_waterRenderObject->Peek_Scene() == W3DDisplay::m_3DScene)
+			W3DDisplay::m_3DScene->Remove_Render_Object(m_waterRenderObject);
 		if (m_terrainRenderObject->Peek_Scene() == W3DDisplay::m_3DScene)
 			W3DDisplay::m_3DScene->Remove_Render_Object(m_terrainRenderObject);
 		m_terrainRenderObject->freeMapResources();
@@ -354,7 +368,12 @@ void W3DTerrainVisual::removeAllBibs()
 		// The bounded factory map has no bib producer.  Reset may therefore pass
 		// through this native cleanup hook only for that explicit, known-empty
 		// owner; all bib creation/removal APIs above remain fail-closed.
-		if (!std::getenv("ZH_M22_FACTORY_MAP"))
+		const Bool generatedConstruction =
+			std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE") &&
+			std::getenv("ZH_M22_GENERATED_SCENE_ROUTE") &&
+			std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") &&
+			std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE");
+		if (!std::getenv("ZH_M22_FACTORY_MAP") && !generatedConstruction)
 			throw OriginalW3DDeviceUnavailable("original map-loaded terrain bib cleanup pending");
 		return;
 	}

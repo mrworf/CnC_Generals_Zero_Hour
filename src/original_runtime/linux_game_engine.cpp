@@ -736,6 +736,8 @@ public:
 	void init(int argc, char *argv[]) override
 	{
 		const bool generatedScene = std::getenv("ZH_M22_GENERATED_SCENE_ROUTE") != NULL;
+		const bool generatedConstruction =
+			std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE") != NULL;
 		const bool configuredReset = std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") &&
 			std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE");
 		if (generatedScene && (!configuredReset || !m_boundedProfile || !m_scenarioProfile ||
@@ -743,6 +745,8 @@ public:
 			!std::getenv("ZH_M22_RECORDING_FACTORY_PROFILE") ||
 			std::getenv("ZH_M22_DRAW_PROFILE")))
 			throw std::runtime_error("original generated scene selector requires bounded Recording reset owners");
+		if (generatedConstruction && !generatedScene)
+			throw std::runtime_error("original construction selector requires generated scene route");
 		GameEngine::init(argc, argv);
 		if (configuredReset && !generatedScene)
 			throw std::runtime_error("original active-water reset next boundary pending");

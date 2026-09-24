@@ -1312,7 +1312,8 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	if (std::getenv("ZH_M22_RETAIL_SCENE_ROUTE"))
 		std::fputs("original retail Recording scene: logic=map-ini\n", stderr);
 	loadMapINI( TheGlobalData->m_mapName );
-	if (std::getenv("ZH_M22_GENERATED_SCENE_ROUTE")) {
+	if (std::getenv("ZH_M22_GENERATED_SCENE_ROUTE") &&
+		!std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE")) {
 		std::fputs("original generated scene boundary: mapini=complete terrain=not-loaded\n", stderr);
 		throw std::runtime_error("original generated scene terrain boundary pending");
 	}
@@ -1321,6 +1322,8 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 
 	// load a map
 	TheTerrainLogic->loadMap( TheGlobalData->m_mapName, false );
+	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+		std::fputs("original generated construction: stage=terrain\n", stderr);
 	if (std::getenv("ZH_M22_RETAIL_SCENE_ROUTE"))
 		std::fputs("original retail Recording scene: logic=map-loaded\n", stderr);
 	// anytime the world's size changes, must reset the partition mgr
@@ -1654,6 +1657,8 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 
 	// set the radar as on a new map
 	TheRadar->newMap( TheTerrainLogic );
+	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+		std::fputs("original generated construction: stage=radar\n", stderr);
 	TheInGameUI->setClientQuiet( FALSE ); // okay to start beeping and stuff
 
 	// Tell the multiplayer victory condition singleton that the players are created
@@ -1673,6 +1678,8 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	// anytime the world's size changes, must reset the partition mgr
 	ThePartitionManager->init();
 	ThePartitionManager->refreshShroudForLocalPlayer();// Can't do this until after init, and doesn't seem right to do in init
+	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+		std::fputs("original generated construction: stage=shroud\n", stderr);
 
 	TheGhostObjectManager->setLocalPlayerIndex(ThePlayerList->getLocalPlayer()->getPlayerIndex());
 	TheGhostObjectManager->reset();
@@ -1682,6 +1689,8 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 
 	// update the terrain logic now that all is loaded
 	TheTerrainLogic->newMap( loadingSaveGame );
+	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+		std::fputs("original generated construction: stage=terrain-logic\n", stderr);
 
 	// update the loadscreen 
 	updateLoadProgress(LOAD_PROGRESS_POST_TERRAIN_LOGIC_NEW_MAP);
@@ -1747,16 +1756,22 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 
 	// refresh the radar to reflect loaded bridges
 	TheRadar->refreshTerrain( TheTerrainLogic );
+	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+		std::fputs("original generated construction: stage=radar-terrain\n", stderr);
 
 	// tell the AI about it
 	// Note that it is important that the pathfinder be called before the map objects are loaded.
 	TheAI->pathfinder()->newMap( );
+	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+		std::fputs("original generated construction: stage=pathfinder\n", stderr);
 
 	// update the loadscreen 
 	updateLoadProgress(LOAD_PROGRESS_POST_PATHFINDER_NEW_MAP);
 
 	// reveal the map for the permanent observer
 	ThePartitionManager->revealMapForPlayerPermanently( ThePlayerList->findPlayerWithNameKey(TheNameKeyGenerator->nameToKey("ReplayObserver"))->getPlayerIndex() );
+	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+		std::fputs("original generated construction: stage=observer\n", stderr);
 	DEBUG_LOG(("Reveal shroud for %ls whose index is %d\n", ThePlayerList->findPlayerWithNameKey(TheNameKeyGenerator->nameToKey("ReplayObserver"))->getPlayerDisplayName().str(),ThePlayerList->findPlayerWithNameKey(TheNameKeyGenerator->nameToKey("ReplayObserver"))->getPlayerIndex()));
 	
 	if (game)
@@ -1956,6 +1971,10 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		}	// for, loading map objects
 
 	}  // end if, not loading save game
+	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE")) {
+		std::fputs("original generated construction: stage=objects\n", stderr);
+		throw std::runtime_error("original generated construction boundary complete");
+	}
 
 	#ifdef DUMP_PERF_STATS
 	GetPrecisionTimer(&endTime64);

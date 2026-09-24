@@ -2911,6 +2911,12 @@ if(ZH_BUILD_TESTS)
     --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
   set_tests_properties(original_w3d_generated_scene_boundary PROPERTIES
     LABELS "original-rendering;source-identity;negative" TIMEOUT 120 RUN_SERIAL TRUE)
+  add_test(NAME original_w3d_generated_construction COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_generated_construction.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
+  set_tests_properties(original_w3d_generated_construction PROPERTIES
+    LABELS "original-rendering;source-identity;negative" TIMEOUT 180 RUN_SERIAL TRUE)
   add_test(NAME original_w3d_material_abi_isolation COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_abi_isolation.py"
     --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"

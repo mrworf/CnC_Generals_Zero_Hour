@@ -113,6 +113,28 @@ negative controls leave an active modeled prop fail-closed. Resume this 08F
 plan at the separate construction selector and source-ordered water/object
 route; do not treat 08F5's direct-method acceptance as construction success.
 
+## Implementation choice before final validation
+
+The separate `ZH_M22_GENERATED_CONSTRUCTION_ROUTE` selector is accepted only
+when the 08F0 generated-scene selector and its bounded Recording/config/reset
+owners are also selected. The 08F0 parser stop remains unchanged when the new
+selector is absent. Under that conjunction, source terrain loading publishes
+the terrain first, reattaches the accepted water owner, disables its grid and
+applies the accepted map override before publishing the visual map. Failure
+removes both scene links and releases the uncommitted map. The selector also
+admits only the known-empty map-owned bib cleanup; every bib creation method
+remains fail-closed.
+
+The generated fixture extends its authored logical map with a flat visual
+blend tile, generated texture and an explicit 7x7 playable boundary for the
+8x8 vertex grid. Its non-edge 12-unit partition size preserves the accepted
+6x6 shroud/partition match. A dedicated test requires fixed source stages in
+order through terrain, radar, shroud, terrain logic, radar terrain refresh,
+pathfinder, permanent observer and the authored object loop. It covers mission
+and skirmish twice, absent and standalone selectors, required texture-provider
+removal, retry, read-only input and zero-owner/resource rollback. It never
+opens retail input.
+
 ## Validation
 
 Positive: both runtime-only consumer selections and two fresh generations
@@ -127,3 +149,13 @@ serial LAN gates as applicable before the slice commit.
 ## Commit boundary
 
 One independent commit: `delivery: M22 08F close redacted scenario construction`.
+
+## Result
+
+Complete. The conjunctive generated construction route preserves the accepted
+08F0 stop when absent and reaches the deliberate post-object boundary in both
+mission and skirmish modes. It restores native terrain/water ordering, bounded
+empty-bib cleanup and the accepted radar/shroud/terrain/pathfinder/observer/
+no-model-prop owners with rollback to zero ownership. The
+[08F evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08f.md)
+records final-state acceptance. Retail Recording admission remains slice 08.

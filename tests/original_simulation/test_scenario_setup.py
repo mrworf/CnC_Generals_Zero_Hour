@@ -42,7 +42,8 @@ def chunk(chunk_id: int, version: int, payload: bytes) -> bytes:
     return struct.pack("<IHI", chunk_id, version, len(payload)) + payload
 
 
-def owned_map(actor_x: float = 20.0, skirmish: bool = False) -> bytes:
+def owned_map(actor_x: float = 20.0, skirmish: bool = False,
+              visual: bool = False) -> bytes:
     names = [
         "HeightMapData", "WorldInfo", "ObjectsList", "Object", "SidesList",
         "PlayerScriptsList", "ScriptList", "originalOwner", "playerName",
@@ -51,13 +52,16 @@ def owned_map(actor_x: float = 20.0, skirmish: bool = False) -> bytes:
     ]
     if skirmish:
         names.extend(("waypointID", "waypointName"))
+    if visual:
+        names.append("BlendTileData")
     ids = {name: index + 1 for index, name in enumerate(names)}
     toc = bytearray(b"CkMp" + struct.pack("<I", len(names)))
     for name, value in ids.items():
         encoded = name.encode("ascii")
         toc.extend(struct.pack("<B", len(encoded)) + encoded + struct.pack("<I", value))
 
-    height = struct.pack("<7i", 8, 8, 0, 1, 8, 8, 64) + bytes(range(64))
+    boundary = 7 if visual else 8
+    height = struct.pack("<7i", 8, 8, 0, 1, boundary, boundary, 64) + bytes(range(64))
     owners = {
         "LogicFixture": "teamplayerA",
         "EnemyFixture": "teamplayerB",
@@ -103,6 +107,13 @@ def owned_map(actor_x: float = 20.0, skirmish: bool = False) -> bytes:
     toc.extend(chunk(ids["WorldInfo"], 1, dictionary([])))
     toc.extend(chunk(ids["ObjectsList"], 3, bytes(objects)))
     toc.extend(chunk(ids["SidesList"], 2, bytes(sides)))
+    if visual:
+        arrays = [bytearray(128) for _ in range(4)]
+        blend = bytearray(struct.pack("<i", 64))
+        blend.extend(b"".join(arrays) + bytearray(8) + struct.pack("<4i", 1, 1, 1, 1))
+        blend.extend(struct.pack("<4i", 0, 1, 1, 0) + ascii_string("Flat"))
+        blend.extend(struct.pack("<2i", 0, 0))
+        toc.extend(chunk(ids["BlendTileData"], 8, bytes(blend)))
     return bytes(toc)
 
 
