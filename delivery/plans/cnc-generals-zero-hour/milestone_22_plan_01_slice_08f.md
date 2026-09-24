@@ -47,14 +47,26 @@ accepted. The next native source chain in `W3DTerrainVisual::load` attaches
 the water object to the primary scene, calls `enableWaterGrid(FALSE)`, then
 calls `updateMapOverrides`. Accepted 08D reset leaves water detached, so 08F
 owns exact reattachment before the disabled setter, with failure rollback.
-The CPU water owner does not yet define `updateMapOverrides`; the independent
-[08F3](milestone_22_plan_01_slice_08f3.md) prerequisite closes only that
-owner method before 08F resumes. Neither prerequisite admits the 08F
-construction selector. The probe edits were removed at discovery checkpoints.
+The independent [08F3](milestone_22_plan_01_slice_08f3.md) prerequisite now
+closes `updateMapOverrides`; 08F must retain native terrain → water attach →
+disable grid → map override order. If any of those calls rejects, remove both
+new scene attachments, release the uncommitted loaded map and terrain
+resources, and leave no published visual map. The generated fixture combines
+the existing authored logical map with a flat visual blend tile, a generated
+terrain texture, and a positive partition cell size; those are fixture inputs,
+not production defaults. Neither prerequisite admitted the 08F construction
+selector. The earlier probe edits were removed at discovery checkpoints.
 The map-loaded `removeAllBibs` cleanup is a separate, selector-scoped 08F
 handoff: the generated fixture has no bib producer and every creation API is
 still fail-closed, so empty-list cleanup can be admitted with exact owner
 checks without implementing an active bib owner or skipping a populated list.
+The post-08F3 generated-only trial reached fixed terrain-loaded and
+radar-complete stages, then found a separate display shroud-refresh owner
+boundary. [08F4](milestone_22_plan_01_slice_08f4.md) closes the source
+`PartitionManager::refreshShroudForLocalPlayer` display/terrain handoff before
+08F resumes. Its child plans separate the terrain notification dependency
+from display clear/per-cell dispatch. All trial production/test edits were
+removed; neither 08F4 child admits the construction selector.
 
 ## Validation
 
