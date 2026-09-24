@@ -31,6 +31,8 @@ unsigned before(const std::string &trace, const char *needle, std::size_t end) {
 bool near(Real left, Real right) { return std::fabs(left-right)<0.0001f; }
 class ScalarProbeWater final : public WaterRenderObjClass {
 public:
+	void forceRiverTexture(bool present) { m_riverTexture = present ? reinterpret_cast<TextureClass *>(this) : NULL; }
+	void forceWaterGrid(Bool enabled) { m_doWaterGrid = enabled; }
 	bool scalar_state_is(Real low, Real high, Real a, Real b, Real c, Real range) const {
 		return near(m_minGridHeight,low) && near(m_maxGridHeight,high) &&
 			near(m_gridChangeAtt0,a) && near(m_gridChangeAtt1,b) && near(m_gridChangeAtt2,c) &&
@@ -61,6 +63,9 @@ extern "C" void zh_probe_terrain_water()
 	TheWritableGlobalData->m_waterExtentX=32; TheWritableGlobalData->m_waterExtentY=24;
 	TheWritableGlobalData->m_waterType=WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT;
 	zh::renderer::RecordingGpuDevice device;
+	ScalarProbeWater preinit_override;
+	require(rejected([&]{preinit_override.updateMapOverrides();}),
+		"original pre-init water override accepted");
 	for (Int generation=0; generation!=3; ++generation) {
 		const Bool cloud = generation != 0;
 		TheWritableGlobalData->m_useCloudPlane=cloud;
@@ -101,6 +106,18 @@ extern "C" void zh_probe_terrain_water()
 				auto *water=TheWaterRenderObj; auto *tracks=TheTerrainTracksRenderObjClassSystem;
 				require(water && tracks && static_cast<void *>(water->Peek_Scene())==static_cast<void *>(W3DDisplay::m_3DScene),
 					"original water primary-scene membership failed");
+				const std::string override_start=device.snapshot();
+				water->updateMapOverrides(); water->updateMapOverrides();
+				require(device.snapshot()==override_start,
+					"original absent river override acquired a resource");
+				WaterRenderObjClass *override_owner=TheWaterRenderObj; TheWaterRenderObj=NULL;
+				require(rejected([&]{water->updateMapOverrides();}),
+					"original water override accepted removed provider");
+				TheWaterRenderObj=override_owner;
+				W3DDisplay::m_3DScene->Remove_Render_Object(water);
+				require(rejected([&]{water->updateMapOverrides();}),
+					"original water override accepted detached owner");
+				W3DDisplay::m_3DScene->Add_Render_Object(water);
 				const std::string allocation=device.snapshot();
 				require(allocation.find("size=12 usage=1 dynamic=true")!=std::string::npos &&
 					allocation.find("size=96 usage=0 dynamic=true")!=std::string::npos,
@@ -108,9 +125,12 @@ extern "C" void zh_probe_terrain_water()
 				water->ReleaseResources(); device.fail_next_buffer_create();
 				require(rejected([&]{water->ReAcquireResources();}) && water->hasPendingGpuResources(),
 					"original water create rollback was not pending");
+				require(rejected([&]{water->updateMapOverrides();}),
+					"original water override accepted pending resources");
 				require(rejected([&]{visual.getWaterGridHeight(0,0,&grid_height);}),
 					"original pending water provider accepted");
 				water->ReAcquireResources(); require(!water->hasPendingGpuResources(), "original water create retry failed");
+				water->updateMapOverrides();
 				require(!visual.getWaterGridHeight(0,0,&grid_height) && grid_height==31337,
 					"original water grid query did not recover after provider retry");
 				view=new W3DView; TheTacticalView=view; view->init(); display.attachView(view);
@@ -158,6 +178,42 @@ extern "C" void zh_probe_terrain_water()
 			TheTacticalView=saved_view; TheTerrainVisual=saved_visual; TheDisplay=saved_display;
 		}
 		edge.release_source_buffers();
+	}
+	TheWritableGlobalData->m_useCloudPlane=FALSE;
+	for (Int generation=0; generation!=2; ++generation) {
+		zh::original_runtime::OriginalGpuEdge edge(device); W3DDisplay display; display.init();
+		auto *water=NEW_REF(ScalarProbeWater, ());
+		require(water->init(0,32,24,W3DDisplay::m_3DScene,
+			WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT)==0,
+			"original generated override owner initialization failed");
+		W3DDisplay::m_3DScene->Add_Render_Object(water);
+		const std::string before_override=device.snapshot();
+		water->updateMapOverrides(); water->updateMapOverrides();
+		require(device.snapshot()==before_override,
+			"original generated override changed Recording resources");
+		water->forceRiverTexture(true);
+		require(rejected([&]{water->updateMapOverrides();}),
+			"original active river override was silently skipped");
+		water->forceRiverTexture(false); water->forceWaterGrid(TRUE);
+		require(rejected([&]{water->updateMapOverrides();}),
+			"original enabled grid override was silently skipped");
+		water->forceWaterGrid(FALSE);
+		ScalarProbeWater foreign_override;
+		require(rejected([&]{foreign_override.updateMapOverrides();}),
+			"original foreign water override was accepted");
+		TheWritableGlobalData->m_useWaterPlane=FALSE;
+		require(rejected([&]{water->updateMapOverrides();}),
+			"original disabled water override was accepted");
+		TheWritableGlobalData->m_useWaterPlane=TRUE;
+		TheWritableGlobalData->m_waterExtentX=0;
+		require(rejected([&]{water->updateMapOverrides();}),
+			"original malformed water override was accepted");
+		TheWritableGlobalData->m_waterExtentX=32;
+		water->updateMapOverrides();
+		W3DDisplay::m_3DScene->Remove_Render_Object(water); water->Release_Ref();
+		edge.release_source_buffers();
+		require(!TheWaterRenderObj && device.resource_counts().total()==0,
+			"original generated override retained water or Recording resources");
 	}
 	// Retail reaches a real translucent water plane, not the generated fixed
 	// cloud-only control below.  Source GameClient reset detaches display objects
@@ -235,5 +291,5 @@ extern "C" void zh_probe_terrain_water()
 	TheWritableGlobalData->m_partitionCellSize=saved_partition; TheWritableGlobalData->m_maxTerrainTracks=saved_tracks; TheWritableGlobalData->m_makeTrackMarks=saved_marks;
 	TheWritableGlobalData->m_useWaterPlane=saved_water; TheWritableGlobalData->m_useCloudPlane=saved_cloud; TheWritableGlobalData->m_waterExtentX=saved_x; TheWritableGlobalData->m_waterExtentY=saved_y; TheWritableGlobalData->m_waterType=saved_type;
 	require(device.resource_counts().total()==0,"original water teardown retained Recording resources");
-	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 scalar-transaction=1 active-reset=1 ordering=1 retry=2 tracks=1 siblings=0 grid-query=1 generations=7 resources=0");
+	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 scalar-transaction=1 active-reset=1 ordering=1 retry=2 tracks=1 siblings=0 grid-query=1 override=1 generations=9 resources=0");
 }

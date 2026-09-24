@@ -250,6 +250,22 @@ void WaterRenderObjClass::enableWaterGrid(Bool state)
 	requireEmptyWaterOwner(this);
 	if (state) throw OriginalW3DDeviceUnavailable("original water grid pending");
 }
+void WaterRenderObjClass::updateMapOverrides(void)
+{
+	// The native override only updates an already-owned river texture. The
+	// bounded CPU plane has no river texture, so its optional branch is empty.
+	requireBoundedWaterOwner(this);
+	if (!TheGlobalData || !TheGlobalData->m_useWaterPlane ||
+		m_parentScene != W3DDisplay::m_3DScene || s_emptyWaterOwner != this ||
+		m_cpuResourcesPending || !m_cpuVertexBuffer || !m_indexBuffer ||
+		m_doWaterGrid || m_riverTexture ||
+		m_waterType != WATER_TYPE_0_TRANSLUCENT ||
+		TheGlobalData->m_waterType != m_waterType ||
+		TheGlobalData->m_useCloudPlane != m_useCloudLayer ||
+		TheGlobalData->m_waterExtentX != m_dx ||
+		TheGlobalData->m_waterExtentY != m_dy || m_dx <= 0 || m_dy <= 0)
+		throw OriginalW3DDeviceUnavailable("original water map override pending");
+}
 void WaterRenderObjClass::setGridHeightClamps(Real minz, Real maxz)
 {
 	if (isRetailCloudOwner(this)) {

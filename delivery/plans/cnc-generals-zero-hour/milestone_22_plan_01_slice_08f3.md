@@ -20,6 +20,13 @@ pending resources, and any non-null river-texture state rather than silently
 skipping an active override. Preserve native optional behavior when the river
 texture is absent: do not open a texture provider or mutate water settings.
 Repeated calls and two fresh generations retain zero extra aliases/resources.
+The CPU method must verify the original active-water alias, primary-scene
+membership and parent, ready source buffers, disabled grid, matched published
+water configuration, and absent river texture before returning. It must not
+read `TheWaterTransparency` or acquire an asset when the optional texture is
+absent. A generated terrain-water source probe calls it on a map-loaded owner;
+a separate controlled generated owner exercises non-null river/grid corruption
+without changing the source visual's ownership model.
 
 Do not reattach water in `W3DTerrainVisual::load`, admit the 08F construction
 selector, render a frame, implement active river textures, traverse a retail
@@ -41,3 +48,15 @@ six, dependency-ledger and `git diff --check` after production changes.
 
 Requires accepted 08F2. One independent production/test/evidence commit for
 08F3; this discovery plan alone does not accept the owner or 08F.
+
+## Result
+
+Complete. The CPU method accepts only an exact published, attached,
+resource-ready, disabled-grid active-water owner with matching configuration
+and no river texture; the native optional branch therefore changes no assets
+or settings. Generated map-loaded and controlled-owner probes cover repeat,
+provider removal, detachment, pending acquisition/retry, malformed river,
+grid and water state, foreign/pre-init calls, two fresh generations, and zero
+Recording resources at teardown. No 08F water reattachment or construction
+selector was admitted. Full acceptance is recorded in
+[08F3 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08f3.md).
