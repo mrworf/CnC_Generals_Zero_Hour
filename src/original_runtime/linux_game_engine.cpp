@@ -766,6 +766,8 @@ public:
 	}
 	void update() override
 	{
+		const Bool scenarioStartThisUpdate = m_scenarioProfile && !m_scenarioStarted &&
+			std::getenv("ZH_M22_DRAW_PROFILE") != NULL;
 		if (m_scenarioProfile && !m_scenarioStarted)
 		{
 			m_scenarioStarted = TRUE;
@@ -840,8 +842,13 @@ public:
 			}
 			TheGameLogic->startNewGame(FALSE);
 			// The original start path is intentionally two-phase: the first call
-			// requests/loads the map and the second finishes scenario construction.
-			TheGameLogic->startNewGame(FALSE);
+			// requests a new game.  The explicit M22 draw fixture observes the
+			// native update-owned phase; older M21/M24 scenario fixtures retain
+			// their established direct two-phase transaction.
+			if (scenarioStartThisUpdate)
+				GameEngine::update();
+			else
+				TheGameLogic->startNewGame(FALSE);
 #if defined(ZH_M22_FULL_DRAW_TEST)
 			if (std::getenv("ZH_M22_DRAW_PROFILE"))
 			{
@@ -1380,7 +1387,8 @@ public:
 			g_lifecycleReport.firstLogicBefore = TheGameLogic->getFrame();
 			g_lifecycleReport.firstClientBefore = TheGameClient->getFrame();
 		}
-		GameEngine::update();
+		if (!scenarioStartThisUpdate)
+			GameEngine::update();
 	#if defined(ZH_M22_FULL_DRAW_TEST)
 		if (std::getenv("ZH_M22_FACTORY_MAP") && TheHeightMap && TheHeightMap->getMap())
 			++g_originalFactoryMapFrameCount;

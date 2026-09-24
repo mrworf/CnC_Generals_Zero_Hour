@@ -112,7 +112,7 @@ def main() -> int:
             os.environ["ZH_M22_RETAIL_MODEL"] = "ABBarracks_AC"
         os.environ["ZH_M22_DRAW_PROFILE"] = "1"
         result = run(args.executable.resolve(), base, source, "mission")
-        if result.returncode or "original scenario setup:" not in result.stdout or "original full draw: drawables=4 hlods=10 animations=1 supply-transitions=2 logic-bones=1 client-before-logic-bones=0 dependency-blocks=2 dependency-releases=2 tread-scrolls=2 wheel-controls=3 rider-dependencies=3" not in result.stdout:
+        if result.returncode or "original scenario setup:" not in result.stdout or "original full draw: drawables=4 hlods=10 animations=1 supply-transitions=2 logic-bones=1 client-before-logic-bones=1 dependency-blocks=2 dependency-releases=2 tread-scrolls=2 wheel-controls=3 rider-dependencies=3" not in result.stdout:
             raise SystemExit(f"full original GameClient draw failed ({result.returncode}):\n"
                              f"{result.stdout}{result.stderr}")
         observed = [line for line in result.stdout.splitlines()
@@ -123,6 +123,10 @@ def main() -> int:
                 for draw_type in draw_types):
             raise SystemExit(f"original GameClient omitted concrete full draw identity:\n"
                              f"{result.stdout}{result.stderr}")
+        repeat = run(args.executable.resolve(), base, source, "mission")
+        if repeat.returncode or "original scenario setup:" not in repeat.stdout or \
+                "client-before-logic-bones=1" not in repeat.stdout:
+            raise SystemExit("original update-owned scenario did not re-enter cleanly")
         if args.retail_archive and "original retail W3D model: ABBarracks_AC class=" not in result.stdout:
             raise SystemExit(f"retail W3D model did not load through original provider:\n"
                              f"{result.stdout}{result.stderr}")
@@ -156,7 +160,7 @@ def main() -> int:
             print(result.stdout)
         os.environ.pop("ZH_M22_RETAIL_MODEL", None)
         missing = run(args.executable.resolve(), base, missing_root, "mission")
-        if missing.returncode or "original full draw: drawables=4 hlods=9 animations=0 supply-transitions=2 logic-bones=1 client-before-logic-bones=0 dependency-blocks=2 dependency-releases=2 tread-scrolls=2 wheel-controls=3 rider-dependencies=3" not in missing.stdout:
+        if missing.returncode or "original full draw: drawables=4 hlods=9 animations=0 supply-transitions=2 logic-bones=1 client-before-logic-bones=1 dependency-blocks=2 dependency-releases=2 tread-scrolls=2 wheel-controls=3 rider-dependencies=3" not in missing.stdout:
             raise SystemExit(f"missing original model was not distinguishable:\n"
                              f"{missing.stdout}{missing.stderr}")
         missing_rider = run(args.executable.resolve(), base, missing_rider_root, "mission")
