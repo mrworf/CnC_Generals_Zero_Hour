@@ -1717,6 +1717,27 @@ if(ZH_BUILD_TESTS)
     --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
     --member SkirmishGameOptionsMenu.cpp.o --required-symbol "updateMapStartSpots(GameInfo*, GameWindow**, bool)")
   set_tests_properties(original_map_start_marker_gadget_removal original_map_start_marker_update_source_removal PROPERTIES LABELS "original-multiplayer;source-identity;negative")
+  add_executable(original_map_start_marker_placement_tests
+    tests/original_lifecycle/test_map_start_marker_placement.cpp
+    tests/original_lifecycle/headless_reset_boundary.cpp
+    $<TARGET_OBJECTS:zh_original_lifecycle_spine>
+    $<TARGET_OBJECTS:zh_original_config_spine>)
+  target_include_directories(original_map_start_marker_placement_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include")
+  target_link_libraries(original_map_start_marker_placement_tests PRIVATE zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
+  target_link_options(original_map_start_marker_placement_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-map-start-marker-placement.link.map")
+  add_test(NAME original_map_start_marker_placement COMMAND original_map_start_marker_placement_tests)
+  add_test(NAME original_map_start_marker_placement_source_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}" --target original_map_start_marker_placement_tests
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-map-start-marker-placement.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member SkirmishGameOptionsMenu.cpp.o --required-symbol "positionStartSpots(AsciiString, GameWindow**, GameWindow*)")
+  set_tests_properties(original_map_start_marker_placement original_map_start_marker_placement_source_removal PROPERTIES LABELS "original-multiplayer;source-identity;negative")
   add_test(NAME original_singleplayer_loadscreen_aggregate COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_singleplayer_loadscreen_aggregate.py"
     --images "$<TARGET_FILE:original_mapped_image_provider_tests>"
