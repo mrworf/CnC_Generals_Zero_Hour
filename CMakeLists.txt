@@ -1738,6 +1738,11 @@ if(ZH_BUILD_TESTS)
     --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
     --member SkirmishGameOptionsMenu.cpp.o --required-symbol "positionStartSpots(AsciiString, GameWindow**, GameWindow*)")
   set_tests_properties(original_map_start_marker_placement original_map_start_marker_placement_source_removal PROPERTIES LABELS "original-multiplayer;source-identity;negative")
+  add_test(NAME original_map_start_marker_gui_aggregate COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_map_start_marker_gui_aggregate.py"
+    --labels "$<TARGET_FILE:original_map_start_marker_update_tests>"
+    --placement "$<TARGET_FILE:original_map_start_marker_placement_tests>")
+  set_tests_properties(original_map_start_marker_gui_aggregate PROPERTIES LABELS "original-multiplayer;source-identity;negative")
   add_test(NAME original_singleplayer_loadscreen_aggregate COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_singleplayer_loadscreen_aggregate.py"
     --images "$<TARGET_FILE:original_mapped_image_provider_tests>"
