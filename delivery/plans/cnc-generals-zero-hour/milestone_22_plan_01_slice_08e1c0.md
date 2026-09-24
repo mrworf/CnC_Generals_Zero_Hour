@@ -1,0 +1,19 @@
+# M22 08E1C0: generated multiplayer load-screen data/provider closure
+
+## Revalidated dependency boundary
+
+The original `MultiPlayerLoadScreen::init(GameInfo*)` cannot be exercised from
+the accepted E1A/E1B providers alone. Before the owner route it dereferences a
+local `GameSlot` and `PlayerTemplateStore`, maps multiplayer house colours,
+resolves ChallengeGenerals/persona and text/image values, creates the full
+MAX_SLOTS named layout, performs map-cache/preview and map-start helpers, and
+initializes GameLogic timeout state. Its update route separately needs either
+Network progress publication or GameLogic/GameInfo progress processing.
+
+This prerequisite must first provide one generated, project-owned provider
+transaction for those exact source values, with occupied/empty/AI slots,
+template/persona fallback, color/image fallback, map-preview absent/present,
+network/logic selection, two-generation removal and zero ownership. It must
+not claim retail maps, lobby/network service, media, pixels, or audio fidelity.
+Only after that proof can 08E1C compose the actual owner without fabricated
+direct calls or null dependencies.
