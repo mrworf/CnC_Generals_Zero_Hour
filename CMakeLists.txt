@@ -1432,6 +1432,37 @@ if(ZH_BUILD_TESTS)
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-headless-update.link.map")
   add_test(NAME original_headless_update COMMAND original_headless_update_tests)
   set_tests_properties(original_headless_update PROPERTIES LABELS "original-headless-update;source-identity")
+  add_executable(original_loadscreen_progress_tests
+    tests/original_lifecycle/test_loadscreen_progress.cpp
+    $<TARGET_OBJECTS:zh_original_lifecycle_spine>
+    $<TARGET_OBJECTS:zh_original_config_spine>)
+  target_include_directories(original_loadscreen_progress_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib")
+  target_link_libraries(original_loadscreen_progress_tests PRIVATE
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
+  target_link_options(original_loadscreen_progress_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-loadscreen-progress.link.map")
+  add_test(NAME original_loadscreen_progress COMMAND original_loadscreen_progress_tests)
+  set_tests_properties(original_loadscreen_progress PROPERTIES LABELS "original-loadscreen-progress;source-identity;negative")
+  add_test(NAME original_loadscreen_progress_contract COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_loadscreen_progress_contract.py"
+    --source "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogic.cpp"
+    --owner "$<TARGET_FILE:original_loadscreen_progress_tests>")
+  set_tests_properties(original_loadscreen_progress_contract PROPERTIES LABELS "original-loadscreen-progress;source-identity;negative")
+  add_test(NAME original_loadscreen_progress_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target original_loadscreen_progress_tests
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-loadscreen-progress.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member GameLogic.cpp.o
+    --required-symbol "GameLogic::getLoadScreen(bool)")
+  set_tests_properties(original_loadscreen_progress_provider_removal PROPERTIES LABELS "original-loadscreen-progress;source-identity;negative")
   add_executable(original_mapped_image_provider_tests
     tests/original_lifecycle/test_mapped_image_provider.cpp
     tests/original_lifecycle/headless_reset_boundary.cpp
