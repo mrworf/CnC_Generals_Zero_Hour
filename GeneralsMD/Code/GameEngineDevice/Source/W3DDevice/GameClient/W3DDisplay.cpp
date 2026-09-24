@@ -48,6 +48,8 @@
 #include "W3DDevice/GameClient/W3DWater.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
 #include "W3DDevice/GameClient/W3DSmudge.h"
+#include "Common/FileSystem.h"
+#include "Common/file.h"
 #include "Common/GlobalData.h"
 #include "WW3D2/ww3d.h"
 #include "WW3D2/rendobj.h"
@@ -177,7 +179,35 @@ Bool W3DDisplay::setDisplayMode(UnsignedInt, UnsignedInt, UnsignedInt, Bool) { Z
 Int W3DDisplay::getDisplayModeCount() { ZH_DISPLAY_PENDING(); }
 void W3DDisplay::getDisplayModeDescription(Int, Int*, Int*, Int*) { ZH_DISPLAY_PENDING(); }
 void W3DDisplay::setGamma(Real, Real, Real, Bool) { ZH_DISPLAY_PENDING(); }
-void W3DDisplay::doSmartAssetPurgeAndPreload(const char*) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::doSmartAssetPurgeAndPreload(const char* usageFileName)
+{
+	// Keep the original no-owner/empty-name return.  A published display must
+	// have its source asset and VFS providers before a map-INI purge can run.
+	if (!m_initialized && !m_assetManager) return;
+	if (!usageFileName || !*usageFileName) return;
+	if (!m_initialized || !m_assetManager || !m_3DScene ||
+		!zh::original_runtime::OriginalGpuEdge::active() || !TheFileSystem)
+		throw OriginalW3DDeviceUnavailable("original display smart purge owner unavailable");
+
+	DynamicVectorClass<StringClass> names(8000);
+	File *file = TheFileSystem->openFile(usageFileName, File::READ | File::TEXT);
+	if (file) {
+		try {
+			for (;;) {
+				AsciiString token;
+				if (file->scanString(token) == FALSE) break;
+				if (token.str()[0] == ';') continue;
+				names.Add(StringClass(token.str()));
+			}
+		} catch (...) {
+			file->close();
+			throw;
+		}
+		file->close();
+	}
+	// The source purges even when the optional usage file is absent.
+	m_assetManager->Free_Assets_With_Exclusion_List(names);
+}
 void W3DDisplay::setClipRegion(IRegion2D*) { ZH_DISPLAY_PENDING(); }
 void W3DDisplay::draw()
 {

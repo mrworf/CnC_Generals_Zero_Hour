@@ -3,6 +3,7 @@
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
+#include "Common/FileSystem.h"
 #include "WW3D2/assetmgr.h"
 #include "WW3D2/mesh.h"
 #include "WW3D2/ww3d.h"
@@ -54,6 +55,7 @@ extern "C" void zh_probe_display_owner()
         try { display->reset(); }
         catch (const std::runtime_error&) { no_reset = true; }
         require(no_reset, "original display reset before bootstrap succeeded");
+        display->doSmartAssetPurgeAndPreload("Maps\\Owned\\AssetUsage.txt");
         {
             zh::original_runtime::OriginalGpuEdge edge(device);
             display->init();
@@ -77,9 +79,49 @@ extern "C" void zh_probe_display_owner()
             try { display->draw(); }
             catch (const std::runtime_error&) { draw_pending = true; }
             require(draw_pending, "original display draw unexpectedly succeeded");
-            RAMFileClass packet(bytes.data(), static_cast<int>(bytes.size()));
-            require(static_cast<WW3DAssetManager*>(assets)->Load_3D_Assets(packet),
-                "original display asset manager rejected generated packet");
+            auto load_packet = [&] {
+                RAMFileClass packet(bytes.data(), static_cast<int>(bytes.size()));
+                require(static_cast<WW3DAssetManager*>(assets)->Load_3D_Assets(packet),
+                    "original display asset manager rejected generated packet");
+            };
+            auto has_prototype = [&](const char* name) {
+                return assets->Find_Prototype(name) != nullptr;
+            };
+            FileSystem *saved_file_system = TheFileSystem;
+            TheFileSystem = nullptr;
+            bool missing_provider = false;
+            try { display->doSmartAssetPurgeAndPreload("Maps\\Owned\\AssetUsage.txt"); }
+            catch (const std::runtime_error&) { missing_provider = true; }
+            TheFileSystem = saved_file_system;
+            require(missing_provider && W3DDisplay::m_assetManager == assets,
+                "original display purge accepted a missing source file-system provider");
+            W3DDisplay::m_assetManager = nullptr;
+            bool missing_assets = false;
+            try { display->doSmartAssetPurgeAndPreload("Maps\\Owned\\AssetUsage.txt"); }
+            catch (const std::runtime_error&) { missing_assets = true; }
+            W3DDisplay::m_assetManager = assets;
+            require(missing_assets, "original display purge accepted a broken published asset owner");
+
+            load_packet();
+            require(has_prototype("TEST.ZERO01") && has_prototype("ALT0.ZERO01"),
+                "generated display purge prototypes missing");
+            display->doSmartAssetPurgeAndPreload(nullptr);
+            display->doSmartAssetPurgeAndPreload("");
+            require(has_prototype("TEST.ZERO01") && has_prototype("ALT0.ZERO01"),
+                "original display empty usage name changed assets");
+            display->doSmartAssetPurgeAndPreload("Maps\\Owned\\AssetUsage.txt");
+            require(has_prototype("TEST.ZERO01") && !has_prototype("ALT0.ZERO01"),
+                "original display usage list did not preserve exactly the named source assets");
+            display->doSmartAssetPurgeAndPreload("Maps\\Owned\\MissingAssetUsage.txt");
+            require(!has_prototype("TEST.ZERO01") && !has_prototype("ALT0.ZERO01"),
+                "original display absent usage list did not purge all source assets");
+            load_packet();
+            require(has_prototype("TEST.ZERO01") && has_prototype("ALT0.ZERO01"),
+                "original display purge retry did not reload source assets");
+            display->doSmartAssetPurgeAndPreload("Maps\\Owned\\CommentsOnly.txt");
+            require(!has_prototype("TEST.ZERO01") && !has_prototype("ALT0.ZERO01"),
+                "original display comment tokens entered the exclusion list");
+            load_packet();
             auto* mesh = assets->Create_Render_Obj("TEST.ZERO01");
             auto* second_mesh = assets->Create_Render_Obj("TEST.ZERO01");
             require(mesh && second_mesh && mesh != second_mesh &&

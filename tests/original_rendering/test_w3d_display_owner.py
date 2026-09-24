@@ -25,9 +25,13 @@ def main() -> int:
         base = Path(scratch)
         source = base / "readonly-input"
         prepare_owned_source(source, fixture)
+        fixture.write(source / "Maps/Owned/AssetUsage.txt", ";ignored\nTEST\n")
+        fixture.write(source / "Maps/Owned/CommentsOnly.txt", ";TEST\n")
+        before = tuple(sorted((path.relative_to(source), path.read_bytes())
+                              for path in source.rglob("*") if path.is_file()))
         fixture.make_read_only(source)
         packet = base / "rigid.w3d"
-        subprocess.run([str(args.asset_producer.resolve()), "--emit-rigid", str(packet)],
+        subprocess.run([str(args.asset_producer.resolve()), "--emit-rigid-pair", str(packet)],
                        check=True)
         os.environ["ZH_M22_DISPLAY_OWNER_PROFILE"] = "1"
         os.environ["ZH_M22_DISPLAY_OWNER_ASSET"] = str(packet)
@@ -39,6 +43,10 @@ def main() -> int:
         output = result.stdout + result.stderr
         if result.returncode or marker not in result.stdout or has_validation_diagnostic(output):
             raise SystemExit(f"original display owner failed ({result.returncode}):\n{output}")
+        after = tuple(sorted((path.relative_to(source), path.read_bytes())
+                             for path in source.rglob("*") if path.is_file()))
+        if before != after:
+            raise SystemExit("original display owner changed read-only generated input")
     print("original W3DDisplay source owner lifecycle: ok")
     return 0
 

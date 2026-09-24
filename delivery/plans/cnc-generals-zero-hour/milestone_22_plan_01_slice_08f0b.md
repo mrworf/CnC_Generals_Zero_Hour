@@ -64,3 +64,14 @@ The native source method completes with observed owner transitions; all
 negative cases fail closed and teardown is clean.  Commit this complete
 behavior and its plan/evidence in one reviewable `delivery: M22 08F0B close
 display smart purge` commit.  Then resume 08F0; do not combine the commits.
+
+## Execution record
+
+Implemented only the CPU-branch original display method: source token scan,
+comment filtering, optional-file empty-list purge, and native asset-manager
+handoff. A published but incomplete display owner fails before any purge;
+null/empty names and the never-initialized display retain the source return.
+The generated two-root fixture tests exact exclusion behavior, provider/owner
+negative controls, reload, reset, and two clean generations. The result is
+recorded in [08F0B evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08f0b.md).
+08F0 remains pending and owns the separate selector transition.

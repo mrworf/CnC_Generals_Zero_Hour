@@ -127,7 +127,7 @@ template <typename T> void chunk(ChunkSaveClass &writer, unsigned id, const T &v
 void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant = false,
 	bool skin_variant = false, unsigned texture_stages = 1, bool lit_uv_variant = false,
 	bool invalid_skin = false, unsigned large_vertex_count = 0, bool batch_second = false,
-	bool cull_tree_variant = false)
+	bool cull_tree_variant = false, const char *container_name = "TEST")
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_MESH));
 	W3dMeshHeader3Struct header{};
@@ -140,7 +140,7 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 		(supply_variant ? "SUPPLY01" : "TRIANGLE"));
 	if (skin_variant) header.Attributes = W3D_MESH_FLAG_GEOMETRY_TYPE_SKIN;
 	if (cull_tree_variant) header.Attributes |= W3D_MESH_FLAG_COLLISION_TYPE_PHYSICAL;
-	std::strcpy(header.ContainerName, "TEST");
+	std::strcpy(header.ContainerName, container_name);
 	header.NumVertices = large_vertex_count ? large_vertex_count : 3;
 	header.NumTris = 1;
 	header.Min = {0, 0, 0};
@@ -441,6 +441,7 @@ int main(int argc, char **argv)
 	ChunkSaveClass writer(&file);
 	const bool supply_variant = argc == 3 && std::strcmp(argv[1], "--emit") == 0;
 	const bool emit_rigid = argc == 3 && std::strcmp(argv[1], "--emit-rigid") == 0;
+	const bool emit_rigid_pair = argc == 3 && std::strcmp(argv[1], "--emit-rigid-pair") == 0;
 	const bool focused_static_scene = argc==2 &&
 		(std::strcmp(argv[1],"--source-static-scene")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
@@ -463,7 +464,10 @@ int main(int argc, char **argv)
 	const bool focused_fault_scene = argc==2 &&
 		(std::strcmp(argv[1],"--source-mixed-fault-matrix")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0);
-	if (emit_rigid) {
+	if (emit_rigid_pair) {
+		make_mesh(writer,false,false,false,0);
+		make_mesh(writer,false,false,false,0,false,false,0,false,false,"ALT0");
+	} else if (emit_rigid) {
 		make_mesh(writer,false,false,false,0); // TEST.ZERO01, original untextured rigid mesh
 	} else if (focused_static_scene) {
 		// This gate owns only the three original W3D mesh families it renders.
@@ -503,7 +507,7 @@ int main(int argc, char **argv)
 	}
 	const int size = file.Size();
 	file.Close();
-	if (argc == 3 && (std::strcmp(argv[1], "--emit") == 0 || emit_rigid))
+	if (argc == 3 && (std::strcmp(argv[1], "--emit") == 0 || emit_rigid || emit_rigid_pair))
 	{
 		FILE *output = std::fopen(argv[2], "wb");
 		assert(output != nullptr);
