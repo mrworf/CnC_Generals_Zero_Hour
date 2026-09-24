@@ -1615,6 +1615,11 @@ if(ZH_BUILD_TESTS)
     --member INIMultiplayer.cpp.o
     --required-symbol "INI::parseMultiplayerSettingsDefinition(INI*)")
   set_tests_properties(original_multiplayer_settings_player_template_removal original_multiplayer_settings_parser_removal PROPERTIES LABELS "original-multiplayer;source-identity;negative")
+  add_test(NAME original_multiplayer_slot_settings_aggregate COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_multiplayer_slot_settings_aggregate.py"
+    --slots "$<TARGET_FILE:original_gameinfo_slot_provider_tests>"
+    --settings "$<TARGET_FILE:original_multiplayer_settings_provider_tests>")
+  set_tests_properties(original_multiplayer_slot_settings_aggregate PROPERTIES LABELS "original-multiplayer;source-identity;negative")
   add_executable(original_persona_mapcache_provider_tests
     tests/original_lifecycle/test_persona_mapcache_provider.cpp
     tests/original_lifecycle/headless_reset_boundary.cpp

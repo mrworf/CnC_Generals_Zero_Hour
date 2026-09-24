@@ -6,3 +6,12 @@ occupied/empty/AI `GameSlot` values, `PlayerTemplateStore` lookup/fallback and
 `MultiplayerSettings` colour lookup. Reject missing slots/templates/colours,
 duplicate or stale publication, and release all providers. No layout, map,
 persona, network service, media or retail data is included.
+
+## Aggregate transaction
+
+This final C0A aggregate adds no production source. One generated executable
+witness requires the accepted source GameInfo/GameSlot transaction before the
+accepted parser-backed template/settings transaction, and requires both to
+report two-generation zero-provider completion. Missing witnesses or changed
+result markers fail deterministically; component slices retain malformed,
+duplicate, stale-publication, removal, and teardown controls.
