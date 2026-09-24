@@ -51,6 +51,7 @@
 #include "Common/GlobalData.h"
 #include "W3DDevice/GameClient/BaseHeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "WW3D2/scene.h"
 #include "original_gpu_edge.h"
@@ -196,6 +197,19 @@ Int BaseHeightMapRenderObjClass::freeMapResources()
 	return 0;
 }
 void BaseHeightMapRenderObjClass::updateCenter(CameraClass*, RefRenderObjListIterator*) {}
+void BaseHeightMapRenderObjClass::notifyShroudChanged()
+{
+	// The native callback only notifies an owned prop buffer.  The bounded
+	// CPU terrain has no prop producer, so its valid map-owned path is empty.
+	if (!zh::original_runtime::OriginalGpuEdge::active() ||
+		TheTerrainRenderObject != this || !W3DDisplay::m_assetManager ||
+		!W3DDisplay::m_3DScene || Peek_Scene() != W3DDisplay::m_3DScene ||
+		!m_map || !m_shroud || m_x != m_map->getDrawWidth() ||
+		m_y != m_map->getDrawHeight() ||
+		m_shroud->getNumShroudCellsX() <= 0 ||
+		m_shroud->getNumShroudCellsY() <= 0 || m_propBuffer)
+		throw OriginalW3DDeviceUnavailable("original terrain shroud notification unavailable");
+}
 void BaseHeightMapRenderObjClass::adjustTerrainLOD(Int)
 {
 	throw OriginalW3DDeviceUnavailable("original terrain LOD pending");

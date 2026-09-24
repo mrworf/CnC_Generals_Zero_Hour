@@ -21,10 +21,22 @@ void require(bool value, const char *message)
 	if (!value) throw std::runtime_error(message);
 }
 
+template <typename Operation>
+bool rejected(Operation operation)
+{
+	try { operation(); }
+	catch (const std::runtime_error &) { return true; }
+	return false;
+}
+
 class TestTerrain final : public HeightMapRenderObjClass
 {
 public:
 	void On_Frame_Update() override { ++updates; }
+	void forceMalformedProp(bool enabled)
+	{
+		m_propBuffer = enabled ? reinterpret_cast<W3DPropBuffer *>(this) : NULL;
+	}
 	Int updates = 0;
 };
 
@@ -62,8 +74,12 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		auto display = std::make_unique<W3DDisplay>();
 		display->init();
 		TestTerrain terrain;
+		require(rejected([&]() { terrain.notifyShroudChanged(); }),
+			"original terrain shroud notification accepted an uninitialized map");
 		require(terrain.initHeightData(map->getDrawWidth(), map->getDrawHeight(), map, NULL, TRUE) == 0,
 			"original terrain scene attachment map binding failed");
+		require(rejected([&]() { terrain.notifyShroudChanged(); }),
+			"original terrain shroud notification accepted a detached map");
 		AABoxClass box;
 		SphereClass sphere;
 		terrain.Get_Obj_Space_Bounding_Box(box);
@@ -79,6 +95,30 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		W3DDisplay::m_3DScene->Add_Render_Object(&terrain);
 		require(terrain.Peek_Scene() == W3DDisplay::m_3DScene,
 			"original terrain primary scene attachment missing");
+		const auto baseline = device.resource_counts();
+		terrain.notifyShroudChanged();
+		terrain.notifyShroudChanged();
+		require(device.resource_counts() == baseline,
+			"original no-prop shroud notification created Recording resources");
+		BaseHeightMapRenderObjClass *saved_owner = TheTerrainRenderObject;
+		TheTerrainRenderObject = NULL;
+		const bool missing_owner = rejected([&]() { terrain.notifyShroudChanged(); });
+		TheTerrainRenderObject = saved_owner;
+		W3DAssetManager *saved_assets = W3DDisplay::m_assetManager;
+		W3DDisplay::m_assetManager = NULL;
+		const bool missing_assets = rejected([&]() { terrain.notifyShroudChanged(); });
+		W3DDisplay::m_assetManager = saved_assets;
+		RTS3DScene *saved_scene = W3DDisplay::m_3DScene;
+		W3DDisplay::m_3DScene = NULL;
+		const bool missing_scene = rejected([&]() { terrain.notifyShroudChanged(); });
+		W3DDisplay::m_3DScene = saved_scene;
+		terrain.forceMalformedProp(true);
+		const bool malformed_prop = rejected([&]() { terrain.notifyShroudChanged(); });
+		terrain.forceMalformedProp(false);
+		require(missing_owner && missing_assets && missing_scene && malformed_prop &&
+			device.resource_counts() == baseline,
+			"original terrain shroud notification accepted a broken owner or prop");
+		terrain.notifyShroudChanged();
 		RegistrationScene alternate;
 		bool duplicate_rejected = false;
 		try { terrain.Notify_Added(W3DDisplay::m_3DScene); }
@@ -95,6 +135,8 @@ extern "C" void zh_probe_terrain_scene_attachment()
 			"original terrain scene negative attachment changed publication");
 		W3DDisplay::m_3DScene->Remove_Render_Object(&terrain);
 		require(!terrain.Peek_Scene(), "original terrain primary scene detach retained owner");
+		require(rejected([&]() { terrain.notifyShroudChanged(); }),
+			"original terrain shroud notification accepted primary scene detachment");
 
 		alternate.Add_Render_Object(&terrain);
 		require(terrain.Peek_Scene() == &alternate && alternate.registrations == 1,
@@ -103,10 +145,14 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		require(!terrain.Peek_Scene() && alternate.unregistrations == 1,
 			"original terrain update unregister missing");
 		alternate.Add_Render_Object(&terrain);
+		require(rejected([&]() { terrain.notifyShroudChanged(); }),
+			"original terrain shroud notification accepted a foreign scene");
 		alternate.Remove_Render_Object(&terrain);
 		require(alternate.registrations == 2 && alternate.unregistrations == 2 && !terrain.Peek_Scene(),
 			"original terrain scene re-entry changed update ownership");
 		terrain.freeMapResources();
+		require(rejected([&]() { terrain.notifyShroudChanged(); }),
+			"original terrain shroud notification accepted a released map");
 		edge.release_source_buffers();
 		display.reset();
 		require(device.snapshot().find("draw pipeline=") == std::string::npos &&
@@ -115,5 +161,5 @@ extern "C" void zh_probe_terrain_scene_attachment()
 	}
 	map->Release_Ref();
 	TheWritableGlobalData->m_partitionCellSize = saved_partition;
-	std::puts("original terrain scene attachment: bounds=8x8 registrations=2 generations=2 resources=0");
+	std::puts("original terrain scene attachment: bounds=8x8 registrations=2 shroud=2 generations=2 resources=0");
 }

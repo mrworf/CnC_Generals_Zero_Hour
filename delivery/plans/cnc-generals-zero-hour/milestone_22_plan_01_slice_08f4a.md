@@ -32,3 +32,11 @@ builds and canonical non-GPU/non-LAN/non-retail suites, canonical sanitizer
 `detect_leaks=0`, strict host LSan both compilers, physical Vulkan controls,
 serial LAN in all six, and `git diff --check`. One 08F4A production/test/evidence
 commit after acceptance; 08F4B may then implement the display caller.
+
+## Result
+
+Complete. The bounded no-prop source callback, generated negative/retry and
+two-generation ownership controls, source ledger update, and all acceptance
+gates are recorded in
+[08F4A evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08f4a.md).
+Display shroud dispatch remains 08F4B.
