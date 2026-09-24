@@ -68,6 +68,46 @@ boundary. [08F4](milestone_22_plan_01_slice_08f4.md) closes the source
 from display clear/per-cell dispatch. All trial production/test edits were
 removed; neither 08F4 child admits the construction selector.
 
+## Post-08F4 resumption checkpoint
+
+08F4A and 08F4B are accepted. The generated-only diagnostic temporarily
+added a separate conjunctive construction selector, retained the accepted
+08F0 post-parser stop when absent, and restored native terrain attach → water
+attach → disabled grid → map overrides inside the terrain-load transaction.
+Rollback removes both new scene links and the uncommitted map. The generated
+fixture extends the authored logical map with only flat visual blend metadata
+and a generated terrain texture. The known-empty map-owned bib cleanup is
+selector-scoped so a later source failure could not be masked by teardown.
+The probe used fixed stage categories after radar/shroud refresh without
+retail input. Its trial code was removed after the missing owner was found;
+the existing default, absent construction selector and 08D/08F0 stops remain
+controls.
+
+## Post-08F4 generated discovery and 08F5 dependency
+
+The uncommitted generated mission trial reached terrain attachment, the
+source-ordered water reattachment/disabled-grid/map overrides, radar new-map,
+partition shroud refresh, terrain logic new-map, radar terrain refresh,
+pathfinder new-map, and permanent-observer reveal. The first missing owner was
+`W3DTerrainVisual::addProp` for the generated authored no-draw prop during the
+source object loop. Its CPU method remains typed pending, while native source
+resolves model conditions and only dispatches to the terrain prop buffer when
+a model name is present. The generated prop has no draw module/model, so the
+valid native result is a no-op; active modeled props require a separate
+producer and must remain fail-closed. [08F5](milestone_22_plan_01_slice_08f5.md)
+owns this bounded method independently; do not delete the generated prop or
+skip source object construction to advance 08F.
+
+The generated 8x8 vertex map's playable boundary is 7x7. A 10-unit partition
+cell size landed on a reciprocal-ceil rounding edge (partition 8, shroud 7);
+the generated-only non-edge 12-unit cell size yields matching 6x6 grids and
+passed the accepted 08F4 dispatch. This was a fixture correction, not an
+accepted owner or production change. The trial's later failure returned by
+normal rollback with zero published graphics owners and zero Recording
+resources. All trial selector, production and test edits were removed at the
+plan-only checkpoint. Resume 08F only after 08F5 accepts the no-model prop
+owner, then re-probe the next exact source boundary without retail input.
+
 ## Validation
 
 Positive: both runtime-only consumer selections and two fresh generations
