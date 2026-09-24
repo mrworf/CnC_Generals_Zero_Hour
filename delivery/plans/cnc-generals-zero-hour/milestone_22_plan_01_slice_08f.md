@@ -108,6 +108,11 @@ resources. All trial selector, production and test edits were removed at the
 plan-only checkpoint. Resume 08F only after 08F5 accepts the no-model prop
 owner, then re-probe the next exact source boundary without retail input.
 
+08F5 is accepted as an independent no-model prop owner. Its generated
+negative controls leave an active modeled prop fail-closed. Resume this 08F
+plan at the separate construction selector and source-ordered water/object
+route; do not treat 08F5's direct-method acceptance as construction success.
+
 ## Validation
 
 Positive: both runtime-only consumer selections and two fresh generations

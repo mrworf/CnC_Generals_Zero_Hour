@@ -37,3 +37,29 @@ test suites, canonical sanitizer `detect_leaks=0`, strict host LSan both,
 physical Vulkan controls, serial LAN in all six, and `git diff --check`.
 Commit one 08F5 production/test/evidence slice; only then resume 08F's
 selector/water/object construction. This plan alone does not accept 08F5.
+
+## Implementation choice before code
+
+Reuse the accepted map/shroud owner's side-effect-free
+`BaseHeightMapRenderObjClass::canNotifyShroudChanged()` as the no-prop-buffer
+readiness predicate; require its exact visual/global terrain and display
+aliases and live map identity first. This is an ownership check, not a shroud
+notification. A generated no-draw `FixtureProp` and a separate generated
+W3DModelDraw prop template distinguish the no-model and active-model paths.
+Extend the existing generated terrain-visual map probe, which already covers
+failed map loads, retry and two generations, rather than creating a second
+map lifecycle. No new CTest registration is needed.
+
+This is an internal original CPU owner method, not an externally authorized
+entry point. Its admission boundary is the exact published display/terrain
+and source-map identity. A missing global-data provider must reject before
+reading weather/time model conditions.
+
+## Result
+
+Complete. The CPU method selects the native first-draw model result and
+accepts only the exact map-owned no-model branch; a selected model remains
+typed pending. Generated tests cover malformed input, provider removal,
+pre-map rejection, modeled rejection, retry, two generations and teardown.
+The [08F5 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08f5.md)
+records all final-state acceptance gates. 08F construction remains pending.

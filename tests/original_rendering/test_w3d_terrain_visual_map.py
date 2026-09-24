@@ -31,9 +31,18 @@ def main() -> int:
         os.environ["ZH_M22_TERRAIN_VISUAL_MAP_PROFILE"] = "1"
         os.environ["ZH_M22_TERRAIN_VISUAL_MAP"] = str(map_path)
         os.environ["ZH_M22_TERRAIN_VISUAL_BAD_MAP"] = str(bad_map_path)
-        marker = "original terrain visual map: attach=1 rollback=3 draws=2 generations=2 resources=0"
+        marker = ("original terrain visual map: attach=1 rollback=3 draws=2 "
+                  "props=2 generations=2 resources=0")
         for generation in range(2):
             source = source_tree(root / f"source-{generation}", fixture, "valid")
+            object_ini = source / "Data/INI/Default/Object.ini"
+            object_ini.chmod(0o600)
+            object_ini.write_text(object_ini.read_text(encoding="ascii") +
+                                  "Object ModeledProp\n KindOf = PROP\n"
+                                  " Draw = W3DModelDraw ModuleTag_GeneratedProp\n"
+                                  "  DefaultConditionState\n   Model = TEST.HLOD\n"
+                                  "  End\n End\nEnd\n", encoding="ascii")
+            object_ini.chmod(0o400)
             result = run(args.executable.resolve(), root / f"generation-{generation}", source, "mission")
             if result.returncode or marker not in result.stdout:
                 raise SystemExit(f"original terrain visual map generation {generation} failed "

@@ -1,6 +1,8 @@
 #include "PreRTS.h"
 
 #include "Common/GlobalData.h"
+#include "Common/ThingFactory.h"
+#include "Common/ThingTemplate.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
@@ -16,6 +18,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <memory>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -23,6 +26,14 @@ namespace {
 void require(bool value, const char *message)
 {
 	if (!value) throw std::runtime_error(message);
+}
+
+template <typename Operation>
+bool rejected(Operation operation)
+{
+	try { operation(); }
+	catch (const std::runtime_error &) { return true; }
+	return false;
 }
 
 unsigned draw_count(const std::string &trace)
@@ -47,17 +58,28 @@ extern "C" void zh_probe_terrain_visual_map()
 	require(map_path && bad_map_path, "original terrain visual map fixture missing");
 	const Real saved_partition = TheWritableGlobalData->m_partitionCellSize;
 	TheWritableGlobalData->m_partitionCellSize = MAP_XY_FACTOR;
+	const ThingTemplate *plain_prop = TheThingFactory->findTemplate(AsciiString("FixtureProp"), FALSE);
+	const ThingTemplate *modeled_prop = TheThingFactory->findTemplate(AsciiString("ModeledProp"), FALSE);
+	require(plain_prop && modeled_prop && plain_prop->getDrawModuleInfo().getCount() == 0 &&
+		modeled_prop->getDrawModuleInfo().getCount() > 0,
+		"original terrain prop generated templates unavailable");
+	Coord3D prop_pos;
+	prop_pos.set(20.0f, 20.0f, 0.0f);
 	zh::renderer::RecordingGpuDevice device;
 	for (Int generation = 0; generation != 2; ++generation) {
 		zh::original_runtime::OriginalGpuEdge edge(device);
 		auto display = std::make_unique<W3DDisplay>();
 		display->init();
+		Display *saved_display = TheDisplay;
+		TheDisplay = display.get();
 		TerrainVisual *saved_visual = TheTerrainVisual;
 		auto visual = std::make_unique<W3DTerrainVisual>();
 		TheTerrainVisual = visual.get();
 		visual->init();
 		require(TheHeightMap && !TheHeightMap->getMap() && !TheHeightMap->Peek_Scene(),
 			"original terrain visual init published a map");
+		require(rejected([&]() { visual->addProp(plain_prop, &prop_pos, 0.0f); }),
+			"original terrain prop accepted a missing map");
 		const auto owner_resources = device.resource_counts().total();
 
 		require(!visual->load(AsciiString("missing-generated-terrain.map")),
@@ -83,6 +105,55 @@ extern "C" void zh_probe_terrain_visual_map()
 			TheHeightMap && TheHeightMap->getMap() == visual->getLogicHeightMap() &&
 			TheHeightMap->Peek_Scene() == W3DDisplay::m_3DScene,
 			"original terrain visual map transaction did not attach primary terrain");
+		const auto prop_resources = device.resource_counts();
+		const auto prop_refs = TheHeightMap->Num_Refs();
+		visual->addProp(plain_prop, &prop_pos, 0.0f);
+		visual->addProp(plain_prop, &prop_pos, 1.0f);
+		require(TheHeightMap->Num_Refs() == prop_refs && device.resource_counts() == prop_resources,
+			"original no-model terrain prop changed source owners or Recording resources");
+		require(rejected([&]() { visual->addProp(modeled_prop, &prop_pos, 0.0f); }),
+			"original modeled terrain prop bypassed pending producer");
+		Coord3D malformed_pos = prop_pos;
+		malformed_pos.x = std::numeric_limits<Real>::quiet_NaN();
+		require(rejected([&]() { visual->addProp(NULL, &prop_pos, 0.0f); }) &&
+			rejected([&]() { visual->addProp(plain_prop, NULL, 0.0f); }) &&
+			rejected([&]() { visual->addProp(plain_prop, &malformed_pos, 0.0f); }) &&
+			rejected([&]() { visual->addProp(plain_prop, &prop_pos,
+				std::numeric_limits<Real>::infinity()); }),
+			"original terrain prop accepted malformed input");
+		TheDisplay = saved_display;
+		const bool missing_display = rejected([&]() { visual->addProp(plain_prop, &prop_pos, 0.0f); });
+		TheDisplay = display.get();
+		TheTerrainVisual = saved_visual;
+		const bool missing_visual = rejected([&]() { visual->addProp(plain_prop, &prop_pos, 0.0f); });
+		TheTerrainVisual = visual.get();
+		BaseHeightMapRenderObjClass *saved_terrain = TheTerrainRenderObject;
+		TheTerrainRenderObject = NULL;
+		const bool missing_terrain = rejected([&]() { visual->addProp(plain_prop, &prop_pos, 0.0f); });
+		TheTerrainRenderObject = saved_terrain;
+		HeightMapRenderObjClass *saved_height = TheHeightMap;
+		TheHeightMap = NULL;
+		const bool missing_height = rejected([&]() { visual->addProp(plain_prop, &prop_pos, 0.0f); });
+		TheHeightMap = saved_height;
+		W3DAssetManager *saved_assets = W3DDisplay::m_assetManager;
+		W3DDisplay::m_assetManager = NULL;
+		const bool missing_assets = rejected([&]() { visual->addProp(plain_prop, &prop_pos, 0.0f); });
+		W3DDisplay::m_assetManager = saved_assets;
+		GlobalData *saved_global_data = TheWritableGlobalData;
+		TheWritableGlobalData = NULL;
+		const bool missing_global_data = rejected([&]() { visual->addProp(plain_prop, &prop_pos, 0.0f); });
+		TheWritableGlobalData = saved_global_data;
+		W3DDisplay::m_3DScene->Remove_Render_Object(TheHeightMap);
+		const bool missing_scene = rejected([&]() { visual->addProp(plain_prop, &prop_pos, 0.0f); });
+		W3DDisplay::m_3DScene->Add_Render_Object(TheHeightMap);
+		require(missing_display && missing_visual && missing_terrain && missing_height &&
+			missing_assets && missing_global_data && missing_scene &&
+			device.resource_counts() == prop_resources &&
+			TheHeightMap->Num_Refs() == prop_refs,
+			"original terrain prop accepted removed provider or changed owner");
+		visual->addProp(plain_prop, &prop_pos, 0.0f);
+		require(device.resource_counts() == prop_resources,
+			"original terrain prop provider retry created Recording resources");
 
 		ShaderClass baseline;
 		baseline.Set_Texturing(ShaderClass::TEXTURING_ENABLE);
@@ -134,10 +205,11 @@ extern "C" void zh_probe_terrain_visual_map()
 			"original terrain visual unload retained map owner");
 		TheTerrainVisual = saved_visual;
 		edge.release_source_buffers();
+		TheDisplay = saved_display;
 		display.reset();
 	}
 	require(device.resource_counts().total() == 0,
 		"original terrain visual re-entry retained Recording resource");
 	TheWritableGlobalData->m_partitionCellSize = saved_partition;
-	std::puts("original terrain visual map: attach=1 rollback=3 draws=2 generations=2 resources=0");
+	std::puts("original terrain visual map: attach=1 rollback=3 draws=2 props=2 generations=2 resources=0");
 }

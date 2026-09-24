@@ -32,6 +32,8 @@
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include <cstdlib>
 #include <cstdio>
+#include <cmath>
+#include "Common/ThingTemplate.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/HeightMap.h"
@@ -40,6 +42,7 @@
 #include "W3DDevice/GameClient/W3DShadow.h"
 #include "W3DDevice/GameClient/W3DBufferManager.h"
 #include "W3DDevice/GameClient/W3DSmudge.h"
+#include "W3DDevice/GameClient/Module/W3DModelDraw.h"
 #include "Common/GlobalData.h"
 #include "Common/MapReaderWriterInfo.h"
 #include "original_gpu_edge.h"
@@ -360,8 +363,38 @@ void W3DTerrainVisual::removeAllBibs()
 void W3DTerrainVisual::removeBibHighlighting() { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
 void W3DTerrainVisual::removeTreesAndPropsForConstruction(const Coord3D *, const GeometryInfo &, Real)
 { ORIGINAL_TERRAIN_PENDING("original terrain prop pending"); }
-void W3DTerrainVisual::addProp(const ThingTemplate *, const Coord3D *, Real)
-{ ORIGINAL_TERRAIN_PENDING("original terrain prop pending"); }
+void W3DTerrainVisual::addProp(const ThingTemplate *tTemplate, const Coord3D *pos, Real angle)
+{
+	if (s_emptyTerrainVisual != this || TheTerrainVisual != this ||
+		!TheGlobalData ||
+		!dynamic_cast<W3DDisplay *>(TheDisplay) ||
+		!m_terrainRenderObject || TheTerrainRenderObject != m_terrainRenderObject ||
+		TheHeightMap != m_terrainRenderObject || !m_logicHeightMap ||
+		m_terrainRenderObject->getMap() != m_logicHeightMap ||
+		!m_terrainRenderObject->canNotifyShroudChanged())
+		throw OriginalW3DDeviceUnavailable("original terrain prop owner unavailable");
+	if (!tTemplate || !pos || !std::isfinite(pos->x) || !std::isfinite(pos->y) ||
+		!std::isfinite(pos->z) || !std::isfinite(angle))
+		throw OriginalW3DDeviceUnavailable("original terrain prop input unavailable");
+
+	ModelConditionFlags state;
+	state.clear();
+	if (TheGlobalData->m_weather == WEATHER_SNOWY)
+		state.set(MODELCONDITION_SNOW);
+	if (TheGlobalData->m_timeOfDay == TIME_OF_DAY_NIGHT)
+		state.set(MODELCONDITION_NIGHT);
+	const Real scale = tTemplate->getAssetScale();
+	(void)scale;
+	AsciiString modelName;
+	const ModuleInfo &mi = tTemplate->getDrawModuleInfo();
+	if (mi.getCount() > 0) {
+		const ModuleData *mdd = mi.getNthData(0);
+		const W3DModelDrawModuleData *md = mdd ? mdd->getAsW3DModelDrawModuleData() : NULL;
+		if (md) modelName = md->getBestModelNameForWB(state);
+	}
+	if (modelName.isNotEmpty())
+		throw OriginalW3DDeviceUnavailable("original modeled terrain prop pending");
+}
 void W3DTerrainVisual::setRawMapHeight(const ICoord2D *, Int) { ORIGINAL_TERRAIN_PENDING("original map height pending"); }
 Int W3DTerrainVisual::getRawMapHeight(const ICoord2D *) { ORIGINAL_TERRAIN_PENDING("original map height pending"); }
 void W3DTerrainVisual::replaceSkyboxTextures(const AsciiString *[NumSkyboxTextures],
