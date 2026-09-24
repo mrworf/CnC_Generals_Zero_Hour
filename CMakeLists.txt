@@ -1615,6 +1615,38 @@ if(ZH_BUILD_TESTS)
     --member INIMultiplayer.cpp.o
     --required-symbol "INI::parseMultiplayerSettingsDefinition(INI*)")
   set_tests_properties(original_multiplayer_settings_player_template_removal original_multiplayer_settings_parser_removal PROPERTIES LABELS "original-multiplayer;source-identity;negative")
+  add_executable(original_persona_mapcache_provider_tests
+    tests/original_lifecycle/test_persona_mapcache_provider.cpp
+    tests/original_lifecycle/headless_reset_boundary.cpp
+    $<TARGET_OBJECTS:zh_original_lifecycle_spine>
+    $<TARGET_OBJECTS:zh_original_config_spine>)
+  target_include_directories(original_persona_mapcache_provider_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include")
+  target_link_libraries(original_persona_mapcache_provider_tests PRIVATE zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix zh_compression zh_build_options)
+  target_link_options(original_persona_mapcache_provider_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-persona-mapcache-provider.link.map")
+  add_test(NAME original_persona_mapcache_provider COMMAND original_persona_mapcache_provider_tests)
+  set_tests_properties(original_persona_mapcache_provider PROPERTIES LABELS "original-multiplayer;source-identity;negative")
+  add_test(NAME original_persona_mapcache_challenge_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target original_persona_mapcache_provider_tests
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-persona-mapcache-provider.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member ChallengeGenerals.cpp.o
+    --required-symbol "ChallengeGenerals::getGeneralByTemplateName(AsciiString) const")
+  add_test(NAME original_persona_mapcache_map_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_headless_provider_removal.py"
+    --build-dir "${CMAKE_CURRENT_BINARY_DIR}"
+    --target original_persona_mapcache_provider_tests
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-persona-mapcache-provider.link.map"
+    --provider-archive "$<TARGET_FILE:zh_original_config_providers>"
+    --member INIMapCache.cpp.o
+    --required-symbol "INI::parseMapCacheDefinition(INI*)")
+  set_tests_properties(original_persona_mapcache_challenge_removal original_persona_mapcache_map_removal PROPERTIES LABELS "original-multiplayer;source-identity;negative")
   add_test(NAME original_singleplayer_loadscreen_aggregate COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_lifecycle/test_singleplayer_loadscreen_aggregate.py"
     --images "$<TARGET_FILE:original_mapped_image_provider_tests>"
