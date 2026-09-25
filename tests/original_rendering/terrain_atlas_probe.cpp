@@ -28,6 +28,51 @@ class TestVisualMap final : public WorldHeightMap
 {
 public:
 	explicit TestVisualMap(ChunkInputStream *input) : WorldHeightMap(input, FALSE) {}
+	ICoord2D source_position(Int index) const { return m_sourceTiles[index]->m_tileLocationInTexture; }
+	ICoord2D edge_position(Int index) const { return m_edgeTiles[index]->m_tileLocationInTexture; }
+	bool rejects_missing_source_owner()
+	{
+		TileData *owner = m_sourceTiles[0];
+		m_sourceTiles[0] = nullptr;
+		bool rejected = false;
+		try { Int edge_height = 0; (void)updateTileTexturePositions(&edge_height); }
+		catch (const std::runtime_error &) { rejected = true; }
+		m_sourceTiles[0] = owner;
+		return rejected;
+	}
+	bool rejects_capacity_overflow()
+	{
+		constexpr Int class_count = 5;
+		constexpr Int tile_count = class_count * 100;
+		TXTextureClass saved_classes[class_count];
+		TileData *saved_tiles[tile_count];
+		for (Int index = 0; index < class_count; ++index)
+			saved_classes[index] = m_textureClasses[index];
+		for (Int index = 0; index < tile_count; ++index)
+			saved_tiles[index] = m_sourceTiles[index];
+		const Int saved_class_count = m_numTextureClasses;
+		const Int saved_tile_count = m_numBitmapTiles;
+		TileData *owner = m_sourceTiles[0];
+		const ICoord2D saved_position = owner->m_tileLocationInTexture;
+		m_numTextureClasses = class_count;
+		m_numBitmapTiles = tile_count;
+		for (Int index = 0; index < class_count; ++index) {
+			m_textureClasses[index].width = 10;
+			m_textureClasses[index].firstTile = index * 100;
+		}
+		for (Int index = 0; index < tile_count; ++index) m_sourceTiles[index] = owner;
+		bool rejected = false;
+		try { Int edge_height = 0; (void)updateTileTexturePositions(&edge_height); }
+		catch (const std::runtime_error &) { rejected = true; }
+		m_numTextureClasses = saved_class_count;
+		m_numBitmapTiles = saved_tile_count;
+		for (Int index = 0; index < class_count; ++index)
+			m_textureClasses[index] = saved_classes[index];
+		for (Int index = 0; index < tile_count; ++index)
+			m_sourceTiles[index] = saved_tiles[index];
+		owner->m_tileLocationInTexture = saved_position;
+		return rejected;
+	}
 };
 
 TestVisualMap *open_map(const char *path)
@@ -286,6 +331,64 @@ void successful_generation(const char *path)
 		throw;
 	}
 }
+
+unsigned packed_color(const UnsignedByte color[4])
+{
+	return 0x8000U | ((color[2] >> 3) << 10) | ((color[1] >> 3) << 5) | (color[0] >> 3);
+}
+
+void successful_authored_generation(const char *path)
+{
+	RecordingGpuDevice device;
+	zh::original_runtime::OriginalGpuEdge edge(device);
+	auto *map = open_map(path);
+	try {
+		require(map->rejects_missing_source_owner(),
+			"original authored terrain atlas accepted a missing source owner");
+		require(map->rejects_capacity_overflow(),
+			"original authored terrain atlas accepted capacity overflow");
+		TextureClass *base = map->getTerrainTexture();
+		TextureClass *alpha = map->getAlphaTerrainTexture();
+		TextureClass *edge_texture = map->getEdgeTerrainTexture();
+		const auto base_handle = edge.texture_handle(base);
+		const auto edge_handle = edge.texture_handle(edge_texture);
+		const auto base_desc = device.texture_descriptor(base_handle);
+		const auto edge_desc = device.texture_descriptor(edge_handle);
+		require(base_handle == edge.texture_handle(alpha) && base_handle != edge_handle &&
+			base_desc.width == 2048 && base_desc.height == 256 && base_desc.mip_levels == 3 &&
+			edge_desc.width == 2048 && edge_desc.height == 128 && edge_desc.mip_levels == 3,
+			"original authored terrain atlas descriptors changed");
+		const ICoord2D expected_positions[5] = {{4, 68}, {68, 68}, {4, 4}, {68, 4}, {148, 4}};
+		const UnsignedByte expected_colors[5][4] = {
+			{3, 2, 1, 4}, {7, 6, 5, 8}, {11, 10, 9, 12}, {15, 14, 13, 16},
+			{23, 22, 21, 24}};
+		const auto base_bytes = device.texture_bytes(base_handle, 0);
+		for (Int tile = 0; tile < 5; ++tile) {
+			const ICoord2D position = map->source_position(tile);
+			require(position.x == expected_positions[tile].x &&
+				position.y == expected_positions[tile].y,
+				"original authored terrain tile placement changed");
+			const std::size_t offset = (static_cast<std::size_t>(position.y) * 2048 + position.x) * 2;
+			const unsigned packed = base_bytes[offset] | (unsigned(base_bytes[offset + 1]) << 8);
+			require(packed == packed_color(expected_colors[tile]),
+				"original authored terrain atlas tile bytes changed");
+		}
+		const ICoord2D edge_position = map->edge_position(0);
+		const auto edge_bytes = device.texture_bytes(edge_handle, 0);
+		const std::size_t edge_offset =
+			(static_cast<std::size_t>(edge_position.y) * 2048 + edge_position.x) * 4;
+		require(edge_position.x == 4 && edge_position.y == 4 &&
+			edge_bytes[edge_offset] == 33 && edge_bytes[edge_offset + 1] == 32 &&
+			edge_bytes[edge_offset + 2] == 31 && edge_bytes[edge_offset + 3] == 255,
+			"original authored edge atlas placement changed");
+		map->Release_Ref(); map = nullptr;
+		require(device.resource_counts().total() == 0,
+			"original authored terrain atlas teardown retained a resource");
+	} catch (...) {
+		if (map) map->Release_Ref();
+		throw;
+	}
+}
 }
 
 extern "C" void zh_probe_terrain_atlas()
@@ -304,6 +407,13 @@ extern "C" void zh_probe_terrain_atlas()
 	expect_rollback(path, 1, ~0U); // Edge atlas create after base and alias.
 	expect_rollback(path, ~0U, 3); // Edge atlas upload after three base mips.
 	for (Int generation = 0; generation != 2; ++generation) successful_generation(path);
+	if (const char *authored_path = std::getenv("ZH_M22_TERRAIN_ATLAS_AUTHORED_MAP")) {
+		expect_rollback(authored_path, 0, ~0U);
+		expect_rollback(authored_path, ~0U, 3);
+		for (Int generation = 0; generation != 2; ++generation)
+			successful_authored_generation(authored_path);
+		std::puts("original authored terrain atlas: base=2048x256 edge=2048x128 classes=3 resources=0");
+	}
 	const auto final_allocations = zh::original_process::live_pool_allocations();
 	if (final_allocations != baseline)
 		throw std::runtime_error("original terrain atlas generations retained pool allocations: " +

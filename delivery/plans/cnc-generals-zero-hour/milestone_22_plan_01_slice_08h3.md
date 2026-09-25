@@ -19,3 +19,13 @@ does not implement blend/cliff UV selection or claim a complete terrain draw.
 
 Run focused and cumulative M22 gates and commit once as
 `delivery: M22 08H3 pack authored terrain atlases`.
+
+## Result
+
+Complete. Base and edge texture classes are packed independently into bounded
+fixed-width grids, largest class first while retaining source class and tile
+order. Exact authored base/edge bytes, placements and power-of-two atlas
+heights are covered across failure injection, retry and two generations;
+missing owners and capacity exhaustion fail before publication. Active
+blend/cliff UV selection remains slice 08H4. See the
+[08H3 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08h3.md).

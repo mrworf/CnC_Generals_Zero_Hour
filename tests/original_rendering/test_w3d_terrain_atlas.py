@@ -10,8 +10,8 @@ from tempfile import TemporaryDirectory
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "original_simulation"))
 from test_scenario_setup import load_m20_fixture, run
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_w3d_terrain_source_bitmap import source_tree
-from test_w3d_visual_height_map import visual_map
+from test_w3d_terrain_source_bitmap import authored_source_tree, source_tree
+from test_w3d_visual_height_map import authored_visual_map, visual_map
 
 
 def main() -> int:
@@ -34,6 +34,16 @@ def main() -> int:
         if result.returncode or marker not in result.stdout:
             raise SystemExit(f"original terrain atlas failed ({result.returncode}); "
                              "private output redacted")
+        authored_map = root / "authored.map"
+        authored_map.write_bytes(authored_visual_map())
+        authored_map.chmod(0o444)
+        authored_source = authored_source_tree(root / "authored", fixture, "valid")
+        os.environ["ZH_M22_TERRAIN_ATLAS_AUTHORED_MAP"] = str(authored_map)
+        authored_marker = ("original authored terrain atlas: base=2048x256 "
+                           "edge=2048x128 classes=3 resources=0")
+        result = run(args.executable.resolve(), root / "run-authored", authored_source, "mission")
+        if result.returncode or authored_marker not in result.stdout:
+            raise SystemExit("original authored terrain atlas failed; private output redacted")
     print("original terrain atlas: ownership/rollback/reentry ok")
     return 0
 

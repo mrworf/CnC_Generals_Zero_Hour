@@ -40,6 +40,7 @@
 #include "W3DDevice/GameClient/TerrainTex.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "OriginalW3DDeviceUnavailable.h"
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <vector>
@@ -479,15 +480,68 @@ Bool WorldHeightMap::isCliffMappedTexture(Int x, Int y)
 
 Int WorldHeightMap::updateTileTexturePositions(Int *edge_height)
 {
-	if (edge_height) *edge_height = 0;
-	if (m_numTextureClasses != 1 || m_numBitmapTiles != 1 || !m_sourceTiles[0] ||
-		m_textureClasses[0].width != 1 || m_textureClasses[0].firstTile != 0)
-		throw OriginalW3DDeviceUnavailable("original active terrain atlas packing pending");
-	m_textureClasses[0].positionInTexture.x = TILE_OFFSET / 2;
-	m_textureClasses[0].positionInTexture.y = TILE_OFFSET / 2;
-	m_sourceTiles[0]->m_tileLocationInTexture.x = TILE_OFFSET / 2;
-	m_sourceTiles[0]->m_tileLocationInTexture.y = TILE_OFFSET / 2;
-	return TILE_OFFSET + TILE_PIXEL_EXTENT;
+	const Int tiles_per_row = TEXTURE_WIDTH / (TILE_PIXEL_EXTENT + TILE_OFFSET);
+	if (tiles_per_row <= 0)
+		throw OriginalW3DDeviceUnavailable("original terrain atlas grid rejected");
+	auto place_classes = [&](TXTextureClass *classes, Int class_count, TileData **tiles,
+		Int tile_count) -> Int {
+		std::vector<Bool> available(static_cast<std::size_t>(tiles_per_row * tiles_per_row), TRUE);
+		for (Int tile = 0; tile < tile_count; ++tile) {
+			if (!tiles[tile])
+				throw OriginalW3DDeviceUnavailable("original terrain atlas tile owner missing");
+			tiles[tile]->m_tileLocationInTexture.x = tiles[tile]->m_tileLocationInTexture.y = 0;
+		}
+		Int maximum_height = 0;
+		for (Int requested_width = tiles_per_row; requested_width > 0; --requested_width) {
+			for (Int class_index = 0; class_index < class_count; ++class_index) {
+				TXTextureClass &texture_class = classes[class_index];
+				if (texture_class.width != requested_width) continue;
+				Int found_row = -1, found_column = -1;
+				for (Int row = 0; row <= tiles_per_row - requested_width && found_row < 0; ++row) {
+					for (Int column = 0; column <= tiles_per_row - requested_width; ++column) {
+						Bool open = TRUE;
+						for (Int y = 0; y < requested_width && open; ++y)
+							for (Int x = 0; x < requested_width; ++x)
+								if (!available[static_cast<std::size_t>((row + y) * tiles_per_row + column + x)]) {
+									open = FALSE;
+									break;
+								}
+						if (open) { found_row = row; found_column = column; break; }
+					}
+				}
+				if (found_row < 0)
+					throw OriginalW3DDeviceUnavailable("original terrain atlas capacity exceeded");
+				const Int origin_x = TILE_OFFSET / 2 +
+					found_column * (TILE_PIXEL_EXTENT + TILE_OFFSET);
+				const Int origin_y = TILE_OFFSET / 2 +
+					found_row * (TILE_PIXEL_EXTENT + TILE_OFFSET);
+				texture_class.positionInTexture.x = origin_x;
+				texture_class.positionInTexture.y = origin_y;
+				maximum_height = std::max(maximum_height,
+					origin_y + requested_width * TILE_PIXEL_EXTENT + TILE_OFFSET / 2);
+				for (Int y = 0; y < requested_width; ++y) {
+					for (Int x = 0; x < requested_width; ++x) {
+						available[static_cast<std::size_t>((found_row + y) * tiles_per_row +
+							found_column + x)] = FALSE;
+						const Int tile_index = texture_class.firstTile + x + y * requested_width;
+						if (tile_index < 0 || tile_index >= tile_count || !tiles[tile_index])
+							throw OriginalW3DDeviceUnavailable("original terrain atlas class span rejected");
+						tiles[tile_index]->m_tileLocationInTexture.x =
+							origin_x + x * TILE_PIXEL_EXTENT;
+						tiles[tile_index]->m_tileLocationInTexture.y =
+							origin_y + (requested_width - y - 1) * TILE_PIXEL_EXTENT;
+					}
+				}
+			}
+		}
+		return maximum_height;
+	};
+	const Int terrain_height = place_classes(m_textureClasses, m_numTextureClasses,
+		m_sourceTiles, m_numBitmapTiles);
+	const Int resolved_edge_height = place_classes(m_edgeTextureClasses,
+		m_numEdgeTextureClasses, m_edgeTiles, m_numEdgeTiles);
+	if (edge_height) *edge_height = resolved_edge_height;
+	return terrain_height;
 }
 
 TextureClass *WorldHeightMap::getTerrainTexture()
