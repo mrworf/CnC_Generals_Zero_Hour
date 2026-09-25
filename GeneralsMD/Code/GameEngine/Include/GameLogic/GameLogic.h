@@ -156,6 +156,7 @@ public:
 	//-----------------------------------------------------------------------------------------------
 	/// create an object given the thing template. (Only for use by ThingFactory.)
 	Object *friend_createObject( const ThingTemplate *thing, const ObjectStatusMaskType &objectStatusMask, Team *team );
+	void friend_rollbackObjectConstruction( Object *obj );
 	void destroyObject( Object *obj );							///< Mark object as destroyed for later deletion
 	Object *findObjectByID( ObjectID id );								///< Given an ObjectID, return a pointer to the object.
  	Object *getFirstObject( void );									///< Returns the "first" object in the world. When used with the object method "getNextObject()", all objects in the world can be iterated.

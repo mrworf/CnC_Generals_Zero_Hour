@@ -31,6 +31,17 @@
 
 #include "Common/AudioEventInfo.h"
 #include "Common/DynamicAudioEventInfo.h"
+
+static void failDrawableConstructionStage(const char *stage)
+{
+#if defined(__linux__)
+	const char *selected = getenv("ZH_M22_CONSTRUCTION_FAIL_STAGE");
+	if (selected && strcmp(selected, stage) == 0)
+		throw ERROR_INVALID_D3D;
+#else
+	(void)stage;
+#endif
+}
 #include "Common/AudioSettings.h"
 #include "Common/BitFlagsIO.h"
 #include "Common/BuildAssistant.h"
@@ -349,6 +360,21 @@ void Drawable::saturateRGB(RGBColor& color, Real factor)
 Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBits ) 
 				: Thing( thingTemplate )
 {
+	m_constructionRolledBack = false;
+	m_id = INVALID_DRAWABLE_ID;
+	m_object = NULL;
+	m_constructDisplayString = NULL;
+	m_captionDisplayString = NULL;
+	m_ambientSound = NULL;
+	m_iconInfo = NULL;
+	m_selectionFlashEnvelope = NULL;
+	m_colorTintEnvelope = NULL;
+	m_locoInfo = NULL;
+	m_groupNumber = NULL;
+	for (Int moduleType = 0; moduleType < NUM_DRAWABLE_MODULE_TYPES; ++moduleType)
+		m_modules[moduleType] = NULL;
+	try
+	{
 
 	// assign status bits before anything else can be done
 	m_status = statusBits;
@@ -366,6 +392,7 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	// members of the drawable before this registration happens
 	//
 	TheGameClient->registerDrawable( this );
+	failDrawableConstructionStage("drawable-registry");
 
 	Int i;
 
@@ -458,7 +485,7 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	Module** m;
 
 	const ModuleInfo& drawMI = thingTemplate->getDrawModuleInfo();
-	m_modules[MODULETYPE_DRAW - FIRST_DRAWABLE_MODULE_TYPE] = MSGNEW("ModulePtrs") Module*[drawMI.getCount()+1];	// pool[]ify
+	m_modules[MODULETYPE_DRAW - FIRST_DRAWABLE_MODULE_TYPE] = MSGNEW("ModulePtrs") Module*[drawMI.getCount()+1]();	// pool[]ify
 	m = m_modules[MODULETYPE_DRAW - FIRST_DRAWABLE_MODULE_TYPE];
 	for (modIdx = 0; modIdx < drawMI.getCount(); ++modIdx)
 	{
@@ -466,15 +493,19 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 		if (TheGlobalData->m_useDrawModuleLOD && 
 				newModData->getMinimumRequiredGameLOD() > TheGameLODManager->getStaticLODLevel())
 			continue;
-		*m++ = TheModuleFactory->newModule(this, drawMI.getNthName(modIdx), newModData, MODULETYPE_DRAW);
+		Module *newModule = TheModuleFactory->newModule(this, drawMI.getNthName(modIdx), newModData, MODULETYPE_DRAW);
+		if (!newModule)
+			throw ERROR_INVALID_D3D;
+		*m++ = newModule;
 	}
 	*m = NULL;
+	failDrawableConstructionStage("draw-modules");
 
 	const ModuleInfo& cuMI = thingTemplate->getClientUpdateModuleInfo();
 	if (cuMI.getCount())
 	{
 		// since most things don't have CU modules, we allow this to be null!
-		m_modules[MODULETYPE_CLIENT_UPDATE - FIRST_DRAWABLE_MODULE_TYPE] = MSGNEW("ModulePtrs") Module*[cuMI.getCount()+1];	// pool[]ify
+		m_modules[MODULETYPE_CLIENT_UPDATE - FIRST_DRAWABLE_MODULE_TYPE] = MSGNEW("ModulePtrs") Module*[cuMI.getCount()+1]();	// pool[]ify
 		m = m_modules[MODULETYPE_CLIENT_UPDATE - FIRST_DRAWABLE_MODULE_TYPE];
 		for (modIdx = 0; modIdx < cuMI.getCount(); ++modIdx)
 		{
@@ -486,10 +517,14 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 					cuMI.getNthName(modIdx).compareNoCase("SwayClientUpdate") == 0)
 				continue;
 
-			*m++ = TheModuleFactory->newModule(this, cuMI.getNthName(modIdx), newModData, MODULETYPE_CLIENT_UPDATE);
+			Module *newModule = TheModuleFactory->newModule(this, cuMI.getNthName(modIdx), newModData, MODULETYPE_CLIENT_UPDATE);
+			if (!newModule)
+				throw ERROR_INVALID_D3D;
+			*m++ = newModule;
 		}
 		*m = NULL;
 	}
+	failDrawableConstructionStage("client-modules");
 
 	/// allow for inter-Module resolution
 	for (i = 0; i < NUM_DRAWABLE_MODULE_TYPES; ++i)
@@ -497,6 +532,7 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 		for (Module** m = m_modules[i]; m && *m; ++m)
 			(*m)->onObjectCreated();
 	}
+	failDrawableConstructionStage("drawable-resolution");
 	
 	m_groupNumber = NULL;
 	m_captionDisplayString = NULL;
@@ -525,13 +561,73 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
   {
   	startAmbientSound();
   }
-
+	}
+	catch (...)
+	{
+		friend_rollbackConstruction();
+		throw;
+	}
 }  // end Drawable
+
+//-------------------------------------------------------------------------------------------------
+/** Reverse constructor publication without running drawable on-delete hooks. */
+//-------------------------------------------------------------------------------------------------
+void Drawable::friend_rollbackConstruction()
+{
+	if (m_constructionRolledBack)
+		return;
+	m_constructionRolledBack = true;
+	if (TheGameClient)
+		TheGameClient->friend_rollbackDrawableConstruction(this);
+	if (m_object)
+		m_object->friend_bindToDrawable(NULL);
+	m_object = NULL;
+
+	for (Int i = 0; i < NUM_DRAWABLE_MODULE_TYPES; ++i)
+	{
+		if (m_modules[i])
+		{
+			for (Module **module = m_modules[i]; *module; ++module)
+			{
+				(*module)->deleteInstance();
+				*module = NULL;
+			}
+			delete [] m_modules[i];
+			m_modules[i] = NULL;
+		}
+	}
+	if (m_constructDisplayString && TheDisplayStringManager)
+		TheDisplayStringManager->freeDisplayString(m_constructDisplayString);
+	m_constructDisplayString = NULL;
+	if (m_captionDisplayString && TheDisplayStringManager)
+		TheDisplayStringManager->freeDisplayString(m_captionDisplayString);
+	m_captionDisplayString = NULL;
+	if (m_ambientSound)
+	{
+		m_ambientSound->deleteInstance();
+		m_ambientSound = NULL;
+	}
+	if (m_iconInfo)
+		m_iconInfo->deleteInstance();
+	m_iconInfo = NULL;
+	if (m_selectionFlashEnvelope)
+		m_selectionFlashEnvelope->deleteInstance();
+	m_selectionFlashEnvelope = NULL;
+	if (m_colorTintEnvelope)
+		m_colorTintEnvelope->deleteInstance();
+	m_colorTintEnvelope = NULL;
+	if (m_locoInfo)
+		m_locoInfo->deleteInstance();
+	m_locoInfo = NULL;
+	m_id = INVALID_DRAWABLE_ID;
+}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 Drawable::~Drawable()
 {
+	if (m_constructionRolledBack)
+		return;
 	Int i;
 
 	if( m_constructDisplayString )

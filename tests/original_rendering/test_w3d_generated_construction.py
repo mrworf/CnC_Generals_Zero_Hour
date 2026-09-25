@@ -23,6 +23,12 @@ STAGES = ("terrain", "radar", "shroud", "terrain-logic", "radar-terrain",
           "pathfinder", "observer", "objects")
 ROLLBACK = re.compile(r"original graphics rollback: residual=(\d+) baseline=(\d+) owners=(\d+)")
 TEARDOWN = "original recording factory teardown: resources=0"
+TRANSACTION_ROLLBACK = "original construction rollback: residual=0"
+FAILURE_STAGES = (
+    "object-id", "team", "behavior-modules", "behavior-resolution", "radar", "logic",
+    "object", "create", "partition", "drawable-registry", "draw-modules", "client-modules",
+    "drawable-resolution", "drawable", "binding", "init",
+)
 
 
 def snapshot(root: Path):
@@ -112,9 +118,28 @@ def main() -> int:
         if retry.returncode != 3 or COMPLETE not in retry.stderr or \
                 not ROLLBACK.search(retry.stderr) or TEARDOWN not in retry.stdout:
             raise SystemExit("generated construction provider retry failed")
+        for stage in FAILURE_STAGES:
+            failed = run(str(args.executable.resolve()), base / f"failure-{stage}", source,
+                         env_overrides={**common, "ZH_M21_SCENARIO": "mission",
+                                        "ZH_M22_CONSTRUCTION_FAIL_STAGE": stage})
+            failed_rollback = ROLLBACK.search(failed.stderr)
+            if failed.returncode != 3 or COMPLETE in failed.stderr or \
+                    not failed_rollback or failed_rollback.group(3) != "0" or \
+                    TEARDOWN not in failed.stdout or TRANSACTION_ROLLBACK not in failed.stderr:
+                raise SystemExit(f"generated construction rollback failed at {stage}: "
+                                 f"status={failed.returncode} "
+                                 f"rollback={failed_rollback.groups() if failed_rollback else 'absent'}")
+            retried = run(str(args.executable.resolve()), base / f"retry-{stage}", source,
+                          env_overrides={**common, "ZH_M21_SCENARIO": "mission"})
+            retried_rollback = ROLLBACK.search(retried.stderr)
+            if retried.returncode != 3 or COMPLETE not in retried.stderr or \
+                    not retried_rollback or retried_rollback.group(3) != "0" or \
+                    TEARDOWN not in retried.stdout:
+                raise SystemExit(f"generated construction retry failed after {stage}")
         if before != snapshot(source):
             raise SystemExit("generated construction changed read-only input")
-    print("M22 08F generated construction: modes=2 generations=2 stages=8 owners=0")
+    print(f"M22 construction: modes=2 generations=2 stages=8 "
+          f"rollback-stages={len(FAILURE_STAGES)} owners=0")
     return 0
 
 

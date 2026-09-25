@@ -4025,6 +4025,41 @@ Object *GameLogic::friend_createObject( const ThingTemplate *thing, const Object
 } 
 
 // ------------------------------------------------------------------------------------------------
+/** Remove every construction-time publication without running gameplay destroy hooks. */
+// ------------------------------------------------------------------------------------------------
+void GameLogic::friend_rollbackObjectConstruction( Object *obj )
+{
+	if (!obj)
+		return;
+
+	for (Int i = (Int)m_sleepyUpdates.size() - 1; i >= 0; --i)
+	{
+		UpdateModulePtr update = m_sleepyUpdates[i];
+		if (update && update->friend_getObject() == obj)
+			eraseSleepyUpdate(i);
+	}
+#ifdef ALLOW_NONSLEEPY_UPDATES
+	for (std::list<UpdateModulePtr>::iterator it = m_normalUpdates.begin();
+		it != m_normalUpdates.end(); )
+	{
+		UpdateModulePtr update = *it;
+		if (update && update->friend_getObject() == obj)
+			it = m_normalUpdates.erase(it);
+		else
+			++it;
+	}
+#endif
+	m_objectsToDestroy.remove(obj);
+	if (obj->isInList(&m_objList))
+		obj->removeFromList(&m_objList);
+	const ObjectID id = obj->getID();
+	if (id != INVALID_ID && (UnsignedInt)id < m_objVector.size() && m_objVector[id] == obj)
+		m_objVector[id] = NULL;
+	if (id != INVALID_ID && (ObjectID)((UnsignedInt)id + 1) == m_nextObjID)
+		m_nextObjID = id;
+}
+
+// ------------------------------------------------------------------------------------------------
 /** Mark the object as destroyed, and place on list for deletion at the end of the next update.
  * This is the only interface to destroy objects - objects cannot be directly deleted. */
 // ------------------------------------------------------------------------------------------------
@@ -4210,10 +4245,24 @@ void GameLogic::sendObjectCreated( Object *obj )
 {
 	Drawable *draw = TheThingFactory->newDrawable(obj->getTemplate());
 
+#if defined(__linux__)
+	const char *constructionFailure = getenv("ZH_M22_CONSTRUCTION_FAIL_STAGE");
+	if (constructionFailure && strcmp(constructionFailure, "drawable") == 0)
+	{
+		draw->friend_rollbackConstruction();
+		draw->friend_deleteInstance();
+		throw ERROR_INVALID_D3D;
+	}
+#endif
+
 /// @todo COLIN ... shouldn't we have a check here for existing drawable!!!!!
 
 	// bind drawable to object and object to drawable
 	bindObjectAndDrawable(obj, draw);
+#if defined(__linux__)
+	if (constructionFailure && strcmp(constructionFailure, "binding") == 0)
+		throw ERROR_INVALID_D3D;
+#endif
 
 }
 

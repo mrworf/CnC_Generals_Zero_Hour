@@ -420,6 +420,8 @@ public:
 	void prependToList(Drawable **pListHead);
 	void removeFromList(Drawable **pListHead);
 	void setID( DrawableID id );											///< set this drawable's unique ID
+	void friend_rollbackConstruction();
+	void friend_deleteInstance() { deleteInstance(); }
 
 	inline const ModelConditionFlags& getModelConditionFlags( void ) const { return m_conditionState; }
 
@@ -664,6 +666,7 @@ private:
 	DrawableID m_id;						///< this drawable's unique ID
 	Drawable *m_nextDrawable; 
 	Drawable *m_prevDrawable;		///< list links
+	Bool m_constructionRolledBack;
 
   DynamicAudioEventInfo *m_customSoundAmbientInfo; ///< If not NULL, info about the ambient sound to attach to this object
 

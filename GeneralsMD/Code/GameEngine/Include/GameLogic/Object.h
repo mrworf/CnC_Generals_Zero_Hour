@@ -412,6 +412,7 @@ public:
 
 	// this is intended for use ONLY by GameLogic.
 	void friend_deleteInstance() { deleteInstance(); }
+	void friend_rollbackConstruction();
 
 	/// cache the partition module (should be called only by PartitionData)
 	void friend_setPartitionData(PartitionData *pd) { m_partitionData = pd; }
@@ -803,6 +804,7 @@ private:
 	// --------- BYTE-SIZED THINGS GO HERE
 	Bool													m_isSelectable;
 	Bool													m_modulesReady;
+	Bool													m_constructionRolledBack;
 #if defined(_DEBUG) || defined(_INTERNAL)
 	Bool													m_hasDiedAlready;
 #endif

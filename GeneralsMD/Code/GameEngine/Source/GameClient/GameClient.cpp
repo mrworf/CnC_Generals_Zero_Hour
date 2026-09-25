@@ -513,6 +513,30 @@ void GameClient::registerDrawable( Drawable *draw )
 
 }  // end registerDrawable
 
+/** Remove construction-time lookup/list publication without invoking drawable callbacks. */
+void GameClient::friend_rollbackDrawableConstruction( Drawable *draw )
+{
+	if (!draw)
+		return;
+	Bool listed = FALSE;
+	for (Drawable *candidate = m_drawableList; candidate; candidate = candidate->getNextDrawable())
+	{
+		if (candidate == draw)
+		{
+			listed = TRUE;
+			break;
+		}
+	}
+	if (listed)
+		draw->removeFromList(&m_drawableList);
+	const DrawableID id = draw->getID();
+	if (id != INVALID_DRAWABLE_ID && (UnsignedInt)id < m_drawableVector.size() &&
+		m_drawableVector[id] == draw)
+		m_drawableVector[id] = NULL;
+	if (id != INVALID_DRAWABLE_ID && (DrawableID)((UnsignedInt)id + 1) == m_nextDrawableID)
+		m_nextDrawableID = id;
+}
+
 /** -----------------------------------------------------------------------------------------------
  * Redraw all views, update the GUI, play sound effects, etc.
  */

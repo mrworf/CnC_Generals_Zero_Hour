@@ -112,6 +112,17 @@
 #include "Common/AudioEventInfo.h"
 #include "Common/DynamicAudioEventInfo.h"
 
+static void failObjectConstructionStage(const char *stage)
+{
+#if defined(__linux__)
+	const char *selected = getenv("ZH_M22_CONSTRUCTION_FAIL_STAGE");
+	if (selected && strcmp(selected, stage) == 0)
+		throw ERROR_INVALID_D3D;
+#else
+	(void)stage;
+#endif
+}
+
 #ifdef _INTERNAL
 // for occasional debugging...
 //#pragma optimize("", off)
@@ -198,8 +209,12 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_partitionData(NULL),
 	m_radarData(NULL),
 	m_drawable(NULL),
+	m_id(INVALID_ID),
+	m_producerID(INVALID_ID),
+	m_builderID(INVALID_ID),
 	m_next(NULL),
 	m_prev(NULL),
+	m_group(NULL),
 	m_team(NULL),
 	m_experienceTracker(NULL),
 	m_firingTracker(NULL),
@@ -230,6 +245,9 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 #endif
 	//Modules have not been created yet!
 	m_modulesReady = false;
+	m_constructionRolledBack = false;
+	try
+	{
 
 	// Force the thing template to use the most overridden version of itself - jkmcd
 	// Note that after this, the object will be using m_template, which forces the usage of the 
@@ -302,6 +320,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	// assign unique object id
 	setID( TheGameLogic->allocateObjectID() );
+	failObjectConstructionStage("object-id");
 
 	//
 	// allocate any modules we need to, we should keep
@@ -312,7 +331,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	// allocate the publicModule arrays
 // pool[]ify
-	m_behaviors = MSGNEW("ModulePtrs") BehaviorModule*[totalModules + 1];
+	m_behaviors = MSGNEW("ModulePtrs") BehaviorModule*[totalModules + 1]();
 	BehaviorModule** curB = m_behaviors;
 	const ModuleInfo& mi = tt->getBehaviorModuleInfo();
 
@@ -320,6 +339,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	// If no team is specified in the constructor, then assign the object
 	// to the neutral team.
 	setTeam(team ? team : ThePlayerList->getNeutralPlayer()->getDefaultTeam());
+	failObjectConstructionStage("team");
 
 	// the helpers are done first -- even before Behaviors! -- in case a module needs
 	// to call something that uses them.
@@ -417,6 +437,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 			continue;
 
 		BehaviorModule* newMod = (BehaviorModule*)TheModuleFactory->newModule(this, modName, mi.getNthData(modIdx), MODULETYPE_BEHAVIOR);
+		if (!newMod)
+			throw ERROR_INVALID_D3D;
 		*curB++ = newMod;
 
 		BodyModuleInterface* body = newMod->getBody();
@@ -460,6 +482,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	}
 
 	*curB = NULL;
+	failObjectConstructionStage("behavior-modules");
 
 	AIUpdateInterface *ai = getAIUpdateInterface();
 	if (ai) {
@@ -485,6 +508,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	{
 		(*b)->onObjectCreated();
 	}
+	failObjectConstructionStage("behavior-resolution");
 
 	m_numTriggerAreasActive = 0;
 	m_enteredOrExitedFrame = 0;
@@ -496,9 +520,11 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_modulesReady = true;
 
 	TheRadar->addObject( this );
+	failObjectConstructionStage("radar");
 
 	// register the object with the GameLogic
 	TheGameLogic->registerObject( this );
+	failObjectConstructionStage("logic");
 
 	//disable occlusion for some time after object is created to allow them to exit the factory/building.
 	m_safeOcclusionFrame = TheGameLogic->getFrame()+tt->getOcclusionDelay();
@@ -507,9 +533,83 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_soleHealingBenefactorID = INVALID_ID; ///< who is the only other object that can give me this non-stacking heal benefit?
 	m_soleHealingBenefactorExpirationFrame = 0; ///< on what frame can I accept healing (thus to switch) from a new benefactor
 
-
-
+	}
+	catch (...)
+	{
+		friend_rollbackConstruction();
+		throw;
+	}
 }  // end Object
+
+//-------------------------------------------------------------------------------------------------
+/** Reverse constructor publication without running gameplay create/destroy notifications. */
+//-------------------------------------------------------------------------------------------------
+void Object::friend_rollbackConstruction()
+{
+	if (m_constructionRolledBack)
+		return;
+	m_constructionRolledBack = true;
+
+	if (m_drawable && TheGameClient)
+	{
+		Drawable *draw = m_drawable;
+		draw->friend_rollbackConstruction();
+		draw->friend_deleteInstance();
+	}
+	m_drawable = NULL;
+	if (TheGameLogic)
+		TheGameLogic->friend_rollbackObjectConstruction(this);
+	if (m_partitionData && ThePartitionManager)
+		ThePartitionManager->unRegisterObject(this);
+	if (m_radarData && TheRadar)
+		TheRadar->removeObject(this);
+	if (m_group)
+		m_group->remove(this);
+	if (m_team)
+		setTeam(NULL);
+
+	if (m_behaviors)
+	{
+		for (BehaviorModule **behavior = m_behaviors; *behavior; ++behavior)
+		{
+			(*behavior)->deleteInstance();
+			*behavior = NULL;
+		}
+		delete [] m_behaviors;
+		m_behaviors = NULL;
+	}
+	if (m_experienceTracker)
+	{
+		m_experienceTracker->deleteInstance();
+		m_experienceTracker = NULL;
+	}
+	SightingInfo **sightings[] = {
+		&m_partitionLastLook, &m_partitionRevealAllLastLook, &m_partitionLastShroud,
+		&m_partitionLastThreat, &m_partitionLastValue
+	};
+	for (UnsignedInt i = 0; i < sizeof(sightings) / sizeof(sightings[0]); ++i)
+	{
+		if (*sightings[i])
+		{
+			(*sightings[i])->deleteInstance();
+			*sightings[i] = NULL;
+		}
+	}
+	m_ai = NULL;
+	m_physics = NULL;
+	m_body = NULL;
+	m_contain = NULL;
+	m_stealth = NULL;
+	m_firingTracker = NULL;
+	m_repulsorHelper = NULL;
+	m_statusDamageHelper = NULL;
+	m_tempWeaponBonusHelper = NULL;
+	m_subdualDamageHelper = NULL;
+	m_smcHelper = NULL;
+	m_wsHelper = NULL;
+	m_defectionHelper = NULL;
+	m_id = INVALID_ID;
+}
 
 //-------------------------------------------------------------------------------------------------
 /** Emit message announcing object's creation
@@ -603,6 +703,8 @@ void Object::initObject()
 //-------------------------------------------------------------------------------------------------
 Object::~Object()
 {
+	if (m_constructionRolledBack)
+		return;
 
 	// tell the AI the building is gone
 	/// @todo Generalize the notion of objects entering and leaving the world, so we don't have to special case this

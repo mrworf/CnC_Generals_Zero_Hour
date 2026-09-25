@@ -49,6 +49,17 @@
 #include "GameClient/Drawable.h"
 #include "Common/INI.h"
 
+static void failConstructionStage(const char *stage)
+{
+#if defined(__linux__)
+	const char *selected = getenv("ZH_M22_CONSTRUCTION_FAIL_STAGE");
+	if (selected && strcmp(selected, stage) == 0)
+		throw ERROR_INVALID_D3D;
+#else
+	(void)stage;
+#endif
+}
+
 #ifdef _INTERNAL
 // for occasional debugging...
 //#pragma optimize("", off)
@@ -323,27 +334,55 @@ Object *ThingFactory::newObject( const ThingTemplate *tmplate, Team *team, Objec
 	// (this will throw an exception on failure.)
 	//Added ability to pass in optional statusBits. This is needed to be set prior to
 	//the onCreate() calls... in the case of constructing.
-	Object *obj = TheGameLogic->friend_createObject( tmplate, statusBits, team );
-
-	// run the create function for the thing
-	for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+	Object *obj = NULL;
+	Object *const objectHeadBefore = TheGameLogic->getFirstObject();
+	Drawable *const drawableHeadBefore = TheGameClient->firstDrawable();
+	try
 	{
-		CreateModuleInterface* create = (*m)->getCreate();
-		if (!create)
+		obj = TheGameLogic->friend_createObject( tmplate, statusBits, team );
+		if (!obj)
+			throw ERROR_INVALID_D3D;
+		failConstructionStage("object");
+
+		// run the create function for the thing
+		for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
+		{
+			CreateModuleInterface* create = (*m)->getCreate();
+			if (!create)
 			continue;
-	
-		create->onCreate();
+
+			create->onCreate();
+		}
+		failConstructionStage("create");
+
+		//
+		// all objects are part of the partition manager system, add it to that
+		// system now
+		//
+		ThePartitionManager->registerObject( obj );
+		failConstructionStage("partition");
+
+		obj->initObject();
+		failConstructionStage("init");
+		return obj;
 	}
-
-	//
-	// all objects are part of the partition manager system, add it to that 
-	// system now
-	//
-	ThePartitionManager->registerObject( obj );
-
-	obj->initObject();
-
-	return obj;
+	catch (...)
+	{
+		if (obj)
+		{
+			obj->friend_rollbackConstruction();
+			obj->friend_deleteInstance();
+		}
+#if defined(__linux__)
+		if (getenv("ZH_M22_CONSTRUCTION_FAIL_STAGE"))
+		{
+			const Int residual = TheGameLogic->getFirstObject() != objectHeadBefore ||
+				TheGameClient->firstDrawable() != drawableHeadBefore;
+			fprintf(stderr, "original construction rollback: residual=%d\n", residual);
+		}
+#endif
+		throw;
+	}
 
 } 
 
