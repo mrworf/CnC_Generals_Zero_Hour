@@ -109,6 +109,8 @@ void verify_terrain_shader(RecordingGpuDevice &device,
 		"original terrain shader duplicate init was accepted");
 	require(W3DShaderManager::getShaderPasses(W3DShaderManager::ST_TERRAIN_BASE) == 2,
 		"original minimum terrain shader pass count changed");
+	require(W3DShaderManager::getShaderPasses(W3DShaderManager::ST_ROAD_BASE) == 1,
+		"original minimum road shader pass count changed");
 	require_rejected([] {
 		(void)W3DShaderManager::getShaderPasses(W3DShaderManager::ST_TERRAIN_BASE_NOISE1);
 	}, "original optional terrain noise shader was exposed");
@@ -118,6 +120,12 @@ void verify_terrain_shader(RecordingGpuDevice &device,
 	require_rejected([] {
 		(void)W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, 2);
 	}, "original terrain shader accepted an invalid pass");
+	require_rejected([] {
+		(void)W3DShaderManager::getShaderPasses(W3DShaderManager::ST_ROAD_BASE_NOISE1);
+	}, "original optional road noise shader was exposed");
+	require_rejected([] {
+		(void)W3DShaderManager::setShader(W3DShaderManager::ST_ROAD_BASE, 1);
+	}, "original road shader accepted an invalid pass");
 	require_rejected([] {
 		(void)W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, 0);
 	}, "original terrain shader accepted an absent atlas pair");
@@ -200,6 +208,48 @@ void verify_terrain_shader(RecordingGpuDevice &device,
 	DX8Wrapper::Apply_Render_State_Changes();
 	require(!Edge::map_applied_state(DX8_FVF_XYZNUV2).pipeline.blend.enabled,
 		"original terrain shader reset did not restore delayed shader selection");
+
+	W3DShaderManager::setTexture(0, nullptr);
+	require_rejected([] {
+		(void)W3DShaderManager::setShader(W3DShaderManager::ST_ROAD_BASE, 0);
+	}, "original road shader accepted a missing alpha atlas");
+	W3DShaderManager::setTexture(0, &unpublished);
+	require_rejected([] {
+		(void)W3DShaderManager::setShader(W3DShaderManager::ST_ROAD_BASE, 0);
+	}, "original road shader accepted an unpublished alpha atlas");
+	W3DShaderManager::setTexture(0, alpha);
+	device.fail_next_sampler_create();
+	require_rejected([] {
+		(void)W3DShaderManager::setShader(W3DShaderManager::ST_ROAD_BASE, 0);
+	}, "original road shader sampler failure was ignored");
+	require(!edge.pending_stage(0).source && !edge.pending_stage(1).source &&
+		device.resource_counts().samplers == 0 &&
+		W3DShaderManager::getCurrentShader() == W3DShaderManager::ST_INVALID,
+		"original road shader failure retained delayed state");
+	require(W3DShaderManager::setShader(W3DShaderManager::ST_ROAD_BASE, 0),
+		"original road alpha material failed after rollback");
+	const auto road_texture = edge.pending_stage(0);
+	const auto road_state = Edge::map_applied_state(DX8_FVF_XYZNUV2);
+	require(road_texture.source == alpha && road_texture.texture == edge.texture_handle(alpha) &&
+		road_state.stages[0].uv_source == 0 &&
+		road_state.stages[0].color.op == Op::modulate &&
+		road_state.stages[0].color.first == Arg::texture &&
+		road_state.stages[0].color.second == Arg::diffuse &&
+		road_state.stages[0].alpha.op == Op::modulate &&
+		road_state.pipeline.blend.enabled &&
+		road_state.pipeline.blend.source_color == zh::renderer::BlendFactor::src_alpha &&
+		road_state.pipeline.blend.destination_color == zh::renderer::BlendFactor::inv_src_alpha &&
+		!road_state.pipeline.depth_stencil.depth_write &&
+		road_state.pipeline.depth_stencil.depth_compare == zh::renderer::CompareOp::less_equal &&
+		!road_state.lighting && road_state.stages[1].color.op == Op::disable,
+		"original road alpha material state changed");
+	require_rejected([] { W3DShaderManager::resetShader(W3DShaderManager::ST_TERRAIN_BASE); },
+		"original road shader accepted a mismatched reset");
+	W3DShaderManager::resetShader(W3DShaderManager::ST_ROAD_BASE);
+	require(!edge.pending_stage(0).source && !edge.pending_stage(1).source &&
+		device.resource_counts().samplers == 0 &&
+		W3DShaderManager::getCurrentShader() == W3DShaderManager::ST_INVALID,
+		"original road shader reset retained state");
 	W3DShaderManager::shutdown();
 	require_rejected([] {
 		(void)W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, 0);

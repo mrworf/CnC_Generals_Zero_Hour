@@ -74,26 +74,31 @@ void W3DShaderManager::shutdown()
 Int W3DShaderManager::getShaderPasses(ShaderTypes shader)
 {
 	require_shader_manager();
-	if (shader != ST_TERRAIN_BASE)
+	if (shader == ST_TERRAIN_BASE) return 2;
+	if (shader == ST_ROAD_BASE) return 1;
+	else
 		throw std::runtime_error("original terrain shader kind is unsupported by Linux minimum profile");
-	return 2;
 }
 
 Int W3DShaderManager::setShader(ShaderTypes shader, Int pass)
 {
 	require_shader_manager();
-	if (shader != ST_TERRAIN_BASE)
+	if (shader != ST_TERRAIN_BASE && shader != ST_ROAD_BASE)
 		throw std::runtime_error("original terrain shader kind is unsupported by Linux minimum profile");
-	if (pass < 0 || pass >= 2)
-		throw std::runtime_error("original terrain shader pass is outside the two-pass base route");
+	const Int pass_count = shader == ST_TERRAIN_BASE ? 2 : 1;
+	if (pass < 0 || pass >= pass_count)
+		throw std::runtime_error("original terrain shader pass is outside the minimum route");
 	if (shader == m_currentShader && pass == m_currentShaderPass) return TRUE;
-	TextureClass *selected = m_Textures[pass];
-	if (!m_Textures[0] || !m_Textures[1] || !selected)
+	TextureClass *selected = shader == ST_TERRAIN_BASE ? m_Textures[pass] : m_Textures[0];
+	if (!selected || (shader == ST_TERRAIN_BASE && (!m_Textures[0] || !m_Textures[1])))
 		throw std::runtime_error("original terrain shader atlas pair is incomplete");
 	auto &edge = zh::original_runtime::OriginalGpuEdge::required();
-	// Validate both published owners before changing delayed source state.
-	(void)edge.texture_handle(m_Textures[0]);
-	(void)edge.texture_handle(m_Textures[1]);
+	// Validate every required published owner before changing delayed source state.
+	(void)edge.texture_handle(selected);
+	if (shader == ST_TERRAIN_BASE) {
+		(void)edge.texture_handle(m_Textures[0]);
+		(void)edge.texture_handle(m_Textures[1]);
+	}
 	DX8Wrapper::Apply_Render_State_Changes();
 	try {
 		edge.select_texture(0, selected);
@@ -103,15 +108,24 @@ Int W3DShaderManager::setShader(ShaderTypes shader, Int pass)
 		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
 		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
 		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
 		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_ALPHAOP,
-			pass == 0 ? D3DTOP_DISABLE : D3DTOP_MODULATE);
-		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_TEXCOORDINDEX, pass);
+			shader == ST_ROAD_BASE || pass != 0 ? D3DTOP_MODULATE : D3DTOP_DISABLE);
+		DX8Wrapper::Set_DX8_Texture_Stage_State(0, D3DTSS_TEXCOORDINDEX,
+			shader == ST_TERRAIN_BASE ? pass : 0);
 		DX8Wrapper::Set_DX8_Texture_Stage_State(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
 		DX8Wrapper::Set_DX8_Texture_Stage_State(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
-		DX8Wrapper::Set_DX8_Render_State(D3DRS_ALPHABLENDENABLE, pass != 0);
-		if (pass != 0) {
+		const Bool alpha_blend = shader == ST_ROAD_BASE || pass != 0;
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_ALPHABLENDENABLE, alpha_blend);
+		if (alpha_blend) {
 			DX8Wrapper::Set_DX8_Render_State(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
 			DX8Wrapper::Set_DX8_Render_State(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+		}
+		if (shader == ST_ROAD_BASE) {
+			DX8Wrapper::Set_DX8_Render_State(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
+			DX8Wrapper::Set_DX8_Render_State(D3DRS_ZWRITEENABLE, FALSE);
+			DX8Wrapper::Set_DX8_Render_State(D3DRS_LIGHTING, FALSE);
 		}
 	} catch (...) {
 		clear_terrain_pass(false);
@@ -127,7 +141,7 @@ Int W3DShaderManager::setShader(ShaderTypes shader, Int pass)
 void W3DShaderManager::resetShader(ShaderTypes shader)
 {
 	require_shader_manager();
-	if (shader != ST_TERRAIN_BASE)
+	if (shader != ST_TERRAIN_BASE && shader != ST_ROAD_BASE)
 		throw std::runtime_error("original terrain shader reset kind is unsupported");
 	if (m_currentShader == ST_INVALID) return;
 	if (m_currentShader != shader)

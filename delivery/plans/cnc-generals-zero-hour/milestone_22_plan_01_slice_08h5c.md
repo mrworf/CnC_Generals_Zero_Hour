@@ -19,3 +19,14 @@ tests assert exact public state and successful retry over two generations.
 This slice supplies no terrain geometry and does not schedule a draw. Run the
 full proportional M22 gates and commit once as
 `delivery: M22 08H5C add extra terrain material`.
+
+## Result
+
+Complete. The Linux minimum-profile shader manager now exposes the single
+source `ST_ROAD_BASE` pass with alpha-atlas/diffuse modulation,
+source-alpha/inverse-source-alpha blending, less-equal depth testing and no
+depth write. Published ownership is validated before delayed state changes;
+missing or unpublished textures, invalid families and passes, injected sampler
+failure and mismatched reset fail without retaining active state. Generated
+Recording coverage proves exact state, retry and two-generation cleanup. See
+the [08H5C evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08h5c.md).
