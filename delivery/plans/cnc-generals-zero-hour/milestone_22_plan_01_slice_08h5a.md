@@ -21,3 +21,13 @@ classes, alpha/orientation cases and height/cliff data over two generations.
 This slice does not add global/dynamic terrain lighting, extra-blend inventory
 or a third material pass. Run the full proportional M22 gates and commit once
 as `delivery: M22 08H5A consume authored terrain vertices`.
+
+## Result
+
+Complete. The source height-map owner now materializes its accepted atlas pair
+before geometry construction and writes base and primary-blend UVs to their
+separate channels with authored blend alpha in diffuse alpha. Generated flat
+and multi-class authored fixtures prove exact payload, two base passes,
+failure rollback and device-generation-safe map/atlas teardown. Extra-blend
+inventory and submission remain 08H5B–08H5D. See the
+[08H5A evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08h5a.md).

@@ -130,19 +130,9 @@ int HeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *map,
 		x < 2 || y < 2 || x > VERTEX_BUFFER_TILE_LENGTH + 1 ||
 		y > VERTEX_BUFFER_TILE_LENGTH + 1 || !zh::original_runtime::OriginalGpuEdge::active())
 		throw OriginalW3DDeviceUnavailable("original flat terrain geometry unavailable");
-	for (Int cell_y = 0; cell_y < y - 1; ++cell_y) {
-		for (Int cell_x = 0; cell_x < x - 1; ++cell_x) {
-			float u[4]{}, v[4]{};
-			UnsignedByte alpha[4]{};
-			Bool flip = FALSE;
-			if (map->getTextureClass(cell_x, cell_y) != 0)
-				throw OriginalW3DDeviceUnavailable("original active terrain tile metadata pending");
-			map->getAlphaUVData(cell_x, cell_y, u, v, alpha, &flip, FALSE);
-			if (flip || alpha[0] || alpha[1] || alpha[2] || alpha[3])
-				throw OriginalW3DDeviceUnavailable("original active terrain blend pending");
-		}
-	}
 	try {
+		if (!map->getTerrainTexture() || !map->getAlphaTerrainTexture())
+			throw OriginalW3DDeviceUnavailable("original terrain atlas pair unavailable");
 		BaseHeightMapRenderObjClass::initHeightData(x, y, map, lights, FALSE);
 		m_numExtraBlendTiles = m_numVisibleExtraBlendTiles = 0;
 		m_originX = m_originY = 0;
@@ -244,20 +234,25 @@ int HeightMapRenderObjClass::updateBlock(Int x0, Int y0, Int x1, Int y1,
 	VERTEX_FORMAT *backup = reinterpret_cast<VERTEX_FORMAT *>(m_vertexBufferBackup[0]);
 	for (Int y = y0; y < y1; ++y) {
 		for (Int x = x0; x < x1; ++x) {
-			float u[4]{}, v[4]{};
+			float u[4]{}, v[4]{}, alpha_u[4]{}, alpha_v[4]{};
 			UnsignedByte alpha[4]{};
 			Bool flip = FALSE;
 			map->getUVData(x, y, u, v, FALSE);
-			map->getAlphaUVData(x, y, u, v, alpha, &flip, FALSE);
+			Bool has_base_uv = FALSE;
+			for (Int corner = 0; corner != 4; ++corner)
+				has_base_uv = has_base_uv || u[corner] != 0.0f || v[corner] != 0.0f;
+			if (!has_base_uv)
+				throw OriginalW3DDeviceUnavailable("original terrain base UV unavailable");
+			map->getAlphaUVData(x, y, alpha_u, alpha_v, alpha, &flip, FALSE);
 			const Int positions[4][2] = {{x,y},{x+1,y},{x+1,y+1},{x,y+1}};
 			VERTEX_FORMAT *cell = backup + (y * VERTEX_BUFFER_TILE_LENGTH + x) * 4;
 			for (Int corner = 0; corner < 4; ++corner) {
 				cell[corner].x = (positions[corner][0] - map->getBorderSizeInline()) * MAP_XY_FACTOR;
 				cell[corner].y = (positions[corner][1] - map->getBorderSizeInline()) * MAP_XY_FACTOR;
 				cell[corner].z = map->getDisplayHeight(positions[corner][0], positions[corner][1]) * MAP_HEIGHT_SCALE;
-				cell[corner].diffuse = 0xffffffffu;
+				cell[corner].diffuse = (static_cast<UnsignedInt>(alpha[corner]) << 24) | 0x00ffffffu;
 				cell[corner].u1 = u[corner]; cell[corner].v1 = v[corner];
-				cell[corner].u2 = u[corner]; cell[corner].v2 = v[corner];
+				cell[corner].u2 = alpha_u[corner]; cell[corner].v2 = alpha_v[corner];
 			}
 		}
 	}

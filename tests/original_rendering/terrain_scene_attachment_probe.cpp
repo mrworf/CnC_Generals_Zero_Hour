@@ -63,10 +63,6 @@ extern "C" void zh_probe_terrain_scene_attachment()
 {
 	const char *path = std::getenv("ZH_M22_TERRAIN_SCENE_ATTACHMENT_MAP");
 	require(path, "original terrain scene attachment map missing");
-	CachedFileInputStream input;
-	require(input.open(AsciiString(path)), "original terrain scene attachment map unreadable");
-	WorldHeightMap *map = NEW_REF(WorldHeightMap, (&input, FALSE));
-	input.close();
 	const Real saved_partition = TheWritableGlobalData->m_partitionCellSize;
 	const UnsignedByte saved_shrouded = TheWritableGlobalData->m_shroudAlpha;
 	const UnsignedByte saved_fogged = TheWritableGlobalData->m_fogAlpha;
@@ -78,6 +74,10 @@ extern "C" void zh_probe_terrain_scene_attachment()
 	zh::renderer::RecordingGpuDevice device;
 	for (Int generation = 0; generation != 2; ++generation) {
 		zh::original_runtime::OriginalGpuEdge edge(device);
+		CachedFileInputStream input;
+		require(input.open(AsciiString(path)), "original terrain scene attachment map unreadable");
+		WorldHeightMap *map = NEW_REF(WorldHeightMap, (&input, FALSE));
+		input.close();
 		auto display = std::make_unique<W3DDisplay>();
 		Display *saved_display = TheDisplay;
 		TheDisplay = display.get();
@@ -228,13 +228,14 @@ extern "C" void zh_probe_terrain_scene_attachment()
 			rejected([&]() { display->setShroudLevel(0, 0, CELLSHROUD_CLEAR); }),
 			"original display shroud accepted a released map");
 		edge.release_source_buffers();
+		map->Release_Ref();
+		map = NULL;
 		TheDisplay = saved_display;
 		display.reset();
 		require(device.snapshot().find("draw pipeline=") == std::string::npos &&
 			device.resource_counts().total() == 0,
 			"original terrain scene attachment submitted or retained Recording resources");
 	}
-	map->Release_Ref();
 	TheWritableGlobalData->m_partitionCellSize = saved_partition;
 	TheWritableGlobalData->m_shroudAlpha = saved_shrouded;
 	TheWritableGlobalData->m_fogAlpha = saved_fogged;

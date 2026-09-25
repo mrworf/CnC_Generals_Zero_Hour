@@ -22,6 +22,17 @@ void require(bool value, const char *message)
 	if (!value) throw std::runtime_error(message);
 }
 
+WorldHeightMap *open_map(const char *environment)
+{
+	const char *path = std::getenv(environment);
+	require(path, "original terrain map path missing");
+	CachedFileInputStream input;
+	require(input.open(AsciiString(path)), "original terrain map unreadable");
+	WorldHeightMap *map = NEW_REF(WorldHeightMap, (&input, FALSE));
+	input.close();
+	return map;
+}
+
 class TestTerrain final : public HeightMapRenderObjClass
 {
 public:
@@ -37,12 +48,7 @@ public:
 
 extern "C" void zh_probe_flat_terrain_geometry()
 {
-	const char *path = std::getenv("ZH_M22_FLAT_TERRAIN_MAP");
-	require(path, "original flat terrain map path missing");
-	CachedFileInputStream input;
-	require(input.open(AsciiString(path)), "original flat terrain map unreadable");
-	WorldHeightMap *map = NEW_REF(WorldHeightMap, (&input, FALSE));
-	input.close();
+	WorldHeightMap *map = open_map("ZH_M22_FLAT_TERRAIN_MAP");
 	const Real saved_partition = TheWritableGlobalData->m_partitionCellSize;
 	TheWritableGlobalData->m_partitionCellSize = MAP_XY_FACTOR;
 
@@ -68,14 +74,21 @@ extern "C" void zh_probe_flat_terrain_geometry()
 			"original flat terrain geometry ownership changed");
 		const UnsignedShort *indices = terrain.index()->Get_CPU_Index_Buffer();
 		const VERTEX_FORMAT *vertices = terrain.backup();
+		float flat_u[4]{}, flat_v[4]{}, flat_alpha_u[4]{}, flat_alpha_v[4]{};
+		UnsignedByte flat_alpha[4]{};
+		Bool flat_flip = FALSE;
+		map->getUVData(0, 0, flat_u, flat_v, FALSE);
+		map->getAlphaUVData(0, 0, flat_alpha_u, flat_alpha_v, flat_alpha, &flat_flip, FALSE);
 		require(indices[0] == 0 && indices[1] == 2 && indices[2] == 3 &&
 			indices[3] == 0 && indices[4] == 1 && indices[5] == 2 &&
 			indices[42] == 28 && vertices[28].x == 0 && vertices[28].y == 0 &&
 			vertices[28].z == 0 &&
 			vertices[0].x == 0 && vertices[0].y == 0 && vertices[0].z == 0 &&
 			vertices[2].x == MAP_XY_FACTOR && vertices[2].y == MAP_XY_FACTOR &&
-			vertices[2].z == 9 * MAP_HEIGHT_SCALE && vertices[0].u1 == 0 &&
-			vertices[0].v1 == 0 && vertices[0].u2 == 0 && vertices[0].v2 == 0,
+			vertices[2].z == 9 * MAP_HEIGHT_SCALE &&
+			vertices[0].u1 == flat_u[0] && vertices[0].v1 == flat_v[0] &&
+			vertices[0].u2 == flat_alpha_u[0] && vertices[0].v2 == flat_alpha_v[0] &&
+			(vertices[0].diffuse >> 24) == flat_alpha[0] && !flat_flip,
 			"original flat terrain source topology changed");
 		map->setRawHeight(0, 0, 5);
 		require(terrain.updateBlock(0, 0, 1, 1, map, NULL) == 0 &&
@@ -195,11 +208,40 @@ extern "C" void zh_probe_flat_terrain_geometry()
 		terrain.freeMapResources();
 		require_no_draw("original released terrain submitted a draw", [&] { terrain.Render(render_info); });
 		edge.release_source_buffers();
+		map->Release_Ref();
+		map = NULL;
+
+		WorldHeightMap *authored = open_map("ZH_M22_AUTHORED_TERRAIN_MAP");
+		require(authored->getTerrainTexture() && authored->getAlphaTerrainTexture(),
+			"original authored terrain atlas pair unavailable");
+		require(terrain.initHeightData(8, 8, authored, NULL, TRUE) == 0,
+			"original authored terrain geometry initialization failed");
+		float base_u[4]{}, base_v[4]{}, alpha_u[4]{}, alpha_v[4]{};
+		UnsignedByte alpha_value[4]{};
+		Bool flip = FALSE;
+		authored->getUVData(0, 0, base_u, base_v, FALSE);
+		authored->getAlphaUVData(0, 0, alpha_u, alpha_v, alpha_value, &flip, FALSE);
+		const VERTEX_FORMAT *authored_vertices = terrain.backup();
+		for (Int corner = 0; corner != 4; ++corner) {
+			require(authored_vertices[corner].u1 == base_u[corner] &&
+				authored_vertices[corner].v1 == base_v[corner] &&
+				authored_vertices[corner].u2 == alpha_u[corner] &&
+				authored_vertices[corner].v2 == alpha_v[corner] &&
+				(authored_vertices[corner].diffuse >> 24) == alpha_value[corner] &&
+				(authored_vertices[corner].diffuse & 0x00ffffffu) == 0x00ffffffu,
+				"original authored terrain vertex payload changed");
+		}
+		const std::string before_authored_draw = device.snapshot();
+		draw();
+		require(count_draws(device.snapshot().substr(before_authored_draw.size())) == 2,
+			"original authored terrain did not use accepted base passes");
+		terrain.freeMapResources();
+		edge.release_source_buffers();
+		authored->Release_Ref();
+		authored = NULL;
 		device.destroy(depth);
 		device.destroy(color);
 		display.reset();
-		map->Release_Ref();
-		map = NULL;
 	}
 	require(device.resource_counts().total() == 0,
 		"original flat terrain teardown retained resource");
