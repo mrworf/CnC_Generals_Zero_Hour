@@ -51,10 +51,15 @@
 #include "Common/GlobalData.h"
 #include "W3DDevice/GameClient/BaseHeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "W3DDevice/GameClient/Module/W3DTreeDraw.h"
 #include "WW3D2/scene.h"
+#include "WW3D2/mesh.h"
+#include "WW3D2/meshmdl.h"
+#include "assetmgr.h"
+#include "sphere.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #include <algorithm>
@@ -87,6 +92,90 @@ struct CpuTreeRegistry {
 // The source terrain's existing layout is shared with full-instance clients.
 // Lazily key CPU-only tree state by its exact owner and erase it on teardown.
 static std::map<const BaseHeightMapRenderObjClass *, CpuTreeRegistry> s_cpuTreeRegistries;
+
+W3DTreeModelSource::~W3DTreeModelSource() { reset(); }
+
+void W3DTreeModelSource::reset()
+{
+	if (m_mesh) m_mesh->Release_Ref();
+	m_mesh = NULL;
+	m_offset = Vector3(0, 0, 0);
+	m_boundsCenter = Vector3(0, 0, 0);
+	m_boundsRadius = m_shadowSize = 0;
+}
+
+bool W3DTreeModelSource::acquire(const W3DTreeDrawModuleData *data,
+	W3DAssetManager *provider)
+{
+	if (m_mesh || !data || data->m_modelName.isEmpty() || !provider ||
+		provider != W3DDisplay::m_assetManager ||
+		provider != WW3DAssetManager::Get_Instance()) return false;
+	RenderObjClass *render = provider->Create_Render_Obj(data->m_modelName.str());
+	if (!render) return false;
+	const char *failAt = std::getenv("ZH_M22_TREE_MODEL_FAIL_AT");
+	if (failAt && std::strcmp(failAt, "root") == 0) {
+		render->Release_Ref();
+		return false;
+	}
+	RenderObjClass *child = NULL;
+	bool ready = false;
+	Vector3 offset(0, 0, 0);
+	Vector3 center(0, 0, 0);
+	Real radius = 0;
+	Real shadow = 0;
+	try {
+		AABoxClass box;
+		render->Get_Obj_Space_Bounding_Box(box);
+		RenderObjClass *selected = render;
+		if (render->Class_ID() == RenderObjClass::CLASSID_HLOD) {
+			if (render->Get_Num_Sub_Objects() > 0)
+				child = render->Get_Sub_Object(0); // Source adds one child ref.
+			selected = child;
+			if (child)
+				child->Get_Bone_Transform(0).Get_Translation(&offset);
+		}
+		if (!(child && failAt && std::strcmp(failAt, "child") == 0) &&
+			selected && selected->Class_ID() == RenderObjClass::CLASSID_MESH) {
+			MeshClass *mesh = static_cast<MeshClass *>(selected);
+			MeshModelClass *model = mesh->Peek_Model();
+			const Int vertices = model ? model->Get_Vertex_Count() : 0;
+			if (vertices > 0) {
+				Vector3 *points = model->Get_Vertex_Array();
+				if (points) {
+					SphereClass bounds(points, vertices);
+					center = bounds.Center + offset;
+					radius = bounds.Radius;
+					shadow = box.Extent.X + box.Extent.Y;
+					ready = std::isfinite(center.X) && std::isfinite(center.Y) &&
+						std::isfinite(center.Z) && std::isfinite(offset.X) &&
+						std::isfinite(offset.Y) && std::isfinite(offset.Z) &&
+						std::isfinite(radius) && radius >= 0 &&
+						std::isfinite(shadow) && shadow >= 0;
+				}
+			}
+		}
+	} catch (...) {
+		if (child) child->Release_Ref();
+		render->Release_Ref();
+		throw;
+	}
+	if (!ready) {
+		if (child) child->Release_Ref();
+		render->Release_Ref();
+		return false;
+	}
+	if (child) {
+		render->Release_Ref(); // Child survives through its own ref.
+		m_mesh = static_cast<MeshClass *>(child);
+	} else {
+		m_mesh = static_cast<MeshClass *>(render);
+	}
+	m_offset = offset;
+	m_boundsCenter = center;
+	m_boundsRadius = radius;
+	m_shadowSize = shadow;
+	return true;
+}
 
 BaseHeightMapRenderObjClass::BaseHeightMapRenderObjClass()
 {

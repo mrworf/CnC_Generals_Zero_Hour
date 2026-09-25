@@ -57,6 +57,33 @@ class W3DShroud;
 class W3DPropDrawModuleData;
 class W3DPropBuffer;
 class W3DTreeDrawModuleData;
+#if defined(ZH_WW3D_CPU_ONLY)
+class MeshClass;
+class W3DAssetManager;
+// An unpublished source tree model candidate. B3 composes this with atlas and
+// Recording owners before the existing terrain registry can publish a type.
+class W3DTreeModelSource
+{
+public:
+	W3DTreeModelSource() = default;
+	~W3DTreeModelSource();
+	W3DTreeModelSource(const W3DTreeModelSource &) = delete;
+	W3DTreeModelSource &operator=(const W3DTreeModelSource &) = delete;
+	bool acquire(const W3DTreeDrawModuleData *data, W3DAssetManager *provider);
+	void reset();
+	MeshClass *mesh() const { return m_mesh; }
+	const Vector3 &offset() const { return m_offset; }
+	const Vector3 &boundsCenter() const { return m_boundsCenter; }
+	Real boundsRadius() const { return m_boundsRadius; }
+	Real shadowSize() const { return m_shadowSize; }
+private:
+	MeshClass *m_mesh = NULL;
+	Vector3 m_offset = Vector3(0, 0, 0);
+	Vector3 m_boundsCenter = Vector3(0, 0, 0);
+	Real m_boundsRadius = 0;
+	Real m_shadowSize = 0;
+};
+#endif
 class GeometryInfo;
 
 #define no_TIMING_TESTS	1

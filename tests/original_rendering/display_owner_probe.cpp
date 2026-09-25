@@ -3,16 +3,21 @@
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
+#include "W3DDevice/GameClient/BaseHeightMap.h"
+#include "W3DDevice/GameClient/Module/W3DTreeDraw.h"
 #include "Common/FileSystem.h"
 #include "WW3D2/assetmgr.h"
 #include "WW3D2/mesh.h"
+#include "WW3D2/meshmdl.h"
 #include "WW3D2/ww3d.h"
+#include "sphere.h"
 #include "WWLib/RAMFILE.H"
 #include "original_gpu_edge.h"
 #include "zh/platform/bgfx_device.h"
 #include "zh/renderer/recording_device.h"
 
 #include <cstdio>
+#include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <iterator>
@@ -105,6 +110,82 @@ extern "C" void zh_probe_display_owner()
             load_packet();
             require(has_prototype("TEST.ZERO01") && has_prototype("ALT0.ZERO01"),
                 "generated display purge prototypes missing");
+            W3DTreeDrawModuleData tree_data;
+            tree_data.m_modelName = "TEST.ZERO01";
+            W3DTreeModelSource tree_model;
+            require(tree_model.acquire(&tree_data, assets) && tree_model.mesh() &&
+                tree_model.mesh()->Num_Refs() == 1 && tree_model.boundsRadius() > 0 &&
+                tree_model.shadowSize() > 0,
+                "original tree direct mesh model candidate missing");
+            require(!tree_model.acquire(&tree_data, assets),
+                "original tree candidate replaced a live source mesh reference");
+            tree_model.reset();
+            require(!tree_model.mesh() && tree_model.boundsRadius() == 0 &&
+                !tree_model.acquire(&tree_data, nullptr),
+                "original tree model reset or missing provider retained a reference");
+            tree_data.m_modelName = "TEST.MISSING";
+            require(!tree_model.acquire(&tree_data, assets) && !tree_model.mesh(),
+                "original tree missing asset published a model");
+            tree_data.m_modelName = "TEST.EMPTYHLOD";
+            RenderObjClass *empty_hlod = assets->Create_Render_Obj("TEST.EMPTYHLOD");
+            require(empty_hlod && empty_hlod->Class_ID() == RenderObjClass::CLASSID_HLOD &&
+                empty_hlod->Get_Num_Sub_Objects() == 0,
+                "generated empty tree HLOD did not load");
+            empty_hlod->Release_Ref();
+            require(!tree_model.acquire(&tree_data, assets) && !tree_model.mesh(),
+                "original tree empty HLOD published a model");
+            tree_data.m_modelName = "TEST.NESTEDHLOD";
+            RenderObjClass *nested_hlod = assets->Create_Render_Obj("TEST.NESTEDHLOD");
+            require(nested_hlod && nested_hlod->Class_ID() == RenderObjClass::CLASSID_HLOD &&
+                nested_hlod->Get_Num_Sub_Objects() == 1,
+                "generated nested tree HLOD did not load");
+            nested_hlod->Release_Ref();
+            require(!tree_model.acquire(&tree_data, assets) && !tree_model.mesh(),
+                "original tree non-mesh first child published a model");
+            tree_data.m_modelName = "TEST.HLOD";
+            setenv("ZH_M22_TREE_MODEL_FAIL_AT", "root", 1);
+            require(!tree_model.acquire(&tree_data, assets) && !tree_model.mesh(),
+                "original tree root-reference fault published a model");
+            setenv("ZH_M22_TREE_MODEL_FAIL_AT", "child", 1);
+            require(!tree_model.acquire(&tree_data, assets) && !tree_model.mesh(),
+                "original tree HLOD child-reference fault published a model");
+            unsetenv("ZH_M22_TREE_MODEL_FAIL_AT");
+            require(tree_model.acquire(&tree_data, assets) && tree_model.mesh() &&
+                tree_model.mesh()->Num_Refs() == 1 && tree_model.boundsRadius() > 0 &&
+                tree_model.shadowSize() > 0,
+                "original tree HLOD first-child source model missing");
+            RenderObjClass *source_hlod = assets->Create_Render_Obj("TEST.HLOD");
+            require(source_hlod && source_hlod->Get_Num_Sub_Objects() > 0,
+                "generated tree HLOD reference missing first child");
+            AABoxClass source_box;
+            source_hlod->Get_Obj_Space_Bounding_Box(source_box);
+            RenderObjClass *source_child = source_hlod->Get_Sub_Object(0);
+            require(source_child && source_child->Class_ID() == RenderObjClass::CLASSID_MESH,
+                "generated tree HLOD first child is not source mesh");
+            Vector3 source_offset;
+            source_child->Get_Bone_Transform(0).Get_Translation(&source_offset);
+            auto *source_mesh = static_cast<MeshClass *>(source_child);
+            auto *source_model = source_mesh->Peek_Model();
+            SphereClass source_bounds(source_model->Get_Vertex_Array(),
+                source_model->Get_Vertex_Count());
+            source_bounds.Center += source_offset;
+            require((tree_model.offset() - source_offset).Length() < 0.001f &&
+                (tree_model.boundsCenter() - source_bounds.Center).Length() < 0.001f &&
+                std::fabs(tree_model.boundsRadius() - source_bounds.Radius) < 0.001f &&
+                std::fabs(tree_model.shadowSize() -
+                    (source_box.Extent.X + source_box.Extent.Y)) < 0.001f,
+                "original tree HLOD offset, bounds or shadow size differ from source");
+            source_child->Release_Ref();
+            source_hlod->Release_Ref();
+            tree_model.reset();
+            W3DAssetManager *published_assets = W3DDisplay::m_assetManager;
+            W3DDisplay::m_assetManager = nullptr;
+            require(!tree_model.acquire(&tree_data, assets) && !tree_model.mesh(),
+                "original tree accepted detached asset provider");
+            W3DDisplay::m_assetManager = published_assets;
+            require(tree_model.acquire(&tree_data, assets) && tree_model.mesh(),
+                "original tree model retry lost the source HLOD");
+            tree_model.reset();
             display->doSmartAssetPurgeAndPreload(nullptr);
             display->doSmartAssetPurgeAndPreload("");
             require(has_prototype("TEST.ZERO01") && has_prototype("ALT0.ZERO01"),

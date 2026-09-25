@@ -278,7 +278,8 @@ void make_animation(ChunkSaveClass &writer)
 }
 
 void make_hlod(ChunkSaveClass &writer, bool supply_variant, bool skin_variant = false,
-	bool invalid_skin = false, bool batch_skin = false, const char *name_override = nullptr)
+	bool invalid_skin = false, bool batch_skin = false, const char *name_override = nullptr,
+	const char *child_override = nullptr, bool empty = false)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_HLOD));
 	W3dHLodHeaderStruct header{};
@@ -290,13 +291,13 @@ void make_hlod(ChunkSaveClass &writer, bool supply_variant, bool skin_variant = 
 	chunk(writer, W3D_CHUNK_HLOD_HEADER, header);
 	assert(writer.Begin_Chunk(W3D_CHUNK_HLOD_LOD_ARRAY));
 	W3dHLodArrayHeaderStruct array{};
-	array.ModelCount = (supply_variant || batch_skin) ? 2 : 1;
+	array.ModelCount = empty ? 0 : (supply_variant || batch_skin) ? 2 : 1;
 	array.MaxScreenSize = 1.0f;
 	chunk(writer, W3D_CHUNK_HLOD_SUB_OBJECT_ARRAY_HEADER, array);
 	W3dHLodSubObjectStruct subobject{};
-	std::strcpy(subobject.Name, invalid_skin ? "TEST.BADSKIN" : skin_variant ? "TEST.SKIN01" :
+	std::strcpy(subobject.Name, child_override ? child_override : invalid_skin ? "TEST.BADSKIN" : skin_variant ? "TEST.SKIN01" :
 		(supply_variant ? "TEST.SUPPLY01" : "TEST.TRIANGLE"));
-	chunk(writer, W3D_CHUNK_HLOD_SUB_OBJECT, subobject);
+	if (!empty) chunk(writer, W3D_CHUNK_HLOD_SUB_OBJECT, subobject);
 	if (supply_variant)
 	{
 		W3dHLodSubObjectStruct tread{};
@@ -442,6 +443,7 @@ int main(int argc, char **argv)
 	const bool supply_variant = argc == 3 && std::strcmp(argv[1], "--emit") == 0;
 	const bool emit_rigid = argc == 3 && std::strcmp(argv[1], "--emit-rigid") == 0;
 	const bool emit_rigid_pair = argc == 3 && std::strcmp(argv[1], "--emit-rigid-pair") == 0;
+	const bool emit_rigid_tree = argc == 3 && std::strcmp(argv[1], "--emit-rigid-tree") == 0;
 	const bool focused_static_scene = argc==2 &&
 		(std::strcmp(argv[1],"--source-static-scene")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
@@ -464,7 +466,15 @@ int main(int argc, char **argv)
 	const bool focused_fault_scene = argc==2 &&
 		(std::strcmp(argv[1],"--source-mixed-fault-matrix")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0);
-	if (emit_rigid_pair) {
+	if (emit_rigid_tree) {
+		make_hierarchy(writer,false);
+		make_mesh(writer,false); // TEST.TRIANGLE, the original HLOD first child.
+		make_mesh(writer,false,false,false,0); // TEST.ZERO01
+		make_mesh(writer,false,false,false,0,false,false,0,false,false,"ALT0");
+		make_hlod(writer,false); // TEST.HLOD
+		make_hlod(writer,false,false,false,false,"TEST.EMPTYHLOD",nullptr,true);
+		make_hlod(writer,false,false,false,false,"TEST.NESTEDHLOD","TEST.HLOD");
+	} else if (emit_rigid_pair) {
 		make_mesh(writer,false,false,false,0);
 		make_mesh(writer,false,false,false,0,false,false,0,false,false,"ALT0");
 	} else if (emit_rigid) {
@@ -508,7 +518,7 @@ int main(int argc, char **argv)
 	}
 	const int size = file.Size();
 	file.Close();
-	if (argc == 3 && (std::strcmp(argv[1], "--emit") == 0 || emit_rigid || emit_rigid_pair))
+	if (argc == 3 && (std::strcmp(argv[1], "--emit") == 0 || emit_rigid || emit_rigid_pair || emit_rigid_tree))
 	{
 		FILE *output = std::fopen(argv[2], "wb");
 		assert(output != nullptr);

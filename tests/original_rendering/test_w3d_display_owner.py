@@ -31,7 +31,7 @@ def main() -> int:
                               for path in source.rglob("*") if path.is_file()))
         fixture.make_read_only(source)
         packet = base / "rigid.w3d"
-        subprocess.run([str(args.asset_producer.resolve()), "--emit-rigid-pair", str(packet)],
+        subprocess.run([str(args.asset_producer.resolve()), "--emit-rigid-tree", str(packet)],
                        check=True)
         os.environ["ZH_M22_DISPLAY_OWNER_PROFILE"] = "1"
         os.environ["ZH_M22_DISPLAY_OWNER_ASSET"] = str(packet)
