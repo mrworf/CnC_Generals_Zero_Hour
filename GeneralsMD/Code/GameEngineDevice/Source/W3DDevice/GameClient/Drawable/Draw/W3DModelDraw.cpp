@@ -64,6 +64,7 @@
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
+#include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "WW3D2/HAnim.h"
@@ -1849,6 +1850,10 @@ void W3DModelDraw::onObjectCreated()
 		if (TheW3DShadowManager && m_renderObject &&
 			(!m_shadow || !TheW3DShadowManager->ownsBoundedVolumeCaster(m_renderObject)))
 			throw ERROR_INVALID_D3D;
+		if (TheHeightMap && TheHeightMap->getMap() && TheW3DShadowManager)
+			TheW3DShadowManager->readyBoundedVolumeCaster(m_renderObject);
+		else if (TheHeightMap && TheHeightMap->getMap())
+			throw ERROR_INVALID_D3D;
 		if (std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT") &&
 			std::strcmp(std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT"), "after-shadow") == 0)
 			throw ERROR_INVALID_D3D;
@@ -3238,6 +3243,10 @@ void W3DModelDraw::setModelState(const ModelConditionInfo* newState)
 				allocateShadows();
 				if (TheW3DShadowManager &&
 					(!m_shadow || !TheW3DShadowManager->ownsBoundedVolumeCaster(m_renderObject)))
+					throw ERROR_INVALID_D3D;
+				if (TheHeightMap && TheHeightMap->getMap() && TheW3DShadowManager)
+					TheW3DShadowManager->readyBoundedVolumeCaster(m_renderObject);
+				else if (TheHeightMap && TheHeightMap->getMap())
 					throw ERROR_INVALID_D3D;
 				if (std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT") &&
 					std::strcmp(std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT"), "replace-after-shadow") == 0)

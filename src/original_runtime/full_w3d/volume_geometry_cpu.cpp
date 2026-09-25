@@ -1,5 +1,7 @@
 #include "PreRTS.h"
 #include "full_w3d/volume_geometry_cpu.h"
+#include <cstdlib>
+#include <cstring>
 
 #include "WW3D2/dx8fvf.h"
 
@@ -84,7 +86,12 @@ VolumeGeometrySlots build_volume_geometry(
   VolumeGeometrySlots slots;
   try {
     slots.vertices = manager.getSlot(W3DBufferManager::VBM_FVF_XYZ, output_vertices);
+    const char *ready_fault = std::getenv("ZH_M22_VOLUME_READY_FAIL_AT");
+    reject(ready_fault && std::strcmp(ready_fault, "source-vertex") == 0,
+           "original modeled volume source vertex slot fault");
     slots.indices = manager.getSlot(output_triangles * 3);
+    reject(ready_fault && std::strcmp(ready_fault, "source-index") == 0,
+           "original modeled volume source index slot fault");
     reject(!slots.vertices || !slots.indices,
            "original volume geometry source slots unavailable");
 

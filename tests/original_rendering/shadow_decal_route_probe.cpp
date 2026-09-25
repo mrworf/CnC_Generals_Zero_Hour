@@ -1,6 +1,7 @@
 #include "PreRTS.h"
 #include "Common/GlobalData.h"
 #include "Common/ThingTemplate.h"
+#include "Common/ThingFactory.h"
 #include "GameClient/Display.h"
 #include "GameClient/View.h"
 #include "GameClient/Drawable.h"
@@ -9,6 +10,7 @@
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
+#include "W3DDevice/GameClient/W3DBufferManager.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "W3DDevice/GameClient/W3DParticleSys.h"
@@ -24,6 +26,8 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <string>
+
+extern "C" void zh_m22_volume_shadow_snapshot(Drawable *, int *, int *);
 
 namespace {
 void require(bool value, const char *message) { if (!value) throw std::runtime_error(message); }
@@ -45,6 +49,7 @@ extern "C" void zh_probe_shadow_decal_route()
 {
 	const char *map=std::getenv("ZH_M22_SHADOW_DECAL_MAP"); require(map,"original decal map fixture missing");
 	const bool volume=std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE")!=NULL;
+	const bool modeled=std::getenv("ZH_M22_MODELED_VOLUME_READY_PROFILE")!=NULL;
 	const Real saved_partition=TheGlobalData->m_partitionCellSize;
 	const Bool saved_marks=TheGlobalData->m_makeTrackMarks;
 	const Bool saved_decals=TheGlobalData->m_useShadowDecals, saved_volumes=TheGlobalData->m_useShadowVolumes;
@@ -83,6 +88,81 @@ extern "C" void zh_probe_shadow_decal_route()
 					// so resource acquisition is deliberately deferred to this source
 					// lifecycle boundary.
 					TheW3DShadowManager->ReAcquireResources();
+					Drawable *late_model=NULL;
+					if (modeled) {
+						require(volume,"original modeled volume profile requires volume route");
+						const ThingTemplate *tmplate=TheThingFactory->findTemplate(AsciiString("LogicFixture"),FALSE);
+						require(tmplate,"original modeled volume template unavailable");
+						auto count=[&](Drawable *draw, int expected) {
+							int casters=-1,owned=0; zh_m22_volume_shadow_snapshot(draw,&casters,&owned);
+							require(casters==expected && (!draw || owned==1),"original modeled volume caster identity changed");
+						};
+						count(NULL,1);
+						const auto baseline_resources=device.resource_counts().total();
+						auto noResidual=[&]{require(device.resource_counts().total()==baseline_resources,
+							"original modeled volume failure retained Recording resources");};
+						for (const char *stage : {"source-vertex","source-index","geometry","vertex","index","finalize"}) {
+							setenv("ZH_M22_VOLUME_READY_FAIL_AT",stage,1);
+							require(rejected([&]{TheThingFactory->newDrawable(tmplate);}),"original modeled volume readiness fault was accepted");
+							unsetenv("ZH_M22_VOLUME_READY_FAIL_AT");
+							count(NULL,1);
+							noResidual();
+						}
+						device.fail_next_buffer_create();
+						require(rejected([&]{TheThingFactory->newDrawable(tmplate);}),"original modeled volume buffer create fault was accepted");
+						count(NULL,1);
+						noResidual();
+						device.fail_next_buffer_upload();
+						require(rejected([&]{TheThingFactory->newDrawable(tmplate);}),"original modeled volume buffer upload fault was accepted");
+						count(NULL,1);
+						noResidual();
+						W3DBufferManager *provider=TheW3DBufferManager;
+						TheW3DBufferManager=NULL;
+						require(rejected([&]{TheThingFactory->newDrawable(tmplate);}),"original modeled volume missing provider was accepted");
+						TheW3DBufferManager=provider;
+						count(NULL,1);
+						noResidual();
+						W3DBufferManager foreign;
+						TheW3DBufferManager=&foreign;
+						require(rejected([&]{TheThingFactory->newDrawable(tmplate);}),"original modeled volume foreign provider was accepted");
+						TheW3DBufferManager=provider;
+						count(NULL,1);
+						noResidual();
+						late_model=TheThingFactory->newDrawable(tmplate);
+						count(late_model,2);
+						require(late_model && TheW3DShadowManager->hasBoundedVolumeCasters(),
+							"original late modeled volume caster unavailable");
+						for (DrawModule **module=late_model->getDrawModules(); module && *module; ++module)
+							if (auto *late=dynamic_cast<W3DModelDraw *>(*module)) {
+								auto *old_render=late->getRenderObject();
+								require(rejected([&]{TheW3DShadowManager->readyBoundedVolumeCaster(late->getRenderObject());}),
+									"original duplicate modeled volume readiness was accepted");
+								W3DDisplay::m_3DScene->Remove_Render_Object(late->getRenderObject());
+								require(rejected([&]{TheW3DShadowManager->readyBoundedVolumeCaster(late->getRenderObject());}),
+									"original detached modeled volume readiness was accepted");
+								W3DDisplay::m_3DScene->Add_Render_Object(late->getRenderObject());
+								count(late_model,2);
+								ModelConditionFlags damaged; damaged.set(MODELCONDITION_DAMAGED);
+								late_model->replaceModelConditionFlags(damaged,TRUE);
+								require(late->getRenderObject() && late->getRenderObject()!=old_render,
+									"original late modeled volume replacement did not publish a new render owner");
+								count(late_model,2);
+								break;
+							}
+						Drawable *rollback=TheThingFactory->newDrawable(tmplate);
+						count(rollback,3);
+						setenv("ZH_M22_VOLUME_READY_FAIL_AT","finalize",1);
+						ModelConditionFlags damaged; damaged.set(MODELCONDITION_DAMAGED);
+						require(rejected([&]{rollback->replaceModelConditionFlags(damaged,TRUE);}),
+							"original modeled volume replacement finalization fault was accepted");
+						unsetenv("ZH_M22_VOLUME_READY_FAIL_AT");
+						count(NULL,2);
+						TheGameClient->destroyDrawable(rollback);
+						Drawable *retry=TheThingFactory->newDrawable(tmplate);
+						count(retry,3);
+						TheGameClient->destroyDrawable(retry);
+						count(late_model,2);
+					}
 					if (volume) {
 						Shadow::ShadowTypeInfo duplicate{}; duplicate.m_type=SHADOW_VOLUME;
 						require(rejected([&]{TheW3DShadowManager->addShadow(render,&duplicate);}),"original duplicate volume owner accepted");
@@ -102,6 +182,9 @@ extern "C" void zh_probe_shadow_decal_route()
 					const char *shadow_marker=volume ? "original W3DShadowManager::RenderShadows volume" : "original W3DShadowManager::RenderShadows decal";
 					const std::size_t terrain=active.find("original RTS3DScene::Render map terrain"), track_mark=active.find("original TerrainTracksRenderObjClassSystem::flush"), shadow=active.find(shadow_marker), water=active.find("original WaterRenderObjClass::Render translucent plane");
 					require(terrain<track_mark&&track_mark<shadow&&shadow<water&&draws(active)>=4&&active.find("DX8Wrapper::Draw indexed first=0 count=6 base=0",shadow)!=std::string::npos,"original terrain-shadow-water order or range failed");
+					if (modeled)
+						require(active.find(shadow_marker,shadow+1)!=std::string::npos && active.find("count=24")!=std::string::npos,
+							"original late modeled volume stencil or nonzero source range missing");
 					if (std::getenv("ZH_M22_FULL_FEATURE_PROFILE")) {
 						auto *smudges=dynamic_cast<W3DSmudgeManager *>(TheSmudgeManager);
 						require(smudges && dynamic_cast<W3DParticleSystemManager *>(TheParticleSystemManager), "original full feature providers missing");
@@ -131,6 +214,7 @@ extern "C" void zh_probe_shadow_decal_route()
 						require(device.snapshot().substr(off.size()).find("original W3DShadowManager::RenderShadows decal")==std::string::npos,"original disabled decals emitted a draw"); TheWritableGlobalData->m_useShadowDecals=TRUE;
 					}
 					model->releaseShadows();
+					if (late_model) TheGameClient->destroyDrawable(late_model);
 					require(volume ? !TheW3DShadowManager->hasBoundedVolumeCasters() : !TheW3DShadowManager->hasBoundedDecalCasters(),"original source shadow removal retained manager owner");
 					W3DDisplay::m_3DScene->Remove_Render_Object(render); source_scene->Add_Render_Object(render);
 					device.destroy(depth); device.destroy(color);
@@ -144,6 +228,8 @@ extern "C" void zh_probe_shadow_decal_route()
 	require(device.resource_counts().total()==0,"original decal teardown retained Recording resources");
 	if (volume)
 		std::puts("original volume shadow: source=1 ordering=1 retry=2 tracks-water=1 negatives=1 removal=1 generations=2 resources=0");
+	if (modeled)
+		std::puts("original modeled volume ready: late=1 frame=1 generations=2 resources=0");
 	if (volume && std::getenv("ZH_M22_VOLUME_SHADOW_AGGREGATE_PROFILE"))
 		std::puts("original volume aggregate: slots-geometry-edge-owner=1 source-order=1 rollback=1 default-guard=1 generations=2 resources=0");
 	else if (std::getenv("ZH_M22_FULL_FEATURE_PROFILE"))

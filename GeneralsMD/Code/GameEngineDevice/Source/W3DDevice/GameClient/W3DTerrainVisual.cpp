@@ -57,6 +57,16 @@ static W3DShadowManager *s_ownedShadows = NULL;
 static W3DBufferManager *s_ownedVolumeBuffers = NULL;
 static W3DSmudgeManager *s_ownedSmudges = NULL;
 
+Bool W3DTerrainVisual::hasPublishedVolumeBufferOwner() const
+{
+	return s_emptyTerrainVisual == this && TheTerrainVisual == this &&
+		s_ownedVolumeBuffers && TheW3DBufferManager == s_ownedVolumeBuffers &&
+		m_terrainRenderObject && TheHeightMap == m_terrainRenderObject &&
+		TheTerrainRenderObject == m_terrainRenderObject && m_logicHeightMap &&
+		m_terrainRenderObject->getMap() == m_logicHeightMap &&
+		m_terrainRenderObject->Peek_Scene() == W3DDisplay::m_3DScene;
+}
+
 W3DTerrainVisual::W3DTerrainVisual()
 	: m_terrainRenderObject(NULL), m_waterRenderObject(NULL),
 	  m_logicHeightMap(NULL), m_isWaterGridRenderingEnabled(FALSE)

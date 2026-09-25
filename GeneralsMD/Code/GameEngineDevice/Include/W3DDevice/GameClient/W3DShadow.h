@@ -59,6 +59,7 @@ public:
 	Bool ownsBoundedDecalCaster(RenderObjClass *robj) const;
 	Bool hasBoundedDecalCasters() const;
 	Bool ownsBoundedVolumeCaster(RenderObjClass *robj) const;
+	void readyBoundedVolumeCaster(RenderObjClass *robj);
 	Bool hasBoundedVolumeCasters() const;
 	inline void setStencilShadowMask(int mask) {m_stencilShadowMask=mask;}	///<mask used to mask out stencil bits used for storing occlusion/playerColor
 	inline Int getStencilShadowMask(void)	{return m_stencilShadowMask;}

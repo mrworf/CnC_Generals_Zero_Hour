@@ -39,6 +39,7 @@
 #include "full_w3d/volume_geometry_cpu.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "W3DDevice/GameClient/W3DBufferManager.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
@@ -173,15 +174,47 @@ public:
 	~BoundedVolumeShadow() { releaseResources(); }
 	void release() override;
 	bool owns(RenderObjClass *robj) const { return m_robj==robj; }
-	void releaseResources() { if (TheW3DBufferManager) zh::original_runtime::release_volume_geometry(*TheW3DBufferManager,m_geometry); }
+	void releaseResources() {
+		if (m_provider) zh::original_runtime::release_volume_geometry(*m_provider,m_geometry);
+		m_provider=NULL;
+	}
 	void reacquire() {
 		releaseResources();
 		if (!m_robj || !TheW3DBufferManager) throw OriginalW3DDeviceUnavailable("original volume shadow source buffer provider unavailable");
 		const Vector3 o=m_robj->Get_Position();
 		const Vector3 vertices[4]={Vector3(o.X-1,o.Y-1,o.Z),Vector3(o.X+1,o.Y-1,o.Z),Vector3(o.X+1,o.Y+1,o.Z),Vector3(o.X-1,o.Y+1,o.Z)};
 		const UnsignedShort silhouette[8]={0,1,1,2,2,3,3,0};
-		try { m_geometry=zh::original_runtime::build_volume_geometry(*TheW3DBufferManager,vertices,4,silhouette,8,LightPosWorld[0],100.0f); }
+		try {
+			m_geometry=zh::original_runtime::build_volume_geometry(*TheW3DBufferManager,vertices,4,silhouette,8,LightPosWorld[0],100.0f);
+			m_provider=TheW3DBufferManager;
+		}
 		catch (...) { releaseResources(); throw; }
+	}
+	void ready()
+	{
+		if (m_geometry.vertices || m_geometry.indices)
+			throw OriginalW3DDeviceUnavailable("original duplicate volume geometry readiness");
+		reacquire();
+		try {
+			const char *fail = std::getenv("ZH_M22_VOLUME_READY_FAIL_AT");
+			if (fail && std::strcmp(fail, "geometry") == 0)
+				throw OriginalW3DDeviceUnavailable("original modeled volume geometry fault");
+			auto &edge = zh::original_runtime::OriginalGpuEdge::required();
+			edge.bind_vertex(m_geometry.vertices->m_VB->m_DX8VertexBuffer);
+			if (fail && std::strcmp(fail, "vertex") == 0)
+				throw OriginalW3DDeviceUnavailable("original modeled volume vertex fault");
+			edge.bind_index(m_geometry.indices->m_IB->m_DX8IndexBuffer);
+			if (fail && std::strcmp(fail, "index") == 0)
+				throw OriginalW3DDeviceUnavailable("original modeled volume index fault");
+			if (fail && std::strcmp(fail, "finalize") == 0)
+				throw OriginalW3DDeviceUnavailable("original modeled volume finalization fault");
+		} catch (...) {
+			auto &edge = zh::original_runtime::OriginalGpuEdge::required();
+			if (m_geometry.vertices) edge.release_vertex(m_geometry.vertices->m_VB->m_DX8VertexBuffer);
+			if (m_geometry.indices) edge.release_index(m_geometry.indices->m_IB->m_DX8IndexBuffer);
+			releaseResources();
+			throw;
+		}
 	}
 	void draw() {
 		if (!m_isEnabled || m_isInvisibleEnabled) return;
@@ -192,7 +225,7 @@ public:
 			m_geometry.indices->m_start,m_geometry.index_count,m_geometry.vertices->m_start,m_geometry.vertex_count,0x80);
 		edge.record_source_state("original W3DShadowManager::RenderShadows volume");
 	}
-private: RenderObjClass *m_robj; Shadow::ShadowTypeInfo m_info; zh::original_runtime::VolumeGeometrySlots m_geometry;
+private: RenderObjClass *m_robj; Shadow::ShadowTypeInfo m_info; zh::original_runtime::VolumeGeometrySlots m_geometry; W3DBufferManager *m_provider=NULL;
 };
 static void eraseBoundedVolume(BoundedVolumeShadow *shadow) { auto found=std::find(s_boundedVolumes.begin(),s_boundedVolumes.end(),shadow); if(found==s_boundedVolumes.end()) return; s_boundedVolumes.erase(found); delete shadow; }
 void BoundedVolumeShadow::release() { eraseBoundedVolume(this); }
@@ -531,6 +564,23 @@ Bool W3DShadowManager::ownsBoundedVolumeCaster(RenderObjClass *robj) const
 		[robj](const BoundedVolumeShadow *shadow) { return shadow->owns(robj); });
 #else
 	return FALSE;
+#endif
+}
+
+void W3DShadowManager::readyBoundedVolumeCaster(RenderObjClass *robj)
+{
+#if defined(ZH_WW3D_CPU_ONLY)
+	auto *visual = dynamic_cast<W3DTerrainVisual *>(TheTerrainVisual);
+	if (TheW3DShadowManager != this || !robj || !hasPublishedModelRenderObject(robj) ||
+		!visual || !visual->hasPublishedVolumeBufferOwner() ||
+		!zh::original_runtime::OriginalGpuEdge::active())
+		throw OriginalW3DDeviceUnavailable("original modeled volume readiness owner unavailable");
+	for (auto *shadow : s_boundedVolumes) {
+		if (shadow->owns(robj)) { shadow->ready(); return; }
+	}
+	throw OriginalW3DDeviceUnavailable("original modeled volume caster unavailable");
+#else
+	(void)robj;
 #endif
 }
 

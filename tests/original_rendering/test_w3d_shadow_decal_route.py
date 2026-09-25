@@ -16,19 +16,20 @@ from test_w3d_visual_height_map import visual_map
 FULL_MARKER = "original full feature map: terrain-tracks-shadow-water-particle-smudge=1 failures=2 generations=2 resources=0"
 VOLUME_MARKER = "original volume shadow: source=1 ordering=1 retry=2 tracks-water=1 negatives=1 removal=1 generations=2 resources=0"
 AGGREGATE_MARKER = "original volume aggregate: slots-geometry-edge-owner=1 source-order=1 rollback=1 default-guard=1 generations=2 resources=0"
+MODELED_MARKER = "original modeled volume ready: late=1 frame=1 generations=2 resources=0"
 
 def fixture(root: Path, producer: Path) -> None:
     model = root / "Art/W3D/TEST.w3d"; model.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run([str(producer), "--emit", str(model)], check=True)
     obj = root / "Data/INI/Default/Object.ini"
-    draw = (" Shadow = SHADOW_DECAL\n ShadowTexture = M22SourceShadow\n ShadowSizeX = 16\n ShadowSizeY = 8\n ShadowOffsetX = 1\n ShadowOffsetY = -2\n Draw = W3DModelDraw ModuleTag_M22Shadow\n  DefaultConditionState\n   Model = TEST.HLOD\n  End\n End\n")
+    draw = (" Shadow = SHADOW_DECAL\n ShadowTexture = M22SourceShadow\n ShadowSizeX = 16\n ShadowSizeY = 8\n ShadowOffsetX = 1\n ShadowOffsetY = -2\n Draw = W3DModelDraw ModuleTag_M22Shadow\n  DefaultConditionState\n   Model = TEST.HLOD\n  End\n  ConditionState = DAMAGED\n   Model = TEST.ALTHLOD\n  End\n End\n")
     obj.write_text(obj.read_text().replace("Object LogicFixture\n", "Object LogicFixture\n" + draw, 1))
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--executable", type=Path, required=True); parser.add_argument("--source-root", type=Path, required=True); parser.add_argument("--asset-producer", type=Path, required=True); parser.add_argument("--volume", action="store_true"); parser.add_argument("--aggregate", action="store_true")
-    args = parser.parse_args(); package = load_m20_fixture(args.source_root.resolve()); marker = AGGREGATE_MARKER if args.aggregate else (VOLUME_MARKER if args.volume else FULL_MARKER)
-    if args.aggregate and not args.volume: raise SystemExit("aggregate requires the volume profile")
+    parser.add_argument("--executable", type=Path, required=True); parser.add_argument("--source-root", type=Path, required=True); parser.add_argument("--asset-producer", type=Path, required=True); parser.add_argument("--volume", action="store_true"); parser.add_argument("--aggregate", action="store_true"); parser.add_argument("--modeled-ready", action="store_true")
+    args = parser.parse_args(); package = load_m20_fixture(args.source_root.resolve()); marker = MODELED_MARKER if args.modeled_ready else (AGGREGATE_MARKER if args.aggregate else (VOLUME_MARKER if args.volume else FULL_MARKER))
+    if (args.aggregate or args.modeled_ready) and not args.volume: raise SystemExit("aggregate/modeled requires the volume profile")
     with TemporaryDirectory(prefix="zh-m22-shadow-decal-") as scratch:
         root = Path(scratch); source = root / "source"
         prepare_owned_source(source, package)
@@ -41,6 +42,7 @@ def main() -> int:
         if args.volume: os.environ["ZH_M22_VOLUME_SHADOW_PROFILE"] = "1"
         else: os.environ["ZH_M22_FULL_FEATURE_PROFILE"] = "1"
         if args.aggregate: os.environ["ZH_M22_VOLUME_SHADOW_AGGREGATE_PROFILE"] = "1"
+        if args.modeled_ready: os.environ["ZH_M22_MODELED_VOLUME_READY_PROFILE"] = "1"
         os.environ["ZH_M22_SHADOW_DECAL_MAP"] = str(packet)
         for generation in range(2):
             result = run(args.executable.resolve(), root / f"run-{generation}", source, "mission")
@@ -54,6 +56,7 @@ def main() -> int:
     os.environ.pop("ZH_M22_FULL_FEATURE_PROFILE", None); os.environ.pop("ZH_M22_SHADOW_DECAL_MAP", None)
     os.environ.pop("ZH_M22_VOLUME_SHADOW_PROFILE", None)
     os.environ.pop("ZH_M22_VOLUME_SHADOW_AGGREGATE_PROFILE", None)
+    os.environ.pop("ZH_M22_MODELED_VOLUME_READY_PROFILE", None)
     print("original full feature map: source ordering/rollback/reentry ok")
     return 0
 
