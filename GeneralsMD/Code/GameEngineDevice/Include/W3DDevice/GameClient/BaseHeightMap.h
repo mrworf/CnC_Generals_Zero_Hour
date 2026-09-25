@@ -253,6 +253,9 @@ public:
 	Real treeSortKey(DrawableID id) const;
 	Int treeSwayVersion() const;
 	Vector3 treeSwayVector(Int index) const;
+	Real treePushAside(DrawableID id) const;
+	Real treePushDelta(DrawableID id) const;
+	ObjectID treePushSource(DrawableID id) const;
 #endif
 	void removeAllTrees(void);
 	void removeTree(DrawableID id);

@@ -128,7 +128,8 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 	bool skin_variant = false, unsigned texture_stages = 1, bool lit_uv_variant = false,
 	bool invalid_skin = false, unsigned large_vertex_count = 0, bool batch_second = false,
 	bool cull_tree_variant = false, const char *container_name = "TEST",
-	const char *mesh_name = nullptr, unsigned large_triangle_count = 0)
+	const char *mesh_name = nullptr, unsigned large_triangle_count = 0,
+	bool raised_tree_variant = false)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_MESH));
 	W3dMeshHeader3Struct header{};
@@ -145,12 +146,13 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 	header.NumVertices = large_vertex_count ? large_vertex_count : 3;
 	header.NumTris = large_triangle_count ? large_triangle_count : 1;
 	header.Min = {0, 0, 0};
-	header.Max = {1, 1, 0};
-	header.SphCenter = {0.5f, 0.5f, 0};
-	header.SphRadius = 1;
+	header.Max = {1, 1, raised_tree_variant ? 1.0f : 0.0f};
+	header.SphCenter = {0.5f, 0.5f, raised_tree_variant ? 0.5f : 0.0f};
+	header.SphRadius = raised_tree_variant ? 1.5f : 1.0f;
 	chunk(writer, W3D_CHUNK_MESH_HEADER3, header);
 	std::vector<W3dVectorStruct> vertices(header.NumVertices);
-	vertices[0]={0,0,0}; vertices[1]={1,0,0}; vertices[2]={0,1,0};
+	vertices[0]={0,0,0}; vertices[1]={1,0,0};
+	vertices[2]={0,1,raised_tree_variant ? 1.0f : 0.0f};
 	assert(writer.Begin_Chunk(W3D_CHUNK_VERTICES));
 	assert(writer.Write(vertices.data(), vertices.size()*sizeof(vertices[0])) ==
 		static_cast<int>(vertices.size()*sizeof(vertices[0])));
@@ -482,6 +484,8 @@ int main(int argc, char **argv)
 		make_mesh(writer,false); // TEST.TRIANGLE, the original HLOD first child.
 		make_mesh(writer,false,false,false,0); // TEST.ZERO01
 		make_mesh(writer,false,false,false,1,true); // TEST.LITONE01, explicit tree UVs.
+		make_mesh(writer,false,false,false,1,true,false,0,false,false,
+			"TEST","PUSHTREE",0,true); // Generated raised vertex for source push displacement.
 		make_mesh(writer,false,false,false,1,true,false,29997,false,false,
 			"TEST","VFITTREE");
 		make_mesh(writer,false,false,false,1,true,false,29998,false,false,

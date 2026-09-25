@@ -588,7 +588,14 @@ public:
 	}
 	void setTeamColor(Int, Int, Int) override {}
 	void adjustLOD(Int) override {}
-	void notifyTerrainObjectMoved(Object *) override {}
+	void notifyTerrainObjectMoved(Object *unit) override
+	{
+#if defined(ZH_ORIGINAL_FULL_DRAW)
+		if (TheTerrainRenderObject) TheTerrainRenderObject->unitMoved(unit);
+#else
+		(void)unit;
+#endif
+	}
 private:
 	Display *createGameDisplay() override
 	{

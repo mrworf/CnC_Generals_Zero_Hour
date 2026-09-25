@@ -52,6 +52,9 @@
 #include "Common/FileSystem.h"
 #include "Common/file.h"
 #include "GameClient/ClientRandomValue.h"
+#include "Common/Geometry.h"
+#include "GameLogic/GameLogic.h"
+#include "GameLogic/Object.h"
 #include "GameLogic/ScriptEngine.h"
 #include "Lib/trig.h"
 #include "W3DDevice/GameClient/BaseHeightMap.h"
@@ -100,6 +103,12 @@ struct CpuTreeInstance {
 	Int firstVertex;
 	Bool visible = FALSE;
 	Real sortKey = 0;
+	Real pushAside = 0;
+	Real pushDelta = 0;
+	Real pushCos = 1;
+	Real pushSin = 1;
+	ObjectID pushSource = INVALID_ID;
+	UnsignedInt lastPushFrame = 0;
 };
 struct CpuTreeVisibleFrame {
 	CpuTreeVisibleFrame()
@@ -484,7 +493,11 @@ std::unique_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
 			static_cast<std::size_t>(instance.typeIndex) >= types.size()) return nullptr;
 		const CpuTreeType &type = types[instance.typeIndex];
 		if (!type.model || !type.model->mesh() || !type.data ||
-			!std::isfinite(type.data->m_darkening)) return nullptr;
+			!std::isfinite(type.data->m_darkening) ||
+			!std::isfinite(type.data->m_maxOutwardMovement) ||
+			!std::isfinite(instance.pushAside) ||
+			!std::isfinite(instance.pushCos) || !std::isfinite(instance.pushSin))
+			return nullptr;
 		MeshModelClass *model = type.model->mesh()->Peek_Model();
 		if (!model) return nullptr;
 		const Int count = model->Get_Vertex_Count();
@@ -534,10 +547,16 @@ std::unique_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
 				y * instance.scale * sine + instance.location.x;
 			vertex.y = y * instance.scale * cosine +
 				x * instance.scale * sine + instance.location.y;
+			if (instance.pushAside > 0) {
+				vertex.x += points[point].Z * instance.pushAside *
+					instance.pushCos * type.data->m_maxOutwardMovement;
+				vertex.y += points[point].Z * instance.pushAside *
+					instance.pushSin * type.data->m_maxOutwardMovement;
+			}
 			vertex.z = points[point].Z * instance.scale +
 				type.model->offset().Z + instance.location.z;
 			vertex.nx = instance.swayType;
-			vertex.ny = 1.0f; // Initial pushAside is zero.
+			vertex.ny = 1.0f - type.data->m_darkening * instance.pushAside;
 			vertex.nz = instance.location.z;
 			vertex.u1 = std::max(Real(0), std::min(Real(1), uv[point].U)) * uvScale + uOffset;
 			vertex.v1 = std::max(Real(0), std::min(Real(1), uv[point].V)) * uvScale + vOffset;
@@ -552,7 +571,8 @@ std::unique_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
 			vertex.diffuse = normals ? cpuTreeDiffuse(normal, emissive,
 				colors ? colors[point] : 0xffffffffU, lighting) : fallbackDiffuse;
 			if (!std::isfinite(vertex.x) || !std::isfinite(vertex.y) ||
-				!std::isfinite(vertex.z) || !std::isfinite(vertex.u1) ||
+				!std::isfinite(vertex.z) || !std::isfinite(vertex.ny) ||
+				!std::isfinite(vertex.u1) ||
 				!std::isfinite(vertex.v1)) return nullptr;
 			vertices.push_back(vertex);
 		}
@@ -874,6 +894,30 @@ Vector3 BaseHeightMapRenderObjClass::treeSwayVector(Int index) const
 		!registry->second.visibleFrame.ready) return Vector3(0, 0, 0);
 	return registry->second.visibleFrame.sampledSway[index];
 }
+Real BaseHeightMapRenderObjClass::treePushAside(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.pushAside;
+	return 0;
+}
+Real BaseHeightMapRenderObjClass::treePushDelta(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.pushDelta;
+	return 0;
+}
+ObjectID BaseHeightMapRenderObjClass::treePushSource(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.pushSource;
+	return INVALID_ID;
+}
 bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 	const CameraClass *camera, const BreezeInfo &breeze, Bool paused)
 {
@@ -1003,6 +1047,25 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 			}
 		}
 		if (fault && std::strcmp(fault, "cull") == 0) return false;
+		if (!paused) {
+			for (CpuTreeInstance &instance : nextInstances) {
+				if (instance.pushDelta == 0) continue;
+				const CpuTreeType &type = registry->second.types.at(instance.typeIndex);
+				if (!type.data || !type.data->m_framesToMoveInward ||
+					!std::isfinite(instance.pushAside) ||
+					!std::isfinite(instance.pushDelta)) return false;
+				instance.pushAside += instance.pushDelta;
+				if (instance.pushAside >= 1.0f)
+					instance.pushDelta = -1.0f / type.data->m_framesToMoveInward;
+				else if (instance.pushAside <= 0.0f) {
+					instance.pushDelta = 0;
+					instance.pushAside = 0;
+				}
+				if (!std::isfinite(instance.pushAside) ||
+					!std::isfinite(instance.pushDelta)) return false;
+				changed = true;
+			}
+		}
 		std::unique_ptr<CpuTreeGpuSource> nextGpu;
 		if (changed) {
 			nextGpu = makeCpuTreeGpu(nextInstances, registry->second.types,
@@ -1237,6 +1300,100 @@ Bool BaseHeightMapRenderObjClass::updateTreePosition(DrawableID id,
 		return TRUE;
 	}
 	return FALSE;
+}
+void BaseHeightMapRenderObjClass::unitMoved( Object *unit )
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry == s_cpuTreeRegistries.end()) return;
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	if (!unit || !edge || !edge->source_buffers_retirable() ||
+		TheTerrainRenderObject != this || !W3DDisplay::m_3DScene ||
+		Peek_Scene() != W3DDisplay::m_3DScene || !m_map || !m_shroud ||
+		!TheGameLogic || m_x != m_map->getDrawWidth() ||
+		m_y != m_map->getDrawHeight())
+		throw OriginalW3DDeviceUnavailable("original tree unit collision provider unavailable");
+	if (unit->isKindOf(KINDOF_IMMOBILE)) return;
+	const GeometryInfo &geometry = unit->getGeometryInfo();
+	Real radius = geometry.getMajorRadius();
+	if (geometry.getGeomType() == GEOMETRY_BOX)
+		radius = std::min(radius, geometry.getMinorRadius());
+	if (!std::isfinite(radius) || radius <= 0)
+		throw OriginalW3DDeviceUnavailable("original tree unit collision geometry unavailable");
+	radius += 7.0f; // Native TREE_RADIUS_APPROX.
+	const Coord3D *position = unit->getPosition();
+	const Coord3D *direction = unit->getUnitDirectionVector2D();
+	const Real width = (m_map->getXExtent() - 2 * m_map->getBorderSize()) * MAP_XY_FACTOR;
+	const Real height = (m_map->getYExtent() - 2 * m_map->getBorderSize()) * MAP_XY_FACTOR;
+	if (!position || !direction || !std::isfinite(radius) || radius < 7.0f ||
+		!std::isfinite(radius * radius) || !std::isfinite(width) ||
+		!std::isfinite(height) || width <= 0 || height <= 0 ||
+		!std::isfinite(position->x) || !std::isfinite(position->y) ||
+		!std::isfinite(position->z) || !std::isfinite(direction->x) ||
+		!std::isfinite(direction->y))
+		throw OriginalW3DDeviceUnavailable("original tree unit collision geometry unavailable");
+	const auto coordinate = [](Real value, Real extent, bool upper) {
+		const Real clamped = std::max(Real(0), std::min(value, extent));
+		const Real scaled = clamped / extent * 99.9f;
+		return static_cast<Int>(upper ? std::ceil(scaled) : std::floor(scaled));
+	};
+	const Int firstX = coordinate(position->x - radius, width, false);
+	const Int firstY = coordinate(position->y - radius, height, false);
+	const Int lastX = coordinate(position->x + radius, width, true);
+	const Int lastY = coordinate(position->y + radius, height, true);
+	if (firstX < 0 || firstY < 0 || lastX > 100 || lastY > 100)
+		throw OriginalW3DDeviceUnavailable("original tree unit collision partition unavailable");
+	try {
+		std::vector<CpuTreeInstance> candidate = registry->second.instances;
+		const UnsignedInt frame = TheGameLogic->getFrame();
+		for (CpuTreeInstance &instance : candidate) {
+			if (instance.partitionBucket < 0 ||
+				instance.partitionBucket % 100 < firstX ||
+				instance.partitionBucket % 100 >= lastX ||
+				instance.partitionBucket / 100 < firstY ||
+				instance.partitionBucket / 100 >= lastY) continue;
+			const Real dx = instance.location.x - position->x;
+			const Real dy = instance.location.y - position->y;
+			const Real dz = instance.location.z - position->z;
+			if (!std::isfinite(dx) || !std::isfinite(dy) || !std::isfinite(dz) ||
+				!std::isfinite(dx * dx + dy * dy + dz * dz))
+				throw OriginalW3DDeviceUnavailable("original tree collision distance unavailable");
+			if (radius * radius <= dx * dx + dy * dy + dz * dz) continue;
+			const CpuTreeType &type = registry->second.types.at(instance.typeIndex);
+			if (!type.data) throw OriginalW3DDeviceUnavailable(
+				"original tree unit collision type unavailable");
+			if (unit->getCrusherLevel() > 1 && type.data->m_doTopple)
+				throw OriginalW3DDeviceUnavailable("original tree crusher topple pending C1B2");
+			if (type.data->m_framesToMoveOutward <= 1) continue;
+			if (!type.data->m_framesToMoveInward ||
+				!std::isfinite(type.data->m_maxOutwardMovement) ||
+				!std::isfinite(type.data->m_darkening))
+				throw OriginalW3DDeviceUnavailable("original tree push parameters unavailable");
+			const UnsignedInt lastFrame = instance.lastPushFrame;
+			instance.lastPushFrame = frame;
+			if (instance.pushSource == unit->getID() && frame - lastFrame < 3)
+				continue;
+			if (instance.pushAside != 0) continue;
+			instance.pushSource = unit->getID();
+			if (direction->x * dy - direction->y * dx > 0) {
+				instance.pushCos = -direction->y;
+				instance.pushSin = direction->x;
+			} else {
+				instance.pushCos = direction->y;
+				instance.pushSin = -direction->x;
+			}
+			instance.pushDelta = 1.0f / type.data->m_framesToMoveOutward;
+			if (!std::isfinite(instance.pushDelta) ||
+				!std::isfinite(instance.pushCos) || !std::isfinite(instance.pushSin))
+				throw OriginalW3DDeviceUnavailable("original tree push candidate unavailable");
+		}
+		const char *fault = std::getenv("ZH_M22_TREE_PUSH_FAIL_AT");
+		if (fault && std::strcmp(fault, "publish") == 0)
+			throw OriginalW3DDeviceUnavailable("injected tree push publication failure");
+		registry->second.instances.swap(candidate);
+	} catch (const OriginalW3DDeviceUnavailable &) { throw; }
+	catch (...) {
+		throw OriginalW3DDeviceUnavailable("original tree unit collision candidate unavailable");
+	}
 }
 void BaseHeightMapRenderObjClass::crc(Xfer*)
 {

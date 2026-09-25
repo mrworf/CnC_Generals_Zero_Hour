@@ -35,7 +35,7 @@ def main() -> int:
         os.environ["ZH_M22_TERRAIN_SCENE_ATTACHMENT_ASSET"] = str(packet)
         for generation in range(2):
             source = source_tree(root / f"source-{generation}", fixture, "valid",
-                                 tree_textures=True)
+                                 tree_textures=True, immobile_enemy=True)
             result = run(args.executable.resolve(), root / f"generation-{generation}", source,
                          "mission", timeout_seconds=120)
             marker = "original terrain scene attachment: bounds=8x8 registrations=2 shroud=2 display-cells=3 generations=2 resources=0"

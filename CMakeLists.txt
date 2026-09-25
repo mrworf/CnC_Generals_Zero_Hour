@@ -1208,7 +1208,8 @@ set_source_files_properties(tests/original_rendering/shroud_data_probe.cpp PROPE
 set_source_files_properties(tests/original_rendering/base_terrain_map_probe.cpp PROPERTIES
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
-target_compile_definitions(zh_original_w3d_full_probe PRIVATE ZH_M22_FULL_DRAW_TEST=1)
+target_compile_definitions(zh_original_w3d_full_probe PRIVATE
+  ZH_M22_FULL_DRAW_TEST=1 ZH_ORIGINAL_FULL_DRAW=1)
 target_include_directories(zh_original_w3d_full_probe PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"

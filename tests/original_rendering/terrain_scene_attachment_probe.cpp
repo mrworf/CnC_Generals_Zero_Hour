@@ -2,8 +2,13 @@
 
 #include "Common/GlobalData.h"
 #include "Common/FileSystem.h"
+#include "Common/Geometry.h"
 #include "Common/MapReaderWriterInfo.h"
+#include "Common/ThingTemplate.h"
 #include "GameClient/ClientRandomValue.h"
+#include "GameClient/GameClient.h"
+#include "GameLogic/GameLogic.h"
+#include "GameLogic/Object.h"
 #include "GameLogic/ScriptEngine.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
@@ -558,6 +563,169 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		terrain.removeTree(frame_one);
 		require(device.resource_counts() == baseline,
 			"original tree paused first-frame removal retained resources");
+		Object *pushUnit = NULL;
+		Object *immobileUnit = NULL;
+		for (Object *object = TheGameLogic->getFirstObject(); object;
+			object = object->getNextObject()) {
+			if (object->getTemplate() &&
+				object->getTemplate()->getName() == "LogicFixture") pushUnit = object;
+			if (object->getTemplate() &&
+				object->getTemplate()->getName() == "EnemyFixture") immobileUnit = object;
+		}
+		require(pushUnit && immobileUnit && TheGameClient &&
+			pushUnit->isKindOf(KINDOF_VEHICLE) &&
+			immobileUnit->isKindOf(KINDOF_IMMOBILE),
+			"original tree push fixture missing generated mobile/immobile units");
+		const GeometryInfo originalPushGeometry = pushUnit->getGeometryInfo();
+		pushUnit->setGeometryInfo(GeometryInfo(GEOMETRY_CYLINDER, FALSE, 2, 4, 4));
+		W3DTreeDrawModuleData pushData;
+		pushData.m_modelName = "TEST.PUSHTREE";
+		pushData.m_textureName = "Tree0.tga";
+		pushData.m_framesToMoveOutward = 4;
+		pushData.m_framesToMoveInward = 2;
+		pushData.m_maxOutwardMovement = 2;
+		pushData.m_darkening = 0.25f;
+		const DrawableID pushTree = static_cast<DrawableID>(6020);
+		const Coord3D originalPushPosition = *pushUnit->getPosition();
+		Coord3D pushPosition = originalPushPosition;
+		pushPosition.x += 2;
+		require(terrain.tryAddTree(pushTree, pushPosition, 1, 0, 0, &pushData) &&
+			terrain.treePartitionBucket(pushTree) >= 0,
+			"original tree push fixture admission or partition missing");
+		frameCamera.Set_Position(Vector3(pushPosition.x, pushPosition.y, 50));
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			terrain.treeVisibleCount() == 1 &&
+			terrain.treePushAside(pushTree) == 0 &&
+			terrain.treePushDelta(pushTree) == 0 &&
+			terrain.treePushSource(pushTree) == INVALID_ID,
+			"original tree push fixture did not start upright");
+		const auto pushReadyResources = device.resource_counts();
+		const auto *pushReadyVertex = terrain.peekTreeVertexSource();
+		require(pushReadyVertex && rejected([&] { terrain.unitMoved(NULL); }) &&
+			terrain.treePushDelta(pushTree) == 0 &&
+			device.resource_counts() == pushReadyResources,
+			"original tree push accepted missing unit or changed accepted resources");
+		pushUnit->setGeometryInfo(GeometryInfo(GEOMETRY_CYLINDER, FALSE, 2, 0, 0));
+		require(rejected([&] { terrain.unitMoved(pushUnit); }) &&
+			terrain.treePushDelta(pushTree) == 0 &&
+			device.resource_counts() == pushReadyResources,
+			"original tree push accepted zero collision radius or changed resources");
+		pushUnit->setGeometryInfo(GeometryInfo(GEOMETRY_CYLINDER, FALSE, 2, 4, 4));
+		const Coord3D originalImmobilePosition = *immobileUnit->getPosition();
+		immobileUnit->setPosition(&pushPosition);
+		terrain.unitMoved(immobileUnit);
+		immobileUnit->setPosition(&originalImmobilePosition);
+		require(terrain.treePushDelta(pushTree) == 0 &&
+			device.resource_counts() == pushReadyResources,
+			"original tree immobile collision changed push state or resources");
+		const auto *pushBaseVertices = reinterpret_cast<const VertexFormatXYZNDUV1 *>(
+			pushReadyVertex->Get_CPU_Vertex_Buffer());
+		const Real pushBaseX = pushBaseVertices[2].x;
+		const Real pushBaseY = pushBaseVertices[2].y;
+		CopyGameClientRandomState(clientBefore);
+		setenv("ZH_M22_TREE_PUSH_FAIL_AT", "publish", 1);
+		require(rejected([&] { terrain.unitMoved(pushUnit); }),
+			"original tree push injected publication accepted candidate");
+		unsetenv("ZH_M22_TREE_PUSH_FAIL_AT");
+		CopyGameClientRandomState(clientAfter);
+		require(terrain.treePushAside(pushTree) == 0 &&
+			terrain.treePushDelta(pushTree) == 0 &&
+			terrain.treePushSource(pushTree) == INVALID_ID &&
+			terrain.peekTreeVertexSource() == pushReadyVertex &&
+			device.resource_counts() == pushReadyResources &&
+			std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0,
+			"original tree push rejected candidate changed state, GPU or RNG");
+		pushUnit->setPosition(&pushPosition);
+		require(terrain.treePushAside(pushTree) == 0 &&
+			terrain.treePushDelta(pushTree) == 0.25f &&
+			terrain.treePushSource(pushTree) == pushUnit->getID(),
+			"original tree mobile-unit route did not publish push candidate");
+		TheGameClient->notifyTerrainObjectMoved(pushUnit);
+		require(terrain.treePushDelta(pushTree) == 0.25f,
+			"original tree repeated pusher changed outward step");
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			terrain.treePushAside(pushTree) == 0 &&
+			terrain.treePushDelta(pushTree) == 0.25f,
+			"original tree paused push frame advanced motion");
+		setenv("ZH_M22_TREE_RESOURCE_FAIL_AT", "geometry", 1);
+		require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treePushAside(pushTree) == 0 &&
+			terrain.treePushDelta(pushTree) == 0.25f &&
+			device.resource_counts() == pushReadyResources,
+			"original tree pushed geometry fault consumed candidate state");
+		unsetenv("ZH_M22_TREE_RESOURCE_FAIL_AT");
+		device.fail_next_buffer_upload();
+		require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treePushAside(pushTree) == 0 &&
+			terrain.treePushDelta(pushTree) == 0.25f &&
+			terrain.peekTreeVertexSource() == pushReadyVertex &&
+			device.resource_counts() == pushReadyResources,
+			"original tree pushed frame upload fault consumed candidate state");
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treePushAside(pushTree) == 0.25f &&
+			terrain.treePushDelta(pushTree) == 0.25f,
+			"original tree pushed frame retry lost outward step");
+		const auto *pushedVertices = reinterpret_cast<const VertexFormatXYZNDUV1 *>(
+			terrain.peekTreeVertexSource()->Get_CPU_Vertex_Buffer());
+		const Coord3D *pushDirection = pushUnit->getUnitDirectionVector2D();
+		const Real relativeX = pushPosition.x - originalPushPosition.x;
+		const Real relativeY = pushPosition.y - originalPushPosition.y;
+		const bool leftSide = pushDirection->x * relativeY -
+			pushDirection->y * relativeX > 0;
+		const Real pushCos = leftSide ? -pushDirection->y : pushDirection->y;
+		const Real pushSin = leftSide ? pushDirection->x : -pushDirection->x;
+		require(pushedVertices[0].ny == 0.9375f &&
+			std::fabs(pushedVertices[2].x - (pushBaseX + 0.5f * pushCos)) < 0.001f &&
+			std::fabs(pushedVertices[2].y - (pushBaseY + 0.5f * pushSin)) < 0.001f,
+			"original tree push displacement/darkening differs from source vertex slots");
+		for (Int step = 0; step != 5; ++step)
+			require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE),
+				"original tree push outward/inward advance rejected valid frame");
+		require(terrain.treePushAside(pushTree) == 0 &&
+			terrain.treePushDelta(pushTree) == 0 &&
+			terrain.treePushSource(pushTree) == pushUnit->getID(),
+			"original tree push failed to return inward to upright");
+		Coord3D edgePushPosition = pushPosition;
+		edgePushPosition.x = 0.5f;
+		edgePushPosition.y = 0.5f;
+		require(terrain.updateTreePosition(pushTree, edgePushPosition, 0) &&
+			terrain.treePartitionBucket(pushTree) == 0,
+			"original tree push relocation left stale partition bucket");
+		terrain.removeTree(pushTree);
+		require(device.resource_counts() == baseline,
+			"original tree relocated push removal retained resources");
+		const DrawableID edgePushTree = static_cast<DrawableID>(6021);
+		require(terrain.tryAddTree(edgePushTree, edgePushPosition, 1, 0, 0,
+			&pushData) && terrain.treePartitionBucket(edgePushTree) == 0,
+			"original tree edge-bucket fixture admission failed");
+		pushUnit->setGeometryInfo(GeometryInfo(GEOMETRY_BOX, FALSE, 2, 4, 1));
+		pushUnit->setPosition(&edgePushPosition);
+		require(terrain.treePushDelta(edgePushTree) == 0.25f &&
+			terrain.treePushSource(edgePushTree) == pushUnit->getID(),
+			"original tree edge-bucket collision missed moved unit");
+		terrain.removeTree(edgePushTree);
+		pushUnit->setPosition(&originalPushPosition);
+		pushUnit->setGeometryInfo(originalPushGeometry);
+		require(device.resource_counts() == baseline &&
+			terrain.treePartitionBucket(edgePushTree) == -1,
+			"original tree push removal retained resources or partition entry");
+		W3DTreeDrawModuleData invalidPushData;
+		invalidPushData.m_modelName = "TEST.PUSHTREE";
+		invalidPushData.m_textureName = "Tree0.tga";
+		invalidPushData.m_framesToMoveOutward = 4;
+		invalidPushData.m_framesToMoveInward = 0;
+		require(terrain.tryAddTree(pushTree, originalPushPosition, 1, 0, 0,
+			&invalidPushData),
+			"original tree invalid-push fixture was not staged for collision test");
+		const auto invalidPushResources = device.resource_counts();
+		require(rejected([&] { terrain.unitMoved(pushUnit); }) &&
+			terrain.treePushDelta(pushTree) == 0 &&
+			terrain.treePushSource(pushTree) == INVALID_ID &&
+			device.resource_counts() == invalidPushResources,
+			"original tree accepted zero inward frames or changed accepted owner");
+		terrain.removeTree(pushTree);
+		require(device.resource_counts() == baseline,
+			"original tree invalid-push removal retained resources");
 		terrain.notifyShroudChanged();
 		terrain.notifyShroudChanged();
 		require(device.resource_counts() == baseline,

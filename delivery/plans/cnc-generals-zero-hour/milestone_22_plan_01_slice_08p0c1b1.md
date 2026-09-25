@@ -28,6 +28,16 @@ are `BaseHeightMap` header/source and generated terrain scene attachment
 fixture; split a discovered prerequisite before production if its owner is
 independent.
 
+Source audit: `Object::setPosition` reaches terrain only after an integer
+position transition for mobile infantry/vehicle, via
+`GameClient::notifyTerrainObjectMoved`. Native `W3DGameClient` forwards it,
+but the Linux runtime's `LinuxGameClient` override is currently a no-op.
+Select its forwarding adapter with an explicit `ZH_ORIGINAL_FULL_DRAW` build
+capability on the full-draw-linked engine, leaving the minimal/headless
+engine unchanged; this is not a test-only environment branch. Prove the
+actual `Object::setPosition` path with a generated mobile vehicle; a direct
+terrain call is diagnostic only, not the accepting witness.
+
 ## Acceptance and commit
 
 Generated positives: immobile/moving box and cylinder units, interior/edge
