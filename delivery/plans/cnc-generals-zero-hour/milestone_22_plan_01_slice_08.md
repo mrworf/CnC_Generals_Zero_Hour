@@ -69,6 +69,16 @@ admission resumes. The earlier doubled-separator trial result is discarded. All
 trial admission and diagnostics were removed; discovery retains fixed categories
 only.
 
+After accepted 08L, the corrected read-only continuation crossed three engine
+init, four map-local INI and five game-logic stages through `map-loaded`, then
+stopped before scene construction at the fixed client/terrain empty-bib cleanup
+category. [08M0](milestone_22_plan_01_slice_08m0.md) owns only safe empty-list
+`removeAllBibs` lifecycle for an exact CPU-only map-loaded terrain owner. The
+separate active-bib producer/storage/render path remains fail-closed; if a later
+redacted continuation reaches it, plan 08M1 before widening admission. Trial
+scene wiring was removed again before the plan-only checkpoint. Discovery
+retains fixed categories only, with no retail input or raw output.
+
 ## Validation and error handling
 
 Retail roots remain read-only/private; no corpus bytes, private paths,
