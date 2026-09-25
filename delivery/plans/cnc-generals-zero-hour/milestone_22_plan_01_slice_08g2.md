@@ -34,3 +34,13 @@ Retail roots remain read-only and are not needed for implementation
 validation. A later redacted probe may record only fixed aggregate stage and
 sanitizer categories. Slice 08G2 does not admit the retail scene selector,
 repair the source-scene borrow/unwind transaction, or claim Recording output.
+
+## Result
+
+Complete. Every ordinary `AudioEventRTS` constructor now begins at
+`PP_Attack`, matching the existing reset contract. Generated tests cover all
+constructor overloads, copy, assignment and explicit override. A redacted
+sanitized source-init probe confirms both prerequisite sanitizer categories
+are absent and reaches the accepted pre-scene boundary with clean Recording
+teardown. Scene admission and its borrow/unwind transaction remain slice 08.
+See the [08G2 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08g2.md).

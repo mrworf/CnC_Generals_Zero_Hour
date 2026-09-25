@@ -523,6 +523,28 @@ public:
 
 int main()
 {
+	Coord3D generatedAudioPosition = { 1.0f, 2.0f, 3.0f };
+	AudioEventRTS generatedAudioEvents[] = {
+		AudioEventRTS(),
+		AudioEventRTS(AsciiString("GeneratedNamed")),
+		AudioEventRTS(AsciiString("GeneratedObject"), static_cast<ObjectID>(1)),
+		AudioEventRTS(AsciiString("GeneratedDrawable"), static_cast<DrawableID>(1)),
+		AudioEventRTS(AsciiString("GeneratedPosition"), &generatedAudioPosition),
+	};
+	for (const AudioEventRTS &event : generatedAudioEvents)
+		check(event.getNextPlayPortion() == PP_Attack,
+			"generated audio constructor did not initialize attack playback portion");
+	AudioEventRTS generatedAudioCopy(generatedAudioEvents[1]);
+	AudioEventRTS generatedAudioAssigned;
+	generatedAudioAssigned.setNextPlayPortion(PP_Done);
+	generatedAudioAssigned = generatedAudioEvents[1];
+	check(generatedAudioCopy.getNextPlayPortion() == PP_Attack &&
+		generatedAudioAssigned.getNextPlayPortion() == PP_Attack,
+		"generated audio copy/assignment did not preserve initialized playback portion");
+	generatedAudioCopy.setNextPlayPortion(PP_Sound);
+	check(generatedAudioCopy.getNextPlayPortion() == PP_Sound,
+		"explicit generated audio playback portion no longer overrides initialization");
+
 	char temp_template[] = "/tmp/zh-m20-headless-XXXXXX";
 	char *temp_root = mkdtemp(temp_template);
 	check(temp_root != NULL, "could not create isolated runtime root");
