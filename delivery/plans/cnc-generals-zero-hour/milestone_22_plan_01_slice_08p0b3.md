@@ -1,29 +1,21 @@
-# M22 plan 01 slice 08P0B3: atomic tree geometry and Recording resources
+# M22 plan 01 slice 08P0B3: tree geometry and RNG aggregate
 
 ## Goal and boundary
 
-After 08P0B1–08P0B2, prepare original tree mesh vertex/index ranges and
-Recording resources. Preserve mesh vertices, normals, diffuse/lighting,
-atlas UV transform, rotation, scale, offset, winding and per-tree index
-identity. Enforce 30000-vertex/60000-index source budgets, 16-bit index
-range and atlas bounds; do not substitute proxy geometry. Allocate/upload
-source wrapper-backed Recording vertex, index and atlas resources in source
-order, with exact owner/device generation.
-
-Only after all references, atlas pixels, geometry and uploads succeed may
-the 08P0A type/instance registry publish the candidate. Geometry/capacity,
-wrapper create/upload, provider removal, reset and teardown failures unwind
-GPU, atlas and model owners in reverse while preserving accepted owners and
-allowing retry. Repeated position/transform must retain source identity.
-The physical factory remains closed; draw, shroud and shadow remain 08P0C.
+After accepted 08P0B3A–08P0B3B, revalidate the complete source tree
+geometry and GameClient RNG transaction together. The source client stream
+must advance exactly once on successful admission and not at all on failed
+asset, geometry or Recording work. Repeated position/transform and removal
+retain source identity; rejected candidates preserve accepted owners and
+allow retry. The physical factory remains closed; frame, shroud and shadow
+remain 08P0C.
 
 ## Validation and commit
 
-Generated mesh/TGA fixtures assert vertex/index/UV bytes and Recording
-resource counts. Inject every source/device edge; inspect immediate
-pre-teardown residuals, then same/fresh-generation retry. Re-run 08P0A
-registry-only negative controls alongside generated ready assets. Run six
-complete builds and canonical nonretail suites, focused strict host LSan,
-physical Vulkan display/bootstrap/map controls, serial LAN 4/4 all six,
-ledger and diff checks on final source. Commit one slice:
-`delivery: M22 08P0B3 publish tree resources atomically`.
+Generated aggregate fixtures compare vertex/index/atlas resource bytes and
+client RNG progression against a fresh equivalent generation, including
+failed admission followed by clean retry. Re-run 08P0A registry negatives
+with ready generated assets. Carry 08P0B3B's six full builds, canonical
+nonretail suites, strict host LSan, physical Vulkan and serial LAN controls;
+check ledger/diff. Commit one aggregate slice:
+`delivery: M22 08P0B3 revalidate tree resource transaction`.
