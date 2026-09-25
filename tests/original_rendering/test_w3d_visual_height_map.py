@@ -94,7 +94,7 @@ def authored_visual_map(kind: str = "valid") -> bytes:
     return bytes(toc)
 
 
-def query_visual_map() -> bytes:
+def query_visual_map(cliff_extra: bool = False) -> bytes:
     """Authored metadata covering every runtime blend/cliff query branch."""
     names = ["HeightMapData", "BlendTileData"]
     toc = bytearray(b"CkMp" + struct.pack("<I", len(names)))
@@ -115,6 +115,8 @@ def query_visual_map() -> bytes:
         tiles[cell] = quadrant
     tiles[32] = 16
     cliffs[32] = 1
+    if cliff_extra:
+        cliffs[24] = 1
     cliff_bits = bytearray(8)
     cliff_bits[4] = 1
     blend = bytearray(struct.pack("<i", 64))
@@ -134,7 +136,7 @@ def query_visual_map() -> bytes:
         (8, 0, 0, 1, 0, 0, 0, -1),
         (9, 0, 0, 1, 0, 1, 1, -1),
         (10, 0, 0, 0, 1, 0, 1, -1),
-        (11, 0, 0, 0, 1, 1, 1, -1),
+        (16 if cliff_extra else 11, 0, 0, 0, 1, 1, 1, -1),
         (12, 1, 0, 0, 0, 2, 0, 0),
     )
     for record in records:

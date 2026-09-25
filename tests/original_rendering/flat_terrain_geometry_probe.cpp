@@ -39,6 +39,12 @@ public:
 	Int tile_count() const { return m_numVertexBufferTiles; }
 	DX8IndexBufferClass *index() const { return m_indexBuffer; }
 	DX8VertexBufferClass *vertices() const { return m_vertexBufferTiles ? m_vertexBufferTiles[0] : NULL; }
+	Int extra_count() const { return m_numExtraBlendTiles; }
+	Int extra_capacity() const { return m_extraBlendTilePositionsSize; }
+	Int extra_position(Int index) const
+	{
+		return index >= 0 && index < m_numExtraBlendTiles ? m_extraBlendTilePositions[index] : -1;
+	}
 	const VERTEX_FORMAT *backup() const
 	{
 		return m_vertexBufferBackup ? reinterpret_cast<const VERTEX_FORMAT *>(m_vertexBufferBackup[0]) : NULL;
@@ -58,16 +64,43 @@ extern "C" void zh_probe_flat_terrain_geometry()
 		auto display = std::make_unique<W3DDisplay>();
 		display->init();
 		TestTerrain terrain;
+		WorldHeightMap *inventory = open_map("ZH_M22_EXTRA_BLEND_TERRAIN_MAP");
+		require(inventory->getTerrainTexture() && inventory->getAlphaTerrainTexture(),
+			"original extra blend terrain atlas pair unavailable");
 		device.fail_next_buffer_create();
-		bool injected = false;
-		try { terrain.initHeightData(8, 8, map, NULL, TRUE); }
-		catch (...) { injected = true; }
-		require(injected && !terrain.getMap() && map->Num_Refs() == 1 &&
+		bool inventory_failure = false;
+		try { terrain.initHeightData(8, 8, inventory, NULL, TRUE); }
+		catch (...) { inventory_failure = true; }
+		require(inventory_failure && !terrain.getMap() && inventory->Num_Refs() == 1 &&
+			terrain.extra_count() == 0 && terrain.extra_capacity() == 0 &&
 			device.resource_counts().buffers == 0,
-			"original flat terrain failed init published state");
+			"original extra blend failed init published inventory");
+		require(terrain.initHeightData(8, 8, inventory, NULL, TRUE) == 0 &&
+			terrain.extra_count() == 8 && terrain.extra_capacity() == 8,
+			"original extra blend inventory retry failed");
+		for (Int index = 0; index != 8; ++index) {
+			const Int expected = index < 7 ? (index | (2 << 16)) : (3 << 16);
+			require(terrain.extra_position(index) == expected,
+				"original extra blend inventory order changed");
+		}
+		float extra_u[4]{}, extra_v[4]{};
+		UnsignedByte extra_alpha[4]{};
+		Bool extra_flip = FALSE;
+		Bool extra_cliff = FALSE;
+		const Bool extra_present = inventory->getExtraAlphaUVData(0, 3, extra_u, extra_v, extra_alpha,
+			&extra_flip, &extra_cliff);
+		require(extra_present && inventory->isCliffMappedTexture(0, 3),
+			"original cliff extra blend inventory entry changed");
+		terrain.freeMapResources();
+		require(terrain.extra_count() == 0 && terrain.extra_capacity() == 0,
+			"original extra blend teardown retained inventory");
+		edge.release_source_buffers();
+		inventory->Release_Ref();
+		inventory = NULL;
 
 		require(terrain.initHeightData(8, 8, map, NULL, TRUE) == 0 &&
 			terrain.getMap() == map && map->Num_Refs() == 2 && terrain.tile_count() == 1 &&
+			terrain.extra_count() == 0 && terrain.extra_capacity() == 0 &&
 			terrain.index() && terrain.index()->Get_Index_Count() == 6144 &&
 			terrain.vertices() && terrain.vertices()->Get_Vertex_Count() == 4096 &&
 			device.resource_counts().buffers == 2,
@@ -216,6 +249,9 @@ extern "C" void zh_probe_flat_terrain_geometry()
 			"original authored terrain atlas pair unavailable");
 		require(terrain.initHeightData(8, 8, authored, NULL, TRUE) == 0,
 			"original authored terrain geometry initialization failed");
+		require(terrain.extra_count() == 1 && terrain.extra_capacity() == 1 &&
+			terrain.extra_position(0) == 2,
+			"original authored terrain extra blend inventory changed");
 		float base_u[4]{}, base_v[4]{}, alpha_u[4]{}, alpha_v[4]{};
 		UnsignedByte alpha_value[4]{};
 		Bool flip = FALSE;
@@ -236,6 +272,8 @@ extern "C" void zh_probe_flat_terrain_geometry()
 		require(count_draws(device.snapshot().substr(before_authored_draw.size())) == 2,
 			"original authored terrain did not use accepted base passes");
 		terrain.freeMapResources();
+		require(terrain.extra_count() == 0 && terrain.extra_capacity() == 0,
+			"original authored terrain free retained extra blend inventory");
 		edge.release_source_buffers();
 		authored->Release_Ref();
 		authored = NULL;

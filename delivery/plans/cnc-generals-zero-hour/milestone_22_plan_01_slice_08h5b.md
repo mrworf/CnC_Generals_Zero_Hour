@@ -20,3 +20,14 @@ injected later initialization failure and retry.
 Dynamic geometry and physical submission remain 08H5D. Run the full
 proportional M22 gates and commit once as
 `delivery: M22 08H5B own extra terrain blends`.
+
+## Result
+
+Complete. The source height-map owner scans the accepted bounded map in
+row-major order and publishes an exact-capacity extra-blend inventory only
+after the complete geometry transaction succeeds. Initialization failure,
+explicit free, destruction and two-generation re-entry restore empty
+inventory state. Generated zero-, one- and multiple-entry fixtures cover
+ordering, cliff-tagged metadata and failure/retry. Dynamic extra-blend
+material and submission remain 08H5C–08H5D. See the
+[08H5B evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08h5b.md).

@@ -58,6 +58,8 @@
 #include "OriginalW3DDeviceUnavailable.h"
 
 #include <cstring>
+#include <memory>
+#include <vector>
 
 HeightMapRenderObjClass *TheHeightMap = NULL;
 
@@ -130,9 +132,35 @@ int HeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *map,
 		x < 2 || y < 2 || x > VERTEX_BUFFER_TILE_LENGTH + 1 ||
 		y > VERTEX_BUFFER_TILE_LENGTH + 1 || !zh::original_runtime::OriginalGpuEdge::active())
 		throw OriginalW3DDeviceUnavailable("original flat terrain geometry unavailable");
+	if (m_extraBlendTilePositions || m_numExtraBlendTiles ||
+		m_numVisibleExtraBlendTiles || m_extraBlendTilePositionsSize)
+		throw OriginalW3DDeviceUnavailable("original terrain extra blend ownership unavailable");
 	try {
 		if (!map->getTerrainTexture() || !map->getAlphaTerrainTexture())
 			throw OriginalW3DDeviceUnavailable("original terrain atlas pair unavailable");
+		std::vector<Int> extra_blend_positions;
+		if (update_extra_pass_tiles) {
+			const Int map_width = map->getXExtent();
+			const Int map_height = map->getYExtent();
+			if (map_width < 2 || map_height < 2 || map_width > 0x10000 || map_height > 0x10000)
+				throw OriginalW3DDeviceUnavailable("original terrain extra blend bounds unavailable");
+			for (Int row = 0; row < map_height - 1; ++row) {
+				for (Int column = 0; column < map_width - 1; ++column) {
+					Real u[4], v[4];
+					UnsignedByte alpha[4];
+					Bool flip = FALSE;
+					Bool cliff = FALSE;
+					if (map->getExtraAlphaUVData(column, row, u, v, alpha, &flip, &cliff))
+						extra_blend_positions.push_back(column | (row << 16));
+				}
+			}
+		}
+		std::unique_ptr<Int[]> extra_blend_storage;
+		if (!extra_blend_positions.empty()) {
+			extra_blend_storage.reset(NEW Int[extra_blend_positions.size()]);
+			std::memcpy(extra_blend_storage.get(), extra_blend_positions.data(),
+				extra_blend_positions.size() * sizeof(Int));
+		}
 		BaseHeightMapRenderObjClass::initHeightData(x, y, map, lights, FALSE);
 		m_numExtraBlendTiles = m_numVisibleExtraBlendTiles = 0;
 		m_originX = m_originY = 0;
@@ -162,6 +190,9 @@ int HeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *map,
 		auto& edge = zh::original_runtime::OriginalGpuEdge::required();
 		(void)edge.bind_index(m_indexBuffer);
 		(void)edge.bind_vertex(m_vertexBufferTiles[0]);
+		m_extraBlendTilePositions = extra_blend_storage.release();
+		m_numExtraBlendTiles = static_cast<Int>(extra_blend_positions.size());
+		m_extraBlendTilePositionsSize = m_numExtraBlendTiles;
 		return 0;
 	} catch (...) {
 		freeMapResources();
@@ -186,6 +217,11 @@ void HeightMapRenderObjClass::freeIndexVertexBuffers()
 Int HeightMapRenderObjClass::freeMapResources()
 {
 	freeIndexVertexBuffers();
+	delete [] m_extraBlendTilePositions;
+	m_extraBlendTilePositions = NULL;
+	m_numExtraBlendTiles = 0;
+	m_numVisibleExtraBlendTiles = 0;
+	m_extraBlendTilePositionsSize = 0;
 	return BaseHeightMapRenderObjClass::freeMapResources();
 }
 void HeightMapRenderObjClass::updateCenter(CameraClass* camera, RefRenderObjListIterator* lights)

@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "original_simulatio
 from test_scenario_setup import load_m20_fixture, run
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_w3d_terrain_source_bitmap import authored_source_tree
-from test_w3d_visual_height_map import authored_visual_map, visual_map
+from test_w3d_visual_height_map import authored_visual_map, query_visual_map, visual_map
 
 
 def main() -> int:
@@ -28,9 +28,13 @@ def main() -> int:
         authored_path = root / "authored.map"
         authored_path.write_bytes(authored_visual_map())
         authored_path.chmod(0o444)
+        inventory_path = root / "inventory.map"
+        inventory_path.write_bytes(query_visual_map(cliff_extra=True))
+        inventory_path.chmod(0o444)
         os.environ["ZH_M22_FLAT_TERRAIN_PROFILE"] = "1"
         os.environ["ZH_M22_FLAT_TERRAIN_MAP"] = str(map_path)
         os.environ["ZH_M22_AUTHORED_TERRAIN_MAP"] = str(authored_path)
+        os.environ["ZH_M22_EXTRA_BLEND_TERRAIN_MAP"] = str(inventory_path)
         for generation in range(2):
             source = authored_source_tree(root / f"source-{generation}", fixture, "valid")
             result = run(args.executable.resolve(), root / f"generation-{generation}", source, "mission")
