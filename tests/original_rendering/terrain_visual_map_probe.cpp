@@ -105,6 +105,39 @@ extern "C" void zh_probe_terrain_visual_map()
 			TheHeightMap && TheHeightMap->getMap() == visual->getLogicHeightMap() &&
 			TheHeightMap->Peek_Scene() == W3DDisplay::m_3DScene,
 			"original terrain visual map transaction did not attach primary terrain");
+		require(!TheHeightMap->hasBibBuffer(),
+			"original CPU-only map unexpectedly published active bib storage");
+		const auto bib_resources = device.resource_counts();
+		const auto bib_trace = device.snapshot();
+		const auto bib_refs = TheHeightMap->Num_Refs();
+		visual->removeAllBibs();
+		visual->removeAllBibs();
+		require(TheHeightMap->getMap() == visual->getLogicHeightMap() &&
+			TheHeightMap->Num_Refs() == bib_refs &&
+			device.resource_counts() == bib_resources && device.snapshot() == bib_trace,
+			"original map-loaded empty bib cleanup changed owners or Recording");
+		TerrainVisual *bib_visual = TheTerrainVisual;
+		TheTerrainVisual = NULL;
+		const bool missing_bib_visual = rejected([&]() { visual->removeAllBibs(); });
+		TheTerrainVisual = bib_visual;
+		HeightMapRenderObjClass *bib_height = TheHeightMap;
+		TheHeightMap = NULL;
+		const bool missing_bib_height = rejected([&]() { visual->removeAllBibs(); });
+		TheHeightMap = bib_height;
+		BaseHeightMapRenderObjClass *bib_terrain = TheTerrainRenderObject;
+		TheTerrainRenderObject = NULL;
+		const bool missing_bib_terrain = rejected([&]() { visual->removeAllBibs(); });
+		TheTerrainRenderObject = bib_terrain;
+		W3DDisplay::m_3DScene->Remove_Render_Object(TheHeightMap);
+		visual->removeAllBibs();
+		W3DDisplay::m_3DScene->Add_Render_Object(TheHeightMap);
+		require(missing_bib_visual && missing_bib_height && missing_bib_terrain &&
+			TheHeightMap->Num_Refs() == bib_refs &&
+			device.resource_counts() == bib_resources && device.snapshot() == bib_trace,
+			"original map-loaded bib cleanup accepted foreign owner or changed Recording");
+		require(rejected([&]() { visual->addFactionBib(NULL, TRUE); }) &&
+			rejected([&]() { visual->addFactionBibDrawable(NULL, TRUE); }),
+			"original active bib producer unexpectedly admitted");
 		const auto prop_resources = device.resource_counts();
 		const auto prop_refs = TheHeightMap->Num_Refs();
 		visual->addProp(plain_prop, &prop_pos, 0.0f);

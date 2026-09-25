@@ -18,6 +18,8 @@ the list is absent. Admit the no-op only for the accepted CPU-only visual,
 height-map and loaded-map identities with no bib buffer. Reject missing,
 foreign or active owners; do not use a selector-only or unconditional
 `removeAllBibs` success and do not reset the world as a shortcut.
+The same exact empty owner may be cleared after scene detachment during
+teardown; the no-op must not require live GPU/scene providers then.
 
 `addFactionBib`, drawable bibs, per-ID removal, highlighting, bib geometry,
 textures, GPU buffers and raw Direct3D rendering remain fail-closed. Source
@@ -32,10 +34,16 @@ Generated direct-source positive: map-loaded terrain with absent bib buffer,
 UI cleanup and repeated clear leave exact owner identities, counts and
 Recording operations unchanged through two generations and reset/re-entry.
 Negative: missing or foreign terrain visual, mismatched height-map owner,
-unloaded map and any present bib buffer reject before mutation. Active
+stale/inconsistent map-loaded state and any present bib buffer reject before
+mutation. The previously accepted no-map empty cleanup remains idempotent. Active
 `addFactionBib`/drawable producer attempts continue to reject; existing
-generated construction, terrain and scene controls remain green. Run six
-complete GCC/Clang Debug, Release and ASan+UBSan builds and canonical
+generated construction, terrain and scene controls remain green.
+The present-buffer branch is a source-state negative because the accepted
+CPU-only route never constructs `W3DBibBuffer`; do not fabricate a raw
+Direct3D owner merely to exercise it. Verify the guard and runtime-reject
+active producers.
+
+Run six complete GCC/Clang Debug, Release and ASan+UBSan builds and canonical
 nonretail suites (`-LE gpu|lan|retail`, sanitizer leak detection disabled),
 focused strict host LSan, physical Vulkan, serial LAN, original dependency
 ledger and diff checks on final source. The retail symlink/content remain

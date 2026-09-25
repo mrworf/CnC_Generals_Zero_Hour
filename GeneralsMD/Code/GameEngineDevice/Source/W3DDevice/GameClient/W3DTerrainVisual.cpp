@@ -380,15 +380,11 @@ void W3DTerrainVisual::removeAllBibs()
 		TheHeightMap != m_terrainRenderObject)
 		throw OriginalW3DDeviceUnavailable("original map-loaded terrain bib cleanup pending");
 	if (m_terrainRenderObject->getMap()) {
-		// The bounded factory map has no bib producer.  Reset may therefore pass
-		// through this native cleanup hook only for that explicit, known-empty
-		// owner; all bib creation/removal APIs above remain fail-closed.
-		const Bool generatedConstruction =
-			std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE") &&
-			std::getenv("ZH_M22_GENERATED_SCENE_ROUTE") &&
-			std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") &&
-			std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE");
-		if (!std::getenv("ZH_M22_FACTORY_MAP") && !generatedConstruction)
+		// The CPU-only map route cannot create a bib buffer.  This is an exact
+		// empty-owner cleanup, independent of which map supplied the height data.
+		// Active bib production and removal remain unsupported above.
+		if (!m_logicHeightMap || m_terrainRenderObject->getMap() != m_logicHeightMap ||
+			m_terrainRenderObject->hasBibBuffer())
 			throw OriginalW3DDeviceUnavailable("original map-loaded terrain bib cleanup pending");
 		return;
 	}

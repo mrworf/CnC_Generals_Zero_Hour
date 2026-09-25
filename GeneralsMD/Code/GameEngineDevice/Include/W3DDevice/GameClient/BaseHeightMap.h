@@ -233,6 +233,9 @@ public:
 	Real getMaxHeight(void) const {return m_maxHeight;}	///<return maximum height of entire terrain
 	Real getMaxCellHeight(Real x, Real y) const;	///< returns maximum height of the 4 cell corners.
 	WorldHeightMap *getMap(void) {return m_map;}	///< returns object holding the heightmap samples - need this for fast access.
+#if defined(ZH_WW3D_CPU_ONLY)
+	Bool hasBibBuffer(void) const { return m_bibBuffer != NULL; }
+#endif
 	Bool isClearLineOfSight(const Coord3D& pos, const Coord3D& posOther) const;
 
 	Bool getShowImpassableAreas(void) {return m_showImpassableAreas;}
