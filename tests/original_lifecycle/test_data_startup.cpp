@@ -132,6 +132,24 @@ bool loadINI(const std::filesystem::path& path)
 
 int main()
 {
+	VeterancyLevelFlags levels = VETERANCY_LEVEL_FLAGS_NONE;
+	for (Int level = LEVEL_FIRST; level <= LEVEL_LAST; ++level) {
+		const VeterancyLevel value = static_cast<VeterancyLevel>(level);
+		levels = setVeterancyLevelFlag(levels, value);
+		check(getVeterancyLevelFlag(levels, value),
+			"zero-based veterancy flag set/get changed");
+	}
+	check((levels & 0x0fU) == 0x0fU,
+		"valid veterancy levels did not occupy the four zero-based bits");
+	for (Int level = LEVEL_FIRST; level <= LEVEL_LAST; ++level)
+		levels = clearVeterancyLevelFlag(levels, static_cast<VeterancyLevel>(level));
+	check(levels == VETERANCY_LEVEL_FLAGS_NONE,
+		"zero-based veterancy flag clear changed");
+	check(!getVeterancyLevelFlag(VETERANCY_LEVEL_FLAGS_ALL, LEVEL_INVALID) &&
+		setVeterancyLevelFlag(0x55U, LEVEL_INVALID) == 0x55U &&
+		clearVeterancyLevelFlag(0x55U, LEVEL_INVALID) == 0x55U,
+		"invalid veterancy level did not fail without shifting");
+
 	std::array<char, 64> rootTemplate{};
 	const std::string templatePath = (std::filesystem::temp_directory_path() / "zh-m20-data-startup-XXXXXX").string();
 	std::copy(templatePath.begin(), templatePath.end(), rootTemplate.begin());

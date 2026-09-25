@@ -152,7 +152,7 @@ def prepare_owned_source(source: pathlib.Path, fixture) -> None:
                   " Behavior = AIUpdateInterface ModuleTag_AI\n"
                   "  AutoAcquireEnemiesWhenIdle = No\n  MoodAttackCheckRate = 33\n End\n"
                   " Locomotor = SET_NORMAL FixtureLocomotor\n"
-                  " Behavior = DestroyDie ModuleTag_Die\n End\nEnd\n"
+                  " Behavior = DestroyDie ModuleTag_Die\n  VeterancyLevels = -REGULAR +VETERAN -ELITE +HEROIC\n End\nEnd\n"
                   "Object EnemyFixture\n KindOf = SELECTABLE STRUCTURE MP_COUNT_FOR_VICTORY\n"
                   " Body = ActiveBody ModuleTag_Body\n  MaxHealth = 100\n InitialHealth = 100\n End\nEnd\n"
                   "Object AllyBase\n KindOf = SELECTABLE STRUCTURE MP_COUNT_FOR_VICTORY\n"

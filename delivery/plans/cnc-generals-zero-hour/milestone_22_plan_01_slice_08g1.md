@@ -35,3 +35,13 @@ Retail roots remain read-only and are not needed for implementation
 validation. A later redacted probe may record only fixed aggregate stage and
 sanitizer categories. Slice 08G1 does not admit the retail scene selector,
 initialize audio events, repair scene-owner unwind, or claim Recording output.
+
+## Result
+
+Complete. The three original helpers now map the four valid zero-based enum
+values to bits zero through three. The named invalid enum value returns false
+or preserves the supplied mask before any shift. Generated unit coverage
+checks every bit and invalid operation, while the generated scenario fixture
+drives mixed first-through-last modifiers through the original INI parser.
+No selector, retail provider or audio behavior changed. See the
+[08G1 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08g1.md).
