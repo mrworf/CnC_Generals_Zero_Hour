@@ -11,7 +11,8 @@ map attempt and a retry reproduces it.
 
 ## Scope and ordering
 
-Depends on accepted 08L3A and closes the 08L3 aggregate. Cover the
+Depends on accepted 08L3A and [08L3B0](milestone_22_plan_01_slice_08l3b0.md)
+pathfinder owner prerequisite, and closes the 08L3 aggregate. Cover the
 `GameLogic::startNewGame` bridge loop through pathfinder `newMap`, including
 bridge/wall selection, object position/orientation, property update, optional
 bridge tower links, radar refresh and map-attempt rollback. Keep road/bridge
@@ -25,20 +26,22 @@ walk-on-wall object graph. Validate template/interface and property providers
 before lasting mutation where possible; reject duplicate map owner or
 unsupported attachment rather than silently continuing. Track every new
 Object, Drawable, bridge/layer/tower, wall registration and affected derived
-owner. On failure, unwind pathfinder and terrain attachments before retiring
+owner. On failure, use 08L3B0's fresh derived-map and exact wall rollback,
+then unwind terrain attachments before retiring
 objects through 08L2 construction cleanup; preserve pre-existing world owners.
-If radar refresh or pathfinder `newMap` mutates derived state, determine its
-rollback/rebuild contract from source and fail before mutation or restore the
-prior state explicitly. Do not claim atomicity from resetting the whole world.
+`Radar::refreshTerrain` clears its queued refresh frame; capture and restore
+that prior queue state on failed attempt. Do not claim atomicity from resetting
+the whole world.
 
 No additional authorization applies to generated data. The retail symlink
 and its content remain read-only; tests report only fixed aggregate categories.
 
 ## Investigation before production edits
 
-- Identify whether `Object::updateObjValuesFromMapProperties`, radar refresh
-  and pathfinder `newMap` can fail or partially mutate, and record exact
-  recovery for every reached failure edge.
+- Identify whether `Object::updateObjValuesFromMapProperties` can fail or
+  partially mutate, and record exact recovery for every reached failure edge.
+- Verify the radar queue-frame restore contract, and compose 08L3B0's
+  pathfinder rollback before publishing a successful map attempt.
 - Build a project-owned map-object graph with modeled bridge and wall source
   templates, neutral team, valid terrain and bounded property dictionary.
 - Identify any bridge-tower behavior that reaches normal destroy callbacks
