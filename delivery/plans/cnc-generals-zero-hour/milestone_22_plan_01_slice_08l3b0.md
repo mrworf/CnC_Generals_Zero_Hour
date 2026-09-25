@@ -32,7 +32,7 @@ instead of applying fresh-map rollback to it.
 ## Tests and validation
 
 Direct generated bridge/wall owner probe: capacity boundary and duplicate
-wall registration, exact removal, real layer ownership before and after
+wall registration, exact removal, two real bridge-layer identities before and after
 fresh-map rollback, and deterministic `newMap` retry. Inject failure after
 zone, ground cells, row pointers, each active layer allocation, and before
 readiness publication; check immediate residual derived owners are zero and

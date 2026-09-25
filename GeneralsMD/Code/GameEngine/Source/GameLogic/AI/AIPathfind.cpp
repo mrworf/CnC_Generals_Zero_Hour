@@ -63,6 +63,9 @@
 
 #include "Common/Xfer.h"
 #include "Common/XferCRC.h"
+#include <cstdlib>
+#include <cstring>
+#include <stdexcept>
 
 //------------------------------------------------------------------------------ Performance Timers 
 #include "Common/PerfMetrics.h"
@@ -2163,7 +2166,10 @@ m_crusherZones(NULL),
 m_hierarchicalZones(NULL), 
 m_blockOfZoneBlocks(NULL),
 m_zoneBlocks(NULL),
-m_zonesAllocated(0)
+m_zonesAllocated(0),
+m_freshMapAttemptActive(FALSE),
+m_freshMapPriorMaxZone(0),
+m_freshMapPriorNextFrame(0)
 {		
 	m_zoneBlockExtent.x = 0;
 	m_zoneBlockExtent.y = 0;
@@ -2263,7 +2269,43 @@ void PathfindZoneManager::reset(void)  ///< Called when the map is reset.
 {
 	freeZones();
 	freeBlocks();
+	m_freshMapAttemptActive = FALSE;
 } 
+
+Bool PathfindZoneManager::beginFreshMapAttempt(void)
+{
+	if (m_freshMapAttemptActive || m_blockOfZoneBlocks || m_zoneBlocks ||
+		m_groundCliffZones || m_groundWaterZones || m_groundRubbleZones ||
+		m_terrainZones || m_crusherZones || m_hierarchicalZones)
+		return FALSE;
+	m_freshMapPriorMaxZone = m_maxZone;
+	m_freshMapPriorNextFrame = m_nextFrameToCalculateZones;
+	m_freshMapAttemptActive = TRUE;
+	return TRUE;
+}
+
+void PathfindZoneManager::rollbackFreshMapAttempt(void)
+{
+	if (!m_freshMapAttemptActive) return;
+	freeZones();
+	freeBlocks();
+	m_maxZone = m_freshMapPriorMaxZone;
+	m_nextFrameToCalculateZones = m_freshMapPriorNextFrame;
+	m_freshMapAttemptActive = FALSE;
+}
+
+void PathfindZoneManager::commitFreshMapAttempt(void)
+{
+	m_freshMapAttemptActive = FALSE;
+}
+
+Int PathfindZoneManager::getOwnedStateCount(void) const
+{
+	return (m_blockOfZoneBlocks != NULL) + (m_zoneBlocks != NULL) +
+		(m_groundCliffZones != NULL) + (m_groundWaterZones != NULL) +
+		(m_groundRubbleZones != NULL) + (m_terrainZones != NULL) +
+		(m_crusherZones != NULL) + (m_hierarchicalZones != NULL);
+}
 
 
 void PathfindZoneManager::markZonesDirty( Bool insert )  ///< Called when the zones need to be recalculated.
@@ -3249,6 +3291,18 @@ void PathfindLayer::reset(void)
 	m_layer = LAYER_GROUND;
 }
 
+void PathfindLayer::rollbackMapCellsKeepOwner(Int priorZone)
+{
+	Bridge *bridge = m_bridge;
+	PathfindLayerEnum layer = m_layer;
+	Bool destroyed = m_destroyed;
+	reset();
+	m_bridge = bridge;
+	m_layer = layer;
+	m_destroyed = destroyed;
+	m_zone = priorZone;
+}
+
 /**
  * Returns true if the layer is avaialble for use.
  */
@@ -3825,7 +3879,8 @@ void PathfindLayer::classifyWallMapCell( Int i, Int j , PathfindCell *cell, Obje
 
 //----------------------- Pathfinder ---------------------------------------
 
-Pathfinder::Pathfinder( void ) :m_map(NULL)
+Pathfinder::Pathfinder( void ) :m_blockOfMapCells(NULL), m_map(NULL),
+	m_freshMapAttemptActive(FALSE)
 {
 	debugPath = NULL;
 	PathfindCellInfo::allocateCellInfos();
@@ -3839,6 +3894,7 @@ Pathfinder::~Pathfinder( void )
 
 void Pathfinder::reset( void )
 {
+	m_freshMapAttemptActive = FALSE;
 	frameToShowObstacles = 0;
 	DEBUG_LOG(("Pathfind cell is %d bytes, PathfindCellInfo is %d bytes\n", sizeof(PathfindCell), sizeof(PathfindCellInfo)));
 
@@ -3906,23 +3962,27 @@ void Pathfinder::reset( void )
 /** 
  * Adds a piece of a wall. 
  */
-void Pathfinder::addWallPiece(Object *wallPiece)
+Bool Pathfinder::addWallPiece(Object *wallPiece)
 {
-	if (m_numWallPieces<MAX_WALL_PIECES-1) {
-		m_wallPieces[m_numWallPieces] = wallPiece->getID();
-		m_numWallPieces++;
-	}
+	if (!wallPiece || !TheGameLogic || wallPiece->getID() == INVALID_ID ||
+		TheGameLogic->findObjectByID(wallPiece->getID()) != wallPiece ||
+		m_layers[LAYER_WALL].hasBridgeOwner() ||
+		m_numWallPieces >= MAX_WALL_PIECES-1) return FALSE;
+	for (Int i = 0; i < m_numWallPieces; ++i)
+		if (m_wallPieces[i] == wallPiece->getID()) return FALSE;
+	m_wallPieces[m_numWallPieces++] = wallPiece->getID();
+	return TRUE;
 }
 
 /**
  * Removes a piece of a wall
  */
-void Pathfinder::removeWallPiece(Object *wallPiece)
+Bool Pathfinder::removeWallPiece(Object *wallPiece)
 {
 
 	// sanity
   if( wallPiece == NULL )
-		return;
+		return FALSE;
 
 	// find entry
 	for( Int i = 0; i < m_numWallPieces; ++i )
@@ -3934,18 +3994,78 @@ void Pathfinder::removeWallPiece(Object *wallPiece)
 
 			// put the last id in the wall piece array here
 			m_wallPieces[ i ] = m_wallPieces[ m_numWallPieces - 1 ];
+			m_wallPieces[ m_numWallPieces - 1 ] = INVALID_ID;
 
 			// we now have one less entry
 			m_numWallPieces--;
 
 			// all done
-			return;
+			return TRUE;
 
 		}  // end if
 
 	}  // end for, i
 
+	return FALSE;
 }  // end removeWallPiece
+
+Bool Pathfinder::tryNewMapFresh(void)
+{
+	if (!TheGameLogic || m_freshMapAttemptActive || m_isMapReady ||
+		m_blockOfMapCells || m_map ||
+		(m_layers[LAYER_WALL].hasBridgeOwner() && m_numWallPieces)) return FALSE;
+	for (Int i = 0; i <= LAYER_LAST; ++i)
+		if (m_layers[i].hasMapCells()) return FALSE;
+	for (Int i = 0; i < m_numWallPieces; ++i)
+		if (!TheGameLogic->findObjectByID(m_wallPieces[i]))
+			return FALSE;
+	if (!m_zoneManager.beginFreshMapAttempt()) return FALSE;
+	m_freshMapAttemptActive = TRUE;
+	m_freshMapPriorExtent = m_extent;
+	m_freshMapPriorWallHeight = m_wallHeight;
+	for (Int i = 0; i <= LAYER_LAST; ++i)
+		m_freshMapPriorLayerZones[i] = m_layers[i].getZone();
+	try {
+		newMap();
+		return TRUE;
+	} catch (...) {
+		rollbackNewMapFresh();
+		return FALSE;
+	}
+}
+
+Bool Pathfinder::rollbackNewMapFresh(void)
+{
+	if (!m_freshMapAttemptActive) return FALSE;
+	for (Int i = 0; i <= LAYER_LAST; ++i)
+		m_layers[i].rollbackMapCellsKeepOwner(m_freshMapPriorLayerZones[i]);
+	delete [] m_map;
+	m_map = NULL;
+	delete [] m_blockOfMapCells;
+	m_blockOfMapCells = NULL;
+	m_zoneManager.rollbackFreshMapAttempt();
+	m_extent = m_freshMapPriorExtent;
+	m_wallHeight = m_freshMapPriorWallHeight;
+	m_isMapReady = FALSE;
+	m_freshMapAttemptActive = FALSE;
+	return TRUE;
+}
+
+void Pathfinder::commitNewMapFresh(void)
+{
+	if (!m_freshMapAttemptActive) return;
+	m_zoneManager.commitFreshMapAttempt();
+	m_freshMapAttemptActive = FALSE;
+}
+
+Int Pathfinder::getFreshMapResidualCount(void) const
+{
+	Int count = (m_blockOfMapCells != NULL) + (m_map != NULL) +
+		m_isMapReady + m_freshMapAttemptActive + m_zoneManager.getOwnedStateCount();
+	for (Int i = 0; i <= LAYER_LAST; ++i)
+		count += m_layers[i].hasMapCells();
+	return count;
+}
 
 /** 
  * Checks if a point is on the wall. 
@@ -3972,6 +4092,7 @@ PathfindLayerEnum Pathfinder::addBridge(Bridge *theBridge)
 {
 	Int layer = LAYER_GROUND+1;
 	while (layer<=LAYER_WALL) {
+		if (layer == LAYER_WALL && m_numWallPieces > 0) break;
 		if (m_layers[layer].isUnused()) {
 			if (m_layers[layer].init(theBridge, (PathfindLayerEnum)layer) ) {
 				return (PathfindLayerEnum)layer;
@@ -4554,6 +4675,22 @@ void Pathfinder::classifyMapCell( Int i, Int j , PathfindCell *cell)
 /**
  * Set up for a new map.
  */
+static void m22FreshMapFault(const char *stage, Int layer = -1)
+{
+	if (!std::getenv("ZH_M22_PATHFINDER_OWNER_PROBE")) return;
+	const char *selected = std::getenv("ZH_M22_PATHFINDER_FAIL_AT");
+	if (!selected) return;
+	static Bool injectedOnce = FALSE;
+	if (injectedOnce && std::getenv("ZH_M22_PATHFINDER_FAIL_ONCE")) return;
+	Bool matches = (layer < 0 && std::strcmp(selected, stage) == 0) ||
+		(layer >= 0 && std::strncmp(selected, "layer:", 6) == 0 &&
+		std::atoi(selected + 6) == layer);
+	if (matches) {
+		injectedOnce = TRUE;
+		throw std::runtime_error("forced fresh pathfinder map failure");
+	}
+}
+
 void Pathfinder::newMap( void )
 {
 	m_wallHeight = TheAI->getAiData()->m_wallHeight; // may be updated by map.ini.
@@ -4577,25 +4714,31 @@ void Pathfinder::newMap( void )
 	if (!dataAllocated) {
 		m_extent = bounds;
 		DEBUG_ASSERTCRASH(m_map == NULL, ("Can't reallocate pathfind cells."));
- 		m_zoneManager.allocateBlocks(m_extent);
+		m_zoneManager.allocateBlocks(m_extent);
+		m22FreshMapFault("zone");
 		// Allocate cells.
 		m_blockOfMapCells = MSGNEW("PathfindMapCells") PathfindCell[(bounds.hi.x+1)*(bounds.hi.y+1)];
+		m22FreshMapFault("ground");
 		m_map = MSGNEW("PathfindMapCells") PathfindCellP[bounds.hi.x+1];
 		Int i;
 		for (i=0; i<=bounds.hi.x; i++) {
 			m_map[i] = &m_blockOfMapCells[i*(bounds.hi.y+1)];
 		}
+		m22FreshMapFault("rows");
 		for (i=0; i<LAYER_LAST; i++) {
 			if (!m_layers[i].isUnused()) {
 				m_layers[i].allocateCells(&m_extent);
+				m22FreshMapFault("layer", i);
 			}
 		}
 		if (m_numWallPieces>0) {
 			m_layers[LAYER_WALL].init(NULL, LAYER_WALL);
 			m_layers[LAYER_WALL].allocateCellsForWallLayer(&m_extent, m_wallPieces, m_numWallPieces);
+			m22FreshMapFault("wall");
 		}
 	}
 	classifyMap();
+	m22FreshMapFault("classify");
 	// Add existing objects.
 	Object *obj;
 	for( obj = TheGameLogic->getFirstObject(); obj; obj = obj->getNextObject() )
@@ -4604,6 +4747,7 @@ void Pathfinder::newMap( void )
 	}
 
 	m_isMapReady = true;
+	m22FreshMapFault("ready");
 }
 
 /**

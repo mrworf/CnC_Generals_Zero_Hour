@@ -1693,6 +1693,86 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	TheTerrainLogic->newMap( loadingSaveGame );
 	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
 		std::fputs("original generated construction: stage=terrain-logic\n", stderr);
+	if (std::getenv("ZH_M22_PATHFINDER_OWNER_PROBE")) {
+		const ThingTemplate *bridgeTemplate = TheThingFactory->findTemplate("OwnedBridge");
+		const ThingTemplate *wallTemplate = TheThingFactory->findTemplate("OwnedWall");
+		if (!bridgeTemplate || !wallTemplate)
+			throw std::runtime_error("generated pathfinder owner template missing");
+		Team *neutralTeam = ThePlayerList->getNeutralPlayer()->getDefaultTeam();
+		Object *bridgeObject = TheThingFactory->newObject(bridgeTemplate, neutralTeam);
+		if (!bridgeObject)
+			throw std::runtime_error("generated pathfinder bridge construction failed");
+		Coord3D position{35.0f, 35.0f, 0.0f};
+		bridgeObject->setPosition(&position);
+		if (!TheTerrainLogic->addLandmarkBridgeToLogic(bridgeObject))
+			throw std::runtime_error("generated pathfinder bridge admission failed");
+		Bridge *preserved = TheTerrainLogic->getFirstBridge();
+		const PathfindLayerEnum layer = preserved->getLayer();
+		Object *secondObject = TheThingFactory->newObject(bridgeTemplate, neutralTeam);
+		if (!secondObject)
+			throw std::runtime_error("generated second pathfinder bridge construction failed");
+		Coord3D secondPosition{55.0f, 35.0f, 0.0f};
+		secondObject->setPosition(&secondPosition);
+		if (!TheTerrainLogic->addLandmarkBridgeToLogic(secondObject))
+			throw std::runtime_error("generated second pathfinder bridge admission failed");
+		Bridge *second = TheTerrainLogic->getFirstBridge();
+		const PathfindLayerEnum secondLayer = second->getLayer();
+		Pathfinder *pathfinder = TheAI->pathfinder();
+		Object *walls[MAX_WALL_PIECES]{};
+		Bool nullRejected = !pathfinder->addWallPiece(NULL) &&
+			!pathfinder->removeWallPiece(NULL);
+		Bool duplicateRejected = FALSE;
+		Bool nonmemberRejected = FALSE;
+		for (Int i = 0; i < MAX_WALL_PIECES; ++i) {
+			Object *wall = TheThingFactory->newObject(wallTemplate, neutralTeam);
+			if (!wall)
+				throw std::runtime_error("generated pathfinder wall construction failed");
+			wall->setPosition(&position);
+			if (i < MAX_WALL_PIECES - 1) {
+				if (!pathfinder->addWallPiece(wall))
+					throw std::runtime_error("generated pathfinder wall admission failed");
+				walls[i] = wall;
+				if (i == 0)
+					duplicateRejected = !pathfinder->addWallPiece(wall);
+			} else {
+				if (pathfinder->addWallPiece(wall))
+					throw std::runtime_error("generated pathfinder wall capacity accepted");
+				nonmemberRejected = !pathfinder->removeWallPiece(wall);
+				wall->friend_rollbackConstruction();
+				wall->friend_deleteInstance();
+			}
+		}
+		Bool exactRemoval = pathfinder->removeWallPiece(walls[0]) &&
+			pathfinder->getWallPieceCount() == MAX_WALL_PIECES - 2 &&
+			pathfinder->addWallPiece(walls[0]);
+		if (std::getenv("ZH_M22_PATHFINDER_STALE_WALL")) {
+			walls[0]->friend_rollbackConstruction();
+			walls[0]->friend_deleteInstance();
+			Bool rejected = !pathfinder->tryNewMapFresh();
+			std::fprintf(stderr, "original pathfinder stale wall: rejected=%d residual=%d intact=%d\n",
+				(Int)rejected, pathfinder->getFreshMapResidualCount(),
+				(Int)(pathfinder->ownsBridgeLayer(preserved, layer) &&
+					pathfinder->ownsBridgeLayer(second, secondLayer)));
+			throw std::runtime_error("original pathfinder stale wall boundary complete");
+		}
+		Bool first = pathfinder->tryNewMapFresh();
+		if (first && !pathfinder->rollbackNewMapFresh())
+			throw std::runtime_error("generated pathfinder successful rollback failed");
+		const Int residual = pathfinder->getFreshMapResidualCount();
+		Bool intact = pathfinder->ownsBridgeLayer(preserved, layer) &&
+			pathfinder->ownsBridgeLayer(second, secondLayer) &&
+			TheTerrainLogic->getFirstBridge() == second && second->getNext() == preserved &&
+			pathfinder->getWallPieceCount() == MAX_WALL_PIECES - 1;
+		Bool retry = pathfinder->tryNewMapFresh();
+		intact = intact && pathfinder->ownsBridgeLayer(preserved, layer) &&
+			pathfinder->ownsBridgeLayer(second, secondLayer);
+		if (retry) pathfinder->commitNewMapFresh();
+		std::fprintf(stderr, "original pathfinder owner: layers=%d,%d walls=%d null=%d duplicate=%d nonmember=%d removal=%d capacity=1 first=%d residual=%d intact=%d retry=%d\n",
+			(Int)layer, (Int)secondLayer, pathfinder->getWallPieceCount(), (Int)nullRejected,
+			(Int)duplicateRejected, (Int)nonmemberRejected, (Int)exactRemoval,
+			(Int)first, residual, (Int)intact, (Int)retry);
+		throw std::runtime_error("original pathfinder owner boundary complete");
+	}
 	if (std::getenv("ZH_M22_BRIDGE_OWNER_PROBE")) {
 		const ThingTemplate *templateOwner = TheThingFactory->findTemplate("OwnedBridge");
 		if (!templateOwner)

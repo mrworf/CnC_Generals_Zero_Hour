@@ -393,6 +393,7 @@ public:
 	~PathfindLayer();
 public:
 	void reset(void);
+	void rollbackMapCellsKeepOwner(Int priorZone); // Fresh-map failure only.
 	Bool init(Bridge *theBridge, PathfindLayerEnum layer);
 	void allocateCells(const IRegion2D *extent);
 	void allocateCellsForWallLayer(const IRegion2D *extent, ObjectID *wallPieces, Int numPieces);
@@ -401,6 +402,8 @@ public:
 	Bool setDestroyed(Bool destroyed);
 	Bool isUnused(void); // True if it doesn't contain a bridge.
 	Bool ownsBridge(const Bridge *bridge) const { return bridge && m_bridge == bridge; }
+	Bool hasBridgeOwner(void) const { return m_bridge != NULL; }
+	Bool hasMapCells(void) const { return m_blockOfMapCells || m_layerCells; }
 	Bool isDestroyed(void) {return m_destroyed;} // True if it has been destroyed.
 	PathfindCell *getCell(Int x, Int y);
 	Int getZone(void) {return m_zone;}
@@ -510,6 +513,10 @@ public:
 	~PathfindZoneManager();
 
 	void reset(void);
+	Bool beginFreshMapAttempt(void);
+	void rollbackFreshMapAttempt(void);
+	void commitFreshMapAttempt(void);
+	Int getOwnedStateCount(void) const;
 
 	Bool needToCalculateZones(void) const {return m_nextFrameToCalculateZones <= TheGameLogic->getFrame() ;} ///< Returns true if the zones need to be recalculated.
  	void markZonesDirty( Bool insert ) ; ///< Called when the zones need to be recalculated.
@@ -555,6 +562,9 @@ private:
 	zoneStorageType *m_terrainZones;
 	zoneStorageType *m_crusherZones;
 	zoneStorageType *m_hierarchicalZones;
+	Bool m_freshMapAttemptActive;
+	UnsignedShort m_freshMapPriorMaxZone;
+	UnsignedInt m_freshMapPriorNextFrame;
 };
 
 /** 
@@ -725,8 +735,17 @@ public:
 	PathfindLayerEnum addBridge(Bridge *theBridge); // Adds a bridge layer, and returns the layer id.
 	Bool rollbackBridgeLayer(Bridge *bridge, PathfindLayerEnum layer); // Releases only the matching construction owner.
 
-	void addWallPiece(Object *wallPiece); // Adds a wall piece.
-	void removeWallPiece(Object *wallPiece);  // Removes a wall piece.
+	Bool addWallPiece(Object *wallPiece); // Reports null, duplicate and capacity failure.
+	Bool removeWallPiece(Object *wallPiece); // Removes only a matching wall owner.
+	Bool tryNewMapFresh(void); // Fresh derived-map owner; preserves accepted layers on failure.
+	Bool rollbackNewMapFresh(void); // Caller unwind after a later map-attempt failure.
+	void commitNewMapFresh(void); // Accept a successful map attempt.
+	Int getFreshMapResidualCount(void) const;
+	Int getWallPieceCount(void) const { return m_numWallPieces; }
+	Bool ownsBridgeLayer(const Bridge *bridge, PathfindLayerEnum layer) const {
+		return bridge && layer > LAYER_GROUND && layer <= LAYER_WALL &&
+			m_layers[layer].ownsBridge(bridge);
+	}
 	Real getWallHeight(void) {return m_wallHeight;}
 	Bool isPointOnWall(const Coord3D *pos);
 
@@ -862,6 +881,10 @@ private:
 	ObjectID			m_wallPieces[MAX_WALL_PIECES];
 	Int						m_numWallPieces;
 	Real					m_wallHeight;
+	Bool					m_freshMapAttemptActive;
+	IRegion2D			m_freshMapPriorExtent;
+	Real					m_freshMapPriorWallHeight;
+	Int						m_freshMapPriorLayerZones[LAYER_LAST+1];
 
 	Int						m_moveAlliesDepth;
 
