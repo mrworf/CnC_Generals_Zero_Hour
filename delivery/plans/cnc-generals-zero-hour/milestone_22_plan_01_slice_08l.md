@@ -21,3 +21,11 @@ output.
 
 Depends on 08L1–08L3. One commit:
 `delivery: M22 08L revalidate modeled bridge construction`.
+
+Accepted generated aggregate: focused modeled-draw through bridge-map
+composition and provider-removal checks passed 9/9 in GCC Debug and Clang
+Release; the expanded strict host LSan group passed 9/9 in both sanitizer
+configurations. The six-suite, physical Vulkan, serial LAN and ledger gates
+were run on the unchanged source tree at 08L3B acceptance and remain valid.
+[Evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08l.md)
+records this scope. Retail scene Recording remains slice 08.
