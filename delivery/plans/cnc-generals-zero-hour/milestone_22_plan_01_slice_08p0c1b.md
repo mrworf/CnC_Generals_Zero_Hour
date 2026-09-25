@@ -1,4 +1,15 @@
-# M22 plan 01 slice 08P0C1B: tree collision and topple state
+# M22 plan 01 slice 08P0C1B: tree interaction aggregate
+
+## Dependency-ordered children
+
+Native source separates the `unitMoved` partition collision and push-aside
+route, post-cull toppling/fog/bounce/sink state, and immediate `FXList`
+dispatch. The last route can create audio, drawable, light or other external
+effects and is not a reversible GPU/state mutation. Deliver these owners as
+[C1B1](milestone_22_plan_01_slice_08p0c1b1.md),
+[C1B2](milestone_22_plan_01_slice_08p0c1b2.md), then
+[C1B3](milestone_22_plan_01_slice_08p0c1b3.md). This file is their
+validation aggregate; do not merge the children into one production commit.
 
 ## Goal and boundary
 
@@ -18,14 +29,16 @@ providers, invalid motion/sink parameters, upload fault, owner removal and
 retry must not leave stale partition links, FX or buffers. Do not consume or
 change GameLogic/audio RNG. Authorization is not applicable.
 
-## Validation and commit
+## Aggregate validation and commit
 
 Generated fixtures cover immobile/moving units, box/cylinder collision,
 partition boundaries, repeated pusher, outward/inward motion, eligible and
 ineligible crusher, fog pause/reveal, bounce/no-bounce, sink/removal, pause,
 move/removal, two generations and owner removal. Inject each interaction,
 effect and geometry boundary; assert immediate residuals and clean retry.
-Run six complete builds and canonical nonretail suites, focused strict host
-LSan, physical Vulkan controls, serial LAN 4/4 all six, ledger and diff
-checks on final source. Commit one slice:
-`delivery: M22 08P0C1B own tree interactions`.
+After the three children, revalidate their composed event ordering, failed
+state/geometry retry without duplicate effects and owner removal on generated
+inputs. Run six complete builds and canonical nonretail suites, focused strict
+host LSan, physical Vulkan controls, serial LAN 4/4 all six, ledger and diff
+checks on final source. Commit only aggregate evidence:
+`delivery: M22 08P0C1B revalidate tree interactions`.
