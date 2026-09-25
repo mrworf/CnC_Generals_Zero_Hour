@@ -1674,6 +1674,22 @@ void zh_linux_w3d_logic_witness()
 	{
 		for (DrawModule **module = drawable->getDrawModules(); *module; ++module)
 		{
+			if (auto *model = dynamic_cast<W3DModelDraw *>(*module))
+			{
+				const TimeOfDay savedTime = TheGlobalData->m_timeOfDay;
+				const Weather savedWeather = TheGlobalData->m_weather;
+				TheWritableGlobalData->m_timeOfDay = TIME_OF_DAY_MORNING;
+				TheWritableGlobalData->m_weather = WEATHER_NORMAL;
+				model->onDrawableBoundToObject();
+				TheWritableGlobalData->m_timeOfDay = TIME_OF_DAY_NIGHT;
+				model->onDrawableBoundToObject();
+				TheWritableGlobalData->m_weather = WEATHER_SNOWY;
+				model->onDrawableBoundToObject();
+				TheWritableGlobalData->m_timeOfDay = TIME_OF_DAY_MORNING;
+				model->onDrawableBoundToObject();
+				TheWritableGlobalData->m_timeOfDay = savedTime;
+				TheWritableGlobalData->m_weather = savedWeather;
+			}
 			if (dynamic_cast<W3DSupplyDraw *>(*module))
 				g_logicSupplyBones += drawable->getPristineBonePositions(
 					"SUPPLY", 1, NULL, NULL, INT_MAX);

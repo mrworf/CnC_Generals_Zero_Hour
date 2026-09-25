@@ -24,8 +24,10 @@ def verify(commands, link_map, executable, removed=None, skip_runtime_witness=Fa
     full_prefix = "src/original_runtime/full_w3d/CMakeFiles/zh_original_w3d_draw_full.dir/"
     for name in DRAW_NAMES + CLIENT_NAMES:
         original_source = f"/GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/"
-        matching = [entry for entry in commands if original_source in entry["file"]
-                    and entry["file"].endswith(f"/{name}.cpp")]
+        matching = [entry for entry in commands if entry["file"].endswith(f"/{name}.cpp")
+                    and (original_source in entry["file"] or
+                         (name == "W3DModelDraw" and
+                          "/src/original_runtime/full_w3d/generated/" in entry["file"]))]
         full = [entry for entry in matching if "-DZH_WW3D_CPU_ONLY=1" in entry["command"]
                 and "-DZH_W3D_SCHEMA_ONLY" not in entry["command"]
                 and "-DZH_W3D_HEADLESS_INSTANCE" not in entry["command"]]
