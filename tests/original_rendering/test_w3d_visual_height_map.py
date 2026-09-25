@@ -94,6 +94,58 @@ def authored_visual_map(kind: str = "valid") -> bytes:
     return bytes(toc)
 
 
+def query_visual_map() -> bytes:
+    """Authored metadata covering every runtime blend/cliff query branch."""
+    names = ["HeightMapData", "BlendTileData"]
+    toc = bytearray(b"CkMp" + struct.pack("<I", len(names)))
+    for index, name in enumerate(names, 1):
+        encoded = name.encode("ascii")
+        toc.extend(struct.pack("<B", len(encoded)) + encoded + struct.pack("<I", index))
+    height = struct.pack("<7i", 8, 8, 0, 1, 8, 8, 64) + bytes(range(64))
+    tiles = [0] * 64
+    blends = [0] * 64
+    extras = [0] * 64
+    cliffs = [0] * 64
+    blend_cells = (0, 1, 2, 3, 4, 5, 6, 8, 9)
+    for record, cell in enumerate(blend_cells, 1):
+        blends[cell] = record
+    for record, cell in enumerate((16, 17, 18, 19, 20, 21, 22, 24), 1):
+        extras[cell] = record
+    for quadrant, cell in enumerate((40, 41, 42, 43)):
+        tiles[cell] = quadrant
+    tiles[32] = 16
+    cliffs[32] = 1
+    cliff_bits = bytearray(8)
+    cliff_bits[4] = 1
+    blend = bytearray(struct.pack("<i", 64))
+    for values in (tiles, blends, extras, cliffs):
+        blend.extend(struct.pack("<64h", *values))
+    blend.extend(cliff_bits)
+    blend.extend(struct.pack("<4i", 5, 10, 2, 2))
+    blend.extend(struct.pack("<4i", 0, 4, 2, 0) + ascii_string("VoidA"))
+    blend.extend(struct.pack("<4i", 4, 1, 1, 0) + ascii_string("VoidB"))
+    blend.extend(struct.pack("<2i", 1, 1))
+    blend.extend(struct.pack("<3i", 0, 1, 1) + ascii_string("VoidEdge"))
+    records = (
+        (4, 1, 0, 0, 0, 0, 0, -1),
+        (5, 1, 0, 0, 0, 3, 0, -1),
+        (6, 0, 1, 0, 0, 0, 0, -1),
+        (7, 0, 1, 0, 0, 1, 0, -1),
+        (8, 0, 0, 1, 0, 0, 0, -1),
+        (9, 0, 0, 1, 0, 1, 1, -1),
+        (10, 0, 0, 0, 1, 0, 1, -1),
+        (11, 0, 0, 0, 1, 1, 1, -1),
+        (12, 1, 0, 0, 0, 2, 0, 0),
+    )
+    for record in records:
+        blend.extend(struct.pack("<i6Bii", *record, 0x7ADA0000))
+    blend.extend(struct.pack("<i8f2B", 16, 0.0, 0.0, 0.0, 1.0,
+                             1.0, 1.0, 1.0, 0.0, 1, 0))
+    toc.extend(chunk(1, 4, height))
+    toc.extend(chunk(2, 8, bytes(blend)))
+    return bytes(toc)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)

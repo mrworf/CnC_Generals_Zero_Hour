@@ -434,42 +434,185 @@ Int WorldHeightMap::getTextureClass(Int x, Int y, Bool base_class)
 	return getTextureClassFromNdx(m_tileNdxes[index]);
 }
 
-Bool WorldHeightMap::getUVData(Int x, Int y, float u[4], float v[4], Bool)
+void WorldHeightMap::getUVForNdx(Int tile_index, float *min_u, float *min_v,
+	float *max_u, float *max_v, Bool full_tile)
 {
-	if (!u || !v || x < 0 || y < 0 || x >= m_drawWidthX - 1 ||
-		y >= m_drawHeightY - 1 || !m_tileNdxes)
-		return FALSE;
-	const Short tile_index = m_tileNdxes[(y + m_drawOriginY) * m_width + x + m_drawOriginX];
 	const Int source_index = tile_index >> 2;
 	if (source_index < 0 || source_index >= m_numBitmapTiles || !m_sourceTiles[source_index] ||
 		m_sourceTiles[source_index]->m_tileLocationInTexture.x <= 0) {
-		for (Int i = 0; i < 4; ++i) u[i] = v[i] = 0.0f;
-		return FALSE;
+		*min_u = *min_v = *max_u = *max_v = 0.0f;
+		return;
 	}
 	const ICoord2D position = m_sourceTiles[source_index]->m_tileLocationInTexture;
-	float min_u = float(position.x) / TEXTURE_WIDTH;
-	float max_u = float(position.x + TILE_PIXEL_EXTENT) / TEXTURE_WIDTH;
-	float min_v = float(position.y) / m_terrainTexHeight;
-	float max_v = float(position.y + TILE_PIXEL_EXTENT) / m_terrainTexHeight;
-	const float mid_u = (min_u + max_u) * 0.5f;
-	const float mid_v = (min_v + max_v) * 0.5f;
-	if (tile_index & 1) min_u = mid_u; else max_u = mid_u;
-	if (tile_index & 2) max_v = mid_v; else min_v = mid_v;
+	*min_u = float(position.x) / TEXTURE_WIDTH;
+	*max_u = float(position.x + TILE_PIXEL_EXTENT) / TEXTURE_WIDTH;
+	*min_v = float(position.y) / m_terrainTexHeight;
+	*max_v = float(position.y + TILE_PIXEL_EXTENT) / m_terrainTexHeight;
+	if (!full_tile) {
+		const float middle_u = (*min_u + *max_u) * 0.5f;
+		const float middle_v = (*min_v + *max_v) * 0.5f;
+		if (tile_index & 1) *min_u = middle_u; else *max_u = middle_u;
+		if (tile_index & 2) *max_v = middle_v; else *min_v = middle_v;
+	}
+}
+
+Bool WorldHeightMap::getUVForTileIndex(Int index, Short tile_index, float u[4], float v[4],
+	Bool full_tile)
+{
+	if (!u || !v || index < 0 || index >= m_dataSize || !m_tileNdxes ||
+		tile_index < 0 || tile_index >= m_numBitmapTiles * 4)
+		throw OriginalW3DDeviceUnavailable("original terrain UV reference rejected");
+	float min_u = 0.0f, min_v = 0.0f, max_u = 0.0f, max_v = 0.0f;
+	getUVForNdx(tile_index, &min_u, &min_v, &max_u, &max_v, full_tile);
 	u[0] = min_u; u[1] = max_u; u[2] = max_u; u[3] = min_u;
 	v[0] = max_v; v[1] = max_v; v[2] = min_v; v[3] = min_v;
-	return TRUE;
+	if (min_u == 0.0f || full_tile || (TheGlobalData && !TheGlobalData->m_adjustCliffTextures))
+		return FALSE;
+	const Int cliff_index = m_cliffInfoNdxes ? m_cliffInfoNdxes[index] : 0;
+	if (!cliff_index) return FALSE;
+	if (cliff_index < 0 || cliff_index >= m_numCliffInfo)
+		throw OriginalW3DDeviceUnavailable("original terrain cliff reference rejected");
+	const TCliffInfo &cliff = m_cliffInfo[cliff_index];
+	const Int source_index = tile_index >> 2;
+	const Int cliff_source_index = cliff.tileIndex >> 2;
+	for (Int class_index = 0; class_index < m_numTextureClasses; ++class_index) {
+		const TXTextureClass &texture_class = m_textureClasses[class_index];
+		if (source_index < texture_class.firstTile ||
+			source_index >= texture_class.firstTile + texture_class.numTiles)
+			continue;
+		if (cliff_source_index < texture_class.firstTile ||
+			cliff_source_index >= texture_class.firstTile + texture_class.numTiles)
+			return FALSE;
+		if (m_terrainTexHeight <= 0 || texture_class.positionInTexture.x <= 0)
+			throw OriginalW3DDeviceUnavailable("original terrain cliff atlas unavailable");
+		const float class_min_u = float(texture_class.positionInTexture.x) / TEXTURE_WIDTH;
+		const float class_max_v = float(texture_class.positionInTexture.y +
+			texture_class.width * TILE_PIXEL_EXTENT) / m_terrainTexHeight;
+		const float v_factor = float(TEXTURE_WIDTH) / m_terrainTexHeight;
+		u[0] = cliff.u0 + class_min_u; u[1] = cliff.u1 + class_min_u;
+		u[2] = cliff.u2 + class_min_u; u[3] = cliff.u3 + class_min_u;
+		v[0] = cliff.v0 * v_factor + class_max_v;
+		v[1] = cliff.v1 * v_factor + class_max_v;
+		v[2] = cliff.v2 * v_factor + class_max_v;
+		v[3] = cliff.v3 * v_factor + class_max_v;
+		return cliff.flip;
+	}
+	return FALSE;
+}
+
+Bool WorldHeightMap::getUVData(Int x, Int y, float u[4], float v[4], Bool full_tile)
+{
+	if (!u || !v || x < 0 || y < 0 || x >= m_drawWidthX - 1 ||
+		y >= m_drawHeightY - 1 || x + m_drawOriginX >= m_width - 1 ||
+		y + m_drawOriginY >= m_height - 1 || !m_tileNdxes)
+		return FALSE;
+	const Int index = (y + m_drawOriginY) * m_width + x + m_drawOriginX;
+	return getUVForTileIndex(index, m_tileNdxes[index], u, v, full_tile);
+}
+
+static void resolveBlendAlpha(const TBlendTileInfo &blend, UnsignedByte alpha[4], Bool *flip)
+{
+	for (Int i = 0; i < 4; ++i) alpha[i] = 0;
+	*flip = FALSE;
+	if (blend.horiz) {
+		*flip = (blend.inverted & FLIPPED_MASK) != 0;
+		if (blend.inverted & INVERTED_MASK) alpha[0] = alpha[3] = 255;
+		else alpha[1] = alpha[2] = 255;
+	} else if (blend.vert) {
+		*flip = (blend.inverted & FLIPPED_MASK) != 0;
+		if (blend.inverted & INVERTED_MASK) alpha[0] = alpha[1] = 255;
+		else alpha[2] = alpha[3] = 255;
+	} else if (blend.rightDiagonal) {
+		if (blend.inverted & INVERTED_MASK) {
+			alpha[1] = 255;
+			if (blend.longDiagonal) alpha[0] = alpha[2] = 255;
+		} else {
+			*flip = TRUE;
+			alpha[2] = 255;
+			if (blend.longDiagonal) alpha[1] = alpha[3] = 255;
+		}
+	} else if (blend.leftDiagonal) {
+		if (blend.inverted & INVERTED_MASK) {
+			*flip = TRUE;
+			alpha[0] = 255;
+			if (blend.longDiagonal) alpha[1] = alpha[3] = 255;
+		} else {
+			alpha[3] = 255;
+			if (blend.longDiagonal) alpha[0] = alpha[2] = 255;
+		}
+	}
+	if (blend.customBlendEdgeClass >= 0) {
+		for (Int i = 0; i < 4; ++i) alpha[i] = 0;
+		*flip = FALSE;
+	}
 }
 
 void WorldHeightMap::getAlphaUVData(Int x, Int y, float u[4], float v[4],
 	UnsignedByte alpha[4], Bool *flip, Bool full_tile)
 {
-	if (!alpha || !flip || !getUVData(x, y, u, v, full_tile)) {
-		if (alpha) for (Int i = 0; i < 4; ++i) alpha[i] = 0;
-		if (flip) *flip = FALSE;
-		if (x < 0 || y < 0 || x >= m_drawWidthX - 1 || y >= m_drawHeightY - 1 || !m_tileNdxes)
-			throw OriginalW3DDeviceUnavailable("original terrain UV query out of range");
-		return;
+	if (!u || !v || !alpha || !flip || x < 0 || y < 0 ||
+		x >= m_drawWidthX - 1 || y >= m_drawHeightY - 1 ||
+		x + m_drawOriginX >= m_width - 1 || y + m_drawOriginY >= m_height - 1 ||
+		!m_tileNdxes || !m_blendTileNdxes)
+		throw OriginalW3DDeviceUnavailable("original terrain alpha UV query out of range");
+	x += m_drawOriginX;
+	y += m_drawOriginY;
+	const Int index = y * m_width + x;
+	const Int blend_index = full_tile ? 0 : m_blendTileNdxes[index];
+	if (blend_index < 0 || blend_index >= m_numBlendedTiles)
+		throw OriginalW3DDeviceUnavailable("original terrain blend reference rejected");
+	const Short tile_index = blend_index ? m_blendedTiles[blend_index].blendNdx : m_tileNdxes[index];
+	const Bool cliff = getUVForTileIndex(index, tile_index, u, v, full_tile);
+	if (blend_index) resolveBlendAlpha(m_blendedTiles[blend_index], alpha, flip);
+	else {
+		for (Int i = 0; i < 4; ++i) alpha[i] = 0;
+		*flip = FALSE;
 	}
+	if (cliff) {
+		const Int diagonal_02 = std::abs(Int(getHeight(x, y)) - Int(getHeight(x + 1, y + 1)));
+		const Int diagonal_13 = std::abs(Int(getHeight(x + 1, y)) - Int(getHeight(x, y + 1)));
+		*flip = diagonal_02 > diagonal_13;
+	}
+}
+
+Bool WorldHeightMap::getExtraAlphaUVData(Int x, Int y, float u[4], float v[4],
+	UnsignedByte alpha[4], Bool *flip, Bool *cliff)
+{
+	if (!u || !v || !alpha || !flip || !cliff || x < 0 || y < 0 ||
+		x >= m_width - 1 || y >= m_height - 1 || !m_tileNdxes || !m_extraBlendTileNdxes)
+		throw OriginalW3DDeviceUnavailable("original terrain extra blend query out of range");
+	const Int index = y * m_width + x;
+	const Int blend_index = m_extraBlendTileNdxes[index];
+	*flip = FALSE;
+	*cliff = FALSE;
+	for (Int i = 0; i < 4; ++i) alpha[i] = 0;
+	if (!blend_index) return FALSE;
+	if (blend_index < 0 || blend_index >= m_numBlendedTiles)
+		throw OriginalW3DDeviceUnavailable("original terrain extra blend reference rejected");
+	*cliff = getUVForTileIndex(index, m_blendedTiles[blend_index].blendNdx, u, v, FALSE);
+	resolveBlendAlpha(m_blendedTiles[blend_index], alpha, flip);
+	return TRUE;
+}
+
+void WorldHeightMap::getUVForBlend(Int edge_class, Region2D *range)
+{
+	if (!range || edge_class < 0 || edge_class >= m_numEdgeTextureClasses ||
+		m_alphaEdgeHeight <= 0 || m_edgeTextureClasses[edge_class].positionInTexture.x <= 0)
+		throw OriginalW3DDeviceUnavailable("original terrain edge UV query rejected");
+	const TXTextureClass &texture_class = m_edgeTextureClasses[edge_class];
+	range->lo.x = float(texture_class.positionInTexture.x) / TEXTURE_WIDTH;
+	range->lo.y = float(texture_class.positionInTexture.y) / m_alphaEdgeHeight;
+	range->hi.x = float(texture_class.positionInTexture.x +
+		texture_class.width * TILE_PIXEL_EXTENT) / TEXTURE_WIDTH;
+	range->hi.y = float(texture_class.positionInTexture.y +
+		texture_class.width * TILE_PIXEL_EXTENT) / m_alphaEdgeHeight;
+}
+
+TXTextureClass WorldHeightMap::getTextureFromIndex(Int texture_index)
+{
+	if (texture_index < 0 || texture_index >= m_numTextureClasses)
+		throw OriginalW3DDeviceUnavailable("original terrain texture class query rejected");
+	return m_textureClasses[texture_index];
 }
 
 Bool WorldHeightMap::isCliffMappedTexture(Int x, Int y)

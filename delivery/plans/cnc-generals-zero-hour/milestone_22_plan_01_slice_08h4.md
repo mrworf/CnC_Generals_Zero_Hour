@@ -20,3 +20,13 @@ retaining authored identifiers or bytes.
 
 Run focused and cumulative M22 gates and commit once as
 `delivery: M22 08H4 restore terrain blend queries`.
+
+## Result
+
+Complete. The accepted authored metadata and atlases now drive bounded base
+quadrant/full-tile UVs, primary and extra blend alpha/flip orientation,
+custom-edge ranges, authored cliff UV remapping and height-diagonal flip state.
+Generated coverage exercises every supported orientation, inversion, long,
+forced-flip and custom-edge branch plus invalid/unpublished queries over two
+generations. See the
+[08H4 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08h4.md).

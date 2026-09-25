@@ -12,6 +12,7 @@
 #include "zh/original_process.h"
 #include "zh/renderer/recording_device.h"
 
+#include <cmath>
 #include <cstdlib>
 #include <stdexcept>
 #include <string>
@@ -30,6 +31,7 @@ public:
 	explicit TestVisualMap(ChunkInputStream *input) : WorldHeightMap(input, FALSE) {}
 	ICoord2D source_position(Int index) const { return m_sourceTiles[index]->m_tileLocationInTexture; }
 	ICoord2D edge_position(Int index) const { return m_edgeTiles[index]->m_tileLocationInTexture; }
+	Region2D edge_range(Int index) { Region2D range; getUVForBlend(index, &range); return range; }
 	bool rejects_missing_source_owner()
 	{
 		TileData *owner = m_sourceTiles[0];
@@ -337,6 +339,103 @@ unsigned packed_color(const UnsignedByte color[4])
 	return 0x8000U | ((color[2] >> 3) << 10) | ((color[1] >> 3) << 5) | (color[0] >> 3);
 }
 
+bool close_to(float left, float right)
+{
+	return std::fabs(left - right) < 0.00001f;
+}
+
+void successful_query_generation(const char *path)
+{
+	RecordingGpuDevice device;
+	zh::original_runtime::OriginalGpuEdge edge(device);
+	require(TheWritableGlobalData, "original terrain query global settings are absent");
+	const Bool saved_adjust_cliffs = TheWritableGlobalData->m_adjustCliffTextures;
+	TheWritableGlobalData->m_adjustCliffTextures = TRUE;
+	auto *map = open_map(path);
+	try {
+		require_rejected([&] { (void)map->edge_range(0); },
+			"original terrain edge query accepted an unpublished atlas");
+		(void)map->getTerrainTexture();
+		const Int blend_cells[9] = {0, 1, 2, 3, 4, 5, 6, 8, 9};
+		const UnsignedByte expected_alpha[9][4] = {
+			{0, 255, 255, 0}, {255, 0, 0, 255}, {0, 0, 255, 255},
+			{255, 255, 0, 0}, {0, 0, 255, 0}, {255, 255, 255, 0},
+			{255, 0, 255, 255}, {255, 255, 0, 255}, {0, 0, 0, 0}};
+		const Bool expected_flip[9] = {FALSE, TRUE, FALSE, FALSE, TRUE, FALSE,
+			FALSE, TRUE, FALSE};
+		for (Int record = 0; record < 9; ++record) {
+			float u[4]{}, v[4]{}; UnsignedByte alpha[4]{}; Bool flip = FALSE;
+			const Int x = blend_cells[record] % 8;
+			const Int y = blend_cells[record] / 8;
+			map->getAlphaUVData(x, y, u, v, alpha, &flip, FALSE);
+			for (Int corner = 0; corner < 4; ++corner)
+				require(alpha[corner] == expected_alpha[record][corner],
+					"original authored terrain blend alpha changed");
+			require(flip == expected_flip[record],
+				"original authored terrain blend flip changed");
+		}
+		const Int extra_cells[8] = {16, 17, 18, 19, 20, 21, 22, 24};
+		for (Int record = 0; record < 8; ++record) {
+			float u[4]{}, v[4]{}; UnsignedByte alpha[4]{};
+			Bool flip = FALSE, cliff = FALSE;
+			const Int x = extra_cells[record] % 8;
+			const Int y = extra_cells[record] / 8;
+			require(map->getExtraAlphaUVData(x, y, u, v, alpha, &flip, &cliff) && !cliff,
+				"original authored extra terrain blend was not selected");
+			for (Int corner = 0; corner < 4; ++corner)
+				require(alpha[corner] == expected_alpha[record][corner],
+					"original authored extra terrain blend alpha changed");
+			require(flip == expected_flip[record],
+				"original authored extra terrain blend flip changed");
+		}
+		float u[4]{}, v[4]{};
+		for (Int quadrant = 0; quadrant < 4; ++quadrant) {
+			const Bool stretched = map->getUVData(quadrant, 5, u, v, FALSE);
+			require(!stretched && close_to(u[0], float(quadrant & 1 ? 36 : 4) / 2048) &&
+				close_to(u[1], float(quadrant & 1 ? 68 : 36) / 2048) &&
+				close_to(v[0], float(quadrant & 2 ? 100 : 132) / 256) &&
+				close_to(v[2], float(quadrant & 2 ? 68 : 100) / 256),
+				"original authored terrain base quadrant UV changed");
+		}
+		require(!map->getUVData(0, 5, u, v, TRUE) && close_to(u[0], 4.0f / 2048) &&
+			close_to(u[1], 68.0f / 2048) && close_to(v[0], 132.0f / 256) &&
+			close_to(v[2], 68.0f / 256),
+			"original authored terrain full-tile UV changed");
+		require(map->getUVData(0, 4, u, v, FALSE) &&
+			close_to(u[0], 148.0f / 2048) && close_to(u[1], 148.0f / 2048) &&
+			close_to(u[2], 1.0f + 148.0f / 2048) &&
+			close_to(v[0], 68.0f / 256) && close_to(v[1], 8.0f + 68.0f / 256) &&
+			map->getFlipState(0, 4) && map->getCliffState(0, 4) &&
+			map->isCliffMappedTexture(0, 4),
+			"original authored terrain cliff UV/flip changed");
+		const Region2D range = map->edge_range(0);
+		require(close_to(range.lo.x, 4.0f / 2048) && close_to(range.lo.y, 4.0f / 128) &&
+			close_to(range.hi.x, 68.0f / 2048) && close_to(range.hi.y, 68.0f / 128),
+			"original authored terrain custom edge range changed");
+		const TXTextureClass texture_class = map->getTextureFromIndex(1);
+		require(texture_class.firstTile == 4 && map->getTextureClassNoBlend(0, 4) == 1,
+			"original authored terrain texture-class lookup changed");
+		require_rejected([&] { (void)map->edge_range(1); },
+			"original terrain edge query accepted an invalid class");
+		require_rejected([&] { (void)map->getTextureFromIndex(2); },
+			"original terrain texture query accepted an invalid class");
+		UnsignedByte alpha[4]{}; Bool flip = FALSE;
+		require_rejected([&] { map->getAlphaUVData(7, 7, u, v, alpha, &flip, FALSE); },
+			"original terrain alpha query accepted an invalid cell");
+		Bool cliff = FALSE;
+		require_rejected([&] { (void)map->getExtraAlphaUVData(-1, 0, u, v, alpha, &flip, &cliff); },
+			"original terrain extra blend query accepted an invalid cell");
+		map->Release_Ref(); map = nullptr;
+		TheWritableGlobalData->m_adjustCliffTextures = saved_adjust_cliffs;
+		require(device.resource_counts().total() == 0,
+			"original authored terrain query teardown retained a resource");
+	} catch (...) {
+		if (map) map->Release_Ref();
+		TheWritableGlobalData->m_adjustCliffTextures = saved_adjust_cliffs;
+		throw;
+	}
+}
+
 void successful_authored_generation(const char *path)
 {
 	RecordingGpuDevice device;
@@ -413,6 +512,11 @@ extern "C" void zh_probe_terrain_atlas()
 		for (Int generation = 0; generation != 2; ++generation)
 			successful_authored_generation(authored_path);
 		std::puts("original authored terrain atlas: base=2048x256 edge=2048x128 classes=3 resources=0");
+	}
+	if (const char *query_path = std::getenv("ZH_M22_TERRAIN_QUERY_MAP")) {
+		for (Int generation = 0; generation != 2; ++generation)
+			successful_query_generation(query_path);
+		std::puts("original authored terrain queries: blends=9 extras=8 cliff=1 resources=0");
 	}
 	const auto final_allocations = zh::original_process::live_pool_allocations();
 	if (final_allocations != baseline)

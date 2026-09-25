@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "original_simulatio
 from test_scenario_setup import load_m20_fixture, run
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_w3d_terrain_source_bitmap import authored_source_tree, source_tree
-from test_w3d_visual_height_map import authored_visual_map, visual_map
+from test_w3d_visual_height_map import authored_visual_map, query_visual_map, visual_map
 
 
 def main() -> int:
@@ -44,6 +44,14 @@ def main() -> int:
         result = run(args.executable.resolve(), root / "run-authored", authored_source, "mission")
         if result.returncode or authored_marker not in result.stdout:
             raise SystemExit("original authored terrain atlas failed; private output redacted")
+        query_map = root / "queries.map"
+        query_map.write_bytes(query_visual_map())
+        query_map.chmod(0o444)
+        os.environ["ZH_M22_TERRAIN_QUERY_MAP"] = str(query_map)
+        query_marker = "original authored terrain queries: blends=9 extras=8 cliff=1 resources=0"
+        result = run(args.executable.resolve(), root / "run-queries", authored_source, "mission")
+        if result.returncode or query_marker not in result.stdout:
+            raise SystemExit("original authored terrain queries failed; private output redacted")
     print("original terrain atlas: ownership/rollback/reentry ok")
     return 0
 
