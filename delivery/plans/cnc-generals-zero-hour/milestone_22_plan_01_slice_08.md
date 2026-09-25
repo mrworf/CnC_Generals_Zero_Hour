@@ -49,6 +49,15 @@ state. [08J](milestone_22_plan_01_slice_08j.md) must replace that pair with one
 selector-independent, transactional state contract before this slice resumes.
 Trial scene admission and diagnostic classification were removed.
 
+After accepted 08J, the same continuation passed the terrain-visual update
+owner but stopped in the immediately adjacent client-owned draw, before game
+logic. The display still recognizes the same detached pre-map state through a
+generated selector rather than its complete owner state. Slice
+[08K](milestone_22_plan_01_slice_08k.md) must make this no-frame transition
+selector-independent before retail scene admission resumes. Trial admission
+wiring was removed again; discovery retains only fixed stage and failure
+categories.
+
 ## Validation and error handling
 
 Retail roots remain read-only/private; no corpus bytes, private paths,
