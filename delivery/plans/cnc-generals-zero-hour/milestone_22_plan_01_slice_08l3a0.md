@@ -37,6 +37,15 @@ file-system semantics.
 - Use a project-owned W3D model and generated source route to witness an
   actual `W3DModelDraw` load, not only pointer presence.
 
+Investigation result: the CPU-only `W3DDisplay::init` branch publishes scenes
+and assets without constructing `W3DFileSystem`; the native branch does create
+it. The earlier standalone draw window then destroys its own factory and
+leaves `_TheFileFactory` null. The apparent non-null `TheW3DFileSystem` value
+in a debugger was a non-linked debug-symbol artifact: the pre-change probe
+binary had no such linked symbol. The corrected CPU branch owns and publishes
+that source provider before WW3D initialization, and the generated window
+borrows its exact identity. A standalone window restores its prior factory.
+
 ## Tests and validation
 
 Positive: modeled generated construction loads the owned W3D model through

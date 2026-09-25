@@ -38,6 +38,7 @@
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
+#include "W3DDevice/GameClient/W3DFileSystem.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "w3d_shader_manager_cpu_types.h"
 #include "W3DDevice/GameClient/W3DShaderManager.h"
@@ -63,6 +64,7 @@ RTS3DScene *W3DDisplay::m_3DScene = NULL;
 RTS2DScene *W3DDisplay::m_2DScene = NULL;
 RTS3DInterfaceScene *W3DDisplay::m_3DInterfaceScene = NULL;
 W3DAssetManager *W3DDisplay::m_assetManager = NULL;
+static FileFactoryClass *s_priorDisplayFileFactory = NULL;
 
 W3DDisplay::W3DDisplay()
 {
@@ -97,6 +99,13 @@ W3DDisplay::~W3DDisplay()
 	m_assetManager = NULL;
 	W3DShaderManager::shutdown();
 	WW3D::Shutdown();
+	FileFactoryClass *activeFactory = _TheFileFactory;
+	W3DFileSystem *ownedFileSystem = TheW3DFileSystem;
+	TheW3DFileSystem = NULL;
+	delete ownedFileSystem;
+	_TheFileFactory = !activeFactory || activeFactory == ownedFileSystem ?
+		s_priorDisplayFileFactory : activeFactory;
+	s_priorDisplayFileFactory = NULL;
 	m_initialized = false;
 }
 
@@ -105,8 +114,10 @@ void W3DDisplay::init()
 	if (m_initialized) return;
 	if (!zh::original_runtime::OriginalGpuEdge::active())
 		throw OriginalW3DDeviceUnavailable("original display bootstrap requires device edge");
-	if (m_3DScene || m_2DScene || m_3DInterfaceScene || m_assetManager)
+	if (m_3DScene || m_2DScene || m_3DInterfaceScene || m_assetManager || TheW3DFileSystem)
 		throw OriginalW3DDeviceUnavailable("original display owners already published");
+	FileFactoryClass *priorFileFactory = _TheFileFactory;
+	W3DFileSystem *fileSystem = NULL;
 	RTS3DInterfaceScene *interface_scene = NULL;
 	RTS2DScene *scene_2d = NULL;
 	RTS3DScene *scene_3d = NULL;
@@ -114,6 +125,9 @@ void W3DDisplay::init()
 	bool ww3d_started = false;
 	bool shader_manager_started = false;
 	try {
+		if (std::getenv("ZH_M22_FACTORY_FAIL_FILE_BEFORE"))
+			throw OriginalW3DDeviceUnavailable("forced original display file factory pre-publication failure");
+		fileSystem = NEW W3DFileSystem;
 		interface_scene = NEW_REF(RTS3DInterfaceScene, ());
 		interface_scene->Set_Ambient_Light(Vector3(1, 1, 1));
 		scene_2d = NEW_REF(RTS2DScene, ());
@@ -131,14 +145,26 @@ void W3DDisplay::init()
 		m_2DScene = scene_2d;
 		m_3DScene = scene_3d;
 		m_assetManager = assets;
+		TheW3DFileSystem = fileSystem;
+		s_priorDisplayFileFactory = priorFileFactory;
+		if (std::getenv("ZH_M22_FACTORY_FAIL_FILE_AFTER"))
+			throw OriginalW3DDeviceUnavailable("forced original display file factory post-publication failure");
 		m_initialized = true;
 	} catch (...) {
+		if (TheW3DFileSystem == fileSystem) TheW3DFileSystem = NULL;
+		s_priorDisplayFileFactory = NULL;
+		m_3DInterfaceScene = NULL;
+		m_2DScene = NULL;
+		m_3DScene = NULL;
+		m_assetManager = NULL;
 		REF_PTR_RELEASE(scene_3d);
 		REF_PTR_RELEASE(scene_2d);
 		REF_PTR_RELEASE(interface_scene);
 		delete assets;
 		if (shader_manager_started) W3DShaderManager::shutdown();
 		if (ww3d_started) WW3D::Shutdown();
+		delete fileSystem;
+		_TheFileFactory = priorFileFactory;
 		throw;
 	}
 }

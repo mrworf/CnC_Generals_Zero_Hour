@@ -17,6 +17,7 @@
 #include "GameClient/TerrainVisual.h"
 #include "GameClient/View.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DFileSystem.h"
 #include "original_gpu_edge.h"
 #include "zh/platform/bgfx_device.h"
 #include "zh/renderer/recording_device.h"
@@ -42,6 +43,11 @@ extern "C" UnsignedInt zh_linux_device_acquisition_attempts();
 #if defined(ZH_M22_FULL_DRAW_TEST)
 extern "C" Bool zh_linux_original_factory_counts(UnsignedInt *values, std::size_t count);
 extern "C" UnsignedInt zh_linux_original_factory_map_frames();
+W3DFileSystem *zh_m22_test_foreign_file_factory()
+{
+	static W3DFileSystem foreignFactory;
+	return &foreignFactory;
+}
 #endif
 
 namespace {
@@ -159,6 +165,12 @@ int main(int argc, char **argv)
 		return 2;
 	}
 	const std::size_t allocationBaseline = zh::original_process::live_pool_allocations();
+#if defined(ZH_M22_FULL_DRAW_TEST)
+	if (std::getenv("ZH_M22_W3D_FILE_OWNER_PROFILE") &&
+		std::getenv("ZH_M22_FACTORY_FOREIGN_FILE"))
+		(void)zh_m22_test_foreign_file_factory();
+	FileFactoryClass *const initialFileFactory = _TheFileFactory;
+#endif
 	installSubsystemINIDataLoader(load_subsystem_ini);
 	int result = 0;
 #if defined(ZH_M22_FULL_DRAW_TEST)
@@ -247,7 +259,8 @@ int main(int argc, char **argv)
 		// owning slots and the engine/subsystem list are proven gone.
 		if (TheGameEngine || TheSubsystemList || TheDisplay || TheTerrainVisual ||
 			W3DDisplay::m_3DScene || W3DDisplay::m_2DScene ||
-			W3DDisplay::m_3DInterfaceScene || W3DDisplay::m_assetManager)
+			W3DDisplay::m_3DInterfaceScene || W3DDisplay::m_assetManager ||
+			TheW3DFileSystem || _TheFileFactory != initialFileFactory)
 		{
 			std::fprintf(stderr, "original graphics factory left published owners after GameMain\n");
 			result = 4;
@@ -317,7 +330,8 @@ int main(int argc, char **argv)
 			graphicsResidualAllocations, allocationBaseline,
 			(TheGameClient || TheDisplay || TheTacticalView || TheTerrainVisual || W3DDisplay::m_3DScene ||
 			W3DDisplay::m_2DScene || W3DDisplay::m_3DInterfaceScene ||
-			W3DDisplay::m_assetManager) ? 1U : 0U);
+			W3DDisplay::m_assetManager || TheW3DFileSystem ||
+			_TheFileFactory != initialFileFactory) ? 1U : 0U);
 #endif
 	installSubsystemINIDataLoader(nullptr);
 	UnsignedInt lifecycle[8]{};

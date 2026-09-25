@@ -33,6 +33,7 @@
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DFileSystem.h"
+extern W3DFileSystem *zh_m22_test_foreign_file_factory();
 #include "original_gpu_edge.h"
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
 #include "W3DDevice/GameClient/Module/W3DDependencyModelDraw.h"
@@ -789,22 +790,39 @@ public:
 				W3DAssetManager *assets = NULL;
 				RTS3DScene *scene = NULL;
 				W3DFileSystem *fileSystem = NULL;
+				FileFactoryClass *priorFileFactory = NULL;
 				Bool borrowed = FALSE;
 				OriginalDrawOwners(Bool enabled, Bool borrow)
 				{
 					if (!enabled) return;
 					if (borrow) {
+						if (std::getenv("ZH_M22_W3D_FILE_OWNER_PROFILE") &&
+							std::getenv("ZH_M22_FACTORY_FOREIGN_FILE"))
+							_TheFileFactory = zh_m22_test_foreign_file_factory();
+						if (std::getenv("ZH_M22_W3D_FILE_OWNER_PROFILE") &&
+							std::getenv("ZH_M22_FACTORY_MISSING_FILE"))
+							_TheFileFactory = NULL;
 						if (!dynamic_cast<W3DDisplay *>(TheDisplay) ||
-							!W3DDisplay::m_assetManager || !W3DDisplay::m_3DScene)
+							!W3DDisplay::m_assetManager || !W3DDisplay::m_3DScene ||
+							!TheW3DFileSystem || _TheFileFactory != TheW3DFileSystem)
 							throw std::runtime_error("original generated scene display owners missing");
 						assets = W3DDisplay::m_assetManager;
 						scene = W3DDisplay::m_3DScene;
 						borrowed = TRUE;
 						return;
 					}
-					fileSystem = new W3DFileSystem;
-					assets = new W3DAssetManager;
-					scene = new RTS3DScene;
+					priorFileFactory = _TheFileFactory;
+					try {
+						fileSystem = new W3DFileSystem;
+						assets = new W3DAssetManager;
+						scene = new RTS3DScene;
+					} catch (...) {
+						if (scene) scene->Release_Ref();
+						delete assets;
+						delete fileSystem;
+						_TheFileFactory = priorFileFactory;
+						throw;
+					}
 					W3DDisplay::m_assetManager = assets;
 					W3DDisplay::m_3DScene = scene;
 				}
@@ -815,7 +833,10 @@ public:
 					W3DDisplay::m_3DScene = NULL;
 					if (scene) scene->Release_Ref();
 					if (assets) { assets->Free_Assets(); delete assets; }
+					FileFactoryClass *activeFactory = _TheFileFactory;
 					delete fileSystem;
+					_TheFileFactory = !activeFactory || activeFactory == fileSystem ?
+						priorFileFactory : activeFactory;
 				}
 			} originalDrawOwners(generatedScene || std::getenv("ZH_M22_DRAW_PROFILE") != NULL ||
 				std::getenv("ZH_M22_SHADOW_SOURCE_PROFILE") != NULL ||
@@ -1338,6 +1359,20 @@ public:
 			return;
 #if defined(ZH_M22_FULL_DRAW_TEST)
 			} catch (...) {
+				if (std::getenv("ZH_M22_W3D_FILE_OWNER_PROFILE")) {
+					UnsignedInt modeled = 0;
+					if (TheGameClient) {
+						for (Drawable *drawable = TheGameClient->firstDrawable(); drawable;
+							drawable = drawable->getNextDrawable()) {
+							for (DrawModule **module = drawable->getDrawModules(); module && *module; ++module) {
+								if (auto *model = dynamic_cast<W3DModelDraw *>(*module))
+									modeled += model->getRenderObject() != NULL;
+							}
+						}
+					}
+					std::fprintf(stderr, "original W3D borrowed file owner: active=%u modeled=%u\n",
+						TheW3DFileSystem && _TheFileFactory == TheW3DFileSystem ? 1U : 0U, modeled);
+				}
 				// Preserve the original CPU presentation owners until the original
 				// GameClient has released its partially built draw modules.
 				if (originalDrawOwners.scene) GameEngine::reset();
