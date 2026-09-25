@@ -6,12 +6,14 @@
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
+#include "W3DDevice/GameClient/Module/W3DTreeDraw.h"
 #include "WW3D2/scene.h"
 #include "original_gpu_edge.h"
 #include "zh/renderer/recording_device.h"
 
 #include <cstdlib>
 #include <cstdio>
+#include <array>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -113,6 +115,82 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		W3DDisplay::m_3DScene->Add_Render_Object(&terrain);
 		require(terrain.Peek_Scene() == W3DDisplay::m_3DScene,
 			"original terrain primary scene attachment missing");
+		W3DTreeDrawModuleData tree_data;
+		tree_data.m_modelName = "TEST.TREE";
+		tree_data.m_textureName = "TEST_TREE_TEXTURE";
+		tree_data.m_framesToMoveOutward = 3;
+		W3DTreeDrawModuleData alternate_tree_data;
+		alternate_tree_data.m_modelName = "TEST.TREE_ALT";
+		alternate_tree_data.m_textureName = "TEST_TREE_TEXTURE_ALT";
+		Coord3D tree_position;
+		tree_position.set(12, 18, 2);
+		const auto tree_one = static_cast<DrawableID>(101);
+		const auto tree_two = static_cast<DrawableID>(102);
+		const auto tree_three = static_cast<DrawableID>(103);
+		require(!terrain.tryAddTree(INVALID_DRAWABLE_ID, tree_position, 1, 0, 0, &tree_data) &&
+			!terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, NULL) &&
+			terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0,
+			"original tree registry accepted invalid admission");
+		setenv("ZH_M22_TREE_REGISTRY_FAIL_AT", "type", 1);
+		require(!terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &tree_data) &&
+			terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0,
+			"original tree type failure published owner");
+		setenv("ZH_M22_TREE_REGISTRY_FAIL_AT", "instance", 1);
+		require(!terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &tree_data) &&
+			terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0,
+			"original tree instance failure published owner");
+		unsetenv("ZH_M22_TREE_REGISTRY_FAIL_AT");
+		require(terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &tree_data),
+			"original tree first owner was not published");
+		setenv("ZH_M22_TREE_REGISTRY_FAIL_AT", "instance", 1);
+		require(!terrain.tryAddTree(tree_two, tree_position, 1, 0, 0, &tree_data) &&
+			terrain.treeTypeCount() == 1 && terrain.treeInstanceCount() == 1,
+			"original tree partial add damaged accepted type or instance");
+		unsetenv("ZH_M22_TREE_REGISTRY_FAIL_AT");
+		require(terrain.tryAddTree(tree_two, tree_position, 1, 0, 0, &tree_data) &&
+			terrain.tryAddTree(tree_three, tree_position, 2, 1, 0, &alternate_tree_data) &&
+			terrain.treeTypeCount() == 2 && terrain.treeInstanceCount() == 3 &&
+			!terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &tree_data),
+			"original tree type/instance admission lost identity");
+		const Int first_bucket = terrain.treePartitionBucket(tree_two);
+		require(first_bucket >= 0 && terrain.treePartitionBucket(tree_three) == -1,
+			"original tree partition admission changed source type policy");
+		tree_position.set(24, 30, 3);
+		require(terrain.updateTreePosition(tree_two, tree_position, 2) &&
+			!terrain.updateTreePosition(static_cast<DrawableID>(999), tree_position, 2) &&
+			terrain.treePartitionBucket(tree_two) != first_bucket,
+			"original tree relocation accepted a stale ID");
+		terrain.removeTree(tree_one);
+		terrain.removeTree(tree_two);
+		require(terrain.treeTypeCount() == 1 && terrain.treeInstanceCount() == 1,
+			"original tree removal retained source type");
+		terrain.removeTree(tree_three);
+		require(terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0,
+			"original tree reverse removal retained owner");
+		std::array<W3DTreeDrawModuleData, 65> tree_types;
+		for (Int index = 0; index < 64; ++index) {
+			tree_types[index].m_modelName = AsciiString(("TEST.TYPE" + std::to_string(index)).c_str());
+			tree_types[index].m_textureName = "TEST_TREE_TEXTURE";
+			require(terrain.tryAddTree(static_cast<DrawableID>(200 + index), tree_position,
+				1, 0, 0, &tree_types[index]), "original tree type budget rejected valid type");
+		}
+		tree_types[64].m_modelName = "TEST.TYPE_OVER";
+		tree_types[64].m_textureName = "TEST_TREE_TEXTURE";
+		require(!terrain.tryAddTree(static_cast<DrawableID>(264), tree_position, 1, 0, 0,
+			&tree_types[64]) && terrain.treeTypeCount() == 64 &&
+			terrain.treeInstanceCount() == 64,
+			"original tree type budget changed published registry");
+		terrain.removeAllTrees();
+		for (Int index = 0; index < 4000; ++index)
+			require(terrain.tryAddTree(static_cast<DrawableID>(1000 + index), tree_position,
+				1, 0, 0, &tree_data), "original tree instance budget rejected valid tree");
+		require(!terrain.tryAddTree(static_cast<DrawableID>(5000), tree_position,
+			1, 0, 0, &tree_data) && terrain.treeTypeCount() == 1 &&
+			terrain.treeInstanceCount() == 4000,
+			"original tree instance budget changed published registry");
+		terrain.removeAllTrees();
+		require(terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0,
+			"original tree clear retained capacity owner");
 		const auto baseline = device.resource_counts();
 		terrain.notifyShroudChanged();
 		terrain.notifyShroudChanged();
@@ -202,6 +280,9 @@ extern "C" void zh_probe_terrain_scene_attachment()
 			"original terrain scene negative attachment changed publication");
 		W3DDisplay::m_3DScene->Remove_Render_Object(&terrain);
 		require(!terrain.Peek_Scene(), "original terrain primary scene detach retained owner");
+		require(!terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &tree_data) &&
+			terrain.treeInstanceCount() == 0,
+			"original tree registry accepted detached terrain");
 		require(rejected([&]() { terrain.notifyShroudChanged(); }),
 			"original terrain shroud notification accepted primary scene detachment");
 		require(rejected([&]() { display->clearShroud(); }) && rejects_without_mutation(),
@@ -221,6 +302,17 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		alternate.Remove_Render_Object(&terrain);
 		require(alternate.registrations == 2 && alternate.unregistrations == 2 && !terrain.Peek_Scene(),
 			"original terrain scene re-entry changed update ownership");
+		W3DDisplay::m_3DScene->Add_Render_Object(&terrain);
+		require(terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &tree_data),
+			"original tree reset witness could not admit owner");
+		const UnsignedInt old_tree_epoch = terrain.treeOwnerEpoch();
+		terrain.reset();
+		require(terrain.treeInstanceCount() == 0 && terrain.treeTypeCount() == 0 &&
+			terrain.treeOwnerEpoch() != old_tree_epoch &&
+			!terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &tree_data) &&
+			device.resource_counts() == baseline,
+			"original tree reset retained owner or admitted unready shroud");
+		W3DDisplay::m_3DScene->Remove_Render_Object(&terrain);
 		terrain.freeMapResources();
 		require(rejected([&]() { terrain.notifyShroudChanged(); }),
 			"original terrain shroud notification accepted a released map");

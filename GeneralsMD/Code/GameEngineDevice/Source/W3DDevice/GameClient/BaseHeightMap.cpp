@@ -53,11 +53,40 @@
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
+#include "W3DDevice/GameClient/Module/W3DTreeDraw.h"
 #include "WW3D2/scene.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <map>
 
 BaseHeightMapRenderObjClass *TheTerrainRenderObject = NULL;
+static UnsignedInt s_nextCpuTreeEpoch = 0;
+struct CpuTreeType {
+	AsciiString modelName;
+	AsciiString textureName;
+	const W3DTreeDrawModuleData *data;
+	Int users;
+};
+struct CpuTreeInstance {
+	DrawableID id;
+	Coord3D location;
+	Real scale;
+	Real angle;
+	Int typeIndex;
+	Int partitionBucket;
+};
+struct CpuTreeRegistry {
+	std::vector<CpuTreeType> types;
+	std::vector<CpuTreeInstance> instances;
+	UnsignedInt epoch = 0;
+};
+// The source terrain's existing layout is shared with full-instance clients.
+// Lazily key CPU-only tree state by its exact owner and erase it on teardown.
+static std::map<const BaseHeightMapRenderObjClass *, CpuTreeRegistry> s_cpuTreeRegistries;
 
 BaseHeightMapRenderObjClass::BaseHeightMapRenderObjClass()
 {
@@ -190,6 +219,7 @@ int BaseHeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *ma
 }
 Int BaseHeightMapRenderObjClass::freeMapResources()
 {
+	s_cpuTreeRegistries.erase(this);
 	if (m_shroud) m_shroud->reset();
 	REF_PTR_RELEASE(m_map);
 	m_x = m_y = 0;
@@ -228,12 +258,170 @@ void BaseHeightMapRenderObjClass::oversizeTerrain(Int)
 }
 void BaseHeightMapRenderObjClass::reset()
 {
+	s_cpuTreeRegistries.erase(this);
 	if (m_shroud) {
 		m_shroud->reset();
 		m_shroud->setBorderShroudLevel(static_cast<W3DShroudLevel>(
 			TheGlobalData ? TheGlobalData->m_shroudAlpha : 0));
 	}
 	m_needFullUpdate = false;
+}
+Int BaseHeightMapRenderObjClass::treeInstanceCount() const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	return registry == s_cpuTreeRegistries.end() ? 0 : static_cast<Int>(registry->second.instances.size());
+}
+Int BaseHeightMapRenderObjClass::treeTypeCount() const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	return registry == s_cpuTreeRegistries.end() ? 0 : static_cast<Int>(registry->second.types.size());
+}
+UnsignedInt BaseHeightMapRenderObjClass::treeOwnerEpoch() const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	return registry == s_cpuTreeRegistries.end() ? 0 : registry->second.epoch;
+}
+bool BaseHeightMapRenderObjClass::tryAddTree(DrawableID id, Coord3D location,
+	Real scale, Real angle, Real randomScaleAmount,
+	const W3DTreeDrawModuleData *data)
+{
+	if (!zh::original_runtime::OriginalGpuEdge::active() ||
+		TheTerrainRenderObject != this || !W3DDisplay::m_assetManager ||
+		!W3DDisplay::m_3DScene || Peek_Scene() != W3DDisplay::m_3DScene ||
+		!m_map || m_x != m_map->getDrawWidth() || m_y != m_map->getDrawHeight() ||
+		!m_shroud || m_shroud->getNumShroudCellsX() <= 0 ||
+		m_shroud->getNumShroudCellsY() <= 0 ||
+		!data || data->m_modelName.isEmpty() || data->m_textureName.isEmpty() ||
+		id == INVALID_DRAWABLE_ID || !std::isfinite(location.x) ||
+		!std::isfinite(location.y) || !std::isfinite(location.z) ||
+		!std::isfinite(scale) || scale <= 0 || !std::isfinite(angle) ||
+		!std::isfinite(randomScaleAmount) || randomScaleAmount < 0)
+		return false;
+	const auto existing = s_cpuTreeRegistries.find(this);
+	if (existing != s_cpuTreeRegistries.end() && existing->second.instances.size() >= 4000)
+		return false;
+	if (existing != s_cpuTreeRegistries.end())
+	for (const CpuTreeInstance &instance : existing->second.instances)
+		if (instance.id == id) return false;
+	const Int bucket = data->m_framesToMoveOutward > 2 || data->m_doTopple
+		? calculateTreePartitionBucket(location) : -1;
+	if ((data->m_framesToMoveOutward > 2 || data->m_doTopple) && bucket < 0)
+		return false;
+	auto insertion = s_cpuTreeRegistries.try_emplace(this);
+	CpuTreeRegistry &registry = insertion.first->second;
+	if (insertion.second) registry.epoch = ++s_nextCpuTreeEpoch;
+	auto rollbackEmpty = [&]() {
+		if (insertion.second && registry.types.empty() && registry.instances.empty())
+			s_cpuTreeRegistries.erase(this);
+	};
+	Int typeIndex = -1;
+	for (Int index = 0; index < static_cast<Int>(registry.types.size()); ++index) {
+		if (registry.types[index].modelName.compareNoCase(data->m_modelName) == 0 &&
+			registry.types[index].textureName.compareNoCase(data->m_textureName) == 0) {
+			typeIndex = index;
+			break;
+		}
+	}
+	const bool newType = typeIndex < 0;
+	if (newType) {
+		if (registry.types.size() >= 64) { rollbackEmpty(); return false; }
+		try {
+			CpuTreeType type = {data->m_modelName, data->m_textureName, data, 0};
+			registry.types.push_back(type);
+		}
+		catch (...) { rollbackEmpty(); throw; }
+		typeIndex = static_cast<Int>(registry.types.size()) - 1;
+	}
+	const char *failAt = std::getenv("ZH_M22_TREE_REGISTRY_FAIL_AT");
+	if (failAt && std::strcmp(failAt, "type") == 0) {
+		if (newType) registry.types.pop_back();
+		rollbackEmpty();
+		return false;
+	}
+	try {
+		registry.instances.push_back({id, location, scale, angle, typeIndex, bucket});
+	} catch (...) {
+		if (newType) registry.types.pop_back();
+		rollbackEmpty();
+		throw;
+	}
+	if (failAt && std::strcmp(failAt, "instance") == 0) {
+		registry.instances.pop_back();
+		if (newType) registry.types.pop_back();
+		rollbackEmpty();
+		return false;
+	}
+	++registry.types[typeIndex].users;
+	return true;
+}
+Int BaseHeightMapRenderObjClass::calculateTreePartitionBucket(const Coord3D &location) const
+{
+	const Real width = (m_map->getXExtent() - 2 * m_map->getBorderSize()) * MAP_XY_FACTOR;
+	const Real height = (m_map->getYExtent() - 2 * m_map->getBorderSize()) * MAP_XY_FACTOR;
+	if (width <= 0 || height <= 0) return -1;
+	const Real x = std::max(Real(0), std::min(location.x, width));
+	const Real y = std::max(Real(0), std::min(location.y, height));
+	const Int cellX = static_cast<Int>(std::floor(x / width * 99.9f));
+	const Int cellY = static_cast<Int>(std::floor(y / height * 99.9f));
+	return cellY * 100 + cellX;
+}
+Int BaseHeightMapRenderObjClass::treePartitionBucket(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry == s_cpuTreeRegistries.end()) return -1;
+	for (const CpuTreeInstance &instance : registry->second.instances)
+		if (instance.id == id) return instance.partitionBucket;
+	return -1;
+}
+void BaseHeightMapRenderObjClass::addTree(DrawableID id, Coord3D location,
+	Real scale, Real angle, Real randomScaleAmount,
+	const W3DTreeDrawModuleData *data)
+{
+	if (!tryAddTree(id, location, scale, angle, randomScaleAmount, data))
+		throw OriginalW3DDeviceUnavailable("original tree registry admission unavailable");
+}
+void BaseHeightMapRenderObjClass::removeTree(DrawableID id)
+{
+	auto registry = s_cpuTreeRegistries.find(this);
+	if (registry == s_cpuTreeRegistries.end()) return;
+	auto &instances = registry->second.instances;
+	auto &types = registry->second.types;
+	for (std::size_t index = 0; index < instances.size(); ++index) {
+		if (instances[index].id != id) continue;
+		const Int typeIndex = instances[index].typeIndex;
+		instances.erase(instances.begin() + index);
+		if (--types[typeIndex].users == 0) {
+			types.erase(types.begin() + typeIndex);
+			for (CpuTreeInstance &instance : instances)
+				if (instance.typeIndex > typeIndex) --instance.typeIndex;
+		}
+		return;
+	}
+}
+void BaseHeightMapRenderObjClass::removeAllTrees()
+{
+	s_cpuTreeRegistries.erase(this);
+}
+Bool BaseHeightMapRenderObjClass::updateTreePosition(DrawableID id,
+	Coord3D location, Real angle)
+{
+	if (!zh::original_runtime::OriginalGpuEdge::active() ||
+		TheTerrainRenderObject != this || !W3DDisplay::m_3DScene ||
+		Peek_Scene() != W3DDisplay::m_3DScene || !m_map || !m_shroud ||
+		m_shroud->getNumShroudCellsX() <= 0 || m_shroud->getNumShroudCellsY() <= 0 ||
+		!std::isfinite(location.x) || !std::isfinite(location.y) ||
+		!std::isfinite(location.z) || !std::isfinite(angle)) return FALSE;
+	auto registry = s_cpuTreeRegistries.find(this);
+	if (registry == s_cpuTreeRegistries.end()) return FALSE;
+	for (CpuTreeInstance &instance : registry->second.instances) {
+		if (instance.id != id) continue;
+		instance.location = location;
+		instance.angle = angle;
+		if (instance.partitionBucket >= 0)
+			instance.partitionBucket = calculateTreePartitionBucket(location);
+		return TRUE;
+	}
+	return FALSE;
 }
 void BaseHeightMapRenderObjClass::crc(Xfer*)
 {

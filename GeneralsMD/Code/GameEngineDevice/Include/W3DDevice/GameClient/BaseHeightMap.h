@@ -180,6 +180,14 @@ public:
 	void addScorch(Vector3 location, Real radius, Scorches type);
 	void addTree(DrawableID id, Coord3D location, Real scale, Real angle,
 								Real randomScaleAmount,  const W3DTreeDrawModuleData *data);
+#if defined(ZH_WW3D_CPU_ONLY)
+	bool tryAddTree(DrawableID id, Coord3D location, Real scale, Real angle,
+		Real randomScaleAmount, const W3DTreeDrawModuleData *data);
+	Int treeInstanceCount() const;
+	Int treeTypeCount() const;
+	UnsignedInt treeOwnerEpoch() const;
+	Int treePartitionBucket(DrawableID id) const;
+#endif
 	void removeAllTrees(void);
 	void removeTree(DrawableID id);
 	Bool updateTreePosition(DrawableID id, Coord3D location, Real angle);
@@ -312,6 +320,9 @@ protected:
 	TextureClass *m_destAlphaTexture;	///< Texture holding destination alpha LUT for water depth.
 
 	W3DTreeBuffer *m_treeBuffer; ///< Class for drawing trees and other alpha objects.
+#if defined(ZH_WW3D_CPU_ONLY)
+	Int calculateTreePartitionBucket(const Coord3D &location) const;
+#endif
 	W3DPropBuffer *m_propBuffer; ///< Class for drawing trees and other alpha objects.
 	W3DBibBuffer *m_bibBuffer; ///< Class for drawing trees and other alpha objects.
 	W3DWaypointBuffer *m_waypointBuffer; ///< Draws waypoints.

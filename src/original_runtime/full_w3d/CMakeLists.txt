@@ -175,6 +175,7 @@ add_library(zh_original_w3d_draw_full OBJECT EXCLUDE_FROM_ALL
   "${draw_root}/W3DOverlordTankDraw.cpp"
   "${draw_root}/W3DDependencyModelDraw.cpp"
   "${draw_root}/W3DOverlordAircraftDraw.cpp"
+  "${draw_root}/W3DTreeDraw.cpp"
   "${draw_root}/W3DOverlordTruckDraw.cpp"
   "${client_root}/W3DAssetManager.cpp"
   "${client_root}/W3DFileSystem.cpp"

@@ -58,6 +58,16 @@ selector-independent before retail scene admission resumes. Trial admission
 wiring was removed again; discovery retains only fixed stage and failure
 categories.
 
+The later 08P0A physical-control audit found an 08J-era gap outside the tree
+owner: a generated factory-map attempt with disabled water arrives at
+`W3DTerrainVisual::load` after reset with its water owner detached. The exact
+active-water helper rejects that disabled-water state at preflight, before
+map binding or tree admission. A separate 08J1 corrective plan-only split
+must be persisted after 08P0A, then implemented and revalidated with the
+physical generated-map control before this retail slice or slice 09 can be
+accepted. The correction must not weaken active-water identity or use a
+selector-specific shortcut.
+
 After accepted 08K, a corrected single-separator redacted continuation crossed
 all map-local and terrain/player/radar/shroud construction stages and reached a
 bridge-like authored map object. Object behavior construction completed, but its

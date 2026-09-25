@@ -129,6 +129,11 @@ m_treeAdded(false)
 //-------------------------------------------------------------------------------------------------
 W3DTreeDraw::~W3DTreeDraw( void )
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (m_treeAdded && m_treeOwner && TheTerrainRenderObject == m_treeOwner &&
+		m_treeOwner->treeOwnerEpoch() == m_treeEpoch)
+		m_treeOwner->removeTree(m_treeID);
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -138,21 +143,33 @@ void W3DTreeDraw::reactToTransformChange( const Matrix3D *oldMtx,
 {
 	Drawable *draw = getDrawable();
 	if (m_treeAdded) {
+#if defined(ZH_WW3D_CPU_ONLY)
+		if (!m_treeOwner || TheTerrainRenderObject != m_treeOwner ||
+			m_treeOwner->treeOwnerEpoch() != m_treeEpoch ||
+			!m_treeOwner->updateTreePosition(m_treeID, *draw->getPosition(), draw->getOrientation()))
+			throw ERROR_INVALID_D3D;
+#endif
 		return;
 	}
 	if (draw->getPosition()->x==0.0f && draw->getPosition()->y == 0.0f) {
 		return;
 	}
-	m_treeAdded = true;
 	const W3DTreeDrawModuleData *moduleData = getW3DTreeDrawModuleData();
 	if (!moduleData) {
-		return;
+		throw ERROR_INVALID_D3D;
 	}
 	Real scale = draw->getScale();
 	Real scaleRandomness = draw->getTemplate()->getInstanceScaleFuzziness();
 	scaleRandomness = 0.0f; // We use the scale fuzziness inside WB to generate random scales, so they don't change at load time. jba. [4/22/2003]
+	if (!TheTerrainRenderObject) throw ERROR_INVALID_D3D;
 	TheTerrainRenderObject->addTree(draw->getID(), *draw->getPosition(),
 		scale, draw->getOrientation(), scaleRandomness, moduleData);
+	m_treeAdded = true;
+#if defined(ZH_WW3D_CPU_ONLY)
+	m_treeOwner = TheTerrainRenderObject;
+	m_treeID = draw->getID();
+	m_treeEpoch = m_treeOwner->treeOwnerEpoch();
+#endif
 	
 }
 

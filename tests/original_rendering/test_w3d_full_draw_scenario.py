@@ -99,9 +99,20 @@ def main() -> int:
         shutil.copytree(source, missing_rider_root)
         missing_rider_ini = missing_rider_root / "Data/INI/Default/Object.ini"
         fixture.write(missing_rider_ini, missing_rider_ini.read_text().replace("Slots = 1", "Slots = 0", 1))
+        closed_tree_root = base / "closed-tree-input"
+        shutil.copytree(source, closed_tree_root)
+        closed_tree_ini = closed_tree_root / "Data/INI/Default/Object.ini"
+        fixture.write(closed_tree_ini, closed_tree_ini.read_text().replace(
+            "Object LogicFixture\n",
+            "Object LogicFixture\n"
+            " Draw = W3DTreeDraw ModuleTag_ClosedTree\n"
+            "  ModelName = TEST.TREE\n"
+            "  TextureName = TEST_TREE_TEXTURE\n"
+            " End\n", 1))
         fixture.make_read_only(source)
         fixture.make_read_only(missing_root)
         fixture.make_read_only(missing_rider_root)
+        fixture.make_read_only(closed_tree_root)
         if args.retail_archive:
             archive = args.retail_archive.resolve(strict=True)
             # Only the owned input root is temporarily writable. The retail
@@ -169,6 +180,11 @@ def main() -> int:
                 "original scenario setup:" in missing_rider.stdout):
             raise SystemExit(f"missing original rider did not fail closed:\n"
                              f"{missing_rider.stdout}{missing_rider.stderr}")
+        closed_tree = run(args.executable.resolve(), base, closed_tree_root, "mission")
+        if (closed_tree.returncode != 3 or
+                "original error 0xdead0007" not in closed_tree.stderr or
+                "original scenario setup:" in closed_tree.stdout):
+            raise SystemExit("schema-only physical tree provider was admitted")
         print("original GameClient full W3D draw modules constructed and called: 10")
     finally:
         if args.keep:

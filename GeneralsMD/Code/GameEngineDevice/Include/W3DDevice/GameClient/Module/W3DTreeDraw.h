@@ -76,6 +76,7 @@ public:
 /** W3D tree draw */
 //-------------------------------------------------------------------------------------------------
 #ifndef ZH_W3D_SCHEMA_ONLY
+class BaseHeightMapRenderObjClass;
 class W3DTreeDraw : public DrawModule
 {
 
@@ -97,6 +98,11 @@ public:
 
 protected:
 	Bool m_treeAdded;
+#if defined(ZH_WW3D_CPU_ONLY)
+	BaseHeightMapRenderObjClass *m_treeOwner = NULL;
+	DrawableID m_treeID = INVALID_DRAWABLE_ID;
+	UnsignedInt m_treeEpoch = 0;
+#endif
 
 };
 #endif

@@ -12,12 +12,16 @@ create proc would therefore silently omit or retain trees.
 Implement a bounded CPU tree type/instance owner attached to the exact loaded
 terrain/map identity. Preserve source `DrawableID`, position, scale, angle,
 model/texture module data, type and area-partition semantics; no fabricated
-retail asset or proxy model. Make add capacity/asset/readiness failure explicit
+retail asset or proxy model. Make registry capacity/readiness failure explicit
 and atomic, with `m_treeAdded` committed only after successful admission.
+Keep the original terrain class layout shared with non-CPU translation units:
+the CPU registry is lazily owned by exact terrain identity and erased on
+reset/teardown, so an empty graphics bootstrap allocates no tree state.
 Correct relocation, removal, reset and terrain teardown so the source
 `W3DTreeDraw`/terrain owner cannot leave a stale ID/type/partition entry.
-Guard null/foreign/stale terrain or module data before mutation. Constructor
-and failed first transform must unwind without gameplay destroy hooks and
+Guard null/foreign/stale terrain or module data before mutation. Model and
+texture asset readiness remains 08P0B, before physical factory admission.
+Constructor and failed first transform must unwind without gameplay destroy hooks and
 allow deterministic retry. Preserve existing map/bridge/bib/shroud owners.
 
 The factory's `W3DTreeDraw` physical create proc stays null in this slice;
