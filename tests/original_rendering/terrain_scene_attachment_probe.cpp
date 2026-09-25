@@ -4,6 +4,7 @@
 #include "Common/FileSystem.h"
 #include "Common/MapReaderWriterInfo.h"
 #include "GameClient/ClientRandomValue.h"
+#include "GameLogic/ScriptEngine.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
@@ -14,6 +15,7 @@
 #include "WWLib/RAMFILE.H"
 #include "assetmgr.h"
 #include "dx8fvf.h"
+#include "camera.h"
 #include "original_gpu_edge.h"
 #include "zh/renderer/recording_device.h"
 
@@ -385,6 +387,177 @@ extern "C" void zh_probe_terrain_scene_attachment()
 			!terrain.peekTreeVertexSource() && !terrain.peekTreeAtlasSource(),
 			"original tree clear retained pre-teardown Recording resources");
 		const auto baseline = device.resource_counts();
+		// C1A: the source's breeze/cull phase publishes only complete visible
+		// geometry. Its failed candidate must leave the accepted B3 registry,
+		// Recording wrappers and GameClient stream untouched.
+		const auto frame_one = static_cast<DrawableID>(6010);
+		const auto frame_two = static_cast<DrawableID>(6011);
+		Coord3D second_position;
+		second_position.set(24, 30, 5);
+		require(terrain.tryAddTree(frame_one, tree_position, 1, 0, 0, &tree_data) &&
+			terrain.tryAddTree(frame_two, second_position, 1, 0, 0, &alternate_tree_data),
+			"original tree visible-frame fixture admission failed");
+		const auto acceptedFrameResources = device.resource_counts();
+		const auto acceptedFrameVertex = terrain.peekTreeVertexSource();
+		const auto acceptedFrameIndex = terrain.peekTreeIndexSource();
+		const auto acceptedFrameEpoch = terrain.treeOwnerEpoch();
+		CameraClass frameCamera;
+		frameCamera.Set_Position(Vector3(18, 24, 50));
+		frameCamera.Set_View_Plane(Vector2(-1, -1), Vector2(1, 1));
+		frameCamera.Set_Clip_Planes(1, 100);
+		BreezeInfo breeze{};
+		breeze.m_directionVec.x = 1;
+		breeze.m_directionVec.y = 0;
+		breeze.m_intensity = 0.2f;
+		breeze.m_lean = 0.1f;
+		breeze.m_randomness = 0.4f;
+		breeze.m_breezePeriod = 60;
+		breeze.m_breezeVersion = 1;
+		const auto frameUnchanged = [&]() {
+			CopyGameClientRandomState(clientAfter);
+			return terrain.treeOwnerEpoch() == acceptedFrameEpoch &&
+				terrain.treeInstanceCount() == 2 && terrain.treeTypeCount() == 2 &&
+				terrain.treeVisibleCount() == 0 && terrain.treeSwayVersion() == -1 &&
+				terrain.peekTreeVertexSource() == acceptedFrameVertex &&
+				terrain.peekTreeIndexSource() == acceptedFrameIndex &&
+				device.resource_counts() == acceptedFrameResources &&
+				std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0;
+		};
+		CopyGameClientRandomState(clientBefore);
+		UnsignedInt expectedFrameWords[6]{};
+		std::memcpy(expectedFrameWords, clientBefore, sizeof(expectedFrameWords));
+		Int expectedSwaySlots[2]{};
+		for (Int index = 0; index != 2; ++index)
+			expectedSwaySlots[index] = 1 +
+				PreviewGameClientRandomValue(expectedFrameWords, 0, 9);
+		for (Int index = 0; index != 10; ++index) {
+			(void)PreviewGameClientRandomValueReal(expectedFrameWords, 0.8f, 1.2f);
+			(void)PreviewGameClientRandomValueReal(expectedFrameWords, 0.8f, 1.2f);
+		}
+		require(!terrain.updateTreeVisibleFrame(NULL, breeze, FALSE) &&
+			frameUnchanged(), "original tree frame accepted null camera");
+		BreezeInfo invalidBreeze = breeze;
+		invalidBreeze.m_breezePeriod = 0;
+		require(!terrain.updateTreeVisibleFrame(&frameCamera, invalidBreeze, FALSE) &&
+			frameUnchanged(), "original tree frame accepted zero breeze period");
+		for (const char *fault : {"edge-mismatch", "cull",
+			"sort-key-nonfinite", "publish"}) {
+			setenv("ZH_M22_TREE_FRAME_FAIL_AT", fault, 1);
+			require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE),
+				"original tree frame injected fault published candidate");
+			unsetenv("ZH_M22_TREE_FRAME_FAIL_AT");
+			require(frameUnchanged(),
+				"original tree frame injected fault changed accepted owner or RNG");
+		}
+		for (const char *fault : {"geometry", "vertex", "index"}) {
+			setenv("ZH_M22_TREE_RESOURCE_FAIL_AT", fault, 1);
+			require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE),
+				"original tree visible geometry fault published candidate");
+			unsetenv("ZH_M22_TREE_RESOURCE_FAIL_AT");
+			require(frameUnchanged(),
+				"original tree visible geometry fault retained candidate");
+		}
+		for (Int failure = 0; failure != 2; ++failure) {
+			if (failure == 0) device.fail_next_buffer_create();
+			if (failure == 1) device.fail_next_buffer_upload();
+			require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				frameUnchanged(),
+				"original tree visible Recording fault retained candidate");
+		}
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeVisibleCount() == 2 &&
+			terrain.treeIsVisible(frame_one) && terrain.treeIsVisible(frame_two) &&
+			terrain.treeSwayVersion() == 1 &&
+			terrain.peekTreeVertexSource()->Get_Vertex_Count() == 6 &&
+			terrain.peekTreeIndexSource()->Get_Index_Count() == 6 &&
+			terrain.treeOwnerEpoch() == acceptedFrameEpoch,
+			"original tree visible-frame retry lost source geometry or identity");
+		const auto *frameVertices = reinterpret_cast<const VertexFormatXYZNDUV1 *>(
+			terrain.peekTreeVertexSource()->Get_CPU_Vertex_Buffer());
+		CopyGameClientRandomState(clientAfter);
+		require(frameVertices[0].nx == expectedSwaySlots[0] &&
+			frameVertices[3].nx == expectedSwaySlots[1] &&
+			std::memcmp(expectedFrameWords, clientAfter, sizeof(clientAfter)) == 0 &&
+			std::isfinite(terrain.treeSwayVector(0).X) &&
+			terrain.treeSwayVector(0).X > 0,
+			"original tree breeze version changed source sway or client RNG sequence");
+		const auto readyFrameResources = device.resource_counts();
+		W3DAssetManager *frameAssets = W3DDisplay::m_assetManager;
+		W3DDisplay::m_assetManager = NULL;
+		require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			device.resource_counts() == readyFrameResources &&
+			terrain.treeVisibleCount() == 2 &&
+			terrain.treeSwayVersion() == 1,
+			"original tree visible frame accepted missing asset provider");
+		W3DDisplay::m_assetManager = frameAssets;
+		const Vector3 sampledBeforePause = terrain.treeSwayVector(0);
+		CopyGameClientRandomState(clientBefore);
+		breeze.m_breezeVersion = 2;
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			terrain.treeSwayVersion() == 1 &&
+			terrain.treeSwayVector(0).X == sampledBeforePause.X,
+			"original tree paused frame changed breeze version");
+		CopyGameClientRandomState(clientAfter);
+		require(std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0 &&
+			terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeSwayVersion() == 2,
+			"original tree resumed frame failed breeze-version update");
+		frameCamera.Set_Position(Vector3(1000, 1000, 50));
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeVisibleCount() == 0 && !terrain.treeIsVisible(frame_one) &&
+			!terrain.peekTreeVertexSource() && !terrain.peekTreeIndexSource(),
+			"original tree camera cull retained offscreen frame geometry");
+		frameCamera.Set_Position(Vector3(18, 24, 50));
+		const bool frameReentered = terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE);
+		require(frameReentered &&
+			terrain.treeVisibleCount() == 2 &&
+			terrain.treeSortKey(frame_one) != terrain.treeSortKey(frame_two),
+			"original tree camera re-entry lost visible identity or sort keys");
+		Coord3D moved_frame_position;
+		moved_frame_position.set(30, 20, 7);
+		require(terrain.updateTreePosition(frame_one, moved_frame_position, 0) &&
+			terrain.treeVisibleCount() == 0 &&
+			!terrain.peekTreeVertexSource() &&
+			terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeVisibleCount() == 2 &&
+			terrain.treeSortKey(frame_one) != terrain.treeSortKey(frame_two),
+			"original tree moved frame did not rebuild visible source geometry");
+		terrain.removeTree(frame_two);
+		require(terrain.treeInstanceCount() == 1 &&
+			terrain.treeTypeCount() == 1 && !terrain.peekTreeAtlasSource() &&
+			!terrain.peekTreeVertexSource(),
+			"original tree type removal retained obsolete frame resources");
+		const auto oneTreeResources = device.resource_counts();
+		setenv("ZH_M22_TREE_RESOURCE_FAIL_AT", "texture-create", 1);
+		require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE),
+			"original tree removal-frame atlas fault published candidate");
+		unsetenv("ZH_M22_TREE_RESOURCE_FAIL_AT");
+		require(device.resource_counts() == oneTreeResources &&
+			terrain.treeInstanceCount() == 1 &&
+			terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeVisibleCount() == 1 && terrain.peekTreeAtlasSource() &&
+			terrain.peekTreeVertexSource(),
+			"original tree removal-frame atlas retry lost accepted survivor");
+		terrain.removeTree(frame_one);
+		require(terrain.treeInstanceCount() == 0 &&
+			terrain.treeVisibleCount() == 0 && device.resource_counts() == baseline,
+			"original tree frame owner removal retained Recording resources");
+		require(terrain.tryAddTree(frame_one, tree_position, 1, 0, 0, &tree_data),
+			"original tree paused-first fixture admission failed");
+		CopyGameClientRandomState(clientBefore);
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			terrain.treeVisibleCount() == 1 &&
+			terrain.treeSwayVersion() == -1 &&
+			terrain.treeSwayVector(0).X == 0 &&
+			terrain.treeSwayVector(0).Y == 0 &&
+			terrain.treeSwayVector(0).Z == 0,
+			"original tree paused first frame sampled uninitialized sway state");
+		CopyGameClientRandomState(clientAfter);
+		require(std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0,
+			"original tree paused first frame consumed client RNG");
+		terrain.removeTree(frame_one);
+		require(device.resource_counts() == baseline,
+			"original tree paused first-frame removal retained resources");
 		terrain.notifyShroudChanged();
 		terrain.notifyShroudChanged();
 		require(device.resource_counts() == baseline,

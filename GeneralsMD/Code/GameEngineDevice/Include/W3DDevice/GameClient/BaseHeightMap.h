@@ -58,6 +58,7 @@ class W3DPropDrawModuleData;
 class W3DPropBuffer;
 class W3DTreeDrawModuleData;
 #if defined(ZH_WW3D_CPU_ONLY)
+struct BreezeInfo;
 #include <vector>
 class MeshClass;
 class W3DAssetManager;
@@ -245,6 +246,13 @@ public:
 	const DX8IndexBufferClass *peekTreeIndexSource() const;
 	const TextureClass *peekTreeAtlasSource() const;
 	Int treeAtlasWidth() const;
+	bool updateTreeVisibleFrame(const CameraClass *camera, const BreezeInfo &breeze,
+		Bool paused);
+	Int treeVisibleCount() const;
+	Bool treeIsVisible(DrawableID id) const;
+	Real treeSortKey(DrawableID id) const;
+	Int treeSwayVersion() const;
+	Vector3 treeSwayVector(Int index) const;
 #endif
 	void removeAllTrees(void);
 	void removeTree(DrawableID id);

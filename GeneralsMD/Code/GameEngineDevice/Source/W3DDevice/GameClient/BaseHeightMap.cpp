@@ -52,6 +52,8 @@
 #include "Common/FileSystem.h"
 #include "Common/file.h"
 #include "GameClient/ClientRandomValue.h"
+#include "GameLogic/ScriptEngine.h"
+#include "Lib/trig.h"
 #include "W3DDevice/GameClient/BaseHeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
@@ -66,6 +68,7 @@
 #include "texture.h"
 #include "assetmgr.h"
 #include "sphere.h"
+#include "camera.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #include <algorithm>
@@ -74,6 +77,7 @@
 #include <cstring>
 #include <map>
 #include <memory>
+#include <limits>
 #include <utility>
 
 BaseHeightMapRenderObjClass *TheTerrainRenderObject = NULL;
@@ -94,6 +98,23 @@ struct CpuTreeInstance {
 	Int partitionBucket;
 	Int swayType;
 	Int firstVertex;
+	Bool visible = FALSE;
+	Real sortKey = 0;
+};
+struct CpuTreeVisibleFrame {
+	CpuTreeVisibleFrame()
+	{
+		for (Vector3 &offset : swayOffsets) offset = Vector3(0, 0, 0);
+		for (Vector3 &sample : sampledSway) sample = Vector3(0, 0, 0);
+	}
+	Vector3 swayOffsets[100];
+	Real phase[10]{};
+	Real step[10]{};
+	Real factor[10]{};
+	Vector3 sampledSway[10];
+	Int breezeVersion = -1;
+	Int visibleCount = 0;
+	Bool ready = FALSE;
 };
 struct CpuTreeGpuSource {
 	zh::original_runtime::OriginalGpuEdge *edge = NULL;
@@ -119,6 +140,7 @@ struct CpuTreeRegistry {
 	std::unique_ptr<W3DTreeAtlasSource> atlas;
 	TextureClass *atlasTexture = NULL;
 	std::unique_ptr<CpuTreeGpuSource> gpu;
+	CpuTreeVisibleFrame visibleFrame;
 	UnsignedInt epoch = 0;
 	~CpuTreeRegistry()
 	{
@@ -444,7 +466,7 @@ UnsignedInt cpuTreeDiffuse(const Vector3 &normal, const Vector3 &emissive,
 std::unique_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
 	std::vector<CpuTreeInstance> &instances,
 	const std::vector<CpuTreeType> &types, const W3DTreeAtlasSource &atlas,
-	zh::original_runtime::OriginalGpuEdge &edge)
+	zh::original_runtime::OriginalGpuEdge &edge, bool visibleOnly = false)
 {
 	if (!TheGlobalData || !atlas.width() || atlas.slots().size() != types.size() ||
 		static_cast<UnsignedInt>(TheGlobalData->m_timeOfDay) >= TIME_OF_DAY_COUNT)
@@ -454,6 +476,10 @@ std::unique_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
 	std::vector<VertexFormatXYZNDUV1> vertices;
 	std::vector<UnsignedShort> indices;
 	for (CpuTreeInstance &instance : instances) {
+		if (visibleOnly && !instance.visible) {
+			instance.firstVertex = -1;
+			continue;
+		}
 		if (instance.typeIndex < 0 ||
 			static_cast<std::size_t>(instance.typeIndex) >= types.size()) return nullptr;
 		const CpuTreeType &type = types[instance.typeIndex];
@@ -546,6 +572,7 @@ std::unique_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
 	gpu->generation = edge.generation();
 	gpu->vertexCount = vertices.size();
 	gpu->indexCount = indices.size();
+	if (vertices.empty()) return gpu;
 	gpu->vertex = NEW_REF(DX8VertexBufferClass,
 		(DX8_FVF_XYZNDUV1, static_cast<UnsignedShort>(vertices.size()),
 		DX8VertexBufferClass::USAGE_DYNAMIC));
@@ -812,6 +839,200 @@ Int BaseHeightMapRenderObjClass::treeAtlasWidth() const
 	return registry == s_cpuTreeRegistries.end() || !registry->second.atlas
 		? 0 : registry->second.atlas->width();
 }
+Int BaseHeightMapRenderObjClass::treeVisibleCount() const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	return registry == s_cpuTreeRegistries.end() || !registry->second.visibleFrame.ready
+		? 0 : registry->second.visibleFrame.visibleCount;
+}
+Bool BaseHeightMapRenderObjClass::treeIsVisible(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end() && registry->second.visibleFrame.ready)
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.visible;
+	return FALSE;
+}
+Real BaseHeightMapRenderObjClass::treeSortKey(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.sortKey;
+	return 0;
+}
+Int BaseHeightMapRenderObjClass::treeSwayVersion() const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	return registry == s_cpuTreeRegistries.end() ? -1 :
+		registry->second.visibleFrame.breezeVersion;
+}
+Vector3 BaseHeightMapRenderObjClass::treeSwayVector(Int index) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (index < 0 || index >= 10 || registry == s_cpuTreeRegistries.end() ||
+		!registry->second.visibleFrame.ready) return Vector3(0, 0, 0);
+	return registry->second.visibleFrame.sampledSway[index];
+}
+bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
+	const CameraClass *camera, const BreezeInfo &breeze, Bool paused)
+{
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	auto registry = s_cpuTreeRegistries.find(this);
+	const char *fault = std::getenv("ZH_M22_TREE_FRAME_FAIL_AT");
+	if (!edge || !edge->source_buffers_retirable() || !camera ||
+		TheTerrainRenderObject != this || !W3DDisplay::m_3DScene ||
+		Peek_Scene() != W3DDisplay::m_3DScene || !W3DDisplay::m_assetManager ||
+		W3DDisplay::m_assetManager != WW3DAssetManager::Get_Instance() ||
+		!m_map || !m_shroud || m_x != m_map->getDrawWidth() ||
+		m_y != m_map->getDrawHeight() ||
+		m_shroud->getNumShroudCellsX() <= 0 ||
+		m_shroud->getNumShroudCellsY() <= 0 ||
+		registry == s_cpuTreeRegistries.end() || !TheFileSystem ||
+		(registry->second.gpu &&
+			((fault && std::strcmp(fault, "edge-mismatch") == 0) ||
+			 registry->second.gpu->edge != edge ||
+			 registry->second.gpu->generation != edge->generation())) ||
+		!std::isfinite(breeze.m_directionVec.x) ||
+		!std::isfinite(breeze.m_directionVec.y) ||
+		!std::isfinite(breeze.m_lean) ||
+		!std::isfinite(breeze.m_intensity) ||
+		!std::isfinite(breeze.m_randomness) ||
+		breeze.m_randomness < 0 || breeze.m_randomness > 1 ||
+		breeze.m_breezePeriod <= 0) return false;
+	try {
+		CpuTreeVisibleFrame nextFrame = registry->second.visibleFrame;
+		std::vector<CpuTreeInstance> nextInstances = registry->second.instances;
+		std::unique_ptr<W3DTreeAtlasSource> nextAtlas;
+		const W3DTreeAtlasSource *atlas = registry->second.atlas.get();
+		bool atlasReady = atlas &&
+			atlas->slots().size() == registry->second.types.size() &&
+			registry->second.atlasTexture;
+		if (atlasReady) {
+			try { (void)edge->texture_handle(registry->second.atlasTexture); }
+			catch (...) { atlasReady = false; }
+		}
+		if (!atlasReady) {
+			std::vector<AsciiString> names;
+			names.reserve(registry->second.types.size());
+			for (const CpuTreeType &type : registry->second.types)
+				names.push_back(type.textureName);
+			nextAtlas = std::make_unique<W3DTreeAtlasSource>();
+			if (!nextAtlas->prepare(names, TheFileSystem)) return false;
+			atlas = nextAtlas.get();
+		}
+		UnsignedInt clientWords[6];
+		CopyGameClientRandomState(clientWords);
+		bool changed = !nextFrame.ready || !registry->second.gpu ||
+			(nextFrame.visibleCount > 0 && !registry->second.gpu->vertex) ||
+			!atlasReady;
+		bool rngChanged = false;
+		if (!paused && nextFrame.breezeVersion != breeze.m_breezeVersion) {
+			for (Int index = 0; index < 100; ++index) {
+				const Real wave = Cos(index * 2.0f * PI / 101.0f);
+				const Real angle = breeze.m_lean + breeze.m_intensity * wave;
+				const Real sine = Sin(angle);
+				const Real cosine = Cos(angle);
+				nextFrame.swayOffsets[index] = Vector3(
+					breeze.m_directionVec.x * sine,
+					breeze.m_directionVec.y * sine,
+					cosine - 1.0f);
+			}
+			for (CpuTreeInstance &instance : nextInstances)
+				instance.swayType = 1 + PreviewGameClientRandomValue(clientWords, 0, 9);
+			const Real delta = breeze.m_randomness * 0.5f;
+			for (Int index = 0; index < 10; ++index) {
+				nextFrame.step[index] = 100.0f / breeze.m_breezePeriod *
+					PreviewGameClientRandomValueReal(clientWords, 1.0f - delta, 1.0f + delta);
+				if (nextFrame.step[index] < 0) nextFrame.step[index] = 0;
+				nextFrame.phase[index] = 0;
+				nextFrame.factor[index] = PreviewGameClientRandomValueReal(clientWords,
+					1.0f - delta, 1.0f + delta);
+			}
+			nextFrame.breezeVersion = breeze.m_breezeVersion;
+			changed = rngChanged = true;
+		}
+		for (Int index = 0; index < 10; ++index) {
+			if (!paused) {
+				nextFrame.phase[index] += nextFrame.step[index];
+				if (nextFrame.phase[index] > 99.0f) nextFrame.phase[index] -= 99.0f;
+			}
+			if (!std::isfinite(nextFrame.phase[index]) ||
+				!std::isfinite(nextFrame.step[index]) ||
+				!std::isfinite(nextFrame.factor[index])) return false;
+			const Int lower = static_cast<Int>(std::floor(nextFrame.phase[index]));
+			if (lower < 0 || lower + 1 >= 100) return false;
+			const Real upperWeight = nextFrame.phase[index] - lower;
+			const Real lowerWeight = 1.0f - upperWeight;
+			nextFrame.sampledSway[index] =
+				(nextFrame.swayOffsets[lower] * lowerWeight +
+				 nextFrame.swayOffsets[lower + 1] * upperWeight) *
+				nextFrame.factor[index];
+			if (!std::isfinite(nextFrame.sampledSway[index].X) ||
+				!std::isfinite(nextFrame.sampledSway[index].Y) ||
+				!std::isfinite(nextFrame.sampledSway[index].Z)) return false;
+		}
+		const Matrix3D &transform = camera->Get_Transform();
+		const Vector3 look(-transform[0][2], -transform[1][2], -transform[2][2]);
+		if (!std::isfinite(look.X) || !std::isfinite(look.Y) ||
+			!std::isfinite(look.Z)) return false;
+		nextFrame.visibleCount = 0;
+		for (CpuTreeInstance &instance : nextInstances) {
+			const CpuTreeType &type = registry->second.types.at(instance.typeIndex);
+			if (!type.model) return false;
+			const Vector3 &center = type.model->boundsCenter();
+			SphereClass bounds(Vector3(
+				center.X * instance.scale + instance.location.x,
+				center.Y * instance.scale + instance.location.y,
+				center.Z * instance.scale + instance.location.z),
+				type.model->boundsRadius() * instance.scale);
+			if (!std::isfinite(bounds.Center.X) ||
+				!std::isfinite(bounds.Center.Y) ||
+				!std::isfinite(bounds.Center.Z) ||
+				!std::isfinite(bounds.Radius)) return false;
+			const Bool visible = !camera->Cull_Sphere(bounds);
+			if (visible != instance.visible) changed = true;
+			instance.visible = visible;
+			if (visible) {
+				++nextFrame.visibleCount;
+				instance.sortKey = instance.location.x * look.X +
+					instance.location.y * look.Y + instance.location.z * look.Z;
+				if (fault && std::strcmp(fault, "sort-key-nonfinite") == 0)
+					instance.sortKey = std::numeric_limits<Real>::infinity();
+				if (!std::isfinite(instance.sortKey)) return false;
+			}
+		}
+		if (fault && std::strcmp(fault, "cull") == 0) return false;
+		std::unique_ptr<CpuTreeGpuSource> nextGpu;
+		if (changed) {
+			nextGpu = makeCpuTreeGpu(nextInstances, registry->second.types,
+				*atlas, *edge, true);
+			if (!nextGpu) return false;
+		}
+		auto releaseTexture = [](TextureClass *texture) {
+			if (texture) texture->Release_Ref();
+		};
+		std::unique_ptr<TextureClass, decltype(releaseTexture)>
+			nextTexture(NULL, releaseTexture);
+		if (nextAtlas) {
+			nextTexture.reset(makeCpuTreeAtlasTexture(*nextAtlas, *edge));
+			if (!nextTexture) return false;
+		}
+		if (fault && std::strcmp(fault, "publish") == 0) return false;
+		nextFrame.ready = TRUE;
+		registry->second.instances.swap(nextInstances);
+		registry->second.visibleFrame = nextFrame;
+		if (changed) registry->second.gpu.swap(nextGpu);
+		if (nextAtlas) {
+			registry->second.atlas.swap(nextAtlas);
+			TextureClass *oldTexture = registry->second.atlasTexture;
+			registry->second.atlasTexture = nextTexture.release();
+			nextTexture.reset(oldTexture);
+		}
+		if (rngChanged) CommitGameClientRandomState(clientWords);
+		return true;
+	} catch (...) { return false; }
+}
 bool BaseHeightMapRenderObjClass::tryAddTree(DrawableID id, Coord3D location,
 	Real scale, Real angle, Real randomScaleAmount,
 	const W3DTreeDrawModuleData *data)
@@ -914,6 +1135,7 @@ bool BaseHeightMapRenderObjClass::tryAddTree(DrawableID id, Coord3D location,
 		registry.types.swap(types);
 		registry.instances.swap(instances);
 		registry.gpu.swap(nextGpu);
+		registry.visibleFrame.ready = FALSE;
 		if (nextAtlas) {
 			registry.atlas.swap(nextAtlas);
 			TextureClass *oldTexture = registry.atlasTexture;
@@ -978,6 +1200,7 @@ void BaseHeightMapRenderObjClass::removeTree(DrawableID id)
 			REF_PTR_RELEASE(registry->second.atlasTexture);
 		}
 		registry->second.gpu.reset(); // Native geometry becomes dirty.
+		registry->second.visibleFrame.ready = FALSE;
 		if (lastUser) registry->second.atlas.reset();
 		registry->second.types.swap(types);
 		registry->second.instances.swap(instances);
@@ -1007,6 +1230,7 @@ Bool BaseHeightMapRenderObjClass::updateTreePosition(DrawableID id,
 			? calculateTreePartitionBucket(location) : -1;
 		if (instance.partitionBucket >= 0 && nextBucket < 0) return FALSE;
 		registry->second.gpu.reset(); // Native loadTrees rebuilds transformed bytes later.
+		registry->second.visibleFrame.ready = FALSE;
 		instance.location = location;
 		instance.angle = angle;
 		instance.partitionBucket = nextBucket;
