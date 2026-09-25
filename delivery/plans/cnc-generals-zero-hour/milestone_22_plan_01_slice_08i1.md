@@ -76,3 +76,13 @@ The generated canonical owner can construct, update, fail, retry, and destroy
 general multi-tile terrain geometry without drawing, leaking, reading retail
 data, or relaxing later owners. One independently reviewable commit:
 `delivery: M22 08I1 own multi-tile terrain geometry`.
+
+## Result
+
+Complete. The CPU terrain owner now checks and constructs a bounded row-major
+tile grid, retains exact partial-edge extents, populates each fixed-capacity
+backup from global authored coordinates, and uploads only intersected tiles.
+Generated X-only, Y-only, exact-boundary and partial two-axis fixtures prove
+seam payloads, deterministic padding, narrow edge updates, mid-sequence
+failure rollback, retry, teardown and a second device generation. Submission
+remains deliberately unchanged for slice 08I2.

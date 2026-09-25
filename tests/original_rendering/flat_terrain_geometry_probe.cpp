@@ -37,8 +37,16 @@ class TestTerrain final : public HeightMapRenderObjClass
 {
 public:
 	Int tile_count() const { return m_numVertexBufferTiles; }
+	Int tile_columns() const { return m_numVBTilesX; }
+	Int tile_rows() const { return m_numVBTilesY; }
+	Int last_columns() const { return m_numBlockColumnsInLastVB; }
+	Int last_rows() const { return m_numBlockRowsInLastVB; }
 	DX8IndexBufferClass *index() const { return m_indexBuffer; }
-	DX8VertexBufferClass *vertices() const { return m_vertexBufferTiles ? m_vertexBufferTiles[0] : NULL; }
+	DX8VertexBufferClass *vertices(Int tile = 0) const
+	{
+		return m_vertexBufferTiles && tile >= 0 && tile < m_numVertexBufferTiles ?
+			m_vertexBufferTiles[tile] : NULL;
+	}
 	Int extra_count() const { return m_numExtraBlendTiles; }
 	Int extra_capacity() const { return m_extraBlendTilePositionsSize; }
 	Int visible_extra_count() const { return m_numVisibleExtraBlendTiles; }
@@ -46,9 +54,10 @@ public:
 	{
 		return index >= 0 && index < m_numExtraBlendTiles ? m_extraBlendTilePositions[index] : -1;
 	}
-	const VERTEX_FORMAT *backup() const
+	const VERTEX_FORMAT *backup(Int tile = 0) const
 	{
-		return m_vertexBufferBackup ? reinterpret_cast<const VERTEX_FORMAT *>(m_vertexBufferBackup[0]) : NULL;
+		return m_vertexBufferBackup && tile >= 0 && tile < m_numVertexBufferTiles ?
+			reinterpret_cast<const VERTEX_FORMAT *>(m_vertexBufferBackup[tile]) : NULL;
 	}
 };
 }
@@ -98,6 +107,69 @@ extern "C" void zh_probe_flat_terrain_geometry()
 		edge.release_source_buffers();
 		inventory->Release_Ref();
 		inventory = NULL;
+
+		const auto verify_shape = [&](const char *environment, Int columns, Int rows,
+			Int last_columns, Int last_rows) {
+			WorldHeightMap *shape = open_map(environment);
+			require(terrain.initHeightData(shape->getDrawWidth(), shape->getDrawHeight(),
+				shape, NULL, TRUE) == 0 && terrain.getMap() == shape &&
+				terrain.tile_columns() == columns && terrain.tile_rows() == rows &&
+				terrain.tile_count() == columns * rows &&
+				terrain.last_columns() == last_columns && terrain.last_rows() == last_rows &&
+				device.resource_counts().buffers == static_cast<std::size_t>(columns * rows + 1),
+				"original multi-tile terrain partition changed");
+			for (Int tile = 0; tile < terrain.tile_count(); ++tile)
+				require(terrain.vertices(tile) && terrain.backup(tile),
+					"original multi-tile terrain omitted owned storage");
+			require(terrain.freeMapResources() == 0 && !terrain.getMap() && shape->Num_Refs() == 1,
+				"original multi-tile shape teardown retained map");
+			edge.release_source_buffers();
+			require(device.resource_counts().buffers == 0,
+				"original multi-tile shape teardown retained buffers");
+			shape->Release_Ref();
+		};
+		verify_shape("ZH_M22_MULTI_TILE_X_MAP", 2, 1, 2, 7);
+		verify_shape("ZH_M22_MULTI_TILE_Y_MAP", 1, 2, 7, 2);
+		verify_shape("ZH_M22_MULTI_TILE_EXACT_MAP", 2, 2, 32, 32);
+
+		WorldHeightMap *multi = open_map("ZH_M22_MULTI_TILE_TERRAIN_MAP");
+		device.fail_buffer_upload_after(2);
+		bool multi_failure = false;
+		try {
+			terrain.initHeightData(multi->getDrawWidth(), multi->getDrawHeight(), multi, NULL, TRUE);
+		} catch (...) { multi_failure = true; }
+		require(multi_failure && !terrain.getMap() && multi->Num_Refs() == 1 &&
+			terrain.tile_count() == 0 && !terrain.index(),
+			"original multi-tile upload failure published partial ownership");
+		edge.release_source_buffers();
+		require(device.resource_counts().buffers == 0,
+			"original multi-tile upload failure retained buffers");
+		require(terrain.initHeightData(35, 34, multi, NULL, TRUE) == 0 &&
+			terrain.tile_columns() == 2 && terrain.tile_rows() == 2 &&
+			terrain.tile_count() == 4 && terrain.last_columns() == 2 &&
+			terrain.last_rows() == 1 && device.resource_counts().buffers == 5,
+			"original multi-tile terrain retry failed");
+		const VERTEX_FORMAT *tile_x = terrain.backup(1);
+		const VERTEX_FORMAT *tile_y = terrain.backup(2);
+		const VERTEX_FORMAT *tile_xy = terrain.backup(3);
+		require(tile_x && tile_y && tile_xy &&
+			tile_x[0].x == 32 * MAP_XY_FACTOR && tile_x[0].y == 0 &&
+			tile_y[0].x == 0 && tile_y[0].y == 32 * MAP_XY_FACTOR &&
+			tile_xy[0].x == 32 * MAP_XY_FACTOR && tile_xy[0].y == 32 * MAP_XY_FACTOR &&
+			tile_xy[8].x == 0 && tile_xy[8].y == 0,
+			"original multi-tile terrain seam or padding payload changed");
+		multi->setRawHeight(33, 32, 201);
+		require(terrain.updateBlock(33, 32, 34, 33, multi, NULL) == 0 &&
+			terrain.backup(3)[4].z == 201 * MAP_HEIGHT_SCALE &&
+			device.resource_counts().buffers == 5,
+			"original multi-tile bounded update changed ownership");
+		require(terrain.freeMapResources() == 0 && !terrain.getMap() && multi->Num_Refs() == 1,
+			"original multi-tile free retained map");
+		edge.release_source_buffers();
+		require(device.resource_counts().buffers == 0,
+			"original multi-tile edge retained freed buffers");
+		multi->Release_Ref();
+		multi = NULL;
 
 		require(terrain.initHeightData(8, 8, map, NULL, TRUE) == 0 &&
 			terrain.getMap() == map && map->Num_Refs() == 2 && terrain.tile_count() == 1 &&
@@ -342,5 +414,5 @@ extern "C" void zh_probe_flat_terrain_geometry()
 	require(device.resource_counts().total() == 0,
 		"original flat terrain teardown retained resource");
 	TheWritableGlobalData->m_partitionCellSize = saved_partition;
-	std::puts("original flat terrain geometry: cells=7x7 vb=4096 ib=6144 draws=2");
+	std::puts("original flat terrain geometry: cells=7x7 vb=4096 ib=6144 draws=2 multitile=4");
 }
