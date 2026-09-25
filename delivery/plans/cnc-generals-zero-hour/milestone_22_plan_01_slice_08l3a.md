@@ -35,6 +35,13 @@ If a layer was acquired then a later step fails, release that exact layer
 without resetting any pre-existing layer, and remove the new terrain Bridge.
 Preserve source-assigned bridge and tower Object IDs on success.
 
+Admission failure leaves the already positioned input Object with its caller:
+`addLandmarkBridgeToLogic` returns `FALSE` after retiring only its terrain
+Bridge, constructed towers and acquired layer. The direct generated witness
+uses the accepted 08L2 rollback on that caller-owned Object; 08L3B must do
+the same in the map attempt before using the failed `obj` again. This avoids
+a dangling map-loop pointer while preserving a one-owner-at-a-time contract.
+
 No additional authorization applies to generated test data. The retail
 symlink and all content behind it are read-only and never used here.
 
@@ -48,6 +55,9 @@ symlink and all content behind it are read-only and never used here.
   cells. Add a checked, pointer-matched pathfinder rollback entry so the
   current Bridge alone can release its layer. The existing normal
   `TerrainLogic::deleteBridge` calls gameplay destruction and is unsuitable.
+- `Pathfinder::addBridge` iterates through numeric `LAYER_WALL` (15) as its
+  final bridge slot before returning `LAYER_GROUND`; pointer identity, not a
+  blanket wall-layer exclusion, protects actual wall state during rollback.
 - `Bridge(Object*)` currently returns early when TerrainRoadType is missing,
   leaving `m_next` uninitialized. It can also create a partial tower graph
   before failure. `addLandmarkBridgeToLogic` publishes the Bridge before

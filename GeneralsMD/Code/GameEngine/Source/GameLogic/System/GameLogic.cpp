@@ -93,6 +93,8 @@
 #include "GameLogic/Object.h"
 #include "GameLogic/Module/AIUpdate.h"
 #include "GameLogic/Module/BodyModule.h"
+#include "GameLogic/Module/BridgeBehavior.h"
+#include "GameLogic/Module/BridgeTowerBehavior.h"
 #include "GameLogic/Module/CreateModule.h"
 #include "GameLogic/Module/DestroyModule.h"
 #include "GameLogic/Module/OpenContain.h"
@@ -1691,6 +1693,93 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	TheTerrainLogic->newMap( loadingSaveGame );
 	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
 		std::fputs("original generated construction: stage=terrain-logic\n", stderr);
+	if (std::getenv("ZH_M22_BRIDGE_OWNER_PROBE")) {
+		const ThingTemplate *templateOwner = TheThingFactory->findTemplate("OwnedBridge");
+		if (!templateOwner)
+			throw std::runtime_error("generated bridge template missing");
+		Bridge *preserved[14]{};
+		const Bool exhaustLayers = std::getenv("ZH_M22_BRIDGE_EXHAUST_LAYERS") != NULL;
+		if (exhaustLayers) {
+			for (Int i = 0; i < 14; ++i) {
+				Object *existing = TheThingFactory->newObject(
+					templateOwner, ThePlayerList->getNeutralPlayer()->getDefaultTeam());
+				if (!existing)
+					throw std::runtime_error("generated bridge layer prefill object failed");
+				Coord3D position{35.0f, 35.0f, 0.0f};
+				existing->setPosition(&position);
+				if (!TheTerrainLogic->addLandmarkBridgeToLogic(existing))
+					throw std::runtime_error("generated bridge layer prefill failed");
+				preserved[i] = TheTerrainLogic->getFirstBridge();
+				if (preserved[i]->getLayer() != i + 2)
+					throw std::runtime_error("generated bridge layer order changed");
+			}
+			if (TheAI->pathfinder()->rollbackBridgeLayer(
+				preserved[0], preserved[1]->getLayer()))
+				throw std::runtime_error("generated bridge rollback reset another owner");
+		}
+		const Int baseline = TheGameLogic->getObjectCount();
+		const auto drawableCount = []() {
+			Int count = 0;
+			for (Drawable *draw = TheGameClient ? TheGameClient->firstDrawable() : NULL;
+				draw; draw = draw->getNextDrawable()) ++count;
+			return count;
+		};
+		const Int baselineDrawables = drawableCount();
+		Bridge *priorHead = TheTerrainLogic->getFirstBridge();
+		Object *bridgeObject = TheThingFactory->newObject(
+			templateOwner, ThePlayerList->getNeutralPlayer()->getDefaultTeam());
+		if (!bridgeObject)
+			throw std::runtime_error("generated bridge object construction failed");
+		Coord3D bridgePosition{35.0f, 35.0f, 0.0f};
+		bridgeObject->setPosition(&bridgePosition);
+		Bool admitted = TheTerrainLogic->addLandmarkBridgeToLogic(bridgeObject);
+		if (admitted) {
+			Bridge *bridge = TheTerrainLogic->getFirstBridge();
+			BridgeInfo info;
+			bridge->getBridgeInfo(&info);
+			Int towers = 0;
+			Int links = 0;
+			BridgeBehaviorInterface *bridgeInterface =
+				BridgeBehavior::getBridgeBehaviorInterfaceFromObject(bridgeObject);
+			for (Int i = 0; i < BRIDGE_MAX_TOWERS; ++i) {
+				ObjectID towerID = info.towerObjectID[i];
+				if (towerID == INVALID_ID) continue;
+				++towers;
+				Object *tower = TheGameLogic->findObjectByID(towerID);
+				BridgeTowerBehaviorInterface *towerInterface = tower ?
+					BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject(tower) : NULL;
+				links += bridgeInterface && towerInterface &&
+					bridgeInterface->getTowerID((BridgeTowerType)i) == towerID &&
+					towerInterface->getBridgeID() == bridgeObject->getID();
+			}
+			std::fprintf(stderr, "original bridge owner: admitted=1 layer=%d towers=%d links=%d objects=%d bridge-id=%u tower-first=%u tower-last=%u\n",
+				(Int)bridge->getLayer(), towers, links, TheGameLogic->getObjectCount() - baseline,
+				bridgeObject->getID(), info.towerObjectID[0], info.towerObjectID[BRIDGE_MAX_TOWERS - 1]);
+		} else {
+			BridgeBehaviorInterface *bridgeInterface =
+				BridgeBehavior::getBridgeBehaviorInterfaceFromObject(bridgeObject);
+			Int residualLinks = 0;
+			if (bridgeInterface)
+				for (Int i = 0; i < BRIDGE_MAX_TOWERS; ++i)
+					residualLinks += bridgeInterface->getTowerID((BridgeTowerType)i) != INVALID_ID;
+			bridgeObject->friend_rollbackConstruction();
+			bridgeObject->friend_deleteInstance();
+			std::fprintf(stderr, "original bridge owner: admitted=0 residual=%d drawables=%d list=%d links=%d\n",
+				TheGameLogic->getObjectCount() - baseline,
+				drawableCount() - baselineDrawables,
+				TheTerrainLogic->getFirstBridge() != priorHead ? 1 : 0, residualLinks);
+			if (exhaustLayers) {
+				Int intact = 0;
+				for (Bridge *bridge = TheTerrainLogic->getFirstBridge(); bridge;
+					bridge = bridge->getNext()) {
+					for (Int i = 0; i < 14; ++i)
+						intact += bridge == preserved[i] && bridge->getLayer() == i + 2;
+				}
+				std::fprintf(stderr, "original bridge owner exhaustion: preexisting=14 intact=%d\n", intact);
+			}
+		}
+		throw std::runtime_error("original bridge owner boundary complete");
+	}
 
 	// update the loadscreen 
 	updateLoadProgress(LOAD_PROGRESS_POST_TERRAIN_LOGIC_NEW_MAP);

@@ -3985,6 +3985,15 @@ PathfindLayerEnum Pathfinder::addBridge(Bridge *theBridge)
 	return LAYER_GROUND;
 }
 
+Bool Pathfinder::rollbackBridgeLayer(Bridge *bridge, PathfindLayerEnum layer)
+{
+	if (!bridge || layer <= LAYER_GROUND || layer > LAYER_WALL ||
+		!m_layers[layer].ownsBridge(bridge))
+		return FALSE;
+	m_layers[layer].reset();
+	return TRUE;
+}
+
 /** 
  * Updates an object's layer, making sure the object is actually on the bridge first. 
  */

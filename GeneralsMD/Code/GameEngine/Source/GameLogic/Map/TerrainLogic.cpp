@@ -59,6 +59,8 @@
 
 #include "WWMath/plane.h"
 #include "WWMath/tri.h"
+#include <cstdlib>
+#include <stdexcept>
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -128,24 +130,17 @@ BridgeInfo::BridgeInfo()
 /** Create a tower object for the bridge of the specified type (and therefore position) */
 // ------------------------------------------------------------------------------------------------
 Object *Bridge::createTower( Coord3D *worldPos,
-														 BridgeTowerType towerType, 
-														 const ThingTemplate *towerTemplate, 
-														 Object *bridge )
+												 BridgeTowerType towerType,
+												 const ThingTemplate *towerTemplate,
+												 Object *bridge )
 {
+	if (!worldPos || !towerTemplate || !bridge || !TheThingFactory)
+		throw std::runtime_error("bridge tower provider missing");
+	BridgeBehaviorInterface *bridgeInterface = BridgeBehavior::getBridgeBehaviorInterfaceFromObject(bridge);
+	if (!bridgeInterface || !bridge->getBodyModule())
+		throw std::runtime_error("bridge behavior or body interface missing");
 
-	// sanity
-	if( towerTemplate == NULL || bridge == NULL )
-	{
-
-		DEBUG_CRASH(( "Bridge::createTower(): Invalid params\n" ));
-		return NULL;
-
-	}  // end if
-
-	// create the tower object
-	Object *tower = TheThingFactory->newObject( towerTemplate, bridge->getTeam() );
-
-	// location information
+	// Resolve orientation before allocating an Object.
 	Real angle = 0;
 	switch( towerType )
 	{
@@ -172,48 +167,33 @@ Object *Bridge::createTower( Coord3D *worldPos,
 
 		// --------------------------------------------------------------------------------------------
 		default:
-			DEBUG_CRASH(( "Bridge::createTower - Unknown bridge tower type '%d'\n", towerType )); 
-			return NULL;
+			throw std::runtime_error("bridge tower position invalid");
 
 	}  // end switch
-
-	// set the position and angle
-	tower->setPosition( worldPos );
-	tower->setOrientation( angle );
-
-	// tie it to the bridge
-	BridgeBehaviorInterface *bridgeInterface = BridgeBehavior::getBridgeBehaviorInterfaceFromObject( bridge );
-	DEBUG_ASSERTCRASH( bridgeInterface != NULL, ("Bridge::createTower - no 'BridgeBehaviorInterface' found\n") );
-	if( bridgeInterface )
-		bridgeInterface->setTower( towerType, tower );
-
-	// tie the bridge to us
-	BridgeTowerBehaviorInterface *bridgeTowerInterface = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject( tower );
-	DEBUG_ASSERTCRASH( bridgeTowerInterface != NULL, ("Bridge::createTower - no 'BridgeTowerBehaviorInterface' found\n") );
-	if( bridgeTowerInterface )
-	{
-
-		// set bridge object
-		bridgeTowerInterface->setBridge( bridge );
-
-		// save our position type
-		bridgeTowerInterface->setTowerType( towerType );
-
-	}  // end if
-
-	// if the bridge is indestructible, so is this tower
-	BodyModuleInterface *bridgeBody = bridge->getBodyModule();
-	if( bridgeBody->isIndestructible() )
-	{
+	Object *tower = TheThingFactory->newObject(towerTemplate, bridge->getTeam());
+	if (!tower)
+		throw std::runtime_error("bridge tower construction failed");
+	BridgeTowerBehaviorInterface *towerInterface = NULL;
+	try {
+		tower->setPosition(worldPos);
+		tower->setOrientation(angle);
+		towerInterface = BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject(tower);
 		BodyModuleInterface *towerBody = tower->getBodyModule();
-
-		towerBody->setIndestructible( TRUE );
-
-	}  // end if
-
-	// return the newly created tower
-	return tower;
-
+		if (!towerInterface || !towerBody)
+			throw std::runtime_error("bridge tower behavior or body interface missing");
+		if (bridge->getBodyModule()->isIndestructible())
+			towerBody->setIndestructible(TRUE);
+		towerInterface->setBridge(bridge);
+		towerInterface->setTowerType(towerType);
+		bridgeInterface->setTower(towerType, tower);
+		return tower;
+	} catch (...) {
+		bridgeInterface->setTower(towerType, NULL);
+		if (towerInterface) towerInterface->setBridge(NULL);
+		tower->friend_rollbackConstruction();
+		tower->friend_deleteInstance();
+		throw;
+	}
 }  // end createTower
 
 //-------------------------------------------------------------------------------------------------
@@ -330,8 +310,11 @@ m_bridgeInfo(theInfo)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Bridge::Bridge(Object *bridgeObj) 
+Bridge::Bridge(Object *bridgeObj) : m_next(NULL), m_layer(LAYER_GROUND)
 {
+	if (!bridgeObj || !bridgeObj->getTemplate() || !TheTerrainRoads || !TheThingFactory ||
+		bridgeObj->getGeometryInfo().getGeomType() != GEOMETRY_BOX)
+		throw std::runtime_error("bridge geometry or road provider missing");
 
 	// save the template name
 	m_templateName = bridgeObj->getTemplate()->getName();
@@ -386,8 +369,15 @@ Bridge::Bridge(Object *bridgeObj)
 	AsciiString bridgeTemplateName = bridgeObj->getTemplate()->getName();
 	TerrainRoadType *bridgeTemplate = TheTerrainRoads->findBridge( bridgeTemplateName );
 	if( bridgeTemplate == NULL ) {
-		DEBUG_LOG(( "*** Bridge Template Not Found '%s'.", bridgeTemplateName ));
-		return;
+		throw std::runtime_error("bridge road type missing");
+	}
+	const ThingTemplate *towerTemplates[BRIDGE_MAX_TOWERS]{};
+	for (Int i = 0; i < BRIDGE_MAX_TOWERS; ++i) {
+		AsciiString towerName = bridgeTemplate->getTowerObjectName((BridgeTowerType)i);
+		if (towerName.isEmpty()) continue;
+		towerTemplates[i] = TheThingFactory->findTemplate(towerName);
+		if (!towerTemplates[i])
+			throw std::runtime_error("configured bridge tower template missing");
 	}
 
 	Coord2D v;
@@ -402,44 +392,41 @@ Bridge::Bridge(Object *bridgeObj)
 	towerPos[ BRIDGE_TOWER_TO_LEFT ] = m_bridgeInfo.toLeft;
 	towerPos[ BRIDGE_TOWER_TO_RIGHT ] = m_bridgeInfo.toRight;
 
-	Real offset = PATHFIND_CELL_SIZE_F/2.0f;
 	// create objects targetable objects for the 4 tower pieces
-	const ThingTemplate *towerTemplate;
-	BridgeTowerType type;
-	Object *tower;	
-	for( Int i = 0; i < BRIDGE_MAX_TOWERS; ++i )
-	{
-
-		type = (BridgeTowerType)i;
-		towerTemplate = TheThingFactory->findTemplate( bridgeTemplate->getTowerObjectName( type ) );
-		if (towerTemplate) {
-			offset = towerTemplate->getTemplateGeometryInfo().getMajorRadius();
+	try {
+		for (Int i = 0; i < BRIDGE_MAX_TOWERS; ++i) {
+			const ThingTemplate *towerTemplate = towerTemplates[i];
+			if (!towerTemplate) continue; // An empty configured name is optional.
+			BridgeTowerType type = (BridgeTowerType)i;
+			Real offset = towerTemplate->getTemplateGeometryInfo().getMajorRadius();
+			if (offset <= 0) offset = PATHFIND_CELL_SIZE_F / 2.0f;
+			Coord3D towerPosition = towerPos[type];
+			switch (type) {
+				case BRIDGE_TOWER_FROM_LEFT:
+				case BRIDGE_TOWER_TO_LEFT:
+					towerPosition.x += v.x * offset;
+					towerPosition.y += v.y * offset;
+					break;
+				case BRIDGE_TOWER_FROM_RIGHT:
+				case BRIDGE_TOWER_TO_RIGHT:
+					towerPosition.x -= v.x * offset;
+					towerPosition.y -= v.y * offset;
+					break;
+				default:
+					throw std::runtime_error("bridge tower position invalid");
+			}
+			Object *tower = createTower(&towerPosition, type, towerTemplate, bridgeObj);
+			m_bridgeInfo.towerObjectID[i] = tower->getID();
+			if (std::getenv("ZH_M22_BRIDGE_OWNER_PROBE")) {
+				const char *fault = std::getenv("ZH_M22_BRIDGE_FAIL_AFTER_TOWER");
+				if (fault && std::atoi(fault) == i + 1)
+					throw std::runtime_error("forced bridge tower publication failure");
+			}
 		}
-		Coord3D pos = towerPos[type];
-		switch( type )
-		{
-			case BRIDGE_TOWER_FROM_LEFT:
-			case BRIDGE_TOWER_TO_LEFT:
-				pos.x += v.x*offset;
-				pos.y += v.y*offset;
-				break;
-			case BRIDGE_TOWER_FROM_RIGHT:
-			case BRIDGE_TOWER_TO_RIGHT:
-				pos.x -= v.x*offset;
-				pos.y -= v.y*offset;
-				break;
-
-		}  // end switch
-		tower = createTower( &pos, type, towerTemplate, bridgeObj );
-		if( tower )
-		{
-			// store the tower object ID
-			m_bridgeInfo.towerObjectID[ i ] = tower->getID();
-		}
-
-	}  // end for, i
-
-	m_next = NULL;
+	} catch (...) {
+		rollbackConstructedTowers(bridgeObj);
+		throw;
+	}
 }  // end Bridge
 
 //-------------------------------------------------------------------------------------------------
@@ -448,6 +435,26 @@ Bridge::~Bridge()
 {
 
 }  // end ~Bridge
+
+void Bridge::rollbackConstructedTowers(Object *bridgeObj)
+{
+	BridgeBehaviorInterface *bridgeInterface = bridgeObj ?
+		BridgeBehavior::getBridgeBehaviorInterfaceFromObject(bridgeObj) : NULL;
+	for (Int i = BRIDGE_MAX_TOWERS - 1; i >= 0; --i) {
+		ObjectID towerID = m_bridgeInfo.towerObjectID[i];
+		if (towerID == INVALID_ID) continue;
+		Object *tower = TheGameLogic ? TheGameLogic->findObjectByID(towerID) : NULL;
+		if (bridgeInterface) bridgeInterface->setTower((BridgeTowerType)i, NULL);
+		if (tower) {
+			BridgeTowerBehaviorInterface *towerInterface =
+				BridgeTowerBehavior::getBridgeTowerBehaviorInterfaceFromObject(tower);
+			if (towerInterface) towerInterface->setBridge(NULL);
+			tower->friend_rollbackConstruction();
+			tower->friend_deleteInstance();
+		}
+		m_bridgeInfo.towerObjectID[i] = INVALID_ID;
+	}
+}
 
 
 //-------------------------------------------------------------------------------------------------
@@ -1549,15 +1556,32 @@ void TerrainLogic::addBridgeToLogic(BridgeInfo *pInfo, Dict *props, AsciiString 
 //-------------------------------------------------------------------------------------------------
 /** Adds a bridge's info get height function for logical terrain */
 //-------------------------------------------------------------------------------------------------
-void TerrainLogic::addLandmarkBridgeToLogic(Object *bridgeObj)
+Bool TerrainLogic::addLandmarkBridgeToLogic(Object *bridgeObj)
 {
-
-	Bridge *pBridge = newInstance(Bridge)(bridgeObj);
-	pBridge->setNext(m_bridgeListHead);
-	m_bridgeListHead = pBridge;
-	PathfindLayerEnum layer = TheAI->pathfinder()->addBridge(pBridge);
-	pBridge->setLayer(layer);
-
+	if (!bridgeObj || !TheAI || !TheAI->pathfinder()) return FALSE;
+	Bridge *bridge = NULL;
+	PathfindLayerEnum layer = LAYER_GROUND;
+	try {
+		bridge = newInstance(Bridge)(bridgeObj);
+		layer = TheAI->pathfinder()->addBridge(bridge);
+		if (layer == LAYER_GROUND)
+			throw std::runtime_error("bridge pathfinder layer unavailable");
+		bridge->setLayer(layer);
+		if (std::getenv("ZH_M22_BRIDGE_OWNER_PROBE") &&
+			std::getenv("ZH_M22_BRIDGE_FAIL_AFTER_LAYER"))
+			throw std::runtime_error("forced bridge layer publication failure");
+		bridge->setNext(m_bridgeListHead);
+		m_bridgeListHead = bridge;
+		return TRUE;
+	} catch (...) {
+		if (bridge) {
+			if (layer != LAYER_GROUND)
+				TheAI->pathfinder()->rollbackBridgeLayer(bridge, layer);
+			bridge->rollbackConstructedTowers(bridgeObj);
+			bridge->deleteInstance();
+		}
+		return FALSE;
+	}
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -183,6 +183,7 @@ public:
 	void setNext(Bridge *pNext) {m_next = pNext; }
 	Object *createTower( Coord3D *worldPos, BridgeTowerType towerPos, 
 											 const ThingTemplate *towerTemplate, Object *bridge );
+	void rollbackConstructedTowers(Object *bridgeObj);
 	
 public:
 	/// return the bridge template name
@@ -292,7 +293,7 @@ public:
 	virtual Drawable *pickBridge(const Vector3 &from, const Vector3 &to, Vector3 *pos);
 
 	virtual void addBridgeToLogic(BridgeInfo *pInfo, Dict *props, AsciiString bridgeTemplateName); ///< Adds a bridge's logical info.
-	virtual void addLandmarkBridgeToLogic(Object *bridgeObj); ///< Adds a bridge's logical info.
+	virtual Bool addLandmarkBridgeToLogic(Object *bridgeObj); ///< Adds a bridge's logical info atomically.
 	virtual void deleteBridge( Bridge *bridge );	///< remove a bridge
 
 	virtual void updateBridgeDamageStates(void); ///< Updates bridge's damage info.

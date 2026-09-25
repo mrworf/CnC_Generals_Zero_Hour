@@ -400,6 +400,7 @@ public:
 	void classifyWallCells(ObjectID *wallPieces, Int numPieces);
 	Bool setDestroyed(Bool destroyed);
 	Bool isUnused(void); // True if it doesn't contain a bridge.
+	Bool ownsBridge(const Bridge *bridge) const { return bridge && m_bridge == bridge; }
 	Bool isDestroyed(void) {return m_destroyed;} // True if it has been destroyed.
 	PathfindCell *getCell(Int x, Int y);
 	Int getZone(void) {return m_zone;}
@@ -722,6 +723,7 @@ public:
 	Bool goalPosition(Object *obj, Coord3D *pos); // Returns the goal position on the grid.
 
 	PathfindLayerEnum addBridge(Bridge *theBridge); // Adds a bridge layer, and returns the layer id.
+	Bool rollbackBridgeLayer(Bridge *bridge, PathfindLayerEnum layer); // Releases only the matching construction owner.
 
 	void addWallPiece(Object *wallPiece); // Adds a wall piece.
 	void removeWallPiece(Object *wallPiece);  // Removes a wall piece.
