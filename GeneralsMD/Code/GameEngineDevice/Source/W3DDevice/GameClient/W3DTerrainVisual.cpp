@@ -241,6 +241,19 @@ Bool W3DTerrainVisual::hasResetDetachedActiveWater() const
 		!m_isWaterGridRenderingEnabled;
 }
 
+Bool W3DTerrainVisual::hasResetDetachedDisabledWater() const
+{
+	return s_emptyTerrainVisual == this && TheTerrainVisual == this &&
+		zh::original_runtime::OriginalGpuEdge::active() &&
+		dynamic_cast<W3DDisplay *>(TheDisplay) && W3DDisplay::m_3DScene &&
+		m_terrainRenderObject && TheTerrainRenderObject == m_terrainRenderObject &&
+		TheHeightMap == m_terrainRenderObject && !m_terrainRenderObject->getMap() &&
+		m_terrainRenderObject->Peek_Scene() == NULL && !m_logicHeightMap &&
+		m_waterRenderObject && m_waterRenderObject->Peek_Scene() == NULL &&
+		m_waterRenderObject->hasEmptyWaterOwnerState(W3DDisplay::m_3DScene) &&
+		!m_isWaterGridRenderingEnabled;
+}
+
 void W3DTerrainVisual::update()
 {
 	if (s_emptyTerrainVisual != this || TheTerrainVisual != this)
@@ -261,8 +274,10 @@ Bool W3DTerrainVisual::load(AsciiString filename)
 		m_logicHeightMap || m_terrainRenderObject->getMap() || m_terrainRenderObject->Peek_Scene() ||
 		filename.isEmpty())
 		throw OriginalW3DDeviceUnavailable("original map-loaded terrain visual unavailable");
-	const Bool reattachResetWater = hasResetDetachedActiveWater();
-	if (m_waterRenderObject && !m_waterRenderObject->Peek_Scene() && !reattachResetWater)
+	const Bool reattachActiveWater = hasResetDetachedActiveWater();
+	const Bool reattachDisabledWater = hasResetDetachedDisabledWater();
+	if (m_waterRenderObject && !m_waterRenderObject->Peek_Scene() &&
+		!reattachActiveWater && !reattachDisabledWater)
 		throw OriginalW3DDeviceUnavailable("original construction water owner unavailable");
 
 	if (TerrainVisual::load(filename) == FALSE)
@@ -289,9 +304,11 @@ Bool W3DTerrainVisual::load(AsciiString filename)
 		// source buffers only after the map has published its authored texture.
 		TheTerrainTracksRenderObjClassSystem->ReAcquireResources();
 		W3DDisplay::m_3DScene->Add_Render_Object(m_terrainRenderObject);
-		if (reattachResetWater) {
+		if (reattachActiveWater || reattachDisabledWater) {
 			if (!m_waterRenderObject || m_waterRenderObject != TheWaterRenderObj ||
-				m_waterRenderObject->Peek_Scene() || m_waterRenderObject->hasPendingGpuResources())
+				m_waterRenderObject->Peek_Scene() ||
+				(reattachActiveWater && m_waterRenderObject->hasPendingGpuResources()) ||
+				(reattachDisabledWater && !m_waterRenderObject->hasEmptyWaterOwnerState(W3DDisplay::m_3DScene)))
 				throw OriginalW3DDeviceUnavailable("original construction water owner unavailable");
 			W3DDisplay::m_3DScene->Add_Render_Object(m_waterRenderObject);
 			constructionWaterAttached = TRUE;

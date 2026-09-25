@@ -20,7 +20,9 @@ resource readiness, update, frame and reattachment unchanged.
 
 On a successful generated map load, attach terrain first and the same
 disabled-water owner second, without creating water GPU resources or a water
-draw command. On missing/malformed map, failed terrain binding, scene
+draw command. The native no-river map override call is a checked no-op for
+that exact attached disabled-water owner; detached, foreign or malformed
+owners still reject. On missing/malformed map, failed terrain binding, scene
 attachment or later setup, remove only links created by this attempt and
 return to the exact detached, mapless retry state. Reject foreign/missing or
 already-attached water, pending active-water resources, malformed disabled

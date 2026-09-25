@@ -295,6 +295,81 @@ extern "C" void zh_probe_terrain_water()
 		require(!TheWaterRenderObj && !TheTerrainTracksRenderObjClassSystem && !TheW3DShadowManager && !TheSmudgeManager,
 			"original detached active water retained source providers");
 	}
+	// Display reset also detaches the source no-water owner. It intentionally
+	// retains no GPU buffers and a pending sentinel, unlike active water.
+	TheWritableGlobalData->m_useWaterPlane=FALSE; TheWritableGlobalData->m_useCloudPlane=FALSE;
+	TheWritableGlobalData->m_waterExtentX=0; TheWritableGlobalData->m_waterExtentY=0;
+	TheWritableGlobalData->m_waterType=WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT;
+	for (Int generation=0; generation!=2; ++generation) {
+		zh::original_runtime::OriginalGpuEdge edge(device); W3DDisplay display; display.init();
+		Display *saved_display=TheDisplay; TerrainVisual *saved_visual=TheTerrainVisual;
+		TheDisplay=&display;
+		{
+			W3DTerrainVisual visual; TheTerrainVisual=&visual;
+			try {
+				visual.init(); WaterRenderObjClass *water=TheWaterRenderObj;
+				require(water && water->hasEmptyWaterOwnerState(W3DDisplay::m_3DScene) &&
+					water->hasPendingGpuResources() && water->Peek_Scene()==W3DDisplay::m_3DScene,
+					"original disabled water owner bootstrap changed");
+				display.reset(); visual.reset();
+				require(visual.hasResetDetachedDisabledWater() && !visual.hasResetDetachedActiveWater() &&
+					!water->Peek_Scene(), "original disabled water reset-detached state missing");
+				WaterRenderObjClass *published=TheWaterRenderObj; TheWaterRenderObj=NULL;
+				require(rejected([&]{visual.load(AsciiString(map));}) &&
+					!TheHeightMap->getMap() && !water->Peek_Scene(),
+					"original disabled water accepted removed provider");
+				TheWaterRenderObj=published;
+				TheWritableGlobalData->m_waterExtentX=1;
+				require(!visual.hasResetDetachedDisabledWater() &&
+					rejected([&]{visual.load(AsciiString(map));}) && !TheHeightMap->getMap(),
+					"original disabled water accepted malformed extent");
+				TheWritableGlobalData->m_waterExtentX=0;
+				TheWritableGlobalData->m_useCloudPlane=TRUE;
+				require(!visual.hasResetDetachedDisabledWater() &&
+					rejected([&]{visual.load(AsciiString(map));}) && !TheHeightMap->getMap(),
+					"original disabled water accepted cloud mutation");
+				TheWritableGlobalData->m_useCloudPlane=FALSE;
+				const auto baseline=device.resource_counts();
+				if (generation==0) {
+					device.fail_next_buffer_create();
+					require(rejected([&]{visual.load(AsciiString(map));}) &&
+						visual.hasResetDetachedDisabledWater() && !water->Peek_Scene() &&
+						device.resource_counts()==baseline,
+						"original disabled water failed map retained partial owner");
+				}
+				require(visual.load(AsciiString(map)) && TheHeightMap->getMap() &&
+					TheTerrainRenderObject->Peek_Scene()==W3DDisplay::m_3DScene &&
+					water->Peek_Scene()==W3DDisplay::m_3DScene &&
+					water->hasEmptyWaterOwnerState(W3DDisplay::m_3DScene) &&
+					!visual.hasResetDetachedDisabledWater(),
+					"original disabled water map attachment lost source order or identity");
+				const std::string before_override=device.snapshot();
+				water->updateMapOverrides();
+				require(device.snapshot()==before_override && water->hasPendingGpuResources(),
+					"original disabled water map override acquired resources");
+				published=TheWaterRenderObj; TheWaterRenderObj=NULL;
+				require(rejected([&]{water->updateMapOverrides();}),
+					"original disabled water override accepted removed provider");
+				TheWaterRenderObj=published;
+				W3DDisplay::m_3DScene->Remove_Render_Object(water);
+				require(rejected([&]{water->updateMapOverrides();}),
+					"original disabled water override accepted detached scene");
+				W3DDisplay::m_3DScene->Add_Render_Object(water);
+				TheWritableGlobalData->m_waterExtentX=1;
+				require(rejected([&]{water->updateMapOverrides();}),
+					"original disabled water override accepted malformed configuration");
+				TheWritableGlobalData->m_waterExtentX=0;
+				water->updateMapOverrides();
+				require(device.snapshot()==before_override,
+					"original disabled water override mutated Recording resources");
+				TheTerrainVisual=saved_visual;
+			} catch (...) { TheTerrainVisual=saved_visual; TheDisplay=saved_display; throw; }
+		}
+		TheDisplay=saved_display; edge.release_source_buffers();
+		require(!TheWaterRenderObj && !TheTerrainTracksRenderObjClassSystem &&
+			device.resource_counts().total()==0,
+			"original disabled water map teardown retained owners or resources");
+	}
 	// The aggregate retail route is the sole cloud-only exception: without its
 	// selector a zero-extent cloud owner stays rejected, while with it the
 	// source owner is a fixed internal 1x1 lifecycle object (not a water draw).
@@ -336,5 +411,5 @@ extern "C" void zh_probe_terrain_water()
 	TheWritableGlobalData->m_partitionCellSize=saved_partition; TheWritableGlobalData->m_maxTerrainTracks=saved_tracks; TheWritableGlobalData->m_makeTrackMarks=saved_marks;
 	TheWritableGlobalData->m_useWaterPlane=saved_water; TheWritableGlobalData->m_useCloudPlane=saved_cloud; TheWritableGlobalData->m_waterExtentX=saved_x; TheWritableGlobalData->m_waterExtentY=saved_y; TheWritableGlobalData->m_waterType=saved_type;
 	require(device.resource_counts().total()==0,"original water teardown retained Recording resources");
-	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 scalar-transaction=1 active-reset=1 pre-map-update=1 pre-map-draw=1 reattach=1 ordering=1 retry=3 tracks=1 siblings=0 grid-query=1 override=1 generations=9 resources=0");
+	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 scalar-transaction=1 active-reset=1 pre-map-update=1 pre-map-draw=1 reattach=1 disabled-map=1 ordering=1 retry=3 tracks=1 siblings=0 grid-query=1 override=1 generations=11 resources=0");
 }

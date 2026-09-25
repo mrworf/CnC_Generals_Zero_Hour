@@ -155,6 +155,7 @@ public:
 
 #if defined(ZH_WW3D_CPU_ONLY)
 	Bool hasResetDetachedActiveWater() const;
+	Bool hasResetDetachedDisabledWater() const;
 	Bool hasPublishedVolumeBufferOwner() const;
 #endif
 

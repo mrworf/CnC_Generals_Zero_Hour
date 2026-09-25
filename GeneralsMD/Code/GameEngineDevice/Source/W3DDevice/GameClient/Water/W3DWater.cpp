@@ -72,6 +72,19 @@ static bool isRetailCloudOwner(WaterRenderObjClass *owner)
 		TheWaterRenderObj == owner;
 }
 
+Bool WaterRenderObjClass::hasEmptyWaterOwnerState(SceneClass *scene) const
+{
+	return scene && scene == W3DDisplay::m_3DScene &&
+		s_emptyWaterOwner == this && TheWaterRenderObj == this &&
+		m_parentScene == scene && TheGlobalData &&
+		!TheGlobalData->m_useWaterPlane && !TheGlobalData->m_useCloudPlane &&
+		TheGlobalData->m_waterExtentX == 0 && TheGlobalData->m_waterExtentY == 0 &&
+		TheGlobalData->m_waterType == WATER_TYPE_0_TRANSLUCENT &&
+		m_dx == 0 && m_dy == 0 && m_waterType == WATER_TYPE_0_TRANSLUCENT &&
+		!m_useCloudLayer && !m_doWaterGrid && !m_riverTexture &&
+		m_cpuResourcesPending && !m_cpuVertexBuffer && !m_indexBuffer;
+}
+
 static void requireFiniteCloudScalar(Real value)
 {
 	if (!std::isfinite(value))
@@ -254,6 +267,13 @@ void WaterRenderObjClass::updateMapOverrides(void)
 {
 	// The native override only updates an already-owned river texture. The
 	// bounded CPU plane has no river texture, so its optional branch is empty.
+	if (TheGlobalData && !TheGlobalData->m_useWaterPlane) {
+		requireEmptyWaterOwner(this);
+		if (!hasEmptyWaterOwnerState(W3DDisplay::m_3DScene) ||
+			Peek_Scene() != W3DDisplay::m_3DScene)
+			throw OriginalW3DDeviceUnavailable("original no-water map override unavailable");
+		return;
+	}
 	requireBoundedWaterOwner(this);
 	if (!TheGlobalData || !TheGlobalData->m_useWaterPlane ||
 		m_parentScene != W3DDisplay::m_3DScene || s_emptyWaterOwner != this ||

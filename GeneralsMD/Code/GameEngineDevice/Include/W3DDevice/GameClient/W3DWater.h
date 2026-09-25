@@ -129,6 +129,7 @@ public:
 	void ReAcquireResources(void);  ///< Reacquire all resources after device reset.
 #if defined(ZH_WW3D_CPU_ONLY)
 	Bool hasPendingGpuResources(void) const { return m_cpuResourcesPending; }
+	Bool hasEmptyWaterOwnerState(SceneClass *scene) const;
 #endif
 	Real getWaterHeight(Real x, Real y);	///<return water height at given point - for use by WB.
 	void setGridHeightClamps(Real minz, Real maxz);	///<set min/max height values alllowed in grid
