@@ -21,3 +21,13 @@ Generated tests cover multi-tile base and edge classes, ordering/orientation,
 mips, RLE packets, two-generation teardown, and missing/malformed/oversized or
 overlapping inputs. Run the full proportional M22 gates and commit once as
 `delivery: M22 08H2 own authored terrain tile sets`.
+
+## Result
+
+Complete. Base and edge texture classes now decode bounded square tile sets
+from 24/32-bit uncompressed or RLE true-color TGA, honor both source-origin
+flags, generate every tile mip and publish only after the complete class
+succeeds. Generated tests cover five base tiles and one edge tile plus missing,
+mis-sized, truncated and malformed-packet rollback/re-entry. Atlas placement
+remains slice 08H3. See the
+[08H2 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08h2.md).

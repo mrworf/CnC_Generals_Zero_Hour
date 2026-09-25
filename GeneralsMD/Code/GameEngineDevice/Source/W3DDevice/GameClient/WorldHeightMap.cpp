@@ -42,6 +42,7 @@
 #include "OriginalW3DDeviceUnavailable.h"
 #include <cmath>
 #include <cstring>
+#include <vector>
 
 TileData *WorldHeightMap::m_alphaTiles[NUM_ALPHA_TILES]{};
 
@@ -323,21 +324,73 @@ void WorldHeightMap::readTexClass(TXTextureClass *texture_class, TileData **tile
 		Short x_origin, y_origin, width, height;
 		UnsignedByte depth, flags;
 	} header{};
+	std::vector<TileData *> decoded;
 	try {
-		if (file->read(&header, sizeof(header)) != sizeof(header) || header.id_length != 0 ||
-			header.color_map_type != 0 || header.image_type != 2 || header.width != TILE_PIXEL_EXTENT ||
-			header.height != TILE_PIXEL_EXTENT || header.depth != 32 || texture_class->firstTile != 0 ||
-			texture_class->numTiles != 1 || texture_class->width != 1)
+		if (file->read(&header, sizeof(header)) != sizeof(header) || header.color_map_type != 0 ||
+			(header.image_type != 2 && header.image_type != 10) ||
+			(header.depth != 24 && header.depth != 32) || header.width <= 0 || header.height <= 0 ||
+			texture_class->width <= 0 || texture_class->width > 10 ||
+			texture_class->numTiles != texture_class->width * texture_class->width ||
+			header.width != texture_class->width * TILE_PIXEL_EXTENT ||
+			header.height != texture_class->width * TILE_PIXEL_EXTENT ||
+			texture_class->firstTile < 0 ||
+			texture_class->firstTile > NUM_SOURCE_TILES - texture_class->numTiles ||
+			(header.flags & 0xc0) != 0)
 			throw OriginalW3DDeviceUnavailable("original terrain source texture format rejected");
-		TileData *tile = NEW_REF(TileData, ());
-		if (file->read(tile->getDataPtr(), TileData::dataLen()) != TileData::dataLen()) {
-			tile->Release_Ref();
-			throw OriginalW3DDeviceUnavailable("original terrain source texture truncated");
+		if (header.id_length) {
+			std::vector<UnsignedByte> id(header.id_length);
+			if (file->read(id.data(), static_cast<Int>(id.size())) != static_cast<Int>(id.size()))
+				throw OriginalW3DDeviceUnavailable("original terrain source texture truncated");
 		}
-		tile->updateMips();
-		tiles[0] = tile;
+		decoded.resize(static_cast<std::size_t>(texture_class->numTiles), NULL);
+		for (TileData *&tile : decoded) tile = NEW_REF(TileData, ());
+		const Int bytes_per_pixel = header.depth / 8;
+		Int packet_remaining = 0;
+		Bool packet_repeats = FALSE;
+		UnsignedByte packet_pixel[4]{};
+		for (Int stream_y = 0; stream_y < header.height; ++stream_y) {
+			for (Int stream_x = 0; stream_x < header.width; ++stream_x) {
+				UnsignedByte pixel[4]{};
+				if (header.image_type == 10) {
+					if (packet_remaining == 0) {
+						UnsignedByte packet = 0;
+						if (file->read(&packet, 1) != 1)
+							throw OriginalW3DDeviceUnavailable("original terrain source texture truncated");
+						packet_remaining = (packet & 0x7f) + 1;
+						packet_repeats = (packet & 0x80) != 0;
+						if (packet_repeats && file->read(packet_pixel, bytes_per_pixel) != bytes_per_pixel)
+							throw OriginalW3DDeviceUnavailable("original terrain source texture truncated");
+					}
+					if (packet_repeats) std::memcpy(pixel, packet_pixel, bytes_per_pixel);
+					else if (file->read(pixel, bytes_per_pixel) != bytes_per_pixel)
+						throw OriginalW3DDeviceUnavailable("original terrain source texture truncated");
+					--packet_remaining;
+				} else if (file->read(pixel, bytes_per_pixel) != bytes_per_pixel) {
+					throw OriginalW3DDeviceUnavailable("original terrain source texture truncated");
+				}
+				const Int x = (header.flags & 0x10) ? header.width - stream_x - 1 : stream_x;
+				const Int y = (header.flags & 0x20) ? header.height - stream_y - 1 : stream_y;
+				const Int tile_x = x / TILE_PIXEL_EXTENT;
+				const Int tile_y = y / TILE_PIXEL_EXTENT;
+				const Int tile_index = tile_y * texture_class->width + tile_x;
+				const Int pixel_index = (y % TILE_PIXEL_EXTENT) * TILE_PIXEL_EXTENT +
+					(x % TILE_PIXEL_EXTENT);
+				UnsignedByte *destination = decoded[tile_index]->getDataPtr() +
+					pixel_index * TILE_BYTES_PER_PIXEL;
+				destination[0] = pixel[0]; destination[1] = pixel[1]; destination[2] = pixel[2];
+				destination[3] = bytes_per_pixel == 4 ? pixel[3] : 255;
+			}
+		}
+		if (packet_remaining != 0)
+			throw OriginalW3DDeviceUnavailable("original terrain source texture packet rejected");
+		for (TileData *tile : decoded) tile->updateMips();
+		for (Int i = 0; i < texture_class->numTiles; ++i) {
+			tiles[texture_class->firstTile + i] = decoded[static_cast<std::size_t>(i)];
+			decoded[static_cast<std::size_t>(i)] = NULL;
+		}
 		file->close();
 	} catch (...) {
+		for (TileData *tile : decoded) REF_PTR_RELEASE(tile);
 		file->close();
 		throw;
 	}
