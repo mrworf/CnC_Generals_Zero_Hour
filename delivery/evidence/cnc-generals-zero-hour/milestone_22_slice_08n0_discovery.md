@@ -22,6 +22,10 @@ also accept a foreign render object or stale Drawable.
 receives its `m_drawable=this` assignment only after draw-module creation;
 safe early user-data binding therefore requires moving that assignment
 before the constructor invokes module creation, without widening publication.
+The fail-closed closure is to defer initial shadow admission until the
+`onObjectCreated` callback sees the published module and scene-linked model,
+and to move replacement admission after new scene publication. The existing
+shadow-manager identity guard need not be weakened.
 
 The two owners are separable. `BoundedVolumeShadow` construction publishes a
 manager entry and stores the render-object pointer but creates no geometry;

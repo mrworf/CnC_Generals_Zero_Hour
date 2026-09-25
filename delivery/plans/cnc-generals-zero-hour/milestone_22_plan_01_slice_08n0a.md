@@ -1,4 +1,4 @@
-# M22 plan 01 slice 08N0A: in-flight modeled volume-shadow admission
+# M22 plan 01 slice 08N0A: constructor-order modeled volume-shadow admission
 
 ## Goal and boundary
 
@@ -6,23 +6,20 @@ After accepted 08M0, a generated modeled Drawable with an enabled volume
 shadow may complete its original constructor and publish one exact scene-
 linked render object and one bounded shadow manager entry. Preserve the
 ordinary Drawable/ThingFactory atomic publication contract. This slice owns
-only source ordering, in-flight identity and rollback; it does not claim
-volume geometry or a rendered shadow frame.
+only source ordering, identity and rollback; it does not claim volume
+geometry or a rendered shadow frame.
 
 Audit `W3DModelDraw::setModelState` from render creation/validation through
-shadow request, scene add, user-data binding and module publication. Its
-initial constructor call occurs before the module pointer is stored, so a
-published-module lookup cannot authorize that call. Admit the in-flight
-volume request only after exact scene registration and DrawableInfo binding,
-with the explicit `Drawable*` registered under the current GameClient, the
-render object's user-data identifying that same Drawable, the accepted
-volume-capable template/manager and no duplicate caster. Preserve the
-existing published-module guard for later `allocateShadows` calls without an
-explicit Drawable. Reject foreign/stale draw, scene, model, manager and
-missing/null shadow info before mutation; do not use a selector-only bypass.
-`DrawableInfo` currently gains its back-pointer only after draw-module
-construction; move that identity assignment before module creation so the
-in-flight user-data check never reads an unbound/null owner.
+scene add, user-data binding and module publication. Its initial constructor
+call occurs before the module pointer is stored, so the existing published-
+module shadow guard correctly rejects an immediate request. Defer that
+request to the source `onObjectCreated` callback, after the module array and
+render scene link are published; state replacement requests its shadow only
+after the new render object joins the scene. Move `DrawableInfo`'s back-
+pointer assignment before module creation, so scene user-data never points
+to an unbound identity. Keep `W3DShadowManager`'s existing published-model
+guard intact, including its foreign/stale model and duplicate negatives;
+do not use an in-flight token, selector bypass or unconditional acceptance.
 
 On any failure before the W3DModelDraw constructor can publish its module
 pointer, release the newly created shadow, detach the render object, release

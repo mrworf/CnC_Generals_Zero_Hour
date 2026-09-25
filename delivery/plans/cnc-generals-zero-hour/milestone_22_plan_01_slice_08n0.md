@@ -1,7 +1,7 @@
 # M22 plan 01 slice 08N0: modeled volume-shadow aggregate
 
 After accepted 08N0A and 08N0B, revalidate the full generated modeled
-Drawable-to-volume-shadow lifecycle: in-flight constructor admission,
+Drawable-to-volume-shadow lifecycle: constructor-order deferred admission,
 scene/user-data publication, exact caster identity, deferred geometry
 readiness, source stencil draw order, replacement, reverse removal,
 injected failure rollback and deterministic process retry. Run focused

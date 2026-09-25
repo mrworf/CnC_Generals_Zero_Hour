@@ -83,9 +83,9 @@ After accepted 08M0, the same corrected continuation crossed six of seven
 fixed post-map phases through observer, then stopped on an authored modeled
 object at the fixed in-flight volume-shadow owner category. The source
 `W3DModelDraw` constructor requests its shadow before scene/user-data and
-module publication, while the bounded manager currently requires a fully
-published model. [08N0A](milestone_22_plan_01_slice_08n0a.md) owns exact
-in-flight scene/admission and rollback; [08N0B](milestone_22_plan_01_slice_08n0b.md)
+module publication, while the bounded manager correctly requires a fully
+published model. [08N0A](milestone_22_plan_01_slice_08n0a.md) owns deferred
+constructor-order scene/admission and rollback; [08N0B](milestone_22_plan_01_slice_08n0b.md)
 owns later volume-geometry readiness; [08N0](milestone_22_plan_01_slice_08n0.md)
 revalidates their generated aggregate before this retail slice resumes.
 No active bib producer was reached, so 08M1 is not planned. All trial scene
