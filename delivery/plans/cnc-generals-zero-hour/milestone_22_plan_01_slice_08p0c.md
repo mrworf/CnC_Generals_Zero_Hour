@@ -1,34 +1,30 @@
-# M22 plan 01 slice 08P0C: physical tree provider and frame
+# M22 plan 01 slice 08P0C: physical tree provider aggregate
 
 ## Goal and boundary
 
-After accepted 08P0B, complete the original `W3DTreeDraw` physical provider
-through the exact terrain-owned tree buffer. Review its source call graph
-end-to-end: factory create proc and module data; first transform; `addTree`,
-move, remove and reset; cull, sway, push-aside/topple/sink and sort; atlas
-binding, shroud texture, lighting, depth/fog/pass state, tree triangles and
-optional projected shadow queue/flush. Preserve source decisions and frame
-order on the public Recording GPU edge. The source `doDrawModule` is empty:
-trees draw from the terrain pass, so do not invent a per-Drawable model draw.
+After accepted 08P0B, compose four independently owned children in order:
+08P0C1 tree frame-state/cull/sway/topple; 08P0C2 shadow-disabled terrain
+tree draw with exact atlas, shroud and lighting pass; 08P0C3 optional
+projected tree-decal resource and queue/flush; then 08P0C4 exact full-instance
+`W3DTreeDraw` factory publication. The source `doDrawModule` is empty: trees
+draw from the terrain pass. Preserve native frame ordering, not an invented
+per-Drawable draw. M20/M21 schema-only factory and the other eight unavailable
+draw providers remain unchanged.
 
-Only once generated frame and rollback contracts pass may the full-instance
-`W3DModuleFactory` register the exact physical `W3DTreeDraw` create proc.
-Keep the M20/M21 schema-only factory unchanged. Require loaded matching
-terrain/map, valid asset/atlas/buffers, exact Drawable ID and test-only
-Recording provider before publication. Failure at creation, admission,
-resource upload, frame submission, shadow queue or replacement must unwind
-tree/module/terrain/GPU ownership in reverse; no stale partition, drawable or
-queued shadow; clean retry must succeed without resetting the world. Retain
-unavailable-provider rejection for the other eight schema-only classes.
+Revalidate the complete composed owner: matching map/terrain and device
+generation, source asset/atlas/buffers, exact Drawable ID, frame update and
+visibility, optional projected decal, shrouded tree triangles, move/removal,
+failure rollback and clean retry. Do not count a child as physical provider
+admission; that occurs only in C4. Frame failures must leave no stale queued
+shadow, Recording frame state, registry/terrain entry or Drawable/module owner.
 
 ## Validation and commit
 
-Generated tree fixtures cover real source mesh and optional shadow variants,
-first transform, repeated/moved/removed trees, source sway/topple state,
-multiple types, visibility/shroud, exact Recording frame families/order and
-two generations. Inject every owned boundary; assert immediate pre-teardown
-residuals, reverse unwind, provider removal and retry. Defaults and other
-schema-only draw providers remain closed. Run six complete builds/suites,
-focused strict host LSan, physical Vulkan 2/2, serial LAN 4/4 each six,
-ledger and diff checks on final source. Commit one slice:
-`delivery: M22 08P0C record physical tree frames`.
+Generated tree fixtures cover two generations, real source mesh, optional
+shadow variants, first/repeated/moved/removed trees, sway/topple, multiple
+types, visibility/shroud and exact Recording frame families/order. Inject
+child-owned failure boundaries, assert immediate pre-teardown residuals,
+owner removal and retry without world reset. Reuse C4 final-source six
+complete builds/nonretail suites, strict host LSan, physical Vulkan controls,
+serial LAN 4/4 all six, ledger and diff checks. Commit the aggregate alone:
+`delivery: M22 08P0C revalidate physical tree provider`.
