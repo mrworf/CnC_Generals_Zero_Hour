@@ -256,6 +256,11 @@ public:
 	Real treePushAside(DrawableID id) const;
 	Real treePushDelta(DrawableID id) const;
 	ObjectID treePushSource(DrawableID id) const;
+	Int treeToppleState(DrawableID id) const;
+	Real treeToppleAngle(DrawableID id) const;
+	Real treeToppleVelocity(DrawableID id) const;
+	UnsignedInt treeToppleStartEvents(DrawableID id) const;
+	UnsignedInt treeBounceEvents(DrawableID id) const;
 #endif
 	void removeAllTrees(void);
 	void removeTree(DrawableID id);

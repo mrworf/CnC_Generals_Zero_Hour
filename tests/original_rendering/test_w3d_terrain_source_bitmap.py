@@ -79,7 +79,7 @@ def authored_source_tree(root: Path, fixture, kind: str) -> Path:
 
 
 def source_tree(root: Path, fixture, kind: str, tree_textures: bool = False,
-                immobile_enemy: bool = False) -> Path:
+                immobile_enemy: bool = False, crusher_logic: bool = False) -> Path:
     source = root / "readonly-input"
     prepare_owned_source(source, fixture)
     if immobile_enemy:
@@ -88,6 +88,12 @@ def source_tree(root: Path, fixture, kind: str, tree_textures: bool = False,
         old = "Object EnemyFixture\n KindOf = SELECTABLE STRUCTURE MP_COUNT_FOR_VICTORY\n"
         assert text.count(old) == 1
         objects.write_text(text.replace(old, "Object EnemyFixture\n KindOf = SELECTABLE STRUCTURE IMMOBILE MP_COUNT_FOR_VICTORY\n"))
+    if crusher_logic:
+        objects = source / "Data/INI/Default/Object.ini"
+        text = objects.read_text()
+        old = "Object LogicFixture\n KindOf = SELECTABLE VEHICLE\n"
+        assert text.count(old) == 1
+        objects.write_text(text.replace(old, "Object LogicFixture\n CrusherLevel = 2\n KindOf = SELECTABLE VEHICLE\n"))
     terrain_ini = ("Terrain DefaultTerrain\n Texture = Flat.tga\n Class = NONE\nEnd\n"
                    "Terrain Flat\n Texture = Flat.tga\n Class = NONE\nEnd\n")
     if kind == "duplicate":

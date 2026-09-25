@@ -3,12 +3,15 @@
 #include "Common/GlobalData.h"
 #include "Common/FileSystem.h"
 #include "Common/Geometry.h"
+#include "Common/Player.h"
+#include "Common/PlayerList.h"
 #include "Common/MapReaderWriterInfo.h"
 #include "Common/ThingTemplate.h"
 #include "GameClient/ClientRandomValue.h"
 #include "GameClient/GameClient.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/PartitionManager.h"
 #include "GameLogic/ScriptEngine.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
@@ -31,6 +34,7 @@
 #include <cstring>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -59,7 +63,70 @@ public:
 	{
 		m_propBuffer = enabled ? reinterpret_cast<W3DPropBuffer *>(this) : NULL;
 	}
+	W3DShroud *takeShroudForTest()
+	{
+		W3DShroud *shroud = m_shroud;
+		m_shroud = NULL;
+		return shroud;
+	}
+	void restoreShroudForTest(W3DShroud *shroud) { m_shroud = shroud; }
 	Int updates = 0;
+};
+
+// The generated logical partition has more cells than its tiny visual map.
+// Preserve real PartitionManager shroud transitions while isolating the
+// unrelated display-cell notification surface during this focused witness.
+class ShroudNotificationSink final : public Display
+{
+public:
+	struct Notice { Int x, y; CellShroudStatus status; };
+	std::vector<Notice> notices;
+	void doSmartAssetPurgeAndPreload(const char *) override {}
+#if defined(_DEBUG) || defined(_INTERNAL)
+	void dumpAssetUsage(const char *) override {}
+	void dumpModelAssets(const char *) override {}
+#endif
+	VideoBuffer *createVideoBuffer() override { return NULL; }
+	void setClipRegion(IRegion2D *) override {}
+	Bool isClippingEnabled() override { return FALSE; }
+	void enableClipping(Bool) override {}
+	void setTimeOfDay(TimeOfDay) override {}
+	void createLightPulse(const Coord3D *, const RGBColor *, Real, Real,
+		UnsignedInt, UnsignedInt) override {}
+	void drawLine(Int, Int, Int, Int, Real, UnsignedInt) override {}
+	void drawLine(Int, Int, Int, Int, Real, UnsignedInt, UnsignedInt) override {}
+	void drawOpenRect(Int, Int, Int, Int, Real, UnsignedInt) override {}
+	void drawFillRect(Int, Int, Int, Int, UnsignedInt) override {}
+	void drawRectClock(Int, Int, Int, Int, Int, UnsignedInt) override {}
+	void drawRemainingRectClock(Int, Int, Int, Int, Int, UnsignedInt) override {}
+	void drawImage(const Image *, Int, Int, Int, Int, Color, DrawImageMode) override {}
+	void drawVideoBuffer(VideoBuffer *, Int, Int, Int, Int) override {}
+	void setShroudLevel(Int x, Int y, CellShroudStatus status) override
+	{
+		notices.push_back({x, y, status});
+	}
+	void clearShroud() override {}
+	void setBorderShroudLevel(UnsignedByte) override {}
+	void preloadModelAssets(AsciiString) override {}
+	void preloadTextureAssets(AsciiString) override {}
+	void takeScreenShot() override {}
+	void toggleMovieCapture() override {}
+	void toggleLetterBox() override {}
+	void enableLetterBox(Bool) override {}
+	Real getAverageFPS() override { return 0; }
+	Int getLastFrameDrawCalls() override { return 0; }
+};
+
+class DisplayOverride final
+{
+public:
+	explicit DisplayOverride(Display *replacement) : m_saved(TheDisplay)
+	{
+		TheDisplay = replacement;
+	}
+	~DisplayOverride() { TheDisplay = m_saved; }
+private:
+	Display *m_saved;
 };
 
 class RegistrationScene final : public SimpleSceneClass
@@ -726,6 +793,297 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		terrain.removeTree(pushTree);
 		require(device.resource_counts() == baseline,
 			"original tree invalid-push removal retained resources");
+		require(pushUnit->getCrusherLevel() > 1 && ThePartitionManager &&
+			ThePlayerList && ThePlayerList->getLocalPlayer(),
+			"original tree crusher fixture missing generated gameplay owner");
+		W3DTreeDrawModuleData toppleData;
+		toppleData.m_modelName = "TEST.PUSHTREE";
+		toppleData.m_textureName = "Tree0.tga";
+		toppleData.m_doTopple = TRUE;
+		toppleData.m_killWhenToppled = FALSE; // Sink belongs to B2B.
+		const DrawableID toppleTree = static_cast<DrawableID>(6022);
+		Coord3D toppleUnitPosition = originalPushPosition;
+		toppleUnitPosition.x += 3;
+		Coord3D toppleTreePosition = toppleUnitPosition;
+		toppleTreePosition.x += 1;
+		require(terrain.tryAddTree(toppleTree, toppleTreePosition, 1, 0, 0,
+			&toppleData) && terrain.treePartitionBucket(toppleTree) >= 0 &&
+			terrain.treeToppleState(toppleTree) == 0,
+			"original tree crusher candidate fixture admission failed");
+		frameCamera.Set_Position(Vector3(toppleTreePosition.x,
+			toppleTreePosition.y, 50));
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			terrain.treeVisibleCount() == 1,
+			"original tree crusher fixture initial visible frame failed");
+		const auto toppleReadyResources = device.resource_counts();
+		const auto *toppleReadyVertex = terrain.peekTreeVertexSource();
+		require(toppleReadyVertex, "original tree crusher fixture vertex owner missing");
+		const auto *toppleBaseVertices = reinterpret_cast<const VertexFormatXYZNDUV1 *>(
+			toppleReadyVertex->Get_CPU_Vertex_Buffer());
+		const Real toppleBaseX = toppleBaseVertices[2].x;
+		const Real toppleBaseZ = toppleBaseVertices[2].z;
+		PartitionManager *savedPartitionManager = ThePartitionManager;
+		ThePartitionManager = NULL;
+		const bool missingTopplePartition = rejected([&] { terrain.unitMoved(pushUnit); });
+		ThePartitionManager = savedPartitionManager;
+		PlayerList *savedPlayerList = ThePlayerList;
+		ThePlayerList = NULL;
+		const bool missingTopplePlayer = rejected([&] { terrain.unitMoved(pushUnit); });
+		ThePlayerList = savedPlayerList;
+		W3DShroud *savedTreeShroud = terrain.takeShroudForTest();
+		const bool missingToppleShroud = rejected([&] { terrain.unitMoved(pushUnit); });
+		terrain.restoreShroudForTest(savedTreeShroud);
+		terrain.unitMoved(immobileUnit);
+		require(missingTopplePartition && missingTopplePlayer &&
+			missingToppleShroud &&
+			terrain.treeToppleState(toppleTree) == 0 &&
+			terrain.treeToppleStartEvents(toppleTree) == 0 &&
+			terrain.peekTreeVertexSource() == toppleReadyVertex &&
+			device.resource_counts() == toppleReadyResources,
+			"original tree crusher missing provider changed accepted owner");
+		pushUnit->setPosition(&toppleUnitPosition);
+		require(terrain.treeToppleState(toppleTree) == 1 &&
+			terrain.treeToppleStartEvents(toppleTree) == 1 &&
+			terrain.treeToppleAngle(toppleTree) == 0 &&
+			terrain.peekTreeVertexSource() == toppleReadyVertex,
+			"original tree crusher public movement did not stage falling state");
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			terrain.treeToppleAngle(toppleTree) == 0,
+			"original tree paused crusher frame advanced angle");
+		setenv("ZH_M22_TREE_TOPPLE_FAIL_AT", "state", 1);
+		require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeToppleAngle(toppleTree) == 0 &&
+			device.resource_counts() == toppleReadyResources,
+			"original tree crusher injected state fault consumed angle/resources");
+		unsetenv("ZH_M22_TREE_TOPPLE_FAIL_AT");
+		setenv("ZH_M22_TREE_RESOURCE_FAIL_AT", "geometry", 1);
+		require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeToppleAngle(toppleTree) == 0 &&
+			device.resource_counts() == toppleReadyResources,
+			"original tree crusher geometry fault consumed angle/resources");
+		unsetenv("ZH_M22_TREE_RESOURCE_FAIL_AT");
+		device.fail_next_buffer_upload();
+		require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeToppleAngle(toppleTree) == 0 &&
+			terrain.peekTreeVertexSource() == toppleReadyVertex &&
+			device.resource_counts() == toppleReadyResources,
+			"original tree crusher Recording fault consumed accepted frame");
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeToppleState(toppleTree) == 1 &&
+			std::fabs(terrain.treeToppleAngle(toppleTree) - 0.1f) < 0.0001f,
+			"original tree crusher retry lost minimum-speed angular step");
+		const auto *toppleVertices = reinterpret_cast<const VertexFormatXYZNDUV1 *>(
+			terrain.peekTreeVertexSource()->Get_CPU_Vertex_Buffer());
+		require(std::fabs(toppleVertices[2].x -
+			(toppleBaseX + std::sin(0.1f))) < 0.001f &&
+			std::fabs(toppleVertices[2].z -
+			(toppleBaseZ + std::cos(0.1f) - 1.0f)) < 0.001f,
+			"original tree crusher transformed raised vertex differs from native matrix");
+		frameCamera.Set_Position(Vector3(1000, 1000, 50));
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeVisibleCount() == 0 && !terrain.treeIsVisible(toppleTree) &&
+			!terrain.peekTreeVertexSource() && !terrain.peekTreeIndexSource() &&
+			std::fabs(terrain.treeToppleAngle(toppleTree) - 0.205f) < 0.0001f &&
+			std::fabs(terrain.treeToppleVelocity(toppleTree) - 0.11f) < 0.0001f,
+			"original tree hidden frame lost accelerated topple state or retained geometry");
+		frameCamera.Set_Position(Vector3(toppleTreePosition.x,
+			toppleTreePosition.y, 50));
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			terrain.treeVisibleCount() == 1 && terrain.treeIsVisible(toppleTree) &&
+			terrain.peekTreeVertexSource() &&
+			std::fabs(terrain.treeToppleAngle(toppleTree) - 0.205f) < 0.0001f,
+			"original tree hidden-frame reentry lost topple identity or paused angle");
+		Player *topplePlayer = ThePlayerList->getLocalPlayer();
+		const Int topplePlayerIndex = topplePlayer->getPlayerIndex();
+		const PlayerMaskType topplePlayerMask = topplePlayer->getPlayerMask();
+		const Real toppleRevealRadius = ThePartitionManager->getCellSize() * 2;
+		const Int shroudCellsX = ThePartitionManager->getCellCountX();
+		const Int shroudCellsY = ThePartitionManager->getCellCountY();
+		std::vector<CellShroudStatus> originalShroudCells;
+		originalShroudCells.reserve(shroudCellsX * shroudCellsY);
+		for (Int y = 0; y != shroudCellsY; ++y)
+			for (Int x = 0; x != shroudCellsX; ++x)
+				originalShroudCells.push_back(ThePartitionManager->getShroudStatusForPlayer(
+					topplePlayerIndex, x, y));
+		ShroudNotificationSink shroudNotices;
+		std::size_t firstRevealCount = 0;
+		{
+			DisplayOverride notificationOnly(&shroudNotices);
+			ThePartitionManager->doShroudReveal(toppleTreePosition.x,
+				toppleTreePosition.y, toppleRevealRadius, topplePlayerMask);
+			firstRevealCount = shroudNotices.notices.size();
+			ThePartitionManager->undoShroudReveal(toppleTreePosition.x,
+				toppleTreePosition.y, toppleRevealRadius, topplePlayerMask);
+		}
+		bool matchedShroudNotices = firstRevealCount > 0 &&
+			shroudNotices.notices.size() == firstRevealCount * 2;
+		for (std::size_t index = 0; matchedShroudNotices && index < firstRevealCount;
+			++index) {
+			const auto &reveal = shroudNotices.notices[index];
+			const auto &undo = shroudNotices.notices[index + firstRevealCount];
+			matchedShroudNotices = reveal.status == CELLSHROUD_CLEAR &&
+				undo.status == CELLSHROUD_FOGGED &&
+				reveal.x == undo.x && reveal.y == undo.y;
+		}
+		require(matchedShroudNotices && TheDisplay == display.get(),
+			"original tree crusher shroud adapter lost reveal/undo notifications");
+		require(ThePartitionManager->getPropShroudStatusForPlayer(topplePlayerIndex,
+			&toppleTreePosition) == OBJECTSHROUD_FOGGED,
+			"original tree crusher fixture failed to establish real fog status");
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeToppleState(toppleTree) == 2 &&
+			std::fabs(terrain.treeToppleAngle(toppleTree) - 0.205f) < 0.0001f &&
+			terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeToppleState(toppleTree) == 2,
+			"original tree crusher fogged frames advanced angular state");
+		{
+			DisplayOverride notificationOnly(&shroudNotices);
+			ThePartitionManager->doShroudReveal(toppleTreePosition.x,
+				toppleTreePosition.y, toppleRevealRadius, topplePlayerMask);
+		}
+		bool secondRevealMatched = TheDisplay == display.get() &&
+			shroudNotices.notices.size() == firstRevealCount * 3;
+		for (std::size_t index = 0; secondRevealMatched && index < firstRevealCount;
+			++index) {
+			const auto &first = shroudNotices.notices[index];
+			const auto &second = shroudNotices.notices[index + firstRevealCount * 2];
+			secondRevealMatched = second.status == CELLSHROUD_CLEAR &&
+				second.x == first.x && second.y == first.y;
+		}
+		require(secondRevealMatched,
+			"original tree crusher reveal notification/owner restoration changed");
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeToppleState(toppleTree) == 4 &&
+			terrain.treeToppleVelocity(toppleTree) == 0,
+			"original tree crusher reveal did not enter source down branch");
+		{
+			DisplayOverride notificationOnly(&shroudNotices);
+			ThePartitionManager->undoShroudReveal(toppleTreePosition.x,
+				toppleTreePosition.y, toppleRevealRadius, topplePlayerMask);
+		}
+		bool finalUndoMatched = TheDisplay == display.get() &&
+			shroudNotices.notices.size() == firstRevealCount * 4;
+		for (std::size_t index = 0; finalUndoMatched && index < firstRevealCount;
+			++index) {
+			const auto &first = shroudNotices.notices[index];
+			const auto &undo = shroudNotices.notices[index + firstRevealCount * 3];
+			finalUndoMatched = undo.status == CELLSHROUD_FOGGED &&
+				undo.x == first.x && undo.y == first.y;
+		}
+		require(finalUndoMatched,
+			"original tree crusher final undo notification/owner restoration changed");
+		{
+			DisplayOverride notificationOnly(&shroudNotices);
+			ThePartitionManager->doShroudCover(toppleTreePosition.x,
+				toppleTreePosition.y, toppleRevealRadius, topplePlayerMask);
+			ThePartitionManager->undoShroudCover(toppleTreePosition.x,
+				toppleTreePosition.y, toppleRevealRadius, topplePlayerMask);
+		}
+		bool shroudRestored = TheDisplay == display.get() &&
+			shroudNotices.notices.size() == firstRevealCount * 5;
+		for (std::size_t index = 0; shroudRestored && index < firstRevealCount;
+			++index) {
+			const auto &first = shroudNotices.notices[index];
+			const auto &cover = shroudNotices.notices[index + firstRevealCount * 4];
+			shroudRestored = cover.status == CELLSHROUD_SHROUDED &&
+				cover.x == first.x && cover.y == first.y;
+		}
+		for (Int y = 0; shroudRestored && y != shroudCellsY; ++y)
+			for (Int x = 0; shroudRestored && x != shroudCellsX; ++x)
+				shroudRestored = ThePartitionManager->getShroudStatusForPlayer(
+					topplePlayerIndex, x, y) == originalShroudCells[y * shroudCellsX + x];
+		require(shroudRestored,
+			"original tree crusher shroud fixture baseline was not restored");
+		terrain.removeTree(toppleTree);
+		pushUnit->setPosition(&originalPushPosition);
+		require(terrain.treeToppleState(toppleTree) == -1 &&
+			terrain.treeToppleStartEvents(toppleTree) == 0 &&
+			terrain.treeBounceEvents(toppleTree) == 0 &&
+			device.resource_counts() == baseline,
+			"original tree crusher removal retained resources");
+		// A full-speed fall bounces; a zero-percent fall enters DOWN without
+		// an effect intent. Both use the shipping movement callback and leave
+		// the accepted registry/Recording owner reusable after removal.
+		toppleData.m_minimumToppleSpeed = 1.0f;
+		toppleData.m_initialVelocityPercent = 1.0f;
+		toppleData.m_initialAccelPercent = 0.0f;
+		for (const bool shouldBounce : {true, false}) {
+			toppleData.m_bounceVelocityPercent = shouldBounce ? 0.5f : 0.0f;
+			require(terrain.tryAddTree(toppleTree, toppleTreePosition, 1, 0, 0,
+				&toppleData) && terrain.treeToppleState(toppleTree) == 0 &&
+				terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE),
+				"original tree bounce fixture admission failed");
+			CopyGameClientRandomState(clientBefore);
+			pushUnit->setPosition(&toppleUnitPosition);
+			CopyGameClientRandomState(clientAfter);
+			require(std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0,
+				"original tree crusher initiation consumed GameClient random state");
+			require(terrain.treeToppleState(toppleTree) == 1 &&
+				terrain.treeToppleStartEvents(toppleTree) == 1 &&
+				terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE),
+				"original tree bounce movement or frame admission failed");
+			const Real angleAtLimit = terrain.treeToppleAngle(toppleTree);
+			require(angleAtLimit > 1.4f && angleAtLimit < 1.6f &&
+				terrain.treeToppleState(toppleTree) == (shouldBounce ? 1 : 4) &&
+				terrain.treeBounceEvents(toppleTree) == (shouldBounce ? 1U : 0U) &&
+				(shouldBounce ? terrain.treeToppleVelocity(toppleTree) < 0 :
+					terrain.treeToppleVelocity(toppleTree) == 0),
+				"original tree bounce/down state or event intent changed");
+			if (shouldBounce)
+				require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+					terrain.treeToppleAngle(toppleTree) < angleAtLimit &&
+					terrain.treeBounceEvents(toppleTree) == 1,
+					"original tree bounce did not reverse the angular step");
+			terrain.removeTree(toppleTree);
+			pushUnit->setPosition(&originalPushPosition);
+			require(terrain.treeToppleState(toppleTree) == -1 &&
+				terrain.treeToppleStartEvents(toppleTree) == 0 &&
+				terrain.treeBounceEvents(toppleTree) == 0 &&
+				device.resource_counts() == baseline,
+				"original tree bounce removal retained state or resources");
+		}
+		pushUnit->setPosition(&toppleUnitPosition);
+		toppleData.m_minimumToppleSpeed = 0.0f;
+		require(terrain.tryAddTree(toppleTree, toppleTreePosition, 1, 0, 0,
+			&toppleData), "original tree invalid-parameter fixture admission failed");
+		const auto *invalidToppleVertex = terrain.peekTreeVertexSource();
+		const auto invalidToppleResources = device.resource_counts();
+		CopyGameClientRandomState(clientBefore);
+		require(rejected([&] { terrain.unitMoved(pushUnit); }) &&
+			terrain.treeToppleState(toppleTree) == 0 &&
+			terrain.treeToppleStartEvents(toppleTree) == 0 &&
+			terrain.peekTreeVertexSource() == invalidToppleVertex &&
+			device.resource_counts() == invalidToppleResources,
+			"original tree invalid topple parameters changed accepted owner");
+		CopyGameClientRandomState(clientAfter);
+		require(std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0,
+			"original tree invalid topple parameters consumed random state");
+		toppleData.m_minimumToppleSpeed = 1.0f;
+		toppleData.m_initialVelocityPercent =
+			std::numeric_limits<Real>::quiet_NaN();
+		require(rejected([&] { terrain.unitMoved(pushUnit); }) &&
+			terrain.treeToppleState(toppleTree) == 0 &&
+			terrain.treeToppleStartEvents(toppleTree) == 0 &&
+			terrain.peekTreeVertexSource() == invalidToppleVertex &&
+			device.resource_counts() == invalidToppleResources,
+			"original tree nonfinite topple velocity changed accepted owner");
+		toppleData.m_initialVelocityPercent = 1.0f;
+		terrain.removeTree(toppleTree);
+		require(terrain.tryAddTree(toppleTree, toppleUnitPosition, 1, 0, 0,
+			&toppleData), "original tree degenerate-direction fixture admission failed");
+		const auto *degenerateVertex = terrain.peekTreeVertexSource();
+		const auto degenerateResources = device.resource_counts();
+		require(rejected([&] { terrain.unitMoved(pushUnit); }) &&
+			terrain.treeToppleState(toppleTree) == 0 &&
+			terrain.treeToppleStartEvents(toppleTree) == 0 &&
+			terrain.peekTreeVertexSource() == degenerateVertex &&
+			device.resource_counts() == degenerateResources,
+			"original tree zero-length topple direction changed accepted owner");
+		terrain.removeTree(toppleTree);
+		pushUnit->setPosition(&originalPushPosition);
+		require(device.resource_counts() == baseline,
+			"original tree negative-topple removal retained resources");
 		terrain.notifyShroudChanged();
 		terrain.notifyShroudChanged();
 		require(device.resource_counts() == baseline,
@@ -839,10 +1197,23 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		W3DDisplay::m_3DScene->Add_Render_Object(&terrain);
 		require(terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &tree_data),
 			"original tree reset witness could not admit owner");
+		require(terrain.tryAddTree(toppleTree, toppleTreePosition, 1, 0, 0,
+			&toppleData) && terrain.treeToppleState(toppleTree) == 0,
+			"original tree reset witness could not admit live topple owner");
+		pushUnit->setPosition(&toppleUnitPosition);
+		require(terrain.treeToppleState(toppleTree) == 1 &&
+			terrain.treeToppleStartEvents(toppleTree) == 1,
+			"original tree reset witness did not publish live topple state");
 		const UnsignedInt old_tree_epoch = terrain.treeOwnerEpoch();
 		terrain.reset();
+		pushUnit->setPosition(&originalPushPosition);
 		require(terrain.treeInstanceCount() == 0 && terrain.treeTypeCount() == 0 &&
 			terrain.treeOwnerEpoch() != old_tree_epoch &&
+			terrain.treeToppleState(toppleTree) == -1 &&
+			terrain.treeToppleStartEvents(toppleTree) == 0 &&
+			terrain.treeBounceEvents(toppleTree) == 0 &&
+			!terrain.peekTreeVertexSource() && !terrain.peekTreeIndexSource() &&
+			!terrain.peekTreeAtlasSource() &&
 			!terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &tree_data) &&
 			device.resource_counts() == baseline,
 			"original tree reset retained owner or admitted unready shroud");

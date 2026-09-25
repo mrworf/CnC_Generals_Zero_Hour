@@ -15,6 +15,12 @@ from test_w3d_terrain_source_bitmap import source_tree
 from test_w3d_visual_height_map import visual_map
 
 
+# The retained 64-type/4000-instance workload plus two topple generations
+# takes about 58 seconds natively and 258 seconds total under isolated GCC
+# ASan+UBSan. Bound each generated process, including all its assertions.
+GENERATION_TIMEOUT_SECONDS = 240
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
@@ -35,9 +41,15 @@ def main() -> int:
         os.environ["ZH_M22_TERRAIN_SCENE_ATTACHMENT_ASSET"] = str(packet)
         for generation in range(2):
             source = source_tree(root / f"source-{generation}", fixture, "valid",
-                                 tree_textures=True, immobile_enemy=True)
-            result = run(args.executable.resolve(), root / f"generation-{generation}", source,
-                         "mission", timeout_seconds=120)
+                                 tree_textures=True, immobile_enemy=True,
+                                 crusher_logic=True)
+            try:
+                result = run(args.executable.resolve(), root / f"generation-{generation}", source,
+                             "mission", timeout_seconds=GENERATION_TIMEOUT_SECONDS)
+            except subprocess.TimeoutExpired:
+                raise SystemExit(f"original terrain scene attachment generation {generation} "
+                                 f"timed out after {GENERATION_TIMEOUT_SECONDS} seconds; "
+                                 "private output redacted") from None
             marker = "original terrain scene attachment: bounds=8x8 registrations=2 shroud=2 display-cells=3 generations=2 resources=0"
             if result.returncode or marker not in result.stdout:
                 raise SystemExit(f"original terrain scene attachment generation {generation} failed "

@@ -53,8 +53,11 @@
 #include "Common/file.h"
 #include "GameClient/ClientRandomValue.h"
 #include "Common/Geometry.h"
+#include "Common/Player.h"
+#include "Common/PlayerList.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
+#include "GameLogic/PartitionManager.h"
 #include "GameLogic/ScriptEngine.h"
 #include "Lib/trig.h"
 #include "W3DDevice/GameClient/BaseHeightMap.h"
@@ -72,6 +75,7 @@
 #include "assetmgr.h"
 #include "sphere.h"
 #include "camera.h"
+#include "matrix3d.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #include <algorithm>
@@ -109,6 +113,17 @@ struct CpuTreeInstance {
 	Real pushSin = 1;
 	ObjectID pushSource = INVALID_ID;
 	UnsignedInt lastPushFrame = 0;
+	enum ToppleState { Upright = 0, Falling = 1, Fogged = 2, Down = 4 };
+	ToppleState toppleState = Upright;
+	Matrix3D toppleTransform{true};
+	Coord3D toppleDirection{0, 0, 0};
+	Real angularVelocity = 0;
+	Real angularAcceleration = 0;
+	Real angularAccumulation = 0;
+	UnsignedInt toppleOptions = 0;
+	UnsignedInt sinkFramesLeft = 0;
+	UnsignedInt toppleStartEvents = 0;
+	UnsignedInt bounceEvents = 0;
 };
 struct CpuTreeVisibleFrame {
 	CpuTreeVisibleFrame()
@@ -160,6 +175,119 @@ struct CpuTreeRegistry {
 // The source terrain's existing layout is shared with full-instance clients.
 // Lazily key CPU-only tree state by its exact owner and erase it on teardown.
 static std::map<const BaseHeightMapRenderObjClass *, CpuTreeRegistry> s_cpuTreeRegistries;
+static constexpr Real kCpuTreeAngularLimit = PI / 2 - PI / 64;
+
+static bool cpuTreeMatrixFinite(const Matrix3D &matrix)
+{
+	for (Int row = 0; row < 3; ++row)
+		for (Int column = 0; column < 4; ++column)
+			if (!std::isfinite(matrix[row][column])) return false;
+	return true;
+}
+
+static bool cpuTreeToppleParametersValid(const W3DTreeDrawModuleData *data)
+{
+	return data && std::isfinite(data->m_minimumToppleSpeed) &&
+		data->m_minimumToppleSpeed > 0 &&
+		std::isfinite(data->m_initialVelocityPercent) &&
+		data->m_initialVelocityPercent > 0 &&
+		std::isfinite(data->m_initialAccelPercent) &&
+		data->m_initialAccelPercent >= 0 &&
+		std::isfinite(data->m_bounceVelocityPercent) &&
+		data->m_bounceVelocityPercent >= 0 &&
+		data->m_bounceVelocityPercent <= 1;
+}
+
+static bool cpuTreeStartTopple(CpuTreeInstance &instance,
+	const W3DTreeDrawModuleData *data, Real directionX, Real directionY)
+{
+	if (instance.toppleState != CpuTreeInstance::Upright) return true;
+	if (!cpuTreeToppleParametersValid(data) ||
+		!std::isfinite(directionX) || !std::isfinite(directionY)) return false;
+	const Real lengthSquared = directionX * directionX + directionY * directionY;
+	if (!std::isfinite(lengthSquared) || lengthSquared <= 0) return false;
+	const Real length = std::sqrt(lengthSquared);
+	const Real velocity = data->m_minimumToppleSpeed * data->m_initialVelocityPercent;
+	const Real acceleration = data->m_minimumToppleSpeed * data->m_initialAccelPercent;
+	if (!std::isfinite(length) || length <= 0 ||
+		!std::isfinite(velocity) || velocity <= 0 ||
+		!std::isfinite(acceleration) ||
+		instance.toppleStartEvents == std::numeric_limits<UnsignedInt>::max()) return false;
+	instance.toppleDirection = Coord3D{directionX / length, directionY / length, 0};
+	instance.angularVelocity = velocity;
+	instance.angularAcceleration = acceleration;
+	instance.angularAccumulation = 0;
+	instance.toppleOptions = 0; // Native unitMoved uses W3D_TOPPLE_OPTIONS_NONE.
+	instance.toppleState = CpuTreeInstance::Falling;
+	instance.toppleTransform.Make_Identity();
+	instance.toppleTransform.Set_Translation(Vector3(instance.location.x,
+		instance.location.y, instance.location.z));
+	++instance.toppleStartEvents; // Event intent; B3 owns external dispatch.
+	return std::isfinite(instance.toppleDirection.x) &&
+		std::isfinite(instance.toppleDirection.y) &&
+		cpuTreeMatrixFinite(instance.toppleTransform);
+}
+
+static bool cpuTreeAdvanceTopple(CpuTreeInstance &instance,
+	const W3DTreeDrawModuleData *data, ObjectShroudStatus shroud, bool &changed)
+{
+	if (instance.toppleState != CpuTreeInstance::Falling &&
+		instance.toppleState != CpuTreeInstance::Fogged) return true;
+	if (!cpuTreeToppleParametersValid(data) ||
+		!std::isfinite(instance.angularVelocity) ||
+		!std::isfinite(instance.angularAcceleration) ||
+		!std::isfinite(instance.angularAccumulation) ||
+		!std::isfinite(instance.toppleDirection.x) ||
+		!std::isfinite(instance.toppleDirection.y) ||
+		!cpuTreeMatrixFinite(instance.toppleTransform)) return false;
+	if (shroud == OBJECTSHROUD_FOGGED) {
+		if (instance.toppleState != CpuTreeInstance::Fogged) {
+			instance.toppleState = CpuTreeInstance::Fogged;
+			changed = true;
+		}
+		return true;
+	}
+	if (instance.toppleState == CpuTreeInstance::Fogged) {
+		instance.angularVelocity = 0;
+		instance.toppleState = CpuTreeInstance::Down;
+		instance.toppleTransform.In_Place_Pre_Rotate_X(
+			-kCpuTreeAngularLimit * instance.toppleDirection.y);
+		instance.toppleTransform.In_Place_Pre_Rotate_Y(
+			kCpuTreeAngularLimit * instance.toppleDirection.x);
+		if (data->m_killWhenToppled) instance.sinkFramesLeft = 0;
+		changed = true;
+		return cpuTreeMatrixFinite(instance.toppleTransform);
+	}
+	Real step = instance.angularVelocity;
+	if (instance.angularAccumulation + step > kCpuTreeAngularLimit)
+		step = kCpuTreeAngularLimit - instance.angularAccumulation;
+	if (!std::isfinite(step)) return false;
+	instance.toppleTransform.In_Place_Pre_Rotate_X(-step * instance.toppleDirection.y);
+	instance.toppleTransform.In_Place_Pre_Rotate_Y(step * instance.toppleDirection.x);
+	instance.angularAccumulation += step;
+	if (instance.angularAccumulation >= kCpuTreeAngularLimit &&
+		instance.angularVelocity > 0) {
+		instance.angularVelocity *= -data->m_bounceVelocityPercent;
+		if ((instance.toppleOptions & 1U) ||
+			std::fabs(instance.angularVelocity) < 0.01f) {
+			instance.angularVelocity = 0;
+			instance.toppleState = CpuTreeInstance::Down;
+			if (data->m_killWhenToppled)
+				instance.sinkFramesLeft = data->m_sinkFrames;
+		} else if (std::fabs(instance.angularVelocity) >= 0.03f &&
+			!(instance.toppleOptions & 2U)) {
+			if (instance.bounceEvents == std::numeric_limits<UnsignedInt>::max())
+				return false;
+			++instance.bounceEvents; // Event intent; B3 owns external dispatch.
+		}
+	} else {
+		instance.angularVelocity += instance.angularAcceleration;
+	}
+	changed = true;
+	return std::isfinite(instance.angularVelocity) &&
+		std::isfinite(instance.angularAccumulation) &&
+		cpuTreeMatrixFinite(instance.toppleTransform);
+}
 
 W3DTreeModelSource::~W3DTreeModelSource() { reset(); }
 
@@ -496,7 +624,8 @@ std::unique_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
 			!std::isfinite(type.data->m_darkening) ||
 			!std::isfinite(type.data->m_maxOutwardMovement) ||
 			!std::isfinite(instance.pushAside) ||
-			!std::isfinite(instance.pushCos) || !std::isfinite(instance.pushSin))
+			!std::isfinite(instance.pushCos) || !std::isfinite(instance.pushSin) ||
+			!cpuTreeMatrixFinite(instance.toppleTransform))
 			return nullptr;
 		MeshModelClass *model = type.model->mesh()->Peek_Model();
 		if (!model) return nullptr;
@@ -547,7 +676,8 @@ std::unique_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
 				y * instance.scale * sine + instance.location.x;
 			vertex.y = y * instance.scale * cosine +
 				x * instance.scale * sine + instance.location.y;
-			if (instance.pushAside > 0) {
+			if (instance.toppleState == CpuTreeInstance::Upright &&
+				instance.pushAside > 0) {
 				vertex.x += points[point].Z * instance.pushAside *
 					instance.pushCos * type.data->m_maxOutwardMovement;
 				vertex.y += points[point].Z * instance.pushAside *
@@ -555,6 +685,18 @@ std::unique_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
 			}
 			vertex.z = points[point].Z * instance.scale +
 				type.model->offset().Z + instance.location.z;
+			if (instance.toppleState != CpuTreeInstance::Upright) {
+				const Vector3 local(
+					x * instance.scale * cosine - y * instance.scale * sine,
+					y * instance.scale * cosine + x * instance.scale * sine,
+					points[point].Z * instance.scale + type.model->offset().Z);
+				Vector3 transformed;
+				Matrix3D::Transform_Vector(instance.toppleTransform,
+					local, &transformed);
+				vertex.x = transformed.X;
+				vertex.y = transformed.Y;
+				vertex.z = transformed.Z;
+			}
 			vertex.nx = instance.swayType;
 			vertex.ny = 1.0f - type.data->m_darkening * instance.pushAside;
 			vertex.nz = instance.location.z;
@@ -918,6 +1060,46 @@ ObjectID BaseHeightMapRenderObjClass::treePushSource(DrawableID id) const
 			if (instance.id == id) return instance.pushSource;
 	return INVALID_ID;
 }
+Int BaseHeightMapRenderObjClass::treeToppleState(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.toppleState;
+	return -1;
+}
+Real BaseHeightMapRenderObjClass::treeToppleAngle(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.angularAccumulation;
+	return 0;
+}
+Real BaseHeightMapRenderObjClass::treeToppleVelocity(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.angularVelocity;
+	return 0;
+}
+UnsignedInt BaseHeightMapRenderObjClass::treeToppleStartEvents(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.toppleStartEvents;
+	return 0;
+}
+UnsignedInt BaseHeightMapRenderObjClass::treeBounceEvents(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.bounceEvents;
+	return 0;
+}
 bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 	const CameraClass *camera, const BreezeInfo &breeze, Bool paused)
 {
@@ -1049,6 +1231,24 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 		if (fault && std::strcmp(fault, "cull") == 0) return false;
 		if (!paused) {
 			for (CpuTreeInstance &instance : nextInstances) {
+				if (instance.toppleState == CpuTreeInstance::Falling ||
+					instance.toppleState == CpuTreeInstance::Fogged) {
+					if (!ThePartitionManager || !ThePlayerList ||
+						!std::isfinite(ThePartitionManager->getCellSize()) ||
+						ThePartitionManager->getCellSize() <= 0 ||
+						!ThePartitionManager->getCellAt(0, 0)) return false;
+					Player *localPlayer = ThePlayerList->getLocalPlayer();
+					if (!localPlayer || localPlayer->getPlayerIndex() < 0 ||
+						localPlayer->getPlayerIndex() >= MAX_PLAYER_COUNT)
+						return false;
+					const CpuTreeType &type = registry->second.types.at(instance.typeIndex);
+					if (!cpuTreeAdvanceTopple(instance, type.data,
+						ThePartitionManager->getPropShroudStatusForPlayer(
+							localPlayer->getPlayerIndex(), &instance.location), changed))
+						return false;
+					continue;
+				}
+				if (instance.toppleState == CpuTreeInstance::Down) continue;
 				if (instance.pushDelta == 0) continue;
 				const CpuTreeType &type = registry->second.types.at(instance.typeIndex);
 				if (!type.data || !type.data->m_framesToMoveInward ||
@@ -1066,6 +1266,9 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 				changed = true;
 			}
 		}
+		const char *toppleFault = std::getenv("ZH_M22_TREE_TOPPLE_FAIL_AT");
+		if (toppleFault && std::strcmp(toppleFault, "state") == 0)
+			return false;
 		std::unique_ptr<CpuTreeGpuSource> nextGpu;
 		if (changed) {
 			nextGpu = makeCpuTreeGpu(nextInstances, registry->second.types,
@@ -1361,8 +1564,17 @@ void BaseHeightMapRenderObjClass::unitMoved( Object *unit )
 			const CpuTreeType &type = registry->second.types.at(instance.typeIndex);
 			if (!type.data) throw OriginalW3DDeviceUnavailable(
 				"original tree unit collision type unavailable");
-			if (unit->getCrusherLevel() > 1 && type.data->m_doTopple)
-				throw OriginalW3DDeviceUnavailable("original tree crusher topple pending C1B2");
+			if (unit->getCrusherLevel() > 1 && type.data->m_doTopple) {
+				if (!ThePartitionManager || !ThePlayerList ||
+					!std::isfinite(ThePartitionManager->getCellSize()) ||
+					ThePartitionManager->getCellSize() <= 0 ||
+					!ThePartitionManager->getCellAt(0, 0) ||
+					!ThePlayerList->getLocalPlayer() ||
+					!cpuTreeStartTopple(instance, type.data, dx, dy))
+					throw OriginalW3DDeviceUnavailable(
+						"original tree crusher topple candidate unavailable");
+				continue;
+			}
 			if (type.data->m_framesToMoveOutward <= 1) continue;
 			if (!type.data->m_framesToMoveInward ||
 				!std::isfinite(type.data->m_maxOutwardMovement) ||

@@ -41,3 +41,18 @@ Run focused GCC/Clang and sanitizer witnesses, six complete builds/canonical
 nonretail suites, strict host LSan, physical Vulkan, serial LAN 4/4 all six,
 ledger and diff checks. Commit one slice:
 `delivery: M22 08P0C1B2A own tree topple state`.
+
+## Delivered evidence
+
+The generated logical/visual map-size mismatch required a test-only Display
+notification sink for real PartitionManager reveal/undo transitions; exact
+notices, real Display restoration before frame execution, and complete
+shroud-cell baseline reconstruction are asserted. This prevents intentional
+fog history in the first internal generation from contaminating the second.
+The existing immediate pre-teardown zero-residual assertion remains intact.
+The retained 64-type/4000-instance witness exceeded its prior 120-second
+per-subprocess bound under isolated sanitizer load; only this script now
+uses a documented 240-second bound with explicit redacted timeout failure.
+No production reset, FX or sink owner was smuggled into A. Six complete
+canonical suites, strict host LSan, physical Vulkan, serial host LAN and
+ledger checks passed; see the linked slice evidence in the governing index.
