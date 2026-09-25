@@ -2,7 +2,7 @@
 
 ## Outcome and dependencies
 
-Requires accepted slices 08B and 08E and a separately configured, read-only
+Requires accepted slices 08B, 08E, 08I and 08J and a separately configured, read-only
 retail corpus.  The already-authorized campaign/skirmish consumer selections
 remain runtime-only test inputs: no selector, root, private logical name,
 content byte, hash, image, or captured command label is committed or emitted.
@@ -39,6 +39,15 @@ rollback. Slices [08I1](milestone_22_plan_01_slice_08i1.md) and
 [08I](milestone_22_plan_01_slice_08i.md), close those generated owners before
 this slice resumes. Trial admission wiring was again removed; discovery retains
 only the fixed failure category.
+
+After accepted 08I, the redacted scene continuation reached the native
+update-owned phase but stopped before game logic at the fixed pre-map active-
+water lifecycle category. The accepted reset intentionally leaves its ready
+water owner detached; update and subsequent terrain-load reattachment are
+currently selected by generated-route variables rather than the shared owner
+state. [08J](milestone_22_plan_01_slice_08j.md) must replace that pair with one
+selector-independent, transactional state contract before this slice resumes.
+Trial scene admission and diagnostic classification were removed.
 
 ## Validation and error handling
 
