@@ -2,7 +2,7 @@
 
 ## Outcome and dependencies
 
-Requires accepted slices 08B, 08E, 08I and 08J and a separately configured, read-only
+Requires accepted slices 08B, 08E, 08I, 08J and 08L and a separately configured, read-only
 retail corpus.  The already-authorized campaign/skirmish consumer selections
 remain runtime-only test inputs: no selector, root, private logical name,
 content byte, hash, image, or captured command label is committed or emitted.
@@ -57,6 +57,17 @@ generated selector rather than its complete owner state. Slice
 selector-independent before retail scene admission resumes. Trial admission
 wiring was removed again; discovery retains only fixed stage and failure
 categories.
+
+After accepted 08K, a corrected single-separator redacted continuation crossed
+all map-local and terrain/player/radar/shroud construction stages and reached a
+bridge-like authored map object. Object behavior construction completed, but its
+first modeled Drawable failed inside source W3D validation before ThingFactory
+could return. [08L](milestone_22_plan_01_slice_08l.md), through dependency-ordered
+08L1–08L3, must close general modeled draw construction, atomic ThingFactory
+publication and transactional bridge/pathfinder attachment before retail scene
+admission resumes. The earlier doubled-separator trial result is discarded. All
+trial admission and diagnostics were removed; discovery retains fixed categories
+only.
 
 ## Validation and error handling
 
