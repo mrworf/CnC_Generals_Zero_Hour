@@ -7,7 +7,8 @@ route, post-cull toppling/fog/bounce/sink state, and immediate `FXList`
 dispatch. The last route can create audio, drawable, light or other external
 effects and is not a reversible GPU/state mutation. Deliver these owners as
 [C1B1](milestone_22_plan_01_slice_08p0c1b1.md),
-[C1B2](milestone_22_plan_01_slice_08p0c1b2.md), then
+[C1B2](milestone_22_plan_01_slice_08p0c1b2.md) with ordered state/sink
+children, then
 [C1B3](milestone_22_plan_01_slice_08p0c1b3.md). This file is their
 validation aggregate; do not merge the children into one production commit.
 

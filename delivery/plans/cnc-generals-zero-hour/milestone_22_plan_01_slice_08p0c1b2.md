@@ -1,41 +1,30 @@
-# M22 plan 01 slice 08P0C1B2: topple, fog, bounce and sink state
+# M22 plan 01 slice 08P0C1B2: topple and sink aggregate
 
-## Goal and boundary
+## Dependency-ordered children
 
-After C1B1, let eligible crusher collisions initiate the native tree-topple
-state machine. Own minimum speed, normalized direction, angular acceleration,
-fog freeze/reveal, angular limit and bounce/no-bounce, down state and bounded
-sink/removal, in source frame order after C1A cull. Publish transformed
-visible geometry and darkening with the accepted state. Stage event intent
-but do not dispatch `FXList` until C1B3; this child must be testable with
-effect-free generated module data. C2 draw, C3 decals and C4 factory remain
-closed. Authorization is not applicable to generated local simulation.
+Native `W3DTreeBuffer::unitMoved/applyTopplingForce/updateTopplingTree`
+own crusher admission, fog, angle and bounce state. The subsequent DOWN sink
+and deletion path has a separate resource boundary: the CPU terrain owner's
+existing `removeTree` retires atlas, type and Recording owners immediately,
+which cannot be called before a fallible frame upload. Deliver
+[B2A](milestone_22_plan_01_slice_08p0c1b2a.md) for topple state and
+transformed geometry, then
+[B2B](milestone_22_plan_01_slice_08p0c1b2b.md) for sink/deletion and
+transactional partition/type/atlas cleanup. This file is their aggregate;
+do not merge production changes into one commit. External `FXList`
+dispatch remains B3.
 
-## State, failure and surfaces
+## Aggregate validation and commit
 
-Trace `W3DTreeBuffer::applyTopplingForce/updateTopplingTree/drawTrees`,
-`W3DTreeDrawModuleData`, local player and partition shroud status, and native
-matrix transforms. Preflight valid crusher level, finite nonzero direction,
-finite speed/acceleration/bounce/sink parameters, positive sink frames when
-required, matching terrain/map/scene and available shroud/player providers.
-Stage instance state, transformed visible geometry, Recording uploads and
-removal candidate before publication. A failed provider, invalid parameter,
-allocation/upload or injected publication leaves the accepted frame, tree
-identity, partition membership, GPU resources and RNG untouched. Fogged
-frames do not advance; reveal reaches the source down-state branch. Removal
-and retry must not retain stale links. Expected source/test/ledger surfaces
-are `BaseHeightMap` header/source and generated terrain fixture; if matrix or
-effect ownership proves independently prerequisite, revise this plan first.
-
-## Acceptance and commit
-
-Generated positives: eligible/ineligible crusher, minimum speed, fog pause
-and reveal, acceleration, bounce and no-bounce, down/sink/removal, pause,
-visible/hidden trees and two generations. Negatives: missing shroud/player,
-nonfinite or degenerate motion, zero sink frames, geometry and Recording
-faults, owner removal/retry. Verify no FX dispatch in this child, no
-GameLogic/audio RNG changes and immediate pre-teardown residuals. Run focused
-GCC/Clang and sanitizer witnesses, six complete builds/canonical nonretail
-suites, strict host LSan, physical Vulkan, serial LAN 4/4 all six, ledger
-and diff checks. Commit one slice:
-`delivery: M22 08P0C1B2 own tree topple state`.
+On generated inputs, compose mobile crusher collision, source minimum
+speed/direction, fog freeze/reveal, angular acceleration/bounce/down,
+pause, bounded sink/deletion, hidden and visible frames, relocation,
+owner removal and two generations. Reject missing providers, degenerate or
+nonfinite parameters, zero sink frames, geometry/Recording faults and injected
+publication without consuming accepted frame, tree/partition/type identity,
+GPU resources or RNG. Verify no external FX dispatch before B3, no stale
+partition link after deletion, exact immediate residuals and clean retry.
+Run six complete builds/canonical nonretail suites, focused strict host LSan,
+physical Vulkan controls, serial LAN 4/4 all six, ledger and diff checks.
+Commit only aggregate evidence:
+`delivery: M22 08P0C1B2 revalidate tree topple and sink`.
