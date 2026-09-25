@@ -59,3 +59,12 @@ The pre-map display no-op is exact-state bounded, selector-independent,
 mutation-free and composes with 08J load/rollback/retry. One independently
 reviewable implementation commit:
 `delivery: M22 08K continue detached pre-map display`.
+
+## Result
+
+Complete. Display draw now reuses the accepted 08J lifecycle predicate instead
+of a route selector. The exact detached pre-map owner graph accepts repeated
+command-free draws, rejects missing, pending and malformed owners, remains
+valid after failed terrain construction, and transitions to the ordinary
+mapped frame path after successful load. Generated parser-stop and
+construction routes retain their accepted boundaries.

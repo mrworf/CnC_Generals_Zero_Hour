@@ -212,22 +212,22 @@ void W3DDisplay::setClipRegion(IRegion2D*) { ZH_DISPLAY_PENDING(); }
 void W3DDisplay::draw()
 {
 	auto *view = dynamic_cast<W3DView *>(getFirstView());
-	// The generated selector crosses the original update-owned new-game phase
-	// before terrain exists.  Keep the source owner graph, but issue no frame.
-	if (std::getenv("ZH_M22_GENERATED_SCENE_ROUTE") &&
-		std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") &&
-		std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE")) {
+	auto *terrainVisual = dynamic_cast<W3DTerrainVisual *>(TheTerrainVisual);
+	// Client update precedes game logic during the source new-game transition.
+	// The exact reset-detached terrain/water owner state has no map to present;
+	// preserve it without issuing a frame, independent of the caller's route.
+	if (terrainVisual && terrainVisual->hasResetDetachedActiveWater()) {
 		if (!m_initialized || TheDisplay != this ||
 			!zh::original_runtime::OriginalGpuEdge::active() || WW3D::Is_Rendering() ||
 			!m_3DScene || !m_2DScene || !m_3DInterfaceScene || !m_assetManager ||
 			!view || getNextView(view) || TheTacticalView != view ||
-			!view->get3DCamera() || !dynamic_cast<W3DTerrainVisual *>(TheTerrainVisual) ||
+			!view->get3DCamera() ||
 			!TheTerrainRenderObject || !TheHeightMap || TheHeightMap->getMap() ||
 			!TheTerrainTracksRenderObjClassSystem || !TheW3DShadowManager ||
 			!TheWaterRenderObj || !TheSmudgeManager ||
 			TheWaterRenderObj->hasPendingGpuResources() ||
 			(TheWaterRenderObj->Peek_Scene() && TheWaterRenderObj->Peek_Scene() != m_3DScene))
-			throw OriginalW3DDeviceUnavailable("original generated pre-map display owners unavailable");
+			throw OriginalW3DDeviceUnavailable("original pre-map display owners unavailable");
 		return;
 	}
 	if (!m_initialized || TheDisplay != this ||
@@ -235,7 +235,7 @@ void W3DDisplay::draw()
 		!m_3DScene || !m_2DScene || !m_3DInterfaceScene || !m_assetManager ||
 		!view || getNextView(view) || TheTacticalView != view ||
 		!view->get3DCamera() ||
-		!dynamic_cast<W3DTerrainVisual *>(TheTerrainVisual) ||
+		!terrainVisual ||
 		!TheTerrainRenderObject || !TheHeightMap ||
 		!TheTerrainTracksRenderObjClassSystem || !TheW3DShadowManager ||
 		!TheWaterRenderObj || !TheSmudgeManager ||

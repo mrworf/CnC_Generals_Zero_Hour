@@ -153,13 +153,13 @@ public:
   ////////////////////////////////////////////////////
   ////////////////////////////////////////////////////
 
-
-
+#if defined(ZH_WW3D_CPU_ONLY)
+	Bool hasResetDetachedActiveWater() const;
+#endif
 
 protected:
 #if defined(ZH_WW3D_CPU_ONLY)
 	void releaseEmptyOwners();
-	Bool hasResetDetachedActiveWater() const;
 #endif
 
 	// snapshot methods
