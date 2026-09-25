@@ -49,6 +49,51 @@ def visual_map(kind: str = "valid", texture_name: str = "Void") -> bytes:
     return result[:-12] if kind == "truncated" else result
 
 
+def authored_visual_map(kind: str = "valid") -> bytes:
+    names = ["HeightMapData", "BlendTileData"]
+    toc = bytearray(b"CkMp" + struct.pack("<I", len(names)))
+    for index, name in enumerate(names, 1):
+        encoded = name.encode("ascii")
+        toc.extend(struct.pack("<B", len(encoded)) + encoded + struct.pack("<I", index))
+    height = struct.pack("<7i", 8, 8, 0, 1, 8, 8, 64) + bytes(range(64))
+    tiles = [0] * 64
+    tiles[1] = 16
+    blends = [0] * 64
+    blends[0] = 1
+    extra = [0] * 64
+    extra[2] = 1
+    cliff_indices = [0] * 64
+    cliff_indices[4] = 1
+    if kind == "bad_tile":
+        tiles[3] = 20
+    if kind == "bad_blend":
+        blends[3] = 2
+    if kind == "bad_cliff":
+        cliff_indices[3] = 2
+    cliff_bits = bytearray(8)
+    cliff_bits[0] = 1
+    blend = bytearray(struct.pack("<i", 64))
+    for values in (tiles, blends, extra, cliff_indices):
+        blend.extend(struct.pack("<64h", *values))
+    blend.extend(cliff_bits)
+    blend.extend(struct.pack("<4i", 5, 2, 2, 2))
+    blend.extend(struct.pack("<4i", 0, 4, 2, 0) + ascii_string("VoidA"))
+    second_first = 3 if kind == "overlap" else (5 if kind == "bad_span" else 4)
+    blend.extend(struct.pack("<4i", second_first, 1, 1, 0) + ascii_string("VoidB"))
+    blend.extend(struct.pack("<2i", 1, 1))
+    blend.extend(struct.pack("<3i", 0, 1, 1) + ascii_string("VoidEdge"))
+    flag = 0 if kind == "bad_flag" else 0x7ADA0000
+    blend.extend(struct.pack("<i6Bii", 4, 1, 0, 0, 0, 0, 0, 0, flag))
+    cliff_u0 = float("nan") if kind == "bad_real" else 0.0
+    blend.extend(struct.pack("<i8f2B", 16, cliff_u0, 0.0, 0.0, 1.0,
+                             1.0, 1.0, 1.0, 0.0, 1, 0))
+    if kind == "tail":
+        blend.extend(b"x")
+    toc.extend(chunk(1, 4, height))
+    toc.extend(chunk(2, 8, bytes(blend)))
+    return bytes(toc)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", type=Path, required=True)
@@ -67,6 +112,16 @@ def main() -> int:
         for env_name, kind in variants.items():
             path = root / f"{kind}.map"
             path.write_bytes(visual_map(kind))
+            path.chmod(0o444)
+            os.environ[f"ZH_M22_VISUAL_MAP_{env_name}"] = str(path)
+        for env_name, kind in {
+                "AUTHORED": "valid", "AUTHORED_BAD_SPAN": "bad_span",
+                "AUTHORED_OVERLAP": "overlap", "AUTHORED_BAD_REAL": "bad_real",
+                "AUTHORED_BAD_TILE": "bad_tile", "AUTHORED_BAD_BLEND": "bad_blend",
+                "AUTHORED_BAD_CLIFF": "bad_cliff", "AUTHORED_BAD_FLAG": "bad_flag",
+                "AUTHORED_TAIL": "tail"}.items():
+            path = root / f"authored-{kind}.map"
+            path.write_bytes(authored_visual_map(kind))
             path.chmod(0o444)
             os.environ[f"ZH_M22_VISUAL_MAP_{env_name}"] = str(path)
         fixture.make_read_only(source)

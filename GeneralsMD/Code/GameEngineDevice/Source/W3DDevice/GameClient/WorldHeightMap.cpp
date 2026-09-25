@@ -40,6 +40,7 @@
 #include "W3DDevice/GameClient/TerrainTex.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
 #include "OriginalW3DDeviceUnavailable.h"
+#include <cmath>
 #include <cstring>
 
 TileData *WorldHeightMap::m_alphaTiles[NUM_ALPHA_TILES]{};
@@ -86,6 +87,10 @@ WorldHeightMap::WorldHeightMap(ChunkInputStream *input, Bool logical_only) : Wor
 			delete [] m_cliffInfoNdxes; m_cliffInfoNdxes = NULL;
 			delete [] m_cellFlipState; m_cellFlipState = NULL;
 			delete [] m_cellCliffState; m_cellCliffState = NULL;
+			for (Int i = 0; i < NUM_SOURCE_TILES; ++i) {
+				REF_PTR_RELEASE(m_sourceTiles[i]);
+				REF_PTR_RELEASE(m_edgeTiles[i]);
+			}
 			throw;
 		}
 	}
@@ -170,30 +175,110 @@ Bool WorldHeightMap::ParseBlendTileData(DataChunkInput &file, DataChunkInfo *inf
 	m_numBlendedTiles = file.readInt();
 	m_numCliffInfo = file.readInt();
 	m_numTextureClasses = file.readInt();
-	if (m_numBitmapTiles != 1 || m_numBlendedTiles != 1 || m_numCliffInfo != 1 ||
-		m_numTextureClasses != 1)
-		throw OriginalW3DDeviceUnavailable("original active terrain blend metadata pending");
-	m_textureClasses[0].globalTextureClass = -1;
-	m_textureClasses[0].firstTile = file.readInt();
-	m_textureClasses[0].numTiles = file.readInt();
-	m_textureClasses[0].width = file.readInt();
-	(void)file.readInt();
-	m_textureClasses[0].name = file.readAsciiString();
-	readTexClass(&m_textureClasses[0], m_sourceTiles);
+	if (m_numBitmapTiles <= 0 || m_numBitmapTiles > NUM_SOURCE_TILES ||
+		m_numBlendedTiles <= 0 || m_numBlendedTiles > NUM_BLEND_TILES ||
+		m_numCliffInfo <= 0 || m_numCliffInfo > NUM_CLIFF_INFO ||
+		m_numTextureClasses <= 0 || m_numTextureClasses > NUM_TEXTURE_CLASSES)
+		throw OriginalW3DDeviceUnavailable("original terrain metadata count rejected");
+	Bool bitmap_owners[NUM_SOURCE_TILES]{};
+	for (Int i = 0; i < m_numTextureClasses; ++i) {
+		TXTextureClass &texture_class = m_textureClasses[i];
+		texture_class.globalTextureClass = -1;
+		texture_class.firstTile = file.readInt();
+		texture_class.numTiles = file.readInt();
+		texture_class.width = file.readInt();
+		(void)file.readInt();
+		texture_class.name = file.readAsciiString();
+		if (texture_class.firstTile < 0 || texture_class.numTiles <= 0 ||
+			texture_class.width <= 0 || texture_class.width > 10 ||
+			texture_class.numTiles > texture_class.width * texture_class.width ||
+			texture_class.firstTile > m_numBitmapTiles - texture_class.numTiles ||
+			texture_class.name.isEmpty())
+			throw OriginalW3DDeviceUnavailable("original terrain texture class rejected");
+		for (Int tile = texture_class.firstTile;
+			tile < texture_class.firstTile + texture_class.numTiles; ++tile) {
+			if (bitmap_owners[tile])
+				throw OriginalW3DDeviceUnavailable("original terrain texture class overlap rejected");
+			bitmap_owners[tile] = TRUE;
+		}
+		readTexClass(&texture_class, m_sourceTiles);
+	}
+	for (Int tile = 0; tile < m_numBitmapTiles; ++tile)
+		if (!bitmap_owners[tile])
+			throw OriginalW3DDeviceUnavailable("original terrain texture class coverage rejected");
 	m_numEdgeTiles = file.readInt();
 	m_numEdgeTextureClasses = file.readInt();
-	if (m_textureClasses[0].firstTile != 0 || m_textureClasses[0].numTiles != 1 ||
-		m_textureClasses[0].width != 1 || m_textureClasses[0].name.isEmpty() ||
-		m_numEdgeTiles != 0 || m_numEdgeTextureClasses != 0)
-		throw OriginalW3DDeviceUnavailable("original terrain texture class rejected");
-	for (Int i = 0; i < m_dataSize; ++i) {
-		if (m_tileNdxes[i] < 0 || m_tileNdxes[i] > 3 || m_blendTileNdxes[i] != 0 ||
-			m_extraBlendTileNdxes[i] != 0 || m_cliffInfoNdxes[i] != 0)
-			throw OriginalW3DDeviceUnavailable("original active terrain cell metadata pending");
+	if (m_numEdgeTiles < 0 || m_numEdgeTiles > NUM_SOURCE_TILES ||
+		m_numEdgeTextureClasses < 0 || m_numEdgeTextureClasses > NUM_TEXTURE_CLASSES)
+		throw OriginalW3DDeviceUnavailable("original terrain edge metadata count rejected");
+	Bool edge_owners[NUM_SOURCE_TILES]{};
+	for (Int i = 0; i < m_numEdgeTextureClasses; ++i) {
+		TXTextureClass &texture_class = m_edgeTextureClasses[i];
+		texture_class.globalTextureClass = -1;
+		texture_class.firstTile = file.readInt();
+		texture_class.numTiles = file.readInt();
+		texture_class.width = file.readInt();
+		texture_class.name = file.readAsciiString();
+		if (texture_class.firstTile < 0 || texture_class.numTiles <= 0 ||
+			texture_class.width <= 0 || texture_class.width > 10 ||
+			texture_class.numTiles > texture_class.width * texture_class.width ||
+			texture_class.firstTile > m_numEdgeTiles - texture_class.numTiles ||
+			texture_class.name.isEmpty())
+			throw OriginalW3DDeviceUnavailable("original terrain edge class rejected");
+		for (Int tile = texture_class.firstTile;
+			tile < texture_class.firstTile + texture_class.numTiles; ++tile) {
+			if (edge_owners[tile])
+				throw OriginalW3DDeviceUnavailable("original terrain edge class overlap rejected");
+			edge_owners[tile] = TRUE;
+		}
+		readTexClass(&texture_class, m_edgeTiles);
 	}
-	for (Int i = 0; i < m_flipStateWidth * m_height; ++i) {
-		if (m_cellCliffState[i] != 0)
-			throw OriginalW3DDeviceUnavailable("original active terrain cliff metadata pending");
+	for (Int tile = 0; tile < m_numEdgeTiles; ++tile)
+		if (!edge_owners[tile])
+			throw OriginalW3DDeviceUnavailable("original terrain edge class coverage rejected");
+	for (Int i = 1; i < m_numBlendedTiles; ++i) {
+		TBlendTileInfo &blend = m_blendedTiles[i];
+		blend.blendNdx = file.readInt();
+		blend.horiz = file.readByte();
+		blend.vert = file.readByte();
+		blend.rightDiagonal = file.readByte();
+		blend.leftDiagonal = file.readByte();
+		blend.inverted = file.readByte();
+		blend.longDiagonal = file.readByte();
+		blend.customBlendEdgeClass = file.readInt();
+		const Int directions = blend.horiz + blend.vert + blend.rightDiagonal + blend.leftDiagonal;
+		if (file.readInt() != FLAG_VAL || blend.blendNdx < 0 ||
+			blend.blendNdx >= m_numBitmapTiles * 4 || blend.horiz > 1 || blend.vert > 1 ||
+			blend.rightDiagonal > 1 || blend.leftDiagonal > 1 || blend.inverted > 3 ||
+			blend.longDiagonal > 1 || directions != 1 || blend.customBlendEdgeClass < -1 ||
+			blend.customBlendEdgeClass >= m_numEdgeTextureClasses)
+			throw OriginalW3DDeviceUnavailable("original terrain blend record rejected");
+	}
+	for (Int i = 1; i < m_numCliffInfo; ++i) {
+		TCliffInfo &cliff = m_cliffInfo[i];
+		cliff.tileIndex = static_cast<Short>(file.readInt());
+		cliff.u0 = file.readReal(); cliff.v0 = file.readReal();
+		cliff.u1 = file.readReal(); cliff.v1 = file.readReal();
+		cliff.u2 = file.readReal(); cliff.v2 = file.readReal();
+		cliff.u3 = file.readReal(); cliff.v3 = file.readReal();
+		const UnsignedByte flip = file.readByte();
+		const UnsignedByte mutant = file.readByte();
+		cliff.flip = flip != 0;
+		cliff.mutant = mutant != 0;
+		if (cliff.tileIndex < 0 || cliff.tileIndex >= m_numBitmapTiles * 4 ||
+			!std::isfinite(cliff.u0) || !std::isfinite(cliff.v0) ||
+			!std::isfinite(cliff.u1) || !std::isfinite(cliff.v1) ||
+			!std::isfinite(cliff.u2) || !std::isfinite(cliff.v2) ||
+			!std::isfinite(cliff.u3) || !std::isfinite(cliff.v3) ||
+			flip > 1 || mutant > 1)
+			throw OriginalW3DDeviceUnavailable("original terrain cliff record rejected");
+	}
+	for (Int i = 0; i < m_dataSize; ++i) {
+		if (m_tileNdxes[i] < 0 || m_tileNdxes[i] >= m_numBitmapTiles * 4 ||
+			m_blendTileNdxes[i] < 0 || m_blendTileNdxes[i] >= m_numBlendedTiles ||
+			m_extraBlendTileNdxes[i] < 0 || m_extraBlendTileNdxes[i] >= m_numBlendedTiles ||
+			m_cliffInfoNdxes[i] < 0 || m_cliffInfoNdxes[i] >= m_numCliffInfo)
+			throw OriginalW3DDeviceUnavailable("original terrain cell metadata rejected");
 	}
 	if (!file.atEndOfChunk())
 		throw OriginalW3DDeviceUnavailable("original visual tile tail rejected");

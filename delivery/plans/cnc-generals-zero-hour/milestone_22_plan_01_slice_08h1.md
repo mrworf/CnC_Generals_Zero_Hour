@@ -27,3 +27,13 @@ GCC/Clang, sanitizer/LSan, canonical nonretail suites, physical Vulkan, serial
 LAN, ledger validation and `git diff --check`.
 
 One commit: `delivery: M22 08H1 own authored terrain metadata`.
+
+## Result
+
+Complete. The canonical CPU branch now owns bounded version-8 multi-class
+base/edge metadata, active blend and cliff records, cliff-state bits and all
+cell references. Generated two-generation coverage proves accepted metadata
+and rejects invalid counts, gaps, overlap, references, flags, directions,
+nonfinite values and tails without retained allocations. Image tile-set
+decoding, atlas placement and blend/cliff query semantics remain 08H2–08H4.
+See the [08H1 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08h1.md).
