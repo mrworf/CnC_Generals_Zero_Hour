@@ -11,7 +11,9 @@ retry produces one coherent owner graph.
 
 ## Scope and ordering
 
-Depends on accepted 08L2 Object/Drawable construction and precedes map-attempt
+Depends on accepted 08L2 Object/Drawable construction and
+[08L3A0](milestone_22_plan_01_slice_08l3a0.md) borrowed W3D file-factory
+closure; precedes map-attempt
 composition in 08L3B. Cover `Bridge(Object*)`, `createTower`,
 `TerrainLogic::addLandmarkBridgeToLogic`, `Pathfinder::addBridge`, and a narrow
 construction rollback/removal API for a bridge layer. Preserve normal bridge
@@ -38,13 +40,27 @@ symlink and all content behind it are read-only and never used here.
 
 ## Investigation before production edits
 
-- Check `Bridge(Object*)` behavior for optional tower positions and whether a
-  TerrainRoadType can intentionally omit tower templates. Retain intentional
-  optional behavior; fail closed only for a configured required tower.
-- Check pathfinder layer allocation and zone/cache mutations to make rollback
-  exact before choosing the narrow removal API.
-- Select a project-owned generated bridge Object/TerrainRoadType fixture and
-  direct source entry that can witness constructor, layer and retry state.
+- A road type's empty tower name is intentionally optional; the current
+  constructor tries all four positions and skips a missing tower after
+  `createTower` returns null. Preserve empty names as absent towers, while a
+  nonempty unresolved tower name is a required-provider failure.
+- `PathfindLayer::reset` releases one layer's bridge pointer and allocated
+  cells. Add a checked, pointer-matched pathfinder rollback entry so the
+  current Bridge alone can release its layer. The existing normal
+  `TerrainLogic::deleteBridge` calls gameplay destruction and is unsuitable.
+- `Bridge(Object*)` currently returns early when TerrainRoadType is missing,
+  leaving `m_next` uninitialized. It can also create a partial tower graph
+  before failure. `addLandmarkBridgeToLogic` publishes the Bridge before
+  `Pathfinder::addBridge`, whose `LAYER_GROUND` value means failure.
+- Use project-owned `Bridge` INI and modeled Object definitions in a generated
+  fixture. The direct terrain admission entry is the focused 08L3A witness;
+  authored MapObject traversal remains 08L3B.
+- The first modeled generated bridge probe reached `W3DModelDraw` but
+  `WW3DAssetManager::Load_3D_Assets` dereferenced a null `_TheFileFactory`.
+  `OriginalDrawOwners` borrows W3DDisplay's assets/scene while omitting the
+  `W3DFileSystem` owner. This independently testable lifecycle gap is assigned
+  to 08L3A0. The uncommitted 08L3A source/test probe was removed before that
+  prerequisite's plan checkpoint; no bridge acceptance is claimed.
 
 ## Tests and validation
 
