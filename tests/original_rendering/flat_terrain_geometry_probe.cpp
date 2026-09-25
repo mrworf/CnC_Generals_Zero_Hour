@@ -47,6 +47,24 @@ public:
 		return m_vertexBufferTiles && tile >= 0 && tile < m_numVertexBufferTiles ?
 			m_vertexBufferTiles[tile] : NULL;
 	}
+	DX8VertexBufferClass *detach_vertices(Int tile)
+	{
+		if (!m_vertexBufferTiles || tile < 0 || tile >= m_numVertexBufferTiles) return NULL;
+		DX8VertexBufferClass *result = m_vertexBufferTiles[tile];
+		m_vertexBufferTiles[tile] = NULL;
+		return result;
+	}
+	void restore_vertices(Int tile, DX8VertexBufferClass *vertices)
+	{
+		require(m_vertexBufferTiles && tile >= 0 && tile < m_numVertexBufferTiles &&
+			!m_vertexBufferTiles[tile], "original terrain tile restore rejected");
+		m_vertexBufferTiles[tile] = vertices;
+	}
+	void set_last_tile_size(Int columns, Int rows)
+	{
+		m_numBlockColumnsInLastVB = columns;
+		m_numBlockRowsInLastVB = rows;
+	}
 	Int extra_count() const { return m_numExtraBlendTiles; }
 	Int extra_capacity() const { return m_extraBlendTilePositionsSize; }
 	Int visible_extra_count() const { return m_numVisibleExtraBlendTiles; }
@@ -68,7 +86,7 @@ extern "C" void zh_probe_flat_terrain_geometry()
 	const Real saved_partition = TheWritableGlobalData->m_partitionCellSize;
 	TheWritableGlobalData->m_partitionCellSize = MAP_XY_FACTOR;
 
-	zh::renderer::RecordingGpuDevice device;
+	zh::renderer::RecordingGpuDevice device(256, 4096);
 	{
 		zh::original_runtime::OriginalGpuEdge edge(device);
 		auto display = std::make_unique<W3DDisplay>();
@@ -274,16 +292,19 @@ extern "C" void zh_probe_flat_terrain_geometry()
 		const auto first_draw = retry.find("draw pipeline=");
 		const auto second_selection = first_selection == std::string::npos ? std::string::npos :
 			retry.find("original TextureClass::Apply stage=0 selected", first_selection + 1);
-		const auto second_draw = first_draw == std::string::npos ? std::string::npos :
-			retry.find("draw pipeline=", first_draw + 1);
-		const std::string range = "count=6144 point_size=0.000000 index_bits=16 first_index=0 base_vertex=0";
+		const auto second_draw = second_selection == std::string::npos ? std::string::npos :
+			retry.find("draw pipeline=", second_selection + 1);
+		const std::string range = "count=42 point_size=0.000000 index_bits=16 first_index=0 base_vertex=0";
+		const std::string last_row_range =
+			"count=42 point_size=0.000000 index_bits=16 first_index=1152 base_vertex=0";
 		const auto first_range = retry.find(range);
 		require(first_selection != std::string::npos && first_selection < first_draw &&
 			second_selection != std::string::npos && first_draw < second_selection && second_selection < second_draw &&
-			count_draws(retry) == 2 && first_range != std::string::npos &&
+			count_draws(retry) == 14 && first_range != std::string::npos &&
 			retry.find(range, first_range + 1) != std::string::npos &&
+			retry.find(last_row_range) != std::string::npos &&
 			edge.texture_handle(map->getTerrainTexture()) == edge.texture_handle(map->getAlphaTerrainTexture()) &&
-			device.last_draw_index_bytes().size() == 6144U * sizeof(UnsignedShort),
+			device.last_draw_index_bytes().size() == 42U * sizeof(UnsignedShort),
 			"original base terrain did not submit both native terrain passes");
 		const auto require_no_draw = [&](const char *message, const auto &operation) {
 			const std::string before = device.snapshot();
@@ -317,6 +338,85 @@ extern "C" void zh_probe_flat_terrain_geometry()
 		map->Release_Ref();
 		map = NULL;
 
+		const auto render_shape = [&](const char *environment, unsigned expected_draws,
+			const char *message) {
+			WorldHeightMap *shape = open_map(environment);
+			require(terrain.initHeightData(shape->getDrawWidth(), shape->getDrawHeight(),
+				shape, NULL, TRUE) == 0, "original multi-tile render shape initialization failed");
+			const std::string before = device.snapshot();
+			draw();
+			const std::string trace = device.snapshot().substr(before.size());
+			require(count_draws(trace) == expected_draws, message);
+			terrain.freeMapResources();
+			edge.release_source_buffers();
+			shape->Release_Ref();
+		};
+		render_shape("ZH_M22_MULTI_TILE_X_MAP", 16,
+			"original X-edge terrain draw traversal changed");
+		render_shape("ZH_M22_MULTI_TILE_Y_MAP", 68,
+			"original Y-edge terrain draw traversal changed");
+		render_shape("ZH_M22_MULTI_TILE_EXACT_MAP", 8,
+			"original exact multi-tile terrain draw traversal changed");
+
+		multi = open_map("ZH_M22_MULTI_TILE_TERRAIN_MAP");
+		require(terrain.initHeightData(35, 34, multi, NULL, TRUE) == 0,
+			"original partial multi-tile draw initialization failed");
+		DX8VertexBufferClass *detached = terrain.detach_vertices(1);
+		const std::string before_detached = device.snapshot();
+		bool detached_rejected = false;
+		try { draw(); } catch (const std::runtime_error &) { detached_rejected = true; }
+		require(detached_rejected && count_draws(device.snapshot().substr(before_detached.size())) == 0,
+			"original incomplete multi-tile owner mutated the frame");
+		terrain.restore_vertices(1, detached);
+		terrain.set_last_tile_size(0, 1);
+		const std::string before_bad_edge = device.snapshot();
+		bool bad_edge_rejected = false;
+		try { draw(); } catch (const std::runtime_error &) { bad_edge_rejected = true; }
+		require(bad_edge_rejected && count_draws(device.snapshot().substr(before_bad_edge.size())) == 0,
+			"original invalid edge metadata mutated the frame");
+		terrain.set_last_tile_size(2, 1);
+		edge.release_vertex(terrain.vertices(0));
+		device.fail_next_buffer_create();
+		const std::string before_bind_failure = device.snapshot();
+		bool bind_rejected = false;
+		try { draw(); } catch (const std::runtime_error &) { bind_rejected = true; }
+		require(bind_rejected &&
+			count_draws(device.snapshot().substr(before_bind_failure.size())) == 0 &&
+			device.resource_counts().samplers == 0,
+			"original multi-tile bind failure retained shader or frame state");
+		const std::string before_bind_recovery = device.snapshot();
+		draw();
+		require(count_draws(device.snapshot().substr(before_bind_recovery.size())) == 70,
+			"original multi-tile bind failure did not recover");
+		for (unsigned failure : {0U, 34U, 35U, 69U}) {
+			require_aborted_draw(failure,
+				"original multi-tile draw failure retained shader or frame state");
+			const std::string before_recovery = device.snapshot();
+			draw();
+			const unsigned recovered = count_draws(device.snapshot().substr(before_recovery.size()));
+			require(recovered == 70,
+				"original multi-tile draw failure did not recover");
+		}
+		const std::string before_multi_draw = device.snapshot();
+		draw();
+		const std::string multi_draw = device.snapshot().substr(before_multi_draw.size());
+		const std::string full_tile_range =
+			"count=6144 point_size=0.000000 index_bits=16 first_index=0 base_vertex=0";
+		const std::string full_width_edge_range =
+			"count=192 point_size=0.000000 index_bits=16 first_index=0 base_vertex=0";
+		const std::string partial_last_row_range =
+			"count=12 point_size=0.000000 index_bits=16 first_index=5952 base_vertex=0";
+		require(count_draws(multi_draw) == 70 &&
+			multi_draw.find(full_tile_range) != std::string::npos &&
+			multi_draw.find(full_width_edge_range) != std::string::npos &&
+			multi_draw.find(partial_last_row_range) != std::string::npos &&
+			device.last_draw_index_bytes().size() == 12U * sizeof(UnsignedShort),
+			"original partial multi-tile ranges consumed padding");
+		terrain.freeMapResources();
+		edge.release_source_buffers();
+		multi->Release_Ref();
+		multi = NULL;
+
 		WorldHeightMap *authored = open_map("ZH_M22_AUTHORED_TERRAIN_MAP");
 		require(authored->getTerrainTexture() && authored->getAlphaTerrainTexture(),
 			"original authored terrain atlas pair unavailable");
@@ -342,7 +442,7 @@ extern "C" void zh_probe_flat_terrain_geometry()
 		}
 		const std::string before_authored_draw = device.snapshot();
 		draw();
-		require(count_draws(device.snapshot().substr(before_authored_draw.size())) == 3 &&
+		require(count_draws(device.snapshot().substr(before_authored_draw.size())) == 15 &&
 			terrain.visible_extra_count() == 1 &&
 			device.last_draw_index_bytes().size() == 6U * sizeof(UnsignedShort),
 			"original authored terrain did not submit its extra blend after the base passes");
@@ -360,27 +460,31 @@ extern "C" void zh_probe_flat_terrain_geometry()
 			"original extra blend submission initialization failed");
 		const Bool saved_adjust_cliffs = TheWritableGlobalData->m_adjustCliffTextures;
 		TheWritableGlobalData->m_adjustCliffTextures = TRUE;
-		require_aborted_draw(2, "original extra blend draw abort retained state");
+		require_aborted_draw(14, "original extra blend draw abort retained state");
 		require(terrain.visible_extra_count() == 0,
 			"original failed extra blend draw published visibility");
 		const std::string before_extra_retry = device.snapshot();
 		draw();
 		const std::string extra_retry = device.snapshot().substr(before_extra_retry.size());
-		const auto extra_first_draw = extra_retry.find("draw pipeline=");
-		const auto extra_second_draw = extra_first_draw == std::string::npos ? std::string::npos :
-			extra_retry.find("draw pipeline=", extra_first_draw + 1);
-		const auto extra_third_selection = extra_second_draw == std::string::npos ? std::string::npos :
-			extra_retry.find("original TextureClass::Apply stage=0 selected", extra_second_draw + 1);
-		const auto extra_third_draw = extra_second_draw == std::string::npos ? std::string::npos :
-			extra_retry.find("draw pipeline=", extra_second_draw + 1);
+		std::size_t last_base_draw = std::string::npos;
+		std::size_t next_base_draw = 0;
+		for (Int draw_index = 0; draw_index < 14; ++draw_index) {
+			last_base_draw = extra_retry.find("draw pipeline=", next_base_draw);
+			require(last_base_draw != std::string::npos,
+				"original extra blend omitted a base terrain range");
+			next_base_draw = last_base_draw + 1;
+		}
+		const auto extra_selection = extra_retry.find(
+			"original TextureClass::Apply stage=0 selected", last_base_draw + 1);
+		const auto extra_draw = extra_selection == std::string::npos ? std::string::npos :
+			extra_retry.find("draw pipeline=", extra_selection + 1);
 		const auto extra_indices = device.last_draw_index_bytes();
 		const auto index_at = [&](std::size_t index) {
 			return UnsignedShort(extra_indices[index * 2]) |
 				(UnsignedShort(extra_indices[index * 2 + 1]) << 8);
 		};
-		require(count_draws(extra_retry) == 3 && terrain.visible_extra_count() == 8 &&
-			extra_third_selection != std::string::npos &&
-			extra_third_selection < extra_third_draw &&
+		require(count_draws(extra_retry) == 15 && terrain.visible_extra_count() == 8 &&
+			extra_selection != std::string::npos && extra_selection < extra_draw &&
 			extra_indices.size() == 48U * sizeof(UnsignedShort) &&
 			index_at(0) == 0 && index_at(1) == 2 && index_at(2) == 3 &&
 			index_at(6) == 5 && index_at(7) == 7 && index_at(8) == 4 &&
@@ -390,7 +494,7 @@ extern "C" void zh_probe_flat_terrain_geometry()
 		TheWritableGlobalData->m_use3WayTerrainBlends = 0;
 		const std::string before_disabled_extra = device.snapshot();
 		draw();
-		require(count_draws(device.snapshot().substr(before_disabled_extra.size())) == 2 &&
+		require(count_draws(device.snapshot().substr(before_disabled_extra.size())) == 14 &&
 			terrain.visible_extra_count() == 0,
 			"original disabled extra blend submitted a third pass");
 		TheWritableGlobalData->m_use3WayTerrainBlends = 2;
@@ -414,5 +518,5 @@ extern "C" void zh_probe_flat_terrain_geometry()
 	require(device.resource_counts().total() == 0,
 		"original flat terrain teardown retained resource");
 	TheWritableGlobalData->m_partitionCellSize = saved_partition;
-	std::puts("original flat terrain geometry: cells=7x7 vb=4096 ib=6144 draws=2 multitile=4");
+	std::puts("original flat terrain geometry: cells=7x7 vb=4096 ib=6144 draws=14 multitile=70");
 }

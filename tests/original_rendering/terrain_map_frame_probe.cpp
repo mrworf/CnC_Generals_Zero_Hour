@@ -102,7 +102,7 @@ extern "C" void zh_probe_terrain_map_frame()
 				const std::string first = device.snapshot().substr(before.size());
 				require(!TheHeightMap->doesNeedFullUpdate() &&
 					TheTerrainRenderObject->getShroud()->getShroudTexture() &&
-					draw_count(first) == 2 &&
+					draw_count(first) == 14 &&
 					first.find("original W3DShroud::render projected") != std::string::npos &&
 					first.find("original W3DShroud::render projected") <
 					first.find("original W3DView::updateView terrain center") &&
@@ -113,7 +113,7 @@ extern "C" void zh_probe_terrain_map_frame()
 					"original map frame did not order shroud projection before terrain draw");
 				const std::string stationary_before = device.snapshot();
 				frame();
-				require(draw_count(device.snapshot().substr(stationary_before.size())) == 2 &&
+				require(draw_count(device.snapshot().substr(stationary_before.size())) == 14 &&
 					!TheHeightMap->doesNeedFullUpdate(),
 					"original stationary map frame changed terrain update state");
 

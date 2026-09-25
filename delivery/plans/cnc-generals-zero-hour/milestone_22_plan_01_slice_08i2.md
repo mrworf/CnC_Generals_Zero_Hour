@@ -68,3 +68,13 @@ All valid generated terrain cells, and no fixed-capacity padding, traverse the
 same accepted base material route in source pass/tile order with deterministic
 failure recovery. One independently reviewable commit:
 `delivery: M22 08I2 submit multi-tile terrain`.
+
+## Result
+
+Complete. The CPU terrain owner validates its full tile grid before mutating
+draw state, then traverses every tile row-major inside each base shader pass.
+Full-width tiles use one exact bounded range; partial-width tiles use one
+shared-index row range per valid row, so no padded cell is submitted. Generated
+1x1, 2x1, 1x2 and exact/partial 2x2 coverage proves range counts and ordering,
+owner/metadata rejection, physical bind and first/middle/last draw failures,
+shader/frame unwind, retry, base-before-extra ordering and teardown.

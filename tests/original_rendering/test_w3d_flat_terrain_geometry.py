@@ -70,7 +70,7 @@ def main() -> int:
         for generation in range(2):
             source = authored_source_tree(root / f"source-{generation}", fixture, "valid")
             result = run(args.executable.resolve(), root / f"generation-{generation}", source, "mission")
-            marker = "original flat terrain geometry: cells=7x7 vb=4096 ib=6144 draws=2 multitile=4"
+            marker = "original flat terrain geometry: cells=7x7 vb=4096 ib=6144 draws=14 multitile=70"
             if result.returncode or marker not in result.stdout:
                 raise SystemExit(f"original flat terrain generation {generation} failed "
                                  f"({result.returncode}); private output redacted")

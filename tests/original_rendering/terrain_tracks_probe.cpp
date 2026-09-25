@@ -55,7 +55,7 @@ extern "C" void zh_probe_terrain_tracks()
 	TheWritableGlobalData->m_maxTankTrackEdges = 8;
 	TheWritableGlobalData->m_maxTankTrackOpaqueEdges = 4;
 	TheWritableGlobalData->m_maxTankTrackFadeDelay = 1;
-	zh::renderer::RecordingGpuDevice device;
+	zh::renderer::RecordingGpuDevice device(256, 4096);
 	for (Int generation = 0; generation != 2; ++generation) {
 		const Int module_count = generation + 1;
 		TheWritableGlobalData->m_maxTerrainTracks = module_count;
@@ -114,7 +114,7 @@ extern "C" void zh_probe_terrain_tracks()
 				const std::string before = device.snapshot(); frame();
 				const std::string active = device.snapshot().substr(before.size());
 				const std::size_t track_marker = active.find("original TerrainTracksRenderObjClassSystem::flush");
-				require(draws(active) == 2 + module_count && active.find("original RTS3DScene::Render map terrain") < track_marker &&
+				require(draws(active) == 14 + module_count && active.find("original RTS3DScene::Render map terrain") < track_marker &&
 					active.find("DX8Wrapper::Draw indexed first=0 count=6 base=0", track_marker) != std::string::npos,
 					"original terrain-track flush ordering/range failed");
 				device.fail_buffer_upload_after(occurrences_before(active, "upload ", track_marker));
@@ -126,12 +126,12 @@ extern "C" void zh_probe_terrain_tracks()
 				frame();
 				TheWritableGlobalData->m_makeTrackMarks = FALSE;
 				const std::string disabled_before = device.snapshot(); frame();
-				require(draws(device.snapshot().substr(disabled_before.size())) == 2,
+				require(draws(device.snapshot().substr(disabled_before.size())) == 14,
 					"original disabled terrain tracks emitted a draw");
 				TheWritableGlobalData->m_makeTrackMarks = TRUE;
 				tracks->unbindTrack(track); if (sibling) tracks->unbindTrack(sibling); tracks->Reset();
 				const std::string expired_before = device.snapshot(); frame();
-				require(draws(device.snapshot().substr(expired_before.size())) == 2,
+				require(draws(device.snapshot().substr(expired_before.size())) == 14,
 					"original expired terrain tracks emitted a draw");
 				device.destroy(depth); device.destroy(color);
 			} catch (...) { TheTacticalView = saved_view; TheTerrainVisual = saved_visual; TheDisplay = saved_display; throw; }

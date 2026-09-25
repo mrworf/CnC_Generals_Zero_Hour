@@ -191,8 +191,8 @@ extern "C" void zh_probe_terrain_visual_map()
 			throw;
 		}
 		const std::string draws = device.snapshot().substr(before_draw.size());
-		const std::string range = "count=6144 point_size=0.000000 index_bits=16 first_index=0 base_vertex=0";
-		require(draw_count(draws) == 2 && draws.find(range) != std::string::npos &&
+		const std::string range = "count=42 point_size=0.000000 index_bits=16 first_index=0 base_vertex=0";
+		require(draw_count(draws) == 14 && draws.find(range) != std::string::npos &&
 			draws.find(range, draws.find(range) + 1) != std::string::npos,
 			"original terrain visual changed two-pass terrain submission");
 		DX8Wrapper::Set_Vertex_Buffer(NULL);
@@ -211,5 +211,5 @@ extern "C" void zh_probe_terrain_visual_map()
 	require(device.resource_counts().total() == 0,
 		"original terrain visual re-entry retained Recording resource");
 	TheWritableGlobalData->m_partitionCellSize = saved_partition;
-	std::puts("original terrain visual map: attach=1 rollback=3 draws=2 props=2 generations=2 resources=0");
+	std::puts("original terrain visual map: attach=1 rollback=3 draws=14 props=2 generations=2 resources=0");
 }

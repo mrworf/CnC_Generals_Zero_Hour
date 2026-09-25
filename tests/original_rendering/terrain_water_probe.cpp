@@ -62,7 +62,7 @@ extern "C" void zh_probe_terrain_water()
 	TheWritableGlobalData->m_useWaterPlane=TRUE;
 	TheWritableGlobalData->m_waterExtentX=32; TheWritableGlobalData->m_waterExtentY=24;
 	TheWritableGlobalData->m_waterType=WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT;
-	zh::renderer::RecordingGpuDevice device;
+	zh::renderer::RecordingGpuDevice device(256, 4096);
 	ScalarProbeWater preinit_override;
 	require(rejected([&]{preinit_override.updateMapOverrides();}),
 		"original pre-init water override accepted");
@@ -144,7 +144,7 @@ extern "C" void zh_probe_terrain_water()
 				const std::string start=device.snapshot(); frame(); const std::string active=device.snapshot().substr(start.size());
 				const char *water_name = cloud ? "original WaterRenderObjClass::Render cloud plane" : "original WaterRenderObjClass::Render translucent plane";
 				const std::size_t terrain=active.find("original RTS3DScene::Render map terrain"), track_mark=active.find("original TerrainTracksRenderObjClassSystem::flush"), water_mark=active.find(water_name);
-				require(draws(active)==4 && terrain<track_mark && track_mark<water_mark &&
+				require(draws(active)==16 && terrain<track_mark && track_mark<water_mark &&
 					active.find("DX8Wrapper::Draw indexed first=0 count=6 base=0",water_mark)!=std::string::npos,
 					"original terrain-track-water source ordering/range failed");
 				auto *smudges=dynamic_cast<W3DSmudgeManager *>(TheSmudgeManager);
@@ -165,7 +165,7 @@ extern "C" void zh_probe_terrain_water()
 				device.fail_draw_after(draws(active.substr(0,water_mark)));
 				require(rejected(frame)&&!WW3D::Is_Rendering()&&!device.pass_active(),"original water draw rollback failed"); frame();
 				TheWritableGlobalData->m_useCloudPlane=FALSE; TheWritableGlobalData->m_useWaterPlane=FALSE; const std::string off=device.snapshot(); frame();
-				require(draws(device.snapshot().substr(off.size()))==3,"original disabled water emitted a draw"); TheWritableGlobalData->m_useWaterPlane=TRUE;
+				require(draws(device.snapshot().substr(off.size()))==15,"original disabled water emitted a draw"); TheWritableGlobalData->m_useWaterPlane=TRUE;
 				TheWritableGlobalData->m_useCloudPlane=!cloud; require(rejected(frame),"original cloud owner mutation was accepted"); TheWritableGlobalData->m_useCloudPlane=cloud;
 				TheWritableGlobalData->m_waterExtentX=0; require(rejected(frame),"original zero-extent water activated"); TheWritableGlobalData->m_waterExtentX=32;
 				TheWritableGlobalData->m_waterType=WaterRenderObjClass::WATER_TYPE_1_FB_REFLECTION; require(rejected(frame),"original reflection water activated"); TheWritableGlobalData->m_waterType=WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT;

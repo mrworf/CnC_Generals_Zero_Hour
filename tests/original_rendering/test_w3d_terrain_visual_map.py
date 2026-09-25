@@ -31,7 +31,7 @@ def main() -> int:
         os.environ["ZH_M22_TERRAIN_VISUAL_MAP_PROFILE"] = "1"
         os.environ["ZH_M22_TERRAIN_VISUAL_MAP"] = str(map_path)
         os.environ["ZH_M22_TERRAIN_VISUAL_BAD_MAP"] = str(bad_map_path)
-        marker = ("original terrain visual map: attach=1 rollback=3 draws=2 "
+        marker = ("original terrain visual map: attach=1 rollback=3 draws=14 "
                   "props=2 generations=2 resources=0")
         for generation in range(2):
             source = source_tree(root / f"source-{generation}", fixture, "valid")

@@ -87,9 +87,19 @@ void HeightMapRenderObjClass::ReleaseResources() {}
 void HeightMapRenderObjClass::ReAcquireResources() {}
 void HeightMapRenderObjClass::Render(RenderInfoClass&)
 {
-	if (!m_map || !m_indexBuffer || !m_vertexBufferTiles || !m_vertexBufferTiles[0] ||
+	if (!m_map || !m_indexBuffer || !m_vertexBufferTiles || !m_vertexBufferBackup ||
+		m_numVBTilesX <= 0 || m_numVBTilesY <= 0 ||
+		m_numVertexBufferTiles != m_numVBTilesX * m_numVBTilesY ||
+		m_numBlockColumnsInLastVB <= 0 ||
+		m_numBlockColumnsInLastVB > VERTEX_BUFFER_TILE_LENGTH ||
+		m_numBlockRowsInLastVB <= 0 ||
+		m_numBlockRowsInLastVB > VERTEX_BUFFER_TILE_LENGTH ||
 		!zh::original_runtime::OriginalGpuEdge::active())
 		throw OriginalW3DDeviceUnavailable("original base terrain draw is unavailable");
+	for (Int tile = 0; tile < m_numVertexBufferTiles; ++tile) {
+		if (!m_vertexBufferTiles[tile] || !m_vertexBufferBackup[tile])
+			throw OriginalW3DDeviceUnavailable("original base terrain tile is unavailable");
+	}
 	if (Is_Hidden()) return;
 	if (!TheGlobalData || m_disableTextures || TheGlobalData->m_useCloudMap ||
 		TheGlobalData->m_useLightMap)
@@ -109,9 +119,26 @@ void HeightMapRenderObjClass::Render(RenderInfoClass&)
 		for (Int pass = 0; pass < 2; ++pass) {
 			W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE, pass);
 			active_shader = TRUE;
-			DX8Wrapper::Set_Vertex_Buffer(m_vertexBufferTiles[0]);
-			DX8Wrapper::Draw_Triangles(0, VERTEX_BUFFER_TILE_LENGTH * VERTEX_BUFFER_TILE_LENGTH * 2,
-				0, VERTEX_BUFFER_TILE_LENGTH * VERTEX_BUFFER_TILE_LENGTH * 4);
+			for (Int tile_y = 0; tile_y < m_numVBTilesY; ++tile_y) {
+				const Int rows = tile_y + 1 == m_numVBTilesY ?
+					m_numBlockRowsInLastVB : VERTEX_BUFFER_TILE_LENGTH;
+				for (Int tile_x = 0; tile_x < m_numVBTilesX; ++tile_x) {
+					const Int columns = tile_x + 1 == m_numVBTilesX ?
+						m_numBlockColumnsInLastVB : VERTEX_BUFFER_TILE_LENGTH;
+					const Int tile = tile_y * m_numVBTilesX + tile_x;
+					DX8Wrapper::Set_Vertex_Buffer(m_vertexBufferTiles[tile]);
+					if (columns == VERTEX_BUFFER_TILE_LENGTH) {
+						DX8Wrapper::Draw_Triangles(0, columns * rows * 2,
+							0, columns * rows * 4);
+					} else {
+						for (Int row = 0; row < rows; ++row) {
+							DX8Wrapper::Draw_Triangles(
+								row * VERTEX_BUFFER_TILE_LENGTH * 6, columns * 2,
+								row * VERTEX_BUFFER_TILE_LENGTH * 4, columns * 4);
+						}
+					}
+				}
+			}
 		}
 		W3DShaderManager::resetShader(W3DShaderManager::ST_TERRAIN_BASE);
 		active_shader = FALSE;
