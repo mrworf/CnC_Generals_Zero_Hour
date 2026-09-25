@@ -92,6 +92,20 @@ No active bib producer was reached, so 08M1 is not planned. All trial scene
 wiring and diagnostics were removed before the plan-only checkpoint; only
 fixed redacted discovery categories remain.
 
+After accepted 08N0, the corrected read-only continuation again crossed the
+six fixed post-map phases into authored object construction. Ten modeled-draw
+callbacks completed, then the public module factory rejected draw-provider
+ordinal 8 of its nine schema-only physical providers: `W3DTreeDraw`. This is a
+tree source-owner prerequisite, not a modeled-shadow failure. The factory's
+null create proc must remain fail-closed until [08P0](milestone_22_plan_01_slice_08p0.md)
+closes tree storage, resources and frame publication through ordered
+[08P0A](milestone_22_plan_01_slice_08p0a.md),
+[08P0B](milestone_22_plan_01_slice_08p0b.md) and
+[08P0C](milestone_22_plan_01_slice_08p0c.md). Retail scene admission and the
+borrow/unwind correction remain in this slice. Trial wiring/diagnostics were
+removed before the plan-only checkpoint. Only the fixed public provider
+category is retained; no private retail input or raw output is retained.
+
 ## Validation and error handling
 
 Retail roots remain read-only/private; no corpus bytes, private paths,
