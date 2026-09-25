@@ -243,6 +243,39 @@ extern "C" void zh_probe_terrain_water()
 			WaterRenderObjClass *saved_owner=TheWaterRenderObj; TheWaterRenderObj=NULL;
 			require(rejected([&]{visual.reset();}), "original detached active water accepted removed provider");
 			TheWaterRenderObj=saved_owner; visual.reset();
+			visual.update(); visual.update();
+			saved_owner=TheWaterRenderObj; TheWaterRenderObj=NULL;
+			require(rejected([&]{visual.update();}),
+				"original detached pre-map update accepted removed water owner");
+			TheWaterRenderObj=saved_owner;
+			const Real active_extent=TheGlobalData->m_waterExtentX;
+			TheWritableGlobalData->m_waterExtentX=0;
+			require(rejected([&]{visual.update();}),
+				"original detached pre-map update accepted malformed water");
+			TheWritableGlobalData->m_waterExtentX=active_extent;
+			W3DDisplay::m_3DScene->Add_Render_Object(water);
+			water->ReleaseResources();
+			W3DDisplay::m_3DScene->Remove_Render_Object(water);
+			require(water->hasPendingGpuResources() && rejected([&]{visual.update();}),
+				"original detached pre-map update accepted pending water");
+			W3DDisplay::m_3DScene->Add_Render_Object(water);
+			water->ReAcquireResources();
+			W3DDisplay::m_3DScene->Remove_Render_Object(water);
+			require(!water->hasPendingGpuResources(),
+				"original detached pre-map water did not recover resources");
+			visual.update();
+			if (generation==0) {
+				device.fail_next_buffer_create();
+				require(rejected([&]{visual.load(AsciiString(map));}) &&
+					!TheHeightMap->getMap() && !water->Peek_Scene(),
+					"original detached water terrain-load rollback failed");
+				visual.update();
+			}
+			require(visual.load(AsciiString(map)) && TheHeightMap->getMap() &&
+				TheTerrainRenderObject->Peek_Scene()==W3DDisplay::m_3DScene &&
+				water->Peek_Scene()==W3DDisplay::m_3DScene,
+				"original detached water terrain-load reattachment failed");
+			water->update();
 			unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE"); unsetenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE");
 			TheTerrainVisual=saved_visual;
 		} catch (...) { unsetenv("ZH_M22_RETAIL_CONFIG_ROUTE"); unsetenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE"); TheTerrainVisual=saved_visual; TheDisplay=saved_display; throw; }
@@ -291,5 +324,5 @@ extern "C" void zh_probe_terrain_water()
 	TheWritableGlobalData->m_partitionCellSize=saved_partition; TheWritableGlobalData->m_maxTerrainTracks=saved_tracks; TheWritableGlobalData->m_makeTrackMarks=saved_marks;
 	TheWritableGlobalData->m_useWaterPlane=saved_water; TheWritableGlobalData->m_useCloudPlane=saved_cloud; TheWritableGlobalData->m_waterExtentX=saved_x; TheWritableGlobalData->m_waterExtentY=saved_y; TheWritableGlobalData->m_waterType=saved_type;
 	require(device.resource_counts().total()==0,"original water teardown retained Recording resources");
-	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 scalar-transaction=1 active-reset=1 ordering=1 retry=2 tracks=1 siblings=0 grid-query=1 override=1 generations=9 resources=0");
+	std::puts("original terrain water: plane=1 cloud=1 retail-cloud-selector=1 scalar-transaction=1 active-reset=1 pre-map-update=1 reattach=1 ordering=1 retry=3 tracks=1 siblings=0 grid-query=1 override=1 generations=9 resources=0");
 }

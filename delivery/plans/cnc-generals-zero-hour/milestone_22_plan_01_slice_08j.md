@@ -74,3 +74,13 @@ transactional, retryable, and fully retired at teardown; all negative controls
 fail before mutation or restore the detached retry state. One independently
 reviewable implementation commit:
 `delivery: M22 08J continue detached active water`.
+
+## Result
+
+Complete. The terrain visual now recognizes the exact reset-detached active
+water state without consulting a scene selector. Repeated pre-map updates are
+idempotent; map load attaches terrain before the existing water owner, applies
+the accepted disabled-grid and map-override operations, and removes only links
+created by that attempt when construction fails. Generated coverage proves
+predicate rejection, pending-resource recovery, failed-load rollback,
+deterministic retry, two device generations and complete teardown.

@@ -214,20 +214,32 @@ void W3DTerrainVisual::reset()
 	m_waterRenderObject->reset();
 }
 
+Bool W3DTerrainVisual::hasResetDetachedActiveWater() const
+{
+	return s_emptyTerrainVisual == this && TheTerrainVisual == this &&
+		zh::original_runtime::OriginalGpuEdge::active() &&
+		dynamic_cast<W3DDisplay *>(TheDisplay) && W3DDisplay::m_3DScene &&
+		m_terrainRenderObject && TheTerrainRenderObject == m_terrainRenderObject &&
+		TheHeightMap == m_terrainRenderObject && !m_terrainRenderObject->getMap() &&
+		m_terrainRenderObject->Peek_Scene() == NULL && !m_logicHeightMap &&
+		m_waterRenderObject && m_waterRenderObject == TheWaterRenderObj &&
+		m_waterRenderObject->Peek_Scene() == NULL &&
+		!m_waterRenderObject->hasPendingGpuResources() &&
+		TheGlobalData && TheGlobalData->m_useWaterPlane &&
+		TheGlobalData->m_waterExtentX > 0 && TheGlobalData->m_waterExtentY > 0 &&
+		TheGlobalData->m_waterType == WaterRenderObjClass::WATER_TYPE_0_TRANSLUCENT &&
+		!m_isWaterGridRenderingEnabled;
+}
+
 void W3DTerrainVisual::update()
 {
 	if (s_emptyTerrainVisual != this || TheTerrainVisual != this)
 		throw OriginalW3DDeviceUnavailable("original empty terrain visual update unavailable");
 	TerrainVisual::update();
-	// The accepted reset detaches active water before the next new-game tick.
-	// Only the explicit generated parser transition may pass this pre-map tick.
-	if (std::getenv("ZH_M22_GENERATED_SCENE_ROUTE") &&
-		std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") &&
-		std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE") &&
-		m_waterRenderObject && m_waterRenderObject == TheWaterRenderObj &&
-		m_terrainRenderObject && !m_terrainRenderObject->getMap() &&
-		m_waterRenderObject->Peek_Scene() == NULL &&
-		!m_waterRenderObject->hasPendingGpuResources())
+	// Display reset detaches active water before the update-owned new-game tick.
+	// This exact source state is valid independent of the caller's route; terrain
+	// load owns its later ordered reattachment.
+	if (hasResetDetachedActiveWater())
 		return;
 	m_waterRenderObject->update();
 }
@@ -239,6 +251,9 @@ Bool W3DTerrainVisual::load(AsciiString filename)
 		m_logicHeightMap || m_terrainRenderObject->getMap() || m_terrainRenderObject->Peek_Scene() ||
 		filename.isEmpty())
 		throw OriginalW3DDeviceUnavailable("original map-loaded terrain visual unavailable");
+	const Bool reattachResetWater = hasResetDetachedActiveWater();
+	if (m_waterRenderObject && !m_waterRenderObject->Peek_Scene() && !reattachResetWater)
+		throw OriginalW3DDeviceUnavailable("original construction water owner unavailable");
 
 	if (TerrainVisual::load(filename) == FALSE)
 		return FALSE;
@@ -264,7 +279,7 @@ Bool W3DTerrainVisual::load(AsciiString filename)
 		// source buffers only after the map has published its authored texture.
 		TheTerrainTracksRenderObjClassSystem->ReAcquireResources();
 		W3DDisplay::m_3DScene->Add_Render_Object(m_terrainRenderObject);
-		if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE")) {
+		if (reattachResetWater) {
 			if (!m_waterRenderObject || m_waterRenderObject != TheWaterRenderObj ||
 				m_waterRenderObject->Peek_Scene() || m_waterRenderObject->hasPendingGpuResources())
 				throw OriginalW3DDeviceUnavailable("original construction water owner unavailable");
