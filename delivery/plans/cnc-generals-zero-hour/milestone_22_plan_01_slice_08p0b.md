@@ -2,7 +2,8 @@
 
 ## Goal and boundary
 
-After accepted 08P0A, prepare source-owned tree render resources without
+After accepted 08P0A and the separate 08J1 generated-map correction, prepare
+source-owned tree render resources without
 enabling the physical factory proc or claiming a frame. The original
 `W3DTreeBuffer` type admission resolves a WW3D render object, extracts a mesh
 and bounds, packs tree textures and tiles, then fills source vertex/index

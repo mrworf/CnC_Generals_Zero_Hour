@@ -287,7 +287,8 @@ The production Linux original-engine path renders representative campaign and sk
 | 08N0B | [milestone_22_plan_01_slice_08n0b.md](milestone_22_plan_01_slice_08n0b.md) | Post-publication modeled volume geometry readiness and resource rollback. | slice 08N0A | complete: exact map-owned per-caster source slots and Recording upload; generated late-modeled frame/fault/retry proof | `delivery: M22 08N0B ready modeled volume geometry` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08n0b.md) |
 | 08N0 | [milestone_22_plan_01_slice_08n0.md](milestone_22_plan_01_slice_08n0.md) | Generated modeled volume-shadow lifecycle aggregate; retail continuation remains 08. | slices 08N0A–08N0B | complete: generated owner aggregate; retail Recording deferred to 08 | `delivery: M22 08N0 revalidate modeled volume shadow lifecycle` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08n0.md) |
 | 08P0A | [milestone_22_plan_01_slice_08p0a.md](milestone_22_plan_01_slice_08p0a.md) | Source tree type/instance registry, terrain owner, atomic add/update/removal and reset lifecycle; physical draw remains closed. | slice 08N0 | complete: lazy exact-owner registry, generated failure/retry, six gates; separate 08J map defect tracked as 08J1 | `delivery: M22 08P0A own tree registry atomically` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0a.md) |
-| 08P0B | [milestone_22_plan_01_slice_08p0b.md](milestone_22_plan_01_slice_08p0b.md) | Source tree model/atlas/mesh resource preparation with checked capacity and Recording ownership; factory still closed. | slice 08P0A | pending | | |
+| 08J1 | [milestone_22_plan_01_slice_08j1.md](milestone_22_plan_01_slice_08j1.md) | Exact disabled-water detached-owner map continuation and physical factory-map control restoration; active-water route unchanged. | slice 08P0A | pending: corrective prerequisite before retail/09 acceptance and tree resource continuation | | |
+| 08P0B | [milestone_22_plan_01_slice_08p0b.md](milestone_22_plan_01_slice_08p0b.md) | Source tree model/atlas/mesh resource preparation with checked capacity and Recording ownership; factory still closed. | slices 08P0A and 08J1 | pending | | |
 | 08P0C | [milestone_22_plan_01_slice_08p0c.md](milestone_22_plan_01_slice_08p0c.md) | Original tree frame/shroud/shadow/update path and exact physical `W3DTreeDraw` admission, rollback and retry. | slice 08P0B | pending | | |
 | 08P0 | [milestone_22_plan_01_slice_08p0.md](milestone_22_plan_01_slice_08p0.md) | Generated original tree-provider aggregate before retail scene admission. | slices 08P0A–08P0C | pending | | |
 | 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | slices 08F, 08G2, 08H, 08I, 08J, 08K, 08L, 08M0, 08N0, 08P0, plus deferred disabled-water map correction 08J1 | pending: retain the retail scene-owner borrow/unwind correction; split 08M1 only if active bib producer reached | | |
@@ -299,9 +300,10 @@ The 08P0A physical-control audit found a separate regression introduced in
 08J: the generated factory-map route reaches `W3DTerrainVisual::load` with
 disabled water detached after reset, while `hasResetDetachedActiveWater()`
 requires enabled water. Its preflight rejects before map binding or tree
-admission. After 08P0A closes, persist a plan-only 08J1 corrective slice for
-the exact disabled-water preflight/reattachment lifecycle, then deliver and
-revalidate the generated physical map control before slice 08 or 09 acceptance.
+admission. [08J1](milestone_22_plan_01_slice_08j1.md) is a separate plan-only
+corrective split after 08P0A for the exact disabled-water
+preflight/reattachment lifecycle; deliver it and revalidate the generated
+physical map control before slice 08 or 09 acceptance.
 This is not part of 08P0A's tree owner or a waived passing control.
 
 - Compatibility and migration: keep the 19 original registry names, concrete data types, tags, defaults, inherited fields, and runtime class identities. Preserve left-handed coordinates, 0..1 depth, clockwise winding, top-left texture origin, ARGB8/premultiplied-alpha, fog, bias, and WWShade multipass semantics.

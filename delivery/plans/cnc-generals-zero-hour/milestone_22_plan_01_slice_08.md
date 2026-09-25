@@ -62,8 +62,9 @@ The later 08P0A physical-control audit found an 08J-era gap outside the tree
 owner: a generated factory-map attempt with disabled water arrives at
 `W3DTerrainVisual::load` after reset with its water owner detached. The exact
 active-water helper rejects that disabled-water state at preflight, before
-map binding or tree admission. A separate 08J1 corrective plan-only split
-must be persisted after 08P0A, then implemented and revalidated with the
+map binding or tree admission. The separate
+[08J1](milestone_22_plan_01_slice_08j1.md) corrective slice must be
+implemented and revalidated with the
 physical generated-map control before this retail slice or slice 09 can be
 accepted. The correction must not weaken active-water identity or use a
 selector-specific shortcut.
