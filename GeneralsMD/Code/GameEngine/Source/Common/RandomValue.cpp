@@ -274,13 +274,8 @@ DEBUG_LOG(( "%d: GetGameLogicRandomValue = %d (%d - %d), %s line %d\n",
 //
 Int GetGameClientRandomValue( int lo, int hi, char *file, int line )
 {
-	UnsignedInt delta = hi - lo + 1;
-	Int rval;
-
-	if (delta == 0)
-		return hi;
-
-	rval = ((Int)(randomValue(theGameClientSeed) % delta)) + lo;
+	if (static_cast<UnsignedInt>(hi - lo + 1) == 0) return hi;
+	Int rval = PreviewGameClientRandomValue(theGameClientSeed, lo, hi);
 
 /**/
 #ifdef DEBUG_RANDOM_CLIENT
@@ -290,6 +285,32 @@ DEBUG_LOG(( "%d: GetGameClientRandomValue = %d (%d - %d), %s line %d\n",
 /**/
 
 	return rval;
+}
+
+void CopyGameClientRandomState(UnsignedInt words[6])
+{
+	for (Int i = 0; i < 6; ++i) words[i] = theGameClientSeed[i];
+}
+
+Int PreviewGameClientRandomValue(UnsignedInt words[6], Int lo, Int hi)
+{
+	UnsignedInt delta = hi - lo + 1;
+	if (delta == 0) return hi;
+	return ((Int)(randomValue(words) % delta)) + lo;
+}
+
+Real PreviewGameClientRandomValueReal(UnsignedInt words[6], Real lo, Real hi)
+{
+	Real delta = hi - lo;
+	if (delta <= 0.0f) return hi;
+	Real rval = ((Real)(randomValue(words)) * theMultFactor) * delta + lo;
+	DEBUG_ASSERTCRASH(rval >= lo && rval <= hi, ("Bad random val"));
+	return rval;
+}
+
+void CommitGameClientRandomState(const UnsignedInt words[6]) noexcept
+{
+	for (Int i = 0; i < 6; ++i) theGameClientSeed[i] = words[i];
 }
 
 //
@@ -344,15 +365,8 @@ DEBUG_LOG(( "%d: GetGameLogicRandomValueReal = %f, %s line %d\n",
 //
 Real GetGameClientRandomValueReal( Real lo, Real hi, char *file, int line )
 {
-	Real delta = hi - lo;
-	Real rval;
-
-	if (delta <= 0.0f)
-		return hi;
-
-	rval = ((Real)(randomValue(theGameClientSeed)) * theMultFactor ) * delta + lo;
-
-	DEBUG_ASSERTCRASH( rval >= lo && rval <= hi, ("Bad random val"));
+	if (hi - lo <= 0.0f) return hi;
+	Real rval = PreviewGameClientRandomValueReal(theGameClientSeed, lo, hi);
 /**/
 #ifdef DEBUG_RANDOM_CLIENT
 DEBUG_LOG(( "%d: GetGameClientRandomValueReal = %f, %s line %d\n",

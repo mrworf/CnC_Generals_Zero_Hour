@@ -38,6 +38,13 @@
 extern Int GetGameClientRandomValue( int lo, int hi, char *file, int line );
 extern Real GetGameClientRandomValueReal( Real lo, Real hi, char *file, int line );
 
+// A single-threaded owner may preview fallible client work without advancing
+// the published stream. It must exclude other client draws until commit.
+extern void CopyGameClientRandomState(UnsignedInt words[6]);
+extern Int PreviewGameClientRandomValue(UnsignedInt words[6], Int lo, Int hi);
+extern Real PreviewGameClientRandomValueReal(UnsignedInt words[6], Real lo, Real hi);
+extern void CommitGameClientRandomState(const UnsignedInt words[6]) noexcept;
+
 // use these macros to access the random value functions
 #define GameClientRandomValue( lo, hi ) GetGameClientRandomValue( lo, hi, __FILE__, __LINE__ )
 #define GameClientRandomValueReal( lo, hi ) GetGameClientRandomValueReal( lo, hi, __FILE__, __LINE__ )
