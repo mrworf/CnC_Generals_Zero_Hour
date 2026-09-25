@@ -43,7 +43,8 @@ def chunk(chunk_id: int, version: int, payload: bytes) -> bytes:
 
 
 def owned_map(actor_x: float = 20.0, skirmish: bool = False,
-              visual: bool = False) -> bytes:
+              visual: bool = False, bridge_wall: bool = False,
+              unsupported_bridge_property: bool = False) -> bytes:
     names = [
         "HeightMapData", "WorldInfo", "ObjectsList", "Object", "SidesList",
         "PlayerScriptsList", "ScriptList", "originalOwner", "playerName",
@@ -54,6 +55,10 @@ def owned_map(actor_x: float = 20.0, skirmish: bool = False,
         names.extend(("waypointID", "waypointName"))
     if visual:
         names.append("BlendTileData")
+    if bridge_wall:
+        names.extend(("objectName", "objectMaxHPs"))
+        if unsupported_bridge_property:
+            names.append("objectSoundAmbient")
     ids = {name: index + 1 for index, name in enumerate(names)}
     toc = bytearray(b"CkMp" + struct.pack("<I", len(names)))
     for name, value in ids.items():
@@ -74,6 +79,18 @@ def owned_map(actor_x: float = 20.0, skirmish: bool = False,
         owner = dictionary([(ids["originalOwner"], 3, owners[name])])
         body = struct.pack("<4fI", x, 20.0, 0.0, 0.0, 0) + ascii_string(name) + owner
         objects.extend(chunk(ids["Object"], 3, body))
+    if bridge_wall:
+        for name, x, authored_name, health in (
+                ("OwnedBridge", 35.0, "AuthoredBridge", 150),
+                ("OwnedWall", 55.0, "AuthoredWall", 75)):
+            values = [(ids["originalOwner"], 3, "teamplayerA"),
+                      (ids["objectName"], 3, authored_name),
+                      (ids["objectMaxHPs"], 1, health)]
+            if unsupported_bridge_property and name == "OwnedBridge":
+                values.append((ids["objectSoundAmbient"], 3, "UnsupportedSound"))
+            body = (struct.pack("<4fI", x, 35.0, 0.0, 0.0, 0) +
+                    ascii_string(name) + dictionary(values))
+            objects.extend(chunk(ids["Object"], 3, body))
     if skirmish:
         for index, x in ((1, 10.0), (2, 70.0)):
             waypoint = dictionary([(ids["waypointID"], 1, index),

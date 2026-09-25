@@ -29,3 +29,10 @@ The original single 08L3 commit boundary is superseded by four coherent
 implementation commits. The governing plan records aggregate completion only
 after 08L3B acceptance. Later ordinary-object, preload, camera and UI stages
 remain outside this aggregate.
+
+08L3B acceptance closes this generated aggregate: the source-order authored
+bridge/wall map attempt composes the accepted borrowed file, ThingFactory,
+Bridge/tower, wall and fresh pathfinder owners through radar refresh. The
+generated witness and six-suite validation are recorded in
+[08L3B evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08l3b.md).
+Retail scene admission remains slice 08 after 08L revalidation.

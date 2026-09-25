@@ -1559,6 +1559,9 @@ void TerrainLogic::addBridgeToLogic(BridgeInfo *pInfo, Dict *props, AsciiString 
 Bool TerrainLogic::addLandmarkBridgeToLogic(Object *bridgeObj)
 {
 	if (!bridgeObj || !TheAI || !TheAI->pathfinder()) return FALSE;
+	for (Bridge *existing = m_bridgeListHead; existing; existing = existing->getNext())
+		if (existing->peekBridgeInfo()->bridgeObjectID == bridgeObj->getID())
+			return FALSE;
 	Bridge *bridge = NULL;
 	PathfindLayerEnum layer = LAYER_GROUND;
 	try {
@@ -1582,6 +1585,26 @@ Bool TerrainLogic::addLandmarkBridgeToLogic(Object *bridgeObj)
 		}
 		return FALSE;
 	}
+}
+
+Bool TerrainLogic::rollbackLandmarkBridgeToLogic(Object *bridgeObj)
+{
+	if (!bridgeObj || !TheAI || !TheAI->pathfinder()) return FALSE;
+	Bridge *previous = NULL;
+	for (Bridge *bridge = m_bridgeListHead; bridge; bridge = bridge->getNext()) {
+		if (bridge->peekBridgeInfo()->bridgeObjectID != bridgeObj->getID()) {
+			previous = bridge;
+			continue;
+		}
+		if (!TheAI->pathfinder()->rollbackBridgeLayer(bridge, bridge->getLayer()))
+			return FALSE;
+		if (previous) previous->setNext(bridge->getNext());
+		else m_bridgeListHead = bridge->getNext();
+		bridge->rollbackConstructedTowers(bridgeObj);
+		bridge->deleteInstance();
+		return TRUE;
+	}
+	return FALSE;
 }
 
 //-------------------------------------------------------------------------------------------------

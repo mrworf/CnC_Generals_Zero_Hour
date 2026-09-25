@@ -206,6 +206,8 @@ public:
 
 	/// refresh the water values for the radar
 	virtual void refreshTerrain( TerrainLogic *terrain );
+	UnsignedInt getQueuedTerrainRefreshFrame(void) const { return m_queueTerrainRefreshFrame; }
+	void rollbackQueuedTerrainRefreshFrame(UnsignedInt prior) { m_queueTerrainRefreshFrame = prior; }
 
 	/// queue a refresh of the terran at the next available time
 	virtual void queueTerrainRefresh( void );
@@ -294,5 +296,4 @@ protected:
 extern Radar *TheRadar;  ///< the radar singleton extern
 
 #endif  // __RADAR_H_
-
 

@@ -294,6 +294,7 @@ public:
 
 	virtual void addBridgeToLogic(BridgeInfo *pInfo, Dict *props, AsciiString bridgeTemplateName); ///< Adds a bridge's logical info.
 	virtual Bool addLandmarkBridgeToLogic(Object *bridgeObj); ///< Adds a bridge's logical info atomically.
+	virtual Bool rollbackLandmarkBridgeToLogic(Object *bridgeObj); ///< Remove only the matching construction owner, without gameplay destroy hooks.
 	virtual void deleteBridge( Bridge *bridge );	///< remove a bridge
 
 	virtual void updateBridgeDamageStates(void); ///< Updates bridge's damage info.

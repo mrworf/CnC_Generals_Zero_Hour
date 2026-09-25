@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <cstring>
 #include <stdexcept>
 
 #include "Common/AudioAffect.h"
@@ -1119,6 +1120,35 @@ void GameLogic::deleteLoadScreen( void )
 /** Entry point for starting a new game, the engine is already in clean state at this
 	* point and ready to load up with all the data */
 // ------------------------------------------------------------------------------------------------
+static Bool m22GeneratedBridgeMapPropertiesAreBounded(const Dict *properties)
+{
+	if (!properties) return FALSE;
+	for (Int i = 0; i < properties->getPairCount(); ++i) {
+		NameKeyType key = properties->getNthKey(i);
+		Dict::DataType type = properties->getNthType(i);
+		if ((key == TheKey_originalOwner || key == TheKey_objectName) &&
+			type == Dict::DICT_ASCIISTRING) continue;
+		if ((key == TheKey_objectMaxHPs || key == TheKey_objectInitialHealth) &&
+			type == Dict::DICT_INT) continue;
+		return FALSE;
+	}
+	return TRUE;
+}
+
+static void m22GeneratedBridgeMapFault(const char *stage, Int ordinal = 0)
+{
+	if (!std::getenv("ZH_M22_BRIDGE_MAP_PROBE")) return;
+	const char *selected = std::getenv("ZH_M22_BRIDGE_MAP_FAIL_AT");
+	if (!selected) return;
+	char name[64];
+	if (ordinal)
+		std::snprintf(name, sizeof(name), "%s:%d", stage, ordinal);
+	else
+		std::snprintf(name, sizeof(name), "%s", stage);
+	if (std::strcmp(selected, name) == 0)
+		throw std::runtime_error("forced generated bridge map attempt failure");
+}
+
 void GameLogic::startNewGame( Bool loadingSaveGame )
 {
 
@@ -1870,9 +1900,167 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	DEBUG_LOG(("%s", Buf));
 	#endif
 
-		// Special case, load any bridge map objects.
+	// Special case, load any bridge map objects.
  	const ThingTemplate *thingTemplate;
 	MapObject *pMapObj;
+	const Bool generatedBridgeMapAttempt =
+		std::getenv("ZH_M22_GENERATED_SCENE_ROUTE") &&
+		std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE");
+	if (generatedBridgeMapAttempt) {
+		if (std::getenv("ZH_M22_BRIDGE_MAP_PREEXISTING")) {
+			const ThingTemplate *priorTemplate = TheThingFactory->findTemplate("OwnedBridge");
+			Object *priorObject = priorTemplate ? TheThingFactory->newObject(
+				priorTemplate, ThePlayerList->getNeutralPlayer()->getDefaultTeam()) : NULL;
+			if (!priorObject)
+				throw std::runtime_error("generated prior bridge construction failed");
+			Coord3D priorPosition{14.0f, 53.0f, 0.0f};
+			priorObject->setPosition(&priorPosition);
+			if (!TheTerrainLogic->addLandmarkBridgeToLogic(priorObject))
+				throw std::runtime_error("generated prior bridge admission failed");
+		}
+		Object *priorObjectHead = getFirstObject();
+		Bridge *priorBridgeHead = TheTerrainLogic->getFirstBridge();
+		const PathfindLayerEnum priorBridgeLayer = priorBridgeHead ?
+			priorBridgeHead->getLayer() : LAYER_GROUND;
+		Pathfinder *pathfinder = TheAI ? TheAI->pathfinder() : NULL;
+		const Int priorObjectCount = getObjectCount();
+		const Int priorWallCount = pathfinder ? pathfinder->getWallPieceCount() : 0;
+		const UnsignedInt priorRadarQueue = TheRadar ?
+			TheRadar->getQueuedTerrainRefreshFrame() : 0;
+		const auto countDrawables = []() {
+			Int count = 0;
+			for (Drawable *draw = TheGameClient ? TheGameClient->firstDrawable() : NULL;
+				draw; draw = draw->getNextDrawable()) ++count;
+			return count;
+		};
+		const Int priorDrawableCount = countDrawables();
+		Object *attemptObjects[64]{};
+		Bool attemptBridge[64]{};
+		Bool attemptWall[64]{};
+		Int attemptCount = 0;
+		Int bridgeCount = 0;
+		Int wallCount = 0;
+		Int propertyCount = 0;
+		try {
+			if (!pathfinder || !TheRadar || !TheTerrainLogic || !TheThingFactory ||
+				!ThePlayerList || !ThePlayerList->getNeutralPlayer())
+				throw std::runtime_error("generated bridge map provider missing");
+			Int candidates = 0;
+			for (pMapObj = MapObject::getFirstMapObject(); pMapObj;
+				pMapObj = pMapObj->getNext()) {
+				if (pMapObj->getFlag(FLAG_BRIDGE_FLAGS) || pMapObj->getFlag(FLAG_ROAD_FLAGS))
+					continue;
+				const ThingTemplate *item = pMapObj->getThingTemplate();
+				if (!item || (!item->isBridge() &&
+					!item->isKindOf(KINDOF_WALK_ON_TOP_OF_WALL))) continue;
+				if ((item->isBridge() && item->isKindOf(KINDOF_WALK_ON_TOP_OF_WALL)) ||
+					!m22GeneratedBridgeMapPropertiesAreBounded(pMapObj->getProperties()) ||
+					++candidates > 64)
+					throw std::runtime_error("generated bridge map attachment or properties unsupported");
+			}
+			for (pMapObj = MapObject::getFirstMapObject(); pMapObj;
+				pMapObj = pMapObj->getNext()) {
+				if (pMapObj->getFlag(FLAG_BRIDGE_FLAGS) || pMapObj->getFlag(FLAG_ROAD_FLAGS))
+					continue;
+				const ThingTemplate *item = pMapObj->getThingTemplate();
+				if (!item || (!item->isBridge() &&
+					!item->isKindOf(KINDOF_WALK_ON_TOP_OF_WALL))) continue;
+				Object *obj = TheThingFactory->newObject(item,
+					ThePlayerList->getNeutralPlayer()->getDefaultTeam());
+				if (!obj)
+					throw std::runtime_error("generated bridge map object construction failed");
+				attemptObjects[attemptCount] = obj;
+				attemptBridge[attemptCount] = item->isBridge();
+				attemptWall[attemptCount] = item->isKindOf(KINDOF_WALK_ON_TOP_OF_WALL);
+				++attemptCount;
+				m22GeneratedBridgeMapFault("object", attemptCount);
+				Coord3D pos = *pMapObj->getLocation();
+				pos.z += TheTerrainLogic->getGroundHeight(pos.x, pos.y);
+				obj->setOrientation(normalizeAngle(pMapObj->getAngle()));
+				obj->setPosition(&pos);
+				m22GeneratedBridgeMapFault("position", attemptCount);
+				if (item->isBridge()) {
+					if (!TheTerrainLogic->addLandmarkBridgeToLogic(obj))
+						throw std::runtime_error("generated bridge map terrain admission failed");
+					++bridgeCount;
+					if (std::getenv("ZH_M22_BRIDGE_MAP_PROBE") &&
+						std::getenv("ZH_M22_BRIDGE_MAP_DUPLICATE")) {
+						if (TheTerrainLogic->addLandmarkBridgeToLogic(obj))
+							throw std::runtime_error("duplicate bridge map owner admitted");
+						throw std::runtime_error("duplicate bridge map owner rejected");
+					}
+					m22GeneratedBridgeMapFault("bridge", attemptCount);
+				} else {
+					if (!obj->getBodyModule() || !pathfinder->addWallPiece(obj))
+						throw std::runtime_error("generated bridge map wall admission failed");
+					++wallCount;
+					m22GeneratedBridgeMapFault("wall", attemptCount);
+				}
+				obj->updateObjValuesFromMapProperties(pMapObj->getProperties());
+				++propertyCount;
+				m22GeneratedBridgeMapFault("property", attemptCount);
+			}
+			if (std::getenv("ZH_M22_BRIDGE_MAP_PROBE") && attemptCount != 2)
+				throw std::runtime_error("generated bridge map source owner missing");
+			updateLoadProgress(LOAD_PROGRESS_POST_BRIDGE_LOAD);
+			TheRadar->refreshTerrain(TheTerrainLogic);
+			if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+				std::fputs("original generated construction: stage=radar-terrain\n", stderr);
+			m22GeneratedBridgeMapFault("radar");
+			if (!pathfinder->tryNewMapFresh())
+				throw std::runtime_error("generated bridge map pathfinder admission failed");
+			if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+				std::fputs("original generated construction: stage=pathfinder\n", stderr);
+			m22GeneratedBridgeMapFault("pathfinder");
+			pathfinder->commitNewMapFresh();
+		} catch (...) {
+			if (pathfinder) pathfinder->rollbackNewMapFresh();
+			for (Int i = attemptCount - 1; i >= 0; --i) {
+				Object *obj = attemptObjects[i];
+				if (attemptWall[i] && pathfinder) pathfinder->removeWallPiece(obj);
+				if (attemptBridge[i]) TheTerrainLogic->rollbackLandmarkBridgeToLogic(obj);
+				obj->friend_rollbackConstruction();
+				obj->friend_deleteInstance();
+			}
+			if (TheRadar) TheRadar->rollbackQueuedTerrainRefreshFrame(priorRadarQueue);
+			if (std::getenv("ZH_M22_BRIDGE_MAP_PROBE")) {
+				Bool priorIntact = TheTerrainLogic->getFirstBridge() == priorBridgeHead &&
+					(!priorBridgeHead || (pathfinder &&
+					pathfinder->ownsBridgeLayer(priorBridgeHead, priorBridgeLayer)));
+				std::fprintf(stderr, "original bridge map attempt: admitted=0 objects=%d drawables=%d list=%d bridge=%d wall=%d path=%d radar=%d prior=%d\n",
+					getObjectCount() - priorObjectCount,
+					countDrawables() - priorDrawableCount,
+					getFirstObject() != priorObjectHead,
+					TheTerrainLogic->getFirstBridge() != priorBridgeHead,
+					pathfinder ? pathfinder->getWallPieceCount() - priorWallCount : -1,
+					pathfinder ? pathfinder->getFreshMapResidualCount() : -1,
+					TheRadar && TheRadar->getQueuedTerrainRefreshFrame() != priorRadarQueue,
+					(Int)priorIntact);
+				throw std::runtime_error("original bridge map attempt boundary complete");
+			}
+			throw;
+		}
+		if (std::getenv("ZH_M22_BRIDGE_MAP_PROBE")) {
+			Int propertyEffects = 0;
+			for (Int i = 0; i < attemptCount; ++i) {
+				Object *obj = attemptObjects[i];
+				const char *expectedName = attemptBridge[i] ? "AuthoredBridge" : "AuthoredWall";
+				Real expectedHealth = attemptBridge[i] ? 150.0f : 75.0f;
+				propertyEffects += obj->getName().compare(expectedName) == 0 &&
+					obj->getBodyModule() &&
+					obj->getBodyModule()->getMaxHealth() == expectedHealth;
+			}
+			std::fprintf(stderr, "original bridge map attempt: admitted=1 bridges=%d walls=%d properties=%d effects=%d order=%d objects=%d prior=%d first-id=%u last-id=%u\n",
+				bridgeCount, wallCount, propertyCount,
+				propertyEffects, attemptCount == 2 && attemptBridge[0] && attemptWall[1],
+				getObjectCount() - priorObjectCount,
+				(Int)(TheTerrainLogic->getFirstBridge() != priorBridgeHead &&
+					(!priorBridgeHead || pathfinder->ownsBridgeLayer(priorBridgeHead, priorBridgeLayer))),
+				attemptObjects[0]->getID(), attemptObjects[attemptCount - 1]->getID());
+			throw std::runtime_error("original bridge map attempt boundary complete");
+		}
+	}
+	if (!generatedBridgeMapAttempt) {
 	for (pMapObj = MapObject::getFirstMapObject(); pMapObj; pMapObj = pMapObj->getNext()) 
 	{
 
@@ -1919,19 +2107,21 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		}  // end if
 
 	}	// for, loading bridge map objects
+	}
 
 	// update the loadscreen 
-	updateLoadProgress(LOAD_PROGRESS_POST_BRIDGE_LOAD);
+	if (!generatedBridgeMapAttempt)
+		updateLoadProgress(LOAD_PROGRESS_POST_BRIDGE_LOAD);
 
 	// refresh the radar to reflect loaded bridges
-	TheRadar->refreshTerrain( TheTerrainLogic );
-	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+	if (!generatedBridgeMapAttempt) TheRadar->refreshTerrain( TheTerrainLogic );
+	if (!generatedBridgeMapAttempt && std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
 		std::fputs("original generated construction: stage=radar-terrain\n", stderr);
 
 	// tell the AI about it
 	// Note that it is important that the pathfinder be called before the map objects are loaded.
-	TheAI->pathfinder()->newMap( );
-	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+	if (!generatedBridgeMapAttempt) TheAI->pathfinder()->newMap( );
+	if (!generatedBridgeMapAttempt && std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
 		std::fputs("original generated construction: stage=pathfinder\n", stderr);
 
 	// update the loadscreen 

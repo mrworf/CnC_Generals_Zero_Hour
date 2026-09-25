@@ -48,6 +48,17 @@ and its content remain read-only; tests report only fixed aggregate categories.
   during unwind; route it through construction cleanup without changing
   accepted gameplay deletion.
 
+Investigation resolved: the property updater can publish ambient audio and
+apply upgrades outside the new Object, so the generated route admits only
+bounded `originalOwner`, `objectName`, `objectMaxHPs` and
+`objectInitialHealth` values before any construction. A property-stage fault
+occurs after the bounded Object-local mutation and reverse cleanup retires
+that Object without gameplay destroy hooks. Radar exposes its prior queued
+frame for exact failure restoration. 08L3A tower rollback and 08L3B0 fresh
+pathfinder rollback compose in reverse order; neither resets an accepted
+bridge layer. The ordinary map loop remains unchanged outside the conjunctive
+generated route.
+
 ## Tests and validation
 
 Positive: source-ordered bridge and wall construction, terrain and pathfinder
