@@ -24,6 +24,8 @@ FAILURE = re.compile(r"original bridge map attempt: admitted=0 objects=(-?\d+) "
                      r"drawables=(-?\d+) list=(\d+) bridge=(\d+) wall=(-?\d+) "
                      r"path=(-?\d+) radar=(\d+) prior=(\d+)")
 ROLLBACK = re.compile(r"original graphics rollback: residual=(\d+) baseline=(\d+) owners=(\d+)")
+VOLUME_SUCCESS = re.compile(r"original bridge volume: admitted=(\d+) residual=(\d+) prior=(\d+) owner=(\d+) prior-owned=(\d+)")
+VOLUME_FAILURE = re.compile(r"original bridge volume: admitted=0 residual=(\d+) prior=(\d+) prior-owned=(\d+)")
 
 
 def snapshot(root: Path):
@@ -45,6 +47,7 @@ def main() -> int:
     parser.add_argument("--executable", type=Path, required=True)
     parser.add_argument("--source-root", type=Path, required=True)
     parser.add_argument("--asset-producer", type=Path, required=True)
+    parser.add_argument("--volume-shadow", action="store_true")
     args = parser.parse_args()
     fixture = load_m20_fixture(args.source_root.resolve())
     with TemporaryDirectory(prefix="zh-m22-bridge-map-") as scratch:
@@ -68,12 +71,16 @@ def main() -> int:
                      " TowerObjectNameToRight = OwnedTower\nEnd\n")
         fixture.write(source / "Data/INI/Default/Roads.ini", road_text)
         object_file = source / "Data/INI/Default/Object.ini"
+        shadow = (" Shadow = SHADOW_VOLUME\n ShadowTexture = M22SourceShadow\n"
+                  " ShadowSizeX = 16\n ShadowSizeY = 8\n") if args.volume_shadow else ""
         object_text = (object_file.read_text(encoding="ascii") +
                        "Object OwnedBridge\n KindOf = STRUCTURE BRIDGE LANDMARK_BRIDGE\n"
                        " IsBridge = Yes\n Geometry = BOX\n"
-                       " GeometryMajorRadius = 8\n GeometryMinorRadius = 3\n"
+                       " GeometryMajorRadius = 8\n GeometryMinorRadius = 3\n" + shadow +
                        " Draw = W3DModelDraw ModuleTag_BridgeDraw\n"
-                       "  DefaultConditionState\n   Model = TEST.HLOD\n  End\n End\n"
+                       "  DefaultConditionState\n   Model = TEST.HLOD\n  End\n" +
+                       ("  ConditionState = DAMAGED\n   Model = TEST.ALTHLOD\n  End\n"
+                        if args.volume_shadow else "") + " End\n"
                        " Body = ActiveBody ModuleTag_BridgeBody\n"
                        "  MaxHealth = 100\n  InitialHealth = 100\n End\n"
                        " Behavior = BridgeBehavior ModuleTag_BridgeBehavior\n End\nEnd\n"
@@ -89,6 +96,8 @@ def main() -> int:
                        " Body = ActiveBody ModuleTag_WallBody\n"
                        "  MaxHealth = 100\n  InitialHealth = 100\n End\nEnd\n")
         fixture.write(object_file, object_text)
+        if args.volume_shadow:
+            fixture.write(source / "Art/Terrain/M22SourceShadow.tga", tga("valid"))
         model = source / "Art/W3D/TEST.w3d"
         model.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run([str(args.asset_producer.resolve()), "--emit", str(model)],
@@ -138,6 +147,9 @@ def main() -> int:
             "ZH_M21_MAP": r"Maps\Owned\Owned.map",
             "ZH_M21_SCENARIO": "mission",
         }
+        if args.volume_shadow:
+            profile["ZH_M22_VOLUME_SHADOW_PROFILE"] = "1"
+            profile["ZH_M22_VOLUME_SHADOW_REPLACE"] = "1"
         stable_ids = []
 
         def check(label: str, root: Path, *, success: bool, extra: dict | None = None):
@@ -149,6 +161,8 @@ def main() -> int:
             positive = SUCCESS.search(result.stderr)
             failure = FAILURE.search(result.stderr)
             rollback = ROLLBACK.search(result.stderr)
+            volume_success = VOLUME_SUCCESS.search(result.stderr) if args.volume_shadow else None
+            volume_failure = VOLUME_FAILURE.search(result.stderr) if args.volume_shadow else None
             valid = (result.returncode == 3 and
                      "original bridge map attempt boundary complete" in result.stderr and
                      rollback and rollback.group(3) == "0" and
@@ -156,6 +170,11 @@ def main() -> int:
             if success:
                 valid = valid and positive and positive.groups()[:7] == (
                     "1", "1", "2", "2", "1", "4", "1") and not failure
+                if args.volume_shadow:
+                    valid = (valid and
+                             "original volume replacement: committed=1" in result.stderr and
+                             volume_success and volume_success.groups() ==
+                             ("1", "0", "1", "1", "1"))
                 if valid:
                     ids = positive.groups()[7:]
                     if stable_ids and ids != stable_ids[0]:
@@ -164,11 +183,17 @@ def main() -> int:
             else:
                 valid = valid and failure and failure.groups() == (
                     "0", "0", "0", "0", "0", "0", "0", "1") and not positive
+                if args.volume_shadow:
+                    expected_prior = "0" if environment.get("ZH_M22_BRIDGE_MAP_PREEXISTING") is None else "1"
+                    valid = valid and volume_failure and volume_failure.groups() == (
+                        "0", expected_prior, "1")
             if not valid:
                 raise SystemExit(f"bridge map {label} failed: status={result.returncode} "
                                  f"positive={positive.groups() if positive else 'absent'} "
                                  f"failure={failure.groups() if failure else 'absent'} "
-                                 f"rollback={rollback.groups() if rollback else 'absent'}")
+                                 f"rollback={rollback.groups() if rollback else 'absent'} "
+                                 f"volume-success={volume_success.groups() if volume_success else 'absent'} "
+                                 f"volume-failure={volume_failure.groups() if volume_failure else 'absent'}")
 
         check("mission-1", source, success=True)
         check("mission-2", source, success=True)
@@ -179,6 +204,12 @@ def main() -> int:
                       "radar", "pathfinder"):
             check("fault-" + fault.replace(":", "-"), source, success=False,
                   extra={"ZH_M22_BRIDGE_MAP_FAIL_AT": fault})
+        if args.volume_shadow:
+            for stage in ("scene-add", "after-scene", "shadow-admit", "after-shadow",
+                          "replace-after-scene", "replace-after-shadow"):
+                check("volume-fault-" + stage, source, success=False,
+                      extra={"ZH_M22_BRIDGE_MAP_PREEXISTING": "",
+                             "ZH_M22_VOLUME_SHADOW_FAIL_AT": stage})
         check("duplicate", source, success=False,
               extra={"ZH_M22_BRIDGE_MAP_DUPLICATE": "1"})
         check("unsupported-property", unsupported, success=False)
@@ -194,7 +225,9 @@ def main() -> int:
         check("mission-retry", source, success=True)
         if snapshot(source) != before:
             raise SystemExit("bridge map attempt changed read-only generated input")
-    print("M22 08L3B bridge map attempt: mission+skirmish+retry=4 failures=17 pre-teardown=0")
+    print("M22 08N0A volume constructor shadow: mission+skirmish+retry=4 failures=23 pre-teardown=0"
+          if args.volume_shadow else
+          "M22 08L3B bridge map attempt: mission+skirmish+retry=4 failures=17 pre-teardown=0")
     return 0
 
 

@@ -30,6 +30,7 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"
+#include <cstdlib>
 
 #define DEFINE_W3DANIMMODE_NAMES
 #define DEFINE_WEAPONSLOTTYPE_NAMES
@@ -1798,7 +1799,20 @@ W3DModelDraw::W3DModelDraw(Thing *thing, const ModuleData* moduleData) : DrawMod
     }
   }
 
-	setModelState(info);
+#if defined(ZH_WW3D_CPU_ONLY)
+	try {
+#endif
+		setModelState(info);
+#if defined(ZH_WW3D_CPU_ONLY)
+	} catch (...) {
+		if (m_trackRenderObject && TheTerrainTracksRenderObjClassSystem) {
+			TheTerrainTracksRenderObjClassSystem->unbindTrack(m_trackRenderObject);
+			m_trackRenderObject = NULL;
+		}
+		nukeCurrentRender(NULL);
+		throw;
+	}
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1822,6 +1836,25 @@ W3DModelDraw::~W3DModelDraw(void)
 
 	nukeCurrentRender(NULL);
 }
+
+#if defined(ZH_WW3D_CPU_ONLY)
+void W3DModelDraw::onObjectCreated()
+{
+	// Drawable publishes the module pointer only after this constructor has
+	// returned. The existing manager guard then proves the exact scene-linked
+	// model instead of accepting a pre-publication shadow request.
+	if (getDrawable()->getTemplate()->getShadowType() == SHADOW_VOLUME)
+	{
+		allocateShadows();
+		if (TheW3DShadowManager && m_renderObject &&
+			(!m_shadow || !TheW3DShadowManager->ownsBoundedVolumeCaster(m_renderObject)))
+			throw ERROR_INVALID_D3D;
+		if (std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT") &&
+			std::strcmp(std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT"), "after-shadow") == 0)
+			throw ERROR_INVALID_D3D;
+	}
+}
+#endif
 
 //-------------------------------------------------------------------------------------------------
 void W3DModelDraw::doStartOrStopParticleSys()
@@ -2828,7 +2861,11 @@ void W3DModelDraw::nukeCurrentRender(Matrix3D* xform)
 		// save the transform for the new model
 		if (xform)
 			*xform = m_renderObject->Get_Transform();
-		W3DDisplay::m_3DScene->Remove_Render_Object(m_renderObject);
+#if defined(ZH_WW3D_CPU_ONLY)
+		if (W3DDisplay::m_3DScene &&
+			m_renderObject->Get_Scene() == W3DDisplay::m_3DScene)
+#endif
+			W3DDisplay::m_3DScene->Remove_Render_Object(m_renderObject);
 		REF_PTR_RELEASE(m_renderObject);
 		m_renderObject = NULL;
 	}
@@ -2935,6 +2972,12 @@ static Bool turretNamesDiffer(const ModelConditionInfo* a, const ModelConditionI
 void W3DModelDraw::setModelState(const ModelConditionInfo* newState)
 {
 	DEBUG_ASSERTCRASH(newState, ("invalid state in W3DModelDraw::setModelState\n")); 
+	// Once replacement releases the old render, any later failure must release
+	// the new scene/caster pair before this published module can be retried.
+#if defined(ZH_WW3D_CPU_ONLY)
+	bool replacingRender = false;
+	try {
+#endif
 
 #ifdef DEBUG_OBJECT_ID_EXISTS
 	if (getDrawable() && getDrawable()->getObject() && getDrawable()->getObject()->getID() == TheObjectIDToDebug)
@@ -3046,6 +3089,9 @@ void W3DModelDraw::setModelState(const ModelConditionInfo* newState)
 	{
 		Matrix3D transform;
 		nukeCurrentRender(&transform);
+#if defined(ZH_WW3D_CPU_ONLY)
+		replacingRender = true;
+#endif
 		Drawable* draw = getDrawable();
 
 		// create a new render object and set into drawable
@@ -3056,6 +3102,10 @@ void W3DModelDraw::setModelState(const ModelConditionInfo* newState)
 		else
 		{
 			m_renderObject = W3DDisplay::m_assetManager->Create_Render_Obj(newState->m_modelName.str(), draw->getScale(), m_hexColor);
+#if defined(ZH_WW3D_CPU_ONLY)
+			if (!m_renderObject && draw->getTemplate()->getShadowType() == SHADOW_VOLUME)
+				throw ERROR_INVALID_D3D;
+#endif
 			DEBUG_ASSERTCRASH(m_renderObject, ("*** ASSET ERROR: Model %s not found!\n",newState->m_modelName.str()));
 		}
 
@@ -3089,7 +3139,10 @@ void W3DModelDraw::setModelState(const ModelConditionInfo* newState)
 
 		// set up shadows
 		if (m_renderObject && TheW3DShadowManager && tmplate->getShadowType() != SHADOW_NONE)
-		{	
+		{
+#if defined(ZH_WW3D_CPU_ONLY)
+			if (tmplate->getShadowType() != SHADOW_VOLUME) {
+#endif
 			Shadow::ShadowTypeInfo shadowInfo;
 			strcpy(shadowInfo.m_ShadowName, tmplate->getShadowTextureName().str());
 			DEBUG_ASSERTCRASH(shadowInfo.m_ShadowName[0] != '\0', ("this should be validated in ThingTemplate now"));
@@ -3105,10 +3158,19 @@ void W3DModelDraw::setModelState(const ModelConditionInfo* newState)
 			{	m_shadow->enableShadowInvisible(m_fullyObscuredByShroud);
 				m_shadow->enableShadowRender(m_shadowEnabled);
 			}
+#if defined(ZH_WW3D_CPU_ONLY)
+			}
+#endif
 		}
 
 		if( m_renderObject )
 		{
+#if defined(ZH_WW3D_CPU_ONLY)
+			if (std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT") &&
+				tmplate->getShadowType() == SHADOW_VOLUME &&
+				std::strcmp(std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT"), "scene-add") == 0)
+				throw ERROR_INVALID_D3D;
+#endif
 			// set collision type for render object.  Used by WW3D2 collision code.
 			if (tmplate->isKindOf(KINDOF_SELECTABLE))  
 			{
@@ -3156,9 +3218,32 @@ void W3DModelDraw::setModelState(const ModelConditionInfo* newState)
 
 			// add render object to our scene
 			W3DDisplay::m_3DScene->Add_Render_Object(m_renderObject);
+#if defined(ZH_WW3D_CPU_ONLY)
+			if (std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT") &&
+				tmplate->getShadowType() == SHADOW_VOLUME &&
+				(std::strcmp(std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT"), "after-scene") == 0 ||
+				(m_curState && std::strcmp(std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT"), "replace-after-scene") == 0)))
+				throw ERROR_INVALID_D3D;
+#endif
 
 			// tie in our drawable as the user data pointer in the render object
 			m_renderObject->Set_User_Data(draw->getDrawableInfo());
+
+#if defined(ZH_WW3D_CPU_ONLY)
+			// A replacement already has a published module. The initial module
+			// constructor has not published itself yet; onObjectCreated admits its
+			// shadow after the Drawable finishes module construction.
+			if (m_curState && tmplate->getShadowType() == SHADOW_VOLUME)
+			{
+				allocateShadows();
+				if (TheW3DShadowManager &&
+					(!m_shadow || !TheW3DShadowManager->ownsBoundedVolumeCaster(m_renderObject)))
+					throw ERROR_INVALID_D3D;
+				if (std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT") &&
+					std::strcmp(std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT"), "replace-after-shadow") == 0)
+					throw ERROR_INVALID_D3D;
+			}
+#endif
 	
 			setTerrainDecal(draw->getTerrainDecalType());
 
@@ -3202,6 +3287,22 @@ void W3DModelDraw::setModelState(const ModelConditionInfo* newState)
 	m_nextState = nextState;
 	m_nextStateAnimLoopDuration = NO_NEXT_DURATION;
 	adjustAnimation(prevState, prevAnimFraction);
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (prevState && replacingRender && m_renderObject &&
+		getDrawable()->getTemplate()->getShadowType() == SHADOW_VOLUME &&
+		std::getenv("ZH_M22_VOLUME_SHADOW_REPLACE"))
+		std::fputs("original volume replacement: committed=1\n", stderr);
+	replacingRender = false;
+	} catch (...) {
+		if (replacingRender) {
+			nukeCurrentRender(NULL);
+			m_curState = NULL;
+			m_nextState = NULL;
+			m_nextStateAnimLoopDuration = NO_NEXT_DURATION;
+		}
+		throw;
+	}
+#endif
 }
 
 //-------------------------------------------------------------------------------------------------

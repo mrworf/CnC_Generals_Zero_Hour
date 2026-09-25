@@ -122,6 +122,9 @@
 #include "GameNetwork/NetworkInterface.h"
 
 extern LANAPI *TheLAN;
+#if defined(__GNUC__) && !defined(_WIN32)
+extern "C" void zh_m22_volume_shadow_snapshot(Drawable *, int *, int *) __attribute__((weak));
+#endif
 
 #ifdef _PROFILE
 #include <rts/profile.h>
@@ -1907,12 +1910,14 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		std::getenv("ZH_M22_GENERATED_SCENE_ROUTE") &&
 		std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE");
 	if (generatedBridgeMapAttempt) {
+		Object *priorBridgeObject = NULL;
 		if (std::getenv("ZH_M22_BRIDGE_MAP_PREEXISTING")) {
 			const ThingTemplate *priorTemplate = TheThingFactory->findTemplate("OwnedBridge");
 			Object *priorObject = priorTemplate ? TheThingFactory->newObject(
 				priorTemplate, ThePlayerList->getNeutralPlayer()->getDefaultTeam()) : NULL;
 			if (!priorObject)
 				throw std::runtime_error("generated prior bridge construction failed");
+			priorBridgeObject = priorObject;
 			Coord3D priorPosition{14.0f, 53.0f, 0.0f};
 			priorObject->setPosition(&priorPosition);
 			if (!TheTerrainLogic->addLandmarkBridgeToLogic(priorObject))
@@ -1934,6 +1939,21 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 			return count;
 		};
 		const Int priorDrawableCount = countDrawables();
+		const Bool volumeProbe = std::getenv("ZH_M22_VOLUME_SHADOW_REPLACE") != NULL;
+		const auto snapshotVolume = [](Drawable *draw, Int *count, Int *owned) {
+			*count = -1;
+			*owned = 0;
+#if defined(__GNUC__) && !defined(_WIN32)
+			if (zh_m22_volume_shadow_snapshot)
+				zh_m22_volume_shadow_snapshot(draw, count, owned);
+#endif
+		};
+		Drawable *priorVolumeDrawable = volumeProbe && priorBridgeObject ?
+			priorBridgeObject->getDrawable() : NULL;
+		Int priorVolumeCasters = 0;
+		Int priorVolumeOwned = 0;
+		if (volumeProbe)
+			snapshotVolume(priorVolumeDrawable, &priorVolumeCasters, &priorVolumeOwned);
 		Object *attemptObjects[64]{};
 		Bool attemptBridge[64]{};
 		Bool attemptWall[64]{};
@@ -1973,6 +1993,15 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 				attemptBridge[attemptCount] = item->isBridge();
 				attemptWall[attemptCount] = item->isKindOf(KINDOF_WALK_ON_TOP_OF_WALL);
 				++attemptCount;
+				if (item->isBridge() &&
+					std::getenv("ZH_M22_VOLUME_SHADOW_REPLACE")) {
+					Drawable *modelDrawable = obj->getDrawable();
+					if (!modelDrawable)
+						throw std::runtime_error("generated volume shadow drawable missing");
+					ModelConditionFlags damaged;
+					damaged.set(MODELCONDITION_DAMAGED);
+					modelDrawable->replaceModelConditionFlags(damaged, TRUE);
+				}
 				m22GeneratedBridgeMapFault("object", attemptCount);
 				Coord3D pos = *pMapObj->getLocation();
 				pos.z += TheTerrainLogic->getGroundHeight(pos.x, pos.y);
@@ -2024,6 +2053,14 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 			}
 			if (TheRadar) TheRadar->rollbackQueuedTerrainRefreshFrame(priorRadarQueue);
 			if (std::getenv("ZH_M22_BRIDGE_MAP_PROBE")) {
+				if (volumeProbe) {
+					Int remaining = -1;
+					Int priorOwned = 0;
+					snapshotVolume(priorVolumeDrawable, &remaining, &priorOwned);
+					std::fprintf(stderr, "original bridge volume: admitted=0 residual=%d prior=%d prior-owned=%d\n",
+						remaining - priorVolumeCasters, priorVolumeCasters,
+						(Int)(!priorVolumeDrawable || priorOwned));
+				}
 				Bool priorIntact = TheTerrainLogic->getFirstBridge() == priorBridgeHead &&
 					(!priorBridgeHead || (pathfinder &&
 					pathfinder->ownsBridgeLayer(priorBridgeHead, priorBridgeLayer)));
@@ -2041,6 +2078,19 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 			throw;
 		}
 		if (std::getenv("ZH_M22_BRIDGE_MAP_PROBE")) {
+			if (volumeProbe) {
+				Drawable *attemptDrawable = attemptObjects[0] ?
+					attemptObjects[0]->getDrawable() : NULL;
+				Int total = -1;
+				Int owned = 0;
+				snapshotVolume(attemptDrawable, &total, &owned);
+				Int priorCount = -1;
+				Int priorOwned = 0;
+				snapshotVolume(priorVolumeDrawable, &priorCount, &priorOwned);
+				std::fprintf(stderr, "original bridge volume: admitted=%d residual=0 prior=%d owner=%d prior-owned=%d\n",
+					total - priorVolumeCasters, priorVolumeCasters, owned,
+					(Int)(!priorVolumeDrawable || priorOwned));
+			}
 			Int propertyEffects = 0;
 			for (Int i = 0; i < attemptCount; ++i) {
 				Object *obj = attemptObjects[i];

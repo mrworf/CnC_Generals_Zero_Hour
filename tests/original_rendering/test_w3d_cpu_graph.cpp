@@ -278,13 +278,13 @@ void make_animation(ChunkSaveClass &writer)
 }
 
 void make_hlod(ChunkSaveClass &writer, bool supply_variant, bool skin_variant = false,
-	bool invalid_skin = false, bool batch_skin = false)
+	bool invalid_skin = false, bool batch_skin = false, const char *name_override = nullptr)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_HLOD));
 	W3dHLodHeaderStruct header{};
 	header.Version = W3D_CURRENT_HLOD_VERSION;
 	header.LodCount = 1;
-	std::strcpy(header.Name, batch_skin ? "TEST.BATCHHLOD" : invalid_skin ? "TEST.BADHLOD" :
+	std::strcpy(header.Name, name_override ? name_override : batch_skin ? "TEST.BATCHHLOD" : invalid_skin ? "TEST.BADHLOD" :
 		(skin_variant ? "TEST.SKINHLOD" : "TEST.HLOD"));
 	std::strcpy(header.HierarchyName, "TESTTREE");
 	chunk(writer, W3D_CHUNK_HLOD_HEADER, header);
@@ -500,6 +500,7 @@ int main(int argc, char **argv)
 		make_mesh(writer, false, false, false, 0, false, false, 0, false, true);
 	}
 	make_hlod(writer, supply_variant);
+	if (supply_variant) make_hlod(writer, true, false, false, false, "TEST.ALTHLOD");
 	if (!supply_variant) {
 		make_hlod(writer,false,true);
 		make_hlod(writer,false,true,true);

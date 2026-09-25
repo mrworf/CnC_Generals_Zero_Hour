@@ -399,7 +399,16 @@ Shadow *W3DShadowManager::addShadow( RenderObjClass *robj, Shadow::ShadowTypeInf
 			if (TheW3DShadowManager!=this || !shadowInfo || !hasPublishedModelRenderObject(robj))
 				throw OriginalW3DDeviceUnavailable("original bounded volume shadow owner or state unavailable");
 			for (auto *shadow:s_boundedVolumes) if(shadow->owns(robj)) throw OriginalW3DDeviceUnavailable("original duplicate volume shadow owner");
-			{ auto *shadow=NEW BoundedVolumeShadow(robj,*shadowInfo); s_boundedVolumes.push_back(shadow); return shadow; }
+			{
+				auto *shadow=NEW BoundedVolumeShadow(robj,*shadowInfo);
+				try {
+					const char *fail=std::getenv("ZH_M22_VOLUME_SHADOW_FAIL_AT");
+					if (fail && std::strcmp(fail,"shadow-admit")==0)
+						throw OriginalW3DDeviceUnavailable("original volume shadow admission failed");
+					s_boundedVolumes.push_back(shadow);
+				} catch (...) { delete shadow; throw; }
+				return shadow;
+			}
 #else
 			if (TheW3DVolumetricShadowManager)
 				return (Shadow *)TheW3DVolumetricShadowManager->addShadow(robj, shadowInfo, draw);
@@ -533,6 +542,28 @@ Bool W3DShadowManager::hasBoundedVolumeCasters() const
 	return FALSE;
 #endif
 }
+
+#if defined(ZH_WW3D_CPU_ONLY)
+extern "C" void zh_m22_volume_shadow_snapshot(Drawable *draw, int *count, int *owned)
+{
+	if (!count || !owned) return;
+	*count = TheW3DShadowManager ? static_cast<int>(s_boundedVolumes.size()) : -1;
+	*owned = 0;
+	if (!TheW3DShadowManager || !draw) return;
+	for (DrawModule **module = draw->getDrawModules(); module && *module; ++module) {
+		auto *model = dynamic_cast<W3DModelDraw *>(*module);
+		RenderObjClass *render = model ? model->getRenderObject() : NULL;
+		if (render &&
+			static_cast<void *>(render->Get_Scene()) == static_cast<void *>(W3DDisplay::m_3DScene) &&
+			render->Get_User_Data() == draw->getDrawableInfo() &&
+			TheW3DShadowManager->ownsBoundedVolumeCaster(render)) {
+			*owned = 1;
+			return;
+		}
+	}
+}
+#endif
+
 
 void W3DShadowManager::RenderShadows(void)
 {

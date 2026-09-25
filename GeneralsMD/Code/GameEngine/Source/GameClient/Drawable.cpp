@@ -479,6 +479,12 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	// this at or near the end of the drawable construction so that we have
 	// all the valid data about the thing when we create the module
 	//
+	// A draw module may attach a render object while its own constructor runs.
+	// Publish this DrawableInfo identity before that module can hand its
+	// address to the source scene; the module itself remains unpublished until
+	// its constructor succeeds.
+	m_drawableInfo.m_drawable = this;
+	m_drawableInfo.m_ghostObject = NULL;
 
 	//Filter out drawable modules which have been disabled because of game LOD.
 	Int modIdx;
@@ -536,8 +542,6 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	
 	m_groupNumber = NULL;
 	m_captionDisplayString = NULL;
-	m_drawableInfo.m_drawable = this;
-	m_drawableInfo.m_ghostObject = NULL;
 
 	m_iconInfo = NULL;								// lazily allocate!
 	m_selectionFlashEnvelope = NULL;	// lazily allocate!
