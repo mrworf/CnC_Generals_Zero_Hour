@@ -51,6 +51,7 @@
 #include "Common/GlobalData.h"
 #include "Common/FileSystem.h"
 #include "Common/file.h"
+#include "GameClient/ClientRandomValue.h"
 #include "W3DDevice/GameClient/BaseHeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
@@ -60,6 +61,9 @@
 #include "WW3D2/scene.h"
 #include "WW3D2/mesh.h"
 #include "WW3D2/meshmdl.h"
+#include "matinfo.h"
+#include "dx8fvf.h"
+#include "texture.h"
 #include "assetmgr.h"
 #include "sphere.h"
 #include "original_gpu_edge.h"
@@ -70,6 +74,7 @@
 #include <cstring>
 #include <map>
 #include <memory>
+#include <utility>
 
 BaseHeightMapRenderObjClass *TheTerrainRenderObject = NULL;
 static UnsignedInt s_nextCpuTreeEpoch = 0;
@@ -78,6 +83,7 @@ struct CpuTreeType {
 	AsciiString textureName;
 	const W3DTreeDrawModuleData *data;
 	Int users;
+	std::shared_ptr<W3DTreeModelSource> model;
 };
 struct CpuTreeInstance {
 	DrawableID id;
@@ -86,11 +92,39 @@ struct CpuTreeInstance {
 	Real angle;
 	Int typeIndex;
 	Int partitionBucket;
+	Int swayType;
+	Int firstVertex;
+};
+struct CpuTreeGpuSource {
+	zh::original_runtime::OriginalGpuEdge *edge = NULL;
+	std::uint64_t generation = 0;
+	UnsignedInt vertexCount = 0;
+	UnsignedInt indexCount = 0;
+	DX8VertexBufferClass *vertex = NULL;
+	DX8IndexBufferClass *index = NULL;
+	~CpuTreeGpuSource()
+	{
+		if (zh::original_runtime::OriginalGpuEdge::active() == edge && edge &&
+			edge->generation() == generation && edge->source_buffers_retirable()) {
+			if (index) edge->release_index(index);
+			if (vertex) edge->release_vertex(vertex);
+		}
+		REF_PTR_RELEASE(index);
+		REF_PTR_RELEASE(vertex);
+	}
 };
 struct CpuTreeRegistry {
 	std::vector<CpuTreeType> types;
 	std::vector<CpuTreeInstance> instances;
+	std::unique_ptr<W3DTreeAtlasSource> atlas;
+	TextureClass *atlasTexture = NULL;
+	std::unique_ptr<CpuTreeGpuSource> gpu;
 	UnsignedInt epoch = 0;
+	~CpuTreeRegistry()
+	{
+		REF_PTR_RELEASE(atlasTexture);
+		gpu.reset();
+	}
 };
 // The source terrain's existing layout is shared with full-instance clients.
 // Lazily key CPU-only tree state by its exact owner and erase it on teardown.
@@ -375,6 +409,193 @@ bool W3DTreeAtlasSource::prepare(const std::vector<AsciiString> &textures,
 	}
 }
 
+namespace {
+UnsignedInt cpuTreeDiffuse(const Vector3 &normal, const Vector3 &emissive,
+	UnsignedInt vertexDiffuse, const GlobalData::TerrainLighting *lighting)
+{
+	Real red = lighting[0].ambient.red + emissive.X;
+	Real green = lighting[0].ambient.green + emissive.Y;
+	Real blue = lighting[0].ambient.blue + emissive.Z;
+	for (Int light = 0; light < MAX_GLOBAL_LIGHTS; ++light) {
+		Vector3 direction(lighting[light].lightPos.x,
+			lighting[light].lightPos.y, lighting[light].lightPos.z);
+		direction.Normalize();
+		const Vector3 ray(-direction.X, -direction.Y, -direction.Z);
+		Real shade = Vector3::Dot_Product(ray, normal);
+		if (shade > 1.0f) shade = 1.0f;
+		if (shade < 0.0f) shade = 0.0f;
+		red += shade * lighting[light].diffuse.red;
+		green += shade * lighting[light].diffuse.green;
+		blue += shade * lighting[light].diffuse.blue;
+	}
+	if (red > 1.0f) red = 1.0f;
+	if (green > 1.0f) green = 1.0f;
+	if (blue > 1.0f) blue = 1.0f;
+	if (vertexDiffuse != 0xffffffffU) {
+		blue *= (vertexDiffuse & 0xff) / 255.0f;
+		green *= ((vertexDiffuse >> 8) & 0xff) / 255.0f;
+		red *= ((vertexDiffuse >> 16) & 0xff) / 255.0f;
+	}
+	return REAL_TO_UNSIGNEDINT(blue * 255.0f) |
+		(REAL_TO_INT(green * 255.0f) << 8) |
+		(REAL_TO_INT(red * 255.0f) << 16) | 0xff000000U;
+}
+
+std::unique_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
+	std::vector<CpuTreeInstance> &instances,
+	const std::vector<CpuTreeType> &types, const W3DTreeAtlasSource &atlas,
+	zh::original_runtime::OriginalGpuEdge &edge)
+{
+	if (!TheGlobalData || !atlas.width() || atlas.slots().size() != types.size() ||
+		static_cast<UnsignedInt>(TheGlobalData->m_timeOfDay) >= TIME_OF_DAY_COUNT)
+		return nullptr;
+	const GlobalData::TerrainLighting *lighting =
+		TheGlobalData->m_terrainObjectsLighting[TheGlobalData->m_timeOfDay];
+	std::vector<VertexFormatXYZNDUV1> vertices;
+	std::vector<UnsignedShort> indices;
+	for (CpuTreeInstance &instance : instances) {
+		if (instance.typeIndex < 0 ||
+			static_cast<std::size_t>(instance.typeIndex) >= types.size()) return nullptr;
+		const CpuTreeType &type = types[instance.typeIndex];
+		if (!type.model || !type.model->mesh() || !type.data ||
+			!std::isfinite(type.data->m_darkening)) return nullptr;
+		MeshModelClass *model = type.model->mesh()->Peek_Model();
+		if (!model) return nullptr;
+		const Int count = model->Get_Vertex_Count();
+		const Int triangles = model->Get_Polygon_Count();
+		const Vector3 *points = model->Get_Vertex_Array();
+		const Vector2 *uv = model->Get_UV_Array_By_Index(0);
+		const Vector3 *normals = model->Get_Vertex_Normal_Array();
+		UnsignedInt *colors = model->Get_Color_Array(0, false);
+		const TriIndex *polygons = model->Get_Polygon_Array();
+		if (count <= 0 || triangles <= 0 || !points || !uv || !polygons ||
+			vertices.size() + static_cast<std::size_t>(count) + 2 >= 30000 ||
+			indices.size() + static_cast<std::size_t>(triangles) * 3 + 6 >= 60000 ||
+			vertices.size() + static_cast<std::size_t>(count) > 65535)
+			return nullptr;
+		const W3DTreeAtlasSlot &slot = atlas.slots()[instance.typeIndex];
+		if (slot.tileWidth <= 0 || slot.origin.x < 0 || slot.origin.y < 0 ||
+			slot.origin.x + slot.tileWidth * 64 > atlas.width() ||
+			slot.origin.y + slot.tileWidth * 64 > atlas.width()) return nullptr;
+		const Real sine = WWMath::Sin(instance.angle);
+		const Real cosine = WWMath::Cos(instance.angle);
+		if (!std::isfinite(sine) || !std::isfinite(cosine)) return nullptr;
+		const Real tileScale = slot.tileWidth * 64.0f / atlas.width();
+		const Real uvScale = slot.halfTile ? tileScale * 0.5f : tileScale;
+		const Real uOffset = slot.origin.x / Real(atlas.width());
+		const Real vOffset = slot.origin.y / Real(atlas.width()) +
+			(slot.halfTile ? 32.0f / atlas.width() : 0.0f);
+		Vector3 emissive(0, 0, 0);
+		MaterialInfoClass *materials = type.model->mesh()->Get_Material_Info();
+		if (materials) {
+			VertexMaterialClass *material = materials->Peek_Vertex_Material(0);
+			if (material) material->Get_Emissive(&emissive);
+		}
+		REF_PTR_RELEASE(materials);
+		if (!std::isfinite(emissive.X) || !std::isfinite(emissive.Y) ||
+			!std::isfinite(emissive.Z)) return nullptr;
+		const UnsignedInt fallbackDiffuse = normals ? 0 :
+			cpuTreeDiffuse(Vector3(0, 0, 1), emissive, 0xffffffffU, lighting);
+		instance.firstVertex = static_cast<Int>(vertices.size());
+		for (Int point = 0; point < count; ++point) {
+			if (!std::isfinite(points[point].X) || !std::isfinite(points[point].Y) ||
+				!std::isfinite(points[point].Z) || !std::isfinite(uv[point].U) ||
+				!std::isfinite(uv[point].V)) return nullptr;
+			VertexFormatXYZNDUV1 vertex{};
+			const Real x = points[point].X + type.model->offset().X;
+			const Real y = points[point].Y + type.model->offset().Y;
+			vertex.x = x * instance.scale * cosine -
+				y * instance.scale * sine + instance.location.x;
+			vertex.y = y * instance.scale * cosine +
+				x * instance.scale * sine + instance.location.y;
+			vertex.z = points[point].Z * instance.scale +
+				type.model->offset().Z + instance.location.z;
+			vertex.nx = instance.swayType;
+			vertex.ny = 1.0f; // Initial pushAside is zero.
+			vertex.nz = instance.location.z;
+			vertex.u1 = std::max(Real(0), std::min(Real(1), uv[point].U)) * uvScale + uOffset;
+			vertex.v1 = std::max(Real(0), std::min(Real(1), uv[point].V)) * uvScale + vOffset;
+			Vector3 normal(0, 0, 1);
+			if (normals) {
+				if (!std::isfinite(normals[point].X) || !std::isfinite(normals[point].Y) ||
+					!std::isfinite(normals[point].Z)) return nullptr;
+				normal.X = normals[point].X * cosine - normals[point].Y * sine;
+				normal.Y = normals[point].Y * cosine + normals[point].X * sine;
+				normal.Z = normals[point].Z;
+			}
+			vertex.diffuse = normals ? cpuTreeDiffuse(normal, emissive,
+				colors ? colors[point] : 0xffffffffU, lighting) : fallbackDiffuse;
+			if (!std::isfinite(vertex.x) || !std::isfinite(vertex.y) ||
+				!std::isfinite(vertex.z) || !std::isfinite(vertex.u1) ||
+				!std::isfinite(vertex.v1)) return nullptr;
+			vertices.push_back(vertex);
+		}
+		for (Int triangle = 0; triangle < triangles; ++triangle) {
+			const TriIndex &polygon = polygons[triangle];
+			if (polygon.I >= count || polygon.J >= count || polygon.K >= count)
+				return nullptr;
+			indices.push_back(instance.firstVertex + polygon.I);
+			indices.push_back(instance.firstVertex + polygon.J);
+			indices.push_back(instance.firstVertex + polygon.K);
+		}
+	}
+	const char *fault = std::getenv("ZH_M22_TREE_RESOURCE_FAIL_AT");
+	if (fault && std::strcmp(fault, "geometry") == 0) return nullptr;
+	auto gpu = std::make_unique<CpuTreeGpuSource>();
+	gpu->edge = &edge;
+	gpu->generation = edge.generation();
+	gpu->vertexCount = vertices.size();
+	gpu->indexCount = indices.size();
+	gpu->vertex = NEW_REF(DX8VertexBufferClass,
+		(DX8_FVF_XYZNDUV1, static_cast<UnsignedShort>(vertices.size()),
+		DX8VertexBufferClass::USAGE_DYNAMIC));
+	if (fault && std::strcmp(fault, "vertex") == 0) return nullptr;
+	std::memcpy(gpu->vertex->Get_CPU_Vertex_Buffer(), vertices.data(),
+		vertices.size() * sizeof(vertices[0]));
+	edge.bind_vertex(gpu->vertex);
+	gpu->index = NEW_REF(DX8IndexBufferClass,
+		(static_cast<UnsignedShort>(indices.size()), DX8IndexBufferClass::USAGE_DYNAMIC));
+	if (fault && std::strcmp(fault, "index") == 0) return nullptr;
+	std::memcpy(gpu->index->Get_CPU_Index_Buffer(), indices.data(),
+		indices.size() * sizeof(indices[0]));
+	edge.bind_index(gpu->index);
+	return gpu;
+}
+
+TextureClass *makeCpuTreeAtlasTexture(const W3DTreeAtlasSource &atlas,
+	zh::original_runtime::OriginalGpuEdge &edge)
+{
+	if (atlas.width() <= 0 || atlas.pixels().size() !=
+		static_cast<std::size_t>(atlas.width()) * atlas.width() * 4)
+		return NULL;
+	const char *fault = std::getenv("ZH_M22_TREE_RESOURCE_FAIL_AT");
+	if (fault && std::strcmp(fault, "texture-create") == 0) return NULL;
+	TextureClass *source = NEW_REF(TextureClass,
+		(atlas.width(), atlas.width(), WW3D_FORMAT_A8R8G8B8, MIP_LEVELS_1));
+	zh::renderer::TextureHandle handle;
+	try {
+		UnsignedInt mips = 1;
+		handle = edge.create_texture(WW3D_FORMAT_A8R8G8B8,
+			atlas.width(), atlas.width(), mips);
+		if (fault && std::strcmp(fault, "texture-upload") == 0)
+			throw OriginalW3DDeviceUnavailable("injected tree atlas upload failure");
+		edge.upload_texture(handle, 0, atlas.width(), atlas.width(),
+			atlas.width() * 4, atlas.pixels().data(), atlas.pixels().size());
+		if (fault && std::strcmp(fault, "texture-publish") == 0)
+			throw OriginalW3DDeviceUnavailable("injected tree atlas publication failure");
+		edge.publish_texture(source, handle);
+		handle = {};
+		source->Apply_Gpu_Texture(WW3D_FORMAT_A8R8G8B8,
+			atlas.width(), atlas.width());
+		return source;
+	} catch (...) {
+		if (handle) edge.discard_texture(handle);
+		source->Release_Ref();
+		return NULL;
+	}
+}
+}
+
 BaseHeightMapRenderObjClass::BaseHeightMapRenderObjClass()
 {
 	if (!zh::original_runtime::OriginalGpuEdge::active() ||
@@ -568,12 +789,38 @@ UnsignedInt BaseHeightMapRenderObjClass::treeOwnerEpoch() const
 	const auto registry = s_cpuTreeRegistries.find(this);
 	return registry == s_cpuTreeRegistries.end() ? 0 : registry->second.epoch;
 }
+const DX8VertexBufferClass *BaseHeightMapRenderObjClass::peekTreeVertexSource() const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	return registry == s_cpuTreeRegistries.end() || !registry->second.gpu
+		? NULL : registry->second.gpu->vertex;
+}
+const DX8IndexBufferClass *BaseHeightMapRenderObjClass::peekTreeIndexSource() const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	return registry == s_cpuTreeRegistries.end() || !registry->second.gpu
+		? NULL : registry->second.gpu->index;
+}
+const TextureClass *BaseHeightMapRenderObjClass::peekTreeAtlasSource() const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	return registry == s_cpuTreeRegistries.end() ? NULL : registry->second.atlasTexture;
+}
+Int BaseHeightMapRenderObjClass::treeAtlasWidth() const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	return registry == s_cpuTreeRegistries.end() || !registry->second.atlas
+		? 0 : registry->second.atlas->width();
+}
 bool BaseHeightMapRenderObjClass::tryAddTree(DrawableID id, Coord3D location,
 	Real scale, Real angle, Real randomScaleAmount,
 	const W3DTreeDrawModuleData *data)
 {
-	if (!zh::original_runtime::OriginalGpuEdge::active() ||
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	if (!edge || !edge->source_buffers_retirable() ||
 		TheTerrainRenderObject != this || !W3DDisplay::m_assetManager ||
+		W3DDisplay::m_assetManager != WW3DAssetManager::Get_Instance() ||
+		!TheFileSystem ||
 		!W3DDisplay::m_3DScene || Peek_Scene() != W3DDisplay::m_3DScene ||
 		!m_map || m_x != m_map->getDrawWidth() || m_y != m_map->getDrawHeight() ||
 		!m_shroud || m_shroud->getNumShroudCellsX() <= 0 ||
@@ -594,52 +841,91 @@ bool BaseHeightMapRenderObjClass::tryAddTree(DrawableID id, Coord3D location,
 		? calculateTreePartitionBucket(location) : -1;
 	if ((data->m_framesToMoveOutward > 2 || data->m_doTopple) && bucket < 0)
 		return false;
-	auto insertion = s_cpuTreeRegistries.try_emplace(this);
-	CpuTreeRegistry &registry = insertion.first->second;
-	if (insertion.second) registry.epoch = ++s_nextCpuTreeEpoch;
-	auto rollbackEmpty = [&]() {
-		if (insertion.second && registry.types.empty() && registry.instances.empty())
-			s_cpuTreeRegistries.erase(this);
-	};
 	Int typeIndex = -1;
-	for (Int index = 0; index < static_cast<Int>(registry.types.size()); ++index) {
-		if (registry.types[index].modelName.compareNoCase(data->m_modelName) == 0 &&
-			registry.types[index].textureName.compareNoCase(data->m_textureName) == 0) {
+	if (existing != s_cpuTreeRegistries.end())
+	for (Int index = 0; index < static_cast<Int>(existing->second.types.size()); ++index) {
+		if (existing->second.types[index].modelName.compareNoCase(data->m_modelName) == 0 &&
+			existing->second.types[index].textureName.compareNoCase(data->m_textureName) == 0) {
 			typeIndex = index;
 			break;
 		}
 	}
 	const bool newType = typeIndex < 0;
-	if (newType) {
-		if (registry.types.size() >= 64) { rollbackEmpty(); return false; }
-		try {
-			CpuTreeType type = {data->m_modelName, data->m_textureName, data, 0};
-			registry.types.push_back(type);
-		}
-		catch (...) { rollbackEmpty(); throw; }
-		typeIndex = static_cast<Int>(registry.types.size()) - 1;
-	}
+	if (newType && existing != s_cpuTreeRegistries.end() &&
+		existing->second.types.size() >= 64) return false;
 	const char *failAt = std::getenv("ZH_M22_TREE_REGISTRY_FAIL_AT");
-	if (failAt && std::strcmp(failAt, "type") == 0) {
-		if (newType) registry.types.pop_back();
-		rollbackEmpty();
-		return false;
-	}
+	if (failAt && std::strcmp(failAt, "type") == 0) return false;
 	try {
-		registry.instances.push_back({id, location, scale, angle, typeIndex, bucket});
+		std::vector<CpuTreeType> types;
+		std::vector<CpuTreeInstance> instances;
+		if (existing != s_cpuTreeRegistries.end()) {
+			types = existing->second.types;
+			instances = existing->second.instances;
+		}
+		if (newType) {
+			auto model = std::make_shared<W3DTreeModelSource>();
+			if (!model->acquire(data, W3DDisplay::m_assetManager)) return false;
+			typeIndex = static_cast<Int>(types.size());
+			types.push_back({data->m_modelName, data->m_textureName, data, 0, model});
+		}
+		++types[typeIndex].users;
+		instances.push_back({id, location, scale, angle, typeIndex, bucket, 0, 0});
+		std::unique_ptr<W3DTreeAtlasSource> nextAtlas;
+		const W3DTreeAtlasSource *atlas = existing != s_cpuTreeRegistries.end()
+			? existing->second.atlas.get() : NULL;
+		bool atlasReady = atlas && atlas->slots().size() == types.size() &&
+			existing->second.atlasTexture;
+		if (atlasReady) {
+			try { (void)edge->texture_handle(existing->second.atlasTexture); }
+			catch (...) { atlasReady = false; }
+		}
+		if (!atlasReady) {
+			std::vector<AsciiString> names;
+			names.reserve(types.size());
+			for (const CpuTreeType &type : types) names.push_back(type.textureName);
+			nextAtlas = std::make_unique<W3DTreeAtlasSource>();
+			if (!nextAtlas->prepare(names, TheFileSystem)) return false;
+			atlas = nextAtlas.get();
+		}
+		UnsignedInt clientWords[6];
+		CopyGameClientRandomState(clientWords);
+		const Real randomScale = PreviewGameClientRandomValueReal(clientWords,
+			1.0f - randomScaleAmount, 1.0f + randomScaleAmount);
+		instances.back().scale = randomScaleAmount > 0 ? scale * randomScale : scale;
+		instances.back().swayType = PreviewGameClientRandomValue(clientWords, 0, 9);
+		if (!std::isfinite(instances.back().scale)) return false;
+		auto nextGpu = makeCpuTreeGpu(instances, types, *atlas, *edge);
+		if (!nextGpu) return false;
+		auto releaseTexture = [](TextureClass *texture) {
+			if (texture) texture->Release_Ref();
+		};
+		std::unique_ptr<TextureClass, decltype(releaseTexture)>
+			nextTexture(NULL, releaseTexture);
+		if (nextAtlas) {
+			nextTexture.reset(makeCpuTreeAtlasTexture(*nextAtlas, *edge));
+			if (!nextTexture) return false;
+		}
+		const char *resourceFail = std::getenv("ZH_M22_TREE_RESOURCE_FAIL_AT");
+		const bool rejected = (failAt && std::strcmp(failAt, "instance") == 0) ||
+			(resourceFail && std::strcmp(resourceFail, "registry") == 0);
+		if (rejected) return false;
+		auto insertion = s_cpuTreeRegistries.try_emplace(this);
+		CpuTreeRegistry &registry = insertion.first->second;
+		registry.types.swap(types);
+		registry.instances.swap(instances);
+		registry.gpu.swap(nextGpu);
+		if (nextAtlas) {
+			registry.atlas.swap(nextAtlas);
+			TextureClass *oldTexture = registry.atlasTexture;
+			registry.atlasTexture = nextTexture.release();
+			nextTexture.reset(oldTexture);
+		}
+		if (insertion.second) registry.epoch = ++s_nextCpuTreeEpoch;
+		CommitGameClientRandomState(clientWords);
+		return true;
 	} catch (...) {
-		if (newType) registry.types.pop_back();
-		rollbackEmpty();
-		throw;
-	}
-	if (failAt && std::strcmp(failAt, "instance") == 0) {
-		registry.instances.pop_back();
-		if (newType) registry.types.pop_back();
-		rollbackEmpty();
 		return false;
 	}
-	++registry.types[typeIndex].users;
-	return true;
 }
 Int BaseHeightMapRenderObjClass::calculateTreePartitionBucket(const Coord3D &location) const
 {
@@ -671,17 +957,31 @@ void BaseHeightMapRenderObjClass::removeTree(DrawableID id)
 {
 	auto registry = s_cpuTreeRegistries.find(this);
 	if (registry == s_cpuTreeRegistries.end()) return;
-	auto &instances = registry->second.instances;
-	auto &types = registry->second.types;
-	for (std::size_t index = 0; index < instances.size(); ++index) {
-		if (instances[index].id != id) continue;
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	if (edge && !edge->source_buffers_retirable())
+		throw OriginalW3DDeviceUnavailable("original tree removal during source frame unavailable");
+	for (std::size_t index = 0; index < registry->second.instances.size(); ++index) {
+		if (registry->second.instances[index].id != id) continue;
+		// Complete every possibly allocating vector operation before retiring
+		// any accepted source/Recording owner.
+		std::vector<CpuTreeType> types = registry->second.types;
+		std::vector<CpuTreeInstance> instances = registry->second.instances;
 		const Int typeIndex = instances[index].typeIndex;
 		instances.erase(instances.begin() + index);
-		if (--types[typeIndex].users == 0) {
+		const bool lastUser = --types[typeIndex].users == 0;
+		if (lastUser) {
 			types.erase(types.begin() + typeIndex);
 			for (CpuTreeInstance &instance : instances)
 				if (instance.typeIndex > typeIndex) --instance.typeIndex;
 		}
+		if (lastUser) {
+			REF_PTR_RELEASE(registry->second.atlasTexture);
+		}
+		registry->second.gpu.reset(); // Native geometry becomes dirty.
+		if (lastUser) registry->second.atlas.reset();
+		registry->second.types.swap(types);
+		registry->second.instances.swap(instances);
+		if (registry->second.instances.empty()) s_cpuTreeRegistries.erase(registry);
 		return;
 	}
 }
@@ -692,7 +992,8 @@ void BaseHeightMapRenderObjClass::removeAllTrees()
 Bool BaseHeightMapRenderObjClass::updateTreePosition(DrawableID id,
 	Coord3D location, Real angle)
 {
-	if (!zh::original_runtime::OriginalGpuEdge::active() ||
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	if (!edge || !edge->source_buffers_retirable() ||
 		TheTerrainRenderObject != this || !W3DDisplay::m_3DScene ||
 		Peek_Scene() != W3DDisplay::m_3DScene || !m_map || !m_shroud ||
 		m_shroud->getNumShroudCellsX() <= 0 || m_shroud->getNumShroudCellsY() <= 0 ||
@@ -702,10 +1003,13 @@ Bool BaseHeightMapRenderObjClass::updateTreePosition(DrawableID id,
 	if (registry == s_cpuTreeRegistries.end()) return FALSE;
 	for (CpuTreeInstance &instance : registry->second.instances) {
 		if (instance.id != id) continue;
+		const Int nextBucket = instance.partitionBucket >= 0
+			? calculateTreePartitionBucket(location) : -1;
+		if (instance.partitionBucket >= 0 && nextBucket < 0) return FALSE;
+		registry->second.gpu.reset(); // Native loadTrees rebuilds transformed bytes later.
 		instance.location = location;
 		instance.angle = angle;
-		if (instance.partitionBucket >= 0)
-			instance.partitionBucket = calculateTreePartitionBucket(location);
+		instance.partitionBucket = nextBucket;
 		return TRUE;
 	}
 	return FALSE;

@@ -78,7 +78,7 @@ def authored_source_tree(root: Path, fixture, kind: str) -> Path:
     return source
 
 
-def source_tree(root: Path, fixture, kind: str) -> Path:
+def source_tree(root: Path, fixture, kind: str, tree_textures: bool = False) -> Path:
     source = root / "readonly-input"
     prepare_owned_source(source, fixture)
     terrain_ini = ("Terrain DefaultTerrain\n Texture = Flat.tga\n Class = NONE\nEnd\n"
@@ -88,6 +88,10 @@ def source_tree(root: Path, fixture, kind: str) -> Path:
     fixture.write(source / "Data/INI/Default/Terrain.ini", terrain_ini)
     if kind != "missing":
         fixture.write(source / "Art/Terrain/Flat.tga", tga(kind))
+    if tree_textures:
+        tile = tile_tga(1, ((23, 22, 21, 255),))
+        for index in range(65):
+            fixture.write(source / f"Art/Terrain/Tree{index}.tga", tile)
     fixture.make_read_only(source)
     return source
 

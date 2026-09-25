@@ -2745,6 +2745,7 @@ if(ZH_BUILD_TESTS)
   add_test(NAME original_w3d_terrain_scene_attachment COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_terrain_scene_attachment.py"
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --asset-producer "$<TARGET_FILE:original_w3d_cpu_graph_tests>"
     --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
   set_tests_properties(original_w3d_terrain_scene_attachment PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")

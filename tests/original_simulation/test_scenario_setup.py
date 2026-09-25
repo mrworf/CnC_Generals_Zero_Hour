@@ -135,7 +135,8 @@ def owned_map(actor_x: float = 20.0, skirmish: bool = False,
 
 
 def run(executable: pathlib.Path, base: pathlib.Path, source: pathlib.Path,
-        scenario: str, map_name: str = "Maps\\Owned\\Owned.map") -> subprocess.CompletedProcess:
+        scenario: str, map_name: str = "Maps\\Owned\\Owned.map",
+        timeout_seconds: int = 30) -> subprocess.CompletedProcess:
     cwd = base / f"cwd-{scenario}"
     cwd.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
@@ -149,7 +150,8 @@ def run(executable: pathlib.Path, base: pathlib.Path, source: pathlib.Path,
         "XDG_STATE_HOME": str(base / f"xdg-{scenario}/state"),
     })
     return subprocess.run([str(executable)], cwd=cwd, env=env, text=True,
-                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          timeout=timeout_seconds)
 
 
 def prepare_owned_source(source: pathlib.Path, fixture) -> None:

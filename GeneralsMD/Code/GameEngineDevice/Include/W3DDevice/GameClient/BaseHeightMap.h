@@ -62,6 +62,7 @@ class W3DTreeDrawModuleData;
 class MeshClass;
 class W3DAssetManager;
 class FileSystem;
+class TextureClass;
 // An unpublished source tree model candidate. B3 composes this with atlas and
 // Recording owners before the existing terrain registry can publish a type.
 class W3DTreeModelSource
@@ -240,6 +241,10 @@ public:
 	Int treeTypeCount() const;
 	UnsignedInt treeOwnerEpoch() const;
 	Int treePartitionBucket(DrawableID id) const;
+	const DX8VertexBufferClass *peekTreeVertexSource() const;
+	const DX8IndexBufferClass *peekTreeIndexSource() const;
+	const TextureClass *peekTreeAtlasSource() const;
+	Int treeAtlasWidth() const;
 #endif
 	void removeAllTrees(void);
 	void removeTree(DrawableID id);

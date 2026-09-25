@@ -127,12 +127,13 @@ template <typename T> void chunk(ChunkSaveClass &writer, unsigned id, const T &v
 void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant = false,
 	bool skin_variant = false, unsigned texture_stages = 1, bool lit_uv_variant = false,
 	bool invalid_skin = false, unsigned large_vertex_count = 0, bool batch_second = false,
-	bool cull_tree_variant = false, const char *container_name = "TEST")
+	bool cull_tree_variant = false, const char *container_name = "TEST",
+	const char *mesh_name = nullptr, unsigned large_triangle_count = 0)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_MESH));
 	W3dMeshHeader3Struct header{};
 	header.Version = W3D_CURRENT_MESH_VERSION;
-	std::strcpy(header.MeshName, cull_tree_variant ? "CULLTREE" :
+	std::strcpy(header.MeshName, mesh_name ? mesh_name : cull_tree_variant ? "CULLTREE" :
 		lit_uv_variant ? (texture_stages==2 ? "LITTWO01" : "LITONE01") :
 		batch_second ? "SKIN02" : invalid_skin ? "BADSKIN" :
 		texture_stages == 0 && !skin_variant ? "ZERO01" : texture_stages == 2 && !skin_variant ? "TWO01" :
@@ -142,7 +143,7 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 	if (cull_tree_variant) header.Attributes |= W3D_MESH_FLAG_COLLISION_TYPE_PHYSICAL;
 	std::strcpy(header.ContainerName, container_name);
 	header.NumVertices = large_vertex_count ? large_vertex_count : 3;
-	header.NumTris = 1;
+	header.NumTris = large_triangle_count ? large_triangle_count : 1;
 	header.Min = {0, 0, 0};
 	header.Max = {1, 1, 0};
 	header.SphCenter = {0.5f, 0.5f, 0};
@@ -164,7 +165,13 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 	triangle.Vindex[1] = 1;
 	triangle.Vindex[2] = 2;
 	triangle.Normal = {0, 0, 1};
-	chunk(writer, W3D_CHUNK_TRIANGLES, triangle);
+	if (large_triangle_count) {
+		std::vector<W3dTriStruct> triangles(large_triangle_count, triangle);
+		assert(writer.Begin_Chunk(W3D_CHUNK_TRIANGLES));
+		assert(writer.Write(triangles.data(), triangles.size() * sizeof(triangles[0])) ==
+			static_cast<int>(triangles.size() * sizeof(triangles[0])));
+		assert(writer.End_Chunk());
+	} else chunk(writer, W3D_CHUNK_TRIANGLES, triangle);
 	if (skin_variant)
 	{
 		std::vector<W3dVertInfStruct> links(header.NumVertices);
@@ -225,9 +232,13 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 		assert(writer.Begin_Chunk(W3D_CHUNK_TEXTURE_STAGE));
 		chunk(writer, W3D_CHUNK_TEXTURE_IDS, stage);
 		if (lit_uv_variant || (tread_variant && stage==0)) {
-			W3dTexCoordStruct texcoords[3]={{0,0},{1,0},{0,1}};
+			std::vector<W3dTexCoordStruct> texcoords(header.NumVertices);
+			texcoords[0]={0,0}; texcoords[1]={1,0}; texcoords[2]={0,1};
 			if (stage==1) { texcoords[0]={0.25f,0}; texcoords[1]={1,0.25f}; }
-			chunk(writer,W3D_CHUNK_STAGE_TEXCOORDS,texcoords);
+			assert(writer.Begin_Chunk(W3D_CHUNK_STAGE_TEXCOORDS));
+			assert(writer.Write(texcoords.data(), texcoords.size() * sizeof(texcoords[0])) ==
+				static_cast<int>(texcoords.size() * sizeof(texcoords[0])));
+			assert(writer.End_Chunk());
 		}
 		assert(writer.End_Chunk());
 	}
@@ -436,14 +447,14 @@ int main(int argc, char **argv)
 	// builds where the mesh path can inline away its only other reference.
 	const int source_strips[] = {3, 0, 1, 2, 2, 3, 4};
 	assert(StripOptimizerClass::Get_Strip_Index_Count(source_strips, 2) == 5);
-	std::vector<char> bytes(16384);
+	const bool emit_rigid_tree = argc == 3 && std::strcmp(argv[1], "--emit-rigid-tree") == 0;
+	std::vector<char> bytes(emit_rigid_tree ? 4U*1024U*1024U : 16384U);
 	RAMFileClass file(bytes.data(), static_cast<int>(bytes.size()));
 	assert(file.Open(FileClass::WRITE));
 	ChunkSaveClass writer(&file);
 	const bool supply_variant = argc == 3 && std::strcmp(argv[1], "--emit") == 0;
 	const bool emit_rigid = argc == 3 && std::strcmp(argv[1], "--emit-rigid") == 0;
 	const bool emit_rigid_pair = argc == 3 && std::strcmp(argv[1], "--emit-rigid-pair") == 0;
-	const bool emit_rigid_tree = argc == 3 && std::strcmp(argv[1], "--emit-rigid-tree") == 0;
 	const bool focused_static_scene = argc==2 &&
 		(std::strcmp(argv[1],"--source-static-scene")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-static-scene")==0 ||
@@ -470,6 +481,15 @@ int main(int argc, char **argv)
 		make_hierarchy(writer,false);
 		make_mesh(writer,false); // TEST.TRIANGLE, the original HLOD first child.
 		make_mesh(writer,false,false,false,0); // TEST.ZERO01
+		make_mesh(writer,false,false,false,1,true); // TEST.LITONE01, explicit tree UVs.
+		make_mesh(writer,false,false,false,1,true,false,29997,false,false,
+			"TEST","VFITTREE");
+		make_mesh(writer,false,false,false,1,true,false,29998,false,false,
+			"TEST","VCAPTREE");
+		make_mesh(writer,false,false,false,1,true,false,0,false,false,
+			"TEST","IFITTREE",19997);
+		make_mesh(writer,false,false,false,1,true,false,0,false,false,
+			"TEST","ICAPTREE",19998);
 		make_mesh(writer,false,false,false,0,false,false,0,false,false,"ALT0");
 		make_hlod(writer,false); // TEST.HLOD
 		make_hlod(writer,false,false,false,false,"TEST.EMPTYHLOD",nullptr,true);

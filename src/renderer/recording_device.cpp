@@ -152,7 +152,7 @@ public:
     bool reject_next_sampler_create=false;
     bool reject_next_shader_create=false;
     bool reject_next_pipeline_create=false;
-    bool reject_next_buffer_create=false;
+    unsigned buffer_create_failure_countdown=std::numeric_limits<unsigned>::max();
     unsigned buffer_upload_failure_countdown=std::numeric_limits<unsigned>::max();
     unsigned draw_failure_countdown=std::numeric_limits<unsigned>::max();
     bool in_pass = false;
@@ -207,7 +207,9 @@ void RecordingGpuDevice::fail_texture_upload_after(unsigned successful_uploads)
 void RecordingGpuDevice::fail_next_sampler_create() { impl_->reject_next_sampler_create=true; }
 void RecordingGpuDevice::fail_next_shader_create() { impl_->reject_next_shader_create=true; }
 void RecordingGpuDevice::fail_next_pipeline_create() { impl_->reject_next_pipeline_create=true; }
-void RecordingGpuDevice::fail_next_buffer_create() { impl_->reject_next_buffer_create=true; }
+void RecordingGpuDevice::fail_next_buffer_create() { impl_->buffer_create_failure_countdown=0; }
+void RecordingGpuDevice::fail_buffer_create_after(unsigned successful_creates)
+{ impl_->buffer_create_failure_countdown=successful_creates; }
 void RecordingGpuDevice::fail_next_buffer_upload() { impl_->buffer_upload_failure_countdown=0; }
 void RecordingGpuDevice::fail_buffer_upload_after(unsigned successful_uploads)
 { impl_->buffer_upload_failure_countdown=successful_uploads; }
@@ -217,9 +219,12 @@ void RecordingGpuDevice::fail_draw_after(unsigned successful_draws)
 
 BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::string_view label)
 {
-    if (impl_->reject_next_buffer_create) {
-        impl_->reject_next_buffer_create=false;
-        impl_->fail("create_buffer", "injected buffer creation failure", label); return {};
+    if (impl_->buffer_create_failure_countdown!=std::numeric_limits<unsigned>::max()) {
+        if (!impl_->buffer_create_failure_countdown) {
+            impl_->buffer_create_failure_countdown=std::numeric_limits<unsigned>::max();
+            impl_->fail("create_buffer", "injected buffer creation failure", label); return {};
+        }
+        --impl_->buffer_create_failure_countdown;
     }
     if (auto result = validate(desc); !result) { impl_->fail("create_buffer", result.error, label); return {}; }
     if (label.empty()) { impl_->fail("create_buffer", "label must not be empty"); return {}; }

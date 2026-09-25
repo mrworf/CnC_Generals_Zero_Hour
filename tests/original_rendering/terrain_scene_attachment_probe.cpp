@@ -1,22 +1,34 @@
 #include "PreRTS.h"
 
 #include "Common/GlobalData.h"
+#include "Common/FileSystem.h"
 #include "Common/MapReaderWriterInfo.h"
+#include "GameClient/ClientRandomValue.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "W3DDevice/GameClient/Module/W3DTreeDraw.h"
 #include "WW3D2/scene.h"
+#include "WWLib/RAMFILE.H"
+#include "assetmgr.h"
+#include "dx8fvf.h"
 #include "original_gpu_edge.h"
 #include "zh/renderer/recording_device.h"
 
 #include <cstdlib>
 #include <cstdio>
 #include <array>
+#include <cmath>
+#include <cstring>
+#include <fstream>
+#include <iterator>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace {
 void require(bool value, const char *message)
@@ -87,6 +99,16 @@ extern "C" void zh_probe_terrain_scene_attachment()
 			rejected([&]() { display->setShroudLevel(0, 0, CELLSHROUD_CLEAR); }),
 			"original display shroud accepted pre-bootstrap calls");
 		display->init();
+		const char *assetPath = std::getenv("ZH_M22_TERRAIN_SCENE_ATTACHMENT_ASSET");
+		require(assetPath, "original terrain tree packet path missing");
+		std::ifstream assetInput(assetPath, std::ios::binary);
+		require(assetInput.good(), "original terrain tree packet unreadable");
+		std::vector<char> assetBytes(std::istreambuf_iterator<char>{assetInput},
+			std::istreambuf_iterator<char>{});
+		require(!assetBytes.empty(), "original terrain tree packet empty");
+		RAMFileClass assetPacket(assetBytes.data(), static_cast<int>(assetBytes.size()));
+		require(static_cast<WW3DAssetManager *>(W3DDisplay::m_assetManager)
+			->Load_3D_Assets(assetPacket), "original terrain tree packet rejected");
 		TestTerrain terrain;
 		require(rejected([&]() { display->clearShroud(); }) &&
 			rejected([&]() { display->setShroudLevel(0, 0, CELLSHROUD_CLEAR); }),
@@ -116,17 +138,91 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		require(terrain.Peek_Scene() == W3DDisplay::m_3DScene,
 			"original terrain primary scene attachment missing");
 		W3DTreeDrawModuleData tree_data;
-		tree_data.m_modelName = "TEST.TREE";
-		tree_data.m_textureName = "TEST_TREE_TEXTURE";
+		tree_data.m_modelName = "TEST.LITONE01";
+		tree_data.m_textureName = "Tree0.tga";
 		tree_data.m_framesToMoveOutward = 3;
 		W3DTreeDrawModuleData alternate_tree_data;
-		alternate_tree_data.m_modelName = "TEST.TREE_ALT";
-		alternate_tree_data.m_textureName = "TEST_TREE_TEXTURE_ALT";
+		alternate_tree_data.m_modelName = "TEST.LITONE01";
+		alternate_tree_data.m_textureName = "Tree1.tga";
 		Coord3D tree_position;
 		tree_position.set(12, 18, 2);
 		const auto tree_one = static_cast<DrawableID>(101);
 		const auto tree_two = static_cast<DrawableID>(102);
 		const auto tree_three = static_cast<DrawableID>(103);
+		const auto emptyTreeResources = device.resource_counts();
+		UnsignedInt clientBefore[6]{};
+		UnsignedInt clientAfter[6]{};
+		UnsignedInt freshEquivalentWords[6]{};
+		W3DTreeDrawModuleData noUvTree;
+		noUvTree.m_modelName = "TEST.ZERO01";
+		noUvTree.m_textureName = "Tree0.tga";
+		CopyGameClientRandomState(clientBefore);
+		require(!terrain.tryAddTree(tree_one, tree_position, 1, 0, 0.2f, &noUvTree) &&
+			terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0 &&
+			device.resource_counts() == emptyTreeResources,
+			"original tree accepted mesh without required source UVs");
+		CopyGameClientRandomState(clientAfter);
+		require(std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0,
+			"original tree no-UV rejection consumed client RNG");
+		for (const auto &capacity : {std::pair<const char *, Int>{"TEST.VFITTREE", 29997},
+			std::pair<const char *, Int>{"TEST.IFITTREE", 3}}) {
+			W3DTreeDrawModuleData fitTree;
+			fitTree.m_modelName = capacity.first;
+			fitTree.m_textureName = "Tree0.tga";
+			require(terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &fitTree) &&
+				terrain.peekTreeVertexSource() && terrain.peekTreeIndexSource() &&
+				terrain.peekTreeVertexSource()->Get_Vertex_Count() == capacity.second &&
+				terrain.peekTreeIndexSource()->Get_Index_Count() ==
+					(capacity.second == 3 ? 59991 : 3),
+				"original tree rejected valid source vertex/index budget boundary");
+			terrain.removeTree(tree_one);
+			require(device.resource_counts() == emptyTreeResources &&
+				terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0,
+				"original tree valid budget boundary retained resources");
+		}
+		for (const char *modelName : {"TEST.VCAPTREE", "TEST.ICAPTREE"}) {
+			W3DTreeDrawModuleData capTree;
+			capTree.m_modelName = modelName;
+			capTree.m_textureName = "Tree0.tga";
+			CopyGameClientRandomState(clientBefore);
+			require(!terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &capTree) &&
+				device.resource_counts() == emptyTreeResources &&
+				terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0,
+				"original tree exceeded source vertex/index budget");
+			CopyGameClientRandomState(clientAfter);
+			require(std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0,
+				"original tree budget rejection consumed client RNG");
+		}
+		CopyGameClientRandomState(freshEquivalentWords);
+		for (const char *fault : {"geometry", "vertex", "index",
+			"texture-create", "texture-upload", "texture-publish", "registry"}) {
+			CopyGameClientRandomState(clientBefore);
+			setenv("ZH_M22_TREE_RESOURCE_FAIL_AT", fault, 1);
+			require(!terrain.tryAddTree(tree_one, tree_position, 1, 0, 0.2f, &tree_data),
+				"original tree injected resource fault admitted owner");
+			unsetenv("ZH_M22_TREE_RESOURCE_FAIL_AT");
+			CopyGameClientRandomState(clientAfter);
+			require(terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0 &&
+				device.resource_counts() == emptyTreeResources &&
+				std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0,
+				"original tree injected failure retained resources or consumed client RNG");
+		}
+		for (Int failure = 0; failure != 6; ++failure) {
+			CopyGameClientRandomState(clientBefore);
+			if (failure == 0) device.fail_next_buffer_create();
+			if (failure == 1) device.fail_next_buffer_upload();
+			if (failure == 2) device.fail_buffer_upload_after(1);
+			if (failure == 3) device.fail_next_texture_create();
+			if (failure == 4) device.fail_next_texture_upload();
+			if (failure == 5) device.fail_buffer_create_after(1);
+			require(!terrain.tryAddTree(tree_one, tree_position, 1, 0, 0.2f, &tree_data),
+				"original tree Recording fault admitted owner");
+			CopyGameClientRandomState(clientAfter);
+			require(terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0 &&
+				device.resource_counts() == emptyTreeResources &&
+				std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0,
+				"original tree Recording fault retained resource or client RNG");
+		}
 		require(!terrain.tryAddTree(INVALID_DRAWABLE_ID, tree_position, 1, 0, 0, &tree_data) &&
 			!terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, NULL) &&
 			terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0,
@@ -140,8 +236,82 @@ extern "C" void zh_probe_terrain_scene_attachment()
 			terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0,
 			"original tree instance failure published owner");
 		unsetenv("ZH_M22_TREE_REGISTRY_FAIL_AT");
-		require(terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &tree_data),
+		CopyGameClientRandomState(clientBefore);
+		require(std::memcmp(clientBefore, freshEquivalentWords, sizeof(clientBefore)) == 0,
+			"original tree failed admissions changed fresh equivalent client generation");
+		const Real expectedScale = PreviewGameClientRandomValueReal(freshEquivalentWords, 0.8f, 1.2f);
+		const Int expectedSway = PreviewGameClientRandomValue(freshEquivalentWords, 0, 9);
+		const bool firstAdmitted = terrain.tryAddTree(tree_one, tree_position, 1, 0, 0.2f, &tree_data);
+		require(firstAdmitted,
 			"original tree first owner was not published");
+		CopyGameClientRandomState(clientAfter);
+		require(std::memcmp(freshEquivalentWords, clientAfter, sizeof(clientAfter)) == 0 &&
+			terrain.treeAtlasWidth() == 512 && terrain.peekTreeVertexSource() &&
+			terrain.peekTreeIndexSource() && terrain.peekTreeAtlasSource(),
+			"original tree successful resource or client RNG publication missing");
+		const auto afterFirstTree = device.resource_counts();
+		const auto *acceptedVertexSource = terrain.peekTreeVertexSource();
+		const auto *acceptedIndexSource = terrain.peekTreeIndexSource();
+		const auto *acceptedAtlasSource = terrain.peekTreeAtlasSource();
+		require(afterFirstTree.buffers == emptyTreeResources.buffers + 2 &&
+			afterFirstTree.textures == emptyTreeResources.textures + 1,
+			"original tree source resource counts differ from vertex/index/atlas");
+		const auto *sourceVertices = reinterpret_cast<const VertexFormatXYZNDUV1 *>(
+			terrain.peekTreeVertexSource()->Get_CPU_Vertex_Buffer());
+		const auto *sourceIndices = terrain.peekTreeIndexSource()->Get_CPU_Index_Buffer();
+		require(terrain.peekTreeVertexSource()->Get_Vertex_Count() == 3 &&
+			terrain.peekTreeIndexSource()->Get_Index_Count() == 3 &&
+			std::fabs(sourceVertices[0].x - tree_position.x) < 0.001f &&
+			std::fabs(sourceVertices[1].x - (tree_position.x + expectedScale)) < 0.001f &&
+			std::fabs(sourceVertices[2].y - (tree_position.y + expectedScale)) < 0.001f &&
+			sourceVertices[0].nx == expectedSway && sourceVertices[0].ny == 1.0f &&
+			sourceVertices[0].nz == tree_position.z &&
+			sourceVertices[0].u1 == 0 && sourceVertices[0].v1 == 0.125f &&
+			sourceVertices[1].u1 == 0.125f && sourceVertices[1].v1 == 0.125f &&
+			sourceVertices[2].v1 == 0 &&
+			sourceIndices[0] == 0 && sourceIndices[1] == 1 && sourceIndices[2] == 2,
+			"original tree source vertex/index/UV bytes differ from generated mesh");
+		const auto vertexHandle = edge.bind_vertex(terrain.peekTreeVertexSource());
+		const auto indexHandle = edge.bind_index(terrain.peekTreeIndexSource());
+		const auto uploadedVertices = device.buffer_bytes(vertexHandle);
+		const auto uploadedIndices = device.buffer_bytes(indexHandle);
+		const auto atlasHandle = edge.texture_handle(terrain.peekTreeAtlasSource());
+		const auto uploadedAtlas = device.texture_bytes(atlasHandle);
+		require(uploadedVertices.size() == 3 * sizeof(VertexFormatXYZNDUV1) &&
+			std::memcmp(uploadedVertices.data(), sourceVertices, uploadedVertices.size()) == 0 &&
+			uploadedIndices.size() == 3 * sizeof(UnsignedShort) &&
+			std::memcmp(uploadedIndices.data(), sourceIndices, uploadedIndices.size()) == 0 &&
+			uploadedAtlas.size() == 512u * 512u * 4u &&
+			std::memcmp(uploadedAtlas.data(), "\x17\x16\x15\xff", 4) == 0,
+			"original tree Recording upload bytes differ from source wrappers/atlas");
+		for (const char *fault : {"texture-create", "texture-upload",
+			"texture-publish", "registry"}) {
+			CopyGameClientRandomState(clientBefore);
+			setenv("ZH_M22_TREE_RESOURCE_FAIL_AT", fault, 1);
+			require(!terrain.tryAddTree(tree_three, tree_position, 2, 1, 0.2f,
+				&alternate_tree_data), "original tree later type fault admitted owner");
+			unsetenv("ZH_M22_TREE_RESOURCE_FAIL_AT");
+			CopyGameClientRandomState(clientAfter);
+			require(terrain.treeTypeCount() == 1 && terrain.treeInstanceCount() == 1 &&
+				device.resource_counts() == afterFirstTree &&
+				terrain.peekTreeVertexSource() == acceptedVertexSource &&
+				terrain.peekTreeIndexSource() == acceptedIndexSource &&
+				terrain.peekTreeAtlasSource() == acceptedAtlasSource &&
+				std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0,
+				"original tree later fault damaged accepted type/resource/RNG");
+		}
+		FileSystem *publishedFiles = TheFileSystem;
+		TheFileSystem = NULL;
+		require(!terrain.tryAddTree(tree_three, tree_position, 2, 1, 0,
+			&alternate_tree_data) && device.resource_counts() == afterFirstTree,
+			"original tree accepted detached file-system provider");
+		TheFileSystem = publishedFiles;
+		W3DAssetManager *publishedAssets = W3DDisplay::m_assetManager;
+		W3DDisplay::m_assetManager = NULL;
+		require(!terrain.tryAddTree(tree_three, tree_position, 2, 1, 0,
+			&alternate_tree_data) && device.resource_counts() == afterFirstTree,
+			"original tree accepted detached asset provider");
+		W3DDisplay::m_assetManager = publishedAssets;
 		setenv("ZH_M22_TREE_REGISTRY_FAIL_AT", "instance", 1);
 		require(!terrain.tryAddTree(tree_two, tree_position, 1, 0, 0, &tree_data) &&
 			terrain.treeTypeCount() == 1 && terrain.treeInstanceCount() == 1,
@@ -160,22 +330,42 @@ extern "C" void zh_probe_terrain_scene_attachment()
 			!terrain.updateTreePosition(static_cast<DrawableID>(999), tree_position, 2) &&
 			terrain.treePartitionBucket(tree_two) != first_bucket,
 			"original tree relocation accepted a stale ID");
+		require(!terrain.peekTreeVertexSource() && !terrain.peekTreeIndexSource() &&
+			device.resource_counts().buffers == emptyTreeResources.buffers,
+			"original tree relocation retained obsolete geometry buffers");
+		const auto tree_four = static_cast<DrawableID>(104);
+		require(terrain.tryAddTree(tree_four, tree_position, 1, 0, 0, &tree_data) &&
+			terrain.treeTypeCount() == 2 && terrain.treeInstanceCount() == 4 &&
+			terrain.peekTreeVertexSource(),
+			"original tree relocation retry lost accepted type or owner identity");
+		const auto *relocatedVertices = reinterpret_cast<const VertexFormatXYZNDUV1 *>(
+			terrain.peekTreeVertexSource()->Get_CPU_Vertex_Buffer());
+		require(std::fabs(relocatedVertices[3].x - tree_position.x) < 0.001f &&
+			std::fabs(relocatedVertices[3].y - tree_position.y) < 0.001f,
+			"original tree relocation retry used stale vertex bytes");
+		terrain.removeTree(tree_four);
 		terrain.removeTree(tree_one);
 		terrain.removeTree(tree_two);
 		require(terrain.treeTypeCount() == 1 && terrain.treeInstanceCount() == 1,
 			"original tree removal retained source type");
+		require(!terrain.peekTreeAtlasSource() && !terrain.peekTreeVertexSource() &&
+			terrain.tryAddTree(tree_four, tree_position, 1, 0, 0, &alternate_tree_data) &&
+			terrain.treeTypeCount() == 1 && terrain.treeInstanceCount() == 2 &&
+			terrain.peekTreeAtlasSource() && terrain.peekTreeVertexSource(),
+			"original tree remaining-type retry lost atlas or geometry identity");
+		terrain.removeTree(tree_four);
 		terrain.removeTree(tree_three);
 		require(terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0,
 			"original tree reverse removal retained owner");
 		std::array<W3DTreeDrawModuleData, 65> tree_types;
 		for (Int index = 0; index < 64; ++index) {
-			tree_types[index].m_modelName = AsciiString(("TEST.TYPE" + std::to_string(index)).c_str());
-			tree_types[index].m_textureName = "TEST_TREE_TEXTURE";
+			tree_types[index].m_modelName = "TEST.LITONE01";
+			tree_types[index].m_textureName = AsciiString(("Tree" + std::to_string(index) + ".tga").c_str());
 			require(terrain.tryAddTree(static_cast<DrawableID>(200 + index), tree_position,
 				1, 0, 0, &tree_types[index]), "original tree type budget rejected valid type");
 		}
-		tree_types[64].m_modelName = "TEST.TYPE_OVER";
-		tree_types[64].m_textureName = "TEST_TREE_TEXTURE";
+		tree_types[64].m_modelName = "TEST.LITONE01";
+		tree_types[64].m_textureName = "Tree64.tga";
 		require(!terrain.tryAddTree(static_cast<DrawableID>(264), tree_position, 1, 0, 0,
 			&tree_types[64]) && terrain.treeTypeCount() == 64 &&
 			terrain.treeInstanceCount() == 64,
@@ -191,6 +381,9 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		terrain.removeAllTrees();
 		require(terrain.treeTypeCount() == 0 && terrain.treeInstanceCount() == 0,
 			"original tree clear retained capacity owner");
+		require(device.resource_counts() == emptyTreeResources &&
+			!terrain.peekTreeVertexSource() && !terrain.peekTreeAtlasSource(),
+			"original tree clear retained pre-teardown Recording resources");
 		const auto baseline = device.resource_counts();
 		terrain.notifyShroudChanged();
 		terrain.notifyShroudChanged();

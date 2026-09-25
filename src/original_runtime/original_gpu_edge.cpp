@@ -655,7 +655,12 @@ void OriginalGpuEdge::publish_texture(TextureBaseClass* source, renderer::Textur
     if (!source || !texture || textures_.count(source))
         throw std::runtime_error("original texture physical publication is invalid");
     textures_.emplace(source,TextureOwnership{texture,generation_,shared_missing});
-    if (!shared_missing) ++texture_owner_refs_[texture.value()];
+    try {
+        if (!shared_missing) ++texture_owner_refs_[texture.value()];
+    } catch (...) {
+        textures_.erase(source);
+        throw;
+    }
 }
 
 void OriginalGpuEdge::publish_texture_alias(TextureBaseClass* source, const TextureBaseClass* owner)

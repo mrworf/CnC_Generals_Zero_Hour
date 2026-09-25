@@ -142,6 +142,7 @@ public:
     static bool is_missing_texture(const TextureBaseClass* source) noexcept;
     renderer::TextureHandle texture_handle(const TextureBaseClass* source) const;
     std::uint64_t generation() const noexcept { return generation_; }
+    bool source_buffers_retirable() const noexcept { return !source_frame_active_; }
     static void release_texture_if_owned(TextureBaseClass* source) noexcept;
     struct PendingStage {
         renderer::TextureHandle texture;

@@ -58,6 +58,7 @@ public:
     void fail_next_shader_create();
     void fail_next_pipeline_create();
     void fail_next_buffer_create();
+    void fail_buffer_create_after(unsigned successful_creates);
     void fail_next_buffer_upload();
     void fail_buffer_upload_after(unsigned successful_uploads);
     void fail_next_draw();
