@@ -22,3 +22,14 @@ extra-pass order.
 Cloud/light-map/noise, dynamic lighting and partial-map mutation remain
 guarded. Run the full proportional M22 gates and commit once as
 `delivery: M22 08H5D submit extra terrain blends`.
+
+## Result
+
+Complete. The source height-map renderer now consumes only its accepted
+row-major inventory, builds exact transient XYZNDUV2/index payloads from
+authored extra UV/alpha and height data, applies the source cliff diagonal
+override, and submits one road-base alpha pass after both accepted base
+passes. Shader and dynamic bindings unwind on draw failure, visibility is
+published only after success, and disabled/empty/hidden routes remain
+draw-free while unsupported modes reject before extra-pass mutation. See the
+[08H5D evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08h5d.md).

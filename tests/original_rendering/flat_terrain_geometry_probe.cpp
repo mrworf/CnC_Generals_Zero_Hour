@@ -41,6 +41,7 @@ public:
 	DX8VertexBufferClass *vertices() const { return m_vertexBufferTiles ? m_vertexBufferTiles[0] : NULL; }
 	Int extra_count() const { return m_numExtraBlendTiles; }
 	Int extra_capacity() const { return m_extraBlendTilePositionsSize; }
+	Int visible_extra_count() const { return m_numVisibleExtraBlendTiles; }
 	Int extra_position(Int index) const
 	{
 		return index >= 0 && index < m_numExtraBlendTiles ? m_extraBlendTilePositions[index] : -1;
@@ -269,14 +270,71 @@ extern "C" void zh_probe_flat_terrain_geometry()
 		}
 		const std::string before_authored_draw = device.snapshot();
 		draw();
-		require(count_draws(device.snapshot().substr(before_authored_draw.size())) == 2,
-			"original authored terrain did not use accepted base passes");
+		require(count_draws(device.snapshot().substr(before_authored_draw.size())) == 3 &&
+			terrain.visible_extra_count() == 1 &&
+			device.last_draw_index_bytes().size() == 6U * sizeof(UnsignedShort),
+			"original authored terrain did not submit its extra blend after the base passes");
 		terrain.freeMapResources();
 		require(terrain.extra_count() == 0 && terrain.extra_capacity() == 0,
 			"original authored terrain free retained extra blend inventory");
 		edge.release_source_buffers();
 		authored->Release_Ref();
 		authored = NULL;
+
+		inventory = open_map("ZH_M22_EXTRA_BLEND_TERRAIN_MAP");
+		require(inventory->getTerrainTexture() && inventory->getAlphaTerrainTexture(),
+			"original extra blend retry atlas pair unavailable");
+		require(terrain.initHeightData(8, 8, inventory, NULL, TRUE) == 0,
+			"original extra blend submission initialization failed");
+		const Bool saved_adjust_cliffs = TheWritableGlobalData->m_adjustCliffTextures;
+		TheWritableGlobalData->m_adjustCliffTextures = TRUE;
+		require_aborted_draw(2, "original extra blend draw abort retained state");
+		require(terrain.visible_extra_count() == 0,
+			"original failed extra blend draw published visibility");
+		const std::string before_extra_retry = device.snapshot();
+		draw();
+		const std::string extra_retry = device.snapshot().substr(before_extra_retry.size());
+		const auto extra_first_draw = extra_retry.find("draw pipeline=");
+		const auto extra_second_draw = extra_first_draw == std::string::npos ? std::string::npos :
+			extra_retry.find("draw pipeline=", extra_first_draw + 1);
+		const auto extra_third_selection = extra_second_draw == std::string::npos ? std::string::npos :
+			extra_retry.find("original TextureClass::Apply stage=0 selected", extra_second_draw + 1);
+		const auto extra_third_draw = extra_second_draw == std::string::npos ? std::string::npos :
+			extra_retry.find("draw pipeline=", extra_second_draw + 1);
+		const auto extra_indices = device.last_draw_index_bytes();
+		const auto index_at = [&](std::size_t index) {
+			return UnsignedShort(extra_indices[index * 2]) |
+				(UnsignedShort(extra_indices[index * 2 + 1]) << 8);
+		};
+		require(count_draws(extra_retry) == 3 && terrain.visible_extra_count() == 8 &&
+			extra_third_selection != std::string::npos &&
+			extra_third_selection < extra_third_draw &&
+			extra_indices.size() == 48U * sizeof(UnsignedShort) &&
+			index_at(0) == 0 && index_at(1) == 2 && index_at(2) == 3 &&
+			index_at(6) == 5 && index_at(7) == 7 && index_at(8) == 4 &&
+			index_at(42) == 29 && index_at(43) == 31 && index_at(44) == 28,
+			"original extra blend source topology or cliff override changed");
+		const Int saved_three_way = TheWritableGlobalData->m_use3WayTerrainBlends;
+		TheWritableGlobalData->m_use3WayTerrainBlends = 0;
+		const std::string before_disabled_extra = device.snapshot();
+		draw();
+		require(count_draws(device.snapshot().substr(before_disabled_extra.size())) == 2 &&
+			terrain.visible_extra_count() == 0,
+			"original disabled extra blend submitted a third pass");
+		TheWritableGlobalData->m_use3WayTerrainBlends = 2;
+		const std::string before_debug_extra = device.snapshot();
+		bool debug_extra_rejected = false;
+		try { terrain.renderExtraBlendTiles(); }
+		catch (const std::runtime_error &) { debug_extra_rejected = true; }
+		require(debug_extra_rejected &&
+			device.snapshot().substr(before_debug_extra.size()).find("draw pipeline=") == std::string::npos,
+			"original debug extra blend mode mutated submission state");
+		TheWritableGlobalData->m_use3WayTerrainBlends = saved_three_way;
+		TheWritableGlobalData->m_adjustCliffTextures = saved_adjust_cliffs;
+		terrain.freeMapResources();
+		edge.release_source_buffers();
+		inventory->Release_Ref();
+		inventory = NULL;
 		device.destroy(depth);
 		device.destroy(color);
 		display.reset();

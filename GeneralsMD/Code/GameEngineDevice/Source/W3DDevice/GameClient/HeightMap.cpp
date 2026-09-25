@@ -57,6 +57,7 @@
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
 
+#include <cmath>
 #include <cstring>
 #include <memory>
 #include <vector>
@@ -114,6 +115,7 @@ void HeightMapRenderObjClass::Render(RenderInfoClass&)
 		}
 		W3DShaderManager::resetShader(W3DShaderManager::ST_TERRAIN_BASE);
 		active_shader = FALSE;
+		renderExtraBlendTiles();
 		if (TheTerrainTracksRenderObjClassSystem)
 			TheTerrainTracksRenderObjClassSystem->flush();
 	} catch (...) {
@@ -123,6 +125,119 @@ void HeightMapRenderObjClass::Render(RenderInfoClass&)
 		}
 		throw;
 	}
+}
+void HeightMapRenderObjClass::renderExtraBlendTiles()
+{
+	m_numVisibleExtraBlendTiles = 0;
+	if (!m_numExtraBlendTiles || Is_Hidden() ||
+		(TheGlobalData && TheGlobalData->m_use3WayTerrainBlends == 0)) return;
+	if (!TheGlobalData || TheGlobalData->m_use3WayTerrainBlends != 1 ||
+		TheGlobalData->m_useCloudMap || TheGlobalData->m_useLightMap)
+		throw OriginalW3DDeviceUnavailable("original extra terrain material mode unavailable");
+	if (!m_map || !m_extraBlendTilePositions ||
+		m_extraBlendTilePositionsSize < m_numExtraBlendTiles)
+		throw OriginalW3DDeviceUnavailable("original extra terrain ownership unavailable");
+	TextureClass *alpha_atlas = m_map->getAlphaTerrainTexture();
+	if (!alpha_atlas)
+		throw OriginalW3DDeviceUnavailable("original extra terrain alpha atlas unavailable");
+
+	std::vector<VertexFormatXYZNDUV2> vertices;
+	std::vector<UnsignedShort> indices;
+	const Int reserve_cells = m_numExtraBlendTiles < VERTEX_BUFFER_TILE_LENGTH * VERTEX_BUFFER_TILE_LENGTH ?
+		m_numExtraBlendTiles : VERTEX_BUFFER_TILE_LENGTH * VERTEX_BUFFER_TILE_LENGTH;
+	vertices.reserve(static_cast<std::size_t>(reserve_cells) * 4);
+	indices.reserve(static_cast<std::size_t>(reserve_cells) * 6);
+	const Int map_width = m_map->getXExtent();
+	const Int draw_start_x = m_map->getDrawOrgX();
+	const Int draw_start_y = m_map->getDrawOrgY();
+	const Int draw_end_x = draw_start_x + m_map->getDrawWidth() - 1;
+	const Int draw_end_y = draw_start_y + m_map->getDrawHeight() - 1;
+	const Int border = m_map->getBorderSizeInline();
+	const UnsignedByte *height = m_map->getDataPtr();
+	for (Int entry = 0; entry < m_numExtraBlendTiles; ++entry) {
+		const Int cell_x = m_extraBlendTilePositions[entry] & 0xffff;
+		const Int cell_y = m_extraBlendTilePositions[entry] >> 16;
+		if (cell_x < draw_start_x || cell_x >= draw_end_x ||
+			cell_y < draw_start_y || cell_y >= draw_end_y) continue;
+		if (vertices.size() > 0xffffU - 4U)
+			throw OriginalW3DDeviceUnavailable("original extra terrain geometry exceeds 16-bit bounds");
+		Real u[4], v[4];
+		UnsignedByte alpha[4];
+		Bool flip = FALSE;
+		Bool cliff = FALSE;
+		if (!m_map->getExtraAlphaUVData(cell_x, cell_y, u, v, alpha, &flip, &cliff))
+			throw OriginalW3DDeviceUnavailable("original extra terrain inventory changed");
+		const Int offset = cell_y * map_width + cell_x;
+		const Real z[4] = {
+			height[offset] * MAP_HEIGHT_SCALE,
+			height[offset + 1] * MAP_HEIGHT_SCALE,
+			height[offset + 1 + map_width] * MAP_HEIGHT_SCALE,
+			height[offset + map_width] * MAP_HEIGHT_SCALE};
+		if (cliff && std::abs(z[0] - z[2]) > std::abs(z[1] - z[3])) flip = TRUE;
+		const Real px[4] = {Real(cell_x - border), Real(cell_x + 1 - border),
+			Real(cell_x + 1 - border), Real(cell_x - border)};
+		const Real py[4] = {Real(cell_y - border), Real(cell_y - border),
+			Real(cell_y + 1 - border), Real(cell_y + 1 - border)};
+		const UnsignedShort base = static_cast<UnsignedShort>(vertices.size());
+		for (Int corner = 0; corner < 4; ++corner) {
+			VertexFormatXYZNDUV2 vertex{};
+			vertex.x = px[corner] * MAP_XY_FACTOR;
+			vertex.y = py[corner] * MAP_XY_FACTOR;
+			vertex.z = z[corner];
+			vertex.diffuse = (UnsignedInt(alpha[corner]) << 24) | 0x00ffffffU;
+			vertex.u1 = u[corner];
+			vertex.v1 = v[corner];
+			vertices.push_back(vertex);
+		}
+		if (flip) {
+			indices.insert(indices.end(), {UnsignedShort(base + 1), UnsignedShort(base + 3), base,
+				UnsignedShort(base + 1), UnsignedShort(base + 2), UnsignedShort(base + 3)});
+		} else {
+			indices.insert(indices.end(), {base, UnsignedShort(base + 2), UnsignedShort(base + 3),
+				base, UnsignedShort(base + 1), UnsignedShort(base + 2)});
+		}
+	}
+	if (vertices.empty()) return;
+
+	DynamicVBAccessClass dynamic_vertices(BUFFER_TYPE_DYNAMIC_DX8, dynamic_fvf_type,
+		static_cast<unsigned short>(vertices.size()));
+	DynamicIBAccessClass dynamic_indices(BUFFER_TYPE_DYNAMIC_DX8,
+		static_cast<unsigned short>(indices.size()));
+	{
+		DynamicVBAccessClass::WriteLockClass lock(&dynamic_vertices);
+		std::memcpy(lock.Get_Formatted_Vertex_Array(), vertices.data(),
+			vertices.size() * sizeof(VertexFormatXYZNDUV2));
+		DynamicIBAccessClass::WriteLockClass index_lock(&dynamic_indices);
+		std::memcpy(index_lock.Get_Index_Array(), indices.data(),
+			indices.size() * sizeof(UnsignedShort));
+	}
+	Bool active_shader = FALSE;
+	try {
+		DX8Wrapper::Set_Material(m_vertexMaterialClass);
+		DX8Wrapper::Set_Shader(m_shaderClass);
+		DX8Wrapper::Set_Index_Buffer(dynamic_indices, 0);
+		DX8Wrapper::Set_Vertex_Buffer(dynamic_vertices);
+		W3DShaderManager::setTexture(0, alpha_atlas);
+		if (W3DShaderManager::getShaderPasses(W3DShaderManager::ST_ROAD_BASE) != 1)
+			throw OriginalW3DDeviceUnavailable("original extra terrain material pass unavailable");
+		W3DShaderManager::setShader(W3DShaderManager::ST_ROAD_BASE, 0);
+		active_shader = TRUE;
+		DX8Wrapper::Draw_Triangles(0, static_cast<UnsignedInt>(indices.size() / 3),
+			0, static_cast<UnsignedInt>(vertices.size()));
+		W3DShaderManager::resetShader(W3DShaderManager::ST_ROAD_BASE);
+		active_shader = FALSE;
+		m_numVisibleExtraBlendTiles = static_cast<Int>(vertices.size() / 4);
+	} catch (...) {
+		if (active_shader) {
+			try { W3DShaderManager::resetShader(W3DShaderManager::ST_ROAD_BASE); }
+			catch (...) {}
+		}
+		DX8Wrapper::Set_Vertex_Buffer(NULL);
+		DX8Wrapper::Set_Index_Buffer(NULL, 0);
+		throw;
+	}
+	DX8Wrapper::Set_Vertex_Buffer(NULL);
+	DX8Wrapper::Set_Index_Buffer(NULL, 0);
 }
 void HeightMapRenderObjClass::On_Frame_Update() {}
 int HeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *map,

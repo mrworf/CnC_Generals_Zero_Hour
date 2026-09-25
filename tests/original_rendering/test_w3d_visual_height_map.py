@@ -136,7 +136,7 @@ def query_visual_map(cliff_extra: bool = False) -> bytes:
         (8, 0, 0, 1, 0, 0, 0, -1),
         (9, 0, 0, 1, 0, 1, 1, -1),
         (10, 0, 0, 0, 1, 0, 1, -1),
-        (16 if cliff_extra else 11, 0, 0, 0, 1, 1, 1, -1),
+        (16 if cliff_extra else 11, 0, 0, 0, 1, 0 if cliff_extra else 1, 1, -1),
         (12, 1, 0, 0, 0, 2, 0, 0),
     )
     for record in records:
