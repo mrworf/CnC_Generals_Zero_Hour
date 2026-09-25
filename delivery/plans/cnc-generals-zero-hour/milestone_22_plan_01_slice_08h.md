@@ -2,9 +2,10 @@
 
 ## Outcome and dependency order
 
-Requires slices 08H1 through 08H4 in order. Compose the canonical authored
+Requires slices 08H1 through 08H5 in order. Compose the canonical authored
 visual-map metadata, source tile-set, atlas-packing and blend/cliff query
-owners through a generated multi-class terrain scene. Prove source-order
+owners with their static and extra-blend geometry/material consumers through
+a generated multi-class terrain scene. Prove source-order
 construction, public Recording submission, rollback and two-generation
 re-entry before retail scene admission resumes.
 
