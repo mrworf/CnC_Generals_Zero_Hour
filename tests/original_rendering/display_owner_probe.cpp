@@ -18,6 +18,7 @@
 
 #include <cstdio>
 #include <cmath>
+#include <cstring>
 #include <cstdlib>
 #include <fstream>
 #include <iterator>
@@ -186,6 +187,85 @@ extern "C" void zh_probe_display_owner()
             require(tree_model.acquire(&tree_data, assets) && tree_model.mesh(),
                 "original tree model retry lost the source HLOD");
             tree_model.reset();
+            W3DTreeAtlasSource tree_atlas;
+            const std::vector<AsciiString> tree_textures = {
+                "TreeA.tga", "TreeB.tga", "treea.tga"};
+            require(!tree_atlas.prepare(tree_textures, nullptr) &&
+                tree_atlas.pixels().empty(),
+                "original tree atlas accepted absent file-system provider");
+            FileSystem *published_files = TheFileSystem;
+            TheFileSystem = nullptr;
+            require(!tree_atlas.prepare(tree_textures, published_files) &&
+                tree_atlas.pixels().empty(),
+                "original tree atlas accepted detached file-system provider");
+            TheFileSystem = published_files;
+            require(tree_atlas.prepare(tree_textures, published_files) &&
+                tree_atlas.width() == 512 && tree_atlas.slots().size() == 3 &&
+                tree_atlas.pixels().size() == 512u * 512u * 4u,
+                "original tree generated atlas was not prepared");
+            const auto &tree_slots = tree_atlas.slots();
+            require(tree_slots[0].firstTile == 0 && tree_slots[0].tileWidth == 2 &&
+                tree_slots[0].numTiles == 4 && tree_slots[0].origin.x == 0 &&
+                tree_slots[0].origin.y == 0 && tree_slots[1].firstTile == 4 &&
+                tree_slots[1].tileWidth == 1 && tree_slots[1].numTiles == 1 &&
+                tree_slots[1].origin.x == 128 && tree_slots[1].origin.y == 0 &&
+                tree_slots[2].numTiles == 0 && tree_slots[2].tileWidth == 2 &&
+                tree_slots[2].origin.x == 0 && tree_slots[2].origin.y == 0,
+                "original tree atlas source packing or alias identity changed");
+            auto tree_pixel = [&](Int x, Int y) {
+                return tree_atlas.pixels().data() +
+                    (static_cast<std::size_t>(y) * tree_atlas.width() + x) * 4;
+            };
+            require(std::memcmp(tree_pixel(0, 0), "\x0b\x0a\x09\x0c", 4) == 0 &&
+                std::memcmp(tree_pixel(0, 64), "\x03\x02\x01\x04", 4) == 0 &&
+                std::memcmp(tree_pixel(64, 0), "\x0f\x0e\x0d\x10", 4) == 0 &&
+                std::memcmp(tree_pixel(128, 0), "\x17\x16\x15\xff", 4) == 0 &&
+                std::memcmp(tree_pixel(192, 0), "\0\0\0\0", 4) == 0,
+                "original tree atlas source TGA format or vertical orientation changed");
+            const std::vector<AsciiString> missing_tree_texture = {"TreeMissing.tga"};
+            const std::vector<AsciiString> bad_tree_texture = {"TreeBad.tga"};
+            const std::vector<AsciiString> truncated_tree_texture = {"TreeTrunc.tga"};
+            require(!tree_atlas.prepare(missing_tree_texture, published_files) &&
+                !tree_atlas.prepare(bad_tree_texture, published_files) &&
+                !tree_atlas.prepare(truncated_tree_texture, published_files) &&
+                tree_atlas.width() == 512 && tree_atlas.slots().size() == 3,
+                "original tree atlas failure replaced accepted candidate");
+            const std::vector<AsciiString> one_tree_texture = {"TreeA.tga"};
+            for (const char *fault : {"read", "tile", "pack", "pixels"}) {
+                setenv("ZH_M22_TREE_ATLAS_FAIL_AT", fault, 1);
+                require(!tree_atlas.prepare(one_tree_texture, published_files) &&
+                    tree_atlas.width() == 512 && tree_atlas.slots().size() == 3,
+                    "original tree atlas injected fault replaced accepted candidate");
+            }
+            unsetenv("ZH_M22_TREE_ATLAS_FAIL_AT");
+            std::vector<AsciiString> capacity_textures;
+            for (Int index = 0; index < 6; ++index) {
+                AsciiString name;
+                name.format("TreeCap%d.tga", index);
+                capacity_textures.push_back(name);
+            }
+            W3DTreeAtlasSource wide_atlas;
+            std::vector<AsciiString> five_capacity_textures(
+                capacity_textures.begin(), capacity_textures.begin() + 5);
+            require(wide_atlas.prepare(five_capacity_textures, published_files) &&
+                wide_atlas.width() == 2048 && wide_atlas.slots().size() == 5,
+                "original tree atlas rejected valid 500-tile source budget");
+            require(!wide_atlas.prepare(capacity_textures, published_files) &&
+                wide_atlas.width() == 2048 && wide_atlas.slots().size() == 5,
+                "original tree atlas capacity failure replaced accepted wide candidate");
+            wide_atlas.reset();
+            require(!tree_atlas.prepare(capacity_textures, published_files) &&
+                tree_atlas.width() == 512 && tree_atlas.slots().size() == 3,
+                "original tree atlas exceeded the 512-tile budget");
+            tree_atlas.reset();
+            require(tree_atlas.width() == 0 && tree_atlas.slots().empty() &&
+                tree_atlas.pixels().empty() &&
+                tree_atlas.prepare({"TreeHalf.tga"}, published_files) &&
+                tree_atlas.slots().size() == 1 && tree_atlas.slots()[0].halfTile &&
+                std::memcmp(tree_pixel(0, 0), "\0\0\0\0", 4) == 0 &&
+                std::memcmp(tree_pixel(0, 32), "\x1f\x20\x21\x22", 4) == 0,
+                "original tree half-tile decode or reset retry changed");
+            tree_atlas.reset();
             display->doSmartAssetPurgeAndPreload(nullptr);
             display->doSmartAssetPurgeAndPreload("");
             require(has_prototype("TEST.ZERO01") && has_prototype("ALT0.ZERO01"),

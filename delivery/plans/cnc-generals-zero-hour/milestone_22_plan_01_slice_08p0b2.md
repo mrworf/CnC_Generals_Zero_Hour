@@ -6,13 +6,14 @@ After 08P0B1, translate source `W3DTreeBuffer::updateTexture` tile
 inventory and packing without GPU upload. Preserve terrain-TGA then
 general-TGA search order through the owned file system, actual TGA pixel
 format and dimensions, source half-tile/first-tile/tile-width decisions,
-case-insensitive texture dedupe, 64-pixel tile-border placement, vertical
-tile orientation and UV origin. Enforce 512 tiles, 2048-pixel atlas edge,
+case-insensitive texture dedupe, 64-pixel tree cells with no extra border
+gap, vertical tile orientation and UV origin. Enforce 512 tiles, 2048-pixel atlas edge,
 valid format/dimensions and overflow-safe allocation.
 
-Stage tile references and atlas pixels before marking a new type texture
-ready. Missing, malformed or unsupported TGA; duplicate alias conflict;
-capacity exhaustion; partial read or allocation failure; provider removal;
+Stage tile bytes and atlas pixels before marking a new type texture ready.
+Case-insensitive duplicate names reuse the first decoded tile block.
+Missing, malformed or unsupported TGA; capacity exhaustion; partial read
+or allocation failure; provider removal;
 reset and teardown must release only the candidate and preserve accepted
 models/tiles. Retry on the same terrain and a fresh map generation must be
 deterministic. No synthetic fallback tile, GPU upload, physical factory or

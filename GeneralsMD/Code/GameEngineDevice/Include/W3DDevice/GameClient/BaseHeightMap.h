@@ -58,8 +58,10 @@ class W3DPropDrawModuleData;
 class W3DPropBuffer;
 class W3DTreeDrawModuleData;
 #if defined(ZH_WW3D_CPU_ONLY)
+#include <vector>
 class MeshClass;
 class W3DAssetManager;
+class FileSystem;
 // An unpublished source tree model candidate. B3 composes this with atlas and
 // Recording owners before the existing terrain registry can publish a type.
 class W3DTreeModelSource
@@ -82,6 +84,30 @@ private:
 	Vector3 m_boundsCenter = Vector3(0, 0, 0);
 	Real m_boundsRadius = 0;
 	Real m_shadowSize = 0;
+};
+
+struct W3DTreeAtlasSlot
+{
+	Int firstTile = 0;
+	Int tileWidth = 0;
+	Int numTiles = 0;
+	Bool halfTile = FALSE;
+	ICoord2D origin = {0, 0};
+};
+
+// CPU pixels only. The original DX8 texture upload belongs to B3.
+class W3DTreeAtlasSource
+{
+public:
+	bool prepare(const std::vector<AsciiString> &textures, FileSystem *provider);
+	void reset();
+	Int width() const { return m_width; }
+	const std::vector<W3DTreeAtlasSlot> &slots() const { return m_slots; }
+	const std::vector<UnsignedByte> &pixels() const { return m_pixels; }
+private:
+	Int m_width = 0;
+	std::vector<W3DTreeAtlasSlot> m_slots;
+	std::vector<UnsignedByte> m_pixels;
 };
 #endif
 class GeometryInfo;

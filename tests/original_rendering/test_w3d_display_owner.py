@@ -5,12 +5,14 @@ import argparse
 import os
 from pathlib import Path
 import subprocess
+import struct
 import sys
 from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "original_simulation"))
 from test_scenario_setup import load_m20_fixture, prepare_owned_source, run
 from test_w3d_status_scene import has_validation_diagnostic
+from test_w3d_terrain_source_bitmap import tile_tga
 
 
 def main() -> int:
@@ -27,6 +29,22 @@ def main() -> int:
         prepare_owned_source(source, fixture)
         fixture.write(source / "Maps/Owned/AssetUsage.txt", ";ignored\nTEST\n")
         fixture.write(source / "Maps/Owned/CommentsOnly.txt", ";TEST\n")
+        fixture.write(source / "Art/Terrain/TreeA.tga", tile_tga(2,
+                      ((3, 2, 1, 4), (7, 6, 5, 8),
+                       (11, 10, 9, 12), (15, 14, 13, 16))))
+        tree_b = tile_tga(1, ((23, 22, 21, 255),),
+                          rle=True, depth=24, flags=0)
+        fixture.write(source / "Art/Textures/TreeB.tga", tree_b)
+        fixture.write(source / "Art/Terrain/TreeTrunc.tga", tree_b[:-7])
+        fixture.write(source / "Art/Terrain/TreeBad.tga", tile_tga(1,
+                      ((3, 2, 1, 4),), depth=16))
+        half_header = struct.pack("<BBB5s4hBB", 0, 0, 2, b"\0" * 5,
+                                  0, 0, 32, 32, 32, 0)
+        fixture.write(source / "Art/Terrain/TreeHalf.tga",
+                      half_header + bytes((31, 32, 33, 34)) * (32 * 32))
+        wide = tile_tga(10, ((1, 2, 3, 4),) * 100, rle=True, flags=0)
+        for index in range(6):
+            fixture.write(source / f"Art/Terrain/TreeCap{index}.tga", wide)
         before = tuple(sorted((path.relative_to(source), path.read_bytes())
                               for path in source.rglob("*") if path.is_file()))
         fixture.make_read_only(source)

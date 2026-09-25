@@ -49,6 +49,8 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "PreRTS.h"
 #include "Common/GlobalData.h"
+#include "Common/FileSystem.h"
+#include "Common/file.h"
 #include "W3DDevice/GameClient/BaseHeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
@@ -67,6 +69,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <map>
+#include <memory>
 
 BaseHeightMapRenderObjClass *TheTerrainRenderObject = NULL;
 static UnsignedInt s_nextCpuTreeEpoch = 0;
@@ -175,6 +178,201 @@ bool W3DTreeModelSource::acquire(const W3DTreeDrawModuleData *data,
 	m_boundsRadius = radius;
 	m_shadowSize = shadow;
 	return true;
+}
+
+namespace {
+struct TreeTgaHeader {
+	UnsignedByte idLength, colorMapType, imageType, colorMapInfo[5];
+	Short xOrigin, yOrigin, imageWidth, imageHeight;
+	UnsignedByte pixelDepth, flags;
+};
+static_assert(sizeof(TreeTgaHeader) == 18, "original tree TGA header layout");
+struct TreeFileGuard {
+	File *file;
+	~TreeFileGuard() { if (file) file->close(); }
+};
+
+bool decodeTreeTiles(File *file, std::vector<UnsignedByte> &pixels,
+	Int &tileWidth, Bool &halfTile)
+{
+	TreeTgaHeader header{};
+	if (file->read(&header, sizeof(header)) != sizeof(header) ||
+		header.colorMapType != 0 ||
+		(header.imageType != 2 && header.imageType != 10) ||
+		(header.pixelDepth != 24 && header.pixelDepth != 32) ||
+		(header.flags & 0xc0) != 0 || header.imageWidth <= 0 ||
+		header.imageHeight <= 0 || header.imageWidth > 640 ||
+		header.imageHeight > 640) return false;
+	halfTile = header.imageWidth == 32 && header.imageHeight == 32;
+	tileWidth = halfTile ? 1 :
+		std::min<Int>(header.imageWidth / 64, header.imageHeight / 64);
+	if (tileWidth <= 0 || tileWidth > 10) return false;
+	if (header.idLength) {
+		UnsignedByte id[255];
+		if (file->read(id, header.idLength) != header.idLength) return false;
+	}
+	pixels.assign(static_cast<std::size_t>(tileWidth * tileWidth * 64 * 64 * 4), 0);
+	const Int bytesPerPixel = header.pixelDepth / 8;
+	Int packetRemaining = 0;
+	bool packetRepeats = false;
+	UnsignedByte repeatedPixel[4]{};
+	const Int totalPixels = header.imageWidth * header.imageHeight;
+	for (Int source = 0; source < totalPixels; ++source) {
+		UnsignedByte pixel[4]{};
+		if (header.imageType == 10) {
+			if (packetRemaining == 0) {
+				UnsignedByte packet = 0;
+				if (file->read(&packet, 1) != 1) return false;
+				packetRemaining = (packet & 0x7f) + 1;
+				packetRepeats = (packet & 0x80) != 0;
+				if (packetRepeats &&
+					file->read(repeatedPixel, bytesPerPixel) != bytesPerPixel) return false;
+			}
+			if (packetRepeats) std::memcpy(pixel, repeatedPixel, bytesPerPixel);
+			else if (file->read(pixel, bytesPerPixel) != bytesPerPixel) return false;
+			--packetRemaining;
+		} else if (file->read(pixel, bytesPerPixel) != bytesPerPixel) {
+			return false;
+		}
+		Int x = source % header.imageWidth;
+		Int y = source / header.imageWidth;
+		if (header.flags & 0x10) x = header.imageWidth - x - 1;
+		if (header.flags & 0x20) y = header.imageHeight - y - 1;
+		if (x >= tileWidth * 64 || y >= tileWidth * 64) continue;
+		const Int tile = (y / 64) * tileWidth + (x / 64);
+		const Int withinTile = (y % 64) * 64 + (x % 64);
+		UnsignedByte *destination = pixels.data() +
+			static_cast<std::size_t>((tile * 64 * 64 + withinTile) * 4);
+		destination[0] = pixel[0];
+		destination[1] = pixel[1];
+		destination[2] = pixel[2];
+		destination[3] = bytesPerPixel == 4 ? pixel[3] : 255;
+	}
+	return packetRemaining == 0;
+}
+}
+
+void W3DTreeAtlasSource::reset()
+{
+	m_width = 0;
+	std::vector<W3DTreeAtlasSlot>().swap(m_slots);
+	std::vector<UnsignedByte>().swap(m_pixels);
+}
+
+bool W3DTreeAtlasSource::prepare(const std::vector<AsciiString> &textures,
+	FileSystem *provider)
+{
+	if (!provider || provider != TheFileSystem || textures.empty() ||
+		textures.size() > 64) return false;
+	const char *failAt = std::getenv("ZH_M22_TREE_ATLAS_FAIL_AT");
+	try {
+		std::vector<W3DTreeAtlasSlot> slots;
+		std::vector<Int> aliases;
+		std::vector<UnsignedByte> tiles;
+		slots.reserve(textures.size());
+		aliases.reserve(textures.size());
+		for (std::size_t index = 0; index < textures.size(); ++index) {
+			if (textures[index].isEmpty()) return false;
+			Int alias = -1;
+			for (std::size_t prior = 0; prior < index; ++prior)
+				if (textures[prior].compareNoCase(textures[index]) == 0) {
+					alias = static_cast<Int>(prior);
+					break;
+				}
+			if (alias >= 0) {
+				W3DTreeAtlasSlot duplicate = slots[static_cast<std::size_t>(alias)];
+				duplicate.firstTile = duplicate.numTiles = 0;
+				slots.push_back(duplicate);
+				aliases.push_back(alias);
+				continue;
+			}
+			AsciiString path(TERRAIN_TGA_DIR_PATH);
+			path.concat(textures[index]);
+			File *opened = provider->openFile(path.str(), File::READ | File::BINARY);
+			if (!opened) {
+				path = TGA_DIR_PATH;
+				path.concat(textures[index]);
+				opened = provider->openFile(path.str(), File::READ | File::BINARY);
+			}
+			if (!opened) return false;
+			TreeFileGuard file{opened};
+			if (failAt && std::strcmp(failAt, "read") == 0) return false;
+			std::vector<UnsignedByte> decoded;
+			Int tileWidth = 0;
+			Bool halfTile = FALSE;
+			if (!decodeTreeTiles(file.file, decoded, tileWidth, halfTile)) return false;
+			if (failAt && std::strcmp(failAt, "tile") == 0) return false;
+			const Int count = tileWidth * tileWidth;
+			const std::size_t first = tiles.size() / (64 * 64 * 4);
+			if (first + count > 512) return false;
+			tiles.insert(tiles.end(), decoded.begin(), decoded.end());
+			W3DTreeAtlasSlot slot;
+			slot.firstTile = static_cast<Int>(first);
+			slot.tileWidth = tileWidth;
+			slot.numTiles = count;
+			slot.halfTile = halfTile;
+			slots.push_back(slot);
+			aliases.push_back(-1);
+		}
+		Int cells = 8;
+		const std::size_t tileCount = tiles.size() / (64 * 64 * 4);
+		while (static_cast<std::size_t>(cells * cells) < tileCount) cells *= 2;
+		const Int atlasWidth = cells * 64;
+		if (atlasWidth > 2048) return false;
+		std::vector<UnsignedByte> available(static_cast<std::size_t>(cells * cells), 1);
+		for (Int requested = cells; requested > 0; --requested) {
+			for (std::size_t type = 0; type < slots.size(); ++type) {
+				W3DTreeAtlasSlot &slot = slots[type];
+				if (slot.tileWidth != requested || aliases[type] >= 0) continue;
+				Int foundRow = -1, foundColumn = -1;
+				for (Int row = 0; row <= cells - requested && foundRow < 0; ++row)
+				for (Int column = 0; column <= cells - requested; ++column) {
+					bool free = true;
+					for (Int y = 0; y < requested && free; ++y)
+					for (Int x = 0; x < requested; ++x)
+						if (!available[static_cast<std::size_t>((row + y) * cells + column + x)]) {
+							free = false;
+							break;
+						}
+					if (free) { foundRow = row; foundColumn = column; break; }
+				}
+				if (foundRow < 0) return false;
+				slot.origin.x = foundColumn * 64;
+				slot.origin.y = foundRow * 64;
+				for (Int y = 0; y < requested; ++y)
+				for (Int x = 0; x < requested; ++x)
+					available[static_cast<std::size_t>((foundRow + y) * cells + foundColumn + x)] = 0;
+			}
+		}
+		for (std::size_t type = 0; type < slots.size(); ++type)
+			if (aliases[type] >= 0)
+				slots[type].origin = slots[static_cast<std::size_t>(aliases[type])].origin;
+		if (failAt && std::strcmp(failAt, "pack") == 0) return false;
+		std::vector<UnsignedByte> pixels(static_cast<std::size_t>(atlasWidth) * atlasWidth * 4, 0);
+		for (const W3DTreeAtlasSlot &slot : slots) {
+			if (slot.numTiles == 0) continue;
+			for (Int y = 0; y < slot.tileWidth; ++y)
+			for (Int x = 0; x < slot.tileWidth; ++x) {
+				const Int tile = slot.firstTile + x + y * slot.tileWidth;
+				const Int originX = slot.origin.x + x * 64;
+				const Int originY = slot.origin.y + (slot.tileWidth - y - 1) * 64;
+				for (Int row = 0; row < 64; ++row) {
+					UnsignedByte *destination = pixels.data() +
+						static_cast<std::size_t>(((originY + row) * atlasWidth + originX) * 4);
+					const UnsignedByte *source = tiles.data() +
+						static_cast<std::size_t>((tile * 64 * 64 + (63 - row) * 64) * 4);
+					std::memcpy(destination, source, 64 * 4);
+				}
+			}
+		}
+		if (failAt && std::strcmp(failAt, "pixels") == 0) return false;
+		m_slots.swap(slots);
+		m_pixels.swap(pixels);
+		m_width = atlasWidth;
+		return true;
+	} catch (...) {
+		return false;
+	}
 }
 
 BaseHeightMapRenderObjClass::BaseHeightMapRenderObjClass()
