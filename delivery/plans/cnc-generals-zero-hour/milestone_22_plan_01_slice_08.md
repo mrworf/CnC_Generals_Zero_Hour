@@ -20,6 +20,15 @@ portion. Slices [08G1](milestone_22_plan_01_slice_08g1.md) and
 order before this slice resumes. Trial diagnostics were removed and no retail
 identifier or raw output is retained.
 
+The next redacted continuation crossed every map-local INI stage and reached
+the authored visual-map reader. Its first fixed failure category was the
+single-class/sentinel-only blend metadata guard. Source review establishes the
+ordered 08H1–08H4 closure (general metadata, multi-tile images, atlas packing,
+then blend/cliff queries); aggregate [08H](milestone_22_plan_01_slice_08h.md)
+must be accepted before this slice resumes. The retail selector and the
+borrow/unwind correction remain here and were removed from the prerequisite
+planning checkpoint.
+
 ## Validation and error handling
 
 Retail roots remain read-only/private; no corpus bytes, private paths,
