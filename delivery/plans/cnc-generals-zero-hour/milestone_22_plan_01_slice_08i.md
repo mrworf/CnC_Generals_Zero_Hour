@@ -26,3 +26,12 @@ serial LAN; source/provider/ABI and dependency-ledger checks; and
 
 One aggregate commit records only coupling/evidence changes:
 `delivery: M22 08I close multi-tile terrain`.
+
+## Result
+
+Complete. Accepted slices 08I1 and 08I2 now compose through one generated
+terrain owner: checked row-major allocation and authored updates feed exact
+pass-major tile submission across partial and exact X/Y boundaries. The
+aggregate fixture covers construction, update, bind/draw failure, retry,
+base-before-extra/tracks order, two process generations and clean teardown.
+The generated boundary is closed without retail input or a new producer.
