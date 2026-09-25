@@ -29,6 +29,17 @@ must be accepted before this slice resumes. The retail selector and the
 borrow/unwind correction remain here and were removed from the prerequisite
 planning checkpoint.
 
+The next redacted continuation crossed all accepted authored metadata and
+material consumers, then stopped at the fixed flat-terrain geometry category.
+Source review found that the accepted CPU owner supports only one 32-cell
+vertex-buffer tile while canonical maps require checked multi-tile allocation,
+per-tile updates, exact partial edges, pass-major traversal and transactional
+rollback. Slices [08I1](milestone_22_plan_01_slice_08i1.md) and
+[08I2](milestone_22_plan_01_slice_08i2.md), followed by aggregate
+[08I](milestone_22_plan_01_slice_08i.md), close those generated owners before
+this slice resumes. Trial admission wiring was again removed; discovery retains
+only the fixed failure category.
+
 ## Validation and error handling
 
 Retail roots remain read-only/private; no corpus bytes, private paths,
