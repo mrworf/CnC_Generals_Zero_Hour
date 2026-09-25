@@ -19,3 +19,13 @@ Run focused GCC/Clang, strict host LSan, all six canonical nonretail suites,
 physical Vulkan, serial LAN, dependency ledgers and `git diff --check`. One
 aggregate commit records only coupling/evidence changes:
 `delivery: M22 08H5 close authored terrain consumers`.
+
+## Result
+
+Complete. The generated authored scene composes the accepted static
+base/primary vertices, exact extra-blend inventory, road-base alpha material
+and source-ordered dynamic extra submission through one original height-map
+owner. Multi-class base/edge atlases, primary/custom/extra blend records and
+cliff-authored topology reach ordered base-before-extra Recording draws with
+child-boundary rollback and two-generation cleanup. See the
+[08H5 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08h5.md).
