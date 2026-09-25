@@ -1,36 +1,25 @@
-# M22 plan 01 slice 08L3: transactional bridge and pathfinder attachment
+# M22 plan 01 slice 08L3: generated bridge and wall attachment aggregate
 
 ## Goal and observable outcome
 
-Consume 08L2 atomic construction in the native bridge phase. Generated authored
-bridge-like and walk-on-wall objects are created against the neutral team,
-positioned/oriented, updated from map properties and attached to terrain bridge
-or pathfinder owners in source order. Radar refresh and pathfinder `newMap` see
-one coherent world; failure removes only owners from the current map attempt and
-retry is deterministic.
+Generated authored bridge-like and walk-on-wall objects reach the native map
+bridge phase. A successful attempt publishes their Object/Drawable, terrain
+bridge, pathfinder wall/layer and radar state in source order before pathfinder
+`newMap`; failure removes only the current attempt's owners and retry is
+deterministic. Accepted 08L2 remains the Object/Drawable rollback owner.
 
-## Scope, ownership and rollback
+## Dependency-ordered implementation slices
 
-Cover bridge registration, optional behavior/tower links, wall registration,
-property update, terrain bridge IDs, radar refresh and pathfinder rebuild. Reject
-absent/malformed templates or interfaces, duplicates, partial tower creation,
-property/pathfinder/radar failures and provider removal before lasting mutation.
-The map attempt owns each new object until all its attachments succeed. Failure
-unwinds pathfinder/terrain links before retiring drawable/object owners through
-08L2; pre-existing world owners remain untouched.
+1. [08L3A](milestone_22_plan_01_slice_08l3a.md) closes `Bridge(Object*)`
+   tower creation, missing-provider and partial-constructor rollback, then
+   atomic terrain publication and pathfinder bridge-layer acquisition/removal.
+   Its direct generated owner witness must pass before map loop changes.
+2. [08L3B](milestone_22_plan_01_slice_08l3b.md) composes the accepted 08L3A
+   bridge owner with map-object traversal, wall registration, property updates,
+   radar refresh and pathfinder `newMap`. Its generated map witness and complete
+   M22 gates close this aggregate.
 
-Do not use retail content, identify a private template, bypass bridge behavior,
-skip pathfinder ownership or claim later ordinary-object/preload/camera/UI stages.
-
-## Implementation and validation
-
-Build a generated map-object graph with modeled bridge and wall fixtures and
-fixed aggregate stages. Exercise success, each injected failure, reverse cleanup,
-retry, reset/re-entry, provider removal and zero-owner teardown. Revalidate prior
-generated construction, no-model prop, terrain/water and pre-map display routes,
-then run complete M22 validation.
-
-## Acceptance and commit boundary
-
-Depends on 08L2. One commit:
-`delivery: M22 08L3 attach bridges transactionally`.
+The original single 08L3 commit boundary is superseded by two coherent
+implementation commits. The governing plan records aggregate completion only
+after 08L3B acceptance. Later ordinary-object, preload, camera and UI stages
+remain outside this aggregate.
