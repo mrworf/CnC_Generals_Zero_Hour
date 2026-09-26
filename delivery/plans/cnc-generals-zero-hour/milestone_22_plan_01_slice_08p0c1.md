@@ -22,3 +22,12 @@ failure/retry and immediate pre-teardown residuals. Reuse C1B final-source
 six complete builds and canonical nonretail suites, focused strict host LSan,
 physical Vulkan controls, serial LAN 4/4 all six, ledger and diff checks.
 Commit the aggregate alone: `delivery: M22 08P0C1 revalidate tree frame state`.
+
+## Delivered
+
+Accepted C1A and C1B compose the declared source frame state on unchanged
+final source with two-generation owner/failure/retry controls. The complete
+matrix is reused exactly as permitted above; see
+[aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c1.md).
+Native visible sort remains disabled. Draw, optional decals, physical factory
+and retail acceptance remain closed for C2–C4 and later slices.
