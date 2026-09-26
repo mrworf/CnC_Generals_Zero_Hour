@@ -164,3 +164,22 @@ transactionally before source metadata detach and final pooled release; retry or
 terminal-failure disposition is its explicit contract, not a stage-local bypass.
 Include a sole-previous-stage-owner replacement/cancel/retry control so B's finish
 cannot hide a fallible destructor callback. B0 aggregate follows this child.
+
+## Approved begin-failure composition correction
+
+A pin admission precedes idle device admission. Failed device admission must
+restore the source baseline even if capacity rejection persists. Implement A's
+approved grouped all-survivor fast drain with B0B: after exact phase/generation
+and arithmetic checks, all identities satisfying `Num_Refs > queued multiplicity`
+release units without a device journal, allocations or callbacks. Equality/mixed
+or uncertain cases retain A's transactional cleanup/retry. No new slice/owner.
+The proof preserves maps/native ownership/revision, exact alias units, queued and
+released counters, pending fault injection and once-only finish semantics.
+
+Focused negatives must prove failed B0B checkpoint/capacity admission cancels and
+drains survivor pins immediately to baseline without a second device admission.
+Retain terminal prior-stage-owner replacement/cancellation controls separately.
+Include A's exact four CPU focused controls, strict host LSan and generated
+physical source-reference witness on final B0B source, in addition to the existing
+five-test B0B focused set and six complete canonical/host matrix. No accepted A
+final-source gate is reused to justify this changed executable boundary.

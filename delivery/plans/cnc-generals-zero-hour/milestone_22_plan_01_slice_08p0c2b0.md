@@ -14,6 +14,10 @@ commit. A therefore reserves bounded reference units and enqueues finish/cancel
 without callbacks, then drains through exact native cleanup and metadata detach
 at an ordinary boundary while the same source/device generation remains valid.
 B composes that owner rather than assuming an external source reference survives.
+Its approved composition correction adds only a grouped all-survivor reference
+drain without device admission; sole/mixed terminal cleanup remains transactional.
+This lets failed device admission restore surviving reference counts even under
+persistent device capacity rejection. A controls rerun on B's final source.
 
 Reconcile both reference multiplicity and complete stage atomicity, including
 resident tuple preflight before refs/load/init/access/journal, selected-stage

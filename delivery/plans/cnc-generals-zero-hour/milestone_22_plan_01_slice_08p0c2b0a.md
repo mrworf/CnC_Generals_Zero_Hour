@@ -160,3 +160,30 @@ ledger/header/diff and frozen-hash checks pass.
 [Evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2b0a_source_references.md).
 Commit boundary: `delivery: M22 08P0C2B0A retire bounded source references`.
 B0B owns selected-stage state and composes this reference owner next.
+
+## Approved B0B composition correction (plan-only checkpoint)
+
+The accepted A implementation opens an idle journal even when every grouped
+source survives queued release. If B0B acquires pins then device admission fails
+persistently on native resource capacity, canceling those pins must not depend
+on a second admission to restore baseline reference counts. This is a narrow A
+composition correction implemented and accepted with B0B, not a new slice.
+
+Keep exact active-edge/generation, reservation/device/source-frame/pass guards,
+queue grouping and release-counter overflow checks. Only if every grouped
+identity has exact `Num_Refs > queued unit multiplicity` may drain consume units
+allocation-free without device admission or cleanup. Every decrement then leaves
+at least one reference: no destructor, source callback, marker, native touch,
+map/filter/sampler/revision change or device fault consumption can occur.
+Repeated identities and distinct native aliases keep their exact unit counts.
+Queue/release counters publish once and repeated empty drain stays a no-op.
+
+Equality (sole ownership), mixed survivor/terminal identities, stale generation
+and any unproven ownership remain on existing rejection/transactional rules;
+never use a per-unit rather than grouped proof. All terminal rollback/retry,
+shared missing ownership and fatal dispositions remain unchanged. Add controls
+for repeated-unit/alias survivors, phase/generation rejection, device admission
+remaining unavailable while survivor cancellation succeeds, preserved pending
+checkpoint/commit faults, zero callbacks/native touches and once-only counters.
+Rerun A's exact four focused controls on final source, both strict host LSan and
+its generated physical proofs alongside full B0B acceptance.
