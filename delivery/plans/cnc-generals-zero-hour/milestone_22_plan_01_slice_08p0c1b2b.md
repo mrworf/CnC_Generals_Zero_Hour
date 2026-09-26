@@ -35,3 +35,18 @@ GCC/Clang and sanitizer witnesses, six complete builds/canonical nonretail
 suites, strict host LSan, physical Vulkan, serial LAN 4/4 all six, ledger and
 diff checks. Commit one slice:
 `delivery: M22 08P0C1B2B own tree sink deletion`.
+
+## Delivered evidence
+
+The generated public crusher route reaches native DOWN and proves a bounded
+two-frame sink, pause/hidden behavior, non-kill stability, survivor identity
+and exact visible source geometry after type reindex, last-tree registry
+retirement, pending-sink owner removal, and idempotent clean retry. Injected
+state/type/publish/atlas/geometry/Recording faults retain the accepted
+countdown, partition, atlas, type and GPU owners; invalid sink parameters
+reject before mutation. No FX path or new RNG owner is admitted. The two
+outer generated scenarios and two internal terrain generations retain their
+pre-teardown zero-residual checks. Six complete builds and canonical suites,
+focused GCC/Clang sanitizer witnesses, strict host LSan, physical Vulkan,
+serial host LAN, ledger and diff checks passed; see linked evidence in the
+governing index.

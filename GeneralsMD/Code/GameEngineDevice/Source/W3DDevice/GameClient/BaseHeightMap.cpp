@@ -1100,6 +1100,22 @@ UnsignedInt BaseHeightMapRenderObjClass::treeBounceEvents(DrawableID id) const
 			if (instance.id == id) return instance.bounceEvents;
 	return 0;
 }
+UnsignedInt BaseHeightMapRenderObjClass::treeSinkFramesLeft(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.sinkFramesLeft;
+	return 0;
+}
+Real BaseHeightMapRenderObjClass::treeSinkLocationZ(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.location.z;
+	return 0;
+}
 bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 	const CameraClass *camera, const BreezeInfo &breeze, Bool paused)
 {
@@ -1134,19 +1150,6 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 		bool atlasReady = atlas &&
 			atlas->slots().size() == registry->second.types.size() &&
 			registry->second.atlasTexture;
-		if (atlasReady) {
-			try { (void)edge->texture_handle(registry->second.atlasTexture); }
-			catch (...) { atlasReady = false; }
-		}
-		if (!atlasReady) {
-			std::vector<AsciiString> names;
-			names.reserve(registry->second.types.size());
-			for (const CpuTreeType &type : registry->second.types)
-				names.push_back(type.textureName);
-			nextAtlas = std::make_unique<W3DTreeAtlasSource>();
-			if (!nextAtlas->prepare(names, TheFileSystem)) return false;
-			atlas = nextAtlas.get();
-		}
 		UnsignedInt clientWords[6];
 		CopyGameClientRandomState(clientWords);
 		bool changed = !nextFrame.ready || !registry->second.gpu ||
@@ -1229,8 +1232,11 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 			}
 		}
 		if (fault && std::strcmp(fault, "cull") == 0) return false;
+		std::vector<std::size_t> pendingDeletes;
+		const char *sinkFault = std::getenv("ZH_M22_TREE_SINK_FAIL_AT");
 		if (!paused) {
-			for (CpuTreeInstance &instance : nextInstances) {
+			for (std::size_t index = 0; index < nextInstances.size(); ++index) {
+				CpuTreeInstance &instance = nextInstances[index];
 				if (instance.toppleState == CpuTreeInstance::Falling ||
 					instance.toppleState == CpuTreeInstance::Fogged) {
 					if (!ThePartitionManager || !ThePlayerList ||
@@ -1248,7 +1254,34 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 						return false;
 					continue;
 				}
-				if (instance.toppleState == CpuTreeInstance::Down) continue;
+				if (instance.toppleState == CpuTreeInstance::Down) {
+					if (instance.typeIndex < 0 ||
+						static_cast<std::size_t>(instance.typeIndex) >=
+							registry->second.types.size()) return false;
+					const CpuTreeType &type = registry->second.types[instance.typeIndex];
+					if (!type.data) return false;
+					if (!type.data->m_killWhenToppled) continue;
+					if (!std::isfinite(type.data->m_sinkDistance) ||
+						type.data->m_sinkDistance <= 0 ||
+						type.data->m_sinkFrames <= 0) return false;
+					const Real sinkStep = type.data->m_sinkDistance /
+						type.data->m_sinkFrames;
+					if (!std::isfinite(sinkStep) || sinkStep <= 0) return false;
+					if (instance.sinkFramesLeft == 0) {
+						pendingDeletes.push_back(index);
+						changed = true;
+						continue;
+					}
+					const Real nextZ = instance.location.z - sinkStep;
+					if (!std::isfinite(nextZ)) return false;
+					instance.location.z = nextZ;
+					instance.toppleTransform.Set_Translation(Vector3(
+						instance.location.x, instance.location.y, nextZ));
+					if (!cpuTreeMatrixFinite(instance.toppleTransform)) return false;
+					--instance.sinkFramesLeft;
+					changed = true;
+					continue;
+				}
 				if (instance.pushDelta == 0) continue;
 				const CpuTreeType &type = registry->second.types.at(instance.typeIndex);
 				if (!type.data || !type.data->m_framesToMoveInward ||
@@ -1266,12 +1299,63 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 				changed = true;
 			}
 		}
+		if (sinkFault && std::strcmp(sinkFault, "state") == 0) return false;
+		std::vector<CpuTreeType> nextTypes;
+		if (!pendingDeletes.empty()) {
+			for (auto deletion = pendingDeletes.rbegin();
+				deletion != pendingDeletes.rend(); ++deletion) {
+				if (nextInstances[*deletion].visible) --nextFrame.visibleCount;
+				nextInstances.erase(nextInstances.begin() + *deletion);
+			}
+			std::vector<Int> users(registry->second.types.size(), 0);
+			for (const CpuTreeInstance &instance : nextInstances) {
+				if (instance.typeIndex < 0 ||
+					static_cast<std::size_t>(instance.typeIndex) >= users.size() ||
+					users[instance.typeIndex] == std::numeric_limits<Int>::max())
+					return false;
+				++users[instance.typeIndex];
+			}
+			std::vector<Int> remap(users.size(), -1);
+			nextTypes.reserve(users.size());
+			for (std::size_t type = 0; type < users.size(); ++type) {
+				if (users[type] == 0) continue;
+				remap[type] = static_cast<Int>(nextTypes.size());
+				nextTypes.push_back(registry->second.types[type]);
+				nextTypes.back().users = users[type];
+			}
+			for (CpuTreeInstance &instance : nextInstances)
+				instance.typeIndex = remap[instance.typeIndex];
+			if (sinkFault && std::strcmp(sinkFault, "type") == 0) return false;
+		}
+		const bool deletingLastTree = !pendingDeletes.empty() && nextInstances.empty();
+		const std::vector<CpuTreeType> &candidateTypes =
+			pendingDeletes.empty() ? registry->second.types : nextTypes;
+		const bool typesChanged = candidateTypes.size() != registry->second.types.size();
+		if (!deletingLastTree) {
+			atlasReady = !typesChanged && atlas &&
+				atlas->slots().size() == candidateTypes.size() &&
+				registry->second.atlasTexture;
+			if (atlasReady) {
+				try { (void)edge->texture_handle(registry->second.atlasTexture); }
+				catch (...) { atlasReady = false; }
+			}
+			if (!atlasReady) {
+				std::vector<AsciiString> names;
+				names.reserve(candidateTypes.size());
+				for (const CpuTreeType &type : candidateTypes)
+					names.push_back(type.textureName);
+				nextAtlas = std::make_unique<W3DTreeAtlasSource>();
+				if (!nextAtlas->prepare(names, TheFileSystem)) return false;
+				atlas = nextAtlas.get();
+				changed = true;
+			}
+		}
 		const char *toppleFault = std::getenv("ZH_M22_TREE_TOPPLE_FAIL_AT");
 		if (toppleFault && std::strcmp(toppleFault, "state") == 0)
 			return false;
 		std::unique_ptr<CpuTreeGpuSource> nextGpu;
-		if (changed) {
-			nextGpu = makeCpuTreeGpu(nextInstances, registry->second.types,
+		if (changed && !deletingLastTree) {
+			nextGpu = makeCpuTreeGpu(nextInstances, candidateTypes,
 				*atlas, *edge, true);
 			if (!nextGpu) return false;
 		}
@@ -1284,9 +1368,16 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 			nextTexture.reset(makeCpuTreeAtlasTexture(*nextAtlas, *edge));
 			if (!nextTexture) return false;
 		}
-		if (fault && std::strcmp(fault, "publish") == 0) return false;
+		if ((fault && std::strcmp(fault, "publish") == 0) ||
+			(sinkFault && std::strcmp(sinkFault, "publish") == 0)) return false;
+		if (deletingLastTree) {
+			if (rngChanged) CommitGameClientRandomState(clientWords);
+			s_cpuTreeRegistries.erase(registry);
+			return true;
+		}
 		nextFrame.ready = TRUE;
 		registry->second.instances.swap(nextInstances);
+		if (!pendingDeletes.empty()) registry->second.types.swap(nextTypes);
 		registry->second.visibleFrame = nextFrame;
 		if (changed) registry->second.gpu.swap(nextGpu);
 		if (nextAtlas) {

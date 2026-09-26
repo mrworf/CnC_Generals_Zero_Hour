@@ -1035,6 +1035,14 @@ extern "C" void zh_probe_terrain_scene_attachment()
 					terrain.treeToppleAngle(toppleTree) < angleAtLimit &&
 					terrain.treeBounceEvents(toppleTree) == 1,
 					"original tree bounce did not reverse the angular step");
+			else {
+				const Real noKillZ = terrain.treeSinkLocationZ(toppleTree);
+				require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+					terrain.treeToppleState(toppleTree) == 4 &&
+					terrain.treeSinkLocationZ(toppleTree) == noKillZ &&
+					terrain.treeSinkFramesLeft(toppleTree) == 0,
+					"original non-kill DOWN tree consumed sink or retired owner");
+			}
 			terrain.removeTree(toppleTree);
 			pushUnit->setPosition(&originalPushPosition);
 			require(terrain.treeToppleState(toppleTree) == -1 &&
@@ -1084,6 +1092,238 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		pushUnit->setPosition(&originalPushPosition);
 		require(device.resource_counts() == baseline,
 			"original tree negative-topple removal retained resources");
+		// Native DOWN consumes exactly the configured positive sink frames,
+		// then retires the tree on the following unpaused frame. Deletion must
+		// publish type, atlas, partition, and Recording ownership atomically.
+		toppleData.m_killWhenToppled = TRUE;
+		toppleData.m_bounceVelocityPercent = 0;
+		toppleData.m_sinkDistance = 4;
+		toppleData.m_sinkFrames = 2;
+		for (const bool sharedType : {true, false}) {
+			const DrawableID sinkTree = static_cast<DrawableID>(6026);
+			const DrawableID survivorTree = static_cast<DrawableID>(6027);
+			Coord3D survivorPosition = toppleTreePosition;
+			survivorPosition.x += 30;
+			W3DTreeDrawModuleData survivorData = toppleData;
+			if (!sharedType) survivorData.m_textureName = "Tree1.tga";
+			require(terrain.tryAddTree(sinkTree, toppleTreePosition, 1, 0, 0,
+				&toppleData) && terrain.tryAddTree(survivorTree, survivorPosition,
+				1, 0, 0, sharedType ? &toppleData : &survivorData) &&
+				terrain.treeInstanceCount() == 2 &&
+				terrain.treeTypeCount() == (sharedType ? 1 : 2) &&
+				terrain.treePartitionBucket(sinkTree) >= 0 &&
+				terrain.treePartitionBucket(survivorTree) >= 0,
+				"original tree sink/survivor fixture admission failed");
+			frameCamera.Set_Position(Vector3(toppleTreePosition.x,
+				toppleTreePosition.y, 50));
+			require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE),
+				"original tree sink fixture initial frame failed");
+			pushUnit->setPosition(&toppleUnitPosition);
+			require(terrain.treeToppleState(sinkTree) == 1 &&
+				terrain.treeToppleState(survivorTree) == 0 &&
+				terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeToppleState(sinkTree) == 4 &&
+				terrain.treeSinkFramesLeft(sinkTree) == 2,
+				"original tree sink fixture did not enter DOWN through public movement");
+			const Real sinkStartZ = terrain.treeSinkLocationZ(sinkTree);
+			const auto *sinkVertex = terrain.peekTreeVertexSource();
+			const auto sinkResources = device.resource_counts();
+			const Int sinkBucket = terrain.treePartitionBucket(sinkTree);
+			const Int survivorBucket = terrain.treePartitionBucket(survivorTree);
+			require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+				terrain.treeSinkFramesLeft(sinkTree) == 2 &&
+				terrain.treeSinkLocationZ(sinkTree) == sinkStartZ,
+				"original tree paused sink consumed countdown or position");
+			setenv("ZH_M22_TREE_SINK_FAIL_AT", "state", 1);
+			require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeSinkFramesLeft(sinkTree) == 2 &&
+				terrain.treeSinkLocationZ(sinkTree) == sinkStartZ &&
+				terrain.peekTreeVertexSource() == sinkVertex &&
+				device.resource_counts() == sinkResources,
+				"original tree sink state fault consumed countdown or Recording owner");
+			unsetenv("ZH_M22_TREE_SINK_FAIL_AT");
+			require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeSinkFramesLeft(sinkTree) == 1 &&
+				std::fabs(terrain.treeSinkLocationZ(sinkTree) - (sinkStartZ - 2)) < 0.001f &&
+				terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeSinkFramesLeft(sinkTree) == 0 &&
+				std::fabs(terrain.treeSinkLocationZ(sinkTree) - (sinkStartZ - 4)) < 0.001f,
+				"original tree sink countdown or bounded displacement changed");
+			const auto *readySinkAtlas = terrain.peekTreeAtlasSource();
+			const auto *readySinkVertex = terrain.peekTreeVertexSource();
+			const auto readySinkResources = device.resource_counts();
+			CopyGameClientRandomState(clientBefore);
+			for (const char *fault : {"type", "publish"}) {
+				setenv("ZH_M22_TREE_SINK_FAIL_AT", fault, 1);
+				require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+					terrain.treeInstanceCount() == 2 &&
+					terrain.treeTypeCount() == (sharedType ? 1 : 2) &&
+					terrain.treeSinkFramesLeft(sinkTree) == 0 &&
+					terrain.treePartitionBucket(sinkTree) == sinkBucket &&
+					terrain.treePartitionBucket(survivorTree) == survivorBucket &&
+					terrain.peekTreeAtlasSource() == readySinkAtlas &&
+					terrain.peekTreeVertexSource() == readySinkVertex &&
+					device.resource_counts() == readySinkResources,
+					"original tree sink deletion fault changed accepted owner");
+				unsetenv("ZH_M22_TREE_SINK_FAIL_AT");
+				CopyGameClientRandomState(clientAfter);
+				require(std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0,
+					"original tree sink deletion fault consumed GameClient RNG");
+			}
+			if (!sharedType) {
+				setenv("ZH_M22_TREE_ATLAS_FAIL_AT", "read", 1);
+				require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+					terrain.treeInstanceCount() == 2 &&
+					terrain.treeTypeCount() == 2 &&
+					terrain.peekTreeAtlasSource() == readySinkAtlas &&
+					device.resource_counts() == readySinkResources,
+					"original tree sink atlas fault retired accepted type");
+				unsetenv("ZH_M22_TREE_ATLAS_FAIL_AT");
+				setenv("ZH_M22_TREE_RESOURCE_FAIL_AT", "geometry", 1);
+				require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+					terrain.treeInstanceCount() == 2 &&
+					terrain.peekTreeAtlasSource() == readySinkAtlas &&
+					device.resource_counts() == readySinkResources,
+					"original tree sink geometry fault retired accepted type");
+				unsetenv("ZH_M22_TREE_RESOURCE_FAIL_AT");
+				device.fail_next_buffer_upload();
+				require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+					terrain.treeInstanceCount() == 2 &&
+					terrain.peekTreeAtlasSource() == readySinkAtlas &&
+					device.resource_counts() == readySinkResources,
+					"original tree sink Recording fault retired accepted type");
+			}
+			require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeInstanceCount() == 1 &&
+				terrain.treeTypeCount() == 1 &&
+				terrain.treeToppleState(sinkTree) == -1 &&
+				terrain.treePartitionBucket(sinkTree) == -1 &&
+				terrain.treePartitionBucket(survivorTree) == survivorBucket &&
+				terrain.treeToppleState(survivorTree) == 0 &&
+				terrain.peekTreeAtlasSource() &&
+				(sharedType ? terrain.peekTreeAtlasSource() == readySinkAtlas :
+					terrain.peekTreeAtlasSource() != readySinkAtlas),
+				"original tree sink retry lost survivor or retained obsolete atlas");
+			frameCamera.Set_Position(Vector3(survivorPosition.x,
+				survivorPosition.y, 50));
+			require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+				terrain.treeIsVisible(survivorTree) &&
+				terrain.treeVisibleCount() == 1 &&
+				terrain.peekTreeVertexSource() &&
+				terrain.peekTreeVertexSource()->Get_Vertex_Count() == 3 &&
+				std::fabs(reinterpret_cast<const VertexFormatXYZNDUV1 *>(
+					terrain.peekTreeVertexSource()->Get_CPU_Vertex_Buffer())[0].x -
+						survivorPosition.x) < 0.001f,
+				"original tree sink survivor type remap lost reentry geometry");
+			const auto retiredResources = device.resource_counts();
+			require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeInstanceCount() == 1 &&
+				terrain.treeTypeCount() == 1 &&
+				terrain.treeIsVisible(survivorTree) &&
+				terrain.treePartitionBucket(sinkTree) == -1 &&
+				device.resource_counts() == retiredResources,
+				"original tree sink retired identity or resources twice");
+			terrain.removeTree(survivorTree);
+			pushUnit->setPosition(&originalPushPosition);
+			frameCamera.Set_Position(Vector3(toppleTreePosition.x,
+				toppleTreePosition.y, 50));
+			require(terrain.treeInstanceCount() == 0 &&
+				terrain.treeTypeCount() == 0 &&
+				!terrain.peekTreeAtlasSource() &&
+				!terrain.peekTreeVertexSource() &&
+				device.resource_counts() == baseline,
+				"original tree sink survivor removal retained type or Recording owner");
+		}
+		// A sole hidden tree must retain its accepted registry through failed
+		// sink/deletion frames, then release the registry without rebuilding an
+		// atlas for an empty type list. Removal during a pending sink is safe.
+		const DrawableID soleSinkTree = static_cast<DrawableID>(6028);
+		for (const bool resetPending : {true, false}) {
+			require(terrain.tryAddTree(soleSinkTree, toppleTreePosition, 1, 0, 0,
+				&toppleData) &&
+				terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE),
+				"original sole-tree sink fixture admission failed");
+			const UnsignedInt sinkEpoch = terrain.treeOwnerEpoch();
+			pushUnit->setPosition(&toppleUnitPosition);
+			require(terrain.treeToppleState(soleSinkTree) == 1 &&
+				terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeToppleState(soleSinkTree) == 4 &&
+				terrain.treeSinkFramesLeft(soleSinkTree) == 2,
+				"original sole-tree sink did not enter DOWN");
+			const Real soleStartZ = terrain.treeSinkLocationZ(soleSinkTree);
+			const auto soleResources = device.resource_counts();
+			toppleData.m_sinkFrames = 0;
+			require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeSinkFramesLeft(soleSinkTree) == 2 &&
+				terrain.treeSinkLocationZ(soleSinkTree) == soleStartZ &&
+				device.resource_counts() == soleResources,
+				"original sole-tree zero sink frames changed accepted owner");
+			toppleData.m_sinkFrames = 2;
+			toppleData.m_sinkDistance = std::numeric_limits<Real>::infinity();
+			require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeSinkFramesLeft(soleSinkTree) == 2 &&
+				terrain.treeSinkLocationZ(soleSinkTree) == soleStartZ &&
+				device.resource_counts() == soleResources,
+				"original sole-tree nonfinite sink distance changed accepted owner");
+			toppleData.m_sinkDistance = 4;
+			frameCamera.Set_Position(Vector3(1000, 1000, 50));
+			require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeSinkFramesLeft(soleSinkTree) == 1 &&
+				terrain.treeVisibleCount() == 0 &&
+				!terrain.peekTreeVertexSource() &&
+				terrain.treeOwnerEpoch() == sinkEpoch,
+				"original sole-tree hidden sink lost countdown or registry");
+			if (resetPending) {
+				terrain.removeAllTrees();
+				pushUnit->setPosition(&originalPushPosition);
+				frameCamera.Set_Position(Vector3(toppleTreePosition.x,
+					toppleTreePosition.y, 50));
+				require(terrain.treeOwnerEpoch() == 0 &&
+					terrain.treePartitionBucket(soleSinkTree) == -1 &&
+					!terrain.peekTreeAtlasSource() &&
+					device.resource_counts() == baseline,
+					"original sole-tree pending sink removal retained owner");
+				continue;
+			}
+			setenv("ZH_M22_TREE_SINK_FAIL_AT", "state", 1);
+			require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeSinkFramesLeft(soleSinkTree) == 1 &&
+				terrain.treeOwnerEpoch() == sinkEpoch,
+				"original sole-tree hidden sink fault consumed countdown");
+			unsetenv("ZH_M22_TREE_SINK_FAIL_AT");
+			require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeSinkFramesLeft(soleSinkTree) == 0 &&
+				std::fabs(terrain.treeSinkLocationZ(soleSinkTree) -
+					(soleStartZ - 4)) < 0.001f,
+				"original sole-tree hidden sink retry lost final displacement");
+			const auto *soleAtlas = terrain.peekTreeAtlasSource();
+			const auto beforeDeleteResources = device.resource_counts();
+			setenv("ZH_M22_TREE_SINK_FAIL_AT", "publish", 1);
+			require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeInstanceCount() == 1 &&
+				terrain.treeTypeCount() == 1 &&
+				terrain.treeOwnerEpoch() == sinkEpoch &&
+				terrain.peekTreeAtlasSource() == soleAtlas &&
+				device.resource_counts() == beforeDeleteResources,
+				"original sole-tree deletion fault retired accepted registry");
+			unsetenv("ZH_M22_TREE_SINK_FAIL_AT");
+			require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				terrain.treeOwnerEpoch() == 0 &&
+				terrain.treeInstanceCount() == 0 &&
+				terrain.treeTypeCount() == 0 &&
+				terrain.treePartitionBucket(soleSinkTree) == -1 &&
+				!terrain.peekTreeAtlasSource() &&
+				!terrain.peekTreeVertexSource() &&
+				device.resource_counts() == baseline &&
+				!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+				device.resource_counts() == baseline,
+				"original sole-tree deletion retry retained or recreated owner");
+			pushUnit->setPosition(&originalPushPosition);
+			frameCamera.Set_Position(Vector3(toppleTreePosition.x,
+				toppleTreePosition.y, 50));
+		}
 		terrain.notifyShroudChanged();
 		terrain.notifyShroudChanged();
 		require(device.resource_counts() == baseline,

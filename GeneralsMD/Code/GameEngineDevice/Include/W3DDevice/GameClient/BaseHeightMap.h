@@ -261,6 +261,8 @@ public:
 	Real treeToppleVelocity(DrawableID id) const;
 	UnsignedInt treeToppleStartEvents(DrawableID id) const;
 	UnsignedInt treeBounceEvents(DrawableID id) const;
+	UnsignedInt treeSinkFramesLeft(DrawableID id) const;
+	Real treeSinkLocationZ(DrawableID id) const;
 #endif
 	void removeAllTrees(void);
 	void removeTree(DrawableID id);
