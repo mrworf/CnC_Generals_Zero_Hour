@@ -52,6 +52,7 @@
 #include "Common/FileSystem.h"
 #include "Common/file.h"
 #include "GameClient/ClientRandomValue.h"
+#include "GameClient/FXList.h"
 #include "Common/Geometry.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -124,7 +125,44 @@ struct CpuTreeInstance {
 	UnsignedInt sinkFramesLeft = 0;
 	UnsignedInt toppleStartEvents = 0;
 	UnsignedInt bounceEvents = 0;
+	UnsignedInt consumedToppleStartEvents = 0;
+	UnsignedInt consumedBounceEvents = 0;
+	const FXList *toppleStartFX = NULL;
+	const FXList *bounceFX = NULL;
+	Coord3D toppleStartPosition{0, 0, 0};
+	Coord3D bouncePosition{0, 0, 0};
+	std::uint64_t toppleStartOrder = 0;
 };
+struct CpuTreePositionEvent {
+	UnsignedInt ownerEpoch;
+	DrawableID treeID;
+	UnsignedInt sequence;
+	Bool bounce;
+	std::uint64_t order;
+	const FXList *fx;
+	Coord3D position;
+};
+static bool cpuTreeSortPositionEvents(std::vector<CpuTreePositionEvent> &events)
+{
+	if (events.size() > 8000) return false; // At most start + bounce for 4000 trees.
+	const auto precedes = [](const CpuTreePositionEvent &left,
+		const CpuTreePositionEvent &right) {
+		if (left.bounce != right.bounce) return !left.bounce;
+		return left.order < right.order;
+	};
+	// Explicitly allocation-free: only indexed candidate writes and stack value
+	// copies. Library temporary buffers cross the native nothrow/delete boundary.
+	for (std::size_t index = 1; index < events.size(); ++index) {
+		const CpuTreePositionEvent event = events[index];
+		std::size_t insertion = index;
+		while (insertion > 0 && precedes(event, events[insertion - 1])) {
+			events[insertion] = events[insertion - 1];
+			--insertion;
+		}
+		events[insertion] = event;
+	}
+	return true;
+}
 struct CpuTreeVisibleFrame {
 	CpuTreeVisibleFrame()
 	{
@@ -166,6 +204,7 @@ struct CpuTreeRegistry {
 	std::unique_ptr<CpuTreeGpuSource> gpu;
 	CpuTreeVisibleFrame visibleFrame;
 	UnsignedInt epoch = 0;
+	std::uint64_t nextToppleStartOrder = 0;
 	~CpuTreeRegistry()
 	{
 		REF_PTR_RELEASE(atlasTexture);
@@ -222,7 +261,9 @@ static bool cpuTreeStartTopple(CpuTreeInstance &instance,
 	instance.toppleTransform.Make_Identity();
 	instance.toppleTransform.Set_Translation(Vector3(instance.location.x,
 		instance.location.y, instance.location.z));
-	++instance.toppleStartEvents; // Event intent; B3 owns external dispatch.
+	instance.toppleStartFX = data->m_toppleFX;
+	instance.toppleStartPosition = instance.location;
+	++instance.toppleStartEvents;
 	return std::isfinite(instance.toppleDirection.x) &&
 		std::isfinite(instance.toppleDirection.y) &&
 		cpuTreeMatrixFinite(instance.toppleTransform);
@@ -278,7 +319,12 @@ static bool cpuTreeAdvanceTopple(CpuTreeInstance &instance,
 			!(instance.toppleOptions & 2U)) {
 			if (instance.bounceEvents == std::numeric_limits<UnsignedInt>::max())
 				return false;
-			++instance.bounceEvents; // Event intent; B3 owns external dispatch.
+			Vector3 position;
+			Matrix3D::Transform_Vector(instance.toppleTransform,
+				Vector3(0, 0, 21), &position); // Native 3 * TREE_RADIUS_APPROX.
+			instance.bouncePosition = Coord3D{position.X, position.Y, position.Z};
+			instance.bounceFX = data->m_bounceFX;
+			++instance.bounceEvents;
 		}
 	} else {
 		instance.angularVelocity += instance.angularAcceleration;
@@ -1100,6 +1146,30 @@ UnsignedInt BaseHeightMapRenderObjClass::treeBounceEvents(DrawableID id) const
 			if (instance.id == id) return instance.bounceEvents;
 	return 0;
 }
+UnsignedInt BaseHeightMapRenderObjClass::treeConsumedToppleStartEvents(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.consumedToppleStartEvents;
+	return 0;
+}
+UnsignedInt BaseHeightMapRenderObjClass::treeConsumedBounceEvents(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.consumedBounceEvents;
+	return 0;
+}
+UnsignedInt64 BaseHeightMapRenderObjClass::treeToppleStartOrder(DrawableID id) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	if (registry != s_cpuTreeRegistries.end())
+		for (const CpuTreeInstance &instance : registry->second.instances)
+			if (instance.id == id) return instance.toppleStartOrder;
+	return 0;
+}
 UnsignedInt BaseHeightMapRenderObjClass::treeSinkFramesLeft(DrawableID id) const
 {
 	const auto registry = s_cpuTreeRegistries.find(this);
@@ -1330,6 +1400,37 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 		const bool deletingLastTree = !pendingDeletes.empty() && nextInstances.empty();
 		const std::vector<CpuTreeType> &candidateTypes =
 			pendingDeletes.empty() ? registry->second.types : nextTypes;
+		std::vector<CpuTreePositionEvent> events;
+		const char *fxFault = std::getenv("ZH_M22_TREE_FX_FAIL_AT");
+		// Collision starts precede this frame's bounces, as in the source.
+		// Build the entire immutable batch before publishing any consumed marker.
+		for (const bool bounce : {false, true}) {
+			for (CpuTreeInstance &instance : nextInstances) {
+				const UnsignedInt sequence = bounce ? instance.bounceEvents :
+					instance.toppleStartEvents;
+				UnsignedInt &consumed = bounce ? instance.consumedBounceEvents :
+					instance.consumedToppleStartEvents;
+				if (sequence < consumed || sequence - consumed > 1) return false;
+				if (sequence == consumed) continue;
+				const FXList *fx = bounce ? instance.bounceFX : instance.toppleStartFX;
+				const Coord3D &position = bounce ? instance.bouncePosition :
+					instance.toppleStartPosition;
+				if (FXList::preflightPositionDispatch(fx, &position) !=
+					FXPositionAdmission::Ready) return false;
+				events.push_back({registry->second.epoch, instance.id,
+					sequence, bounce, bounce ? events.size() : instance.toppleStartOrder,
+					fx, position});
+				consumed = sequence; // Candidate only; failed uploads cannot consume.
+			}
+		}
+		if (fxFault && std::strcmp(fxFault, "sort-bound") == 0) {
+			const CpuTreePositionEvent rejectedEvent{registry->second.epoch,
+				INVALID_DRAWABLE_ID, 0, FALSE, 0, NULL, Coord3D{0, 0, 0}};
+			events.resize(8001, rejectedEvent); // Actual bound+1 candidate; never dispatch.
+		}
+		if (!cpuTreeSortPositionEvents(events)) return false;
+		if (fxFault && (std::strcmp(fxFault, "queue") == 0 ||
+			std::strcmp(fxFault, "sort") == 0)) return false;
 		const bool typesChanged = candidateTypes.size() != registry->second.types.size();
 		if (!deletingLastTree) {
 			atlasReady = !typesChanged && atlas &&
@@ -1369,7 +1470,8 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 			if (!nextTexture) return false;
 		}
 		if ((fault && std::strcmp(fault, "publish") == 0) ||
-			(sinkFault && std::strcmp(sinkFault, "publish") == 0)) return false;
+			(sinkFault && std::strcmp(sinkFault, "publish") == 0) ||
+			(fxFault && std::strcmp(fxFault, "publish") == 0)) return false;
 		if (deletingLastTree) {
 			if (rngChanged) CommitGameClientRandomState(clientWords);
 			s_cpuTreeRegistries.erase(registry);
@@ -1387,6 +1489,16 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 			nextTexture.reset(oldTexture);
 		}
 		if (rngChanged) CommitGameClientRandomState(clientWords);
+		// Retire all replaced resources before effects. From here onward state is
+		// accepted, every marker is consumed, and no registry is accessed: a native
+		// effect may remove/reset the terrain or fail after earlier nuggets ran.
+		nextGpu.reset();
+		nextTexture.reset();
+		nextAtlas.reset();
+		for (const CpuTreePositionEvent &event : events) {
+			try { FXList::doFXPos(event.fx, &event.position); }
+			catch (...) { /* Accepted/consumed partial dispatch; never replay it. */ }
+		}
 		return true;
 	} catch (...) { return false; }
 }
@@ -1638,6 +1750,8 @@ void BaseHeightMapRenderObjClass::unitMoved( Object *unit )
 		throw OriginalW3DDeviceUnavailable("original tree unit collision partition unavailable");
 	try {
 		std::vector<CpuTreeInstance> candidate = registry->second.instances;
+		std::uint64_t candidateStartOrder = registry->second.nextToppleStartOrder;
+		const char *fxFault = std::getenv("ZH_M22_TREE_FX_FAIL_AT");
 		const UnsignedInt frame = TheGameLogic->getFrame();
 		for (CpuTreeInstance &instance : candidate) {
 			if (instance.partitionBucket < 0 ||
@@ -1656,6 +1770,7 @@ void BaseHeightMapRenderObjClass::unitMoved( Object *unit )
 			if (!type.data) throw OriginalW3DDeviceUnavailable(
 				"original tree unit collision type unavailable");
 			if (unit->getCrusherLevel() > 1 && type.data->m_doTopple) {
+				const UnsignedInt startBefore = instance.toppleStartEvents;
 				if (!ThePartitionManager || !ThePlayerList ||
 					!std::isfinite(ThePartitionManager->getCellSize()) ||
 					ThePartitionManager->getCellSize() <= 0 ||
@@ -1664,6 +1779,18 @@ void BaseHeightMapRenderObjClass::unitMoved( Object *unit )
 					!cpuTreeStartTopple(instance, type.data, dx, dy))
 					throw OriginalW3DDeviceUnavailable(
 						"original tree crusher topple candidate unavailable");
+				if (instance.toppleStartEvents != startBefore &&
+					FXList::preflightPositionDispatch(instance.toppleStartFX,
+						&instance.toppleStartPosition) != FXPositionAdmission::Ready)
+					throw OriginalW3DDeviceUnavailable(
+						"original tree crusher position FX candidate unavailable");
+				if (instance.toppleStartEvents != startBefore) {
+					if (candidateStartOrder == std::numeric_limits<std::uint64_t>::max() ||
+						(fxFault && std::strcmp(fxFault, "order-overflow") == 0))
+						throw OriginalW3DDeviceUnavailable(
+							"original tree crusher position FX order unavailable");
+					instance.toppleStartOrder = ++candidateStartOrder;
+				}
 				continue;
 			}
 			if (type.data->m_framesToMoveOutward <= 1) continue;
@@ -1693,6 +1820,7 @@ void BaseHeightMapRenderObjClass::unitMoved( Object *unit )
 		if (fault && std::strcmp(fault, "publish") == 0)
 			throw OriginalW3DDeviceUnavailable("injected tree push publication failure");
 		registry->second.instances.swap(candidate);
+		registry->second.nextToppleStartOrder = candidateStartOrder;
 	} catch (const OriginalW3DDeviceUnavailable &) { throw; }
 	catch (...) {
 		throw OriginalW3DDeviceUnavailable("original tree unit collision candidate unavailable");

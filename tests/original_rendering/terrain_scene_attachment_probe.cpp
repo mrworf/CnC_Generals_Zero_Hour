@@ -181,6 +181,43 @@ private:
 };
 EMPTY_DTOR(UnknownFXNugget)
 
+struct PositionFXTrace {
+	Int token;
+	Coord3D position;
+};
+class DispatchFXNugget final : public FXNugget
+{
+	MEMORY_POOL_GLUE_WITH_EXPLICIT_CREATE(DispatchFXNugget, "DispatchFXNugget", 8, 8)
+public:
+	DispatchFXNugget(std::vector<PositionFXTrace> *trace, Int token,
+		BaseHeightMapRenderObjClass *terrain, DrawableID id, bool bounce,
+		bool fail = false, bool remove = false) : m_trace(trace), m_token(token),
+		m_terrain(terrain), m_id(id), m_bounce(bounce), m_fail(fail), m_remove(remove) {}
+	void doFXPos(const Coord3D *position, const Matrix3D *, Real,
+		const Coord3D *, Real) const override
+	{
+		if (m_terrain) {
+			require(m_terrain->peekTreeVertexSource() &&
+				(m_bounce ? m_terrain->treeConsumedBounceEvents(m_id) :
+					m_terrain->treeConsumedToppleStartEvents(m_id)) == 1,
+				"tree FX dispatched before accepted geometry/consumed marker");
+		}
+		m_trace->push_back({m_token, *position});
+		(void)GameClientRandomValue(0, 100); // Explicit external-effect randomness.
+		if (m_remove) m_terrain->removeTree(m_id);
+		if (m_fail) throw std::runtime_error("generated position FX dispatch failure");
+	}
+	FXPositionNuggetReadiness cpuPositionReady(const Coord3D *, const Coord3D *) const override
+	{ return FXPositionNuggetReadiness::Ready; }
+private:
+	std::vector<PositionFXTrace> *m_trace;
+	Int m_token;
+	BaseHeightMapRenderObjClass *m_terrain;
+	DrawableID m_id;
+	bool m_bounce, m_fail, m_remove;
+};
+EMPTY_DTOR(DispatchFXNugget)
+
 void checkPositionFXAdmission(const Coord3D &position,
 	const zh::renderer::RecordingGpuDevice &device)
 {
@@ -1248,6 +1285,418 @@ extern "C" void zh_probe_terrain_scene_attachment()
 				device.resource_counts() == baseline,
 				"original tree bounce removal retained state or resources");
 		}
+		// Position FX are registry-owned intents until the Recording frame commits.
+		// Keep the real logical shroud query; the notification adapter only bridges
+		// this generated fixture's logical/visual map-size mismatch.
+		std::vector<PositionFXTrace> fxTrace;
+		FXList *startFX = const_cast<FXList *>(TheFXListStore->findFXList("FixtureGraph60"));
+		FXList *bounceFX = const_cast<FXList *>(TheFXListStore->findFXList("FixtureGraph61"));
+		require(startFX && bounceFX, "tree FX fixture lists missing");
+		W3DTreeDrawModuleData fxData = toppleData;
+		fxData.m_toppleFX = startFX;
+		fxData.m_bounceFX = bounceFX;
+		fxData.m_bounceVelocityPercent = 0.5f;
+		// The bounce is gated at its transformed tip, not the tree's base.
+		const Real fxRevealRadius = toppleRevealRadius + 32;
+		startFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 1, &terrain, toppleTree, false));
+		startFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 2, &terrain, toppleTree, false));
+		bounceFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 3, &terrain, toppleTree, true));
+		const auto revealFX = [&] {
+			DisplayOverride notificationOnly(&shroudNotices);
+			ThePartitionManager->doShroudReveal(toppleTreePosition.x,
+				toppleTreePosition.y, fxRevealRadius, topplePlayerMask);
+		};
+		const auto undoFX = [&] {
+			DisplayOverride notificationOnly(&shroudNotices);
+			ThePartitionManager->undoShroudReveal(toppleTreePosition.x,
+				toppleTreePosition.y, fxRevealRadius, topplePlayerMask);
+		};
+		const auto admitFXTree = [&] {
+			pushUnit->setPosition(&originalPushPosition);
+			frameCamera.Set_Position(Vector3(toppleTreePosition.x,
+				toppleTreePosition.y, 50));
+			require(terrain.tryAddTree(toppleTree, toppleTreePosition, 1, 0, 0,
+				&fxData) && terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE),
+				"tree FX fixture admission failed");
+		};
+		const auto retireFXTree = [&] {
+			terrain.removeTree(toppleTree);
+			pushUnit->setPosition(&originalPushPosition);
+			require(terrain.treeToppleState(toppleTree) == -1 &&
+				device.resource_counts() == baseline,
+				"tree FX retirement retained state/resources");
+		};
+		const std::size_t fxRevealNotice = shroudNotices.notices.size();
+		revealFX();
+		const std::size_t fxRevealCount = shroudNotices.notices.size() - fxRevealNotice;
+		require(fxRevealCount > 0 && TheDisplay == display.get() &&
+			ThePartitionManager->getShroudStatusForPlayer(topplePlayerIndex,
+				&toppleTreePosition) == CELLSHROUD_CLEAR,
+			"tree FX clear-shroud fixture/notification restoration failed");
+		admitFXTree();
+		const auto fxReadyResources = device.resource_counts();
+		const auto *fxReadyVertex = terrain.peekTreeVertexSource();
+		UnsignedInt collisionClientBefore[6]{}, collisionClientAfter[6]{};
+		UnsignedInt collisionLogicBefore[6]{}, collisionLogicAfter[6]{};
+		UnsignedInt collisionSeedBefore = 0, collisionSeedAfter = 0;
+		CopyGameClientRandomState(collisionClientBefore);
+		CopyGameLogicRandomState(&collisionSeedBefore, collisionLogicBefore);
+		FXListStore *collisionStore = TheFXListStore;
+		TheFXListStore = NULL;
+		const bool collisionNoStore = rejected([&] { pushUnit->setPosition(&toppleUnitPosition); });
+		TheFXListStore = collisionStore;
+		require(collisionNoStore && terrain.treeToppleStartEvents(toppleTree) == 0 &&
+			fxTrace.empty(), "tree FX missing store changed collision intent");
+		pushUnit->setPosition(&originalPushPosition);
+		// The entire list is checked before public collision publication.
+		fxData.m_toppleFX = TheFXListStore->findFXList("FixtureLateLight");
+		require(rejected([&] { pushUnit->setPosition(&toppleUnitPosition); }) &&
+			terrain.treeToppleStartEvents(toppleTree) == 0 && fxTrace.empty(),
+			"tree FX late unsupported nugget changed collision state/effects");
+		pushUnit->setPosition(&originalPushPosition);
+		fxData.m_toppleFX = reinterpret_cast<const FXList *>(static_cast<uintptr_t>(1));
+		require(rejected([&] { pushUnit->setPosition(&toppleUnitPosition); }) &&
+			terrain.treeToppleStartEvents(toppleTree) == 0 && fxTrace.empty(),
+			"tree FX stale list changed collision state/effects");
+		pushUnit->setPosition(&originalPushPosition);
+		fxData.m_toppleFX = startFX;
+		for (const char *owner : {"ZH_M22_TREE_PUSH_FAIL_AT", "ZH_M22_TREE_FX_FAIL_AT"}) {
+			setenv(owner, std::strcmp(owner, "ZH_M22_TREE_PUSH_FAIL_AT") == 0 ?
+				"publish" : "order-overflow", 1);
+			const bool failed = rejected([&] { pushUnit->setPosition(&toppleUnitPosition); });
+			unsetenv(owner);
+			require(failed && terrain.treeToppleStartOrder(toppleTree) == 0 &&
+				terrain.treeToppleStartEvents(toppleTree) == 0 && fxTrace.empty() &&
+				terrain.peekTreeVertexSource() == fxReadyVertex &&
+				device.resource_counts() == fxReadyResources,
+				"tree FX collision publication/overflow consumed order or intent");
+			pushUnit->setPosition(&originalPushPosition);
+		}
+		CopyGameClientRandomState(collisionClientAfter);
+		CopyGameLogicRandomState(&collisionSeedAfter, collisionLogicAfter);
+		require(std::memcmp(collisionClientBefore, collisionClientAfter, sizeof(collisionClientBefore)) == 0 &&
+			collisionSeedBefore == collisionSeedAfter &&
+			std::memcmp(collisionLogicBefore, collisionLogicAfter, sizeof(collisionLogicBefore)) == 0 &&
+			terrain.peekTreeVertexSource() == fxReadyVertex &&
+			device.resource_counts() == fxReadyResources,
+			"tree FX rejected collision admission consumed RNG/GPU state");
+		pushUnit->setPosition(&toppleUnitPosition);
+		require(terrain.treeToppleStartEvents(toppleTree) == 1 &&
+			terrain.treeToppleStartOrder(toppleTree) == 1 &&
+			terrain.treeConsumedToppleStartEvents(toppleTree) == 0 && fxTrace.empty(),
+			"tree FX collision intent was consumed before frame commit");
+		UnsignedInt fxClientBefore[6]{}, fxClientAfter[6]{};
+		UnsignedInt fxLogicBefore[6]{}, fxLogicAfter[6]{};
+		UnsignedInt fxLogicSeedBefore = 0, fxLogicSeedAfter = 0;
+		CopyGameClientRandomState(fxClientBefore);
+		CopyGameLogicRandomState(&fxLogicSeedBefore, fxLogicBefore);
+		const auto pendingFXUnchanged = [&] {
+			CopyGameClientRandomState(fxClientAfter);
+			CopyGameLogicRandomState(&fxLogicSeedAfter, fxLogicAfter);
+			return terrain.treeToppleStartEvents(toppleTree) == 1 &&
+				terrain.treeConsumedToppleStartEvents(toppleTree) == 0 &&
+				terrain.treeToppleAngle(toppleTree) == 0 && fxTrace.empty() &&
+				terrain.peekTreeVertexSource() == fxReadyVertex &&
+				device.resource_counts() == fxReadyResources &&
+				std::memcmp(fxClientBefore, fxClientAfter, sizeof(fxClientBefore)) == 0 &&
+				fxLogicSeedBefore == fxLogicSeedAfter &&
+				std::memcmp(fxLogicBefore, fxLogicAfter, sizeof(fxLogicBefore)) == 0;
+		};
+		FXListStore *fxStore = TheFXListStore;
+		TheFXListStore = NULL;
+		const bool missingFXStore = !terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE);
+		TheFXListStore = fxStore;
+		require(missingFXStore && pendingFXUnchanged(),
+			"tree FX failed provider preflight consumed pending intent");
+		for (const char *boundary : {"sort-bound", "sort", "queue", "publish"}) {
+			setenv("ZH_M22_TREE_FX_FAIL_AT", boundary, 1);
+			const bool failed = !terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE);
+			unsetenv("ZH_M22_TREE_FX_FAIL_AT");
+			require(failed && pendingFXUnchanged(),
+				"tree FX queue/publication failure consumed pending intent");
+		}
+		for (const char *owner : {"ZH_M22_TREE_TOPPLE_FAIL_AT", "ZH_M22_TREE_RESOURCE_FAIL_AT"}) {
+			setenv(owner, std::strcmp(owner, "ZH_M22_TREE_TOPPLE_FAIL_AT") == 0 ?
+				"state" : "geometry", 1);
+			const bool failed = !terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE);
+			unsetenv(owner);
+			require(failed && pendingFXUnchanged(),
+				"tree FX state/geometry failure consumed pending intent");
+		}
+		device.fail_next_buffer_upload();
+		require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			pendingFXUnchanged(), "tree FX Recording failure consumed pending intent");
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeConsumedToppleStartEvents(toppleTree) == 1 &&
+			fxTrace.size() == 2 && fxTrace[0].token == 1 && fxTrace[1].token == 2 &&
+			fxTrace[0].position.x == toppleTreePosition.x &&
+			fxTrace[0].position.y == toppleTreePosition.y &&
+			fxTrace[0].position.z == toppleTreePosition.z,
+			"tree FX clean retry lost start ordering/position/commit marker");
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			fxTrace.size() == 2, "tree FX paused frame replayed start");
+		const Real bounceAngle = PI / 2 - PI / 64;
+		const Coord3D expectedBouncePosition{
+			toppleTreePosition.x + 21 * std::sin(bounceAngle), toppleTreePosition.y,
+			toppleTreePosition.z + 21 * std::cos(bounceAngle)};
+		require(ThePartitionManager->getShroudStatusForPlayer(topplePlayerIndex,
+			&expectedBouncePosition) == CELLSHROUD_CLEAR &&
+			terrain.treeConsumedBounceEvents(toppleTree) == 0,
+			"tree FX bounce position not admitted clear before frame dispatch");
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			terrain.treeConsumedBounceEvents(toppleTree) == 1 && fxTrace.size() == 3 &&
+			fxTrace[2].token == 3, "tree FX bounce intent was not consumed exactly once");
+		require(std::fabs(fxTrace[2].position.x -
+			(toppleTreePosition.x + 21 * std::sin(bounceAngle))) < 0.001f &&
+			std::fabs(fxTrace[2].position.y - toppleTreePosition.y) < 0.001f &&
+			std::fabs(fxTrace[2].position.z -
+			(toppleTreePosition.z + 21 * std::cos(bounceAngle))) < 0.001f &&
+			ThePartitionManager->getShroudStatusForPlayer(topplePlayerIndex,
+				&fxTrace[2].position) == CELLSHROUD_CLEAR,
+			"tree FX bounce position differs from exact native transformed point");
+		frameCamera.Set_Position(Vector3(10000, 10000, 50));
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			fxTrace.size() == 3, "tree FX hidden frame replayed an event");
+		frameCamera.Set_Position(Vector3(toppleTreePosition.x, toppleTreePosition.y, 50));
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			fxTrace.size() == 3, "tree FX reentry replayed an event");
+		retireFXTree();
+		fxTrace.clear();
+		// Separate collision callbacks keep chronology, not insertion order.
+		const DrawableID otherFXTree = static_cast<DrawableID>(6023);
+		Coord3D otherFXPosition = toppleTreePosition;
+		otherFXPosition.y += 30;
+		Coord3D otherFXUnitPosition = toppleUnitPosition;
+		otherFXUnitPosition.y += 30;
+		FXList *otherFX = const_cast<FXList *>(TheFXListStore->findFXList("FixtureGraph62"));
+		require(otherFX, "tree FX second collision list missing");
+		W3DTreeDrawModuleData otherFXData = fxData;
+		otherFXData.m_textureName = "Tree1.tga";
+		otherFXData.m_toppleFX = otherFX;
+		otherFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 11, &terrain, otherFXTree, false));
+		startFX->clear();
+		startFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 12, &terrain, toppleTree, false));
+		for (const bool cancelFirst : {false, true}) {
+			admitFXTree();
+			require(terrain.tryAddTree(otherFXTree, otherFXPosition, 1, 0, 0, &otherFXData) &&
+				terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE),
+				"tree FX callback ordering fixture admission failed");
+			if (cancelFirst) pushUnit->setPosition(&toppleUnitPosition);
+			pushUnit->setPosition(&otherFXUnitPosition);
+			if (cancelFirst) {
+				terrain.removeTree(toppleTree);
+				require(terrain.tryAddTree(toppleTree, toppleTreePosition, 1, 0, 0, &fxData),
+					"tree FX canceled intent replacement admission failed");
+			}
+			pushUnit->setPosition(&toppleUnitPosition);
+			require(terrain.treeToppleStartOrder(otherFXTree) == (cancelFirst ? 2U : 1U) &&
+				terrain.treeToppleStartOrder(toppleTree) == (cancelFirst ? 3U : 2U) &&
+				fxTrace.empty() && terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+				fxTrace.size() == 2 && fxTrace[0].token == 11 && fxTrace[1].token == 12,
+				"tree FX callback chronology/cancellation reordered surviving intent");
+			terrain.removeTree(otherFXTree);
+			retireFXTree();
+			fxTrace.clear();
+		}
+		otherFX->clear();
+		// Four reverse callbacks exercise the explicit bounded in-place sort.
+		// The sort-fault rejection must leave all registry/RNG/GPU state untouched.
+		startFX->clear();
+		startFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 13, NULL, toppleTree, false));
+		bounceFX->clear();
+		bounceFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 14, NULL, toppleTree, true));
+		Coord3D orderedPositions[4]{};
+		pushUnit->setPosition(&originalPushPosition);
+		for (Int index = 0; index < 4; ++index) {
+			orderedPositions[index] = toppleTreePosition;
+			orderedPositions[index].x += (index % 2) * 20;
+			orderedPositions[index].y += (index / 2) * 20;
+			require(ThePartitionManager->getShroudStatusForPlayer(topplePlayerIndex,
+				&orderedPositions[index]) == CELLSHROUD_CLEAR,
+				"tree FX reverse-event source position is not admitted clear shroud");
+			require(terrain.tryAddTree(static_cast<DrawableID>(6040 + index),
+				orderedPositions[index], 1, 0, 0, &fxData),
+				"tree FX reverse-event fixture admission failed");
+		}
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE),
+			"tree FX reverse-event initial geometry failed");
+		for (Int index = 3; index >= 0; --index) {
+			Coord3D position = orderedPositions[index];
+			position.x -= 1;
+			pushUnit->setPosition(&position);
+			require(terrain.treeToppleStartOrder(static_cast<DrawableID>(6040 + index)) ==
+				static_cast<UnsignedInt64>(4 - index),
+				"tree FX reverse-event collision order changed");
+		}
+		for (const Coord3D &position : orderedPositions)
+			require(ThePartitionManager->getShroudStatusForPlayer(topplePlayerIndex,
+				&position) == CELLSHROUD_CLEAR,
+				"tree FX reverse-event dispatch position lost real clear shroud");
+		const auto reverseResources = device.resource_counts();
+		const auto *reverseVertex = terrain.peekTreeVertexSource();
+		CopyGameClientRandomState(fxClientBefore);
+		CopyGameLogicRandomState(&fxLogicSeedBefore, fxLogicBefore);
+		setenv("ZH_M22_TREE_FX_FAIL_AT", "sort", 1);
+		const bool reverseSortFailed = !terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE);
+		unsetenv("ZH_M22_TREE_FX_FAIL_AT");
+		CopyGameClientRandomState(fxClientAfter);
+		CopyGameLogicRandomState(&fxLogicSeedAfter, fxLogicAfter);
+		require(reverseSortFailed && fxTrace.empty() &&
+			terrain.peekTreeVertexSource() == reverseVertex &&
+			device.resource_counts() == reverseResources &&
+			std::memcmp(fxClientBefore, fxClientAfter, sizeof(fxClientBefore)) == 0 &&
+			fxLogicSeedBefore == fxLogicSeedAfter &&
+			std::memcmp(fxLogicBefore, fxLogicAfter, sizeof(fxLogicBefore)) == 0,
+			"tree FX reverse-event sorting consumed accepted state/resources/RNG");
+		for (Int index = 0; index < 4; ++index)
+			require(terrain.treeConsumedToppleStartEvents(static_cast<DrawableID>(6040 + index)) == 0,
+				"tree FX reverse-event sort fault consumed a marker");
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) && fxTrace.size() == 4,
+			"tree FX reverse-event retry lost an admitted event");
+		for (Int index = 0; index < 4; ++index) {
+			require(fxTrace[index].token == 13 &&
+				fxTrace[index].position.x == orderedPositions[3 - index].x &&
+				fxTrace[index].position.y == orderedPositions[3 - index].y &&
+				terrain.treeConsumedToppleStartEvents(static_cast<DrawableID>(6040 + index)) == 1,
+				"tree FX reverse-event retry changed chronology/identity");
+		}
+		// Bounce order follows source registry order, not reversed start chronology.
+		// Keep source gating at each transformed tip, including suppressed tips.
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) && fxTrace.size() == 4,
+			"tree FX reverse-event first angular step emitted premature bounce");
+		std::vector<Coord3D> admittedBouncePositions;
+		Int suppressedBounces = 0;
+		for (const Coord3D &base : orderedPositions) {
+			Coord3D tip{base.x + 21 * std::sin(bounceAngle), base.y,
+				base.z + 21 * std::cos(bounceAngle)};
+			if (ThePartitionManager->getShroudStatusForPlayer(topplePlayerIndex, &tip) ==
+				CELLSHROUD_CLEAR) admittedBouncePositions.push_back(tip);
+			else ++suppressedBounces;
+		}
+		require(!admittedBouncePositions.empty() && suppressedBounces > 0 &&
+			terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
+			fxTrace.size() == 4 + admittedBouncePositions.size(),
+			"tree FX source-ordered bounce/shroud batch admission failed");
+		for (std::size_t index = 0; index < admittedBouncePositions.size(); ++index) {
+			const Coord3D &actual = fxTrace[4 + index].position;
+			const Coord3D &expected = admittedBouncePositions[index];
+			require(fxTrace[4 + index].token == 14 &&
+				std::fabs(actual.x - expected.x) < 0.001f &&
+				std::fabs(actual.y - expected.y) < 0.001f &&
+				std::fabs(actual.z - expected.z) < 0.001f,
+				"tree FX bounce source ordinal was replaced by start chronology");
+		}
+		const std::size_t dispatchedBounceCount = fxTrace.size();
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			fxTrace.size() == dispatchedBounceCount,
+			"tree FX source-ordered bounce retry replayed suppressed or accepted event");
+		for (Int index = 0; index < 4; ++index) {
+			require(terrain.treeBounceEvents(static_cast<DrawableID>(6040 + index)) == 1 &&
+				terrain.treeConsumedBounceEvents(static_cast<DrawableID>(6040 + index)) == 1,
+				"tree FX shroud-suppressed bounce retained a replay marker");
+			terrain.removeTree(static_cast<DrawableID>(6040 + index));
+		}
+		pushUnit->setPosition(&originalPushPosition);
+		require(device.resource_counts() == baseline,
+			"tree FX reverse-event retirement retained resources");
+		fxTrace.clear();
+		// Removing an unconsumed collision cancels it; a new owner epoch is clean.
+		admitFXTree();
+		pushUnit->setPosition(&toppleUnitPosition);
+		const UnsignedInt removedFXEpoch = terrain.treeOwnerEpoch();
+		retireFXTree();
+		admitFXTree();
+		require(terrain.treeOwnerEpoch() != removedFXEpoch &&
+			terrain.treeConsumedToppleStartEvents(toppleTree) == 0 && fxTrace.empty(),
+			"tree FX removal/recreation inherited pending intent");
+		retireFXTree();
+		// A failed nugget after an earlier effect is accepted/consumed, never replayed.
+		startFX->clear();
+		startFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 4, &terrain, toppleTree, false));
+		startFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 5, &terrain, toppleTree, false, true));
+		startFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 9, &terrain, toppleTree, false));
+		admitFXTree();
+		pushUnit->setPosition(&toppleUnitPosition);
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			fxTrace.size() == 2 && fxTrace[0].token == 4 && fxTrace[1].token == 5 &&
+			terrain.treeConsumedToppleStartEvents(toppleTree) == 1,
+			"tree FX partial dispatch failure was not accepted/consumed");
+		CopyGameClientRandomState(fxClientBefore);
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) && fxTrace.size() == 2,
+			"tree FX partial dispatch failure replayed an event");
+		CopyGameClientRandomState(fxClientAfter);
+		require(std::memcmp(fxClientBefore, fxClientAfter, sizeof(fxClientBefore)) == 0,
+			"tree FX partial dispatch retry consumed extra RNG");
+		retireFXTree();
+		fxTrace.clear();
+		// The first nugget destroys the sole registry. The second still dispatches
+		// from the immutable batch: production must not touch the erased registry.
+		startFX->clear();
+		startFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 6, &terrain, toppleTree, false, false, true));
+		startFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 7, NULL, toppleTree, false));
+		admitFXTree();
+		pushUnit->setPosition(&toppleUnitPosition);
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			fxTrace.size() == 2 && fxTrace[0].token == 6 && fxTrace[1].token == 7 &&
+			terrain.treeInstanceCount() == 0 && device.resource_counts() == baseline,
+			"tree FX dispatch accessed removed registry or lost later nugget");
+		pushUnit->setPosition(&originalPushPosition);
+		fxTrace.clear();
+		startFX->clear();
+		startFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 8, &terrain, toppleTree, false));
+		undoFX();
+		require(TheDisplay == display.get() &&
+			ThePartitionManager->getShroudStatusForPlayer(topplePlayerIndex,
+				&toppleTreePosition) == CELLSHROUD_FOGGED,
+			"tree FX fog-shroud fixture/notification restoration failed");
+		admitFXTree();
+		pushUnit->setPosition(&toppleUnitPosition);
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) &&
+			terrain.treeConsumedToppleStartEvents(toppleTree) == 1 && fxTrace.empty(),
+			"tree FX native fog gate dispatched or retained replay intent");
+		revealFX();
+		require(terrain.updateTreeVisibleFrame(&frameCamera, breeze, TRUE) && fxTrace.empty(),
+			"tree FX visibility return replayed fog-gated event");
+		retireFXTree();
+		undoFX();
+		{
+			DisplayOverride notificationOnly(&shroudNotices);
+			ThePartitionManager->doShroudCover(toppleTreePosition.x,
+				toppleTreePosition.y, fxRevealRadius, topplePlayerMask);
+			ThePartitionManager->undoShroudCover(toppleTreePosition.x,
+				toppleTreePosition.y, fxRevealRadius, topplePlayerMask);
+		}
+		bool fxShroudRestored = TheDisplay == display.get() &&
+			shroudNotices.notices.size() == fxRevealNotice + fxRevealCount * 5;
+		for (std::size_t index = 0; fxShroudRestored && index < fxRevealCount; ++index)
+			for (std::size_t transition = 0; fxShroudRestored && transition < 5; ++transition) {
+				const auto &first = shroudNotices.notices[fxRevealNotice + index];
+				const auto &notice = shroudNotices.notices[
+					fxRevealNotice + transition * fxRevealCount + index];
+				fxShroudRestored = first.x == notice.x && first.y == notice.y &&
+					notice.status == (transition == 4 ? CELLSHROUD_SHROUDED :
+						(transition % 2 == 0 ? CELLSHROUD_CLEAR : CELLSHROUD_FOGGED));
+			}
+		for (Int y = 0; fxShroudRestored && y != shroudCellsY; ++y)
+			for (Int x = 0; fxShroudRestored && x != shroudCellsX; ++x)
+				fxShroudRestored = ThePartitionManager->getShroudStatusForPlayer(
+					topplePlayerIndex, x, y) == originalShroudCells[y * shroudCellsX + x];
+		require(fxShroudRestored, "tree FX notification sequence/baseline restoration failed");
+		startFX->clear();
+		bounceFX->clear();
 		pushUnit->setPosition(&toppleUnitPosition);
 		toppleData.m_minimumToppleSpeed = 0.0f;
 		require(terrain.tryAddTree(toppleTree, toppleTreePosition, 1, 0, 0,
@@ -1635,14 +2084,18 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		require(terrain.tryAddTree(tree_one, tree_position, 1, 0, 0, &tree_data),
 			"original tree reset witness could not admit owner");
 		require(terrain.tryAddTree(toppleTree, toppleTreePosition, 1, 0, 0,
-			&toppleData) && terrain.treeToppleState(toppleTree) == 0,
+			&fxData) && terrain.treeToppleState(toppleTree) == 0,
 			"original tree reset witness could not admit live topple owner");
+		startFX->addFXNugget(newInstance(DispatchFXNugget)(
+			&fxTrace, 10, &terrain, toppleTree, false));
 		pushUnit->setPosition(&toppleUnitPosition);
 		require(terrain.treeToppleState(toppleTree) == 1 &&
 			terrain.treeToppleStartEvents(toppleTree) == 1,
 			"original tree reset witness did not publish live topple state");
 		const UnsignedInt old_tree_epoch = terrain.treeOwnerEpoch();
 		terrain.reset();
+		require(fxTrace.empty(), "tree FX reset dispatched pending collision intent");
+		startFX->clear();
 		pushUnit->setPosition(&originalPushPosition);
 		require(terrain.treeInstanceCount() == 0 && terrain.treeTypeCount() == 0 &&
 			terrain.treeOwnerEpoch() != old_tree_epoch &&
