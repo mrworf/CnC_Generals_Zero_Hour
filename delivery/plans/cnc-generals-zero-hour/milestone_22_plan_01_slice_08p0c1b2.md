@@ -28,3 +28,13 @@ Run six complete builds/canonical nonretail suites, focused strict host LSan,
 physical Vulkan controls, serial LAN 4/4 all six, ledger and diff checks.
 Commit only aggregate evidence:
 `delivery: M22 08P0C1B2 revalidate tree topple and sink`.
+
+## Delivered evidence
+
+B2A and B2B compose the public crusher, shroud, angular/bounce/DOWN and
+bounded sink/deletion transaction with survivor reentry, exact resource
+rollback, owner removal and two-generation retry. No production or fixture
+changed after B2B; its six complete final-source builds/canonical suites,
+focused sanitizer witnesses, strict host LSan, physical Vulkan, serial LAN,
+ledger and diff gates carry to this evidence-only aggregate. External FX
+dispatch remains B3. See linked aggregate evidence in the governing index.
