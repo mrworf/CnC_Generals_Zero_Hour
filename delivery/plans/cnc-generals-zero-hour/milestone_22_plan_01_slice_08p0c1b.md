@@ -24,8 +24,10 @@ and full-instance factory C4.
 
 Preflight unit/partition, map, shroud/player, source geometry and effect
 providers before mutation. Stage candidate interaction state, geometry and
-effects; commit only after all fallible work, or restore accepted instance,
-frame, GPU and external effect state without gameplay destroy hooks. Missing
+effects; commit only after all fallible tree/resource work, or preserve accepted
+instance, frame and GPU without gameplay destroy hooks or external dispatch.
+External effects begin only after that commit; a partially throwing dispatch
+is accepted/consumed at most once, not reversible. Missing
 providers, invalid motion/sink parameters, upload fault, owner removal and
 retry must not leave stale partition links, FX or buffers. Do not consume or
 change GameLogic/audio RNG. Authorization is not applicable.
@@ -43,3 +45,13 @@ inputs. Run six complete builds and canonical nonretail suites, focused strict
 host LSan, physical Vulkan controls, serial LAN 4/4 all six, ledger and diff
 checks on final source. Commit only aggregate evidence:
 `delivery: M22 08P0C1B revalidate tree interactions`.
+
+## Delivered
+
+Accepted C1B1, C1B2 and C1B3 compose the public collision, transformed frame,
+sink/deletion and admitted/consumed FX transaction. The wording above now
+states the children's explicit irreversible dispatch contract, not an
+external-effect rollback claim. The unchanged final-source matrix and
+generated owner/fault/retry composition are recorded in
+[aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c1b.md).
+No draw/decal/factory/retail admission or production merge is included.
