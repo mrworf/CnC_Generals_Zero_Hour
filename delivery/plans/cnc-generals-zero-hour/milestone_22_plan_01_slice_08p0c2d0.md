@@ -2,7 +2,9 @@
 
 After accepted C2A and before B0/B, deliver D0A bounded public capability/
 Recording transaction then
-D0B public bgfx deferred native command owner. Neither current end_pass nor
+D0B1 candidate/COW resource and upload lifetime, D0B2A narrow public native
+reservation/admission extension, D0B2B deferred native command owner, then
+D0B2 and D0B evidence-only aggregates. Neither current end_pass nor
 edge abort is a checkpoint. Both required Linux full-draw capabilities precede
 C2B0 delayed-source-stage transaction, C2B exact shroud semantics,
 C2C immutable preparation and C2D tree scene integration. SDL/other devices

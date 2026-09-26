@@ -1,0 +1,91 @@
+# M22 plan 01 slice 08P0C2D0B2B: deferred bgfx frame journal
+
+## Goal, dependencies and boundary
+
+After D0B1 candidate/COW resource publication and D0B2A proved public native
+reservation, enable the public device's frame_commands mode and narrow
+OriginalGpuEdge admission/commit/abort. Idle behavior remains D0B1; Recording
+is already accepted, SDL/others fail closed. No tree advancement/factory,
+shroud semantics, retail input or allocator rewrite. Authorization does not
+apply to generated local work.
+
+## Complete admitted command owner
+
+Use D0A's exact token and bounded command/resource/byte/view descriptor.
+Reject nested/cross-mode/active ordinary pass, wrong generation, overflow and
+unsupported provider before mutation. Capture an immutable source-order batch
+of begin/viewport/clear/draw/end and at most one final present. Preserve
+ordinary work already queued and view order; never reset/frame to admit.
+No native view mutation, touch, clear, submit or present occurs while staging.
+Speculative CPU initialization/active-pass state is journal-owned and restores
+on failure. Resources compose D0B1, with retained versions needed by commands.
+
+Before native admission, validate every target/load/generation/extent/view,
+pipeline/shader/format/depth-stencil rule, layout/base/index/initialized vertex
+range, reflected source uniform offset/count/written bytes, texture/sampler/mip,
+viewport/clear bounds and budget. Move existing late stencil validation before
+all native work. Freeze exact uniform payloads, native texture/version/sampler
+flags, program, state, view/rect/clear and geometry. All fallible CPU copies,
+native VB/IB and borrowed-attachment FBO wrappers complete before commit.
+Retain wrappers and providers through queued use; no borrowed-target destroy.
+Changed sampled textures use COW versions; captured earlier draws retain their
+exact earlier version. Render-target upload rejects before mutation as D0B1.
+Every FBO belongs to the journal and uses destroyTextures=false.
+
+Presentation preflights SDL extent callback, immutable current window ownership,
+generation, program/uniform/sampler/source, fixed triangle bytes and resize.
+Use prepared native vertices, not commit-time transient allocation. Suspension
+is frame-only completion. Require one final present and reject later frame
+commands; allow only bounded retirement metadata afterward. Reserve complete
+resize/retirement/frame-finish storage with D0B2A before accepted-target touch.
+Claim/release/wait/readback side routes reject during the live journal; owner
+destruction cancels before ordinary shutdown. Do not roll back irreversible
+driver work or treat device loss as an ordinary rejected transaction.
+
+Only after the entire immutable batch and native reservation succeed may the
+no-throw exactly-once commit replay source order. It uses owned data and public
+admitted native operations only: no source registry lookup, callback, heap
+allocation, wrapper creation, late validation or error diagnostic formatting.
+Retire candidates/replaced resources in bounded completion-safe order. Abort
+before replay destroys only candidates, restores CPU shadows/init/view/target
+identities and invalidates candidate generations without aliasing retry.
+Fault counters remain monotonic. Repeated/stale finish cannot submit or retire
+twice. Ordinary nontransactional rendering remains unchanged.
+
+## Surfaces, witnesses and acceptance
+
+Expected surfaces: bgfx device/header/journal helper, narrow OriginalGpuEdge
+capability integration, new isolated `test_bgfx_transaction.cpp`, CMake and
+contract docs. Never alter the unrelated renderer diagnostic. New aggregate/
+value members explicitly initialize; no padding assumptions. No second native
+reservation implementation or private checkpoint container in the edge.
+
+Two-generation CPU metadata and physical Vulkan tests prove complete commit,
+exact source view/clear/draw order, multiple textured/uniform/indexed draws,
+prior accepted pixels unchanged after faults at every later staged boundary,
+native provider identity, byte/init/view/resource baseline, allocation-free
+replay and clean retry emits once. Cover target LOAD, selected clears, multiple
+passes, later stale/wrong providers, COW versions, shader/program retirement,
+FBO/candidate destruction, window resize/query failure/suspension, final present
+and wrong-mode routes. Include all command/resource/byte/view bounds+1,
+checkpoint/frozen-copy/native-wrapper/reservation failures, diagnostic exception,
+partial abort, duplicate finish, owner removal and ordinary behavior controls.
+Accepted-target pixels are inspected only outside the completed attempt;
+readback cannot repair a failed batch.
+
+Focused commands before production:
+
+`cmake --build build/<preset> --target renderer_bgfx_transaction_tests -j4`
+
+`ctest --test-dir build/<preset> -R '^(renderer_bgfx_transaction|renderer_bgfx_transaction_resource|renderer_bgfx_submission_reservation|renderer_recording_transaction|original_w3d_first_gpu_edge)$' --output-on-failure`
+
+Both native toolchains and focused sanitized builds (detect_leaks=0), exact
+serial host LSan detect_leaks=1/no UBSan override selecting the three new CPU
+witnesses and Recording transaction, all six complete builds and canonical
+`-LE 'gpu|lan|retail'` suites are mandatory on frozen source. Physical test
+`renderer_bgfx_transaction_gpu` is validation-clean/host graphical on both
+native toolchains plus established display-owner/map controls. Require
+zero Validation Error/VUID, allocator pairing, immediate residuals and no
+emulation substitute. Serial host LAN 4/4 all six, ledger/header/diff and exact
+staged review complete acceptance. Commit one coherent frame behavior child:
+`delivery: M22 08P0C2D0B2B defer admitted bgfx frame commands`.

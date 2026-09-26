@@ -307,7 +307,11 @@ The production Linux original-engine path renders representative campaign and sk
 | 08P0C2A0 | [milestone_22_plan_01_slice_08p0c2a0.md](milestone_22_plan_01_slice_08p0c2a0.md) | Compiler-authoritative source uniform-block origins, dead-prefix/multiblock admission and physical payload correction. | slice 08P0C1 | complete: exact compiled origins, two-generation CPU/physical rollback and six gates; no tree program or scene draw | `delivery: M22 08P0C2A0 bind exact shader block origins` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2a0.md) |
 | 08P0C2A | [milestone_22_plan_01_slice_08p0c2a.md](milestone_22_plan_01_slice_08p0c2a.md) | Exact source tree program, packed attributes and source constant semantics; generic world shaders cannot substitute. | slice 08P0C2A0 | complete: exact source slots/constants, atomic program rollback and physical atlas/unswayed-shroud controls with six gates; draw/factory closed | `delivery: M22 08P0C2A translate exact tree program` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2a.md) |
 | 08P0C2D0A | [milestone_22_plan_01_slice_08p0c2d0a.md](milestone_22_plan_01_slice_08p0c2d0a.md) | Bounded optional idle-preparation/frame capability and deterministic Recording command/resource rollback. | slice 08P0C2A | complete: exact Recording rollback/handle retirement, exception poisoning and six gates; physical/source/factory closed | `delivery: M22 08P0C2D0A own Recording frame transactions` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2d0a_recording_transaction.md) |
-| 08P0C2D0B | [milestone_22_plan_01_slice_08p0c2d0b.md](milestone_22_plan_01_slice_08p0c2d0b.md) | Public bgfx idle resource preparation and deferred frame commands before irreversible submission. | slice 08P0C2D0A | pending; physical Vulkan required | | |
+| 08P0C2D0B1 | [milestone_22_plan_01_slice_08p0c2d0b1.md](milestone_22_plan_01_slice_08p0c2d0b1.md) | Bounded candidate/COW bgfx resource, upload and native lifetime publication. | slice 08P0C2D0A | pending; idle capability only, physical Vulkan required | | |
+| 08P0C2D0B2A | [milestone_22_plan_01_slice_08p0c2d0b2a.md](milestone_22_plan_01_slice_08p0c2d0b2a.md) | Narrow public bounded bgfx submission reservation and allocation-free replay admission. | slice 08P0C2D0B1 | pending; reviewed pinned runtime extension, physical Vulkan required | | |
+| 08P0C2D0B2B | [milestone_22_plan_01_slice_08p0c2d0b2b.md](milestone_22_plan_01_slice_08p0c2d0b2b.md) | Complete deferred frame journal, immutable native preparation and allocation-free commit/retry. | slices 08P0C2D0B1 and 08P0C2D0B2A | pending; physical Vulkan required | | |
+| 08P0C2D0B2 | [milestone_22_plan_01_slice_08p0c2d0b2.md](milestone_22_plan_01_slice_08p0c2d0b2.md) | Public native reservation and deferred frame journal aggregate. | slices 08P0C2D0B2A–08P0C2D0B2B | pending; evidence-only | | |
+| 08P0C2D0B | [milestone_22_plan_01_slice_08p0c2d0b.md](milestone_22_plan_01_slice_08p0c2d0b.md) | Public bgfx idle/frame resource and command transaction aggregate. | slices 08P0C2D0B1 and 08P0C2D0B2 | pending; evidence-only, physical Vulkan required | | |
 | 08P0C2D0 | [milestone_22_plan_01_slice_08p0c2d0.md](milestone_22_plan_01_slice_08p0c2d0.md) | Recording and Linux full-draw bgfx idle/frame transaction aggregate. | slices 08P0C2D0A–08P0C2D0B | pending; SDL/other devices unsupported | | |
 | 08P0C2B0 | [milestone_22_plan_01_slice_08p0c2b0.md](milestone_22_plan_01_slice_08p0c2b0.md) | Complete delayed-source texture/ref/maps/transform/revision/filter/sampler transaction and retry. | slice 08P0C2D0 | pending; no shroud semantics, frame or factory | | |
 | 08P0C2B | [milestone_22_plan_01_slice_08p0c2b.md](milestone_22_plan_01_slice_08p0c2b.md) | Exact tree shroud stage, texture/transform binding and borrowed resource lifetime. | slice 08P0C2B0 | pending; draw/factory closed | | |
@@ -334,7 +338,14 @@ ordered commands. The post-A shroud rollback audit found source texture refs/
 maps/transforms and edge revision/filter/sampler state also lack a complete
 checkpoint. B0 owns that bounded shared atomic boundary and composes both
 device idle capabilities; B remains exact shroud semantics only. Order is
-A→D0A→D0B→D0 aggregate→B0→B→C→D, with no cyclic B prerequisite.
+A→D0A→D0B1→D0B2A→D0B2B→D0B2 aggregate→D0B aggregate→D0
+aggregate→B0→B→C→D, with no cyclic B prerequisite. The native audit found
+independent accepted-texture byte/lifetime and submission-storage owners.
+Pinned public bgfx has no cancellation/release API for an unconsumed Memory;
+candidate/COW uploads precede publication. Submit can allocate binding-cache
+nodes/frame-arena blocks; uniform and resource command buffers can grow.
+Public Init reservations alone do not cover these paths. D0B2A establishes
+an explicit bounded public admission extension before D0B2B may replay.
 A failed render keeps its
 accepted immutable C1 phase for retry; it cannot advance RNG or replay committed
 FX. SDL/other devices fail closed for this optional capability, and C3 decals,

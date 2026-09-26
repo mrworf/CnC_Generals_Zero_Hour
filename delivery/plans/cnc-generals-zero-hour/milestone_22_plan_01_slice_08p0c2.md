@@ -6,8 +6,12 @@ After C1, deliver independently reviewable source owners in dependency order:
 [C2A0](milestone_22_plan_01_slice_08p0c2a0.md) exact reflected uniform-block origins;
 [C2A](milestone_22_plan_01_slice_08p0c2a.md) exact Trees.nvv program;
 [D0A](milestone_22_plan_01_slice_08p0c2d0a.md) bounded public/Recording idle/frame
-transaction then [D0B](milestone_22_plan_01_slice_08p0c2d0b.md) deferred public
-bgfx transaction and [D0](milestone_22_plan_01_slice_08p0c2d0.md) aggregate;
+transaction then [D0B1](milestone_22_plan_01_slice_08p0c2d0b1.md) candidate/COW
+resource lifetime, [D0B2A](milestone_22_plan_01_slice_08p0c2d0b2a.md) bounded
+public native reservation, [D0B2B](milestone_22_plan_01_slice_08p0c2d0b2b.md)
+deferred frame journal, [D0B2](milestone_22_plan_01_slice_08p0c2d0b2.md) and
+[D0B](milestone_22_plan_01_slice_08p0c2d0b.md) evidence-only aggregates, then
+[D0](milestone_22_plan_01_slice_08p0c2d0.md) aggregate;
 [C2B0](milestone_22_plan_01_slice_08p0c2b0.md) complete delayed-source stage/ref/
 map/transform/revision/filter/sampler transaction;
 [C2B](milestone_22_plan_01_slice_08p0c2b.md) exact shroud stage/transform;
