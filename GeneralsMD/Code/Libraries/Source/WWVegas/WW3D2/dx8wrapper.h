@@ -138,6 +138,7 @@ enum {
 };
 
 const unsigned MAX_TEXTURE_STAGES=8;
+#include <memory>
 const unsigned MAX_VERTEX_STREAMS=2;
 #include "shader.h"
 #include "vertmaterial.h"
@@ -170,6 +171,18 @@ public:
         bool light_environment_selected=false;
     };
     static SourceStateSnapshot Snapshot_Source_State();
+    static SourceStateSnapshot Inspect_Source_State();
+private:
+    friend class zh::original_runtime::OriginalGpuEdge;
+    struct SourceStageCheckpoint;
+    static std::shared_ptr<SourceStageCheckpoint> Capture_Source_Stages(unsigned mask);
+    static void Restore_Source_Stages(SourceStageCheckpoint&) noexcept;
+    static void Apply_Source_Stages(unsigned mask);
+public:
+    static unsigned Source_Stage_Key_Count(unsigned stage);
+    static bool Source_Stage_Key_Present(unsigned stage,unsigned key);
+    static bool Source_Transform_Present(int transform);
+    static void Guard_Nonstage_Mutation();
     static void Get_Render_State(RenderStateStruct& snapshot);
     static void Set_Render_State(const RenderStateStruct& snapshot);
     static void Release_Render_State();

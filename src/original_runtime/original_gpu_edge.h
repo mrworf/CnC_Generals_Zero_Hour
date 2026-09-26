@@ -9,10 +9,13 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <memory>
+#include <exception>
 
 class VertexBufferClass;
 class IndexBufferClass;
 class TextureBaseClass;
+class TextureFilterClass;
 
 namespace zh::original_runtime {
 
@@ -170,6 +173,37 @@ public:
     unsigned reserved_source_reference_count() const noexcept { return source_reference_token_.units; }
     std::uint64_t source_reference_release_count() const noexcept { return source_reference_releases_; }
     std::uint64_t source_revision() const noexcept { return source_revision_; }
+    struct SourceStageSelection { unsigned stage=0; TextureBaseClass* texture=nullptr; };
+    struct SourceStageDesc {
+        std::uint64_t generation=0;
+        const SourceStageSelection* selections=nullptr;
+        unsigned count=0,stage_keys=12,transform_nodes=8;
+        unsigned commands=4096,resources=4096;
+        std::size_t bytes=64U*1024U*1024U;
+    };
+    struct SourceStageToken { std::uint64_t owner=0,sequence=0,generation=0; unsigned mask=0; };
+    renderer::ValidationResult begin_source_stages(const SourceStageDesc&,SourceStageToken&);
+    void apply_source_stages(const SourceStageToken&);
+    bool commit_source_stages(const SourceStageToken&) noexcept;
+    bool abort_source_stages(const SourceStageToken&) noexcept;
+    void cancel_source_stages_for_reset();
+    void guard_source_stage(unsigned stage,const TextureBaseClass* provider=nullptr,bool selection=false);
+    void guard_source_stage_key(unsigned stage,unsigned key);
+    void guard_source_filter(unsigned stage,const TextureFilterClass* filter);
+    void guard_source_transform(int transform);
+    void guard_nonstage_mutation();
+    void poison_source_stages() noexcept;
+    struct SourceMutationGuard {
+        OriginalGpuEdge* edge;
+        int exceptions=std::uncaught_exceptions();
+        explicit SourceMutationGuard(OriginalGpuEdge& owner):edge(&owner) {}
+        explicit SourceMutationGuard(OriginalGpuEdge* owner):edge(owner) {}
+        ~SourceMutationGuard() { if (edge && std::uncaught_exceptions()>exceptions) edge->poison_source_stages(); }
+    };
+    bool source_stages_active() const noexcept { return bool(source_stage_attempt_); }
+    void fail_next_source_stage_commit() noexcept { source_stage_commit_fault_=true; }
+    void fail_source_stage_allocation_after(unsigned successful) noexcept { source_stage_allocation_fault_=successful; }
+    void source_stage_allocation_boundary();
     void fail_next_source_reference_commit() noexcept { source_reference_commit_fault_=true; }
     // Lifecycle notification borrows no stale provider. The caller pins its
     // receiver across notification and its ordinary mutation.
@@ -210,6 +244,11 @@ public:
     static OriginalGpuEdge* active() noexcept;
 
 private:
+    struct SourceStageAttempt;
+    std::unique_ptr<SourceStageAttempt> source_stage_attempt_;
+    std::uint64_t source_stage_sequence_=0;
+    bool source_stage_commit_fault_=false;
+    std::optional<unsigned> source_stage_allocation_fault_;
     static AppliedState map_state(unsigned source_fvf,bool tree_program);
     PhysicalState prepare_state(unsigned source_fvf,renderer::PrimitiveTopology topology,
         const TreeVertexUniform* tree);

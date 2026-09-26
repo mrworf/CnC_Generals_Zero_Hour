@@ -69,8 +69,14 @@ class TextureClass;
 class CubeTextureClass;
 class VolumeTextureClass;
 
+#if defined(__linux__)
+namespace zh { namespace original_runtime { class OriginalGpuEdge; } }
+#endif
 class TextureBaseClass : public RefCountClass
 {
+#if defined(__linux__)
+    friend class zh::original_runtime::OriginalGpuEdge;
+#endif
 	friend class TextureLoader;
 	friend class LoaderThreadClass;
 	friend class DX8TextureTrackerClass;  //(gth) so it can call Poke_Texture, 

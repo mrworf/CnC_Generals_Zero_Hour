@@ -91,9 +91,18 @@ void recording()
             && texture->Num_Refs()==65,"full queue admission changed refs");
         check(!edge.drain_source_references(edge.generation()+1) && edge.queued_source_reference_count()==64,
             "foreign generation drained queue");
+        DeviceTransactionToken phase;
+        check(edge.begin_device_transaction({DeviceTransactionMode::idle_preparation,edge.generation(),128,128,1024*1024,0},phase),
+            "survivor phase control admission");
+        check(!edge.drain_source_references(edge.generation()) && texture->Num_Refs()==65
+            && edge.queued_source_reference_count()==64 && edge.abort_device_transaction(phase),
+            "survivor fast path bypassed phase guard");
+        const auto survivor_snapshot=device.snapshot();const auto survivor_revision=edge.source_revision();
+        device.fail_next_transaction_checkpoint();edge.fail_next_source_reference_commit();
         check(edge.drain_source_references(edge.generation()) && texture->Num_Refs()==1
-            && edge.texture_handle(texture)==handle && edge.source_reference_release_count()==64,
-            "surviving source identity changed");
+            && edge.texture_handle(texture)==handle && edge.source_reference_release_count()==64
+            && device.snapshot()==survivor_snapshot && edge.source_revision()==survivor_revision,
+            "survivor drain required device admission or changed publication");
         const auto empty=device.snapshot();
         check(edge.drain_source_references(edge.generation()) && device.snapshot()==empty,"empty drain touched device");
         check(edge.begin_source_references(edge.generation(),units.data(),2,token),"sole reference admission");
@@ -103,9 +112,8 @@ void recording()
         for(unsigned fault=0;fault<4;++fault) {
             const auto baseline=device.snapshot();const auto count=device.resource_counts();
             const auto source_revision=edge.source_revision();
-            if(fault==0) device.fail_next_transaction_checkpoint();
-            if(fault==1) device.fail_transaction_operation_after(0);
-            if(fault==2) edge.fail_next_source_reference_commit();
+            // These faults must still be pending after survivor-only drain.
+            if(fault==2) device.fail_transaction_operation_after(0);
             if(fault==3) { device.fail_transaction_operation_after(0);device.fail_next_transaction_diagnostic_allocation(); }
             check(!edge.drain_source_references(edge.generation()) && edge.queued_source_reference_count()==2
                 && edge.source_revision()==source_revision && edge.texture_handle(texture)==handle
@@ -119,8 +127,20 @@ void recording()
         edge.publish_texture_alias(second,first);second->Apply_Gpu_Texture(WW3D_FORMAT_A8R8G8B8,4,4);
         TextureBaseClass* aliases[]{first,second,second};
         const auto shared=edge.texture_handle(first);
+        check(edge.begin_source_references(edge.generation(),aliases,3,token),"surviving aliases admission");
+        const auto alias_snapshot=device.snapshot();const auto released=edge.source_reference_release_count();
+        check(edge.finish_source_references(token) && edge.drain_source_references(edge.generation())
+            && first->Num_Refs()==1 && second->Num_Refs()==1 && device.snapshot()==alias_snapshot
+            && edge.source_reference_release_count()==released+3 && edge.texture_handle(first)==shared
+            && edge.texture_handle(second)==shared,"surviving alias units collapsed or touched device");
         check(edge.begin_source_references(edge.generation(),aliases,3,token),"alias admission");
         first->Release_Ref();check(edge.finish_source_references(token),"alias finish");
+        const auto mixed_snapshot=device.snapshot();const auto mixed_revision=edge.source_revision();
+        edge.fail_next_source_reference_commit();
+        check(!edge.drain_source_references(edge.generation()) && first->Num_Refs()==1 && second->Num_Refs()==3
+            && edge.queued_source_reference_count()==3 && edge.source_revision()==mixed_revision
+            && device.snapshot()==mixed_snapshot && destroyed==2,
+            "mixed terminal/survivor queue incorrectly used fast path");
         check(edge.drain_source_references(edge.generation()) && destroyed==3 && second->Num_Refs()==1
             && edge.texture_handle(second)==shared && device.resource_counts().textures==1,
             "alias multiplicity prematurely retired native owner");
@@ -138,14 +158,19 @@ void recording()
         invalidated->Release_Ref();
         check(destroyed==5 && !device.resource_counts().total(),"immediate pre-teardown residual");
         auto* failure=source(edge,destroyed);pointer=failure;
-        check(edge.begin_source_references(edge.generation(),&pointer,1,token),"invalidation failure pin");
+        unsigned companion_destroyed=0;
+        auto* companion=source(edge,companion_destroyed);
+        TextureBaseClass* invalidation_pins[]{failure,companion};
+        check(edge.begin_source_references(edge.generation(),invalidation_pins,2,token),"invalidation failure pin");
+        companion->Release_Ref(); // Terminal companion requires transactional cleanup despite receiver pin.
         device.fail_next_transaction_checkpoint();bool caught=false;
         try { failure->Invalidate(); } catch(const std::runtime_error&) {caught=true;}
         check(caught && failure->Is_Initialized() && failure->Num_Refs()==2
-            && edge.queued_source_reference_count()==1,"failed invalidation mutated receiver");
+            && edge.queued_source_reference_count()==2 && !companion_destroyed,
+            "failed mixed invalidation mutated receiver");
         failure->Release_Ref(); // only the queue owns the receiver when entering Invalidate.
         failure->Invalidate();
-        check(destroyed==6 && !device.resource_counts().total(),"sole receiver invalidation lifetime");
+        check(destroyed==6 && companion_destroyed==1 && !device.resource_counts().total(),"sole receiver invalidation lifetime");
         auto* shutdown=source(edge,destroyed);pointer=shutdown;
         check(edge.begin_source_references(edge.generation(),&pointer,1,token),"shutdown failure pin");
         shutdown->Release_Ref();device.fail_next_transaction_checkpoint();
@@ -228,6 +253,14 @@ void physical()
             && pixels[center+2]==0,"physical accepted pixel baseline");
         sampling(edge,texture);
         Edge::SourceReferenceToken token;
+        check(edge.begin_source_references(edge.generation(),&pointer,1,token),"physical survivor pin");
+        const auto survivor_frames=device.native_frame_advance_count();
+        const auto survivor_retires=device.native_retirement_destroy_count();
+        check(edge.finish_source_references(token) && edge.drain_source_references(edge.generation())
+            && texture->Num_Refs()==1 && edge.source_reference_release_count()==1
+            && device.native_frame_advance_count()==survivor_frames
+            && device.native_retirement_destroy_count()==survivor_retires
+            && scene.render(handle)==pixels,"physical survivor drain touched native boundary or identity");
         check(edge.begin_source_references(edge.generation(),&pointer,1,token),"physical source pin");
         texture->Release_Ref();
         const auto frames=device.native_frame_advance_count();const auto retires=device.native_retirement_destroy_count();

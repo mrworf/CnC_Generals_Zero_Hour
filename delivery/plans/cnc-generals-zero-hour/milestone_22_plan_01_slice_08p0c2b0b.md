@@ -1,5 +1,11 @@
 # M22 plan 01 slice 08P0C2B0B: resident selected-stage atomic transaction
 
+Status: complete. [Final-source evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2b0b_stage_transaction.md)
+records selected tuple/LastAccessed/unrelated-state rollback, grouped A regression,
+48 commit-ready failure controls, six complete builds and six clean 276/276
+canonical suites, strict host LSan, generated/established Vulkan and six LAN.
+B0 remains the separate evidence-only aggregate; shroud/frame/factory stay closed.
+
 ## Goal, dependency and boundary
 
 After accepted C2A, D0 aggregate and dependency-first B0A source-reference
@@ -153,6 +159,12 @@ six; ledger/diff and exact staged review on final source. Commit one slice:
 `delivery: M22 08P0C2B0B own resident selected-stage transaction`.
 
 ## Required source-reference retirement composition
+
+The final direct-entry controls cover frame/end/abort/view/clear/index/volume
+and tree preparation: an active source attempt is poisoned before any phase
+diagnostic or provider dereference. No-throw abort/volume release return without
+mutation. Minimal-fixture stale providers and a never-queried optional volume
+sentinel prove this boundary; production provider/link semantics are unchanged.
 
 [B0A](milestone_22_plan_01_slice_08p0c2b0a.md) owns every acquired pin unit and
 bounded cancellation/finish retirement. Reserve its exact capacity before source

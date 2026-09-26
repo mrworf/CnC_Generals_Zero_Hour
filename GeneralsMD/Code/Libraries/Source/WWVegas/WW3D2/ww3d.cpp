@@ -1182,6 +1182,9 @@ bool WW3D::Is_Large_Texture_Extra_Reduction_Enabled()
 
 void WW3D::Set_Texture_Filter(int texture_filter)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    DX8Wrapper::Guard_Nonstage_Mutation();
+#endif
 	if (texture_filter<0) texture_filter=0;
 	if (texture_filter>TextureFilterClass::TEXTURE_FILTER_ANISOTROPIC) texture_filter=TextureFilterClass::TEXTURE_FILTER_ANISOTROPIC;
 	TextureFilter=texture_filter;
@@ -1190,6 +1193,9 @@ void WW3D::Set_Texture_Filter(int texture_filter)
 
 void WW3D::Enable_Texturing(bool b)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    DX8Wrapper::Guard_Nonstage_Mutation();
+#endif
 	if (b==IsTexturingEnabled) return;
 	IsTexturingEnabled=b;
 //	_Invalidate_Textures();
@@ -1404,6 +1410,9 @@ unsigned int WW3D::Get_Last_Frame_Vertex_Count(void)
  *=============================================================================================*/
 void WW3D::Sync(unsigned int sync_time)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    DX8Wrapper::Guard_Nonstage_Mutation();
+#endif
 	PreviousSyncTime = SyncTime;
    SyncTime = sync_time;
 }

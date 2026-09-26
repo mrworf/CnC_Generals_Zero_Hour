@@ -18,6 +18,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <exception>
 
 namespace zh::original_runtime {
 namespace {
@@ -40,6 +41,190 @@ renderer::TextureFormat translate_format(WW3DFormat source)
 }
 }
 
+struct OriginalGpuEdge::SourceStageAttempt {
+    SourceStageToken token;
+    std::array<TextureBaseClass*,8> selections{};
+    std::shared_ptr<DX8Wrapper::SourceStageCheckpoint> checkpoint;
+    std::array<PendingStage,8> pending{};
+    std::array<PendingFilterValues,8> filters{};
+    std::array<TextureBaseClass*,source_reference_capacity> providers{};
+    std::array<unsigned,source_reference_capacity> access{};
+    unsigned provider_count=0,stage_keys=0,transform_nodes=0;
+    std::uint64_t revision=0;
+    SourceReferenceToken refs;
+    renderer::DeviceTransactionToken device;
+    bool failed=false,applied=false;
+};
+
+renderer::ValidationResult OriginalGpuEdge::begin_source_stages(const SourceStageDesc& desc,SourceStageToken& token)
+{
+    if (active_edge!=this || source_stage_attempt_ || device_transaction_ || source_frame_active_ || source_reference_queued_
+        || device_.pass_active() || desc.generation!=generation_ || !desc.selections || !desc.count
+        || !device_.supports_device_transactions(renderer::DeviceTransactionMode::idle_preparation)
+        || desc.count>8 || !desc.stage_keys || desc.stage_keys>12 || desc.transform_nodes>8 || desc.transform_nodes<desc.count
+        || !desc.commands || desc.commands>4096 || !desc.resources || desc.resources>4096
+        || !desc.bytes || desc.bytes>64U*1024U*1024U
+        || source_revision_>std::numeric_limits<std::uint64_t>::max()-desc.commands-1
+        || source_stage_sequence_==std::numeric_limits<std::uint64_t>::max())
+        return {false,"original source stage transaction bounds or phase are invalid"};
+    unsigned mask=0,transforms=0;
+    std::array<TextureBaseClass*,source_reference_capacity> providers{};
+    unsigned count=0;
+    const auto admit=[&](TextureBaseClass* source,unsigned stage) {
+        if (!source) return true;
+        const auto owner=textures_.find(source);
+        if (owner==textures_.end() || owner->second.generation!=generation_
+            || !device_.describe_texture_format(owner->second.handle)) return false;
+        if (!source->As_TextureClass() || !source->Is_Initialized()
+            || source->Num_Refs()<=0 || source->Num_Refs()>std::numeric_limits<int>::max()-10
+            || !source->As_TextureClass()->Get_Filter().Can_Apply(stage)) return false;
+        for (unsigned i=0;i<count;++i) if (providers[i]==source) return true;
+        if (count==providers.size()) return false;
+        providers[count++]=source;return true;
+    };
+    for (unsigned i=0;i<desc.count;++i) {
+        const auto selection=desc.selections[i];
+        if (selection.stage>=8 || (mask&(1U<<selection.stage))
+            || DX8Wrapper::Source_Stage_Key_Count(selection.stage)>desc.stage_keys)
+            return {false,"original source stage selection is invalid"};
+        mask|=1U<<selection.stage;
+        if (DX8Wrapper::Source_Transform_Present(D3DTS_TEXTURE0+selection.stage)) ++transforms;
+        if (!admit(selection.texture,selection.stage)
+            || !admit(DX8Wrapper::Peek_Texture(selection.stage),selection.stage)
+            || !admit(const_cast<TextureBaseClass*>(pending_stages_[selection.stage].source),selection.stage))
+            return {false,"original source stage provider is not resident and ready"};
+    }
+    if (transforms>desc.transform_nodes || count>source_reference_capacity-source_reference_queued_)
+        return {false,"original source stage checkpoint capacity is insufficient"};
+    SourceReferenceToken acquired;
+    renderer::DeviceTransactionToken admitted;
+    try {
+        source_stage_allocation_boundary();
+        auto attempt=std::make_unique<SourceStageAttempt>();
+        attempt->checkpoint=DX8Wrapper::Capture_Source_Stages(mask);
+        attempt->stage_keys=desc.stage_keys;attempt->transform_nodes=desc.transform_nodes;
+        attempt->revision=source_revision_;attempt->pending=pending_stages_;attempt->filters=pending_filter_values_;
+        attempt->providers=providers;attempt->provider_count=count;
+        for (unsigned i=0;i<count;++i) attempt->access[i]=providers[i]->LastAccessed;
+        for (unsigned i=0;i<desc.count;++i) attempt->selections[desc.selections[i].stage]=desc.selections[i].texture;
+        if (count) { auto result=begin_source_references(generation_,providers.data(),count,attempt->refs);if (!result) return result;acquired=attempt->refs; }
+        const renderer::DeviceTransactionDesc device_desc{renderer::DeviceTransactionMode::idle_preparation,
+            generation_,desc.commands,desc.resources,desc.bytes,0};
+        auto result=begin_device_transaction(device_desc,attempt->device);
+        if (!result) {
+            if (count && (!cancel_source_references(attempt->refs) || !drain_source_references(generation_))) std::terminate();
+            return result;
+        }
+        admitted=attempt->device;
+        attempt->token={generation_,source_stage_sequence_+1,generation_,mask};
+        token=attempt->token;++source_stage_sequence_;source_stage_attempt_=std::move(attempt);
+        return {true,{}};
+    } catch (...) {
+        if (admitted.sequence && !abort_device_transaction(admitted)) std::terminate();
+        if (acquired.units && source_reference_token_.units
+            && (!cancel_source_references(acquired) || !drain_source_references(generation_))) std::terminate();
+        return {false,"original source stage checkpoint allocation failed"};
+    }
+}
+void OriginalGpuEdge::poison_source_stages() noexcept
+{ if (source_stage_attempt_) source_stage_attempt_->failed=true; }
+void OriginalGpuEdge::source_stage_allocation_boundary()
+{
+    if (!source_stage_allocation_fault_) return;
+    if (*source_stage_allocation_fault_) { --*source_stage_allocation_fault_;return; }
+    source_stage_allocation_fault_.reset();poison_source_stages();throw std::bad_alloc();
+}
+void OriginalGpuEdge::guard_nonstage_mutation()
+{
+    if (!source_stage_attempt_) return;
+    poison_source_stages();throw std::runtime_error("original nonstage mutation is outside the selected stage owner");
+}
+void OriginalGpuEdge::guard_source_stage(unsigned stage,const TextureBaseClass* provider,bool selection)
+{
+    if (!source_stage_attempt_) return;
+    auto& owner=*source_stage_attempt_;
+    if (stage<8 && (owner.token.mask&(1U<<stage))
+        && (!selection || owner.selections[stage]==provider) && !owner.failed) { owner.applied=false;return; }
+    poison_source_stages();throw std::runtime_error("original source stage mutation is outside its declared selection");
+}
+void OriginalGpuEdge::guard_source_stage_key(unsigned stage,unsigned key)
+{
+    guard_source_stage(stage);
+    if (!source_stage_attempt_) return;
+    const bool known=key==D3DTSS_TEXCOORDINDEX || key==D3DTSS_TEXTURETRANSFORMFLAGS
+        || key==D3DTSS_BUMPENVMAT00 || key==D3DTSS_BUMPENVMAT01 || key==D3DTSS_BUMPENVMAT10 || key==D3DTSS_BUMPENVMAT11
+        || key==D3DTSS_COLOROP || key==D3DTSS_ALPHAOP || key==D3DTSS_COLORARG1 || key==D3DTSS_COLORARG2
+        || key==D3DTSS_ALPHAARG1 || key==D3DTSS_ALPHAARG2;
+    if (known && (DX8Wrapper::Source_Stage_Key_Present(stage,key)
+        || DX8Wrapper::Source_Stage_Key_Count(stage)<source_stage_attempt_->stage_keys)) return;
+    poison_source_stages();throw std::runtime_error("original source stage key capacity exceeded");
+}
+void OriginalGpuEdge::guard_source_filter(unsigned stage,const TextureFilterClass* filter)
+{
+    guard_source_stage(stage);
+    if (!source_stage_attempt_) return;
+    const auto* source=source_stage_attempt_->selections[stage];
+    if (source && &const_cast<TextureBaseClass*>(source)->As_TextureClass()->Get_Filter()==filter) return;
+    poison_source_stages();throw std::runtime_error("original filter is outside its declared resident provider");
+}
+void OriginalGpuEdge::guard_source_transform(int transform)
+{
+    if (!source_stage_attempt_) return;
+    if (transform<D3DTS_TEXTURE0 || transform>=D3DTS_TEXTURE0+8) { guard_nonstage_mutation();return; }
+    guard_source_stage(transform-D3DTS_TEXTURE0);
+    unsigned count=0;
+    for (unsigned stage=0;stage<8;++stage) if ((source_stage_attempt_->token.mask&(1U<<stage))
+        && DX8Wrapper::Source_Transform_Present(D3DTS_TEXTURE0+stage)) ++count;
+    if (DX8Wrapper::Source_Transform_Present(transform) || count<source_stage_attempt_->transform_nodes) return;
+    poison_source_stages();throw std::runtime_error("original source transform checkpoint capacity exceeded");
+}
+static bool Same_Source_Stage_Token(const OriginalGpuEdge::SourceStageToken& left,const OriginalGpuEdge::SourceStageToken& right) noexcept
+{ return left.owner==right.owner && left.sequence==right.sequence && left.generation==right.generation && left.mask==right.mask; }
+void OriginalGpuEdge::apply_source_stages(const SourceStageToken& token)
+{
+    if (!source_stage_attempt_ || !Same_Source_Stage_Token(token,source_stage_attempt_->token))
+        throw std::runtime_error("original source stage apply token is foreign");
+    if (source_stage_attempt_->failed) throw std::runtime_error("original source stage attempt is poisoned");
+    try {
+        for (unsigned stage=0;stage<8;++stage) if (token.mask&(1U<<stage)) {
+            if (DX8Wrapper::Peek_Texture(stage)!=source_stage_attempt_->selections[stage])
+                { poison_source_stages();throw std::runtime_error("original source stage declared selection was not staged"); }
+        }
+        DX8Wrapper::Apply_Source_Stages(token.mask);source_stage_attempt_->applied=true;
+    } catch (...) { poison_source_stages();throw; }
+}
+bool OriginalGpuEdge::commit_source_stages(const SourceStageToken& token) noexcept
+{
+    if (!source_stage_attempt_ || !Same_Source_Stage_Token(token,source_stage_attempt_->token)
+        || source_stage_attempt_->failed || !source_stage_attempt_->applied) return false;
+    if (source_stage_commit_fault_) { source_stage_commit_fault_=false;poison_source_stages();return false; }
+    if (!commit_device_transaction(source_stage_attempt_->device)) { poison_source_stages();return false; }
+    if (source_stage_attempt_->provider_count && !finish_source_references(source_stage_attempt_->refs)) std::terminate();
+    source_stage_attempt_.reset();return true;
+}
+bool OriginalGpuEdge::abort_source_stages(const SourceStageToken& token) noexcept
+{
+    if (!source_stage_attempt_ || !Same_Source_Stage_Token(token,source_stage_attempt_->token)) return false;
+    auto& owner=*source_stage_attempt_;
+    if (!abort_device_transaction(owner.device)) return false;
+    DX8Wrapper::Restore_Source_Stages(*owner.checkpoint);
+    for (unsigned stage=0;stage<8;++stage) if (token.mask&(1U<<stage)) {
+        pending_stages_[stage]=owner.pending[stage];pending_filter_values_[stage]=owner.filters[stage];
+    }
+    source_revision_=owner.revision;
+    for (unsigned i=0;i<owner.provider_count;++i) owner.providers[i]->LastAccessed=owner.access[i];
+    if (owner.provider_count && !cancel_source_references(owner.refs)) std::terminate();
+    source_stage_attempt_.reset();return true;
+}
+
+void OriginalGpuEdge::cancel_source_stages_for_reset()
+{
+    if (!source_stage_attempt_) return;
+    const auto token=source_stage_attempt_->token;
+    if (!abort_source_stages(token) || !drain_source_references(generation_))
+        throw std::runtime_error("original source stage reset cleanup unavailable");
+}
+
 OriginalGpuEdge::OriginalGpuEdge(renderer::GpuDevice& device)
     : device_(device), previous_(active_edge), generation_(next_generation.fetch_add(1))
 {
@@ -50,6 +235,7 @@ OriginalGpuEdge::OriginalGpuEdge(renderer::GpuDevice& device)
 
 OriginalGpuEdge::~OriginalGpuEdge()
 {
+    if (source_stage_attempt_ && !abort_source_stages(source_stage_attempt_->token)) std::terminate();
     if (device_transaction_) (void)abort_device_transaction(*device_transaction_);
     abort_source_frame();
     if (!shutdown_source_references()) {
@@ -73,6 +259,7 @@ OriginalGpuEdge::~OriginalGpuEdge()
 
 void OriginalGpuEdge::release_source_buffers()
 {
+    guard_nonstage_mutation();
     if (source_frame_active_)
         throw std::runtime_error("original source buffers cannot retire during a frame");
     for (auto& entry : indices_) { device_.destroy(entry.second); entry.first->Release_Ref(); }
@@ -186,6 +373,7 @@ bool OriginalGpuEdge::drain_source_references(std::uint64_t generation) noexcept
     std::array<Source,source_reference_capacity> sources{};
     std::array<Native,source_reference_capacity> natives{};
     unsigned source_count=0,native_count=0,terminal_owned=0;
+    bool has_terminal=false;
     for (unsigned i=0;i<source_reference_queued_;++i) {
         auto* object=source_reference_queue_[i];
         unsigned j=0;while (j<source_count && sources[j].object!=object) ++j;
@@ -197,6 +385,7 @@ bool OriginalGpuEdge::drain_source_references(std::uint64_t generation) noexcept
         if (!source.object || source.object->Num_Refs()<static_cast<int>(source.units)) return false;
         source.terminal=source.object->Num_Refs()==static_cast<int>(source.units);
         if (!source.terminal) continue;
+        has_terminal=true;
         const auto found=textures_.find(source.object);
         if (found==textures_.end()) continue; // previously invalidated while still strongly pinned
         if (found->second.generation!=generation_ || !found->second.handle) return false;
@@ -209,6 +398,18 @@ bool OriginalGpuEdge::drain_source_references(std::uint64_t generation) noexcept
     if (terminal_owned>std::numeric_limits<std::uint64_t>::max()-source_revision_
         || source_reference_queued_>std::numeric_limits<std::uint64_t>::max()-source_reference_releases_)
         return false;
+    const auto release_units=[&]() noexcept {
+        const auto units=source_reference_queued_;
+        source_reference_queued_=0;source_reference_releases_+=units;
+        for (unsigned i=0;i<units;++i) {
+            auto* object=source_reference_queue_[i];source_reference_queue_[i]=nullptr;
+            object->Release_Ref();
+        }
+    };
+    // Grouped ownership proves every decrement leaves a live external/source
+    // reference. No destructor, device admission, callback or fault consumption
+    // is possible; cancellation remains usable after persistent device rejection.
+    if (!has_terminal) { release_units();return true; }
     for (unsigned i=0;i<native_count;++i) {
         const auto found=texture_owner_refs_.find(natives[i].handle.value());
         if (found==texture_owner_refs_.end() || found->second<natives[i].owners) return false;
@@ -253,12 +454,7 @@ bool OriginalGpuEdge::drain_source_references(std::uint64_t generation) noexcept
         if (!found->second) texture_owner_refs_.erase(found);
     }
     source_revision_+=terminal_owned;
-    const auto units=source_reference_queued_;
-    source_reference_queued_=0;source_reference_releases_+=units;
-    for (unsigned i=0;i<units;++i) {
-        auto* object=source_reference_queue_[i];source_reference_queue_[i]=nullptr;
-        object->Release_Ref();
-    }
+    release_units();
     return true;
 }
 
@@ -279,6 +475,7 @@ bool OriginalGpuEdge::source_texture_references_pending(const TextureBaseClass* 
 void OriginalGpuEdge::notify_source_texture_invalidation(TextureBaseClass* source)
 {
     if (!source_texture_references_pending(source)) return;
+    if (active_edge->source_stages_active()) active_edge->cancel_source_stages_for_reset();
     if (!active_edge->shutdown_source_references())
         throw std::runtime_error("source reference invalidation cleanup unavailable");
 }
@@ -582,6 +779,7 @@ void OriginalGpuEdge::release_prepared_state() noexcept
 
 void OriginalGpuEdge::release_volume_stencil() noexcept
 {
+    if (source_stages_active()) { poison_source_stages(); return; }
     if (!volume_stencil_) return;
     device_.destroy(volume_stencil_->composite);
     device_.destroy(volume_stencil_->decrement);
@@ -600,6 +798,7 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
 OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_tree_state(
     const VertexBufferClass* source,const TreeVertexUniform& constants)
 {
+    guard_nonstage_mutation();
     const auto* vertex_source=dynamic_cast<const DX8VertexBufferClass*>(source);
     if (!source || source->FVF_Info().Get_FVF()!=DX8_FVF_XYZNDUV1 ||
         !vertex_source || !vertex_source->Get_CPU_Vertex_Buffer() || !source->Get_Vertex_Count())
@@ -644,6 +843,7 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_tree_state(
 OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_state(unsigned source_fvf,
     renderer::PrimitiveTopology topology,const TreeVertexUniform* tree)
 {
+    guard_nonstage_mutation();
     const auto source_state=DX8Wrapper::Snapshot_Source_State();
     const auto source_lighting=source_state.render.find(D3DRS_LIGHTING);
     std::optional<AppliedState> lit_state;
@@ -882,6 +1082,7 @@ bool OriginalGpuEdge::supports_texture_format(WW3DFormat format) const noexcept
 renderer::TextureHandle OriginalGpuEdge::create_texture(WW3DFormat format, unsigned width,
     unsigned height, unsigned& mips)
 {
+    guard_nonstage_mutation();
     const auto translated=translate_format(format);
     if (!device_.supports_texture_format(translated,renderer::TextureDimension::texture_2d,true,false))
         throw std::runtime_error("original texture format is unsupported by physical device");
@@ -903,6 +1104,7 @@ renderer::TextureHandle OriginalGpuEdge::create_texture(WW3DFormat format, unsig
 void OriginalGpuEdge::upload_texture(renderer::TextureHandle texture, unsigned level,
     unsigned width, unsigned height, unsigned pitch, const void* bytes, std::size_t size)
 {
+    guard_nonstage_mutation();
     renderer::TextureUploadDesc desc{texture,width,height,pitch,size,level};
     const auto result=device_.upload_texture(desc,bytes);
     if (!result) throw std::runtime_error("original texture mip upload failed: "+device_.last_error());
@@ -910,11 +1112,13 @@ void OriginalGpuEdge::upload_texture(renderer::TextureHandle texture, unsigned l
 
 void OriginalGpuEdge::discard_texture(renderer::TextureHandle handle) noexcept
 {
+    if (source_stages_active()) {poison_source_stages();return;}
     if (handle) device_.destroy(handle);
 }
 
 void OriginalGpuEdge::publish_texture(TextureBaseClass* source, renderer::TextureHandle texture, bool shared_missing)
 {
+    guard_nonstage_mutation();
     if (!source || !texture || textures_.count(source))
         throw std::runtime_error("original texture physical publication is invalid");
     textures_.emplace(source,TextureOwnership{texture,generation_,shared_missing});
@@ -928,6 +1132,7 @@ void OriginalGpuEdge::publish_texture(TextureBaseClass* source, renderer::Textur
 
 void OriginalGpuEdge::publish_texture_alias(TextureBaseClass* source, const TextureBaseClass* owner)
 {
+    guard_nonstage_mutation();
     if (!source || !owner || source==owner || textures_.count(source))
         throw std::runtime_error("original texture alias publication is invalid");
     const auto found=textures_.find(const_cast<TextureBaseClass*>(owner));
@@ -939,6 +1144,7 @@ void OriginalGpuEdge::publish_texture_alias(TextureBaseClass* source, const Text
 
 renderer::TextureHandle OriginalGpuEdge::missing_texture()
 {
+    guard_nonstage_mutation();
     if (!missing_texture_) missing_texture_=MissingTexture::_Create_Gpu_Missing_Texture();
     return missing_texture_;
 }
@@ -961,6 +1167,9 @@ renderer::TextureHandle OriginalGpuEdge::texture_handle(const TextureBaseClass* 
 void OriginalGpuEdge::release_texture_if_owned(TextureBaseClass* source) noexcept
 {
     if (!active_edge) return;
+    if (active_edge->source_stages_active()) {
+        try { active_edge->cancel_source_stages_for_reset(); } catch (...) { std::terminate(); }
+    }
     const auto it=active_edge->textures_.find(source);
     if (it==active_edge->textures_.end()) return;
     ++active_edge->source_revision_;
@@ -985,6 +1194,10 @@ void OriginalGpuEdge::release_texture_if_owned(TextureBaseClass* source) noexcep
 
 void OriginalGpuEdge::select_texture(unsigned stage, const TextureBaseClass* source)
 {
+    SourceMutationGuard mutation{*this};
+    guard_source_stage(stage);
+    if (source_stage_attempt_ && source!=source_stage_attempt_->selections[stage]
+        && (source || WW3D::Is_Texturing_Enabled())) guard_source_stage(stage,source,true);
     if (stage>=pending_stages_.size()) throw std::runtime_error("original texture stage exceeds DX8 stage count");
     auto handle=source ? texture_handle(source) : renderer::TextureHandle{};
     // An explicit null selection is also the source-equivalent release point
@@ -1004,10 +1217,12 @@ void OriginalGpuEdge::select_texture(unsigned stage, const TextureBaseClass* sou
 
 void OriginalGpuEdge::set_filter_stage_state(unsigned stage, FilterStageState state, unsigned value)
 {
+    SourceMutationGuard mutation{*this};
+    guard_source_stage(stage);
     if (stage>=pending_stages_.size()) throw std::runtime_error("original filter stage exceeds DX8 stage count");
     if (value>(state==FilterStageState::min_filter || state==FilterStageState::mag_filter ||
         state==FilterStageState::mip_filter ? 2U : 1U))
-        throw std::runtime_error("original texture filter/address mode unsupported by physical device");
+        { poison_source_stages();throw std::runtime_error("original texture filter/address mode unsupported by physical device"); }
     auto& selected=pending_filter_values_[stage];
     switch (state) {
     case FilterStageState::min_filter: selected.min=value; break;
@@ -1021,7 +1236,7 @@ void OriginalGpuEdge::set_filter_stage_state(unsigned stage, FilterStageState st
         " property="+std::to_string(static_cast<unsigned>(state))+" value="+std::to_string(value));
     if (state!=FilterStageState::address_v) return;
     if (selected.min<0 || selected.mag<0 || selected.mip<0 || selected.u<0 || selected.v<0)
-        throw std::runtime_error("original filter state sequence is incomplete");
+        { poison_source_stages();throw std::runtime_error("original filter state sequence is incomplete"); }
     renderer::SamplerDesc desc;
     desc.min_filter=selected.min ? renderer::Filter::linear : renderer::Filter::nearest;
     desc.mag_filter=selected.mag ? renderer::Filter::linear : renderer::Filter::nearest;
@@ -1048,12 +1263,13 @@ OriginalGpuEdge::PendingStage OriginalGpuEdge::pending_stage(unsigned stage) con
 void OriginalGpuEdge::record_source_state(std::string_view label)
 {
     ++source_revision_;
-    device_.record_marker(label);
+    try { device_.record_marker(label); } catch (...) { poison_source_stages();throw; }
 }
 
 void OriginalGpuEdge::bind_frame_targets(renderer::TextureHandle color,
     renderer::TextureHandle depth,unsigned width,unsigned height)
 {
+    guard_nonstage_mutation();
     if (device_transaction_ || source_frame_active_ || !color || !depth || !width || !height)
         throw std::runtime_error("original frame target binding requires idle, complete attachments");
     bound_frame_=BoundFrame{color,depth,width,height};
@@ -1070,6 +1286,7 @@ std::pair<unsigned,unsigned> OriginalGpuEdge::bound_frame_extent() const
 void OriginalGpuEdge::begin_source_frame(bool clear_color,bool clear_depth,
     float red,float green,float blue,float alpha)
 {
+    guard_nonstage_mutation();
     const auto [width,height]=bound_frame_extent();
     if (source_frame_active_) throw std::runtime_error("original frame pass already active");
     renderer::RenderPassDesc pass;
@@ -1100,6 +1317,7 @@ void OriginalGpuEdge::begin_source_frame(bool clear_color,bool clear_depth,
 
 void OriginalGpuEdge::end_source_frame(bool present)
 {
+    guard_nonstage_mutation();
     if (!source_frame_active_) throw std::runtime_error("original source frame is not active");
     if (auto result=device_.end_pass(); !result)
         throw std::runtime_error("original source frame end failed: "+result.error);
@@ -1113,6 +1331,7 @@ void OriginalGpuEdge::end_source_frame(bool present)
 
 void OriginalGpuEdge::abort_source_frame() noexcept
 {
+    if (source_stages_active()) { poison_source_stages(); return; }
     if (!source_frame_active_) return;
     source_frame_active_=false;
     source_viewport_.reset();
@@ -1125,6 +1344,7 @@ std::pair<unsigned,unsigned> OriginalGpuEdge::active_render_target_extent() cons
 void OriginalGpuEdge::set_source_viewport(float x,float y,float width,float height,
     float min_depth,float max_depth)
 {
+    guard_nonstage_mutation();
     renderer::ViewportDesc viewport{x,y,width,height,min_depth,max_depth};
     if (auto result=device_.set_viewport(viewport); !result)
         throw std::runtime_error("original camera viewport GPU translation failed: "+result.error);
@@ -1135,6 +1355,7 @@ void OriginalGpuEdge::set_source_viewport(float x,float y,float width,float heig
 void OriginalGpuEdge::clear_source_viewport(bool color,bool depth,bool stencil,
     std::array<float,4> rgba,float z,unsigned stencil_value)
 {
+    guard_nonstage_mutation();
     if (!source_frame_active_ || !source_viewport_ || !bound_frame_)
         throw std::runtime_error("original camera clear requires an active source frame and viewport");
     const auto& vp=*source_viewport_;
@@ -1180,6 +1401,7 @@ bool OriginalGpuEdge::source_depth_has_stencil() const
 [[noreturn]] void OriginalGpuEdge::texture_creation_unavailable(WW3DFormat format,
     unsigned width, unsigned height, unsigned mips, unsigned reduction)
 {
+    guard_nonstage_mutation();
     device_.record_marker("original TextureLoader selected format=" + std::to_string(format) +
         " width=" + std::to_string(width) + " height=" + std::to_string(height) +
         " mips=" + std::to_string(mips) + " reduction=" + std::to_string(reduction));
@@ -1188,6 +1410,7 @@ bool OriginalGpuEdge::source_depth_has_stencil() const
 
 renderer::BufferHandle OriginalGpuEdge::bind_vertex(const VertexBufferClass* source)
 {
+    guard_nonstage_mutation();
     if (!source || source->Type() != BUFFER_TYPE_DX8)
         throw std::runtime_error("original sorting/dynamic vertex physical route is not translated");
     const auto* original = static_cast<const DX8VertexBufferClass*>(source);
@@ -1209,6 +1432,7 @@ renderer::BufferHandle OriginalGpuEdge::bind_vertex(const VertexBufferClass* sou
 
 renderer::BufferHandle OriginalGpuEdge::bind_index(const IndexBufferClass* source)
 {
+    guard_nonstage_mutation();
     if (!source || source->Type() != BUFFER_TYPE_DX8)
         throw std::runtime_error("original sorting/dynamic index physical route is not translated");
     const auto* original = static_cast<const DX8IndexBufferClass*>(source);
@@ -1229,6 +1453,7 @@ renderer::BufferHandle OriginalGpuEdge::bind_index(const IndexBufferClass* sourc
 
 void OriginalGpuEdge::release_vertex(const VertexBufferClass* source)
 {
+    guard_nonstage_mutation();
     if (source_frame_active_)
         throw std::runtime_error("original source vertex buffer cannot retire during a frame");
     const auto it=vertices_.find(source);
@@ -1241,6 +1466,7 @@ void OriginalGpuEdge::release_vertex(const VertexBufferClass* source)
 
 void OriginalGpuEdge::release_index(const IndexBufferClass* source)
 {
+    guard_nonstage_mutation();
     if (source_frame_active_)
         throw std::runtime_error("original source index buffer cannot retire during a frame");
     const auto it=indices_.find(source);
@@ -1256,6 +1482,7 @@ void OriginalGpuEdge::draw_source_indexed(const VertexBufferClass* vertex,
     unsigned base_vertex,unsigned min_vertex,unsigned vertex_count,
     renderer::PrimitiveTopology topology)
 {
+    guard_nonstage_mutation();
     if (!device_.pass_active())
         throw std::runtime_error("original indexed draw requires a caller-owned active render pass");
     if (!vertex || !index || !index_count || !vertex_count)
@@ -1301,6 +1528,7 @@ void OriginalGpuEdge::draw_volume_stencil(const VertexBufferClass* vertex,
     const IndexBufferClass* index, unsigned first_index, unsigned index_count,
     unsigned base_vertex, unsigned vertex_count, renderer::UInt8 shadow_mask)
 {
+    guard_nonstage_mutation();
     if (!source_frame_active_ || !bound_frame_ || !device_.pass_active())
         throw std::runtime_error("original volume stencil requires an active caller-owned source frame");
     if (!vertex || !index || vertex->Type()!=BUFFER_TYPE_DX8 || index->Type()!=BUFFER_TYPE_DX8 ||

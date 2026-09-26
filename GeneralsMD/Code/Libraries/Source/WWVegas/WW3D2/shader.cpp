@@ -58,6 +58,14 @@
 bool ShaderClass::ShaderDirty=true;
 unsigned long ShaderClass::CurrentShader=0;
 unsigned long _PolygonCullMode = D3DCULL_CW;
+#if defined(__linux__)
+void ShaderClass::Guard_Global_Mutation()
+{
+#if defined(ZH_WW3D_CPU_ONLY)
+    DX8Wrapper::Guard_Nonstage_Mutation();
+#endif
+}
+#endif
 
 
 /*
@@ -416,6 +424,9 @@ const Blend dstBlendLUT[ShaderClass::DSTBLEND_MAX] =
  *=============================================================================================*/
 void ShaderClass::Apply()
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    DX8Wrapper::Guard_Nonstage_Mutation();
+#endif
 	unsigned long diff;
 
 #if defined(ZH_WW3D_CPU_ONLY)
@@ -1123,6 +1134,9 @@ void ShaderClass::Apply()
  *=============================================================================================*/
 void ShaderClass::Invert_Backface_Culling(bool onoff)
 {
+#if defined(__linux__)
+    Guard_Global_Mutation();
+#endif
 	if (onoff == true) {
 		_PolygonCullMode = D3DCULL_CCW;
 	} else {

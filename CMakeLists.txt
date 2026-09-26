@@ -3336,8 +3336,25 @@ if(ZH_BUILD_TESTS)
   target_link_options(original_w3d_source_reference_tests PRIVATE -Wl,--gc-sections)
   add_dependencies(original_w3d_source_reference_tests zh_bgfx_shaders)
   add_test(NAME original_w3d_source_reference COMMAND original_w3d_source_reference_tests)
+  add_executable(original_w3d_stage_transaction_tests tests/original_rendering/test_stage_transaction.cpp)
+  target_include_directories(original_w3d_stage_transaction_tests PRIVATE ${tree_program_includes})
+  target_compile_options(original_w3d_stage_transaction_tests PRIVATE -fpermissive)
+  target_compile_definitions(original_w3d_stage_transaction_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1
+    ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx")
+  target_link_libraries(original_w3d_stage_transaction_tests PRIVATE
+    zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu zh_renderer_bgfx)
+  target_link_options(original_w3d_stage_transaction_tests PRIVATE -Wl,--gc-sections)
+  add_dependencies(original_w3d_stage_transaction_tests zh_bgfx_shaders)
+  add_test(NAME original_w3d_stage_transaction COMMAND original_w3d_stage_transaction_tests)
+  set_tests_properties(original_w3d_stage_transaction PROPERTIES LABELS "original-rendering;renderer-contract;negative")
   set_tests_properties(original_w3d_source_reference PROPERTIES LABELS "original-rendering;renderer-contract;negative")
   if(ZH_ENABLE_GPU_TESTS)
+    add_test(NAME original_w3d_stage_transaction_bgfx COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:original_w3d_stage_transaction_tests> --gpu)
+    set_tests_properties(original_w3d_stage_transaction_bgfx PROPERTIES
+      LABELS "gpu;original-rendering;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE
+      ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
     add_test(NAME original_w3d_source_reference_bgfx COMMAND "${Python3_EXECUTABLE}"
       "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
       $<TARGET_FILE:original_w3d_source_reference_tests> --gpu)

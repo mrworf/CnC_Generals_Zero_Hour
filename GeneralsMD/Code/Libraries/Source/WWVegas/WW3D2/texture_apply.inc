@@ -1,8 +1,13 @@
 void TextureClass::Apply(unsigned int stage)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
+	zh::original_runtime::OriginalGpuEdge::SourceMutationGuard mutation{zh::original_runtime::OriginalGpuEdge::active()};
+	if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) edge->guard_source_stage(stage,this,true);
 	if (!Filter.Can_Apply(stage))
+	{
+		if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) edge->poison_source_stages();
 		throw std::runtime_error("original texture filter or stage is invalid");
+	}
 #endif
 	// Initialization needs to be done when texture is used if it hasn't been done before.
 	if (!Initialized)

@@ -87,10 +87,14 @@ bool TextureFilterClass::Can_Apply(unsigned int stage) const noexcept
 void TextureFilterClass::Apply(unsigned int stage)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
+    zh::original_runtime::OriginalGpuEdge::SourceMutationGuard mutation{zh::original_runtime::OriginalGpuEdge::active()};
+    if (auto* owner=zh::original_runtime::OriginalGpuEdge::active()) owner->guard_source_stage(stage);
     if (!Can_Apply(stage))
-        throw std::runtime_error("original texture filter or stage is invalid");
+        { if (auto* owner=zh::original_runtime::OriginalGpuEdge::active()) owner->poison_source_stages();
+          throw std::runtime_error("original texture filter or stage is invalid"); }
     using State=zh::original_runtime::OriginalGpuEdge::FilterStageState;
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    edge.guard_source_filter(stage,this);
     edge.set_filter_stage_state(stage,State::min_filter,_MinTextureFilters[stage][TextureMinFilter]);
     edge.set_filter_stage_state(stage,State::mag_filter,_MagTextureFilters[stage][TextureMagFilter]);
     edge.set_filter_stage_state(stage,State::mip_filter,_MipMapFilters[stage][MipMapFilter]);
@@ -139,6 +143,9 @@ void TextureFilterClass::Apply(unsigned int stage)
 */
 void TextureFilterClass::_Init_Filters(TextureFilterMode filter_type)
 {
+#if defined(__linux__)
+    Guard_Mutation();
+#endif
 #if defined(ZH_WW3D_CPU_ONLY)
     if (filter_type!=TEXTURE_FILTER_BILINEAR && filter_type!=TEXTURE_FILTER_TRILINEAR &&
         filter_type!=TEXTURE_FILTER_ANISOTROPIC)
@@ -265,6 +272,9 @@ void TextureFilterClass::_Init_Filters(TextureFilterMode filter_type)
 */
 void TextureFilterClass::Set_Mip_Mapping(FilterType mipmap)
 {
+#if defined(__linux__)
+    Guard_Mutation();
+#endif
 //	if (mipmap != FILTER_TYPE_NONE && Get_Mip_Level_Count() <= 1 && Is_Initialized()) 
 //	{
 //		WWASSERT_PRINT(0, "Trying to enable MipMapping on texture w/o Mip levels!\n");
@@ -279,6 +289,9 @@ void TextureFilterClass::Set_Mip_Mapping(FilterType mipmap)
 */
 void TextureFilterClass::_Set_Default_Min_Filter(FilterType filter)
 {
+#if defined(__linux__)
+    Guard_Mutation();
+#endif
 #if defined(ZH_WW3D_CPU_ONLY)
     if (static_cast<unsigned>(filter)>=FILTER_TYPE_COUNT)
         throw std::runtime_error("original default min filter is invalid");
@@ -296,6 +309,9 @@ void TextureFilterClass::_Set_Default_Min_Filter(FilterType filter)
 */
 void TextureFilterClass::_Set_Default_Mag_Filter(FilterType filter)
 {
+#if defined(__linux__)
+    Guard_Mutation();
+#endif
 #if defined(ZH_WW3D_CPU_ONLY)
     if (static_cast<unsigned>(filter)>=FILTER_TYPE_COUNT)
         throw std::runtime_error("original default mag filter is invalid");
@@ -312,6 +328,9 @@ void TextureFilterClass::_Set_Default_Mag_Filter(FilterType filter)
 */
 void TextureFilterClass::_Set_Default_Mip_Filter(FilterType filter)
 {
+#if defined(__linux__)
+    Guard_Mutation();
+#endif
 #if defined(ZH_WW3D_CPU_ONLY)
     if (static_cast<unsigned>(filter)>=FILTER_TYPE_COUNT)
         throw std::runtime_error("original default mip filter is invalid");
@@ -321,3 +340,12 @@ void TextureFilterClass::_Set_Default_Mip_Filter(FilterType filter)
 		_MipMapFilters[i][FILTER_TYPE_DEFAULT]=_MipMapFilters[i][filter];
 	}
 }
+
+#if defined(__linux__)
+void TextureFilterClass::Guard_Mutation()
+{
+#if defined(ZH_WW3D_CPU_ONLY)
+    if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) edge->guard_nonstage_mutation();
+#endif
+}
+#endif

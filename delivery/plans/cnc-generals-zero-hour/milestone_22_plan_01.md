@@ -2,6 +2,12 @@
 
 This plan governs exactly one milestone transaction.
 
+Approved critical-path scope freeze from B0A onward: complete the already-defined
+dependency chain and reuse unchanged evidence-only aggregate gates. Any newly
+required architecture owner stops for an explicit architecture checkpoint; do
+not introduce another prerequisite/split autonomously. Historical child-plan
+split wording does not broaden this authority.
+
 ## Outcome
 
 The production Linux original-engine path renders representative campaign and skirmish scenes from the user-owned retail corpus through the original W3D, WWShade, and GameClient producers onto the public bgfx Vulkan backend. The same producer path is observable through the recording device, fails closed for unsupported state or malformed/missing assets, survives resize/device-resource recreation, and returns all owned renderer resources to zero at teardown.
@@ -316,7 +322,7 @@ The production Linux original-engine path renders representative campaign and sk
 | 08P0C2D0B | [milestone_22_plan_01_slice_08p0c2d0b.md](milestone_22_plan_01_slice_08p0c2d0b.md) | Public bgfx idle/frame resource and command transaction aggregate. | slices 08P0C2D0B1 and 08P0C2D0B2 | complete: independent idle/frame physical composition and unchanged clean final-source gates | `delivery: M22 08P0C2D0B revalidate bgfx transactions` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2d0b_bgfx_transaction_aggregate.md) |
 | 08P0C2D0 | [milestone_22_plan_01_slice_08p0c2d0.md](milestone_22_plan_01_slice_08p0c2d0.md) | Recording and Linux full-draw bgfx idle/frame transaction aggregate. | slices 08P0C2D0A–08P0C2D0B | complete: required Recording/bgfx modes independently proven; SDL/others fail closed | `delivery: M22 08P0C2D0 revalidate frame command transactions` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2d0_device_transaction_aggregate.md) |
 | 08P0C2B0A | [milestone_22_plan_01_slice_08p0c2b0a.md](milestone_22_plan_01_slice_08p0c2b0a.md) | Bounded retained source-reference units and exact-generation transactional cleanup/drain. | slice 08P0C2D0 | complete: exact units/aliases, transactional cleanup, once-only retry and six clean canonical suites; no stage/shroud/frame/factory | `delivery: M22 08P0C2B0A retire bounded source references` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2b0a_source_references.md) |
-| 08P0C2B0B | [milestone_22_plan_01_slice_08p0c2b0b.md](milestone_22_plan_01_slice_08p0c2b0b.md) | Resident selected-stage refs/maps/transform/access/revision/filter atomic transaction. | slice 08P0C2B0A | pending; approved grouped survivor-drain composition, resident-ready preflight and selected-stage-only application; no shroud/frame/factory | | |
+| 08P0C2B0B | [milestone_22_plan_01_slice_08p0c2b0b.md](milestone_22_plan_01_slice_08p0c2b0b.md) | Resident selected-stage refs/maps/transform/access/revision/filter atomic transaction. | slice 08P0C2B0A | complete: resident tuple/LastAccessed/selected-only rollback and A composition; six clean 276/276 canonicals; no shroud/frame/factory | `delivery: M22 08P0C2B0B own resident selected-stage transaction` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2b0b_stage_transaction.md) |
 | 08P0C2B0 | [milestone_22_plan_01_slice_08p0c2b0.md](milestone_22_plan_01_slice_08p0c2b0.md) | Complete delayed-source reference/stage transaction aggregate. | slices 08P0C2B0A–08P0C2B0B | pending; evidence-only; downstream dependency unchanged | | |
 | 08P0C2B | [milestone_22_plan_01_slice_08p0c2b.md](milestone_22_plan_01_slice_08p0c2b.md) | Exact tree shroud stage, texture/transform binding and borrowed resource lifetime. | slice 08P0C2B0 | pending; draw/factory closed | | |
 | 08P0C2C | [milestone_22_plan_01_slice_08p0c2c.md](milestone_22_plan_01_slice_08p0c2c.md) | Outside-frame immutable tree preparation and accepted-phase reuse without C1/FX advancement on render retry. | slices 08P0C2A–08P0C2B and 08P0C2D0 | pending; draw/factory closed | | |

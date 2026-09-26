@@ -104,6 +104,7 @@ TextureClass::TextureClass(unsigned width, unsigned height, WW3DFormat format,
 
 void TextureClass::Init()
 {
+    if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) edge->guard_nonstage_mutation();
 	if (Initialized) return;
 	if (InactivationTime && LastInactivationSyncTime) {
 		if ((WW3D::Get_Sync_Time()-LastInactivationSyncTime)<InactivationTime)
@@ -122,6 +123,7 @@ void TextureClass::Init()
 void TextureClass::Apply_New_Surface(IDirect3DBaseTexture8 *, bool, bool) { unavailable(); }
 void TextureClass::Apply_Gpu_Texture(WW3DFormat format, unsigned width, unsigned height)
 {
+    if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) edge->guard_nonstage_mutation();
 	TextureFormat=format; Width=width; Height=height; Initialized=true;
 }
 #include "texture_apply.inc"

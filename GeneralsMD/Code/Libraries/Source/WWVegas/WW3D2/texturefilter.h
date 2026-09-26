@@ -106,6 +106,15 @@ public:
 	};
 
 	TextureFilterClass(MipCountType mip_level_count);
+#if defined(__linux__)
+    TextureFilterClass(const TextureFilterClass&)=default;
+    TextureFilterClass& operator=(const TextureFilterClass& other) {
+        Guard_Mutation();
+        TextureMinFilter=other.TextureMinFilter;TextureMagFilter=other.TextureMagFilter;
+        MipMapFilter=other.MipMapFilter;UAddressMode=other.UAddressMode;VAddressMode=other.VAddressMode;
+        return *this;
+    }
+#endif
 
 	void Apply(unsigned int stage);
 #if defined(__linux__)
@@ -116,15 +125,25 @@ public:
 	FilterType Get_Min_Filter(void) const { return TextureMinFilter; }
 	FilterType Get_Mag_Filter(void) const { return TextureMagFilter; }
 	FilterType Get_Mip_Mapping(void) const { return MipMapFilter; }
+#if defined(__linux__)
+	void Set_Min_Filter(FilterType filter) { Guard_Mutation();TextureMinFilter=filter; }
+	void Set_Mag_Filter(FilterType filter) { Guard_Mutation();TextureMagFilter=filter; }
+#else
 	void Set_Min_Filter(FilterType filter) { TextureMinFilter=filter; }
 	void Set_Mag_Filter(FilterType filter) { TextureMagFilter=filter; }
+#endif
 	void Set_Mip_Mapping(FilterType mipmap);
 
 	// Texture address mode
 	TxtAddrMode Get_U_Addr_Mode(void) const { return UAddressMode; }
 	TxtAddrMode Get_V_Addr_Mode(void) const { return VAddressMode; }
+#if defined(__linux__)
+	void Set_U_Addr_Mode(TxtAddrMode mode) { Guard_Mutation();UAddressMode=mode; }
+	void Set_V_Addr_Mode(TxtAddrMode mode) { Guard_Mutation();VAddressMode=mode; }
+#else
 	void Set_U_Addr_Mode(TxtAddrMode mode) { UAddressMode=mode; }
 	void Set_V_Addr_Mode(TxtAddrMode mode) { VAddressMode=mode; }
+#endif
 
 	// This needs to be called after device has been created
 	static void _Init_Filters(TextureFilterMode texture_filter);
@@ -134,6 +153,9 @@ public:
 	static void _Set_Default_Mip_Filter(FilterType filter);
 
 private:
+#if defined(__linux__)
+    static void Guard_Mutation();
+#endif
 	// State not contained in the Direct3D texture object:
 	FilterType TextureMinFilter;
 	FilterType TextureMagFilter;

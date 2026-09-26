@@ -92,8 +92,54 @@ struct DX8Wrapper::CpuState {
 
 DX8Wrapper::CpuState& DX8Wrapper::state() { static CpuState source_state; return source_state; }
 
+struct DX8Wrapper::SourceStageCheckpoint {
+    unsigned mask=0,dirty=0;
+    std::array<TextureBaseClass*,8> textures{};
+    std::array<std::map<unsigned,unsigned>,8> stages;
+    std::map<int,Matrix4x4> transforms;
+};
+std::shared_ptr<DX8Wrapper::SourceStageCheckpoint> DX8Wrapper::Capture_Source_Stages(unsigned mask)
+{
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    edge.source_stage_allocation_boundary();
+    auto checkpoint=std::make_shared<SourceStageCheckpoint>();
+    checkpoint->mask=mask;checkpoint->dirty=state().dirty & mask;
+    for (unsigned stage=0;stage<8;++stage) if (mask&(1U<<stage)) {
+        checkpoint->textures[stage]=state().textures[stage];
+        for (const auto& key:state().texture_states[stage]) {
+            edge.source_stage_allocation_boundary();checkpoint->stages[stage].emplace(key);
+        }
+        const auto transform=state().transforms.find(D3DTS_TEXTURE0+stage);
+        if (transform!=state().transforms.end()) {
+            edge.source_stage_allocation_boundary();checkpoint->transforms.emplace(*transform);
+        }
+    }
+    return checkpoint;
+}
+void DX8Wrapper::Restore_Source_Stages(SourceStageCheckpoint& checkpoint) noexcept
+{
+    for (unsigned stage=0;stage<8;++stage) if (checkpoint.mask&(1U<<stage)) {
+        auto*& current=state().textures[stage];
+        auto* prior=checkpoint.textures[stage];
+        // The stage owner pins both identities, so these decrements cannot destroy.
+        if (current!=prior) { if (prior) prior->Add_Ref(); if (current) current->Release_Ref();current=prior; }
+        state().texture_states[stage].swap(checkpoint.stages[stage]);
+        state().transforms.erase(D3DTS_TEXTURE0+stage);
+        auto node=checkpoint.transforms.extract(D3DTS_TEXTURE0+stage);
+        if (!node.empty()) state().transforms.insert(std::move(node));
+    }
+    state().dirty=(state().dirty & ~checkpoint.mask)|checkpoint.dirty;
+}
+unsigned DX8Wrapper::Source_Stage_Key_Count(unsigned stage) { return state().texture_states.at(stage).size(); }
+bool DX8Wrapper::Source_Stage_Key_Present(unsigned stage,unsigned key) { return state().texture_states.at(stage).count(key)!=0; }
+bool DX8Wrapper::Source_Transform_Present(int transform) { return state().transforms.count(transform)!=0; }
+void DX8Wrapper::Guard_Nonstage_Mutation()
+{ if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) edge->guard_nonstage_mutation(); }
+
 void DX8Wrapper::Reset_Source_State()
 {
+    if (auto* edge=zh::original_runtime::OriginalGpuEdge::active();edge && edge->source_stages_active())
+        edge->cancel_source_stages_for_reset();
     auto& selected=state();
     if (selected.vertex_buffer) {
         selected.vertex_buffer->Release_Engine_Ref();
@@ -144,6 +190,8 @@ void DX8Wrapper::Reset_Source_State()
 void DX8Wrapper::Set_Texture(unsigned stage,TextureBaseClass* texture)
 {
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    zh::original_runtime::OriginalGpuEdge::SourceMutationGuard mutation{edge};
+    edge.guard_source_stage(stage,texture,true);
     if (stage>=state().textures.size()) throw std::runtime_error("original DX8 texture stage is invalid");
     auto& previous=state().textures[stage];
     if (texture==previous) return;
@@ -156,6 +204,7 @@ void DX8Wrapper::Set_Texture(unsigned stage,TextureBaseClass* texture)
 
 void DX8Wrapper::Set_Material(const VertexMaterialClass* material)
 {
+    Guard_Nonstage_Mutation();
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     if (material) const_cast<VertexMaterialClass*>(material)->Add_Ref();
     if (state().material) const_cast<VertexMaterialClass*>(state().material)->Release_Ref();
@@ -166,6 +215,7 @@ void DX8Wrapper::Set_Material(const VertexMaterialClass* material)
 
 void DX8Wrapper::Set_Shader(const ShaderClass& shader)
 {
+    Guard_Nonstage_Mutation();
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     if (!ShaderClass::ShaderDirty && state().shader.Get_Bits()==shader.Get_Bits()) return;
     state().shader=shader;
@@ -186,6 +236,11 @@ DX8Wrapper::SourceStateSnapshot DX8Wrapper::Snapshot_Source_State()
     auto& selected=state();
     if (selected.dirty || ShaderClass::ShaderDirty)
         throw std::runtime_error("original DX8 state is pending source application");
+    return Inspect_Source_State();
+}
+DX8Wrapper::SourceStateSnapshot DX8Wrapper::Inspect_Source_State()
+{
+    const auto& selected=state();
     return {selected.physical_material,selected.render_states,selected.texture_states,
         selected.transforms,selected.fog_enabled,selected.fog_color,selected.material_applied,
         selected.lights,selected.light_enabled,selected.light_environment!=nullptr};
@@ -233,6 +288,7 @@ void DX8Wrapper::Get_Render_State(RenderStateStruct& snapshot)
 
 void DX8Wrapper::Set_Render_State(const RenderStateStruct& snapshot)
 {
+    Guard_Nonstage_Mutation();
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     if (snapshot.vertex_buffers[1] || snapshot.vertex_buffer_types[1]!=BUFFER_TYPE_INVALID ||
         (snapshot.vertex_buffers[0] &&
@@ -275,6 +331,7 @@ void DX8Wrapper::Set_Render_State(const RenderStateStruct& snapshot)
 
 void DX8Wrapper::Release_Render_State()
 {
+    Guard_Nonstage_Mutation();
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     Set_Vertex_Buffer(nullptr);
     Set_Index_Buffer(nullptr,0);
@@ -286,6 +343,7 @@ void DX8Wrapper::Release_Render_State()
 
 void DX8Wrapper::Apply_Render_State_Changes()
 {
+    Guard_Nonstage_Mutation();
     auto& selected=state();
     if (selected.dirty & (1U<<9)) {
         const auto prior_render=selected.render_states;
@@ -313,8 +371,19 @@ void DX8Wrapper::Apply_Render_State_Changes()
         throw std::runtime_error("original delayed DX8 state outside material/texture route is unsupported");
 }
 
+void DX8Wrapper::Apply_Source_Stages(unsigned mask)
+{
+    auto& selected=state();
+    for (unsigned stage=0;stage<8;++stage) if (mask&(1U<<stage)) {
+        if (selected.textures[stage]) selected.textures[stage]->Apply(stage);
+        else TextureBaseClass::Apply_Null(stage);
+        selected.dirty &= ~(1U<<stage);
+    }
+}
+
 void DX8Wrapper::Set_DX8_Material(const D3DMATERIAL8* material)
 {
+    Guard_Nonstage_Mutation();
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     if (!material) throw std::runtime_error("original DX8 material source is missing");
     state().physical_material=*material;
@@ -323,6 +392,7 @@ void DX8Wrapper::Set_DX8_Material(const D3DMATERIAL8* material)
 }
 void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
 {
+    Guard_Nonstage_Mutation();
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     if ((property==D3DRS_LIGHTING && value>1) ||
         (property==D3DRS_FILLMODE && value!=D3DFILL_SOLID) ||
@@ -356,6 +426,9 @@ void DX8Wrapper::Set_DX8_Render_State(unsigned property,unsigned value)
 void DX8Wrapper::Set_DX8_Texture_Stage_State(unsigned stage,unsigned property,unsigned value)
 {
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    zh::original_runtime::OriginalGpuEdge::SourceMutationGuard mutation{edge};
+    edge.guard_source_stage_key(stage,property);
+    const auto reject=[&](const char* category) { edge.poison_source_stages();throw std::runtime_error(category); };
     if (stage>=state().texture_states.size()) throw std::runtime_error("original DX8 texture stage is invalid");
     if (property!=D3DTSS_TEXCOORDINDEX && property!=D3DTSS_TEXTURETRANSFORMFLAGS &&
         property!=D3DTSS_BUMPENVMAT00 && property!=D3DTSS_BUMPENVMAT01 &&
@@ -363,22 +436,23 @@ void DX8Wrapper::Set_DX8_Texture_Stage_State(unsigned stage,unsigned property,un
         property!=D3DTSS_COLOROP && property!=D3DTSS_ALPHAOP &&
         property!=D3DTSS_COLORARG1 && property!=D3DTSS_COLORARG2 &&
         property!=D3DTSS_ALPHAARG1 && property!=D3DTSS_ALPHAARG2)
-        throw std::runtime_error("original DX8 shader stage state is unsupported by Linux software profile");
+        reject("original DX8 shader stage state is unsupported by Linux software profile");
     if ((property==D3DTSS_COLOROP || property==D3DTSS_ALPHAOP) &&
         value!=D3DTOP_DISABLE && value!=D3DTOP_SELECTARG1 &&
         value!=D3DTOP_SELECTARG2 && value!=D3DTOP_MODULATE && value!=D3DTOP_ADD)
-        throw std::runtime_error("original DX8 combiner op is unsupported by Linux software profile");
+        reject("original DX8 combiner op is unsupported by Linux software profile");
     if ((property==D3DTSS_COLORARG1 || property==D3DTSS_COLORARG2 ||
         property==D3DTSS_ALPHAARG1 || property==D3DTSS_ALPHAARG2) &&
         value!=D3DTA_DIFFUSE && value!=D3DTA_CURRENT && value!=D3DTA_TEXTURE)
-        throw std::runtime_error("original DX8 combiner argument is unsupported by Linux software profile");
+        reject("original DX8 combiner argument is unsupported by Linux software profile");
     if (property==D3DTSS_TEXCOORDINDEX &&
         ((value&0xffffU)>=8 || (value&0xffff0000U)>D3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR))
-        throw std::runtime_error("original DX8 mapper coordinate index is unsupported");
+        reject("original DX8 mapper coordinate index is unsupported");
     if (property==D3DTSS_TEXTURETRANSFORMFLAGS &&
         value!=D3DTTFF_DISABLE && value!=D3DTTFF_COUNT2 && value!=D3DTTFF_COUNT3 &&
         value!=(D3DTTFF_PROJECTED | D3DTTFF_COUNT3))
-        throw std::runtime_error("original DX8 mapper transform flag is unsupported");
+        reject("original DX8 mapper transform flag is unsupported");
+    if (!Source_Stage_Key_Present(stage,property) && edge.source_stages_active()) edge.source_stage_allocation_boundary();
     state().texture_states[stage][property]=value;
     edge.record_source_state(
         "DX8Wrapper::Set_DX8_Texture_Stage_State="+std::to_string(stage)+":"+
@@ -387,9 +461,12 @@ void DX8Wrapper::Set_DX8_Texture_Stage_State(unsigned stage,unsigned property,un
 void DX8Wrapper::Set_Transform(D3DTRANSFORMSTATETYPE transform,const Matrix4x4& matrix)
 {
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    zh::original_runtime::OriginalGpuEdge::SourceMutationGuard mutation{edge};
+    edge.guard_source_transform(transform);
     if (transform<D3DTS_VIEW || (transform>D3DTS_PROJECTION && transform!=D3DTS_WORLD &&
         (transform<D3DTS_TEXTURE0 || transform>=D3DTS_TEXTURE0+8)))
         throw std::runtime_error("original DX8 transform index is unsupported");
+    if (!Source_Transform_Present(transform) && edge.source_stages_active()) edge.source_stage_allocation_boundary();
     state().transforms.insert_or_assign(transform,matrix);
     if (transform==D3DTS_WORLD) state().world_identity_selected=false;
     edge.record_source_state(
@@ -399,6 +476,7 @@ void DX8Wrapper::Set_Transform(D3DTRANSFORMSTATETYPE transform,const Matrix3D& m
 { Set_Transform(transform,Matrix4x4(matrix)); }
 void DX8Wrapper::Set_World_Identity()
 {
+    Guard_Nonstage_Mutation();
     if (state().world_identity_selected) return;
     Set_Transform(D3DTS_WORLD,Matrix4x4(true));
     state().world_identity_selected=true;
@@ -430,6 +508,7 @@ static void Validate_Cpu_Source_Light(const D3DLIGHT8& light)
 }
 void DX8Wrapper::Set_Light(unsigned index,const D3DLIGHT8* light)
 {
+    Guard_Nonstage_Mutation();
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     if (index>=state().lights.size())
         throw std::runtime_error("original light slot exceeds four source lights");
@@ -469,6 +548,7 @@ bool DX8Wrapper::Get_Fog_Enable() { return state().fog_enabled; }
 D3DCOLOR DX8Wrapper::Get_Fog_Color() { return state().fog_color; }
 void DX8Wrapper::Set_Fog(bool enabled,const Vector3& color,float start,float end)
 {
+    Guard_Nonstage_Mutation();
     zh::original_runtime::OriginalGpuEdge::required();
     if (!std::isfinite(start) || !std::isfinite(end))
         throw std::runtime_error("original fog range is nonfinite");
@@ -484,12 +564,14 @@ void DX8Wrapper::Set_Fog(bool enabled,const Vector3& color,float start,float end
 }
 void DX8Wrapper::Set_Ambient(const Vector3& color)
 {
+    Guard_Nonstage_Mutation();
     const auto packed=Convert_Color(color,0.0f);
     Set_DX8_Render_State(D3DRS_AMBIENT,packed);
 }
 
 void DX8Wrapper::Set_Vertex_Buffer(const VertexBufferClass* buffer,unsigned stream)
 {
+    Guard_Nonstage_Mutation();
     auto* edge=buffer ? &zh::original_runtime::OriginalGpuEdge::required() :
         zh::original_runtime::OriginalGpuEdge::active();
     if (stream!=0) throw std::runtime_error("original secondary vertex stream is unsupported");
@@ -504,6 +586,7 @@ void DX8Wrapper::Set_Vertex_Buffer(const VertexBufferClass* buffer,unsigned stre
 
 void DX8Wrapper::Set_Vertex_Buffer(const DynamicVBAccessClass& access)
 {
+    Guard_Nonstage_Mutation();
     if (!access.VertexBuffer || access.Get_Type()!=BUFFER_TYPE_DYNAMIC_DX8)
         throw std::runtime_error("original dynamic sorting vertex draw requires sorting renderer");
     Set_Vertex_Buffer(access.VertexBuffer);
@@ -515,6 +598,7 @@ void DX8Wrapper::Set_Vertex_Buffer(const DynamicVBAccessClass& access)
 
 void DX8Wrapper::Set_Index_Buffer(const IndexBufferClass* buffer,unsigned short base_offset)
 {
+    Guard_Nonstage_Mutation();
     auto* edge=buffer ? &zh::original_runtime::OriginalGpuEdge::required() :
         zh::original_runtime::OriginalGpuEdge::active();
     auto& current=state().index_buffer;
@@ -529,6 +613,7 @@ void DX8Wrapper::Set_Index_Buffer(const IndexBufferClass* buffer,unsigned short 
 
 void DX8Wrapper::Set_Index_Buffer(const DynamicIBAccessClass& access,unsigned short base_offset)
 {
+    Guard_Nonstage_Mutation();
     if (!access.IndexBuffer || access.Get_Type()!=BUFFER_TYPE_DYNAMIC_DX8)
         throw std::runtime_error("original dynamic sorting index draw requires sorting renderer");
     Set_Index_Buffer(access.IndexBuffer,base_offset);
@@ -540,6 +625,7 @@ void DX8Wrapper::Set_Index_Buffer(const DynamicIBAccessClass& access,unsigned sh
 
 void DX8Wrapper::Set_Index_Buffer_Index_Offset(unsigned offset)
 {
+    Guard_Nonstage_Mutation();
     if (state().index_base_offset==offset) return;
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     state().index_base_offset=offset;
@@ -549,6 +635,7 @@ void DX8Wrapper::Set_Index_Buffer_Index_Offset(unsigned offset)
 void DX8Wrapper::Draw_Triangles(unsigned short first_index,unsigned short triangle_count,
     unsigned short min_vertex,unsigned short vertex_count)
 {
+    Guard_Nonstage_Mutation();
     if ((state().polygon_low_bound && state().polygon_low_bound>=triangle_count)) return;
     const auto& source=state();
     if (source.vertex_buffer && source.index_buffer &&
@@ -586,6 +673,7 @@ void DX8Wrapper::Draw_Triangles(unsigned short first_index,unsigned short triang
 void DX8Wrapper::Draw_Strip(unsigned short first_index,unsigned short triangle_count,
     unsigned short min_vertex,unsigned short vertex_count)
 {
+    Guard_Nonstage_Mutation();
     if ((state().polygon_low_bound && state().polygon_low_bound>=triangle_count)) return;
     Apply_Render_State_Changes();
     if (!state().triangle_draw_enabled) return;
@@ -610,14 +698,15 @@ void DX8Wrapper::Draw_Strip(unsigned short first_index,unsigned short triangle_c
         zh::renderer::PrimitiveTopology::triangle_strip);
 }
 
-void DX8Wrapper::_Enable_Triangle_Draw(bool enabled) { state().triangle_draw_enabled=enabled; }
+void DX8Wrapper::_Enable_Triangle_Draw(bool enabled) { Guard_Nonstage_Mutation();state().triangle_draw_enabled=enabled; }
 bool DX8Wrapper::_Is_Triangle_Draw_Enabled() { return state().triangle_draw_enabled; }
 void DX8Wrapper::Set_Draw_Polygon_Low_Bound_Limit(unsigned limit)
-{ state().polygon_low_bound=limit; }
+{ Guard_Nonstage_Mutation();state().polygon_low_bound=limit; }
 
 void DX8Wrapper::Clear(bool clear_color,bool clear_z_stencil,const Vector3& color,
     float dest_alpha,float z,unsigned int stencil)
 {
+    Guard_Nonstage_Mutation();
     // The authored D3D8 Clear(0, NULL, ...) uses the active camera viewport.
     // Keep source flag/color selection here; the device edge only translates
     // the resulting ordered viewport-scoped operation.

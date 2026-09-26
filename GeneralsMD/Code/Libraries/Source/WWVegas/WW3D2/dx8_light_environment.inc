@@ -2,6 +2,9 @@
 // mutually exclusive Linux CPU/device-edge configuration.
 void DX8Wrapper::Set_Light_Environment(LightEnvironmentClass* light_env)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    Guard_Nonstage_Mutation();
+#endif
 	// Shader light environment support
 //	if (Light_Environment && light_env && (*Light_Environment)==(*light_env)) return;
 #if defined(ZH_WW3D_CPU_ONLY)

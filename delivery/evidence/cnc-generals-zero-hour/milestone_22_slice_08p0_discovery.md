@@ -240,3 +240,17 @@ production format/shader semantics did not change. All six full builds/canonical
 275/275 clean-log suites, focused, strict host LSan, generated/established Vulkan
 and six serial LAN4/4 pass. B0B stage transaction is next, then B0 aggregate;
 no shroud/tree/factory or retail admission is opened by this reference owner.
+
+B0B now independently closes resident selected-stage tuple/ref/map/transform/
+LastAccessed/revision/filter/sampler atomicity. Preflight precedes pins/journal;
+selected-only application preserves pending shader/material and other stages.
+Grouped all-survivor A cancellation is allocation-free only when every exact
+identity retains more refs than queued units; equality/mixed terminal retry
+remains transactional. Forty-eight commit-ready generated failure controls,
+stale-provider entry guards and two-generation lifecycle cleanup prove exact
+rollback/retry without loader/RNG/frame consumption. Six complete builds and
+six clean canonical276/276 suites, focused both native/sanitizer, exact strict
+host LSan, A/B generated and established Vulkan, six serial LAN4/4 and identity
+checks pass. Scope freeze is durable: newly required architecture owners require
+an explicit checkpoint, not another autonomous split. B0's evidence-only
+aggregate follows separately; exact shroud/tree/factory/retail remain closed.

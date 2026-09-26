@@ -30,3 +30,8 @@ An unfixed enum may make a synthetic rejection value undefined before validation
 reads it. Use a defined raw representation at admission, keep platform class
 definitions consistent, and verify enum/class size, alignment and member offsets
 against the prior ABI before accepting range checks under both sanitizers.
+
+Test transaction poisoning from an otherwise commit-ready candidate. A rejected
+commit on an unapplied owner does not prove poisoning. Put scope guards before
+provider dereference, phase diagnostics and diagnostic allocation, including
+no-throw entry points that must poison and return without mutation.

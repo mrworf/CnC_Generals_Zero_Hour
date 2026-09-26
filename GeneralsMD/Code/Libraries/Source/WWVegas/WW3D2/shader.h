@@ -343,7 +343,12 @@ public:
 	int							Guess_Sort_Level(void) const;
 
 	// DX 8 state management routines
+#if defined(__linux__)
+    static void Guard_Global_Mutation();
+	static inline void	Invalidate() { Guard_Global_Mutation();ShaderDirty=true; }
+#else
 	static inline void	Invalidate() { ShaderDirty=true; }
+#endif
 	
 	// Global backface culling invert.  This interface can be used to globally invert all backface
 	// culling.  This is a global setting and will affect everything being rendered.  Typically it 

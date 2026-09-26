@@ -23,3 +23,16 @@ invalidation drains enrolled pins before ordinary mutation. Mandatory shutdown
 failure terminates with a fixed cleanup category; native device loss remains
 process-fatal, not a normal teardown or stale-generation retry. Source-stage
 atomic application and shroud semantics remain dependency-next.
+
+M22 08P0C2B0B composes that owner with a bounded resident selected-stage
+transaction. Membership and complete filter admission precede allocation,
+retention, access-time changes and device admission. Selected maps, exact key
+presence, preallocated transform nodes, texture refs, access times and pending
+edge/filter/sampler/revision state roll back without ordinary fallible setters.
+Selected-only application leaves pending shader/material and unselected state
+unchanged. Reset, source removal and destruction cancel in the live generation.
+Finish transfers pins to A; ordinary drain owns terminal retirement and retry.
+Only grouped strictly-surviving units bypass the device cleanup journal, without
+callbacks or allocation; equality and mixed terminal groups stay transactional.
+This capability does not apply shroud semantics, produce a frame, admit retail
+assets or open the tree factory.
