@@ -292,3 +292,27 @@ stage-0 application or fallible post-commit source marker is part of content
 upload. Exact nine CPU/strict controls and generated host physical command are
 persisted before implementation. Further capability gaps require another explicit
 architecture checkpoint, not an autonomous split.
+
+C2B implementation remains on that existing owner: bounded quantized full-cell
+upload/dirty readiness composes with accepted B1/D0 COW, then exact stage1 B0
+binding and ordinary A drain. The confirmed public candidate-withdrawal surface
+was narrowed to private W3DShroud friendship before acceptance; early live-attempt
+poisoning precedes phase/provider inspection and a generated access-detection
+assertion proves no public caller. All earlier native/physical passes are
+superseded by this final source correction; ten code/test hashes are refrozen,
+ledger/header metadata refreshed and six complete final builds/gates restarted.
+No new owner/slice, source draw/factory/retail admission, original data write or
+renderer diagnostic edit is introduced.
+
+C2B final physical sanitizer admission revealed a separate pre-owner allocation
+pairing defect. Clang identifies Vulkan SPIRV-Tools checkLayout stable-sort
+temporary cleanup resolving original delete (GameMemory.cpp:1794); unchanged
+GCC sanitizer tree-program physical independently reproduces the validation-layer
+path (pool list access:989). Ordinary non-aligned nothrow allocation symbols are
+not defined by the executable, whereas ordinary/sized delete is. Parent-approved
+08P0C2BR1 adds only those paired non-aligned overloads/matching placement deletes
+through existing DMA, with null-on-failure/count/cross-target/aligned controls and
+both independent sanitizer physical proofs. Aligned allocation remains runtime
+owned; no suppression, validation disabling or allocator redesign. Persist plan
+before production and preserve all frozen C2B executable edits plus the unrelated
+renderer diagnostic unstaged. C2B is not accepted while its physical gate fails.

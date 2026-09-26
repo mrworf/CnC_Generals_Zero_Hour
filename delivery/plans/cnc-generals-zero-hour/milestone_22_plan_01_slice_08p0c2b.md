@@ -1,5 +1,18 @@
 # M22 plan 01 slice 08P0C2B: exact shroud content and stage binding
 
+Status: source refrozen for final acceptance after the private candidate-withdrawal
+audit; implementation/evidence remain uncommitted and this slice is not accepted.
+See [in-progress evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2b_shroud_binding.md).
+
+Acceptance now also depends on approved [08P0C2BR1](milestone_22_plan_01_slice_08p0c2br1.md),
+the narrowly bounded ordinary nothrow allocator-pairing correction. Both sanitizer
+physical routes fail before this slice's physical owner, and the independent
+unchanged tree-program route reproduces validation-library temporary cleanup
+through the original allocator. Six frozen builds, four CPU9/9 focused selections,
+two exact strict9/9 and both native physical proofs pass; they do not waive the
+failed sanitizer physical gate. Keep C2B executable edits unstaged while BR1
+is independently planned, implemented, accepted and committed, then resume.
+
 ## Goal, dependency and boundary
 
 After accepted C2A, D0's Recording/bgfx idle/frame capabilities and
@@ -93,6 +106,12 @@ publishes m_pDstTexture/accepted epoch with no-throw assignments only. A narrow
 exact candidate-publication withdrawal on the existing Edge owner removes only
 that candidate's map/ref units before device abort, without source revision,
 callbacks or ordinary destroy; the journal owns native rollback/retirement.
+Withdrawal is a private W3DShroud/Edge friendship boundary, not a public Edge API;
+poison any live B0 attempt before phase/provider access. A generated compile-time
+access-detection control must prove the public caller surface is absent. The
+once-only post-publication failure seam is private owner state reachable only
+through the friend type defined by the generated witness, with no exported
+setter, runtime/retail selector or serialized/virtual ABI change.
 Never release an accepted resident texture on upload failure. Commit/abort must
 match the exact token and generation; accepted B1 ordinary-boundary drain/wait/
 shutdown retires COW candidates, never during commit/abort. No new public
