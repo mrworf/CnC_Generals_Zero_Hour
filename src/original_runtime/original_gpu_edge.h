@@ -3,6 +3,7 @@
 #include "zh/renderer/contract.h"
 #include "ww3dformat.h"
 #include "ww3d_cpu_boundary.h"
+#include "tree_program_contract.h"
 
 #include <unordered_map>
 #include <array>
@@ -120,6 +121,8 @@ public:
     static AppliedState map_applied_state(unsigned source_fvf);
     PhysicalState prepare_applied_state(unsigned source_fvf,
         renderer::PrimitiveTopology topology=renderer::PrimitiveTopology::triangle_list);
+    PhysicalState prepare_tree_state(const VertexBufferClass* source,
+        const TreeVertexUniform& constants);
     void validate_prepared_state(const PhysicalState& state) const;
     void draw_source_indexed(const VertexBufferClass* vertex,const IndexBufferClass* index,
         unsigned first_index,unsigned index_count,unsigned base_vertex,
@@ -177,6 +180,9 @@ public:
     static OriginalGpuEdge* active() noexcept;
 
 private:
+    static AppliedState map_state(unsigned source_fvf,bool tree_program);
+    PhysicalState prepare_state(unsigned source_fvf,renderer::PrimitiveTopology topology,
+        const TreeVertexUniform* tree);
     void release_prepared_state() noexcept;
     renderer::GpuDevice& device_;
     OriginalGpuEdge* previous_;
@@ -195,6 +201,7 @@ private:
         renderer::ShaderHandle vertex_shader,fragment_shader;
         renderer::PipelineHandle pipeline;
         renderer::BufferHandle vertex_uniform,fragment_uniform;
+        std::size_t vertex_uniform_size=sizeof(VertexUniform);
         PhysicalState state;
         std::array<const TextureBaseClass*,2> sources{};
     };

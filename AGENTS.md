@@ -13,3 +13,7 @@ Shader reflection may omit dead fields without changing their source block's
 origin or padding. Bind unchanged source payloads using compiler-authoritative
 block offsets, never the first live field; cross-check generated metadata and
 cover dead prefixes, multiblock layouts and genuinely eliminated providers.
+
+Treat packed vertex attributes as a source-shader protocol, not their transport
+names. Preserve encoded slots through transitions when native load/update does;
+prove exact source selection and physical payloads instead of inventing resets.

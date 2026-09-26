@@ -59,6 +59,7 @@ class W3DPropBuffer;
 class W3DTreeDrawModuleData;
 #if defined(ZH_WW3D_CPU_ONLY)
 struct BreezeInfo;
+namespace zh { namespace original_runtime { struct TreeVertexUniform; } }
 #include <vector>
 class MeshClass;
 class W3DAssetManager;
@@ -253,6 +254,7 @@ public:
 	Real treeSortKey(DrawableID id) const;
 	Int treeSwayVersion() const;
 	Vector3 treeSwayVector(Int index) const;
+	bool captureTreeProgram(zh::original_runtime::TreeVertexUniform &output) const;
 	Real treePushAside(DrawableID id) const;
 	Real treePushDelta(DrawableID id) const;
 	ObjectID treePushSource(DrawableID id) const;

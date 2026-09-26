@@ -89,3 +89,15 @@ not final A acceptance. Retain exact generated-UV1 tree-only admission with
 stage0/output0 and stage1/output1, disabled transforms and unchanged generic
 absent-UV rejection. Prove a nontrivial atlas quadrant and position-varying
 unswayed shroud pixels, plus native nonzero toppled sway-index coverage.
+
+## Reimplementation freeze checkpoint
+
+After accepted C2A0, diagnostic-free generated native focused controls pass
+5/5 in GCC and Clang on final source, including explicit nonfinite source bytes
+and native toppled nonzero sway-index coverage. Both sanitizer focused sets
+also pass 5/5. Six complete builds and six canonical suites pass 269/269 each;
+both strict host LSan tree/terrain sets pass 2/2. Exact physical tree program,
+atlas quadrant and unswayed shroud variation pass in both compilers, together
+with established Vulkan, serial LAN 4/4 all six and ledger/diff gates. These
+are independent shader controls, not scene/factory admission.
+[Acceptance evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2a.md).

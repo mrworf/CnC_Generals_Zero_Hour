@@ -1082,6 +1082,53 @@ Vector3 BaseHeightMapRenderObjClass::treeSwayVector(Int index) const
 		!registry->second.visibleFrame.ready) return Vector3(0, 0, 0);
 	return registry->second.visibleFrame.sampledSway[index];
 }
+bool BaseHeightMapRenderObjClass::captureTreeProgram(
+	zh::original_runtime::TreeVertexUniform &output) const
+{
+	const auto registry = s_cpuTreeRegistries.find(this);
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	if (TheTerrainRenderObject != this || registry == s_cpuTreeRegistries.end() ||
+		!registry->second.visibleFrame.ready || !registry->second.gpu ||
+		!edge || registry->second.gpu->edge != edge ||
+		registry->second.gpu->generation != edge->generation() || !m_shroud) return false;
+	try {
+		zh::original_runtime::TreeVertexUniform next;
+		Matrix4x4 world, view, projection;
+		DX8Wrapper::Get_Transform(D3DTS_WORLD, world);
+		DX8Wrapper::Get_Transform(D3DTS_VIEW, view);
+		DX8Wrapper::Get_Transform(D3DTS_PROJECTION, projection);
+		const Matrix4x4 composite = projection * view * world;
+		for (Int row = 0; row < 4; ++row)
+			for (Int column = 0; column < 4; ++column) {
+				const Real value = composite[row][column];
+				if (!std::isfinite(value)) return false;
+				next.composite[row][column] = value;
+			}
+		for (Int index = 0; index < 10; ++index) {
+			const Vector3 &wave = registry->second.visibleFrame.sampledSway[index];
+			if (!std::isfinite(wave.X) || !std::isfinite(wave.Y) ||
+				!std::isfinite(wave.Z)) return false;
+			next.sway[index + 1] = {wave.X, wave.Y, wave.Z, 0};
+		}
+		const Real cellWidth = m_shroud->getCellWidth();
+		const Real cellHeight = m_shroud->getCellHeight();
+		const Int textureWidth = m_shroud->getTextureWidth();
+		const Int textureHeight = m_shroud->getTextureHeight();
+		if (!std::isfinite(cellWidth) || !std::isfinite(cellHeight) ||
+			cellWidth <= 0 || cellHeight <= 0 || textureWidth <= 0 || textureHeight <= 0)
+			return false;
+		next.shroud_offset = {-m_shroud->getDrawOriginX() + cellWidth,
+			-m_shroud->getDrawOriginY() + cellHeight, 0, 0};
+		next.shroud_scale = {1.0f / (cellWidth * textureWidth),
+			1.0f / (cellHeight * textureHeight), 1, 1};
+		for (Int index = 0; index < 2; ++index)
+			if (!std::isfinite(next.shroud_offset[index]) ||
+				!std::isfinite(next.shroud_scale[index]) || next.shroud_scale[index] <= 0)
+				return false;
+		output = next; // All validation precedes publication; no source advancement.
+		return true;
+	} catch (...) { return false; }
+}
 Real BaseHeightMapRenderObjClass::treePushAside(DrawableID id) const
 {
 	const auto registry = s_cpuTreeRegistries.find(this);

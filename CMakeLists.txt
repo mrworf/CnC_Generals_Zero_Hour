@@ -904,6 +904,7 @@ set(ZH_RENDERER_SHADER_NAMES
   uniform_origin_probe.vert uniform_origin_probe.frag
   original_fvf_probe.vert
   original_volume.vert original_volume.frag
+  original_tree.vert
   original_applied_0.frag original_applied_1.frag
   original_applied_2.frag original_applied_3.frag
   world.vert world.frag
@@ -3223,6 +3224,26 @@ if(ZH_BUILD_TESTS)
   add_test(NAME original_w3d_shader_source COMMAND original_w3d_shader_source_tests)
   set_tests_properties(original_w3d_shader_source PROPERTIES
     LABELS "original-rendering;source-identity;negative")
+  add_executable(original_w3d_tree_program_tests tests/original_rendering/test_tree_program.cpp)
+  get_target_property(tree_program_includes original_w3d_shader_source_tests INCLUDE_DIRECTORIES)
+  target_include_directories(original_w3d_tree_program_tests PRIVATE ${tree_program_includes})
+  target_compile_options(original_w3d_tree_program_tests PRIVATE -fpermissive)
+  target_compile_definitions(original_w3d_tree_program_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1
+    ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx")
+  target_link_libraries(original_w3d_tree_program_tests PRIVATE
+    zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu zh_renderer_bgfx)
+  target_link_options(original_w3d_tree_program_tests PRIVATE -Wl,--gc-sections)
+  add_dependencies(original_w3d_tree_program_tests zh_bgfx_shaders)
+  add_test(NAME original_w3d_tree_program COMMAND original_w3d_tree_program_tests)
+  set_tests_properties(original_w3d_tree_program PROPERTIES LABELS "original-rendering;renderer-contract;negative")
+  if(ZH_ENABLE_GPU_TESTS)
+    add_test(NAME original_w3d_tree_program_bgfx COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:original_w3d_tree_program_tests> --gpu)
+    set_tests_properties(original_w3d_tree_program_bgfx PROPERTIES
+      LABELS "gpu;original-rendering;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE
+      ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+  endif()
   if(ZH_ENABLE_GPU_TESTS)
     add_executable(original_w3d_shader_gpu_acceptance
       tests/original_rendering/test_original_shader_gpu.cpp)

@@ -788,6 +788,37 @@ extern "C" void zh_probe_terrain_scene_attachment()
 			terrain.treeSwayVector(0).X > 0,
 			"original tree breeze version changed source sway or client RNG sequence");
 		const auto readyFrameResources = device.resource_counts();
+		Matrix4x4 programWorld(true), programView(true), programProjection(true);
+		programWorld[0].W = 3;
+		programView[0].X = 2;
+		programProjection[0].W = 0.25f;
+		DX8Wrapper::Set_Transform(D3DTS_WORLD, programWorld);
+		DX8Wrapper::Set_Transform(D3DTS_VIEW, programView);
+		DX8Wrapper::Set_Transform(D3DTS_PROJECTION, programProjection);
+		zh::original_runtime::TreeVertexUniform sourceTreeProgram;
+		CopyGameClientRandomState(clientBefore);
+		require(terrain.captureTreeProgram(sourceTreeProgram) &&
+			sourceTreeProgram.composite[0][0] == 2 &&
+			sourceTreeProgram.composite[0][3] == 6.25f &&
+			sourceTreeProgram.composite[3][3] == 1 &&
+			sourceTreeProgram.sway[0] == std::array<float, 4>{} &&
+			sourceTreeProgram.sway[1][0] == terrain.treeSwayVector(0).X &&
+			sourceTreeProgram.shroud_offset[0] ==
+				-terrain.getShroud()->getDrawOriginX() + terrain.getShroud()->getCellWidth(),
+			"tree source program lost exact constants or zero slot");
+		CopyGameClientRandomState(clientAfter);
+		require(std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0 &&
+			device.resource_counts() == readyFrameResources,
+			"tree program capture consumed source RNG or resources");
+		W3DShroud *programShroud = terrain.takeShroudForTest();
+		const auto acceptedProgram = sourceTreeProgram;
+		require(!terrain.captureTreeProgram(sourceTreeProgram) &&
+			std::memcmp(&sourceTreeProgram, &acceptedProgram, sizeof(sourceTreeProgram)) == 0,
+			"tree program missing shroud changed accepted snapshot");
+		terrain.restoreShroudForTest(programShroud);
+		DX8Wrapper::Set_Transform(D3DTS_WORLD, Matrix4x4(true));
+		DX8Wrapper::Set_Transform(D3DTS_VIEW, Matrix4x4(true));
+		DX8Wrapper::Set_Transform(D3DTS_PROJECTION, Matrix4x4(true));
 		W3DAssetManager *frameAssets = W3DDisplay::m_assetManager;
 		W3DDisplay::m_assetManager = NULL;
 		require(!terrain.updateTreeVisibleFrame(&frameCamera, breeze, FALSE) &&
@@ -1108,6 +1139,11 @@ extern "C" void zh_probe_terrain_scene_attachment()
 			"original tree crusher retry lost minimum-speed angular step");
 		const auto *toppleVertices = reinterpret_cast<const VertexFormatXYZNDUV1 *>(
 			terrain.peekTreeVertexSource()->Get_CPU_Vertex_Buffer());
+		require(toppleVertices[0].nx >= 1 && toppleVertices[0].nx <= 10 &&
+			terrain.captureTreeProgram(sourceTreeProgram) &&
+			sourceTreeProgram.sway[static_cast<Int>(toppleVertices[0].nx)][0] ==
+				terrain.treeSwayVector(static_cast<Int>(toppleVertices[0].nx) - 1).X,
+			"tree topple lost native nonzero encoded sway selection");
 		require(std::fabs(toppleVertices[2].x -
 			(toppleBaseX + std::sin(0.1f))) < 0.001f &&
 			std::fabs(toppleVertices[2].z -

@@ -97,3 +97,10 @@ two-generation physical dead-prefix/multiblock controls and all six canonical
 suites 268/268. [Exact evidence](milestone_22_slice_08p0c2a0.md) records the
 refrozen results; the earlier A trial remains localization only. Reimplement
 C2A against this owner before admitting exact tree shader semantics.
+
+C2A is now independently accepted against C2A0: exact source packed slots,
+272-byte constant record and tree-only generated UV transport retain generic
+rejection. Native toppled nonzero sway selection and physical nontrivial atlas/
+position-varying unswayed shroud controls pass, with six canonical suites
+269/269 and focused/strict LSan/host gates. [Exact evidence](milestone_22_slice_08p0c2a.md)
+does not admit source shroud binding, scene draw or physical factory/retail.

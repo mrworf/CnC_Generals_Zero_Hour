@@ -132,6 +132,11 @@ renderer::OriginalFvfLayout OriginalGpuEdge::layout_for_fvf(unsigned source_fvf)
 
 OriginalGpuEdge::AppliedState OriginalGpuEdge::map_applied_state(unsigned source_fvf)
 {
+    return map_state(source_fvf,false);
+}
+
+OriginalGpuEdge::AppliedState OriginalGpuEdge::map_state(unsigned source_fvf,bool tree_program)
+{
     (void)required();
     const auto source=DX8Wrapper::Snapshot_Source_State();
     if (!source.material_applied)
@@ -329,9 +334,13 @@ OriginalGpuEdge::AppliedState OriginalGpuEdge::map_applied_state(unsigned source
             throw std::runtime_error("original mapper coordinate selection is unsupported");
         const unsigned source_uv_count=(source_fvf>>8U)&0xfU;
         if (out.texture_required && out.coordinate_mode==D3DTSS_TCI_PASSTHRU
-            && out.uv_source>=source_uv_count)
+            && out.uv_source>=source_uv_count && !tree_program)
             throw std::runtime_error("original textured stage requests absent source UV coordinates");
         out.transform_flags=stage_value(D3DTSS_TEXTURETRANSFORMFLAGS);
+        if (tree_program && out.texture_required &&
+            (out.coordinate_mode!=D3DTSS_TCI_PASSTHRU || out.uv_source!=stage ||
+             out.transform_flags!=D3DTTFF_DISABLE))
+            throw std::runtime_error("original tree stage requires exact program UV output without a second transform");
         if (out.transform_flags!=D3DTTFF_DISABLE && out.transform_flags!=D3DTTFF_COUNT2 &&
             out.transform_flags!=D3DTTFF_COUNT3 &&
             out.transform_flags!=(D3DTTFF_PROJECTED|D3DTTFF_COUNT3))
@@ -388,10 +397,61 @@ void OriginalGpuEdge::release_volume_stencil() noexcept
 OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned source_fvf,
     renderer::PrimitiveTopology topology)
 {
+    return prepare_state(source_fvf,topology,nullptr);
+}
+
+OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_tree_state(
+    const VertexBufferClass* source,const TreeVertexUniform& constants)
+{
+    const auto* vertex_source=dynamic_cast<const DX8VertexBufferClass*>(source);
+    if (!source || source->FVF_Info().Get_FVF()!=DX8_FVF_XYZNDUV1 ||
+        !vertex_source || !vertex_source->Get_CPU_Vertex_Buffer() || !source->Get_Vertex_Count())
+        throw std::runtime_error("original tree program requires exact source vertex bytes");
+    for (const auto& row:constants.composite)
+        for (float value:row)
+            if (!std::isfinite(value)) throw std::runtime_error("original tree composite is not finite");
+    for (const auto& wave:constants.sway) {
+        for (float value:wave)
+            if (!std::isfinite(value)) throw std::runtime_error("original tree sway is not finite");
+        if (wave[3]!=0) throw std::runtime_error("original tree sway changes homogeneous position");
+    }
+    if (constants.sway[0]!=std::array<float,4>{})
+        throw std::runtime_error("original tree c8 is not zero");
+    for (unsigned i=0;i<4;++i)
+        if (!std::isfinite(constants.shroud_offset[i]) || !std::isfinite(constants.shroud_scale[i]))
+            throw std::runtime_error("original tree shroud constants are not finite");
+    if (constants.shroud_offset[2]!=0 || constants.shroud_offset[3]!=0 ||
+        constants.shroud_scale[0]<=0 || constants.shroud_scale[1]<=0 ||
+        constants.shroud_scale[2]!=1 || constants.shroud_scale[3]!=1)
+        throw std::runtime_error("original tree shroud constants are not canonical");
+    const auto* bytes=vertex_source->Get_CPU_Vertex_Buffer();
+    const auto& layout=source->FVF_Info();
+    for (unsigned i=0;i<source->Get_Vertex_Count();++i) {
+        const auto* vertex=bytes+i*layout.Get_FVF_Size();
+        float position[3],packed[3],uv[2];
+        std::memcpy(position,vertex+layout.Get_Location_Offset(),sizeof(position));
+        std::memcpy(packed,vertex+layout.Get_Normal_Offset(),sizeof(packed));
+        std::memcpy(uv,vertex+layout.Get_Tex_Offset(0),sizeof(uv));
+        for (float value:position) if (!std::isfinite(value))
+            throw std::runtime_error("original tree position is not finite");
+        for (float value:packed) if (!std::isfinite(value))
+            throw std::runtime_error("original tree packed slot is not finite");
+        for (float value:uv) if (!std::isfinite(value))
+            throw std::runtime_error("original tree atlas UV is not finite");
+        if (packed[0]<0 || packed[0]>10 || std::floor(packed[0])!=packed[0])
+            throw std::runtime_error("original tree sway slot is outside c8–18");
+    }
+    return prepare_state(DX8_FVF_XYZNDUV1,renderer::PrimitiveTopology::triangle_list,&constants);
+}
+
+OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_state(unsigned source_fvf,
+    renderer::PrimitiveTopology topology,const TreeVertexUniform* tree)
+{
     const auto source_state=DX8Wrapper::Snapshot_Source_State();
     const auto source_lighting=source_state.render.find(D3DRS_LIGHTING);
     std::optional<AppliedState> lit_state;
     if (source_lighting!=source_state.render.end() && source_lighting->second==1) {
+        if (tree) throw std::runtime_error("original tree packed slots cannot use fixed-function lighting");
         lit_state=map_applied_state(source_fvf);
         if (!lit_state->light_environment_selected)
             throw std::runtime_error("original lighting requires selected source light environment");
@@ -407,13 +467,16 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
                 lit_state->lights[slot].Type!=D3DLIGHT_DIRECTIONAL)
                 throw std::runtime_error("original lit physical light type is unsupported");
     }
-    release_prepared_state();
-    const AppliedState mapped=lit_state ? *lit_state : map_applied_state(source_fvf);
+    if (!tree) release_prepared_state(); // Keep the established generic contract.
+    const AppliedState mapped=lit_state ? *lit_state : map_state(source_fvf,tree!=nullptr);
+    if (tree && (mapped.pipeline.fog_enabled || mapped.specular_enabled))
+        throw std::runtime_error("original tree program requires source fog/specular disabled");
     if (topology!=renderer::PrimitiveTopology::triangle_list &&
         topology!=renderer::PrimitiveTopology::triangle_strip)
         throw std::runtime_error("original indexed primitive topology is unsupported");
     const char* vertex_variant=nullptr;
-    if (source_fvf==DX8_FVF_XYZDUV1) vertex_variant="renderer/original_applied_d1.vert";
+    if (tree) vertex_variant="renderer/original_tree.vert";
+    else if (source_fvf==DX8_FVF_XYZDUV1) vertex_variant="renderer/original_applied_d1.vert";
     else if (source_fvf==DX8_FVF_XYZDUV2) vertex_variant="renderer/original_applied_d2.vert";
     else if (source_fvf==DX8_FVF_XYZN) vertex_variant=mapped.lighting?
         "renderer/original_applied_n0_lit.vert":"renderer/original_applied_n0.vert";
@@ -523,6 +586,7 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
     }
     fragment_bindings.texture_count=slot;
     PhysicalResources next;
+    next.vertex_uniform_size=tree?sizeof(TreeVertexUniform):sizeof(VertexUniform);
     try {
         next.vertex_shader=device_.create_shader(
             {renderer::ShaderStage::vertex,vertex_variant,1,0},"original applied vertex");
@@ -548,18 +612,19 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
         pipeline.fragment_shader=next.fragment_shader;
         next.pipeline=device_.create_pipeline(renderer::PipelineKey(pipeline),"original applied pipeline");
         if (!next.pipeline) throw std::runtime_error("original applied pipeline creation failed: "+device_.last_error());
-        next.vertex_uniform=device_.create_buffer({sizeof(vertex),renderer::BufferUsage::uniform,true},
+        next.vertex_uniform=device_.create_buffer({next.vertex_uniform_size,renderer::BufferUsage::uniform,true},
             "original world/view/projection and UV state");
         if (!next.vertex_uniform) throw std::runtime_error("original vertex uniform creation failed: "+device_.last_error());
         next.fragment_uniform=device_.create_buffer({sizeof(fragment),renderer::BufferUsage::uniform,true},
             "original material/shader/fog state");
         if (!next.fragment_uniform) throw std::runtime_error("original fragment uniform creation failed: "+device_.last_error());
-        if (auto result=device_.upload({next.vertex_uniform,sizeof(vertex),0,sizeof(vertex)},&vertex); !result)
+        const void* vertex_bytes=tree?static_cast<const void*>(tree):static_cast<const void*>(&vertex);
+        if (auto result=device_.upload({next.vertex_uniform,next.vertex_uniform_size,0,next.vertex_uniform_size},vertex_bytes); !result)
             throw std::runtime_error("original vertex uniform upload failed: "+result.error);
         if (auto result=device_.upload({next.fragment_uniform,sizeof(fragment),0,sizeof(fragment)},&fragment); !result)
             throw std::runtime_error("original fragment uniform upload failed: "+result.error);
         next.state.pipeline=next.pipeline;
-        next.state.vertex_bindings.uniforms[0]={next.vertex_uniform,0,sizeof(vertex)};
+        next.state.vertex_bindings.uniforms[0]={next.vertex_uniform,0,next.vertex_uniform_size};
         next.state.vertex_bindings.uniform_count=1;
         next.state.fragment_bindings=fragment_bindings;
         next.state.fragment_bindings.uniforms[0]={next.fragment_uniform,0,sizeof(fragment)};
@@ -569,6 +634,7 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_applied_state(unsigned s
         next.state.source_revision=source_revision_;
         next.state.texture_mask=mask;
         next.sources=stage_sources;
+        if (tree) release_prepared_state(); // Candidate is complete; publication cannot allocate.
         physical_=next;
         return next.state;
     } catch (...) {
@@ -589,7 +655,7 @@ void OriginalGpuEdge::validate_prepared_state(const PhysicalState& state) const
         state.vertex_bindings.uniform_count!=1 ||
         state.vertex_bindings.uniforms[0].buffer!=physical_->vertex_uniform ||
         state.vertex_bindings.uniforms[0].offset!=0 ||
-        state.vertex_bindings.uniforms[0].size!=sizeof(VertexUniform) ||
+        state.vertex_bindings.uniforms[0].size!=physical_->vertex_uniform_size ||
         state.vertex_bindings.texture_count!=0 ||
         state.fragment_bindings.uniform_count!=1 ||
         state.fragment_bindings.uniforms[0].buffer!=physical_->fragment_uniform ||
