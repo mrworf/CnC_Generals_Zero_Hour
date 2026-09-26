@@ -50,6 +50,8 @@
 #include "GameClient/ParticleSys.h"
 #include "GameLogic/PartitionManager.h"
 
+#include <cmath>
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -98,6 +100,13 @@ class SoundFXNugget : public FXNugget
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(SoundFXNugget, "SoundFXNugget")		
 	
 public:
+
+#if defined(__linux__)
+	FXPositionNuggetReadiness cpuPositionReady(const Coord3D *,
+		const Coord3D *) const override
+	{ return TheAudio ? FXPositionNuggetReadiness::Ready :
+		FXPositionNuggetReadiness::MissingProvider; }
+#endif
 
 	virtual void doFXPos(const Coord3D *primary, const Matrix3D* /*primaryMtx*/, const Real /*primarySpeed*/, const Coord3D * /*secondary*/, const Real /*overrideRadius*/ ) const
 	{
@@ -156,6 +165,17 @@ class TracerFXNugget : public FXNugget
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(TracerFXNugget, "TracerFXNugget")		
 public:
+
+#if defined(__linux__)
+	FXPositionNuggetReadiness cpuPositionReady(const Coord3D *,
+		const Coord3D *secondary) const override
+	{
+		if (!secondary) return FXPositionNuggetReadiness::Unsupported;
+		return TheThingFactory && TheGameLogic && TheGameClient &&
+			TheThingFactory->hasExistingTemplateForPositionFX(m_tracerName) ? FXPositionNuggetReadiness::Ready :
+			FXPositionNuggetReadiness::MissingProvider;
+	}
+#endif
 
 	TracerFXNugget()
 	{
@@ -260,6 +280,17 @@ class RayEffectFXNugget : public FXNugget
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(RayEffectFXNugget, "RayEffectFXNugget")		
 public:
 
+#if defined(__linux__)
+	FXPositionNuggetReadiness cpuPositionReady(const Coord3D *,
+		const Coord3D *secondary) const override
+	{
+		if (!secondary) return FXPositionNuggetReadiness::Unsupported;
+		return TheThingFactory && TheGameClient &&
+			TheThingFactory->hasExistingTemplateForPositionFX(m_templateName) ? FXPositionNuggetReadiness::Ready :
+			FXPositionNuggetReadiness::MissingProvider;
+	}
+#endif
+
 	RayEffectFXNugget()
 	{
 		m_templateName.clear();
@@ -318,6 +349,12 @@ class LightPulseFXNugget : public FXNugget
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(LightPulseFXNugget, "LightPulseFXNugget")		
 public:
+
+#if defined(__linux__)
+	FXPositionNuggetReadiness cpuPositionReady(const Coord3D *,
+		const Coord3D *) const override
+	{ return FXPositionNuggetReadiness::Unsupported; }
+#endif
 
 	LightPulseFXNugget() : m_radius(0), m_increaseFrames(0), m_decreaseFrames(0), m_boundingCirclePct(0)
 	{
@@ -385,6 +422,12 @@ class ViewShakeFXNugget : public FXNugget
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(ViewShakeFXNugget, "ViewShakeFXNugget")		
 public:
 
+#if defined(__linux__)
+	FXPositionNuggetReadiness cpuPositionReady(const Coord3D *,
+		const Coord3D *) const override
+	{ return FXPositionNuggetReadiness::Ready; }
+#endif
+
 	ViewShakeFXNugget() : m_shake(View::SHAKE_NORMAL)
 	{
 	}
@@ -442,6 +485,13 @@ class TerrainScorchFXNugget : public FXNugget
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(TerrainScorchFXNugget, "TerrainScorchFXNugget")		
 public:
+
+#if defined(__linux__)
+	FXPositionNuggetReadiness cpuPositionReady(const Coord3D *,
+		const Coord3D *) const override
+	{ return TheGameClient ? FXPositionNuggetReadiness::Ready :
+		FXPositionNuggetReadiness::MissingProvider; }
+#endif
 
 	TerrainScorchFXNugget() : m_scorch(-1), m_radius(0)
 	{
@@ -506,6 +556,14 @@ class ParticleSystemFXNugget : public FXNugget
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(ParticleSystemFXNugget, "ParticleSystemFXNugget")		
 public:
+
+#if defined(__linux__)
+	FXPositionNuggetReadiness cpuPositionReady(const Coord3D *,
+		const Coord3D *) const override
+	{ return TheParticleSystemManager && TheGameClient &&
+		TheParticleSystemManager->findTemplate(m_name) ? FXPositionNuggetReadiness::Ready :
+		FXPositionNuggetReadiness::MissingProvider; }
+#endif
 
 	ParticleSystemFXNugget()
 	{
@@ -687,6 +745,13 @@ class FXListAtBonePosFXNugget : public FXNugget
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(FXListAtBonePosFXNugget, "FXListAtBonePosFXNugget")		
 public:
 
+#if defined(__linux__)
+	FXPositionNuggetReadiness cpuPositionReady(const Coord3D *,
+		const Coord3D *) const override
+	{ return FXPositionNuggetReadiness::Unsupported; }
+	const FXList *cpuPositionChild() const override { return m_fx; }
+#endif
+
 	FXListAtBonePosFXNugget()
 	{
 		m_fx = NULL;
@@ -814,6 +879,77 @@ void FXList::doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx, const R
 	}
 }
 
+#if defined(__linux__)
+FXPositionAdmission FXList::preflightPositionDispatch(const FXList *fx,
+	const Coord3D *primary, const Coord3D *secondary)
+{
+	if (!fx) return FXPositionAdmission::Ready;
+	if (!primary || !std::isfinite(primary->x) ||
+		!std::isfinite(primary->y) || !std::isfinite(primary->z) ||
+		(secondary && (!std::isfinite(secondary->x) ||
+			!std::isfinite(secondary->y) || !std::isfinite(secondary->z))))
+		return FXPositionAdmission::InvalidInput;
+	if (!TheFXListStore || !ThePartitionManager || !ThePlayerList ||
+		!std::isfinite(ThePartitionManager->getCellSize()) ||
+		ThePartitionManager->getCellSize() <= 0 ||
+		!ThePartitionManager->getCellAt(0, 0))
+		return FXPositionAdmission::MissingProvider;
+	Player *local = ThePlayerList->peekLocalPlayerForPositionFX();
+	if (!local || local->getPlayerIndex() < 0 ||
+		local->getPlayerIndex() >= MAX_PLAYER_COUNT)
+		return FXPositionAdmission::MissingProvider;
+	const FXList *active[16]{};
+	const FXList *visited[64]{};
+	unsigned int visitedCount = 0;
+	return preflightPositionGraph(fx, primary, secondary, active, 0,
+		visited, visitedCount);
+}
+
+FXPositionAdmission FXList::preflightPositionGraph(const FXList *fx,
+	const Coord3D *primary, const Coord3D *secondary,
+	const FXList **active, unsigned int depth,
+	const FXList **visited, unsigned int &visitedCount)
+{
+	if (!fx || !TheFXListStore->containsFXList(fx))
+		return FXPositionAdmission::ForeignList;
+	if (depth >= 16) return FXPositionAdmission::Bounds;
+	for (unsigned int index = 0; index < depth; ++index)
+		if (active[index] == fx) return FXPositionAdmission::Cycle;
+	for (unsigned int index = 0; index < visitedCount; ++index)
+		if (visited[index] == fx) return FXPositionAdmission::Ready;
+	if (visitedCount >= 64) return FXPositionAdmission::Bounds;
+	active[depth] = fx;
+	visited[visitedCount++] = fx;
+	FXPositionAdmission readiness = FXPositionAdmission::Ready;
+	for (const FXNugget *nugget : fx->m_nuggets) {
+		if (!nugget) {
+			readiness = FXPositionAdmission::UnsupportedNugget;
+			continue;
+		}
+		const FXList *child = nugget->cpuPositionChild();
+		if (child) {
+			const FXPositionAdmission nested = preflightPositionGraph(child,
+				primary, secondary, active, depth + 1, visited, visitedCount);
+			if (nested == FXPositionAdmission::ForeignList ||
+				nested == FXPositionAdmission::Cycle ||
+				nested == FXPositionAdmission::Bounds) return nested;
+			if (nested != FXPositionAdmission::Ready) readiness = nested;
+		}
+		switch (nugget->cpuPositionReady(primary, secondary)) {
+			case FXPositionNuggetReadiness::Ready: break;
+			case FXPositionNuggetReadiness::MissingProvider:
+				if (readiness == FXPositionAdmission::Ready)
+					readiness = FXPositionAdmission::MissingProvider;
+				break;
+			case FXPositionNuggetReadiness::Unsupported:
+				readiness = FXPositionAdmission::UnsupportedNugget;
+				break;
+		}
+	}
+	return readiness;
+}
+#endif
+
 //-------------------------------------------------------------------------------------------------
 void FXList::doFXObj(const Object* primary, const Object* secondary) const
 {
@@ -858,6 +994,17 @@ const FXList *FXListStore::findFXList(const char* name) const
 	}
 	return NULL;
 }
+
+#if defined(__linux__)
+bool FXListStore::containsFXList(const FXList *fx) const
+{
+	if (!fx) return false;
+	for (FXListMap::const_iterator it = m_fxmap.begin();
+		it != m_fxmap.end(); ++it)
+		if (&it->second == fx) return true;
+	return false;
+}
+#endif
 
 //-------------------------------------------------------------------------------------------------
 /*static */ void FXListStore::parseFXListDefinition(INI *ini)

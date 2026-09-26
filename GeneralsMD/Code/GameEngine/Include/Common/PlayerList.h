@@ -122,6 +122,11 @@ public:
 	*/
 	inline Player *getLocalPlayer() { DEBUG_ASSERTCRASH(m_local != NULL, ("null m_local")); return m_local; }
 
+#if defined(__linux__)
+	// Read-only preflight must not trip getLocalPlayer's asserting contract.
+	Player *peekLocalPlayerForPositionFX() const { return m_local; }
+#endif
+
 	/**
 		Set the local player. You cannot set it to null; if you pass null, you'll
 		end up setting the local player to be the neutral player.

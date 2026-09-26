@@ -3,12 +3,16 @@
 #include "Common/GlobalData.h"
 #include "Common/FileSystem.h"
 #include "Common/Geometry.h"
+#include "Common/GameAudio.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
+#include "Common/RandomValue.h"
 #include "Common/MapReaderWriterInfo.h"
 #include "Common/ThingTemplate.h"
+#include "Common/ThingFactory.h"
 #include "GameClient/ClientRandomValue.h"
 #include "GameClient/GameClient.h"
+#include "GameClient/FXList.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/PartitionManager.h"
@@ -28,6 +32,7 @@
 #include "zh/renderer/recording_device.h"
 
 #include <cstdlib>
+#include <cstdint>
 #include <cstdio>
 #include <array>
 #include <cmath>
@@ -145,6 +150,197 @@ public:
 	Int registrations = 0;
 	Int unregistrations = 0;
 };
+
+// Each fixture FXList owns its distinct pooled edge nugget; child links are
+// non-owning, like FXListAtBonePos, so a shared child is never double-freed.
+class ProbeFXNugget final : public FXNugget
+{
+	MEMORY_POOL_GLUE_WITH_EXPLICIT_CREATE(ProbeFXNugget, "ProbeFXNugget", 8, 8)
+public:
+	ProbeFXNugget(const FXList *child, Int *dispatches) : m_child(child), m_dispatches(dispatches) {}
+	void doFXPos(const Coord3D *, const Matrix3D *, Real, const Coord3D *, Real) const override
+	{ ++*m_dispatches; }
+	FXPositionNuggetReadiness cpuPositionReady(const Coord3D *, const Coord3D *) const override
+	{ return FXPositionNuggetReadiness::Ready; }
+	const FXList *cpuPositionChild() const override { return m_child; }
+private:
+	const FXList *m_child;
+	Int *m_dispatches;
+};
+EMPTY_DTOR(ProbeFXNugget)
+
+class UnknownFXNugget final : public FXNugget
+{
+	MEMORY_POOL_GLUE_WITH_EXPLICIT_CREATE(UnknownFXNugget, "UnknownFXNugget", 1, 1)
+public:
+	explicit UnknownFXNugget(Int *dispatches) : m_dispatches(dispatches) {}
+	void doFXPos(const Coord3D *, const Matrix3D *, Real, const Coord3D *, Real) const override
+	{ ++*m_dispatches; }
+private:
+	Int *m_dispatches;
+};
+EMPTY_DTOR(UnknownFXNugget)
+
+void checkPositionFXAdmission(const Coord3D &position,
+	const zh::renderer::RecordingGpuDevice &device)
+{
+	using Result = FXPositionAdmission;
+	UnsignedInt clientBefore[6]{}, clientAfter[6]{};
+	UnsignedInt logicBefore[6]{}, logicAfter[6]{};
+	UnsignedInt logicSeedBefore = 0, logicSeedAfter = 0;
+	CopyGameClientRandomState(clientBefore);
+	CopyGameLogicRandomState(&logicSeedBefore, logicBefore);
+	const UnsignedInt frameBefore = TheGameLogic->getFrame();
+	const auto gpuBefore = device.resource_counts();
+	AudioManager *audioBefore = TheAudio;
+	require(FXList::preflightPositionDispatch(NULL, NULL) == Result::Ready,
+		"null position FX list rejected");
+	require(TheFXListStore && ThePlayerList && ThePartitionManager &&
+		ThePlayerList->peekLocalPlayerForPositionFX(),
+		"initialized local-player position FX provider missing");
+	const FXList *empty = TheFXListStore->findFXList("FixtureEmpty");
+	const FXList *view = TheFXListStore->findFXList("FixtureView");
+	const FXList *viewTwo = TheFXListStore->findFXList("FixtureViewTwo");
+	const FXList *lateLight = TheFXListStore->findFXList("FixtureLateLight");
+	const FXList *scorch = TheFXListStore->findFXList("FixtureScorch");
+	const FXList *particle = TheFXListStore->findFXList("FixtureParticle");
+	const FXList *tracer = TheFXListStore->findFXList("FixtureTracer");
+	const FXList *ray = TheFXListStore->findFXList("FixtureRay");
+	const FXList *missingTracer = TheFXListStore->findFXList("FixtureMissingTracer");
+	const FXList *missingRay = TheFXListStore->findFXList("FixtureMissingRay");
+	const FXList *bone = TheFXListStore->findFXList("FixtureBone");
+	const FXList *boneSelf = TheFXListStore->findFXList("FixtureBoneSelf");
+	require(empty && view && viewTwo && lateLight && scorch && particle &&
+		tracer && ray && missingTracer && missingRay && bone && boneSelf,
+		"generated position FX list definitions missing");
+	require(FXList::preflightPositionDispatch(empty, &position) == Result::Ready &&
+		FXList::preflightPositionDispatch(view, &position) == Result::Ready &&
+		FXList::preflightPositionDispatch(viewTwo, &position) == Result::Ready,
+		"empty or supported position FX list rejected");
+	require(FXList::preflightPositionDispatch(view, NULL) == Result::InvalidInput,
+		"null position FX coordinate accepted");
+	Coord3D invalid = position;
+	invalid.x = std::numeric_limits<Real>::infinity();
+	require(FXList::preflightPositionDispatch(view, &invalid) == Result::InvalidInput,
+		"nonfinite position FX coordinate accepted");
+	require(FXList::preflightPositionDispatch(view, &position, &invalid) == Result::InvalidInput,
+		"nonfinite secondary position FX coordinate accepted");
+	FXList foreign;
+	require(FXList::preflightPositionDispatch(&foreign, &position) == Result::ForeignList,
+		"non-store position FX root accepted");
+	PlayerList *players = ThePlayerList;
+	ThePlayerList = NULL;
+	const Result noPlayers = FXList::preflightPositionDispatch(view, &position);
+	ThePlayerList = players;
+	require(noPlayers == Result::MissingProvider,
+		"fresh-null player-list position FX provider accepted");
+	require(FXList::preflightPositionDispatch(view, &position) == Result::Ready,
+		"initialized local-player position FX retry rejected");
+	require(FXList::preflightPositionDispatch(
+		TheFXListStore->findFXList("FixtureSound"), &position) == Result::Ready &&
+		FXList::preflightPositionDispatch(scorch, &position) == Result::Ready,
+		"available positional audio or scorch provider rejected");
+	require(FXList::preflightPositionDispatch(lateLight, &position) == Result::UnsupportedNugget &&
+		FXList::preflightPositionDispatch(bone, &position) == Result::UnsupportedNugget &&
+		FXList::preflightPositionDispatch(boneSelf, &position) == Result::Cycle &&
+		FXList::preflightPositionDispatch(tracer, &position) == Result::UnsupportedNugget &&
+		FXList::preflightPositionDispatch(ray, &position) == Result::UnsupportedNugget,
+		"late light pulse or recursive object-only FX admission changed");
+	require(TheThingFactory, "position FX template factory missing");
+	const size_t templateCount = TheThingFactory->existingTemplateCountForPositionFX();
+	const ThingTemplate *existingTemplate = TheThingFactory->findTemplate(AsciiString("EnemyFixture"), FALSE);
+	require(existingTemplate, "generated existing position FX template missing");
+	require(FXList::preflightPositionDispatch(tracer, &position, &position) == Result::Ready &&
+		FXList::preflightPositionDispatch(ray, &position, &position) == Result::Ready &&
+		FXList::preflightPositionDispatch(missingTracer, &position, &position) == Result::MissingProvider &&
+		FXList::preflightPositionDispatch(missingRay, &position, &position) == Result::MissingProvider &&
+		FXList::preflightPositionDispatch(particle, &position) == Result::MissingProvider,
+		"positional FX template admission changed");
+	require(TheThingFactory->existingTemplateCountForPositionFX() == templateCount &&
+		TheThingFactory->findTemplate(AsciiString("EnemyFixture"), FALSE) == existingTemplate &&
+		!TheThingFactory->hasExistingTemplateForPositionFX(AsciiString("GenericTracer")),
+		"position FX preflight mutated template factory state");
+	FXListStore *store = TheFXListStore;
+	TheFXListStore = NULL;
+	const Result noStore = FXList::preflightPositionDispatch(view, &position);
+	TheFXListStore = store;
+	require(noStore == Result::MissingProvider, "missing FX store accepted");
+	PartitionManager *partition = ThePartitionManager;
+	ThePartitionManager = NULL;
+	const Result noPartition = FXList::preflightPositionDispatch(view, &position);
+	ThePartitionManager = partition;
+	require(noPartition == Result::MissingProvider, "missing partition accepted");
+	AudioManager *audio = TheAudio;
+	TheAudio = NULL;
+	const Result noAudio = FXList::preflightPositionDispatch(
+		TheFXListStore->findFXList("FixtureSound"), &position);
+	TheAudio = audio;
+	require(noAudio == Result::MissingProvider, "missing audio accepted");
+	GameClient *client = TheGameClient;
+	TheGameClient = NULL;
+	const Result noClient = FXList::preflightPositionDispatch(scorch, &position);
+	TheGameClient = client;
+	require(noClient == Result::MissingProvider, "missing game client accepted");
+	Int dispatches = 0;
+	FXList *graph[66]{};
+	for (Int index = 0; index != 66; ++index) {
+		const std::string name = "FixtureGraph" + std::to_string(index);
+		graph[index] = const_cast<FXList *>(TheFXListStore->findFXList(name.c_str()));
+		require(graph[index], "generated position FX graph node missing");
+	}
+	graph[0]->addFXNugget(NULL);
+	require(FXList::preflightPositionDispatch(graph[0], &position) == Result::UnsupportedNugget,
+		"null position FX nugget admitted");
+	graph[0]->clear();
+	graph[0]->addFXNugget(newInstance(UnknownFXNugget)(&dispatches));
+	require(FXList::preflightPositionDispatch(graph[0], &position) == Result::UnsupportedNugget,
+		"unknown position FX nugget admitted");
+	graph[0]->clear();
+	graph[0]->addFXNugget(newInstance(ProbeFXNugget)(graph[1], &dispatches));
+	graph[0]->addFXNugget(newInstance(ProbeFXNugget)(graph[1], &dispatches));
+	const Result dag = FXList::preflightPositionDispatch(graph[0], &position);
+	require(dag == Result::Ready &&
+		dispatches == 0, "shared position FX DAG dispatched or rejected");
+	graph[1]->addFXNugget(newInstance(ProbeFXNugget)(graph[0], &dispatches));
+	require(FXList::preflightPositionDispatch(graph[0], &position) == Result::Cycle &&
+		dispatches == 0, "mutual position FX cycle dispatched or admitted");
+	graph[1]->clear();
+	graph[0]->clear();
+	graph[0]->addFXNugget(newInstance(ProbeFXNugget)(
+		reinterpret_cast<const FXList *>(static_cast<uintptr_t>(1)), &dispatches));
+	require(FXList::preflightPositionDispatch(graph[0], &position) == Result::ForeignList,
+		"stale position FX child dereferenced or admitted");
+	graph[0]->clear();
+	graph[0]->addFXNugget(newInstance(ProbeFXNugget)(graph[0], &dispatches));
+	require(FXList::preflightPositionDispatch(graph[0], &position) == Result::Cycle,
+		"self position FX cycle admitted");
+	graph[0]->clear();
+	graph[0]->addFXNugget(newInstance(ProbeFXNugget)(&foreign, &dispatches));
+	require(FXList::preflightPositionDispatch(graph[0], &position) == Result::ForeignList,
+		"non-store position FX child admitted");
+	graph[0]->clear();
+	for (Int index = 0; index != 16; ++index)
+		graph[index]->addFXNugget(newInstance(ProbeFXNugget)(graph[index + 1], &dispatches));
+	require(FXList::preflightPositionDispatch(graph[0], &position) == Result::Bounds,
+		"position FX depth bound not enforced");
+	for (Int index = 0; index != 16; ++index) graph[index]->clear();
+	for (Int index = 1; index != 66; ++index)
+		graph[0]->addFXNugget(newInstance(ProbeFXNugget)(graph[index], &dispatches));
+	require(FXList::preflightPositionDispatch(graph[0], &position) == Result::Bounds &&
+		dispatches == 0, "position FX node bound dispatched or not enforced");
+	graph[0]->clear();
+	require(FXList::preflightPositionDispatch(graph[0], &position) == Result::Ready,
+		"position FX graph retry rejected");
+	CopyGameClientRandomState(clientAfter);
+	CopyGameLogicRandomState(&logicSeedAfter, logicAfter);
+	require(dispatches == 0 &&
+		std::memcmp(clientBefore, clientAfter, sizeof(clientBefore)) == 0 &&
+		logicSeedBefore == logicSeedAfter &&
+		std::memcmp(logicBefore, logicAfter, sizeof(logicBefore)) == 0 &&
+		TheGameLogic->getFrame() == frameBefore &&
+		device.resource_counts() == gpuBefore && TheAudio == audioBefore,
+		"position FX preflight consumed dispatch, RNG, frame, GPU or audio owner");
+}
 }
 
 extern "C" void zh_probe_terrain_scene_attachment()
@@ -220,6 +416,7 @@ extern "C" void zh_probe_terrain_scene_attachment()
 		alternate_tree_data.m_textureName = "Tree1.tga";
 		Coord3D tree_position;
 		tree_position.set(12, 18, 2);
+		checkPositionFXAdmission(tree_position, device);
 		const auto tree_one = static_cast<DrawableID>(101);
 		const auto tree_two = static_cast<DrawableID>(102);
 		const auto tree_three = static_cast<DrawableID>(103);

@@ -79,7 +79,8 @@ def authored_source_tree(root: Path, fixture, kind: str) -> Path:
 
 
 def source_tree(root: Path, fixture, kind: str, tree_textures: bool = False,
-                immobile_enemy: bool = False, crusher_logic: bool = False) -> Path:
+                immobile_enemy: bool = False, crusher_logic: bool = False,
+                fx_lists: bool = False) -> Path:
     source = root / "readonly-input"
     prepare_owned_source(source, fixture)
     if immobile_enemy:
@@ -105,6 +106,23 @@ def source_tree(root: Path, fixture, kind: str, tree_textures: bool = False,
         tile = tile_tga(1, ((23, 22, 21, 255),))
         for index in range(65):
             fixture.write(source / f"Art/Terrain/Tree{index}.tga", tile)
+    if fx_lists:
+        fixture.write(source / "Data/INI/Default/FXList.ini",
+                      "FXList FixtureEmpty\nEnd\n"
+                      "FXList FixtureView\n ViewShake\n End\nEnd\n"
+                      "FXList FixtureViewTwo\n ViewShake\n End\n ViewShake\n End\nEnd\n"
+                      "FXList FixtureSound\n Sound\n Name = FixtureSound\n End\nEnd\n"
+                      "FXList FixtureLateLight\n ViewShake\n End\n LightPulse\n End\nEnd\n"
+                      "FXList FixtureScorch\n TerrainScorch\n End\nEnd\n"
+                      "FXList FixtureParticle\n ParticleSystem\n End\nEnd\n"
+                      "FXList FixtureTracer\n Tracer\n TracerName = EnemyFixture\n End\nEnd\n"
+                      "FXList FixtureRay\n RayEffect\n Name = EnemyFixture\n End\nEnd\n"
+                      "FXList FixtureMissingTracer\n Tracer\n End\nEnd\n"
+                      "FXList FixtureMissingRay\n RayEffect\n End\nEnd\n"
+                      "FXList FixtureBone\n FXListAtBonePos\n FX = FixtureEmpty\n End\nEnd\n"
+                      "FXList FixtureBoneSelf\n FXListAtBonePos\n FX = FixtureBoneSelf\n End\nEnd\n"
+                      + "".join(f"FXList FixtureGraph{index}\nEnd\n"
+                                for index in range(66)))
     fixture.make_read_only(source)
     return source
 

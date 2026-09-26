@@ -78,6 +78,15 @@ public:
 	*/
 	const ThingTemplate *findTemplate( const AsciiString& name, Bool check = TRUE ) { return findTemplateInternal( name, check ); }
 
+#if defined(__linux__)
+	// Position-FX admission may only inspect existing entries: findTemplateInternal
+	// can synthesize LOAD_TEST_ASSETS templates even when check is FALSE.
+	bool hasExistingTemplateForPositionFX(const AsciiString &name) const
+	{ return m_templateHashMap.find(name) != m_templateHashMap.end(); }
+	size_t existingTemplateCountForPositionFX() const
+	{ return m_templateHashMap.size(); }
+#endif
+
 	/** 
 		get a template given ID. return null if not found.
 		note, this is not particularly fast (does a linear search).
@@ -137,4 +146,3 @@ extern ThingFactory *TheThingFactory;  ///< the template singleton
 
 
 #endif // __THINGFACTORY_H_
-

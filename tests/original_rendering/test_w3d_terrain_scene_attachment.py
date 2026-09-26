@@ -42,7 +42,7 @@ def main() -> int:
         for generation in range(2):
             source = source_tree(root / f"source-{generation}", fixture, "valid",
                                  tree_textures=True, immobile_enemy=True,
-                                 crusher_logic=True)
+                                 crusher_logic=True, fx_lists=True)
             try:
                 result = run(args.executable.resolve(), root / f"generation-{generation}", source,
                              "mission", timeout_seconds=GENERATION_TIMEOUT_SECONDS)

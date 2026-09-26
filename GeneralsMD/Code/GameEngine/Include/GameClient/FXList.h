@@ -45,6 +45,19 @@ class INI;
 class Object;
 class Matrix3D;
 
+#if defined(__linux__)
+enum class FXPositionAdmission {
+	Ready,
+	InvalidInput,
+	MissingProvider,
+	ForeignList,
+	Cycle,
+	Bounds,
+	UnsupportedNugget
+};
+enum class FXPositionNuggetReadiness { Ready, MissingProvider, Unsupported };
+#endif
+
 //-------------------------------------------------------------------------------------------------
 /**
 	An FXNugget encapsulates a particular type of audio/video effect. FXNuggets are virtually
@@ -83,6 +96,13 @@ public:
 		needed. Note that primary and/or secondary can be null, so you must check for this.
 	*/
 	virtual void doFXPos(const Coord3D *primary, const Matrix3D* primaryMtx = NULL, const Real primarySpeed = 0.0f, const Coord3D *secondary = NULL, const Real overrideRadius = 0.0f) const = 0;
+
+#if defined(__linux__)
+	// Read-only positional admission; the abstract source ABI gains no data.
+	virtual FXPositionNuggetReadiness cpuPositionReady(const Coord3D *,
+		const Coord3D *) const { return FXPositionNuggetReadiness::Unsupported; }
+	virtual const FXList *cpuPositionChild() const { return NULL; }
+#endif
 
 	/**
 		the object-based version... by default, just call the location-based implementation.
@@ -141,6 +161,11 @@ public:
 		m_nuggets.push_back(fxn);
 	}
 
+#if defined(__linux__)
+	static FXPositionAdmission preflightPositionDispatch(const FXList *fx,
+		const Coord3D *primary, const Coord3D *secondary = NULL);
+#endif
+
 	/// inline convenience method to avoid having to check for null.
 	inline static void doFXPos(const FXList* fx, const Coord3D *primary, const Matrix3D* primaryMtx = NULL, const Real primarySpeed = 0.0f, const Coord3D *secondary = NULL, const Real overrideRadius = 0.0f)
 	{
@@ -179,6 +204,13 @@ protected:
 
 private:
 
+#if defined(__linux__)
+	static FXPositionAdmission preflightPositionGraph(const FXList *fx,
+		const Coord3D *primary, const Coord3D *secondary,
+		const FXList **active, unsigned int depth,
+		const FXList **visited, unsigned int &visitedCount);
+#endif
+
 	typedef std::list< FXNugget* > FXNuggetList;
 
 	FXNuggetList m_nuggets;
@@ -206,6 +238,10 @@ public:
 		return NULL if no such FXList exists.
 	*/
 	const FXList *findFXList( const char* name ) const;
+
+#if defined(__linux__)
+	bool containsFXList(const FXList *fx) const;
+#endif
 	
 	static void parseFXListDefinition(INI* ini);
 
@@ -222,4 +258,3 @@ private:
 extern FXListStore *TheFXListStore;
 
 #endif // _FXList_H_
-
