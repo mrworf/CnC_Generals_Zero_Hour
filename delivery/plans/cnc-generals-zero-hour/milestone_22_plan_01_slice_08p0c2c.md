@@ -2,7 +2,8 @@
 
 ## Goal, dependency and boundary
 
-After C2A program, C2B shroud binding and both D0A/D0B frame capabilities,
+After C2A program, D0's idle/frame capabilities, B0's complete delayed-source
+transaction and C2B shroud binding,
 prepare one exact-owner immutable tree
 render phase outside an active source frame. C1's resource retirement/update
 requires `source_buffers_retirable()`, while native DoTrees is inside Flush.

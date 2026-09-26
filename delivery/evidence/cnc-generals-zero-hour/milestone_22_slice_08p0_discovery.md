@@ -104,3 +104,20 @@ rejection. Native toppled nonzero sway selection and physical nontrivial atlas/
 position-varying unswayed shroud controls pass, with six canonical suites
 269/269 and focused/strict LSan/host gates. [Exact evidence](milestone_22_slice_08p0c2a.md)
 does not admit source shroud binding, scene draw or physical factory/retail.
+
+Post-A read-only shroud admission audit confirms an additional complete owner:
+CPU DX8 texture refs/dirty bits change before fallible markers; source stage
+maps/transforms can allocate, edge revision advances before recording, and
+delayed filtering can replace the accepted sampler. SourceStateSnapshot lacks
+refs/pending edge state; RenderStateStruct lacks stage maps/texture transforms
+and its ordinary-setter restore is fallible. Neither is rollback.
+
+Persist the dependency-safe reorder A→D0A→D0B→D0 aggregate→B0→B→C→D before
+production. D0 supplies explicit bounded idle preparation and in-frame modes
+on Recording and bgfx; idle mode forbids pass/view/viewport/clear/draw/present,
+SDL/other devices fail closed. B0 composes device journals with complete source
+texture/ref/maps/transform/dirty/revision/filter/sampler ownership and retry;
+B supplies only exact native shroud semantics. No trial wiring, private input
+or production edit is included in this plan-only checkpoint.
+Checkpoint against accepted A commit `8df9c18b34bef2e23613b8655bccfd8b97555aef`
+by `delivery: M22 order idle and frame transaction prerequisites`.

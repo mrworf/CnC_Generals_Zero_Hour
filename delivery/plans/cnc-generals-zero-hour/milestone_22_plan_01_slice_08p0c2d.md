@@ -2,7 +2,7 @@
 
 ## Goal, dependency and boundary
 
-After C2A/B, D0A/D0B and C2C, consume only an admitted immutable tree phase in the native
+After C2A, D0A/D0B, B0/B and C2C, consume only an admitted immutable tree phase in the native
 terrain scene draw. Preserve terrain/tracks, non-stencil object decals,
 mesh/occluded/shader flush, DoTrees, stencil shadows, static/water and final
 translucent/particle order. The CPU scene currently performs some later shadow/

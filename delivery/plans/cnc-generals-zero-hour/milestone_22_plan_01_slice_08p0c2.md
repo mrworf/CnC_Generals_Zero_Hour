@@ -5,10 +5,12 @@
 After C1, deliver independently reviewable source owners in dependency order:
 [C2A0](milestone_22_plan_01_slice_08p0c2a0.md) exact reflected uniform-block origins;
 [C2A](milestone_22_plan_01_slice_08p0c2a.md) exact Trees.nvv program;
-[C2B](milestone_22_plan_01_slice_08p0c2b.md) exact shroud stage/transform;
-[D0A](milestone_22_plan_01_slice_08p0c2d0a.md) bounded public/Recording frame
+[D0A](milestone_22_plan_01_slice_08p0c2d0a.md) bounded public/Recording idle/frame
 transaction then [D0B](milestone_22_plan_01_slice_08p0c2d0b.md) deferred public
 bgfx transaction and [D0](milestone_22_plan_01_slice_08p0c2d0.md) aggregate;
+[C2B0](milestone_22_plan_01_slice_08p0c2b0.md) complete delayed-source stage/ref/
+map/transform/revision/filter/sampler transaction;
+[C2B](milestone_22_plan_01_slice_08p0c2b.md) exact shroud stage/transform;
 [C2C](milestone_22_plan_01_slice_08p0c2c.md) outside-frame immutable tree
 preparation; then [C2D](milestone_22_plan_01_slice_08p0c2d.md) in-frame source
 scene draw/retry. This file becomes their evidence-only aggregate, not a

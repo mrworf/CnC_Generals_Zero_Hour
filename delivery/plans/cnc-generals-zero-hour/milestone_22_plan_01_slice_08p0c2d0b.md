@@ -2,8 +2,9 @@
 
 ## Goal, dependency and boundary
 
-After D0A's bounded opt-in public transaction, implement that capability on
-the Linux full-draw public bgfx route. C2C preparation and C2D source draw
+After D0A and before B0/B, implement both idle-preparation and in-frame modes
+on the Linux full-draw public bgfx route. B0/B delayed-source admission,
+C2C preparation and C2D source draw
 depend on this real capability, not Recording-only success. SDL and other
 devices remain explicitly unsupported/fail-closed unless source runtime
 reachability later requires them. No private Vulkan/bgfx cancellation API,
@@ -28,7 +29,13 @@ removed providers and capacity fail before mutation. The admitted immutable
 batch uses only pinned public bgfx operations and owned references, no source
 registry/state access or fallible resource creation after submit begins.
 Release candidate/retired native resources in bounded completion-safe order.
-Ordinary nontransaction passes remain unchanged. A failed transaction cannot
+Idle mode permits only admitted bounded resource/byte/marker preparation;
+never allocate/touch/consume pass/view/viewport/clear/draw/present. Candidate
+native resources and accepted shadow bytes retire/rollback without a frame.
+Frame mode alone admits its complete ordered deferred pass sequence. Reject
+cross-mode operations, mode changes, nested entry and existing active ordinary
+passes before mutation. Preserve ordinary nontransaction passes and accepted
+resource identities in both modes. A failed transaction cannot
 mark targets accepted or present partial pixels; prior accepted contents stay
 unchanged. Do not claim rollback after irreversible submission or disable
 Khronos validation. Authorization is not applicable to generated tests.
@@ -50,3 +57,7 @@ builds/canonical nonretail suites (sanitizer detect_leaks=0), exact serial host
 LSan (`ASAN_OPTIONS=detect_leaks=1`, no UBSan override), required physical
 Vulkan and LAN 4/4 all six, ledger/diff. Commit one coherent slice:
 `delivery: M22 08P0C2D0B defer bgfx frame commands atomically`.
+
+Add independent idle-mode physical resource/byte controls, no-view/pass/draw
+negative controls and prior accepted pixels on idle rejection; frame controls
+cannot substitute for idle source-preparation admission or vice versa.

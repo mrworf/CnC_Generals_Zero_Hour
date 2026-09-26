@@ -306,10 +306,11 @@ The production Linux original-engine path renders representative campaign and sk
 | 08P0C1 | [milestone_22_plan_01_slice_08p0c1.md](milestone_22_plan_01_slice_08p0c1.md) | Generated source tree frame-state aggregate before terrain draw. | slices 08P0C1A–08P0C1B | complete: source breeze/cull and interaction/resource/consumed-FX transaction; no draw/factory | `delivery: M22 08P0C1 revalidate tree frame state` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c1.md) |
 | 08P0C2A0 | [milestone_22_plan_01_slice_08p0c2a0.md](milestone_22_plan_01_slice_08p0c2a0.md) | Compiler-authoritative source uniform-block origins, dead-prefix/multiblock admission and physical payload correction. | slice 08P0C1 | complete: exact compiled origins, two-generation CPU/physical rollback and six gates; no tree program or scene draw | `delivery: M22 08P0C2A0 bind exact shader block origins` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2a0.md) |
 | 08P0C2A | [milestone_22_plan_01_slice_08p0c2a.md](milestone_22_plan_01_slice_08p0c2a.md) | Exact source tree program, packed attributes and source constant semantics; generic world shaders cannot substitute. | slice 08P0C2A0 | complete: exact source slots/constants, atomic program rollback and physical atlas/unswayed-shroud controls with six gates; draw/factory closed | `delivery: M22 08P0C2A translate exact tree program` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2a.md) |
-| 08P0C2B | [milestone_22_plan_01_slice_08p0c2b.md](milestone_22_plan_01_slice_08p0c2b.md) | Exact tree shroud stage, texture/transform binding and borrowed resource lifetime. | slice 08P0C2A | pending; draw/factory closed | | |
-| 08P0C2D0A | [milestone_22_plan_01_slice_08p0c2d0a.md](milestone_22_plan_01_slice_08p0c2d0a.md) | Bounded optional frame transaction capability and deterministic Recording command/resource rollback. | slices 08P0C2A–08P0C2B | pending; unsupported devices fail closed | | |
-| 08P0C2D0B | [milestone_22_plan_01_slice_08p0c2d0b.md](milestone_22_plan_01_slice_08p0c2d0b.md) | Public bgfx deferred frame commands and fallible resource preparation before irreversible submission. | slice 08P0C2D0A | pending; physical Vulkan required | | |
-| 08P0C2D0 | [milestone_22_plan_01_slice_08p0c2d0.md](milestone_22_plan_01_slice_08p0c2d0.md) | Recording and Linux full-draw bgfx frame-command transaction aggregate. | slices 08P0C2D0A–08P0C2D0B | pending; SDL/other devices unsupported | | |
+| 08P0C2D0A | [milestone_22_plan_01_slice_08p0c2d0a.md](milestone_22_plan_01_slice_08p0c2d0a.md) | Bounded optional idle-preparation/frame capability and deterministic Recording command/resource rollback. | slice 08P0C2A | pending; unsupported devices fail closed | | |
+| 08P0C2D0B | [milestone_22_plan_01_slice_08p0c2d0b.md](milestone_22_plan_01_slice_08p0c2d0b.md) | Public bgfx idle resource preparation and deferred frame commands before irreversible submission. | slice 08P0C2D0A | pending; physical Vulkan required | | |
+| 08P0C2D0 | [milestone_22_plan_01_slice_08p0c2d0.md](milestone_22_plan_01_slice_08p0c2d0.md) | Recording and Linux full-draw bgfx idle/frame transaction aggregate. | slices 08P0C2D0A–08P0C2D0B | pending; SDL/other devices unsupported | | |
+| 08P0C2B0 | [milestone_22_plan_01_slice_08p0c2b0.md](milestone_22_plan_01_slice_08p0c2b0.md) | Complete delayed-source texture/ref/maps/transform/revision/filter/sampler transaction and retry. | slice 08P0C2D0 | pending; no shroud semantics, frame or factory | | |
+| 08P0C2B | [milestone_22_plan_01_slice_08p0c2b.md](milestone_22_plan_01_slice_08p0c2b.md) | Exact tree shroud stage, texture/transform binding and borrowed resource lifetime. | slice 08P0C2B0 | pending; draw/factory closed | | |
 | 08P0C2C | [milestone_22_plan_01_slice_08p0c2c.md](milestone_22_plan_01_slice_08p0c2c.md) | Outside-frame immutable tree preparation and accepted-phase reuse without C1/FX advancement on render retry. | slices 08P0C2A–08P0C2B and 08P0C2D0 | pending; draw/factory closed | | |
 | 08P0C2D | [milestone_22_plan_01_slice_08p0c2d.md](milestone_22_plan_01_slice_08p0c2d.md) | Exact shadow-disabled source scene-order draw with transactional command rollback and identical retry. | slices 08P0C2C and 08P0C2D0 | pending; factory closed | | |
 | 08P0C2 | [milestone_22_plan_01_slice_08p0c2.md](milestone_22_plan_01_slice_08p0c2.md) | Exact tree program/shroud, immutable preparation and transactional terrain draw aggregate. | slices 08P0C2A–08P0C2D including 08P0C2D0 | pending; factory closed | | |
@@ -327,7 +328,14 @@ program and shroud-stage owner from outside-frame preparation and source-order
 draw. Existing `end_pass`/source-frame abort is not rollback: Recording retains
 commands/resources and bgfx submits immediately. The dependency-first
 08P0C2D0A/08P0C2D0B owners therefore establish bounded Recording and deferred
-public-bgfx transactions before 08P0C2C/08P0C2D. A failed render keeps its
+public-bgfx transactions before B0/B and C2C/D. Explicit idle preparation
+forbids pass/view/viewport/clear/draw/present; frame mode owns its declared
+ordered commands. The post-A shroud rollback audit found source texture refs/
+maps/transforms and edge revision/filter/sampler state also lack a complete
+checkpoint. B0 owns that bounded shared atomic boundary and composes both
+device idle capabilities; B remains exact shroud semantics only. Order is
+A→D0A→D0B→D0 aggregate→B0→B→C→D, with no cyclic B prerequisite.
+A failed render keeps its
 accepted immutable C1 phase for retry; it cannot advance RNG or replay committed
 FX. SDL/other devices fail closed for this optional capability, and C3 decals,
 C4 factory admission and retail acceptance remain separate.

@@ -2,7 +2,9 @@
 
 ## Goal, dependency and boundary
 
-After C2A's exact tree program, restore native `W3DShaderManager::setShroudTex`
+After accepted C2A, D0's Recording/bgfx idle/frame capabilities and
+[B0](milestone_22_plan_01_slice_08p0c2b0.md)'s complete delayed-source transaction,
+restore native `W3DShaderManager::setShroudTex`
 stage/resource/transform semantics on the CPU shipping route. No tree draw,
 C1 advancement, scene preparation, decal, physical factory or retail admission
 is included. This generated local renderer operation has no authorization gate.
@@ -19,7 +21,9 @@ preserve subsequent tree-loop UV-index/transform-disable state in source order
 and do not double-apply the camera-space transform. Do not bind an unshrouded
 pass or replace the exact source texture with a placeholder.
 
-Readiness must be side-effect free. Preflight every owner/resource and matrix
+B remains exact shroud semantics only: use B0's complete transaction rather
+than adding another ref/map/revision/sampler checkpoint here. Do not fold
+frame-command rollback into shroud admission. Readiness must be side-effect free. Preflight every owner/resource and matrix
 before delayed state mutation; preserve the existing asserting/query semantics
 outside any narrow readiness peek. On provider/resource failure preserve prior
 accepted source stage/transform/resource identity; binding failure unwinds
