@@ -582,6 +582,57 @@ void source_camera_clear_edge()
     device.destroy(depth); device.destroy(color);
     check(device.resource_counts().total()==0);
 }
+void source_device_transaction_edge()
+{
+    for (unsigned generation=0;generation<2;++generation) {
+        RecordingGpuDevice device;
+        TextureDesc target;target.width=target.height=4;target.render_target=true;
+        const auto color=device.create_texture(target,"edge transaction color");
+        target.format=TextureFormat::depth24_stencil8;
+        const auto depth=device.create_texture(target,"edge transaction depth");
+        const auto baseline=device.snapshot();
+        {
+            zh::original_runtime::OriginalGpuEdge edge(device);
+            check(edge.supports_device_transactions(DeviceTransactionMode::frame_commands));
+            edge.bind_frame_targets(color,depth,4,4);
+            DeviceTransactionDesc desc{DeviceTransactionMode::frame_commands,edge.frame_target_generation(),32,128,1U<<20,8};
+            DeviceTransactionToken token,unchanged{99,98,97,DeviceTransactionMode::idle_preparation};
+            auto wrong=desc;++wrong.generation;
+            check(!edge.begin_device_transaction(wrong,unchanged) && unchanged.device==99);
+            check(edge.begin_device_transaction(desc,token));
+            check(!edge.begin_device_transaction(desc,unchanged) && unchanged.device==99);
+            edge.begin_source_frame(true,true,0,0,0,1);
+            for (unsigned field=0;field<4;++field) {
+                auto foreign=token;
+                if (field==0) ++foreign.device;
+                if (field==1) ++foreign.sequence;
+                if (field==2) ++foreign.generation;
+                if (field==3) foreign.mode=DeviceTransactionMode::idle_preparation;
+                check(!edge.abort_device_transaction(foreign) && !edge.commit_device_transaction(foreign)
+                    && device.pass_active() && !edge.source_buffers_retirable());
+            }
+            check(!edge.commit_device_transaction(token));
+            check(edge.abort_device_transaction(token) && !device.pass_active() && edge.source_buffers_retirable());
+            check(device.snapshot()==baseline && !edge.abort_device_transaction(token));
+            check(edge.begin_device_transaction(desc,token));
+            edge.begin_source_frame(true,true,0,0,0,1);edge.end_source_frame(true);
+            check(edge.commit_device_transaction(token) && !edge.commit_device_transaction(token)
+                && !edge.abort_device_transaction(token));
+            // Owner removal cancels a partial frame before source cleanup.
+            check(edge.begin_device_transaction(desc,token));
+            edge.begin_source_frame(false,false,0,0,0,1);
+        }
+        check(!device.pass_active());
+        device.destroy(depth);device.destroy(color);check(device.resource_counts().total()==0);
+    }
+    FaultDevice unsupported;
+    zh::original_runtime::OriginalGpuEdge edge(unsupported);
+    DeviceTransactionToken sentinel{99,98,97,DeviceTransactionMode::frame_commands};
+    DeviceTransactionDesc desc{DeviceTransactionMode::idle_preparation,edge.generation(),32,128,1U<<20,0};
+    const auto baseline=unsupported.recorder.snapshot();
+    check(!edge.supports_device_transactions(desc.mode) && !edge.begin_device_transaction(desc,sentinel)
+        && sentinel.device==99 && unsupported.recorder.snapshot()==baseline);
+}
 } // namespace
 
 int main()
@@ -594,4 +645,5 @@ int main()
     original_wrapper_indexed_methods();
     original_dynamic_access_owner();
     source_camera_clear_edge();
+    source_device_transaction_edge();
 }

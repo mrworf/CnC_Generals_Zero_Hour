@@ -140,3 +140,38 @@ Required next-frame bookkeeping must have exact fixed capacity. Workers/backends
 retain ordinary device-loss/fatal behavior outside the reversible API-thread
 boundary. SDL remains unsupported; source/tree/factory admission remains closed
 until its dependency-ordered owners are accepted.
+
+M22 D0B2B enables bgfx `frame_commands` with an owned immutable journal.
+Capture validates exact logical generations, source byte ranges/initialization,
+aliases and native representation before publishing CPU pass/init/view shadows.
+View origins must fit signed int16; extents fit uint16 and device caps. Source
+texture-slot aliases across shader stages require identical captured texture,
+source sampler/flags and reflected sampler handle; uniform aliases require
+identical count/bytes. Conflicting or unrepresentable aliases fail closed.
+Typed native VB/IB and borrowed-attachment FBO candidates are prepared outside
+replay. Captured B1 native ownership units survive later removal/COW/replacement;
+buffer and aligned uniform bytes are frozen, never reread at commit.
+
+Frame mode requires exactly one final present (including suspension) and an
+inactive pass. It stages optional resize, presentation views/typed vertices
+and last-only CompleteFrame, with no native view/touch/submit/frame during
+capture. Only bounded CPU retirement metadata may follow final present.
+Commit invokes accepted submitBounded once; its fallible native reservation
+precedes any accepted-target touch, while admitted API-thread replay is
+allocation-free. This is not the idle commit's no-native-call guarantee.
+Native rejection preserves packets/token and emits nothing. Recoverable
+reservation rejection retries the same batch; unsupported external encoder
+use requires abort, then an ordinary frame/wait boundary and a fresh attempt,
+because bgfx::end does not reset encoder-handle admission. No live transaction
+advances a frame to obtain readiness. Success consumes once; abort restores
+CPU target/init/view/window extent shadows without native destroy/frame calls.
+Exact candidate/reference units retire at ordinary/wait/shutdown boundaries.
+
+OriginalGpuEdge forwards optional device admission and exact token ownership;
+frame admission uses its bound target generation, idle uses edge generation.
+Successful abort cancels source-frame phase without issuing ordinary end_pass;
+edge destruction cancels an owned partial attempt before source cleanup.
+Complete source texture/ref/maps/transform/revision/filter checkpointing remains
+C2B0, not a duplicate private device checkpoint here. SDL/other devices remain
+unsupported, and no source tree advancement, scene/factory or retail admission
+is implied by generated journal pixels.

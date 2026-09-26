@@ -45,6 +45,10 @@ public:
     UInt64 native_retirement_destroy_count() const noexcept;
     UInt64 native_frame_advance_count() const noexcept;
     UInt64 live_owned_native_reference_count() const noexcept;
+    UInt64 bounded_submission_count() const noexcept;
+    UInt64 staged_frame_command_count() const noexcept;
+    void fail_next_transaction_submission() noexcept;
+    void fail_transaction_frame_copy_after(UInt32 successful_boundaries) noexcept;
 
     bool supports_texture_format(TextureFormat, TextureDimension, bool sampled, bool render_target) const noexcept override;
     BufferHandle create_buffer(const BufferDesc&, std::string_view) override;

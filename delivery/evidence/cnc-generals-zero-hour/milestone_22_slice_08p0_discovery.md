@@ -199,3 +199,22 @@ suppression. ABI, established Vulkan, generated native resource/reservation,
 existing texture physical, six LAN and ledger/header/diff gates pass. This closes
 the dependency-first corrective matrix before B2B; it does not open the tree
 factory or accept the deferred frame journal. Renderer remains excluded.
+
+D0B2B now independently accepts complete bounded immutable frame capture on
+the public bgfx owner. Exact native ownership-unit leases and frozen aligned
+payloads survive source removal/COW/generation reuse; conflicting aliases and
+nonrepresentable coordinates reject before shadow/candidate publication.
+Final present is unique, CompleteFrame is last, and synchronous A admission
+precedes all accepted target touches. Recoverable reservation rejection retries
+the same journal once; unsupported external encoder overlap requires abort and
+an ordinary readiness boundary before a fresh attempt, never a live reset.
+Typed candidates retire only at ordinary/wait/shutdown boundaries, preserving
+native reference multiplicity. The edge forwards exact device/token ownership;
+B0 still supplies complete engine stage/ref/map/filter rollback.
+Separate self-contained generated shader fixtures preserve production relative
+paths and exact shipping/install closure. Refrozen focused 8/8 all four,
+strict host LSan 4/4 both, twelve generated physical controls, six complete
+builds/canonicals 274/274 with clean complete-log audits, established physical
+Vulkan and six serial LAN 4/4 all pass. Exact hashes/ledger/header/diff hold;
+unrelated renderer diagnostic remains excluded. B2/B/D0 evidence-only aggregates
+follow before B0, exact shroud, immutable tree preparation and scene integration.

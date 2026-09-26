@@ -158,7 +158,7 @@ void physical()
         BgfxOptions options; options.shader_root = ZH_BGFX_SHADER_DIR;
         BgfxGpuDevice device(options);
         check(device.supports_device_transactions(DeviceTransactionMode::idle_preparation)
-            && !device.supports_device_transactions(DeviceTransactionMode::frame_commands), "wrong native capability");
+            && device.supports_device_transactions(DeviceTransactionMode::frame_commands), "wrong native capability");
         // Fill the declared retirement capacity exactly, then prove a later
         // admission includes both retained tombstones and queued native owners.
         auto small = desc(); small.resources = 8; small.commands = 8;

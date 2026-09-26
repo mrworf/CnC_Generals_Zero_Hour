@@ -381,12 +381,22 @@ public:
     };
     struct PipelineRecord { PipelineRecord() : key(PipelineDesc{}) {} PipelineKey key; bgfx::ProgramHandle native = BGFX_INVALID_HANDLE; };
 
-    enum class NativeKind : UInt8 { program, shader, texture };
+    enum class NativeKind : UInt8 { program, shader, texture, vertex, index, framebuffer };
     struct NativeOwned {
         NativeKind kind = NativeKind::texture;
         UInt16 index = UINT16_MAX;
         bool candidate = false, retained = false;
+        UInt32 captures = 0;
     };
+    struct alignas(16) UniformWord { std::array<UInt8,16> bytes{}; };
+    struct FramePacket {
+        bgfx::BoundedSubmissionCommand command{};
+        std::vector<bgfx::BoundedSubmissionUniform> uniforms;
+        std::vector<bgfx::BoundedSubmissionTexture> textures;
+        std::vector<UniformWord> payload;
+        std::vector<std::size_t> leases;
+    };
+    static_assert(std::is_nothrow_move_constructible_v<FramePacket>);
     struct Checkpoint {
         std::vector<Slot<BufferRecord>> buffers;
         std::vector<Slot<TextureRecord>> textures;
@@ -394,6 +404,11 @@ public:
         std::vector<Slot<ShaderRecord>> shaders;
         std::vector<Slot<PipelineRecord>> pipelines;
         std::vector<NativeOwned> native_owners;
+        std::vector<FramePacket> journal;
+        std::vector<bgfx::BoundedSubmissionCommand> manifest;
+        UInt32 next_view = 0, window_width = 0, window_height = 0;
+        UInt32 draws = 0, views = 0;
+        bool completed = false;
     };
     struct OperationGuard {
         Impl& owner;
@@ -409,6 +424,9 @@ public:
         case NativeKind::program: bgfx::destroy(bgfx::ProgramHandle{value.index}); break;
         case NativeKind::shader: bgfx::destroy(bgfx::ShaderHandle{value.index}); break;
         case NativeKind::texture: bgfx::destroy(bgfx::TextureHandle{value.index}); break;
+        case NativeKind::vertex: bgfx::destroy(bgfx::VertexBufferHandle{value.index}); break;
+        case NativeKind::index: bgfx::destroy(bgfx::IndexBufferHandle{value.index}); break;
+        case NativeKind::framebuffer: bgfx::destroy(bgfx::FrameBufferHandle{value.index}); break;
         }
     }
     struct NativeCandidate {
@@ -426,7 +444,8 @@ public:
     {
         // Programs before their shaders; borrowed FBO textures are never owned
         // here. Only ordinary boundaries drain, never transaction finish.
-        for (auto kind : {NativeKind::program, NativeKind::shader, NativeKind::texture})
+        for (auto kind : {NativeKind::framebuffer, NativeKind::vertex, NativeKind::index,
+                          NativeKind::program, NativeKind::shader, NativeKind::texture})
             for (const auto value : retirements) if (value.kind == kind) {
                 destroy_reference(value); ++retirement_destroys;
             }
@@ -453,10 +472,19 @@ public:
         }
         --checkpoint_copy_fault;
     }
+    void frame_copy_boundary()
+    {
+        if (frame_copy_fault == UINT32_MAX) return;
+        if (!frame_copy_fault) { frame_copy_fault=UINT32_MAX; throw std::bad_alloc(); }
+        --frame_copy_fault;
+    }
 
     bool admit(std::string_view operation, UInt64 bytes = 0, UInt32 resources = 0)
     {
         if (!transaction.active()) { drain_retirements(); return true; }
+        if (frame_transaction() && checkpoint->completed && operation.rfind("destroy_",0) != 0) {
+            fail(operation, "only retirement metadata is allowed after final present"); return false;
+        }
         if (!transaction.charge(bytes, resources)) { fail(operation, "transaction capacity or prior failure"); return false; }
         if (operation_fault != UINT32_MAX) {
             if (!operation_fault) {
@@ -472,6 +500,193 @@ public:
         if (!transaction.active()) { drain_retirements(); return false; }
         fail(operation, "idle transaction forbids frame or external completion operation");
         return true;
+    }
+    bool frame_transaction() const noexcept
+    { return transaction.active() && transaction.token().mode == DeviceTransactionMode::frame_commands; }
+    bool frame_operation(std::string_view operation)
+    {
+        if (!transaction.active()) { drain_retirements(); return true; }
+        if (!frame_transaction()) { fail(operation,"idle transaction forbids frame commands"); return false; }
+        return admit(operation);
+    }
+    bool reserve_packet(std::string_view operation, UInt32 packets = 1, UInt32 views = 0,
+                        UInt64 bytes = 0, UInt32 resources = 0)
+    {
+        if (packets > transaction.descriptor().commands - checkpoint->journal.size()
+            || next_view > RendererLimits::ordered_views
+            || views > RendererLimits::ordered_views - next_view
+            || !transaction.retain_views(views) || !transaction.retain_bytes(bytes)
+            || !transaction.retain_resources(resources)) {
+            fail(operation,"frame manifest capacity exceeded"); return false;
+        }
+        return true;
+    }
+    bool lease(FramePacket& packet, NativeKind kind, UInt16 index)
+    {
+        for (std::size_t i=0;i<checkpoint->native_owners.size();++i) {
+            auto& unit=checkpoint->native_owners[i];
+            if (unit.kind == kind && unit.index == index) {
+                packet.leases.push_back(i);
+                return true;
+            }
+        }
+        fail("frame capture","native ownership unit is unavailable"); return false;
+    }
+    void append(FramePacket&& packet) noexcept
+    {
+        for (const auto i : packet.leases) ++checkpoint->native_owners[i].captures;
+        if (packet.command.kind == bgfx::BoundedSubmissionCommand::Draw) ++checkpoint->draws;
+        if (packet.command.kind == bgfx::BoundedSubmissionCommand::View) ++checkpoint->views;
+        checkpoint->journal.push_back(std::move(packet)); // admission reserves capacity
+    }
+    void restore_frame(const Checkpoint& prior) noexcept
+    {
+        if (transaction.token().mode != DeviceTransactionMode::frame_commands) return;
+        framebuffer=BGFX_INVALID_HANDLE; colors={}; color_count=0; depth={};
+        width=height=0; target_generation=0; in_pass=false;
+        next_view=prior.next_view; window_width=prior.window_width; window_height=prior.window_height;
+    }
+    ValidationResult capture_draw(const DrawDesc& desc, const PipelineRecord& pipeline,
+        const ShaderRecord& vs, const ShaderRecord& fs, const BufferRecord& vertex,
+        const BufferRecord* index, const bgfx::VertexLayout& layout, UInt32 stride)
+    {
+        FramePacket packet;
+        const auto fields=vs.fields.size()+fs.fields.size();
+        const auto samples=vs.textures.size()+fs.textures.size();
+        UInt64 payload_bytes=0;
+        for (const auto* shader : {&vs,&fs}) for (const auto& field : shader->fields)
+            payload_bytes+=field.size;
+        const UInt64 retained=payload_bytes+fields*sizeof(bgfx::BoundedSubmissionUniform)
+            +samples*sizeof(bgfx::BoundedSubmissionTexture)+(samples+6)*sizeof(std::size_t)
+            +vertex.shadow.size()+(index ? index->shadow.size() : 0);
+        // All source/provider validation, alias comparison and byte copies
+        // finish before candidates or checkpointed frame state are published.
+        if (!reserve_packet("draw",1,0,retained,index ? 2 : 1)) return {false,last_error};
+        frame_copy_boundary(); packet.uniforms.reserve(fields);
+        frame_copy_boundary(); packet.textures.reserve(samples);
+        frame_copy_boundary();
+        packet.payload.reserve(static_cast<std::size_t>(payload_bytes/16));
+        frame_copy_boundary();
+        packet.leases.reserve(samples+6);
+        std::vector<std::size_t> offsets;
+        std::vector<SamplerHandle> sampler_owners;
+        frame_copy_boundary(); offsets.reserve(fields);
+        frame_copy_boundary(); sampler_owners.reserve(samples);
+        const auto capture_stage=[&](const ShaderRecord& shader,const StageBindings& bindings) {
+            for (const auto& field : shader.fields) {
+                const auto& binding=bindings.uniforms[field.binding];
+                const auto* buffer=lookup(buffers,binding.buffer);
+                if (!field.count || field.count > UINT16_MAX || !field.size || field.size%16
+                    || (UInt64(binding.offset)+field.offset)%16)
+                    return fail("draw","reflected uniform alignment/count is not representable");
+                const auto* bytes=buffer->record.shadow.data()+static_cast<std::size_t>(UInt64(binding.offset)+field.offset);
+                std::size_t duplicate=packet.uniforms.size();
+                for (std::size_t i=0;i<packet.uniforms.size();++i)
+                    if (packet.uniforms[i].handle.idx == field.handle.idx) { duplicate=i; break; }
+                if (duplicate != packet.uniforms.size()) {
+                    const auto& prior=packet.uniforms[duplicate];
+                    if (!detail::same_uniform_payload(prior.count,prior.bytes,packet.payload.data()+offsets[duplicate],
+                        field.count,field.size,bytes))
+                        return fail("draw","conflicting reflected uniform alias");
+                    continue;
+                }
+                const auto offset=packet.payload.size();
+                packet.payload.resize(offset+field.size/16);
+                std::memcpy(packet.payload.data()+offset,bytes,field.size);
+                bgfx::BoundedSubmissionUniform value;
+                value.handle=field.handle; value.count=static_cast<UInt16>(field.count); value.bytes=field.size;
+                packet.uniforms.push_back(value); offsets.push_back(offset);
+            }
+            for (const auto& field : shader.textures) {
+                const auto* image=lookup(textures,bindings.textures[field.binding]);
+                const auto owner=bindings.samplers[field.binding];
+                const auto* sampler=lookup(samplers,owner);
+                const auto flags=sampler_flags(sampler->record.desc);
+                if (field.stage >= bgfx::getCaps()->limits.maxTextureSamplers || field.stage >= 32)
+                    return fail("draw","reflected texture stage is not representable");
+                bool duplicate=false;
+                for (std::size_t i=0;i<packet.textures.size();++i) {
+                    const auto& prior=packet.textures[i];
+                    const auto alias=detail::sampler_alias(
+                        {prior.stage,prior.sampler.idx,prior.texture.idx,sampler_owners[i].value(),prior.flags},
+                        {field.stage,field.handle.idx,image->record.native.idx,owner.value(),flags});
+                    if (alias == detail::BgfxSamplerAlias::conflict)
+                        return fail("draw","conflicting shared source texture-stage alias");
+                    if (alias == detail::BgfxSamplerAlias::identical) duplicate=true;
+                }
+                if (duplicate) continue;
+                bgfx::BoundedSubmissionTexture value;
+                value.sampler=field.handle; value.texture=image->record.native;
+                value.flags=flags; value.stage=static_cast<UInt8>(field.stage);
+                packet.textures.push_back(value); sampler_owners.push_back(owner);
+                if (!lease(packet,NativeKind::texture,image->record.native.idx)) return ValidationResult{false,last_error};
+            }
+            return ValidationResult{};
+        };
+        if (auto result=capture_stage(vs,desc.vertex_bindings); !result) return result;
+        if (auto result=capture_stage(fs,desc.fragment_bindings); !result) return result;
+        if (!lease(packet,NativeKind::program,pipeline.native.idx)
+            || !lease(packet,NativeKind::shader,vs.native.idx)
+            || !lease(packet,NativeKind::shader,fs.native.idx)
+            || !lease(packet,NativeKind::framebuffer,framebuffer.idx)) return {false,last_error};
+        if (vertex.shadow.size() > UINT32_MAX || (index && index->shadow.size() > UINT32_MAX)
+            || packet.uniforms.size() > UINT16_MAX || packet.textures.size() > UINT16_MAX)
+            return fail("draw","native geometry or manifest capacity exceeded");
+        for (std::size_t i=0;i<packet.uniforms.size();++i)
+            packet.uniforms[i].data=packet.payload.data()+offsets[i];
+        auto native_vertex=bgfx::createVertexBuffer(bgfx::copy(vertex.shadow.data(),
+            static_cast<UInt32>(vertex.shadow.size())),layout);
+        if (!bgfx::isValid(native_vertex)) return fail("draw","native candidate vertices unavailable");
+        NativeCandidate vertex_candidate{*this,{NativeKind::vertex,native_vertex.idx}};
+        bgfx::IndexBufferHandle native_index=BGFX_INVALID_HANDLE;
+        if (index) native_index=bgfx::createIndexBuffer(bgfx::copy(index->shadow.data(),
+            static_cast<UInt32>(index->shadow.size())),
+            desc.index_element_size == IndexElementSize::uint32 ? BGFX_BUFFER_INDEX32 : BGFX_BUFFER_NONE);
+        if (index && !bgfx::isValid(native_index)) return fail("draw","native candidate indices unavailable");
+        // The optional index guard cannot represent an invalid ownership unit.
+        std::optional<NativeCandidate> index_candidate;
+        if (index) index_candidate.emplace(*this,NativeOwned{NativeKind::index,native_index.idx});
+        if (!admit_native_publication("draw")) return {false,last_error};
+        const auto& state=pipeline.key.descriptor();
+        auto& cmd=packet.command;
+        cmd.kind=bgfx::BoundedSubmissionCommand::Draw; cmd.view=static_cast<bgfx::ViewId>(next_view-1);
+        cmd.program=pipeline.native; cmd.vertex=native_vertex; cmd.index=native_index;
+        cmd.firstVertex=static_cast<UInt32>(desc.base_vertex);
+        cmd.vertices=index ? static_cast<UInt32>(vertex.shadow.size()/stride)-cmd.firstVertex : desc.vertex_or_index_count;
+        cmd.firstIndex=index ? desc.first_index : 0; cmd.indices=index ? desc.vertex_or_index_count : 0;
+        cmd.uniforms=packet.uniforms.data(); cmd.uniformCount=static_cast<UInt16>(packet.uniforms.size());
+        cmd.textures=packet.textures.data(); cmd.textureCount=static_cast<UInt16>(packet.textures.size());
+        if (state.blend.color_write_mask&1) cmd.state|=BGFX_STATE_WRITE_R;
+        if (state.blend.color_write_mask&2) cmd.state|=BGFX_STATE_WRITE_G;
+        if (state.blend.color_write_mask&4) cmd.state|=BGFX_STATE_WRITE_B;
+        if (state.blend.color_write_mask&8) cmd.state|=BGFX_STATE_WRITE_A;
+        if (state.depth_stencil.depth_test) cmd.state|=depth_compare_state(state.depth_stencil.depth_compare);
+        if (state.depth_stencil.depth_write) cmd.state|=BGFX_STATE_WRITE_Z;
+        if (state.raster.cull == CullMode::clockwise) cmd.state|=BGFX_STATE_CULL_CW;
+        if (state.raster.cull == CullMode::counter_clockwise) cmd.state|=BGFX_STATE_CULL_CCW;
+        if (state.topology == PrimitiveTopology::triangle_strip) cmd.state|=BGFX_STATE_PT_TRISTRIP;
+        if (state.topology == PrimitiveTopology::point_list)
+            cmd.state|=BGFX_STATE_PT_POINTS|BGFX_STATE_POINT_SIZE(static_cast<UInt32>(desc.point_size));
+        if (state.blend.enabled) cmd.state|=BGFX_STATE_BLEND_FUNC_SEPARATE(
+            blend_factor(state.blend.source_color),blend_factor(state.blend.destination_color),
+            blend_factor(state.blend.source_alpha),blend_factor(state.blend.destination_alpha))
+            |BGFX_STATE_BLEND_EQUATION_SEPARATE(blend_operation(state.blend.color_operation),blend_operation(state.blend.alpha_operation));
+        cmd.depthBias=static_cast<Int32>(state.raster.depth_bias);
+        if (state.depth_stencil.stencil_test) {
+            const auto& stencil=state.depth_stencil;
+            cmd.stencilFront=stencil_compare_state(stencil.stencil_compare)
+                |BGFX_STENCIL_FUNC_REF(stencil.stencil_reference)|BGFX_STENCIL_FUNC_RMASK(stencil.stencil_read_mask)
+                |(stencil_op_code(stencil.stencil_fail)<<BGFX_STENCIL_OP_FAIL_S_SHIFT)
+                |(stencil_op_code(stencil.depth_fail)<<BGFX_STENCIL_OP_FAIL_Z_SHIFT)
+                |(stencil_op_code(stencil.depth_pass)<<BGFX_STENCIL_OP_PASS_Z_SHIFT);
+            cmd.stencilBack=(cmd.stencilFront&~BGFX_STENCIL_FUNC_RMASK_MASK)|BGFX_STENCIL_FUNC_RMASK(stencil.stencil_write_mask);
+        }
+        track_native(vertex_candidate.owned); vertex_candidate.released=true;
+        if (index) { track_native(index_candidate->owned); index_candidate->released=true; }
+        if (!lease(packet,NativeKind::vertex,native_vertex.idx)
+            || (index && !lease(packet,NativeKind::index,native_index.idx))) return {false,last_error};
+        append(std::move(packet));
+        return {};
     }
     void track_native(NativeOwned value) noexcept
     {
@@ -554,6 +769,7 @@ public:
             restore_slots(samplers, checkpoint->samplers);
             restore_slots(shaders, checkpoint->shaders);
             restore_slots(pipelines, checkpoint->pipelines);
+            restore_frame(*checkpoint);
             checkpoint.reset();
         }
         drain_retirements();
@@ -598,9 +814,12 @@ public:
     UInt32 operation_fault = UINT32_MAX;
     UInt32 publication_fault = UINT32_MAX;
     UInt32 checkpoint_copy_fault = UINT32_MAX;
+    UInt32 frame_copy_fault = UINT32_MAX;
     UInt64 retirement_destroys = 0, frame_advances = 0;
     UInt64 native_reference_creates = 0, native_reference_destroys = 0;
     bool checkpoint_fault = false, diagnostic_fault = false;
+    bool submission_fault = false;
+    UInt64 bounded_submissions = 0;
     std::string last_error;
     std::vector<Slot<BufferRecord>> buffers;
     std::vector<Slot<TextureRecord>> textures;
@@ -632,7 +851,7 @@ BgfxGpuDevice::BgfxGpuDevice(BgfxOptions options) : impl_(std::make_unique<Impl>
 BgfxGpuDevice::~BgfxGpuDevice() = default;
 
 bool BgfxGpuDevice::supports_device_transactions(DeviceTransactionMode mode) const noexcept
-{ return mode == DeviceTransactionMode::idle_preparation; }
+{ return mode == DeviceTransactionMode::idle_preparation || mode == DeviceTransactionMode::frame_commands; }
 
 ValidationResult BgfxGpuDevice::begin_device_transaction(const DeviceTransactionDesc& desc,
                                                        DeviceTransactionToken& token)
@@ -641,11 +860,13 @@ ValidationResult BgfxGpuDevice::begin_device_transaction(const DeviceTransaction
     // unchanged until every checkpoint allocation succeeds.
     const UInt64 reserved = UInt64(desc.resources) * 2 *
         (sizeof(Slot<Impl::BufferRecord>)+sizeof(Slot<Impl::TextureRecord>)+sizeof(Slot<Impl::SamplerRecord>)
-         +sizeof(Slot<Impl::ShaderRecord>)+sizeof(Slot<Impl::PipelineRecord>)+sizeof(Impl::NativeOwned));
+         +sizeof(Slot<Impl::ShaderRecord>)+sizeof(Slot<Impl::PipelineRecord>)+sizeof(Impl::NativeOwned))
+        + (desc.mode == DeviceTransactionMode::frame_commands ? UInt64(desc.commands)*
+            (sizeof(Impl::FramePacket)+sizeof(bgfx::BoundedSubmissionCommand)) : 0);
     const auto baseline = impl_->baseline_bytes();
     if (impl_->transaction.active() || impl_->in_pass
         || baseline > detail::BgfxTransactionState::maximum_bytes
-        || !detail::BgfxTransactionState::valid_idle(desc,
+        || !detail::BgfxTransactionState::valid(desc,
             impl_->slot_count()+impl_->retirements.size(), baseline*2+reserved))
         return {false,"transaction: invalid mode, baseline, capacity or overlapping owner"};
     if (impl_->checkpoint_fault) {
@@ -653,6 +874,12 @@ ValidationResult BgfxGpuDevice::begin_device_transaction(const DeviceTransaction
         return {false,"transaction: injected checkpoint allocation failure"};
     }
     auto candidate = std::make_unique<Impl::Checkpoint>();
+    candidate->next_view=impl_->next_view;
+    candidate->window_width=impl_->window_width; candidate->window_height=impl_->window_height;
+    if (desc.mode == DeviceTransactionMode::frame_commands) {
+        candidate->journal.reserve(desc.commands); candidate->manifest.reserve(desc.commands);
+        impl_->checkpoint_boundary();
+    }
     impl_->checkpoint_boundary();
     candidate->buffers = impl_->buffers;
     impl_->checkpoint_boundary();
@@ -709,6 +936,21 @@ bool BgfxGpuDevice::commit_device_transaction(const DeviceTransactionToken& toke
         || !keep_live(impl_->textures, Impl::NativeKind::texture)) {
         impl_->transaction.poison(); return false;
     }
+    if (impl_->frame_transaction()) {
+        if (!checkpoint.completed || impl_->in_pass) return false;
+        if (impl_->submission_fault) { impl_->submission_fault=false; return false; }
+        checkpoint.manifest.clear();
+        for (const auto& packet : checkpoint.journal) checkpoint.manifest.push_back(packet.command);
+        const auto& bounds=impl_->transaction.descriptor();
+        bgfx::BoundedSubmissionDesc native;
+        native.generation=token.generation; native.commands=bounds.commands;
+        native.draws=checkpoint.draws; native.views=checkpoint.views;
+        native.resources=bounds.resources; native.bytes=static_cast<UInt32>(bounds.bytes);
+        bgfx::BoundedSubmissionReceipt receipt;
+        if (!bgfx::submitBounded(native,checkpoint.manifest.data(),
+            static_cast<UInt32>(checkpoint.manifest.size()),receipt)) return false;
+        ++impl_->bounded_submissions; ++impl_->frame_advances;
+    }
     if (!impl_->transaction.finish(token, true)) return false;
     for (const auto value : checkpoint.native_owners)
         if (!value.retained) impl_->retirements.push_back(value);
@@ -727,6 +969,7 @@ bool BgfxGpuDevice::abort_device_transaction(const DeviceTransactionToken& token
     Impl::restore_slots(impl_->samplers, checkpoint.samplers);
     Impl::restore_slots(impl_->shaders, checkpoint.shaders);
     Impl::restore_slots(impl_->pipelines, checkpoint.pipelines);
+    impl_->restore_frame(checkpoint);
     impl_->checkpoint.reset();
     return true;
 }
@@ -738,6 +981,11 @@ void BgfxGpuDevice::fail_transaction_native_publication_after(UInt32 count) noex
 std::size_t BgfxGpuDevice::pending_native_retirement_count() const noexcept { return impl_->retirements.size(); }
 UInt64 BgfxGpuDevice::native_retirement_destroy_count() const noexcept { return impl_->retirement_destroys; }
 UInt64 BgfxGpuDevice::native_frame_advance_count() const noexcept { return impl_->frame_advances; }
+UInt64 BgfxGpuDevice::bounded_submission_count() const noexcept { return impl_->bounded_submissions; }
+UInt64 BgfxGpuDevice::staged_frame_command_count() const noexcept
+{ return impl_->checkpoint ? impl_->checkpoint->journal.size() : 0; }
+void BgfxGpuDevice::fail_next_transaction_submission() noexcept { impl_->submission_fault=true; }
+void BgfxGpuDevice::fail_transaction_frame_copy_after(UInt32 count) noexcept { impl_->frame_copy_fault=count; }
 UInt64 BgfxGpuDevice::live_owned_native_reference_count() const noexcept
 { return impl_->native_reference_creates-impl_->native_reference_destroys; }
 
@@ -1101,9 +1349,11 @@ PipelineHandle BgfxGpuDevice::create_pipeline(const PipelineKey& key, std::strin
 ValidationResult BgfxGpuDevice::begin_pass(const RenderPassDesc& desc, std::string_view)
 {
     Impl::OperationGuard guard{*impl_};
-    if (impl_->reject_live("begin_pass")) return {false, impl_->last_error};
+    if (!impl_->frame_operation("begin_pass")) return {false, impl_->last_error};
     if (impl_->in_pass) return impl_->fail("begin_pass", "a pass is already active");
     if (auto result = validate(desc); !result) return impl_->fail("begin_pass", result.error);
+    if (impl_->frame_transaction() && desc.target_generation != impl_->transaction.token().generation)
+        return impl_->fail("begin_pass","target and transaction generations differ");
     if (desc.width > UINT16_MAX || desc.height > UINT16_MAX || impl_->next_view >= RendererLimits::ordered_views)
         return impl_->fail("begin_pass", "target extent or ordered view budget exceeded");
     std::array<bgfx::TextureHandle, RendererLimits::color_targets + 1> attachments{};
@@ -1124,16 +1374,40 @@ ValidationResult BgfxGpuDevice::begin_pass(const RenderPassDesc& desc, std::stri
         || (depth->record.desc.format == TextureFormat::depth24_stencil8 && !depth->record.stencil_initialized)))
         return impl_->fail("begin_pass", "depth LOAD requires prior completed write");
     attachments[desc.color_target_count] = depth->record.native;
+    Impl::FramePacket packet;
+    if (impl_->frame_transaction()) {
+        if (desc.width > bgfx::getCaps()->limits.maxTextureSize || desc.height > bgfx::getCaps()->limits.maxTextureSize
+            || !impl_->reserve_packet("begin_pass",1,1,
+                (desc.color_target_count+2)*sizeof(std::size_t),1))
+            return impl_->fail("begin_pass","native extent or candidate admission failed");
+        impl_->frame_copy_boundary(); packet.leases.reserve(desc.color_target_count+2);
+        for (UInt32 i=0;i<=desc.color_target_count;++i)
+            if (!impl_->lease(packet,Impl::NativeKind::texture,attachments[i].idx)) return {false,impl_->last_error};
+    }
     auto framebuffer = bgfx::createFrameBuffer(static_cast<UInt8>(desc.color_target_count + 1), attachments.data(), false);
     if (!bgfx::isValid(framebuffer)) return impl_->fail("begin_pass", "public bgfx framebuffer creation failed");
-    const auto view = static_cast<bgfx::ViewId>(impl_->next_view++);
-    bgfx::setViewFrameBuffer(view, framebuffer);
-    bgfx::setViewMode(view, bgfx::ViewMode::Sequential);
-    bgfx::setViewRect(view, 0, 0, static_cast<UInt16>(desc.width), static_cast<UInt16>(desc.height));
+    const auto view = static_cast<bgfx::ViewId>(impl_->next_view);
     const UInt16 flags = (desc.color_load == AttachmentLoad::clear ? BGFX_CLEAR_COLOR : 0)
         | (desc.depth_load == AttachmentLoad::clear ? BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL : 0);
-    bgfx::setViewClear(view, flags, clear_rgba(desc.clear_color), desc.clear_depth, 0);
-    bgfx::touch(view);
+    if (impl_->frame_transaction()) {
+        Impl::NativeCandidate candidate{*impl_,{Impl::NativeKind::framebuffer,framebuffer.idx}};
+        if (!impl_->admit_native_publication("begin_pass")) return {false,impl_->last_error};
+        packet.command.kind=bgfx::BoundedSubmissionCommand::View;
+        packet.command.view=view; packet.command.framebuffer=framebuffer;
+        packet.command.width=static_cast<UInt16>(desc.width); packet.command.height=static_cast<UInt16>(desc.height);
+        packet.command.clearFlags=flags; packet.command.clearRgba=clear_rgba(desc.clear_color);
+        packet.command.clearDepth=desc.clear_depth; packet.command.touch=true;
+        impl_->track_native(candidate.owned); candidate.released=true;
+        if (!impl_->lease(packet,Impl::NativeKind::framebuffer,framebuffer.idx)) return {false,impl_->last_error};
+        impl_->append(std::move(packet));
+    } else {
+        bgfx::setViewFrameBuffer(view, framebuffer);
+        bgfx::setViewMode(view, bgfx::ViewMode::Sequential);
+        bgfx::setViewRect(view, 0, 0, static_cast<UInt16>(desc.width), static_cast<UInt16>(desc.height));
+        bgfx::setViewClear(view, flags, clear_rgba(desc.clear_color), desc.clear_depth, 0);
+        bgfx::touch(view);
+    }
+    ++impl_->next_view;
     impl_->framebuffer = framebuffer;
     impl_->colors = desc.color_targets;
     impl_->color_count = desc.color_target_count;
@@ -1159,7 +1433,7 @@ std::pair<UInt32,UInt32> BgfxGpuDevice::active_pass_extent() const noexcept
 ValidationResult BgfxGpuDevice::set_viewport(const ViewportDesc& desc)
 {
     Impl::OperationGuard guard{*impl_};
-    if (impl_->reject_live("set_viewport")) return {false, impl_->last_error};
+    if (!impl_->frame_operation("set_viewport")) return {false, impl_->last_error};
     if (!impl_->in_pass) return impl_->fail("set_viewport", "no active pass");
     if (auto result = validate(desc, impl_->width, impl_->height); !result)
         return impl_->fail("set_viewport", result.error);
@@ -1169,6 +1443,21 @@ ValidationResult BgfxGpuDevice::set_viewport(const ViewportDesc& desc)
         return impl_->fail("set_viewport", "public bgfx view requires integer rectangle and full depth range");
     if (impl_->next_view >= RendererLimits::ordered_views)
         return impl_->fail("set_viewport", "ordered view budget exhausted");
+    if (impl_->frame_transaction()) {
+        if (!detail::bounded_view_rectangle(desc.x,desc.y,desc.width,desc.height))
+            return impl_->fail("set_viewport","native signed view coordinate is not representable");
+        if (!impl_->reserve_packet("set_viewport",1,1,sizeof(std::size_t))) return {false,impl_->last_error};
+        Impl::FramePacket packet;
+        impl_->frame_copy_boundary(); packet.leases.reserve(1);
+        if (!impl_->lease(packet,Impl::NativeKind::framebuffer,impl_->framebuffer.idx)) return {false,impl_->last_error};
+        packet.command.kind=bgfx::BoundedSubmissionCommand::View;
+        packet.command.view=static_cast<bgfx::ViewId>(impl_->next_view);
+        packet.command.framebuffer=impl_->framebuffer;
+        packet.command.x=static_cast<std::int16_t>(desc.x); packet.command.y=static_cast<std::int16_t>(desc.y);
+        packet.command.width=static_cast<UInt16>(desc.width); packet.command.height=static_cast<UInt16>(desc.height);
+        impl_->append(std::move(packet)); ++impl_->next_view;
+        return {};
+    }
     // View state is frame-global, not an immediate command. Mutating the
     // previous view would retroactively clip its full-target clear/draws.
     const auto view = static_cast<bgfx::ViewId>(impl_->next_view++);
@@ -1184,7 +1473,7 @@ ValidationResult BgfxGpuDevice::set_viewport(const ViewportDesc& desc)
 ValidationResult BgfxGpuDevice::clear_viewport(const ViewportClearDesc& desc)
 {
     Impl::OperationGuard guard{*impl_};
-    if (impl_->reject_live("clear_viewport")) return {false, impl_->last_error};
+    if (!impl_->frame_operation("clear_viewport")) return {false, impl_->last_error};
     if (!impl_->in_pass) return impl_->fail("clear_viewport", "no active pass");
     if (auto result = validate(desc, impl_->width, impl_->height); !result)
         return impl_->fail("clear_viewport", result.error);
@@ -1200,15 +1489,32 @@ ValidationResult BgfxGpuDevice::clear_viewport(const ViewportClearDesc& desc)
     const auto top = std::max<Int32>(0, desc.y);
     const auto right = std::min<std::int64_t>(impl_->width, static_cast<std::int64_t>(desc.x) + desc.width);
     const auto bottom = std::min<std::int64_t>(impl_->height, static_cast<std::int64_t>(desc.y) + desc.height);
-    const auto view = static_cast<bgfx::ViewId>(impl_->next_view++);
-    bgfx::setViewFrameBuffer(view, impl_->framebuffer);
-    bgfx::setViewMode(view, bgfx::ViewMode::Sequential);
-    bgfx::setViewRect(view, static_cast<UInt16>(left), static_cast<UInt16>(top),
-        static_cast<UInt16>(right - left), static_cast<UInt16>(bottom - top));
+    const auto view = static_cast<bgfx::ViewId>(impl_->next_view);
     const UInt16 flags = (desc.color ? BGFX_CLEAR_COLOR : 0) | (desc.depth ? BGFX_CLEAR_DEPTH : 0)
         | (desc.stencil ? BGFX_CLEAR_STENCIL : 0);
-    bgfx::setViewClear(view, flags, clear_rgba(desc.color_value), desc.depth_value, desc.stencil_value);
-    bgfx::touch(view);
+    if (impl_->frame_transaction()) {
+        if (!detail::bounded_view_rectangle(left,top,right-left,bottom-top))
+            return impl_->fail("clear_viewport","native signed clear coordinate is not representable");
+        if (!impl_->reserve_packet("clear_viewport",1,1,sizeof(std::size_t))) return {false,impl_->last_error};
+        Impl::FramePacket packet;
+        impl_->frame_copy_boundary(); packet.leases.reserve(1);
+        if (!impl_->lease(packet,Impl::NativeKind::framebuffer,impl_->framebuffer.idx)) return {false,impl_->last_error};
+        packet.command.kind=bgfx::BoundedSubmissionCommand::View; packet.command.view=view;
+        packet.command.framebuffer=impl_->framebuffer;
+        packet.command.x=static_cast<std::int16_t>(left); packet.command.y=static_cast<std::int16_t>(top);
+        packet.command.width=static_cast<UInt16>(right-left); packet.command.height=static_cast<UInt16>(bottom-top);
+        packet.command.clearFlags=flags; packet.command.clearRgba=clear_rgba(desc.color_value);
+        packet.command.clearDepth=desc.depth_value; packet.command.clearStencil=desc.stencil_value;
+        packet.command.touch=true; impl_->append(std::move(packet));
+    } else {
+        bgfx::setViewFrameBuffer(view, impl_->framebuffer);
+        bgfx::setViewMode(view, bgfx::ViewMode::Sequential);
+        bgfx::setViewRect(view, static_cast<UInt16>(left), static_cast<UInt16>(top),
+            static_cast<UInt16>(right-left), static_cast<UInt16>(bottom-top));
+        bgfx::setViewClear(view, flags, clear_rgba(desc.color_value), desc.depth_value, desc.stencil_value);
+        bgfx::touch(view);
+    }
+    ++impl_->next_view;
     if (desc.color) lookup(impl_->textures, impl_->colors[0])->record.color_initialized = true;
     if (desc.depth) lookup(impl_->textures, impl_->depth)->record.depth_initialized = true;
     if (desc.stencil) lookup(impl_->textures, impl_->depth)->record.stencil_initialized = true;
@@ -1217,7 +1523,7 @@ ValidationResult BgfxGpuDevice::clear_viewport(const ViewportClearDesc& desc)
 ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
 {
     Impl::OperationGuard guard{*impl_};
-    if (impl_->reject_live("draw")) return {false, impl_->last_error};
+    if (!impl_->frame_operation("draw")) return {false, impl_->last_error};
     if (!impl_->in_pass) return impl_->fail("draw", "draw requires an active pass");
     auto* pipeline = lookup(impl_->pipelines, desc.pipeline);
     if (!pipeline) return impl_->fail("draw", "stale or foreign pipeline handle");
@@ -1225,12 +1531,15 @@ ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
     if (auto result = validate(desc, state); !result) return impl_->fail("draw", result.error);
     if (impl_->color_count != 1 || !lookup(impl_->textures, impl_->colors[0])
         || lookup(impl_->textures, impl_->colors[0])->record.desc.format != state.color_format
+        || !lookup(impl_->textures, impl_->depth)
         || lookup(impl_->textures, impl_->depth)->record.desc.format != state.depth_format)
         return impl_->fail("draw", "pipeline and active target formats differ");
     if (state.raster.fill != FillMode::solid ||
         (state.raster.depth_bias != 0.0f && state.raster.depth_bias != -8.0f)
         || state.topology == PrimitiveTopology::triangle_fan)
         return impl_->fail("draw", "required pipeline or binding state is not yet mapped to public bgfx");
+    if (state.depth_stencil.stencil_test && state.depth_format != TextureFormat::depth24_stencil8)
+        return impl_->fail("draw","stencil test requires D24S8 target");
     if (state.topology == PrimitiveTopology::point_list
         && (desc.point_size > 15.0f || std::floor(desc.point_size) != desc.point_size))
         return impl_->fail("draw", "public bgfx point size must be an integer in 1..15");
@@ -1248,7 +1557,7 @@ ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
             auto* buffer = lookup(impl_->buffers, binding.buffer);
             if (!buffer || buffer->record.desc.usage != BufferUsage::uniform
                 || field.offset > binding.size || field.size > binding.size - field.offset
-                || !range_written(buffer->record.written, binding.offset + field.offset, field.size))
+                || !range_written(buffer->record.written, UInt64(binding.offset) + field.offset, field.size))
                 return impl_->fail("draw", "missing, stale or uninitialized reflected uniform field");
         }
         for (const auto& texture : shader.textures) {
@@ -1282,6 +1591,8 @@ ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
         return impl_->fail("draw", "stale or wrong-usage index buffer");
     if (index) {
         const UInt64 width = static_cast<UInt8>(desc.index_element_size);
+        if (impl_->frame_transaction() && index->record.shadow.size()%width)
+            return impl_->fail("draw","native index buffer element alignment mismatch");
         const UInt64 offset = static_cast<UInt64>(desc.first_index) * width;
         const UInt64 bytes = static_cast<UInt64>(desc.vertex_or_index_count) * width;
         if (!range_written(index->record.written, offset, bytes))
@@ -1296,6 +1607,9 @@ ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
     } else if (start_vertex || desc.vertex_or_index_count > available_vertices
         || !range_written(vertex->record.written, 0, static_cast<UInt64>(desc.vertex_or_index_count) * stride))
         return impl_->fail("draw", "non-indexed vertex range is out of bounds or uninitialized");
+    if (impl_->frame_transaction())
+        return impl_->capture_draw(desc,pipeline->record,vertex_shader->record,fragment_shader->record,
+            vertex->record,index ? &index->record : nullptr,layout,stride);
     const auto native_vertex = bgfx::createVertexBuffer(
         bgfx::copy(vertex->record.shadow.data(), static_cast<UInt32>(vertex->record.shadow.size())), layout);
     if (!bgfx::isValid(native_vertex)) return impl_->fail("draw", "public bgfx vertex buffer creation failed");
@@ -1380,9 +1694,9 @@ ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
 ValidationResult BgfxGpuDevice::end_pass()
 {
     Impl::OperationGuard guard{*impl_};
-    if (impl_->reject_live("end_pass")) return {false, impl_->last_error};
+    if (!impl_->frame_operation("end_pass")) return {false, impl_->last_error};
     if (!impl_->in_pass) return impl_->fail("end_pass", "no active pass");
-    bgfx::destroy(impl_->framebuffer);
+    if (!impl_->frame_transaction()) bgfx::destroy(impl_->framebuffer);
     impl_->framebuffer = BGFX_INVALID_HANDLE;
     impl_->in_pass = false;
     impl_->color_count = 0;
@@ -1395,7 +1709,7 @@ ValidationResult BgfxGpuDevice::end_pass()
 ValidationResult BgfxGpuDevice::present(TextureHandle source)
 {
     Impl::OperationGuard guard{*impl_};
-    if (impl_->reject_live("present")) return {false, impl_->last_error};
+    if (!impl_->frame_operation("present")) return {false, impl_->last_error};
     if (impl_->in_pass) return impl_->fail("present", "cannot present during an active pass");
     if (!impl_->window || !bgfx::isValid(impl_->window_framebuffer))
         return impl_->fail("present", "no SDL3 window is claimed");
@@ -1406,6 +1720,79 @@ ValidationResult BgfxGpuDevice::present(TextureHandle source)
     int width = 0, height = 0;
     if (!impl_->query_window_pixels(impl_->window, &width, &height) || width < 0 || height < 0)
         return impl_->fail("present", "SDL3 window pixel size is unavailable");
+    if (impl_->frame_transaction()) {
+        if (width > UINT16_MAX || height > UINT16_MAX
+            || width > bgfx::getCaps()->limits.maxTextureSize || height > bgfx::getCaps()->limits.maxTextureSize)
+            return impl_->fail("present","window extent exceeds native bounds");
+        const bool suspended=width == 0 || height == 0;
+        const bool resize=!suspended && (impl_->window_width != static_cast<UInt32>(width)
+            || impl_->window_height != static_cast<UInt32>(height));
+        if (!bgfx::isValid(impl_->present_program) || !bgfx::isValid(impl_->present_viewport)
+            || !bgfx::isValid(impl_->present_texture)
+            || !lookup(impl_->shaders,impl_->present_vertex) || !lookup(impl_->shaders,impl_->present_fragment))
+            return impl_->fail("present","presentation provider ownership is unavailable");
+        if (!impl_->reserve_packet("present",suspended ? 1 : (resize ? 4 : 3),suspended ? 0 : 1,
+            suspended ? 0 : 16+sizeof(bgfx::BoundedSubmissionUniform)+sizeof(bgfx::BoundedSubmissionTexture)
+                +4*sizeof(std::size_t)+60,suspended ? 0 : 1)) return {false,impl_->last_error};
+        std::array<Impl::FramePacket,4> packets;
+        std::size_t count=0;
+        if (resize) {
+            auto& cmd=packets[count++].command;
+            cmd.kind=bgfx::BoundedSubmissionCommand::ResizeSwapChain; cmd.framebuffer=impl_->window_framebuffer;
+            cmd.swapChain.nwh=impl_->window_nwh; cmd.swapChain.ndt=impl_->window_ndt;
+            cmd.swapChain.width=static_cast<UInt32>(width); cmd.swapChain.height=static_cast<UInt32>(height);
+            cmd.swapChain.formatColor=bgfx::TextureFormat::BGRA8;
+            cmd.swapChain.formatDepthStencil=bgfx::TextureFormat::Count;
+        }
+        if (!suspended) {
+            auto& view=packets[count++].command;
+            view.kind=bgfx::BoundedSubmissionCommand::View; view.view=static_cast<bgfx::ViewId>(impl_->next_view);
+            view.framebuffer=impl_->window_framebuffer; view.width=static_cast<UInt16>(width);
+            view.height=static_cast<UInt16>(height); view.clearFlags=BGFX_CLEAR_COLOR; view.clearRgba=0x000000ff;
+            auto& packet=packets[count++];
+            impl_->frame_copy_boundary(); packet.payload.resize(1);
+            impl_->frame_copy_boundary(); packet.uniforms.resize(1);
+            impl_->frame_copy_boundary(); packet.textures.resize(1);
+            impl_->frame_copy_boundary(); packet.leases.reserve(4);
+            const std::array<float,4> viewport{static_cast<float>(width),static_cast<float>(height),0,0};
+            std::memcpy(packet.payload.data(),viewport.data(),sizeof(viewport));
+            packet.uniforms[0].handle=impl_->present_viewport; packet.uniforms[0].count=1;
+            packet.uniforms[0].bytes=sizeof(viewport); packet.uniforms[0].data=packet.payload.data();
+            packet.textures[0].sampler=impl_->present_texture; packet.textures[0].texture=image->record.native;
+            packet.textures[0].stage=8; packet.textures[0].flags=BGFX_SAMPLER_U_CLAMP|BGFX_SAMPLER_V_CLAMP;
+            if (!impl_->lease(packet,Impl::NativeKind::texture,image->record.native.idx)
+                || !impl_->lease(packet,Impl::NativeKind::shader,lookup(impl_->shaders,impl_->present_vertex)->record.native.idx)
+                || !impl_->lease(packet,Impl::NativeKind::shader,lookup(impl_->shaders,impl_->present_fragment)->record.native.idx))
+                return {false,impl_->last_error};
+            bgfx::VertexLayout layout;
+            layout.begin().add(bgfx::Attrib::Position,2,bgfx::AttribType::Float)
+                .add(bgfx::Attrib::Color0,4,bgfx::AttribType::Uint8,true)
+                .add(bgfx::Attrib::TexCoord0,2,bgfx::AttribType::Float).end();
+            struct Vertex { float x,y; UInt32 color; float u,v; };
+            const std::array<Vertex,3> triangle{{{0,0,0xffffffffU,0,0},
+                {2.0f*width,0,0xffffffffU,2,0},{0,2.0f*height,0xffffffffU,0,2}}};
+            const auto native=bgfx::createVertexBuffer(bgfx::copy(triangle.data(),sizeof(triangle)),layout);
+            if (!bgfx::isValid(native)) return impl_->fail("present","typed presentation vertices unavailable");
+            Impl::NativeCandidate candidate{*impl_,{Impl::NativeKind::vertex,native.idx}};
+            if (!impl_->admit_native_publication("present")) return {false,impl_->last_error};
+            auto& draw=packet.command;
+            draw.kind=bgfx::BoundedSubmissionCommand::Draw; draw.view=static_cast<bgfx::ViewId>(impl_->next_view);
+            draw.program=impl_->present_program; draw.vertex=native; draw.vertices=3;
+            draw.uniforms=packet.uniforms.data(); draw.uniformCount=1;
+            draw.textures=packet.textures.data(); draw.textureCount=1;
+            draw.state=BGFX_STATE_WRITE_RGB|BGFX_STATE_WRITE_A;
+            impl_->track_native(candidate.owned); candidate.released=true;
+            if (!impl_->lease(packet,Impl::NativeKind::vertex,native.idx)) return {false,impl_->last_error};
+        }
+        packets[count++].command.kind=bgfx::BoundedSubmissionCommand::CompleteFrame;
+        // Window-owned FBO/program identities are borrowed under the exclusive
+        // device/window lifetime; claim/release/shutdown cannot intervene.
+        for (std::size_t i=0;i<count;++i) impl_->append(std::move(packets[i]));
+        impl_->checkpoint->completed=true;
+        if (!suspended) { impl_->window_width=static_cast<UInt32>(width); impl_->window_height=static_cast<UInt32>(height); }
+        impl_->next_view=0;
+        return {};
+    }
     if (width == 0 || height == 0) {
         impl_->advance_frame();
         impl_->next_view = 0;

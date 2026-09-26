@@ -105,6 +105,13 @@ reservation token or mutation interval. Recoverable native admission rejection
 returns before accepted-target touch and leaves this journal available to abort
 or retry. Native success returns a context/frame/sequence receipt; this child's
 device token/generation owns consumption and at-most-once invocation.
+An external unsupported encoder is not assumed released by bgfx::end: pinned
+Context::end only finalizes/posts, and encoderApiWait resets encoder-handle
+allocation at an ordinary frame boundary. A rejects that native admission and
+preserves this journal; abort before ordinary wait, then use a fresh attempt.
+Never advance a live transaction's frame to manufacture native readiness.
+Recoverable reservation rejection separately proves same-journal immediate
+retry; external encoder removal/readiness is a different admission condition.
 Only after the entire immutable batch and native reservation succeed may the
 no-throw exactly-once native replay emit source order. It uses owned data and public
 admitted native operations only: no source registry lookup, callback, heap
@@ -123,7 +130,12 @@ category. Unsupported native categories reject during whole-manifest admission.
 
 Expected surfaces: bgfx device/header/journal helper, narrow OriginalGpuEdge
 capability integration, new isolated `test_bgfx_transaction.cpp`, CMake and
-contract docs. Never alter the unrelated renderer diagnostic. New aggregate/
+contract docs, and generated-only cross-stage shader fixtures (not installed
+as shipping shader families, compiled under a separate generated output root;
+the shipping shader-family closure remains exact). The fixture device uses that
+separate owned root with byte-identical generated video binary/manifest/layout
+copies for baseline/present controls; relative-path admission is unchanged.
+Never alter the unrelated renderer diagnostic. New aggregate/
 value members explicitly initialize; no padding assumptions. No second native
 reservation implementation or private checkpoint container in the edge.
 
@@ -150,7 +162,7 @@ Focused commands before production:
 
 `cmake --build build/<preset> --target renderer_bgfx_transaction_tests -j4`
 
-`ctest --test-dir build/<preset> -R '^(renderer_bgfx_transaction|renderer_bgfx_transaction_resource|renderer_bgfx_submission_reservation|renderer_recording_transaction|original_w3d_first_gpu_edge)$' --output-on-failure`
+`ctest --test-dir build/<preset> -R '^(renderer_bgfx_transaction|renderer_bgfx_transaction_shader_scope|bgfx_shader_family_closure|renderer_bgfx_transaction_resource|renderer_bgfx_submission_reservation|renderer_recording_transaction|original_w3d_first_gpu_edge|original_w3d_gpu_edge_failure)$' --output-on-failure`
 
 Both native toolchains and focused sanitized builds (detect_leaks=0), exact
 serial host LSan detect_leaks=1/no UBSan override selecting the three new CPU
@@ -162,3 +174,19 @@ zero Validation Error/VUID, allocator pairing, immediate residuals and no
 emulation substitute. Serial host LAN 4/4 all six, ledger/header/diff and exact
 staged review complete acceptance. Commit one coherent frame behavior child:
 `delivery: M22 08P0C2D0B2B defer admitted bgfx frame commands`.
+
+## Accepted result
+
+Delivered the complete immutable frame journal, exact captured native leases,
+source-stage alias/coordinate preflight, one-final-presentation completion and
+allocation-free native invocation/once-only retry consumption. OriginalGpuEdge
+forwards exact capability/token ownership; complete source-stage rollback remains
+B0. The self-contained generated fixture root preserves production relative-path
+admission and byte-identical required video providers, never shipping/install
+enumeration. [Final evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2d0b2b_bgfx_frame_journal.md)
+records both native/both sanitizer focused 8/8, strict host LSan 4/4 each, twelve
+generated physical controls, all six complete builds/canonicals 274/274 with clean
+complete-log audits, established Vulkan 3/3+2/2 and serial LAN 4/4 all six.
+Frozen hashes, ledger/header/diff and exact-owned review pass. The unrelated
+renderer diagnostic is preserved unstaged. B2/B/D0 aggregates are dependency-next;
+no factory, tree scene or retail acceptance is claimed.

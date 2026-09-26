@@ -49,6 +49,7 @@ OriginalGpuEdge::OriginalGpuEdge(renderer::GpuDevice& device)
 
 OriginalGpuEdge::~OriginalGpuEdge()
 {
+    if (device_transaction_) (void)abort_device_transaction(*device_transaction_);
     abort_source_frame();
     release_prepared_state();
     release_volume_stencil();
@@ -84,6 +85,44 @@ OriginalGpuEdge& OriginalGpuEdge::required()
 OriginalGpuEdge* OriginalGpuEdge::active() noexcept
 {
     return active_edge;
+}
+
+bool OriginalGpuEdge::supports_device_transactions(renderer::DeviceTransactionMode mode) const noexcept
+{ return device_.supports_device_transactions(mode); }
+
+renderer::ValidationResult OriginalGpuEdge::begin_device_transaction(
+    const renderer::DeviceTransactionDesc& desc,renderer::DeviceTransactionToken& token)
+{
+    if (device_transaction_ || source_frame_active_ || device_.pass_active() || !device_.supports_device_transactions(desc.mode)
+        || (desc.mode == renderer::DeviceTransactionMode::frame_commands
+            && (!bound_frame_ || desc.generation != frame_target_generation_))
+        || (desc.mode == renderer::DeviceTransactionMode::idle_preparation && desc.generation != generation_))
+        return {false,"original device transaction has an unsupported mode or mismatched owner generation"};
+    const auto result=device_.begin_device_transaction(desc,token);
+    if (result) device_transaction_=token;
+    return result;
+}
+
+bool OriginalGpuEdge::commit_device_transaction(const renderer::DeviceTransactionToken& token) noexcept
+{
+    if (!device_transaction_ || source_frame_active_ || device_.pass_active()) return false;
+    const auto& owner=*device_transaction_;
+    if (token.device!=owner.device || token.sequence!=owner.sequence || token.generation!=owner.generation
+        || token.mode!=owner.mode || !device_.commit_device_transaction(token)) return false;
+    device_transaction_.reset();return true;
+}
+
+bool OriginalGpuEdge::abort_device_transaction(const renderer::DeviceTransactionToken& token) noexcept
+{
+    if (!device_transaction_) return false;
+    const auto owner=*device_transaction_;
+    if (token.device!=owner.device || token.sequence!=owner.sequence || token.generation!=owner.generation
+        || token.mode!=owner.mode || !device_.abort_device_transaction(token)) return false;
+    device_transaction_.reset();
+    // The admitted device has restored its inactive-pass baseline. Do not
+    // issue a fallible ordinary end_pass after aborting the journal.
+    source_frame_active_=false; source_viewport_.reset();
+    return true;
 }
 
 renderer::OriginalFvfLayout OriginalGpuEdge::layout_for_fvf(unsigned source_fvf)
@@ -857,7 +896,7 @@ void OriginalGpuEdge::record_source_state(std::string_view label)
 void OriginalGpuEdge::bind_frame_targets(renderer::TextureHandle color,
     renderer::TextureHandle depth,unsigned width,unsigned height)
 {
-    if (source_frame_active_ || !color || !depth || !width || !height)
+    if (device_transaction_ || source_frame_active_ || !color || !depth || !width || !height)
         throw std::runtime_error("original frame target binding requires idle, complete attachments");
     bound_frame_=BoundFrame{color,depth,width,height};
     ++frame_target_generation_;

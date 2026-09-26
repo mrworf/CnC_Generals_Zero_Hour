@@ -2510,6 +2510,62 @@ if(ZH_BUILD_TESTS)
     ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx")
   add_dependencies(renderer_bgfx_mip_texture_tests zh_bgfx_shaders)
   add_executable(renderer_bgfx_transaction_resource_tests tests/renderer/test_bgfx_transaction_resource.cpp)
+  add_executable(renderer_bgfx_transaction_tests tests/renderer/test_bgfx_transaction.cpp)
+  set(ZH_BGFX_TRANSACTION_SHADERS)
+  foreach(shader_name IN ITEMS transaction_alias.vert transaction_alias.frag transaction_distinct.vert)
+    if(shader_name MATCHES "\\.vert$")
+      set(shader_type vertex)
+    else()
+      set(shader_type fragment)
+    endif()
+    set(shader_source "${CMAKE_CURRENT_SOURCE_DIR}/tests/renderer/shaders/${shader_name}")
+    set(shader_base "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx-transaction/${shader_name}")
+    add_custom_command(OUTPUT "${shader_base}.bin"
+      BYPRODUCTS "${shader_base}.pre" "${shader_base}.lower" "${shader_base}.json" "${shader_base}.layout"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx-transaction"
+      COMMAND "${ZH_GLSLC_EXECUTABLE}" -E "${shader_source}" -o "${shader_base}.pre"
+      COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/prepare_bgfx_glsl.py"
+        --input "${shader_base}.pre" --output "${shader_base}.lower" --manifest "${shader_base}.json" --stage "${shader_type}"
+      COMMAND "${ZH_BGFX_SHADERC_EXECUTABLE}" -f "${shader_base}.lower" -o "${shader_base}.bin"
+        --type "${shader_type}" --platform linux --profile spirv --raw
+      COMMAND zh_bgfx_uniform_layout_tool "${shader_base}.bin" "${shader_type}" "${shader_base}.layout"
+      DEPENDS "${shader_source}" "${ZH_BGFX_SHADERC_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx_shaderc_glsl.patch"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/prepare_bgfx_glsl.py" zh_bgfx_uniform_layout_tool
+      VERBATIM)
+    list(APPEND ZH_BGFX_TRANSACTION_SHADERS "${shader_base}.bin")
+  endforeach()
+  foreach(shader_name IN ITEMS video.vert video.frag)
+    set(shader_shipping "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/renderer/${shader_name}")
+    set(shader_fixture "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx-transaction/renderer/${shader_name}")
+    add_custom_command(OUTPUT "${shader_fixture}.bin" "${shader_fixture}.json" "${shader_fixture}.layout"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx-transaction/renderer"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${shader_shipping}.bin" "${shader_fixture}.bin"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${shader_shipping}.json" "${shader_fixture}.json"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${shader_shipping}.layout" "${shader_fixture}.layout"
+      DEPENDS "${shader_shipping}.bin" "${shader_shipping}.json" "${shader_shipping}.layout"
+      VERBATIM)
+    list(APPEND ZH_BGFX_TRANSACTION_SHADERS "${shader_fixture}.bin" "${shader_fixture}.json" "${shader_fixture}.layout")
+  endforeach()
+  add_custom_target(zh_bgfx_transaction_shaders DEPENDS ${ZH_BGFX_TRANSACTION_SHADERS})
+  target_link_libraries(renderer_bgfx_transaction_tests PRIVATE zh_renderer_bgfx)
+  target_compile_definitions(renderer_bgfx_transaction_tests PRIVATE
+    ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx"
+    ZH_BGFX_TRANSACTION_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx-transaction")
+  add_dependencies(renderer_bgfx_transaction_tests zh_bgfx_shaders zh_bgfx_transaction_shaders)
+  add_test(NAME renderer_bgfx_transaction COMMAND renderer_bgfx_transaction_tests)
+  set_tests_properties(renderer_bgfx_transaction PROPERTIES LABELS renderer-contract)
+  add_test(NAME renderer_bgfx_transaction_shader_scope COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/renderer/test_bgfx_transaction_shader_scope.py"
+    --build-root "${CMAKE_CURRENT_BINARY_DIR}")
+  set_tests_properties(renderer_bgfx_transaction_shader_scope PROPERTIES LABELS "renderer-contract;source-identity")
+  if(ZH_ENABLE_GPU_TESTS)
+    add_test(NAME renderer_bgfx_transaction_gpu COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:renderer_bgfx_transaction_tests> --gpu)
+    set_tests_properties(renderer_bgfx_transaction_gpu PROPERTIES LABELS "gpu;renderer-contract"
+      TIMEOUT 60 RUN_SERIAL TRUE ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+  endif()
   add_executable(renderer_bgfx_submission_reservation_tests tests/renderer/test_bgfx_submission_reservation.cpp)
   target_link_libraries(renderer_bgfx_submission_reservation_tests PRIVATE zh_renderer_bgfx)
   set_target_properties(renderer_bgfx_submission_reservation_tests PROPERTIES CXX_STANDARD 20)

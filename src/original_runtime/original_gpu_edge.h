@@ -145,6 +145,14 @@ public:
     static bool is_missing_texture(const TextureBaseClass* source) noexcept;
     renderer::TextureHandle texture_handle(const TextureBaseClass* source) const;
     std::uint64_t generation() const noexcept { return generation_; }
+    // Device capability only. Complete source-stage checkpointing is a
+    // separate owner; this boundary does not snapshot refs/maps/revisions.
+    bool supports_device_transactions(renderer::DeviceTransactionMode mode) const noexcept;
+    renderer::ValidationResult begin_device_transaction(const renderer::DeviceTransactionDesc&,
+        renderer::DeviceTransactionToken&);
+    bool commit_device_transaction(const renderer::DeviceTransactionToken&) noexcept;
+    bool abort_device_transaction(const renderer::DeviceTransactionToken&) noexcept;
+    std::uint64_t frame_target_generation() const noexcept { return frame_target_generation_; }
     bool source_buffers_retirable() const noexcept { return !source_frame_active_; }
     static void release_texture_if_owned(TextureBaseClass* source) noexcept;
     struct PendingStage {
@@ -185,6 +193,7 @@ private:
         const TreeVertexUniform* tree);
     void release_prepared_state() noexcept;
     renderer::GpuDevice& device_;
+    std::optional<renderer::DeviceTransactionToken> device_transaction_;
     OriginalGpuEdge* previous_;
     std::unordered_map<const VertexBufferClass*, renderer::BufferHandle> vertices_;
     std::unordered_map<const IndexBufferClass*, renderer::BufferHandle> indices_;
