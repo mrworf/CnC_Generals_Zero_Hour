@@ -174,3 +174,14 @@ owners, then require affected clean sanitizer controls and a fresh complete matr
 Shipping FileSystem ordering is already correct; filter rejection must precede
 all table access and min/mag/mip/U/V stage mutation. Exact A evidence records
 counts, locations and qualification; renderer diagnostic remains excluded.
+
+Corrective D0B2R1 now admits real generated-root FileSystem/local service
+ownership before GlobalData, rejects absent/overlapping providers without
+construction, and removes services after GlobalData on success/failure.
+Two-generation exact global/pool baselines and the unchanged presentation route
+pass. Six complete builds/canonical suites finish 272/272, focused/strict-LSan,
+established Vulkan and six LAN gates pass. Both complete sanitizer logs prove
+the presentation null-service category eliminated; only separately tracked
+unchanged R2 address/profile enum categories remain. R2 is mandatory next and
+must complete a clean canonical matrix before B2B. No shipping CRC/startup,
+native transaction, tree/factory or retail behavior changed; renderer excluded.

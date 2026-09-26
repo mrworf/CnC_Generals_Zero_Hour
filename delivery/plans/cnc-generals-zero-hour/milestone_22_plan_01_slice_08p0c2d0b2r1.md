@@ -77,3 +77,25 @@ service lifetime owner: `delivery: M22 08P0C2D0B2R1 own presentation fixture ser
 Implementation-ready plan only; no production/test edits precede this durable
 checkpoint. This owner cannot alter accepted A or open B2B. R2 owns the separate
 defined filter/profile representation and complete pre-mutation validation.
+
+## Implementation/freeze checkpoint
+
+Real generated-root FileSystem/PosixLocalFileSystem ownership and checked
+GlobalData construction are now implemented solely in the presentation fixture.
+Both native focused selections and GCC sanitizer pass 3/3 with no null-service
+diagnostic. Borrowed/owned overlap, both absent counterpart services, exact
+two-generation pool baseline, consumer exception unwind and full-route final
+provider removal are asserted. Source and test are frozen at the adjacent
+evidence hash before final Clang sanitizer/build and complete acceptance gates.
+No shipping source, CRC, allocator or B2B admission is changed.
+
+## Accepted service checkpoint
+
+All six complete builds/canonical suites finish 272/272. Both full sanitizer
+logs confirm the null-FileSystem category eliminated; only independently
+tracked R2 address/profile fixture categories remain, explicitly qualified.
+Four focused selections pass 3/3, both exact strict host LSan 3/3, established
+Vulkan controls and six serial LAN selections pass. Adjacent evidence records
+exact source hash, times and source/owner classification. R2 now follows before
+any B2B source change and must yield the clean complete matrix. Renderer
+diagnostic remains unstaged; no source startup or CRC fallback was introduced.

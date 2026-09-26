@@ -2,6 +2,11 @@
 #include "OriginalW3DDeviceUnavailable.h"
 #include "Common/GameMemory.h"
 #include "Common/GlobalData.h"
+#include "Common/FileSystem.h"
+#include "Common/LocalFileSystem.h"
+#include "Common/ArchiveFileSystem.h"
+#include "Common/file.h"
+#include "PosixDevice/Common/PosixLocalFileSystem.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
@@ -27,6 +32,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <memory>
 
 struct PoolProbeNode { void *next; std::uint64_t originalPayload; };
 struct PoolProbe : ObjectPoolClass<PoolProbeNode, 7> {
@@ -54,6 +60,119 @@ struct WritableTestDirectory {
 static void require(bool ok, const char *message)
 {
     if (!ok) throw std::runtime_error(message);
+}
+
+// Real source services, rooted solely in the generated directory. Shipping
+// GameEngine establishes these before GlobalData; this fixture must do so too.
+class GeneratedPresentationServices final {
+    std::unique_ptr<FileSystem> files_;
+    std::unique_ptr<PosixLocalFileSystem> local_;
+public:
+    explicit GeneratedPresentationServices(const std::filesystem::path& root)
+    {
+        require(!TheFileSystem && !TheLocalFileSystem && !TheArchiveFileSystem,
+            "presentation service admission overlaps a borrowed provider");
+        auto files = std::make_unique<FileSystem>();
+        auto local = std::make_unique<PosixLocalFileSystem>(root);
+        local->init();
+        files_ = std::move(files);
+        local_ = std::move(local);
+        TheLocalFileSystem = local_.get();
+        TheFileSystem = files_.get();
+    }
+    ~GeneratedPresentationServices() noexcept
+    {
+        TheFileSystem = nullptr;
+        TheLocalFileSystem = nullptr;
+    }
+    GeneratedPresentationServices(const GeneratedPresentationServices&) = delete;
+    GeneratedPresentationServices& operator=(const GeneratedPresentationServices&) = delete;
+};
+
+static std::unique_ptr<GlobalData> makePresentationGlobalData()
+{
+    require(TheFileSystem && TheLocalFileSystem && !TheWritableGlobalData,
+        "presentation GlobalData requires admitted real filesystem services");
+    auto global = std::make_unique<GlobalData>();
+    TheWritableGlobalData = global.get();
+    return global;
+}
+
+static void testPresentationServices(const std::filesystem::path& root)
+{
+    require(!TheFileSystem && !TheLocalFileSystem && !TheArchiveFileSystem &&
+        !TheWritableGlobalData, "presentation service baseline is not empty");
+    const auto baseline = TheMemoryPoolFactory->getLiveAllocationCount();
+    bool absent = false;
+    try { (void)makePresentationGlobalData(); }
+    catch (const std::runtime_error&) { absent = true; }
+    require(absent && !TheWritableGlobalData && !TheFileSystem && !TheLocalFileSystem &&
+        TheMemoryPoolFactory->getLiveAllocationCount() == baseline,
+        "missing presentation service reached GlobalData or consumed ownership");
+    {
+        FileSystem borrowed;
+        TheFileSystem = &borrowed;
+        bool rejected = false;
+        try { GeneratedPresentationServices services(root); }
+        catch (const std::runtime_error&) { rejected = true; }
+        bool missing_local = false;
+        try { (void)makePresentationGlobalData(); }
+        catch (const std::runtime_error&) { missing_local = true; }
+        require(rejected && missing_local && TheFileSystem == &borrowed &&
+            !TheLocalFileSystem && !TheWritableGlobalData,
+            "borrowed FileSystem admission changed ownership or called GlobalData");
+        TheFileSystem = nullptr;
+    }
+    {
+        PosixLocalFileSystem borrowed(root);
+        TheLocalFileSystem = &borrowed;
+        bool rejected = false;
+        try { GeneratedPresentationServices services(root); }
+        catch (const std::runtime_error&) { rejected = true; }
+        bool missing_files = false;
+        try { (void)makePresentationGlobalData(); }
+        catch (const std::runtime_error&) { missing_files = true; }
+        require(rejected && missing_files && TheLocalFileSystem == &borrowed &&
+            !TheFileSystem && !TheWritableGlobalData,
+            "borrowed local admission changed ownership or called GlobalData");
+        TheLocalFileSystem = nullptr;
+    }
+    require(TheMemoryPoolFactory->getLiveAllocationCount() == baseline,
+        "borrowed presentation service controls retained pool ownership");
+    for (int generation = 0; generation != 2; ++generation) {
+        {
+            GeneratedPresentationServices services(root);
+            auto* const files = TheFileSystem;
+            auto* const local = TheLocalFileSystem;
+            const auto admitted_live = TheMemoryPoolFactory->getLiveAllocationCount();
+            bool overlap = false;
+            try { GeneratedPresentationServices rejected(root); }
+            catch (const std::runtime_error&) { overlap = true; }
+            require(overlap && TheFileSystem == files && TheLocalFileSystem == local &&
+                !TheArchiveFileSystem && TheMemoryPoolFactory->getLiveAllocationCount() == admitted_live,
+                "overlap changed the admitted presentation services");
+            require(files->openFile("Data\\Scripts\\SkirmishScripts.scb", File::READ | File::BINARY) == nullptr,
+                "generated missing script unexpectedly selected an external provider");
+            auto global = makePresentationGlobalData();
+            require(global.get() == TheWritableGlobalData && global->m_exeCRC == 0,
+                "generated GlobalData did not use the declared empty script baseline");
+            global.reset();
+            require(!TheWritableGlobalData && TheFileSystem == files && TheLocalFileSystem == local,
+                "GlobalData teardown changed its longer-lived filesystem services");
+        }
+        require(!TheFileSystem && !TheLocalFileSystem && !TheArchiveFileSystem &&
+            !TheWritableGlobalData && TheMemoryPoolFactory->getLiveAllocationCount() == baseline,
+            "presentation service generation retained provider or pool ownership");
+    }
+    bool failed = false;
+    try {
+        GeneratedPresentationServices services(root);
+        auto global = makePresentationGlobalData();
+        throw std::runtime_error("generated presentation consumer failure");
+    } catch (const std::runtime_error&) { failed = true; }
+    require(failed && !TheFileSystem && !TheLocalFileSystem && !TheArchiveFileSystem &&
+        !TheWritableGlobalData && TheMemoryPoolFactory->getLiveAllocationCount() == baseline,
+        "presentation failure unwind retained provider or pool ownership");
 }
 
 int main()
@@ -92,7 +211,9 @@ int main()
         delete live_multilist_node;
         require(MultiListNodeClass::Release_Empty_Blocks(),
             "original multilist cache retained its empty slab");
-        TheWritableGlobalData = new GlobalData;
+        testPresentationServices(writable.path);
+        auto services = std::make_unique<GeneratedPresentationServices>(writable.path);
+        auto global = makePresentationGlobalData();
         TheWritableGlobalData->m_terrainLightPos[0].z = 1;
         TheWritableGlobalData->m_clearAlpha = 255;
         TheWritableGlobalData->m_maxTerrainTracks = 1;
@@ -316,8 +437,10 @@ int main()
         scene->Release_Ref();
         assets->Free_Assets();
         delete assets;
-        delete TheWritableGlobalData;
-        TheWritableGlobalData = nullptr;
+        global.reset();
+        services.reset();
+        require(!TheFileSystem && !TheLocalFileSystem && !TheArchiveFileSystem &&
+            !TheWritableGlobalData, "full presentation route retained generated services");
         std::cout << "original-rendering runtime provider=GeneralsMD GameClient CPU presentation\n";
         return 0;
     } catch (const std::exception &error) {
