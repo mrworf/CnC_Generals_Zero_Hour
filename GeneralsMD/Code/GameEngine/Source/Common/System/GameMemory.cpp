@@ -50,6 +50,10 @@
 #include "Common/GameMemory.h"
 #include "Common/CriticalSection.h"
 #include "Common/Errors.h"
+#if defined(__linux__)
+#include <limits>
+#include <new>
+#endif
 #ifdef MEMORYPOOL_DEBUG
 #include "Common/GlobalData.h"
 #include "Common/PerfTimer.h"
@@ -3426,6 +3430,34 @@ void operator delete[](void * p, const char *, int)
 #if !defined(_MSC_VER)
 void operator delete(void *p, size_t) noexcept { ::operator delete(p); }
 void operator delete[](void *p, size_t) noexcept { ::operator delete[](p); }
+
+#if defined(__linux__)
+// A DSO's ordinary nothrow allocation can later resolve our ordinary/sized
+// delete. Keep both halves on the existing DMA, without claiming aligned memory.
+static bool ordinaryNothrowSizeFits(size_t size) noexcept
+{
+	size_t overhead = sizeof(MemoryPoolSingleBlock) + (MEM_BOUND_ALIGNMENT - 1);
+#ifdef MEMORYPOOL_BOUNDINGWALL
+	overhead += WALLSIZE * 2;
+#endif
+	return size <= static_cast<size_t>((std::numeric_limits<Int>::max)()) - overhead;
+}
+
+void* operator new(size_t size, const std::nothrow_t&) noexcept
+{
+	if (!ordinaryNothrowSizeFits(size)) return nullptr;
+	try { return ::operator new(size); } catch (...) { return nullptr; }
+}
+
+void* operator new[](size_t size, const std::nothrow_t&) noexcept
+{
+	if (!ordinaryNothrowSizeFits(size)) return nullptr;
+	try { return ::operator new[](size); } catch (...) { return nullptr; }
+}
+
+void operator delete(void* p, const std::nothrow_t&) noexcept { ::operator delete(p); }
+void operator delete[](void* p, const std::nothrow_t&) noexcept { ::operator delete[](p); }
+#endif
 
 // Leave process-wide aligned allocation/deallocation to the C++ runtime. A
 // Vulkan/LLVM DSO may allocate with its own aligned-new overload and resolve

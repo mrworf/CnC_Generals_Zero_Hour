@@ -1,6 +1,6 @@
 # M22 plan 01 slice 08P0C2BR1: ordinary nothrow allocator pairing
 
-Status: approved architecture correction; plan-only checkpoint before implementation.
+Status: complete; accepted final-source gates, allocator-only commit boundary.
 Parent checkpoint: `6dea8647699c36a77eff92c6304fd00c1f32c1b7`.
 
 ## Goal, scope and dependency
@@ -55,7 +55,10 @@ raw request, then clean retry; no production fault selector. The wrapper remains
 in the allocator test only and forwards all ordinary calls to the real allocator.
 Retain existing aligned foreign-style and cross-target controls, including
 aligned nothrow; counts must not enter original DMA. Inspect defined executable
-symbols for all four added overloads and confirm no aligned definitions appear.
+symbols for all four added strong overloads and confirm no original aligned
+override appears. Clang sanitizer may provide its existing weak aligned ASan
+interceptors; prove their runtime archive ownership rather than counting them
+as original-engine overloads.
 
 Focused build: `cmake --build build/<preset> --target original_process_allocator_tests original_w3d_tree_program_tests -j4`.
 CPU command on GCC/Clang native and sanitizer: `ASAN_OPTIONS=detect_leaks=0 ctest
@@ -84,3 +87,31 @@ on this ordinary nothrow route. Plan-only checkpoint commits only plan/index/
 discovery before production. The later implementation commit exact-stages only
 this allocator owner and evidence: `delivery: M22 08P0C2BR1 pair ordinary nothrow allocation`.
 Preserve C2B executable changes and unrelated renderer diagnostic unstaged.
+
+## Implementation/freeze checkpoint
+
+Plan-only checkpoint `9f17c079ebd1a293dafa078025e780767c13e950` preceded
+allocator edits. Exactly four Linux non-aligned nothrow overloads now delegate
+to the existing ordinary DMA pair, reject Int/header/rounding overflow and catch
+all allocation exceptions. Test-local malloc wrapping proves real once-only raw
+failure/null and unchanged throwing failure behavior; scalar/array constructor
+unwind, small one-pool-unit, zero/raw/cross-target/sized/placement and unchanged
+aligned foreign behavior pass. No production fault state exists. Defined-symbol
+inspection proves all four strong ordinary overloads in all six configurations
+and no original aligned override; Clang weak aligned interceptors resolve to
+the existing asan_cxx runtime archive, not GameMemory.cpp.
+
+Frozen final focused selection passes3/3 in GCC/Clang native and sanitizers;
+strict host LSan passes3/3 both. Independent validation-enabled tree-program
+physical controls now pass both sanitizer toolchains with no finding, resolving
+the earlier external-library temporary-buffer mismatch. Six complete builds and
+six serial canonical suites pass276/276 each, with complete per-test log audit
+clean. Established native Vulkan3/3 and2/2, LAN4/4 all six, ledger/header/symbol/
+diff review pass. C2B alone owns the corrected map-frame test and remains unstaged.
+See
+[evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2br1_allocator_pairing.md).
+
+The exact frozen BR1+C2B executable composition supplies these full gates.
+Allocator-only commit changes none of those bytes; parent-approved C2B reuse
+requires its own ten-control focus/strict and four generated physical refresh
+after this commit, plus exact hash verification. No failed result is reused.

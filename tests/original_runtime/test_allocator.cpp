@@ -5,11 +5,27 @@
 #include <cstdio>
 #include <cstring>
 #include <new>
+#include <limits>
+#include <initializer_list>
 
 extern "C" void* m26_allocate_across_target(std::size_t size);
 extern "C" void m26_free_across_target(void* memory);
 extern "C" void* m26_allocate_aligned(std::size_t size, std::size_t alignment);
 extern "C" void m26_free_aligned(void* memory, std::size_t alignment);
+extern "C" void* m22_allocate_nothrow_across_target(std::size_t size, bool array);
+extern "C" void m22_free_nothrow_across_target(void* memory, bool array, unsigned route);
+extern "C" void* __real_malloc(std::size_t size) noexcept;
+
+namespace { bool fail_next_raw_malloc = false; unsigned raw_failures = 0; }
+extern "C" void* __wrap_malloc(std::size_t size) noexcept
+{
+  if (fail_next_raw_malloc) {
+    fail_next_raw_malloc = false;
+    ++raw_failures;
+    return nullptr;
+  }
+  return __real_malloc(size);
+}
 
 namespace {
 
@@ -19,6 +35,84 @@ int fail(const char* message)
 {
   std::fprintf(stderr, "m26 allocator failure: %s\n", message);
   return 1;
+}
+
+struct ThrowingScalar {
+  char bytes[4097];
+  ThrowingScalar() { throw 17; }
+};
+struct ThrowingArray {
+  char bytes[4097];
+  static unsigned constructed, destroyed;
+  ThrowingArray() { if (++constructed == 2) throw 19; }
+  ~ThrowingArray() { ++destroyed; }
+};
+unsigned ThrowingArray::constructed = 0;
+unsigned ThrowingArray::destroyed = 0;
+
+int nothrow_pairing()
+{
+  for (bool array : {false, true}) {
+    for (unsigned route = 0; route != 3; ++route) {
+      const auto raw = zh::original_process::live_raw_allocations();
+      const auto pools = zh::original_process::live_pool_allocations();
+      void* memory = m22_allocate_nothrow_across_target(4097, array);
+      if (!memory || zh::original_process::live_raw_allocations() != raw + 1)
+        return fail("ordinary nothrow cross-target raw owner missing");
+      m22_free_nothrow_across_target(memory, array, route);
+      if (zh::original_process::live_raw_allocations() != raw ||
+          zh::original_process::live_pool_allocations() != pools)
+        return fail("ordinary/sized/placement nothrow deletion changed counts");
+    }
+    const auto raw = zh::original_process::live_raw_allocations();
+    const auto pools = zh::original_process::live_pool_allocations();
+    void* small = m22_allocate_nothrow_across_target(37, array);
+    if (!small || zh::original_process::live_pool_allocations() != pools + 1)
+      return fail("small ordinary nothrow allocation did not acquire one pool unit");
+    m22_free_nothrow_across_target(small, array, 0);
+    void* zero = m22_allocate_nothrow_across_target(0, array);
+    if (!zero) return fail("zero-size nothrow allocation failed");
+    m22_free_nothrow_across_target(zero, array, 2);
+    if (m22_allocate_nothrow_across_target((std::numeric_limits<std::size_t>::max)(), array))
+      return fail("unrepresentable nothrow size admitted");
+    if (m22_allocate_nothrow_across_target((std::numeric_limits<Int>::max)(), array))
+      return fail("nothrow private-header overflow admitted");
+    if (zh::original_process::live_raw_allocations() != raw ||
+        zh::original_process::live_pool_allocations() != pools)
+      return fail("zero/unrepresentable nothrow size changed counts");
+    const unsigned failures = raw_failures;
+    fail_next_raw_malloc = true;
+    if (m22_allocate_nothrow_across_target(4097, array) || fail_next_raw_malloc ||
+        raw_failures != failures + 1)
+      return fail("actual nothrow allocation failure did not return null once");
+    if (zh::original_process::live_raw_allocations() != raw ||
+        zh::original_process::live_pool_allocations() != pools)
+      return fail("failed nothrow raw request changed counts");
+    void* retry = m22_allocate_nothrow_across_target(4097, array);
+    if (!retry) return fail("nothrow allocation retry failed");
+    m22_free_nothrow_across_target(retry, array, 0);
+    m22_free_nothrow_across_target(nullptr, array, 2);
+  }
+  const auto raw = zh::original_process::live_raw_allocations();
+  const auto pools = zh::original_process::live_pool_allocations();
+  bool scalar_threw = false, array_threw = false;
+  try { auto* value = new (std::nothrow) ThrowingScalar; delete value; }
+  catch (int value) { scalar_threw = value == 17; }
+  try { auto* value = new (std::nothrow) ThrowingArray[2]; delete[] value; }
+  catch (int value) { array_threw = value == 19; }
+  if (!scalar_threw || !array_threw || ThrowingArray::constructed != 2 ||
+      ThrowingArray::destroyed != 1 || zh::original_process::live_raw_allocations() != raw ||
+      zh::original_process::live_pool_allocations() != pools)
+    return fail("nothrow constructor unwind failed exact placement cleanup");
+  // The correction must not turn the original throwing allocation into null.
+  fail_next_raw_malloc = true;
+  bool throwing_failed = false;
+  try { auto* value = m26_allocate_across_target(4097); m26_free_across_target(value); }
+  catch (...) { throwing_failed = true; }
+  if (!throwing_failed || fail_next_raw_malloc ||
+      zh::original_process::live_raw_allocations() != raw)
+    return fail("original throwing allocation failure semantics changed");
+  return 0;
 }
 
 }  // namespace
@@ -64,6 +158,8 @@ int main(int argc, char** argv)
   m26_free_across_target(cross_target);
   if (zh::original_process::live_raw_allocations() != raw_before)
     return fail("cross-target free did not restore raw allocation count");
+
+  if (nothrow_pairing()) return 1;
 
   void* aligned = m26_allocate_aligned(37, 64);
   if ((reinterpret_cast<std::uintptr_t>(aligned) & 63U) != 0)

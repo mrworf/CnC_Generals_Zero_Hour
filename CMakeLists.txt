@@ -2293,6 +2293,7 @@ if(ZH_BUILD_TESTS)
     "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include")
   target_link_libraries(original_process_allocator_tests PRIVATE zh_original_process)
   target_link_options(original_process_allocator_tests PRIVATE
+    "-Wl,--wrap=malloc"
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-process-allocator.link.map")
   add_test(NAME original_process_allocator COMMAND original_process_allocator_tests defaults)
   set_tests_properties(original_process_allocator PROPERTIES LABELS "original-process;source-identity")
