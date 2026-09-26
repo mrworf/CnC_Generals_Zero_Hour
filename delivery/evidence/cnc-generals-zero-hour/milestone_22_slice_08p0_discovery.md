@@ -33,3 +33,38 @@ the source tree pass and only then admits the physical module. 08P0 is the
 generated aggregate. Retail selector/borrow-unwind belongs to slice 08.
 All trial production wiring and diagnostics were removed before this
 plan-only checkpoint; unrelated renderer diagnostic remains unstaged.
+
+## Post-C1 C2 source-owner audit
+
+Accepted C1 ends at committed source tree geometry/state and consumed optional
+FX, not terrain triangles. Canonical `Shaders/Trees.nvv` interprets XYZNDUV1
+normal slots as sway-index/darkening/base-Z, uses height-relative displacement,
+scales diffuse, retains atlas UV and derives shroud UV from unswayed position.
+Generic world/lighting shaders are incompatible. `Trees.nvp` is unused and its
+install is under `#if 0`. Native tree draw supplies c4–7, c8–18, c32/c33 and
+detail-alpha/depth state. Linux `setShroudTex` is absent; its native owner
+separately binds exact terrain shroud, camera-space inverse-view/origin/scale,
+color MODULATE/alpha SELECTARG2 before the tree program's UV/disable sequence.
+
+C1 update requires source_buffers_retirable outside an active frame. Native
+DoTrees is in Flush after mesh/occluded/shader work and before stencil shadow,
+static/water and final particles. Linux source display/view Begin/End and
+current Customized_Render ordering need an explicit immutable preparation
+phase so render retry cannot advance C1 or replay irreversible FX.
+
+Read-only rollback audit finds no public checkpoint. Recording begin/draw/end
+append commands and mutate view/index/target state; edge abort merely ends a
+pass. bgfx begins with view touch/clear and submits each draw immediately;
+end releases framebuffer only. SDL end submits its command buffer. Those are
+not command rollback. Dependency-first D0A owns bounded optional public
+capability and deterministic Recording checkpoint; D0B owns real deferred
+public-bgfx transactions, all fallible admission/resources before native
+commit. Unsupported SDL/other devices remain fail-closed. Both capabilities
+precede outside-frame preparation and inside-frame draw. Preserve ordinary
+pass behavior, no private cancellation or fixture mutation, and prove partial
+commands/resources removed with retry-emits-once and physical validation.
+
+The persisted plan-only order is C2A→C2B→D0A→D0B→D0 aggregate→C2C→C2D→C2
+aggregate. C3 optional tree decals, C4 factory and 08/09 retail/visual acceptance
+remain unchanged and closed. No production edits or retail probing occurred
+in this refinement; only public source facts are recorded.

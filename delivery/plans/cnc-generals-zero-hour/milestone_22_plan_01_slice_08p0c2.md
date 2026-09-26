@@ -2,7 +2,18 @@
 
 ## Goal and boundary
 
-After C1, add shadow-disabled tree triangles to the CPU terrain Recording
+After C1, deliver independently reviewable source owners in dependency order:
+[C2A](milestone_22_plan_01_slice_08p0c2a.md) exact Trees.nvv program;
+[C2B](milestone_22_plan_01_slice_08p0c2b.md) exact shroud stage/transform;
+[D0A](milestone_22_plan_01_slice_08p0c2d0a.md) bounded public/Recording frame
+transaction then [D0B](milestone_22_plan_01_slice_08p0c2d0b.md) deferred public
+bgfx transaction and [D0](milestone_22_plan_01_slice_08p0c2d0.md) aggregate;
+[C2C](milestone_22_plan_01_slice_08p0c2c.md) outside-frame immutable tree
+preparation; then [C2D](milestone_22_plan_01_slice_08p0c2d.md) in-frame source
+scene draw/retry. This file becomes their evidence-only aggregate, not a
+production merge. All child plans are persisted before source edits.
+
+Together add shadow-disabled tree triangles to the CPU terrain Recording
 frame. Preserve native scene order: terrain/track, bounded object decals and
 occluded flush, then DoTrees before stencil shadows. Bind the accepted 08P0B
 atlas and geometry through exact active-generation wrappers. Implement the
@@ -12,7 +23,10 @@ Keep projected tree decals and full-instance factory closed for C3/C4.
 
 Preflight every frame resource and capacity before submission. On render or
 provider failure, rollback owned Recording state/commands and restore the
-prior accepted frame; owner removal and clean retry must work without reset.
+prior accepted render result; owner removal and clean retry work without reset.
+C1/FX acceptance is a distinct irreversible phase: failed render retains its
+immutable accepted phase for identical retry, with no second sway/topple/sink,
+RNG or effect consumption. Unsupported devices reject before C1 acceptance.
 Preserve C1 instance identities and state. Authorization is not applicable;
 this is generated, asset-free runtime work.
 
@@ -25,4 +39,6 @@ Inject frame/resource failures and provider removal; assert no partial frame,
 no lost accepted identity and successful retry. Run six complete builds and
 canonical nonretail suites, focused strict host LSan, physical Vulkan
 controls, serial LAN 4/4 all six, ledger and diff checks on final source.
-Commit one slice: `delivery: M22 08P0C2 record shrouded tree terrain pass`.
+Reuse C2D's unchanged final-source matrix after reviewing child composition;
+commit only aggregate evidence:
+`delivery: M22 08P0C2 revalidate shrouded tree terrain pass`.

@@ -304,7 +304,14 @@ The production Linux original-engine path renders representative campaign and sk
 | 08P0C1B3 | [milestone_22_plan_01_slice_08p0c1b3.md](milestone_22_plan_01_slice_08p0c1b3.md) | Position FX admission and committed tree dispatch aggregate. | slices 08P0C1B3A–08P0C1B3B | complete: admitted/consumed transaction and unchanged final-source matrix; no draw/factory | `delivery: M22 08P0C1B3 revalidate tree FX transaction` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c1b3.md) |
 | 08P0C1B | [milestone_22_plan_01_slice_08p0c1b.md](milestone_22_plan_01_slice_08p0c1b.md) | Unit collision, push/topple/fog/bounce/sink and dynamic geometry/effect transaction aggregate. | slices 08P0C1B1–08P0C1B3 | complete: public collision/transformed state/sink and consumed FX compose; no draw/factory | `delivery: M22 08P0C1B revalidate tree interactions` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c1b.md) |
 | 08P0C1 | [milestone_22_plan_01_slice_08p0c1.md](milestone_22_plan_01_slice_08p0c1.md) | Generated source tree frame-state aggregate before terrain draw. | slices 08P0C1A–08P0C1B | complete: source breeze/cull and interaction/resource/consumed-FX transaction; no draw/factory | `delivery: M22 08P0C1 revalidate tree frame state` | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c1.md) |
-| 08P0C2 | [milestone_22_plan_01_slice_08p0c2.md](milestone_22_plan_01_slice_08p0c2.md) | Shadow-disabled terrain-stage tree Recording draw with atlas/shroud/lighting pass. | slice 08P0C1 | pending; factory closed | | |
+| 08P0C2A | [milestone_22_plan_01_slice_08p0c2a.md](milestone_22_plan_01_slice_08p0c2a.md) | Exact source tree program, packed attributes and source constant semantics; generic world shaders cannot substitute. | slice 08P0C1 | pending; draw/factory closed | | |
+| 08P0C2B | [milestone_22_plan_01_slice_08p0c2b.md](milestone_22_plan_01_slice_08p0c2b.md) | Exact tree shroud stage, texture/transform binding and borrowed resource lifetime. | slice 08P0C2A | pending; draw/factory closed | | |
+| 08P0C2D0A | [milestone_22_plan_01_slice_08p0c2d0a.md](milestone_22_plan_01_slice_08p0c2d0a.md) | Bounded optional frame transaction capability and deterministic Recording command/resource rollback. | slices 08P0C2A–08P0C2B | pending; unsupported devices fail closed | | |
+| 08P0C2D0B | [milestone_22_plan_01_slice_08p0c2d0b.md](milestone_22_plan_01_slice_08p0c2d0b.md) | Public bgfx deferred frame commands and fallible resource preparation before irreversible submission. | slice 08P0C2D0A | pending; physical Vulkan required | | |
+| 08P0C2D0 | [milestone_22_plan_01_slice_08p0c2d0.md](milestone_22_plan_01_slice_08p0c2d0.md) | Recording and Linux full-draw bgfx frame-command transaction aggregate. | slices 08P0C2D0A–08P0C2D0B | pending; SDL/other devices unsupported | | |
+| 08P0C2C | [milestone_22_plan_01_slice_08p0c2c.md](milestone_22_plan_01_slice_08p0c2c.md) | Outside-frame immutable tree preparation and accepted-phase reuse without C1/FX advancement on render retry. | slices 08P0C2A–08P0C2B and 08P0C2D0 | pending; draw/factory closed | | |
+| 08P0C2D | [milestone_22_plan_01_slice_08p0c2d.md](milestone_22_plan_01_slice_08p0c2d.md) | Exact shadow-disabled source scene-order draw with transactional command rollback and identical retry. | slices 08P0C2C and 08P0C2D0 | pending; factory closed | | |
+| 08P0C2 | [milestone_22_plan_01_slice_08p0c2.md](milestone_22_plan_01_slice_08p0c2.md) | Exact tree program/shroud, immutable preparation and transactional terrain draw aggregate. | slices 08P0C2A–08P0C2D including 08P0C2D0 | pending; factory closed | | |
 | 08P0C3 | [milestone_22_plan_01_slice_08p0c3.md](milestone_22_plan_01_slice_08p0c3.md) | Optional projected-decal queue/flush before tree triangles with exact rollback. | slice 08P0C2 | pending; factory closed | | |
 | 08P0C4 | [milestone_22_plan_01_slice_08p0c4.md](milestone_22_plan_01_slice_08p0c4.md) | Exact full-instance physical `W3DTreeDraw` create proc and module/terrain unwind. | slices 08P0C1–08P0C3 | pending | | |
 | 08P0C | [milestone_22_plan_01_slice_08p0c.md](milestone_22_plan_01_slice_08p0c.md) | Physical tree frame/provider aggregate before retail continuation. | slices 08P0C1–08P0C4 | pending | | |
@@ -313,6 +320,16 @@ The production Linux original-engine path renders representative campaign and sk
 | 09 | [milestone_22_plan_01_slice_09.md](milestone_22_plan_01_slice_09.md) | Same retail scenes present on validation-enabled public bgfx Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 08, PRE-012, PRE-016 | pending | | |
 
 ## Cross-slice concerns
+
+The post-C1 source audit separates the exact `Trees.nvv` packed-attribute
+program and shroud-stage owner from outside-frame preparation and source-order
+draw. Existing `end_pass`/source-frame abort is not rollback: Recording retains
+commands/resources and bgfx submits immediately. The dependency-first
+08P0C2D0A/08P0C2D0B owners therefore establish bounded Recording and deferred
+public-bgfx transactions before 08P0C2C/08P0C2D. A failed render keeps its
+accepted immutable C1 phase for retry; it cannot advance RNG or replay committed
+FX. SDL/other devices fail closed for this optional capability, and C3 decals,
+C4 factory admission and retail acceptance remain separate.
 
 The 08P0A physical-control audit found a separate regression introduced in
 08J: the generated factory-map route reaches `W3DTerrainVisual::load` with
