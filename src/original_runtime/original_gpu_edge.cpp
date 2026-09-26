@@ -14,6 +14,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstring>
+#include <cstdio>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -51,6 +52,10 @@ OriginalGpuEdge::~OriginalGpuEdge()
 {
     if (device_transaction_) (void)abort_device_transaction(*device_transaction_);
     abort_source_frame();
+    if (!shutdown_source_references()) {
+        std::fputs("original source-reference cleanup unavailable\n",stderr);
+        std::terminate();
+    }
     release_prepared_state();
     release_volume_stencil();
     DX8Wrapper::Reset_Source_State();
@@ -123,6 +128,159 @@ bool OriginalGpuEdge::abort_device_transaction(const renderer::DeviceTransaction
     // issue a fallible ordinary end_pass after aborting the journal.
     source_frame_active_=false; source_viewport_.reset();
     return true;
+}
+
+renderer::ValidationResult OriginalGpuEdge::begin_source_references(std::uint64_t generation,
+    TextureBaseClass* const* sources,unsigned count,SourceReferenceToken& token)
+{
+    if (active_edge!=this || generation!=generation_ || !generation || !sources || !count
+        || count>source_reference_capacity-source_reference_queued_ || source_reference_token_.units
+        || source_reference_sequence_==std::numeric_limits<std::uint64_t>::max()
+        || device_transaction_ || source_frame_active_ || device_.pass_active()
+        || !device_.supports_device_transactions(renderer::DeviceTransactionMode::idle_preparation))
+        return {false,"source reference admission unavailable"};
+    // Membership precedes every provider dereference; no lazy source lookup.
+    for (unsigned i=0;i<count;++i) {
+        const auto found=textures_.find(sources[i]);
+        if (!sources[i] || found==textures_.end() || found->second.generation!=generation_
+            || !found->second.handle || !device_.describe_texture_format(found->second.handle)
+            || !sources[i]->As_TextureClass() || !sources[i]->Is_Initialized()
+            || sources[i]->Num_Refs()<=0)
+            return {false,"source reference provider unavailable"};
+        unsigned units=1;
+        for (unsigned j=0;j<i;++j) if (sources[j]==sources[i]) ++units;
+        if (static_cast<unsigned>(sources[i]->Num_Refs())>
+            static_cast<unsigned>(std::numeric_limits<int>::max())-units)
+            return {false,"source reference count exhausted"};
+    }
+    for (unsigned i=0;i<count;++i) { sources[i]->Add_Ref();source_reference_pins_[i]=sources[i]; }
+    source_reference_token_={static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(this)),
+        ++source_reference_sequence_,generation_,count};
+    token=source_reference_token_;
+    return {};
+}
+
+bool OriginalGpuEdge::finish_source_references(const SourceReferenceToken& token) noexcept
+{
+    const auto& owner=source_reference_token_;
+    if (!owner.units || token.owner!=owner.owner || token.sequence!=owner.sequence
+        || token.generation!=owner.generation || token.units!=owner.units || active_edge!=this)
+        return false;
+    for (unsigned i=0;i<owner.units;++i) {
+        source_reference_queue_[source_reference_queued_++]=source_reference_pins_[i];
+        source_reference_pins_[i]=nullptr;
+    }
+    source_reference_token_={};
+    return true;
+}
+bool OriginalGpuEdge::cancel_source_references(const SourceReferenceToken& token) noexcept
+{ return finish_source_references(token); }
+
+bool OriginalGpuEdge::drain_source_references(std::uint64_t generation) noexcept
+{
+    if (active_edge!=this || generation!=generation_ || source_reference_token_.units
+        || device_transaction_ || source_frame_active_ || device_.pass_active()) return false;
+    if (!source_reference_queued_) return true;
+    struct Source { TextureBaseClass* object=nullptr;unsigned units=0;bool terminal=false,owned=false; };
+    struct Native { renderer::TextureHandle handle;unsigned owners=0; };
+    std::array<Source,source_reference_capacity> sources{};
+    std::array<Native,source_reference_capacity> natives{};
+    unsigned source_count=0,native_count=0,terminal_owned=0;
+    for (unsigned i=0;i<source_reference_queued_;++i) {
+        auto* object=source_reference_queue_[i];
+        unsigned j=0;while (j<source_count && sources[j].object!=object) ++j;
+        if (j==source_count) { sources[j].object=object;++source_count; }
+        ++sources[j].units;
+    }
+    for (unsigned i=0;i<source_count;++i) {
+        auto& source=sources[i];
+        if (!source.object || source.object->Num_Refs()<static_cast<int>(source.units)) return false;
+        source.terminal=source.object->Num_Refs()==static_cast<int>(source.units);
+        if (!source.terminal) continue;
+        const auto found=textures_.find(source.object);
+        if (found==textures_.end()) continue; // previously invalidated while still strongly pinned
+        if (found->second.generation!=generation_ || !found->second.handle) return false;
+        source.owned=true;++terminal_owned;
+        if (found->second.shared_missing) continue;
+        unsigned j=0;while (j<native_count && natives[j].handle!=found->second.handle) ++j;
+        if (j==native_count) { natives[j].handle=found->second.handle;++native_count; }
+        ++natives[j].owners;
+    }
+    if (terminal_owned>std::numeric_limits<std::uint64_t>::max()-source_revision_
+        || source_reference_queued_>std::numeric_limits<std::uint64_t>::max()-source_reference_releases_)
+        return false;
+    for (unsigned i=0;i<native_count;++i) {
+        const auto found=texture_owner_refs_.find(natives[i].handle.value());
+        if (found==texture_owner_refs_.end() || found->second<natives[i].owners) return false;
+    }
+    renderer::DeviceTransactionToken device_token{};
+    bool device_started=false;
+    try {
+        const renderer::DeviceTransactionDesc desc{renderer::DeviceTransactionMode::idle_preparation,
+            generation_,4096,4096,64ULL*1024*1024,0};
+        if (!begin_device_transaction(desc,device_token)) return false;
+        device_started=true;
+        for (unsigned stage=0;stage<pending_stages_.size();++stage) {
+            for (unsigned i=0;i<source_count;++i)
+                if (sources[i].terminal && sources[i].owned
+                    && pending_stages_[stage].source==sources[i].object && pending_stages_[stage].sampler)
+                    device_.destroy(pending_stages_[stage].sampler);
+        }
+        for (unsigned i=0;i<native_count;++i)
+            if (texture_owner_refs_.find(natives[i].handle.value())->second==natives[i].owners)
+                device_.destroy(natives[i].handle);
+        if (source_reference_commit_fault_) { source_reference_commit_fault_=false;
+            (void)abort_device_transaction(device_token);return false; }
+        if (!commit_device_transaction(device_token)) {
+            (void)abort_device_transaction(device_token);return false;
+        }
+    } catch (...) {
+        if (device_started) (void)abort_device_transaction(device_token);
+        return false;
+    }
+    // All fallible device cleanup is complete. Detach metadata before the
+    // final reference can invoke its original pooled destructor callback.
+    for (unsigned i=0;i<source_count;++i) if (sources[i].terminal && sources[i].owned) {
+        for (unsigned stage=0;stage<pending_stages_.size();++stage)
+            if (pending_stages_[stage].source==sources[i].object) {
+                pending_stages_[stage]={};pending_filter_values_[stage]={};
+            }
+        textures_.erase(sources[i].object);
+    }
+    for (unsigned i=0;i<native_count;++i) {
+        const auto found=texture_owner_refs_.find(natives[i].handle.value());
+        found->second-=natives[i].owners;
+        if (!found->second) texture_owner_refs_.erase(found);
+    }
+    source_revision_+=terminal_owned;
+    const auto units=source_reference_queued_;
+    source_reference_queued_=0;source_reference_releases_+=units;
+    for (unsigned i=0;i<units;++i) {
+        auto* object=source_reference_queue_[i];source_reference_queue_[i]=nullptr;
+        object->Release_Ref();
+    }
+    return true;
+}
+
+bool OriginalGpuEdge::shutdown_source_references() noexcept
+{
+    if (source_reference_token_.units && !cancel_source_references(source_reference_token_)) return false;
+    return drain_source_references(generation_);
+}
+bool OriginalGpuEdge::source_texture_references_pending(const TextureBaseClass* source) noexcept
+{
+    if (!active_edge) return false;
+    for (unsigned i=0;i<active_edge->source_reference_token_.units;++i)
+        if (active_edge->source_reference_pins_[i]==source) return true;
+    for (unsigned i=0;i<active_edge->source_reference_queued_;++i)
+        if (active_edge->source_reference_queue_[i]==source) return true;
+    return false;
+}
+void OriginalGpuEdge::notify_source_texture_invalidation(TextureBaseClass* source)
+{
+    if (!source_texture_references_pending(source)) return;
+    if (!active_edge->shutdown_source_references())
+        throw std::runtime_error("source reference invalidation cleanup unavailable");
 }
 
 renderer::OriginalFvfLayout OriginalGpuEdge::layout_for_fvf(unsigned source_fvf)

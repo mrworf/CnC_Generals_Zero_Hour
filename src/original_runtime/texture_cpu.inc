@@ -42,6 +42,16 @@ bool TextureBaseClass::Is_Missing_Texture()
 }
 void TextureBaseClass::Invalidate()
 {
+	struct ReceiverPin {
+		TextureBaseClass* source=nullptr;
+		explicit ReceiverPin(TextureBaseClass* value) {
+			if (zh::original_runtime::OriginalGpuEdge::source_texture_references_pending(value)) {
+				value->Add_Ref();source=value;
+			}
+		}
+		~ReceiverPin() { if (source) source->Release_Ref(); }
+	} pin(this);
+	zh::original_runtime::OriginalGpuEdge::notify_source_texture_invalidation(this);
 	if (TextureLoadTask || ThumbnailLoadTask || IsProcedural) return;
 	zh::original_runtime::OriginalGpuEdge::release_texture_if_owned(this);
 	Initialized = false; D3DTexture = nullptr;

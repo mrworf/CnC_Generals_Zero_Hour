@@ -153,6 +153,28 @@ public:
     bool commit_device_transaction(const renderer::DeviceTransactionToken&) noexcept;
     bool abort_device_transaction(const renderer::DeviceTransactionToken&) noexcept;
     std::uint64_t frame_target_generation() const noexcept { return frame_target_generation_; }
+    // Source references are distinct from native create/reference ownership.
+    // Finish only transfers pin units; ordinary drain owns fallible cleanup.
+    static constexpr unsigned source_reference_capacity=64;
+    struct SourceReferenceToken {
+        std::uint64_t owner=0,sequence=0,generation=0;
+        unsigned units=0;
+    };
+    renderer::ValidationResult begin_source_references(std::uint64_t generation,
+        TextureBaseClass* const* sources,unsigned count,SourceReferenceToken& token);
+    bool finish_source_references(const SourceReferenceToken& token) noexcept;
+    bool cancel_source_references(const SourceReferenceToken& token) noexcept;
+    bool drain_source_references(std::uint64_t generation) noexcept;
+    bool shutdown_source_references() noexcept;
+    unsigned queued_source_reference_count() const noexcept { return source_reference_queued_; }
+    unsigned reserved_source_reference_count() const noexcept { return source_reference_token_.units; }
+    std::uint64_t source_reference_release_count() const noexcept { return source_reference_releases_; }
+    std::uint64_t source_revision() const noexcept { return source_revision_; }
+    void fail_next_source_reference_commit() noexcept { source_reference_commit_fault_=true; }
+    // Lifecycle notification borrows no stale provider. The caller pins its
+    // receiver across notification and its ordinary mutation.
+    static bool source_texture_references_pending(const TextureBaseClass* source) noexcept;
+    static void notify_source_texture_invalidation(TextureBaseClass* source);
     bool source_buffers_retirable() const noexcept { return !source_frame_active_; }
     static void release_texture_if_owned(TextureBaseClass* source) noexcept;
     struct PendingStage {
@@ -194,6 +216,12 @@ private:
     void release_prepared_state() noexcept;
     renderer::GpuDevice& device_;
     std::optional<renderer::DeviceTransactionToken> device_transaction_;
+    std::array<TextureBaseClass*,source_reference_capacity> source_reference_pins_{};
+    std::array<TextureBaseClass*,source_reference_capacity> source_reference_queue_{};
+    SourceReferenceToken source_reference_token_{};
+    std::uint64_t source_reference_sequence_=0,source_reference_releases_=0;
+    unsigned source_reference_queued_=0;
+    bool source_reference_commit_fault_=false;
     OriginalGpuEdge* previous_;
     std::unordered_map<const VertexBufferClass*, renderer::BufferHandle> vertices_;
     std::unordered_map<const IndexBufferClass*, renderer::BufferHandle> indices_;

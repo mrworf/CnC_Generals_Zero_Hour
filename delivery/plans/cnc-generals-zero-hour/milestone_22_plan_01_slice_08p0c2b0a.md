@@ -135,3 +135,28 @@ sanitizer detect_leaks=0. Established host Vulkan and six serial LAN4/4,
 ledger/header/diff and exact-owned stage review complete acceptance. Commit:
 `delivery: M22 08P0C2B0A retire bounded source references`.
 B0B resident selected-stage transaction is dependency-next, then B0 aggregate.
+
+## Implementation audit checkpoint
+
+Resident admission includes the device's read-only `describe_texture_format`
+membership check, before dereferencing the mapped provider or acquiring a unit;
+this enforces the existing resident-owner requirement without lazy initialization.
+All fixed value members initialize explicitly and token comparison is fieldwise.
+The initial physical witness target used RGBA while its accepted video pipeline
+requires BGRA: only the fixture target format was corrected. Production texture
+format/shader semantics were unchanged. Generated terminal subprocesses model
+precommit retained and postcommit consumed dispositions and mandatory destructor
+failure; they do not claim physical device-loss injection.
+
+## Accepted outcome
+
+Fixed source-reference ownership and exact-generation transactional retirement
+are independently accepted. Two-generation CPU/physical controls prove bounded
+admission, exact unit/alias multiplicity, receiver-safe invalidation, failure
+rollback/retry, once-only shutdown and declared fatal disposition. All six
+complete builds and canonical nonretail suites pass 275/275 with clean complete
+logs; focused, strict host LSan, generated/established Vulkan, six serial LAN,
+ledger/header/diff and frozen-hash checks pass.
+[Evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2b0a_source_references.md).
+Commit boundary: `delivery: M22 08P0C2B0A retire bounded source references`.
+B0B owns selected-stage state and composes this reference owner next.

@@ -227,3 +227,16 @@ and focused/strict/physical/LAN gates remain valid. SDL/other devices fail close
 The source edge owns only optional device/token forwarding here: complete
 delayed texture refs/maps/transforms/revision/filter/samplers remain B0 next.
 Tree preparation/draw/factory and retail admission remain deferred.
+
+B0A independently closes fixed bounded source-reference lifetime: exact64 units,
+generation/sequence/count tokens, allocation-free finish/cancel, transactional
+native cleanup before terminal source metadata detach/pooled release, alias
+multiplicity and receiver-pinned invalidation. Failed checkpoint/destroy/commit
+keeps queue and publication for exact retry; mandatory final cleanup cannot
+return with abandoned pins. Generated fatal subprocesses model retained versus
+consumed terminal disposition, not physical device loss. The first physical
+sample mismatch was fixture-only RGBA target versus existing BGRA video pipeline;
+production format/shader semantics did not change. All six full builds/canonical
+275/275 clean-log suites, focused, strict host LSan, generated/established Vulkan
+and six serial LAN4/4 pass. B0B stage transaction is next, then B0 aggregate;
+no shroud/tree/factory or retail admission is opened by this reference owner.

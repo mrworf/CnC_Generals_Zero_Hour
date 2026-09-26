@@ -13,3 +13,13 @@ The explicit original-source lists in `CMakeLists.txt` are the executable invent
 The owned in-memory W3D fixture uses the original chunk writer and RAM file, then the original asset manager, creation, inspection and reverse release paths. Positive controls assert HLOD/hierarchy/model, animation, geometry, shader, vertex material and texture-filter identity. Negative controls reject duplicate prototypes, oversized mesh counts/texture names, unknown chunks and device use before translation. The original asset manager can publish earlier valid chunks before reporting a later error; this authored intermediate behavior is retained. Slice 05 owns required retail scenario failure unwind and corrected retry.
 
 No original-game symlink files are modified or copied into tests. This is a CPU source-identity gate, not a rendered retail scene or Vulkan acceptance claim.
+
+M22 08P0C2B0A adds a bounded owner for acquired source texture references,
+distinct from native handle reference ownership. Finish/cancel transfers exact
+units without callbacks; ordinary exact-generation drain commits idle device
+cleanup before detaching terminal metadata and releasing pooled objects.
+Retryable failures preserve the queue and publication. Receiver-pinned texture
+invalidation drains enrolled pins before ordinary mutation. Mandatory shutdown
+failure terminates with a fixed cleanup category; native device loss remains
+process-fatal, not a normal teardown or stale-generation retry. Source-stage
+atomic application and shroud semantics remain dependency-next.
