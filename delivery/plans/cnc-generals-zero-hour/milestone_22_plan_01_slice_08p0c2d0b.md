@@ -133,3 +133,12 @@ closed before any accepted-target touch; ordinary behavior remains unchanged.
 Reuse unchanged D0B2B final-source six-build/canonical, focused and strict
 host LSan, physical Vulkan, serial LAN, ledger/diff evidence after reviewing
 both idle and frame composition. Commit only aggregate artifacts.
+
+Accepted after independent idle/frame ownership composition review; no
+executable change. B2 aggregate `b4e0559b566e3d7570d0d351c549bd5e013b3448`
+preserves B2B's unchanged final-source baseline and clean six canonical suites
+274/274. Current B1 idle physical controls and B2B frame controls independently
+pass on both native/both sanitized toolchains, not substituted by Recording.
+[Aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2d0b_bgfx_transaction_aggregate.md)
+records exact reference multiplicity, mode separation and native limitations.
+D0 aggregate is next; source-stage/tree/factory/retail remain closed.
