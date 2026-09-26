@@ -262,3 +262,33 @@ with B's preflight, no-throw native/source publication and lifecycle cancellatio
 Unchanged B0B final-source six276/276 clean canonical suites and focused/strict/
 physical/LAN/identity gates remain valid. No executable changes or reruns; exact
 shroud semantics are next under the approved critical-path scope freeze.
+
+C2B's read-only audit finds no new owner: resident W3DShroud TextureClass
+reacquisition already exists, while native setShroudTex is absent from the CPU
+branch. Existing s_emptyTerrainVisual publication can provide a narrow borrowed
+peek with address validation before dereference. Native view transport is
+transposed; CPU exact binding uses transpose-equivalent scale/offset/inverse
+order. The unfinished general inverse is not repaired: a bounded local inverse
+rejects singular/nonfinite inputs before B0 admission. Successful binding
+transfers A pins without post-commit fallibility; ordinary caller drain owns
+cleanup/retry before a subsequent attempt/frame. Nine exact focused commands
+and this narrow refinement are persisted plan-only before production.
+
+Deeper C2B audit reached the scope-freeze architecture checkpoint: CPU shroud
+ReAcquireResources publishes an initialized texture but render does not upload
+current/final fog-cell contents. Binding identity/lifetime is independently
+testable; physical tree fog-content acceptance needs explicit owner
+classification. The checkpoint is now resolved: fold bounded source content
+update into the existing W3DShroud render/update owner within C2B, then exact
+stage-1 binding. No new prerequisite/split or production edit is introduced by
+this amendment. Native copies all logical cells at (1,1) over a one-cell border;
+RGB565 normal or ARGB4444 debug/internal quantization is explicitly expanded to
+the existing BGRA8 transport. Normal 255 is white; debug alpha is inverted level.
+Accepted B1/D0 regular-texture idle COW supplies pixel rollback; private initial
+publication is withdrawn before abort, while source identity and accepted epochs
+publish no-throw after commit. Dirty/color/mode/generation readiness and a real
+nonuniform physical sample are mandatory. B0 binding follows separately; no
+stage-0 application or fallible post-commit source marker is part of content
+upload. Exact nine CPU/strict controls and generated host physical command are
+persisted before implementation. Further capability gaps require another explicit
+architecture checkpoint, not an autonomous split.
