@@ -254,3 +254,11 @@ host LSan, A/B generated and established Vulkan, six serial LAN4/4 and identity
 checks pass. Scope freeze is durable: newly required architecture owners require
 an explicit checkpoint, not another autonomous split. B0's evidence-only
 aggregate follows separately; exact shroud/tree/factory/retail remain closed.
+
+B0 independently reviews accepted A/B source lifetime and complete selected-stage
+atomicity as an evidence-only aggregate. A's grouped survivor/terminal boundary,
+exact-generation ordinary cleanup/retry and explicit fatal disposition compose
+with B's preflight, no-throw native/source publication and lifecycle cancellation.
+Unchanged B0B final-source six276/276 clean canonical suites and focused/strict/
+physical/LAN/identity gates remain valid. No executable changes or reruns; exact
+shroud semantics are next under the approved critical-path scope freeze.

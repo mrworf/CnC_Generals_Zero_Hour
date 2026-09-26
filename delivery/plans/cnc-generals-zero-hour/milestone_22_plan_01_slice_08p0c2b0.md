@@ -1,5 +1,11 @@
 # M22 plan 01 slice 08P0C2B0: delayed-source transaction aggregate
 
+Status: complete, evidence-only. [Composition evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2b0_source_stage_aggregate.md)
+reviews accepted A reference units and B resident stage atomicity at
+`bbe0b93a9842fbdc080eae346ccf645e044344cc`, including grouped survivor cancellation,
+terminal cleanup/retry and unchanged final-source six clean 276/276 matrices.
+No executable changes or test rerun; exact shroud semantics are dependency-next.
+
 After accepted C2A and D0 capabilities, deliver dependency-first
 [B0A](milestone_22_plan_01_slice_08p0c2b0a.md) bounded exact-generation source
 reference retirement, then [B0B](milestone_22_plan_01_slice_08p0c2b0b.md)
