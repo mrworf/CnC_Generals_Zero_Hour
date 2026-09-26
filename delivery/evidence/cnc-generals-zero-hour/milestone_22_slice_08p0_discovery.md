@@ -130,3 +130,14 @@ builds/canonical suites pass 270/270 all six, focused 3/3 in native/sanitizer
 toolchains, strict host LSan 2/2 both, established physical controls and serial
 LAN 4/4 all six. [Exact evidence](milestone_22_slice_08p0c2d0a_recording_transaction.md)
 preserves physical/source/factory closure; D0B is dependency-next.
+
+D0B1 is independently accepted: bounded idle bgfx candidate/COW resource
+publication with exact per-create native ownership units, delayed ordinary
+retirement and no native finish/frame calls. Refrozen rejected nested/foreign
+admission preserves the original owner; two-generation physical controls
+cover aliases, formats/mips, partial allocation/publication failure and retry.
+Complete builds/canonical suites pass 271/271 all six, strict host LSan 2/2
+both, generated native/sanitizer Vulkan controls, established physical checks
+and serial LAN 4/4 all six. [Exact evidence](milestone_22_slice_08p0c2d0b1_bgfx_resource_transaction.md)
+keeps frame/source/factory closed. D0B2A's reviewed bounded public native
+submission reservation precedes D0B2B's complete deferred frame journal.

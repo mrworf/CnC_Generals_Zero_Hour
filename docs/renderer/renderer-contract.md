@@ -89,3 +89,27 @@ ordinary journal operation or its exception poisons commit while preserving
 abort; rejected admission/foreign finish cannot mutate an existing owner. Ordinary
 non-transactional behavior remains unchanged. Physical transaction support
 belongs to D0B; no other backend support is implied by this Recording witness.
+
+M22 D0B1 implements bgfx `idle_preparation` only; frame capability stays
+unsupported until the native reservation/deferred-journal children. Admission
+bounds five slot-table checkpoints, source mip shadows, candidate native
+versions and pending retirements (4096 commands/resources, 64 MiB, zero views).
+Resource metadata reservations and duplicate checkpoint payloads consume the
+byte budget. Rejected entry preserves the output token and observable state.
+Sampled non-target texture uploads COW complete known mip bytes into native
+candidates; commit keeps the accepted opaque handle, abort preserves its
+native bytes. RGBA8, BGRA8 and BGR5A1 retain full padded source rows and untouched
+mips. Transaction uploads to GPU-owned render targets reject; target resize is
+a fresh handle, not in-place descriptor mutation. Ordinary uploads stay valid.
+
+Finish performs no native call or allocation: it publishes/restores CPU state
+and transfers exact native ownership units into a pre-reserved retirement
+queue. Deduplicated shader/program indices do not collapse create increments;
+one unit is kept per surviving slot and every excess unit retires exactly once.
+Pending units remain owned and count toward admission. An ordinary boundary
+drains public native destruction; ordinary wait/shutdown completes it, never a
+transaction abort/reset shortcut. Pass/view/clear/draw/present, window changes,
+wait and readback reject during idle admission before mutation. Guards poison
+before diagnostic allocation, and consumed faults are not restored. Aborted
+candidate generations cannot alias retry; source refs/maps and frame rollback
+remain separate later owners. No other backend or source/factory claim follows.

@@ -30,6 +30,22 @@ public:
     BgfxGpuDevice(const BgfxGpuDevice&) = delete;
     BgfxGpuDevice& operator=(const BgfxGpuDevice&) = delete;
 
+    bool supports_device_transactions(DeviceTransactionMode) const noexcept override;
+    ValidationResult begin_device_transaction(const DeviceTransactionDesc&, DeviceTransactionToken&) override;
+    bool commit_device_transaction(const DeviceTransactionToken&) noexcept override;
+    bool abort_device_transaction(const DeviceTransactionToken&) noexcept override;
+
+    // Deterministic generated-only fault controls; counters never roll back.
+    void fail_next_transaction_checkpoint() noexcept;
+    void fail_transaction_checkpoint_copy_after(UInt32 successful_boundaries) noexcept;
+    void fail_transaction_operation_after(UInt32 successful_operations) noexcept;
+    void fail_next_transaction_diagnostic_allocation() noexcept;
+    void fail_transaction_native_publication_after(UInt32 successful_candidates) noexcept;
+    std::size_t pending_native_retirement_count() const noexcept;
+    UInt64 native_retirement_destroy_count() const noexcept;
+    UInt64 native_frame_advance_count() const noexcept;
+    UInt64 live_owned_native_reference_count() const noexcept;
+
     bool supports_texture_format(TextureFormat, TextureDimension, bool sampled, bool render_target) const noexcept override;
     BufferHandle create_buffer(const BufferDesc&, std::string_view) override;
     TextureHandle create_texture(const TextureDesc&, std::string_view) override;

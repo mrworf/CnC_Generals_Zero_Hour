@@ -1,5 +1,13 @@
 # M22 plan 01 slice 08P0C2D0B1: candidate/COW bgfx resource lifetime
 
+Status: independently accepted by this slice commit against parent
+`9b7701a5a5645a93a9a9ef1bf2f5b430428b5b88`; see
+[refrozen evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2d0b1_bgfx_resource_transaction.md).
+Six complete builds/canonical suites 271/271, both sanitizer focused/strict
+LSan, physical native/sanitizer resource controls, established Vulkan and all
+six serial LAN gates pass. Frame capability and source/factory admission remain
+closed; D0B2A is dependency-next.
+
 ## Goal, dependency and boundary
 
 After accepted D0A, independently deliver bounded bgfx idle-preparation
@@ -50,6 +58,20 @@ native textures/shaders/programs, in safe dependency order. Candidate wrappers
 use RAII through allocation/publication failure, including texture and program
 slot insertion. No resource leaks from a throwing vector insertion.
 
+Finish itself makes no native call: public bgfx destroy can grow its native
+command buffer. Admission reserves a bounded retirement queue; commit/abort
+transfer replaced/canceled native ownership into it with nonallocating CPU
+operations. A later ordinary nontransaction boundary drains public destruction,
+and ordinary wait/shutdown completes it. Pending retirements remain explicitly
+owned/count toward admission, never alias a retry and retire exactly once.
+No hidden frame advancement or unbounded native residual obtains this guarantee.
+Pinned shader/program creates can deduplicate native indices and increment
+their reference counts. Count each successful create as one distinct native
+ownership unit, not a unique handle. Commit consumes exactly one ownership
+unit per live slot, queues every excess/canceled unit once, and abort queues
+only candidate units. Cover repeated alias creation, replacement, abort,
+drain and shutdown; accepted aliases must survive without ref leaks.
+
 No frame advancement, view mutation, native target touch or window ownership
 change is permitted during idle admission, commit or abort. Reject pass/end,
 viewport/clear/draw/present, claim/release/wait/readback routes while live before
@@ -89,6 +111,11 @@ build/<sanitized-preset> -R '^(renderer_bgfx_transaction_resource|renderer_recor
 `renderer_bgfx_transaction_resource_gpu`, wrapped by `tools/run_validation_clean.py`;
 run GCC/Clang native via host graphical escalation with Khronos validation,
 plus established display-owner/map controls. Do not substitute software Vulkan.
+When the preset does not register opt-in GPU tests, run the exact physical
+entry directly: `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation python3
+tools/run_validation_clean.py build/<preset>/renderer_bgfx_transaction_resource_tests --gpu`.
+An empty CTest selection is not evidence. Run this generated physical entry
+under both sanitized toolchains with detect_leaks=0 as well, serially.
 All six complete builds and canonical `-LE 'gpu|lan|retail'` suites (sanitizer
 detect_leaks=0), serial host LAN 4/4 each, ledger/header-neutrality/diff and
 exact staged review are required on frozen source. Isolate heavy sanitizer

@@ -1,25 +1,31 @@
 #include "zh/platform/bgfx_device.h"
 #include "zh/renderer/bgfx_uniform_layout.h"
+#include "bgfx_transaction_state.h"
 
 #include <bgfx/bgfx.h>
 #include <SDL3/SDL.h>
 
 #include <algorithm>
 #include <atomic>
+#include <cassert>
 #include <cmath>
 #include <cstring>
 #include <fstream>
+#include <exception>
 #include <limits>
 #include <map>
+#include <new>
 #include <regex>
 #include <set>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 namespace zh::renderer {
 namespace {
 
 std::atomic<bool> runtime_owned{false};
+std::atomic<UInt64> next_transaction_device{0};
 constexpr UInt32 slot_mask = 0xffffU;
 
 template <class HandleType> HandleType encode(std::size_t index, UInt32 generation)
@@ -44,10 +50,10 @@ Slot<Record>* lookup(std::vector<Slot<Record>>& slots, HandleType handle)
 }
 
 template <class HandleType, class Record>
-HandleType insert(std::vector<Slot<Record>>& slots, Record value)
+HandleType insert(std::vector<Slot<Record>>& slots, Record value, bool append_only = false)
 {
     for (std::size_t i = 0; i < slots.size(); ++i) {
-        if (!slots[i].alive) {
+        if (!append_only && !slots[i].alive && slots[i].generation) {
             slots[i].alive = true;
             slots[i].record = std::move(value);
             return encode<HandleType>(i, slots[i].generation);
@@ -355,11 +361,13 @@ class BgfxGpuDevice::Impl {
 public:
     struct BufferRecord { BufferDesc desc; std::vector<UInt8> shadow; std::vector<UInt8> written; };
     struct TextureRecord {
+        struct Mip { std::vector<UInt8> bytes; UInt32 pitch = 0; };
         TextureDesc desc;
         bgfx::TextureHandle native = BGFX_INVALID_HANDLE;
         bool color_initialized = false;
         bool depth_initialized = false;
         bool stencil_initialized = false;
+        std::vector<Mip> mips;
     };
     struct SamplerRecord { SamplerDesc desc; };
     struct ShaderRecord {
@@ -372,6 +380,147 @@ public:
         std::vector<TextureField> textures;
     };
     struct PipelineRecord { PipelineRecord() : key(PipelineDesc{}) {} PipelineKey key; bgfx::ProgramHandle native = BGFX_INVALID_HANDLE; };
+
+    enum class NativeKind : UInt8 { program, shader, texture };
+    struct NativeOwned {
+        NativeKind kind = NativeKind::texture;
+        UInt16 index = UINT16_MAX;
+        bool candidate = false, retained = false;
+    };
+    struct Checkpoint {
+        std::vector<Slot<BufferRecord>> buffers;
+        std::vector<Slot<TextureRecord>> textures;
+        std::vector<Slot<SamplerRecord>> samplers;
+        std::vector<Slot<ShaderRecord>> shaders;
+        std::vector<Slot<PipelineRecord>> pipelines;
+        std::vector<NativeOwned> native_owners;
+    };
+    struct OperationGuard {
+        Impl& owner;
+        int exceptions = std::uncaught_exceptions();
+        ~OperationGuard() noexcept {
+            if (std::uncaught_exceptions() > exceptions) owner.transaction.poison();
+        }
+    };
+
+    static void destroy_native(NativeOwned value) noexcept
+    {
+        switch (value.kind) {
+        case NativeKind::program: bgfx::destroy(bgfx::ProgramHandle{value.index}); break;
+        case NativeKind::shader: bgfx::destroy(bgfx::ShaderHandle{value.index}); break;
+        case NativeKind::texture: bgfx::destroy(bgfx::TextureHandle{value.index}); break;
+        }
+    }
+    struct NativeCandidate {
+        Impl& owner;
+        NativeOwned owned;
+        bool released = false;
+        NativeCandidate(Impl& value, NativeOwned native) : owner(value), owned(native)
+        { ++owner.native_reference_creates; }
+        ~NativeCandidate() { if (!released) owner.destroy_reference(owned); }
+    };
+    void destroy_reference(NativeOwned value) noexcept
+    { destroy_native(value); ++native_reference_destroys; }
+
+    void drain_retirements() noexcept
+    {
+        // Programs before their shaders; borrowed FBO textures are never owned
+        // here. Only ordinary boundaries drain, never transaction finish.
+        for (auto kind : {NativeKind::program, NativeKind::shader, NativeKind::texture})
+            for (const auto value : retirements) if (value.kind == kind) {
+                destroy_reference(value); ++retirement_destroys;
+            }
+        retirements.clear();
+    }
+    UInt32 advance_frame()
+    { ++frame_advances; return bgfx::frame(); }
+    bool admit_native_publication(std::string_view operation)
+    {
+        if (!transaction.active() || publication_fault == UINT32_MAX) return true;
+        if (!publication_fault) {
+            publication_fault = UINT32_MAX;
+            fail(operation, "injected native candidate publication failure"); return false;
+        }
+        --publication_fault;
+        return true;
+    }
+    void checkpoint_boundary()
+    {
+        if (checkpoint_copy_fault == UINT32_MAX) return;
+        if (!checkpoint_copy_fault) {
+            checkpoint_copy_fault = UINT32_MAX;
+            throw std::bad_alloc();
+        }
+        --checkpoint_copy_fault;
+    }
+
+    bool admit(std::string_view operation, UInt64 bytes = 0, UInt32 resources = 0)
+    {
+        if (!transaction.active()) { drain_retirements(); return true; }
+        if (!transaction.charge(bytes, resources)) { fail(operation, "transaction capacity or prior failure"); return false; }
+        if (operation_fault != UINT32_MAX) {
+            if (!operation_fault) {
+                operation_fault = UINT32_MAX;
+                fail(operation, "injected transaction operation failure"); return false;
+            }
+            --operation_fault;
+        }
+        return true;
+    }
+    bool reject_live(std::string_view operation)
+    {
+        if (!transaction.active()) { drain_retirements(); return false; }
+        fail(operation, "idle transaction forbids frame or external completion operation");
+        return true;
+    }
+    void track_native(NativeOwned value) noexcept
+    {
+        if (checkpoint) {
+            value.candidate = true;
+            checkpoint->native_owners.push_back(value); // admission reserved capacity
+        }
+    }
+    bool retain_native_unit(NativeKind kind, UInt16 index) noexcept
+    {
+        for (auto& owner : checkpoint->native_owners) {
+            if (!owner.retained && owner.kind == kind && owner.index == index) {
+                owner.retained = true;
+                return true;
+            }
+        }
+        return false;
+    }
+    template<class Record>
+    static void restore_slots(std::vector<Slot<Record>>& current,
+                              std::vector<Slot<Record>>& baseline) noexcept
+    {
+        static_assert(std::is_nothrow_move_constructible_v<Slot<Record>>);
+        const auto old_count = baseline.size();
+        current.swap(baseline);
+        for (std::size_t i = old_count; i < baseline.size(); ++i) {
+            const auto generation = baseline[i].generation;
+            Slot<Record> tombstone;
+            tombstone.generation = generation < slot_mask ? generation + 1 : 0;
+            current.push_back(std::move(tombstone)); // reserved at admission
+        }
+    }
+    UInt64 slot_count() const noexcept
+    { return buffers.size()+textures.size()+samplers.size()+shaders.size()+pipelines.size(); }
+    UInt64 baseline_bytes() const noexcept
+    {
+        UInt64 bytes = buffers.size()*sizeof(Slot<BufferRecord>)
+            + textures.size()*sizeof(Slot<TextureRecord>) + samplers.size()*sizeof(Slot<SamplerRecord>)
+            + shaders.size()*sizeof(Slot<ShaderRecord>) + pipelines.size()*sizeof(Slot<PipelineRecord>);
+        for (const auto& slot : buffers) bytes += slot.record.shadow.size()+slot.record.written.size();
+        for (const auto& slot : textures) {
+            bytes += slot.record.mips.size()*sizeof(TextureRecord::Mip);
+            for (const auto& mip : slot.record.mips) bytes += mip.bytes.size();
+        }
+        for (const auto& slot : shaders)
+            bytes += slot.record.fields.size()*sizeof(ShaderRecord::Field)
+                + slot.record.textures.size()*sizeof(ShaderRecord::TextureField);
+        return bytes;
+    }
 
     explicit Impl(BgfxOptions value) : options(std::move(value))
     {
@@ -397,22 +546,39 @@ public:
 
     ~Impl()
     {
+        if (checkpoint) {
+            for (const auto value : checkpoint->native_owners)
+                if (value.candidate) retirements.push_back(value);
+            restore_slots(buffers, checkpoint->buffers);
+            restore_slots(textures, checkpoint->textures);
+            restore_slots(samplers, checkpoint->samplers);
+            restore_slots(shaders, checkpoint->shaders);
+            restore_slots(pipelines, checkpoint->pipelines);
+            checkpoint.reset();
+        }
+        drain_retirements();
         if (bgfx::isValid(framebuffer)) bgfx::destroy(framebuffer);
         if (bgfx::isValid(window_framebuffer)) bgfx::destroy(window_framebuffer);
         if (bgfx::isValid(present_program)) bgfx::destroy(present_program);
         for (auto& slot : pipelines)
-            if (slot.alive && bgfx::isValid(slot.record.native)) bgfx::destroy(slot.record.native);
+            if (slot.alive && bgfx::isValid(slot.record.native)) destroy_reference({NativeKind::program,slot.record.native.idx});
         for (auto& slot : shaders)
-            if (slot.alive && bgfx::isValid(slot.record.native)) bgfx::destroy(slot.record.native);
+            if (slot.alive && bgfx::isValid(slot.record.native)) destroy_reference({NativeKind::shader,slot.record.native.idx});
         for (auto& slot : textures)
-            if (slot.alive && bgfx::isValid(slot.record.native)) bgfx::destroy(slot.record.native);
-        bgfx::frame();
+            if (slot.alive && bgfx::isValid(slot.record.native)) destroy_reference({NativeKind::texture,slot.record.native.idx});
+        assert(native_reference_creates == native_reference_destroys);
+        advance_frame();
         bgfx::shutdown();
         runtime_owned.store(false);
     }
 
     ValidationResult fail(std::string_view operation, std::string_view reason)
     {
+        transaction.poison(); // diagnostics may allocate or throw
+        if (transaction.active() && diagnostic_fault) {
+            diagnostic_fault = false;
+            throw std::bad_alloc();
+        }
         last_error = std::string(operation) + ": " + std::string(reason);
         return {false, last_error};
     }
@@ -425,6 +591,16 @@ public:
     }
 
     BgfxOptions options;
+    const UInt64 transaction_device = ++next_transaction_device;
+    detail::BgfxTransactionState transaction;
+    std::unique_ptr<Checkpoint> checkpoint;
+    std::vector<NativeOwned> retirements;
+    UInt32 operation_fault = UINT32_MAX;
+    UInt32 publication_fault = UINT32_MAX;
+    UInt32 checkpoint_copy_fault = UINT32_MAX;
+    UInt64 retirement_destroys = 0, frame_advances = 0;
+    UInt64 native_reference_creates = 0, native_reference_destroys = 0;
+    bool checkpoint_fault = false, diagnostic_fault = false;
     std::string last_error;
     std::vector<Slot<BufferRecord>> buffers;
     std::vector<Slot<TextureRecord>> textures;
@@ -455,6 +631,116 @@ public:
 BgfxGpuDevice::BgfxGpuDevice(BgfxOptions options) : impl_(std::make_unique<Impl>(std::move(options))) {}
 BgfxGpuDevice::~BgfxGpuDevice() = default;
 
+bool BgfxGpuDevice::supports_device_transactions(DeviceTransactionMode mode) const noexcept
+{ return mode == DeviceTransactionMode::idle_preparation; }
+
+ValidationResult BgfxGpuDevice::begin_device_transaction(const DeviceTransactionDesc& desc,
+                                                       DeviceTransactionToken& token)
+{
+    // Reserving slot capacity is private, but all observable ownership remains
+    // unchanged until every checkpoint allocation succeeds.
+    const UInt64 reserved = UInt64(desc.resources) * 2 *
+        (sizeof(Slot<Impl::BufferRecord>)+sizeof(Slot<Impl::TextureRecord>)+sizeof(Slot<Impl::SamplerRecord>)
+         +sizeof(Slot<Impl::ShaderRecord>)+sizeof(Slot<Impl::PipelineRecord>)+sizeof(Impl::NativeOwned));
+    const auto baseline = impl_->baseline_bytes();
+    if (impl_->transaction.active() || impl_->in_pass
+        || baseline > detail::BgfxTransactionState::maximum_bytes
+        || !detail::BgfxTransactionState::valid_idle(desc,
+            impl_->slot_count()+impl_->retirements.size(), baseline*2+reserved))
+        return {false,"transaction: invalid mode, baseline, capacity or overlapping owner"};
+    if (impl_->checkpoint_fault) {
+        impl_->checkpoint_fault = false;
+        return {false,"transaction: injected checkpoint allocation failure"};
+    }
+    auto candidate = std::make_unique<Impl::Checkpoint>();
+    impl_->checkpoint_boundary();
+    candidate->buffers = impl_->buffers;
+    impl_->checkpoint_boundary();
+    candidate->textures = impl_->textures;
+    impl_->checkpoint_boundary();
+    candidate->samplers = impl_->samplers;
+    impl_->checkpoint_boundary();
+    candidate->shaders = impl_->shaders;
+    impl_->checkpoint_boundary();
+    candidate->pipelines = impl_->pipelines;
+    impl_->checkpoint_boundary();
+    const auto reserve = [&](auto& current, auto& prior) {
+        current.reserve(current.size()+desc.resources);
+        prior.reserve(prior.size()+desc.resources);
+        impl_->checkpoint_boundary();
+    };
+    reserve(impl_->buffers, candidate->buffers);
+    reserve(impl_->textures, candidate->textures);
+    reserve(impl_->samplers, candidate->samplers);
+    reserve(impl_->shaders, candidate->shaders);
+    reserve(impl_->pipelines, candidate->pipelines);
+    candidate->native_owners.reserve(desc.resources);
+    const auto record_owners = [&](const auto& slots, auto kind) {
+        for (const auto& slot : slots)
+            if (slot.alive) candidate->native_owners.push_back({kind,slot.record.native.idx});
+    };
+    record_owners(candidate->pipelines, Impl::NativeKind::program);
+    record_owners(candidate->shaders, Impl::NativeKind::shader);
+    record_owners(candidate->textures, Impl::NativeKind::texture);
+    impl_->retirements.reserve(desc.resources);
+    impl_->checkpoint_boundary();
+    if (!impl_->transaction.begin(desc, impl_->transaction_device,
+            impl_->slot_count()+impl_->retirements.size(), baseline*2+reserved))
+        return {false,"transaction: sequence exhausted"};
+    impl_->checkpoint = std::move(candidate);
+    token = impl_->transaction.token();
+    return {};
+}
+
+bool BgfxGpuDevice::commit_device_transaction(const DeviceTransactionToken& token) noexcept
+{
+    if (!impl_->transaction.matches(token) || impl_->transaction.failed()) return false;
+    auto& checkpoint = *impl_->checkpoint;
+    for (auto& owner : checkpoint.native_owners) owner.retained = false;
+    const auto keep_live = [&](const auto& slots, auto kind) {
+        for (const auto& slot : slots) {
+            if (!slot.alive) continue;
+            if (!impl_->retain_native_unit(kind, slot.record.native.idx)) return false;
+        }
+        return true;
+    };
+    if (!keep_live(impl_->pipelines, Impl::NativeKind::program)
+        || !keep_live(impl_->shaders, Impl::NativeKind::shader)
+        || !keep_live(impl_->textures, Impl::NativeKind::texture)) {
+        impl_->transaction.poison(); return false;
+    }
+    if (!impl_->transaction.finish(token, true)) return false;
+    for (const auto value : checkpoint.native_owners)
+        if (!value.retained) impl_->retirements.push_back(value);
+    impl_->checkpoint.reset();
+    return true;
+}
+
+bool BgfxGpuDevice::abort_device_transaction(const DeviceTransactionToken& token) noexcept
+{
+    if (!impl_->transaction.finish(token, false)) return false;
+    auto& checkpoint = *impl_->checkpoint;
+    for (const auto value : checkpoint.native_owners)
+        if (value.candidate) impl_->retirements.push_back(value);
+    Impl::restore_slots(impl_->buffers, checkpoint.buffers);
+    Impl::restore_slots(impl_->textures, checkpoint.textures);
+    Impl::restore_slots(impl_->samplers, checkpoint.samplers);
+    Impl::restore_slots(impl_->shaders, checkpoint.shaders);
+    Impl::restore_slots(impl_->pipelines, checkpoint.pipelines);
+    impl_->checkpoint.reset();
+    return true;
+}
+void BgfxGpuDevice::fail_next_transaction_checkpoint() noexcept { impl_->checkpoint_fault = true; }
+void BgfxGpuDevice::fail_transaction_checkpoint_copy_after(UInt32 count) noexcept { impl_->checkpoint_copy_fault = count; }
+void BgfxGpuDevice::fail_transaction_operation_after(UInt32 count) noexcept { impl_->operation_fault = count; }
+void BgfxGpuDevice::fail_next_transaction_diagnostic_allocation() noexcept { impl_->diagnostic_fault = true; }
+void BgfxGpuDevice::fail_transaction_native_publication_after(UInt32 count) noexcept { impl_->publication_fault = count; }
+std::size_t BgfxGpuDevice::pending_native_retirement_count() const noexcept { return impl_->retirements.size(); }
+UInt64 BgfxGpuDevice::native_retirement_destroy_count() const noexcept { return impl_->retirement_destroys; }
+UInt64 BgfxGpuDevice::native_frame_advance_count() const noexcept { return impl_->frame_advances; }
+UInt64 BgfxGpuDevice::live_owned_native_reference_count() const noexcept
+{ return impl_->native_reference_creates-impl_->native_reference_destroys; }
+
 bool BgfxGpuDevice::supports_texture_format(TextureFormat format, TextureDimension dimension,
     bool sampled, bool render_target) const noexcept
 {
@@ -466,21 +752,28 @@ bool BgfxGpuDevice::supports_texture_format(TextureFormat format, TextureDimensi
     return bgfx::isTextureValid(1, false, 1, native, flags);
 }
 
-BufferHandle BgfxGpuDevice::create_buffer(const BufferDesc& desc, std::string_view)
+BufferHandle BgfxGpuDevice::create_buffer(const BufferDesc& desc, std::string_view label)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (impl_->transaction.active() && desc.size > detail::BgfxTransactionState::maximum_bytes) {
+        impl_->fail("create_buffer", "transaction buffer exceeds byte capacity"); return {};
+    }
+    if (!impl_->admit("create_buffer", desc.size*2+label.size(), 1)) return {};
     if (auto result = validate(desc); !result) { impl_->fail("create_buffer", result.error); return {}; }
     // Vertex layout and index width are supplied only by the later draw. Keep
     // a bounded upload shadow and materialize the correctly typed native buffer
     // at the draw boundary instead of guessing its layout here.
     auto handle = insert<BufferHandle>(impl_->buffers, {desc,
         std::vector<UInt8>(static_cast<std::size_t>(desc.size)),
-        std::vector<UInt8>(static_cast<std::size_t>(desc.size))});
+        std::vector<UInt8>(static_cast<std::size_t>(desc.size))}, impl_->transaction.active());
     if (!handle) impl_->fail("create_buffer", "opaque resource slot budget exhausted");
     return handle;
 }
 
-TextureHandle BgfxGpuDevice::create_texture(const TextureDesc& desc, std::string_view)
+TextureHandle BgfxGpuDevice::create_texture(const TextureDesc& desc, std::string_view label)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit("create_texture", UInt64(desc.mip_levels)*sizeof(Impl::TextureRecord::Mip)+label.size(), 1)) return {};
     if (auto result = validate(desc); !result) { impl_->fail("create_texture", result.error); return {}; }
     if (desc.dimension != TextureDimension::texture_2d || desc.width > UINT16_MAX || desc.height > UINT16_MAX
         || desc.mip_levels > maximum_2d_mip_levels(desc.width, desc.height)
@@ -493,8 +786,13 @@ TextureHandle BgfxGpuDevice::create_texture(const TextureDesc& desc, std::string
     auto native = bgfx::createTexture2D(static_cast<UInt16>(desc.width), static_cast<UInt16>(desc.height),
         desc.mip_levels > 1, 1, physical_format(desc.format), flags);
     if (!bgfx::isValid(native)) { impl_->fail("create_texture", "public bgfx texture allocation failed"); return {}; }
-    auto handle = insert<TextureHandle>(impl_->textures, {desc, native, false, false, false});
-    if (!handle) { bgfx::destroy(native); impl_->fail("create_texture", "opaque resource slot budget exhausted"); }
+    Impl::NativeCandidate candidate{*impl_, {Impl::NativeKind::texture, native.idx}};
+    Impl::TextureRecord record;
+    record.desc = desc; record.native = native; record.mips.resize(desc.mip_levels);
+    if (!impl_->admit_native_publication("create_texture")) return {};
+    auto handle = insert<TextureHandle>(impl_->textures, std::move(record), impl_->transaction.active());
+    if (!handle) impl_->fail("create_texture", "opaque resource slot budget exhausted");
+    else { impl_->track_native(candidate.owned); candidate.released = true; }
     return handle;
 }
 
@@ -504,17 +802,21 @@ std::optional<TextureFormat> BgfxGpuDevice::describe_texture_format(TextureHandl
     return slot ? std::optional<TextureFormat>(slot->record.desc.format) : std::nullopt;
 }
 
-SamplerHandle BgfxGpuDevice::create_sampler(const SamplerDesc& desc, std::string_view)
+SamplerHandle BgfxGpuDevice::create_sampler(const SamplerDesc& desc, std::string_view label)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit("create_sampler", label.size(), 1)) return {};
     if (auto result = validate(desc); !result) { impl_->fail("create_sampler", result.error); return {}; }
     // bgfx encodes samplers as validated flags at the setTexture binding edge.
-    auto handle = insert<SamplerHandle>(impl_->samplers, {desc});
+    auto handle = insert<SamplerHandle>(impl_->samplers, {desc}, impl_->transaction.active());
     if (!handle) impl_->fail("create_sampler", "opaque resource slot budget exhausted");
     return handle;
 }
 
 ValidationResult BgfxGpuDevice::upload(const UploadDesc& desc, const void* bytes)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit("upload", desc.size)) return {false, impl_->last_error};
     if (auto result = validate(desc); !result) return impl_->fail("upload", result.error);
     auto* slot = lookup(impl_->buffers, desc.destination);
     if (!slot) return impl_->fail("upload", "stale or foreign buffer handle");
@@ -528,6 +830,8 @@ ValidationResult BgfxGpuDevice::upload(const UploadDesc& desc, const void* bytes
 
 ValidationResult BgfxGpuDevice::upload_texture(const TextureUploadDesc& desc, const void* bytes)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit("upload_texture", desc.size)) return {false, impl_->last_error};
     auto* slot = lookup(impl_->textures, desc.destination);
     if (!slot) return impl_->fail("upload_texture", "stale or foreign texture handle");
     const auto& texture = slot->record.desc;
@@ -542,19 +846,51 @@ ValidationResult BgfxGpuDevice::upload_texture(const TextureUploadDesc& desc, co
             (texture.format == TextureFormat::bgr5a1 ? 2U : 4U) || desc.row_pitch > UINT16_MAX
         || !required || desc.size != required || desc.size > RendererLimits::maximum_upload_bytes)
         return impl_->fail("upload_texture", "unsupported or out-of-bounds texture upload");
-    bgfx::updateTexture2D(slot->record.native, 0, static_cast<UInt8>(desc.mip_level), 0, 0,
+    if (impl_->transaction.active() && texture.render_target)
+        return impl_->fail("upload_texture", "transaction upload cannot reconstruct GPU-owned render-target pixels");
+    Impl::TextureRecord::Mip mip;
+    mip.bytes.assign(static_cast<const UInt8*>(bytes), static_cast<const UInt8*>(bytes)+desc.size);
+    mip.pitch = desc.row_pitch;
+    if (impl_->transaction.active()) {
+        UInt64 cloned = 0;
+        for (const auto& prior : slot->record.mips) cloned += prior.bytes.size();
+        if (!impl_->transaction.retain_resources(1) || !impl_->transaction.retain_bytes(cloned+desc.size))
+            return impl_->fail("upload_texture", "COW native version or byte capacity exhausted");
+        auto native = bgfx::createTexture2D(static_cast<UInt16>(texture.width), static_cast<UInt16>(texture.height),
+            texture.mip_levels > 1, 1, physical_format(texture.format), BGFX_TEXTURE_NONE);
+        if (!bgfx::isValid(native)) return impl_->fail("upload_texture", "COW native texture allocation failed");
+        Impl::NativeCandidate candidate{*impl_, {Impl::NativeKind::texture, native.idx}};
+        for (UInt32 level = 0; level < texture.mip_levels; ++level) {
+            const auto& source = level == desc.mip_level ? mip : slot->record.mips[level];
+            if (source.bytes.empty()) continue;
+            bgfx::updateTexture2D(native, 0, static_cast<UInt8>(level), 0, 0,
+                static_cast<UInt16>(std::max(1U, texture.width >> level)),
+                static_cast<UInt16>(std::max(1U, texture.height >> level)),
+                bgfx::copy(source.bytes.data(), static_cast<UInt32>(source.bytes.size())),
+                static_cast<UInt16>(source.pitch));
+        }
+        if (!impl_->admit_native_publication("upload_texture")) return {false, impl_->last_error};
+        impl_->track_native(candidate.owned);
+        slot->record.native = native;
+        candidate.released = true;
+    } else bgfx::updateTexture2D(slot->record.native, 0, static_cast<UInt8>(desc.mip_level), 0, 0,
         static_cast<UInt16>(desc.width), static_cast<UInt16>(desc.height),
         bgfx::copy(bytes, static_cast<UInt32>(desc.size)), static_cast<UInt16>(desc.row_pitch));
+    slot->record.mips[desc.mip_level] = std::move(mip);
     slot->record.color_initialized = true;
     return {};
 }
 
 void BgfxGpuDevice::destroy(BufferHandle handle)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit("destroy_buffer")) return;
     if (auto* slot = lookup(impl_->buffers, handle)) retire(*slot);
 }
 void BgfxGpuDevice::destroy(TextureHandle handle)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit("destroy_texture")) return;
     if (auto* slot = lookup(impl_->textures, handle)) {
         if (impl_->in_pass && (handle == impl_->depth
             || std::find(impl_->colors.begin(), impl_->colors.begin() + impl_->color_count, handle)
@@ -562,16 +898,21 @@ void BgfxGpuDevice::destroy(TextureHandle handle)
             impl_->fail("destroy_texture", "active render attachment cannot be destroyed");
             return;
         }
-        bgfx::destroy(slot->record.native); retire(*slot);
+        if (!impl_->transaction.active()) impl_->destroy_reference({Impl::NativeKind::texture,slot->record.native.idx});
+        retire(*slot);
     }
 }
 void BgfxGpuDevice::destroy(SamplerHandle handle)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit("destroy_sampler")) return;
     if (auto* slot = lookup(impl_->samplers, handle)) retire(*slot);
 }
 
 ShaderHandle BgfxGpuDevice::create_shader(const ShaderDesc& desc, std::string_view label)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit("create_shader", label.size()+desc.name.size(), 1)) return {};
     if (auto result = validate(desc); !result) { impl_->fail("create_shader", result.error); return {}; }
     const std::filesystem::path relative(desc.name);
     if (label.empty() || relative.empty() || relative.is_absolute()) {
@@ -585,6 +926,9 @@ ShaderHandle BgfxGpuDevice::create_shader(const ShaderDesc& desc, std::string_vi
         impl_->fail("create_shader", "missing, empty or oversized pinned bgfx shader binary"); return {};
     }
     std::vector<char> data(static_cast<std::size_t>(input.tellg()));
+    if (!impl_->transaction.retain_bytes(data.size())) {
+        impl_->fail("create_shader", "shader byte capacity exhausted"); return {};
+    }
     input.seekg(0);
     input.read(data.data(), static_cast<std::streamsize>(data.size()));
     const char* expected = desc.stage == ShaderStage::vertex ? "VSH" : "FSH";
@@ -641,10 +985,7 @@ ShaderHandle BgfxGpuDevice::create_shader(const ShaderDesc& desc, std::string_vi
     }
     auto native = bgfx::createShader(bgfx::copy(data.data(), static_cast<UInt32>(data.size())));
     if (!bgfx::isValid(native)) { impl_->fail("create_shader", "public bgfx shader creation failed"); return {}; }
-    struct CandidateShader {
-        bgfx::ShaderHandle handle;
-        ~CandidateShader() { if (bgfx::isValid(handle)) bgfx::destroy(handle); }
-    } candidate{native};
+    Impl::NativeCandidate candidate{*impl_, {Impl::NativeKind::shader,native.idx}};
     const auto uniform_count = bgfx::getShaderUniforms(native);
     std::vector<bgfx::UniformHandle> uniforms(uniform_count);
     bgfx::getShaderUniforms(native, uniforms.data(), uniform_count);
@@ -710,20 +1051,33 @@ ShaderHandle BgfxGpuDevice::create_shader(const ShaderDesc& desc, std::string_vi
             impl_->fail("create_shader", "unclassified public bgfx uniform: " + item.name); return {};
         }
     }
-    auto handle = insert<ShaderHandle>(impl_->shaders, std::move(record));
+    if (!impl_->transaction.retain_bytes(record.fields.size()*sizeof(Impl::ShaderRecord::Field)
+        +record.textures.size()*sizeof(Impl::ShaderRecord::TextureField))) {
+        impl_->fail("create_shader", "reflection byte capacity exhausted"); return {};
+    }
+    if (!impl_->admit_native_publication("create_shader")) return {};
+    auto handle = insert<ShaderHandle>(impl_->shaders, std::move(record), impl_->transaction.active());
     if (!handle) impl_->fail("create_shader", "opaque shader slot budget exhausted");
-    else candidate.handle = BGFX_INVALID_HANDLE;
+    else {
+        impl_->track_native({Impl::NativeKind::shader, native.idx});
+        candidate.released = true;
+    }
     return handle;
 }
 
 PipelineHandle BgfxGpuDevice::create_pipeline(const PipelineKey& key, std::string_view label)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit("create_pipeline", label.size())) return {};
     const auto& desc = key.descriptor();
     if (auto result = validate(desc); !result) { impl_->fail("create_pipeline", result.error); return {}; }
     if (label.empty()) { impl_->fail("create_pipeline", "label must not be empty"); return {}; }
     for (std::size_t i = 0; i < impl_->pipelines.size(); ++i)
         if (impl_->pipelines[i].alive && impl_->pipelines[i].record.key == key)
             return encode<PipelineHandle>(i, impl_->pipelines[i].generation);
+    if (!impl_->transaction.retain_resources(1)) {
+        impl_->fail("create_pipeline", "transaction resource capacity exhausted"); return {};
+    }
     auto* vertex = lookup(impl_->shaders, desc.vertex_shader);
     auto* fragment = lookup(impl_->shaders, desc.fragment_shader);
     if (!vertex || vertex->record.stage != ShaderStage::vertex
@@ -735,14 +1089,19 @@ PipelineHandle BgfxGpuDevice::create_pipeline(const PipelineKey& key, std::strin
     }
     auto native = bgfx::createProgram(vertex->record.native, fragment->record.native, false);
     if (!bgfx::isValid(native)) { impl_->fail("create_pipeline", "public bgfx shader program creation failed"); return {}; }
+    Impl::NativeCandidate candidate{*impl_, {Impl::NativeKind::program, native.idx}};
     Impl::PipelineRecord record;
     record.key = key; record.native = native;
-    auto handle = insert<PipelineHandle>(impl_->pipelines, std::move(record));
-    if (!handle) { bgfx::destroy(native); impl_->fail("create_pipeline", "opaque pipeline slot budget exhausted"); }
+    if (!impl_->admit_native_publication("create_pipeline")) return {};
+    auto handle = insert<PipelineHandle>(impl_->pipelines, std::move(record), impl_->transaction.active());
+    if (!handle) impl_->fail("create_pipeline", "opaque pipeline slot budget exhausted");
+    else { impl_->track_native(candidate.owned); candidate.released = true; }
     return handle;
 }
 ValidationResult BgfxGpuDevice::begin_pass(const RenderPassDesc& desc, std::string_view)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (impl_->reject_live("begin_pass")) return {false, impl_->last_error};
     if (impl_->in_pass) return impl_->fail("begin_pass", "a pass is already active");
     if (auto result = validate(desc); !result) return impl_->fail("begin_pass", result.error);
     if (desc.width > UINT16_MAX || desc.height > UINT16_MAX || impl_->next_view >= RendererLimits::ordered_views)
@@ -799,6 +1158,8 @@ std::pair<UInt32,UInt32> BgfxGpuDevice::active_pass_extent() const noexcept
 
 ValidationResult BgfxGpuDevice::set_viewport(const ViewportDesc& desc)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (impl_->reject_live("set_viewport")) return {false, impl_->last_error};
     if (!impl_->in_pass) return impl_->fail("set_viewport", "no active pass");
     if (auto result = validate(desc, impl_->width, impl_->height); !result)
         return impl_->fail("set_viewport", result.error);
@@ -822,6 +1183,8 @@ ValidationResult BgfxGpuDevice::set_viewport(const ViewportDesc& desc)
 
 ValidationResult BgfxGpuDevice::clear_viewport(const ViewportClearDesc& desc)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (impl_->reject_live("clear_viewport")) return {false, impl_->last_error};
     if (!impl_->in_pass) return impl_->fail("clear_viewport", "no active pass");
     if (auto result = validate(desc, impl_->width, impl_->height); !result)
         return impl_->fail("clear_viewport", result.error);
@@ -853,6 +1216,8 @@ ValidationResult BgfxGpuDevice::clear_viewport(const ViewportClearDesc& desc)
 }
 ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (impl_->reject_live("draw")) return {false, impl_->last_error};
     if (!impl_->in_pass) return impl_->fail("draw", "draw requires an active pass");
     auto* pipeline = lookup(impl_->pipelines, desc.pipeline);
     if (!pipeline) return impl_->fail("draw", "stale or foreign pipeline handle");
@@ -1014,6 +1379,8 @@ ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
 }
 ValidationResult BgfxGpuDevice::end_pass()
 {
+    Impl::OperationGuard guard{*impl_};
+    if (impl_->reject_live("end_pass")) return {false, impl_->last_error};
     if (!impl_->in_pass) return impl_->fail("end_pass", "no active pass");
     bgfx::destroy(impl_->framebuffer);
     impl_->framebuffer = BGFX_INVALID_HANDLE;
@@ -1027,6 +1394,8 @@ ValidationResult BgfxGpuDevice::end_pass()
 }
 ValidationResult BgfxGpuDevice::present(TextureHandle source)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (impl_->reject_live("present")) return {false, impl_->last_error};
     if (impl_->in_pass) return impl_->fail("present", "cannot present during an active pass");
     if (!impl_->window || !bgfx::isValid(impl_->window_framebuffer))
         return impl_->fail("present", "no SDL3 window is claimed");
@@ -1038,7 +1407,7 @@ ValidationResult BgfxGpuDevice::present(TextureHandle source)
     if (!impl_->query_window_pixels(impl_->window, &width, &height) || width < 0 || height < 0)
         return impl_->fail("present", "SDL3 window pixel size is unavailable");
     if (width == 0 || height == 0) {
-        bgfx::frame();
+        impl_->advance_frame();
         impl_->next_view = 0;
         return {}; // Suspended/minimized surface; source resources remain live.
     }
@@ -1084,12 +1453,14 @@ ValidationResult BgfxGpuDevice::present(TextureHandle source)
         BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP);
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
     bgfx::submit(view, impl_->present_program);
-    bgfx::frame();
+    impl_->advance_frame();
     impl_->next_view = 0;
     return {};
 }
 void BgfxGpuDevice::destroy(ShaderHandle handle)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit("destroy_shader")) return;
     auto* slot = lookup(impl_->shaders, handle);
     if (!slot) return;
     for (const auto& pipeline : impl_->pipelines)
@@ -1097,17 +1468,29 @@ void BgfxGpuDevice::destroy(ShaderHandle handle)
             || pipeline.record.key.descriptor().fragment_shader == handle)) {
             impl_->fail("destroy_shader", "shader is referenced by a live pipeline"); return;
         }
-    bgfx::destroy(slot->record.native); retire(*slot);
+    if (!impl_->transaction.active()) impl_->destroy_reference({Impl::NativeKind::shader,slot->record.native.idx});
+    retire(*slot);
 }
 void BgfxGpuDevice::destroy(PipelineHandle handle)
 {
-    if (auto* slot = lookup(impl_->pipelines, handle)) { bgfx::destroy(slot->record.native); retire(*slot); }
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit("destroy_pipeline")) return;
+    if (auto* slot = lookup(impl_->pipelines, handle)) {
+        if (!impl_->transaction.active()) impl_->destroy_reference({Impl::NativeKind::program,slot->record.native.idx});
+        retire(*slot);
+    }
 }
 const std::string& BgfxGpuDevice::last_error() const noexcept { return impl_->last_error; }
 bool BgfxGpuDevice::pass_active() const noexcept { return impl_->in_pass; }
-void BgfxGpuDevice::record_marker(std::string_view) {}
+void BgfxGpuDevice::record_marker(std::string_view label)
+{
+    Impl::OperationGuard guard{*impl_};
+    (void)impl_->admit("record_marker", label.size());
+}
 ValidationResult BgfxGpuDevice::claim_window(SDL_Window* window)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (impl_->reject_live("claim_window")) return {false, impl_->last_error};
     if (!window) return impl_->fail("claim_window", "SDL3 window is null");
     if (impl_->window) return impl_->fail("claim_window", "an SDL3 window is already claimed");
     if (impl_->in_pass) return impl_->fail("claim_window", "cannot claim during an active pass");
@@ -1176,8 +1559,10 @@ ValidationResult BgfxGpuDevice::claim_window(SDL_Window* window)
 }
 ValidationResult BgfxGpuDevice::wait_idle()
 {
+    Impl::OperationGuard guard{*impl_};
+    if (impl_->reject_live("wait_idle")) return {false, impl_->last_error};
     if (impl_->in_pass) return impl_->fail("wait_idle", "pass remains active");
-    bgfx::frame();
+    impl_->advance_frame();
     impl_->next_view = 0;
     return {};
 }
@@ -1194,6 +1579,8 @@ std::size_t BgfxGpuDevice::live_resource_count() const noexcept
 
 std::vector<UInt8> BgfxGpuDevice::readback_rgba(TextureHandle source)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (impl_->reject_live("readback_rgba")) return {};
     if (impl_->in_pass) { impl_->fail("readback_rgba", "pass remains active"); return {}; }
     auto* slot = lookup(impl_->textures, source);
     if (!slot || !slot->record.color_initialized || is_depth(slot->record.desc.format)
@@ -1216,14 +1603,14 @@ std::vector<UInt8> BgfxGpuDevice::readback_rgba(TextureHandle source)
     bgfx::TextureRegion origin{};
     origin.handle = slot->record.native;
     bgfx::blit(static_cast<bgfx::ViewId>(impl_->next_view++), destination, origin);
-    auto current = bgfx::frame();
+    auto current = impl_->advance_frame();
     std::vector<UInt8> pixels(static_cast<std::size_t>(desc.width) * desc.height * 4U);
     const auto ready = bgfx::read(destination, pixels.data());
-    while (current < ready) current = bgfx::frame();
+    while (current < ready) current = impl_->advance_frame();
     // bgfx::frame() returns the frame it just submitted after waiting for the
     // preceding render frame. The read command retains pixels.data(), so the
     // ready frame must finish before we inspect or release this vector.
-    bgfx::frame();
+    impl_->advance_frame();
     bgfx::destroy(target);
     impl_->next_view = 0;
     if (desc.format == TextureFormat::bgra8)
@@ -1232,6 +1619,8 @@ std::vector<UInt8> BgfxGpuDevice::readback_rgba(TextureHandle source)
 }
 void BgfxGpuDevice::release_window() noexcept
 {
+    if (impl_->transaction.active()) { impl_->transaction.poison(); return; }
+    impl_->drain_retirements();
     if (impl_->in_pass) return;
     if (bgfx::isValid(impl_->window_framebuffer)) bgfx::destroy(impl_->window_framebuffer);
     if (bgfx::isValid(impl_->present_program)) bgfx::destroy(impl_->present_program);

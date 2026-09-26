@@ -17,3 +17,7 @@ cover dead prefixes, multiblock layouts and genuinely eliminated providers.
 Treat packed vertex attributes as a source-shader protocol, not their transport
 names. Preserve encoded slots through transitions when native load/update does;
 prove exact source selection and physical payloads instead of inventing resets.
+
+Native create APIs may deduplicate handles while incrementing reference counts.
+Transaction journals must track each acquired ownership unit, not unique handle
+values; cover canceled aliases, replacement, drain and teardown independently.
