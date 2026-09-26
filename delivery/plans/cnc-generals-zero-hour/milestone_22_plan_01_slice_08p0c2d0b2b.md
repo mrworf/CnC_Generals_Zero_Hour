@@ -16,6 +16,11 @@ owns real generated FileSystem-before-GlobalData lifetime; R2 owns defined raw
 filter/profile representation and whole-tuple preflight before publication.
 Both must be delivered independently before any B2B production edits.
 
+R1 and R2 are now independently accepted; R2's final-source six canonical
+suites are clean, including both formerly qualified sanitizer categories.
+The read-only B2B audit below refines the existing owner without opening B0's
+source-stage checkpoint or changing the accepted native reservation API.
+
 ## Complete admitted command owner
 
 Use D0A's exact token and bounded command/resource/byte/view descriptor.
@@ -39,6 +44,38 @@ Changed sampled textures use COW versions; captured earlier draws retain their
 exact earlier version. Render-target upload rejects before mutation as D0B1.
 Every FBO belongs to the journal and uses destroyTextures=false.
 
+At capture, acquire a lease on the exact B1 ownership unit/version, not merely
+an opaque handle or a unique native index. Baseline and candidate native units
+stay owned until completion-safe retirement; multiple commands may borrow one
+unit without inventing native reference increments. Captured unit identities
+cannot be retargeted by later slot removal, COW replacement or reuse. Freeze
+CPU buffer/uniform bytes and sampler values at the same admission boundary.
+Retirement preserves native create/reference multiplicity, including aliases.
+
+The lowering maps source texture slot N in either shader stage to native stage
+8+N. Shared source-stage aliases require identical captured texture version,
+source sampler identity/flags and reflected native sampler UniformHandle;
+emit one canonical binding. Conflicting aliases reject before checkpointed CPU
+mutation. Distinct reflected sampler handles sharing one stage are explicitly
+unsupported: pinned setTexture also writes the sampler uniform, and the accepted
+A manifest cannot express both writes with one canonical binding. Never drop
+one write or choose a winner by vertex/fragment replay order. Repeated native
+uniform handles likewise merge only with identical reflected type/count and
+frozen payload bytes; conflicting payloads reject. Different native stages may
+not alias one sampler handle. Ordinary nontransactional behavior is unchanged.
+
+Use checked UInt64 range arithmetic for vertex/index spans and reflected source
+offsets; prove initialized bytes, native vertex counts, index element alignment,
+uniform count/byte-size and payload alignment before copies or publication.
+Validate viewport/clear intersection and integer coordinates before conversion.
+Native manifest view origins are signed int16: reject non-representable x/y,
+including a clipped clear origin, rather than narrowing. Width/height must fit
+uint16 and native caps; view allocation respects both the admitted view budget
+and the existing ordinary prefix. No unsupported scissor/depth-range behavior
+may be approximated. Each staging operation finishes its complete validation,
+budget admission, owned copies and candidate preparation before publishing any
+checkpointed CPU pass/init/view state.
+
 Presentation preflights SDL extent callback, immutable current window ownership,
 generation, program/uniform/sampler/source, fixed triangle bytes and resize.
 Use prepared native vertices, not commit-time transient allocation. Suspension
@@ -48,6 +85,17 @@ resize/retirement/frame-finish storage with D0B2A before accepted-target touch.
 Claim/release/wait/readback side routes reject during the live journal; owner
 destruction cancels before ordinary shutdown. Do not roll back irreversible
 driver work or treat device loss as an ordinary rejected transaction.
+
+The final present is required to complete frame mode, including zero-extent
+suspension; an unfinished/offscreen-only frame cannot commit. Validate the
+window callback result and native-cap extent before publishing resize shadows.
+CompleteFrame occurs exactly once and is the last native manifest packet, as
+required by A. Later destruction is bounded CPU retirement-queue metadata only:
+no native Retire or other command follows completion. Prepared VB/IB/FBO units
+drain at ordinary/wait/shutdown boundaries, never by a native destroy or frame
+call during commit/abort. Edge integration forwards the exact device capability
+and owner token only; B0 separately owns source refs/maps/transforms/revision/
+pending sampler rollback, with no private duplicate checkpoint here.
 
 This child constructs and orders the complete immutable native manifest before
 calling D0B2A's single synchronous public admit/reserve/replay primitive. A
@@ -91,6 +139,12 @@ checkpoint/frozen-copy/native-wrapper/reservation failures, diagnostic exception
 partial abort, duplicate finish, owner removal and ordinary behavior controls.
 Accepted-target pixels are inspected only outside the completed attempt;
 readback cannot repair a failed batch.
+Include shared-stage identical/conflicting aliases, distinct reflected sampler
+aliases, equal/conflicting uniform payloads, signed-coordinate maximum/bound+1,
+checked span/count/alignment rejection, removed/replaced captured owners,
+unfinished/duplicate completion and mutation attempted after final present.
+Each rejection proves unchanged CPU shadows, receipt, native view/frame state
+and accepted pixels before clean retry; no gate relies on exit code alone.
 
 Focused commands before production:
 
