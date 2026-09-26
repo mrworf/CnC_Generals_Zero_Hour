@@ -63,6 +63,14 @@ public:
     void fail_buffer_upload_after(unsigned successful_uploads);
     void fail_next_draw();
     void fail_draw_after(unsigned successful_draws);
+    void fail_next_transaction_checkpoint();
+    void fail_next_transaction_diagnostic_allocation();
+    // Counts all admitted transaction operations, including release/markers.
+    void fail_transaction_operation_after(unsigned successful_operations);
+    bool supports_device_transactions(DeviceTransactionMode) const noexcept override;
+    ValidationResult begin_device_transaction(const DeviceTransactionDesc&, DeviceTransactionToken&) override;
+    bool commit_device_transaction(const DeviceTransactionToken&) noexcept override;
+    bool abort_device_transaction(const DeviceTransactionToken&) noexcept override;
 
     BufferHandle create_buffer(const BufferDesc& desc, std::string_view label) override;
     TextureHandle create_texture(const TextureDesc& desc, std::string_view label) override;

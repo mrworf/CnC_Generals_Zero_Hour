@@ -48,6 +48,16 @@ selects the declared phase; this slice never snapshots C1/RNG/FX. Preserve ordin
 
 ## Surfaces and acceptance
 
+Implementation audit: Recording owns five slot tables, payloads/initialization,
+ordered commands, view/target state and last-index bytes. Admission bounds and
+copies the baseline before publication; abort restores via no-throw swaps and
+retains retired candidate slots so their generations cannot alias retry.
+Transactions allocate new slots rather than reusing baseline slots. Fault
+counters are outside the checkpoint. Exact device/sequence/generation/mode
+tokens select one owner; commit/abort are no-throw, exactly-once boolean
+operations. Rejected admission leaves its output token untouched. Diagnostic
+failures are not appended to the successful command journal in a transaction.
+
 Expected surfaces: optional public GpuDevice capability, Recording owner,
 contract docs, generated renderer tests and narrow edge readiness/integration.
 Existing derived consumers compile with unsupported defaults. Positive tests
@@ -78,3 +88,26 @@ path; the unrelated renderer diagnostic remains excluded. Sanitizer focused
 uses detect_leaks=0; serial strict host LSan selects
 `renderer_recording_transaction|renderer_recording_device`, detect_leaks=1,
 no UBSan override. Existing established physical gates remain required.
+
+## Frozen implementation checkpoint
+
+Parent `1ff903ad04a313f2adfaff34daa80be6f39964d8`; unrelated
+`tests/renderer/test_bgfx_device.cpp` remains untouched and unstaged. Optional
+public defaults, exact tokens and bounded Recording checkpoint/rollback are
+implemented; no physical capability or source transaction wiring is claimed.
+GCC/Clang focused each pass 3/3, including the two-generation transaction
+witness. The exact resource-capacity control uses a fresh scene because abort
+intentionally retains retired tombstones; the bound counts checkpoint slots,
+not just live resource counts. Pipeline cache hits consume no candidate slot.
+All new aggregate members have declared defaults; comparisons use fields,
+never implicit padding. A final audit corrected attached-target rejection's
+exception-poisoning boundary: an outer guard covers diagnostic argument
+construction; the common diagnostic poisons before formatting. The explicit
+diagnostic-allocation fault proves rejection/abort identity and resource
+rollback. Earlier gates are superseded; refrozen acceptance is complete:
+six builds and canonical suites 270/270 each, focused 3/3 in both
+native/sanitizer toolchains, strict host LSan 2/2 both, established physical
+GCC 3/3 and Clang 2/2, serial host LAN 4/4 all six, ledger/diff. Source hashes
+remain unchanged after refreeze. The exact commit subject above identifies
+this independent Recording slice; D0B physical capability is dependency-next.
+Evidence: `delivery/evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2d0a_recording_transaction.md`.

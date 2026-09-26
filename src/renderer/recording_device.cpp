@@ -2,9 +2,13 @@
 #include <stdexcept>
 
 #include <algorithm>
+#include <atomic>
 #include <cstring>
+#include <exception>
 #include <limits>
+#include <new>
 #include <sstream>
+#include <type_traits>
 #include <utility>
 
 namespace zh::renderer {
@@ -67,11 +71,12 @@ Slot<Record>* lookup(std::vector<Slot<Record>>& slots, HandleType handle)
 }
 
 template <typename HandleType, typename Record, typename Value>
-HandleType allocate(std::vector<Slot<Record>>& slots, std::size_t& next_id, std::string_view label, Value&& value)
+HandleType allocate(std::vector<Slot<Record>>& slots, std::size_t& next_id, std::string_view label, Value&& value,
+    bool append_only = false)
 {
     for (std::size_t index = 0; index < slots.size(); ++index) {
         auto& slot = slots[index];
-        if (!slot.alive) {
+        if (!append_only && !slot.alive && slot.generation) {
             slot.alive = true;
             slot.normalized_id = ++next_id;
             slot.label.assign(label);
@@ -108,17 +113,105 @@ std::string enum_value(Enum value) { return std::to_string(static_cast<unsigned>
 bool is_depth(TextureFormat format)
 { return format==TextureFormat::depth16 || format==TextureFormat::depth24_stencil8 || format==TextureFormat::depth32; }
 
+UInt64 bounded_sum(UInt64 a, UInt64 b) noexcept
+{
+    return a>RendererLimits::maximum_upload_bytes || b>RendererLimits::maximum_upload_bytes
+        ? std::numeric_limits<UInt64>::max() : a+b;
+}
+
 } // namespace
 
 class RecordingGpuDevice::Impl {
 public:
     explicit Impl(std::size_t capacity, std::size_t views) : pipeline_capacity(capacity), view_capacity(views) {}
 
+    struct Checkpoint {
+        DeviceTransactionDesc desc;
+        DeviceTransactionToken token;
+        bool failed = false;
+        UInt32 operations = 0, creates = 0, views = 0;
+        UInt64 used_bytes = 0;
+        std::size_t command_count = 0, view_count = 0;
+        std::array<TextureHandle, RendererLimits::color_targets> active_colors{};
+        std::vector<UInt8> last_draw_indices;
+        std::vector<Slot<BufferRecord>> buffers;
+        std::vector<Slot<TextureRecord>> textures;
+        std::vector<Slot<SamplerRecord>> samplers;
+        std::vector<Slot<ShaderRecord>> shaders;
+        std::vector<Slot<PipelineRecord>> pipelines;
+        std::size_t next_buffer=0, next_texture=0, next_sampler=0, next_shader=0, next_pipeline=0;
+    };
+
+    // Any exception after admission poisons commit, but leaves abort available.
+    struct OperationGuard {
+        Impl& owner;
+        int exceptions = std::uncaught_exceptions();
+        ~OperationGuard() noexcept {
+            if (owner.checkpoint && std::uncaught_exceptions()>exceptions) owner.checkpoint->failed=true;
+        }
+    };
+
+    bool admit(bool frame = false, UInt64 bytes = 0, bool create = false, UInt32 views = 0)
+    {
+        if (!checkpoint) return true;
+        auto& c=*checkpoint;
+        if (c.failed) return false;
+        if ((frame && c.desc.mode!=DeviceTransactionMode::frame_commands) ||
+            c.operations>=c.desc.commands || bytes>c.desc.bytes-c.used_bytes ||
+            (create && c.creates>=c.desc.resources) || views>c.desc.views-c.views) {
+            c.failed=true;
+            last_error="transaction: mode or bounded journal capacity rejected";
+            return false;
+        }
+        if (transaction_failure_countdown!=std::numeric_limits<unsigned>::max()) {
+            if (!transaction_failure_countdown) {
+                transaction_failure_countdown=std::numeric_limits<unsigned>::max();
+                c.failed=true;
+                last_error="transaction: injected operation failure";
+                return false;
+            }
+            --transaction_failure_countdown;
+        }
+        ++c.operations;
+        c.used_bytes+=bytes;
+        c.creates+=create ? 1U : 0U;
+        c.views+=views;
+        return true;
+    }
+
+    bool matches(const DeviceTransactionToken& t) const noexcept {
+        return checkpoint && t.device==device_identity && t.sequence==checkpoint->token.sequence &&
+            t.generation==checkpoint->token.generation && t.mode==checkpoint->token.mode;
+    }
+
+    template<class Record>
+    static void restore_slots(std::vector<Slot<Record>>& current, std::vector<Slot<Record>>& baseline) noexcept
+    {
+        static_assert(std::is_nothrow_move_constructible_v<Slot<Record>>);
+        // Both tables were reserved at entry. Candidate slots never reused an
+        // old slot. Keep their tombstones, advancing/retiring their generation,
+        // so even a later ordinary allocation cannot resurrect an aborted ID.
+        while (baseline.size()<current.size()) {
+            Slot<Record> retired;
+            const auto generation=current[baseline.size()].generation;
+            retired.generation=generation>=index_mask ? 0 : generation+1;
+            baseline.push_back(std::move(retired));
+        }
+        current.swap(baseline);
+    }
+
     ValidationResult fail(std::string operation, std::string reason, std::string_view label = {})
     {
+        if (checkpoint) {
+            checkpoint->failed=true;
+            if (reject_next_diagnostic_allocation) {
+                reject_next_diagnostic_allocation=false;
+                throw std::bad_alloc();
+            }
+        }
         last_error = std::move(operation) + ": " + std::move(reason);
         if (!label.empty()) last_error += " [label=" + std::string(label) + "]";
-        commands.push_back("error " + quoted(last_error));
+        if (!checkpoint) commands.push_back("error " + quoted(last_error));
         return {false, last_error};
     }
 
@@ -132,6 +225,8 @@ public:
     template <typename HandleType, typename Record>
     void destroy_resource(std::vector<Slot<Record>>& slots, HandleType handle, char prefix, std::string_view kind)
     {
+        OperationGuard guard{*this};
+        if (!admit()) return;
         auto* slot = lookup(slots, handle);
         if (!slot) {
             fail("destroy", "stale or destroyed " + std::string(kind) + " handle");
@@ -140,7 +235,7 @@ public:
         commands.push_back("destroy " + std::string(1, prefix) + std::to_string(slot->normalized_id) + " label=" + quoted(slot->label));
         slot->alive = false;
         slot->label.clear();
-        if (++slot->generation > index_mask) slot->generation = 1;
+        if (++slot->generation > index_mask) slot->generation = checkpoint ? 0 : 1;
     }
 
     std::size_t pipeline_capacity;
@@ -171,6 +266,13 @@ public:
     std::vector<Slot<ShaderRecord>> shaders;
     std::vector<Slot<PipelineRecord>> pipelines;
     std::size_t next_buffer = 0, next_texture = 0, next_sampler = 0, next_shader = 0, next_pipeline = 0;
+    inline static std::atomic<UInt64> next_device_identity{1};
+    const UInt64 device_identity=next_device_identity.fetch_add(1,std::memory_order_relaxed);
+    UInt64 next_transaction=0;
+    bool reject_next_checkpoint=false;
+    bool reject_next_diagnostic_allocation=false;
+    unsigned transaction_failure_countdown=std::numeric_limits<unsigned>::max();
+    std::unique_ptr<Checkpoint> checkpoint;
 };
 
 RecordingGpuDevice::RecordingGpuDevice(std::size_t pipeline_capacity, std::size_t view_capacity)
@@ -217,8 +319,105 @@ void RecordingGpuDevice::fail_next_draw() { impl_->draw_failure_countdown=0; }
 void RecordingGpuDevice::fail_draw_after(unsigned successful_draws)
 { impl_->draw_failure_countdown=successful_draws; }
 
+void RecordingGpuDevice::fail_next_transaction_checkpoint() { impl_->reject_next_checkpoint=true; }
+void RecordingGpuDevice::fail_next_transaction_diagnostic_allocation()
+{ impl_->reject_next_diagnostic_allocation=true; }
+void RecordingGpuDevice::fail_transaction_operation_after(unsigned successful_operations)
+{ impl_->transaction_failure_countdown=successful_operations; }
+bool RecordingGpuDevice::supports_device_transactions(DeviceTransactionMode mode) const noexcept
+{ return mode==DeviceTransactionMode::idle_preparation || mode==DeviceTransactionMode::frame_commands; }
+
+ValidationResult RecordingGpuDevice::begin_device_transaction(const DeviceTransactionDesc& desc,
+    DeviceTransactionToken& token)
+{
+    if (impl_->checkpoint || impl_->in_pass || !supports_device_transactions(desc.mode) ||
+        !desc.generation || !desc.commands || desc.commands>4096 || !desc.resources || desc.resources>4096 ||
+        !desc.bytes || desc.bytes>RendererLimits::maximum_upload_bytes || desc.views>RendererLimits::ordered_views ||
+        (desc.mode==DeviceTransactionMode::idle_preparation && desc.views) ||
+        (desc.mode==DeviceTransactionMode::frame_commands && !desc.views) ||
+        impl_->next_transaction==std::numeric_limits<UInt64>::max())
+        return {false,"transaction: invalid, nested, or active-pass admission"};
+    if (impl_->reject_next_checkpoint) {
+        impl_->reject_next_checkpoint=false;
+        return {false,"transaction: injected checkpoint failure"};
+    }
+    const auto resources=impl_->buffers.size()+impl_->textures.size()+impl_->samplers.size()+
+        impl_->shaders.size()+impl_->pipelines.size();
+    UInt64 bytes=impl_->last_draw_indices.size();
+    const auto charge=[&](UInt64 amount) {
+        if (amount>desc.bytes-bytes) return false;
+        bytes+=amount; return true;
+    };
+    if (bytes>desc.bytes || resources>desc.resources) return {false,"transaction: baseline exceeds budget"};
+    for (const auto& slot:impl_->buffers)
+        if (!charge(slot.label.size()) || !charge(slot.value.bytes.size())) return {false,"transaction: baseline exceeds budget"};
+    for (const auto& slot:impl_->textures) {
+        if (!charge(slot.label.size())) return {false,"transaction: baseline exceeds budget"};
+        for (const auto& mip:slot.value.mips) if (!charge(mip.size())) return {false,"transaction: baseline exceeds budget"};
+    }
+    for (const auto& slot:impl_->samplers) if (!charge(slot.label.size())) return {false,"transaction: baseline exceeds budget"};
+    for (const auto& slot:impl_->shaders)
+        if (!charge(slot.label.size()) || !charge(slot.value.name.size())) return {false,"transaction: baseline exceeds budget"};
+    for (const auto& slot:impl_->pipelines) if (!charge(slot.label.size())) return {false,"transaction: baseline exceeds budget"};
+    try {
+        auto c=std::make_unique<Impl::Checkpoint>();
+        c->desc=desc;
+        c->creates=static_cast<UInt32>(resources);
+        c->used_bytes=bytes;
+        c->command_count=impl_->commands.size(); c->view_count=impl_->view_count;
+        c->active_colors=impl_->active_colors; c->last_draw_indices=impl_->last_draw_indices;
+        c->buffers=impl_->buffers; c->textures=impl_->textures; c->samplers=impl_->samplers;
+        c->shaders=impl_->shaders; c->pipelines=impl_->pipelines;
+        c->next_buffer=impl_->next_buffer; c->next_texture=impl_->next_texture;
+        c->next_sampler=impl_->next_sampler; c->next_shader=impl_->next_shader; c->next_pipeline=impl_->next_pipeline;
+        // Allocation failure here changes capacity only, never observable state.
+        const auto reserve=[&](auto& current, auto& baseline) {
+            if (current.size()+desc.resources>index_mask) throw std::length_error("transaction resource table bound");
+            current.reserve(current.size()+desc.resources);
+            baseline.reserve(current.size()+desc.resources);
+        };
+        reserve(impl_->buffers,c->buffers); reserve(impl_->textures,c->textures);
+        reserve(impl_->samplers,c->samplers); reserve(impl_->shaders,c->shaders); reserve(impl_->pipelines,c->pipelines);
+        impl_->commands.reserve(impl_->commands.size()+desc.commands);
+        c->token={impl_->device_identity,impl_->next_transaction+1,desc.generation,desc.mode};
+        token=c->token;
+        ++impl_->next_transaction;
+        impl_->checkpoint=std::move(c);
+        return {};
+    } catch (const std::exception&) {
+        return {false,"transaction: bounded checkpoint allocation failed"};
+    }
+}
+
+bool RecordingGpuDevice::commit_device_transaction(const DeviceTransactionToken& token) noexcept
+{
+    if (!impl_->matches(token) || impl_->checkpoint->failed || impl_->in_pass) return false;
+    impl_->checkpoint.reset();
+    return true;
+}
+
+bool RecordingGpuDevice::abort_device_transaction(const DeviceTransactionToken& token) noexcept
+{
+    if (!impl_->matches(token)) return false;
+    auto& c=*impl_->checkpoint;
+    Impl::restore_slots(impl_->buffers,c.buffers); Impl::restore_slots(impl_->textures,c.textures);
+    Impl::restore_slots(impl_->samplers,c.samplers); Impl::restore_slots(impl_->shaders,c.shaders);
+    Impl::restore_slots(impl_->pipelines,c.pipelines);
+    impl_->commands.resize(c.command_count);
+    impl_->last_draw_indices.swap(c.last_draw_indices);
+    impl_->view_count=c.view_count; impl_->in_pass=false; impl_->active_pass_label.clear();
+    impl_->active_colors=c.active_colors; impl_->active_color_count=0; impl_->active_depth={};
+    impl_->active_width=impl_->active_height=0; impl_->active_target_generation=0;
+    impl_->next_buffer=c.next_buffer; impl_->next_texture=c.next_texture;
+    impl_->next_sampler=c.next_sampler; impl_->next_shader=c.next_shader; impl_->next_pipeline=c.next_pipeline;
+    impl_->checkpoint.reset();
+    return true;
+}
+
 BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::string_view label)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(false,bounded_sum(desc.size,label.size()),true)) return {};
     if (impl_->buffer_create_failure_countdown!=std::numeric_limits<unsigned>::max()) {
         if (!impl_->buffer_create_failure_countdown) {
             impl_->buffer_create_failure_countdown=std::numeric_limits<unsigned>::max();
@@ -229,7 +428,7 @@ BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::stri
     if (auto result = validate(desc); !result) { impl_->fail("create_buffer", result.error, label); return {}; }
     if (label.empty()) { impl_->fail("create_buffer", "label must not be empty"); return {}; }
     BufferRecord record{desc, std::vector<UInt8>(static_cast<std::size_t>(desc.size), 0)};
-    auto handle = allocate<BufferHandle>(impl_->buffers, impl_->next_buffer, label, std::move(record));
+    auto handle = allocate<BufferHandle>(impl_->buffers, impl_->next_buffer, label, std::move(record),bool(impl_->checkpoint));
     if (!handle) { impl_->fail("create_buffer", "resource table exhausted", label); return {}; }
     impl_->commands.push_back("create_buffer " + impl_->name(impl_->buffers, handle, 'B') + " label=" + quoted(label)
         + " size=" + std::to_string(desc.size) + " usage=" + enum_value(desc.usage)
@@ -239,6 +438,8 @@ BufferHandle RecordingGpuDevice::create_buffer(const BufferDesc& desc, std::stri
 
 TextureHandle RecordingGpuDevice::create_texture(const TextureDesc& desc, std::string_view label)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(false,label.size(),true)) return {};
     if (impl_->texture_create_failure_countdown!=std::numeric_limits<unsigned>::max()) {
         if (impl_->texture_create_failure_countdown) {
             --impl_->texture_create_failure_countdown;
@@ -256,7 +457,7 @@ TextureHandle RecordingGpuDevice::create_texture(const TextureDesc& desc, std::s
         impl_->fail("create_texture", "format/dimension/usage unsupported by recording device", label); return {};
     }
     if (label.empty()) { impl_->fail("create_texture", "label must not be empty"); return {}; }
-    auto handle = allocate<TextureHandle>(impl_->textures, impl_->next_texture, label, TextureRecord{desc});
+    auto handle = allocate<TextureHandle>(impl_->textures, impl_->next_texture, label, TextureRecord{desc},bool(impl_->checkpoint));
     if (!handle) { impl_->fail("create_texture", "resource table exhausted", label); return {}; }
     impl_->commands.push_back("create_texture " + impl_->name(impl_->textures, handle, 'T') + " label=" + quoted(label)
         + " extent=" + std::to_string(desc.width) + "x" + std::to_string(desc.height)
@@ -274,13 +475,15 @@ std::optional<TextureFormat> RecordingGpuDevice::describe_texture_format(Texture
 
 SamplerHandle RecordingGpuDevice::create_sampler(const SamplerDesc& desc, std::string_view label)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(false,label.size(),true)) return {};
     if (impl_->reject_next_sampler_create) {
         impl_->reject_next_sampler_create=false;
         impl_->fail("create_sampler", "injected sampler creation failure", label); return {};
     }
     if (auto result = validate(desc); !result) { impl_->fail("create_sampler", result.error, label); return {}; }
     if (label.empty()) { impl_->fail("create_sampler", "label must not be empty"); return {}; }
-    auto handle = allocate<SamplerHandle>(impl_->samplers, impl_->next_sampler, label, SamplerRecord{desc});
+    auto handle = allocate<SamplerHandle>(impl_->samplers, impl_->next_sampler, label, SamplerRecord{desc},bool(impl_->checkpoint));
     if (!handle) { impl_->fail("create_sampler", "resource table exhausted", label); return {}; }
     impl_->commands.push_back("create_sampler " + impl_->name(impl_->samplers, handle, 'S') + " label=" + quoted(label)
         + " filter=" + enum_value(desc.min_filter) + "/" + enum_value(desc.mag_filter) + "/" + enum_value(desc.mip_filter)
@@ -291,6 +494,8 @@ SamplerHandle RecordingGpuDevice::create_sampler(const SamplerDesc& desc, std::s
 
 ShaderHandle RecordingGpuDevice::create_shader(const ShaderDesc& desc, std::string_view label)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(false,bounded_sum(label.size(),desc.name.size()),true)) return {};
     if (impl_->reject_next_shader_create) {
         impl_->reject_next_shader_create=false;
         impl_->fail("create_shader", "injected shader creation failure", label); return {};
@@ -298,7 +503,7 @@ ShaderHandle RecordingGpuDevice::create_shader(const ShaderDesc& desc, std::stri
     if (auto result = validate(desc); !result) { impl_->fail("create_shader", result.error, label); return {}; }
     if (label.empty()) { impl_->fail("create_shader", "label must not be empty"); return {}; }
     ShaderRecord record{desc.stage, std::string(desc.name), desc.uniform_buffers, desc.samplers};
-    auto handle = allocate<ShaderHandle>(impl_->shaders, impl_->next_shader, label, std::move(record));
+    auto handle = allocate<ShaderHandle>(impl_->shaders, impl_->next_shader, label, std::move(record),bool(impl_->checkpoint));
     if (!handle) { impl_->fail("create_shader", "resource table exhausted", label); return {}; }
     impl_->commands.push_back("create_shader " + impl_->name(impl_->shaders, handle, 'H') + " label=" + quoted(label)
         + " name=" + quoted(desc.name) + " stage=" + enum_value(desc.stage)
@@ -308,6 +513,8 @@ ShaderHandle RecordingGpuDevice::create_shader(const ShaderDesc& desc, std::stri
 
 PipelineHandle RecordingGpuDevice::create_pipeline(const PipelineKey& key, std::string_view label)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(false,label.size())) return {};
     if (impl_->reject_next_pipeline_create) {
         impl_->reject_next_pipeline_create=false;
         impl_->fail("create_pipeline", "injected pipeline creation failure", label); return {};
@@ -327,7 +534,12 @@ PipelineHandle RecordingGpuDevice::create_pipeline(const PipelineKey& key, std::
         }
     }
     if (pipeline_count() >= impl_->pipeline_capacity) { impl_->fail("create_pipeline", "pipeline cache capacity exceeded", label); return {}; }
-    auto handle = allocate<PipelineHandle>(impl_->pipelines, impl_->next_pipeline, label, PipelineRecord(key));
+    if (impl_->checkpoint) {
+        auto& c=*impl_->checkpoint;
+        if (c.creates>=c.desc.resources) { impl_->fail("create_pipeline","transaction resource capacity exceeded");return {}; }
+        ++c.creates;
+    }
+    auto handle = allocate<PipelineHandle>(impl_->pipelines, impl_->next_pipeline, label, PipelineRecord(key),bool(impl_->checkpoint));
     if (!handle) { impl_->fail("create_pipeline", "resource table exhausted", label); return {}; }
     impl_->commands.push_back("create_pipeline " + impl_->name(impl_->pipelines, handle, 'P') + " label=" + quoted(label)
         + " key=" + std::to_string(key.stable_hash()) + " shaders=" + impl_->name(impl_->shaders, desc.vertex_shader, 'H')
@@ -342,6 +554,8 @@ PipelineHandle RecordingGpuDevice::create_pipeline(const PipelineKey& key, std::
 
 ValidationResult RecordingGpuDevice::upload(const UploadDesc& desc, const void* bytes)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(false,desc.size)) return {false,impl_->last_error};
     if (impl_->buffer_upload_failure_countdown!=std::numeric_limits<unsigned>::max()) {
         if (!impl_->buffer_upload_failure_countdown) {
             impl_->buffer_upload_failure_countdown=std::numeric_limits<unsigned>::max();
@@ -365,6 +579,8 @@ ValidationResult RecordingGpuDevice::upload(const UploadDesc& desc, const void* 
 
 ValidationResult RecordingGpuDevice::upload_texture(const TextureUploadDesc& desc, const void* bytes)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(false,desc.size)) return {false,impl_->last_error};
     if (impl_->texture_upload_failure_countdown!=std::numeric_limits<unsigned>::max()) {
         if (!impl_->texture_upload_failure_countdown) {
             impl_->texture_upload_failure_countdown=std::numeric_limits<unsigned>::max();
@@ -408,6 +624,8 @@ ValidationResult RecordingGpuDevice::upload_texture(const TextureUploadDesc& des
 
 ValidationResult RecordingGpuDevice::begin_pass(const RenderPassDesc& desc, std::string_view label)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(true,label.size(),false,1)) return {false,impl_->last_error};
     if (impl_->in_pass) return impl_->fail("begin_pass", "render pass is already active", label);
     if (impl_->view_count >= impl_->view_capacity)
         return impl_->fail("begin_pass", "ordered view budget exhausted", label);
@@ -460,6 +678,8 @@ std::pair<UInt32,UInt32> RecordingGpuDevice::active_pass_extent() const noexcept
 
 ValidationResult RecordingGpuDevice::set_viewport(const ViewportDesc& desc)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(true)) return {false,impl_->last_error};
     if (!impl_->in_pass) return impl_->fail("set_viewport","no render pass is active");
     if (auto result=validate(desc,impl_->active_width,impl_->active_height); !result)
         return impl_->fail("set_viewport",result.error,impl_->active_pass_label);
@@ -471,6 +691,8 @@ ValidationResult RecordingGpuDevice::set_viewport(const ViewportDesc& desc)
 
 ValidationResult RecordingGpuDevice::clear_viewport(const ViewportClearDesc& desc)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(true,0,false,1)) return {false,impl_->last_error};
     if (!impl_->in_pass) return impl_->fail("clear_viewport", "no render pass is active");
     if (impl_->view_count >= impl_->view_capacity)
         return impl_->fail("clear_viewport", "ordered view budget exhausted", impl_->active_pass_label);
@@ -508,6 +730,9 @@ ValidationResult RecordingGpuDevice::clear_viewport(const ViewportClearDesc& des
 
 ValidationResult RecordingGpuDevice::draw(const DrawDesc& desc)
 {
+    Impl::OperationGuard guard{*impl_};
+    const UInt64 index_bytes=desc.index_buffer ? static_cast<UInt64>(desc.vertex_or_index_count)*static_cast<UInt8>(desc.index_element_size) : 0;
+    if (!impl_->admit(true,index_bytes,false,1)) return {false,impl_->last_error};
     if (!impl_->in_pass) return impl_->fail("draw", "draw requires an active render pass");
     if (impl_->view_count >= impl_->view_capacity)
         return impl_->fail("draw", "ordered view budget exhausted", impl_->active_pass_label);
@@ -597,6 +822,8 @@ ValidationResult RecordingGpuDevice::draw(const DrawDesc& desc)
 
 ValidationResult RecordingGpuDevice::end_pass()
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(true)) return {false,impl_->last_error};
     if (!impl_->in_pass) return impl_->fail("end_pass", "no render pass is active");
     for (UInt32 index=0; index<impl_->active_color_count; ++index)
         lookup(impl_->textures,impl_->active_colors[index])->value.initialized=true;
@@ -613,6 +840,8 @@ ValidationResult RecordingGpuDevice::end_pass()
 
 ValidationResult RecordingGpuDevice::present(TextureHandle source)
 {
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(true)) return {false,impl_->last_error};
     if (impl_->in_pass) return impl_->fail("present", "cannot present while a render pass is active");
     const auto* texture = lookup(impl_->textures, source);
     if (!texture || !texture->value.desc.render_target || texture->value.desc.format != TextureFormat::rgba8)
@@ -626,6 +855,7 @@ ValidationResult RecordingGpuDevice::present(TextureHandle source)
 void RecordingGpuDevice::destroy(BufferHandle handle) { impl_->destroy_resource(impl_->buffers, handle, 'B', "buffer"); }
 void RecordingGpuDevice::destroy(TextureHandle handle)
 {
+    Impl::OperationGuard guard{*impl_};
     if (impl_->in_pass) {
         const bool active_color = std::find(impl_->active_colors.begin(), impl_->active_colors.begin() + impl_->active_color_count, handle)
             != impl_->active_colors.begin() + impl_->active_color_count;
@@ -645,7 +875,8 @@ const std::string& RecordingGpuDevice::last_error() const noexcept { return impl
 std::string RecordingGpuDevice::snapshot() const
 {
     std::ostringstream stream;
-    for (const auto& command : impl_->commands) stream << command << '\n';
+    const auto count=impl_->checkpoint ? impl_->checkpoint->command_count : impl_->commands.size();
+    for (std::size_t i=0;i<count;++i) stream << impl_->commands[i] << '\n';
     return stream.str();
 }
 std::size_t RecordingGpuDevice::pipeline_count() const noexcept
@@ -664,8 +895,9 @@ ResourceCounts RecordingGpuDevice::resource_counts() const noexcept
 RecordingOperationCounts RecordingGpuDevice::operation_counts() const noexcept
 {
     RecordingOperationCounts counts;
-    counts.commands = impl_->commands.size();
-    for (const auto& command : impl_->commands) {
+    counts.commands = impl_->checkpoint ? impl_->checkpoint->command_count : impl_->commands.size();
+    for (std::size_t i=0;i<counts.commands;++i) {
+        const auto& command=impl_->commands[i];
         const auto begins = [&command](const char* prefix) {
             const std::size_t length = std::char_traits<char>::length(prefix);
             return command.size() >= length && command.compare(0, length, prefix) == 0;
@@ -714,6 +946,11 @@ PipelineDesc RecordingGpuDevice::pipeline_descriptor(PipelineHandle handle) cons
     if (!pipeline) throw std::runtime_error("recording pipeline handle is stale or destroyed");
     return pipeline->value.key.descriptor();
 }
-void RecordingGpuDevice::record_marker(std::string_view marker) { impl_->commands.push_back("marker " + quoted(marker)); }
+void RecordingGpuDevice::record_marker(std::string_view marker)
+{
+    Impl::OperationGuard guard{*impl_};
+    if (!impl_->admit(false,marker.size())) throw std::runtime_error("transaction marker rejected");
+    impl_->commands.push_back("marker " + quoted(marker));
+}
 
 } // namespace zh::renderer

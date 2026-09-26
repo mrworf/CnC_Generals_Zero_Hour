@@ -2417,6 +2417,11 @@ if(ZH_BUILD_TESTS)
   add_test(NAME renderer_recording_device COMMAND renderer_recording_device_tests)
   set_tests_properties(renderer_recording_device PROPERTIES LABELS renderer-contract)
 
+  add_executable(renderer_recording_transaction_tests tests/renderer/test_recording_transaction.cpp)
+  target_link_libraries(renderer_recording_transaction_tests PRIVATE zh_renderer_sdl_gpu)
+  add_test(NAME renderer_recording_transaction COMMAND renderer_recording_transaction_tests)
+  set_tests_properties(renderer_recording_transaction PROPERTIES LABELS renderer-contract)
+
   add_executable(renderer_packed_texture_gpu tests/renderer/packed_texture_gpu.cpp)
   target_compile_definitions(renderer_packed_texture_gpu PRIVATE
     ZH_GPU_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/shaders"

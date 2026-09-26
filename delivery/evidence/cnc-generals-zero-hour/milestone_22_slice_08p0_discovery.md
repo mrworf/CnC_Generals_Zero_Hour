@@ -121,3 +121,12 @@ B supplies only exact native shroud semantics. No trial wiring, private input
 or production edit is included in this plan-only checkpoint.
 Checkpoint against accepted A commit `8df9c18b34bef2e23613b8655bccfd8b97555aef`
 by `delivery: M22 order idle and frame transaction prerequisites`.
+
+D0A is independently accepted: optional bounded idle/frame capability,
+Recording checkpoint/commit/rollback, exact token ownership, retired candidate
+handles and monotonic consumed faults. Attached-target diagnostic allocation
+is poisoned before formatting and explicitly fault-tested. Refrozen complete
+builds/canonical suites pass 270/270 all six, focused 3/3 in native/sanitizer
+toolchains, strict host LSan 2/2 both, established physical controls and serial
+LAN 4/4 all six. [Exact evidence](milestone_22_slice_08p0c2d0a_recording_transaction.md)
+preserves physical/source/factory closure; D0B is dependency-next.

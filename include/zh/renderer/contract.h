@@ -329,9 +329,36 @@ private:
     ResizePhase phase_ = ResizePhase::stable;
 };
 
+// Opt-in bounded device journal. Resources/payload bytes already owned at entry
+// count toward the checkpoint budgets; operations consume the remaining budget.
+// Idle preparation never admits pass/view/viewport/clear/draw/present operations.
+enum class DeviceTransactionMode : UInt8 { idle_preparation, frame_commands };
+struct DeviceTransactionDesc {
+    DeviceTransactionMode mode = DeviceTransactionMode::idle_preparation;
+    UInt64 generation = 0;
+    UInt32 commands = 0;
+    UInt32 resources = 0;
+    UInt64 bytes = 0;
+    UInt32 views = 0;
+};
+struct DeviceTransactionToken {
+    UInt64 device = 0;
+    UInt64 sequence = 0;
+    UInt64 generation = 0;
+    DeviceTransactionMode mode = DeviceTransactionMode::idle_preparation;
+};
+
 class GpuDevice {
 public:
     virtual ~GpuDevice() = default;
+    // Defaults preserve existing derived consumers and fail closed. Finish is
+    // allocation-free/no-throw; false means wrong/stale/consumed owner (or a
+    // failed/incomplete journal for commit). Abort never restores fault counters.
+    virtual bool supports_device_transactions(DeviceTransactionMode) const noexcept { return false; }
+    virtual ValidationResult begin_device_transaction(const DeviceTransactionDesc&, DeviceTransactionToken&)
+    { return {false,"bounded device transactions are unavailable"}; }
+    virtual bool commit_device_transaction(const DeviceTransactionToken&) noexcept { return false; }
+    virtual bool abort_device_transaction(const DeviceTransactionToken&) noexcept { return false; }
     // A preflight query for the exact texture dimension and usage requested
     // by a source producer. Unknown implementations fail closed. The backend has
     // no public maximum-extent query; texture creation remains authoritative

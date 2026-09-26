@@ -67,3 +67,25 @@ unsupported-device/invalid-state errors. This translation is exercised with
 owned CPU fixtures; M22 still owns connecting the complete original
 `WW3D::Render` scene producer and retail pixels. The [migration ledger](bgfx-migration-ledger.md)
 records affected source-category and evidence ownership.
+
+M22 slice 08P0C2D0A adds opt-in bounded device transactions. Existing consumers
+retain unsupported defaults. `idle_preparation` admits resources, payload bytes
+and markers only; frame pass/view/viewport/clear/draw/present operations reject
+before mutation. `frame_commands` admits those operations from an idle device,
+but cannot commit with a pass still active. Tokens bind device, sequence,
+caller generation and mode; nested admission and stale/cross-owner finish
+reject. Finish is no-throw, allocation-free and exactly once.
+
+Recording admission bounds/copies existing slot tables, labels, payloads and
+last-index bytes before publishing its checkpoint. Limits are 4096 commands,
+4096 total checkpoint/candidate slots, 64 MiB checkpoint/operation payload
+bytes and 256 views. Admission failure leaves the output token and observable
+device state unchanged. Partial commands stay hidden until commit. Abort
+restores prior bytes, initialization, identities, target/view/draw state and
+command prefix, retaining dead candidate slots with retired generations so
+retry cannot alias aborted handles. Consumed faults remain consumed; fixed
+failure diagnostics are separate from the successful journal. Any failed
+ordinary journal operation or its exception poisons commit while preserving
+abort; rejected admission/foreign finish cannot mutate an existing owner. Ordinary
+non-transactional behavior remains unchanged. Physical transaction support
+belongs to D0B; no other backend support is implied by this Recording witness.
