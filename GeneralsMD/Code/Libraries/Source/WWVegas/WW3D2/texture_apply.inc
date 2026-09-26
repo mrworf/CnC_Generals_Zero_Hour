@@ -1,5 +1,9 @@
 void TextureClass::Apply(unsigned int stage)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (!Filter.Can_Apply(stage))
+		throw std::runtime_error("original texture filter or stage is invalid");
+#endif
 	// Initialization needs to be done when texture is used if it hasn't been done before.
 	if (!Initialized)
 	{

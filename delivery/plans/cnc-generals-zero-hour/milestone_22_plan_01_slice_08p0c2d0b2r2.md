@@ -87,3 +87,29 @@ Commit one coherent source admission owner:
 
 Implementation-ready plan only, persisted before source changes. B2B remains
 closed until R1/R2 independent commits and the clean final matrix complete.
+
+## Corrected-source checkpoint
+
+Parent `05d00c519013981345987d63f7bd42542c2aa15c`. Executable source and witness
+freeze after exact native GCC/Clang 4/4 and both sanitizer 4/4 focused selections;
+complete selected logs contain no former address-9/profile-99 or other finding.
+Both compilers verify prior/current Linux/current non-Linux enum size/alignment
+4/4, class size/alignment 20/4 and member offsets 0/4/8/12/16. Two missing-provider
+generations and two real initialized-stage generations cover sentinel access,
+all raw tuple/default/profile boundaries, exact defaults, prepared-state identity
+and valid retry. Full acceptance is recorded in
+[R2 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2d0b2r2_texture_filter_admission.md).
+
+## Acceptance
+
+Six complete builds and six canonical suites pass 272/272 each with clean
+complete-log sanitizer audits. Both historical R1/R2 categories are absent;
+no suppression/UBSan override is used. Focused four-test selections pass both
+native/both sanitizer configurations; exact serial strict host LSan passes
+4/4 each. Prior/current ABI controls, unchanged native reservation/resource
+physical controls, established Vulkan display/map controls, current-target
+existing texture physical witness, six serial LAN 4/4 and ledger/header/diff
+checks pass. Source/witness hashes stay frozen. Accepted commit subject:
+`delivery: M22 08P0C2D0B2R2 admit defined texture filter values`.
+This closes corrective readiness for dependency-next B2B, not B2B, C2 or M22
+acceptance. Preserve the unrelated renderer modification unstaged.

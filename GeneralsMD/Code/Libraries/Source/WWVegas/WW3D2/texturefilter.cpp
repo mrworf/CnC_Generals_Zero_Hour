@@ -73,11 +73,21 @@ TextureFilterClass::TextureFilterClass(MipCountType mip_level_count)
 //! Apply filters (legacy)
 /*!
 */
+#if defined(__linux__)
+bool TextureFilterClass::Can_Apply(unsigned int stage) const noexcept
+{
+    return stage<8 && static_cast<unsigned>(TextureMinFilter)<FILTER_TYPE_COUNT &&
+        static_cast<unsigned>(TextureMagFilter)<FILTER_TYPE_COUNT &&
+        static_cast<unsigned>(MipMapFilter)<FILTER_TYPE_COUNT &&
+        static_cast<unsigned>(UAddressMode)<=TEXTURE_ADDRESS_CLAMP &&
+        static_cast<unsigned>(VAddressMode)<=TEXTURE_ADDRESS_CLAMP;
+}
+#endif
+
 void TextureFilterClass::Apply(unsigned int stage)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-    if (stage>=MAX_TEXTURE_STAGES || TextureMinFilter>=FILTER_TYPE_COUNT ||
-        TextureMagFilter>=FILTER_TYPE_COUNT || MipMapFilter>=FILTER_TYPE_COUNT)
+    if (!Can_Apply(stage))
         throw std::runtime_error("original texture filter or stage is invalid");
     using State=zh::original_runtime::OriginalGpuEdge::FilterStageState;
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
@@ -269,6 +279,10 @@ void TextureFilterClass::Set_Mip_Mapping(FilterType mipmap)
 */
 void TextureFilterClass::_Set_Default_Min_Filter(FilterType filter)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    if (static_cast<unsigned>(filter)>=FILTER_TYPE_COUNT)
+        throw std::runtime_error("original default min filter is invalid");
+#endif
 	for (int i=0;i<MAX_TEXTURE_STAGES;++i) 
 	{
 		_MinTextureFilters[i][FILTER_TYPE_DEFAULT]=_MinTextureFilters[i][filter];
@@ -282,6 +296,10 @@ void TextureFilterClass::_Set_Default_Min_Filter(FilterType filter)
 */
 void TextureFilterClass::_Set_Default_Mag_Filter(FilterType filter)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    if (static_cast<unsigned>(filter)>=FILTER_TYPE_COUNT)
+        throw std::runtime_error("original default mag filter is invalid");
+#endif
 	for (int i=0;i<MAX_TEXTURE_STAGES;++i) 
 	{
 		_MagTextureFilters[i][FILTER_TYPE_DEFAULT]=_MagTextureFilters[i][filter];
@@ -294,6 +312,10 @@ void TextureFilterClass::_Set_Default_Mag_Filter(FilterType filter)
 */
 void TextureFilterClass::_Set_Default_Mip_Filter(FilterType filter)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    if (static_cast<unsigned>(filter)>=FILTER_TYPE_COUNT)
+        throw std::runtime_error("original default mip filter is invalid");
+#endif
 	for (int i=0;i<MAX_TEXTURE_STAGES;++i) 
 	{
 		_MipMapFilters[i][FILTER_TYPE_DEFAULT]=_MipMapFilters[i][filter];

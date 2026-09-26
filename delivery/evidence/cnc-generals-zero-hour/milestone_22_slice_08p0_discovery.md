@@ -185,3 +185,17 @@ the presentation null-service category eliminated; only separately tracked
 unchanged R2 address/profile enum categories remain. R2 is mandatory next and
 must complete a clean canonical matrix before B2B. No shipping CRC/startup,
 native transaction, tree/factory or retail behavior changed; renderer excluded.
+
+Corrective D0B2R2 now uses platform-consistent defined unsigned filter/profile/
+address representations with unchanged enum/class/member layout and untouched
+Windows declarations. Whole-tuple admission precedes fresh texture Init/access/
+selection and direct provider/table/stage effects; default indices reject before
+lookup. Two-generation generated controls prove no rejected tuple state/resource/
+provider consumption, exact accepted identities/defaults and clean retry.
+Both native/both sanitizer focused and strict host LSan controls pass. All six
+complete builds/canonical suites finish 272/272; broad complete-log audits have
+zero sanitizer findings and prove both historical R1/R2 categories gone without
+suppression. ABI, established Vulkan, generated native resource/reservation,
+existing texture physical, six LAN and ledger/header/diff gates pass. This closes
+the dependency-first corrective matrix before B2B; it does not open the tree
+factory or accept the deferred frame journal. Renderer remains excluded.

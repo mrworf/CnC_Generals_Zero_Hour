@@ -21,10 +21,22 @@
 #include <algorithm>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <vector>
+
+extern unsigned _MinTextureFilters[8][TextureFilterClass::FILTER_TYPE_COUNT];
+extern unsigned _MagTextureFilters[8][TextureFilterClass::FILTER_TYPE_COUNT];
+extern unsigned _MipMapFilters[8][TextureFilterClass::FILTER_TYPE_COUNT];
+
+static_assert(std::is_same_v<std::underlying_type_t<TextureFilterClass::FilterType>,unsigned>);
+static_assert(std::is_same_v<std::underlying_type_t<TextureFilterClass::TextureFilterMode>,unsigned>);
+static_assert(std::is_same_v<std::underlying_type_t<TextureFilterClass::TxtAddrMode>,unsigned>);
+static_assert(sizeof(TextureFilterClass)==5*sizeof(unsigned));
+static_assert(alignof(TextureFilterClass)==alignof(unsigned));
 
 namespace {
 #define check(condition) do { if (!(condition)) throw std::runtime_error("original texture decision invariant: " #condition); } while (false)
@@ -61,10 +73,140 @@ private:
 };
 class OwnedFactory final : public FileFactoryClass {
 public:
-    std::map<std::string,Bytes> files; int owners=0;
-    FileClass* Get_File(const char* name) override { ++owners; return new OwnedFile(name,files[name]); }
+    std::map<std::string,Bytes> files; int owners=0; unsigned requests=0;
+    FileClass* Get_File(const char* name) override { ++owners; ++requests; return new OwnedFile(name,files[name]); }
     void Return_File(FileClass* file) override { --owners; delete file; }
 };
+
+class InspectTexture final : public TextureClass {
+public:
+    using TextureClass::TextureClass;
+    unsigned last_accessed() const noexcept { return LastAccessed; }
+    void mark_access_baseline() noexcept { LastAccessed=WW3D::Get_Sync_Time() ^ 1u; }
+};
+
+auto filter_tables() {
+    std::array<unsigned,3*8*TextureFilterClass::FILTER_TYPE_COUNT> result{};
+    size_t next=0;
+    for (auto table : {_MinTextureFilters,_MagTextureFilters,_MipMapFilters})
+        for (unsigned stage=0;stage<8;++stage)
+            for (unsigned filter=0;filter<TextureFilterClass::FILTER_TYPE_COUNT;++filter)
+                result[next++]=table[stage][filter];
+    return result;
+}
+
+void set_raw_filter_field(TextureFilterClass& filter,unsigned field,unsigned raw) {
+    using F=TextureFilterClass;
+    switch (field) {
+    case 0: filter.Set_Min_Filter(static_cast<F::FilterType>(raw)); break;
+    case 1: filter.Set_Mag_Filter(static_cast<F::FilterType>(raw)); break;
+    case 2: filter.Set_Mip_Mapping(static_cast<F::FilterType>(raw)); break;
+    case 3: filter.Set_U_Addr_Mode(static_cast<F::TxtAddrMode>(raw)); break;
+    case 4: filter.Set_V_Addr_Mode(static_cast<F::TxtAddrMode>(raw)); break;
+    default: check(false);
+    }
+}
+
+void original_filter_admission_baseline() {
+    using F=TextureFilterClass;
+    constexpr unsigned maximum=std::numeric_limits<unsigned>::max();
+    for (unsigned generation=0;generation<2;++generation) {
+        OwnedFactory factory;
+        auto* prior=_TheFileFactory;
+        _TheFileFactory=&factory;
+        try {
+            check(zh::original_runtime::OriginalGpuEdge::active()==nullptr);
+            F::_Init_Filters(F::TEXTURE_FILTER_ANISOTROPIC);
+            const auto tables=filter_tables();
+            for (unsigned raw : {3u,99u,maximum}) {
+                bool rejected=false;
+                try { F::_Init_Filters(static_cast<F::TextureFilterMode>(raw)); }
+                catch (const std::runtime_error&) { rejected=true; }
+                check(rejected && filter_tables()==tables);
+            }
+            for (auto setter : {F::_Set_Default_Min_Filter,F::_Set_Default_Mag_Filter,F::_Set_Default_Mip_Filter}) {
+                for (unsigned raw : {static_cast<unsigned>(F::FILTER_TYPE_COUNT),9u,maximum}) {
+                    bool rejected=false;
+                    try { setter(static_cast<F::FilterType>(raw)); }
+                    catch (const std::runtime_error&) { rejected=true; }
+                    check(rejected && filter_tables()==tables);
+                }
+                setter(F::FILTER_TYPE_DEFAULT);
+                check(filter_tables()==tables);
+            }
+            for (unsigned field=0;field<5;++field) {
+                const unsigned bound=field<3 ? F::FILTER_TYPE_COUNT : 2;
+                for (unsigned raw : {bound,9u,maximum}) {
+                    InspectTexture fresh("rejected-fresh","not-read.tga",MIP_LEVELS_ALL);
+                    fresh.mark_access_baseline();
+                    const auto accessed=fresh.last_accessed();
+                    set_raw_filter_field(fresh.Get_Filter(),field,raw);
+                    check(!fresh.Get_Filter().Can_Apply(0));
+                    bool rejected=false;
+                    try { fresh.Apply(0); }
+                    catch (const std::runtime_error& e) {
+                        rejected=std::string(e.what())=="original texture filter or stage is invalid";
+                    }
+                    check(rejected && !fresh.Is_Initialized() && fresh.last_accessed()==accessed &&
+                        factory.requests==0 && factory.owners==0 && factory.files.empty() && filter_tables()==tables);
+                    // Direct filter admission must precede its missing provider too.
+                    rejected=false;
+                    try { fresh.Get_Filter().Apply(0); }
+                    catch (const std::runtime_error& e) {
+                        rejected=std::string(e.what())=="original texture filter or stage is invalid";
+                    }
+                    check(rejected && filter_tables()==tables);
+                }
+            }
+            for (unsigned stage : {8u,maximum}) {
+                InspectTexture fresh("rejected-stage","not-read.tga",MIP_LEVELS_ALL);
+                fresh.mark_access_baseline();
+                const auto accessed=fresh.last_accessed();
+                bool rejected=false;
+                try { fresh.Apply(stage); }
+                catch (const std::runtime_error& e) {
+                    rejected=std::string(e.what())=="original texture filter or stage is invalid";
+                }
+                check(rejected && !fresh.Is_Initialized() && fresh.last_accessed()==accessed &&
+                    factory.requests==0 && factory.files.empty() && filter_tables()==tables);
+            }
+            F valid(MIP_LEVELS_ALL);
+            valid.Set_U_Addr_Mode(F::TEXTURE_ADDRESS_CLAMP);
+            valid.Set_V_Addr_Mode(F::TEXTURE_ADDRESS_CLAMP);
+            check(valid.Can_Apply(0) && valid.Can_Apply(7));
+            F no_mips(MIP_LEVELS_1);
+            check(no_mips.Get_Mip_Mapping()==F::FILTER_TYPE_NONE && no_mips.Can_Apply(7));
+            unsigned table_index=0;
+            for (auto setter : {F::_Set_Default_Min_Filter,F::_Set_Default_Mag_Filter,F::_Set_Default_Mip_Filter}) {
+                for (unsigned raw=0;raw<F::FILTER_TYPE_COUNT;++raw) {
+                    auto expected=filter_tables();
+                    for (unsigned stage=0;stage<8;++stage) {
+                        const auto base=(table_index*8+stage)*F::FILTER_TYPE_COUNT;
+                        expected[base+F::FILTER_TYPE_DEFAULT]=expected[base+raw];
+                    }
+                    setter(static_cast<F::FilterType>(raw));
+                    check(filter_tables()==expected);
+                }
+                ++table_index;
+            }
+            for (unsigned profile=0;profile<=F::TEXTURE_FILTER_ANISOTROPIC;++profile) {
+                F::_Init_Filters(static_cast<F::TextureFilterMode>(profile));
+                for (unsigned stage=0;stage<8;++stage) {
+                    check(_MinTextureFilters[stage][F::FILTER_TYPE_DEFAULT]==
+                        (profile==F::TEXTURE_FILTER_ANISOTROPIC && stage==0 ? 2u : 1u));
+                    check(_MagTextureFilters[stage][F::FILTER_TYPE_DEFAULT]==
+                        _MinTextureFilters[stage][F::FILTER_TYPE_DEFAULT]);
+                    check(_MipMapFilters[stage][F::FILTER_TYPE_DEFAULT]==
+                        (profile==F::TEXTURE_FILTER_BILINEAR ? 1u : 2u));
+                }
+            }
+            F::_Init_Filters(F::TEXTURE_FILTER_TRILINEAR);
+            check(factory.requests==0 && factory.owners==0 && factory.files.empty());
+        } catch (...) { _TheFileFactory=prior; throw; }
+        _TheFileFactory=prior;
+        check(zh::original_runtime::OriginalGpuEdge::active()==nullptr);
+    }
+}
 
 Bytes compressed_fixture(unsigned width,unsigned mip_count,unsigned fourcc=0x31545844) {
     LegacyDDSURFACEDESC2 header{};
@@ -325,7 +467,7 @@ void original_stage_filter_state() {
         DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
         DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
         DX8Wrapper::Apply_Render_State_Changes();
-        TextureClass texture("stage","stage.tga",MIP_LEVELS_ALL,WW3D_FORMAT_UNKNOWN,true,true);
+        InspectTexture texture("stage","stage.tga",MIP_LEVELS_ALL,WW3D_FORMAT_UNKNOWN,true,true);
         TextureClass orphan("orphan","stage.tga",MIP_LEVELS_ALL,WW3D_FORMAT_UNKNOWN,true,true);
         bool no_owner=false;
         try { edge.select_texture(0,&orphan); } catch (const std::runtime_error&) { no_owner=true; }
@@ -423,14 +565,63 @@ void original_stage_filter_state() {
         check(injected);
         texture.Apply(0);
         check(edge.pending_stage(0).texture==edge.texture_handle(&texture));
-        texture.Get_Filter().Set_U_Addr_Mode(static_cast<TextureFilterClass::TxtAddrMode>(9));
-        bool unsupported=false;
-        try { texture.Apply(0); } catch (const std::runtime_error&) { unsupported=true; }
-        check(unsupported);
+        const auto admitted=edge.prepare_applied_state(DX8_FVF_XYZNUV2);
+        const auto pending_zero=edge.pending_stage(0);
+        const auto pending_one=edge.pending_stage(1);
+        const auto filter_baseline=texture.Get_Filter();
+        const auto table_baseline=filter_tables();
+        const auto recording_baseline=device.snapshot();
+        const auto resource_baseline=device.resource_counts();
+        const auto requests_baseline=factory.requests;
+        const auto files_baseline=factory.files;
+        texture.mark_access_baseline();
+        const auto accessed_baseline=texture.last_accessed();
+        auto unchanged=[&] {
+            check(device.snapshot()==recording_baseline && device.resource_counts()==resource_baseline &&
+                !device.pass_active() && texture.last_accessed()==accessed_baseline &&
+                factory.requests==requests_baseline && factory.files==files_baseline && factory.owners==0 &&
+                filter_tables()==table_baseline);
+            check(edge.pending_stage(0).texture==pending_zero.texture &&
+                edge.pending_stage(0).sampler==pending_zero.sampler &&
+                edge.pending_stage(1).texture==pending_one.texture &&
+                edge.pending_stage(1).sampler==pending_one.sampler);
+            edge.validate_prepared_state(admitted);
+        };
+        for (unsigned field=0;field<5;++field) {
+            const unsigned bound=field<3 ? TextureFilterClass::FILTER_TYPE_COUNT : 2;
+            for (unsigned raw : {bound,9u,std::numeric_limits<unsigned>::max()}) {
+                set_raw_filter_field(texture.Get_Filter(),field,raw);
+                bool rejected=false;
+                try { texture.Apply(0); } catch (const std::runtime_error&) { rejected=true; }
+                check(rejected);
+                unchanged();
+                rejected=false;
+                try { texture.Get_Filter().Apply(0); } catch (const std::runtime_error&) { rejected=true; }
+                check(rejected);
+                unchanged();
+                texture.Get_Filter()=filter_baseline;
+            }
+        }
+        for (unsigned stage : {8u,std::numeric_limits<unsigned>::max()}) {
+            bool rejected=false;
+            try { texture.Apply(stage); } catch (const std::runtime_error&) { rejected=true; }
+            check(rejected);
+            unchanged();
+        }
+        for (unsigned field=0;field<5;++field) {
+            InspectTexture fresh("rejected-with-provider","stage.tga",MIP_LEVELS_ALL);
+            fresh.mark_access_baseline();
+            const auto accessed=fresh.last_accessed();
+            set_raw_filter_field(fresh.Get_Filter(),field,std::numeric_limits<unsigned>::max());
+            bool rejected=false;
+            try { fresh.Apply(0); } catch (const std::runtime_error&) { rejected=true; }
+            check(rejected && !fresh.Is_Initialized() && fresh.last_accessed()==accessed);
+            unchanged();
+        }
         texture.Get_Filter().Set_U_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_REPEAT);
-        bool stage_out_of_bounds=false;
-        try { texture.Apply(8); } catch (const std::runtime_error&) { stage_out_of_bounds=true; }
-        check(stage_out_of_bounds);
+        texture.Apply(0); // Accepted retry after all rejected tuples.
+        texture.Apply(7); // Exact maximum source stage is admitted.
+        check(edge.pending_stage(7).texture==edge.texture_handle(&texture));
         texture.Invalidate();
         bool released_stage=false;
         try { (void)edge.pending_stage(0); }
@@ -588,13 +779,14 @@ void original_bitmap_pixels()
 
 int main()
 {
+    original_filter_admission_baseline();
     format_fallbacks();
     original_bitmap_pixels();
     original_loader_decisions();
     original_texture_generation_lifetime();
     original_texture_device_fallback();
     original_dds_to_targa_fallback();
-    original_stage_filter_state();
+    for (unsigned generation=0;generation<2;++generation) original_stage_filter_state();
     original_w3d_texture_stage();
     std::cout << "original-rendering runtime provider=GeneralsMD WW3D2 texture format bitmap decisions\n";
 }

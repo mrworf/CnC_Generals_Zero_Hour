@@ -25,3 +25,8 @@ values; cover canceled aliases, replacement, drain and teardown independently.
 Known-bit masks do not bound encoded native table indices. Validate every packed
 subfield (including ignored/default values) before reservation or replay; cover
 exact maxima, representable bound+1 and mixed late-invalid inputs without effects.
+
+An unfixed enum may make a synthetic rejection value undefined before validation
+reads it. Use a defined raw representation at admission, keep platform class
+definitions consistent, and verify enum/class size, alignment and member offsets
+against the prior ABI before accepting range checks under both sanitizers.

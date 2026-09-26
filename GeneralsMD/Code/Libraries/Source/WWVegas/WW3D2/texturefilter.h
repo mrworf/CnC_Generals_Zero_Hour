@@ -75,6 +75,9 @@ class TextureFilterClass
 public:
 
 	enum FilterType 
+#if defined(__linux__)
+	: unsigned
+#endif
 	{
 		FILTER_TYPE_NONE,
 		FILTER_TYPE_FAST,
@@ -84,6 +87,9 @@ public:
 	};
 
 	enum TextureFilterMode
+#if defined(__linux__)
+	: unsigned
+#endif
 	{
 		TEXTURE_FILTER_BILINEAR,
 		TEXTURE_FILTER_TRILINEAR,
@@ -91,6 +97,9 @@ public:
 	};
 
 	enum TxtAddrMode
+#if defined(__linux__)
+	: unsigned
+#endif
 	{
 		TEXTURE_ADDRESS_REPEAT=0,
 		TEXTURE_ADDRESS_CLAMP
@@ -99,6 +108,9 @@ public:
 	TextureFilterClass(MipCountType mip_level_count);
 
 	void Apply(unsigned int stage);
+#if defined(__linux__)
+	bool Can_Apply(unsigned int stage) const noexcept;
+#endif
 
 	// Filter and MIPmap settings:
 	FilterType Get_Min_Filter(void) const { return TextureMinFilter; }
