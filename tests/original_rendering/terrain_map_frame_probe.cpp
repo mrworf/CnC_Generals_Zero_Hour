@@ -100,11 +100,27 @@ extern "C" void zh_probe_terrain_map_frame()
 				const std::string before = device.snapshot();
 				frame();
 				const std::string first = device.snapshot().substr(before.size());
+				auto* accepted_shroud = TheTerrainRenderObject->getShroud();
+				const auto shroud_handle = edge.texture_handle(accepted_shroud->getShroudTexture());
+				const auto shroud_desc = device.texture_descriptor(shroud_handle);
+				const auto shroud_bytes = device.texture_bytes(shroud_handle);
+				const auto create_at = first.find("create_texture ");
+				require(create_at != std::string::npos, "original map frame omitted shroud candidate");
+				const auto name_at = create_at + std::string("create_texture ").size();
+				const auto name_end = first.find(' ', name_at);
+				require(name_end != std::string::npos, "original map frame malformed shroud publication");
+				const auto upload_at = first.find("upload_texture " + first.substr(name_at, name_end-name_at) + " ");
 				require(!TheHeightMap->doesNeedFullUpdate() &&
-					TheTerrainRenderObject->getShroud()->getShroudTexture() &&
+					accepted_shroud->getShroudTexture() && accepted_shroud->hasAcceptedContent() &&
+					accepted_shroud->acceptedContentEpoch() == accepted_shroud->contentEpoch() &&
+					shroud_desc.width == static_cast<unsigned>(accepted_shroud->getTextureWidth()) &&
+					shroud_desc.height == static_cast<unsigned>(accepted_shroud->getTextureHeight()) &&
+					shroud_desc.format == zh::renderer::TextureFormat::bgra8 &&
+					shroud_bytes.size() == static_cast<std::size_t>(shroud_desc.width)*shroud_desc.height*4 &&
+					first.find("create_texture ", create_at+1) == std::string::npos &&
 					draw_count(first) == 14 &&
-					first.find("original W3DShroud::render projected") != std::string::npos &&
-					first.find("original W3DShroud::render projected") <
+					upload_at != std::string::npos &&
+					first.find("upload_texture ", upload_at+1) == std::string::npos && upload_at <
 					first.find("original W3DView::updateView terrain center") &&
 					first.find("original W3DView::updateView terrain center") <
 					first.find("original RTS3DScene::Render map terrain") &&

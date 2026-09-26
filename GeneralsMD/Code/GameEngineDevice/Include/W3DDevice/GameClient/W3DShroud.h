@@ -108,6 +108,13 @@ public:
 	void setBorderShroudLevel(W3DShroudLevel level);	///<color that will appear in unused border terrain.
 	Real	getDrawOriginX(void)	{return m_drawOriginX;}	///<returns ws origin of first pixel in shroud texture.			
 	Real	getDrawOriginY(void)	{return m_drawOriginY;}	///<returns ws origin of first pixel in shroud texture.			
+#if defined(__linux__)
+    // Read-only current-content admission; never allocates or reacquires.
+    Bool hasAcceptedContent(void) const;
+    unsigned long long contentEpoch(void) const { return m_contentEpoch; }
+    unsigned long long acceptedContentEpoch(void) const { return m_acceptedContentEpoch; }
+    static void encodeContentPixel(W3DShroudLevel level,Bool fog,unsigned char* pixel);
+#endif
 
 protected:
 	Int m_numCellsX;						///<number of cells covering entire map
@@ -133,6 +140,18 @@ protected:
 	W3DShroudLevel *m_currentFogData;		///<copy of intermediate logical shroud while it's interpolated.
 	void interpolateFogLevels(RECT *rect);		///<fade current fog levels to actual logic side levels.
 	void fillBorderShroudData(W3DShroudLevel level, SurfaceClass* pDestSurface);	///<fill the destination texture with a known value
+#if defined(__linux__)
+    void dirtyContent(void);
+    unsigned long long m_contentEpoch;
+    unsigned long long m_acceptedContentEpoch;
+    unsigned long long m_contentGeneration;
+    unsigned m_contentColor;
+    W3DShroudLevel m_contentAlpha;
+    Bool m_failContentCommit;
+    // Only the generated witness defines this access type. No shipping setter,
+    // selector, exported fault API, serialized field or retail path is added.
+    friend struct W3DShroudGeneratedProbeAccess;
+#endif
 };
 
 #endif	//__W3DSHROUD_H_

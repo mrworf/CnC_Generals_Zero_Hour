@@ -40,6 +40,7 @@ class Matrix3D;
 class WaterHandle;
 class BaseHeightMapRenderObjClass;
 class WorldHeightMap;
+class W3DShroud;
 
 
 
@@ -54,6 +55,9 @@ class W3DTerrainVisual : public TerrainVisual
 {
 
 public:
+#if defined(__linux__)
+    static W3DShroud* peekPublishedShroud();
+#endif
 
 	W3DTerrainVisual();
 	virtual ~W3DTerrainVisual();

@@ -40,9 +40,50 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <vector>
+#include <exception>
 
 namespace {
 constexpr std::size_t MAX_CPU_SHROUD_CELLS = 16U * 1024U * 1024U;
+unsigned shroudColor()
+{
+    if (!TheGlobalData) throw OriginalW3DDeviceUnavailable("original shroud color provider unavailable");
+    const auto& color=TheGlobalData->m_shroudColor;
+    for (Real channel:{color.red,color.green,color.blue})
+        if (!std::isfinite(channel) || channel<0 || channel>1)
+            throw OriginalW3DDeviceUnavailable("original shroud color invalid");
+    return static_cast<unsigned>(color.getAsInt());
+}
+Bool fogMode()
+{
+#if defined(_DEBUG) || defined(_INTERNAL)
+    return TheGlobalData->m_fogOfWarOn;
+#else
+    return FALSE;
+#endif
+}
+unsigned char expand(unsigned value,unsigned maximum)
+{ return static_cast<unsigned char>((value*255+maximum/2)/maximum); }
+void shroudPixel(unsigned char* pixel,W3DShroudLevel level,unsigned color,Bool fog)
+{
+    level=std::max(level,static_cast<W3DShroudLevel>(TheGlobalData->m_shroudAlpha));
+    if (fog) {
+        // Native debug code casts normalized RGBColor members directly to Int.
+        pixel[0]=static_cast<unsigned char>((static_cast<Int>(TheGlobalData->m_shroudColor.blue)>>4)*17);
+        pixel[1]=static_cast<unsigned char>((static_cast<Int>(TheGlobalData->m_shroudColor.green)>>4)*17);
+        pixel[2]=static_cast<unsigned char>((static_cast<Int>(TheGlobalData->m_shroudColor.red)>>4)*17);
+        pixel[3]=static_cast<unsigned char>(((255-level)>>4)*17);
+    } else {
+        const auto scaled=[&](unsigned channel) {
+            return level==255 ? 255U : static_cast<unsigned>(static_cast<Real>(level)*
+                (static_cast<Real>(channel)/255.0f));
+        };
+        pixel[0]=expand(scaled(color&255)>>3,31);
+        pixel[1]=expand(scaled((color>>8)&255)>>2,63);
+        pixel[2]=expand(scaled((color>>16)&255)>>3,31);
+        pixel[3]=255;
+    }
+}
 }
 
 W3DShroud::W3DShroud() :
@@ -56,7 +97,9 @@ W3DShroud::W3DShroud() :
 	m_clearDstTexture(TRUE),
 	m_boderShroudLevel(TheGlobalData ?
 		static_cast<W3DShroudLevel>(TheGlobalData->m_shroudAlpha) : 0),
-	m_finalFogData(NULL), m_currentFogData(NULL)
+	m_finalFogData(NULL), m_currentFogData(NULL),
+    m_contentEpoch(0),m_acceptedContentEpoch(0),m_contentGeneration(0),
+    m_contentColor(0),m_contentAlpha(0),m_failContentCommit(FALSE)
 {
 }
 
@@ -67,7 +110,8 @@ W3DShroud::~W3DShroud()
 
 void W3DShroud::init(WorldHeightMap *map, Real cell_width, Real cell_height)
 {
-	if (!map || cell_width <= 0 || cell_height <= 0 || m_currentFogData ||
+	if (!map || !std::isfinite(cell_width) || !std::isfinite(cell_height) ||
+        cell_width <= 0 || cell_height <= 0 || m_currentFogData ||
 		m_numCellsX || m_numCellsY)
 		throw OriginalW3DDeviceUnavailable("original shroud map initialization unavailable");
 	const Int playable_x = map->getXExtent() - 1 - map->getBorderSizeInline() * 2;
@@ -108,6 +152,7 @@ void W3DShroud::init(WorldHeightMap *map, Real cell_width, Real cell_height)
 	m_currentFogData = current;
 	m_finalFogData = final;
 	m_clearDstTexture = TRUE;
+    m_contentEpoch=1;
 }
 
 void W3DShroud::reset()
@@ -124,11 +169,48 @@ void W3DShroud::reset()
 	m_srcTextureData = NULL;
 	m_srcTexturePitch = 0;
 	m_clearDstTexture = TRUE;
+    m_contentEpoch=m_acceptedContentEpoch=m_contentGeneration=0;
+    m_contentColor=0;m_contentAlpha=0;
+    m_failContentCommit=FALSE;
 }
 
 void W3DShroud::ReleaseResources()
 {
 	REF_PTR_RELEASE(m_pDstTexture);
+    m_acceptedContentEpoch=m_contentGeneration=0;
+    m_clearDstTexture=TRUE;
+}
+void W3DShroud::dirtyContent()
+{
+    if (m_contentEpoch==std::numeric_limits<unsigned long long>::max())
+        throw OriginalW3DDeviceUnavailable("original shroud content epoch exhausted");
+    ++m_contentEpoch;m_clearDstTexture=TRUE;
+}
+Bool W3DShroud::hasAcceptedContent() const
+{
+    auto* edge=zh::original_runtime::OriginalGpuEdge::active();
+    if (!edge || !m_pDstTexture || m_clearDstTexture || !m_contentEpoch
+        || m_shroudFilter!=TextureFilterClass::FILTER_TYPE_DEFAULT
+        || m_acceptedContentEpoch!=m_contentEpoch || m_contentGeneration!=edge->generation()
+        || !TheGlobalData || !m_currentFogData || !m_finalFogData
+        || m_numCellsX<=0 || m_numCellsY<=0 || m_numCellsX>16381 || m_numCellsY>16382
+        || m_dstTextureWidth!=m_numCellsX+2 || m_dstTextureHeight!=m_numCellsY+2
+        || !std::isfinite(m_cellWidth) || !std::isfinite(m_cellHeight)
+        || m_cellWidth<=0 || m_cellHeight<=0) return FALSE;
+    try {
+        if (m_contentColor!=shroudColor() || m_contentAlpha!=TheGlobalData->m_shroudAlpha
+            || m_drawFogOfWar!=fogMode()) return FALSE;
+        if (!edge->resident_texture(m_pDstTexture)) return FALSE;
+        return m_pDstTexture->Is_Initialized() && m_pDstTexture->Get_Width()==m_dstTextureWidth
+            && m_pDstTexture->Get_Height()==m_dstTextureHeight
+            && m_pDstTexture->Get_Texture_Format()==WW3D_FORMAT_A8R8G8B8;
+    } catch (...) { return FALSE; }
+}
+void W3DShroud::encodeContentPixel(W3DShroudLevel level,Bool fog,unsigned char* pixel)
+{
+    if (!pixel) throw OriginalW3DDeviceUnavailable("original shroud pixel destination unavailable");
+    const auto color=shroudColor();
+    shroudPixel(pixel,level,color,fog);
 }
 Bool W3DShroud::ReAcquireResources()
 {
@@ -155,6 +237,7 @@ Bool W3DShroud::ReAcquireResources()
 		m_pDstTexture = texture;
 		texture = NULL;
 		m_clearDstTexture = TRUE;
+        m_acceptedContentEpoch=m_contentGeneration=0;
 		return TRUE;
 	} catch (...) {
 		REF_PTR_RELEASE(texture);
@@ -177,6 +260,8 @@ void W3DShroud::setShroudLevel(Int x, Int y, W3DShroudLevel level, Bool)
 		throw OriginalW3DDeviceUnavailable("original shroud cell mutation unavailable");
 	if (TheGlobalData && level < TheGlobalData->m_shroudAlpha)
 		level = static_cast<W3DShroudLevel>(TheGlobalData->m_shroudAlpha);
+	if (m_currentFogData[x + y * m_numCellsX]!=level || m_finalFogData[x + y * m_numCellsX]!=level)
+        dirtyContent();
 	m_currentFogData[x + y * m_numCellsX] = level;
 	m_finalFogData[x + y * m_numCellsX] = level;
 }
@@ -188,12 +273,16 @@ void W3DShroud::fillShroudData(W3DShroudLevel level)
 	if (TheGlobalData && level < TheGlobalData->m_shroudAlpha)
 		level = static_cast<W3DShroudLevel>(TheGlobalData->m_shroudAlpha);
 	const std::size_t count = static_cast<std::size_t>(m_numCellsX) * m_numCellsY;
+    if (std::any_of(m_currentFogData,m_currentFogData+count,[&](W3DShroudLevel value){return value!=level;})
+        || std::any_of(m_finalFogData,m_finalFogData+count,[&](W3DShroudLevel value){return value!=level;}))
+        dirtyContent();
 	std::fill_n(m_currentFogData, count, level);
 	std::fill_n(m_finalFogData, count, level);
 }
 
 void W3DShroud::setBorderShroudLevel(W3DShroudLevel level)
 {
+    if (m_boderShroudLevel!=level) dirtyContent();
 	m_boderShroudLevel = level;
 	m_clearDstTexture = TRUE;
 }
@@ -206,22 +295,71 @@ void W3DShroud::setShroudFilter(Bool enable)
 
 void W3DShroud::render(CameraClass *camera)
 {
+	if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) edge->guard_nonstage_mutation();
 	if (!camera || !m_currentFogData || !m_finalFogData || m_numCellsX <= 0 ||
 		m_numCellsY <= 0 || m_shroudFilter != TextureFilterClass::FILTER_TYPE_DEFAULT ||
 		!zh::original_runtime::OriginalGpuEdge::active())
 		throw OriginalW3DDeviceUnavailable("original shroud projection unavailable");
-	if (!m_pDstTexture && !ReAcquireResources())
-		throw OriginalW3DDeviceUnavailable("original shroud projection allocation failed");
-	try {
-		m_pDstTexture->Apply(0);
-		m_clearDstTexture = FALSE;
-		zh::original_runtime::OriginalGpuEdge::required().record_source_state(
-			"original W3DShroud::render projected");
-	} catch (...) {
-		ReleaseResources();
-		m_clearDstTexture = TRUE;
-		throw;
-	}
+    auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+    if (!edge.idle_preparation_ready())
+        throw OriginalW3DDeviceUnavailable("original shroud upload phase unavailable");
+    const unsigned color=shroudColor();const Bool fog=fogMode();
+    if (!std::isfinite(m_cellWidth) || !std::isfinite(m_cellHeight)
+        || m_cellWidth<=0 || m_cellHeight<=0 || !m_contentEpoch
+        || m_numCellsX>16381 || m_numCellsY>16382
+        || m_dstTextureWidth!=m_numCellsX+2 || m_dstTextureHeight!=m_numCellsY+2)
+        throw OriginalW3DDeviceUnavailable("original shroud upload extent invalid");
+    const std::size_t pitch=static_cast<std::size_t>(m_dstTextureWidth)*4;
+    const std::size_t size=pitch*static_cast<std::size_t>(m_dstTextureHeight);
+    if (pitch>65535 || size>zh::renderer::RendererLimits::maximum_upload_bytes)
+        throw OriginalW3DDeviceUnavailable("original shroud upload capacity exceeded");
+    if (m_pDstTexture && !edge.resident_texture(m_pDstTexture))
+        throw OriginalW3DDeviceUnavailable("original shroud upload resident owner unavailable");
+    if (hasAcceptedContent()) return;
+    std::vector<unsigned char> pixels(size);
+    for (Int y=0;y<m_dstTextureHeight;++y) for (Int x=0;x<m_dstTextureWidth;++x) {
+        const auto level=(x && y && x<=m_numCellsX && y<=m_numCellsY)
+            ? m_currentFogData[(x-1)+(y-1)*m_numCellsX] : m_boderShroudLevel;
+        shroudPixel(pixels.data()+static_cast<std::size_t>(y)*pitch+x*4,level,color,fog);
+    }
+    zh::renderer::DeviceTransactionDesc desc;
+    desc.generation=edge.generation();desc.commands=4096;desc.resources=4096;
+    desc.bytes=zh::renderer::RendererLimits::maximum_upload_bytes;
+    zh::renderer::DeviceTransactionToken token;
+    if (!edge.begin_device_transaction(desc,token))
+        throw OriginalW3DDeviceUnavailable("original shroud upload transaction rejected");
+    TextureClass* candidate=NULL;bool published=false;
+    try {
+        zh::renderer::TextureHandle handle;
+        if (m_pDstTexture) handle=edge.texture_handle(m_pDstTexture);
+        else {
+            candidate=NEW_REF(TextureClass,(m_dstTextureWidth,m_dstTextureHeight,WW3D_FORMAT_A8R8G8B8,MIP_LEVELS_1));
+            candidate->Get_Filter().Set_U_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_CLAMP);
+            candidate->Get_Filter().Set_V_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_CLAMP);
+            candidate->Get_Filter().Set_Mip_Mapping(TextureFilterClass::FILTER_TYPE_NONE);
+            unsigned mips=1;handle=edge.create_texture(WW3D_FORMAT_A8R8G8B8,m_dstTextureWidth,m_dstTextureHeight,mips);
+        }
+        edge.upload_texture(handle,0,m_dstTextureWidth,m_dstTextureHeight,static_cast<unsigned>(pitch),pixels.data(),size);
+        if (candidate) {
+            edge.publish_texture(candidate,handle);published=true;
+            candidate->Apply_Gpu_Texture(WW3D_FORMAT_A8R8G8B8,m_dstTextureWidth,m_dstTextureHeight);
+        }
+        if (m_failContentCommit) {
+            m_failContentCommit=FALSE;
+            throw OriginalW3DDeviceUnavailable("original shroud injected content commit rejection");
+        }
+        if (!edge.commit_device_transaction(token))
+            throw OriginalW3DDeviceUnavailable("original shroud upload commit rejected");
+        if (candidate) {m_pDstTexture=candidate;candidate=NULL;}
+        m_acceptedContentEpoch=m_contentEpoch;m_contentGeneration=edge.generation();
+        m_contentColor=color;m_contentAlpha=TheGlobalData->m_shroudAlpha;
+        m_drawFogOfWar=fog;m_clearDstTexture=FALSE;
+    } catch (...) {
+        if (published && !edge.withdraw_candidate_texture(candidate,edge.texture_handle(candidate))) std::terminate();
+        if (!edge.abort_device_transaction(token)) std::terminate();
+        REF_PTR_RELEASE(candidate);
+        throw;
+    }
 }
 
 void W3DShroudMaterialPassClass::Install_Materials(void) const

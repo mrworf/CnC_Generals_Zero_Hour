@@ -1,17 +1,15 @@
 # M22 plan 01 slice 08P0C2B: exact shroud content and stage binding
 
-Status: source refrozen for final acceptance after the private candidate-withdrawal
-audit; implementation/evidence remain uncommitted and this slice is not accepted.
-See [in-progress evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2b_shroud_binding.md).
+Status: accepted after exact final-source and post-allocator-commit validation.
+See [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2b_shroud_binding.md).
+Transaction parent: `e11d3e38ec5e085c15b1f28820467a6b8d273b4e`.
+The governing index's unique commit subject identifies this slice in Git history.
 
 Acceptance now also depends on approved [08P0C2BR1](milestone_22_plan_01_slice_08p0c2br1.md),
-the narrowly bounded ordinary nothrow allocator-pairing correction. Both sanitizer
-physical routes fail before this slice's physical owner, and the independent
-unchanged tree-program route reproduces validation-library temporary cleanup
-through the original allocator. Six frozen builds, four CPU9/9 focused selections,
-two exact strict9/9 and both native physical proofs pass; they do not waive the
-failed sanitizer physical gate. Keep C2B executable edits unstaged while BR1
-is independently planned, implemented, accepted and committed, then resume.
+the narrowly bounded ordinary nothrow allocator-pairing correction, accepted at
+the transaction parent above. The historical pre-owner sanitizer physical
+failure and independent reproduction are classified in evidence; neither is
+reused. All corrected final-source gates and post-commit refreshes now pass.
 
 ## Goal, dependency and boundary
 
@@ -171,11 +169,11 @@ Exact focused commands, persisted before production:
 
 `cmake --build build/<preset> --target zh_original_w3d_full_probe original_w3d_tree_program_tests original_w3d_source_reference_tests original_w3d_stage_transaction_tests original_w3d_gpu_edge_tests original_w3d_texture_decision_tests renderer_recording_transaction_tests renderer_bgfx_transaction_resource_tests -j4`
 
-`ctest --test-dir build/<preset> -R '^(original_w3d_terrain_shroud_projection|original_w3d_shroud_data|original_w3d_tree_program|original_w3d_source_reference|original_w3d_stage_transaction|original_w3d_gpu_edge_failure|original_w3d_texture_decisions|renderer_recording_transaction|renderer_bgfx_transaction_resource)$' --output-on-failure`
+`ctest --test-dir build/<preset> -R '^(original_w3d_terrain_map_frame|original_w3d_terrain_shroud_projection|original_w3d_shroud_data|original_w3d_tree_program|original_w3d_source_reference|original_w3d_stage_transaction|original_w3d_gpu_edge_failure|original_w3d_texture_decisions|renderer_recording_transaction|renderer_bgfx_transaction_resource)$' --output-on-failure`
 
-This selects nine CPU controls, including the expanded real generated shroud
+This selects ten CPU controls, including the corrected map-frame ordering and expanded real generated shroud
 projection fixture and unchanged stage/lifetime regressions, on GCC/Clang native
-and both sanitizer configurations. Strict host LSan selects these same nine with
+and both sanitizer configurations. Strict host LSan selects these same ten with
 exactly `ASAN_OPTIONS=detect_leaks=1`, no UBSan override. Retain every existing
 fixture assertion; add exact content/stage/matrix/borrowed lifetime, all negative/fault
 rollback and ordinary drain/retry across two generations. Six complete builds
@@ -212,3 +210,17 @@ sanitizer focused witnesses, six complete builds/canonical nonretail suites
 host LSan (`ASAN_OPTIONS=detect_leaks=1`, no UBSan override), established physical
 Vulkan, serial LAN 4/4 all six, ledger and diff on final source. Commit one slice:
 `delivery: M22 08P0C2B bind exact tree shroud stage`.
+
+## Final accepted checkpoint
+
+All six corrected serial canonical suites pass276/276 with clean console and
+archived complete per-test logs. After BR1 commit, all fifteen combined frozen
+executable/test hashes match; C2B's ten-control focus passes10/10 GCC/Clang native
+and both sanitizers, strict host LSan passes10/10 both (`ASAN_OPTIONS=detect_leaks=1`,
+no UBSan override), and validation-enabled generated nonuniform physical proof
+passes all four configurations. Six builds, six canonical suites, established
+Vulkan3/3 GCC and2/2 Clang and serial LAN4/4 all six are reused only from this exact
+unchanged corrected executable composition, as explicitly approved. Ledger,
+header/identity, complete-log and diff checks pass. The failed275/276 run remains
+classified as superseded, never accepted evidence. Exact commit owns only C2B
+paths/hunks; unrelated renderer diagnostic stays unstaged. No tree draw/factory opens.

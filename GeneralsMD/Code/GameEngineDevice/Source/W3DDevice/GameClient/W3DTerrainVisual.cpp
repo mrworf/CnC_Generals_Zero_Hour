@@ -46,6 +46,7 @@
 #include "Common/GlobalData.h"
 #include "Common/MapReaderWriterInfo.h"
 #include "original_gpu_edge.h"
+#include "W3DDevice/GameClient/W3DShroud.h"
 #include "OriginalW3DDeviceUnavailable.h"
 
 static W3DTerrainVisual *s_emptyTerrainVisual = NULL;
@@ -56,6 +57,20 @@ static W3DShadowManager *s_ownedShadows = NULL;
 // normal map and fixture paths remain provider-free.
 static W3DBufferManager *s_ownedVolumeBuffers = NULL;
 static W3DSmudgeManager *s_ownedSmudges = NULL;
+
+W3DShroud* W3DTerrainVisual::peekPublishedShroud()
+{
+    // Compare borrowed global addresses before dereferencing any publication.
+    auto* owner=s_emptyTerrainVisual;
+    if (!owner || TheTerrainVisual!=owner || !owner->m_terrainRenderObject
+        || TheHeightMap!=owner->m_terrainRenderObject
+        || TheTerrainRenderObject!=owner->m_terrainRenderObject || !owner->m_logicHeightMap
+        || !W3DDisplay::m_3DScene
+        || owner->m_terrainRenderObject->getMap()!=owner->m_logicHeightMap
+        || owner->m_terrainRenderObject->Peek_Scene()!=W3DDisplay::m_3DScene) return NULL;
+    auto* shroud=owner->m_terrainRenderObject->getShroud();
+    return shroud && shroud->hasAcceptedContent() ? shroud : NULL;
+}
 
 Bool W3DTerrainVisual::hasPublishedVolumeBufferOwner() const
 {

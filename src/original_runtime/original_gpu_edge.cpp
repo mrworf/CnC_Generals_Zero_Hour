@@ -282,6 +282,20 @@ OriginalGpuEdge* OriginalGpuEdge::active() noexcept
 bool OriginalGpuEdge::supports_device_transactions(renderer::DeviceTransactionMode mode) const noexcept
 { return device_.supports_device_transactions(mode); }
 
+bool OriginalGpuEdge::idle_preparation_ready() const noexcept
+{
+    return active_edge==this && !device_transaction_ && !source_stage_attempt_
+        && !source_frame_active_ && !source_reference_queued_ && !device_.pass_active()
+        && device_.supports_device_transactions(renderer::DeviceTransactionMode::idle_preparation);
+}
+bool OriginalGpuEdge::resident_texture(const TextureBaseClass* source) const noexcept
+{
+    if (active_edge!=this || !source) return false;
+    const auto owned=textures_.find(const_cast<TextureBaseClass*>(source));
+    return owned!=textures_.end() && owned->second.generation==generation_
+        && !owned->second.shared_missing && device_.describe_texture_format(owned->second.handle).has_value();
+}
+
 renderer::ValidationResult OriginalGpuEdge::begin_device_transaction(
     const renderer::DeviceTransactionDesc& desc,renderer::DeviceTransactionToken& token)
 {
@@ -1140,6 +1154,22 @@ void OriginalGpuEdge::publish_texture_alias(TextureBaseClass* source, const Text
         throw std::runtime_error("original texture alias owner is unavailable");
     textures_.emplace(source,TextureOwnership{found->second.handle,generation_,false});
     ++texture_owner_refs_[found->second.handle.value()];
+}
+
+bool OriginalGpuEdge::withdraw_candidate_texture(TextureBaseClass* source,renderer::TextureHandle texture) noexcept
+{
+    if (source_stage_attempt_) {poison_source_stages();return false;}
+    if (active_edge!=this || !device_transaction_ || source_stage_attempt_
+        || device_transaction_->mode!=renderer::DeviceTransactionMode::idle_preparation
+        || device_transaction_->generation!=generation_) return false;
+    const auto owned=textures_.find(source);
+    const auto refs=texture_owner_refs_.find(texture.value());
+    if (owned==textures_.end() || owned->second.generation!=generation_
+        || owned->second.handle!=texture || owned->second.shared_missing
+        || refs==texture_owner_refs_.end() || refs->second!=1) return false;
+    for (const auto& stage:pending_stages_) if (stage.source==source) return false;
+    texture_owner_refs_.erase(refs);textures_.erase(owned);
+    return true;
 }
 
 renderer::TextureHandle OriginalGpuEdge::missing_texture()

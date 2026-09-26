@@ -16,6 +16,7 @@ class VertexBufferClass;
 class IndexBufferClass;
 class TextureBaseClass;
 class TextureFilterClass;
+class W3DShroud;
 
 namespace zh::original_runtime {
 
@@ -151,6 +152,8 @@ public:
     // Device capability only. Complete source-stage checkpointing is a
     // separate owner; this boundary does not snapshot refs/maps/revisions.
     bool supports_device_transactions(renderer::DeviceTransactionMode mode) const noexcept;
+    bool idle_preparation_ready() const noexcept;
+    bool resident_texture(const TextureBaseClass* source) const noexcept;
     renderer::ValidationResult begin_device_transaction(const renderer::DeviceTransactionDesc&,
         renderer::DeviceTransactionToken&);
     bool commit_device_transaction(const renderer::DeviceTransactionToken&) noexcept;
@@ -244,6 +247,10 @@ public:
     static OriginalGpuEdge* active() noexcept;
 
 private:
+    friend class ::W3DShroud;
+    // Only the shroud owner may withdraw its unpublished first candidate.
+    // The device owns native rollback; this is not ordinary removal.
+    bool withdraw_candidate_texture(TextureBaseClass* source,renderer::TextureHandle texture) noexcept;
     struct SourceStageAttempt;
     std::unique_ptr<SourceStageAttempt> source_stage_attempt_;
     std::uint64_t source_stage_sequence_=0;
