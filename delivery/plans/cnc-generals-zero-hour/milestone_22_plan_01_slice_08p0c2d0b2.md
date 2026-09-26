@@ -19,3 +19,12 @@ LSan, six builds/canonical nonretail suites, physical Vulkan/validation and
 API-thread allocation proof, serial LAN 4/4 all six, patch/bootstrap/public
 header/ledger/diff evidence after composition review. Commit only aggregate
 artifacts: `delivery: M22 08P0C2D0B2 revalidate admitted bgfx frame replay`.
+
+Accepted after exact A/B2B composition review on unchanged B2B implementation
+`f93114b4b851dea8164cba03af98ef902d24e5ac`. The independent R1/R2 corrections
+close historical sanitizer qualifications; current six canonicals are 274/274
+with clean full-log audits. All unchanged focused/strict/physical/LAN/ledger
+gates are reused under the specified evidence-only contract.
+[Aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2d0b2_bgfx_submission_aggregate.md)
+records exact ownership, retry and native-boundary limitations. No executable
+change or factory/source-stage acceptance is made; B aggregate is next.
