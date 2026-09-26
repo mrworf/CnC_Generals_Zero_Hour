@@ -2,12 +2,19 @@
 
 ## Goal, dependencies and boundary
 
-After D0B1 candidate/COW resource publication and D0B2A proved public native
-reservation, enable the public device's frame_commands mode and narrow
+After D0B1 candidate/COW resource publication, D0B2A proved public native
+reservation and corrective D0B2R1/R2 service/filter admission with a clean
+complete sanitizer/canonical matrix, enable the public device's frame_commands mode and narrow
 OriginalGpuEdge admission/commit/abort. Idle behavior remains D0B1; Recording
 is already accepted, SDL/others fail closed. No tree advancement/factory,
 shroud semantics, retail input or allocator rewrite. Authorization does not
 apply to generated local work.
+
+Historical presentation null-service and invalid texture enum categories are
+explicitly isolated in A's qualified evidence, not suppressed or waived. R1
+owns real generated FileSystem-before-GlobalData lifetime; R2 owns defined raw
+filter/profile representation and whole-tuple preflight before publication.
+Both must be delivered independently before any B2B production edits.
 
 ## Complete admitted command owner
 
