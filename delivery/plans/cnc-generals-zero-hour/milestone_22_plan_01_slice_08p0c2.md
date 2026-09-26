@@ -3,6 +3,7 @@
 ## Goal and boundary
 
 After C1, deliver independently reviewable source owners in dependency order:
+[C2A0](milestone_22_plan_01_slice_08p0c2a0.md) exact reflected uniform-block origins;
 [C2A](milestone_22_plan_01_slice_08p0c2a.md) exact Trees.nvv program;
 [C2B](milestone_22_plan_01_slice_08p0c2b.md) exact shroud stage/transform;
 [D0A](milestone_22_plan_01_slice_08p0c2d0a.md) bounded public/Recording frame

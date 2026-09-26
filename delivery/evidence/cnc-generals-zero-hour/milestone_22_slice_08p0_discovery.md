@@ -68,3 +68,25 @@ The persisted plan-only order is C2A→C2B→D0A→D0B→D0 aggregate→C2C→C2
 aggregate. C3 optional tree decals, C4 factory and 08/09 retail/visual acceptance
 remain unchanged and closed. No production edits or retail probing occurred
 in this refinement; only public source facts are recorded.
+
+## C2A trial localization and C2A0 prerequisite
+
+Canonical tree load/update retains encoded sway type across topple; only slot0
+selects zero c8, while1–10 select sampled waves. The uncommitted A trial's
+native two-generation owner/Recording/fault/retry controls passed. Its physical
+standalone initially omitted shipping process-service synchronization before
+bgfx workers; adding that real fixture precondition removed allocator/thread
+corruption without allocator edits. Exact untextured physical sway, darkening,
+alpha and composite controls then passed. These are localization, not final A
+acceptance, and no retail input was used.
+
+The textured control exposed a distinct public-bgfx origin defect. Compiled
+original_applied_3.frag reflects stage_ops128, stage_args160, alpha96, fog80/64
+in a block beginning0. Runtime subtracts the first live field64 instead of the
+actual block origin, reading stage control from the wrong bytes. The generated
+physical symptom was338 accepted pixels with constant green100:100, no shroud
+variation; the tree vertex block has first live field0 and is unaffected.
+Persist C2A0→A before backend correction, remove all A-owned trial source/test
+edits while preserving plans/investigation facts and the unrelated renderer
+diagnostic, accept exact dead-prefix/multiblock binding independently, then
+reimplement and revalidate A. No passing prior control waives this defect.
