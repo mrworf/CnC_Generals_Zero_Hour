@@ -55,8 +55,11 @@ quantize R/B to five bits and G to six. Level 255 overrides all RGB to white.
 The existing A8R8G8B8/BGRA8 transport expands an n-bit channel q to
 floor((q*255 + floor((2^n-1)/2))/(2^n-1)); alpha is 255. This preserves normalized
 RGB565 semantics without inventing an unsupported RGB565 transport format.
-For the native debug/internal fog mode, quantize RGB color and (255-level)
-alpha to high nibbles and expand each nibble by multiplication by 17, preserving
+For the native debug/internal fog mode, cast the normalized Real RGBColor
+members directly to Int as the native source does (do not use getAsInt or
+multiply these debug RGB members by 255), then take their high nibbles. Valid
+normalized [0,1] input therefore produces zero debug RGB. Quantize (255-level)
+alpha to its high nibble and expand each nibble by multiplication by 17, preserving
 ARGB4444 semantics (the normal-mode white override does not apply here).
 Physical assertions use these exact transport bytes, not unquantized colors.
 Do not introduce time/RNG interpolation: no DO_FOG_INTERPOLATION definition is
@@ -102,6 +105,9 @@ two complete generations. Recording checks every byte and unchanged accepted
 pixels on every injected failure. Physical Vulkan samples at least two unequal
 interior cells plus the border from the exact bound resident texture and proves
 fault rollback/retry; a uniform/empty texture is not acceptable evidence.
+Include an explicit valid normalized-debug-RGB zero-byte control together with
+nonzero nibble-expanded inverted alpha, so this source direct-cast distinction
+cannot be silently replaced by normal-mode byte extraction.
 
 B0 aggregate is accepted at `7dfb6bb496af997fbae83c5cc790866d711eeaa4`,
 with B0B executable payload `bbe0b93a9842fbdc080eae346ccf645e044344cc`.
