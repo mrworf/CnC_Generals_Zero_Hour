@@ -39,3 +39,12 @@ complete builds/canonical nonretail suites, focused sanitizer, strict host
 LSan, physical Vulkan, serial LAN 4/4 all six, ledger and diff checks.
 Commit only aggregate evidence:
 `delivery: M22 08P0C1B3 revalidate tree FX transaction`.
+
+## Delivered
+
+B3A `3946590` and B3B `f4ff291` compose the declared admitted/consumed
+transaction on unchanged final source. Rejection is side-effect free;
+dispatch-time partial effects are accepted at most once, not reversible.
+The complete final-source matrix and generated composition are recorded in
+[aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c1b3.md).
+No production merge or draw/factory/retail admission is included.
