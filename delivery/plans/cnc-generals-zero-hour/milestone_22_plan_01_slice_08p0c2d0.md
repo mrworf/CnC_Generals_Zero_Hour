@@ -30,3 +30,14 @@ unchanged final-source six builds/canonical nonretail suites, focused/native/
 sanitizer and exact serial host LSan, physical Vulkan, serial LAN 4/4 all six,
 ledger and diff evidence. Commit only aggregate artifacts:
 `delivery: M22 08P0C2D0 revalidate frame command transactions`.
+
+Accepted after Recording/native composition review against B aggregate
+`3fe00c4cb49afb79ae791ad308482014fd9a0664`, with unchanged B2B executable
+baseline. Both required modes, exact shared token/retry/rollback contract and
+independent native ownership/pixels are proven; SDL/other devices still reject.
+All six final-source canonicals are274/274 with clean full-log audits; focused,
+strict host LSan, generated/established physical, LAN and ledger/header/diff
+evidence is reused without executable changes.
+[Aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2d0_device_transaction_aggregate.md)
+records the source/device boundary. B0 complete delayed-source state is next;
+no tree/factory or retail acceptance is implied.

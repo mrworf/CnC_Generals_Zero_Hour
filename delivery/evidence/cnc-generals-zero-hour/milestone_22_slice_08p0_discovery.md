@@ -218,3 +218,12 @@ builds/canonicals 274/274 with clean complete-log audits, established physical
 Vulkan and six serial LAN 4/4 all pass. Exact hashes/ledger/header/diff hold;
 unrelated renderer diagnostic remains excluded. B2/B/D0 evidence-only aggregates
 follow before B0, exact shroud, immutable tree preparation and scene integration.
+
+D0B2, D0B and D0 evidence-only aggregates now review exact public native
+reservation/journal, independent idle/frame native ownership and required
+Recording/Linux full-draw capability composition in that order. No executable
+surface changes; unchanged B2B final-source six274/274 clean canonical suites
+and focused/strict/physical/LAN gates remain valid. SDL/other devices fail closed.
+The source edge owns only optional device/token forwarding here: complete
+delayed texture refs/maps/transforms/revision/filter/samplers remain B0 next.
+Tree preparation/draw/factory and retail admission remain deferred.
