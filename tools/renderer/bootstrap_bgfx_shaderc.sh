@@ -84,21 +84,39 @@ for project in bgfx bx bimg; do
     fi
 done
 
-patch_file="${repo_root}/third_party/bgfx_shaderc_glsl.patch"
 bgfx_dir="${source_root}/bgfx"
-if git -C "${bgfx_dir}" apply --reverse --check "${patch_file}" 2>/dev/null; then
-    if [[ "$(git -C "${bgfx_dir}" diff --name-only)" != $'tools/shaderc/shaderc.cpp\ntools/shaderc/shaderc_spirv.cpp' ]]; then
-        echo "bgfx checkout has changes outside the reviewed shaderc patch" >&2; exit 1
-    fi
-    if ! git -C "${bgfx_dir}" diff --binary -- tools/shaderc/shaderc.cpp tools/shaderc/shaderc_spirv.cpp | cmp -s - "${patch_file}"; then
-        echo "bgfx shaderc changes differ from the reviewed patch" >&2; exit 1
-    fi
-else
-    if ! git -C "${bgfx_dir}" diff --quiet; then
-        echo "bgfx checkout has unreviewed tracked changes" >&2; exit 1
-    fi
-    git -C "${bgfx_dir}" apply --check "${patch_file}"
-    git -C "${bgfx_dir}" apply "${patch_file}"
+shaderc_patch="${repo_root}/third_party/bgfx_shaderc_glsl.patch"
+submission_patch="${repo_root}/third_party/bgfx_bounded_submission.patch"
+# Each group is either clean or byte-for-byte the complete reviewed patch.
+# Reject unrelated or partial edits before applying either new group.
+shaderc_diff="$(git -C "${bgfx_dir}" diff --binary -- tools/shaderc/shaderc.cpp tools/shaderc/shaderc_spirv.cpp)"
+submission_diff="$(git -C "${bgfx_dir}" diff --binary -- include/bgfx/bgfx.h src/bgfx.cpp src/bgfx_p.h)"
+if [[ -n "${shaderc_diff}" && "${shaderc_diff}" != "$(sed -n '1,$p' "${shaderc_patch}")" ]]; then
+    echo "bgfx shaderc changes differ from the reviewed patch" >&2; exit 1
+fi
+if [[ -n "${submission_diff}" && "${submission_diff}" != "$(sed -n '1,$p' "${submission_patch}")" ]]; then
+    echo "bgfx submission changes differ from the reviewed patch" >&2; exit 1
+fi
+reviewed_existing_diff="${submission_diff}"
+if [[ -n "${shaderc_diff}" ]]; then
+    if [[ -n "${reviewed_existing_diff}" ]]; then reviewed_existing_diff+=$'\n'; fi
+    reviewed_existing_diff+="${shaderc_diff}"
+fi
+if [[ "$(git -C "${bgfx_dir}" diff --binary)" != "${reviewed_existing_diff}" ]]; then
+    echo "bgfx checkout has changes outside the reviewed patches" >&2; exit 1
+fi
+if [[ -z "${shaderc_diff}" ]]; then
+    git -C "${bgfx_dir}" apply --check "${shaderc_patch}"
+    git -C "${bgfx_dir}" apply "${shaderc_patch}"
+fi
+if [[ -z "${submission_diff}" ]]; then
+    git -C "${bgfx_dir}" apply --check "${submission_patch}"
+    git -C "${bgfx_dir}" apply "${submission_patch}"
+fi
+reviewed_bgfx_diff="$(sed -n '1,$p' "${submission_patch}")
+$(sed -n '1,$p' "${shaderc_patch}")"
+if [[ "$(git -C "${bgfx_dir}" diff --binary)" != "${reviewed_bgfx_diff}" ]]; then
+    echo "bgfx combined source differs from the exact reviewed patches" >&2; exit 1
 fi
 for project in bx bimg; do
     if ! git -C "${source_root}/${project}" diff --quiet; then

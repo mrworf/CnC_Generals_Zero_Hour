@@ -21,9 +21,10 @@ for project in bgfx bx bimg; do
     fi
 done
 
-if ! git -C "${source_root}/bgfx" diff --binary | \
-    cmp -s - "${repo_root}/third_party/bgfx_shaderc_glsl.patch"; then
-    echo "bgfx source differs from the reviewed shaderc-only patch" >&2
+reviewed_bgfx_diff="$(sed -n '1,$p' "${repo_root}/third_party/bgfx_bounded_submission.patch")
+$(sed -n '1,$p' "${repo_root}/third_party/bgfx_shaderc_glsl.patch")"
+if [[ "$(git -C "${source_root}/bgfx" diff --binary)" != "${reviewed_bgfx_diff}" ]]; then
+    echo "bgfx source differs from the reviewed shaderc/submission patches" >&2
     exit 1
 fi
 for project in bx bimg; do
@@ -33,8 +34,8 @@ for project in bx bimg; do
     fi
 done
 
-# The shaderc-only patch is reviewed by its bootstrap script and does not
-# alter bgfx runtime sources. This invocation never accesses the network.
+# Both exact reviewed public patches are verified before runtime compilation.
+# This invocation never accesses the network.
 make -C "${source_root}/bgfx" .build/projects/gmake-linux-gcc
 make -C "${source_root}/bgfx/.build/projects/gmake-linux-gcc" \
     bgfx-shared-lib config=release64 -j "${ZH_BGFX_JOBS:-4}"

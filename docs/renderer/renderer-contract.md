@@ -113,3 +113,30 @@ wait and readback reject during idle admission before mutation. Guards poison
 before diagnostic allocation, and consumed faults are not restored. Aborted
 candidate generations cannot alias retry; source refs/maps and frame rollback
 remain separate later owners. No other backend or source/factory claim follows.
+
+M22 D0B2A adds a reviewed opt-in public native `bgfx::submitBounded` primitive;
+it does not yet enable the device's frame transaction capability. One synchronous
+call snapshots the complete immutable command/payload slab, validates ordered
+native lifetimes, reserves all API-thread storage, then replays without allocation.
+Failure before replay restores completion-semaphore ownership, leaves commands,
+views, accepted resources/pixels and caller receipt unchanged, and advances no
+frame. Only success publishes context/sequence/generation and frame receipts.
+Native indices/refcounts are validated here; device logical generations and
+at-most-once journal consumption belong to D0B2B.
+
+Bounds are 4096 commands/draws/resource mutation operations, 256 unique declared
+views and 64 MiB checked admission storage. Supported categories are view/touch,
+static indexed/nonindexed graphics draws, draw-frequency uniforms, sampled texture
+bindings, exact live window resize, static resource retirement and optional
+last-only frame completion. Full binding equality preserves distinct hash-colliding
+values. Complete encoded-field/table extents and unknown gap bits are checked
+before admission allocation, including resolved default sampler flags, both
+stencil faces and independent blend target encodings. Ordinary queued work remains
+intact. Source suspension uses frame completion
+only; zero-size resize and changed native window identity or formats reject.
+Debug text, profiling/custom callbacks, cached view uniforms, pending dynamic
+retirement, single-thread rendering and overlapping encoders are unsupported.
+Required next-frame bookkeeping must have exact fixed capacity. Workers/backends
+retain ordinary device-loss/fatal behavior outside the reversible API-thread
+boundary. SDL remains unsupported; source/tree/factory admission remains closed
+until its dependency-ordered owners are accepted.

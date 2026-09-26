@@ -21,3 +21,7 @@ prove exact source selection and physical payloads instead of inventing resets.
 Native create APIs may deduplicate handles while incrementing reference counts.
 Transaction journals must track each acquired ownership unit, not unique handle
 values; cover canceled aliases, replacement, drain and teardown independently.
+
+Known-bit masks do not bound encoded native table indices. Validate every packed
+subfield (including ignored/default values) before reservation or replay; cover
+exact maxima, representable bound+1 and mixed late-invalid inputs without effects.

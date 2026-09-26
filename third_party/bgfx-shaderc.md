@@ -9,6 +9,13 @@ source checkout. The repository's `bgfx_shaderc_glsl.patch` is a narrowly
 reviewed source patch under those upstream license terms. No prebuilt
 upstream binary or private game asset is committed.
 
+M22's separate `bgfx_bounded_submission.patch` adds only the opt-in public
+synchronous immutable-manifest admission/reservation/replay owner. Bootstrap
+and CMake verify the exact combined shaderc/runtime diff, unchanged pins and
+licenses, with no system fallback or implicit fetch. New native implementation
+stays within bgfx; engine consumers use public declarations only. Worker/device
+failure remains the ordinary fatal boundary, not reversible API-thread replay.
+
 One-time acquisition (requires network, outside configure/build/test):
 
 ```sh

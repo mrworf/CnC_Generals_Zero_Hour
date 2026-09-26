@@ -2510,6 +2510,23 @@ if(ZH_BUILD_TESTS)
     ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx")
   add_dependencies(renderer_bgfx_mip_texture_tests zh_bgfx_shaders)
   add_executable(renderer_bgfx_transaction_resource_tests tests/renderer/test_bgfx_transaction_resource.cpp)
+  add_executable(renderer_bgfx_submission_reservation_tests tests/renderer/test_bgfx_submission_reservation.cpp)
+  target_link_libraries(renderer_bgfx_submission_reservation_tests PRIVATE zh_renderer_bgfx)
+  set_target_properties(renderer_bgfx_submission_reservation_tests PROPERTIES CXX_STANDARD 20)
+  target_compile_definitions(renderer_bgfx_submission_reservation_tests PRIVATE
+    BX_CONFIG_DEBUG=0
+    ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx")
+  add_dependencies(renderer_bgfx_submission_reservation_tests zh_bgfx_shaders)
+  add_test(NAME renderer_bgfx_submission_reservation COMMAND renderer_bgfx_submission_reservation_tests)
+  set_tests_properties(renderer_bgfx_submission_reservation PROPERTIES LABELS renderer-contract)
+  if(ZH_ENABLE_GPU_TESTS)
+    add_test(NAME renderer_bgfx_submission_reservation_gpu COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:renderer_bgfx_submission_reservation_tests> --gpu)
+    set_tests_properties(renderer_bgfx_submission_reservation_gpu PROPERTIES
+      LABELS "gpu;renderer-contract" TIMEOUT 60 RUN_SERIAL TRUE
+      ENVIRONMENT "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+  endif()
   target_link_libraries(renderer_bgfx_transaction_resource_tests PRIVATE zh_renderer_bgfx)
   target_compile_definitions(renderer_bgfx_transaction_resource_tests PRIVATE
     ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx")

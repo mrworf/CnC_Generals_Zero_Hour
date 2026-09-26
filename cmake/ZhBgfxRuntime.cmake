@@ -33,8 +33,10 @@ endforeach()
 execute_process(COMMAND git -C "${ZH_BGFX_SOURCE_ROOT}/bgfx" diff --binary
   OUTPUT_VARIABLE bgfx_diff)
 file(READ "${CMAKE_SOURCE_DIR}/third_party/bgfx_shaderc_glsl.patch" reviewed_shaderc_diff)
-if(NOT bgfx_diff STREQUAL reviewed_shaderc_diff)
-  message(FATAL_ERROR "bgfx source differs from the reviewed shaderc-only patch")
+file(READ "${CMAKE_SOURCE_DIR}/third_party/bgfx_bounded_submission.patch" reviewed_submission_diff)
+set(reviewed_bgfx_diff "${reviewed_submission_diff}${reviewed_shaderc_diff}")
+if(NOT bgfx_diff STREQUAL reviewed_bgfx_diff)
+  message(FATAL_ERROR "bgfx source differs from the reviewed shaderc/submission patches")
 endif()
 foreach(project IN ITEMS bx bimg)
   execute_process(COMMAND git -C "${ZH_BGFX_SOURCE_ROOT}/${project}" diff --quiet

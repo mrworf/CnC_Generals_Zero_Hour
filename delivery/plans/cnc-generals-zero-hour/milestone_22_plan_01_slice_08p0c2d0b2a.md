@@ -140,3 +140,76 @@ suites, serial host LAN 4/4 all six, bootstrap/patch/header/ledger/diff checks.
 Do not declare acceptance if any supported commit replay can still allocate;
 admission fails closed until the bounded native owner is proved complete.
 Commit one child: `delivery: M22 08P0C2D0B2A reserve bounded bgfx submissions`.
+
+## Implemented scope and final-source checkpoint
+
+The public C++ `submitBounded` call deep-copies a checked immutable slab,
+validates the complete ordered native lifetime model, stages replacement storage,
+then publishes/replays synchronously. Limits are 4096 commands/draws/resource
+mutation commands, 256 unique declared views and 64 MiB admission storage.
+Resource budgets count resize/retire operations, not ordinary resource uses.
+Supported commands are view/touch, static indexed or nonindexed draw with
+draw-frequency uniforms/textures, exact live window resize, six static native
+retirement families, and optional last-only frame completion. Native handles
+are current indices/refcounts; device logical generations and at-most-once
+journal consumption remain D0B2B's responsibility, not invented native epochs.
+
+Source-suspended presentation is a frame-only manifest. Zero-size resize is
+unsupported; exact native window identity/formats must be preserved. Debug text,
+profiling/custom callbacks, cached view uniforms, pending dynamic retirement,
+single-thread rendering and overlapping encoders fail closed. Next-frame text
+bookkeeping must already match its fixed dimensions/capacity. Worker/backend
+allocation and device loss remain outside API-thread reversible admission.
+
+The final candidate audit explicitly constructs and destroys nontrivial native
+UniformBuffer storage; unpublished rejection never byte-clones its owner.
+Typed arena installation avoids pointer aliasing. Debug-enabled native proof
+retains duplicate/frequency assertions while using bounded exact tracking.
+Generated two-generation physical controls prove immutable snapshot isolation,
+late recognized rejection preserves prior pixels, opposite sampled-stage values
+collide under the pinned hash but remain distinct under full equality, maximal
+uniform/arena growth, window publication/resize, ordinary-prefix preservation,
+reference multiplicity and zero API-thread replay allocations. Bounded collision
+search is fixture preparation only, never admitted replay.
+
+Source/test are frozen after the final native Release and Debug physical controls;
+earlier exploratory results are superseded. Complete final acceptance is recorded
+in adjacent evidence before this child is marked accepted.
+
+Final read-only audit supersedes that freeze before acceptance: native Vulkan
+indexes depth/stencil/sampler comparison (0–8), blend factors (0–13), equations
+(0–4), cull (0–2), topology (0–4) and stencil operations (0–7). Sampler min/mag
+encode 0–2; addressing (0–3), mip (0–1), border index (0–15), alpha reference,
+point size and stencil ref/mask exhaust their field widths. Independent blend
+also encodes three 11-bit target descriptors in rgba. Unknown state/sampler gaps
+and reserved bits reject, including resolved default sampler flags. Swapchain
+flags/MSAA (0–4) and format enum extents are validated, with fixed source identity
+still required. Add complete pure public encoded-value bounds predicates and
+allocation-free whole-input preflight before immutable storage; repeat validation
+on the copied model. Positive maxima, each representable bound+1, every unknown
+bit and mixed late-invalid controls must prove no allocator traffic, touch,
+receipt or pixel change. Then refreeze and repeat all final acceptance gates.
+
+The complete correction and maxima/mixed-invalid generated witness now pass
+GCC CPU and two-generation physical Release/Debug proof, with debug assertions
+enabled. Source/test refreeze is recorded in the adjacent evidence; all final
+build/canonical/host gates restart on that exact source before acceptance.
+
+## Accepted checkpoint and next-owner gate
+
+The corrected exact source completes six builds and all six canonical suites
+272/272, native/sanitizer focused witnesses, strict host LSan, generated native
+Release/Debug and sanitized Vulkan proofs, established physical controls and
+six serial LAN selections. The adjacent evidence records frozen hashes and
+exact counts/times. Complete sanitizer log review identifies unchanged,
+non-bgfx presentation null-FileSystem and texture-decision invalid-enum fixture
+categories; A cannot be reached from those executables. This child closes as
+non-regressing with explicit parent-authorized classification, not a claim that
+the whole legacy suite is sanitizer-clean.
+
+Before opening D0B2B, separately persist/deliver presentation service ordering
+and complete defined filter/profile admission corrective owners. Re-run the
+affected sanitizer controls and clean complete matrix after those corrections.
+Do not suppress or waive the categories at M22 acceptance. D0B2B, source shroud,
+tree/scene/factory and retail remain closed. Commit boundary remains the exact
+bounded native admission owner; unrelated renderer diagnostic is excluded.

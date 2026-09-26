@@ -141,3 +141,36 @@ both, generated native/sanitizer Vulkan controls, established physical checks
 and serial LAN 4/4 all six. [Exact evidence](milestone_22_slice_08p0c2d0b1_bgfx_resource_transaction.md)
 keeps frame/source/factory closed. D0B2A's reviewed bounded public native
 submission reservation precedes D0B2B's complete deferred frame journal.
+
+D0B2A implementation freezes one synchronous public immutable native manifest,
+ordered lifetime validation, checked storage reservation and allocation-free
+API-thread replay. Final generated two-generation Release and BX debug-enabled
+physical proofs pass exact collision/full-equality sampling, ordinary prefix,
+immutable payload snapshot, late rejection pixel preservation, maximal uniform
+and arena extents, exact native window resize, frame-only source suspension and
+native ownership multiplicity. Unpublished nontrivial UniformBuffer candidates
+use explicit constructor/destructor ownership; no global allocator change is made.
+These are focused checkpoint results, not final acceptance. Six complete builds,
+canonical suites and host gates must finish before the child is marked accepted.
+
+The final read-only encoded-state audit found reserved-bit checks alone did not
+exclude native table bound+1 values. A's whole-manifest correction validates all
+state/sampler gap bits and encoded depth/blend/equation/cull/topology/stencil,
+independent target descriptors, default sampler flags/stages and swapchain/clear
+encodings before any reservation allocation. Maxima and mixed late-invalid
+generated controls preserve receipt/pixels with zero allocation. Corrected CPU
+and native Release/Debug physical proof pass; all prior acceptance gates are
+superseded and the complete matrix restarts from the recorded refrozen hashes.
+
+D0B2A completes corrected-source six builds/canonical selections 272/272,
+focused/strict-LSan/generated Release+Debug+sanitized Vulkan, established host
+controls and six LAN selections. Whole sanitizer-log audit isolates historical
+non-bgfx presentation null-FileSystem and texture-decision invalid address/profile
+enum categories; unchanged original/Recording executables cannot reach A.
+Explicit parent classification permits the non-regressing native child closeout,
+not a global sanitizer-clean or M22 waiver claim. Before D0B2B, persist/deliver
+independent presentation-service and complete filter/profile admission corrective
+owners, then require affected clean sanitizer controls and a fresh complete matrix.
+Shipping FileSystem ordering is already correct; filter rejection must precede
+all table access and min/mag/mip/U/V stage mutation. Exact A evidence records
+counts, locations and qualification; renderer diagnostic remains excluded.

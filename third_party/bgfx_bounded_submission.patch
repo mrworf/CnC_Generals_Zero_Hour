@@ -1,0 +1,991 @@
+diff --git a/include/bgfx/bgfx.h b/include/bgfx/bgfx.h
+index 6c56eaf..b52762d 100644
+--- a/include/bgfx/bgfx.h
++++ b/include/bgfx/bgfx.h
+@@ -5344,6 +5344,172 @@ namespace bgfx
+ 		, const BufferRegion& _src
+ 		);
+ 
++
++	/// Opt-in bounded synchronous native submission. Ordinary API use is unchanged.
++	/// A complete immutable manifest is validated/copied/reserved before replay.
++	/// No external token interval, resource creation, callback or recoverable
++	/// capacity failure is permitted after replay begins. Vulkan worker/device
++	/// failure retains the ordinary native fatal boundary.
++	struct BoundedSubmissionDesc
++	{
++		uint64_t generation = 0;
++		uint32_t commands = 0;
++		uint32_t draws = 0;
++		uint32_t views = 0;
++		uint32_t resources = 0;
++		uint32_t bytes = 0;
++	};
++
++	struct BoundedSubmissionLimits
++	{
++		static constexpr uint32_t commands = 4096;
++		static constexpr uint32_t draws = 4096;
++		static constexpr uint32_t views = 256;
++		static constexpr uint32_t resources = 4096;
++		static constexpr uint32_t bytes = 64u << 20;
++
++		// Pinned native encoded-field extents, including ignored-but-indexed
++		// values. Reject unknown gap bits, not just the native reserved mask.
++		static bool acceptsState(uint64_t _state, uint32_t _rgba)
++		{
++			const uint64_t known = BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_MASK
++				| BGFX_STATE_BLEND_MASK | BGFX_STATE_BLEND_EQUATION_MASK
++				| BGFX_STATE_CULL_MASK | BGFX_STATE_ALPHA_REF_MASK | BGFX_STATE_PT_MASK
++				| BGFX_STATE_POINT_SIZE_MASK | BGFX_STATE_MSAA | BGFX_STATE_LINEAA
++				| BGFX_STATE_CONSERVATIVE_RASTER | BGFX_STATE_FRONT_CCW
++				| BGFX_STATE_BLEND_INDEPENDENT | BGFX_STATE_BLEND_ALPHA_TO_COVERAGE;
++			if ((_state & ~known) != 0
++			|| ((_state & BGFX_STATE_DEPTH_TEST_MASK) >> BGFX_STATE_DEPTH_TEST_SHIFT) > 8
++			|| ((_state & BGFX_STATE_CULL_MASK) >> BGFX_STATE_CULL_SHIFT) > 2
++			|| ((_state & BGFX_STATE_PT_MASK) >> BGFX_STATE_PT_SHIFT) > 4)
++				return false;
++			const uint32_t blend = uint32_t((_state & BGFX_STATE_BLEND_MASK) >> BGFX_STATE_BLEND_SHIFT);
++			for (uint32_t shift = 0; shift < 16; shift += 4)
++				if (((blend >> shift) & 15) > 13)
++					return false;
++			const uint32_t equations = uint32_t((_state & BGFX_STATE_BLEND_EQUATION_MASK) >> BGFX_STATE_BLEND_EQUATION_SHIFT);
++			if ((equations & 7) > 4 || ((equations >> 3) & 7) > 4)
++				return false;
++			if (0 != (_state & BGFX_STATE_BLEND_INDEPENDENT))
++				for (uint32_t target = 0; target < 3; ++target, _rgba >>= 11)
++					if ((_rgba & 15) > 13 || ((_rgba >> 4) & 15) > 13 || ((_rgba >> 8) & 7) > 4)
++						return false;
++			return true;
++		}
++		static bool acceptsStencil(uint32_t _stencil)
++		{
++			return ((_stencil & BGFX_STENCIL_TEST_MASK) >> BGFX_STENCIL_TEST_SHIFT) <= 8
++				&& ((_stencil & BGFX_STENCIL_OP_FAIL_S_MASK) >> BGFX_STENCIL_OP_FAIL_S_SHIFT) <= 7
++				&& ((_stencil & BGFX_STENCIL_OP_FAIL_Z_MASK) >> BGFX_STENCIL_OP_FAIL_Z_SHIFT) <= 7
++				&& ((_stencil & BGFX_STENCIL_OP_PASS_Z_MASK) >> BGFX_STENCIL_OP_PASS_Z_SHIFT) <= 7;
++		}
++		static bool acceptsSamplerFlags(uint32_t _flags)
++		{
++			const uint32_t known = BGFX_SAMPLER_BITS_MASK | BGFX_SAMPLER_BORDER_COLOR_MASK
++				| BGFX_SAMPLER_SAMPLE_STENCIL | BGFX_SAMPLER_SRGB;
++			return 0 == (_flags & ~known)
++				&& ((_flags & BGFX_SAMPLER_MIN_MASK) >> BGFX_SAMPLER_MIN_SHIFT) <= 2
++				&& ((_flags & BGFX_SAMPLER_MAG_MASK) >> BGFX_SAMPLER_MAG_SHIFT) <= 2
++				&& ((_flags & BGFX_SAMPLER_COMPARE_MASK) >> BGFX_SAMPLER_COMPARE_SHIFT) <= 8;
++		}
++		static bool acceptsSwapChainFlags(uint32_t _flags)
++		{
++			const uint32_t known = BGFX_SWAP_CHAIN_MSAA_MASK | BGFX_SWAP_CHAIN_FULLSCREEN
++				| BGFX_SWAP_CHAIN_SRGB_BACKBUFFER | BGFX_SWAP_CHAIN_TRANSPARENT_BACKBUFFER
++				| BGFX_SWAP_CHAIN_HDR10 | BGFX_SWAP_CHAIN_HIDPI;
++			return 0 == (_flags & ~known)
++				&& ((_flags & BGFX_SWAP_CHAIN_MSAA_MASK) >> BGFX_SWAP_CHAIN_MSAA_SHIFT) <= 4;
++		}
++		static bool acceptsSwapChainEncoding(const SwapChain& _desc)
++		{
++			return acceptsSwapChainFlags(_desc.flags)
++				&& uint32_t(_desc.formatColor) <= TextureFormat::Count
++				&& uint32_t(_desc.formatDepthStencil) <= TextureFormat::Count;
++		}
++
++		static bool accepts(const BoundedSubmissionDesc& _desc, uint32_t _commands)
++		{
++			return 0 != _desc.generation && 0 != _commands
++				&& _commands <= _desc.commands && _desc.commands <= commands
++				&& _desc.draws <= draws && _desc.views <= views
++				&& _desc.resources <= resources
++				&& 0 != _desc.bytes && _desc.bytes <= bytes;
++		}
++	};
++
++	struct BoundedSubmissionUniform
++	{
++		UniformHandle handle = BGFX_INVALID_HANDLE;
++		uint16_t count = 0;
++		uint32_t bytes = 0;
++		const void* data = NULL;
++	};
++
++	struct BoundedSubmissionTexture
++	{
++		UniformHandle sampler = BGFX_INVALID_HANDLE;
++		TextureHandle texture = BGFX_INVALID_HANDLE;
++		uint32_t flags = UINT32_MAX;
++		uint8_t stage = 0;
++	};
++
++	struct BoundedSubmissionCommand
++	{
++		enum Kind : uint8_t { View, Draw, ResizeSwapChain, Retire, CompleteFrame, Count };
++		enum Resource : uint8_t { Vertex, Index, Texture, Shader, Program, FrameBuffer, ResourceCount };
++
++		Kind kind = Count;
++		Resource resource = ResourceCount;
++		uint16_t resourceIndex = UINT16_MAX;
++		ViewId view = UINT16_MAX;
++		FrameBufferHandle framebuffer = BGFX_INVALID_HANDLE;
++		int16_t x = 0, y = 0;
++		uint16_t width = 0, height = 0;
++		float minDepth = 0.0f, maxDepth = 1.0f;
++		uint16_t clearFlags = BGFX_CLEAR_NONE;
++		uint32_t clearRgba = 0;
++		float clearDepth = 1.0f;
++		uint8_t clearStencil = 0;
++		bool touch = false;
++
++		ProgramHandle program = BGFX_INVALID_HANDLE;
++		VertexBufferHandle vertex = BGFX_INVALID_HANDLE;
++		IndexBufferHandle index = BGFX_INVALID_HANDLE;
++		uint32_t firstVertex = 0, vertices = 0, firstIndex = 0, indices = 0;
++		uint64_t state = BGFX_STATE_NONE;
++		uint32_t rgba = 0, stencilFront = BGFX_STENCIL_NONE, stencilBack = BGFX_STENCIL_NONE;
++		int32_t depthBias = 0;
++		const BoundedSubmissionUniform* uniforms = NULL;
++		const BoundedSubmissionTexture* textures = NULL;
++		uint16_t uniformCount = 0, textureCount = 0;
++		SwapChain swapChain;
++	};
++
++	struct BoundedSubmissionReceipt
++	{
++		uint64_t context = 0, sequence = 0, generation = 0;
++		uint32_t frameBefore = 0, frameAfter = 0, draws = 0, views = 0;
++		uint32_t bindingsBefore = 0, bindingsAfter = 0;
++	};
++
++	/// Performs one complete synchronous admission/reservation/replay.
++	/// False means no manifest view/submit/resize/retirement/frame was emitted;
++	/// _receipt stays unchanged. Only API-thread multithreaded native contexts
++	/// with no overlapping encoder, dynamic retirement or cached-view uniforms
++	/// are supported. All manifest pointers must address the declared readable
++	/// input until this call returns. Successful replay consumes the manifest
++	/// once; high-level retry/generation ownership belongs to the caller.
++	bool submitBounded(
++		  const BoundedSubmissionDesc& _desc
++		, const BoundedSubmissionCommand* _commands
++		, uint32_t _count
++		, BoundedSubmissionReceipt& _receipt
++		);
++
++	/// Read-only generated allocator diagnostics. Render workers report Idle.
++	enum class BoundedSubmissionPhase : uint8_t { Idle, Preparing, Replaying };
++	BoundedSubmissionPhase boundedSubmissionPhase();
++
+ } // namespace bgfx
+ 
+ #endif // BGFX_H_HEADER_GUARD
+diff --git a/src/bgfx.cpp b/src/bgfx.cpp
+index 1a19ec4..de55b0c 100644
+--- a/src/bgfx.cpp
++++ b/src/bgfx.cpp
+@@ -2828,7 +2828,8 @@ namespace bgfx
+ 
+ 		BGFX_PROFILER_SCOPE("bgfx/API thread frame", kColorSubmit);
+ 		// wait for render thread to finish
+-		renderSemWait();
++		if (!boundedRenderCompletionHeld())
++			renderSemWait();
+ 		frameNoRenderWait();
+ 
+ 		m_encoder[0].begin(m_submit, 0);
+@@ -7082,6 +7083,687 @@ namespace bgfx
+ 		s_ctx->requestScreenShot(_handle, _filePath);
+ 	}
+ 
++
++	// All extension state is API-thread-local. Render workers never enter replay.
++	static BX_THREAD_LOCAL BoundedSubmissionPhase s_boundedPhase = BoundedSubmissionPhase::Idle;
++	static BX_THREAD_LOCAL bool s_boundedCompletion = false;
++	static BX_THREAD_LOCAL uint8_t* s_boundedUniforms = NULL;
++	static uint64_t s_boundedContextSerial = 0;
++
++	BoundedSubmissionPhase boundedSubmissionPhase() { return s_boundedPhase; }
++	bool boundedReplayActive() { return s_boundedPhase == BoundedSubmissionPhase::Replaying; }
++	bool boundedRenderCompletionHeld() { return s_boundedCompletion; }
++	bool boundedTrackUniform(uint16_t _handle)
++	{
++		if (!boundedReplayActive())
++			return false;
++		BX_ASSERT(_handle < BGFX_CONFIG_MAX_UNIFORMS && NULL != s_boundedUniforms, "Invalid admitted uniform tracking.");
++		const bool duplicate = 0 != s_boundedUniforms[_handle];
++		s_boundedUniforms[_handle] = 1;
++		return duplicate;
++	}
++
++	// Each checked allocation stays private until the complete reservation passes.
++	// Typed installers avoid type-punning Ty** through void**. Adopted payloads
++	// retain exactly the allocation/alignment expected by their original owner.
++	struct BoundedStorage
++	{
++		struct Node
++		{
++			Node* next;
++			void* data;
++			void* target;
++			void (*install)(Node&);
++			void (*cleanup)(void*);
++			uint32_t alignment;
++		};
++		Node* head = NULL;
++		uint64_t used = 0;
++		uint64_t limit;
++		explicit BoundedStorage(uint32_t _limit) : limit(_limit) {}
++		~BoundedStorage()
++		{
++			while (NULL != head)
++			{
++				Node* node = head;
++				head = node->next;
++				if (NULL != node->data)
++				{
++					if (NULL != node->cleanup)
++						node->cleanup(node->data);
++					else
++						bx::free(g_allocator, node->data, node->alignment);
++				}
++				bx::free(g_allocator, node);
++			}
++		}
++		void* alloc(uint64_t _bytes, uint32_t _alignment = 0)
++		{
++			if (0 == _bytes || _bytes > UINT32_MAX || used + sizeof(Node) + _bytes > limit)
++				return NULL;
++			Node* node = (Node*)bx::alloc(g_allocator, sizeof(Node));
++			if (NULL == node)
++				return NULL;
++			void* data = bx::alloc(g_allocator, size_t(_bytes), _alignment);
++			if (NULL == data)
++			{
++				bx::free(g_allocator, node);
++				return NULL;
++			}
++			*node = {head, data, NULL, NULL, NULL, _alignment};
++			head = node;
++			used += sizeof(Node) + _bytes;
++			bx::memSet(data, 0, size_t(_bytes));
++			return data;
++		}
++		template<typename Ty>
++		static void install(Node& _node)
++		{
++			Ty** target = static_cast<Ty**>(_node.target);
++			bx::free(g_allocator, *target, _node.alignment);
++			*target = static_cast<Ty*>(_node.data);
++			_node.data = NULL;
++		}
++		template<typename Ty>
++		bool replace(Ty*& _target, uint64_t _bytes, uint64_t _copy, uint32_t _alignment = 0)
++		{
++			void* data = alloc(_bytes, _alignment);
++			if (NULL == data)
++				return false;
++			if (NULL != _target && 0 != _copy)
++				bx::memCopy(data, _target, size_t(_copy));
++			head->target = &_target;
++			head->install = &install<Ty>;
++			return true;
++		}
++		template<typename Ty, uint32_t Block>
++		bool arena(FrameArenaT<Ty, Block>& _arena, uint32_t _count)
++		{
++#if BGFX_CONFIG_DYNAMIC_FRAME_STORAGE
++			const uint32_t count = FrameArenaT<Ty, Block>::numBlocks(_count);
++			if (count > _arena.m_numBlocks)
++				return false;
++			for (uint32_t ii = 0; ii < count; ++ii)
++				if (NULL == _arena.m_block[ii]
++				&& !replace(_arena.m_block[ii], uint64_t(sizeof(Ty))*Block, 0, BX_ALIGNOF(Ty)))
++					return false;
++#else
++			BX_UNUSED(_arena, _count);
++#endif
++			return true;
++		}
++		bool commands(CommandBuffer& _buffer, uint64_t _additional)
++		{
++			const uint64_t required = bx::alignUp(uint64_t(_buffer.m_pos) + _additional + 64, UINT64_C(1024));
++			if (required > UINT32_MAX)
++				return false;
++			if (required <= _buffer.m_capacity)
++				return true;
++			return replace(_buffer.m_buffer, required, _buffer.m_capacity);
++		}
++		bool uniforms(UniformBuffer*& _buffer, uint64_t _additional)
++		{
++			const uint64_t prefix = NULL == _buffer ? 0 : _buffer->m_pos;
++			const uint64_t required = bx::alignUp(prefix + _additional
++				+ BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE + 16, UINT64_C(16));
++			if (required > UINT32_MAX)
++				return false;
++			if (NULL != _buffer && required <= _buffer->m_size)
++				return true;
++			const uint32_t header = sizeof(UniformBuffer)-sizeof(UniformBuffer::m_buffer);
++			void* data = alloc(required + header);
++			if (NULL == data)
++				return false;
++			UniformBuffer* next = BX_PLACEMENT_NEW(data, UniformBuffer)(uint32_t(required));
++			if (NULL != _buffer)
++			{
++				next->m_pos = _buffer->m_pos;
++				next->m_hwm = _buffer->m_hwm;
++				bx::memCopy(next->m_buffer, _buffer->m_buffer, size_t(prefix));
++			}
++			head->target = &_buffer;
++			head->install = &installUniform;
++			head->cleanup = &destroyUniformCandidate;
++			return true;
++		}
++		static void installUniform(Node& _node)
++		{
++			UniformBuffer** target = static_cast<UniformBuffer**>(_node.target);
++			if (NULL != *target)
++				UniformBuffer::destroy(*target);
++			*target = static_cast<UniformBuffer*>(_node.data);
++			_node.data = NULL;
++		}
++		static void destroyUniformCandidate(void* _data)
++		{
++			UniformBuffer::destroy(static_cast<UniformBuffer*>(_data));
++		}
++		void publish()
++		{
++			for (Node* node = head; NULL != node; node = node->next)
++				if (NULL != node->install)
++					node->install(*node);
++		}
++	};
++
++	struct BoundedResourceModel
++	{
++		int32_t vertex[BGFX_CONFIG_MAX_VERTEX_BUFFERS];
++		int32_t index[BGFX_CONFIG_MAX_INDEX_BUFFERS];
++		int32_t shader[BGFX_CONFIG_MAX_SHADERS];
++		int32_t program[BGFX_CONFIG_MAX_PROGRAMS];
++		int32_t texture[BGFX_CONFIG_MAX_TEXTURES];
++		int32_t framebuffer[BGFX_CONFIG_MAX_FRAME_BUFFERS];
++		int32_t uniform[BGFX_CONFIG_MAX_UNIFORMS];
++		FrameBufferHandle view[BGFX_CONFIG_MAX_VIEWS];
++		SwapChain swapchain[BGFX_CONFIG_MAX_FRAME_BUFFERS];
++		uint8_t declared[BGFX_CONFIG_MAX_VIEWS];
++		uint8_t rendered[BGFX_CONFIG_MAX_VIEWS];
++		uint8_t uniformSeen[BGFX_CONFIG_MAX_UNIFORMS];
++		uint32_t draws = 0, views = 0, resources = 0, items = 0;
++		uint64_t uniformBytes = 0;
++		bool complete = false;
++
++		template<uint32_t Max, typename Ty>
++		static void clearQueued(int32_t (&_refs)[Max], Frame::FreeHandle<Ty, Max>& _queue)
++		{
++			for (uint32_t ii = 0; ii < _queue.m_num; ++ii)
++				_refs[_queue.m_queue[ii].idx] = 0;
++		}
++		void init(Context& _ctx)
++		{
++#define BOUNDED_INIT_SIMPLE(_member, _allocator) \
++			for (uint32_t ii = 0; ii < BX_COUNTOF(_member); ++ii) \
++				_member[ii] = _ctx._allocator.isValid(uint16_t(ii)) ? 1 : 0
++#define BOUNDED_INIT_REFS(_member, _allocator, _refs) \
++			for (uint32_t ii = 0; ii < BX_COUNTOF(_member); ++ii) \
++				_member[ii] = _ctx._allocator.isValid(uint16_t(ii)) ? _ctx._refs[ii].m_refCount : 0
++			BOUNDED_INIT_SIMPLE(vertex, m_vertexBufferHandle);
++			BOUNDED_INIT_SIMPLE(index, m_indexBufferHandle);
++			BOUNDED_INIT_REFS(shader, m_shaderHandle, m_shaderRef);
++			BOUNDED_INIT_REFS(program, m_programHandle, m_programRef);
++			BOUNDED_INIT_REFS(texture, m_textureHandle, m_textureRef);
++			BOUNDED_INIT_SIMPLE(framebuffer, m_frameBufferHandle);
++			BOUNDED_INIT_REFS(uniform, m_uniformHandle, m_uniformRef);
++#undef BOUNDED_INIT_SIMPLE
++#undef BOUNDED_INIT_REFS
++			for (uint32_t fi = 0; fi < BX_COUNTOF(_ctx.m_frame); ++fi)
++			{
++				Frame& frame = _ctx.m_frame[fi];
++				clearQueued(vertex, frame.m_freeVertexBuffer);
++				clearQueued(index, frame.m_freeIndexBuffer);
++				clearQueued(shader, frame.m_freeShader);
++				clearQueued(program, frame.m_freeProgram);
++				clearQueued(texture, frame.m_freeTexture);
++				clearQueued(framebuffer, frame.m_freeFrameBuffer);
++				clearQueued(uniform, frame.m_freeUniform);
++			}
++			for (uint32_t ii = 0; ii < BGFX_CONFIG_MAX_VIEWS; ++ii)
++				view[ii] = _ctx.m_view[ii].m_fbh;
++			for (uint32_t ii = 0; ii < BGFX_CONFIG_MAX_FRAME_BUFFERS; ++ii)
++				if (live(framebuffer, uint16_t(ii)) && _ctx.m_frameBufferRef[ii].m_window)
++					swapchain[ii] = _ctx.m_frameBufferRef[ii].m_swapChain;
++		}
++		template<uint32_t Max>
++		static bool live(const int32_t (&_refs)[Max], uint16_t _idx)
++		{
++			return _idx < Max && 0 < _refs[_idx];
++		}
++		template<uint32_t Max>
++		static bool release(int32_t (&_refs)[Max], uint16_t _idx)
++		{
++			if (!live(_refs, _idx))
++				return false;
++			--_refs[_idx];
++			return true;
++		}
++		bool releaseShader(Context& _ctx, uint16_t _idx)
++		{
++			if (!release(shader, _idx))
++				return false;
++			if (0 == shader[_idx])
++			{
++				const ShaderRef& ref = _ctx.m_shaderRef[_idx];
++				for (uint32_t ii = 0; ii < ref.m_num; ++ii)
++					if (!release(uniform, ref.m_uniforms[ii].idx))
++						return false;
++			}
++			return true;
++		}
++		bool retire(Context& _ctx, const BoundedSubmissionCommand& _cmd)
++		{
++			const uint16_t idx = _cmd.resourceIndex;
++			switch (_cmd.resource)
++			{
++			case BoundedSubmissionCommand::Vertex: return release(vertex, idx);
++			case BoundedSubmissionCommand::Index: return release(index, idx);
++			case BoundedSubmissionCommand::Texture: return release(texture, idx);
++			case BoundedSubmissionCommand::Shader: return releaseShader(_ctx, idx);
++			case BoundedSubmissionCommand::Program:
++				if (!release(program, idx))
++					return false;
++				if (!releaseShader(_ctx, _ctx.m_programRef[idx].m_vsh.idx))
++					return false;
++				return !isValid(_ctx.m_programRef[idx].m_fsh)
++					|| releaseShader(_ctx, _ctx.m_programRef[idx].m_fsh.idx);
++			case BoundedSubmissionCommand::FrameBuffer:
++				if (!release(framebuffer, idx))
++					return false;
++				if (!_ctx.m_frameBufferRef[idx].m_window)
++					for (const TextureHandle handle : _ctx.m_frameBufferRef[idx].un.m_th)
++						if (isValid(handle) && !release(texture, handle.idx))
++							return false;
++				return true;
++			default: return false;
++			}
++		}
++		bool target(Context& _ctx, FrameBufferHandle _handle)
++		{
++			if (!isValid(_handle))
++				return true;
++			if (!live(framebuffer, _handle.idx))
++				return false;
++			const FrameBufferRef& ref = _ctx.m_frameBufferRef[_handle.idx];
++			if (ref.m_window)
++				return !isValid(swapchain[_handle.idx].depth) || live(texture, swapchain[_handle.idx].depth.idx);
++			for (TextureHandle handle : ref.un.m_th)
++				if (isValid(handle) && !live(texture, handle.idx))
++					return false;
++			return true;
++		}
++		bool validate(Context& _ctx, const BoundedSubmissionCommand& _cmd, uint32_t _ordinal, uint32_t _count)
++		{
++			using Cmd = BoundedSubmissionCommand;
++			if (_cmd.kind >= Cmd::Count || complete)
++				return false;
++			switch (_cmd.kind)
++			{
++			case Cmd::View:
++			{
++				if (_cmd.view >= BGFX_CONFIG_MAX_VIEWS || rendered[_cmd.view]
++				|| 0 != (_ctx.m_encoder[0].m_viewUsed[_cmd.view >> 6] & (UINT64_C(1) << (_cmd.view & 63)))
++				|| !target(_ctx, _cmd.framebuffer) || 0 == _cmd.width || 0 == _cmd.height
++				|| !bx::isFinite(_cmd.minDepth) || !bx::isFinite(_cmd.maxDepth)
++				|| _cmd.minDepth < 0.0f || _cmd.maxDepth > 1.0f || _cmd.minDepth > _cmd.maxDepth
++				|| !bx::isFinite(_cmd.clearDepth) || _cmd.clearDepth < 0.0f || _cmd.clearDepth > 1.0f
++				|| 0 != (_cmd.clearFlags & ~(BGFX_CLEAR_COLOR|BGFX_CLEAR_DEPTH|BGFX_CLEAR_STENCIL)))
++					return false;
++				if (0 == declared[_cmd.view])
++					++views;
++				declared[_cmd.view] = 1;
++				view[_cmd.view] = _cmd.framebuffer;
++				if (_cmd.touch)
++				{
++					rendered[_cmd.view] = 1;
++					++items;
++				}
++				return true;
++			}
++			case Cmd::Draw:
++			{
++				if (_cmd.view >= BGFX_CONFIG_MAX_VIEWS || !declared[_cmd.view]
++				|| !target(_ctx, view[_cmd.view]) || !live(program, _cmd.program.idx)
++				|| !live(vertex, _cmd.vertex.idx)
++				|| !isValid(_ctx.m_programRef[_cmd.program.idx].m_fsh)
++				|| !live(shader, _ctx.m_programRef[_cmd.program.idx].m_vsh.idx)
++				|| !live(shader, _ctx.m_programRef[_cmd.program.idx].m_fsh.idx)
++				|| 0 == _cmd.vertices
++				|| !BoundedSubmissionLimits::acceptsState(_cmd.state, _cmd.rgba)
++				|| !BoundedSubmissionLimits::acceptsStencil(_cmd.stencilFront)
++				|| !BoundedSubmissionLimits::acceptsStencil(_cmd.stencilBack)
++				|| _cmd.uniformCount > BGFX_CONFIG_MAX_UNIFORMS
++				|| _cmd.textureCount > g_caps.limits.maxTextureSamplers
++				|| (0 != _cmd.uniformCount && NULL == _cmd.uniforms)
++				|| (0 != _cmd.textureCount && NULL == _cmd.textures))
++					return false;
++				const VertexBuffer& vb = _ctx.m_vertexBuffers[_cmd.vertex.idx];
++				if (0 == vb.m_stride || uint64_t(_cmd.firstVertex) + _cmd.vertices > vb.m_size/vb.m_stride)
++					return false;
++				if (isValid(_cmd.index))
++				{
++					if (!live(index, _cmd.index.idx) || 0 == _cmd.indices)
++						return false;
++					const IndexBuffer& ib = _ctx.m_indexBuffers[_cmd.index.idx];
++					const uint32_t indexSize = 0 != (ib.m_flags & BGFX_BUFFER_INDEX32) ? 4 : 2;
++					if (uint64_t(_cmd.firstIndex) + _cmd.indices > ib.m_size/indexSize)
++						return false;
++				}
++				else if (0 != _cmd.indices || 0 != _cmd.firstIndex)
++					return false;
++				bx::memSet(uniformSeen, 0, sizeof(uniformSeen));
++				for (uint32_t ii = 0; ii < _cmd.uniformCount; ++ii)
++				{
++					const BoundedSubmissionUniform& value = _cmd.uniforms[ii];
++					if (!live(uniform, value.handle.idx) || uniformSeen[value.handle.idx])
++						return false;
++					const UniformRef& ref = _ctx.m_uniformRef[value.handle.idx];
++					if (UniformFreq::Draw != ref.m_freq || UniformType::Sampler == ref.m_type
++					|| ref.m_type >= UniformType::Count || UniformType::End == ref.m_type
++					|| 0 == value.count || value.count > ref.m_num
++					|| value.count > (kConstantOpcodeNumMask >> kConstantOpcodeNumShift)
++					|| value.bytes != uint64_t(g_uniformTypeSize[ref.m_type])*value.count || NULL == value.data)
++						return false;
++					uniformSeen[value.handle.idx] = 1;
++					uniformBytes += uint64_t(value.bytes) + sizeof(uint32_t);
++				}
++				uint32_t stages = 0;
++				for (uint32_t ii = 0; ii < _cmd.textureCount; ++ii)
++				{
++					const BoundedSubmissionTexture& value = _cmd.textures[ii];
++					if (value.stage >= g_caps.limits.maxTextureSamplers
++					|| !live(uniform, value.sampler.idx) || uniformSeen[value.sampler.idx]
++					|| !live(texture, value.texture.idx) || (stages & (1u << value.stage))
++					|| !BoundedSubmissionLimits::acceptsSamplerFlags(UINT32_MAX == value.flags
++						? uint32_t(_ctx.m_textureRef[value.texture.idx].m_flags) : value.flags)
++					|| _ctx.m_textureRef[value.texture.idx].isReadBack())
++						return false;
++					const UniformRef& ref = _ctx.m_uniformRef[value.sampler.idx];
++					if (UniformFreq::Draw != ref.m_freq || UniformType::Sampler != ref.m_type)
++						return false;
++					uniformSeen[value.sampler.idx] = 1;
++					stages |= 1u << value.stage;
++					uniformBytes += sizeof(uint32_t)*2;
++				}
++				rendered[_cmd.view] = 1;
++				++draws;
++				++items;
++				return true;
++			}
++			case Cmd::ResizeSwapChain:
++			{
++				++resources;
++				if (!live(framebuffer, _cmd.framebuffer.idx)
++				|| !_ctx.m_frameBufferRef[_cmd.framebuffer.idx].m_window)
++					return false;
++				const SwapChain& desc = _cmd.swapChain;
++				const SwapChain& accepted = swapchain[_cmd.framebuffer.idx];
++				if (desc.nwh != accepted.nwh || desc.ndt != accepted.ndt
++				|| desc.formatColor != accepted.formatColor || desc.formatDepthStencil != accepted.formatDepthStencil)
++					return false;
++				if (0 == desc.width || 0 == desc.height
++				|| desc.width > g_caps.limits.maxTextureSize || desc.height > g_caps.limits.maxTextureSize
++				|| desc.width > UINT16_MAX || desc.height > UINT16_MAX
++				|| !BoundedSubmissionLimits::acceptsSwapChainEncoding(desc)
++				|| (0 != (desc.flags & BGFX_SWAP_CHAIN_TRANSPARENT_BACKBUFFER) && 0 == (g_caps.supported & BGFX_CAPS_TRANSPARENT_BACKBUFFER))
++				|| (0 != (desc.flags & BGFX_SWAP_CHAIN_HDR10) && 0 == (g_caps.supported & BGFX_CAPS_HDR10)))
++					return false;
++				const uint32_t msaa = (desc.flags & BGFX_SWAP_CHAIN_MSAA_MASK) >> BGFX_SWAP_CHAIN_MSAA_SHIFT;
++				if (msaa > 4)
++					return false;
++				if (isValid(desc.depth))
++				{
++					if (!live(texture, desc.depth.idx))
++						return false;
++					const TextureRef& ref = _ctx.m_textureRef[desc.depth.idx];
++					const uint32_t samples = 0 == msaa ? 1 : 1u << msaa;
++					if (!ref.isRt() || !ref.isDepth() || BackbufferRatio::Count != ref.m_bbRatio
++					|| ref.m_width != desc.width || ref.m_height != desc.height || ref.m_numSamples != samples)
++						return false;
++				}
++				swapchain[_cmd.framebuffer.idx] = desc;
++				return true;
++			}
++			case Cmd::Retire:
++				++resources;
++				return retire(_ctx, _cmd);
++			case Cmd::CompleteFrame:
++				complete = true;
++				return _ordinal + 1 == _count;
++			default: return false;
++			}
++		}
++	};
++
++	bool submitBounded(const BoundedSubmissionDesc& _desc, const BoundedSubmissionCommand* _commands
++		, uint32_t _count, BoundedSubmissionReceipt& _receipt)
++	{
++#if !BGFX_CONFIG_MULTITHREADED
++		BX_UNUSED(_desc, _commands, _count, _receipt);
++		return false;
++#else
++		if (!BoundedSubmissionLimits::accepts(_desc, _count) || NULL == _commands || NULL == s_ctx
++		|| s_threadIndex != BGFX_API_THREAD_MAGIC || s_boundedPhase != BoundedSubmissionPhase::Idle)
++			return false;
++		Context& ctx = *s_ctx;
++		bx::MutexScope beginLock(ctx.m_encoderBeginLock);
++		bx::MutexScope encoderLock(ctx.m_encoderApiLock);
++		bx::MutexScope resourceLock(ctx.m_resourceApiLock);
++		if (ctx.m_singleThreaded || ctx.m_encoderHandle->getNumHandles() != 1
++		|| ctx.m_encoderHandle->getHandleAt(0) != 0
++		|| ctx.m_numFreeDynamicIndexBufferHandles != 0 || ctx.m_numFreeDynamicVertexBufferHandles != 0
++		|| (ctx.m_debug & BGFX_DEBUG_TEXT) || BX_ENABLED(BGFX_CONFIG_PROFILER) || NULL != ctx.m_init.callback
++		|| !ctx.m_uniformCache.m_uniformKeyHashMap.empty() || !ctx.m_uniformCache.m_uniformEntryMap.empty()
++		|| !ctx.m_encoder[0].m_uniformSet.empty()
++		|| ctx.m_boundedSequence == UINT64_MAX || (ctx.m_boundedContext == 0 && s_boundedContextSerial == UINT64_MAX))
++			return false;
++
++		// Waiting acquires the completed frame but emits/advances nothing. Every
++		// pre-replay return restores its exact completion token locally.
++		if (!ctx.m_renderSem.wait())
++			return false;
++		struct Owner
++		{
++			Context& ctx;
++			bool advanced = false;
++			explicit Owner(Context& _ctx) : ctx(_ctx)
++			{
++				s_boundedPhase = BoundedSubmissionPhase::Preparing;
++				s_boundedCompletion = true;
++			}
++			~Owner()
++			{
++				s_boundedUniforms = NULL;
++				s_boundedCompletion = false;
++				s_boundedPhase = BoundedSubmissionPhase::Idle;
++				if (!advanced)
++					ctx.m_renderSem.post();
++			}
++		} owner(ctx);
++		BoundedStorage storage(_desc.bytes);
++		// One checked immutable slab bounds all manifest copies; no per-draw
++		// allocator traffic is required even at the complete command limit.
++		uint64_t bytes = uint64_t(sizeof(BoundedSubmissionCommand))*_count;
++		const auto account = [&](uint64_t amount)
++		{
++			if (bytes > _desc.bytes || amount > _desc.bytes - bytes)
++				return false;
++			bytes = bx::alignUp(bytes + amount, UINT64_C(16));
++			return bytes <= _desc.bytes;
++		};
++		if (!account(0))
++			return false;
++		for (uint32_t ii = 0; ii < _count; ++ii)
++		{
++			const BoundedSubmissionCommand& cmd = _commands[ii];
++			if (cmd.kind >= BoundedSubmissionCommand::Count
++			|| (cmd.kind != BoundedSubmissionCommand::Draw && (cmd.uniformCount || cmd.textureCount))
++			|| cmd.uniformCount > BGFX_CONFIG_MAX_UNIFORMS || cmd.textureCount > g_caps.limits.maxTextureSamplers
++			|| (cmd.uniformCount && NULL == cmd.uniforms) || (cmd.textureCount && NULL == cmd.textures))
++				return false;
++			if (cmd.kind == BoundedSubmissionCommand::Draw)
++			{
++				if (!BoundedSubmissionLimits::acceptsState(cmd.state, cmd.rgba)
++				|| !BoundedSubmissionLimits::acceptsStencil(cmd.stencilFront)
++				|| !BoundedSubmissionLimits::acceptsStencil(cmd.stencilBack))
++					return false;
++				for (uint32_t jj = 0; jj < cmd.textureCount; ++jj)
++				{
++					const BoundedSubmissionTexture& value = cmd.textures[jj];
++					if (value.stage >= 32 || value.stage >= g_caps.limits.maxTextureSamplers
++					|| value.stage >= BGFX_CONFIG_MAX_TEXTURE_SAMPLERS || value.texture.idx >= BGFX_CONFIG_MAX_TEXTURES
++					|| !ctx.m_textureHandle.isValid(value.texture.idx)
++					|| !BoundedSubmissionLimits::acceptsSamplerFlags(UINT32_MAX == value.flags
++						? uint32_t(ctx.m_textureRef[value.texture.idx].m_flags) : value.flags))
++						return false;
++				}
++			}
++			if (cmd.kind == BoundedSubmissionCommand::ResizeSwapChain
++			&& !BoundedSubmissionLimits::acceptsSwapChainEncoding(cmd.swapChain))
++				return false;
++			if (cmd.kind == BoundedSubmissionCommand::View
++			&& 0 != (cmd.clearFlags & ~(BGFX_CLEAR_COLOR|BGFX_CLEAR_DEPTH|BGFX_CLEAR_STENCIL)))
++				return false;
++			if (!account(uint64_t(sizeof(BoundedSubmissionUniform))*cmd.uniformCount))
++				return false;
++			for (uint32_t jj = 0; jj < cmd.uniformCount; ++jj)
++			{
++				if (NULL == cmd.uniforms[jj].data || 0 == cmd.uniforms[jj].bytes || !account(cmd.uniforms[jj].bytes))
++					return false;
++			}
++			if (!account(uint64_t(sizeof(BoundedSubmissionTexture))*cmd.textureCount))
++				return false;
++		}
++		auto* slab = (uint8_t*)storage.alloc(bytes);
++		if (NULL == slab)
++			return false;
++		auto* commands = reinterpret_cast<BoundedSubmissionCommand*>(slab);
++		uint64_t offset = bx::alignUp(uint64_t(sizeof(BoundedSubmissionCommand))*_count, UINT64_C(16));
++		for (uint32_t ii = 0; ii < _count; ++ii)
++		{
++			BX_PLACEMENT_NEW(&commands[ii], BoundedSubmissionCommand)(_commands[ii]);
++			BoundedSubmissionCommand& cmd = commands[ii];
++			auto* uniforms = reinterpret_cast<BoundedSubmissionUniform*>(slab + offset);
++			offset = bx::alignUp(offset + uint64_t(sizeof(BoundedSubmissionUniform))*cmd.uniformCount, UINT64_C(16));
++			for (uint32_t jj = 0; jj < cmd.uniformCount; ++jj)
++			{
++				BX_PLACEMENT_NEW(&uniforms[jj], BoundedSubmissionUniform)(cmd.uniforms[jj]);
++				bx::memCopy(slab + offset, uniforms[jj].data, uniforms[jj].bytes);
++				uniforms[jj].data = slab + offset;
++				offset = bx::alignUp(offset + uniforms[jj].bytes, UINT64_C(16));
++			}
++			cmd.uniforms = uniforms;
++			auto* textures = reinterpret_cast<BoundedSubmissionTexture*>(slab + offset);
++			for (uint32_t jj = 0; jj < cmd.textureCount; ++jj)
++				BX_PLACEMENT_NEW(&textures[jj], BoundedSubmissionTexture)(cmd.textures[jj]);
++			offset = bx::alignUp(offset + uint64_t(sizeof(BoundedSubmissionTexture))*cmd.textureCount, UINT64_C(16));
++			cmd.textures = textures;
++		}
++		BX_ASSERT(offset == bytes, "Immutable manifest extent mismatch.");
++		auto* model = (BoundedResourceModel*)storage.alloc(sizeof(BoundedResourceModel));
++		if (NULL == model)
++			return false;
++		// All members are value initialized before modeled release/validation.
++		BX_PLACEMENT_NEW(model, BoundedResourceModel)();
++		model->init(ctx);
++		for (uint32_t ii = 0; ii < _count; ++ii)
++			if (!model->validate(ctx, commands[ii], ii, _count))
++				return false;
++		Frame& frame = *ctx.m_submit;
++		if (model->draws > _desc.draws || model->views > _desc.views || model->resources > _desc.resources
++		|| uint64_t(frame.m_numRenderItems) + model->items > frame.m_maxDrawCalls
++		|| uint64_t(frame.m_numRenderBinds) + model->items + 1 > frame.m_maxDrawCalls
++		|| uint64_t(frame.m_frameCache.m_depthBiasCache.m_num) + model->draws > frame.m_frameCache.m_depthBiasCache.m_max)
++			return false;
++		if (!storage.arena(frame.m_renderItem, frame.m_numRenderItems + model->items + 1)
++		|| !storage.arena(frame.m_renderBind, frame.m_numRenderBinds + model->items + 1)
++		|| !storage.arena(frame.m_frameCache.m_depthBiasCache.m_cache, frame.m_frameCache.m_depthBiasCache.m_num + model->draws)
++		|| !storage.uniforms(frame.m_uniformBuffer[0], model->uniformBytes + 8))
++			return false;
++		// Conservative checked native-pool bound covers every recursive destroy
++		// and deferred vertex-layout command, including the ordinary prefix.
++		const uint64_t retirementBytes = uint64_t(BGFX_CONFIG_MAX_UNIFORMS + BGFX_CONFIG_MAX_SHADERS
++			+ BGFX_CONFIG_MAX_PROGRAMS + BGFX_CONFIG_MAX_TEXTURES + BGFX_CONFIG_MAX_FRAME_BUFFERS
++			+ BGFX_CONFIG_MAX_VERTEX_BUFFERS + BGFX_CONFIG_MAX_INDEX_BUFFERS + BGFX_CONFIG_MAX_VERTEX_LAYOUTS)*16;
++		const uint64_t resizeBytes = uint64_t(model->resources)*(sizeof(SwapChain) + 32);
++		if (!storage.commands(frame.m_cmdPre, resizeBytes)
++		|| !storage.commands(frame.m_cmdPost, retirementBytes + resizeBytes))
++			return false;
++		if (model->complete)
++		{
++			Frame& next = *ctx.m_render;
++			if (!storage.uniforms(next.m_uniformBuffer[0], 8)
++			|| !storage.commands(next.m_cmdPre, 8) || !storage.commands(next.m_cmdPost, 8))
++				return false;
++			if (BX_ENABLED(BGFX_CONFIG_DEBUG_TEXT))
++			{
++				const TextVideoMem& previous = *frame.m_textVideoMem;
++				const TextVideoMem& text = *next.m_textVideoMem;
++				// Active text is unsupported; unchanged bookkeeping capacity is
++				// a required, observable admission precondition, not a realloc.
++				const uint32_t width = bx::max(1u, ctx.m_init.swapChain.width/8);
++				const uint32_t height = bx::max(1u, ctx.m_init.swapChain.height/(previous.m_small ? 8u : 16u));
++				if (text.m_mem == NULL || text.m_width != width || text.m_height != height || text.m_small != previous.m_small)
++					return false;
++			}
++		}
++		s_boundedUniforms = model->uniformSeen;
++		const uint32_t before = frame.m_frameNum;
++		const uint32_t bindingsBefore = frame.m_numRenderBinds;
++		uint32_t bindingsAfter = bindingsBefore;
++		storage.publish();
++		s_boundedPhase = BoundedSubmissionPhase::Replaying;
++		for (uint32_t ii = 0; ii < _count; ++ii)
++		{
++			const BoundedSubmissionCommand& cmd = commands[ii];
++			using Cmd = BoundedSubmissionCommand;
++			switch (cmd.kind)
++			{
++			case Cmd::View:
++				setViewFrameBuffer(cmd.view, cmd.framebuffer);
++				setViewMode(cmd.view, ViewMode::Sequential);
++				setViewRect(cmd.view, cmd.x, cmd.y, cmd.width, cmd.height, cmd.minDepth, cmd.maxDepth);
++				setViewClear(cmd.view, cmd.clearFlags, cmd.clearRgba, cmd.clearDepth, cmd.clearStencil);
++				if (cmd.touch)
++					touch(cmd.view);
++				break;
++			case Cmd::Draw:
++				bx::memSet(s_boundedUniforms, 0, BGFX_CONFIG_MAX_UNIFORMS);
++				discard(BGFX_DISCARD_ALL);
++				setVertexBuffer(0, cmd.vertex, cmd.firstVertex, cmd.vertices);
++				if (isValid(cmd.index))
++					setIndexBuffer(cmd.index, cmd.firstIndex, cmd.indices);
++				for (uint32_t jj = 0; jj < cmd.uniformCount; ++jj)
++					setUniform(cmd.uniforms[jj].handle, cmd.uniforms[jj].data, cmd.uniforms[jj].count);
++				for (uint32_t jj = 0; jj < cmd.textureCount; ++jj)
++					setTexture(cmd.textures[jj].stage, cmd.textures[jj].sampler, cmd.textures[jj].texture, cmd.textures[jj].flags);
++				setState(cmd.state, cmd.rgba);
++				setStencil(cmd.stencilFront, cmd.stencilBack);
++				setDepthControl(cmd.depthBias, 0.0f, 0.0f, false);
++				submit(cmd.view, cmd.program);
++				break;
++			case Cmd::ResizeSwapChain:
++				updateSwapChain(cmd.framebuffer, cmd.swapChain);
++				break;
++			case Cmd::Retire:
++				switch (cmd.resource)
++				{
++				case Cmd::Vertex: destroy(VertexBufferHandle{cmd.resourceIndex}); break;
++				case Cmd::Index: destroy(IndexBufferHandle{cmd.resourceIndex}); break;
++				case Cmd::Texture: destroy(TextureHandle{cmd.resourceIndex}); break;
++				case Cmd::Shader: destroy(ShaderHandle{cmd.resourceIndex}); break;
++				case Cmd::Program: destroy(ProgramHandle{cmd.resourceIndex}); break;
++				case Cmd::FrameBuffer: destroy(FrameBufferHandle{cmd.resourceIndex}); break;
++				default: BX_ASSERT(false, "Invalid admitted retirement."); break;
++				}
++				break;
++			case Cmd::CompleteFrame:
++				bindingsAfter = frame.m_numRenderBinds;
++				bgfx::frame();
++				owner.advanced = true;
++				break;
++			default: BX_ASSERT(false, "Invalid admitted command."); break;
++			}
++		}
++		if (!model->complete)
++			bindingsAfter = frame.m_numRenderBinds;
++		if (ctx.m_boundedContext == 0)
++			ctx.m_boundedContext = ++s_boundedContextSerial;
++		++ctx.m_boundedSequence;
++		BoundedSubmissionReceipt result;
++		result.context = ctx.m_boundedContext;
++		result.sequence = ctx.m_boundedSequence;
++		result.generation = _desc.generation;
++		result.frameBefore = before;
++		result.frameAfter = ctx.m_submit->m_frameNum;
++		result.draws = model->draws;
++		result.views = model->views;
++		result.bindingsBefore = bindingsBefore;
++		result.bindingsAfter = bindingsAfter;
++		_receipt = result;
++		return true;
++#endif
++	}
++
+ #undef BGFX_CHECK_ENCODER0
+ 
+ } // namespace bgfx
+diff --git a/src/bgfx_p.h b/src/bgfx_p.h
+index 7af637d..f859501 100644
+--- a/src/bgfx_p.h
++++ b/src/bgfx_p.h
+@@ -67,6 +67,10 @@
+ 
+ namespace bgfx
+ {
++	struct BoundedStorage;
++	bool boundedReplayActive();
++	bool boundedRenderCompletionHeld();
++	bool boundedTrackUniform(uint16_t _handle);
+ #if BX_COMPILER_CLANG_ANALYZER
+ 	void __attribute__( (analyzer_noreturn) ) fatal(const char* _filePath, uint16_t _line, Fatal::Enum _code, const char* _format, ...);
+ #else
+@@ -1670,6 +1674,7 @@ namespace bgfx
+ 	template<typename Ty, uint32_t BlockT>
+ 	class FrameArenaT
+ 	{
++		friend struct BoundedStorage;
+ 	public:
+ 		static_assert(bx::isPowerOf2(BlockT), "FrameArenaT BlockT must be power of two.");
+ 
+@@ -1977,6 +1982,11 @@ namespace bgfx
+ 		void reset()
+ 		{
+ 			const uint32_t used = m_num;
++			if (boundedReplayActive())
++			{
++				m_num = 1;
++				return;
++			}
+ 
+ 			if (1 < m_numChunks)
+ 			{
+@@ -2163,6 +2173,7 @@ namespace bgfx
+ 
+ 	class UniformBuffer
+ 	{
++		friend struct BoundedStorage;
+ 	public:
+ 		static_assert(BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE
+ 			>= sizeof(uint32_t) + (kConstantOpcodeNumMask>>kConstantOpcodeNumShift)*sizeof(float)*16
+@@ -3522,7 +3533,7 @@ namespace bgfx
+ 
+ 		void adjustCapacity()
+ 		{
+-			if (0 == m_numPeakFrames)
++			if (boundedReplayActive() || 0 == m_numPeakFrames)
+ 			{
+ 				return;
+ 			}
+@@ -3976,6 +3987,20 @@ namespace bgfx
+ 
+ 		uint32_t bindStateIndex()
+ 		{
++			if (boundedReplayActive())
++			{
++				// A bounded full-equality search also admits hash collisions. Never
++				// insert TinySTL nodes while replay owns the API-thread boundary.
++				for (uint32_t ii = 0; ii < m_frame->m_numRenderBinds; ++ii)
++				{
++					if (bindingsEqual(m_frame->m_renderBind[ii].m_bind, m_bind.m_bind))
++						return ii;
++				}
++				const uint32_t idx = m_frame->m_numRenderBinds++;
++				BX_ASSERT(idx < m_frame->m_maxDrawCalls, "Admitted binding extent exceeded.");
++				m_frame->m_renderBind[idx] = m_bind;
++				return idx;
++			}
+ 			const uint32_t hash = hashBindings(m_bind.m_bind, m_bindOccupied);
+ 
+ 			BindHashMap::const_iterator it = m_bindHashMap.find(hash);
+@@ -4046,12 +4071,13 @@ namespace bgfx
+ 		{
+ 			if (BX_ENABLED(BGFX_CONFIG_DEBUG_UNIFORM) )
+ 			{
+-				BX_ASSERT(m_uniformSet.end() == m_uniformSet.find(_handle.idx)
++				BX_ASSERT(boundedReplayActive() ? !boundedTrackUniform(_handle.idx) : m_uniformSet.end() == m_uniformSet.find(_handle.idx)
+ 					, "Uniform %d (%s) was already set for this draw call."
+ 					, _handle.idx
+ 					, getName(_handle)
+ 					);
+-				m_uniformSet.insert(_handle.idx);
++				if (!boundedReplayActive())
++					m_uniformSet.insert(_handle.idx);
+ 
+ 				const UniformRef& uniform = getUniformRef(_handle);
+ 				BX_ASSERT(UniformFreq::Draw == uniform.m_freq
+@@ -4968,6 +4994,13 @@ namespace bgfx
+ 
+ 		void frame(UniformCacheFrame& _outUniformCacheFrame)
+ 		{
++			if (boundedReplayActive())
++			{
++				BX_ASSERT(m_uniformKeyHashMap.empty() && m_uniformEntryMap.empty(), "Cached-view uniforms are not admitted.");
++				_outUniformCacheFrame.m_numItems = 0;
++				_outUniformCacheFrame.m_keys[0] = 0;
++				return;
++			}
+ 			_outUniformCacheFrame.resize(
+ 				  uint32_t(m_uniformKeyHashMap.size() )
+ 				, m_uniformStoreAlloc.getTotalUsed()
+@@ -7967,6 +8000,8 @@ namespace bgfx
+ 		bool m_singleThreaded;
+ 		bool m_flipped;
+ 		bool m_flushPrevFrame;
++		uint64_t m_boundedContext = 0;
++		uint64_t m_boundedSequence = 0;
+ 
+ 		typedef UpdateBatchT<256> TextureUpdateBatch;
+ 		BX_ALIGN_DECL_CACHE_LINE(TextureUpdateBatch m_textureUpdateBatch);
