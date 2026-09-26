@@ -843,7 +843,7 @@ target_sources(zh_renderer_sdl_gpu PRIVATE
 )
 target_include_directories(zh_renderer_sdl_gpu PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-add_library(zh_renderer_bgfx STATIC src/renderer/bgfx_device.cpp)
+add_library(zh_renderer_bgfx STATIC src/renderer/bgfx_device.cpp src/renderer/bgfx_uniform_layout.cpp)
 target_include_directories(zh_renderer_bgfx PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(zh_renderer_bgfx PUBLIC zh_renderer_sdl_gpu zh_bgfx_runtime zh_build_options)
 
@@ -901,6 +901,7 @@ add_dependencies(zh_renderer_sdl_gpu zh_bootstrap_shaders)
 set(ZH_RENDERER_SHADER_NAMES
   acceptance.vert acceptance.frag
   packed_texture_probe.vert packed_texture_probe.frag
+  uniform_origin_probe.vert uniform_origin_probe.frag
   original_fvf_probe.vert
   original_volume.vert original_volume.frag
   original_applied_0.frag original_applied_1.frag
@@ -991,6 +992,10 @@ if(NOT EXISTS "${ZH_BGFX_SHADERC_EXECUTABLE}")
   message(FATAL_ERROR "Missing pinned bgfx shaderc. Run tools/renderer/bootstrap_bgfx_shaderc.sh --acquire once, then configure/build offline.")
 endif()
 set(ZH_BGFX_SHADER_BINARIES)
+add_executable(zh_bgfx_uniform_layout_tool
+  tools/renderer/bgfx_uniform_layout_tool.cpp src/renderer/bgfx_uniform_layout.cpp)
+target_include_directories(zh_bgfx_uniform_layout_tool PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_compile_features(zh_bgfx_uniform_layout_tool PRIVATE cxx_std_20)
 foreach(shader_group IN ITEMS renderer effects)
   if(shader_group STREQUAL "renderer")
     set(shader_names ${ZH_RENDERER_SHADER_NAMES})
@@ -1008,8 +1013,9 @@ foreach(shader_group IN ITEMS renderer effects)
     set(shader_lowered "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/${shader_group}/${shader_name}.lower")
     set(shader_manifest "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/${shader_group}/${shader_name}.json")
     set(shader_output "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/${shader_group}/${shader_name}.bin")
+    set(shader_layout "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/${shader_group}/${shader_name}.layout")
     add_custom_command(OUTPUT "${shader_output}"
-      BYPRODUCTS "${shader_preprocessed}" "${shader_lowered}" "${shader_manifest}"
+      BYPRODUCTS "${shader_preprocessed}" "${shader_lowered}" "${shader_manifest}" "${shader_layout}"
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/${shader_group}"
       COMMAND "${ZH_GLSLC_EXECUTABLE}" -E "${shader_source}" -o "${shader_preprocessed}"
       COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/prepare_bgfx_glsl.py"
@@ -1017,13 +1023,14 @@ foreach(shader_group IN ITEMS renderer effects)
         --manifest "${shader_manifest}" --stage "${shader_type}"
       COMMAND "${ZH_BGFX_SHADERC_EXECUTABLE}" -f "${shader_lowered}" -o "${shader_output}"
         --type "${shader_type}" --platform linux --profile spirv --raw
+      COMMAND zh_bgfx_uniform_layout_tool "${shader_output}" "${shader_type}" "${shader_layout}"
       DEPENDS "${shader_source}" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/renderer/original_applied_core.glsl"
         "${ZH_BGFX_SHADERC_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx_shaderc_glsl.patch"
-        "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/prepare_bgfx_glsl.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/prepare_bgfx_glsl.py" zh_bgfx_uniform_layout_tool
       COMMENT "Building bgfx ${shader_group} shader ${shader_name}"
       VERBATIM)
     list(APPEND ZH_BGFX_SHADER_BINARIES "${shader_output}")
-    install(FILES "${shader_output}" "${shader_manifest}"
+    install(FILES "${shader_output}" "${shader_manifest}" "${shader_layout}"
       DESTINATION "share/generals-zero-hour/bgfx/${shader_group}")
   endforeach()
 endforeach()
@@ -1045,8 +1052,9 @@ foreach(fvf_variant IN ITEMS d1 d2 n0 n1 n2 nd2)
     set(shader_lowered "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/renderer/original_applied_${shader_suffix}.vert.lower")
     set(shader_manifest "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/renderer/original_applied_${shader_suffix}.vert.json")
     set(shader_output "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/renderer/original_applied_${shader_suffix}.vert.bin")
+    set(shader_layout "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/renderer/original_applied_${shader_suffix}.vert.layout")
     add_custom_command(OUTPUT "${shader_output}"
-      BYPRODUCTS "${shader_preprocessed}" "${shader_lowered}" "${shader_manifest}"
+      BYPRODUCTS "${shader_preprocessed}" "${shader_lowered}" "${shader_manifest}" "${shader_layout}"
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx/renderer"
       COMMAND "${ZH_GLSLC_EXECUTABLE}" -E ${shader_defines} "${shader_source}" -o "${shader_preprocessed}"
       COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/prepare_bgfx_glsl.py"
@@ -1054,13 +1062,14 @@ foreach(fvf_variant IN ITEMS d1 d2 n0 n1 n2 nd2)
         --manifest "${shader_manifest}" --stage vertex
       COMMAND "${ZH_BGFX_SHADERC_EXECUTABLE}" -f "${shader_lowered}" -o "${shader_output}"
         --type vertex --platform linux --profile spirv --raw
+      COMMAND zh_bgfx_uniform_layout_tool "${shader_output}" vertex "${shader_layout}"
       DEPENDS "${shader_source}" "${ZH_BGFX_SHADERC_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx_shaderc_glsl.patch"
-        "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/prepare_bgfx_glsl.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/renderer/prepare_bgfx_glsl.py" zh_bgfx_uniform_layout_tool
       COMMENT "Building bgfx original FVF ${shader_suffix}"
       VERBATIM)
     list(APPEND ZH_BGFX_SHADER_BINARIES "${shader_output}")
-    install(FILES "${shader_output}" "${shader_manifest}"
+    install(FILES "${shader_output}" "${shader_manifest}" "${shader_layout}"
       DESTINATION share/generals-zero-hour/bgfx/renderer)
   endforeach()
 endforeach()
@@ -2476,6 +2485,19 @@ if(ZH_BUILD_TESTS)
   add_dependencies(renderer_bgfx_device_tests zh_bgfx_shaders)
   add_test(NAME renderer_bgfx_device_contract COMMAND renderer_bgfx_device_tests)
   set_tests_properties(renderer_bgfx_device_contract PROPERTIES LABELS renderer-contract)
+  add_executable(renderer_bgfx_uniform_layout_tests tests/renderer/test_bgfx_uniform_layout.cpp)
+  target_link_libraries(renderer_bgfx_uniform_layout_tests PRIVATE zh_renderer_bgfx)
+  target_compile_definitions(renderer_bgfx_uniform_layout_tests PRIVATE
+    ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx")
+  add_dependencies(renderer_bgfx_uniform_layout_tests zh_bgfx_shaders)
+  add_test(NAME renderer_bgfx_uniform_layout COMMAND renderer_bgfx_uniform_layout_tests)
+  set_tests_properties(renderer_bgfx_uniform_layout PROPERTIES LABELS renderer-contract)
+  if(ZH_ENABLE_GPU_TESTS)
+    add_test(NAME renderer_bgfx_uniform_layout_gpu COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/run_validation_clean.py"
+      $<TARGET_FILE:renderer_bgfx_uniform_layout_tests> --gpu)
+    set_tests_properties(renderer_bgfx_uniform_layout_gpu PROPERTIES LABELS gpu)
+  endif()
   add_executable(renderer_bgfx_mip_texture_tests tests/renderer/test_bgfx_mip_texture.cpp)
   target_link_libraries(renderer_bgfx_mip_texture_tests PRIVATE zh_renderer_bgfx)
   target_compile_definitions(renderer_bgfx_mip_texture_tests PRIVATE

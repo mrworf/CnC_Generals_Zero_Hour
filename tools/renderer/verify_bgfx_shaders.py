@@ -167,6 +167,12 @@ def verify(source_root: Path, build_root: Path, spirv_val: str) -> dict[str, lis
         temporary = Path(directory) / "shader.spv"
         for name in sorted(expected):
             uniforms, attributes, spirv = parse_shader((output_root / name).read_bytes(), name)
+            layout_check = subprocess.run(
+                [str(build_root / "zh_bgfx_uniform_layout_tool"), str(output_root / name),
+                 "vertex" if name.endswith(".vert.bin") else "fragment", "--check"],
+                capture_output=True, text=True, check=False)
+            if layout_check.returncode:
+                raise ShaderError(f"{name}: missing, stale or invalid compiler uniform layout")
             manifest_name = f"{name.removesuffix('.bin')}.json"
             manifest = json.loads((output_root / manifest_name).read_text(encoding="utf-8"))
             preprocessed_name = f"{name.removesuffix('.bin')}.pre"

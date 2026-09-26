@@ -1,4 +1,5 @@
 #include "zh/platform/bgfx_device.h"
+#include "zh/renderer/bgfx_uniform_layout.h"
 
 #include <bgfx/bgfx.h>
 #include <SDL3/SDL.h>
@@ -229,7 +230,7 @@ UInt32 stencil_op_code(StencilOp op)
     return 1;
 }
 
-struct UniformMetadata { std::string name; UInt16 offset = 0; };
+struct UniformMetadata { std::string name, source_path; UInt16 offset = 0; };
 
 bool normalize_shader_uniform_identifiers(std::vector<char>& data, std::vector<UniformMetadata>& metadata)
 {
@@ -250,6 +251,7 @@ bool normalize_shader_uniform_identifiers(std::vector<char>& data, std::vector<U
         if (position >= data.size()) return false;
         const auto length = static_cast<UInt8>(data[position++]);
         if (!length || position + length + 10 > data.size()) return false;
+        std::string source_path(data.data() + position, length);
         for (std::size_t j = 0; j < length; ++j) {
             char& c = data[position + j];
             if (j == 0 && !alpha(c) && c != '_') return false;
@@ -261,7 +263,7 @@ bool normalize_shader_uniform_identifiers(std::vector<char>& data, std::vector<U
         const std::size_t header = position + length;
         const auto offset = static_cast<UInt16>(static_cast<UInt8>(data[header + 2])
             | (static_cast<UInt16>(static_cast<UInt8>(data[header + 3])) << 8U));
-        metadata.push_back({std::move(name), offset});
+        metadata.push_back({std::move(name), std::move(source_path), offset});
         position += length + 10;
     }
     return position + 4 <= data.size();
@@ -284,10 +286,8 @@ bool read_shader_manifest(const std::filesystem::path& path, ShaderManifest& man
     if (contents.find("\"stage\":\"vertex\"") != std::string::npos) manifest.stage = ShaderStage::vertex;
     else if (contents.find("\"stage\":\"fragment\"") != std::string::npos) manifest.stage = ShaderStage::fragment;
     else return false;
-    const std::regex block("\\\"instance\\\":\\\"([^\\\"]+)\\\",\\\"source_binding\\\":([0-3])");
     const std::regex texture("\\\"bgfx_stage\\\":([0-9]+),\\\"kind\\\":\\\"[^\\\"]+\\\",\\\"name\\\":\\\"([^\\\"]+)\\\",\\\"source_binding\\\":([0-9]+)");
-    for (std::sregex_iterator it(contents.begin(), contents.end(), block), end; it != end; ++it)
-        if (!manifest.block_binding.emplace((*it)[1], static_cast<UInt32>(std::stoul((*it)[2]))).second) return false;
+    if (!read_bgfx_uniform_bindings(contents, manifest.block_binding)) return false;
     for (std::sregex_iterator it(contents.begin(), contents.end(), texture), end; it != end; ++it)
         if (!manifest.texture_binding.emplace((*it)[2], std::pair<UInt32, UInt32>{
                 static_cast<UInt32>(std::stoul((*it)[3])), static_cast<UInt32>(std::stoul((*it)[1]))}).second)
@@ -592,6 +592,10 @@ ShaderHandle BgfxGpuDevice::create_shader(const ShaderDesc& desc, std::string_vi
         impl_->fail("create_shader", "wrong bgfx shader stage/version envelope"); return {};
     }
     std::vector<UniformMetadata> metadata;
+    std::vector<BgfxUniformBlockLayout> layout;
+    if (auto result = decode_bgfx_uniform_layout(data, desc.stage, layout); !result) {
+        impl_->fail("create_shader", result.error); return {};
+    }
     if (!normalize_shader_uniform_identifiers(data, metadata)) {
         impl_->fail("create_shader", "invalid or colliding reflected shader uniform identifiers"); return {};
     }
@@ -600,14 +604,52 @@ ShaderHandle BgfxGpuDevice::create_shader(const ShaderDesc& desc, std::string_vi
         || manifest.stage != desc.stage) {
         impl_->fail("create_shader", "missing or invalid project-owned bgfx shader manifest"); return {};
     }
+    if (!associate_bgfx_uniform_bindings(layout, manifest.block_binding)) {
+        impl_->fail("create_shader", "compiled source uniform binding mismatch"); return {};
+    }
+    std::ifstream layout_input(impl_->options.shader_root / (relative.string() + ".layout"),
+        std::ios::binary | std::ios::ate);
+    if (!layout_input || layout_input.tellg() <= 0 || layout_input.tellg() > 4096) {
+        impl_->fail("create_shader", "missing or oversized uniform layout metadata"); return {};
+    }
+    std::string sidecar(static_cast<std::size_t>(layout_input.tellg()), '\0');
+    layout_input.seekg(0); layout_input.read(sidecar.data(), static_cast<std::streamsize>(sidecar.size()));
+    if (!layout_input || !validate_bgfx_uniform_layout_sidecar(sidecar, desc.stage, layout)) {
+        impl_->fail("create_shader", "stale or malformed uniform layout metadata"); return {};
+    }
+    std::set<UInt32> source_bindings;
+    for (const auto& block : manifest.block_binding) {
+        if (block.second >= desc.uniform_buffers || !source_bindings.emplace(block.second).second) {
+            impl_->fail("create_shader", "duplicate or out-of-range source uniform binding"); return {};
+        }
+    }
+    UInt32 previous_binding = 0;
+    bool first_block = true;
+    for (const auto& block : layout) {
+        const auto binding = manifest.block_binding.find(block.instance);
+        if (binding == manifest.block_binding.end() || (!first_block && binding->second <= previous_binding)) {
+            impl_->fail("create_shader", "compiled source block/manifest binding mismatch"); return {};
+        }
+        first_block = false; previous_binding = binding->second;
+    }
+    for (const auto& item : metadata) {
+        if (item.source_path.rfind("ZhStageUniforms.", 0) != 0) continue;
+        bool admitted = false;
+        for (const auto& block : manifest.block_binding)
+            if (item.source_path.rfind("ZhStageUniforms." + block.first + ".", 0) == 0) admitted = true;
+        if (!admitted) { impl_->fail("create_shader", "unknown reflected source block"); return {}; }
+    }
     auto native = bgfx::createShader(bgfx::copy(data.data(), static_cast<UInt32>(data.size())));
     if (!bgfx::isValid(native)) { impl_->fail("create_shader", "public bgfx shader creation failed"); return {}; }
+    struct CandidateShader {
+        bgfx::ShaderHandle handle;
+        ~CandidateShader() { if (bgfx::isValid(handle)) bgfx::destroy(handle); }
+    } candidate{native};
     const auto uniform_count = bgfx::getShaderUniforms(native);
     std::vector<bgfx::UniformHandle> uniforms(uniform_count);
     bgfx::getShaderUniforms(native, uniforms.data(), uniform_count);
     for (const auto uniform : uniforms) {
         if (!bgfx::isValid(uniform)) {
-            bgfx::destroy(native);
             impl_->fail("create_shader", "public bgfx rejected a reflected uniform identifier");
             return {};
         }
@@ -627,9 +669,9 @@ ShaderHandle BgfxGpuDevice::create_shader(const ShaderDesc& desc, std::string_vi
         bgfx::UniformInfo info;
         bgfx::getUniformInfo(found->second, info);
         bool classified = false;
-        for (const auto& block : manifest.block_binding) {
-            const auto prefix = std::string("ZhStageUniforms_") + block.first + "_";
-            if (item.name.rfind(prefix, 0) != 0) continue;
+        for (const auto& block : layout) {
+            const auto prefix = std::string("ZhStageUniforms.") + block.instance + ".";
+            if (item.source_path.rfind(prefix, 0) != 0) continue;
             UInt32 size = 0;
             switch (info.type) {
             case bgfx::UniformType::Vec4: size = 16; break;
@@ -637,36 +679,40 @@ ShaderHandle BgfxGpuDevice::create_shader(const ShaderDesc& desc, std::string_vi
             case bgfx::UniformType::Mat4: size = 64; break;
             default: break;
             }
-            if (!size || block.second >= desc.uniform_buffers) {
-                bgfx::destroy(native); impl_->fail("create_shader", "reflected block type/binding mismatch"); return {};
+            const auto binding = manifest.block_binding.at(block.instance);
+            const auto field = std::find_if(block.fields.begin(), block.fields.end(), [&](const auto& candidate) {
+                return item.source_path == prefix + candidate.name;
+            });
+            if (!size || field == block.fields.end() ||
+                size != (field->kind == 2 ? 16U : field->kind == 3 ? 48U : 64U) || item.offset < block.origin ||
+                item.offset != field->offset || info.num != field->count ||
+                UInt64(item.offset) + size * info.num > UInt64(block.origin) + block.extent) {
+                impl_->fail("create_shader", "reflected block type/binding mismatch"); return {};
             }
-            record.fields.push_back({found->second, block.second, item.offset, size * info.num, info.num});
+            record.fields.push_back({found->second, binding, item.offset - block.origin, size * info.num, info.num});
             classified = true;
             break;
         }
         if (classified) continue;
+        if (layout.empty() && item.source_path.rfind("ZhStageUniforms.", 0) == 0)
+            continue; // The actual compiler removed the entire algebraically dead UBO.
         for (const auto& texture : manifest.texture_binding) {
             if (item.name != texture.first + "_image") continue;
             if (info.type != bgfx::UniformType::Sampler || texture.second.first >= desc.samplers
                 || texture.second.second >= RendererLimits::sampled_textures_per_stage) {
-                bgfx::destroy(native); impl_->fail("create_shader", "reflected texture type/binding mismatch"); return {};
+                impl_->fail("create_shader", "reflected texture type/binding mismatch"); return {};
             }
             record.textures.push_back({found->second, texture.second.first, texture.second.second});
             classified = true;
             break;
         }
         if (!classified) {
-            bgfx::destroy(native); impl_->fail("create_shader", "unclassified public bgfx uniform: " + item.name); return {};
+            impl_->fail("create_shader", "unclassified public bgfx uniform: " + item.name); return {};
         }
     }
-    std::map<UInt32, UInt32> block_base;
-    for (const auto& field : record.fields) {
-        auto it = block_base.find(field.binding);
-        if (it == block_base.end() || field.offset < it->second) block_base[field.binding] = field.offset;
-    }
-    for (auto& field : record.fields) field.offset -= block_base[field.binding];
     auto handle = insert<ShaderHandle>(impl_->shaders, std::move(record));
-    if (!handle) { bgfx::destroy(native); impl_->fail("create_shader", "opaque shader slot budget exhausted"); }
+    if (!handle) impl_->fail("create_shader", "opaque shader slot budget exhausted");
+    else candidate.handle = BGFX_INVALID_HANDLE;
     return handle;
 }
 

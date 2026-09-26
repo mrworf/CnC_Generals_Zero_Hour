@@ -64,3 +64,30 @@ sanitizer `ASAN_OPTIONS=detect_leaks=0`), exact serial host strict LSan
 (`ASAN_OPTIONS=detect_leaks=1`, no UBSan override), established physical
 Vulkan, serial LAN4/4 all six, ledger and diff on final source.
 Commit independently: `delivery: M22 08P0C2A0 bind exact shader block origins`.
+
+## Implementation admission and focused commands
+
+Share one bounded CPU-only shader-envelope/SPIR-V decoder between build-time
+metadata emission and runtime admission. A versioned `.layout` sidecar records
+actual root source-block origins/extents; runtime cross-checks it against the
+loaded binary and the existing source-binding manifest before native creation.
+Offline closure also checks that contract. Never infer an origin from live
+fields; preserve source field offsets/padding and compiled payload bytes.
+
+Focused: `ctest --test-dir build/<preset> -R
+'^(renderer_bgfx_uniform_layout|bgfx_shader_family_closure|original_w3d_shader_source|original_headless_update)$'
+--output-on-failure`. Physical: isolated `renderer_bgfx_uniform_layout_tests
+--gpu` under the established graphical host environment and
+`VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`, wrapped by
+`tools/run_validation_clean.py`. Strict host LSan selects
+`renderer_bgfx_uniform_layout|original_w3d_display_owner` with detect_leaks=1,
+no UBSan override. Existing canonical/physical/LAN gates remain required.
+
+## Implementation checkpoint
+
+Compiler/runtime origin admission and generated CPU/physical controls are
+accepted: six complete builds and six canonical suites pass 268/268 each,
+with focused, strict host LSan, physical Vulkan, serial LAN and ledger/diff
+gates on the refrozen source.
+[Acceptance evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2a0.md).
+No tree program or scene/factory/retail admission is included in this slice.

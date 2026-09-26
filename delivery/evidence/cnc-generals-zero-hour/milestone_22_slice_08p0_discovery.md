@@ -90,3 +90,10 @@ Persist C2A0→A before backend correction, remove all A-owned trial source/test
 edits while preserving plans/investigation facts and the unrelated renderer
 diagnostic, accept exact dead-prefix/multiblock binding independently, then
 reimplement and revalidate A. No passing prior control waives this defect.
+
+C2A0 is independently accepted with compiler-authoritative block origins,
+strict absent-versus-foreign Uniform admission, unchanged source payloads,
+two-generation physical dead-prefix/multiblock controls and all six canonical
+suites 268/268. [Exact evidence](milestone_22_slice_08p0c2a0.md) records the
+refrozen results; the earlier A trial remains localization only. Reimplement
+C2A against this owner before admitting exact tree shader semantics.

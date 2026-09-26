@@ -8,3 +8,8 @@ with GCC and Clang sanitizers. When a transaction requires allocation-free
 ordering, use an explicit bounded in-place algorithm; do not infer that property
 from a standard-library algorithm. Keep allocator fixes scoped to their actual
 owner, and preserve pre-publication rollback and accepted-state retry contracts.
+
+Shader reflection may omit dead fields without changing their source block's
+origin or padding. Bind unchanged source payloads using compiler-authoritative
+block offsets, never the first live field; cross-check generated metadata and
+cover dead prefixes, multiblock layouts and genuinely eliminated providers.
