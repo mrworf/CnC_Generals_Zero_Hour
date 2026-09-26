@@ -42,8 +42,16 @@ Claim/release/wait/readback side routes reject during the live journal; owner
 destruction cancels before ordinary shutdown. Do not roll back irreversible
 driver work or treat device loss as an ordinary rejected transaction.
 
+This child constructs and orders the complete immutable native manifest before
+calling D0B2A's single synchronous public admit/reserve/replay primitive. A
+deep-copies, validates and reserves under native API/frame ownership, then
+emits that admitted manifest before returning; there is no exposed native
+reservation token or mutation interval. Recoverable native admission rejection
+returns before accepted-target touch and leaves this journal available to abort
+or retry. Native success returns a context/frame/sequence receipt; this child's
+device token/generation owns consumption and at-most-once invocation.
 Only after the entire immutable batch and native reservation succeed may the
-no-throw exactly-once commit replay source order. It uses owned data and public
+no-throw exactly-once native replay emit source order. It uses owned data and public
 admitted native operations only: no source registry lookup, callback, heap
 allocation, wrapper creation, late validation or error diagnostic formatting.
 Retire candidates/replaced resources in bounded completion-safe order. Abort
@@ -51,6 +59,10 @@ before replay destroys only candidates, restores CPU shadows/init/view/target
 identities and invalidates candidate generations without aliasing retry.
 Fault counters remain monotonic. Repeated/stale finish cannot submit or retire
 twice. Ordinary nontransactional rendering remains unchanged.
+Worker/backend allocation is outside the reversible API-thread boundary;
+ordinary device-loss/error handling and physical validation cover it. Never
+report driver work as rolled back or hide an API-thread allocation in that
+category. Unsupported native categories reject during whole-manifest admission.
 
 ## Surfaces, witnesses and acceptance
 

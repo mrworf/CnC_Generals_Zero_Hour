@@ -118,6 +118,18 @@ loss and fatal process OOM remain the ordinary bgfx fatal boundary; they are
 not reclassified as recoverable journal rejection. Every supported recoverable
 allocation/provider/capacity failure precedes accepted-resource touch.
 
+Post-D0B1 read-only allocation inventory is complete in D0B2A. Its narrow
+public native primitive performs synchronous admit/reserve/replay of a complete
+immutable manifest while holding API/frame ownership; no exposed reservation
+token admits intervening native mutation. A owns native deep-copy/admission,
+all reached encoder/depth/debug/frame/buffer reservation and allocation-free
+replay. B owns device journal construction/order and generation consumption.
+Worker/backend allocations retain the ordinary device-loss/error boundary and
+physical Vulkan validation, never a claimed reversible API-thread result.
+Cached view-frequency uniforms, active debug text, dynamic-buffer retirement,
+single-threaded/concurrent encoders and unsupported command categories fail
+closed before any accepted-target touch; ordinary behavior remains unchanged.
+
 Reuse unchanged D0B2B final-source six-build/canonical, focused and strict
 host LSan, physical Vulkan, serial LAN, ledger/diff evidence after reviewing
 both idle and frame composition. Commit only aggregate artifacts.
