@@ -95,19 +95,32 @@ or throwing destructor is permitted; immutable tree/shadow admission stays close
 
 ## Outcome and dependencies
 
+08L2R1, 08Q0R1 and 08Q0 are now accepted; do not reopen them. The subsequent
+bounded redacted probe reaches only the fixed modeled terrain-prop stop before
+any Recording frame. Approved dependency-first disposition:
+[08R0A](milestone_22_plan_01_slice_08r0a.md) strong composite/prop ownership →
+[08R0B](milestone_22_plan_01_slice_08r0b.md) exact source shroud material pass →
+[08R0C](milestone_22_plan_01_slice_08r0c.md) transactional prop frame →
+[08R0](milestone_22_plan_01_slice_08r0.md) evidence-only aggregate → slice08.
+All active08 trial edits remain unstaged; resume the same bounded probe only
+after R0 acceptance. Public source audit/architecture authority is in the R0
+packet. No private detail, new selector or implicit producer admission persists.
+
+Historical corrective checkpoint (now accepted):
+
 The mixed-shadow continuation reaches the fixed house-color surface-loading
 category through indicator-color notification. Its callback throw exposes a
 one-sided Object/Drawable binding and stale reset dereference. Approved separate
 corrective sequence: accepted08L2 → [08L2R1](milestone_22_plan_01_slice_08l2r1.md)
 → [08Q0R1](milestone_22_plan_01_slice_08q0r1.md) strong cloned-render graph
 construction → [08Q0](milestone_22_plan_01_slice_08q0.md), with accepted08P0 and the canonical
-texture/filter providers also required by Q0. Slice08 is closed until both new
-owners are accepted. Preserve all existing unstaged trial edits; neither private
+texture/filter providers also required by Q0. That dependency gate is now closed
+successfully; slice08 is currently blocked by R0 above. Preserve all existing unstaged trial edits; neither private
 input details nor raw debugger/process output are retained. R1 is independently
 validated/committed first, then clone-graph R1, then Q0, then the unchanged trial resumes with the
 bounded redacted probe. No new milestone or implicit owner admission occurs.
 
-Requires accepted slices 08B, 08E, 08I, 08J, 08L and 08Q0 and a separately configured, read-only
+Requires accepted slices 08B, 08E, 08I, 08J, 08L, 08Q0 and 08R0 and a separately configured, read-only
 retail corpus.  The already-authorized campaign/skirmish consumer selections
 remain runtime-only test inputs: no selector, root, private logical name,
 content byte, hash, image, or captured command label is committed or emitted.

@@ -1,5 +1,43 @@
 # Milestone readiness report — renderer migration
 
+## M22 08R0 terrain-prop packet supplement — 2026-09-27
+
+1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. A can begin after this plan-only
+   checkpoint; B waits for accepted A, C for accepted B, aggregate for accepted C.
+   Fresh existing physical/host facilities are later acceptance gates.
+2. Audited parent `b4fc25b137e94accc1abebd4f0f14bc992c64670`; Q0 is accepted,
+   active08 trial/ledger and renderer diagnostic remain untouched/unstaged.
+   Only the fixed modeled terrain-prop category is retained from continuation.
+3. Complete public transitive source inventory and source-success semantics are
+   in R0; graph includes HLOD/HTree/HModel/Collection/DistLOD and native props.
+   Unsafe Aggregate/Ring/Sphere/Dazzle kinds reject before construction, including
+   nested graph edges. Class ID alone cannot admit Aggregate as HLOD.
+4. A owns strong graph/lifecycle, B exact source shroud pass, C complete bounded
+   mesh/task/scene/display rollback and props-only frame. No unresolved frame
+   investigation gate or independent prerequisite was deferred into readiness.
+5. M22-R0-01–06 classifications separate accepted providers, child outputs and
+   later host gates. No confirmation/action gate remains for the approved scope;
+   any newly mandatory independent owner stops at an architecture checkpoint.
+6. Clean-environment simulation: committed original providers/tools → A generated
+   graph/lifecycle → B generated pass → C generated frame → evidence-only R0 →
+   active08; no warm/private cache, private fixture, live service or forward edge.
+7. Commands: four native presets/tool resolution checked, six configured build
+   directories verified; ctest -N and CMake registration confirm existing focus
+   names/targets. New prop IDs/helpers are implementation outputs, not claimed
+   tested. No build, physical or acceptance test was rerun by the planning audit.
+8. Required acceptance is exact four-focus/both strict LSan, six complete builds/
+   serial canonicals, established Vulkan/LAN and B/C generated physical routes;
+   no availability or acceptance inferred from historical Q0 gates.
+9. Windows successful behavior, ABI/layout/virtual/serialized fields and ordinary
+   generic containers remain unchanged. No retail paths/names/data/hashes/logs or
+   images enter this packet; PRE-008 is later read-only active08 input only.
+10. No M0 required. Plan readiness changes only these eight files: R0/A/B/C,
+    governing index, slice08 and manifest/report. Historical readiness below is
+    not reopened. Exact plan-only subject: `delivery: M22 plan terrain prop owners`.
+11. Next: verify links/dependency order/test names and staged ownership, commit
+    only that packet, then implement R0A independently. Preserve all active08
+    executable/ledger edits and `tests/renderer/test_bgfx_device.cpp` unstaged.
+
 ## M22 08Q0R1 corrective packet supplement — 2026-09-27
 
 1. **Overall: READY_WITH_EXTERNAL_DEPENDENCIES.** R1 source implementation is

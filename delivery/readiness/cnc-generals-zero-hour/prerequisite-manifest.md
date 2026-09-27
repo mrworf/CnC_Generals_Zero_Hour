@@ -1,5 +1,29 @@
 # Milestone Prerequisite Manifest
 
+## M22 08R0 terrain-prop packet supplement — 2026-09-27
+
+Audited parent: `b4fc25b137e94accc1abebd4f0f14bc992c64670`.
+Approved order: accepted mesh/material/Q0/shroud/frame providers → 08R0A →
+08R0B → 08R0C → evidence-only 08R0 → active08 → 09. Complete public-source
+branch/ownership audit is in `milestone_22_plan_01_slice_08r0.md`; the packet
+changes planning/readiness only and claims no implementation acceptance.
+Earlier supplements below remain historical evidence, not current readiness.
+
+| ID | Description | Consumers | Classification | Current status | Proposed provider | Class | Verification | Commands executed | Files changed | Blocking | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| M22-R0-01 | Accepted mesh/material/model/clone/recolor/shroud/device/frame contracts | R0A/B/C | Already satisfied | Governing accepted provider index/plans/source inspected; no reopening | 01, 05B2B2B1, 06C4D, 08L2R1, 08P0 and 08Q0R1/Q0; exact child dependency lists in plans | AUTO | Dependency/order and public source audit | sed/rg; git rev-parse | Four R0 plans, index, 08, manifest/report | Entry if an accepted provider is lost | FACT: accepted index, Q0 parent and transitive public source inventory |
+| M22-R0-02 | Strong composite/prop graph and lifecycle | R0A; downstream B/C/08 | Owned by the consuming milestone | A implementation and three new witnesses pending, not its entry prerequisite | 08R0A | AUTO | Interior faults, bounds, exact refs/identity/retry/reset/removal | Complete registered-kind/constructor audit; existing focus IDs checked by ctest -N | Same eight plan/readiness paths | B production and active08 | FACT: reversed memset, leaked instance refs and composite unwind gaps; unsupported kinds reject before construction |
+| M22-R0-03 | Exact ST_SHROUD_TEXTURE material-pass lowering | R0B; C/08 | Owned by the consuming milestone | B output; A acceptance is dependency-first gate | 08R0B | AUTO | Exact state/matrix/physical sampling, fault rollback and retry | Native/CPU shader and shroud source audit; existing eight-focus providers checked | Same eight paths | C production and active08 | FACT: CPU texture-only Install lacks authored shader/pass semantics |
+| M22-R0-04 | Complete bounded source prop frame/checkpoint | R0C; R0/08 | Owned by the consuming milestone | C output; A/B acceptance required first | 08R0C | AUTO | Populated exact source-order/queue/bytes/pixels and late rollback/retry | Public mesh/FVF/category/task/static-sort/scene/display audit | Same eight paths | R0 closure and active08 | FACT: existing tree checkpoint does not cover prop mesh graph or props-only presentation |
+| M22-R0-05 | Existing clean-checkout toolchain and generated-input facilities | R0A/B/C | Already satisfied | Four native presets, six existing directories and tools verified; new helper IDs are child outputs | PRE-002 and repository generators | AUTO | Presets/tools, exact selected existing IDs and target registration | cmake --list-presets; command -v; directory listing; ctest -N; rg CMakeLists | Same eight paths | Entry if tools unavailable | FACT: observed commands; no warm/private asset prerequisite |
+| M22-R0-06 | Physical Vulkan/validation/session and strict host LSan/LAN execution | R0A/B/C acceptance | External dependency | Existing authorized host route; freshly verify at acceptance, not presumed ready | PRE-012/PRE-016 host facilities | AUTO | Established controls plus new B/C physical routes and final matrices | Not rerun by read-only planning audit | Same eight paths | Physical acceptance only if unavailable | FACT: explicit later commands; no substituted gate |
+
+No new package, credential, service, global assumption or M0. Retail PRE-008 is
+not an R0 input. Unsupported Aggregate/Ring/Sphere/Dazzle kinds and the separate
+W3DPropDraw factory are explicit fail-closed boundaries, not hidden prerequisites.
+Declared dependency order is acyclic; no implementation child requires its own
+unimplemented outputs at entry. The aggregate is evidence-only after C acceptance.
+
 ## M22 08Q0R1 corrective packet supplement — 2026-09-27
 
 Audited revision/parent: `ab4deb411e6dab48999018a98676349688335b37`.
