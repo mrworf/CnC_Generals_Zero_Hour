@@ -1,6 +1,6 @@
 # M22 plan 01 slice 08Q0: source-owned house-color texture recoloring
 
-Status: dependency-blocked on 08Q0R1; 08L2R1 accepted at `4c37e9e5ddc2509cbcae518df2303f92108763a2`; one coherent texture/remap/cache lifecycle owner.
+Status: active; 08Q0R1 accepted at `b16b39b3b420b6357ada08208922fbbd6fb0ec53`, 08L2R1 accepted at `4c37e9e5ddc2509cbcae518df2303f92108763a2`; one coherent texture/remap/cache lifecycle owner.
 Parent checkpoint: `72751dcb55bbdddc914b8187ceedaba2c5ccd42c`.
 
 ## Outcome, dependency order and scope
@@ -68,6 +68,21 @@ Public semantic/reference sources: [Microsoft BOX flags](https://learn.microsoft
 [upstream native-expectation tests](https://github.com/wine-mirror/wine/blob/master/dlls/d3dx9_36/tests/surface.c).
 Reject short/overlong names, unsupported format, malformed
 palette extents, nonfinite values and overflowing dimensions before effects.
+Preserve native finite-scale semantics: zero/default and finite negative uniform
+scales follow the original geometry path unchanged. Reject only NaN/+Inf/-Inf
+scale values before lookup/clone/cache/resource/ref/RNG effects. Generated tests
+must retain existing authored templates rather than insert positive scales to
+hide a new admission restriction; cover exact zero/negative geometry and
+nonfinite no-mutation residuals.
+Preserve pre-device geometry/prototype preparation when color is zero and no
+texture replacement is requested. This CPU-only path may run without an Edge.
+If an Edge exists, every cache/prototype mutation retains its exact idle,
+source-stage poison and retirement guards. Any actual recolor/replacement,
+private backing upload/replay or cached recolored residency requires the matching
+active Edge/generation, with absent/stale/busy rejection before mutation.
+Preflight private backing even when a geometry-only source references a custom
+prototype. Cover absent-Edge plain success and recolor/replacement rejection,
+busy-present rejection, exact resource/ref/cache residuals and clean retry.
 Checked color-key name construction replaces unchecked fixed-buffer formatting
 on the reached path while preserving native cache keys for valid names.
 
