@@ -30,6 +30,16 @@ nonfinite or nonrepresentable intermediate values before refs/access/maps/device
 mutation. Preserve direct quantized pixel semantics already accepted by C2B.
 Use existing source-stage transaction/retirement ownership, selected-stage-only
 publication; no lazy load/init/LastAccessed mutation before tuple admission.
+There are two exact, mutually exclusive admission phases. Standalone generated
+install/fault tests use the accepted idle selected-stage transaction and drain
+its source pins at the ordinary boundary. Native source-order material-pass
+Install/UnInstall occurs inside rendering: apply an already-admitted resident
+shroud pass only while the existing source-frame journal reports its active/
+pending owner and checkpoints DX8Wrapper, shader-manager and Edge state.
+Outside either exact phase, reject before pending texture/pass/stage mutation.
+Never overlap an idle stage transaction with a live frame journal. B owns pass
+semantics, resource/pin checks and state rollback; R0C alone opens/schedules the
+props-only or full terrain frame and restores that journal on failure.
 Failure leaves exact prior stage texture/refs/maps/filter/transform/program/state,
 content pixels/epoch and unrelated pending shader/material/stages unchanged.
 Successful UnInstall follows native reset: texture null, LESSEQUAL depth, ordinary
