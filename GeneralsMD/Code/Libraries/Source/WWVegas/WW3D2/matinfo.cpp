@@ -36,6 +36,7 @@
 
 
 #include "matinfo.h"
+#include "clone_graph.h"
 #include "wwdebug.h"
 #include "meshmdl.h"
 #include "texture.h"
@@ -46,6 +47,44 @@ MaterialInfoClass::MaterialInfoClass(void)
 
 MaterialInfoClass::MaterialInfoClass(const MaterialInfoClass & src)
 {
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	const int materials=src.VertexMaterials.Count(),textures=src.Textures.Count();
+	if (materials<0 || materials>src.VertexMaterials.Length() ||
+		textures<0 || textures>src.Textures.Length())
+		throw std::runtime_error("original clone node counts are not admitted");
+	ww3d_clone::Attempt::extent(materials,sizeof(VertexMaterialClass*));
+	ww3d_clone::Attempt::extent(textures,sizeof(TextureClass*));
+	// Match the authored empty destination's ten-element growth policy.
+	const int material_capacity=((materials+9)/10)*10;
+	const int texture_capacity=((textures+9)/10)*10;
+	ww3d_clone::RefArray<VertexMaterialClass> material_nodes(material_capacity);
+	ww3d_clone::RefArray<TextureClass> texture_nodes(texture_capacity);
+	for (int i=0;i<materials;++i) {
+		if (!src.VertexMaterials[i]) throw std::runtime_error("original clone material is missing");
+		ww3d_clone::Attempt::fault();
+		ww3d_clone::Ref<VertexMaterialClass> node(src.VertexMaterials[i]->Clone());
+		ww3d_clone::Attempt::fault();
+		material_nodes.append(node.release());
+	}
+	for (int i=0;i<textures;++i) {
+		if (!src.Textures[i]) throw std::runtime_error("original clone texture is missing");
+		ww3d_clone::Attempt::fault();
+		src.Textures[i]->Add_Ref();
+		ww3d_clone::Ref<TextureClass> node(src.Textures[i]);
+		ww3d_clone::Attempt::fault();
+		texture_nodes.append(node.release());
+	}
+	VertexMaterials.Vector=material_nodes.release();
+	VertexMaterials.VectorMax=material_capacity;
+	VertexMaterials.ActiveCount=materials;
+	VertexMaterials.IsAllocated=material_capacity!=0;
+	Textures.Vector=texture_nodes.release();
+	Textures.VectorMax=texture_capacity;
+	Textures.ActiveCount=textures;
+	Textures.IsAllocated=texture_capacity!=0;
+	attempt.commit();
+#else
 	for (int mi=0; mi<src.VertexMaterials.Count(); mi++) {
 		VertexMaterialClass * vmat;
 		vmat = src.VertexMaterials[mi]->Clone();
@@ -57,6 +96,7 @@ MaterialInfoClass::MaterialInfoClass(const MaterialInfoClass & src)
 		tex->Add_Ref();
 		Textures.Add(tex);
 	}
+#endif
 }
 
 
@@ -141,11 +181,40 @@ MaterialRemapperClass::MaterialRemapperClass(MaterialInfoClass * src,MaterialInf
 	LastSrcTex(NULL),
 	LastDestTex(NULL)
 {
+#if defined(__linux__)
+	if (!src || !dest || src->Texture_Count()!=dest->Texture_Count() ||
+		src->Vertex_Material_Count()!=dest->Vertex_Material_Count())
+		throw std::runtime_error("original clone remap owners do not agree");
+#endif
 	WWASSERT(src);
 	WWASSERT(dest);
 	WWASSERT(src->Texture_Count() == dest->Texture_Count());
 	WWASSERT(src->Vertex_Material_Count() == dest->Vertex_Material_Count());
 
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	const int materials=src->Vertex_Material_Count(),textures=src->Texture_Count();
+	ww3d_clone::Attempt::reserve(materials,sizeof(VmatRemapStruct));
+	ww3d_clone::Attempt::reserve(textures,sizeof(TextureRemapStruct));
+	std::unique_ptr<VmatRemapStruct[]> material_nodes;
+	std::unique_ptr<TextureRemapStruct[]> texture_nodes;
+	if (materials) { ww3d_clone::Attempt::fault();material_nodes.reset(new VmatRemapStruct[materials]); }
+	if (textures) { ww3d_clone::Attempt::fault();texture_nodes.reset(new TextureRemapStruct[textures]); }
+	for (int i=0;i<materials;++i) {
+		material_nodes[i].Src=src->Peek_Vertex_Material(i);
+		material_nodes[i].Dest=dest->Peek_Vertex_Material(i);
+	}
+	for (int i=0;i<textures;++i) {
+		texture_nodes[i].Src=src->Peek_Texture(i);
+		texture_nodes[i].Dest=dest->Peek_Texture(i);
+	}
+	SrcMatInfo=src;src->Add_Ref();
+	DestMatInfo=dest;dest->Add_Ref();
+	VertexMaterialCount=materials;TextureCount=textures;
+	VertexMaterialRemaps=material_nodes.release();
+	TextureRemaps=texture_nodes.release();
+	attempt.commit();
+#else
 	SrcMatInfo = src;
 	SrcMatInfo->Add_Ref();
 	DestMatInfo = dest;
@@ -168,6 +237,7 @@ MaterialRemapperClass::MaterialRemapperClass(MaterialInfoClass * src,MaterialInf
 			TextureRemaps[i].Dest = dest->Peek_Texture(i);
 		}
 	}
+#endif
 }
 
 MaterialRemapperClass::~MaterialRemapperClass(void)
@@ -194,7 +264,11 @@ TextureClass * MaterialRemapperClass::Remap_Texture(TextureClass * src)
 			return TextureRemaps[i].Dest;
 		}
 	}
+#if defined(__linux__)
+	throw std::runtime_error("original clone texture remap is missing");
+#else
 	WWASSERT(0); // uh-oh didn't find the texture, what happend???
+#endif
 	return NULL;
 }
 
@@ -209,12 +283,52 @@ VertexMaterialClass * MaterialRemapperClass::Remap_Vertex_Material(VertexMateria
 			return VertexMaterialRemaps[i].Dest;
 		}
 	}
+#if defined(__linux__)
+	throw std::runtime_error("original clone material remap is missing");
+#else
 	WWASSERT(0); // uh-oh didn't find the material, what happend???
+#endif
 	return NULL;
 }
 
 void MaterialRemapperClass::Remap_Mesh(const MeshMatDescClass * srcmeshmatdesc, MeshMatDescClass * destmeshmatdesc)
 {
+#if defined(__linux__)
+	if (!srcmeshmatdesc || !destmeshmatdesc || srcmeshmatdesc->PassCount<0 ||
+		srcmeshmatdesc->PassCount>MeshMatDescClass::MAX_PASSES ||
+		srcmeshmatdesc->VertexCount<0 || srcmeshmatdesc->PolyCount<0 ||
+		destmeshmatdesc->VertexCount!=srcmeshmatdesc->VertexCount ||
+		destmeshmatdesc->PolyCount!=srcmeshmatdesc->PolyCount)
+		throw std::runtime_error("original clone remap descriptor is not admitted");
+	// Validate the complete candidate mapping before even private pointer writes.
+	for (int pass=0;pass<srcmeshmatdesc->PassCount;++pass) {
+		if (SrcMatInfo->Vertex_Material_Count()) {
+			if (srcmeshmatdesc->MaterialArray[pass]) {
+				if (srcmeshmatdesc->MaterialArray[pass]->Get_Count()!=srcmeshmatdesc->VertexCount ||
+					(destmeshmatdesc->MaterialArray[pass] &&
+					destmeshmatdesc->MaterialArray[pass]->Get_Count()!=srcmeshmatdesc->VertexCount))
+					throw std::runtime_error("original clone material array is not admitted");
+				if (!destmeshmatdesc->MaterialArray[pass])
+					ww3d_clone::Attempt::reserve(srcmeshmatdesc->VertexCount,sizeof(VertexMaterialClass*));
+				for (int i=0;i<srcmeshmatdesc->VertexCount;++i) Remap_Vertex_Material(srcmeshmatdesc->Peek_Material(i,pass));
+			} else Remap_Vertex_Material(srcmeshmatdesc->Peek_Single_Material(pass));
+		}
+		for (int stage=0;stage<MeshMatDescClass::MAX_TEX_STAGES;++stage) {
+			if (SrcMatInfo->Texture_Count()) {
+				if (srcmeshmatdesc->TextureArray[pass][stage]) {
+					if (srcmeshmatdesc->TextureArray[pass][stage]->Get_Count()!=srcmeshmatdesc->PolyCount ||
+						(destmeshmatdesc->TextureArray[pass][stage] &&
+						 destmeshmatdesc->TextureArray[pass][stage]->Get_Count()!=srcmeshmatdesc->PolyCount))
+						throw std::runtime_error("original clone texture array is not admitted");
+					if (!destmeshmatdesc->TextureArray[pass][stage])
+						ww3d_clone::Attempt::reserve(srcmeshmatdesc->PolyCount,sizeof(TextureClass*));
+					for (int i=0;i<srcmeshmatdesc->PolyCount;++i) Remap_Texture(srcmeshmatdesc->Peek_Texture(i,pass,stage));
+				} else Remap_Texture(srcmeshmatdesc->Peek_Single_Texture(pass,stage));
+			}
+		}
+	}
+	ww3d_clone::Attempt::fault();
+#endif
 	/*
 	** Remap the vertex materials if there is at least one of them
 	*/
@@ -225,6 +339,9 @@ void MaterialRemapperClass::Remap_Mesh(const MeshMatDescClass * srcmeshmatdesc, 
 			if (srcmeshmatdesc->Has_Material_Array(pass)) {
 				
 				for (int vert_index = 0; vert_index < srcmeshmatdesc->Get_Vertex_Count(); vert_index++) {
+#if defined(__linux__)
+					ww3d_clone::Attempt::fault();
+#endif
 					VertexMaterialClass * src = srcmeshmatdesc->Peek_Material(vert_index, pass);
 					destmeshmatdesc->Set_Material(vert_index, Remap_Vertex_Material(src),pass);
 				}
@@ -232,6 +349,9 @@ void MaterialRemapperClass::Remap_Mesh(const MeshMatDescClass * srcmeshmatdesc, 
 			} else {
 			
 				VertexMaterialClass * src = srcmeshmatdesc->Peek_Single_Material(pass);
+#if defined(__linux__)
+				ww3d_clone::Attempt::fault();
+#endif
 				destmeshmatdesc->Set_Single_Material(Remap_Vertex_Material(src), pass);
 				
 			}
@@ -250,6 +370,9 @@ void MaterialRemapperClass::Remap_Mesh(const MeshMatDescClass * srcmeshmatdesc, 
 				if (srcmeshmatdesc->Has_Texture_Array(pass, stage)) {
 					
 					for (int poly_index = 0; poly_index < srcmeshmatdesc->Get_Polygon_Count(); poly_index++) {
+#if defined(__linux__)
+						ww3d_clone::Attempt::fault();
+#endif
 						TextureClass * src = srcmeshmatdesc->Peek_Texture(poly_index, pass, stage);
 						destmeshmatdesc->Set_Texture(poly_index, Remap_Texture(src), pass, stage);
 					}
@@ -257,6 +380,9 @@ void MaterialRemapperClass::Remap_Mesh(const MeshMatDescClass * srcmeshmatdesc, 
 				} else {
 				
 					TextureClass * src = srcmeshmatdesc->Peek_Single_Texture(pass, stage);
+#if defined(__linux__)
+					ww3d_clone::Attempt::fault();
+#endif
 					destmeshmatdesc->Set_Single_Texture(Remap_Texture(src), pass, stage);
 
 				}

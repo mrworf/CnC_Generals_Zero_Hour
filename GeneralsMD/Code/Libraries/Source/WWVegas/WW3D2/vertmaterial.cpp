@@ -38,6 +38,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "vertmaterial.h"
+#include "clone_graph.h"
 #include "realcrc.h"
 #include "wwdebug.h"
 #include "w3d_util.h"
@@ -99,6 +100,9 @@ VertexMaterialClass::VertexMaterialClass(void):
 		UVSource[i] = i;
 	}	
 
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 #ifdef DYN_MAT8
 	MaterialDyn=W3DNEW DynD3DMATERIAL8;
 #else
@@ -126,12 +130,20 @@ VertexMaterialClass::VertexMaterialClass(const VertexMaterialClass & src) :
 	UniqueID(src.UniqueID),
 	CRCDirty(true)
 {
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	for (int i=0;i<MeshBuilderClass::MAX_STAGES;++i) Mapper[i]=NULL;
+	try {
+#endif
 	int i;
 	for (i=0; i<MeshBuilderClass::MAX_STAGES; i++)
 	{
 		Mapper[i]=NULL;
 		if (src.Mapper[i])
 		{
+#if defined(__linux__)
+			ww3d_clone::Attempt::fault();
+#endif
 			TextureMapperClass *mapper=src.Mapper[i]->Clone();
 			Set_Mapper(mapper,i);
 			mapper->Release_Ref();
@@ -141,12 +153,38 @@ VertexMaterialClass::VertexMaterialClass(const VertexMaterialClass & src) :
 	}	
 
 #ifdef DYN_MAT8
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 	MaterialDyn=W3DNEW DynD3DMATERIAL8;
 #else
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 	MaterialOld=W3DNEW D3DMATERIAL8;
 #endif
 	memcpy(Material, SRCMATPTR(&src), sizeof(D3DMATERIAL8));
+#if defined(__linux__)
+	attempt.commit();
+	} catch (...) {
+		for (int stage=MeshBuilderClass::MAX_STAGES;stage>0;--stage) REF_PTR_RELEASE(Mapper[stage-1]);
+		throw;
+	}
+#endif
 }
+
+#if defined(__linux__)
+VertexMaterialClass* VertexMaterialClass::Clone(void)
+{
+	ww3d_clone::Attempt attempt;
+	ww3d_clone::Attempt::fault();
+	ww3d_clone::Ref<VertexMaterialClass> material(NEW_REF(VertexMaterialClass,()));
+	ww3d_clone::Attempt::fault();
+	*material.get()=*this;
+	attempt.commit();
+	return material.release();
+}
+#endif
 
 void VertexMaterialClass::Make_Unique()
 {
@@ -179,6 +217,9 @@ VertexMaterialClass & VertexMaterialClass::operator = (const VertexMaterialClass
 {	
 
 	if (this != &src) {
+#if defined(__linux__)
+		ww3d_clone::Attempt::fault();
+#endif
 		Name=src.Name;
 		Flags = src.Flags;
 		AmbientColorSource = src.AmbientColorSource;
@@ -196,6 +237,9 @@ VertexMaterialClass & VertexMaterialClass::operator = (const VertexMaterialClass
 		}
 		for (stage=0;stage<MeshBuilderClass::MAX_STAGES;++stage) {
 			if (src.Mapper[stage]) {
+#if defined(__linux__)
+				ww3d_clone::Attempt::fault();
+#endif
 				TextureMapperClass *mapper = src.Mapper[stage]->Clone();
 				Set_Mapper(mapper,stage);
 				mapper->Release_Ref();

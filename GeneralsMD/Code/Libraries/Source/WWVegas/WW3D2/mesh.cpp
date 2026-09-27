@@ -87,6 +87,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "mesh.h"
+#include "clone_graph.h"
 #include <assert.h>
 #include <string.h>
 #include "w3d_file.h"
@@ -1218,9 +1219,16 @@ void MeshClass::Make_Unique(bool force_meshmdl_clone)
 	// model regardless of whether there is another mesh using it.
 	if (Model->Num_Refs()==1 && !force_meshmdl_clone) return;
 
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	ww3d_clone::Attempt::fault();
+#endif
 	MeshModelClass *newmesh=NEW_REF(MeshModelClass,(*Model));
 	REF_PTR_SET(Model,newmesh);
 	REF_PTR_RELEASE(newmesh);
+#if defined(__linux__)
+	attempt.commit();
+#endif
 }
 
 /*********************************************************************************************** 

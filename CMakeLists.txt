@@ -2747,6 +2747,46 @@ if(ZH_BUILD_TESTS)
 
   add_executable(original_wwsupport_tests tests/original_support/test_original_wwsupport.cpp)
   add_executable(original_w3d_cpu_graph_tests tests/original_rendering/test_w3d_cpu_graph.cpp)
+  add_executable(original_w3d_clone_graph_tests tests/original_rendering/test_clone_graph.cpp)
+  target_include_directories(original_w3d_clone_graph_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/original_runtime"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/GameEngine/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWMath"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
+    "${CMAKE_CURRENT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad")
+  target_compile_definitions(original_w3d_clone_graph_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
+  target_compile_options(original_w3d_clone_graph_tests PRIVATE -fpermissive -ffunction-sections -fdata-sections)
+  target_link_libraries(original_w3d_clone_graph_tests PRIVATE zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu)
+  target_link_options(original_w3d_clone_graph_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-clone-graph.link.map")
+  add_test(NAME original_w3d_clone_graph COMMAND original_w3d_clone_graph_tests)
+  set_tests_properties(original_w3d_clone_graph PROPERTIES LABELS "original-rendering;source-identity;negative")
+  set(clone_graph_identity_args)
+  set(clone_graph_removal_args)
+  foreach(clone_provider IN ITEMS mesh meshmdl meshgeometry aabtree meshmatdesc matinfo vertmaterial mapper)
+    set(clone_source "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/${clone_provider}.cpp")
+    list(APPEND clone_graph_identity_args --required "${clone_source}")
+    list(APPEND clone_graph_removal_args --provider "${clone_source}")
+  endforeach()
+  add_test(NAME original_w3d_clone_graph_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-clone-graph.link.map"
+    --executable "$<TARGET_FILE:original_w3d_clone_graph_tests>"
+    --witness "original-rendering runtime provider=GeneralsMD WW3D2 strong cloned render graph"
+    ${clone_graph_identity_args})
+  add_test(NAME original_w3d_clone_graph_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_provider_removal.py"
+    --checker "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-clone-graph.link.map"
+    --executable "$<TARGET_FILE:original_w3d_clone_graph_tests>" ${clone_graph_removal_args})
+  set_tests_properties(original_w3d_clone_graph_identity original_w3d_clone_graph_provider_removal
+    PROPERTIES LABELS "original-rendering;source-identity;negative")
   add_executable(original_w3d_presentation_tests
     tests/original_rendering/test_w3d_presentation.cpp
     $<TARGET_OBJECTS:zh_original_lifecycle_spine>

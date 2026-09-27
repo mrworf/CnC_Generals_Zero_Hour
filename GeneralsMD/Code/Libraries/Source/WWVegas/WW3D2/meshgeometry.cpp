@@ -86,6 +86,7 @@
 
 
 #include "meshgeometry.h"
+#include "clone_graph.h"
 #include "aabtree.h"
 #include "chunkio.h"
 #include "aabox.h"
@@ -181,7 +182,18 @@ MeshGeometryClass::MeshGeometryClass(const MeshGeometryClass & that) :
 	BoundSphereRadius(1),
 	CullTree(NULL)
 {
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	try {
+		*this=that;
+		attempt.commit();
+	} catch (...) {
+		Reset_Geometry(0,0);
+		throw;
+	}
+#else
 	*this = that;
+#endif
 }
 
 
@@ -225,6 +237,9 @@ MeshGeometryClass & MeshGeometryClass::operator = (const MeshGeometryClass & tha
 		REF_PTR_RELEASE(CullTree);
 
 		if (that.CullTree) {
+#if defined(__linux__)
+			ww3d_clone::Attempt::fault();
+#endif
 			CullTree = NEW_REF(AABTreeClass, ());
 			*CullTree = *that.CullTree;
 			CullTree->Set_Mesh(this);

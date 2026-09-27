@@ -38,6 +38,10 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "meshmdl.h"
+#include "clone_graph.h"
+#if defined(__linux__)
+#include <memory>
+#endif
 #include "matinfo.h"
 #include "aabtree.h"
 #include "htree.h"
@@ -96,6 +100,27 @@ MeshModelClass::MeshModelClass(const MeshModelClass & that) :
 	GapFiller(NULL),
 	HasBeenInUse(false)
 {
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	if (!that.DefMatDesc || !that.CurMatDesc || !that.MatInfo)
+		throw std::runtime_error("original clone model owners are missing");
+	ww3d_clone::Attempt::fault();
+	std::unique_ptr<MeshMatDescClass> descriptor(new MeshMatDescClass(*that.DefMatDesc));
+	std::unique_ptr<MeshMatDescClass> alternate;
+	if (that.AlternateMatDesc) {
+		ww3d_clone::Attempt::fault();
+		alternate.reset(new MeshMatDescClass(*that.AlternateMatDesc));
+	}
+	ww3d_clone::Attempt::fault();
+	ww3d_clone::Ref<MaterialInfoClass> materials(NEW_REF(MaterialInfoClass,(*that.MatInfo)));
+	MaterialRemapperClass remapper(that.MatInfo,materials.get());
+	remapper.Remap_Mesh(that.CurMatDesc,descriptor.get());
+	DefMatDesc=descriptor.release();
+	AlternateMatDesc=alternate.release();
+	CurMatDesc=DefMatDesc;
+	MatInfo=materials.release();
+	attempt.commit();
+#else
 	DefMatDesc = W3DNEW MeshMatDescClass(*(that.DefMatDesc));
 	if (that.AlternateMatDesc != NULL) {
 		AlternateMatDesc = W3DNEW MeshMatDescClass(*(that.AlternateMatDesc));
@@ -103,6 +128,7 @@ MeshModelClass::MeshModelClass(const MeshModelClass & that) :
 	CurMatDesc = DefMatDesc;
 
 	clone_materials(that);
+#endif
 	return ;
 }
 

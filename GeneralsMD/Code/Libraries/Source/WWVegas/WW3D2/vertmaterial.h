@@ -113,7 +113,11 @@ public:
 	~VertexMaterialClass(void);
 
 	VertexMaterialClass &	operator = (const VertexMaterialClass &src);
+#if defined(__linux__)
+	VertexMaterialClass * Clone(void);
+#else
 	VertexMaterialClass *	Clone(void) { VertexMaterialClass * mat = NEW_REF (VertexMaterialClass,()); *mat = *this; return mat;}
+#endif
 
 	/*
 	** Name Access

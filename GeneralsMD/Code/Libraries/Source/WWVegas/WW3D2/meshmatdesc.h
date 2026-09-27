@@ -60,6 +60,10 @@ class MeshModelClass;
 */
 class MeshMatDescClass : public W3DMPO
 {
+#if defined(__linux__)
+	friend struct W3DCloneGraphProbeAccess;
+	friend class MaterialRemapperClass;
+#endif
 	W3DMPO_GLUE(MeshMatDescClass)
 public:
 
@@ -492,4 +496,3 @@ inline void MeshMatDescClass::Disable_Backface_Culling(void)
 }
 
 #endif //MESHMATDESC_H
-

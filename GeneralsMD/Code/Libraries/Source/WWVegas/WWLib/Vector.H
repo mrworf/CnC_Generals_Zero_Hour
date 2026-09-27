@@ -87,6 +87,9 @@ class	NoInitClass;
 template<class T>
 class VectorClass
 {
+#if defined(__linux__)
+	friend class MaterialInfoClass;
+#endif
 	public:
 		WWINLINE VectorClass(NoInitClass const &) {};
 		VectorClass(int size=0, T const * array=0);
@@ -486,6 +489,9 @@ bool VectorClass<T>::Resize(int newsize, T const * array)
 template<class T>
 class DynamicVectorClass : public VectorClass<T>
 {
+#if defined(__linux__)
+	friend class MaterialInfoClass;
+#endif
 	public:
 		DynamicVectorClass(unsigned size=0, T const * array=0);
 

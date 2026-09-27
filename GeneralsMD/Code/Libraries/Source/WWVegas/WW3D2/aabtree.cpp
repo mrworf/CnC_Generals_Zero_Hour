@@ -63,6 +63,7 @@
 
 
 #include "aabtree.h"
+#include "clone_graph.h"
 #include "aabtreebuilder.h"
 #include "wwdebug.h"
 #include "tri.h"
@@ -142,7 +143,13 @@ AABTreeClass::AABTreeClass(const AABTreeClass & that) :
 	PolyIndices(0),
 	Mesh(NULL)
 { 
-	*this = that; 
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	try { *this=that;attempt.commit(); }
+	catch (...) { Reset();throw; }
+#else
+	*this = that;
+#endif
 }
 
 /***********************************************************************************************
@@ -176,16 +183,36 @@ AABTreeClass::~AABTreeClass(void)
  *=============================================================================================*/
 AABTreeClass & AABTreeClass::operator = (const AABTreeClass & that)
 {
+#if defined(__linux__)
+	if (ww3d_clone::Attempt::active()) {
+		ww3d_clone::Attempt::extent(that.NodeCount,sizeof(CullNodeStruct));
+		ww3d_clone::Attempt::extent(that.PolyCount,sizeof(uint32));
+		if ((that.NodeCount && !that.Nodes) || (that.PolyCount && !that.PolyIndices))
+			throw std::runtime_error("original clone cull arrays are missing");
+	}
+#endif
 	Reset();
 	
 	NodeCount = that.NodeCount;
 	if (NodeCount > 0) {
+#if defined(__linux__)
+		if (ww3d_clone::Attempt::active()) {
+			ww3d_clone::Attempt::reserve(NodeCount,sizeof(CullNodeStruct));
+			ww3d_clone::Attempt::fault();
+		}
+#endif
 		Nodes = W3DNEWARRAY CullNodeStruct[NodeCount];
 		memcpy(Nodes,that.Nodes,NodeCount * sizeof(CullNodeStruct));
 	}
 
 	PolyCount = that.PolyCount;
 	if (PolyCount > 0) {
+#if defined(__linux__)
+		if (ww3d_clone::Attempt::active()) {
+			ww3d_clone::Attempt::reserve(PolyCount,sizeof(uint32));
+			ww3d_clone::Attempt::fault();
+		}
+#endif
 		PolyIndices = W3DNEWARRAY uint32[PolyCount];
 		memcpy(PolyIndices,that.PolyIndices,PolyCount * sizeof(uint32));
 	}
@@ -1231,6 +1258,4 @@ void AABTreeClass::Read_Nodes(ChunkLoadClass & cload)
 		Nodes[i].BackOrPolyCount = w3dnode.BackOrPolyCount;
 	}
 }
-
-
 

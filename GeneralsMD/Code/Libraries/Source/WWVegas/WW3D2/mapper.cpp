@@ -51,6 +51,14 @@
 
 Random4Class rand4;
 
+#if defined(__linux__)
+#include "clone_graph.h"
+namespace ww3d_clone {
+Random4Class capture_mapper_random() noexcept { return rand4; }
+void restore_mapper_random(const Random4Class& state) noexcept { rand4=state; }
+}
+#endif
+
 inline DWORD F2DW( FLOAT f ) { return *((DWORD*)&f); }
 
 

@@ -1,6 +1,7 @@
 # M22 plan 01 slice 08Q0R1: strong cloned-render graph construction
 
-Status: ready for implementation; acceptance pending.
+Status: complete; final-source acceptance passed.
+Evidence: [strong clone graph](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08q0r1_clone_graph.md).
 Plan transaction parent: `ab4deb411e6dab48999018a98676349688335b37`.
 
 ## Outcome, dependencies and boundary
@@ -41,7 +42,7 @@ screen mapper and texture; remapper construction is mandatory, not hypothetical.
 | Mapper::Clone families | Allocate concrete mapper; copy scalar/vector/matrix state; authored reset/sync reads | Caller guards acquired clones; all inspected concrete copy bodies have no nested heap ownership | Animated copies retain authored reset/time behavior, not a frozen surrogate |
 | RandomTextureMapper copy | Consumes three values of mapper.cpp-local rand4 | An owner-local clone-attempt checkpoint restores this stream on graph failure; success preserves authored consumption. Q0 may retain this internal guard until its own publication | No GameClient, GameLogic or audio stream mutation; no random API/layout change |
 | MaterialRemapper | Add_Refs src/dest, allocate vertex-material table then texture table | Build both arrays under guards before publishing refs/arrays; partial construction owns nothing unguarded | Exact paired source/destination order and cached last-hit lookup |
-| MaterialRemapper::Remap_Mesh | Set material/texture pointers in already copied fixed arrays | Remap only private candidate descriptors; preflight graph consistency so missing entries reject, never publish partial model | Authored pass/stage/vertex/polygon order and single-vs-array choices |
+| MaterialRemapper::Remap_Mesh | Set material/texture pointers; when current/alternate source uses arrays absent from copied default, allocate those destination arrays through authored setters | Remap only private candidate descriptors; preflight the whole lookup graph and reserve missing-array bytes, then guard every remap allocation/Add boundary; missing entries reject, never publish partial model | Authored pass/stage/vertex/polygon order, single-vs-array choices and alternate-to-default array creation |
 
 No fallible copy helper outside this cloned-render ownership graph was identified.
 MeshClass/RenderObj copy before Make_Unique copies scalar state then Add_Refs its
@@ -81,6 +82,8 @@ MaterialInfo/VertexMaterial clone, descriptors and optional cull trees. Cover:
 
 - Actual single-material/texture/screen-mapper graph and mixed multi-material,
   two-stage arrays, shared aliases, alternate descriptors and nonnull cull tree.
+  Explicitly cover current-alternate arrays absent from copied default so native
+  destination-array creation succeeds and every partial remap still unwinds.
 - Every interior fault ordinal, including second array/vector allocation and
   failure after acquired mapper/material/texture refs; immediate raw allocation,
   source/ref/cache/prototype/native residual baseline, successful retry and total

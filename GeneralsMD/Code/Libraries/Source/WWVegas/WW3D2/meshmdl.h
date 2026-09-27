@@ -153,6 +153,9 @@ public:
 
 class MeshModelClass : public MeshGeometryClass
 {
+#if defined(__linux__)
+	friend struct W3DCloneGraphProbeAccess;
+#endif
 	W3DMPO_GLUE(MeshModelClass)
 
 public:	
@@ -354,4 +357,3 @@ protected:
 
 
 #endif
-

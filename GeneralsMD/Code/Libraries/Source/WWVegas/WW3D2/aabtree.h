@@ -87,6 +87,9 @@ struct BoxRayAPTContextStruct;
 */
 class AABTreeClass : public W3DMPO, public RefCountClass
 {
+#if defined(__linux__)
+	friend struct W3DCloneGraphProbeAccess;
+#endif
 	W3DMPO_GLUE(AABTreeClass)
 public:
 

@@ -73,6 +73,9 @@ struct VertexFormatXYZNDUV2;
 */
 class MeshClass : public W3DMPO, public RenderObjClass
 {
+#if defined(__linux__)
+	friend struct W3DCloneGraphProbeAccess;
+#endif
 	W3DMPO_GLUE(MeshClass)
 public:
 

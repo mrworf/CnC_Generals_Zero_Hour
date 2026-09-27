@@ -40,3 +40,8 @@ Bidirectional publication stays fallible until notification callbacks return.
 Exercise faults inside every callback family, not only after binding completes.
 Restore both ownership links without cleanup notifications before construction
 owners withdraw registries/modules and release backing storage.
+
+A failed constructor does not run that class's destructor. For cloned graphs,
+guard each acquired ref/array before the next fallible copy helper, publish only
+after complete construction, and test immediate residuals plus same-owner retry.
+Include helper-local RNG state when successful clone semantics consume it.

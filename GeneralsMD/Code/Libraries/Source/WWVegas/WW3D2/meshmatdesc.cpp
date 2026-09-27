@@ -37,6 +37,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "meshmatdesc.h"
+#include "clone_graph.h"
 #include "texture.h"
 #include "vertmaterial.h"
 #include "realcrc.h"
@@ -253,7 +254,28 @@ MeshMatDescClass::MeshMatDescClass(const MeshMatDescClass & that) :
 		MaterialArray[pass] = NULL;
 	}
 
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	try {
+		if (that.PassCount<0 || that.PassCount>MAX_PASSES || that.VertexCount<0 || that.PolyCount<0)
+			throw std::runtime_error("original clone descriptor counts are not admitted");
+		for (int pass=0;pass<MAX_PASSES;++pass) {
+			if ((that.MaterialArray[pass] && that.MaterialArray[pass]->Get_Count()!=that.VertexCount) ||
+				(that.ShaderArray[pass] && that.ShaderArray[pass]->Get_Count()!=that.PolyCount))
+				throw std::runtime_error("original clone descriptor array extent is not admitted");
+			for (int stage=0;stage<MAX_TEX_STAGES;++stage)
+				if (that.TextureArray[pass][stage] && that.TextureArray[pass][stage]->Get_Count()!=that.PolyCount)
+					throw std::runtime_error("original clone texture array extent is not admitted");
+		}
+		*this=that;
+		attempt.commit();
+	} catch (...) {
+		Reset(0,0,0);
+		throw;
+	}
+#else
 	*this = that;
+#endif
 }
 
 MeshMatDescClass &
@@ -281,6 +303,12 @@ MeshMatDescClass::operator = (const MeshMatDescClass & that)
 				// make our own array of texture pointers.
 				REF_PTR_RELEASE(TextureArray[pass][stage]);
 				if (that.TextureArray[pass][stage]) {
+#if defined(__linux__)
+					if (ww3d_clone::Attempt::active()) {
+						ww3d_clone::Attempt::reserve(that.TextureArray[pass][stage]->Get_Count(),sizeof(TextureClass*));
+						ww3d_clone::Attempt::fault();
+					}
+#endif
 					TextureArray[pass][stage] = NEW_REF(TexBufferClass,(*that.TextureArray[pass][stage]));
 				}
 			}
@@ -298,10 +326,22 @@ MeshMatDescClass::operator = (const MeshMatDescClass & that)
 			// passes...
 			REF_PTR_RELEASE(MaterialArray[pass]);
 			if (that.MaterialArray[pass]) {
+#if defined(__linux__)
+				if (ww3d_clone::Attempt::active()) {
+					ww3d_clone::Attempt::reserve(that.MaterialArray[pass]->Get_Count(),sizeof(VertexMaterialClass*));
+					ww3d_clone::Attempt::fault();
+				}
+#endif
 				MaterialArray[pass] = NEW_REF(MatBufferClass,(*that.MaterialArray[pass]));
 			}
 			REF_PTR_RELEASE(ShaderArray[pass]);
 			if (that.ShaderArray[pass]) {
+#if defined(__linux__)
+				if (ww3d_clone::Attempt::active()) {
+					ww3d_clone::Attempt::reserve(that.ShaderArray[pass]->Get_Count(),sizeof(ShaderClass));
+					ww3d_clone::Attempt::fault();
+				}
+#endif
 				ShaderArray[pass] = NEW_REF(ShareBufferClass<ShaderClass>,(*that.ShaderArray[pass]));
 			}
 		}

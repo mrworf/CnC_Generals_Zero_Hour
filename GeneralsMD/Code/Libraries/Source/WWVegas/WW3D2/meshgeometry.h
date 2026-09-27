@@ -87,6 +87,9 @@ typedef Vector3i16 TriIndex;
 
 class MeshGeometryClass : public W3DMPO, public RefCountClass, public MultiListObjectClass
 {
+#if defined(__linux__)
+	friend struct W3DCloneGraphProbeAccess;
+#endif
 	//W3DMPO_GLUE(MeshGeometryClass)
 
 public:
@@ -295,4 +298,3 @@ inline uint8 MeshGeometryClass::Get_Poly_Surface_Type(int poly_index) const
 }
 
 #endif //MESHGEOMETRY_H
-
