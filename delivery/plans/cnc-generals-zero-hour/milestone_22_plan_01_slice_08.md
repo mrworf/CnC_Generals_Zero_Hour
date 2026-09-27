@@ -59,6 +59,19 @@ mutation phase rejection and exact-content accepted continuation/cleanup.
 Deliver this bounded correction within slice08 and rerun its seven-control focus
 and corrected redacted probe before broader final acceptance.
 
+The next fixed failure is modeled-volume readiness with NULL render object.
+Read-only predicates prove matching published map/visual/buffer identity and an
+explicitly empty authored current model state with no shadow. The callback added
+by 08N0 requests readiness unconditionally after allocateShadows correctly does
+nothing for NULL. Approved correction: preserve that exact empty/no-caster state
+without a readiness call; actual models still require strict readiness and
+nonempty missing resources still reject. Add initial empty state, empty↔nonempty
+transitions/cleanup and missing-nonempty-resource controls to the existing
+generated modeled-volume fixture, then rerun it, the generated volume constructor
+and the seven-control union before another bounded redacted continuation.
+Exact additional focus:
+`ctest --test-dir build/<preset> -R '^(original_w3d_generated_volume_shadow_constructor|original_w3d_modeled_volume_ready)$' --output-on-failure -j1`.
+
 ## Outcome and dependencies
 
 Requires accepted slices 08B, 08E, 08I, 08J and 08L and a separately configured, read-only

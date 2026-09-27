@@ -20,6 +20,15 @@ foreign provider must reject instead of silently drawing an empty shadow.
 No raw Direct3D fallback, synthetic retail surrogate, or broader shadow
 type admission is authorized.
 
+Approved slice08 correction preserves the native empty-model condition state as
+no render/caster work at the existing post-create callback. Readiness remains
+mandatory for actual scene-linked models and rejects NULL directly. Extend the
+registered modeled-volume witness with initial authored empty state, repeated
+empty→nonempty→empty transitions and exact caster/resource cleanup, plus a
+nonempty missing-resource constructor negative. Prove strict actual-model
+provider/scene/fault checks and two-generation retry remain unchanged. No new
+owner or source ordering is admitted; deliver with the active slice08 correction.
+
 ## Validation and commit boundary
 
 A generated map/frame fixture proves ordered original terrain, tracks,

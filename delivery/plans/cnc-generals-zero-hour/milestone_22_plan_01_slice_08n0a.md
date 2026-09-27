@@ -9,6 +9,14 @@ ordinary Drawable/ThingFactory atomic publication contract. This slice owns
 only source ordering, identity and rollback; it does not claim volume
 geometry or a rendered shadow frame.
 
+Approved slice08 callback correction: an explicitly empty authored
+ModelConditionInfo is a valid no-render-object/no-caster state. The post-create
+callback must skip volume readiness only for that exact empty state with no
+shadow. Nonempty model data with a missing render resource remains fail-closed;
+every actual scene-linked model still requires strict caster admission/readiness.
+Do not pre-create placeholder geometry or weaken the manager's NULL rejection.
+This is a bounded correction within the existing owner, delivered with slice08.
+
 Audit `W3DModelDraw::setModelState` from render creation/validation through
 scene add, user-data binding and module publication. Its initial constructor
 call occurs before the module pointer is stored, so the existing published-
