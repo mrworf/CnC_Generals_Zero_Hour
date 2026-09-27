@@ -1,6 +1,6 @@
 # M22 plan 01 slice 08Q0: source-owned house-color texture recoloring
 
-Status: ready after 08L2R1; one coherent texture/remap/cache lifecycle owner.
+Status: ready; 08L2R1 accepted at `4c37e9e5ddc2509cbcae518df2303f92108763a2`; one coherent texture/remap/cache lifecycle owner.
 Parent checkpoint: `72751dcb55bbdddc914b8187ceedaba2c5ccd42c`.
 
 ## Outcome, dependency order and scope
@@ -70,6 +70,37 @@ Same source/different colors remain isolated; alias multiplicity, unused texture
 release, Free_Assets, display reset/re-entry and device generation retirement use
 existing owners, not a new deferred-destruction queue.
 
+### Private procedural backing and exact generation replay
+
+The native surface-backed texture is procedural and its managed surface retains
+the recolored mip data. The Linux procedural invalidation guard currently skips
+withdrawal, while Edge teardown requires every source mapping to withdraw. Q0
+therefore retains its exact bounded recolored mip bytes, format, dimensions,
+pitches and mip count as private immutable source-owned backing, rather than
+discarding upload staging or decoding a color-key name later. This correction
+belongs to the same color-texture/cache lifecycle, not a separate owner.
+
+Keep backing declarations identical across every Linux texture consumer (no
+`ZH_WW3D_CPU_ONLY`-dependent object-layout fork), without Windows, serialized or
+virtual-slot changes. Backing owns only Q0 color textures and is released exactly
+once with source texture destruction. Ordinary procedural textures retain their
+existing semantics. Q0-backed invalidation must preflight idle/reference/phase
+requirements before effects, withdraw the exact current-generation mapping and
+mark only its residency uninitialized while retaining immutable bytes and cache
+identity. Edge teardown may not spin on a skipped procedural mapping, and stale
+generation must never destroy or replay a foreign handle.
+
+Initialization/cache reuse in a fresh admitted Edge recreates/uploads all mips
+from retained bytes before exact mapping publication, without reopening source
+files, synthesizing fallback, repeating remap or replacing the cached source
+identity. Any create/upload/publication rejection releases the candidate and
+keeps retained pixels, filter/access metadata, cache aliases and accepted sibling
+resources unchanged for deterministic retry. If an accepted current-generation
+mapping exists, cache hits perform no upload. Prove explicit invalidation, manager
+reset/removal, Edge retirement with surviving source-cache references, fresh
+generation recreation and terminal source destruction, including every candidate
+fault and exact resource/refcount zero teardown.
+
 The enclosing custom `Create_Render_Obj` transaction must unwind cloned render
 refs/material/texture replacements, newly inserted color textures and prototype
 publication if any recolor or allocation fails. Preserve accepted sibling caches
@@ -96,7 +127,9 @@ short/long/unterminated names, required missing/malformed and unsupported format
 dimension/pitch/count/byte maxima and bound+1. Cover every allocation/upload/cache/
 prototype publication fault with immediate exact residuals and clean retry;
 cache hits, multiple colors, shared aliases, sibling isolation, reset/removal and
-two generations. Actual model-color notification must compose with R1 rollback.
+two generations, retained-pixel replay without source reads/remap, exact-generation
+withdrawal and cache-identity survival. Actual model-color notification must
+compose with R1 rollback.
 Physical witness samples nonuniform recolored texture and lower mip content
 through original source draw; require unchanged prior pixels on candidate fault,
 same successful retry pixels and validation-clean zero teardown.
