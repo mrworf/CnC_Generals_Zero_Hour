@@ -30,16 +30,20 @@ nonfinite or nonrepresentable intermediate values before refs/access/maps/device
 mutation. Preserve direct quantized pixel semantics already accepted by C2B.
 Use existing source-stage transaction/retirement ownership, selected-stage-only
 publication; no lazy load/init/LastAccessed mutation before tuple admission.
-There are two exact, mutually exclusive admission phases. Standalone generated
-install/fault tests use the accepted idle selected-stage transaction and drain
-its source pins at the ordinary boundary. Native source-order material-pass
-Install/UnInstall occurs inside rendering: apply an already-admitted resident
-shroud pass only while the existing source-frame journal reports its active/
-pending owner and checkpoints DX8Wrapper, shader-manager and Edge state.
-Outside either exact phase, reject before pending texture/pass/stage mutation.
-Never overlap an idle stage transaction with a live frame journal. B owns pass
-semantics, resource/pin checks and state rollback; R0C alone opens/schedules the
-props-only or full terrain frame and restores that journal on failure.
+There are two exact, mutually exclusive phases. Standalone generated idle
+preparation/fault tests use the accepted selected-stage transaction only for
+the resident shroud texture, transform and filter tuple, then drain its source
+pins at the ordinary boundary. This does not select a usable material pass or
+change material, blend, depth or shader state. Native source-order material-pass
+Install/UnInstall may apply the complete, already-admitted shroud pass only while
+the existing source-frame journal reports its active owner and checkpoints
+DX8Wrapper, shader-manager and Edge state. The generated complete-pass/physical
+fixture opens that already-accepted journal without any prop owner or production
+frame scheduling. Outside an admitted frame, attempts to apply or reset the
+complete pass reject before mutation. Never overlap an idle stage transaction
+with a live frame journal. B owns exact pass semantics and resource/pin checks;
+the admitted frame journal owns nonstage rollback, while R0C alone opens and
+schedules the production props-only/full terrain frame.
 Failure leaves exact prior stage texture/refs/maps/filter/transform/program/state,
 content pixels/epoch and unrelated pending shader/material/stages unchanged.
 Successful UnInstall follows native reset: texture null, LESSEQUAL depth, ordinary
@@ -61,6 +65,8 @@ nonuniform pixels. Cover all install/apply/program/upload/commit faults, wrong/
 stale/foreign/unready texture/provider, invalid tuple, singular/nonfinite/bound+1
 matrix, stage index/output/transform mismatch, uninstall/reset and retry. Assert
 unselected maps/material/shader state and accepted shroud pixels unchanged.
+Prove idle stage-only preparation leaves the material pass unusable and complete
+Install/UnInstall rejects outside the journal before any state mutation.
 
 Build focus:
 `cmake --build build/<preset> --target original_w3d_prop_shroud_tests original_w3d_tree_program_tests original_w3d_stage_transaction_tests original_w3d_source_reference_tests zh_original_w3d_full_probe -j4`.
