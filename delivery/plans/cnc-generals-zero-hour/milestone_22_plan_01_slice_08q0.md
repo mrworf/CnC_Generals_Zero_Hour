@@ -70,6 +70,22 @@ Same source/different colors remain isolated; alias multiplicity, unused texture
 release, Free_Assets, display reset/re-entry and device generation retirement use
 existing owners, not a new deferred-destruction queue.
 
+The reached generic hash currently consumes its free entry before key allocation
+and rehashes through unguarded raw allocations. Do not change ordinary generic
+Insert/Re_Hash. Linux-only W3DAssetManager friendship, with no fields/virtuals/
+layout or Windows change in the template, permits an owner-local strong color
+cache insertion. Construct the entire candidate table, buckets, copied keys,
+existing values/order and new entry off to the side; validate duplicate/ownership
+and capacity before publication. Bound the graph to 65536 slots and a combined
+64MiB metadata/key budget, rejecting overflow or bound+1 without cache/GPU effects.
+Commit solely through nonthrowing pointer/index/capacity swap. Every failed table,
+bucket, key-copy or new-entry allocation leaves prior capacity, buckets, key/value
+identities, sibling order, prototype refs and native resources exact, with no raw
+residual. Prove each candidate boundary, duplicate/full-capacity rejection,
+successful insertion/removal, clean retry and provider teardown. The enclosing
+custom-create owner tracks only its new color entries and reverses them if later
+clone/prototype construction fails; accepted siblings are never removed.
+
 ### Private procedural backing and exact generation replay
 
 The native surface-backed texture is procedural and its managed surface retains
