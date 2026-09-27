@@ -87,6 +87,12 @@ eleven registered tests, regenerate configure-time overlays, then execute:
 `ctest --test-dir build/<preset> -R '^(original_w3d_generated_volume_shadow_constructor|original_w3d_modeled_volume_ready|original_w3d_generated_scene_boundary|original_w3d_generated_construction|original_w3d_borrowed_file_owner|original_w3d_full_draw_scenario|original_w3d_full_draw_identity|original_w3d_full_draw_provider_removal|original_w3d_tree_module|original_w3d_shadow_decal_route|original_w3d_shadow_volume_route)$' --output-on-failure -j1`.
 Only after generated focus passes repeat the bounded redacted scene probe.
 
+Candidate decal binding exposes the existing Edge Add_Ref ownership unit: local
+Release_Ref alone does not withdraw a source mapping. The approved 07FD cleanup
+refinement owns exact reverse idle withdrawal and accepted lifecycle preflight,
+including active-frame zero-mutation rejection/idle retry. No deferred destruction
+or throwing destructor is permitted; immutable tree/shadow admission stays closed.
+
 ## Outcome and dependencies
 
 Requires accepted slices 08B, 08E, 08I, 08J and 08L and a separately configured, read-only

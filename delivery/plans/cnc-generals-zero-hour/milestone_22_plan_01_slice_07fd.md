@@ -16,6 +16,17 @@ replacement, fault/retry and mixed decal-before-volume frame controls must prove
 exact surviving identities and total-zero teardown in two generations. Deliver
 this correction with active slice08, not a new milestone or shadow family.
 
+Approved cleanup refinement: each decal owns unique source index/vertex mapping
+units. Track successful binds and withdraw candidate units in reverse order on
+idle partial allocation/upload/admission rejection, before local reference release.
+Accepted release/reacquire/reset/removal must preflight the exact Edge identity,
+source-buffer retirement phase and all fallible conditions before list/resource
+mutation; active source frames reject with the owner intact for idle retry.
+Destruction runs only after successful preflight or proven idle constructor
+rollback, with no throwing destructor/deferred destruction or new coexistence
+with immutable tree frames. Test both partial-bind faults, admission withdrawal,
+sibling isolation, active-frame rejection/idle retry and total-zero teardown.
+
 ## Outcome and dependency
 
 Requires 07FD0 and the accepted original scene mesh route. Implement the
