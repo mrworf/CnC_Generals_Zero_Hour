@@ -1,5 +1,10 @@
 # M22 plan 01 slice 08P0C: physical tree provider aggregate
 
+Status: accepted evidence-only composition of C1–C4; executable baseline
+`24e7f91c0a83184ecc5e7d157cf28199ef551dce` (C4). No executable or test changes.
+Acceptance and unchanged-source gate reuse are recorded in
+[C evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c_physical_tree_aggregate.md).
+
 ## Goal and boundary
 
 After accepted 08P0B, compose four independently owned children in order:
