@@ -1,5 +1,28 @@
 # Milestone Prerequisite Manifest
 
+## M22 08Q0R1 corrective packet supplement — 2026-09-27
+
+Audited revision/parent: `ab4deb411e6dab48999018a98676349688335b37`.
+Packet/order: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`
+slice index; accepted 01/05B2B2B1/08P0B1 → 08Q0R1 → 08Q0 → 08 → 09.
+Planning transaction: exact plan-only commit identified by
+`delivery: M22 plan strong cloned-render prerequisite`; acceptance is not claimed.
+Source decision: approved transitive clone architecture checkpoint, recorded in
+the self-contained `milestone_22_plan_01_slice_08q0r1.md` audit inventory.
+This supplement updates only the active M22 continuation; historical readiness
+below remains time-bound evidence, not current provider/GPU availability.
+
+| ID | Description | Consumers | Classification | Current status | Proposed provider | Class | Verification | Commands executed | Files changed | Blocking | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| M22-QCR-01 | Original mesh/material/model-reference source contracts | 08Q0R1 | Already satisfied | Accepted provider plans/index inspected | Accepted 01, 05B2B2B1, 08P0B1 | AUTO | Source/plan/index audit | sed/rg source and provider inspection | R1/Q0/08/index plans; manifest/report | R1 entry if lost | FACT: governing index and linked accepted provider plans |
+| M22-QCR-02 | Strong transitive cloned-render construction | 08Q0R1; 08Q0; slice08 transitively | Owned by the consuming milestone | Implementation and nine-control acceptance pending, not an R1 entry precondition | 08Q0R1; earlier slice for Q0 | AUTO | Generated interior-fault/ref/raw-residual/retry witnesses | Source graph audit; existing six focus IDs verified by ctest -N; new IDs not run | R1/Q0/08/index plans; manifest/report | Q0 production and slice08 continuation | FACT: mandatory MaterialRemapper and clone ownership gaps inventoried in R1 plan |
+| M22-QCR-03 | Existing toolchain and later physical validation facilities | 08Q0R1; 08Q0 | Already satisfied | Four native presets/tools resolve; sanitizer configurations already established; physical availability verified only at gate | Repository PRE-002; host PRE-012/PRE-016 at acceptance | AUTO | cmake --list-presets; command -v; fresh validation-enabled host controls at acceptance | Native preset/tool checks pass; physical not run by this read-only audit | Manifest/report and R1 readiness section | Physical acceptance only if unavailable | FACT: observed preset/tool results; no current GPU availability inferred |
+
+No extra dependency package, service, credential, global tool assumption or M0.
+The three new registered witness IDs are R1 implementation outputs. Q0 retains
+its own image/remap/cache/prototype contract and unstaged trial; retail is not an
+R1 input. Dependency-first ordering has no cycle or forward provider.
+
 - Packet: `delivery/milestones/cnc-generals-zero-hour/status.yaml`
 - Product ID: `cnc-generals-zero-hour`
 - Audited revision: renderer-migration packet at parent transaction-start HEAD `c19f79fc71f72b33e37e8080a6d5f0a78a1bee1a`, including uncommitted parent/compiler M29/M30 compilation and this child readiness update; parent records the final packet fingerprint.

@@ -1,11 +1,12 @@
 # M22 plan 01 slice 08Q0: source-owned house-color texture recoloring
 
-Status: ready; 08L2R1 accepted at `4c37e9e5ddc2509cbcae518df2303f92108763a2`; one coherent texture/remap/cache lifecycle owner.
+Status: dependency-blocked on 08Q0R1; 08L2R1 accepted at `4c37e9e5ddc2509cbcae518df2303f92108763a2`; one coherent texture/remap/cache lifecycle owner.
 Parent checkpoint: `72751dcb55bbdddc914b8187ceedaba2c5ccd42c`.
 
 ## Outcome, dependency order and scope
 
-Depends on 08L2R1, accepted 08P0, 05B1/05B2A/05B2B1 canonical image/bitmap/
+Depends on [08Q0R1](milestone_22_plan_01_slice_08q0r1.md) strong cloned-render
+graph construction, 08L2R1, accepted 08P0, 05B1/05B2A/05B2B1 canonical image/bitmap/
 texture-task providers, and accepted 08P0C2D0B2R2 defined filter-tuple admission.
 Accepted 08P0 transitively supplies resource transaction and source-pin lifetime
 contracts. Before slice08 resumes, original W3DAssetManager house-color cloning
@@ -71,6 +72,14 @@ Checked color-key name construction replaces unchecked fixed-buffer formatting
 on the reached path while preserving native cache keys for valid names.
 
 ## Publication, errors, cancellation and cache lifetime
+
+The exhaustive transitive clone audit found mandatory interior constructor
+unwind gaps beyond the enclosing render-ref guard. Dependency-first 08Q0R1
+owns MeshModel, geometry/cull-tree, descriptor, material/mapper and remapper
+construction as one coherent graph. Q0 consumes its accepted strong-clone
+contract, including an internal mapper-random attempt guard retained through
+Q0 publication when needed. Preserve all present Q0 executable/test changes
+unstaged while R1 is delivered separately; no piecemeal clone fixes enter Q0.
 
 Validate the entire copied filter tuple using R2 before GPU work. Build all CPU
 bytes and candidate source TextureClass state locally; create/upload all mips

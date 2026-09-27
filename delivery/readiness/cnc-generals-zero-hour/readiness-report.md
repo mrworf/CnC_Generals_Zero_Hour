@@ -1,5 +1,49 @@
 # Milestone readiness report — renderer migration
 
+## M22 08Q0R1 corrective packet supplement — 2026-09-27
+
+1. **Overall: READY_WITH_EXTERNAL_DEPENDENCIES.** R1 source implementation is
+   internally executable in dependency order; existing host Vulkan/session
+   requirements are explicit later acceptance gates, not presumed available.
+2. Scope/evidence: active M22 governing index and new 08Q0R1 plan at parent
+   `ab4deb411e6dab48999018a98676349688335b37`; exhaustive public-source clone
+   inventory is FACT. Current Q0/08/renderer executable edits are preserved
+   unstaged. Historical migration report below is not reopened or regraded.
+3. Automatic readiness work: M22-QCR-01–03 provider/order/source/tool checks;
+   plan/index/manifest/report only. No product code or bootstrap remediation.
+4. Confirmation gates: none for the approved graph correction. Any additional
+   independent owner stops at a new architecture checkpoint.
+5. User actions: none at R1 entry. Existing PRE-012/PRE-016 host escalation and
+   fresh validation controls remain required at physical acceptance; PRE-008
+   retail remains later read-only slice08 input, never R1 fixture data.
+6. Missing/unresolved: no unresolved construction owner after the transitive
+   audit. New witness/code registration is R1 work, not readiness failure.
+7. Graph: accepted 01/05B2B2B1/08P0B1 --M22-QCR-01→ 08Q0R1
+   --M22-QCR-02→ 08Q0 → 08 → 09; PRE-002 --M22-QCR-03→ implementation;
+   PRE-012/PRE-016 → acceptance only. No backward edge or cycle.
+8. Declared/proposed order agree after the explicitly approved insertion;
+   accepted 08L2R1 and every prior accepted slice remain closed.
+9. M0: not required; correction belongs to the reached cloned-render graph.
+10. Per-slice: R1 preconditions and readiness checks are in its plan; Q0 is
+    dependency-blocked pending R1 acceptance; slice08 remains closed pending Q0.
+    Unchanged 09 waits on slice08. No acceptance was substituted with this audit.
+11. Clean-environment simulation passes for implementation using committed
+    original-source/toolchain providers. No generated Q0 helper, warm asset
+    cache, retail file or live service is an R1 prerequisite. Physical acceptance
+    needs freshly verified declared host access; that check was not simulated
+    as a successful GPU result.
+12. Commands: `cmake --list-presets` lists four native presets; `command -v`
+    resolves cmake/ninja/g++/clang++/pkg-config/vulkaninfo; `ctest -N` selects
+    all six existing focus IDs. Read-only sed/rg source/plan audit completed.
+    Three new IDs and executable gates are not run until implementation.
+13. Files: governing index, R1 plan/audit, Q0 dependency clarification,
+    slice08 dependency clarification, readiness manifest and this report.
+14. Remaining entry blockers: none; later physical host requirements unchanged.
+15. Next: commit only these six plan/readiness files, then implement 08Q0R1
+    independently in `/home/ha/projects/CnC_Generals_Zero_Hour`, preserving all
+    current executable changes unstaged. Planned checkpoint subject:
+    `delivery: M22 plan strong cloned-render prerequisite`.
+
 ## 1. Overall readiness status
 
 **READY_WITH_EXTERNAL_DEPENDENCIES** — M29 is executable from the completed repository contracts; M30 follows M29 and needs the declared developer RTX/Vulkan/graphical session only at its hardware acceptance boundary. This does not claim bgfx or original retail rendering is implemented. If that session is unavailable when M30 reaches acceptance, its gate becomes `BLOCKED_BY_USER_ACTION`.
