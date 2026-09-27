@@ -107,6 +107,17 @@ Same source/different colors remain isolated; alias multiplicity, unused texture
 release, Free_Assets, display reset/re-entry and device generation retirement use
 existing owners, not a new deferred-destruction queue.
 
+Immediate rollback checks distinguish Q0 ownership from accepted device metadata:
+source refs/backing, cache/prototype identity/capacity/order, exact Edge mappings
+and live native/device resources must equal the pre-attempt state. Recording
+commands and dead resource-slot storage remain device-owned monotonic diagnostics
+under the accepted D0 anti-alias contract; do not demand universal DMA-pool
+equality while that device remains alive or redesign its rollback. Assert exact
+bounded create/upload/destroy deltas, no live candidate or handle alias reuse,
+repeated-fault boundedness and generation retry. Fresh-equivalent Edge/device
+teardown must restore the overall raw/DMA-pool baseline, with zero residual at
+allocator shutdown. Candidate source graph allocations are never waived.
+
 The reached generic hash currently consumes its free entry before key allocation
 and rehashes through unguarded raw allocations. Do not change ordinary generic
 Insert/Re_Hash. Linux-only W3DAssetManager friendship, with no fields/virtuals/
