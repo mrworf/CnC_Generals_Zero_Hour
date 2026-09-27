@@ -1,5 +1,49 @@
 # M22 plan 01 slice 08: original retail scenes through recording device
 
+## Resumed transaction and focused commands
+
+Active continuation parent: `6ad3c296e8faa039fa0d88abf80ccc1177469149`.
+08P0 is accepted; the disabled-water correction 08J1 is already accepted at
+`06f6489d7547b27baeb25c16af66ad0e4b81ba5e`, with the current physical
+factory-map controls passing. Do not reopen either dependency. The only
+pre-existing dirty path is the unrelated renderer diagnostic, which stays
+unstaged. Scope freeze requires an architecture checkpoint for any newly
+reached unplanned producer/owner.
+
+The read-only audit recovered the existing retail wrapper and provisioned roots
+from the prior configured retail build without exposing their values. Preserve
+the already-selected runtime inputs; normalize their separator representation
+to exactly one backslash before dispatch. Retain the no-scene stop and require
+the explicit scene selector plus bounded scenario/original-factory/Recording/
+retail-config/reset selectors before continuation. Generated scene selection
+keeps its independent terrain/construction stops.
+
+The already-planned owner correction is narrow: inactive `OriginalDrawOwners`
+does nothing; active scene guards borrow exact live display/file-factory aliases;
+only a guard that created fixture owners releases them. No module, terrain or
+device guard is weakened to reach retail. First run one redacted scene generation
+for localization; only after complete support is proven run both modes twice.
+Raw process output remains captured privately by the wrapper and never emitted
+or retained as a durable log. Only fixed stage/failure categories and aggregate
+counts may be recorded.
+
+Implementation surfaces: `src/original_runtime/linux_game_engine.cpp`, existing
+`tests/original_rendering/test_w3d_retail_recording_audit.py`, directly required
+generated owner lifecycle controls/registration and dependency ledger. No new
+source owner is authorized by this refinement.
+
+Baseline audit (no new scene selector):
+`python3 tests/original_rendering/test_w3d_retail_recording_audit.py --source-root . --executable build/<preset>/zh_original_w3d_full_probe --zh-data-root <runtime-private-root> --generals-data-root <runtime-private-root>`.
+Redacted localization adds `--scene --scene-once`; complete acceptance adds
+`--scene` only, both using the same private roots supplied at runtime.
+Focused regression:
+`ctest --test-dir build/<preset> -R '^(original_w3d_generated_scene_boundary|original_w3d_generated_construction|original_w3d_borrowed_file_owner|original_w3d_full_draw_scenario|original_w3d_full_draw_identity|original_w3d_full_draw_provider_removal|original_w3d_tree_module)$' --output-on-failure -j1`.
+Verify the exact registered selection before implementation; do not infer a
+passing gate from a missing test. Run native and sanitizer focus/retail routes,
+strict host LSan, established physical controls, serial LAN and six complete
+builds/nonretail canonicals on final source as required by the governing M22
+matrix. Failure before scene load is discovery, never retail acceptance.
+
 ## Outcome and dependencies
 
 Requires accepted slices 08B, 08E, 08I, 08J and 08L and a separately configured, read-only
