@@ -139,6 +139,18 @@ equivalent exact rollback); no half-published prototype. Manager-local bounded
 transaction bookkeeping may track only entries created by this attempt, with
 no serialized field/vtable/Windows ABI changes. Active-frame mutation and stale/
 foreign Edge generation reject before resource/cache mutation; idle retry works.
+
+Generic VectorClass::Resize changes IsValid before a fallible allocation, so Q0
+must not use it as a supposedly mutation-free reservation. Linux-only manager
+friendship/access on VectorClass/DynamicVectorClass (no fields, layout, virtual or
+Windows change) supports an owner-local bounded replacement pointer array built
+entirely offside. Preserve existing identities/order/active count/capacity/growth
+policy; validate duplicate/new prototype ownership and the 65536-slot capacity
+before nonthrowing pointer/metadata swap and hash publication. Ordinary Resize
+stays unchanged. Any allocation/copy/prototype fault leaves the original vector
+valid and logically byte-exact, with no color-cache/ref/native residual. Cover
+every boundary, full-capacity/duplicate negatives, siblings/order, growth/removal,
+retry and total teardown.
 Any independently required owner not supplied by these accepted contracts stops
 at an architecture checkpoint, not an autonomous split.
 
