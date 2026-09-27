@@ -44,6 +44,21 @@ strict host LSan, established physical controls, serial LAN and six complete
 builds/nonretail canonicals on final source as required by the governing M22
 matrix. Failure before scene load is discovery, never retail acceptance.
 
+The first corrected redacted continuation reaches init3, map-INI4 and logic5
+through map-loaded, then fails in the exact physical Tree constructor before
+first transform. Categorized read-only localization proves logical shroud owner/
+epoch present, texture and accepted epoch absent, dirty content pending. The
+existing C4 fixture rendered content before factory construction and missed this
+native ordering boundary. Approved disposition: require structural map/scene/
+device readiness for module construction and tree add; retain exact accepted
+shroud content at C2C immutable phase preparation. No early shroud upload, new
+owner, selector-specific admission or relaxed draw preflight is permitted.
+Amend only the constructor's over-early content predicate and extend the existing
+generated actual-factory witness with fresh-map/no-render construction, zero-
+mutation phase rejection and exact-content accepted continuation/cleanup.
+Deliver this bounded correction within slice08 and rerun its seven-control focus
+and corrected redacted probe before broader final acceptance.
+
 ## Outcome and dependencies
 
 Requires accepted slices 08B, 08E, 08I, 08J and 08L and a separately configured, read-only

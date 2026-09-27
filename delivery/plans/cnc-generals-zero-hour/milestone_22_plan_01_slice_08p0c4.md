@@ -19,6 +19,19 @@ exact Drawable ID and the accepted generated Recording/bgfx capability before
 publication. This opens only the full-instance source create proc, not a retail
 selector or retail scene admission.
 
+Approved slice08 continuation correction: module construction and first-add
+admission require structural map/scene/device and typed asset readiness, not a
+previous shroud render. Native map objects are constructed before the first
+source shroud-content update. Exact accepted bordered shroud pixels/epoch/
+generation remain mandatory at immutable C2C phase preparation before C1 or
+draw publication. Do not pre-upload shroud or reorder native object construction.
+The historical accepted C4 gates above remain provenance; this narrow correction
+is validated and delivered with the active slice08 transaction, not a new owner.
+Generated actual-factory controls must construct/add on a fresh map without
+render, prove phase rejection preserves tree/resources/RNG/frame identity while
+content is unaccepted, then render through the existing shroud owner and prove
+successful phase preparation/cleanup after exact content acceptance.
+
 Stage module/tree/terrain publication atomically with Drawable construction.
 On create, transform, registration, resource or frame failure, unwind in
 reverse without gameplay destroy hooks or stale partition/Drawable/tree/decal
