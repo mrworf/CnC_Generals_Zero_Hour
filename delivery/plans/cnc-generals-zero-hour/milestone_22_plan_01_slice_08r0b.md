@@ -57,8 +57,12 @@ sampling. No new public general matrix/shader API or Windows behavior change.
 
 ## Generated witnesses and exact commands
 
-Register `original_w3d_prop_shroud` and generated `--gpu` mode; input contains no
-prop owner/frame dependency. Cover release multiplicative and debug-alpha native
+Register `original_w3d_prop_shroud` as an additional CTest ID for the existing
+generated-map `terrain_shroud_projection_probe` through its established Python
+wrapper. The existing C2B ID remains registered and runs the same expanded
+probe, so no second fixture owner or selector is introduced. Its `--gpu` wrapper
+mode is the physical command; input contains no prop owner/frame dependency.
+Cover release multiplicative and debug-alpha native
 choices, exact EQUAL depth, program/state/stage identity, shifted origin, nontrivial
 view inverse, COUNT2/camera mapping, content quantization/borders and physical
 nonuniform pixels. Cover all install/apply/program/upload/commit faults, wrong/
@@ -69,11 +73,11 @@ Prove idle stage-only preparation leaves the material pass unusable and complete
 Install/UnInstall rejects outside the journal before any state mutation.
 
 Build focus:
-`cmake --build build/<preset> --target original_w3d_prop_shroud_tests original_w3d_tree_program_tests original_w3d_stage_transaction_tests original_w3d_source_reference_tests zh_original_w3d_full_probe -j4`.
+`cmake --build build/<preset> --target original_w3d_tree_program_tests original_w3d_stage_transaction_tests original_w3d_source_reference_tests zh_original_w3d_full_probe -j4`.
 Exact eight-control focus:
 `ASAN_OPTIONS=detect_leaks=0 ctest --test-dir build/<preset> -R '^(original_w3d_prop_shroud|original_w3d_shroud_data|original_w3d_terrain_shroud_projection|original_w3d_tree_program|original_w3d_stage_transaction|original_w3d_source_reference|original_w3d_texture_decisions|original_w3d_material_abi_isolation)$' --output-on-failure -j1`.
 Physical generated command on all four focused configurations:
-`python3 tools/run_validation_clean.py build/<preset>/original_w3d_prop_shroud_tests --gpu`.
+`python3 tools/run_validation_clean.py python3 tests/original_rendering/test_w3d_terrain_shroud_projection.py --source-root . --executable build/<preset>/zh_original_w3d_full_probe --gpu`.
 Run focus/strict/six-build/canonical/established Vulkan/LAN/ledger/diff exactly as
 R0 specifies; record actual eight-ID selection and clean category audit.
 
