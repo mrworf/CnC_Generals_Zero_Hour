@@ -80,9 +80,31 @@ def authored_source_tree(root: Path, fixture, kind: str) -> Path:
 
 def source_tree(root: Path, fixture, kind: str, tree_textures: bool = False,
                 immobile_enemy: bool = False, crusher_logic: bool = False,
-                fx_lists: bool = False, tree_decals: bool = False) -> Path:
+                fx_lists: bool = False, tree_decals: bool = False,
+                tree_modules: bool = False) -> Path:
     source = root / "readonly-input"
     prepare_owned_source(source, fixture)
+    if tree_modules:
+        objects = source / "Data/INI/Default/Object.ini"
+        objects.write_text(objects.read_text() +
+            "Object ModuleControlFixture\n Scale = 1\n KindOf = DRAWABLE_ONLY\n"
+            " Body = ActiveBody ModuleTag_Body\n MaxHealth = 100\n InitialHealth = 100\n End\n"
+            " Draw = W3DDefaultDraw ModuleTag_Control\n End\nEnd\n"
+            "Object ModuleTreeFixture\n Scale = 1\n KindOf = IMMOBILE\n"
+            " Body = ActiveBody ModuleTag_Body\n  MaxHealth = 100\n  InitialHealth = 100\n End\n"
+            " Draw = W3DTreeDraw ModuleTag_Tree\n"
+            "  ModelName = TEST.LITONE01\n  TextureName = Tree0.tga\n"
+            "  DoShadow = Yes\n End\nEnd\n"
+            "Object ModuleTreeOtherFixture\n Scale = 1\n KindOf = IMMOBILE\n"
+            " Body = ActiveBody ModuleTag_Body\n MaxHealth = 100\n InitialHealth = 100\n End\n"
+            " Draw = W3DTreeDraw ModuleTag_Tree\n"
+            "  ModelName = TEST.LITONE01\n  TextureName = Tree1.tga\n"
+            "  DoShadow = Yes\n End\nEnd\n"
+            "Object ModuleTreeSlopeFixture\n Scale = 1\n KindOf = IMMOBILE STICK_TO_TERRAIN_SLOPE\n"
+            " Body = ActiveBody ModuleTag_Body\n MaxHealth = 100\n InitialHealth = 100\n End\n"
+            " Draw = W3DTreeDraw ModuleTag_Tree\n"
+            "  ModelName = TEST.LITONE01\n  TextureName = Tree0.tga\n"
+            "  DoShadow = Yes\n End\nEnd\n")
     if immobile_enemy:
         objects = source / "Data/INI/Default/Object.ini"
         text = objects.read_text()

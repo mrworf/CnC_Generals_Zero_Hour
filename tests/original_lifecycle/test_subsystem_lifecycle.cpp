@@ -12,6 +12,13 @@ namespace {
 std::vector<std::string> events;
 int live_subsystems = 0;
 int fail_loader = 0;
+struct ResetAdmission { int calls = 0; bool reject = false; };
+void reset_admission(void *owner)
+{
+  auto &state = *static_cast<ResetAdmission *>(owner);
+  ++state.calls;
+  if (state.reject) throw ERROR_BAD_ARG;
+}
 
 int fail(const char* message)
 {
@@ -90,6 +97,42 @@ int main()
   char diagnostic[96]{};
   if (!zh::original_process::initialize_services(0, diagnostic, sizeof(diagnostic)))
     return fail(diagnostic);
+
+  {
+    ResetAdmission first, foreign;
+    preflightSubsystemResetAdmission(); // Minimal/headless absence is a no-op.
+    if (installSubsystemResetAdmission(nullptr, reset_admission) ||
+        installSubsystemResetAdmission(&first, nullptr))
+      return fail("malformed optional reset admission was installed");
+    const auto token = installSubsystemResetAdmission(&first, reset_admission);
+    if (!token || installSubsystemResetAdmission(&first, reset_admission) ||
+        installSubsystemResetAdmission(&foreign, reset_admission) ||
+        removeSubsystemResetAdmission(&foreign, token) ||
+        removeSubsystemResetAdmission(&first, token + 1))
+      return fail("optional reset owner overlap/staleness was admitted");
+    SubsystemInterfaceList list;
+    TheSubsystemList = &list;
+    list.initSubsystem(new TestSubsystem("admission"), nullptr, nullptr, nullptr, nullptr, "admission");
+    const auto baseline = events;
+    first.reject = true;
+    bool rejected = false;
+    try { list.resetAll(); } catch (ErrorCode error) { rejected = error == ERROR_BAD_ARG; }
+    if (!rejected || first.calls != 1 || foreign.calls || events != baseline || live_subsystems != 1)
+      return fail("optional reset rejection entered mutation/shutdown boundary");
+    first.reject = false;
+    list.resetAll();
+    if (first.calls != 2 || !removeSubsystemResetAdmission(&first, token) ||
+        removeSubsystemResetAdmission(&first, token))
+      return fail("optional reset retry/remove was not exactly once");
+    const auto retry = installSubsystemResetAdmission(&first, reset_admission);
+    if (!retry || retry <= token || removeSubsystemResetAdmission(&first, token) ||
+        !removeSubsystemResetAdmission(&first, retry))
+      return fail("optional reset registration retargeted stale generation");
+    list.resetAll(); // Removed callback is absent, not a dangling owner.
+    if (first.calls != 2) return fail("removed optional reset callback was replayed");
+    list.shutdownAll();
+    TheSubsystemList = nullptr;
+  }
 
   {
     SubsystemInterfaceList list;

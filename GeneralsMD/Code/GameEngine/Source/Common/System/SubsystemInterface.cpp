@@ -43,6 +43,29 @@ Real SubsystemInterface::s_msConsumed = 0;
 
 SubsystemInterfaceList* TheSubsystemList = NULL;
 static SubsystemINIDataLoader TheSubsystemINIDataLoader = NULL;
+#if defined(__linux__)
+namespace {
+void *resetAdmissionOwner = NULL;
+void (*resetAdmission)(void *) = NULL;
+UnsignedInt64 resetAdmissionSequence = 0, resetAdmissionToken = 0;
+}
+UnsignedInt64 installSubsystemResetAdmission(void *owner, void (*admit)(void *)) noexcept
+{
+	if (!owner || !admit || resetAdmissionOwner || resetAdmissionSequence == ~UnsignedInt64(0)) return 0;
+	resetAdmissionOwner = owner; resetAdmission = admit;
+	return resetAdmissionToken = ++resetAdmissionSequence;
+}
+bool removeSubsystemResetAdmission(void *owner, UnsignedInt64 token) noexcept
+{
+	if (!owner || !token || owner != resetAdmissionOwner || token != resetAdmissionToken) return false;
+	resetAdmissionOwner = NULL; resetAdmission = NULL; resetAdmissionToken = 0;
+	return true;
+}
+void preflightSubsystemResetAdmission()
+{
+	if (resetAdmission) resetAdmission(resetAdmissionOwner);
+}
+#endif
 
 void installSubsystemINIDataLoader(SubsystemINIDataLoader loader)
 {
@@ -206,6 +229,10 @@ void SubsystemInterfaceList::postProcessLoadAll()
 //-----------------------------------------------------------------------------
 void SubsystemInterfaceList::resetAll()
 {
+#if defined(__linux__)
+	// A rejected admission must not enter the catch-and-shutdown path.
+	preflightSubsystemResetAdmission();
+#endif
 	try
 	{
 		for (SubsystemList::reverse_iterator it = m_subsystems.rbegin(); it != m_subsystems.rend(); ++it)

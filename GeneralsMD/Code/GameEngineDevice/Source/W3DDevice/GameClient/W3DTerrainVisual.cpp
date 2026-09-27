@@ -226,6 +226,7 @@ void W3DTerrainVisual::reset()
 {
 	if (s_emptyTerrainVisual != this || TheTerrainVisual != this)
 		throw OriginalW3DDeviceUnavailable("original empty terrain visual reset unavailable");
+	if (m_terrainRenderObject) m_terrainRenderObject->preflightTreeRemoval();
 	TerrainVisual::reset();
 	m_terrainRenderObject->reset();
 	TheW3DShadowManager->Reset();

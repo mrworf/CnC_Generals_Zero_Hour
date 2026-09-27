@@ -411,7 +411,11 @@ public:
 	Bool isInList(Object **pListHead) const;
 
 	// this is intended for use ONLY by GameLogic.
+#if defined(__linux__)
+	void friend_deleteInstance();
+#else
 	void friend_deleteInstance() { deleteInstance(); }
+#endif
 	void friend_rollbackConstruction();
 
 	/// cache the partition module (should be called only by PartitionData)

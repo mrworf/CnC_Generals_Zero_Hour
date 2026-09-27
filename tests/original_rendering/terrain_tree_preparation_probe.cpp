@@ -4,8 +4,12 @@
 #include "Common/MapReaderWriterInfo.h"
 #include "GameClient/ClientRandomValue.h"
 #include "GameClient/FXList.h"
+#include "GameClient/Drawable.h"
+#include "GameClient/GameClient.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
+#include "Common/ThingFactory.h"
+#include "Common/ThingTemplate.h"
 #include "GameLogic/PartitionManager.h"
 #include "Common/PlayerList.h"
 #include "Common/Player.h"
@@ -40,6 +44,8 @@
 #include <iterator>
 #include <stdexcept>
 #include <vector>
+
+extern "C" void zh_probe_tree_module_destroy(Object *);
 
 // Generated-only access to private owner checkpoints, with no shipping selector.
 struct W3DFrameGeneratedProbeAccess {
@@ -448,7 +454,8 @@ void recordingBoundaries(const char *path,const char *asset,bool projected=false
 
 void physicalDraw(const char *path,const char *asset)
 {
-    const bool projected=std::getenv("ZH_M22_TREE_DECAL_PHYSICAL")!=nullptr;
+    const bool factoryModule=std::getenv("ZH_M22_TREE_MODULE_PHYSICAL")!=nullptr;
+    const bool projected=factoryModule || std::getenv("ZH_M22_TREE_DECAL_PHYSICAL")!=nullptr;
     const auto priorShadows=TheWritableGlobalData->m_useShadowDecals;
     require(SDL_Init(SDL_INIT_VIDEO),"physical tree video service rejected");
     auto *window=SDL_CreateWindow("generated source tree frame",32,24,SDL_WINDOW_HIDDEN);
@@ -494,7 +501,18 @@ void physicalDraw(const char *path,const char *asset)
                 const auto ground=terrain->getMap()->getDisplayHeight(1,1)*MAP_HEIGHT_SCALE;
                 require(ground>2,"physical generated depth-occlusion baseline changed");
                 const Coord3D position{12,18,terrain->getMap()->getDisplayHeight(3,3)*MAP_HEIGHT_SCALE+4};
-                require(terrain->tryAddTree(static_cast<DrawableID>(701),position,8,0,0,&data),
+                Object *moduleObject=nullptr;
+                if (factoryModule) {
+                    const auto *source=TheThingFactory->findTemplate(AsciiString("ModuleTreeFixture"),FALSE);
+                    auto *seed=TheGameLogic->getFirstObject();
+                    require(source && seed,"physical factory tree template/team missing");
+                    moduleObject=TheThingFactory->newObject(source,seed->getTeam());
+                    auto *drawable=moduleObject->getDrawable();
+                    require(drawable && dynamic_cast<W3DTreeDraw *>(drawable->getDrawModules()[0]),
+                        "physical factory tree create proc mismatch");
+                    drawable->setInstanceScale(8);moduleObject->setPosition(&position);
+                    require(terrain->treeInstanceCount()==1,"physical factory transform admission rejected");
+                } else require(terrain->tryAddTree(static_cast<DrawableID>(701),position,8,0,0,&data),
                     "physical tree source admission rejected");
                 camera->Set_Position(Vector3(12,18,position.z+15));
                 if (projected) {
@@ -546,6 +564,9 @@ void physicalDraw(const char *path,const char *asset)
                         "physical unshadowed fixture has no bounded nonblack projected terrain region");
                 }
                 const auto identity=terrain->preparedTreePhaseIdentity();
+                auto *moduleDraw=moduleObject ? moduleObject->getDrawable() : nullptr;
+                auto *moduleIdentity=moduleDraw ? moduleDraw->getDrawModules()[0] : nullptr;
+                const auto moduleID=moduleDraw ? moduleDraw->getID() : INVALID_DRAWABLE_ID;
                 UnsignedInt before[6],after[6];CopyGameClientRandomState(before);
                 for (unsigned fault=0;fault<2;++fault) {
                     const auto owners=W3DFrameGeneratedProbeAccess::image(camera);
@@ -562,6 +583,11 @@ void physicalDraw(const char *path,const char *asset)
                         && std::memcmp(before,after,sizeof(before))==0,
                         "physical source abort changed phase/owners/native frame/RNG");
                     require(device.readback_rgba(color)==empty,"physical rejected frame touched accepted pixels");
+                    if (moduleObject) require(moduleObject->getDrawable()==moduleDraw
+                        && moduleDraw->getObject()==moduleObject && moduleDraw->getDrawModules()[0]==moduleIdentity
+                        && TheGameClient->findDrawableByID(moduleID)==moduleDraw
+                        && terrain->treeInstanceCount()==1,
+                        "physical rollback changed factory object/module/terrain relationship");
                 }
                 const auto frames=device.native_frame_advance_count();
                 display.draw();CopyGameClientRandomState(after);
@@ -597,6 +623,10 @@ void physicalDraw(const char *path,const char *asset)
                     "physical equivalent paused phase rejected");
                 display.draw();
                 require(device.readback_rgba(color)==accepted,"physical identical paused source draw changed pixels");
+                if (moduleObject) {
+                    zh_probe_tree_module_destroy(moduleObject);
+                    require(!terrain->treeInstanceCount(),"physical factory tree teardown retained publication");
+                }
                 visual.reset();edge.release_source_buffers();device.destroy(depth);device.destroy(color);
             } catch (...) {
                 TheTacticalView=savedView;TheTerrainVisual=savedVisual;TheDisplay=savedDisplay;throw;
@@ -612,6 +642,12 @@ void physicalDraw(const char *path,const char *asset)
     std::puts("original tree draw physical: source=1 rollback=1 retry=1 generations=2 resources=0");
     if (projected) std::puts("original tree decal physical: source=1 multiplicative=1 rollback=1 retry=1 generations=2 resources=0");
 }
+}
+
+extern "C" void zh_probe_tree_module_physical(const char *path,const char *asset)
+{
+    physicalDraw(path,asset);
+    std::puts("original tree module physical: factory=1 tree=1 decal=1 rollback=1 retry=1 resources=0");
 }
 
 static void recordingDecals(const char* path,const char* asset)

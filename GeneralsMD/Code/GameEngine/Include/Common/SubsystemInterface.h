@@ -40,6 +40,12 @@ class Xfer;
 
 typedef void (*SubsystemINIDataLoader)(const char *path1, const char *path2, const char *dirpath, Xfer *pXfer);
 void installSubsystemINIDataLoader(SubsystemINIDataLoader loader);
+#if defined(__linux__)
+// Optional client admission; the lifecycle spine never links a full client.
+UnsignedInt64 installSubsystemResetAdmission(void *owner, void (*admit)(void *)) noexcept;
+bool removeSubsystemResetAdmission(void *owner, UnsignedInt64 token) noexcept;
+void preflightSubsystemResetAdmission();
+#endif
 
 //-------------------------------------------------------------------------------------------------
 /** This is the abstract base class from which all game engine subsytems should derive from.
@@ -175,4 +181,3 @@ private:
 extern SubsystemInterfaceList* TheSubsystemList;
 
 #endif // __SUBSYSTEMINTERFACE_H_
-

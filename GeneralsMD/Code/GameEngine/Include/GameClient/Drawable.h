@@ -421,7 +421,16 @@ public:
 	void removeFromList(Drawable **pListHead);
 	void setID( DrawableID id );											///< set this drawable's unique ID
 	void friend_rollbackConstruction();
-	void friend_deleteInstance() { deleteInstance(); }
+	void friend_deleteInstance() {
+#if defined(__linux__)
+		friend_preflightModuleRemoval();
+#endif
+		deleteInstance();
+	}
+#if defined(__linux__)
+	void friend_preflightModuleRemoval() const;
+	void deleteInstance() { friend_preflightModuleRemoval(); MemoryPoolObject::deleteInstance(); }
+#endif
 
 	inline const ModelConditionFlags& getModelConditionFlags( void ) const { return m_conditionState; }
 

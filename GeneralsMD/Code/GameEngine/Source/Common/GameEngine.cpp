@@ -765,6 +765,9 @@ void GameEngine::init( int argc, char *argv[] )
 	*/
 void GameEngine::reset( void )
 {
+#if defined(__linux__)
+	if (TheGameClient) TheGameClient->friend_preflightDrawableRemoval();
+#endif
 
 	WindowLayout *background = TheWindowManager->winCreateLayout("Menus/BlankWindow.wnd");
 	DEBUG_ASSERTCRASH(background,("We Couldn't Load Menus/BlankWindow.wnd"));

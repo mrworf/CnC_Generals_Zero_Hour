@@ -308,6 +308,9 @@ Bool GameLogic::isInSinglePlayerGame( void )
 //-------------------------------------------------------------------------------------------------
 void GameLogic::destroyAllObjectsImmediate()
 {
+#if defined(__linux__)
+	if (TheGameClient) TheGameClient->friend_preflightDrawableRemoval();
+#endif
 	// destroy all remaining objects
 	Object *obj;
 	Object *nextObj;
@@ -449,6 +452,9 @@ void GameLogic::init( void )
 //-------------------------------------------------------------------------------------------------
 void GameLogic::reset( void )
 {
+#if defined(__linux__)
+	if (TheGameClient) TheGameClient->friend_preflightDrawableRemoval();
+#endif
 	m_thingTemplateBuildableOverrides.clear();
 	m_controlBarOverrides.clear();
 
@@ -2940,6 +2946,11 @@ void GameLogic::loadMapINI( AsciiString mapName )
 //DECLARE_PERF_TIMER(processDestroyList)
 void GameLogic::processDestroyList( void )
 {
+#if defined(__linux__)
+	// Admit the complete list before erasing any update/list/lookup owner.
+	for (Object *object : m_objectsToDestroy)
+		if (object && object->getDrawable()) object->getDrawable()->friend_preflightModuleRemoval();
+#endif
 	//USE_PERF_TIMER(processDestroyList)
 
 	for( ObjectPointerListIterator iterator = m_objectsToDestroy.begin(); iterator != m_objectsToDestroy.end(); iterator++ )
@@ -4479,6 +4490,9 @@ void GameLogic::destroyObject( Object *obj )
 	// if already flagged for destruction, ignore
 	if (!obj || obj->isDestroyed())
 		return;
+#if defined(__linux__)
+	if (obj->getDrawable()) obj->getDrawable()->friend_preflightModuleRemoval();
+#endif
 
 	// run the object onDestroy event if provied
 	for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)

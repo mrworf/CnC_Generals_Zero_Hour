@@ -92,6 +92,11 @@ public:
 
 	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle) = 0;
 	virtual void reactToGeometryChange() = 0;
+#if defined(__linux__)
+	// Admission belongs to the caller, before any owned module is destroyed.
+	virtual void friend_preflightRemoval() const {}
+	void deleteInstance() { friend_preflightRemoval(); MemoryPoolObject::deleteInstance(); }
+#endif
 	
 	virtual Bool isLaser() const { return false; }
 

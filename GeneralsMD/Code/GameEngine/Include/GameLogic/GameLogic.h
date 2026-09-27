@@ -103,6 +103,9 @@ typedef std::vector<Object*> ObjectPtrVector;
  */
 class GameLogic : public SubsystemInterface, public Snapshot
 {
+#if defined(__linux__)
+	friend struct W3DTreeModuleGeneratedProbeAccess;
+#endif
 
 public:
 

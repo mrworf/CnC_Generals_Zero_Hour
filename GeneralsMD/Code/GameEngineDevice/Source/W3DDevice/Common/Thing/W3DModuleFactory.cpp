@@ -129,8 +129,25 @@ void W3DModuleFactory::init( void )
 #else
 	addW3DSchema(W3DTankTruckDraw, W3DTankTruckDrawModuleData);
 #endif
+#if defined(ZH_W3D_FULL_INSTANCE)
+	addModule(W3DTreeDraw);
+#else
 	addW3DSchema(W3DTreeDraw, W3DTreeDrawModuleData);
+#endif
 	addW3DSchema(W3DPropDraw, W3DPropDrawModuleData);
 #undef addW3DSchema
 
 }  // end init
+
+#if defined(ZH_W3D_FULL_INSTANCE)
+#if !defined(ZH_WW3D_CPU_ONLY)
+#error Full tree factory must share the CPU constructor class definition
+#endif
+void zh_m22_tree_factory_layout(std::size_t *out)
+{
+	out[0]=sizeof(W3DTreeDraw);out[1]=alignof(W3DTreeDraw);
+	out[2]=offsetof(W3DTreeDraw,m_treeAdded);out[3]=offsetof(W3DTreeDraw,m_treeOwner);
+	out[4]=offsetof(W3DTreeDraw,m_treeID);out[5]=offsetof(W3DTreeDraw,m_treeEpoch);
+	out[6]=offsetof(W3DTreeDraw,m_treeDevice);out[7]=offsetof(W3DTreeDraw,m_treeDeviceGeneration);
+}
+#endif

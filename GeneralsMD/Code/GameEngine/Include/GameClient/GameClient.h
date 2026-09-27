@@ -130,6 +130,9 @@ public:
 
 	virtual Drawable *friend_createDrawable( const ThingTemplate *thing, DrawableStatus statusBits = DRAWABLE_STATUS_NONE ) = 0;
 	virtual void destroyDrawable( Drawable *draw );											///< Destroy the given drawable
+#if defined(__linux__)
+	void friend_preflightDrawableRemoval() const;
+#endif
 
 	virtual void setTimeOfDay( TimeOfDay tod );													///< Tell all the drawables what time of day it is now
 

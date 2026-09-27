@@ -184,7 +184,7 @@ def main() -> int:
         if (closed_tree.returncode != 3 or
                 "original error 0xdead0007" not in closed_tree.stderr or
                 "original scenario setup:" in closed_tree.stdout):
-            raise SystemExit("schema-only physical tree provider was admitted")
+            raise SystemExit("physical tree provider without ready terrain was admitted")
         print("original GameClient full W3D draw modules constructed and called: 10")
     finally:
         if args.keep:

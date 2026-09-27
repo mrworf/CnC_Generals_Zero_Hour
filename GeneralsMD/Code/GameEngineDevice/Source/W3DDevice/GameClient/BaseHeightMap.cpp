@@ -1128,6 +1128,7 @@ int BaseHeightMapRenderObjClass::initHeightData(Int x, Int y, WorldHeightMap *ma
 }
 Int BaseHeightMapRenderObjClass::freeMapResources()
 {
+	preflightTreeRemoval();
 	s_cpuTreeRegistries.erase(this);
 	if (m_shroud) m_shroud->reset();
 	REF_PTR_RELEASE(m_map);
@@ -1167,6 +1168,7 @@ void BaseHeightMapRenderObjClass::oversizeTerrain(Int)
 }
 void BaseHeightMapRenderObjClass::reset()
 {
+	preflightTreeRemoval();
 	s_cpuTreeRegistries.erase(this);
 	if (m_shroud) {
 		m_shroud->reset();
@@ -2049,9 +2051,7 @@ void BaseHeightMapRenderObjClass::removeTree(DrawableID id)
 {
 	auto registry = s_cpuTreeRegistries.find(this);
 	if (registry == s_cpuTreeRegistries.end()) return;
-	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
-	if (edge && !edge->source_buffers_retirable())
-		throw OriginalW3DDeviceUnavailable("original tree removal during source frame unavailable");
+	preflightTreeRemoval();
 	for (std::size_t index = 0; index < registry->second.instances.size(); ++index) {
 		if (registry->second.instances[index].id != id) continue;
 		// Complete every possibly allocating vector operation before retiring
@@ -2079,8 +2079,51 @@ void BaseHeightMapRenderObjClass::removeTree(DrawableID id)
 		return;
 	}
 }
+void BaseHeightMapRenderObjClass::preflightTreeRemoval() const
+{
+	if (s_cpuTreeRegistries.find(this) == s_cpuTreeRegistries.end()) return;
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	if (edge && !edge->idle_preparation_ready()) throw ERROR_INVALID_D3D;
+}
+void BaseHeightMapRenderObjClass::preflightTreeModuleRemoval(const BaseHeightMapRenderObjClass *owner, UnsignedInt epoch)
+{
+	const auto registry = s_cpuTreeRegistries.find(owner);
+	if (registry == s_cpuTreeRegistries.end() || !epoch || registry->second.epoch != epoch) return;
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	if (edge && !edge->idle_preparation_ready()) throw ERROR_INVALID_D3D;
+}
+void BaseHeightMapRenderObjClass::detachTreeModule(const BaseHeightMapRenderObjClass *source, DrawableID id, UnsignedInt epoch) noexcept
+{
+	auto registry = s_cpuTreeRegistries.find(source);
+	if (registry == s_cpuTreeRegistries.end() || !epoch || registry->second.epoch != epoch) return;
+	// Caller admission precedes ownership destruction. No candidate vectors,
+	// allocation, callbacks or throwing diagnostics belong in module teardown.
+	auto &owner = registry->second;
+	for (std::size_t index = 0; index < owner.instances.size(); ++index) {
+		if (owner.instances[index].id != id) continue;
+		const Int typeIndex = owner.instances[index].typeIndex;
+		const bool lastUser = --owner.types[typeIndex].users == 0;
+		if (owner.preparedPhase) owner.preparedPhase->canceled = TRUE;
+		owner.preparedPhase.reset();
+		owner.gpu.reset();
+		owner.visibleFrame.ready = FALSE;
+		if (lastUser) {
+			REF_PTR_RELEASE(owner.atlasTexture);
+			owner.atlas.reset();
+		}
+		owner.instances.erase(owner.instances.begin() + index);
+		if (lastUser) {
+			owner.types.erase(owner.types.begin() + typeIndex);
+			for (auto &instance : owner.instances)
+				if (instance.typeIndex > typeIndex) --instance.typeIndex;
+		}
+		if (owner.instances.empty()) s_cpuTreeRegistries.erase(registry);
+		return;
+	}
+}
 void BaseHeightMapRenderObjClass::removeAllTrees()
 {
+	preflightTreeRemoval();
 	s_cpuTreeRegistries.erase(this);
 }
 Bool BaseHeightMapRenderObjClass::updateTreePosition(DrawableID id,

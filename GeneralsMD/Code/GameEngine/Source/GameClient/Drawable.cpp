@@ -576,10 +576,25 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 //-------------------------------------------------------------------------------------------------
 /** Reverse constructor publication without running drawable on-delete hooks. */
 //-------------------------------------------------------------------------------------------------
+#if defined(__linux__)
+void Drawable::friend_preflightModuleRemoval() const
+{
+	Module **modules = m_modules[MODULETYPE_DRAW - FIRST_DRAWABLE_MODULE_TYPE];
+	if (!modules) return;
+	const Int count = getTemplate()->getDrawModuleInfo().getCount();
+	for (Int index = 0; index < count && modules[index]; ++index)
+		static_cast<DrawModule *>(modules[index])->friend_preflightRemoval();
+	if (modules[count]) throw ERROR_INVALID_D3D;
+}
+#endif
+
 void Drawable::friend_rollbackConstruction()
 {
 	if (m_constructionRolledBack)
 		return;
+#if defined(__linux__)
+	friend_preflightModuleRemoval();
+#endif
 	m_constructionRolledBack = true;
 	if (TheGameClient)
 		TheGameClient->friend_rollbackDrawableConstruction(this);

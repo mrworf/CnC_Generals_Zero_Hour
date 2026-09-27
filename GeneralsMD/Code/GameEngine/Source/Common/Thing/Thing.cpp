@@ -46,6 +46,40 @@
 #include "Lib/trig.h"
 #include "GameLogic/TerrainLogic.h"
 
+#if defined(__linux__)
+namespace {
+// Stack-only rollback of precisely the mutation owner, including lazy caches.
+// Never notify modules while restoring a rejected callback.
+class ThingTransformAttempt {
+public:
+	ThingTransformAttempt(Matrix3D &matrix, Coord3D &position, Real &angle,
+		Coord3D &direction, Real &terrain, Real &water, Int &flags) noexcept
+		: matrix_(matrix), position_(position), angle_(angle), direction_(direction),
+		  terrain_(terrain), water_(water), flags_(flags), oldMatrix_(matrix),
+		  oldPosition_(position), oldAngle_(angle), oldDirection_(direction),
+		  oldTerrain_(terrain), oldWater_(water), oldFlags_(flags) {}
+	~ThingTransformAttempt() noexcept
+	{
+		if (committed_) return;
+		matrix_ = oldMatrix_; position_ = oldPosition_; angle_ = oldAngle_;
+		direction_ = oldDirection_; terrain_ = oldTerrain_; water_ = oldWater_;
+		flags_ = oldFlags_;
+	}
+	void commit() noexcept { committed_ = true; }
+private:
+	Matrix3D &matrix_; Coord3D &position_; Real &angle_; Coord3D &direction_;
+	Real &terrain_, &water_; Int &flags_;
+	Matrix3D oldMatrix_; Coord3D oldPosition_; Real oldAngle_; Coord3D oldDirection_;
+	Real oldTerrain_, oldWater_; Int oldFlags_; bool committed_ = false;
+};
+}
+#define THING_TRANSFORM_ATTEMPT ThingTransformAttempt transformAttempt(m_transform, m_cachedPos, m_cachedAngle, m_cachedDirVector, m_cachedAltitudeAboveTerrain, m_cachedAltitudeAboveTerrainOrWater, m_cacheFlags)
+#define THING_TRANSFORM_COMMIT transformAttempt.commit()
+#else
+#define THING_TRANSFORM_ATTEMPT
+#define THING_TRANSFORM_COMMIT
+#endif
+
 #ifdef _INTERNAL
 // for occasional debugging...
 //#pragma optimize("", off)
@@ -132,6 +166,7 @@ void Thing::getUnitDirectionVector3D(Coord3D& dir) const
 // the nice thing about this is that we don't have to recalc out cached terrain stuff.
 void Thing::setPositionZ( Real z )
 {
+	THING_TRANSFORM_ATTEMPT;
 	//USE_PERF_TIMER(ThingMatrixStuff)
 	if( !m_template->isKindOf( KINDOF_STICK_TO_TERRAIN_SLOPE) )
 	{
@@ -163,11 +198,13 @@ void Thing::setPositionZ( Real z )
 		setTransformMatrix(&mtx);
 	}
 	DEBUG_ASSERTCRASH(!(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)), ("Drawable/Object position NAN! '%s'\n", m_template->getName().str() ));
+	THING_TRANSFORM_COMMIT;
 }
 
 //=============================================================================
 void Thing::setPosition( const Coord3D *pos )
 {
+	THING_TRANSFORM_ATTEMPT;
 	//USE_PERF_TIMER(ThingMatrixStuff)
 	if( !m_template->isKindOf( KINDOF_STICK_TO_TERRAIN_SLOPE) )
 	{
@@ -192,11 +229,13 @@ void Thing::setPosition( const Coord3D *pos )
 		setTransformMatrix(&mtx);
 	}
 	DEBUG_ASSERTCRASH(!(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)), ("Drawable/Object position NAN! '%s'\n", m_template->getName().str() ));
+	THING_TRANSFORM_COMMIT;
 }
 
 //=============================================================================
 void Thing::setOrientation( Real angle )
 {
+	THING_TRANSFORM_ATTEMPT;
 	//USE_PERF_TIMER(ThingMatrixStuff)
 	Coord3D u, x, y, z, pos;
 
@@ -242,6 +281,7 @@ void Thing::setOrientation( Real angle )
 
 	reactToTransformChange(&oldMtx, &oldPos, oldAngle);
 	DEBUG_ASSERTCRASH(!(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)), ("Drawable/Object position NAN! '%s'\n", m_template->getName().str() ));
+	THING_TRANSFORM_COMMIT;
 }
 
 //=============================================================================
@@ -249,6 +289,7 @@ void Thing::setOrientation( Real angle )
 //=============================================================================
 void Thing::setTransformMatrix( const Matrix3D *mx )
 {
+	THING_TRANSFORM_ATTEMPT;
 	//USE_PERF_TIMER(ThingMatrixStuff)
 	Real oldAngle = m_cachedAngle;
 	Coord3D oldPos = m_cachedPos;
@@ -263,7 +304,10 @@ void Thing::setTransformMatrix( const Matrix3D *mx )
 
 	reactToTransformChange(&oldMtx, &oldPos, oldAngle);
 	DEBUG_ASSERTCRASH(!(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)), ("Drawable/Object position NAN! '%s'\n", m_template->getName().str() ));
+	THING_TRANSFORM_COMMIT;
 }
+#undef THING_TRANSFORM_ATTEMPT
+#undef THING_TRANSFORM_COMMIT
 
 //-------------------------------------------------------------------------------------------------
 Bool Thing::isKindOf(KindOfType t) const 

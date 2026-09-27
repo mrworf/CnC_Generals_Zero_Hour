@@ -39,6 +39,10 @@
 #include "W3DDevice/GameClient/Module/W3DTreeDraw.h"
 #ifndef ZH_W3D_SCHEMA_ONLY
 #include "W3DDevice/GameClient/BaseHeightMap.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "original_gpu_edge.h"
+#include "W3DDevice/GameClient/W3DShroud.h"
+#endif
 #endif
 
 #ifdef _INTERNAL
@@ -118,9 +122,27 @@ void W3DTreeDrawModuleData::buildFieldParse(MultiIniFieldParse& p)
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 #ifndef ZH_W3D_SCHEMA_ONLY
+#if defined(ZH_WW3D_CPU_ONLY)
+void zh_m22_tree_constructor_layout(std::size_t *out)
+{
+	out[0]=sizeof(W3DTreeDraw);out[1]=alignof(W3DTreeDraw);
+	out[2]=offsetof(W3DTreeDraw,m_treeAdded);out[3]=offsetof(W3DTreeDraw,m_treeOwner);
+	out[4]=offsetof(W3DTreeDraw,m_treeID);out[5]=offsetof(W3DTreeDraw,m_treeEpoch);
+	out[6]=offsetof(W3DTreeDraw,m_treeDevice);out[7]=offsetof(W3DTreeDraw,m_treeDeviceGeneration);
+}
+#endif
 W3DTreeDraw::W3DTreeDraw( Thing *thing, const ModuleData* moduleData ) : DrawModule( thing, moduleData ),
 m_treeAdded(false)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	const auto *data = moduleData ? moduleData->getAsW3DTreeDrawModuleData() : NULL;
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	if (!thing || !data || !getDrawable() || !TheTerrainRenderObject ||
+		getDrawable()->getID() == INVALID_DRAWABLE_ID || data->m_modelName.isEmpty() ||
+		data->m_textureName.isEmpty() || !TheTerrainRenderObject->canNotifyShroudChanged() ||
+		!TheTerrainRenderObject->getShroud()->hasAcceptedContent() ||
+		!edge || !edge->idle_preparation_ready()) throw ERROR_INVALID_D3D;
+#endif
 
 }  // end W3DTreeDraw
 
@@ -130,11 +152,20 @@ m_treeAdded(false)
 W3DTreeDraw::~W3DTreeDraw( void )
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	if (m_treeAdded && m_treeOwner && TheTerrainRenderObject == m_treeOwner &&
-		m_treeOwner->treeOwnerEpoch() == m_treeEpoch)
-		m_treeOwner->removeTree(m_treeID);
+	if (m_treeAdded)
+		BaseHeightMapRenderObjClass::detachTreeModule(m_treeOwner, m_treeID, m_treeEpoch);
 #endif
 }
+
+#if defined(__linux__)
+void W3DTreeDraw::friend_preflightRemoval() const
+{
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (m_treeAdded)
+		BaseHeightMapRenderObjClass::preflightTreeModuleRemoval(m_treeOwner, m_treeEpoch);
+#endif
+}
+#endif
 
 //-------------------------------------------------------------------------------------------------
 void W3DTreeDraw::reactToTransformChange( const Matrix3D *oldMtx, 
@@ -145,6 +176,9 @@ void W3DTreeDraw::reactToTransformChange( const Matrix3D *oldMtx,
 	if (m_treeAdded) {
 #if defined(ZH_WW3D_CPU_ONLY)
 		if (!m_treeOwner || TheTerrainRenderObject != m_treeOwner ||
+			zh::original_runtime::OriginalGpuEdge::active() != m_treeDevice ||
+			!m_treeDevice || m_treeDevice->generation() != m_treeDeviceGeneration ||
+			!m_treeDevice->idle_preparation_ready() ||
 			m_treeOwner->treeOwnerEpoch() != m_treeEpoch ||
 			!m_treeOwner->updateTreePosition(m_treeID, *draw->getPosition(), draw->getOrientation()))
 			throw ERROR_INVALID_D3D;
@@ -154,7 +188,12 @@ void W3DTreeDraw::reactToTransformChange( const Matrix3D *oldMtx,
 	if (draw->getPosition()->x==0.0f && draw->getPosition()->y == 0.0f) {
 		return;
 	}
-	const W3DTreeDrawModuleData *moduleData = getW3DTreeDrawModuleData();
+#if defined(ZH_WW3D_CPU_ONLY)
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	if (!edge || !edge->idle_preparation_ready()) throw ERROR_INVALID_D3D;
+#endif
+	const W3DTreeDrawModuleData *moduleData = getModuleData() ?
+		getModuleData()->getAsW3DTreeDrawModuleData() : NULL;
 	if (!moduleData) {
 		throw ERROR_INVALID_D3D;
 	}
@@ -169,6 +208,8 @@ void W3DTreeDraw::reactToTransformChange( const Matrix3D *oldMtx,
 	m_treeOwner = TheTerrainRenderObject;
 	m_treeID = draw->getID();
 	m_treeEpoch = m_treeOwner->treeOwnerEpoch();
+	m_treeDevice = zh::original_runtime::OriginalGpuEdge::active();
+	m_treeDeviceGeneration = m_treeDevice->generation();
 #endif
 	
 }

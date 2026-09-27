@@ -117,6 +117,7 @@ extern "C" void zh_probe_terrain_visual_map();
 extern "C" void zh_probe_terrain_shroud_projection();
 extern "C" void zh_probe_terrain_map_frame();
 extern "C" void zh_probe_terrain_tree_preparation();
+extern "C" void zh_probe_tree_module();
 extern "C" void zh_probe_terrain_tracks();
 extern "C" void zh_probe_terrain_water();
 extern "C" void zh_probe_volumetric_buffer();
@@ -931,6 +932,7 @@ public:
 			if (std::getenv("ZH_M22_TERRAIN_SHROUD_PROJECTION_PROFILE")) zh_probe_terrain_shroud_projection();
 			if (std::getenv("ZH_M22_TERRAIN_MAP_FRAME_PROFILE")) zh_probe_terrain_map_frame();
 			if (std::getenv("ZH_M22_TREE_PREPARATION_PROFILE")) zh_probe_terrain_tree_preparation();
+			if (std::getenv("ZH_M22_TREE_MODULE_PROFILE")) zh_probe_tree_module();
 			if (std::getenv("ZH_M22_TERRAIN_TRACKS_PROFILE")) zh_probe_terrain_tracks();
 			if (std::getenv("ZH_M22_TERRAIN_WATER_PROFILE")) zh_probe_terrain_water();
 			if (std::getenv("ZH_M22_VOLUME_BUFFER_PROFILE")) zh_probe_volumetric_buffer();

@@ -235,7 +235,7 @@ target_include_directories(zh_original_w3d_factory_full PRIVATE
   "${PROJECT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWLib"
   "${PROJECT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWDebug"
   "${PROJECT_SOURCE_DIR}/GeneralsMD/Code/Libraries/Source/WWVegas/WWSaveLoad")
-target_compile_definitions(zh_original_w3d_factory_full PRIVATE NDEBUG ZH_W3D_FULL_INSTANCE=1)
+target_compile_definitions(zh_original_w3d_factory_full PRIVATE NDEBUG ZH_W3D_FULL_INSTANCE=1 ZH_WW3D_CPU_ONLY=1)
 target_compile_options(zh_original_w3d_factory_full PRIVATE
   $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-fpermissive;-ffunction-sections;-fdata-sections>)
 target_link_libraries(zh_original_w3d_factory_full PRIVATE zh_build_options)

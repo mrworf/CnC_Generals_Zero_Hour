@@ -85,6 +85,9 @@ class ThingTemplate;
 //=====================================
 class Thing : public MemoryPoolObject
 {
+#if defined(__linux__)
+	friend struct W3DTreeModuleGeneratedProbeAccess;
+#endif
 	// note, it is explicitly OK to pass null for 'thing' here;
 	// they will check for null and return null in these cases.
 	friend inline Object *AsObject(Thing *thing) { return thing ? thing->asObjectMeth() : NULL; }
@@ -196,4 +199,3 @@ private:
 //-----------------------------------------------------------------------------
 
 #endif // $label
-

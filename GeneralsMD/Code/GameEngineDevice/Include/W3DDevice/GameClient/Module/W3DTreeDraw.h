@@ -34,6 +34,9 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/DrawModule.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <cstddef>
+#endif
 #ifndef ZH_W3D_SCHEMA_ONLY
 #include "WW3D2/Line3D.h"
 #endif
@@ -77,8 +80,16 @@ public:
 //-------------------------------------------------------------------------------------------------
 #ifndef ZH_W3D_SCHEMA_ONLY
 class BaseHeightMapRenderObjClass;
+#if defined(ZH_WW3D_CPU_ONLY)
+namespace zh { namespace original_runtime { class OriginalGpuEdge; } }
+#endif
 class W3DTreeDraw : public DrawModule
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend struct W3DTreeModuleGeneratedProbeAccess;
+	friend void zh_m22_tree_factory_layout(std::size_t *);
+	friend void zh_m22_tree_constructor_layout(std::size_t *);
+#endif
 
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( W3DTreeDraw, "W3DTreeDraw" )
 	MAKE_STANDARD_MODULE_MACRO_WITH_MODULE_DATA( W3DTreeDraw, W3DTreeDrawModuleData )
@@ -95,6 +106,9 @@ public:
 	virtual void setFullyObscuredByShroud(Bool fullyObscured) { }
 	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle);
 	virtual void reactToGeometryChange() { }
+#if defined(__linux__)
+	void friend_preflightRemoval() const override;
+#endif
 
 protected:
 	Bool m_treeAdded;
@@ -102,6 +116,8 @@ protected:
 	BaseHeightMapRenderObjClass *m_treeOwner = NULL;
 	DrawableID m_treeID = INVALID_DRAWABLE_ID;
 	UnsignedInt m_treeEpoch = 0;
+	zh::original_runtime::OriginalGpuEdge *m_treeDevice = NULL;
+	UnsignedInt64 m_treeDeviceGeneration = 0;
 #endif
 
 };

@@ -85,6 +85,9 @@
 #include "GameLogic/GhostObject.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/ScriptEngine.h"		// For TheScriptEngine - jkmcd
+#if defined(__linux__)
+#include <exception>
+#endif
 #ifdef _INTERNAL
 // for occasional debugging...
 //#pragma optimize("", off)
@@ -95,6 +98,17 @@
 
 /// The GameClient singleton instance
 GameClient *TheGameClient = NULL;
+#if defined(__linux__)
+namespace {
+GameClient *resetAdmissionClient = NULL;
+UnsignedInt64 resetAdmissionClientToken = 0;
+void admitClientReset(void *owner)
+{
+	if (owner != TheGameClient) throw ERROR_INVALID_D3D;
+	static_cast<GameClient *>(owner)->friend_preflightDrawableRemoval();
+}
+}
+#endif
 
 //-------------------------------------------------------------------------------------------------
 GameClient::GameClient()
@@ -126,6 +140,13 @@ GameClient::GameClient()
 //-------------------------------------------------------------------------------------------------
 GameClient::~GameClient()
 {
+#if defined(__linux__)
+	if (resetAdmissionClient == this)
+	{
+		if (!removeSubsystemResetAdmission(this, resetAdmissionClientToken)) std::terminate();
+		resetAdmissionClient = NULL; resetAdmissionClientToken = 0;
+	}
+#endif
 #ifdef PERF_TIMERS
 	delete TheGraphDraw;
 	TheGraphDraw = NULL;
@@ -252,6 +273,12 @@ GameClient::~GameClient()
 //-------------------------------------------------------------------------------------------------
 void GameClient::init( void )
 {
+#if defined(__linux__)
+	if (TheGameClient != this || resetAdmissionClient) throw ERROR_INVALID_D3D;
+	const UnsignedInt64 token = installSubsystemResetAdmission(this, admitClientReset);
+	if (!token) throw ERROR_INVALID_D3D;
+	resetAdmissionClient = this; resetAdmissionClientToken = token;
+#endif
 
 	setFrameRate(MSEC_PER_LOGICFRAME_REAL);		// from GameCommon.h... tell W3D what our expected framerate is
 
@@ -453,6 +480,9 @@ void GameClient::init( void )
 /** Reset the game client for a new game */
 void GameClient::reset( void )
 {
+#if defined(__linux__)
+	friend_preflightDrawableRemoval();
+#endif
 	Drawable *draw;
 	const Bool retailWaterReset = std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE") != NULL &&
 		std::getenv("ZH_M22_RETAIL_CONFIG_RESET_PROFILE") != NULL;
@@ -854,6 +884,9 @@ void GameClient::updateFakeDrawables(void)
  */
 void GameClient::destroyDrawable( Drawable *draw )
 {
+#if defined(__linux__)
+	if (draw) draw->friend_preflightModuleRemoval();
+#endif
 
 	// remove any notion of the Drawable in the in-game user interface
 	TheInGameUI->disregardDrawable( draw );
@@ -885,6 +918,18 @@ void GameClient::destroyDrawable( Drawable *draw )
 
 // ------------------------------------------------------------------------------------------------
 /** Add drawable to lookup table for fast id searching */
+#if defined(__linux__)
+void GameClient::friend_preflightDrawableRemoval() const
+{
+	std::size_t count = 0;
+	for (Drawable *draw = m_drawableList; draw; draw = draw->getNextDrawable())
+	{
+		if (++count > m_drawableVector.size()) throw ERROR_INVALID_D3D;
+		draw->friend_preflightModuleRemoval();
+	}
+}
+#endif
+
 // ------------------------------------------------------------------------------------------------
 void GameClient::addDrawableToLookupTable(Drawable *draw )
 {

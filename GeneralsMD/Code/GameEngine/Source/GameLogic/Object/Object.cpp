@@ -544,10 +544,21 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 //-------------------------------------------------------------------------------------------------
 /** Reverse constructor publication without running gameplay create/destroy notifications. */
 //-------------------------------------------------------------------------------------------------
+#if defined(__linux__)
+void Object::friend_deleteInstance()
+{
+	if (m_drawable) m_drawable->friend_preflightModuleRemoval();
+	deleteInstance();
+}
+#endif
+
 void Object::friend_rollbackConstruction()
 {
 	if (m_constructionRolledBack)
 		return;
+#if defined(__linux__)
+	if (m_drawable) m_drawable->friend_preflightModuleRemoval();
+#endif
 	m_constructionRolledBack = true;
 
 	if (m_drawable && TheGameClient)

@@ -2,8 +2,8 @@
 
 ## Goal and boundary
 
-Status: implementation-ready after the approved factory/unwind architecture
-checkpoint; persist this plan-only correction before executable edits.
+Status: accepted final source under factory/unwind architecture checkpoint
+`32c2ecb4dbe8422233cb19c76a83f6fad463172b`.
 Transaction parent is accepted C3 `b2a613b6b69b3bc1c33e4a3043381e4a5a84082f`.
 Preserve the unrelated renderer diagnostic unstaged. No additional owner/split
 may be introduced without an explicit architecture checkpoint.
@@ -93,11 +93,11 @@ CPU terrain/visual exact detach/reset boundaries, generated module probe/wrapper
 full probe wiring, CMake registrations and dependency ledger. No unrelated
 shadow mode, shader, allocator, retail admission or source rendering redesign.
 
-`cmake --build build/<preset> --target zh_original_w3d_full_probe original_w3d_cpu_graph_tests original_w3d_tree_program_tests original_w3d_source_reference_tests original_w3d_stage_transaction_tests renderer_recording_transaction_tests renderer_bgfx_transaction_resource_tests renderer_bgfx_transaction_tests original_w3d_schema_tests original_w3d_abi_schema original_w3d_abi_full -j4`
+`cmake --build build/<preset> --target zh_original_w3d_full_probe original_lifecycle_subsystem_tests original_w3d_cpu_graph_tests original_w3d_tree_program_tests original_w3d_source_reference_tests original_w3d_stage_transaction_tests renderer_recording_transaction_tests renderer_bgfx_transaction_resource_tests renderer_bgfx_transaction_tests original_w3d_schema_tests original_w3d_abi_schema original_w3d_abi_full -j4`
 
-`ctest --test-dir build/<preset> -R '^(original_w3d_tree_module|original_w3d_tree_decal|original_w3d_tree_draw|original_w3d_tree_preparation|original_w3d_tree_program|original_w3d_terrain_shroud_projection|original_w3d_terrain_map_frame|original_w3d_source_reference|original_w3d_stage_transaction|renderer_recording_transaction|renderer_bgfx_transaction_resource|renderer_bgfx_transaction|original_w3d_schema|original_w3d_schema_identity|original_w3d_schema_provider_removal|original_w3d_abi|original_w3d_full_draw_identity|original_w3d_full_draw_provider_removal|original_w3d_generated_construction)$' --output-on-failure -j1`
+`ctest --test-dir build/<preset> -R '^(original_lifecycle_subsystem|original_lifecycle_subsystem_identity|original_w3d_tree_module|original_w3d_tree_decal|original_w3d_tree_draw|original_w3d_tree_preparation|original_w3d_tree_program|original_w3d_terrain_shroud_projection|original_w3d_terrain_map_frame|original_w3d_source_reference|original_w3d_stage_transaction|renderer_recording_transaction|renderer_bgfx_transaction_resource|renderer_bgfx_transaction|original_w3d_schema|original_w3d_schema_identity|original_w3d_schema_provider_removal|original_w3d_abi|original_w3d_full_draw_identity|original_w3d_full_draw_provider_removal|original_w3d_generated_construction)$' --output-on-failure -j1`
 
-Run this exact nineteen-control union on GCC/Clang debug and both sanitizers;
+Run this exact twenty-one-control union on GCC/Clang debug and both sanitizers;
 sanitizer focus uses `ASAN_OPTIONS=detect_leaks=0`. Strict host LSan uses the
 same union with exactly `ASAN_OPTIONS=detect_leaks=1`, no UBSan override.
 Retain the asset-free existing full draw scenario separately:
@@ -112,6 +112,13 @@ environment; retain generated tree/decal/program/shroud and established Vulkan
 controls. Audit complete logs rather than exit codes alone.
 
 ## Validation and commit
+
+Final-source acceptance is recorded in
+[C4 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c4_tree_module.md).
+All six builds/canonicals280, four focused21, strict21 both, generated physical
+five controls all four, established Vulkan, LAN4 all six and asset-free full
+scenarios all four pass. The payload commit uses the boundary below and excludes
+the unrelated renderer diagnostic.
 
 Generated full-instance fixtures cover first/zero/repeated transform, move,
 remove, multiple types, shadow-enabled/disabled frame, matching and mismatched
@@ -133,3 +140,12 @@ compaction, last-tree registry retirement, stale-owner no-retarget, constructor
 unwind and two-generation shutdown. Retain C1/RNG/FX and C2/C3 identical frame
 retry assertions. Record focused, strict, physical, six complete build/canonical,
 LAN, ledger and exact-owned diff provenance before the one implementation commit.
+
+The optional reset-admission registration follows the existing lifecycle hook
+pattern: exact owner plus monotonically generated token, single install/remove,
+foreign/stale rejection and callback removal before GameClient teardown. Minimal
+lifecycle linkage remains independent of WW3D/full GameClient. The two added
+lifecycle controls prove absence, rejection before reset/shutdown mutation and
+clean retry. Generated Tree objects explicitly author `Scale = 1`; the zero-scale
+negative remains unchanged. Fresh generated frame targets explicitly request
+clear rather than an invalid load of uninitialized target content.

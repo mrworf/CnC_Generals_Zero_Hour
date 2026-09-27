@@ -242,6 +242,9 @@ public:
 	Int treeInstanceCount() const;
 	Int treeTypeCount() const;
 	UnsignedInt treeOwnerEpoch() const;
+	void preflightTreeRemoval() const;
+	static void preflightTreeModuleRemoval(const BaseHeightMapRenderObjClass *owner, UnsignedInt epoch);
+	static void detachTreeModule(const BaseHeightMapRenderObjClass *owner, DrawableID id, UnsignedInt epoch) noexcept;
 	Int treePartitionBucket(DrawableID id) const;
 	const DX8VertexBufferClass *peekTreeVertexSource() const;
 	const DX8IndexBufferClass *peekTreeIndexSource() const;
