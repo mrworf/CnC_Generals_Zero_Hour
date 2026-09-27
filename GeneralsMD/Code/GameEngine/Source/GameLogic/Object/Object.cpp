@@ -112,14 +112,21 @@
 #include "Common/AudioEventInfo.h"
 #include "Common/DynamicAudioEventInfo.h"
 
-static void failObjectConstructionStage(const char *stage)
+static void failObjectConstructionStage(const char *stage, Int ordinal = -1)
 {
 #if defined(__linux__)
 	const char *selected = getenv("ZH_M22_CONSTRUCTION_FAIL_STAGE");
 	if (selected && strcmp(selected, stage) == 0)
 		throw ERROR_INVALID_D3D;
+	if (selected && ordinal >= 0)
+	{
+		char indexed[96];
+		snprintf(indexed, sizeof(indexed), "%s:%d", stage, ordinal);
+		if (strcmp(selected, indexed) == 0) throw ERROR_INVALID_D3D;
+	}
 #else
 	(void)stage;
+	(void)ordinal;
 #endif
 }
 
@@ -3116,12 +3123,16 @@ void Object::friend_bindToDrawable( Drawable *draw )
 				set.set(MODELCONDITION_SNOW, (TheGlobalData->m_weather == WEATHER_SNOWY) ? 1 : 0);
 			}
 		}
+		failObjectConstructionStage("binding-condition-before");
 		m_drawable->clearAndSetModelConditionFlags(clr, set);
+		failObjectConstructionStage("binding-condition-after");
 	}
 
 	for (BehaviorModule** b = m_behaviors; *b; ++b)
 	{
+		failObjectConstructionStage("binding-behavior-before", Int(b - m_behaviors));
 		(*b)->onDrawableBoundToObject();
+		failObjectConstructionStage("binding-behavior-after", Int(b - m_behaviors));
 	}
 }	
 

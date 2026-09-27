@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "original_simulatio
 from test_scenario_setup import load_m20_fixture, owned_map, prepare_owned_source
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "original_lifecycle"))
-from test_production_entry import run
+from test_production_entry import run as run_process
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_w3d_terrain_source_bitmap import tga
@@ -24,11 +24,28 @@ STAGES = ("terrain", "radar", "shroud", "terrain-logic", "radar-terrain",
 ROLLBACK = re.compile(r"original graphics rollback: residual=(\d+) baseline=(\d+) owners=(\d+)")
 TEARDOWN = "original recording factory teardown: resources=0"
 TRANSACTION_ROLLBACK = "original construction rollback: residual=0"
+CALLBACKS = re.compile(r"original binding callbacks: created=(\d+) draw=(\d+) behavior=(\d+)")
+BINDING_CONTROLS = "original binding controls: null=1 foreign=1 prior-pair=1 registries=1"
 FAILURE_STAGES = (
     "object-id", "team", "behavior-modules", "behavior-resolution", "radar", "logic",
     "object", "create", "partition", "drawable-registry", "draw-modules", "client-modules",
     "drawable-resolution", "drawable", "binding", "init",
+    "object-created-before", "object-created-after",
+    "binding-indicator-before", "binding-indicator-after",
+    "binding-draw-before", "binding-draw-after",
+    "binding-condition-before", "binding-condition-after",
+    "binding-behavior-before", "binding-behavior-after",
 )
+
+
+def run(*args, **kwargs):
+    result = run_process(*args, **kwargs)
+    output = result.stdout + result.stderr
+    # Successful subprocess exit does not establish sanitizer-clean callbacks.
+    if any(marker in output for marker in ("AddressSanitizer", "LeakSanitizer",
+                                           "UndefinedBehaviorSanitizer", "runtime error:")):
+        raise SystemExit("generated construction sanitizer finding")
+    return result
 
 
 def snapshot(root: Path):
@@ -46,6 +63,11 @@ def main() -> int:
         base = Path(scratch)
         source = base / "readonly-input"
         prepare_owned_source(source, fixture)
+        object_ini = source / "Data/INI/Default/Object.ini"
+        object_ini.write_text(object_ini.read_text(encoding="ascii").replace(
+            "Object LogicFixture\n", "Object LogicFixture\n"
+            " Draw = W3DDefaultDraw ModuleTag_BindingDraw\n End\n", 1),
+            encoding="ascii")
         fixture.write(source / "Maps/Owned/Owned.map", owned_map(visual=True))
         fixture.write(source / "Maps/Owned/map.ini",
                       "GameData\n MaxTerrainTracks = 2\n PartitionCellSize = 12\nEnd\n")
@@ -63,9 +85,16 @@ def main() -> int:
         missing = base / "missing-provider"
         shutil.copytree(source, missing)
         (missing / "Art/Terrain/Flat.tga").unlink()
+        fake = base / "fake-structure-callback"
+        shutil.copytree(source, fake)
+        fake_ini = fake / "Data/INI/Default/Object.ini"
+        fake_ini.write_text(fake_ini.read_text(encoding="ascii").replace(
+            "KindOf = SELECTABLE VEHICLE", "KindOf = SELECTABLE VEHICLE FS_FAKE", 1),
+            encoding="ascii")
         before = snapshot(source)
         fixture.make_read_only(source)
         fixture.make_read_only(missing)
+        fixture.make_read_only(fake)
         common = {
             "ZH_M22_ORIGINAL_FACTORY_PROFILE": "1",
             "ZH_M22_RECORDING_FACTORY_PROFILE": "1",
@@ -75,6 +104,7 @@ def main() -> int:
             "ZH_M22_GENERATED_CONSTRUCTION_ROUTE": "1",
             "ZH_M21_MAP": r"Maps\Owned\Owned.map",
         }
+        callback_counts = [0, 0, 0]
         for mode in ("mission", "skirmish"):
             selected = {**common, "ZH_M21_SCENARIO": mode}
             for generation in range(2):
@@ -82,8 +112,12 @@ def main() -> int:
                              base / f"{mode}-{generation}", source,
                              env_overrides=selected)
                 output = result.stdout + result.stderr
+                for callbacks in CALLBACKS.findall(result.stderr):
+                    callback_counts = [max(previous, int(count))
+                                       for previous, count in zip(callback_counts, callbacks)]
                 rollback = ROLLBACK.search(result.stderr)
                 if result.returncode != 3 or COMPLETE not in result.stderr or \
+                        BINDING_CONTROLS not in result.stderr or \
                         not rollback or rollback.group(3) != "0" or \
                         TEARDOWN not in result.stdout:
                     raise SystemExit(f"generated construction {mode} generation failed: "
@@ -118,8 +152,18 @@ def main() -> int:
         if retry.returncode != 3 or COMPLETE not in retry.stderr or \
                 not ROLLBACK.search(retry.stderr) or TEARDOWN not in retry.stdout:
             raise SystemExit("generated construction provider retry failed")
-        for stage in FAILURE_STAGES:
-            failed = run(str(args.executable.resolve()), base / f"failure-{stage}", source,
+        if any(count == 0 for count in callback_counts):
+            raise SystemExit("generated binding did not reach every callback family")
+        indexed_stages = tuple(
+            f"{family}-{boundary}:{ordinal}"
+            for family, count in zip(("object-created", "binding-draw", "binding-behavior"),
+                                     callback_counts)
+            for boundary in ("before", "after") for ordinal in range(count))
+        failure_stages = (*FAILURE_STAGES, "binding-decal-before", "binding-decal-after",
+                          *indexed_stages)
+        for stage in failure_stages:
+            stage_source = fake if stage.startswith("binding-decal-") else source
+            failed = run(str(args.executable.resolve()), base / f"failure-{stage}", stage_source,
                          env_overrides={**common, "ZH_M21_SCENARIO": "mission",
                                         "ZH_M22_CONSTRUCTION_FAIL_STAGE": stage})
             failed_rollback = ROLLBACK.search(failed.stderr)
@@ -129,17 +173,21 @@ def main() -> int:
                 raise SystemExit(f"generated construction rollback failed at {stage}: "
                                  f"status={failed.returncode} "
                                  f"rollback={failed_rollback.groups() if failed_rollback else 'absent'}")
+            if stage.startswith("binding-") and \
+                    "original binding rollback: restored=1" not in failed.stderr:
+                raise SystemExit(f"generated binding did not restore pointers at {stage}")
             retried = run(str(args.executable.resolve()), base / f"retry-{stage}", source,
                           env_overrides={**common, "ZH_M21_SCENARIO": "mission"})
             retried_rollback = ROLLBACK.search(retried.stderr)
             if retried.returncode != 3 or COMPLETE not in retried.stderr or \
+                    BINDING_CONTROLS not in retried.stderr or \
                     not retried_rollback or retried_rollback.group(3) != "0" or \
                     TEARDOWN not in retried.stdout:
                 raise SystemExit(f"generated construction retry failed after {stage}")
         if before != snapshot(source):
             raise SystemExit("generated construction changed read-only input")
     print(f"M22 construction: modes=2 generations=2 stages=8 "
-          f"rollback-stages={len(FAILURE_STAGES)} owners=0")
+          f"rollback-stages={len(failure_stages)} owners=0")
     return 0
 
 

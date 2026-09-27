@@ -35,3 +35,8 @@ Test transaction poisoning from an otherwise commit-ready candidate. A rejected
 commit on an unapplied owner does not prove poisoning. Put scope guards before
 provider dereference, phase diagnostics and diagnostic allocation, including
 no-throw entry points that must poison and return without mutation.
+
+Bidirectional publication stays fallible until notification callbacks return.
+Exercise faults inside every callback family, not only after binding completes.
+Restore both ownership links without cleanup notifications before construction
+owners withdraw registries/modules and release backing storage.

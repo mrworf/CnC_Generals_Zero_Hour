@@ -32,14 +32,21 @@
 #include "Common/AudioEventInfo.h"
 #include "Common/DynamicAudioEventInfo.h"
 
-static void failDrawableConstructionStage(const char *stage)
+static void failDrawableConstructionStage(const char *stage, Int ordinal = -1)
 {
 #if defined(__linux__)
 	const char *selected = getenv("ZH_M22_CONSTRUCTION_FAIL_STAGE");
 	if (selected && strcmp(selected, stage) == 0)
 		throw ERROR_INVALID_D3D;
+	if (selected && ordinal >= 0)
+	{
+		char indexed[96];
+		snprintf(indexed, sizeof(indexed), "%s:%d", stage, ordinal);
+		if (strcmp(selected, indexed) == 0) throw ERROR_INVALID_D3D;
+	}
 #else
 	(void)stage;
+	(void)ordinal;
 #endif
 }
 #include "Common/AudioSettings.h"
@@ -533,10 +540,15 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	failDrawableConstructionStage("client-modules");
 
 	/// allow for inter-Module resolution
+	Int createdOrdinal = 0;
 	for (i = 0; i < NUM_DRAWABLE_MODULE_TYPES; ++i)
 	{
 		for (Module** m = m_modules[i]; m && *m; ++m)
+		{
+			failDrawableConstructionStage("object-created-before", createdOrdinal);
 			(*m)->onObjectCreated();
+			failDrawableConstructionStage("object-created-after", createdOrdinal++);
+		}
 	}
 	failDrawableConstructionStage("drawable-resolution");
 	
@@ -599,7 +611,14 @@ void Drawable::friend_rollbackConstruction()
 	if (TheGameClient)
 		TheGameClient->friend_rollbackDrawableConstruction(this);
 	if (m_object)
+#if defined(__linux__)
+	{
+		if (m_object->m_drawable == this)
+			m_object->m_drawable = NULL;
+	}
+#else
 		m_object->friend_bindToDrawable(NULL);
+#endif
 	m_object = NULL;
 
 	for (Int i = 0; i < NUM_DRAWABLE_MODULE_TYPES; ++i)
@@ -4279,24 +4298,30 @@ void Drawable::friend_bindToObject( Object *obj ) ///< bind this drawable to an 
 	m_object = obj; 
 	if (getObject())
 	{
+		failDrawableConstructionStage("binding-indicator-before");
 		if (TheGlobalData->m_timeOfDay == TIME_OF_DAY_NIGHT)
 			setIndicatorColor(getObject()->getNightIndicatorColor());
 		else
 			setIndicatorColor(getObject()->getIndicatorColor());
+		failDrawableConstructionStage("binding-indicator-after");
 
 		if (getObject()->isKindOf(KINDOF_FS_FAKE))
 		{
+			failDrawableConstructionStage("binding-decal-before");
 			Relationship rel=ThePlayerList->getLocalPlayer()->getRelationship(getObject()->getTeam());
 			if (rel == ALLIES || rel == NEUTRAL)
 				setTerrainDecal(TERRAIN_DECAL_SHADOW_TEXTURE);
 			else
 				setTerrainDecal(TERRAIN_DECAL_NONE);
+			failDrawableConstructionStage("binding-decal-after");
 		}
 	}
 
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
+		failDrawableConstructionStage("binding-draw-before", Int(dm - getDrawModules()));
 		(*dm)->onDrawableBoundToObject();
+		failDrawableConstructionStage("binding-draw-after", Int(dm - getDrawModules()));
 	}
 }					
 //-------------------------------------------------------------------------------------------------

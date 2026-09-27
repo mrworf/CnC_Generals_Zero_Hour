@@ -2387,6 +2387,40 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 
 	}  // end if, not loading save game
 	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE")) {
+		// Generated-only public binding controls use already accepted pairs.
+		// No additional object/module provider or gameplay mutation is needed.
+#if defined(__linux__)
+		Object *first = NULL, *second = NULL;
+		for (Object *object = getFirstObject(); object && !second; object = object->getNextObject())
+		{
+			if (!object->getDrawable()) continue;
+			if (!first) first = object; else second = object;
+		}
+		if (!first || !second) throw ERROR_INVALID_D3D;
+		Drawable *firstDraw = first->getDrawable(), *secondDraw = second->getDrawable();
+		Object *objectHead = getFirstObject();
+		Drawable *drawableHead = TheGameClient->firstDrawable();
+		Bool nullObjectRejected = FALSE, nullDrawRejected = FALSE, foreignRejected = FALSE;
+		try { bindObjectAndDrawable(NULL, firstDraw); } catch (...) { nullObjectRejected = TRUE; }
+		try { bindObjectAndDrawable(first, NULL); } catch (...) { nullDrawRejected = TRUE; }
+		try { bindObjectAndDrawable(first, secondDraw); } catch (...) { foreignRejected = TRUE; }
+		Bool existingPairRestored = TRUE;
+		if (!getenv("ZH_M22_CONSTRUCTION_FAIL_STAGE"))
+		{
+			if (setenv("ZH_M22_CONSTRUCTION_FAIL_STAGE", "binding-indicator-before", 1) != 0)
+				throw ERROR_INVALID_D3D;
+			existingPairRestored = FALSE;
+			try { bindObjectAndDrawable(first, firstDraw); }
+			catch (...) { existingPairRestored = TRUE; }
+			unsetenv("ZH_M22_CONSTRUCTION_FAIL_STAGE");
+		}
+		if (!nullObjectRejected || !nullDrawRejected || !foreignRejected || !existingPairRestored ||
+			first->getDrawable() != firstDraw || firstDraw->getObject() != first ||
+			second->getDrawable() != secondDraw || secondDraw->getObject() != second ||
+			getFirstObject() != objectHead || TheGameClient->firstDrawable() != drawableHead)
+			throw ERROR_INVALID_D3D;
+		std::fputs("original binding controls: null=1 foreign=1 prior-pair=1 registries=1\n", stderr);
+#endif
 		std::fputs("original generated construction: stage=objects\n", stderr);
 		throw std::runtime_error("original generated construction boundary complete");
 	}
@@ -4681,7 +4715,22 @@ void GameLogic::sendObjectCreated( Object *obj )
 /// @todo COLIN ... shouldn't we have a check here for existing drawable!!!!!
 
 	// bind drawable to object and object to drawable
+#if defined(__linux__)
+	try
+	{
+		bindObjectAndDrawable(obj, draw);
+	}
+	catch (...)
+	{
+		// The binding transaction restored both pointers. This owner still
+		// owns the new Drawable and must withdraw it before Object cleanup.
+		draw->friend_rollbackConstruction();
+		draw->friend_deleteInstance();
+		throw;
+	}
+#else
 	bindObjectAndDrawable(obj, draw);
+#endif
 #if defined(__linux__)
 	if (constructionFailure && strcmp(constructionFailure, "binding") == 0)
 		throw ERROR_INVALID_D3D;
@@ -4692,8 +4741,41 @@ void GameLogic::sendObjectCreated( Object *obj )
 // ------------------------------------------------------------------------------------------------
 void GameLogic::bindObjectAndDrawable(Object* obj, Drawable* draw)
 {
+#if defined(__linux__)
+	if (!obj || !draw || (obj->m_drawable && obj->m_drawable != draw) ||
+		(draw->m_object && draw->m_object != obj))
+		throw ERROR_INVALID_D3D;
+	Drawable *priorDrawable = obj->m_drawable;
+	Object *priorObject = draw->m_object;
+	try
+	{
+		draw->friend_bindToObject(obj);
+		obj->friend_bindToDrawable(draw);
+	}
+	catch (...)
+	{
+		// Do not call either notifying setter during exception cleanup.
+		obj->m_drawable = priorDrawable;
+		draw->m_object = priorObject;
+		if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+			std::fputs("original binding rollback: restored=1\n", stderr);
+		throw;
+	}
+	if (std::getenv("ZH_M22_GENERATED_CONSTRUCTION_ROUTE"))
+	{
+		Int created = 0, draws = 0, behaviors = 0;
+		for (Int type = 0; type < NUM_DRAWABLE_MODULE_TYPES; ++type)
+			for (Module **module = draw->m_modules[type]; module && *module; ++module)
+				++created;
+		for (DrawModule **module = draw->getDrawModules(); *module; ++module) ++draws;
+		for (BehaviorModule **module = obj->getBehaviorModules(); *module; ++module) ++behaviors;
+		fprintf(stderr, "original binding callbacks: created=%d draw=%d behavior=%d\n",
+			created, draws, behaviors);
+	}
+#else
 	draw->friend_bindToObject( obj );
 	obj->friend_bindToDrawable( draw );
+#endif
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -689,6 +689,11 @@ protected:
 	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle);
 
 private:
+#if defined(__linux__)
+	// Exact pointer restoration must not notify partially constructed modules.
+	friend class GameLogic;
+	friend class Drawable;
+#endif
 
 	// yes, private. No, really. Private. Don't expose.
 	enum ObjectPrivateStatusBits

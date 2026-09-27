@@ -650,6 +650,10 @@ protected:
 	void updateHiddenStatus();
 
 private:
+#if defined(__linux__)
+	// Binding rollback restores ownership without invoking source callbacks.
+	friend class GameLogic;
+#endif
 
 	// note, these are lazily allocated!
 	TintEnvelope*		m_selectionFlashEnvelope;	///< used for selection flash, works WITH m_colorTintEnvelope
