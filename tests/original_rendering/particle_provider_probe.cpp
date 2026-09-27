@@ -60,6 +60,8 @@ extern "C" void zh_probe_particle_provider()
 				for (Int i=0;i!=5;++i) { smudge->m_verts[i].pos=points[i]; smudge->m_verts[i].uv.Set((i==2||i==3)?1:0,(i==0||i==3)?0:1); }
 			};
 			populate_smudge();
+			extern void zh_probe_source_frame_checkpoint_roundtrip(CameraClass *);
+			zh_probe_source_frame_checkpoint_roundtrip(view->get3DCamera());
 			const std::string smudge_before=device.snapshot(); frame(); const std::string smudge_active=device.snapshot().substr(smudge_before.size());
 			const auto smudge_request=smudge_active.find("original W3DParticleSystemManager::doParticles smudge request"), smudge_draw=smudge_active.find("original W3DSmudgeManager::render bounded batch");
 			require(smudge_request<smudge_draw && smudge_active.find("DX8Wrapper::Draw indexed first=0 count=12 base=0",smudge_draw)!=std::string::npos,

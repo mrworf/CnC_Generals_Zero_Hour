@@ -1,7 +1,7 @@
 # M22 plan 01 slice 08P0C2D: source scene tree draw and retry
 
-Status: implementation-ready after the read-only composition audit and
-approved display-presentation architecture checkpoint. Transaction parent is
+Status: accepted; final-source acceptance complete
+after the approved display-presentation architecture checkpoint. Transaction parent is
 C2C `cb8651c82d6e5b843cd3d576bb2f49c2f1c74cb6`. The existing unrelated
 `tests/renderer/test_bgfx_device.cpp` diagnostic remains excluded. Persist this
 plan/index checkpoint before executable edits; no additional slice is opened.
@@ -160,3 +160,37 @@ complete builds/canonical nonretail suites (`-LE 'gpu|lan|retail'`, sanitizer
 (`ASAN_OPTIONS=detect_leaks=1`, no UBSan override), physical Vulkan, serial
 LAN 4/4 all six, ledger/diff on final source. Commit one slice:
 `delivery: M22 08P0C2D integrate source tree terrain draw`.
+
+## Resolved implementation and final workload facts
+
+The bounded checkpoint also captures the exact asset-hash texture identities
+visited by TextureLoader expiry, including initialized nonresident sources.
+Only mutable access/inactivation/Initialized metadata is copied; neither lazy
+loading nor initialization is admitted. Both hash entry count and distinct
+combined metadata identity count are4096. Exact capacity and capacity+1,
+resident/nonresident expiry rollback and clean retry are generated controls.
+Dynamic DX8 VB/IB overwrite and growth restore exact old identity, capacity,
+offset and full bytes; sorting and unsupported populated work remain closed.
+
+Display owns the real final present/CompleteFrame for admitted tree frames;
+generated callers never present twice. Independent owner round trips and
+integrated populated particle/smudge late-fault controls preserve exact order,
+identity, counters and bytes, then drain once. Per-operation faults use fresh
+equivalent device generations while retaining failure/same-phase retry within
+each instance; a separate control retains exact tombstone-capacity rejection.
+The minimal sweep packet extracts exact generated mesh bytes from the unchanged
+full preparation packet, not a regenerated source record.
+
+The inherited30s per-process wrapper limit was shorter than the isolated clean
+sanitizer workload (GCC41.87/42.35s, Clang40.93/41.13s). Only the new tree-draw
+wrapper now has a bounded60s deadline; all assertions/workload and explicit
+TimeoutExpired failure remain. No global or existing heavy-witness timeout
+changed. Final gates use this corrected frozen test identity.
+
+[Accepted evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2d_source_tree_draw.md)
+records all final gates and superseded exploratory corrections. Six complete
+builds and canonical278 suites, exact focus10 all4, strict10 both, physical
+all4 and serial LAN4 all6 pass with clean complete logs and exact frozen hashes.
+The implementation is identified by the unique commit subject above and Git
+history; unrelated renderer diagnostics remain excluded. C2 aggregate may reuse
+these unchanged executable gates without rerunning or changing source.

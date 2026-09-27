@@ -67,6 +67,10 @@ class StaticSortListClass
 // The actual implementation for the standard ww3d StaticSortList.
 class DefaultStaticSortListClass : public StaticSortListClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    friend class WW3D;
+    bool Source_Frame_Empty() noexcept;
+#endif
 	public:
 		///////////////////////////////////////////////////////////////////////////////////
 		// Construction.

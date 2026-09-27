@@ -17,6 +17,8 @@ class IndexBufferClass;
 class TextureBaseClass;
 class TextureFilterClass;
 class W3DShroud;
+class HeightMapRenderObjClass;
+struct W3DFrameGeneratedProbeAccess;
 
 namespace zh::original_runtime {
 
@@ -155,6 +157,14 @@ public:
         const VertexBufferClass* source,const ImmutableTreeSnapshot& snapshot);
     bool probe_tree_frame_admission();
     bool immutable_tree_program_current(const PreparedTreeProgram&) const noexcept;
+    // Source-frame ownership composes the device journal with source caches.
+    // Only a fully admitted immutable tree frame uses this boundary.
+    bool begin_tree_source_frame();
+    bool commit_tree_source_frame() noexcept;
+    bool abort_tree_source_frame() noexcept;
+    bool tree_source_frame_pending() const noexcept;
+    void draw_immutable_tree(const PreparedTreeProgram&,const VertexBufferClass*,
+        const IndexBufferClass*,unsigned vertex_count,unsigned index_count);
     void validate_prepared_state(const PhysicalState& state) const;
     void draw_source_indexed(const VertexBufferClass* vertex,const IndexBufferClass* index,
         unsigned first_index,unsigned index_count,unsigned base_vertex,
@@ -276,10 +286,18 @@ public:
 
 private:
     friend class ::W3DShroud;
+    friend class ::HeightMapRenderObjClass;
+    friend struct ::W3DFrameGeneratedProbeAccess;
+    void mark_tree_source_terrain();
     // Only the shroud owner may withdraw its unpublished first candidate.
     // The device owns native rollback; this is not ordinary removal.
     bool withdraw_candidate_texture(TextureBaseClass* source,renderer::TextureHandle texture) noexcept;
     struct SourceStageAttempt;
+    struct SourceFrameAttempt;
+    std::unique_ptr<SourceFrameAttempt> source_frame_attempt_;
+    // Only the generated friend can reach these once-only source boundaries.
+    // No public setter, serialized state, environment or retail selector.
+    bool source_frame_present_fault_=false,source_frame_commit_fault_=false;
     std::unique_ptr<SourceStageAttempt> source_stage_attempt_;
     std::uint64_t source_stage_sequence_=0;
     bool source_stage_commit_fault_=false;

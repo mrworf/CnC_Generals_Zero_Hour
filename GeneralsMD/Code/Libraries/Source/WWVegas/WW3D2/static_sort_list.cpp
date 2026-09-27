@@ -41,8 +41,20 @@
 
 #include "static_sort_list.h"
 
+#if defined(ZH_WW3D_CPU_ONLY)
+bool DefaultStaticSortListClass::Source_Frame_Empty() noexcept
+{
+    for (auto& list:SortLists) if (!list.Is_Empty()) return false;
+    return true;
+}
+#endif
+
 #include "rendobj.h"
 #include "dx8renderer.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "original_gpu_edge.h"
+#include "OriginalW3DDeviceUnavailable.h"
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Initialization Functions ////////////////////////////////////////////////////////////////////////
@@ -64,6 +76,11 @@ DefaultStaticSortListClass::~DefaultStaticSortListClass(void)
 
 void DefaultStaticSortListClass::Add_To_List(RenderObjClass * robj, unsigned int sort_level)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (zh::original_runtime::OriginalGpuEdge::active() &&
+		zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending())
+		throw OriginalW3DDeviceUnavailable("original tree frame static-sort queue unsupported");
+#endif
 	if(sort_level < 1 || sort_level > MAX_SORT_LEVEL) {
 		WWASSERT(0);
 		return;

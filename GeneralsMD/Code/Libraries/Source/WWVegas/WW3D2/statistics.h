@@ -29,9 +29,17 @@
 class TextureClass;
 class StringClass;
 class ShaderClass;
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <memory>
+#endif
 
 namespace Debug_Statistics
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    struct SourceFrameCheckpoint;
+    std::shared_ptr<SourceFrameCheckpoint> Capture_Source_Frame();
+    void Restore_Source_Frame(SourceFrameCheckpoint&) noexcept;
+#endif
 	enum RecordTextureMode
 	{
 		RECORD_TEXTURE_NONE,

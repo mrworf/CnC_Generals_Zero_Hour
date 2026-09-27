@@ -106,6 +106,8 @@ void TextureClass::Init()
 {
     if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) edge->guard_nonstage_mutation();
 	if (Initialized) return;
+	if (auto *edge=zh::original_runtime::OriginalGpuEdge::active(); edge && edge->tree_source_frame_pending())
+		throw std::runtime_error("original tree frame requires resident texture readiness");
 	if (InactivationTime && LastInactivationSyncTime) {
 		if ((WW3D::Get_Sync_Time()-LastInactivationSyncTime)<InactivationTime)
 			ExtendedInactivationTime=3*InactivationTime;

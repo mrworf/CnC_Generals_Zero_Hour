@@ -90,6 +90,14 @@ constexpr unsigned fvf_tex7 = D3DFVF_TEX7, fvf_tex8 = D3DFVF_TEX8;
 ** Global Instance of the DX8MeshRender
 */
 DX8MeshRendererClass TheDX8MeshRenderer;
+#if defined(ZH_WW3D_CPU_ONLY)
+bool DX8FVFCategoryContainer::Source_Frame_Empty() noexcept
+{
+    if (AnythingToRender || AnyDelayedPassesToRender || visible_matpass_head || visible_matpass_tail) return false;
+    for (auto& list:visible_texture_category_list) if (!list.Is_Empty()) return false;
+    return true;
+}
+#endif
 bool DX8TextureCategoryClass::m_gForceMultiply = false; // Forces opaque materials to use the multiply blend - pseudo transparent effect.  jba.
 // ----------------------------------------------------------------------------
 
@@ -99,6 +107,23 @@ static DynamicVectorClass<Vector3>				_TempNormalBuffer;
 static MultiListClass<MeshModelClass>			_RegisteredMeshList;
 static TextureCategoryList							texture_category_delete_list;
 static FVFCategoryList								fvf_category_container_delete_list;
+
+#if defined(ZH_WW3D_CPU_ONLY)
+bool DX8MeshRendererClass::Source_Frame_Queues_Empty() const noexcept
+{
+    if (visible_decal_meshes || !texture_category_delete_list.Is_Empty()
+        || !fvf_category_container_delete_list.Is_Empty()) return false;
+    const auto empty=[](FVFCategoryList* list) {
+        if (!list) return true;
+        FVFCategoryListIterator it(list);
+        for (;!it.Is_Done();it.Next()) if (!it.Peek_Obj()->Source_Frame_Empty()) return false;
+        return true;
+    };
+    for (int i=0;i<texture_category_container_lists_rigid.Count();++i)
+        if (!empty(texture_category_container_lists_rigid[i])) return false;
+    return empty(texture_category_container_list_skin);
+}
+#endif
 
 // helper data structure
 class PolyRemover : public MultiListObjectClass

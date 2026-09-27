@@ -142,6 +142,11 @@ protected:
 	static bool IsMemoryLogEnabled;
 
 	friend class WWMemorySampleClass;
+#if defined(__linux__)
+	friend class WW3D;
+	static void Capture_Source_Frame(unsigned &allocations,unsigned &frees) noexcept;
+	static void Restore_Source_Frame(unsigned allocations,unsigned frees) noexcept;
+#endif
 };
 
 

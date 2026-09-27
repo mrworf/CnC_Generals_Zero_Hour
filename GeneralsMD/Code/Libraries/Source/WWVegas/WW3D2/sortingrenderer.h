@@ -30,6 +30,11 @@ class SphereClass;
 
 class SortingRendererClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    friend class WW3D;
+    static unsigned Capture_Source_Frame();
+    static void Restore_Source_Frame(unsigned) noexcept;
+#endif
 	static bool _EnableTriangleDraw;
 
 	static void Flush_Sorting_Pool();

@@ -9,6 +9,7 @@
 #include <cmath>
 #include <limits>
 #include <exception>
+#include <array>
 
 namespace {
 bool shader_manager_initialized = false;
@@ -60,6 +61,34 @@ void select_filter(zh::original_runtime::OriginalGpuEdge &edge, unsigned stage)
 TextureClass *W3DShaderManager::m_Textures[8]{};
 W3DShaderManager::ShaderTypes W3DShaderManager::m_currentShader = W3DShaderManager::ST_INVALID;
 Int W3DShaderManager::m_currentShaderPass = -1;
+
+struct W3DShaderManager::SourceFrameCheckpoint {
+	std::array<TextureClass *,8> textures{};
+	ShaderTypes shader;
+	Int pass;
+	bool pinned=false;
+	~SourceFrameCheckpoint() { if (pinned) for (auto *texture:textures) if (texture) texture->Release_Ref(); }
+};
+
+std::shared_ptr<W3DShaderManager::SourceFrameCheckpoint> W3DShaderManager::captureSourceFrame()
+{
+	auto result=std::make_shared<SourceFrameCheckpoint>();
+	result->shader=m_currentShader;result->pass=m_currentShaderPass;
+	for (unsigned stage=0;stage<8;++stage) {
+		result->textures[stage]=m_Textures[stage];
+		if (m_Textures[stage] && (m_Textures[stage]->Num_Refs()<=0 || m_Textures[stage]->Num_Refs()>std::numeric_limits<int>::max()-32))
+			throw std::runtime_error("original tree shader selection ownership rejected");
+	}
+	for (auto *texture:result->textures) if (texture) texture->Add_Ref();
+	result->pinned=true;
+	return result;
+}
+
+void W3DShaderManager::restoreSourceFrame(SourceFrameCheckpoint &checkpoint) noexcept
+{
+	for (unsigned stage=0;stage<8;++stage) m_Textures[stage]=checkpoint.textures[stage];
+	m_currentShader=checkpoint.shader;m_currentShaderPass=checkpoint.pass;
+}
 
 void W3DShaderManager::init()
 {

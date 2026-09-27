@@ -92,6 +92,63 @@ struct DX8Wrapper::CpuState {
 
 DX8Wrapper::CpuState& DX8Wrapper::state() { static CpuState source_state; return source_state; }
 
+struct DX8Wrapper::SourceFrameCheckpoint {
+    CpuState baseline;
+    bool shader_dirty=false;
+    unsigned long current_shader=0;
+    bool owns_refs=false;
+    ~SourceFrameCheckpoint()
+    {
+        if (!owns_refs) return;
+        for (auto* texture:baseline.textures) if (texture) texture->Release_Ref();
+        if (baseline.material) const_cast<VertexMaterialClass*>(baseline.material)->Release_Ref();
+        if (baseline.vertex_buffer) baseline.vertex_buffer->Release_Ref();
+        if (baseline.index_buffer) baseline.index_buffer->Release_Ref();
+    }
+};
+
+std::shared_ptr<DX8Wrapper::SourceFrameCheckpoint> DX8Wrapper::Capture_Source_Frame()
+{
+    if (state().render_states.size()>256 || state().transforms.size()>64)
+        throw std::runtime_error("original tree source-state checkpoint exceeds bound");
+    for (const auto& stage:state().texture_states)
+        if (stage.size()>64) throw std::runtime_error("original tree stage checkpoint exceeds bound");
+    auto checkpoint=std::make_shared<SourceFrameCheckpoint>();
+    // Copy every allocating container before acquiring any ownership unit.
+    checkpoint->baseline=state();
+    checkpoint->shader_dirty=ShaderClass::ShaderDirty;
+    checkpoint->current_shader=ShaderClass::CurrentShader;
+    for (auto* texture:checkpoint->baseline.textures) if (texture) texture->Add_Ref();
+    if (checkpoint->baseline.material) const_cast<VertexMaterialClass*>(checkpoint->baseline.material)->Add_Ref();
+    if (checkpoint->baseline.vertex_buffer) checkpoint->baseline.vertex_buffer->Add_Ref();
+    if (checkpoint->baseline.index_buffer) checkpoint->baseline.index_buffer->Add_Ref();
+    checkpoint->owns_refs=true;
+    return checkpoint;
+}
+
+void DX8Wrapper::Restore_Source_Frame(SourceFrameCheckpoint& checkpoint) noexcept
+{
+    if (!checkpoint.owns_refs) std::terminate();
+    auto& current=state();
+    for (auto* texture:current.textures) if (texture) texture->Release_Ref();
+    if (current.material) const_cast<VertexMaterialClass*>(current.material)->Release_Ref();
+    if (current.vertex_buffer) {
+        current.vertex_buffer->Release_Engine_Ref();current.vertex_buffer->Release_Ref();
+    }
+    if (current.index_buffer) {
+        current.index_buffer->Release_Engine_Ref();current.index_buffer->Release_Ref();
+    }
+    // All swaps are allocation-free; the captured ordinary references become
+    // the restored selection's ownership, while engine references are exact.
+    using std::swap;
+    swap(current,checkpoint.baseline);
+    checkpoint.owns_refs=false;
+    if (current.vertex_buffer) current.vertex_buffer->Add_Engine_Ref();
+    if (current.index_buffer) current.index_buffer->Add_Engine_Ref();
+    ShaderClass::ShaderDirty=checkpoint.shader_dirty;
+    ShaderClass::CurrentShader=checkpoint.current_shader;
+}
+
 struct DX8Wrapper::SourceStageCheckpoint {
     unsigned mask=0,dirty=0;
     std::array<TextureBaseClass*,8> textures{};

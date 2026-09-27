@@ -49,6 +49,7 @@
 #include "W3DDevice/GameClient/W3DWater.h"
 #include "W3DDevice/GameClient/W3DShadow.h"
 #include "W3DDevice/GameClient/W3DSmudge.h"
+#include "W3DDevice/GameClient/W3DParticleSys.h"
 #include "Common/FileSystem.h"
 #include "Common/file.h"
 #include "Common/GlobalData.h"
@@ -65,6 +66,53 @@ RTS2DScene *W3DDisplay::m_2DScene = NULL;
 RTS3DInterfaceScene *W3DDisplay::m_3DInterfaceScene = NULL;
 W3DAssetManager *W3DDisplay::m_assetManager = NULL;
 static FileFactoryClass *s_priorDisplayFileFactory = NULL;
+
+struct W3DDisplay::SourceTreeFrameCheckpoint {
+	RTS3DScene *scene;
+	TerrainTracksRenderObjClassSystem *tracks;
+	W3DParticleSystemManager *particles;
+	W3DSmudgeManager *smudges;
+	W3DShadowManager *shadows;
+	HeightMapRenderObjClass *terrain;
+	Int visible_extra_blends;
+	std::shared_ptr<RTS3DScene::SourceFrameCheckpoint> scene_state;
+	std::shared_ptr<TerrainTracksRenderObjClassSystem::SourceFrameCheckpoint> track_state;
+	std::shared_ptr<W3DParticleSystemManager::SourceFrameCheckpoint> particle_state;
+	std::shared_ptr<W3DSmudgeManager::SourceFrameCheckpoint> smudge_state;
+	std::shared_ptr<W3DShaderManager::SourceFrameCheckpoint> shader_state;
+	std::shared_ptr<W3DShadowManager::SourceFrameCheckpoint> shadow_state;
+	explicit SourceTreeFrameCheckpoint(CameraClass *camera)
+		:scene(m_3DScene),tracks(TheTerrainTracksRenderObjClassSystem),
+		 particles(dynamic_cast<W3DParticleSystemManager *>(TheParticleSystemManager)),
+		 smudges(dynamic_cast<W3DSmudgeManager *>(TheSmudgeManager)),shadows(TheW3DShadowManager),terrain(TheHeightMap),
+		 visible_extra_blends(terrain ? terrain->m_numVisibleExtraBlendTiles : 0)
+	{
+		if (!scene || !tracks || !smudges || !shadows || !terrain || visible_extra_blends<0 ||
+			(TheParticleSystemManager &&
+			 (TheParticleSystemManager->getParticleCount()!=0 || TheParticleSystemManager->getParticleSystemCount()!=0)))
+			throw OriginalW3DDeviceUnavailable("original immutable tree frame owner checkpoint rejected");
+		scene_state=scene->captureSourceFrame(camera);
+		track_state=tracks->captureSourceFrame();
+		if (particles) particle_state=particles->captureSourceFrame();
+		smudge_state=smudges->captureSourceFrame();
+		shader_state=W3DShaderManager::captureSourceFrame();
+		shadow_state=shadows->captureSourceFrame();
+	}
+	void restore() noexcept
+	{
+		W3DShaderManager::restoreSourceFrame(*shader_state);
+		shadows->restoreSourceFrame(*shadow_state);
+		scene->restoreSourceFrame(*scene_state);
+		tracks->restoreSourceFrame(*track_state);
+		if (particles) particles->restoreSourceFrame(*particle_state);
+		smudges->restoreSourceFrame(*smudge_state);
+		terrain->m_numVisibleExtraBlendTiles=visible_extra_blends;
+	}
+	void consume() noexcept
+	{
+		if (particles) smudges->consumeSourceFrame(*smudge_state);
+	}
+};
 
 W3DDisplay::W3DDisplay()
 {
@@ -303,15 +351,34 @@ void W3DDisplay::draw()
 		if (preparation==BaseHeightMapRenderObjClass::TREE_PHASE_CANCELED)
 			throw OriginalW3DDeviceUnavailable("original accepted tree preparation canceled by effects");
 	}
-	if (WW3D::Begin_Render(true, true, Vector3(0, 0, 0), 1) != WW3D_ERROR_OK)
-		throw OriginalW3DDeviceUnavailable("original display frame did not begin");
+	auto &edge=zh::original_runtime::OriginalGpuEdge::required();
+	const auto phase=TheTerrainRenderObject->preparedTreePhaseIdentity();
+	std::unique_ptr<SourceTreeFrameCheckpoint> checkpoint;
+	if (phase) {
+		checkpoint=std::make_unique<SourceTreeFrameCheckpoint>(view->get3DCamera());
+		if (!edge.begin_tree_source_frame())
+			throw OriginalW3DDeviceUnavailable("original immutable tree frame admission rejected");
+	}
 	try {
+		if (WW3D::Begin_Render(true, true, Vector3(0, 0, 0), 1) != WW3D_ERROR_OK)
+			throw OriginalW3DDeviceUnavailable("original display frame did not begin");
 		DX8Wrapper::Set_Transform(D3DTS_WORLD, Matrix3D(true));
 		Display::drawViews();
-		if (WW3D::End_Render(false) != WW3D_ERROR_OK)
+		if (WW3D::End_Render(phase!=0) != WW3D_ERROR_OK)
 			throw OriginalW3DDeviceUnavailable("original display frame did not end");
+		if (phase) {
+			if (!edge.commit_tree_source_frame())
+				throw OriginalW3DDeviceUnavailable("original immutable tree frame commit rejected");
+			checkpoint->consume();
+			// No fallible work or callbacks remain after native commit. The
+			// admitted owner/generation cannot change on this closed source route.
+			if (!TheTerrainRenderObject->completeTreeRenderPhase(phase)) std::terminate();
+		}
 	} catch (...) {
-		if (WW3D::Is_Rendering()) {
+		if (phase) {
+			if (!edge.abort_tree_source_frame()) std::terminate();
+			checkpoint->restore();
+		} else if (WW3D::Is_Rendering()) {
 			try { (void)WW3D::End_Render(false); }
 			catch (...) { }
 		}

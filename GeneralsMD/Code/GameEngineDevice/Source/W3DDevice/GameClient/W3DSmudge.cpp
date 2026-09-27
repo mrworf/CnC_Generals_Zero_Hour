@@ -39,9 +39,88 @@
 #include "WW3D2/vertmaterial.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
+#include <vector>
+#include <cstring>
 
 SmudgeManager *TheSmudgeManager = NULL;
 static W3DSmudgeManager *s_emptySmudgeOwner = NULL;
+
+struct W3DSmudgeManager::SourceFrameCheckpoint {
+	struct Set { SmudgeSet *identity; std::vector<Smudge *> smudges; Int count; };
+	std::vector<Set> used, free;
+	std::vector<unsigned char> vertex_bytes;
+	DX8VertexBufferClass *vertices;
+	Int last_count;
+	bool pinned=false;
+	~SourceFrameCheckpoint() { if (pinned && vertices) vertices->Release_Ref(); }
+	static void verify(DLListClass<SmudgeSet> &list,const std::vector<Set> &baseline) noexcept;
+};
+
+std::shared_ptr<W3DSmudgeManager::SourceFrameCheckpoint> W3DSmudgeManager::captureSourceFrame()
+{
+	auto result=std::make_shared<SourceFrameCheckpoint>();
+	result->vertices=m_vertexBuffer;result->last_count=m_smudgeCountLastFrame;
+	auto capture=[](DLListClass<SmudgeSet> &list,std::vector<SourceFrameCheckpoint::Set> &output) {
+		for (auto *set=list.Head(); set; set=set->Succ()) {
+			if (output.size()>=4096)
+				throw OriginalW3DDeviceUnavailable("original smudge frame set capacity rejected");
+			SourceFrameCheckpoint::Set entry{set,{},set->getUsedSmudgeCount()};
+			for (auto *smudge=set->getUsedSmudgeList().Head(); smudge; smudge=smudge->Succ()) {
+				if (entry.smudges.size()>=4096)
+					throw OriginalW3DDeviceUnavailable("original smudge frame queue capacity rejected");
+				entry.smudges.push_back(smudge);
+			}
+			if (entry.count!=static_cast<Int>(entry.smudges.size()))
+				throw OriginalW3DDeviceUnavailable("original smudge frame queue count rejected");
+			output.push_back(std::move(entry));
+		}
+	};
+	capture(m_usedSmudgeSetList,result->used);capture(m_freeSmudgeSetList,result->free);
+	if (result->used.size()>1 || (!result->used.empty() && result->used.front().count!=1))
+		throw OriginalW3DDeviceUnavailable("original tree frame smudge geometry rejected");
+	if (m_vertexBuffer) {
+		const auto size=std::size_t(m_vertexBuffer->Get_Vertex_Count())*m_vertexBuffer->FVF_Info().Get_FVF_Size();
+		if (!m_vertexBuffer->Get_CPU_Vertex_Buffer() || size>zh::renderer::RendererLimits::maximum_upload_bytes)
+			throw OriginalW3DDeviceUnavailable("original smudge frame bytes rejected");
+		const auto *begin=m_vertexBuffer->Get_CPU_Vertex_Buffer();
+		result->vertex_bytes.assign(begin,begin+size);
+		m_vertexBuffer->Add_Ref();result->pinned=true;
+	}
+	return result;
+}
+
+void W3DSmudgeManager::SourceFrameCheckpoint::verify(DLListClass<SmudgeSet> &list,
+	const std::vector<Set> &baseline) noexcept
+{
+		auto *set=list.Head();
+		for (const auto &entry:baseline) {
+			if (set!=entry.identity || set->getUsedSmudgeCount()!=entry.count) std::terminate();
+			auto *smudge=set->getUsedSmudgeList().Head();
+			for (auto *identity:entry.smudges) { if (smudge!=identity) std::terminate();smudge=smudge->Succ(); }
+			if (smudge) std::terminate();
+			set=set->Succ();
+		}
+		if (set) std::terminate();
+}
+
+void W3DSmudgeManager::restoreSourceFrame(SourceFrameCheckpoint &checkpoint) noexcept
+{
+	SourceFrameCheckpoint::verify(m_usedSmudgeSetList,checkpoint.used);
+	SourceFrameCheckpoint::verify(m_freeSmudgeSetList,checkpoint.free);
+	if (m_vertexBuffer!=checkpoint.vertices) std::terminate();
+	m_smudgeCountLastFrame=checkpoint.last_count;
+	if (!checkpoint.vertex_bytes.empty())
+		std::memcpy(m_vertexBuffer->Get_CPU_Vertex_Buffer(),checkpoint.vertex_bytes.data(),checkpoint.vertex_bytes.size());
+}
+
+void W3DSmudgeManager::consumeSourceFrame(SourceFrameCheckpoint &checkpoint) noexcept
+{
+	// Validate exact queue identity before the allocation-free source consume.
+	SourceFrameCheckpoint::verify(m_usedSmudgeSetList,checkpoint.used);
+	SourceFrameCheckpoint::verify(m_freeSmudgeSetList,checkpoint.free);
+	SmudgeManager::reset();
+	m_smudgeCountLastFrame=0;
+}
 
 static void requireEmptySmudgeOwner(W3DSmudgeManager *owner)
 {

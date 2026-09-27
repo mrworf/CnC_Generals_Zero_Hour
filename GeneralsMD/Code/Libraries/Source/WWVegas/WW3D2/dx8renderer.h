@@ -136,6 +136,10 @@ public:
 
 class DX8FVFCategoryContainer : public MultiListObjectClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    friend class DX8MeshRendererClass;
+    bool Source_Frame_Empty() noexcept;
+#endif
 public:
 	enum {
 		MAX_PASSES=4
@@ -332,6 +336,9 @@ public:
 	void						Unregister_Mesh_Type(MeshModelClass* mmc);
 	void						Set_Camera(CameraClass* cam) { camera=cam; }
 	CameraClass *			Peek_Camera(void)	{ return camera; }
+#if defined(ZH_WW3D_CPU_ONLY)
+    bool Source_Frame_Queues_Empty() const noexcept;
+#endif
 	void						Add_To_Render_List(DecalMeshClass * decalmesh);
 
 	// Enable or disable lighting on all objects inserted from now on. (Doesn't affect the objects that are already in the lists)

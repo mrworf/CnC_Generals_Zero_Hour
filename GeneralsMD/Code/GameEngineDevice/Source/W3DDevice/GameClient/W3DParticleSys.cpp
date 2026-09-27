@@ -35,6 +35,25 @@ class File;
 #include "OriginalW3DDeviceUnavailable.h"
 #include "original_gpu_edge.h"
 
+struct W3DParticleSystemManager::SourceFrameCheckpoint {
+    Bool ready;
+    Int on_screen;
+};
+
+std::shared_ptr<W3DParticleSystemManager::SourceFrameCheckpoint>
+W3DParticleSystemManager::captureSourceFrame()
+{
+    if (getParticleCount()!=0 || getParticleSystemCount()!=0)
+        throw OriginalW3DDeviceUnavailable("original tree frame active particle geometry rejected");
+    return std::make_shared<SourceFrameCheckpoint>(SourceFrameCheckpoint{m_readyToRender,m_onScreenParticleCount});
+}
+
+void W3DParticleSystemManager::restoreSourceFrame(SourceFrameCheckpoint &checkpoint) noexcept
+{
+    m_readyToRender=checkpoint.ready;
+    m_onScreenParticleCount=checkpoint.on_screen;
+}
+
 W3DParticleSystemManager::W3DParticleSystemManager()
     : m_pointGroup(NULL), m_streakLine(NULL), m_posBuffer(NULL),
       m_RGBABuffer(NULL), m_sizeBuffer(NULL), m_angleBuffer(NULL),
@@ -78,8 +97,13 @@ void W3DParticleSystemManager::doParticles(RenderInfoClass &rinfo)
     zh::original_runtime::OriginalGpuEdge::required().record_source_state(
         "original W3DParticleSystemManager::doParticles smudge request");
     static_cast<W3DSmudgeManager *>(TheSmudgeManager)->render(rinfo);
-    TheSmudgeManager->reset();
-    TheSmudgeManager->setSmudgeCountLastFrame(0);
+    // An admitted tree frame retains the exact lists until native commit.
+    // Its display-owned checkpoint consumes them once after commit, or
+    // restores scalar/buffer state on abort without reconstructing a queue.
+    if (!zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending()) {
+        TheSmudgeManager->reset();
+        TheSmudgeManager->setSmudgeCountLastFrame(0);
+    }
 }
 
 void DoParticles(RenderInfoClass &rinfo)

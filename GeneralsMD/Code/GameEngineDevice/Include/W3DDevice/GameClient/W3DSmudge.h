@@ -25,6 +25,9 @@
 
 #include "GameClient/Smudge.h"
 #include "sharebuf.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <memory>
+#endif
 
 class SmudgeGroupClass;	//forward reference.
 class Vector3;
@@ -39,6 +42,14 @@ class VertexMaterialClass;
 
 class W3DSmudgeManager : public SmudgeManager
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class W3DDisplay;
+	friend struct W3DFrameGeneratedProbeAccess;
+	struct SourceFrameCheckpoint;
+	std::shared_ptr<SourceFrameCheckpoint> captureSourceFrame();
+	void restoreSourceFrame(SourceFrameCheckpoint &) noexcept;
+	void consumeSourceFrame(SourceFrameCheckpoint &) noexcept;
+#endif
 public:
 	W3DSmudgeManager( void );
 	virtual ~W3DSmudgeManager();

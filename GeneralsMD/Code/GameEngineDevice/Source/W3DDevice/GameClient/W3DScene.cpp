@@ -81,6 +81,8 @@
 
 #include "WW3D2/shdlib.h"
 #if defined(ZH_WW3D_CPU_ONLY)
+#include <vector>
+#include <algorithm>
 static bool isBoundedWaterSceneObject(RenderObjClass *object)
 {
 	if (object != TheWaterRenderObj || !object) return false;
@@ -117,6 +119,109 @@ static bool isBoundedShadowCasterSceneObject(RenderObjClass *object)
 			  TheW3DShadowManager->ownsBoundedVolumeCaster(object)) &&
 		object->Peek_Scene() == W3DDisplay::m_3DScene;
 }
+
+struct RTS3DScene::SourceFrameCheckpoint {
+	struct Object {
+		RenderObjClass *identity;
+		unsigned long bits;
+		Matrix3D transform;
+		SphereClass sphere;
+		AABoxClass box;
+		float native_size;
+		bool transform_identity;
+	};
+	struct Light {
+		LightClass *identity;
+		LightClass value;
+		Object object;
+		Light(LightClass *light,const Object &state):identity(light),value(*light),object(state) {}
+	};
+	std::vector<Object> objects;
+	std::vector<RenderObjClass *> render, update;
+	std::vector<Light> lights;
+	LightEnvironmentClass default_env, fogged_env;
+	Vector3 infantry_ambient;
+	CameraClass *draw_camera, *scene_camera;
+	void *camera_user_data;
+	Bool behind_markers;
+	bool visibility, pinned=false;
+	~SourceFrameCheckpoint() { if (pinned) for (const auto &object:objects) object.identity->Release_Ref(); }
+};
+
+std::shared_ptr<RTS3DScene::SourceFrameCheckpoint> RTS3DScene::captureSourceFrame(CameraClass *camera)
+{
+	if (!camera || !TheWritableGlobalData || !LightList.Is_Empty() || !ReleaseList.Is_Empty() ||
+		!m_dynamicLightList.Is_Empty() || m_translucentObjectsCount || m_occludedObjectsCount || m_drawTerrainOnly ||
+		m_customPassMode!=SCENE_PASS_DEFAULT || Get_Extra_Pass_Polygon_Mode()!=EXTRA_PASS_DISABLE ||
+		TheGlobalData->m_useShadowVolumes || TheGlobalData->m_useShadowDecals ||
+		m_numGlobalLights<0 || m_numGlobalLights>LightEnvironmentClass::MAX_LIGHTS)
+		throw OriginalW3DDeviceUnavailable("original immutable tree scene frame admission rejected");
+	auto result=std::make_shared<SourceFrameCheckpoint>();
+	result->default_env=m_defaultLightEnv;result->fogged_env=m_foggedLightEnv;
+	result->infantry_ambient=m_infantryAmbient;result->visibility=Visibility_Checked;
+	result->draw_camera=camera;result->scene_camera=m_camera;result->camera_user_data=camera->Get_User_Data();
+	result->behind_markers=TheWritableGlobalData->m_enableBehindBuildingMarkers;
+	auto state=[](RenderObjClass *object) {
+		return SourceFrameCheckpoint::Object{object,object->Bits,object->Transform,
+			object->CachedBoundingSphere,object->CachedBoundingBox,object->NativeScreenSize,object->IsTransformIdentity};
+	};
+	RefRenderObjListIterator render(&RenderList);
+	for (render.First(); !render.Is_Done(); render.Next()) {
+		auto *object=render.Peek_Obj();
+		if (result->render.size()>=4096 || !(isBoundedMapTerrainSceneObject(object) ||
+			isBoundedMapTrackSceneObject(object) || isBoundedWaterSceneObject(object)))
+			throw OriginalW3DDeviceUnavailable("original immutable tree scene object rejected");
+		result->render.push_back(object);result->objects.push_back(state(object));
+	}
+	RefRenderObjListIterator update(&UpdateList);
+	for (update.First(); !update.Is_Done(); update.Next()) {
+		auto *object=update.Peek_Obj();
+		if (result->update.size()>=4096 || std::find(result->render.begin(),result->render.end(),object)==result->render.end())
+			throw OriginalW3DDeviceUnavailable("original immutable tree update queue rejected");
+		result->update.push_back(object);
+	}
+	for (Int i=0;i<m_numGlobalLights;++i) {
+		if (!m_globalLight[i] || !m_infantryLight[i] || !m_scratchLight)
+			throw OriginalW3DDeviceUnavailable("original immutable tree light owner rejected");
+		result->lights.emplace_back(m_infantryLight[i],state(m_infantryLight[i]));
+	}
+	if (m_scratchLight) result->lights.emplace_back(m_scratchLight,state(m_scratchLight));
+#ifdef USE_NON_STENCIL_OCCLUSION
+	// This bounded profile does not admit the independent mutable player-color
+	// material route; reject it before frame work rather than mutate it midway.
+	if (TheGlobalData->m_enableBehindBuildingMarkers)
+		throw OriginalW3DDeviceUnavailable("original tree player-color pass unsupported");
+#endif
+	for (const auto &object:result->objects) object.identity->Add_Ref();
+	result->pinned=true;
+	return result;
+}
+
+void RTS3DScene::restoreSourceFrame(SourceFrameCheckpoint &checkpoint) noexcept
+{
+	auto verify=[](RefRenderObjListClass &list,const std::vector<RenderObjClass *> &baseline) {
+		RefRenderObjListIterator iterator(&list);iterator.First();
+		for (auto *identity:baseline) {
+			if (iterator.Is_Done() || iterator.Peek_Obj()!=identity) std::terminate();iterator.Next();
+		}
+		if (!iterator.Is_Done()) std::terminate();
+	};
+	verify(RenderList,checkpoint.render);verify(UpdateList,checkpoint.update);
+	if (!LightList.Is_Empty() || !ReleaseList.Is_Empty() || !m_dynamicLightList.Is_Empty() ||
+		m_translucentObjectsCount || m_occludedObjectsCount) std::terminate();
+	auto restore=[](const SourceFrameCheckpoint::Object &value) {
+		auto *object=value.identity;
+		object->Bits=value.bits;object->Transform=value.transform;
+		object->CachedBoundingSphere=value.sphere;object->CachedBoundingBox=value.box;
+		object->NativeScreenSize=value.native_size;object->IsTransformIdentity=value.transform_identity;
+	};
+	for (const auto &object:checkpoint.objects) restore(object);
+	for (const auto &light:checkpoint.lights) { *light.identity=light.value;restore(light.object); }
+	m_defaultLightEnv=checkpoint.default_env;m_foggedLightEnv=checkpoint.fogged_env;
+	m_infantryAmbient=checkpoint.infantry_ambient;Visibility_Checked=checkpoint.visibility;
+	m_camera=checkpoint.scene_camera;checkpoint.draw_camera->Set_User_Data(checkpoint.camera_user_data);
+	TheWritableGlobalData->m_enableBehindBuildingMarkers=checkpoint.behind_markers;
+}
 #endif
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -151,6 +256,7 @@ RTS3DScene::RTS3DScene()
 	setName("RTS3DScene");
 #if defined(ZH_WW3D_CPU_ONLY)
 	m_camera = NULL;
+	m_infantryAmbient=Vector3(0,0,0);
 #endif
 	m_drawTerrainOnly = false;
 	m_numGlobalLights=0;
@@ -932,8 +1038,30 @@ void RTS3DScene::Flush(RenderInfoClass & rinfo)
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid flush translation pending");
 	}
+	if (zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending()) DoShadows(rinfo,FALSE);
 	TheDX8MeshRenderer.Flush();
-	WW3D::Render_And_Clear_Static_Sort_Lists(rinfo);
+	if (zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending()) {
+		// All adjacent owners have been captured before Begin_Render. Native
+		// source order places trees after opaque/shroud flush and before water
+		// and particle consumption, independent of mutable generic stage state.
+		SHD_FLUSH;
+		zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+			"original tree source opaque/empty-occluded/shader flush complete");
+		DoTrees(rinfo);
+		DoShadows(rinfo,TRUE);
+		zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+			"original tree source post-tree stencil flush complete");
+		WW3D::Render_And_Clear_Static_Sort_Lists(rinfo);
+		if (TheWaterRenderObj && TheGlobalData->m_useWaterPlane && TheWaterRenderObj->Is_Really_Visible())
+			TheWaterRenderObj->Render(rinfo);
+		zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+			"original tree source static/water flush complete");
+		if (map_frame && TheParticleSystemManager) DoParticles(rinfo);
+		zh::original_runtime::OriginalGpuEdge::required().record_source_state(
+			"original tree source particle/smudge flush complete");
+	}
+	if (!zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending())
+		WW3D::Render_And_Clear_Static_Sort_Lists(rinfo);
 	SortingRendererClass::Flush();
 	TheDX8MeshRenderer.Clear_Pending_Delete_Lists();
 #else
@@ -1876,6 +2004,10 @@ void RTS3DScene::Customized_Render(RenderInfoClass &rinfo)
 			object->Get_User_Data() != NULL)
 			throw OriginalW3DDeviceUnavailable("original 3D non-rigid object traversal pending");
 		if (object->Is_Really_Visible()) renderOneObject(rinfo, object, localPlayerIndex);
+	}
+	if (zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending()) {
+		if (map_frame && TheParticleSystemManager) TheParticleSystemManager->queueParticleRender();
+		return;
 	}
 	if (map_frame && TheGlobalData->m_useShadowDecals && TheW3DShadowManager && TheW3DShadowManager->hasBoundedDecalCasters()) {
 		TheW3DShadowManager->queueShadows(TRUE);

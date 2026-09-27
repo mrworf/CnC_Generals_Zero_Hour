@@ -56,6 +56,9 @@ class RTS3DInterfaceScene;
 	*/
 class W3DDisplay : public Display
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	struct SourceTreeFrameCheckpoint;
+#endif
 
 public:
 	W3DDisplay();

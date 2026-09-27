@@ -287,6 +287,55 @@ static int last_frame_sorting_vertices;
 static int draw_calls;
 static int last_frame_draw_calls;
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <array>
+#include <string>
+namespace {
+std::array<int*,32> sourceFrameStatistics()
+{
+    return {{&texture_memory,&texture_count,&lightmap_texture_memory,&lightmap_texture_count,
+        &procedural_texture_memory,&procedural_texture_count,&record_count,&texture_change_count,
+        &last_frame_texture_memory,&last_frame_texture_count,&last_frame_lightmap_texture_memory,
+        &last_frame_lightmap_texture_count,&last_frame_procedural_texture_memory,
+        &last_frame_procedural_texture_count,&last_frame_record_count,&last_frame_texture_change_count,
+        &dx8_skin_renders,&last_frame_dx8_skin_renders,&dx8_skin_polygons,&last_frame_dx8_skin_polygons,
+        &dx8_skin_vertices,&last_frame_dx8_skin_vertices,&dx8_polygons,&last_frame_dx8_polygons,
+        &dx8_vertices,&last_frame_dx8_vertices,&sorting_polygons,&last_frame_sorting_polygons,
+        &sorting_vertices,&last_frame_sorting_vertices,&draw_calls,&last_frame_draw_calls}};
+}
+}
+struct Debug_Statistics::SourceFrameCheckpoint {
+    std::array<int,32> counters{};
+    TextureClass* latest=nullptr;
+    std::string text;
+    ~SourceFrameCheckpoint() { if (latest) latest->Release_Ref(); }
+};
+std::shared_ptr<Debug_Statistics::SourceFrameCheckpoint> Debug_Statistics::Capture_Source_Frame()
+{
+    // Detailed debug texture enumeration is not an admitted shipping tree
+    // frame. Its variable-size table must not be discarded on failed replay.
+    if (record_texture_mode!=RECORD_TEXTURE_NONE || texture_statistics.Count()!=0
+        || texture_statistics_string.Get_Length()>1024*1024)
+        throw std::runtime_error("original tree frame debug statistics mode unavailable");
+    auto checkpoint=std::make_shared<SourceFrameCheckpoint>();
+    const auto source=sourceFrameStatistics();
+    for (unsigned i=0;i<source.size();++i) checkpoint->counters[i]=*source[i];
+    checkpoint->text=texture_statistics_string.Peek_Buffer();
+    checkpoint->latest=latest_texture;
+    if (checkpoint->latest) checkpoint->latest->Add_Ref();
+    return checkpoint;
+}
+void Debug_Statistics::Restore_Source_Frame(SourceFrameCheckpoint& checkpoint) noexcept
+{
+    const auto target=sourceFrameStatistics();
+    for (unsigned i=0;i<target.size();++i) *target[i]=checkpoint.counters[i];
+    latest_texture=checkpoint.latest;
+    // Native string assignment grows only: End_Statistics's empty assignment
+    // retains the baseline capacity, so restoring its prior text cannot allocate.
+    texture_statistics_string=checkpoint.text.c_str();
+}
+#endif
+
 void Debug_Statistics::Record_DX8_Skin_Polys_And_Vertices(int pcount,int vcount)
 {
 	dx8_skin_polygons+=pcount;

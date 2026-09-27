@@ -52,6 +52,8 @@
 #else
 #include <cmath>
 #include <stdexcept>
+#include "original_gpu_edge.h"
+#include "OriginalW3DDeviceUnavailable.h"
 #endif
 #include "statistics.h"
 #include <wwprofile.h>
@@ -243,6 +245,11 @@ void SortingRendererClass::Insert_Triangles(
 	unsigned short min_vertex_index,
 	unsigned short vertex_count)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (zh::original_runtime::OriginalGpuEdge::active() &&
+		zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending())
+		throw OriginalW3DDeviceUnavailable("original tree frame sorting queue unsupported");
+#endif
 	if (!WW3D::Is_Sorting_Enabled()) {
 		DX8Wrapper::Draw_Triangles(start_index,polygon_count,min_vertex_index,vertex_count);
 		return;
@@ -418,6 +425,21 @@ static unsigned overlapping_polygon_count;
 static unsigned overlapping_vertex_count;
 static const unsigned MAX_OVERLAPPING_NODES=4096;
 static SortingNodeStruct* overlapping_nodes[MAX_OVERLAPPING_NODES];
+
+#if defined(ZH_WW3D_CPU_ONLY)
+unsigned SortingRendererClass::Capture_Source_Frame()
+{
+    if (sorted_list.Head() || overlapping_node_count || overlapping_polygon_count || overlapping_vertex_count)
+        throw std::runtime_error("original tree frame overlaps pending source sorting work");
+    return last_sorted_triangle_count;
+}
+void SortingRendererClass::Restore_Source_Frame(unsigned count) noexcept
+{
+    if (sorted_list.Head() || overlapping_node_count || overlapping_polygon_count || overlapping_vertex_count)
+        std::terminate();
+    last_sorted_triangle_count=count;
+}
+#endif
 
 // ----------------------------------------------------------------------------
 

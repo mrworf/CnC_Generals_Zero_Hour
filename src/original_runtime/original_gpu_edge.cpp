@@ -9,6 +9,8 @@
 #include "missingtexture.h"
 #include "volume_stencil_contract.h"
 #include "volume_buffer_provider.h"
+#include "ww3d.h"
+#include "assetmgr.h"
 
 #include <algorithm>
 #include <atomic>
@@ -19,6 +21,7 @@
 #include <stdexcept>
 #include <string>
 #include <exception>
+#include <vector>
 
 namespace zh::original_runtime {
 namespace {
@@ -55,6 +58,196 @@ struct OriginalGpuEdge::SourceStageAttempt {
     renderer::DeviceTransactionToken device;
     bool failed=false,applied=false;
 };
+
+struct OriginalGpuEdge::SourceFrameAttempt {
+    struct TextureMetadata {
+        TextureBaseClass* source=nullptr;
+        unsigned access=0,inactivation=0,extended=0;
+        bool initialized=false;
+    };
+    struct VertexBytes { const DX8VertexBufferClass* source=nullptr;std::vector<unsigned char> bytes; };
+    struct IndexBytes { const DX8IndexBufferClass* source=nullptr;std::vector<unsigned short> bytes; };
+    std::shared_ptr<DX8Wrapper::SourceFrameCheckpoint> source;
+    std::shared_ptr<WW3D::SourceFrameCheckpoint> ww3d;
+    std::shared_ptr<DynamicVBAccessClass::SourceFrameCheckpoint> dynamic_vertices;
+    std::shared_ptr<DynamicIBAccessClass::SourceFrameCheckpoint> dynamic_indices;
+    decltype(vertices_) vertices;
+    decltype(indices_) indices;
+    decltype(textures_) textures;
+    decltype(texture_owner_refs_) texture_owners;
+    decltype(pending_stages_) pending{};
+    decltype(pending_filter_values_) filters{};
+    decltype(physical_) physical;
+    decltype(volume_stencil_) volume;
+    decltype(source_viewport_) viewport;
+    std::vector<TextureMetadata> metadata;
+    std::vector<VertexBytes> vertex_bytes;
+    std::vector<IndexBytes> index_bytes;
+    std::uint64_t revision=0;
+    renderer::DeviceTransactionToken device;
+    bool buffer_pins=false,texture_pins=false;
+    bool terrain_produced=false;
+    ~SourceFrameAttempt()
+    {
+        if (buffer_pins) {
+            for (const auto& entry:vertices) entry.first->Release_Ref();
+            for (const auto& entry:indices) entry.first->Release_Ref();
+        }
+        if (texture_pins) for (const auto& entry:metadata) entry.source->Release_Ref();
+    }
+};
+
+bool OriginalGpuEdge::tree_source_frame_pending() const noexcept
+{ return source_frame_attempt_!=nullptr; }
+
+void OriginalGpuEdge::mark_tree_source_terrain()
+{
+    if (!source_frame_attempt_) return;
+    if (!source_frame_active_ || !device_.pass_active() || source_frame_attempt_->terrain_produced)
+        throw std::runtime_error("original immutable tree terrain producer rejected");
+    source_frame_attempt_->terrain_produced=true;
+}
+
+bool OriginalGpuEdge::begin_tree_source_frame()
+{
+    if (active_edge!=this || source_frame_attempt_ || device_transaction_ || source_stage_attempt_
+        || source_frame_active_ || device_.pass_active() || source_reference_queued_
+        || source_reference_token_.units || !bound_frame_
+        || vertices_.size()+indices_.size()+textures_.size()>4096
+        || !device_.supports_device_transactions(renderer::DeviceTransactionMode::frame_commands)) return false;
+    try {
+        auto attempt=std::make_unique<SourceFrameAttempt>();
+        attempt->vertices=vertices_;attempt->indices=indices_;attempt->textures=textures_;
+        attempt->texture_owners=texture_owner_refs_;attempt->pending=pending_stages_;
+        attempt->filters=pending_filter_values_;attempt->physical=physical_;
+        attempt->volume=volume_stencil_;attempt->revision=source_revision_;
+        attempt->viewport=source_viewport_;
+        attempt->metadata.reserve(textures_.size());attempt->vertex_bytes.reserve(vertices_.size());
+        attempt->index_bytes.reserve(indices_.size());
+        std::size_t bytes=0;
+        const auto capture_metadata=[&](TextureBaseClass *texture,bool resident) {
+            if (!texture || (resident && !texture->Is_Initialized()) || texture->Num_Refs()<=0
+                || texture->Num_Refs()>std::numeric_limits<int>::max()-32)
+                throw std::runtime_error("original tree frame texture metadata provider rejected");
+            for (const auto &entry:attempt->metadata) if (entry.source==texture) return;
+            if (attempt->metadata.size()==4096)
+                throw std::runtime_error("original tree frame texture metadata capacity rejected");
+            attempt->metadata.push_back({texture,texture->LastAccessed,
+                texture->LastInactivationSyncTime,texture->ExtendedInactivationTime,texture->Initialized});
+        };
+        for (const auto& entry:textures_) capture_metadata(entry.first,true);
+        // Begin_Render's native loader expiry walks the complete asset hash,
+        // not just GPU-resident sources. Capture only its mutable metadata;
+        // do not initialize/load any nonresident source while admitting it.
+        if (WW3D::Get_Thumbnail_Enabled()) {
+            auto *assets=WW3DAssetManager::Get_Instance();
+            if (assets) {
+                HashTemplateIterator<StringClass,TextureClass *> textures(assets->Texture_Hash());
+                unsigned entries=0;
+                for (textures.First();!textures.Is_Done();textures.Next()) {
+                    if (entries++==4096) throw std::runtime_error("original tree frame asset texture capacity rejected");
+                    capture_metadata(textures.Peek_Value(),false);
+                }
+            }
+        }
+        for (const auto& entry:vertices_) {
+            const auto* vertex=static_cast<const DX8VertexBufferClass*>(entry.first);
+            const std::size_t size=std::size_t(vertex->Get_Vertex_Count())*vertex->FVF_Info().Get_FVF_Size();
+            if (!vertex->Get_CPU_Vertex_Buffer() || size>renderer::RendererLimits::maximum_upload_bytes-bytes) return false;
+            bytes+=size;
+            const auto* begin=static_cast<const unsigned char*>(vertex->Get_CPU_Vertex_Buffer());
+            attempt->vertex_bytes.push_back({vertex,std::vector<unsigned char>(begin,begin+size)});
+        }
+        for (const auto& entry:indices_) {
+            const auto* index=static_cast<const DX8IndexBufferClass*>(entry.first);
+            const std::size_t size=std::size_t(index->Get_Index_Count())*sizeof(unsigned short);
+            if (!index->Get_CPU_Index_Buffer() || size>renderer::RendererLimits::maximum_upload_bytes-bytes) return false;
+            bytes+=size;
+            const auto* begin=index->Get_CPU_Index_Buffer();
+            attempt->index_bytes.push_back({index,std::vector<unsigned short>(begin,begin+index->Get_Index_Count())});
+        }
+        attempt->source=DX8Wrapper::Capture_Source_Frame();
+        attempt->ww3d=WW3D::Capture_Source_Frame();
+        attempt->dynamic_vertices=DynamicVBAccessClass::Capture_Source_Frame();
+        attempt->dynamic_indices=DynamicIBAccessClass::Capture_Source_Frame();
+        for (const auto& entry:attempt->vertices) entry.first->Add_Ref();
+        for (const auto& entry:attempt->indices) entry.first->Add_Ref();
+        attempt->buffer_pins=true;
+        for (const auto& entry:attempt->metadata) entry.source->Add_Ref();
+        attempt->texture_pins=true;
+        const renderer::DeviceTransactionDesc desc{renderer::DeviceTransactionMode::frame_commands,
+            frame_target_generation_,4096,4096,renderer::RendererLimits::maximum_upload_bytes,
+            renderer::RendererLimits::ordered_views};
+        if (!begin_device_transaction(desc,attempt->device)) return false;
+        source_frame_attempt_=std::move(attempt);
+        return true;
+    } catch (...) { return false; }
+}
+
+bool OriginalGpuEdge::commit_tree_source_frame() noexcept
+{
+    if (!source_frame_attempt_ || source_frame_active_ || device_.pass_active()) return false;
+    if (source_frame_commit_fault_) { source_frame_commit_fault_=false;return false; }
+    if (!commit_device_transaction(source_frame_attempt_->device)) return false;
+    source_frame_attempt_.reset();
+    return true;
+}
+
+bool OriginalGpuEdge::abort_tree_source_frame() noexcept
+{
+    if (!source_frame_attempt_) return false;
+    auto& attempt=*source_frame_attempt_;
+    if (!abort_device_transaction(attempt.device)) return false;
+    DX8Wrapper::Restore_Source_Frame(*attempt.source);
+    WW3D::Restore_Source_Frame(*attempt.ww3d);
+    DynamicVBAccessClass::Restore_Source_Frame(*attempt.dynamic_vertices);
+    DynamicIBAccessClass::Restore_Source_Frame(*attempt.dynamic_indices);
+    for (const auto& entry:vertices_) entry.first->Release_Ref();
+    for (const auto& entry:indices_) entry.first->Release_Ref();
+    vertices_.swap(attempt.vertices);indices_.swap(attempt.indices);
+    attempt.buffer_pins=false; // Captured pins are now the restored map units.
+    textures_.swap(attempt.textures);texture_owner_refs_.swap(attempt.texture_owners);
+    pending_stages_=attempt.pending;pending_filter_values_=attempt.filters;
+    physical_=attempt.physical;volume_stencil_=attempt.volume;source_revision_=attempt.revision;
+    source_frame_active_=false;source_viewport_=attempt.viewport;
+    for (const auto& entry:attempt.metadata) {
+        entry.source->LastAccessed=entry.access;entry.source->LastInactivationSyncTime=entry.inactivation;
+        entry.source->ExtendedInactivationTime=entry.extended;entry.source->Initialized=entry.initialized;
+    }
+    for (const auto& entry:attempt.vertex_bytes)
+        std::memcpy(const_cast<unsigned char*>(entry.source->Get_CPU_Vertex_Buffer()),entry.bytes.data(),entry.bytes.size());
+    for (const auto& entry:attempt.index_bytes)
+        std::memcpy(const_cast<unsigned short*>(entry.source->Get_CPU_Index_Buffer()),entry.bytes.data(),entry.bytes.size()*sizeof(unsigned short));
+    source_frame_attempt_.reset();
+    return true;
+}
+
+void OriginalGpuEdge::draw_immutable_tree(const PreparedTreeProgram& program,
+    const VertexBufferClass* vertex,const IndexBufferClass* index,
+    unsigned vertex_count,unsigned index_count)
+{
+    guard_nonstage_mutation();
+    const auto vb=vertices_.find(vertex);
+    const auto ib=indices_.find(index);
+    if (!source_frame_attempt_ || !source_frame_active_ || !device_.pass_active()
+        || !source_frame_attempt_->terrain_produced || !immutable_tree_program_current(program) || vb==vertices_.end() || ib==indices_.end()
+        || !vertex_count || !index_count || index_count%3
+        || vertex_count!=vertex->Get_Vertex_Count() || index_count!=index->Get_Index_Count()
+        || vertex->Type()!=BUFFER_TYPE_DX8 || index->Type()!=BUFFER_TYPE_DX8
+        || vertex->FVF_Info().Get_FVF()!=DX8_FVF_XYZNDUV1)
+        throw std::runtime_error("original immutable tree draw provider/range unavailable");
+    const auto* source=static_cast<const DX8IndexBufferClass*>(index)->Get_CPU_Index_Buffer();
+    if (!source) throw std::runtime_error("original immutable tree indices unavailable");
+    for (unsigned i=0;i<index_count;++i)
+        if (source[i]>=vertex_count)
+            throw std::runtime_error("original immutable tree index escapes accepted range");
+    renderer::DrawDesc draw;
+    draw.pipeline=program.state_.pipeline;draw.vertex_buffer=vb->second;draw.index_buffer=ib->second;
+    draw.vertex_or_index_count=index_count;draw.index_element_size=renderer::IndexElementSize::uint16;
+    draw.vertex_bindings=program.state_.vertex_bindings;draw.fragment_bindings=program.state_.fragment_bindings;
+    if (!device_.draw(draw)) throw std::runtime_error("original immutable tree submission rejected");
+    record_source_state("original BaseHeightMap::renderTrees immutable indexed triangles");
+}
 
 renderer::ValidationResult OriginalGpuEdge::begin_source_stages(const SourceStageDesc& desc,SourceStageToken& token)
 {
@@ -235,6 +428,7 @@ OriginalGpuEdge::OriginalGpuEdge(renderer::GpuDevice& device)
 
 OriginalGpuEdge::~OriginalGpuEdge()
 {
+    if (source_frame_attempt_ && !abort_tree_source_frame()) std::terminate();
     if (source_stage_attempt_ && !abort_source_stages(source_stage_attempt_->token)) std::terminate();
     if (device_transaction_) (void)abort_device_transaction(*device_transaction_);
     abort_source_frame();
@@ -1501,6 +1695,10 @@ void OriginalGpuEdge::end_source_frame(bool present)
     source_frame_active_=false;
     source_viewport_.reset();
     if (present) {
+        if (source_frame_attempt_ && source_frame_present_fault_) {
+            source_frame_present_fault_=false;
+            throw std::runtime_error("original generated source pre-present rejection");
+        }
         if (auto result=device_.present(bound_frame_->color); !result)
             throw std::runtime_error("original source frame presentation failed: "+result.error);
     }

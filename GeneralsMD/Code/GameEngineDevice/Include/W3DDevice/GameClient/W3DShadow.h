@@ -30,12 +30,21 @@
 
 #include "matrix4.h"
 #include "GameClient/Shadow.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <memory>
+#endif
 
 class Drawable;	//forward reference
 
 // ShadowManager -------------------------------------------------------------
 class W3DShadowManager
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class W3DDisplay;
+	struct SourceFrameCheckpoint;
+	std::shared_ptr<SourceFrameCheckpoint> captureSourceFrame();
+	void restoreSourceFrame(SourceFrameCheckpoint &) noexcept;
+#endif
 
 public:
 	

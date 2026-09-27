@@ -15,6 +15,11 @@
 #include <limits>
 #include <stdexcept>
 
+struct DynamicFrameGeneratedProbeAccess {
+    static unsigned offset(const DynamicVBAccessClass &access) { return access.VertexBufferOffset; }
+    static unsigned offset(const DynamicIBAccessClass &access) { return access.IndexBufferOffset; }
+};
+
 namespace {
 using namespace zh::renderer;
 using Edge=zh::original_runtime::OriginalGpuEdge;
@@ -242,6 +247,104 @@ void recording_generation()
                 && device.buffer_bytes(owned->state().fragment_bindings.uniforms[0].buffer)==fragment,
                 "generic preparation/stage mutation invalidated immutable program");
             DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_TEXCOORDINDEX,1);
+            const auto bound=edge.bind_vertex(vb);
+            DX8VertexBufferClass *dynamicVertex=nullptr;
+            DX8IndexBufferClass *dynamicIndex=nullptr;
+            {
+                DynamicVBAccessClass access(BUFFER_TYPE_DYNAMIC_DX8,DX8_FVF_XYZNDUV2,4);
+                DynamicVBAccessClass::WriteLockClass lock(&access);
+                std::memset(lock.Get_Formatted_Vertex_Array(),0x35,4*sizeof(VertexFormatXYZNDUV2));
+                dynamicVertex=static_cast<DX8VertexBufferClass *>(access.Peek_Buffer());
+            }
+            {
+                DynamicIBAccessClass access(BUFFER_TYPE_DYNAMIC_DX8,4);
+                DynamicIBAccessClass::WriteLockClass lock(&access);
+                std::fill(lock.Get_Index_Array(),lock.Get_Index_Array()+4,3);
+                dynamicIndex=static_cast<DX8IndexBufferClass *>(access.Peek_Buffer());
+            }
+            const auto dynamicVertexHandle=edge.bind_vertex(dynamicVertex),dynamicIndexHandle=edge.bind_index(dynamicIndex);
+            const auto dynamicVertexBytes=device.buffer_bytes(dynamicVertexHandle),dynamicIndexBytes=device.buffer_bytes(dynamicIndexHandle);
+            const auto dynamicVertexCapacity=dynamicVertex->Get_Vertex_Count(),dynamicIndexCapacity=dynamicIndex->Get_Index_Count();
+            const auto frameBaseline=edge.prepare_tree_state(vb,program);
+            const auto sourceBaseline=DX8Wrapper::Inspect_Source_State();
+            const auto frameResources=device.resource_counts();
+            const auto frameCommands=device.snapshot();
+            const auto frameBytes=device.buffer_bytes(bound);
+            const auto frameRefs=vb->Num_Refs();
+            check(edge.begin_tree_source_frame() && edge.tree_source_frame_pending(),
+                "source frame checkpoint rejected exact backend/target");
+            check(!edge.begin_tree_source_frame(),"nested source frame changed original ownership");
+            edge.begin_source_frame(true,true,0,0,0,1);
+            Matrix4x4 changedWorld(true);changedWorld[0].W=1;
+            DX8Wrapper::Set_Transform(D3DTS_WORLD,changedWorld);
+            DX8Wrapper::Set_Texture(1,nullptr);
+            DX8Wrapper::Set_Material(nullptr);
+            write(vb,vertices(0));
+            (void)edge.bind_vertex(vb);
+            {
+                DynamicVBAccessClass access(BUFFER_TYPE_DYNAMIC_DX8,DX8_FVF_XYZNDUV2,4);
+                DynamicVBAccessClass::WriteLockClass lock(&access);
+                std::memset(lock.Get_Formatted_Vertex_Array(),0x61,4*sizeof(VertexFormatXYZNDUV2));
+                (void)edge.bind_vertex(access.Peek_Buffer());
+            }
+            {
+                DynamicIBAccessClass access(BUFFER_TYPE_DYNAMIC_DX8,4);
+                DynamicIBAccessClass::WriteLockClass lock(&access);
+                std::fill(lock.Get_Index_Array(),lock.Get_Index_Array()+4,5);
+                (void)edge.bind_index(access.Peek_Buffer());
+            }
+            {
+                DynamicVBAccessClass access(BUFFER_TYPE_DYNAMIC_DX8,DX8_FVF_XYZNDUV2,6000);
+                DynamicVBAccessClass::WriteLockClass lock(&access);
+                std::memset(lock.Get_Formatted_Vertex_Array(),0x73,6000*sizeof(VertexFormatXYZNDUV2));
+                (void)edge.bind_vertex(access.Peek_Buffer());
+            }
+            {
+                DynamicIBAccessClass access(BUFFER_TYPE_DYNAMIC_DX8,6000);
+                DynamicIBAccessClass::WriteLockClass lock(&access);
+                std::fill(lock.Get_Index_Array(),lock.Get_Index_Array()+6000,7);
+                (void)edge.bind_index(access.Peek_Buffer());
+            }
+            check(rejected([&]{DynamicVBAccessClass unsupported(BUFFER_TYPE_DYNAMIC_SORTING,DX8_FVF_XYZNDUV2,4);}) &&
+                rejected([&]{DynamicIBAccessClass unsupported(BUFFER_TYPE_DYNAMIC_SORTING,4);}),
+                "tree source frame admitted sorting producer");
+            edge.end_source_frame(false);
+            // The latest fallible presentation command must poison the whole
+            // frame, after all preceding source/device mutation has occurred.
+            device.fail_transaction_operation_after(0);
+            check(!device.present(color) && !edge.commit_tree_source_frame()
+                && edge.abort_tree_source_frame() && !edge.abort_tree_source_frame(),
+                "late presentation failure escaped source/device rollback");
+            const auto restored=DX8Wrapper::Inspect_Source_State();
+            check(!edge.tree_source_frame_pending() && !device.pass_active()
+                && device.snapshot()==frameCommands && device.resource_counts()==frameResources
+                && device.buffer_bytes(bound)==frameBytes && vb->Num_Refs()==frameRefs
+                && !std::memcmp(vb->Get_CPU_Vertex_Buffer(),frameBytes.data(),frameBytes.size())
+                && restored.render==sourceBaseline.render && restored.stages==sourceBaseline.stages
+                && restored.transforms.size()==sourceBaseline.transforms.size()
+                && edge.immutable_tree_program_current(*owned),
+                "late presentation abort changed accepted source/resource identity");
+            edge.validate_prepared_state(frameBaseline);
+            {
+                DynamicVBAccessClass access(BUFFER_TYPE_DYNAMIC_DX8,DX8_FVF_XYZNDUV2,4);
+                check(access.Peek_Buffer()==dynamicVertex && DynamicFrameGeneratedProbeAccess::offset(access)==4 &&
+                    dynamicVertex->Get_Vertex_Count()==dynamicVertexCapacity && device.buffer_bytes(dynamicVertexHandle)==dynamicVertexBytes &&
+                    !std::memcmp(dynamicVertex->Get_CPU_Vertex_Buffer(),dynamicVertexBytes.data(),dynamicVertexBytes.size()),
+                    "dynamic vertex abort changed identity/capacity/offset/bytes");
+            }
+            {
+                DynamicIBAccessClass access(BUFFER_TYPE_DYNAMIC_DX8,4);
+                check(access.Peek_Buffer()==dynamicIndex && DynamicFrameGeneratedProbeAccess::offset(access)==4 &&
+                    dynamicIndex->Get_Index_Count()==dynamicIndexCapacity && device.buffer_bytes(dynamicIndexHandle)==dynamicIndexBytes &&
+                    !std::memcmp(dynamicIndex->Get_CPU_Index_Buffer(),dynamicIndexBytes.data(),dynamicIndexBytes.size()),
+                    "dynamic index abort changed identity/capacity/offset/bytes");
+            }
+            check(edge.begin_tree_source_frame(),"source frame clean retry rejected");
+            edge.begin_source_frame(true,true,0,0,0,1);
+            edge.end_source_frame(true);
+            check(edge.commit_tree_source_frame() && !edge.commit_tree_source_frame()
+                && edge.immutable_tree_program_current(*owned),
+                "source frame success did not consume exactly once");
             owned.reset();
             device.destroy(depth);device.destroy(color);
         }
@@ -255,6 +358,7 @@ void recording_generation()
         }
         vb->Release_Ref();
     }
+    DynamicVBAccessClass::_Deinit();DynamicIBAccessClass::_Deinit();
     check(device.resource_counts().total()==0 && VertexBufferClass::Get_Total_Buffer_Count()==0,
         "tree program teardown retained resource");
 }

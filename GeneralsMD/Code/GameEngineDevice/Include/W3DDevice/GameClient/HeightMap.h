@@ -59,6 +59,9 @@ scorchmarks and intersection tests.
 
 class HeightMapRenderObjClass : public BaseHeightMapRenderObjClass
 {	
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class W3DDisplay;
+#endif
 
 public:
 

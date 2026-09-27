@@ -546,6 +546,9 @@ protected:
 	};
 
 	mutable unsigned long		Bits;
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class RTS3DScene;
+#endif
 	Matrix3D							Transform;
  	float						ObjectScale;					//user applied scaling factor inside Transform matrix.
 	unsigned int				ObjectColor;					//user applied coloring to the asset/prototype used to make this robj. - For Generals -MW

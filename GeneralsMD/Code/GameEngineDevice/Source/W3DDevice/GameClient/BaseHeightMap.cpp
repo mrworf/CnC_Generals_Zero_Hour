@@ -1320,6 +1320,32 @@ void BaseHeightMapRenderObjClass::cancelTreeRenderPhase()
 	registry->second.preparedPhase.reset();
 }
 
+void BaseHeightMapRenderObjClass::renderTrees(CameraClass *camera)
+{
+	if (!m_map || !Peek_Scene()) return;
+	const auto registry=s_cpuTreeRegistries.find(this);
+	if (registry==s_cpuTreeRegistries.end() || registry->second.instances.empty()) return;
+	auto* edge=zh::original_runtime::OriginalGpuEdge::active();
+	const auto& phase=registry->second.preparedPhase;
+	if (!edge || !edge->tree_source_frame_pending() || !phase || phase->canceled
+		|| phase->edge!=edge || phase->generation!=edge->generation()
+		|| phase->frameGeneration!=edge->frame_target_generation() || phase->camera!=camera
+		|| phase->ownerEpoch!=registry->second.epoch || !phase->gpu
+		|| !m_shroud || phase->shroudEpoch!=m_shroud->acceptedContentEpoch())
+		throw OriginalW3DDeviceUnavailable("original tree draw immutable phase unavailable");
+	if (!phase->gpu->vertexCount && !phase->gpu->indexCount) return;
+	if (!phase->program)
+		throw OriginalW3DDeviceUnavailable("original visible tree immutable program unavailable");
+	edge->draw_immutable_tree(*phase->program,phase->gpu->vertex,phase->gpu->index,
+		phase->gpu->vertexCount,phase->gpu->indexCount);
+}
+
+void DoTrees(RenderInfoClass& info)
+{
+	if (TheTerrainRenderObject && TheGlobalData && TheGlobalData->m_useTrees)
+		TheTerrainRenderObject->renderTrees(&info.Camera);
+}
+
 bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 	const CameraClass *camera,const BreezeInfo &breeze,Bool paused,Bool preparePhase,Bool *phaseCanceled,Bool *phaseEmpty)
 {

@@ -43,6 +43,9 @@
 #include "WW3D2/RInfo.h"
 #include "WW3D2/Coltest.h"
 #include "WW3D2/lightenvironment.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <memory>
+#endif
 ///////////////////////////////////////////////////////////////////////////////
 // PROTOTYPES /////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -60,6 +63,13 @@ class W3DMaskMaterialPassClass;
 //-----------------------------------------------------------------------------
 class RTS3DScene : public SimpleSceneClass, public SubsystemInterface
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class W3DDisplay;
+	friend struct W3DFrameGeneratedProbeAccess;
+	struct SourceFrameCheckpoint;
+	std::shared_ptr<SourceFrameCheckpoint> captureSourceFrame(CameraClass *);
+	void restoreSourceFrame(SourceFrameCheckpoint &) noexcept;
+#endif
 
 public:
 

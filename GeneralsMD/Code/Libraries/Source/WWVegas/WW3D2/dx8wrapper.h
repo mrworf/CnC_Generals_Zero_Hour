@@ -175,6 +175,9 @@ public:
 private:
     friend class zh::original_runtime::OriginalGpuEdge;
     struct SourceStageCheckpoint;
+    struct SourceFrameCheckpoint;
+    static std::shared_ptr<SourceFrameCheckpoint> Capture_Source_Frame();
+    static void Restore_Source_Frame(SourceFrameCheckpoint&) noexcept;
     static std::shared_ptr<SourceStageCheckpoint> Capture_Source_Stages(unsigned mask);
     static void Restore_Source_Stages(SourceStageCheckpoint&) noexcept;
     static void Apply_Source_Stages(unsigned mask);

@@ -37,6 +37,9 @@
 #define __W3DSHADERMANAGER_H_
 
 #include "WW3D2/Texture.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <memory>
+#endif
 enum CustomScenePassModes : int;
 #if !defined(ZH_WW3D_CPU_ONLY)
 enum FilterTypes;
@@ -54,6 +57,12 @@ class TextureClass;	///forward reference
 */
 class W3DShaderManager
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class W3DDisplay;
+	struct SourceFrameCheckpoint;
+	static std::shared_ptr<SourceFrameCheckpoint> captureSourceFrame();
+	static void restoreSourceFrame(SourceFrameCheckpoint &) noexcept;
+#endif
 public:
 
 	//put any custom shaders (not going through W3D) in here.

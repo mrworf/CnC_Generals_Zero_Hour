@@ -239,6 +239,22 @@ static void requireEmptyShadowOwner(W3DShadowManager *owner)
 }
 #endif
 const FrustumClass *shadowCameraFrustum;
+#if defined(ZH_WW3D_CPU_ONLY)
+struct W3DShadowManager::SourceFrameCheckpoint {
+	const FrustumClass *frustum;
+	Bool queued,stencil;
+};
+std::shared_ptr<W3DShadowManager::SourceFrameCheckpoint> W3DShadowManager::captureSourceFrame()
+{
+	if (m_isShadowScene || TheGlobalData->m_useShadowDecals || TheGlobalData->m_useShadowVolumes)
+		throw OriginalW3DDeviceUnavailable("original immutable tree frame shadow profile rejected");
+	return std::make_shared<SourceFrameCheckpoint>(SourceFrameCheckpoint{shadowCameraFrustum,m_isShadowScene,s_boundedShadowStencilPass});
+}
+void W3DShadowManager::restoreSourceFrame(SourceFrameCheckpoint &checkpoint) noexcept
+{
+	shadowCameraFrustum=checkpoint.frustum;m_isShadowScene=checkpoint.queued;s_boundedShadowStencilPass=checkpoint.stencil;
+}
+#endif
 
 Vector3 LightPosWorld[ MAX_SHADOW_LIGHTS ] =
 {

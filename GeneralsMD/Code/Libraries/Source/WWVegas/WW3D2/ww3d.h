@@ -52,6 +52,10 @@ class		SceneClass;
 class		CameraClass;
 class		ShaderClass;
 class		DX8Wrapper;
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <memory>
+namespace zh { namespace original_runtime { class OriginalGpuEdge; } }
+#endif
 
 struct	RenderStatistics;
 class		FrameGrabClass;
@@ -315,6 +319,12 @@ public:
 	static void					Set_Gamma(float gamma,float bright,float contrast,bool calibrate=true);
 
 private:
+#if defined(ZH_WW3D_CPU_ONLY)
+    friend class zh::original_runtime::OriginalGpuEdge;
+    struct SourceFrameCheckpoint;
+    static std::shared_ptr<SourceFrameCheckpoint> Capture_Source_Frame();
+    static void Restore_Source_Frame(SourceFrameCheckpoint&) noexcept;
+#endif
 
 	enum
 	{

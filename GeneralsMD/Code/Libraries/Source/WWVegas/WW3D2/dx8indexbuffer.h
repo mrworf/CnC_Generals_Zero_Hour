@@ -44,11 +44,17 @@
 #define DX8INDEXBUFFER_H
 
 #include "always.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <memory>
+#endif
 #include "wwdebug.h"
 #include "refcount.h"
 #include "sphere.h"
 
 class DX8Wrapper;
+#if defined(ZH_WW3D_CPU_ONLY)
+namespace zh { namespace original_runtime { class OriginalGpuEdge; } }
+#endif
 class SortingRendererClass;
 struct IDirect3DIndexBuffer8;
 class DX8IndexBufferClass;
@@ -113,6 +119,13 @@ protected:
 // Created
 class DynamicIBAccessClass : public W3DMPO
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    friend class zh::original_runtime::OriginalGpuEdge;
+    friend struct DynamicFrameGeneratedProbeAccess;
+    struct SourceFrameCheckpoint;
+    static std::shared_ptr<SourceFrameCheckpoint> Capture_Source_Frame();
+    static void Restore_Source_Frame(SourceFrameCheckpoint &) noexcept;
+#endif
 	W3DMPO_GLUE(DynamicIBAccessClass)
 
 	friend DX8Wrapper;

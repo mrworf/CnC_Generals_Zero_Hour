@@ -58,6 +58,10 @@
 static TerrainTracksRenderObjClassSystem *s_zeroTrackOwner = NULL;
 #endif
 #include <algorithm>
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <vector>
+#include <cstring>
+#endif
 #include "texture.h"
 #include "colmath.h"
 #include "coltest.h"
@@ -77,6 +81,57 @@ static TerrainTracksRenderObjClassSystem *s_zeroTrackOwner = NULL;
 #endif
 
 #define BRIDGE_OFFSET_FACTOR	0.25f	//amount to raise tracks above bridges.
+#if defined(ZH_WW3D_CPU_ONLY)
+struct TerrainTracksRenderObjClassSystem::SourceFrameCheckpoint {
+	Int edges;
+	DX8VertexBufferClass *vertices;
+	std::vector<unsigned char> bytes;
+	std::vector<TerrainTracksRenderObjClass *> used, free;
+	bool pinned=false;
+	~SourceFrameCheckpoint() { if (pinned && vertices) vertices->Release_Ref(); }
+};
+
+std::shared_ptr<TerrainTracksRenderObjClassSystem::SourceFrameCheckpoint>
+TerrainTracksRenderObjClassSystem::captureSourceFrame()
+{
+	auto result=std::make_shared<SourceFrameCheckpoint>();
+	result->edges=m_edgesToFlush;
+	result->vertices=m_vertexBuffer;
+	for (auto *node=m_usedModules; node; node=node->m_nextSystem) {
+		if (result->used.size()>=4096)
+			throw OriginalW3DDeviceUnavailable("original track frame queue capacity rejected");
+		result->used.push_back(node);
+	}
+	for (auto *node=m_freeModules; node; node=node->m_nextSystem) {
+		if (result->free.size()>=4096)
+			throw OriginalW3DDeviceUnavailable("original track frame free queue capacity rejected");
+		result->free.push_back(node);
+	}
+	if (m_vertexBuffer) {
+		const auto size=std::size_t(m_vertexBuffer->Get_Vertex_Count())*m_vertexBuffer->FVF_Info().Get_FVF_Size();
+		if (!m_vertexBuffer->Get_CPU_Vertex_Buffer() || size>zh::renderer::RendererLimits::maximum_upload_bytes)
+			throw OriginalW3DDeviceUnavailable("original track frame bytes rejected");
+		const auto *begin=m_vertexBuffer->Get_CPU_Vertex_Buffer();
+		result->bytes.assign(begin,begin+size);
+		m_vertexBuffer->Add_Ref();result->pinned=true;
+	}
+	return result;
+}
+
+void TerrainTracksRenderObjClassSystem::restoreSourceFrame(SourceFrameCheckpoint &checkpoint) noexcept
+{
+	// Rendering only consumes the edge count and rewrites this fixed buffer;
+	// it never removes/reorders modules.  Verify the exact admitted identities.
+	auto *used=m_usedModules;
+	for (auto *node:checkpoint.used) { if (used!=node) std::terminate(); used=used->m_nextSystem; }
+	auto *free=m_freeModules;
+	for (auto *node:checkpoint.free) { if (free!=node) std::terminate(); free=free->m_nextSystem; }
+	if (used || free || m_vertexBuffer!=checkpoint.vertices) std::terminate();
+	m_edgesToFlush=checkpoint.edges;
+	if (!checkpoint.bytes.empty())
+		std::memcpy(m_vertexBuffer->Get_CPU_Vertex_Buffer(),checkpoint.bytes.data(),checkpoint.bytes.size());
+}
+#endif
 //=============================================================================
 // TerrainTracksRenderObjClass::~TerrainTracksRenderObjClass
 //=============================================================================

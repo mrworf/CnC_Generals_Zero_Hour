@@ -48,6 +48,7 @@
 #include "wwmemlog.h"
 #if defined(ZH_WW3D_CPU_ONLY)
 #include <stdexcept>
+#include "original_gpu_edge.h"
 #endif
 
 #if defined(ZH_WW3D_CPU_ONLY)
@@ -155,9 +156,48 @@ static SortingIndexBufferClass* _DynamicSortingIndexArray = nullptr;
 static unsigned short _DynamicSortingIndexArraySize = 0;
 static unsigned short _DynamicSortingIndexArrayOffset = 0;
 
+struct DynamicIBAccessClass::SourceFrameCheckpoint {
+    DX8IndexBufferClass *source=nullptr;
+    SortingIndexBufferClass *sorting=nullptr;
+    unsigned short capacity=0,offset=0,sorting_capacity=0,sorting_offset=0;
+    std::vector<unsigned short> bytes;
+    bool pinned=false;
+    ~SourceFrameCheckpoint() { if (pinned && source) source->Release_Ref(); }
+};
+std::shared_ptr<DynamicIBAccessClass::SourceFrameCheckpoint> DynamicIBAccessClass::Capture_Source_Frame()
+{
+    if (_DynamicDX8IndexBufferInUse || _DynamicSortingIndexArrayInUse)
+        throw std::runtime_error("original tree frame overlaps dynamic index access");
+    auto result=std::make_shared<SourceFrameCheckpoint>();
+    result->source=_DynamicDX8IndexBuffer;result->capacity=_DynamicDX8IndexBufferSize;
+    result->offset=_DynamicDX8IndexBufferOffset;result->sorting=_DynamicSortingIndexArray;
+    result->sorting_capacity=_DynamicSortingIndexArraySize;result->sorting_offset=_DynamicSortingIndexArrayOffset;
+    if (result->source) {
+        const auto *begin=result->source->Get_CPU_Index_Buffer();
+        if (!begin || result->source->Get_Index_Count()!=result->capacity)
+            throw std::runtime_error("original tree frame dynamic index identity rejected");
+        result->bytes.assign(begin,begin+result->capacity);
+        result->source->Add_Ref();result->pinned=true;
+    }
+    return result;
+}
+void DynamicIBAccessClass::Restore_Source_Frame(SourceFrameCheckpoint &checkpoint) noexcept
+{
+    if (_DynamicDX8IndexBufferInUse || _DynamicSortingIndexArrayInUse ||
+        _DynamicSortingIndexArray!=checkpoint.sorting || _DynamicSortingIndexArraySize!=checkpoint.sorting_capacity)
+        std::terminate();
+    REF_PTR_SET(_DynamicDX8IndexBuffer,checkpoint.source);
+    _DynamicDX8IndexBufferSize=checkpoint.capacity;_DynamicDX8IndexBufferOffset=checkpoint.offset;
+    _DynamicSortingIndexArrayOffset=checkpoint.sorting_offset;
+    if (!checkpoint.bytes.empty())
+        std::memcpy(_DynamicDX8IndexBuffer->Get_CPU_Index_Buffer(),checkpoint.bytes.data(),checkpoint.bytes.size()*sizeof(unsigned short));
+}
+
 DynamicIBAccessClass::DynamicIBAccessClass(unsigned short type_, unsigned short count)
     : IndexCount(count), IndexBufferOffset(0), IndexBuffer(nullptr), Type(type_)
 {
+    if (auto* edge=zh::original_runtime::OriginalGpuEdge::active();edge && edge->tree_source_frame_pending() && Type!=BUFFER_TYPE_DYNAMIC_DX8)
+        throw std::runtime_error("original tree frame dynamic index producer unavailable");
     if (!count) throw std::runtime_error("invalid original dynamic index count");
     if (Type==BUFFER_TYPE_DYNAMIC_DX8) Allocate_DX8_Dynamic_Buffer();
     else if (Type==BUFFER_TYPE_DYNAMIC_SORTING) Allocate_Sorting_Dynamic_Buffer();

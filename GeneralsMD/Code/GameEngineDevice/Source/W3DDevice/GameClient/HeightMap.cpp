@@ -100,6 +100,7 @@ void HeightMapRenderObjClass::Render(RenderInfoClass&)
 		if (!m_vertexBufferTiles[tile] || !m_vertexBufferBackup[tile])
 			throw OriginalW3DDeviceUnavailable("original base terrain tile is unavailable");
 	}
+	zh::original_runtime::OriginalGpuEdge::required().mark_tree_source_terrain();
 	if (Is_Hidden()) return;
 	if (!TheGlobalData || m_disableTextures || TheGlobalData->m_useCloudMap ||
 		TheGlobalData->m_useLightMap)

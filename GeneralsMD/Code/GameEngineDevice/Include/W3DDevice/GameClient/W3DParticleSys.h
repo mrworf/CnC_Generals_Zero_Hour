@@ -35,6 +35,9 @@ class File;
 #include "WW3D2/RInfo.h"
 #include "WWLib/BitType.h"
 #include "WWLib/sharebuf.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <memory>
+#endif
 #if defined(ZH_WW3D_CPU_ONLY) || defined(ZH_M22_FULL_DRAW_TEST)
 class PointGroupClass;
 class StreakLineClass;
@@ -49,6 +52,13 @@ class StreakLineClass;
 	*/
 class W3DParticleSystemManager : public ParticleSystemManager
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class W3DDisplay;
+	friend struct W3DFrameGeneratedProbeAccess;
+	struct SourceFrameCheckpoint;
+	std::shared_ptr<SourceFrameCheckpoint> captureSourceFrame();
+	void restoreSourceFrame(SourceFrameCheckpoint &) noexcept;
+#endif
 
 public:
 	W3DParticleSystemManager();

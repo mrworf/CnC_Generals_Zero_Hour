@@ -33,6 +33,9 @@
 #include "shader.h"
 #include "vertmaterial.h"
 #include "Lib/BaseType.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <memory>
+#endif
 
 #define MAX_TRACK_EDGE_COUNT	100	//maximum number of edges or divisions in track mark
 #define MAX_TRACK_OPAQUE_EDGE	25	//linear fade of edges will begin at this edge
@@ -52,6 +55,9 @@ class TerrainTracksRenderObjClass : public W3DMPO, public RenderObjClass
 	W3DMPO_GLUE(TerrainTracksRenderObjClass)
 
 	friend class TerrainTracksRenderObjClassSystem;
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend struct W3DFrameGeneratedProbeAccess;
+#endif
 
 public:
 
@@ -113,6 +119,13 @@ this frame.
 class TerrainTracksRenderObjClassSystem
 {
 	friend class TerrainTracksRenderObjClass;
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class W3DDisplay;
+	friend struct W3DFrameGeneratedProbeAccess;
+	struct SourceFrameCheckpoint;
+	std::shared_ptr<SourceFrameCheckpoint> captureSourceFrame();
+	void restoreSourceFrame(SourceFrameCheckpoint &) noexcept;
+#endif
 
 public:
 

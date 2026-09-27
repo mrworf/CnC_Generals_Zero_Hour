@@ -76,6 +76,7 @@ class TextureBaseClass : public RefCountClass
 {
 #if defined(__linux__)
     friend class zh::original_runtime::OriginalGpuEdge;
+    friend struct W3DFrameGeneratedProbeAccess;
 #endif
 	friend class TextureLoader;
 	friend class LoaderThreadClass;

@@ -98,6 +98,12 @@ bool WWMemoryLogClass::IsMemoryLogEnabled=false;
 
 static unsigned AllocateCount;
 static unsigned FreeCount;
+#if defined(__linux__)
+void WWMemoryLogClass::Capture_Source_Frame(unsigned &allocations,unsigned &frees) noexcept
+{ allocations=AllocateCount;frees=FreeCount; }
+void WWMemoryLogClass::Restore_Source_Frame(unsigned allocations,unsigned frees) noexcept
+{ AllocateCount=allocations;FreeCount=frees; }
+#endif
 
 /*
 ** Name for each memory category.  I'm padding the array with some "undefined" strings in case
