@@ -1,5 +1,16 @@
 # M22 plan 01 slice 08N0A: constructor-order modeled volume-shadow admission
 
+## Approved slice08 shared modeled-shadow publication correction
+
+Use this same post-scene/user-data/module callback boundary for initial modeled
+decals, and the existing post-scene/user-data replacement boundary for decals as
+well as volumes. Do not admit in-flight manager identities or change Windows
+behavior/layout. The manager's single-type/duplicate/published-model checks stay
+strict; only obsolete global decal-volume exclusivity is removed under 07FD.
+Failed candidate allocation/upload/admission withdraws caster/render/scene state,
+preserves accepted siblings, and permits deterministic clean retry. Existing
+volume readiness and explicitly empty authored state semantics remain unchanged.
+
 ## Goal and boundary
 
 After accepted 08M0, a generated modeled Drawable with an enabled volume

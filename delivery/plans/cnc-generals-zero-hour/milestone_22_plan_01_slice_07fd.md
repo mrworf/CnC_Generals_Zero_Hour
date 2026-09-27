@@ -1,5 +1,21 @@
 # M22 plan 01 slice 07FD: active original shadow route
 
+## Approved slice08 modeled-shadow correction
+
+The redacted continuation reaches an actual modeled `SHADOW_DECAL` while volume
+shadows are enabled. The existing source already orders decals in its non-stencil
+pass before volumes in the later stencil pass. Remove only the obsolete global
+decal-versus-volume exclusivity; each template still owns one exact shadow type.
+Defer initial modeled decal admission until scene/user-data/module publication,
+and replacement admission until its new render is scene-linked/user-data-bound,
+using the existing 08N callback/lifecycle boundary. Preserve old-shadow release
+before old-scene removal and constructor/replacement cleanup on rejection.
+Direct/prepublication, duplicate, foreign, detached, missing texture/size/resource
+and malformed requests remain closed. Generated actual-factory constructor,
+replacement, fault/retry and mixed decal-before-volume frame controls must prove
+exact surviving identities and total-zero teardown in two generations. Deliver
+this correction with active slice08, not a new milestone or shadow family.
+
 ## Outcome and dependency
 
 Requires 07FD0 and the accepted original scene mesh route. Implement the

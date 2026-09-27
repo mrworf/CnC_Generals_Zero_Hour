@@ -72,6 +72,21 @@ and the seven-control union before another bounded redacted continuation.
 Exact additional focus:
 `ctest --test-dir build/<preset> -R '^(original_w3d_generated_volume_shadow_constructor|original_w3d_modeled_volume_ready)$' --output-on-failure -j1`.
 
+The next fixed category is modeled decal admission before scene publication while
+volume shadows are enabled. Approved existing 07FD/08N correction: preserve native
+mixed non-stencil decal then stencil-volume ordering; remove only global mutual
+exclusion and defer initial/replacement decal admission to the exact published
+modeled-shadow boundary. Keep per-template ownership, all direct/foreign/detached/
+duplicate/size/texture/resource negatives, release-before-scene-removal, rollback
+and retry strict. Extend the registered generated modeled-ready route with actual
+factory decals, replacement and create/upload/publication faults, exact mixed
+frame order, surviving identity and zero teardown. No new owner or retail family
+is introduced. Exact regression union adds `original_w3d_shadow_decal_route` and
+`original_w3d_shadow_volume_route` to the nine-control selection above; verify the
+eleven registered tests, regenerate configure-time overlays, then execute:
+`ctest --test-dir build/<preset> -R '^(original_w3d_generated_volume_shadow_constructor|original_w3d_modeled_volume_ready|original_w3d_generated_scene_boundary|original_w3d_generated_construction|original_w3d_borrowed_file_owner|original_w3d_full_draw_scenario|original_w3d_full_draw_identity|original_w3d_full_draw_provider_removal|original_w3d_tree_module|original_w3d_shadow_decal_route|original_w3d_shadow_volume_route)$' --output-on-failure -j1`.
+Only after generated focus passes repeat the bounded redacted scene probe.
+
 ## Outcome and dependencies
 
 Requires accepted slices 08B, 08E, 08I, 08J and 08L and a separately configured, read-only
