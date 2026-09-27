@@ -41,7 +41,14 @@ def main() -> int:
                                   "Object ModeledProp\n KindOf = PROP\n"
                                   " Draw = W3DModelDraw ModuleTag_GeneratedProp\n"
                                   "  DefaultConditionState\n   Model = TEST.HLOD\n"
-                                  "  End\n End\nEnd\n", encoding="ascii")
+                                  "  End\n End\nEnd\n"
+                                  "Object WeatherProp\n KindOf = PROP\n Scale = -1\n"
+                                  " Draw = W3DModelDraw ModuleTag_GeneratedWeatherProp\n"
+                                  "  DefaultConditionState\n   Model = PROP.NORMAL\n  End\n"
+                                  "  ConditionState = SNOW\n   Model = PROP.SNOW\n  End\n"
+                                  "  ConditionState = NIGHT\n   Model = PROP.NIGHT\n  End\n"
+                                  "  ConditionState = SNOW NIGHT\n   Model = PROP.SNOW_NIGHT\n  End\n"
+                                  " End\nEnd\n", encoding="ascii")
             object_ini.chmod(0o400)
             result = run(args.executable.resolve(), root / f"generation-{generation}", source, "mission")
             if result.returncode or marker not in result.stdout:

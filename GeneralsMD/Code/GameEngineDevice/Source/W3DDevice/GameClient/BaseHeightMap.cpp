@@ -62,10 +62,12 @@
 #include "GameLogic/ScriptEngine.h"
 #include "Lib/trig.h"
 #include "W3DDevice/GameClient/BaseHeightMap.h"
+#include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
+#include "W3DDevice/GameClient/W3DPropBuffer.h"
 #include "W3DDevice/GameClient/Module/W3DTreeDraw.h"
 #include "WW3D2/scene.h"
 #include "WW3D2/mesh.h"
@@ -245,6 +247,33 @@ struct CpuTreeRegistry {
 // The source terrain's existing layout is shared with full-instance clients.
 // Lazily key CPU-only tree state by its exact owner and erase it on teardown.
 static std::map<const BaseHeightMapRenderObjClass *, CpuTreeRegistry> s_cpuTreeRegistries;
+// The original display publishes one terrain/map. Keep borrowed provider
+// identity outside native class layout; no new serialized or virtual state.
+static const BaseHeightMapRenderObjClass *s_cpuPropMapOwner = NULL;
+static W3DPropBuffer *s_cpuPropBufferOwner = NULL;
+static const WorldHeightMap *s_cpuPropLogicalMap = NULL;
+static UnsignedInt64 s_cpuPropToken = 0;
+static UnsignedInt64 s_cpuPropSequence = 0;
+static zh::original_runtime::OriginalGpuEdge *s_cpuPropEdge = NULL;
+static UnsignedInt64 s_cpuPropGeneration = 0;
+static W3DAssetManager *s_cpuPropAssets = NULL;
+static RTS3DScene *s_cpuPropScene = NULL;
+static bool cpuPropOwnerMatches(const BaseHeightMapRenderObjClass *terrain,
+	const W3DPropBuffer *buffer, const WorldHeightMap *map)
+{
+	// Compare borrowed addresses before touching any possibly foreign owner.
+	if (!buffer) return s_cpuPropMapOwner != terrain;
+	if (s_cpuPropMapOwner != terrain || s_cpuPropBufferOwner != buffer ||
+		!s_cpuPropToken || s_cpuPropToken != s_cpuPropSequence ||
+		!map || map != s_cpuPropLogicalMap ||
+		TheTerrainRenderObject != terrain || TheHeightMap != terrain ||
+		!s_cpuPropAssets || W3DDisplay::m_assetManager != s_cpuPropAssets ||
+		WW3DAssetManager::Get_Instance() != s_cpuPropAssets ||
+		!s_cpuPropScene || W3DDisplay::m_3DScene != s_cpuPropScene)
+		return false;
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	return edge && edge == s_cpuPropEdge && edge->generation() == s_cpuPropGeneration;
+}
 const zh::original_runtime::detail::TreeDecalQueue*
 zh::original_runtime::detail::TreeDecalGeneratedProbeAccess::peek(const BaseHeightMapRenderObjClass* owner) noexcept
 {
@@ -1045,8 +1074,8 @@ BaseHeightMapRenderObjClass::~BaseHeightMapRenderObjClass()
 	if (TheTerrainRenderObject == this) TheTerrainRenderObject = NULL;
 }
 
-void BaseHeightMapRenderObjClass::ReleaseResources() {}
-void BaseHeightMapRenderObjClass::ReAcquireResources() {}
+void BaseHeightMapRenderObjClass::ReleaseResources() { preflightTreeRemoval(); }
+void BaseHeightMapRenderObjClass::ReAcquireResources() { preflightTreeRemoval(); }
 RenderObjClass *BaseHeightMapRenderObjClass::Clone() const
 {
 	throw OriginalW3DDeviceUnavailable("original empty terrain clone pending");
@@ -1130,6 +1159,13 @@ Int BaseHeightMapRenderObjClass::freeMapResources()
 {
 	preflightTreeRemoval();
 	s_cpuTreeRegistries.erase(this);
+	delete m_propBuffer;
+	m_propBuffer = NULL;
+	if (s_cpuPropMapOwner == this) {
+		s_cpuPropMapOwner = NULL; s_cpuPropBufferOwner = NULL; s_cpuPropEdge = NULL;
+		s_cpuPropGeneration = 0; s_cpuPropAssets = NULL; s_cpuPropScene = NULL;
+		s_cpuPropLogicalMap = NULL; s_cpuPropToken = 0;
+	}
 	if (m_shroud) m_shroud->reset();
 	REF_PTR_RELEASE(m_map);
 	m_x = m_y = 0;
@@ -1139,20 +1175,71 @@ Int BaseHeightMapRenderObjClass::freeMapResources()
 void BaseHeightMapRenderObjClass::updateCenter(CameraClass*, RefRenderObjListIterator*) {}
 bool BaseHeightMapRenderObjClass::canNotifyShroudChanged()
 {
-	// The native callback only notifies an owned prop buffer.  The bounded
-	// CPU terrain has no prop producer, so its valid map-owned path is empty.
-	return zh::original_runtime::OriginalGpuEdge::active() &&
+	// The native callback invalidates only this map's logical prop visibility.
+	return cpuPropOwnerMatches(this, m_propBuffer, m_map) &&
+		zh::original_runtime::OriginalGpuEdge::active() &&
 		TheTerrainRenderObject == this && W3DDisplay::m_assetManager &&
 		W3DDisplay::m_3DScene && Peek_Scene() == W3DDisplay::m_3DScene &&
 		m_map && m_shroud && m_x == m_map->getDrawWidth() &&
 		m_y == m_map->getDrawHeight() &&
 		m_shroud->getNumShroudCellsX() > 0 &&
-		m_shroud->getNumShroudCellsY() > 0 && !m_propBuffer;
+		m_shroud->getNumShroudCellsY() > 0;
 }
 void BaseHeightMapRenderObjClass::notifyShroudChanged()
 {
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	if (edge && edge->source_stages_active()) { edge->poison_source_stages(); throw ERROR_INVALID_D3D; }
 	if (!canNotifyShroudChanged())
 		throw OriginalW3DDeviceUnavailable("original terrain shroud notification unavailable");
+	if (m_propBuffer) m_propBuffer->notifyShroudChanged();
+}
+void BaseHeightMapRenderObjClass::addProp(Int id, Coord3D location, Real angle, Real scale,
+	const AsciiString &modelName)
+{
+	if (!canNotifyShroudChanged())
+		throw OriginalW3DDeviceUnavailable("original prop map owner unavailable");
+	preflightTreeRemoval();
+	if (m_propBuffer) { m_propBuffer->addProp(id, location, angle, scale, modelName); return; }
+	if (s_cpuPropMapOwner) throw OriginalW3DDeviceUnavailable("original prop map owner overlaps");
+	if (s_cpuPropSequence == std::numeric_limits<UnsignedInt64>::max()) throw ERROR_INVALID_D3D;
+	std::unique_ptr<W3DPropBuffer> candidate(new W3DPropBuffer);
+	candidate->addProp(id, location, angle, scale, modelName);
+	if (candidate->m_numProps) {
+		s_cpuPropMapOwner = this; s_cpuPropBufferOwner = candidate.get();
+		s_cpuPropEdge = zh::original_runtime::OriginalGpuEdge::active();
+		s_cpuPropGeneration = s_cpuPropEdge->generation();
+		s_cpuPropAssets = W3DDisplay::m_assetManager; s_cpuPropScene = W3DDisplay::m_3DScene;
+		s_cpuPropLogicalMap = m_map; s_cpuPropToken = ++s_cpuPropSequence;
+		m_propBuffer = candidate.release();
+	}
+}
+void BaseHeightMapRenderObjClass::removeProp(Int id)
+{
+	preflightTreeRemoval();
+	if (m_propBuffer) m_propBuffer->removeProp(id);
+}
+void BaseHeightMapRenderObjClass::removeAllProps()
+{
+	preflightTreeRemoval();
+	if (m_propBuffer) m_propBuffer->clearAllProps();
+}
+void BaseHeightMapRenderObjClass::removeTreesAndPropsForConstruction(const Coord3D* pos,
+	const GeometryInfo& geometry, Real angle)
+{
+	preflightTreeRemoval();
+	if (!canNotifyShroudChanged() || !pos || !std::isfinite(angle))
+		throw OriginalW3DDeviceUnavailable("original prop construction owner unavailable");
+	// R0A does not add a new tree-construction deletion capability.
+	if (treeInstanceCount())
+		throw OriginalW3DDeviceUnavailable("original construction tree clearing is not admitted");
+	if (m_propBuffer) m_propBuffer->removePropsForConstruction(pos, geometry, angle);
+}
+Bool BaseHeightMapRenderObjClass::hasLiveProps() const
+{
+	if (!cpuPropOwnerMatches(this, m_propBuffer, m_map)) throw ERROR_INVALID_D3D;
+	if (m_propBuffer) for (Int i=0;i<m_propBuffer->m_numProps;++i)
+		if (m_propBuffer->m_props[i].m_robj) return TRUE;
+	return FALSE;
 }
 void BaseHeightMapRenderObjClass::adjustTerrainLOD(Int)
 {
@@ -1170,6 +1257,7 @@ void BaseHeightMapRenderObjClass::reset()
 {
 	preflightTreeRemoval();
 	s_cpuTreeRegistries.erase(this);
+	if (m_propBuffer) m_propBuffer->clearAllProps();
 	if (m_shroud) {
 		m_shroud->reset();
 		m_shroud->setBorderShroudLevel(static_cast<W3DShroudLevel>(
@@ -2081,8 +2169,13 @@ void BaseHeightMapRenderObjClass::removeTree(DrawableID id)
 }
 void BaseHeightMapRenderObjClass::preflightTreeRemoval() const
 {
-	if (s_cpuTreeRegistries.find(this) == s_cpuTreeRegistries.end()) return;
 	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	if (edge && edge->source_stages_active()) { edge->poison_source_stages(); throw ERROR_INVALID_D3D; }
+	if (!cpuPropOwnerMatches(this, m_propBuffer, m_map)) throw ERROR_INVALID_D3D;
+	if (m_propBuffer) {
+		m_propBuffer->preflightRemoval();
+	}
+	if (s_cpuTreeRegistries.find(this) == s_cpuTreeRegistries.end()) return;
 	if (edge && !edge->idle_preparation_ready()) throw ERROR_INVALID_D3D;
 }
 void BaseHeightMapRenderObjClass::preflightTreeModuleRemoval(const BaseHeightMapRenderObjClass *owner, UnsignedInt epoch)

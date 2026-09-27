@@ -45,6 +45,10 @@ void installSubsystemINIDataLoader(SubsystemINIDataLoader loader);
 UnsignedInt64 installSubsystemResetAdmission(void *owner, void (*admit)(void *)) noexcept;
 bool removeSubsystemResetAdmission(void *owner, UnsignedInt64 token) noexcept;
 void preflightSubsystemResetAdmission();
+// Optional terrain ownership admission composed by the client lifecycle spine.
+UnsignedInt64 installClientTerrainRemovalAdmission(void *owner, void (*admit)(void *)) noexcept;
+bool removeClientTerrainRemovalAdmission(void *owner, UnsignedInt64 token) noexcept;
+void preflightClientTerrainRemovalAdmission();
 #endif
 
 //-------------------------------------------------------------------------------------------------

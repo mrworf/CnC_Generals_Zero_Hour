@@ -310,6 +310,7 @@ void GameLogic::destroyAllObjectsImmediate()
 {
 #if defined(__linux__)
 	if (TheGameClient) TheGameClient->friend_preflightDrawableRemoval();
+	else preflightClientTerrainRemovalAdmission();
 #endif
 	// destroy all remaining objects
 	Object *obj;
@@ -454,6 +455,7 @@ void GameLogic::reset( void )
 {
 #if defined(__linux__)
 	if (TheGameClient) TheGameClient->friend_preflightDrawableRemoval();
+	else preflightClientTerrainRemovalAdmission();
 #endif
 	m_thingTemplateBuildableOverrides.clear();
 	m_controlBarOverrides.clear();

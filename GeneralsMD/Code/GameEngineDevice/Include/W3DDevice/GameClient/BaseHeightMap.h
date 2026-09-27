@@ -243,6 +243,8 @@ public:
 	Int treeTypeCount() const;
 	UnsignedInt treeOwnerEpoch() const;
 	void preflightTreeRemoval() const;
+	Bool hasPropBuffer() const { return m_propBuffer != NULL; }
+	Bool hasLiveProps() const;
 	static void preflightTreeModuleRemoval(const BaseHeightMapRenderObjClass *owner, UnsignedInt epoch);
 	static void detachTreeModule(const BaseHeightMapRenderObjClass *owner, DrawableID id, UnsignedInt epoch) noexcept;
 	Int treePartitionBucket(DrawableID id) const;

@@ -921,6 +921,7 @@ void GameClient::destroyDrawable( Drawable *draw )
 #if defined(__linux__)
 void GameClient::friend_preflightDrawableRemoval() const
 {
+	preflightClientTerrainRemovalAdmission();
 	std::size_t count = 0;
 	for (Drawable *draw = m_drawableList; draw; draw = draw->getNextDrawable())
 	{

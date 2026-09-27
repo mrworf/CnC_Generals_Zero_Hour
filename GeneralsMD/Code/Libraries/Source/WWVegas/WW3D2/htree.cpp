@@ -63,6 +63,11 @@
 #include "wwmemlog.h"
 #include "hrawanim.h"
 #include "motchan.h"
+#include "clone_graph.h"
+#if defined(__linux__)
+#include <cstdint>
+#include <cmath>
+#endif
 
 /*********************************************************************************************** 
  * HTreeClass::HTreeClass -- constructor                                                       * 
@@ -85,6 +90,22 @@ HTreeClass::HTreeClass(void) :
 
 void HTreeClass::Init_Default(void)
 {
+#if defined(__linux__)
+	ww3d_clone::Attempt::reserve(1,sizeof(PivotClass));
+	ww3d_clone::Attempt::fault();
+	std::unique_ptr<PivotClass[]> candidate(new PivotClass[1]);
+	candidate[0].Index=0;
+	candidate[0].Parent=NULL;
+	candidate[0].BaseTransform.Make_Identity();
+	candidate[0].Transform.Make_Identity();
+	candidate[0].IsVisible=true;
+	strcpy(candidate[0].Name,"RootTransform");
+	Free();
+	Pivot=candidate.release();
+	NumPivots=1;
+	Name[0]=0;
+	return;
+#else
 	Free ();
 
 	NumPivots = 1;
@@ -99,6 +120,7 @@ void HTreeClass::Init_Default(void)
 	//::strcpy (Name, "Default");
 	Name[0] = 0;
 	return ;
+#endif
 
 
 
@@ -142,6 +164,40 @@ HTreeClass::HTreeClass(const HTreeClass & src) :
 	Pivot(NULL),
 	ScaleFactor(1.0f)
 {
+#if defined(__linux__)
+	ww3d_clone::Attempt::reserve(src.NumPivots,sizeof(PivotClass));
+	if ((src.NumPivots && !src.Pivot) || !std::isfinite(src.ScaleFactor))
+		throw std::runtime_error("original hierarchy source is not admitted");
+	const std::uintptr_t first=reinterpret_cast<std::uintptr_t>(src.Pivot);
+	const std::size_t bytes=ww3d_clone::Attempt::extent(src.NumPivots,sizeof(PivotClass));
+	for (int i=0;i<src.NumPivots;++i) {
+		if (src.Pivot[i].Index!=i || strnlen(src.Pivot[i].Name,sizeof(src.Pivot[i].Name))==sizeof(src.Pivot[i].Name))
+			throw std::runtime_error("original hierarchy pivot is not admitted");
+		for(int r=0;r<3;++r) for(int c=0;c<4;++c)
+			if(!std::isfinite(src.Pivot[i].BaseTransform[r][c]))
+				throw std::runtime_error("original hierarchy matrix is not admitted");
+		const std::uintptr_t parent=reinterpret_cast<std::uintptr_t>(src.Pivot[i].Parent);
+		if (parent && (parent<first || parent-first>=bytes ||
+			(parent-first)/sizeof(PivotClass)>=static_cast<unsigned>(i) ||
+			(parent-first)%sizeof(PivotClass) || src.Pivot[i].Parent->Index<0 ||
+			src.Pivot[i].Parent->Index>=src.NumPivots ||
+			static_cast<std::size_t>(src.Pivot[i].Parent->Index)!=(parent-first)/sizeof(PivotClass)))
+			throw std::runtime_error("original hierarchy parent is not admitted");
+	}
+	std::unique_ptr<PivotClass[]> candidate;
+	if (src.NumPivots) {
+		ww3d_clone::Attempt::fault();
+		candidate.reset(new PivotClass[src.NumPivots]);
+	}
+	for (int i=0;i<src.NumPivots;++i) {
+		candidate[i]=src.Pivot[i];
+		candidate[i].Parent=src.Pivot[i].Parent ? &candidate[src.Pivot[i].Parent->Index] : NULL;
+	}
+	memcpy(Name,src.Name,sizeof(Name));
+	Pivot=candidate.release();
+	NumPivots=src.NumPivots;
+	ScaleFactor=src.ScaleFactor;
+#else
 	memcpy(&Name,&src.Name,sizeof(Name));
 
 	NumPivots = src.NumPivots;
@@ -160,6 +216,7 @@ HTreeClass::HTreeClass(const HTreeClass & src) :
 	}
 
 	ScaleFactor = src.ScaleFactor;
+#endif
 }
 
 /*********************************************************************************************** 

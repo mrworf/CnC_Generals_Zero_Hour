@@ -79,6 +79,11 @@
 #include "assetmgr.h"
 #include "ww3d.h"
 #include "w3derr.h"
+#include "clone_graph.h"
+#include "prop_graph.h"
+#if defined(__linux__)
+#include <cmath>
+#endif
 //#include "sr.hpp"
 
 
@@ -110,6 +115,9 @@ protected:
 	DynamicVectorClass <ProxyClass>	ProxyList;
 
 	friend class CollectionClass;
+#if defined(__linux__)
+	friend class ww3d_prop::Audit;
+#endif
 };
 
 
@@ -133,6 +141,31 @@ public:
 protected:
 	virtual ~CollectionPrototypeClass(void)					{ delete ColDef; }						 
 };
+
+#if defined(__linux__)
+void ww3d_prop::Audit::collection(const CollectionDefClass& d)
+{
+	ww3d_clone::Attempt::extent(d.ObjectNames.Count(),sizeof(RenderObjClass*));
+	ww3d_clone::Attempt::extent(d.ProxyList.Count(),sizeof(ProxyClass));
+	for (int i=0;i<d.ProxyList.Count();++i) {
+		const char* name=d.ProxyList[i].Get_Name();
+		if(!name || !name[0] || strnlen(name,1024)==1024)
+			throw std::runtime_error("original prop proxy name is not admitted");
+		const Matrix3D& matrix=d.ProxyList[i].Get_Transform();
+		for(int r=0;r<3;++r) for(int c=0;c<4;++c)
+			if(!std::isfinite(matrix[r][c])) throw std::runtime_error("original prop proxy matrix is not admitted");
+	}
+	for (int i=0;i<d.ObjectNames.Count();++i) named(d.ObjectNames[i]);
+}
+
+bool ww3d_prop::inspect_collection(PrototypeClass* p,Audit& audit)
+{
+	auto* typed=dynamic_cast<CollectionPrototypeClass*>(p);
+	if (!typed || typeid(*p)!=typeid(CollectionPrototypeClass)) return false;
+	if (!typed->ColDef) throw std::runtime_error("original prop collection definition is absent");
+	audit.collection(*typed->ColDef);return true;
+}
+#endif
 
 
 /***********************************************************************************************
@@ -167,9 +200,45 @@ CollectionClass::CollectionClass(void) :
  *   12/8/98    GTH : Created.                                                                 *
  *=============================================================================================*/
 CollectionClass::CollectionClass(const CollectionDefClass & def) :
+#if defined(__linux__)
+	SubObjects(),
+#else
 	SubObjects(def.ObjectNames.Count()),	
+#endif
 	SnapPoints(NULL)
 {
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	try {
+		ww3d_clone::Attempt::reserve(def.ObjectNames.Count(),sizeof(RenderObjClass*));
+		ww3d_clone::Attempt::reserve(def.ProxyList.Count(),sizeof(ProxyClass));
+		ww3d_clone::Attempt::fault();
+		Set_Name(def.Get_Name());
+		ww3d_clone::Attempt::fault();
+		if (!SubObjects.Resize(def.ObjectNames.Count())) throw std::bad_alloc();
+		ww3d_clone::Attempt::fault();
+		if (!ProxyList.Resize(def.ProxyList.Count())) throw std::bad_alloc();
+		for (int i=0;i<def.ObjectNames.Count();++i) {
+			if (!def.ObjectNames[i]) throw std::runtime_error("original collection child is not admitted");
+			ww3d_clone::Attempt::fault();
+			ww3d_clone::Ref<RenderObjClass> child(WW3DAssetManager::Get_Instance()->Create_Render_Obj(def.ObjectNames[i]));
+			if (!child.get()) throw std::runtime_error("original collection child is absent");
+			ww3d_clone::Attempt::fault();
+			if (!SubObjects.Add(child.get())) throw std::bad_alloc();
+			child.release()->Set_Container(this);
+		}
+		for (int i=0;i<def.ProxyList.Count();++i) {
+			ww3d_clone::Attempt::reserve(static_cast<int>(strlen(def.ProxyList[i].Get_Name())+1),1);
+			ww3d_clone::Attempt::fault();
+			if (!ProxyList.Add(def.ProxyList[i])) throw std::bad_alloc();
+		}
+		ww3d_clone::Attempt::fault();
+		REF_PTR_SET(SnapPoints,def.SnapPoints);
+		Update_Sub_Object_Bits();
+		Update_Obj_Space_Bounding_Volumes();
+		attempt.commit();
+	} catch (...) { Free();throw; }
+#else
 	// Set our name
 	Set_Name (def.Get_Name ());
 
@@ -193,6 +262,7 @@ CollectionClass::CollectionClass(const CollectionDefClass & def) :
 
 	// update the object bounding volumes
 	Update_Obj_Space_Bounding_Volumes();
+#endif
 }
 
 
@@ -210,10 +280,45 @@ CollectionClass::CollectionClass(const CollectionDefClass & def) :
  *=============================================================================================*/
 CollectionClass::CollectionClass(const CollectionClass & src) :
 	CompositeRenderObjClass(src),
+#if defined(__linux__)
+	SubObjects(),
+#else
 	SubObjects(src.SubObjects.Count()),
+#endif
 	SnapPoints(NULL)
 {
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	try {
+		ww3d_clone::Attempt::reserve(src.SubObjects.Count(),sizeof(RenderObjClass*));
+		ww3d_clone::Attempt::reserve(src.ProxyList.Count(),sizeof(ProxyClass));
+		ww3d_clone::Attempt::fault();
+		if (!SubObjects.Resize(src.SubObjects.Count())) throw std::bad_alloc();
+		ww3d_clone::Attempt::fault();
+		if (!ProxyList.Resize(src.ProxyList.Count())) throw std::bad_alloc();
+		for (int i=0;i<src.SubObjects.Count();++i) {
+			if (!src.SubObjects[i]) throw std::runtime_error("original collection child is not admitted");
+			ww3d_clone::Attempt::fault();
+			ww3d_clone::Ref<RenderObjClass> child(src.SubObjects[i]->Clone());
+			if (!child.get()) throw std::runtime_error("original collection child is absent");
+			ww3d_clone::Attempt::fault();
+			if (!SubObjects.Add(child.get())) throw std::bad_alloc();
+			child.release()->Set_Container(this);
+		}
+		for (int i=0;i<src.ProxyList.Count();++i) {
+			ww3d_clone::Attempt::reserve(static_cast<int>(strlen(src.ProxyList[i].Get_Name())+1),1);
+			ww3d_clone::Attempt::fault();
+			if (!ProxyList.Add(src.ProxyList[i])) throw std::bad_alloc();
+		}
+		ww3d_clone::Attempt::fault();
+		REF_PTR_SET(SnapPoints,src.SnapPoints);
+		Update_Sub_Object_Bits();
+		Update_Obj_Space_Bounding_Volumes();
+		attempt.commit();
+	} catch (...) { Free();throw; }
+#else
 	*this = src;
+#endif
 }
 
 
@@ -968,6 +1073,10 @@ void CollectionDefClass::Free(void)
 	for (int i=0; i<ObjectNames.Count(); i++) {
 		delete[] ObjectNames[i];
 	}
+#if defined(__linux__)
+	ObjectNames.Delete_All();
+	REF_PTR_RELEASE(SnapPoints);
+#endif
 
 	ProxyList.Delete_All ();
 }
@@ -1104,6 +1213,3 @@ PrototypeClass * CollectionLoaderClass::Load_W3D(ChunkLoadClass & cload)
 	
 	}
 }
-
-
-

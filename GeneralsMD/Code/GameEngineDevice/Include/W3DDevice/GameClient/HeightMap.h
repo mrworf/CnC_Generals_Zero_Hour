@@ -61,6 +61,7 @@ class HeightMapRenderObjClass : public BaseHeightMapRenderObjClass
 {	
 #if defined(ZH_WW3D_CPU_ONLY)
 	friend class W3DDisplay;
+	friend struct W3DTerrainPropLifecycleProbeAccess;
 #endif
 
 public:

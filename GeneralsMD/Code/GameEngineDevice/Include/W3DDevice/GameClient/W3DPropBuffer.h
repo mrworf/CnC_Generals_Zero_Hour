@@ -54,9 +54,9 @@
 #include "rendobj.h"
 #include "w3d_file.h"
 #include "Lib/BaseType.h"
-#include "common/GameType.h"
+#include "Common/GameType.h"
 #include "Common/AsciiString.h"
-#include "common/GlobalData.h"
+#include "Common/GlobalData.h"
 
 //-----------------------------------------------------------------------------
 //           Forward References
@@ -96,6 +96,10 @@ typedef struct {
 class W3DPropBuffer : Snapshot
 {	
 friend class BaseHeightMapRenderObjClass;
+#if defined(__linux__)
+friend struct W3DPropOwnerProbeAccess;
+friend struct W3DTerrainPropLifecycleProbeAccess;
+#endif
 
 
 public:
@@ -148,6 +152,10 @@ protected:
 	LightClass *m_light;
 
 	void cull(CameraClass * camera);						 ///< Culls the props.
+#if defined(__linux__)
+	void preflightRemoval() const;
+	void releaseAllProps() noexcept;
+#endif
 };
 
 #endif  // end __W3DPROP_BUFFER_H_

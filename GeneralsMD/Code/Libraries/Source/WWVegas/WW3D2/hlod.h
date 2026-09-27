@@ -82,8 +82,14 @@ class ProxyArrayClass;
 	This is an hierarchical, animatable level-of-detail model.
 
 */
+#if defined(__linux__)
+namespace ww3d_prop { class Audit; }
+#endif
 class HLodClass : public W3DMPO, public Animatable3DObjClass
 {
+#if defined(__linux__)
+	friend class ww3d_prop::Audit;
+#endif
 	W3DMPO_GLUE(HLodClass)
 public:
 
@@ -360,6 +366,9 @@ private:
 	bool							read_proxy_array(ChunkLoadClass & cload);
 
 	friend class HLodClass;
+#if defined(__linux__)
+	friend class ww3d_prop::Audit;
+#endif
 };
 
 

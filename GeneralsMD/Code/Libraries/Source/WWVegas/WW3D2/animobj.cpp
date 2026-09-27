@@ -66,6 +66,7 @@
 #include "ww3d.h"
 #include "wwmemlog.h"
 #include "animatedsoundmgr.h"
+#include "clone_graph.h"
 
 
 /***********************************************************************************************
@@ -107,16 +108,30 @@ Animatable3DObjClass::Animatable3DObjClass(const char * htree_name) :
 	if (htree_name == NULL) {
 		HTree = NULL;
 	} else if (htree_name[0] == 0) {
+#if defined(__linux__)
+		ww3d_clone::Attempt::fault();
+		std::unique_ptr<HTreeClass> candidate(W3DNEW HTreeClass);
+		candidate->Init_Default();
+		HTree=candidate.release();
+#else
 		HTree = W3DNEW HTreeClass;
 		HTree->Init_Default ();
+#endif
 	} else {
 		HTreeClass * source = WW3DAssetManager::Get_Instance()->Get_HTree(htree_name);
 		if (source != NULL) {
 			HTree = W3DNEW HTreeClass(*source);
 		} else {
 			WWDEBUG_SAY(("Unable to find HTree: %s\r\n",htree_name));
+#if defined(__linux__)
+			ww3d_clone::Attempt::fault();
+			std::unique_ptr<HTreeClass> candidate(W3DNEW HTreeClass);
+			candidate->Init_Default();
+			HTree=candidate.release();
+#else
 			HTree = W3DNEW HTreeClass;
 			HTree->Init_Default();
+#endif
 		}
 	}
 }
@@ -198,6 +213,15 @@ Animatable3DObjClass::~Animatable3DObjClass(void)
 Animatable3DObjClass & Animatable3DObjClass::operator = (const Animatable3DObjClass & that)
 { 
 	if (&that != this) {
+#if defined(__linux__)
+		// Admit the entire hierarchy before releasing accepted ownership. Copies
+		// with no hierarchy retain that authored optional state.
+		std::unique_ptr<HTreeClass> candidate;
+		if (that.HTree) {
+			ww3d_clone::Attempt::fault();
+			candidate.reset(W3DNEW HTreeClass(*that.HTree));
+		}
+#endif
 		Release();
 		if (HTree) {
 			delete HTree;
@@ -222,7 +246,11 @@ Animatable3DObjClass & Animatable3DObjClass::operator = (const Animatable3DObjCl
 		ModeInterp.Percentage = 0.0f;
 		ModeCombo.AnimCombo = NULL;
 
+#if defined(__linux__)
+		HTree=candidate.release();
+#else
 		HTree = W3DNEW HTreeClass(*that.HTree);
+#endif
 	}
 	return *this; 
 }

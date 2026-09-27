@@ -137,6 +137,7 @@
 #include <win.h>
 #include "sphere.h"
 #include "boxrobj.h"
+#include "clone_graph.h"
 
 
 /*
@@ -966,7 +967,74 @@ HLodClass::HLodClass(const HLodClass & src) :
 	ProxyArray(NULL),
 	LODBias(1.0f)
 {
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	try {
+		if (src.LodCount<=0 || src.LodCount>1024 || !src.Lod || !HTree ||
+			HTree->Num_Pivots()<=0)
+			throw std::runtime_error("original composite source is not admitted");
+		ww3d_clone::Attempt::reserve(src.LodCount,sizeof(ModelArrayClass));
+		ww3d_clone::Attempt::reserve(src.LodCount,sizeof(float));
+		ww3d_clone::Attempt::reserve(src.LodCount+1,sizeof(float));
+		for (int l=0;l<src.LodCount;++l)
+			ww3d_clone::Attempt::reserve(src.Lod[l].Count(),sizeof(ModelNodeClass));
+		ww3d_clone::Attempt::reserve(src.AdditionalModels.Count(),sizeof(ModelNodeClass));
+		ww3d_clone::Attempt::fault();
+		Lod=W3DNEWARRAY ModelArrayClass[src.LodCount];
+		LodCount=src.LodCount;
+		ww3d_clone::Attempt::fault();
+		Cost=W3DNEWARRAY float[LodCount];
+		ww3d_clone::Attempt::fault();
+		Value=W3DNEWARRAY float[LodCount+1];
+		for (int l=0;l<LodCount;++l) {
+			ww3d_clone::Attempt::fault();
+			if (!Lod[l].Resize(src.Lod[l].Count())) throw std::bad_alloc();
+			Lod[l].MaxScreenSize=src.Lod[l].MaxScreenSize;
+		}
+		ww3d_clone::Attempt::fault();
+		if (!AdditionalModels.Resize(src.AdditionalModels.Count())) throw std::bad_alloc();
+		for (int l=0;l<LodCount;++l) {
+			for (int m=0;m<src.Lod[l].Count();++m) {
+				const ModelNodeClass& source=src.Lod[l][m];
+				if (!source.Model || source.BoneIndex<0 || source.BoneIndex>=HTree->Num_Pivots())
+					throw std::runtime_error("original composite child is not admitted");
+				ww3d_clone::Attempt::fault();
+				ww3d_clone::Ref<RenderObjClass> child(source.Model->Clone());
+				if (!child.get()) throw std::runtime_error("original composite child is absent");
+				ModelNodeClass node; node.Model=child.get();node.BoneIndex=source.BoneIndex;
+				ww3d_clone::Attempt::fault();
+				if (!Lod[l].Add(node)) throw std::bad_alloc();
+				child.release()->Set_Container(this);
+			}
+		}
+		for (int m=0;m<src.AdditionalModels.Count();++m) {
+			const ModelNodeClass& source=src.AdditionalModels[m];
+			if (!source.Model || source.BoneIndex<0 || source.BoneIndex>=HTree->Num_Pivots())
+				throw std::runtime_error("original composite child is not admitted");
+			ww3d_clone::Attempt::fault();
+			ww3d_clone::Ref<RenderObjClass> child(source.Model->Clone());
+			if (!child.get()) throw std::runtime_error("original composite child is absent");
+			ModelNodeClass node;node.Model=child.get();node.BoneIndex=source.BoneIndex;
+			ww3d_clone::Attempt::fault();
+			if (!AdditionalModels.Add(node)) throw std::bad_alloc();
+			child.release()->Set_Container(this);
+		}
+		BoundingBoxIndex=src.BoundingBoxIndex;
+		LODBias=src.LODBias;
+		Recalculate_Static_LOD_Factors();
+		int minlod=Calculate_Cost_Value_Arrays(1.0f,Value,Cost);
+		if (CurLod<minlod) Set_LOD_Level(minlod);
+		Set_Sub_Object_Transforms_Dirty(true);
+		Update_Sub_Object_Bits();
+		Update_Obj_Space_Bounding_Volumes();
+		attempt.commit();
+	} catch (...) {
+		Free();
+		throw;
+	}
+#else
 	*this = src;
+#endif
 }
 
 
@@ -998,6 +1066,17 @@ HLodClass::HLodClass(const char * name,RenderObjClass ** lods,int count) :
 	ProxyArray(NULL),
 	LODBias(1.0f)
 {
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	try {
+		if (!name || !lods || count<=0 || count>=256)
+			throw std::runtime_error("original composite conversion is not admitted");
+		for (int l=0;l<count;++l)
+			if (!lods[l]) throw std::runtime_error("original composite child is absent");
+		ww3d_clone::Attempt::reserve(count,sizeof(ModelArrayClass));
+		ww3d_clone::Attempt::reserve(count,sizeof(float));
+		ww3d_clone::Attempt::reserve(count+1,sizeof(float));
+#endif
 	// enforce parameters
 	WWASSERT(name != NULL);
 	WWASSERT(lods != NULL);
@@ -1008,23 +1087,54 @@ HLodClass::HLodClass(const char * name,RenderObjClass ** lods,int count) :
 	
 	LodCount = count;
 	WWASSERT(LodCount >= 1);
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 	Lod = W3DNEWARRAY ModelArrayClass[LodCount];
 	WWASSERT(Lod);
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 	Cost = W3DNEWARRAY float[LodCount];
 	WWASSERT(Cost);
 	// Value has LodCount + 1 entries so PostIncrementValue can always use
 	// Value[CurLod + 1] (the last entry wil be AT_MAX_LOD).
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 	Value = W3DNEWARRAY float[LodCount + 1];
 	WWASSERT(Value);
+
+#if defined(__linux__)
+	// All child storage is admitted before conversion detaches the first child.
+	for (int l=0;l<count;++l) {
+		const bool composite=lods[l]->Class_ID()==RenderObjClass::CLASSID_HMODEL ||
+			lods[l]->Class_ID()==RenderObjClass::CLASSID_HLOD || lods[l]->Get_Num_Sub_Objects()>1;
+		const int children=composite ? lods[l]->Get_Num_Sub_Objects() : 1;
+		ww3d_clone::Attempt::reserve(children,sizeof(ModelNodeClass));
+		ww3d_clone::Attempt::fault();
+		if (!Lod[l].Resize(children)) throw std::bad_alloc();
+	}
+#endif
 
 	// Create our HTree from the highest LOD if it is an HModel
 	// Otherwise, create a single node tree
 	const HTreeClass * tree = lods[count-1]->Get_HTree();
 	if (tree != NULL) {
+#if defined(__linux__)
+		ww3d_clone::Attempt::fault();
+#endif
 		HTree = W3DNEW HTreeClass(*tree);
 	} else {
+#if defined(__linux__)
+		ww3d_clone::Attempt::fault();
+		std::unique_ptr<HTreeClass> candidate(W3DNEW HTreeClass());
+		candidate->Init_Default();
+		HTree=candidate.release();
+#else
 		HTree = W3DNEW HTreeClass();
 		HTree->Init_Default();
+#endif
 	}
 
 	// Ok, now suck the sub-objects out of each LOD model and place them into this HLOD.
@@ -1040,12 +1150,17 @@ HLodClass::HLodClass(const char * name,RenderObjClass ** lods,int count) :
 			while (lod_obj->Get_Num_Sub_Objects() > 0) {
 
 				RenderObjClass * sub_obj = lod_obj->Get_Sub_Object(0);
+#if defined(__linux__)
+				ww3d_clone::Ref<RenderObjClass> child(sub_obj);
+#endif
 				int boneindex = lod_obj->Get_Sub_Object_Bone_Index(sub_obj);
 				lod_obj->Remove_Sub_Object(sub_obj);				
 				
 				Add_Lod_Model(lod_index,sub_obj,boneindex);
 
+#if !defined(__linux__)
 				sub_obj->Release_Ref();
+#endif
 			}
 		
 		} else {
@@ -1072,6 +1187,10 @@ HLodClass::HLodClass(const char * name,RenderObjClass ** lods,int count) :
 	// Normal render object processing whenever sub-objects are added or removed:
 	Update_Sub_Object_Bits();
 	Update_Obj_Space_Bounding_Volumes();
+#if defined(__linux__)
+		attempt.commit();
+	} catch (...) { Free();throw; }
+#endif
 }
 
 
@@ -1100,6 +1219,18 @@ HLodClass::HLodClass(const HLodDefClass & def) :
 	ProxyArray(NULL),
 	LODBias(1.0f)
 {
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	try {
+		if (def.LodCount<=0 || def.LodCount>1024 || !def.Lod || !HTree || HTree->Num_Pivots()<=0)
+			throw std::runtime_error("original composite definition is not admitted");
+		ww3d_clone::Attempt::reserve(def.LodCount,sizeof(ModelArrayClass));
+		ww3d_clone::Attempt::reserve(def.LodCount,sizeof(float));
+		ww3d_clone::Attempt::reserve(def.LodCount+1,sizeof(float));
+		ww3d_clone::Attempt::reserve(def.Aggregates.ModelCount,sizeof(ModelNodeClass));
+		for (int l=0;l<def.LodCount;++l)
+			ww3d_clone::Attempt::reserve(def.Lod[l].ModelCount,sizeof(ModelNodeClass));
+#endif
 	// Set the name
 	Set_Name(def.Get_Name());
 
@@ -1107,14 +1238,31 @@ HLodClass::HLodClass(const HLodDefClass & def) :
 	// Number of LODs comes from the distlod
 	LodCount = def.LodCount;
 	WWASSERT(LodCount >= 1);
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 	Lod = W3DNEWARRAY ModelArrayClass[LodCount];
 	WWASSERT(Lod);
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 	Cost = W3DNEWARRAY float[LodCount];
 	WWASSERT(Cost);
 	// Value has LodCount + 1 entries so PostIncrementValue can always use
 	// Value[CurLod + 1] (the last entry wil be AT_MAX_LOD).
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 	Value = W3DNEWARRAY float[LodCount + 1];
 	WWASSERT(Value);
+#if defined(__linux__)
+	for (int l=0;l<LodCount;++l) {
+		ww3d_clone::Attempt::fault();
+		if (!Lod[l].Resize(def.Lod[l].ModelCount)) throw std::bad_alloc();
+	}
+	ww3d_clone::Attempt::fault();
+	if (!AdditionalModels.Resize(def.Aggregates.ModelCount)) throw std::bad_alloc();
+#endif
 
 	// Add Models to the ModelArrays
 	for (int ilod=0; ilod < def.LodCount; ilod++) {
@@ -1124,10 +1272,15 @@ HLodClass::HLodClass(const HLodDefClass & def) :
 		for (int imodel=0; imodel < def.Lod[ilod].ModelCount; imodel++) {
 
 			RenderObjClass * robj = WW3DAssetManager::Get_Instance()->Create_Render_Obj(def.Lod[ilod].ModelName[imodel]);
+#if defined(__linux__)
+			ww3d_clone::Ref<RenderObjClass> child(robj);
+#endif
 			int boneindex = def.Lod[ilod].BoneIndex[imodel];
 			if (robj != NULL) {
 				Add_Lod_Model(ilod,robj,boneindex);
+#if !defined(__linux__)
 				robj->Release_Ref();
+#endif
 			}
 		}
 	}
@@ -1137,14 +1290,22 @@ HLodClass::HLodClass(const HLodDefClass & def) :
 	// Add aggregates to this model
 	for (int iagg=0; iagg<def.Aggregates.ModelCount; iagg++) {
 		RenderObjClass * robj = WW3DAssetManager::Get_Instance()->Create_Render_Obj(def.Aggregates.ModelName[iagg]);
+#if defined(__linux__)
+		ww3d_clone::Ref<RenderObjClass> child(robj);
+#endif
 		int boneindex = def.Aggregates.BoneIndex[iagg];
 		if (robj != NULL) {
 			Add_Sub_Object_To_Bone(robj,boneindex);
+#if !defined(__linux__)
 			robj->Release_Ref();
+#endif
 		}
 	}
 
 	// Add a reference to the proxy array
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 	REF_PTR_SET(ProxyArray,def.ProxyArray);
 
 	// So that the object is ready for use after construction, we will
@@ -1160,6 +1321,10 @@ HLodClass::HLodClass(const HLodDefClass & def) :
 
 	Update_Sub_Object_Bits();
 	Update_Obj_Space_Bounding_Volumes();
+#if defined(__linux__)
+		attempt.commit();
+	} catch (...) { Free();throw; }
+#endif
 	return ;
 }
 
@@ -1189,19 +1354,42 @@ HLodClass::HLodClass(const HModelDefClass & def) :
 	ProxyArray(NULL),
 	LODBias(1.0f)
 {
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	try {
+		if (!HTree || HTree->Num_Pivots()<=0 || def.SubObjectCount<0 ||
+			(def.SubObjectCount && !def.SubObjects))
+			throw std::runtime_error("original hierarchy definition is not admitted");
+		ww3d_clone::Attempt::reserve(def.SubObjectCount,sizeof(ModelNodeClass));
+		ww3d_clone::Attempt::reserve(1,sizeof(ModelArrayClass));
+		ww3d_clone::Attempt::reserve(3,sizeof(float));
+#endif
 	// Set the name
 	Set_Name(def.Get_Name());
 	
 	// This is a "simple" HLod, only one LOD
 	LodCount = 1;
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 	Lod = W3DNEWARRAY ModelArrayClass[1];
 	WWASSERT(Lod);
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 	Cost = W3DNEWARRAY float[1];
 	WWASSERT(Cost);
 	// Value has LodCount + 1 entries so PostIncrementValue can always use
 	// Value[CurLod + 1] (the last entry wil be AT_MAX_LOD).
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+#endif
 	Value = W3DNEWARRAY float[2];
 	WWASSERT(Value);
+#if defined(__linux__)
+	ww3d_clone::Attempt::fault();
+	if (!Lod[0].Resize(def.SubObjectCount)) throw std::bad_alloc();
+#endif
 
 	// no lod size clamping
 	Lod[0].MaxScreenSize = NO_MAX_SCREEN_SIZE;
@@ -1210,10 +1398,15 @@ HLodClass::HLodClass(const HModelDefClass & def) :
 	int imodel;
 	for (imodel=0; imodel < def.SubObjectCount; ++imodel) {
 		RenderObjClass * robj = WW3DAssetManager::Get_Instance()->Create_Render_Obj(def.SubObjects[imodel].RenderObjName);
+#if defined(__linux__)
+		ww3d_clone::Ref<RenderObjClass> child(robj);
+#endif
 		if (robj) {
 			int boneindex = def.SubObjects[imodel].PivotID;
 			Add_Lod_Model(0,robj,boneindex);
+#if !defined(__linux__)
 			robj->Release_Ref();
+#endif
 		}
 	}
 
@@ -1232,6 +1425,10 @@ HLodClass::HLodClass(const HModelDefClass & def) :
 
 	Update_Sub_Object_Bits();
 	Update_Obj_Space_Bounding_Volumes();
+#if defined(__linux__)
+		attempt.commit();
+	} catch (...) { Free();throw; }
+#endif
 	return ;
 }
 
@@ -1358,7 +1555,7 @@ void HLodClass::Free(void)
 {
 	int lod,model;
 
-	for (lod = 0; lod < LodCount; lod++) {
+	for (lod = 0; Lod != NULL && lod < LodCount; lod++) {
 		for (model = 0; model < Lod[lod].Count(); model++) {
 
 			RenderObjClass * robj = Lod[lod][model].Model;
@@ -2571,6 +2768,13 @@ int HLodClass::Add_Sub_Object_To_Bone(RenderObjClass * subobj,int boneindex)
 {
 	WWASSERT(subobj);
 	if ((boneindex < 0) || (boneindex >= HTree->Num_Pivots())) return 0;
+#if defined(__linux__)
+	if (ww3d_clone::Attempt::active()) {
+		if (!subobj || Is_In_Scene() || AdditionalModels.Count()>=AdditionalModels.Length())
+			throw std::runtime_error("original composite storage is not admitted");
+		ww3d_clone::Attempt::fault();
+	}
+#endif
 
 	subobj->Set_LOD_Bias(LODBias);
 	
@@ -3527,6 +3731,14 @@ void HLodClass::Update_Obj_Space_Bounding_Volumes(void)
 void HLodClass::Add_Lod_Model(int lod, RenderObjClass * robj, int boneindex)
 {		
 	WWASSERT(robj != NULL);
+#if defined(__linux__)
+	if (ww3d_clone::Attempt::active()) {
+		if (!robj || !HTree || !Lod || lod<0 || lod>=LodCount || boneindex<0 ||
+			Is_In_Scene() || Lod[lod].Count()>=Lod[lod].Length())
+			throw std::runtime_error("original composite storage is not admitted");
+		ww3d_clone::Attempt::fault();
+	}
+#endif
 
 	// (gth) survive the case where the skeleton for this object no longer has
 	// the bone that we're trying to use.  This happens when a skeleton is re-exported

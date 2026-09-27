@@ -57,8 +57,15 @@ class SnapPointsClass;
 ** CollectionClass
 ** This is a render object which contains a collection of render objects.
 */
+#if defined(__linux__)
+namespace ww3d_prop { class Audit; }
+#endif
 class CollectionClass : public CompositeRenderObjClass
 {
+#if defined(__linux__)
+	friend class ww3d_prop::Audit;
+	friend struct W3DPropOwnerProbeAccess;
+#endif
 public:
 
 	CollectionClass(void);

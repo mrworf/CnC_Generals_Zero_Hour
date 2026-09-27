@@ -52,6 +52,7 @@
 #include "Common/GlobalData.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DTerrainTracks.h"
+#include "W3DDevice/GameClient/W3DPropBuffer.h"
 #include "w3d_shader_manager_cpu_types.h"
 #include "W3DDevice/GameClient/W3DShaderManager.h"
 #include "original_gpu_edge.h"
@@ -83,10 +84,11 @@ HeightMapRenderObjClass::~HeightMapRenderObjClass()
 	if (TheTerrainRenderObject == this) TheTerrainRenderObject = NULL;
 }
 
-void HeightMapRenderObjClass::ReleaseResources() {}
-void HeightMapRenderObjClass::ReAcquireResources() {}
+void HeightMapRenderObjClass::ReleaseResources() { BaseHeightMapRenderObjClass::ReleaseResources(); }
+void HeightMapRenderObjClass::ReAcquireResources() { BaseHeightMapRenderObjClass::ReAcquireResources(); }
 void HeightMapRenderObjClass::Render(RenderInfoClass&)
 {
+	if (hasLiveProps()) throw OriginalW3DDeviceUnavailable("original prop frame owner is not admitted");
 	if (!m_map || !m_indexBuffer || !m_vertexBufferTiles || !m_vertexBufferBackup ||
 		m_numVBTilesX <= 0 || m_numVBTilesY <= 0 ||
 		m_numVertexBufferTiles != m_numVBTilesX * m_numVBTilesY ||
@@ -367,6 +369,7 @@ void HeightMapRenderObjClass::freeIndexVertexBuffers()
 }
 Int HeightMapRenderObjClass::freeMapResources()
 {
+	preflightTreeRemoval();
 	freeIndexVertexBuffers();
 	delete [] m_extraBlendTilePositions;
 	m_extraBlendTilePositions = NULL;
@@ -384,13 +387,15 @@ void HeightMapRenderObjClass::updateCenter(CameraClass* camera, RefRenderObjList
 	if (!camera || !m_vertexBufferTiles || !m_vertexBufferBackup ||
 		m_x <= 1 || m_y <= 1)
 		throw OriginalW3DDeviceUnavailable("original terrain center update unavailable");
-	// The bounded Linux terrain route has no bridge, road, tree, prop, bib or
-	// waypoint sub-owner yet.  The native base update would dispatch those
-	// owners (and assumes its bridge owner exists), so fail closed if any is
-	// present and retain the source height-map full-update operation here.
-	if (m_treeBuffer || m_propBuffer || m_bibBuffer || m_waypointBuffer ||
+	// Prop ownership/cull invalidation is admitted independently of prop draw.
+	// Other sibling update owners remain closed on this bounded route.
+	if (m_treeBuffer || m_bibBuffer || m_waypointBuffer ||
 		m_roadBuffer || m_bridgeBuffer)
 		throw OriginalW3DDeviceUnavailable("original terrain sibling update pending");
+	if (m_propBuffer) {
+		preflightTreeRemoval();
+		m_propBuffer->doFullUpdate();
+	}
 	if (!m_needFullUpdate) return;
 	updateBlock(0, 0, m_x - 1, m_y - 1, m_map, lights);
 	m_needFullUpdate = FALSE;

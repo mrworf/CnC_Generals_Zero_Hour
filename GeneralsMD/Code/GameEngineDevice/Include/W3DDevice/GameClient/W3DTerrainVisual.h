@@ -166,6 +166,7 @@ public:
 protected:
 #if defined(ZH_WW3D_CPU_ONLY)
 	void releaseEmptyOwners();
+	static void admitPropTerrainRemoval(void *owner);
 #endif
 
 	// snapshot methods

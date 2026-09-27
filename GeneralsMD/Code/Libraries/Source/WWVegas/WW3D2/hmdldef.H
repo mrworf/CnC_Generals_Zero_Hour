@@ -71,6 +71,9 @@ struct HmdlNodeDefStruct
 **	The asset manager stores these objects internally and uses them to 
 **	create instances of HierarchyModels for the user.
 */
+#if defined(__linux__)
+namespace ww3d_prop { class Audit; }
+#endif
 class HModelDefClass
 {
 
@@ -107,6 +110,9 @@ private:
 	// HModelClass requires intimate knowlege of us
 	friend class HModelClass;
 	friend class HLodClass;
+#if defined(__linux__)
+	friend class ww3d_prop::Audit;
+#endif
 };
 
 #endif 

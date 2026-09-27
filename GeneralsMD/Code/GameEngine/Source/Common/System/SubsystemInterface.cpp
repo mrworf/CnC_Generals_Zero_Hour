@@ -48,6 +48,9 @@ namespace {
 void *resetAdmissionOwner = NULL;
 void (*resetAdmission)(void *) = NULL;
 UnsignedInt64 resetAdmissionSequence = 0, resetAdmissionToken = 0;
+void *terrainAdmissionOwner = NULL;
+void (*terrainAdmission)(void *) = NULL;
+UnsignedInt64 terrainAdmissionSequence = 0, terrainAdmissionToken = 0;
 }
 UnsignedInt64 installSubsystemResetAdmission(void *owner, void (*admit)(void *)) noexcept
 {
@@ -63,7 +66,24 @@ bool removeSubsystemResetAdmission(void *owner, UnsignedInt64 token) noexcept
 }
 void preflightSubsystemResetAdmission()
 {
+	preflightClientTerrainRemovalAdmission();
 	if (resetAdmission) resetAdmission(resetAdmissionOwner);
+}
+UnsignedInt64 installClientTerrainRemovalAdmission(void *owner, void (*admit)(void *)) noexcept
+{
+	if (!owner || !admit || terrainAdmissionOwner || terrainAdmissionSequence == ~UnsignedInt64(0)) return 0;
+	terrainAdmissionOwner = owner; terrainAdmission = admit;
+	return terrainAdmissionToken = ++terrainAdmissionSequence;
+}
+bool removeClientTerrainRemovalAdmission(void *owner, UnsignedInt64 token) noexcept
+{
+	if (!owner || !token || owner != terrainAdmissionOwner || token != terrainAdmissionToken) return false;
+	terrainAdmissionOwner = NULL; terrainAdmission = NULL; terrainAdmissionToken = 0;
+	return true;
+}
+void preflightClientTerrainRemovalAdmission()
+{
+	if (terrainAdmission) terrainAdmission(terrainAdmissionOwner);
 }
 #endif
 
@@ -250,6 +270,9 @@ void SubsystemInterfaceList::resetAll()
 //-----------------------------------------------------------------------------
 void SubsystemInterfaceList::shutdownAll()
 {
+#if defined(__linux__)
+	preflightSubsystemResetAdmission();
+#endif
 	// must go in reverse order!
 	for (SubsystemList::reverse_iterator it = m_subsystems.rbegin(); it != m_subsystems.rend(); ++it)
 	{

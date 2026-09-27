@@ -225,6 +225,7 @@ zh_add_bootstrap_component(zh_test_support ZH_EMPTY_LEGACY_SOURCES)
 # before joining the production provider.
 target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/assetmgr.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/prop_graph.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/proto.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/rendobj.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/mesh.cpp
@@ -2820,6 +2821,52 @@ if(ZH_BUILD_TESTS)
     $<TARGET_OBJECTS:zh_original_config_spine>
     $<TARGET_OBJECTS:zh_original_w3d_factory_full>
     $<TARGET_OBJECTS:zh_original_w3d_draw_full>)
+  add_executable(original_w3d_prop_owner_tests
+    tests/original_rendering/test_prop_owner.cpp
+    $<TARGET_OBJECTS:zh_original_lifecycle_spine>
+    $<TARGET_OBJECTS:zh_original_config_spine>
+    $<TARGET_OBJECTS:zh_original_w3d_factory_full>
+    $<TARGET_OBJECTS:zh_original_w3d_draw_full>)
+  get_target_property(prop_owner_includes original_w3d_presentation_tests INCLUDE_DIRECTORIES)
+  target_include_directories(original_w3d_prop_owner_tests PRIVATE ${prop_owner_includes})
+  target_compile_definitions(original_w3d_prop_owner_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
+  target_compile_options(original_w3d_prop_owner_tests PRIVATE -fpermissive -ffunction-sections -fdata-sections)
+  target_link_libraries(original_w3d_prop_owner_tests PRIVATE
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix
+    zh_compression zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu zh_build_options)
+  target_link_options(original_w3d_prop_owner_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-prop-owner.link.map")
+  add_test(NAME original_w3d_prop_owner COMMAND original_w3d_prop_owner_tests)
+  set_tests_properties(original_w3d_prop_owner PROPERTIES LABELS "original-rendering;source-identity;negative")
+  set(prop_owner_identity_args)
+  set(prop_owner_removal_args)
+  foreach(prop_owner_source IN ITEMS
+      "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/W3DPropBuffer.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/prop_graph.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/htree.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/animobj.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hlod.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/collect.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/distlod.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/assetmgr.cpp"
+      "GeneralsMD/Code/GameEngine/Source/Common/System/SubsystemInterface.cpp")
+    list(APPEND prop_owner_identity_args --required "${prop_owner_source}")
+    list(APPEND prop_owner_removal_args --provider "${prop_owner_source}")
+  endforeach()
+  add_test(NAME original_w3d_prop_owner_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-prop-owner.link.map"
+    --executable "$<TARGET_FILE:original_w3d_prop_owner_tests>"
+    --witness "strong terrain prop owner" ${prop_owner_identity_args})
+  add_test(NAME original_w3d_prop_owner_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_provider_removal.py"
+    --checker "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-prop-owner.link.map"
+    --executable "$<TARGET_FILE:original_w3d_prop_owner_tests>" ${prop_owner_removal_args})
+  set_tests_properties(original_w3d_prop_owner_identity original_w3d_prop_owner_provider_removal
+    PROPERTIES LABELS "original-rendering;source-identity;negative")
   get_target_property(house_color_includes original_w3d_presentation_tests INCLUDE_DIRECTORIES)
   target_include_directories(original_w3d_house_color_tests PRIVATE ${house_color_includes})
   target_compile_definitions(original_w3d_house_color_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1

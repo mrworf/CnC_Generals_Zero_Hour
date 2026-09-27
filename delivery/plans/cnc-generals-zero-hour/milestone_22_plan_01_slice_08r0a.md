@@ -1,6 +1,8 @@
 # M22 plan 01 slice 08R0A: strong composite and terrain-prop ownership
 
-Status: planned; ready for implementation after plan-only checkpoint.
+Status: complete; six corrected final-source builds and canonical suites
+(289/289 each), exact focus, strict host LSan, minimal/headless, physical
+Vulkan and LAN gates pass. Commit: this slice commit.
 Plan transaction parent: `b4fc25b137e94accc1abebd4f0f14bc992c64670`.
 
 ## Outcome, dependencies and scope
@@ -31,8 +33,9 @@ turn a rejected graph into a substitute model/type0.
 HLOD/Animatable/HTree guards cover hierarchy pivots/parent fixup, LOD/cost/value
 arrays, child clones and container ownership, additional models, proxies, snap
 points and name storage. Definition constructors and copy constructors share
-the bounded strong contract; don't publish LodCount/raw pointers before complete
-storage. Preserve current-LOD selection/clamping, matching flags, LOD bias, child
+the bounded strong contract; don't externally publish the owner before complete
+storage. Private partial members stay under the constructor's reverse cleanup
+guard. Preserve current-LOD selection/clamping, matching flags, LOD bias, child
 bone/order, base-pose/reset semantics and native bounds. Constructors must unwind
 without relying on an unconstructed most-derived destructor or generic Resize.
 
@@ -44,6 +47,8 @@ semantics and delete the temporary pointer array. Definition/copy paths retain
 all local refs under guards. No fields, virtuals, class layout, serialization or
 Windows successful behavior change; no generic container redesign. Existing
 ordinary assignment behavior is not broadened unless directly mandatory here.
+Collection definition teardown clears the deleted child-name count and releases
+its exact snap-point ownership once; repeated cleanup cannot reuse freed names.
 
 ## Prop admission and lifecycle contract
 
@@ -63,6 +68,9 @@ and INVALID shroud status. Existing type/instance order and type refs are exact.
 Update/remove/construction clearing preflight first; remove all matching IDs,
 preserve tombstone positions/type cleanup semantics and invalidate source cull
 state exactly. Real PartitionManager invalidation remains source-owned.
+The bounded Linux center update performs native prop cull invalidation without
+admitting prop draw. Construction clearing is props-only here: a nonempty tree
+registry remains fail-closed rather than silently inventing tree removal.
 
 clear/reset/destructor release every instance ref before every type ref, and
 light/pass resources exactly once. Whole-operation phase/provider/generation and
@@ -73,6 +81,25 @@ rollback. No reset shortcut that destroys unrelated terrain/tree layers. Device
 release/recreation preserves logical owner identities and never replays mappings
 into a stale generation; A makes no draw/residency claim. Provider removal and
 two generations end at exact initialized allocator baseline.
+
+Props have no Drawable module. Compose their preflight into the existing Linux
+GameClient reset/shutdown admission spine through one optional opaque owner/token
+callback, declared without WW3D linkage, fields or virtuals. Install only for the
+exact terrain/map prop lifecycle, invoke before drawable scanning, and remove only
+after successful teardown. Duplicate/foreign/stale install/remove rejects without
+mutation; no-prop/minimal/headless is a no-op. Direct terrain release/reset/free
+preflight before any sibling, scene, registry or map mutation. Rejection preserves
+callback registration and exact owner/ref state for idle retry.
+The Linux sidecar records the exact terrain/map, prop-buffer address, providers,
+device generation and nonzero lifecycle token. Publish/clear it atomically with
+ownership. Validate raw addresses and all metadata before any prop-buffer
+dereference in readiness, notification, query or removal; foreign/malformed,
+stale generation/provider/map and a lost buffer pointer reject without mutation.
+The established null/no-prop state remains valid. Generated map controls prove
+these rejections, unchanged identities/resources, exact retry and safe teardown.
+After a successful direct map free, the still-registered exact terrain may have
+a null map and no prop buffer/types/instances; only this empty state admits later
+callback/visual teardown under unchanged provider/generation/idle guards.
 
 ## Generated witnesses and exact commands
 
@@ -91,8 +118,11 @@ reset/destruction and total teardown. Keep physical prop factory closed.
 
 Build focus:
 `cmake --build build/<preset> --target zh_original_w3d_full_probe original_w3d_prop_owner_tests original_w3d_cpu_graph_tests original_w3d_clone_graph_tests -j4`.
-Exact ten-control focus:
-`ASAN_OPTIONS=detect_leaks=0 ctest --test-dir build/<preset> -R '^(original_w3d_prop_owner|original_w3d_prop_owner_identity|original_w3d_prop_owner_provider_removal|original_w3d_clone_graph|original_w3d_clone_graph_identity|original_w3d_clone_graph_provider_removal|original_w3d_cpu_graph|original_w3d_house_color|original_w3d_house_color_identity|original_w3d_tree_module)$' --output-on-failure -j1`.
+The existing `original_w3d_terrain_visual_map` control also proves real props-only
+GameClient/GameLogic/GameEngine/resetAll/terrain preflight and idle retry while
+retaining the historical 14-draw empty-prop terrain control.
+Exact eleven-control focus:
+`ASAN_OPTIONS=detect_leaks=0 ctest --test-dir build/<preset> -R '^(original_w3d_prop_owner|original_w3d_prop_owner_identity|original_w3d_prop_owner_provider_removal|original_w3d_clone_graph|original_w3d_clone_graph_identity|original_w3d_clone_graph_provider_removal|original_w3d_cpu_graph|original_w3d_house_color|original_w3d_house_color_identity|original_w3d_tree_module|original_w3d_terrain_visual_map)$' --output-on-failure -j1`.
 Run four focused configurations and both strict host LSan plus six complete
 build/canonical, established native Vulkan, serial LAN and ledger/diff gates
 defined in R0. A has no new physical prop drawing claim.
@@ -110,3 +140,5 @@ Commit only A sources/helpers/tests/registration, exact ledger rows and A eviden
 plan/index status: `delivery: M22 08R0A own terrain prop graphs strongly`.
 Preserve every active08 source/test/ledger hunk and renderer diagnostic unstaged;
 when overlap exists, stage only demonstrably separable A-owned hunks.
+[Acceptance evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08r0a_prop_owner.md)
+records the corrected frozen-source matrix and superseded first failure.

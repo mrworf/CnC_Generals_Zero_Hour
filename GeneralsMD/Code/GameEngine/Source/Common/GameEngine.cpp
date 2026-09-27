@@ -767,6 +767,7 @@ void GameEngine::reset( void )
 {
 #if defined(__linux__)
 	if (TheGameClient) TheGameClient->friend_preflightDrawableRemoval();
+	else preflightClientTerrainRemovalAdmission();
 #endif
 
 	WindowLayout *background = TheWindowManager->winCreateLayout("Menus/BlankWindow.wnd");

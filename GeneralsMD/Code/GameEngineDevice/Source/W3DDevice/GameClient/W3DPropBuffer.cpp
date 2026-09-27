@@ -45,6 +45,10 @@
 //-----------------------------------------------------------------------------
 //         Includes                                                      
 //-----------------------------------------------------------------------------
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "PreRTS.h"
+#include "original_gpu_edge.h"
+#endif
 #include "W3DDevice/GameClient/W3DPropBuffer.h"
 
 #include <stdio.h>
@@ -54,15 +58,25 @@
 #include "Common/PerfTimer.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
-#include "WW3D2/Camera.h"
-#include "WW3D2/RInfo.h"
-#include "WW3D2/Light.h"
-#include "WW3D2/DX8Wrapper.h"
+#include "WW3D2/camera.h"
+#include "WW3D2/rinfo.h"
+#include "WW3D2/light.h"
+#include "WW3D2/lightenvironment.h"
+#include "WW3D2/dx8wrapper.h"
 #include "WW3D2/dx8renderer.h"
 #include "W3DDevice/GameClient/Module/W3DPropDraw.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "W3DDevice/GameClient/BaseHeightMap.h"
 #include "GameLogic/PartitionManager.h"
+#include "Common/Xfer.h"
+#if defined(__linux__)
+#include "clone_graph.h"
+#include "prop_graph.h"
+#include "original_gpu_edge.h"
+#include <exception>
+#include <cmath>
+#include <limits>
+#endif
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -106,12 +120,23 @@ void W3DPropBuffer::cull(CameraClass * camera)
 //=============================================================================
 W3DPropBuffer::~W3DPropBuffer(void)
 {
+#if defined(__linux__)
+	// Every published teardown route must admit idle retirement before deleting
+	// the owner. Constructor rollback is private and never enters a source frame.
+	if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) {
+		if (!edge->source_buffers_retirable() || edge->source_stages_active()) std::terminate();
+	}
+	releaseAllProps();
+	REF_PTR_RELEASE(m_propShroudMaterialPass);
+	REF_PTR_RELEASE(m_light);
+#else
 	Int i;
 	for (i=0; i<MAX_TYPES; i++) {
 		REF_PTR_RELEASE(m_propTypes[i].m_robj);
 	}
 	REF_PTR_RELEASE(m_light);
 	REF_PTR_RELEASE(m_propShroudMaterialPass);
+#endif
 }
 
 //=============================================================================
@@ -122,12 +147,36 @@ for the props. */
 //=============================================================================
 W3DPropBuffer::W3DPropBuffer(void)
 {
+#if defined(__linux__)
+	m_numProps=0;m_numPropTypes=0;m_anythingChanged=false;
+	m_initialized=false;m_doCull=true;m_light=NULL;m_propShroudMaterialPass=NULL;
+	for (int i=0;i<MAX_PROPS;++i) {
+		m_props[i].m_robj=NULL;m_props[i].id=0;m_props[i].location.set(0,0,0);
+		m_props[i].propType=-1;m_props[i].ss=OBJECTSHROUD_INVALID;m_props[i].visible=false;
+		m_props[i].bounds.Init(Vector3(0,0,0),1.0f);
+	}
+	for (int i=0;i<MAX_TYPES;++i) {
+		m_propTypes[i].m_robj=NULL;
+		m_propTypes[i].m_bounds.Init(Vector3(0,0,0),0.0f);
+	}
+	preflightRemoval();
+	ww3d_clone::Attempt attempt;
+	try {
+		ww3d_clone::Attempt::fault();
+		ww3d_clone::Ref<LightClass> light(NEW_REF(LightClass,(LightClass::DIRECTIONAL)));
+		ww3d_clone::Attempt::fault();
+		ww3d_clone::Ref<W3DShroudMaterialPassClass> pass(NEW_REF(W3DShroudMaterialPassClass,()));
+		m_light=light.release();m_propShroudMaterialPass=pass.release();
+		m_initialized=true;attempt.commit();
+	} catch (...) { releaseAllProps();throw; }
+#else
 	memset(this, sizeof(W3DPropBuffer), 0);
 	m_initialized = false;
 	clearAllProps();
 	m_light = NEW_REF( LightClass, (LightClass::DIRECTIONAL) );
 	m_propShroudMaterialPass = NEW_REF(W3DShroudMaterialPassClass,());
 	m_initialized = true;
+#endif
 }
 
 
@@ -141,6 +190,10 @@ W3DPropBuffer::W3DPropBuffer(void)
 //=============================================================================
 void W3DPropBuffer::clearAllProps(void)
 {
+#if defined(__linux__)
+	preflightRemoval();
+	releaseAllProps();
+#else
 	m_numProps=0;
 	Int i;
 	for (i=0; i<MAX_TYPES; i++) {
@@ -148,7 +201,40 @@ void W3DPropBuffer::clearAllProps(void)
 		m_propTypes[i].m_robjName.clear();
 	}
 	m_numPropTypes = 0;
+#endif
 }
+
+#if defined(__linux__)
+void W3DPropBuffer::preflightRemoval() const
+{
+	if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) {
+		if (edge->source_stages_active()) {
+			edge->poison_source_stages();
+			throw std::runtime_error("original prop source attempt is active");
+		}
+		if (!edge->source_buffers_retirable())
+			throw std::runtime_error("original prop frame is active");
+	}
+}
+
+void W3DPropBuffer::releaseAllProps() noexcept
+{
+	for (int i=m_numProps;i>0;--i) {
+		REF_PTR_RELEASE(m_props[i-1].m_robj);
+		m_props[i-1].propType=-1;m_props[i-1].visible=false;
+		m_props[i-1].ss=OBJECTSHROUD_INVALID;
+		m_props[i-1].id=0;m_props[i-1].location.set(0,0,0);
+		m_props[i-1].bounds.Init(Vector3(0,0,0),1.0f);
+	}
+	m_numProps=0;
+	for (int i=m_numPropTypes;i>0;--i) {
+		REF_PTR_RELEASE(m_propTypes[i-1].m_robj);
+		m_propTypes[i-1].m_robjName.clear();
+		m_propTypes[i-1].m_bounds.Init(Vector3(0,0,0),0.0f);
+	}
+	m_numPropTypes=0;m_anythingChanged=false;m_doCull=true;
+}
+#endif
 
 //=============================================================================
 // W3DPropBuffer::addPropTypes
@@ -157,6 +243,32 @@ void W3DPropBuffer::clearAllProps(void)
 //=============================================================================
 Int W3DPropBuffer::addPropType(const AsciiString &modelName)
 {
+#if defined(__linux__)
+	preflightRemoval();
+	if (!m_initialized || modelName.isEmpty() || m_numPropTypes>=MAX_TYPES)
+		throw std::runtime_error("original prop type admission is unavailable");
+	for (int i=0;i<m_numPropTypes;++i)
+		if (!m_propTypes[i].m_robjName.compareNoCase(modelName))
+			throw std::runtime_error("original prop duplicate type is not admitted");
+	ww3d_prop::Attempt attempt(WW3DAssetManager::Get_Instance());
+	ww3d_clone::Attempt::fault();
+	ww3d_clone::Ref<RenderObjClass> candidate(WW3DAssetManager::Get_Instance()->Create_Render_Obj(modelName.str()));
+	if (!candidate.get()) { attempt.commit();return -1; }
+	ww3d_clone::Attempt::fault();
+	AsciiString name(modelName);
+	SphereClass bounds=candidate.get()->Get_Bounding_Sphere();
+	if (!std::isfinite(bounds.Center.X) || !std::isfinite(bounds.Center.Y) ||
+		!std::isfinite(bounds.Center.Z) || !std::isfinite(bounds.Radius) || bounds.Radius<0)
+		throw std::runtime_error("original prop type bounds are not admitted");
+	ww3d_clone::Attempt::fault();
+	// AsciiString shares an already-owned buffer; this final assignment cannot
+	// allocate. All fallible name/model/graph work precedes publication.
+	m_propTypes[m_numPropTypes].m_robjName=name;
+	m_propTypes[m_numPropTypes].m_bounds=bounds;
+	m_propTypes[m_numPropTypes].m_robj=candidate.release();
+	const int index=m_numPropTypes++;
+	attempt.commit();return index;
+#else
 	if (m_numPropTypes>=MAX_TYPES) {
 		DEBUG_CRASH(("Too many kinds of props in map.  Reduce kinds of props, or raise prop limit. jba.")); 
 		return 0;
@@ -173,6 +285,7 @@ Int W3DPropBuffer::addPropType(const AsciiString &modelName)
 	m_propTypes[m_numPropTypes].m_bounds = bounds;
 	m_numPropTypes++;
 	return m_numPropTypes-1;
+#endif
 }
 
 //=============================================================================
@@ -183,6 +296,64 @@ ALPINE, DECIDUOUS and SHRUB. */
 //=============================================================================
 void W3DPropBuffer::addProp(Int id, Coord3D location, Real angle,Real scale, const AsciiString &modelName)
 {
+#if defined(__linux__)
+	preflightRemoval();
+	if (!m_initialized || m_numProps>=MAX_PROPS || modelName.isEmpty() ||
+		!std::isfinite(location.x) || !std::isfinite(location.y) || !std::isfinite(location.z) ||
+		!std::isfinite(angle) || !std::isfinite(scale))
+		throw std::runtime_error("original prop instance admission is unavailable");
+	int type=-1;
+	for (int i=0;i<m_numPropTypes;++i)
+		if (!m_propTypes[i].m_robjName.compareNoCase(modelName)) { type=i;break; }
+	const bool new_type=type<0;
+	if (new_type && m_numPropTypes>=MAX_TYPES)
+		throw std::runtime_error("original prop type capacity is exhausted");
+	ww3d_prop::Attempt attempt(WW3DAssetManager::Get_Instance());
+	std::optional<ww3d_clone::Ref<RenderObjClass>> candidate_type;
+	RenderObjClass* source=nullptr;
+	SphereClass bounds;
+	AsciiString name;
+	if (new_type) {
+		ww3d_clone::Attempt::fault();
+		ww3d_clone::Ref<RenderObjClass> acquired(WW3DAssetManager::Get_Instance()->Create_Render_Obj(modelName.str()));
+		if (!acquired.get()) { attempt.commit();return; }
+		source=acquired.get();
+		bounds=source->Get_Bounding_Sphere();
+		ww3d_clone::Attempt::fault();
+		name=modelName;
+		candidate_type.emplace(acquired.release());
+		type=m_numPropTypes;
+	} else {
+		source=m_propTypes[type].m_robj;bounds=m_propTypes[type].m_bounds;
+		ww3d_prop::Audit audit(*WW3DAssetManager::Get_Instance());
+		audit.render(source);
+	}
+	if (!source || !std::isfinite(bounds.Center.X) || !std::isfinite(bounds.Center.Y) ||
+		!std::isfinite(bounds.Center.Z) || !std::isfinite(bounds.Radius) || bounds.Radius<0)
+		throw std::runtime_error("original prop type provider is not admitted");
+	ww3d_clone::Attempt::fault();
+	ww3d_clone::Ref<RenderObjClass> instance(source->Clone());
+	if (!instance.get()) throw std::runtime_error("original prop instance is absent");
+	Matrix3D transform(true);transform.Rotate_Z(angle);transform.Scale(scale);
+	transform.Set_Translation(Vector3(location.x,location.y,location.z));
+	ww3d_clone::Attempt::fault();
+	instance.get()->Set_Transform(transform);instance.get()->Set_ObjectScale(scale);
+	SphereClass translated=bounds;translated.Center+=Vector3(location.x,location.y,location.z);
+	if (!std::isfinite(translated.Center.X) || !std::isfinite(translated.Center.Y) ||
+		!std::isfinite(translated.Center.Z))
+		throw std::runtime_error("original prop translated bounds are not admitted");
+	ww3d_clone::Attempt::fault(); // type publication boundary, before any owner mutation
+	ww3d_clone::Attempt::fault(); // instance publication boundary, also before any mutation
+	if (new_type) {
+		m_propTypes[type].m_robjName=name;m_propTypes[type].m_bounds=bounds;
+		m_propTypes[type].m_robj=candidate_type->release();++m_numPropTypes;
+	}
+	TProp& published=m_props[m_numProps];
+	published.location=location;published.id=id;published.ss=OBJECTSHROUD_INVALID;
+	published.m_robj=instance.release();published.propType=type;
+	published.bounds=translated;published.visible=false;++m_numProps;
+	attempt.commit();
+#else
 	if (m_numProps >= MAX_PROPS) {
 		return;  
 	}
@@ -223,6 +394,7 @@ void W3DPropBuffer::addProp(Int id, Coord3D location, Real angle,Real scale, con
 	m_props[m_numProps].visible = false;
 
 	m_numProps++;
+#endif
 }
 
 //=============================================================================
@@ -232,16 +404,40 @@ void W3DPropBuffer::addProp(Int id, Coord3D location, Real angle,Real scale, con
 //=============================================================================
 Bool W3DPropBuffer::updatePropPosition(Int id, const Coord3D &location, Real angle, Real scale)
 {
+#if defined(__linux__)
+	preflightRemoval();
+	if (!std::isfinite(location.x) || !std::isfinite(location.y) || !std::isfinite(location.z) ||
+		!std::isfinite(angle) || !std::isfinite(scale))
+		throw std::runtime_error("original prop transform is not admitted");
+#endif
 	Int i;
 	for (i=0; i<m_numProps; i++) {
 		if (m_props[i].id == id) {
+#if defined(__linux__)
+			// Native removal keeps tombstones/IDs. Never dereference a removed
+			// instance when a later live instance reuses the same source ID.
+			if (!m_props[i].m_robj) continue;
+			if (m_props[i].propType<0 || m_props[i].propType>=m_numPropTypes ||
+				!m_propTypes[m_props[i].propType].m_robj)
+				throw std::runtime_error("original prop transform owner is not admitted");
+			SphereClass translated=m_propTypes[m_props[i].propType].m_bounds;
+			translated.Center+=Vector3(location.x,location.y,location.z);
+			if (!std::isfinite(translated.Center.X) || !std::isfinite(translated.Center.Y) ||
+				!std::isfinite(translated.Center.Z))
+				throw std::runtime_error("original prop translated bounds are not admitted");
+#endif
 			Matrix3D mtx(true);
 			mtx.Rotate_Z(angle);
 			mtx.Scale(scale);
 			mtx.Set_Translation(Vector3(location.x, location.y, location.z));
+#if !defined(__linux__)
 			m_props[i].location = location;
+#endif
 			m_props[i].m_robj->Set_Transform(mtx);
 			m_props[i].m_robj->Set_ObjectScale(scale);
+#if defined(__linux__)
+			m_props[i].location = location;
+#endif
 			// Translate the bounding sphere of the model.
 			m_props[i].bounds = m_propTypes[m_props[i].propType].m_bounds;
 			m_props[i].bounds.Center += Vector3(location.x, location.y, location.z);
@@ -259,6 +455,9 @@ Bool W3DPropBuffer::updatePropPosition(Int id, const Coord3D &location, Real ang
 //=============================================================================
 void W3DPropBuffer::removeProp(Int id)
 {
+#if defined(__linux__)
+	preflightRemoval();
+#endif
 	Int i;
 	for (i=0; i<m_numProps; i++) {
 		if (m_props[i].id == id) {
@@ -280,6 +479,22 @@ void W3DPropBuffer::removeProp(Int id)
 //=============================================================================
 void W3DPropBuffer::removePropsForConstruction(const Coord3D* pos, const GeometryInfo& geom, Real angle )
 {
+#if defined(__linux__)
+	preflightRemoval();
+	if (!pos || !ThePartitionManager || !std::isfinite(pos->x) || !std::isfinite(pos->y) ||
+		geom.getGeomType()<GEOMETRY_FIRST || geom.getGeomType()>=GEOMETRY_NUM_TYPES ||
+		!std::isfinite(pos->z) || !std::isfinite(angle) || !std::isfinite(geom.getMajorRadius()) ||
+		!std::isfinite(geom.getMinorRadius()) || !std::isfinite(geom.getMaxHeightAbovePosition()) ||
+		!std::isfinite(geom.getMaxHeightBelowPosition()) || !std::isfinite(geom.getBoundingCircleRadius()))
+		throw std::runtime_error("original prop construction geometry is not admitted");
+	for (int p=0;p<m_numProps;++p) if (m_props[p].m_robj) {
+		const Real radius=m_props[p].bounds.Radius;
+		if (!std::isfinite(radius) || radius<0 || radius>(std::numeric_limits<Real>::max)()/5 ||
+			!std::isfinite(m_props[p].location.x) || !std::isfinite(m_props[p].location.y) ||
+			!std::isfinite(m_props[p].location.z))
+			throw std::runtime_error("original prop construction radius is not admitted");
+	}
+#endif
 	// Just iterate all trees, as even non-collidable ones get removed. jba. [7/11/2003]
 	Int i;
 	for (i=0; i<m_numProps; i++) {				
@@ -326,6 +541,10 @@ DECLARE_PERF_TIMER(Prop_Render)
 //=============================================================================
 void W3DPropBuffer::drawProps(RenderInfoClass &rinfo)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	// Logical admission is separate from the R0B pass and R0C frame owner.
+	throw std::runtime_error("original prop draw owner is not admitted");
+#else
 	USE_PERF_TIMER(Prop_Render)
 
 	Int i;
@@ -387,7 +606,7 @@ void W3DPropBuffer::drawProps(RenderInfoClass &rinfo)
 		}
 	}
 	rinfo.light_environment = NULL;
-
+#endif
 }
 
 
@@ -422,4 +641,3 @@ void W3DPropBuffer::loadPostProcess( void )
 {
 	// empty. jba [8/11/2003]	
 }  // end loadPostProcess
-

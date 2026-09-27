@@ -64,8 +64,14 @@ class		DistLODDefClass;
 ** notified that it is being added.  This allows us to correctly handle lights
 ** and particle emitters in LODs...
 */
+#if defined(__linux__)
+namespace ww3d_prop { class Audit; }
+#endif
 class DistLODClass : public CompositeRenderObjClass
 {
+#if defined(__linux__)
+	friend class ww3d_prop::Audit;
+#endif
 public:
 
 	DistLODClass(const DistLODDefClass & desc);
@@ -215,6 +221,9 @@ private:
 	bool							read_node(ChunkLoadClass & cload,DistLODNodeDefStruct * node);
 
 	friend class DistLODClass;
+#if defined(__linux__)
+	friend class ww3d_prop::Audit;
+#endif
 };
 
 /*
@@ -222,6 +231,9 @@ private:
 */
 class DistLODPrototypeClass : public W3DMPO, public PrototypeClass 
 {
+#if defined(__linux__)
+	friend class ww3d_prop::Audit;
+#endif
 	W3DMPO_GLUE(DistLODPrototypeClass)
 public:
 	DistLODPrototypeClass( DistLODDefClass *def ) { Definition = def; }

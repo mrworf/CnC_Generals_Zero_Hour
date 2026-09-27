@@ -89,6 +89,26 @@
 #include "rinfo.h"
 #include "coltest.h"
 #include "inttest.h"
+#include "clone_graph.h"
+
+#if defined(__linux__)
+namespace {
+struct DistLodChildren {
+	std::unique_ptr<RenderObjClass*[]> values;
+	int count;
+	explicit DistLodChildren(int n):count(n)
+	{
+		ww3d_clone::Attempt::reserve(n,sizeof(RenderObjClass*));
+		ww3d_clone::Attempt::fault();
+		values.reset(new RenderObjClass*[n]());
+	}
+	~DistLodChildren() noexcept
+	{
+		for (int i=count;i>0;--i) if (values[i-1]) values[i-1]->Release_Ref();
+	}
+};
+}
+#endif
 
 /*
 ** Loader Instance
@@ -96,8 +116,33 @@
 DistLODLoaderClass			_DistLODLoader;
 
 
-RenderObjClass * DistLODPrototypeClass::Create(void)			
-{ 
+RenderObjClass * DistLODPrototypeClass::Create(void)
+{
+#if defined(__linux__)
+	ww3d_clone::Attempt attempt;
+	if (!Definition) throw std::runtime_error("original legacy definition is absent");
+	ww3d_clone::Attempt::fault();
+	ww3d_clone::Ref<DistLODClass> dist(NEW_REF(DistLODClass,(*Definition)));
+	const int count=dist.get()->Get_Num_Sub_Objects();
+	if (count<=0 || count>=256)
+		throw std::runtime_error("original legacy conversion extent is not admitted");
+	ww3d_clone::Attempt::reserve(static_cast<int>(strlen(dist.get()->Get_Name())+1),1);
+	ww3d_clone::Attempt::fault();
+	std::unique_ptr<char[]> name(nstrdup(dist.get()->Get_Name()));
+	if (!name) throw std::bad_alloc();
+	DistLodChildren children(count);
+	for (int i=0;i<count;++i) {
+		ww3d_clone::Attempt::fault();
+		children.values[count-1-i]=dist.get()->Get_Sub_Object(i);
+		if (!children.values[count-1-i])
+			throw std::runtime_error("original legacy child is absent");
+	}
+	dist.release()->Release_Ref();
+	ww3d_clone::Attempt::fault();
+	ww3d_clone::Ref<HLodClass> converted(NEW_REF(HLodClass,(name.get(),children.values.get(),count)));
+	attempt.commit();
+	return converted.release();
+#else
 	DistLODClass * dist = NEW_REF( DistLODClass , ( *Definition ) ); 
 
 	// Have to pull each LOD out of the DistLOD, create a copy of the name
@@ -126,6 +171,7 @@ RenderObjClass * DistLODPrototypeClass::Create(void)
 	free(name);
 
 	return hlod;
+#endif
 }
 
 /*
@@ -389,6 +435,32 @@ bool DistLODDefClass::read_node(ChunkLoadClass & cload,DistLODNodeDefStruct * no
  *=============================================================================================*/
 DistLODClass::DistLODClass(const DistLODDefClass & def)
 {
+#if defined(__linux__)
+	LodCount=0;CurLod=0;VpPushLod=0;Lods=NULL;
+	ww3d_clone::Attempt attempt;
+	try {
+		if (def.LodCount<=0 || def.LodCount>=256 || !def.Lods)
+			throw std::runtime_error("original legacy definition is not admitted");
+		ww3d_clone::Attempt::reserve(def.LodCount,sizeof(LODNodeClass));
+		ww3d_clone::Attempt::fault();
+		Set_Name(def.Get_Name());
+		ww3d_clone::Attempt::fault();
+		Lods=W3DNEWARRAY LODNodeClass[def.LodCount]();
+		LodCount=def.LodCount;
+		for (int i=0;i<LodCount;++i) {
+			ww3d_clone::Attempt::fault();
+			ww3d_clone::Ref<RenderObjClass> child(WW3DAssetManager::Get_Instance()->Create_Render_Obj(def.Lods[i].Name));
+			if (!child.get()) throw std::runtime_error("original legacy child is absent");
+			Lods[i].Model=child.release();
+			Lods[i].Model->Set_Container(this);
+			Lods[i].ResUpDist=def.Lods[i].ResUpDist;
+			Lods[i].ResDownDist=def.Lods[i].ResDownDist;
+		}
+		Update_Sub_Object_Bits();
+		Update_Obj_Space_Bounding_Volumes();
+		attempt.commit();
+	} catch (...) { Free();throw; }
+#else
 	Set_Name(def.Get_Name());
 	LodCount = def.LodCount;
 	CurLod = 0;
@@ -407,6 +479,7 @@ DistLODClass::DistLODClass(const DistLODDefClass & def)
 
 	Update_Sub_Object_Bits();
 	Update_Obj_Space_Bounding_Volumes();
+#endif
 }
 
 
@@ -425,6 +498,31 @@ DistLODClass::DistLODClass(const DistLODDefClass & def)
 DistLODClass::DistLODClass(const DistLODClass & that) :
 	CompositeRenderObjClass( that )
 {
+#if defined(__linux__)
+	LodCount=0;CurLod=VpPushLod=that.CurLod;Lods=NULL;
+	ww3d_clone::Attempt attempt;
+	try {
+		if (that.LodCount<=0 || that.LodCount>=256 || !that.Lods ||
+			that.CurLod<0 || that.CurLod>=that.LodCount)
+			throw std::runtime_error("original legacy source is not admitted");
+		ww3d_clone::Attempt::reserve(that.LodCount,sizeof(LODNodeClass));
+		ww3d_clone::Attempt::fault();
+		Lods=W3DNEWARRAY LODNodeClass[that.LodCount]();
+		LodCount=that.LodCount;
+		for (int i=0;i<LodCount;++i) {
+			if (!that.Lods[i].Model) throw std::runtime_error("original legacy child is absent");
+			ww3d_clone::Attempt::fault();
+			ww3d_clone::Ref<RenderObjClass> child(that.Lods[i].Model->Clone());
+			if (!child.get()) throw std::runtime_error("original legacy child is absent");
+			Lods[i].Model=child.release();
+			Lods[i].Model->Set_Container(this);
+			Lods[i].ResUpDist=that.Lods[i].ResUpDist;
+			Lods[i].ResDownDist=that.Lods[i].ResDownDist;
+		}
+		Update_Obj_Space_Bounding_Volumes();
+		attempt.commit();
+	} catch (...) { Free();throw; }
+#else
 	LodCount = that.LodCount;
 	CurLod = VpPushLod = that.CurLod;
 
@@ -440,6 +538,7 @@ DistLODClass::DistLODClass(const DistLODClass & that) :
 		Lods[i].ResDownDist = that.Lods[i].ResDownDist;
 	}
 	Update_Obj_Space_Bounding_Volumes();
+#endif
 }
 
 
@@ -1162,4 +1261,3 @@ void DistLODClass::Decrement_Lod(void)
 		}
 	}
 }
-

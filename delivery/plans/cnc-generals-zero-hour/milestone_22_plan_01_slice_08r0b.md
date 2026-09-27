@@ -1,6 +1,6 @@
 # M22 plan 01 slice 08R0B: exact source shroud material pass
 
-Status: planned; dependency-blocked until 08R0A acceptance.
+Status: planned; 08R0A accepted, ready for implementation.
 Plan transaction parent: `b4fc25b137e94accc1abebd4f0f14bc992c64670`.
 
 ## Outcome and boundary

@@ -125,6 +125,7 @@
 #include "assetstatus.h"
 #include "ringobj.h"
 #include "sphereobj.h"
+#include "prop_graph.h"
 
 #include "shdlib.h"
 
@@ -861,6 +862,9 @@ RenderObjClass * WW3DAssetManager::Create_Render_Obj(const char * name)
 		return NULL;		// Failed to find a prototype
 	}
 
+#if defined(__linux__)
+	ww3d_prop::Attempt::check(*this,proto,name);
+#endif
 	return proto->Create();
 }
 

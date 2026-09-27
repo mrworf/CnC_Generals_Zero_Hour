@@ -86,6 +86,7 @@ RenderObjClass * PrimitivePrototypeClass::Create(void)
 }	
 
 
+#include "prop_graph.h"
 class HModelPrototypeClass : public W3DMPO, public PrototypeClass
 {
 	W3DMPO_GLUE(HModelPrototypeClass)
@@ -103,6 +104,16 @@ protected:
 	virtual ~HModelPrototypeClass(void)							{ if (HModelDef) delete HModelDef; }						 
 
 };
+
+#if defined(__linux__)
+bool ww3d_prop::inspect_hmodel(PrototypeClass* p,Audit& audit)
+{
+	auto* typed=dynamic_cast<HModelPrototypeClass*>(p);
+	if (!typed || typeid(*p)!=typeid(HModelPrototypeClass)) return false;
+	if (!typed->HModelDef) throw std::runtime_error("original prop hierarchy definition is absent");
+	audit.hmodel(*typed->HModelDef);return true;
+}
+#endif
 
 
 /***********************************************************************************************
@@ -177,4 +188,3 @@ PrototypeClass * HModelLoaderClass::Load_W3D(ChunkLoadClass & cload)
 	
 	}
 }
-

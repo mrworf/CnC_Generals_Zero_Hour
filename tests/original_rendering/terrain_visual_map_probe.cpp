@@ -3,13 +3,24 @@
 #include "Common/GlobalData.h"
 #include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
+#include "Common/GameEngine.h"
+#include "Common/SubsystemInterface.h"
+#include "Common/Geometry.h"
+#include "GameClient/GameClient.h"
+#include "GameLogic/GameLogic.h"
+#include "W3DDevice/GameClient/W3DAssetManager.h"
+#include "nullrobj.h"
+#include "proto.h"
 #include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/W3DPropBuffer.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "WW3D2/scene.h"
 #include "WW3D2/camera.h"
 #include "WW3D2/rinfo.h"
+#include "dx8vertexbuffer.h"
+#include "dx8fvf.h"
 #include "w3d_shader_manager_cpu_types.h"
 #include "W3DDevice/GameClient/W3DShaderManager.h"
 #include "original_gpu_edge.h"
@@ -21,6 +32,111 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <vector>
+
+struct W3DTerrainPropLifecycleProbeAccess {
+	static void malformed(HeightMapRenderObjClass& owner,zh::original_runtime::OriginalGpuEdge& edge)
+	{
+		auto* const buffer=owner.m_propBuffer;
+		auto* const map=owner.m_map;
+		auto* const assets=W3DDisplay::m_assetManager;
+		const auto generation=edge.generation_;
+		const auto before=image(owner);
+		const auto mapping=mappings(edge);
+		const auto count=buffer->m_numProps;
+		const auto types=buffer->m_numPropTypes;
+		const auto restore=[&] {
+			owner.m_propBuffer=buffer;owner.m_map=map;
+			W3DDisplay::m_assetManager=assets;edge.generation_=generation;
+		};
+		try {
+			for(unsigned fault=0;fault<5;++fault) {
+				restore();
+				if(fault==0) owner.m_propBuffer=reinterpret_cast<W3DPropBuffer*>(&owner);
+				if(fault==1) owner.m_propBuffer=NULL;
+				if(fault==2) owner.m_map=reinterpret_cast<WorldHeightMap*>(&owner);
+				if(fault==3) ++edge.generation_;
+				if(fault==4) W3DDisplay::m_assetManager=reinterpret_cast<W3DAssetManager*>(&owner);
+				const auto rejects=[](auto operation) { try { operation(); } catch(...) { return true; } return false; };
+				if(owner.canNotifyShroudChanged() ||
+					!rejects([&] { owner.notifyShroudChanged(); }) ||
+					!rejects([&] { owner.hasLiveProps(); }) ||
+					!rejects([&] { owner.removeAllProps(); }) ||
+					!rejects([&] { owner.freeMapResources(); }) ||
+					!rejects([&] { preflightClientTerrainRemovalAdmission(); }))
+					throw std::runtime_error("generated malformed prop identity escaped admission");
+				restore();
+				if(image(owner)!=before || mappings(edge)!=mapping ||
+					buffer->m_numProps!=count || buffer->m_numPropTypes!=types ||
+					!owner.canNotifyShroudChanged() || !owner.hasLiveProps())
+					throw std::runtime_error("generated malformed prop identity changed accepted owner");
+				preflightClientTerrainRemovalAdmission();
+				owner.notifyShroudChanged();
+			}
+		} catch(...) { restore();throw; }
+	}
+	static void construction(HeightMapRenderObjClass& owner,const Coord3D& near,const ThingTemplate* model,W3DTerrainVisual& visual)
+	{
+		auto& buffer=*owner.m_propBuffer;
+		Coord3D far=near;far.x+=1000;
+		visual.addProp(model,&far,0);
+		const int survivor=buffer.m_numProps-1;
+		auto* identity=buffer.m_props[survivor].m_robj;
+		GeometryInfo geometry(GEOMETRY_BOX,false,10,10,10);
+		owner.removeTreesAndPropsForConstruction(&near,geometry,0);
+		for(int i=0;i<survivor;++i)
+			if(buffer.m_props[i].m_robj) throw std::runtime_error("generated native construction clearing missed overlap");
+		if(buffer.m_props[survivor].m_robj!=identity || buffer.m_props[survivor].location.x!=far.x)
+			throw std::runtime_error("generated construction clearing changed distant sibling");
+		buffer.m_doCull=false;
+		CameraClass camera;
+		owner.updateCenter(&camera,NULL);
+		if(!buffer.m_doCull || buffer.m_props[survivor].m_robj!=identity)
+			throw std::runtime_error("generated native prop cull invalidation differs");
+	}
+	static void last(const HeightMapRenderObjClass& owner,const char* model,const Coord3D& position,Real angle,Real scale)
+	{
+		const auto& buffer=*owner.m_propBuffer;
+		if(!buffer.m_numProps) throw std::runtime_error("generated weather prop is absent");
+		const auto& prop=buffer.m_props[buffer.m_numProps-1];
+		if(buffer.m_propTypes[prop.propType].m_robjName.compareNoCase(AsciiString(model))!=0 ||
+			prop.id!=1 || prop.visible || prop.ss!=OBJECTSHROUD_INVALID)
+			throw std::runtime_error("generated first module/weather/type state differs");
+		Matrix3D expected(true);expected.Rotate_Z(angle);expected.Scale(scale);
+		expected.Set_Translation(Vector3(position.x,position.y,position.z));
+		for(int r=0;r<3;++r) for(int c=0;c<4;++c)
+			if(prop.m_robj->Get_Transform()[r][c]!=expected[r][c])
+				throw std::runtime_error("generated native prop transform order differs");
+		if(prop.bounds.Radius!=buffer.m_propTypes[prop.propType].m_bounds.Radius)
+			throw std::runtime_error("generated prop invented scale/radius correction");
+	}
+	using Mapping = std::vector<std::pair<const void*,zh::renderer::BufferHandle>>;
+	static std::pair<Mapping,Mapping> mappings(const zh::original_runtime::OriginalGpuEdge& edge)
+	{
+		Mapping vertices,indices;
+		for(const auto& value:edge.vertices_) vertices.emplace_back(value.first,value.second);
+		for(const auto& value:edge.indices_) indices.emplace_back(value.first,value.second);
+		return {vertices,indices};
+	}
+	static std::vector<unsigned char> image(const HeightMapRenderObjClass& owner)
+	{
+		std::vector<unsigned char> bytes;
+		const auto append=[&](const auto& value) {
+			const auto* p=reinterpret_cast<const unsigned char*>(&value);
+			bytes.insert(bytes.end(),p,p+sizeof(value));
+		};
+		append(owner.m_indexBuffer);append(owner.m_vertexBufferTiles);append(owner.m_vertexBufferBackup);
+		append(owner.m_numVBTilesX);append(owner.m_numVBTilesY);append(owner.m_numVertexBufferTiles);
+		append(owner.m_numBlockColumnsInLastVB);append(owner.m_numBlockRowsInLastVB);
+		for (Int i=0;i<owner.m_numVertexBufferTiles;++i) {
+			append(owner.m_vertexBufferTiles[i]);append(owner.m_vertexBufferBackup[i]);
+			const std::size_t extent=owner.m_vertexBufferTiles[i]->Get_Vertex_Count()*owner.m_vertexBufferTiles[i]->FVF_Info().Get_FVF_Size();
+			const auto* p=reinterpret_cast<const unsigned char*>(owner.m_vertexBufferBackup[i]);
+			bytes.insert(bytes.end(),p,p+extent);
+		}
+		return bytes;
+	}
+};
 
 namespace {
 void require(bool value, const char *message)
@@ -35,6 +151,9 @@ bool rejected(Operation operation)
 	catch (const std::runtime_error &) { return true; }
 	return false;
 }
+template <typename Operation>
+bool rejected_any(Operation operation)
+{ try { operation(); } catch (...) { return true; } return false; }
 
 unsigned draw_count(const std::string &trace)
 {
@@ -60,13 +179,18 @@ extern "C" void zh_probe_terrain_visual_map()
 	TheWritableGlobalData->m_partitionCellSize = MAP_XY_FACTOR;
 	const ThingTemplate *plain_prop = TheThingFactory->findTemplate(AsciiString("FixtureProp"), FALSE);
 	const ThingTemplate *modeled_prop = TheThingFactory->findTemplate(AsciiString("ModeledProp"), FALSE);
+	const ThingTemplate *weather_prop = TheThingFactory->findTemplate(AsciiString("WeatherProp"), FALSE);
 	require(plain_prop && modeled_prop && plain_prop->getDrawModuleInfo().getCount() == 0 &&
-		modeled_prop->getDrawModuleInfo().getCount() > 0,
+		modeled_prop->getDrawModuleInfo().getCount() > 0 && weather_prop,
 		"original terrain prop generated templates unavailable");
 	Coord3D prop_pos;
 	prop_pos.set(20.0f, 20.0f, 0.0f);
 	zh::renderer::RecordingGpuDevice device;
 	for (Int generation = 0; generation != 2; ++generation) {
+		struct RestoreProviders {
+			Display* display=TheDisplay;TerrainVisual* visual=TheTerrainVisual;
+			~RestoreProviders() { TheDisplay=display;TheTerrainVisual=visual; }
+		} restore_providers;
 		zh::original_runtime::OriginalGpuEdge edge(device);
 		auto display = std::make_unique<W3DDisplay>();
 		display->init();
@@ -74,6 +198,10 @@ extern "C" void zh_probe_terrain_visual_map()
 		TheDisplay = display.get();
 		TerrainVisual *saved_visual = TheTerrainVisual;
 		auto visual = std::make_unique<W3DTerrainVisual>();
+		struct AbortFrameBeforeOwners {
+			zh::original_runtime::OriginalGpuEdge& edge;
+			~AbortFrameBeforeOwners() { edge.abort_source_frame(); }
+		} abort_frame_before_owners{edge};
 		TheTerrainVisual = visual.get();
 		visual->init();
 		require(TheHeightMap && !TheHeightMap->getMap() && !TheHeightMap->Peek_Scene(),
@@ -144,8 +272,33 @@ extern "C" void zh_probe_terrain_visual_map()
 		visual->addProp(plain_prop, &prop_pos, 1.0f);
 		require(TheHeightMap->Num_Refs() == prop_refs && device.resource_counts() == prop_resources,
 			"original no-model terrain prop changed source owners or Recording resources");
-		require(rejected([&]() { visual->addProp(modeled_prop, &prop_pos, 0.0f); }),
-			"original modeled terrain prop bypassed pending producer");
+		// An authored missing model retains the native optional no-publication
+		// behavior. A resident logical prop is admitted below, not rendered in A.
+		visual->addProp(modeled_prop, &prop_pos, 0.0f);
+		require(!TheHeightMap->hasPropBuffer(), "missing prop model published a buffer");
+		auto* resident = new Null3DObjClass("TEST.HLOD");
+		W3DDisplay::m_assetManager->Add_Prototype(new PrimitivePrototypeClass(resident));
+		resident->Release_Ref();
+		visual->addProp(modeled_prop, &prop_pos, 0.0f);
+		require(TheHeightMap->hasLiveProps() && resident->Num_Refs()==1,
+			"original logical prop publication or prototype ownership differs");
+		W3DTerrainPropLifecycleProbeAccess::last(*TheHeightMap,"TEST.HLOD",prop_pos,0,modeled_prop->getAssetScale());
+		for(const char* name:{"PROP.NORMAL","PROP.SNOW","PROP.NIGHT","PROP.SNOW_NIGHT"}) {
+			auto* model=new Null3DObjClass(name);
+			W3DDisplay::m_assetManager->Add_Prototype(new PrimitivePrototypeClass(model));model->Release_Ref();
+		}
+		const auto saved_weather=TheWritableGlobalData->m_weather;
+		const auto saved_time=TheWritableGlobalData->m_timeOfDay;
+		for(unsigned condition=0;condition<4;++condition) {
+			TheWritableGlobalData->m_weather=condition&1?WEATHER_SNOWY:WEATHER_NORMAL;
+			TheWritableGlobalData->m_timeOfDay=condition&2?TIME_OF_DAY_NIGHT:TIME_OF_DAY_AFTERNOON;
+			visual->addProp(weather_prop,&prop_pos,0.375f);
+			const char* names[]={"PROP.NORMAL","PROP.SNOW","PROP.NIGHT","PROP.SNOW_NIGHT"};
+			W3DTerrainPropLifecycleProbeAccess::last(*TheHeightMap,names[condition],prop_pos,0.375f,weather_prop->getAssetScale());
+		}
+		TheWritableGlobalData->m_weather=saved_weather;TheWritableGlobalData->m_timeOfDay=saved_time;
+		W3DTerrainPropLifecycleProbeAccess::construction(*TheHeightMap,prop_pos,modeled_prop,*visual);
+		W3DTerrainPropLifecycleProbeAccess::malformed(*TheHeightMap,edge);
 		Coord3D malformed_pos = prop_pos;
 		malformed_pos.x = std::numeric_limits<Real>::quiet_NaN();
 		require(rejected([&]() { visual->addProp(NULL, &prop_pos, 0.0f); }) &&
@@ -171,6 +324,9 @@ extern "C" void zh_probe_terrain_visual_map()
 		W3DAssetManager *saved_assets = W3DDisplay::m_assetManager;
 		W3DDisplay::m_assetManager = NULL;
 		const bool missing_assets = rejected([&]() { visual->addProp(plain_prop, &prop_pos, 0.0f); });
+		require(rejected_any([&] { preflightClientTerrainRemovalAdmission(); }) &&
+			rejected_any([&] { TheHeightMap->freeMapResources(); }),
+			"prop provider removal bypassed whole-owner preflight");
 		W3DDisplay::m_assetManager = saved_assets;
 		GlobalData *saved_global_data = TheWritableGlobalData;
 		TheWritableGlobalData = NULL;
@@ -216,6 +372,37 @@ extern "C" void zh_probe_terrain_visual_map()
 		const std::string before_draw = device.snapshot();
 		edge.bind_frame_targets(color, depth, 32, 32);
 		edge.begin_source_frame(true, true, 0, 0, 0, 1);
+		const auto live_prop_resources=device.resource_counts();
+		const auto live_prop_trace=device.snapshot();
+		const auto live_prop_refs=TheHeightMap->Num_Refs();
+		const auto live_prop_buffers=W3DTerrainPropLifecycleProbeAccess::image(*TheHeightMap);
+		const auto live_prop_mappings=W3DTerrainPropLifecycleProbeAccess::mappings(edge);
+		const auto rejects_any=[](auto action) { try { action(); } catch (...) { return true; } return false; };
+		require(rejects_any([&] { preflightClientTerrainRemovalAdmission(); }) &&
+			rejects_any([&] { TheGameClient->reset(); }) &&
+			rejects_any([&] { TheGameLogic->reset(); }) &&
+			rejects_any([&] { TheGameEngine->reset(); }) &&
+			rejects_any([&] { TheSubsystemList->resetAll(); }) &&
+			rejects_any([&] { TheSubsystemList->shutdownAll(); }) &&
+			rejects_any([&] { visual->reset(); }) &&
+			rejects_any([&] { TheHeightMap->freeMapResources(); }) &&
+			rejects_any([&] { TheHeightMap->ReleaseResources(); }) &&
+			rejects_any([&] { TheHeightMap->removeAllProps(); }),
+			"props-only active source frame bypassed lifecycle preflight");
+		require(TheHeightMap->hasLiveProps() && TheHeightMap->Num_Refs()==live_prop_refs &&
+			W3DTerrainPropLifecycleProbeAccess::image(*TheHeightMap)==live_prop_buffers &&
+			W3DTerrainPropLifecycleProbeAccess::mappings(edge)==live_prop_mappings &&
+			device.resource_counts()==live_prop_resources && device.snapshot()==live_prop_trace &&
+			TheHeightMap->getMap()==visual->getLogicHeightMap(),
+			"props-only lifecycle rejection changed accepted owner/resources");
+		edge.abort_source_frame();
+		preflightClientTerrainRemovalAdmission();
+		TheHeightMap->ReleaseResources();TheHeightMap->ReAcquireResources();
+		require(TheHeightMap->hasLiveProps(), "prop device recreation changed logical owner");
+		TheHeightMap->notifyShroudChanged();
+		TheHeightMap->removeAllProps();
+		require(!TheHeightMap->hasLiveProps(), "idle prop cleanup retry retained instances");
+		edge.begin_source_frame(true, true, 0, 0, 0, 1);
 		try {
 			TheHeightMap->Render(render_info);
 			edge.end_source_frame(false);
@@ -230,6 +417,16 @@ extern "C" void zh_probe_terrain_visual_map()
 			"original terrain visual changed two-pass terrain submission");
 		DX8Wrapper::Set_Vertex_Buffer(NULL);
 		DX8Wrapper::Set_Index_Buffer(NULL, 0);
+		TheHeightMap->freeMapResources();
+		require(!TheHeightMap->getMap() && !TheHeightMap->hasPropBuffer(),
+			"direct idle terrain free retained prop/map ownership");
+		preflightClientTerrainRemovalAdmission();
+		edge.begin_source_frame(true,true,0,0,0,1);
+		require(rejects_any([&] { preflightClientTerrainRemovalAdmission(); }),
+			"empty post-free terrain callback admitted active frame");
+		edge.abort_source_frame();
+		TheHeightMap->freeMapResources();
+		preflightClientTerrainRemovalAdmission();
 		device.destroy(depth);
 		device.destroy(color);
 

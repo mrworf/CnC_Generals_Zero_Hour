@@ -71,6 +71,9 @@ class HRawAnimClass;
 	by the HierarchyModelClass.
 
 */
+#if defined(__linux__)
+namespace ww3d_prop { class Audit; }
+#endif
 class HTreeClass : public W3DMPO
 {
 	W3DMPO_GLUE(HTreeClass)
@@ -170,6 +173,10 @@ private:
 	bool					read_pivots(ChunkLoadClass & cload,bool pre30);
 
 	friend class MeshClass;
+#if defined(__linux__)
+	friend class ww3d_prop::Audit;
+	friend struct W3DPropOwnerProbeAccess;
+#endif
 
 
 

@@ -35,6 +35,7 @@
 #include <cmath>
 #include "Common/ThingTemplate.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
+#include "W3DDevice/GameClient/W3DAssetManager.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
@@ -44,6 +45,7 @@
 #include "W3DDevice/GameClient/W3DSmudge.h"
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
 #include "Common/GlobalData.h"
+#include "Common/SubsystemInterface.h"
 #include "Common/MapReaderWriterInfo.h"
 #include "original_gpu_edge.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
@@ -57,6 +59,29 @@ static W3DShadowManager *s_ownedShadows = NULL;
 // normal map and fixture paths remain provider-free.
 static W3DBufferManager *s_ownedVolumeBuffers = NULL;
 static W3DSmudgeManager *s_ownedSmudges = NULL;
+static UnsignedInt64 s_propAdmissionToken = 0;
+static zh::original_runtime::OriginalGpuEdge *s_propAdmissionEdge = NULL;
+static UnsignedInt64 s_propAdmissionGeneration = 0;
+static W3DAssetManager *s_propAdmissionAssets = NULL;
+static RTS3DScene *s_propAdmissionScene = NULL;
+void W3DTerrainVisual::admitPropTerrainRemoval(void *address)
+{
+	auto *owner = s_emptyTerrainVisual;
+	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+	if (edge && edge->source_stages_active()) { edge->poison_source_stages(); throw ERROR_INVALID_D3D; }
+	if (edge && !edge->source_buffers_retirable()) throw ERROR_INVALID_D3D;
+	if (!owner || address != owner || TheTerrainVisual != owner ||
+		!edge || edge != s_propAdmissionEdge || edge->generation() != s_propAdmissionGeneration ||
+		!s_propAdmissionAssets || W3DDisplay::m_assetManager != s_propAdmissionAssets ||
+		WW3DAssetManager::Get_Instance() != s_propAdmissionAssets ||
+		!s_propAdmissionScene || W3DDisplay::m_3DScene != s_propAdmissionScene ||
+		!owner->m_terrainRenderObject || TheTerrainRenderObject != owner->m_terrainRenderObject ||
+		TheHeightMap != owner->m_terrainRenderObject || !owner->m_logicHeightMap ||
+		(owner->m_terrainRenderObject->getMap() != owner->m_logicHeightMap &&
+			(owner->m_terrainRenderObject->getMap() || owner->m_terrainRenderObject->hasPropBuffer())))
+		throw ERROR_INVALID_D3D;
+	TheTerrainRenderObject->preflightTreeRemoval();
+}
 
 W3DShroud* W3DTerrainVisual::peekPublishedShroud()
 {
@@ -91,6 +116,8 @@ W3DTerrainVisual::W3DTerrainVisual()
 void W3DTerrainVisual::releaseEmptyOwners()
 {
 	if (s_emptyTerrainVisual != this) return;
+	if (s_propAdmissionToken) admitPropTerrainRemoval(this);
+	if (m_terrainRenderObject) m_terrainRenderObject->preflightTreeRemoval();
 	delete s_ownedSmudges;
 	s_ownedSmudges = NULL;
 	if (m_waterRenderObject) {
@@ -119,6 +146,11 @@ void W3DTerrainVisual::releaseEmptyOwners()
 		m_terrainRenderObject = NULL;
 	}
 	REF_PTR_RELEASE(m_logicHeightMap);
+	if (s_propAdmissionToken) {
+		if (!removeClientTerrainRemovalAdmission(this, s_propAdmissionToken)) std::terminate();
+		s_propAdmissionToken = 0; s_propAdmissionEdge = NULL; s_propAdmissionGeneration = 0;
+		s_propAdmissionAssets = NULL; s_propAdmissionScene = NULL;
+	}
 	s_emptyTerrainVisual = NULL;
 }
 
@@ -224,6 +256,7 @@ void W3DTerrainVisual::init()
 
 void W3DTerrainVisual::reset()
 {
+	if (s_propAdmissionToken) admitPropTerrainRemoval(this);
 	if (s_emptyTerrainVisual != this || TheTerrainVisual != this)
 		throw OriginalW3DDeviceUnavailable("original empty terrain visual reset unavailable");
 	if (m_terrainRenderObject) m_terrainRenderObject->preflightTreeRemoval();
@@ -434,8 +467,14 @@ void W3DTerrainVisual::removeAllBibs()
 	// The no-map owner cannot create a bib: every creation path remains guarded.
 }
 void W3DTerrainVisual::removeBibHighlighting() { ORIGINAL_TERRAIN_PENDING("original terrain bib pending"); }
-void W3DTerrainVisual::removeTreesAndPropsForConstruction(const Coord3D *, const GeometryInfo &, Real)
-{ ORIGINAL_TERRAIN_PENDING("original terrain prop pending"); }
+void W3DTerrainVisual::removeTreesAndPropsForConstruction(const Coord3D *position, const GeometryInfo &geometry, Real angle)
+{
+	if (s_propAdmissionToken) admitPropTerrainRemoval(this);
+	if (s_emptyTerrainVisual != this || TheTerrainVisual != this || !m_terrainRenderObject ||
+		TheTerrainRenderObject != m_terrainRenderObject || !m_terrainRenderObject->canNotifyShroudChanged())
+		throw OriginalW3DDeviceUnavailable("original construction prop owner unavailable");
+	m_terrainRenderObject->removeTreesAndPropsForConstruction(position, geometry, angle);
+}
 void W3DTerrainVisual::addProp(const ThingTemplate *tTemplate, const Coord3D *pos, Real angle)
 {
 	if (s_emptyTerrainVisual != this || TheTerrainVisual != this ||
@@ -457,7 +496,6 @@ void W3DTerrainVisual::addProp(const ThingTemplate *tTemplate, const Coord3D *po
 	if (TheGlobalData->m_timeOfDay == TIME_OF_DAY_NIGHT)
 		state.set(MODELCONDITION_NIGHT);
 	const Real scale = tTemplate->getAssetScale();
-	(void)scale;
 	AsciiString modelName;
 	const ModuleInfo &mi = tTemplate->getDrawModuleInfo();
 	if (mi.getCount() > 0) {
@@ -465,8 +503,33 @@ void W3DTerrainVisual::addProp(const ThingTemplate *tTemplate, const Coord3D *po
 		const W3DModelDrawModuleData *md = mdd ? mdd->getAsW3DModelDrawModuleData() : NULL;
 		if (md) modelName = md->getBestModelNameForWB(state);
 	}
-	if (modelName.isNotEmpty())
-		throw OriginalW3DDeviceUnavailable("original modeled terrain prop pending");
+	if (modelName.isNotEmpty()) {
+		const bool installing = !s_propAdmissionToken;
+		if (installing) {
+			auto *edge = zh::original_runtime::OriginalGpuEdge::active();
+			const auto token = installClientTerrainRemovalAdmission(this, admitPropTerrainRemoval);
+			if (!token) throw ERROR_INVALID_D3D;
+			s_propAdmissionToken = token; s_propAdmissionEdge = edge;
+			s_propAdmissionGeneration = edge->generation();
+			s_propAdmissionAssets = W3DDisplay::m_assetManager; s_propAdmissionScene = W3DDisplay::m_3DScene;
+		}
+		try {
+			admitPropTerrainRemoval(this);
+			m_terrainRenderObject->addProp(1, *pos, angle, scale, modelName);
+		} catch (...) {
+			if (installing) {
+				if (!removeClientTerrainRemovalAdmission(this, s_propAdmissionToken)) std::terminate();
+				s_propAdmissionToken = 0; s_propAdmissionEdge = NULL; s_propAdmissionGeneration = 0;
+				s_propAdmissionAssets = NULL; s_propAdmissionScene = NULL;
+			}
+			throw;
+		}
+		if (installing && !m_terrainRenderObject->hasPropBuffer()) {
+			if (!removeClientTerrainRemovalAdmission(this, s_propAdmissionToken)) std::terminate();
+			s_propAdmissionToken = 0; s_propAdmissionEdge = NULL; s_propAdmissionGeneration = 0;
+			s_propAdmissionAssets = NULL; s_propAdmissionScene = NULL;
+		}
+	}
 }
 void W3DTerrainVisual::setRawMapHeight(const ICoord2D *, Int) { ORIGINAL_TERRAIN_PENDING("original map height pending"); }
 Int W3DTerrainVisual::getRawMapHeight(const ICoord2D *) { ORIGINAL_TERRAIN_PENDING("original map height pending"); }

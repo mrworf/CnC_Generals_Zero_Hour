@@ -19,12 +19,14 @@ class TextureFilterClass;
 class W3DShroud;
 class HeightMapRenderObjClass;
 struct W3DFrameGeneratedProbeAccess;
+struct W3DTerrainPropLifecycleProbeAccess;
 
 namespace zh::original_runtime {
 
 // Device-only translation of the bytes owned and populated by original WW3D
 // buffers. Never selects geometry, material, shader or pass order.
 class OriginalGpuEdge final {
+	friend struct ::W3DTerrainPropLifecycleProbeAccess;
 public:
     enum class CombinerOp : std::uint8_t { disable, select_first, select_second, modulate, add };
     enum class CombinerArg : std::uint8_t { diffuse, current, texture };
