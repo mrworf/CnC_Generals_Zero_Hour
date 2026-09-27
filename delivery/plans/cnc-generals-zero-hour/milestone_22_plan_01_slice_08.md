@@ -95,7 +95,18 @@ or throwing destructor is permitted; immutable tree/shadow admission stays close
 
 ## Outcome and dependencies
 
-Requires accepted slices 08B, 08E, 08I, 08J and 08L and a separately configured, read-only
+The mixed-shadow continuation reaches the fixed house-color surface-loading
+category through indicator-color notification. Its callback throw exposes a
+one-sided Object/Drawable binding and stale reset dereference. Approved separate
+corrective sequence: accepted08L2 → [08L2R1](milestone_22_plan_01_slice_08l2r1.md)
+→ [08Q0](milestone_22_plan_01_slice_08q0.md), with accepted08P0 and the canonical
+texture/filter providers also required by Q0. Slice08 is closed until both new
+owners are accepted. Preserve all existing unstaged trial edits; neither private
+input details nor raw debugger/process output are retained. R1 is independently
+validated/committed first, then Q0, then the unchanged trial resumes with the
+bounded redacted probe. No new milestone or implicit owner admission occurs.
+
+Requires accepted slices 08B, 08E, 08I, 08J, 08L and 08Q0 and a separately configured, read-only
 retail corpus.  The already-authorized campaign/skirmish consumer selections
 remain runtime-only test inputs: no selector, root, private logical name,
 content byte, hash, image, or captured command label is committed or emitted.

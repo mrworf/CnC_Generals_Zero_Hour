@@ -34,5 +34,11 @@ complete M22 validation.
 
 ## Acceptance and commit boundary
 
+Accepted 08L2 remains closed. The resumed callback-throw audit identified a
+one-sided binding lifetime correction tracked independently in
+[08L2R1](milestone_22_plan_01_slice_08l2r1.md); it restores symmetric pointers and
+withdraws the new Drawable before Object constructor cleanup. Historical 08L2
+evidence is not rewritten or treated as coverage of this newly reached boundary.
+
 Depends on 08L1. One commit:
 `delivery: M22 08L2 make ThingFactory construction atomic`.
