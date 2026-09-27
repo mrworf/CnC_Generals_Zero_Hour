@@ -118,6 +118,13 @@ public:
         std::array<TextureBaseClass*,2> textures{};
         std::array<renderer::SamplerDesc,2> samplers{};
     };
+    struct ImmutableTreeDecalSnapshot {
+        VertexUniform vertex;
+        FragmentUniform fragment;
+        renderer::PipelineDesc pipeline;
+        TextureBaseClass* texture=nullptr;
+        renderer::SamplerDesc sampler;
+    };
     class PreparedTreeProgram final {
     public:
         ~PreparedTreeProgram();
@@ -133,6 +140,7 @@ public:
         renderer::ShaderHandle vertex_shader_,fragment_shader_;
         std::array<renderer::SamplerHandle,2> samplers_{};
         std::array<TextureBaseClass*,2> sources_{};
+        unsigned source_fvf_=0;
     };
     explicit OriginalGpuEdge(renderer::GpuDevice& device);
     ~OriginalGpuEdge();
@@ -155,6 +163,8 @@ public:
         const TreeVertexUniform& constants);
     std::unique_ptr<PreparedTreeProgram> prepare_immutable_tree_program(
         const VertexBufferClass* source,const ImmutableTreeSnapshot& snapshot);
+    std::unique_ptr<PreparedTreeProgram> prepare_immutable_tree_decal_program(
+        const VertexBufferClass* source,const ImmutableTreeDecalSnapshot& snapshot);
     bool probe_tree_frame_admission();
     bool immutable_tree_program_current(const PreparedTreeProgram&) const noexcept;
     // Source-frame ownership composes the device journal with source caches.
@@ -164,6 +174,8 @@ public:
     bool abort_tree_source_frame() noexcept;
     bool tree_source_frame_pending() const noexcept;
     void draw_immutable_tree(const PreparedTreeProgram&,const VertexBufferClass*,
+        const IndexBufferClass*,unsigned vertex_count,unsigned index_count);
+    void draw_immutable_tree_decal(const PreparedTreeProgram&,const VertexBufferClass*,
         const IndexBufferClass*,unsigned vertex_count,unsigned index_count);
     void validate_prepared_state(const PhysicalState& state) const;
     void draw_source_indexed(const VertexBufferClass* vertex,const IndexBufferClass* index,

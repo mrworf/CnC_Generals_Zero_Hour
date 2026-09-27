@@ -317,7 +317,8 @@ void W3DDisplay::draw()
 			(!(std::getenv("ZH_M22_VOLUME_SHADOW_PROFILE") || std::getenv("ZH_M22_RETAIL_CONFIG_ROUTE")) ||
 			 !TheW3DShadowManager->hasBoundedVolumeCasters() || !TheHeightMap->getMap())) ||
 		(TheGlobalData->m_useShadowDecals &&
-			(!TheW3DShadowManager->hasBoundedDecalCasters() || !TheHeightMap->getMap())) ||
+			((!TheW3DShadowManager->hasBoundedDecalCasters() &&
+                !(TheGlobalData->m_useTrees && TheTerrainRenderObject->treeInstanceCount()>0)) || !TheHeightMap->getMap())) ||
 		(TheGlobalData->m_useWaterPlane &&
 			(TheGlobalData->m_waterExtentX <= 0 ||
 			TheGlobalData->m_waterExtentY <= 0 ||

@@ -80,7 +80,7 @@ def authored_source_tree(root: Path, fixture, kind: str) -> Path:
 
 def source_tree(root: Path, fixture, kind: str, tree_textures: bool = False,
                 immobile_enemy: bool = False, crusher_logic: bool = False,
-                fx_lists: bool = False) -> Path:
+                fx_lists: bool = False, tree_decals: bool = False) -> Path:
     source = root / "readonly-input"
     prepare_owned_source(source, fixture)
     if immobile_enemy:
@@ -123,6 +123,23 @@ def source_tree(root: Path, fixture, kind: str, tree_textures: bool = False,
                       "FXList FixtureBoneSelf\n FXListAtBonePos\n FX = FixtureBoneSelf\n End\nEnd\n"
                       + "".join(f"FXList FixtureGraph{index}\nEnd\n"
                                 for index in range(66)))
+    if tree_decals:
+        # C3's multiplicative RGB control needs lit, opaque nonblack terrain,
+        # unlike the inherited low-RGB/alpha4 bitmap ownership fixture.
+        game_data=source/"Data/INI/Default/GameData.ini"
+        text=game_data.read_text()
+        assert text.count("END\n")==1
+        fixture.write(game_data,text.replace("END\n",
+                      " TerrainLightingAfternoonAmbient = R:255 G:255 B:255\n"
+                      " TerrainObjectsLightingAfternoonAmbient = R:255 G:255 B:255\nEND\n"))
+        header=struct.pack("<BBB5sHHHHBB",0,0,2,b"\0"*5,0,0,64,64,32,0)
+        fixture.write(source/"Art/Terrain/Flat.tga",header+bytes((128,160,200,255))*4096)
+        header=struct.pack("<BBB5sHHHHBB",0,0,2,b"\0"*5,0,0,64,64,32,0)
+        pixels=bytes(channel for y in range(64) for x in range(64)
+                     for channel in ((128 if x<32 else 192),)*3+(255,))
+        if tree_decals!="missing":
+            if tree_decals=="unsupported": header=header[:2]+bytes((3,))+header[3:]
+            fixture.write(source/"Art/Textures/shadow.tga",header+(pixels[:3] if tree_decals=="truncated" else pixels))
     fixture.make_read_only(source)
     return source
 

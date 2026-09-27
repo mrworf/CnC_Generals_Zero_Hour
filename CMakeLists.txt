@@ -2883,6 +2883,13 @@ if(ZH_BUILD_TESTS)
     --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
   set_tests_properties(original_w3d_tree_draw PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")
+  add_test(NAME original_w3d_tree_decal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_tree_decal.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --asset-producer "$<TARGET_FILE:original_w3d_cpu_graph_tests>"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
+  set_tests_properties(original_w3d_tree_decal PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
   add_test(NAME original_w3d_terrain_visual_map COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_terrain_visual_map.py"
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"

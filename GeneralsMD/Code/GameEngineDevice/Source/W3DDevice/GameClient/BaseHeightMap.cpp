@@ -79,6 +79,7 @@
 #include "matrix3d.h"
 #include "original_gpu_edge.h"
 #include "tree_shroud_projection_cpu.h"
+#include "tree_projected_decal_cpu.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #include <algorithm>
 #include <cmath>
@@ -210,6 +211,16 @@ struct CpuTreePreparedPhase {
 	UnsignedInt ownerEpoch = 0;
 	const CameraClass *camera = NULL;
 	Bool canceled = FALSE;
+    struct ProjectedShadow {
+        RenderObjClass *robj = NULL;
+        ProjectedShadow *next = NULL;
+        TextureClass *texture = NULL;
+        ~ProjectedShadow() { REF_PTR_RELEASE(texture); }
+    };
+    std::shared_ptr<ProjectedShadow> shadow;
+    zh::original_runtime::detail::TreeDecalQueue decals;
+    std::vector<std::shared_ptr<CpuTreeGpuSource>> decalGpu;
+    std::unique_ptr<zh::original_runtime::OriginalGpuEdge::PreparedTreeProgram> decalProgram;
 };
 struct CpuTreeRegistry {
 	std::vector<CpuTreeType> types;
@@ -218,6 +229,7 @@ struct CpuTreeRegistry {
 	TextureClass *atlasTexture = NULL;
 	std::shared_ptr<CpuTreeGpuSource> gpu;
 	std::shared_ptr<CpuTreePreparedPhase> preparedPhase;
+    std::shared_ptr<CpuTreePreparedPhase::ProjectedShadow> shadow;
 	CpuTreeVisibleFrame visibleFrame;
 	UnsignedInt epoch = 0;
 	std::uint64_t nextToppleStartOrder = 0;
@@ -225,6 +237,7 @@ struct CpuTreeRegistry {
 	{
 		if (preparedPhase) preparedPhase->canceled = TRUE;
 		preparedPhase.reset();
+        shadow.reset();
 		REF_PTR_RELEASE(atlasTexture);
 		gpu.reset();
 	}
@@ -232,6 +245,25 @@ struct CpuTreeRegistry {
 // The source terrain's existing layout is shared with full-instance clients.
 // Lazily key CPU-only tree state by its exact owner and erase it on teardown.
 static std::map<const BaseHeightMapRenderObjClass *, CpuTreeRegistry> s_cpuTreeRegistries;
+const zh::original_runtime::detail::TreeDecalQueue*
+zh::original_runtime::detail::TreeDecalGeneratedProbeAccess::peek(const BaseHeightMapRenderObjClass* owner) noexcept
+{
+    const auto found=s_cpuTreeRegistries.find(owner);
+    return found!=s_cpuTreeRegistries.end() && found->second.preparedPhase?
+        &found->second.preparedPhase->decals:nullptr;
+}
+TextureClass* zh::original_runtime::detail::TreeDecalGeneratedProbeAccess::texture(const BaseHeightMapRenderObjClass* owner) noexcept
+{
+    const auto found=s_cpuTreeRegistries.find(owner);
+    return found!=s_cpuTreeRegistries.end() && found->second.preparedPhase && found->second.preparedPhase->shadow?
+        found->second.preparedPhase->shadow->texture:nullptr;
+}
+bool zh::original_runtime::detail::TreeDecalGeneratedProbeAccess::objectless(const BaseHeightMapRenderObjClass* owner) noexcept
+{
+    const auto found=s_cpuTreeRegistries.find(owner);
+    const auto shadow=found!=s_cpuTreeRegistries.end()?found->second.shadow:nullptr;
+    return shadow && !shadow->robj && !shadow->next;
+}
 static constexpr Real kCpuTreeAngularLimit = PI / 2 - PI / 64;
 
 static bool cpuTreeMatrixFinite(const Matrix3D &matrix)
@@ -847,6 +879,122 @@ TextureClass *makeCpuTreeAtlasTexture(const W3DTreeAtlasSource &atlas,
 		return NULL;
 	}
 }
+
+std::shared_ptr<CpuTreePreparedPhase::ProjectedShadow> makeCpuTreeProjectedShadow(
+    zh::original_runtime::OriginalGpuEdge &edge)
+{
+    const char *fault=std::getenv("ZH_M22_TREE_DECAL_FAIL_AT");
+    if (fault && std::strcmp(fault,"texture-create")==0) return nullptr;
+    if (!TheFileSystem) return nullptr;
+    AsciiString path(TGA_DIR_PATH);path.concat("shadow.tga");
+    TreeFileGuard file{TheFileSystem->openFile(path.str(),File::READ|File::BINARY)};
+    if (!file.file) return nullptr;
+    TreeTgaHeader header{};
+    if (file.file->read(&header,sizeof(header))!=sizeof(header) || header.colorMapType
+        || (header.imageType!=2 && header.imageType!=10) || (header.pixelDepth!=24 && header.pixelDepth!=32)
+        || (header.flags&0xc0) || header.imageWidth<=0 || header.imageHeight<=0
+        || header.imageWidth>2048 || header.imageHeight>2048) return nullptr;
+    if (header.idLength) { UnsignedByte id[255];if (file.file->read(id,header.idLength)!=header.idLength) return nullptr; }
+    std::vector<UnsignedByte> pixels(std::size_t(header.imageWidth)*header.imageHeight*4);
+    const Int bytes=header.pixelDepth/8,total=header.imageWidth*header.imageHeight;
+    Int remaining=0;bool repeats=false;UnsignedByte repeated[4]{};
+    for (Int index=0;index<total;++index) {
+        UnsignedByte pixel[4]{};
+        if (header.imageType==10) {
+            if (!remaining) {
+                UnsignedByte packet;
+                if (file.file->read(&packet,1)!=1) return nullptr;
+                remaining=(packet&127)+1;repeats=(packet&128)!=0;
+                if (remaining>total-index) return nullptr;
+                if (repeats && file.file->read(repeated,bytes)!=bytes) return nullptr;
+            }
+            if (repeats) std::memcpy(pixel,repeated,bytes);
+            else if (file.file->read(pixel,bytes)!=bytes) return nullptr;
+            --remaining;
+        } else if (file.file->read(pixel,bytes)!=bytes) return nullptr;
+        Int x=index%header.imageWidth,y=index/header.imageWidth;
+        if (header.flags&16) x=header.imageWidth-x-1;
+        if (header.flags&32) y=header.imageHeight-y-1;
+        auto *destination=pixels.data()+(std::size_t(y)*header.imageWidth+x)*4;
+        std::memcpy(destination,pixel,3);destination[3]=bytes==4?pixel[3]:255;
+    }
+    auto shadow=std::make_shared<CpuTreePreparedPhase::ProjectedShadow>();
+    shadow->texture=NEW_REF(TextureClass,(header.imageWidth,header.imageHeight,WW3D_FORMAT_A8R8G8B8,MIP_LEVELS_1));
+    auto& filter=shadow->texture->Get_Filter();
+    filter.Set_U_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_CLAMP);
+    filter.Set_V_Addr_Mode(TextureFilterClass::TEXTURE_ADDRESS_CLAMP);
+    filter.Set_Mip_Mapping(TextureFilterClass::FILTER_TYPE_NONE);
+    zh::renderer::TextureHandle handle;
+    try {
+        UnsignedInt mips=1;handle=edge.create_texture(WW3D_FORMAT_A8R8G8B8,header.imageWidth,header.imageHeight,mips);
+        if (fault && std::strcmp(fault,"texture-upload")==0) throw OriginalW3DDeviceUnavailable("tree decal upload rejected");
+        edge.upload_texture(handle,0,header.imageWidth,header.imageHeight,header.imageWidth*4,pixels.data(),pixels.size());
+        if (fault && std::strcmp(fault,"texture-publish")==0) throw OriginalW3DDeviceUnavailable("tree decal texture publication rejected");
+        edge.publish_texture(shadow->texture,handle);handle={};
+        shadow->texture->Apply_Gpu_Texture(WW3D_FORMAT_A8R8G8B8,header.imageWidth,header.imageHeight);
+    } catch (...) { if (handle) edge.discard_texture(handle);return nullptr; }
+    return shadow;
+}
+
+bool prepareCpuTreeDecals(CpuTreePreparedPhase& phase,
+    const std::shared_ptr<CpuTreePreparedPhase::ProjectedShadow>& resident,
+    WorldHeightMap& map,const std::vector<zh::original_runtime::detail::TreeDecalIntent>& intents,
+    const CameraClass& camera,zh::original_runtime::OriginalGpuEdge& edge)
+{
+    if (intents.empty()) return true;
+    const char *fault=std::getenv("ZH_M22_TREE_DECAL_FAIL_AT");
+    if (!zh::original_runtime::detail::build_tree_decal_queue(map,intents,phase.decals)) return false;
+    if (fault && std::strcmp(fault,"queue")==0) return false;
+    phase.shadow=resident;
+    if (phase.shadow && (!edge.resident_texture(phase.shadow->texture) || phase.shadow->robj || phase.shadow->next)) return false;
+    if (!phase.shadow) phase.shadow=makeCpuTreeProjectedShadow(edge);
+    if (!phase.shadow) return false;
+    // Even a fully clipped intent belongs to the admitted optional owner.
+    // Its source resource must not become a lazy post-publication dependency.
+    if (phase.decals.batches.empty()) return true;
+    for (const auto& batch:phase.decals.batches) {
+        auto gpu=std::make_shared<CpuTreeGpuSource>();gpu->edge=&edge;gpu->generation=edge.generation();
+        gpu->vertexCount=static_cast<UnsignedInt>(batch.vertices.size());gpu->indexCount=static_cast<UnsignedInt>(batch.indices.size());
+        gpu->vertex=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZDUV1,static_cast<UnsignedShort>(gpu->vertexCount),DX8VertexBufferClass::USAGE_DYNAMIC));
+        if (fault && std::strcmp(fault,"vertex")==0) return false;
+        std::memcpy(gpu->vertex->Get_CPU_Vertex_Buffer(),batch.vertices.data(),batch.vertices.size()*sizeof(batch.vertices[0]));
+        edge.bind_vertex(gpu->vertex);
+        gpu->index=NEW_REF(DX8IndexBufferClass,(static_cast<UnsignedShort>(gpu->indexCount),DX8IndexBufferClass::USAGE_DYNAMIC));
+        if (fault && std::strcmp(fault,"index")==0) return false;
+        std::memcpy(gpu->index->Get_CPU_Index_Buffer(),batch.indices.data(),batch.indices.size()*sizeof(batch.indices[0]));
+        edge.bind_index(gpu->index);phase.decalGpu.push_back(std::move(gpu));
+    }
+    using Edge=zh::original_runtime::OriginalGpuEdge;
+    Edge::ImmutableTreeDecalSnapshot snapshot;
+    Matrix4x4 projection;auto& nativeCamera=const_cast<CameraClass&>(camera);
+    nativeCamera.Get_D3D_Projection_Matrix(&projection);
+    const Matrix4x4 view(nativeCamera.Get_View_Matrix()),identity(true);
+    for (Int row=0;row<4;++row) for (Int col=0;col<4;++col) {
+        snapshot.vertex.world[row*4+col]=identity[row][col];
+        snapshot.vertex.view[row*4+col]=view[row][col];snapshot.vertex.projection[row*4+col]=projection[row][col];
+    }
+    snapshot.pipeline.vertex_layout=zh::renderer::VertexLayout::original_fvf;
+    snapshot.pipeline.original_fvf=edge.layout_for_fvf(DX8_FVF_XYZDUV1);
+    snapshot.pipeline.raster.cull=zh::renderer::CullMode::clockwise;
+    snapshot.pipeline.depth_stencil.depth_write=false;snapshot.pipeline.blend.enabled=true;
+    snapshot.pipeline.blend.source_color=snapshot.pipeline.blend.source_alpha=zh::renderer::BlendFactor::zero;
+    snapshot.pipeline.blend.destination_color=snapshot.pipeline.blend.destination_alpha=zh::renderer::BlendFactor::src_color;
+    snapshot.fragment.stage_ops[0]={static_cast<int>(Edge::CombinerOp::modulate),static_cast<int>(Edge::CombinerOp::modulate),1,0};
+    snapshot.fragment.stage_args[0]={static_cast<int>(Edge::CombinerArg::texture),static_cast<int>(Edge::CombinerArg::diffuse),
+        static_cast<int>(Edge::CombinerArg::texture),static_cast<int>(Edge::CombinerArg::diffuse)};
+    snapshot.texture=phase.shadow->texture;
+    auto& filter=snapshot.texture->As_TextureClass()->Get_Filter();if (!filter.Can_Apply(0)) return false;
+    const unsigned min=_MinTextureFilters[0][filter.Get_Min_Filter()],mag=_MagTextureFilters[0][filter.Get_Mag_Filter()];
+    if (min>2 || mag>2) return false;
+    snapshot.sampler.min_filter=min?zh::renderer::Filter::linear:zh::renderer::Filter::nearest;
+    snapshot.sampler.mag_filter=mag?zh::renderer::Filter::linear:zh::renderer::Filter::nearest;
+    snapshot.sampler.maximum_anisotropy=(min==2 || mag==2)?2:1;
+    snapshot.sampler.address_u=snapshot.sampler.address_v=zh::renderer::AddressMode::clamp_edge;
+    snapshot.sampler.maximum_lod=0;
+    phase.decalProgram=edge.prepare_immutable_tree_decal_program(phase.decalGpu.front()->vertex,snapshot);
+    if (fault && std::strcmp(fault,"program")==0) return false;
+    return true;
+}
 }
 
 BaseHeightMapRenderObjClass::BaseHeightMapRenderObjClass()
@@ -1334,6 +1482,9 @@ void BaseHeightMapRenderObjClass::renderTrees(CameraClass *camera)
 		|| !m_shroud || phase->shroudEpoch!=m_shroud->acceptedContentEpoch())
 		throw OriginalW3DDeviceUnavailable("original tree draw immutable phase unavailable");
 	if (!phase->gpu->vertexCount && !phase->gpu->indexCount) return;
+    if (phase->decalProgram)
+        for (const auto& gpu:phase->decalGpu)
+            edge->draw_immutable_tree_decal(*phase->decalProgram,gpu->vertex,gpu->index,gpu->vertexCount,gpu->indexCount);
 	if (!phase->program)
 		throw OriginalW3DDeviceUnavailable("original visible tree immutable program unavailable");
 	edge->draw_immutable_tree(*phase->program,phase->gpu->vertex,phase->gpu->index,
@@ -1464,6 +1615,14 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 			}
 		}
 		if (fault && std::strcmp(fault, "cull") == 0) return false;
+        std::vector<zh::original_runtime::detail::TreeDecalIntent> decalIntents;
+        if (preparePhase && TheGlobalData && TheGlobalData->m_useShadowDecals)
+            for (const auto& instance:nextInstances) {
+                const auto& type=registry->second.types.at(instance.typeIndex);
+                if (instance.visible && type.data && type.data->m_doShadow
+                    && instance.toppleState!=CpuTreeInstance::Falling && instance.toppleState!=CpuTreeInstance::Down)
+                    decalIntents.push_back({instance.id,instance.location,type.model->shadowSize()});
+            }
 		std::vector<std::size_t> pendingDeletes;
 		const char *sinkFault = std::getenv("ZH_M22_TREE_SINK_FAIL_AT");
 		if (!paused) {
@@ -1641,6 +1800,7 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 			prepared->identity=s_nextCpuTreePreparedIdentity+1;
 			prepared->gpu=changed?nextGpu:registry->second.gpu;
 			if (!prepared->gpu) return false;
+            if (!prepareCpuTreeDecals(*prepared,registry->second.shadow,*m_map,decalIntents,*camera,*edge)) return false;
 			if (nextFrame.visibleCount>0) {
 				zh::original_runtime::OriginalGpuEdge::ImmutableTreeSnapshot snapshot;
 				Matrix4x4 projection;
@@ -1697,6 +1857,8 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 			if (!edge->probe_tree_frame_admission()) return false;
 		}
 		if (preparePhase && deletingLastTree && !edge->probe_tree_frame_admission()) return false;
+        const char *decalFault=std::getenv("ZH_M22_TREE_DECAL_FAIL_AT");
+        if (decalFault && std::strcmp(decalFault,"publish")==0) return false;
 		if ((fault && std::strcmp(fault, "publish") == 0) ||
 			(sinkFault && std::strcmp(sinkFault, "publish") == 0) ||
 			(fxFault && std::strcmp(fxFault, "publish") == 0)) return false;
@@ -1712,6 +1874,7 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 		registry->second.visibleFrame = nextFrame;
 		if (prepared) {
 			registry->second.preparedPhase=prepared;
+            if (prepared->shadow) registry->second.shadow=prepared->shadow;
 			s_nextCpuTreePreparedIdentity=prepared->identity;
 		}
 		if (changed) registry->second.gpu.swap(nextGpu);

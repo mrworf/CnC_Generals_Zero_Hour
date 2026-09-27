@@ -246,7 +246,8 @@ struct W3DShadowManager::SourceFrameCheckpoint {
 };
 std::shared_ptr<W3DShadowManager::SourceFrameCheckpoint> W3DShadowManager::captureSourceFrame()
 {
-	if (m_isShadowScene || TheGlobalData->m_useShadowDecals || TheGlobalData->m_useShadowVolumes)
+	if (m_isShadowScene || TheGlobalData->m_useShadowVolumes || !s_boundedDecals.empty() || !s_boundedVolumes.empty()
+        || (TheGlobalData->m_useShadowDecals && (!TheTerrainRenderObject || !TheTerrainRenderObject->preparedTreePhaseIdentity())))
 		throw OriginalW3DDeviceUnavailable("original immutable tree frame shadow profile rejected");
 	return std::make_shared<SourceFrameCheckpoint>(SourceFrameCheckpoint{shadowCameraFrustum,m_isShadowScene,s_boundedShadowStencilPass});
 }

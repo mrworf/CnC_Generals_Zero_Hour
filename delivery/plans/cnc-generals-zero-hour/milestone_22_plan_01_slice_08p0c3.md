@@ -2,7 +2,10 @@
 
 ## Goal and boundary
 
-Status: implementation-ready after the approved C3 architecture checkpoint.
+Status: accepted; exact projected phase ownership and rollback pass final-source
+focus11 all four, strict11 both, six builds/canonical279 all six, generated
+physical all four, established Vulkan and identity-proved LAN4 all six.
+Implementation commit is identified by its unique subject below; no self-SHA.
 Transaction parent is C2 aggregate `5004485e354c8ae6b8b15ad688944b866c30aeaf`.
 Persist this plan/index checkpoint before executable edits. Preserve the
 unrelated `tests/renderer/test_bgfx_device.cpp` diagnostic unstaged.
@@ -105,3 +108,24 @@ complete builds and canonical nonretail suites, focused strict host LSan,
 physical Vulkan controls, serial LAN 4/4 all six, ledger and diff checks on
 final source. Commit one slice:
 `delivery: M22 08P0C3 own projected tree decals`.
+
+Implementation and final gate provenance are recorded in
+`delivery/evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c3_projected_tree_decals.md`.
+The generated physical baseline uses explicit native afternoon ambient lighting
+and a bright opaque exact-name Flat.tga; inherited dark/alpha4 fixture pixels
+cannot provide a meaningful multiplicative comparison. The shipping source
+lighting and exact decal state are unchanged. CPU/editor flip/origin setters are
+not linked; the generated map-state adapter exercises those native fields
+without introducing a production API or changing source ABI.
+The C3 wrapper alone uses90s/process: isolated sanitizer full generations take
+53.62s GCC and49.62s Clang. This bounded workload correction retains all
+assertions/contents and TimeoutExpired failure; no global timeout changes.
+
+Final coverage review found that uniform maximal patches hit the64MiB limit
+before256 batches. The registered witness now alternates104-by-104 and21-by-21
+patches:256 batches occupy51,491,328 bytes, while257 rejects without changing
+accepted storage, rectangle, ordered intents or any vertex/index byte, source
+checkpoint, RNG or GPU state. No production behavior changes. Refresh all six
+builds, exact focus/strict/physical gates and six canonicals on this final test
+hash. Reuse prior LAN4/4 only after executable, wrapper/interpreter and selected
+CTest command/input identity is proved byte-for-byte.

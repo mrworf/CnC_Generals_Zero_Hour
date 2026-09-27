@@ -153,7 +153,9 @@ std::shared_ptr<RTS3DScene::SourceFrameCheckpoint> RTS3DScene::captureSourceFram
 	if (!camera || !TheWritableGlobalData || !LightList.Is_Empty() || !ReleaseList.Is_Empty() ||
 		!m_dynamicLightList.Is_Empty() || m_translucentObjectsCount || m_occludedObjectsCount || m_drawTerrainOnly ||
 		m_customPassMode!=SCENE_PASS_DEFAULT || Get_Extra_Pass_Polygon_Mode()!=EXTRA_PASS_DISABLE ||
-		TheGlobalData->m_useShadowVolumes || TheGlobalData->m_useShadowDecals ||
+		TheGlobalData->m_useShadowVolumes ||
+        (TheGlobalData->m_useShadowDecals && (!TheTerrainRenderObject || !TheTerrainRenderObject->preparedTreePhaseIdentity()
+            || !TheW3DShadowManager || TheW3DShadowManager->hasBoundedDecalCasters() || TheW3DShadowManager->hasBoundedVolumeCasters())) ||
 		m_numGlobalLights<0 || m_numGlobalLights>LightEnvironmentClass::MAX_LIGHTS)
 		throw OriginalW3DDeviceUnavailable("original immutable tree scene frame admission rejected");
 	auto result=std::make_shared<SourceFrameCheckpoint>();

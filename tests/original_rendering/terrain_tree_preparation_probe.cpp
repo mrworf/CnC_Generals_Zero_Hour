@@ -1,5 +1,7 @@
 #include "PreRTS.h"
 #include "Common/GlobalData.h"
+#include "Common/FileSystem.h"
+#include "Common/MapReaderWriterInfo.h"
 #include "GameClient/ClientRandomValue.h"
 #include "GameClient/FXList.h"
 #include "GameLogic/GameLogic.h"
@@ -27,6 +29,7 @@
 #include "assetmgr.h"
 #include "camera.h"
 #include "original_gpu_edge.h"
+#include "tree_projected_decal_cpu.h"
 #include "zh/renderer/recording_device.h"
 #include "zh/platform/bgfx_device.h"
 #include <SDL3/SDL.h>
@@ -254,6 +257,17 @@ extern "C" void zh_probe_source_frame_checkpoint_roundtrip(CameraClass *camera)
 namespace {
 void require(bool condition,const char* message)
 { if (!condition) throw std::runtime_error(message); }
+// Generated-only authored map-state adapter: the CPU owner has no linked editor
+// setters. Production queue construction still reads the real native fields.
+class GeneratedDecalMap final:public WorldHeightMap {
+public:
+    explicit GeneratedDecalMap(ChunkInputStream* input):WorldHeightMap(input,FALSE) {}
+    void origin(Int x,Int y) { m_drawOriginX=x;m_drawOriginY=y; }
+    void flip(Int x,Int y,bool value) {
+        auto& bits=m_cellFlipState[y*m_flipStateWidth+(x>>3)];
+        if (value) bits|=1<<(x&7);else bits&=~(1<<(x&7));
+    }
+};
 template<class Operation> bool rejected(Operation operation)
 { try { operation(); } catch (const std::runtime_error&) { return true; } return false; }
 class PreparedPhaseFX final : public FXNugget {
@@ -314,8 +328,9 @@ public:
     Int getLastFrameDrawCalls() override { return 0; }
 };
 
-void recordingBoundaries(const char *path,const char *asset)
+void recordingBoundaries(const char *path,const char *asset,bool projected=false)
 {
+    const auto shadowSetting=TheWritableGlobalData->m_useShadowDecals;
     // Aborted candidate IDs retain generation tombstones by design. Prove
     // their bounded admission separately; never inflate the frame budget to
     // accommodate an ever-growing diagnostic sweep in one device.
@@ -344,6 +359,7 @@ void recordingBoundaries(const char *path,const char *asset)
     }
     unsigned completedOrdinal=0;
     for (;completedOrdinal<4096;++completedOrdinal) {
+        if (projected) TheWritableGlobalData->m_useShadowDecals=FALSE;
         bool failed=false;
         // One fresh equivalent device/source owner per ordinal; the failed
         // attempt and its clean retry still share one immutable accepted phase.
@@ -374,6 +390,7 @@ void recordingBoundaries(const char *path,const char *asset)
                 require(color && depth,"journal boundary targets rejected");edge.bind_frame_targets(color,depth,32,24);
                 display.draw();require(device.present(color),"journal boundary ordinary baseline rejected");
                 W3DTreeDrawModuleData data;data.m_modelName="TEST.LITONE01";data.m_textureName="Tree0.tga";
+                if (projected) { data.m_doShadow=TRUE;TheWritableGlobalData->m_useShadowDecals=TRUE; }
                 const Coord3D position{12,18,2};
                 auto *terrain=TheTerrainRenderObject;
                 require(terrain->tryAddTree(static_cast<DrawableID>(801),position,1,0,0,&data),
@@ -381,6 +398,8 @@ void recordingBoundaries(const char *path,const char *asset)
                 require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY,
                     "journal boundary immutable phase rejected");
                 const auto identity=terrain->preparedTreePhaseIdentity();
+                const auto* queue=projected?zh::original_runtime::detail::TreeDecalGeneratedProbeAccess::peek(terrain):nullptr;
+                const auto* texture=projected?zh::original_runtime::detail::TreeDecalGeneratedProbeAccess::texture(terrain):nullptr;
                 const auto baseline=device.snapshot();const auto resources=device.resource_counts();
                 const auto owners=W3DFrameGeneratedProbeAccess::image(camera);
                 const auto source=DX8Wrapper::Inspect_Source_State();
@@ -397,6 +416,9 @@ void recordingBoundaries(const char *path,const char *asset)
                 failed=rejected([&]{display.draw();});CopyGameClientRandomState(after);
                 if (failed) {
                     require(terrain->preparedTreePhaseIdentity()==identity && !edge.tree_source_frame_pending()
+                        && (!projected || (queue && queue->intents.size()==1 && !queue->batches.empty()
+                            && zh::original_runtime::detail::TreeDecalGeneratedProbeAccess::peek(terrain)==queue
+                            && zh::original_runtime::detail::TreeDecalGeneratedProbeAccess::texture(terrain)==texture))
                         && !device.pass_active() && device.snapshot()==baseline && device.resource_counts()==resources
                         && W3DFrameGeneratedProbeAccess::image(camera)==owners
                         && W3DFrameGeneratedProbeAccess::sameSource(source,DX8Wrapper::Inspect_Source_State())
@@ -421,15 +443,19 @@ void recordingBoundaries(const char *path,const char *asset)
     }
     require(completedOrdinal>15 && completedOrdinal<4096,"journal boundary sweep incomplete/unbounded");
     std::printf("original tree draw boundaries: rejected=%u tombstones=1 retry=1\n",completedOrdinal);
+    TheWritableGlobalData->m_useShadowDecals=shadowSetting;
 }
 
 void physicalDraw(const char *path,const char *asset)
 {
+    const bool projected=std::getenv("ZH_M22_TREE_DECAL_PHYSICAL")!=nullptr;
+    const auto priorShadows=TheWritableGlobalData->m_useShadowDecals;
     require(SDL_Init(SDL_INIT_VIDEO),"physical tree video service rejected");
     auto *window=SDL_CreateWindow("generated source tree frame",32,24,SDL_WINDOW_HIDDEN);
     require(window!=nullptr,"physical tree window provider rejected");
     const auto paused=TheGameLogic->isGamePaused();TheGameLogic->setGamePaused(TRUE,FALSE);
     for (unsigned generation=0;generation<2;++generation) {
+        if (projected) TheWritableGlobalData->m_useShadowDecals=FALSE;
         // linux_main owns shipping allocation/filesystem services for the
         // complete worker lifetime, just as in the independent program route.
         zh::renderer::BgfxOptions options;options.shader_root=ZH_BGFX_SHADER_DIR;
@@ -463,7 +489,7 @@ void physicalDraw(const char *path,const char *asset)
                 auto *terrain=TheTerrainRenderObject;
                 terrain->getShroud()->fillShroudData(255);terrain->getShroud()->render(camera);
                 display.draw();require(device.present(color),"physical ordinary frame presentation rejected");
-                const auto empty=device.readback_rgba(color);
+                auto empty=device.readback_rgba(color);
                 W3DTreeDrawModuleData data;data.m_modelName="TEST.LITONE01";data.m_textureName="Tree0.tga";
                 const auto ground=terrain->getMap()->getDisplayHeight(1,1)*MAP_HEIGHT_SCALE;
                 require(ground>2,"physical generated depth-occlusion baseline changed");
@@ -471,8 +497,54 @@ void physicalDraw(const char *path,const char *asset)
                 require(terrain->tryAddTree(static_cast<DrawableID>(701),position,8,0,0,&data),
                     "physical tree source admission rejected");
                 camera->Set_Position(Vector3(12,18,position.z+15));
+                if (projected) {
+                    data.m_doShadow=FALSE;
+                    require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY,
+                        "physical unshadowed tree phase rejected");
+                    display.draw();empty=device.readback_rgba(color);
+                    data.m_doShadow=TRUE;TheWritableGlobalData->m_useShadowDecals=TRUE;
+                }
+                const auto* treeVertex=terrain->peekTreeVertexSource();
+                const auto* treeBytes=treeVertex->Get_CPU_Vertex_Buffer();
+                const std::vector<unsigned char> treeGeometry(treeBytes,
+                    treeBytes+std::size_t(treeVertex->Get_Vertex_Count())*treeVertex->FVF_Info().Get_FVF_Size());
                 require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY,
                     "physical immutable source phase rejected");
+                std::vector<bool> projectedCoverage(32*24,false);
+                if (projected) {
+                    const auto* queue=zh::original_runtime::detail::TreeDecalGeneratedProbeAccess::peek(terrain);
+                    Matrix4x4 projection;camera->Get_D3D_Projection_Matrix(&projection);
+                    const auto composite=projection*Matrix4x4(camera->Get_View_Matrix());
+                    for (const auto& batch:queue->batches) {
+                        std::vector<std::array<float,2>> screen;
+                        for (const auto& vertex:batch.vertices) {
+                            const float input[4]={vertex.x,vertex.y,vertex.z,1};float clip[4]{};
+                            for (unsigned row=0;row<4;++row) for (unsigned col=0;col<4;++col)
+                                clip[row]+=composite[row][col]*input[col];
+                            require(clip[3]>0 && clip[2]>=0 && clip[2]<=clip[3],"physical decal escapes admitted clip/depth");
+                            // Pinned Vulkan backend uses a negative-height viewport.
+                            screen.push_back({(clip[0]/clip[3]+1)*16,(1-clip[1]/clip[3])*12});
+                        }
+                        const auto edge=[](const auto& a,const auto& b,float x,float y) {
+                            return (b[0]-a[0])*(y-a[1])-(b[1]-a[1])*(x-a[0]);
+                        };
+                        for (std::size_t index=0;index<batch.indices.size();index+=3) {
+                            const auto& a=screen[batch.indices[index]];const auto& b=screen[batch.indices[index+1]];
+                            const auto& c=screen[batch.indices[index+2]];
+                            for (unsigned y=0;y<24;++y) for (unsigned x=0;x<32;++x) {
+                                const float ab=edge(a,b,x+0.5f,y+0.5f),bc=edge(b,c,x+0.5f,y+0.5f),ca=edge(c,a,x+0.5f,y+0.5f);
+                                if ((ab>=-0.01f && bc>=-0.01f && ca>=-0.01f) || (ab<=0.01f && bc<=0.01f && ca<=0.01f))
+                                    projectedCoverage[y*32+x]=true;
+                            }
+                        }
+                    }
+                    unsigned coverage=0,nonblack=0;
+                    for (std::size_t pixel=0;pixel<projectedCoverage.size();++pixel) if (projectedCoverage[pixel]) {
+                        ++coverage;if (empty[pixel*4]|empty[pixel*4+1]|empty[pixel*4+2]) ++nonblack;
+                    }
+                    require(coverage>0 && coverage<projectedCoverage.size() && nonblack>0,
+                        "physical unshadowed fixture has no bounded nonblack projected terrain region");
+                }
                 const auto identity=terrain->preparedTreePhaseIdentity();
                 UnsignedInt before[6],after[6];CopyGameClientRandomState(before);
                 for (unsigned fault=0;fault<2;++fault) {
@@ -498,6 +570,29 @@ void physicalDraw(const char *path,const char *asset)
                     "physical retry did not complete exactly one source frame");
                 const auto accepted=device.readback_rgba(color);
                 require(accepted.size()==32*24*4 && accepted!=empty,"physical source tree emitted no distinct pixels");
+                if (projected) {
+                    unsigned darkened=0;
+                    for (std::size_t pixel=0;pixel<accepted.size();pixel+=4) {
+                        if (!projectedCoverage[pixel/4]) {
+                            require(std::memcmp(accepted.data()+pixel,empty.data()+pixel,4)==0,
+                                "physical projected decal changed pixels outside authored coverage");
+                            continue;
+                        }
+                        if (accepted[pixel]>=empty[pixel] || !empty[pixel]) continue;
+                        // Generated grayscale default resource samples128 or192,
+                        // with linear boundary interpolation. Native ZERO/SRCCOLOR
+                        // multiplies the accepted terrain rather than alpha-over.
+                        for (unsigned channel=0;channel<3;++channel)
+                            require(accepted[pixel+channel]+2>=empty[pixel+channel]*128U/255U
+                                && accepted[pixel+channel]<=empty[pixel+channel]*192U/255U+2,
+                                "physical projected decal is not source multiplicative");
+                        ++darkened;
+                    }
+                    require(darkened>0,"physical projected tree decal did not sample terrain pixels");
+                    const auto* current=terrain->peekTreeVertexSource();
+                    require(current==treeVertex && std::memcmp(current->Get_CPU_Vertex_Buffer(),treeGeometry.data(),treeGeometry.size())==0,
+                        "physical optional projected decal altered accepted tree geometry");
+                }
                 require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY,
                     "physical equivalent paused phase rejected");
                 display.draw();
@@ -512,9 +607,382 @@ void physicalDraw(const char *path,const char *asset)
         require(device.wait_idle() && device.live_resource_count()==0,"physical tree draw teardown retained resources");
     }
     TheGameLogic->setGamePaused(paused,FALSE);
+    TheWritableGlobalData->m_useShadowDecals=priorShadows;
     SDL_DestroyWindow(window);SDL_Quit();
     std::puts("original tree draw physical: source=1 rollback=1 retry=1 generations=2 resources=0");
+    if (projected) std::puts("original tree decal physical: source=1 multiplicative=1 rollback=1 retry=1 generations=2 resources=0");
 }
+}
+
+static void recordingDecals(const char* path,const char* asset)
+{
+    using namespace zh::original_runtime::detail;
+    const auto shadows=TheWritableGlobalData->m_useShadowDecals,trees=TheWritableGlobalData->m_useTrees;
+    const auto partition=TheWritableGlobalData->m_partitionCellSize;
+    TheWritableGlobalData->m_partitionCellSize=MAP_XY_FACTOR;
+    const auto paused=TheGameLogic->isGamePaused();
+    TheWritableGlobalData->m_useShadowDecals=FALSE;TheWritableGlobalData->m_useTrees=TRUE;
+    TheGameLogic->setGamePaused(TRUE,FALSE);
+    for (unsigned generation=0;generation<2;++generation) {
+        TheWritableGlobalData->m_useShadowDecals=FALSE;
+        zh::renderer::RecordingGpuDevice device;
+        {
+            zh::original_runtime::OriginalGpuEdge edge(device);
+            W3DDisplay display;display.init();
+            auto* priorDisplay=TheDisplay;auto* priorVisual=TheTerrainVisual;auto* priorView=TheTacticalView;
+            TheDisplay=&display;W3DTerrainVisual visual;TheTerrainVisual=&visual;
+            try {
+                display.setWidth(32);display.setHeight(24);visual.init();
+                require(visual.load(AsciiString(path)),"tree decal generated map rejected");
+                TheWritableGlobalData->m_useShadowDecals=TRUE;
+                std::ifstream input(asset,std::ios::binary);
+                std::vector<char> bytes(std::istreambuf_iterator<char>{input},std::istreambuf_iterator<char>{});
+                RAMFileClass packet(bytes.data(),static_cast<int>(bytes.size()));
+                require(!bytes.empty() && static_cast<WW3DAssetManager*>(W3DDisplay::m_assetManager)->Load_3D_Assets(packet),
+                    "tree decal generated model rejected");
+                auto* view=new W3DView;TheTacticalView=view;view->init();display.attachView(view);
+                view->setWidth(32);view->setHeight(24);view->setDefaultView(0,0,1);
+                auto* camera=view->get3DCamera();camera->Set_Clip_Planes(0.1f,1000);camera->Set_Position(Vector3(12,18,30));
+                zh::renderer::TextureDesc target;target.width=32;target.height=24;target.render_target=true;
+                target.format=zh::renderer::TextureFormat::rgba8;const auto color=device.create_texture(target,"tree decal color");
+                target.format=zh::renderer::TextureFormat::depth24_stencil8;const auto depth=device.create_texture(target,"tree decal depth");
+                require(color && depth,"tree decal target rejected");edge.bind_frame_targets(color,depth,32,24);
+                auto* terrain=TheTerrainRenderObject;terrain->getShroud()->fillShroudData(255);terrain->getShroud()->render(camera);
+                W3DTreeDrawModuleData data;data.m_modelName="TEST.LITONE01";data.m_textureName="Tree0.tga";data.m_doShadow=TRUE;
+                const Coord3D position{12,18,2};
+                require(terrain->tryAddTree(static_cast<DrawableID>(901),position,8,0,0,&data),"tree decal source admission rejected");
+                const auto* vertex=terrain->peekTreeVertexSource();const auto resources=device.resource_counts();
+                const auto commands=device.snapshot();UnsignedInt rng[6],after[6];CopyGameClientRandomState(rng);
+                auto* files=TheFileSystem;TheFileSystem=nullptr;
+                const auto missingFiles=terrain->prepareTreeRenderPhase(camera);TheFileSystem=files;
+                CopyGameClientRandomState(after);
+                require(missingFiles==BaseHeightMapRenderObjClass::TREE_PHASE_REJECTED
+                    && !terrain->preparedTreePhaseIdentity() && terrain->peekTreeVertexSource()==vertex
+                    && device.resource_counts()==resources && std::memcmp(rng,after,sizeof(rng))==0,
+                    "tree decal missing file provider published candidate state");
+                for (const char* fault:{"queue","texture-create","texture-upload","texture-publish","vertex","index","program","publish"}) {
+                    setenv("ZH_M22_TREE_DECAL_FAIL_AT",fault,1);
+                    const auto result=terrain->prepareTreeRenderPhase(camera);unsetenv("ZH_M22_TREE_DECAL_FAIL_AT");
+                    CopyGameClientRandomState(after);
+                    require(result==BaseHeightMapRenderObjClass::TREE_PHASE_REJECTED && !terrain->preparedTreePhaseIdentity()
+                        && terrain->peekTreeVertexSource()==vertex && device.resource_counts()==resources
+                        && std::memcmp(rng,after,sizeof(rng))==0 && terrain->treeToppleStartEvents(static_cast<DrawableID>(901))==0
+                        && !edge.tree_source_frame_pending() && !TreeDecalGeneratedProbeAccess::peek(terrain),
+                        "tree decal candidate failure published C1/RNG/FX/resources");
+                }
+                if (!std::getenv("ZH_M22_TREE_DECAL_PROVIDER_NEGATIVE")) {
+                require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY,
+                    "tree decal source preparation rejected");
+                const auto identity=terrain->preparedTreePhaseIdentity();const auto* queue=TreeDecalGeneratedProbeAccess::peek(terrain);
+                require(identity && queue && queue->intents.size()==1 && queue->batches.size()==1
+                    && queue->intents[0].id==static_cast<DrawableID>(901) && queue->intents[0].size==1
+                    && queue->intents[0].position.x==position.x && queue->intents[0].position.y==position.y
+                    && TreeDecalGeneratedProbeAccess::objectless(terrain),"tree decal pre-topple/objectless source intent differs");
+                const auto* texture=TreeDecalGeneratedProbeAccess::texture(terrain);
+                require(texture && edge.resident_texture(texture) && texture->Num_Refs()==2,
+                    "tree decal source/phase texture ownership multiplicity differs");
+                auto* map=terrain->getMap();const auto& rectangle=queue->rectangle;
+                require(rectangle.startX==map->getDrawOrgX() && rectangle.startY==map->getDrawOrgY()
+                    && rectangle.endX==std::min(map->getDrawOrgX()+map->getDrawWidth()-1,map->getXExtent()-1)
+                    && rectangle.endY==std::min(map->getDrawOrgY()+map->getDrawHeight()-1,map->getYExtent()-1),
+                    "tree decal unlisted-only rectangle did not use current map");
+                const auto& batch=queue->batches[0];
+                require(batch.vertices.size()==4 && batch.indices.size()==6,"tree decal source rectangle geometry differs");
+                for (const auto& v:batch.vertices) {
+                    const Int x=static_cast<Int>(v.x/MAP_XY_FACTOR)+map->getBorderSizeInline();
+                    const Int y=static_cast<Int>(v.y/MAP_XY_FACTOR)+map->getBorderSizeInline();
+                    require(v.z==map->getHeight(x,y)*MAP_HEIGHT_SCALE+0.01f*MAP_XY_FACTOR
+                        && v.diffuse==0xffffffffU && v.u1==(v.x-position.x)+0.5f && v.v1==(v.y-position.y)+0.5f,
+                        "tree decal native height/negative-Y/UV source formula differs");
+                }
+                const auto bytesImage=[&] {
+                    std::vector<unsigned char> result;
+                    for (const auto& b:queue->batches) {
+                        const auto* v=reinterpret_cast<const unsigned char*>(b.vertices.data());
+                        result.insert(result.end(),v,v+b.vertices.size()*sizeof(b.vertices[0]));
+                        const auto* i=reinterpret_cast<const unsigned char*>(b.indices.data());
+                        result.insert(result.end(),i,i+b.indices.size()*sizeof(b.indices[0]));
+                    } return result;
+                };
+                const auto immutable=bytesImage();const auto pins=device.resource_counts();CopyGameClientRandomState(rng);
+                for (unsigned fault=0;fault<2;++fault) {
+                    const auto baseline=device.snapshot();const auto owners=W3DFrameGeneratedProbeAccess::image(camera);
+                    if (!fault) W3DFrameGeneratedProbeAccess::failPresent(edge);else W3DFrameGeneratedProbeAccess::failCommit(edge);
+                    require(rejected([&]{display.draw();}),"tree decal late transaction fault admitted");CopyGameClientRandomState(after);
+                    require(terrain->preparedTreePhaseIdentity()==identity && TreeDecalGeneratedProbeAccess::peek(terrain)==queue
+                        && TreeDecalGeneratedProbeAccess::texture(terrain)==texture && bytesImage()==immutable
+                        && device.resource_counts()==pins && device.snapshot()==baseline
+                        && W3DFrameGeneratedProbeAccess::image(camera)==owners && std::memcmp(rng,after,sizeof(rng))==0,
+                        "tree decal late failure changed accepted queue/resource/frame/C1/RNG");
+                }
+                const auto beforeTrace=device.snapshot();display.draw();
+                const auto trace=device.snapshot().substr(beforeTrace.size());
+                const auto pre=trace.find("original tree source opaque/empty-occluded/shader flush complete");
+                const auto decal=trace.find("W3DProjectedShadowManager::flushDecals multiplicative tree triangles");
+                const auto tree=trace.find("BaseHeightMap::renderTrees immutable indexed triangles");
+                require(pre!=std::string::npos && decal>pre && tree>decal && tree!=std::string::npos
+                    && !terrain->preparedTreePhaseIdentity() && texture->Num_Refs()==1,
+                    "tree decal multiplicative source order/completion ownership differs");
+                TheWritableGlobalData->m_useShadowDecals=FALSE;
+                require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY
+                    && TreeDecalGeneratedProbeAccess::peek(terrain)->intents.empty()
+                    && !TreeDecalGeneratedProbeAccess::texture(terrain),"shadow-disabled phase created optional owner");
+                terrain->cancelTreeRenderPhase();TheWritableGlobalData->m_useShadowDecals=TRUE;
+                data.m_doShadow=FALSE;
+                require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY
+                    && TreeDecalGeneratedProbeAccess::peek(terrain)->intents.empty(),"DoShadow=false queued a projected decal");
+                terrain->cancelTreeRenderPhase();data.m_doShadow=TRUE;
+                const auto cameraPosition=camera->Get_Position();camera->Set_Position(Vector3(10000,10000,30));
+                require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY
+                    && !terrain->treeIsVisible(static_cast<DrawableID>(901))
+                    && TreeDecalGeneratedProbeAccess::peek(terrain)->intents.empty(),"hidden tree queued a projected decal");
+                terrain->cancelTreeRenderPhase();camera->Set_Position(cameraPosition);
+                TreeDecalQueue direct;const std::vector<TreeDecalIntent> one{{static_cast<DrawableID>(901),position,20}};
+                require(build_tree_decal_queue(*map,one,direct),"tree decal direct source algebra control rejected");
+                auto tooMany=one;tooMany.resize(4001,one[0]);const auto prior=direct.batches[0].vertices.size();
+                require(!build_tree_decal_queue(*map,tooMany,direct) && direct.batches[0].vertices.size()==prior,
+                    "tree decal bound+1 mutated accepted queue");
+                tooMany.resize(4000);
+                require(build_tree_decal_queue(*map,tooMany,direct) && direct.intents.size()==4000
+                    && direct.batches.size()>1,"tree decal exact intent capacity/stream split rejected");
+                for (const auto& b:direct.batches) {
+                    require(b.vertices.size()<=32768 && b.indices.size()<=65535,
+                        "tree decal streaming batch narrowed native count");
+                    for (auto i:b.indices) require(i<b.vertices.size(),"tree decal split index crossed batch");
+                }
+                CachedFileInputStream largeInput;
+                require(largeInput.open(AsciiString(std::getenv("ZH_M22_TREE_DECAL_LARGE_MAP"))),
+                    "tree decal large grid fixture missing");
+                std::shared_ptr<GeneratedDecalMap> large(NEW_REF(GeneratedDecalMap,(&largeInput)),
+                    [](GeneratedDecalMap* value){value->Release_Ref();});largeInput.close();
+                large->setDrawWidth(112);large->setDrawHeight(112);
+                const std::vector<TreeDecalIntent> broad{{static_cast<DrawableID>(901),{530,530,2},2000}};
+                TreeDecalQueue clipped;
+                require(build_tree_decal_queue(*large,broad,clipped) && clipped.batches.size()==1
+                    && clipped.batches[0].vertices.size()==104*104 && clipped.batches[0].indices.size()==103*103*6
+                    && clipped.batches[0].vertices.front().x==20 && clipped.batches[0].vertices.front().y==20,
+                    "tree decal 104-axis clip/border source rule differs");
+                const std::size_t patchBytes=clipped.batches[0].vertices.size()*sizeof(VertexFormatXYZDUV1)
+                    +clipped.batches[0].indices.size()*sizeof(UnsignedShort);
+                const Int sx=4,sy=4,row=104;
+                for (const bool flip:{false,true}) {
+                large->flip(sx,sy,flip);
+                require(build_tree_decal_queue(*large,broad,clipped),"tree decal winding control rejected");
+                const std::array<UnsignedShort,6> expected=flip
+                    ?std::array<UnsignedShort,6>{1,row,0,1,row+1,row}
+                    :std::array<UnsignedShort,6>{0,row+1,row,0,1,row+1};
+                require(std::equal(expected.begin(),expected.end(),clipped.batches[0].indices.begin()),
+                    "tree decal authored flip winding changed");
+                }
+                auto byteLimit=broad;byteLimit.resize((64U*1024U*1024U)/patchBytes,broad[0]);
+                require(build_tree_decal_queue(*large,byteLimit,clipped),"tree decal exact byte-bound admission rejected");
+                const auto acceptedBatches=clipped.batches.size();byteLimit.push_back(broad[0]);
+                require(!build_tree_decal_queue(*large,byteLimit,clipped) && clipped.batches.size()==acceptedBatches,
+                    "tree decal byte bound+1 changed accepted queue");
+                // Alternating patches force distinct batches below the byte bound:
+                // 63654 + 2400 indices cannot share the native ushort-count batch.
+                std::vector<TreeDecalIntent> alternating;
+                for (unsigned i=0;i<256;++i)
+                    alternating.push_back({static_cast<DrawableID>(901+i),{530,530,2},i%2?200.0f:2000.0f});
+                const auto capacityCommands=device.snapshot();const auto capacityResources=device.resource_counts();
+                const auto capacityOwners=W3DFrameGeneratedProbeAccess::image(camera);
+                UnsignedInt capacityRng[6],capacityAfter[6];CopyGameClientRandomState(capacityRng);
+                require(build_tree_decal_queue(*large,alternating,clipped) && clipped.batches.size()==256
+                    && clipped.intents.size()==256,"tree decal exact batch capacity rejected");
+                const TreeDecalBatch largePatch=clipped.batches[0],smallPatch=clipped.batches[1];
+                require(largePatch.vertices.size()==104*104 && largePatch.indices.size()==103*103*6
+                    && smallPatch.vertices.size()==21*21 && smallPatch.indices.size()==20*20*6,
+                    "tree decal alternating source grid differs");
+                struct BatchIdentity {
+                    const VertexFormatXYZDUV1* vertices;const UnsignedShort* indices;
+                    std::size_t vertexCapacity,indexCapacity;
+                };
+                std::array<BatchIdentity,256> batchIdentities{};
+                std::size_t alternatingBytes=0;
+                for (std::size_t i=0;i<clipped.batches.size();++i) {
+                    const auto& batch=clipped.batches[i];
+                    batchIdentities[i]={batch.vertices.data(),batch.indices.data(),
+                        batch.vertices.capacity(),batch.indices.capacity()};
+                    alternatingBytes+=batch.vertices.size()*sizeof(VertexFormatXYZDUV1)
+                        +batch.indices.size()*sizeof(UnsignedShort);
+                }
+                require(alternatingBytes==51491328 && alternatingBytes<64U*1024U*1024U,
+                    "tree decal batch capacity control reached byte bound instead");
+                const auto* batchStorage=clipped.batches.data();const auto* intentStorage=clipped.intents.data();
+                const auto batchCapacity=clipped.batches.capacity(),intentCapacity=clipped.intents.capacity();
+                const auto capacityRectangle=clipped.rectangle;
+                alternating.push_back({static_cast<DrawableID>(1157),{530,530,2},2000});
+                require(!build_tree_decal_queue(*large,alternating,clipped)
+                    && clipped.batches.size()==256 && clipped.intents.size()==256
+                    && clipped.batches.data()==batchStorage && clipped.intents.data()==intentStorage
+                    && clipped.batches.capacity()==batchCapacity && clipped.intents.capacity()==intentCapacity
+                    && clipped.rectangle.startX==capacityRectangle.startX && clipped.rectangle.startY==capacityRectangle.startY
+                    && clipped.rectangle.endX==capacityRectangle.endX && clipped.rectangle.endY==capacityRectangle.endY,
+                    "tree decal batch bound+1 mutated accepted queue storage/rectangle");
+                for (std::size_t i=0;i<256;++i) {
+                    const auto& batch=clipped.batches[i];const auto& expected=i%2?smallPatch:largePatch;
+                    const auto& identity=batchIdentities[i];const auto& intent=clipped.intents[i];
+                    require(batch.vertices.data()==identity.vertices && batch.indices.data()==identity.indices
+                        && batch.vertices.capacity()==identity.vertexCapacity && batch.indices.capacity()==identity.indexCapacity
+                        && batch.vertices.size()==expected.vertices.size() && batch.indices.size()==expected.indices.size()
+                        && std::memcmp(batch.vertices.data(),expected.vertices.data(),batch.vertices.size()*sizeof(VertexFormatXYZDUV1))==0
+                        && std::memcmp(batch.indices.data(),expected.indices.data(),batch.indices.size()*sizeof(UnsignedShort))==0
+                        && intent.id==alternating[i].id && intent.size==alternating[i].size
+                        && intent.position.x==530 && intent.position.y==530 && intent.position.z==2,
+                        "tree decal batch bound+1 changed accepted identity/order/bytes");
+                }
+                CopyGameClientRandomState(capacityAfter);
+                require(device.snapshot()==capacityCommands && device.resource_counts()==capacityResources
+                    && W3DFrameGeneratedProbeAccess::image(camera)==capacityOwners
+                    && std::memcmp(capacityRng,capacityAfter,sizeof(capacityRng))==0,
+                    "tree decal batch admission changed source/RNG/GPU state");
+                large->setDrawWidth(20);large->setDrawHeight(18);large->origin(8,9);
+                require(build_tree_decal_queue(*large,broad,clipped) && clipped.rectangle.startX==8
+                    && clipped.rectangle.startY==9 && clipped.rectangle.endX==27 && clipped.rectangle.endY==26
+                    && clipped.batches[0].vertices.front().x==60 && clipped.batches[0].vertices.front().y==70,
+                    "tree decal shifted current-map rectangle/border changed");
+                auto invalid=one;invalid[0].size=0;
+                require(!build_tree_decal_queue(*map,invalid,direct),"tree decal zero size admitted");
+                invalid[0].size=std::numeric_limits<Real>::infinity();
+                require(!build_tree_decal_queue(*map,invalid,direct),"tree decal nonfinite size admitted");
+                require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY,
+                    "tree decal cancel/retry failed");
+                terrain->removeTree(static_cast<DrawableID>(901));
+                require(!terrain->preparedTreePhaseIdentity() && !TreeDecalGeneratedProbeAccess::peek(terrain),
+                    "tree decal owner removal retained phase");
+                Object* crusher=TheGameLogic->getFirstObject();while (crusher && crusher->getCrusherLevel()<=1) crusher=crusher->getNextObject();
+                require(crusher && ThePlayerList && ThePartitionManager,"tree decal real topple providers missing");
+                const auto crusherPosition=*crusher->getPosition();const auto crusherGeometry=crusher->getGeometryInfo();
+                const Coord3D treePosition{13,18,2},unitPosition{12,18,2};
+                const auto playerMask=ThePlayerList->getLocalPlayer()->getPlayerMask();
+                PreparationShroudNotices notices;
+                TheDisplay=&notices;
+                try {
+                    ThePartitionManager->doShroudReveal(treePosition.x,treePosition.y,1,playerMask);
+                    const auto reveal=notices.notices.size();
+                    ThePartitionManager->undoShroudReveal(treePosition.x,treePosition.y,1,playerMask);
+                    require(reveal>0 && notices.notices.size()==2*reveal,"tree decal fog baseline notices incomplete");
+                    for (std::size_t i=0;i<reveal;++i)
+                        require(notices.notices[i].status==CELLSHROUD_CLEAR && notices.notices[i+reveal].status==CELLSHROUD_FOGGED
+                            && notices.notices[i].x==notices.notices[i+reveal].x && notices.notices[i].y==notices.notices[i+reveal].y,
+                            "tree decal fog baseline reveal/undo sequence differs");
+                } catch (...) { TheDisplay=&display;throw; }
+                TheDisplay=&display;
+                require(ThePartitionManager->getPropShroudStatusForPlayer(ThePlayerList->getLocalPlayer()->getPlayerIndex(),&treePosition)
+                    ==OBJECTSHROUD_FOGGED,"tree decal real fog baseline missing");
+                data.m_doTopple=TRUE;data.m_killWhenToppled=FALSE;data.m_minimumToppleSpeed=2;
+                data.m_initialVelocityPercent=1;data.m_initialAccelPercent=0;data.m_bounceVelocityPercent=0;
+                data.m_toppleFX=NULL;data.m_bounceFX=NULL;
+                require(terrain->tryAddTree(static_cast<DrawableID>(902),treePosition,8,0,0,&data),"tree decal topple source rejected");
+                TheGameLogic->setGamePaused(FALSE,FALSE);
+                crusher->setGeometryInfo(GeometryInfo(GEOMETRY_CYLINDER,FALSE,2,4,4));crusher->setPosition(&unitPosition);
+                require(terrain->treeToppleState(static_cast<DrawableID>(902))==1,"tree decal public collision did not enter FALLING");
+                require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY
+                    && terrain->treeToppleState(static_cast<DrawableID>(902))==2
+                    && TreeDecalGeneratedProbeAccess::peek(terrain)->intents.empty(),
+                    "FALLING tree was queued using post-advance FOGGED state");
+                terrain->cancelTreeRenderPhase();
+                TheDisplay=&notices;const auto firstNotice=notices.notices.size();
+                try { ThePartitionManager->doShroudReveal(treePosition.x,treePosition.y,1,playerMask); }
+                catch (...) { TheDisplay=&display;throw; }
+                TheDisplay=&display;const auto revealCount=notices.notices.size()-firstNotice;
+                CopyGameClientRandomState(rng);const auto foggedResources=device.resource_counts();
+                const auto foggedVertex=terrain->peekTreeVertexSource();
+                setenv("ZH_M22_TREE_DECAL_FAIL_AT","publish",1);
+                const auto failed=terrain->prepareTreeRenderPhase(camera);unsetenv("ZH_M22_TREE_DECAL_FAIL_AT");CopyGameClientRandomState(after);
+                require(failed==BaseHeightMapRenderObjClass::TREE_PHASE_REJECTED
+                    && terrain->treeToppleState(static_cast<DrawableID>(902))==2 && !terrain->preparedTreePhaseIdentity()
+                    && terrain->peekTreeVertexSource()==foggedVertex && device.resource_counts()==foggedResources
+                    && std::memcmp(rng,after,sizeof(rng))==0,"FOGGED decal publication failure advanced C1/RNG");
+                require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY
+                    && terrain->treeToppleState(static_cast<DrawableID>(902))==4
+                    && TreeDecalGeneratedProbeAccess::peek(terrain)->intents.size()==1,
+                    "FOGGED source decal was derived from post-advance DOWN state");
+                const auto foggedPhase=terrain->preparedTreePhaseIdentity();const auto* foggedQueue=TreeDecalGeneratedProbeAccess::peek(terrain);
+                const auto foggedBytes=foggedQueue->batches[0].vertices;
+                require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY
+                    && terrain->preparedTreePhaseIdentity()==foggedPhase && TreeDecalGeneratedProbeAccess::peek(terrain)==foggedQueue
+                    && std::memcmp(foggedQueue->batches[0].vertices.data(),foggedBytes.data(),foggedBytes.size()*sizeof(foggedBytes[0]))==0,
+                    "later topple state altered immutable pre-advance decal batch");
+                display.draw();
+                require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_READY
+                    && TreeDecalGeneratedProbeAccess::peek(terrain)->intents.empty(),"DOWN tree queued a projected decal");
+                terrain->cancelTreeRenderPhase();terrain->removeTree(static_cast<DrawableID>(902));
+                crusher->setPosition(&crusherPosition);crusher->setGeometryInfo(crusherGeometry);
+                TheDisplay=&notices;
+                try { ThePartitionManager->undoShroudReveal(treePosition.x,treePosition.y,1,playerMask); }
+                catch (...) { TheDisplay=&display;throw; }
+                TheDisplay=&display;
+                require(revealCount>0 && notices.notices.size()==firstNotice+2*revealCount,
+                    "tree decal real reveal/undo did not restore fog ownership");
+                for (std::size_t i=0;i<revealCount;++i)
+                    require(notices.notices[firstNotice+i].status==CELLSHROUD_CLEAR
+                        && notices.notices[firstNotice+revealCount+i].status==CELLSHROUD_FOGGED
+                        && notices.notices[firstNotice+i].x==notices.notices[firstNotice+revealCount+i].x
+                        && notices.notices[firstNotice+i].y==notices.notices[firstNotice+revealCount+i].y,
+                        "tree decal final reveal/undo sequence differs");
+                TheGameLogic->setGamePaused(TRUE,FALSE);
+                // A different tree's immediate FX removes an upright decal
+                // owner after phase publication. Both nuggets must execute,
+                // and cancellation may use only the already-owned phase.
+                auto* fx=const_cast<FXList*>(TheFXListStore->findFXList("FixtureGraph60"));
+                require(fx,"tree decal FX-removal provider missing");Int dispatches=0;
+                fx->clear();fx->addFXNugget(newInstance(PreparedPhaseFX)(&dispatches,terrain,NULL));
+                fx->addFXNugget(newInstance(PreparedPhaseFX)(&dispatches,NULL,NULL));
+                data.m_doTopple=FALSE;data.m_toppleFX=NULL;
+                require(terrain->tryAddTree(static_cast<DrawableID>(903),treePosition,1,0,0,&data),
+                    "tree decal FX survivor admission rejected");
+                data.m_doTopple=TRUE;data.m_toppleFX=fx;
+                require(terrain->tryAddTree(static_cast<DrawableID>(904),treePosition,1,0,0,&data),
+                    "tree decal FX trigger admission rejected");
+                crusher->setGeometryInfo(GeometryInfo(GEOMETRY_CYLINDER,FALSE,2,4,4));crusher->setPosition(&unitPosition);
+                require(terrain->treeToppleStartEvents(static_cast<DrawableID>(904))==1,
+                    "tree decal public FX collision did not stage intent");
+                TheDisplay=&notices;const auto fxFirst=notices.notices.size();
+                try { ThePartitionManager->doShroudReveal(treePosition.x,treePosition.y,1,playerMask); }
+                catch (...) { TheDisplay=&display;throw; }
+                TheDisplay=&display;const auto fxReveals=notices.notices.size()-fxFirst;
+                device.fail_next_transaction_checkpoint();CopyGameClientRandomState(rng);
+                require(rejected([&]{display.draw();}) && dispatches==0
+                    && !terrain->preparedTreePhaseIdentity() && terrain->treeInstanceCount()==2,
+                    "tree decal rejected probe published phase or dispatched FX");CopyGameClientRandomState(after);
+                require(std::memcmp(rng,after,sizeof(rng))==0,"tree decal rejected FX probe advanced RNG");
+                require(rejected([&]{display.draw();}) && dispatches==2
+                    && !terrain->preparedTreePhaseIdentity() && terrain->treeInstanceCount()==0,
+                    "tree decal FX owner removal failed exact phase cancellation/later nugget");
+                require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_EMPTY
+                    && dispatches==2,"tree decal FX retry replayed consumed dispatch");
+                fx->clear();crusher->setPosition(&crusherPosition);crusher->setGeometryInfo(crusherGeometry);
+                TheDisplay=&notices;
+                try { ThePartitionManager->undoShroudReveal(treePosition.x,treePosition.y,1,playerMask); }
+                catch (...) { TheDisplay=&display;throw; }
+                TheDisplay=&display;
+                require(fxReveals>0 && notices.notices.size()==fxFirst+2*fxReveals,
+                    "tree decal FX reveal/undo count changed");
+                for (std::size_t i=0;i<fxReveals;++i)
+                    require(notices.notices[fxFirst+i].status==CELLSHROUD_CLEAR
+                        && notices.notices[fxFirst+fxReveals+i].status==CELLSHROUD_FOGGED
+                        && notices.notices[fxFirst+i].x==notices.notices[fxFirst+fxReveals+i].x
+                        && notices.notices[fxFirst+i].y==notices.notices[fxFirst+fxReveals+i].y,
+                        "tree decal FX reveal/undo identity changed");
+                } else {
+                    CopyGameClientRandomState(rng);
+                    require(terrain->prepareTreeRenderPhase(camera)==BaseHeightMapRenderObjClass::TREE_PHASE_REJECTED
+                        && !terrain->preparedTreePhaseIdentity() && device.resource_counts()==resources
+                        && terrain->peekTreeVertexSource()==vertex,"tree decal wrong file provider accepted");
+                    CopyGameClientRandomState(after);require(std::memcmp(rng,after,sizeof(rng))==0,
+                        "tree decal wrong provider consumed RNG");
+                    terrain->removeTree(static_cast<DrawableID>(901));
+                }
+                visual.reset();edge.release_source_buffers();device.destroy(depth);device.destroy(color);
+            } catch (...) { TheDisplay=priorDisplay;TheTerrainVisual=priorVisual;TheTacticalView=priorView;throw; }
+            TheDisplay=priorDisplay;TheTerrainVisual=priorVisual;TheTacticalView=priorView;
+        }
+        require(device.resource_counts().total()==0,"tree decal generation retained native resources");
+    }
+    TheGameLogic->setGamePaused(paused,FALSE);TheWritableGlobalData->m_useShadowDecals=shadows;TheWritableGlobalData->m_useTrees=trees;
+    TheWritableGlobalData->m_partitionCellSize=partition;
+    std::puts("original tree decal: source=1 rollback=1 retry=1 generations=2 resources=0");
 }
 
 extern "C" void zh_probe_terrain_tree_preparation()
@@ -522,6 +990,28 @@ extern "C" void zh_probe_terrain_tree_preparation()
     const char* path=std::getenv("ZH_M22_TREE_PREPARATION_MAP");
     const char* asset=std::getenv("ZH_M22_TREE_PREPARATION_ASSET");
     require(path && asset,"tree preparation generated providers missing");
+    if (std::getenv("ZH_M22_TREE_DECAL_PROFILE")) {
+        recordingDecals(path,asset);
+        if (std::getenv("ZH_M22_TREE_DECAL_PROVIDER_NEGATIVE")) return;
+        {
+            const auto partition=TheWritableGlobalData->m_partitionCellSize;
+            const auto trees=TheWritableGlobalData->m_useTrees;
+            const auto pause=TheGameLogic->isGamePaused();
+            TheWritableGlobalData->m_partitionCellSize=MAP_XY_FACTOR;TheWritableGlobalData->m_useTrees=TRUE;
+            TheGameLogic->setGamePaused(TRUE,FALSE);
+            recordingBoundaries(path,asset,true);
+            TheWritableGlobalData->m_partitionCellSize=partition;TheWritableGlobalData->m_useTrees=trees;
+            TheGameLogic->setGamePaused(pause,FALSE);
+        }
+        if (std::getenv("ZH_M22_TREE_DECAL_PHYSICAL")) {
+            const auto partition=TheWritableGlobalData->m_partitionCellSize;
+            const auto trees=TheWritableGlobalData->m_useTrees;
+            TheWritableGlobalData->m_partitionCellSize=MAP_XY_FACTOR;TheWritableGlobalData->m_useTrees=TRUE;
+            physicalDraw(path,asset);
+            TheWritableGlobalData->m_partitionCellSize=partition;TheWritableGlobalData->m_useTrees=trees;
+        }
+        return;
+    }
     const auto savedPartition=TheWritableGlobalData->m_partitionCellSize;
     const auto savedTrees=TheWritableGlobalData->m_useTrees;
     TheWritableGlobalData->m_partitionCellSize=MAP_XY_FACTOR;

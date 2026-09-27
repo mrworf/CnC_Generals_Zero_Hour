@@ -234,7 +234,7 @@ void OriginalGpuEdge::draw_immutable_tree(const PreparedTreeProgram& program,
         || !vertex_count || !index_count || index_count%3
         || vertex_count!=vertex->Get_Vertex_Count() || index_count!=index->Get_Index_Count()
         || vertex->Type()!=BUFFER_TYPE_DX8 || index->Type()!=BUFFER_TYPE_DX8
-        || vertex->FVF_Info().Get_FVF()!=DX8_FVF_XYZNDUV1)
+        || program.source_fvf_!=DX8_FVF_XYZNDUV1 || vertex->FVF_Info().Get_FVF()!=DX8_FVF_XYZNDUV1)
         throw std::runtime_error("original immutable tree draw provider/range unavailable");
     const auto* source=static_cast<const DX8IndexBufferClass*>(index)->Get_CPU_Index_Buffer();
     if (!source) throw std::runtime_error("original immutable tree indices unavailable");
@@ -247,6 +247,31 @@ void OriginalGpuEdge::draw_immutable_tree(const PreparedTreeProgram& program,
     draw.vertex_bindings=program.state_.vertex_bindings;draw.fragment_bindings=program.state_.fragment_bindings;
     if (!device_.draw(draw)) throw std::runtime_error("original immutable tree submission rejected");
     record_source_state("original BaseHeightMap::renderTrees immutable indexed triangles");
+}
+
+void OriginalGpuEdge::draw_immutable_tree_decal(const PreparedTreeProgram& program,
+    const VertexBufferClass* vertex,const IndexBufferClass* index,
+    unsigned vertex_count,unsigned index_count)
+{
+    guard_nonstage_mutation();
+    const auto vb=vertices_.find(vertex);const auto ib=indices_.find(index);
+    if (!source_frame_attempt_ || !source_frame_active_ || !device_.pass_active()
+        || !source_frame_attempt_->terrain_produced || !immutable_tree_program_current(program)
+        || vb==vertices_.end() || ib==indices_.end() || !vertex_count || !index_count || index_count%3
+        || vertex_count!=vertex->Get_Vertex_Count() || index_count!=index->Get_Index_Count()
+        || vertex->Type()!=BUFFER_TYPE_DX8 || index->Type()!=BUFFER_TYPE_DX8
+        || program.source_fvf_!=DX8_FVF_XYZDUV1 || vertex->FVF_Info().Get_FVF()!=DX8_FVF_XYZDUV1)
+        throw std::runtime_error("original immutable tree decal provider/range unavailable");
+    const auto* source=static_cast<const DX8IndexBufferClass*>(index)->Get_CPU_Index_Buffer();
+    if (!source) throw std::runtime_error("original immutable tree decal indices unavailable");
+    for (unsigned i=0;i<index_count;++i) if (source[i]>=vertex_count)
+        throw std::runtime_error("original immutable tree decal index escapes accepted range");
+    renderer::DrawDesc draw;
+    draw.pipeline=program.state_.pipeline;draw.vertex_buffer=vb->second;draw.index_buffer=ib->second;
+    draw.vertex_or_index_count=index_count;draw.index_element_size=renderer::IndexElementSize::uint16;
+    draw.vertex_bindings=program.state_.vertex_bindings;draw.fragment_bindings=program.state_.fragment_bindings;
+    if (!device_.draw(draw)) throw std::runtime_error("original immutable tree decal submission rejected");
+    record_source_state("original W3DProjectedShadowManager::flushDecals multiplicative tree triangles");
 }
 
 renderer::ValidationResult OriginalGpuEdge::begin_source_stages(const SourceStageDesc& desc,SourceStageToken& token)
@@ -1071,7 +1096,7 @@ bool OriginalGpuEdge::immutable_tree_program_current(const PreparedTreeProgram& 
 {
     if (active_edge!=this || program.owner_!=this || program.generation_!=generation_
         || !program.state_.pipeline || program.state_.generation!=generation_) return false;
-    for (unsigned stage=0;stage<2;++stage) {
+    for (unsigned stage=0;stage<program.state_.fragment_bindings.texture_count;++stage) {
         const auto found=textures_.find(program.sources_[stage]);
         if (found==textures_.end() || found->second.generation!=generation_
             || found->second.handle!=program.state_.fragment_bindings.textures[stage]
@@ -1162,6 +1187,7 @@ std::unique_ptr<OriginalGpuEdge::PreparedTreeProgram> OriginalGpuEdge::prepare_i
     const auto depth=device_.describe_texture_format(bound_frame_->depth);
     if (!color || !depth) throw std::runtime_error("original immutable tree targets unavailable");
     std::unique_ptr<PreparedTreeProgram> candidate(new PreparedTreeProgram(*this));
+    candidate->source_fvf_=DX8_FVF_XYZNDUV1;
     for (unsigned stage=0;stage<2;++stage) {
         snapshot.textures[stage]->Add_Ref();candidate->sources_[stage]=snapshot.textures[stage];
         candidate->state_.fragment_bindings.textures[stage]=texture_handle(snapshot.textures[stage]);
@@ -1192,6 +1218,75 @@ std::unique_ptr<OriginalGpuEdge::PreparedTreeProgram> OriginalGpuEdge::prepare_i
     // The caller publishes this already-owned resource bundle with C1 only
     // after the real begin/abort probe. Generic physical_ is never touched.
     ++physical_serial_;
+    return candidate;
+}
+
+std::unique_ptr<OriginalGpuEdge::PreparedTreeProgram> OriginalGpuEdge::prepare_immutable_tree_decal_program(
+    const VertexBufferClass* source,const ImmutableTreeDecalSnapshot& snapshot)
+{
+    guard_nonstage_mutation();
+    const auto* vertex=dynamic_cast<const DX8VertexBufferClass*>(source);
+    if (active_edge!=this || !idle_preparation_ready() || !bound_frame_ || !vertex
+        || source->FVF_Info().Get_FVF()!=DX8_FVF_XYZDUV1 || !source->Get_Vertex_Count()
+        || !vertex->Get_CPU_Vertex_Buffer() || physical_serial_==std::numeric_limits<std::uint64_t>::max()
+        || !resident_texture(snapshot.texture) || !snapshot.texture->Is_Initialized()
+        || snapshot.texture->Num_Refs()<=0 || snapshot.texture->Num_Refs()>std::numeric_limits<int>::max()-2)
+        throw std::runtime_error("original immutable tree decal owner unavailable");
+    for (const auto* matrix:{&snapshot.vertex.world,&snapshot.vertex.view,&snapshot.vertex.projection})
+        for (float value:*matrix) if (!std::isfinite(value))
+            throw std::runtime_error("original immutable tree decal matrix invalid");
+    const auto& layout=source->FVF_Info();
+    for (unsigned index=0;index<source->Get_Vertex_Count();++index) {
+        const auto* bytes=vertex->Get_CPU_Vertex_Buffer()+index*layout.Get_FVF_Size();
+        float position[3],uv[2];std::memcpy(position,bytes+layout.Get_Location_Offset(),sizeof(position));
+        std::memcpy(uv,bytes+layout.Get_Tex_Offset(0),sizeof(uv));
+        for (float value:position) if (!std::isfinite(value)) throw std::runtime_error("original tree decal position invalid");
+        for (float value:uv) if (!std::isfinite(value)) throw std::runtime_error("original tree decal UV invalid");
+    }
+    const auto& pipeline=snapshot.pipeline;
+    if (pipeline.vertex_layout!=renderer::VertexLayout::original_fvf
+        || !(pipeline.original_fvf==layout_for_fvf(DX8_FVF_XYZDUV1))
+        || pipeline.topology!=renderer::PrimitiveTopology::triangle_list || pipeline.fog_enabled
+        || !pipeline.blend.enabled || pipeline.blend.source_color!=renderer::BlendFactor::zero
+        || pipeline.blend.destination_color!=renderer::BlendFactor::src_color
+        || pipeline.blend.source_alpha!=renderer::BlendFactor::zero
+        || pipeline.blend.destination_alpha!=renderer::BlendFactor::src_color
+        || !pipeline.depth_stencil.depth_test || pipeline.depth_stencil.depth_write
+        || pipeline.depth_stencil.depth_compare!=renderer::CompareOp::less_equal
+        || pipeline.depth_stencil.stencil_test || pipeline.raster.cull!=renderer::CullMode::clockwise
+        || snapshot.fragment.alpha_parameters[0]!=0
+        || snapshot.fragment.stage_ops[0]!=std::array<std::int32_t,4>{static_cast<int>(CombinerOp::modulate),static_cast<int>(CombinerOp::modulate),1,0}
+        || snapshot.fragment.stage_args[0]!=std::array<std::int32_t,4>{static_cast<int>(CombinerArg::texture),static_cast<int>(CombinerArg::diffuse),static_cast<int>(CombinerArg::texture),static_cast<int>(CombinerArg::diffuse)}
+        || snapshot.fragment.stage_ops[1][0]!=static_cast<int>(CombinerOp::disable)
+        || snapshot.sampler.address_u!=renderer::AddressMode::clamp_edge
+        || snapshot.sampler.address_v!=renderer::AddressMode::clamp_edge || snapshot.sampler.maximum_lod!=0)
+        throw std::runtime_error("original immutable tree decal source state invalid");
+    const auto color=device_.describe_texture_format(bound_frame_->color),depth=device_.describe_texture_format(bound_frame_->depth);
+    if (!color || !depth) throw std::runtime_error("original immutable tree decal targets unavailable");
+    std::unique_ptr<PreparedTreeProgram> candidate(new PreparedTreeProgram(*this));
+    candidate->source_fvf_=DX8_FVF_XYZDUV1;
+    snapshot.texture->Add_Ref();candidate->sources_[0]=snapshot.texture;
+    candidate->state_.fragment_bindings.textures[0]=texture_handle(snapshot.texture);
+    candidate->samplers_[0]=device_.create_sampler(snapshot.sampler,"immutable source tree decal sampler");
+    if (!candidate->samplers_[0]) throw std::runtime_error("original immutable tree decal sampler failed");
+    candidate->state_.fragment_bindings.samplers[0]=candidate->samplers_[0];candidate->state_.fragment_bindings.texture_count=1;
+    candidate->vertex_shader_=device_.create_shader({renderer::ShaderStage::vertex,"renderer/original_applied_d1.vert",1,0},"immutable tree decal vertex");
+    if (!candidate->vertex_shader_) throw std::runtime_error("original immutable tree decal vertex failed");
+    candidate->fragment_shader_=device_.create_shader({renderer::ShaderStage::fragment,"renderer/original_applied_1.frag",1,1},"immutable tree decal fragment");
+    if (!candidate->fragment_shader_) throw std::runtime_error("original immutable tree decal fragment failed");
+    auto descriptor=pipeline;descriptor.color_format=*color;descriptor.depth_format=*depth;
+    descriptor.vertex_shader=candidate->vertex_shader_;descriptor.fragment_shader=candidate->fragment_shader_;
+    candidate->state_.pipeline=device_.create_pipeline(renderer::PipelineKey(descriptor),"immutable tree decal pipeline");
+    if (!candidate->state_.pipeline) throw std::runtime_error("original immutable tree decal pipeline failed");
+    const auto upload=[&](renderer::StageBindings& bindings,const void* bytes,std::size_t size) {
+        const auto handle=device_.create_buffer({size,renderer::BufferUsage::uniform,true},"immutable tree decal constants");
+        if (!handle) throw std::runtime_error("original immutable tree decal constants failed");
+        bindings.uniform_count=1;bindings.uniforms[0]={handle,0,size};
+        if (!device_.upload({handle,size,0,size},bytes)) throw std::runtime_error("original immutable tree decal upload failed");
+    };
+    upload(candidate->state_.vertex_bindings,&snapshot.vertex,sizeof(snapshot.vertex));
+    upload(candidate->state_.fragment_bindings,&snapshot.fragment,sizeof(snapshot.fragment));
+    candidate->state_.generation=generation_;candidate->state_.serial=++physical_serial_;candidate->state_.texture_mask=1;
     return candidate;
 }
 
