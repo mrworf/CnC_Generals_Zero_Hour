@@ -285,12 +285,24 @@ void W3DDisplay::draw()
 	// Empty, published terrain is the native pre-load state.  It still owns a
 	// view and can present the bounded empty/rigid scene; only a loaded map
 	// projects shroud data before the terrain-center update.
-	if (TheHeightMap->getMap()) {
+	Bool pendingTreePhase=TheTerrainRenderObject->preparedTreePhaseIdentity()!=0;
+	if (pendingTreePhase && !TheGlobalData->m_useTrees) {
+		TheTerrainRenderObject->cancelTreeRenderPhase();
+		pendingTreePhase=FALSE;
+	}
+	if (TheHeightMap->getMap() && !pendingTreePhase) {
 		auto *shroud = TheTerrainRenderObject->getShroud();
 		if (!shroud) throw OriginalW3DDeviceUnavailable("original display shroud owner missing");
 		shroud->render(view->get3DCamera());
 	}
-	updateViews();
+	if (!pendingTreePhase) updateViews();
+	if (TheHeightMap->getMap() && TheGlobalData->m_useTrees) {
+		const auto preparation=TheTerrainRenderObject->prepareTreeRenderPhase(view->get3DCamera());
+		if (preparation==BaseHeightMapRenderObjClass::TREE_PHASE_REJECTED)
+			throw OriginalW3DDeviceUnavailable("original immutable tree preparation rejected");
+		if (preparation==BaseHeightMapRenderObjClass::TREE_PHASE_CANCELED)
+			throw OriginalW3DDeviceUnavailable("original accepted tree preparation canceled by effects");
+	}
 	if (WW3D::Begin_Render(true, true, Vector3(0, 0, 0), 1) != WW3D_ERROR_OK)
 		throw OriginalW3DDeviceUnavailable("original display frame did not begin");
 	try {

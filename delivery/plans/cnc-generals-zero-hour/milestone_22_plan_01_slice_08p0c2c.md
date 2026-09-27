@@ -1,7 +1,9 @@
 # M22 plan 01 slice 08P0C2C: immutable outside-frame tree preparation
 
-Status: implementation-ready refinement after accepted C2B `749067b`;
-plan-only checkpoint precedes all production edits. No new prerequisite/slice.
+Status: complete; accepted frozen implementation after C2B `749067b`.
+Plan-only checkpoint `fd87f2e` precedes all production edits. Exact commit is
+identified by the governing index's unique slice subject and Git history.
+No new prerequisite/slice; draw/factory/retail remain closed.
 Transaction parent is the accepted C2B payload; the governing index's unique
 plan commit subject identifies this checkpoint in Git history.
 

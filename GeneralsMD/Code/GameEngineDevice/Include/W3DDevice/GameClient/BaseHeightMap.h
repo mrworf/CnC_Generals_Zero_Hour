@@ -255,6 +255,16 @@ public:
 	Int treeSwayVersion() const;
 	Vector3 treeSwayVector(Int index) const;
 	bool captureTreeProgram(zh::original_runtime::TreeVertexUniform &output) const;
+	enum TreePhasePreparation { TREE_PHASE_REJECTED, TREE_PHASE_EMPTY,
+		TREE_PHASE_READY, TREE_PHASE_CANCELED };
+	TreePhasePreparation prepareTreeRenderPhase(CameraClass *camera);
+	UnsignedInt64 preparedTreePhaseIdentity() const;
+	bool completeTreeRenderPhase(UnsignedInt64 identity);
+	void cancelTreeRenderPhase();
+private:
+	bool updateTreeVisibleFrame(const CameraClass *camera,const BreezeInfo &breeze,
+		Bool paused,Bool preparePhase,Bool *phaseCanceled = NULL,Bool *phaseEmpty = NULL);
+public:
 	Real treePushAside(DrawableID id) const;
 	Real treePushDelta(DrawableID id) const;
 	ObjectID treePushSource(DrawableID id) const;

@@ -854,6 +854,153 @@ OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_tree_state(
     return prepare_state(DX8_FVF_XYZNDUV1,renderer::PrimitiveTopology::triangle_list,&constants);
 }
 
+OriginalGpuEdge::PreparedTreeProgram::PreparedTreeProgram(OriginalGpuEdge& edge) noexcept
+    : owner_(&edge),generation_(edge.generation_) {}
+
+OriginalGpuEdge::PreparedTreeProgram::~PreparedTreeProgram()
+{
+    if (OriginalGpuEdge::active()==owner_ && owner_->generation_==generation_) {
+        // The terrain phase owns completion/cancellation at an inactive boundary.
+        if (!owner_->source_buffers_retirable() || owner_->device_.pass_active()) std::terminate();
+        auto& device=owner_->device_;
+        if (state_.pipeline) device.destroy(state_.pipeline);
+        if (state_.vertex_bindings.uniforms[0].buffer) device.destroy(state_.vertex_bindings.uniforms[0].buffer);
+        if (state_.fragment_bindings.uniforms[0].buffer) device.destroy(state_.fragment_bindings.uniforms[0].buffer);
+        for (auto sampler:samplers_) if (sampler) device.destroy(sampler);
+        if (fragment_shader_) device.destroy(fragment_shader_);
+        if (vertex_shader_) device.destroy(vertex_shader_);
+    }
+    for (auto* source:sources_) if (source) source->Release_Ref();
+}
+
+bool OriginalGpuEdge::immutable_tree_program_current(const PreparedTreeProgram& program) const noexcept
+{
+    if (active_edge!=this || program.owner_!=this || program.generation_!=generation_
+        || !program.state_.pipeline || program.state_.generation!=generation_) return false;
+    for (unsigned stage=0;stage<2;++stage) {
+        const auto found=textures_.find(program.sources_[stage]);
+        if (found==textures_.end() || found->second.generation!=generation_
+            || found->second.handle!=program.state_.fragment_bindings.textures[stage]
+            || !device_.describe_texture_format(found->second.handle)) return false;
+    }
+    return true;
+}
+
+bool OriginalGpuEdge::probe_tree_frame_admission()
+{
+    if (active_edge!=this || device_transaction_ || source_frame_active_ || device_.pass_active()
+        || !bound_frame_ || !device_.supports_device_transactions(renderer::DeviceTransactionMode::frame_commands))
+        return false;
+    const auto color=device_.describe_texture_format(bound_frame_->color);
+    const auto depth=device_.describe_texture_format(bound_frame_->depth);
+    if (!color || !depth || (*color!=renderer::TextureFormat::rgba8 && *color!=renderer::TextureFormat::bgra8)
+        || (*depth!=renderer::TextureFormat::depth16 && *depth!=renderer::TextureFormat::depth24_stencil8
+            && *depth!=renderer::TextureFormat::depth32)) return false;
+    renderer::DeviceTransactionDesc desc;
+    desc.mode=renderer::DeviceTransactionMode::frame_commands;
+    desc.generation=frame_target_generation_;desc.commands=4096;desc.resources=4096;
+    desc.bytes=renderer::RendererLimits::maximum_upload_bytes;desc.views=renderer::RendererLimits::ordered_views;
+    renderer::DeviceTransactionToken token;
+    if (!begin_device_transaction(desc,token)) return false;
+    if (!abort_device_transaction(token)) std::terminate();
+    return true;
+}
+
+std::unique_ptr<OriginalGpuEdge::PreparedTreeProgram> OriginalGpuEdge::prepare_immutable_tree_program(
+    const VertexBufferClass* source,const ImmutableTreeSnapshot& snapshot)
+{
+    guard_nonstage_mutation();
+    const auto* vertex=dynamic_cast<const DX8VertexBufferClass*>(source);
+    if (active_edge!=this || !idle_preparation_ready() || !bound_frame_ || !vertex
+        || source->FVF_Info().Get_FVF()!=DX8_FVF_XYZNDUV1 || !source->Get_Vertex_Count()
+        || !vertex->Get_CPU_Vertex_Buffer() || physical_serial_==std::numeric_limits<std::uint64_t>::max())
+        throw std::runtime_error("original immutable tree program owner unavailable");
+    const auto& constants=snapshot.vertex;
+    for (const auto& row:constants.composite) for (float value:row)
+        if (!std::isfinite(value)) throw std::runtime_error("original immutable tree composite invalid");
+    for (const auto& wave:constants.sway) {
+        for (float value:wave) if (!std::isfinite(value)) throw std::runtime_error("original immutable tree sway invalid");
+        if (wave[3]!=0) throw std::runtime_error("original immutable tree homogeneous sway invalid");
+    }
+    if (constants.sway[0]!=std::array<float,4>{} || constants.shroud_offset[2]!=0
+        || constants.shroud_offset[3]!=0 || constants.shroud_scale[0]<=0 || constants.shroud_scale[1]<=0
+        || constants.shroud_scale[2]!=1 || constants.shroud_scale[3]!=1)
+        throw std::runtime_error("original immutable tree constants noncanonical");
+    for (unsigned i=0;i<4;++i)
+        if (!std::isfinite(constants.shroud_offset[i]) || !std::isfinite(constants.shroud_scale[i]))
+            throw std::runtime_error("original immutable tree shroud invalid");
+    const auto& layout=source->FVF_Info();
+    for (unsigned index=0;index<source->Get_Vertex_Count();++index) {
+        const auto* bytes=vertex->Get_CPU_Vertex_Buffer()+index*layout.Get_FVF_Size();
+        float values[8];
+        std::memcpy(values,bytes+layout.Get_Location_Offset(),3*sizeof(float));
+        std::memcpy(values+3,bytes+layout.Get_Normal_Offset(),3*sizeof(float));
+        std::memcpy(values+6,bytes+layout.Get_Tex_Offset(0),2*sizeof(float));
+        for (float value:values) if (!std::isfinite(value))
+            throw std::runtime_error("original immutable tree vertex invalid");
+        if (values[3]<0 || values[3]>10 || std::floor(values[3])!=values[3])
+            throw std::runtime_error("original immutable tree packed slot invalid");
+    }
+    for (unsigned stage=0;stage<2;++stage) {
+        auto* texture=snapshot.textures[stage];
+        if (!resident_texture(texture) || !texture->Is_Initialized() || texture->Num_Refs()<=0
+            || texture->Num_Refs()>std::numeric_limits<int>::max()-2)
+            throw std::runtime_error("original immutable tree texture pin unavailable");
+        const auto& operations=snapshot.fragment.stage_ops[stage];
+        const auto& arguments=snapshot.fragment.stage_args[stage];
+        if (operations!=std::array<std::int32_t,4>{static_cast<int>(CombinerOp::modulate),
+                static_cast<int>(stage?CombinerOp::select_second:CombinerOp::modulate),1,D3DTTFF_DISABLE}
+            || arguments!=std::array<std::int32_t,4>{static_cast<int>(CombinerArg::texture),
+                static_cast<int>(stage?CombinerArg::current:CombinerArg::diffuse),static_cast<int>(CombinerArg::texture),
+                static_cast<int>(stage?CombinerArg::current:CombinerArg::diffuse)})
+            throw std::runtime_error("original immutable tree stage snapshot invalid");
+    }
+    if (snapshot.pipeline.vertex_layout!=renderer::VertexLayout::original_fvf
+        || !(snapshot.pipeline.original_fvf==layout_for_fvf(DX8_FVF_XYZNDUV1))
+        || snapshot.pipeline.topology!=renderer::PrimitiveTopology::triangle_list
+        || snapshot.pipeline.fog_enabled || snapshot.pipeline.blend.enabled
+        || !snapshot.pipeline.depth_stencil.depth_test || snapshot.pipeline.depth_stencil.stencil_test
+        || !snapshot.pipeline.depth_stencil.depth_write
+        || snapshot.pipeline.depth_stencil.depth_compare!=renderer::CompareOp::less_equal
+        || snapshot.pipeline.raster.cull!=renderer::CullMode::none)
+        throw std::runtime_error("original immutable tree pipeline snapshot invalid");
+    const auto color=device_.describe_texture_format(bound_frame_->color);
+    const auto depth=device_.describe_texture_format(bound_frame_->depth);
+    if (!color || !depth) throw std::runtime_error("original immutable tree targets unavailable");
+    std::unique_ptr<PreparedTreeProgram> candidate(new PreparedTreeProgram(*this));
+    for (unsigned stage=0;stage<2;++stage) {
+        snapshot.textures[stage]->Add_Ref();candidate->sources_[stage]=snapshot.textures[stage];
+        candidate->state_.fragment_bindings.textures[stage]=texture_handle(snapshot.textures[stage]);
+        candidate->samplers_[stage]=device_.create_sampler(snapshot.samplers[stage],"immutable source tree sampler");
+        if (!candidate->samplers_[stage]) throw std::runtime_error("original immutable tree sampler failed");
+        candidate->state_.fragment_bindings.samplers[stage]=candidate->samplers_[stage];
+    }
+    candidate->state_.fragment_bindings.texture_count=2;
+    candidate->vertex_shader_=device_.create_shader({renderer::ShaderStage::vertex,"renderer/original_tree.vert",1,0},"immutable source tree vertex");
+    if (!candidate->vertex_shader_) throw std::runtime_error("original immutable tree vertex shader failed");
+    candidate->fragment_shader_=device_.create_shader({renderer::ShaderStage::fragment,"renderer/original_applied_3.frag",1,2},"immutable source tree fragment");
+    if (!candidate->fragment_shader_) throw std::runtime_error("original immutable tree fragment shader failed");
+    auto pipeline=snapshot.pipeline;
+    pipeline.color_format=*color;pipeline.depth_format=*depth;
+    pipeline.vertex_shader=candidate->vertex_shader_;pipeline.fragment_shader=candidate->fragment_shader_;
+    candidate->state_.pipeline=device_.create_pipeline(renderer::PipelineKey(pipeline),"immutable source tree pipeline");
+    if (!candidate->state_.pipeline) throw std::runtime_error("original immutable tree pipeline failed");
+    const auto upload=[&](renderer::StageBindings& bindings,const void* bytes,std::size_t size) {
+        auto handle=device_.create_buffer({size,renderer::BufferUsage::uniform,true},"immutable source tree constants");
+        if (!handle) throw std::runtime_error("original immutable tree constant buffer failed");
+        bindings.uniform_count=1;bindings.uniforms[0]={handle,0,size};
+        if (!device_.upload({handle,size,0,size},bytes)) throw std::runtime_error("original immutable tree constant upload failed");
+    };
+    upload(candidate->state_.vertex_bindings,&constants,sizeof(constants));
+    upload(candidate->state_.fragment_bindings,&snapshot.fragment,sizeof(snapshot.fragment));
+    candidate->state_.generation=generation_;
+    candidate->state_.serial=physical_serial_+1;candidate->state_.texture_mask=3;
+    // The caller publishes this already-owned resource bundle with C1 only
+    // after the real begin/abort probe. Generic physical_ is never touched.
+    ++physical_serial_;
+    return candidate;
+}
+
 OriginalGpuEdge::PhysicalState OriginalGpuEdge::prepare_state(unsigned source_fvf,
     renderer::PrimitiveTopology topology,const TreeVertexUniform* tree)
 {

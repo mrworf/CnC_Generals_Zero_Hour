@@ -78,6 +78,7 @@
 #include "camera.h"
 #include "matrix3d.h"
 #include "original_gpu_edge.h"
+#include "tree_shroud_projection_cpu.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #include <algorithm>
 #include <cmath>
@@ -88,8 +89,13 @@
 #include <limits>
 #include <utility>
 
+extern unsigned _MinTextureFilters[8][TextureFilterClass::FILTER_TYPE_COUNT];
+extern unsigned _MagTextureFilters[8][TextureFilterClass::FILTER_TYPE_COUNT];
+extern unsigned _MipMapFilters[8][TextureFilterClass::FILTER_TYPE_COUNT];
+
 BaseHeightMapRenderObjClass *TheTerrainRenderObject = NULL;
 static UnsignedInt s_nextCpuTreeEpoch = 0;
+static std::uint64_t s_nextCpuTreePreparedIdentity = 0;
 struct CpuTreeType {
 	AsciiString modelName;
 	AsciiString textureName;
@@ -196,17 +202,29 @@ struct CpuTreeGpuSource {
 		REF_PTR_RELEASE(vertex);
 	}
 };
+struct CpuTreePreparedPhase {
+	std::shared_ptr<CpuTreeGpuSource> gpu;
+	std::unique_ptr<zh::original_runtime::OriginalGpuEdge::PreparedTreeProgram> program;
+	zh::original_runtime::OriginalGpuEdge *edge = NULL;
+	std::uint64_t generation = 0,frameGeneration = 0,identity = 0,shroudEpoch = 0;
+	UnsignedInt ownerEpoch = 0;
+	const CameraClass *camera = NULL;
+	Bool canceled = FALSE;
+};
 struct CpuTreeRegistry {
 	std::vector<CpuTreeType> types;
 	std::vector<CpuTreeInstance> instances;
 	std::unique_ptr<W3DTreeAtlasSource> atlas;
 	TextureClass *atlasTexture = NULL;
-	std::unique_ptr<CpuTreeGpuSource> gpu;
+	std::shared_ptr<CpuTreeGpuSource> gpu;
+	std::shared_ptr<CpuTreePreparedPhase> preparedPhase;
 	CpuTreeVisibleFrame visibleFrame;
 	UnsignedInt epoch = 0;
 	std::uint64_t nextToppleStartOrder = 0;
 	~CpuTreeRegistry()
 	{
+		if (preparedPhase) preparedPhase->canceled = TRUE;
+		preparedPhase.reset();
 		REF_PTR_RELEASE(atlasTexture);
 		gpu.reset();
 	}
@@ -646,7 +664,7 @@ UnsignedInt cpuTreeDiffuse(const Vector3 &normal, const Vector3 &emissive,
 		(REAL_TO_INT(red * 255.0f) << 16) | 0xff000000U;
 }
 
-std::unique_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
+std::shared_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
 	std::vector<CpuTreeInstance> &instances,
 	const std::vector<CpuTreeType> &types, const W3DTreeAtlasSource &atlas,
 	zh::original_runtime::OriginalGpuEdge &edge, bool visibleOnly = false)
@@ -775,7 +793,7 @@ std::unique_ptr<CpuTreeGpuSource> makeCpuTreeGpu(
 	}
 	const char *fault = std::getenv("ZH_M22_TREE_RESOURCE_FAIL_AT");
 	if (fault && std::strcmp(fault, "geometry") == 0) return nullptr;
-	auto gpu = std::make_unique<CpuTreeGpuSource>();
+	auto gpu = std::make_shared<CpuTreeGpuSource>();
 	gpu->edge = &edge;
 	gpu->generation = edge.generation();
 	gpu->vertexCount = vertices.size();
@@ -1236,6 +1254,75 @@ Real BaseHeightMapRenderObjClass::treeSinkLocationZ(DrawableID id) const
 bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 	const CameraClass *camera, const BreezeInfo &breeze, Bool paused)
 {
+	return updateTreeVisibleFrame(camera,breeze,paused,FALSE);
+}
+
+BaseHeightMapRenderObjClass::TreePhasePreparation BaseHeightMapRenderObjClass::prepareTreeRenderPhase(CameraClass *camera)
+{
+	auto* edge=zh::original_runtime::OriginalGpuEdge::active();
+	if (!edge || !edge->idle_preparation_ready() || !camera || TheTerrainRenderObject!=this
+		|| !m_map || !m_shroud || !m_shroud->hasAcceptedContent()
+		|| !W3DDisplay::m_3DScene || Peek_Scene()!=W3DDisplay::m_3DScene)
+		return TREE_PHASE_REJECTED;
+	auto registry=s_cpuTreeRegistries.find(this);
+	if (registry==s_cpuTreeRegistries.end() || registry->second.instances.empty())
+		return edge->probe_tree_frame_admission()?TREE_PHASE_EMPTY:TREE_PHASE_REJECTED;
+	if (registry->second.preparedPhase) {
+		const auto& phase=registry->second.preparedPhase;
+		if (phase->canceled || phase->edge!=edge || phase->generation!=edge->generation()
+			|| phase->frameGeneration!=edge->frame_target_generation()
+			|| phase->ownerEpoch!=registry->second.epoch || phase->camera!=camera
+			|| phase->shroudEpoch!=m_shroud->acceptedContentEpoch()
+			|| (phase->program && !edge->immutable_tree_program_current(*phase->program)))
+			return TREE_PHASE_REJECTED;
+		return TREE_PHASE_READY; // No simulation/provider/RNG/FX re-entry on retry.
+	}
+	if (!TheScriptEngine || !TheGameLogic) return TREE_PHASE_REJECTED;
+	const Bool paused=TheScriptEngine->isTimeFrozenScript() || TheScriptEngine->isTimeFrozenDebug()
+		|| TheGameLogic->isGamePaused();
+	Bool canceled=FALSE,empty=FALSE;
+	if (!updateTreeVisibleFrame(camera,TheScriptEngine->getBreezeInfo(),paused,TRUE,&canceled,&empty))
+		return TREE_PHASE_REJECTED;
+	// The local result was written through already-owned phase state after FX;
+	// no registry or terrain access follows the potentially destructive dispatch.
+	return canceled?TREE_PHASE_CANCELED:(empty?TREE_PHASE_EMPTY:TREE_PHASE_READY);
+}
+
+UnsignedInt64 BaseHeightMapRenderObjClass::preparedTreePhaseIdentity() const
+{
+	const auto registry=s_cpuTreeRegistries.find(this);
+	return registry==s_cpuTreeRegistries.end() || !registry->second.preparedPhase
+		|| registry->second.preparedPhase->canceled?0:registry->second.preparedPhase->identity;
+}
+
+bool BaseHeightMapRenderObjClass::completeTreeRenderPhase(UnsignedInt64 identity)
+{
+	auto registry=s_cpuTreeRegistries.find(this);
+	auto* edge=zh::original_runtime::OriginalGpuEdge::active();
+	if (!identity || !edge || !edge->idle_preparation_ready() || registry==s_cpuTreeRegistries.end()
+		|| !registry->second.preparedPhase || registry->second.preparedPhase->identity!=identity
+		|| registry->second.preparedPhase->canceled || registry->second.preparedPhase->edge!=edge
+		|| registry->second.preparedPhase->generation!=edge->generation()
+		|| registry->second.preparedPhase->frameGeneration!=edge->frame_target_generation()
+		|| registry->second.preparedPhase->ownerEpoch!=registry->second.epoch) return false;
+	registry->second.preparedPhase.reset();
+	return true;
+}
+
+void BaseHeightMapRenderObjClass::cancelTreeRenderPhase()
+{
+	auto registry=s_cpuTreeRegistries.find(this);
+	if (registry==s_cpuTreeRegistries.end() || !registry->second.preparedPhase) return;
+	auto* edge=zh::original_runtime::OriginalGpuEdge::active();
+	if (edge && !edge->source_buffers_retirable())
+		throw OriginalW3DDeviceUnavailable("original tree phase cancellation during source frame unavailable");
+	registry->second.preparedPhase->canceled=TRUE;
+	registry->second.preparedPhase.reset();
+}
+
+bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
+	const CameraClass *camera,const BreezeInfo &breeze,Bool paused,Bool preparePhase,Bool *phaseCanceled,Bool *phaseEmpty)
+{
 	auto *edge = zh::original_runtime::OriginalGpuEdge::active();
 	auto registry = s_cpuTreeRegistries.find(this);
 	const char *fault = std::getenv("ZH_M22_TREE_FRAME_FAIL_AT");
@@ -1247,7 +1334,9 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 		m_y != m_map->getDrawHeight() ||
 		m_shroud->getNumShroudCellsX() <= 0 ||
 		m_shroud->getNumShroudCellsY() <= 0 ||
-		registry == s_cpuTreeRegistries.end() || !TheFileSystem ||
+		registry == s_cpuTreeRegistries.end() || registry->second.preparedPhase || !TheFileSystem ||
+		(preparePhase && (!m_shroud->hasAcceptedContent() ||
+			s_nextCpuTreePreparedIdentity==std::numeric_limits<std::uint64_t>::max())) ||
 		(registry->second.gpu &&
 			((fault && std::strcmp(fault, "edge-mismatch") == 0) ||
 			 registry->second.gpu->edge != edge ||
@@ -1501,7 +1590,7 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 		const char *toppleFault = std::getenv("ZH_M22_TREE_TOPPLE_FAIL_AT");
 		if (toppleFault && std::strcmp(toppleFault, "state") == 0)
 			return false;
-		std::unique_ptr<CpuTreeGpuSource> nextGpu;
+		std::shared_ptr<CpuTreeGpuSource> nextGpu;
 		if (changed && !deletingLastTree) {
 			nextGpu = makeCpuTreeGpu(nextInstances, candidateTypes,
 				*atlas, *edge, true);
@@ -1516,10 +1605,77 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 			nextTexture.reset(makeCpuTreeAtlasTexture(*nextAtlas, *edge));
 			if (!nextTexture) return false;
 		}
+		std::shared_ptr<CpuTreePreparedPhase> prepared;
+		if (preparePhase && !deletingLastTree) {
+			prepared=std::make_shared<CpuTreePreparedPhase>();
+			prepared->edge=edge;prepared->generation=edge->generation();
+			prepared->frameGeneration=edge->frame_target_generation();
+			prepared->ownerEpoch=registry->second.epoch;prepared->camera=camera;
+			prepared->shroudEpoch=m_shroud->acceptedContentEpoch();
+			prepared->identity=s_nextCpuTreePreparedIdentity+1;
+			prepared->gpu=changed?nextGpu:registry->second.gpu;
+			if (!prepared->gpu) return false;
+			if (nextFrame.visibleCount>0) {
+				zh::original_runtime::OriginalGpuEdge::ImmutableTreeSnapshot snapshot;
+				Matrix4x4 projection;
+				auto* nativeCamera=const_cast<CameraClass*>(camera);
+				nativeCamera->Get_D3D_Projection_Matrix(&projection);
+				const Matrix4x4 view(nativeCamera->Get_View_Matrix());
+				(void)zh::original_runtime::detail::tree_shroud_projection(view,
+					m_shroud->getCellWidth(),m_shroud->getCellHeight(),m_shroud->getTextureWidth(),
+					m_shroud->getTextureHeight(),m_shroud->getDrawOriginX(),m_shroud->getDrawOriginY());
+				const Matrix4x4 composite=projection*view; // Native terrain world is identity.
+				for (Int row=0;row<4;++row) for (Int col=0;col<4;++col)
+					snapshot.vertex.composite[row][col]=composite[row][col];
+				for (Int index=0;index<10;++index) {
+					const Vector3& wave=nextFrame.sampledSway[index];
+					snapshot.vertex.sway[index+1]={wave.X,wave.Y,wave.Z,0};
+				}
+				snapshot.vertex.shroud_offset={-m_shroud->getDrawOriginX()+m_shroud->getCellWidth(),
+					-m_shroud->getDrawOriginY()+m_shroud->getCellHeight(),0,0};
+				snapshot.vertex.shroud_scale={1.0f/(m_shroud->getCellWidth()*m_shroud->getTextureWidth()),
+					1.0f/(m_shroud->getCellHeight()*m_shroud->getTextureHeight()),1,1};
+				snapshot.pipeline.vertex_layout=zh::renderer::VertexLayout::original_fvf;
+				snapshot.pipeline.original_fvf=edge->layout_for_fvf(DX8_FVF_XYZNDUV1);
+				snapshot.pipeline.raster.cull=zh::renderer::CullMode::none;
+				snapshot.fragment.alpha_parameters={1,static_cast<float>(zh::renderer::CompareOp::greater_equal),96.0f/255.0f,0};
+				snapshot.textures={nextTexture?nextTexture.get():registry->second.atlasTexture,m_shroud->getShroudTexture()};
+				using Edge=zh::original_runtime::OriginalGpuEdge;
+				for (unsigned stage=0;stage<2;++stage) {
+					snapshot.fragment.stage_ops[stage]={static_cast<int>(Edge::CombinerOp::modulate),
+						static_cast<int>(stage?Edge::CombinerOp::select_second:Edge::CombinerOp::modulate),1,D3DTTFF_DISABLE};
+					snapshot.fragment.stage_args[stage]={static_cast<int>(Edge::CombinerArg::texture),
+						static_cast<int>(stage?Edge::CombinerArg::current:Edge::CombinerArg::diffuse),
+						static_cast<int>(Edge::CombinerArg::texture),static_cast<int>(stage?Edge::CombinerArg::current:Edge::CombinerArg::diffuse)};
+					auto& filter=snapshot.textures[stage]->As_TextureClass()->Get_Filter();
+					if (!filter.Can_Apply(stage)) return false;
+					// Same accepted source lookup tables as TextureFilterClass::Apply;
+					// tuple admission precedes indexing and creates no global stage state.
+					const unsigned min=_MinTextureFilters[stage][filter.Get_Min_Filter()];
+					const unsigned mag=_MagTextureFilters[stage][filter.Get_Mag_Filter()];
+					const unsigned mip=_MipMapFilters[stage][filter.Get_Mip_Mapping()];
+					if (min>2 || mag>2 || mip>2) return false;
+					auto& sampler=snapshot.samplers[stage];
+					sampler.min_filter=min?zh::renderer::Filter::linear:zh::renderer::Filter::nearest;
+					sampler.mag_filter=mag?zh::renderer::Filter::linear:zh::renderer::Filter::nearest;
+					sampler.mip_filter=mip==2?zh::renderer::Filter::linear:zh::renderer::Filter::nearest;
+					sampler.maximum_anisotropy=(min==2 || mag==2)?2:1;
+					sampler.maximum_lod=mip?1000.0f:0.0f;
+					sampler.address_u=filter.Get_U_Addr_Mode()==TextureFilterClass::TEXTURE_ADDRESS_CLAMP?
+						zh::renderer::AddressMode::clamp_edge:zh::renderer::AddressMode::repeat;
+					sampler.address_v=filter.Get_V_Addr_Mode()==TextureFilterClass::TEXTURE_ADDRESS_CLAMP?
+						zh::renderer::AddressMode::clamp_edge:zh::renderer::AddressMode::repeat;
+				}
+				prepared->program=edge->prepare_immutable_tree_program(prepared->gpu->vertex,snapshot);
+			}
+			if (!edge->probe_tree_frame_admission()) return false;
+		}
+		if (preparePhase && deletingLastTree && !edge->probe_tree_frame_admission()) return false;
 		if ((fault && std::strcmp(fault, "publish") == 0) ||
 			(sinkFault && std::strcmp(sinkFault, "publish") == 0) ||
 			(fxFault && std::strcmp(fxFault, "publish") == 0)) return false;
 		if (deletingLastTree) {
+			if (phaseEmpty) *phaseEmpty=TRUE;
 			if (rngChanged) CommitGameClientRandomState(clientWords);
 			s_cpuTreeRegistries.erase(registry);
 			return true;
@@ -1528,6 +1684,10 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 		registry->second.instances.swap(nextInstances);
 		if (!pendingDeletes.empty()) registry->second.types.swap(nextTypes);
 		registry->second.visibleFrame = nextFrame;
+		if (prepared) {
+			registry->second.preparedPhase=prepared;
+			s_nextCpuTreePreparedIdentity=prepared->identity;
+		}
 		if (changed) registry->second.gpu.swap(nextGpu);
 		if (nextAtlas) {
 			registry->second.atlas.swap(nextAtlas);
@@ -1546,6 +1706,7 @@ bool BaseHeightMapRenderObjClass::updateTreeVisibleFrame(
 			try { FXList::doFXPos(event.fx, &event.position); }
 			catch (...) { /* Accepted/consumed partial dispatch; never replay it. */ }
 		}
+		if (phaseCanceled) *phaseCanceled=prepared && prepared->canceled;
 		return true;
 	} catch (...) { return false; }
 }
@@ -1648,6 +1809,10 @@ bool BaseHeightMapRenderObjClass::tryAddTree(DrawableID id, Coord3D location,
 		if (rejected) return false;
 		auto insertion = s_cpuTreeRegistries.try_emplace(this);
 		CpuTreeRegistry &registry = insertion.first->second;
+		if (registry.preparedPhase) {
+			registry.preparedPhase->canceled=TRUE;
+			registry.preparedPhase.reset();
+		}
 		registry.types.swap(types);
 		registry.instances.swap(instances);
 		registry.gpu.swap(nextGpu);
@@ -1712,6 +1877,7 @@ void BaseHeightMapRenderObjClass::removeTree(DrawableID id)
 			for (CpuTreeInstance &instance : instances)
 				if (instance.typeIndex > typeIndex) --instance.typeIndex;
 		}
+		cancelTreeRenderPhase();
 		if (lastUser) {
 			REF_PTR_RELEASE(registry->second.atlasTexture);
 		}
@@ -1745,6 +1911,7 @@ Bool BaseHeightMapRenderObjClass::updateTreePosition(DrawableID id,
 		const Int nextBucket = instance.partitionBucket >= 0
 			? calculateTreePartitionBucket(location) : -1;
 		if (instance.partitionBucket >= 0 && nextBucket < 0) return FALSE;
+		cancelTreeRenderPhase();
 		registry->second.gpu.reset(); // Native loadTrees rebuilds transformed bytes later.
 		registry->second.visibleFrame.ready = FALSE;
 		instance.location = location;

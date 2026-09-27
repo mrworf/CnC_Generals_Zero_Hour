@@ -108,6 +108,30 @@ public:
         std::uint64_t generation=0,serial=0,source_revision=0;
         unsigned texture_mask=0;
     };
+    // Complete source-issued tree state. It does not select global DX8 stages.
+    struct ImmutableTreeSnapshot {
+        TreeVertexUniform vertex;
+        FragmentUniform fragment;
+        renderer::PipelineDesc pipeline;
+        std::array<TextureBaseClass*,2> textures{};
+        std::array<renderer::SamplerDesc,2> samplers{};
+    };
+    class PreparedTreeProgram final {
+    public:
+        ~PreparedTreeProgram();
+        PreparedTreeProgram(const PreparedTreeProgram&)=delete;
+        PreparedTreeProgram& operator=(const PreparedTreeProgram&)=delete;
+        const PhysicalState& state() const noexcept { return state_; }
+    private:
+        friend class OriginalGpuEdge;
+        explicit PreparedTreeProgram(OriginalGpuEdge& edge) noexcept;
+        OriginalGpuEdge* owner_;
+        std::uint64_t generation_;
+        PhysicalState state_;
+        renderer::ShaderHandle vertex_shader_,fragment_shader_;
+        std::array<renderer::SamplerHandle,2> samplers_{};
+        std::array<TextureBaseClass*,2> sources_{};
+    };
     explicit OriginalGpuEdge(renderer::GpuDevice& device);
     ~OriginalGpuEdge();
     OriginalGpuEdge(const OriginalGpuEdge&) = delete;
@@ -127,6 +151,10 @@ public:
         renderer::PrimitiveTopology topology=renderer::PrimitiveTopology::triangle_list);
     PhysicalState prepare_tree_state(const VertexBufferClass* source,
         const TreeVertexUniform& constants);
+    std::unique_ptr<PreparedTreeProgram> prepare_immutable_tree_program(
+        const VertexBufferClass* source,const ImmutableTreeSnapshot& snapshot);
+    bool probe_tree_frame_admission();
+    bool immutable_tree_program_current(const PreparedTreeProgram&) const noexcept;
     void validate_prepared_state(const PhysicalState& state) const;
     void draw_source_indexed(const VertexBufferClass* vertex,const IndexBufferClass* index,
         unsigned first_index,unsigned index_count,unsigned base_vertex,

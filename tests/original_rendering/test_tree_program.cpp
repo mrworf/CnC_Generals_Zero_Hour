@@ -173,6 +173,78 @@ void recording_generation()
         }
         const auto mappedRetry=edge.prepare_tree_state(vb,program);
         edge.validate_prepared_state(mappedRetry);
+        {
+            TextureDesc target;target.width=4;target.height=4;target.render_target=true;target.sampled=false;
+            auto color=device.create_texture(target,"immutable program target");
+            target.format=TextureFormat::depth24_stencil8;
+            auto depth=device.create_texture(target,"immutable program depth");
+            edge.bind_frame_targets(color,depth,4,4);
+            edge.bind_frame_targets(color,color,4,4);
+            const auto invalidProbe=device.snapshot();
+            check(!edge.probe_tree_frame_admission() && device.snapshot()==invalidProbe,
+                "immutable admission accepted wrong target format or mutated baseline");
+            edge.bind_frame_targets(color,depth,4,4);
+            Edge::ImmutableTreeSnapshot immutable;
+            immutable.vertex=program;
+            immutable.pipeline.vertex_layout=VertexLayout::original_fvf;
+            immutable.pipeline.original_fvf=Edge::layout_for_fvf(DX8_FVF_XYZNDUV1);
+            immutable.pipeline.raster.cull=CullMode::none;
+            immutable.fragment.alpha_parameters={1,static_cast<float>(CompareOp::greater_equal),96.0f/255.0f,0};
+            immutable.textures={textures[0],textures[1]};
+            for(unsigned stage=0;stage<2;++stage) {
+                immutable.fragment.stage_ops[stage]={static_cast<int>(Edge::CombinerOp::modulate),
+                    static_cast<int>(stage?Edge::CombinerOp::select_second:Edge::CombinerOp::modulate),1,0};
+                immutable.fragment.stage_args[stage]={static_cast<int>(Edge::CombinerArg::texture),
+                    static_cast<int>(stage?Edge::CombinerArg::current:Edge::CombinerArg::diffuse),
+                    static_cast<int>(Edge::CombinerArg::texture),static_cast<int>(stage?Edge::CombinerArg::current:Edge::CombinerArg::diffuse)};
+            }
+            auto owned=edge.prepare_immutable_tree_program(vb,immutable);
+            const auto descriptor=device.pipeline_descriptor(owned->state().pipeline);
+            check(!descriptor.blend.enabled && descriptor.depth_stencil.depth_write
+                && descriptor.depth_stencil.depth_compare==CompareOp::less_equal && descriptor.raster.cull==CullMode::none,
+                "immutable program changed native alpha-test-only depth/cull/blend semantics");
+            const auto fragment=device.buffer_bytes(owned->state().fragment_bindings.uniforms[0].buffer);
+            check(fragment.size()==sizeof(immutable.fragment)
+                && !std::memcmp(fragment.data(),&immutable.fragment,sizeof(immutable.fragment)),
+                "immutable program changed alpha0x60/GEQUAL or exact native stage combiners");
+            const auto ownedResources=device.resource_counts();
+            const auto ownedIdentity=owned->state();
+            const std::array<int,2> ownedRefs{textures[0]->Num_Refs(),textures[1]->Num_Refs()};
+            auto stalePin=immutable;
+            stalePin.textures[0]=reinterpret_cast<TextureBaseClass*>(1);
+            check(rejected([&]{edge.prepare_immutable_tree_program(vb,stalePin);})
+                && device.resource_counts()==ownedResources && textures[0]->Num_Refs()==ownedRefs[0]
+                && textures[1]->Num_Refs()==ownedRefs[1],"immutable nonresident pin changed ownership");
+            for(unsigned fault=0;fault<7;++fault) {
+                if(fault==0) device.fail_next_sampler_create();
+                if(fault==1) device.fail_next_shader_create();
+                if(fault==2) device.fail_next_pipeline_create();
+                if(fault==3) device.fail_next_buffer_create();
+                if(fault==4) device.fail_buffer_create_after(1);
+                if(fault==5) device.fail_next_buffer_upload();
+                if(fault==6) device.fail_buffer_upload_after(1);
+                check(rejected([&]{edge.prepare_immutable_tree_program(vb,immutable);})
+                    && edge.immutable_tree_program_current(*owned) && device.resource_counts()==ownedResources
+                    && textures[0]->Num_Refs()==ownedRefs[0] && textures[1]->Num_Refs()==ownedRefs[1]
+                    && owned->state().serial==ownedIdentity.serial,
+                    "immutable candidate fault damaged accepted resource identity");
+            }
+            device.fail_next_transaction_checkpoint();
+            check(!edge.probe_tree_frame_admission() && edge.immutable_tree_program_current(*owned)
+                && device.resource_counts()==ownedResources,"immutable probe rejection changed phase");
+            const auto beforeProbe=device.snapshot();
+            check(edge.probe_tree_frame_admission() && device.snapshot()==beforeProbe
+                && device.resource_counts()==ownedResources,"immutable probe touched accepted targets/resources");
+            (void)edge.prepare_tree_state(vb,program); // Existing mutable owner changes independently.
+            DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_TEXCOORDINDEX,0);
+            check(edge.immutable_tree_program_current(*owned)
+                && owned->state().pipeline==ownedIdentity.pipeline && owned->state().serial==ownedIdentity.serial
+                && device.buffer_bytes(owned->state().fragment_bindings.uniforms[0].buffer)==fragment,
+                "generic preparation/stage mutation invalidated immutable program");
+            DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_TEXCOORDINDEX,1);
+            owned.reset();
+            device.destroy(depth);device.destroy(color);
+        }
         textures[1]->Invalidate();
         check(rejected([&]{edge.validate_prepared_state(mappedRetry);}) &&
             rejected([&]{edge.prepare_tree_state(vb,program);}),"tree stale texture owner admitted");
