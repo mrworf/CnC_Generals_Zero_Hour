@@ -1,5 +1,8 @@
 # M22 plan 01 slice 08P0C2: shrouded terrain tree pass
 
+Status: accepted evidence-only aggregate. Unchanged executable parent:
+`f8e046e96f49e9d0b9c4d9f9d1d5908ac7cdf6b2` (C2D).
+
 ## Goal and boundary
 
 After C1, deliver independently reviewable source owners in dependency order:
@@ -49,3 +52,10 @@ controls, serial LAN 4/4 all six, ledger and diff checks on final source.
 Reuse C2D's unchanged final-source matrix after reviewing child composition;
 commit only aggregate evidence:
 `delivery: M22 08P0C2 revalidate shrouded tree terrain pass`.
+
+[Accepted aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08p0c2_shrouded_tree_aggregate.md)
+reviews exact child composition and reuses C2D's unchanged accepted hashes,
+six complete builds/canonical278 suites, focus10 all4, strict10 both,
+generated physical all4, established Vulkan and LAN4 all6. Complete logs are
+clean. Only plan/index/evidence changes; no executable rerun or extra workload.
+Projected decals, factory, retail and M22 acceptance remain downstream gates.
