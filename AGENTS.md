@@ -45,3 +45,9 @@ A failed constructor does not run that class's destructor. For cloned graphs,
 guard each acquired ref/array before the next fallible copy helper, publish only
 after complete construction, and test immediate residuals plus same-owner retry.
 Include helper-local RNG state when successful clone semantics consume it.
+
+Owner-specific strong cache publication may require an entire offside graph;
+generic container growth need not preserve validity or key ownership on failure.
+Check source refs and live resources exactly, while measuring accepted monotonic
+device diagnostics separately. Establish fixture allocation baselines after
+public process-global initialization and pair existing source teardown services.

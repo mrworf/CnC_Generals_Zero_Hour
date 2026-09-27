@@ -70,13 +70,16 @@ class CubeTextureClass;
 class VolumeTextureClass;
 
 #if defined(__linux__)
-namespace zh { namespace original_runtime { class OriginalGpuEdge; } }
+namespace zh { namespace original_runtime { class OriginalGpuEdge; struct HouseColorTexturePixels; } }
 #endif
 class TextureBaseClass : public RefCountClass
 {
 #if defined(__linux__)
     friend class zh::original_runtime::OriginalGpuEdge;
     friend struct W3DFrameGeneratedProbeAccess;
+    friend struct HouseColorGeneratedProbeAccess;
+    friend class W3DAssetManager;
+    friend class TextureClass;
 #endif
 	friend class TextureLoader;
 	friend class LoaderThreadClass;
@@ -242,6 +245,11 @@ protected:
 	int Height;
 
 private:
+
+#if defined(__linux__)
+	// Same declaration in every Linux consumer; only Q0 color surfaces own it.
+	zh::original_runtime::HouseColorTexturePixels *HouseColorPixels = nullptr;
+#endif
 
 	// Direct3D texture object
 	IDirect3DBaseTexture8 *D3DTexture;

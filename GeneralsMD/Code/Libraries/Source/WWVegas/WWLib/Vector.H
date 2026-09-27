@@ -88,6 +88,7 @@ template<class T>
 class VectorClass
 {
 #if defined(__linux__)
+	friend class W3DAssetManager;
 	friend class MaterialInfoClass;
 #endif
 	public:
@@ -490,6 +491,7 @@ template<class T>
 class DynamicVectorClass : public VectorClass<T>
 {
 #if defined(__linux__)
+	friend class W3DAssetManager;
 	friend class MaterialInfoClass;
 #endif
 	public:

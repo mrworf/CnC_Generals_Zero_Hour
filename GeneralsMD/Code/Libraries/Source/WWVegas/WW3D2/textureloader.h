@@ -50,6 +50,7 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "zh/renderer/contract.h"
 #include <vector>
+#include "house_color_texture_cpu.h"
 #endif
 
 class StringClass;
@@ -244,6 +245,8 @@ class TextureLoadTaskClass : public TextureLoadTaskListNodeClass
 		bool						Begin_Load					(void);
 #if defined(ZH_WW3D_CPU_ONLY)
 		void                    Probe_Begin_Load(TextureBaseClass *texture);
+		void Load_Detached_Surface(TextureBaseClass *texture,
+			zh::original_runtime::HouseColorTexturePixels &pixels);
 #endif
 		bool						Load							(void);
 		void						End_Load						(void);
@@ -267,6 +270,7 @@ class TextureLoadTaskClass : public TextureLoadTaskListNodeClass
 #if defined(ZH_WW3D_CPU_ONLY)
 		zh::renderer::TextureHandle CpuTextureHandle;
 		std::vector<std::vector<unsigned char>> CpuLockedMips;
+		bool CpuDetached = false;
 #endif
 		WW3DFormat				Format;
 

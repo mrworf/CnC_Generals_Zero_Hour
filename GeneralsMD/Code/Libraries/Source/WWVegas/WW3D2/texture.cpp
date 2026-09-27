@@ -52,6 +52,7 @@
 static unsigned TexturesAppliedPerFrame;
 
 #if defined(ZH_WW3D_CPU_ONLY)
+#include "surface_pixels.inc"
 #include "textureloader.h"
 #include "ww3d.h"
 #include "original_gpu_edge.h"

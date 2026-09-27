@@ -74,6 +74,9 @@ template <> inline unsigned int HashTemplateKeyClass<float>::Get_Hash_Value (con
 template <class KeyType, class ValueType> 
 class HashTemplateClass
 {
+#if defined(__linux__)
+	friend class W3DAssetManager;
+#endif
 	struct Entry;
 public:
 

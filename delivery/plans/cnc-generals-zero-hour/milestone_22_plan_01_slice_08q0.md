@@ -1,6 +1,6 @@
 # M22 plan 01 slice 08Q0: source-owned house-color texture recoloring
 
-Status: active; 08Q0R1 accepted at `b16b39b3b420b6357ada08208922fbbd6fb0ec53`, 08L2R1 accepted at `4c37e9e5ddc2509cbcae518df2303f92108763a2`; one coherent texture/remap/cache lifecycle owner.
+Status: complete; 08Q0R1 accepted at `b16b39b3b420b6357ada08208922fbbd6fb0ec53`, 08L2R1 accepted at `4c37e9e5ddc2509cbcae518df2303f92108763a2`; one coherent texture/remap/cache lifecycle owner. Six final-source builds and canonical suites (286/286 each), exact focused controls, strict LSan, physical Vulkan and LAN gates pass. [Acceptance evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08q0_house_color.md) records the unchanged frozen composition and superseded timeout diagnosis. Commit: this slice commit.
 Parent checkpoint: `72751dcb55bbdddc914b8187ceedaba2c5ccd42c`.
 
 ## Outcome, dependency order and scope

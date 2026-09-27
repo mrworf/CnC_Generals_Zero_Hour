@@ -97,8 +97,17 @@ void TextureLoadTaskClass::Init(TextureBaseClass*, TaskType, PriorityType) { thr
 void TextureLoadTaskClass::Deinit() { throw std::runtime_error("original texture task publication requires physical upload"); }
 void TextureLoadTaskClass::Lock_Surfaces()
 {
-	if (!CpuTextureHandle || !MipLevelCount || MipLevelCount>MIP_LEVELS_MAX)
+	if ((!CpuTextureHandle && !CpuDetached) || !MipLevelCount || MipLevelCount>MIP_LEVELS_MAX)
 		throw std::runtime_error("original texture lock has invalid physical mip count");
+	std::size_t total = 0;
+	for (unsigned level=0; CpuDetached && level<MipLevelCount; ++level) {
+		const std::size_t w=std::max(1U,(Width>>Reduction)>>level);
+		const std::size_t h=std::max(1U,(Height>>Reduction)>>level);
+		if (!w || !h || w>16384 || h>16384 || w*h>zh::original_runtime::house_color_byte_limit/4 ||
+			total>zh::original_runtime::house_color_byte_limit-w*h*4)
+			throw std::runtime_error("original texture staging exceeds bounded byte budget");
+		total += w*h*4;
+	}
 	CpuLockedMips.resize(MipLevelCount);
 	for (unsigned level=0;level<MipLevelCount;++level) {
 		const unsigned width=std::max(1U,(Width>>Reduction)>>level);
@@ -166,6 +175,45 @@ void TextureLoadTaskClass::Probe_Begin_Load(TextureBaseClass* texture)
 		throw;
 	}
 	Texture = nullptr;
+}
+
+void TextureLoadTaskClass::Load_Detached_Surface(TextureBaseClass* texture,
+	zh::original_runtime::HouseColorTexturePixels& pixels)
+{
+	if (!texture || !texture->As_TextureClass() || texture->Get_Full_Path()=="" ||
+		Texture || CpuTextureHandle || !CpuLockedMips.empty())
+		throw std::runtime_error("original detached texture source is invalid");
+	Texture=texture; CpuDetached=true;
+	Format=texture->As_TextureClass()->Get_Texture_Format();
+	MipLevelCount=texture->Get_Mip_Level_Count(); Reduction=texture->Get_Reduction();
+	HSVShift=texture->Get_HSV_Shift();
+	try {
+		if (!Begin_Load() || !Load())
+			throw std::runtime_error("original detached texture source is missing or malformed");
+		if (Format!=WW3D_FORMAT_A8R8G8B8 && Format!=WW3D_FORMAT_X8R8G8B8)
+			throw std::runtime_error("original detached recolor surface format is unsupported");
+		zh::original_runtime::HouseColorTexturePixels candidate;
+		candidate.format=Format;
+		candidate.width=std::max(1U,Width>>Reduction);
+		candidate.height=std::max(1U,Height>>Reduction);
+		if (texture->Is_Initialized() &&
+			(texture->Width!=int(candidate.width) || texture->Height!=int(candidate.height) ||
+			 texture->As_TextureClass()->Get_Texture_Format()!=Format))
+			throw std::runtime_error("original detached surface disagrees with accepted source");
+		candidate.pitches.assign(LockedSurfacePitch,LockedSurfacePitch+MipLevelCount);
+		candidate.mips.swap(CpuLockedMips);
+		pixels=std::move(candidate);
+	} catch (...) {
+		CpuLockedMips.clear();
+		for (unsigned level=0;level<MIP_LEVELS_MAX;++level) {
+			LockedSurfacePtr[level]=nullptr;LockedSurfacePitch[level]=0;
+		}
+		Texture=nullptr;CpuDetached=false;throw;
+	}
+	for (unsigned level=0;level<MIP_LEVELS_MAX;++level) {
+		LockedSurfacePtr[level]=nullptr;LockedSurfacePitch[level]=0;
+	}
+	Texture=nullptr;CpuDetached=false;
 }
 
 #include "textureloader_begin.inc"

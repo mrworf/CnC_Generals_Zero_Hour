@@ -39,7 +39,7 @@ bool TextureLoadTaskClass::Load(void)
 {
 	WWMEMLOG(MEM_TEXTURE);
 #if defined(ZH_WW3D_CPU_ONLY)
-	WWASSERT(CpuTextureHandle);
+	WWASSERT(CpuTextureHandle || CpuDetached);
 #else
 	WWASSERT(Peek_D3D_Texture());
 #endif

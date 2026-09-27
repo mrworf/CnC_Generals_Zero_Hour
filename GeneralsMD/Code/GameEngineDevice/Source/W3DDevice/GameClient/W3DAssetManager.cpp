@@ -48,6 +48,12 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "PreRTS.h"
 #include "OriginalW3DDeviceUnavailable.h"
+#include "original_gpu_edge.h"
+#include "house_color_texture_cpu.h"
+#include <memory>
+#include <vector>
+#include <cmath>
+#include "realcrc.h"
 #endif
 #include <always.h>
 #include "W3DDevice/GameClient/W3DAssetManager.h"
@@ -148,10 +154,14 @@ W3DPrototypeClass::~W3DPrototypeClass(void)
 }
 
 //---------------------------------------------------------------------
-RenderObjClass * W3DPrototypeClass::Create(void)					
+RenderObjClass * W3DPrototypeClass::Create(void)
 { 
 	return (RenderObjClass *)( SET_REF_OWNER( Proto->Clone() ) ); 
 }
+
+#if defined(ZH_WW3D_CPU_ONLY)
+#include "house_color_asset_cpu.inc"
+#endif
 	
 //---------------------------------------------------------------------
 // W3DAssetManager
@@ -168,6 +178,11 @@ W3DAssetManager::W3DAssetManager(void)
 //---------------------------------------------------------------------
 W3DAssetManager::~W3DAssetManager(void)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	// Callers retire/reset while idle before deleting the manager. Do not throw
+	// from destruction or allow the base destructor to mutate half a live frame.
+	try { preflight_house_color_retirement(); } catch (...) { std::terminate(); }
+#endif
 #ifdef	INCLUDE_GRANNY_IN_BUILD
 	delete m_GrannyAnimManager;
 #endif
@@ -331,8 +346,13 @@ Int W3DAssetManager::replaceHLODTexture(RenderObjClass *robj, TextureClass *oldT
 	int num_sub = robj->Get_Num_Sub_Objects();
 	for(int i = 0; i < num_sub; i++) {
 		RenderObjClass *sub_obj = robj->Get_Sub_Object(i);
+#if defined(ZH_WW3D_CPU_ONLY)
+		HouseColorRef<RenderObjClass> owned_sub(sub_obj);
+#endif
 		didReplace |= replaceAssetTexture(sub_obj, oldTex, newTex);
+#if !defined(ZH_WW3D_CPU_ONLY)
 		REF_PTR_RELEASE(sub_obj);
+#endif
 	}
 	return didReplace;
 }
@@ -345,7 +365,13 @@ Int W3DAssetManager::replaceMeshTexture(RenderObjClass *robj, TextureClass *oldT
 
 	MeshClass *mesh=(MeshClass*) robj;	
 	MeshModelClass * model = mesh->Get_Model();
+#if defined(ZH_WW3D_CPU_ONLY)
+	HouseColorRef<MeshModelClass> owned_model(model);
+#endif
 	MaterialInfoClass	*material = mesh->Get_Material_Info();
+#if defined(ZH_WW3D_CPU_ONLY)
+	HouseColorRef<MaterialInfoClass> owned_material(material);
+#endif
 
 	for (i=0; i<material->Texture_Count(); i++)
 	{
@@ -357,8 +383,10 @@ Int W3DAssetManager::replaceMeshTexture(RenderObjClass *robj, TextureClass *oldT
 		}
 	}
 
-	REF_PTR_RELEASE(material);	
+#if !defined(ZH_WW3D_CPU_ONLY)
+	REF_PTR_RELEASE(material);
 	REF_PTR_RELEASE(model);
+#endif
 	return didReplace;
 }
 
@@ -388,12 +416,33 @@ int W3DAssetManager::replacePrototypeTexture(RenderObjClass *robj, const char * 
 */
 TextureClass * W3DAssetManager::Find_Texture(const char * name, const int color)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	house_color_name_size(name,4);
+#endif
 	char newname[512];	
 	Munge_Texture_Name(newname, name, color);
 
 	// see if we have a cached copy
 	TextureClass *newtex = TextureHash.Get(newname);
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (auto* attempt=house_color_attempt();attempt && attempt->owner==this && attempt->started)
+		newtex=attempt->cache.Get(newname);
+#endif
 	if (newtex) {
+#if defined(ZH_WW3D_CPU_ONLY)
+		if (!newtex->HouseColorPixels)
+			throw std::runtime_error("original color cache contains a foreign texture owner");
+		if (newtex->Is_Initialized())
+			(void)zh::original_runtime::OriginalGpuEdge::required().texture_handle(newtex);
+		if (newtex->HouseColorPixels && !newtex->Is_Initialized()) {
+			if (auto* attempt=house_color_attempt()) {
+				if (attempt->owner!=this || attempt->rehydrated.size()>=4096)
+					throw std::runtime_error("original color replay owner or bound is not admitted");
+				house_color_fault();attempt->rehydrated.push_back(newtex);newtex->Add_Ref();
+			}
+			newtex->Init();
+		}
+#endif
 		newtex->Add_Ref();
 	}
 	return newtex;
@@ -402,6 +451,13 @@ TextureClass * W3DAssetManager::Find_Texture(const char * name, const int color)
 //---------------------------------------------------------------------
 TextureClass * W3DAssetManager::Recolor_Texture(TextureClass *texture, const int color)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) edge->guard_nonstage_mutation();
+	if (!texture || (house_color_attempt() && house_color_attempt()->owner!=this))
+		throw std::runtime_error("original color source or attempt owner is not admitted");
+	if (texture->Get_Texture_Name() && texture->Get_Texture_Name()[0]=='!') return nullptr;
+	house_color_idle();
+#endif
 	const char *name=texture->Get_Texture_Name();	
 
 	TextureClass *newtex = Find_Texture(name, color);
@@ -624,6 +680,39 @@ First 16 pixels are a palette composed of 24-Bit RGB values.
 Any pixels in remainder of image that use these 24-bit values
 will be remapped using a pre-defined formula.
 */
+#if defined(ZH_WW3D_CPU_ONLY)
+void W3DAssetManager::remap_house_color_pixels(zh::original_runtime::HouseColorTexturePixels& pixels,
+	unsigned color,bool palette_only,bool alpha)
+{
+	SurfaceClass::SurfaceDescription desc;
+	desc.Width=pixels.width;desc.Height=pixels.height;desc.Format=pixels.format;
+	const unsigned size=PixelSize(desc);
+	const bool supported=pixels.format==WW3D_FORMAT_A8R8G8B8 || pixels.format==WW3D_FORMAT_X8R8G8B8 ||
+		pixels.format==WW3D_FORMAT_A4R4G4B4 || pixels.format==WW3D_FORMAT_A1R5G5B5 ||
+		pixels.format==WW3D_FORMAT_R5G6B5;
+	if (!supported || (size!=2 && size!=4) || !pixels.width || !pixels.height ||
+		pixels.width>16384 || pixels.height>16384 || pixels.mips.empty() || pixels.pitches.empty() ||
+		pixels.pitches[0]<pixels.width*size || pixels.pitches[0]%size ||
+		std::size_t(pixels.pitches[0])*pixels.height>zh::original_runtime::house_color_byte_limit ||
+		pixels.mips[0].size()!=std::size_t(pixels.pitches[0])*pixels.height ||
+		(!alpha && pixels.width<16) || (alpha && size==2 && pixels.format!=WW3D_FORMAT_A4R4G4B4))
+		throw std::runtime_error("original color remap surface extent or format is not admitted");
+	unsigned char* bits=pixels.mips[0].data();const int pitch=pixels.pitches[0]/size;
+	if (palette_only) {
+		if (size==2) remapPalette16Bit(&desc,reinterpret_cast<UnsignedShort*>(bits),color);
+		else remapPalette32Bit(&desc,reinterpret_cast<UnsignedInt*>(bits),color);
+	} else if (alpha) {
+		if (size==2) remapAlphaTexture16Bit(desc.Width,desc.Height,pitch,&desc,reinterpret_cast<UnsignedShort*>(bits),color);
+		else remapAlphaTexture32Bit(desc.Width,desc.Height,pitch,&desc,reinterpret_cast<UnsignedInt*>(bits),color);
+	} else {
+		if (size==2) remapTexture16Bit(desc.Width,desc.Height-1,pitch,&desc,
+			reinterpret_cast<UnsignedShort*>(bits),reinterpret_cast<UnsignedShort*>(bits+pixels.pitches[0]),color);
+		else remapTexture32Bit(desc.Width,desc.Height-1,pitch,&desc,
+			reinterpret_cast<UnsignedInt*>(bits),reinterpret_cast<UnsignedInt*>(bits+pixels.pitches[0]),color);
+	}
+}
+#endif
+
 void W3DAssetManager::Remap_Palette(SurfaceClass *surface, const int color, Bool doPaletteOnly, Bool useAlpha)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
@@ -673,13 +762,58 @@ void W3DAssetManager::Remap_Palette(SurfaceClass *surface, const int color, Bool
 //---------------------------------------------------------------------
 TextureClass * W3DAssetManager::Recolor_Texture_One_Time(TextureClass *texture, const int color)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (!texture) throw std::runtime_error("original color texture provider is missing");
+#endif
 	const char *name=texture->Get_Texture_Name();	
 
 	// if texture is procedural return NULL
 	if (name && name[0]=='!') return NULL;
 
 #if defined(ZH_WW3D_CPU_ONLY)
-	throw OriginalW3DDeviceUnavailable("original recolor texture GPU surface loading pending");
+	house_color_idle();house_color_name_size(name,4);
+	if (!texture->Get_Filter().Can_Apply(0))
+		throw std::runtime_error("original color source filter tuple is invalid");
+	std::unique_ptr<HouseColorAttempt> local;
+	if (!house_color_attempt()) local.reset(new HouseColorAttempt(this));
+	auto* attempt=house_color_attempt();
+	if (attempt->owner!=this)
+		throw std::runtime_error("original color texture attempt owner mismatch");
+	const auto& cache=attempt->started ? attempt->cache : TextureHash;
+	if (cache.Size>65536 || (cache.Size==65536 && cache.First==-1))
+		throw std::runtime_error("original color texture cache capacity is exhausted");
+	house_color_fault();
+	zh::original_runtime::HouseColorTexturePixels pixels;
+	TextureLoadTaskClass task;task.Load_Detached_Surface(texture,pixels);
+	if (pixels.mips.empty() || pixels.pitches.empty())
+		throw std::runtime_error("original color detached surface is empty");
+	if (name[3]=='D' || name[3]=='d')
+		remap_house_color_pixels(pixels,color,true,false);
+	else if (name[3]=='A' || name[3]=='a')
+		remap_house_color_pixels(pixels,color,false,true);
+	house_color_fault();
+	zh::original_runtime::build_house_color_box_mips(pixels,texture->Get_Mip_Level_Count());
+	house_color_fault();
+	HouseColorRef<TextureClass> candidate(new TextureClass(pixels.width,pixels.height,pixels.format,
+		static_cast<MipCountType>(texture->Get_Mip_Level_Count()),TextureBaseClass::POOL_MANAGED,false,false));
+	TextureClass* newtex=candidate.value;
+	newtex->Get_Filter().Set_Mag_Filter(texture->Get_Filter().Get_Mag_Filter());
+	newtex->Get_Filter().Set_Min_Filter(texture->Get_Filter().Get_Min_Filter());
+	newtex->Get_Filter().Set_Mip_Mapping(texture->Get_Filter().Get_Mip_Mapping());
+	newtex->Get_Filter().Set_U_Addr_Mode(texture->Get_Filter().Get_U_Addr_Mode());
+	newtex->Get_Filter().Set_V_Addr_Mode(texture->Get_Filter().Get_V_Addr_Mode());
+	char newname[512];Munge_Texture_Name(newname,name,color);
+	house_color_fault();newtex->Set_Texture_Name(newname);
+	house_color_fault();newtex->HouseColorPixels=new zh::original_runtime::HouseColorTexturePixels(std::move(pixels));
+	// Acquire bookkeeping before cache publication; no accepted cache is touched.
+	house_color_fault();attempt->acquired.push_back(newtex);
+	newtex->Add_Ref();
+	insert_house_color_strong(attempt->cache,StringClass(newname),newtex);
+	newtex->Init();
+	newtex->LastAccessed=WW3D::Get_Sync_Time();
+	house_color_fault();
+	if (local) local->commit();
+	return candidate.release();
 #else
 	// make sure texture is loaded
 	if (!texture->Is_Initialized())	
@@ -740,6 +874,9 @@ RenderObjClass * W3DAssetManager::Create_Render_Obj(
 	const char *newTexture
 )
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	return create_house_color_object(name,scale,color,oldTexture,newTexture);
+#else
 	#ifdef DUMP_PERF_STATS
 	__int64 startTime64,endTime64;
 	GetPrecisionTimer(&startTime64);
@@ -914,6 +1051,7 @@ RenderObjClass * W3DAssetManager::Create_Render_Obj(
 #endif
 
 	return rendobj;
+#endif
 }
 
 //---------------------------------------------------------------------
@@ -943,7 +1081,13 @@ int W3DAssetManager::Recolor_Mesh(RenderObjClass *robj, const int color)
 
 	MeshClass *mesh=(MeshClass*) robj;	
 	MeshModelClass * model = mesh->Get_Model();
+#if defined(ZH_WW3D_CPU_ONLY)
+	HouseColorRef<MeshModelClass> owned_model(model);
+#endif
 	MaterialInfoClass	*material = mesh->Get_Material_Info();
+#if defined(ZH_WW3D_CPU_ONLY)
+	HouseColorRef<MaterialInfoClass> owned_material(material);
+#endif
 
 	// recolor vertex material (assuming mesh is housecolor)
 	if ( (( (meshName=strchr(mesh->Get_Name(),'.') ) != 0 && *(meshName++)) || ( (meshName=mesh->Get_Name()) != NULL)) &&
@@ -961,18 +1105,25 @@ int W3DAssetManager::Recolor_Mesh(RenderObjClass *robj, const int color)
 		if (strnicmp(oldtex->Get_Texture_Name(),"ZHC", 3) == 0)
 		{	//This texture needs to be adjusted for housecolor
 			newtex=Recolor_Texture(oldtex,color);
+#if defined(ZH_WW3D_CPU_ONLY)
+			HouseColorRef<TextureClass> owned_texture(newtex);
+#endif
 			if (newtex)
 			{
 				model->Replace_Texture(oldtex,newtex);
 				material->Replace_Texture(i,newtex);
+#if !defined(ZH_WW3D_CPU_ONLY)
 				REF_PTR_RELEASE(newtex);
+#endif
 				didRecolor=1;
 			}
 		}
 	}
 
-	REF_PTR_RELEASE(material);	
+#if !defined(ZH_WW3D_CPU_ONLY)
+	REF_PTR_RELEASE(material);
 	REF_PTR_RELEASE(model);
+#endif
 	return didRecolor;
 }
 
@@ -987,8 +1138,13 @@ int W3DAssetManager::Recolor_HLOD(RenderObjClass *robj, const int color)
 	int num_sub = robj->Get_Num_Sub_Objects();
 	for(int i = 0; i < num_sub; i++) {
 		RenderObjClass *sub_obj = robj->Get_Sub_Object(i);
+#if defined(ZH_WW3D_CPU_ONLY)
+		HouseColorRef<RenderObjClass> owned_sub(sub_obj);
+#endif
 		didRecolor |= Recolor_Asset(sub_obj,color);
+#if !defined(ZH_WW3D_CPU_ONLY)
 		REF_PTR_RELEASE(sub_obj);
+#endif
 	}
 	return didRecolor;
 }
@@ -1194,8 +1350,13 @@ void W3DAssetManager::Make_HLOD_Unique(RenderObjClass *robj, Bool geometry, Bool
 	int num_sub = robj->Get_Num_Sub_Objects();
 	for(int i = 0; i < num_sub; i++) {
 		RenderObjClass *sub_obj = robj->Get_Sub_Object(i);
+#if defined(ZH_WW3D_CPU_ONLY)
+		HouseColorRef<RenderObjClass> owned_sub(sub_obj);
+#endif
 		Make_Unique(sub_obj, geometry, colors);
+#if !defined(ZH_WW3D_CPU_ONLY)
 		REF_PTR_RELEASE(sub_obj);
+#endif
 	}
 }
 
@@ -1263,16 +1424,26 @@ void W3DAssetManager::Make_Mesh_Unique(RenderObjClass *robj, Bool geometry, Bool
 			mesh->Make_Unique();
 		
 		MeshModelClass * model = mesh->Get_Model();
+#if defined(ZH_WW3D_CPU_ONLY)
+		HouseColorRef<MeshModelClass> owned_model(model);
+#endif
 
 		if (colors && isVertexColor)
 		{
 			MaterialInfoClass	*material=mesh->Get_Material_Info();
+#if defined(ZH_WW3D_CPU_ONLY)
+			HouseColorRef<MaterialInfoClass> owned_material(material);
+#endif
 			for (i=0; i<material->Vertex_Material_Count(); i++)
 				material->Peek_Vertex_Material(i)->Make_Unique();	
+#if !defined(ZH_WW3D_CPU_ONLY)
 			REF_PTR_RELEASE(material);
+#endif
 		}
 
+#if !defined(ZH_WW3D_CPU_ONLY)
 		REF_PTR_RELEASE(model);
+#endif
 	}
 }
 

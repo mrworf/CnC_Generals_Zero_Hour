@@ -1,5 +1,6 @@
 #include <cstring>
 #include <stdexcept>
+#include "house_color_texture_cpu.h"
 
 namespace {
 unsigned next_texture_id = 0;
@@ -25,6 +26,7 @@ TextureBaseClass::~TextureBaseClass()
 	zh::original_runtime::OriginalGpuEdge::release_texture_if_owned(this);
 	// CPU-only objects never create background/device tasks.
 	WWASSERT(TextureLoadTask == nullptr && ThumbnailLoadTask == nullptr && D3DTexture == nullptr);
+	delete HouseColorPixels;
 }
 
 void TextureBaseClass::Set_Texture_Name(const char *name) { Name = name; }
@@ -42,6 +44,16 @@ bool TextureBaseClass::Is_Missing_Texture()
 }
 void TextureBaseClass::Invalidate()
 {
+	if (HouseColorPixels) {
+		auto* edge=zh::original_runtime::OriginalGpuEdge::active();
+		if (edge) {
+			edge->guard_nonstage_mutation();
+			if (!edge->source_buffers_retirable())
+				throw std::runtime_error("original color texture cannot invalidate during a frame");
+			if (Initialized) (void)edge->texture_handle(this);
+		} else if (Initialized)
+			throw std::runtime_error("original color texture residency has no device generation");
+	}
 	struct ReceiverPin {
 		TextureBaseClass* source=nullptr;
 		explicit ReceiverPin(TextureBaseClass* value) {
@@ -51,12 +63,22 @@ void TextureBaseClass::Invalidate()
 		}
 		~ReceiverPin() { if (source) source->Release_Ref(); }
 	} pin(this);
+	if (HouseColorPixels) {
+		zh::original_runtime::OriginalGpuEdge::notify_source_texture_invalidation(this);
+		zh::original_runtime::OriginalGpuEdge::release_texture_if_owned(this);
+		Initialized=false;D3DTexture=nullptr;
+		return;
+	}
 	zh::original_runtime::OriginalGpuEdge::notify_source_texture_invalidation(this);
 	if (TextureLoadTask || ThumbnailLoadTask || IsProcedural) return;
 	zh::original_runtime::OriginalGpuEdge::release_texture_if_owned(this);
 	Initialized = false; D3DTexture = nullptr;
 }
-void TextureBaseClass::Set_HSV_Shift(const Vector3 &shift) { HSVShift = shift; Invalidate(); }
+void TextureBaseClass::Set_HSV_Shift(const Vector3 &shift)
+{
+	if (HouseColorPixels) { Invalidate();HSVShift=shift;return; }
+	HSVShift=shift;Invalidate();
+}
 unsigned TextureBaseClass::Get_Reduction() const
 {
 	if (MipLevelCount == MIP_LEVELS_1 || Width <= 32 || Height <= 32) return 0;
@@ -105,7 +127,32 @@ TextureClass::TextureClass(unsigned width, unsigned height, WW3DFormat format,
 void TextureClass::Init()
 {
     if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) edge->guard_nonstage_mutation();
-	if (Initialized) return;
+	if (Initialized) {
+		if (HouseColorPixels) (void)zh::original_runtime::OriginalGpuEdge::required().texture_handle(this);
+		return;
+	}
+	if (HouseColorPixels) {
+		auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+		if (!edge.source_buffers_retirable() || !Filter.Can_Apply(0))
+			throw std::runtime_error("original color texture initialization is not admitted");
+		const auto& pixels=*HouseColorPixels;
+		unsigned mips=static_cast<unsigned>(pixels.mips.size());
+		if (!mips || mips>MIP_LEVELS_MAX || pixels.pitches.size()!=mips)
+			throw std::runtime_error("original color texture backing is malformed");
+		auto candidate=edge.create_texture(pixels.format,pixels.width,pixels.height,mips);
+		try {
+			if (mips!=pixels.mips.size())
+				throw std::runtime_error("original color texture mip identity changed");
+			for (unsigned level=0;level<mips;++level)
+				edge.upload_texture(candidate,level,std::max(1U,pixels.width>>level),
+					std::max(1U,pixels.height>>level),pixels.pitches[level],
+					pixels.mips[level].data(),pixels.mips[level].size());
+			edge.publish_texture(this,candidate);
+		} catch (...) { edge.discard_texture(candidate);throw; }
+		TextureFormat=pixels.format;Width=pixels.width;Height=pixels.height;
+		Initialized=true;
+		return;
+	}
 	if (auto *edge=zh::original_runtime::OriginalGpuEdge::active(); edge && edge->tree_source_frame_pending())
 		throw std::runtime_error("original tree frame requires resident texture readiness");
 	if (InactivationTime && LastInactivationSyncTime) {

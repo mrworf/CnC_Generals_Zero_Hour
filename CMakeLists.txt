@@ -2814,6 +2814,51 @@ if(ZH_BUILD_TESTS)
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-presentation.link.map")
   add_test(NAME original_w3d_presentation COMMAND original_w3d_presentation_tests)
   set_tests_properties(original_w3d_presentation PROPERTIES LABELS "original-rendering;source-identity")
+  add_executable(original_w3d_house_color_tests
+    tests/original_rendering/test_house_color.cpp
+    $<TARGET_OBJECTS:zh_original_lifecycle_spine>
+    $<TARGET_OBJECTS:zh_original_config_spine>
+    $<TARGET_OBJECTS:zh_original_w3d_factory_full>
+    $<TARGET_OBJECTS:zh_original_w3d_draw_full>)
+  get_target_property(house_color_includes original_w3d_presentation_tests INCLUDE_DIRECTORIES)
+  target_include_directories(original_w3d_house_color_tests PRIVATE ${house_color_includes})
+  target_compile_definitions(original_w3d_house_color_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1
+    ZH_BGFX_SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/generated/bgfx")
+  target_compile_options(original_w3d_house_color_tests PRIVATE -fpermissive -ffunction-sections -fdata-sections)
+  target_link_libraries(original_w3d_house_color_tests PRIVATE
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix
+    zh_compression zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu zh_renderer_bgfx zh_build_options)
+  add_dependencies(original_w3d_house_color_tests zh_bgfx_shaders)
+  target_link_options(original_w3d_house_color_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-house-color.link.map")
+  add_test(NAME original_w3d_house_color COMMAND original_w3d_house_color_tests)
+  set_tests_properties(original_w3d_house_color PROPERTIES LABELS "original-rendering;source-identity;negative")
+  set(house_color_identity_args)
+  set(house_color_removal_args)
+  foreach(house_color_source IN ITEMS
+      "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/W3DAssetManager.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/textureloader.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/TARGA.CPP"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/mesh.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/meshmdl.cpp")
+    list(APPEND house_color_identity_args --required "${house_color_source}")
+    list(APPEND house_color_removal_args --provider "${house_color_source}")
+  endforeach()
+  add_test(NAME original_w3d_house_color_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-house-color.link.map"
+    --executable "$<TARGET_FILE:original_w3d_house_color_tests>"
+    --witness "house-color generated CPU controls passed" ${house_color_identity_args})
+  add_test(NAME original_w3d_house_color_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_provider_removal.py"
+    --checker "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-house-color.link.map"
+    --executable "$<TARGET_FILE:original_w3d_house_color_tests>" ${house_color_removal_args})
+  set_tests_properties(original_w3d_house_color_identity original_w3d_house_color_provider_removal
+    PROPERTIES LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_status_circle_compile COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_status_circle_compile.py"
     --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"

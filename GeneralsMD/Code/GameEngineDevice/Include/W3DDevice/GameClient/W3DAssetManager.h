@@ -61,6 +61,13 @@ class W3DAssetManager: public WW3DAssetManager
 public:
 	W3DAssetManager(void);
 	virtual ~W3DAssetManager(void);	
+#if defined(__linux__)
+	void Free_Assets() override;
+	void Release_Unused_Assets() override;
+	void Free_Assets_With_Exclusion_List(const DynamicVectorClass<StringClass>& list) override;
+	void Release_All_Textures() override;
+	void Release_Unused_Textures() override;
+#endif
 
 	virtual RenderObjClass * Create_Render_Obj(const char * name);
 	// unique to W3DAssetManager
@@ -89,6 +96,24 @@ public:
 	int replacePrototypeTexture(RenderObjClass *robj, const char * oldname, const char * newname);
 
 private:
+#if defined(__linux__)
+	friend struct HouseColorGeneratedProbeAccess;
+	struct HouseColorAttempt;
+	static HouseColorAttempt*& house_color_attempt();
+	static void house_color_fault();
+	static int& house_color_fault_ordinal();
+	static unsigned& house_color_fault_count();
+	void insert_house_color_strong(HashTemplateClass<StringClass, TextureClass*>& cache,
+		const StringClass& key, TextureClass* texture);
+	void swap_house_color_cache(HashTemplateClass<StringClass, TextureClass*>& cache) noexcept;
+	void publish_house_color_prototype(PrototypeClass* prototype);
+	void preflight_house_color_retirement();
+	void ensure_house_color_resident(RenderObjClass* object, unsigned depth=0);
+	static void remap_house_color_pixels(zh::original_runtime::HouseColorTexturePixels& pixels,
+		unsigned color, bool palette_only, bool alpha);
+	RenderObjClass* create_house_color_object(const char* name, float scale, int color,
+		const char* old_texture, const char* new_texture);
+#endif
 	void Make_Mesh_Unique(RenderObjClass *robj,Bool geometry, Bool colors);
 	void Make_HLOD_Unique(RenderObjClass *robj,Bool geometry, Bool colors);
 	void Make_Unique(RenderObjClass *robj,Bool geometry, Bool colors);
@@ -125,4 +150,3 @@ private:
 };
 
 #endif
-
