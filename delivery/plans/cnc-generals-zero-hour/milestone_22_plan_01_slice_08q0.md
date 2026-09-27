@@ -49,9 +49,22 @@ loops through one shared source body for native and CPU configurations; do not
 reimplement color mathematics in the device edge. Generate requested lower mips
 from recolored level zero with the authored surface constructor's BOX filter
 (`DX8Wrapper::_Create_DX8_Texture(surface)` uses D3DX_FILTER_BOX for the copy and
-lower-mip generation). Use existing BitmapHandler primitives only where their
-packing and box arithmetic match that rule; pin exact integer/edge behavior in
-generated reference controls, not separately recolored source lower mips.
+lower-mip generation). Keep BitmapHandler unchanged: its per-sample quarter
+truncation is not the selected BOX compatibility arithmetic. Preserve exact
+recolored level zero, then derive each next power-of-two mip from its immediately
+preceding recolored level, with each axis `max(1, prior/2)`. Sample two values on
+each reducible axis and one on a singleton axis. Average ARGB channels separately
+with nearest/half-up rounding: `(sum + sample_count/2)/sample_count` for two or
+four samples (one sample is unchanged). Cover diverse channels, ties, extrema,
+singleton chains and every overlapping upstream Wine D3DX9 native-expectation
+8x8 reference case. This is an explicit D3DX8-compatibility contract: Microsoft
+documents BOX averaging, and D3DX9 native-reference agreement applies only where
+covered; exact D3DX8 channel quantization could not be established. Do not claim
+byte-exact D3DX8 rounding, copy decoded source lower mips or silently substitute
+the authored bitmap helper's different truncation.
+
+Public semantic/reference sources: [Microsoft BOX flags](https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dx-filter),
+[upstream native-expectation tests](https://github.com/wine-mirror/wine/blob/master/dlls/d3dx9_36/tests/surface.c).
 Reject short/overlong names, unsupported format, malformed
 palette extents, nonfinite values and overflowing dimensions before effects.
 Checked color-key name construction replaces unchecked fixed-buffer formatting
@@ -137,7 +150,7 @@ providers. Add identity/provider-removal controls named
 `original_w3d_house_color_identity` and `original_w3d_house_color_provider_removal`.
 No retail bytes or private names are fixture inputs. Cover 16/32-bit native remap
 packing where supported, D/d, A/a, unchanged selector, inverse-alpha threshold,
-palette matches/nonmatches, orientation, level-zero and generated-mip bytes,
+palette matches/nonmatches, orientation, exact level-zero and compatibility-mip bytes,
 all filter/default semantics, zero-color native behavior, procedural rejection,
 short/long/unterminated names, required missing/malformed and unsupported formats,
 dimension/pitch/count/byte maxima and bound+1. Cover every allocation/upload/cache/
@@ -164,7 +177,8 @@ header/link ABI/diff audits. Inspect complete sanitizer logs, not exit alone.
 
 ## Acceptance and exact commit
 
-Only original authored remap/mip/cache behavior is opened; every fault withdraws
+Only original authored remap/cache behavior and the explicit documented BOX
+compatibility contract above are opened; every fault withdraws
 the candidate with accepted sibling/source identity intact and exact residuals.
 One Q0 implementation/tests/evidence commit:
 `delivery: M22 08Q0 close house-color texture recoloring`.
