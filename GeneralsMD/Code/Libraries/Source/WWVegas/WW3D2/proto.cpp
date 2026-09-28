@@ -45,6 +45,10 @@
 #include "hmdldef.h"
 #include "hlod.h"
 #include "w3derr.h"
+#if defined(__linux__)
+#include "asset_import.h"
+#include "clone_graph.h"
+#endif
 
 /*
 ** Global instances of the default loaders for the asset manager to install
@@ -130,6 +134,12 @@ bool ww3d_prop::inspect_hmodel(PrototypeClass* p,Audit& audit)
  *=============================================================================================*/
 PrototypeClass * MeshLoaderClass::Load_W3D(ChunkLoadClass & cload)
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+	ww3d_clone::Ref<MeshClass> candidate(new MeshClass);
+	if (candidate.get()->Load_W3D(cload)!=WW3D_ERROR_OK) return nullptr;
+	ww3d_import::Attempt::boundary();return new PrimitivePrototypeClass(candidate.get());
+#else
 	MeshClass * mesh = NEW_REF( MeshClass, () );
 
 	if (mesh == NULL) {
@@ -151,6 +161,7 @@ PrototypeClass * MeshLoaderClass::Load_W3D(ChunkLoadClass & cload)
 		return newproto;
 	
 	}
+#endif
 }
 
 
@@ -168,6 +179,12 @@ PrototypeClass * MeshLoaderClass::Load_W3D(ChunkLoadClass & cload)
  *=============================================================================================*/
 PrototypeClass * HModelLoaderClass::Load_W3D(ChunkLoadClass & cload)
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();std::unique_ptr<HModelDefClass> candidate(new HModelDefClass);
+	if (candidate->Load_W3D(cload)!=HModelDefClass::OK) return nullptr;
+	ww3d_import::Attempt::boundary();auto* result=new HModelPrototypeClass(candidate.get());
+	candidate.release();return result;
+#else
 	HModelDefClass * hdef = W3DNEW HModelDefClass;
 
 	if (hdef == NULL) {
@@ -187,4 +204,5 @@ PrototypeClass * HModelLoaderClass::Load_W3D(ChunkLoadClass & cload)
 		return hproto;
 	
 	}
+#endif
 }

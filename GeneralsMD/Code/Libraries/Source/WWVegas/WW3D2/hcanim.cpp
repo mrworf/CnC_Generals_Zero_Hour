@@ -58,6 +58,10 @@
 #include "wwdebug.h"
 #include <string.h>
 #include <nstrdup.h>
+#include "asset_import.h"
+#if defined(__linux__)
+#include <memory>
+#endif
 
 
 struct NodeCompressedMotionStruct
@@ -109,6 +113,7 @@ struct NodeCompressedMotionStruct
  * HISTORY:                                                                                    *
  *=============================================================================================*/
 NodeCompressedMotionStruct::NodeCompressedMotionStruct() : 
+	Flavor(ANIM_FLAVOR_TIMECODED),
 	Vis(NULL)
 {
 		vd.X = NULL;
@@ -216,6 +221,9 @@ void HCompressedAnimClass::Free(void)
 {
 	if (NodeMotion != NULL) {
 		delete[] NodeMotion;
+#if defined(__linux__)
+		NodeMotion = NULL;
+#endif
 	}
 }
 
@@ -256,6 +264,12 @@ int HCompressedAnimClass::Load_W3D(ChunkLoadClass & cload)
 	}
 
 	cload.Close_Chunk();
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() &&
+		(strnlen(aheader.Name,sizeof(aheader.Name))==sizeof(aheader.Name) || !aheader.Name[0] ||
+		 strnlen(aheader.HierarchyName,sizeof(aheader.HierarchyName))==sizeof(aheader.HierarchyName) || !aheader.HierarchyName[0] ||
+		 !aheader.NumFrames || aheader.NumFrames>65536 || !aheader.FrameRate || aheader.Flavor>=ANIM_FLAVOR_VALID)) return LOAD_ERROR;
+#endif
 
 	strcpy(Name,aheader.HierarchyName);
 	strcat(Name,".");
@@ -272,6 +286,13 @@ int HCompressedAnimClass::Load_W3D(ChunkLoadClass & cload)
 		goto Error;
 	}
 	NumNodes = base_pose->Num_Pivots();
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (NumNodes<=0 || NumNodes>65536) goto Error;
+		ww3d_import::Attempt::reserve(NumNodes,sizeof(NodeCompressedMotionStruct));
+		ww3d_import::Attempt::boundary();
+	}
+#endif
 
 	NumFrames = aheader.NumFrames;
 	FrameRate = aheader.FrameRate;
@@ -387,19 +408,31 @@ Error:
  *=============================================================================================*/
 bool HCompressedAnimClass::read_channel(ChunkLoadClass & cload,TimeCodedMotionChannelClass * * newchan)
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();std::unique_ptr<TimeCodedMotionChannelClass> candidate(new TimeCodedMotionChannelClass);
+	if (!candidate->Load_W3D(cload)) return false;
+	*newchan=candidate.release();return true;
+#else
 	*newchan = W3DNEW TimeCodedMotionChannelClass;
 	bool result = (*newchan)->Load_W3D(cload);	
 	
 	return result;
+#endif
   
 }	// read_channel
 
 bool HCompressedAnimClass::read_channel(ChunkLoadClass & cload,AdaptiveDeltaMotionChannelClass * * newchan)
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();std::unique_ptr<AdaptiveDeltaMotionChannelClass> candidate(new AdaptiveDeltaMotionChannelClass);
+	if (!candidate->Load_W3D(cload)) return false;
+	*newchan=candidate.release();return true;
+#else
 	*newchan = W3DNEW AdaptiveDeltaMotionChannelClass;
 	bool result = (*newchan)->Load_W3D(cload);	
 	
 	return result;
+#endif
   
 }	// read_channel
 
@@ -419,6 +452,21 @@ bool HCompressedAnimClass::read_channel(ChunkLoadClass & cload,AdaptiveDeltaMoti
 void HCompressedAnimClass::add_channel(TimeCodedMotionChannelClass * newchan)
 {
 	int idx = newchan->Get_Pivot();
+#if defined(__linux__)
+	std::unique_ptr<TimeCodedMotionChannelClass> candidate(newchan);
+	if (ww3d_import::Attempt::is_active()) {
+		TimeCodedMotionChannelClass** slot=nullptr;
+		switch (newchan->Get_Type()) {
+		case ANIM_CHANNEL_X:slot=&NodeMotion[idx].tc.X;break;
+		case ANIM_CHANNEL_Y:slot=&NodeMotion[idx].tc.Y;break;
+		case ANIM_CHANNEL_Z:slot=&NodeMotion[idx].tc.Z;break;
+		case ANIM_CHANNEL_Q:slot=&NodeMotion[idx].tc.Q;break;
+		}
+		if (!slot || *slot) throw std::runtime_error("original import compressed channel is duplicate or unsupported");
+		ww3d_import::Attempt::boundary();*slot=candidate.release();return;
+	}
+	candidate.release();
+#endif
 
 	switch (newchan->Get_Type())
 	{
@@ -444,6 +492,21 @@ void HCompressedAnimClass::add_channel(TimeCodedMotionChannelClass * newchan)
 void HCompressedAnimClass::add_channel(AdaptiveDeltaMotionChannelClass * newchan)
 {
 	int idx = newchan->Get_Pivot();
+#if defined(__linux__)
+	std::unique_ptr<AdaptiveDeltaMotionChannelClass> candidate(newchan);
+	if (ww3d_import::Attempt::is_active()) {
+		AdaptiveDeltaMotionChannelClass** slot=nullptr;
+		switch (newchan->Get_Type()) {
+		case ANIM_CHANNEL_X:slot=&NodeMotion[idx].ad.X;break;
+		case ANIM_CHANNEL_Y:slot=&NodeMotion[idx].ad.Y;break;
+		case ANIM_CHANNEL_Z:slot=&NodeMotion[idx].ad.Z;break;
+		case ANIM_CHANNEL_Q:slot=&NodeMotion[idx].ad.Q;break;
+		}
+		if (!slot || *slot) throw std::runtime_error("original import compressed channel is duplicate or unsupported");
+		ww3d_import::Attempt::boundary();*slot=candidate.release();return;
+	}
+	candidate.release();
+#endif
 
 	switch (newchan->Get_Type())
 	{
@@ -483,10 +546,16 @@ void HCompressedAnimClass::add_channel(AdaptiveDeltaMotionChannelClass * newchan
  *=============================================================================================*/
 bool HCompressedAnimClass::read_bit_channel(ChunkLoadClass & cload,TimeCodedBitChannelClass * * newchan)
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();std::unique_ptr<TimeCodedBitChannelClass> candidate(new TimeCodedBitChannelClass);
+	if (!candidate->Load_W3D(cload)) return false;
+	*newchan=candidate.release();return true;
+#else
 	*newchan = W3DNEW TimeCodedBitChannelClass;
 	bool result = (*newchan)->Load_W3D(cload);	
 
-	return result;		 
+	return result;
+#endif
   
 }	// read_bit_channel
 
@@ -506,6 +575,15 @@ bool HCompressedAnimClass::read_bit_channel(ChunkLoadClass & cload,TimeCodedBitC
 void HCompressedAnimClass::add_bit_channel(TimeCodedBitChannelClass * newchan)
 {
 	int idx = newchan->Get_Pivot();
+#if defined(__linux__)
+	std::unique_ptr<TimeCodedBitChannelClass> candidate(newchan);
+	if (ww3d_import::Attempt::is_active()) {
+		if (newchan->Get_Type()!=BIT_CHANNEL_VIS || NodeMotion[idx].Vis)
+			throw std::runtime_error("original import compressed bit channel is duplicate or unsupported");
+		ww3d_import::Attempt::boundary();NodeMotion[idx].Vis=candidate.release();return;
+	}
+	candidate.release();
+#endif
 
 	switch (newchan->Get_Type())
 	{

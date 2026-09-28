@@ -37,6 +37,7 @@
 
 
 #include "hmdldef.h"
+#include "asset_import.h"
 #include <assert.h>
 #include <string.h>
 #include "w3d_file.h"
@@ -147,6 +148,13 @@ int HModelDefClass::Load_W3D(ChunkLoadClass & cload)
 	}
 
 	cload.Close_Chunk();
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (!header.Name[0] || strnlen(header.Name,sizeof(header.Name))==sizeof(header.Name) ||
+			strnlen(header.HierarchyName,sizeof(header.HierarchyName))==sizeof(header.HierarchyName)) goto Error;
+		ww3d_import::Attempt::reserve(header.NumConnections,sizeof(HmdlNodeDefStruct));ww3d_import::Attempt::boundary();
+	}
+#endif
 
 	/*
 	** process the header info
@@ -190,6 +198,9 @@ int HModelDefClass::Load_W3D(ChunkLoadClass & cload)
 			case W3D_CHUNK_NODE:
 			case W3D_CHUNK_COLLISION_NODE: 
 			case W3D_CHUNK_SKIN_NODE:
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active() && subobjcounter>=SubObjectCount) goto Error;
+#endif
 				if (!read_connection(cload,&(SubObjects[subobjcounter]),pre30)) {
 					goto Error;
 				}			
@@ -197,8 +208,17 @@ int HModelDefClass::Load_W3D(ChunkLoadClass & cload)
 				break;
 				
 			case W3D_CHUNK_POINTS:
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active() && SnapPoints) goto Error;
+				ww3d_import::Attempt::boundary();
+#endif
 				SnapPoints = W3DNEW SnapPointsClass;
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active() && SnapPoints->Load_W3D(cload)!=WW3D_ERROR_OK) goto Error;
+				if (!ww3d_import::Attempt::is_active()) SnapPoints->Load_W3D(cload);
+#else
 				SnapPoints->Load_W3D(cload);
+#endif
 				break;
 
 			default:
@@ -206,6 +226,9 @@ int HModelDefClass::Load_W3D(ChunkLoadClass & cload)
 		}
 		cload.Close_Chunk();
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && subobjcounter!=SubObjectCount) goto Error;
+#endif
 
 	return OK;
 
@@ -236,6 +259,9 @@ bool HModelDefClass::read_connection(ChunkLoadClass & cload,HmdlNodeDefStruct * 
 	if (cload.Read(&con,sizeof(W3dHModelNodeStruct)) != sizeof(W3dHModelNodeStruct)) {
 		return false;
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && strnlen(con.RenderObjName,sizeof(con.RenderObjName))==sizeof(con.RenderObjName)) return false;
+#endif
 
 	strcpy(node->RenderObjName,ModelName);
 	strcat(node->RenderObjName,".");
@@ -254,4 +280,3 @@ bool HModelDefClass::read_connection(ChunkLoadClass & cload,HmdlNodeDefStruct * 
 	
 	return true;
 }
-

@@ -38,12 +38,22 @@
 #include "chunkio.h"
 #include "w3d_file.h"
 #include "w3derr.h"
+#include "asset_import.h"
+#if defined(__linux__)
+#include <cmath>
+#endif
 
 WW3DErrorType SnapPointsClass::Load_W3D(ChunkLoadClass & cload)
 {
 	// this function assumes that a W3D_CHUNK_POINTS has been opened
 	int size = cload.Cur_Chunk_Length();
 	int count = size / sizeof (W3dVectorStruct);
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (count>65536 || size%sizeof(W3dVectorStruct)) return WW3D_ERROR_LOAD_FAILED;
+		ww3d_import::Attempt::reserve(count,sizeof(Vector3));ww3d_import::Attempt::boundary();
+	}
+#endif
 	
 	Resize(count);
 	for (int i=0; i<count; i++) {
@@ -53,6 +63,12 @@ WW3DErrorType SnapPointsClass::Load_W3D(ChunkLoadClass & cload)
 		}
 
 		Vector3 point (vec.X, vec.Y, vec.Z);
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active()) {
+			if (!std::isfinite(vec.X) || !std::isfinite(vec.Y) || !std::isfinite(vec.Z)) goto Error;
+			ww3d_import::Attempt::boundary();
+		}
+#endif
 		Add (point);
 		//(*this)[i].Set(vec.X,vec.Y,vec.X);
 	}

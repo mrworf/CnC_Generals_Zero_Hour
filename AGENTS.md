@@ -56,3 +56,8 @@ When native code copies a fixed-capacity aggregate, initialize every slot, not
 only its active prefix. Explicitly initialize nested vectors whose legacy default
 constructors are empty; test fresh/reset/copy from nonzero backing under both
 sanitizers instead of relying on allocator contents.
+
+Parser rejection may retire storage before a guarded candidate is destroyed.
+Clear retired pointers on corrected owner paths and test repeated semantic
+rejection as well as injected throws. At new validation boundaries, use portable
+finite/defined-width checks; legacy bit helpers may assume a 32-bit `long`.

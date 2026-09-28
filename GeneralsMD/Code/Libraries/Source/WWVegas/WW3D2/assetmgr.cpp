@@ -139,6 +139,9 @@ WW3DAssetManager *		WW3DAssetManager::TheInstance = NULL;
 ** to always be available...
 */
 static NullPrototypeClass _NullPrototype;
+#if defined(__linux__)
+#include "asset_import_cpu.inc"
+#endif
 
 /*
 ** Iterator for the Render Objects in the asset manager
@@ -457,6 +460,9 @@ void WW3DAssetManager::Log_Texture_Statistics()
  *=============================================================================================*/
 void WW3DAssetManager::Free(void)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import registry teardown requires idle ownership");
+#endif
 	Free_Assets();
 }
 
@@ -476,6 +482,9 @@ void WW3DAssetManager::Free(void)
  *=============================================================================================*/
 void WW3DAssetManager::Free_Assets(void)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import registry teardown requires idle ownership");
+#endif
 	WWPROFILE( "WW3DAssetManager::Free_Assets" );
 
 	// delete all of the prototypes
@@ -522,6 +531,9 @@ void WW3DAssetManager::Free_Assets(void)
  *=============================================================================================*/
 void WW3DAssetManager::Release_Unused_Assets(void)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import registry teardown requires idle ownership");
+#endif
 	// release all references to objects that have only one reference on them
 	// and remove them from our lists.
 	Release_Unused_Textures();
@@ -547,6 +559,9 @@ void WW3DAssetManager::Release_Unused_Assets(void)
  *=============================================================================================*/
 void WW3DAssetManager::Free_Assets_With_Exclusion_List(const DynamicVectorClass<StringClass> & exclusion_names)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import registry teardown requires idle ownership");
+#endif
 	// Reset the dx8 mesh renderer
 #if !defined(ZH_WW3D_CPU_ONLY)
 	TheDX8MeshRenderer.Invalidate();
@@ -653,6 +668,13 @@ void WW3DAssetManager::Create_Asset_List(DynamicVectorClass<StringClass> & model
  *=============================================================================================*/
 bool WW3DAssetManager::Load_3D_Assets( const char * filename )
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::FileScope scope(filename);
+	if (ww3d_import::Attempt::is_active()) ww3d_import::Attempt::name(filename);
+	if (!_TheFileFactory) throw std::runtime_error("original import file provider is missing");
+	file_auto_ptr file(_TheFileFactory,filename);
+	return file && file->Is_Available() ? WW3DAssetManager::Load_3D_Assets(*file) : false;
+#else
 	bool result = false;
 
 	FileClass * file = _TheFileFactory->Get_File( filename );
@@ -666,6 +688,7 @@ bool WW3DAssetManager::Load_3D_Assets( const char * filename )
 	}
 
 	return result;
+#endif
 }
 
 
@@ -687,11 +710,23 @@ bool WW3DAssetManager::Load_3D_Assets(FileClass & w3dfile)
 	if (!w3dfile.Open()) {
 		return false;
 	}
+#if defined(__linux__)
+	struct Close { FileClass& file;~Close() noexcept { file.Close(); } } close{w3dfile};
+	if (ww3d_import::Attempt::is_active()) {
+		const int bytes=w3dfile.Size();
+		if (bytes<0) throw std::runtime_error("original import file extent is not admitted");
+		ww3d_import::Attempt::reserve(bytes,1);
+		if (!ww3d_import::Attempt::preflight(w3dfile)) return false;
+	}
+#endif
 
 	ChunkLoadClass cload(&w3dfile);
 	bool loaded = true;
 
 	while (cload.Open_Chunk()) {
+#if defined(__linux__)
+		ww3d_import::Attempt::boundary();
+#endif
 
 		switch (cload.Cur_Chunk_ID()) {
 
@@ -713,7 +748,9 @@ bool WW3DAssetManager::Load_3D_Assets(FileClass & w3dfile)
 		cload.Close_Chunk();
 	}
 
+#if !defined(__linux__)
 	w3dfile.Close();
+#endif
 
 	return loaded;
 }
@@ -777,7 +814,12 @@ bool WW3DAssetManager::Load_Prototype(ChunkLoadClass & cload)
 			/*
 			** Add the new, unique prototype to our list
 			*/
+#if defined(__linux__)
+			try { Add_Prototype(newproto); }
+			catch (...) { newproto->DeleteSelf();throw; }
+#else
 			Add_Prototype(newproto);
+#endif
 
 		} else {
 
@@ -1005,6 +1047,9 @@ AssetIterator * WW3DAssetManager::Create_Font3DData_Iterator(void)
 HAnimClass *	WW3DAssetManager::Get_HAnim(const char * name)
 {
 	WWPROFILE( "WW3DAssetManager::Get_HAnim" );
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) ww3d_import::Attempt::name(name,7);
+#endif
 
 	// Try to find the hanim
 	HAnimClass * anim = HAnimManager.Get_Anim(name);
@@ -1059,6 +1104,9 @@ HAnimClass *	WW3DAssetManager::Get_HAnim(const char * name)
 HTreeClass *	WW3DAssetManager::Get_HTree(const char * name)
 {
 	WWPROFILE( "WW3DAssetManager::Get_HTree" );
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) ww3d_import::Attempt::name(name,7);
+#endif
 
 	// Try to find the htree
 	HTreeClass * htree = HTreeManager.Get_Tree(name);
@@ -1110,6 +1158,15 @@ TextureClass * WW3DAssetManager::Get_Texture
 )
 {
 	WWPROFILE( "WW3DAssetManager::Get_Texture 1" );
+#if defined(__linux__)
+	auto* attempt=ww3d_import::Attempt::active(this);
+	if (attempt) {
+		attempt->validate();
+		if (filename && *filename) ww3d_import::Attempt::name(filename);
+		if (type!=TextureBaseClass::TEX_REGULAR)
+			throw std::runtime_error("original import texture kind is not admitted");
+	}
+#endif
 
 	/*
 	** We cannot currently mip-map bumpmaps
@@ -1133,7 +1190,12 @@ TextureClass * WW3DAssetManager::Get_Texture
 	/*
 	** See if the texture has already been loaded.
 	*/
+#if defined(__linux__)
+	TextureClass* tex = attempt ? attempt->find_texture(lower_case_name) : TextureHash.Get(lower_case_name);
+	if (attempt && tex) attempt->remember_filter(tex);
+#else
 	TextureClass* tex = TextureHash.Get(lower_case_name);
+#endif
 	if (tex && (tex->Is_Initialized() == true) && (texture_format!=WW3D_FORMAT_UNKNOWN)) 
 	{
 		WWASSERT_PRINT(tex->Get_Texture_Format()==texture_format,("Texture %s has already been loaded with different format",filename));
@@ -1164,7 +1226,14 @@ TextureClass * WW3DAssetManager::Get_Texture
 			tex = NEW_REF (VolumeTextureClass, (lower_case_name, NULL, mip_level_count, texture_format, allow_compression, allow_reduction));
 #endif
 		}
+#if defined(__linux__)
+		if (attempt) {
+			try { attempt->add_texture(tex->Get_Texture_Name(),tex); }
+			catch (...) { tex->Release_Ref();throw; }
+		} else TextureHash.Insert(tex->Get_Texture_Name(),tex);
+#else
 		TextureHash.Insert(tex->Get_Texture_Name(),tex);
+#endif
 	}
 
 	tex->Add_Ref();
@@ -1186,6 +1255,9 @@ TextureClass * WW3DAssetManager::Get_Texture
  *=============================================================================================*/
 void WW3DAssetManager::Release_All_Textures(void)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import registry teardown requires idle ownership");
+#endif
 	/*
 	** for each texture in the list, get it and release ref it
 	*/
@@ -1215,6 +1287,9 @@ void WW3DAssetManager::Release_All_Textures(void)
  *=============================================================================================*/
 void WW3DAssetManager::Release_Unused_Textures(void)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import registry teardown requires idle ownership");
+#endif
 	/*
 	** for each texture in the list, get it, check it's refcount, and and release ref it if the
 	** refcount is one.
@@ -1259,6 +1334,9 @@ void WW3DAssetManager::Release_Unused_Textures(void)
  *=============================================================================================*/
 void WW3DAssetManager::Release_Texture(TextureClass *tex)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import registry teardown requires idle ownership");
+#endif
 	/*
 	** Try to find the texture in the list, if found release it and remove it from the list.
 	*/
@@ -1613,6 +1691,9 @@ PrototypeLoaderClass * WW3DAssetManager::Find_Prototype_Loader(int chunk_id)
  *=============================================================================================*/
 void WW3DAssetManager::Add_Prototype(PrototypeClass * newproto)
 {
+#if defined(__linux__)
+	if (auto* attempt=ww3d_import::Attempt::active(this)) { attempt->add_prototype(newproto);return; }
+#endif
 	WWASSERT(newproto != NULL);
 	int hash = CRC_Stringi(newproto->Get_Name()) & PROTOTYPE_HASH_MASK;
 	newproto->friend_setNextHash(PrototypeHashTable[hash]);
@@ -1635,6 +1716,9 @@ void WW3DAssetManager::Add_Prototype(PrototypeClass * newproto)
  *=============================================================================================*/
 void WW3DAssetManager::Remove_Prototype(PrototypeClass *proto)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import registry teardown requires idle ownership");
+#endif
 	WWASSERT(proto != NULL);
 	if (proto != NULL) {
 
@@ -1725,6 +1809,9 @@ PrototypeClass * WW3DAssetManager::Find_Prototype(const char * name)
 	if (stricmp(name,"NULL") == 0) {
 		return &(_NullPrototype);
 	}
+#if defined(__linux__)
+	if (auto* attempt=ww3d_import::Attempt::active(this)) return attempt->find_prototype(name);
+#endif
 	
 	// Find the prototype
 	int hash = CRC_Stringi(name) & PROTOTYPE_HASH_MASK;

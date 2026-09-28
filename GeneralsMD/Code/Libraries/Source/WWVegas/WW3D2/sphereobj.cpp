@@ -69,6 +69,9 @@
 
 
 #include "sphereobj.h"
+#if defined(__linux__)
+#include "asset_import.h"
+#endif
 #include "w3d_util.h"
 #include "wwdebug.h"
 #include "vertmaterial.h"
@@ -1163,9 +1166,16 @@ void SphereRenderObjClass::animate (void)
 */
 PrototypeClass * SphereLoaderClass::Load_W3D(ChunkLoadClass & cload)
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+	std::unique_ptr<SpherePrototypeClass,ww3d_import::PrototypeDelete> prototype(new SpherePrototypeClass);
+	if (!prototype->Load(cload)) return nullptr;
+	return prototype.release();
+#else
 	SpherePrototypeClass *prototype = W3DNEW SpherePrototypeClass;
 	prototype->Load (cload);
 	return prototype;
+#endif
 }
 
 /*
@@ -1238,6 +1248,7 @@ enum
 
 bool SpherePrototypeClass::Load (ChunkLoadClass &cload)
 {
+	bool have_definition=false;
 	ColorChannel.Reset ();
 	AlphaChannel.Reset ();
 	ScaleChannel.Reset ();
@@ -1247,6 +1258,14 @@ bool SpherePrototypeClass::Load (ChunkLoadClass &cload)
 		switch (cload.Cur_Chunk_ID ()) {
 			
 			case CHUNKID_SPHERE_DEF:
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active()) {
+					if (have_definition || cload.Cur_Chunk_Length()!=sizeof(Definition) || cload.Read(&Definition,sizeof(Definition))!=sizeof(Definition) ||
+						!Definition.Name[0] || strnlen(Definition.Name,sizeof(Definition.Name))==sizeof(Definition.Name) ||
+						strnlen(Definition.TextureName,sizeof(Definition.TextureName))==sizeof(Definition.TextureName)) return false;
+					ww3d_import::Attempt::boundary();have_definition=true;break;
+				}
+#endif
 				cload.Read (&Definition, sizeof (Definition));
 				break;
 
@@ -1270,6 +1289,9 @@ bool SpherePrototypeClass::Load (ChunkLoadClass &cload)
 		cload.Close_Chunk ();
 	}
 
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && !have_definition) return false;
+#endif
 	return true;
 }
 

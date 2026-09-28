@@ -1,7 +1,14 @@
 # M22 plan 01 slice 08S0A: strong bounded asset-import/cache transaction
 
-Status: planned; ready after the plan-only checkpoint.
+Status: complete; accepted frozen-source import/cache boundary.
 Plan transaction parent: `89df8bb309ad8cd4f6d409cdc27d645f11d9f782`.
+Implementation transaction parent: `05b51dc1d3e90907e488cdc4877bffedf55bfec5`.
+Implementation provenance: this slice commit.
+
+Acceptance: six complete builds and six serial canonical suites 294/294;
+exact11 focus on four configurations and strict11 both sanitizers; minimal8
+both native toolchains, established Vulkan3/2 and LAN4 all six. Complete logs
+are category-clean. See [accepted evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08s0a_asset_import.md).
 
 ## Outcome, dependencies and scope
 
@@ -71,12 +78,42 @@ construction, with explicit negatives; ordinary registered definitions are not
 left behind an unresolved admission decision.
 Any independent owner beyond the inventory stops for architecture authority.
 
+The active-import AdaptiveDelta finite-scale check uses `std::isfinite`, not
+the legacy float-bit helper that assumes 32-bit `long`. Linux compressed-motion
+array retirement clears its owned pointer, so parser rejection followed by
+candidate destruction is idempotent. Repeated NaN/+Inf/-Inf rejection and clean
+retry must retain exact graph/ref/raw baselines in both generated generations;
+ordinary decoding and the Windows path are unchanged.
+
+Approved transitive mapper helper: Linux default `INIClass::Initialize` and
+fresh `Load(Straw)` use local guards for list/index/name, unpublished section,
+entry/key/value and index-growth publication. Destruction retires its graph
+without calling allocating `Clear()`. Preserve successful grammar, section/entry
+order, duplicate first-win and readonly lookups; FileClass/filename constructor,
+merge and `Put_String` semantics remain outside this correction and untouched.
+Generic Index/List APIs remain unchanged. A private Linux thread-local null/no-op
+WWLib guard is installed only by the active import Attempt and restored on every
+exit; it supplies the existing bounded storage/fault checkpoints without a WW3D
+link dependency in WWLib or a new field/virtual/serialized interface. Cover fresh
+null/nonempty arguments, both stages, duplicate behavior, entry/section/index
+growth faults, exact raw teardown and minimal/no-hook behavior.
+
 Candidate failure keeps accepted source bytes, refs, registry identities/capacity/
 order, normal and Q0 caches, native resources and mapper RNG exact. Import does
 not advance animation, GameClient/GameLogic/audio RNG or emit sound/FX. Generated
 fault seams are owner-local once-only friend capabilities, never retail/env
 selectors or serialized/public ABI. Reset/free/provider removal must preserve
 accepted sibling refs and cannot call stale-generation providers.
+
+Approved cull-helper distinction: retain native libc `rand()` candidate-plane
+selection, consumption and successful tree topology. It is not a project RNG
+stream. A failed import may advance this existing helper stream; no libc state
+tricks or substitute generator are introduced. Guard every builder input/split
+array, child node and final partial constructor, retaining exact accepted graph,
+resource and project-RNG rollback. Prove same-seed ordinary/scoped successful tree
+bytes and next-rand equality, repeated late-fault accepted-state/raw cleanup, and
+varied-seed retry collision-query equivalence rather than identical failed
+candidate topology. Any additional hidden global effect requires a checkpoint.
 
 ## Tests and exact validation
 

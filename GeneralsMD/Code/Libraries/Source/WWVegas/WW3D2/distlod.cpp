@@ -90,6 +90,7 @@
 #include "coltest.h"
 #include "inttest.h"
 #include "clone_graph.h"
+#include "asset_import.h"
 
 #if defined(__linux__)
 namespace {
@@ -179,6 +180,12 @@ RenderObjClass * DistLODPrototypeClass::Create(void)
 */
 PrototypeClass *DistLODLoaderClass::Load_W3D( ChunkLoadClass &cload )
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();std::unique_ptr<DistLODDefClass> candidate(new DistLODDefClass);
+	if (candidate->Load_W3D(cload)!=WW3D_ERROR_OK) return nullptr;
+	ww3d_import::Attempt::boundary();auto* result=new DistLODPrototypeClass(candidate.get());
+	candidate.release();return result;
+#else
 	DistLODDefClass * pCDistLODClass = W3DNEW DistLODDefClass;
 
 	if (pCDistLODClass == NULL)
@@ -198,6 +205,7 @@ PrototypeClass *DistLODLoaderClass::Load_W3D( ChunkLoadClass &cload )
 		DistLODPrototypeClass *pCLODProto = W3DNEW DistLODPrototypeClass (pCDistLODClass);
 		return pCLODProto;	
 	}
+#endif
 }
 
 
@@ -350,6 +358,13 @@ WW3DErrorType DistLODDefClass::Load_W3D(ChunkLoadClass & cload)
 		if (cload.Read(&lodStruct,sizeof(W3dLODStruct)) != sizeof(W3dLODStruct)) {
 			return WW3D_ERROR_LOAD_FAILED;
 		}
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active()) {
+			if (cload.Cur_Chunk_Length()!=sizeof(lodStruct) || !lodStruct.RenderObjName[0] ||
+				strnlen(lodStruct.RenderObjName,sizeof(lodStruct.RenderObjName))==sizeof(lodStruct.RenderObjName)) return WW3D_ERROR_LOAD_FAILED;
+			ww3d_import::Attempt::reserve(strlen(lodStruct.RenderObjName)+1,1);ww3d_import::Attempt::boundary();
+		}
+#endif
 
 		// Add the information from the chunk into the LOD array
 		Lods[iLOD].Name = nstrdup (lodStruct.RenderObjName);
@@ -392,12 +407,25 @@ bool DistLODDefClass::read_header(ChunkLoadClass & cload)
 	if (cload.Read(&lodHeader,sizeof(W3dLODModelHeaderStruct)) != sizeof(W3dLODModelHeaderStruct)) {
 		return false;
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (cload.Cur_Chunk_Length()!=sizeof(lodHeader) || !lodHeader.Name[0] || !lodHeader.NumLODs ||
+			strnlen(lodHeader.Name,sizeof(lodHeader.Name))==sizeof(lodHeader.Name)) return false;
+		ww3d_import::Attempt::reserve(strlen(lodHeader.Name)+1,1);ww3d_import::Attempt::boundary();
+	}
+#endif
 
 	cload.Close_Chunk();
 
 	// Copy the name into our internal variable
 	Name = ::nstrdup (lodHeader.Name);
 	LodCount = lodHeader.NumLODs;
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		ww3d_import::Attempt::reserve(LodCount,sizeof(DistLODNodeDefStruct));ww3d_import::Attempt::boundary();
+		Lods = W3DNEWARRAY DistLODNodeDefStruct[LodCount]();return true;
+	}
+#endif
 	Lods = W3DNEWARRAY DistLODNodeDefStruct[LodCount];
 	return true;
 }

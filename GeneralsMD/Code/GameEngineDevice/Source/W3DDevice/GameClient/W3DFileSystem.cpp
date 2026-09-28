@@ -48,6 +48,14 @@
 #include "Common/MapObject.h"
 #include "Common/Registry.h"
 #include "W3DDevice/GameClient/W3DFileSystem.h"
+#include "asset_import.h"
+#if defined(__linux__)
+#include <cstdio>
+#include <cstring>
+namespace {
+const void* import_file_system() noexcept { return TheFileSystem; }
+}
+#endif
 // DEFINES ////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef _WIN32
@@ -142,6 +150,37 @@ inline static Bool isImageFileType( GameFileType fileType )
 //-------------------------------------------------------------------------------------------------
 char const * GameFileClass::Set_Name( char const *filename )
 {
+#if defined(__linux__)
+	AsciiString import_language;
+	if (ww3d_import::Attempt::is_active()) {
+		ww3d_import::Attempt::file_provider(TheFileSystem,import_file_system);
+		ww3d_import::Attempt::name(filename);
+		const char* suffix=strrchr(filename,'.');
+		const bool model=suffix && !stricmp(suffix,".w3d");
+		const bool image=suffix && (!stricmp(suffix,".tga") || !stricmp(suffix,".dds"));
+		char candidate[sizeof(m_filePath)];
+		auto check=[&](const char* format,const char* prefix) {
+			const int bytes=std::snprintf(candidate,sizeof(candidate),format,prefix);
+			if (bytes<0 || bytes>=int(sizeof(candidate)) || strlen(filename)>=sizeof(candidate)-std::size_t(bytes))
+				throw std::runtime_error("original import file lookup exceeds source extent");
+		};
+		if (model || image) {
+			import_language=GetRegistryLanguage();
+			check(model ? "Data/%s/Art/W3D/" : "Data/%s/Art/Textures/",import_language.str());
+			check("%s",model ? W3D_DIR_PATH : TGA_DIR_PATH);
+#ifdef MAINTAIN_LEGACY_FILES
+			check("%s",model ? LEGACY_W3D_DIR_PATH : LEGACY_TGA_DIR_PATH);
+#endif
+#ifdef LOAD_TEST_ASSETS
+			check("%s",model ? TEST_W3D_DIR_PATH : TEST_TGA_DIR_PATH);
+#endif
+			if (TheGlobalData) {
+				check(model ? USER_W3D_DIR_PATH : USER_TGA_DIR_PATH,TheGlobalData->getPath_UserData().str());
+				if (suffix && !stricmp(suffix,".tga")) check(MAP_PREVIEW_DIR_PATH,TheGlobalData->getPath_UserData().str());
+			}
+		}
+	}
+#endif
 
 	if( Is_Open() ) 
 		Close();
@@ -191,7 +230,11 @@ char const * GameFileClass::Set_Name( char const *filename )
 	if( fileType == FILE_TYPE_W3D )
 	{
 		static const char *localizedPathFormat = "Data/%s/Art/W3D/";
+#if defined(__linux__)
+		sprintf(m_filePath,localizedPathFormat, ww3d_import::Attempt::is_active() ? import_language.str() : GetRegistryLanguage().str());
+#else
 		sprintf(m_filePath,localizedPathFormat, GetRegistryLanguage().str());
+#endif
 		strcat( m_filePath, filename );
 
 	}  // end if
@@ -200,7 +243,11 @@ char const * GameFileClass::Set_Name( char const *filename )
 	if( isImageFileType(fileType) )
 	{
 		static const char *localizedPathFormat = "Data/%s/Art/Textures/";
+#if defined(__linux__)
+		sprintf(m_filePath,localizedPathFormat, ww3d_import::Attempt::is_active() ? import_language.str() : GetRegistryLanguage().str());
+#else
 		sprintf(m_filePath,localizedPathFormat, GetRegistryLanguage().str());
+#endif
 		strcat( m_filePath, filename );
 
 	}  // end else if
@@ -371,6 +418,9 @@ int  GameFileClass::Open(char const *filename, int rights)
 //-------------------------------------------------------------------------------------------------
 int  GameFileClass::Open(int rights) 
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::file_provider(TheFileSystem,import_file_system);
+#endif
 	if( rights != READ ) 
 	{
 		return(false);

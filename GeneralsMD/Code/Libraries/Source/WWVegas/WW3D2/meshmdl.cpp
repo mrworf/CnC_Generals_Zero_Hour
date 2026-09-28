@@ -83,10 +83,16 @@ MeshModelClass::MeshModelClass(void) :
 {
 	Set_Flag(DIRTY_BOUNDS,true);
 
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();std::unique_ptr<MeshMatDescClass> descriptor(new MeshMatDescClass);
+	ww3d_import::Attempt::boundary();ww3d_clone::Ref<MaterialInfoClass> materials(new MaterialInfoClass);
+	DefMatDesc=descriptor.release();CurMatDesc=DefMatDesc;MatInfo=materials.release();
+#else
 	DefMatDesc = W3DNEW MeshMatDescClass;
 	CurMatDesc = DefMatDesc;
 	
 	MatInfo = NEW_REF( MaterialInfoClass, () );
+#endif
 	
 	return ;
 }

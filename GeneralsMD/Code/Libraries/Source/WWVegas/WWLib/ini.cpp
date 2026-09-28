@@ -99,6 +99,10 @@
 #include <alloca.h>
 #include <cctype>
 #include <cstdio>
+#if defined(__linux__)
+#include <memory>
+#include <new>
+#endif
 #if !defined(_MSC_VER)
 #define _alloca alloca
 #define _snprintf snprintf
@@ -129,6 +133,9 @@ static inline void OutputDebugString(const char *) {}
 // Instance of the static variables.
 bool INIClass::KeepBlankEntries = false;
 const int INIClass::MAX_LINE_LENGTH = 4096;
+#if defined(__linux__)
+thread_local void (*INIClass::SourceImportGuard)(std::size_t,std::size_t)=nullptr;
+#endif
 
 
 INIEntry::~INIEntry(void)
@@ -153,9 +160,19 @@ bool INIClass::Is_Loaded(void) const
 
 void INIClass::Initialize(void)
 {
+#if defined(__linux__)
+	Guard_Source_Import(1,sizeof(List<INISection *>));
+	std::unique_ptr<List<INISection *>> sections(new List<INISection *>);
+	Guard_Source_Import(1,sizeof(IndexClass<int,INISection *>));
+	std::unique_ptr<IndexClass<int,INISection *>> index(new IndexClass<int,INISection *>);
+	Guard_Source_Import(sizeof("<unknown>"),1);
+	std::unique_ptr<char[]> name(nstrdup("<unknown>"));
+	SectionList=sections.release();SectionIndex=index.release();Filename=name.release();
+#else
 	SectionList = W3DNEW List<INISection *> ();
 	SectionIndex = W3DNEW IndexClass<int, INISection *> ();
 	Filename = nstrdup("<unknown>");
+#endif
 }
 
 void INIClass::Shutdown(void)
@@ -248,7 +265,13 @@ INIClass::INIClass(const char *filename)
  *=============================================================================================*/
 INIClass::~INIClass(void)
 {
+#if defined(__linux__)
+	// Clear() recreates Filename, so it is not an unwind/destruction operation.
+	// Retire this owned graph directly, with no allocation or callback.
+	SectionList->Delete();
+#else
 	Clear();
+#endif
 	Shutdown();
 }
 
@@ -412,6 +435,9 @@ int INIClass::Load(Straw & ffile)
 		merge = true;
 	}
 
+#if defined(__linux__)
+	Guard_Source_Import(4096,1);
+#endif
 	CacheStraw file;
 	file.Get_From(ffile);
 
@@ -502,7 +528,16 @@ int INIClass::Load(Straw & ffile)
 			char * ptr = strchr(buffer, ']');
 			if (ptr != NULL) *ptr = '\0';
 			strtrim(buffer);
+#if defined(__linux__)
+			Guard_Source_Import(strlen(buffer)+1,1);
+			std::unique_ptr<char,decltype(&free)> section_name(strdup(buffer),free);
+			if (!section_name) throw std::bad_alloc();
+			Guard_Source_Import(1,sizeof(INISection));
+			std::unique_ptr<INISection> section_owner(new INISection(section_name.get()));section_name.release();
+			INISection* secptr=section_owner.get();
+#else
 			INISection * secptr = W3DNEW INISection(strdup(buffer));
+#endif
 			if (secptr == NULL) {
 				Clear();
 				return(false);
@@ -553,9 +588,23 @@ int INIClass::Load(Straw & ffile)
 				}
 
 
+#if defined(__linux__)
+				Guard_Source_Import(strlen(buffer)+1,1);
+				std::unique_ptr<char,decltype(&free)> entry_name(strdup(buffer),free);
+				if (!entry_name) throw std::bad_alloc();
+				Guard_Source_Import(strlen(divider)+1,1);
+				std::unique_ptr<char,decltype(&free)> entry_value(strdup(divider),free);
+				if (!entry_value) throw std::bad_alloc();
+				Guard_Source_Import(1,sizeof(INIEntry));
+				std::unique_ptr<INIEntry> entry_owner(new INIEntry(entry_name.get(),entry_value.get()));
+				entry_name.release();entry_value.release();INIEntry* entryptr=entry_owner.get();
+#else
 				INIEntry * entryptr = W3DNEW INIEntry(strdup(buffer), strdup(divider));
+#endif
 				if (entryptr == NULL) {
+#if !defined(__linux__)
 					delete secptr;
+#endif
 					Clear();
 					return(false);
 				}
@@ -563,12 +612,22 @@ int INIClass::Load(Straw & ffile)
 				// 12/09/97 EHC - check to see if an entry with this ID already exists
 				if (secptr->EntryIndex.Is_Present(entryptr->Index_ID())) {
 					DuplicateCRCError("INIClass::Load", secptr->Section, buffer);
+#if !defined(__linux__)
 					delete entryptr;
+#endif
 					continue;
 				}
 
+#if defined(__linux__)
+				Guard_Source_Import(secptr->EntryIndex.Count()+1,2*(sizeof(int)+sizeof(INIEntry*)));
+				if (!secptr->EntryIndex.Add_Index(entryptr->Index_ID(),entryptr)) return false;
+#else
 				secptr->EntryIndex.Add_Index(entryptr->Index_ID(), entryptr);
+#endif
 				secptr->EntryList.Add_Tail(entryptr);
+#if defined(__linux__)
+				entry_owner.release();
+#endif
 			}
 
 			/*
@@ -576,10 +635,20 @@ int INIClass::Load(Straw & ffile)
 			**	don't bother storing it.
 			*/
 			if (secptr->EntryList.Is_Empty()) {
+#if !defined(__linux__)
 				delete secptr;
+#endif
 			} else {
+#if defined(__linux__)
+				Guard_Source_Import(SectionIndex->Count()+1,2*(sizeof(int)+sizeof(INISection*)));
+				if (!SectionIndex->Add_Index(secptr->Index_ID(),secptr)) return false;
+#else
 				SectionIndex->Add_Index(secptr->Index_ID(), secptr);
+#endif
 				SectionList->Add_Tail(secptr);
+#if defined(__linux__)
+				section_owner.release();
+#endif
 			}
 		}
 	}

@@ -138,6 +138,7 @@
 #include "sphere.h"
 #include "boxrobj.h"
 #include "clone_graph.h"
+#include "asset_import.h"
 
 
 /*
@@ -213,6 +214,12 @@ public:
  *=============================================================================================*/
 PrototypeClass *HLodLoaderClass::Load_W3D( ChunkLoadClass &cload )
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();std::unique_ptr<HLodDefClass> candidate(new HLodDefClass);
+	if (candidate->Load_W3D(cload)!=WW3D_ERROR_OK) return nullptr;
+	ww3d_import::Attempt::boundary();auto* result=new HLodPrototypeClass(candidate.get());
+	candidate.release();return result;
+#else
 	HLodDefClass * def = W3DNEW HLodDefClass;
 
 	if (def == NULL)
@@ -230,6 +237,7 @@ PrototypeClass *HLodLoaderClass::Load_W3D( ChunkLoadClass &cload )
 		return proto;	
 	}
 	return NULL;
+#endif
 }
 
 
@@ -615,10 +623,20 @@ WW3DErrorType HLodDefClass::Load_W3D(ChunkLoadClass & cload)
 		switch(cload.Cur_Chunk_ID()) 
 		{
 			case W3D_CHUNK_HLOD_AGGREGATE_ARRAY:
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active() && !Aggregates.Load_W3D(cload)) return WW3D_ERROR_LOAD_FAILED;
+				if (!ww3d_import::Attempt::is_active()) Aggregates.Load_W3D(cload);
+#else
 				Aggregates.Load_W3D(cload);
+#endif
 				break;
 			case W3D_CHUNK_HLOD_PROXY_ARRAY:
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active() && !read_proxy_array(cload)) return WW3D_ERROR_LOAD_FAILED;
+				if (!ww3d_import::Attempt::is_active()) read_proxy_array(cload);
+#else
 				read_proxy_array(cload);
+#endif
 				break;
 		}
 		cload.Close_Chunk();
@@ -662,8 +680,20 @@ bool HLodDefClass::read_header(ChunkLoadClass & cload)
 		memchr(header.HierarchyName, '\0', sizeof(header.HierarchyName)) == NULL) return false;
 
 	// Copy the name into our internal variable
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		ww3d_import::Attempt::reserve(strlen(header.Name)+strlen(header.HierarchyName)+2,1);
+		ww3d_import::Attempt::reserve(header.LodCount,sizeof(SubObjectArrayClass));ww3d_import::Attempt::boundary();
+	}
+#endif
 	Name = ::_strdup(header.Name);
+#if defined(__linux__)
+	if (!Name) throw std::bad_alloc();ww3d_import::Attempt::boundary();
+#endif
 	HierarchyTreeName = ::strdup(header.HierarchyName);
+#if defined(__linux__)
+	if (!HierarchyTreeName) throw std::bad_alloc();ww3d_import::Attempt::boundary();
+#endif
 	LodCount = header.LodCount;
 	Lod = W3DNEWARRAY SubObjectArrayClass[LodCount];
 	return true;
@@ -703,6 +733,12 @@ bool HLodDefClass::read_proxy_array(ChunkLoadClass & cload)
 	if (header.ModelCount > 100000 ||
 		header.ModelCount > cload.Cur_Chunk_Length() / (sizeof(W3dHLodSubObjectStruct) + 8)) return false;
 
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (header.ModelCount>65536) return false;
+		ww3d_import::Attempt::reserve(header.ModelCount,sizeof(ProxyClass));ww3d_import::Attempt::boundary();
+	}
+#endif
 	ProxyArray = NEW_REF(ProxyArrayClass,(header.ModelCount));
 
 	/*
@@ -715,7 +751,12 @@ bool HLodDefClass::read_proxy_array(ChunkLoadClass & cload)
 		W3dHLodSubObjectStruct subobjdef;
 		if (cload.Read(&subobjdef,sizeof(subobjdef)) != sizeof(subobjdef)) return false;
 		if (!cload.Close_Chunk()) return false;
-
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active()) {
+			if (strnlen(subobjdef.Name,sizeof(subobjdef.Name))==sizeof(subobjdef.Name)) return false;
+			ww3d_import::Attempt::reserve(strlen(subobjdef.Name)+1,1);ww3d_import::Attempt::boundary();
+		}
+#endif
 		(*ProxyArray)[imodel].Init(subobjdef);
 	}
 	return true;
@@ -819,6 +860,12 @@ bool HLodDefClass::SubObjectArrayClass::Load_W3D(ChunkLoadClass & cload)
 	if (header.ModelCount > 100000 ||
 		header.ModelCount > cload.Cur_Chunk_Length() / (sizeof(W3dHLodSubObjectStruct) + 8)) return false;
 
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (ModelName || BoneIndex || header.ModelCount>65536) return false;
+		ww3d_import::Attempt::reserve(header.ModelCount,sizeof(char*)+sizeof(int));ww3d_import::Attempt::boundary();
+	}
+#endif
 	ModelCount = header.ModelCount;
 	MaxScreenSize = header.MaxScreenSize;
 	ModelName = W3DNEWARRAY char * [ModelCount]();
@@ -837,7 +884,13 @@ bool HLodDefClass::SubObjectArrayClass::Load_W3D(ChunkLoadClass & cload)
 
 		if (!cload.Close_Chunk()) return false;
 
+#if defined(__linux__)
+		ww3d_import::Attempt::reserve(strlen(subobjdef.Name)+1,1);ww3d_import::Attempt::boundary();
+#endif
 		ModelName[imodel] = strdup(subobjdef.Name);
+#if defined(__linux__)
+		if (!ModelName[imodel]) throw std::bad_alloc();
+#endif
 		BoneIndex[imodel] = subobjdef.BoneIndex;
 	}
 	return true;

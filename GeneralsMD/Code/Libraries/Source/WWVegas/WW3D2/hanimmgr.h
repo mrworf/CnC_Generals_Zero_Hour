@@ -76,6 +76,9 @@ private:
 
 class HAnimManagerClass
 {
+#if defined(__linux__)
+	friend class ww3d_import::Attempt;
+#endif
 
 public:
 	HAnimManagerClass(void);

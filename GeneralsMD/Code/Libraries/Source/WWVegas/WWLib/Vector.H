@@ -84,11 +84,15 @@ class	NoInitClass;
 #pragma warning(disable : 4505)
 
 
+#if defined(__linux__)
+namespace ww3d_import { class Attempt; }
+#endif
 template<class T>
 class VectorClass
 {
 #if defined(__linux__)
 	friend class W3DAssetManager;
+	friend class ww3d_import::Attempt;
 	friend class MaterialInfoClass;
 #if defined(ZH_WW3D_CPU_ONLY)
 	friend class DX8MeshRendererClass;
@@ -495,6 +499,7 @@ class DynamicVectorClass : public VectorClass<T>
 {
 #if defined(__linux__)
 	friend class W3DAssetManager;
+	friend class ww3d_import::Attempt;
 	friend class MaterialInfoClass;
 #if defined(ZH_WW3D_CPU_ONLY)
 	friend class DX8MeshRendererClass;

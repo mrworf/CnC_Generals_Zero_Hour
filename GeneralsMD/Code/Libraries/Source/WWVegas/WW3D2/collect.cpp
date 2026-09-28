@@ -80,6 +80,7 @@
 #include "ww3d.h"
 #include "w3derr.h"
 #include "clone_graph.h"
+#include "asset_import.h"
 #include "prop_graph.h"
 #if defined(__linux__)
 #include <cmath>
@@ -1122,6 +1123,12 @@ WW3DErrorType CollectionDefClass::Load(ChunkLoadClass & cload)
 	if (cload.Cur_Chunk_ID() != W3D_CHUNK_COLLECTION_HEADER) goto Error;
 	if (cload.Read(&header,sizeof(header)) != sizeof(header)) goto Error;
 	if (!cload.Close_Chunk()) goto Error;
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (strnlen(header.Name,sizeof(header.Name))==sizeof(header.Name) || !header.Name[0] || header.RenderObjectCount>65536) goto Error;
+		ww3d_import::Attempt::reserve(header.RenderObjectCount,sizeof(char*));ww3d_import::Attempt::boundary();
+	}
+#endif
 
 	strncpy(Name,header.Name,W3D_NAME_LEN);
 	ObjectNames.Resize(header.RenderObjectCount);
@@ -1131,6 +1138,16 @@ WW3DErrorType CollectionDefClass::Load(ChunkLoadClass & cload)
 		{
 		case W3D_CHUNK_COLLECTION_OBJ_NAME:
 			{
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active()) {
+					const unsigned bytes=cload.Cur_Chunk_Length();
+					if (!bytes || bytes>255 || ObjectNames.Count()>=int(header.RenderObjectCount)) goto Error;
+					ww3d_import::Attempt::reserve(bytes,1);ww3d_import::Attempt::boundary();
+					std::unique_ptr<char[]> name(new char[bytes]);
+					if (cload.Read(name.get(),bytes)!=bytes || name[bytes-1] || strnlen(name.get(),bytes)!=bytes-1) goto Error;
+					ww3d_import::Attempt::append_candidate(ObjectNames,name.get());name.release();break;
+				}
+#endif
 				WWASSERT(cload.Cur_Chunk_Length() > 0);
 				char * name = W3DNEWARRAY char [cload.Cur_Chunk_Length()];
 				cload.Read(name,cload.Cur_Chunk_Length());
@@ -1140,6 +1157,23 @@ WW3DErrorType CollectionDefClass::Load(ChunkLoadClass & cload)
 
 		case W3D_CHUNK_PLACEHOLDER:
 			{
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active()) {
+					W3dPlaceholderStruct info;
+					if (cload.Read(&info,sizeof(info))!=sizeof(info) || !info.name_len || info.name_len>254 ||
+						cload.Cur_Chunk_Length()!=sizeof(info)+info.name_len) goto Error;
+					for (const auto& row:info.transform) for (float value:row) if (!std::isfinite(value)) goto Error;
+					ww3d_import::Attempt::reserve(info.name_len+1,1);ww3d_import::Attempt::boundary();
+					std::unique_ptr<char[]> name(new char[info.name_len+1]);
+					if (cload.Read(name.get(),info.name_len)!=info.name_len || strnlen(name.get(),info.name_len)!=info.name_len) goto Error;
+					name[info.name_len]=0;
+					Matrix3D transform(info.transform[0][0],info.transform[1][0],info.transform[2][0],info.transform[3][0],
+						info.transform[0][1],info.transform[1][1],info.transform[2][1],info.transform[3][1],
+						info.transform[0][2],info.transform[1][2],info.transform[2][2],info.transform[3][2]);
+					ww3d_import::Attempt::reserve(ProxyList.Count()+1,255);ww3d_import::Attempt::boundary();
+					ProxyClass candidate(name.get(),transform);ww3d_import::Attempt::append_candidate(ProxyList,candidate);break;
+				}
+#endif
 				// Read the placeholder information from the chunk
 				WWASSERT(cload.Cur_Chunk_Length() > 0);
 				W3dPlaceholderStruct info;
@@ -1164,13 +1198,25 @@ WW3DErrorType CollectionDefClass::Load(ChunkLoadClass & cload)
 			}
 
 		case W3D_CHUNK_POINTS:
+#if defined(__linux__)
+			if (ww3d_import::Attempt::is_active() && SnapPoints) goto Error;
+			ww3d_import::Attempt::boundary();
+#endif
 			SnapPoints = NEW_REF(SnapPointsClass, ());
+#if defined(__linux__)
+			if (ww3d_import::Attempt::is_active() && SnapPoints->Load_W3D(cload)!=WW3D_ERROR_OK) goto Error;
+			if (!ww3d_import::Attempt::is_active()) SnapPoints->Load_W3D(cload);
+#else
 			SnapPoints->Load_W3D(cload);
+#endif
 			break;
 		}
 
 		cload.Close_Chunk();
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && ObjectNames.Count()!=int(header.RenderObjectCount)) goto Error;
+#endif
 	
 	return WW3D_ERROR_OK;
 
@@ -1193,6 +1239,12 @@ Error:
  *=============================================================================================*/
 PrototypeClass * CollectionLoaderClass::Load_W3D(ChunkLoadClass & cload)
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();std::unique_ptr<CollectionDefClass> candidate(new CollectionDefClass);
+	if (candidate->Load(cload)!=WW3D_ERROR_OK) return nullptr;
+	ww3d_import::Attempt::boundary();auto* result=new CollectionPrototypeClass(candidate.get());
+	candidate.release();return result;
+#else
 	CollectionDefClass * def = W3DNEW CollectionDefClass;
 
 	if (def == NULL) {
@@ -1212,4 +1264,5 @@ PrototypeClass * CollectionLoaderClass::Load_W3D(ChunkLoadClass & cload)
 		return proto;
 	
 	}
+#endif
 }

@@ -64,6 +64,10 @@
 
 #include "aabtree.h"
 #include "clone_graph.h"
+#include "asset_import.h"
+#if defined(__linux__)
+#include <cmath>
+#endif
 #include "aabtreebuilder.h"
 #include "wwdebug.h"
 #include "tri.h"
@@ -112,15 +116,30 @@ AABTreeClass::AABTreeClass(void) :
  *   5/23/2000  gth : Created.                                                                 *
  *=============================================================================================*/
 AABTreeClass::AABTreeClass(AABTreeBuilderClass * builder)
+#if defined(__linux__)
+	: NodeCount(0),Nodes(NULL),PolyCount(0),PolyIndices(NULL),Mesh(NULL)
+#endif
 {
+#if defined(__linux__)
+	try {
+#endif
 	NodeCount = builder->Node_Count();
+#if defined(__linux__)
+	ww3d_import::Attempt::reserve(NodeCount,sizeof(CullNodeStruct));ww3d_import::Attempt::boundary();
+#endif
 	Nodes = W3DNEWARRAY AABTreeClass::CullNodeStruct[NodeCount];
 
 	PolyCount = builder->Poly_Count();
+#if defined(__linux__)
+	ww3d_import::Attempt::reserve(PolyCount,sizeof(uint32));ww3d_import::Attempt::boundary();
+#endif
 	PolyIndices = W3DNEWARRAY uint32[PolyCount];
 
 	int curpolyindex = 0;
 	Build_Tree_Recursive(builder->Root,curpolyindex);
+#if defined(__linux__)
+	} catch (...) { Reset();throw; }
+#endif
 }
 
 
@@ -1183,29 +1202,75 @@ void AABTreeClass::Load_W3D(ChunkLoadClass & cload)
 	Reset();
 	
 	W3dMeshAABTreeHeader header;
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (!cload.Open_Chunk() || cload.Cur_Chunk_ID()!=W3D_CHUNK_AABTREE_HEADER || cload.Read(&header,sizeof(header))!=sizeof(header))
+			throw std::runtime_error("original import cull-tree header is malformed");
+		cload.Close_Chunk();
+		if (!header.NodeCount || header.NodeCount>65536 || header.PolyCount>1000000)
+			throw std::runtime_error("original import cull-tree extent is not admitted");
+		ww3d_import::Attempt::reserve(header.NodeCount,sizeof(CullNodeStruct));
+		ww3d_import::Attempt::reserve(header.PolyCount,sizeof(uint32));ww3d_import::Attempt::boundary();
+	} else
+#endif
+	{
 	cload.Open_Chunk();
 	WWASSERT(cload.Cur_Chunk_ID() == W3D_CHUNK_AABTREE_HEADER);
 	cload.Read(&header,sizeof(header));
 	cload.Close_Chunk();
+	}
 
 	NodeCount = header.NodeCount;
 	PolyCount = header.PolyCount;
 	Nodes = W3DNEWARRAY CullNodeStruct[NodeCount];
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+#endif
 	PolyIndices = W3DNEWARRAY uint32[PolyCount];
+	bool indices=false,nodes=false;
 
 	while (cload.Open_Chunk()) {
 		switch (cload.Cur_Chunk_ID()) 
 		{
 		case W3D_CHUNK_AABTREE_POLYINDICES:
+#if defined(__linux__)
+			if (ww3d_import::Attempt::is_active() && (indices || cload.Cur_Chunk_Length()!=std::size_t(PolyCount)*sizeof(uint32)))
+				throw std::runtime_error("original import cull-tree index extent is malformed");
+#endif
 			Read_Poly_Indices(cload);
+			indices=true;
 			break;
 
 		case W3D_CHUNK_AABTREE_NODES:
+#if defined(__linux__)
+			if (ww3d_import::Attempt::is_active() && (nodes || cload.Cur_Chunk_Length()!=std::size_t(NodeCount)*sizeof(W3dMeshAABTreeNode)))
+				throw std::runtime_error("original import cull-tree node extent is malformed");
+#endif
 			Read_Nodes(cload);
+			nodes=true;
 			break;
 		}
 		cload.Close_Chunk();
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (!indices || !nodes) throw std::runtime_error("original import cull-tree payload is incomplete");
+		for (int i=0;i<NodeCount;++i) {
+			const auto& n=Nodes[i];
+			if (!std::isfinite(n.Min.X) || !std::isfinite(n.Min.Y) || !std::isfinite(n.Min.Z) ||
+				!std::isfinite(n.Max.X) || !std::isfinite(n.Max.Y) || !std::isfinite(n.Max.Z) ||
+				n.Min.X>n.Max.X || n.Min.Y>n.Max.Y || n.Min.Z>n.Max.Z)
+				throw std::runtime_error("original import cull-tree bounds are malformed");
+			if (n.FrontOrPoly0&AABTREE_LEAF_FLAG) {
+				const unsigned first=n.FrontOrPoly0&~AABTREE_LEAF_FLAG;
+				if (first>unsigned(PolyCount) || n.BackOrPolyCount>unsigned(PolyCount)-first)
+					throw std::runtime_error("original import cull-tree leaf extent is malformed");
+			} else if (n.FrontOrPoly0<=unsigned(i) || n.FrontOrPoly0>=unsigned(NodeCount) ||
+				n.BackOrPolyCount<=unsigned(i) || n.BackOrPolyCount>=unsigned(NodeCount))
+				throw std::runtime_error("original import cull-tree child identity is malformed");
+		}
+	}
+#endif
 }
 
 
@@ -1223,7 +1288,10 @@ void AABTreeClass::Load_W3D(ChunkLoadClass & cload)
  *=============================================================================================*/
 void AABTreeClass::Read_Poly_Indices(ChunkLoadClass & cload)
 {
-	cload.Read(PolyIndices,sizeof(uint32) * PolyCount);
+	const int actual=cload.Read(PolyIndices,sizeof(uint32) * PolyCount);
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && actual!=int(sizeof(uint32)*PolyCount)) throw std::runtime_error("original import cull-tree index read is incomplete");
+#endif
 }
 
 
@@ -1244,7 +1312,10 @@ void AABTreeClass::Read_Nodes(ChunkLoadClass & cload)
 	W3dMeshAABTreeNode w3dnode;
 
 	for (int i=0; i<NodeCount; i++) {
-		cload.Read(&w3dnode,sizeof(w3dnode));
+		const int actual=cload.Read(&w3dnode,sizeof(w3dnode));
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active() && actual!=sizeof(w3dnode)) throw std::runtime_error("original import cull-tree node read is incomplete");
+#endif
 
 		Nodes[i].Min.X = w3dnode.Min.X;
 		Nodes[i].Min.Y = w3dnode.Min.Y;
@@ -1258,4 +1329,3 @@ void AABTreeClass::Read_Nodes(ChunkLoadClass & cload)
 		Nodes[i].BackOrPolyCount = w3dnode.BackOrPolyCount;
 	}
 }
-

@@ -110,9 +110,17 @@ NullPrototypeClass::NullPrototypeClass (const W3dNullObjectStruct &null)
 ** NullLoaderClass
 */
 
+#include "asset_import.h"
 PrototypeClass * NullLoaderClass::Load_W3D (ChunkLoadClass &cload)
 {
 	W3dNullObjectStruct null;
-	cload.Read(&null,sizeof(null));
+	const auto read=cload.Read(&null,sizeof(null));
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (read!=sizeof(null) || cload.Cur_Chunk_Length()!=sizeof(null) ||
+			strnlen(null.Name,sizeof(null.Name))==sizeof(null.Name) || !null.Name[0]) return nullptr;
+		ww3d_import::Attempt::boundary();
+	}
+#endif
 	return W3DNEW NullPrototypeClass(null);
 }

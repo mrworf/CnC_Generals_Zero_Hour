@@ -64,6 +64,7 @@
 #include "hrawanim.h"
 #include "motchan.h"
 #include "clone_graph.h"
+#include "asset_import.h"
 #if defined(__linux__)
 #include <cstdint>
 #include <cmath>
@@ -252,6 +253,16 @@ int HTreeClass::Load_W3D(ChunkLoadClass & cload)
 
 	cload.Close_Chunk();
 
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (strnlen(header.Name,sizeof(header.Name))==sizeof(header.Name) || !header.Name[0] ||
+			header.NumPivots==0 || header.NumPivots>65536 ||
+			(header.Version<W3D_MAKE_VERSION(3,0) && header.NumPivots==65536)) return LOAD_ERROR;
+		ww3d_import::Attempt::reserve(header.NumPivots+1,sizeof(PivotClass));
+		ww3d_import::Attempt::boundary();
+	}
+#endif
+
 	/*
 	** Check the version, if < 3.0 add a root node for everything
 	** to attach to.  The load_pivots function will also have to be
@@ -271,6 +282,7 @@ int HTreeClass::Load_W3D(ChunkLoadClass & cload)
 	if (NumPivots > 0) {
 		Pivot = MSGW3DNEWARRAY("HTreeClass::Pivot") PivotClass[NumPivots];
 	}
+	bool have_pivots=false;
 
 	/*
 	** Now, read in all of the other chunks for this hierarchy.
@@ -281,9 +293,13 @@ int HTreeClass::Load_W3D(ChunkLoadClass & cload)
 		switch (cload.Cur_Chunk_ID()) {
 
 			case W3D_CHUNK_PIVOTS:
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active() && have_pivots) goto Error;
+#endif
 				if (!read_pivots(cload,pre30)) {
 					goto Error;
 				}			
+				have_pivots=true;
 				break;
 
 			default:
@@ -292,6 +308,10 @@ int HTreeClass::Load_W3D(ChunkLoadClass & cload)
 		}
 		cload.Close_Chunk();
 	}
+
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && !have_pivots) goto Error;
+#endif
 
 	return OK;
 
@@ -320,6 +340,10 @@ bool HTreeClass::read_pivots(ChunkLoadClass & cload,bool pre30)
 	Matrix3D mtx;
 	
 	int first_piv = 0;
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() &&
+		cload.Cur_Chunk_Length()!=std::size_t(NumPivots-(pre30 ? 1 : 0))*sizeof(W3dPivotStruct)) return false;
+#endif
 
 	/*
 	** At (w3d file format) version 3.0, I added a node for the root.  Pre-3.0 htrees didn't have
@@ -340,6 +364,18 @@ bool HTreeClass::read_pivots(ChunkLoadClass & cload,bool pre30)
 		if (cload.Read(&piv,sizeof(W3dPivotStruct)) != sizeof(W3dPivotStruct)) {
 			return false;
 		}
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active()) {
+			if (strnlen(piv.Name,sizeof(piv.Name))==sizeof(piv.Name) ||
+				(!pre30 && ((pidx==0 && piv.ParentIdx!=0xffffffffu) ||
+				 (pidx!=0 && piv.ParentIdx>=unsigned(pidx)))) ||
+				(pre30 && piv.ParentIdx!=0xffffffffu && piv.ParentIdx>=unsigned(pidx-1))) return false;
+			const float values[]={piv.Translation.X,piv.Translation.Y,piv.Translation.Z,
+				piv.Rotation.Q[0],piv.Rotation.Q[1],piv.Rotation.Q[2],piv.Rotation.Q[3]};
+			for (float value:values) if (!std::isfinite(value)) return false;
+			ww3d_import::Attempt::boundary();
+		}
+#endif
 
 		memcpy(Pivot[pidx].Name,piv.Name,W3D_NAME_LEN);
 		Pivot[pidx].Index = pidx;		

@@ -50,6 +50,7 @@
 #include "OriginalW3DDeviceUnavailable.h"
 #include "original_gpu_edge.h"
 #include "house_color_texture_cpu.h"
+#include "asset_import.h"
 #include <memory>
 #include <vector>
 #include <cmath>
@@ -1185,6 +1186,9 @@ static Load_3D_Asset_Recursions=0;
 //---------------------------------------------------------------------
 bool W3DAssetManager::Load_3D_Assets( const char * filename )
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) ww3d_import::Attempt::name(filename);
+#endif
 #ifdef DUMP_PERF_STATS
 		Load_3D_Asset_Recursions++;
 

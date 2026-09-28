@@ -43,6 +43,7 @@
 #include "chunkio.h"
 #include "w3d_file.h"
 #include "assetmgr.h"
+#include "asset_import.h"
 #include "ww3d.h"
 #if defined(ZH_WW3D_CPU_ONLY)
 #include <stdexcept>
@@ -1004,8 +1005,13 @@ TextureClass* Load_Texture(ChunkLoadClass & cload)
 {
 	// Assume failure
 	TextureClass *newtex = NULL;
+#if defined(__linux__)
+	struct LocalTexture { TextureClass*& value;bool returned=false;
+		~LocalTexture() { if (!returned && value) value->Release_Ref(); } } local{newtex};
+#endif
 
 	char name[256] = {};
+	bool named=false;
 	if (cload.Open_Chunk () && (cload.Cur_Chunk_ID () == W3D_CHUNK_TEXTURE)) 
 	{
 
@@ -1018,6 +1024,10 @@ TextureClass* Load_Texture(ChunkLoadClass & cload)
 		while (cload.Open_Chunk()) {
 			switch (cload.Cur_Chunk_ID()) {
 				case W3D_CHUNK_TEXTURE_NAME:
+#if defined(__linux__)
+					if (ww3d_import::Attempt::is_active() && (named || !cload.Cur_Chunk_Length() || cload.Cur_Chunk_Length()>sizeof(name)))
+						throw std::runtime_error("original import texture name exceeds source extent");
+#endif
 #if defined(ZH_WW3D_CPU_ONLY)
 					if (cload.Cur_Chunk_Length() == 0 || cload.Cur_Chunk_Length() > sizeof(name)) {
 						cload.Close_Chunk();
@@ -1025,11 +1035,24 @@ TextureClass* Load_Texture(ChunkLoadClass & cload)
 						return NULL;
 					}
 #endif
-					cload.Read(&name,cload.Cur_Chunk_Length());
+					if (cload.Read(&name,cload.Cur_Chunk_Length())!=cload.Cur_Chunk_Length()) {
+#if defined(__linux__)
+						if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import texture name is truncated");
+#endif
+					}
+#if defined(__linux__)
+					if (ww3d_import::Attempt::is_active() && strnlen(name,cload.Cur_Chunk_Length())==cload.Cur_Chunk_Length())
+						throw std::runtime_error("original import texture name is malformed");
+#endif
 					name[sizeof(name) - 1] = '\0';
+					named=true;
 					break;
 
 				case W3D_CHUNK_TEXTURE_INFO:
+#if defined(__linux__)
+					if (ww3d_import::Attempt::is_active() && (hastexinfo || cload.Cur_Chunk_Length()!=sizeof(texinfo)))
+						throw std::runtime_error("original import texture info is malformed");
+#endif
 #if defined(ZH_WW3D_CPU_ONLY)
 					if (cload.Cur_Chunk_Length() != sizeof(texinfo)) {
 						cload.Close_Chunk();
@@ -1037,14 +1060,30 @@ TextureClass* Load_Texture(ChunkLoadClass & cload)
 						return NULL;
 					}
 #endif
-					cload.Read(&texinfo,sizeof(W3dTextureInfoStruct));
+					if (cload.Read(&texinfo,sizeof(W3dTextureInfoStruct))!=sizeof(texinfo)) {
+#if defined(__linux__)
+						if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import texture info is truncated");
+#endif
+					}
 					hastexinfo = true;
 					break;
 			};
 			cload.Close_Chunk();
 		}
 		cload.Close_Chunk();
-		if (name[0] == '\0') return NULL;
+		if (name[0] == '\0') {
+#if defined(__linux__)
+			if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import texture name is missing");
+#endif
+			return NULL;
+		}
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active() && hastexinfo &&
+			((texinfo.Attributes&W3DTEXTURE_TYPE_MASK)!=W3DTEXTURE_TYPE_COLORMAP &&
+			 (texinfo.Attributes&W3DTEXTURE_TYPE_MASK)!=W3DTEXTURE_TYPE_BUMPMAP))
+			throw std::runtime_error("original import texture profile is unsupported");
+		ww3d_import::Attempt::boundary();
+#endif
 
 		/*
 		** Get the texture from the asset manager
@@ -1140,6 +1179,9 @@ TextureClass* Load_Texture(ChunkLoadClass & cload)
 	}
 
 	// Return a pointer to the new texture
+#if defined(__linux__)
+	local.returned=true;
+#endif
 	return newtex;
 }
 

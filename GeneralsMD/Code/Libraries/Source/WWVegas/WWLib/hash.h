@@ -46,6 +46,9 @@
 #include "always.h"
 
 class HashTableIteratorClass;
+#if defined(__linux__)
+namespace ww3d_import { class Attempt; }
+#endif
 
 
 /*
@@ -70,6 +73,9 @@ private:
 ** HashTableClass
 */
 class HashTableClass {
+#if defined(__linux__)
+	friend class ww3d_import::Attempt;
+#endif
 
 public:
 	HashTableClass( int size );

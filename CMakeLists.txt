@@ -2833,6 +2833,75 @@ if(ZH_BUILD_TESTS)
     $<TARGET_OBJECTS:zh_original_w3d_factory_full>
     $<TARGET_OBJECTS:zh_original_w3d_draw_full>)
   get_target_property(prop_owner_includes original_w3d_presentation_tests INCLUDE_DIRECTORIES)
+  add_executable(original_w3d_asset_import_tests
+    tests/original_rendering/test_asset_import.cpp
+    $<TARGET_OBJECTS:zh_original_lifecycle_spine>
+    $<TARGET_OBJECTS:zh_original_config_spine>
+    $<TARGET_OBJECTS:zh_original_w3d_factory_full>
+    $<TARGET_OBJECTS:zh_original_w3d_draw_full>)
+  target_include_directories(original_w3d_asset_import_tests PRIVATE ${prop_owner_includes})
+  target_compile_definitions(original_w3d_asset_import_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
+  target_compile_options(original_w3d_asset_import_tests PRIVATE -fpermissive -ffunction-sections -fdata-sections)
+  target_link_libraries(original_w3d_asset_import_tests PRIVATE
+    zh_original_config_providers zh_original_lifecycle zh_original_data zh_os_posix
+    zh_compression zh_w3d zh_wwsupport zh_original_process zh_renderer_sdl_gpu zh_build_options)
+  target_link_options(original_w3d_asset_import_tests PRIVATE -Wl,--gc-sections
+    "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/original-w3d-asset-import.link.map")
+  add_test(NAME original_w3d_asset_import COMMAND original_w3d_asset_import_tests)
+  set_tests_properties(original_w3d_asset_import PROPERTIES LABELS "original-rendering;source-identity;negative")
+  set(asset_import_identity_args)
+  set(asset_import_removal_args)
+  foreach(asset_import_source IN ITEMS
+      "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/W3DAssetManager.cpp"
+      "GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/W3DFileSystem.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/assetmgr.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/proto.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/htreemgr.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/htree.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hanimmgr.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hrawanim.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hcanim.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hmorphanim.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/motchan.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hlod.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/distlod.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/collect.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/agg_def.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/hmdldef.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/snappts.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/boxrobj.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/nullrobj.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/ringobj.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/sphereobj.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dazzle.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/meshmdlio.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/meshgeometry.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/meshmdl.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/meshmatdesc.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/matinfo.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/vertmaterial.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/mapper.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/texture.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/aabtree.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/aabtreebuilder.cpp"
+      "GeneralsMD/Code/Libraries/Source/WWVegas/WWLib/ini.cpp")
+    list(APPEND asset_import_identity_args --required "${asset_import_source}")
+    list(APPEND asset_import_removal_args --provider "${asset_import_source}")
+  endforeach()
+  add_test(NAME original_w3d_asset_import_identity COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-asset-import.link.map"
+    --executable "$<TARGET_FILE:original_w3d_asset_import_tests>"
+    --witness "strong bounded native asset import" ${asset_import_identity_args})
+  add_test(NAME original_w3d_asset_import_provider_removal COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_provider_removal.py"
+    --checker "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_original_identity.py"
+    --compile-commands "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json"
+    --link-map "${CMAKE_CURRENT_BINARY_DIR}/original-w3d-asset-import.link.map"
+    --executable "$<TARGET_FILE:original_w3d_asset_import_tests>" ${asset_import_removal_args})
+  set_tests_properties(original_w3d_asset_import_identity original_w3d_asset_import_provider_removal
+    PROPERTIES LABELS "original-rendering;source-identity;negative")
   target_include_directories(original_w3d_prop_owner_tests PRIVATE ${prop_owner_includes})
   target_compile_definitions(original_w3d_prop_owner_tests PRIVATE NDEBUG ZH_WW3D_CPU_ONLY=1)
   target_compile_options(original_w3d_prop_owner_tests PRIVATE -fpermissive -ffunction-sections -fdata-sections)

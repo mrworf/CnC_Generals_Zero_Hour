@@ -87,6 +87,10 @@
 
 #include "meshgeometry.h"
 #include "clone_graph.h"
+#include "asset_import.h"
+#if defined(__linux__)
+#include <cmath>
+#endif
 #include "aabtree.h"
 #include "chunkio.h"
 #include "aabox.h"
@@ -1800,6 +1804,9 @@ WW3DErrorType MeshGeometryClass::read_chunks(ChunkLoadClass & cload)
  *=============================================================================================*/
 WW3DErrorType MeshGeometryClass::read_vertices(ChunkLoadClass & cload)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && cload.Cur_Chunk_Length()!=std::size_t(VertexCount)*sizeof(W3dVectorStruct)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	W3dVectorStruct vert;
 	Vector3 * loc = Vertex->Get_Array();
 	assert(loc);
@@ -1811,6 +1818,9 @@ WW3DErrorType MeshGeometryClass::read_vertices(ChunkLoadClass & cload)
 		}
 		
 		loc[i].X = vert.X;
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active() && (!std::isfinite(vert.X) || !std::isfinite(vert.Y) || !std::isfinite(vert.Z))) return WW3D_ERROR_LOAD_FAILED;
+#endif
 		loc[i].Y = vert.Y;
 		loc[i].Z = vert.Z;
 	}
@@ -1833,6 +1843,9 @@ WW3DErrorType MeshGeometryClass::read_vertices(ChunkLoadClass & cload)
  *=============================================================================================*/
 WW3DErrorType MeshGeometryClass::read_vertex_normals(ChunkLoadClass & cload)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && cload.Cur_Chunk_Length()!=std::size_t(VertexCount)*sizeof(W3dVectorStruct)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	W3dVectorStruct norm;
 	Vector3 * mdlnorms = get_vert_normals();
 	WWASSERT(mdlnorms);
@@ -1842,6 +1855,9 @@ WW3DErrorType MeshGeometryClass::read_vertex_normals(ChunkLoadClass & cload)
 			return WW3D_ERROR_LOAD_FAILED;
 		}
 
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active() && (!std::isfinite(norm.X) || !std::isfinite(norm.Y) || !std::isfinite(norm.Z))) return WW3D_ERROR_LOAD_FAILED;
+#endif
 		mdlnorms[i].Set(norm.X,norm.Y,norm.Z);
 	}
 
@@ -1863,6 +1879,9 @@ WW3DErrorType MeshGeometryClass::read_vertex_normals(ChunkLoadClass & cload)
  *=============================================================================================*/
 WW3DErrorType MeshGeometryClass::read_triangles(ChunkLoadClass & cload)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && cload.Cur_Chunk_Length()!=std::size_t(PolyCount)*sizeof(W3dTriStruct)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	W3dTriStruct tri;
 
 	// cache pointers to various arrays in the surrender mesh
@@ -1879,6 +1898,12 @@ WW3DErrorType MeshGeometryClass::read_triangles(ChunkLoadClass & cload)
 		}
 
 		// set the vertex indices
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active() && (tri.Vindex[0]>=unsigned(VertexCount) || tri.Vindex[1]>=unsigned(VertexCount) ||
+			tri.Vindex[2]>=unsigned(VertexCount) || tri.Vindex[0]>65535 || tri.Vindex[1]>65535 || tri.Vindex[2]>65535 ||
+			tri.Attributes>=256 || !std::isfinite(tri.Normal.X) || !std::isfinite(tri.Normal.Y) ||
+			!std::isfinite(tri.Normal.Z) || !std::isfinite(tri.Dist))) return WW3D_ERROR_LOAD_FAILED;
+#endif
 		vi[i].I = tri.Vindex[0];
 		vi[i].J = tri.Vindex[1];
 		vi[i].K = tri.Vindex[2];
@@ -1927,11 +1952,20 @@ WW3DErrorType MeshGeometryClass::read_user_text(ChunkLoadClass & cload)
 	/*
 	** Allocate the buffer and read in the text
 	*/
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (!textlen) return WW3D_ERROR_LOAD_FAILED;
+		ww3d_import::Attempt::reserve(textlen,sizeof(char));ww3d_import::Attempt::boundary();
+	}
+#endif
 	UserText = NEW_REF(ShareBufferClass<char>,(textlen, "MeshGeometryClass::UserText"));
 
 	if (cload.Read(UserText->Get_Array(),textlen) != textlen) {
 		return WW3D_ERROR_LOAD_FAILED;
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && !memchr(UserText->Get_Array(),0,textlen)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 
 	return WW3D_ERROR_OK;	
 }
@@ -1951,6 +1985,9 @@ WW3DErrorType MeshGeometryClass::read_user_text(ChunkLoadClass & cload)
  *=============================================================================================*/
 WW3DErrorType MeshGeometryClass::read_vertex_influences(ChunkLoadClass & cload)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && cload.Cur_Chunk_Length()!=std::size_t(VertexCount)*sizeof(W3dVertInfStruct)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	W3dVertInfStruct vinf;
 	uint16 * links = get_bone_links(true);
 	WWASSERT(links);
@@ -1982,6 +2019,9 @@ WW3DErrorType MeshGeometryClass::read_vertex_influences(ChunkLoadClass & cload)
  *=============================================================================================*/
 WW3DErrorType MeshGeometryClass::read_vertex_shade_indices(ChunkLoadClass & cload)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && cload.Cur_Chunk_Length()!=std::size_t(VertexCount)*sizeof(uint32)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	uint32 * shade_index = get_shade_indices(true);
 	uint32 si;
 
@@ -2012,6 +2052,12 @@ WW3DErrorType MeshGeometryClass::read_aabtree(ChunkLoadClass &cload)
 	REF_PTR_RELEASE(CullTree);
 	CullTree = NEW_REF(AABTreeClass,());
 	CullTree->Load_W3D(cload);
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (CullTree->PolyCount!=PolyCount) return WW3D_ERROR_LOAD_FAILED;
+		for (int i=0;i<CullTree->PolyCount;++i) if (CullTree->PolyIndices[i]>=unsigned(PolyCount)) return WW3D_ERROR_LOAD_FAILED;
+	}
+#endif
 	CullTree->Set_Mesh(this);
 	return (WW3D_ERROR_OK);
 }

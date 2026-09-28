@@ -56,6 +56,19 @@
 #include "wwmemlog.h"
 #include "w3dexclusionlist.h"
 #include "animatedsoundmgr.h"
+#if defined(__linux__)
+#include "asset_import.h"
+#include "clone_graph.h"
+#include <memory>
+namespace {
+template<class T> int import_animation(HAnimManagerClass& manager,ChunkLoadClass& cload)
+{
+	ww3d_import::Attempt::boundary();ww3d_clone::Ref<T> animation(new T);
+	if (animation.get()->Load_W3D(cload)!=T::OK || manager.Peek_Anim(animation.get()->Get_Name())) return 1;
+	manager.Add_Anim(animation.get());return 0;
+}
+}
+#endif
 
 
 /*********************************************************************************************** 
@@ -118,6 +131,17 @@ HAnimManagerClass::~HAnimManagerClass(void)
  *=============================================================================================*/
 int HAnimManagerClass::Load_Anim(ChunkLoadClass & cload)
 {
+#if defined(__linux__)
+	if (auto* attempt=ww3d_import::Attempt::active(this)) {
+		attempt->validate();
+		switch (cload.Cur_Chunk_ID()) {
+		case W3D_CHUNK_ANIMATION:return import_animation<HRawAnimClass>(*this,cload);
+		case W3D_CHUNK_COMPRESSED_ANIMATION:return import_animation<HCompressedAnimClass>(*this,cload);
+		case W3D_CHUNK_MORPH_ANIMATION:return import_animation<HMorphAnimClass>(*this,cload);
+		default:return 1;
+		}
+	}
+#endif
 	WWMEMLOG(MEM_ANIMATION);
 
 	switch (cload.Cur_Chunk_ID()) 
@@ -281,6 +305,11 @@ Error:
  *=============================================================================================*/
 HAnimClass * HAnimManagerClass::Peek_Anim(const char * name)
 {
+#if defined(__linux__)
+	if (auto* attempt=ww3d_import::Attempt::active(this)) {
+		attempt->validate();return static_cast<HAnimClass*>(attempt->animations().Find(name));
+	}
+#endif
 	return (HAnimClass*)AnimPtrTable->Find( name );
 }
 
@@ -321,6 +350,9 @@ HAnimClass * HAnimManagerClass::Get_Anim(const char * name)
  *=============================================================================================*/
 void HAnimManagerClass::Free_All_Anims(void)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import animation teardown requires idle ownership");
+#endif
 	// Make an iterator, and release all ptrs
 	HAnimManagerIterator it( *this );
 	for( it.First(); !it.Is_Done(); it.Next() ) {
@@ -346,6 +378,9 @@ void HAnimManagerClass::Free_All_Anims(void)
  *=============================================================================================*/
 void HAnimManagerClass::Free_All_Anims_With_Exclusion_List(const W3DExclusionListClass & exclusion_list)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import animation teardown requires idle ownership");
+#endif
 	// Remove and Release_Ref any animation not in the exclusion list.
 	HAnimManagerIterator it( *this );
 	for( it.First(); !it.Is_Done(); it.Next() ) {
@@ -407,6 +442,9 @@ void HAnimManagerClass::Create_Asset_List(DynamicVectorClass<StringClass> & excl
  *=============================================================================================*/
 bool HAnimManagerClass::Add_Anim(HAnimClass *new_anim)
 {
+#if defined(__linux__)
+	if (auto* attempt=ww3d_import::Attempt::active(this)) { attempt->add_animation(new_anim);return true; }
+#endif
 	WWASSERT (new_anim != NULL);
 
 	// Increment the refcount on the W3DNEW animation and add it to our table.
@@ -426,11 +464,23 @@ bool HAnimManagerClass::Add_Anim(HAnimClass *new_anim)
 */
 void	HAnimManagerClass::Register_Missing( const char * name )
 {
+#if defined(__linux__)
+	if (auto* attempt=ww3d_import::Attempt::active(this)) {
+		ww3d_import::Attempt::name(name);ww3d_import::Attempt::boundary();
+		std::unique_ptr<MissingAnimClass> missing(new MissingAnimClass(name));
+		attempt->add_missing(missing.get());missing.release();return;
+	}
+#endif
 	MissingAnimTable->Add( W3DNEW MissingAnimClass( name ) );
 }
 
 bool	HAnimManagerClass::Is_Missing( const char * name )
 {
+#if defined(__linux__)
+	if (auto* attempt=ww3d_import::Attempt::active(this)) {
+		attempt->validate();return attempt->missing().Find(name)!=nullptr;
+	}
+#endif
 	return ( MissingAnimTable->Find( name ) != NULL );
 }
 

@@ -55,6 +55,11 @@
 #include "chunkio.h"
 #include "assetmgr.h"
 #include "htree.h"
+#include "asset_import.h"
+#if defined(__linux__)
+#include <memory>
+#include <cmath>
+#endif
 
 /***********************************************************************************************
  * NodeMotionStruct::NodeMotionStruct -- constructor                                           *
@@ -220,6 +225,12 @@ int HRawAnimClass::Load_W3D(ChunkLoadClass & cload)
 	}
 
 	cload.Close_Chunk();
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() &&
+		(strnlen(aheader.Name,sizeof(aheader.Name))==sizeof(aheader.Name) || !aheader.Name[0] ||
+		 strnlen(aheader.HierarchyName,sizeof(aheader.HierarchyName))==sizeof(aheader.HierarchyName) || !aheader.HierarchyName[0] ||
+		 !aheader.NumFrames || aheader.NumFrames>65536 || !std::isfinite(float(aheader.FrameRate)) || aheader.FrameRate<=0)) return LOAD_ERROR;
+#endif
 
 	/*
 	** Check if the animation version is pre-3.0.  If so, we need to add 1 to all of the
@@ -244,6 +255,13 @@ int HRawAnimClass::Load_W3D(ChunkLoadClass & cload)
 		goto Error;
 	}
 	NumNodes = base_pose->Num_Pivots();
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (NumNodes<=0 || NumNodes>65536) goto Error;
+		ww3d_import::Attempt::reserve(NumNodes,sizeof(NodeMotionStruct));
+		ww3d_import::Attempt::boundary();
+	}
+#endif
 
 	NumFrames = aheader.NumFrames;
 	FrameRate = aheader.FrameRate;
@@ -263,37 +281,53 @@ int HRawAnimClass::Load_W3D(ChunkLoadClass & cload)
 
 		switch (cload.Cur_Chunk_ID()) {
 
-			case W3D_CHUNK_ANIMATION_CHANNEL:
+			case W3D_CHUNK_ANIMATION_CHANNEL: {
 				if (!read_channel(cload,&newchan,pre30)) {
 					goto Error;
 				}			
+#if defined(__linux__)
+				std::unique_ptr<MotionChannelClass> candidate(newchan);
+#endif
 
 				// (gth) if the channel is referring to a node which is outside the range, 
 				// just throw away the channel.  This probably means the animation must
 				// be re-exported
 				if (newchan->Get_Pivot() < NumNodes) {
 					add_channel(newchan);
+#if defined(__linux__)
+					candidate.release();
+#endif
 				} else {
 					WWDEBUG_SAY(("Animation %s referring to missing Bone! Please re-export.\n",Name));
+#if !defined(__linux__)
 					delete newchan;
+#endif
 				}
-				break;
+				break; }
 	
-			case W3D_CHUNK_BIT_CHANNEL:
+			case W3D_CHUNK_BIT_CHANNEL: {
 				if (!read_bit_channel(cload,&newbitchan,pre30)) {
 					goto Error;
 				}
+#if defined(__linux__)
+				std::unique_ptr<BitChannelClass> candidate(newbitchan);
+#endif
 
 				// (gth) if the channel is referring to a node which is outside the range, 
 				// just throw away the channel.  This probably means the animation must
 				// be re-exported
 				if (newbitchan->Get_Pivot() < NumNodes) {
 					add_bit_channel(newbitchan);
+#if defined(__linux__)
+					candidate.release();
+#endif
 				} else {
 					WWDEBUG_SAY(("Animation %s referring to missing Bone! Please re-export.\n",Name));
+#if !defined(__linux__)
 					delete newbitchan;
+#endif
 				}
-				break;
+				break; }
 
 			default:
 				break;
@@ -324,6 +358,13 @@ Error:
  *=============================================================================================*/
 bool HRawAnimClass::read_channel(ChunkLoadClass & cload,MotionChannelClass * * newchan,bool pre30)
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+	std::unique_ptr<MotionChannelClass> candidate(new MotionChannelClass);
+	if (!candidate->Load_W3D(cload)) return false;
+	if (pre30) candidate->Set_Pivot(candidate->Get_Pivot()+1);
+	*newchan=candidate.release();return true;
+#else
 	*newchan = W3DNEW MotionChannelClass;
 	bool result = (*newchan)->Load_W3D(cload);	
 	
@@ -333,6 +374,7 @@ bool HRawAnimClass::read_channel(ChunkLoadClass & cload,MotionChannelClass * * n
 	}
 	
 	return result;
+#endif
 }
 
 /*********************************************************************************************** 
@@ -350,6 +392,22 @@ bool HRawAnimClass::read_channel(ChunkLoadClass & cload,MotionChannelClass * * n
 void HRawAnimClass::add_channel(MotionChannelClass * newchan)
 {
 	int idx = newchan->Get_Pivot();
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		MotionChannelClass** slot=nullptr;
+		switch (newchan->Get_Type()) {
+		case ANIM_CHANNEL_X: slot=&NodeMotion[idx].X;break;
+		case ANIM_CHANNEL_Y: slot=&NodeMotion[idx].Y;break;
+		case ANIM_CHANNEL_Z: slot=&NodeMotion[idx].Z;break;
+		case ANIM_CHANNEL_XR: slot=&NodeMotion[idx].XR;break;
+		case ANIM_CHANNEL_YR: slot=&NodeMotion[idx].YR;break;
+		case ANIM_CHANNEL_ZR: slot=&NodeMotion[idx].ZR;break;
+		case ANIM_CHANNEL_Q: slot=&NodeMotion[idx].Q;break;
+		}
+		if (!slot || *slot) throw std::runtime_error("original import motion channel is duplicate or unsupported");
+		ww3d_import::Attempt::boundary();*slot=newchan;return;
+	}
+#endif
 
 	switch (newchan->Get_Type())
 	{
@@ -399,6 +457,13 @@ void HRawAnimClass::add_channel(MotionChannelClass * newchan)
  *=============================================================================================*/
 bool HRawAnimClass::read_bit_channel(ChunkLoadClass & cload,BitChannelClass * * newchan,bool pre30)
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+	std::unique_ptr<BitChannelClass> candidate(new BitChannelClass);
+	if (!candidate->Load_W3D(cload)) return false;
+	if (pre30) ++candidate->PivotIdx;
+	*newchan=candidate.release();return true;
+#else
 	*newchan = W3DNEW BitChannelClass;
 	bool result = (*newchan)->Load_W3D(cload);	
 
@@ -407,6 +472,7 @@ bool HRawAnimClass::read_bit_channel(ChunkLoadClass & cload,BitChannelClass * * 
 	}
 	
 	return result;
+#endif
 }
 
 
@@ -425,6 +491,13 @@ bool HRawAnimClass::read_bit_channel(ChunkLoadClass & cload,BitChannelClass * * 
 void HRawAnimClass::add_bit_channel(BitChannelClass * newchan)
 {
 	int idx = newchan->Get_Pivot();
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (newchan->Get_Type()!=BIT_CHANNEL_VIS || NodeMotion[idx].Vis)
+			throw std::runtime_error("original import bit channel is duplicate or unsupported");
+		ww3d_import::Attempt::boundary();NodeMotion[idx].Vis=newchan;return;
+	}
+#endif
 
 	switch (newchan->Get_Type())
 	{
@@ -731,5 +804,4 @@ bool HRawAnimClass::Has_Visibility (int pividx)
 	WWASSERT((pividx >= 0) && (pividx < NumNodes));
 	return NodeMotion[pividx].Vis != NULL;
 }
-
 

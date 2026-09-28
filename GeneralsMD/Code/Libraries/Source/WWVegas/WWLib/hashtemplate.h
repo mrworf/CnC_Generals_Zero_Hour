@@ -71,11 +71,15 @@ template <> inline unsigned int HashTemplateKeyClass<float>::Get_Hash_Value (con
 }
 
 // Hash class
+#if defined(__linux__)
+namespace ww3d_import { class Attempt; }
+#endif
 template <class KeyType, class ValueType> 
 class HashTemplateClass
 {
 #if defined(__linux__)
 	friend class W3DAssetManager;
+	friend class ww3d_import::Attempt;
 #endif
 	struct Entry;
 public:

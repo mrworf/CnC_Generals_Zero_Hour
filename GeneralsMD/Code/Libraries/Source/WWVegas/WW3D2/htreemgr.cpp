@@ -50,6 +50,10 @@
 #include "chunkio.h"
 #include "wwmemlog.h"
 #include "w3dexclusionlist.h"
+#if defined(__linux__)
+#include "asset_import.h"
+#include <memory>
+#endif
 
 
 /*********************************************************************************************** 
@@ -64,6 +68,14 @@
  * HISTORY:                                                                                    * 
  *   08/11/1997 GH  : Created.                                                                 * 
  *=============================================================================================*/
+#if defined(__linux__)
+int HTreeManagerClass::Num_Trees(void)
+{
+	if (auto* attempt=ww3d_import::Attempt::active(this)) return attempt->tree_count();
+	return NumTrees;
+}
+#endif
+
 HTreeManagerClass::HTreeManagerClass(void) :
 	NumTrees(0)
 {
@@ -121,6 +133,9 @@ void HTreeManagerClass::Free(void)
  *=============================================================================================*/
 void HTreeManagerClass::Free_All_Trees(void)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import hierarchy teardown requires idle ownership");
+#endif
 	// Clear the hash table
 	TreeHash.Remove_All();
 
@@ -147,6 +162,9 @@ void HTreeManagerClass::Free_All_Trees(void)
  *=============================================================================================*/
 void HTreeManagerClass::Free_All_Trees_With_Exclusion_List(const W3DExclusionListClass & exclusion_list)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import hierarchy teardown requires idle ownership");
+#endif
 	// For this system, since it is so simplistic, we simply loop over the array either deleting the tree
 	// or copying it to the new tail index if it is excluded.
 	int new_tail = 0;
@@ -198,6 +216,15 @@ void HTreeManagerClass::Free_All_Trees_With_Exclusion_List(const W3DExclusionLis
  *=============================================================================================*/
 int HTreeManagerClass::Load_Tree(ChunkLoadClass & cload)
 {
+#if defined(__linux__)
+	if (auto* attempt=ww3d_import::Attempt::active(this)) {
+		attempt->validate();ww3d_import::Attempt::boundary();
+		if (attempt->tree_count()==MAX_TREES) return 1;
+		std::unique_ptr<HTreeClass> tree(new HTreeClass);
+		if (tree->Load_W3D(cload)!=HTreeClass::OK || attempt->tree_id(tree->Get_Name())!=-1) return 1;
+		attempt->add_tree(tree.get());tree.release();return 0;
+	}
+#endif
 	WWMEMLOG(MEM_ANIMATION);
 	HTreeClass * newtree = W3DNEW HTreeClass;
 
@@ -251,6 +278,9 @@ Error:
  *=============================================================================================*/
 int HTreeManagerClass::Get_Tree_ID(const char * name)
 {
+#if defined(__linux__)
+	if (auto* attempt=ww3d_import::Attempt::active(this)) return attempt->tree_id(name);
+#endif
 	for (int i=0; i<NumTrees; i++) {
 		if (TreePtr[i] && (stricmp(name,TreePtr[i]->Get_Name()) == 0)) {
 			return i;
@@ -273,6 +303,11 @@ int HTreeManagerClass::Get_Tree_ID(const char * name)
  *=============================================================================================*/
 char *HTreeManagerClass::Get_Tree_Name(const int idx)
 {
+#if defined(__linux__)
+	if (auto* attempt=ww3d_import::Attempt::active(this)) {
+		auto* tree=attempt->tree(idx);return tree ? const_cast<char*>(tree->Get_Name()) : nullptr;
+	}
+#endif
 	if ((idx < NumTrees) && TreePtr[idx]) {
 		if (TreePtr[idx]) {
 			return (char *)TreePtr[idx]->Get_Name();
@@ -300,6 +335,9 @@ HTreeClass * HTreeManagerClass::Get_Tree(const char * name)
 {
 	StringClass lower_case_name(name,true);
 	_strlwr(lower_case_name.Peek_Buffer());
+#if defined(__linux__)
+	if (auto* attempt=ww3d_import::Attempt::active(this)) return attempt->tree(lower_case_name);
+#endif
 	return TreeHash.Get(lower_case_name);
 
 //	for (int i=0; i<NumTrees; i++) {
@@ -326,6 +364,9 @@ HTreeClass * HTreeManagerClass::Get_Tree(const char * name)
  *=============================================================================================*/
 HTreeClass * HTreeManagerClass::Get_Tree(int id)
 {
+#if defined(__linux__)
+	if (auto* attempt=ww3d_import::Attempt::active(this)) return attempt->tree(id);
+#endif
 	if ((id >= 0) && (id < NumTrees)) {
 		return TreePtr[id];
 	} else {

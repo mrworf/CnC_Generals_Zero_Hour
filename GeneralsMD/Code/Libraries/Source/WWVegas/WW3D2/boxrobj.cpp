@@ -1365,10 +1365,18 @@ OBBoxClass & OBBoxRenderObjClass::Get_Box(void)
 /*
 ** BoxLoaderClass Implementation
 */
+#include "asset_import.h"
 PrototypeClass * BoxLoaderClass::Load_W3D(ChunkLoadClass & cload)
 {
 	W3dBoxStruct box;
-	cload.Read(&box,sizeof(box));
+	const auto read=cload.Read(&box,sizeof(box));
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (read!=sizeof(box) || cload.Cur_Chunk_Length()!=sizeof(box) ||
+			strnlen(box.Name,sizeof(box.Name))==sizeof(box.Name) || !box.Name[0]) return nullptr;
+		ww3d_import::Attempt::boundary();
+	}
+#endif
 	return W3DNEW BoxPrototypeClass(box);
 }
 

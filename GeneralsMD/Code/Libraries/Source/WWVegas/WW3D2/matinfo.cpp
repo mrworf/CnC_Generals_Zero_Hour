@@ -114,6 +114,12 @@ MaterialInfoClass * MaterialInfoClass::Clone(void) const
 int MaterialInfoClass::Add_Texture(TextureClass * tex)
 {
 	WWASSERT(tex != NULL);
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		const int index=Textures.Count();ww3d_import::Attempt::append_candidate(Textures,tex);
+		tex->Add_Ref();return index;
+	}
+#endif
 	tex->Add_Ref();
 	int index = Textures.Count();
 	Textures.Add(tex);

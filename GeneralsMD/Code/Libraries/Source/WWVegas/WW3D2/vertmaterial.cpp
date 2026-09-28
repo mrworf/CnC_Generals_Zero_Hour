@@ -46,6 +46,9 @@
 #include "w3derr.h"
 #include "ini.h"
 #include "xstraw.h"
+#if defined(__linux__)
+#include "asset_import.h"
+#endif
 #if !defined(ZH_WW3D_CPU_ONLY)
 #include "dx8wrapper.h"
 #else
@@ -547,6 +550,9 @@ WW3DErrorType VertexMaterialClass::Load_W3D(ChunkLoadClass & cload)
 	char *mapping1_arg_buffer = NULL;
 	unsigned int mapping0_arg_len = 0U;
 	unsigned int mapping1_arg_len = 0U;
+#if defined(__linux__)
+	std::unique_ptr<char[]> mapping0_storage,mapping1_storage;
+#endif
 
 	while (cload.Open_Chunk()) {
 		switch (cload.Cur_Chunk_ID()) {
@@ -565,18 +571,38 @@ WW3DErrorType VertexMaterialClass::Load_W3D(ChunkLoadClass & cload)
 
 			case W3D_CHUNK_VERTEX_MAPPER_ARGS0:
 				mapping0_arg_len = cload.Cur_Chunk_Length();
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active()) {
+					if (mapping0_storage || !mapping0_arg_len || mapping0_arg_len>65536) return WW3D_ERROR_LOAD_FAILED;
+					ww3d_import::Attempt::reserve(mapping0_arg_len,1);ww3d_import::Attempt::boundary();
+					mapping0_storage.reset(new char[mapping0_arg_len]);mapping0_arg_buffer=mapping0_storage.get();
+				} else
+#endif
 				mapping0_arg_buffer = MSGW3DNEWARRAY("VertexMaterialClassTemp") char[mapping0_arg_len];
 				if (cload.Read(mapping0_arg_buffer, mapping0_arg_len) != mapping0_arg_len) {
 					return WW3D_ERROR_LOAD_FAILED;
 				}
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active() && !memchr(mapping0_arg_buffer,'\0',mapping0_arg_len)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 				break;
 
 			case W3D_CHUNK_VERTEX_MAPPER_ARGS1:
 				mapping1_arg_len = cload.Cur_Chunk_Length();
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active()) {
+					if (mapping1_storage || !mapping1_arg_len || mapping1_arg_len>65536) return WW3D_ERROR_LOAD_FAILED;
+					ww3d_import::Attempt::reserve(mapping1_arg_len,1);ww3d_import::Attempt::boundary();
+					mapping1_storage.reset(new char[mapping1_arg_len]);mapping1_arg_buffer=mapping1_storage.get();
+				} else
+#endif
 				mapping1_arg_buffer = MSGW3DNEWARRAY("VertexMaterialClassTemp") char[mapping1_arg_len];
 				if (cload.Read(mapping1_arg_buffer, mapping1_arg_len) != mapping1_arg_len) {
 					return WW3D_ERROR_LOAD_FAILED;
 				}
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active() && !memchr(mapping1_arg_buffer,'\0',mapping1_arg_len)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 				break;
 		};
 		cload.Close_Chunk();
@@ -588,6 +614,9 @@ WW3DErrorType VertexMaterialClass::Load_W3D(ChunkLoadClass & cload)
 
 	Parse_W3dVertexMaterialStruct(vmat);
 	Parse_Mapping_Args(vmat,mapping0_arg_buffer,mapping1_arg_buffer);
+#if defined(__linux__)
+	mapping0_storage.release();mapping1_storage.release();
+#endif
 
 	delete [] mapping0_arg_buffer;
 	mapping0_arg_buffer = NULL;
@@ -635,14 +664,21 @@ void VertexMaterialClass::Parse_Mapping_Args(const W3dVertexMaterialStruct & vma
 
 		int mapping0_arg_len = strlen(mapping0_arg_buffer);
 	
+#if defined(__linux__)
+		ww3d_import::Attempt::reserve(mapping0_arg_len+10,1);ww3d_import::Attempt::boundary();
+		std::unique_ptr<char[]> extended_storage(new char[mapping0_arg_len+10]);char* extended_arg_buffer=extended_storage.get();
+#else
 		char *extended_arg_buffer = MSGW3DNEWARRAY("VertexMaterialClassTemp") char[mapping0_arg_len + 10];
+#endif
 		sprintf(extended_arg_buffer, "[Args]\n%s", mapping0_arg_buffer);
 		mapping0_arg_len = strlen(extended_arg_buffer) + 1;
 
 		BufferStraw map_arg_buf_straw((void *)extended_arg_buffer, mapping0_arg_len);
 
 		mapping0_arg_ini.Load(map_arg_buf_straw);
-
+#if defined(__linux__)
+		extended_storage.release();
+#endif
 		delete [] extended_arg_buffer;
 		extended_arg_buffer = NULL;
 	}
@@ -651,14 +687,21 @@ void VertexMaterialClass::Parse_Mapping_Args(const W3dVertexMaterialStruct & vma
 
 		int mapping1_arg_len = strlen(mapping1_arg_buffer);
 
+#if defined(__linux__)
+		ww3d_import::Attempt::reserve(mapping1_arg_len+20,1);ww3d_import::Attempt::boundary();
+		std::unique_ptr<char[]> extended_storage(new char[mapping1_arg_len+20]);char* extended_arg_buffer=extended_storage.get();
+#else
 		char *extended_arg_buffer = MSGW3DNEWARRAY("VertexMaterialClassTemp") char[mapping1_arg_len + 20];
+#endif
 		sprintf(extended_arg_buffer, "[Args]\n%s", mapping1_arg_buffer);
 		mapping1_arg_len = strlen(extended_arg_buffer) + 1;
 
 		BufferStraw map_arg_buf_straw((void *)extended_arg_buffer, mapping1_arg_len);
 
 		mapping1_arg_ini.Load(map_arg_buf_straw);
-
+#if defined(__linux__)
+		extended_storage.release();
+#endif
 		delete [] extended_arg_buffer;
 		extended_arg_buffer = NULL;
 	}
@@ -666,6 +709,9 @@ void VertexMaterialClass::Parse_Mapping_Args(const W3dVertexMaterialStruct & vma
 	// Set up the vertex mapper.  If it is one of the simple
 	// ones, set the pointer to one of the global instances. 
 	int mapping = vmat.Attributes & W3DVERTMAT_STAGE0_MAPPING_MASK;
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+#endif
 
 	switch(mapping) {
 		
@@ -843,6 +889,9 @@ void VertexMaterialClass::Parse_Mapping_Args(const W3dVertexMaterialStruct & vma
 
 	// Same setup for stage 1's mapper.
 	mapping = vmat.Attributes & W3DVERTMAT_STAGE1_MAPPING_MASK;
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+#endif
 	switch(mapping) {
 
 		case W3DVERTMAT_STAGE1_MAPPING_UV:

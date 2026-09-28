@@ -63,6 +63,35 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#if defined(__linux__)
+#include "asset_import.h"
+#include <memory>
+#include <cmath>
+namespace {
+template<class T> void import_cull_input(int count,const T* polys,int vertices,const Vector3* verts)
+{
+	if (!ww3d_import::Attempt::is_active()) return;
+	if (count<=0 || vertices<=0 || !polys || !verts)
+		throw std::runtime_error("original import cull input is malformed");
+	ww3d_import::Attempt::reserve(vertices,sizeof(Vector3));
+	ww3d_import::Attempt::reserve(count,sizeof(TriIndex)+sizeof(int));
+	for (int i=0;i<vertices;++i) if (!std::isfinite(verts[i].X) || !std::isfinite(verts[i].Y) || !std::isfinite(verts[i].Z))
+		throw std::runtime_error("original import cull vertex is nonfinite");
+	for (int i=0;i<count;++i) for (int j=0;j<3;++j) if (static_cast<unsigned>(polys[i][j])>=static_cast<unsigned>(vertices))
+		throw std::runtime_error("original import cull vertex index is malformed");
+}
+struct ImportCullDepth {
+	static thread_local unsigned depth;
+	bool active;
+	ImportCullDepth() : active(ww3d_import::Attempt::is_active()) {
+		if (active && depth==64) throw std::runtime_error("original import cull depth is exhausted");
+		if (active) ++depth;
+	}
+	~ImportCullDepth() noexcept { if (active) --depth; }
+};
+thread_local unsigned ImportCullDepth::depth=0;
+}
+#endif
 
 #undef WWASSERT
 #define WWASSERT	assert					// can't use WWASSERT because we use this module in the MAX plugin...
@@ -152,6 +181,9 @@ void AABTreeBuilderClass::Reset(void)
  *=============================================================================================*/
 void AABTreeBuilderClass::Build_AABTree(int polycount,TriIndex * polys,int vertcount,Vector3 * verts)
 {
+#if defined(__linux__)
+	import_cull_input(polycount,polys,vertcount,verts);
+#endif
 	WWASSERT(polycount > 0);
 	WWASSERT(vertcount > 0);
 	WWASSERT(polys != NULL);
@@ -167,7 +199,13 @@ void AABTreeBuilderClass::Build_AABTree(int polycount,TriIndex * polys,int vertc
 	*/
 	VertCount = vertcount;
 	PolyCount = polycount;
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+#endif
 	Verts = W3DNEWARRAY Vector3[VertCount];
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+#endif
 	Polys = W3DNEWARRAY TriIndex[PolyCount];
 
 	for (int vi=0; vi<VertCount; vi++) {
@@ -180,7 +218,13 @@ void AABTreeBuilderClass::Build_AABTree(int polycount,TriIndex * polys,int vertc
 	/*
 	** First, create a list of all of the poly indices
 	*/
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+#endif
 	int * polyindices = W3DNEWARRAY int[PolyCount];
+#if defined(__linux__)
+	std::unique_ptr<int[]> input(ww3d_import::Attempt::is_active() ? polyindices : nullptr);
+#endif
 	for (int i=0; i<PolyCount; i++) {
 		polyindices[i] = i;
 	}
@@ -189,7 +233,13 @@ void AABTreeBuilderClass::Build_AABTree(int polycount,TriIndex * polys,int vertc
 	** Build the tree, note that the array of poly indices will be
 	** deleted by the Build_Tree function.
 	*/
+#if defined(__linux__)
+	ww3d_import::Attempt::reserve(1,sizeof(CullNodeStruct));ww3d_import::Attempt::boundary();
+#endif
 	Root = W3DNEW CullNodeStruct;
+#if defined(__linux__)
+	if (input) input.release();
+#endif
 	Build_Tree(Root,PolyCount,polyindices);
 	polyindices = NULL;
 
@@ -217,6 +267,9 @@ void AABTreeBuilderClass::Build_AABTree(int polycount,TriIndex * polys,int vertc
  *=============================================================================================*/
 void AABTreeBuilderClass::Build_AABTree(int polycount,Vector3i * polys,int vertcount,Vector3 * verts)
 {
+#if defined(__linux__)
+	import_cull_input(polycount,polys,vertcount,verts);
+#endif
 	WWASSERT(polycount > 0);
 	WWASSERT(vertcount > 0);
 	WWASSERT(polys != NULL);
@@ -232,7 +285,13 @@ void AABTreeBuilderClass::Build_AABTree(int polycount,Vector3i * polys,int vertc
 	*/
 	VertCount = vertcount;
 	PolyCount = polycount;
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+#endif
 	Verts = new Vector3[VertCount];
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+#endif
 	Polys = new TriIndex[PolyCount];
 
 	for (int vi=0; vi<VertCount; vi++) {
@@ -247,7 +306,13 @@ void AABTreeBuilderClass::Build_AABTree(int polycount,Vector3i * polys,int vertc
 	/*
 	** First, create a list of all of the poly indices
 	*/
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();
+#endif
 	int * polyindices = new int[PolyCount];
+#if defined(__linux__)
+	std::unique_ptr<int[]> input(ww3d_import::Attempt::is_active() ? polyindices : nullptr);
+#endif
 	for (int i=0; i<PolyCount; i++) {
 		polyindices[i] = i;
 	}
@@ -256,7 +321,13 @@ void AABTreeBuilderClass::Build_AABTree(int polycount,Vector3i * polys,int vertc
 	** Build the tree, note that the array of poly indices will be
 	** deleted by the Build_Tree function.
 	*/
+#if defined(__linux__)
+	ww3d_import::Attempt::reserve(1,sizeof(CullNodeStruct));ww3d_import::Attempt::boundary();
+#endif
 	Root = new CullNodeStruct;
+#if defined(__linux__)
+	if (input) input.release();
+#endif
 	Build_Tree(Root,PolyCount,polyindices);
 	polyindices = NULL;
 
@@ -283,12 +354,19 @@ void AABTreeBuilderClass::Build_AABTree(int polycount,Vector3i * polys,int vertc
  *=============================================================================================*/
 void AABTreeBuilderClass::Build_Tree(CullNodeStruct * node,int polycount,int * polyindices)
 {
+#if defined(__linux__)
+	std::unique_ptr<int[]> input(ww3d_import::Attempt::is_active() ? polyindices : nullptr);
+	ImportCullDepth depth;
+#endif
 	/*
 	** First, if there are only a few polys left, just terminate the tree
 	*/
 	if (polycount <= MIN_POLYS_PER_NODE) {
 		node->PolyCount = polycount;
 		node->PolyIndices = polyindices;
+#if defined(__linux__)
+		input.release();
+#endif
 		return;
 	}
 
@@ -306,6 +384,9 @@ void AABTreeBuilderClass::Build_Tree(CullNodeStruct * node,int polycount,int * p
 	if (sc.FrontCount + sc.BackCount != polycount) {
 		node->PolyCount = polycount;
 		node->PolyIndices = polyindices;
+#if defined(__linux__)
+		input.release();
+#endif
 		return;
 	}
 
@@ -327,6 +408,11 @@ void AABTreeBuilderClass::Build_Tree(CullNodeStruct * node,int polycount,int * p
 	*/
 	SplitArraysStruct arrays;
 	Split_Polys(polycount,polyindices,sc,&arrays);
+#if defined(__linux__)
+	std::unique_ptr<int[]> front(ww3d_import::Attempt::is_active() ? arrays.FrontPolys : nullptr);
+	std::unique_ptr<int[]> back(ww3d_import::Attempt::is_active() ? arrays.BackPolys : nullptr);
+	input.release();
+#endif
 
 	/*
 	** Free the memory in use by the input tile-list
@@ -339,7 +425,13 @@ void AABTreeBuilderClass::Build_Tree(CullNodeStruct * node,int polycount,int * p
 	*/
 	if (arrays.FrontCount) {
 		WWASSERT(arrays.FrontPolys != NULL);
+#if defined(__linux__)
+		ww3d_import::Attempt::reserve(1,sizeof(CullNodeStruct));ww3d_import::Attempt::boundary();
+#endif
 		node->Front = W3DNEW CullNodeStruct;
+#if defined(__linux__)
+		front.release();
+#endif
 		Build_Tree(node->Front,arrays.FrontCount,arrays.FrontPolys);
 		arrays.FrontPolys = NULL;
 	}
@@ -351,7 +443,13 @@ void AABTreeBuilderClass::Build_Tree(CullNodeStruct * node,int polycount,int * p
 	if (arrays.BackCount) {
 		WWASSERT(arrays.BackPolys != NULL);
 
+#if defined(__linux__)
+		ww3d_import::Attempt::reserve(1,sizeof(CullNodeStruct));ww3d_import::Attempt::boundary();
+#endif
 		node->Back = W3DNEW CullNodeStruct;
+#if defined(__linux__)
+		back.release();
+#endif
 		Build_Tree(node->Back,arrays.BackCount,arrays.BackPolys);
 		arrays.BackPolys = NULL;
 	}
@@ -572,6 +670,17 @@ void AABTreeBuilderClass::Split_Polys
 	SplitArraysStruct *				arrays
 )
 {
+#if defined(__linux__)
+	std::unique_ptr<int[]> front,back;
+	if (ww3d_import::Attempt::is_active()) {
+		ww3d_import::Attempt::reserve(sc.FrontCount,sizeof(int));ww3d_import::Attempt::boundary();
+		if (sc.FrontCount) front.reset(new int[sc.FrontCount]);
+		ww3d_import::Attempt::reserve(sc.BackCount,sizeof(int));ww3d_import::Attempt::boundary();
+		if (sc.BackCount) back.reset(new int[sc.BackCount]);
+		arrays->FrontPolys=front.get();arrays->BackPolys=back.get();
+	}
+	else {
+#endif
 	/*
 	** Note that this routine arrays of polygons. The caller is then responsible for keeping 
 	** track of the memory this routine allocates.
@@ -583,6 +692,9 @@ void AABTreeBuilderClass::Split_Polys
 	if (sc.BackCount > 0) {
 		arrays->BackPolys = W3DNEWARRAY int[sc.BackCount];
 	}
+#if defined(__linux__)
+	}
+#endif
 
 	arrays->FrontCount = 0;
 	arrays->BackCount = 0;
@@ -608,6 +720,9 @@ void AABTreeBuilderClass::Split_Polys
 	*/
 	WWASSERT(arrays->FrontCount == sc.FrontCount);
 	WWASSERT(arrays->BackCount == sc.BackCount);
+#if defined(__linux__)
+	front.release();back.release();
+#endif
 }
 
 
@@ -992,7 +1107,6 @@ void AABTreeBuilderClass::Build_W3D_AABTree_Recursive
 		Build_W3D_AABTree_Recursive(node->Back,w3d_nodes,poly_indices,cur_node,cur_poly);
 	}
 }
-
 
 
 

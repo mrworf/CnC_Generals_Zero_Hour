@@ -39,6 +39,9 @@
 
 
 #include "dazzle.h"
+#if defined(__linux__)
+#include "asset_import.h"
+#endif
 #include "simplevec.h"
 #include "vector2.h"
 #include "camera.h"
@@ -1733,6 +1736,26 @@ RenderObjClass * DazzlePrototypeClass::Create(void)
 WW3DErrorType DazzlePrototypeClass::Load_W3D(ChunkLoadClass & cload)
 {
 	StringClass dazzle_type;
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		bool named=false,typed=false;
+		while (cload.Open_Chunk()) {
+			StringClass* value=nullptr;
+			if (cload.Cur_Chunk_ID()==W3D_CHUNK_DAZZLE_NAME) { if (named) return WW3D_ERROR_LOAD_FAILED;named=true;value=&Name; }
+			if (cload.Cur_Chunk_ID()==W3D_CHUNK_DAZZLE_TYPENAME) { if (typed) return WW3D_ERROR_LOAD_FAILED;typed=true;value=&dazzle_type; }
+			if (value) {
+				const unsigned bytes=cload.Cur_Chunk_Length();
+				if (!bytes || bytes>255) return WW3D_ERROR_LOAD_FAILED;
+				ww3d_import::Attempt::reserve(bytes,1);ww3d_import::Attempt::boundary();char* text=value->Get_Buffer(bytes);
+				if (cload.Read(text,bytes)!=bytes || text[bytes-1] || strnlen(text,bytes)!=bytes-1) return WW3D_ERROR_LOAD_FAILED;
+			}
+			cload.Close_Chunk();
+		}
+		if (!named || Name.Is_Empty()) return WW3D_ERROR_LOAD_FAILED;
+		DazzleType=DazzleRenderObjClass::Get_Type_ID(dazzle_type);if (DazzleType==UINT_MAX) DazzleType=0;
+		return WW3D_ERROR_OK;
+	}
+#endif
 
 	while (cload.Open_Chunk()) {
 		switch (cload.Cur_Chunk_ID())
@@ -1762,7 +1785,13 @@ WW3DErrorType DazzlePrototypeClass::Load_W3D(ChunkLoadClass & cload)
 
 PrototypeClass * DazzleLoaderClass::Load_W3D(ChunkLoadClass & cload)
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();std::unique_ptr<DazzlePrototypeClass> prototype(new DazzlePrototypeClass);
+	if (prototype->Load_W3D(cload)!=WW3D_ERROR_OK) return nullptr;
+	return prototype.release();
+#else
 	DazzlePrototypeClass * new_proto = W3DNEW DazzlePrototypeClass;
 	new_proto->Load_W3D(cload);
 	return new_proto;
+#endif
 }

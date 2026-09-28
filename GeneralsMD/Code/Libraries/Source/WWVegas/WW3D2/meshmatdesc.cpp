@@ -38,6 +38,7 @@
 
 #include "meshmatdesc.h"
 #include "clone_graph.h"
+#include "asset_import.h"
 #include "texture.h"
 #include "vertmaterial.h"
 #include "realcrc.h"
@@ -654,6 +655,10 @@ void MeshMatDescClass::Make_Color_Array_Unique(int array)
 
 void MeshMatDescClass::Install_UV_Array(int pass,int stage,Vector2 * uvs,int count)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && (pass<0 || pass>=MAX_PASSES || stage<0 || stage>=MAX_TEX_STAGES || count<=0 || !uvs))
+		throw std::runtime_error("original import UV publication is malformed");
+#endif
 	/*
 	** Compute the crc of this uv array
 	*/
@@ -681,18 +686,24 @@ void MeshMatDescClass::Install_UV_Array(int pass,int stage,Vector2 * uvs,int cou
 		** Find the first empty UV-array slot
 		*/
 		int new_index = 0;
-		while ((UV[new_index] != NULL) && (new_index < MAX_UV_ARRAYS)) {
+		while ((new_index < MAX_UV_ARRAYS) && (UV[new_index] != NULL)) {
 			new_index++;
 		}
 
 		if (new_index < MAX_UV_ARRAYS) {
 
 			WWASSERT(UV[new_index] == NULL);
+#if defined(__linux__)
+			ww3d_import::Attempt::reserve(count,sizeof(Vector2));ww3d_import::Attempt::boundary();
+#endif
 			UV[new_index] = NEW_REF(UVBufferClass,(count, "MeshMatDescClass::UV"));
 			memcpy(UV[new_index]->Get_Array(),uvs,count * sizeof(Vector2));
 			UV[new_index]->Update_CRC();  // update the crc for future comparision
 			Set_UV_Source(pass,stage,new_index);
 		}
+#if defined(__linux__)
+		else if (ww3d_import::Attempt::is_active()) throw std::runtime_error("original import UV capacity is exhausted");
+#endif
 	}
 }
 
@@ -711,6 +722,9 @@ void MeshMatDescClass::Post_Load_Process(bool lighting_enabled,MeshModelClass * 
 		** If this pass doesn't have a vertex material, create one
 		*/
 		if ((Material[pass] == NULL) && (MaterialArray[pass] == NULL)) {
+#if defined(__linux__)
+			ww3d_import::Attempt::reserve(1,sizeof(VertexMaterialClass));ww3d_import::Attempt::boundary();
+#endif
 			Material[pass] = NEW_REF(VertexMaterialClass,());
 		}
 

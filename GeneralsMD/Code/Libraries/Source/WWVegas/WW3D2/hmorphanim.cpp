@@ -44,6 +44,10 @@
 #include "wwstring.h"
 #include "textfile.h"
 #include "simplevec.h"
+#include "asset_import.h"
+#if defined(__linux__)
+#include <cmath>
+#endif
 
 
 
@@ -67,10 +71,23 @@ bool TimeCodedMorphKeysClass::Load_W3D(ChunkLoadClass & cload)
 {
 	Free();
 	uint32 key_count = cload.Cur_Chunk_Length() / sizeof(W3dMorphAnimKeyStruct);
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (!key_count || key_count>65536 || cload.Cur_Chunk_Length()%sizeof(W3dMorphAnimKeyStruct)) return false;
+		ww3d_import::Attempt::reserve(key_count,sizeof(MorphKeyStruct));ww3d_import::Attempt::boundary();
+	}
+	uint32 previous=0;
+#endif
 
 	W3dMorphAnimKeyStruct w3dkey;
 	for (uint32 i=0; i<key_count; i++) {
-		cload.Read(&w3dkey,sizeof(w3dkey));
+		const auto read=cload.Read(&w3dkey,sizeof(w3dkey));
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active()) {
+			if (read!=sizeof(w3dkey) || (i && w3dkey.MorphFrame<=previous)) return false;
+			previous=w3dkey.MorphFrame;ww3d_import::Attempt::boundary();
+		}
+#endif
 		Keys.Add (MorphKeyStruct (w3dkey.MorphFrame, w3dkey.PoseFrame));
 	}
 	CachedIdx = 0;
@@ -552,10 +569,23 @@ int HMorphAnimClass::Load_W3D(ChunkLoadClass & cload)
 
 	// read in the animation header
 	W3dMorphAnimHeaderStruct header;
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (!cload.Open_Chunk() || cload.Cur_Chunk_ID()!=W3D_CHUNK_MORPHANIM_HEADER ||
+			cload.Read(&header,sizeof(header))!=sizeof(header)) return LOAD_ERROR;
+		cload.Close_Chunk();
+		if (strnlen(header.Name,sizeof(header.Name))==sizeof(header.Name) || !header.Name[0] ||
+			strnlen(header.HierarchyName,sizeof(header.HierarchyName))==sizeof(header.HierarchyName) || !header.HierarchyName[0] ||
+			!header.FrameCount || header.FrameCount>65536 || !std::isfinite(header.FrameRate) || header.FrameRate<=0 ||
+			!header.ChannelCount || header.ChannelCount>65536) return LOAD_ERROR;
+	} else
+#endif
+	{
 	cload.Open_Chunk();
 	WWASSERT(cload.Cur_Chunk_ID() == W3D_CHUNK_MORPHANIM_HEADER);
 	cload.Read(&header,sizeof(header));
 	cload.Close_Chunk();
+	}
 
 	strncpy(AnimName,header.Name,sizeof(AnimName));
    strncpy(HierarchyName,header.HierarchyName,sizeof(HierarchyName));
@@ -573,26 +603,50 @@ int HMorphAnimClass::Load_W3D(ChunkLoadClass & cload)
 	FrameRate = header.FrameRate;
 	ChannelCount = header.ChannelCount;
 
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (NumNodes<=0 || NumNodes>65536) return LOAD_ERROR;
+		ww3d_import::Attempt::reserve(ChannelCount,sizeof(HAnimClass*)+sizeof(TimeCodedMorphKeysClass));
+		ww3d_import::Attempt::reserve(NumNodes,sizeof(uint32));ww3d_import::Attempt::boundary();
+	}
+	PoseData = W3DNEWARRAY HAnimClass * [ChannelCount]();
+#else
 	PoseData = W3DNEWARRAY HAnimClass * [ChannelCount];
+#endif
 	MorphKeyData = W3DNEWARRAY TimeCodedMorphKeysClass[ChannelCount];
 	PivotChannel = W3DNEWARRAY uint32[NumNodes];
 	memset(PivotChannel,0,NumNodes * sizeof(uint32));
 
 	// read in the rest of the chunks
 	int cur_channel = 0;
+	bool have_pivot_channels=false;
 	while (cload.Open_Chunk()) {
 		switch(cload.Cur_Chunk_ID()) 
 		{
 		case W3D_CHUNK_MORPHANIM_CHANNEL:
+#if defined(__linux__)
+			if (ww3d_import::Attempt::is_active() && cur_channel>=ChannelCount) return LOAD_ERROR;
+#endif
 			read_channel(cload,cur_channel++);
 			break;
 
 		case W3D_CHUNK_MORPHANIM_PIVOTCHANNELDATA:
+#if defined(__linux__)
+			if (ww3d_import::Attempt::is_active() && (have_pivot_channels ||
+				cload.Cur_Chunk_Length()!=std::size_t(NumNodes)*sizeof(uint32))) return LOAD_ERROR;
+#endif
 			cload.Read(PivotChannel,cload.Cur_Chunk_Length());	
+			have_pivot_channels=true;
 			break;
 		};
 		cload.Close_Chunk();
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (cur_channel!=ChannelCount) return LOAD_ERROR;
+		for (int i=0;i<NumNodes;++i) if (PivotChannel[i]>=unsigned(ChannelCount)) return LOAD_ERROR;
+	}
+#endif
 	return OK;
 
 }
@@ -603,6 +657,22 @@ void HMorphAnimClass::read_channel(ChunkLoadClass & cload,int channel)
 	WWASSERT(channel < ChannelCount);
 
 	StringClass anim_name;
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (channel<0 || channel>=ChannelCount || !cload.Open_Chunk() || cload.Cur_Chunk_ID()!=W3D_CHUNK_MORPHANIM_POSENAME)
+			throw std::runtime_error("original import morph pose chunk is not admitted");
+		const unsigned bytes=cload.Cur_Chunk_Length();
+		if (!bytes || bytes>254) throw std::runtime_error("original import morph pose name exceeds source extent");
+		ww3d_import::Attempt::reserve(bytes,1);ww3d_import::Attempt::boundary();
+		char* value=anim_name.Get_Buffer(bytes);
+		if (cload.Read(value,bytes)!=bytes || value[bytes-1] || strnlen(value,bytes)!=bytes-1)
+			throw std::runtime_error("original import morph pose name is malformed");
+		cload.Close_Chunk();PoseData[channel]=WW3DAssetManager::Get_Instance()->Get_HAnim(value);
+		if (!PoseData[channel] || !cload.Open_Chunk() || cload.Cur_Chunk_ID()!=W3D_CHUNK_MORPHANIM_KEYDATA ||
+			!MorphKeyData[channel].Load_W3D(cload)) throw std::runtime_error("original import morph pose provider is not admitted");
+		cload.Close_Chunk();return;
+	}
+#endif
 
 	cload.Open_Chunk();
 	WWASSERT(cload.Cur_Chunk_ID() == W3D_CHUNK_MORPHANIM_POSENAME);

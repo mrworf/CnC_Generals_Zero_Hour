@@ -44,6 +44,10 @@
 
 #include "simplevec.h"
 #include "chunkio.h"
+#include "asset_import.h"
+#if defined(__linux__)
+#include <cmath>
+#endif
 
 
 // Forward declarations
@@ -317,6 +321,28 @@ PrimitiveAnimationChannelClass<T>::Load (ChunkLoadClass &cload)
 template<class T> void
 PrimitiveAnimationChannelClass<T>::Load_Variables (ChunkLoadClass &cload)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		unsigned remaining=cload.Cur_Chunk_Length();
+		while (remaining) {
+			MicroChunkHeader header;
+			if (remaining<sizeof(header) || cload.Read(&header,sizeof(header))!=sizeof(header))
+				throw std::runtime_error("original import primitive microheader is truncated");
+			remaining-=sizeof(header);
+			if (header.Get_Size()>remaining) throw std::runtime_error("original import primitive microextent is malformed");
+			if (header.Get_Type()==VARID_KEY) {
+				KeyClass value;
+				if (header.Get_Size()!=sizeof(value) || m_Data.Count()==65536 || cload.Read(&value,sizeof(value))!=sizeof(value) ||
+					!std::isfinite(value.Get_Time()) || (m_Data.Count() && value.Get_Time()<=m_Data[m_Data.Count()-1].Get_Time()))
+					throw std::runtime_error("original import primitive key is malformed");
+				ww3d_import::Attempt::reserve(m_Data.Count()+1,sizeof(KeyClass));ww3d_import::Attempt::boundary();
+				if (!m_Data.Add(value)) throw std::bad_alloc();
+			} else cload.Seek(header.Get_Size());
+			remaining-=header.Get_Size();
+		}
+		return;
+	}
+#endif
 	//
 	//	Loop through all the microchunks that define the variables
 	//
@@ -326,7 +352,18 @@ PrimitiveAnimationChannelClass<T>::Load_Variables (ChunkLoadClass &cload)
 			case VARID_KEY:
 			{
 				KeyClass value;
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active() && (cload.Cur_Micro_Chunk_Length()!=sizeof(value) || m_Data.Count()==65536))
+					throw std::runtime_error("original import primitive key extent is not admitted");
+#endif
 				cload.Read (&value, sizeof (value));
+#if defined(__linux__)
+				if (ww3d_import::Attempt::is_active()) {
+					if (!std::isfinite(value.Get_Time()) || (m_Data.Count() && value.Get_Time()<=m_Data[m_Data.Count()-1].Get_Time()))
+						throw std::runtime_error("original import primitive key time is not admitted");
+					ww3d_import::Attempt::reserve(m_Data.Count()+1,sizeof(KeyClass));ww3d_import::Attempt::boundary();
+				}
+#endif
 				m_Data.Add (value);
 			}
 			break;

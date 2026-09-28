@@ -76,6 +76,10 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include "meshmdl.h"
+#if defined(__linux__)
+#include "asset_import.h"
+#include "clone_graph.h"
+#endif
 #include "aabtree.h"
 #include "matinfo.h"
 #include "vertmaterial.h"
@@ -121,6 +125,16 @@ public:
 ** will own the refs for the mesh.  The load context object is destroyed once
 ** loading is complete...
 */
+#if defined(__linux__)
+namespace {
+void read_import_id(ChunkLoadClass& reader,uint32& value)
+{
+	const int actual=reader.Read(&value,sizeof(value));
+	if (ww3d_import::Attempt::is_active() && actual!=sizeof(value)) throw std::runtime_error("original import material index read is incomplete");
+}
+}
+#endif
+
 class MeshLoadContextClass : public W3DMPO
 {
 	W3DMPO_GLUE(MeshLoadContextClass)
@@ -134,9 +148,24 @@ private:
 	int							Add_Vertex_Material(VertexMaterialClass * vmat);
 	int							Add_Texture(TextureClass* tex);
 
-	ShaderClass					Peek_Shader(int index)											{ return Shaders[index]; }
-	VertexMaterialClass *	Peek_Vertex_Material(int index)								{ return VertexMaterials[index]; }
-	TextureClass *				Peek_Texture(int index)											{ return Textures[index]; }
+	ShaderClass Peek_Shader(int index) {
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active() && (index<0 || index>=Shaders.Count())) throw std::runtime_error("original import shader index is malformed");
+#endif
+		return Shaders[index];
+	}
+	VertexMaterialClass* Peek_Vertex_Material(int index) {
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active() && (index<0 || index>=VertexMaterials.Count())) throw std::runtime_error("original import material index is malformed");
+#endif
+		return VertexMaterials[index];
+	}
+	TextureClass* Peek_Texture(int index) {
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active() && (index<0 || index>=Textures.Count())) throw std::runtime_error("original import texture index is malformed");
+#endif
+		return Textures[index];
+	}
 	
 	int							Shader_Count(void)												{ return Shaders.Count(); }
 	int							Vertex_Material_Count(void)									{ return VertexMaterials.Count(); }
@@ -249,6 +278,10 @@ public:
 WW3DErrorType MeshModelClass::Load_W3D(ChunkLoadClass & cload)
 {
 	MeshLoadContextClass * context = NULL;
+#if defined(__linux__)
+	char* tmpname=nullptr;
+	try {
+#endif
 
 	/*
 	**	Open the first chunk, it should be the mesh header
@@ -283,9 +316,18 @@ WW3DErrorType MeshModelClass::Load_W3D(ChunkLoadClass & cload)
 	/*
 	** Process the header
 	*/
+#if !defined(__linux__)
 	char *	tmpname;
+#endif
 	int		namelen;
 	
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		ww3d_import::Attempt::reserve(context->Header.NumTris,sizeof(TriIndex)+sizeof(uint8)+sizeof(Vector4));
+		ww3d_import::Attempt::reserve(context->Header.NumVertices,sizeof(Vector3)*2+sizeof(uint16)+sizeof(uint32));
+		ww3d_import::Attempt::boundary();
+	}
+#endif
 	Reset(context->Header.NumTris,context->Header.NumVertices,1);
 	
 	namelen = strlen(context->Header.ContainerName);
@@ -403,7 +445,12 @@ WW3DErrorType MeshModelClass::Load_W3D(ChunkLoadClass & cload)
 		// Else this mesh has no prelighting.
 	}
 
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && read_chunks(cload,context)!=WW3D_ERROR_OK) goto Error;
+	if (!ww3d_import::Attempt::is_active()) read_chunks(cload,context);
+#else
 	read_chunks(cload,context);
+#endif
 
 	/*
 	** If this is a pre-3.0 mesh and it has vertex influences,
@@ -437,6 +484,9 @@ WW3DErrorType MeshModelClass::Load_W3D(ChunkLoadClass & cload)
 	** Delete the temporary LoadInfo object
 	*/
 	delete context;
+#if defined(__linux__)
+	context=nullptr;
+#endif
 
 	/*
 	** Post-process the model: optimize passes, activate fog etc.
@@ -448,6 +498,9 @@ WW3DErrorType MeshModelClass::Load_W3D(ChunkLoadClass & cload)
 Error:
 	delete context;
 	return WW3D_ERROR_LOAD_FAILED;
+#if defined(__linux__)
+	} catch (...) { delete[] tmpname;delete context;throw; }
+#endif
 }
 
 
@@ -470,6 +523,9 @@ WW3DErrorType MeshModelClass::read_chunks(ChunkLoadClass & cload,MeshLoadContext
 	** If there are no more chunks within the mesh chunk,
 	** we are done.
 	*/
+#if defined(__linux__)
+	bool vertices=false,triangles=false;
+#endif
 	while (cload.Open_Chunk()) {
 
 		/*
@@ -482,6 +538,9 @@ WW3DErrorType MeshModelClass::read_chunks(ChunkLoadClass & cload,MeshLoadContext
 			case W3D_CHUNK_VERTICES:
 					// call up to MeshGeometryClass
 					error = read_vertices(cload);		
+#if defined(__linux__)
+					vertices=true;
+#endif
 					break;
 
 			case W3D_CHUNK_SURRENDER_NORMALS:
@@ -512,6 +571,9 @@ WW3DErrorType MeshModelClass::read_chunks(ChunkLoadClass & cload,MeshLoadContext
 			case W3D_CHUNK_TRIANGLES:
 					// call up to MeshGeometryClass
 					error = read_triangles(cload);
+#if defined(__linux__)
+					triangles=true;
+#endif
 					break;
 
 			case W3D_CHUNK_PER_TRI_MATERIALS:
@@ -569,12 +631,12 @@ WW3DErrorType MeshModelClass::read_chunks(ChunkLoadClass & cload,MeshLoadContext
 			case W3D_CHUNK_PRELIT_VERTEX:
 			case W3D_CHUNK_PRELIT_LIGHTMAP_MULTI_PASS:
 			case W3D_CHUNK_PRELIT_LIGHTMAP_MULTI_TEXTURE:
-					read_prelit_material (cload, context);
+					error = read_prelit_material (cload, context);
 					break;
 			
 			case W3D_CHUNK_AABTREE:
 					// call up to MeshGeometryClass
-					read_aabtree(cload);
+					error = read_aabtree(cload);
 					break;
 
 			default:
@@ -589,6 +651,9 @@ WW3DErrorType MeshModelClass::read_chunks(ChunkLoadClass & cload,MeshLoadContext
 		}
 	}
 
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && ((VertexCount && !vertices) || (PolyCount && !triangles))) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	return WW3D_ERROR_OK;
 }
 
@@ -608,6 +673,9 @@ WW3DErrorType MeshModelClass::read_chunks(ChunkLoadClass & cload,MeshLoadContext
  *=============================================================================================*/
 WW3DErrorType MeshModelClass::read_texcoords(ChunkLoadClass & cload,MeshLoadContextClass * context)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && cload.Cur_Chunk_Length()!=std::size_t(VertexCount)*sizeof(W3dTexCoordStruct)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	W3dTexCoordStruct texcoord;
 	Vector2 * uvarray = 0;
 	int elementcount = cload.Cur_Chunk_Length() / sizeof (W3dTexCoordStruct);
@@ -672,13 +740,23 @@ WW3DErrorType MeshModelClass::read_v3_materials(ChunkLoadClass & cload,MeshLoadC
 		ShaderClass						shader;
 		TextureClass *					tex = NULL;
 		char								name[256];
+#if defined(__linux__)
+		struct LocalRefs { VertexMaterialClass*& material;TextureClass*& texture;
+			~LocalRefs() { if (material) material->Release_Ref();if (texture) texture->Release_Ref(); } } refs{vmat,tex};
+#endif
 
 		/*
 		** Read the material name
 		*/
 		if (!cload.Open_Chunk()) goto Error;
 		if (cload.Cur_Chunk_ID() != W3D_CHUNK_MATERIAL3_NAME) goto Error;
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active() && (!cload.Cur_Chunk_Length() || cload.Cur_Chunk_Length()>sizeof(name))) goto Error;
+#endif
 		cload.Read(name,cload.Cur_Chunk_Length());
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active() && strnlen(name,cload.Cur_Chunk_Length())==cload.Cur_Chunk_Length()) goto Error;
+#endif
 		if (!cload.Close_Chunk()) goto Error;
 
 		/*
@@ -716,7 +794,15 @@ WW3DErrorType MeshModelClass::read_v3_materials(ChunkLoadClass & cload,MeshLoadC
 				if (!cload.Open_Chunk()) goto Error;
 					if (cload.Cur_Chunk_ID() != W3D_CHUNK_MAP3_FILENAME) goto Error;
 					if (cload.Cur_Chunk_Length() >= sizeof(filename)) goto Error;
+#if defined(__linux__)
+					const int received=cload.Read(filename,cload.Cur_Chunk_Length());
+					if (ww3d_import::Attempt::is_active() && received!=int(cload.Cur_Chunk_Length())) goto Error;
+#else
 					cload.Read(filename,cload.Cur_Chunk_Length());
+#endif
+#if defined(__linux__)
+					if (ww3d_import::Attempt::is_active() && (!cload.Cur_Chunk_Length() || !memchr(filename,0,cload.Cur_Chunk_Length()))) goto Error;
+#endif
 				if (!cload.Close_Chunk()) goto Error;
 
 				/*
@@ -748,10 +834,21 @@ WW3DErrorType MeshModelClass::read_v3_materials(ChunkLoadClass & cload,MeshLoadC
 					if (!cload.Open_Chunk()) goto Error;
 						if (cload.Cur_Chunk_ID() != W3D_CHUNK_MAP3_FILENAME) goto Error;
 						if (cload.Cur_Chunk_Length() >= sizeof(filename)) goto Error;
+#if defined(__linux__)
+						const int received=cload.Read(filename,cload.Cur_Chunk_Length());
+						if (ww3d_import::Attempt::is_active() && received!=int(cload.Cur_Chunk_Length())) goto Error;
+#else
 						cload.Read(filename,cload.Cur_Chunk_Length());
+#endif
+#if defined(__linux__)
+						if (ww3d_import::Attempt::is_active() && (!cload.Cur_Chunk_Length() || !memchr(filename,0,cload.Cur_Chunk_Length()))) goto Error;
+#endif
 					if (!cload.Close_Chunk()) goto Error;
 
 					if (tex) tex->Release_Ref();
+#if defined(__linux__)
+					tex=nullptr;
+#endif
 
 					/*
 					** Read in the auxiliary map info
@@ -949,6 +1046,16 @@ WW3DErrorType MeshModelClass::read_material_info(ChunkLoadClass & cload,MeshLoad
 	if (cload.Read(&(context->MatInfo),sizeof(W3dMaterialInfoStruct)) != sizeof(W3dMaterialInfoStruct)) {
 		return WW3D_ERROR_LOAD_FAILED;
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		const auto& info=context->MatInfo;
+		if (!info.PassCount || info.PassCount>MeshMatDescClass::MAX_PASSES || info.ShaderCount>65536 ||
+			info.VertexMaterialCount>65536 || info.TextureCount>65536) return WW3D_ERROR_LOAD_FAILED;
+		ww3d_import::Attempt::reserve(info.ShaderCount,sizeof(ShaderClass));
+		ww3d_import::Attempt::reserve(info.VertexMaterialCount,sizeof(VertexMaterialClass*));
+		ww3d_import::Attempt::reserve(info.TextureCount,sizeof(TextureClass*));ww3d_import::Attempt::boundary();
+	}
+#endif
 	Set_Pass_Count(context->MatInfo.PassCount);
 	return WW3D_ERROR_OK;
 }
@@ -997,18 +1104,32 @@ WW3DErrorType MeshModelClass::read_shaders(ChunkLoadClass & cload,MeshLoadContex
  *=============================================================================================*/
 WW3DErrorType MeshModelClass::read_vertex_materials(ChunkLoadClass & cload,MeshLoadContextClass * context)
 {
+	unsigned count=0;
 	while (cload.Open_Chunk()) {
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active() && (cload.Cur_Chunk_ID()!=W3D_CHUNK_VERTEX_MATERIAL || count>=context->MatInfo.VertexMaterialCount)) return WW3D_ERROR_LOAD_FAILED;
+		ww3d_import::Attempt::boundary();
+#endif
 		WWASSERT(cload.Cur_Chunk_ID() == W3D_CHUNK_VERTEX_MATERIAL);
 		VertexMaterialClass * vmat = NEW_REF(VertexMaterialClass,());
+#if defined(__linux__)
+		ww3d_clone::Ref<VertexMaterialClass> local(vmat);
+#endif
 		WW3DErrorType error = vmat->Load_W3D(cload);
 		if (error != WW3D_ERROR_OK) {
 			return error;
 		}
 		context->Add_Vertex_Material(vmat);
+#if !defined(__linux__)
 		vmat->Release_Ref();
+#endif
 
 		cload.Close_Chunk();
+		++count;
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && count!=context->MatInfo.VertexMaterialCount) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	return WW3D_ERROR_OK;
 }
 
@@ -1027,16 +1148,26 @@ WW3DErrorType MeshModelClass::read_vertex_materials(ChunkLoadClass & cload,MeshL
  *   3/05/99	 PDS : Broke the guts of this function into a util function in texture.cpp		  *
  *=============================================================================================*/
 WW3DErrorType MeshModelClass::read_textures(ChunkLoadClass & cload,MeshLoadContextClass * context)
-{	
+{
+	unsigned count=0;
 	// Keep reading textures until there are no more...
 	for (TextureClass *newtex = ::Load_Texture (cload);
 		  newtex != NULL;
 		  newtex = ::Load_Texture (cload)) {
 
 		// Add this texture to our contex and release our local hold on it
+#if defined(__linux__)
+		ww3d_clone::Ref<TextureClass> local(newtex);
+#endif
 		context->Add_Texture(newtex);
+		++count;
+#if !defined(__linux__)
 		newtex->Release_Ref();
+#endif
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && count!=context->MatInfo.TextureCount) return WW3D_ERROR_LOAD_FAILED;
+#endif
 
 	return WW3D_ERROR_OK;
 }
@@ -1056,6 +1187,9 @@ WW3DErrorType MeshModelClass::read_textures(ChunkLoadClass & cload,MeshLoadConte
  *=============================================================================================*/
 WW3DErrorType MeshModelClass::read_material_pass(ChunkLoadClass & cload,MeshLoadContextClass * context)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && (context->CurPass<0 || unsigned(context->CurPass)>=context->MatInfo.PassCount)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	context->CurTexStage = 0;
 
 	while (cload.Open_Chunk()) {
@@ -1114,6 +1248,10 @@ WW3DErrorType MeshModelClass::read_material_pass(ChunkLoadClass & cload,MeshLoad
  *=============================================================================================*/
 WW3DErrorType MeshModelClass::read_vertex_material_ids(ChunkLoadClass & cload,MeshLoadContextClass * context)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && cload.Cur_Chunk_Length()!=sizeof(uint32) &&
+		cload.Cur_Chunk_Length()!=std::size_t(VertexCount)*sizeof(uint32)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	/*
 	** Determine whether this chunk should be read into the default or alternate material description
 	*/
@@ -1130,19 +1268,31 @@ WW3DErrorType MeshModelClass::read_vertex_material_ids(ChunkLoadClass & cload,Me
 #if (!MESH_SINGLE_MATERIAL_HACK)
 	if (cload.Cur_Chunk_Length() == 1*sizeof(uint32)) {
 		
+#if defined(__linux__)
+		read_import_id(cload,vmat);
+#else
 		cload.Read(&vmat,sizeof(uint32));
+#endif
 		matdesc->Set_Single_Material(context->Peek_Vertex_Material(vmat),context->CurPass);
 	
 	} else {
 
 		for (int i=0; i<Get_Vertex_Count(); i++) {
+#if defined(__linux__)
+			read_import_id(cload,vmat);
+#else
 			cload.Read(&vmat,sizeof(uint32));
+#endif
 			matdesc->Set_Material(i,context->Peek_Vertex_Material(vmat),context->CurPass);
 		}
 	}
 #else
 #pragma message ("(gth) Hacking to make Generals behave as if all meshes have 1 material")
+#if defined(__linux__)
+		read_import_id(cload,vmat);
+#else
 		cload.Read(&vmat,sizeof(uint32));
+#endif
 		matdesc->Set_Single_Material(context->Peek_Vertex_Material(vmat),context->CurPass);
 #endif //0
 
@@ -1165,6 +1315,10 @@ WW3DErrorType MeshModelClass::read_vertex_material_ids(ChunkLoadClass & cload,Me
  *=============================================================================================*/
 WW3DErrorType MeshModelClass::read_shader_ids(ChunkLoadClass & cload,MeshLoadContextClass * context)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && cload.Cur_Chunk_Length()!=sizeof(uint32) &&
+		cload.Cur_Chunk_Length()!=std::size_t(PolyCount)*sizeof(uint32)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	/*
 	** Determine whether this chunk should be read into the default or alternate material description
 	*/
@@ -1180,7 +1334,11 @@ WW3DErrorType MeshModelClass::read_shader_ids(ChunkLoadClass & cload,MeshLoadCon
 #if (!MESH_SINGLE_MATERIAL_HACK)
 	if (cload.Cur_Chunk_Length() == 1*sizeof(uint32)) {
 		
+#if defined(__linux__)
+		read_import_id(cload,shaderid);
+#else
 		cload.Read(&shaderid,sizeof(shaderid));
+#endif
 		ShaderClass shader = context->Peek_Shader(shaderid);
 		matdesc->Set_Single_Shader(shader,context->CurPass);
 
@@ -1200,7 +1358,11 @@ WW3DErrorType MeshModelClass::read_shader_ids(ChunkLoadClass & cload,MeshLoadCon
 	} else {
 		
 		for (int i=0; i<Get_Polygon_Count(); i++) {
+#if defined(__linux__)
+			read_import_id(cload,shaderid);
+#else
 			cload.Read(&shaderid,sizeof(uint32));
+#endif
 			ShaderClass shader = context->Peek_Shader(shaderid);
 			matdesc->Set_Shader(i,shader,context->CurPass);
 
@@ -1221,7 +1383,11 @@ WW3DErrorType MeshModelClass::read_shader_ids(ChunkLoadClass & cload,MeshLoadCon
 #else
 #pragma message ("(gth) Hacking to make Generals behave as if all meshes have 1 material")
 
+#if defined(__linux__)
+		read_import_id(cload,shaderid);
+#else
 		cload.Read(&shaderid,sizeof(shaderid));
+#endif
 		ShaderClass shader = context->Peek_Shader(shaderid);
 		matdesc->Set_Single_Shader(shader,context->CurPass);
 
@@ -1259,6 +1425,9 @@ WW3DErrorType MeshModelClass::read_shader_ids(ChunkLoadClass & cload,MeshLoadCon
  *=============================================================================================*/
 WW3DErrorType MeshModelClass::read_dcg(ChunkLoadClass & cload,MeshLoadContextClass * context)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && cload.Cur_Chunk_Length()!=std::size_t(VertexCount)*sizeof(W3dRGBAStruct)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	/*
 	** Determine whether this chunk should be read into the default or alternate material description
 	*/
@@ -1327,6 +1496,9 @@ WW3DErrorType MeshModelClass::read_dcg(ChunkLoadClass & cload,MeshLoadContextCla
  *=============================================================================================*/
 WW3DErrorType MeshModelClass::read_dig(ChunkLoadClass & cload,MeshLoadContextClass * context)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && cload.Cur_Chunk_Length()!=std::size_t(VertexCount)*sizeof(W3dRGBAStruct)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	/*
 	** Determine whether this chunk should be read into the default or alternate material description
 	*/
@@ -1454,6 +1626,10 @@ WW3DErrorType MeshModelClass::read_texture_stage(ChunkLoadClass & cload,MeshLoad
  *=============================================================================================*/
 WW3DErrorType MeshModelClass::read_texture_ids(ChunkLoadClass & cload,MeshLoadContextClass * context)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && cload.Cur_Chunk_Length()!=sizeof(uint32) &&
+		cload.Cur_Chunk_Length()!=std::size_t(PolyCount)*sizeof(uint32)) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	uint32 texid;
 	int pass = context->CurPass;
 	int stage = context->CurTexStage;
@@ -1471,13 +1647,21 @@ WW3DErrorType MeshModelClass::read_texture_ids(ChunkLoadClass & cload,MeshLoadCo
 	*/
 #if (!MESH_SINGLE_MATERIAL_HACK)
 	if (cload.Cur_Chunk_Length() == 1*sizeof(uint32)) {
+#if defined(__linux__)
+		read_import_id(cload,texid);
+#else
 		cload.Read(&texid,sizeof(texid));
+#endif
 		matdesc->Set_Single_Texture(context->Peek_Texture(texid),pass,stage);
 
 	} else {
 
 		for (int i=0; i<Get_Polygon_Count(); i++) {
+#if defined(__linux__)
+			read_import_id(cload,texid);
+#else
 			cload.Read(&texid,sizeof(uint32));
+#endif
 			if (texid != 0xffffffff) {
 				matdesc->Set_Texture(i,context->Peek_Texture(texid),pass,stage);
 			} 
@@ -1486,7 +1670,11 @@ WW3DErrorType MeshModelClass::read_texture_ids(ChunkLoadClass & cload,MeshLoadCo
 #else
 #pragma message ("(gth) Hacking to make Generals behave as if all meshes have 1 material")
 
+#if defined(__linux__)
+		read_import_id(cload,texid);
+#else
 		cload.Read(&texid,sizeof(texid));
+#endif
 		matdesc->Set_Single_Texture(context->Peek_Texture(texid),pass,stage);
 
 #endif
@@ -1511,6 +1699,9 @@ WW3DErrorType MeshModelClass::read_texture_ids(ChunkLoadClass & cload,MeshLoadCo
  *=============================================================================================*/
 WW3DErrorType MeshModelClass::read_stage_texcoords(ChunkLoadClass & cload,MeshLoadContextClass * context)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && (!cload.Cur_Chunk_Length() || cload.Cur_Chunk_Length()%sizeof(W3dTexCoordStruct))) return WW3D_ERROR_LOAD_FAILED;
+#endif
 	unsigned				elementcount;
 	Vector2			  *uvs;
 	W3dTexCoordStruct texcoord;
@@ -1990,7 +2181,11 @@ MeshLoadContextClass::~MeshLoadContextClass(void)
 	int i;
 
 	if (TexCoords != NULL) {
+#if defined(__linux__)
+		delete[] TexCoords;
+#else
 		delete TexCoords;
+#endif
 		TexCoords = NULL;
 	}
 	for (i=0; i<Textures.Count(); i++) {
@@ -2043,6 +2238,9 @@ W3dTexCoordStruct * MeshLoadContextClass::Get_Texcoord_Array(void)
 int MeshLoadContextClass::Add_Shader(ShaderClass shader)								
 { 
 	int index = Shaders.Count();
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) { ww3d_import::Attempt::append_candidate(Shaders,shader);return index; }
+#endif
 	Shaders.Add(shader); 
 	return index;
 }
@@ -2063,9 +2261,15 @@ int MeshLoadContextClass::Add_Shader(ShaderClass shader)
 int MeshLoadContextClass::Add_Vertex_Material(VertexMaterialClass * vmat)			
 { 
 	WWASSERT(vmat != NULL);
-	vmat->Add_Ref();
 	int index = VertexMaterials.Count();
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) ww3d_import::Attempt::append_candidate(VertexMaterials,vmat);
+	else if (!VertexMaterials.Add(vmat)) throw std::runtime_error("original import material capacity is exhausted");
+	vmat->Add_Ref();
+#else
+	vmat->Add_Ref();
 	VertexMaterials.Add(vmat); 
+#endif
 	return index;
 }
 
@@ -2085,9 +2289,15 @@ int MeshLoadContextClass::Add_Vertex_Material(VertexMaterialClass * vmat)
 int MeshLoadContextClass::Add_Texture(TextureClass * tex)							
 { 
 	WWASSERT(tex != NULL);
-	tex->Add_Ref();
 	int index = Textures.Count();
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) ww3d_import::Attempt::append_candidate(Textures,tex);
+	else if (!Textures.Add(tex)) throw std::runtime_error("original import texture context capacity is exhausted");
+	tex->Add_Ref();
+#else
+	tex->Add_Ref();
 	Textures.Add(tex); 
+#endif
 	return index;
 }
 
@@ -2110,7 +2320,12 @@ int MeshLoadContextClass::Add_Texture(TextureClass * tex)
 void MeshLoadContextClass::Add_Legacy_Material(ShaderClass shader,VertexMaterialClass * vmat,TextureClass * tex)
 {
 	// create a new legacy material
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();std::unique_ptr<LegacyMaterialClass> candidate(new LegacyMaterialClass);
+	LegacyMaterialClass* mat=candidate.get();
+#else
 	LegacyMaterialClass * mat = W3DNEW LegacyMaterialClass;
+#endif
 
 	// add the shader if it is unique
 	int si = 0;
@@ -2134,6 +2349,10 @@ void MeshLoadContextClass::Add_Legacy_Material(ShaderClass shader,VertexMaterial
 		}
 		if (vi == VertexMaterials.Count()) {
 			mat->VertexMaterialIdx = Add_Vertex_Material(vmat);
+#if defined(__linux__)
+			if (ww3d_import::Attempt::is_active()) ww3d_import::Attempt::append_candidate(VertexMaterialCrcs,crc);
+			else
+#endif
 			VertexMaterialCrcs.Add(crc);
 			WWASSERT(VertexMaterialCrcs.Count() == VertexMaterials.Count());
 		} else {
@@ -2157,7 +2376,13 @@ void MeshLoadContextClass::Add_Legacy_Material(ShaderClass shader,VertexMaterial
 		}
 	}
 
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) ww3d_import::Attempt::append_candidate(LegacyMaterials,mat);
+	else if (!LegacyMaterials.Add(mat)) throw std::bad_alloc();
+	candidate.release();
+#else
 	LegacyMaterials.Add(mat);
+#endif
 }
 
 
@@ -2178,6 +2403,9 @@ void MeshLoadContextClass::Add_Legacy_Material(ShaderClass shader,VertexMaterial
  *=============================================================================================*/
 ShaderClass MeshLoadContextClass::Peek_Legacy_Shader(int legacy_material_index)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && (legacy_material_index<0 || legacy_material_index>=LegacyMaterials.Count())) throw std::runtime_error("original import legacy shader index is malformed");
+#endif
 	WWASSERT(legacy_material_index >= 0);
 	WWASSERT(legacy_material_index < LegacyMaterials.Count());
 	int si = LegacyMaterials[legacy_material_index]->ShaderIdx;
@@ -2199,6 +2427,9 @@ ShaderClass MeshLoadContextClass::Peek_Legacy_Shader(int legacy_material_index)
  *=============================================================================================*/
 VertexMaterialClass * MeshLoadContextClass::Peek_Legacy_Vertex_Material(int legacy_material_index)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && (legacy_material_index<0 || legacy_material_index>=LegacyMaterials.Count())) throw std::runtime_error("original import legacy material index is malformed");
+#endif
 	WWASSERT(legacy_material_index >= 0);
 	WWASSERT(legacy_material_index < LegacyMaterials.Count());
 	int vi = LegacyMaterials[legacy_material_index]->VertexMaterialIdx;
@@ -2224,6 +2455,9 @@ VertexMaterialClass * MeshLoadContextClass::Peek_Legacy_Vertex_Material(int lega
  *=============================================================================================*/
 TextureClass * MeshLoadContextClass::Peek_Legacy_Texture(int legacy_material_index)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active() && (legacy_material_index<0 || legacy_material_index>=LegacyMaterials.Count())) throw std::runtime_error("original import legacy texture index is malformed");
+#endif
 	WWASSERT(legacy_material_index >= 0);
 	WWASSERT(legacy_material_index < LegacyMaterials.Count());
 	int ti = LegacyMaterials[legacy_material_index]->TextureIdx;
@@ -2237,6 +2471,16 @@ TextureClass * MeshLoadContextClass::Peek_Legacy_Texture(int legacy_material_ind
 
 Vector2 * MeshLoadContextClass::Get_Temporary_UV_Array(int elementcount)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (elementcount<=0) throw std::runtime_error("original import UV extent is empty");
+		if (elementcount>TempUVArray.Length()) {
+			ww3d_import::Attempt::reserve(elementcount,sizeof(Vector2));ww3d_import::Attempt::boundary();
+			TempUVArray.Resize(elementcount); // native Resize allocates before deleting old storage
+		}
+		return &TempUVArray[0];
+	}
+#endif
 	TempUVArray.Uninitialised_Grow(elementcount);
 	return &(TempUVArray[0]);
 }

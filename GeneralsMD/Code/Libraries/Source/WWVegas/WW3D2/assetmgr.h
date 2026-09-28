@@ -187,6 +187,10 @@ public:
 
 class WW3DAssetManager
 {
+#if defined(__linux__)
+	friend class ww3d_import::Attempt;
+	friend struct W3DAssetImportProbeAccess;
+#endif
 #if defined(ZH_WW3D_CPU_ONLY)
 	friend class ww3d_prop::FrameGraph;
 #endif

@@ -70,8 +70,14 @@ enum MipCountType
 
 // This is legacy and should be phased out into wwshade shader states
 // keeping as an abstracted class for now to support this transition later
+#if defined(__linux__)
+namespace ww3d_import { class Attempt; }
+#endif
 class TextureFilterClass
 {
+#if defined(__linux__)
+	friend class ww3d_import::Attempt;
+#endif
 public:
 
 	enum FilterType 

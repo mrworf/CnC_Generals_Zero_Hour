@@ -62,6 +62,10 @@ class FileFactoryClass;
 
 struct INISection;
 struct INIEntry;
+#if defined(__linux__)
+#include <cstddef>
+namespace ww3d_import { class Attempt; }
+#endif
 
 template<class T> class TPoint3D;
 template<class T> class TPoint2D;
@@ -215,6 +219,12 @@ class INIClass {
 		void DuplicateCRCError(const char *message, const char *section, const char *entry);
 
 	private:
+#if defined(__linux__)
+		friend class ww3d_import::Attempt;
+		static thread_local void (*SourceImportGuard)(std::size_t,std::size_t);
+		static void Guard_Source_Import(std::size_t count,std::size_t size)
+		{ if (SourceImportGuard) SourceImportGuard(count,size); }
+#endif
 
 		/*
 		**	These functions are used to allocate and free the section list and section index

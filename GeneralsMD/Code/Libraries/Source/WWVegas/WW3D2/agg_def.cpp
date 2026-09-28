@@ -34,6 +34,9 @@
 
 
 #include "agg_def.h"
+#if defined(__linux__)
+#include "asset_import.h"
+#endif
 #include "htree.h"
 #include "w3derr.h"
 #include "chunkio.h"
@@ -583,9 +586,18 @@ AggregateDefClass::Read_Header (ChunkLoadClass &chunk_load)
 	// Is this the header chunk?
 	W3dAggregateHeaderStruct header = { 0 };
 	if (chunk_load.Read (&header, sizeof (header)) == sizeof (header)) {
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active()) {
+			if (m_pName || !header.Name[0] || strnlen(header.Name,sizeof(header.Name))==sizeof(header.Name)) return ret_val;
+			ww3d_import::Attempt::reserve(strlen(header.Name)+1,1);ww3d_import::Attempt::boundary();
+		}
+#endif
 
 		// Copy the name from the header structure
 		m_pName = ::_strdup (header.Name);
+#if defined(__linux__)
+		if (!m_pName) throw std::bad_alloc();
+#endif
 		m_Version = header.Version;
 
 		// Success!
@@ -610,6 +622,14 @@ AggregateDefClass::Read_Info (ChunkLoadClass &chunk_load)
 	// Read the chunk straight into our member structure
 	::memset (&m_Info, 0, sizeof (m_Info));
 	if (chunk_load.Read (&m_Info, sizeof (m_Info)) == sizeof (m_Info)) {
+#if defined(__linux__)
+		if (ww3d_import::Attempt::is_active()) {
+			if (m_SubobjectList.Count() || m_Info.SubobjectCount>65536 ||
+				strnlen(m_Info.BaseModelName,sizeof(m_Info.BaseModelName))==sizeof(m_Info.BaseModelName) ||
+				chunk_load.Cur_Chunk_Length()!=sizeof(m_Info)+std::size_t(m_Info.SubobjectCount)*sizeof(W3dAggregateSubobjectStruct)) return ret_val;
+			ww3d_import::Attempt::reserve(m_Info.SubobjectCount,sizeof(W3dAggregateSubobjectStruct));
+		}
+#endif
 
 		// Success!
 		ret_val = WW3D_ERROR_OK;
@@ -662,6 +682,15 @@ AggregateDefClass::Read_Subobject (ChunkLoadClass &chunk_load)
 void
 AggregateDefClass::Add_Subobject (const W3dAggregateSubobjectStruct &subobj_info)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (strnlen(subobj_info.SubobjectName,sizeof(subobj_info.SubobjectName))==sizeof(subobj_info.SubobjectName) ||
+			strnlen(subobj_info.BoneName,sizeof(subobj_info.BoneName))==sizeof(subobj_info.BoneName))
+			throw std::runtime_error("original import aggregate child name is malformed");
+		ww3d_import::Attempt::boundary();std::unique_ptr<W3dAggregateSubobjectStruct> candidate(new W3dAggregateSubobjectStruct(subobj_info));
+		ww3d_import::Attempt::append_candidate(m_SubobjectList,candidate.get());candidate.release();return;
+	}
+#endif
 	// Create a new structure and copy the contents of the src
 	W3dAggregateSubobjectStruct *pnew_entry = W3DNEW W3dAggregateSubobjectStruct;
 	::lstrcpy (pnew_entry->SubobjectName, subobj_info.SubobjectName);
@@ -860,6 +889,12 @@ AggregateDefClass::Save_Class_Info (ChunkSaveClass &chunk_save)
 PrototypeClass *
 AggregateLoaderClass::Load_W3D (ChunkLoadClass &chunk_load)
 {
+#if defined(__linux__)
+	ww3d_import::Attempt::boundary();std::unique_ptr<AggregateDefClass> candidate(new AggregateDefClass);
+	if (candidate->Load_W3D(chunk_load)!=WW3D_ERROR_OK) return nullptr;
+	ww3d_import::Attempt::boundary();auto* result=new AggregatePrototypeClass(candidate.get());
+	candidate.release();return result;
+#else
 	// Assume failure
 	AggregatePrototypeClass *pprototype = NULL;
 
@@ -882,4 +917,5 @@ AggregateLoaderClass::Load_W3D (ChunkLoadClass &chunk_load)
 
     // Return a pointer to the prototype
 	 return pprototype;
+#endif
 }

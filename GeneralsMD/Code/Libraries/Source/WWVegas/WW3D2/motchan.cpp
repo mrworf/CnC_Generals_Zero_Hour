@@ -45,6 +45,7 @@
 
 
 #include "motchan.h"
+#include "asset_import.h"
 #include "w3d_file.h"
 #include "chunkio.h"
 #include "vector.h"
@@ -169,6 +170,15 @@ bool MotionChannelClass::Load_W3D(ChunkLoadClass & cload)
 	if (cload.Read(&chan,sizeof(W3dAnimChannelStruct)) != sizeof(W3dAnimChannelStruct)) {
 		return false;
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (size<int(sizeof(chan)) || chan.LastFrame<chan.FirstFrame ||
+			chan.Flags>ANIM_CHANNEL_Q || chan.VectorLen!=(chan.Flags==ANIM_CHANNEL_Q ? 4 : 1)) return false;
+		const std::size_t count=(std::size_t(chan.LastFrame)-chan.FirstFrame+1)*chan.VectorLen;
+		if (!count || count>65536u*4 || (count-1)*sizeof(float)>saved_datasize) return false;
+		ww3d_import::Attempt::reserve(count,sizeof(float));ww3d_import::Attempt::boundary();
+	}
+#endif
 
 	FirstFrame = chan.FirstFrame;
 	LastFrame  = chan.LastFrame;
@@ -281,6 +291,15 @@ bool BitChannelClass::Load_W3D(ChunkLoadClass & cload)
 	if (cload.Read(&chan,sizeof(W3dBitChannelStruct)) != sizeof(W3dBitChannelStruct)) {
 		return false;
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (chunk_size<int(sizeof(chan)) || chan.LastFrame<chan.FirstFrame ||
+			chan.Flags!=BIT_CHANNEL_VIS || chan.DefaultVal>1) return false;
+		const std::size_t count=(std::size_t(chan.LastFrame)-chan.FirstFrame+8)/8;
+		if (!count || count>8192 || sizeof(chan)+count-1!=std::size_t(chunk_size)) return false;
+		ww3d_import::Attempt::reserve(count,1);ww3d_import::Attempt::boundary();
+	}
+#endif
 
 	FirstFrame = chan.FirstFrame;
 	LastFrame = chan.LastFrame;
@@ -394,6 +413,15 @@ bool TimeCodedMotionChannelClass::Load_W3D(ChunkLoadClass & cload)
 	if (cload.Read(&chan,sizeof(W3dTimeCodedAnimChannelStruct)) != sizeof(W3dTimeCodedAnimChannelStruct)) {
 		return false;
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (size<int(sizeof(chan)) || !chan.NumTimeCodes || chan.NumTimeCodes>65536 ||
+			(chan.Flags!=ANIM_CHANNEL_X && chan.Flags!=ANIM_CHANNEL_Y && chan.Flags!=ANIM_CHANNEL_Z && chan.Flags!=ANIM_CHANNEL_Q) ||
+			chan.VectorLen!=(chan.Flags==ANIM_CHANNEL_Q ? 4 : 1) ||
+			datasize%sizeof(uint32) || numInts!=std::size_t(chan.NumTimeCodes)*(chan.VectorLen+1)) return false;
+		ww3d_import::Attempt::reserve(numInts,sizeof(uint32));ww3d_import::Attempt::boundary();
+	}
+#endif
 						
 	NumTimeCodes = chan.NumTimeCodes;          
 	VectorLen    = chan.VectorLen;
@@ -762,6 +790,13 @@ bool TimeCodedBitChannelClass::Load_W3D(ChunkLoadClass & cload)
 	if (cload.Read(&chan,sizeof(W3dTimeCodedBitChannelStruct)) != sizeof(W3dTimeCodedBitChannelStruct)) {
 		return false;
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (!chan.NumTimeCodes || chan.NumTimeCodes>65536 || chan.Flags!=BIT_CHANNEL_VIS || chan.DefaultVal>1 ||
+			sizeof(chan)+(std::size_t(chan.NumTimeCodes)-1)*sizeof(uint32)!=std::size_t(chunk_size)) return false;
+		ww3d_import::Attempt::reserve(chan.NumTimeCodes,sizeof(uint32));ww3d_import::Attempt::boundary();
+	}
+#endif
 			 
 	NumTimeCodes = chan.NumTimeCodes;     
 	Type 			 = chan.Flags;
@@ -948,6 +983,15 @@ bool AdaptiveDeltaMotionChannelClass::Load_W3D(ChunkLoadClass & cload)
 	if (cload.Read(&chan,sizeof(W3dAdaptiveDeltaAnimChannelStruct)) != sizeof(W3dAdaptiveDeltaAnimChannelStruct)) {
 		return false;
 	}
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		if (size<int(sizeof(chan)) || !chan.NumFrames || chan.NumFrames>65536 ||
+			(chan.Flags!=ANIM_CHANNEL_X && chan.Flags!=ANIM_CHANNEL_Y && chan.Flags!=ANIM_CHANNEL_Z && chan.Flags!=ANIM_CHANNEL_Q) ||
+			chan.VectorLen!=(chan.Flags==ANIM_CHANNEL_Q ? 4 : 1) || datasize%sizeof(uint32) || !std::isfinite(chan.Scale)) return false;
+		ww3d_import::Attempt::reserve(numInts,sizeof(uint32));
+		ww3d_import::Attempt::reserve(chan.VectorLen*2,sizeof(float));ww3d_import::Attempt::boundary();
+	}
+#endif
 						
 	VectorLen   = chan.VectorLen;
 	Type 		   = chan.Flags;

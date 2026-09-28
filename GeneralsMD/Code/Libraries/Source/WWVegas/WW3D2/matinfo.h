@@ -48,6 +48,7 @@
 #include "vertmaterial.h"
 #include "texture.h"
 #include "shader.h"
+#include "asset_import.h"
 #ifdef _UNIX
 #include "osdep.h"
 #endif
@@ -228,6 +229,12 @@ protected:
 
 inline int MaterialInfoClass::Add_Vertex_Material(VertexMaterialClass * vmat)
 {
+#if defined(__linux__)
+	if (ww3d_import::Attempt::is_active()) {
+		const int index=VertexMaterials.Count();ww3d_import::Attempt::append_candidate(VertexMaterials,vmat);
+		if (vmat) vmat->Add_Ref();return index;
+	}
+#endif
 	if (vmat != NULL) {
 		vmat->Add_Ref();
 	}

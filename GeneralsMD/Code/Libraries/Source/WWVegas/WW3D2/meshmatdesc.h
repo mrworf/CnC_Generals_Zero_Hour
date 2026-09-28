@@ -337,7 +337,7 @@ inline int MeshMatDescClass::Get_UV_Source(int pass,int stage)
 inline int MeshMatDescClass::Get_UV_Array_Count(void)
 {
 	int count = 0;
-	while ((UV[count] != NULL) && (count < MAX_UV_ARRAYS)) {
+	while ((count < MAX_UV_ARRAYS) && (UV[count] != NULL)) {
 		count++;
 	}
 	return count;

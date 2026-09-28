@@ -63,6 +63,10 @@ class StringClass;
 */
 class HTreeManagerClass
 {
+#if defined(__linux__)
+	friend class ww3d_import::Attempt;
+	friend struct W3DAssetImportProbeAccess;
+#endif
 
 public:
 
@@ -70,7 +74,11 @@ public:
 	~HTreeManagerClass(void);
 
 	int							Load_Tree(ChunkLoadClass & cload);
+#if defined(__linux__)
+	int							Num_Trees(void);
+#else
 	int							Num_Trees(void) { return NumTrees; }
+#endif
 	HTreeClass *				Get_Tree(const char * name);
 	HTreeClass *				Get_Tree(int id);
 	uint32						Get_Tree_Handle(char * name);
