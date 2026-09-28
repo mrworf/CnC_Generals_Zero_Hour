@@ -1,7 +1,8 @@
 # M22 plan 01 slice 08S0: native asset-preload aggregate
 
-Status: planned; architecture-approved dependency-first corrective packet.
+Status: complete; evidence-only aggregate of accepted 08S0A/B.
 Plan transaction parent: `89df8bb309ad8cd4f6d409cdc27d645f11d9f782`.
+Aggregate transaction parent: `0be5d49eb47f8d58937914988503141110d23f8a`.
 
 ## Outcome and dependency graph
 
@@ -112,5 +113,22 @@ outputs, not their own entry prerequisites. PRE-012/PRE-016 physical host and
 strict/LAN facilities are freshly verified at acceptance; PRE-008 retail is used
 only after the aggregate. No new package/service/credential or M0.
 The supplement in the existing readiness manifest/report records the acyclic
-clean-checkout order. This plan packet claims no implementation/test acceptance.
+clean-checkout order. The original plan-only packet did not claim acceptance;
+the separately accepted children now close that boundary.
 Aggregate subject: `delivery: M22 08S0 close native asset preload`.
+
+## Accepted closure
+
+08S0A is accepted at `f237f73aadf90da5dbaf944159481452cbf69559`; 08S0B
+is accepted at `0be5d49eb47f8d58937914988503141110d23f8a`. Their ancestry,
+completed plan states and exact final executable/test hashes are verified.
+This aggregate changes no executable or witness and reuses B's six complete
+builds, exact14 native/sanitizer/strict focus, physical four, minimal8 both,
+established Vulkan3/2, LAN4 all six and six fresh canonical suites295/295.
+Complete category audits are clean; the approved preload-wrapper120-second
+correction and preserved build/native/minimal identity are documented in B.
+The same thirteen active08/renderer paths remain unstaged and unchanged. Resume
+only the existing bounded redacted probe after this evidence-only commit;
+retail and slice09 acceptance remain pending. The
+[aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08s0_native_preload.md)
+records the accepted child identities and unchanged gate provenance.
