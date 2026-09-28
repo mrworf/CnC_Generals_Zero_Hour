@@ -120,7 +120,20 @@ input details nor raw debugger/process output are retained. R1 is independently
 validated/committed first, then clone-graph R1, then Q0, then the unchanged trial resumes with the
 bounded redacted probe. No new milestone or implicit owner admission occurs.
 
-Requires accepted slices 08B, 08E, 08I, 08J, 08L, 08Q0 and 08R0 and a separately configured, read-only
+The post-R0 bounded redacted continuation now reaches the fixed display model-
+preload pending category after object/player construction, before camera/recorder
+continuation. Public read-only audit identifies distinct incremental asset-import
+ownership, not an R0 regression. Approved sequence:
+[08S0A](milestone_22_plan_01_slice_08s0a.md) strong bounded import/cache transaction
+→ [08S0B](milestone_22_plan_01_slice_08s0b.md) native display preload and temporary
+GameClient Drawable lifetime → [08S0](milestone_22_plan_01_slice_08s0.md) evidence-only
+aggregate → this existing active08 trial. Do not reopen accepted slices or make
+further subdivisions without architecture authority. Current trial source/test/
+ledger and unrelated renderer edits stay unstaged through each prerequisite.
+Resume only the existing bounded redacted probe after S0 acceptance; no private
+input metadata or raw output persists.
+
+Requires accepted slices 08B, 08E, 08I, 08J, 08L, 08Q0, 08R0 and 08S0 and a separately configured, read-only
 retail corpus.  The already-authorized campaign/skirmish consumer selections
 remain runtime-only test inputs: no selector, root, private logical name,
 content byte, hash, image, or captured command label is committed or emitted.

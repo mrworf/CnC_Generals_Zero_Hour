@@ -1,5 +1,55 @@
 # Milestone readiness report — renderer migration
 
+## M22 08S0 native-preload packet supplement — 2026-09-28
+
+1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. Approved A→B→aggregate is internally
+   executable; fresh existing host physical/strict/LAN facilities are explicit
+   later acceptance gates, not assumed current availability.
+2. Scope/evidence: M22 governing index and S0/A/B at parent
+   `89df8bb309ad8cd4f6d409cdc27d645f11d9f782`. FACT: bounded public transitive
+   preload/file/asset/cache/manager/local parser and temporary-Drawable audit.
+   Native preload is descriptor/import preparation, not eager pixels or a frame.
+3. Automatic work: M22-S0-01/04 read-only provider/tool/order/registration checks
+   and plan/readiness updates only. No bootstrap or executable remediation.
+4. Confirmation gates: None; exactly A/B/aggregate approved. Any independent
+   owner or additional split stops for a new architecture checkpoint.
+5. User actions: None at A entry. Existing authorized host escalation supplies
+   physical/session/strict/LAN execution at M22-S0-05 acceptance; if unavailable,
+   report exact external recovery requirements and do not substitute a gate.
+6. Missing/unresolved: no unresolved provider/order/decision remains in the
+   approved inventory. A import implementation/three new IDs and B adapter/
+   temp lifetime/new generated wrapper are owned outputs, not entry blockers.
+7. Graph: accepted providers --M22-S0-01→ A --M22-S0-02→ B --M22-S0-03→
+   aggregate → active08 → 09. PRE-002 --M22-S0-04→ A/B;
+   host PRE-012/PRE-016 --M22-S0-05→ acceptance; PRE-008 --M22-S0-06→ active08.
+8. Declared/proposed order agree after authorized insertion. R0 and all earlier
+   accepted slices remain closed; no numerical reordering or backward edge.
+9. M0: Not required; these are reached source behavior corrections, not shared
+   tool/service/bootstrap foundations.
+10. Per-child readiness: A has accepted providers/tool/generator entry; B waits
+    on accepted A; aggregate waits on exact accepted A/B commits/unchanged B
+    executable hashes. Preconditions/checks are self-contained in child plans.
+11. Clean-environment simulation passes for implementation: committed native
+    sources/providers/tools → generated strong import → original generated
+    preload/lifetime → aggregate → read-only private retail continuation. No
+    warm cache, private test asset, hidden fixture or unimplemented forward API
+    is an entry prerequisite. Physical availability is not simulated acceptance.
+12. Commands: cmake --list-presets resolves four; command -v resolves cmake,
+    ninja, GCC, Clang, Python, Git, GDB; six build directories exist. Parsed CTest
+    manifest verifies A eight/B ten existing IDs; new IDs were not run. Latest
+    generated active08 exact11 passes GCC/Clang; retail fixed pending category
+    is diagnostic, not S0 acceptance. No behavior gate rerun by planning.
+13. Files: exactly seven planning/readiness paths—S0/A/B, governing index, 08
+    dependency-only hunks, existing prerequisite manifest/report. Existing
+    active08 plan observation hunks and all executable/test/ledger/renderer
+    changes remain unstaged. No corpus metadata/raw output enters the packet.
+14. Remaining blockers: None at A implementation entry; M22-S0-05 external
+    availability is checked at acceptance. B/aggregate/08 wait for earlier
+    declared implementation outputs, not unresolved architecture.
+15. Next: re-read/audit exact packet/dependencies/links/commands/staged hunks,
+    commit `delivery: M22 plan native asset preload owners`, then implement
+    08S0A alone. No production edit before the durable plan checkpoint.
+
 ## M22 08R0 terrain-prop packet supplement — 2026-09-27
 
 1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. A can begin after this plan-only

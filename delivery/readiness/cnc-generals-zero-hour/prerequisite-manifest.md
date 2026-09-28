@@ -1,5 +1,31 @@
 # Milestone Prerequisite Manifest
 
+## M22 08S0 native-preload packet supplement — 2026-09-28
+
+Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.
+Product ID: `cnc-generals-zero-hour`; audited parent:
+`89df8bb309ad8cd4f6d409cdc27d645f11d9f782`.
+Planning transaction: exact plan-only commit identified by
+`delivery: M22 plan native asset preload owners`. Source authority is the approved
+M22 reached-preload architecture checkpoint; public source inventory is in S0.
+Order: accepted file/mesh/material/texture/clone/Q0/R0 providers → 08S0A → 08S0B
+→ evidence-only 08S0 → active08 → 09. Earlier supplements remain historical.
+
+| ID | Description | Consumers | Classification | Current status | Proposed provider | Class | Verification | Commands executed | Files changed | Blocking | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| M22-S0-01 | Accepted original file/bootstrap/asset/mesh/material/texture/clone/cache/lifecycle contracts | A/B | Already satisfied | Source/index/accepted R0 commits inspected; no reopening | 01, 05B1/05B2A/05B2B1, 05B2B2B1, 08L3A0, 08L2R1, 08N0, 08P0C4, 08Q0R1/Q0, 08R0 | AUTO | Exact child dependency declarations and public graph audit | sed/rg; git rev-parse | S0/A/B/index; 08 dependency hunks; manifest/report | Entry if provider lost | FACT: indexed accepted providers and source graph in S0 |
+| M22-S0-02 | Strong explicit bounded cold-import/normal-cache ownership | A; B/08 transitively | Owned by the consuming milestone | A output pending; ordinary loader's intermediate publication is not strong preload acceptance | 08S0A | AUTO | All manager/local construction faults, bounds, identity/ref/filter/file rollback and retry | Public loader/cache/manager audit; existing eight focus IDs verified | Same seven plan/readiness paths | B production and active08 | FACT: file cleanup and prototype/tree/animation/texture incremental publication gaps |
+| M22-S0-03 | Native display preload plus temporary GameClient Drawable cleanup | B; S0/08 | Owned by the consuming milestone | B output pending; accepted A is dependency-first entry gate | 08S0B | AUTO | Actual source traversal/order, temp throw cleanup, lazy descriptors, retry/reset/physical consumer proof | Public display/GameClient/module source audit; existing ten focus IDs verified | Same seven paths | Aggregate and active08 | FACT: CPU preload stub and returned temporary Drawable lacking scoped throw cleanup |
+| M22-S0-04 | Existing clean-checkout tools/generators and build/test registration | A/B | Already satisfied | Four native presets/tools/six directories and existing selected IDs verified; new IDs are outputs | PRE-002 repository facilities | AUTO | Presets/tool resolution/test manifest | cmake --list-presets; command -v; six directory inspection; ctest --show-only=json-v1 | Same seven paths | Entry if missing | FACT: observed checks; no warm cache/private corpus dependency |
+| M22-S0-05 | Physical Vulkan/validation/session, strict host LSan and LAN execution | A/B acceptance | Requires user action | Existing authorized host route; fresh facilities verified only at acceptance, not presumed available | PRE-012/PRE-016 host/session | USER_ACTION | Established exact native Vulkan/minimal/LAN and B generated physical route | Not run by this plan-only audit | Same seven paths | Physical acceptance if unavailable; not A entry | FACT: exact later commands, unchanged host escalation contract |
+| M22-S0-06 | Existing read-only private corpus and authorized retail continuation | Active08 after aggregate | Provided by an earlier milestone | Existing configured inputs unchanged in latest bounded probe; later acceptance not claimed | PRE-008 and accepted input provisioning | AUTO | Existing bounded redacted wrapper plus corpus-unchanged check | Latest probe fixed pending-display category only; no private metadata retained | Same seven paths | Active08 acceptance only | FACT: reach/setup/teardown=1, scene/frame=0, unchanged=1 |
+
+No new dependency/package/service/credential or M0. Import and display lifetime
+are distinct owners with no forward or cyclic edge. Scope freeze permits exactly
+A→B→aggregate; another owner/split requires explicit architecture authority.
+New A three-ID target and B one-ID wrapper are implementation outputs, not
+entry conditions. Retail inputs are never A/B fixtures.
+
 ## M22 08R0 terrain-prop packet supplement — 2026-09-27
 
 Audited parent: `b4fc25b137e94accc1abebd4f0f14bc992c64670`.
