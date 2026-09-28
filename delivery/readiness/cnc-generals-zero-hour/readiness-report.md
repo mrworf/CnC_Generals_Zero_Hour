@@ -1,5 +1,51 @@
 # Milestone readiness report — renderer migration
 
+## M22 08S0R1 accepted-cache-hit correction — 2026-09-28
+
+1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. The approved single corrective leaf
+   is implementation-ready after its durable plan checkpoint; existing authorized
+   host physical/strict/LAN facilities are fresh later acceptance gates.
+2. Scope/evidence: governing M22 index and R1/S0 at parent
+   `cb64cf6f4130e94a236f89a00d27a47dbcc27537`. FACT: unchanged bounded probe
+   TimeoutExpired120.099s and public source/function audit; INFERENCE: redundant
+   hit snapshots contribute, but future timeout closure is not assumed.
+3. Automatic work: M22-S0R1-01/03 read-only ancestry/provider/tool/registration
+   checks and five plan/readiness artifacts only. No executable/bootstrap change.
+4. Confirmation gates: None within approved one-leaf scope; any new owner, split
+   or timeout increase requires a new architecture checkpoint.
+5. User actions: None at R1 entry. Existing host escalation supplies later
+   M22-S0R1-04 validation; if unavailable, report exact external recovery rather
+   than substitute a gate. Private runtime roots remain unprinted/read-only.
+6. Missing/unresolved: None. R1 peeks/witnesses are consuming-slice outputs;
+   existing providers and full-probe owner are already committed.
+7. Graph: accepted A/B --M22-S0R1-01→ R1 --M22-S0R1-02→ refreshed S0→active08→09;
+   tools --03→R1; host --04→acceptance; provisioned read-only inputs --05→closure.
+8. Declared/proposed order agree after authorized correction. Accepted A/B and
+   historical aggregate evidence are not reopened; no backward/cyclic edge.
+9. M0: Not required; this is reached behavior, not shared bootstrap.
+10. Per-slice readiness: R1 entry providers/tools verified; refreshed S0 waits
+    for exact accepted R1/hash/gates; active08 waits for refreshed aggregate.
+    Native normalization/provider/nested/hit/miss contracts and exact commands
+    are implementation-ready in R1; no unresolved source investigation gate.
+11. Clean-environment simulation: committed A/B/providers/generators→generated
+    accepted-hit correction/cold rollback→aggregate→existing read-only probe.
+    No warm cache, undeclared service, hidden fixture or forward API required;
+    host physical availability and later private timeout closure are not simulated
+    acceptance.
+12. Commands: both A/B git ancestor checks pass; cmake --list-presets resolves
+    four native presets; cmake/ninja/GCC/Clang/Python/Git/GDB resolve; parsed
+    CTest manifests verify exact14 in all six configurations. No new behavior
+    acceptance run by planning. Preserved dirty paths and empty index verified.
+13. Files: exactly R1 plan, S0 correction plan, governing index, existing manifest
+    and report. Existing active08 plan/source/test/ledger and renderer remain
+    unstaged; no private metadata/raw output enters this packet.
+14. Remaining blockers: None at implementation entry. Existing host facilities
+    and unchanged120-second timeout closure must pass before R1 acceptance;
+    neither is waived, assumed or converted to a new owner automatically.
+15. Next: exact-stage/review/commit this plan-only packet as
+    `delivery: M22 plan native preload cache-hit correction`, then implement R1
+    alone. No production edit before the durable checkpoint.
+
 ## M22 08S0 native-preload packet supplement — 2026-09-28
 
 1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. Approved A→B→aggregate is internally

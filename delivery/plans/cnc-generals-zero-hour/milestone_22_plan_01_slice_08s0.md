@@ -1,6 +1,8 @@
 # M22 plan 01 slice 08S0: native asset-preload aggregate
 
 Status: complete; evidence-only aggregate of accepted 08S0A/B.
+Current continuation gate: approved 08S0R1 corrective leaf and aggregate refresh
+pending; the historical accepted A/B closure is unchanged.
 Plan transaction parent: `89df8bb309ad8cd4f6d409cdc27d645f11d9f782`.
 Aggregate transaction parent: `0be5d49eb47f8d58937914988503141110d23f8a`.
 
@@ -9,8 +11,10 @@ Aggregate transaction parent: `0be5d49eb47f8d58937914988503141110d23f8a`.
 Accepted original file/bootstrap, mesh/material/texture, 08Q0R1/08Q0 and 08R0
 providers precede [08S0A](milestone_22_plan_01_slice_08s0a.md) strong bounded
 asset-import/cache ownership → [08S0B](milestone_22_plan_01_slice_08s0b.md)
-native display preload and temporary GameClient Drawable lifetime → evidence-only
-08S0 → [08](milestone_22_plan_01_slice_08.md) → 09. No further split without a
+native display preload and temporary GameClient Drawable lifetime → accepted
+historical 08S0 closure → [08S0R1](milestone_22_plan_01_slice_08s0r1.md) native
+accepted-cache-hit correction → refreshed evidence-only 08S0 →
+[08](milestone_22_plan_01_slice_08.md) → 09. No further split without a
 new architecture checkpoint. Existing accepted slices remain closed.
 
 The redacted continuation reaches the unchanged CPU
@@ -132,3 +136,16 @@ only the existing bounded redacted probe after this evidence-only commit;
 retail and slice09 acceptance remain pending. The
 [aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08s0_native_preload.md)
 records the accepted child identities and unchanged gate provenance.
+
+## Approved post-closure cache-hit correction
+
+The unchanged bounded continuation times out in preload at120 seconds, before
+any Recording frame. A public read-only stack/source audit finds full offside
+registry/cache reconstruction before the native existing-prototype early return;
+default regular-texture preload has the same eager Attempt ordering. The exact
+normalization, provider/preflight/nested-visibility contracts and generated
+controls are in 08S0R1. Deliver that one corrective leaf after accepted A/B,
+without reopening their historic acceptance or changing Q0/ordinary loaders.
+Then refresh this aggregate using R1's unchanged accepted final-source gates.
+The existing retail timeout is not waived or raised; all trial paths remain
+unstaged/private-safe. Any new owner or additional split requires a checkpoint.

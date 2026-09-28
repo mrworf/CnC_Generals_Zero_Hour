@@ -1,5 +1,29 @@
 # Milestone Prerequisite Manifest
 
+## M22 08S0R1 accepted-cache-hit correction — 2026-09-28
+
+Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.
+Product ID: `cnc-generals-zero-hour`; audited parent:
+`cb64cf6f4130e94a236f89a00d27a47dbcc27537`.
+Source authority: approved one-leaf cache-hit architecture checkpoint; native
+source inventory and FACT/INFERENCE distinction are in the R1 plan.
+Planning transaction: exact plan-only commit identified by
+`delivery: M22 plan native preload cache-hit correction`.
+Order: accepted 08S0A/B → 08S0R1 → refreshed evidence-only08S0 → active08 →09.
+Earlier supplements remain historical; A/B acceptance is not reopened.
+
+| ID | Description | Consumers | Classification | Current status | Proposed provider | Class | Verification | Commands executed | Files changed | Blocking | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| M22-S0R1-01 | Accepted strong import and native preload/file/Edge ownership | R1 | Already satisfied | Exact A/B commits verified ancestors; public native lookup/preflight audit complete | 08S0A/B and their accepted original providers | AUTO | Ancestry, source/plan ownership and finite hit/miss/nested semantics | git merge-base --is-ancestor; sed/rg | R1/S0 plans, index, manifest/report | Entry if provider lost | FACT: native early hit precedes parser/file work; eager snapshot currently precedes hit |
+| M22-S0R1-02 | Bounded callback-free accepted-cache observation and regression | R1; refreshed S0/08 | Owned by the consuming milestone | Implementation/witness output pending, not R1 entry gate | 08S0R1 | AUTO | Exact native hit equivalence, zero snapshot/file/ownership delta, cold/nested/fault retry, large-hit and teardown proof | Public source audit; behavior not run | Same five paths | Refreshed S0/active08 | FACT: both display model/default texture hits construct full Attempt first |
+| M22-S0R1-03 | Existing toolchain, generated full-probe owner and exact14 registration | R1 | Already satisfied | Four presets/tools resolved; exact14 registered on all six configurations | PRE-002 and accepted S0B generator/wrapper | AUTO | No private/warm fixture dependency; test/target manifests | cmake --list-presets; command -v; ctest --show-only=json-v1 | Same five paths | Entry if unavailable | FACT: observed read-only checks |
+| M22-S0R1-04 | Physical Vulkan/validation/session, strict LSan and LAN | R1 acceptance | Requires user action | Existing authorized host facilities; freshly verify at acceptance | PRE-012/PRE-016 host/session | USER_ACTION | Exact14 strict, generated physical4, native Vulkan/minimal/LAN and canonical matrix | Not rerun by planning | Same five paths | Acceptance if unavailable, not implementation entry | FACT: existing exact commands/host contract; no availability inferred |
+| M22-S0R1-05 | Existing private read-only runtime inputs and bounded timeout-closure gate | R1 closure; active08 after aggregate | Provided by an earlier milestone | Runtime provisioning present; latest unchanged probe times out120, not retail acceptance | PRE-008 and existing slice08 wrapper | AUTO | Preload completes/categorized result within unchanged120 and corpus-unchanged check | Unchanged scene-once probe; public-only stack snapshot | Same five paths | R1 timeout closure and retail acceptance | FACT: TimeoutExpired120.099s, init3/logic5/map-INI4/stage1; record0/scene0 |
+
+No new service/package/credential/M0. Internal order is acyclic; R1 outputs are
+not entry prerequisites. No additional split or timeout increase without explicit
+architecture authority. The same thirteen active08/renderer paths are preserved.
+
 ## M22 08S0 native-preload packet supplement — 2026-09-28
 
 Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.
