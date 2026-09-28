@@ -64,6 +64,13 @@ typedef void (*GameClientFuncPtr)( Drawable *draw, void *userData );
 
 typedef std::vector<Drawable*> DrawablePtrVector;
 
+#if defined(__linux__)
+// Optional source-display capability; the lifecycle spine has no WW3D linkage.
+UnsignedInt64 installClientPreloadAdmission(void *owner, void (*admit)(void *)) noexcept;
+bool removeClientPreloadAdmission(void *owner, UnsignedInt64 token) noexcept;
+void preflightClientPreloadAdmission();
+#endif
+
 //-----------------------------------------------------------------------------
 /** The Client message dispatcher, this is the last "translator" on the message
 	* stream before the messages go to the network for processing.  It gives
@@ -85,6 +92,9 @@ public:
 class GameClient : public SubsystemInterface,
 									 public Snapshot
 {
+#if defined(__linux__)
+	friend struct W3DAssetPreloadProbeAccess;
+#endif
 
 public:
 

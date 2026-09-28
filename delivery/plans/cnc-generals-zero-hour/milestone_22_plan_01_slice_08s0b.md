@@ -1,7 +1,8 @@
 # M22 plan 01 slice 08S0B: native preload and temporary Drawable lifetime
 
-Status: planned; production waits for accepted 08S0A.
+Status: complete; accepted on the frozen final source by this slice commit.
 Plan transaction parent: `89df8bb309ad8cd4f6d409cdc27d645f11d9f782`.
+Implementation transaction parent: `f237f73aadf90da5dbaf944159481452cbf69559`.
 
 ## Outcome, dependencies and boundary
 
@@ -27,6 +28,35 @@ needed, new owned probe/wrapper and CMake/ledger/identity coverage. Stage shared
 engine/ledger paths by exact B hunks, never the preserved active08 trial.
 
 ## Source order, provider and lifetime contract
+
+Bounded audit: ModelConditionInfo preload calls only display model preload; its
+bone/Create validation remains commented out and is not opened. Native module
+condition order and GameClient traversal are unchanged. Display bootstrap's
+existing atomic owner publication may retain Linux owner-local preload identity
+(display, asset/file/FileSystem, Edge/generation), with no class fields/layout;
+withdraw it on bootstrap failure/teardown. Provider admission checks that exact
+identity before dereferencing a manager or doing any format/load work. Use the
+existing Edge nonstage guard before diagnostic construction. GameClient remains
+WW3D-free: an optional Linux-only owner/token preload-admission callback calls
+only the display's exact preload-owner check before any temporary creation.
+Display bootstrap installs it atomically with the preload sidecar and removes
+it before teardown; foreign/duplicate installs and stale removals reject without
+changing the owner. Null admission preserves minimal/headless native behavior.
+Pending/active frames and removed/stale providers therefore reject with zero
+ID/list/slot delta, even when no existing tree/prop module can check them.
+Its accepted removal preflight also runs before temporary creation, then
+the exact returned Drawable is destroyed on both preload success and throw.
+No new independent owner was found; generated tests must prove that cleanup
+cannot mask the original preload failure or touch a sibling.
+
+Approved native temporary-bookkeeping distinction: before temporary creation,
+rejection has zero counter/vector delta. After a temporary is returned, native
+successful destruction intentionally retains its consumed Drawable ID and null
+lookup slot/capacity. Success and preload failure must each consume exactly one
+bounded ID/null slot per created temporary, restore exact live list/hash/module/
+scene/ref ownership and sibling identity, and retry with the deterministic next
+ID. Do not rewind IDs or redesign the registry/vector. Final initialized process
+teardown still requires total raw/DMA/resource baseline equality.
 
 Display model preload preserves literal native model+`.w3d` naming and existing
 asset-manager cache check/file resolution. It uses A's scoped strong import;
@@ -58,8 +88,11 @@ Drawable/module/scene/shadow/tree/prop/registry/ref identities remain unchanged.
 Per-request import is atomic; earlier successful independent preload requests
 may stay accepted. No invented all-or-nothing GameClient/map preload batch.
 Debris list is cleared only at its native completed-loop point; retry is
-idempotent via accepted cache identities. Imports do not advance animation/RNG/
-FX/audio or create frame/present commands. Display teardown uses accepted source
+idempotent via accepted cache identities. Imports do not advance animation,
+project GameClient/GameLogic RNG, FX/audio or create frame/present commands.
+The already-accepted A contract preserves native cull-helper libc rand()
+consumption/topology and its explicit failed-import rollback exception; B does
+not reset or substitute that helper stream. Display teardown uses accepted source
 order; missing provider/reset/re-entry does not dereference stale ownership.
 
 ## Generated witnesses and acceptance commands
@@ -94,6 +127,29 @@ This is B's implementation-owned wrapper extension, not a claimed existing run.
 After exact descriptor preload, drive those same identities through accepted
 source mesh/terrain draw; compare source payload/commands/pixels/recreation and
 preserve required-missing rejection. Preload itself claims no pixel upload.
+The physical fixture clears only the public TextureInfo NO_LOD bit in its
+generated mesh (all other bytes identical), explicitly verifies the retained
+default all-mip descriptor and mip-enabled filter, and uses that supported
+native sampler tuple. The existing bgfx no-mip sampler/full-chain restriction
+is not changed or silently admitted by this slice.
+The generated physical fixture also saves the declared filter profile, invokes
+public `WW3D::Set_Texture_Filter(TEXTURE_FILTER_BILINEAR)` to match shipping
+device setup, and restores the profile on every exit. It snapshots every public
+min/mag/mip profile-table value and proves successful and rejected preload do
+not change those tables, descriptor defaults, native resources or frame count.
+This is fixture setup only; CPU Init and production filter semantics stay intact.
+Approved wrapper-only workload correction: the unchanged two-generation preload
+control measured 85.554/85.150 s (GCC sanitizer CPU), 70.337/70.221 s (Clang
+sanitizer CPU), 91.056/90.764 s (GCC sanitizer physical), and 75.371/75.371 s
+(Clang sanitizer physical), all category-clean under a diagnostic 240 s ceiling.
+Those diagnostic runs are not acceptance. Set only this wrapper's per-process
+deadline from 90 to 120 s: 28.944 s, approximately 31.8%, headroom above the
+slowest measured process. Preserve TimeoutExpired rejection, all 2311 fault
+boundaries, workload and assertions. No production/CMake or executable bytes
+change. Preserve six complete builds, native exact14 and minimal exact8 by
+executable/source identity; refresh registered sanitizer exact14, strict exact14,
+physical four, established Vulkan, LAN and six fresh serial canonical suites
+under the final wrapper hash before acceptance.
 Run six complete builds/canonicals, established native Vulkan/minimal/LAN,
 ledger/owned/staged/privacy audits. Only then commit B and close S0 separately.
 
@@ -110,3 +166,12 @@ retry/teardown/control plus the complete final-source matrix clean.
 Exact commit: `delivery: M22 08S0B own native asset preload lifecycle`.
 Only B-owned source/test/registration/ledger/plan/evidence/index hunks; preserve
 active08/renderer unstaged paths. S0 aggregate adds no executable change/rerun.
+
+Final acceptance: six complete builds; native exact14 on both toolchains;
+final-wrapper sanitizer exact14 and strict host LSan exact14 on both; generated
+physical four, established Vulkan GCC3/Clang2, minimal8 both, LAN4 all six and
+six serial canonical suites 295/295 each, with complete category-clean logs.
+The approved 120 s wrapper-only correction preserves complete-build/native/minimal
+provenance by exact binary/source identity. Frozen hashes, timings, ownership
+distinctions and exact staged boundary are in the
+[B evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08s0b_asset_preload.md).

@@ -102,11 +102,33 @@ GameClient *TheGameClient = NULL;
 namespace {
 GameClient *resetAdmissionClient = NULL;
 UnsignedInt64 resetAdmissionClientToken = 0;
+void *preloadAdmissionOwner = NULL;
+void (*preloadAdmissionCallback)(void *) = NULL;
+UnsignedInt64 preloadAdmissionToken = 0;
+UnsignedInt64 nextPreloadAdmissionToken = 1;
 void admitClientReset(void *owner)
 {
 	if (owner != TheGameClient) throw ERROR_INVALID_D3D;
 	static_cast<GameClient *>(owner)->friend_preflightDrawableRemoval();
 }
+}
+UnsignedInt64 installClientPreloadAdmission(void *owner, void (*admit)(void *)) noexcept
+{
+	if (!owner || !admit || preloadAdmissionOwner || !nextPreloadAdmissionToken) return 0;
+	preloadAdmissionOwner = owner;
+	preloadAdmissionCallback = admit;
+	preloadAdmissionToken = nextPreloadAdmissionToken++;
+	return preloadAdmissionToken;
+}
+bool removeClientPreloadAdmission(void *owner, UnsignedInt64 token) noexcept
+{
+	if (!owner || owner != preloadAdmissionOwner || !token || token != preloadAdmissionToken) return false;
+	preloadAdmissionOwner = NULL; preloadAdmissionCallback = NULL; preloadAdmissionToken = 0;
+	return true;
+}
+void preflightClientPreloadAdmission()
+{
+	if (preloadAdmissionCallback) preloadAdmissionCallback(preloadAdmissionOwner);
 }
 #endif
 
@@ -1137,6 +1159,13 @@ void GameClient::allocateShadows(void)
 //-------------------------------------------------------------------------------------------------
 void GameClient::preloadAssets( TimeOfDay timeOfDay )
 {
+#if defined(__linux__)
+	if (TheGameClient!=this || !TheThingFactory || !TheDisplay || !TheGlobalData ||
+		!TheInGameUI || !TheControlBar || !TheParticleSystemManager)
+		throw ERROR_INVALID_D3D;
+	preflightClientPreloadAdmission();
+	friend_preflightDrawableRemoval();
+#endif
 
 	MEMORYSTATUS before, after;
 	GlobalMemoryStatus(&before);
@@ -1162,15 +1191,34 @@ void GameClient::preloadAssets( TimeOfDay timeOfDay )
 			continue;
 
 		// create the drawable and do the preloading
+#if defined(__linux__)
+		// Native descriptor preload cannot change the admitted removal phase.
+		// Establish all cleanup-owner conditions before publishing a temporary.
+		preflightClientPreloadAdmission();
+		friend_preflightDrawableRemoval();
+#endif
 		draw = TheThingFactory->newDrawable( tTemplate );
 		if( draw )
 		{
 
 			// preload the assets
+#if defined(__linux__)
+			try {
+				draw->preloadAssets( timeOfDay );
+			} catch (...) {
+				destroyDrawable( draw );
+				throw;
+			}
+#else
 			draw->preloadAssets( timeOfDay );
+#endif
 
 			// destroy the drawable
+#if defined(__linux__)
+			destroyDrawable( draw );
+#else
 			TheGameClient->destroyDrawable( draw );
+#endif
 
 		}  // end if
 

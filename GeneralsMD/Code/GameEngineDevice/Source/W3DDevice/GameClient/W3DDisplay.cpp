@@ -58,6 +58,8 @@
 #include "WW3D2/light.h"
 #include "WW3D2/statistics.h"
 #include "original_gpu_edge.h"
+#include "asset_import.h"
+#include "GameClient/GameClient.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #include <stdexcept>
 
@@ -66,6 +68,36 @@ RTS2DScene *W3DDisplay::m_2DScene = NULL;
 RTS3DInterfaceScene *W3DDisplay::m_3DInterfaceScene = NULL;
 W3DAssetManager *W3DDisplay::m_assetManager = NULL;
 static FileFactoryClass *s_priorDisplayFileFactory = NULL;
+namespace {
+struct DisplayPreloadOwner {
+	W3DDisplay *display = nullptr;
+	W3DAssetManager *assets = nullptr;
+	W3DFileSystem *files = nullptr;
+	FileSystem *source_files = nullptr;
+	zh::original_runtime::OriginalGpuEdge *edge = nullptr;
+	std::uint64_t generation = 0;
+	UnsignedInt64 admission_token = 0;
+} s_displayPreloadOwner;
+
+W3DAssetManager &requireDisplayPreloadOwner(W3DDisplay *display)
+{
+	auto *edge=zh::original_runtime::OriginalGpuEdge::active();
+	if (edge) edge->guard_nonstage_mutation();
+	const auto &owner=s_displayPreloadOwner;
+	if (owner.display!=display || TheDisplay!=display || !owner.assets ||
+		W3DDisplay::m_assetManager!=owner.assets || WW3DAssetManager::Get_Instance()!=owner.assets ||
+		!owner.files || TheW3DFileSystem!=owner.files || _TheFileFactory!=owner.files ||
+		!owner.source_files || TheFileSystem!=owner.source_files || !edge || edge!=owner.edge ||
+		edge->generation()!=owner.generation || !edge->source_buffers_retirable() ||
+		edge->tree_source_frame_pending() || WW3D::Is_Rendering())
+		throw OriginalW3DDeviceUnavailable("original display preload owner unavailable");
+	return *owner.assets;
+}
+void admitDisplayPreload(void *display)
+{
+	(void)requireDisplayPreloadOwner(static_cast<W3DDisplay *>(display));
+}
+}
 
 struct W3DDisplay::SourceTreeFrameCheckpoint {
 	RTS3DScene *scene;
@@ -138,6 +170,8 @@ W3DDisplay::W3DDisplay()
 W3DDisplay::~W3DDisplay()
 {
 	if (!m_initialized) return;
+	if (!removeClientPreloadAdmission(this,s_displayPreloadOwner.admission_token)) std::terminate();
+	s_displayPreloadOwner={};
 	Display::deleteViews();
 	REF_PTR_RELEASE(m_3DScene);
 	REF_PTR_RELEASE(m_2DScene);
@@ -200,8 +234,17 @@ void W3DDisplay::init()
 		s_priorDisplayFileFactory = priorFileFactory;
 		if (std::getenv("ZH_M22_FACTORY_FAIL_FILE_AFTER"))
 			throw OriginalW3DDeviceUnavailable("forced original display file factory post-publication failure");
+		s_displayPreloadOwner={this,assets,fileSystem,TheFileSystem,
+			zh::original_runtime::OriginalGpuEdge::active(),
+			zh::original_runtime::OriginalGpuEdge::required().generation()};
+		s_displayPreloadOwner.admission_token=installClientPreloadAdmission(this,admitDisplayPreload);
+		if (!s_displayPreloadOwner.admission_token)
+			throw OriginalW3DDeviceUnavailable("original display preload admission already owned");
 		m_initialized = true;
 	} catch (...) {
+		if (s_displayPreloadOwner.admission_token &&
+			!removeClientPreloadAdmission(this,s_displayPreloadOwner.admission_token)) std::terminate();
+		s_displayPreloadOwner={};
 		if (TheW3DFileSystem == fileSystem) TheW3DFileSystem = NULL;
 		s_priorDisplayFileFactory = NULL;
 		m_3DInterfaceScene = NULL;
@@ -453,8 +496,29 @@ void W3DDisplay::setShroudLevel(Int x, Int y, CellShroudStatus setting)
 	TheTerrainRenderObject->notifyShroudChanged();
 }
 void W3DDisplay::setBorderShroudLevel(UnsignedByte) { ZH_DISPLAY_PENDING(); }
-void W3DDisplay::preloadModelAssets(AsciiString) { ZH_DISPLAY_PENDING(); }
-void W3DDisplay::preloadTextureAssets(AsciiString) { ZH_DISPLAY_PENDING(); }
+void W3DDisplay::preloadModelAssets(AsciiString model)
+{
+	auto &assets=requireDisplayPreloadOwner(this);
+	ww3d_import::Attempt::name(model.str(),4);
+	AsciiString filename;
+	filename.format("%s.w3d",model.str());
+	// Preserve native optional-missing void preload and literal suffix naming.
+	(void)ww3d_import::Attempt::load(assets,filename.str());
+}
+void W3DDisplay::preloadTextureAssets(AsciiString texture)
+{
+	auto &assets=requireDisplayPreloadOwner(this);
+	ww3d_import::Attempt::name(texture.str());
+	ww3d_import::Attempt attempt(assets);
+	TextureClass *descriptor=assets.Get_Texture(texture.str());
+	if (!descriptor) throw OriginalW3DDeviceUnavailable("original texture preload descriptor missing");
+	// This caller ref is released before publication and on every throw. The
+	// attempt owns its candidate cache ref; no lazy Init/upload/access occurs.
+	descriptor->Release_Ref();
+	attempt.validate();
+	ww3d_import::Attempt::boundary();
+	if (!attempt.commit()) throw OriginalW3DDeviceUnavailable("original texture preload publication rejected");
+}
 Real W3DDisplay::getAverageFPS() { ZH_DISPLAY_PENDING(); }
 Int W3DDisplay::getLastFrameDrawCalls() { ZH_DISPLAY_PENDING(); }
 #undef ZH_DISPLAY_PENDING
