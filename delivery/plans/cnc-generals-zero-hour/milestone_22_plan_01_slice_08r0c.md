@@ -1,7 +1,8 @@
 # M22 plan 01 slice 08R0C: transactional source terrain-prop frame
 
-Status: planned; dependency-blocked until 08R0B acceptance.
+Status: implementation-ready; 08R0A and 08R0B accepted. No C production edits yet.
 Plan transaction parent: `b4fc25b137e94accc1abebd4f0f14bc992c64670`.
+Command/queue refinement parent: `c382a699f61a91dbaa992b99c9b4a832918bee50`.
 
 ## Outcome, dependencies and boundary
 
@@ -39,6 +40,49 @@ only within complete admitted checkpoint; no global Invalidate/reset shortcut.
 All commit replay is allocation-free within D0 admitted API-thread bounds; worker/
 backend allocation remains existing device-loss handling, not reversible claim.
 
+### Verified queue and preparation boundary
+
+Public-source audit confirms `W3DPropBuffer::drawProps` performs cull and the real
+partition/local-player shroud query, installs native terrain-object lighting, and
+calls each admitted render object's `Render`. It does not emit prop triangles.
+`MeshClass::Render` enqueues original `PolyRenderTaskClass` and visible/delayed
+`MatPassTaskClass` work, skin links, or the source static-sort list. The later
+DX8 rigid/skin/category flush and static/sorting flush emit the triangles.
+R0B remains only exact shroud-pass semantics; C owns all queue preparation,
+registration, frame scheduling, rollback and successful retirement.
+
+Registration audit includes `Register_For_Rendering` / `Register_Mesh_Type`,
+rigid and skin containers, vertex split/gap arrays, FVF list growth, 64-way
+texture/material/shader booking, polygon renderer construction and both list
+memberships, VB/IB append bytes/counters and source buffer mapping generation.
+Never allow a failed publication to unregister or rebuild an accepted sibling.
+Prepare guarded bounded candidate allocations/list nodes/task ownership units
+outside the source frame; preserve native matching, grouping and insertion order.
+Publish only after complete admission, with nonthrowing owner-local publication
+and reverse exact withdrawal on failure. Narrow Linux friendship/internal
+sidecars may access these owner fields without changing generic container
+operations, class fields/vtables/layout/serialization or Windows behavior.
+
+Frame capture must retain consumed task/list ownership until device commit:
+restoration restores the same nodes, refs, head/tail/link order and source bytes,
+not newly allocated reconstructions. Pre-existing populated work and accepted
+categories are checkpointed exactly; newly prepared units are canceled exactly.
+Include procedural per-polygon APT/dynamic buffers, delayed passes, skin streaming
+offsets/scratch storage, source static-sort levels/ref nodes, sorting state/ref
+nodes/temp-index storage and all counters. Unsupported NPatches or malformed
+source/FVF/category/pass/range providers reject before registration or journal.
+All bounds use accepted D0 limits (4096 commands/resources, ordered-view and
+64MiB byte bounds), including mixed manifests and exact bound+1 rejection.
+
+Visual-animation admission recursively validates all reachable SINGLE/DOUBLE/
+COMBO motion providers before any journal, queue/category registration, animation
+time, RNG or C1 mutation. Sound-bearing or indeterminate motion graphs reject
+with exact no-mutation residual and deterministic retry. `Animatable3DObjClass`
+can dispatch embedded sound Play/Stop during transform update, which is outside
+this frame rollback owner; C does not admit that effect or change ordinary
+nontransactional sound behavior. Sound-free visual animation, hierarchy/bone/
+LOD/cache state remains within C's exact checkpoint.
+
 Preserve source HeightMap ordering: terrain/shore/extra, authored edging/roads,
 prop Render task generation, scorches/bridge/tracks/additional terrain shroud;
 actual mesh triangles occur at the existing source scene flush, followed by
@@ -59,7 +103,8 @@ and never access stale registry/mappings during replay.
 
 ## Generated witnesses and exact commands
 
-Register `original_w3d_prop_frame` with bounded generated packet/map and --gpu;
+Register `original_w3d_prop_frame` using the established full-probe/Python
+generated-map owner, bounded public packet/map and wrapper `--gpu`;
 exercise public map add and display.draw, not direct draw substitution. Cover
 props-only and combined tree/decal/shadow/water frame; mixed direct Mesh and
 HLOD/HModel/Collection/converted DistLOD, shared type/texture refs, animated/LOD,
@@ -77,12 +122,21 @@ removal rejection/idle retry, reset/cancel/hidden/empty and two-generation teard
 Immediate owner/live-resource residual and exact monotonic diagnostic delta are
 separate; final initialized raw/DMA baseline must match after complete teardown.
 
+The wrapper is `tests/original_rendering/test_w3d_prop_frame.py`, invoking
+`zh_original_w3d_full_probe` through the existing generated mission/map fixture
+and `original_w3d_cpu_graph_tests` asset producer. Do not add a standalone prop
+process/device owner, retail selector or alternate draw route. The generated
+profile dispatch is isolated from the preserved active08 trial hunks.
 Build focus:
-`cmake --build build/<preset> --target zh_original_w3d_full_probe original_w3d_prop_owner_tests original_w3d_prop_shroud_tests original_w3d_prop_frame_tests original_w3d_tree_program_tests original_w3d_stage_transaction_tests -j4`.
+`cmake --build build/<preset> --target zh_original_w3d_full_probe original_w3d_cpu_graph_tests original_w3d_prop_owner_tests original_w3d_tree_program_tests original_w3d_stage_transaction_tests original_w3d_source_reference_tests -j4`.
 Exact ten-control focus:
 `ASAN_OPTIONS=detect_leaks=0 ctest --test-dir build/<preset> -R '^(original_w3d_prop_frame|original_w3d_prop_owner|original_w3d_prop_owner_identity|original_w3d_prop_owner_provider_removal|original_w3d_prop_shroud|original_w3d_terrain_map_frame|original_w3d_tree_draw|original_w3d_tree_decal|original_w3d_stage_transaction|original_w3d_source_reference)$' --output-on-failure -j1`.
 Generated physical command on GCC/Clang native and both sanitizers:
-`python3 tools/run_validation_clean.py build/<preset>/original_w3d_prop_frame_tests --gpu`.
+`python3 tools/run_validation_clean.py python3 tests/original_rendering/test_w3d_prop_frame.py --executable build/<preset>/zh_original_w3d_full_probe --asset-producer build/<preset>/original_w3d_cpu_graph_tests --source-root . --gpu`.
+Strict host LSan uses exactly `ASAN_OPTIONS=detect_leaks=1` with the same ten-control
+CTest expression, host escalation and no strict UBSan override. Native/generated
+controls cover every conditional branch above; a sound-bearing/indeterminate
+motion negative proves no dispatch, frame, queue, animation-time or RNG changes.
 Freeze source after native audit/focus, then run all R0 common final-source gates
 including strict LSan, six serial canonical suites and fresh physical/LAN controls.
 
