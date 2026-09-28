@@ -59,6 +59,7 @@ class W3DShaderManager
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	friend class W3DDisplay;
+	friend struct W3DShroudGeneratedProbeAccess;
 	struct SourceFrameCheckpoint;
 	static std::shared_ptr<SourceFrameCheckpoint> captureSourceFrame();
 	static void restoreSourceFrame(SourceFrameCheckpoint &) noexcept;

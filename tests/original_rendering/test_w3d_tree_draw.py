@@ -67,11 +67,11 @@ def main():
         for generation in range(2):
             source=source_tree(root/f"source-{generation}",fixture,"valid",tree_textures=True,
                                immobile_enemy=True,crusher_logic=True,fx_lists=True)
-            # Isolated GCC/Clang sanitizer processes take 40.93--42.35s for
-            # the unchanged exhaustive rollback sweep. Keep a bounded 60s
-            # deadline here only; TimeoutExpired still reports a hung process.
+            # Final-source Clang sanitizer diagnosis measures 59.32--64.35s
+            # for the unchanged 368-boundary sweep. Bound this process at 90s
+            # (~40% margin); TimeoutExpired still reports a hung process.
             result=run(args.executable.resolve(),root/f"generation-{generation}",source,"mission",
-                       timeout_seconds=60)
+                       timeout_seconds=90)
             output=result.stdout+result.stderr
             if (result.returncode or "original tree draw: source=1 rollback=1 retry=1 generations=2 resources=0" not in output
                     or "runtime error:" in output or "ERROR: AddressSanitizer" in output

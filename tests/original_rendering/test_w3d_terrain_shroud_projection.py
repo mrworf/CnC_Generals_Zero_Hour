@@ -39,7 +39,7 @@ def main() -> int:
             output=result.stdout+result.stderr
             if (result.returncode or marker not in result.stdout or "Validation Error" in output
                     or "VUID-" in output or "runtime error:" in output or "ERROR: AddressSanitizer" in output
-                    or (args.gpu and "original terrain shroud physical: nonuniform=1 rollback=1 generations=2 resources=0 draws=0" not in result.stdout)):
+                    or (args.gpu and "original terrain shroud physical: nonuniform=1 rollback=1 generations=2 resources=0 committed-draws=10" not in result.stdout)):
                 raise SystemExit(f"original terrain shroud projection generation {generation} "
                                  f"failed ({result.returncode}); private output redacted")
     print("original terrain shroud projection: ownership/rollback/reentry ok")

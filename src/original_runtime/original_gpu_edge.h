@@ -175,6 +175,8 @@ public:
     bool commit_tree_source_frame() noexcept;
     bool abort_tree_source_frame() noexcept;
     bool tree_source_frame_pending() const noexcept;
+    bool admitted_source_frame_active() const noexcept
+    { return source_frame_attempt_ && source_frame_active_ && device_.pass_active(); }
     void draw_immutable_tree(const PreparedTreeProgram&,const VertexBufferClass*,
         const IndexBufferClass*,unsigned vertex_count,unsigned index_count);
     void draw_immutable_tree_decal(const PreparedTreeProgram&,const VertexBufferClass*,

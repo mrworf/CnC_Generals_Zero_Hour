@@ -4,6 +4,8 @@
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "tree_shroud_projection_cpu.h"
+#include "shroud_material_preset_cpu.h"
+#include "WW3D2/vertmaterial.h"
 
 #include <stdexcept>
 #include <cmath>
@@ -118,6 +120,7 @@ Int W3DShaderManager::getShaderPasses(ShaderTypes shader)
 	require_shader_manager();
 	if (shader == ST_TERRAIN_BASE) return 2;
 	if (shader == ST_ROAD_BASE) return 1;
+	if (shader == ST_SHROUD_TEXTURE) return 1;
 	else
 		throw std::runtime_error("original terrain shader kind is unsupported by Linux minimum profile");
 }
@@ -127,29 +130,29 @@ Int W3DShaderManager::setShroudTex(Int stage)
     auto& edge=zh::original_runtime::OriginalGpuEdge::required();
     edge.guard_nonstage_mutation();
     require_shader_manager();
-    if (stage!=1 || !edge.idle_preparation_ready())
+    if ((stage!=0 && stage!=1) || !edge.idle_preparation_ready())
         throw std::runtime_error("original tree shroud binding phase or stage unavailable");
     auto* shroud=W3DTerrainVisual::peekPublishedShroud();
     if (!shroud) throw std::runtime_error("original tree shroud current resident content unavailable");
     auto* texture=shroud->getShroudTexture();
     const auto matrix=shroudTransform(*shroud);
-    zh::original_runtime::OriginalGpuEdge::SourceStageSelection selection{1,texture};
+    zh::original_runtime::OriginalGpuEdge::SourceStageSelection selection{static_cast<unsigned>(stage),texture};
     zh::original_runtime::OriginalGpuEdge::SourceStageDesc desc;
     desc.generation=edge.generation();desc.selections=&selection;desc.count=1;
     zh::original_runtime::OriginalGpuEdge::SourceStageToken token;
     if (!edge.begin_source_stages(desc,token))
         throw std::runtime_error("original tree shroud binding admission rejected");
     try {
-        DX8Wrapper::Set_Texture(1,texture);
-        DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_TEXCOORDINDEX,D3DTSS_TCI_CAMERASPACEPOSITION);
-        DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_COUNT2);
-        DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_COLORARG1,D3DTA_TEXTURE);
-        DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_COLORARG2,D3DTA_CURRENT);
-        DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);
-        DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_ALPHAARG2,D3DTA_CURRENT);
-        DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_COLOROP,D3DTOP_MODULATE);
-        DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_ALPHAOP,D3DTOP_SELECTARG2);
-        DX8Wrapper::Set_Transform(D3DTS_TEXTURE0+1,matrix);
+        DX8Wrapper::Set_Texture(stage,texture);
+        DX8Wrapper::Set_DX8_Texture_Stage_State(stage,D3DTSS_TEXCOORDINDEX,D3DTSS_TCI_CAMERASPACEPOSITION);
+        DX8Wrapper::Set_DX8_Texture_Stage_State(stage,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_COUNT2);
+        DX8Wrapper::Set_DX8_Texture_Stage_State(stage,D3DTSS_COLORARG1,D3DTA_TEXTURE);
+        DX8Wrapper::Set_DX8_Texture_Stage_State(stage,D3DTSS_COLORARG2,D3DTA_CURRENT);
+        DX8Wrapper::Set_DX8_Texture_Stage_State(stage,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);
+        DX8Wrapper::Set_DX8_Texture_Stage_State(stage,D3DTSS_ALPHAARG2,D3DTA_CURRENT);
+        DX8Wrapper::Set_DX8_Texture_Stage_State(stage,D3DTSS_COLOROP,D3DTOP_MODULATE);
+        DX8Wrapper::Set_DX8_Texture_Stage_State(stage,D3DTSS_ALPHAOP,D3DTOP_SELECTARG2);
+        DX8Wrapper::Set_Transform(D3DTS_TEXTURE0+stage,matrix);
         edge.apply_source_stages(token);
         if (!edge.commit_source_stages(token)) throw std::runtime_error("original tree shroud binding commit rejected");
     } catch (...) {
@@ -164,6 +167,39 @@ Int W3DShaderManager::setShroudTex(Int stage)
 Int W3DShaderManager::setShader(ShaderTypes shader, Int pass)
 {
 	require_shader_manager();
+	if (shader == ST_SHROUD_TEXTURE) {
+		auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+		if (pass!=0 || !edge.admitted_source_frame_active())
+			throw std::runtime_error("original shroud material requires admitted source frame");
+		auto* shroud=W3DTerrainVisual::peekPublishedShroud();
+		auto* texture=shroud?shroud->getShroudTexture():nullptr;
+		if (!texture || m_Textures[0]!=texture)
+			throw std::runtime_error("original shroud material source identity unavailable");
+		(void)edge.texture_handle(texture);
+		const auto matrix=shroudTransform(*shroud);
+		if (m_currentShader==shader && m_currentShaderPass==pass) return TRUE;
+		VertexMaterialClass* material=VertexMaterialClass::Get_Preset(VertexMaterialClass::PRELIT_DIFFUSE);
+		try { DX8Wrapper::Set_Material(material); }
+		catch (...) { REF_PTR_RELEASE(material);throw; }
+		REF_PTR_RELEASE(material);
+		DX8Wrapper::Set_Texture(0,texture);
+#if defined(_DEBUG) || defined(_INTERNAL)
+		constexpr bool debug_profile=true;
+		const bool fog_on=TheGlobalData && TheGlobalData->m_fogOfWarOn;
+#else
+		constexpr bool debug_profile=false;
+		constexpr bool fog_on=false;
+#endif
+		DX8Wrapper::Set_Shader(zh::original_runtime::detail::shroud_material_preset(
+			debug_profile,fog_on));
+		DX8Wrapper::Apply_Render_State_Changes();
+		DX8Wrapper::Set_DX8_Texture_Stage_State(0,D3DTSS_TEXCOORDINDEX,D3DTSS_TCI_CAMERASPACEPOSITION);
+		DX8Wrapper::Set_DX8_Texture_Stage_State(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_COUNT2);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_ZFUNC,D3DCMP_EQUAL);
+		DX8Wrapper::Set_Transform(D3DTS_TEXTURE0,matrix);
+		m_currentShader=shader;m_currentShaderPass=pass;
+		return TRUE;
+	}
 	if (shader != ST_TERRAIN_BASE && shader != ST_ROAD_BASE)
 		throw std::runtime_error("original terrain shader kind is unsupported by Linux minimum profile");
 	const Int pass_count = shader == ST_TERRAIN_BASE ? 2 : 1;
@@ -222,6 +258,17 @@ Int W3DShaderManager::setShader(ShaderTypes shader, Int pass)
 void W3DShaderManager::resetShader(ShaderTypes shader)
 {
 	require_shader_manager();
+	if (shader==ST_SHROUD_TEXTURE) {
+		auto& edge=zh::original_runtime::OriginalGpuEdge::required();
+		if (!edge.admitted_source_frame_active() || m_currentShader!=shader)
+			throw std::runtime_error("original shroud material reset requires admitted source frame");
+		DX8Wrapper::Set_Texture(0,nullptr);
+		DX8Wrapper::Set_DX8_Render_State(D3DRS_ZFUNC,D3DCMP_LESSEQUAL);
+		DX8Wrapper::Set_DX8_Texture_Stage_State(0,D3DTSS_TEXCOORDINDEX,0);
+		DX8Wrapper::Set_DX8_Texture_Stage_State(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);
+		m_currentShader=ST_INVALID;m_currentShaderPass=-1;
+		return;
+	}
 	if (shader != ST_TERRAIN_BASE && shader != ST_ROAD_BASE)
 		throw std::runtime_error("original terrain shader reset kind is unsupported");
 	if (m_currentShader == ST_INVALID) return;

@@ -8,10 +8,17 @@
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "WW3D2/camera.h"
+#include "WW3D2/dx8vertexbuffer.h"
+#include "WW3D2/dx8indexbuffer.h"
+#include "WW3D2/dx8fvf.h"
+#include "WW3D2/shader.h"
 #include "original_gpu_edge.h"
 #include "tree_shroud_projection_cpu.h"
+#include "shroud_material_preset_cpu.h"
 #include "zh/renderer/recording_device.h"
 #include "zh/platform/bgfx_device.h"
+
+#include <SDL3/SDL.h>
 
 #include <cstdlib>
 #include <cstdio>
@@ -26,6 +33,9 @@
 
 struct W3DShroudGeneratedProbeAccess {
     static void rejectNextCommit(W3DShroud& owner) { owner.m_failContentCommit=TRUE; }
+    using ShaderState=W3DShaderManager::SourceFrameCheckpoint;
+    static std::shared_ptr<ShaderState> captureShader() { return W3DShaderManager::captureSourceFrame(); }
+    static void restoreShader(ShaderState& state) { W3DShaderManager::restoreSourceFrame(state); }
 };
 template<class Owner,class=void> struct HasPublicCandidateWithdrawal:std::false_type {};
 template<class Owner> struct HasPublicCandidateWithdrawal<Owner,std::void_t<decltype(
@@ -191,9 +201,27 @@ void bindingControls(zh::renderer::RecordingGpuDevice& device,
             && device.texture_bytes(edge.texture_handle(shroud->getShroudTexture()))==pixels,
             "original shroud binding fault changed accepted pixels/stage/refs");
     }
-    require(rejected([&]{W3DShaderManager::setShroudTex(0);})
-        && sameStage(original,DX8Wrapper::Inspect_Source_State()) && edge.source_revision()==revision,
-        "original shroud wrong-stage rejection changed state");
+    for(unsigned fault=0;fault<5;++fault) {
+        if(fault==0) device.fail_next_transaction_checkpoint();
+        if(fault==1) edge.fail_next_source_stage_commit();
+        if(fault==2) edge.fail_source_stage_allocation_after(0);
+        if(fault==3) device.fail_transaction_operation_after(0);
+        if(fault==4) device.fail_next_sampler_create();
+        require(rejected([&]{W3DShaderManager::setShroudTex(0);})
+            && sameStage(original,DX8Wrapper::Inspect_Source_State())
+            && edge.source_revision()==revision && device.resource_counts()==resources
+            && shroud->getShroudTexture()->Num_Refs()==refs
+            && !edge.queued_source_reference_count() && !edge.reserved_source_reference_count(),
+            "original stage-zero shroud preparation fault changed accepted owners");
+    }
+    require(W3DShaderManager::setShroudTex(0) && DX8Wrapper::Peek_Texture(0)==shroud->getShroudTexture()
+        && edge.pending_stage(0).texture==edge.texture_handle(shroud->getShroudTexture())
+        && W3DShaderManager::getCurrentShader()==W3DShaderManager::ST_INVALID
+        && edge.drain_source_references(edge.generation()),
+        "original shroud idle stage-zero preparation selected a material pass");
+    DX8Wrapper::Set_Texture(0,nullptr);TextureBaseClass::Apply_Null(0);
+    require(rejected([&]{W3DShaderManager::setShroudTex(2);}),
+        "original shroud unsupported stage was admitted");
     for(unsigned invalid=0;invalid<3;++invalid) {
         Matrix4x4 bad=view;
         if(invalid==0) for(unsigned column=0;column<4;++column) bad[2][column]=0;
@@ -254,14 +282,288 @@ void bindingControls(zh::renderer::RecordingGpuDevice& device,
     DX8Wrapper::Set_Texture(1,NULL);TextureBaseClass::Apply_Null(1);
 }
 
+void materialFrameControls(zh::renderer::RecordingGpuDevice& device,
+    zh::original_runtime::OriginalGpuEdge& edge,
+    W3DShroud* shroud)
+{
+    using namespace zh::renderer;
+    const auto& alpha=zh::original_runtime::detail::shroud_material_preset(true,true);
+    const auto& normal=zh::original_runtime::detail::shroud_material_preset(true,false);
+    require(&alpha==&ShaderClass::_PresetAlphaSpriteShader
+        && alpha.Get_Src_Blend_Func()==ShaderClass::SRCBLEND_SRC_ALPHA
+        && alpha.Get_Dst_Blend_Func()==ShaderClass::DSTBLEND_ONE_MINUS_SRC_ALPHA
+        && &normal==&ShaderClass::_PresetMultiplicativeSpriteShader
+        && normal.Get_Src_Blend_Func()==ShaderClass::SRCBLEND_ZERO
+        && normal.Get_Dst_Blend_Func()==ShaderClass::DSTBLEND_SRC_COLOR
+        && &zh::original_runtime::detail::shroud_material_preset(false,true)==&normal,
+        "original shroud debug-alpha versus release-multiplicative preset mismatch");
+    W3DShroudMaterialPassClass pass;
+    DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+    DX8Wrapper::Set_Transform(D3DTS_PROJECTION,Matrix4x4(true));
+    const auto idle=DX8Wrapper::Inspect_Source_State();
+    const auto idle_shader=W3DShaderManager::getCurrentShader();
+    const auto idle_texture=W3DShaderManager::getShaderTexture(0);
+    require(rejected([&]{pass.Install_Materials();}) && rejected([&]{pass.UnInstall_Materials();})
+        && sameStage(idle,DX8Wrapper::Inspect_Source_State())
+        && W3DShaderManager::getCurrentShader()==idle_shader
+        && W3DShaderManager::getShaderTexture(0)==idle_texture,
+        "original shroud complete pass escaped idle stage-only boundary");
+    TextureDesc target;target.width=8;target.height=8;target.render_target=true;target.sampled=false;
+    auto color=device.create_texture(target,"generated shroud pass color");
+    target.format=TextureFormat::depth24_stencil8;
+    auto depth=device.create_texture(target,"generated shroud pass depth");
+    edge.bind_frame_targets(color,depth,8,8);
+    const auto accepted_commands=device.snapshot();
+    const auto accepted_resources=device.resource_counts();
+    auto shader_checkpoint=W3DShroudGeneratedProbeAccess::captureShader();
+    require(edge.begin_tree_source_frame(),"original shroud frame fault admission rejected");
+    edge.begin_source_frame(true,true,0.5f,0.5f,0.5f,1);
+    pass.Install_Materials();
+    const auto attempted=DX8Wrapper::Inspect_Source_State();
+    require(attempted.render.at(D3DRS_ZFUNC)==D3DCMP_EQUAL,
+        "original shroud late fault did not reach complete pass");
+    pass.UnInstall_Materials();
+    edge.end_source_frame(false);
+    device.fail_transaction_operation_after(0);
+    require(!device.present(color) && !edge.commit_tree_source_frame()
+        && edge.abort_tree_source_frame(),
+        "original shroud late present fault escaped frame rollback");
+    W3DShroudGeneratedProbeAccess::restoreShader(*shader_checkpoint);
+    require(device.snapshot()==accepted_commands && device.resource_counts()==accepted_resources
+        && sameStage(idle,DX8Wrapper::Inspect_Source_State())
+        && W3DShaderManager::getCurrentShader()==idle_shader
+        && W3DShaderManager::getShaderTexture(0)==idle_texture,
+        "original shroud frame rollback changed accepted commands/state/resources");
+    for(unsigned fault=0;fault<5;++fault) {
+        auto prior_shader=W3DShroudGeneratedProbeAccess::captureShader();
+        const auto prior_source=DX8Wrapper::Inspect_Source_State();
+        const auto prior_commands=device.snapshot();
+        const auto prior_resources=device.resource_counts();
+        require(edge.begin_tree_source_frame(),"original shroud program fault frame admission rejected");
+        edge.begin_source_frame(true,true,0,0,0,1);
+        pass.Install_Materials();
+        if(fault==0) device.fail_next_shader_create();
+        if(fault==1) device.fail_next_pipeline_create();
+        if(fault==2) device.fail_next_buffer_create();
+        if(fault==3) device.fail_next_buffer_upload();
+        if(fault==4) device.fail_buffer_create_after(1);
+        require(rejected([&]{(void)edge.prepare_applied_state(DX8_FVF_XYZDUV1);}),
+            "original shroud generated program fault was admitted");
+        edge.abort_source_frame();
+        require(edge.abort_tree_source_frame(),"original shroud program fault journal abort rejected");
+        W3DShroudGeneratedProbeAccess::restoreShader(*prior_shader);
+        require(device.snapshot()==prior_commands && device.resource_counts()==prior_resources
+            && sameStage(prior_source,DX8Wrapper::Inspect_Source_State())
+            && W3DShaderManager::getCurrentShader()==idle_shader
+            && W3DShaderManager::getShaderTexture(0)==idle_texture,
+            "original shroud program fault changed accepted frame source/resources");
+    }
+    auto success_shader=W3DShroudGeneratedProbeAccess::captureShader();
+    auto* prior_terrain_texture=W3DShaderManager::getShaderTexture(1);
+    require(edge.begin_tree_source_frame(),"original shroud frame admission rejected");
+    try {
+    edge.begin_source_frame(true,true,0.5f,0.5f,0.5f,1);
+    require(edge.admitted_source_frame_active(),"original shroud frame owner not active");
+    const auto before_negative=DX8Wrapper::Inspect_Source_State();
+    require(rejected([&]{W3DShaderManager::setShader(W3DShaderManager::ST_SHROUD_TEXTURE,1);})
+        && sameStage(before_negative,DX8Wrapper::Inspect_Source_State()),
+        "original shroud invalid pass mutated admitted source state");
+    Matrix4x4 prior_view;DX8Wrapper::Get_Transform(D3DTS_VIEW,prior_view);
+    Matrix4x4 singular=prior_view;
+    for(unsigned col=0;col<4;++col) singular[2][col]=0;
+    DX8Wrapper::Set_Transform(D3DTS_VIEW,singular);
+    const auto invalid_view_state=DX8Wrapper::Inspect_Source_State();
+    require(rejected([&]{pass.Install_Materials();})
+        && sameStage(invalid_view_state,DX8Wrapper::Inspect_Source_State())
+        && W3DShaderManager::getShaderTexture(0)==idle_texture
+        && W3DShaderManager::getCurrentShader()==idle_shader,
+        "original shroud invalid frame view changed selection/material state");
+    DX8Wrapper::Set_Transform(D3DTS_VIEW,prior_view);
+    W3DShaderManager::setTexture(0,shroud->getShroudTexture());
+    W3DShaderManager::setTexture(1,shroud->getShroudTexture());
+    require(W3DShaderManager::setShader(W3DShaderManager::ST_TERRAIN_BASE,0),
+        "original shroud source-order terrain pass rejected");
+    // HeightMap invalidates and applies the preceding direct terrain pass
+    // before its additional shroud pass is installed.
+    ShaderClass::Invalidate();
+    DX8Wrapper::Apply_Render_State_Changes();
+    const auto terrain_state=DX8Wrapper::Inspect_Source_State();
+    const auto terrain_stage1=edge.pending_stage(1);
+    pass.Install_Materials();
+    auto installed=DX8Wrapper::Inspect_Source_State();
+    auto expected_stage1=terrain_state.stages[1];
+    // Applying the authored sprite preset resets the stale stage-one mapping
+    // left by earlier tree binding; it does not replace its borrowed sampler.
+    expected_stage1[D3DTSS_TEXCOORDINDEX]=1;
+    expected_stage1[D3DTSS_TEXTURETRANSFORMFLAGS]=D3DTTFF_DISABLE;
+    require(W3DShaderManager::getCurrentShader()==W3DShaderManager::ST_SHROUD_TEXTURE
+        && W3DShaderManager::getShaderTexture(0)==shroud->getShroudTexture()
+        && DX8Wrapper::Peek_Texture(0)==shroud->getShroudTexture()
+        && installed.render.at(D3DRS_ZFUNC)==D3DCMP_EQUAL
+        && installed.render.at(D3DRS_ZWRITEENABLE)==FALSE
+        && installed.render.at(D3DRS_ALPHABLENDENABLE)==TRUE
+        && installed.render.at(D3DRS_SRCBLEND)==D3DBLEND_ZERO
+        && installed.render.at(D3DRS_DESTBLEND)==D3DBLEND_SRCCOLOR
+        && installed.render.at(D3DRS_ALPHATESTENABLE)==FALSE
+        && installed.render.at(D3DRS_FOGENABLE)==FALSE
+        && installed.stages[0].at(D3DTSS_TEXCOORDINDEX)==D3DTSS_TCI_CAMERASPACEPOSITION
+        && installed.stages[0].at(D3DTSS_TEXTURETRANSFORMFLAGS)==D3DTTFF_COUNT2
+        && installed.stages[1]==expected_stage1
+        && edge.pending_stage(1).sampler==terrain_stage1.sampler
+        && edge.pending_stage(1).texture==terrain_stage1.texture,
+        "original shroud admitted pass source state mismatch");
+    const auto lowered=zh::original_runtime::OriginalGpuEdge::map_applied_state(DX8_FVF_XYZDUV1);
+    require(lowered.pipeline.depth_stencil.depth_compare==CompareOp::equal
+        && !lowered.pipeline.depth_stencil.depth_write
+        && lowered.pipeline.blend.enabled
+        && lowered.pipeline.blend.source_color==BlendFactor::zero
+        && lowered.pipeline.blend.destination_color==BlendFactor::src_color
+        && lowered.stages[0].texture_required
+        && lowered.stages[0].coordinate_mode==D3DTSS_TCI_CAMERASPACEPOSITION
+        && lowered.stages[0].transform_flags==D3DTTFF_COUNT2,
+        "original shroud exact GPU lowering changed blend/depth/UV ABI");
+    const auto prepared=edge.prepare_applied_state(DX8_FVF_XYZDUV1);
+    const auto pipeline=device.pipeline_descriptor(prepared.pipeline);
+    require(prepared.texture_mask==1 && prepared.fragment_bindings.texture_count==1
+        && prepared.fragment_bindings.textures[0]==edge.texture_handle(shroud->getShroudTexture())
+        && pipeline.depth_stencil.depth_compare==CompareOp::equal
+        && pipeline.blend.destination_color==BlendFactor::src_color,
+        "original shroud generated program binding or pipeline ABI mismatch");
+    const auto vertex_bytes=device.buffer_bytes(prepared.vertex_bindings.uniforms[0].buffer);
+    const auto fragment_bytes=device.buffer_bytes(prepared.fragment_bindings.uniforms[0].buffer);
+    zh::original_runtime::OriginalGpuEdge::VertexUniform vertex{};
+    zh::original_runtime::OriginalGpuEdge::FragmentUniform fragment{};
+    require(vertex_bytes.size()==sizeof(vertex) && fragment_bytes.size()==sizeof(fragment),
+        "original shroud generated shader uniform extent mismatch");
+    std::memcpy(&vertex,vertex_bytes.data(),sizeof(vertex));
+    std::memcpy(&fragment,fragment_bytes.data(),sizeof(fragment));
+    require(vertex.coordinate_modes[0]==D3DTSS_TCI_CAMERASPACEPOSITION
+        && vertex.uv_indices[0]==0 && vertex.transform_flags[0]==D3DTTFF_COUNT2
+        && fragment.stage_ops[0][2]==1 && fragment.stage_ops[1][2]==0,
+        "original shroud generated stage-output/constant ABI mismatch");
+    pass.UnInstall_Materials();
+    auto reset=DX8Wrapper::Inspect_Source_State();
+    require(W3DShaderManager::getCurrentShader()==W3DShaderManager::ST_INVALID
+        && reset.render.at(D3DRS_ZFUNC)==D3DCMP_LESSEQUAL
+        && reset.stages[0].at(D3DTSS_TEXCOORDINDEX)==0
+        && reset.stages[0].at(D3DTSS_TEXTURETRANSFORMFLAGS)==D3DTTFF_DISABLE
+        && DX8Wrapper::Peek_Texture(0)==nullptr,
+        "original shroud admitted pass reset mismatch");
+    edge.end_source_frame(true);
+    require(edge.commit_tree_source_frame(),"original shroud admitted frame commit rejected");
+    } catch (...) {
+        edge.abort_source_frame();
+        (void)edge.abort_tree_source_frame();
+        W3DShroudGeneratedProbeAccess::restoreShader(*success_shader);
+        throw;
+    }
+    require(rejected([&]{pass.Install_Materials();}) && rejected([&]{pass.UnInstall_Materials();}),
+        "original shroud pass remained usable after journal commit");
+    W3DShaderManager::setTexture(0,idle_texture);
+    W3DShaderManager::setTexture(1,prior_terrain_texture);
+    device.destroy(depth);device.destroy(color);
+}
+
+void physicalMaterialPixels(zh::renderer::BgfxGpuDevice& device,
+    zh::original_runtime::OriginalGpuEdge& edge,W3DShroud* shroud)
+{
+    using namespace zh::renderer;
+    struct Vertex { float position[3];unsigned diffuse;float uv[2]; };
+    static_assert(sizeof(Vertex)==24);
+    TextureDesc target;target.width=64;target.height=64;target.render_target=true;target.sampled=true;
+    auto color=device.create_texture(target,"generated shroud material pixels");
+    target.format=TextureFormat::depth24_stencil8;target.sampled=false;
+    auto depth=device.create_texture(target,"generated shroud material depth");
+    auto* vb=NEW_REF(DX8VertexBufferClass,(DX8_FVF_XYZDUV1,4));
+    auto* ib=NEW_REF(DX8IndexBufferClass,(6));
+    const float cell_x=shroud->getCellWidth(),cell_y=shroud->getCellHeight();
+    const float left=shroud->getDrawOriginX()-cell_x;
+    const float bottom=shroud->getDrawOriginY()-cell_y;
+    const float span_x=cell_x*4,span_y=cell_y*4;
+    const std::array<Vertex,4> vertices{{
+        {{left,bottom,0.5f},0xffffffff,{0,0}},
+        {{left+span_x,bottom,0.5f},0xffffffff,{1,0}},
+        {{left+span_x,bottom+span_y,0.5f},0xffffffff,{1,1}},
+        {{left,bottom+span_y,0.5f},0xffffffff,{0,1}},
+    }};
+    {
+        VertexBufferClass::WriteLockClass lock(vb);
+        require(vb->FVF_Info().Get_FVF_Size()==sizeof(Vertex),"original shroud physical source FVF stride");
+        std::memcpy(lock.Get_Vertex_Array(),vertices.data(),sizeof(vertices));
+        IndexBufferClass::WriteLockClass indices(ib);
+        const unsigned short order[]={0,1,2,0,2,3};
+        std::memcpy(indices.Get_Index_Array(),order,sizeof(order));
+    }
+    Matrix4x4 projection(true);
+    projection[0][0]=2/span_x;projection[1][1]=2/span_y;
+    projection[0][3]=-1-2*left/span_x;projection[1][3]=-1-2*bottom/span_y;
+    DX8Wrapper::Set_Transform(D3DTS_WORLD,Matrix4x4(true));
+    DX8Wrapper::Set_Transform(D3DTS_VIEW,Matrix4x4(true));
+    DX8Wrapper::Set_Transform(D3DTS_PROJECTION,projection);
+    DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_COLOROP,D3DTOP_DISABLE);
+    DX8Wrapper::Set_DX8_Texture_Stage_State(1,D3DTSS_ALPHAOP,D3DTOP_DISABLE);
+    edge.bind_frame_targets(color,depth,64,64);
+    W3DShroudMaterialPassClass pass;
+    auto render=[&](bool shroud_pass,bool reject_commit=false) {
+        const auto native_frames=device.native_frame_advance_count();
+        require(edge.begin_tree_source_frame(),"original shroud physical frame admission");
+        edge.begin_source_frame(true,true,0.75f,0.75f,0.75f,1);
+        ShaderClass opaque=ShaderClass::_PresetOpaqueShader;
+        opaque.Set_Texturing(ShaderClass::TEXTURING_DISABLE);
+        opaque.Set_Cull_Mode(ShaderClass::CULL_MODE_DISABLE);
+        DX8Wrapper::Set_Shader(opaque);DX8Wrapper::Set_Material(nullptr);
+        DX8Wrapper::Apply_Render_State_Changes();
+        edge.draw_source_indexed(vb,ib,0,6,0,0,4,PrimitiveTopology::triangle_list);
+        if (shroud_pass) {
+            pass.Install_Materials();
+            edge.draw_source_indexed(vb,ib,0,6,0,0,4,PrimitiveTopology::triangle_list);
+            pass.UnInstall_Materials();
+        }
+        if (reject_commit) device.fail_next_transaction_submission();
+        edge.end_source_frame(true);
+        if (reject_commit) {
+            require(!edge.commit_tree_source_frame() && edge.abort_tree_source_frame()
+                && device.native_frame_advance_count()==native_frames,
+                "original shroud physical late publication was not rolled back");
+            return device.readback_rgba(color);
+        }
+        require(edge.commit_tree_source_frame(),"original shroud physical frame commit");
+        return device.readback_rgba(color);
+    };
+    const auto clear=render(false);
+    const auto masked=render(true);
+    const auto accepted_resources=device.live_resource_count();
+    const auto rejected_pixels=render(true,true);
+    require(rejected_pixels==masked
+        && device.live_resource_count()==accepted_resources,
+        "original shroud physical rejected frame changed accepted pixels/resources");
+    require(render(true)==masked,"original shroud physical frame retry changed pixels");
+    require(clear.size()==64*64*4 && masked.size()==clear.size(),
+        "original shroud physical pixel extent");
+    unsigned darkened=0,unchanged=0;
+    for(unsigned y=4;y<60;++y) for(unsigned x=4;x<60;++x) {
+        const auto i=(y*64+x)*4;
+        if(clear[i]>0 && masked[i]<clear[i]) ++darkened;
+        if(clear[i]==masked[i] && clear[i+1]==masked[i+1] && clear[i+2]==masked[i+2]) ++unchanged;
+    }
+    require(darkened>100 && unchanged>100,
+        "original shroud physical camera projection lacked nonuniform darkening");
+    edge.release_vertex(vb);edge.release_index(ib);vb->Release_Ref();ib->Release_Ref();
+    device.destroy(depth);device.destroy(color);
+}
+
 void physicalProof(const char* map_path)
 {
     // linux_main initialized shipping process services before GameMain/probe.
     // Destroy the device/worker here, before those services leave their scope.
+    require(SDL_Init(SDL_INIT_VIDEO),"physical shroud video provider rejected");
+    auto* window=SDL_CreateWindow("generated shroud material pass",64,64,SDL_WINDOW_HIDDEN);
+    require(window!=nullptr,"physical shroud presentation window rejected");
     for(unsigned generation=0;generation<2;++generation) {
         TheWritableGlobalData->m_shroudColor.setFromInt(0x7db3e1);
         zh::renderer::BgfxOptions options;options.shader_root=ZH_BGFX_SHADER_DIR;
         zh::renderer::BgfxGpuDevice device(options);
+        require(device.claim_window(window),"physical shroud presentation provider rejected");
         {
             zh::original_runtime::OriginalGpuEdge edge(device);
             auto display=std::make_unique<W3DDisplay>();display->init();
@@ -332,6 +634,7 @@ void physicalProof(const char* map_path)
             shroud->render(&camera);
             require(shroud->hasAcceptedContent() && edge.texture_handle(identity)==handle
                 && device.readback_rgba(handle)!=accepted,"physical shroud COW retry failed");
+            physicalMaterialPixels(device,edge,shroud);
             const auto updated=device.readback_rgba(handle);
             edge.fail_next_source_stage_commit();
             const auto state=DX8Wrapper::Inspect_Source_State();const auto revision=edge.source_revision();
@@ -344,9 +647,11 @@ void physicalProof(const char* map_path)
             visual->reset();visual.reset();TheTerrainVisual=saved_visual;
             edge.release_source_buffers();display.reset();
         }
+        device.release_window();
         require(device.wait_idle() && !device.live_resource_count(),"physical shroud teardown retained owner");
     }
-    std::puts("original terrain shroud physical: nonuniform=1 rollback=1 generations=2 resources=0 draws=0");
+    SDL_DestroyWindow(window);SDL_Quit();
+    std::puts("original terrain shroud physical: nonuniform=1 rollback=1 generations=2 resources=0 committed-draws=10");
 }
 }
 
@@ -481,11 +786,19 @@ extern "C" void zh_probe_terrain_shroud_projection()
 			shroud->getShroudTexture() == first_texture,
 			"original terrain shroud filter rejection changed projection owner");
 		shroud->setShroudFilter(TRUE);
-		material.Install_Materials();
-		material.UnInstall_Materials();
+		materialFrameControls(device,edge,shroud);
 
+		// The shroud owns one texture and its selected sampler; the draw program remains
+        // Edge-owned until the full source-buffer teardown below.
+		const auto material_owned=device.resource_counts();
 		shroud->ReleaseResources();
-		require(!shroud->getShroudTexture() && device.resource_counts() == baseline,
+		const auto after_release=device.resource_counts();
+		require(!shroud->getShroudTexture()
+            && after_release.textures+1==material_owned.textures
+            && after_release.buffers==material_owned.buffers
+            && after_release.samplers+1==material_owned.samplers
+            && after_release.shaders==material_owned.shaders
+            && after_release.pipelines==material_owned.pipelines,
 			"original terrain shroud release retained projection resource");
         require(rejected([&]{W3DShaderManager::setShroudTex(1);}) && !edge.queued_source_reference_count(),
             "original released shroud bound a stale texture");
@@ -498,8 +811,7 @@ extern "C" void zh_probe_terrain_shroud_projection()
         require(rejected([&]{W3DShaderManager::setShroudTex(1);}),
             "original reacquired empty shroud bound stale content");
 		shroud->render(&camera);
-		material.Install_Materials();
-		material.UnInstall_Materials();
+		materialFrameControls(device,edge,shroud);
 
 		visual->reset();
 		visual.reset();
@@ -507,8 +819,13 @@ extern "C" void zh_probe_terrain_shroud_projection()
 			"original terrain shroud visual teardown retained owner");
 		TheTerrainVisual = saved_visual;
 		edge.release_source_buffers();
-		require(device.resource_counts().total() == 0,
-			"original terrain shroud teardown retained Recording resource");
+        const auto retained_program=device.resource_counts();
+        // Terrain's unselected stage-one filter and the draw program are
+        // independently Edge-owned; shroud teardown must not retire either.
+        require(retained_program.buffers==2 && !retained_program.textures
+            && retained_program.samplers==1 && retained_program.shaders==2
+            && retained_program.pipelines==1,
+            "original shroud teardown retained non-program Recording resource");
 		display.reset();
 	}
 	require(device.resource_counts().total() == 0,

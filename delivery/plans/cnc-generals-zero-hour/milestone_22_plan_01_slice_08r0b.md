@@ -1,6 +1,8 @@
 # M22 plan 01 slice 08R0B: exact source shroud material pass
 
-Status: planned; 08R0A accepted, ready for implementation.
+Status: complete; six canonical configurations 290/290 and focused/strict/physical/
+Vulkan/LAN acceptance pass under the documented timeout-only proportional reuse.
+Evidence: [shroud material pass](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08r0b_shroud_pass.md).
 Plan transaction parent: `b4fc25b137e94accc1abebd4f0f14bc992c64670`.
 
 ## Outcome and boundary
@@ -80,6 +82,25 @@ Physical generated command on all four focused configurations:
 `python3 tools/run_validation_clean.py python3 tests/original_rendering/test_w3d_terrain_shroud_projection.py --source-root . --executable build/<preset>/zh_original_w3d_full_probe --gpu`.
 Run focus/strict/six-build/canonical/established Vulkan/LAN/ledger/diff exactly as
 R0 specifies; record actual eight-ID selection and clean category audit.
+
+Approved final-source test-workload correction: the unchanged registered tree
+draw wrapper's 60-second process bound times out under Clang sanitizer. Two
+diagnosis-only unchanged-input runs complete cleanly at 59.32/62.25 and
+61.05/64.35 seconds; the repeat processes both report 368 rejected operation
+boundaries. CPU HeightMap selects terrain shaders and the tree sweep/phase/Edge
+does not call R0B complete shroud-pass or idle setShroudTex work. Change only
+`test_w3d_tree_draw.py` to a bounded 90-second process deadline (about 40% margin
+over the slower measured process), retaining TimeoutExpired, all assertions,
+two generations and the unchanged operation sweep. No production/CMake change.
+Run the corrected exact tree-draw CTest control on all six configurations with
+complete sanitizer category audit, then rerun the failed Clang sanitizer full
+canonical suite to 290/290. Preserve the other five complete canonical suites
+and unchanged build/eight-focus/strict/generated-physical/established-Vulkan/LAN
+gates proportionally: binaries, selections and behavior assertions are identical.
+Record reused evidence, the sole final test hash delta and refrozen public hashes.
+Temporary 240-second drivers remain uncommitted diagnostic evidence, never gates.
+Exact corrected control:
+`ASAN_OPTIONS=detect_leaks=0 ctest --test-dir build/<preset> -R '^original_w3d_tree_draw$' --output-on-failure -j1 -V`.
 
 ## Readiness and commit
 

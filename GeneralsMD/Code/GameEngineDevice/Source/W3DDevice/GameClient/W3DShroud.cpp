@@ -33,6 +33,7 @@
 #include "OriginalW3DDeviceUnavailable.h"
 #include "W3DDevice/GameClient/W3DShroud.h"
 #include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "w3d_shader_manager_cpu_types.h"
 #include "W3DDevice/GameClient/W3DShaderManager.h"
 #include "W3DDevice/GameClient/WorldHeightMap.h"
@@ -369,14 +370,19 @@ void W3DShroudMaterialPassClass::Install_Materials(void) const
 	// owner cannot select an arbitrary earlier device session.
 	if (!zh::original_runtime::OriginalGpuEdge::active())
 		throw OriginalW3DDeviceUnavailable("original shroud material GPU installation pending");
-	if (!TheTerrainRenderObject || !TheTerrainRenderObject->getShroud() ||
-		!TheTerrainRenderObject->getShroud()->getShroudTexture())
+	if (!zh::original_runtime::OriginalGpuEdge::active()->admitted_source_frame_active())
+		throw OriginalW3DDeviceUnavailable("original shroud material requires admitted source frame");
+	auto *shroud=W3DTerrainVisual::peekPublishedShroud();
+	if (!shroud || !shroud->getShroudTexture())
 		throw OriginalW3DDeviceUnavailable("original shroud material texture unavailable");
-	W3DShaderManager::setTexture(0, TheTerrainRenderObject->getShroud()->getShroudTexture());
+	auto *prior=W3DShaderManager::getShaderTexture(0);
+	W3DShaderManager::setTexture(0,shroud->getShroudTexture());
+	try { W3DShaderManager::setShader(W3DShaderManager::ST_SHROUD_TEXTURE,0); }
+	catch (...) { W3DShaderManager::setTexture(0,prior);throw; }
 }
 void W3DShroudMaterialPassClass::UnInstall_Materials(void) const
 {
-	W3DShaderManager::setTexture(0, NULL);
+	W3DShaderManager::resetShader(W3DShaderManager::ST_SHROUD_TEXTURE);
 }
 void W3DMaskMaterialPassClass::Install_Materials(void) const
 {
