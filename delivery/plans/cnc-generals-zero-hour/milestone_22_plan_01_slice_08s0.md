@@ -1,10 +1,12 @@
 # M22 plan 01 slice 08S0: native asset-preload aggregate
 
-Status: complete; evidence-only aggregate of accepted 08S0A/B.
-Current continuation gate: approved 08S0R1 corrective leaf and aggregate refresh
-pending; the historical accepted A/B closure is unchanged.
+Status: complete; refreshed evidence-only aggregate of accepted 08S0A/B/R1.
+Current continuation gate: R1 timeout closure and aggregate refresh accepted;
+resume only read-only classification of the later active08 scene-contract stop.
 Plan transaction parent: `89df8bb309ad8cd4f6d409cdc27d645f11d9f782`.
 Aggregate transaction parent: `0be5d49eb47f8d58937914988503141110d23f8a`.
+Refresh transaction parent: `a9a1d1ada6a9635103577f69acc432612d6ad1a3`.
+Refresh provenance: this slice commit; executable and witness bytes unchanged.
 
 ## Outcome and dependency graph
 
@@ -121,12 +123,12 @@ clean-checkout order. The original plan-only packet did not claim acceptance;
 the separately accepted children now close that boundary.
 Aggregate subject: `delivery: M22 08S0 close native asset preload`.
 
-## Accepted closure
+## Historical accepted A/B closure
 
 08S0A is accepted at `f237f73aadf90da5dbaf944159481452cbf69559`; 08S0B
 is accepted at `0be5d49eb47f8d58937914988503141110d23f8a`. Their ancestry,
 completed plan states and exact final executable/test hashes are verified.
-This aggregate changes no executable or witness and reuses B's six complete
+That historical aggregate changed no executable or witness and reused B's six complete
 builds, exact14 native/sanitizer/strict focus, physical four, minimal8 both,
 established Vulkan3/2, LAN4 all six and six fresh canonical suites295/295.
 Complete category audits are clean; the approved preload-wrapper120-second
@@ -139,13 +141,23 @@ records the accepted child identities and unchanged gate provenance.
 
 ## Approved post-closure cache-hit correction
 
-The unchanged bounded continuation times out in preload at120 seconds, before
+The pre-correction unchanged bounded continuation times out in preload at120 seconds, before
 any Recording frame. A public read-only stack/source audit finds full offside
 registry/cache reconstruction before the native existing-prototype early return;
 default regular-texture preload has the same eager Attempt ordering. The exact
 normalization, provider/preflight/nested-visibility contracts and generated
-controls are in 08S0R1. Deliver that one corrective leaf after accepted A/B,
-without reopening their historic acceptance or changing Q0/ordinary loaders.
-Then refresh this aggregate using R1's unchanged accepted final-source gates.
-The existing retail timeout is not waived or raised; all trial paths remain
-unstaged/private-safe. Any new owner or additional split requires a checkpoint.
+controls are in 08S0R1. That one corrective leaf is now accepted at
+`a9a1d1ada6a9635103577f69acc432612d6ad1a3`, without reopening A/B historical
+acceptance or changing Q0/ordinary loaders. This separate evidence-only refresh
+consumes R1's unchanged five source/test and eighteen selected executable hashes,
+six complete-build provenance, exact14 native/sanitizer/strict focus, physical4,
+minimal8 both, established Vulkan3/2, LAN4 all six and six fresh canonical295/295.
+Complete category audits are clean; no duplicate aggregate run is required.
+
+R1's unchanged120-second bounded child completes in61.587s with independent
+corpus metadata unchanged. This closes the preload timeout only: the returned
+scene_contract category remains active08 work, not accepted retail scene/frame
+output. Classify that later stop read-only after this refresh commit, before any
+behavioral change. All thirteen trial/renderer paths remain unstaged/private-safe;
+the original content/symlink remain read-only. Any new owner or additional split
+requires an architecture checkpoint.
