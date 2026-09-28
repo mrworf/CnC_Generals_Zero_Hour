@@ -1,5 +1,29 @@
 # Milestone Prerequisite Manifest
 
+## M22 08T0 bounded camera-startup packet — 2026-09-28
+
+Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.
+Product ID: `cnc-generals-zero-hour`; audited parent:
+`b6f95598fde2d9b8f5b8ec68bcc9b20290ee71cb`.
+Source authority: approved one-leaf camera-startup architecture checkpoint and
+complete public owner audit in T0A. Planning transaction: exact plan-only commit
+identified by `delivery: M22 plan bounded camera startup`.
+Order: accepted S0/providers →08T0A →evidence-only08T0 →active08 →09.
+Earlier supplements remain historical; accepted S0 and camera/terrain/frame
+providers are not reopened. Last audit:2026-09-28.
+
+| ID | Description | Consumers | Classification | Current status | Proposed provider | Class | Verification | Commands executed | Files changed | Blocking | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| M22-T0-01 | Accepted preload, view, terrain, idle device, shroud and prop/frame ownership | A | Already satisfied | S0/R1 ancestry and indexed accepted providers verified; finite public graph audited | 08S0,07D/07E0C/07FA,08I1/I2,08P0C2D0/B/D,08R0A/C | AUTO | Ancestry/index/source and typed reachable-owner inventory | git ancestry; sed/rg | T0A/T0/index; owned08 dependency hunk; manifest/report | Entry if provider lost | FACT: source default method pending; post-transform terrain update can throw outside display journal |
+| M22-T0-02 | Strong bounded ordinary camera startup and typed camera/terrain rollback | A; T0/08 | Owned by the consuming milestone | Implementation/witness output pending, not entry prerequisite | 08T0A | AUTO | Native formulas, ground/elevated lookAt, exact caches/bytes/mappings/prop rollback, fault/retry/reset/physical | Read-only source audit; behavior not run | Same six plan/readiness files | Aggregate/active08 | FACT: current CPU startup methods are unavailable; CameraClass assignment is not exact cache restoration |
+| M22-T0-03 | Existing tools and full-probe generated-map fixture/test ownership | A | Already satisfied | Four presets/tools and eleven prior focus IDs verified; new twelfth registration is A output | PRE-002 and accepted full-probe/generators | AUTO | Six CTest manifests; exact12 after implementation | cmake --list-presets; command -v; ctest --show-only=json-v1 | Same six files | Entry if unavailable | FACT: existing targets/wrappers; no retail/warm-cache entry prerequisite |
+| M22-T0-04 | Physical Vulkan/session/validation, strict host LSan and LAN | A acceptance | Requires user action | Existing authorized host route; fresh availability is later acceptance gate | PRE-012/PRE-016 host/session | USER_ACTION | Exact12/strict12, generatedphysical4, Vulkan3/2,minimal8,LAN4,six canonicals | Not rerun by planning | Same six files | Acceptance if unavailable, not implementation | FACT: existing supported command and escalation contracts |
+| M22-T0-05 | Read-only private runtime inputs and categorized camera continuation | Active08 after T0 | Provided by an earlier milestone | Existing inputs unchanged; fixed camera-pending stop classified, no retail scene accepted | PRE-008 and existing slice08 wrapper | AUTO | Existing unchanged120-second scene-once wrapper; corpus/teardown/fixed categories only | Bounded read-only categorized diagnostics | Same six files | Active08 acceptance | FACT: first public stack startNewGame→setAngleAndPitchToDefault; input unchanged and teardown pass |
+
+No new package/service/credential/M0, backward edge or unresolved architecture
+owner. Exact1 executable leaf plus evidence-only aggregate; no split without
+checkpoint. Preserve all thirteen active08/renderer paths and shared hunks.
+
 ## M22 08S0R1 accepted-cache-hit correction — 2026-09-28
 
 Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.

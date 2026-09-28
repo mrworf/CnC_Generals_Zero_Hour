@@ -1,5 +1,48 @@
 # Milestone readiness report — renderer migration
 
+## M22 08T0 bounded camera-startup packet — 2026-09-28
+
+1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. Approved single camera leaf is
+   internally implementation-ready after the durable packet; existing authorized
+   host facilities remain fresh acceptance gates, not presumed currently usable.
+2. Scope/evidence: T0A/T0/governing M22 index at parent
+   b6f95598fde2d9b8f5b8ec68bcc9b20290ee71cb. FACT: first public startup pending
+   method and finite owner graph; no private input detail/raw output retained.
+3. Automatic work: M22-T0-01/03 public-source/provider/tool/test-registration
+   checks and six plan/readiness files only; no executable/bootstrap mutation.
+4. Confirmation gates: None within approved scope. New owner/split/timeout
+   correction requires architecture checkpoint; explicit camera exclusions stand.
+5. User actions: None at implementation entry. Existing host escalation supplies
+   M22-T0-04 physical/strict/LAN acceptance; unavailable facilities require exact
+   external recovery, not substitute gates. Runtime-private inputs stay read-only.
+6. Missing/unresolved: None. Typed camera/terrain checkpoints and new witness
+   are A outputs, not missing prior APIs. Existing idle transaction owns native
+   rollback; no generic renderer/container redesign or motion/audio provider.
+7. Graph: accepted S0/providers --M22-T0-01→A --02→T0→active08→09;
+   tools --03→A; host --04→acceptance; existing inputs --05→later continuation.
+8. Declared/proposed order agree after authorized insertion; no backward edge
+   or cycle. Historical S0 and all camera/terrain/prop/frame providers stay closed.
+9. M0: Not required. This is reached source behavior, not shared bootstrap.
+10. Per-slice: A entry providers/tools verified, exact native semantics and typed
+    rollback/exclusions implementation-ready; T0 waits for accepted A and unchanged
+    gate identity; active08 waits for T0. New12th registration is implementation.
+11. Clean-environment simulation: committed providers/generators→generated native
+    startup/rollback→evidence aggregate→read-only existing continuation. No warm
+    cache, private data, undeclared service or forward API at A entry. Host and
+    retail results are later execution, not simulated success.
+12. Commands: S0/R1 ancestry passes; four native presets/tools resolved; six
+    parsed CTest manifests contain all eleven existing focus IDs. Public source
+    audit complete, same thirteen dirty paths and empty index observed. No new
+    behavior/build/acceptance run during this documentation-only checkpoint.
+13. Files: T0A plan, T0 aggregate plan, governing index, owned active08 dependency
+    hunks, existing prerequisite manifest/report. Preserve all prior active08
+    plan/source/test/ledger and renderer hunks unstaged and byte-identical.
+14. Remaining implementation blockers: None. Fresh host gates and later redacted
+    continuation remain mandatory; no acceptance waiver or inferred retail output.
+15. Next: exact-stage/review/commit only this packet as
+    `delivery: M22 plan bounded camera startup`, then implement A independently
+    in /home/ha/projects/CnC_Generals_Zero_Hour. No production edit before commit.
+
 ## M22 08S0R1 accepted-cache-hit correction — 2026-09-28
 
 1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. The approved single corrective leaf

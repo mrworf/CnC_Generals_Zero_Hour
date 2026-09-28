@@ -1,5 +1,17 @@
 # M22 plan 01 slice 08: original retail scenes through recording device
 
+## Approved bounded camera-startup dependency
+
+Accepted S0/R1 closes preload timeout. The next fixed public boundary is
+GameLogic::startNewGame → W3DView::setAngleAndPitchToDefault, before initial
+lookAt/map-height/defaults and partition continuation. Approved one-leaf sequence:
+[08T0A](milestone_22_plan_01_slice_08t0a.md) bounded native ordinary camera startup
+and typed camera/terrain idle rollback → [08T0](milestone_22_plan_01_slice_08t0.md)
+evidence-only aggregate → this unchanged active08 trial. No additional split or
+producer admission without architecture checkpoint. Preserve every trial/renderer
+hunk unstaged through T0 acceptance; resume only the existing redacted probe after
+aggregate closure. No private metadata/raw output or camera replacement is allowed.
+
 ## Resumed transaction and focused commands
 
 Active continuation parent: `6ad3c296e8faa039fa0d88abf80ccc1177469149`.
@@ -133,7 +145,7 @@ ledger and unrelated renderer edits stay unstaged through each prerequisite.
 Resume only the existing bounded redacted probe after S0 acceptance; no private
 input metadata or raw output persists.
 
-Requires accepted slices 08B, 08E, 08I, 08J, 08L, 08Q0, 08R0 and 08S0 and a separately configured, read-only
+Requires accepted slices 08B, 08E, 08I, 08J, 08L, 08Q0, 08R0, 08S0 and 08T0 and a separately configured, read-only
 retail corpus.  The already-authorized campaign/skirmish consumer selections
 remain runtime-only test inputs: no selector, root, private logical name,
 content byte, hash, image, or captured command label is committed or emitted.
