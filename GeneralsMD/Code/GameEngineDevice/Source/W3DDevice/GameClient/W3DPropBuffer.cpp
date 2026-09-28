@@ -48,6 +48,9 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "PreRTS.h"
 #include "original_gpu_edge.h"
+#include "prop_frame.h"
+#include "mesh.h"
+#include "meshmdl.h"
 #endif
 #include "W3DDevice/GameClient/W3DPropBuffer.h"
 
@@ -76,6 +79,7 @@
 #include <exception>
 #include <cmath>
 #include <limits>
+#include <algorithm>
 #endif
 
 #ifdef _INTERNAL
@@ -124,7 +128,8 @@ W3DPropBuffer::~W3DPropBuffer(void)
 	// Every published teardown route must admit idle retirement before deleting
 	// the owner. Constructor rollback is private and never enters a source frame.
 	if (auto* edge=zh::original_runtime::OriginalGpuEdge::active()) {
-		if (!edge->source_buffers_retirable() || edge->source_stages_active()) std::terminate();
+		if (!edge->source_buffers_retirable() || edge->tree_source_frame_pending() ||
+			edge->source_stages_active()) std::terminate();
 	}
 	releaseAllProps();
 	REF_PTR_RELEASE(m_propShroudMaterialPass);
@@ -212,7 +217,7 @@ void W3DPropBuffer::preflightRemoval() const
 			edge->poison_source_stages();
 			throw std::runtime_error("original prop source attempt is active");
 		}
-		if (!edge->source_buffers_retirable())
+		if (!edge->source_buffers_retirable() || edge->tree_source_frame_pending())
 			throw std::runtime_error("original prop frame is active");
 	}
 }
@@ -534,6 +539,84 @@ void W3DPropBuffer::notifyShroudChanged()
 
 DECLARE_PERF_TIMER(Prop_Render)
 
+#if defined(ZH_WW3D_CPU_ONLY)
+struct W3DPropBuffer::SourceFrameCheckpoint {
+	W3DPropBuffer *owner;
+	LightClass *light;
+	W3DShroudMaterialPassClass *pass;
+	Int count,types;
+	Bool changed,cull;
+	std::vector<TProp> props;
+	std::shared_ptr<ww3d_prop::FrameGraph> graph;
+};
+std::shared_ptr<W3DPropBuffer::SourceFrameCheckpoint> W3DPropBuffer::captureSourceFrame()
+{
+	preflightRemoval();
+	if (!m_initialized || !m_light || !m_propShroudMaterialPass || m_numProps<0 || m_numProps>MAX_PROPS ||
+		m_numPropTypes<0 || m_numPropTypes>MAX_TYPES)
+		throw std::runtime_error("original prop frame owner is not admitted");
+	ww3d_clone::Attempt attempt;
+	ww3d_clone::Attempt::fault();
+	auto candidate=std::make_shared<SourceFrameCheckpoint>();
+	candidate->owner=this;candidate->light=m_light;candidate->pass=m_propShroudMaterialPass;
+	candidate->count=m_numProps;candidate->types=m_numPropTypes;
+	candidate->changed=m_anythingChanged;candidate->cull=m_doCull;
+	ww3d_clone::Attempt::fault();candidate->props.resize(m_numProps);
+	// TProp is source-owned POD. Preserve inactive padding/cache bytes without
+	// evaluating them or taking new instance refs before graph admission.
+	if (m_numProps) std::memcpy(candidate->props.data(),m_props,sizeof(TProp)*m_numProps);
+	std::vector<RenderObjClass*> roots;ww3d_clone::Attempt::fault();roots.reserve(m_numProps+1);
+	for (Int i=0;i<m_numProps;++i) if (m_props[i].m_robj) {
+		if (m_props[i].propType<0 || m_props[i].propType>=m_numPropTypes || !m_propTypes[m_props[i].propType].m_robj)
+			throw std::runtime_error("original prop frame instance/type identity is not admitted");
+		roots.push_back(m_props[i].m_robj);
+	}
+	roots.push_back(m_light);ww3d_clone::Attempt::fault();candidate->graph=ww3d_prop::FrameGraph::capture(roots);
+	attempt.commit();
+	return candidate;
+}
+void W3DPropBuffer::restoreSourceFrame(SourceFrameCheckpoint& state) noexcept
+{
+	if (state.owner!=this || state.light!=m_light || state.pass!=m_propShroudMaterialPass ||
+		state.count!=m_numProps || state.types!=m_numPropTypes) std::terminate();
+	for (Int i=0;i<m_numProps;++i) if (m_props[i].m_robj!=state.props[i].m_robj) std::terminate();
+	state.graph->restore();
+	if (m_numProps) std::memcpy(m_props,state.props.data(),sizeof(TProp)*m_numProps);
+	m_anythingChanged=state.changed;m_doCull=state.cull;
+}
+void W3DPropBuffer::prepareSourceFrame(SourceFrameCheckpoint& state)
+{
+	preflightRemoval();
+	if (state.owner!=this || state.count!=m_numProps || state.types!=m_numPropTypes ||
+		!TheGlobalData || TheGlobalData->m_timeOfDay<TIME_OF_DAY_FIRST || TheGlobalData->m_timeOfDay>=TIME_OF_DAY_COUNT ||
+		(ThePartitionManager && ThePlayerList && !ThePlayerList->peekLocalPlayerForPositionFX()))
+		throw std::runtime_error("original prop frame preparation owner rejected");
+	std::vector<MeshModelClass*> models;
+	std::vector<TextureClass*> textures;
+	for (auto *mesh:state.graph->meshes()) {
+		auto *model=mesh->Peek_Model();
+		if (std::find(models.begin(),models.end(),model)==models.end()) models.push_back(model);
+		for (unsigned pass=0;pass<model->Get_Pass_Count();++pass) for (unsigned stage=0;stage<2;++stage) {
+			const int count=model->Has_Texture_Array(pass,stage)?model->Get_Polygon_Count():1;
+			for (int poly=0;poly<count;++poly) {
+				auto *texture=model->Has_Texture_Array(pass,stage)?model->Peek_Texture(poly,pass,stage):model->Peek_Single_Texture(pass,stage);
+				if (texture && std::find(textures.begin(),textures.end(),texture)==textures.end()) {
+					if (textures.size()==4096) throw std::runtime_error("original prop texture capacity rejected");
+					textures.push_back(texture);
+				}
+			}
+		}
+	}
+	// Both preparation owners are complete strong batches. Neither consumes
+	// animation time, mapper RNG, C1 state or effects. Accepted preparation may
+	// be reused after a later frame admission rejection.
+	try {
+		zh::original_runtime::OriginalGpuEdge::required().prepare_prop_textures(textures);
+		TheDX8MeshRenderer.Prepare_Mesh_Batch_Strong(models);
+	} catch (...) { state.graph->restore();throw; }
+}
+#endif
+
 //=============================================================================
 // W3DPropBuffer::drawProps
 //=============================================================================
@@ -542,9 +625,10 @@ DECLARE_PERF_TIMER(Prop_Render)
 void W3DPropBuffer::drawProps(RenderInfoClass &rinfo)
 {
 #if defined(ZH_WW3D_CPU_ONLY)
-	// Logical admission is separate from the R0B pass and R0C frame owner.
-	throw std::runtime_error("original prop draw owner is not admitted");
-#else
+	if (!zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending() ||
+		!DX8MeshRendererClass::Source_Frame_Checkpoint_Active())
+		throw std::runtime_error("original prop draw requires the admitted source frame");
+#endif
 	USE_PERF_TIMER(Prop_Render)
 
 	Int i;
@@ -606,7 +690,6 @@ void W3DPropBuffer::drawProps(RenderInfoClass &rinfo)
 		}
 	}
 	rinfo.light_environment = NULL;
-#endif
 }
 
 

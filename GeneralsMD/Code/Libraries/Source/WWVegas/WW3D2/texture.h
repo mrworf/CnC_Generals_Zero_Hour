@@ -285,6 +285,9 @@ private:
 *************************************************************************/
 class TextureClass : public TextureBaseClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    friend class zh::original_runtime::OriginalGpuEdge;
+#endif
 	W3DMPO_GLUE(TextureClass)
 //	friend DX8Wrapper;
 

@@ -99,6 +99,10 @@ protected:
 	int								Index;
 };
 
+#if defined(ZH_WW3D_CPU_ONLY)
+namespace ww3d_prop { class FrameGraph; }
+#endif
+
 /*
 ** RenderObjIterator
 ** The render obj iterator simply adds a method for determining
@@ -183,6 +187,9 @@ public:
 
 class WW3DAssetManager
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class ww3d_prop::FrameGraph;
+#endif
 
 public:
 

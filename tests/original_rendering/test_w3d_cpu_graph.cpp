@@ -243,6 +243,7 @@ int main(int argc, char **argv)
 	const int source_strips[] = {3, 0, 1, 2, 2, 3, 4};
 	assert(StripOptimizerClass::Get_Strip_Index_Count(source_strips, 2) == 5);
 	const bool emit_rigid_tree = argc == 3 && std::strcmp(argv[1], "--emit-rigid-tree") == 0;
+	const bool emit_prop_frame = argc == 3 && std::strcmp(argv[1], "--emit-prop-frame") == 0;
 	std::vector<char> bytes(emit_rigid_tree ? 4U*1024U*1024U : 16384U);
 	RAMFileClass file(bytes.data(), static_cast<int>(bytes.size()));
 	assert(file.Open(FileClass::WRITE));
@@ -272,7 +273,27 @@ int main(int argc, char **argv)
 	const bool focused_fault_scene = argc==2 &&
 		(std::strcmp(argv[1],"--source-mixed-fault-matrix")==0 ||
 		 std::strcmp(argv[1],"--bgfx-source-mixed-fault-retry")==0);
-	if (emit_rigid_tree) {
+	if (emit_prop_frame) {
+		make_hierarchy(writer,false);make_animation(writer);
+		make_mesh(writer,false,false,false,1,true);
+		make_mesh(writer,false,false,false,1,true,false,0,false,false,"TEST","STATIC01",0,false,nullptr,false,2);
+		make_mesh(writer,false,false,true,1);
+		make_hlod(writer,false,true);
+		make_hlod(writer,false,false,false,false,"TEST.HLOD","TEST.LITONE01");
+		assert(writer.Begin_Chunk(W3D_CHUNK_HMODEL));
+		W3dHModelHeaderStruct hierarchy{};hierarchy.Version=W3D_CURRENT_HMODEL_VERSION;
+		std::strcpy(hierarchy.Name,"PROP_HMODEL");std::strcpy(hierarchy.HierarchyName,"TESTTREE");hierarchy.NumConnections=1;
+		chunk(writer,W3D_CHUNK_HMODEL_HEADER,hierarchy);
+		W3dHModelNodeStruct node{};std::strcpy(node.RenderObjName,"TEST.LITONE01");node.PivotIdx=0;
+		chunk(writer,W3D_CHUNK_NODE,node);assert(writer.End_Chunk());
+		assert(writer.Begin_Chunk(W3D_CHUNK_COLLECTION));
+		W3dCollectionHeaderStruct collection{};collection.Version=W3D_CURRENT_COLLECTION_VERSION;
+		std::strcpy(collection.Name,"PROP_COLLECTION");collection.RenderObjectCount=2;
+		chunk(writer,W3D_CHUNK_COLLECTION_HEADER,collection);
+		const char first[]="PROP_HMODEL",second[]="TEST.HLOD";
+		chunk(writer,W3D_CHUNK_COLLECTION_OBJ_NAME,first);chunk(writer,W3D_CHUNK_COLLECTION_OBJ_NAME,second);
+		assert(writer.End_Chunk());
+	} else if (emit_rigid_tree) {
 		make_hierarchy(writer,false);
 		make_mesh(writer,false); // TEST.TRIANGLE, the original HLOD first child.
 		make_mesh(writer,false,false,false,0); // TEST.ZERO01
@@ -335,7 +356,7 @@ int main(int argc, char **argv)
 	}
 	const int size = file.Size();
 	file.Close();
-	if (argc == 3 && (std::strcmp(argv[1], "--emit") == 0 || emit_rigid || emit_rigid_pair || emit_rigid_tree))
+	if (argc == 3 && (std::strcmp(argv[1], "--emit") == 0 || emit_rigid || emit_rigid_pair || emit_rigid_tree || emit_prop_frame))
 	{
 		FILE *output = std::fopen(argv[2], "wb");
 		assert(output != nullptr);

@@ -72,6 +72,9 @@
 */
 template <class T> class SimpleVecClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class DX8MeshRendererClass;
+#endif
 public:
 
 	SimpleVecClass(int size = 0);
@@ -254,6 +257,9 @@ inline bool SimpleVecClass<T>::Uninitialised_Grow(int newsize)
 */
 template <class T> class SimpleDynVecClass : public SimpleVecClass<T>
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class DX8MeshRendererClass;
+#endif
 public:
 
 	SimpleDynVecClass(int size = 0);

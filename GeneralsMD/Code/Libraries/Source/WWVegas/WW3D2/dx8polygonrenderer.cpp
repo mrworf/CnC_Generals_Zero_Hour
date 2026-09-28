@@ -64,7 +64,11 @@ DX8PolygonRendererClass::DX8PolygonRendererClass(
 	pass(pass_)
 {
 	WWASSERT(index_count);
+#if defined(ZH_WW3D_CPU_ONLY)
+	DX8MeshRendererClass::Publish_Prepared_Polygon(mmc,this);
+#else
 	mmc->PolygonRendererList.Add_Tail(this);
+#endif
 }
 
 DX8PolygonRendererClass::DX8PolygonRendererClass(const DX8PolygonRendererClass& src,MeshModelClass* mmc_)
@@ -79,7 +83,11 @@ DX8PolygonRendererClass::DX8PolygonRendererClass(const DX8PolygonRendererClass& 
 	strip(src.strip),
 	pass(src.pass)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	DX8MeshRendererClass::Publish_Prepared_Polygon(mmc,this);
+#else
 	mmc->PolygonRendererList.Add_Tail(this);
+#endif
 }
 
 DX8PolygonRendererClass::~DX8PolygonRendererClass()
@@ -112,4 +120,3 @@ void DX8PolygonRendererClass::Log()
 		mmc->Get_Name());
 */	WWDEBUG_SAY((work));
 }
-

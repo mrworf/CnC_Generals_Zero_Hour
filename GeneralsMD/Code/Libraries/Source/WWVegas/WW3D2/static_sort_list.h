@@ -69,6 +69,7 @@ class DefaultStaticSortListClass : public StaticSortListClass
 {
 #if defined(ZH_WW3D_CPU_ONLY)
     friend class WW3D;
+    friend class DX8MeshRendererClass;
     bool Source_Frame_Empty() noexcept;
 #endif
 	public:

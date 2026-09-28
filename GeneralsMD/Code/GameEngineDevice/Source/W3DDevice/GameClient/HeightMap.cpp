@@ -86,9 +86,10 @@ HeightMapRenderObjClass::~HeightMapRenderObjClass()
 
 void HeightMapRenderObjClass::ReleaseResources() { BaseHeightMapRenderObjClass::ReleaseResources(); }
 void HeightMapRenderObjClass::ReAcquireResources() { BaseHeightMapRenderObjClass::ReAcquireResources(); }
-void HeightMapRenderObjClass::Render(RenderInfoClass&)
+void HeightMapRenderObjClass::Render(RenderInfoClass& rinfo)
 {
-	if (hasLiveProps()) throw OriginalW3DDeviceUnavailable("original prop frame owner is not admitted");
+	if (hasLiveProps() && !zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending())
+		throw OriginalW3DDeviceUnavailable("original prop frame owner is not admitted");
 	if (!m_map || !m_indexBuffer || !m_vertexBufferTiles || !m_vertexBufferBackup ||
 		m_numVBTilesX <= 0 || m_numVBTilesY <= 0 ||
 		m_numVertexBufferTiles != m_numVBTilesX * m_numVBTilesY ||
@@ -146,6 +147,12 @@ void HeightMapRenderObjClass::Render(RenderInfoClass&)
 		W3DShaderManager::resetShader(W3DShaderManager::ST_TERRAIN_BASE);
 		active_shader = FALSE;
 		renderExtraBlendTiles();
+		// Native prop Render generates mesh/material tasks here. Triangles are
+		// emitted later by the scene mesh/static/sorting flush, not in this slot.
+		if (hasLiveProps()) {
+			zh::original_runtime::OriginalGpuEdge::required().record_source_state("original HeightMap prop mesh task generation");
+			drawSourceProps(rinfo);
+		}
 		if (TheTerrainTracksRenderObjClassSystem)
 			TheTerrainTracksRenderObjClassSystem->flush();
 	} catch (...) {

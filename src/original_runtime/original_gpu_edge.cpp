@@ -108,7 +108,7 @@ void OriginalGpuEdge::mark_tree_source_terrain()
     source_frame_attempt_->terrain_produced=true;
 }
 
-bool OriginalGpuEdge::begin_tree_source_frame()
+bool OriginalGpuEdge::begin_tree_source_frame(bool source_mesh_work)
 {
     if (active_edge!=this || source_frame_attempt_ || device_transaction_ || source_stage_attempt_
         || source_frame_active_ || device_.pass_active() || source_reference_queued_
@@ -167,7 +167,7 @@ bool OriginalGpuEdge::begin_tree_source_frame()
             attempt->index_bytes.push_back({index,std::vector<unsigned short>(begin,begin+index->Get_Index_Count())});
         }
         attempt->source=DX8Wrapper::Capture_Source_Frame();
-        attempt->ww3d=WW3D::Capture_Source_Frame();
+        attempt->ww3d=WW3D::Capture_Source_Frame(source_mesh_work);
         attempt->dynamic_vertices=DynamicVBAccessClass::Capture_Source_Frame();
         attempt->dynamic_indices=DynamicIBAccessClass::Capture_Source_Frame();
         for (const auto& entry:attempt->vertices) entry.first->Add_Ref();
@@ -187,8 +187,10 @@ bool OriginalGpuEdge::begin_tree_source_frame()
 bool OriginalGpuEdge::commit_tree_source_frame() noexcept
 {
     if (!source_frame_attempt_ || source_frame_active_ || device_.pass_active()) return false;
+    if (!WW3D::Source_Frame_Ready_To_Commit(*source_frame_attempt_->ww3d)) return false;
     if (source_frame_commit_fault_) { source_frame_commit_fault_=false;return false; }
     if (!commit_device_transaction(source_frame_attempt_->device)) return false;
+    WW3D::Commit_Source_Frame(*source_frame_attempt_->ww3d);
     source_frame_attempt_.reset();
     return true;
 }
@@ -513,6 +515,60 @@ bool OriginalGpuEdge::resident_texture(const TextureBaseClass* source) const noe
     const auto owned=textures_.find(const_cast<TextureBaseClass*>(source));
     return owned!=textures_.end() && owned->second.generation==generation_
         && !owned->second.shared_missing && device_.describe_texture_format(owned->second.handle).has_value();
+}
+
+void OriginalGpuEdge::prepare_prop_textures(const std::vector<TextureClass*>& sources)
+{
+    guard_nonstage_mutation();
+    if (!idle_preparation_ready() || sources.size()>4096 || source_frame_attempt_)
+        throw std::runtime_error("original prop texture preparation is not idle");
+    struct Metadata {
+        TextureClass* source;
+        unsigned access,inactivation,extended;
+        int width,height;
+        WW3DFormat format;
+        bool initialized;
+    };
+    std::vector<Metadata> metadata;
+    metadata.reserve(sources.size());
+    for (auto *source:sources) {
+        if (!source || source->Num_Refs()<=0 || !source->Get_Filter().Can_Apply(0)
+            || !source->Get_Filter().Can_Apply(1))
+            throw std::runtime_error("original prop texture provider rejected");
+        if (std::find_if(metadata.begin(),metadata.end(),[source](const auto& value){return value.source==source;})!=metadata.end())
+            throw std::runtime_error("original prop texture preparation has duplicate ownership");
+        if (source->Initialized && !resident_texture(source))
+            throw std::runtime_error("original prop texture generation rejected");
+        metadata.push_back({source,source->LastAccessed,source->LastInactivationSyncTime,
+            source->ExtendedInactivationTime,source->Width,source->Height,source->TextureFormat,source->Initialized});
+    }
+    auto textures=textures_;
+    auto owners=texture_owner_refs_;
+    const auto missing=missing_texture_;
+    if (std::all_of(sources.begin(),sources.end(),[this](auto* source){return resident_texture(source);})) return;
+    renderer::DeviceTransactionToken token;
+    const renderer::DeviceTransactionDesc desc{renderer::DeviceTransactionMode::idle_preparation,
+        generation_,4096,4096,renderer::RendererLimits::maximum_upload_bytes,0};
+    if (!begin_device_transaction(desc,token))
+        throw std::runtime_error("original prop texture device preparation rejected");
+    try {
+        for (auto *source:sources) {
+            source->Init();
+            if (!resident_texture(source)) throw std::runtime_error("original prop texture residency rejected");
+        }
+        if (!commit_device_transaction(token))
+            throw std::runtime_error("original prop texture preparation commit rejected");
+    } catch (...) {
+        if (!abort_device_transaction(token)) std::terminate();
+        textures_.swap(textures);texture_owner_refs_.swap(owners);missing_texture_=missing;
+        for (const auto& value:metadata) {
+            value.source->LastAccessed=value.access;value.source->LastInactivationSyncTime=value.inactivation;
+            value.source->ExtendedInactivationTime=value.extended;value.source->Width=value.width;
+            value.source->Height=value.height;value.source->TextureFormat=value.format;
+            value.source->Initialized=value.initialized;
+        }
+        throw;
+    }
 }
 
 renderer::ValidationResult OriginalGpuEdge::begin_device_transaction(

@@ -51,6 +51,73 @@
 
 Random4Class rand4;
 
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <functional>
+#include <vector>
+#include <typeinfo>
+#include <stdexcept>
+struct TextureMapperClass::SourceFrameState {
+	TextureMapperClass *owner=nullptr;
+	unsigned stage=0;
+	std::vector<std::function<void()>> restore;
+	~SourceFrameState() { if (owner) owner->Release_Ref(); }
+};
+std::shared_ptr<TextureMapperClass::SourceFrameState> TextureMapperClass::captureSourceFrame()
+{
+	const auto& kind=typeid(*this);
+	const bool linear=kind==typeid(LinearOffsetTextureMapperClass) || kind==typeid(ScreenMapperClass) || kind==typeid(BumpEnvTextureMapperClass);
+	const bool grid=kind==typeid(GridTextureMapperClass) || kind==typeid(GridClassicEnvironmentMapperClass) ||
+		kind==typeid(GridEnvironmentMapperClass) || kind==typeid(GridWSClassicEnvironmentMapperClass) || kind==typeid(GridWSEnvironmentMapperClass);
+	const bool inert=kind==typeid(ScaleTextureMapperClass) || kind==typeid(ClassicEnvironmentMapperClass) ||
+		kind==typeid(EnvironmentMapperClass) || kind==typeid(WSClassicEnvironmentMapperClass) || kind==typeid(WSEnvironmentMapperClass);
+	if ((!linear && !grid && !inert && kind!=typeid(RotateTextureMapperClass) && kind!=typeid(SineLinearOffsetTextureMapperClass) &&
+		kind!=typeid(StepLinearOffsetTextureMapperClass) && kind!=typeid(ZigZagLinearOffsetTextureMapperClass) &&
+		kind!=typeid(EdgeMapperClass) && kind!=typeid(RandomTextureMapperClass)) || Stage>=2 || Num_Refs()<=0 || Num_Refs()>2147483615)
+		throw std::runtime_error("original source mapper checkpoint provider rejected");
+	auto state=std::make_shared<SourceFrameState>();state->stage=Stage;state->restore.reserve(2);
+	if (linear) {
+		auto *p=static_cast<LinearOffsetTextureMapperClass*>(this);
+		const auto uv=p->CurrentUVOffset;const auto sync=p->LastUsedSyncTime;
+		state->restore.emplace_back([p,uv,sync]() noexcept { p->CurrentUVOffset=uv;p->LastUsedSyncTime=sync; });
+	}
+	if (grid) {
+		auto *p=static_cast<GridTextureMapperClass*>(this);
+		if (!p->MSPerFrame || !p->LastFrame || p->LastFrame>2147483647U || p->GridWidthLog2>=16)
+			throw std::runtime_error("original source grid mapper range rejected");
+		const auto remainder=p->Remainder,frame=p->CurrentFrame,sync=p->LastUsedSyncTime;
+		state->restore.emplace_back([p,remainder,frame,sync]() noexcept { p->Remainder=remainder;p->CurrentFrame=frame;p->LastUsedSyncTime=sync; });
+	}
+	if (kind==typeid(RotateTextureMapperClass)) {
+		auto *p=static_cast<RotateTextureMapperClass*>(this);const auto angle=p->CurrentAngle;const auto sync=p->LastUsedSyncTime;
+		state->restore.emplace_back([p,angle,sync]() noexcept { p->CurrentAngle=angle;p->LastUsedSyncTime=sync; });
+	} else if (kind==typeid(SineLinearOffsetTextureMapperClass)) {
+		auto *p=static_cast<SineLinearOffsetTextureMapperClass*>(this);const auto angle=p->CurrentAngle;const auto sync=p->LastUsedSyncTime;
+		state->restore.emplace_back([p,angle,sync]() noexcept { p->CurrentAngle=angle;p->LastUsedSyncTime=sync; });
+	} else if (kind==typeid(StepLinearOffsetTextureMapperClass)) {
+		auto *p=static_cast<StepLinearOffsetTextureMapperClass*>(this);const auto step=p->CurrentStep;const auto remainder=p->Remainder;const auto sync=p->LastUsedSyncTime;
+		state->restore.emplace_back([p,step,remainder,sync]() noexcept { p->CurrentStep=step;p->Remainder=remainder;p->LastUsedSyncTime=sync; });
+	} else if (kind==typeid(ZigZagLinearOffsetTextureMapperClass)) {
+		auto *p=static_cast<ZigZagLinearOffsetTextureMapperClass*>(this);const auto remainder=p->Remainder;const auto sync=p->LastUsedSyncTime;
+		state->restore.emplace_back([p,remainder,sync]() noexcept { p->Remainder=remainder;p->LastUsedSyncTime=sync; });
+	} else if (kind==typeid(EdgeMapperClass)) {
+		auto *p=static_cast<EdgeMapperClass*>(this);const auto offset=p->VOffset;const auto sync=p->LastUsedSyncTime;
+		state->restore.emplace_back([p,offset,sync]() noexcept { p->VOffset=offset;p->LastUsedSyncTime=sync; });
+	} else if (kind==typeid(RandomTextureMapperClass)) {
+		auto *p=static_cast<RandomTextureMapperClass*>(this);const auto remainder=p->Remainder,angle=p->CurrentAngle;const auto center=p->Center;const auto sync=p->LastUsedSyncTime;
+		state->restore.emplace_back([p,remainder,angle,center,sync]() noexcept { p->Remainder=remainder;p->CurrentAngle=angle;p->Center=center;p->LastUsedSyncTime=sync; });
+	} else if (kind==typeid(BumpEnvTextureMapperClass)) {
+		auto *p=static_cast<BumpEnvTextureMapperClass*>(this);const auto angle=p->CurrentAngle;const auto sync=p->LastUsedSyncTime;
+		state->restore.emplace_back([p,angle,sync]() noexcept { p->CurrentAngle=angle;p->LastUsedSyncTime=sync; });
+	}
+	Add_Ref();state->owner=this;return state;
+}
+void TextureMapperClass::restoreSourceFrame(SourceFrameState& state) noexcept
+{
+	if (state.owner!=this || Stage!=state.stage) std::terminate();
+	for (auto& restore:state.restore) restore();
+}
+#endif
+
 #if defined(__linux__)
 #include "clone_graph.h"
 namespace ww3d_clone {

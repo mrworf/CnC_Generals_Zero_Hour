@@ -81,6 +81,7 @@ struct W3DDisplay::SourceTreeFrameCheckpoint {
 	std::shared_ptr<W3DSmudgeManager::SourceFrameCheckpoint> smudge_state;
 	std::shared_ptr<W3DShaderManager::SourceFrameCheckpoint> shader_state;
 	std::shared_ptr<W3DShadowManager::SourceFrameCheckpoint> shadow_state;
+	std::shared_ptr<BaseHeightMapRenderObjClass::SourcePropFrameCheckpoint> prop_state;
 	explicit SourceTreeFrameCheckpoint(CameraClass *camera)
 		:scene(m_3DScene),tracks(TheTerrainTracksRenderObjClassSystem),
 		 particles(dynamic_cast<W3DParticleSystemManager *>(TheParticleSystemManager)),
@@ -97,6 +98,7 @@ struct W3DDisplay::SourceTreeFrameCheckpoint {
 		smudge_state=smudges->captureSourceFrame();
 		shader_state=W3DShaderManager::captureSourceFrame();
 		shadow_state=shadows->captureSourceFrame();
+		prop_state=terrain->capturePropSourceFrame();
 	}
 	void restore() noexcept
 	{
@@ -107,6 +109,7 @@ struct W3DDisplay::SourceTreeFrameCheckpoint {
 		if (particles) particles->restoreSourceFrame(*particle_state);
 		smudges->restoreSourceFrame(*smudge_state);
 		terrain->m_numVisibleExtraBlendTiles=visible_extra_blends;
+		if (prop_state) terrain->restorePropSourceFrame(*prop_state);
 	}
 	void consume() noexcept
 	{
@@ -345,6 +348,11 @@ void W3DDisplay::draw()
 		shroud->render(view->get3DCamera());
 	}
 	if (!pendingTreePhase) updateViews();
+	// Full reachable sound-free graph/resource/registration admission precedes
+	// tree C1 publication and its irreversible FX callbacks. No live frame
+	// journal spans that publication/old-resource retirement boundary.
+	const Bool props=TheTerrainRenderObject->hasLiveProps();
+	if (props) TheTerrainRenderObject->preparePropSourceFrame();
 	if (TheHeightMap->getMap() && TheGlobalData->m_useTrees) {
 		const auto preparation=TheTerrainRenderObject->prepareTreeRenderPhase(view->get3DCamera());
 		if (preparation==BaseHeightMapRenderObjClass::TREE_PHASE_REJECTED)
@@ -354,10 +362,12 @@ void W3DDisplay::draw()
 	}
 	auto &edge=zh::original_runtime::OriginalGpuEdge::required();
 	const auto phase=TheTerrainRenderObject->preparedTreePhaseIdentity();
+	const Bool frameProps=TheTerrainRenderObject->hasLiveProps();
+	const Bool transactional=phase || frameProps;
 	std::unique_ptr<SourceTreeFrameCheckpoint> checkpoint;
-	if (phase) {
+	if (transactional) {
 		checkpoint=std::make_unique<SourceTreeFrameCheckpoint>(view->get3DCamera());
-		if (!edge.begin_tree_source_frame())
+		if (!edge.begin_tree_source_frame(frameProps))
 			throw OriginalW3DDeviceUnavailable("original immutable tree frame admission rejected");
 	}
 	try {
@@ -365,18 +375,18 @@ void W3DDisplay::draw()
 			throw OriginalW3DDeviceUnavailable("original display frame did not begin");
 		DX8Wrapper::Set_Transform(D3DTS_WORLD, Matrix3D(true));
 		Display::drawViews();
-		if (WW3D::End_Render(phase!=0) != WW3D_ERROR_OK)
+		if (WW3D::End_Render(transactional) != WW3D_ERROR_OK)
 			throw OriginalW3DDeviceUnavailable("original display frame did not end");
-		if (phase) {
+		if (transactional) {
 			if (!edge.commit_tree_source_frame())
 				throw OriginalW3DDeviceUnavailable("original immutable tree frame commit rejected");
 			checkpoint->consume();
 			// No fallible work or callbacks remain after native commit. The
 			// admitted owner/generation cannot change on this closed source route.
-			if (!TheTerrainRenderObject->completeTreeRenderPhase(phase)) std::terminate();
+			if (phase && !TheTerrainRenderObject->completeTreeRenderPhase(phase)) std::terminate();
 		}
 	} catch (...) {
-		if (phase) {
+		if (transactional) {
 			if (!edge.abort_tree_source_frame()) std::terminate();
 			checkpoint->restore();
 		} else if (WW3D::Is_Rendering()) {

@@ -62,6 +62,10 @@ class RenderInfoClass;
 */
 class Animatable3DObjClass : public CompositeRenderObjClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    friend class ww3d_prop::FrameGraph;
+    friend struct W3DPropOwnerProbeAccess;
+#endif
 public:
 
 	Animatable3DObjClass(const char * htree_name);

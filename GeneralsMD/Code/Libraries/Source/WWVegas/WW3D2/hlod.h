@@ -89,6 +89,9 @@ class HLodClass : public W3DMPO, public Animatable3DObjClass
 {
 #if defined(__linux__)
 	friend class ww3d_prop::Audit;
+	#if defined(ZH_WW3D_CPU_ONLY)
+	friend class ww3d_prop::FrameGraph;
+	#endif
 #endif
 	W3DMPO_GLUE(HLodClass)
 public:

@@ -138,6 +138,10 @@ protected:
 
 	struct InputLightStruct
 	{
+		InputLightStruct() : Direction(0,0,0), Ambient(0,0,0), Diffuse(0,0,0),
+			DiffuseRejected(false), m_point(false), m_center(0,0,0),
+			m_innerRadius(0), m_outerRadius(0), m_ambient(0,0,0), m_diffuse(0,0,0) {}
+
 		void				Init(const LightClass & light,const Vector3 & object_center);
 		void				Init_From_Point_Or_Spot_Light(const LightClass & light,const Vector3 & object_center);
 		void				Init_From_Directional_Light(const LightClass & light,const Vector3 & object_center);
@@ -159,6 +163,8 @@ protected:
 	
 	struct OutputLightStruct
 	{
+		OutputLightStruct() : Direction(0,0,0), Diffuse(0,0,0) {}
+
 		void				Init(const InputLightStruct & input,const Matrix3D & camera_tm);
 		
 		Vector3			Direction;						// direction to the light.
@@ -181,4 +187,3 @@ protected:
 
 
 #endif //LIGHTENVIRONMENT_H
-

@@ -734,6 +734,10 @@ void MeshClass::Render(RenderInfoClass & rinfo)
 			** If this mesh model has never been rendered, we need to generate the DX8 datastructures
 			*/
 			if (Model->PolygonRendererList.Is_Empty()) {
+#if defined(ZH_WW3D_CPU_ONLY)
+				if (DX8MeshRendererClass::Source_Frame_Checkpoint_Active())
+					throw std::runtime_error("original source frame mesh registration was not admitted");
+#endif
 				Model->Register_For_Rendering();
 				WWASSERT(!Model->PolygonRendererList.Is_Empty());
 			}

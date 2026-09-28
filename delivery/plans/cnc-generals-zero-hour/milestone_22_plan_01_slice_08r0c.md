@@ -1,6 +1,9 @@
 # M22 plan 01 slice 08R0C: transactional source terrain-prop frame
 
-Status: implementation-ready; 08R0A and 08R0B accepted. No C production edits yet.
+Status: complete and accepted; 08R0A and 08R0B accepted. Six corrected complete
+builds, exact10 focus on four configurations, strict host LSan exact10 both,
+physical four, fresh minimal/Vulkan/LAN and six canonical suites 291/291 pass.
+Evidence: [transactional prop frame](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08r0c_prop_frame.md).
 Plan transaction parent: `b4fc25b137e94accc1abebd4f0f14bc992c64670`.
 Command/queue refinement parent: `c382a699f61a91dbaa992b99c9b4a832918bee50`.
 
@@ -127,6 +130,45 @@ The wrapper is `tests/original_rendering/test_w3d_prop_frame.py`, invoking
 and `original_w3d_cpu_graph_tests` asset producer. Do not add a standalone prop
 process/device owner, retail selector or alternate draw route. The generated
 profile dispatch is isolated from the preserved active08 trial hunks.
+The fresh equivalent generated operation sweep reaches exactly 1382 rejected
+props-only and 1386 rejected combined ordinals followed by clean success. Its
+unchanged two external native GCC processes measured 137.385/137.275 seconds
+under an isolated, diagnostic-only 240-second ceiling. The inherited 30-second
+helper default cannot represent that workload; only this wrapper uses a bounded
+180-second per-process native limit (~31% headroom), retaining TimeoutExpired
+and all workload/assertions. After the lighting correction, isolated category-clean
+GCC sanitizer processes measured 565.788/566.341 seconds and Clang measured
+492.544/492.894 seconds, with unchanged 1382/1386 ordinal counts, retry and
+zero-resource teardown. Diagnostic-only runs used the existing helper timeout
+parameter and are not acceptance. The approved wrapper-only final bound is
+750 seconds per process (~32% margin over the slower sanitizer), with unchanged
+TimeoutExpired failure, workload, inputs and assertions; no production/CMake
+change or rebuild. Corrected native ten-control results at the stricter 180-second
+bound and the corrected six complete builds are retained as proportional evidence:
+their executable/helper bytes and selected behavior assertions are unchanged.
+Refresh the wrapper hash; rerun registered sanitizer exact ten controls, strict
+ten controls on both sanitizers, generated physical four configurations and all
+six fresh canonical suites, plus the common fresh minimal/Vulkan/LAN controls.
+DynamicSorting VB/IB access binding is admitted only when both the pending
+source-frame journal and mesh checkpoint are active. Preserve the legacy guard
+elsewhere; prove outside rejection and inside failure/retry with exact source
+buffer identity/type/offset restoration and original SortingRenderer lowering.
+Prop lifecycle preflight and destructor invariants reject both a pending source
+frame checkpoint and an active pass; unchanged Edge retirement semantics remain
+outside C. Reject add before constructing a private candidate while pending,
+so constructor cleanup retains its proven idle contract. Generated pending and
+active reset/free/add controls preserve exact owner/frame/resource identities;
+journal close restores idle preparation and deterministic draw/removal retry.
+Sanitizer localization reached native MeshClass::Set_Lighting_Environment's full
+member assignment: inactive InputLight boolean slots were uninitialized by the
+LightEnvironment constructor. Initialize every InputLight/OutputLight/Fill field
+to explicit portable neutral values at construction, including local directional
+InputLight values whose unused point fields otherwise remain indeterminate.
+Preserve layout and active-light semantics; no rollback workaround or sanitizer
+suppression. Add fresh, populated/reset and copy regression plus the reached
+late-fault sanitizer proof. Initial native/build gates and the 560.325-second
+category-rejected sanitizer diagnostic are superseded, not acceptance. Measure
+sanitizer timing only after its category audit is clean.
 Build focus:
 `cmake --build build/<preset> --target zh_original_w3d_full_probe original_w3d_cpu_graph_tests original_w3d_prop_owner_tests original_w3d_tree_program_tests original_w3d_stage_transaction_tests original_w3d_source_reference_tests -j4`.
 Exact ten-control focus:

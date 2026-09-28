@@ -24,6 +24,9 @@
 #define SORTING_RENDERER_H
 
 #include "always.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <memory>
+#endif
 
 class SortingNodeStruct;
 class SphereClass;
@@ -31,9 +34,14 @@ class SphereClass;
 class SortingRendererClass
 {
 #if defined(ZH_WW3D_CPU_ONLY)
+public:
+    struct SourceFrameCheckpoint;
+private:
     friend class WW3D;
-    static unsigned Capture_Source_Frame();
-    static void Restore_Source_Frame(unsigned) noexcept;
+    static std::shared_ptr<SourceFrameCheckpoint> Capture_Source_Frame(unsigned bound=0);
+    static void Restore_Source_Frame(SourceFrameCheckpoint&) noexcept;
+    static bool Source_Frame_Ready_To_Commit(const SourceFrameCheckpoint&) noexcept;
+    static void Commit_Source_Frame(SourceFrameCheckpoint&) noexcept;
 #endif
 	static bool _EnableTriangleDraw;
 

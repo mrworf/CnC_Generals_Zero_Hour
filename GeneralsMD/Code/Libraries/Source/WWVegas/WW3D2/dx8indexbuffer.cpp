@@ -49,6 +49,7 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 #include <stdexcept>
 #include "original_gpu_edge.h"
+#include "dx8renderer.h"
 #endif
 
 #if defined(ZH_WW3D_CPU_ONLY)
@@ -160,9 +161,12 @@ struct DynamicIBAccessClass::SourceFrameCheckpoint {
     DX8IndexBufferClass *source=nullptr;
     SortingIndexBufferClass *sorting=nullptr;
     unsigned short capacity=0,offset=0,sorting_capacity=0,sorting_offset=0;
-    std::vector<unsigned short> bytes;
-    bool pinned=false;
-    ~SourceFrameCheckpoint() { if (pinned && source) source->Release_Ref(); }
+    std::vector<unsigned short> bytes,sorting_bytes;
+    bool pinned=false,sorting_pinned=false;
+    ~SourceFrameCheckpoint() {
+        if (pinned && source) source->Release_Ref();
+        if (sorting_pinned && sorting) sorting->Release_Ref();
+    }
 };
 std::shared_ptr<DynamicIBAccessClass::SourceFrameCheckpoint> DynamicIBAccessClass::Capture_Source_Frame()
 {
@@ -179,24 +183,34 @@ std::shared_ptr<DynamicIBAccessClass::SourceFrameCheckpoint> DynamicIBAccessClas
         result->bytes.assign(begin,begin+result->capacity);
         result->source->Add_Ref();result->pinned=true;
     }
+    if (result->sorting) {
+        if (!result->sorting->index_buffer || result->sorting->Get_Index_Count()!=result->sorting_capacity)
+            throw std::runtime_error("original source sorting index identity rejected");
+        result->sorting_bytes.assign(result->sorting->index_buffer,result->sorting->index_buffer+result->sorting_capacity);
+        result->sorting->Add_Ref();result->sorting_pinned=true;
+    }
     return result;
 }
 void DynamicIBAccessClass::Restore_Source_Frame(SourceFrameCheckpoint &checkpoint) noexcept
 {
-    if (_DynamicDX8IndexBufferInUse || _DynamicSortingIndexArrayInUse ||
-        _DynamicSortingIndexArray!=checkpoint.sorting || _DynamicSortingIndexArraySize!=checkpoint.sorting_capacity)
+    if (_DynamicDX8IndexBufferInUse || _DynamicSortingIndexArrayInUse)
         std::terminate();
     REF_PTR_SET(_DynamicDX8IndexBuffer,checkpoint.source);
     _DynamicDX8IndexBufferSize=checkpoint.capacity;_DynamicDX8IndexBufferOffset=checkpoint.offset;
+    REF_PTR_SET(_DynamicSortingIndexArray,checkpoint.sorting);
+    _DynamicSortingIndexArraySize=checkpoint.sorting_capacity;
     _DynamicSortingIndexArrayOffset=checkpoint.sorting_offset;
     if (!checkpoint.bytes.empty())
         std::memcpy(_DynamicDX8IndexBuffer->Get_CPU_Index_Buffer(),checkpoint.bytes.data(),checkpoint.bytes.size()*sizeof(unsigned short));
+    if (!checkpoint.sorting_bytes.empty())
+        std::memcpy(_DynamicSortingIndexArray->index_buffer,checkpoint.sorting_bytes.data(),checkpoint.sorting_bytes.size()*sizeof(unsigned short));
 }
 
 DynamicIBAccessClass::DynamicIBAccessClass(unsigned short type_, unsigned short count)
     : IndexCount(count), IndexBufferOffset(0), IndexBuffer(nullptr), Type(type_)
 {
-    if (auto* edge=zh::original_runtime::OriginalGpuEdge::active();edge && edge->tree_source_frame_pending() && Type!=BUFFER_TYPE_DYNAMIC_DX8)
+    if (auto* edge=zh::original_runtime::OriginalGpuEdge::active();edge && edge->tree_source_frame_pending() && Type!=BUFFER_TYPE_DYNAMIC_DX8
+        && !DX8MeshRendererClass::Source_Frame_Checkpoint_Active())
         throw std::runtime_error("original tree frame dynamic index producer unavailable");
     if (!count) throw std::runtime_error("invalid original dynamic index count");
     if (Type==BUFFER_TYPE_DYNAMIC_DX8) Allocate_DX8_Dynamic_Buffer();

@@ -52,6 +52,9 @@
 #else
 #include <cmath>
 #include <stdexcept>
+#include <memory>
+#include <vector>
+#include <cstring>
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
 #endif
@@ -185,9 +188,17 @@ void Release_Refs(SortingNodeStruct* state);
 static DLListClass<SortingNodeStruct> sorted_list;
 static DLListClass<SortingNodeStruct> clean_list;
 static unsigned total_sorting_vertices;
+#if defined(ZH_WW3D_CPU_ONLY)
+static SortingNodeStruct* source_sorting_node();
+static TempIndexStruct* source_temp_indices(unsigned);
+static bool source_sorting_checkpoint_active() noexcept;
+#endif
 
 static SortingNodeStruct* Get_Sorting_Struct()
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (source_sorting_checkpoint_active()) return source_sorting_node();
+#endif
 
 	SortingNodeStruct* state=clean_list.Head();
 	if (state) {
@@ -222,6 +233,9 @@ static unsigned temp_index_array_count;
 
 static TempIndexStruct* Get_Temp_Index_Array(unsigned count)
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (source_sorting_checkpoint_active()) return source_temp_indices(count);
+#endif
 	if (count < DEFAULT_SORTING_POLY_COUNT)
 		count = DEFAULT_SORTING_POLY_COUNT;
 	if (count>temp_index_array_count) {
@@ -247,7 +261,8 @@ void SortingRendererClass::Insert_Triangles(
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	if (zh::original_runtime::OriginalGpuEdge::active() &&
-		zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending())
+		zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending() &&
+		!source_sorting_checkpoint_active())
 		throw OriginalW3DDeviceUnavailable("original tree frame sorting queue unsupported");
 #endif
 	if (!WW3D::Is_Sorting_Enabled()) {
@@ -427,17 +442,114 @@ static const unsigned MAX_OVERLAPPING_NODES=4096;
 static SortingNodeStruct* overlapping_nodes[MAX_OVERLAPPING_NODES];
 
 #if defined(ZH_WW3D_CPU_ONLY)
-unsigned SortingRendererClass::Capture_Source_Frame()
+struct SortingRendererClass::SourceFrameCheckpoint {
+    struct Sorted { SortingNodeStruct *identity;std::unique_ptr<SortingNodeStruct> value; };
+    std::vector<Sorted> sorted;
+    std::vector<SortingNodeStruct*> clean,slots;
+    std::vector<unsigned char> temp_bytes;
+    std::unique_ptr<TempIndexStruct[]> candidate;
+    unsigned used=0,required=0,last_count=0,total_vertices=0;
+    bool closed=false,active=false;
+    ~SourceFrameCheckpoint();
+};
+static SortingRendererClass::SourceFrameCheckpoint *source_sort_frame=nullptr;
+constexpr unsigned source_sort_polygon_bound=21845;
+void source_copy_sorting_node(SortingNodeStruct& to,const SortingNodeStruct& from)
 {
-    if (sorted_list.Head() || overlapping_node_count || overlapping_polygon_count || overlapping_vertex_count)
-        throw std::runtime_error("original tree frame overlaps pending source sorting work");
-    return last_sorted_triangle_count;
+    // Assignment acquires independent render-state units. Never use its
+    // implicit shallow copy constructor for these ref-owning source values.
+    to.sorting_state=from.sorting_state;to.bounding_sphere=from.bounding_sphere;
+    // Preserve inactive/light/cache representations as bytes too; assignment
+    // above established the matching independent reference ownership units.
+    std::memcpy(&to.sorting_state,&from.sorting_state,sizeof(RenderStateStruct));
+    to.transformed_center=from.transformed_center;to.start_index=from.start_index;
+    to.polygon_count=from.polygon_count;to.min_vertex_index=from.min_vertex_index;to.vertex_count=from.vertex_count;
 }
-void SortingRendererClass::Restore_Source_Frame(unsigned count) noexcept
+static bool source_sorting_checkpoint_active() noexcept { return source_sort_frame!=nullptr; }
+static SortingNodeStruct* source_sorting_node()
 {
-    if (sorted_list.Head() || overlapping_node_count || overlapping_polygon_count || overlapping_vertex_count)
-        std::terminate();
-    last_sorted_triangle_count=count;
+    if (auto *state=clean_list.Head()) { state->Remove();return state; }
+    auto& c=*source_sort_frame;
+    if (c.used==c.slots.size()) throw std::runtime_error("original source sorting node capacity rejected");
+    return c.slots[c.used++];
+}
+static TempIndexStruct* source_temp_indices(unsigned count)
+{
+    auto& c=*source_sort_frame;
+    count=std::max(count,DEFAULT_SORTING_POLY_COUNT);
+    if (count>source_sort_polygon_bound) throw std::runtime_error("original source sorting index capacity rejected");
+    c.required=std::max(c.required,count);
+    return count<=temp_index_array_count?temp_index_array:c.candidate.get();
+}
+SortingRendererClass::SourceFrameCheckpoint::~SourceFrameCheckpoint()
+{
+    if (!closed && source_sort_frame==this) SortingRendererClass::Restore_Source_Frame(*this);
+    for (auto *slot:slots) if (slot) delete slot;
+}
+std::shared_ptr<SortingRendererClass::SourceFrameCheckpoint> SortingRendererClass::Capture_Source_Frame(unsigned bound)
+{
+    if (source_sort_frame || bound>4096 || overlapping_node_count || overlapping_polygon_count || overlapping_vertex_count
+        || temp_index_array_count>64U*1024U*1024U/sizeof(TempIndexStruct)
+        || (temp_index_array_count && !temp_index_array))
+        throw std::runtime_error("original source sorting checkpoint admission rejected");
+    auto c=std::make_shared<SourceFrameCheckpoint>();c->last_count=last_sorted_triangle_count;c->total_vertices=total_sorting_vertices;
+    if (!bound) {
+        if (sorted_list.Head()) throw std::runtime_error("original tree frame overlaps pending source sorting work");
+        return c;
+    }
+    for (auto *node=sorted_list.Head();node;node=node->Succ()) {
+        if (c->sorted.size()==bound) throw std::runtime_error("original source sorting baseline capacity rejected");
+        std::unique_ptr<SortingNodeStruct> value(new SortingNodeStruct);
+        source_copy_sorting_node(*value,*node);c->sorted.push_back({node,std::move(value)});
+    }
+    for (auto *node=clean_list.Head();node;node=node->Succ()) {
+        if (c->clean.size()==4096) throw std::runtime_error("original source sorting clean capacity rejected");
+        c->clean.push_back(node);
+    }
+    if (temp_index_array_count) {
+        const auto *bytes=reinterpret_cast<const unsigned char*>(temp_index_array);
+        c->temp_bytes.assign(bytes,bytes+std::size_t(temp_index_array_count)*sizeof(TempIndexStruct));
+    }
+    if (temp_index_array_count<source_sort_polygon_bound) c->candidate.reset(new TempIndexStruct[source_sort_polygon_bound]);
+    c->slots.reserve(bound);
+    for (unsigned i=0;i<bound;++i) { std::unique_ptr<SortingNodeStruct> slot(new SortingNodeStruct);c->slots.push_back(slot.get());slot.release(); }
+    c->active=true;source_sort_frame=c.get();return c;
+}
+void SortingRendererClass::Restore_Source_Frame(SourceFrameCheckpoint& c) noexcept
+{
+    if (!c.active) {
+        if (c.closed || sorted_list.Head() || overlapping_node_count || overlapping_polygon_count || overlapping_vertex_count) std::terminate();
+        last_sorted_triangle_count=c.last_count;c.closed=true;return;
+    }
+    if (source_sort_frame!=&c || c.closed) std::terminate();
+    source_sort_frame=nullptr;
+    // Retain identities, detach all current ordering and restore ref units
+    // from the separately pinned baseline. No node reconstruction is used.
+    while (auto *node=sorted_list.Head()) { node->Remove();Release_Refs(node); }
+    while (auto *node=clean_list.Head()) { node->Remove();Release_Refs(node); }
+    for (unsigned i=0;i<overlapping_node_count;++i) { overlapping_nodes[i]->Remove();Release_Refs(overlapping_nodes[i]);overlapping_nodes[i]=nullptr; }
+    overlapping_node_count=overlapping_polygon_count=overlapping_vertex_count=0;
+    for (const auto& node:c.sorted) { source_copy_sorting_node(*node.identity,*node.value);sorted_list.Add_Tail(node.identity); }
+    for (auto *node:c.clean) clean_list.Add_Tail(node);
+    if (!c.temp_bytes.empty()) std::memcpy(temp_index_array,c.temp_bytes.data(),c.temp_bytes.size());
+    last_sorted_triangle_count=c.last_count;total_sorting_vertices=c.total_vertices;c.closed=true;
+}
+bool SortingRendererClass::Source_Frame_Ready_To_Commit(const SourceFrameCheckpoint& c) noexcept
+{
+    return (!c.active || source_sort_frame==&c) && !c.closed && !sorted_list.Head() && !overlapping_node_count
+        && !overlapping_polygon_count && !overlapping_vertex_count;
+}
+void SortingRendererClass::Commit_Source_Frame(SourceFrameCheckpoint& c) noexcept
+{
+    if (!Source_Frame_Ready_To_Commit(c)) std::terminate();
+    if (!c.active) { c.closed=true;return; }
+    source_sort_frame=nullptr;
+    // Only actually-used nodes become ordinary source clean-list ownership.
+    for (unsigned i=0;i<c.used;++i) { if (c.slots[i]->List()!=&clean_list) std::terminate();c.slots[i]=nullptr; }
+    if (c.required>temp_index_array_count) {
+        delete[] temp_index_array;temp_index_array=c.candidate.release();temp_index_array_count=c.required;
+    }
+    c.closed=true;
 }
 #endif
 

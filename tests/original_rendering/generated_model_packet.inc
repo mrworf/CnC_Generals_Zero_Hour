@@ -10,7 +10,8 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 	bool invalid_skin = false, unsigned large_vertex_count = 0, bool batch_second = false,
 	bool cull_tree_variant = false, const char *container_name = "TEST",
 	const char *mesh_name = nullptr, unsigned large_triangle_count = 0,
-	bool raised_tree_variant = false, const char* first_texture = nullptr, bool texture_mips = false)
+	bool raised_tree_variant = false, const char* first_texture = nullptr, bool texture_mips = false,
+	int authored_sort_level = 0)
 {
 	assert(writer.Begin_Chunk(W3D_CHUNK_MESH));
 	W3dMeshHeader3Struct header{};
@@ -26,6 +27,7 @@ void make_mesh(ChunkSaveClass &writer, bool supply_variant, bool tread_variant =
 	std::strcpy(header.ContainerName, container_name);
 	header.NumVertices = large_vertex_count ? large_vertex_count : 3;
 	header.NumTris = large_triangle_count ? large_triangle_count : 1;
+	header.SortLevel = authored_sort_level;
 	header.Min = {0, 0, 0};
 	header.Max = {1, 1, raised_tree_variant ? 1.0f : 0.0f};
 	header.SphCenter = {0.5f, 0.5f, raised_tree_variant ? 0.5f : 0.0f};

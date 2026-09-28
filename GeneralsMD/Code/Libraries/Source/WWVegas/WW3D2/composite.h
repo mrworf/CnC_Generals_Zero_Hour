@@ -54,6 +54,9 @@
 */
 class CompositeRenderObjClass : public RenderObjClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class ww3d_prop::FrameGraph;
+#endif
 public:
 
 	CompositeRenderObjClass(void);

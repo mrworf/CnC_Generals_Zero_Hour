@@ -15,6 +15,7 @@
 class VertexBufferClass;
 class IndexBufferClass;
 class TextureBaseClass;
+class TextureClass;
 class TextureFilterClass;
 class W3DShroud;
 class HeightMapRenderObjClass;
@@ -171,7 +172,7 @@ public:
     bool immutable_tree_program_current(const PreparedTreeProgram&) const noexcept;
     // Source-frame ownership composes the device journal with source caches.
     // Only a fully admitted immutable tree frame uses this boundary.
-    bool begin_tree_source_frame();
+    bool begin_tree_source_frame(bool source_mesh_work=false);
     bool commit_tree_source_frame() noexcept;
     bool abort_tree_source_frame() noexcept;
     bool tree_source_frame_pending() const noexcept;
@@ -208,6 +209,9 @@ public:
     bool supports_device_transactions(renderer::DeviceTransactionMode mode) const noexcept;
     bool idle_preparation_ready() const noexcept;
     bool resident_texture(const TextureBaseClass* source) const noexcept;
+    // Source prop preparation completes synchronous texture acquisition while
+    // idle. A failed batch restores exact source metadata and mapping owners.
+    void prepare_prop_textures(const std::vector<TextureClass*>& sources);
     renderer::ValidationResult begin_device_transaction(const renderer::DeviceTransactionDesc&,
         renderer::DeviceTransactionToken&);
     bool commit_device_transaction(const renderer::DeviceTransactionToken&) noexcept;

@@ -55,6 +55,9 @@
 #include "multilist.h"
 #include "robjlist.h"
 #include <float.h>
+#if defined(ZH_WW3D_CPU_ONLY)
+namespace ww3d_prop { class FrameGraph; }
+#endif
 
 class	Vector3;
 class Matrix3D;
@@ -171,6 +174,9 @@ private:
 // RenderObjClass definition
 class RenderObjClass : public RefCountClass , public PersistClass, public MultiListObjectClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class ww3d_prop::FrameGraph;
+#endif
 public:
 
  	//Integer flag placed at the start of structure pointed to by

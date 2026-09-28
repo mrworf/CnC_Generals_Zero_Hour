@@ -49,6 +49,7 @@
 #include "dx8vertexbuffer.h"
 #include "dx8indexbuffer.h"
 #include "sortingrenderer.h"
+#include "dx8renderer.h"
 #include "ww3d.h"
 #include "matrix3d.h"
 #include "lightenvironment.h"
@@ -644,7 +645,12 @@ void DX8Wrapper::Set_Vertex_Buffer(const VertexBufferClass* buffer,unsigned stre
 void DX8Wrapper::Set_Vertex_Buffer(const DynamicVBAccessClass& access)
 {
     Guard_Nonstage_Mutation();
-    if (!access.VertexBuffer || access.Get_Type()!=BUFFER_TYPE_DYNAMIC_DX8)
+    const bool admitted_sorting=access.Get_Type()==BUFFER_TYPE_DYNAMIC_SORTING &&
+        zh::original_runtime::OriginalGpuEdge::active() &&
+        zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending() &&
+        DX8MeshRendererClass::Source_Frame_Checkpoint_Active();
+    if (!access.VertexBuffer ||
+        (access.Get_Type()!=BUFFER_TYPE_DYNAMIC_DX8 && !admitted_sorting))
         throw std::runtime_error("original dynamic sorting vertex draw requires sorting renderer");
     Set_Vertex_Buffer(access.VertexBuffer);
     state().vba_offset=access.VertexBufferOffset;
@@ -671,7 +677,12 @@ void DX8Wrapper::Set_Index_Buffer(const IndexBufferClass* buffer,unsigned short 
 void DX8Wrapper::Set_Index_Buffer(const DynamicIBAccessClass& access,unsigned short base_offset)
 {
     Guard_Nonstage_Mutation();
-    if (!access.IndexBuffer || access.Get_Type()!=BUFFER_TYPE_DYNAMIC_DX8)
+    const bool admitted_sorting=access.Get_Type()==BUFFER_TYPE_DYNAMIC_SORTING &&
+        zh::original_runtime::OriginalGpuEdge::active() &&
+        zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending() &&
+        DX8MeshRendererClass::Source_Frame_Checkpoint_Active();
+    if (!access.IndexBuffer ||
+        (access.Get_Type()!=BUFFER_TYPE_DYNAMIC_DX8 && !admitted_sorting))
         throw std::runtime_error("original dynamic sorting index draw requires sorting renderer");
     Set_Index_Buffer(access.IndexBuffer,base_offset);
     state().iba_offset=access.IndexBufferOffset;

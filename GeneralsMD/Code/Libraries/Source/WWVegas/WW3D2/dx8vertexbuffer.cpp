@@ -51,6 +51,7 @@
 #if defined(ZH_WW3D_CPU_ONLY)
 #include <stdexcept>
 #include "original_gpu_edge.h"
+#include "dx8renderer.h"
 #endif
 
 static const FVFInfoClass _DynamicFVFInfo(dynamic_fvf_type);
@@ -151,9 +152,12 @@ struct DynamicVBAccessClass::SourceFrameCheckpoint {
     DX8VertexBufferClass *source=nullptr;
     SortingVertexBufferClass *sorting=nullptr;
     unsigned short capacity=0,offset=0,sorting_capacity=0,sorting_offset=0;
-    std::vector<unsigned char> bytes;
-    bool pinned=false;
-    ~SourceFrameCheckpoint() { if (pinned && source) source->Release_Ref(); }
+    std::vector<unsigned char> bytes,sorting_bytes;
+    bool pinned=false,sorting_pinned=false;
+    ~SourceFrameCheckpoint() {
+        if (pinned && source) source->Release_Ref();
+        if (sorting_pinned && sorting) sorting->Release_Ref();
+    }
 };
 std::shared_ptr<DynamicVBAccessClass::SourceFrameCheckpoint> DynamicVBAccessClass::Capture_Source_Frame()
 {
@@ -171,24 +175,35 @@ std::shared_ptr<DynamicVBAccessClass::SourceFrameCheckpoint> DynamicVBAccessClas
         result->bytes.assign(begin,begin+size);
         result->source->Add_Ref();result->pinned=true;
     }
+    if (result->sorting) {
+        if (!result->sorting->VertexBuffer || result->sorting->Get_Vertex_Count()!=result->sorting_capacity)
+            throw std::runtime_error("original source sorting vertex identity rejected");
+        const auto *begin=reinterpret_cast<const unsigned char*>(result->sorting->VertexBuffer);
+        result->sorting_bytes.assign(begin,begin+sizeof(VertexFormatXYZNDUV2)*result->sorting_capacity);
+        result->sorting->Add_Ref();result->sorting_pinned=true;
+    }
     return result;
 }
 void DynamicVBAccessClass::Restore_Source_Frame(SourceFrameCheckpoint &checkpoint) noexcept
 {
-    if (_DynamicDX8VertexBufferInUse || _DynamicSortingVertexArrayInUse ||
-        _DynamicSortingVertexArray!=checkpoint.sorting || _DynamicSortingVertexArraySize!=checkpoint.sorting_capacity)
+    if (_DynamicDX8VertexBufferInUse || _DynamicSortingVertexArrayInUse)
         std::terminate();
     REF_PTR_SET(_DynamicDX8VertexBuffer,checkpoint.source);
     _DynamicDX8VertexBufferSize=checkpoint.capacity;_DynamicDX8VertexBufferOffset=checkpoint.offset;
+    REF_PTR_SET(_DynamicSortingVertexArray,checkpoint.sorting);
+    _DynamicSortingVertexArraySize=checkpoint.sorting_capacity;
     _DynamicSortingVertexArrayOffset=checkpoint.sorting_offset;
     if (!checkpoint.bytes.empty())
         std::memcpy(_DynamicDX8VertexBuffer->Get_CPU_Vertex_Buffer(),checkpoint.bytes.data(),checkpoint.bytes.size());
+    if (!checkpoint.sorting_bytes.empty())
+        std::memcpy(_DynamicSortingVertexArray->VertexBuffer,checkpoint.sorting_bytes.data(),checkpoint.sorting_bytes.size());
 }
 
 DynamicVBAccessClass::DynamicVBAccessClass(unsigned t,unsigned fvf,unsigned short count)
     : Type(t), FVFInfo(_DynamicFVFInfo), VertexCount(count), VertexBufferOffset(0), VertexBuffer(nullptr)
 {
-    if (auto* edge=zh::original_runtime::OriginalGpuEdge::active();edge && edge->tree_source_frame_pending() && Type!=BUFFER_TYPE_DYNAMIC_DX8)
+    if (auto* edge=zh::original_runtime::OriginalGpuEdge::active();edge && edge->tree_source_frame_pending() && Type!=BUFFER_TYPE_DYNAMIC_DX8
+        && !DX8MeshRendererClass::Source_Frame_Checkpoint_Active())
         throw std::runtime_error("original tree frame dynamic vertex producer unavailable");
     if (fvf!=dynamic_fvf_type || !count)
         throw std::runtime_error("invalid original dynamic vertex FVF/count");

@@ -245,6 +245,12 @@ public:
 	void preflightTreeRemoval() const;
 	Bool hasPropBuffer() const { return m_propBuffer != NULL; }
 	Bool hasLiveProps() const;
+	friend struct W3DPropFrameGeneratedProbeAccess;
+	struct SourcePropFrameCheckpoint;
+	std::shared_ptr<SourcePropFrameCheckpoint> capturePropSourceFrame();
+	void preparePropSourceFrame();
+	void restorePropSourceFrame(SourcePropFrameCheckpoint&) noexcept;
+	void drawSourceProps(RenderInfoClass&);
 	static void preflightTreeModuleRemoval(const BaseHeightMapRenderObjClass *owner, UnsignedInt epoch);
 	static void detachTreeModule(const BaseHeightMapRenderObjClass *owner, DrawableID id, UnsignedInt epoch) noexcept;
 	Int treePartitionBucket(DrawableID id) const;

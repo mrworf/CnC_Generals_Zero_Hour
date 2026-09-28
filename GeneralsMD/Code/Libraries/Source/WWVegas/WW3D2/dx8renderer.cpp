@@ -65,7 +65,15 @@
 #include "texture.h"
 #if defined(ZH_WW3D_CPU_ONLY)
 #include "original_gpu_edge.h"
+#include "prop_frame.h"
+#include "clone_graph.h"
+#include "static_sort_list.h"
+#include <algorithm>
+#include <memory>
+#include <vector>
+#include <functional>
 #include <stdexcept>
+#include <limits>
 #endif
 
 namespace {
@@ -150,6 +158,11 @@ typedef MultiListIterator<PolyRemover>		PolyRemoverListIterator;
 class PolyRenderTaskClass : public AutoPoolClass<PolyRenderTaskClass, 256>
 {
 public:
+#if defined(ZH_WW3D_CPU_ONLY)
+    PolyRenderTaskClass():Renderer(NULL),Mesh(NULL),NextVisible(NULL) {}
+    void Bind(DX8PolygonRendererClass *renderer,MeshClass *mesh) noexcept
+    { Renderer=renderer;Mesh=mesh;NextVisible=NULL;Mesh->Add_Ref(); }
+#endif
 	PolyRenderTaskClass(DX8PolygonRendererClass * p_renderer,MeshClass * p_mesh) :
 		Renderer(p_renderer),
 		Mesh(p_mesh),
@@ -162,7 +175,7 @@ public:
 
 	~PolyRenderTaskClass(void)
 	{
-		Mesh->Release_Ref();
+		if (Mesh) Mesh->Release_Ref();
 	}
 
 	DX8PolygonRendererClass *	Peek_Polygon_Renderer(void)							{ return Renderer; }
@@ -191,6 +204,11 @@ DEFINE_AUTO_POOL(PolyRenderTaskClass, 256);
 class MatPassTaskClass : public AutoPoolClass<MatPassTaskClass, 256>
 {
 public:
+#if defined(ZH_WW3D_CPU_ONLY)
+    MatPassTaskClass():MaterialPass(NULL),Mesh(NULL),NextVisible(NULL) {}
+    void Bind(MaterialPassClass *pass,MeshClass *mesh) noexcept
+    { MaterialPass=pass;Mesh=mesh;NextVisible=NULL;MaterialPass->Add_Ref();Mesh->Add_Ref(); }
+#endif
 	MatPassTaskClass(MaterialPassClass * pass,MeshClass * mesh) :
 		MaterialPass(pass),
 		Mesh(mesh),
@@ -204,8 +222,8 @@ public:
 
 	~MatPassTaskClass(void)
 	{
-		MaterialPass->Release_Ref();
-		Mesh->Release_Ref();
+		if (MaterialPass) MaterialPass->Release_Ref();
+		if (Mesh) Mesh->Release_Ref();
 	}
 	
 	MaterialPassClass *	Peek_Material_Pass(void)							{ return MaterialPass; }
@@ -222,6 +240,480 @@ private:
 };
 
 DEFINE_AUTO_POOL(MatPassTaskClass, 256);
+
+#if defined(ZH_WW3D_CPU_ONLY)
+struct DX8MeshRendererClass::SourceFrameCheckpoint {
+    struct List { GenericMultiListClass *identity;MultiListNodeClass *next,*previous; };
+    struct Node {
+        MultiListNodeClass *identity,*next,*previous,*next_list;
+        MultiListObjectClass *object;
+        GenericMultiListClass *list;
+    };
+    struct Object { MultiListObjectClass *identity;MultiListNodeClass *head; };
+    struct Poly { PolyRenderTaskClass *identity,*next; };
+    struct Material { MatPassTaskClass *identity,*next; };
+    struct Category { DX8TextureCategoryClass *identity;PolyRenderTaskClass *head; };
+    struct Vertex { VertexBufferClass *identity;std::vector<unsigned char> bytes; };
+    struct Index { IndexBufferClass *identity;std::vector<unsigned short> bytes; };
+    struct Scratch {
+        Vector3 *original=nullptr;
+        int capacity=0,count=0,growth=0;
+        bool valid=false,allocated=false;
+        std::unique_ptr<Vector3[]> candidate;
+        std::vector<unsigned char> bytes;
+        unsigned required=0;
+    };
+    struct Container {
+        DX8FVFCategoryContainer *identity;
+        MatPassTaskClass *head,*tail;
+        bool anything,delayed;
+        DX8RigidFVFCategoryContainer *rigid;
+        MatPassTaskClass *delayed_head,*delayed_tail;
+        DX8SkinFVFCategoryContainer *skin;
+        MeshClass *skin_head,*skin_tail;
+        unsigned skin_count;
+        int used_indices;
+        int used_vertices;
+    };
+    DX8MeshRendererClass *owner=nullptr;
+    std::vector<List> lists;
+    std::vector<Node> nodes;
+    std::vector<Object> objects;
+    std::vector<Poly> poly_tasks;
+    std::vector<Material> material_tasks;
+    std::vector<Category> categories;
+    std::vector<Container> containers;
+    std::vector<Vertex> vertices;
+    std::vector<Index> indices;
+    bool buffers_pinned=false;
+    Scratch skin_vertices,skin_normals;
+    std::vector<MultiListNodeClass*> detached;
+    std::vector<MultiListNodeClass*> node_slots;
+    std::vector<PolyRenderTaskClass*> poly_slots,retired_poly;
+    std::vector<MatPassTaskClass*> material_slots,retired_material;
+    std::vector<DX8TextureCategoryClass*> retired_categories;
+    std::vector<DX8FVFCategoryContainer*> retired_containers;
+    std::shared_ptr<ww3d_prop::FrameGraph> graph;
+    DefaultStaticSortListClass *sorts=nullptr;
+    unsigned min_sort=0,max_sort=0;
+    std::vector<RenderObjClass*> candidate_render_refs,retired_baseline_render_refs;
+    unsigned poly_used=0,material_used=0,node_used=0;
+    bool closed=false;
+    ~SourceFrameCheckpoint();
+};
+namespace {
+DX8MeshRendererClass::SourceFrameCheckpoint *source_mesh_frame=nullptr;
+DX8PolygonRendererList *source_prepared_polygons=nullptr;
+MeshModelClass *source_prepared_model=nullptr;
+struct SourceRegistrationBatch {
+    struct Container { DX8FVFCategoryContainer *root,*latest;FVFCategoryList *list; };
+    struct Group { bool skin;unsigned fvf;FVFCategoryList *list; };
+    struct Category { DX8TextureCategoryClass *candidate,*root; };
+    std::vector<Container> containers;
+    std::vector<Group> groups;
+    std::vector<Category> categories;
+    std::vector<std::function<void()>> publications;
+    std::size_t bytes=0;
+};
+SourceRegistrationBatch *source_registration_batch=nullptr;
+constexpr unsigned source_node_bound=32768;
+PolyRenderTaskClass *source_poly_task(DX8PolygonRendererClass *renderer,MeshClass *mesh)
+{
+    if (!source_mesh_frame) return new PolyRenderTaskClass(renderer,mesh);
+    auto& c=*source_mesh_frame;
+    if (!renderer || !mesh || c.poly_used==c.poly_slots.size())
+        throw std::runtime_error("original source polygon task capacity rejected");
+    auto *task=c.poly_slots[c.poly_used++];task->Bind(renderer,mesh);return task;
+}
+MatPassTaskClass *source_material_task(MaterialPassClass *pass,MeshClass *mesh)
+{
+    if (!source_mesh_frame) return new MatPassTaskClass(pass,mesh);
+    auto& c=*source_mesh_frame;
+    if (!pass || !mesh || c.material_used==c.material_slots.size())
+        throw std::runtime_error("original source material task capacity rejected");
+    auto *task=c.material_slots[c.material_used++];task->Bind(pass,mesh);return task;
+}
+void source_retire(PolyRenderTaskClass *task) noexcept
+{
+    if (!source_mesh_frame) { delete task;return; }
+    auto& c=*source_mesh_frame;
+    if (c.retired_poly.size()==c.retired_poly.capacity()) std::terminate();
+    c.retired_poly.push_back(task);
+}
+void source_retire(MatPassTaskClass *task) noexcept
+{
+    if (!source_mesh_frame) { delete task;return; }
+    auto& c=*source_mesh_frame;
+    if (c.retired_material.size()==c.retired_material.capacity()) std::terminate();
+    c.retired_material.push_back(task);
+}
+bool source_baseline_node(const DX8MeshRendererClass::SourceFrameCheckpoint& c,MultiListNodeClass *node) noexcept
+{
+    return std::find_if(c.nodes.begin(),c.nodes.end(),[node](const auto& n){return n.identity==node;})!=c.nodes.end();
+}
+bool source_candidate_node(const DX8MeshRendererClass::SourceFrameCheckpoint& c,MultiListNodeClass *node) noexcept
+{
+    return std::find(c.node_slots.begin(),c.node_slots.end(),node)!=c.node_slots.end();
+}
+void source_unlink(MultiListNodeClass *node) noexcept
+{
+    auto *head=node->Object->Get_List_Node();
+    MultiListNodeClass *previous=nullptr;
+    for (auto *p=head;p && p!=node;p=p->NextList) previous=p;
+    if (previous) previous->NextList=node->NextList;
+    else node->Object->Set_List_Node(node->NextList);
+    node->Prev->Next=node->Next;node->Next->Prev=node->Prev;
+    node->List=nullptr;node->Prev=node->Next=node->NextList=nullptr;
+}
+}
+DX8MeshRendererClass::SourceFrameCheckpoint::~SourceFrameCheckpoint()
+{
+    if (!closed && source_mesh_frame==this) DX8MeshRendererClass::Restore_Source_Frame(*this);
+    for (auto *task:poly_slots) delete task;
+    for (auto *task:material_slots) delete task;
+    for (auto *node:node_slots) { if (node->List) std::terminate();delete node; }
+    for (auto *object:candidate_render_refs) object->Release_Ref();
+    if (buffers_pinned) {
+        for (const auto& vertex:vertices) vertex.identity->Release_Ref();
+        for (const auto& index:indices) index.identity->Release_Ref();
+    }
+}
+bool DX8MeshRendererClass::Source_Frame_Checkpoint_Active() noexcept { return source_mesh_frame!=nullptr; }
+std::pair<Vector3*,unsigned> DX8MeshRendererClass::Peek_Source_Skin_Scratch(bool normals) noexcept
+{
+    const auto& buffer=normals?_TempNormalBuffer:_TempVertexBuffer;
+    return {buffer.Vector,static_cast<unsigned>(buffer.VectorMax)};
+}
+void DX8MeshRendererClass::Prepare_Source_Skin_Scratch(unsigned vertices)
+{
+    if (!vertices || vertices>65535) throw std::runtime_error("original source skin scratch range rejected");
+    if (!source_mesh_frame) {
+        if (_TempVertexBuffer.Length()<static_cast<int>(vertices) && !_TempVertexBuffer.Resize(vertices)) throw std::bad_alloc();
+        if (_TempNormalBuffer.Length()<static_cast<int>(vertices) && !_TempNormalBuffer.Resize(vertices)) throw std::bad_alloc();
+        return;
+    }
+    if (vertices>static_cast<unsigned>(_TempVertexBuffer.VectorMax) || vertices>static_cast<unsigned>(_TempNormalBuffer.VectorMax))
+        throw std::runtime_error("original source skin scratch capacity was not admitted");
+    source_mesh_frame->skin_vertices.required=std::max(vertices,source_mesh_frame->skin_vertices.required);
+    source_mesh_frame->skin_normals.required=std::max(vertices,source_mesh_frame->skin_normals.required);
+}
+std::shared_ptr<DX8MeshRendererClass::SourceFrameCheckpoint> DX8MeshRendererClass::Capture_Source_Frame(unsigned bound,DefaultStaticSortListClass *sorts)
+{
+    if (source_mesh_frame || !bound || bound>4096 || visible_decal_meshes)
+        throw std::runtime_error("original source mesh frame admission rejected");
+    auto c=std::make_shared<SourceFrameCheckpoint>();c->owner=this;
+    std::size_t buffer_bytes=0;
+    unsigned skin_vertices=0;
+    const auto vertex_buffer=[&](VertexBufferClass *p) {
+        if (!p || std::find_if(c->vertices.begin(),c->vertices.end(),[p](const auto& v){return v.identity==p;})!=c->vertices.end()) return;
+        if (p->Num_Refs()<=0 || p->Num_Refs()>std::numeric_limits<int>::max()-32 ||
+            (p->Type()!=BUFFER_TYPE_DX8 && p->Type()!=BUFFER_TYPE_SORTING))
+            throw std::runtime_error("original source vertex checkpoint provider rejected");
+        const std::size_t size=std::size_t(p->Get_Vertex_Count())*p->FVF_Info().Get_FVF_Size();
+        if (size>64U*1024U*1024U-buffer_bytes) throw std::runtime_error("original source buffer checkpoint byte bound rejected");
+        const auto *bytes=p->Type()==BUFFER_TYPE_DX8?static_cast<DX8VertexBufferClass*>(p)->Get_CPU_Vertex_Buffer():
+            reinterpret_cast<const unsigned char*>(static_cast<SortingVertexBufferClass*>(p)->VertexBuffer);
+        if (!bytes || !size) throw std::runtime_error("original source vertex checkpoint bytes rejected");
+        c->vertices.push_back({p,std::vector<unsigned char>(bytes,bytes+size)});buffer_bytes+=size;
+    };
+    const auto index_buffer=[&](IndexBufferClass *p) {
+        if (!p || std::find_if(c->indices.begin(),c->indices.end(),[p](const auto& v){return v.identity==p;})!=c->indices.end()) return;
+        if (p->Num_Refs()<=0 || p->Num_Refs()>std::numeric_limits<int>::max()-32 ||
+            (p->Type()!=BUFFER_TYPE_DX8 && p->Type()!=BUFFER_TYPE_SORTING))
+            throw std::runtime_error("original source index checkpoint provider rejected");
+        const std::size_t size=std::size_t(p->Get_Index_Count())*sizeof(unsigned short);
+        if (size>64U*1024U*1024U-buffer_bytes) throw std::runtime_error("original source buffer checkpoint byte bound rejected");
+        const auto *bytes=p->Type()==BUFFER_TYPE_DX8?static_cast<DX8IndexBufferClass*>(p)->Get_CPU_Index_Buffer():
+            static_cast<SortingIndexBufferClass*>(p)->index_buffer;
+        if (!bytes || !size) throw std::runtime_error("original source index checkpoint bytes rejected");
+        c->indices.push_back({p,std::vector<unsigned short>(bytes,bytes+p->Get_Index_Count())});buffer_bytes+=size;
+    };
+    const auto list=[&](GenericMultiListClass& list) {
+        if (std::find_if(c->lists.begin(),c->lists.end(),[&](const auto& p){return p.identity==&list;})!=c->lists.end()) return;
+        c->lists.push_back({&list,list.Head.Next,list.Head.Prev});
+        for (auto *node=list.Head.Next;node!=&list.Head;node=node->Next) {
+            if (!node || !node->Object || node->List!=&list || c->nodes.size()==source_node_bound)
+                throw std::runtime_error("original source mesh list provider/bound rejected");
+            c->nodes.push_back({node,node->Next,node->Prev,node->NextList,node->Object,node->List});
+            if (std::find_if(c->objects.begin(),c->objects.end(),[&](const auto& o){return o.identity==node->Object;})==c->objects.end())
+                c->objects.push_back({node->Object,node->Object->Get_List_Node()});
+        }
+    };
+    std::vector<RenderObjClass*> meshes;
+    const auto material_tasks=[&](MatPassTaskClass *head) {
+        for (auto *task=head;task;task=task->Get_Next_Visible()) {
+            if (c->material_tasks.size()==bound) throw std::runtime_error("original source material baseline bound rejected");
+            c->material_tasks.push_back({task,task->Get_Next_Visible()});meshes.push_back(task->Peek_Mesh());
+        }
+    };
+    const auto container_list=[&](FVFCategoryList *fvfs) {
+        if (!fvfs) return;list(*fvfs);
+        FVFCategoryListIterator iterator(fvfs);
+        for (;!iterator.Is_Done();iterator.Next()) {
+            auto *p=iterator.Peek_Obj();
+            auto *rigid=dynamic_cast<DX8RigidFVFCategoryContainer*>(p);
+            auto *skin=dynamic_cast<DX8SkinFVFCategoryContainer*>(p);
+            if ((!rigid && !skin) || c->containers.size()==4096) throw std::runtime_error("original source container provider rejected");
+            index_buffer(p->index_buffer);if (rigid) vertex_buffer(rigid->vertex_buffer);
+            c->containers.push_back({p,p->visible_matpass_head,p->visible_matpass_tail,p->AnythingToRender,p->AnyDelayedPassesToRender,
+                rigid,rigid?rigid->delayed_matpass_head:nullptr,rigid?rigid->delayed_matpass_tail:nullptr,
+                skin,skin?skin->VisibleSkinHead:nullptr,skin?skin->VisibleSkinTail:nullptr,skin?skin->VisibleVertexCount:0,
+                p->used_indices,rigid?rigid->used_vertices:0});
+            material_tasks(p->visible_matpass_head);
+            if (rigid) material_tasks(rigid->delayed_matpass_head);
+            for (unsigned pass=0;pass<p->MAX_PASSES;++pass) {
+                list(p->texture_category_list[pass]);list(p->visible_texture_category_list[pass]);
+                TextureCategoryListIterator categories(&p->texture_category_list[pass]);
+                for (;!categories.Is_Done();categories.Next()) {
+                    auto *category=categories.Peek_Obj();list(category->PolygonRendererList);
+                    if (skin) {
+                        DX8PolygonRendererListIterator polys(&category->PolygonRendererList);
+                        for (;!polys.Is_Done();polys.Next()) {
+                            const int vertices=polys.Peek_Obj()->Get_Mesh_Model_Class()->Get_Vertex_Count();
+                            if (vertices<1 || vertices>65535) throw std::runtime_error("original source skin preparation range rejected");
+                            skin_vertices=std::max(skin_vertices,static_cast<unsigned>(vertices));
+                        }
+                    }
+                    c->categories.push_back({category,category->render_task_head});
+                    for (auto *task=category->render_task_head;task;task=task->Get_Next_Visible()) {
+                        if (c->poly_tasks.size()==bound) throw std::runtime_error("original source polygon baseline bound rejected");
+                        c->poly_tasks.push_back({task,task->Get_Next_Visible()});meshes.push_back(task->Peek_Mesh());
+                    }
+                }
+            }
+        }
+    };
+    list(_RegisteredMeshList);list(texture_category_delete_list);list(fvf_category_container_delete_list);
+    for (int i=0;i<texture_category_container_lists_rigid.Count();++i) container_list(texture_category_container_lists_rigid[i]);
+    container_list(texture_category_container_list_skin);
+    if (sorts) {
+        if (sorts->MinSort<1 || sorts->MaxSort>MAX_SORT_LEVEL || sorts->MinSort>sorts->MaxSort)
+            throw std::runtime_error("original source static sort range rejected");
+        c->sorts=sorts;c->min_sort=sorts->MinSort;c->max_sort=sorts->MaxSort;
+        for (auto& sorted:sorts->SortLists) {
+            list(sorted);
+            GenericMultiListIterator iterator(&sorted);
+            // Iterate exact reference-list identities without a transferring
+            // Get/Remove call. The graph pin is separate from list ownership.
+            for (auto *node=sorted.Head.Next;node!=&sorted.Head;node=node->Next)
+                meshes.push_back(static_cast<RenderObjClass*>(node->Object));
+        }
+    }
+    c->graph=ww3d_prop::FrameGraph::capture(meshes);
+    c->detached.reserve(source_node_bound);
+    c->objects.reserve(source_node_bound);
+    c->candidate_render_refs.reserve(bound);c->retired_baseline_render_refs.reserve(source_node_bound);
+    c->retired_poly.reserve(bound+c->poly_tasks.size());c->retired_material.reserve(bound+c->material_tasks.size());
+    c->retired_categories.reserve(4096);c->retired_containers.reserve(4096);
+    c->poly_slots.reserve(bound);c->material_slots.reserve(bound);c->node_slots.reserve(bound);
+    for (unsigned i=0;i<bound;++i) {
+        std::unique_ptr<PolyRenderTaskClass> poly(new PolyRenderTaskClass);
+        c->poly_slots.push_back(poly.get());poly.release();
+        std::unique_ptr<MatPassTaskClass> material(new MatPassTaskClass);
+        c->material_slots.push_back(material.get());material.release();
+        std::unique_ptr<MultiListNodeClass> node(new MultiListNodeClass);
+        c->node_slots.push_back(node.get());node.release();
+    }
+    const auto scratch=[&](DynamicVectorClass<Vector3>& buffer,SourceFrameCheckpoint::Scratch& saved) {
+        if (!buffer.IsValid || buffer.VectorMax<0 || buffer.VectorMax>65535 || buffer.ActiveCount<0 || buffer.ActiveCount>buffer.VectorMax ||
+            (buffer.VectorMax && (!buffer.Vector || !buffer.IsAllocated)))
+            throw std::runtime_error("original source skin scratch ownership rejected");
+        saved.original=buffer.Vector;saved.capacity=buffer.VectorMax;saved.count=buffer.ActiveCount;saved.growth=buffer.GrowthStep;
+        saved.valid=buffer.IsValid;saved.allocated=buffer.IsAllocated;
+        const std::size_t size=std::size_t(std::max(static_cast<unsigned>(buffer.VectorMax),skin_vertices))*sizeof(Vector3);
+        if (size>64U*1024U*1024U-buffer_bytes) throw std::runtime_error("original source scratch byte bound rejected");
+        buffer_bytes+=size;
+        if (buffer.VectorMax) {
+            const auto *begin=reinterpret_cast<const unsigned char*>(buffer.Vector);
+            saved.bytes.assign(begin,begin+sizeof(Vector3)*buffer.VectorMax);
+        }
+        if (skin_vertices>static_cast<unsigned>(buffer.VectorMax)) {
+            saved.candidate.reset(new Vector3[skin_vertices]);
+            std::memset(saved.candidate.get(),0,skin_vertices*sizeof(Vector3));
+            if (!saved.bytes.empty()) std::memcpy(saved.candidate.get(),saved.bytes.data(),saved.bytes.size());
+        }
+    };
+    scratch(_TempVertexBuffer,c->skin_vertices);scratch(_TempNormalBuffer,c->skin_normals);
+    // Complete admission precedes publication of the optional frame owner.
+    for (const auto& vertex:c->vertices) vertex.identity->Add_Ref();
+    for (const auto& index:c->indices) index.identity->Add_Ref();
+    c->buffers_pinned=true;
+    const auto publish_scratch=[&](DynamicVectorClass<Vector3>& buffer,SourceFrameCheckpoint::Scratch& saved) noexcept {
+        if (saved.candidate) { buffer.Vector=saved.candidate.get();buffer.VectorMax=skin_vertices;buffer.IsAllocated=true;buffer.IsValid=true; }
+    };
+    publish_scratch(_TempVertexBuffer,c->skin_vertices);publish_scratch(_TempNormalBuffer,c->skin_normals);
+    source_mesh_frame=c.get();return c;
+}
+bool DX8MeshRendererClass::Add_Source_Frame_List(GenericMultiListClass& list,MultiListObjectClass *object,bool tail,bool only_once)
+{
+    if (!object) throw std::runtime_error("original source list object rejected");
+    if (!source_mesh_frame) return tail?list.Internal_Add_Tail(object,only_once):list.Internal_Add(object,only_once);
+    auto& c=*source_mesh_frame;
+    if (std::find_if(c.lists.begin(),c.lists.end(),[&](const auto& p){return p.identity==&list;})==c.lists.end())
+        throw std::runtime_error("original source list insertion was not admitted");
+    if (only_once && list.Contains(object)) return false;
+    const bool known=std::find_if(c.objects.begin(),c.objects.end(),[&](const auto& p){return p.identity==object;})!=c.objects.end();
+    if (c.node_used==c.node_slots.size() || (!known && c.objects.size()==c.objects.capacity()))
+        throw std::runtime_error("original source list insertion capacity rejected");
+    if (!known) c.objects.push_back({object,object->Get_List_Node()});
+    auto *node=c.node_slots[c.node_used++];node->Object=object;node->List=&list;
+    node->NextList=object->Get_List_Node();object->Set_List_Node(node);
+    node->Prev=tail?list.Head.Prev:&list.Head;node->Next=tail?&list.Head:list.Head.Next;
+    node->Next->Prev=node;node->Prev->Next=node;
+    return true;
+}
+void DX8MeshRendererClass::Add_Source_Frame_Render_List(GenericMultiListClass& list,RenderObjClass *object)
+{
+    if (source_mesh_frame && source_mesh_frame->candidate_render_refs.size()==source_mesh_frame->candidate_render_refs.capacity())
+        throw std::runtime_error("original source static sort reference capacity rejected");
+    Add_Source_Frame_List(list,object,true,false);
+    object->Add_Ref();
+    if (source_mesh_frame) source_mesh_frame->candidate_render_refs.push_back(object);
+}
+RenderObjClass* DX8MeshRendererClass::Remove_Source_Frame_Render_Head(GenericMultiListClass& list)
+{
+    auto *node=list.Head.Next;
+    if (node==&list.Head) return nullptr;
+    const bool baseline=source_mesh_frame && source_baseline_node(*source_mesh_frame,node);
+    if (baseline && source_mesh_frame->retired_baseline_render_refs.size()==source_mesh_frame->retired_baseline_render_refs.capacity())
+        throw std::runtime_error("original source static sort retirement capacity rejected");
+    auto *object=static_cast<RenderObjClass*>(Remove_Source_Frame_Head(list));
+    if (baseline) source_mesh_frame->retired_baseline_render_refs.push_back(object);
+    return object;
+}
+void DX8MeshRendererClass::Release_Source_Frame_Render_Ref(RenderObjClass *object) noexcept
+{
+    if (!source_mesh_frame) object->Release_Ref();
+}
+void DX8MeshRendererClass::Publish_Prepared_Polygon(MeshModelClass *model,DX8PolygonRendererClass *polygon)
+{
+    if (source_prepared_polygons) {
+        if (model!=source_prepared_model) throw std::runtime_error("original prepared polygon owner rejected");
+        ww3d_clone::Attempt::fault();
+        source_prepared_polygons->Add_Tail(polygon);
+    } else model->PolygonRendererList.Add_Tail(polygon);
+}
+void DX8MeshRendererClass::Withdraw_Prepared_Category(DX8TextureCategoryClass *category) noexcept
+{
+    while (auto *polygon=category->PolygonRendererList.Remove_Head()) {
+        polygon->Set_Texture_Category(nullptr);delete polygon;
+    }
+}
+void DX8MeshRendererClass::Destroy_Prepared_Container(DX8FVFCategoryContainer *container) noexcept
+{
+    for (auto& list:container->texture_category_list)
+        while (auto *category=list.Remove_Head()) { Withdraw_Prepared_Category(category);delete category; }
+    delete container;
+}
+void DX8FVFCategoryContainer::Add_Visible_Texture_Category(DX8TextureCategoryClass *category,int pass)
+{
+    if (pass<0 || pass>=MAX_PASSES || !category || !texture_category_list[pass].Contains(category))
+        throw std::runtime_error("original source visible category rejected");
+    DX8MeshRendererClass::Add_Source_Frame_List(visible_texture_category_list[pass],category);
+    AnythingToRender=true;
+}
+MultiListObjectClass* DX8MeshRendererClass::Remove_Source_Frame_Head(GenericMultiListClass& list)
+{
+    auto *node=list.Head.Next;
+    if (node==&list.Head) return nullptr;
+    if (!source_mesh_frame) { auto *object=node->Object;list.Internal_Remove(object);return object; }
+    auto& c=*source_mesh_frame;
+    if (c.detached.size()==c.detached.capacity()
+        || std::find_if(c.lists.begin(),c.lists.end(),[&](const auto& p){return p.identity==&list;})==c.lists.end())
+        throw std::runtime_error("original source list withdrawal was not admitted");
+    c.detached.push_back(node);source_unlink(node);return node->Object;
+}
+void DX8MeshRendererClass::Restore_Source_Frame(SourceFrameCheckpoint& c) noexcept
+{
+    if (source_mesh_frame!=&c || c.closed) std::terminate();
+    source_mesh_frame=nullptr;
+    for (const auto& list:c.lists) {
+        while (list.identity->Head.Next!=&list.identity->Head) {
+            auto *node=list.identity->Head.Next;source_unlink(node);
+            if (!source_baseline_node(c,node) && !source_candidate_node(c,node)) delete node;
+        }
+    }
+    for (auto *node:c.detached) if (!source_baseline_node(c,node) && !source_candidate_node(c,node)) delete node;
+    for (const auto& n:c.nodes) {
+        n.identity->Next=n.next;n.identity->Prev=n.previous;n.identity->NextList=n.next_list;
+        n.identity->Object=n.object;n.identity->List=n.list;
+    }
+    for (const auto& list:c.lists) { list.identity->Head.Next=list.next;list.identity->Head.Prev=list.previous; }
+    for (const auto& object:c.objects) object.identity->Set_List_Node(object.head);
+    for (const auto& task:c.poly_tasks) task.identity->Set_Next_Visible(task.next);
+    for (const auto& task:c.material_tasks) task.identity->Set_Next_Visible(task.next);
+    for (const auto& category:c.categories) category.identity->render_task_head=category.head;
+    for (const auto& p:c.containers) {
+        p.identity->visible_matpass_head=p.head;p.identity->visible_matpass_tail=p.tail;
+        p.identity->AnythingToRender=p.anything;p.identity->AnyDelayedPassesToRender=p.delayed;
+        if (p.rigid) { p.rigid->delayed_matpass_head=p.delayed_head;p.rigid->delayed_matpass_tail=p.delayed_tail; }
+        if (p.skin) { p.skin->VisibleSkinHead=p.skin_head;p.skin->VisibleSkinTail=p.skin_tail;p.skin->VisibleVertexCount=p.skin_count; }
+        p.identity->used_indices=p.used_indices;if (p.rigid) p.rigid->used_vertices=p.used_vertices;
+    }
+    for (const auto& vertex:c.vertices) {
+        auto *target=vertex.identity->Type()==BUFFER_TYPE_DX8?static_cast<DX8VertexBufferClass*>(vertex.identity)->Get_CPU_Vertex_Buffer():
+            reinterpret_cast<unsigned char*>(static_cast<SortingVertexBufferClass*>(vertex.identity)->VertexBuffer);
+        std::memcpy(target,vertex.bytes.data(),vertex.bytes.size());
+    }
+    for (const auto& index:c.indices) {
+        auto *target=index.identity->Type()==BUFFER_TYPE_DX8?static_cast<DX8IndexBufferClass*>(index.identity)->Get_CPU_Index_Buffer():
+            static_cast<SortingIndexBufferClass*>(index.identity)->index_buffer;
+        std::memcpy(target,index.bytes.data(),index.bytes.size()*sizeof(unsigned short));
+    }
+    c.graph->restore();c.closed=true;
+    const auto restore_scratch=[](DynamicVectorClass<Vector3>& buffer,SourceFrameCheckpoint::Scratch& saved) noexcept {
+        buffer.Vector=saved.original;buffer.VectorMax=saved.capacity;buffer.ActiveCount=saved.count;buffer.GrowthStep=saved.growth;
+        buffer.IsAllocated=saved.allocated;buffer.IsValid=saved.valid;
+        if (!saved.bytes.empty()) std::memcpy(buffer.Vector,saved.bytes.data(),saved.bytes.size());
+    };
+    restore_scratch(_TempVertexBuffer,c.skin_vertices);restore_scratch(_TempNormalBuffer,c.skin_normals);
+    if (c.sorts) { c.sorts->MinSort=c.min_sort;c.sorts->MaxSort=c.max_sort; }
+}
+bool DX8MeshRendererClass::Source_Frame_Ready_To_Commit(const SourceFrameCheckpoint& c) noexcept
+{
+    if (source_mesh_frame!=&c || c.closed || !c.owner->Source_Frame_Queues_Empty()) return false;
+    if (c.sorts && !c.sorts->Source_Frame_Empty()) return false;
+    for (auto *node:c.node_slots) if (node->List) return false;
+    // Candidate tasks must have been consumed rather than silently discarded.
+    for (unsigned i=0;i<c.poly_used;++i)
+        if (std::find(c.retired_poly.begin(),c.retired_poly.end(),c.poly_slots[i])==c.retired_poly.end()) return false;
+    for (unsigned i=0;i<c.material_used;++i)
+        if (std::find(c.retired_material.begin(),c.retired_material.end(),c.material_slots[i])==c.retired_material.end()) return false;
+    return true;
+}
+void DX8MeshRendererClass::Commit_Source_Frame(SourceFrameCheckpoint& c) noexcept
+{
+    if (!Source_Frame_Ready_To_Commit(c)) std::terminate();
+    source_mesh_frame=nullptr;
+    const auto commit_scratch=[](DynamicVectorClass<Vector3>& buffer,SourceFrameCheckpoint::Scratch& saved) noexcept {
+        if (!saved.candidate) return;
+        if (saved.required>static_cast<unsigned>(saved.capacity)) {
+            buffer.Vector=saved.candidate.release();buffer.VectorMax=saved.required;
+            if (saved.allocated) delete[] saved.original;
+        } else {
+            if (!saved.bytes.empty()) std::memcpy(saved.original,saved.candidate.get(),saved.bytes.size());
+            buffer.Vector=saved.original;buffer.VectorMax=saved.capacity;buffer.IsAllocated=saved.allocated;buffer.IsValid=saved.valid;
+        }
+    };
+    commit_scratch(_TempVertexBuffer,c.skin_vertices);commit_scratch(_TempNormalBuffer,c.skin_normals);
+    for (auto *node:c.detached) if (!source_candidate_node(c,node)) delete node;
+    const auto candidate_poly=[&](PolyRenderTaskClass *task) { return std::find(c.poly_slots.begin(),c.poly_slots.end(),task)!=c.poly_slots.end(); };
+    const auto candidate_material=[&](MatPassTaskClass *task) { return std::find(c.material_slots.begin(),c.material_slots.end(),task)!=c.material_slots.end(); };
+    for (auto *task:c.retired_poly) if (!candidate_poly(task)) delete task;
+    for (auto *task:c.retired_material) if (!candidate_material(task)) delete task;
+    for (auto *category:c.retired_categories) delete category;
+    for (auto *container:c.retired_containers) delete container;
+    for (auto *object:c.retired_baseline_render_refs) object->Release_Ref();
+    c.closed=true;
+}
+#else
+static PolyRenderTaskClass *source_poly_task(DX8PolygonRendererClass *renderer,MeshClass *mesh)
+{ return new PolyRenderTaskClass(renderer,mesh); }
+static MatPassTaskClass *source_material_task(MaterialPassClass *pass,MeshClass *mesh)
+{ return new MatPassTaskClass(pass,mesh); }
+static void source_retire(PolyRenderTaskClass *task) { delete task; }
+static void source_retire(MatPassTaskClass *task) { delete task; }
+#endif
 
 
 // ----------------------------------------------------------------------------
@@ -285,7 +777,7 @@ DX8TextureCategoryClass::~DX8TextureCategoryClass()
 
 void DX8TextureCategoryClass::Add_Render_Task(DX8PolygonRendererClass * p_renderer,MeshClass * p_mesh)
 {
-	PolyRenderTaskClass * new_prt = new PolyRenderTaskClass(p_renderer,p_mesh);
+	PolyRenderTaskClass * new_prt = source_poly_task(p_renderer,p_mesh);
 	new_prt->Set_Next_Visible(render_task_head);
 	render_task_head = new_prt;
 
@@ -333,7 +825,7 @@ void DX8FVFCategoryContainer::Remove_Texture_Category(DX8TextureCategoryClass* t
 
 void DX8FVFCategoryContainer::Add_Visible_Material_Pass(MaterialPassClass * pass,MeshClass * mesh)
 {
-	MatPassTaskClass * new_mpr = new MatPassTaskClass(pass,mesh);
+	MatPassTaskClass * new_mpr = source_material_task(pass,mesh);
 
 	if (visible_matpass_head == NULL) {
 		WWASSERT(visible_matpass_tail == NULL);
@@ -377,7 +869,7 @@ void DX8FVFCategoryContainer::Render_Procedural_Material_Passes(void)
 	       last_mpr->Set_Next_Visible(next_mpr);
 	    }
 
-		delete mpr;
+		source_retire(mpr);
 		mpr = next_mpr;
 	}
 
@@ -386,7 +878,7 @@ void DX8FVFCategoryContainer::Render_Procedural_Material_Passes(void)
 
 void DX8RigidFVFCategoryContainer::Add_Delayed_Visible_Material_Pass(MaterialPassClass * pass, MeshClass * mesh)
 {
-	MatPassTaskClass * new_mpr = new MatPassTaskClass(pass,mesh);
+	MatPassTaskClass * new_mpr = source_material_task(pass,mesh);
 
 	if (delayed_matpass_head == NULL) {
 		WWASSERT(delayed_matpass_tail == NULL);
@@ -415,7 +907,7 @@ void DX8RigidFVFCategoryContainer::Render_Delayed_Procedural_Material_Passes(voi
 		mpr->Peek_Mesh()->Render_Material_Pass(mpr->Peek_Material_Pass(),index_buffer);
 		delayed_matpass_head=mpr->Get_Next_Visible();
 		if (delayed_matpass_head==NULL) delayed_matpass_tail=NULL;
-		delete mpr;
+		source_retire(mpr);
 	}
 	AnyDelayedPassesToRender=false;
 #else
@@ -914,7 +1406,11 @@ void DX8RigidFVFCategoryContainer::Render(void)
 	//DX8Wrapper::Set_DX8_ZBias(zbias);
 	for (unsigned p=0;p<passes;++p) {
 		SNAPSHOT_SAY(("Pass: %d\n",p));
+#if defined(ZH_WW3D_CPU_ONLY)
+		while (auto *tex=static_cast<DX8TextureCategoryClass*>(DX8MeshRendererClass::Remove_Source_Frame_Head(visible_texture_category_list[p]))) {
+#else
 		while (DX8TextureCategoryClass * tex = visible_texture_category_list[p].Remove_Head()) {
+#endif
 			tex->Render();
 		}
 		//zbias++;
@@ -1252,6 +1748,11 @@ void DX8FVFCategoryContainer::Insert_To_Texture_Category(
 	if (!fit_in_existing_category) {
 		
 		DX8TextureCategoryClass * new_tex_category=W3DNEW DX8TextureCategoryClass(this,texs,shader,mat,pass);
+#if defined(ZH_WW3D_CPU_ONLY)
+		const auto cleanup=[](DX8TextureCategoryClass *p) { DX8MeshRendererClass::Withdraw_Prepared_Category(p);delete p; };
+		std::unique_ptr<DX8TextureCategoryClass,decltype(cleanup)> candidate(new_tex_category,cleanup);
+		if (source_prepared_model) ww3d_clone::Attempt::fault();
+#endif
 		used_indices+=new_tex_category->Add_Mesh(split_table,vertex_offset,used_indices,index_buffer,pass);
 		
 		/*
@@ -1272,8 +1773,14 @@ void DX8FVFCategoryContainer::Insert_To_Texture_Category(
 		}
 
 		if (!found_similar_category) {
+#if defined(ZH_WW3D_CPU_ONLY)
+			if (source_prepared_model) ww3d_clone::Attempt::fault();
+#endif
 			texture_category_list[pass].Add_Tail(new_tex_category);
 		}
+#if defined(ZH_WW3D_CPU_ONLY)
+		candidate.release();
+#endif
 	}
 }
 
@@ -1300,6 +1807,9 @@ struct Textures_Material_And_Shader_Booking_Struct
 			}
 		}
 		WWASSERT(added_type_count<MAX_ADDED_TYPE_COUNT);
+#if defined(ZH_WW3D_CPU_ONLY)
+		if (added_type_count==MAX_ADDED_TYPE_COUNT) throw std::runtime_error("original mesh material booking capacity rejected");
+#endif
 		for (unsigned int stage = 0; stage < MeshMatDescClass::MAX_TEX_STAGES; stage++) {
 			added_textures[stage][added_type_count]=texs[stage];
 		}
@@ -1469,8 +1979,12 @@ void DX8SkinFVFCategoryContainer::Render(void)
 		WWASSERT((vertex_offset+mesh_vertex_count)<=VisibleVertexCount);
 			DX8_RECORD_SKIN_RENDER(mesh->Get_Num_Polys(),mesh_vertex_count);
 
-				if (_TempVertexBuffer.Length() < mesh_vertex_count) _TempVertexBuffer.Resize(mesh_vertex_count); 
+#if defined(ZH_WW3D_CPU_ONLY)
+				DX8MeshRendererClass::Prepare_Source_Skin_Scratch(mesh_vertex_count);
+#else
+				if (_TempVertexBuffer.Length() < mesh_vertex_count) _TempVertexBuffer.Resize(mesh_vertex_count);
 				if (_TempNormalBuffer.Length() < mesh_vertex_count) _TempNormalBuffer.Resize(mesh_vertex_count);
+#endif
 
 				Vector3* loc=&(_TempVertexBuffer[0]);
 				Vector3* norm=&(_TempNormalBuffer[0]);
@@ -1547,7 +2061,11 @@ void DX8SkinFVFCategoryContainer::Render(void)
 
 	//remove all the rendered data from queues
 	for (unsigned pass=0;pass<passes;++pass) {
+#if defined(ZH_WW3D_CPU_ONLY)
+		while (auto *tex=static_cast<DX8TextureCategoryClass*>(DX8MeshRendererClass::Remove_Source_Frame_Head(visible_texture_category_list[pass]))) {
+#else
 		while (DX8TextureCategoryClass * tex = visible_texture_category_list[pass].Remove_Head()) {
+#endif
 		}
 	}
 
@@ -1753,7 +2271,15 @@ unsigned DX8TextureCategoryClass::Add_Mesh(
 				index_offset,
 				false,
 				pass);
+#if defined(ZH_WW3D_CPU_ONLY)
+			const auto cleanup=[](DX8PolygonRendererClass *p) { p->Set_Texture_Category(nullptr);delete p; };
+			std::unique_ptr<DX8PolygonRendererClass,decltype(cleanup)> candidate(p_renderer,cleanup);
+			if (source_prepared_model) ww3d_clone::Attempt::fault();
+#endif
 			PolygonRendererList.Add_Tail(p_renderer);
+#if defined(ZH_WW3D_CPU_ONLY)
+			candidate.release();
+#endif
 
 			IndexBufferClass::AppendLockClass l(index_buffer,index_offset,index_count);
 			unsigned short* dst_indices=l.Get_Index_Array();
@@ -2082,7 +2608,7 @@ void DX8TextureCategoryClass::Render(void)
 		  last_prt->Set_Next_Visible(next_prt);
 		}
 
-		delete prt;
+		source_retire(prt);
 		prt = next_prt;
 	}
 
@@ -2130,6 +2656,8 @@ void DX8MeshRendererClass::Shutdown(void)
 	// the next original WW3D generation.
 	const bool render_tasks_drained = PolyRenderTaskClass::Release_Empty_Blocks();
 	WWASSERT(render_tasks_drained);
+	const bool material_tasks_drained = MatPassTaskClass::Release_Empty_Blocks();
+	WWASSERT(material_tasks_drained);
 	#endif
 }
 
@@ -2137,6 +2665,19 @@ void DX8MeshRendererClass::Shutdown(void)
 
 void DX8MeshRendererClass::Clear_Pending_Delete_Lists()
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	if (source_mesh_frame) {
+		auto& c=*source_mesh_frame;
+		if (texture_category_delete_list.Count()>static_cast<int>(c.retired_categories.capacity()-c.retired_categories.size())
+			|| fvf_category_container_delete_list.Count()>static_cast<int>(c.retired_containers.capacity()-c.retired_containers.size()))
+			throw std::runtime_error("original source deferred retirement capacity rejected");
+		while (auto *category=static_cast<DX8TextureCategoryClass*>(Remove_Source_Frame_Head(texture_category_delete_list)))
+			c.retired_categories.push_back(category);
+		while (auto *container=static_cast<DX8FVFCategoryContainer*>(Remove_Source_Frame_Head(fvf_category_container_delete_list)))
+			c.retired_containers.push_back(container);
+		return;
+	}
+#endif
 	while (DX8TextureCategoryClass* category=texture_category_delete_list.Remove_Head()) {
 		delete category;
 	}
@@ -2185,6 +2726,273 @@ void DX8MeshRendererClass::Unregister_Mesh_Type(MeshModelClass* mmc)
 	}
 
 }
+
+#if defined(ZH_WW3D_CPU_ONLY)
+void DX8MeshRendererClass::Prepare_Mesh_Type_Strong(MeshModelClass *model)
+{
+    auto *edge=zh::original_runtime::OriginalGpuEdge::active();
+    if (!model || !edge || !edge->idle_preparation_ready() || edge->tree_source_frame_pending()
+        || source_mesh_frame || source_prepared_polygons || !model->Get_Vertex_Count()
+        || model->Get_Vertex_Count()>65535 || !model->Get_Polygon_Count() || model->Get_Pass_Count()>DX8FVFCategoryContainer::MAX_PASSES
+        || !model->Get_Pass_Count() || model->Get_Polygon_Count()>65535U/(3*model->Get_Pass_Count())
+        || model->GapFiller || WW3D::Get_NPatches_Level()>1
+        || WW3D::Get_NPatches_Gap_Filling_Mode()==WW3D::NPATCHES_GAP_FILLING_FORCE)
+        throw std::runtime_error("original prop mesh preparation owner/range rejected");
+    if (!model->PolygonRendererList.Is_Empty()) return;
+    const bool skin=model->Get_Flag(MeshModelClass::SKIN) && model->VertexBoneLink;
+    const bool sorting=model->Get_Flag(MeshModelClass::SORT) && WW3D::Is_Sorting_Enabled() && model->Get_Sort_Level()==SORT_LEVEL_NONE;
+    const unsigned fvf=skin?DX8_FVF_XYZNUV1:DX8FVFCategoryContainer::Define_FVF(model,enable_lighting);
+    FVFCategoryList *destination=nullptr;
+    DX8FVFCategoryContainer *accepted=nullptr;
+    DX8FVFCategoryContainer *base=nullptr;
+    if (skin) destination=texture_category_container_list_skin;
+    else for (int i=0;i<texture_category_container_lists_rigid.Count();++i) {
+        auto *list=texture_category_container_lists_rigid[i];
+        if (!list) throw std::runtime_error("original prop FVF provider rejected");
+        if (!list->Peek_Head() || list->Peek_Head()->Get_FVF()==fvf) { destination=list;break; }
+    }
+    if (!destination && source_registration_batch)
+        for (const auto& group:source_registration_batch->groups)
+            if (group.skin==skin && group.fvf==fvf) { destination=group.list;break; }
+    if (destination) {
+        FVFCategoryListIterator iterator(destination);
+        for (;!iterator.Is_Done();iterator.Next()) {
+            auto *container=iterator.Peek_Obj();
+            auto *effective=container;
+            if (source_registration_batch) for (const auto& prior:source_registration_batch->containers)
+                if (prior.root==container) { effective=prior.latest;break; }
+            if (effective->sorting==sorting && effective->Check_If_Mesh_Fits(model)) { accepted=container;base=effective;break; }
+        }
+        if (!accepted && source_registration_batch) for (const auto& prior:source_registration_batch->containers) {
+            if (prior.list==destination && prior.latest->sorting==sorting && prior.latest->Check_If_Mesh_Fits(model))
+                { accepted=prior.root;base=prior.latest;break; }
+        }
+    }
+    if (accepted && !accepted->Source_Frame_Empty())
+        throw std::runtime_error("original prop preparation overlaps queued category work");
+    ww3d_clone::Attempt::fault();
+    auto new_list=std::make_shared<std::unique_ptr<FVFCategoryList>>();
+    ww3d_clone::Attempt::fault();
+    auto replacement=std::make_shared<std::unique_ptr<FVFCategoryList*[]>>();
+    int replacement_capacity=texture_category_container_lists_rigid.VectorMax;
+    if (!destination) {
+        ww3d_clone::Attempt::fault();new_list->reset(new FVFCategoryList);destination=new_list->get();
+        if (!skin) {
+            auto& lists=texture_category_container_lists_rigid;
+            if (lists.ActiveCount>=4096 || lists.VectorMax<lists.ActiveCount)
+                throw std::runtime_error("original prop FVF list capacity rejected");
+            if (!source_registration_batch && lists.ActiveCount==lists.VectorMax) {
+                replacement_capacity=std::max(lists.VectorMax+lists.VectorMax/4,lists.VectorMax+4);
+                if (replacement_capacity>4096) throw std::runtime_error("original prop FVF growth capacity rejected");
+                replacement->reset(new FVFCategoryList*[replacement_capacity]());
+                if (lists.ActiveCount) std::copy(lists.Vector,lists.Vector+lists.ActiveCount,replacement->get());
+            }
+        }
+    }
+    ww3d_clone::Attempt::fault();auto private_model=std::make_shared<DX8PolygonRendererList>();
+    struct PreparedLists {
+        FVFCategoryList containers;
+        MultiListClass<MeshModelClass> registered;
+        ~PreparedLists() { while (containers.Remove_Head()) {} while (registered.Remove_Head()) {} }
+    };
+    ww3d_clone::Attempt::fault();auto private_lists=std::make_shared<PreparedLists>();
+    ww3d_clone::Attempt::fault();auto transferred=std::make_shared<bool>(false);
+    const auto cleanup=[private_model,private_lists,transferred](DX8FVFCategoryContainer *p) {
+        if (!*transferred) DX8MeshRendererClass::Destroy_Prepared_Container(p);
+    };
+    ww3d_clone::Attempt::fault();std::shared_ptr<DX8FVFCategoryContainer> candidate(
+        skin?static_cast<DX8FVFCategoryContainer*>(new DX8SkinFVFCategoryContainer(sorting)):
+             static_cast<DX8FVFCategoryContainer*>(new DX8RigidFVFCategoryContainer(fvf,sorting)),cleanup);
+    struct CategoryPair { DX8TextureCategoryClass *candidate,*accepted; };
+    std::vector<CategoryPair> pairs;
+    ww3d_clone::Attempt::fault();pairs.reserve(4096);
+    auto *rigid=dynamic_cast<DX8RigidFVFCategoryContainer*>(candidate.get());
+    auto *old_rigid=accepted?dynamic_cast<DX8RigidFVFCategoryContainer*>(accepted):nullptr;
+    auto *base_rigid=base?dynamic_cast<DX8RigidFVFCategoryContainer*>(base):nullptr;
+    const auto copy_vertex=[&](VertexBufferClass *buffer) {
+        ww3d_clone::Attempt::fault();
+        if (buffer->Engine_Refs()) throw std::runtime_error("original prop vertex append ownership rejected");
+        if (buffer->Type()==BUFFER_TYPE_DX8) {
+            auto *copy=new DX8VertexBufferClass(fvf,buffer->Get_Vertex_Count(),DX8VertexBufferClass::USAGE_DEFAULT);
+            std::memcpy(copy->Get_CPU_Vertex_Buffer(),static_cast<DX8VertexBufferClass*>(buffer)->Get_CPU_Vertex_Buffer(),
+                std::size_t(buffer->Get_Vertex_Count())*buffer->FVF_Info().Get_FVF_Size());return static_cast<VertexBufferClass*>(copy);
+        }
+        if (buffer->Type()!=BUFFER_TYPE_SORTING) throw std::runtime_error("original prop vertex provider rejected");
+        auto *copy=new SortingVertexBufferClass(buffer->Get_Vertex_Count());
+        std::memcpy(copy->VertexBuffer,static_cast<SortingVertexBufferClass*>(buffer)->VertexBuffer,
+            std::size_t(buffer->Get_Vertex_Count())*sizeof(VertexFormatXYZNDUV2));return static_cast<VertexBufferClass*>(copy);
+    };
+    const auto copy_index=[&](IndexBufferClass *buffer) {
+        ww3d_clone::Attempt::fault();
+        if (buffer->Engine_Refs()) throw std::runtime_error("original prop index append ownership rejected");
+        if (buffer->Type()==BUFFER_TYPE_DX8) {
+            auto *copy=new DX8IndexBufferClass(buffer->Get_Index_Count(),DX8IndexBufferClass::USAGE_DEFAULT);
+            std::memcpy(copy->Get_CPU_Index_Buffer(),static_cast<DX8IndexBufferClass*>(buffer)->Get_CPU_Index_Buffer(),
+                std::size_t(buffer->Get_Index_Count())*sizeof(unsigned short));return static_cast<IndexBufferClass*>(copy);
+        }
+        if (buffer->Type()!=BUFFER_TYPE_SORTING) throw std::runtime_error("original prop index provider rejected");
+        auto *copy=new SortingIndexBufferClass(buffer->Get_Index_Count());
+        std::memcpy(copy->index_buffer,static_cast<SortingIndexBufferClass*>(buffer)->index_buffer,
+            std::size_t(buffer->Get_Index_Count())*sizeof(unsigned short));return static_cast<IndexBufferClass*>(copy);
+    };
+    if (accepted) {
+        if ((skin && !dynamic_cast<DX8SkinFVFCategoryContainer*>(accepted)) || (!skin && !old_rigid))
+            throw std::runtime_error("original prop container kind rejected");
+        candidate->used_indices=base->used_indices;
+        if (base->index_buffer) candidate->index_buffer=copy_index(base->index_buffer);
+        if (rigid) { rigid->used_vertices=base_rigid->used_vertices;if (base_rigid->vertex_buffer) rigid->vertex_buffer=copy_vertex(base_rigid->vertex_buffer); }
+        for (unsigned pass=0;pass<DX8FVFCategoryContainer::MAX_PASSES;++pass) {
+            TextureCategoryListIterator iterator(&base->texture_category_list[pass]);
+            for (;!iterator.Is_Done();iterator.Next()) {
+                auto *old=iterator.Peek_Obj();
+                if (pairs.size()==pairs.capacity()) throw std::runtime_error("original prop category clone capacity rejected");
+                ww3d_clone::Attempt::fault();
+                std::unique_ptr<DX8TextureCategoryClass> next(new DX8TextureCategoryClass(candidate.get(),old->textures,old->shader,old->material,old->pass));
+                next->shader=old->shader;
+                ww3d_clone::Attempt::fault();
+                candidate->texture_category_list[pass].Add_Tail(next.get());
+                auto *root=old;
+                if (source_registration_batch) for (const auto& prior:source_registration_batch->categories)
+                    if (prior.candidate==old) { root=prior.root;break; }
+                pairs.push_back({next.get(),root});next.release();
+            }
+        }
+    }
+    ww3d_clone::Attempt::fault();
+    if (!accepted) private_lists->containers.Add_Tail(candidate.get());
+    ww3d_clone::Attempt::fault();
+    if (!skin) private_lists->registered.Add_Tail(model);
+    struct Selector {
+        Selector(MeshModelClass *model,DX8PolygonRendererList *list) { source_prepared_model=model;source_prepared_polygons=list; }
+        ~Selector() { source_prepared_model=nullptr;source_prepared_polygons=nullptr; }
+    } selector(model,private_model.get());
+    ww3d_clone::Attempt::fault();candidate->Add_Mesh(model);
+    if (private_model->Is_Empty()) throw std::runtime_error("original prop prepared polygon graph empty");
+    if (source_registration_batch) {
+        auto& batch=*source_registration_batch;
+        const std::size_t bytes=std::size_t(candidate->index_buffer->Get_Index_Count())*sizeof(unsigned short)
+            +(rigid?std::size_t(rigid->vertex_buffer->Get_Vertex_Count())*rigid->vertex_buffer->FVF_Info().Get_FVF_Size():0);
+        if (bytes>64U*1024U*1024U-batch.bytes || batch.containers.size()==batch.containers.capacity()
+            || pairs.size()>batch.categories.capacity()-batch.categories.size()
+            || (*new_list && batch.groups.size()==batch.groups.capacity()))
+            throw std::runtime_error("original prop registration batch capacity rejected");
+        batch.bytes+=bytes;
+        auto prior=std::find_if(batch.containers.begin(),batch.containers.end(),[&](const auto& p){return p.root==accepted;});
+        if (accepted && prior!=batch.containers.end()) prior->latest=candidate.get();
+        else batch.containers.push_back({accepted?accepted:candidate.get(),candidate.get(),destination});
+        for (const auto& pair:pairs) batch.categories.push_back({pair.candidate,pair.accepted});
+        if (*new_list) batch.groups.push_back({skin,fvf,destination});
+    }
+    // All storage, material refs, buffer bytes and both polygon memberships
+    // now exist privately. The remaining publication consists of byte copies
+    // and exact-node relinking; none allocates or calls a provider.
+    const auto move_node=[](MultiListNodeClass *node,GenericMultiListClass& to,MultiListNodeClass *after) noexcept {
+        node->Prev->Next=node->Next;node->Next->Prev=node->Prev;
+        node->List=&to;node->Prev=after?after:to.Head.Prev;node->Next=node->Prev->Next;
+        node->Next->Prev=node;node->Prev->Next=node;
+    };
+    auto publication=[this,model,accepted,old_rigid,rigid,candidate,transferred,private_lists,private_model,new_list,replacement,
+                      replacement_capacity,pairs=std::move(pairs),destination,skin,move_node]() noexcept {
+    if (accepted) {
+        if (rigid) {
+            if (!old_rigid->vertex_buffer) { old_rigid->vertex_buffer=rigid->vertex_buffer;rigid->vertex_buffer=nullptr; }
+            else {
+                auto *from=rigid->vertex_buffer;auto *to=old_rigid->vertex_buffer;
+                void *target=to->Type()==BUFFER_TYPE_DX8?static_cast<void*>(static_cast<DX8VertexBufferClass*>(to)->Get_CPU_Vertex_Buffer()):static_cast<void*>(static_cast<SortingVertexBufferClass*>(to)->VertexBuffer);
+                const void *bytes=from->Type()==BUFFER_TYPE_DX8?static_cast<const void*>(static_cast<DX8VertexBufferClass*>(from)->Get_CPU_Vertex_Buffer()):static_cast<const void*>(static_cast<SortingVertexBufferClass*>(from)->VertexBuffer);
+                std::memcpy(target,bytes,std::size_t(to->Get_Vertex_Count())*to->FVF_Info().Get_FVF_Size());
+            }
+            old_rigid->used_vertices=rigid->used_vertices;
+        }
+        if (!accepted->index_buffer) { accepted->index_buffer=candidate->index_buffer;candidate->index_buffer=nullptr; }
+        else {
+            auto *from=candidate->index_buffer;auto *to=accepted->index_buffer;
+            auto *target=to->Type()==BUFFER_TYPE_DX8?static_cast<DX8IndexBufferClass*>(to)->Get_CPU_Index_Buffer():static_cast<SortingIndexBufferClass*>(to)->index_buffer;
+            const auto *bytes=from->Type()==BUFFER_TYPE_DX8?static_cast<DX8IndexBufferClass*>(from)->Get_CPU_Index_Buffer():static_cast<SortingIndexBufferClass*>(from)->index_buffer;
+            std::memcpy(target,bytes,std::size_t(to->Get_Index_Count())*sizeof(unsigned short));
+        }
+        accepted->used_indices=candidate->used_indices;
+        for (unsigned pass=0;pass<DX8FVFCategoryContainer::MAX_PASSES;++pass) {
+            auto& source=candidate->texture_category_list[pass];auto& target=accepted->texture_category_list[pass];
+            MultiListNodeClass *after=&target.Head;
+            for (auto *node=source.Head.Next;node!=&source.Head;) {
+                auto *next=node->Next;auto *category=static_cast<DX8TextureCategoryClass*>(node->Object);
+                const auto pair=std::find_if(pairs.begin(),pairs.end(),[&](const auto& p){return p.candidate==category;});
+                if (pair!=pairs.end()) {
+                    auto& polygons=category->PolygonRendererList;auto& destination=pair->accepted->PolygonRendererList;
+                    while (polygons.Head.Next!=&polygons.Head) {
+                        auto *poly_node=polygons.Head.Next;
+                        static_cast<DX8PolygonRendererClass*>(poly_node->Object)->Set_Texture_Category(pair->accepted);
+                        move_node(poly_node,destination,nullptr);
+                    }
+                    for (after=target.Head.Next;after!=&target.Head && after->Object!=pair->accepted;after=after->Next) {}
+                    if (after==&target.Head) std::terminate();
+                } else {
+                    category->container=accepted;move_node(node,target,after);after=node;
+                }
+                node=next;
+            }
+        }
+    } else { move_node(private_lists->containers.Head.Next,*destination,nullptr);*transferred=true; }
+    while (private_model->Head.Next!=&private_model->Head) move_node(private_model->Head.Next,model->PolygonRendererList,nullptr);
+    if (!skin) move_node(private_lists->registered.Head.Next,_RegisteredMeshList,nullptr);
+    if (*new_list) {
+        if (skin) texture_category_container_list_skin=new_list->release();
+        else {
+            auto& lists=texture_category_container_lists_rigid;
+            if (*replacement) { auto *old=lists.Vector;lists.Vector=replacement->release();lists.VectorMax=replacement_capacity;delete[] old; }
+            lists.Vector[lists.ActiveCount++]=new_list->release();
+        }
+    }
+    model->HasBeenInUse=true;
+    };
+    ww3d_clone::Attempt::fault();
+    if (source_registration_batch) source_registration_batch->publications.push_back(std::move(publication));
+    else publication();
+}
+void DX8MeshRendererClass::Prepare_Mesh_Batch_Strong(const std::vector<MeshModelClass*>& models)
+{
+    if (source_registration_batch || models.size()>4096)
+        throw std::runtime_error("original prop registration batch owner rejected");
+    for (std::size_t i=0;i<models.size();++i)
+        if (!models[i] || std::find(models.begin(),models.begin()+i,models[i])!=models.begin()+i)
+            throw std::runtime_error("original prop registration duplicate/provider rejected");
+    ww3d_clone::Attempt attempt;
+    SourceRegistrationBatch batch;
+    ww3d_clone::Attempt::fault();batch.containers.reserve(4096);
+    ww3d_clone::Attempt::fault();batch.groups.reserve(4096);
+    ww3d_clone::Attempt::fault();batch.categories.reserve(32768);
+    ww3d_clone::Attempt::fault();batch.publications.reserve(models.size());
+    struct Owner {
+        explicit Owner(SourceRegistrationBatch *p) { source_registration_batch=p; }
+        ~Owner() { source_registration_batch=nullptr; }
+    } owner(&batch);
+    // Duplicate identities are rejected before any candidate allocation or
+    // semantic source mutation; callers supply the graph's unique model set.
+    for (auto *model:models) Prepare_Mesh_Type_Strong(model);
+    auto& lists=texture_category_container_lists_rigid;
+    int needed=lists.ActiveCount;
+    for (const auto& group:batch.groups) if (!group.skin) ++needed;
+    if (needed>4096) throw std::runtime_error("original prop batch FVF count rejected");
+    int capacity=lists.VectorMax;
+    while (capacity<needed) {
+        capacity=std::max(capacity+capacity/4,capacity+4);
+        if (capacity>4096) throw std::runtime_error("original prop batch FVF growth rejected");
+    }
+    std::unique_ptr<FVFCategoryList*[]> replacement;
+    if (capacity!=lists.VectorMax) {
+        ww3d_clone::Attempt::fault();
+        replacement.reset(new FVFCategoryList*[capacity]());
+        if (lists.ActiveCount) std::copy(lists.Vector,lists.Vector+lists.ActiveCount,replacement.get());
+    }
+    // Complete graph and capacity admission precedes this allocation-free
+    // publication sequence. No source/model callback can observe half state.
+    ww3d_clone::Attempt::fault();
+    if (replacement) { auto *old=lists.Vector;lists.Vector=replacement.release();lists.VectorMax=capacity;delete[] old; }
+    for (auto& publish:batch.publications) publish();
+    attempt.commit();
+}
+#endif
 
 
 void DX8MeshRendererClass::Register_Mesh_Type(MeshModelClass* mmc)

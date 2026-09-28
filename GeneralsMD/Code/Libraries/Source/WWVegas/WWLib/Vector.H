@@ -90,6 +90,9 @@ class VectorClass
 #if defined(__linux__)
 	friend class W3DAssetManager;
 	friend class MaterialInfoClass;
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class DX8MeshRendererClass;
+#endif
 #endif
 	public:
 		WWINLINE VectorClass(NoInitClass const &) {};
@@ -493,6 +496,9 @@ class DynamicVectorClass : public VectorClass<T>
 #if defined(__linux__)
 	friend class W3DAssetManager;
 	friend class MaterialInfoClass;
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class DX8MeshRendererClass;
+#endif
 #endif
 	public:
 		DynamicVectorClass(unsigned size=0, T const * array=0);

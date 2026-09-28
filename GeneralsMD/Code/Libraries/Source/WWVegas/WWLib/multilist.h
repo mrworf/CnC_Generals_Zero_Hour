@@ -144,6 +144,9 @@ private:
 	MultiListNodeClass		Head;
 	friend class				GenericMultiListIterator;
 	friend class				MultiListObjectClass;
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class DX8MeshRendererClass;
+#endif
 };
 
 inline bool GenericMultiListClass::Is_In_List(MultiListObjectClass * obj)

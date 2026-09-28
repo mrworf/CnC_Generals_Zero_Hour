@@ -56,6 +56,10 @@
 
 class ChunkLoadClass;
 class ChunkSaveClass;
+#if defined(ZH_WW3D_CPU_ONLY)
+namespace ww3d_prop { class FrameGraph; }
+#include <memory>
+#endif
 
 #define DYN_MAT8
 #ifdef DYN_MAT8
@@ -74,6 +78,12 @@ class VertexMaterialClass : public W3DMPO, public RefCountClass
 	W3DMPO_GLUE(VertexMaterialClass)
 
 	friend DX8Wrapper;
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class ww3d_prop::FrameGraph;
+	struct SourceFrameState;
+	std::shared_ptr<SourceFrameState> captureSourceFrame();
+	void restoreSourceFrame(SourceFrameState&) noexcept;
+#endif
 
 public:
 	/*

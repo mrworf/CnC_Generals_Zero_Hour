@@ -347,6 +347,9 @@ protected:
 	friend class MeshLoadContextClass;
 	friend class DX8SkinFVFCategoryContainer;
 	friend class DX8MeshRendererClass;
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend struct W3DPropOwnerProbeAccess;
+#endif
 	friend class DX8PolygonRendererClass;
 };
 

@@ -1196,6 +1196,10 @@ void BaseHeightMapRenderObjClass::notifyShroudChanged()
 void BaseHeightMapRenderObjClass::addProp(Int id, Coord3D location, Real angle, Real scale,
 	const AsciiString &modelName)
 {
+	// No candidate owner may be constructed while a frame checkpoint retains
+	// the current graph; its constructor unwind must remain an idle operation.
+	if (auto* edge=zh::original_runtime::OriginalGpuEdge::active())
+		if (edge->tree_source_frame_pending()) throw ERROR_INVALID_D3D;
 	if (!canNotifyShroudChanged())
 		throw OriginalW3DDeviceUnavailable("original prop map owner unavailable");
 	preflightTreeRemoval();
@@ -1240,6 +1244,41 @@ Bool BaseHeightMapRenderObjClass::hasLiveProps() const
 	if (m_propBuffer) for (Int i=0;i<m_propBuffer->m_numProps;++i)
 		if (m_propBuffer->m_props[i].m_robj) return TRUE;
 	return FALSE;
+}
+struct BaseHeightMapRenderObjClass::SourcePropFrameCheckpoint {
+	BaseHeightMapRenderObjClass* terrain;
+	W3DPropBuffer* buffer;
+	WorldHeightMap* map;
+	UnsignedInt64 token,generation;
+	std::shared_ptr<W3DPropBuffer::SourceFrameCheckpoint> state;
+};
+std::shared_ptr<BaseHeightMapRenderObjClass::SourcePropFrameCheckpoint>
+BaseHeightMapRenderObjClass::capturePropSourceFrame()
+{
+	if (!cpuPropOwnerMatches(this,m_propBuffer,m_map)) throw ERROR_INVALID_D3D;
+	if (!m_propBuffer) return {};
+	auto state=std::make_shared<SourcePropFrameCheckpoint>();
+	state->terrain=this;state->buffer=m_propBuffer;state->map=m_map;
+	state->token=s_cpuPropToken;state->generation=s_cpuPropGeneration;
+	state->state=m_propBuffer->captureSourceFrame();
+	return state;
+}
+void BaseHeightMapRenderObjClass::preparePropSourceFrame()
+{
+	auto state=capturePropSourceFrame();
+	if (state) m_propBuffer->prepareSourceFrame(*state->state);
+}
+void BaseHeightMapRenderObjClass::restorePropSourceFrame(SourcePropFrameCheckpoint& state) noexcept
+{
+	if (state.terrain!=this || state.buffer!=m_propBuffer || state.map!=m_map ||
+		state.token!=s_cpuPropToken || state.generation!=s_cpuPropGeneration ||
+		!cpuPropOwnerMatches(this,m_propBuffer,m_map)) std::terminate();
+	m_propBuffer->restoreSourceFrame(*state.state);
+}
+void BaseHeightMapRenderObjClass::drawSourceProps(RenderInfoClass& info)
+{
+	if (!cpuPropOwnerMatches(this,m_propBuffer,m_map)) throw ERROR_INVALID_D3D;
+	if (m_propBuffer) m_propBuffer->drawProps(info);
 }
 void BaseHeightMapRenderObjClass::adjustTerrainLOD(Int)
 {

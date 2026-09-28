@@ -322,8 +322,10 @@ private:
 #if defined(ZH_WW3D_CPU_ONLY)
     friend class zh::original_runtime::OriginalGpuEdge;
     struct SourceFrameCheckpoint;
-    static std::shared_ptr<SourceFrameCheckpoint> Capture_Source_Frame();
+    static std::shared_ptr<SourceFrameCheckpoint> Capture_Source_Frame(bool mesh_work=false);
     static void Restore_Source_Frame(SourceFrameCheckpoint&) noexcept;
+    static bool Source_Frame_Ready_To_Commit(const SourceFrameCheckpoint&) noexcept;
+    static void Commit_Source_Frame(SourceFrameCheckpoint&) noexcept;
 #endif
 
 	enum

@@ -54,6 +54,10 @@
 #include "matrix4.h"
 
 class INIClass;
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <memory>
+namespace ww3d_prop { class FrameGraph; }
+#endif
 
 /*
 ** TextureMapperClass
@@ -61,6 +65,12 @@ class INIClass;
 */
 class TextureMapperClass : public W3DMPO, public RefCountClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class ww3d_prop::FrameGraph;
+	struct SourceFrameState;
+	std::shared_ptr<SourceFrameState> captureSourceFrame();
+	void restoreSourceFrame(SourceFrameState&) noexcept;
+#endif
 	public:
 
 		enum {
@@ -142,6 +152,9 @@ protected:
 */
 class LinearOffsetTextureMapperClass : public ScaleTextureMapperClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class TextureMapperClass;
+#endif
 	W3DMPO_GLUE(LinearOffsetTextureMapperClass)
 public:
 	LinearOffsetTextureMapperClass(const Vector2 &offset_per_sec, const Vector2 & start_offset,
@@ -185,6 +198,9 @@ protected:
 */
 class GridTextureMapperClass : public TextureMapperClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class TextureMapperClass;
+#endif
 	W3DMPO_GLUE(GridTextureMapperClass)
 public:
 	GridTextureMapperClass(float fps, unsigned int gridwidth_log2, unsigned int last_frame, unsigned int offset, unsigned int stage);
@@ -229,6 +245,9 @@ protected:
 */
 class RotateTextureMapperClass : public ScaleTextureMapperClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class TextureMapperClass;
+#endif
 	W3DMPO_GLUE(RotateTextureMapperClass)
 public:
 	RotateTextureMapperClass(float rad_per_sec, const Vector2& center, const Vector2 &scale, unsigned int stage);
@@ -256,6 +275,9 @@ private:
 */
 class SineLinearOffsetTextureMapperClass : public ScaleTextureMapperClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class TextureMapperClass;
+#endif
 	W3DMPO_GLUE(SineLinearOffsetTextureMapperClass)
 public:
 	SineLinearOffsetTextureMapperClass(const Vector3 &uafp, const Vector3 &vafp, const Vector2 &scale, unsigned int stage);
@@ -283,6 +305,9 @@ private:
 */
 class StepLinearOffsetTextureMapperClass : public ScaleTextureMapperClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class TextureMapperClass;
+#endif
 	W3DMPO_GLUE(StepLinearOffsetTextureMapperClass)
 public:
 	StepLinearOffsetTextureMapperClass(const Vector2 &step, float steps_per_sec, bool clamp_fix,
@@ -313,6 +338,9 @@ private:
 */
 class ZigZagLinearOffsetTextureMapperClass : public ScaleTextureMapperClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class TextureMapperClass;
+#endif
 	W3DMPO_GLUE(ZigZagLinearOffsetTextureMapperClass)
 public:
 	ZigZagLinearOffsetTextureMapperClass(const Vector2 &speed, float period, const Vector2 &scale, unsigned int stage);
@@ -370,6 +398,9 @@ public:
 
 class EdgeMapperClass : public TextureMapperClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class TextureMapperClass;
+#endif
 	W3DMPO_GLUE(EdgeMapperClass)
 public:
 	EdgeMapperClass(unsigned int stage);
@@ -480,6 +511,9 @@ public:
 */
 class RandomTextureMapperClass : public ScaleTextureMapperClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class TextureMapperClass;
+#endif
 	W3DMPO_GLUE(RandomTextureMapperClass)
 public:
 	RandomTextureMapperClass(float fps, const Vector2 &scale, unsigned int stage);
@@ -511,6 +545,9 @@ protected:
 */
 class BumpEnvTextureMapperClass : public LinearOffsetTextureMapperClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class TextureMapperClass;
+#endif
 	W3DMPO_GLUE(BumpEnvTextureMapperClass)
 public:
 	BumpEnvTextureMapperClass(float rad_per_sec, float scale_factor, const Vector2 & offset_per_sec,

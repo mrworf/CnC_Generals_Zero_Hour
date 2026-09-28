@@ -292,25 +292,27 @@ void WW3D::Set_NPatches_Level(unsigned level)
 struct WW3D::SourceFrameCheckpoint {
     int frame=0,allocations=0,frees=0;
     bool rendering=false,snapshot=false;
-    unsigned sorted=0;
+    std::shared_ptr<SortingRendererClass::SourceFrameCheckpoint> sorted;
+    std::shared_ptr<DX8MeshRendererClass::SourceFrameCheckpoint> mesh;
     unsigned live_allocations=0,live_frees=0;
     CameraClass* mesh_camera=nullptr;
     std::shared_ptr<Debug_Statistics::SourceFrameCheckpoint> statistics;
 };
-std::shared_ptr<WW3D::SourceFrameCheckpoint> WW3D::Capture_Source_Frame()
+std::shared_ptr<WW3D::SourceFrameCheckpoint> WW3D::Capture_Source_Frame(bool mesh_work)
 {
     if (IsRendering || IsCapturing)
         throw std::runtime_error("original tree frame overlaps source rendering/capture");
     auto* sorts=dynamic_cast<DefaultStaticSortListClass*>(CurrentStaticSortLists);
-    if ((CurrentStaticSortLists && (!sorts || !sorts->Source_Frame_Empty()))
-        || !TheDX8MeshRenderer.Source_Frame_Queues_Empty())
+    if ((CurrentStaticSortLists && (!sorts || (!mesh_work && !sorts->Source_Frame_Empty())))
+        || (!mesh_work && !TheDX8MeshRenderer.Source_Frame_Queues_Empty()))
         throw std::runtime_error("original tree frame overlaps pending source mesh/static work");
     auto checkpoint=std::make_shared<SourceFrameCheckpoint>();
     checkpoint->frame=FrameCount;checkpoint->allocations=LastFrameMemoryAllocations;
     checkpoint->frees=LastFrameMemoryFrees;checkpoint->rendering=IsRendering;
     checkpoint->snapshot=SnapshotActivated;
     checkpoint->statistics=Debug_Statistics::Capture_Source_Frame();
-    checkpoint->sorted=SortingRendererClass::Capture_Source_Frame();
+    checkpoint->sorted=SortingRendererClass::Capture_Source_Frame(mesh_work?4096:0);
+    if (mesh_work) checkpoint->mesh=TheDX8MeshRenderer.Capture_Source_Frame(4096,sorts);
     checkpoint->mesh_camera=TheDX8MeshRenderer.Peek_Camera();
     WWMemoryLogClass::Capture_Source_Frame(checkpoint->live_allocations,checkpoint->live_frees);
     return checkpoint;
@@ -321,9 +323,21 @@ void WW3D::Restore_Source_Frame(SourceFrameCheckpoint& checkpoint) noexcept
     LastFrameMemoryFrees=checkpoint.frees;IsRendering=checkpoint.rendering;
     SnapshotActivated=checkpoint.snapshot;
     Debug_Statistics::Restore_Source_Frame(*checkpoint.statistics);
-    SortingRendererClass::Restore_Source_Frame(checkpoint.sorted);
+    SortingRendererClass::Restore_Source_Frame(*checkpoint.sorted);
+    if (checkpoint.mesh) DX8MeshRendererClass::Restore_Source_Frame(*checkpoint.mesh);
     TheDX8MeshRenderer.Set_Camera(checkpoint.mesh_camera);
     WWMemoryLogClass::Restore_Source_Frame(checkpoint.live_allocations,checkpoint.live_frees);
+}
+bool WW3D::Source_Frame_Ready_To_Commit(const SourceFrameCheckpoint& checkpoint) noexcept
+{
+    return !IsRendering && !IsCapturing && SortingRendererClass::Source_Frame_Ready_To_Commit(*checkpoint.sorted)
+        && (!checkpoint.mesh || DX8MeshRendererClass::Source_Frame_Ready_To_Commit(*checkpoint.mesh));
+}
+void WW3D::Commit_Source_Frame(SourceFrameCheckpoint& checkpoint) noexcept
+{
+    if (!Source_Frame_Ready_To_Commit(checkpoint)) std::terminate();
+    SortingRendererClass::Commit_Source_Frame(*checkpoint.sorted);
+    if (checkpoint.mesh) DX8MeshRendererClass::Commit_Source_Frame(*checkpoint.mesh);
 }
 #endif
 

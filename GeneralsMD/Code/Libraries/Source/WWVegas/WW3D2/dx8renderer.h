@@ -54,6 +54,9 @@
 #include "shader.h"
 #include "dx8wrapper.h"
 #include "meshmatdesc.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <vector>
+#endif
 
 class IndexBufferClass;
 class VertexBufferClass;
@@ -82,6 +85,10 @@ class CameraClass;
 */
 class DX8TextureCategoryClass : public MultiListObjectClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    friend class DX8MeshRendererClass;
+    friend struct W3DPropOwnerProbeAccess;
+#endif
 	int												pass;
 	TextureClass *									textures[MeshMatDescClass::MAX_TEX_STAGES];
 	ShaderClass										shader;
@@ -138,6 +145,7 @@ class DX8FVFCategoryContainer : public MultiListObjectClass
 {
 #if defined(ZH_WW3D_CPU_ONLY)
     friend class DX8MeshRendererClass;
+    friend struct W3DPropOwnerProbeAccess;
     bool Source_Frame_Empty() noexcept;
 #endif
 public:
@@ -216,6 +224,9 @@ public:
 
 	inline unsigned Get_FVF() const { return FVF; }
 	
+#if defined(ZH_WW3D_CPU_ONLY)
+	void Add_Visible_Texture_Category(DX8TextureCategoryClass * tex_category,int pass);
+#else
 	inline void Add_Visible_Texture_Category(DX8TextureCategoryClass * tex_category,int pass) 
 	{
 		WWASSERT(pass<MAX_PASSES);
@@ -224,6 +235,7 @@ public:
 		visible_texture_category_list[pass].Add(tex_category);
 		AnythingToRender=true;
 	}
+#endif
 
 	/*
 	** Material pass rendering.  The following two functions allow procedural material passes
@@ -244,6 +256,10 @@ public:
 */
 class DX8RigidFVFCategoryContainer : public DX8FVFCategoryContainer
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    friend class DX8MeshRendererClass;
+    friend struct W3DPropOwnerProbeAccess;
+#endif
 public:
 	DX8RigidFVFCategoryContainer(unsigned FVF,bool sorting);
 	~DX8RigidFVFCategoryContainer();
@@ -279,6 +295,9 @@ protected:
 */
 class DX8SkinFVFCategoryContainer: public DX8FVFCategoryContainer
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    friend class DX8MeshRendererClass;
+#endif
 public:
 	DX8SkinFVFCategoryContainer(bool sorting);
 	~DX8SkinFVFCategoryContainer();
@@ -319,6 +338,9 @@ private:
 */
 class DX8MeshRendererClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+    friend struct W3DPropOwnerProbeAccess;
+#endif
 public:
 	DX8MeshRendererClass();
 	~DX8MeshRendererClass();
@@ -338,6 +360,28 @@ public:
 	CameraClass *			Peek_Camera(void)	{ return camera; }
 #if defined(ZH_WW3D_CPU_ONLY)
     bool Source_Frame_Queues_Empty() const noexcept;
+    struct SourceFrameCheckpoint;
+    std::shared_ptr<SourceFrameCheckpoint> Capture_Source_Frame(unsigned task_bound,class DefaultStaticSortListClass* sorts=nullptr);
+    static void Restore_Source_Frame(SourceFrameCheckpoint&) noexcept;
+    static void Commit_Source_Frame(SourceFrameCheckpoint&) noexcept;
+    static bool Source_Frame_Checkpoint_Active() noexcept;
+    static void Prepare_Source_Skin_Scratch(unsigned vertices);
+private:
+    static std::pair<Vector3*,unsigned> Peek_Source_Skin_Scratch(bool normals) noexcept;
+public:
+    static bool Source_Frame_Ready_To_Commit(const SourceFrameCheckpoint&) noexcept;
+    // Exact original list-node withdrawal; ordinary container operations do
+    // not change. Source frame owners retain nodes until commit or restore.
+    static MultiListObjectClass* Remove_Source_Frame_Head(GenericMultiListClass&);
+    static bool Add_Source_Frame_List(GenericMultiListClass&,MultiListObjectClass*,bool tail=false,bool only_once=true);
+    static void Add_Source_Frame_Render_List(GenericMultiListClass&,class RenderObjClass*);
+    static RenderObjClass* Remove_Source_Frame_Render_Head(GenericMultiListClass&);
+    static void Release_Source_Frame_Render_Ref(RenderObjClass*) noexcept;
+    static void Publish_Prepared_Polygon(class MeshModelClass*,class DX8PolygonRendererClass*);
+    static void Withdraw_Prepared_Category(class DX8TextureCategoryClass*) noexcept;
+    static void Destroy_Prepared_Container(class DX8FVFCategoryContainer*) noexcept;
+    void Prepare_Mesh_Type_Strong(class MeshModelClass*);
+    void Prepare_Mesh_Batch_Strong(const std::vector<class MeshModelClass*>&);
 #endif
 	void						Add_To_Render_List(DecalMeshClass * decalmesh);
 

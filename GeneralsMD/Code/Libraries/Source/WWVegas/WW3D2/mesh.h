@@ -75,6 +75,9 @@ class MeshClass : public W3DMPO, public RenderObjClass
 {
 #if defined(__linux__)
 	friend struct W3DCloneGraphProbeAccess;
+	#if defined(ZH_WW3D_CPU_ONLY)
+	friend class ww3d_prop::FrameGraph;
+	#endif
 #endif
 	W3DMPO_GLUE(MeshClass)
 public:

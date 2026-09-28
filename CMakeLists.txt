@@ -275,6 +275,7 @@ target_sources(zh_w3d PRIVATE
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8indexbuffer.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8polygonrenderer.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dx8renderer.cpp
+  GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/prop_frame.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/statistics.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/stripoptimizer.cpp
   GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/scene.cpp
@@ -1123,6 +1124,7 @@ add_executable(zh_original_w3d_full_probe
   tests/original_rendering/terrain_visual_map_probe.cpp
   tests/original_rendering/terrain_shroud_projection_probe.cpp
 	 tests/original_rendering/terrain_map_frame_probe.cpp
+	 tests/original_rendering/prop_frame_probe.cpp
 	 tests/original_rendering/terrain_tree_preparation_probe.cpp
 	 tests/original_rendering/tree_module_probe.cpp
 	 tests/original_rendering/terrain_tracks_probe.cpp
@@ -1177,6 +1179,9 @@ set_source_files_properties(tests/original_rendering/terrain_shroud_projection_p
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/terrain_map_frame_probe.cpp PROPERTIES
+  COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
+  COMPILE_OPTIONS "-fpermissive")
+set_source_files_properties(tests/original_rendering/prop_frame_probe.cpp PROPERTIES
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/terrain_tree_preparation_probe.cpp PROPERTIES
@@ -3057,6 +3062,13 @@ if(ZH_BUILD_TESTS)
     --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
   set_tests_properties(original_w3d_terrain_map_frame PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")
+  add_test(NAME original_w3d_prop_frame COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_prop_frame.py"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>"
+    --asset-producer "$<TARGET_FILE:original_w3d_cpu_graph_tests>"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}")
+  set_tests_properties(original_w3d_prop_frame PROPERTIES
+    LABELS "original-rendering;source-identity;negative")
   add_test(NAME original_w3d_terrain_tracks COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_terrain_tracks.py"
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"

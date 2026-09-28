@@ -51,3 +51,8 @@ generic container growth need not preserve validity or key ownership on failure.
 Check source refs and live resources exactly, while measuring accepted monotonic
 device diagnostics separately. Establish fixture allocation baselines after
 public process-global initialization and pair existing source teardown services.
+
+When native code copies a fixed-capacity aggregate, initialize every slot, not
+only its active prefix. Explicitly initialize nested vectors whose legacy default
+constructors are empty; test fresh/reset/copy from nonzero backing under both
+sanitizers instead of relying on allocator contents.

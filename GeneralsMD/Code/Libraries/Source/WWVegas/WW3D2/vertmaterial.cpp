@@ -75,6 +75,33 @@ public:
 #define SRCMATPTR(src)	((src)->MaterialOld)
 #endif
 
+#if defined(ZH_WW3D_CPU_ONLY)
+struct VertexMaterialClass::SourceFrameState {
+	VertexMaterialClass *owner=nullptr;
+	void *identity=nullptr;
+	D3DMATERIAL8 material;
+	unsigned char crc[sizeof(unsigned long)];
+	bool dirty;
+	~SourceFrameState() { if (owner) owner->Release_Ref(); }
+};
+std::shared_ptr<VertexMaterialClass::SourceFrameState> VertexMaterialClass::captureSourceFrame()
+{
+	if (!Material || Num_Refs()<=0 || Num_Refs()>2147483615)
+		throw std::runtime_error("original source material checkpoint provider rejected");
+	auto state=std::make_shared<SourceFrameState>();
+	state->identity=Material;
+	std::memcpy(&state->material,Material,sizeof(state->material));
+	std::memcpy(state->crc,&CRC,sizeof(CRC));state->dirty=CRCDirty;
+	Add_Ref();state->owner=this;return state;
+}
+void VertexMaterialClass::restoreSourceFrame(SourceFrameState& state) noexcept
+{
+	if (state.owner!=this || state.identity!=Material) std::terminate();
+	std::memcpy(Material,&state.material,sizeof(state.material));
+	std::memcpy(&CRC,state.crc,sizeof(CRC));CRCDirty=state.dirty;
+}
+#endif
+
 /*
 ** VertexMaterialClass Implementation
 */

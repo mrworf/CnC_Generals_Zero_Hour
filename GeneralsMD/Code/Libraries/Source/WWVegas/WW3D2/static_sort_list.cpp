@@ -78,14 +78,19 @@ void DefaultStaticSortListClass::Add_To_List(RenderObjClass * robj, unsigned int
 {
 #if defined(ZH_WW3D_CPU_ONLY)
 	if (zh::original_runtime::OriginalGpuEdge::active() &&
-		zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending())
+		zh::original_runtime::OriginalGpuEdge::required().tree_source_frame_pending() &&
+		!DX8MeshRendererClass::Source_Frame_Checkpoint_Active())
 		throw OriginalW3DDeviceUnavailable("original tree frame static-sort queue unsupported");
 #endif
 	if(sort_level < 1 || sort_level > MAX_SORT_LEVEL) {
 		WWASSERT(0);
 		return;
 	}
+#if defined(ZH_WW3D_CPU_ONLY)
+	DX8MeshRendererClass::Add_Source_Frame_Render_List(SortLists[sort_level],robj);
+#else
 	SortLists[sort_level].Add_Tail(robj, false);
+#endif
 }
 
 void DefaultStaticSortListClass::Render_And_Clear(RenderInfoClass & rinfo)
@@ -94,8 +99,13 @@ void DefaultStaticSortListClass::Render_And_Clear(RenderInfoClass & rinfo)
 	// front), so lower sort level meshes need to be rendered later.
 	for(unsigned int sort_level = MaxSort; sort_level >= MinSort; sort_level--) {
 		bool render=false;
+#if defined(ZH_WW3D_CPU_ONLY)
+		for (auto *robj=DX8MeshRendererClass::Remove_Source_Frame_Render_Head(SortLists[sort_level]);robj;
+			DX8MeshRendererClass::Release_Source_Frame_Render_Ref(robj),robj=DX8MeshRendererClass::Remove_Source_Frame_Render_Head(SortLists[sort_level]))
+#else
 		for (	RenderObjClass *robj = SortLists[sort_level].Remove_Head(); robj;
 				robj->Release_Ref(), robj = SortLists[sort_level].Remove_Head())
+#endif
 		{
 			#if defined(ZH_WW3D_CPU_ONLY)
 			try {
@@ -114,7 +124,7 @@ void DefaultStaticSortListClass::Render_And_Clear(RenderInfoClass & rinfo)
 			} catch (...) {
 				// Remove_Head transferred the list's ref to this loop. The
 				// increment expression will not run when a callback throws.
-				robj->Release_Ref();
+				DX8MeshRendererClass::Release_Source_Frame_Render_Ref(robj);
 				throw;
 			}
 			#endif

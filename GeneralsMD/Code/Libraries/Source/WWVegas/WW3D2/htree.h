@@ -72,7 +72,7 @@ class HRawAnimClass;
 
 */
 #if defined(__linux__)
-namespace ww3d_prop { class Audit; }
+namespace ww3d_prop { class Audit; class FrameGraph; }
 #endif
 class HTreeClass : public W3DMPO
 {
@@ -175,6 +175,9 @@ private:
 	friend class MeshClass;
 #if defined(__linux__)
 	friend class ww3d_prop::Audit;
+	#if defined(ZH_WW3D_CPU_ONLY)
+	friend class ww3d_prop::FrameGraph;
+	#endif
 	friend struct W3DPropOwnerProbeAccess;
 #endif
 

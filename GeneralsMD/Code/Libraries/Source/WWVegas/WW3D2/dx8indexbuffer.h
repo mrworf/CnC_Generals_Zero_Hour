@@ -210,6 +210,9 @@ private:
 
 class SortingIndexBufferClass : public IndexBufferClass
 {
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class DX8MeshRendererClass;
+#endif
 	W3DMPO_GLUE(SortingIndexBufferClass)
 
 	friend DX8Wrapper;
@@ -217,6 +220,9 @@ class SortingIndexBufferClass : public IndexBufferClass
 	friend IndexBufferClass::WriteLockClass;
 	friend IndexBufferClass::AppendLockClass;
 	friend DynamicIBAccessClass::WriteLockClass;
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class DynamicIBAccessClass;
+#endif
 public:
 	SortingIndexBufferClass(unsigned short index_count);
 	~SortingIndexBufferClass();

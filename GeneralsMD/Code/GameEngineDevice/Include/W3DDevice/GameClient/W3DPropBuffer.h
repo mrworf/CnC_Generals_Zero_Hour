@@ -57,6 +57,9 @@
 #include "Common/GameType.h"
 #include "Common/AsciiString.h"
 #include "Common/GlobalData.h"
+#if defined(ZH_WW3D_CPU_ONLY)
+#include <memory>
+#endif
 
 //-----------------------------------------------------------------------------
 //           Forward References
@@ -127,6 +130,13 @@ public:
 	void clearAllProps(void);
 	/// Draws the props.  Uses camera for culling.
 	void drawProps(RenderInfoClass &rinfo);
+#if defined(ZH_WW3D_CPU_ONLY)
+	struct SourceFrameCheckpoint;
+	friend struct W3DPropFrameGeneratedProbeAccess;
+	std::shared_ptr<SourceFrameCheckpoint> captureSourceFrame();
+	void prepareSourceFrame(SourceFrameCheckpoint&);
+	void restoreSourceFrame(SourceFrameCheckpoint&) noexcept;
+#endif
 	/// Called when the view changes, and sort key needs to be recalculated.
 	void doFullUpdate(void) {m_doCull = true;};
 
