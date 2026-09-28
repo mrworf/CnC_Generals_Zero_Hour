@@ -502,6 +502,10 @@ void W3DDisplay::preloadModelAssets(AsciiString model)
 	ww3d_import::Attempt::name(model.str(),4);
 	AsciiString filename;
 	filename.format("%s.w3d",model.str());
+	// Native accepted hits do not import, acquire a file or copy a registry.
+	// Nested loads keep the existing Attempt's candidate visibility/join rules.
+	if (!ww3d_import::Attempt::is_active() &&
+		ww3d_import::Attempt::peek_preload_prototype(assets,filename.str())) return;
 	// Preserve native optional-missing void preload and literal suffix naming.
 	(void)ww3d_import::Attempt::load(assets,filename.str());
 }
@@ -509,6 +513,11 @@ void W3DDisplay::preloadTextureAssets(AsciiString texture)
 {
 	auto &assets=requireDisplayPreloadOwner(this);
 	ww3d_import::Attempt::name(texture.str());
+	if (TextureClass* cached=ww3d_import::Attempt::peek_preload_texture(assets,texture.str())) {
+		// Preserve the native caller reference unit, with no descriptor access,
+		// initialization, filter or device work. The accepted cache retains a ref.
+		cached->Add_Ref();cached->Release_Ref();return;
+	}
 	ww3d_import::Attempt attempt(assets);
 	TextureClass *descriptor=assets.Get_Texture(texture.str());
 	if (!descriptor) throw OriginalW3DDeviceUnavailable("original texture preload descriptor missing");

@@ -15,6 +15,7 @@
 #include "asset_import.h"
 #include "assetmgr.h"
 #include "proto.h"
+#include "realcrc.h"
 #include "texture.h"
 #include "ww3d.h"
 #include "dx8wrapper.h"
@@ -41,6 +42,46 @@ extern unsigned _MipMapFilters[8][TextureFilterClass::FILTER_TYPE_COUNT];
 struct W3DAssetImportProbeAccess {
     static void fault(int ordinal) { ww3d_import::Attempt::fault_ordinal=ordinal;ww3d_import::Attempt::fault_count=0; }
     static unsigned faults() { return ww3d_import::Attempt::fault_count; }
+    static bool armed() { return ww3d_import::Attempt::fault_ordinal==0; }
+    static PrototypeClass* peekModel(WW3DAssetManager &assets,const char *file) {
+        return ww3d_import::Attempt::peek_preload_prototype(assets,file);
+    }
+    static TextureClass* peekTexture(WW3DAssetManager &assets,const char *file) {
+        return ww3d_import::Attempt::peek_preload_texture(assets,file);
+    }
+    struct Registry {
+        std::array<unsigned char,sizeof(WW3DAssetManager)> manager{};
+        std::vector<unsigned char> table,hash;
+        std::vector<std::string> keys;
+        explicit Registry(WW3DAssetManager &assets) {
+            std::memcpy(manager.data(),&assets,manager.size());
+            auto &cache=assets.TextureHash;
+            if (cache.Get_Size()) {
+                const auto *first=reinterpret_cast<const unsigned char*>(cache.Get_Table());
+                table.assign(first,first+cache.Get_Size()*sizeof(*cache.Get_Table()));
+                first=reinterpret_cast<const unsigned char*>(cache.Get_Hash());
+                hash.assign(first,first+cache.Get_Size()*sizeof(*cache.Get_Hash()));
+                HashTemplateIterator<StringClass,TextureClass*> entries(assets.TextureHash);
+                for (;!entries.Is_Done();entries.Next()) keys.emplace_back(entries.Peek_Key());
+            }
+        }
+        bool same(const Registry &other) const {
+            return manager==other.manager && table==other.table && hash==other.hash && keys==other.keys;
+        }
+    };
+    template<class F> static void foreignPrototype(WW3DAssetManager &assets,const char *name,F action) {
+        const unsigned bucket=CRC_Stringi(name)&assets.PROTOTYPE_HASH_MASK;
+        auto *saved=assets.PrototypeHashTable[bucket];
+        assets.PrototypeHashTable[bucket]=reinterpret_cast<PrototypeClass*>(1);
+        try { action(); } catch (...) { assets.PrototypeHashTable[bucket]=saved;throw; }
+        assets.PrototypeHashTable[bucket]=saved;
+    }
+    template<class F> static void cyclePrototype(WW3DAssetManager &assets,const char *name,F action) {
+        auto *entry=assets.Find_Prototype(name),*next=entry->friend_getNextHash();
+        entry->friend_setNextHash(entry);
+        try { action(); } catch (...) { entry->friend_setNextHash(next);throw; }
+        entry->friend_setNextHash(next);
+    }
     static std::vector<std::string> prototypes(WW3DAssetManager &assets) {
         std::vector<std::string> result;
         for (int i=0;i<assets.Prototypes.Count();++i) result.emplace_back(assets.Prototypes[i]->Get_Name());
@@ -118,6 +159,125 @@ void lazy(WW3DAssetManager &assets) {
             texture->Get_Width()==0 && texture->Get_Height()==0 && texture->Num_Refs()==1,
             "preload descriptor performed eager work or retained caller ref");
     }
+}
+void acceptedHits(TraceDisplay &display,WW3DAssetManager &assets,zh::renderer::RecordingGpuDevice &device)
+{
+    // One public generated file admits a bounded large accepted graph; its
+    // native model keys deliberately match filename stems, not file content aliases.
+    display.preloadModelAssets(AsciiString("PreloadHitBatch"));
+    display.preloadModelAssets(AsciiString("PreloadHitQualified.w3d"));
+    std::vector<AsciiString> models,textures;
+    std::vector<PrototypeClass*> prototypeIdentities;
+    std::vector<TextureClass*> textureIdentities;
+    models.reserve(512);textures.reserve(512);prototypeIdentities.reserve(512);textureIdentities.reserve(512);
+    for (unsigned ordinal=0;ordinal<512;++ordinal) {
+        char name[64];std::snprintf(name,sizeof(name),"PreloadHit%03u",ordinal);
+        models.emplace_back(name);prototypeIdentities.push_back(assets.Find_Prototype(name));
+        require(prototypeIdentities.back(),"large accepted preload prototype absent");
+        std::snprintf(name,sizeof(name),"PreloadHit%03u.tga",ordinal);
+        textures.emplace_back(name);display.W3DDisplay::preloadTextureAssets(textures.back());
+        std::snprintf(name,sizeof(name),"preloadhit%03u.tga",ordinal);
+        textureIdentities.push_back(assets.Texture_Hash().Get(name));
+        require(textureIdentities.back() && textureIdentities.back()->Num_Refs()==1,
+            "large accepted preload descriptor/ref absent");
+    }
+    const auto names=W3DAssetImportProbeAccess::prototypes(assets);
+    const W3DAssetImportProbeAccess::Registry registry(assets);
+    const RandomImage random;const FilterImage filter;
+    const auto frame=device.snapshot();const auto resources=device.resource_counts();
+    const auto descriptor=bytes(*textureIdentities.front());
+    const auto unchanged=[&] {
+        require(registry.same(W3DAssetImportProbeAccess::Registry(assets)) &&
+            names==W3DAssetImportProbeAccess::prototypes(assets) && random.same(RandomImage()) &&
+            filter.same(FilterImage()) && frame==device.snapshot() && resources==device.resource_counts() &&
+            descriptor==bytes(*textureIdentities.front()),"accepted preload hit changed registry/ref/access/RNG/native identity");
+    };
+    W3DAssetImportProbeAccess::fault(0);
+    for (unsigned request=0;request<4096;++request) {
+        const unsigned selected=request%512;
+        display.W3DDisplay::preloadModelAssets(models[selected]);
+        display.W3DDisplay::preloadTextureAssets(textures[selected]);
+        require(W3DAssetImportProbeAccess::peekModel(assets,(std::string(models[selected].str())+".w3d").c_str())==prototypeIdentities[selected] &&
+            W3DAssetImportProbeAccess::peekTexture(assets,textures[selected].str())==textureIdentities[selected],
+            "large accepted preload lookup differed from native identity");
+    }
+    for (const char *name:{"preloadhit000","PRELOADHIT000","PreloadHitQualified.w3d","NULL","null"}) {
+        const std::string filename=std::string(name)+".w3d";
+        auto *native=assets.Find_Prototype(name);
+        require(native && assets.Load_3D_Assets(filename.c_str()) &&
+            W3DAssetImportProbeAccess::peekModel(assets,filename.c_str())==native,
+            "native final-suffix/case/NULL cache-hit identity differed");
+        display.W3DDisplay::preloadModelAssets(AsciiString(name));
+    }
+    require(!W3DAssetImportProbeAccess::peekModel(assets,"PreloadHit000.extra.w3d") &&
+        !W3DAssetImportProbeAccess::peekModel(assets,"folder\\PreloadHit000.w3d") &&
+        !W3DAssetImportProbeAccess::peekModel(assets,"folder/PreloadHit000.w3d"),
+        "accepted preload lookup rewrote first-dot or directory identity");
+    require(W3DAssetImportProbeAccess::armed() && !W3DAssetImportProbeAccess::faults(),
+        "accepted hit built a graph or consumed an import fault");
+    W3DAssetImportProbeAccess::fault(-1);unchanged();
+    const auto rejectedHit=[&] {
+        W3DAssetImportProbeAccess::fault(0);
+        require(rejected([&]{display.W3DDisplay::preloadModelAssets(models.front());}) &&
+            rejected([&]{display.W3DDisplay::preloadTextureAssets(textures.front());}) &&
+            W3DAssetImportProbeAccess::armed() && !W3DAssetImportProbeAccess::faults(),
+            "accepted preload hit bypassed provider admission or constructed an import");
+        W3DAssetImportProbeAccess::fault(-1);
+    };
+    { BorrowedReplacement<FileFactoryClass> removed(_TheFileFactory,nullptr);rejectedHit(); }unchanged();
+    { BorrowedReplacement<FileFactoryClass> foreign(_TheFileFactory,reinterpret_cast<FileFactoryClass*>(1));
+      rejectedHit(); }unchanged();
+    { BorrowedReplacement<FileSystem> removed(TheFileSystem,nullptr);rejectedHit(); }unchanged();
+    { BorrowedReplacement<FileSystem> foreign(TheFileSystem,reinterpret_cast<FileSystem*>(1));
+      rejectedHit(); }unchanged();
+    { BorrowedReplacement<W3DFileSystem> removed(TheW3DFileSystem,nullptr);rejectedHit(); }unchanged();
+    { BorrowedReplacement<W3DFileSystem> foreign(TheW3DFileSystem,reinterpret_cast<W3DFileSystem*>(1));
+      rejectedHit(); }unchanged();
+    { BorrowedReplacement<Display> removed(TheDisplay,nullptr);rejectedHit(); }unchanged();
+    { BorrowedReplacement<Display> foreign(TheDisplay,reinterpret_cast<Display*>(1));rejectedHit(); }unchanged();
+    { BorrowedReplacement<W3DAssetManager> foreign(W3DDisplay::m_assetManager,reinterpret_cast<W3DAssetManager*>(1));
+      rejectedHit(); }unchanged();
+    W3DAssetImportProbeAccess::foreignPrototype(assets,"PreloadHit000",[&] {
+        require(rejected([&]{display.W3DDisplay::preloadModelAssets(models.front());}),
+            "accepted preload followed an unregistered prototype pointer");
+    });unchanged();
+    W3DAssetImportProbeAccess::cyclePrototype(assets,"PreloadHit000",[&] {
+        require(rejected([&]{display.W3DDisplay::preloadModelAssets(models.front());}),
+            "accepted preload admitted a cyclic matching prototype chain");
+    });unchanged();
+    auto &cache=assets.Texture_Hash();int *buckets=cache.Get_Hash();
+    int selectedBucket=-1,selectedEntry=-1;
+    for (unsigned bucket=0;bucket<cache.Get_Size();++bucket)
+        for (int entry=buckets[bucket];entry!=-1;entry=cache.Get_Table()[entry].Next)
+            if (cache.Get_Table()[entry].Key==StringClass("preloadhit000.tga")) {
+                selectedBucket=int(bucket);selectedEntry=entry;
+            }
+    require(selectedBucket>=0 && selectedEntry>=0,"accepted texture test key missing");
+    {
+        const int saved=buckets[selectedBucket];buckets[selectedBucket]=int(cache.Get_Size());
+        const bool failed=rejected([&]{display.W3DDisplay::preloadTextureAssets(textures.front());});
+        buckets[selectedBucket]=saved;require(failed,"accepted texture bound+1 bucket was followed");
+    }unchanged();
+    {
+        const int saved=cache.Get_Table()[selectedEntry].Next;cache.Get_Table()[selectedEntry].Next=selectedEntry;
+        const bool failed=rejected([&]{display.W3DDisplay::preloadTextureAssets(textures.front());});
+        cache.Get_Table()[selectedEntry].Next=saved;require(failed,"accepted texture cyclic matching chain admitted");
+    }unchanged();
+    {
+        ww3d_import::Attempt attempt(assets);
+        require(ww3d_import::Attempt::load(assets,"PreloadHitNested.w3d") &&
+            assets.Find_Prototype("PreloadHitNested"),"nested preload candidate not visible inside owner");
+        W3DAssetImportProbeAccess::fault(0);
+        display.W3DDisplay::preloadModelAssets(AsciiString("PreloadHitNested"));
+        require(rejected([&]{display.W3DDisplay::preloadTextureAssets(textures.front());}) &&
+            W3DAssetImportProbeAccess::armed() && !W3DAssetImportProbeAccess::faults(),
+            "nested accepted peek changed join/texture-overlap/fault semantics");
+        W3DAssetImportProbeAccess::fault(-1);
+        // Uncommitted nested candidates are destroyed; accepted siblings stay exact.
+    }unchanged();
+    display.W3DDisplay::preloadModelAssets(models.front());
+    display.W3DDisplay::preloadTextureAssets(textures.front());unchanged();
+    std::puts("original asset preload hits: prototypes=512 textures=512 model=4096 texture=4096 snapshot=0 retry=1");
 }
 void importFaults(TraceDisplay &display,WW3DAssetManager &assets)
 {
@@ -272,6 +432,24 @@ void physicalPreload(Display *savedDisplay)
                     edge.resident_texture(descriptor) && !edge.is_missing_texture(descriptor),
                     "preloaded exact source identities did not produce physical texture/mesh pixels");
                 require(frame()==pixels,"preloaded physical equivalent source retry changed pixels");
+                const auto resident=edge.texture_handle(descriptor);
+                const auto residentBytes=bytes(*descriptor);
+                const W3DAssetImportProbeAccess::Registry residentRegistry(assets);
+                const auto residentNative=device.live_resource_count(),residentFrames=device.native_frame_advance_count();
+                const RandomImage residentRandom;
+                W3DAssetImportProbeAccess::fault(0);
+                display.preloadModelAssets(AsciiString("test.litone01"));
+                display.preloadTextureAssets(AsciiString("MYTEX.TGA"));
+                require(W3DAssetImportProbeAccess::armed() && !W3DAssetImportProbeAccess::faults() &&
+                    assets.Find_Prototype("TEST.LITONE01")==prototype &&
+                    assets.Texture_Hash().Get("mytex.tga")==descriptor && edge.resident_texture(descriptor) &&
+                    resident==edge.texture_handle(descriptor) &&
+                    residentBytes==bytes(*descriptor) && residentRegistry.same(W3DAssetImportProbeAccess::Registry(assets)) &&
+                    residentNative==device.live_resource_count() && residentFrames==device.native_frame_advance_count() &&
+                    residentRandom.same(RandomImage()) && filter.same(FilterImage()),
+                    "resident accepted preload changed native identity/ref/access/frame or built a snapshot");
+                W3DAssetImportProbeAccess::fault(-1);
+                require(frame()==pixels,"resident accepted preload changed physical retry pixels");
                 meshOwner.reset();
                 edge.release_source_buffers();device.destroy(depth);device.destroy(color);
                 TheDisplay=savedDisplay;
@@ -357,6 +535,7 @@ extern "C" void zh_probe_asset_preload()
                 require(rejected([&]{display.preloadModelAssets(AsciiString("PreloadUnsupported"));}) ||
                     !assets.Find_Prototype("PRELOAD.UNSUPPORTED"),"unsupported preload published prototype");
                 importFaults(display,assets);
+                acceptedHits(display,assets,device);
                 const Live baseline(*TheGameClient);
                 const auto next=TheGameClient->getDrawableIDCounter();
                 const auto slots=W3DAssetPreloadProbeAccess::slots(*TheGameClient);
@@ -449,20 +628,69 @@ extern "C" void zh_probe_asset_preload()
                 lazy(assets);
                 require(device.snapshot()==frame && device.resource_counts()==resources,
                     "descriptor preload emitted GPU/stage/frame work");
+                display.W3DDisplay::preloadModelAssets(AsciiString("PreloadHitBatch"));
+                display.W3DDisplay::preloadTextureAssets(AsciiString("PreloadHit000.tga"));
+                require(assets.Find_Prototype("PreloadHit000") && assets.Texture_Hash().Get("preloadhit000.tga"),
+                    "phase cache-hit fixture did not retain accepted source identities");
+                const auto rejectPhaseHit=[&] {
+                    const W3DAssetImportProbeAccess::Registry accepted(assets);
+                    auto *texture=assets.Texture_Hash().Get("preloadhit000.tga");
+                    const auto image=bytes(*texture);const auto trace=device.snapshot();
+                    const auto native=device.resource_counts();const RandomImage random;const FilterImage filter;
+                    W3DAssetImportProbeAccess::fault(0);
+                    require(rejected([&]{display.W3DDisplay::preloadModelAssets(AsciiString("PreloadHit000"));}) &&
+                        rejected([&]{display.W3DDisplay::preloadTextureAssets(AsciiString("PreloadHit000.tga"));}) &&
+                        W3DAssetImportProbeAccess::armed() && !W3DAssetImportProbeAccess::faults() &&
+                        accepted.same(W3DAssetImportProbeAccess::Registry(assets)) && image==bytes(*texture) &&
+                        trace==device.snapshot() && native==device.resource_counts() && random.same(RandomImage()) &&
+                        filter.same(FilterImage()),"phase rejected accepted preload changed source/native identity");
+                    W3DAssetImportProbeAccess::fault(-1);
+                };
+                const auto retryPhaseHit=[&] {
+                    W3DAssetImportProbeAccess::fault(0);
+                    display.W3DDisplay::preloadModelAssets(AsciiString("PreloadHit000"));
+                    display.W3DDisplay::preloadTextureAssets(AsciiString("PreloadHit000.tga"));
+                    require(W3DAssetImportProbeAccess::armed() && !W3DAssetImportProbeAccess::faults(),
+                        "phase rejection clean hit retry constructed an import");
+                    W3DAssetImportProbeAccess::fault(-1);
+                };
+                {
+                    using Edge=zh::original_runtime::OriginalGpuEdge;
+                    const Edge::SourceStageSelection selection{7,nullptr};
+                    Edge::SourceStageDesc desc;desc.generation=edge->generation();desc.selections=&selection;desc.count=1;
+                    Edge::SourceStageToken token;
+                    TextureBaseClass::Apply_Null(7);
+                    const auto revision=edge->source_revision();const auto dirty=DX8Wrapper::Pending_Changes();
+                    const auto stage=edge->pending_stage(7);
+                    require(bool(edge->begin_source_stages(desc,token)),"cache-hit stage-attempt fixture rejected");
+                    DX8Wrapper::Set_Texture(7,nullptr);edge->apply_source_stages(token);
+                    rejectPhaseHit();
+                    require(!edge->commit_source_stages(token) && edge->abort_source_stages(token) &&
+                        edge->drain_source_references(edge->generation()) && edge->source_revision()==revision &&
+                        DX8Wrapper::Pending_Changes()==dirty && edge->pending_stage(7).source==stage.source &&
+                        edge->pending_stage(7).texture==stage.texture && !edge->source_stages_active(),
+                        "accepted preload did not poison commit-ready stage owner or restore abort identity");
+                    retryPhaseHit();
+                }
                 zh::renderer::TextureDesc target;target.width=4;target.height=4;target.render_target=true;
                 target.format=zh::renderer::TextureFormat::rgba8;const auto color=device.create_texture(target,"preload phase color");
                 target.format=zh::renderer::TextureFormat::depth24_stencil8;const auto depth=device.create_texture(target,"preload phase depth");
                 require(color && depth,"preload phase target fixture rejected");edge->bind_frame_targets(color,depth,4,4);
                 require(edge->begin_tree_source_frame(),"preload pending frame fixture rejected");
                 noCreation([&]{TheGameClient->preloadAssets(TIME_OF_DAY_AFTERNOON);});
+                rejectPhaseHit();
                 require(edge->abort_tree_source_frame(),"preload pending frame abort failed");
+                retryPhaseHit();
                 edge->begin_source_frame(true,true,0,0,0,1);
                 noCreation([&]{TheGameClient->preloadAssets(TIME_OF_DAY_AFTERNOON);});
-                edge->end_source_frame(false);device.destroy(depth);device.destroy(color);
+                rejectPhaseHit();
+                edge->end_source_frame(false);retryPhaseHit();device.destroy(depth);device.destroy(color);
                 edge.reset();
                 noCreation([&]{TheGameClient->preloadAssets(TIME_OF_DAY_AFTERNOON);});
+                rejectPhaseHit();
                 edge=std::make_unique<zh::original_runtime::OriginalGpuEdge>(device);
                 noCreation([&]{TheGameClient->preloadAssets(TIME_OF_DAY_AFTERNOON);});
+                rejectPhaseHit();
                 TheDisplay=savedDisplay;
             }
             require(!device.resource_counts().total(),"preload generated generation retained native resources");

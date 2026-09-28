@@ -340,6 +340,86 @@ bool Attempt::load(WW3DAssetManager& owner,const char* filename)
 	}
 	return result;
 }
+void Attempt::require_preload_peek_owner(WW3DAssetManager& owner)
+{
+	// The display checks its exact file/device aliases first. Keep the internal
+	// observation independently fail-closed, without installing an Attempt.
+	auto* edge=zh::original_runtime::OriginalGpuEdge::active();
+	if (edge) edge->guard_nonstage_mutation();
+	if (current || INIClass::SourceImportGuard || WW3DAssetManager::Get_Instance()!=&owner ||
+		!_TheFileFactory || (edge && (!edge->source_buffers_retirable() || edge->tree_source_frame_pending())))
+		throw std::runtime_error("original preload accepted-cache owner is not admitted");
+}
+PrototypeClass* Attempt::peek_preload_prototype(WW3DAssetManager& owner,const char* filename)
+{
+	require_preload_peek_owner(owner);name(filename);
+	char basename[255];std::strcpy(basename,filename);
+	if (char* extension=std::strrchr(basename,'.')) *extension='\0';
+	// Exactly the native final-suffix rule, including its immutable NULL object.
+	if (!stricmp(basename,"NULL")) return &_NullPrototype;
+	const auto& source=owner.Prototypes;
+	if (!source.IsValid || source.ActiveCount<0 || source.VectorMax<source.ActiveCount ||
+		source.VectorMax>65536 || (source.VectorMax && !source.Vector) || !owner.PrototypeHashTable)
+		throw std::runtime_error("original preload prototype ownership is malformed");
+	const unsigned bucket=CRC_Stringi(basename)&owner.PROTOTYPE_HASH_MASK;
+	PrototypeClass* found=nullptr;
+	unsigned traversed=0;
+	for (auto* entry=owner.PrototypeHashTable[bucket];entry;) {
+		if (++traversed>unsigned(source.ActiveCount))
+			throw std::runtime_error("original preload prototype chain is malformed");
+		unsigned membership=0;
+		for (int i=0;i<source.ActiveCount;++i) membership+=source.Vector[i]==entry;
+		// Never call the immutable name getter or follow an unregistered node.
+		if (membership!=1)
+			throw std::runtime_error("original preload prototype identity is malformed");
+		const char* key=entry->Get_Name();name(key);
+		if ((CRC_Stringi(key)&owner.PROTOTYPE_HASH_MASK)!=bucket)
+			throw std::runtime_error("original preload prototype key is malformed");
+		if (!found && !stricmp(key,basename)) found=entry;
+		entry=entry->friend_getNextHash();
+	}
+	return found;
+}
+TextureClass* Attempt::peek_preload_texture(WW3DAssetManager& owner,const char* filename)
+{
+	require_preload_peek_owner(owner);name(filename);
+	char normalized[255];std::strcpy(normalized,filename);_strlwr(normalized);
+	using Cache=HashTemplateClass<StringClass,TextureClass*>;
+	const auto& cache=owner.TextureHash;
+	if (!cache.Size) {
+		if (cache.Hash || cache.Table || cache.First!=Cache::NIL)
+			throw std::runtime_error("original preload empty texture cache is malformed");
+		return nullptr;
+	}
+	if (cache.Size>65536 || (cache.Size&(cache.Size-1)) || !cache.Hash || !cache.Table ||
+		(cache.First!=Cache::NIL && (cache.First<0 || unsigned(cache.First)>=cache.Size)))
+		throw std::runtime_error("original preload texture ownership is malformed");
+	// Native StringClass filename hash, without constructing a StringClass or
+	// lazily storing length metadata into an accepted key during observation.
+	const auto hash=[](const char* value,std::size_t length) {
+		unsigned result=0;
+		if (length<8) for (std::size_t i=0;i<length;++i)
+			result+=37*result+static_cast<unsigned char>(value[i]);
+		else {
+			std::memcpy(&result,value+length-8,sizeof(result));
+			result=result+(result>>5)+(result>>10)+(result>>20);
+		}
+		return result;
+	};
+	const unsigned bucket=hash(normalized,std::strlen(normalized))&(cache.Size-1);
+	TextureClass* found=nullptr;
+	unsigned traversed=0;
+	for (int index=cache.Hash[bucket];index!=Cache::NIL;index=cache.Table[index].Next) {
+		if (index<0 || unsigned(index)>=cache.Size || ++traversed>cache.Size || !cache.Table[index].Value)
+			throw std::runtime_error("original preload texture chain is malformed");
+		const char* key=cache.Table[index].Key;
+		const std::size_t length=strnlen(key,512);
+		if (!length || length==512 || (hash(key,length)&(cache.Size-1))!=bucket)
+			throw std::runtime_error("original preload texture key is malformed");
+		if (!found && !std::strcmp(key,normalized)) found=cache.Table[index].Value;
+	}
+	return found;
+}
 bool Attempt::commit() noexcept
 {
 	if (impl->committed || current!=this || WW3DAssetManager::Get_Instance()!=impl->owner ||

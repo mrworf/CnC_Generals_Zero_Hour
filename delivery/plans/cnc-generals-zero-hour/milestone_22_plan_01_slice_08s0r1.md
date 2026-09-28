@@ -1,7 +1,9 @@
 # M22 plan 01 slice 08S0R1: native accepted preload cache hits
 
-Status: planned; approved one-leaf corrective boundary, dependency-ready.
+Status: complete; final-source acceptance and unchanged-bound timeout closure pass.
 Plan transaction parent: `cb64cf6f4130e94a236f89a00d27a47dbcc27537`.
+Implementation transaction parent: `75a758f2b7a39c9add6a5cb38eb31e8f55ec2f21`.
+Implementation provenance: this slice commit.
 
 ## Outcome, dependencies and preserved state
 
@@ -164,3 +166,40 @@ preserve active08/renderer composition. Exact implementation commit subject:
 `delivery: M22 08S0R1 preserve native preload cache hits`.
 Refresh S0 separately with evidence-only artifacts and unchanged accepted R1 gates,
 then resume active08; no executable churn or duplicate aggregate rerun.
+
+## Implementation checkpoint
+
+The private Linux Attempt/display peeks now preserve the native last-suffix,
+case/hash/full-equality and NULL behavior before any candidate graph construction.
+The registered generated witness retains all 2311 existing import boundaries;
+its two internal generations each require the explicit512-prototype/512-descriptor,
+4096-model/4096-texture snapshot=0 marker. Direct hit controls reject omitted,
+foreign and removed providers, pending/active source frames and absent/stale Edge
+generations without graph work or live identity mutation. A commit-ready selected-
+stage attempt is poisoned before rejection, aborts exactly and retries idle.
+The physical consumer additionally proves resident descriptor/native identity,
+ref/access/filter bytes and equivalent retry pixels remain unchanged on hits.
+
+The first expanded stage fixture inspected an absent stage identity before setup;
+the exact failure was the existing absent-device-generation category. Only the
+fixture was corrected to initialize the null stage through public Apply_Null(7)
+before taking its baseline. No production or device behavior was changed.
+The corrected GCC registered control passes1/1 in43.00 seconds, category-clean.
+The resident-hit proof was subsequently strengthened, under architecture approval,
+to compare exact texture_handle identity rather than Boolean residency while
+retaining every ref/access/live/pixel assertion. Production/archive identity
+preserves the six complete-build provenance; all six selected targets were
+relinked and the final native/sanitizer/strict/physical gates refreshed.
+
+Final frozen acceptance passes: exact14 on GCC/Clang native and both sanitizers;
+strict14 both with exactly ASAN_OPTIONS=detect_leaks=1 and host escalation;
+validation-enabled generated physical four; minimal8 both; established Vulkan
+GCC3/Clang2; serial LAN4 all six; and six fresh canonical suites295/295 with
+complete category audits clean. The unchanged bounded continuation completes in
+61.587s inside120 seconds, with independent corpus metadata unchanged. Its later
+scene_contract stop belongs to active08 and is not retail scene acceptance;
+classification is deferred until this commit and the evidence-only S0 refresh.
+Frozen source/selected18 binaries and preserved trial hashes, shared engine diff,
+ledger, privacy, whitespace and exact owned staging are verified. No executable
+change or duplicate rerun is required for S0's separate aggregate refresh.
+See the [accepted evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08s0r1_preload_cache_hits.md).

@@ -19,11 +19,13 @@ class HashableClass;
 class PrototypeClass;
 class TextureClass;
 class FileClass;
+class W3DDisplay;
 struct W3DAssetImportProbeAccess;
 namespace ww3d_import {
 struct PrototypeDelete { void operator()(PrototypeClass*) const noexcept; };
 class Attempt {
 	friend struct ::W3DAssetImportProbeAccess;
+	friend class ::W3DDisplay;
 	struct Impl;
 	std::unique_ptr<Impl> impl;
 	static thread_local Attempt* current;
@@ -31,6 +33,9 @@ class Attempt {
 	static thread_local unsigned fault_count;
 	static void fault();
 	static void ini_boundary(std::size_t,std::size_t);
+	static void require_preload_peek_owner(WW3DAssetManager&);
+	static PrototypeClass* peek_preload_prototype(WW3DAssetManager&,const char*);
+	static TextureClass* peek_preload_texture(WW3DAssetManager&,const char*);
 public:
 	explicit Attempt(WW3DAssetManager&);
 	~Attempt() noexcept;

@@ -15,6 +15,7 @@ from test_w3d_tree_draw import selected_mesh
 from test_w3d_terrain_source_bitmap import tile_tga
 
 MARKER="original asset preload: source=1 lazy=1 temporary=1 retry=1 generations=2 resources=0"
+HITS="original asset preload hits: prototypes=512 textures=512 model=4096 texture=4096 snapshot=0 retry=1"
 
 def chunk(kind,payload):
     return struct.pack("<II",kind,len(payload))+payload
@@ -70,6 +71,10 @@ def main():
         fixture.write(source/"Art/W3D/PreloadUnsupported.w3d",chunk(0x7ffffffe,b""))
         fixture.write(source/"Art/W3D/PreloadLoaded.w3d",box("PRELOAD.LOADED"))
         fixture.write(source/"Art/W3D/PreloadDebris.w3d",box("PRELOAD.DEBRIS"))
+        fixture.write(source/"Art/W3D/PreloadHitBatch.w3d",
+                      b"".join(box(f"PreloadHit{ordinal:03d}") for ordinal in range(512)))
+        fixture.write(source/"Art/W3D/PreloadHitQualified.w3d.w3d",box("PreloadHitQualified.w3d"))
+        fixture.write(source/"Art/W3D/PreloadHitNested.w3d",box("PreloadHitNested"))
         for ordinal in range(256):
             fixture.write(source/f"Art/W3D/PreloadFault{ordinal}.w3d",box(f"PRELOAD.FAULT{ordinal}"))
         if args.gpu:
@@ -85,7 +90,7 @@ def main():
             result=run(args.executable.resolve(),root/f"generation-{generation}",source,"mission",timeout_seconds=120)
             output=result.stdout+result.stderr
             boundary=re.findall(r"original asset preload boundaries: rejected=(\d+) retry=1",output)
-            if (result.returncode or MARKER not in output or
+            if (result.returncode or MARKER not in output or output.count(HITS)!=2 or
                 len(boundary)!=1 or not 0<int(boundary[0])<4096 or
                 (args.gpu and "original asset preload physical: lazy=1 identity=1 pixels=1 retry=1 generations=2 resources=0" not in output) or
                 any(category in output for category in ("runtime error:","AddressSanitizer","LeakSanitizer",
