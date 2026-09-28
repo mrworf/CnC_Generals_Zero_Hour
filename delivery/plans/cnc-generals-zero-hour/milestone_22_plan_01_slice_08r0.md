@@ -1,6 +1,7 @@
 # M22 plan 01 slice 08R0: modeled terrain-prop aggregate
 
-Status: planned; implementation-ready in dependency order, not accepted.
+Status: complete and accepted; evidence-only aggregate of accepted A/B/C commits.
+Evidence: [terrain props aggregate](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08r0_terrain_props.md).
 Plan transaction parent: `b4fc25b137e94accc1abebd4f0f14bc992c64670`.
 
 ## Outcome and dependency graph
@@ -19,6 +20,14 @@ R0 closes in a separate evidence-only commit immediately after C, reusing C's
 unchanged frozen executable gates. No executable change or duplicate rerun.
 Keep active08 trial source/tests/ledger and the unrelated renderer diagnostic
 unstaged throughout each exact plan/behavior transaction.
+
+Accepted children: A `05c5a55c60fb432940269843d381d3ac4fa0b9af`,
+B `c382a699f61a91dbaa992b99c9b4a832918bee50`,
+C `2cd0d277e3e8b7ae71ea4dca0aaba0c15f914d22`.
+Their source/provider boundaries and final evidence are unchanged. C's six
+canonical suites 291/291 and complete focus/strict/physical/common gate set
+are reused without an executable change. R0 opens no W3DPropDraw factory or
+retail admission; slice08 resumes only its existing bounded redacted probe.
 
 ## Complete public-source branch and ownership audit
 
