@@ -40,6 +40,44 @@ void cpu() {
         && !detail::same_uniform_payload(1,16,payload.data(),2,16,payload.data())
         && !detail::same_uniform_payload(1,16,payload.data(),1,15,payload.data()),"uniform alias exact bytes/count");
     for (UInt64 generation=1;generation<=2;++generation) {
+        DeviceTransactionDesc camera{DeviceTransactionMode::idle_preparation,generation,4096,4096,
+            CameraStartupTransactionLimits::maximum_bytes,0,DeviceTransactionCapacity::camera_startup};
+        check(CameraStartupTransactionLimits::maximum_tiles==1024
+            && CameraStartupTransactionLimits::tile_payload_bytes==131072
+            && camera.bytes==738197504 && budget().capacity==DeviceTransactionCapacity::ordinary,
+            "camera public formula/default capacity changed");
+        for (unsigned bad=0;bad<12;++bad) {
+            auto rejected=camera;
+            if (bad==0) ++rejected.bytes;
+            if (bad==1) rejected.bytes=0;
+            if (bad==2) rejected.capacity=static_cast<DeviceTransactionCapacity>(255);
+            if (bad==3) {rejected.mode=DeviceTransactionMode::frame_commands;rejected.views=1;}
+            if (bad==4) rejected.generation=0;
+            if (bad==5) rejected.views=1;
+            if (bad==6) rejected.commands=0;
+            if (bad==7) rejected.commands=4097;
+            if (bad==8) rejected.resources=0;
+            if (bad==9) rejected.resources=4097;
+            if (bad==10) rejected.capacity=DeviceTransactionCapacity::ordinary;
+            if (bad==11) rejected.mode=static_cast<DeviceTransactionMode>(255);
+            State state;
+            check(!state.begin(rejected,generation,0,0) && !state.active(),"camera profile rejection changed owner");
+        }
+        const auto payload=CameraStartupTransactionLimits::maximum_terrain_payload_bytes;
+        // Exact bgfx terrain double-shadow/written baseline plus ALL auxiliary
+        // ownership/reservation consumes the profile only after full upload.
+        State combined;
+        check(!combined.begin(camera,generation,0,camera.bytes+1)
+            && combined.begin(camera,generation,1024,4*payload+RendererLimits::maximum_upload_bytes),
+            "camera combined baseline admission");
+        const auto camera_token=combined.token();
+        auto overlap=camera;overlap.capacity=static_cast<DeviceTransactionCapacity>(255);
+        check(!combined.begin(overlap,generation,0,0) && combined.matches(camera_token)
+            && !combined.failed() && combined.charge(payload) && !combined.charge(1)
+            && !combined.finish(camera_token,true) && combined.finish(camera_token,false),
+            "camera exact combined charge/bound+1 or nested preservation");
+        check(combined.begin(camera,generation,1024,4*payload+RendererLimits::maximum_upload_bytes)
+            && combined.charge(payload) && combined.finish(combined.token(),true),"camera combined clean retry");
         auto desc=budget(generation); State state;
         check(state.begin(desc,generation,2,2),"frame CPU admission");
         const auto token=state.token();

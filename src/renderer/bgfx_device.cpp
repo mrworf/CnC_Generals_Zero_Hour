@@ -866,7 +866,7 @@ ValidationResult BgfxGpuDevice::begin_device_transaction(const DeviceTransaction
             (sizeof(Impl::FramePacket)+sizeof(bgfx::BoundedSubmissionCommand)) : 0);
     const auto baseline = impl_->baseline_bytes();
     if (impl_->transaction.active() || impl_->in_pass
-        || baseline > detail::BgfxTransactionState::maximum_bytes
+        || baseline > device_transaction_byte_limit(desc)
         || !detail::BgfxTransactionState::valid(desc,
             impl_->slot_count()+impl_->retirements.size(), baseline*2+reserved))
         return {false,"transaction: invalid mode, baseline, capacity or overlapping owner"};

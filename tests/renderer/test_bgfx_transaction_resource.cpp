@@ -210,6 +210,52 @@ void physical()
         check(accepted.size() == 64*64*4 && accepted[center] == 255 && accepted[center+1] == 0,
               "accepted red mip pixels differ");
         auto budget = desc(); budget.generation += generation;
+        // Probe actual retained baseline+all reservation on this native owner,
+        // not a fabricated formula or a large unused payload allocation.
+        auto camera=budget;camera.capacity=DeviceTransactionCapacity::camera_startup;
+        camera.bytes=CameraStartupTransactionLimits::maximum_bytes;
+        const auto camera_frames=device.native_frame_advance_count();
+        const auto camera_destroyed=device.native_retirement_destroy_count();
+        DeviceTransactionToken camera_token;
+        check(device.begin_device_transaction(camera,camera_token)
+            && device.abort_device_transaction(camera_token),"native camera exact ceiling rejected");
+        for (unsigned bad=0;bad<5;++bad) {
+            auto rejected=camera;
+            if (bad==0) ++rejected.bytes;
+            if (bad==1) rejected.capacity=DeviceTransactionCapacity::ordinary;
+            if (bad==2) rejected.capacity=static_cast<DeviceTransactionCapacity>(255);
+            if (bad==3) {rejected.mode=DeviceTransactionMode::frame_commands;rejected.views=1;}
+            if (bad==4) rejected.generation=0;
+            DeviceTransactionToken output{99,98,97,DeviceTransactionMode::frame_commands};
+            check(!device.begin_device_transaction(rejected,output) && output.device==99
+                && output.sequence==98 && device.live_resource_count()==count,
+                "native camera malformed profile changed owner");
+        }
+        UInt64 low=0,high=budget.bytes;
+        while (low+1<high) {
+            const auto middle=low+(high-low)/2;camera.bytes=middle;
+            if (device.begin_device_transaction(camera,camera_token)) {
+                check(device.abort_device_transaction(camera_token),"native camera budget probe abort");high=middle;
+            } else low=middle;
+        }
+        const auto retained=high;camera.bytes=retained;
+        check(!device.begin_device_transaction(DeviceTransactionDesc{camera.mode,camera.generation,camera.commands,
+            camera.resources,retained-1,0,camera.capacity},camera_token),"native camera baseline byte+1 escaped");
+        // Buffer uploads charge exactly their size; the sibling textures,
+        // shader metadata and retirement reservations remain in retained.
+        camera.bytes=retained+sizeof(scene.viewport);
+        check(device.begin_device_transaction(camera,camera_token)
+            && device.upload({scene.uniform,sizeof(scene.viewport),0,sizeof(scene.viewport)},scene.viewport.data())
+            && !device.upload({scene.uniform,sizeof(scene.viewport),0,1},scene.viewport.data())
+            && !device.commit_device_transaction(camera_token)
+            && device.abort_device_transaction(camera_token),"native camera combined exact/bound+1 rollback");
+        check(device.begin_device_transaction(camera,camera_token)
+            && device.upload({scene.uniform,sizeof(scene.viewport),0,sizeof(scene.viewport)},scene.viewport.data())
+            && device.commit_device_transaction(camera_token),"native camera combined clean retry");
+        check(device.native_frame_advance_count()==camera_frames
+            && device.native_retirement_destroy_count()==camera_destroyed && device.live_resource_count()==count,
+            "native camera admission/upload/finish touched frame or sibling ownership");
+        check(scene.render()==accepted,"native camera combined retry changed accepted pixels");
         const auto finish_without_native_calls = [&](DeviceTransactionToken token, bool commit) {
             const auto destroyed = device.native_retirement_destroy_count();
             const auto frames = device.native_frame_advance_count();

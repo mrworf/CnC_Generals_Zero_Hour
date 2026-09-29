@@ -333,6 +333,21 @@ private:
 // count toward the checkpoint budgets; operations consume the remaining budget.
 // Idle preparation never admits pass/view/viewport/clear/draw/present operations.
 enum class DeviceTransactionMode : UInt8 { idle_preparation, frame_commands };
+enum class DeviceTransactionCapacity : UInt8 { ordinary, camera_startup };
+// The original CPU HeightMap admits at most 32x32 tiles, each with four
+// 32-byte vertices per 32x32 cells. Camera idle preparation retains bgfx's
+// double checkpoint of payload+written maps and may upload every tile once.
+// The ordinary allowance still charges all auxiliary ownership/reservation.
+struct CameraStartupTransactionLimits {
+    static constexpr UInt32 maximum_tile_axis = 32;
+    static constexpr UInt32 tile_length = 32;
+    static constexpr UInt32 vertex_bytes = 32;
+    static constexpr UInt32 maximum_tiles = maximum_tile_axis * maximum_tile_axis;
+    static constexpr UInt64 tile_payload_bytes = UInt64(tile_length) * tile_length * 4 * vertex_bytes;
+    static constexpr UInt64 maximum_terrain_payload_bytes = UInt64(maximum_tiles) * tile_payload_bytes;
+    static constexpr UInt64 maximum_bytes = RendererLimits::maximum_upload_bytes
+        + 5 * maximum_terrain_payload_bytes;
+};
 struct DeviceTransactionDesc {
     DeviceTransactionMode mode = DeviceTransactionMode::idle_preparation;
     UInt64 generation = 0;
@@ -340,7 +355,17 @@ struct DeviceTransactionDesc {
     UInt32 resources = 0;
     UInt64 bytes = 0;
     UInt32 views = 0;
+    DeviceTransactionCapacity capacity = DeviceTransactionCapacity::ordinary;
 };
+// Unknown profiles and camera frame journals fail closed; this never changes
+// per-resource/per-upload or native deferred-frame admission limits.
+inline constexpr UInt64 device_transaction_byte_limit(const DeviceTransactionDesc& desc) noexcept
+{
+    return desc.capacity == DeviceTransactionCapacity::ordinary ? RendererLimits::maximum_upload_bytes
+        : desc.capacity == DeviceTransactionCapacity::camera_startup
+            && desc.mode == DeviceTransactionMode::idle_preparation
+            ? CameraStartupTransactionLimits::maximum_bytes : 0;
+}
 struct DeviceTransactionToken {
     UInt64 device = 0;
     UInt64 sequence = 0;

@@ -45,6 +45,14 @@
     `delivery: M22 plan bounded camera startup capacity`, then implement R3
     in /home/ha/projects/CnC_Generals_Zero_Hour. No production before checkpoint.
 
+Delivery closure: the approved R3 implementation subsequently completed six
+full builds, six fresh canonical297/297 suites, exact17 four/strict17 both,
+physical4, minimal8, established Vulkan and LAN4 all six on frozen source.
+The unchanged bounded redacted probe crossed camera capacity and stopped at
+`W3DDisplay` immutable-tree frame-checkpoint admission; this is downstream
+active08 classification, not an R3 frame claim. See the
+[R3 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0r3.md).
+
 ## M22 08T0R2 deferred logical-terrain publication — 2026-09-29
 
 1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. The approved single correction is

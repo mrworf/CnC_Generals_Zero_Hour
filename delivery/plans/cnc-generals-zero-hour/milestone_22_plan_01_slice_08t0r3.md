@@ -1,6 +1,6 @@
 # M22 plan 01 slice 08T0R3: bounded camera-startup capacity
 
-Status: implementation-ready plan; executable acceptance pending.
+Status: accepted; final-source executable and host acceptance complete.
 Parent: `cf4ce431adc6aba98a07f2083badb6b905e1501b`.
 Plan provenance: exact plan-only commit identified by
 `delivery: M22 plan bounded camera startup capacity`.
@@ -126,10 +126,23 @@ Never stage active08/renderer diagnostic hunks or their ledger bookkeeping.
 - Nested/foreign token, pending/active source frame and provider-removal/stale
   generation reject without mutating the original owner. Reset and fresh second
   generation exercise255/256/1024 bounds and exact initialized teardown.
+  Establish each generated allocation baseline after real logical map load and
+  before device/camera construction. LinuxTerrainLogic::reset retains height
+  vector capacity; native SidesList validation owns its default-player strings.
+  Neither is a camera leak. Require zero live camera/terrain/device resources,
+  then exact initialized allocation equality after device destruction and
+  logical reset, including retirement of device diagnostics/tombstones.
 - Validation-enabled physical Recording/bgfx comparison: authored nonblack terrain,
   exact constrained source camera (no override), ordinary native draw order,
   full update and no-update pixel identity, early/late fault unchanged prior pixels
   and identical retry. Test partial-chain mip semantics through accepted R1.
+  Keep the existing small-map physical pixel proof;255/256/1024 native maps
+  validate the idle camera transaction with unchanged native frame count and
+  zero staged frame commands. No max-map full-display admission is claimed.
+  An exploratory255-tile continuation passed camera preparation then rejected
+  W3DShroud's ordinary64MiB transaction (`original shroud upload transaction
+  rejected`). This is a separate downstream active08 boundary; do not promote
+  shroud, selected-stage or frame capacity in R3.
 
 ## Exact commands and source freeze
 
@@ -146,6 +159,33 @@ Exact17 CPU controls, verified registered on all six at plan entry:
 ```text
 ^(original_w3d_camera_startup|original_w3d_view_scene|original_w3d_terrain_visual_map|original_w3d_terrain_shroud_projection|original_w3d_terrain_map_frame|original_w3d_prop_frame|original_w3d_tree_preparation|original_w3d_tree_draw|original_w3d_tree_module|original_w3d_asset_preload|original_w3d_full_draw_identity|original_w3d_full_draw_provider_removal|renderer_recording_transaction|renderer_bgfx_transaction|renderer_bgfx_transaction_shader_scope|renderer_bgfx_transaction_resource|original_w3d_stage_transaction)$
 ```
+
+Approved wrapper-only workload correction: the existing30s mission-child bound
+cannot cover the added real maximum-capacity camera workload. Diagnostic-only
+drivers used the existing public `run(..., timeout_seconds=...)` parameter,
+unchanged executable/generated inputs/workload/assertions, isolated serial load,
+120s CPU/native-physical and240s sanitizer-physical ceilings. All completed
+processes had exact172 typed-fault and255/256/1024/1025/full/no-update/retry/
+two-generation/zero-resource markers; physical also had16 small-map pixel-fault
+boundaries. All sanitizer and Vulkan validation category counts were zero.
+The drivers remain temporary/uncommitted and are not final acceptance evidence.
+
+| Configuration | CPU child seconds (two processes) | Physical child seconds (two processes) |
+| --- | --- | --- |
+| GCC native | registered44.17s total; separate child times not measured |44.924 /44.872 |
+| Clang native |22.497 /22.558 |45.633 /45.667 |
+| GCC sanitizer |82.209 /82.402 |184.872 /185.951 |
+| Clang sanitizer |77.457 /78.433 |177.737 /176.725 |
+
+Set only the camera wrapper mission-child override to250s:34.44% headroom over
+the slowest clean185.951s process. Keep TimeoutExpired behavior, both generation
+loops, every assertion and all workload unchanged; do not raise the shared
+helper/default/bootstrap timeout. The original30s physical timeout and stopped
+incomplete120s diagnostic are superseded non-evidence. The temporary driver's
+first successful GCC physical output printed a literal validation-category name
+with count zero, triggering the outer substring classifier; raw child category
+counts and wrapper checks were zero, and subsequent safe-label runs were clean.
+Freeze the final wrapper hash and run all planned final gates under250s.
 
 All four focused configurations use
 `ASAN_OPTIONS=detect_leaks=0 ctest --test-dir build/<configuration> -R '<exact17>' --output-on-failure -j1 -V`.

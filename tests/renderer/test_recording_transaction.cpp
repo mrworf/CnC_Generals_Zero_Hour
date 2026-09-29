@@ -327,6 +327,76 @@ void test_initialized_bytes_and_view_baseline() {
     check(bounded.begin_pass(p,"second view") && bounded.end_pass() && bounded.begin_pass(p,"third view") && bounded.end_pass(),"view budget not restored");
     check(!bounded.begin_pass(p,"fourth view"),"abort/present incorrectly reset prior view baseline");
 }
+void test_camera_capacity() {
+    Scene s;const Baseline baseline(s);DeviceTransactionToken token;
+    auto camera=desc();camera.capacity=DeviceTransactionCapacity::camera_startup;
+    camera.bytes=CameraStartupTransactionLimits::maximum_bytes;
+    check(desc().capacity==DeviceTransactionCapacity::ordinary && camera.bytes==738197504,
+        "camera formula/default capacity changed");
+    for (unsigned bad=0;bad<12;++bad) {
+        auto rejected=camera;
+        if (bad==0) ++rejected.bytes;
+        if (bad==1) rejected.bytes=0;
+        if (bad==2) rejected.capacity=static_cast<DeviceTransactionCapacity>(255);
+        if (bad==3) {rejected.mode=DeviceTransactionMode::frame_commands;rejected.views=1;}
+        if (bad==4) rejected.generation=0;
+        if (bad==5) rejected.views=1;
+        if (bad==6) rejected.commands=0;
+        if (bad==7) rejected.commands=4097;
+        if (bad==8) rejected.resources=0;
+        if (bad==9) rejected.resources=4097;
+        if (bad==10) rejected.capacity=DeviceTransactionCapacity::ordinary;
+        if (bad==11) rejected.mode=static_cast<DeviceTransactionMode>(255);
+        DeviceTransactionToken output{99,98,97,DeviceTransactionMode::frame_commands};
+        check(!s.device.begin_device_transaction(rejected,output) && output.device==99
+            && output.sequence==98,"camera profile rejection published token");baseline.assert_same(s);
+    }
+    for (bool commit : {false,true}) {
+        check(s.device.begin_device_transaction(camera,token),"camera exact ceiling admission");
+        auto output=token;auto rejected=camera;rejected.capacity=static_cast<DeviceTransactionCapacity>(255);
+        check(!s.device.begin_device_transaction(rejected,output) && output.sequence==token.sequence,
+            "camera nested rejection changed owner");
+        check(commit ? s.device.commit_device_transaction(token) : s.device.abort_device_transaction(token),
+            "camera nested rejection poisoned real owner");baseline.assert_same(s);
+    }
+    check(s.device.begin_device_transaction(camera,token)
+        && !s.device.create_buffer({RendererLimits::maximum_upload_bytes+1,BufferUsage::vertex,true},"oversized")
+        && !s.device.commit_device_transaction(token) && s.device.abort_device_transaction(token),
+        "camera profile widened individual resource limit");baseline.assert_same(s);
+    check(s.device.begin_device_transaction(camera,token)
+        && !s.device.upload({s.buffer,RendererLimits::maximum_upload_bytes+1,0,
+            RendererLimits::maximum_upload_bytes+1},reinterpret_cast<const void*>(1))
+        && !s.device.commit_device_transaction(token) && s.device.abort_device_transaction(token),
+        "camera profile widened individual upload limit");baseline.assert_same(s);
+
+    RecordingGpuDevice combined;
+    std::array<UInt8,8> bytes{};std::array<UInt8,16> pixels{};
+    const auto buffer=combined.create_buffer({bytes.size(),BufferUsage::vertex,true},"camera");
+    const auto texture=combined.create_texture({2,2},"sibling");
+    check(buffer && texture && combined.upload_texture({texture,2,2,8,pixels.size(),0},pixels.data()),
+        "camera combined generated ownership");
+    const auto commands=combined.snapshot();const auto resources=combined.resource_counts();
+    const auto prior=combined.buffer_bytes(buffer);const auto prior_texture=combined.texture_bytes(texture);
+    const UInt64 retained=bytes.size()+6+7+pixels.size(); // exact retained bytes and both labels
+    camera.bytes=retained-1;
+    check(!combined.begin_device_transaction(camera,token) && combined.snapshot()==commands,
+        "camera retained baseline was not charged");
+    camera.bytes=retained+bytes.size()+pixels.size();
+    for (bool extra : {true,false}) {
+        check(combined.begin_device_transaction(camera,token),"camera combined exact budget");
+        bytes.fill(17);pixels.fill(42);
+        check(combined.upload({buffer,bytes.size(),0,bytes.size()},bytes.data())
+            && combined.upload_texture({texture,2,2,8,pixels.size(),0},pixels.data()),
+            "camera combined exact upload charge");
+        if (extra) check(!combined.upload({buffer,bytes.size(),0,1},bytes.data())
+            && !combined.commit_device_transaction(token),"camera combined byte+1 escaped");
+        check(combined.abort_device_transaction(token) && combined.snapshot()==commands
+            && combined.resource_counts()==resources && combined.buffer_bytes(buffer)==prior
+            && combined.texture_bytes(texture)==prior_texture,"camera combined rollback/retry identity");
+    }
+    combined.destroy(buffer);combined.destroy(texture);
+    check(combined.resource_counts()==ResourceCounts{},"camera combined teardown residual");
+}
 }
 int main() {
     try {
@@ -334,6 +404,7 @@ int main() {
             test_idle_and_handles();test_modes_and_tokens();test_faulted_frames();
             test_bounds_and_checkpoint();test_resource_faults_and_absence();test_uninitialized_rollback_and_destruction();
             test_initialized_bytes_and_view_baseline();
+            test_camera_capacity();
         }
         std::cout<<"Recording transactions: two generations passed\n";return 0;
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}

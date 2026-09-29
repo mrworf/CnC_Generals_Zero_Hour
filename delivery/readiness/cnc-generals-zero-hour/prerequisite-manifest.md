@@ -23,6 +23,14 @@ Earlier accepted packets remain historical. Last audit:2026-09-29.
 No M0, forward provider, new service/credential, native patch or unresolved owner.
 Capacity changes are R3 outputs. No additional split without architecture checkpoint.
 
+Delivery closure: R3's named capacity and exact source/device rollback are accepted
+by the [slice evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0r3.md).
+All six full builds and fresh canonical297/297 suites, focused/strict/physical,
+Vulkan and LAN gates completed on frozen source. The correctly provisioned,
+unchanged redacted scene-once probe crossed the former camera guard and reached
+the next public display-owned frame-checkpoint rejection. It is not retail
+acceptance and does not widen R3 into frame admission.
+
 ## M22 08T0R2 deferred logical-terrain publication — 2026-09-29
 
 Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.

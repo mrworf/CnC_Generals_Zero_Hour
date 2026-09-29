@@ -30,10 +30,12 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <stdexcept>
 #include <limits>
 #include <vector>
 #include <fstream>
+#include <sstream>
 #include <iterator>
 #include <type_traits>
 
@@ -233,6 +235,97 @@ struct W3DCameraStartupGeneratedProbeAccess {
 			std::equal(std::begin(a.rng),std::end(a.rng),std::begin(b.rng)) &&
 			std::equal(std::begin(a.clientRng),std::end(a.clientRng),std::begin(b.clientRng));
 	}
+	static bool capacityMappingsReleased(const zh::original_runtime::OriginalGpuEdge &edge)
+	{
+		return edge.vertices_.empty() && edge.indices_.empty() && edge.textures_.empty() &&
+			!edge.queued_source_reference_count() && !edge.reserved_source_reference_count();
+	}
+	template<class Device> static void capacity(W3DView &view,zh::original_runtime::OriginalGpuEdge &edge,
+		Device &device,Int expected)
+	{
+		require(TheHeightMap->m_numVertexBufferTiles==expected && TheHeightMap->m_needFullUpdate,
+			"camera capacity fixture is not a fresh full-update map");
+		{
+		const auto initial=snapshot(view,edge,device);
+		auto malformed=[&](auto &field,auto value) {
+			const auto prior=field;field=value;
+			const bool failed=rejected([&]{view.setAngleAndPitchToDefault();});field=prior;
+			require(failed && unchanged(initial,snapshot(view,edge,device)),
+				"camera capacity metadata rejection changed baseline");
+		};
+		malformed(TheHeightMap->m_numVertexBufferTiles,1025);
+		malformed(TheHeightMap->m_numVertexBufferTiles,-1);
+		malformed(TheHeightMap->m_numVBTilesX,33);
+		malformed(TheHeightMap->m_x,1026);
+		malformed(TheHeightMap->m_y,1);
+		malformed(TheHeightMap->m_numVertexBufferTiles,expected-1);
+		// The count must reject before even reading an unavailable pointer array.
+		const auto saved_count=TheHeightMap->m_numVertexBufferTiles;
+		auto **saved_buffers=TheHeightMap->m_vertexBufferTiles;
+		TheHeightMap->m_numVertexBufferTiles=1025;
+		TheHeightMap->m_vertexBufferTiles=reinterpret_cast<DX8VertexBufferClass **>(1);
+		const bool bad_array=rejected([&]{view.setAngleAndPitchToDefault();});
+		TheHeightMap->m_vertexBufferTiles=saved_buffers;TheHeightMap->m_numVertexBufferTiles=saved_count;
+		require(bad_array && unchanged(initial,snapshot(view,edge,device)),"camera capacity read rejected backing");
+		}
+		std::string initial_trace;
+		if constexpr (std::is_same_v<Device,zh::renderer::RecordingGpuDevice>) initial_trace=device.snapshot();
+		view.setAngleAndPitchToDefault();
+		require(!TheHeightMap->m_needFullUpdate && binding(view),"camera capacity first publication was incomplete");
+		for (Int tile=0;tile<expected;++tile) {
+			auto *source=TheHeightMap->m_vertexBufferTiles[tile];
+			const auto handle=edge.vertices_.at(source);
+			const auto bytes=zh::renderer::CameraStartupTransactionLimits::tile_payload_bytes;
+			require(!std::memcmp(source->Get_CPU_Vertex_Buffer(),TheHeightMap->m_vertexBufferBackup[tile],bytes),
+				"camera capacity CPU/backup full upload differs");
+			if constexpr (std::is_same_v<Device,zh::renderer::RecordingGpuDevice>) {
+				const auto native=device.buffer_bytes(handle);
+				require(native.size()==bytes && !std::memcmp(native.data(),source->Get_CPU_Vertex_Buffer(),bytes),
+					"camera capacity native full upload differs");
+			}
+		}
+		const auto accepted=snapshot(view,edge,device);
+		const auto upload_sequence=accepted.trace.substr(initial_trace.size());
+		if constexpr (std::is_same_v<Device,zh::renderer::RecordingGpuDevice>) {
+			require(accepted.trace.compare(0,initial_trace.size(),initial_trace)==0 &&
+				std::count(upload_sequence.begin(),upload_sequence.end(),'\n')==expected,
+				"camera capacity first full upload sequence differs");
+			std::istringstream lines(upload_sequence);std::string line;
+			while (std::getline(lines,line)) require(line.rfind("upload B",0)==0 &&
+				line.find(" offset=0 size=131072")!=std::string::npos,"camera capacity full upload emitted other work");
+		}
+		auto identical_retry=[&](const Snapshot &before) {
+			auto retry=snapshot(view,edge,device);
+			if constexpr (std::is_same_v<Device,zh::renderer::RecordingGpuDevice>) {
+				require(retry.trace==before.trace+upload_sequence,"camera capacity retry upload order/count differs");
+				retry.trace=accepted.trace; // Only the proven complete upload sequence is additional.
+			}
+			require(unchanged(accepted,retry),"camera large clean retry changed accepted source ownership");
+		};
+		view.setAngleAndPitchToDefault();
+		require(unchanged(accepted,snapshot(view,edge,device)),"camera capacity no-update changed ownership or uploaded");
+		// Existing small-map controls exhaust every fault. Large maps reach
+		// first/middle candidate copy, first/last upload and exact post-upload commit.
+		for (const Int ordinal : {0,1+3*(expected/2),3*expected+3}) {
+			TheHeightMap->m_needFullUpdate=TRUE;
+			const auto before=snapshot(view,edge,device);fault(ordinal);
+			const bool failed=rejected([&]{view.setAngleAndPitchToDefault();});fault(-1);
+			require(failed && unchanged(before,snapshot(view,edge,device)),"camera large early/middle/late rollback");
+			view.setAngleAndPitchToDefault();
+			identical_retry(before);
+		}
+		for (unsigned ordinal : {0U,static_cast<unsigned>(expected-1)}) {
+			TheHeightMap->m_needFullUpdate=TRUE;const auto before=snapshot(view,edge,device);
+			device.fail_transaction_operation_after(ordinal);
+			require(rejected([&]{view.setAngleAndPitchToDefault();}) && unchanged(before,snapshot(view,edge,device)),
+				"camera large first/last upload rollback");
+			view.setAngleAndPitchToDefault();
+			identical_retry(before);
+		}
+		view.reset();view.setAngleAndPitchToDefault();
+		require(binding(view)==GameLogic::peekTerrainLogicPublication(TheGameLogic,TheTerrainLogic).token,
+			"camera capacity reset lost provider token");
+	}
 	static void providers(W3DView &view,zh::original_runtime::OriginalGpuEdge &edge,
 		zh::renderer::RecordingGpuDevice &device)
 	{
@@ -424,6 +517,78 @@ struct W3DCameraStartupGeneratedProbeAccess {
 };
 
 namespace {
+template<class Device> void capacityCameraMap(Device &device,const char *map_path,Int count,bool physical)
+{
+	{
+		zh::original_runtime::OriginalGpuEdge edge(device);
+		{
+			W3DDisplay display;display.init();
+			struct Restore {
+				Display *display;TerrainVisual *visual;View *view;
+				~Restore() { TheTacticalView=view;TheTerrainVisual=visual;TheDisplay=display; }
+			} restore{TheDisplay,TheTerrainVisual,TheTacticalView};
+			TheDisplay=&display;display.setWidth(32);display.setHeight(24);
+			W3DTerrainVisual visual;TheTerrainVisual=&visual;visual.init();
+			require(visual.load(AsciiString(map_path)),"camera capacity visual map rejected");
+				auto *view=new W3DView;TheTacticalView=view;view->init();display.attachView(view);
+				view->setWidth(32);view->setHeight(24);view->setDefaultView(0,0,1);
+				std::uint64_t frame_advances=0;
+				if constexpr (std::is_same_v<Device,zh::renderer::BgfxGpuDevice>) {
+					require(physical && !device.staged_frame_command_count(),
+						"camera capacity native idle baseline has staged commands");
+					frame_advances=device.native_frame_advance_count();
+				}
+				W3DCameraStartupGeneratedProbeAccess::capacity(*view,edge,device,count);
+				if constexpr (std::is_same_v<Device,zh::renderer::BgfxGpuDevice>) {
+					require(device.native_frame_advance_count()==frame_advances && !device.staged_frame_command_count(),
+						"camera capacity idle attempt advanced a frame or staged draw commands");
+				}
+		}
+			edge.release_source_buffers();
+			require(W3DCameraStartupGeneratedProbeAccess::capacityMappingsReleased(edge),
+				"camera capacity source mapping ownership retained");
+		}
+	require(!TheHeightMap && !TheTerrainRenderObject,"camera capacity retained live source terrain");
+}
+void capacityCamera(bool physical)
+{
+	SDL_Window *window=nullptr;
+	if (physical) {
+		require(SDL_Init(SDL_INIT_VIDEO),"camera capacity video services rejected");
+		window=SDL_CreateWindow("generated camera capacity",32,24,SDL_WINDOW_HIDDEN);
+		require(window,"camera capacity window rejected");
+	}
+	struct Window { SDL_Window *value;~Window() { if(value) {SDL_DestroyWindow(value);SDL_Quit();} } } owned_window{window};
+	TheTerrainLogic->reset();
+	Debug_Statistics::Shutdown_Statistics();
+	for (unsigned generation=0;generation<2;++generation) for (Int count : {255,256,1024}) {
+		const auto variable=std::string("ZH_M22_CAMERA_CAPACITY_MAP_")+std::to_string(count);
+		const char *map_path=std::getenv(variable.c_str());require(map_path,"camera capacity generated map missing");
+		require(TheTerrainLogic->loadMap(AsciiString(map_path),TRUE),"camera capacity logical map rejected");
+		// Logical map loading owns retained height-vector capacity and the
+		// SidesList default-player strings. They exist before this camera/device
+		// attempt; reset clears logical contents without discarding that backing.
+		const auto allocations=zh::original_process::live_pool_allocations();
+		if (physical) {
+			zh::renderer::BgfxOptions options;options.shader_root=ZH_BGFX_SHADER_DIR;
+			zh::renderer::BgfxGpuDevice device(options);
+			require(device.claim_window(window),"camera capacity physical claim rejected");
+			capacityCameraMap(device,map_path,count,true);
+			device.release_window();require(device.wait_idle() && !device.live_resource_count(),
+				"camera capacity physical teardown residual");
+		} else {
+			zh::renderer::RecordingGpuDevice device;capacityCameraMap(device,map_path,count,false);
+			require(!device.resource_counts().total(),"camera capacity Recording teardown residual");
+		}
+		TheTerrainLogic->reset();
+		Debug_Statistics::Shutdown_Statistics();
+		// Device destruction also retires its accepted diagnostic commands and
+		// resource tombstones. No live camera, terrain or device owner remains.
+		require(zh::original_process::live_pool_allocations()==allocations,
+			"camera capacity source lifecycle allocation residual");
+	}
+	std::printf("original camera capacity: tiles=255,256,1024 rejected=1025 full=1 no-update=1 retry=1 generations=2 gpu=%u resources=0\n",physical);
+}
 void physicalCamera(const char *map_path)
 {
 	const auto height=TheGlobalData->m_cameraHeight,minimum=TheGlobalData->m_minCameraHeight,
@@ -639,4 +804,6 @@ extern "C" void zh_probe_camera_startup()
 	std::printf("original camera startup typed faults: count=%u\n",typed_faults);
 	std::puts("original camera startup: ground-default=1 stationary=1 retry=1 generations=2 resources=0");
 	if (std::getenv("ZH_M22_CAMERA_STARTUP_PHYSICAL")) physicalCamera(map_path);
+	capacityCamera(false);
+	if (std::getenv("ZH_M22_CAMERA_STARTUP_PHYSICAL")) capacityCamera(true);
 }

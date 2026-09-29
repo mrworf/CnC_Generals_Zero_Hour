@@ -332,7 +332,7 @@ ValidationResult RecordingGpuDevice::begin_device_transaction(const DeviceTransa
 {
     if (impl_->checkpoint || impl_->in_pass || !supports_device_transactions(desc.mode) ||
         !desc.generation || !desc.commands || desc.commands>4096 || !desc.resources || desc.resources>4096 ||
-        !desc.bytes || desc.bytes>RendererLimits::maximum_upload_bytes || desc.views>RendererLimits::ordered_views ||
+        !desc.bytes || desc.bytes>device_transaction_byte_limit(desc) || desc.views>RendererLimits::ordered_views ||
         (desc.mode==DeviceTransactionMode::idle_preparation && desc.views) ||
         (desc.mode==DeviceTransactionMode::frame_commands && !desc.views) ||
         impl_->next_transaction==std::numeric_limits<UInt64>::max())

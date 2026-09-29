@@ -55,7 +55,7 @@ public:
         return desc.mode == DeviceTransactionMode::idle_preparation && desc.generation
             && desc.commands && desc.commands <= maximum_commands
             && desc.resources && desc.resources <= maximum_resources
-            && desc.bytes && desc.bytes <= maximum_bytes && !desc.views
+            && desc.bytes && desc.bytes <= device_transaction_byte_limit(desc) && !desc.views
             && resources <= desc.resources && bytes <= desc.bytes;
     }
 
@@ -67,7 +67,8 @@ public:
         auto idle = desc;
         idle.mode = DeviceTransactionMode::idle_preparation;
         idle.views = 0;
-        return desc.mode == DeviceTransactionMode::frame_commands && desc.views
+        return desc.mode == DeviceTransactionMode::frame_commands
+            && desc.capacity == DeviceTransactionCapacity::ordinary && desc.views
             && desc.views <= maximum_views && valid_idle(idle, resources, bytes);
     }
 

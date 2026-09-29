@@ -195,12 +195,23 @@ struct W3DView::CameraStartupAttempt {
 		 logical_publication(GameLogic::peekTerrainLogicPublication(TheGameLogic,TheTerrainLogic))
 	{
 		camera_baseline.restore(camera_candidate);
-		cameraRequire(terrain.m_numVertexBufferTiles>0 && terrain.m_numVertexBufferTiles<=4096 &&
+		using Capacity=zh::renderer::CameraStartupTransactionLimits;
+		static_assert(VERTEX_BUFFER_TILE_LENGTH==Capacity::tile_length && sizeof(VERTEX_FORMAT)==Capacity::vertex_bytes,
+			"camera capacity must match authored terrain layout");
+		cameraRequire(terrain.m_numVertexBufferTiles>0 && terrain.m_numVertexBufferTiles<=Capacity::maximum_tiles &&
 			terrain.m_vertexBufferTiles && terrain.m_vertexBufferBackup && terrain.m_x>1 && terrain.m_y>1 &&
+			terrain.m_x<=Capacity::maximum_tile_axis*VERTEX_BUFFER_TILE_LENGTH+1 &&
+			terrain.m_y<=Capacity::maximum_tile_axis*VERTEX_BUFFER_TILE_LENGTH+1 &&
 			camera_candidate.Projection==CameraClass::PERSPECTIVE);
+		const Int tiles_x=(terrain.m_x-2)/VERTEX_BUFFER_TILE_LENGTH+1;
+		const Int tiles_y=(terrain.m_y-2)/VERTEX_BUFFER_TILE_LENGTH+1;
+		cameraRequire(terrain.m_numVBTilesX==tiles_x && terrain.m_numVBTilesY==tiles_y &&
+			terrain.m_numVertexBufferTiles==tiles_x*tiles_y);
 		constexpr std::size_t bytes=VERTEX_BUFFER_TILE_LENGTH*VERTEX_BUFFER_TILE_LENGTH*4*sizeof(VERTEX_FORMAT);
+		constexpr std::size_t maximum_source_bytes=std::size_t(Capacity::maximum_tiles)*(2*bytes+sizeof(Tile))+
+			sizeof(CameraStartupAttempt);
 		cameraRequire(static_cast<std::size_t>(terrain.m_numVertexBufferTiles)*(2*bytes+sizeof(Tile))+
-			sizeof(CameraStartupAttempt)<=64u*1024*1024);
+			sizeof(CameraStartupAttempt)<=maximum_source_bytes);
 		cameraStartupBoundary();tiles.reserve(terrain.m_numVertexBufferTiles);
 		for (Int i=0;i<terrain.m_numVertexBufferTiles;++i) {
 			auto *buffer=terrain.m_vertexBufferTiles[i];
@@ -322,7 +333,8 @@ struct W3DView::CameraStartupAttempt {
 		try {
 			cameraStartupBoundary();
 			const zh::renderer::DeviceTransactionDesc desc{zh::renderer::DeviceTransactionMode::idle_preparation,
-				edge.generation(),4096,4096,zh::renderer::RendererLimits::maximum_upload_bytes,0};
+				edge.generation(),4096,4096,zh::renderer::CameraStartupTransactionLimits::maximum_bytes,0,
+				zh::renderer::DeviceTransactionCapacity::camera_startup};
 			cameraRequire(static_cast<bool>(edge.begin_device_transaction(desc,token)));active=true;
 			terrain.updateCenter(&camera_candidate,lights);
 			CameraState accepted(camera_candidate);

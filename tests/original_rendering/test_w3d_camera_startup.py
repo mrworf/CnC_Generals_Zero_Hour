@@ -15,6 +15,7 @@ from test_production_entry import run as bootstrap_run
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_w3d_terrain_source_bitmap import source_tree
 from test_w3d_visual_height_map import visual_map
+from test_w3d_flat_terrain_geometry import sized_visual_map
 
 
 def main() -> int:
@@ -30,6 +31,11 @@ def main() -> int:
         map_path = root / "map.map"
         map_path.write_bytes(visual_map(texture_name="Flat"))
         map_path.chmod(0o444)
+        for count, dimensions in ((255, (480, 545)), (256, (513, 513)), (1024, (1025, 1025))):
+            capacity_map = root / f"capacity-{count}.map"
+            capacity_map.write_bytes(sized_visual_map(*dimensions))
+            capacity_map.chmod(0o444)
+            os.environ[f"ZH_M22_CAMERA_CAPACITY_MAP_{count}"] = str(capacity_map)
         packet = root / "prop.w3d"
         subprocess.run([str(args.asset_producer.resolve()), "--emit-prop-frame", str(packet)], check=True)
         packet.chmod(0o444)
@@ -39,6 +45,7 @@ def main() -> int:
         if args.gpu:
             os.environ["ZH_M22_CAMERA_STARTUP_PHYSICAL"] = "1"
         marker = "original camera startup: ground-default=1 stationary=1 retry=1 generations=2 resources=0"
+        capacity_marker = "original camera capacity: tiles=255,256,1024 rejected=1025 full=1 no-update=1 retry=1 generations=2"
         for generation in range(2):
             source = source_tree(root / f"source-{generation}", fixture, "valid", tree_textures=True, tree_decals=True)
             for path in source.rglob("*"):
@@ -64,11 +71,15 @@ def main() -> int:
                     or "Validation Error" in bootstrap_output or "VUID-" in bootstrap_output):
                 raise SystemExit(f"original camera deferred bootstrap generation {generation} failed "
                                  f"({bootstrap.returncode}); private output redacted")
-            result = run(args.executable.resolve(), root / f"generation-{generation}", source, "mission")
+            # The complete bounded-map physical workload measured185.951s
+            # under sanitizers;250s retains34.44% headroom and bounded failure.
+            result = run(args.executable.resolve(), root / f"generation-{generation}", source, "mission",
+                         timeout_seconds=250)
             output = result.stdout + result.stderr
-            if (result.returncode or marker not in output or "runtime error:" in output
+            if (result.returncode or marker not in output or capacity_marker+" gpu=0 resources=0" not in output or "runtime error:" in output
                     or "ERROR: AddressSanitizer" in output or "Validation Error" in output or "VUID-" in output
-                    or (args.gpu and "original camera startup physical:" not in output)):
+                    or (args.gpu and ("original camera startup physical:" not in output
+                                     or capacity_marker+" gpu=1 resources=0" not in output))):
                 raise SystemExit(f"original camera startup generation {generation} failed "
                                  f"({result.returncode}); private output redacted")
     print("original camera startup: ground/default/stationary rollback/reentry ok")
