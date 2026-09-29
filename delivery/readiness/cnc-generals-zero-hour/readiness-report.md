@@ -1,5 +1,50 @@
 # Milestone readiness report — renderer migration
 
+## M22 08T0R2 deferred logical-terrain publication — 2026-09-29
+
+1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. The approved single correction is
+   internally executable; existing authorized host facilities are explicit fresh
+   later acceptance gates, not assumed successful execution.
+2. Scope/evidence: R2/T0/governing M22 at parent
+   `8e13acdc410ef0cf6b4bd5ab3c0fb9758739c698`. FACT: genuine native early-view/
+   later-logic order, reverse reset/teardown and fixed public guard/identity
+   classification. No private metadata, raw process/debugger log or image.
+3. Automatic work: M22-T0R2-01/03/05 ancestry/provider/order/tool/test and exact
+   preserved-worktree checks; five plan/readiness artifacts only. No executable,
+   test, ledger, bootstrap or renderer mutation.
+4. Confirmation gates: None within the approved one-leaf mechanism. No arbitrary
+   global adoption, WW3D core callback, layout change or split without checkpoint.
+5. User actions: None at implementation entry. Existing host escalation supplies
+   M22-T0R2-04 physical/strict/LAN acceptance; if unavailable, report exact external
+   recovery and preserve the gate, never substitute or waive it.
+6. Missing/unresolved: None. Source publication/peek and atomic candidate late
+   binding are R2 outputs; no future or unimplemented API is an entry provider.
+7. Graph: accepted R1/A/core --01→R2 --02→refreshed T0→active08→09;
+   tools --03→R2; host --04→acceptance; preserved/privacy --05→exact staging.
+8. Declared/proposed order agree after approved insertion. R2 does not depend
+   on the aggregate it refreshes; no cycle/backward edge or historical reopening.
+9. M0: Not required; this is the existing camera/core publication boundary.
+10. Per-slice: R2 entry providers/tools/fixture registrations verified; exact
+    pointer/owner/token, reset and withdrawal semantics and commands are explicit.
+    Refreshed T0 waits for exact accepted R2/hashes/gates; active08 stays gated.
+11. Clean-environment simulation: committed providers/generators → native early
+    view → source-owned initialized logical publication → generated camera/fault/
+    teardown acceptance → evidence aggregate → existing read-only continuation.
+    No warm cache/private asset/undeclared service or forward API required. Later
+    host results and retail scenes are not simulated acceptance.
+12. Commands: R1/A ancestor checks pass; cmake/ninja/GCC/Clang/Python/Git/GDB and
+    four presets resolve; parsed CTest JSON verifies exact12 in all six. Initial
+    text parser omitted quoted names, then authoritative CTest JSON proved all
+    registrations; no test was falsely accepted from an empty selection. Preserved
+    fourteen-path hashes/index verified. Read-only bounded discovery is not acceptance.
+13. Files: R2 plan, narrow T0 refresh/dependency contract, governing index, existing
+    prerequisite manifest and report. All active08/renderer paths remain untouched.
+14. Remaining entry blockers: None. Fresh implementation/gates and exact staged
+    privacy review are mandatory; no inferred runtime or retail success.
+15. Next: exact-stage/review/commit only these five files as
+    `delivery: M22 plan deferred camera terrain publication`, then implement R2
+    alone in /home/ha/projects/CnC_Generals_Zero_Hour. No production before commit.
+
 ## M22 08T0R1 sampled-mip correction — 2026-09-28
 
 1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. The approved single backend leaf

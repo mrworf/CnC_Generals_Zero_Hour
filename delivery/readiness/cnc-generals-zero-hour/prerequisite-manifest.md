@@ -1,5 +1,31 @@
 # Milestone Prerequisite Manifest
 
+## M22 08T0R2 deferred logical-terrain publication — 2026-09-29
+
+Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.
+Product ID: `cnc-generals-zero-hour`; audited parent:
+`8e13acdc410ef0cf6b4bd5ab3c0fb9758739c698`.
+Source authority: explicit single-leaf architecture approval after complete
+public create/init/reset/destroy and provider/callback audit. Planning transaction:
+exact plan-only commit identified by
+`delivery: M22 plan deferred camera terrain publication`.
+Order: accepted08T0R1/A →08T0R2 →refreshed evidence-only08T0 →active08 →09.
+Earlier accepted commits/readiness remain historical, not rewritten.
+Last audit:2026-09-29. Five plan/readiness files only; all fourteen existing
+active08/renderer worktree files are preserved unchanged and unstaged.
+
+| ID | Description | Consumers | Classification | Current status | Proposed provider | Class | Verification | Commands executed | Files changed | Blocking | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| M22-T0R2-01 | Accepted camera/backend/core lifecycle and typed idle ownership | R2 | Already satisfied | Exact R1/A ancestry and public source owner graph verified | 08T0R1/A and accepted GameLogic/terrain/view/lifecycle providers | AUTO | Ancestry/source/reset/teardown audit | git merge-base --is-ancestor; sed/rg | R2/T0/index plans; manifest/report | Entry if provider lost | FACT: GameClient/view precedes GameLogic provider; reverse teardown deletes provider before view |
+| M22-T0R2-02 | Exact source publication/token/peek and deferred successful-attempt view binding | R2; refreshed T0/08 | Owned by the consuming milestone | Plan-ready implementation/acceptance output, not an entry requirement | 08T0R2 | AUTO | Genuine bootstrap plus missing/foreign/stale/fault/retry/reset/removal/two-generation/minimal controls | Read-only fixed-boolean/public-stack classification; acceptance not run | Same five files | Refreshed T0 and active08 | FACT: camera guard captures null logical terrain; all other provider/generation checks match |
+| M22-T0R2-03 | Existing toolchain, generated map/full-probe/minimal owners and exact12 registration | R2 | Already satisfied | Tools/four presets and exact12 on all six configurations verified | PRE-002; accepted existing fixture/test providers | AUTO | Tool/preset resolution and six parsed CTest manifests | command -v; cmake --list-presets; ctest --show-only=json-v1 | Same five files | Entry if unavailable | FACT: no new selector/standalone fixture/package or private input required |
+| M22-T0R2-04 | Authorized host Vulkan/validation/session, strict LSan and LAN | R2 acceptance | Requires user action | Existing supported host route; fresh complete gates required later | PRE-012/PRE-016 host/session | USER_ACTION | Exact12 four/strict12 both/physical4, minimal8, Vulkan3/2, LAN4 and six fresh builds/canonicals | Not rerun by planning | Same five files | Acceptance if unavailable, not implementation | FACT: established wrapper and escalation contract; no substituted or waived gate |
+| M22-T0R2-05 | Preserved active08/privacy and exact owned staging | R2; later08 | Already satisfied | Fourteen baseline worktree paths and empty index recorded; private inputs read-only | Existing transaction and PRE-008 contract | AUTO | Exact preserved hash check, owned diff and redacted continuation | git status/diff; private-safe source-only hash verification | Same five files | Commit if ownership cannot be isolated; later retail acceptance | FACT: no executable/test/ledger/retail/renderer edits in this packet |
+
+No new M0, service, package, credential, backward edge or unresolved owner.
+The aggregate depends on R2; R2 depends on accepted leaves, not on the refreshed
+aggregate, so the graph is acyclic. Additional split requires a new checkpoint.
+
 ## M22 08T0R1 sampled-mip correction — 2026-09-28
 
 Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.
