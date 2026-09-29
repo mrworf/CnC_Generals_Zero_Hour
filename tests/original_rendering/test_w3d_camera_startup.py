@@ -10,6 +10,8 @@ from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "original_simulation"))
 from test_scenario_setup import load_m20_fixture, run
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "original_lifecycle"))
+from test_production_entry import run as bootstrap_run
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_w3d_terrain_source_bitmap import source_tree
 from test_w3d_visual_height_map import visual_map
@@ -47,7 +49,21 @@ def main() -> int:
                           "Object CameraPropFixture\n Scale = 8\n KindOf = PROP\n"
                           " Draw = W3DModelDraw ModuleTag_Prop\n DefaultConditionState\n"
                           " Model = TEST.LITONE01\n End\n End\nEnd\n")
+            game_data = source / "Data/INI/Default/GameData.ini"
+            text = game_data.read_text()
+            assert text.count("END\n") == 1
+            fixture.write(game_data, text.replace("END\n", " CameraHeight = 180\n CameraPitch = 37.5\n"
+                                                 " CameraYaw = 0\n PartitionCellSize = 10\nEND\n"))
             fixture.make_read_only(source)
+            bootstrap = bootstrap_run(str(args.executable.resolve()), root / f"bootstrap-{generation}", source,
+                                      env_overrides={"ZH_M22_ORIGINAL_FACTORY_PROFILE": "1",
+                                                     "ZH_M22_RECORDING_FACTORY_PROFILE": "1"})
+            bootstrap_output = bootstrap.stdout + bootstrap.stderr
+            if (bootstrap.returncode or "original camera deferred bootstrap:" not in bootstrap_output
+                    or "runtime error:" in bootstrap_output or "ERROR: AddressSanitizer" in bootstrap_output
+                    or "Validation Error" in bootstrap_output or "VUID-" in bootstrap_output):
+                raise SystemExit(f"original camera deferred bootstrap generation {generation} failed "
+                                 f"({bootstrap.returncode}); private output redacted")
             result = run(args.executable.resolve(), root / f"generation-{generation}", source, "mission")
             output = result.stdout + result.stderr
             if (result.returncode or marker not in output or "runtime error:" in output

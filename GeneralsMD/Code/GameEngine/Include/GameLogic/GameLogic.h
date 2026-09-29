@@ -105,12 +105,35 @@ class GameLogic : public SubsystemInterface, public Snapshot
 {
 #if defined(__linux__)
 	friend struct W3DTreeModuleGeneratedProbeAccess;
+	friend struct W3DCameraStartupGeneratedProbeAccess;
 #endif
 
 public:
 
 	GameLogic( void );
 	virtual ~GameLogic();
+
+#if defined(__linux__)
+	// Source lifetime identity only; no renderer linkage or owned reference.
+	struct TerrainLogicPublication {
+		const GameLogic *owner = NULL;
+		TerrainLogic *provider = NULL;
+		UnsignedInt64 token = 0;
+	};
+	static TerrainLogicPublication peekTerrainLogicPublication(
+		const void *owner, const void *provider) noexcept;
+private:
+	struct TerrainPublicationRegistry {
+		TerrainLogicPublication current{};
+		UnsignedInt64 sequence = 0;
+		bool canPublish(const void *owner) const noexcept;
+		UnsignedInt64 publish(GameLogic *owner, TerrainLogic *provider) noexcept;
+		bool withdraw(const void *owner, const void *provider, UnsignedInt64 token) noexcept;
+		TerrainLogicPublication peek(const void *owner, const void *provider) const noexcept;
+	};
+	static TerrainPublicationRegistry &terrainPublicationRegistry() noexcept;
+public:
+#endif
 
 	// subsytem methods
 	virtual void init( void );															///< Initialize or re-initialize the instance

@@ -240,6 +240,7 @@ private:
 	Bool castCameraStartupRay(const Vector3 &start, const Vector3 &end, Vector3 *point) const;
 	static Bool cameraStartupRayWorkAllowed(UnsignedInt64 visits);
 	static void setCameraStartupFaultOrdinal(Int ordinal);
+	static UnsignedInt64 cameraStartupLogicToken(const void *owner) noexcept;
 	friend struct W3DCameraStartupGeneratedProbeAccess;
 #endif
 

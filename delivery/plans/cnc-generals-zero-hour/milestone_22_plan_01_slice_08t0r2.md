@@ -1,6 +1,6 @@
 # M22 plan 01 slice 08T0R2: deferred exact logical-terrain publication
 
-Status: plan-ready; no executable implementation or acceptance claimed.
+Status: accepted in this independently validated implementation commit.
 Plan transaction parent: `8e13acdc410ef0cf6b4bd5ab3c0fb9758739c698`.
 Plan provenance: exact commit `delivery: M22 plan deferred camera terrain publication`.
 
@@ -180,3 +180,31 @@ Then one independently validated implementation commit:
 `delivery: M22 08T0R2 publish deferred camera terrain identity`.
 Refresh T0 in a separate evidence-only aggregate using unchanged accepted R2
 bytes/gates; only then resume active08. Do not rewrite accepted R1/A/T0 history.
+
+## Implementation checkpoint
+
+Plan packet committed as `075c827f4b1f81ad36430b2b2c1a84833a81557d` before
+production work. Finite owner/ABI audit remains inside the nine planned source/test
+surfaces; core publication is BSS constant-initialized with no guard symbol and no
+WW3D linkage. The existing camera registration additionally drives genuine native
+early-view/later-logic bootstrap through existing generated profiles. Headless
+runtime/identity/provider-removal3/3 and corrected camera1/1 pass. Frozen native
+exact12 is12/12 GCC/Clang,316.68/320.60s, category-clean; retain it after complete
+builds only through exact selected binary identity, otherwise rerun. All six
+complete builds pass and both native focus binary pairs are unchanged. Fresh
+minimal8 passes8/8 on both native toolchains; GCC sanitizer exact12 passes12/12
+in1359.97s and Clang sanitizer exact12 passes12/12 in1182.03s without sanitizer/
+validation categories. Frozen source/selected binary identities still match.
+Strict GCC/Clang pass12/12 in1362.56/1183.28s without sanitizer/leak categories.
+Generated validation physical4, established Vulkan GCC3/Clang2 and serial LAN4
+all six pass with clean category audits. All six fresh canonical suites pass
+297/297 with complete clean category audits and unchanged frozen source/binary
+hashes. Ledger, finite ABI/source, preserved-worktree and exact staged audits pass.
+The unchanged bounded redacted continuation crosses the logical-publication guard
+and stops at the existing T0A camera terrain-checkpoint 64MiB capacity predicate,
+before a Recording frame. Public stack classification proves admission returned;
+this is a separate active08 capacity boundary, not an R2 publication defect.
+Only fixed categories/public owners are retained, with clean teardown. No capacity,
+allocation, timeout or behavior change is authorized here. See the [final evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0r2.md).
+No prior provider acceptance substitutes for R2 final gates. Refresh T0 separately
+with these unchanged accepted bytes/gates before active08 architecture work.

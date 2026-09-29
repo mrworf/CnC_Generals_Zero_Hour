@@ -15,6 +15,8 @@ struct CameraStartupProviders {
 	RTS3DScene *scene=nullptr;
 	zh::original_runtime::OriginalGpuEdge *edge=nullptr;
 	std::uint64_t generation=0;
+	const GameLogic *logic_owner=nullptr;
+	UnsignedInt64 logic_token=0;
 } s_cameraStartupProviders;
 struct CameraStartupAccepted {
 	W3DView *owner = nullptr;
@@ -64,6 +66,11 @@ Real cameraHeightAround(Real x,Real y)
 	height=std::max(height,cameraGround(x+40,y+40));
 	return std::max(height,cameraGround(x-40,y+40));
 }
+}
+
+UnsignedInt64 W3DView::cameraStartupLogicToken(const void *owner) noexcept
+{
+	return owner && owner==s_cameraStartupProviders.owner ? s_cameraStartupProviders.logic_token : 0;
 }
 
 struct W3DView::CameraStartupAttempt {
@@ -135,14 +142,20 @@ struct W3DView::CameraStartupAttempt {
 	Bool full_update,prop_cull;
 	zh::renderer::DeviceTransactionToken token{};
 	bool active=false;
+	GameLogic::TerrainLogicPublication logical_publication;
 
 	static zh::original_runtime::OriginalGpuEdge &admit(W3DView &view)
 	{
 		auto *edge=zh::original_runtime::OriginalGpuEdge::active();
 		if (edge) edge->guard_nonstage_mutation();
 		const auto &providers=s_cameraStartupProviders;
+		const auto logical=GameLogic::peekTerrainLogicPublication(TheGameLogic,TheTerrainLogic);
+		cameraRequire(logical.owner && logical.provider && logical.token);
 		cameraRequire(providers.owner==&view && providers.camera==view.m_3DCamera &&
-			providers.display==TheDisplay && providers.logic==TheTerrainLogic &&
+			providers.display==TheDisplay &&
+			(!providers.logic ? !providers.logic_owner && !providers.logic_token :
+				providers.logic==logical.provider && providers.logic_owner==logical.owner &&
+				providers.logic_token==logical.token) &&
 			providers.scene==W3DDisplay::m_3DScene && providers.edge==edge && edge &&
 			providers.generation==edge->generation());
 		// Compare raw borrowed globals with the registered map/scene before
@@ -178,7 +191,8 @@ struct W3DView::CameraStartupAttempt {
 	explicit CameraStartupAttempt(W3DView &source)
 		:view(source),edge(admit(source)),terrain(*TheHeightMap),baseline(source),candidate(source),
 		 camera_baseline(*source.m_3DCamera),props(terrain.m_propBuffer),
-		 full_update(terrain.m_needFullUpdate),prop_cull(props ? props->m_doCull : FALSE)
+		 full_update(terrain.m_needFullUpdate),prop_cull(props ? props->m_doCull : FALSE),
+		 logical_publication(GameLogic::peekTerrainLogicPublication(TheGameLogic,TheTerrainLogic))
 	{
 		camera_baseline.restore(camera_candidate);
 		cameraRequire(terrain.m_numVertexBufferTiles>0 && terrain.m_numVertexBufferTiles<=4096 &&
@@ -314,10 +328,16 @@ struct W3DView::CameraStartupAttempt {
 			CameraState accepted(camera_candidate);
 			if (!change_camera) edge.record_source_state("original W3DView::updateView terrain center");
 			cameraStartupBoundary();
+			const auto logical=GameLogic::peekTerrainLogicPublication(TheGameLogic,TheTerrainLogic);
+			cameraRequire(logical.owner==logical_publication.owner && logical.provider==logical_publication.provider &&
+				logical.token && logical.token==logical_publication.token);
 			cameraRequire(edge.commit_device_transaction(token));active=false;
 			if (change_camera) {
 				candidate.publish(view);accepted.restore(*view.m_3DCamera);
-				s_cameraStartupAccepted={&view,view.m_3DCamera,&terrain,terrain.getMap(),TheTerrainLogic,
+				s_cameraStartupProviders.logic=logical_publication.provider;
+				s_cameraStartupProviders.logic_owner=logical_publication.owner;
+				s_cameraStartupProviders.logic_token=logical_publication.token;
+				s_cameraStartupAccepted={&view,view.m_3DCamera,&terrain,terrain.getMap(),logical_publication.provider,
 					&edge,edge.generation(),candidate.position,candidate.angle,candidate.pitch,candidate.zoom,
 					camera_candidate.Get_Transform()};
 			}

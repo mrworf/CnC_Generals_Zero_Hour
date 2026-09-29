@@ -773,6 +773,9 @@ int main()
 	TheLocomotorStore = &locomotors;
 	TheVictoryConditions = &victory;
 	TheGameLogic = &logic;
+	check(!GameLogic::peekTerrainLogicPublication(&logic, &terrain).token &&
+		!GameLogic::peekTerrainLogicPublication(NULL, NULL).token,
+		"headless absence fabricated initialized terrain publication");
 	TheRadar = radar;
 	TheAudio = &audio;
 	TheCDManager = &cdManager;
@@ -1197,6 +1200,8 @@ int main()
 	TheBuildAssistant = NULL;
 	TheAI = NULL;
 	TheTerrainLogic = NULL;
+	check(!GameLogic::peekTerrainLogicPublication(TheGameLogic, NULL).token,
+		"headless provider removal retained terrain publication");
 	TheScriptEngine = NULL;
 	TheTacticalView = NULL;
 	TheCommandList = NULL;

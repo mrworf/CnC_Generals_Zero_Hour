@@ -4,6 +4,7 @@
 #include "Common/ThingFactory.h"
 #include "GameClient/ClientRandomValue.h"
 #include "GameLogic/TerrainLogic.h"
+#include "GameLogic/GameLogic.h"
 #include "W3DDevice/GameClient/HeightMap.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
@@ -22,6 +23,7 @@
 #include "original_gpu_edge.h"
 #include "zh/renderer/recording_device.h"
 #include "zh/platform/bgfx_device.h"
+#include "zh/original_process.h"
 #include <SDL3/SDL.h>
 
 #include <algorithm>
@@ -59,6 +61,93 @@ bool nativeRayReference(BaseHeightMapRenderObjClass &terrain,RayCollisionTestCla
 }
 
 struct W3DCameraStartupGeneratedProbeAccess {
+	static void publicationRegistry()
+	{
+		using Registry=GameLogic::TerrainPublicationRegistry;
+		const auto allocations=zh::original_process::live_pool_allocations();
+		Registry registry;
+		auto *foreignOwner=reinterpret_cast<GameLogic *>(1);
+		auto *foreignProvider=reinterpret_cast<TerrainLogic *>(1);
+		require(!registry.peek(TheGameLogic,TheTerrainLogic).token &&
+			!registry.publish(nullptr,TheTerrainLogic) && !registry.publish(TheGameLogic,nullptr) &&
+			!registry.publish(foreignOwner,TheTerrainLogic) &&
+			!registry.publish(TheGameLogic,foreignProvider) && !registry.sequence,
+			"camera publication fresh/foreign rejection mutated registry");
+		const auto token=registry.publish(TheGameLogic,TheTerrainLogic);
+		require(token && registry.peek(TheGameLogic,TheTerrainLogic).token==token &&
+			!registry.publish(TheGameLogic,TheTerrainLogic) && registry.sequence==token &&
+			!registry.peek(foreignOwner,TheTerrainLogic).token &&
+			!registry.peek(TheGameLogic,foreignProvider).token &&
+			!registry.withdraw(foreignOwner,TheTerrainLogic,token) &&
+			!registry.withdraw(TheGameLogic,foreignProvider,token) &&
+			!registry.withdraw(TheGameLogic,TheTerrainLogic,token+1) && registry.current.token==token,
+			"camera publication duplicate/stale identity changed accepted registry");
+		require(registry.withdraw(TheGameLogic,TheTerrainLogic,token) &&
+			!registry.withdraw(TheGameLogic,TheTerrainLogic,token) &&
+			!registry.peek(TheGameLogic,TheTerrainLogic).token,
+			"camera publication withdrawal was not exact once");
+		const auto reused=registry.publish(TheGameLogic,TheTerrainLogic);
+		require(reused>token && !registry.withdraw(TheGameLogic,TheTerrainLogic,token) &&
+			registry.withdraw(TheGameLogic,TheTerrainLogic,reused),
+			"camera publication address reuse aliased retired token");
+		registry.sequence=~UnsignedInt64(0);
+		require(!registry.canPublish(TheGameLogic) && !registry.publish(TheGameLogic,TheTerrainLogic) &&
+			!registry.current.token && registry.sequence==~UnsignedInt64(0),
+			"camera publication exhaustion changed empty registry");
+		require(allocations==zh::original_process::live_pool_allocations(),
+			"camera publication graph consumed allocator storage");
+	}
+	static UnsignedInt64 binding(const W3DView &view)
+	{ return W3DView::cameraStartupLogicToken(&view); }
+	static void firstBinding(W3DView &view,zh::original_runtime::OriginalGpuEdge &edge,
+		zh::renderer::RecordingGpuDevice &device)
+	{
+		require(!binding(view),"camera view bound before first successful attempt");
+		const auto before=snapshot(view,edge,device);
+		device.fail_next_transaction_checkpoint();
+		require(rejected([&]{view.setAngleAndPitchToDefault();}) && !binding(view) &&
+			unchanged(before,snapshot(view,edge,device)),"camera first checkpoint published binding");
+		auto &registry=GameLogic::terrainPublicationRegistry();
+		const auto old=registry.peek(TheGameLogic,TheTerrainLogic);
+		require(old.token && registry.withdraw(old.owner,old.provider,old.token),
+			"camera generated first-attempt publication withdrawal rejected");
+		const auto token=registry.publish(TheGameLogic,TheTerrainLogic);
+		require(token>old.token,"camera first-attempt retry reused publication token");
+		unsigned faults=0;
+		for (Int ordinal=0;ordinal<64;++ordinal) {
+			view.setCameraStartupFaultOrdinal(ordinal);
+			const bool failed=rejected([&]{view.setAngleAndPitchToDefault();});
+			view.setCameraStartupFaultOrdinal(-1);
+			if (!failed) break;
+			++faults;
+			require(!binding(view) && unchanged(before,snapshot(view,edge,device)),
+				"camera first query/upload/commit published partial binding");
+			require(ordinal<63,"camera first-binding faults exceeded admitted bound");
+		}
+		require(faults && binding(view)==token,"camera first retry did not publish exact admitted token");
+		view.reset();
+		require(binding(view)==token && registry.peek(TheGameLogic,TheTerrainLogic).token==token,
+			"camera reset changed source publication/binding token");
+		view.setAngleAndPitchToDefault();
+	}
+	static void removedPublication(W3DView &view,zh::original_runtime::OriginalGpuEdge &edge,
+		zh::renderer::RecordingGpuDevice &device)
+	{
+		auto &registry=GameLogic::terrainPublicationRegistry();
+		const auto old=registry.peek(TheGameLogic,TheTerrainLogic);
+		const auto before=snapshot(view,edge,device);Coord3D target{30,40,0};
+		require(old.token==binding(view) && registry.withdraw(old.owner,old.provider,old.token),
+			"camera accepted publication withdrawal rejected");
+		require(rejected([&]{view.lookAt(&target);}) && unchanged(before,snapshot(view,edge,device)),
+			"camera removed provider changed accepted source/device/RNG");
+		const auto token=registry.publish(TheGameLogic,TheTerrainLogic);
+		require(token>old.token && rejected([&]{view.lookAt(&target);}) && binding(view)==old.token &&
+			unchanged(before,snapshot(view,edge,device)),"camera stale bound view silently rebound");
+	}
+	static zh::renderer::RecordingGpuDevice &recording(zh::original_runtime::OriginalGpuEdge &edge)
+	{ return dynamic_cast<zh::renderer::RecordingGpuDevice &>(edge.device_); }
+	static void restoreBootstrapPosition(W3DView &view,const Coord3D &position)
+	{ view.setPosition(&position); }
 	struct Snapshot {
 		std::vector<Real> values;
 		std::vector<std::vector<unsigned char>> cpu,backup,native;
@@ -156,6 +245,8 @@ struct W3DCameraStartupGeneratedProbeAccess {
 		};
 		substitute(TheTerrainLogic,static_cast<TerrainLogic *>(nullptr));
 		substitute(TheTerrainLogic,reinterpret_cast<TerrainLogic *>(1));
+		substitute(TheGameLogic,static_cast<GameLogic *>(nullptr));
+		substitute(TheGameLogic,reinterpret_cast<GameLogic *>(1));
 		substitute(TheDisplay,reinterpret_cast<Display *>(1));
 		substitute(TheTerrainVisual,reinterpret_cast<TerrainVisual *>(1));
 		substitute(TheHeightMap,reinterpret_cast<HeightMapRenderObjClass *>(1));
@@ -409,6 +500,41 @@ void physicalCamera(const char *map_path)
 }
 }
 
+extern "C" void zh_probe_camera_startup_bootstrap()
+{
+	const char *map_path=std::getenv("ZH_M22_CAMERA_STARTUP_MAP");
+	auto *edge=zh::original_runtime::OriginalGpuEdge::active();
+	auto *view=dynamic_cast<W3DView *>(TheTacticalView);
+	auto *visual=dynamic_cast<W3DTerrainVisual *>(TheTerrainVisual);
+	const auto published=GameLogic::peekTerrainLogicPublication(TheGameLogic,TheTerrainLogic);
+	require(map_path && edge && view && visual && published.token &&
+		!W3DCameraStartupGeneratedProbeAccess::binding(*view),
+		"camera genuine early-view/later-logic bootstrap identity rejected");
+	auto &device=W3DCameraStartupGeneratedProbeAccess::recording(*edge);
+	Coord3D initial;view->getPosition(&initial);
+	// Missing map must not turn explicit late source publication into binding.
+	const auto resources=device.resource_counts();const auto trace=device.snapshot();
+	require(rejected([&]{view->setAngleAndPitchToDefault();}) &&
+		!W3DCameraStartupGeneratedProbeAccess::binding(*view) && resources==device.resource_counts() &&
+		trace==device.snapshot(),"camera early native view rejected map published binding");
+	require(TheTerrainLogic->loadMap(AsciiString(map_path),TRUE) && visual->load(AsciiString(map_path)),
+		"camera genuine bootstrap generated map rejected");
+	W3DCameraStartupGeneratedProbeAccess::firstBinding(*view,*edge,device);
+	view->setZoomToDefault();Coord3D target{30,40,0};view->lookAt(&target);
+	view->initHeightForMap();view->setAngleAndPitchToDefault();view->setZoomToDefault();view->updateView();
+	W3DCameraStartupGeneratedProbeAccess::formula(*view);
+	const auto token=GameLogic::peekTerrainLogicPublication(TheGameLogic,TheTerrainLogic).token;
+	view->reset();visual->reset();
+	// Match native visual teardown: unlink the map owner before retiring backing.
+	W3DDisplay::m_3DScene->Remove_Render_Object(TheHeightMap);
+	TheHeightMap->freeMapResources();TheGameLogic->reset();
+	W3DCameraStartupGeneratedProbeAccess::restoreBootstrapPosition(*view,initial);
+	require(GameLogic::peekTerrainLogicPublication(TheGameLogic,TheTerrainLogic).token==token &&
+		W3DCameraStartupGeneratedProbeAccess::binding(*view)==token,
+		"camera native reset lost exact source/binding token");
+	std::puts("original camera deferred bootstrap: early-view=1 initialized-publication=1 first-failure=1 retry=1 reset-token=1");
+}
+
 extern "C" void zh_probe_camera_startup()
 {
 	const char *map_path=std::getenv("ZH_M22_CAMERA_STARTUP_MAP");
@@ -431,6 +557,7 @@ extern "C" void zh_probe_camera_startup()
 	require(TheTerrainLogic->loadMap(AsciiString(map_path),TRUE),"camera generated logical map rejected");
 	zh::renderer::RecordingGpuDevice device;
 	W3DCameraStartupGeneratedProbeAccess::freshCaches();
+	W3DCameraStartupGeneratedProbeAccess::publicationRegistry();
 	unsigned typed_faults=0;
 	for (Int generation=0;generation!=2;++generation) {
 		zh::original_runtime::OriginalGpuEdge edge(device);
@@ -447,6 +574,7 @@ extern "C" void zh_probe_camera_startup()
 			visual.init();require(visual.load(AsciiString(map_path)),"camera generated visual map rejected");
 			auto *view=new W3DView;TheTacticalView=view;view->init();display.attachView(view);
 			view->setWidth(32);view->setHeight(24);view->setDefaultView(0,0,1);
+			W3DCameraStartupGeneratedProbeAccess::firstBinding(*view,edge,device);
 			view->setAngleAndPitchToDefault();
 			require(view->getAngle()==0 && view->getPitch()==0,"camera defaults changed authored values");
 			Coord3D previous;view->getPosition(&previous);
@@ -502,6 +630,7 @@ extern "C" void zh_probe_camera_startup()
 			view->setAngleAndPitchToDefault();view->setZoomToDefault();view->updateView();
 			W3DCameraStartupGeneratedProbeAccess::formula(*view);
 			W3DCameraStartupGeneratedProbeAccess::modes(*view,edge,device);
+			W3DCameraStartupGeneratedProbeAccess::removedPublication(*view,edge,device);
 		}
 		require(!TheHeightMap && !TheTerrainRenderObject,"camera teardown retained terrain owner");
 		edge.release_source_buffers();

@@ -72,3 +72,11 @@ descriptor declares. Bind the exact declared sampled range, carry it through
 immutable journals/cache equality, and reject unknown exposed backing rather
 than generating a tail or changing sampler policy. Prove extreme minification
 with distinct authored mip colors on ordinary and deferred paths.
+
+Freeze shell acceptance runners before launching them. Bash may read later
+commands from the live file; editing a running script can corrupt its tail even
+after child gates pass. Correct helpers between runs, preserving completed logs.
+
+Filter private-input wrapper inspection to public command/guard summaries: even
+repository source can embed corpus selectors. Keep selectors, roots and raw
+input-derived output out of tool output and durable artifacts.

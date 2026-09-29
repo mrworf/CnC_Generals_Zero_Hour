@@ -37,6 +37,7 @@
 #include "Common/SubsystemInterface.h"
 #include "Common/GlobalData.h"
 #include "GameLogic/TerrainLogic.h"
+#include "GameLogic/GameLogic.h"
 #include "GameLogic/AIPathfind.h"
 #include "GameClient/CommandXlat.h"
 #include "W3DDevice/GameClient/W3DView.h"
@@ -117,7 +118,7 @@ void W3DView::init()
 		m_3DCamera = camera3d;
 		m_2DCamera = camera2d;
 		auto *edge=zh::original_runtime::OriginalGpuEdge::active();
-		s_cameraStartupProviders={this,camera3d,TheDisplay,TheTerrainLogic,W3DDisplay::m_3DScene,
+		s_cameraStartupProviders={this,camera3d,TheDisplay,NULL,W3DDisplay::m_3DScene,
 			edge,edge->generation()};
 	} catch (...) {
 		REF_PTR_RELEASE(camera2d);

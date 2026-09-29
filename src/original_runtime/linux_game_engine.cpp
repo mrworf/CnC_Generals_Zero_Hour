@@ -117,6 +117,7 @@ extern "C" void zh_probe_terrain_visual_map();
 extern "C" void zh_probe_terrain_shroud_projection();
 extern "C" void zh_probe_terrain_map_frame();
 extern "C" void zh_probe_camera_startup();
+extern "C" void zh_probe_camera_startup_bootstrap();
 extern "C" void zh_probe_prop_frame();
 extern "C" void zh_probe_terrain_tree_preparation();
 extern "C" void zh_probe_tree_module();
@@ -761,6 +762,12 @@ public:
 		if (generatedConstruction && !generatedScene)
 			throw std::runtime_error("original construction selector requires generated scene route");
 		GameEngine::init(argc, argv);
+#if defined(ZH_M22_FULL_DRAW_TEST)
+		if (!m_scenarioProfile && std::getenv("ZH_M22_CAMERA_STARTUP_PROFILE") &&
+			std::getenv("ZH_M22_ORIGINAL_FACTORY_PROFILE") &&
+			std::getenv("ZH_M22_RECORDING_FACTORY_PROFILE"))
+			zh_probe_camera_startup_bootstrap();
+#endif
 		if (configuredReset && !generatedScene)
 			throw std::runtime_error("original active-water reset next boundary pending");
 		if (m_boundedProfile)

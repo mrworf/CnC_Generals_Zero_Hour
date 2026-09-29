@@ -30,6 +30,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 #include <cstring>
 #include <stdexcept>
+#include <exception>
 
 #include "Common/AudioAffect.h"
 #include "Common/AudioHandleSpecialValues.h"
@@ -162,6 +163,44 @@ enum { OBJ_HASH_SIZE	= 8192 };
 
 /// The GameLogic singleton instance
 GameLogic *TheGameLogic = NULL;
+
+#if defined(__linux__)
+bool GameLogic::TerrainPublicationRegistry::canPublish(const void *owner) const noexcept
+{
+	return owner && owner == TheGameLogic && !current.token &&
+		sequence != ~UnsignedInt64(0);
+}
+UnsignedInt64 GameLogic::TerrainPublicationRegistry::publish(GameLogic *owner, TerrainLogic *provider) noexcept
+{
+	if (!canPublish(owner) || !provider || provider != TheTerrainLogic) return 0;
+	current = {owner, provider, ++sequence};
+	return current.token;
+}
+bool GameLogic::TerrainPublicationRegistry::withdraw(const void *owner, const void *provider, UnsignedInt64 token) noexcept
+{
+	if (!owner || !provider || !token || owner != current.owner ||
+		provider != current.provider || token != current.token) return false;
+	current = {};
+	return true;
+}
+GameLogic::TerrainLogicPublication GameLogic::TerrainPublicationRegistry::peek(const void *owner, const void *provider) const noexcept
+{
+	if (!current.token || !owner || !provider || owner != current.owner ||
+		provider != current.provider || owner != TheGameLogic || provider != TheTerrainLogic)
+		return {};
+	return current;
+}
+GameLogic::TerrainPublicationRegistry &GameLogic::terrainPublicationRegistry() noexcept
+{
+	static TerrainPublicationRegistry registry;
+	return registry;
+}
+GameLogic::TerrainLogicPublication GameLogic::peekTerrainLogicPublication(
+	const void *owner, const void *provider) noexcept
+{
+	return terrainPublicationRegistry().peek(owner, provider);
+}
+#endif
 
 static void findAndSelectCommandCenter(Object *obj, void* alreadyFound);
 
@@ -364,6 +403,14 @@ GameLogic::~GameLogic()
 	destroyAllObjectsImmediate();
 
 	// delete the logical terrain
+#if defined(__linux__)
+	auto &terrainPublication = terrainPublicationRegistry();
+	if (terrainPublication.current.owner == this) {
+		if (TheGameLogic != this || terrainPublication.current.provider != TheTerrainLogic ||
+			!terrainPublication.withdraw(this, TheTerrainLogic, terrainPublication.current.token))
+			std::terminate();
+	}
+#endif
 	delete TheTerrainLogic;
 	TheTerrainLogic = NULL;
 
@@ -394,6 +441,10 @@ GameLogic::~GameLogic()
 void GameLogic::init( void )
 {
 
+#if defined(__linux__)
+	if (!terrainPublicationRegistry().canPublish(this)) throw ERROR_INVALID_D3D;
+#endif
+
 	setFPMode();
 
 	/// @todo Clear object and destroy lists
@@ -412,7 +463,13 @@ void GameLogic::init( void )
 
 	// create the terrain logic
 	TheTerrainLogic = createTerrainLogic();
+#if defined(__linux__)
+	if (!TheTerrainLogic) throw ERROR_INVALID_D3D;
+#endif
 	TheTerrainLogic->init();
+#if defined(__linux__)
+	if (!terrainPublicationRegistry().publish(this, TheTerrainLogic)) throw ERROR_INVALID_D3D;
+#endif
 	TheTerrainLogic->setName("TheTerrainLogic");
 
 	// Create script engine system.
