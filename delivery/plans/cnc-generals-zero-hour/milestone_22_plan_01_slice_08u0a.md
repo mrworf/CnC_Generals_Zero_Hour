@@ -20,11 +20,15 @@ the original corpus is read-only and private.
 ## Admission and state contract
 
 The reached source graph is a nonempty manager registry even when its current
-particle count is zero. Admission must validate exact manager/provider/generation,
-registered template and attached Object/Drawable identities by callback-free
-membership before any dereference or update. Inspect every reachable child name,
-slave and per-particle attached-system edge as a bounded graph; reject missing,
-foreign, stale, cyclic, unsupported or indeterminate providers before mutation.
+particle count is zero. Admission must validate exact manager/provider/generation
+and registered template identity by callback-free membership before any
+dereference or update. Inspect every reachable child name, slave and
+per-particle attached-system edge as a bounded graph. A missing attachment ID
+has native semantics: update clears it, marks the system destroyed and may
+retire it that frame; this must remain candidate-rollbackable, not be rejected.
+A missing optional slave/per-particle attached template is skipped as native
+source does. Reject foreign/malformed provider identity, recursive cycles,
+unsupported types or indeterminate graph state before mutation.
 The reached family is `PARTICLE` with `ALPHA` shader. Other particle types,
 shader families, external drawable effects, sound-bearing/irreversible callbacks,
 and unknown template branches fail closed; no substitute output or empty-registry
@@ -80,11 +84,12 @@ than adding another leaf.
 Register `original_w3d_particle_update` and
 `original_w3d_particle_update_provider_removal` using generated assets and the
 existing full-probe/Python map lifecycle. Positive: nonempty stopped plus active
-systems, real Object/Drawable attachment, shroud/terrain and source-order
-transform, one-burst/zero-burst, priority eviction, finite wind/lifetime and
+systems, real Object/Drawable attachment, missing-attachment native retirement,
+missing optional child skip, shroud/terrain and source-order transform,
+one-burst/zero-burst, priority eviction, finite wind/lifetime and
 same-logic-frame skip. Compare fresh-equivalent generation success state and
 next GameClient RNG value, exact system ID and intrusive-list order. Negative:
-null/foreign/stale templates/providers/attachments, all unsupported families,
+null/foreign/stale templates/providers, malformed attachment metadata, all unsupported families,
 missing local player, child cycle/depth/node/byte/count/ID bound+1, active-frame
 overlap, reset/removal and faults at every candidate allocation, constructor,
 slave, particle link, eviction and list publication. Each fault proves exact
