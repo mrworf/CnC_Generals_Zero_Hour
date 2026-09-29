@@ -1,6 +1,6 @@
 # M22 plan 01 slice 08T0: bounded camera-startup aggregate
 
-Status: pending accepted08T0R1 and08T0A; evidence-only, no executable change.
+Status: complete in this aggregate commit; evidence-only, no executable change.
 Plan transaction parent: `b6f95598fde2d9b8f5b8ec68bcc9b20290ee71cb`.
 
 ## Outcome, dependencies and scope
@@ -22,6 +22,13 @@ audits. Do not rerun unchanged evidence-only composition or alter executables.
 Record native default/constrained camera, ground/elevated lookAt, typed camera/
 terrain rollback/retry, reset/provider removal and total teardown acceptance.
 All explicit excluded camera modes and later producers remain closed.
+
+Accepted R1: `cbb65e0924ba3c1b6660e6c3193717e9e9a4a123`.
+Accepted A: `c62160a8964291a2e218b915bbc7ccf7cb0af0e6`.
+Both are verified current ancestors; own/source/selected-binary hashes remain
+unchanged. [Aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0.md)
+records the exact fresh A gates and approved qualified common-gate provenance.
+All fourteen preserved active08/renderer paths remain unstaged and byte-identical.
 
 ## Readiness, errors and continuation
 
