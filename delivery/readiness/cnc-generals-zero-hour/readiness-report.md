@@ -1,5 +1,58 @@
 # Milestone readiness report — renderer migration
 
+## M22 08U0 particle source-frame correction — 2026-09-29
+
+1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. The approved two-leaf packet is
+   internally implementation-ready; authorized host Vulkan/strict/LAN gates
+   remain fresh acceptance dependencies, not assumed results.
+2. Scope/evidence: public M22 source, accepted T0R3 and fixed-category live
+   checkpoint at parent `821c0367b01f0425e269c09b105d96bc876a214f`.
+   Registered systems are nonempty while current particle count is zero;
+   direct Audio/FXList dispatch is absent from the reached ParticleSys branch.
+   No private input metadata or raw debugger output is retained.
+3. Automatic prerequisites: U0-01/04/06 accepted owners, existing tools/tests,
+   empty index and fourteen-path preserved worktree. New A/B test registrations
+   and final gated commands are explicit outputs, not fabricated entry results.
+4. Graph: accepted T0R3/S0/C2D/D0/B0/B1/R0C/M20→A bounded reversible CPU
+   candidate→B source-order point/smudge frame and joint commit→U0 evidence-only
+   aggregate→active08→09. A's candidate is not finalized before B succeeds.
+   No cycle, reopen of accepted slices or third owner/split is authorized.
+5. Finite branch inventory: current Linux checkpoint/renderer reject any
+   nonempty registry. Native update can mutate RNG, IDs, lists, attachments and
+   spawned particle/system lifetime; native output can acquire textures and
+   emit point/streak/volume/smudge/weather work. Only reached PARTICLE/ALPHA is
+   a positive target; all other families are explicit fail-closed negatives.
+6. Per-slice readiness: A has checked64-depth/65536-node/64MiB admission and
+   exact owner snapshots/fault/retry/reset controls; B has native512-point
+   grouping, complete frame/journal/texture/shader/smudge rollback and physical
+   pixel controls. These are planned contracts, not accepted behavior.
+7. Authorization: no external write, new selector, gameplay/audio rewrite,
+   generic allocator/container redesign or private asset admission. Original
+   retail roots/symlink remain unchanged and read-only.
+8. Host action: existing authorized graphical escalation, Khronos validation,
+   strict `ASAN_OPTIONS=detect_leaks=1`, LAN and six serial canonicals are
+   required on final source. If unavailable, report exact unblock condition;
+   never substitute or infer from historical R3 acceptance.
+9. Commands: accepted ancestry/status, tool and four-preset checks, public
+   source/registration inventory and plan/diff audit. No behavior/build/retail
+   gate has run for A or B. After registration, parse CTest JSON to ensure all
+   exact IDs select nonempty and run the plans' focused/strict/physical commands.
+10. Clean-environment simulation: committed providers and generated map assets
+    →A bounded CPU candidate→B admitted frame→fresh final gates→separate A/B
+    commits→evidence aggregate→unchanged bounded private redacted continuation.
+    No warm cache, private input or unimplemented forward provider is needed at
+    implementation entry.
+11. Files: U0/A/B plans, governing index, prerequisite manifest and this report.
+    Fourteen pre-existing active08/renderer paths are untouched/unstaged; no
+    executable/test/ledger mutation belongs to the plan-only commit.
+12. Remaining entry blockers: none. Stop if a new independent provider, audio
+    effect or unsupported branch becomes required; no further split without an
+    explicit architecture checkpoint.
+13. Next: exact-stage only these six metadata paths, review staged diff/privacy,
+    commit `delivery: M22 plan particle source frame`, then implement A before B.
+
+No A/B acceptance or retail-scene success is claimed by this readiness packet.
+
 ## M22 08T0R3 bounded camera-capacity correction — 2026-09-29
 
 1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. Approved single-leaf packet is

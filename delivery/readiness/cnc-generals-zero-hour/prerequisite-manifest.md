@@ -1,5 +1,31 @@
 # Milestone Prerequisite Manifest
 
+## M22 08U0 particle source-frame correction — 2026-09-29
+
+Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.
+Product ID: `cnc-generals-zero-hour`; audited parent:
+`821c0367b01f0425e269c09b105d96bc876a214f`.
+Authority: approved two-leaf CPU→GPU particle correction after finite public
+read-only source/live-category audit. Order: accepted08T0R3 and accepted
+providers →08U0A→08U0B→08U0 evidence aggregate→active08→09. The original
+corpus and symlink are read-only; this packet contains public categories only.
+Plan-only transaction subject: `delivery: M22 plan particle source frame`.
+
+| ID | Description | Consumers | Classification | Current status | Proposed provider | Class | Verification | Commands executed | Files changed | Blocking | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| M22-U0-01 | Accepted display/frame, asset/texture, terrain/scene, GameClient and allocator providers | A/B | Already satisfied | Public dependency graph and accepted T0R3 commit inspected; no historical source reopened | accepted08T0R3,08S0,08P0C2D0/C2D,08P0C2B0/B1,08R0C,08L2R1,M20 | AUTO | Git ancestry, exact source order and ledger ownership | git rev-parse/status; rg/sed public sources and accepted plans | U0/A/B, governing index, manifest/report | Entry if an accepted provider is lost | FACT: accepted D0/C2D frame journal and B0/B1 texture ownership exist; neither currently admits populated particles |
+| M22-U0-02 | Bounded CPU system/particle candidate, exact RNG/ID/list/attachment/lifecycle rollback | A; B transitively | Owned by the consuming milestone | Plan-ready output; no implementation or acceptance claimed | 08U0A | AUTO | Positive/negative, graph/depth/node/byte bound+1, every fallible publication, retry/reset/two generations/provider withdrawal and no audio | Public source audit and fixed-category live checkpoint only; generated tests pending | Same six planning artifacts | B production and active08 | FACT: 213 registered systems/zero current particles; update may mutate state and spawn particles |
+| M22-U0-03 | Transactional admitted point/texture/shader/smudge frame jointly commits CPU candidate | B; aggregate/08 | Owned by the consuming milestone | A acceptance required first; generated/physical evidence pending | 08U0B | AUTO | Exact source order/512 group limit, texture/point/shader state, smudge, every frame fault, same-phase rollback/retry, pixels and provider teardown | Public scene/W3DParticleSys source audit only; no B gate run | Same six planning artifacts | Aggregate and active08 | FACT: Linux W3DParticleSys empty-smudge branch rejects any populated system registry |
+| M22-U0-04 | Existing clean-checkout generators, six builds and registered adjacent controls | A/B | Already satisfied | Four native presets, six build configurations, full-probe/generated-map owner and existing particle/terrain/tree tests resolve; new IDs are A/B outputs | PRE-002 and accepted test owners | AUTO | Tool/preset resolution; CTest JSON must prove exact selections after registration | cmake --list-presets; rg CMakeLists/source; planned CTest JSON check | Same six planning artifacts | Entry if unavailable | FACT: no new retail fixture, package, warm cache or selector is required |
+| M22-U0-05 | Strict LSan, graphical validation Vulkan, LAN and canonical acceptance | A/B final gates | External dependency | Previously available host route; freshly verify for changed final source, no reuse inferred | PRE-012/PRE-016 authorized host route | USER_ACTION | Exact focused/strict, B physical four, minimal8, established Vulkan, serial LAN4 and six complete builds/canonicals | Not run in plan-only phase | Same six planning artifacts | Acceptance if unavailable, not implementation entry | FACT: no substitute driver/waiver; original inputs remain separate from generated tests |
+| M22-U0-06 | Preserved active08/renderer work and private redacted continuation | Planning/commits; later08 | Already satisfied | Fourteen pre-existing dirty paths inventoried; index clean; plan packet stages only its own six metadata paths | Existing Git/privacy contract and PRE-008 | AUTO | Exact staged diff and preserved-path hash/status; fixed-category bounded wrapper only after generated B gates | git status/diff; staged audit before commit | Same six planning artifacts | Commit/continuation if ownership fails | FACT: original symlink/corpus unchanged; no private names/paths/bytes/hashes/raw logs/images |
+
+No M0, unresolved product decision, new required bootstrap service or extra
+leaf. CPU candidate and GPU frame are separately testable yet join at one
+success-only commit. Unsupported branches remain explicit negatives rather than
+implicit producer admissions. A/B implementation and physical/retail results
+are future outputs, not readiness evidence.
+
 ## M22 08T0R3 bounded camera-capacity correction — 2026-09-29
 
 Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.

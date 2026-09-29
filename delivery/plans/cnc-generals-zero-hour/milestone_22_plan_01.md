@@ -349,10 +349,27 @@ The production Linux original-engine path renders representative campaign and sk
 | 08T0R2 | [milestone_22_plan_01_slice_08t0r2.md](milestone_22_plan_01_slice_08t0r2.md) | Exact GameLogic-owned initialized TerrainLogic publication/token and successful-attempt deferred W3DView binding across native early-view/later-logic startup. | accepted08T0R1 cbb65e09,08T0A c62160a8 and original GameLogic/lifecycle providers | complete: six builds, exact12 four/strict12 both, minimal8 both, physical4, Vulkan3/2, LAN4 all six, six fresh canonical297/297; redacted logical-publication guard closure classified | this slice commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0r2.md) |
 | 08T0 | [milestone_22_plan_01_slice_08t0.md](milestone_22_plan_01_slice_08t0.md) | Bounded camera-startup evidence-only aggregate. | accepted08T0R1 cbb65e09,08T0A c62160a8,08T0R2 24d61a50 | complete: separate evidence-only refresh; unchanged R2 six-build/focus/strict/physical/common and six fresh canonical297/297 evidence; logical-publication guard crossed | historical8e13acdc; refresh this slice commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0.md) |
 | 08T0R3 | [milestone_22_plan_01_slice_08t0r3.md](milestone_22_plan_01_slice_08t0r3.md) | Public1024-tile typed camera checkpoint and named camera-idle704MiB combined device capacity; ordinary/frame/default and per-upload64MiB unchanged. | accepted08T0 cf4ce431 and its accepted terrain/D0/prop providers | complete: six builds, exact17 four/strict17 both, physical4, minimal8, Vulkan3/2, LAN4 all six, six fresh canonical297/297; redacted camera guard crossed | this slice commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0r3.md) |
-| 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | accepted slices 08F, 08G2, 08H, 08I, 08J, 08J1, 08K, 08L, 08M0, 08N0, 08P0, 08Q0, 08R0; refreshed08S0; refreshed08T0 including R2; accepted08T0R3 | active trial preserved; R3 camera guard crossed; next fixed public stop is display immutable-tree frame checkpoint admission | existing continuation/correction checkpoints plus accepted R2/T0/R3 | |
+| 08U0A | [milestone_22_plan_01_slice_08u0a.md](milestone_22_plan_01_slice_08u0a.md) | Bounded reversible particle system/particle CPU update candidate with exact RNG/ID/list/attachment rollback; no draw. | accepted08T0R3,08S0,08P0C2D0,08L2R1 and M20 lifecycle | planned; public nonempty registry checkpoint classified, production closed until plan commit | `delivery: M22 08U0A own bounded particle update` | [planned evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08u0a.md) |
+| 08U0B | [milestone_22_plan_01_slice_08u0b.md](milestone_22_plan_01_slice_08u0b.md) | Transactional admitted source-order alpha point/smudge output; CPU candidate commits only with the successful GPU frame. | accepted08U0A and C2D/D0, B0/B1, S0 and R0C providers | planned; A acceptance required before production | `delivery: M22 08U0B render particle source frame` | [planned evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08u0b.md) |
+| 08U0 | [milestone_22_plan_01_slice_08u0.md](milestone_22_plan_01_slice_08u0.md) | Evidence-only particle CPU/GPU source-frame aggregate before retail continuation. | accepted08U0A/B | planned; no executable aggregate work | `delivery: M22 08U0 close particle source frame` | [planned evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08u0.md) |
+| 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | accepted slices 08F, 08G2, 08H, 08I, 08J, 08J1, 08K, 08L, 08M0, 08N0, 08P0, 08Q0, 08R0; refreshed08S0; refreshed08T0 including R2; accepted08T0R3; planned08U0A→B→aggregate | active trial preserved; R3 camera guard crossed; next fixed public stop is particle system admission within display immutable-frame checkpoint | existing continuation/correction checkpoints; U0 pending | |
 | 09 | [milestone_22_plan_01_slice_09.md](milestone_22_plan_01_slice_09.md) | Same retail scenes present on validation-enabled public bgfx Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 08, PRE-012, PRE-016 | pending | | |
 
 ## Cross-slice concerns
+
+Approved particle checkpoint after accepted08T0R3: live frame has a nonempty
+source-system registry despite zero current particles. Native display updates
+particle systems after view transforms and before scene rendering; current Linux
+C2D checkpoint and empty-smudge renderer reject that registry. Exactly two
+dependency-ordered corrective leaves, 08U0A bounded CPU candidate and 08U0B
+transactional alpha point/texture/shader/smudge source-frame output, then an
+evidence-only 08U0 aggregate, precede active08. A must remain reversible until
+B's successful frame commit, so a frame fault cannot advance RNG, system IDs or
+intrusive lists twice. Explicit unsupported type/shader/weather/audio branches
+fail closed. The original retail corpus is private/read-only; fixed categories
+only. Commit the plan/readiness packet before production and do not add a split
+without architecture authority. All fourteen active08/renderer paths stay
+unstaged and unchanged by this planning checkpoint.
 
 Approved post-T0 capacity correction: exactly08T0R3 follows accepted T0 and
 precedes active08. Public HeightMap32x32 tile capacity defines the source
