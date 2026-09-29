@@ -348,10 +348,21 @@ The production Linux original-engine path renders representative campaign and sk
 | 08T0A | [milestone_22_plan_01_slice_08t0a.md](milestone_22_plan_01_slice_08t0a.md) | Bounded native default/constrained camera startup, ground/elevated lookAt and exact typed camera/terrain idle rollback. | accepted08T0R1, 08S0, 07D/07E0C/07FA, 08I1/I2, 08P0C2D0, 08P0C2B/D and 08R0A/C | complete: fresh exact12 four configs, strict12 both and validation-enabled physical4; unchanged six-build/common/canonical provenance verified | this slice commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0a.md) |
 | 08T0R2 | [milestone_22_plan_01_slice_08t0r2.md](milestone_22_plan_01_slice_08t0r2.md) | Exact GameLogic-owned initialized TerrainLogic publication/token and successful-attempt deferred W3DView binding across native early-view/later-logic startup. | accepted08T0R1 cbb65e09,08T0A c62160a8 and original GameLogic/lifecycle providers | complete: six builds, exact12 four/strict12 both, minimal8 both, physical4, Vulkan3/2, LAN4 all six, six fresh canonical297/297; redacted logical-publication guard closure classified | this slice commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0r2.md) |
 | 08T0 | [milestone_22_plan_01_slice_08t0.md](milestone_22_plan_01_slice_08t0.md) | Bounded camera-startup evidence-only aggregate. | accepted08T0R1 cbb65e09,08T0A c62160a8,08T0R2 24d61a50 | complete: separate evidence-only refresh; unchanged R2 six-build/focus/strict/physical/common and six fresh canonical297/297 evidence; logical-publication guard crossed | historical8e13acdc; refresh this slice commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0.md) |
-| 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | accepted slices 08F, 08G2, 08H, 08I, 08J, 08J1, 08K, 08L, 08M0, 08N0, 08P0, 08Q0, 08R0; refreshed08S0; refreshed08T0 including R2 | active trial preserved; R2 guard crossed; existing64MiB camera checkpoint capacity stops before Recording and awaits read-only ownership/architecture audit | existing continuation/correction checkpoints plus accepted R2/T0 | |
+| 08T0R3 | [milestone_22_plan_01_slice_08t0r3.md](milestone_22_plan_01_slice_08t0r3.md) | Public1024-tile typed camera checkpoint and named camera-idle704MiB combined device capacity; ordinary/frame/default and per-upload64MiB unchanged. | accepted08T0 cf4ce431 and its accepted terrain/D0/prop providers | implementation-ready: approved one-leaf plan/readiness; executable gates pending | pending | |
+| 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | accepted slices 08F, 08G2, 08H, 08I, 08J, 08J1, 08K, 08L, 08M0, 08N0, 08P0, 08Q0, 08R0; refreshed08S0; refreshed08T0 including R2; 08T0R3 | active trial preserved; R2 guard crossed; approved camera-capacity correction must close before bounded continuation | existing continuation/correction checkpoints plus accepted R2/T0; R3 pending | |
 | 09 | [milestone_22_plan_01_slice_09.md](milestone_22_plan_01_slice_09.md) | Same retail scenes present on validation-enabled public bgfx Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 08, PRE-012, PRE-016 | pending | | |
 
 ## Cross-slice concerns
+
+Approved post-T0 capacity correction: exactly08T0R3 follows accepted T0 and
+precedes active08. Public HeightMap32x32 tile capacity defines the source
+checkpoint ceiling; named camera-idle704MiB derives bgfx double shadow/written
+checkpoint, full upload and explicitly charged64MiB auxiliary allowance. Preserve
+ordinary/default/frame transaction and individual-upload64MiB limits. No targeted
+checkpoint/COW redesign, native patch, new owner or split. Commit plan/readiness
+before implementation; require generated255/256/1024/1025/full/no-update,
+combined-budget/fault/retry/provider/reset/physical gates. Keep all fourteen
+active08/renderer dirty paths untouched; private continuation remains read-only.
 
 Approved post-T0 bootstrap checkpoint: native GameClient/InGameUI initializes
 W3DView before GameLogic creates/initializes TerrainLogic. The accepted A sidecar

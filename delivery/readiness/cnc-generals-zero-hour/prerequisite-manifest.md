@@ -1,5 +1,28 @@
 # Milestone Prerequisite Manifest
 
+## M22 08T0R3 bounded camera-capacity correction — 2026-09-29
+
+Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.
+Product ID: `cnc-generals-zero-hour`; audited parent:
+`cf4ce431adc6aba98a07f2083badb6b905e1501b`.
+Source authority: explicit approved single-leaf capacity architecture after the
+finite public camera/HeightMap/Recording/bgfx accounting audit. Planning
+transaction: exact plan-only commit identified by
+`delivery: M22 plan bounded camera startup capacity`.
+Order: accepted08T0/providers →08T0R3 →active08 →09.
+Earlier accepted packets remain historical. Last audit:2026-09-29.
+
+| ID | Description | Consumers | Classification | Current status | Proposed provider | Class | Verification | Commands executed | Files changed | Blocking | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| M22-T0R3-01 | Accepted camera/TerrainLogic publication, bounded terrain, prop and device transaction owners | R3 | Already satisfied | T0/R2 ancestry and finite public accounting/default contracts verified | accepted08T0 cf4ce431; R1/A/R2, 08I1/I2, 08R0A/C, 08P0C2D0 and their providers | AUTO | Ancestry/index; public32x32 source and retained-baseline/reservation/upload formulas | git log/merge-base; sed/rg; compiled public size inspection | R3 plan/index and manifest/report | Entry if provider lost | FACT: source64MiB rejects256; max1024 payload128MiB; bgfx retains shadow+written and double baseline |
+| M22-T0R3-02 | Named idle-only capacity and exact source/device bounded rollback | R3; active08 | Owned by the consuming milestone | Implementation/test output pending, not entry prerequisite | 08T0R3 | AUTO | 255/256/1024/1025, full/no-update,704MiB profile and combined budgets, faults/retry/reset/provider/two generations/physical | Not run; plan-only formula audit | Same four artifacts | Active08/acceptance | FACT:704MiB is derived5x128MiB+64MiB; actual auxiliary charge must fit, ordinary/frame/per-upload64MiB unchanged |
+| M22-T0R3-03 | Existing offline tools, full-probe/generated-map and renderer witnesses | R3 | Already satisfied | Tools/four presets resolve; exact17 registered in all six CTest manifests | PRE-002 and accepted camera/renderer test owners | AUTO | CMake/tool resolution and authoritative CTest JSON | command -v; cmake --list-presets; ctest --show-only=json-v1 | Same four artifacts | Entry if unavailable | FACT: no new fixture/selector/patch/package or retail input required |
+| M22-T0R3-04 | Validation-enabled physical Vulkan, strict LSan, graphical session and serial LAN | R3 acceptance | Requires user action | Existing authorized facilities; freshly verify at later acceptance, no result inferred | PRE-012/PRE-016 host/session | USER_ACTION | Exact17 four/strict both, camera and renderer physical four, minimal/Vulkan/LAN and six fresh builds/canonicals | Not run by planning | Same four artifacts | Acceptance if unavailable, not implementation entry | FACT: existing supported host escalation/wrappers; no substitution or waiver |
+| M22-T0R3-05 | Preserved active08/renderer and read-only private continuation boundary | R3 staging; active08 | Already satisfied | Empty index and fourteen-path source-only hash baseline recorded; existing unchanged120-second wrapper available | Existing transaction/privacy contract and PRE-008 | AUTO | Exact staged ownership/hash review; fixed-category guard closure after generated gates | git status/diff; source-only sha256sum | Same four artifacts | Commit/continuation if ownership fails | FACT: original inputs/symlink unchanged; public capacity stop classified, not retail acceptance |
+
+No M0, forward provider, new service/credential, native patch or unresolved owner.
+Capacity changes are R3 outputs. No additional split without architecture checkpoint.
+
 ## M22 08T0R2 deferred logical-terrain publication — 2026-09-29
 
 Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.

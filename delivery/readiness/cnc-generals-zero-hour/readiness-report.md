@@ -1,5 +1,50 @@
 # Milestone readiness report — renderer migration
 
+## M22 08T0R3 bounded camera-capacity correction — 2026-09-29
+
+1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. Approved single-leaf packet is
+   internally executable; existing host facilities are explicit fresh later
+   acceptance gates, not assumed passing/currently available results.
+2. Scope/evidence: R3/governing M22 at parent
+   `cf4ce431adc6aba98a07f2083badb6b905e1501b`. FACT: public32x32 tile cap,
+   131072-byte tile, typed double copy and backend retained/reserved/upload formulas.
+   No private dimensions/metadata/raw log/image or inferred retail success.
+3. Automatic work: M22-T0R3-01/03/05 ancestry/source/default/formula, tools,
+   exact17 registration and fourteen-path preservation checks. Four documentation
+   artifacts only; no executable/test/ledger/provider/bootstrap mutation.
+4. Confirmation gates: None inside approved named capacity owner. No targeted/COW
+   redesign, native patch, timeout change or further split without checkpoint.
+5. User actions: None at implementation entry. Existing authorized host escalation
+   supplies M22-T0R3-04 later physical/strict/LAN acceptance. If unavailable,
+   report exact recovery condition and retain the original gate, never substitute.
+6. Missing/unresolved: None. Profile/source ceiling and extended generated controls
+   are R3 outputs; no future capability is a required entry provider.
+7. Graph: acceptedT0/providers --01→R3 --02→active08→09;
+   tools --03→R3; host --04→acceptance; privacy/preservation --05→exact staging.
+8. Declared/proposed order agree after approved insertion after T0. No backward
+   edge/cycle, accepted aggregate rewrite, new owner or speculative milestone.
+9. M0: Not required; this is the existing bounded camera/device capacity boundary.
+10. Per-slice: R3 providers/tools/registered fixture owners verified; public ceiling,
+    named idle profile/default preservation and fault commands explicit. Active08
+    waits for accepted R3. Historical accepted T0/R2 evidence is not reopened.
+11. Clean-environment simulation: committed providers/generators →1024-tile source
+    and bounded actual device accounting →fresh generated/physical acceptance →
+    exact R3 commit →existing redacted continuation. No warm cache/private input,
+    new service or undeclared tool at implementation entry. Host/retail acceptance
+    is real later execution, not a simulated passing result.
+12. Commands: current HEAD/index/status and accepted ancestry; tools/four presets;
+    parsed six CTest JSON manifests contain all17 exact controls. Public source
+    and compiled sizeof formula yields268,511,264 source/738,197,504 device bytes.
+    Fourteen preserved source hashes recorded. No behavior/build/full gate run.
+13. Files: new R3 plan, governing index/dependency note, existing prerequisite
+    manifest and readiness report. All fourteen prior dirty paths stay unchanged
+    and unstaged, including active08 plan/ledger and renderer diagnostic.
+14. Remaining entry blockers: None. Fresh full acceptance and exact staged/privacy
+    checks required; no camera/retail capacity closure presumed from planning.
+15. Next: exact-stage/review/commit only these four metadata paths as
+    `delivery: M22 plan bounded camera startup capacity`, then implement R3
+    in /home/ha/projects/CnC_Generals_Zero_Hour. No production before checkpoint.
+
 ## M22 08T0R2 deferred logical-terrain publication — 2026-09-29
 
 1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. The approved single correction is
