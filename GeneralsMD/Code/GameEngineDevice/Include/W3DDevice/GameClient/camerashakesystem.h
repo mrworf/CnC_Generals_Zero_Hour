@@ -54,6 +54,10 @@ class CameraClass;
 */
 class CameraShakeSystemClass
 {
+#if defined(__linux__)
+	// The native out-of-class pool specialization names the protected node.
+	template<class T, int BlockSize> friend class AutoPoolClass;
+#endif
 public:
 
 	CameraShakeSystemClass(void);
@@ -110,4 +114,3 @@ extern CameraShakeSystemClass CameraShakerSystem; //WST 11/12/2002 This is the n
 
 
 #endif //CAMERASHAKESYSTEM_H
-

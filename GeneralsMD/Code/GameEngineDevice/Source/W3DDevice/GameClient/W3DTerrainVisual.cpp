@@ -64,6 +64,16 @@ static zh::original_runtime::OriginalGpuEdge *s_propAdmissionEdge = NULL;
 static UnsignedInt64 s_propAdmissionGeneration = 0;
 static W3DAssetManager *s_propAdmissionAssets = NULL;
 static RTS3DScene *s_propAdmissionScene = NULL;
+Bool W3DTerrainVisual::cameraStartupOwnerMatches(const TerrainVisual *address,
+	const void *terrain)
+{
+	const auto *owner=s_emptyTerrainVisual;
+	return owner && address==owner && TheTerrainVisual==owner &&
+		terrain && terrain==owner->m_terrainRenderObject && TheHeightMap==terrain &&
+		TheTerrainRenderObject==terrain && owner->m_logicHeightMap &&
+		owner->m_terrainRenderObject->getMap()==owner->m_logicHeightMap &&
+		W3DDisplay::m_3DScene && owner->m_terrainRenderObject->Peek_Scene()==W3DDisplay::m_3DScene;
+}
 void W3DTerrainVisual::admitPropTerrainRemoval(void *address)
 {
 	auto *owner = s_emptyTerrainVisual;

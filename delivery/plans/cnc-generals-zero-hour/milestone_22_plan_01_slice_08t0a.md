@@ -1,6 +1,6 @@
 # M22 plan 01 slice 08T0A: bounded native camera startup
 
-Status: implementation in progress; acceptance waits for approved08T0R1.
+Status: complete in this slice commit; exact12/strict12/physical4 accepted.
 Plan transaction parent: `b6f95598fde2d9b8f5b8ec68bcc9b20290ee71cb`.
 Plan provenance: exact commit `delivery: M22 plan bounded camera startup`.
 
@@ -23,7 +23,7 @@ Requires accepted08T0R1 exact declared sampled-mip range and accepted 08S0
 07D/07E0C/07FA camera/display/traversal, 08I1/I2 bounded terrain tiles,
 08P0C2D0 idle/device rollback, 08P0C2B shroud, 08P0C2D frame rollback,
 and 08R0A/C prop lifecycle/checkpoint. These are providers, not reopened slices.
-Preserve the same thirteen active08/renderer dirty paths and shared ledger/engine
+Preserve the existing active08/renderer dirty paths and shared ledger/engine
 hunks. Original corpus/symlink are read-only; generated owned inputs alone supply
 this leaf's behavior witnesses. Authorization/security changes are not applicable:
 this is the existing local source-engine path, with no new external access.
@@ -181,3 +181,29 @@ Readiness checks: exact S0/R1 ancestry, cmake --list-presets/tool resolution,
 parsed six CTest manifests and public source/typed-owner inspection. Stage only
 owned implementation/ledger/plan/evidence/index hunks after clean final gates.
 Implementation subject: `delivery: M22 08T0A own bounded native camera startup`.
+
+## Approved final-source proportional provenance
+
+Accepted08T0R1 commit `cbb65e0924ba3c1b6660e6c3193717e9e9a4a123` validated
+the exact frozen R1+A+active08 executable composition. Its six complete builds,
+common minimal/Vulkan/LAN and six canonical297/297 gates may be reused only if
+this final A audit changes no executable/test bytes. The final finite audit made
+no such change. The approved private terrain-identity peek correction changed
+only its parameter to `const void *`, avoiding an invalid typed upcast before
+raw-identity rejection. All181 static archives and R1's36 selected executables
+were byte-identical across that correction; all six full-probes were relinked,
+the exact camera control passed/category-clean on all six configurations, and
+the failed Clang sanitizer canonical was replaced by fresh297/297/category-clean.
+The preceding296/297 run remains superseded diagnostic evidence, not acceptance.
+
+A still executes its own fresh exact12 in four focused configurations, strict12
+both with exact `ASAN_OPTIONS=detect_leaks=1`, and validation-enabled generated
+physical4. Freeze source/test/probe hashes before those gates and verify unchanged
+afterward. Any further executable/test delta invalidates affected reused gates
+and requires proportional revalidation before acceptance. No timeout, workload,
+camera/filter/sampler or assertion change is authorized by this reuse.
+
+Final own gates pass: exact12 GCC/Clang debug and both sanitizers, strict12 both
+under the required host contract, and validation-enabled generated physical all
+four configurations. Source/test/selected-binary hashes are unchanged after the
+queue, and dependency-ledger checks pass. See the [final evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0a.md).

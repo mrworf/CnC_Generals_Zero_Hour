@@ -165,6 +165,14 @@ endforeach()
 set(model_draw_generated "${CMAKE_CURRENT_BINARY_DIR}/generated/W3DModelDraw.cpp")
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
 file(WRITE "${model_draw_generated}" "${model_draw_linux}")
+# The native shaker body needs only its own declarations. Its historical
+# terrain/D3DX includes are unused and include Windows macro surfaces. Keep the
+# entire implementation body verbatim behind the canonical CPU declaration.
+file(READ "${client_root}/camerashakesystem.cpp" camera_shaker_linux)
+string(REGEX REPLACE "#include[^\n]*" "" camera_shaker_linux "${camera_shaker_linux}")
+string(PREPEND camera_shaker_linux "#include \"PreRTS.h\"\n#include \"matrix3d.h\"\n#include \"W3DDevice/GameClient/camerashakesystem.h\"\n")
+set(camera_shaker_generated "${CMAKE_CURRENT_BINARY_DIR}/generated/camerashakesystem.cpp")
+file(WRITE "${camera_shaker_generated}" "${camera_shaker_linux}")
 add_library(zh_original_w3d_draw_full OBJECT EXCLUDE_FROM_ALL
   "${draw_root}/W3DDefaultDraw.cpp"
   "${model_draw_generated}"
@@ -181,6 +189,7 @@ add_library(zh_original_w3d_draw_full OBJECT EXCLUDE_FROM_ALL
   "${client_root}/W3DFileSystem.cpp"
   "${client_root}/W3DDisplay.cpp"
   "${client_root}/W3DView.cpp"
+  "${camera_shaker_generated}"
   "${client_root}/BaseHeightMap.cpp"
   "${client_root}/HeightMap.cpp"
   "${client_root}/Water/W3DWater.cpp"

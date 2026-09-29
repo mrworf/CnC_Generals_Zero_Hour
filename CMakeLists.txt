@@ -1124,6 +1124,7 @@ add_executable(zh_original_w3d_full_probe
   tests/original_rendering/terrain_visual_map_probe.cpp
   tests/original_rendering/terrain_shroud_projection_probe.cpp
 	 tests/original_rendering/terrain_map_frame_probe.cpp
+	 tests/original_rendering/camera_startup_probe.cpp
 	 tests/original_rendering/prop_frame_probe.cpp
 	 tests/original_rendering/terrain_tree_preparation_probe.cpp
 	 tests/original_rendering/tree_module_probe.cpp
@@ -1146,6 +1147,24 @@ add_executable(zh_original_w3d_full_probe
   $<TARGET_OBJECTS:zh_original_config_spine>
   $<TARGET_OBJECTS:zh_original_w3d_factory_full>
   $<TARGET_OBJECTS:zh_original_w3d_draw_full>)
+# Compile the original, unbounded source ray body only as a generated-input
+# equivalence reference. It is not reachable from the shipping camera owner.
+file(READ "${PROJECT_SOURCE_DIR}/GeneralsMD/Code/GameEngineDevice/Source/W3DDevice/GameClient/BaseHeightMap.cpp" camera_ray_reference)
+string(FIND "${camera_ray_reference}" "bool BaseHeightMapRenderObjClass::Cast_Ray(RayCollisionTestClass & raytest)\n{" camera_ray_start)
+if(camera_ray_start EQUAL -1)
+  message(FATAL_ERROR "Native camera ray reference signature missing")
+endif()
+string(SUBSTRING "${camera_ray_reference}" ${camera_ray_start} -1 camera_ray_reference)
+string(FIND "${camera_ray_reference}" "\n\treturn hit;\n}" camera_ray_end)
+if(camera_ray_end EQUAL -1)
+  message(FATAL_ERROR "Native camera ray reference terminator missing")
+endif()
+math(EXPR camera_ray_length "${camera_ray_end}+15")
+string(SUBSTRING "${camera_ray_reference}" 0 ${camera_ray_length} camera_ray_reference)
+string(REPLACE "bool BaseHeightMapRenderObjClass::Cast_Ray(RayCollisionTestClass & raytest)" "" camera_ray_reference "${camera_ray_reference}")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/m22-camera-reference")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/m22-camera-reference/native_ray.inc" "${camera_ray_reference}")
+target_include_directories(zh_original_w3d_full_probe PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/m22-camera-reference")
 set_source_files_properties(tests/original_rendering/retail_material_probe.cpp PROPERTIES
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
@@ -1180,6 +1199,9 @@ set_source_files_properties(tests/original_rendering/terrain_shroud_projection_p
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/terrain_map_frame_probe.cpp PROPERTIES
+  COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
+  COMPILE_OPTIONS "-fpermissive")
+set_source_files_properties(tests/original_rendering/camera_startup_probe.cpp PROPERTIES
   COMPILE_DEFINITIONS "ZH_WW3D_CPU_ONLY=1;NDEBUG"
   COMPILE_OPTIONS "-fpermissive")
 set_source_files_properties(tests/original_rendering/prop_frame_probe.cpp PROPERTIES
@@ -3138,6 +3160,13 @@ if(ZH_BUILD_TESTS)
     --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
     --executable "$<TARGET_FILE:zh_original_w3d_full_probe>")
   set_tests_properties(original_w3d_terrain_map_frame PROPERTIES
+    LABELS "original-rendering;renderer-contract;source-identity;negative")
+  add_test(NAME original_w3d_camera_startup COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_camera_startup.py"
+    --source-root "${CMAKE_CURRENT_SOURCE_DIR}"
+    --executable "$<TARGET_FILE:zh_original_w3d_full_probe>"
+    --asset-producer "$<TARGET_FILE:original_w3d_cpu_graph_tests>")
+  set_tests_properties(original_w3d_camera_startup PROPERTIES
     LABELS "original-rendering;renderer-contract;source-identity;negative")
   add_test(NAME original_w3d_prop_frame COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/original_rendering/test_w3d_prop_frame.py"

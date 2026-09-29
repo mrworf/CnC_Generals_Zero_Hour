@@ -108,6 +108,11 @@ CameraClass::CameraClass(void) :
 {
 	Set_Transform(Matrix3D(1));
 	Set_View_Plane(DEG_TO_RADF(50.0f));
+#if defined(__linux__)
+	// Define typed cache backing for exact Linux startup checkpoint copies.
+	Update_Frustum();
+	FrustumValid = false;
+#endif
 }
 
 

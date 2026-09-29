@@ -234,6 +234,14 @@ public:
 
 
 private:
+#if defined(ZH_WW3D_CPU_ONLY)
+	struct CameraStartupAttempt;
+	void applyCameraStartup(Int operation, const Coord3D *position = NULL);
+	Bool castCameraStartupRay(const Vector3 &start, const Vector3 &end, Vector3 *point) const;
+	static Bool cameraStartupRayWorkAllowed(UnsignedInt64 visits);
+	static void setCameraStartupFaultOrdinal(Int ordinal);
+	friend struct W3DCameraStartupGeneratedProbeAccess;
+#endif
 
 	CameraClass *m_3DCamera;												///< camera representation for 3D scene
 	CameraClass *m_2DCamera;												///< camera for UI overlayed on top of 3D scene

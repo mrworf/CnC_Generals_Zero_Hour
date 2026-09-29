@@ -106,6 +106,10 @@ public:
 */
 class CameraClass : public RenderObjClass
 {
+#if defined(__linux__)
+	friend class W3DView;
+	friend struct W3DCameraStartupGeneratedProbeAccess;
+#endif
 public:
 
 	enum ProjectionType

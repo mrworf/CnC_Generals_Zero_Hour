@@ -116,6 +116,7 @@ extern "C" void zh_probe_terrain_scene_attachment();
 extern "C" void zh_probe_terrain_visual_map();
 extern "C" void zh_probe_terrain_shroud_projection();
 extern "C" void zh_probe_terrain_map_frame();
+extern "C" void zh_probe_camera_startup();
 extern "C" void zh_probe_prop_frame();
 extern "C" void zh_probe_terrain_tree_preparation();
 extern "C" void zh_probe_tree_module();
@@ -933,6 +934,7 @@ public:
 			if (std::getenv("ZH_M22_TERRAIN_VISUAL_MAP_PROFILE")) zh_probe_terrain_visual_map();
 			if (std::getenv("ZH_M22_TERRAIN_SHROUD_PROJECTION_PROFILE")) zh_probe_terrain_shroud_projection();
 			if (std::getenv("ZH_M22_TERRAIN_MAP_FRAME_PROFILE")) zh_probe_terrain_map_frame();
+			if (std::getenv("ZH_M22_CAMERA_STARTUP_PROFILE")) zh_probe_camera_startup();
 			if (std::getenv("ZH_M22_PROP_FRAME_PROFILE")) zh_probe_prop_frame();
 			if (std::getenv("ZH_M22_TREE_PREPARATION_PROFILE")) zh_probe_terrain_tree_preparation();
 			if (std::getenv("ZH_M22_TREE_MODULE_PROFILE")) zh_probe_tree_module();

@@ -19,8 +19,10 @@ class TextureClass;
 class TextureFilterClass;
 class W3DShroud;
 class HeightMapRenderObjClass;
+class W3DView;
 struct W3DFrameGeneratedProbeAccess;
 struct W3DTerrainPropLifecycleProbeAccess;
+struct W3DCameraStartupGeneratedProbeAccess;
 
 namespace zh::original_runtime {
 
@@ -28,6 +30,7 @@ namespace zh::original_runtime {
 // buffers. Never selects geometry, material, shader or pass order.
 class OriginalGpuEdge final {
 	friend struct ::W3DTerrainPropLifecycleProbeAccess;
+	friend struct ::W3DCameraStartupGeneratedProbeAccess;
 public:
     enum class CombinerOp : std::uint8_t { disable, select_first, select_second, modulate, add };
     enum class CombinerArg : std::uint8_t { diffuse, current, texture };
@@ -306,6 +309,7 @@ public:
 
 private:
     friend class ::W3DShroud;
+    friend class ::W3DView;
     friend class ::HeightMapRenderObjClass;
     friend struct ::W3DFrameGeneratedProbeAccess;
     void mark_tree_source_terrain();

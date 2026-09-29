@@ -152,6 +152,10 @@ scorchmarks and intersection tests.
 */
 class BaseHeightMapRenderObjClass : public RenderObjClass, public DX8_CleanupHook, public Snapshot
 {	
+#if defined(ZH_WW3D_CPU_ONLY)
+	friend class W3DView;
+	friend struct W3DCameraStartupGeneratedProbeAccess;
+#endif
 
 public:
 

@@ -174,6 +174,10 @@ private:
 // RenderObjClass definition
 class RenderObjClass : public RefCountClass , public PersistClass, public MultiListObjectClass
 {
+#if defined(__linux__)
+	friend class W3DView;
+	friend struct W3DCameraStartupGeneratedProbeAccess;
+#endif
 #if defined(ZH_WW3D_CPU_ONLY)
 	friend class ww3d_prop::FrameGraph;
 #endif

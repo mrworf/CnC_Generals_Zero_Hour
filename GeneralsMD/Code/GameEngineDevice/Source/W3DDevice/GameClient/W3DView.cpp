@@ -36,15 +36,29 @@
 #include "PreRTS.h"
 #include "Common/SubsystemInterface.h"
 #include "Common/GlobalData.h"
+#include "GameLogic/TerrainLogic.h"
+#include "GameLogic/AIPathfind.h"
 #include "GameClient/CommandXlat.h"
 #include "W3DDevice/GameClient/W3DView.h"
 #include "W3DDevice/GameClient/W3DDisplay.h"
 #include "W3DDevice/GameClient/W3DScene.h"
 #include "W3DDevice/GameClient/W3DTerrainVisual.h"
 #include "W3DDevice/GameClient/HeightMap.h"
+#include "W3DDevice/GameClient/W3DPropBuffer.h"
+#include "W3DDevice/GameClient/camerashakesystem.h"
 #include "WW3D2/ww3d.h"
+#include "WW3D2/coltest.h"
+#include "colmath.h"
+#include "tri.h"
 #include "original_gpu_edge.h"
 #include "OriginalW3DDeviceUnavailable.h"
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <limits>
+#include <vector>
+
+#include "w3d_camera_startup_cpu.inc"
 
 Int TheW3DFrameLengthInMsec = 1000 / LOGICFRAMES_PER_SECOND;
 static const Int MAX_REQUEST_CACHE_SIZE = 40;
@@ -54,6 +68,11 @@ W3DView::W3DView()
 	m_3DCamera = NULL;
 	m_2DCamera = NULL;
 	m_groundLevel = 10.0f;
+	m_pos.z = 0;
+	m_cameraOffset.set(0,0,0);
+	m_cameraConstraint.lo.x=m_cameraConstraint.lo.y=0;
+	m_cameraConstraint.hi.x=m_cameraConstraint.hi.y=0;
+	m_doingRotateCamera=m_doingPitchCamera=m_doingZoomCamera=m_doingScriptedCameraLock=FALSE;
 	m_viewFilterMode = FM_VIEW_DEFAULT;
 	m_viewFilter = FT_VIEW_DEFAULT;
 	m_isWireFrameEnabled = m_nextWireFrameEnabled = FALSE;
@@ -72,6 +91,8 @@ W3DView::W3DView()
 
 W3DView::~W3DView()
 {
+	if (s_cameraStartupAccepted.owner==this) s_cameraStartupAccepted={};
+	if (s_cameraStartupProviders.owner==this) s_cameraStartupProviders={};
 	REF_PTR_RELEASE(m_2DCamera);
 	REF_PTR_RELEASE(m_3DCamera);
 }
@@ -95,6 +116,9 @@ void W3DView::init()
 		camera2d->Set_Clip_Planes(0.995f, 2.0f);
 		m_3DCamera = camera3d;
 		m_2DCamera = camera2d;
+		auto *edge=zh::original_runtime::OriginalGpuEdge::active();
+		s_cameraStartupProviders={this,camera3d,TheDisplay,TheTerrainLogic,W3DDisplay::m_3DScene,
+			edge,edge->generation()};
 	} catch (...) {
 		REF_PTR_RELEASE(camera2d);
 		REF_PTR_RELEASE(camera3d);
@@ -104,12 +128,18 @@ void W3DView::init()
 
 void W3DView::reset()
 {
+	auto *edge=zh::original_runtime::OriginalGpuEdge::active();
+	if (edge) edge->guard_nonstage_mutation();
+	if (s_cameraStartupAccepted.owner==this)
+		cameraRequire(edge && edge->idle_preparation_ready() &&
+			!edge->tree_source_frame_pending() && !WW3D::Is_Rendering());
 	if (!m_3DCamera || !m_2DCamera)
 		throw OriginalW3DDeviceUnavailable("original view reset before init");
 	View::reset();
 	m_timeMultiplier = 1;
 	m_viewFilterMode = FM_VIEW_DEFAULT;
 	m_viewFilter = FT_VIEW_DEFAULT;
+	if (s_cameraStartupAccepted.owner==this) s_cameraStartupAccepted={};
 }
 
 void W3DView::drawView() { DRAW(); }
@@ -128,6 +158,20 @@ void W3DView::draw()
 #define ZH_VIEW_PENDING() throw OriginalW3DDeviceUnavailable("original view tactical method pending")
 void W3DView::updateView()
 {
+	auto *edge=zh::original_runtime::OriginalGpuEdge::active();
+	if (edge) edge->guard_nonstage_mutation();
+	const auto &accepted=s_cameraStartupAccepted;
+	if (accepted.owner==this) {
+		CameraStartupAttempt attempt(*this); // Validates raw registered identities first.
+		cameraRequire(accepted.camera==m_3DCamera && accepted.terrain==TheHeightMap &&
+			accepted.map==TheHeightMap->getMap() && accepted.logic==TheTerrainLogic &&
+			accepted.edge==edge && accepted.generation==edge->generation() &&
+			accepted.position.x==m_pos.x && accepted.position.y==m_pos.y && accepted.position.z==m_pos.z &&
+			accepted.angle==m_angle && accepted.pitch==m_pitchAngle && accepted.zoom==m_zoom &&
+			cameraSame(accepted.transform,m_3DCamera->Get_Transform()));
+		attempt.commit(false);
+		return;
+	}
 	auto *display = dynamic_cast<W3DDisplay *>(TheDisplay);
 	if (!display || TheTacticalView != this || display->getFirstView() != this ||
 		getNextView() || !zh::original_runtime::OriginalGpuEdge::active() ||
@@ -135,7 +179,7 @@ void W3DView::updateView()
 		!dynamic_cast<W3DTerrainVisual *>(TheTerrainVisual) ||
 		!TheTerrainRenderObject || !TheHeightMap ||
 		getCameraLock() != INVALID_ID || m_doingMoveCameraOnWaypointPath ||
-		m_pos.x != 0 || m_pos.y != 0 || m_angle != 0 || m_pitchAngle != 0 ||
+		(m_pos.x != 0 || m_pos.y != 0 || m_angle != 0 || m_pitchAngle != 0) ||
 		m_viewFilterMode != FM_VIEW_DEFAULT || m_viewFilter != FT_VIEW_DEFAULT ||
 		m_isWireFrameEnabled || m_nextWireFrameEnabled)
 		throw OriginalW3DDeviceUnavailable("original tactical map or camera update pending");
@@ -196,9 +240,9 @@ void W3DView::scrollBy(Coord2D*) { ZH_VIEW_PENDING(); }
 void W3DView::forceRedraw() { ZH_VIEW_PENDING(); }
 void W3DView::setAngle(Real) { ZH_VIEW_PENDING(); }
 void W3DView::setPitch(Real) { ZH_VIEW_PENDING(); }
-void W3DView::setAngleAndPitchToDefault() { ZH_VIEW_PENDING(); }
-void W3DView::lookAt(const Coord3D*) { ZH_VIEW_PENDING(); }
-void W3DView::initHeightForMap() { ZH_VIEW_PENDING(); }
+void W3DView::setAngleAndPitchToDefault() { applyCameraStartup(0); }
+void W3DView::lookAt(const Coord3D *position) { applyCameraStartup(1,position); }
+void W3DView::initHeightForMap() { applyCameraStartup(2); }
 void W3DView::moveCameraTo(const Coord3D*, Int, Int, Bool, Real, Real) { ZH_VIEW_PENDING(); }
 void W3DView::moveCameraAlongWaypointPath(Waypoint*, Int, Int, Bool, Real, Real) { ZH_VIEW_PENDING(); }
 Bool W3DView::isCameraMovementFinished() { ZH_VIEW_PENDING(); }
@@ -235,7 +279,7 @@ void W3DView::zoomCamera(Real, Int, Real, Real) { ZH_VIEW_PENDING(); }
 void W3DView::pitchCamera(Real, Int, Real, Real) { ZH_VIEW_PENDING(); }
 void W3DView::setHeightAboveGround(Real) { ZH_VIEW_PENDING(); }
 void W3DView::setZoom(Real) { ZH_VIEW_PENDING(); }
-void W3DView::setZoomToDefault() { ZH_VIEW_PENDING(); }
+void W3DView::setZoomToDefault() { applyCameraStartup(3); }
 void W3DView::setFieldOfView(Real) { ZH_VIEW_PENDING(); }
 View::WorldToScreenReturn W3DView::worldToScreenTriReturn(const Coord3D*, ICoord2D*) { ZH_VIEW_PENDING(); }
 void W3DView::screenToWorld(const ICoord2D*, Coord3D*) { ZH_VIEW_PENDING(); }

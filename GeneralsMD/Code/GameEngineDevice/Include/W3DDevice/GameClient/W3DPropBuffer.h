@@ -100,6 +100,8 @@ class W3DPropBuffer : Snapshot
 {	
 friend class BaseHeightMapRenderObjClass;
 #if defined(__linux__)
+	friend class W3DView;
+	friend struct W3DCameraStartupGeneratedProbeAccess;
 friend struct W3DPropOwnerProbeAccess;
 friend struct W3DTerrainPropLifecycleProbeAccess;
 #endif

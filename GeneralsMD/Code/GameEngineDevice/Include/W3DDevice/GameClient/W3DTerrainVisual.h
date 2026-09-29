@@ -165,6 +165,8 @@ public:
 
 protected:
 #if defined(ZH_WW3D_CPU_ONLY)
+	friend class W3DView;
+	static Bool cameraStartupOwnerMatches(const TerrainVisual *address, const void *terrain);
 	void releaseEmptyOwners();
 	static void admitPropTerrainRemoval(void *owner);
 #endif

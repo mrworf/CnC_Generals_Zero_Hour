@@ -41,6 +41,11 @@ Exercise faults inside every callback family, not only after binding completes.
 Restore both ownership links without cleanup notifications before construction
 owners withdraw registries/modules and release backing storage.
 
+Compare borrowed provider identities as raw addresses before derived-to-base
+conversion or RTTI. A malformed derived pointer can trigger undefined behavior
+during implicit argument conversion, before an otherwise safe admission check.
+Exercise malformed-pointer negatives under both sanitizers.
+
 A failed constructor does not run that class's destructor. For cloned graphs,
 guard each acquired ref/array before the next fallible copy helper, publish only
 after complete construction, and test immediate residuals plus same-owner retry.
