@@ -1,6 +1,6 @@
 # M22 plan 01 slice 08T0A: bounded native camera startup
 
-Status: implementation-ready; plan-only checkpoint precedes executable work.
+Status: implementation in progress; acceptance waits for approved08T0R1.
 Plan transaction parent: `b6f95598fde2d9b8f5b8ec68bcc9b20290ee71cb`.
 Plan provenance: exact commit `delivery: M22 plan bounded camera startup`.
 
@@ -11,9 +11,15 @@ pitch and zoom, constrained nonmoving transform, initial ground/elevated lookAt,
 and map-height setup. The accepted camera then drives the existing stationary
 terrain/shroud/scene frame without adapter camera replacement. One coherent
 corrective leaf is approved, followed by evidence-only 08T0, before active08.
+Approved sampling checkpoint inserts exactly one independent backend leaf
+[08T0R1](milestone_22_plan_01_slice_08t0r1.md) before A acceptance. Native
+generated physical diagnosis found source3/native12 mip exposure, not a camera
+formula discrepancy. Preserve all current A source/test bytes unstaged while R1
+is planned/delivered separately; no fixture camera/filter/assertion correction.
 No additional split or owner admission without an architecture checkpoint.
 
-Requires accepted 08S0 (`b6f95598fde2d9b8f5b8ec68bcc9b20290ee71cb`),
+Requires accepted08T0R1 exact declared sampled-mip range and accepted 08S0
+(`b6f95598fde2d9b8f5b8ec68bcc9b20290ee71cb`),
 07D/07E0C/07FA camera/display/traversal, 08I1/I2 bounded terrain tiles,
 08P0C2D0 idle/device rollback, 08P0C2B shroud, 08P0C2D frame rollback,
 and 08R0A/C prop lifecycle/checkpoint. These are providers, not reopened slices.

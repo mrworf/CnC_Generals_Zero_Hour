@@ -1,5 +1,49 @@
 # Milestone readiness report — renderer migration
 
+## M22 08T0R1 sampled-mip correction — 2026-09-28
+
+1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. The approved single backend leaf
+   is internally executable before camera acceptance; existing authorized host
+   facilities remain fresh later acceptance gates, not inferred clean results.
+2. Scope/evidence: R1/A/T0/governing M22 at parent9eefa8ec75a8c810717fd983377f188d2fc01931.
+   FACT: exact descriptor/upload3 versus actual native12 and14 source draws,
+   with authored nonblack/opaque texels and matching camera/uploaded transforms.
+   INFERENCE: unspecified tail sampling explains black minification; controlled
+   mip colors must prove correction. No private input metadata/log/image retained.
+3. Automatic work: M22-T0R1-01/03/05 source/provider/pin/tool/test inventory and
+   seven plan/readiness artifacts only. No executable/fixture/bootstrap mutation.
+4. Confirmation gates: None inside approved R1. No further split, mip synthesis,
+   camera/filter/sampler-policy or device-loss change without new checkpoint.
+5. User actions: None at implementation entry. Existing graphical host escalation
+   supplies M22-T0R1-04 physical/Debug+Release/strict/LAN gates; unavailable host
+   capabilities require exact external recovery, not a weakened/substitute gate.
+6. Missing/unresolved: None. Immutable range representation/preflight/replay and
+   new CPU registration are R1 outputs; all existing required providers are accepted.
+7. Graph: accepted mip/M30/B1/B2A/B2B --01→R1 --02→A→T0→active08→09;
+   pins/tools --03→R1; host --04→acceptance; preserved transaction --05→staging.
+8. Declared/proposed order agree after authorized insertion. No cycle/backward
+   dependency; T0A executable/test work stays in progress, not silently accepted.
+9. M0: Not required. This is an existing backend semantic correction, not bootstrap.
+10. Per-slice: R1 providers/pins/test owners are entry-ready; exact binding/view,
+    unknown-level/COW/lease/error/recreate contracts and commands are explicit.
+    A final acceptance waits for R1; T0 composes both accepted leaves without code;
+    active08 remains gated by T0. New eighth CPU ID is implementation output.
+11. Clean-environment simulation: pinned public source+reviewed patches→bounded
+    range CPU/generated physical proof→exact backend commit→unchanged camera
+    acceptance→evidence aggregate→existing read-only continuation. No retail or
+    warm cache required by R1, no future private API or undeclared service.
+12. Commands: provider/index/source audit, current31-path/empty-index/hash baseline,
+    existing tools/preset/CTest and exact applied-native patch/pin/license checks.
+    Read-only generated diagnosis is discovery, not a passing implementation gate.
+13. Files: newR1 plan, refined A/T0 plans, governing index, owned active08 dependency
+    hunk and existing manifest/report. Preserve every other active08/T0A source,
+    test, ledger and renderer hunk unstaged and byte-identical.
+14. Remaining implementation blockers: None. Required fresh acceptance and
+    strict category/patch/privacy/exact staging remain; no presumed pixel closure.
+15. Next: exact-stage/review/commit only this packet as
+    `delivery: M22 plan declared sampled-mip range`, then implement R1 in
+    /home/ha/projects/CnC_Generals_Zero_Hour while T0A/active08 remain unstaged.
+
 ## M22 08T0 bounded camera-startup packet — 2026-09-28
 
 1. Overall: READY_WITH_EXTERNAL_DEPENDENCIES. Approved single camera leaf is

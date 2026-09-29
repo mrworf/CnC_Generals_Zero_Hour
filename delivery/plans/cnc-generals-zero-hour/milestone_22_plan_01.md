@@ -344,12 +344,25 @@ The production Linux original-engine path renders representative campaign and sk
 | 08S0B | [milestone_22_plan_01_slice_08s0b.md](milestone_22_plan_01_slice_08s0b.md) | Native display descriptor/model preload and exact temporary GameClient Drawable lifetime through failure/retry/teardown; no eager upload. | accepted 08S0A, 08L2R1, 08N0, 08P0C4, 08Q0, 08R0 and display/file/texture owners | complete: six frozen builds/canonical suites295/295, exact14 focus/strict, physical/minimal/Vulkan/LAN and owned-ledger acceptance | this slice commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08s0b_asset_preload.md) |
 | 08S0R1 | [milestone_22_plan_01_slice_08s0r1.md](milestone_22_plan_01_slice_08s0r1.md) | Callback-free bounded accepted prototype/default regular-texture hit observation before full import snapshot; native normalization, preflight, nested visibility and cold rollback unchanged. | accepted 08S0A/B and their original providers | accepted: six builds, exact14 native/sanitizer/strict, physical4, minimal8, Vulkan3/2, LAN4 all six, six canonical295/295; unchanged-bound61.587s timeout closure only | this slice commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08s0r1_preload_cache_hits.md) |
 | 08S0 | [milestone_22_plan_01_slice_08s0.md](milestone_22_plan_01_slice_08s0.md) | Native preload/import evidence-only aggregate. | accepted 08S0A/B and 08S0R1 a9a1d1ad | complete: separate evidence-only refresh; unchanged R1 final-source gates, six canonical295/295 and61.587s unchanged-bound preload timeout closure | historical cb64cf6f; refresh this slice commit | [evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08s0_native_preload.md) |
-| 08T0A | [milestone_22_plan_01_slice_08t0a.md](milestone_22_plan_01_slice_08t0a.md) | Bounded native default/constrained camera startup, ground/elevated lookAt and exact typed camera/terrain idle rollback. | accepted 08S0, 07D/07E0C/07FA, 08I1/I2, 08P0C2D0, 08P0C2B/D and 08R0A/C | implementation-ready; plan-only/readiness checkpoint precedes source work | planned corrective leaf | |
-| 08T0 | [milestone_22_plan_01_slice_08t0.md](milestone_22_plan_01_slice_08t0.md) | Bounded camera-startup evidence-only aggregate. | accepted 08T0A | pending accepted A; unchanged gate reuse only | planned aggregate | |
+| 08T0R1 | [milestone_22_plan_01_slice_08t0r1.md](milestone_22_plan_01_slice_08t0r1.md) | Exact declared sampled-mip range across ordinary bgfx binding and immutable deferred manifest/replay, preserving authored bytes/COW/generation ownership. | accepted05B2B1, M30, 08P0C2D0B1/B2A/B2B | implementation-ready; approved independent backend correction, plan-only/readiness checkpoint first | planned corrective leaf | |
+| 08T0A | [milestone_22_plan_01_slice_08t0a.md](milestone_22_plan_01_slice_08t0a.md) | Bounded native default/constrained camera startup, ground/elevated lookAt and exact typed camera/terrain idle rollback. | accepted08T0R1, 08S0, 07D/07E0C/07FA, 08I1/I2, 08P0C2D0, 08P0C2B/D and 08R0A/C | in progress; executable/test bytes preserved unstaged while R1 is delivered | planned camera leaf | |
+| 08T0 | [milestone_22_plan_01_slice_08t0.md](milestone_22_plan_01_slice_08t0.md) | Bounded camera-startup evidence-only aggregate. | accepted08T0R1 and08T0A | pending accepted R1/A; unchanged gate reuse only | planned aggregate | |
 | 08 | [milestone_22_plan_01_slice_08.md](milestone_22_plan_01_slice_08.md) | Original campaign/skirmish consumers load and record complete retail scene families with failure/reset and provider-removal evidence. | accepted slices 08F, 08G2, 08H, 08I, 08J, 08J1, 08K, 08L, 08M0, 08N0, 08P0, 08Q0, 08R0; refreshed 08S0; 08T0 | active trial preserved; bounded camera-startup dependency before continuation | plans: existing slice08 continuation/correction checkpoints plus accepted R0/S0/R1 and approved T0 | |
 | 09 | [milestone_22_plan_01_slice_09.md](milestone_22_plan_01_slice_09.md) | Same retail scenes present on validation-enabled public bgfx Vulkan, survive resize/recreation, yield reviewed visuals and pass cumulative acceptance. | slice 08, PRE-012, PRE-016 | pending | | |
 
 ## Cross-slice concerns
+
+Approved native-camera physical checkpoint: a generated source atlas declares/
+uploads3 mips while its public-bgfx native texture exposes12. All14 source
+draws bind that unrestricted atlas. Camera formula/upload and authored nonblack
+texels agree; undeclared minification is a concrete backend contract defect,
+not authority to change camera/fixture/filter. Exactly one dependency-first
+08T0R1 binds the declared range through the existing public subresource API
+for ordinary draws and immutable deferred replay before T0A acceptance. Preserve
+COW/unknown-level/lease/recreation, single/full-chain and fail-closed-format
+contracts; no invented mip tail, sampler-policy or device-loss redesign.
+T0A and active08 source/test/ledger/renderer trial hunks remain unstaged; commit
+the plan/readiness packet first. No further split without a new checkpoint.
 
 The post-C1 source audit separates the exact `Trees.nvv` packed-attribute
 program and shroud-stage owner from outside-frame preparation and source-order

@@ -1,5 +1,29 @@
 # Milestone Prerequisite Manifest
 
+## M22 08T0R1 sampled-mip correction — 2026-09-28
+
+Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.
+Product ID: `cnc-generals-zero-hour`; audited parent:
+`9eefa8ec75a8c810717fd983377f188d2fc01931`.
+Source authority: explicit one-leaf backend architecture checkpoint after the
+bounded public texture/manifest audit. Planning transaction: exact plan-only
+commit identified by `delivery: M22 plan declared sampled-mip range`.
+Order: accepted mip/COW/native admission/journal providers →08T0R1 →08T0A
+→evidence-only08T0 →active08 →09. Prior T0 packet is historical and refined by
+this approved dependency; accepted providers are not reopened. Last audit2026-09-28.
+
+| ID | Description | Consumers | Classification | Current status | Proposed provider | Class | Verification | Commands executed | Files changed | Blocking | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| M22-T0R1-01 | Original declared mip/upload lifetime, public backend and exact candidate/journal/native replay ownership | R1 | Already satisfied | Indexed accepted providers and public finite source graph verified | 05B2B1, M30, 08P0C2D0B1/B2A/B2B | AUTO | Source/contract/index ancestry and existing range API/cache/reservation audit | sed/rg; git ancestry | R1/A/T0/governing/owned08 plans; manifest/report | Entry if provider lost | FACT: ordinary and COW boolean create allocate full chain; native subresource API exists |
+| M22-T0R1-02 | Exact logical sampled range and immutable native replay correction | R1; A/T0/08 | Owned by the consuming milestone | Plan-ready; implementation/acceptance output pending | 08T0R1 | AUTO | CPU exact range rejection/equality plus controlled minification/COW/replay/recreate pixels and zero replay allocation | Generated-only read-only diagnosis; acceptance not run | Same seven artifacts | A acceptance and later continuation | FACT: declared/uploaded3 versus actual native12,14 source draws; INFERENCE: tail sampling explains black pixels |
+| M22-T0R1-03 | Existing pinned offline bgfx/shader toolchain, test/shader owners and six configurations | R1 | Already satisfied | Pins, reviewed patch identity, tools and existing seven focus registrations verified; new eighth registration is R1 output | PRE-002, PRE-039, accepted native/test providers | AUTO | Exact applied-native patches, tool/preset resolution and six CTest manifests | read-only git diff/pin/license comparison; CTest manifests | Same seven artifacts | Entry if unavailable | FACT: public subresource range is existing API, no package/network/new fixture owner |
+| M22-T0R1-04 | Authorized physical Vulkan/validation, Debug+Release replay proof, strict LSan and LAN | R1 acceptance | Requires user action | Existing host route available to diagnostics; fresh complete gates required before acceptance | PRE-012/PRE-016 host/session | USER_ACTION | Exact8 focus/strict, physical4 all four configurations, Debug+Release native proof, six builds/canonicals and established Vulkan/minimal/LAN | Read-only generated physical diagnosis only; acceptance not rerun | Same seven artifacts | Acceptance if unavailable, not implementation | FACT: existing host escalation/validation wrapper; no substitute or category waiver |
+| M22-T0R1-05 | Preserved independent camera and active08/privacy boundary | R1 staging; later A/08 | Already satisfied | Thirty-one in-progress/active08/renderer dirty paths recorded with empty index; exact owned plan hunk isolated | Existing transaction and private-input contract | AUTO | Executable/test/ledger hashes unchanged by plan packet; all trial hunks excluded from staged diff | git status/diff; source-only SHA256 baseline | Same seven artifacts | Commit if ownership cannot be isolated | FACT: no camera/fixture/filter/source byte changes during R1 planning |
+
+No new M0, service, acquisition/license decision, backward edge or unresolved
+owner. Exactly one backend corrective leaf is approved before the existing
+camera leaf. Any additional split requires a fresh architecture checkpoint.
+
 ## M22 08T0 bounded camera-startup packet — 2026-09-28
 
 Packet: `delivery/plans/cnc-generals-zero-hour/milestone_22_plan_01.md`.

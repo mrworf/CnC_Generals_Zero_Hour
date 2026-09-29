@@ -4,7 +4,9 @@
 
 Accepted S0/R1 closes preload timeout. The next fixed public boundary is
 GameLogic::startNewGame → W3DView::setAngleAndPitchToDefault, before initial
-lookAt/map-height/defaults and partition continuation. Approved one-leaf sequence:
+lookAt/map-height/defaults and partition continuation. Approved correction order:
+[08T0R1](milestone_22_plan_01_slice_08t0r1.md) exact declared sampled-mip range
+across ordinary/deferred bgfx binding →
 [08T0A](milestone_22_plan_01_slice_08t0a.md) bounded native ordinary camera startup
 and typed camera/terrain idle rollback → [08T0](milestone_22_plan_01_slice_08t0.md)
 evidence-only aggregate → this unchanged active08 trial. No additional split or
