@@ -1,6 +1,6 @@
 # M22 plan 01 slice 08T0: bounded camera-startup aggregate
 
-Status: historical aggregate accepted at `8e13acdc`; refresh pending accepted08T0R2.
+Status: accepted in this separate evidence-only refresh after08T0R2.
 This remains evidence-only; no executable change belongs to the aggregate.
 Plan transaction parent: `b6f95598fde2d9b8f5b8ec68bcc9b20290ee71cb`.
 
@@ -20,11 +20,13 @@ adds exactly one corrective leaf; no further split without authority. No
 authorization, product or external-access change.
 
 FACT: the real view initializes before GameLogic creates logical terrain; A's
-provider sidecar freezes null while the generated secondary-view fixture misses
-that order. R2 owns exact source publication/token/peek and successful-attempt
-late binding. The bounded redacted stop is this integration defect, not a new
-producer. Historical R1/A/aggregate acceptance remains recorded, but active08
-continuation waits for accepted R2 and this separate evidence-only refresh.
+provider sidecar froze null while the generated secondary-view fixture missed
+that order. Accepted R2 owns exact source publication/token/peek and
+successful-attempt late binding. The unchanged bounded redacted continuation now
+crosses that guard and stops at the existing camera typed-checkpoint64MiB
+capacity predicate before Recording. This is a separately classified active08
+capacity boundary, not an R2 defect or retail acceptance. Historical R1/A/aggregate
+acceptance remains recorded; no capacity/allocation change is admitted here.
 
 After R2 closes, verify R1/A/R2 exact accepted commits, completed plans/evidence and R2 source/test/selected
 executable hashes and required gates. Reuse R2's unchanged six builds, exact12
@@ -37,10 +39,12 @@ All explicit excluded camera modes and later producers remain closed.
 
 Accepted R1: `cbb65e0924ba3c1b6660e6c3193717e9e9a4a123`.
 Accepted A: `c62160a8964291a2e218b915bbc7ccf7cb0af0e6`.
-Both are verified current ancestors; own/source/selected-binary hashes remain
-unchanged. [Aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0.md)
-records the exact fresh A gates and approved qualified common-gate provenance.
-All fourteen preserved active08/renderer paths remain unstaged and byte-identical.
+Accepted R2: `24d61a509977f36342317e646abe425d30d875d9`.
+All three are verified current ancestors; R2's frozen composition source/test and
+selected-binary hashes remain unchanged. [Aggregate evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0.md)
+records the exact fresh R2 gates and the historical A/R1 provenance distinction.
+All fourteen preserved active08/renderer paths remain unstaged; this aggregate
+changes none of their working bytes or shared-ledger state.
 
 ## Readiness, errors and continuation
 
@@ -55,8 +59,10 @@ Pre-existing active08/renderer paths stay unstaged and byte-identical. Commit on
 this plan, evidence and governing index state after exact staged/privacy review:
 `delivery: M22 08T0 close bounded camera startup`.
 
-Then resume the existing bounded redacted active08 probe, preserving source
-startup order and the unchanged120-second bound. Original corpus/symlink remain
+Then audit the classified camera capacity/ownership boundary read-only before
+proposing any bound/allocation change or resuming the existing bounded redacted
+active08 probe. Preserve source startup order and the unchanged120-second bound.
+Original corpus/symlink remain
 read-only/private; only fixed categories/counts and public owner boundaries may
 be retained. Camera closure does not itself accept retail scenes, Recorder,
 partition continuation, general motion, picking or UI. Classify any new failure
