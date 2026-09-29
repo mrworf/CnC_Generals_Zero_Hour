@@ -1,8 +1,8 @@
 diff --git a/include/bgfx/bgfx.h b/include/bgfx/bgfx.h
-index 6c56eaf..b52762d 100644
+index 6c56eaf..6c1d0fc 100644
 --- a/include/bgfx/bgfx.h
 +++ b/include/bgfx/bgfx.h
-@@ -5344,6 +5344,172 @@ namespace bgfx
+@@ -5344,6 +5344,183 @@ namespace bgfx
  		, const BufferRegion& _src
  		);
  
@@ -89,6 +89,15 @@ index 6c56eaf..b52762d 100644
 +				&& uint32_t(_desc.formatDepthStencil) <= TextureFormat::Count;
 +		}
 +
++		// UINT8_MAX preserves the ordinary full-remaining-range default. Explicit
++		// ranges are checked with subtraction before reservation or native replay.
++		static bool acceptsMipRange(uint32_t _first, uint32_t _count, uint32_t _levels)
++		{
++			return 0 != _levels && _levels <= UINT8_MAX && _first < _levels
++				&& 0 != _count && _count <= UINT8_MAX
++				&& (UINT8_MAX == _count || _count <= _levels - _first);
++		}
++
 +		static bool accepts(const BoundedSubmissionDesc& _desc, uint32_t _commands)
 +		{
 +			return 0 != _desc.generation && 0 != _commands
@@ -113,6 +122,8 @@ index 6c56eaf..b52762d 100644
 +		TextureHandle texture = BGFX_INVALID_HANDLE;
 +		uint32_t flags = UINT32_MAX;
 +		uint8_t stage = 0;
++		uint8_t firstMip = 0;
++		uint8_t numMips = UINT8_MAX;
 +	};
 +
 +	struct BoundedSubmissionCommand
@@ -176,7 +187,7 @@ index 6c56eaf..b52762d 100644
  
  #endif // BGFX_H_HEADER_GUARD
 diff --git a/src/bgfx.cpp b/src/bgfx.cpp
-index 1a19ec4..de55b0c 100644
+index 1a19ec4..873d71e 100644
 --- a/src/bgfx.cpp
 +++ b/src/bgfx.cpp
 @@ -2828,7 +2828,8 @@ namespace bgfx
@@ -189,7 +200,7 @@ index 1a19ec4..de55b0c 100644
  		frameNoRenderWait();
  
  		m_encoder[0].begin(m_submit, 0);
-@@ -7082,6 +7083,687 @@ namespace bgfx
+@@ -7082,6 +7083,692 @@ namespace bgfx
  		s_ctx->requestScreenShot(_handle, _filePath);
  	}
  
@@ -563,6 +574,8 @@ index 1a19ec4..de55b0c 100644
 +					if (value.stage >= g_caps.limits.maxTextureSamplers
 +					|| !live(uniform, value.sampler.idx) || uniformSeen[value.sampler.idx]
 +					|| !live(texture, value.texture.idx) || (stages & (1u << value.stage))
++					|| !BoundedSubmissionLimits::acceptsMipRange(value.firstMip, value.numMips,
++						_ctx.m_textureRef[value.texture.idx].m_numMips)
 +					|| !BoundedSubmissionLimits::acceptsSamplerFlags(UINT32_MAX == value.flags
 +						? uint32_t(_ctx.m_textureRef[value.texture.idx].m_flags) : value.flags)
 +					|| _ctx.m_textureRef[value.texture.idx].isReadBack())
@@ -702,6 +715,8 @@ index 1a19ec4..de55b0c 100644
 +					if (value.stage >= 32 || value.stage >= g_caps.limits.maxTextureSamplers
 +					|| value.stage >= BGFX_CONFIG_MAX_TEXTURE_SAMPLERS || value.texture.idx >= BGFX_CONFIG_MAX_TEXTURES
 +					|| !ctx.m_textureHandle.isValid(value.texture.idx)
++					|| !BoundedSubmissionLimits::acceptsMipRange(value.firstMip, value.numMips,
++						ctx.m_textureRef[value.texture.idx].m_numMips)
 +					|| !BoundedSubmissionLimits::acceptsSamplerFlags(UINT32_MAX == value.flags
 +						? uint32_t(ctx.m_textureRef[value.texture.idx].m_flags) : value.flags))
 +						return false;
@@ -825,7 +840,8 @@ index 1a19ec4..de55b0c 100644
 +				for (uint32_t jj = 0; jj < cmd.uniformCount; ++jj)
 +					setUniform(cmd.uniforms[jj].handle, cmd.uniforms[jj].data, cmd.uniforms[jj].count);
 +				for (uint32_t jj = 0; jj < cmd.textureCount; ++jj)
-+					setTexture(cmd.textures[jj].stage, cmd.textures[jj].sampler, cmd.textures[jj].texture, cmd.textures[jj].flags);
++					setTexture(cmd.textures[jj].stage, cmd.textures[jj].sampler, cmd.textures[jj].texture,
++						0, UINT16_MAX, cmd.textures[jj].firstMip, cmd.textures[jj].numMips, cmd.textures[jj].flags);
 +				setState(cmd.state, cmd.rgba);
 +				setStencil(cmd.stencilFront, cmd.stencilBack);
 +				setDepthControl(cmd.depthBias, 0.0f, 0.0f, false);

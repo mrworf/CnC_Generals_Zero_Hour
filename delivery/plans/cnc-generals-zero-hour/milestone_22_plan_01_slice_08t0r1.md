@@ -1,8 +1,11 @@
 # M22 plan 01 slice 08T0R1: exact declared sampled-mip range
 
-Status: implementation-ready; plan-only/readiness checkpoint before production.
+Status: complete; accepted in this slice commit after exact final-source gates.
 Plan transaction parent: `9eefa8ec75a8c810717fd983377f188d2fc01931`.
 Plan provenance: exact commit `delivery: M22 plan declared sampled-mip range`.
+Implementation provenance: this slice commit, exact subject
+`delivery: M22 08T0R1 bound declared sampled mip range`.
+Acceptance: [08T0R1 evidence](../../evidence/cnc-generals-zero-hour/milestone_22_slice_08t0r1.md).
 
 ## Outcome, authority and dependency order
 
@@ -138,6 +141,10 @@ builds uses exactly `ASAN_OPTIONS=detect_leaks=1`, no strict UBSan override.
 Complete category audits; do not infer clean output from exit status alone.
 
 Physical exact4 on GCC/Clang debug and both sanitizer configurations:
+Enable the existing GPU registrations in each build cache with
+`cmake -S . -B build/<preset> -DZH_ENABLE_GPU_TESTS=ON` (the ordinary preset default
+is OFF); verify all four IDs before selecting them. This is registration only,
+not a workload or runtime-policy change. A no-tests-found invocation is not evidence.
 `ASAN_OPTIONS=detect_leaks=0 VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation python3 tools/run_validation_clean.py ctest --test-dir build/<preset> -R '^(renderer_bgfx_mip_texture_gpu|renderer_bgfx_submission_reservation_gpu|renderer_bgfx_transaction_resource_gpu|renderer_bgfx_transaction_gpu)$' --output-on-failure -j1 -V`.
 Use existing authorized graphical host escalation; no alternate driver/gate.
 Run the same native reservation/mip proof against the pinned Debug and Release

@@ -153,6 +153,7 @@ struct Allocator final : bx::AllocatorI {
     bool reenter=false, reentry_rejected=false, mutate_after_copy=false, changed_input=false;
     float* external_payload=nullptr;
     Command* external_commands=nullptr;
+    bgfx::BoundedSubmissionTexture* external_texture=nullptr;
     unsigned external_count=0;
     Desc external_desc{};
     Receipt recursive_receipt{81,82,83,84,85,86,87};
@@ -170,6 +171,7 @@ struct Allocator final : bx::AllocatorI {
                 external_commands[1].vertices=0;
                 external_commands[1].uniformCount=0;
                 external_payload[0]=0;
+                if (external_texture) external_texture->numMips=0;
             }
             if (reenter) {
                 reenter=false;
@@ -473,10 +475,13 @@ void physical()
             // payloads after the native allocator's model-allocation boundary.
             allocator.fault(0); allocator.mutate_after_copy=true;
             allocator.external_payload=scene.viewport_bytes.data();
+            allocator.external_texture=&scene.texture;
             const auto snapshot=accept(scene.commands.data(),scene.commands.size(),good);
-            check(allocator.changed_input&&snapshot.draws==1,"immutable-copy mutation control was not reached");
+            check(allocator.changed_input&&snapshot.draws==1&&scene.texture.numMips==0,
+                "immutable-copy range mutation control was not reached");
             scene.commands[1].vertices=3; scene.commands[1].uniformCount=scene.uniforms.size();
             scene.viewport_bytes={64,64,0,0};
+            scene.texture.numMips=UINT8_MAX;allocator.external_texture=nullptr;
             check(scene.pixels()==green_pixels,"immutable snapshot reread caller payload");
 
             // A valid red clear/draw before a late invalid encoded value must
@@ -529,6 +534,47 @@ void physical()
                 reject_encoded(invalid);
             }
             check(scene.pixels()==green_pixels,"encoded rejection changed accepted pixels");
+
+            // Partial image views remain distinct native cache values; none of
+            // the unspecified native tail is exposed by the exact range.
+            auto mip_texture=bgfx::createTexture2D(8,8,true,1,bgfx::TextureFormat::RGBA8);
+            check(bgfx::isValid(mip_texture),"native range texture unavailable");
+            for(unsigned level=0;level<4;++level) {
+                const auto side=8u>>level;
+                std::vector<std::uint8_t> bytes(side*side*4);
+                for(unsigned pixel=0;pixel<side*side;++pixel) {
+                    bytes[pixel*4+(level==0?0:level==1?1:2)]=255;bytes[pixel*4+3]=255;
+                }
+                bgfx::updateTexture2D(mip_texture,0,std::uint8_t(level),0,0,std::uint16_t(side),std::uint16_t(side),
+                    bgfx::copy(bytes.data(),std::uint32_t(bytes.size())));
+            }
+            auto range=scene.texture;range.texture=mip_texture;range.firstMip=1;range.numMips=1;
+            auto ranged_commands=scene.commands;ranged_commands[1].textures=&range;
+            accept(ranged_commands.data(),ranged_commands.size(),good);
+            check(scene.pixels()==green_pixels,"native exact first mip view differs");
+            for(const auto invalid_range : {std::array<unsigned,2>{0,0},{4,1},{3,2},{0,5},{255,255}}) {
+                auto invalid=scene.commands[1];auto binding=range;
+                binding.firstMip=std::uint8_t(invalid_range[0]);binding.numMips=std::uint8_t(invalid_range[1]);
+                invalid.textures=&binding;reject_encoded(invalid);
+            }
+            check(scene.pixels()==green_pixels,"late invalid range changed prior pixels");
+            range.firstMip=2;
+            accept(ranged_commands.data(),ranged_commands.size(),good);
+            const auto blue_pixels=scene.pixels();
+            check(blue_pixels[center]==255&&blue_pixels[center+1]==0&&blue_pixels[center+2]==0,
+                "native different mip view reused cache identity");
+            std::array<Command,5> ranged_pair{};ranged_pair.front()=scene.commands[0];ranged_pair.back()=scene.commands[2];
+            auto first_range=range;first_range.firstMip=1;
+            ranged_pair[1]=scene.commands[1];ranged_pair[1].textures=&first_range;
+            ranged_pair[2]=scene.commands[1];ranged_pair[2].textures=&range;
+            ranged_pair[3]=ranged_pair[1];
+            const auto pair_receipt=accept(ranged_pair.data(),ranged_pair.size(),good);
+            check(pair_receipt.bindingsBefore==0&&pair_receipt.bindingsAfter==3&&pair_receipt.draws==3
+                &&scene.pixels()==green_pixels,
+                "native sampled ranges did not use full equality/cache reuse");
+            bgfx::destroy(mip_texture);bgfx::frame();bgfx::frame();
+            accept(scene.commands.data(),scene.commands.size(),good);
+            check(scene.pixels()==green_pixels,"range retirement changed accepted sibling");
 
             // Late recognized rejection must not queue even a partial clear or
             // draw against the previously accepted target; an ordinary read

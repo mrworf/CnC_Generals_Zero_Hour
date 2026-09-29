@@ -608,8 +608,8 @@ public:
                 for (std::size_t i=0;i<packet.textures.size();++i) {
                     const auto& prior=packet.textures[i];
                     const auto alias=detail::sampler_alias(
-                        {prior.stage,prior.sampler.idx,prior.texture.idx,sampler_owners[i].value(),prior.flags},
-                        {field.stage,field.handle.idx,image->record.native.idx,owner.value(),flags});
+                        {prior.stage,prior.sampler.idx,prior.texture.idx,sampler_owners[i].value(),prior.flags,prior.firstMip,prior.numMips},
+                        {field.stage,field.handle.idx,image->record.native.idx,owner.value(),flags,0,image->record.desc.mip_levels});
                     if (alias == detail::BgfxSamplerAlias::conflict)
                         return fail("draw","conflicting shared source texture-stage alias");
                     if (alias == detail::BgfxSamplerAlias::identical) duplicate=true;
@@ -618,6 +618,7 @@ public:
                 bgfx::BoundedSubmissionTexture value;
                 value.sampler=field.handle; value.texture=image->record.native;
                 value.flags=flags; value.stage=static_cast<UInt8>(field.stage);
+                value.firstMip=0; value.numMips=static_cast<UInt8>(image->record.desc.mip_levels);
                 packet.textures.push_back(value); sampler_owners.push_back(owner);
                 if (!lease(packet,NativeKind::texture,image->record.native.idx)) return ValidationResult{false,last_error};
             }
@@ -1566,10 +1567,20 @@ ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
             auto* image = lookup(impl_->textures, bindings.textures[texture.binding]);
             auto* sampler = lookup(impl_->samplers, bindings.samplers[texture.binding]);
             if (!image || !image->record.desc.sampled || !image->record.color_initialized || !sampler
+                || !detail::sampled_mip_range(0,image->record.desc.mip_levels,image->record.desc.mip_levels)
                 || (sampler->record.desc.maximum_lod != 1000.0f
                     && !(sampler->record.desc.maximum_lod == 0.0f
                         && image->record.desc.mip_levels == 1)))
                 return impl_->fail("draw", "missing/stale texture, sampler or unsupported sampler LOD");
+            // Unknown CPU backing stays unknown. Render targets instead become
+            // ready through completed writes and are constrained to one mip.
+            if (!image->record.desc.render_target) {
+                if (image->record.mips.size() != image->record.desc.mip_levels)
+                    return impl_->fail("draw", "sampled mip backing differs from declared range");
+                for (const auto& mip : image->record.mips)
+                    if (mip.bytes.empty())
+                        return impl_->fail("draw", "sampled range contains an uninitialized mip");
+            }
         }
         return {};
     };
@@ -1637,7 +1648,7 @@ ValidationResult BgfxGpuDevice::draw(const DrawDesc& desc)
             const auto* image = lookup(impl_->textures, bindings.textures[texture.binding]);
             const auto* sampler = lookup(impl_->samplers, bindings.samplers[texture.binding]);
             bgfx::setTexture(static_cast<UInt8>(texture.stage), texture.handle, image->record.native,
-                sampler_flags(sampler->record.desc));
+                0,UINT16_MAX,0,static_cast<UInt8>(image->record.desc.mip_levels),sampler_flags(sampler->record.desc));
         }
     };
     bind_stage(vertex_shader->record, desc.vertex_bindings);

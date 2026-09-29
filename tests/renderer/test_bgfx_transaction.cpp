@@ -387,6 +387,61 @@ void physical() {
         check(device.end_pass() && device.present(scene.color) && device.commit_device_transaction(token),"captured removal retargeted draw");
         check(device.readback_rgba(scene.color)==baseline,"captured COW version changed");
         device.destroy(replacement);
+        // Use this fixture's already-owned presentation/CompleteFrame boundary
+        // for immutable partial-chain capture, COW, handle removal and retry.
+        for (const auto format : {TextureFormat::rgba8,TextureFormat::bgra8,TextureFormat::bgr5a1})
+        for (const auto filter : {Filter::nearest,Filter::linear}) {
+            TextureDesc partial;partial.width=8;partial.height=4;partial.mip_levels=2;partial.format=format;
+            const auto source=device.create_texture(partial,"partial-chain immutable source");
+            const unsigned bpp=format==TextureFormat::bgr5a1 ? 2 : 4;
+            const auto bytes=[&](unsigned w,unsigned h,bool green) {
+                std::vector<UInt8> result(w*h*bpp);
+                for(unsigned i=0;i<w*h;++i) {
+                    if (bpp==2) {const UInt16 value=green ? 0x83e0 : 0xfc00;result[i*2]=UInt8(value);result[i*2+1]=UInt8(value>>8);}
+                    else {result[i*4+(green ? 1 : format==TextureFormat::bgra8 ? 2 : 0)]=255;result[i*4+3]=255;}
+                }
+                return result;
+            };
+            const auto base_bytes=bytes(8,4,false),last_bytes=bytes(4,2,true),changed=bytes(4,2,false);
+            check(source && device.upload_texture({source,8,4,8*bpp,base_bytes.size(),0},base_bytes.data()),
+                "partial mip base bytes");
+            scene.sample=source;
+            const auto unknown_prior=device.readback_rgba(scene.color);
+            check(device.begin_device_transaction(budget(),token) && device.begin_pass(scene.pass(),"unknown declared mip"),
+                "unknown mip frame admission");
+            const auto unknown_packets=device.staged_frame_command_count(),unknown_owned=device.live_owned_native_reference_count();
+            check(!device.draw(scene.draw()) && device.staged_frame_command_count()==unknown_packets
+                && device.live_owned_native_reference_count()==unknown_owned && !device.commit_device_transaction(token)
+                && device.abort_device_transaction(token) && device.readback_rgba(scene.color)==unknown_prior,
+                "unknown declared mip published draw/resource/target state");
+            check(device.upload_texture({source,4,2,4*bpp,last_bytes.size(),1},last_bytes.data()),"partial mip last bytes");
+            auto far=scene.triangle;for(auto& vertex:far) {vertex.u*=2048;vertex.v*=2048;}
+            check(device.upload({scene.vertices,sizeof(far),0,sizeof(far)},far.data()),"partial mip minification bytes");
+            SamplerDesc sampling;sampling.min_filter=sampling.mag_filter=Filter::nearest;sampling.mip_filter=filter;
+            const auto range_sampler=device.create_sampler(sampling,"preserved partial mip policy");
+            const auto prior_sampler=scene.sampler;scene.sampler=range_sampler;scene.sample=source;
+            const auto ordinary=scene.accepted();const auto center=(32U*64U+32U)*4U;
+            check(ordinary.size()==64*64*4 && ordinary[center]==0 && ordinary[center+1]==255
+                && ordinary[center+2]==0 && ordinary[center+3]==255,"ordinary partial-chain pixel baseline");
+            check(device.begin_device_transaction(budget(),token) && device.begin_pass(scene.pass(),"immutable declared mip range")
+                && device.draw(scene.draw()) && device.upload_texture({source,4,2,4*bpp,changed.size(),1},changed.data()),
+                "partial range capture/COW preparation");
+            device.destroy(source);
+            auto single=partial;single.mip_levels=1;
+            const auto reused=device.create_texture(single,"different range removed-handle retry");
+            check(reused && reused!=source,"partial source handle generation reused");device.destroy(reused);
+            check(device.end_pass() && device.present(scene.color),"partial source frame completion");
+            const auto captured=device.staged_frame_command_count(),emitted=device.bounded_submission_count();
+            device.fail_next_transaction_submission();
+            check(!device.commit_device_transaction(token) && device.staged_frame_command_count()==captured
+                && device.bounded_submission_count()==emitted,"partial-range rejection consumed immutable phase");
+            check(device.commit_device_transaction(token) && device.bounded_submission_count()==emitted+1
+                && device.readback_rgba(scene.color)==ordinary && !device.pending_native_retirement_count(),
+                "immutable partial range/COW/lease retry differs from ordinary pixels");
+            scene.sample={};scene.sampler=prior_sampler;device.destroy(range_sampler);
+        }
+        check(device.upload({scene.vertices,sizeof(scene.triangle),0,sizeof(scene.triangle)},scene.triangle.data()),
+            "partial mip ordinary geometry restoration");
         // Suspension still completes once, without presentation draws.
         width=height=0;check(device.begin_device_transaction(budget(),token),"suspension admission");
         check(device.present(scene.color) && device.staged_frame_command_count()==1

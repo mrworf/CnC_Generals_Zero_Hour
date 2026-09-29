@@ -102,6 +102,18 @@ native bytes. RGBA8, BGRA8 and BGR5A1 retain full padded source rows and untouch
 mips. Transaction uploads to GPU-owned render targets reject; target resize is
 a fresh handle, not in-place descriptor mutation. Ordinary uploads stay valid.
 
+M22 08T0R1 makes the logical descriptor's declared mip count the exact sampled
+view on ordinary and deferred bgfx draws, even when native boolean allocation
+creates a longer chain. No mip tail is synthesized and source sampler policy is
+unchanged. Every exposed non-target level must have known uploaded backing;
+single-mip targets obtain readiness from accepted writes. Journal capture owns
+the immutable first/count and exact native lease. The public bounded manifest
+preserves its full-remaining-range default, rejects empty/out-of-range extents
+with overflow-safe arithmetic before reservation, and replays the existing
+subresource binding. Layer-range defaults remain unchanged. Full binding/cache
+equality includes mip extent; COW/abort/recreation preserve declared range and
+all known authored bytes, without changing monotonic tombstone diagnostics.
+
 Finish performs no native call or allocation: it publishes/restores CPU state
 and transfers exact native ownership units into a pre-reserved retirement
 queue. Deduplicated shader/program indices do not collapse create increments;
@@ -146,7 +158,7 @@ Capture validates exact logical generations, source byte ranges/initialization,
 aliases and native representation before publishing CPU pass/init/view shadows.
 View origins must fit signed int16; extents fit uint16 and device caps. Source
 texture-slot aliases across shader stages require identical captured texture,
-source sampler/flags and reflected sampler handle; uniform aliases require
+source sampler/flags, sampled mip range and reflected sampler handle; uniform aliases require
 identical count/bytes. Conflicting or unrepresentable aliases fail closed.
 Typed native VB/IB and borrowed-attachment FBO candidates are prepared outside
 replay. Captured B1 native ownership units survive later removal/COW/replacement;

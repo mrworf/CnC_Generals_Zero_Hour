@@ -61,3 +61,9 @@ Parser rejection may retire storage before a guarded candidate is destroyed.
 Clear retired pointers on corrected owner paths and test repeated semantic
 rejection as well as injected throws. At new validation boundaries, use portable
 finite/defined-width checks; legacy bit helpers may assume a 32-bit `long`.
+
+Native boolean mip-allocation APIs may allocate more levels than a logical
+descriptor declares. Bind the exact declared sampled range, carry it through
+immutable journals/cache equality, and reject unknown exposed backing rather
+than generating a tail or changing sampler policy. Prove extreme minification
+with distinct authored mip colors on ordinary and deferred paths.

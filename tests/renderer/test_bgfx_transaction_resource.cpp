@@ -343,7 +343,9 @@ void physical()
             "COW changed surviving accepted mip pixels");
         check(scene.render() == green, "mip control changed accepted base image");
         for (const auto format : {TextureFormat::rgba8,TextureFormat::bgra8,TextureFormat::bgr5a1}) {
+          for (const bool partial : {false,true}) {
             TextureDesc image; image.width = image.height = 4; image.mip_levels = 3; image.format = format;
+            if (partial) {image.width=8;image.height=4;image.mip_levels=2;}
             const auto texture = device.create_texture(image,"padded source mip survivor");
             const unsigned pixel_bytes = format == TextureFormat::bgr5a1 ? 2 : 4;
             const auto padded = [&](unsigned width, unsigned height, bool green) {
@@ -362,23 +364,38 @@ void physical()
                 return result;
             };
             check(bool(texture), "padded source format unavailable");
-            for (unsigned mip = 0; mip < 3; ++mip) {
-                const auto width = 4U >> mip;
-                const auto bytes = padded(width,width,false);
-                check(device.upload_texture({texture,width,width,width*pixel_bytes+4,bytes.size(),mip},bytes.data()),
+            for (unsigned mip = 0; mip < image.mip_levels; ++mip) {
+                const auto width = image.width >> mip,height=image.height >> mip;
+                const auto bytes = padded(width,height,false);
+                check(device.upload_texture({texture,width,height,width*pixel_bytes+4,bytes.size(),mip},bytes.data()),
                       "ordinary padded mip upload failed");
             }
             const auto original_sample = scene.sample; scene.sample = texture;
             const auto red_pixels = scene.render();
             check(red_pixels[center] == 255 && red_pixels[center+1] == 0, "padded source red pixels differ");
-            const auto changed = padded(4,4,true);
+            const auto changed = padded(image.width,image.height,true);
+            if (partial) {
+                for (unsigned failure=0;failure<3;++failure) {
+                    check(device.begin_device_transaction(budget,token),"partial chain fault admission");
+                    if (failure==0) device.fail_transaction_native_publication_after(0);
+                    else device.fail_transaction_operation_after(failure-1);
+                    const auto uploaded=device.upload_texture({texture,image.width,image.height,image.width*pixel_bytes+4,changed.size(),0},changed.data());
+                    if (failure==2) check(uploaded,"partial COW expected pre-marker publication");
+                    else check(!uploaded,"partial COW fault was not reached");
+                    device.record_marker("partial COW late operation fault");
+                    check(!device.commit_device_transaction(token),"partial fault committed");
+                    finish_without_native_calls(token,false);
+                    check(device.live_resource_count()==count+1 && scene.render()==red_pixels
+                        && scene.render(2)==red_pixels,"partial COW fault changed source identity/known mips");
+                }
+            }
             check(device.begin_device_transaction(budget,token)
-                && device.upload_texture({texture,4,4,4*pixel_bytes+4,changed.size(),0},changed.data()),
+                && device.upload_texture({texture,image.width,image.height,image.width*pixel_bytes+4,changed.size(),0},changed.data()),
                   "padded COW abort candidate failed");
             finish_without_native_calls(token,false);
             check(scene.render() == red_pixels, "padded COW abort changed accepted pixels");
             check(device.begin_device_transaction(budget,token)
-                && device.upload_texture({texture,4,4,4*pixel_bytes+4,changed.size(),0},changed.data()),
+                && device.upload_texture({texture,image.width,image.height,image.width*pixel_bytes+4,changed.size(),0},changed.data()),
                   "padded COW retry candidate failed");
             finish_without_native_calls(token,true);
             const auto base_pixels = scene.render();
@@ -390,6 +407,7 @@ void physical()
             scene.sample = original_sample;
             device.destroy(texture);
             check(device.live_resource_count() == count && scene.render() == green, "format control changed surviving resource");
+          }
         }
         // Complete successful publication of all five resource families, plus
         // fresh target resize without overwriting the accepted attachment.

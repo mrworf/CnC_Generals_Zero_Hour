@@ -8,6 +8,11 @@
 
 namespace zh::renderer::detail {
 
+// The logical descriptor, not bgfx's boolean full-chain allocation, owns the
+// sampled view. Use subtraction so malformed first/count cannot overflow.
+inline bool sampled_mip_range(UInt32 first, UInt32 count, UInt32 levels) noexcept
+{ return levels && levels <= 255 && count && first < levels && count <= levels-first; }
+
 // Exact native field representation used by capture and its generated CPU
 // controls. Native-cap/target bounds are additional owner-specific checks.
 inline bool bounded_view_rectangle(double x,double y,double width,double height) noexcept
@@ -21,6 +26,7 @@ inline bool same_uniform_payload(UInt32 count,UInt32 bytes,const void* data,
 { return count == other_count && bytes == other_bytes && data && other && !std::memcmp(data,other,bytes); }
 struct BgfxCapturedSampler {
     UInt32 stage=0,uniform=0,texture=0,source_sampler=0,flags=0;
+    UInt32 first_mip=0,mip_count=255;
 };
 enum class BgfxSamplerAlias { distinct, identical, conflict };
 inline BgfxSamplerAlias sampler_alias(const BgfxCapturedSampler& prior,
@@ -30,6 +36,7 @@ inline BgfxSamplerAlias sampler_alias(const BgfxCapturedSampler& prior,
         return prior.uniform == candidate.uniform ? BgfxSamplerAlias::conflict : BgfxSamplerAlias::distinct;
     return prior.uniform == candidate.uniform && prior.texture == candidate.texture
         && prior.source_sampler == candidate.source_sampler && prior.flags == candidate.flags
+        && prior.first_mip == candidate.first_mip && prior.mip_count == candidate.mip_count
         ? BgfxSamplerAlias::identical : BgfxSamplerAlias::conflict;
 }
 
