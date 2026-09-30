@@ -51,6 +51,10 @@ registry order/count, unique system ID, per-priority global heads/tails/counts,
 per-system list heads/tails/counts, object/drawable attachment IDs, master/slave/
 control edges, transforms/position/wind/delay/lifetime/burst/personality,
 particle positions/velocity/keyframes/age and GameClient RNG. Respect the
+native `GameLODManager::isParticleSkipped` generation counter as an owned
+transitive update: snapshot its exact value before mutation, restore it on
+every abort/fault, and retain precisely the native increments on commit.
+Do not reset or substitute the global LOD policy. Respect the
 source's `updateViews` then manager-update order and its same-logic-frame skip.
 `createParticleSystem` increments ID before construction; its constructor can
 consume RNG and create a slave before list `push_back`. Particle construction
@@ -89,6 +93,10 @@ missing optional child skip, shroud/terrain and source-order transform,
 one-burst/zero-burst, priority eviction, finite wind/lifetime and
 same-logic-frame skip. Compare fresh-equivalent generation success state and
 next GameClient RNG value, exact system ID and intrusive-list order. Negative:
+compare the GameLOD particle-generation counter across ordinary success,
+failed candidate/late-frame abort and same-state retry, including a skipped
+particle branch; no failed attempt may consume a generation increment.
+Negative:
 null/foreign/stale templates/providers, malformed attachment metadata, all unsupported families,
 missing local player, child cycle/depth/node/byte/count/ID bound+1, active-frame
 overlap, reset/removal and faults at every candidate allocation, constructor,
