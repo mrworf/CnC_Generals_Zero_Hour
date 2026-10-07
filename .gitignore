@@ -1,0 +1,5 @@
+/.port-recovery/
+/original_game_symlink
+/build/
+__pycache__/
+*.pyc
