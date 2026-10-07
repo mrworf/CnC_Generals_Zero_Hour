@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "workflow": "delivery-planning",
+  "product_id": "cnc-generals-zero-hour",
+  "packet_id": "linux-upstream-v2",
+  "status": "ready_with_external_dependencies",
+  "transaction": {
+    "parent_commit": "d0483ca911b029460fb46d878fe260e90ec8d071",
+    "repository_commit": null
+  },
+  "source": {
+    "mode": "CHANGE_PLAN",
+    "path": "docs/zero-hour-linux-port-plan.md",
+    "revision": "sha256:0316702c3fb75979f3ef5cdafb3adcf3a4c1bfa3dc84e94f883aceb6ce49bf90",
+    "repository_commit": "d0483ca911b029460fb46d878fe260e90ec8d071"
+  },
+  "stages": {
+    "compilation": {
+      "status": "COMPILED",
+      "packet_manifest": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",
+      "result": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/index.md"
+    },
+    "readiness": {
+      "status": "READY_WITH_EXTERNAL_DEPENDENCIES",
+      "prerequisite_manifest": "delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md",
+      "result": "delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/readiness-report.md"
+    }
+  },
+  "blockers": [],
+  "corrections": [],
+  "handoff": {
+    "status": "pending_provenance",
+    "path": "workflow/delivery-planning/handoff.yaml"
+  }
+}

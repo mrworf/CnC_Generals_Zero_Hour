@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "product_id": "cnc-generals-zero-hour",
+  "packet_id": "linux-upstream-v2",
+  "compiled_from": {
+    "product_id": "cnc-generals-zero-hour",
+    "input_mode": "CHANGE_PLAN",
+    "plan": {
+      "path": "docs/zero-hour-linux-port-plan.md",
+      "revision": "sha256:0316702c3fb75979f3ef5cdafb3adcf3a4c1bfa3dc84e94f883aceb6ce49bf90",
+      "repository_commit": "d0483ca911b029460fb46d878fe260e90ec8d071"
+    },
+    "authority": "User-approved complete restart and replacement graph; no old packet preservation obligation."
+  },
+  "milestones": [
+    {
+      "id": "N0",
+      "title": "Clean baseline and specification",
+      "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N0-clean-baseline-and-specification.md",
+      "status": "pending",
+      "dependencies": [],
+      "requirements": [
+        "R01"
+      ],
+      "completed_at": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "N1",
+      "title": "Stock renderer suitability",
+      "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N1-stock-renderer-suitability.md",
+      "status": "pending",
+      "dependencies": [
+        "N0"
+      ],
+      "requirements": [
+        "R02",
+        "R06"
+      ],
+      "completed_at": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "N2",
+      "title": "Original engine Linux foundation",
+      "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N2-original-engine-linux-foundation.md",
+      "status": "pending",
+      "dependencies": [
+        "N0"
+      ],
+      "requirements": [
+        "R03",
+        "R04",
+        "R07"
+      ],
+      "completed_at": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "N3",
+      "title": "Original world rendering",
+      "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N3-original-world-rendering.md",
+      "status": "pending",
+      "dependencies": [
+        "N1",
+        "N2"
+      ],
+      "requirements": [
+        "R05",
+        "R08"
+      ],
+      "completed_at": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "N4",
+      "title": "Interactive platform and media",
+      "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N4-interactive-platform-and-media.md",
+      "status": "pending",
+      "dependencies": [
+        "N1",
+        "N2"
+      ],
+      "requirements": [
+        "R05",
+        "R09"
+      ],
+      "completed_at": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "N5",
+      "title": "Playable single-player and persistence",
+      "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N5-playable-single-player-and-persistence.md",
+      "status": "pending",
+      "dependencies": [
+        "N3",
+        "N4"
+      ],
+      "requirements": [
+        "R05",
+        "R10"
+      ],
+      "completed_at": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "N6",
+      "title": "Linux LAN matches",
+      "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N6-linux-lan-matches.md",
+      "status": "pending",
+      "dependencies": [
+        "N5"
+      ],
+      "requirements": [
+        "R11"
+      ],
+      "completed_at": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "N7",
+      "title": "Release and dependency maintenance",
+      "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N7-release-and-dependency-maintenance.md",
+      "status": "pending",
+      "dependencies": [
+        "N6"
+      ],
+      "requirements": [
+        "R02",
+        "R03",
+        "R04",
+        "R12"
+      ],
+      "completed_at": null,
+      "evidence": null,
+      "notes": null
+    }
+  ]
+}
