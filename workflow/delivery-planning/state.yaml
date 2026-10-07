@@ -6,7 +6,7 @@
   "status": "ready_with_external_dependencies",
   "transaction": {
     "parent_commit": "d0483ca911b029460fb46d878fe260e90ec8d071",
-    "repository_commit": null
+    "repository_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808"
   },
   "source": {
     "mode": "CHANGE_PLAN",
@@ -29,7 +29,7 @@
   "blockers": [],
   "corrections": [],
   "handoff": {
-    "status": "pending_provenance",
+    "status": "ready_for_implementation",
     "path": "workflow/delivery-planning/handoff.yaml"
   }
 }
