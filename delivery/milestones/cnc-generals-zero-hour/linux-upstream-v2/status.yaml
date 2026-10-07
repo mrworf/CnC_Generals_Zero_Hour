@@ -17,20 +17,20 @@
       "id": "N0",
       "title": "Clean baseline and specification",
       "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N0-clean-baseline-and-specification.md",
-      "status": "pending",
+      "status": "completed",
       "dependencies": [],
       "requirements": [
         "R01"
       ],
-      "completed_at": null,
-      "evidence": null,
-      "notes": null
+      "completed_at": "2026-10-07",
+      "evidence": "evidence/recovery/20261007-reset.md",
+      "notes": "Recovery, exact baseline and replacement packet committed in d0483ca9, f92a3e5c and ade34a49."
     },
     {
       "id": "N1",
       "title": "Stock renderer suitability",
       "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N1-stock-renderer-suitability.md",
-      "status": "pending",
+      "status": "in_progress",
       "dependencies": [
         "N0"
       ],
@@ -39,8 +39,8 @@
         "R06"
       ],
       "completed_at": null,
-      "evidence": null,
-      "notes": null
+      "evidence": "evidence/qa/N1-stock-renderer-semantics.md",
+      "notes": "Slice 01 semantics passed; source-derived capacity/lifecycle gate remains pending."
     },
     {
       "id": "N2",

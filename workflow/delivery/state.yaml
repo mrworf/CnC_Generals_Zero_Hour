@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "workflow": "delivery",
+  "product_id": "cnc-generals-zero-hour",
+  "packet_id": "linux-upstream-v2",
+  "requested_milestones": ["N0", "N1", "N2", "N3", "N4", "N5", "N6", "N7"],
+  "completed_milestones": ["N0"],
+  "current_milestone": "N1",
+  "status": "in_progress",
+  "planning_handoff": "workflow/delivery-planning/handoff.yaml",
+  "governing_plan": "delivery/plans/cnc-generals-zero-hour/N1_plan.md",
+  "current_slice": "delivery/plans/cnc-generals-zero-hour/N1_plan_slice_02.md",
+  "completed_slices": ["N1_plan_slice_01"],
+  "evidence": "evidence/qa/N1-stock-renderer-semantics.md",
+  "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
+  "reset_evidence": "evidence/recovery/20261007-reset.md",
+  "agents": "prohibited by user",
+  "blockers": [],
+  "next": "Derive current original-source scene demand and implement capacity/repeated-lifetime qualification; do not accept N1 or start broad integration yet."
+}

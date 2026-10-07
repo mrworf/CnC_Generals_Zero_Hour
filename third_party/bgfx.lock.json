@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "acquired_from_official_upstream": "2026-10-07",
+  "projects": {
+    "bgfx": {"url": "https://github.com/bkaradzic/bgfx.git", "revision": "cca91681c953d2de9531197b0f580c866ffaa775"},
+    "bx": {"url": "https://github.com/bkaradzic/bx.git", "revision": "d86e4ea9d9da6e832a3ff41398587d82b772c69b"},
+    "bimg": {"url": "https://github.com/bkaradzic/bimg.git", "revision": "101b5b5fd4670f82cfdec8e98aa1ab9ee93bb2a1"}
+  }
+}
