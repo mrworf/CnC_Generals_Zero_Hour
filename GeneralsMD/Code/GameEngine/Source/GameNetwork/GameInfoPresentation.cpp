@@ -170,4 +170,3 @@ Bool GameInfo::isSkirmish(void)
 	}
 	return sawAI;
 }
-

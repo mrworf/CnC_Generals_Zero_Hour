@@ -470,7 +470,7 @@ Bool ParseAsciiStringToGameInfo(GameInfo *game, AsciiString options)
 						break;
 						case 'C':
 						{
-            	DEBUG_LOG(("ParseAsciiStringToGameInfo - AI player\n"));
+							DEBUG_LOG(("ParseAsciiStringToGameInfo - AI player\n"));
 							char *slotPos = NULL;
 							//Parse out the Name
 							AsciiString slotValue(strtok_r(rawSlotBacking.data(),",",&slotPos));
@@ -729,7 +729,7 @@ void SkirmishGameInfo::xfer( Xfer *xfer )
 		Int origStartPos=m_slot[slot]->getOriginalStartPos();
 		xfer->xferInt(&origStartPos);
 
- 		Int origPlayerTemplate=m_slot[slot]->getOriginalPlayerTemplate();
+		Int origPlayerTemplate=m_slot[slot]->getOriginalPlayerTemplate();
 		xfer->xferInt(&origPlayerTemplate);
 
 		if( xfer->getXferMode() == XFER_LOAD ) {
