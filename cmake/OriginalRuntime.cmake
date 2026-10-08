@@ -210,11 +210,16 @@ set(ZH_ORIGINAL_GAMEPLAY_COMMON
   RTS/PlayerTemplate.cpp RTS/ProductionPrerequisite.cpp RTS/ResourceGatheringManager.cpp
   RTS/Science.cpp RTS/ScoreKeeper.cpp RTS/SpecialPower.cpp RTS/Team.cpp RTS/TunnelTracker.cpp
   DamageFX.cpp GameLOD.cpp Language.cpp MultiplayerSettings.cpp PartitionSolver.cpp
+  System/BuildAssistant.cpp System/FunctionLexicon.cpp
   SkirmishBattleHonors.cpp StateMachine.cpp TerrainTypes.cpp
   System/DisabledTypes.cpp System/GameCommon.cpp
   System/ObjectStatusTypes.cpp System/Radar.cpp System/Upgrade.cpp)
 list(TRANSFORM ZH_ORIGINAL_GAMEPLAY_COMMON PREPEND "${ZH_CODE}/GameEngine/Source/Common/")
 add_library(original_gameplay_common STATIC ${ZH_ORIGINAL_GAMEPLAY_COMMON})
+# Actual CPU map owners extracted from the original device-owned translation unit.
+target_sources(original_gameplay_common PRIVATE
+  "${ZH_CODE}/GameEngine/Source/Common/System/MapObject.cpp"
+  "${ZH_CODE}/GameEngine/Source/Common/System/MapObjectTeams.cpp")
 target_link_libraries(original_gameplay_common PUBLIC original_runtime_common)
 target_include_directories(original_gameplay_common PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas"
@@ -230,7 +235,7 @@ set(ZH_ORIGINAL_LOGICAL_CLIENT
   Color.cpp Credits.cpp Display.cpp DisplayString.cpp DisplayStringManager.cpp
   Drawable.cpp DrawGroupInfo.cpp FXList.cpp GameClientDispatch.cpp GlobalLanguage.cpp
   LanguageFilter.cpp Line2D.cpp ParabolicEase.cpp RadiusDecal.cpp SelectionInfo.cpp Snow.cpp Statistics.cpp
-  View.cpp Water.cpp Input/Keyboard.cpp Input/Mouse.cpp
+  View.cpp Water.cpp VideoPlayer.cpp Terrain/TerrainVisual.cpp Input/Keyboard.cpp Input/Mouse.cpp
   System/Anim2D.cpp System/CampaignManager.cpp System/Image.cpp System/ParticleSys.cpp
   System/RayEffect.cpp Terrain/TerrainRoads.cpp
   Drawable/Update/AnimatedParticleSysBoneClientUpdate.cpp
@@ -281,6 +286,31 @@ endforeach()
 add_executable(original_transfer_fixture tests/original/transfer.cpp tests/original/AllocationFault.cpp)
 add_executable(original_message_parser_fixture tests/original/message_parser.cpp tests/original/AllocationFault.cpp)
 add_executable(original_game_info_fixture tests/original/game_info.cpp tests/original/AllocationFault.cpp)
+add_executable(original_map_object_fixture tests/original/map_object.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_map_object_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_map_object_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS values references constructor-faults names name-faults pool-failure)
+  add_test(NAME original_map_object_${family} COMMAND original_map_object_fixture "${family}")
+  set_tests_properties(original_map_object_${family} PROPERTIES LABELS "original;runtime;map" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
+# Explicit diagnostic only. Its expected unresolved providers must not prevent
+# configured acceptance targets from building, or be mistaken for runtime tests.
+add_executable(original_runtime_link_probe EXCLUDE_FROM_ALL
+  tests/toolchain/original_runtime_link_probe.cpp)
+target_link_libraries(original_runtime_link_probe PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_runtime_link_probe PRIVATE -Wl,--gc-sections)
+add_executable(original_seismic_filter_fixture tests/original/seismic_filter.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_seismic_filter_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_seismic_filter_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS oracle failures)
+  add_test(NAME original_seismic_filter_${family} COMMAND original_seismic_filter_fixture "${family}")
+  set_tests_properties(original_seismic_filter_${family} PROPERTIES LABELS "original;runtime;terrain" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 target_link_libraries(original_game_info_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_game_info_fixture PRIVATE -Wl,--gc-sections)

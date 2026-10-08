@@ -41,5 +41,7 @@
 
 // DEFINE /////////////////////////////////////////////////////////////////////
 #define MAX_TERRAIN_NAME_LEN 64  ///< max size of map filename with extenstion
+#define MAP_XY_FACTOR (10.0f) // Width/height of a height-map square in world space.
+#define MAP_HEIGHT_SCALE (MAP_XY_FACTOR/16.0f)
 
 #endif  // end __TERRAIN_H_

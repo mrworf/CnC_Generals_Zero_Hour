@@ -70,7 +70,7 @@
     },
     {
       "name": "BridgeTowerType",
-      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/TerrainRoads.h",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/BridgeTowerType.h",
       "underlying": "UnsignedInt",
       "enumerator_body_sha256": "ccd5181d7422af20d25bf77fb92aed3baf100044ea78471d51a038fec5538c46"
     },

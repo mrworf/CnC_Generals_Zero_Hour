@@ -14,12 +14,12 @@ class NativeWindowCallback {
       GameWinTooltipFunc, GameWinDrawFunc, WindowLayoutInitFunc>;
   Value m_value;
 public:
-  NativeWindowCallback() noexcept = default;
-  NativeWindowCallback(std::nullptr_t) noexcept {}
-  NativeWindowCallback(GameWinSystemFunc f) noexcept : m_value(f) {}
-  NativeWindowCallback(GameWinTooltipFunc f) noexcept : m_value(f) {}
-  NativeWindowCallback(GameWinDrawFunc f) noexcept : m_value(f) {}
-  NativeWindowCallback(WindowLayoutInitFunc f) noexcept : m_value(f) {}
+  constexpr NativeWindowCallback() noexcept = default;
+  constexpr NativeWindowCallback(std::nullptr_t) noexcept {}
+  constexpr NativeWindowCallback(GameWinSystemFunc f) noexcept : m_value(f) {}
+  constexpr NativeWindowCallback(GameWinTooltipFunc f) noexcept : m_value(f) {}
+  constexpr NativeWindowCallback(GameWinDrawFunc f) noexcept : m_value(f) {}
+  constexpr NativeWindowCallback(WindowLayoutInitFunc f) noexcept : m_value(f) {}
   template<class T> T get() const noexcept {
     const auto* value=std::get_if<T>(&m_value);
     return value ? *value : nullptr;

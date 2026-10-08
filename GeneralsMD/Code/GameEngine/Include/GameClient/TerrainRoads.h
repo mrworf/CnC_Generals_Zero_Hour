@@ -29,6 +29,7 @@
 
 #pragma once
 #include "Lib/BaseType.h"
+#include "Common/BridgeTowerType.h"
 
 #ifndef __TERRAINROADS_H_
 #define __TERRAINROADS_H_
@@ -47,14 +48,6 @@ class AsciiString;
 // ------------------------------------------------------------------------------------------------
 /** Bridges have 4 towers around it that the player can attack or use to repair the bridge */
 // ------------------------------------------------------------------------------------------------
-enum BridgeTowerType : UnsignedInt
-{
-	BRIDGE_TOWER_FROM_LEFT = 0,
-	BRIDGE_TOWER_FROM_RIGHT,
-	BRIDGE_TOWER_TO_LEFT,
-	BRIDGE_TOWER_TO_RIGHT,
-	BRIDGE_MAX_TOWERS				///< keep this last
-};
 
 // ------------------------------------------------------------------------------------------------
 enum { MAX_BRIDGE_BODY_FX = 3 };

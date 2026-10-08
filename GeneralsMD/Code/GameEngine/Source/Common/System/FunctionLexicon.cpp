@@ -61,7 +61,7 @@ extern WindowMsgHandledType PopupReplayInput( GameWindow *window, UnsignedInt ms
 extern WindowMsgHandledType ExtendedMessageBoxSystem( GameWindow *window, UnsignedInt msg, WindowMsgData mData1, WindowMsgData mData2 );
 
 // game window draw table -----------------------------------------------------------------------
-static FunctionLexicon::TableEntry gameWinDrawTable[] = 
+constinit static FunctionLexicon::TableEntry gameWinDrawTable[] =
 {
 	{ NAMEKEY_INVALID, "IMECandidateMainDraw",						IMECandidateMainDraw },
 	{ NAMEKEY_INVALID, "IMECandidateTextAreaDraw",				IMECandidateTextAreaDraw },
@@ -69,7 +69,7 @@ static FunctionLexicon::TableEntry gameWinDrawTable[] =
 };
 
 // game window system table -----------------------------------------------------------------------
-static FunctionLexicon::TableEntry gameWinSystemTable[] = 
+constinit static FunctionLexicon::TableEntry gameWinSystemTable[] =
 {
 
 
@@ -154,7 +154,7 @@ static FunctionLexicon::TableEntry gameWinSystemTable[] =
 };
 
 // game window input table ------------------------------------------------------------------------
-static FunctionLexicon::TableEntry gameWinInputTable[] = 
+constinit static FunctionLexicon::TableEntry gameWinInputTable[] =
 {
 
 	{ NAMEKEY_INVALID, "GameWinDefaultInput",						GameWinDefaultInput },
@@ -226,7 +226,7 @@ static FunctionLexicon::TableEntry gameWinInputTable[] =
 };
 
 // game window tooltip table ----------------------------------------------------------------------
-static FunctionLexicon::TableEntry gameWinTooltipTable[] = 
+constinit static FunctionLexicon::TableEntry gameWinTooltipTable[] =
 {
 
 
@@ -237,7 +237,7 @@ static FunctionLexicon::TableEntry gameWinTooltipTable[] =
 };
 
 // window layout init table -----------------------------------------------------------------------
-static FunctionLexicon::TableEntry winLayoutInitTable[] = 
+constinit static FunctionLexicon::TableEntry winLayoutInitTable[] =
 {
 
 	{ NAMEKEY_INVALID, "MainMenuInit",									MainMenuInit },
@@ -289,7 +289,7 @@ static FunctionLexicon::TableEntry winLayoutInitTable[] =
 };
 
 // window layout update table ---------------------------------------------------------------------
-static FunctionLexicon::TableEntry winLayoutUpdateTable[] = 
+constinit static FunctionLexicon::TableEntry winLayoutUpdateTable[] =
 {
 
 	{ NAMEKEY_INVALID, "MainMenuUpdate",								MainMenuUpdate },
@@ -330,7 +330,7 @@ static FunctionLexicon::TableEntry winLayoutUpdateTable[] =
 };
 
 // window layout shutdown table -------------------------------------------------------------------
-static FunctionLexicon::TableEntry winLayoutShutdownTable[] = 
+constinit static FunctionLexicon::TableEntry winLayoutShutdownTable[] =
 {
 
 	{ NAMEKEY_INVALID, "MainMenuShutdown",							MainMenuShutdown },

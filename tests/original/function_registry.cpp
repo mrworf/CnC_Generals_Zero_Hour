@@ -20,7 +20,18 @@ void draw(GameWindow*,WinInstanceData*) { ++calls; }
 void tooltip(GameWindow*,WinInstanceData*,UnsignedInt time) { require(time==97,"tooltip argument"); ++calls; }
 void layout(WindowLayout*,void* data) { received=data; ++calls; }
 void layoutOther(WindowLayout*,void*) { ++calls; }
+// Compilation proves the real typed representation supports constant table
+// initialization; no dynamic startup callback acquisitions are required.
+constinit const Entry staticCallbacks[]{
+  {NAMEKEY_INVALID,"System",system}, {NAMEKEY_INVALID,"Draw",draw},
+  {NAMEKEY_INVALID,"Tooltip",tooltip}, {NAMEKEY_INVALID,"Layout",layout},
+  {NAMEKEY_INVALID,nullptr,nullptr}};
 void functional() {
+  require(staticCallbacks[0].func.get<GameWinSystemFunc>()==system &&
+      staticCallbacks[1].func.get<GameWinDrawFunc>()==draw &&
+      staticCallbacks[2].func.get<GameWinTooltipFunc>()==tooltip &&
+      staticCallbacks[3].func.get<WindowLayoutInitFunc>()==layout &&
+      !staticCallbacks[4].func.get<GameWinSystemFunc>(),"constant tables preserve every typed pointer and sentinel");
   NameKeyGenerator names; names.init(); NativeFunctionRegistry registry;
   Entry s[]{{NAMEKEY_INVALID,"System",system},{NAMEKEY_INVALID,nullptr,nullptr}};
   Entry d[]{{NAMEKEY_INVALID,"Draw",draw},{NAMEKEY_INVALID,nullptr,nullptr}};

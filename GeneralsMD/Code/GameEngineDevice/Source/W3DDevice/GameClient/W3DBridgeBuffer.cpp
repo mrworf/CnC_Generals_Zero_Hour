@@ -902,7 +902,9 @@ static RenderObjClass* createTower( SimpleSceneClass *scene,
 	tower = assetManager->Create_Render_Obj( modelName.str(), 1.0f, playerColor );
 
 	// tie the render object into the map object
-	mapObject->setBridgeRenderObject( type, tower );
+	mapObject->setBridgeRenderObject(type,tower,{
+		[](RenderObjClass* object) noexcept { object->Add_Ref(); },
+		[](RenderObjClass* object) noexcept { object->Release_Ref(); }});
 
 	// set the position of the tower render object to the position in the world
 	Matrix3D transform;

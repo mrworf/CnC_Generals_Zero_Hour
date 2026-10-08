@@ -2310,3 +2310,64 @@ short prefixes, invalid raw encodings, every supported difficulty/mode pair,
 corrected retries, prior immutable input, and wrong-mode output preservation.
 Actual ReplayGameInfo adoption tests retain both owners' embedded slot identities,
 complete payload/backing, allocation-free swap and whole-owner retirement.
+
+## Native startup provider continuation (N2; whole runtime still pending)
+
+Actual BuildAssistant/FunctionLexicon/TerrainVisual/VideoPlayer providers now
+compile in the original archives. Typed NativeWindowCallback constructors are
+constexpr and all seven actual tables enforce constinit: original callback tables
+initialize as data rather than unconditional
+dynamic startup initializers. A constinit fixture proves all four pointer families
+and sentinel preservation. This does not omit any live callback; GUI table init
+still requires its actual implementations when reached.
+
+WorldHeightMapInterfaceClass's four source methods now live in a thin common
+header, and original map scales live in Common/Terrain.h. MapObject and
+TerrainVisual consume the same declarations. Importing MapObject merely for this
+interface had pulled gameplay type metadata into the isolated filter fixture;
+the fix removes that dependency, not sanitizer checks or parent type identities.
+
+Actual DomeStyleSeismicFilter preserves cosine dome, source square write extent,
+9.0 cap and 1.5 gravity subtraction. Its workspace is initialized RAII storage;
+radius/coordinate/size calculations are defined and malformed active input rejects
+before writes. Generated grid oracles cover radius1..3/life1..14, zero/expired
+life, no input, nonfinite/overflow boundaries, all25 sample and36 write callback
+failures, allocation ordinal0/terminal1 and corrected retries through three
+lifetimes. Callback write failure can leave preceding writes: this is workspace
+ownership evidence, not world-state rollback or actual WorldHeightMap acceptance.
+
+BuildAssistant source follow-through remains required: init publishes size before
+array acquisition; wall-position resize deletes accepted backing before replacement;
+sell-list load clears pointers without retiring nodes and publishes each pooled
+node before complete input/list admission; start-selling mutates construction
+before pooled/list acquisition; destructor does not retire sell nodes. Correct
+these coupled owner paths with actual game graph tests, not an isolated fake
+GameLogic. Sources: BuildAssistant.cpp::init/destructor/xferTheSellList/
+buildTiledLocations/sellObject.
+
+MapObject constructor/destructor and bridge render references reside in actual
+GameEngineDevice/WorldHeightMap.cpp, not a Common MapObject.cpp. Bridge render
+references are used by W3DBridgeBuffer, so do not classify them as editor-only or
+discard intended visual behavior. Its constructor calls reference replacement on
+bridge slots without first initializing them: prepare every slot before any
+fallible helper/reference operation when separating CPU map ownership. Source
+WorldHeightMap parses maps and owns tile/height data; a generated velocity grid is
+not a substitute for that owner. Next native CPU map/source-provider work must
+preserve serialized properties, linked object ownership and bridge semantics.
+### CPU MapObject extraction checkpoint (not whole-map acceptance)
+
+The actual definitions formerly in device `WorldHeightMap.cpp` now live in
+`Common/System/MapObject.cpp` and `MapObjectTeams.cpp`. The common header uses
+the extracted original bridge enum and height-velocity interface, not renderer
+implementation headers. Original bridge enum values and their recorded hash
+are unchanged. The device bridge caller supplies public retain/release hooks.
+Each map attachment captures one acquired reference unit; equal pointers in
+five slots require five releases. All attachment members initialize before
+fallible property construction. Default properties and all-ID assignment prepare
+offside dictionaries and commit the name namespace only after admission.
+Normal source fixtures cover defaults, reverse ID order, linked-node/pool
+retirement and complete allocation failure/retry manifests. See
+`evidence/qa/N2-runtime-support.md` for exact evidence and limitations.
+The new sanitizer fixture currently fails to link through parent/template
+metadata; it has not executed. Nonnull template/team integration and actual
+CPU WorldHeightMap acceptance remain pending, not inferred from these fixtures.

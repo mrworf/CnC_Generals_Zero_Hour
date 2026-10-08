@@ -106,6 +106,7 @@ public:
 	/**
 	*/
 	Dict& operator=(const Dict& src) = default;
+	void swap(Dict& other) noexcept { m_data.swap(other.m_data); }
 
 	/**
 		remove all pairs.

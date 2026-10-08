@@ -653,3 +653,15 @@ owner across GameEngine reset. Shared startup wire admission executes through th
 transfer fixture; actual ReplayGameInfo payload adoption executes through the
 setup fixture. Neither substitutes for executing Recorder startup, its registered
 reset callback, pooled messages and RNG in the full native graph.
+
+Native provider continuation: actual BuildAssistant/FunctionLexicon compile in
+original_gameplay_common; TerrainVisual/VideoPlayer compile in original_logical_client.
+NativeWindowCallback constant initialization removes accidental unconditional GUI
+table startup dependencies from lookup-only linking. A durable explicit diagnostic
+target original_runtime_link_probe retains actual GameEngine::init, is excluded
+from default builds and is never a CTest/runtime fixture. Current normal GCC
+root-link unresolved count36 supersedes historical75 for this precise configuration;
+the initial provider count247 is retained as the pre-constexpr comparison.
+Sanitizer whole-root linkage/execution remains pending; normal linkage alone is
+not acceptance. Current source/code/build/test provenance is in support QA and
+the native_root_provider_cohort entry of N2-runtime-link-census.json.

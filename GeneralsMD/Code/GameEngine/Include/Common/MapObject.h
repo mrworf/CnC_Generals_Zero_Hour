@@ -34,20 +34,14 @@
 
 #include "Common/Dict.h"
 #include "Common/GameMemory.h"
-#include "GameClient/TerrainRoads.h"
+#include "Common/GameCommon.h"
+#include "Common/BridgeTowerType.h"
+#include "Common/WorldHeightMapInterface.h"
+#include "Common/Terrain.h"
+#include "Common/NativeMapRenderReference.h"
 
 
 
-class WorldHeightMapInterfaceClass
-{
-public:
-
-  virtual Int getBorderSize() = 0;
-  virtual Real getSeismicZVelocity(Int xIndex, Int yIndex) const = 0;
-  virtual void setSeismicZVelocity(Int xIndex, Int yIndex, Real value) = 0; 
-  virtual Real getBilinearSampleSeismicZVelocity( Int x, Int y) = 0;
-
-};
 
 /** MapObject class 
 Not ref counted.  Do not store pointers to this class.  */
@@ -57,8 +51,6 @@ class ThingTemplate;
 class Shadow;
 enum WaypointID : UnsignedInt;
 
-#define MAP_XY_FACTOR			(10.0f)	 //How wide and tall each height map square is in world space.
-#define MAP_HEIGHT_SCALE	(MAP_XY_FACTOR/16.0f)		//divide all map heights by 8.
 
 // m_flags bit values.
 enum {
@@ -104,9 +96,9 @@ class MapObject : public MemoryPoolObject
 	// This data is runtime data that is used by the worldbuider editor, but 
 	// not saved in the map file.
 	Int										m_color;		 ///< Display color.
-	RenderObjClass*				m_renderObj; ///< object that renders in the 3d scene.
+	NativeMapRenderReference m_renderObj; ///< one acquired presentation reference.
 	Shadow*								m_shadowObj; ///< object that renders shadow in the 3d scene.
-	RenderObjClass*				m_bridgeTowers[ BRIDGE_MAX_TOWERS ];		///< for bridge towers
+	NativeMapRenderReference m_bridgeTowers[BRIDGE_MAX_TOWERS]; ///< one acquired unit per tower.
 	Int										m_runtimeFlags;
 
 public:
@@ -152,13 +144,13 @@ public:
 	void setIsWaypoint() { m_runtimeFlags |= MO_WAYPOINT; }
 	void setIsScorch() { m_runtimeFlags |= MO_SCORCH; }
 
-	void setRenderObj(RenderObjClass *pObj);
-	RenderObjClass *getRenderObj(void) const {return m_renderObj;}
+	void setRenderObj(RenderObjClass *pObj,NativeMapRenderOwnership owner={});
+	RenderObjClass *getRenderObj(void) const {return m_renderObj.get();}
 	void setShadowObj(Shadow *pObj)	{m_shadowObj=pObj;}
 	Shadow *getShadowObj(void) const {return m_shadowObj;}
 
 	RenderObjClass* getBridgeRenderObject( BridgeTowerType type );
-	void setBridgeRenderObject( BridgeTowerType type, RenderObjClass* renderObj );
+	void setBridgeRenderObject( BridgeTowerType type,RenderObjClass* renderObj,NativeMapRenderOwnership owner={} );
 
 	WaypointID getWaypointID();
 	AsciiString getWaypointName();

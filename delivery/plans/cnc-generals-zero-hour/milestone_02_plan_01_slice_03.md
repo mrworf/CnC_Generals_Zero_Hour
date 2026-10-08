@@ -979,3 +979,66 @@ are in N2-runtime-support.md. Setup/replay-wire/adoption tests are executed;
 whole Recorder/runtime remains compile-only. Commit this coherent progress
 checkpoint without completing this slice or milestone. Generated files, libraries,
 retail assets and recovery storage are excluded.
+
+Resume from clean a815cbef: refresh actual root link dependencies after setup and
+replay providers, then admit source-owned BuildAssistant, FunctionLexicon,
+TerrainVisual and VideoPlayer together into their actual archives. Inspect whole
+construct/init/retire paths and batch Linux/type/include corrections before
+validation; do not replace any gameplay or callback with stubs. StatsCollector
+still writes through CWD and must not become executable until protected user
+storage replaces those writers. Keep root linkage evidence separate from startup
+execution. Use a durable, EXCLUDE_FROM_ALL link-only probe that retains actual
+GameEngine::init and is never registered as a runtime test. This diagnostic target
+is not the native entry point or accepted gameplay fixture. Complete all three
+archive builds, inspect the refreshed unresolved cohort and continue actual
+factories/map/GameState execution. No new slice or milestone is created.
+
+Provider census exposes a source-layering issue: NativeWindowCallback's typed
+constructors were not constexpr, so linking FunctionLexicon lookup methods
+retains dynamic startup initializers for every GUI/Internet callback table,
+even when the table-owning init function is unreferenced. Make these existing
+pure value constructors constexpr so original static tables initialize as data;
+do not suppress sanitizer metadata or remove live callbacks to reduce a count.
+Validate all existing typed callback families and refresh the root census.
+
+TerrainVisual's actual source filter has legacy for-scope/MIN compiler assumptions
+and an unguarded temporary workspace across virtual sample/write callbacks.
+Keep the exact dome/velocity cap/gravity behavior while using owned initialized
+workspace and defined radius/coordinate/size arithmetic. Generated grid oracles
+exercise the actual filter, zero/expired life, malformed boundaries, callback
+exceptions and allocation failure/retry under both sanitizers; they are isolated
+algorithm/ownership evidence, not substitute WorldHeightMap or terrain acceptance.
+
+The sanitizer filter link exposes a header-layering dependency: TerrainVisual
+imports MapObject merely for its four-method height-velocity interface and shared
+map scales, pulling ThingTemplate/BehaviorModule and the whole unlinked parent
+through sanitizer type metadata. Move the actual interface/scales to their common
+declaration headers and keep MapObject consuming those same declarations. No fake
+typeinfo, alternative interface or sanitizer waiver. Initial sanitizer binaries
+were not produced; their missing-executable tests are not acceptance evidence.
+
+CPU MapObject continuation in this same transaction: move the actual original
+MapObject definitions out of WorldHeightMap.cpp into Common/System/MapObject.cpp,
+retaining properties, naming, template override selection, waypoint/team and linked
+object behavior. Retain render/shadow/bridge associations; their non-null render
+ownership becomes explicit game-owned acquire/release callbacks captured per
+reference, so CPU ownership does not import renderer/library private headers.
+Every bridge slot is initialized before fallible construction. The retained W3D
+bridge caller supplies its existing public reference operations explicitly; no
+library changes or alternate gameplay providers. Missing render ownership rejects
+before changing the accepted reference; equal numeric pointers in distinct slots
+remain separate acquired units. Null withdrawal needs no service callback lookup.
+Exercise actual pooled MapObject construction/defaults/copy/link retirement,
+generated properties and failed construction/duplicate/ID publication, all render
+reference units and source naming order through repeated GCC/Clang sanitizer
+lifetimes. Whole WorldHeightMap input and gameplay still require native execution.
+
+The map source retains source bridge enum values/hash while exposing its declaration
+without TerrainRoads/BodyModule imports. Whole IDs/default construction prepare
+properties and namespace offside, with complete failure-prefix retirement.
+Both sanitizer links reveal that including SidesList solely for the team-validation
+method retains the entire live parent through its type metadata. Separate that
+actual method into MapObjectTeams.cpp; keep it in the production graph, not an
+alternate provider or suppressed RTTI check. Newly extracted game-owned providers
+are explicit target_sources, not falsely claimed as original DSP-listed Common
+files. Verify one active definition and original device-definition retirement.

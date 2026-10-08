@@ -34,7 +34,9 @@
 
 #include "Common/Terrain.h"
 #include "Common/Snapshot.h"
-#include "Common/MapObject.h"
+#include "Common/WorldHeightMapInterface.h"
+#include "Common/SubsystemInterface.h"
+#include <list>
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class TerrainType;
@@ -43,6 +45,7 @@ class Matrix3D;
 class Object;
 class Drawable;
 class GeometryInfo;
+class ThingTemplate;
 
 
 class WorldHeightMap;

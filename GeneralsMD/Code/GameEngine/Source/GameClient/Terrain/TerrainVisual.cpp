@@ -30,6 +30,8 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 #include "Common/Xfer.h"
 #include "GameClient/TerrainVisual.h"
+#include <limits>
+#include <vector>
 
 
 #ifdef _INTERNAL
@@ -143,11 +145,9 @@ void TerrainVisual::loadPostProcess( void )
 SeismicSimulationFilterBase::SeismicSimStatusCode DomeStyleSeismicFilter::filterCallback( WorldHeightMapInterfaceClass *heightMap, const SeismicSimulationNode *node )
 {
 
-  Int life = node->m_life;
-
-  if ( heightMap == NULL )
+  if ( heightMap == NULL || node == NULL )
     return SEISMIC_STATUS_INVALID;
-
+  const UnsignedInt life = node->m_life;
 
   if ( life == 0 )
     return SEISMIC_STATUS_ACTIVE;
@@ -158,50 +158,51 @@ SeismicSimulationFilterBase::SeismicSimStatusCode DomeStyleSeismicFilter::filter
     Real magnitude = node->m_magnitude;
 
     Real offsScalar =  magnitude / (Real)life; // real-life, get it?
-    Int radius = node->m_radius;
+    if (!std::isfinite(magnitude) || node->m_radius>UnsignedInt(std::numeric_limits<Int>::max()/2))
+      return SEISMIC_STATUS_INVALID;
+    const Int radius = Int(node->m_radius);
     Int border = heightMap->getBorderSize();
-    Int centerX = node->m_center.x + border ;
-    Int centerY = node->m_center.y + border ;
-
-    UnsignedInt workspaceWidth = radius*2;
-    Real *workspace = NEW( Real[ sqr(workspaceWidth) ] );
-    Real *workspaceEnd = workspace + sqr(workspaceWidth);
-
-
-    for ( Real *t = workspace; t < workspaceEnd; ++t ) *t = 0.0f;// clear the workspace
+    const auto wideX=std::int64_t(node->m_center.x)+border;
+    const auto wideY=std::int64_t(node->m_center.y)+border;
+    for (const auto center:{wideX,wideY})
+      if (center-radius<std::numeric_limits<Int>::min() ||
+          center+radius>std::numeric_limits<Int>::max()) return SEISMIC_STATUS_INVALID;
+    const Int centerX=Int(wideX),centerY=Int(wideY);
+    const Int workspaceWidth=radius*2;
+    const auto width=std::size_t(workspaceWidth);
+    if (width && width>std::vector<Real>().max_size()/width) return SEISMIC_STATUS_INVALID;
+    std::vector<Real> workspace(width*width,0.0f);
 
     for (Int x = 0; x < radius; ++x)
     {
       for (Int y = 0; y < radius; ++y)
       {
 
-        Real distance = sqrt( sqr(x) + sqr(y) );//Pythagoras
+        Real distance = sqrt( Real(x)*Real(x) + Real(y)*Real(y) );//Pythagoras
     
         if ( distance < radius )
         {
           Real distScalar = cos( ( distance / radius * (PI/2) ) );
           Real height = (offsScalar * distScalar); 
 
-          workspace[ (radius + x) +  workspaceWidth * (radius + y) ] = height + heightMap->getBilinearSampleSeismicZVelocity( centerX + x,  centerY + y ) ;//kaleidoscope
+          workspace[ (radius + x) +  width * (radius + y) ] = height + heightMap->getBilinearSampleSeismicZVelocity( centerX + x,  centerY + y ) ;//kaleidoscope
           
           if ( x != 0 ) // non-zero test prevents cross-shaped double stamp 
           {
-      			workspace[ (radius - x) + workspaceWidth * (radius + y) ] = height + heightMap->getBilinearSampleSeismicZVelocity( centerX - x,  centerY + y ) ;
+            workspace[ (radius - x) + width * (radius + y) ] = height + heightMap->getBilinearSampleSeismicZVelocity( centerX - x,  centerY + y ) ;
             if ( y != 0 )
-              workspace[ (radius - x) + workspaceWidth * (radius - y) ] =  height + heightMap->getBilinearSampleSeismicZVelocity( centerX - x,  centerY - y ) ;
+              workspace[ (radius - x) + width * (radius - y) ] =  height + heightMap->getBilinearSampleSeismicZVelocity( centerX - x,  centerY - y ) ;
           }
           if ( y != 0 )
-      			workspace[ (radius + x) + workspaceWidth * (radius - y) ] = height + heightMap->getBilinearSampleSeismicZVelocity( centerX + x,  centerY - y ) ;
+            workspace[ (radius + x) + width * (radius - y) ] = height + heightMap->getBilinearSampleSeismicZVelocity( centerX + x,  centerY - y ) ;
         }
       }
     }
 
     // stuff the values from the workspace into the heightmap's velocities
-    for (x = 0; x < workspaceWidth; ++x)
+    for (Int x = 0; x < workspaceWidth; ++x)
       for (Int y = 0; y < workspaceWidth; ++y)
-    		heightMap->setSeismicZVelocity( centerX - radius + x, centerY - radius + y,  MIN( 9.0f, workspace[  x + workspaceWidth * y ])  );
-
-    delete [] workspace;
+        heightMap->setSeismicZVelocity( centerX - radius + x, centerY - radius + y, std::min(9.0f, workspace[x + width * y]) );
 
     return SEISMIC_STATUS_ACTIVE;
   }

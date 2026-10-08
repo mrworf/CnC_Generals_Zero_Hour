@@ -1,5 +1,68 @@
 # N2 slice03 supporting owner checkpoint — not milestone acceptance
 
+## User-requested worktree checkpoint: CPU map integration (unfinished)
+
+This checkpoint includes the previously verified constinit/filter cohort below
+and the subsequent actual CPU MapObject extraction. It is not a completed slice.
+Canonical543 SHA256
+`cad00cac460d5bc060145abd69915c2d5288e8a59fa010623ba3b0966e63e8aa`;
+toolchain-inclusive548 SHA256
+`ad89edf98ed5af2df9441f24bfdba7c7d5c366b325755110683aba1dedd7b694`.
+Whitespace normalization of the two extracted sources is nonsemantic.
+
+Normal GCC configured build passed. The cleanup check reran 15 related tests:
+all PASS in 3.41 seconds (six MapObject families, two seismic filter families,
+four callback registry families, and three source header/enum checks).
+MapObject constructor allocation discovery has 23 failure/retry pairs and exact
+terminal23; ID publication has 17 pairs and terminal17, over three lifetimes.
+Generated reference fixtures prove five acquired units on the same pointer;
+they do not prove physical rendering or whole-map loading.
+
+GCC and Clang sanitizer builds compile the added owners but FAIL linking the
+new MapObject fixture: retained parent-engine metadata pulls unresolved original
+providers/callbacks. No MapObject sanitizer execution or acceptance is claimed.
+The team-method extraction did not resolve that link failure. Preserve checks
+and investigate actual template metadata/provider selection next, holistically.
+Logs: `/tmp/zh-map-object-split-<variant>-build.log`,
+`/tmp/zh-map-object-gcc-test.log`, `/tmp/zh-map-object-root-link.log`.
+The earlier 36-provider root census below belongs to its earlier source cohort;
+the changed root diagnostic still fails and must be recounted. It was not run.
+
+Actual team/template binding, WorldHeightMap, native entry/factories, GameState,
+Recorder/reset and scenario acceptance remain pending. Full configured suite
+now has 191 tests; no current full-matrix pass is claimed. N2 and slice03 remain
+in progress. No vendor, retail asset or recovery content was modified.
+
+Final constinit source cohort: canonical537 SHA
+b38949c3a06dbe09e5d43511a73cb14c4549324845b8fddc925d071b1773f60e;
+plus-toolchain542 SHA2d1d8cea3ede2a4e7b932bfceb87c87687ff8db18e1d88ab6571e5cd1724049c.
+All configured targets build all3; related31/31 PASS4.74/13.44/10.24s,
+adding full source enum/header graph checks to the28 families below.
+Logs /tmp/zh-native-root-constinit-<variant>-{build,test}.log. Actual seven
+FunctionLexicon tables now enforce constant initialization, not just relying on
+compiler optimization. Refreshed GCC root remains36 unresolved, never executed,
+log /tmp/zh-native-root-constinit-link.log. Full185/runtime acceptance still pending.
+
+Native source provider continuation from a815cbef: canonical537 SHA
+2ceb93b2f6577fd35e3a0c5b28d58496d0ba9406ed85295df0b441bb52b00eb0;
+plus-toolchain542 SHA b3ba6b337ccd34f0ad482fe13ca434a76f63303ff3ad8d862aa05951f7dab72e.
+All configured targets build under normal GCC and GCC/Clang sanitizers.
+Related28/28 PASS1.61/8.67/6.28s on normal host, all leak/vptr/UB checks intact.
+Logs /tmp/zh-native-root-thin-<variant>-{build,test}.log. Actual filter's generated
+oracle/failure families and all callback/setup/message/transfer families execute;
+newly compiled building/video/lexicon whole owners remain unaccepted.
+
+Explicit original_runtime_link_probe GCC linkage still fails36 actual providers;
+log /tmp/zh-native-root-thin-link.log, never executed. Initial provider link247
+in /tmp/zh-native-root-providers-link.log drops to36 after typed callback static
+initialization; no fake globals or callback removal. Initial filter compilation
+found old for-scope/MIN assumptions, then its new fixture API spelling and missing
+header dependencies; sanitizer linkage exposed real parent type metadata. These
+were corrected as a coupled header/source graph; no checks suppressed. Earlier
+missing-executable sanitizer checks are NOT acceptance. Full185 suite and actual
+native root/GameState/Recorder/map/module/scenario acceptance remain pending.
+Pristine upstream verification passes; no retail/GPU/recovery/library changes.
+
 User-requested cleanup checkpoint (current frozen source): canonical533 SHA
 e24c1d763e974c369e01be614d824dca585c20ee6e7bd89b522809eac0ab1ba9;
 plus-toolchain537 SHA49bbdf6a97af082007a631a4800a9fc3e51ded4de4eaaa907998d7664b598abc.
