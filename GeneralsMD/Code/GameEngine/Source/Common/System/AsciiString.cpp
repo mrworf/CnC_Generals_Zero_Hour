@@ -334,12 +334,10 @@ Bool AsciiString::nextToken(AsciiString* tok, const char* seps)
 
 	if (end > start)
 	{
-		Int len = end - start;
-		char* tmp = tok->getBufferForRead(len + 1);
-		memcpy(tmp, start, len);
-		tmp[len] = 0;
-
-		this->set(end);
+		const std::string tokenValue(start,end);
+		AsciiString candidateToken(tokenValue.c_str()),candidateRest(end);
+		*tok=candidateToken;
+		*this=candidateRest;
 
 		return true;
 	}

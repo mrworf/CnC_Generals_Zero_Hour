@@ -101,6 +101,13 @@ void strings() {
     rejects([&]{other.format(L"%02048d",1);},"wide format truncation");
     require(other==wide,"wide format rejection preserves owner");
     rejects([&]{other.nextToken(nullptr,UnicodeString(L" "));},"null Unicode token owner");
+    UnicodeString wideTokens(L"  alpha Ω😀 end"),wideToken(wideTokens);
+    require(wideTokens.nextToken(&wideToken)&&wideToken.compare(L"alpha")==0,"odd native-wide token and shared backing");
+    require(wideTokens.nextToken(&wideToken)&&wideToken.compare(L"Ω😀")==0,"non-ASCII native-wide token");
+    require(wideTokens.nextToken(&wideToken)&&wideToken.compare(L"end")==0,"complete token sequence");
+    require(!wideTokens.nextToken(&wideToken)&&wideTokens.isEmpty(),"empty source token convention");
+    AsciiString aliasTokens("shared suffix"),aliasToken(aliasTokens);
+    require(aliasTokens.nextToken(&aliasToken)&&aliasToken=="shared"&&aliasTokens==" suffix","ASCII shared token/source transition");
     // Exceed the old 16-bit reference counter with real ownership units.
     std::vector<AsciiString> asciiCopies(70000,source);
     std::vector<UnicodeString> wideCopies(70000,wide);

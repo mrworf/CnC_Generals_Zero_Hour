@@ -27,6 +27,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "Common/SubsystemInterface.h"
+#include "Common/INI.h"
 #include "Common/Xfer.h"
 
 #ifdef _INTERNAL
@@ -43,29 +44,6 @@ Real SubsystemInterface::s_msConsumed = 0;
 #endif
 
 //-----------------------------------------------------------------------------
-SubsystemInterface::SubsystemInterface()
-#ifdef DUMP_PERF_STATS
-:m_curDrawTime(0),
-m_startDrawTimeConsumed(0),
-m_startTimeConsumed(0),
-m_curUpdateTime(0),
-m_dumpUpdate(false),
-m_dumpDraw(false)
-#endif
-{
-	if (TheSubsystemList) {
-		TheSubsystemList->addSubsystem(this);
-	}
-}
-
-
-SubsystemInterface::~SubsystemInterface()
-{
-	if (TheSubsystemList) {
-		TheSubsystemList->removeSubsystem(this);
-	}
-}
-
 #ifdef DUMP_PERF_STATS
 static const Real MIN_TIME_THRESHOLD = 0.0002f; // .2 msec. [8/13/2003]
 void SubsystemInterface::UPDATE(void) 
@@ -135,26 +113,6 @@ SubsystemInterfaceList::~SubsystemInterfaceList()
 	shutdownAll();
 }
 
-//-----------------------------------------------------------------------------
-void SubsystemInterfaceList::addSubsystem(SubsystemInterface* sys)
-{
-#ifdef DUMP_PERF_STATS
-	m_allSubsystems.push_back(sys);
-#endif
-}
-//-----------------------------------------------------------------------------
-void SubsystemInterfaceList::removeSubsystem(SubsystemInterface* sys)
-{
-#ifdef DUMP_PERF_STATS
-	for (SubsystemList::iterator it = m_allSubsystems.begin(); it != m_subsystems.end(); ++it)
-	{	 
-		if ( (*it) == sys) {
-			m_allSubsystems.erase(it);
-			break;
-		}
-	}
-#endif
-}
 //-----------------------------------------------------------------------------
 void SubsystemInterfaceList::initSubsystem(SubsystemInterface* sys, const char* path1, const char* path2, const char* dirpath, Xfer *pXfer, AsciiString name)
 {

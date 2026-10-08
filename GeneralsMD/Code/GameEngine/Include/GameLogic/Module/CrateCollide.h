@@ -39,7 +39,7 @@
 class Thing;
 class Anim2DTemplate;
 class FXList;
-enum ScienceType;
+#include "Common/ScienceType.h"
 
 //-------------------------------------------------------------------------------------------------
 class CrateCollideModuleData : public CollideModuleData 

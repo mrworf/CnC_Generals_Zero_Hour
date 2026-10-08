@@ -27,26 +27,26 @@
 // Desc:   INI Exception class. Thrown when INIs fail to read.
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-class INIException
+#pragma once
+#include <exception>
+#include <string>
+#include <utility>
+class INIException : public std::exception
 {
 	// This is a stack based exception class. It is used to output useful information
 	// when thrown from an INI message
 
+private:
+	std::string m_message;
+	bool m_present=false;
+	void bind() noexcept {mFailureMessage=m_present?m_message.data():nullptr;}
 public:
-	char *mFailureMessage;
-
-	INIException(const char* errorMessage) : mFailureMessage(NULL)
-	{
-		if (errorMessage) {
-			mFailureMessage = new char[strlen(errorMessage) + 1];
-			strcpy(mFailureMessage, errorMessage);
-		}
+	char* mFailureMessage=nullptr; // retained original diagnostic API, owned here
+	explicit INIException(const char* message):m_message(message?message:""),m_present(message!=nullptr){bind();}
+	INIException(const INIException& other):m_message(other.m_message),m_present(other.m_present){bind();}
+	INIException(INIException&& other) noexcept:m_message(std::move(other.m_message)),m_present(other.m_present){bind();other.m_present=false;other.bind();}
+	INIException& operator=(INIException other) noexcept {
+		m_message.swap(other.m_message);std::swap(m_present,other.m_present);bind();other.bind();return *this;
 	}
-
-	~INIException()
-	{
-		if (mFailureMessage) {
-			delete [] mFailureMessage;
-		}
-	}
+	const char* what() const noexcept override{return m_message.c_str();}
 };

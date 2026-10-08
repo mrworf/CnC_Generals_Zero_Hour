@@ -27,6 +27,13 @@ startup validates supplied content and integrity, with redacted error/status onl
 
 ## Tests and completion gate
 
+Carry forward the reader slice's explicit remaining startup services: XDG
+user/cache writers separated from immutable asset mounts; rooted MemoryPools.ini
+profile loading; native FileInfo timestamp semantics used by map-cache owners;
+complete original INI block table; non-BMP filter replacement-width compatibility.
+The slice02 stage4/mask63 retail probe is only container/basic-family/text evidence,
+not acceptance of these services or deterministic GameLogic execution.
+
 Normal, GCC and Clang original executables run the same fixture with identical
 checkpoints. Test independent presentation omission, multiple startup/run/shutdown
 cycles, interrupted startup/late decode failure, missing roots/malformed input,

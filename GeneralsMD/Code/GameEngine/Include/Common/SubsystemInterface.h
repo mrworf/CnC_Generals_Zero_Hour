@@ -32,8 +32,8 @@
 #ifndef __SUBSYSTEMINTERFACE_H_
 #define __SUBSYSTEMINTERFACE_H_
 
-#include "Common/INI.h"
-#include "Common/STLTypedefs.h"	
+#include "Common/AsciiString.h"
+#include <vector>
 
 class Xfer;
 
@@ -171,4 +171,3 @@ private:
 extern SubsystemInterfaceList* TheSubsystemList;
 
 #endif // __SUBSYSTEMINTERFACE_H_
-

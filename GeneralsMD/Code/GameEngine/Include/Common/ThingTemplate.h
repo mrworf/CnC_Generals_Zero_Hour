@@ -61,7 +61,7 @@ struct FieldParse;
 class Player;
 class INI;
 enum RadarPriorityType;
-enum ScienceType;
+#include "Common/ScienceType.h"
 enum EditorSortingType;
 enum ShadowType;
 class WeaponTemplateSet;
@@ -777,4 +777,3 @@ private:
 //-----------------------------------------------------------------------------
 
 #endif // __THINGTEMPLATE_H_
-

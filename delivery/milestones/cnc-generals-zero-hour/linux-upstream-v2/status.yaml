@@ -57,7 +57,7 @@
       ],
       "completed_at": null,
       "evidence": null,
-      "notes": "Original source inspected; one N2 transaction with three persisted coherent slices. Core owners precede rooted data and actual GameLogic acceptance."
+      "notes": "Core and rooted-data slices accepted, 18/18 normal/GCC/Clang original cases; six complete repeated ownership sweeps and read-only stage4/mask63 input-integrity probe. Actual GameEngine/GameLogic slice03 remains the N2 completion gate. Evidence: evidence/qa/N2-original-core.md and evidence/qa/N2-original-data.md."
     },
     {
       "id": "N3",

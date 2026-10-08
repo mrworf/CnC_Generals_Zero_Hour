@@ -34,7 +34,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include <stddef.h>	// for offsetof, which we don't use but everyone who includes us does
-#include "Common/STLTypedefs.h"
+#include "Common/ScienceType.h"
 #include "Common/AsciiString.h"
 #include "Common/GameCommon.h"
 
@@ -42,12 +42,11 @@
 class INI;
 class Xfer;
 class File;
-enum ScienceType;
 
 //-------------------------------------------------------------------------------------------------
 /** These control the behavior of loading the INI data into items */
 //-------------------------------------------------------------------------------------------------
-enum INILoadType
+enum INILoadType : Int
 {	
 	INI_LOAD_INVALID,						///< invalid load type
 	INI_LOAD_OVERWRITE,					///< create new or load *over* existing data instance
@@ -139,7 +138,7 @@ private:
 	Int								m_count;
 
 public:
-	MultiIniFieldParse() : m_count(0) 
+	MultiIniFieldParse() : m_fieldParse{},m_extraOffset{},m_count(0)
 	{ 
 		//Added By Sadullah Nader
 		//Initializations missing and needed
@@ -177,6 +176,9 @@ public:
 
 	void loadDirectory( AsciiString dirName, Bool subdirs, INILoadType loadType, Xfer *pXfer );  ///< load directory of INI files
 	void load( AsciiString filename, INILoadType loadType, Xfer *pXfer );		///< load INI file
+	// Actual field-dispatch entry point for rooted native data owners.
+	// The caller owns an offside candidate; publish it only after this returns.
+	void loadFields(AsciiString filename,INILoadType loadType,void* candidate,const FieldParse* fields);
 
 	static Bool isDeclarationOfType( AsciiString blockType, AsciiString blockName, char *bufferToCheck );
 	static Bool isEndOfBlock( char *bufferToCheck );
@@ -400,6 +402,10 @@ protected:
   char m_readBuffer[INI_READ_BUFFER];       ///< internal read buffer
   unsigned m_readBufferNext;                ///< next char in read buffer
   unsigned m_readBufferUsed;                ///< number of bytes in read buffer
+  char* m_tokenCursor=nullptr;
+  using LineTransfer=void(*)(void*,const char*,Int);
+  LineTransfer m_lineTransfer=nullptr;
+  void* m_transferOwner=nullptr;
 
 	AsciiString m_filename;										///< filename of file currently loading
 	INILoadType m_loadType;										///< load time for current file
@@ -417,4 +423,3 @@ protected:
 };
 
 #endif // __INI_H_
-

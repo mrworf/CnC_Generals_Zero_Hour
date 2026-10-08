@@ -66,7 +66,7 @@ enum ProductionID;
 enum CommandSourceType;
 enum ProductionType;
 enum GadgetGameMessage;
-enum ScienceType;
+#include "Common/ScienceType.h"
 enum TimeOfDay;
 enum RadiusCursorType;
 
@@ -1039,4 +1039,3 @@ private:
 extern ControlBar *TheControlBar;
 
 #endif  // end __CONTROLBAR_H_
-

@@ -381,6 +381,7 @@ public: \
 public: \
 	inline void *operator new(size_t s, ARGCLASS##MagicEnum e DECLARE_LITERALSTRING_ARG2) \
 	{ \
+		(void)s; (void)e; \
 		if(s!=sizeof(ARGCLASS) || alignof(ARGCLASS)>alignof(std::max_align_t))throw ERROR_BAD_ARG; \
 		DEBUG_ASSERTCRASH(s == sizeof(ARGCLASS), ("The wrong operator new is being called; ensure all objects in the hierarchy have MemoryPoolGlue set up correctly")); \
 		return ARGCLASS::getClassMemoryPool()->allocateBlockImplementation(PASS_LITERALSTRING_ARG1); \
@@ -393,6 +394,7 @@ public: \
 	*/ \
 	inline void operator delete(void *p, ARGCLASS##MagicEnum e DECLARE_LITERALSTRING_ARG2) \
 	{ \
+		(void)p; (void)e; \
 		ARGCLASS::getClassMemoryPool()->freeBlock(p); \
 	} \
 protected: \
@@ -411,17 +413,19 @@ protected: \
 	*/ \
 	inline void *operator new(size_t s) \
 	{ \
+		(void)s; \
 		DEBUG_CRASH(("This operator new should normally never be called... please use new(char*) instead.")); \
 		DEBUG_ASSERTCRASH(s == sizeof(ARGCLASS), ("The wrong operator new is being called; ensure all objects in the hierarchy have MemoryPoolGlue set up correctly")); \
 		throw ERROR_BUG; \
 	} \
 	inline void operator delete(void *p) \
 	{ \
+		(void)p; \
 		DEBUG_CRASH(("Please call deleteInstance instead of delete.")); \
 		ARGCLASS::getClassMemoryPool()->freeBlock(p); \
 	} \
 private: \
-	virtual MemoryPool *getObjectMemoryPool() \
+	virtual MemoryPool *getObjectMemoryPool() override \
 	{ \
 		return ARGCLASS::getClassMemoryPool(); \
 	} \
@@ -452,6 +456,7 @@ public: \
 protected: \
 	inline void *operator new(size_t s, ARGCLASS##MagicEnum e DECLARE_LITERALSTRING_ARG2) \
 	{ \
+		(void)s; (void)e; \
 		DEBUG_CRASH(("this should be impossible to call (abstract base class)")); \
 		DEBUG_ASSERTCRASH(s == sizeof(ARGCLASS), ("The wrong operator new is being called; ensure all objects in the hierarchy have MemoryPoolGlue set up correctly")); \
 		throw ERROR_BUG; \
@@ -459,21 +464,24 @@ protected: \
 protected: \
 	inline void operator delete(void *p, ARGCLASS##MagicEnum e DECLARE_LITERALSTRING_ARG2) \
 	{ \
+		(void)p; (void)e; \
 		DEBUG_CRASH(("this should be impossible to call (abstract base class)")); \
 	} \
 protected: \
 	inline void *operator new(size_t s) \
 	{ \
+		(void)s; \
 		DEBUG_CRASH(("this should be impossible to call (abstract base class)")); \
 		DEBUG_ASSERTCRASH(s == sizeof(ARGCLASS), ("The wrong operator new is being called; ensure all objects in the hierarchy have MemoryPoolGlue set up correctly")); \
 		throw ERROR_BUG; \
 	} \
 	inline void operator delete(void *p) \
 	{ \
+		(void)p; \
 		DEBUG_CRASH(("this should be impossible to call (abstract base class)")); \
 	} \
 private: \
-	virtual MemoryPool *getObjectMemoryPool() \
+	virtual MemoryPool *getObjectMemoryPool() override \
 	{ \
 		throw ERROR_BUG; \
 	} \

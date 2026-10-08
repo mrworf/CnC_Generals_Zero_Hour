@@ -54,7 +54,7 @@ processes. Fresh normal-host init-only and full controls reproduced the same
 enabled. There are no suppressions or library edits. The normal functional build
 leaves the host bus environment unchanged. See the evidence report for limits.
 
-CTest registers 23 cases: five original-core families plus provenance,
+CTest registers 36 cases: eighteen original-core/data cases plus provenance,
 initialization, nine semantic families,
 a combined same-process repeat, and six capacity/lifecycle families. The latter
 are `capacity`, `draw-boundary`, `uploads`, `lifetimes`, `presentation-init`, and
@@ -96,3 +96,19 @@ owner; only explicit class/DMA allocations use game pools. ASan, UBSan and leak
 checking remain enabled. A ptrace-based sandbox prevents LeakSanitizer teardown;
 run sanitizer CTest on the host, rather than disabling leak detection. These
 CPU-only families require no isolated-bus fixture or graphics session.
+
+The same headless configuration also builds rooted original data consumers and
+thirteen data cases: six functional families (roots, archives, RAM, catalogs,
+text, INI), six independent allocation-failure batches and the generated audit
+wrapper. Each fault batch exhausts its contiguous ordinal range plus terminal
+success, with three same-process repeats. These are actual core/data owners,
+not complete original GameLogic initialization or simulation acceptance.
+
+`original_data_audit` is an optional read-only supplied-data probe, not a CTest
+retail dependency. Run `tools/run_data_audit.py --binary <audit-executable>` with
+repeated `--data-root <supplied-root>` options in Zero Hour/Generals order. Keep
+actual roots out of committed commands/logs. The wrapper retains only bounded
+public stage/mask/status and integrity outcomes, hashes regular input bytes
+before/after, rejects unexpected output, and never writes into supplied roots.
+Its successful mask proves indexing/basic-family presence and text initialization,
+not full scenario completeness. Use `evidence/qa/N2-original-data.md` for limits.

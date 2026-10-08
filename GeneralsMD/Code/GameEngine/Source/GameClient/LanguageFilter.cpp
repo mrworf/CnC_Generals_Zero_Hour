@@ -27,7 +27,11 @@
 
 #include "GameClient/LanguageFilter.h"
 #include "Common/FileSystem.h"
-#include "Common/File.h"
+#include "Common/file.h"
+#include "Common/FileOwner.h"
+#include "Common/UTF16.h"
+#include <array>
+#include <memory>
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -50,31 +54,18 @@ LanguageFilter::~LanguageFilter() {
 }
 
 void LanguageFilter::init() {
-	m_wordList.clear();
-
-	// read in the file already.
-	File *file1 = TheFileSystem->openFile(BadWordFileName, File::READ | File::BINARY);
-	if (file1 == NULL) {
-		return;
-	}
-
-	wchar_t word[128];
-	while (readWord(file1, word)) {
-		Int wordLen = wcslen(word);
-		if (wordLen == 0) {
-			continue;
-		}
-		for (Int i = 0; i < wordLen; ++i) {
-			word[i] = word[i] ^ LANGUAGE_XOR_KEY;
-		}
-		UnicodeString uniword(word);
-		unHaxor(uniword);
-		//DEBUG_LOG(("Just read %ls from the bad word file.  Entered as %ls\n", word, uniword.str()));
-		m_wordList[uniword] = true;
-	}
-
-	file1->close();
-	file1 = NULL;
+    if(!TheFileSystem)throw ERROR_BAD_ARG;
+    FileCloseOwner file(TheFileSystem->openFile(BadWordFileName,File::READ|File::BINARY));
+    LangMap candidate;
+    if(file) {
+        wchar_t word[128]{};
+        while(readWord(file.get(),word)) {
+            if(!*word)continue;
+            UnicodeString value(word);unHaxor(value);
+            candidate[value]=true;
+        }
+    }
+    m_wordList.swap(candidate);
 }
 
 void LanguageFilter::reset() {
@@ -88,8 +79,9 @@ wchar_t ignoredChars[] = L"-_*'\"";
 
 void LanguageFilter::filterLine(UnicodeString &line) 
 {
-	WideChar *buf = NEW WideChar[line.getLength()+1];
-	wcscpy(buf, line.str());
+	auto backing=std::make_unique<WideChar[]>(std::size_t(line.getLength())+1);
+	WideChar* buf=backing.get();
+	wcscpy(buf,line.str());
 
 	UnicodeString newLine(line);
 	UnicodeString token(L"");
@@ -115,7 +107,6 @@ void LanguageFilter::filterLine(UnicodeString &line)
 	}
 
 	line.set(buf);
-	delete[] buf;
 }
 
 void LanguageFilter::unHaxor(UnicodeString &word) {
@@ -159,37 +150,21 @@ void LanguageFilter::unHaxor(UnicodeString &word) {
 }
 
 // returning true means that there are more words in the file.
-Bool LanguageFilter::readWord(File *file1, UnsignedShort *buf) {
-	Int index = 0;
-	Bool retval = TRUE;
-	Int val = 0;
-
-	UnsignedShort c;
-
-	val = file1->read(&c, sizeof(UnsignedShort));
-	if ((val == -1) || (val == 0)) {
-		buf[index] = 0;
-		return FALSE;
-	}
-	buf[index] = c;
-
-	while (buf[index] != L' ') {
-		++index;
-		val = file1->read(&c, sizeof(UnsignedShort));
-		if ((val == -1) || (val == 0)) {
-			c = WEOF;
-		}
-
-		if ((c == WEOF) || (c == L' ')) {
-			buf[index] = 0;
-			if (c == WEOF) {
-				retval = FALSE;
-			}
-			break;
-		}
-		buf[index] = c;
-	}
-	return retval;
+Bool LanguageFilter::readWord(File* file,WideChar* output) {
+    if(!file || !output)throw ERROR_BAD_ARG;
+    std::array<UnsignedShort,127> units{};std::size_t count=0;
+    for(;;) {
+        std::array<unsigned char,2> bytes{};
+        const Int read=file->read(bytes.data(),2);
+        if(read==0 && count==0){output[0]=0;return FALSE;}
+        if(read!=2)throw ERROR_BAD_ARG;
+        const auto unit=UnsignedShort(UnsignedInt(bytes[0])|(UnsignedInt(bytes[1])<<8));
+        if(unit==0x20)break; // original raw separator, outside XOR payload
+        if(count==units.size())throw ERROR_BAD_ARG;
+        units[count++]=UnsignedShort(unit^LANGUAGE_XOR_KEY);
+    }
+    const auto word=decodeOriginalUTF16(std::span<const UnsignedShort>(units.data(),count));
+    std::copy(word.begin(),word.end(),output);output[word.size()]=0;return TRUE;
 }
 
 LanguageFilter * createLanguageFilter() 

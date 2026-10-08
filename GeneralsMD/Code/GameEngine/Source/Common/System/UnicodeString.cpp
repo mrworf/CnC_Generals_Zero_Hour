@@ -303,12 +303,12 @@ Bool UnicodeString::nextToken(UnicodeString* tok, UnicodeString delimiters)
 
 	if (end > start)
 	{
-		Int len = end - start;
-		WideChar* tmp = tok->getBufferForRead(len + 1);
-		memcpy(tmp, start, len*2);
-		tmp[len] = 0;
-
-		this->set(end);
+		// Both values are constructed before publication. Native wchar_t is
+		// not the two-byte CSF unit, and tok may share our accepted backing.
+		const std::wstring tokenValue(start,end);
+		UnicodeString candidateToken(tokenValue.c_str()),candidateRest(end);
+		*tok=candidateToken;
+		*this=candidateRest;
 
 		return true;
 	}

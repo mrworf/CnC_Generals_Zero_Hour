@@ -51,7 +51,7 @@
 //----------------------------------------------------------------------------
 
 //#include "Common/File.h"
-#include "Common/STLTypedefs.h"
+#include "Common/FilenameList.h"
 #include "Common/SubsystemInterface.h"
 
 //----------------------------------------------------------------------------
@@ -63,8 +63,6 @@ class File;
 //           Type Defines
 //----------------------------------------------------------------------------
 
-typedef std::set<AsciiString, rts::less_than_nocase<AsciiString> > FilenameList;
-typedef FilenameList::iterator FilenameListIter;
 
 //----------------------------------------------------------------------------
 //           Type Defines
@@ -126,6 +124,9 @@ class FileSystem : public SubsystemInterface
 public:
 	FileSystem();
 	virtual	~FileSystem();
+	// Explicit ordered roots: Zero Hour first, then original Generals assets.
+	// Replace mounts only after a complete offside read-only index is admitted.
+	void mountReadOnly(const std::vector<std::string>& roots);
 
 	void init();
 	void reset();
@@ -143,6 +144,9 @@ public:
 	void unloadMusicFilesFromCD();
 protected:
   mutable std::map<unsigned,bool> m_fileExist;
+private:
+  struct NativeMounts;
+  std::unique_ptr<NativeMounts> m_nativeMounts;
 };
 
 extern FileSystem*	TheFileSystem;

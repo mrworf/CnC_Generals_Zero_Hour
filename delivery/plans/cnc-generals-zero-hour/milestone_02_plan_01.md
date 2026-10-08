@@ -58,8 +58,8 @@ from Linux wchar_t. Reader/writer source traceability precedes implementation.
 | Slice | Plan | Observable outcome | Dependencies | Status | Commit | Evidence |
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | [Core owner process](milestone_02_plan_01_slice_01.md) | Original core values, strings, memory and RNG start/use/retire safely on Linux | N0 | completed | `delivery: port original core ownership to Linux` | `evidence/qa/N2-original-core.md` |
-| 02 | [Supplied data access](milestone_02_plan_01_slice_02.md) | Original consumers read rooted BIG/INI/CSF with bounded errors and no asset writes | 01 | planned | | |
-| 03 | [Original headless runtime](milestone_02_plan_01_slice_03.md) | Actual original startup and simulation run/repeat with compiler-matching checkpoints | 01,02 | planned | | |
+| 02 | [Supplied data access](milestone_02_plan_01_slice_02.md) | Original consumers read rooted BIG/INI/CSF with bounded errors and no asset writes | 01 | completed | `delivery: port rooted original data consumers to Linux` | `evidence/qa/N2-original-data.md` |
+| 03 | [Original headless runtime](milestone_02_plan_01_slice_03.md) | Actual original startup and simulation run/repeat with compiler-matching checkpoints | 01,02 | in_progress | | |
 
 Three independently testable behavior slices, not per-assert or per-file plans.
 Renderer/UI/media/LAN/full match completion remain later milestones. No toy
@@ -93,3 +93,9 @@ ordinary port/build/fixture work remains inside this transaction.
 N1 output is committed at 11295c4f and untouched upstream. N2 planning is
 persisted before any original-runtime production edit. PRE04 completeness is
 still pending at the actual retail boundary, not inferred from the symlink.
+
+Slice02 is accepted under normal/GCC/Clang checks, 18/18 each. Its read-only
+supplied-data probe reached stage4/mask63 with unchanged complete input snapshots.
+This establishes basic indexing/families/text, not full PRE04 scenario or runtime
+acceptance. The existing slice03 continues actual original startup; see its
+explicit carry-forward service/encoding gates and the slice02 evidence limits.

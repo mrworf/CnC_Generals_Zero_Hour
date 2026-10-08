@@ -69,7 +69,7 @@
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-static Xfer *s_xfer = NULL;
+// INI transfer ownership is per instance, not a process-global borrowed pointer.
 
 //-------------------------------------------------------------------------------------------------
 /** This is the table of data types we can have in INI files.  To add a new data type
@@ -181,33 +181,11 @@ Bool INI::isValidINIFilename( const char *filename )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-INI::INI( void )
-{
-
-	m_file							= NULL;
-  m_readBufferNext=m_readBufferUsed=0;
-	m_filename					= "None";
-	m_loadType					= INI_LOAD_INVALID;
-	m_lineNum						= 0;
-	m_seps							= " \n\r\t=";			///< make sure you update m_sepsPercent/m_sepsColon as well
-	m_sepsPercent				= " \n\r\t=%%";
-	m_sepsColon					= " \n\r\t=:";
-	m_sepsQuote					= "\"\n=";				///< stop at " = EOL
-	m_blockEndToken			= "END";
-	m_endOfFile					= FALSE;
-	m_buffer[0]					= 0;
-#if defined(_DEBUG) || defined(_INTERNAL)
-	m_curBlockStart[0]	= 0;
-#endif
-
-}  // end INI
+  // end INI
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-INI::~INI( void )
-{
-
-}  // end ~INI
+  // end ~INI
 
 //-------------------------------------------------------------------------------------------------
 /** Load all INI files in the specified directory (and subdirectories if indicated).
@@ -262,50 +240,11 @@ void INI::loadDirectory( AsciiString dirName, Bool subdirs, INILoadType loadType
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void INI::prepFile( AsciiString filename, INILoadType loadType )
-{
-	// if we have a file open already -- we can't do another one
-	if( m_file != NULL )
-	{
 
-		DEBUG_CRASH(( "INI::load, cannot open file '%s', file already open\n", filename.str() ));
-		throw INI_FILE_ALREADY_OPEN;
-
-	}  // end if
-
-	// open the file
-	m_file = TheFileSystem->openFile(filename.str(), File::READ);
-	if( m_file == NULL )
-	{
-
-		DEBUG_CRASH(( "INI::load, cannot open file '%s'\n", filename.str() ));
-		throw INI_CANT_OPEN_FILE;
-
-	}  // end if
-
-	m_file = m_file->convertToRAMFile();
-
-	// save our filename
-	m_filename = filename;
-
-	// save our load time
-	m_loadType = loadType;
-}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void INI::unPrepFile()
-{
-	// close the file
-	m_file->close();
-	m_file = NULL;
-  m_readBufferUsed=m_readBufferNext=0;
-	m_filename = "None";
-	m_loadType = INI_LOAD_INVALID;
-	m_lineNum = 0;
-	m_endOfFile = FALSE;
-	s_xfer = NULL;
-}
+
 
 //-------------------------------------------------------------------------------------------------
 static INIBlockParse findBlockParse(const char* token)
@@ -321,29 +260,7 @@ static INIBlockParse findBlockParse(const char* token)
 }
 
 //-------------------------------------------------------------------------------------------------
-static INIFieldParseProc findFieldParse(const FieldParse* parseTable, const char* token, int& offset, const void*& userData)
-{
-	for (const FieldParse* parse = parseTable; parse->token; ++parse)
-	{
-		if (strcmp( parse->token, token ) == 0)
-		{
-			offset = parse->offset;
-			userData = parse->userData;
-			return parse->parse;
-		}
-	}
 
-	if (!parse->token && parse->parse) 
-	{
-		offset = parse->offset;
-		userData = token;
-		return parse->parse;
-	}
-	else
-	{
-		return NULL;
-	}
-}
 
 //-------------------------------------------------------------------------------------------------
 /** Load and parse an INI file */
@@ -352,8 +269,9 @@ void INI::load( AsciiString filename, INILoadType loadType, Xfer *pXfer )
 {
 	setFPMode(); // so we have consistent Real values for GameLogic -MDC
 
-	s_xfer = pXfer;
-	prepFile(filename, loadType);
+	prepFile(filename,loadType);
+    m_transferOwner=pXfer;
+    m_lineTransfer=pXfer?+[](void* owner,const char* bytes,Int count){static_cast<Xfer*>(owner)->xferUser(const_cast<char*>(bytes),count);}:nullptr;
 
 	try
 	{
@@ -368,7 +286,7 @@ void INI::load( AsciiString filename, INILoadType loadType, Xfer *pXfer )
 			AsciiString currentLine = m_buffer;
 
 			// the first word is the type of data we're processing
-			const char *token = strtok( m_buffer, m_seps );
+			const char *token = ::strtok_r(m_buffer,m_seps,&m_tokenCursor);
 			if( token )
 			{
 				INIBlockParse parse = findBlockParse(token);
@@ -418,164 +336,42 @@ void INI::load( AsciiString filename, INILoadType loadType, Xfer *pXfer )
 /** Read a line from the already open file.  Any comments will be remved and
 	* therefore ignored from any given line */
 //-------------------------------------------------------------------------------------------------
-void INI::readLine( void )
-{
-	// sanity
-	DEBUG_ASSERTCRASH( m_file, ("readLine(), file pointer is NULL\n") );
 
-  if (m_endOfFile)
-    *m_buffer=0;
-  else
-  {
-    char *p=m_buffer;
-    while (p!=m_buffer+INI_MAX_CHARS_PER_LINE)
-    {
-      // get next character
-      if (m_readBufferNext==m_readBufferUsed)
-      {
-        // refill buffer
-        m_readBufferNext=0;
-        m_readBufferUsed=m_file->read(m_readBuffer,INI_READ_BUFFER);
-
-        // EOF?
-        if (!m_readBufferUsed)
-        {
-          m_endOfFile=true;
-          *p=0;
-          break;
-        }
-      }
-      *p=m_readBuffer[m_readBufferNext++];
-
-      // CR?
-      if (*p=='\n')
-      {
-        *p=0;
-        break;
-      }
-
-      DEBUG_ASSERTCRASH(*p != '\t', ("tab characters are not allowed in INI files (%s). please check your editor settings. Line Number %d\n",m_filename.str(), getLineNum()));
-
-      // comment?
-      if (*p==';')
-        *p=0;
-      // whitespace?
-      else if (*p>0&&*p<32)
-        *p=' ';
-      p++;
-    }
-    *p=0;
-
-		// increase our line count
-		m_lineNum++;
-
-		// check for at the max
-		if ( p == m_buffer+INI_MAX_CHARS_PER_LINE )
-		{
-
-			DEBUG_ASSERTCRASH( 0, ("Buffer too small (%d) and was truncated, increase INI_MAX_CHARS_PER_LINE\n", 
-														 INI_MAX_CHARS_PER_LINE) );
-
-		}  // end if
-  }
-
-	if (s_xfer)
-	{
-		s_xfer->xferUser( m_buffer, sizeof( char ) * strlen( m_buffer ) );
-		//DEBUG_LOG(("Xfer val is now 0x%8.8X in %s, line %s\n", ((XferCRC *)s_xfer)->getCRC(),
-			//m_filename.str(), m_buffer));
-	}
-}
 
 //-------------------------------------------------------------------------------------------------
 /** Parse UnsignedByte from buffer and assign at location 'store' */
 //-------------------------------------------------------------------------------------------------
-void INI::parseUnsignedByte( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	const char *token = ini->getNextToken();
-	Int value = scanInt(token);
-	if (value < 0 || value > 255)
-	{
-		DEBUG_CRASH(("Bad value INI::parseUnsignedByte"));
-		throw ERROR_BUG;
-	}
-	*(Byte *)store = (Byte)value;
-} 
+
 
 //-------------------------------------------------------------------------------------------------
 /** Parse signed short from buffer and assign at location 'store' */
 //-------------------------------------------------------------------------------------------------
-void INI::parseShort( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	const char *token = ini->getNextToken();
-	Int value = scanInt(token);
-	if (value < -32768 || value > 32767)
-	{
-		DEBUG_CRASH(("Bad value INI::parseShort"));
-		throw ERROR_BUG;
-	}
-	*(Short *)store = (Short)value;
-} 
+
 
 //-------------------------------------------------------------------------------------------------
 /** Parse unsigned short from buffer and assign at location 'store' */
 //-------------------------------------------------------------------------------------------------
-void INI::parseUnsignedShort( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	const char *token = ini->getNextToken();
-	Int value = scanInt(token);
-	if (value < 0 || value > 65535)
-	{
-		DEBUG_CRASH(("Bad value INI::parseUnsignedShort"));
-		throw ERROR_BUG;
-	}
-	*(UnsignedShort *)store = (UnsignedShort)value;
-} 
+
 
 //-------------------------------------------------------------------------------------------------
 /** Parse integer from buffer and assign at location 'store' */
 //-------------------------------------------------------------------------------------------------
-void INI::parseInt( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	const char *token = ini->getNextToken();
-	*(Int *)store = scanInt(token);
 
-} 
 
 //-------------------------------------------------------------------------------------------------
 /** Parse unsigned integer from buffer and assign at location 'store' */
 //-------------------------------------------------------------------------------------------------
-void INI::parseUnsignedInt( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	const char *token = ini->getNextToken();
-	*(UnsignedInt *)store = scanUnsignedInt(token);
 
-}
 
 //-------------------------------------------------------------------------------------------------
 /** Parse real from buffer and assign at location 'store' */
 //-------------------------------------------------------------------------------------------------
-void INI::parseReal( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	const char *token = ini->getNextToken();
-	*(Real *)store = scanReal(token);
 
-} 
 
 //-------------------------------------------------------------------------------------------------
 /** Parse real from buffer and assign at location 'store' */
 //-------------------------------------------------------------------------------------------------
-void INI::parsePositiveNonZeroReal( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	const char *token = ini->getNextToken();
-	*(Real *)store = scanReal(token);
-	if (*(Real *)store <= 0.0f)
-	{
-		DEBUG_CRASH(("invalid Real value %f -- expected > 0\n",*(Real*)store));
-		throw INI_INVALID_DATA;
-	}
 
-}
 
 //-------------------------------------------------------------------------------------------------
 /** Parse a degree value (0 to 360) and store the radian value of that degree
@@ -609,52 +405,22 @@ void INI::parseAngularVelocityReal( INI *ini, void * /*instance*/,
 /** Parse Bool from buffer and assign at location 'store'.  The buffer token must
 	* be in the form of a string "Yes" or "No" (case is ignored) */
 //-------------------------------------------------------------------------------------------------
-void INI::parseBool( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	*(Bool*)store = INI::scanBool(ini->getNextToken());
-}
+
 
 //-------------------------------------------------------------------------------------------------
 /** Parse Bool from buffer; if true, or in MASK, otherwise and out MASK. The buffer token must
 	* be in the form of a string "Yes" or "No" (case is ignored) */
 //-------------------------------------------------------------------------------------------------
-void INI::parseBitInInt32( INI *ini, void *instance, void *store, const void* userData )
-{
-	UnsignedInt* s = (UnsignedInt*)store;
-	UnsignedInt mask = (UnsignedInt)userData;
 
-	if (INI::scanBool(ini->getNextToken()))
-		*s |= mask;
-	else
-		*s &= ~mask;
-}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-/*static*/ Bool INI::scanBool(const char* token)
-{
-	// translate string yes/no into TRUE/FALSE
-	if( stricmp( token, "yes" ) == 0 )
-		return TRUE;
-	else if( stricmp( token, "no" ) == 0 )
-		return FALSE;
-	else
-	{
-		DEBUG_CRASH(("invalid boolean token %s -- expected Yes or No\n",token));
-		throw INI_INVALID_DATA;
-		return false;	// keep compiler happy
-	}
 
-}
 
 //-------------------------------------------------------------------------------------------------
 /** Parse an *ASCII* string from buffer and assign at location 'store' */
 //-------------------------------------------------------------------------------------------------
-void INI::parseAsciiString( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	AsciiString* asciiString = (AsciiString *)store;
-	*asciiString = ini->getNextAsciiString();
-}
+
 
 //-------------------------------------------------------------------------------------------------
 /** Parse an *ASCII* string from buffer and assign at location 'store'. Has better support for quoted strings.
@@ -662,11 +428,7 @@ We don't really need this function, but parseString() is broken and we want to l
 maintain existing code.
  */
 //-------------------------------------------------------------------------------------------------
-void INI::parseQuotedAsciiString( INI* ini, void * /*instance*/, void *store, const void* /*userData*/ )
-{
-	AsciiString* asciiString = (AsciiString *)store;
-	*asciiString = ini->getNextQuotedAsciiString();
-}
+
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -712,95 +474,11 @@ void INI::parseAsciiStringVectorAppend( INI* ini, void * /*instance*/, void *sto
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-AsciiString INI::getNextQuotedAsciiString()
-{
-	AsciiString result;
-	char buff[INI_MAX_CHARS_PER_LINE];
 
-	const char *token = getNextTokenOrNull();	// if null, just leave an empty string
-	if (token != NULL)
-	{
-		if (token[0] != '\"') 
-		{	
-			// if token is simply "
-			result.set( token );	// Start following the "
-		}
-		else
-		{	int strLen=0;
-			Bool done=FALSE;
-			if ((strLen=strlen(token)) > 1)
-			{
-				strcpy(buff, &token[1]);	//skip the starting quote
-				//Check for end of quoted string.  Checking here fixes cases where quoted string on same line with other data.
-				if (buff[strLen-2]=='"')	//skip ending quote if present
-				{	buff[strLen-2]='\0';
-					done=TRUE;
-				}
-			}
-
-			if (!done)
-			{
-				token = getNextToken(getSepsQuote());
-				
-				if (strlen(token) > 1 && token[1] != '\t')
-				{
-					strcat(buff, " ");
-					strcat(buff, token);
-				}
-				else
-				{	Int buflen=strlen(buff);
-					if (buff[buflen-1]=='\"')
-						buff[buflen-1]='\0';
-				}
-			}
-			result.set(buff);
-		}
-	}
-	return result;
-}
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-AsciiString INI::getNextAsciiString()
-{
-	AsciiString result;
 
-	const char *token = getNextTokenOrNull();	// if null, just leave an empty string
-	if (token != NULL)
-	{
-		if (token[0] != '\"') 
-		{	
-			// if token is simply "
-			result.set( token );	// Start following the "
-		}
-		else
-		{
-			static char buff[INI_MAX_CHARS_PER_LINE];
-			buff[0] = 0;
-			if (strlen(token) > 1)
-			{
-				strcpy(buff, &token[1]);
-			} 
-
-			token = getNextTokenOrNull(getSepsQuote());
-			if (token) {
-				if (strlen(token) > 1 && token[1] != '\t')
-				{
-					strcat(buff, " ");
-				}
-				strcat(buff, token);
-				result.set(buff);
-			} else {
-				Int len = strlen(buff);
-				if (len && buff[len-1] == '"') { // strip off trailing quote jba. [2/12/2003]
-					buff[len-1] = 0;
-				}
-				result.set(buff);
-			}
-		}
-	}
-	return result;
-}
 
 //-------------------------------------------------------------------------------------------------
 /** Parse a string label, get the *translated* actual text from the label and store
@@ -1440,138 +1118,22 @@ void INI::parseLookupList( INI* ini, void * /*instance*/, void *store, const voi
 
 	
 //-------------------------------------------------------------------------------------------------
-void MultiIniFieldParse::add(const FieldParse* f, UnsignedInt e)
-{
-	if (m_count < MAX_MULTI_FIELDS)
-	{
-		m_fieldParse[m_count] = f;
-		m_extraOffset[m_count] = e;
-		++m_count;
-	}
-	else
-	{
-		DEBUG_CRASH(("too many multi-fields in INI::initFromINIMultiProc"));
-		throw ERROR_BUG;
-	}
-}
+
 
 //-------------------------------------------------------------------------------------------------
-void INI::initFromINI( void *what, const FieldParse* parseTable )
-{
-	MultiIniFieldParse p;
-	p.add(parseTable);
-	initFromINIMulti(what, p);
-}
+
 
 //-------------------------------------------------------------------------------------------------
-void INI::initFromINIMultiProc( void *what, BuildMultiIniFieldProc proc )
-{
-	MultiIniFieldParse p;
-	(*proc)(p);
-	initFromINIMulti(what, p);
-}
+
 
 //-------------------------------------------------------------------------------------------------
-void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList )
-{
-	Bool done = FALSE;
 
-	if( what == NULL )
-	{
-		DEBUG_ASSERTCRASH( 0, ("INI::initFromINI - Invalid parameters supplied!\n") );
-		throw INI_INVALID_PARAMS;
-	}
-
-	// read each of the data fields
-	while( !done )
-	{
-
-		// read next line
-		readLine();
-
-		// check for end token
-		const char* field = strtok( m_buffer, INI::getSeps() );
-		if( field )
-		{
-
-			if( stricmp( field, m_blockEndToken ) == 0 )
-			{
-				done = TRUE;
-			}
-			else
-			{
-				Bool found = false;
-				for (int ptIdx = 0; ptIdx < parseTableList.getCount(); ++ptIdx)
-				{
-					int offset = 0;
-					void* userData = 0;
-					INIFieldParseProc parse = findFieldParse(parseTableList.getNthFieldParse(ptIdx), field, offset, userData);
-					if (parse)
-					{
-						// parse this block and check for parse errors
-						try {
-
-						(*parse)( this, what, (char *)what + offset + parseTableList.getNthExtraOffset(ptIdx), userData );
-
-						} catch (...) {
-							DEBUG_CRASH( ("[LINE: %d - FILE: '%s'] Error reading field '%s' of block '%s'\n",
-																 INI::getLineNum(), INI::getFilename().str(), field, m_curBlockStart) );
-
-
-							char buff[1024];
-							sprintf(buff, "[LINE: %d - FILE: '%s'] Error reading field '%s'\n", INI::getLineNum(), INI::getFilename().str(), field);
-							throw INIException(buff);
-						}
-						
-						found = true;
-						break;
-						
-					}
-				}
-
-				if (!found)
-				{
-					DEBUG_ASSERTCRASH( 0, ("[LINE: %d - FILE: '%s'] Unknown field '%s' in block '%s'\n",
-														 INI::getLineNum(), INI::getFilename().str(), field, m_curBlockStart) );
-					throw INI_UNKNOWN_TOKEN;
-				}
-
-			}  // end else
-
-		}  // end if
-
-		// sanity check for reaching end of file with no closing end token
-		if( done == FALSE && INI::isEOF() == TRUE )
-		{
-
-			done = TRUE;
-			DEBUG_ASSERTCRASH( 0, ("Error parsing block '%s', in INI file '%s'.  Missing '%s' token\n",
-												 m_curBlockStart, getFilename().str(), m_blockEndToken) );
-			throw INI_MISSING_END_TOKEN;
-
-		}  // end if
-
-	}  // end while
-
-}
 
 //-------------------------------------------------------------------------------------------------
-/*static*/ const char* INI::getNextToken(const char* seps)
-{
-	if (!seps) seps = getSeps();
-	const char *token = ::strtok(NULL, seps);
-	if (!token) 
-		throw INI_INVALID_DATA;
-	return token;
-}
+
 
 //-------------------------------------------------------------------------------------------------
-/*static*/ const char* INI::getNextTokenOrNull(const char* seps)
-{
-	if (!seps) seps = getSeps();
-	const char *token = ::strtok(NULL, seps);
-	return token;
-}
+
 
 //-------------------------------------------------------------------------------------------------
 /*static*/ ScienceType INI::scanScience(const char* token)
@@ -1580,102 +1142,24 @@ void INI::initFromINIMulti( void *what, const MultiIniFieldParse& parseTableList
 }
 
 //-------------------------------------------------------------------------------------------------
-/*static*/ Int INI::scanInt(const char* token)
-{
-	Int value;
-	if (sscanf( token, "%d", &value ) != 1)
-		throw INI_INVALID_DATA;
-	return value;
-}
+
 
 //-------------------------------------------------------------------------------------------------
-/*static*/ UnsignedInt INI::scanUnsignedInt(const char* token)
-{
-	UnsignedInt value;
-	if (sscanf( token, "%u", &value ) != 1)	// unsigned int is %u, not %d
-		throw INI_INVALID_DATA;
-	return value;
-}
+
 
 //-------------------------------------------------------------------------------------------------
-/*static*/ Real INI::scanReal(const char* token)
-{
-	Real value;
-	if (sscanf( token, "%f", &value ) != 1)
-		throw INI_INVALID_DATA;
-	return value;
-}
+
 
 //-------------------------------------------------------------------------------------------------
-/*static*/ Real INI::scanPercentToReal(const char* token)
-{
-	Real value;
-	if (sscanf( token, "%f", &value ) != 1)
-		throw INI_INVALID_DATA;
-	return value / 100.0f;
-}
+
 
 //-------------------------------------------------------------------------------------------------
-/*static*/ Int INI::scanIndexList(const char* token, ConstCharPtrArray nameList)
-{
-	if( nameList == NULL || nameList[ 0 ] == NULL )
-	{
-
-		DEBUG_ASSERTCRASH( 0, ("INTERNAL ERROR! scanIndexList, invalid name list\n") );
-		throw INI_INVALID_NAME_LIST;
-
-	}
-
-	// search for matching name
-	Int count = 0;
-	for(ConstCharPtrArray name = nameList; *name; name++, count++ )
-	{
-		if( stricmp( *name, token ) == 0 )
-		{
-			return count;
-		}
-	}
-
-	DEBUG_CRASH(("token %s is not a valid member of the index list\n",token));
-	throw INI_INVALID_DATA;
-	return 0;	// never executed, but keeps compiler happy
-
-}
-//-------------------------------------------------------------------------------------------------
-/*static*/ Int INI::scanLookupList(const char* token, ConstLookupListRecArray lookupList)
-{
-	if( lookupList == NULL || lookupList[ 0 ].name == NULL )
-	{
-		DEBUG_ASSERTCRASH( 0, ("INTERNAL ERROR! scanLookupList, invalid name list\n") );
-		throw INI_INVALID_NAME_LIST;
-	}
-
-	// search for matching name
-	Bool found = false;
-	for( const LookupListRec* lookup = &lookupList[0]; lookup->name; lookup++ )
-	{
-		if( stricmp( lookup->name, token ) == 0 )
-		{
-			return lookup->value;
-			found = true;
-			break;
-		}
-	}
-
-	DEBUG_CRASH(("token %s is not a valid member of the lookup list\n",token));
-	throw INI_INVALID_DATA;
-	return 0;	// never executed, but keeps compiler happy
-
-}
 
 //-------------------------------------------------------------------------------------------------
-const char* INI::getNextSubToken(const char* expected)
-{
-	const char* token = getNextToken(getSepsColon());
-	if (stricmp(token, expected) != 0)
-		throw INI_INVALID_DATA;
-	return getNextToken(getSepsColon());
-}
+
+
+//-------------------------------------------------------------------------------------------------
+
 
 //-------------------------------------------------------------------------------------------------
 /**

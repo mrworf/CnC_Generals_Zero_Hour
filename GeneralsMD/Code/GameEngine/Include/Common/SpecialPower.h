@@ -45,7 +45,7 @@
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class ObjectCreationList;
 class Object;
-enum ScienceType;
+#include "Common/ScienceType.h"
 struct FieldParse;
 enum AcademyClassificationType;
 

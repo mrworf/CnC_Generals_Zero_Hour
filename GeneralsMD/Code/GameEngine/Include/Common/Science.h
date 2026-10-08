@@ -40,10 +40,7 @@
 class Player;
 
 //-------------------------------------------------------------------------------------------------
-enum ScienceType
-{
-	SCIENCE_INVALID = -1
-};
+#include "Common/ScienceType.h"
 
 //-------------------------------------------------------------------------------------------------
 typedef std::vector<ScienceType> ScienceVec;
@@ -137,4 +134,3 @@ extern ScienceStore* TheScienceStore;
 
 
 #endif // __SCIENCE_H_
-

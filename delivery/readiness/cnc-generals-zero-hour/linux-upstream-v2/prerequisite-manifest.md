@@ -26,6 +26,13 @@ The sandbox cannot resolve GitHub or load the host NVIDIA ICD. The identical
 read-only checks succeeded outside it through the execution approval mechanism.
 Do not misclassify sandbox driver visibility as a missing host driver.
 
+Delivery evidence update (N2 slice02): the read-only data probe reached
+stage4/mask63 and complete before/after SHA256/metadata snapshots were unchanged.
+`evidence/qa/N2-original-data.md` establishes archive admission, basic startup
+content families and populated actual text ownership. PRE04's actual startup
+and representative scenario completeness remains pending at slice03/later
+consumers; this partial evidence does not remove those prerequisite gates.
+
 No new M0 is required: the user explicitly specified N0's recoverable-reset
 outcome. Later milestone outputs have named providers. Ordinary consumers share
 the documented build conventions but headless N2 does not require N1 acceptance.

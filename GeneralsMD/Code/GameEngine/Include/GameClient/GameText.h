@@ -49,6 +49,8 @@
 //----------------------------------------------------------------------------
 //           Includes                                                      
 //----------------------------------------------------------------------------
+#include "Common/SubsystemInterface.h"
+#include "Common/UnicodeString.h"
 
 //----------------------------------------------------------------------------
 //           Forward References
@@ -82,11 +84,15 @@ class GameTextInterface : public SubsystemInterface
 		virtual AsciiStringVec& getStringsWithLabelPrefix(AsciiString label) = 0;
 
 		virtual void					initMapStringFile( const AsciiString& filename ) = 0;
+		// Rooted native startup selects its language/content explicitly.
+		virtual Bool loadCSF(const AsciiString& filename) = 0;
 };
 
 
 extern GameTextInterface *TheGameText;
 extern GameTextInterface* CreateGameTextInterface( void );
+void configureGameTextLanguage(const AsciiString& directory);
+AsciiString getConfiguredGameTextLanguage();
 
 //----------------------------------------------------------------------------
 //           Inlining                                                       

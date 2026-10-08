@@ -28,7 +28,8 @@
 #ifndef __LANGUAGEFILTER_H
 #define __LANGUAGEFILTER_H
 
-#include "Common/STLTypedefs.h"
+#include "Common/SubsystemInterface.h"
+#include <map>
 #include "Common/AsciiString.h"
 #include "Common/UnicodeString.h"
 
@@ -82,7 +83,7 @@ public:
 	void filterLine(UnicodeString &line);
 
 protected:
-	Bool readWord(File *file1, UnsignedShort *buf);
+	Bool readWord(File *file1, WideChar *buf);
 	void unHaxor(UnicodeString &word);
 	LangMap m_wordList;
 	LangMap m_subWordList;

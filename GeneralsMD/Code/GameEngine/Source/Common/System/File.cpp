@@ -51,9 +51,12 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <charconv>
+#include <cmath>
+#include <cctype>
 
 
-#include "Common/File.h"
+#include "Common/file.h"
 
 
 //----------------------------------------------------------------------------
@@ -101,9 +104,9 @@
 //=================================================================
 
 File::File()
-:	m_open(FALSE),
-	m_deleteOnClose(FALSE),
-	m_access(NONE)
+:	m_access(NONE),
+	m_open(FALSE),
+	m_deleteOnClose(FALSE)
 {
 
 	setName("<no file>");
@@ -122,6 +125,7 @@ File::File()
 
 File::~File()
 {
+	m_deleteOnClose = FALSE;
 	close();
 }
 
@@ -137,7 +141,8 @@ File::~File()
 
 Bool File::open( const Char *filename, Int access )
 {
-	if( m_open )
+	constexpr Int known=READ|WRITE|APPEND|CREATE|TRUNCATE|TEXT|BINARY|ONLYNEW|STREAMING;
+	if( m_open || !filename || !*filename || (access & ~known) )
 	{
 		return FALSE;
 	}
@@ -188,7 +193,7 @@ void File::close( void )
 {
 	if( m_open )
 	{
-		setName( "<no file>" );
+		m_nameStr.clear();
 		m_open = FALSE;
 		if ( m_deleteOnClose )
 		{
@@ -231,23 +236,22 @@ Int File::position( void )
 
 Bool	File::print ( const Char *format, ...)
 {
-	Char buffer[10*1024];
+	Char buffer[10*1024]{};
 	Int len;
 
-	if ( ! (m_access & TEXT ) )
+	if ( !format || !m_open || ! (m_access & TEXT ) )
 	{
 		return FALSE;
 	}
 
 	va_list args;
 	va_start( args, format );     /* Initialize variable arguments. */
-	len = vsprintf( buffer, format, args );
+	len = vsnprintf( buffer, sizeof(buffer), format, args );
 	va_end( args );
 
-	if ( len >= sizeof(buffer) )
+	if ( len < 0 || std::size_t(len) >= sizeof(buffer) )
 	{
 		// Big Problem
-		assert( FALSE );
 		return FALSE;
 	}
 
@@ -256,4 +260,49 @@ Bool	File::print ( const Char *format, ...)
 
 Bool	File::eof() {
 	return (position() == size());
+}
+
+// Shared original scanning grammar: skip to number prefixes, consume decimal
+// digits (one dot for real), and retain the first delimiter for the next scan.
+// Invalid/overflowing values do not publish output or leave a partial cursor.
+Bool File::scanInt(Int& output) {
+    const Int prior=position();if(prior<0)return FALSE;
+    std::string token;char value=0;
+    try {
+        while(read(&value,1)==1){if((value>='0'&&value<='9')||value=='-'){token+=value;break;}}
+        while(read(&value,1)==1){if(value<'0'||value>'9'){seek(-1,CURRENT);break;}token+=value;}
+        Int candidate=0;auto result=std::from_chars(token.data(),token.data()+token.size(),candidate);
+        if(token.empty()||result.ec!=std::errc{}||result.ptr!=token.data()+token.size()){seek(prior,START);return FALSE;}
+        output=candidate;return TRUE;
+    }catch(...){seek(prior,START);throw;}
+}
+Bool File::scanReal(Real& output) {
+    const Int prior=position();if(prior<0)return FALSE;
+    std::string token;char value=0;bool dot=false;
+    try {
+        while(read(&value,1)==1){if((value>='0'&&value<='9')||value=='-'||value=='.'){token+=value;dot=value=='.';break;}}
+        while(read(&value,1)==1){
+            if((value>='0'&&value<='9')||(value=='.'&&!dot)){token+=value;dot=dot||value=='.';}
+            else {seek(-1,CURRENT);break;}
+        }
+        Real candidate=0;auto result=std::from_chars(token.data(),token.data()+token.size(),candidate);
+        if(token.empty()||result.ec!=std::errc{}||result.ptr!=token.data()+token.size()||!std::isfinite(candidate)){seek(prior,START);return FALSE;}
+        output=candidate;return TRUE;
+    }catch(...){seek(prior,START);throw;}
+}
+Bool File::scanString(AsciiString& output) {
+    const Int prior=position();if(prior<0)return FALSE;
+    std::string token;char value=0;
+    try {
+        while(read(&value,1)==1){if(!std::isspace(static_cast<unsigned char>(value))){token+=value;break;}}
+        while(read(&value,1)==1){if(std::isspace(static_cast<unsigned char>(value))){seek(-1,CURRENT);break;}token+=value;}
+        if(token.empty())return FALSE;
+        output=token.c_str();return TRUE;
+    }catch(...){seek(prior,START);throw;}
+}
+void File::nextLine(Char* buffer,Int capacity) {
+    if(capacity<0||(buffer&&capacity==0))throw ERROR_BAD_ARG;
+    Int stored=0;char value=0;
+    while(read(&value,1)==1){if(buffer&&stored<capacity-1)buffer[stored++]=value;if(value=='\n')break;}
+    if(buffer)buffer[stored]=0;
 }

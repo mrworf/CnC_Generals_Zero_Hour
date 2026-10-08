@@ -42,7 +42,7 @@
 class Object;
 class SpecialPowerTemplate;
 struct FieldParse;
-enum ScienceType;
+#include "Common/ScienceType.h"
 
 
 
@@ -82,4 +82,3 @@ protected:
 
 };
 #endif  // end DefectorSpecialPower
-

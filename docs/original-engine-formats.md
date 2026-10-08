@@ -206,3 +206,122 @@ StringStorage.h, AsciiString.cpp, UnicodeString.cpp and tests/original/core.cpp.
 
 These are core-fixture claims only; GameEngine/GameLogic startup, rooted data,
 CSF decoding and retail integrity/completeness remain unaccepted N2 work.
+
+### Rooted data owner investigation (N2 slice 02, acceptance pending)
+
+`FileSystem.cpp::openFile` tries local access before archive access.
+`Win32BIGFileSystem.cpp::loadBigFilesFromDirectory` iterates the case-insensitive
+FilenameList in ascending order and calls loadIntoDirectoryTree with overwrite
+false by default; Zero Hour archives are loaded before Generals archives.
+Native mounts preserve loose-before-archive and first ordered archive/root wins.
+Original GameEngine patch startup removed `Data/INI/INIZH.big`, an obsolete
+duplicate shipped alongside the proper root archive. Native selection excludes
+that one source-established obsolete archive from indexing, while retaining its
+physical bytes for the user. Simply removing DeleteFile while indexing the old
+duplicate would silently change intended definition precedence. The roots
+fixture puts conflicting generated definitions in both archives and proves the
+proper one wins without deleting the duplicate. Other nested archives retain
+the original recursive discovery contract.
+BIGF count/entry offset/size are big-endian 32-bit; header size remains unused as
+in the original reader. Native indexing bounds records against actual length and
+the earliest payload, not diagnostic header-size assumptions. BIG4 has not been
+established as an original retained-provider contract.
+
+`LocalFile.cpp::convertToRAMFile` is **consuming** on successful conversion: it
+transfers delete-on-close policy to the RAMFile, then retires the original File.
+On a failed boolean snapshot it returns the unchanged original File. RAMFile's
+own conversion returns itself. NativeDataFile must honor that owner protocol;
+callers cannot close a successful conversion's retired source. Snapshot failure
+restores the borrowed cursor; candidate array ownership is guarded before reads.
+
+GameText CSF integer tags are loaded in Windows little-endian order: numeric
+CSF_ID 0x43534620 appears as bytes `20 46 53 43`. LBL/STR/STRW tags follow the same
+rule. A header has six four-byte words; string text is **inverted UTF-16LE units**,
+not native wchar_t. Only each label's first alternative text/speech is retained,
+but all alternatives must be decoded/validated. GameText stripSpaces collapses
+spaces and trims at text/newline/tab boundaries, preserving newline/tab bytes.
+Lookup is case-insensitive; getStringsWithLabelPrefix is deliberately
+case-sensitive (`strstr`). Generated tests must not demand a case-insensitive
+prefix API that the source never provided.
+
+LanguageFilter's langdata.dat uses little-endian 16-bit units XOR 0x5555, with a
+raw 0x0020 delimiter outside the XOR payload. Native wchar_t and WEOF must not
+be read/cast as this file representation. Decode bounded words before publishing
+the replacement map; preserve the accepted filter on truncation. Linked native
+tests and complete slice acceptance are recorded separately below; these source
+findings do not establish full original startup or scenario completeness.
+
+### Rooted data representations and owner proofs (N2 slice 02)
+
+Zero-length BIG members can use offset zero. The source reader accepts the range
+as metadata; no bytes are read for that member. Empty members must not lower the
+index/nonempty-payload boundary. All offsets still lie within actual archive
+length; every nonempty range remains bounded after a preceding empty member.
+`NativeFileSystem.cpp::readBig` and `data.cpp::archives` cover zero/interior
+empty offsets, late nonempty rejection and accepted-owner preservation. The
+read-only supplied-data audit found this convention; initial admission rejected
+it before any consumer ran. Corrected admission reached mask63/stage4, and the
+wrapper's complete before/after SHA-256 and metadata snapshots were unchanged.
+This establishes indexing, basic required-family presence and actual GameText
+initialization, **not** GameLogic startup, every scenario or visual/audio parity.
+
+Native root traversal uses guarded POSIX directory handles and `openat`/
+`fstatat` with no-follow admission. The fault sweep exposed a libstdc++ recursive
+directory-iterator allocation terminating inside its implementation rather than
+unwinding. No library is patched: the game-owned walker keeps all fallible
+allocation outside library no-throw directory helpers, guards each directory
+before container growth, and publishes only a complete replacement index.
+Canonicalizing an explicit supplied root may resolve the user's root symlink;
+internal symlink files/directories are not traversed. See `fault_mount` and exact
+descriptor/standard-allocation/pool residual checks in `tests/original/data.cpp`.
+
+`.str` and `map.str` use labels followed by a quoted text and `END` (case
+insensitive), with outside-line `//` comments. Physical line breaks in a quote
+become spaces; source `\\n` and `\\t` escapes produce newline/tab, and other
+escaped bytes retain their low eight bits. Raw bytes are not reinterpreted as
+UTF-8. Speech identifiers retain alphanumeric/underscore characters; a final
+digit gains the source's `e` suffix. Source `stripSpaces` is shared with CSF.
+`StringCatalog.cpp` is the bounded extraction of original `readToEndOfQuote`,
+`translateCopy` and `parseStringFile`/`parseMapStringFile`; `data.cpp::textManager`
+tests escapes, multiline values, speech, EOF, map filtering and rejected retry.
+The original `getStringCount` added 500 reserve rows to the logical lookup count;
+the native owner indexes only parsed rows, fixing empty-label lookup pollution.
+Catalog arrays and their pointer lookup are prepared together before publication,
+including every language-filter call. Missing-label teardown is iterative.
+
+Native `UnicodeString::nextToken` cannot copy its remainder using the source's
+hardcoded `len*2` bytes. That bug was exposed by actual LanguageFilter calls,
+not slice01's null-token test. Both ASCII and Unicode token owners now prepare
+token and remainder before either publication; core tests include odd-length,
+non-ASCII and shared-backing transitions. `fault_map` covers allocation failures
+inside filter callbacks as well as all catalog/lookup preparation. Native scalar
+storage is separate from fixed UTF-16 file units; non-BMP filter replacement
+width remains an explicit source-semantics question for full text integration.
+
+`INICore.cpp` extracts original line/token/field dispatch; `INI.cpp` retains the
+complete gameplay block table for slice03, without fake parse callbacks. Native
+numeric scanners deliberately retain source `sscanf` prefix acceptance (`12x`
+parses as 12, `25%` as .25, unsigned `-1` as UINT32_MAX), while rejecting overflow
+and nonfinite reals before publication. Each INI owns its token/transfer state.
+The caller owns offside semantic candidates. Rejection retires the parser's File
+before reuse, and allocation exceptions propagate without another diagnostic
+allocation. `INIException` owns independent diagnostic storage across copy/move.
+`data.cpp::iniFields` and `fault_ini` prove real FieldParse dispatch and retry,
+not complete GameLogic definition admission. Dynamic ScienceType IDs and File
+seek admission use consistent fixed signed-32-bit enums across retained headers;
+width/alignment checks do not assert legacy full-class MSVC ABI compatibility.
+
+`RAMFile::open`/`openFromArchive` guard arrays before virtual reads and restore a
+borrowed cursor on boolean rejection and thrown reads. The generated throwing
+provider exercises both paths plus same-candidate retry. All retained native File
+providers use defined invalid-seek admission without changing accepted cursors.
+Each independent allocation sweep is a separate CTest batch, exhausts contiguous
+ordinals through its exact first successful terminal boundary, and repeats three
+times in one process. The fixture implements every ordinary/array/nothrow/aligned
+allocation/deallocation pairing; production never uses this interposition.
+
+See `evidence/qa/N2-original-data.md` for acceptance configuration and boundaries.
+No conversion cache or write is introduced here. XDG user/cache writers, rooted
+MemoryPools.ini overrides, original FileInfo timestamp/cache integration, complete
+INI block dispatch and actual GameEngine/GameLogic reachability remain slice03
+work; zero diagnostic timestamps are not map-cache compatibility acceptance.
