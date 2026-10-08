@@ -2368,6 +2368,13 @@ offside dictionaries and commit the name namespace only after admission.
 Normal source fixtures cover defaults, reverse ID order, linked-node/pool
 retirement and complete allocation failure/retry manifests. See
 `evidence/qa/N2-runtime-support.md` for exact evidence and limitations.
-The new sanitizer fixture currently fails to link through parent/template
-metadata; it has not executed. Nonnull template/team integration and actual
-CPU WorldHeightMap acceptance remain pending, not inferred from these fixtures.
+The initial sanitizer links failed through team metadata, not incorrect template
+provider selection. Linker archive admission occurs before section GC; the
+uncalled validate entry point admitted the team translation unit and its entire
+SidesList/AI/GameLogic graph. Moving that complete entry point to its team owner
+resolved both links without suppressing checks. Seven actual MapObject families
+now execute under both sanitizers, including actual nonnull ThingTemplate binding,
+two-step live override resolution, duplicate borrowed identity and final-template
+ID naming. Generated temporary data parents preserve borrowed publications through
+retirement; borrowed stack override links detach before original destructors.
+Whole team validation and CPU WorldHeightMap acceptance remain pending.

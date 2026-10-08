@@ -143,14 +143,6 @@ RenderObjClass* MapObject::getBridgeRenderObject( BridgeTowerType type )
 
 }
 
-void MapObject::validate(void)
-{
-	MapPropertiesTransaction transaction(*this);
-	verifyValidTeam();
-	verifyValidUniqueID();
-	transaction.commit();
-}
-
 void MapObject::verifyValidUniqueID(void)
 {
 	MapPropertiesTransaction transaction(*this);

@@ -665,3 +665,15 @@ the initial provider count247 is retained as the pre-constexpr comparison.
 Sanitizer whole-root linkage/execution remains pending; normal linkage alone is
 not acceptance. Current source/code/build/test provenance is in support QA and
 the native_root_provider_cohort entry of N2-runtime-link-census.json.
+
+CPU map continuation: the actual MapObject values/reference/name methods and
+team-validation methods are explicit extracted providers in original_gameplay_common.
+The complete validate entry point lives with team validation. Linker archive
+admission precedes section GC: leaving that call in the value provider pulls
+SidesList RTTI, AI and GameLogic even for an uncalled validate method. The trace
+selected NativeThingTemplateData correctly; template-provider ordering was not
+the cause. Both GCC/Clang map fixtures now link with all sanitizers intact.
+Actual ThingTemplate stack owners, borrowed publications and live override chains
+execute in the seventh map family, alongside six complete value/ownership families.
+The refreshed never-executed normal GameEngine::init root fails31 providers;
+earlier36 is historical. No whole map/team/native-entry acceptance is inferred.

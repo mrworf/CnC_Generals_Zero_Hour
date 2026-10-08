@@ -22,6 +22,23 @@
 #include "Common/WellKnownKeys.h"
 #include "GameLogic/SidesList.h"
 
+void MapObject::validate(void)
+{
+    if(!TheNameKeyGenerator) throw ERROR_BAD_ARG;
+    NameKeyTransaction names(*TheNameKeyGenerator);
+    Dict previous(*getProperties());
+    struct RestoreProperties {
+        Dict& live;
+        Dict& prior;
+        bool accepted=false;
+        ~RestoreProperties() noexcept { if(!accepted) live.swap(prior); }
+    } properties{*getProperties(),previous};
+    verifyValidTeam();
+    verifyValidUniqueID();
+    properties.accepted=true;
+    names.commit();
+}
+
 void MapObject::verifyValidTeam(void)
 {
 	// if this map object has a valid team, then do nothing.

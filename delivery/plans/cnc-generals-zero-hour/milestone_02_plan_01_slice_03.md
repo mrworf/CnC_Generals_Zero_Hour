@@ -1042,3 +1042,17 @@ actual method into MapObjectTeams.cpp; keep it in the production graph, not an
 alternate provider or suppressed RTTI check. Newly extracted game-owned providers
 are explicit target_sources, not falsely claimed as original DSP-listed Common
 files. Verify one active definition and original device-definition retirement.
+
+Resume from user checkpoint57c262a8. Linker archive-admission trace proves the
+actual MapObject::validate reference admits MapObjectTeams before section GC;
+SidesList RTTI then admits AI/GameLogic/GUI parents. ThingTemplate RTTI already
+selects the correct NativeThingTemplateData provider. Move the complete actual
+team-validation entry point to the team provider, preserving property-before-
+namespace rollback and atomic validate semantics. Do not suppress checks or
+replace types/globals. Rebuild normal/GCC/Clang and exercise the actual MapObject
+families; keep whole team/world/runtime integration as separate pending gates.
+Extend this MapObject cohort with actual nonnull ThingTemplate binding and a
+two-step override chain, template-derived unique IDs and duplicate identity.
+Borrow/restore the actual GlobalData publication through complete template/map
+retirement. Generated templates are original owners, not replacement providers;
+detach borrowed stack override links before their source destructors retire.

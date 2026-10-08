@@ -1,5 +1,39 @@
 # N2 slice03 supporting owner checkpoint — not milestone acceptance
 
+## CPU map cohort after integration repair
+
+Canonical543 SHA256
+`9095f7ab6bf0efd8bcb314dd18fd2125238a3154d626f0a0f10787bb11300880`;
+toolchain548 SHA256
+`25abdfc4d24568c72fd82014079f761427505c7457d2074433d3fe25852d4d06`.
+All configured targets build under normal GCC and GCC/Clang sanitizers.
+Full192/192 PASS in 18.13/85.27/69.12 seconds, respectively. Sanitizers execute
+on the normal host with ASan/UBSan/vptr/LSan enabled, no suppressions.
+Logs `/tmp/zh-map-cohort-<variant>-{build,full-test}.log`.
+Seven map families independently PASS in 0.33/2.19/1.60 seconds;
+logs `/tmp/zh-map-binding-<variant>-{build,test}.log`.
+
+Read-only archive-admission trace `/tmp/zh-map-provider-trace.map` identifies
+MapObject::validate as the remaining admission edge to MapObjectTeams/SidesList
+RTTI and AI/GameLogic; NativeThingTemplateData is already selected correctly.
+Moving the complete validate entry point to the actual team provider resolves
+both sanitizer links without losing its property/namespace rollback. The initial
+failed links below are retained historical failures, not current acceptance.
+No fake providers, RTTI/vptr waivers or callback removal were used.
+
+The seventh map family uses actual ThingTemplate owners and generated temporary
+data parents. It proves nonnull binding, two-step live overrides, source-derived
+ID naming, duplicate borrowed template identity and null rejection, with three
+repeated lifetimes and exact owner retirement. Namespace/property and reference
+fault manifests from the six earlier families execute under both sanitizers.
+Whole team/world/map input and native startup/simulation remain pending.
+
+Refreshed normal original_runtime_link_probe fails31 unique providers (previous36
+belonged to its earlier cohort). Log `/tmp/zh-map-cohort-root-link.log`; target
+never executed. Census records the exact source identity/configuration. Full192
+supporting suite is not the required GameLogic scenario/compiler checkpoints or
+N2 acceptance. Same plan01/slice03 stays in progress; N3/N4 not started.
+
 ## User-requested worktree checkpoint: CPU map integration (unfinished)
 
 This checkpoint includes the previously verified constinit/filter cohort below

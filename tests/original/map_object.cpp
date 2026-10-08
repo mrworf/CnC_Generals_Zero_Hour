@@ -4,7 +4,11 @@
 #include "Common/MapObject.h"
 #include "Common/NameKeyGenerator.h"
 #include "Common/WellKnownKeys.h"
+#include "Common/ThingTemplate.h"
+#include "Common/GlobalData.h"
+#include "Common/NativeUserStorage.h"
 #include <array>
+#include <filesystem>
 #include <cstdio>
 #include <limits>
 #include <memory>
@@ -168,6 +172,62 @@ void poolFailure() {
     for(std::size_t i=0;i<count;++i)pool()->freeBlock(held[i]);
     Owner retry(source->duplicate());require(retry->getName()==source->getName(),"same-owner pooled duplicate retry");
 }
+struct TemplateOwner : ThingTemplate {~TemplateOwner() override=default;};
+void templateBinding() {
+    Context context;
+    char pattern[]="/tmp/zh-map-template-XXXXXX";
+    const auto* directory=::mkdtemp(pattern);
+    require(directory,"generated template data parents");
+    const std::filesystem::path root(directory);
+    struct RetireRoot {
+        const std::filesystem::path& root;
+        ~RetireRoot() noexcept {std::error_code ignored;std::filesystem::remove_all(root,ignored);}
+    } retireRoot{root};
+    std::filesystem::create_directory(root/"assets");
+    FileSystem files;files.mountReadOnly({(root/"assets").string()});
+    NativeUserStorage storage(NativeUserPaths::resolve(root.string(),(root/"data").string(),(root/"cache").string()),files);
+    struct RestoreDataParents {
+        FileSystem* files;
+        NativeUserStorage* storage;
+        ~RestoreDataParents() noexcept {TheFileSystem=files;TheNativeUserStorage=storage;}
+    } restoreParents{TheFileSystem,TheNativeUserStorage};
+    TheFileSystem=&files;TheNativeUserStorage=&storage;
+    GlobalData globals;
+    globals.m_defaultOcclusionDelay=37;
+    auto* previous=TheWritableGlobalData;
+    TheWritableGlobalData=&globals;
+    struct RestoreGlobal {
+        GlobalData* previous;
+        ~RestoreGlobal() noexcept {TheWritableGlobalData=previous;}
+    } restore{previous};
+    TemplateOwner original,middle,final;
+    original.friend_setTemplateName("Generated/BaseTemplate");
+    middle.friend_setTemplateName("Generated/MiddleTemplate");
+    final.friend_setTemplateName("Generated/FinalTemplate");
+    original.setNextOverride(&middle);middle.setNextOverride(&final);
+    struct DetachBorrowedOverrides {
+        ThingTemplate& original;ThingTemplate& middle;
+        ~DetachBorrowedOverrides() noexcept {original.setNextOverride(nullptr);middle.setNextOverride(nullptr);}
+    } detach{original,middle};
+    auto source=object();
+    AllocationFault::arm(0);
+    source->setThingTemplate(&original);
+    const auto attempted=AllocationFault::attempts();const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+    require(!attempted && !hit && source->getThingTemplate()==&final &&
+        source->getName()=="Generated/BaseTemplate","actual template binding and final override without allocation");
+    source->verifyValidUniqueID();
+    require(source->getProperties()->getAsciiString(TheKey_uniqueID)=="FinalTemplate 0",
+        "source ID uses final template name rather than base record name");
+    Owner clone(source->duplicate());
+    require(clone->getThingTemplate()==&final && clone->getName()=="Generated/BaseTemplate",
+        "duplicate retains actual borrowed base identity and override resolution");
+    middle.setNextOverride(nullptr);
+    require(source->getThingTemplate()==&middle && clone->getThingTemplate()==&middle,
+        "live original override chain remains authoritative");
+    bool rejected=false;try{source->setThingTemplate(nullptr);}catch(ErrorCode){rejected=true;}
+    require(rejected && source->getThingTemplate()==&middle && source->getName()=="Generated/BaseTemplate",
+        "null template rejects without losing actual binding");
+}
 }
 int main(int argc,char** argv) {
     bool initialized=false;
@@ -176,10 +236,12 @@ int main(int argc,char** argv) {
         TheMemoryPoolFactory->createMemoryPool("MapObject",sizeof(MapObject),16,0);
         TheMemoryPoolFactory->createMemoryPool("NameKeyBucketPool",sizeof(Bucket),128,0);
         {Context context;auto warm=object();warm->setWaypointName("Warm");warm->setWaypointID(1);}
+        if(family=="template-binding")templateBinding(); // retire discovery before repeated-owner baselines
         for(int repeat=0;repeat<3;++repeat) {
             const auto live=AllocationFault::live();
             if(family=="values")values();else if(family=="references")references();else if(family=="constructor-faults")constructorFaults();
-            else if(family=="names")names(false);else if(family=="name-faults")names(true);else if(family=="pool-failure")poolFailure();else require(false,"unknown family");
+            else if(family=="names")names(false);else if(family=="name-faults")names(true);else if(family=="pool-failure")poolFailure();
+            else if(family=="template-binding")templateBinding();else require(false,"unknown family");
             require(AllocationFault::live()==live && !pool()->getUsedBlockCount() && !keyPool()->getUsedBlockCount(),"whole source owner retirement");
         }
         shutdownMemoryManager();initialized=false;return 0;

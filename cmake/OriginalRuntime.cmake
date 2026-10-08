@@ -290,7 +290,7 @@ add_executable(original_map_object_fixture tests/original/map_object.cpp tests/o
 target_link_libraries(original_map_object_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_map_object_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS values references constructor-faults names name-faults pool-failure)
+foreach(family IN ITEMS values references constructor-faults names name-faults pool-failure template-binding)
   add_test(NAME original_map_object_${family} COMMAND original_map_object_fixture "${family}")
   set_tests_properties(original_map_object_${family} PROPERTIES LABELS "original;runtime;map" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
