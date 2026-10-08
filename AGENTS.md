@@ -55,3 +55,13 @@ Validate real draw cardinality and upload volume, ordered clears/copies, repeate
 scene lifetimes, and resource growth. Do not infer whole-game parity from a
 triangle, mocked renderer, or isolated buffer test. Physical GPU evidence must
 name the dependency revision and configuration actually executed.
+
+Native discovery changes fault-manifest cardinality across sandbox and normal
+host execution. Capture only the count before arming faults, retire discovery
+before resource baselines, and derive/prove an exact terminal rather than
+reusing a sandbox-only constant. Retain every failure/retry pair; never record
+private addresses or host names. Registry metadata may retain legitimate warmed
+capacity after shutdown; whole-owner destruction still must retire it exactly.
+Source Object/Drawable cleanup calls its parent singleton. Preserve that valid
+identity through legitimate cleanup, then restore borrowed publication without
+callbacks or allocations; registry removal alone does not withdraw all globals.
