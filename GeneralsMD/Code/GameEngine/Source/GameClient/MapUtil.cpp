@@ -882,15 +882,6 @@ Bool isOfficialMap( AsciiString mapName )
 }
 
 
-const MapMetaData *MapCache::findMap(AsciiString mapName)
-{
-	mapName.toLower();
-	MapCache::iterator it = find(mapName);
-	if (it == end())
-		return NULL;
-	return &(it->second);
-}
-
 // ------------------------------------------------------------------------------------------------
 /** Embed the pristine map into the xfer stream */
 // ------------------------------------------------------------------------------------------------

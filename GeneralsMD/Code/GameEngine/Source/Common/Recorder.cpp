@@ -768,6 +768,7 @@ void RecorderClass::writeArgument(GameMessageArgumentDataType type, const GameMe
 Bool RecorderClass::readReplayHeader(ReplayHeader& acceptedHeader)
 {
     NativeReplaySession::OwnerGuard sessionGuard(m_file);
+    NativeGameInfoTransaction gameTransaction(m_gameInfo);
     if (!TheNativeUserStorage) return FALSE;
     ReplayHeader header{};
     header.filename=acceptedHeader.filename; header.forPlayback=acceptedHeader.forPlayback;
@@ -856,6 +857,7 @@ Bool RecorderClass::readReplayHeader(ReplayHeader& acceptedHeader)
 		m_file = nullptr;
 	}
     acceptedHeader.swap(header);
+	gameTransaction.commit();
 	return TRUE;
 }
 
@@ -1011,21 +1013,21 @@ Bool RecorderClass::testVersionPlayback(AsciiString filename)
  */
 Bool RecorderClass::playbackFile(AsciiString filename) 
 {
-    NativeReplaySession::OwnerGuard sessionGuard(m_file);
-	if (!m_doingAnalysis)
-	{
-		if (TheGameLogic->isInGame())
-		{
-			TheGameLogic->clearGameData();
-		}
-	}
-
-	m_mode = RECORDERMODETYPE_PLAYBACK;
+    if (!TheNativeUserStorage) return FALSE;
+    if (!TheGlobalData || !TheWritableGlobalData ||
+        (!m_doingAnalysis && (!TheGameLogic || !TheGameEngine || !TheMessageStream || !ThePlayerList)))
+        throw ERROR_BAD_ARG;
+    // GameLogic::clearGameData resets the registered Recorder through the engine.
+    // A separately scoped actual owner survives that callback; invalid input
+    // cannot retire/poison the previously accepted session or clear its world.
+    RecorderClass prepared;
+    prepared.m_doingAnalysis=m_doingAnalysis;
+    NativeReplaySession::OwnerGuard sessionGuard(prepared.m_file);
 
 	ReplayHeader header;
 	header.forPlayback = TRUE;
 	header.filename = filename;
-	Bool success = readReplayHeader( header );
+	Bool success = prepared.readReplayHeader( header );
 	if (!success)
 	{
 		return FALSE;
@@ -1074,52 +1076,70 @@ Bool RecorderClass::playbackFile(AsciiString filename)
 	DEBUG_ASSERTCRASH(!exeDifferent && !iniDifferent, (debugString.str()));
 #endif
 
-	TheWritableGlobalData->m_pendingFile = m_gameInfo.getMap();
+    AsciiString pendingFile=prepared.m_gameInfo.getMap();
 
 #ifdef DEBUG_LOGGING
 	if (header.localPlayerIndex >= 0)
 	{
 		DEBUG_LOG(("Local player is %ls (slot %d, IP %8.8X)\n",
-			m_gameInfo.getSlot(header.localPlayerIndex)->getName().str(), header.localPlayerIndex, m_gameInfo.getSlot(header.localPlayerIndex)->getIP()));
+			prepared.m_gameInfo.getSlot(header.localPlayerIndex)->getName().str(), header.localPlayerIndex, prepared.m_gameInfo.getSlot(header.localPlayerIndex)->getIP()));
 	}
 #endif
 
-	std::unique_ptr<CRCInfo> crcCandidate(NEW CRCInfo);
-    retireRecorderCRC(m_crcInfo);
-    m_crcInfo=crcCandidate.release();
-	m_crcInfo->setLocalPlayer(header.localPlayerIndex);
-	REPLAY_CRC_INTERVAL = m_gameInfo.getCRCInterval();
-	DEBUG_LOG(("Player index is %d, replay CRC interval is %d\n", m_crcInfo->getLocalPlayer(), REPLAY_CRC_INTERVAL));
+    prepared.m_crcInfo=NEW CRCInfo;
+    prepared.m_crcInfo->setLocalPlayer(header.localPlayerIndex);
 
-	Int difficulty = 0;
-	difficulty=std::bit_cast<Int>(m_file->readWord());
+    const auto settings=nativeReplayReadStartupSettings(*prepared.m_file);
+    const auto difficulty=settings.difficulty,rankPoints=settings.rankPoints,maxFPS=settings.maxFPS;
+    prepared.m_originalGameMode=settings.originalGameMode;
 
-	m_originalGameMode=std::bit_cast<Int>(m_file->readWord());
+    const auto frame=nativeReplayReadFrame([&](void* bytes,std::size_t count) {
+        return prepared.m_file->read(bytes,1,count);
+    });
+    NativeReplayMessage newGame,cleanEOF;
+    if (!m_doingAnalysis) {
+        newGame.reset(newInstance(GameMessage)(GameMessage::MSG_NEW_GAME,-1));
+        newGame->appendIntegerArgument(GAME_REPLAY);
+        newGame->appendIntegerArgument(difficulty);
+        newGame->appendIntegerArgument(rankPoints);
+        if (maxFPS!=0) newGame->appendIntegerArgument(maxFPS);
+        if (!frame) cleanEOF.reset(newInstance(GameMessage)(GameMessage::MSG_CLEAR_GAME_DATA,-1));
+    }
+    if (!frame) prepared.m_file.reset();
 
-	Int rankPoints = 0;
-	rankPoints=std::bit_cast<Int>(m_file->readWord());
-	
-	Int maxFPS = 0;
-	maxFPS=std::bit_cast<Int>(m_file->readWord());
+    // The original world transition is destructive, not a reversible metadata
+    // transaction. Admission/acquisition is complete; a reset exception must
+    // stop the engine and propagate instead of reporting a playable old/new world.
+    if (!m_doingAnalysis) {
+        try {
+            if (TheGameLogic->isInGame()) TheGameLogic->clearGameData();
+            if (!ThePlayerList->getLocalPlayer()) throw ERROR_BAD_ARG;
+        } catch (...) { TheGameEngine->GameEngine::setQuitting(TRUE); throw; }
+        const auto player=ThePlayerList->getLocalPlayer()->getPlayerIndex();
+        newGame->friend_setPlayerIndex(player);
+        if (cleanEOF) cleanEOF->friend_setPlayerIndex(player);
+    }
 
-	DEBUG_LOG(("RecorderClass::playbackFile() - original game was mode %d\n", m_originalGameMode));
-
-	readNextFrame();
-
-	// send a message to the logic for a new game
-	if (!m_doingAnalysis)
-	{
-		GameMessage *msg = TheMessageStream->appendMessage( GameMessage::MSG_NEW_GAME );
-		msg->appendIntegerArgument(GAME_REPLAY);
-		msg->appendIntegerArgument(difficulty);
-		msg->appendIntegerArgument(rankPoints);
-		if( maxFPS != 0 )
-			msg->appendIntegerArgument(maxFPS);
-		//InitGameLogicRandom( m_gameInfo.getSeed());
-		InitRandom( m_gameInfo.getSeed() );
-	}
-
-	m_currentReplayFilename = filename;
+    // No copied parent/slot pointers, fallible string copies, CRC acquisition or
+    // session reopening after reset. The preparing owner retires old resources.
+    m_gameInfo.swap(prepared.m_gameInfo);
+    m_file.swap(prepared.m_file);
+    std::swap(m_crcInfo,prepared.m_crcInfo);
+    TheWritableGlobalData->m_pendingFile.swap(pendingFile);
+    m_originalGameMode=prepared.m_originalGameMode;
+    m_mode=RECORDERMODETYPE_PLAYBACK;
+    m_nextFrame=frame ? *frame : UnsignedInt(-1);
+    REPLAY_CRC_INTERVAL=m_gameInfo.getCRCInterval();
+    m_currentReplayFilename.swap(filename);
+    if (!m_doingAnalysis) {
+        // Preserve source clean-EOF CLEAR-before-NEW ordering. These complete
+        // freshly owned messages are admitted allocation-free by the real list.
+        if (cleanEOF) {
+            TheMessageStream->GameMessageList::appendMessage(cleanEOF.get()); cleanEOF.release();
+        }
+        TheMessageStream->GameMessageList::appendMessage(newGame.get()); newGame.release();
+        InitRandom(m_gameInfo.getSeed()); // all source streams, after preparation
+    }
 	return TRUE;
 }
 

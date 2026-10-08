@@ -495,6 +495,62 @@ void replaySessionFaults() {
     }
     std::cout<<"protected replay recording allocation manifest "<<census<<" playback "<<inputCensus<<'\n';
 }
+void replayStartup() {
+    Context context; const AsciiString filename("Replays/startup.rep");
+    // Four source little-endian Int words: hard, skirmish, -7 rank, -1 FPS.
+    const std::array<unsigned char,16> oracle{2,0,0,0,2,0,0,0,249,255,255,255,255,255,255,255};
+    context.put(filename.str(),oracle);
+    auto accepted=NativeReplaySession::playback(context.storage,filename);
+    AllocationFault::arm(0);
+    const auto settings=nativeReplayReadStartupSettings(*accepted);
+    const auto count=AllocationFault::attempts(); const auto hit=AllocationFault::triggered();
+    AllocationFault::disarm();
+    require(count==0 && !hit && settings.difficulty==DIFFICULTY_HARD && settings.originalGameMode==GAME_SKIRMISH
+        && settings.rankPoints==-7 && settings.maxFPS==-1,"source startup oracle and allocation-free complete admission");
+    for (std::size_t prefix=0;prefix<oracle.size();++prefix) {
+        context.put(filename.str(),std::span(oracle).first(prefix));
+        auto rejected=NativeReplaySession::playback(context.storage,filename);
+        rejects([&]{(void)nativeReplayReadStartupSettings(*rejected);});
+        require(rejected->poisoned(),"every partial startup tail poisons unpublished session"); rejected.reset();
+        context.put(filename.str(),oracle); auto retry=NativeReplaySession::playback(context.storage,filename);
+        require(nativeReplayReadStartupSettings(*retry).rankPoints==-7,"same-storage corrected truncated-tail retry");
+    }
+    for (Int raw:{-1,Int(DIFFICULTY_COUNT),std::numeric_limits<Int>::max()}) {
+        auto bytes=oracle; const auto word=std::bit_cast<UnsignedInt>(raw);
+        for (unsigned i=0;i<4;++i)bytes[i]=static_cast<unsigned char>(word>>(8*i));
+        context.put(filename.str(),bytes); auto rejected=NativeReplaySession::playback(context.storage,filename);
+        rejects([&]{(void)nativeReplayReadStartupSettings(*rejected);});
+        require(rejected->poisoned(),"raw invalid difficulty rejected before enum conversion"); rejected.reset();
+        context.put(filename.str(),oracle); auto retry=NativeReplaySession::playback(context.storage,filename);
+        require(nativeReplayReadStartupSettings(*retry).difficulty==DIFFICULTY_HARD,"same-storage corrected difficulty retry");
+    }
+    for (Int raw:{-1,Int(GAME_INTERNET),Int(GAME_NONE)+1,std::numeric_limits<Int>::max()}) {
+        auto bytes=oracle; const auto word=std::bit_cast<UnsignedInt>(raw);
+        for (unsigned i=0;i<4;++i)bytes[i+4]=static_cast<unsigned char>(word>>(8*i));
+        context.put(filename.str(),bytes); auto rejected=NativeReplaySession::playback(context.storage,filename);
+        rejects([&]{(void)nativeReplayReadStartupSettings(*rejected);});
+        require(rejected->poisoned(),"invalid/excluded mode rejected before world effects"); rejected.reset();
+        context.put(filename.str(),oracle); auto retry=NativeReplaySession::playback(context.storage,filename);
+        require(nativeReplayReadStartupSettings(*retry).originalGameMode==GAME_SKIRMISH,"same-storage corrected mode retry");
+    }
+    for (Int difficulty=DIFFICULTY_EASY;difficulty<DIFFICULTY_COUNT;++difficulty) {
+        for (Int mode=GAME_SINGLE_PLAYER;mode<=GAME_NONE;++mode) {
+            if(mode==GAME_INTERNET)continue;
+            auto bytes=oracle; bytes[0]=static_cast<unsigned char>(difficulty); bytes[4]=static_cast<unsigned char>(mode);
+            context.put(filename.str(),bytes); auto reader=NativeReplaySession::playback(context.storage,filename);
+            const auto value=nativeReplayReadStartupSettings(*reader);
+            require(value.difficulty==difficulty && value.originalGameMode==mode,"all admitted source difficulty/mode pairs");
+        }
+    }
+    accepted->seek(0);
+    require(nativeReplayReadStartupSettings(*accepted).originalGameMode==GAME_SKIRMISH,"prior immutable input unaffected by rejected sessions");
+    context.put(filename.str(),oracle);
+    auto ready=NativeReplaySession::record(context.storage,filename); ready->writeWord(123);
+    rejects([&]{(void)nativeReplayReadStartupSettings(*ready);});
+    rejects([&]{ready->commit();}); ready.reset();
+    require(context.get(filename.str())==std::vector<unsigned char>(oracle.begin(),oracle.end()),"wrong-mode admission poisons commit-ready output without replacement");
+    context.clean();
+}
 void services() {
     // Generated service-contract evidence only; this is not a GameState fixture.
     Context context;
@@ -596,6 +652,7 @@ int main(int argc,char** argv) {
             else if (family=="services") services();
             else if (family=="replay-session") replaySession();
             else if (family=="replay-session-faults") replaySessionFaults();
+            else if (family=="replay-startup") replayStartup();
             else throw std::runtime_error("unknown transfer family");
             require(AllocationFault::live()==live,"complete same-process transfer lifetimes");
         }

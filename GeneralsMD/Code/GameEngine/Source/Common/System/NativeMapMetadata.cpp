@@ -96,3 +96,13 @@ Bool MapCache::loadCacheINI(AsciiString filename) {
   keys.commit();
   return TRUE;
 }
+
+// Original logical lookup, independent of terrain/presentation ownership.
+const MapMetaData *MapCache::findMap(AsciiString mapName)
+{
+	mapName.toLower();
+	MapCache::iterator it = find(mapName);
+	if (it == end())
+		return NULL;
+	return &(it->second);
+}

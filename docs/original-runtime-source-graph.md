@@ -632,3 +632,24 @@ evidence/qa/N2-runtime-link-census.json. The link-only probe was never executed.
 Whole GameInfo slot/map publication, Recorder streams/header/command transaction,
 real native root/map/terrain/module/scenario/checkpoints remain pending; neither
 archive compilation nor value/dispatch tests accept those parent owners.
+
+Game setup continuation: original GameInfo.cpp now owns setup/slot values and the
+native value journal; GameInfoPresentation.cpp retains apparent-player/skirmish
+methods; GameInfoSerialization.cpp retains source replay/snapshot methods.
+All three remain in original_bootstrap. MapCompanionPaths.cpp owns the actual
+shared FileTransfer lexical path definitions once; NativeMapMetadata.cpp owns
+actual MapCache::findMap. No fake singleton or replacement simulation is linked.
+Normal/GCC/Clang focused3 and full181 PASS on canonical533
+c207ad5ad97eea1cf017a27aa6eefd99930822d5d58418cd990b6ff2f5ad6f58.
+Exact setup setter/combined fault manifests are linked from support QA. This is
+actual setup-owner support, not accepted GameEngine startup or Recorder playback.
+The prior75 root symbols are historical inventory, not a refreshed current count.
+Complete native root/providers, supplied data/scenario/compiler checkpoints and
+Recorder candidate publication across the real engine-reset callback remain
+required in the same incomplete slice03 transaction.
+
+Replay preparation now compiles in actual Recorder.cpp using a separate actual
+owner across GameEngine reset. Shared startup wire admission executes through the
+transfer fixture; actual ReplayGameInfo payload adoption executes through the
+setup fixture. Neither substitutes for executing Recorder startup, its registered
+reset callback, pooled messages and RNG in the full native graph.

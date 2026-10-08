@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "Common/NativeTransferWire.h"
+#include "Common/GameCommon.h"
+#include "GameLogic/GameModes.h"
 #include <cstring>
 #include <exception>
 #include <cstdio>
@@ -119,3 +121,18 @@ public:
         const auto result=m_output->commit(); m_committed=true; return result;
     }
 };
+
+struct NativeReplayStartupSettings {
+    Int difficulty,originalGameMode,rankPoints,maxFPS;
+};
+inline NativeReplayStartupSettings nativeReplayReadStartupSettings(NativeReplaySession& session) {
+    NativeReplaySession::Guard guard(session);
+    const NativeReplayStartupSettings candidate{
+        std::bit_cast<Int>(session.readWord()),std::bit_cast<Int>(session.readWord()),
+        std::bit_cast<Int>(session.readWord()),std::bit_cast<Int>(session.readWord())};
+    if (candidate.difficulty<DIFFICULTY_EASY || candidate.difficulty>=DIFFICULTY_COUNT ||
+        !nativeGameModeSupported(candidate.originalGameMode)) throw XFER_INVALID_PARAMETERS;
+    // Rank/FPS are source Int fields; nonpositive FPS is the existing disabled
+    // policy, not a malformed float or an excuse to invent a positive-only rule.
+    return candidate;
+}

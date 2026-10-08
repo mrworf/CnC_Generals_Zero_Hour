@@ -35,6 +35,9 @@
 #include "Common/Money.h"
 #include "GameNetwork/NetworkDefs.h"
 #include "GameNetwork/FirewallHelper.h"
+#include <array>
+
+class NativeGameInfoTransaction;
 
 enum SlotState
 {
@@ -62,6 +65,8 @@ class GameSlot
 public:
 	GameSlot();
 	virtual void reset();
+	// Payload only: preserve the actual parent/derived slot identity.
+	void swapPayload(GameSlot& other) noexcept;
 
 	void setAccept( void ) { m_isAccepted = true; }		///< Accept the current options
 	void unAccept( void );														///< Unaccept (options changed, etc)
@@ -154,6 +159,7 @@ protected:
 	*/
 class GameInfo
 {
+friend class NativeGameInfoTransaction;
 public:
 	GameInfo();
 	
@@ -234,6 +240,9 @@ public:
   inline void setOldFactionsOnly( Bool oldFactionsOnly );
 
 protected:
+	// Only complete, attached setup owners use this commit boundary. Their
+	// embedded slot identities remain in place; no parent pointers are copied.
+	void swapSetupPayload(GameInfo& other) noexcept;
 	Int m_preorderMask;
 	Int m_crcInterval;
 	Bool m_inGame;
@@ -257,6 +266,30 @@ protected:
 };
 
 extern GameInfo *TheGameInfo;
+
+// Synchronous bounded rollback journal, not a second game owner. No factories,
+// virtual callbacks or allocation occur during retirement. Inner acceptance is
+// still owned by an enclosing journal. Derived LAN slot payloads are untouched.
+class NativeGameInfoTransaction
+{
+public:
+    explicit NativeGameInfoTransaction(GameInfo& owner);
+    ~NativeGameInfoTransaction() noexcept;
+    NativeGameInfoTransaction(const NativeGameInfoTransaction&)=delete;
+    NativeGameInfoTransaction& operator=(const NativeGameInfoTransaction&)=delete;
+    void commit() noexcept { m_committed=true; }
+private:
+    GameInfo& m_owner;
+    std::array<GameSlot*,MAX_SLOTS> m_links{};
+    std::array<GameSlot,MAX_SLOTS> m_slots;
+    Int m_preorderMask,m_crcInterval,m_gameID,m_mapMask,m_seed,m_useStats;
+    Bool m_inGame,m_inProgress,m_surrendered,m_oldFactionsOnly;
+    UnsignedInt m_localIP,m_mapCRC,m_mapSize;
+    AsciiString m_mapName;
+    Money m_startingCash;
+    UnsignedShort m_superweaponRestriction;
+    bool m_committed=false;
+};
 
 // Inline functions
 Int					GameInfo::getGameID( void ) const								{ return m_gameID; }

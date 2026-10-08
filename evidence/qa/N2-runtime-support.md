@@ -1,5 +1,60 @@
 # N2 slice03 supporting owner checkpoint — not milestone acceptance
 
+User-requested cleanup checkpoint (current frozen source): canonical533 SHA
+e24c1d763e974c369e01be614d824dca585c20ee6e7bd89b522809eac0ab1ba9;
+plus-toolchain537 SHA49bbdf6a97af082007a631a4800a9fc3e51ded4de4eaaa907998d7664b598abc.
+Same cumulative identity construction below. All configured targets built;
+full183/183 PASS normal GCC17.98s, GCC ASan/UBSan/LSan83.24s,
+Clang ASan/UBSan/LSan67.88s. Logs /tmp/zh-cleanup-gcc-full.log and
+/tmp/zh-cleanup-host-{gcc,clang}-sanitize-full.log. Initial sandbox sanitizer
+executions failed LeakSanitizer ptrace support (182/183 in each); those results
+are retained in /tmp/zh-cleanup-{gcc,clang}-sanitize-full.log, not accepted or
+silenced. Normal-host reruns preserve all sanitizer/leak checks and pass.
+
+New executed families verify actual ReplayGameInfo allocation-free payload
+adoption with both embedded slot arrays retaining identity, and shared replay
+startup settings admission across every short prefix/invalid encoding/corrected
+retry. Recorder.cpp now prepares a separate actual owner before destructive
+engine reset and adopts complete resources afterward, with truthful reset failure.
+That whole Recorder/reset/message/RNG path is compile evidence only. Full runtime
+and N2 acceptance remain pending. No library, retail asset or recovery edits.
+Official pristine bgfx/bx/bimg verification passes.
+
+Newest setup-owner checkpoint (after user-requested committed checkpoint a62794b2):
+canonical533 SHA c207ad5ad97eea1cf017a27aa6eefd99930822d5d58418cd990b6ff2f5ad6f58;
+plus-toolchain537 SHA63bb8fb6f6beae5e1801fea4ed86cb2c2947c7f955d8ebc95772d413a0531832.
+Identity is the same sorted path+NUL+file-digest construction as prior checkpoints,
+over cumulative changed original/CMake/tests paths since9e5c0e4f, not just this
+turn's diff. All configured targets build under normal/GCC/Clang sanitizers.
+Focused3/3 PASS0.40/1.89/1.53s; full181/181 PASS17.82/81.90/66.68s.
+Logs: /tmp/zh-game-info-<variant>-{focused,full,frozen-build}.log, where variants
+are gcc,gcc-sanitize,clang-sanitize. All corrected builds were verified complete
+before their tests; initial newly extracted FileTransfer header/Unicode fixture
+compile errors and both sanitizer parent-metadata link failures were never tested.
+The source owner split keeps every actual method in the real bootstrap archive;
+no sanitizer/link check is suppressed and no fake parent symbol is introduced.
+
+Actual GameInfo/slot/map setup tests cover complete borrowed slot identity,
+name/map backing, all scalar restoration, nested commit/rejection, nonzero fresh
+slot backing, source reset semantics, original CRC-based size availability and
+seven-bit companion mask127. Source slash/backslash/root-level path regressions
+are exercised. Native mutation83 standard acquisitions and seven direct owners
+(map63/CRC2/size2/reset1/clear8/adjust3/start1) retain every failed ordinal and retry,
+prove the exact terminal, immediate std/fd residuals and whole-owner retirement
+through three lifetimes. Direct-setter rejection is checked BEFORE the test's
+successful-operation restoration guard retires, so an outer fixture rollback
+cannot hide a missing production rollback. No private data or GPU was executed.
+Official pristine bgfx/bx/bimg verification and tracked diff whitespace pass.
+
+Options commit and replay-header journal integration compile but are not accepted
+by these standalone setup-owner tests. Actual LAN context, complete Recorder
+startup/world reset/message/CRC/RNG adoption, GameState/store namespace/init,
+original native root/map/terrain/module/scenario/checkpoints and supplied-data
+integrity remain mandatory. N2/plan01/slice03 stays incomplete; N3/N4 are not ready.
+Durable next-batch finding: actual world clear resets Recorder through the engine
+registry, so candidate preparation must live outside that reset owner. See
+docs/original-engine-formats.md; do not rediscover it through runtime assertions.
+
 Latest actual template/data-vector checkpoint: frozen470 code paths SHA
 `bac5627b2d9505b7bd0faf119dadcf3dcfaf6288887e67f470c23246e450ed3a`.
 Selected actual Common/Thing/data providers and affected fixtures build all3;

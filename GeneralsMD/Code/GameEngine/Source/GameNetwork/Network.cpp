@@ -58,12 +58,6 @@
 //#pragma MESSAGE("************************************** WARNING, optimization disabled for debugging purposes")
 #endif
 
-#if defined(DEBUG_CRC)
-Int NET_CRC_INTERVAL = 1;
-#else
-Int NET_CRC_INTERVAL = 100;
-#endif
-
 // DEFINES ////////////////////////////////////////////////////////////////////
 
 #define RESEND_INTERVAL 1

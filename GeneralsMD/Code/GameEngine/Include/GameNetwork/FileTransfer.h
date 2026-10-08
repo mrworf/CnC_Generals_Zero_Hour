@@ -35,6 +35,8 @@
 class GameInfo;
 
 // Convenience functions
+#include "Common/AsciiString.h"
+
 AsciiString GetBasePathFromPath( AsciiString path );
 AsciiString GetFileFromPath( AsciiString path );
 AsciiString GetExtensionFromFile( AsciiString fname );

@@ -45,6 +45,7 @@ public:
 		for (Int i = 0; i< MAX_SLOTS; ++i)
 			setSlotPointer(i, &m_ReplaySlot[i]);
 	}
+    void swap(ReplayGameInfo& other) noexcept { swapSetupPayload(other); }
 };
 
 enum RecorderModeType {

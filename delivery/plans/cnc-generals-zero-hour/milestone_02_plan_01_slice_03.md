@@ -934,3 +934,48 @@ and artifact/authority freshness checks. Every N2 acceptance criterion maps to
 direct evidence; caches/writes stay outside supplied roots. Commit the completed
 slice and N2 delivery status. If required private data is absent, retain passing
 generated evidence and precise PRE04 unblock condition rather than accepting N2.
+
+Resume after user-requested checkpoint a62794b2 (clean worktree): complete the
+coupled GameInfo publication owner before broader Recorder startup integration.
+A bounded value journal captures every base option/flag and each actual slot
+payload, never a copied GameInfo or alternate LAN parent. Rejection restores
+original slot identities and string backing without callbacks/allocations;
+nested success remains owned by the outer transaction. Guard reset, multi-slot
+mutation, map/setter work, whole options publication and replay header startup.
+Prepare localized slot names before mutation and initialize fresh slot IP while
+preserving reset semantics. Extract the actual map-companion path definitions
+and CRC default into their logical providers (one definition each), so generated
+actual-owner fixtures do not acquire unrelated network transfer/RTTI graphs.
+Validate source-derived map masks/availability and slot flags, nested rejection,
+all allocation ordinals/exact terminal/retry, prior backing and three lifetimes
+under GCC/Clang sanitizers. No fake GameInfo/GameState/LAN globals or mocked game
+logic; isolated owner evidence cannot complete Recorder, simulation or N2.
+Both sanitizer linkers retain unrelated parent/runtime metadata through the
+combined GameInfo replay-serialization TU. Separate its actual setup/slot values,
+apparent-player presentation and replay/snapshot serialization providers without
+changing methods or adding replacement globals. All providers stay in the real
+bootstrap archive; only genuinely unreferenced methods may retire from standalone
+fixtures. This is dependency separation, not a vptr/global sanitizer waiver.
+
+Recorder startup continuation must prepare using a distinct actual Recorder with
+its own ReplayGameInfo slots/session/CRC, never move its borrowed slot pointer
+array into the registered Recorder. Read the complete original tail and first
+frame before world reset; admit difficulty/mode before downstream conversion.
+Prepare pooled NEW_GAME and clean-EOF CLEAR messages offside, preserve the source
+CLEAR-before-NEW ordering, then resolve their player context against the actual
+post-reset PlayerList. Engine reset can reset the registered Recorder but cannot
+retire this separately scoped candidate. Transfer setup payloads and owned
+session/CRC/strings without allocation; retire prior resources through the candidate.
+Preserve analysis omission and all three source RNG streams. An exception during
+actual destructive world reset must mark engine shutdown and propagate, not claim
+an intact prior world or successful playback. Test complete ReplayGameInfo adoption
+with both embedded slot identities retained; keep actual whole Recorder/reset/
+message/RNG execution pending until the full native graph links and executes.
+
+User-requested worktree cleanup checkpoint: all configured targets build and
+all183 tests pass normal GCC and normal-host GCC/Clang ASan/UBSan/LSan
+(17.98/83.24/67.88s). Current source identities and retained sandbox LSan failures
+are in N2-runtime-support.md. Setup/replay-wire/adoption tests are executed;
+whole Recorder/runtime remains compile-only. Commit this coherent progress
+checkpoint without completing this slice or milestone. Generated files, libraries,
+retail assets and recovery storage are excluded.

@@ -2243,3 +2243,70 @@ setMapSize/ParseAsciiStringToGameInfo; LANGameInfo.cpp getLocalSlotNum/
 LANGameSlot::isLocalPlayer; Recorder.cpp::playbackFile; RandomValue.cpp seed owners.
 These are implementation obligations for the next coupled owner batch, not
 accepted behavior or a replacement milestone plan.
+
+Game setup publication now has actual-owner generated evidence on frozen533
+SHA c207ad5ad97eea1cf017a27aa6eefd99930822d5d58418cd990b6ff2f5ad6f58
+(537 including toolchain:63bb8fb6f6beae5e1801fea4ed86cb2c2947c7f955d8ebc95772d413a0531832).
+NativeGameInfoTransaction captures base option/flag values and each real slot's
+payload/borrowed identity, not a copied GameInfo with another parent's slot links.
+Rejection restores exact name/map backing and every scalar without callbacks or
+allocation; inner acceptance remains owned by an outer journal. Fresh GameSlot
+initializes IP while accepted reset retains IP/name as the original intended.
+Localized slot names are prepared before scalar effects. Whole reset/clear/start/
+map/CRC/size/adjust publication and the options commit/replay-header owner use
+the same journal; virtual local-slot queries retain their original parent.
+
+GameInfo::setMapSize intentionally uses map CRC for availability, not filesize.
+This source behavior is retained and tested. Seven companion bits are map1/
+preview2/map.ini4/map.str8/solo.ini16/assetusage32/readme64. Original setMap's
+mixed slash/backslash loop loses the directory, and FileTransfer helpers also
+search backslashes only (root-level companions get an absolute-leading separator).
+Actual shared path definitions now accept both separators and avoid inventing
+an absolute root-level path; generated actual setMap reaches mask127. The unchanged
+NET_CRC_INTERVAL default moved once into the shared setup provider; MapCache::findMap
+moved once into its logical metadata provider. Presentation and replay/snapshot
+methods remain actual separate providers in the bootstrap archive, not fixture
+substitutes. This permits full sanitizer instrumentation without retaining
+unexecuted parent methods through an unrelated setup-only source TU.
+
+Generated source-owner manifests: combined mutation83; direct map63, CRC2, size2,
+reset1, clear8, adjust3, start1. Every ordinal, exact terminal and failure/retry
+pair retains accepted pointers/backing and exact allocation/descriptor residuals
+through three lifetimes under all3. Focused3/3 and full181/181 PASS
+(17.82s/81.90s/66.68s); source/log provenance is in N2-runtime-support.md.
+Whole options/actual LAN/replay-header callback execution, Recorder startup,
+Skirmish snapshot graph, native root and GameLogic scenario remain unaccepted.
+
+Recorder startup surrounding lifecycle finding: GameLogic::clearGameData calls
+GameEngine::reset, which dispatches SubsystemInterfaceList::resetAll including
+the actual Recorder. Its reset/init retires file/CRC and resets game setup.
+Do not merely move clearGameData after parsing into this same Recorder: that
+would retire the admitted candidate. Prepare replay session/setup/tail settings,
+CRC/message resources and filename outside the reset-owned Recorder, finish input
+admission before destructive world reset, then adopt the complete candidate without
+fallible copies into the original owner. Runtime world-reset failure is not
+reversible via metadata/RNG snapshots; never claim accepted gameplay from a
+partially reset world. Engine reset itself creates a blank-window layout and can
+fail, so it needs truthful failure handling at the actual parent integration gate.
+Full RNG publication owns all three six-word arrays and the base seed.
+Source evidence: GameLogicDispatch.cpp::clearGameData; GameEngine.cpp::reset;
+Recorder.cpp::reset/init/playbackFile. These are verified next-batch obligations,
+not new accepted runtime or extra milestones.
+
+Recorder preparation implementation now uses a separately scoped actual
+RecorderClass and adopts ReplayGameInfo payloads without swapping embedded slot
+pointers. Candidate file, CRC, complete startup settings, first frame and pooled
+messages are acquired before destructive reset. Actual post-reset PlayerList
+supplies message context; clean EOF retains source CLEAR-before-NEW ordering.
+Reset exceptions mark the actual engine quitting and propagate. This code is
+compiled, not yet accepted through whole Recorder/runtime execution.
+
+NativeReplaySession::nativeReplayReadStartupSettings reads four little-endian
+32-bit words (difficulty, original mode, rank points, max FPS). Reject difficulty
+outside EASY..COUNT-1 and excluded/invalid native modes before enum conversion.
+Rank/FPS remain source signed Int values; nonpositive FPS retains source policy.
+The session guard poisons short/invalid reads. Generated fixture covers all 16
+short prefixes, invalid raw encodings, every supported difficulty/mode pair,
+corrected retries, prior immutable input, and wrong-mode output preservation.
+Actual ReplayGameInfo adoption tests retain both owners' embedded slot identities,
+complete payload/backing, allocation-free swap and whole-owner retirement.

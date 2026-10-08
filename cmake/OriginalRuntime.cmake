@@ -80,6 +80,7 @@ add_library(original_runtime_common STATIC
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeInputSettings.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/QuotedPrintable.cpp"
   "${ZH_CODE}/GameEngine/Source/GameNetwork/IPEnumeration.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameNetwork/MapCompanionPaths.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeFunctionRegistry.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/UserPreferences.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/Bezier/BezierSegment.cpp"
@@ -152,6 +153,8 @@ add_library(original_bootstrap STATIC
   "${ZH_CODE}/GameEngine/Source/Common/System/SaveGame/GameState.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/Recorder.cpp"
   "${ZH_CODE}/GameEngine/Source/GameNetwork/GameInfo.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameNetwork/GameInfoPresentation.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameNetwork/GameInfoSerialization.cpp"
   "${ZH_CODE}/GameEngine/Source/GameNetwork/GameMessageParser.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/SubsystemInterface.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/INI/INI.cpp")
@@ -277,6 +280,15 @@ foreach(owner IN ITEMS original_transfer original_bootstrap original_templates o
 endforeach()
 add_executable(original_transfer_fixture tests/original/transfer.cpp tests/original/AllocationFault.cpp)
 add_executable(original_message_parser_fixture tests/original/message_parser.cpp tests/original/AllocationFault.cpp)
+add_executable(original_game_info_fixture tests/original/game_info.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_game_info_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_game_info_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS transactions faults setter-faults adoption)
+  add_test(NAME original_game_info_${family} COMMAND original_game_info_fixture "${family}")
+  set_tests_properties(original_game_info_${family} PROPERTIES LABELS "original;runtime;setup" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 target_link_libraries(original_message_parser_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_message_parser_fixture PRIVATE -Wl,--gc-sections)
@@ -291,7 +303,7 @@ target_link_options(original_transfer_fixture PRIVATE -Wl,--gc-sections)
 target_include_directories(original_transfer_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_definitions(original_transfer_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
-foreach(family IN ITEMS wire functional malformed poisoning faults collections masks aggregates io-faults services replay-session replay-session-faults)
+foreach(family IN ITEMS wire functional malformed poisoning faults collections masks aggregates io-faults services replay-session replay-session-faults replay-startup)
   add_test(NAME original_transfer_${family} COMMAND original_transfer_fixture "${family}")
   set_tests_properties(original_transfer_${family} PROPERTIES LABELS "original;runtime;transfer" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

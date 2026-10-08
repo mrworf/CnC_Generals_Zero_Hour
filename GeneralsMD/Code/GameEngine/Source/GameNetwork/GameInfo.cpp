@@ -37,6 +37,8 @@
 #include "Common/NativeSourceStrings.h"
 #include <string>
 #include <bit>
+#include <utility>
+#include <type_traits>
 #include "GameClient/GameText.h"
 #include "GameClient/MapUtil.h"
 #include "Common/MultiplayerSettings.h"
@@ -57,11 +59,82 @@
 
 GameInfo *TheGameInfo = NULL;
 
+// Original network CRC policy belongs to the shared game setup owner.
+#if defined(DEBUG_CRC)
+Int NET_CRC_INTERVAL = 1;
+#else
+Int NET_CRC_INTERVAL = 100;
+#endif
+
 // GameSlot ----------------------------------------
 
-GameSlot::GameSlot()
+GameSlot::GameSlot() : m_IP(0)
 {
 	reset();
+}
+
+void GameSlot::swapPayload(GameSlot& other) noexcept
+{
+    using std::swap;
+    swap(m_state,other.m_state); swap(m_isAccepted,other.m_isAccepted);
+    swap(m_hasMap,other.m_hasMap); swap(m_isMuted,other.m_isMuted);
+    swap(m_color,other.m_color); swap(m_startPos,other.m_startPos);
+    swap(m_playerTemplate,other.m_playerTemplate); swap(m_teamNumber,other.m_teamNumber);
+    swap(m_origColor,other.m_origColor); swap(m_origStartPos,other.m_origStartPos);
+    swap(m_origPlayerTemplate,other.m_origPlayerTemplate); m_name.swap(other.m_name);
+    swap(m_IP,other.m_IP); swap(m_port,other.m_port); swap(m_NATBehavior,other.m_NATBehavior);
+    swap(m_lastFrameInGame,other.m_lastFrameInGame); swap(m_disconnected,other.m_disconnected);
+}
+
+NativeGameInfoTransaction::NativeGameInfoTransaction(GameInfo& owner)
+    : m_owner(owner),m_preorderMask(owner.m_preorderMask),m_crcInterval(owner.m_crcInterval),
+      m_gameID(owner.m_gameID),m_mapMask(owner.m_mapMask),m_seed(owner.m_seed),m_useStats(owner.m_useStats),
+      m_inGame(owner.m_inGame),m_inProgress(owner.m_inProgress),m_surrendered(owner.m_surrendered),
+      m_oldFactionsOnly(owner.m_oldFactionsOnly),m_localIP(owner.m_localIP),m_mapCRC(owner.m_mapCRC),
+      m_mapSize(owner.m_mapSize),m_mapName(owner.m_mapName),m_startingCash(owner.m_startingCash),
+      m_superweaponRestriction(owner.m_superweaponRestriction)
+{
+    for (Int i=0;i<MAX_SLOTS;++i) {
+        m_links[i]=owner.m_slot[i];
+        if (m_links[i]) m_slots[i]=*m_links[i];
+    }
+}
+
+NativeGameInfoTransaction::~NativeGameInfoTransaction() noexcept
+{
+    if (m_committed) return;
+    m_owner.m_preorderMask=m_preorderMask; m_owner.m_crcInterval=m_crcInterval;
+    m_owner.m_gameID=m_gameID; m_owner.m_mapMask=m_mapMask; m_owner.m_seed=m_seed;
+    m_owner.m_useStats=m_useStats; m_owner.m_inGame=m_inGame; m_owner.m_inProgress=m_inProgress;
+    m_owner.m_surrendered=m_surrendered; m_owner.m_oldFactionsOnly=m_oldFactionsOnly;
+    m_owner.m_localIP=m_localIP; m_owner.m_mapCRC=m_mapCRC; m_owner.m_mapSize=m_mapSize;
+    m_owner.m_mapName.swap(m_mapName);
+    static_assert(std::is_nothrow_copy_assignable_v<Money>);
+    m_owner.m_startingCash=m_startingCash; m_owner.m_superweaponRestriction=m_superweaponRestriction;
+    for (Int i=0;i<MAX_SLOTS;++i) {
+        m_owner.m_slot[i]=m_links[i];
+        if (m_links[i]) m_links[i]->swapPayload(m_slots[i]);
+    }
+}
+
+void GameInfo::swapSetupPayload(GameInfo& other) noexcept
+{
+    if (this==&other) return;
+    using std::swap;
+    swap(m_preorderMask,other.m_preorderMask); swap(m_crcInterval,other.m_crcInterval);
+    swap(m_inGame,other.m_inGame); swap(m_inProgress,other.m_inProgress);
+    swap(m_surrendered,other.m_surrendered); swap(m_gameID,other.m_gameID);
+    swap(m_localIP,other.m_localIP); m_mapName.swap(other.m_mapName);
+    swap(m_mapCRC,other.m_mapCRC); swap(m_mapSize,other.m_mapSize);
+    swap(m_mapMask,other.m_mapMask); swap(m_seed,other.m_seed); swap(m_useStats,other.m_useStats);
+    static_assert(std::is_nothrow_swappable_v<Money>);
+    swap(m_startingCash,other.m_startingCash);
+    swap(m_superweaponRestriction,other.m_superweaponRestriction);
+    swap(m_oldFactionsOnly,other.m_oldFactionsOnly);
+    for (Int i=0;i<MAX_SLOTS;++i) {
+        // ReplayGameInfo attaches every slot to its own embedded array.
+        m_slot[i]->swapPayload(*other.m_slot[i]);
+    }
 }
 
 void GameSlot::reset()
@@ -94,96 +167,6 @@ void GameSlot::saveOffOriginalInfo( void )
 		m_color, m_startPos, m_playerTemplate));
 }
 
-static Int getSlotIndex(const GameSlot *slot)
-{
-	for (Int i=0; i<MAX_SLOTS; ++i)
-	{
-		if (TheGameInfo->getConstSlot(i) == slot)
-			return i;
-	}
-	return -1;
-}
-
-static Bool isSlotLocalAlly(const GameSlot *slot)
-{
-	Int slotIndex = getSlotIndex(slot);
-	Int localIndex = TheGameInfo->getLocalSlotNum();
-	const GameSlot *localSlot = TheGameInfo->getConstSlot(localIndex);
-
-	// if either doesn't exist, not an ally
-	if (slotIndex < 0 || localIndex < 0)
-		return FALSE;
-
-	// if slot is us, ally
-	if (slotIndex == localIndex)
-		return TRUE;
-
-	// if slot is same team as us, ally
-	if (slot->getTeamNumber() == localSlot->getTeamNumber() && slot->getTeamNumber() >= 0)
-		return TRUE;
-
-	// if we're an observer, we see all
-	if (localSlot->getOriginalPlayerTemplate() == PLAYERTEMPLATE_OBSERVER)
-		return TRUE;
-
-	// nope
-	return FALSE;
-}
-
-UnicodeString GameSlot::getApparentPlayerTemplateDisplayName( void ) const
-{
-	if (TheMultiplayerSettings && TheMultiplayerSettings->showRandomPlayerTemplate() &&
-		m_origPlayerTemplate == PLAYERTEMPLATE_RANDOM && !isSlotLocalAlly(this))
-	{
-		return TheGameText->fetch("GUI:Random");
-	}
-	else if (m_origPlayerTemplate == PLAYERTEMPLATE_OBSERVER)
-	{
-		return TheGameText->fetch("GUI:Observer");
-	}
-	DEBUG_LOG(("Fetching player template display name for player template %d (orig is %d)\n",
-		m_playerTemplate, m_origPlayerTemplate));
-	if (m_playerTemplate < 0)
-	{
-		return TheGameText->fetch("GUI:Random");
-	}
-	return ThePlayerTemplateStore->getNthPlayerTemplate(m_playerTemplate)->getDisplayName();
-}
-
-Int GameSlot::getApparentPlayerTemplate( void ) const
-{
-	if (TheMultiplayerSettings && TheMultiplayerSettings->showRandomPlayerTemplate() &&
-		!isSlotLocalAlly(this))
-	{
-		return m_origPlayerTemplate;
-	}
-	return m_playerTemplate;
-}
-
-Int GameSlot::getApparentColor( void ) const
-{
-	if (TheMultiplayerSettings && m_origPlayerTemplate == PLAYERTEMPLATE_OBSERVER)
-		return TheMultiplayerSettings->getColor(PLAYERTEMPLATE_OBSERVER)->getColor();
-
-	if (TheMultiplayerSettings && TheMultiplayerSettings->showRandomColor() &&
-		!isSlotLocalAlly(this))
-	{
-		return m_origColor;
-	}
-	return m_color;
-}
-
-Int GameSlot::getApparentStartPos( void ) const
-{
-	if (TheMultiplayerSettings && TheMultiplayerSettings->showRandomStartPos() &&
-		!isSlotLocalAlly(this))
-	{
-		return m_origStartPos;
-	}
-	return m_startPos;
-}
-
-
 void GameSlot::unAccept( void )
 {
 	if (isHuman())
@@ -202,6 +185,21 @@ void GameSlot::setMapAvailability( Bool hasMap )
 
 void GameSlot::setState( SlotState state, UnicodeString name, UnsignedInt IP )
 {
+    // Localization may allocate or reject. Admit the complete name before any
+    // accepted scalar changes; no virtual parent is replaced by a base clone.
+    UnicodeString preparedName=name;
+    if (state!=SLOT_PLAYER) {
+        if (!TheGameText) throw ERROR_BAD_ARG;
+        const char* label="GUI:Closed";
+        switch(state) {
+        case SLOT_OPEN: label="GUI:Open"; break;
+        case SLOT_EASY_AI: label="GUI:EasyAI"; break;
+        case SLOT_MED_AI: label="GUI:MediumAI"; break;
+        case SLOT_BRUTAL_AI: label="GUI:HardAI"; break;
+        default: break;
+        }
+        preparedName=TheGameText->fetch(label);
+    }
 	if (!(isAI() &&  (state == SLOT_EASY_AI || state == SLOT_MED_AI || state == SLOT_BRUTAL_AI)))
 	{
 		m_color = -1;
@@ -214,32 +212,14 @@ void GameSlot::setState( SlotState state, UnicodeString name, UnsignedInt IP )
 	{
 		reset();
 		m_state = state;
-		m_name = name;
+		m_name.swap(preparedName);
 	}// state == SLOT_PLAYER
 	else
 	{
 		m_state = state;
 		m_isAccepted = true;
 		m_hasMap = true;
-		switch(state)
-		{
-		case SLOT_OPEN:
-			m_name = TheGameText->fetch("GUI:Open");
-			break;
-		case SLOT_EASY_AI:
-			m_name = TheGameText->fetch("GUI:EasyAI");
-			break;
-		case SLOT_MED_AI:
-			m_name = TheGameText->fetch("GUI:MediumAI");
-			break;
-		case SLOT_BRUTAL_AI:
-			m_name = TheGameText->fetch("GUI:HardAI");
-			break;
-		case SLOT_CLOSED:
-		default:
-			m_name = TheGameText->fetch("GUI:Closed");
-			break;
-		}
+		m_name.swap(preparedName);
 	}
 
 	m_IP = IP;
@@ -286,6 +266,9 @@ Bool GameSlot::isOpen( void ) const
 // GameInfo ----------------------------------------
 
 GameInfo::GameInfo()
+    : m_preorderMask(0),m_crcInterval(0),m_inGame(false),m_inProgress(false),
+      m_surrendered(false),m_gameID(0),m_localIP(0),m_mapCRC(0),m_mapSize(0),
+      m_mapMask(0),m_seed(0),m_useStats(0),m_superweaponRestriction(0),m_oldFactionsOnly(false)
 {
     m_localIP=0;
 	for (int i=0; i<MAX_SLOTS; ++i)
@@ -302,6 +285,8 @@ void GameInfo::init( void )
 
 void GameInfo::reset( void )
 {
+    if (!TheGlobalData) throw ERROR_BAD_ARG;
+    NativeGameInfoTransaction transaction(*this);
 	m_crcInterval = NET_CRC_INTERVAL;
 	m_inGame = false;
 	m_inProgress = false;
@@ -330,7 +315,40 @@ void GameInfo::reset( void )
 	}
 
 	m_preorderMask = 0;
+    transaction.commit();
 }
+
+
+Bool GameInfo::isMultiPlayer(void)
+{
+	for (Int i=0; i<MAX_SLOTS; ++i)
+	{
+		if (i == getLocalSlotNum())
+			continue;
+
+		if (getConstSlot(i)->isHuman())
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
+Bool GameInfo::isSandbox(void)
+{
+	Int localSlotNum = getLocalSlotNum();
+	Int localTeam = getConstSlot(localSlotNum)->getTeamNumber();
+	for (Int i=0; i<MAX_SLOTS; ++i)
+	{
+		if (i == localSlotNum)
+			continue;
+
+		const GameSlot *slot = getConstSlot(i);
+		if (slot->isOccupied() && (slot->getTeamNumber() < 0 || slot->getTeamNumber() != localTeam))
+			return FALSE;
+	}
+	return TRUE;
+}
+
 
 Bool GameInfo::isPlayerPreorder(Int index)
 {
@@ -348,13 +366,14 @@ void GameInfo::markPlayerAsPreorder(Int index)
 
 void GameInfo::clearSlotList( void )
 {
+    NativeGameInfoTransaction transaction(*this);
 	for (int i=0; i<MAX_SLOTS; ++i)
 	{
 		if (m_slot[i])
 			m_slot[i]->setState(SLOT_CLOSED);
 	}
+    transaction.commit();
 }
-
 Int GameInfo::getNumPlayers( void ) const
 {
 	Int numPlayers = 0;
@@ -407,10 +426,12 @@ void GameInfo::leaveGame( void )
 
 void GameInfo::startGame( Int gameID )
 {
+    NativeGameInfoTransaction transaction(*this);
 	DEBUG_ASSERTCRASH(m_inGame && !m_inProgress, ("Starting game at a bad time!"));
 	m_gameID = gameID;
 	closeOpenSlots();
 	m_inProgress = true;
+    transaction.commit();
 }
 
 void GameInfo::endGame( void )
@@ -438,13 +459,13 @@ void GameInfo::setSlot( Int slotNum, GameSlot slotInfo )
 		slotInfo.setAccept();
 		slotInfo.setMapAvailability(true);
 	}
-	*m_slot[slotNum] = slotInfo;
+	m_slot[slotNum]->swapPayload(slotInfo);
 
 #ifdef DEBUG_LOGGING
-	UnsignedInt ip = slotInfo.getIP();
+	UnsignedInt ip = m_slot[slotNum]->getIP();
 #endif
 
-	DEBUG_LOG(("GameInfo::setSlot - setting slot %d to be player %ls with IP %d.%d.%d.%d\n", slotNum, slotInfo.getName().str(),
+	DEBUG_LOG(("GameInfo::setSlot - setting slot %d to be player %ls with IP %d.%d.%d.%d\n", slotNum, m_slot[slotNum]->getName().str(),
 							ip >> 24, (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff));
 }
 
@@ -512,9 +533,11 @@ Bool GameInfo::amIHost( void ) const
 
 void GameInfo::setMap( AsciiString mapName )
 {
+    NativeGameInfoTransaction transaction(*this);
 	m_mapName = mapName;
 	if (m_inGame && amIHost())
 	{
+        if (!TheMapCache || !TheFileSystem) throw ERROR_BAD_ARG;
 		const MapMetaData *mapData = TheMapCache->findMap( mapName );
 		if (mapData)
 		{
@@ -533,27 +556,7 @@ void GameInfo::setMap( AsciiString mapName )
 				fp = NULL;
 			}
 
-			AsciiString newMapName;
-			if (mapName.getLength() > 0)
-			{
-				AsciiString token;
-				mapName.nextToken(&token, "\\/");
-				// add all the tokens except the last one.
-				// that way we don't add the filename, just the
-				// directory name, we can do this since the filename
-				// is just the directory name with the file extention
-				// added onto it.
-				while (mapName.find('\\') != NULL)
-				{
-					if (newMapName.getLength() > 0)
-					{
-						newMapName.concat('/');
-					}
-					newMapName.concat(token);
-					mapName.nextToken(&token, "\\/");
-				}
-			}
-			newMapName.concat("/map.ini");
+			AsciiString newMapName = GetINIFromMap(m_mapName);
 			DEBUG_LOG(("GameInfo::setMap() - Looking for '%s'\n", newMapName.str()));
 			fp = TheFileSystem->openFile(newMapName.str());
 			if (fp)
@@ -608,6 +611,7 @@ void GameInfo::setMap( AsciiString mapName )
 			m_mapMask = 0;
 		}
 	}
+    transaction.commit();
 }
 
 void GameInfo::setMapContentsMask( Int mask )
@@ -617,9 +621,9 @@ void GameInfo::setMapContentsMask( Int mask )
 
 void GameInfo::setMapCRC( UnsignedInt mapCRC )
 {
+    NativeGameInfoTransaction transaction(*this);
 	m_mapCRC = mapCRC;
-	if (!TheMapCache)
-		return;
+	if (!TheMapCache) { transaction.commit(); return; }
 
 	// check the map cache
 	if (m_inGame && getLocalSlotNum() >= 0)
@@ -653,13 +657,14 @@ void GameInfo::setMapCRC( UnsignedInt mapCRC )
 			getSlot(getLocalSlotNum())->setMapAvailability(true);
 		}
 	}
+    transaction.commit();
 }
 
 void GameInfo::setMapSize( UnsignedInt mapSize )
 {
+    NativeGameInfoTransaction transaction(*this);
 	m_mapSize = mapSize;
-	if (!TheMapCache)
-		return;
+	if (!TheMapCache) { transaction.commit(); return; }
 
 	// check the map cache
 	if (m_inGame && getLocalSlotNum() >= 0)
@@ -684,6 +689,7 @@ void GameInfo::setMapSize( UnsignedInt mapSize )
 			getSlot(getLocalSlotNum())->setMapAvailability(true);
 		}
 	}
+    transaction.commit();
 }
 
 void GameInfo::setSeed( Int seed )
@@ -762,6 +768,8 @@ void GameInfo::resetStartSpots()
 // players the map can hold.
 void GameInfo::adjustSlotsForMap()
 {
+    NativeGameInfoTransaction transaction(*this);
+    if (!TheMapCache) throw ERROR_BAD_ARG;
 	const MapMetaData *md = TheMapCache->findMap(m_mapName);
 	if (md != NULL)
 	{
@@ -808,10 +816,12 @@ void GameInfo::adjustSlotsForMap()
 			}
 		}
 	}
+    transaction.commit();
 }
 
 void GameInfo::closeOpenSlots()
 {
+    NativeGameInfoTransaction transaction(*this);
 	for (Int i = 0; i < MAX_SLOTS; ++i)
 	{
 		GameSlot *slot = getSlot(i);
@@ -822,796 +832,5 @@ void GameInfo::closeOpenSlots()
 			setSlot(i, newSlot);
 		}
 	}
+    transaction.commit();
 }
-
-static Bool isSlotLocalAlly(GameInfo *game, const GameSlot *slot)
-{
-	const GameSlot *localSlot = game->getConstSlot(game->getLocalSlotNum());
-	if (!localSlot)
-		return TRUE;
-
-	if (slot == localSlot)
-		return TRUE;
-
-	if (slot->getTeamNumber() < 0)
-		return FALSE;
-
-	return slot->getTeamNumber() == localSlot->getTeamNumber();
-}
-
-Bool GameInfo::isSkirmish(void)
-{
-	Bool sawAI = FALSE;
-
-	for (Int i=0; i<MAX_SLOTS; ++i)
-	{
-		if (i == getLocalSlotNum())
-			continue;
-
-		if (getConstSlot(i)->isHuman())
-			return FALSE;
-
-		if (getConstSlot(i)->isAI())
-		{
-			if (isSlotLocalAlly(getConstSlot(i)))
-				return FALSE;
-			sawAI = TRUE;
-		}
-	}
-	return sawAI;
-}
-
-Bool GameInfo::isMultiPlayer(void)
-{
-	for (Int i=0; i<MAX_SLOTS; ++i)
-	{
-		if (i == getLocalSlotNum())
-			continue;
-
-		if (getConstSlot(i)->isHuman())
-			return TRUE;
-	}
-
-	return FALSE;
-}
-
-Bool GameInfo::isSandbox(void)
-{
-	Int localSlotNum = getLocalSlotNum();
-	Int localTeam = getConstSlot(localSlotNum)->getTeamNumber();
-	for (Int i=0; i<MAX_SLOTS; ++i)
-	{
-		if (i == localSlotNum)
-			continue;
-
-		const GameSlot *slot = getConstSlot(i);
-		if (slot->isOccupied() && (slot->getTeamNumber() < 0 || slot->getTeamNumber() != localTeam))
-			return FALSE;
-	}
-	return TRUE;
-}
-
-
-// Convenience Functions ----------------------------------------
-
-static const char slotListID		= 'S';
-
-AsciiString GameInfoToAsciiString( const GameInfo *game )
-{
-	if (!game)
-		return AsciiString::TheEmptyString;
-
-	AsciiString mapName = game->getMap();
-	mapName = TheGameState->realMapPathToPortableMapPath(mapName);
-	AsciiString newMapName;
-	if (mapName.getLength() > 0)
-	{
-		AsciiString token;
-		mapName.nextToken(&token, "\\/");
-		// add all the tokens except the last one.
-		// that way we don't add the filename, just the
-		// directory name, we can do this since the filename
-		// is just the directory name with the file extention
-		// added onto it.
-		while (mapName.find('\\') != NULL)
-		{
-			if (newMapName.getLength() > 0)
-			{
-				newMapName.concat('/');
-			}
-			newMapName.concat(token);
-			mapName.nextToken(&token, "\\/");
-		}
-		DEBUG_LOG(("Map name is %s\n", mapName.str()));
-	}
-
-	AsciiString optionsString;
-	optionsString.format("US=%d;M=%2.2x%s;MC=%X;MS=%d;SD=%d;C=%d;SR=%u;SC=%u;O=%c;", game->getUseStats(), game->getMapContentsMask(), newMapName.str(),
-		game->getMapCRC(), game->getMapSize(), game->getSeed(), game->getCRCInterval(), game->getSuperweaponRestriction(),
-		game->getStartingCash().countMoney(), game->oldFactionsOnly() ? 'Y' : 'N' );
-
-	//add player info for each slot
-	optionsString.concat(slotListID);
-	optionsString.concat('=');
-	for (Int i=0; i<MAX_SLOTS; ++i)
-	{
-		const GameSlot *slot = game->getConstSlot(i);
-
-		AsciiString str;
-		if (slot && slot->isHuman())
-		{
-			AsciiString tmp;  //all this data goes after name
-			tmp.format( ",%X,%d,%c%c,%d,%d,%d,%d,%d:",
-				slot->getIP(), slot->getPort(),
-				(slot->isAccepted()?'T':'F'),
-				(slot->hasMap()?'T':'F'),
-				slot->getColor(), slot->getPlayerTemplate(),
-				slot->getStartPos(), slot->getTeamNumber(),
-				slot->getNATBehavior() );
-			//make sure name doesn't cause overflow of m_lanMaxOptionsLength
-			int lenCur = tmp.getLength() + optionsString.getLength() + 2;  //+2 for H and trailing ;
-			int lenRem = m_lanMaxOptionsLength - lenCur;  //length remaining before overflowing
-			int lenMax = lenRem / (MAX_SLOTS-i);  //share lenRem with all remaining slots
-            if (lenMax<0) throw ERROR_BAD_ARG;
-            const auto encoded=nativeEncodePlayerName(slot->getName().str());
-            const auto prefix=nativePlayerNamePrefix(encoded,static_cast<size_t>(lenMax));
-            AsciiString name(std::string(prefix).c_str());
-			
-			str.format( "H%s%s", name.str(), tmp.str() );
-		}
-		else if (slot && slot->isAI())
-		{
-			Char c;
-			if (slot->getState() == SLOT_EASY_AI)
-				c = 'E';
-			else if (slot->getState() == SLOT_MED_AI)
-				c = 'M';
-			else
-				c = 'H';
-			str.format("C%c,%d,%d,%d,%d:", c,
-				slot->getColor(), slot->getPlayerTemplate(),
-				slot->getStartPos(), slot->getTeamNumber());
-		}
-		else if (slot && slot->getState() == SLOT_OPEN)
-		{
-			str = "O:";
-		}
-		else if (slot && slot->getState() == SLOT_CLOSED)
-		{
-			str = "X:";
-		}
-		else
-		{
-			DEBUG_ASSERTCRASH(false, ("Bad slot type"));
-			str = "X:";
-		}
-		optionsString.concat(str);
-	}
-	optionsString.concat(';');
-
-	DEBUG_ASSERTCRASH(!TheLAN || (optionsString.getLength() < m_lanMaxOptionsLength),
-		("WARNING: options string is longer than expected!  Length is %d, but max is %d!\n",
-		optionsString.getLength(), m_lanMaxOptionsLength));
-	
-	return optionsString;
-}
-
-static Int grabHexInt(const char *s)
-{
-    return nativeSourceInteger<UnsignedByte>(std::string_view(s,2),16);
-}
-Bool ParseAsciiStringToGameInfo(GameInfo *game, AsciiString options)
-{
-    try {
-    if (!TheGlobalData || !TheMapCache || !TheGameState || !ThePlayerTemplateStore || !TheMultiplayerSettings)
-        throw ERROR_BAD_ARG;
-	// Parse game options
-	std::string buffer(options.str(),static_cast<size_t>(options.getLength()));
-    char *buf=buffer.data();
-	char *bufPtr = buf;
-	char *strPos, *keyValPair;
-	GameSlot newSlot[MAX_SLOTS];
-	Bool optionsOk = true;
-	AsciiString mapName;
-	Int mapContentsMask;
-	UnsignedInt mapCRC, mapSize;
-	Int seed = 0;
-	Int crc = 100;
-	Bool sawCRC = FALSE;
-  Bool oldFactionsOnly = FALSE;
-	Int useStats = TRUE;
-  Money startingCash = TheGlobalData->m_defaultStartingCash;
-  UnsignedShort restriction = 0; // Always the default
-  
-	Bool sawMap, sawMapCRC, sawMapSize, sawSeed, sawSlotlist, sawUseStats, sawSuperweaponRestriction, sawStartingCash, sawOldFactions;
-	sawMap = sawMapCRC = sawMapSize = sawSeed = sawSlotlist = sawUseStats = sawSuperweaponRestriction = sawStartingCash = sawOldFactions = FALSE;
-
-	//DEBUG_LOG(("Saw options of %s\n", options.str()));
-	DEBUG_LOG(("ParseAsciiStringToGameInfo - parsing [%s]\n", options.str()));
-
-
-	while ( (keyValPair = strtok_r(bufPtr, ";", &strPos)) != NULL )
-	{
-		bufPtr = NULL; // strtok within the same string
-
-		AsciiString key, val;
-		char *pos = NULL;
-		char *keyPtr, *valPtr;
-		keyPtr = (strtok_r(keyValPair, "=", &pos));
-		valPtr = (strtok_r(NULL, "\n", &pos));
-		if (keyPtr)
-			key = keyPtr;
-		if (valPtr)
-			val = valPtr;
-
-		if (val.isEmpty())
-		{
-			optionsOk = false;
-			DEBUG_LOG(("ParseAsciiStringToGameInfo - saw empty value, quitting\n"));
-			break;
-		}
-
-		if (key.compare("US") == 0)
-		{
-			useStats = nativeSourceInteger<Int>(val.str());
-			sawUseStats = true;
-		}
-		else
-		if (key.compare("M") == 0)
-		{
-			if (val.getLength() < 3)
-			{
-				optionsOk = FALSE;
-				DEBUG_LOG(("ParseAsciiStringToGameInfo - saw bogus map; quitting\n"));
-				break;
-			}
-			mapContentsMask = grabHexInt(val.str());
-			AsciiString tempstr;
-			AsciiString token;
-			tempstr = val.str()+2;
-			tempstr.nextToken(&token, "\\/");
-			while (tempstr.getLength() > 0)
-			{
-				mapName.concat(token);
-				mapName.concat('\\');
-				tempstr.nextToken(&token, "\\/");
-			}
-			mapName.concat(token);
-			mapName.concat('\\');
-			mapName.concat(token);
-			mapName.concat('.');
-			mapName.concat(TheMapCache->getMapExtension());
-			mapName = TheGameState->portableMapPathToRealMapPath(mapName);
-			sawMap = true;
-			DEBUG_LOG(("ParseAsciiStringToGameInfo - map name is %s\n", mapName.str()));
-		}
-		else if (key.compare("MC") == 0)
-		{
-			mapCRC = 0;
-			mapCRC=nativeSourceInteger<UnsignedInt>(val.str(),16);
-			sawMapCRC = true;
-		}
-		else if (key.compare("MS") == 0)
-		{
-			mapSize = nativeSourceInteger<UnsignedInt>(val.str());
-			sawMapSize = true;
-		}
-		else if (key.compare("SD") == 0)
-		{
-			seed = nativeSourceInteger<Int>(val.str());
-			sawSeed = true;
-//			DEBUG_LOG(("ParseAsciiStringToGameInfo - random seed is %d\n", seed));
-		}
-		else if (key.compare("C") == 0)
-		{
-			crc = nativeSourceInteger<Int>(val.str());
-			sawCRC = TRUE;
-		}
-    else if (key.compare("SR") == 0 )
-    {
-      restriction = nativeSourceInteger<UnsignedShort>(val.str());
-      sawSuperweaponRestriction = TRUE;
-    }
-    else if (key.compare("SC") == 0 )
-    {
-      UnsignedInt startingCashAmount = nativeSourceInteger<UnsignedInt>(val.str());
-      startingCash.init();
-      startingCash.deposit( startingCashAmount, FALSE );
-      sawStartingCash = TRUE;
-    }
-    else if (key.compare("O") == 0 )
-    {
-      oldFactionsOnly = ( val.compareNoCase( "Y" ) == 0 );
-      sawOldFactions = TRUE;
-    }
-		else if (key.getLength() == 1 && *key.str() == slotListID)
-		{
-			sawSlotlist = true;
-			/// @TODO: Need to read in all the slot info... big mess right now.
-			std::string slotBuffer(val.str(),static_cast<size_t>(val.getLength()));
-            char *rawSlotBuf=slotBuffer.data();
-			AsciiString rawSlot;
-//			Bool slotsOk = true;	//flag that lets us know whether or not the slot list is good.
-
-//			DEBUG_LOG(("ParseAsciiStringToGameInfo - Parsing slot list\n"));
-			for (int i=0; i<MAX_SLOTS; ++i)
-				{
-					rawSlot = strtok_r(rawSlotBuf,":",&pos);
-					rawSlotBuf = NULL;
-                    std::string rawSlotBacking(rawSlot.str(),static_cast<size_t>(rawSlot.getLength()));
-					switch (*rawSlot.str())
-					{
-						case 'H':
-						{
-//							DEBUG_LOG(("ParseAsciiStringToGameInfo - Human player\n"));
-							char *slotPos = NULL;
-							//Parse out the Name																
-							AsciiString slotValue(strtok_r(rawSlotBacking.data(),",",&slotPos));
-							if(slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue name is empty, quitting\n"));
-								break;
-							}
-							UnicodeString name;
-                            name.set(nativeDecodePlayerName(slotValue.str()+1).c_str());
-
-							//DEBUG_LOG(("ParseAsciiStringToGameInfo - name is %s\n", slotValue.str()+1));
-							
-							//Parse out the IP
-							slotValue = strtok_r(NULL,",",&slotPos);
-							if(slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue IP address is empty, quitting\n"));
-								break;
-							}
-							UnsignedInt playerIP = 0;
-							playerIP=nativeSourceInteger<UnsignedInt>(slotValue.str(),16);
-							//DEBUG_LOG(("ParseAsciiStringToGameInfo - IP address is %x\n", playerIP));
-							
-							//set the state of the slot
-							newSlot[i].setState(SLOT_PLAYER, name, playerIP);
-
-							// parse out the port
-							slotValue = strtok_r(NULL, ",", &slotPos);
-							if (slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue port is empty, quitting\n"));
-								break;
-							}
-							UnsignedInt playerPort = 0;
-							playerPort=nativeSourceInteger<UnsignedShort>(slotValue.str());
-							newSlot[i].setPort(playerPort);
-							DEBUG_LOG(("ParseAsciiStringToGameInfo - port is %d\n", playerPort));
-
-							//Read if it's accepted or not
-							slotValue = strtok_r(NULL,",",&slotPos);
-							if(slotValue.getLength() != 2)
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue accepted is mis-sized, quitting\n"));
-								break;
-							}
-							const char *svs = slotValue.str();
-							if(*svs == 'T') {
-								newSlot[i].setAccept();
-								//DEBUG_LOG(("ParseAsciiStringToGameInfo - player has accepted\n"));
-							} else if (*svs == 'F') {
-								newSlot[i].unAccept();
-								//DEBUG_LOG(("ParseAsciiStringToGameInfo - player has not accepted\n"));
-							}
-							++svs;
-							if(*svs == 'T') {
-								newSlot[i].setMapAvailability(TRUE);
-								//DEBUG_LOG(("ParseAsciiStringToGameInfo - player has map\n"));
-							} else {
-								newSlot[i].setMapAvailability(FALSE);
-								//DEBUG_LOG(("ParseAsciiStringToGameInfo - player does not have map\n"));
-							}
-
-							//Read color index
-							slotValue = strtok_r(NULL,",",&slotPos);
-							if(slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue color is empty, quitting\n"));
-								break;
-							}
-							Int color = nativeSourceInteger<Int>(slotValue.str());
-							if (color < -1 || color >= TheMultiplayerSettings->getNumColors())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - player color was invalid, quitting\n"));
-								break;
-							}
-							newSlot[i].setColor(color);
-							//DEBUG_LOG(("ParseAsciiStringToGameInfo - player color set to %d\n", color));
-
-							//Read playerTemplate index
-							slotValue = strtok_r(NULL,",",&slotPos);
-							if(slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue player template is empty, quitting\n"));
-								break;
-							}
-							Int playerTemplate = nativeSourceInteger<Int>(slotValue.str());
-							if (playerTemplate < PLAYERTEMPLATE_MIN || playerTemplate >= ThePlayerTemplateStore->getPlayerTemplateCount())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - player template value is invalid, quitting\n"));
-								break;
-							}
-							newSlot[i].setPlayerTemplate(playerTemplate);
-							//DEBUG_LOG(("ParseAsciiStringToGameInfo - player template is %d\n", playerTemplate));
-
-							//Read start position index
-							slotValue = strtok_r(NULL,",",&slotPos);
-							if(slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue start position is empty, quitting\n"));
-								break;
-							}
-							Int startPos = nativeSourceInteger<Int>(slotValue.str());
-							if (startPos < -1 || startPos >= MAX_SLOTS)
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - player start position is invalid, quitting\n"));
-								break;
-							}
-							newSlot[i].setStartPos(startPos);
-							//DEBUG_LOG(("ParseAsciiStringToGameInfo - player start position is %d\n", startPos));
-
-							//Read team index
-							slotValue = strtok_r(NULL,",",&slotPos);
-							if(slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue team number is empty, quitting\n"));
-								break;
-							}
-							Int team = nativeSourceInteger<Int>(slotValue.str());
-							if (team < -1 || team >= MAX_SLOTS/2)
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - team number is invalid, quitting\n"));
-								break;
-							}
-							newSlot[i].setTeamNumber(team);
-							//DEBUG_LOG(("ParseAsciiStringToGameInfo - team number is %d\n", team));
-
-							// Read the NAT behavior
-							slotValue = strtok_r(NULL, ",",&slotPos);
-							if (slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - NAT behavior is empty, quitting\n"));
-								break;
-							}
-							Int NATType = nativeSourceInteger<Int>(slotValue.str());
-							if ((NATType < FirewallHelperClass::FIREWALL_MIN) ||
-									(NATType > FirewallHelperClass::FIREWALL_MAX)) {
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - NAT behavior is invalid, quitting\n"));
-								break;
-							}
-							newSlot[i].setNATBehavior(static_cast<FirewallHelperClass::FirewallBehaviorType>(NATType));
-							DEBUG_LOG(("ParseAsciiStringToGameInfo - NAT behavior is %X\n", NATType));
-						}// case 'H':
-						break;
-						case 'C':
-						{
-            	DEBUG_LOG(("ParseAsciiStringToGameInfo - AI player\n"));
-							char *slotPos = NULL;
-							//Parse out the Name																
-							AsciiString slotValue(strtok_r(rawSlotBacking.data(),",",&slotPos));
-							if(slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue AI Type is empty, quitting\n"));
-								break;
-							}
-              
-							switch(*(slotValue.str() + 1))
-							{
-								case 'E':
-								{
-									newSlot[i].setState(SLOT_EASY_AI);
-									//DEBUG_LOG(("ParseAsciiStringToGameInfo - Easy AI\n"));
-								}
-								break;
-								case 'M':
-								{
-									newSlot[i].setState(SLOT_MED_AI);
-									//DEBUG_LOG(("ParseAsciiStringToGameInfo - Medium AI\n"));
-								}
-								break;
-								case 'H':
-								{
-									newSlot[i].setState(SLOT_BRUTAL_AI);
-									//DEBUG_LOG(("ParseAsciiStringToGameInfo - Brutal AI\n"));
-								}
-								break;
-								default:
-								{
-									optionsOk = false;
-									DEBUG_LOG(("ParseAsciiStringToGameInfo - Unknown AI, quitting\n"));
-								}
-								break;
-							}//switch(*rawSlot.str()+1)
-              
-							//Read color index
-							slotValue = strtok_r(NULL,",",&slotPos);
-							if(slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue color is empty, quitting\n"));
-								break;
-							}
-							Int color = nativeSourceInteger<Int>(slotValue.str());
-							if (color < -1 || color >= TheMultiplayerSettings->getNumColors())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - player color was invalid, quitting\n"));
-								break;
-							}
-							newSlot[i].setColor(color);
-							//DEBUG_LOG(("ParseAsciiStringToGameInfo - player color set to %d\n", color));
-
-							//Read playerTemplate index
-							slotValue = strtok_r(NULL,",",&slotPos);
-							if(slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue player template is empty, quitting\n"));
-								break;
-							}
-							Int playerTemplate = nativeSourceInteger<Int>(slotValue.str());
-							if (playerTemplate < PLAYERTEMPLATE_MIN || playerTemplate >= ThePlayerTemplateStore->getPlayerTemplateCount())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - player template value is invalid, quitting\n"));
-								break;
-							}
-							newSlot[i].setPlayerTemplate(playerTemplate);
-							//DEBUG_LOG(("ParseAsciiStringToGameInfo - player template is %d\n", playerTemplate));
-
-							//Read start pos
-							slotValue = strtok_r(NULL,",",&slotPos);
-							if(slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue start pos is empty, quitting\n"));
-								break;
-							}
-							Int startPos = nativeSourceInteger<Int>(slotValue.str());
-							Bool isStartPosBad = FALSE;
-							if (startPos < -1 || startPos >= MAX_SLOTS)
-							{
-								isStartPosBad = TRUE;
-							}
-							for (Int j=0; j<i; ++j)
-							{
-								if (startPos >= 0 && startPos == newSlot[j].getStartPos())
-								{
-									isStartPosBad = TRUE; // can't have multiple people using the same start pos
-								}
-							}
-							if (isStartPosBad)
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - start pos is invalid, quitting\n"));
-								break;
-							}
-							newSlot[i].setStartPos(startPos);
-							//DEBUG_LOG(("ParseAsciiStringToGameInfo - start spot is %d\n", startPos));
-
-							//Read team index
-							slotValue = strtok_r(NULL,",",&slotPos);
-							if(slotValue.isEmpty())
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - slotValue team number is empty, quitting\n"));
-								break;
-							}
-							Int team = nativeSourceInteger<Int>(slotValue.str());
-							if (team < -1 || team >= MAX_SLOTS/2)
-							{
-								optionsOk = false;
-								DEBUG_LOG(("ParseAsciiStringToGameInfo - team number is invalid, quitting\n"));
-								break;
-							}
-							newSlot[i].setTeamNumber(team);
-							//DEBUG_LOG(("ParseAsciiStringToGameInfo - team number is %d\n", team));
-
-						}//case 'C':
-						break;
-						case 'O':
-						{
-							newSlot[i].setState( SLOT_OPEN );
-							//DEBUG_LOG(("ParseAsciiStringToGameInfo - Slot is open\n"));
-						}// case 'O':
-						break;
-						case 'X':
-						{
-							newSlot[i].setState( SLOT_CLOSED );
-							//DEBUG_LOG(("ParseAsciiStringToGameInfo - Slot is closed\n"));
-						}// case 'X':
-						break;
-						default:
-						{								
-							optionsOk = false;
-							DEBUG_LOG(("ParseAsciiStringToGameInfo - unrecognized slot entry, quitting\n"));
-						}
-						break;
-					}
-				}
-		}
-		else
-		{
-			optionsOk = false;
-			break;
-		}
-	}
-
-	//DEBUG_LOG(("Options were ok == %d\n", optionsOk));
-	if (optionsOk && sawMap && sawMapCRC && sawMapSize && sawSeed && sawSlotlist && sawCRC && sawUseStats && sawSuperweaponRestriction && sawStartingCash && sawOldFactions )
-	{
-		// We were setting the Global Data directly here, but Instead, I'm now 
-		// first setting the data in game.  We'll set the global data when
-		// we start a game.
-		if (!game)
-			return true;
-
-		//DEBUG_LOG(("ParseAsciiStringToGameInfo - game options all good, setting info\n"));
-
-		for(Int i = 0; i<MAX_SLOTS; i++)
-			game->setSlot(i,newSlot[i]);
-
-		game->setMap(mapName);
-		game->setMapCRC(mapCRC);
-		game->setMapSize(mapSize);
-		game->setMapContentsMask(mapContentsMask);
-		game->setSeed(seed);
-		game->setCRCInterval(crc);
-		game->setUseStats(useStats);
-    game->setSuperweaponRestriction(restriction);
-    game->setStartingCash( startingCash );
-    game->setOldFactionsOnly( oldFactionsOnly );
-
-		return true;
-	}
-
-	DEBUG_LOG(("ParseAsciiStringToGameInfo - game options messed up\n"));
-	return false;
-    } catch (ErrorCode error) { if (error==ERROR_BAD_ARG) return false; throw; }
-
-}
-
-
-//----------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------
-
-//------------------------- SkirmishGameInfo ---------------------------------------------------------------
-
-// ------------------------------------------------------------------------------------------------
-/** CRC */
-// ------------------------------------------------------------------------------------------------
-void SkirmishGameInfo::crc( Xfer *xfer )
-{
-}  // end crc
-
-// ------------------------------------------------------------------------------------------------
-/** Xfer Method */
-// ------------------------------------------------------------------------------------------------
-void SkirmishGameInfo::xfer( Xfer *xfer )
-{
-	const XferVersion currentVersion = 4;	
-	XferVersion version = currentVersion; 
-	xfer->xferVersion( &version, currentVersion );
-
-
-	xfer->xferInt(&m_preorderMask);
-	xfer->xferInt(&m_crcInterval);
-	xfer->xferBool(&m_inGame);
-	xfer->xferBool(&m_inProgress);
-	xfer->xferBool(&m_surrendered);
-	xfer->xferInt(&m_gameID);
-
-	Int slot = MAX_SLOTS;
-	xfer->xferInt(&slot);
-	DEBUG_ASSERTCRASH(slot==MAX_SLOTS, ("MAX_SLOTS changed, need to change version. jba."));
-
-	for (slot = 0; slot < MAX_SLOTS; slot++) 
-	{
-		Int state = m_slot[slot]->getState();
-		xfer->xferInt(&state);
-
-		UnicodeString name=m_slot[slot]->getName();	
-		if (version >= 2)
-		{
-			xfer->xferUnicodeString(&name);
-		}
-
-		Bool isAccepted=m_slot[slot]->isAccepted();
-		xfer->xferBool(&isAccepted);
-
-		Bool isMuted=m_slot[slot]->isMuted();
-		xfer->xferBool(&isMuted);
-		m_slot[slot]->mute(isMuted);
-
-		Int color=m_slot[slot]->getColor();
-		xfer->xferInt(&color);
-
-		Int startPos=m_slot[slot]->getStartPos();
-		xfer->xferInt(&startPos);
-
-		Int playerTemplate=m_slot[slot]->getPlayerTemplate();
-		xfer->xferInt(&playerTemplate);
-
-		Int teamNumber=m_slot[slot]->getTeamNumber();
-		xfer->xferInt(&teamNumber);
-
-		Int origColor=m_slot[slot]->getOriginalColor();
-		xfer->xferInt(&origColor);
-
-		Int origStartPos=m_slot[slot]->getOriginalStartPos();
-		xfer->xferInt(&origStartPos);
-
- 		Int origPlayerTemplate=m_slot[slot]->getOriginalPlayerTemplate();
-		xfer->xferInt(&origPlayerTemplate);
-
-		if( xfer->getXferMode() == XFER_LOAD ) {
-			m_slot[slot]->setState((SlotState)state, name);
-			if (isAccepted) m_slot[slot]->setAccept();
-
-			m_slot[slot]->setPlayerTemplate(origPlayerTemplate);
-			m_slot[slot]->setStartPos(origStartPos);
-			m_slot[slot]->setColor(origColor);
-			m_slot[slot]->saveOffOriginalInfo();
-
-			m_slot[slot]->setTeamNumber(teamNumber);
-			m_slot[slot]->setColor(color);
-			m_slot[slot]->setStartPos(startPos);
-			m_slot[slot]->setPlayerTemplate(playerTemplate);
-		}
-	}
-
-	xfer->xferUnsignedInt(&m_localIP);
-
-	xfer->xferMapName(&m_mapName);
-	xfer->xferUnsignedInt(&m_mapCRC);
-	xfer->xferUnsignedInt(&m_mapSize);
-	xfer->xferInt(&m_mapMask);
-	xfer->xferInt(&m_seed);
-
-  if ( version >= 3 )
-  {
-    xfer->xferUnsignedShort( &m_superweaponRestriction );
-    
-    if ( version == 3 )
-    {
-      // Version 3 had a bool which is now gone
-      Bool obsoleteBool;
-      xfer->xferBool( &obsoleteBool );
-    }
-
-    xfer->xferSnapshot( &m_startingCash );
-  }
-  else if ( xfer->getXferMode() == XFER_LOAD )
-  {
-    m_superweaponRestriction = 0;
-    m_startingCash = TheGlobalData->m_defaultStartingCash;
-  }
-
-}  // end xfer
-
-// ------------------------------------------------------------------------------------------------
-/** Load post process */
-// ------------------------------------------------------------------------------------------------
-void SkirmishGameInfo::loadPostProcess( void )
-{
-}  // end loadPostProcess
