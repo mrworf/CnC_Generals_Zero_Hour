@@ -51,6 +51,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <cwchar>
+#include <new>
+#include "Common/StringStorage.h"
+#include <type_traits>
 #include "Lib/BaseType.h"
 #include "Common/Debug.h"
 #include "Common/Errors.h"
@@ -92,7 +96,7 @@ private:
 #if defined(_DEBUG) || defined(_INTERNAL)
 		const WideChar* m_debugptr;	// just makes it easier to read in the debugger
 #endif
-		unsigned short	m_refCount;						// reference count
+		std::atomic<std::uint32_t> m_refCount;						// reference count
 		unsigned short	m_numCharsAllocated;  // length of data allocated
 		// WideChar m_stringdata[];
 
@@ -240,7 +244,8 @@ public:
 		given sprintf-style format string (and the variable argument list)
 		and stores the result in self.
 	*/
-	void format(UnicodeString format, ...);
+	template<class Pattern,class... Args> requires std::is_same_v<std::remove_cvref_t<Pattern>,UnicodeString>
+	void format(Pattern&& pattern,Args... args) {format(pattern.str(),args...);}
 	void format(const WideChar* format, ...);
 	/**
 		Identical to format(), but takes a va_list rather than
@@ -258,11 +263,11 @@ public:
 	*/
 	int compare(const WideChar* s) const;
 	/**
-		Conceptually identical to _wcsicmp().
+		Conceptually identical to wcscasecmp().
 	*/
 	int compareNoCase(const UnicodeString& stringSrc) const;
 	/**
-		Conceptually identical to _wcsicmp().
+		Conceptually identical to wcscasecmp().
 	*/
 	int compareNoCase(const WideChar* s) const;
 
@@ -404,14 +409,14 @@ inline int UnicodeString::compare(const WideChar* s) const
 inline int UnicodeString::compareNoCase(const UnicodeString& stringSrc) const
 {
 	validate();
-	return _wcsicmp(this->str(), stringSrc.str());
+	return wcscasecmp(this->str(), stringSrc.str());
 }
 
 // -----------------------------------------------------
 inline int UnicodeString::compareNoCase(const WideChar* s) const
 {
 	validate();
-	return _wcsicmp(this->str(), s);
+	return wcscasecmp(this->str(), s);
 }
 
 // -----------------------------------------------------

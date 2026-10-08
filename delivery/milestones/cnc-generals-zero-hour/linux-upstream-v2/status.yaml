@@ -46,7 +46,7 @@
       "id": "N2",
       "title": "Original engine Linux foundation",
       "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N2-original-engine-linux-foundation.md",
-      "status": "pending",
+      "status": "in_progress",
       "dependencies": [
         "N0"
       ],
@@ -57,7 +57,7 @@
       ],
       "completed_at": null,
       "evidence": null,
-      "notes": null
+      "notes": "Original source inspected; one N2 transaction with three persisted coherent slices. Core owners precede rooted data and actual GameLogic acceptance."
     },
     {
       "id": "N3",

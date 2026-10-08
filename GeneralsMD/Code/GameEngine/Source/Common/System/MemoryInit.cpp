@@ -740,64 +740,9 @@ void userMemoryAdjustPoolSize(const char *poolName, Int& initialAllocationCount,
 }
 
 //-----------------------------------------------------------------------------
-static Int roundUpMemBound(Int i)
-{
-	const int MEM_BOUND_ALIGNMENT = 4;
-
-	if (i < MEM_BOUND_ALIGNMENT)
-		return MEM_BOUND_ALIGNMENT;
-	else
-		return (i + (MEM_BOUND_ALIGNMENT-1)) & ~(MEM_BOUND_ALIGNMENT-1);
-}
-
-//-----------------------------------------------------------------------------
 void userMemoryManagerInitPools()
 {
-	// note that we MUST use stdio stuff here, and not the normal game file system
-	// (with bigfile support, etc), because that relies on memory pools, which
-	// aren't yet initialized properly! so rely ONLY on straight stdio stuff here.
-	// (not even AsciiString. thanks.)
-	
-	// since we're called prior to main, the cur dir might not be what
-	// we expect. so do it the hard way.
-	char buf[_MAX_PATH];
-	::GetModuleFileName(NULL, buf, sizeof(buf));
-	char* pEnd = buf + strlen(buf);
-	while (pEnd != buf) 
-	{
-		if (*pEnd == '\\') 
-		{
-			*pEnd = 0;
-			break;
-		}
-		--pEnd;
-	}
-	strcat(buf, "\\Data\\INI\\MemoryPools.ini");
-
-	FILE* fp = fopen(buf, "r");
-	if (fp)
-	{
-		char poolName[256];
-		int initial, overflow;
-		while (fgets(buf, _MAX_PATH, fp))
-		{
-			if (buf[0] == ';')
-				continue;
-			if (sscanf(buf, "%s %d %d", poolName, &initial, &overflow ) == 3)
-			{
-				for (PoolSizeRec* p = sizes; p->name != NULL; ++p)
-				{
-					if (stricmp(p->name, poolName) == 0)
-					{
-						// currently, these must be multiples of 4. so round up.
-						p->initial = roundUpMemBound(initial);
-						p->overflow = roundUpMemBound(overflow);
-						break;	// from for-p
-					}
-				}
-			}
-		}
-		fclose(fp);
-	}
+    // Native startup uses compiled defaults. Rooted MemoryPools.ini overrides
+    // are applied by the original data-loading owner after mounts exist (N2).
+    // Never discover assets through executable location or mutate supplied data.
 }
-

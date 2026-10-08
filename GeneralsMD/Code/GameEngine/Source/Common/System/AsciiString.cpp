@@ -44,7 +44,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
-#include "Common/CriticalSection.h"
+#include "Common/UnicodeString.h"
+#include <string>
 
 
 // -----------------------------------------------------
@@ -70,7 +71,7 @@ inline char* skipNonSeps(char* p, const char* seps)
 //-----------------------------------------------------------------------------
 inline char* skipWhitespace(char* p)
 {
-	while (*p && isspace(*p))
+	while (*p && isspace(static_cast<unsigned char>(*p)))
 		++p;
 	return p;
 }
@@ -78,14 +79,15 @@ inline char* skipWhitespace(char* p)
 //-----------------------------------------------------------------------------
 inline char* skipNonWhitespace(char* p)
 {
-	while (*p && !isspace(*p))
+	while (*p && !isspace(static_cast<unsigned char>(*p)))
 		++p;
 	return p;
 }
 
 void AsciiString::freeBytes(void)
 {
-	TheDynamicMemoryAllocator->freeBytes(m_data);
+	m_data->~AsciiStringData();
+	::operator delete(m_data);
 }
 
 // -----------------------------------------------------
@@ -102,73 +104,33 @@ void AsciiString::validate() const
 #endif
 
 // -----------------------------------------------------
-void AsciiString::debugIgnoreLeaks()
-{
-#ifdef MEMORYPOOL_DEBUG
-	if (m_data)
-	{
-		TheDynamicMemoryAllocator->debugIgnoreLeaksForThisBlock(m_data);
-	}
-	else
-	{
-		DEBUG_LOG(("cannot ignore the leak (no data)\n"));
-	}
-#endif
-}
+void AsciiString::debugIgnoreLeaks() {}
 
 // -----------------------------------------------------
-void AsciiString::ensureUniqueBufferOfSize(int numCharsNeeded, Bool preserveData, const char* strToCopy, const char* strToCat)
+void AsciiString::ensureUniqueBufferOfSize(int needed, Bool preserve, const char* copy, const char* append)
 {
-	validate();
-
-	if (m_data &&
-			m_data->m_refCount == 1 &&
-			m_data->m_numCharsAllocated >= numCharsNeeded)
-	{
-		// no buffer manhandling is needed (it's already large enough, and unique to us)
-		if (strToCopy)
-			strcpy(m_data->peek(), strToCopy);
-		if (strToCat)
-			strcat(m_data->peek(), strToCat);
-		return;
-	}
-
-	int minBytes = sizeof(AsciiStringData) + numCharsNeeded*sizeof(char);
-	if (minBytes > MAX_LEN)
-		throw ERROR_OUT_OF_MEMORY;
-
-	int actualBytes = TheDynamicMemoryAllocator->getActualAllocationSize(minBytes);
-	AsciiStringData* newData = (AsciiStringData*)TheDynamicMemoryAllocator->allocateBytesDoNotZero(actualBytes, "STR_AsciiString::ensureUniqueBufferOfSize");
-	newData->m_refCount = 1;
-	newData->m_numCharsAllocated = (actualBytes - sizeof(AsciiStringData))/sizeof(char);
+    if(needed<=0 || needed>MAX_LEN)throw ERROR_OUT_OF_MEMORY;
+    // Snapshot borrowed aliases before touching their backing owner.
+    std::string value=copy?copy:(preserve && m_data?m_data->peek():"");
+    if(append)value+=append;
+    if(value.size()>=std::size_t(needed))throw ERROR_BAD_ARG;
+    const auto bytes=sizeof(AsciiStringData)+std::size_t(needed);
+    auto* fresh=new (::operator new(bytes)) AsciiStringData{};
+    fresh->m_refCount.store(1);fresh->m_numCharsAllocated=static_cast<unsigned short>(needed);
 #if defined(_DEBUG) || defined(_INTERNAL)
-	newData->m_debugptr = newData->peek();	// just makes it easier to read in the debugger
+    fresh->m_debugptr=fresh->peek();
 #endif
-
-	if (m_data && preserveData)
-		strcpy(newData->peek(), m_data->peek());
-	else
-		newData->peek()[0] = 0;
-
-	// do these BEFORE releasing the old buffer, so that self-copies
-	// or self-cats will work correctly.
-	if (strToCopy)
-		strcpy(newData->peek(), strToCopy);
-	if (strToCat)
-		strcat(newData->peek(), strToCat);
-
-	releaseBuffer();
-	m_data = newData;
-
-	validate();
+    std::memset(fresh->peek(),0,std::size_t(needed));
+    std::memcpy(fresh->peek(),value.data(),value.size());
+    releaseBuffer();m_data=fresh;
 }
-
 
 // -----------------------------------------------------
 char*  AsciiString::getBufferForRead(Int len)
 {
 	validate();
 	DEBUG_ASSERTCRASH(len>0, ("No need to allocate 0 len strings."));
+	if(len<0 || len>=MAX_LEN)throw ERROR_BAD_ARG;
 	ensureUniqueBufferOfSize(len + 1, false, NULL, NULL);
 	validate();
 	return peek();
@@ -228,13 +190,13 @@ void AsciiString::toLower()
 	validate();
 	if (m_data)
 	{
-		char buf[MAX_FORMAT_BUF_LEN];
+		char buf[MAX_FORMAT_BUF_LEN]{};
 		strcpy(buf, peek());
 
 		char *c = buf;
 		while (c && *c)
 		{
-			*c = tolower(*c);
+			*c = tolower(static_cast<unsigned char>(*c));
 			c++;
 		}
 		set(buf);
@@ -259,23 +221,13 @@ void AsciiString::removeLastChar()
 }
 
 // -----------------------------------------------------
-void AsciiString::format(AsciiString format, ...)
-{
-	validate();
-	va_list args;
-  va_start(args, format);
-	format_va(format, args);
-  va_end(args);
-	validate();
-}
-
 // -----------------------------------------------------
 void AsciiString::format(const char* format, ...)
 {
 	validate();
 	va_list args;
   va_start(args, format);
-	format_va(format, args);
+	try {format_va(format, args);} catch(...) {va_end(args);throw;}
   va_end(args);
 	validate();
 }
@@ -284,8 +236,9 @@ void AsciiString::format(const char* format, ...)
 void AsciiString::format_va(const AsciiString& format, va_list args)
 {
 	validate();
-	char buf[MAX_FORMAT_BUF_LEN];
-  if (_vsnprintf(buf, sizeof(buf)/sizeof(char)-1, format.str(), args) < 0)
+	char buf[MAX_FORMAT_BUF_LEN]{};
+  const int count=vsnprintf(buf, sizeof(buf), format.str(), args);
+  if (count<0 || count>=int(sizeof(buf)))
 			throw ERROR_OUT_OF_MEMORY;
 	set(buf);
 	validate();
@@ -295,8 +248,10 @@ void AsciiString::format_va(const AsciiString& format, va_list args)
 void AsciiString::format_va(const char* format, va_list args)
 {
 	validate();
-	char buf[MAX_FORMAT_BUF_LEN];
-  if (_vsnprintf(buf, sizeof(buf)/sizeof(char)-1, format, args) < 0)
+	char buf[MAX_FORMAT_BUF_LEN]{};
+  if(!format)throw ERROR_BAD_ARG;
+  const int count=vsnprintf(buf, sizeof(buf), format, args);
+  if (count<0 || count>=int(sizeof(buf)))
 			throw ERROR_OUT_OF_MEMORY;
 	set(buf);
 	validate();
@@ -327,7 +282,7 @@ Bool AsciiString::startsWithNoCase(const char* p) const
 	if (lenThis < lenThat)
 		return false;	// that must be smaller than this
 
-	return strnicmp(peek(), p, lenThat) == 0;
+	return strncasecmp(peek(), p, lenThat) == 0;
 }
 
 // -----------------------------------------------------
@@ -355,18 +310,19 @@ Bool AsciiString::endsWithNoCase(const char* p) const
 	if (lenThis < lenThat)
 		return false;	// that must be smaller than this
 
-	return strnicmp(peek() + lenThis - lenThat, p, lenThat) == 0;
+	return strncasecmp(peek() + lenThis - lenThat, p, lenThat) == 0;
 }
 
 //-----------------------------------------------------------------------------
 Bool AsciiString::isNone() const
 {
-	return m_data && stricmp(peek(), "None") == 0;
+	return m_data && strcasecmp(peek(), "None") == 0;
 }
 
 //-----------------------------------------------------------------------------
 Bool AsciiString::nextToken(AsciiString* tok, const char* seps)
 {
+    if(!tok)throw ERROR_BAD_ARG;
 	if (this->isEmpty() || tok == this)
 		return false;
 

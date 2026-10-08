@@ -1,7 +1,8 @@
-# Stock renderer qualification build
+# Linux foundation and stock renderer builds
 
-The game itself is not yet ported after the clean reset. These commands qualify
-the renderer/toolchain only. Run from the repository root on x86-64 Linux.
+The complete game is not yet ported after the clean reset. The renderer and
+original common-service fixtures are independently testable foundations, not
+GameLogic or whole-game acceptance. Run from the repository root on x86-64 Linux.
 
 Prerequisites: Git, Python3, Make, GCC/G++, Clang/Clang++, CMake, Ninja, pkg-config,
 X11/OpenGL/Wayland and Vulkan development packages, a Vulkan driver and Khronos
@@ -53,7 +54,8 @@ processes. Fresh normal-host init-only and full controls reproduced the same
 enabled. There are no suppressions or library edits. The normal functional build
 leaves the host bus environment unchanged. See the evidence report for limits.
 
-CTest registers 18 cases: provenance, initialization, nine semantic families,
+CTest registers 23 cases: five original-core families plus provenance,
+initialization, nine semantic families,
 a combined same-process repeat, and six capacity/lifecycle families. The latter
 are `capacity`, `draw-boundary`, `uploads`, `lifetimes`, `presentation-init`, and
 `presentation`. Per-family logs are in the build directory. Failures,
@@ -74,3 +76,23 @@ No driver library is pinned, and no dependency source is modified.
 See `docs/renderer-workload-census.md` for formulas and bounded workload claims.
 Renderer qualification does not prove original-game visual parity or whole-map
 capacity; integrated scene demand and original ownership remain later gates.
+
+## Headless original core
+
+No private assets, SDL or bgfx SDK is needed for the core-only build:
+
+```sh
+cmake -S . -B build/original-core-gcc -G Ninja -DCMAKE_BUILD_TYPE=Debug -DZH_BUILD_RENDERER=OFF
+cmake --build build/original-core-gcc -j 4
+ctest --test-dir build/original-core-gcc --output-on-failure
+```
+
+Use `-DZH_SANITIZE=ON` in a separate build directory, and
+`-DCMAKE_CXX_COMPILER=clang++` for the second required sanitizer compiler.
+The five families exercise original values/CRC, three RNG streams, strings,
+explicit pools and repeated original memory-manager ownership. They do not
+implement replacement gameplay. General C++ allocations use the standard
+owner; only explicit class/DMA allocations use game pools. ASan, UBSan and leak
+checking remain enabled. A ptrace-based sandbox prevents LeakSanitizer teardown;
+run sanitizer CTest on the host, rather than disabling leak detection. These
+CPU-only families require no isolated-bus fixture or graphics session.

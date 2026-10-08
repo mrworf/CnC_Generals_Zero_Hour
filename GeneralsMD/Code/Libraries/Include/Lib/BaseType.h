@@ -34,6 +34,15 @@
 
 #include <math.h>
 #include <string.h>
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <limits>
+#include <stdexcept>
+
+#ifndef __forceinline
+#define __forceinline inline
+#endif
 
 /*
 **	Turn off some unneeded warnings.
@@ -97,13 +106,8 @@
 //#define abs(x) (((x) < 0) ? -(x) : (x))
 //#endif
 
-#ifndef min
-#define min(x,y) (((x)<(y)) ? (x) : (y))
-#endif
-
-#ifndef max
-#define max(x,y) (((x)>(y)) ? (x) : (y))
-#endif
+using std::min;
+using std::max;
 
 #ifndef TRUE
 #define TRUE true
@@ -122,8 +126,8 @@
 // Fundamental type definitions
 //--------------------------------------------------------------------
 typedef float							Real;							// 4 bytes 
-typedef int								Int;							// 4 bytes 
-typedef unsigned int			UnsignedInt;	  	// 4 bytes 
+typedef std::int32_t Int;
+typedef std::uint32_t UnsignedInt;
 typedef unsigned short		UnsignedShort;		// 2 bytes 
 typedef short							Short;					  // 2 bytes 
 typedef unsigned char			UnsignedByte;			// 1 byte		USED TO BE "Byte"
@@ -131,10 +135,10 @@ typedef char							Byte;							// 1 byte		USED TO BE "SignedByte"
 typedef char							Char;							// 1 byte of text
 typedef bool							Bool;							// 
 // note, the types below should use "long long", but MSVC doesn't support it yet
-typedef __int64						Int64;							// 8 bytes 
-typedef unsigned __int64	UnsignedInt64;	  	// 8 bytes 
+typedef std::int64_t Int64;
+typedef std::uint64_t UnsignedInt64;
 
-#include "Lib/Trig.h"
+#include "Lib/trig.h"
 
 //-----------------------------------------------------------------------------
 typedef wchar_t WideChar;  ///< multi-byte character representations
@@ -179,52 +183,32 @@ inline Real deg2rad(Real rad) { return rad * (PI/180); }
 // note, this function depends on the cpu rounding mode, which we set to CHOP every frame, 
 // but apparently tends to be left in unpredictable modes by various system bits of
 // code, so use this function with caution -- it might not round in the way you want.
-__forceinline long fast_float2long_round(float f)
+inline Int fast_float2long_round(float f)
 {
-	long i;
-
-	__asm {
-		fld [f]
-		fistp [i]
-	}
-
-	return i;
+    const double value=std::nearbyint(double(f));
+    if(!std::isfinite(value) || value<std::numeric_limits<Int>::min() ||
+       value>std::numeric_limits<Int>::max())
+        throw std::out_of_range("original float conversion outside signed 32-bit range");
+    return static_cast<Int>(value);
 }
 
 // super fast float trunc routine, works always (independent of any FPU modes)
 // code courtesy of Martin Hoffesommer (grin)
-__forceinline float fast_float_trunc(float f)
+inline float fast_float_trunc(float f)
 {
-  _asm
-  {
-    mov ecx,[f]
-    shr ecx,23
-    mov eax,0xff800000
-    xor ebx,ebx
-    sub cl,127
-    cmovc eax,ebx
-    sar eax,cl
-    and [f],eax
-  }
-  return f;
+  return std::trunc(f);
 }
 
 // same here, fast floor function
-__forceinline float fast_float_floor(float f)
+inline float fast_float_floor(float f)
 {
-  static unsigned almost1=(126<<23)|0x7fffff;
-  if (*(unsigned *)&f &0x80000000)
-    f-=*(float *)&almost1;
-  return fast_float_trunc(f);
+  return std::floor(f);
 }
 
 // same here, fast ceil function
-__forceinline float fast_float_ceil(float f)
+inline float fast_float_ceil(float f)
 {
-  static unsigned almost1=(126<<23)|0x7fffff;
-  if ( (*(unsigned *)&f &0x80000000)==0)
-    f+=*(float *)&almost1;
-  return fast_float_trunc(f);
+  return std::ceil(f);
 }
 
 //-------------------------------------------------------------------------------------------------

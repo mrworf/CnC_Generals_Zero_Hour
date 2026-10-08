@@ -31,9 +31,13 @@
 
 #include "Lib/BaseType.h"
 #include "Common/RandomValue.h"
-#include "Common/CRC.h"
+#include "Common/crc.h"
 #include "Common/Debug.h"
-#include "GameLogic/GameLogic.h"
+#include "GameClient/ClientRandomValue.h"
+#include "GameLogic/LogicRandomValue.h"
+#include "Common/AudioRandomValue.h"
+#include <stdexcept>
+#include <cmath>
 
 //#define DETERMINISTIC				// to allow repetition for debugging
 
@@ -200,24 +204,26 @@ DEBUG_LOG(( "InitRandom Logic %08lx\n",seed));
 //
 // Integer random value
 //
-Int GetGameLogicRandomValue( int lo, int hi, char *file, int line )
+Int GetGameLogicRandomValue( int lo, int hi, const char *file, int line )
 {
+	(void)file; (void)line;
 	//Int delta = hi - lo + 1;
 	//Int rval;
 
 	//if (delta == 0)
 		//return hi;
 
-	//rval = ((Int)(randomValue(theGameLogicSeed) % delta)) + lo;
+	//rval = Int(Int64(lo) + Int64(randomValue(theGameLogicSeed) % delta));
 
-	UnsignedInt delta = hi - lo + 1;
+	if (hi < lo) throw std::invalid_argument("original random range reversed");
+	UnsignedInt delta = UnsignedInt(hi) - UnsignedInt(lo) + 1u;
 	//UnsignedInt temp;
 	Int rval;
 
 	if (delta == 0)
 		return hi;
 
-	rval = ((Int)(randomValue(theGameLogicSeed) % delta)) + lo;
+	rval = Int(Int64(lo) + Int64(randomValue(theGameLogicSeed) % delta));
 	//temp = randomValue(theGameLogicSeed);
 	//temp = temp % delta;
 
@@ -236,15 +242,17 @@ DEBUG_LOG(( "%d: GetGameLogicRandomValue = %d (%d - %d), %s line %d\n",
 //
 // Integer random value
 //
-Int GetGameClientRandomValue( int lo, int hi, char *file, int line )
+Int GetGameClientRandomValue( int lo, int hi, const char *file, int line )
 {
-	UnsignedInt delta = hi - lo + 1;
+	(void)file; (void)line;
+	if (hi < lo) throw std::invalid_argument("original random range reversed");
+	UnsignedInt delta = UnsignedInt(hi) - UnsignedInt(lo) + 1u;
 	Int rval;
 
 	if (delta == 0)
 		return hi;
 
-	rval = ((Int)(randomValue(theGameClientSeed) % delta)) + lo;
+	rval = Int(Int64(lo) + Int64(randomValue(theGameClientSeed) % delta));
 
 /**/
 #ifdef DEBUG_RANDOM_CLIENT
@@ -259,15 +267,17 @@ DEBUG_LOG(( "%d: GetGameClientRandomValue = %d (%d - %d), %s line %d\n",
 //
 // Integer random value
 //
-Int GetGameAudioRandomValue( int lo, int hi, char *file, int line )
+Int GetGameAudioRandomValue( int lo, int hi, const char *file, int line )
 {
-	UnsignedInt delta = hi - lo + 1;
+	(void)file; (void)line;
+	if (hi < lo) throw std::invalid_argument("original random range reversed");
+	UnsignedInt delta = UnsignedInt(hi) - UnsignedInt(lo) + 1u;
 	Int rval;
 
 	if (delta == 0)
 		return hi;
 
-	rval = ((Int)(randomValue(theGameAudioSeed) % delta)) + lo;
+	rval = Int(Int64(lo) + Int64(randomValue(theGameAudioSeed) % delta));
 
 /**/
 #ifdef DEBUG_RANDOM_AUDIO
@@ -282,9 +292,12 @@ DEBUG_LOG(( "%d: GetGameAudioRandomValue = %d (%d - %d), %s line %d\n",
 //
 // Real valued random value
 //
-Real GetGameLogicRandomValueReal( Real lo, Real hi, char *file, int line )
+Real GetGameLogicRandomValueReal( Real lo, Real hi, const char *file, int line )
 {
+	(void)file; (void)line;
+	if (!std::isfinite(lo) || !std::isfinite(hi)) throw std::invalid_argument("original random range nonfinite");
 	Real delta = hi - lo;
+	if (!std::isfinite(delta)) throw std::invalid_argument("original random range overflow");
 	Real rval;
 
 	if (delta <= 0.0f)
@@ -306,9 +319,12 @@ DEBUG_LOG(( "%d: GetGameLogicRandomValueReal = %f, %s line %d\n",
 //
 // Real valued random value
 //
-Real GetGameClientRandomValueReal( Real lo, Real hi, char *file, int line )
+Real GetGameClientRandomValueReal( Real lo, Real hi, const char *file, int line )
 {
+	(void)file; (void)line;
+	if (!std::isfinite(lo) || !std::isfinite(hi)) throw std::invalid_argument("original random range nonfinite");
 	Real delta = hi - lo;
+	if (!std::isfinite(delta)) throw std::invalid_argument("original random range overflow");
 	Real rval;
 
 	if (delta <= 0.0f)
@@ -330,9 +346,12 @@ DEBUG_LOG(( "%d: GetGameClientRandomValueReal = %f, %s line %d\n",
 //
 // Real valued random value
 //
-Real GetGameAudioRandomValueReal( Real lo, Real hi, char *file, int line )
+Real GetGameAudioRandomValueReal( Real lo, Real hi, const char *file, int line )
 {
+	(void)file; (void)line;
+	if (!std::isfinite(lo) || !std::isfinite(hi)) throw std::invalid_argument("original random range nonfinite");
 	Real delta = hi - lo;
+	if (!std::isfinite(delta)) throw std::invalid_argument("original random range overflow");
 	Real rval;
 
 	if (delta <= 0.0f)
@@ -365,7 +384,7 @@ DEBUG_LOG(( "%d: GetGameAudioRandomValueReal = %f, %s line %d\n",
 */
 void GameClientRandomVariable::setRange( Real low, Real high, DistributionType type )
 {
-	DEBUG_ASSERTCRASH(!(m_type == CONSTANT && m_low != m_high), ("CONSTANT GameClientRandomVariables should have low == high"));
+	DEBUG_ASSERTCRASH(!(type == CONSTANT && low != high), ("CONSTANT GameClientRandomVariables should have low == high"));
 	m_low = low;
 	m_high = high;
 	m_type = type;
@@ -383,6 +402,7 @@ Real GameClientRandomVariable::getValue( void ) const
 			if (m_low == m_high) {
 				return m_low;
 			} // else return as though a UNIFORM.
+			[[fallthrough]];
 
 		case UNIFORM:
 			return GameClientRandomValueReal( m_low, m_high );
@@ -409,7 +429,7 @@ Real GameClientRandomVariable::getValue( void ) const
 */
 void GameLogicRandomVariable::setRange( Real low, Real high, DistributionType type )
 {
-	DEBUG_ASSERTCRASH(!(m_type == CONSTANT && m_low != m_high), ("CONSTANT GameLogicRandomVariables should have low == high"));
+	DEBUG_ASSERTCRASH(!(type == CONSTANT && low != high), ("CONSTANT GameLogicRandomVariables should have low == high"));
 	m_low = low;
 	m_high = high;
 	m_type = type;
@@ -427,6 +447,7 @@ Real GameLogicRandomVariable::getValue( void ) const
 			if (m_low == m_high) {
 				return m_low;
 			} // else return as though a UNIFORM.
+			[[fallthrough]];
 
 		case UNIFORM:
 			return GameLogicRandomValueReal( m_low, m_high );
@@ -437,5 +458,3 @@ Real GameLogicRandomVariable::getValue( void ) const
 			return 0.0f;
 	}
 }
-
-

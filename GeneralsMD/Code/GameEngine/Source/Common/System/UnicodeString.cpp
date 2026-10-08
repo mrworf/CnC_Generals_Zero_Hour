@@ -44,7 +44,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
-#include "Common/CriticalSection.h"
+#include "Common/AsciiString.h"
+#include <string>
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -70,71 +71,42 @@ void UnicodeString::validate() const
 // -----------------------------------------------------
 UnicodeString::UnicodeString(const UnicodeString& stringSrc) : m_data(stringSrc.m_data)
 {
-	ScopedCriticalSection scopedCriticalSection(TheUnicodeStringCriticalSection);
+
 	if (m_data)
-		++m_data->m_refCount;
+		OriginalStringStorage::retain(m_data->m_refCount);
 	validate();
 }
 
 // -----------------------------------------------------
-void UnicodeString::ensureUniqueBufferOfSize(int numCharsNeeded, Bool preserveData, const WideChar* strToCopy, const WideChar* strToCat)
+void UnicodeString::ensureUniqueBufferOfSize(int needed, Bool preserve, const WideChar* copy, const WideChar* append)
 {
-	validate();
-
-	if (m_data &&
-			m_data->m_refCount == 1 &&
-			m_data->m_numCharsAllocated >= numCharsNeeded)
-	{
-		// no buffer manhandling is needed (it's already large enough, and unique to us)
-		if (strToCopy)
-			wcscpy(m_data->peek(), strToCopy);
-		if (strToCat)
-			wcscat(m_data->peek(), strToCat);
-		return;
-	}
-
-	int minBytes = sizeof(UnicodeStringData) + numCharsNeeded*sizeof(WideChar);
-	if (minBytes > MAX_LEN)
-		throw ERROR_OUT_OF_MEMORY;
-
-	int actualBytes = TheDynamicMemoryAllocator->getActualAllocationSize(minBytes);
-	UnicodeStringData* newData = (UnicodeStringData*)TheDynamicMemoryAllocator->allocateBytesDoNotZero(actualBytes, "STR_UnicodeString::ensureUniqueBufferOfSize");
-	newData->m_refCount = 1;
-	newData->m_numCharsAllocated = (actualBytes - sizeof(UnicodeStringData))/sizeof(WideChar);
+    if(needed<=0 || needed>MAX_LEN)throw ERROR_OUT_OF_MEMORY;
+    std::wstring value=copy?copy:(preserve && m_data?m_data->peek():L"");
+    if(append)value+=append;
+    if(value.size()>=std::size_t(needed))throw ERROR_BAD_ARG;
+    const auto bytes=sizeof(UnicodeStringData)+std::size_t(needed)*sizeof(WideChar);
+    auto* fresh=new (::operator new(bytes)) UnicodeStringData{};
+    fresh->m_refCount.store(1);fresh->m_numCharsAllocated=static_cast<unsigned short>(needed);
 #if defined(_DEBUG) || defined(_INTERNAL)
-	newData->m_debugptr = newData->peek();	// just makes it easier to read in the debugger
+    fresh->m_debugptr=fresh->peek();
 #endif
-
-	if (m_data && preserveData)
-		wcscpy(newData->peek(), m_data->peek());
-	else
-		newData->peek()[0] = 0;
-
-	// do these BEFORE releasing the old buffer, so that self-copies
-	// or self-cats will work correctly.
-	if (strToCopy)
-		wcscpy(newData->peek(), strToCopy);
-	if (strToCat)
-		wcscat(newData->peek(), strToCat);
-
-	releaseBuffer();
-	m_data = newData;
-
-	validate();
+    std::memset(fresh->peek(),0,std::size_t(needed)*sizeof(WideChar));
+    std::memcpy(fresh->peek(),value.data(),value.size()*sizeof(WideChar));
+    releaseBuffer();m_data=fresh;
 }
-
 
 // -----------------------------------------------------
 void UnicodeString::releaseBuffer()
 {
-	ScopedCriticalSection scopedCriticalSection(TheUnicodeStringCriticalSection);
+
 
 	validate();
 	if (m_data)
 	{
-		if (--m_data->m_refCount == 0)
+		if (OriginalStringStorage::release(m_data->m_refCount))
 		{
-			TheDynamicMemoryAllocator->freeBytes(m_data);
+			m_data->~UnicodeStringData();
+			::operator delete(m_data);
 		}
 		m_data = 0;
 	}
@@ -143,7 +115,7 @@ void UnicodeString::releaseBuffer()
 // -----------------------------------------------------
 UnicodeString::UnicodeString(const WideChar* s) : m_data(0)
 {
-	int len = wcslen(s);
+	int len = s?wcslen(s):0;
 	if (len)
 	{
 		ensureUniqueBufferOfSize(len + 1, false, s, NULL);
@@ -154,17 +126,10 @@ UnicodeString::UnicodeString(const WideChar* s) : m_data(0)
 // -----------------------------------------------------
 void UnicodeString::set(const UnicodeString& stringSrc)
 {
-	ScopedCriticalSection scopedCriticalSection(TheUnicodeStringCriticalSection);
-
-	validate();
-	if (&stringSrc != this)
-	{
-		releaseBuffer();
-		m_data = stringSrc.m_data;
-		if (m_data)
-			++m_data->m_refCount;
-	}
-	validate();
+    if(this==&stringSrc)return;
+    auto* incoming=stringSrc.m_data;
+    if(incoming)OriginalStringStorage::retain(incoming->m_refCount);
+    releaseBuffer();m_data=incoming;
 }
 
 // -----------------------------------------------------
@@ -191,6 +156,7 @@ WideChar* UnicodeString::getBufferForRead(Int len)
 {
 	validate();
 	DEBUG_ASSERTCRASH(len>0, ("No need to allocate 0 len strings."));
+	if(len<0 || len>=MAX_LEN)throw ERROR_BAD_ARG;
 	ensureUniqueBufferOfSize(len + 1, false, NULL, NULL);
 	validate();
 	return peek();
@@ -283,23 +249,13 @@ void UnicodeString::removeLastChar()
 }
 
 // -----------------------------------------------------
-void UnicodeString::format(UnicodeString format, ...)
-{
-	validate();
-	va_list args;
-  va_start(args, format);
-	format_va(format, args);
-  va_end(args);
-	validate();
-}
-
 // -----------------------------------------------------
 void UnicodeString::format(const WideChar* format, ...)
 {
 	validate();
 	va_list args;
   va_start(args, format);
-	format_va(format, args);
+	try {format_va(format, args);} catch(...) {va_end(args);throw;}
   va_end(args);
 	validate();
 }
@@ -308,8 +264,8 @@ void UnicodeString::format(const WideChar* format, ...)
 void UnicodeString::format_va(const UnicodeString& format, va_list args)
 {
 	validate();
-	WideChar buf[MAX_FORMAT_BUF_LEN];
-  if (_vsnwprintf(buf, sizeof(buf)/sizeof(WideChar)-1, format.str(), args) < 0)
+	WideChar buf[MAX_FORMAT_BUF_LEN]{};
+  if (vswprintf(buf, sizeof(buf)/sizeof(WideChar)-1, format.str(), args) < 0)
 			throw ERROR_OUT_OF_MEMORY;
 	set(buf);
 	validate();
@@ -319,8 +275,9 @@ void UnicodeString::format_va(const UnicodeString& format, va_list args)
 void UnicodeString::format_va(const WideChar* format, va_list args)
 {
 	validate();
-	WideChar buf[MAX_FORMAT_BUF_LEN];
-  if (_vsnwprintf(buf, sizeof(buf)/sizeof(WideChar)-1, format, args) < 0)
+	if (!format) throw ERROR_BAD_ARG;
+	WideChar buf[MAX_FORMAT_BUF_LEN]{};
+  if (vswprintf(buf, sizeof(buf)/sizeof(WideChar)-1, format, args) < 0)
 			throw ERROR_OUT_OF_MEMORY;
 	set(buf);
 	validate();
@@ -329,6 +286,7 @@ void UnicodeString::format_va(const WideChar* format, va_list args)
 //-----------------------------------------------------------------------------
 Bool UnicodeString::nextToken(UnicodeString* tok, UnicodeString delimiters)
 {
+    if(!tok)throw ERROR_BAD_ARG;
 	if (this->isEmpty() || tok == this)
 		return false;
 

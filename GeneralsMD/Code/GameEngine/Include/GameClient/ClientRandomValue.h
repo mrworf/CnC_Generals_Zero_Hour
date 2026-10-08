@@ -35,8 +35,8 @@
 #include "Lib/BaseType.h"
 
 // do NOT use these functions directly, rather use the macros below
-extern Int GetGameClientRandomValue( int lo, int hi, char *file, int line );
-extern Real GetGameClientRandomValueReal( Real lo, Real hi, char *file, int line );
+extern Int GetGameClientRandomValue( int lo, int hi, const char *file, int line );
+extern Real GetGameClientRandomValueReal( Real lo, Real hi, const char *file, int line );
 
 // use these macros to access the random value functions
 #define GameClientRandomValue( lo, hi ) GetGameClientRandomValue( lo, hi, __FILE__, __LINE__ )
@@ -85,8 +85,8 @@ protected:
 	Real m_low, m_high;																					///< the range of random values
 
 	// These two friends are for particle editing.
-	friend CColorAlphaDialog;
-	friend DebugWindowDialog;
+	friend class CColorAlphaDialog;
+	friend class DebugWindowDialog;
 
 };
 

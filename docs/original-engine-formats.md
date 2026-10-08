@@ -136,3 +136,73 @@ in installed `SDL3/SDL_vulkan.h`; the exercised owner is `lifecycle.cpp::Video`.
 Final normal-host, GCC sanitizer and Clang sanitizer matrices passed 18/18 each.
 See `evidence/qa/N1-stock-renderer-capacity-lifecycle.md` for attributable
 qualification acceptance and explicit original-integration limits.
+
+## N2 source investigation (implementation and acceptance pending)
+
+- GameMemory.cpp replaces global new/delete, has MEM_BOUND_ALIGNMENT=4 and
+  suppresses shutdown after pre-main allocation. GameMemory.h class-pool glue
+  caches factory-owned pointers in function statics, which cannot survive an
+  actual factory retirement. N2 removes global interposition and audits retained
+  explicit pools; standard library allocations are not game pool allocations.
+- AsciiString.h uses InterlockedIncrement/Decrement through a `long*` cast into
+  a 16-bit refcount next to capacity. This is not a portable atomic protocol on
+  Linux LP64. Inspect string backing and reference ownership together.
+- GameEngine.cpp::init deletes a patch-era data archive. This is incompatible
+  with supplied read-only assets and must be removed before runtime audits.
+- Win32BIGFileSystem.cpp::openArchiveFile reads count, offset and entry size as
+  32-bit big-endian via ntohl; names are NUL terminated. Header-size endianness
+  is not established by its unconverted diagnostic-only read. Original bounds
+  checks are insufficient; use actual file length and bounded index admission.
+- GameText.cpp CSFHeader has six Windows 32-bit Int fields; labels and string
+  lengths are Int. parseCSF reads inverted Windows WideChar units and then
+  complements them, optionally reading STRW wave names. Decode file UTF-16
+  independently of Linux wchar_t; exact validation/writer pairing is pending.
+- RandomValue.cpp has separate six-word logic/client/audio seeds and unsigned
+  additive carry state. Each integer-range family calculates `hi-lo+1` in signed
+  arithmetic before conversion; inspect all three together for full-width ranges.
+  CRC's release header uses x86 assembly; its debug implementation documents the
+  byte-wise left-shift/high-bit carry algorithm. Keep the byte protocol unchanged.
+
+These findings are source inspection, not N2 runtime acceptance. Plans and tests
+will link verified portable implementations here as each coherent slice passes.
+
+### Portable core representation and ownership (N2 slice 01)
+
+The retained original RNG carry algorithm has three independent six-word seeds.
+Seed `0x12345678`, inclusive integer range 0..1000, yields
+`823,209,704,299,632,971,682,948,750,591,960,331`. The original full signed-width
+range produces zero unsigned delta, returns the high endpoint and does not
+advance the seed; this convention is retained. Range arithmetic now uses
+defined unsigned/widened arithmetic in all three families. CRC bytes
+`ff 00 80 7f 01 aa` produce 9864, independently of chunking. See
+`RandomValue.cpp`, `Common/crc.h` and `tests/original/core.cpp`.
+
+The published Trig.cpp unconditionally selected DEFAULT_TRIG; its active
+sin/cos/tan/acos/asin path is retained with standard float overloads, not the
+inactive integer tables. BaseType fast floor/ceil now implement their documented
+mathematical operation without the legacy epsilon, which misrounded sufficiently
+close fractional inputs. Float-to-Int conversion checks finite signed 32-bit
+representability before casting. Internal Linux WideChar is native wchar_t;
+this is **not** a CSF wire-format decision. File UTF-16 decoding remains slice 02.
+
+Ordinary, array, nothrow and aligned C++ allocation is standard-owned, not
+interposed by GameMemory. Explicit game pools use max_align_t-aligned blobs,
+preallocated slot metadata and raw-address admission. Each DMA has its own
+allocation ledger even when named subpools are shared. Factory teardown releases
+DMA units before pools. Class glue reacquires its pool from the current factory;
+constructor failure returns its acquired slot. Pool/factory/DMA and holder owners
+are noncopyable. The obsolete Win32 custom-new/checkpoint declarations are
+retired, so Debug and Release share the same native class layout. No adopted
+framework source is changed. See GameMemory.h/.cpp and the pools/repeat families.
+
+ASCII and Unicode backing uses standard allocation and atomic 32-bit reference
+units, independent of pool shutdown. Mutation snapshots borrowed source data
+before replacing backing, including self/interior aliases; all capacity slots
+are initialized. Assignment retains its incoming unit before releasing the old
+one. Format forwarding does not use a non-POD variadic last parameter, and
+capacity/null/truncation rejection preserves accepted values. The strings family
+exercises 70,000 real aliases and concurrent independent copies. See
+StringStorage.h, AsciiString.cpp, UnicodeString.cpp and tests/original/core.cpp.
+
+These are core-fixture claims only; GameEngine/GameLogic startup, rooted data,
+CSF decoding and retail integrity/completeness remain unaccepted N2 work.

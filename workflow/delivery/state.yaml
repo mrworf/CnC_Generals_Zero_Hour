@@ -14,15 +14,15 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "scope": "remaining",
-  "resume_point": "Begin the independent N2 companion transaction with source-owner investigation and persisted plans before original-runtime edits",
-  "transaction_parent": "22c25e7be6c7613a119d8a2becec6da71b1c25d4",
+  "resume_point": "N2 companion transaction, slice 02 rooted original-data access; slice 01 accepted and committed",
+  "transaction_parent": "11295c4feb535f97978b8335632440fccae82794",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
-  "current_slice": null,
-  "completed_slices": ["N1_plan_slice_01", "N1_plan_slice_02"],
-  "evidence": "evidence/qa/N1-stock-renderer-capacity-lifecycle.md",
+  "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_02.md",
+  "completed_slices": ["N1_plan_slice_01", "N1_plan_slice_02", "N2_plan_slice_01"],
+  "evidence": "evidence/qa/N2-original-core.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Select dependency-ready N2 and plan original Linux foundation/headless simulation; N3/N4 still require accepted N2."
+  "next": "Implement rooted original-data slice 02 and actual headless runtime slice 03; N3/N4 still require accepted N2."
 }

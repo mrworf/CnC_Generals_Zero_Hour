@@ -57,7 +57,10 @@
 
 class UnicodeString;
 
-#include "windows.h"
+#include <strings.h>
+#include <new>
+#include "Common/StringStorage.h"
+#include <type_traits>
 
 // -----------------------------------------------------
 /**
@@ -94,7 +97,7 @@ private:
 #if defined(_DEBUG) || defined(_INTERNAL)
 		const char* m_debugptr;	// just makes it easier to read in the debugger
 #endif
-		unsigned short	m_refCount;						// reference count
+		std::atomic<std::uint32_t> m_refCount;						// reference count
 		unsigned short	m_numCharsAllocated;  // length of data allocated
 		// char m_stringdata[];
 
@@ -249,7 +252,8 @@ public:
 		given sprintf-style format string (and the variable argument list)
 		and stores the result in self.
 	*/
-	void format(AsciiString format, ...);
+	template<class Pattern,class... Args> requires std::is_same_v<std::remove_cvref_t<Pattern>,AsciiString>
+	void format(Pattern&& pattern,Args... args) {format(pattern.str(),args...);}
 	void format(const char* format, ...);
 	/**
 		Identical to format(), but takes a va_list rather than
@@ -267,11 +271,11 @@ public:
 	*/
 	int compare(const char* s) const;
 	/**
-		Conceptually identical to _stricmp().
+		Conceptually identical to strcasecmp().
 	*/
 	int compareNoCase(const AsciiString& stringSrc) const;
 	/**
-		Conceptually identical to _stricmp().
+		Conceptually identical to strcasecmp().
 	*/
 	int compareNoCase(const char* s) const;
 
@@ -379,7 +383,7 @@ inline AsciiString::AsciiString(const AsciiString& stringSrc) : m_data(stringSrc
 	if (m_data)
 		// ++m_data->m_refCount;
     // yes, I know it's not a DWord but we're incrementing so we're safe
-    InterlockedIncrement((long *)&m_data->m_refCount);
+    OriginalStringStorage::retain(m_data->m_refCount);
 	validate();
 }
 
@@ -391,8 +395,7 @@ inline void AsciiString::releaseBuffer()
 	validate();
 	if (m_data)
 	{
-    InterlockedDecrement((long *)&m_data->m_refCount);
-		if (!m_data->m_refCount)
+    if (OriginalStringStorage::release(m_data->m_refCount))
 			freeBytes();
 		m_data = 0;
 	}
@@ -447,25 +450,10 @@ inline const char* AsciiString::str() const
 // -----------------------------------------------------
 inline void AsciiString::set(const AsciiString& stringSrc)
 {
-  //FastCriticalSectionClass::LockClass lock(TheAsciiStringCriticalSection);
-
-	validate();
-	if (&stringSrc != this)
-	{
-    // do not call releaseBuffer(); here, it locks the CS twice
-    // from the same thread which is illegal using fast CS's
-		if (m_data)
-    {
-      InterlockedDecrement((long *)&m_data->m_refCount);
-		  if (!m_data->m_refCount)
-			  freeBytes();
-    }
-
-		m_data = stringSrc.m_data;
-		if (m_data)
-      InterlockedIncrement((long *)&m_data->m_refCount);
-	}
-	validate();
+    if(this==&stringSrc)return;
+    auto* incoming=stringSrc.m_data;
+    if(incoming)OriginalStringStorage::retain(incoming->m_refCount);
+    releaseBuffer();m_data=incoming;
 }
 
 // -----------------------------------------------------
@@ -560,14 +548,14 @@ inline int AsciiString::compare(const char* s) const
 inline int AsciiString::compareNoCase(const AsciiString& stringSrc) const
 {
 	validate();
-	return _stricmp(this->str(), stringSrc.str());
+	return strcasecmp(this->str(), stringSrc.str());
 }
 
 // -----------------------------------------------------
 inline int AsciiString::compareNoCase(const char* s) const
 {
 	validate();
-	return _stricmp(this->str(), s);
+	return strcasecmp(this->str(), s);
 }
 
 // -----------------------------------------------------
