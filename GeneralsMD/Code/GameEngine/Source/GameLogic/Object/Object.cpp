@@ -34,6 +34,8 @@
 #include "Common/BuildAssistant.h"
 #include "Common/Dict.h"
 #include "Common/GameEngine.h"
+#include "Common/GlobalData.h"
+#include <cmath>
 #include "Common/GameState.h"
 #include "Common/ModuleFactory.h"
 #include "Common/Player.h"
@@ -322,7 +324,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	// the helpers are done first -- even before Behaviors! -- in case a module needs
 	// to call something that uses them.
-	static const NameKeyType smcHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_SMCHelper" );
+	static const StaticNameKey nativeCached_smcHelperModuleDataTagNameKey("ModuleTag_SMCHelper");
+	const NameKeyType smcHelperModuleDataTagNameKey = nativeCached_smcHelperModuleDataTagNameKey.key();
 	static ObjectSMCHelperModuleData smcModuleData;
 	smcModuleData.setModuleTagNameKey( smcHelperModuleDataTagNameKey );
 	m_smcHelper = newInstance(ObjectSMCHelper)(this, &smcModuleData);		
@@ -345,13 +348,15 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	if( !isInactiveBody )
 	{
-		static const NameKeyType statusHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_StatusDamageHelper" );
+		static const StaticNameKey nativeCached_statusHelperModuleDataTagNameKey("ModuleTag_StatusDamageHelper");
+		const NameKeyType statusHelperModuleDataTagNameKey = nativeCached_statusHelperModuleDataTagNameKey.key();
 		static StatusDamageHelperModuleData statusModuleData;
 		statusModuleData.setModuleTagNameKey( statusHelperModuleDataTagNameKey );
 		m_statusDamageHelper = newInstance(StatusDamageHelper)(this, &statusModuleData);		
 		*curB++ = m_statusDamageHelper;
 
-		static const NameKeyType subdualHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_SubdualDamageHelper" );
+		static const StaticNameKey nativeCached_subdualHelperModuleDataTagNameKey("ModuleTag_SubdualDamageHelper");
+		const NameKeyType subdualHelperModuleDataTagNameKey = nativeCached_subdualHelperModuleDataTagNameKey.key();
 		static SubdualDamageHelperModuleData subdualModuleData;
 		subdualModuleData.setModuleTagNameKey( subdualHelperModuleDataTagNameKey );
 		m_subdualDamageHelper = newInstance(SubdualDamageHelper)(this, &subdualModuleData);		
@@ -363,7 +368,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 			&& isKindOf(KINDOF_CAN_BE_REPULSED))
 	{
 		// if we can ever be a temporary-repulsor, make a repulsor helper. (srj)
-		static const NameKeyType repulsorHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_RepulsorHelper" );
+		static const StaticNameKey nativeCached_repulsorHelperModuleDataTagNameKey("ModuleTag_RepulsorHelper");
+		const NameKeyType repulsorHelperModuleDataTagNameKey = nativeCached_repulsorHelperModuleDataTagNameKey.key();
 		static ObjectRepulsorHelperModuleData repulsorModuleData;
 		repulsorModuleData.setModuleTagNameKey( repulsorHelperModuleDataTagNameKey );
 		m_repulsorHelper = newInstance(ObjectRepulsorHelper)(this, &repulsorModuleData);		
@@ -378,7 +384,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	// shrubbery cannot defect. no, really.
 	if (!tt->isKindOf(KINDOF_SHRUBBERY))
 	{
-		static const NameKeyType defectionModuleDataTagNameKey = NAMEKEY( "ModuleTag_DefectionHelper" );
+		static const StaticNameKey nativeCached_defectionModuleDataTagNameKey("ModuleTag_DefectionHelper");
+		const NameKeyType defectionModuleDataTagNameKey = nativeCached_defectionModuleDataTagNameKey.key();
 		static ObjectDefectionHelperModuleData defectionModuleData;
 		defectionModuleData.setModuleTagNameKey( defectionModuleDataTagNameKey );
 		m_defectionHelper = newInstance(ObjectDefectionHelper)(this, &defectionModuleData);		
@@ -388,19 +395,22 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	if (tt->canPossiblyHaveAnyWeapon())
 	{
 		// we only need a firingtracker and wshelper if we can possibly have a weapon.
-		static const NameKeyType weaponStatusModuleDataTagNameKey = NAMEKEY( "ModuleTag_WeaponStatusHelper" );
+		static const StaticNameKey nativeCached_weaponStatusModuleDataTagNameKey("ModuleTag_WeaponStatusHelper");
+		const NameKeyType weaponStatusModuleDataTagNameKey = nativeCached_weaponStatusModuleDataTagNameKey.key();
 		static ObjectWeaponStatusHelperModuleData weaponStatusModuleData;
 		weaponStatusModuleData.setModuleTagNameKey( weaponStatusModuleDataTagNameKey );
 		m_wsHelper = newInstance(ObjectWeaponStatusHelper)(this, &weaponStatusModuleData);		
 		*curB++ = m_wsHelper;
 
-		static const NameKeyType firingTrackerModuleDataTagNameKey = NAMEKEY( "ModuleTag_FiringTrackerHelper" );
+		static const StaticNameKey nativeCached_firingTrackerModuleDataTagNameKey("ModuleTag_FiringTrackerHelper");
+		const NameKeyType firingTrackerModuleDataTagNameKey = nativeCached_firingTrackerModuleDataTagNameKey.key();
 		static FiringTrackerModuleData firingTrackerModuleData;
 		firingTrackerModuleData.setModuleTagNameKey( firingTrackerModuleDataTagNameKey );
 		m_firingTracker = newInstance(FiringTracker)(this, &firingTrackerModuleData);
 		*curB++ = m_firingTracker;
 
-		static const NameKeyType tempWeaponBonusHelperModuleDataTagNameKey = NAMEKEY( "ModuleTag_TempWeaponBonusHelper" );
+		static const StaticNameKey nativeCached_tempWeaponBonusHelperModuleDataTagNameKey("ModuleTag_TempWeaponBonusHelper");
+		const NameKeyType tempWeaponBonusHelperModuleDataTagNameKey = nativeCached_tempWeaponBonusHelperModuleDataTagNameKey.key();
 		static TempWeaponBonusHelperModuleData tempWeaponBonusModuleData;
 		tempWeaponBonusModuleData.setModuleTagNameKey( tempWeaponBonusHelperModuleDataTagNameKey );
 		m_tempWeaponBonusHelper = newInstance(TempWeaponBonusHelper)(this, &tempWeaponBonusModuleData);		
@@ -450,7 +460,8 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 			m_ai = ai;
 		}
 
-		static NameKeyType key_PhysicsUpdate = NAMEKEY("PhysicsBehavior");
+		static const StaticNameKey nativeCached_key_PhysicsUpdate("PhysicsBehavior");
+		NameKeyType key_PhysicsUpdate = nativeCached_key_PhysicsUpdate.key();
 		if (newMod->getModuleNameKey() == key_PhysicsUpdate)
 		{
 			DEBUG_ASSERTCRASH(m_physics == NULL, ("You should never have more than one Physics module (%s)\n",getTemplate()->getName().str()));
@@ -959,7 +970,8 @@ Bool Object::checkAndDetonateBoobyTrap(const Object *victim)
 
 	if( ourBoobyTrap )
 	{
-		static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+		static const StaticNameKey nativeCached_key_StickyBombUpdate("StickyBombUpdate");
+		NameKeyType key_StickyBombUpdate = nativeCached_key_StickyBombUpdate.key();
 		StickyBombUpdate *update = (StickyBombUpdate*)ourBoobyTrap->findUpdateModule( key_StickyBombUpdate );
 		if( update )
 		{
@@ -1154,7 +1166,8 @@ Bool Object::canCrushOrSquish(Object *otherObj, CrushSquishTestType testType ) c
 		//****************************************************************************************
 		{
 			// See if other is squishable
-			static NameKeyType key_squish = NAMEKEY( "SquishCollide" );
+			static const StaticNameKey nativeCached_key_squish("SquishCollide");
+			NameKeyType key_squish = nativeCached_key_squish.key();
 			if( otherObj->findModule( key_squish ) ) 
 			{
 				return true; // squishable.
@@ -1194,7 +1207,8 @@ UnsignedByte Object::getCrushableLevel() const
 // ------------------------------------------------------------------------------------------------
 void Object::topple( const Coord3D *toppleDirection, Real toppleSpeed, UnsignedInt options )
 {
-	static NameKeyType key_ToppleUpdate = NAMEKEY("ToppleUpdate");
+	static const StaticNameKey nativeCached_key_ToppleUpdate("ToppleUpdate");
+	NameKeyType key_ToppleUpdate = nativeCached_key_ToppleUpdate.key();
 
 	ToppleUpdate* toppleUpdate = (ToppleUpdate*)findModule(key_ToppleUpdate);
 	if( toppleUpdate && toppleUpdate->isAbleToBeToppled() )
@@ -1764,7 +1778,7 @@ void Object::reactToTurretChange( WhichTurretType turret, Real oldRotation, Real
 void Object::reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle)
 {
 	//USE_PERF_TIMER(Object_reactToTransformChange)
-	if(_isnan(getPosition()->x) || _isnan(getPosition()->y) || _isnan(getPosition()->z)) {
+	if(std::isnan(getPosition()->x) || std::isnan(getPosition()->y) || std::isnan(getPosition()->z)) {
 		DEBUG_CRASH(("Object pos is nan."));
 		TheGameLogic->destroyObject(this);
 	}
@@ -1834,7 +1848,7 @@ void Object::attemptDamage( DamageInfo *damageInfo )
 		{ 
 			// Calculate the shockwave taperoff amount due to distance from ground zero
 			Real shockWaveScalar = damageInfo->in.m_shockWaveVector.length();
-			Real distanceFromCenter = min(1.0f, shockWaveScalar / damageInfo->in.m_shockWaveRadius); 
+			Real distanceFromCenter = std::min(1.0f, shockWaveScalar / damageInfo->in.m_shockWaveRadius);
 			Real distanceTaper = (distanceFromCenter) * (1.0f - damageInfo->in.m_shockWaveTaperOff);
 			Real shockTaperMult = 1.0f - distanceTaper;
 
@@ -2194,7 +2208,8 @@ void Object::setDisabledUntil( DisabledType type, UnsignedInt frame )
 			}
 			//Not only that, but it also loses any healing bonuses it may have earned in its prior life
 			{
-				static const NameKeyType key_AutoHealBehavior = NAMEKEY("AutoHealBehavior");
+				static const StaticNameKey nativeCached_key_AutoHealBehavior("AutoHealBehavior");
+				const NameKeyType key_AutoHealBehavior = nativeCached_key_AutoHealBehavior.key();
 				AutoHealBehavior* autoHeal = (AutoHealBehavior*)(findUpdateModule( key_AutoHealBehavior ));
 				if (autoHeal)
 					autoHeal->undoUpgrade();
@@ -3831,7 +3846,8 @@ void Object::onDisabledEdge(Bool becomingDisabled)
 	{
 		//@todo jkmcd - Colin suggested we rewrite this to use the interface stuff. I agree, but need
 		// to get some more bugs fixed today. 
-		static NameKeyType radar = NAMEKEY("RadarUpgrade");
+		static const StaticNameKey nativeCached_radar("RadarUpgrade");
+		NameKeyType radar = nativeCached_radar.key();
 		Module *mod = mod = findModule(radar);
 		if (mod) {
 			RadarUpgrade *radarMod = (RadarUpgrade*) mod;
@@ -3854,8 +3870,10 @@ void Object::onDisabledEdge(Bool becomingDisabled)
 		// We can't affect something that consumes, or else we go low power which removes the consumption
 		// which makes us not low power so we add the consumption so we go low power...
 		// This check also guaards the IsDisabled in friend_adjustPower above
-		static NameKeyType powerPlant = NAMEKEY("PowerPlantUpgrade");
-		static NameKeyType overCharge = NAMEKEY("OverchargeBehavior");
+		static const StaticNameKey nativeCached_powerPlant("PowerPlantUpgrade");
+		NameKeyType powerPlant = nativeCached_powerPlant.key();
+		static const StaticNameKey nativeCached_overCharge("OverchargeBehavior");
+		NameKeyType overCharge = nativeCached_overCharge.key();
 		
 		Module* mod = findModule(powerPlant);
 		if (mod) {
@@ -5999,7 +6017,8 @@ SpecialAbilityUpdate* Object::findSpecialAbilityUpdate( SpecialPowerType type ) 
 // ------------------------------------------------------------------------------------------------
 SpecialPowerCompletionDie* Object::findSpecialPowerCompletionDie() const
 {
-	static NameKeyType key_SpecialPowerCompletionDie = NAMEKEY("SpecialPowerCompletionDie");
+	static const StaticNameKey nativeCached_key_SpecialPowerCompletionDie("SpecialPowerCompletionDie");
+	NameKeyType key_SpecialPowerCompletionDie = nativeCached_key_SpecialPowerCompletionDie.key();
 	return (SpecialPowerCompletionDie*)findModule(key_SpecialPowerCompletionDie);
 }
 

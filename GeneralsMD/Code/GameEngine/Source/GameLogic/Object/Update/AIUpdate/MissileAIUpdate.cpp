@@ -27,6 +27,7 @@
 // Desc:   Implementation of missile behavior
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/NativeSourceMath.h"
 
 #include "Common/Thing.h"
 #include "Common/ThingTemplate.h"
@@ -265,7 +266,7 @@ void MissileAIUpdate::projectileFireAtObjectOrPosition( const Object *victim, co
 	Vector3 objPos(obj->getPosition()->x, obj->getPosition()->y, obj->getPosition()->z);
 
 	Matrix3D newXform;
-	newXform.buildTransformMatrix( objPos, dir );
+	nativeSourceBuildTransformMatrix(newXform,  objPos, dir );
 	obj->setTransformMatrix( &newXform );
 
 	switchToState(LAUNCH);

@@ -9,6 +9,9 @@ X11/OpenGL/Wayland and Vulkan development packages, a Vulkan driver and Khronos
 validation layer. SDL3 development files are required for the native-window
 qualification; this host uses SDL3 3.4.16. FreeType, Fontconfig, zlib and FFmpeg
 development packages are required for later original-process integration.
+Native runtime cache tests additionally require stock OpenSSL3 Crypto development
+headers/library (Arch `openssl`, Ubuntu `libssl-dev`, Fedora `openssl-devel`).
+Only public EVP digest APIs are used; this host supplies OpenSSL3.6.4 unchanged.
 No private asset is needed.
 
 ```sh
@@ -112,3 +115,29 @@ public stage/mask/status and integrity outcomes, hashes regular input bytes
 before/after, rejects unexpected output, and never writes into supplied roots.
 Its successful mask proves indexing/basic-family presence and text initialization,
 not full scenario completeness. Use `evidence/qa/N2-original-data.md` for limits.
+
+The same native configuration now also requires system zlib and OpenSSL3 development headers
+and builds original namespace/FP/Dict, cached map backing and TOC/chunk readers.
+`original_runtime_*`, `original_map_*` and `original_chunk_*` are generated
+CPU-only supporting fixtures. All38 original-owner cases pass normal/GCC/Clang
+checks at the recorded checkpoint in `evidence/qa/N2-runtime-support.md`; they
+do not yet execute original GameLogic. Explicit chunk output is covered by four
+additional families; EAB/EAH, rooted profiles, timestamps and UTF-16-width
+filtering bring the matrix to50. XDG atomic output and content/version-keyed
+conversion storage bring the cohort to60. Header/ID graph contracts bring the
+cohort to62. Five native container families bring the frozen cohort to67/67
+normal/GCC/Clang passes, with complete original DSP-root include casing census.
+Two source-locked enum configurations bring the supporting cohort to69/69.
+They verify all49 selected enum representations/declarations, not whole owners.
+NOX qualification and full startup, including binding these storage owners into
+GameEngine/GlobalData and whole MapCache, remain pending; supporting fixtures
+do not substitute for actual original startup or simulation.
+
+Latest committed-progress checkpoint: the generated original-runtime suite has
+178 tests, with normal GCC, GCC ASan/UBSan/LSan and Clang ASan/UBSan/LSan results
+recorded in `evidence/qa/N2-runtime-support.md`. The earlier counts above describe
+historical supporting cohorts. Native source providers, protected user storage,
+save/CRC transports and replay command/session ownership are supporting evidence;
+the full native entry and deterministic scenario are still N2 completion gates.
+Use the existing original-core build directories and normal `cmake --build` /
+`ctest --output-on-failure` workflow; no proprietary assets are embedded in tests.

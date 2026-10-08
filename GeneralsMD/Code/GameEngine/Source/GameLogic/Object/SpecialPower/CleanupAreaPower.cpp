@@ -92,7 +92,8 @@ void CleanupAreaPower::doSpecialPowerAtLocation( const Coord3D *loc, Real angle,
 	Object *obj = getObject();
 	const CleanupAreaPowerModuleData *data = getCleanupAreaPowerModuleData();
 
-	static NameKeyType key_CleanupHazardUpdate = NAMEKEY( "CleanupHazardUpdate" );
+	static const StaticNameKey nativeCached_key_CleanupHazardUpdate("CleanupHazardUpdate");
+	NameKeyType key_CleanupHazardUpdate = nativeCached_key_CleanupHazardUpdate.key();
 	CleanupHazardUpdate *update = (CleanupHazardUpdate*)obj->findUpdateModule( key_CleanupHazardUpdate );
 	if( update )
 	{

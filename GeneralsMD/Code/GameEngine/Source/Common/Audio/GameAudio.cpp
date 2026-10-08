@@ -68,7 +68,7 @@
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/TerrainLogic.h"
 
-#include "WWMath/Matrix3D.h"
+#include "WWMath/matrix3d.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef _INTERNAL
@@ -315,7 +315,7 @@ void AudioManager::update()
 	Coord3D groundPos, microphonePos;
 	TheTacticalView->getPosition( &groundPos );
 	Real angle = TheTacticalView->getAngle();
-	Matrix3D rot = Matrix3D::Identity;
+	Matrix3D rot(true);
 	rot.Rotate_Z( angle );
 	Vector3 forward( 0, 1, 0 );
 	rot.mulVector3( forward );
@@ -1167,4 +1167,3 @@ void parseSpeakerType( INI *ini, void *instance, void *store, const void* userDa
 
 	(*(UnsignedInt*)store) = TheAudio->translateSpeakerTypeToUnsignedInt(str);
 }
-

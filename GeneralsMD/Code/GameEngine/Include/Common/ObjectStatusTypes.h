@@ -40,7 +40,7 @@
 //-------------------------------------------------------------------------------------------------
 /** Object status types */
 //-------------------------------------------------------------------------------------------------
-enum ObjectStatusTypes
+enum ObjectStatusTypes : UnsignedInt
 {
 	//These are saved. Do not insert or remove any!
 

@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef _PARTICLE_SYS_H_
 #define _PARTICLE_SYS_H_
@@ -40,7 +41,7 @@
 #include "Common/SubsystemInterface.h"
 #include "GameClient/ClientRandomValue.h"
 
-#include "WWMath/Matrix3D.h"		///< @todo Replace with our own matrix library
+#include "WWMath/matrix3d.h"		///< @todo Replace with our own matrix library
 #include "Common/STLTypedefs.h"
 
  
@@ -56,10 +57,7 @@ class INI;
 class DebugWindowDialog;		// really ParticleEditorDialog
 class RenderInfoClass;			// ick
 
-enum ParticleSystemID
-{
-	INVALID_PARTICLE_SYSTEM_ID = 0
-};
+#include "Common/EngineIDs.h"
 
 #define MAX_VOLUME_PARTICLE_DEPTH ( 16 )
 #define DEFAULT_VOLUME_PARTICLE_DEPTH ( 0 )//The Default is not to do the volume thing!
@@ -82,7 +80,7 @@ struct RGBColorKeyframe
 	UnsignedInt frame;
 };
 
-enum ParticlePriorityType
+enum ParticlePriorityType : UnsignedInt
 {
 	INVALID_PRIORITY = 0, 
 	PARTICLE_PRIORITY_LOWEST = 1,
@@ -718,7 +716,7 @@ public:
 
 	typedef std::list<ParticleSystem*> ParticleSystemList;
 	typedef std::list<ParticleSystem*>::iterator ParticleSystemListIt;
-	typedef std::hash_map<AsciiString, ParticleSystemTemplate *, rts::hash<AsciiString>, rts::equal_to<AsciiString> > TemplateMap;
+	typedef std::unordered_map<AsciiString, ParticleSystemTemplate *, rts::hash<AsciiString>, rts::equal_to<AsciiString> > TemplateMap;
 
 	ParticleSystemManager( void );
 	virtual ~ParticleSystemManager();

@@ -30,6 +30,8 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <algorithm>
+#include "Common/GlobalData.h"
 #define DEFINE_RELATIONSHIP_NAMES
 #include "Common/GameState.h"
 #include "Common/RandomValue.h"
@@ -162,7 +164,7 @@ UpdateSleepTime MinefieldBehavior::calcSleepTime()
 	// about it (that is, when our creator dies)
 	//
 	if (m_regenerates && d->m_stopsRegenAfterCreatorDies)
-		sleepTime = min( sleepTime, m_nextDeathCheckFrame - now );
+		sleepTime = std::min( sleepTime, m_nextDeathCheckFrame - now );
 
 	// if we don't want to sleep forever, prevent 0 frame sleeps
 	if( sleepTime == 0 )
@@ -248,7 +250,8 @@ UpdateSleepTime MinefieldBehavior::update()
 				{
 					m_regenerates = false;
 					m_draining = true;
-					static const NameKeyType key_AutoHealBehavior = NAMEKEY("AutoHealBehavior");
+					static const StaticNameKey nativeCached_key_AutoHealBehavior("AutoHealBehavior");
+					const NameKeyType key_AutoHealBehavior = nativeCached_key_AutoHealBehavior.key();
 					AutoHealBehavior* ahb = (AutoHealBehavior*)obj->findUpdateModule( key_AutoHealBehavior );
 					if (ahb)
 						ahb->stopHealing();

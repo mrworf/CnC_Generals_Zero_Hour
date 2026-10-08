@@ -38,15 +38,17 @@
 #include "Common/PlayerList.h"
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
+#include "Common/NativeClock.h"
+#include "Common/NativeSubsystemInit.h"
+#include "Common/NativeUserStorage.h"
 #include "Common/INI.h"
 #include "Common/INIException.h"
 #include "Common/MessageStream.h"
 #include "Common/ThingFactory.h"
-#include "Common/File.h"
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/ArchiveFileSystem.h"
 #include "Common/LocalFileSystem.h"
-#include "Common/CDManager.h"
 #include "Common/GlobalData.h"
 #include "Common/PerfTimer.h"
 #include "Common/RandomValue.h"
@@ -102,11 +104,10 @@
 #include "GameClient/GUICallbacks.h"
 
 #include "GameNetwork/NetworkInterface.h"
-#include "GameNetwork/WOLBrowser/WebBrowser.h"
+// The embedded ATL browser is outside the native product.
 #include "GameNetwork/LANAPI.h"
-#include "GameNetwork/GameSpy/GameResultsThread.h"
 
-#include "Common/Version.h"
+#include "Common/version.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -158,17 +159,7 @@ GameEngine *TheGameEngine = NULL;
 //-------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------
-template<class SUBSYSTEM>
-void initSubsystem(SUBSYSTEM*& sysref, AsciiString name, SUBSYSTEM* sys, Xfer *pXfer,  const char* path1 = NULL, 
-									 const char* path2 = NULL, const char* dirpath = NULL)
-{
-	sysref = sys;
-	TheSubsystemList->initSubsystem(sys, path1, path2, dirpath, pXfer, name);
-}
-
 //-------------------------------------------------------------------------------------------------
-extern HINSTANCE ApplicationHInstance;  ///< our application instance
-extern CComModule _Module;
 
 //-------------------------------------------------------------------------------------------------
 static void updateTGAtoDDS();
@@ -181,60 +172,54 @@ Int GameEngine::getFramesPerSecondLimit( void )
 //-------------------------------------------------------------------------------------------------
 GameEngine::GameEngine( void )
 {
-	// Set the time slice size to 1 ms.
-	timeBeginPeriod(1);
 
 	// initialize to non garbage values
 	m_maxFPS = 0;
 	m_quitting = FALSE;
 	m_isActive = FALSE;
 
-	_Module.Init(NULL, ApplicationHInstance);
 }
 
 //-------------------------------------------------------------------------------------------------
 GameEngine::~GameEngine()
 {
+	const bool ownsWorld=m_serviceOwners.owns(TheSubsystemList);
 	//extern std::vector<std::string>	preloadTextureNamesGlobalHack;
 	//preloadTextureNamesGlobalHack.clear();
 
-	delete TheMapCache;
-	TheMapCache = NULL;
+	if (ownsWorld) {
+		delete TheMapCache;
+		TheMapCache = NULL;
+	}
 
 //	delete TheShell;
 //	TheShell = NULL;
 
-	TheGameResultsQueue->endThreads();
+	if (m_serviceOwners.owns(TheSubsystemList)) TheSubsystemList->shutdownAll();
+	m_serviceOwners.retire(TheSubsystemList);
 
-	TheSubsystemList->shutdownAll();
-	delete TheSubsystemList;
-	TheSubsystemList = NULL;
+	if (ownsWorld) {
+		delete TheNetwork;
+		TheNetwork = NULL;
+	}
 
-	delete TheNetwork;
-	TheNetwork = NULL;
+	m_serviceOwners.retire(TheCommandList);
 
-	delete TheCommandList;
-	TheCommandList = NULL;
+	m_serviceOwners.retire(TheNameKeyGenerator);
 
-	delete TheNameKeyGenerator;
-	TheNameKeyGenerator = NULL;
+	m_serviceOwners.retire(TheNativeUserStorage);
 
-	delete TheFileSystem;
-	TheFileSystem = NULL;
+	m_serviceOwners.retire(TheFileSystem);
 
-	if (TheGameLODManager)
-		delete TheGameLODManager;
+	m_serviceOwners.retire(TheGameLODManager);
 
-	Drawable::killStaticImages();
+	if (ownsWorld) Drawable::killStaticImages();
 
-	_Module.Term();
 
 #ifdef PERF_TIMERS
-	PerfGather::termPerfDump();
+	if (ownsWorld) PerfGather::termPerfDump();
 #endif
 
-	// Restore the previous time slice for Windows.
-	timeEndPeriod(1);
 }
 
 void GameEngine::setFramesPerSecondLimit( Int fps )
@@ -293,7 +278,7 @@ void GameEngine::init( int argc, char *argv[] )
 		
 		m_maxFPS = DEFAULT_MAX_FPS;
 
-		TheSubsystemList = MSGNEW("GameEngineSubsystem") SubsystemInterfaceList;
+		m_serviceOwners.create(TheSubsystemList, [&] { return MSGNEW("GameEngineSubsystem") SubsystemInterfaceList; });
 		
 		TheSubsystemList->addSubsystem(this);
 
@@ -301,12 +286,21 @@ void GameEngine::init( int argc, char *argv[] )
 		InitRandom();
 
 		// Create the low-level file system interface
-		TheFileSystem = createFileSystem();
+		m_serviceOwners.create(TheFileSystem, [&] { return createFileSystem(); });
+
+    // The native file factory must return admitted explicit asset mounts. User
+    // ownership is acquired before GlobalData publishes paths, and outlives
+    // every subsystem that retains scratch or persistence state.
+    m_serviceOwners.create(TheNativeUserStorage,[&] {
+      auto storage=std::make_unique<NativeUserStorage>(NativeUserPaths::fromEnvironment(),*TheFileSystem);
+      TheFileSystem->attachUserStorage(storage.get());
+      return storage.release();
+    });
 
 		// Supplied game content is read-only. Patch-era archive deletion is retired.
 
 		// not part of the subsystem list, because it should normally never be reset!
-		TheNameKeyGenerator = MSGNEW("GameEngineSubsystem") NameKeyGenerator;
+		m_serviceOwners.create(TheNameKeyGenerator, [&] { return MSGNEW("GameEngineSubsystem") NameKeyGenerator; });
 		TheNameKeyGenerator->init();
 
 
@@ -319,7 +313,7 @@ void GameEngine::init( int argc, char *argv[] )
 
 
 		// not part of the subsystem list, because it should normally never be reset!
-		TheCommandList = MSGNEW("GameEngineSubsystem") CommandList;
+		m_serviceOwners.create(TheCommandList, [&] { return MSGNEW("GameEngineSubsystem") CommandList; });
 		TheCommandList->init();
 
     	#ifdef DUMP_PERF_STATS///////////////////////////////////////////////////////////////////////////
@@ -376,7 +370,7 @@ void GameEngine::init( int argc, char *argv[] )
 		parseCommandLine(argc, argv);
 
 		// doesn't require resets so just create a single instance here.
-		TheGameLODManager = MSGNEW("GameEngineSubsystem") GameLODManager;
+		m_serviceOwners.create(TheGameLODManager, [&] { return MSGNEW("GameEngineSubsystem") GameLODManager; });
 		TheGameLODManager->init();
 		
 		// after parsing the command line, we may want to perform dds stuff. Do that here.
@@ -419,13 +413,7 @@ void GameEngine::init( int argc, char *argv[] )
 		initSubsystem(TheTerrainTypes,"TheTerrainTypes", MSGNEW("GameEngineSubsystem") TerrainTypeCollection(), &xferCRC, "Data\\INI\\Default\\Terrain.ini", "Data\\INI\\Terrain.ini");
 		initSubsystem(TheTerrainRoads,"TheTerrainRoads", MSGNEW("GameEngineSubsystem") TerrainRoadCollection(), &xferCRC, "Data\\INI\\Default\\Roads.ini", "Data\\INI\\Roads.ini");
 		initSubsystem(TheGlobalLanguageData,"TheGlobalLanguageData",MSGNEW("GameEngineSubsystem") GlobalLanguage, NULL); // must be before the game text
-		initSubsystem(TheCDManager,"TheCDManager", CreateCDManager(), NULL);
-	#ifdef DUMP_PERF_STATS///////////////////////////////////////////////////////////////////////////
-	GetPrecisionTimer(&endTime64);//////////////////////////////////////////////////////////////////
-	sprintf(Buf,"----------------------------------------------------------------------------After TheCDManager = %f seconds \n",((double)(endTime64-startTime64)/(double)(freq64)));
-  startTime64 = endTime64;//Reset the clock ////////////////////////////////////////////////////////
-	DEBUG_LOG(("%s", Buf));////////////////////////////////////////////////////////////////////////////
-	#endif/////////////////////////////////////////////////////////////////////////////////////////////
+		// CD/DRM owners are excluded; retained audio validation follows unchanged.
 		initSubsystem(TheAudio,"TheAudio", createAudioManager(), NULL);
 		if (!TheAudio->isMusicAlreadyLoaded())
 			setQuitting(TRUE);
@@ -533,18 +521,6 @@ void GameEngine::init( int argc, char *argv[] )
 		initSubsystem(TheGameStateMap,"TheGameStateMap", MSGNEW("GameEngineSubsystem") GameStateMap, NULL, NULL, NULL );
 		initSubsystem(TheGameState,"TheGameState", MSGNEW("GameEngineSubsystem") GameState, NULL, NULL, NULL );
 
-		// Create the interface for sending game results
-		initSubsystem(TheGameResultsQueue,"TheGameResultsQueue", GameResultsInterface::createNewGameResultsInterface(), NULL, NULL, NULL, NULL);
-
-
-	#ifdef DUMP_PERF_STATS///////////////////////////////////////////////////////////////////////////
-	GetPrecisionTimer(&endTime64);//////////////////////////////////////////////////////////////////
-	sprintf(Buf,"----------------------------------------------------------------------------After TheGameResultsQueue = %f seconds \n",((double)(endTime64-startTime64)/(double)(freq64)));
-  startTime64 = endTime64;//Reset the clock ////////////////////////////////////////////////////////
-	DEBUG_LOG(("%s", Buf));////////////////////////////////////////////////////////////////////////////
-	#endif/////////////////////////////////////////////////////////////////////////////////////////////
-
-
 		xferCRC.close();
 		TheWritableGlobalData->m_iniCRC = xferCRC.getCRC();
 		DEBUG_LOG(("INI CRC is 0x%8.8X\n", TheGlobalData->m_iniCRC));
@@ -569,33 +545,6 @@ void GameEngine::init( int argc, char *argv[] )
 		// If this really needs to take place, please make sure that pressing cancel on the audio 
 		// load music dialog will still cause the game to quit.
 		// m_quitting = FALSE;
-
-		// for fingerprinting, we need to ensure the presence of these files
-
-
-#if !defined(_INTERNAL) && !defined(_DEBUG)
-		AsciiString dirName;
-    dirName = TheArchiveFileSystem->getArchiveFilenameForFile("generalsbzh.sec");
-
-    if (dirName.compareNoCase("genseczh.big") != 0)
-		{
-			DEBUG_LOG(("generalsbzh.sec was not found in genseczh.big - it was in '%s'\n", dirName.str()));
-			m_quitting = TRUE;
-		}
-		
-		dirName = TheArchiveFileSystem->getArchiveFilenameForFile("generalsazh.sec");
-		const char *noPath = dirName.reverseFind('\\');
-		if (noPath) {
-			dirName = noPath + 1;
-		}
-
-		if (dirName.compareNoCase("musiczh.big") != 0)
-		{
-			DEBUG_LOG(("generalsazh.sec was not found in musiczh.big - it was in '%s'\n", dirName.str()));
-			m_quitting = TRUE;
-		}
-#endif
-
 
 		// initialize the MapCache
 		TheMapCache = MSGNEW("GameEngineSubsystem") MapCache;
@@ -667,24 +616,12 @@ void GameEngine::init( int argc, char *argv[] )
 		//initDisabledMasks();
 		
 	}
-	catch (ErrorCode ec)
-	{
-		if (ec == ERROR_INVALID_D3D)
-		{
-			RELEASE_CRASHLOCALIZED("ERROR:D3DFailurePrompt", "ERROR:D3DFailureMessage");
-		}
-	}
-	catch (INIException e)
-	{
-		if (e.mFailureMessage)
-			RELEASE_CRASH((e.mFailureMessage));
-		else
-			RELEASE_CRASH(("Uncaught Exception during initialization."));
-
-	}
 	catch (...)
 	{
-		RELEASE_CRASH(("Uncaught Exception during initialization."));
+		// Propagate the original failure through GameMain's construction owner.
+		// Fatal presentation before unwinding bypasses acquired child cleanup;
+		// swallowing non-D3D errors continues with a partial simulation graph.
+		throw;
 	}
 
 	if(!TheGlobalData->m_playIntro)
@@ -761,7 +698,6 @@ void GameEngine::update( void )
 				TheNetwork->UPDATE();
 			}
 			 
-			TheCDManager->UPDATE();
 		}
 
 
@@ -774,9 +710,6 @@ void GameEngine::update( void )
 
 }
 
-// Horrible reference, but we really, really need to know if we are windowed.
-extern bool DX8Wrapper_IsWindowed;
-extern HWND ApplicationHWnd;
 
 /** -----------------------------------------------------------------------------------------------
  * The "main loop" of the game engine. It will not return until the game exits. 
@@ -784,9 +717,9 @@ extern HWND ApplicationHWnd;
 void GameEngine::execute( void )
 {
 	
-	DWORD prevTime = timeGetTime();
+	UnsignedInt prevTime = nativeMilliseconds();
 #if defined(_DEBUG) || defined(_INTERNAL)
-	DWORD startTime = timeGetTime() / 1000;
+	UnsignedInt startTime = nativeMilliseconds() / 1000;
 #endif
 
 	// pretty basic for now
@@ -807,7 +740,7 @@ void GameEngine::execute( void )
 				// enter only if in benchmark mode
 				if (TheGlobalData->m_benchmarkTimer > 0)
 				{
-					DWORD currentTime = timeGetTime() / 1000;
+					UnsignedInt currentTime = nativeMilliseconds() / 1000;
 					if (TheGlobalData->m_benchmarkTimer < currentTime - startTime)
 					{
 						if (TheGameLogic->isInGame())
@@ -830,7 +763,7 @@ void GameEngine::execute( void )
 					// compute a frame
 					update();
 				}
-				catch (INIException e)
+				catch (const INIException& e)
 				{
 					// Release CRASH doesn't return, so don't worry about executing additional code.
 					if (e.mFailureMessage)
@@ -861,7 +794,7 @@ void GameEngine::execute( void )
 		// I'm disabling this in internal because many people need alt-tab capability.  If you happen to be
 		// doing performance tuning, please just change this on your local system. -MDC
 		#if defined(_DEBUG) || defined(_INTERNAL)
-					::Sleep(1); // give everyone else a tiny time slice.
+					nativeSleepMilliseconds(1); // give everyone else a tiny time slice.
 		#endif
 
 
@@ -872,12 +805,12 @@ void GameEngine::execute( void )
 		#endif
           {
             // limit the framerate
-					  DWORD now = timeGetTime();
-					  DWORD limit = (1000.0f/m_maxFPS)-1;
+					  UnsignedInt now = nativeMilliseconds();
+					  UnsignedInt limit = nativeFrameDelayMilliseconds(m_maxFPS);
 					  while (TheGlobalData->m_useFpsLimit && (now - prevTime) < limit) 
 					  {
-						  ::Sleep(0);
-						  now = timeGetTime();
+						  nativeSleepMilliseconds(0);
+						  now = nativeMilliseconds();
 					  }
 					  //Int slept = now - prevTime;
 					  //DEBUG_LOG(("delayed %d\n",slept));
@@ -1001,4 +934,4 @@ void updateTGAtoDDS()
 // If we're using the Wide character version of MessageBox, then there's no additional
 // processing necessary. Please note that this is a sleazy way to get this information,
 // but pending a better one, this'll have to do.
-extern const Bool TheSystemIsUnicode = (((void*) (::MessageBox)) == ((void*) (::MessageBoxW)));
+extern const Bool TheSystemIsUnicode = TRUE;

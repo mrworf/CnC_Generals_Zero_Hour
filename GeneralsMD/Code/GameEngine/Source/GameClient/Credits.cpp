@@ -71,13 +71,13 @@ CreditsManager *TheCredits = NULL;
 const FieldParse CreditsManager::m_creditsFieldParseTable[] = 
 {
 
-	{ "ScrollRate",					INI::parseInt,											NULL, offsetof( CreditsManager, m_scrollRate )	},
-	{ "ScrollRateEveryFrames",	INI::parseInt,											NULL, offsetof( CreditsManager, m_scrollRatePerFrames )	},
-	{ "ScrollDown",					INI::parseBool,											NULL,	offsetof( CreditsManager, m_scrollDown )  },
-	{ "TitleColor",					INI::parseColorInt,									NULL,	offsetof( CreditsManager, m_titleColor )  },
-	{ "MinorTitleColor",		INI::parseColorInt,									NULL,	offsetof( CreditsManager, m_positionColor )  },
-	{ "NormalColor",				INI::parseColorInt,									NULL,	offsetof( CreditsManager, m_normalColor )  },
-	{ "Style",							INI::parseLookupList,								CreditStyleNames,	offsetof( CreditsManager, m_currentStyle )  },
+	{ "ScrollRate",					INI::parseInt,											NULL, static_cast<Int>(offsetof(CreditsManager, m_scrollRate))	},
+	{ "ScrollRateEveryFrames",	INI::parseInt,											NULL, static_cast<Int>(offsetof(CreditsManager, m_scrollRatePerFrames))	},
+	{ "ScrollDown",					INI::parseBool,											NULL,	static_cast<Int>(offsetof(CreditsManager, m_scrollDown))  },
+	{ "TitleColor",					INI::parseColorInt,									NULL,	static_cast<Int>(offsetof(CreditsManager, m_titleColor))  },
+	{ "MinorTitleColor",		INI::parseColorInt,									NULL,	static_cast<Int>(offsetof(CreditsManager, m_positionColor))  },
+	{ "NormalColor",				INI::parseColorInt,									NULL,	static_cast<Int>(offsetof(CreditsManager, m_normalColor))  },
+	{ "Style",							INI::parseLookupList,								CreditStyleNames,	static_cast<Int>(offsetof(CreditsManager, m_currentStyle))  },
 	{ "Blank",							CreditsManager::parseBlank,					NULL,	NULL  },
 	{ "Text",								CreditsManager::parseText,					NULL,	NULL  },
 

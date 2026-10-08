@@ -145,7 +145,8 @@ static const LadderInfo * getLadderInfo( void );
 
 static Bool isInfoShown(void)
 {
-	static NameKeyType parentStatsID = NAMEKEY("WOLQuickMatchMenu.wnd:ParentStats");
+	static const StaticNameKey nativeCached_parentStatsID("WOLQuickMatchMenu.wnd:ParentStats");
+	NameKeyType parentStatsID = nativeCached_parentStatsID.key();
 	GameWindow *parentStats = TheWindowManager->winGetWindowFromId( parentWOLQuickMatch, parentStatsID );
 	if (parentStats)
 		return !parentStats->winIsHidden();
@@ -154,7 +155,8 @@ static Bool isInfoShown(void)
 
 static void hideInfoGadgets(Bool doIt)
 {
-	static NameKeyType parentStatsID = NAMEKEY("WOLQuickMatchMenu.wnd:ParentStats");
+	static const StaticNameKey nativeCached_parentStatsID("WOLQuickMatchMenu.wnd:ParentStats");
+	NameKeyType parentStatsID = nativeCached_parentStatsID.key();
 	GameWindow *parentStats = TheWindowManager->winGetWindowFromId( parentWOLQuickMatch, parentStatsID );
 	if (parentStats)
 	{
@@ -164,7 +166,8 @@ static void hideInfoGadgets(Bool doIt)
 
 static void hideOptionsGadgets(Bool doIt)
 {
-	static NameKeyType parentOptionsID = NAMEKEY("WOLQuickMatchMenu.wnd:ParentOptions");
+	static const StaticNameKey nativeCached_parentOptionsID("WOLQuickMatchMenu.wnd:ParentOptions");
+	NameKeyType parentOptionsID = nativeCached_parentOptionsID.key();
 	GameWindow *parentOptions = TheWindowManager->winGetWindowFromId( parentWOLQuickMatch, parentOptionsID );
 	if (parentOptions)
 	{
@@ -191,7 +194,8 @@ static void enableOptionsGadgets(Bool doIt)
 #ifdef PERF_TEST
 	s_inQM = !doIt;
 #endif // PERF_TEST
-	static NameKeyType parentOptionsID = NAMEKEY("WOLQuickMatchMenu.wnd:ParentOptions");
+	static const StaticNameKey nativeCached_parentOptionsID("WOLQuickMatchMenu.wnd:ParentOptions");
+	NameKeyType parentOptionsID = nativeCached_parentOptionsID.key();
 	GameWindow *parentOptions = TheWindowManager->winGetWindowFromId( parentWOLQuickMatch, parentOptionsID );
 	const LadderInfo *li = getLadderInfo();
 	if (parentOptions)
@@ -1606,7 +1610,8 @@ WindowMsgHandledType WOLQuickMatchMenuSystem( GameWindow *window, UnsignedInt ms
 					break;
 				GameWindow *control = (GameWindow *)mData1;
 				Int controlID = control->winGetWindowId();
-				static NameKeyType buttonOptionsID = NAMEKEY("WOLQuickMatchMenu.wnd:ButtonOptions");
+				static const StaticNameKey nativeCached_buttonOptionsID("WOLQuickMatchMenu.wnd:ButtonOptions");
+				NameKeyType buttonOptionsID = nativeCached_buttonOptionsID.key();
 
 				if ( controlID == buttonStopID )
 				{

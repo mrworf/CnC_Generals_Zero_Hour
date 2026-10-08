@@ -156,6 +156,9 @@ public:
 		Destructor. Not too exciting... clean up the works and such.
 	*/
 	~UnicodeString();
+  void swap(UnicodeString& other) noexcept {
+    auto* prior=m_data;m_data=other.m_data;other.m_data=prior;
+  }
 
 	/**
 		Return the length, in characters (not bytes!), of the string.

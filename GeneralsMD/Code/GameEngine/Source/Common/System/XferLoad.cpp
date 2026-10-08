@@ -27,234 +27,89 @@
 // Desc:   Xfer implemenation for loading from disk
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-// USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
-#include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
-#include "Common/Debug.h"
-#include "Common/GameState.h"
-#include "Common/Snapshot.h"
+#include "PreRTS.h"
 #include "Common/XferLoad.h"
+#include "Common/NativeTransferWire.h"
+#include "Common/NativeTransferServices.h"
+#include "Common/Snapshot.h"
+#include <array>
+#include <cstring>
+#include <limits>
 
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-XferLoad::XferLoad( void )
-{
-
-	m_xferMode = XFER_LOAD;
-	m_fileFP = NULL;
-
-}  // end XferLoad
-
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-XferLoad::~XferLoad( void )
-{
-
-	// warn the user if a file was left open
-	if( m_fileFP != NULL )
-	{
-
-		DEBUG_CRASH(( "Warning: Xfer file '%s' was left open\n", m_identifier.str() ));
-		close();
-
-	}  // end if
-
-}  // end ~XferLoad
-
-//-------------------------------------------------------------------------------------------------
-/** Open file 'identifier' for reading */
-//-------------------------------------------------------------------------------------------------
-void XferLoad::open( AsciiString identifier )
-{
-
-	// sanity, check to see if we're already open
-	if( m_fileFP != NULL )
-	{
-
-		DEBUG_CRASH(( "Cannot open file '%s' cause we've already got '%s' open\n",
-									identifier.str(), m_identifier.str() ));
-		throw XFER_FILE_ALREADY_OPEN;
-
-	}  // end if
-
-	// call base class
-	Xfer::open( identifier );
-
-	// open the file
-	m_fileFP = fopen( identifier.str(), "rb" );
-	if( m_fileFP == NULL )
-	{
-		
-		DEBUG_CRASH(( "File '%s' not found\n", identifier.str() ));
-		throw XFER_FILE_NOT_FOUND;
-
-	}  // end if
-
-}  // end open
-
-//-------------------------------------------------------------------------------------------------
-/** Close our current file */
-//-------------------------------------------------------------------------------------------------
-void XferLoad::close( void )
-{
-
-	// sanity, if we don't have an open file we can do nothing
-	if( m_fileFP == NULL )
-	{
-
-		DEBUG_CRASH(( "Xfer close called, but no file was open\n" ));
-		throw XFER_FILE_NOT_OPEN;
-
-	}  // end if
-
-	// close the file
-	fclose( m_fileFP );
-	m_fileFP = NULL;
-
-	// erase the filename
-	m_identifier.clear();
-
-}  // end close
-
-//-------------------------------------------------------------------------------------------------
-/** Read a block size descriptor from the file at the current position */
-//-------------------------------------------------------------------------------------------------
-Int XferLoad::beginBlock( void )
-{
-
-	// sanity
-	DEBUG_ASSERTCRASH( m_fileFP != NULL, ("Xfer begin block - file pointer for '%s' is NULL\n",
-										 m_identifier.str()) );
-
-	// read block size
-	XferBlockSize blockSize;
-	if( fread( &blockSize, sizeof( XferBlockSize ), 1, m_fileFP ) != 1 )
-	{
-		
-		DEBUG_CRASH(( "Xfer - Error reading block size for '%s'\n", m_identifier.str() ));
-		return 0;
-
-	}  // end if
-
-	// return the block size
-	return blockSize;
-
-}  // end beginBlock
-
-// ------------------------------------------------------------------------------------------------
-/** End block ... this does nothing when reading */
-// ------------------------------------------------------------------------------------------------
-void XferLoad::endBlock( void )
-{
-
-}  // end endBlock
-
-//-------------------------------------------------------------------------------------------------
-/** Skip forward 'dataSize' bytes in the file */
-//-------------------------------------------------------------------------------------------------
-void XferLoad::skip( Int dataSize )
-{
-
-	// sanity
-	DEBUG_ASSERTCRASH( m_fileFP != NULL, ("XferLoad::skip - file pointer for '%s' is NULL\n",
-										 m_identifier.str()) );
-
-	// sanity
-	DEBUG_ASSERTCRASH( dataSize >=0, ("XferLoad::skip - dataSize '%d' must be greater than 0\n",
-										 dataSize) );
-
-	// skip datasize in the file from the current position
-	if( fseek( m_fileFP, dataSize, SEEK_CUR ) != 0 )
-		throw XFER_SKIP_ERROR;
-
-}  // end skip
-
-// ------------------------------------------------------------------------------------------------
-/** Entry point for xfering a snapshot */
-// ------------------------------------------------------------------------------------------------
-void XferLoad::xferSnapshot( Snapshot *snapshot )
-{
-
-	if( snapshot == NULL )
-	{
-
-		DEBUG_CRASH(( "XferLoad::xferSnapshot - Invalid parameters\n" ));
-		throw XFER_INVALID_PARAMETERS;
-
-	}  // end if
-
-	// run the xfer function of the snapshot
-	snapshot->xfer( this );
-
-	// add this snapshot to the game state for later post processing if not restricted
-	if( BitTest( getOptions(), XO_NO_POST_PROCESSING ) == FALSE )
-		TheGameState->addPostProcessSnapshot( snapshot );
-
-}  // end xferSnapshot
-
-// ------------------------------------------------------------------------------------------------
-/** Read string from file and store in ascii string */
-// ------------------------------------------------------------------------------------------------
-void XferLoad::xferAsciiString( AsciiString *asciiStringData )
-{
-	
-	// read bytes of string length to follow
-	UnsignedByte len;
-	xferUnsignedByte( &len );
-
-	// read all the string data
-	const Int MAX_XFER_LOAD_STRING_BUFFER = 1024;
-	static Char buffer[ MAX_XFER_LOAD_STRING_BUFFER ];
-
-	if( len > 0 )
-		xferUser( buffer, sizeof( Byte ) * len );
-	buffer[ len ] = 0;  // terminate
-
-	// save into ascii string
-	asciiStringData->set( buffer );
-
-}  // end xferAsciiString
-
-// ------------------------------------------------------------------------------------------------
-/** Read string from file and store in unicode string */
-// ------------------------------------------------------------------------------------------------
-void XferLoad::xferUnicodeString( UnicodeString *unicodeStringData )
-{
-	
-	// read bytes of string length to follow
-	UnsignedByte len;
-	xferUnsignedByte( &len );
-
-	// read all the string data
-	const Int MAX_XFER_LOAD_STRING_BUFFER = 1024;
-	static WideChar buffer[ MAX_XFER_LOAD_STRING_BUFFER ];
-
-	if( len > 0 )
-		xferUser( buffer, sizeof( WideChar ) * len );
-	buffer[ len ] = 0;  // terminate
-
-	// save into unicode string
-	unicodeStringData->set( buffer );
-
-}  // end xferUnicodeString
-
-//-------------------------------------------------------------------------------------------------
-/** Perform the read operation */
-//-------------------------------------------------------------------------------------------------
-void XferLoad::xferImplementation( void *data, Int dataSize )
-{
-
-	// sanity
-	DEBUG_ASSERTCRASH( m_fileFP != NULL, ("XferLoad - file pointer for '%s' is NULL\n",
-										 m_identifier.str()) );
-
-	// read data from file
-	if( fread( data, dataSize, 1, m_fileFP ) != 1 )
-	{
-
-		DEBUG_CRASH(( "XferLoad - Error reading from file '%s'\n", m_identifier.str() ));
-		throw XFER_READ_ERROR;
-
-	}  // end if
-	
-}  // end xferImplementation
-
+XferLoad::XferLoad() { m_xferMode=XFER_LOAD; }
+XferLoad::~XferLoad() { abort(); }
+void XferLoad::abort() noexcept {
+    std::vector<unsigned char>{}.swap(m_bytes);
+    m_position=0; m_open=false; m_identifier.clear();
+}
+void XferLoad::open(AsciiString identifier) {
+    FailureScope failure(*this);
+    if (m_open) throw XFER_FILE_ALREADY_OPEN;
+    if (!TheNativeUserStorage) throw XFER_FILE_NOT_OPEN;
+    auto candidate=TheNativeUserStorage->readFile(NativeUserArea::Data,
+        nativeTransferUserPath(*TheNativeUserStorage,identifier),
+        static_cast<std::size_t>(std::numeric_limits<Int>::max()));
+    if (!candidate) throw XFER_FILE_NOT_FOUND;
+    XferBase::open(identifier);
+    m_bytes=std::move(*candidate); m_position=0; m_open=true; m_failed=false;
+}
+void XferLoad::close() {
+    if (!m_open) throw XFER_FILE_NOT_OPEN;
+    abort();
+}
+Int XferLoad::beginBlock() {
+    FailureScope failure(*this);
+    XferBlockSize size=0;
+    xferImplementation(&size,sizeof size);
+    if (size<0 || static_cast<std::size_t>(size)>m_bytes.size()-m_position)
+        throw XFER_READ_ERROR;
+    return size;
+}
+void XferLoad::endBlock() {
+    FailureScope failure(*this);
+    if (!m_open || m_failed) throw XFER_FILE_NOT_OPEN;
+}
+void XferLoad::skip(Int count) {
+    FailureScope failure(*this);
+    if (!m_open || m_failed) throw XFER_FILE_NOT_OPEN;
+    if (count<0 || static_cast<std::size_t>(count)>m_bytes.size()-m_position)
+        throw XFER_SKIP_ERROR;
+    m_position+=static_cast<std::size_t>(count);
+}
+void XferLoad::xferSnapshot(Snapshot* snapshot) {
+    FailureScope failure(*this);
+    if (!m_open || m_failed) throw XFER_FILE_NOT_OPEN;
+    const auto services=nativeTransferServices();
+    if (!snapshot || (!BitTest(getOptions(),XO_NO_POST_PROCESSING) && !services.owner))
+        throw XFER_INVALID_PARAMETERS;
+    snapshot->xfer(this);
+    if (!BitTest(getOptions(),XO_NO_POST_PROCESSING))
+        services.postProcess(services.owner,snapshot);
+}
+void XferLoad::xferAsciiString(AsciiString* text) {
+    FailureScope failure(*this);
+    if (!text) throw XFER_INVALID_PARAMETERS;
+    UnsignedByte length=0; xferUnsignedByte(&length);
+    std::array<Char,256> bytes{};
+    if (length) xferUser(bytes.data(),length);
+    if (std::memchr(bytes.data(),0,length)) throw XFER_STRING_ERROR;
+    AsciiString candidate(bytes.data());
+    *text=candidate;
+}
+void XferLoad::xferUnicodeString(UnicodeString* text) {
+    FailureScope failure(*this);
+    if (!text) throw XFER_INVALID_PARAMETERS;
+    UnsignedByte length=0; xferUnsignedByte(&length);
+    std::array<unsigned char,510> bytes{};
+    if (length) xferUser(bytes.data(),static_cast<Int>(length)*2);
+    auto candidate=nativeTransferDecodeUTF16(std::span<const unsigned char>(bytes).first(std::size_t(length)*2));
+    *text=candidate;
+}
+void XferLoad::xferImplementation(void* bytes,Int count) {
+    FailureScope failure(*this);
+    if (!m_open || m_failed) throw XFER_FILE_NOT_OPEN;
+    if (count<0 || (count && !bytes)) throw XFER_INVALID_PARAMETERS;
+    if (static_cast<std::size_t>(count)>m_bytes.size()-m_position) throw XFER_READ_ERROR;
+    if (count) std::memcpy(bytes,m_bytes.data()+m_position,static_cast<std::size_t>(count));
+    m_position+=static_cast<std::size_t>(count);
+}

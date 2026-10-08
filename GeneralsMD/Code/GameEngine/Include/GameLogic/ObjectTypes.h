@@ -36,6 +36,7 @@
 #include "Common/Snapshot.h"
 
 class Player;
+class ThingTemplate;
 
 class ObjectTypes : public MemoryPoolObject,
 										public Snapshot

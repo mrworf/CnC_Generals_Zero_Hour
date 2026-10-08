@@ -51,6 +51,7 @@
 
 
 // Forward Declarations
+struct FieldParse;
 
 class AsciiString;
 class AudioEventRTS;
@@ -61,15 +62,15 @@ class Object;
 class SoundManager;
 
 
-enum AudioAffect;
-enum AudioType;
+enum AudioAffect : UnsignedInt;
+enum AudioType : UnsignedInt;
 
 struct AudioEventInfo;
 struct AudioRequest;
 struct AudioSettings;
 struct MiscAudio;
 
-typedef std::hash_map<AsciiString, AudioEventInfo*, rts::hash<AsciiString>, rts::equal_to<AsciiString> > AudioEventInfoHash;
+typedef std::unordered_map<AsciiString, AudioEventInfo*, rts::hash<AsciiString>, rts::equal_to<AsciiString> > AudioEventInfoHash;
 typedef AudioEventInfoHash::iterator AudioEventInfoHashIt;
 typedef UnsignedInt AudioHandle;
 

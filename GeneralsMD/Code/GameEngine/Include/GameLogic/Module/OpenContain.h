@@ -37,6 +37,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "GameLogic/Module/BehaviorModule.h"
+#include "WWMath/matrix3d.h"
 #include "GameLogic/Module/CollideModule.h"
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/UpdateModule.h"

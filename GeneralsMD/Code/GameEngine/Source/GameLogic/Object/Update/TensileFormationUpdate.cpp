@@ -65,7 +65,8 @@
 //---------------------------------------------------------------------------------
 TensileFormationUpdate* getTFU( Object *obj )
 {
-	static NameKeyType theTFUKey = TheNameKeyGenerator->nameToKey( "TensileFormationUpdate" );
+	static const StaticNameKey nativeCached_theTFUKey("TensileFormationUpdate");
+	NameKeyType theTFUKey = nativeCached_theTFUKey.key();
 	TensileFormationUpdate* tfu = (TensileFormationUpdate *)obj->findUpdateModule( theTFUKey );
 	return tfu;
 }

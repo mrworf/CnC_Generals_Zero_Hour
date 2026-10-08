@@ -34,7 +34,7 @@
 
 #include "GameLogic/Module/UpgradeModule.h"
 
-enum ModelConditionFlagType;
+enum ModelConditionFlagType : Int;
 //-----------------------------------------------------------------------------
 class ModelConditionUpgradeModuleData : public UpgradeModuleData
 {
@@ -64,5 +64,4 @@ protected:
 
 };
 #endif // _MODEL_CONDITION_UPGRADE_H
-
 

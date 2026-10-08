@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef __WEAPON_H_
 #define __WEAPON_H_
@@ -38,7 +39,7 @@
 
 #include "GameLogic/Damage.h"
 
-#include "WWMath/Matrix3D.h"
+#include "WWMath/matrix3d.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 struct FieldParse;
@@ -50,7 +51,7 @@ class Weapon;
 class WeaponTemplate;
 class INI;
 class ParticleSystemTemplate;
-enum NameKeyType;
+enum NameKeyType : Int;
 
 //-------------------------------------------------------------------------------------------------
 const Int NO_MAX_SHOTS_LIMIT = 0x7fffffff;
@@ -169,155 +170,9 @@ static const char *TheWeaponCollideMaskNames[] =
 // Note: these values are saved in save files, so you MUST NOT REMOVE OR CHANGE
 // existing values!
 //
-enum WeaponBonusConditionType
-{
-	// The access and use of this enum has the bit shifting built in, so this is a 0,1,2,3,4,5 enum
-	WEAPONBONUSCONDITION_INVALID = -1,
-
-	WEAPONBONUSCONDITION_GARRISONED = 0,
-	WEAPONBONUSCONDITION_HORDE,
-	WEAPONBONUSCONDITION_CONTINUOUS_FIRE_MEAN,
-	WEAPONBONUSCONDITION_CONTINUOUS_FIRE_FAST,
-	WEAPONBONUSCONDITION_NATIONALISM,
-	WEAPONBONUSCONDITION_PLAYER_UPGRADE,
-	WEAPONBONUSCONDITION_DRONE_SPOTTING,
-#ifdef ALLOW_DEMORALIZE
-	WEAPONBONUSCONDITION_DEMORALIZED,
-#else
-	WEAPONBONUSCONDITION_DEMORALIZED_OBSOLETE,
-#endif
-	WEAPONBONUSCONDITION_ENTHUSIASTIC,
-	WEAPONBONUSCONDITION_VETERAN,
-	WEAPONBONUSCONDITION_ELITE,
-	WEAPONBONUSCONDITION_HERO,
-	WEAPONBONUSCONDITION_BATTLEPLAN_BOMBARDMENT,
-	WEAPONBONUSCONDITION_BATTLEPLAN_HOLDTHELINE,
-	WEAPONBONUSCONDITION_BATTLEPLAN_SEARCHANDDESTROY,
-	WEAPONBONUSCONDITION_SUBLIMINAL,
-	WEAPONBONUSCONDITION_SOLO_HUMAN_EASY,
-	WEAPONBONUSCONDITION_SOLO_HUMAN_NORMAL,
-	WEAPONBONUSCONDITION_SOLO_HUMAN_HARD,
-	WEAPONBONUSCONDITION_SOLO_AI_EASY,
-	WEAPONBONUSCONDITION_SOLO_AI_NORMAL,
-	WEAPONBONUSCONDITION_SOLO_AI_HARD,
-	WEAPONBONUSCONDITION_TARGET_FAERIE_FIRE,
-  WEAPONBONUSCONDITION_FANATICISM, // FOR THE NEW GC INFANTRY GENERAL... adds to nationalism
-	WEAPONBONUSCONDITION_FRENZY_ONE,
-	WEAPONBONUSCONDITION_FRENZY_TWO,
-	WEAPONBONUSCONDITION_FRENZY_THREE,
-
-	WEAPONBONUSCONDITION_COUNT
-};
-#ifdef DEFINE_WEAPONBONUSCONDITION_NAMES
-static const char *TheWeaponBonusNames[] = 
-{
-	// This is a RHS enum (weapon.ini will have WeaponBonus = IT) so it is all caps
-	"GARRISONED",
-	"HORDE",
-	"CONTINUOUS_FIRE_MEAN",
-	"CONTINUOUS_FIRE_FAST",
-	"NATIONALISM",
-	"PLAYER_UPGRADE",
-	"DRONE_SPOTTING",
-#ifdef ALLOW_DEMORALIZE
-	"DEMORALIZED",
-#else
-	"DEMORALIZED_OBSOLETE",
-#endif
-	"ENTHUSIASTIC",
-	"VETERAN",
-	"ELITE",
-	"HERO",
-	"BATTLEPLAN_BOMBARDMENT",
-	"BATTLEPLAN_HOLDTHELINE",
-	"BATTLEPLAN_SEARCHANDDESTROY",
-	"SUBLIMINAL",
-	"SOLO_HUMAN_EASY",
-	"SOLO_HUMAN_NORMAL",
-	"SOLO_HUMAN_HARD",
-	"SOLO_AI_EASY",
-	"SOLO_AI_NORMAL",
-	"SOLO_AI_HARD",
-	"TARGET_FAERIE_FIRE",
-  "FANATICISM", // FOR THE NEW GC INFANTRY GENERAL... adds to nationalism
-	"FRENZY_ONE",
-	"FRENZY_TWO",
-	"FRENZY_THREE",
-
-	NULL
-};
-#endif
-
-// For WeaponBonusConditionFlags
-// part of detangling
-#include "GameLogic/WeaponBonusConditionFlags.h"
+#include "GameLogic/WeaponBonus.h"
 #include "GameLogic/WeaponStatus.h"
 
-//-------------------------------------------------------------------------------------------------
-class WeaponBonus
-{
-public:
-
-	enum Field
-	{
-		DAMAGE = 0,
-		RADIUS,
-		RANGE,
-		RATE_OF_FIRE,
-		PRE_ATTACK,
-
-		FIELD_COUNT	// keep last
-	};
-
-	WeaponBonus()
-	{
-		clear();
-	}
-
-	inline void clear()
-	{
-		for (int i = 0; i < FIELD_COUNT; ++i)
-			m_field[i] = 1.0f;
-	}
-
-	inline Real getField(Field f) const { return m_field[f]; }
-	inline void setField(Field f, Real v) { m_field[f] = v; }
-
-	void appendBonuses(WeaponBonus& bonus) const;
-
-private:
-	Real m_field[FIELD_COUNT];
-
-};
-
-#ifdef DEFINE_WEAPONBONUSFIELD_NAMES
-static const char *TheWeaponBonusFieldNames[] = 
-{
-	"DAMAGE",
-	"RADIUS",
-	"RANGE",
-	"RATE_OF_FIRE",
-	"PRE_ATTACK",
-	NULL
-};
-#endif
-
-
-//-------------------------------------------------------------------------------------------------
-class WeaponBonusSet : public MemoryPoolObject
-{
-	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( WeaponBonusSet, "WeaponBonusSet" )
-private:
-	WeaponBonus m_bonus[WEAPONBONUSCONDITION_COUNT];
-
-public:
-	void appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus) const;
-
-	void parseWeaponBonusSet(INI* ini);
-	static void parseWeaponBonusSet(INI* ini, void *instance, void* /*store*/, const void* /*userData*/);
-	static void parseWeaponBonusSetPtr(INI* ini, void *instance, void* /*store*/, const void* /*userData*/);
-};
-EMPTY_DTOR(WeaponBonusSet)
 
 //-------------------------------------------------------------------------------------------------
 struct HistoricWeaponDamageInfo
@@ -886,4 +741,3 @@ private:
 extern WeaponStore *TheWeaponStore;
 
 #endif // __WEAPON_H_
-

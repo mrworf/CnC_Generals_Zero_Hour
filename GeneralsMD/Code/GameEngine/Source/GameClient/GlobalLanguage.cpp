@@ -50,12 +50,15 @@
 //-----------------------------------------------------------------------------
 // USER INCLUDES //////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
+#include "Common/GlobalData.h"
 #include "PreRTS.h"
 
 #include "Common/INI.h"
+#include "Common/NameKeyGenerator.h"
+#include <utility>
 #include "Common/Registry.h"
 #include "GameClient/GlobalLanguage.h"
-#include "Common/Filesystem.h"
+#include "Common/FileSystem.h"
 
 //-----------------------------------------------------------------------------
 // DEFINES ////////////////////////////////////////////////////////////////////
@@ -121,55 +124,60 @@ GlobalLanguage::GlobalLanguage()
 	//End Add
 }
 
-GlobalLanguage::~GlobalLanguage()
+GlobalLanguage::~GlobalLanguage() = default;
+
+void GlobalLanguage::swapConfiguration(GlobalLanguage& other) noexcept
 {
-	StringListIt it = m_localFonts.begin();
-	while( it != m_localFonts.end())
-	{
-		AsciiString font = *it;
-		RemoveFontResource(font.str());
-		//SendMessage( HWND_BROADCAST, WM_FONTCHANGE, 0, 0);
-		++it;
-	}
+	m_unicodeFontName.swap(other.m_unicodeFontName);
+	m_unicodeFontFileName.swap(other.m_unicodeFontFileName);
+	m_localFonts.swap(other.m_localFonts);
+	m_copyrightFont.swap(other.m_copyrightFont);
+	m_messageFont.swap(other.m_messageFont);
+	m_militaryCaptionTitleFont.swap(other.m_militaryCaptionTitleFont);
+	m_militaryCaptionFont.swap(other.m_militaryCaptionFont);
+	m_superweaponCountdownNormalFont.swap(other.m_superweaponCountdownNormalFont);
+	m_superweaponCountdownReadyFont.swap(other.m_superweaponCountdownReadyFont);
+	m_namedTimerCountdownNormalFont.swap(other.m_namedTimerCountdownNormalFont);
+	m_namedTimerCountdownReadyFont.swap(other.m_namedTimerCountdownReadyFont);
+	m_drawableCaptionFont.swap(other.m_drawableCaptionFont);
+	m_defaultWindowFont.swap(other.m_defaultWindowFont);
+	m_defaultDisplayStringFont.swap(other.m_defaultDisplayStringFont);
+	m_tooltipFontName.swap(other.m_tooltipFontName);
+	m_nativeDebugDisplay.swap(other.m_nativeDebugDisplay);
+	m_drawGroupInfoFont.swap(other.m_drawGroupInfoFont);
+	m_creditsTitleFont.swap(other.m_creditsTitleFont);
+	m_creditsPositionFont.swap(other.m_creditsPositionFont);
+	m_creditsNormalFont.swap(other.m_creditsNormalFont);
+	std::swap(m_useHardWrap, other.m_useHardWrap);
+	std::swap(m_militaryCaptionSpeed, other.m_militaryCaptionSpeed);
+	std::swap(m_militaryCaptionDelayMS, other.m_militaryCaptionDelayMS);
+	std::swap(m_resolutionFontSizeAdjustment, other.m_resolutionFontSizeAdjustment);
 }
 
-void GlobalLanguage::init( void ) 
+void GlobalLanguage::init( void )
 {
-
+	if (!TheFileSystem || !TheNameKeyGenerator || TheGlobalLanguageData != this)
+		throw ERROR_BAD_ARG;
+	NameKeyTransaction keys(*TheNameKeyGenerator);
+	GlobalLanguage candidate(*this);
+	struct Publication {
+		GlobalLanguage* previous;
+		explicit Publication(GlobalLanguage& value) : previous(TheGlobalLanguageData) {
+			TheGlobalLanguageData = &value;
+		}
+		~Publication() noexcept { TheGlobalLanguageData = previous; }
+	} publication(candidate);
+	AsciiString filename;
+	filename.format("Data\\%s\\Language.ini", GetRegistryLanguage().str());
+	const INIBlockDefinition blocks[]{{"Language", INI::parseLanguageDefinition}};
 	INI ini;
-	AsciiString fname;
-	fname.format("Data\\%s\\Language.ini", GetRegistryLanguage().str());
-
-	OSVERSIONINFO	osvi;
-	osvi.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);
-
-	//GS NOTE: Must call doesFileExist in either case so that NameKeyGenerator will stay in sync
-	AsciiString tempName;
-	tempName.format("Data\\%s\\Language9x.ini", GetRegistryLanguage().str());
-	bool isExist = TheFileSystem->doesFileExist(tempName.str());
-	if (GetVersionEx(&osvi)  &&  osvi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS  && isExist)
-	{	//check if we're running Win9x variant since they may need different fonts
-		fname = tempName;
-	}
-
-
-	ini.load( fname, INI_LOAD_OVERWRITE, NULL );
-	StringListIt it = m_localFonts.begin();
-	while( it != m_localFonts.end())
-	{
-		AsciiString font = *it;
-		if(AddFontResource(font.str()) == 0)
-		{
-			DEBUG_ASSERTCRASH(FALSE,("GlobalLanguage::init Failed to add font %s", font.str()));
-		}
-		else
-		{
-			//SendMessage( HWND_BROADCAST, WM_FONTCHANGE, 0, 0);
-		}
-		++it;
-	}
-
-	
+	ini.loadBlocks(filename, INI_LOAD_OVERWRITE, blocks);
+	// Keep supplied font identities for native text output. No host font install
+	// or CWD lookup: only configured read-only assets may satisfy local fonts.
+	for (const auto& font : candidate.m_localFonts)
+		if (!TheFileSystem->doesFileExist(font.str())) throw INI_CANT_OPEN_FILE;
+	swapConfiguration(candidate);
+	keys.commit();
 }
 void GlobalLanguage::reset( void ) {}
 
@@ -208,4 +216,3 @@ FontDesc::FontDesc(void)
 //-----------------------------------------------------------------------------
 // PRIVATE FUNCTIONS //////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-

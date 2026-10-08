@@ -36,20 +36,13 @@
 //-----------------------------------------------------------------------------
 // USER INCLUDES //////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-#include "Common/GameSpyMiscPreferences.h"
 #include "Common/UserPreferences.h"
-#include "Common/LadderPreferences.h"
-#include "Common/Player.h"
-#include "Common/PlayerTemplate.h"
-#include "Common/Registry.h"
-#include "Common/QuickmatchPreferences.h"
-#include "Common/CustomMatchPreferences.h"
-#include "Common/IgnorePreferences.h"
-#include "Common/QuotedPrintable.h"
-#include "Common/MultiplayerSettings.h"
-#include "GameClient/MapUtil.h"
-#include "GameClient/ChallengeGenerals.h"
-#include "GameNetwork/GameSpy/PeerDefs.h"
+#include "Common/NativeUserStorage.h"
+#include <cerrno>
+#include <climits>
+#include <cmath>
+#include <string_view>
+#include <utility>
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -111,7 +104,7 @@ static AsciiString realAsStr(Real val)
 // UserPreferences Class 
 //-----------------------------------------------------------------------------
 
-UserPreferences::UserPreferences( void )
+UserPreferences::UserPreferences(NativeUserStorage* storage) : m_storage(storage)
 {
 }
 
@@ -119,60 +112,68 @@ UserPreferences::~UserPreferences( void )
 {
 }
 
-#define LINE_LEN 2048
 Bool UserPreferences::load(AsciiString fname)
 {
-//	if (strstr(fname.str(), "\\"))
-//		throw INI_INVALID_DATA;	// must be a leaf name
-
-	m_filename = TheGlobalData->getPath_UserData();
-	m_filename.concat(fname);
-
-	FILE *fp = fopen(m_filename.str(), "r");
-	if (fp)
-	{
-		char buf[LINE_LEN];
-		while( fgets( buf, LINE_LEN, fp ) != NULL )
-		{
-			AsciiString line = buf;
-			line.trim();
-
-			AsciiString key, val;
-			line.nextToken(&key, "=");
-			val = line.str() + 1;
-
-			key.trim();
-			val.trim();
-
-			if (key.isEmpty() || val.isEmpty())
-				continue;
-
-			(*this)[key] = val;
-		}  // end while
-		fclose(fp);
-		return true;
+	// Preference names are leaves. Never resolve them through the asset VFS.
+	const std::string_view name(fname.str(), fname.getLength());
+	if (name.empty() || name.find_first_of("/\\:") != name.npos ||
+		name == "." || name == "..")
+		throw NativeStorageError();
+	NativeUserStorage* storage = m_storage ? m_storage : TheNativeUserStorage;
+	if (!storage) throw NativeStorageError();
+	auto bytes = storage->readFile(NativeUserArea::Data, name, INT_MAX);
+	if (!bytes) {
+		// A missing first-boot file is accepted: retain values and the writable leaf.
+		m_filename.swap(fname);
+		return false;
 	}
-	return false;
+	if (std::find(bytes->begin(), bytes->end(), 0) != bytes->end())
+		throw NativeStorageError();
+	PreferenceMap candidate(*this); // original load overlays existing values
+	std::string_view remaining;
+	if (!bytes->empty())
+		remaining = std::string_view(reinterpret_cast<const char*>(bytes->data()), bytes->size());
+	while (!remaining.empty()) {
+		const auto newline = remaining.find('\n');
+		const auto row = remaining.substr(0, newline);
+		if (row.size() > AsciiString::MAX_LEN) throw NativeStorageError();
+		const auto equal = row.find('=');
+		if (equal != row.npos) {
+			AsciiString key(std::string(row.substr(0, equal)).c_str());
+			AsciiString value(std::string(row.substr(equal + 1)).c_str());
+			key.trim(); value.trim();
+			if (!key.isEmpty() && !value.isEmpty())
+				candidate.insert_or_assign(std::move(key), std::move(value));
+		}
+		if (newline == remaining.npos) break;
+		remaining.remove_prefix(newline + 1);
+	}
+	PreferenceMap::swap(candidate);
+	m_filename.swap(fname); // both publications are non-throwing
+	return true;
 }
 
-Bool UserPreferences::write( void )
+Bool UserPreferences::write()
 {
-	if (m_filename.isEmpty())
-		return false;
-
-	FILE *fp = fopen(m_filename.str(), "w");
-	if (fp)
-	{
-		PreferenceMap::const_iterator it = begin();
-		while (it != end())
-		{
-			fprintf(fp, "%s = %s\n", it->first.str(), it->second.str());
-			++it;
-		}
-		fclose(fp);
-		return true;
+	if (m_filename.isEmpty()) return false;
+	NativeUserStorage* storage = m_storage ? m_storage : TheNativeUserStorage;
+	if (!storage) throw NativeStorageError();
+	// Validate the complete map before opening a publication candidate.
+	for (const auto& [key, value] : *this) {
+		if (key.isEmpty() ||
+			std::strpbrk(key.str(), "=\r\n") || std::strpbrk(value.str(), "\r\n"))
+			throw NativeStorageError();
 	}
-	return false;
+	auto output = storage->beginWrite(NativeUserArea::Data, m_filename.str());
+	for (const auto& [key, value] : *this) {
+		output->write(key.str(), key.getLength());
+		output->write(" = ", 3);
+		output->write(value.str(), value.getLength());
+		output->write("\n", 1);
+	}
+	// A successful rename with uncertain directory durability is still published.
+	(void)output->commit();
+	return true;
 }
 
 Bool UserPreferences::getBool(AsciiString key, Bool defaultValue) const
@@ -195,7 +196,9 @@ Real UserPreferences::getReal(AsciiString key, Real defaultValue) const
 		return defaultValue;
 	}
 
-	return (Real)atof(val.str());
+	errno = 0;
+	const Real parsed = std::strtof(val.str(), nullptr);
+	return errno == ERANGE || !std::isfinite(parsed) ? defaultValue : parsed;
 }
 
 Int UserPreferences::getInt(AsciiString key, Int defaultValue) const
@@ -206,7 +209,10 @@ Int UserPreferences::getInt(AsciiString key, Int defaultValue) const
 		return defaultValue;
 	}
 
-	return atoi(val.str());
+	errno = 0;
+	const long parsed = std::strtol(val.str(), nullptr, 10);
+	return errno == ERANGE || parsed < INT_MIN || parsed > INT_MAX
+		? defaultValue : static_cast<Int>(parsed);
 }
 
 AsciiString UserPreferences::getAsciiString(AsciiString key, AsciiString defaultValue) const
@@ -222,747 +228,23 @@ AsciiString UserPreferences::getAsciiString(AsciiString key, AsciiString default
 
 void UserPreferences::setBool(AsciiString key, Bool val)
 {
-	(*this)[key] = boolAsStr(val);
+	insert_or_assign(std::move(key), boolAsStr(val));
 }
 
 void UserPreferences::setReal(AsciiString key, Real val)
 {
-	(*this)[key] = realAsStr(val);
+	if (!std::isfinite(val)) throw NativeStorageError();
+	insert_or_assign(std::move(key), realAsStr(val));
 }
 
 void UserPreferences::setInt(AsciiString key, Int val)
 {
-	(*this)[key] = intAsStr(val);
+	insert_or_assign(std::move(key), intAsStr(val));
 }
 
 void UserPreferences::setAsciiString(AsciiString key, AsciiString val)
 {
-	(*this)[key] = val;
+	insert_or_assign(std::move(key), std::move(val));
 }
 
-//-----------------------------------------------------------------------------
-// QuickMatchPreferences base class 
-//-----------------------------------------------------------------------------
-
-QuickMatchPreferences::QuickMatchPreferences()
-{
-	AsciiString userPrefFilename;
-	Int localProfile = TheGameSpyInfo->getLocalProfileID();
-	userPrefFilename.format("GeneralsOnline\\QMPref%d.ini", localProfile);
-	load(userPrefFilename);
-}
-
-QuickMatchPreferences::~QuickMatchPreferences()
-{
-}
-
-void QuickMatchPreferences::setMapSelected(const AsciiString& mapName, Bool selected)
-{
-	(*this)[AsciiStringToQuotedPrintable(mapName)] = (selected)?"1":"0";
-}
-
-Bool QuickMatchPreferences::isMapSelected(const AsciiString& mapName)
-{
-	Int ret;
-	QuickMatchPreferences::const_iterator it = find(AsciiStringToQuotedPrintable(mapName));
-	if (it == end())
-	{
-		return TRUE;
-	}
-
-	ret = atoi(it->second.str());
-
-	return (ret != 0);
-}
-
-void QuickMatchPreferences::setLastLadder(const AsciiString& addr, UnsignedShort port)
-{
-	AsciiString strVal;
-	strVal.format("%d", port);
-	(*this)["LastLadderAddr"] = addr;
-	(*this)["LastLadderPort"] = strVal;
-}
-
-AsciiString QuickMatchPreferences::getLastLadderAddr( void )
-{
-	QuickMatchPreferences::const_iterator it = find("LastLadderAddr");
-	if (it == end())
-	{
-		return AsciiString::TheEmptyString;
-	}
-	return it->second;
-}
-
-UnsignedShort QuickMatchPreferences::getLastLadderPort( void )
-{
-	QuickMatchPreferences::const_iterator it = find("LastLadderPort");
-	if (it == end())
-	{
-		return 0;
-	}
-	return atoi(it->second.str());
-}
-
-void QuickMatchPreferences::setMaxDisconnects(Int val)
-{
-	AsciiString strVal;
-	strVal.format("%d", val);
-	(*this)["MaxDisconnects"] = strVal;
-}
-
-Int QuickMatchPreferences::getMaxDisconnects( void )
-{
-	QuickMatchPreferences::const_iterator it = find("MaxDisconnects");
-	if (it == end())
-	{
-		return 0;
-	}
-	return atoi(it->second.str());
-}
-
-void QuickMatchPreferences::setMaxPoints(Int val)
-{
-	AsciiString strVal;
-	strVal.format("%d", val);
-	(*this)["MaxPoints"] = strVal;
-}
-
-Int QuickMatchPreferences::getMaxPoints( void )
-{
-	QuickMatchPreferences::const_iterator it = find("MaxPoints");
-	if (it == end())
-	{
-		return 1000;
-	}
-	return atoi(it->second.str());
-}
-
-void QuickMatchPreferences::setMinPoints(Int val)
-{
-	AsciiString strVal;
-	strVal.format("%d", val);
-	(*this)["MinPoints"] = strVal;
-}
-
-Int QuickMatchPreferences::getMinPoints( void )
-{
-	QuickMatchPreferences::const_iterator it = find("MinPoints");
-	if (it == end())
-	{
-		return 0;
-	}
-	return atoi(it->second.str());
-}
-
-void QuickMatchPreferences::setWaitTime(Int val)
-{
-	AsciiString strVal;
-	strVal.format("%d", val);
-	(*this)["WaitTime"] = strVal;
-}
-
-Int QuickMatchPreferences::getWaitTime( void )
-{
-	QuickMatchPreferences::const_iterator it = find("WaitTime");
-	if (it == end())
-	{
-		return 0;
-	}
-	return atoi(it->second.str());
-}
-
-void QuickMatchPreferences::setNumPlayers(Int val)
-{
-	AsciiString strVal;
-	strVal.format("%d", val);
-	(*this)["NumPlayers"] = strVal;
-}
-
-Int QuickMatchPreferences::getNumPlayers( void )
-{
-	QuickMatchPreferences::const_iterator it = find("NumPlayers");
-	if (it == end())
-	{
-		return 0;	// first in list, 1v1
-	}
-	return atoi(it->second.str());
-}
-
-void QuickMatchPreferences::setMaxPing(Int val)
-{
-	AsciiString strVal;
-	strVal.format("%d", val);
-	(*this)["MaxPing"] = strVal;
-}
-
-Int QuickMatchPreferences::getMaxPing( void )
-{
-	QuickMatchPreferences::const_iterator it = find("MaxPing");
-	if (it == end())
-	{
-		return 5;
-	}
-	return atoi(it->second.str());
-}
-
-void QuickMatchPreferences::setColor( Int val )
-{
-	setInt("Color", val);
-}
-
-Int QuickMatchPreferences::getColor( void )
-{
-	return getInt("Color", 0);
-}
-
-void QuickMatchPreferences::setSide( Int val )
-{
-	setInt("Side", val);
-}
-
-Int QuickMatchPreferences::getSide( void )
-{
-	return getInt("Side", 0);
-}
-
-//-----------------------------------------------------------------------------
-// CustomMatchPreferences base class 
-//-----------------------------------------------------------------------------
-
-CustomMatchPreferences::CustomMatchPreferences()
-{
-	AsciiString userPrefFilename;
-	Int localProfile = TheGameSpyInfo->getLocalProfileID();
-	userPrefFilename.format("GeneralsOnline\\CustomPref%d.ini", localProfile);
-	load(userPrefFilename);
-}
-
-CustomMatchPreferences::~CustomMatchPreferences()
-{
-}
-
-void CustomMatchPreferences::setLastLadder(const AsciiString& addr, UnsignedShort port)
-{
-	AsciiString strVal;
-	strVal.format("%d", port);
-	(*this)["LastLadderAddr"] = addr;
-	(*this)["LastLadderPort"] = strVal;
-}
-
-AsciiString CustomMatchPreferences::getLastLadderAddr( void )
-{
-	QuickMatchPreferences::const_iterator it = find("LastLadderAddr");
-	if (it == end())
-	{
-		return AsciiString::TheEmptyString;
-	}
-	return it->second;
-}
-
-UnsignedShort CustomMatchPreferences::getLastLadderPort( void )
-{
-	QuickMatchPreferences::const_iterator it = find("LastLadderPort");
-	if (it == end())
-	{
-		return 0;
-	}
-	return atoi(it->second.str());
-}
-
-Int CustomMatchPreferences::getPreferredColor(void)
-{
-	Int ret;
-	CustomMatchPreferences::const_iterator it = find("Color");
-	if (it == end())
-	{
-		return -1;
-	}
-
-	ret = atoi(it->second.str());
-	if (ret < -1 || ret >= TheMultiplayerSettings->getNumColors())
-		ret = -1;
-
-	return ret;
-}
-
-void CustomMatchPreferences::setPreferredColor(Int val)
-{
-	AsciiString s;
-	s.format("%d", val);
-	(*this)["Color"] = s;
-}
-
-Int CustomMatchPreferences::getChatSizeSlider(void)
-{
-	Int ret;
-	CustomMatchPreferences::const_iterator it = find("ChatSlider");
-	if (it == end())
-	{
-		return 45;
-	}
-
-	ret = atoi(it->second.str());
-	if (ret < 0 || ret > 100)
-		ret = 45;
-
-	return ret;
-}
-
-void CustomMatchPreferences::setChatSizeSlider(Int val)
-{
-	AsciiString s;
-	s.format("%d", val);
-	(*this)["ChatSlider"] = s;
-}
-
-Int CustomMatchPreferences::getPreferredFaction(void)
-{
-	Int ret;
-	CustomMatchPreferences::const_iterator it = find("PlayerTemplate");
-	if (it == end())
-	{
-		return PLAYERTEMPLATE_RANDOM;
-	}
-
-	ret = atoi(it->second.str());
-	if (ret == PLAYERTEMPLATE_OBSERVER || ret < PLAYERTEMPLATE_MIN || ret >= ThePlayerTemplateStore->getPlayerTemplateCount())
-		ret = PLAYERTEMPLATE_RANDOM;
-
-	if (ret >= 0)
-	{
-		const PlayerTemplate *fac = ThePlayerTemplateStore->getNthPlayerTemplate(ret);
-		if (!fac)
-			ret = PLAYERTEMPLATE_RANDOM;
-		else if (fac->getStartingBuilding().isEmpty())
-			ret = PLAYERTEMPLATE_RANDOM;
-		else if (TheGameInfo && TheGameInfo->oldFactionsOnly() && !fac->isOldFaction())
-			ret = PLAYERTEMPLATE_RANDOM;
-		else {
-			// Prevent from loading the disabled Generals, in case you had previously selected one as your preferred faction.
-			// This is also enforced at GUI setup (GUIUtil.cpp and GameLogic.cpp).
-			// @todo: unlock these when something rad happens
-			Bool disallowLockedGenerals = TRUE;
-			const GeneralPersona *general = TheChallengeGenerals->getGeneralByTemplateName(fac->getName());
-			Bool startsLocked = general ? !general->isStartingEnabled() : FALSE;
-			if (disallowLockedGenerals && startsLocked)
-				ret = PLAYERTEMPLATE_RANDOM;
-		}
-	}
-
-	return ret;
-}
-
-void CustomMatchPreferences::setPreferredFaction(Int val)
-{
-	AsciiString s;
-	s.format("%d", val);
-	(*this)["PlayerTemplate"] = s;
-}
-
-Bool CustomMatchPreferences::usesSystemMapDir(void)
-{
-	CustomMatchPreferences::const_iterator it = find("UseSystemMapDir");
-	if (it == end())
-		return TRUE;
-
-	if (stricmp(it->second.str(), "1") == 0) {
-		return TRUE;
-	}
-	return FALSE;
-}
-
-void CustomMatchPreferences::setUsesSystemMapDir(Bool val)
-{
-	AsciiString s;
-	s.format("%d", val);
-	(*this)["UseSystemMapDir"] = s;
-}
-
-Bool CustomMatchPreferences::usesLongGameList(void)
-{
-	return TRUE;
-	CustomMatchPreferences::const_iterator it = find("UseLongGameList");
-	if (it == end())
-		return FALSE;
-
-	if (stricmp(it->second.str(), "1") == 0) {
-		return TRUE;
-	}
-	return FALSE;
-}
-
-void CustomMatchPreferences::setUsesLongGameList(Bool val)
-{
-	AsciiString s;
-	s.format("%d", val);
-	(*this)["UseLongGameList"] = s;
-}
-
-Bool CustomMatchPreferences::allowsObservers(void)
-{
-	CustomMatchPreferences::const_iterator it = find("AllowObservers");
-	if (it == end())
-		return TRUE;
-
-	if (stricmp(it->second.str(), "1") == 0) {
-		return TRUE;
-	}
-	return FALSE;
-}
-
-void CustomMatchPreferences::setAllowsObserver(Bool val)
-{
-	AsciiString s;
-	s.format("%d", val);
-	(*this)["AllowObservers"] = s;
-}
-
-Bool CustomMatchPreferences::getDisallowAsianText( void )
-{
-	CustomMatchPreferences::const_iterator it = find("DisallowAsianText");
-	if (it == end())
-	{
-		// since English Win98 machines don't have a Unicode font installed by default,
-		// we're forced to disable asian chat by default for English builds.
-		if (GetRegistryLanguage().compareNoCase("chinese") == 0 || GetRegistryLanguage().compareNoCase("korean") == 0 )
-			return FALSE;
-		else
-			return TRUE;
-	}
-
-	if (stricmp(it->second.str(), "1") == 0) {
-		return TRUE;
-	}
-	return FALSE;
-}
-
-void CustomMatchPreferences::setDisallowAsianText(Bool val)
-{
-	AsciiString s;
-	s.format("%d", val);
-	(*this)["DisallowAsianText"] = s;
-
-}
-
-Bool CustomMatchPreferences::getDisallowNonAsianText( void )
-{
-	CustomMatchPreferences::const_iterator it = find("DisallowNonAsianText");
-	if (it == end())
-		return FALSE;
-
-	if (stricmp(it->second.str(), "1") == 0) {
-		return TRUE;
-	}
-	return FALSE;
-}
-
-void CustomMatchPreferences::setDisallowNonAsianText( Bool val )
-{
-	AsciiString s;
-	s.format("%d", val);
-	(*this)["DisallowNonAsianText"] = s;
-}
-
-AsciiString CustomMatchPreferences::getPreferredMap(void)
-{
-	AsciiString ret;
-	CustomMatchPreferences::const_iterator it = find("Map");
-	if (it == end())
-	{	//found find map, use default instead
-		ret = getDefaultOfficialMap();
-		return ret;
-	}
-
-	ret = QuotedPrintableToAsciiString(it->second);
-	ret.trim();
-	if (ret.isEmpty() || !isValidMap(ret, TRUE))
-	{	//map is invalid, use default instead
-		ret = getDefaultOfficialMap();
-		return ret;
-	}
-	
-	//can only use official maps if recording stats
-	if( getUseStats() && !isOfficialMap(ret) )
-		ret = getDefaultOfficialMap();
-	return ret;
-}
-
-void CustomMatchPreferences::setPreferredMap(AsciiString val)
-{
-	(*this)["Map"] = AsciiStringToQuotedPrintable(val);
-}
-
-
-static const char superweaponRestrictionKey[] = "SuperweaponRestrict";
-
-Bool CustomMatchPreferences::getSuperweaponRestricted(void) const
-{
-  const_iterator it = find(superweaponRestrictionKey);
-  if (it == end())
-  {
-    return false;
-  }
-  
-  return ( it->second.compareNoCase( "yes" ) == 0 );
-}
-
-void CustomMatchPreferences::setSuperweaponRestricted( Bool superweaponRestricted )
-{
-  (*this)[superweaponRestrictionKey] = superweaponRestricted ? "Yes" : "No";
-}
-
-static const char startingCashKey[] = "StartingCash";
-Money CustomMatchPreferences::getStartingCash(void) const
-{
-  const_iterator it = find(startingCashKey);
-  if (it == end())
-  {
-    return TheMultiplayerSettings->getDefaultStartingMoney();
-  }
-  
-  Money money;
-  money.deposit( strtoul( it->second.str(), NULL, 10 ), FALSE  );
-  
-  return money;
-}
-
-void CustomMatchPreferences::setStartingCash( const Money & startingCash )
-{
-  AsciiString option;
-  
-  option.format( "%d", startingCash.countMoney() );
-  
-  (*this)[startingCashKey] = option;
-}
-
-
-static const char limitFactionsKey[] = "LimitArmies";
-
-// Prefers to only use the original 3 sides, not USA Air Force General, GLA Toxin General, et al
-Bool CustomMatchPreferences::getFactionsLimited(void) const
-{
-  const_iterator it = find(limitFactionsKey);
-  if (it == end())
-  {
-    return false; // The default
-  }
-  
-  return ( it->second.compareNoCase( "yes" ) == 0 );
-}
-
-void CustomMatchPreferences::setFactionsLimited( Bool factionsLimited )
-{
-  (*this)[limitFactionsKey] = factionsLimited ? "Yes" : "No";
-}
-
-
-static const char useStatsKey[] = "UseStats";
-
-Bool CustomMatchPreferences::getUseStats(void) const
-{
-  const_iterator it = find(useStatsKey);
-  if (it == end())
-  {
-    return true; // The default
-  }
-  
-  return ( it->second.compareNoCase( "yes" ) == 0 );
-}
-
-void CustomMatchPreferences::setUseStats( Bool useStats )
-{
-  (*this)[useStatsKey] = useStats ? "Yes" : "No";
-}
-
-//-----------------------------------------------------------------------------
-// GameSpyMiscPreferences base class 
-//-----------------------------------------------------------------------------
-
-GameSpyMiscPreferences::GameSpyMiscPreferences()
-{
-	AsciiString userPrefFilename;
-	Int localProfile = TheGameSpyInfo->getLocalProfileID();
-	userPrefFilename.format("GeneralsOnline\\GSMiscPref%d.ini", localProfile);
-	load(userPrefFilename);
-}
-
-GameSpyMiscPreferences::~GameSpyMiscPreferences()
-{
-}
-
-Int GameSpyMiscPreferences::getLocale( void )
-{
-	return getInt("Locale", 0);
-}
-
-void GameSpyMiscPreferences::setLocale( Int val )
-{
-	setInt("Locale", val);
-}
-
-AsciiString GameSpyMiscPreferences::getCachedStats( void )
-{
-	return getAsciiString("CachedStats", AsciiString::TheEmptyString);
-}
-
-void GameSpyMiscPreferences::setCachedStats( AsciiString val )
-{
-	setAsciiString("CachedStats", val);
-}
-
-Bool GameSpyMiscPreferences::getQuickMatchResLocked( void )
-{
-	return getBool("QMResLock", FALSE);
-}
-
-Int GameSpyMiscPreferences::getMaxMessagesPerUpdate( void )
-{
-	return getInt("MaxMessagesPerUpdate", 100);
-}
-//-----------------------------------------------------------------------------
-// IgnorePreferences base class 
-//-----------------------------------------------------------------------------
-
-IgnorePreferences::IgnorePreferences()
-{
-	AsciiString userPrefFilename;
-//	if(!TheGameSpyInfo)
-	Int localProfile = TheGameSpyInfo->getLocalProfileID();
-	userPrefFilename.format("GeneralsOnline\\IgnorePref%d.ini", localProfile);
-	load(userPrefFilename);
-}
-
-IgnorePreferences::~IgnorePreferences()
-{
-}
-
-void IgnorePreferences::setIgnore(const AsciiString& userName, Int profileID, Bool ignore)
-{
-	AsciiString strVal;
-	strVal.format("%d", profileID);
-	if (ignore)
-	{
-		(*this)[strVal] = userName;
-	}
-	else
-	{
-		erase(strVal);
-	}
-}
-
-IgnorePrefMap IgnorePreferences::getIgnores(void)
-{
-	IgnorePrefMap ignores;
-	
-	IgnorePreferences::iterator it;
-	for (it = begin(); it != end(); ++it)
-	{
-		AsciiString profileStr = it->first;
-		AsciiString lastLoginStr = it->second;
-		Int profileID = atoi(profileStr.str());
-
-		ignores[profileID] = lastLoginStr;
-	}
-
-	return ignores;
-}
-
-//-----------------------------------------------------------------------------
-// LadderPreferences base class 
-//-----------------------------------------------------------------------------
-
-LadderPreferences::LadderPreferences()
-{
-}
-
-LadderPreferences::~LadderPreferences()
-{
-}
-
-Bool LadderPreferences::loadProfile( Int profileID )
-{
-	clear();
-	m_ladders.clear();
-	AsciiString userPrefFilename;
-	userPrefFilename.format("GeneralsOnline\\Ladders%d.ini", profileID);
-	Bool success = load(userPrefFilename);
-	if (!success)
-		return success;
-
-	// parse out our ladders
-	for (LadderPreferences::iterator it = begin(); it != end(); ++it)
-	{
-		LadderPref p;
-		AsciiString ladName = it->first;
-		AsciiString ladData = it->second;
-
-		DEBUG_LOG(("Looking at [%s] = [%s]\n", ladName.str(), ladData.str()));
-
-		const char *ptr = ladName.reverseFind(':');
-		DEBUG_ASSERTCRASH(ptr, ("Did not find ':' in ladder name - skipping"));
-		if (!ptr)
-			continue;
-
-		p.port = atoi( ptr + 1 );
-		for (Int i=0; i<strlen(ptr); ++i)
-		{
-			ladName.removeLastChar();
-		}
-		p.address = QuotedPrintableToAsciiString(ladName);
-
-		ptr = ladData.reverseFind(':');
-		DEBUG_ASSERTCRASH(ptr, ("Did not find ':' in ladder data - skipping"));
-		if (!ptr)
-			continue;
-
-		p.lastPlayDate = atoi( ptr + 1 );
-		for (i=0; i<strlen(ptr); ++i)
-		{
-			ladData.removeLastChar();
-		}
-		p.name = QuotedPrintableToUnicodeString(ladData);
-
-		m_ladders[p.lastPlayDate] = p;
-	}
-
-	return true;
-}
-
-bool LadderPreferences::write( void )
-{
-	clear();
-	LadderPrefMap::iterator lpIt;
-
-	static const Int MAX_LADDERS = 5;
-	Int count;
-	for (lpIt = m_ladders.begin(), count=0; lpIt != m_ladders.end() && count<MAX_LADDERS; ++lpIt, ++count)
-	{
-		LadderPref p = lpIt->second;
-		AsciiString ladName;
-		AsciiString ladData;
-		ladName.format("%s:%d", AsciiStringToQuotedPrintable(p.address).str(), p.port);
-		ladData.format("%s:%d", UnicodeStringToQuotedPrintable(p.name).str(), p.lastPlayDate);
-		(*this)[ladName] = ladData;
-	}
-
-	return UserPreferences::write();
-}
-
-const LadderPrefMap& LadderPreferences::getRecentLadders( void )
-{
-	return m_ladders;
-}
-
-void LadderPreferences::addRecentLadder( LadderPref ladder )
-{
-	for (LadderPrefMap::iterator it = m_ladders.begin(); it != m_ladders.end(); ++it)
-	{
-		if (it->second == ladder)
-		{
-			m_ladders.erase(it);
-			break;
-		}
-	}
-
-	m_ladders[ladder.lastPlayDate] = ladder;
-}
+// Obsolete Internet profile preferences are excluded from the native runtime.

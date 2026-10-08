@@ -51,7 +51,7 @@
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/ObjectIter.h"
-#include "GameLogic/Weaponset.h"
+#include "GameLogic/WeaponSet.h"
 #include "GameLogic/Weapon.h"
 #include "GameLogic/TerrainLogic.h"
 #include "GameLogic/Module/SpecialPowerModule.h"
@@ -775,7 +775,8 @@ void BattlePlanUpdate::setBattlePlan( BattlePlanStatus plan )
 				//Remove stealth detection
 				if( data->m_strategyCenterSearchAndDestroyDetectsStealth )
 				{
-					static NameKeyType key_StealthDetectorUpdate = NAMEKEY( "StealthDetectorUpdate" );
+					static const StaticNameKey nativeCached_key_StealthDetectorUpdate("StealthDetectorUpdate");
+					NameKeyType key_StealthDetectorUpdate = nativeCached_key_StealthDetectorUpdate.key();
 					StealthDetectorUpdate *update = (StealthDetectorUpdate*)obj->findUpdateModule( key_StealthDetectorUpdate );
 					if( update )
 					{
@@ -836,7 +837,8 @@ void BattlePlanUpdate::setBattlePlan( BattlePlanStatus plan )
 				//Enable stealth detection
 				if( data->m_strategyCenterSearchAndDestroyDetectsStealth )
 				{
-					static NameKeyType key_StealthDetectorUpdate = NAMEKEY( "StealthDetectorUpdate" );
+					static const StaticNameKey nativeCached_key_StealthDetectorUpdate("StealthDetectorUpdate");
+					NameKeyType key_StealthDetectorUpdate = nativeCached_key_StealthDetectorUpdate.key();
 					StealthDetectorUpdate *update = (StealthDetectorUpdate*)obj->findUpdateModule( key_StealthDetectorUpdate );
 					if( update )
 					{

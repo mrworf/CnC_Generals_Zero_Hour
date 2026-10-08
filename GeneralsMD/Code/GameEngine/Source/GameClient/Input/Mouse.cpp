@@ -27,7 +27,8 @@
 // Desc:      Basic mouse interactions
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "PreRTS.h"
+#include "Common/NativeClock.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "Common/Debug.h"
 #include "Common/MessageStream.h"
@@ -340,7 +341,7 @@ void Mouse::processMouseEvent( Int index )
 //			if (!m_displayTooltip)
 //			{
 //				m_highlightPos = 0;
-//				m_highlightUpdateStart = timeGetTime();
+//				m_highlightUpdateStart = nativeMilliseconds();
 //			}
 //
 //			// display tooltip for current window
@@ -671,7 +672,7 @@ void Mouse::createStreamMessages( void )
 		return;  // no place to put messages
 
 	GameMessage *msg = NULL;
-	UnsignedInt now = timeGetTime();
+	UnsignedInt now = nativeMilliseconds();
 
 	// basic position messages are always created
 	msg = TheMessageStream->appendMessage( GameMessage::MSG_RAW_MOUSE_POSITION );
@@ -692,7 +693,7 @@ void Mouse::createStreamMessages( void )
 		if (!m_displayTooltip)
 		{
 			m_highlightPos = 0;
-			m_highlightUpdateStart = timeGetTime();
+			m_highlightUpdateStart = nativeMilliseconds();
 		}
 
 		// display tooltip for current window
@@ -977,7 +978,7 @@ void Mouse::draw( void )
 // ------------------------------------------------------------------------------------------------
 void Mouse::resetTooltipDelay( void )
 {
-	m_stillTime = timeGetTime();
+	m_stillTime = nativeMilliseconds();
 	m_displayTooltip = FALSE;
 }
 
@@ -1010,7 +1011,7 @@ void Mouse::drawTooltip( void )
 			yPos -= /*40 +*/ height;
 		}
 
-		Int boxWidth = (m_tooltipAnimateBackground)?(min(width, m_highlightPos)):width;
+		Int boxWidth = (m_tooltipAnimateBackground)?(std::min(width, m_highlightPos)):width;
 
 #define GMC(x) GameMakeColor(x.red, x.green, x.blue, x.alpha)
 #define COLOR(x) GMC(m_tooltipColor##x)
@@ -1038,7 +1039,7 @@ void Mouse::drawTooltip( void )
 		// get ready for the next part of the anim
 		if (m_highlightPos < width + HIGHLIGHT_WIDTH)
 		{
-			UnsignedInt now = timeGetTime();
+			UnsignedInt now = nativeMilliseconds();
 			m_highlightPos = (width*(now-m_highlightUpdateStart))/m_tooltipFillTime;
 		}
 	}  // end if
@@ -1225,5 +1226,3 @@ void INI::parseMouseDefinition( INI* ini )
 		ini->initFromINI( TheMouse, TheMouseFieldParseTable );
 	}
 }
-
-

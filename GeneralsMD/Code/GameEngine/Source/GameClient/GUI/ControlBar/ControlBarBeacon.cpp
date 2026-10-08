@@ -47,9 +47,12 @@ void ControlBar::populateBeacon( Object *beacon )
 	// set the portrait for the thing being constructed
 	setPortraitByObject( beacon );
 
-	static NameKeyType textID = NAMEKEY("ControlBar.wnd:EditBeaconText");
-	static NameKeyType staticTextID = NAMEKEY("ControlBar.wnd:StaticTextBeaconLabel");
-	static NameKeyType clearButtonID = NAMEKEY("ControlBar.wnd:ButtonClearBeaconText");
+	static const StaticNameKey nativeCached_textID("ControlBar.wnd:EditBeaconText");
+	NameKeyType textID = nativeCached_textID.key();
+	static const StaticNameKey nativeCached_staticTextID("ControlBar.wnd:StaticTextBeaconLabel");
+	NameKeyType staticTextID = nativeCached_staticTextID.key();
+	static const StaticNameKey nativeCached_clearButtonID("ControlBar.wnd:ButtonClearBeaconText");
+	NameKeyType clearButtonID = nativeCached_clearButtonID.key();
 
 	GameWindow *textEntryWin = TheWindowManager->winGetWindowFromId(NULL, textID);
 	GameWindow *staticTextWin = TheWindowManager->winGetWindowFromId(NULL, staticTextID);

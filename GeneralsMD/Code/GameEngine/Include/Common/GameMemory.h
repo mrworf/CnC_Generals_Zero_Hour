@@ -55,6 +55,7 @@
 #include <new>
 #include <unordered_set>
 #include <string>
+#include <string_view>
 #include <cstddef>
 #include <mutex>
 std::recursive_mutex& originalPoolMutex();
@@ -618,6 +619,10 @@ extern void userMemoryManagerGetDmaParms(Int *numSubPools, const PoolInitRec **p
 	to initialize the pools to be used. (You can define an empty function if you like.)
 */
 extern void userMemoryManagerInitPools();
+
+// Startup-only: publish a complete rooted profile before definition pools exist.
+// Missing profiles use compiled defaults. Live pools are never resized.
+extern void userMemoryLoadPoolProfile(std::string_view profile);
 
 /**
 	This function is declared in this header, but is not defined anywhere -- you must provide

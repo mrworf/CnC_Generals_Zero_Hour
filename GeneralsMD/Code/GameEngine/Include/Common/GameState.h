@@ -37,7 +37,9 @@
 #include "Common/Snapshot.h"
 #include "Common/SubsystemInterface.h"
 #include "Common/UnicodeString.h"
+#include "Common/NativeCalendar.h"
 #include "GameNetwork/NetworkDefs.h"
+#include <utility>
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class GameWindow;
@@ -99,6 +101,17 @@ public:
 
 	SaveGameInfo( void );
 	~SaveGameInfo( void );
+	void swap(SaveGameInfo& other) noexcept {
+		saveGameMapName.swap(other.saveGameMapName);
+		pristineMapName.swap(other.pristineMapName);
+		mapLabel.swap(other.mapLabel);
+		campaignSide.swap(other.campaignSide);
+		description.swap(other.description);
+		missionMapName.swap(other.missionMapName);
+		std::swap(date,other.date);
+		std::swap(missionNumber,other.missionNumber);
+		std::swap(saveFileType,other.saveFileType);
+	}
 
 	AsciiString saveGameMapName;			// map name of the "scratch pad" map extracted from save file
 	AsciiString pristineMapName;			// pristine map in the map or user maps directory
@@ -240,8 +253,7 @@ private:
 extern GameState *TheGameState;	
 
 
-UnicodeString getUnicodeTimeBuffer(SYSTEMTIME timeVal); 
-UnicodeString getUnicodeDateBuffer(SYSTEMTIME timeVal); 
+// Native calendar formatting is declared by Common/NativeCalendar.h.
 
 
 #endif  // end __GAME_STATE_H_

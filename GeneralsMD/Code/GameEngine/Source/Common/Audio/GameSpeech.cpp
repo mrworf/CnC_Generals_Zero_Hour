@@ -199,7 +199,7 @@ class Speaker : public SpeakerInterface
 };
 
 typedef std::vector<Speech> VecSpeech;
-typedef std::hash_map<const char*, Speech, std::hash<const char*>, rts::equal_to<const char*> > HashSpeech;
+typedef std::unordered_map<const char*, Speech, rts::hash<const char*>, rts::equal_to<const char*> > HashSpeech;
 
 //===============================
 // SpeechManager: 
@@ -357,7 +357,7 @@ SpeechManager::SpeechManager()
 	m_device(NULL),
 	m_masterAttribs(NULL),
 	m_masterFadeAttribs(NULL),
-	m_speech(NULL),
+	m_speech(),
 	m_count(0)
 {
 	if( (m_masterFadeAttribs = NEW AudioAttribs) != 0 )		// poolify

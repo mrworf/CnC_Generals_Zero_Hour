@@ -35,6 +35,7 @@
 #include "Common/BitFlags.h"
 #include "Common/INI.h"
 #include "Common/Xfer.h"
+#include <array>
 
 //-------------------------------------------------------------------------------------------------
 
@@ -79,7 +80,7 @@ void BitFlags<NUMBITS>::parse(INI* ini, AsciiString* str)
 			str->concat(token);
 		}
 
-		if (stricmp(token, "NONE") == 0)
+		if (strcasecmp(token, "NONE") == 0)
 		{
 			if (foundNormal || foundAddOrSub)
 			{
@@ -158,6 +159,8 @@ template <size_t NUMBITS>
 template <size_t NUMBITS>
 void BitFlags<NUMBITS>::xfer(Xfer* xfer)
 {
+    if (!xfer) throw XFER_INVALID_PARAMETERS;
+    Xfer::FailureScope failure(*xfer);
 	// this deserves a version number
 	XferVersion currentVersion = 1;
 	XferVersion version = currentVersion;
@@ -187,12 +190,13 @@ void BitFlags<NUMBITS>::xfer(Xfer* xfer)
 	}  // end if, save
 	else if( xfer->getXferMode() == XFER_LOAD )
 	{
-  	// clear the kind of mask data
-		clear();
+        BitFlags<NUMBITS> candidate;
+        candidate.clear();
 
 		// read how many entries follow
 		Int c;
 		xfer->xferInt( &c );
+        if (c<0 || static_cast<size_t>(c)>NUMBITS) throw XFER_READ_ERROR;
 
 		// read each of the string entries
 		AsciiString string;
@@ -203,7 +207,7 @@ void BitFlags<NUMBITS>::xfer(Xfer* xfer)
 			xfer->xferAsciiString( &string );
 
 			// set in our mask type data
-			Bool valid = setBitByName( string.str() );
+			Bool valid = candidate.setBitByName( string.str() );
 			if (!valid)
 			{
 				DEBUG_CRASH(("invalid bit name %s",string.str()));
@@ -212,12 +216,16 @@ void BitFlags<NUMBITS>::xfer(Xfer* xfer)
 
 		}  // end for, i
 
+		*this=candidate;
 	}  // end else if, load
 	else if( xfer->getXferMode() == XFER_CRC )
 	{
 
-		// just call the xfer implementation on the data values
-		xfer->xferUser( this, sizeof( this ) );
+        std::array<UnsignedInt,(NUMBITS+31)/32> words{};
+        static_assert(sizeof(UnsignedInt)==4);
+        for (size_t i=0;i<NUMBITS;++i)
+            if (test(static_cast<Int>(i))) words[i/32]|=UnsignedInt{1}<<(i%32);
+        xfer->xferUser(words.data(),static_cast<Int>(words.size()*sizeof(UnsignedInt)));
 
 	}  // end else if, crc
 	else

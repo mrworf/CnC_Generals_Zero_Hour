@@ -172,11 +172,12 @@ UpdateSleepTime SupplyCenterDockUpdate::update()
 	UpdateSleepTime result = DockUpdate::update();
 
 #ifdef _DEBUG_ECONOMY
-	static const NameKeyType key_SupplyCenterCreate = NAMEKEY("SupplyCenterCreate");
+	static const StaticNameKey nativeCached_key_SupplyCenterCreate("SupplyCenterCreate");
+	const NameKeyType key_SupplyCenterCreate = nativeCached_key_SupplyCenterCreate.key();
 	SupplyCenterCreate* create = (SupplyCenterCreate*)getObject()->findCreateModule(key_SupplyCenterCreate);
 	DEBUG_ASSERTCRASH( create && ! create->shouldDoOnBuildComplete(), ("A Supply center did not call onBuildComplete.") );
 #endif
-	
+
 	return result;
 }
 

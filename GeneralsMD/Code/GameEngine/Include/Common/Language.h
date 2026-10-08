@@ -44,6 +44,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include <cwctype>
 
 #ifndef __LANGUAGE_H_
 #define __LANGUAGE_H_
@@ -94,7 +95,8 @@ typedef enum
 #define GameStrstr wcsstr 
 #define GameStrchr wcschr
 #define GameIsDigit iswdigit
-#define GameIsAscii iswascii
+#define GameIsAscii nativeGameIsAscii
+inline bool nativeGameIsAscii(wint_t value) noexcept {return value<=0x7fu;}
 #define GameIsAlNum iswalnum
 #define GameIsAlpha iswalpha
 #define GameArrayEnd(array) (array)[(sizeof(array)/sizeof((array)[0]))-1] = 0
@@ -105,4 +107,3 @@ typedef enum
 extern LanguageID OurLanguage;  ///< our current language definition
 
 #endif // __LANGUAGE_H_
-

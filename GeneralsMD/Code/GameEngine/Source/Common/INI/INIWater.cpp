@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include <strings.h>
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #define DEFINE_TIME_OF_DAY_NAMES
@@ -57,12 +58,12 @@ void INI::parseWaterSettingDefinition( INI* ini )
 	name.set( token );
 
 	// get the water setting we want to load based on name
-	char **timeOfDayName = TimeOfDayNames;
+	const char* const* timeOfDayName = TimeOfDayNames;
 	Int timeOfDayIndex = 0;  // TIME_OF_DAY_INVALID
 	while( timeOfDayName && *timeOfDayName )
 	{
 
-		if( stricmp( *timeOfDayName, name.str() ) == 0 )
+		if( strcasecmp( *timeOfDayName, name.str() ) == 0 )
 		{
 
 			waterSetting = &WaterSettings[ timeOfDayIndex ];
@@ -140,5 +141,3 @@ void INI::parseWaterTransparencyDefinition( INI *ini )
 		TheTerrainVisual->replaceSkyboxTextures(oldTextures, newTextures);
 	}
 }
-
-

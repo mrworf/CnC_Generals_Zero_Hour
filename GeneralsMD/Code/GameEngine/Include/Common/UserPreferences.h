@@ -39,6 +39,8 @@
 #include "Common/STLTypedefs.h"
 
 class Money;
+class NativeUserStorage;
+class GlobalData;
 
 //-----------------------------------------------------------------------------
 // PUBLIC TYPES ///////////////////////////////////////////////////////////////
@@ -52,7 +54,7 @@ typedef std::map<AsciiString, AsciiString> PreferenceMap;
 class UserPreferences : public PreferenceMap
 {
 public:
-	UserPreferences();
+	explicit UserPreferences(NativeUserStorage* storage = nullptr);
 	virtual ~UserPreferences();
 
 	virtual Bool load(AsciiString fname);
@@ -69,6 +71,7 @@ public:
 	void setAsciiString(AsciiString key, AsciiString val);
 
 protected:
+	NativeUserStorage* m_storage; // explicit owner, or the active native engine service
 	AsciiString m_filename;
 };
 
@@ -79,6 +82,7 @@ class OptionPreferences : public UserPreferences
 {
 public:
 	OptionPreferences(  );
+	explicit OptionPreferences(const GlobalData& defaults, NativeUserStorage* storage = nullptr);
 	virtual ~OptionPreferences();
 	UnsignedInt getLANIPAddress(void);				// convenience function
 	UnsignedInt getOnlineIPAddress(void);			// convenience function
@@ -125,6 +129,9 @@ public:
 
 	Int	 getCampaignDifficulty(void);
 	void setCampaignDifficulty( Int diff );
+private:
+	const GlobalData* m_defaults;
+	const GlobalData& defaults() const;
 };
 
 //-----------------------------------------------------------------------------

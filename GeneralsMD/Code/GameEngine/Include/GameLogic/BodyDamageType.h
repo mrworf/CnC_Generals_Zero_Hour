@@ -1,0 +1,43 @@
+/*
+**	Command & Conquer Generals Zero Hour(tm)
+**	Copyright 2025 Electronic Arts Inc.
+**
+**	This program is free software: you can redistribute it and/or modify
+**	it under the terms of the GNU General Public License as published by
+**	the Free Software Foundation, either version 3 of the License, or
+**	(at your option) any later version.
+**
+**	This program is distributed in the hope that it will be useful,
+**	but WITHOUT ANY WARRANTY; without even the implied warranty of
+**	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+**	GNU General Public License for more details.
+**
+**	You should have received a copy of the GNU General Public License
+**	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+// Original ordered damage-state identities and authored INI names.
+#pragma once
+#include "Lib/BaseType.h"
+enum BodyDamageType : UnsignedInt
+{
+	BODY_PRISTINE,				///< unit should appear in pristine condition
+	BODY_DAMAGED,					///< unit has been damaged
+	BODY_REALLYDAMAGED,		///< unit is extremely damaged / nearly destroyed
+	BODY_RUBBLE,					///< unit has been reduced to rubble/corpse/exploded-hulk, etc
+
+	BODYDAMAGETYPE_COUNT
+};
+
+#ifdef DEFINE_BODYDAMAGETYPE_NAMES
+static const char* TheBodyDamageTypeNames[] =
+{
+	"PRISTINE",
+	"DAMAGED",
+	"REALLYDAMAGED",
+	"RUBBLE",
+
+	NULL
+};
+#endif
+

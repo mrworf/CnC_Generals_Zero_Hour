@@ -1,0 +1,1500 @@
+{
+  "kind": "unaccepted-source-compilation-census",
+  "source_root": "GeneralsMD/Code/GameEngine/Source/GameClient",
+  "compiler": "g++",
+  "translation_units": [
+    {
+      "path": "CSF.cpp",
+      "sha256": "fdd92aced1c12c4736f0eb85a391f2b78908488064a93c6aa6df65123cb37d31",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "Color.cpp",
+      "sha256": "4cfdd8c09bc2ddb6b87934d407159fdb36508f8138af12776930a303f3eac0ae",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "Credits.cpp",
+      "sha256": "4fe935059d70a698659d55ba9e1f2f782a9cd4a164c6c90e4ee34eef207c918d",
+      "returncode": 1,
+      "diagnostic_count": 14,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/Credits.h:112": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/Credits.h:145": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/Credits.h:146": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/Credits.h:147": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Credits.cpp:77": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Credits.cpp:78": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Credits.cpp:79": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Credits.cpp:132": 3,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Credits.cpp:241": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Credits.cpp:262": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Credits.cpp:283": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Credits.cpp:304": 1
+      }
+    },
+    {
+      "path": "Display.cpp",
+      "sha256": "0c49efc40685a8a6dbb36daed588d4fab86297ff4ac959388ecacb3a48a2a95d",
+      "returncode": 1,
+      "diagnostic_count": 3,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Display.cpp:218": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Display.cpp:324": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Display.cpp:326": 1
+      }
+    },
+    {
+      "path": "DisplayString.cpp",
+      "sha256": "7a121d121573c4ad55b5f3637b41145735f6aeae1cd1b89d045731ccc56eaf65",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "DisplayStringManager.cpp",
+      "sha256": "448e314aee2bfb247cbc83ff0f5cc28adfc7fc6ecf9f95fa0bb08dfd1431e124",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "DrawGroupInfo.cpp",
+      "sha256": "9c91c43e4b56dce64e3e533ea132dd2388de4191ff425a4186858f5a2159d9ae",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "Drawable/DrawableManager.cpp",
+      "sha256": "92fd2d2eddf345cd880633fc61e197e5a49a59896cb8fe4e5471ac7ebb9c9c60",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "Drawable/Update/AnimatedParticleSysBoneClientUpdate.cpp",
+      "sha256": "38a024de924500c06d9913e3b85d72114c3ee6b324c793de9a9f5df128bbe539",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "Drawable/Update/BeaconClientUpdate.cpp",
+      "sha256": "87d65de667ae70a3a94ce9d3785c66c9e02721a23e37e552782ef8015952f1a2",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "Drawable/Update/SwayClientUpdate.cpp",
+      "sha256": "1b8684b2446d3ff9c0c571659ed1e8af34781c79cafb47b299bc0f0eff137494",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "Drawable.cpp",
+      "sha256": "7651b190cef57dcee1714779358b9a81ddfa024c87509f582a3228dc8005dc3b",
+      "returncode": 1,
+      "diagnostic_count": 2,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Drawable.cpp:238": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Drawable.cpp:3950": 1
+      }
+    },
+    {
+      "path": "DrawableManager.cpp",
+      "sha256": "b35235e3a3dc67e72b7922e155b52555f09620875564214aac2616ab37c50bdd",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "Eva.cpp",
+      "sha256": "fcd3ddbc111fe8f9b8b87a7a6cebc65ace6d6f2bce83f74ae77a4145c36e28bc",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "FXList.cpp",
+      "sha256": "9913da9ad55b4c53dcc41a3d01905f20993ba8ae991f22be0ab63e187dfd7cd2",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/FXList.cpp:851": 1
+      }
+    },
+    {
+      "path": "GUI/AnimateWindowManager.cpp",
+      "sha256": "1fee5a535539218da89b4e2d2e6fa11fec438df08dc24ce23bd12fde904508ea",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/ChallengeGenerals.cpp",
+      "sha256": "e973513892b50c2f3d447ba1d609044c9e17534bf3066c64b0cbdf73f5efafae",
+      "returncode": 1,
+      "diagnostic_count": 23,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:61": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:62": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:67": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:68": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:97": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:98": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:103": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:104": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:83": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:84": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:129": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:139": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:147": 2,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:148": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ChallengeGenerals.h:150": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ChallengeGenerals.cpp:62": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ChallengeGenerals.cpp:63": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ChallengeGenerals.cpp:69": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ChallengeGenerals.cpp:100": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ChallengeGenerals.cpp:104": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ChallengeGenerals.cpp:125": 1
+      }
+    },
+    {
+      "path": "GUI/ControlBar/ControlBar.cpp",
+      "sha256": "78d0aec1d3dc5de98316070bf2b02d319a0128f23a9a3a3375a8dfdc23e56e44",
+      "returncode": 1,
+      "diagnostic_count": 5,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBar.cpp:522": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBar.cpp:811": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBar.cpp:2732": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBar.cpp:2953": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBar.cpp:3262": 1
+      }
+    },
+    {
+      "path": "GUI/ControlBar/ControlBarBeacon.cpp",
+      "sha256": "a8f9fa5bdfe23e0779906aff9041c8bad74055fcd8607492f25c99d8a0239a16",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/ControlBar/ControlBarCommand.cpp",
+      "sha256": "60c50231ee882118c78c894061aa41f4e3f791eb5f616821302cdcd34c430d08",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/ControlBar/ControlBarCommandProcessing.cpp",
+      "sha256": "8548a6d461b172076f3a6d506a7a13cd75db90cc141a6e9518dcd7aa028c6629",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/ControlBar/ControlBarMultiSelect.cpp",
+      "sha256": "fbc2a4374aa23b0c4f214e14bb83651d5b1e242ee07fde135919aa300ba84fb8",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/ControlBar/ControlBarOCLTimer.cpp",
+      "sha256": "e17555ad6745412d66a471f23a66146dcd50a858ea9b47d84664d2134b30f985",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/ControlBar/ControlBarObserver.cpp",
+      "sha256": "1af5d347371c243f9c56e11ee36faeedd2b1e548ea068bcad09cbaeb5a822e20",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/ControlBar/ControlBarPrintPositions.cpp",
+      "sha256": "5566649dff7f08f0d4b22f18282bca868cf75a019ccf1a945519462d7bf9d328",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarPrintPositions.cpp:83": 1
+      }
+    },
+    {
+      "path": "GUI/ControlBar/ControlBarResizer.cpp",
+      "sha256": "0bb507b611cc9a3e5b2147c8de63f462aa6c6139446a4c1be98db4dcece53cff",
+      "returncode": 1,
+      "diagnostic_count": 8,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ControlBar.h:286": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarResizer.cpp:64": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarResizer.cpp:65": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarResizer.cpp:62": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarResizer.cpp:104": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarResizer.cpp:106": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarResizer.cpp:210": 1
+      }
+    },
+    {
+      "path": "GUI/ControlBar/ControlBarScheme.cpp",
+      "sha256": "353f8d44beae66bd00ae9c22cab08bbad6da4aa9d8245cd24ebb9666ebe239c1",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/ControlBar/ControlBarStructureInventory.cpp",
+      "sha256": "fa4d85b88a16413c605118f2b2efcde0c85bae2bbbc5a43eb65067bf909053cb",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/ControlBar/ControlBarUnderConstruction.cpp",
+      "sha256": "0e157ff8b5360445b2c0b678277b0bc34fa4bdbe83700fa76970fb3853e42c48",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/DisconnectMenu/DisconnectMenu.cpp",
+      "sha256": "7b70b5bfdb035882741a6473a5ca65ca7fe75f7dd5ac7b295a8d66ae3bf7a333",
+      "returncode": 1,
+      "diagnostic_count": 3,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/DisconnectMenu/DisconnectMenu.cpp:151": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/DisconnectMenu/DisconnectMenu.cpp:253": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/DisconnectMenu/DisconnectMenu.cpp:307": 1
+      }
+    },
+    {
+      "path": "GUI/EstablishConnectionsMenu/EstablishConnectionsMenu.cpp",
+      "sha256": "677d6046e0a035222706f124bf83f8716a4eb33c84020e82bf9526706d31c8d2",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GUICallbacks/ControlBarCallback.cpp",
+      "sha256": "085aa228a219cdb49efbf4755c305d06ea01605a3ccfa1daf7d30e108fdb524c",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarCallback.cpp:268": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/ControlBarPopupDescription.cpp",
+      "sha256": "cd0470456f1a89d523a3de72ad8045ee6e20515000d45cfc9131879da7aa50b5",
+      "returncode": 1,
+      "diagnostic_count": 19,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:146": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:179": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:256": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:420": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:428": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:430": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:432": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:435": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:438": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:517": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:518": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:538": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:546": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:548": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:550": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:553": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/ControlBarPopupDescription.cpp:556": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Diplomacy.cpp",
+      "sha256": "1d0471fcb0567dff8ba8569c1aea43d17db57e69dfd4d13d21dd3c4952b32ee9",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/ExtendedMessageBox.cpp",
+      "sha256": "9b805047e185d91fa01d88e6d92db9ff8ae634e7b798746431ba05f62ec1bdee",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GUICallbacks/GeneralsExpPoints.cpp",
+      "sha256": "056b97120ae275e6c4cc6206e4bda0f6bdf00bfb7b5c9ba227058ff7f3438916",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ControlBar.h:286": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/IMECandidate.cpp",
+      "sha256": "ad15c6e6b8b8c2b2d891bb0df37a2845a86ebdb72927b05822c092c7016a9f2a",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GUICallbacks/InGameChat.cpp",
+      "sha256": "cb358f4880539be74e6a7fef0bf6c4360697b0c662071ab970bac7e8bc913559",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/InGameChat.cpp:202": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/InGamePopupMessage.cpp",
+      "sha256": "fa6dee33c9ac6f36bd744238c0c46a9f54e43dc3e52a2c6a649018e72538ffac",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/ChallengeMenu.cpp",
+      "sha256": "b67eff632b19e8f8a1cef0b34e3612725463ec68cdaa915fd6c618361de0e149",
+      "returncode": 1,
+      "diagnostic_count": 2,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/GameWindowTransitions.h:90": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ChallengeMenu.cpp:662": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/CreditsMenu.cpp",
+      "sha256": "08d661ee09601ca4641194d5009456b6e85961632bb191ba74760c5670273ea1",
+      "returncode": 1,
+      "diagnostic_count": 6,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/Credits.h:79": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/Credits.h:145": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/Credits.h:146": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/Credits.h:147": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/CreditsMenu.cpp:74": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/CreditsMenu.cpp:94": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/DifficultySelect.cpp",
+      "sha256": "afa4d3060c9bc231db12dfd1536ef618324122e7a7e76b7e529be8fe3f3c79fb",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/DisconnectWindow.cpp",
+      "sha256": "8583c7774cc3f49eeb68c4c926ec3b567455f305f4bdfd05755cf17e9fce02b8",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/DownloadMenu.cpp",
+      "sha256": "b6d749cc6b6bc2b6e36bef4ae5636300a12a26c4690987a08e08a8e4659260f7",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/Libraries/Source/WWVegas/WWDownload/ftp.h:27": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/EstablishConnectionsWindow.cpp",
+      "sha256": "f8b83cef4855e4242f3e4c600c5c1d2bec938ad83b1f1aa785022fdb9f5dde8a",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/GameInfoWindow.cpp",
+      "sha256": "ecc3415250dab3cc16da2984acc4af81de9e5c9bff6bc648eea537ff7f8846e1",
+      "returncode": 1,
+      "diagnostic_count": 2,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/GameInfoWindow.cpp:238": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/GameInfoWindow.cpp:239": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/KeyboardOptionsMenu.cpp",
+      "sha256": "7d0c7415928ee9ebea0ade32643f1a7c0f962cfe0df7a77e95139627b0027545",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/KeyboardOptionsMenu.cpp:726": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/LanGameOptionsMenu.cpp",
+      "sha256": "b49892dcee7793c2fbc0e9a70db0b5265d567087f4de776f57a2611441f3175b",
+      "returncode": 1,
+      "diagnostic_count": 10,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/GameWindowTransitions.h:90": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanGameOptionsMenu.cpp:217": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanGameOptionsMenu.cpp:275": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanGameOptionsMenu.cpp:286": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanGameOptionsMenu.cpp:315": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanGameOptionsMenu.cpp:409": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanGameOptionsMenu.cpp:467": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanGameOptionsMenu.cpp:579": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanGameOptionsMenu.cpp:624": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanGameOptionsMenu.cpp:982": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/LanLobbyMenu.cpp",
+      "sha256": "9bffc240a637718e5f83f1220f43284cb6cdc70e144b55ed7df18b3f07536450",
+      "returncode": 1,
+      "diagnostic_count": 2,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanLobbyMenu.cpp:154": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/LanLobbyMenu.cpp:328": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/LanMapSelectMenu.cpp",
+      "sha256": "78a4d69f21fe2a9f67acc47205aec14df4ae4a147b454b46006896061fa1dccf",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/MainMenu.cpp",
+      "sha256": "3fb43b0243ab668cb59e589ef0bf7efad75254bec05afb2d85236c81b59f73a0",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/MainMenu.cpp:33": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/MapSelectMenu.cpp",
+      "sha256": "2ce3dfdb716f10d832f535b10d77d50273033ad0888b23d2773050a759284b6f",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/MapSelectMenu.cpp:63": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/NetworkDirectConnect.cpp",
+      "sha256": "642f1d52d467b19c0b35dd15bbeb6ebf4165899cc43f3d8217b35f43ac97a90c",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/NetworkDirectConnect.cpp:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/OptionsMenu.cpp",
+      "sha256": "33d743a2ce737979ff9209a29c3e27cd577e599c813c8299257c5183b67031ab",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/OptionsMenu.cpp:33": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/PopupCommunicator.cpp",
+      "sha256": "61e5e818355f80347d82978efbab51658d816c8f570f14611083350463f3bd87",
+      "returncode": 1,
+      "diagnostic_count": 2,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupCommunicator.cpp:53": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupCommunicator.cpp:66": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/PopupHostGame.cpp",
+      "sha256": "0fd11bee83a587becf754c842a105c574e7147cb5808b5b8365c30e925ac6311",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/PopupJoinGame.cpp",
+      "sha256": "cc2d39a05b096e638899cda17db9a7172a60b21efc2beb00706e07a535cd7f9c",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/PopupLadderSelect.cpp",
+      "sha256": "b6566346d29f0fd594d77ce875d957e0710b1ae7e50d010116eddfb3b406bc04",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/PopupPlayerInfo.cpp",
+      "sha256": "c7a220a865c0d912313e1f53e2ad4dc84df4513e28eb353d98d78512b49c641e",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/PopupReplay.cpp",
+      "sha256": "32967214a279e5f5f598a7b83376261d48109a09223b7cd1562220c2a76380df",
+      "returncode": 1,
+      "diagnostic_count": 10,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupReplay.cpp:180": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupReplay.cpp:288": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupReplay.cpp:291": 3,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupReplay.cpp:313": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupReplay.cpp:316": 3,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupReplay.cpp:337": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/PopupSaveLoad.cpp",
+      "sha256": "09373331aa70e9cc5e7cd36e1a637e2f22ec962ff884551356e775ee81ff7c65",
+      "returncode": 1,
+      "diagnostic_count": 2,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupSaveLoad.cpp:462": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/PopupSaveLoad.cpp:721": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/QuitMenu.cpp",
+      "sha256": "c1036079221b043ae4cea79bd238e97c111751b3dd2706ba441de0d5e44fe771",
+      "returncode": 1,
+      "diagnostic_count": 3,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/QuitMenu.cpp:205": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/QuitMenu.cpp:235": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/QuitMenu.cpp:304": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/ReplayMenu.cpp",
+      "sha256": "62a6a787f8c608c56ec2bd7af00dedb8d4786646bc9c4f17d99d104be7f14fa2",
+      "returncode": 1,
+      "diagnostic_count": 22,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/GameWindowTransitions.h:90": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:58": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:59": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:60": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:61": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:62": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:63": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:228": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:276": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:631": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:634": 3,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:662": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:663": 3,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:664": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:669": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/ReplayMenu.cpp:672": 3
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/ScoreScreen.cpp",
+      "sha256": "604a39cc4c8644faa8aaaf9894a8ed3c9e88a23a535e6019a0e3652e8bb4bb74",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/SinglePlayerMenu.cpp",
+      "sha256": "0279906024577caff51c127d907de1886eba9a07eabfa644d121aca1f696cbd4",
+      "returncode": 1,
+      "diagnostic_count": 4,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SinglePlayerMenu.cpp:73": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SinglePlayerMenu.cpp:159": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SinglePlayerMenu.cpp:188": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SinglePlayerMenu.cpp:200": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp",
+      "sha256": "49f0a7d1dfc08261642f6f91cc4562feb41621a5bf1350d446f7ee92830b0b9d",
+      "returncode": 1,
+      "diagnostic_count": 18,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:271": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:409": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:432": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:497": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:509": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:536": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:539": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:799": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:857": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:900": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:919": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:959": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:1012": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:1038": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:1176": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:1282": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:1351": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishGameOptionsMenu.cpp:1391": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/SkirmishMapSelectMenu.cpp",
+      "sha256": "a48cd90d69cb84427cf433de428d3fdaa3bd20a217330b436fd13d5ac28defe4",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/SkirmishMapSelectMenu.cpp:99": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLBuddyOverlay.cpp",
+      "sha256": "a7e5b0bc58ead37456bba7760c4e67bb626f5c1b2006eebf3d8f34aee675d00b",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLCustomScoreScreen.cpp",
+      "sha256": "c7acb8fd9f9f0b4b998e671c1c48af9f7f4d02e8a8b882a5370b4f9e9001edbf",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLGameSetupMenu.cpp",
+      "sha256": "31932315559c20fe2eb073e505780765c020f8b37069cc681ae93f0c794fc539",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLLadderScreen.cpp",
+      "sha256": "ef82080668c66664b8e889082c1a1c42de702af3b9e6158757537891d9e0dfb8",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/WOLBrowser/WebBrowser.h:49": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLLobbyMenu.cpp",
+      "sha256": "23c60ca0e6d7b7a8a497d4c305e5cdcc94e8137f2d56705bb6911110643ba36e",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLLocaleSelectPopup.cpp",
+      "sha256": "73b2bcef353e2acf41bb1a6585514402f64e489ca0295bbb390650aefeab201b",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLLoginMenu.cpp",
+      "sha256": "e0953dc1bf0e4a4939408c8b54262295d656c67e61b3a225c6cb2b6f1ff5d391",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLMapSelectMenu.cpp",
+      "sha256": "2fa9037c9e4efbd1c0331910c607f548684269ad1d13b1d52fbe3b753f1c4749",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLMessageWindow.cpp",
+      "sha256": "8789bd1439f313b48bd723e112a97fc28b4ba7f72925310adb2331cb8ea5c6bc",
+      "returncode": 1,
+      "diagnostic_count": 3,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLMessageWindow.cpp:49": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLMessageWindow.cpp:50": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLMessageWindow.cpp:62": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLQMScoreScreen.cpp",
+      "sha256": "f54a4aea14e480547ee359559d51a5cf4a826726d92eea8a6d4181493acee0a0",
+      "returncode": 1,
+      "diagnostic_count": 4,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLQMScoreScreen.cpp:49": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLQMScoreScreen.cpp:50": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLQMScoreScreen.cpp:51": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLQMScoreScreen.cpp:63": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLQuickMatchMenu.cpp",
+      "sha256": "1042cb510aeff8dead0c01dccca6c22be340bc8ddedfc9ade1b38806943788e0",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLStatusMenu.cpp",
+      "sha256": "0c1077ee7637105f0ae2034ba28b2cf82f198a52ff2e2f8bf57e304ea5daae65",
+      "returncode": 1,
+      "diagnostic_count": 3,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLStatusMenu.cpp:49": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLStatusMenu.cpp:50": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLStatusMenu.cpp:62": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/Menus/WOLWelcomeMenu.cpp",
+      "sha256": "c2dfef20b2f2cd5993a9efdce61f5c15dd98dc1d07b848f62875806ecbd6cb65",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLWelcomeMenu.cpp:34": 1
+      }
+    },
+    {
+      "path": "GUI/GUICallbacks/MessageBox.cpp",
+      "sha256": "3cd5762c211ffd0f9e6f34ceac532f86fc9cb7813a6c78d211b7ba02bea04e9d",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GUICallbacks/ReplayControls.cpp",
+      "sha256": "65b3e330153ace34b920e716acd05ca412d82bb1c2ae9e2b2faf5e0d61b38bd6",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/Gadget/GadgetCheckBox.cpp",
+      "sha256": "d1ac4bf23d4376912b59c9fb21429b64cc7057d81f18de7647f260a7de3a9e99",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/Gadget/GadgetComboBox.cpp",
+      "sha256": "d9bedecf588a8e15873c090cc7b44e7af50f8da30ed56a6fca12521a225b366a",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetComboBox.cpp:474": 1
+      }
+    },
+    {
+      "path": "GUI/Gadget/GadgetHorizontalSlider.cpp",
+      "sha256": "485ba1cb2f620a1cb7545bf68d9f00010f757c7af03226380fc4e79673615140",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/Gadget/GadgetListBox.cpp",
+      "sha256": "d4efe45c3f5a80618a0c5a7ba352f0b55e083867493539365550634166330807",
+      "returncode": 1,
+      "diagnostic_count": 8,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetListBox.cpp:75": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetListBox.cpp:732": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetListBox.cpp:828": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetListBox.cpp:857": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetListBox.cpp:1293": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetListBox.cpp:1652": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetListBox.cpp:1753": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetListBox.cpp:1796": 1
+      }
+    },
+    {
+      "path": "GUI/Gadget/GadgetProgressBar.cpp",
+      "sha256": "b2bcf6f4214479cbc98910093996710601b51ab933a6aa666778a86c6b93479b",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/Gadget/GadgetPushButton.cpp",
+      "sha256": "095c7beb371a43e625580a1e4932c0ff6a537c922a2d1fa89e45ac79c156e7cc",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/Gadget/GadgetRadioButton.cpp",
+      "sha256": "b1d49d0914017b229b39c14c4503d750ce2187aa8c181074774d69ed970c21c3",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/Gadget/GadgetStaticText.cpp",
+      "sha256": "039eb948caad6af6a78059b39025819b4ed82cd22e47590a028186825d3eac8a",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/Gadget/GadgetTabControl.cpp",
+      "sha256": "07a45ea5747615ecafe7e62b02e7c75cea352d5b1936461d18482627e6e80534",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/Gadget/GadgetTextEntry.cpp",
+      "sha256": "efc9a028611192934af219305da84a4ba22399819a9c08f89c2a12e2c5c87786",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/Gadget/GadgetTextEntry.cpp:106": 1
+      }
+    },
+    {
+      "path": "GUI/Gadget/GadgetVerticalSlider.cpp",
+      "sha256": "95b5ced7882b60e7238a692cb539ac490c7c32c14abbd5ef099593a8d800ccdc",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GameFont.cpp",
+      "sha256": "41cbe9bba282ffeef9cbefdd287c44a6a14d94c116e835ad742839bfb2dfa727",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GameWindow.cpp",
+      "sha256": "a94f2ee6bf9714a4b113935b8d480b10bbc32977e3fc7062851bf95965d62c05",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GameWindowGlobal.cpp",
+      "sha256": "ef8f004a07de23a44305c42d1e42de4847c7554667b307ee5cba23ad6c198a7c",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/Common/Language.h:97": 1
+      }
+    },
+    {
+      "path": "GUI/GameWindowManager.cpp",
+      "sha256": "5f26a0bec26739b74919ef8ccc0b8be292662800b2fac17052bc80dcc6ca9dc3",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/GameWindowTransitions.h:90": 1
+      }
+    },
+    {
+      "path": "GUI/GameWindowManagerScript.cpp",
+      "sha256": "73db0725a1ee256d8ec7e48d974a4c82dd5cbc1cc24f3b30d50dfd20f8ec835c",
+      "returncode": 1,
+      "diagnostic_count": 7,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManagerScript.cpp:216": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManagerScript.cpp:850": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManagerScript.cpp:2713": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManagerScript.cpp:2733": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManagerScript.cpp:2735": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowManagerScript.cpp:2738": 1,
+        "GeneralsMD/Code/Libraries/Include/Lib/BaseType.h:117": 1
+      }
+    },
+    {
+      "path": "GUI/GameWindowTransitions.cpp",
+      "sha256": "3325bad664b0c3dacd58cc0dd8e997a3469ff79a38b96879703812daa399e087",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/GameWindowTransitionsStyles.cpp",
+      "sha256": "12f9a0f9b1df9a56318df440ec79bf1c52e184bb1670bf6785f0d9921c7aa21e",
+      "returncode": 1,
+      "diagnostic_count": 7,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/GameWindowTransitions.h:90": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/ControlBar.h:286": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowTransitionsStyles.cpp:1378": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowTransitionsStyles.cpp:1501": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowTransitionsStyles.cpp:1506": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowTransitionsStyles.cpp:1511": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GameWindowTransitionsStyles.cpp:2177": 1
+      }
+    },
+    {
+      "path": "GUI/HeaderTemplate.cpp",
+      "sha256": "8923220a1388a6190c4d39053280ee75c428f0a0c29131f7f7b920a00daebf21",
+      "returncode": 1,
+      "diagnostic_count": 4,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/HeaderTemplate.cpp:147": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/HeaderTemplate.cpp:148": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/HeaderTemplate.cpp:149": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/HeaderTemplate.cpp:151": 1
+      }
+    },
+    {
+      "path": "GUI/IMEManager.cpp",
+      "sha256": "c05061b4d505b40d1c9403a84cb3ff70dd172fa127873ee8a85b5f2eed0dda2e",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/IMEManager.cpp:50": 1
+      }
+    },
+    {
+      "path": "GUI/LoadScreen.cpp",
+      "sha256": "4480645a7497ee24484f999b848d739a63f0976c083ac4db2fb91e08e8756761",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/ProcessAnimateWindow.cpp",
+      "sha256": "90a617a69e9ffba0a2c00e403618543d42887a79252693b3224a820bb3002994",
+      "returncode": 1,
+      "diagnostic_count": 31,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:99": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:149": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:168": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:216": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:283": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:328": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:345": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:394": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:461": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:506": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:523": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:573": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:640": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:686": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:703": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:753": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:841": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:882": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:903": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:919": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:973": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:1019": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:1037": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:1154": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:1202": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:1219": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:1269": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:1339": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:1408": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:1427": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/ProcessAnimateWindow.cpp:1475": 1
+      }
+    },
+    {
+      "path": "GUI/Shell/Shell.cpp",
+      "sha256": "e3ee95526af03aded33b33d7b90c521a21592087adbc825d2c45edd51ae8e24e",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+      }
+    },
+    {
+      "path": "GUI/Shell/ShellMenuScheme.cpp",
+      "sha256": "8097a950aed43be3067f3e54996394515008daeb29acd911b655920b53e86425",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/Shell.h:115": 1
+      }
+    },
+    {
+      "path": "GUI/WinInstanceData.cpp",
+      "sha256": "dba0e958bfc147339ba28c8555315960a57be65803e3e30d05477647967bc96b",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/WindowLayout.cpp",
+      "sha256": "e39e51fab0c247d559754c2fbc4c72ec2ba8ad694dd899a15c8efd66128f3329",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GUI/WindowVideoManager.cpp",
+      "sha256": "9dd0ac2b30066a6172619f6623ab59c787f1b5fcfef26c5c871515f555c0ab15",
+      "returncode": 1,
+      "diagnostic_count": 47,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/WindowVideoManager.h:123": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/WindowVideoManager.h:158": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/WindowVideoManager.h:160": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:139": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:140": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:147": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:156": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:157": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:164": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:171": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:179": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:180": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:187": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:195": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:201": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:293": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:302": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:303": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:313": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:314": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:324": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:325": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:337": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:338": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:348": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:349": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:361": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:363": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:377": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:379": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:393": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:395": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:408": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GUI/WindowVideoManager.cpp:409": 2
+      }
+    },
+    {
+      "path": "GameClient.cpp",
+      "sha256": "8460d4519adef2d312bbd0e9867cd179ff221c6baaba917a9624068d839f4100",
+      "returncode": 1,
+      "diagnostic_count": 7,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GameClient.cpp:558": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GameClient.cpp:564": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GameClient.cpp:1063": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GameClient.cpp:1064": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GameClient.cpp:1100": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GameClient.cpp:1193": 1
+      }
+    },
+    {
+      "path": "GameClientDispatch.cpp",
+      "sha256": "c015fc5eab764b91edbd6126e30e742ecf0dbeb6357b0b4966fd4db9efca26b2",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GameText.cpp",
+      "sha256": "d58b6db1130cdc5853abad2ed12172ca221db5d04e493f6e60ede42d0bf473e6",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "GlobalLanguage.cpp",
+      "sha256": "cf8eb3cd09fa000255bb4e1c985e3cd71bd6b68b8efc53d44841b473f5c7f31d",
+      "returncode": 1,
+      "diagnostic_count": 7,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GlobalLanguage.cpp:130": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GlobalLanguage.cpp:143": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GlobalLanguage.cpp:144": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GlobalLanguage.cpp:150": 2,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GlobalLanguage.cpp:161": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/GlobalLanguage.cpp:194": 1
+      }
+    },
+    {
+      "path": "GraphDraw.cpp",
+      "sha256": "bd9b3763d2093b2ce1fe357c763f939cf86cf7422d778038e7349987a7c28694",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "InGameUI.cpp",
+      "sha256": "e3ec95f463fd4ccae745fe875efbe624d33b50ac6e1294825d8c418ecf75c5eb",
+      "returncode": 1,
+      "diagnostic_count": 12,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:975": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:1322": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:1530": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:1860": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:1865": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:2029": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:2051": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:2073": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:2419": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:2550": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:2961": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:3043": 1
+      }
+    },
+    {
+      "path": "Input/Keyboard.cpp",
+      "sha256": "a5e9e0ee013ebb9fa1ceb0cb8cf41c699f74f2d7fc212d3231029d65ba5927ec",
+      "returncode": 1,
+      "diagnostic_count": 4,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Input/Keyboard.cpp:451": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Input/Keyboard.cpp:979": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Input/Keyboard.cpp:332": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Input/Keyboard.cpp:334": 1
+      }
+    },
+    {
+      "path": "Input/Mouse.cpp",
+      "sha256": "8f117db58fc51223df145a44231c3f728e89e84eba9ddc56c6015896146c377b",
+      "returncode": 1,
+      "diagnostic_count": 4,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Input/Mouse.cpp:674": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Input/Mouse.cpp:980": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Input/Mouse.cpp:1013": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Input/Mouse.cpp:1041": 1
+      }
+    },
+    {
+      "path": "LanguageFilter.cpp",
+      "sha256": "7017b639efbd93073c39a77075452d16dedc3f99679dec9ecd93b40a9ff429ac",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "Line2D.cpp",
+      "sha256": "b1aa22e79d03d23b7ab7c2b49ef3bcb7f20ffce137e155dd622521d7cb3ed68f",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "MapUtil.cpp",
+      "sha256": "b6fb8d35de0ce5d2820be4684cb3ef02dfcf39a3ed8b6efacc3d2d25504bec19",
+      "returncode": 1,
+      "diagnostic_count": 11,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp:96": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp:99": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp:103": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp:240": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp:245": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp:250": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp:350": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp:611": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp:612": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp:823": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MapUtil.cpp:979": 1
+      }
+    },
+    {
+      "path": "MessageStream/CommandXlat.cpp",
+      "sha256": "1c94468676e15d58a7f68293cc5fd374ccda96fc200591b29266724f6e5e321a",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/BuddyThread.h:34": 1
+      }
+    },
+    {
+      "path": "MessageStream/GUICommandTranslator.cpp",
+      "sha256": "72bcf3e6ff93e2ac4d6998942762fe2d49c1b765549c89315ebf882b5d6abfdb",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/GUICommandTranslator.cpp:57": 1
+      }
+    },
+    {
+      "path": "MessageStream/HintSpy.cpp",
+      "sha256": "be85e19f79f542755e989940c672db058d38b961f2c2ad208cda1800c0bee854",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "MessageStream/HotKey.cpp",
+      "sha256": "33e90f05efa34f81b509442e0f972cf09a0961ee8c28351d896a7e10e1212ce6",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "MessageStream/LookAtXlat.cpp",
+      "sha256": "99930cec64156ff05c0302a76c3f66a05e622d515e069b934b75dc8bd18f046f",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/LookAtXlat.cpp:31": 1
+      }
+    },
+    {
+      "path": "MessageStream/MetaEvent.cpp",
+      "sha256": "c4266817b7ff61ed3a769b38b75c10d6776814bf351d3d4234c18a89e7828714",
+      "returncode": 1,
+      "diagnostic_count": 3,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/MetaEvent.cpp:503": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/MetaEvent.cpp:506": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/MetaEvent.cpp:672": 1
+      }
+    },
+    {
+      "path": "MessageStream/PlaceEventTranslator.cpp",
+      "sha256": "e2023196c358f376eb3fc05f665913385d3a86a97b17e7bc89c4a5d4a36da960",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "MessageStream/SelectionXlat.cpp",
+      "sha256": "58c2c9c033a0f9d1420286e8bba0431ff9524c234628f303d344e6c70d79ff66",
+      "returncode": 1,
+      "diagnostic_count": 2,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/SelectionXlat.cpp:957": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/SelectionXlat.cpp:1044": 1
+      }
+    },
+    {
+      "path": "MessageStream/WindowXlat.cpp",
+      "sha256": "2bddf9b27f5de2a0c0eacc0237cc6fda5667d9a5dc037061d90aa04711079989",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/MessageStream/WindowXlat.cpp:328": 1
+      }
+    },
+    {
+      "path": "NativeTextPaths.cpp",
+      "sha256": "93420b50c88b60d51f377f540c38efdecd6aecd7720203a3fa3eab2ef9d00d04",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "ParabolicEase.cpp",
+      "sha256": "497b5eea4e7dd9bb16cabbc462ab5f160f1c8c8b104ff61ab89d1524fa0076e2",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "RadiusDecal.cpp",
+      "sha256": "aa8dc8e1f2127942dcf14943f2609f60992a6c75744cf2d3bf30adda763638d2",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "SelectionInfo.cpp",
+      "sha256": "cb6cb335f71d8bc3e9bc87363aa1d0f7451f6ae0eb07b7d5370b2a7d8c4a41ca",
+      "returncode": 1,
+      "diagnostic_count": 2,
+      "locations": {
+        "GeneralsMD/Code/Libraries/Include/Lib/BaseType.h:117": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/SelectionInfo.cpp:198": 1
+      }
+    },
+    {
+      "path": "Snow.cpp",
+      "sha256": "05e81a10c6874f2f2636f455341b19acb5e80c43b1b88be1b34cfc8f66df056b",
+      "returncode": 1,
+      "diagnostic_count": 4,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Include/GameClient/Snow.h:73": 1,
+        "GeneralsMD/Code/GameEngine/Include/GameClient/Snow.h:76": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Snow.cpp:107": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Snow.cpp:126": 1
+      }
+    },
+    {
+      "path": "Statistics.cpp",
+      "sha256": "ae13f377019a2aa1154891bee79252f30640eed95232bb6b24048efb9ef5edfd",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "StringCatalog.cpp",
+      "sha256": "ebf801f40eff2455ecb30eadac7dc3c459263b47a0e9aef1a0c585b3787b8d7d",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "System/Anim2D.cpp",
+      "sha256": "b1b9b41882cabb00b0780eb9d0e41010228891f08a44052beeda494940322897",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "System/CampaignManager.cpp",
+      "sha256": "3aa07ee98b3103c86c7adfe2daa33c2cb96ef3bf66e889cceacf6e4d676d3bce",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "System/Debug Displayers/AudioDebugDisplay.cpp",
+      "sha256": "87a043191e3baadff8eb8ad3e1405bda5b5b287f9e52b01b30c2be1a2ca5eddc",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "System/DebugDisplay.cpp",
+      "sha256": "0ce13bccf2ffd0e582869600bf9acf513da11fe8a02432839cd2064fe89630c7",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "System/Image.cpp",
+      "sha256": "d33ca7d9678dc3e42f283690bcea1c283869ad0ca50e022cad54640184097267",
+      "returncode": 1,
+      "diagnostic_count": 6,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/Image.cpp:234": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/Image.cpp:237": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/Image.cpp:242": 3,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/Image.cpp:250": 1
+      }
+    },
+    {
+      "path": "System/ParticleSys.cpp",
+      "sha256": "236abd73b47feb0ead17e1145014e52b736c4d1656f59f89acb252bdbb6257c4",
+      "returncode": 1,
+      "diagnostic_count": 11,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp:302": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp:1093": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp:1542": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp:1668": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp:1690": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp:1709": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp:1715": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp:1806": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp:1814": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp:1851": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/System/ParticleSys.cpp:2330": 1
+      }
+    },
+    {
+      "path": "System/RayEffect.cpp",
+      "sha256": "dea05c574de7b0e2edb95fc52ca15877a93dea3954982982ee663ac07b461a0c",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "System/Smudge.cpp",
+      "sha256": "d0098e995786fbf91ca4453204894e971a6976638f9b01f0efe9f4232edf9127",
+      "returncode": 1,
+      "diagnostic_count": 2,
+      "locations": {
+        "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dllist.h:79": 1,
+        "GeneralsMD/Code/Libraries/Source/WWVegas/WW3D2/dllist.h:87": 1
+      }
+    },
+    {
+      "path": "Terrain/TerrainRoads.cpp",
+      "sha256": "fe234d95caa089a44be1688aa6733f441ff3a46c637e294d98d24fe8a9d1b311",
+      "returncode": 1,
+      "diagnostic_count": 2,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Terrain/TerrainRoads.cpp:108": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Terrain/TerrainRoads.cpp:164": 1
+      }
+    },
+    {
+      "path": "Terrain/TerrainVisual.cpp",
+      "sha256": "903f0afabe8f07ceaa704d8724f094cc935dffed9003eaf8b132cf80a5d3b501",
+      "returncode": 1,
+      "diagnostic_count": 2,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Terrain/TerrainVisual.cpp:200": 1,
+        "GeneralsMD/Code/GameEngine/Source/GameClient/Terrain/TerrainVisual.cpp:202": 1
+      }
+    },
+    {
+      "path": "VideoPlayer.cpp",
+      "sha256": "6624bb46aa69767d3b6254d143c13f578848ea4b3d16f468b3eedc313ecda014",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "VideoStream.cpp",
+      "sha256": "8c517a47973d2c458653f1c192986f0cee09cac08e015de91630822bcaa8b263",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    },
+    {
+      "path": "View.cpp",
+      "sha256": "85cb00f9cc25dd4629dcf3738bbdeadcea7ec32d8df9525867724943dd4d7c01",
+      "returncode": 1,
+      "diagnostic_count": 1,
+      "locations": {
+        "GeneralsMD/Code/GameEngine/Source/GameClient/View.cpp:105": 1
+      }
+    },
+    {
+      "path": "Water.cpp",
+      "sha256": "d04a24063b7b4a5a40c2202812f8e9ae6eef0f46a6bdaf1305fd623a18d7f86e",
+      "returncode": 0,
+      "diagnostic_count": 0,
+      "locations": {}
+    }
+  ]
+}

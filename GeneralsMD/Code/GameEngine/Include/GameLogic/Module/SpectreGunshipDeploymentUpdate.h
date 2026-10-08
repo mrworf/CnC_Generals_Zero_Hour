@@ -41,7 +41,7 @@ class SpecialPowerModule;
 class ParticleSystem;
 class FXList;
 class AudioEventRTS;
-enum ParticleSystemID;
+enum ParticleSystemID : UnsignedInt;
 #include "Common/ScienceType.h"
 
 //#define MAX_OUTER_NODES 16

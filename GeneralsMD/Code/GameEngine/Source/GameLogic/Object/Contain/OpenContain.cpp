@@ -32,6 +32,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <cstdio>
 
 #include "Common/BitFlagsIO.h"
 #include "Common/GameAudio.h"
@@ -965,8 +966,8 @@ void OpenContain::exitObjectViaDoor( Object *exitObj, ExitDoorType exitDoor )
 		Coord3D endPosition;
 		if( numberExits > 1 )
 		{
-			char suffix[8];
-			itoa(m_whichExitPath, suffix, 10);
+			char suffix[16];
+			std::snprintf(suffix, sizeof(suffix), "%d", m_whichExitPath);
 			if( m_whichExitPath < 10 )
 			{
 				startBone.concat('0');
@@ -1084,8 +1085,8 @@ void OpenContain::exitObjectInAHurry( Object *exitObj )
 		Coord3D endPosition;
 		if( numberExits > 1 )
 		{
-			char suffix[8];
-			itoa(m_whichExitPath, suffix, 10);
+			char suffix[16];
+			std::snprintf(suffix, sizeof(suffix), "%d", m_whichExitPath);
 			if( m_whichExitPath < 10 )
 			{
 				startBone.concat('0');
@@ -1265,8 +1266,8 @@ void OpenContain::putObjAtNextFirePoint( Object *obj )
 	{
 		// If our passengers are in our turret, we need to recompute the Matrix.
 		AsciiString firepoint("FIREPOINT");
-		char suffix[8];
-		itoa( m_firePointNext + 1, suffix, 10 );//+1 from bone names starting at 1, not zero like my array
+		char suffix[16];
+		std::snprintf(suffix, sizeof(suffix), "%lld", static_cast<long long>(m_firePointNext) + 1);//+1 from bone names starting at 1, not zero like my array
 		if( m_firePointNext < 10 )
 		{
 			firepoint.concat('0');

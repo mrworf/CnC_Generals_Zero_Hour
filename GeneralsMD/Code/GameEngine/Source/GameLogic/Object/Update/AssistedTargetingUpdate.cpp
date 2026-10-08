@@ -129,7 +129,8 @@ void AssistedTargetingUpdate::makeFeedbackLaser( const ThingTemplate *laserTempl
 	laser->setPosition(from->getPosition());
 	
 	Drawable *draw = laser->getDrawable();
-	static const NameKeyType key_LaserUpdate = NAMEKEY( "LaserUpdate" );
+	static const StaticNameKey nativeCached_key_LaserUpdate("LaserUpdate");
+	const NameKeyType key_LaserUpdate = nativeCached_key_LaserUpdate.key();
 	LaserUpdate *update = (LaserUpdate*)draw->findClientUpdateModule( key_LaserUpdate );
 	if( !update )
 	{

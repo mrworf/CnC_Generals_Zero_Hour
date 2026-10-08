@@ -792,7 +792,8 @@ void ControlBar::updateContextCommand( void )
 			const ProductionEntry *produce = pu->firstProduction();
 			if( produce )
 			{
-				static NameKeyType winID = TheNameKeyGenerator->nameToKey( "ControlBar.wnd:ButtonQueue01" );
+				static const StaticNameKey nativeCached_winID("ControlBar.wnd:ButtonQueue01");
+				NameKeyType winID = nativeCached_winID.key();
 				GameWindow *win = TheWindowManager->winGetWindowFromId( m_contextParent[ CP_BUILD_QUEUE ], winID );
 				
 				DEBUG_ASSERTCRASH( win, ("updateContextCommand: Unable to find first build queue button\n") );
@@ -1440,7 +1441,8 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 			}
 			else if( mod->getSpecialPowerTemplate()->getSpecialPowerType() == SPECIAL_CHANGE_BATTLE_PLANS )
 			{
-				static NameKeyType key_BattlePlanUpdate = NAMEKEY( "BattlePlanUpdate" );
+				static const StaticNameKey nativeCached_key_BattlePlanUpdate("BattlePlanUpdate");
+				NameKeyType key_BattlePlanUpdate = nativeCached_key_BattlePlanUpdate.key();
 				BattlePlanUpdate *update = (BattlePlanUpdate*)obj->findUpdateModule( key_BattlePlanUpdate );
 				if( update && update->getCommandOption() & command->getOptions() )
 				{
@@ -1518,7 +1520,8 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 
 			//We're dealing with a strategy center stop button. Only show the button
 			//if we're in bombardment mode (to stop the artillery cannon).
-			static NameKeyType key_BattlePlanUpdate = NAMEKEY( "BattlePlanUpdate" );
+			static const StaticNameKey nativeCached_key_BattlePlanUpdate("BattlePlanUpdate");
+			NameKeyType key_BattlePlanUpdate = nativeCached_key_BattlePlanUpdate.key();
 			BattlePlanUpdate *bpUpdate = (BattlePlanUpdate*)obj->findUpdateModule( key_BattlePlanUpdate );
 			if( bpUpdate && bpUpdate->getActiveBattlePlan() != PLANSTATUS_BOMBARDMENT )
 			{
@@ -1538,4 +1541,3 @@ CommandAvailability ControlBar::getCommandAvailability( const CommandButton *com
 	return COMMAND_AVAILABLE;
 
 }  // end getCommandAvailability
-

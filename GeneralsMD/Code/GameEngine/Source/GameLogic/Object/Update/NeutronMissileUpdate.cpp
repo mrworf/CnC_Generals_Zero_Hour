@@ -27,6 +27,7 @@
 // Desc:   Implementation of missile behavior
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/NativeSourceMath.h"
 
 #include "Common/GameState.h"
 #include "Common/Thing.h"
@@ -282,7 +283,7 @@ static Real calcTransform(const Object* obj, const Coord3D *pos, Real maxTurnRat
 	Vector3 objPos(obj->getPosition()->x, obj->getPosition()->y, obj->getPosition()->z);
 	Vector3 otherPos(pos->x, pos->y, pos->z);
 
-	Vector3 objDir = obj->getTransformMatrix()->Rotate_Vector(Vector3(1.0f, 0.0f, 0.0f));
+	Vector3 objDir = nativeSourceRotateVector(*obj->getTransformMatrix(), Vector3(1.0f, 0.0f, 0.0f));
 	Vector3 otherDir = otherPos - objPos;
 	otherDir.Normalize();
 
@@ -318,11 +319,11 @@ static Real calcTransform(const Object* obj, const Coord3D *pos, Real maxTurnRat
 #endif
 
 		Matrix3D rotMtx(objCrossOther, angle);
-		newDir = rotMtx.Rotate_Vector(objDir);
+		newDir = nativeSourceRotateVector(rotMtx, objDir);
 
 	}
 
-	newTransform->buildTransformMatrix( objPos, newDir );
+	nativeSourceBuildTransformMatrix(*newTransform,  objPos, newDir );
 
 	return angle;
 }
@@ -405,7 +406,7 @@ void NeutronMissileUpdate::doAttack( void )
 				// MDC: moving to GameLogicRandomValue.  This does not need to be synced, but having it so makes searches *so* much nicer.
 				vectmp.Y = GameLogicRandomValueReal(-1.0, 1.0) * amplitude;
 				vectmp.Z = GameLogicRandomValueReal(-1.0, 1.0) * amplitude;
-				vectmp = mx.Rotate_Vector(vectmp);
+				vectmp = nativeSourceRotateVector(mx, vectmp);
 				Matrix3D mtxtmp(1);
 				mtxtmp.Translate(vectmp);
 				getObject()->getDrawable()->setInstanceMatrix( &mtxtmp );

@@ -639,7 +639,8 @@ void W3DCommandBarBackgroundDraw( GameWindow *window, WinInstanceData *instData 
 	ControlBarSchemeManager *man = TheControlBar->getControlBarSchemeManager();
 	if(!man)
 		return;
-	static NameKeyType winNamekey	= TheNameKeyGenerator->nameToKey( AsciiString( "ControlBar.wnd:BackgroundMarker" ) );
+	static const StaticNameKey nativeCached_winNamekey("ControlBar.wnd:BackgroundMarker");
+	NameKeyType winNamekey = nativeCached_winNamekey.key();
 	GameWindow *win =  TheWindowManager->winGetWindowFromId(NULL,winNamekey);
 	static ICoord2D basePos;
 	if(!win)
@@ -664,7 +665,8 @@ void W3DCommandBarForegroundDraw( GameWindow *window, WinInstanceData *instData 
 	if(!man)
 		return;
 
-	static NameKeyType winNamekey	= TheNameKeyGenerator->nameToKey( AsciiString( "ControlBar.wnd:BackgroundMarker" ) );
+	static const StaticNameKey nativeCached_winNamekey("ControlBar.wnd:BackgroundMarker");
+	NameKeyType winNamekey = nativeCached_winNamekey.key();
 	GameWindow *win = TheWindowManager->winGetWindowFromId(NULL,winNamekey);
 	static ICoord2D basePos;
 	if(!win)

@@ -44,6 +44,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include <unordered_map>
+#include "Common/SubsystemInterface.h"
+
 
 #ifndef __WINDOWVIDEOMANAGER_H_
 #define __WINDOWVIDEOMANAGER_H_
@@ -151,12 +154,11 @@ private:
 	{
 	size_t operator()(ConstGameWindowPtr p) const
 	{
-		std::hash<UnsignedInt> hasher;
-		return hasher((UnsignedInt)p);
+		return std::hash<ConstGameWindowPtr>{}(p);
 	}
 	};
 
-	typedef std::hash_map< ConstGameWindowPtr, WindowVideo *, hashConstGameWindowPtr, std::equal_to<ConstGameWindowPtr> > WindowVideoMap;
+	typedef std::unordered_map< ConstGameWindowPtr, WindowVideo *, hashConstGameWindowPtr, std::equal_to<ConstGameWindowPtr> > WindowVideoMap;
 
 	WindowVideoMap m_playingVideos;								///< List of currently playin Videos
 	//WindowVideoMap m_pausedVideos;									///< List of currently paused Videos

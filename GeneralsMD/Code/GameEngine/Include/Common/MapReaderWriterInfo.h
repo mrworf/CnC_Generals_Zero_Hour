@@ -31,6 +31,8 @@
 #ifndef _MAP_READER_WRITER_INFO_H_
 #define _MAP_READER_WRITER_INFO_H_
 
+#include "Common/AsciiString.h"
+
 #define K_HEIGHT_MAP_VERSION_1	1	// Height map cell = 5.0
 #define K_HEIGHT_MAP_VERSION_2	2	// Height map cell = 10.0
 #define K_HEIGHT_MAP_VERSION_3	3	// Added m_borderSize
@@ -82,15 +84,19 @@ public:
 };
 
 /** An instance of InputStream that uses a FILE* to read data. */
+class NativeUserStorage;
 class CachedFileInputStream : public ChunkInputStream
 {
 protected:
 	int m_size;
 	char* m_buffer;
 	int m_pos;
+	const NativeUserStorage* m_storage;
 public:
-	CachedFileInputStream(void);
+	explicit CachedFileInputStream(const NativeUserStorage* storage = nullptr);
 	~CachedFileInputStream(void);
+	CachedFileInputStream(const CachedFileInputStream&) = delete;
+	CachedFileInputStream& operator=(const CachedFileInputStream&) = delete;
 	Bool open(AsciiString path);	///< Returns true if open succeeded.
 	void close(void);  ///< Explict close.  Destructor closes if file is left open.
 	virtual Int read(void *pData, Int numBytes);

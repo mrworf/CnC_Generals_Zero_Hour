@@ -71,6 +71,8 @@ MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( Image, "Image" );
 public:
 	
 	Image( void );
+	void copyDefinition(const Image& source);
+	void swapDefinition(Image& other) noexcept;
 	// virtual desctructor defined by memory pool object
 
 	void setName( AsciiString name );							///< set image name
@@ -171,4 +173,3 @@ inline UnsignedInt Image::getStatus( void ) const { return m_status; }
 extern ImageCollection *TheMappedImageCollection;  ///< mapped images
 
 #endif // __IMAGE_H_
-

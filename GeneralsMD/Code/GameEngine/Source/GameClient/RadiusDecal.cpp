@@ -33,8 +33,12 @@
 #include "Common/PlayerList.h"
 #include "Common/Xfer.h"
 #include "GameClient/RadiusDecal.h"
+
 #include "GameClient/Shadow.h"
 #include "GameLogic/GameLogic.h"
+
+// Shared logical interface; the native renderer publishes its actual provider.
+ProjectedShadowManager* TheProjectedShadowManager = nullptr;
 
 #ifdef _INTERNAL
 // for occasional debugging...

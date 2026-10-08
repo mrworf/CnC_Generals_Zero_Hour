@@ -34,6 +34,8 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include <stddef.h>	// for offsetof, which we don't use but everyone who includes us does
+#include <span>
+#include "Common/Errors.h"
 #include "Common/ScienceType.h"
 #include "Common/AsciiString.h"
 #include "Common/GameCommon.h"
@@ -65,26 +67,22 @@ enum
 //-------------------------------------------------------------------------------------------------
 /** Status return codes for the INI reader */
 //-------------------------------------------------------------------------------------------------
-enum
-{
-	// we map all of these to the same "real" error code, because
-	// we generally don't care why it failed; but since the code distinguishes,
-	// I didn't want to wipe out that intelligence. if we ever need to distinguish
-	// failure modes at runtime, just put in real values for these.
-	INI_CANT_SEARCH_DIR		= ERROR_BAD_INI,
-	INI_INVALID_DIRECTORY = ERROR_BAD_INI,
-	INI_INVALID_PARAMS		= ERROR_BAD_INI,
-	INI_INVALID_NAME_LIST = ERROR_BAD_INI,
-	INI_INVALID_DATA			= ERROR_BAD_INI,
-	INI_MISSING_END_TOKEN = ERROR_BAD_INI,
-	INI_UNKNOWN_TOKEN			= ERROR_BAD_INI,
-	INI_BUFFER_TOO_SMALL  = ERROR_BAD_INI,
-	INI_FILE_NOT_OPEN			= ERROR_BAD_INI,
-	INI_FILE_ALREADY_OPEN = ERROR_BAD_INI,
-	INI_CANT_OPEN_FILE		= ERROR_BAD_INI,
-	INI_UNKNOWN_ERROR			= ERROR_BAD_INI,
-	INI_END_OF_FILE				= ERROR_BAD_INI
-};
+// These are aliases of the actual throwable ErrorCode, not a distinct
+// anonymous enum that bypasses ErrorCode handlers. Identities stay unchanged.
+inline constexpr ErrorCode INI_CANT_SEARCH_DIR = ERROR_BAD_INI;
+inline constexpr ErrorCode INI_INVALID_DIRECTORY = ERROR_BAD_INI;
+inline constexpr ErrorCode INI_INVALID_PARAMS = ERROR_BAD_INI;
+inline constexpr ErrorCode INI_INVALID_NAME_LIST = ERROR_BAD_INI;
+inline constexpr ErrorCode INI_INVALID_DATA = ERROR_BAD_INI;
+inline constexpr ErrorCode INI_MISSING_END_TOKEN = ERROR_BAD_INI;
+inline constexpr ErrorCode INI_UNKNOWN_TOKEN = ERROR_BAD_INI;
+inline constexpr ErrorCode INI_BUFFER_TOO_SMALL = ERROR_BAD_INI;
+inline constexpr ErrorCode INI_FILE_NOT_OPEN = ERROR_BAD_INI;
+inline constexpr ErrorCode INI_FILE_ALREADY_OPEN = ERROR_BAD_INI;
+inline constexpr ErrorCode INI_CANT_OPEN_FILE = ERROR_BAD_INI;
+inline constexpr ErrorCode INI_UNKNOWN_ERROR = ERROR_BAD_INI;
+inline constexpr ErrorCode INI_END_OF_FILE = ERROR_BAD_INI;
+
 
 //-------------------------------------------------------------------------------------------------
 /** Function typedef for parsing data block fields.
@@ -159,6 +157,11 @@ public:
 /** Function typedef for parsing INI types blocks */
 //-------------------------------------------------------------------------------------------------
 typedef void (*INIBlockParse)( INI *ini );
+struct INIBlockDefinition { const char* token; INIBlockParse parse; };
+struct INILineTransfer {
+	void* owner = nullptr;
+	void (*line)(void*, const char*, Int) = nullptr;
+};
 typedef void (*BuildMultiIniFieldProc)(MultiIniFieldParse& p);
 
 //-------------------------------------------------------------------------------------------------
@@ -179,6 +182,12 @@ public:
 	// Actual field-dispatch entry point for rooted native data owners.
 	// The caller owns an offside candidate; publish it only after this returns.
 	void loadFields(AsciiString filename,INILoadType loadType,void* candidate,const FieldParse* fields);
+	// Bounded source-owned block registration. The full runtime passes its
+	// complete original registry; owner-focused fixtures may select real owners.
+	void loadBlocks(AsciiString filename, INILoadType loadType,
+	                std::span<const INIBlockDefinition> blocks, INILineTransfer transfer = {});
+	void loadDirectoryBlocks(AsciiString directory, Bool subdirectories, INILoadType loadType,
+	                         std::span<const INIBlockDefinition> blocks, INILineTransfer transfer = {});
 
 	static Bool isDeclarationOfType( AsciiString blockType, AsciiString blockName, char *bufferToCheck );
 	static Bool isEndOfBlock( char *bufferToCheck );

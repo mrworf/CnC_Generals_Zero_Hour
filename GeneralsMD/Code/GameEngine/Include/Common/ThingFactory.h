@@ -47,7 +47,7 @@ class Object;
 class Drawable;
 class INI;
 
-typedef std::hash_map<AsciiString, ThingTemplate*, rts::hash<AsciiString>, rts::equal_to<AsciiString> > ThingTemplateHashMap;
+typedef std::unordered_map<AsciiString, ThingTemplate*, rts::hash<AsciiString>, rts::equal_to<AsciiString> > ThingTemplateHashMap;
 typedef ThingTemplateHashMap::iterator ThingTemplateHashMapIt;
 //-------------------------------------------------------------------------------------------------
 /** Implementation of the thing manager interface singleton */
@@ -137,4 +137,3 @@ extern ThingFactory *TheThingFactory;  ///< the template singleton
 
 
 #endif // __THINGFACTORY_H_
-

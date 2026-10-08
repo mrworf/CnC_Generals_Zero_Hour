@@ -26,6 +26,7 @@
 // The implementation of the Display class
 // Author: Michael S. Booth, March 2001
 
+#include "Common/NativeClock.h"
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "GameClient/Display.h"
@@ -215,7 +216,7 @@ void Display::playLogoMovie( AsciiString movieName, Int minMovieLength, Int minC
 	m_currentlyPlayingMovie = movieName;
 	m_movieHoldTime = minMovieLength;
 	m_copyrightHoldTime = minCopyrightLength;
-	m_elapsedMovieTime = timeGetTime();  // we're using time get time becuase legal want's actual "Seconds"
+	m_elapsedMovieTime = nativeMilliseconds();  // we're using time get time becuase legal want's actual "Seconds"
 	
 	m_videoBuffer = createVideoBuffer();
 	if (	m_videoBuffer == NULL || 
@@ -321,10 +322,10 @@ void Display::update( void )
 					else
 						m_copyrightDisplayString->setFont(TheFontLibrary->getFont("Courier", 
 						TheGlobalLanguageData->adjustFontSize(12), TRUE));	
-					m_elapsedCopywriteTime = timeGetTime();
+					m_elapsedCopywriteTime = nativeMilliseconds();
 				}
-				if(m_movieHoldTime + m_elapsedMovieTime < timeGetTime() && 
-						m_copyrightHoldTime + m_elapsedCopywriteTime < timeGetTime())
+				if(m_movieHoldTime + m_elapsedMovieTime < nativeMilliseconds() &&
+						m_copyrightHoldTime + m_elapsedCopywriteTime < nativeMilliseconds())
 				{
 					m_movieHoldTime = -1;
 					m_elapsedMovieTime = 0;

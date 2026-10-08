@@ -86,18 +86,15 @@ void ThingFactory::freeDatabase( void )
 //-------------------------------------------------------------------------------------------------
 void ThingFactory::addTemplate( ThingTemplate *tmplate )
 {
-	ThingTemplateHashMapIt tIt = m_templateHashMap.find(tmplate->getName());
-
-	if (tIt != m_templateHashMap.end()) {
-		DEBUG_CRASH(("Duplicate Thing Template name found: %s\n", tmplate->getName().str()));
-	}
+	if (!tmplate) throw ERROR_BAD_ARG;
+	// Prepare the fallible index node before publishing its owning list link.
+	const auto admitted = m_templateHashMap.emplace(tmplate->getName(), tmplate);
+	if (!admitted.second) throw ERROR_BAD_INI;
 
 	// Link it to the list
 	tmplate->friend_setNextTemplate(m_firstTemplate);
 	m_firstTemplate = tmplate;
 
-	// Add it to the hash table.
-	m_templateHashMap[tmplate->getName()] = tmplate;
 }  // end addTemplate
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -111,7 +108,7 @@ ThingFactory::ThingFactory()
 	m_firstTemplate = NULL;
 	m_nextTemplateID = 1;	// not zero!
 
-	m_templateHashMap.resize( TEMPLATE_HASH_SIZE );
+	m_templateHashMap.rehash( TEMPLATE_HASH_SIZE );
 }  // end ThingFactory
 
 //-------------------------------------------------------------------------------------------------
@@ -129,10 +126,12 @@ ThingFactory::~ThingFactory()
 //-------------------------------------------------------------------------------------------------
 ThingTemplate *ThingFactory::newTemplate( const AsciiString& name )
 {
+	if (m_nextTemplateID == 0 || name.isEmpty()) throw ERROR_BAD_ARG;
 	ThingTemplate *newTemplate;
 
 	// allocate template
 	newTemplate = newInstance(ThingTemplate);
+	MemoryPoolObjectHolder candidateOwner(newTemplate);
 
 	// if the default template is present, get it and copy over any data to the new template
 	const ThingTemplate *defaultT = findTemplate( AsciiString( "DefaultThingTemplate" ), FALSE );
@@ -140,20 +139,22 @@ ThingTemplate *ThingFactory::newTemplate( const AsciiString& name )
 	{
 
 		// copy over static data
-		*newTemplate = *defaultT;
+		newTemplate->copyFrom(defaultT);
 		newTemplate->setCopiedFromDefault();
 
 	}  // end if
 
 	// give template a unique identifier
-	newTemplate->friend_setTemplateID( m_nextTemplateID++ );
-	DEBUG_ASSERTCRASH( m_nextTemplateID != 0, ("m_nextTemplateID wrapped to zero") );
+	newTemplate->friend_setTemplateID(m_nextTemplateID);
 
 	// assign name
 	newTemplate->friend_setTemplateName( name );
 
 	// add to list
 	addTemplate( newTemplate );
+	// Zero is the exhausted next-ID sentinel, never an admitted template ID.
+	m_nextTemplateID = static_cast<UnsignedShort>(UnsignedInt(m_nextTemplateID) + 1);
+	candidateOwner.release();
 
 	// return the newly created template
 	return newTemplate;
@@ -168,6 +169,11 @@ ThingTemplate *ThingFactory::newTemplate( const AsciiString& name )
 //-------------------------------------------------------------------------------------------------
 ThingTemplate* ThingFactory::newOverride( ThingTemplate *thingTemplate )
 {
+	// Compare borrowed raw identities before dereferencing the proposed parent.
+	Bool owned = FALSE;
+	for (const auto& entry : m_templateHashMap)
+		if (entry.second == thingTemplate) { owned = TRUE; break; }
+	if (!owned || !thingTemplate) throw ERROR_BAD_ARG;
 
 	// sanity
 	DEBUG_ASSERTCRASH( thingTemplate, ("newOverride(): NULL 'parent' thing template\n") );
@@ -182,13 +188,18 @@ ThingTemplate* ThingFactory::newOverride( ThingTemplate *thingTemplate )
 
 	// allocate new template
 	ThingTemplate *newTemplate = newInstance(ThingTemplate);
+	MemoryPoolObjectHolder candidateOwner(newTemplate);
 
 	// copy data from final override to 'newTemplate' as a set of initial default values
-	*newTemplate = *child;
+	newTemplate->copyFrom(child);
+	newTemplate->friend_setTemplateName(child->getName());
+	newTemplate->friend_setTemplateID(child->getTemplateID());
+	newTemplate->friend_setNextTemplate(child->friend_getNextTemplate());
 	newTemplate->setCopiedFromDefault();
 
 	newTemplate->markAsOverride();
 	child->setNextOverride(newTemplate);
+	candidateOwner.release();
 
 	// return the newly created override for us to set values with etc
 	return newTemplate;
@@ -208,36 +219,26 @@ void ThingFactory::init( void )
 //-------------------------------------------------------------------------------------------------
 void ThingFactory::reset( void )
 {
-	ThingTemplate *t;
-	// go through all templates and delete any overrides
-	for( t = m_firstTemplate; t; /* empty */ )
+	ThingTemplate* previous = nullptr;
+	for (ThingTemplate* current = m_firstTemplate; current; )
 	{
-		Bool possibleAdjustment = FALSE;
-		// t itself can be deleted if it is something created for this map only. Therefore, 
-		// we need to store what the next item is so that we don't orphan a bunch of templates.
-		ThingTemplate *nextT = t->friend_getNextTemplate();
-		if (t == m_firstTemplate) {
-			possibleAdjustment = TRUE;
+		ThingTemplate* next = current->friend_getNextTemplate();
+		if (current->friend_isOverride())
+		{
+			// Map-only roots may appear anywhere in the list. Withdraw both
+			// ownership links before deleting; a retained predecessor must not
+			// continue pointing at a retired non-head root.
+			m_templateHashMap.erase(current->getName());
+			if (previous) previous->friend_setNextTemplate(next);
+			else m_firstTemplate = next;
+			current->deleteInstance();
 		}
-
-		// if stillValid is NULL after we delete the overrides, then this template was created for 
-		// this map only. If it also happens to be m_firstTemplate, then we need to update m_firstTemplate
-		// as well. Finally, if it was only created for this map, we need to remove the name from the 
-		// hash map, to prevent any crashes.
-
-		AsciiString templateName = t->getName();
-		
-		Overridable *stillValid = t->deleteOverrides();
-		if (stillValid == NULL && possibleAdjustment) {
-			m_firstTemplate = nextT;
+		else
+		{
+			current->deleteOverrides();
+			previous = current;
 		}
-		
-		if (stillValid == NULL) {
-			// Also needs to be removed from the Hash map.
-			m_templateHashMap.erase(templateName);
-		}
-
-		t = nextT;
+		current = next;
 	}
 }  // end reset
 
@@ -371,68 +372,80 @@ AsciiString TheThingTemplateBeingParsedName;
 //-------------------------------------------------------------------------------------------------
 /*static*/ void ThingFactory::parseObjectDefinition( INI* ini, const AsciiString& name, const AsciiString& reskinFrom )
 {
+    if (!ini || !TheThingFactory || !TheModuleFactory || !TheNameKeyGenerator || name.isEmpty())
+        throw ERROR_BAD_ARG;
+    ThingFactory& factory = *TheThingFactory;
+    NameKeyTransaction keys(*TheNameKeyGenerator);
+    NativeModuleDataTransaction moduleData(TheModuleFactory->m_moduleDataList);
 #if defined(_DEBUG) || defined(_INTERNAL)
-	TheThingTemplateBeingParsedName = name;
+    struct ParseNameGuard {
+        AsciiString previous;
+        ParseNameGuard() : previous(TheThingTemplateBeingParsedName) { }
+        ~ParseNameGuard() noexcept { TheThingTemplateBeingParsedName.swap(previous); }
+    } parseName;
+    TheThingTemplateBeingParsedName = name;
 #endif
-
-	// find existing item if present
-	ThingTemplate *thingTemplate = TheThingFactory->findTemplateInternal( name, FALSE );
-	if( !thingTemplate )
-	{
-		// no item is present, create a new one
-		thingTemplate = TheThingFactory->newTemplate( name );
-		if ( ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES )
-		{
-			// This ThingTemplate is actually an override, so we will mark it as such so that it properly
-			// gets deleted on ::reset().
-			thingTemplate->markAsOverride();
-		}
-	}
-	else if( ini->getLoadType() != INI_LOAD_CREATE_OVERRIDES )
-	{
-		//Holy crap, this sucks to debug!!!
-		//If you have two different objects, the previous code would simply 
-		//allow you to define multiple objects with the same name, and just 
-		//nuke the old one with the new one. So, I (KM) have added this 
-		//assert to notify in case of two same-name objects.
-		DEBUG_CRASH(( "[LINE: %d in '%s'] Duplicate factionunit %s found!", ini->getLineNum(), ini->getFilename().str(), name.str() ));
-	}
-	else
-	{
-		thingTemplate = TheThingFactory->newOverride( thingTemplate );
-	}
-
-	if (reskinFrom.isNotEmpty())
-	{
-		const ThingTemplate* reskinTmpl = TheThingFactory->findTemplate(reskinFrom);
-		if (reskinTmpl)
-		{
-			thingTemplate->copyFrom(reskinTmpl);
-			thingTemplate->setCopiedFromDefault();
-			thingTemplate->setReskinnedFrom(reskinTmpl);
-			ini->initFromINI( thingTemplate, thingTemplate->getReskinFieldParse() );
-		}
-		else
-		{
-			DEBUG_CRASH(("ObjectReskin must come after the original Object (%s, %s).\n",reskinFrom.str(),name.str()));
-			throw INI_INVALID_DATA;
-		}
-	}
-	else
-	{
-		ini->initFromINI( thingTemplate, thingTemplate->getFieldParse() );
-	}
-
-	thingTemplate->validate();
-	
-	if( ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES )
-	{
-		thingTemplate->resolveNames();
-	}
-
-#if defined(_DEBUG) || defined(_INTERNAL)
-	TheThingTemplateBeingParsedName.clear();
-#endif
+    ThingTemplate* parent = factory.findTemplateInternal(name, FALSE);
+    if (parent && ini->getLoadType() != INI_LOAD_CREATE_OVERRIDES)
+        throw ERROR_BAD_INI; // Original duplicate-definition diagnostic, without partial overwrite.
+    ThingTemplate* last = parent ? static_cast<ThingTemplate*>(parent->friend_getFinalOverride()) : nullptr;
+    ThingTemplate* candidate = nullptr;
+    struct Publication {
+        ThingTemplate*& head;
+        UnsignedShort& nextID;
+        ThingTemplateHashMap& index;
+        ThingTemplateHashMap previousIndex;
+        ThingTemplate* previousHead;
+        UnsignedShort previousID;
+        ThingTemplate* overrideParent;
+        ThingTemplate*& candidate;
+        std::vector<std::pair<ThingTemplate*, Bool>> flags;
+        bool committed = false;
+        Publication(ThingTemplate*& h, UnsignedShort& id, ThingTemplateHashMap& map,
+                    ThingTemplate* parent, ThingTemplate*& value)
+            : head(h), nextID(id), index(map), previousIndex(map), previousHead(h),
+              previousID(id), overrideParent(parent), candidate(value) {
+            // Complete all fallible journal preparation before changing the live index.
+            for (ThingTemplate* root = h; root; root = root->friend_getNextTemplate())
+                for (ThingTemplate* node = root; node;
+                     node = static_cast<ThingTemplate*>(node->friend_getNextOverride()))
+                    flags.emplace_back(node, node->isBuildFacility());
+            index.swap(previousIndex);
+        }
+        ~Publication() noexcept {
+            if (!committed) {
+                if (overrideParent) overrideParent->setNextOverride(nullptr);
+                head = previousHead;
+                nextID = previousID;
+                index.swap(previousIndex);
+                for (const auto& entry : flags) entry.first->friend_setBuildFacility(entry.second);
+                if (candidate) candidate->deleteInstance();
+            }
+        }
+    } publication(factory.m_firstTemplate, factory.m_nextTemplateID,
+                  factory.m_templateHashMap, last, candidate);
+    // Scoped visibility preserves original self/prerequisite lookup order. The
+    // publication journal restores every link/backing before candidate retirement.
+    candidate = parent ? factory.newOverride(parent) : factory.newTemplate(name);
+    if (!parent && ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
+        candidate->markAsOverride();
+    if (reskinFrom.isNotEmpty()) {
+        const ThingTemplate* source = factory.findTemplate(reskinFrom);
+        if (!source) throw INI_INVALID_DATA;
+        candidate->copyFrom(source);
+        candidate->setCopiedFromDefault();
+        candidate->setReskinnedFrom(source);
+        ini->initFromINI(candidate, candidate->getReskinFieldParse());
+    } else {
+        ini->initFromINI(candidate, candidate->getFieldParse());
+    }
+    candidate->validate();
+    if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES)
+        candidate->resolveNames();
+    // No fallible work remains after these publication decisions.
+    publication.committed = true;
+    moduleData.commit();
+    keys.commit();
 }
 
 //#define CHECK_THING_NAMES

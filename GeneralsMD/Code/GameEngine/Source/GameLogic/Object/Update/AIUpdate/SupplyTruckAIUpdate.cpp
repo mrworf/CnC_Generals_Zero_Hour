@@ -224,12 +224,14 @@ void SupplyTruckAIUpdate::privateDock( Object *dock, CommandSourceType cmdSource
 UnsignedInt SupplyTruckAIUpdate::getActionDelayForDock( Object *dock )
 {
 	// Decide whether to use my Center or Warehouse delay time
-	static const NameKeyType key_warehouseUpdate = NAMEKEY("SupplyWarehouseDockUpdate");
+	static const StaticNameKey nativeCached_key_warehouseUpdate("SupplyWarehouseDockUpdate");
+	const NameKeyType key_warehouseUpdate = nativeCached_key_warehouseUpdate.key();
 	SupplyWarehouseDockUpdate *warehouseModule = (SupplyWarehouseDockUpdate*) dock->findUpdateModule( key_warehouseUpdate );
 	if (warehouseModule) {
 		return getSupplyTruckAIUpdateModuleData()->m_warehouseDelay;
 	}
-	static const NameKeyType key_centerUpdate = NAMEKEY("SupplyCenterDockUpdate");
+	static const StaticNameKey nativeCached_key_centerUpdate("SupplyCenterDockUpdate");
+	const NameKeyType key_centerUpdate = nativeCached_key_centerUpdate.key();
 	SupplyCenterDockUpdate *centerModule = (SupplyCenterDockUpdate*) dock->findUpdateModule( key_centerUpdate );
 	if (centerModule) {
 		return getSupplyTruckAIUpdateModuleData()->m_centerDelay;
@@ -835,4 +837,3 @@ TheInGameUI->DEBUG_addFloatingText(tmp, owner->getPosition(), GameMakeColor(255,
 
 	return false;
 }
-

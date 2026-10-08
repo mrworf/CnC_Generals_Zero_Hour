@@ -54,7 +54,8 @@ BoneFXDamage::~BoneFXDamage( void )
 //-------------------------------------------------------------------------------------------------
 void BoneFXDamage::onObjectCreated()
 {
-	static NameKeyType key_BoneFXUpdate = NAMEKEY("BoneFXUpdate");
+	static const StaticNameKey nativeCached_key_BoneFXUpdate("BoneFXUpdate");
+	NameKeyType key_BoneFXUpdate = nativeCached_key_BoneFXUpdate.key();
 	BoneFXUpdate* bfxu = (BoneFXUpdate*)getObject()->findUpdateModule(key_BoneFXUpdate);
 	if (bfxu == NULL)
 	{
@@ -70,7 +71,8 @@ void BoneFXDamage::onBodyDamageStateChange( const DamageInfo *damageInfo,
 																						BodyDamageType oldState, 
 																						BodyDamageType newState )
 {
-	static NameKeyType key_BoneFXUpdate = NAMEKEY("BoneFXUpdate");
+	static const StaticNameKey nativeCached_key_BoneFXUpdate("BoneFXUpdate");
+	NameKeyType key_BoneFXUpdate = nativeCached_key_BoneFXUpdate.key();
 	BoneFXUpdate* bfxu = (BoneFXUpdate*)getObject()->findUpdateModule(key_BoneFXUpdate);
 	if (bfxu)
 		bfxu->changeBodyDamageState(oldState, newState);

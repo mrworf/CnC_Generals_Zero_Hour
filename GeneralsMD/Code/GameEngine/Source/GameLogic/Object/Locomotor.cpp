@@ -30,6 +30,10 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/NativeSourceMath.h"
+#include <climits>
+#include <algorithm>
+#include "Common/GlobalData.h"
 
 #define DEFINE_SURFACECATEGORY_NAMES
 #define DEFINE_LOCO_Z_NAMES
@@ -166,7 +170,7 @@ static Real tryToRotateVector3D(
 
 		angleBetween = maxAngle;
 		Matrix3D rotMtx(objCrossGoal, angleBetween);
-		actualDir = rotMtx.Rotate_Vector(curDir);
+		actualDir = nativeSourceRotateVector(rotMtx, curDir);
 	}
 	
 	return angleBetween;
@@ -182,7 +186,7 @@ static Real tryToOrientInThisDirection3D(Object* obj, Real maxTurnRate, const Ve
 		Vector3 objPos(obj->getPosition()->x, obj->getPosition()->y, obj->getPosition()->z);
 
 		Matrix3D newXform;
-		newXform.buildTransformMatrix( objPos, actualDir );
+		nativeSourceBuildTransformMatrix(newXform,  objPos, actualDir );
 
 		obj->setTransformMatrix( &newXform );
 	}
@@ -2561,7 +2565,7 @@ void Locomotor::maintainCurrentPositionHover(Object* obj, PhysicsBehavior *physi
 		//
 		// Stop
 		//
-		Real minSpeed = max( 1.0E-10f, m_template->m_minSpeed ); 
+		Real minSpeed = std::max( 1.0E-10f, m_template->m_minSpeed );
 		Real speedDelta = minSpeed - actualSpeed;
 		if (fabs(speedDelta) > minSpeed)
 		{
@@ -2804,5 +2808,3 @@ Locomotor* LocomotorSet::findLocomotor(LocomotorSurfaceTypeMask t)
 	}
 	return NULL;
 }
-
-

@@ -32,7 +32,6 @@
 #include "GameClient/GameWindow.h"
 #include "W3DDevice/Common/W3DFunctionLexicon.h"
 #include "W3DDevice/GameClient/W3DGUICallbacks.h"
-#include "W3DDevice/GameClient/W3DGameWindow.h"
 #include "W3DDevice/GameClient/W3DGadget.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -95,7 +94,7 @@ static FunctionLexicon::TableEntry gameWinDrawTable [] =
 	{ NAMEKEY_INVALID, "W3DNoDraw",											W3DNoDraw },
 	{ NAMEKEY_INVALID, "W3DDrawMapPreview",							W3DDrawMapPreview },
 
-	{ NAMEKEY_INVALID, NULL,														NULL },
+	{ NAMEKEY_INVALID, NULL,														nullptr },
 
 };
 
@@ -105,7 +104,7 @@ static FunctionLexicon::TableEntry layoutInitTable [] =
 
 	{ NAMEKEY_INVALID, "W3DMainMenuInit",								W3DMainMenuInit },
 
-	{ NAMEKEY_INVALID, NULL,														NULL },
+	{ NAMEKEY_INVALID, NULL,														nullptr },
 
 };
 
@@ -134,12 +133,8 @@ W3DFunctionLexicon::~W3DFunctionLexicon( void )
 void W3DFunctionLexicon::init( void )
 {
 
-	// extend functionality
-	FunctionLexicon::init();
-
-	// load our own tables
-	loadTable( gameWinDrawTable, TABLE_GAME_WIN_DEVICEDRAW );
-	loadTable( layoutInitTable, TABLE_WIN_LAYOUT_DEVICEINIT );
+	// Core and device tables publish in one bounded registration transaction.
+	initWithDeviceTables(gameWinDrawTable, layoutInitTable);
 
 }  // end init
 
@@ -166,5 +161,3 @@ void W3DFunctionLexicon::update( void )
 	FunctionLexicon::update();
 
 }  // end update
-
-

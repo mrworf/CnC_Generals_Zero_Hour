@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
+#include <strings.h>
 
 #include "Common/RandomValue.h"
 #include "Common/Xfer.h"
@@ -51,7 +52,7 @@ void parseFactionObjectCreationList( INI *ini, void *instance, void *store, cons
 
 	const char *token = ini->getNextToken( ini->getSepsColon() );
 
-	if ( stricmp(token, "Faction") == 0 )
+	if ( strcasecmp(token, "Faction") == 0 )
 	{
 		token = ini->getNextTokenOrNull( ini->getSepsColon() );
 		if (!token)	throw INI_INVALID_DATA;
@@ -63,7 +64,7 @@ void parseFactionObjectCreationList( INI *ini, void *instance, void *store, cons
 
 
 	token = ini->getNextTokenOrNull( ini->getSepsColon() );
-	if ( stricmp(token, "OCL") == 0 )
+	if ( strcasecmp(token, "OCL") == 0 )
 		ini->parseObjectCreationList( ini, instance, &info.m_ocl, NULL );
 	else
 		throw INI_INVALID_DATA;

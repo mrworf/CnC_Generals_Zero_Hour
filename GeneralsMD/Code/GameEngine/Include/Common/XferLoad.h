@@ -35,16 +35,18 @@
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include <stdio.h>
 #include "Common/Xfer.h"
+#include <vector>
 
 // FOWARD REFERNCES ///////////////////////////////////////////////////////////////////////////////
 class Snapshot;
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-class XferLoad : public Xfer
+class XferLoad : public XferBase
 {
 
 public:
+	void abort() noexcept;
 
 	XferLoad( void );
 	virtual ~XferLoad( void );
@@ -65,9 +67,10 @@ protected:
 
 	virtual void xferImplementation( void *data, Int dataSize );		///< the xfer implementation
 
-	FILE * m_fileFP;																					///< pointer to file
+	std::vector<unsigned char> m_bytes;
+	std::size_t m_position=0;
+	bool m_open=false;
 
 };
 
 #endif // __XFER_LOAD_H_
-

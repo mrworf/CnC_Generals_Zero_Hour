@@ -28,40 +28,41 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <algorithm>
 
 #define DEFINE_DEATH_NAMES
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
-#include "Common\GameAudio.h"
-#include "Common\ThingTemplate.h"
-#include "Common\ThingFactory.h"
-#include "Common\Player.h"
-#include "Common\PlayerList.h"
-#include "Common\Xfer.h"
-#include "Common\ClientUpdateModule.h"
+#include "Common/GameAudio.h"
+#include "Common/ThingTemplate.h"
+#include "Common/ThingFactory.h"
+#include "Common/Player.h"
+#include "Common/PlayerList.h"
+#include "Common/Xfer.h"
+#include "Common/ClientUpdateModule.h"
 
-#include "GameClient\ControlBar.h"
-#include "GameClient\GameClient.h"
-#include "GameClient\Drawable.h"
-#include "GameClient\ParticleSys.h"
-#include "GameClient\FXList.h"
+#include "GameClient/ControlBar.h"
+#include "GameClient/GameClient.h"
+#include "GameClient/Drawable.h"
+#include "GameClient/ParticleSys.h"
+#include "GameClient/FXList.h"
 #include "GameClient/ParticleSys.h"
 
-#include "GameLogic\Locomotor.h"
-#include "GameLogic\GameLogic.h"
-#include "GameLogic\PartitionManager.h"
-#include "GameLogic\Object.h"
-#include "GameLogic\ObjectIter.h"
-#include "GameLogic\Weaponset.h"
-#include "GameLogic\Weapon.h"
-#include "GameLogic\TerrainLogic.h"
-#include "GameLogic\Module\SpecialPowerModule.h"
-#include "GameLogic\Module\SpectreGunshipUpdate.h"
-#include "GameLogic\Module\PhysicsUpdate.h"
-#include "GameLogic\Module\LaserUpdate.h"
-#include "GameLogic\Module\ActiveBody.h"
-#include "GameLogic\Module\AIUpdate.h"
-#include "GameLogic\Module\ContainModule.h"
+#include "GameLogic/Locomotor.h"
+#include "GameLogic/GameLogic.h"
+#include "GameLogic/PartitionManager.h"
+#include "GameLogic/Object.h"
+#include "GameLogic/ObjectIter.h"
+#include "GameLogic/WeaponSet.h"
+#include "GameLogic/Weapon.h"
+#include "GameLogic/TerrainLogic.h"
+#include "GameLogic/Module/SpecialPowerModule.h"
+#include "GameLogic/Module/SpectreGunshipUpdate.h"
+#include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/LaserUpdate.h"
+#include "GameLogic/Module/ActiveBody.h"
+#include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/Module/ContainModule.h"
 
 
 #ifdef _INTERNAL
@@ -424,7 +425,7 @@ UpdateSleepTime SpectreGunshipUpdate::update()
 
         // declination intersects line [p][a], given an attack slope of n1/n2
         Coord3D declination;
-        Real n1 = min( ORBIT_INSERTION_SLOPE_MAX, max(ORBIT_INSERTION_SLOPE_MIN, data->m_orbitInsertionSlope) );
+        Real n1 = std::min( ORBIT_INSERTION_SLOPE_MAX, std::max(ORBIT_INSERTION_SLOPE_MIN, data->m_orbitInsertionSlope) );
         Real n2 = ONE - n1;
         declination.z = zero;
         declination.x = ( perigee.x * n1 ) + ( apogee.x * n2 );

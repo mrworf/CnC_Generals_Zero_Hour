@@ -29,6 +29,9 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include "Lib/BaseType.h"
+#include <utility>
+#include "Common/NativeMessageText.h"
 
 #ifndef _IN_GAME_UI_H_
 #define _IN_GAME_UI_H_
@@ -60,13 +63,13 @@ class WindowLayout;
 class Anim2DTemplate;
 class Anim2D;
 class Shadow;
-enum LegalBuildCode;
-enum KindOfType;
-enum ShadowType;
-enum CanAttackResult;
+enum LegalBuildCode : UnsignedInt;
+enum KindOfType : Int;
+enum ShadowType : UnsignedInt;
+enum CanAttackResult : UnsignedInt;
 
 // ------------------------------------------------------------------------------------------------
-enum RadiusCursorType
+enum RadiusCursorType : UnsignedInt
 {
 	RADIUSCURSOR_NONE = 0,
 	RADIUSCURSOR_ATTACK_DAMAGE_AREA,
@@ -375,10 +378,20 @@ public:  // ********************************************************************
 	void clearPopupMessageData( void );
 
 	// interface for messages to the user
-	// srj sez: passing as const-ref screws up varargs for some reason. dunno why. just pass by value.
-	virtual void messageColor( const RGBColor *rgbColor, UnicodeString format, ... );	///< display a colored message to the user
-	virtual void message( UnicodeString format, ... );				  ///< display a message to the user
-	virtual void message( AsciiString stringManagerLabel, ... );///< display a message to the user
+    // The C varargs anchor is the formatter's plain WideChar pointer, never a
+    // nontrivial string object. No device subclass overrides these entry points.
+    UnicodeString resolveMessageFormat(const AsciiString& label) const;
+    template<class... Args> void message(UnicodeString format, Args&&... args) {
+        UnicodeString prepared=formatOriginalMessageText(format,std::forward<Args>(args)...);
+        addMessageText(prepared);
+    }
+    template<class... Args> void message(AsciiString label, Args&&... args) {
+        message(resolveMessageFormat(label),std::forward<Args>(args)...);
+    }
+    template<class... Args> void messageColor(const RGBColor* color,UnicodeString format,Args&&... args) {
+        UnicodeString prepared=formatOriginalMessageText(format,std::forward<Args>(args)...);
+        addMessageText(prepared,color);
+    }
 	virtual void toggleMessages( void ) { m_messagesOn = 1 - m_messagesOn; }	///< toggle messages on/off
 	virtual Bool isMessagesOn( void ) { return m_messagesOn; }	///< are the display messages on
 	void freeMessageResources( void );				///< free resources for the ui messages

@@ -44,6 +44,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef __GADGET_H_
 #define __GADGET_H_
@@ -133,7 +134,7 @@ enum
 };
 
 // Gadget game messages (sent to their owners)
-enum GadgetGameMessage
+enum GadgetGameMessage : UnsignedInt
 {
 
 	// Generic messages supported by all gadgets

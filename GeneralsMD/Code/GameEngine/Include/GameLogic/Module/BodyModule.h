@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef __BODYMODULE_H_
 #define __BODYMODULE_H_
@@ -50,29 +51,9 @@ class WeaponTemplate;
 	* enumeration being in sequential order
 	*/
 //-------------------------------------------------------------------------------------------------
-enum BodyDamageType
-{
-	BODY_PRISTINE,				///< unit should appear in pristine condition
-	BODY_DAMAGED,					///< unit has been damaged
-	BODY_REALLYDAMAGED,		///< unit is extremely damaged / nearly destroyed
-	BODY_RUBBLE,					///< unit has been reduced to rubble/corpse/exploded-hulk, etc
+#include "GameLogic/BodyDamageType.h"
 
-	BODYDAMAGETYPE_COUNT
-};
-
-#ifdef DEFINE_BODYDAMAGETYPE_NAMES
-static const char* TheBodyDamageTypeNames[] =
-{
-	"PRISTINE",
-	"DAMAGED",
-	"REALLYDAMAGED",
-	"RUBBLE",
-
-	NULL
-};
-#endif
-
-enum MaxHealthChangeType
+enum MaxHealthChangeType : UnsignedInt
 {
 	SAME_CURRENTHEALTH,
 	PRESERVE_RATIO,

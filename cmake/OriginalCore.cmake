@@ -1,6 +1,7 @@
 find_package(Threads REQUIRED)
 set(ZH_CODE "${CMAKE_SOURCE_DIR}/GeneralsMD/Code")
 add_library(original_core STATIC
+  "${ZH_CODE}/GameEngine/Source/GameLogic/System/FPUControl.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/RandomValue.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/crc.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/Trig.cpp"
@@ -32,6 +33,7 @@ add_library(original_data STATIC
   "${ZH_CODE}/GameEngine/Source/Common/System/File.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/RAMFile.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeDataFile.cpp"
+  "${ZH_CODE}/GameEngine/Source/Common/System/NativeUserStorage.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeFileSystem.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/SubsystemBase.cpp")
 target_sources(original_data PRIVATE "${ZH_CODE}/GameEngine/Source/GameClient/CSF.cpp")
@@ -52,7 +54,7 @@ add_test(NAME original_data_audit_wrapper COMMAND "${Python3_EXECUTABLE}"
   "${CMAKE_SOURCE_DIR}/tests/original/test_data_audit.py" --binary "$<TARGET_FILE:original_data_audit>")
 set_tests_properties(original_data_audit_wrapper PROPERTIES LABELS "original;data" TIMEOUT 60
   ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
-foreach(family IN ITEMS roots archives ram catalogs text ini fault_mount fault_ram fault_csf fault_map fault_filter fault_ini)
+foreach(family IN ITEMS roots archives ram catalogs text ini fault_mount fault_ram fault_csf fault_map fault_metadata fault_filter fault_ini)
   add_test(NAME original_data_${family} COMMAND original_data_fixture "${family}")
   set_tests_properties(original_data_${family} PROPERTIES LABELS "original;data" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

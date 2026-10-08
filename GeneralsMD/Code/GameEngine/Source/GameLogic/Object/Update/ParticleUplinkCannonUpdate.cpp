@@ -28,35 +28,36 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <algorithm>
 
 #define DEFINE_DEATH_NAMES
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
-#include "Common\ThingTemplate.h"
-#include "Common\ThingFactory.h"
-#include "Common\Player.h"
-#include "Common\PlayerList.h"
-#include "Common\Xfer.h"
-#include "Common\ClientUpdateModule.h"
+#include "Common/ThingTemplate.h"
+#include "Common/ThingFactory.h"
+#include "Common/Player.h"
+#include "Common/PlayerList.h"
+#include "Common/Xfer.h"
+#include "Common/ClientUpdateModule.h"
 
-#include "GameClient\ControlBar.h"
-#include "GameClient\GameClient.h"
-#include "GameClient\Drawable.h"
-#include "GameClient\ParticleSys.h"
-#include "GameClient\FXList.h"
+#include "GameClient/ControlBar.h"
+#include "GameClient/GameClient.h"
+#include "GameClient/Drawable.h"
+#include "GameClient/ParticleSys.h"
+#include "GameClient/FXList.h"
 
-#include "GameLogic\GameLogic.h"
-#include "GameLogic\PartitionManager.h"
-#include "GameLogic\Object.h"
-#include "GameLogic\ObjectIter.h"
-#include "GameLogic\Weaponset.h"
-#include "GameLogic\Weapon.h"
-#include "GameLogic\TerrainLogic.h"
-#include "GameLogic\Module\SpecialPowerModule.h"
-#include "GameLogic\Module\ParticleUplinkCannonUpdate.h"
-#include "GameLogic\Module\PhysicsUpdate.h"
-#include "GameLogic\Module\LaserUpdate.h"
-#include "GameLogic\Module\ActiveBody.h"
+#include "GameLogic/GameLogic.h"
+#include "GameLogic/PartitionManager.h"
+#include "GameLogic/Object.h"
+#include "GameLogic/ObjectIter.h"
+#include "GameLogic/WeaponSet.h"
+#include "GameLogic/Weapon.h"
+#include "GameLogic/TerrainLogic.h"
+#include "GameLogic/Module/SpecialPowerModule.h"
+#include "GameLogic/Module/ParticleUplinkCannonUpdate.h"
+#include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/LaserUpdate.h"
+#include "GameLogic/Module/ActiveBody.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -305,7 +306,7 @@ Bool ParticleUplinkCannonUpdate::initiateIntentToDoSpecialPower(const SpecialPow
 		{
 			pos.set( targetObj->getPosition() );
 		}
-   	m_startAttackFrame = max( now, (UnsignedInt)1 );
+	m_startAttackFrame = std::max( now, (UnsignedInt)1 );
 		m_scriptedWaypointMode = TRUE;
    	m_laserStatus = LASERSTATUS_NONE;
 		setLogicalStatus( STATUS_READY_TO_FIRE );
@@ -339,7 +340,7 @@ Bool ParticleUplinkCannonUpdate::initiateIntentToDoSpecialPower(const SpecialPow
 			pos.set( targetObj->getPosition() );
 		}
    	m_initialTargetPosition.set( &pos );
-   	m_startAttackFrame = max( now, (UnsignedInt)1 );
+	m_startAttackFrame = std::max( now, (UnsignedInt)1 );
    	m_laserStatus = LASERSTATUS_NONE;
 		setLogicalStatus( STATUS_READY_TO_FIRE );
 		m_specialPowerModule->setReadyFrame( now );
@@ -463,7 +464,8 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 					//m_annihilationSound.setPosition( beam->getPosition() );
 					if( orbitalDecayStart <= now )
 					{
-						static NameKeyType nameKeyClientUpdate = NAMEKEY( "LaserUpdate" );
+						static const StaticNameKey nativeCached_nameKeyClientUpdate("LaserUpdate");
+						NameKeyType nameKeyClientUpdate = nativeCached_nameKeyClientUpdate.key();
 						LaserUpdate *update = (LaserUpdate*)beam->findClientUpdateModule( nameKeyClientUpdate );
 						if( update )
 						{
@@ -535,7 +537,7 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 				cartesianTargetVector.Normalize();
 
 				Real dotProduct = Vector2::Dot_Product( buildingToTargetVector, cartesianTargetVector );
-				dotProduct = __min( 0.99999f, __max( -0.99999f, dotProduct ) ); //Account for numerical errors.  Also, acos(-1.00000) is coming out QNAN on the superweapon general map.  Heh.
+				dotProduct = std::min( 0.99999f, std::max( -0.99999f, dotProduct ) ); //Account for numerical errors.  Also, acos(-1.00000) is coming out QNAN on the superweapon general map.  Heh.
 				Real angle = (Real)ACos( dotProduct );
 
 				if( buildingToTargetVector.Y >= 0 )
@@ -609,7 +611,8 @@ UpdateSleepTime ParticleUplinkCannonUpdate::update()
 			Real damageRadius = 0.0f;
 
 			//Reset the laser position
-			static NameKeyType nameKeyClientUpdate = NAMEKEY( "LaserUpdate" );
+			static const StaticNameKey nativeCached_nameKeyClientUpdate("LaserUpdate");
+			NameKeyType nameKeyClientUpdate = nativeCached_nameKeyClientUpdate.key();
 			LaserUpdate *update = (LaserUpdate*)beam->findClientUpdateModule( nameKeyClientUpdate );
 			if( update )
 			{
@@ -851,7 +854,8 @@ void ParticleUplinkCannonUpdate::createConnectorLasers( IntensityTypes intensity
 				{
 					m_laserBeamIDs[ i ] = beam->getID();
 
-					static NameKeyType nameKeyClientUpdate = NAMEKEY( "LaserUpdate" );
+					static const StaticNameKey nativeCached_nameKeyClientUpdate("LaserUpdate");
+					NameKeyType nameKeyClientUpdate = nativeCached_nameKeyClientUpdate.key();
 					LaserUpdate *update = (LaserUpdate*)beam->findClientUpdateModule( nameKeyClientUpdate );
 					if( update )
 					{
@@ -955,7 +959,8 @@ void ParticleUplinkCannonUpdate::createGroundToOrbitLaser( UnsignedInt growthFra
 			{
 				m_groundToOrbitBeamID = beam->getID();
 
-				static NameKeyType nameKeyClientUpdate = NAMEKEY( "LaserUpdate" );
+				static const StaticNameKey nativeCached_nameKeyClientUpdate("LaserUpdate");
+				NameKeyType nameKeyClientUpdate = nativeCached_nameKeyClientUpdate.key();
 				LaserUpdate *update = (LaserUpdate*)beam->findClientUpdateModule( nameKeyClientUpdate );
 				if( update )
 				{
@@ -991,7 +996,8 @@ void ParticleUplinkCannonUpdate::createOrbitToTargetLaser( UnsignedInt growthFra
 			if( beam )
 			{
 				m_orbitToTargetBeamID = beam->getID();
-				static NameKeyType nameKeyClientUpdate = NAMEKEY( "LaserUpdate" );
+				static const StaticNameKey nativeCached_nameKeyClientUpdate("LaserUpdate");
+				NameKeyType nameKeyClientUpdate = nativeCached_nameKeyClientUpdate.key();
 				LaserUpdate *update = (LaserUpdate*)beam->findClientUpdateModule( nameKeyClientUpdate );
 				if( update )
 				{
@@ -1300,7 +1306,8 @@ void ParticleUplinkCannonUpdate::setClientStatus( PUCStatus newStatus, Bool reve
 			Drawable *beam = TheGameClient->findDrawableByID( m_groundToOrbitBeamID );
 			if( beam )
 			{
-				static NameKeyType nameKeyClientUpdate = NAMEKEY( "LaserUpdate" );
+				static const StaticNameKey nativeCached_nameKeyClientUpdate("LaserUpdate");
+				NameKeyType nameKeyClientUpdate = nativeCached_nameKeyClientUpdate.key();
 				LaserUpdate *update = (LaserUpdate*)beam->findClientUpdateModule( nameKeyClientUpdate );
 				if( update )
 				{

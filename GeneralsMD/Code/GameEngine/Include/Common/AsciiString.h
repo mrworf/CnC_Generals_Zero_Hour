@@ -146,6 +146,16 @@ public:
 		refcount.)
 	*/
 	AsciiString(const AsciiString& stringSrc);
+	AsciiString(AsciiString&& other) noexcept : m_data(other.m_data) { other.m_data = nullptr; }
+	AsciiString& operator=(AsciiString&& other) noexcept
+	{
+		if (this != &other) { releaseBuffer(); m_data = other.m_data; other.m_data = nullptr; }
+		return *this;
+	}
+	void swap(AsciiString& other) noexcept
+	{
+		auto* previous = m_data; m_data = other.m_data; other.m_data = previous;
+	}
 	/**
 		Constructor -- from a literal string. Constructs an AsciiString
 		with the given string. Note that a copy of the string is made;

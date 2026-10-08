@@ -59,23 +59,11 @@
 #endif
 
 //-----------------------------------------------------------------------------
-ProductionPrerequisite::ProductionPrerequisite() 
-{
-	init();
-}
+// Data construction/retirement is owned by NativeThingTemplateData.cpp.
 
 //-----------------------------------------------------------------------------
-ProductionPrerequisite::~ProductionPrerequisite()
-{
-}
 
 //-----------------------------------------------------------------------------
-void ProductionPrerequisite::init()
-{
-	m_prereqUnits.clear();
-	m_prereqSciences.clear();
-	
-}
 
 //=============================================================================
 void ProductionPrerequisite::resolveNames()

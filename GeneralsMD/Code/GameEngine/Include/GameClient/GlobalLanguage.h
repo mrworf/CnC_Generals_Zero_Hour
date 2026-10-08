@@ -72,6 +72,7 @@ public:
 
 	GlobalLanguage();
 	virtual ~GlobalLanguage();
+	void swapConfiguration(GlobalLanguage& other) noexcept;
 
 	void init();
 	void reset();

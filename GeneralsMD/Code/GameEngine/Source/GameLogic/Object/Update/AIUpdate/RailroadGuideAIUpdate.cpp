@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"	
+#include "Common/NativeSourceMath.h"
 
 #include "Common/Player.h"
 #include "Common/ThingFactory.h"
@@ -107,7 +108,7 @@ RailroadBehavior::RailroadBehavior( Thing *thing, const ModuleData *moduleData )
 {
 	const RailroadBehaviorModuleData *modData = getRailroadBehaviorModuleData();
 
-	m_carriageTemplateNameIterator = 0;
+	m_carriageTemplateNameIterator = TemplateNameIterator{};
 
 	m_nextStationTask = DO_NOTHING;
 	m_trailerID = INVALID_ID;
@@ -270,7 +271,8 @@ void RailroadBehavior::onCollide( Object *other, const Coord3D *loc, const Coord
 			return;
 		}
 
-		static NameKeyType key_DemoTrapUpdate = NAMEKEY("DemoTrapUpdate");
+		static const StaticNameKey nativeCached_key_DemoTrapUpdate("DemoTrapUpdate");
+		NameKeyType key_DemoTrapUpdate = nativeCached_key_DemoTrapUpdate.key();
 		DemoTrapUpdate *dtu = (DemoTrapUpdate*)other->findUpdateModule(key_DemoTrapUpdate);
 		if( dtu )
 		{
@@ -656,7 +658,8 @@ void RailroadBehavior::makeAWallOutOfThisTrain( Bool on )
 		Object *trailer = TheGameLogic->findObjectByID( m_trailerID );
     if ( trailer )
     {
-			static NameKeyType key_RGUpdate = NAMEKEY("RailroadBehavior");
+			static const StaticNameKey nativeCached_key_RGUpdate("RailroadBehavior");
+			NameKeyType key_RGUpdate = nativeCached_key_RGUpdate.key();
 			RailroadBehavior *RGUpdate = (RailroadBehavior*)trailer->findUpdateModule(key_RGUpdate);
 			if( RGUpdate )
 			{
@@ -811,7 +814,8 @@ UpdateSleepTime RailroadBehavior::update( void )
 		if ( trailer )
 		{
 			//call his pull trailer with my info;
-			static NameKeyType key_RGUpdate = NAMEKEY("RailroadBehavior");
+			static const StaticNameKey nativeCached_key_RGUpdate("RailroadBehavior");
+			NameKeyType key_RGUpdate = nativeCached_key_RGUpdate.key();
 			RailroadBehavior *RGUpdate = (RailroadBehavior*)trailer->findUpdateModule(key_RGUpdate);
 			if( RGUpdate )
 			{
@@ -874,7 +878,8 @@ void RailroadBehavior::disembark(void)
 	Object *trailer = TheGameLogic->findObjectByID( m_trailerID );
 	if ( trailer )
 	{
-		static NameKeyType key_RGUpdate = NAMEKEY("RailroadBehavior");
+		static const StaticNameKey nativeCached_key_RGUpdate("RailroadBehavior");
+		NameKeyType key_RGUpdate = nativeCached_key_RGUpdate.key();
 		RailroadBehavior *RGUpdate = (RailroadBehavior*)trailer->findUpdateModule(key_RGUpdate);
 		if( RGUpdate )
 		{
@@ -924,7 +929,8 @@ public:
 		if (m_obj == objOther)
 			return FALSE;
 		// must have railroady goodness
-		static NameKeyType key_rb = NAMEKEY("RailroadBehavior");
+		static const StaticNameKey nativeCached_key_rb("RailroadBehavior");
+		NameKeyType key_rb = nativeCached_key_rb.key();
 		RailroadBehavior *rb = (RailroadBehavior*)objOther->findUpdateModule(key_rb);
 		if( ! rb )
 			return FALSE;
@@ -1007,7 +1013,8 @@ void RailroadBehavior::createCarriages( void )
 					firstCarriage->setProducer(self);
 					m_trailerID = firstCarriage->getID();
 					
-					static NameKeyType key_rb = NAMEKEY("RailroadBehavior");
+					static const StaticNameKey nativeCached_key_rb("RailroadBehavior");
+					NameKeyType key_rb = nativeCached_key_rb.key();
 					RailroadBehavior *rb = (RailroadBehavior*)firstCarriage->findUpdateModule(key_rb);
 					if( rb )
 					{
@@ -1069,7 +1076,8 @@ void RailroadBehavior::hitchNewCarriagebyTemplate( ObjectID locoID, const Templa
 			newCarriage->setProducer(locomotive);
 			m_trailerID = newCarriage->getID();
 
-			static NameKeyType key_rb = NAMEKEY("RailroadBehavior");
+			static const StaticNameKey nativeCached_key_rb("RailroadBehavior");
+			NameKeyType key_rb = nativeCached_key_rb.key();
 			RailroadBehavior *rb = (RailroadBehavior*)newCarriage->findUpdateModule(key_rb);
 			if( rb )
 			{
@@ -1146,7 +1154,8 @@ void RailroadBehavior::hitchNewCarriagebyProximity( ObjectID locoID, TrainTrack 
 		closeCarriage->setProducer(self);
 		m_trailerID = closeCarriage->getID();
 		
-		static NameKeyType key_rb = NAMEKEY("RailroadBehavior");
+		static const StaticNameKey nativeCached_key_rb("RailroadBehavior");
+		NameKeyType key_rb = nativeCached_key_rb.key();
 		RailroadBehavior *rb = (RailroadBehavior*)closeCarriage->findUpdateModule(key_rb);
 		if( rb )
 			rb->hitchNewCarriagebyProximity( self->getID(), m_track );
@@ -1200,7 +1209,8 @@ void RailroadBehavior::getPulled( PullInfo *info )
 	if ( trailer )
 	{
 		//call his pull trailer with MY info;
-		static NameKeyType key_RGUpdate = NAMEKEY("RailroadBehavior");
+		static const StaticNameKey nativeCached_key_RGUpdate("RailroadBehavior");
+		NameKeyType key_RGUpdate = nativeCached_key_RGUpdate.key();
 		RailroadBehavior *RGUpdate = (RailroadBehavior*)trailer->findUpdateModule(key_RGUpdate);
 		if( RGUpdate )
 		{
@@ -1309,7 +1319,7 @@ void RailroadBehavior::updatePositionTrackDistance( PullInfo *pullerInfo, PullIn
 	Real desiredAngle = atan2(dy, dx);
 
 
-	Real relAngle = stdAngleDiff(desiredAngle, obj->getTransformMatrix()->Get_Z_Rotation());
+	Real relAngle = stdAngleDiff(desiredAngle, nativeSourceYaw(*obj->getTransformMatrix()));
 
 
 	Matrix3D mtx;
@@ -1352,7 +1362,8 @@ void RailroadBehavior::destroyTheWholeTrainNow( void )
 	Object *trailer = TheGameLogic->findObjectByID( m_trailerID );
 	if ( trailer )
 	{
-		static NameKeyType key_RGUpdate = NAMEKEY("RailroadBehavior");
+		static const StaticNameKey nativeCached_key_RGUpdate("RailroadBehavior");
+		NameKeyType key_RGUpdate = nativeCached_key_RGUpdate.key();
 		RailroadBehavior *RGUpdate = (RailroadBehavior*)trailer->findUpdateModule(key_RGUpdate);
 		if( RGUpdate )
 		{
@@ -1643,7 +1654,4 @@ void RailroadBehavior::loadPostProcess( void )
 	m_clicketyClackSound.setObjectID( getObject()->getID() ) ;
 
 }  // end loadPostProcess
-
-
-
 

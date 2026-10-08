@@ -34,7 +34,7 @@
 #include "Common/GameType.h"
 #include "GameClient/Color.h"
 
-enum ShadowType;
+enum ShadowType : UnsignedInt;
 class Player;
 class Shadow;
 class RadiusDecalTemplate;

@@ -34,6 +34,9 @@
 // USER INCLUDES //////////////////////////////////////////////////////////////
 #include "Common/ActionManager.h"
 #include "Common/GameEngine.h"
+#include "Common/NativeClock.h"
+#include <cstdint>
+#include <sys/resource.h>
 #include "Common/GameState.h"
 #include "Common/GlobalData.h"
 #include "Common/PerfTimer.h"
@@ -111,11 +114,12 @@ GameClient::GameClient()
 	m_textBearingDrawableList.clear();
 
 	m_frame = 0;
+	m_renderedObjectCount = 0;
 
 	m_drawableList = NULL;
 	
 	m_nextDrawableID = (DrawableID)1;
-	TheDrawGroupInfo = new DrawGroupInfo;
+	m_serviceOwners.create(TheDrawGroupInfo, [&] { return new DrawGroupInfo; });
 }
 
 //std::vector<std::string>	preloadTextureNamesGlobalHack;
@@ -125,14 +129,12 @@ GameClient::GameClient()
 GameClient::~GameClient()
 {
 #ifdef PERF_TIMERS
-	delete TheGraphDraw;
-	TheGraphDraw = NULL;
+	m_serviceOwners.retire(TheGraphDraw);
 #endif
 
-	if (TheDrawGroupInfo) 
+	if (m_serviceOwners.owns(TheDrawGroupInfo))
 	{
-		delete TheDrawGroupInfo;
-		TheDrawGroupInfo = NULL;
+		m_serviceOwners.retire(TheDrawGroupInfo);
 	}
 
 	// clear any drawable TOC we might have
@@ -149,9 +151,8 @@ GameClient::~GameClient()
 	//	DEBUG_LOG(("%s\n", preloadTextureNamesGlobalHack[oog]));
 	//}
 	//DEBUG_LOG(("End Texture files ------------------------------------------------\n"));
-	if(TheCampaignManager)
-		delete TheCampaignManager;
-	TheCampaignManager = NULL;
+	if(m_serviceOwners.owns(TheCampaignManager))
+		m_serviceOwners.retire(TheCampaignManager);
 
 	// destroy all Drawables
 	Drawable *draw, *nextDraw;
@@ -163,59 +164,45 @@ GameClient::~GameClient()
 	m_drawableList = NULL;
 
 	// delete the ray effects
-	delete TheRayEffects;
-	TheRayEffects = NULL;
+	m_serviceOwners.retire(TheRayEffects);
 
 	// delete the hot key manager
-	delete TheHotKeyManager;
-	TheHotKeyManager = NULL;
+	m_serviceOwners.retire(TheHotKeyManager);
 
 	// destroy the in-game user interface
-	delete TheInGameUI;
-	TheInGameUI = NULL;
+	m_serviceOwners.retire(TheInGameUI);
 
-	delete TheChallengeGenerals;
-	TheChallengeGenerals = NULL;
+	m_serviceOwners.retire(TheChallengeGenerals);
 
 	// delete the shell
-	delete TheShell;
-	TheShell = NULL;
+	m_serviceOwners.retire(TheShell);
 
-	delete TheIMEManager;
-	TheIMEManager = NULL;
+	m_serviceOwners.retire(TheIMEManager);
 
 	// delete window manager
-	delete TheWindowManager;
-	TheWindowManager = NULL;
+	m_serviceOwners.retire(TheWindowManager);
 
 	// delete the font library
-	TheFontLibrary->reset();
-	delete TheFontLibrary;
-	TheFontLibrary = NULL;
+	if (m_serviceOwners.owns(TheFontLibrary)) TheFontLibrary->reset();
+	m_serviceOwners.retire(TheFontLibrary);
 
-	delete TheMouse;
-	TheMouse = NULL;
+	m_serviceOwners.retire(TheMouse);
 
 	///@todo :  TheTerrainVisual used to be the first thing destroyed.
 	//I had to put in here so that drawables free their track marks before
 	//the terrain visual deletes the track laying system. MW
 
 	// destroy the terrain visual representation
-	delete TheTerrainVisual;
-	TheTerrainVisual = NULL;
+	m_serviceOwners.retire(TheTerrainVisual);
 
 	// destroy the display
-	delete TheDisplay;
-	TheDisplay = NULL;
+	m_serviceOwners.retire(TheDisplay);
 
-	delete TheHeaderTemplateManager;
-	TheHeaderTemplateManager = NULL;
+	m_serviceOwners.retire(TheHeaderTemplateManager);
 	
-	delete TheLanguageFilter;
-	TheLanguageFilter = NULL;
+	m_serviceOwners.retire(TheLanguageFilter);
 
-	delete TheVideoPlayer;
-	TheVideoPlayer = NULL;
+	m_serviceOwners.retire(TheVideoPlayer);
 
 	// destroy all translators
 	for( Int i = 0; i < m_numTranslators; i++ )
@@ -223,23 +210,17 @@ GameClient::~GameClient()
 	m_numTranslators = 0;
 	m_commandTranslator = NULL;
 
-	delete TheAnim2DCollection;
-	TheAnim2DCollection = NULL;	
+	m_serviceOwners.retire(TheAnim2DCollection);
 
-	delete TheMappedImageCollection;
-	TheMappedImageCollection = NULL;	
+	m_serviceOwners.retire(TheMappedImageCollection);
 	
-	delete TheKeyboard;
-	TheKeyboard = NULL;
+	m_serviceOwners.retire(TheKeyboard);
 
-	delete TheDisplayStringManager;
-	TheDisplayStringManager = NULL;
+	m_serviceOwners.retire(TheDisplayStringManager);
 
-	delete TheEva;
-	TheEva = NULL;
+	m_serviceOwners.retire(TheEva);
 
-	delete TheSnowManager;
-	TheSnowManager = NULL;
+	m_serviceOwners.retire(TheSnowManager);
 
 }  // end ~GameClient
 
@@ -264,29 +245,36 @@ void GameClient::init( void )
 	}
 
 	// create the display string factory
-	TheDisplayStringManager = createDisplayStringManager();
+	m_serviceOwners.create(TheDisplayStringManager, [&] { return createDisplayStringManager(); });
 	if( TheDisplayStringManager )	{
 		TheDisplayStringManager->init();
 		TheDisplayStringManager->setName("TheDisplayStringManager");
 	}
 	
 	// create the keyboard
-	TheKeyboard = createKeyboard();
+	m_serviceOwners.create(TheKeyboard, [&] { return createKeyboard(); });
 	TheKeyboard->init();
 	TheKeyboard->setName("TheKeyboard");
 
 	// allocate and load image collection for the GUI and just load the 256x256 ones for now
-	TheMappedImageCollection = MSGNEW("GameClientSubsystem") ImageCollection;
+	m_serviceOwners.create(TheMappedImageCollection, [&] { return MSGNEW("GameClientSubsystem") ImageCollection; });
 	TheMappedImageCollection->load( 512 );
 
 	// now that we have all the images loaded ... load any animation definitions from those images
-	TheAnim2DCollection = MSGNEW("GameClientSubsystem") Anim2DCollection;
+	m_serviceOwners.create(TheAnim2DCollection, [&] { return MSGNEW("GameClientSubsystem") Anim2DCollection; });
 	TheAnim2DCollection->init();
  	TheAnim2DCollection->setName("TheAnim2DCollection");
 
 	// register message translators
 	if( TheMessageStream )
 	{
+		auto attachClientTranslator = [&](GameMessageTranslator* translator, UnsignedInt priority) {
+			std::unique_ptr<GameMessageTranslator> candidate(translator);
+			if (m_numTranslators == MAX_CLIENT_TRANSLATORS) throw ERROR_BAD_ARG;
+			const TranslatorID id=TheMessageStream->attachTranslator(candidate.release(), priority);
+			m_translators[m_numTranslators++]=id; // Only accepted cookies are visible.
+			return id;
+		};
 
 		//
 		// NOTE: Make sure m_translators[] is large enough to accomodate all the translators you
@@ -294,17 +282,17 @@ void GameClient::init( void )
 		//
 
 		// since we only allocate one of each, don't bother pooling 'em
-		m_translators[ m_numTranslators++ ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") WindowTranslator,     10 );
-		m_translators[ m_numTranslators++ ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") MetaEventTranslator,	20 );
-		m_translators[ m_numTranslators++ ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") HotKeyTranslator,	25 );
-		m_translators[ m_numTranslators++ ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") PlaceEventTranslator,	30 );
-		m_translators[ m_numTranslators++ ] = TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") GUICommandTranslator, 40 );
-		m_translators[ m_numTranslators++ ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") SelectionTranslator,	50 );
-		m_translators[ m_numTranslators++ ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") LookAtTranslator,			60 );
-		m_translators[ m_numTranslators ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") CommandTranslator,		70 );
+		attachClientTranslator( MSGNEW("GameClientSubsystem") WindowTranslator,     10 );
+		attachClientTranslator( MSGNEW("GameClientSubsystem") MetaEventTranslator,	20 );
+		attachClientTranslator( MSGNEW("GameClientSubsystem") HotKeyTranslator,	25 );
+		attachClientTranslator( MSGNEW("GameClientSubsystem") PlaceEventTranslator,	30 );
+		attachClientTranslator( MSGNEW("GameClientSubsystem") GUICommandTranslator, 40 );
+		attachClientTranslator( MSGNEW("GameClientSubsystem") SelectionTranslator,	50 );
+		attachClientTranslator( MSGNEW("GameClientSubsystem") LookAtTranslator,			60 );
+		const TranslatorID commandID = attachClientTranslator( MSGNEW("GameClientSubsystem") CommandTranslator,		70 );
 		// we keep a pointer to the command translator because it's useful
-		m_commandTranslator = (CommandTranslator *)TheMessageStream->findTranslator( m_translators[ m_numTranslators++ ] );
-		m_translators[ m_numTranslators++ ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") HintSpyTranslator,		100 );
+		m_commandTranslator = (CommandTranslator *)TheMessageStream->findTranslator( commandID );
+		attachClientTranslator( MSGNEW("GameClientSubsystem") HintSpyTranslator,		100 );
 
 		//
 		// the client message translator should probably remain as the last reaction of the
@@ -312,35 +300,35 @@ void GameClient::init( void )
 		// lets all systems in the client give events that can be processed by the
 		// client message translator
 		//
-		m_translators[ m_numTranslators++ ] =	TheMessageStream->attachTranslator( MSGNEW("GameClientSubsystem") GameClientMessageDispatcher, 999999999 );
+		attachClientTranslator( MSGNEW("GameClientSubsystem") GameClientMessageDispatcher, 999999999 );
 
 	}  
 
 	// create the font library
-	TheFontLibrary = createFontLibrary();
+	m_serviceOwners.create(TheFontLibrary, [&] { return createFontLibrary(); }, false);
 	if( TheFontLibrary )
 		TheFontLibrary->init();
 
 	// create the mouse
-	TheMouse = createMouse();
+	m_serviceOwners.create(TheMouse, [&] { return createMouse(); });
 	TheMouse->parseIni();
 	TheMouse->initCursorResources();
  	TheMouse->setName("TheMouse");
 
 	// instantiate the display
-	TheDisplay = createGameDisplay();
+	m_serviceOwners.create(TheDisplay, [&] { return createGameDisplay(); }, false);
 	if( TheDisplay ) {
 		TheDisplay->init();
  		TheDisplay->setName("TheDisplay");
 	}
 	
-	TheHeaderTemplateManager = MSGNEW("GameClientSubsystem") HeaderTemplateManager;
+	m_serviceOwners.create(TheHeaderTemplateManager, [&] { return MSGNEW("GameClientSubsystem") HeaderTemplateManager; });
 	if(TheHeaderTemplateManager){
 		TheHeaderTemplateManager->init();
 	}
 
 	// create the window manager
-	TheWindowManager = createWindowManager();
+	m_serviceOwners.create(TheWindowManager, [&] { return createWindowManager(); }, false);
 	if( TheWindowManager )
 	{
 
@@ -351,7 +339,7 @@ void GameClient::init( void )
 	}  // end if
 
 	// create the IME manager
-	TheIMEManager = CreateIMEManagerInterface();
+	m_serviceOwners.create(TheIMEManager, [&] { return CreateIMEManagerInterface(); }, false);
 	if ( TheIMEManager )
 	{
 		TheIMEManager->init();
@@ -359,39 +347,39 @@ void GameClient::init( void )
 	}
 
 	// create the shell
-	TheShell = MSGNEW("GameClientSubsystem") Shell;
+	m_serviceOwners.create(TheShell, [&] { return MSGNEW("GameClientSubsystem") Shell; });
 	if( TheShell ) {
 		TheShell->init();
  		TheShell->setName("TheShell");
 	}
 
 	// instantiate the in-game user interface
-	TheInGameUI = createInGameUI();
+	m_serviceOwners.create(TheInGameUI, [&] { return createInGameUI(); }, false);
 	if( TheInGameUI ) {
 		TheInGameUI->init();
  		TheInGameUI->setName("TheInGameUI");
 	}
 
- 	TheChallengeGenerals = createChallengeGenerals();
+	m_serviceOwners.create(TheChallengeGenerals, [&] { return createChallengeGenerals(); }, false);
  	if( TheChallengeGenerals ) {
  		TheChallengeGenerals->init();
  	}
 
-	TheHotKeyManager = MSGNEW("GameClientSubsystem") HotKeyManager;
+	m_serviceOwners.create(TheHotKeyManager, [&] { return MSGNEW("GameClientSubsystem") HotKeyManager; });
 	if( TheHotKeyManager ) {
 		TheHotKeyManager->init();
  		TheHotKeyManager->setName("TheHotKeyManager");
 	}
 
 	// instantiate the terrain visual display
-	TheTerrainVisual = createTerrainVisual();
+	m_serviceOwners.create(TheTerrainVisual, [&] { return createTerrainVisual(); }, false);
 	if( TheTerrainVisual ) {
 		TheTerrainVisual->init();
  		TheTerrainVisual->setName("TheTerrainVisual");
 	}
 
 	// allocate the ray effects manager
-	TheRayEffects = MSGNEW("GameClientSubsystem") RayEffectSystem;
+	m_serviceOwners.create(TheRayEffects, [&] { return MSGNEW("GameClientSubsystem") RayEffectSystem; });
 	if( TheRayEffects )	{
 		TheRayEffects->init();
  		TheRayEffects->setName("TheRayEffects");
@@ -408,7 +396,7 @@ void GameClient::init( void )
 	}  // end if
 
 	// create the video player
-	TheVideoPlayer = createVideoPlayer();
+	m_serviceOwners.create(TheVideoPlayer, [&] { return createVideoPlayer(); }, false);
 	if ( TheVideoPlayer )
 	{
 		TheVideoPlayer->init();
@@ -416,23 +404,23 @@ void GameClient::init( void )
 	}
 
 	// create the language filter.
-	TheLanguageFilter = createLanguageFilter();
+	m_serviceOwners.create(TheLanguageFilter, [&] { return createLanguageFilter(); }, false);
 	if (TheLanguageFilter)
 	{
 		TheLanguageFilter->init();
  		TheLanguageFilter->setName("TheLanguageFilter");
 	}
 
-	TheCampaignManager = MSGNEW("GameClientSubsystem") CampaignManager;
+	m_serviceOwners.create(TheCampaignManager, [&] { return MSGNEW("GameClientSubsystem") CampaignManager; });
 	TheCampaignManager->init();
 
-	TheEva = MSGNEW("GameClientSubsystem") Eva;
+	m_serviceOwners.create(TheEva, [&] { return MSGNEW("GameClientSubsystem") Eva; });
 	TheEva->init();
  	TheEva->setName("TheEva");
 
 	TheDisplayStringManager->postProcessLoad();
 
-	TheSnowManager = createSnowManager();
+	m_serviceOwners.create(TheSnowManager, [&] { return createSnowManager(); }, false);
 	if (TheSnowManager)
 	{
 		TheSnowManager->init();
@@ -440,7 +428,7 @@ void GameClient::init( void )
 	}
 
 #ifdef PERF_TIMERS
-	TheGraphDraw = new GraphDraw;
+	m_serviceOwners.create(TheGraphDraw, [&] { return new GraphDraw; });
 #endif
 
 }  // end init
@@ -555,13 +543,13 @@ void GameClient::update( void )
 				{				
 					legal->hide(FALSE);
 					legal->bringForward();
-					Int beginTime = timeGetTime();
-					while(beginTime + 4000 > timeGetTime() )
+					const UnsignedInt beginTime = nativeMilliseconds();
+					while(nativeElapsedMilliseconds(nativeMilliseconds(), beginTime) < 4000)
 					{
 						TheWindowManager->update();
 						// redraw all views, update the GUI
 						TheDisplay->draw();
-						Sleep(100);
+						nativeSleepMilliseconds(100);
 					}
 					setFPMode();
 
@@ -1060,8 +1048,13 @@ void GameClient::allocateShadows(void)
 void GameClient::preloadAssets( TimeOfDay timeOfDay )
 {
 
-	MEMORYSTATUS before, after;
-	GlobalMemoryStatus(&before);
+	auto peakResidentKiB = []() noexcept -> std::uint64_t {
+		struct rusage usage{};
+		return getrusage(RUSAGE_SELF, &usage)==0 && usage.ru_maxrss>=0
+			? static_cast<std::uint64_t>(usage.ru_maxrss) : 0;
+	};
+	std::uint64_t before=0, after=0;
+	before=peakResidentKiB();
 
 	// first, for every drawable in the map load the assets for all states we care about
 	Drawable *draw;
@@ -1097,57 +1090,31 @@ void GameClient::preloadAssets( TimeOfDay timeOfDay )
 		}  // end if
 
 	}  // end for
-	GlobalMemoryStatus(&after);
+	after=peakResidentKiB();
 
-	DEBUG_LOG(("Preloading memory dwAvailPageFile %d --> %d : %d\n",
-		before.dwAvailPageFile, after.dwAvailPageFile, before.dwAvailPageFile - after.dwAvailPageFile));
-	DEBUG_LOG(("Preloading memory dwAvailPhys     %d --> %d : %d\n",
-		before.dwAvailPhys, after.dwAvailPhys, before.dwAvailPhys - after.dwAvailPhys));
-	DEBUG_LOG(("Preloading memory dwAvailVirtual  %d --> %d : %d\n",
-		before.dwAvailVirtual, after.dwAvailVirtual, before.dwAvailVirtual - after.dwAvailVirtual));
-	/*
-	DEBUG_LOG(("Preloading memory dwLength        %d --> %d : %d\n",
-		before.dwLength, after.dwLength, before.dwLength - after.dwLength));
-	DEBUG_LOG(("Preloading memory dwMemoryLoad    %d --> %d : %d\n",
-		before.dwMemoryLoad, after.dwMemoryLoad, before.dwMemoryLoad - after.dwMemoryLoad));
-	DEBUG_LOG(("Preloading memory dwTotalPageFile %d --> %d : %d\n",
-		before.dwTotalPageFile, after.dwTotalPageFile, before.dwTotalPageFile - after.dwTotalPageFile));
-	DEBUG_LOG(("Preloading memory dwTotalPhys     %d --> %d : %d\n",
-		before.dwTotalPhys , after.dwTotalPhys, before.dwTotalPhys - after.dwTotalPhys));
-	DEBUG_LOG(("Preloading memory dwTotalVirtual  %d --> %d : %d\n",
-		before.dwTotalVirtual , after.dwTotalVirtual, before.dwTotalVirtual - after.dwTotalVirtual));
-	*/
+	DEBUG_LOG(("Preloading process peak resident KiB %llu --> %llu\n",
+		static_cast<unsigned long long>(before), static_cast<unsigned long long>(after)));
 
-	GlobalMemoryStatus(&before);
+	before=peakResidentKiB();
 	extern std::vector<AsciiString>	debrisModelNamesGlobalHack;
 	for (Int i=0; i<debrisModelNamesGlobalHack.size(); ++i)
 	{
 		TheDisplay->preloadModelAssets(debrisModelNamesGlobalHack[i]);
 	}
-	GlobalMemoryStatus(&after);
+	after=peakResidentKiB();
 	debrisModelNamesGlobalHack.clear();
 
-	DEBUG_LOG(("Preloading memory dwAvailPageFile %d --> %d : %d\n",
-		before.dwAvailPageFile, after.dwAvailPageFile, before.dwAvailPageFile - after.dwAvailPageFile));
-	DEBUG_LOG(("Preloading memory dwAvailPhys     %d --> %d : %d\n",
-		before.dwAvailPhys, after.dwAvailPhys, before.dwAvailPhys - after.dwAvailPhys));
-	DEBUG_LOG(("Preloading memory dwAvailVirtual  %d --> %d : %d\n",
-		before.dwAvailVirtual, after.dwAvailVirtual, before.dwAvailVirtual - after.dwAvailVirtual));
-
+	DEBUG_LOG(("Preloading process peak resident KiB %llu --> %llu\n",
+		static_cast<unsigned long long>(before), static_cast<unsigned long long>(after)));
 	TheControlBar->preloadAssets( timeOfDay );
 
-	GlobalMemoryStatus(&before);
+	before=peakResidentKiB();
 	TheParticleSystemManager->preloadAssets( timeOfDay );
-	GlobalMemoryStatus(&after);
+	after=peakResidentKiB();
 
-	DEBUG_LOG(("Preloading memory dwAvailPageFile %d --> %d : %d\n",
-		before.dwAvailPageFile, after.dwAvailPageFile, before.dwAvailPageFile - after.dwAvailPageFile));
-	DEBUG_LOG(("Preloading memory dwAvailPhys     %d --> %d : %d\n",
-		before.dwAvailPhys, after.dwAvailPhys, before.dwAvailPhys - after.dwAvailPhys));
-	DEBUG_LOG(("Preloading memory dwAvailVirtual  %d --> %d : %d\n",
-		before.dwAvailVirtual, after.dwAvailVirtual, before.dwAvailVirtual - after.dwAvailVirtual));
-
-	char *textureNames[] = {
+	DEBUG_LOG(("Preloading process peak resident KiB %llu --> %llu\n",
+		static_cast<unsigned long long>(before), static_cast<unsigned long long>(after)));
+	const char *textureNames[] = {
 		"ptspruce01.tga",
 		"exrktflame.tga",
 		"cvlimo3_d2.tga",
@@ -1189,17 +1156,13 @@ void GameClient::preloadAssets( TimeOfDay timeOfDay )
 		""
 	};
 
-	GlobalMemoryStatus(&before);
-	for (i=0; *textureNames[i]; ++i)
+	before=peakResidentKiB();
+	for (Int i=0; *textureNames[i]; ++i)
 		TheDisplay->preloadTextureAssets(textureNames[i]);
-	GlobalMemoryStatus(&after);
+	after=peakResidentKiB();
 
-	DEBUG_LOG(("Preloading memory dwAvailPageFile %d --> %d : %d\n",
-		before.dwAvailPageFile, after.dwAvailPageFile, before.dwAvailPageFile - after.dwAvailPageFile));
-	DEBUG_LOG(("Preloading memory dwAvailPhys     %d --> %d : %d\n",
-		before.dwAvailPhys, after.dwAvailPhys, before.dwAvailPhys - after.dwAvailPhys));
-	DEBUG_LOG(("Preloading memory dwAvailVirtual  %d --> %d : %d\n",
-		before.dwAvailVirtual, after.dwAvailVirtual, before.dwAvailVirtual - after.dwAvailVirtual));
+	DEBUG_LOG(("Preloading process peak resident KiB %llu --> %llu\n",
+		static_cast<unsigned long long>(before), static_cast<unsigned long long>(after)));
 
 //	preloadTextureNamesGlobalHack2 = preloadTextureNamesGlobalHack;
 //	preloadTextureNamesGlobalHack.clear();

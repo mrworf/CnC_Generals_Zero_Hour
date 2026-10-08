@@ -33,6 +33,7 @@
 
 #include "Common/SubsystemInterface.h"
 #include "Common/GameType.h"
+#include "Common/NativeServiceOwners.h"
 
 #define DEFAULT_MAX_FPS		45
 
@@ -84,6 +85,8 @@ public:
 	virtual void setIsActive(Bool isActive) { m_isActive = isActive; };
 
 protected:
+
+	NativeServiceOwners<6> m_serviceOwners;
 
 	virtual FileSystem *createFileSystem( void );								///< Factory for FileSystem classes
 	virtual LocalFileSystem *createLocalFileSystem( void ) = 0;	///< Factory for LocalFileSystem classes

@@ -28,6 +28,9 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include "Common/INI.h"
+#include "Common/Override.h"
+#include "Lib/BaseType.h"
 
 #ifndef __CONTROLBAR_H_
 #define __CONTROLBAR_H_
@@ -61,19 +64,19 @@ class ControlBarResizer;
 class GameWindowTransitionsHandler;
 class DisplayString;
 
-enum ProductionID;
+enum ProductionID : UnsignedInt;
 
-enum CommandSourceType;
-enum ProductionType;
-enum GadgetGameMessage;
+enum CommandSourceType : UnsignedInt;
+enum ProductionType : UnsignedInt;
+enum GadgetGameMessage : UnsignedInt;
 #include "Common/ScienceType.h"
-enum TimeOfDay;
-enum RadiusCursorType;
+enum TimeOfDay : UnsignedInt;
+enum RadiusCursorType : UnsignedInt;
 
 //-------------------------------------------------------------------------------------------------
 /** Command options */
 //-------------------------------------------------------------------------------------------------
-enum CommandOption
+enum CommandOption : UnsignedInt
 {
 	COMMAND_OPTION_NONE					= 0x00000000,
 	NEED_TARGET_ENEMY_OBJECT		= 0x00000001, // command now needs user to select enemy target
@@ -166,7 +169,7 @@ const UnsignedInt COMMAND_OPTION_NEED_OBJECT_TARGET =
 	* IMPORTANT: Make sure the GUICommandType enum and the TheGuiCommandNames[] have the same
 	*						 entries in the same order */
 //-------------------------------------------------------------------------------------------------
-enum GUICommandType
+enum GUICommandType : UnsignedInt
 {
 	GUI_COMMAND_NONE = 0,									///< invalid command
 	GUI_COMMAND_DOZER_CONSTRUCT,					///< dozer construct

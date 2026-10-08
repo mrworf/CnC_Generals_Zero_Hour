@@ -43,6 +43,7 @@
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/DamageModule.h"
 #include "Common/BitFlagsIO.h"
+#include <climits>
 
 class ParticleSystem;
 class ParticleSystemTemplate;
@@ -191,4 +192,3 @@ private:
 };
 
 #endif // __AutoHealBehavior_H_
-

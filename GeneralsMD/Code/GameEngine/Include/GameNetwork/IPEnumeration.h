@@ -31,7 +31,9 @@
 #ifndef _IPENUMERATION_H_
 #define _IPENUMERATION_H_
 
-#include "GameNetwork/Transport.h"
+#include "Common/GameMemory.h"
+#include "Common/AsciiString.h"
+#include <span>
 
 /**
  * IP wrapper class.
@@ -43,11 +45,11 @@ public:
 	EnumeratedIP() { m_IPstring = ""; m_next = NULL; m_IP = 0; }
 
 	// Access functions
-	inline AsciiString getIPstring( void ) { return m_IPstring; }
+	inline AsciiString getIPstring( void ) const { return m_IPstring; }
 	inline void setIPstring( AsciiString name ) { m_IPstring = name; }
-	inline UnsignedInt getIP( void ) { return m_IP; }
+	inline UnsignedInt getIP( void ) const { return m_IP; }
 	inline void setIP( UnsignedInt IP ) { m_IP = IP; }
-	inline EnumeratedIP *getNext( void ) { return m_next; }
+	inline EnumeratedIP *getNext( void ) const { return m_next; }
 	inline void setNext( EnumeratedIP *next ) { m_next = next; }
 
 protected:
@@ -70,12 +72,14 @@ public:
 	~IPEnumeration();
 
 	EnumeratedIP * getAddresses( void );		///< Return a linked list of local IP addresses
+	// Publish a complete source host-order IPv4 snapshot; preserve current
+	// backing on failure. Native discovery and generated ownership tests share it.
+	void replaceAddresses(std::span<const UnsignedInt> addresses);
 	AsciiString getMachineName( void );			///< Return the Network Neighborhood machine name
 
 protected:
 
 	EnumeratedIP *m_IPlist;
-	Bool m_isWinsockInitialized;
 };
 
 

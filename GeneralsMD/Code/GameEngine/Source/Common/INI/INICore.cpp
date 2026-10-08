@@ -36,12 +36,14 @@
 #include "Common/file.h"
 #include "Common/FileOwner.h"
 #include "Common/INIException.h"
+#include "GameLogic/FPUControl.h"
 #include <algorithm>
 #include <charconv>
 #include <cctype>
 #include <cmath>
 #include <cstring>
 #include <strings.h>
+#include <string>
 #include <utility>
 namespace {
 const char* numericStart(const char* token) {
@@ -582,4 +584,75 @@ void INI::loadFields(AsciiString filename,INILoadType type,void* candidate,const
     prepFile(filename,type);
     try {initFromINI(candidate,fields);}catch(...){unPrepFile();throw;}
     unPrepFile();
+}
+
+namespace {
+void validateSelectedBlocks(std::span<const INIBlockDefinition> blocks, INILineTransfer transfer) {
+    if (blocks.empty() || bool(transfer.owner)!=bool(transfer.line)) throw ERROR_BAD_INI;
+    for (std::size_t i=0; i<blocks.size(); ++i) {
+        if (!blocks[i].token || !*blocks[i].token || !blocks[i].parse) throw ERROR_BAD_INI;
+        for (std::size_t j=0; j<i; ++j)
+            if (std::strcmp(blocks[j].token, blocks[i].token)==0) throw ERROR_BAD_INI;
+    }
+}
+}
+void INI::loadBlocks(AsciiString filename, INILoadType type,
+                     std::span<const INIBlockDefinition> blocks, INILineTransfer transfer) {
+    validateSelectedBlocks(blocks, transfer);
+    setFPMode();
+    prepFile(filename,type);
+    m_transferOwner=transfer.owner;
+    m_lineTransfer=transfer.line;
+    try {
+        while (!m_endOfFile) {
+            readLine();
+            const char* token=::strtok_r(m_buffer,m_seps,&m_tokenCursor);
+            if (!token) continue;
+            INIBlockParse parser=nullptr;
+            for (const auto& block: blocks)
+                if (std::strcmp(block.token,token)==0) {parser=block.parse;break;}
+            if (!parser) throw INI_UNKNOWN_TOKEN;
+#if defined(_DEBUG) || defined(_INTERNAL)
+            copyBounded(m_curBlockStart,token);
+#endif
+            parser(this);
+#if defined(_DEBUG) || defined(_INTERNAL)
+            copyBounded(m_curBlockStart,"NO_BLOCK");
+#endif
+        }
+    } catch (...) { unPrepFile(); throw; }
+    unPrepFile();
+}
+
+void INI::loadDirectoryBlocks(AsciiString directory, Bool subdirectories, INILoadType type,
+                              std::span<const INIBlockDefinition> blocks, INILineTransfer transfer) {
+    validateSelectedBlocks(blocks, transfer);
+    if (!TheFileSystem || directory.isEmpty()) throw INI_INVALID_DIRECTORY;
+    if (type<INI_LOAD_OVERWRITE || type>INI_LOAD_MULTIFILE) throw ERROR_BAD_INI;
+    // The rooted filesystem returns normalized identities, not the caller's
+    // spelling. Normalize the directory before deriving any relative offsets.
+    std::string prefix;
+    const bool absolute=directory.str()[0]=='/';
+    for (unsigned char ch: std::string_view(directory.str())) {
+        if (ch=='\\') ch='/';
+        if (ch=='/' && !prefix.empty() && prefix.back()=='/') continue;
+        if (!absolute && ch>='A' && ch<='Z') ch+=('a'-'A');
+        prefix.push_back(static_cast<char>(ch));
+    }
+    if (prefix.back()!='/') prefix.push_back('/');
+    directory=prefix.c_str();
+    FilenameList files;
+    TheFileSystem->getFileListInDirectory(directory, "*.ini", files, subdirectories);
+    // Validate every returned identity before publishing the first definition.
+    for (const auto& filename: files)
+        if (std::string_view(filename.str()).size()<=prefix.size() ||
+            !std::string_view(filename.str()).starts_with(prefix)) throw INI_INVALID_DIRECTORY;
+    // Preserve the original root-files-before-subdirectory-files ordering,
+    // including the original sorted filename selection within each pass.
+    for (int nested=0; nested<2; ++nested)
+        for (const auto& filename: files) {
+            const std::string_view relative(filename.str()+prefix.size());
+            const bool inSubdirectory=relative.find('/')!=std::string_view::npos;
+            if (inSubdirectory==bool(nested)) loadBlocks(filename, type, blocks, transfer);
+        }
 }

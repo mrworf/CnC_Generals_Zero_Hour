@@ -55,7 +55,7 @@
 #include "GameNetwork/GameInfo.h"
 #include "GameNetwork/NetworkInterface.h"
 #include "GameNetwork/GameSpy/BuddyDefs.h"
-#include "GameNetwork/GameSpy/peerDefs.h"
+#include "GameNetwork/GameSpy/PeerDefs.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -414,7 +414,8 @@ WindowMsgHandledType DiplomacySystem( GameWindow *window, UnsignedInt msg,
 		{
 			GameWindow *control = (GameWindow *)mData1;
 			NameKeyType controlID = (NameKeyType)control->winGetWindowId();
-			static NameKeyType buttonHideID = NAMEKEY( "Diplomacy.wnd:ButtonHide" );
+			static const StaticNameKey nativeCached_buttonHideID("Diplomacy.wnd:ButtonHide");
+			NameKeyType buttonHideID = nativeCached_buttonHideID.key();
 			if (controlID == buttonHideID)
 			{
 				HideDiplomacy( FALSE );
@@ -597,6 +598,4 @@ void PopulateInGameDiplomacyPopup( void )
 		++rowNum;
 	}
 }
-
-
 

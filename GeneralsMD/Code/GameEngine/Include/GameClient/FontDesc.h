@@ -31,6 +31,8 @@
 #define _FONTDESC_H_
 
 #include "Common/GameType.h"
+#include "Common/AsciiString.h"
+#include <utility>
 
 struct FontDesc
 {
@@ -38,6 +40,11 @@ struct FontDesc
 	AsciiString name;	///<name of font
 	Int	size;			///<point size
 	Bool bold;			///<is bold?
+	void swap(FontDesc& other) noexcept {
+		name.swap(other.name);
+		std::swap(size, other.size);
+		std::swap(bold, other.bold);
+	}
 };
 
 #endif // _FONTDESC_H_

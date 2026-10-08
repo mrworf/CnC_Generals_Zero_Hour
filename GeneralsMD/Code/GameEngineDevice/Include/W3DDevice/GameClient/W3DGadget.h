@@ -53,7 +53,7 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////
 #include "GameClient/Gadget.h"
-#include "W3DDevice/GameClient/W3DGameWindow.h"
+#include "GameClient/GameWindow.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////
 
@@ -91,4 +91,3 @@ extern void W3DGadgetTextEntryDraw( GameWindow *window, WinInstanceData *instDat
 extern void W3DGadgetTextEntryImageDraw( GameWindow *window, WinInstanceData *instData );
 
 #endif // __W3DGADGET_H_
-

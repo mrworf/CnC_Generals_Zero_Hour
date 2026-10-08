@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef __PRODUCTIONUPDATE_H_
 #define __PRODUCTIONUPDATE_H_
@@ -43,12 +44,9 @@ class ThingTemplate;
 class UpgradeTemplate;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-enum ProductionID
-{
-	PRODUCTIONID_INVALID = 0
-};
+#include "Common/EngineIDs.h"
 
-enum ProductionType
+enum ProductionType : UnsignedInt
 {
 	PRODUCTION_INVALID = 0,
 	PRODUCTION_UNIT,
@@ -141,7 +139,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------
-enum CanMakeType;
+enum CanMakeType : UnsignedInt;
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------

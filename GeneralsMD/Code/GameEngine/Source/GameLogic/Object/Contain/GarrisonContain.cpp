@@ -29,6 +29,7 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/GlobalData.h"
 
 #include "Common/GameState.h"
 #include "Common/PerfTimer.h"
@@ -2022,7 +2023,7 @@ void GarrisonContain::loadStationGarrisonPoints( void )
 
     m_stationPointList.clear();// we are starting over... forget everything
 
-    for( t = 0; t < count; ++t )
+    for( Int t = 0; t < count; ++t )
     {
       StationPointData tempStationPointData;
       tempStationPointData.position = tempBuffer[ t ];
@@ -2048,8 +2049,6 @@ void GarrisonContain::loadStationGarrisonPoints( void )
 	}
 
 }  // end loadStationGarrisonPoints
-
-
 
 
 

@@ -55,7 +55,7 @@ enum PortionToPlay
 	PP_Done
 };
 
-enum AudioPriority;
+enum AudioPriority : UnsignedInt;
 
 // This is called AudioEventRTS because AudioEvent is a typedef in ww3d
 // You might want this to be memory pooled (I personally do), but it can't
@@ -69,7 +69,7 @@ public:
 	AudioEventRTS( const AsciiString& eventName, DrawableID drawableID );	// Pass 0 for unused if attaching to drawable
 	AudioEventRTS( const AsciiString& eventName, const Coord3D *positionOfAudio );
 
-	virtual ~AudioEventRTS( );
+	virtual ~AudioEventRTS() = default; // Original empty body; retain member teardown.
 
 	AudioEventRTS( const AudioEventRTS& right );
 	AudioEventRTS& operator=( const AudioEventRTS& right );
@@ -176,10 +176,10 @@ protected:
 	Real m_volume;									///< This is the override for the volume. It will either be the normal 
 	TimeOfDay m_timeOfDay;					///< This should be the current Time Of Day.
 
-	Coord3D m_positionOfAudio;			///< Position of the sound if no further positional updates are necessary
+	Coord3D m_positionOfAudio{0, 0, 0};			///< Position of the sound if no further positional updates are necessary
 	union	// These are now unioned.
 	{
-		ObjectID m_objectID;						///< ObjectID of the object that this sound is tied to. Position can be automatically updated from this.
+		ObjectID m_objectID = INVALID_ID;						///< ObjectID of the object that this sound is tied to. Position can be automatically updated from this.
 		DrawableID m_drawableID;				///< DrawableID of the drawable that owns this sound
 	};
 	OwnerType m_ownerType;
@@ -198,7 +198,7 @@ protected:
 	
 	Int m_playerIndex;							///< The index of the player who owns this sound. Used for sounds that should have an owner, but don't have an object, etc.
 
-	PortionToPlay m_portionToPlayNext;	///< Which portion (attack, sound, decay) should be played next?
+	PortionToPlay m_portionToPlayNext = PP_Attack;	///< Which portion (attack, sound, decay) should be played next?
 };
 
 class DynamicAudioEventRTS : public MemoryPoolObject
@@ -214,4 +214,3 @@ public:
 EMPTY_DTOR(DynamicAudioEventRTS)
 
 #endif /* _H_AUDIOEVENTRTS_ */
-

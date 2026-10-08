@@ -27,10 +27,11 @@
 // JKMCD Aug 2002
 
 #pragma once
+#include "Lib/BaseType.h"
 #ifndef __WEAPONSTATUS_H__
 #define __WEAPONSTATUS_H__
 
-enum WeaponStatus
+enum WeaponStatus : UnsignedInt
 {
 	READY_TO_FIRE,
 	OUT_OF_AMMO,

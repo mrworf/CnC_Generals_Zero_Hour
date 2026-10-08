@@ -363,8 +363,10 @@ WindowMsgHandledType MapSelectMenuSystem( GameWindow *window, UnsignedInt msg,
 			GameWindow *control = (GameWindow *)mData1;
 			Int controlID = control->winGetWindowId();
 
-			static NameKeyType singlePlayerID = NAMEKEY("MapSelectMenu.wnd:ButtonSinglePlayer");
-			static NameKeyType multiplayerID = NAMEKEY("MapSelectMenu.wnd:ButtonMultiplayer");
+			static const StaticNameKey nativeCached_singlePlayerID("MapSelectMenu.wnd:ButtonSinglePlayer");
+			NameKeyType singlePlayerID = nativeCached_singlePlayerID.key();
+			static const StaticNameKey nativeCached_multiplayerID("MapSelectMenu.wnd:ButtonMultiplayer");
+			NameKeyType multiplayerID = nativeCached_multiplayerID.key();
 			if ( controlID == singlePlayerID )
 			{
 				showSoloMaps = true;

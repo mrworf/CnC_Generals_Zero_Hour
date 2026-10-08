@@ -27,6 +27,7 @@
 // JKMCD Aug 2002
 
 #pragma once
+#include "Lib/BaseType.h"
 #ifndef __WEAPONSETTYPE_H__
 #define __WEAPONSETTYPE_H__
 
@@ -38,7 +39,7 @@
 // IMPORTANT NOTE #2: if you add or modify this list, be sure to update TheWeaponSetNames, 
 // *and* TheWeaponSetTypeToModelConditionTypeMap!
 //
-enum WeaponSetType
+enum WeaponSetType : UnsignedInt
 {
 	// The access and use of this enum has the bit shifting built in, so this is a 0,1,2,3,4,5 enum
 	WEAPONSET_VETERAN		= 0,

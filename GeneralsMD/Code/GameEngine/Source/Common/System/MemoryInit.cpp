@@ -48,6 +48,8 @@
 // USER INCLUDES 
 #include "Lib/BaseType.h"
 #include "Common/GameMemory.h"
+#include <charconv>
+#include <string_view>
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -84,8 +86,8 @@ struct PoolSizeRec
 
 //-----------------------------------------------------------------------------
 // And please be careful of duplicates.  They are not rejected.
-// not const -- we might override from INI
-static PoolSizeRec sizes[] = 
+// Immutable compiled defaults; a startup profile is published offside.
+static const PoolSizeRec sizes[] =
 {
 	{ "PartitionContactListNode", 2048, 512 },
 	{ "BattleshipUpdate", 32, 32 },
@@ -720,13 +722,73 @@ static PoolSizeRec sizes[] =
 	{ 0, 0, 0 }
 };
 
+namespace {
+std::unique_ptr<PoolSizeRec[]> profileSizes;
+bool sameName(std::string_view a, std::string_view b) {
+  if (a.size() != b.size()) return false;
+  for (std::size_t n = 0; n < a.size(); ++n) {
+    auto lower = [](unsigned char c) { return c >= 'A' && c <= 'Z' ? c + ('a' - 'A') : c; };
+    if (lower(a[n]) != lower(b[n])) return false;
+  }
+  return true;
+}
+void skipSpace(std::string_view& text) {
+  while (!text.empty() && (text.front() == ' ' || text.front() == '\t' || text.front() == '\r'))
+    text.remove_prefix(1);
+}
+bool parseCount(std::string_view& text, Int& value) {
+  skipSpace(text);
+  if (text.empty()) return false;
+  if (text.front() == '+') {
+    text.remove_prefix(1);
+    if (text.empty() || text.front() == '+' || text.front() == '-') return false;
+  }
+  const auto result = std::from_chars(text.data(), text.data() + text.size(), value);
+  if (result.ec == std::errc::result_out_of_range) throw ERROR_BAD_ARG;
+  if (result.ec != std::errc{}) return false;
+  text.remove_prefix(static_cast<std::size_t>(result.ptr - text.data()));
+  return true;
+}
+Int roundedCount(Int value) {
+  if (value < 4) return 4; // Original profile minimum, including zero/negative.
+  if (value > INT32_MAX - 3) throw ERROR_BAD_ARG;
+  return (value + 3) & ~Int(3);
+}
+}
+void userMemoryLoadPoolProfile(std::string_view profile) {
+  std::lock_guard<std::recursive_mutex> lock(originalPoolMutex());
+  if (!isMemoryManagerOfficiallyInited()) throw ERROR_BAD_ARG;
+  auto candidate = std::make_unique<PoolSizeRec[]>(std::size(sizes));
+  std::copy(std::begin(sizes), std::end(sizes), candidate.get());
+  while (!profile.empty()) {
+    const auto end = profile.find('\n');
+    auto row = profile.substr(0, end);
+    profile.remove_prefix(end == std::string_view::npos ? profile.size() : end + 1);
+    if (row.empty() || row.front() == ';') continue;
+    skipSpace(row);
+    const auto nameEnd = row.find_first_of(" \t\r");
+    const auto name = row.substr(0, nameEnd);
+    if (nameEnd == std::string_view::npos) continue;
+    row.remove_prefix(nameEnd);
+    for (std::size_t n = 0; sizes[n].name; ++n) {
+      if (!sameName(name, sizes[n].name)) continue;
+      Int initial = 0, overflow = 0;
+      if (parseCount(row, initial) && parseCount(row, overflow))
+        candidate[n] = {sizes[n].name, roundedCount(initial), roundedCount(overflow)};
+      break; // Preserve first known record if the compiled table has duplicates.
+    }
+  }
+  profileSizes.swap(candidate);
+}
 //-----------------------------------------------------------------------------
 void userMemoryAdjustPoolSize(const char *poolName, Int& initialAllocationCount, Int& overflowAllocationCount)
 {
+    std::lock_guard<std::recursive_mutex> lock(originalPoolMutex());
+    if (!poolName) throw ERROR_BAD_ARG;
 	if (initialAllocationCount > 0)
 		return;
 
-	for (const PoolSizeRec* p = sizes; p->name != NULL; ++p)
+	for (const PoolSizeRec* p = profileSizes ? profileSizes.get() : sizes; p->name != NULL; ++p)
 	{
 		if (strcmp(p->name, poolName) == 0)
 		{
@@ -742,7 +804,9 @@ void userMemoryAdjustPoolSize(const char *poolName, Int& initialAllocationCount,
 //-----------------------------------------------------------------------------
 void userMemoryManagerInitPools()
 {
+    std::lock_guard<std::recursive_mutex> lock(originalPoolMutex());
     // Native startup uses compiled defaults. Rooted MemoryPools.ini overrides
     // are applied by the original data-loading owner after mounts exist (N2).
     // Never discover assets through executable location or mutate supplied data.
+    profileSizes.reset();
 }

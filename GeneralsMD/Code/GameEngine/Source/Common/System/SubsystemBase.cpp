@@ -60,6 +60,36 @@ void SubsystemInterfaceList::addSubsystem(SubsystemInterface* sys)
 #endif
 }
 //-----------------------------------------------------------------------------
+
+// Registry ownership is independent of complete INI provider initialization.
+SubsystemInterfaceList::SubsystemInterfaceList() = default;
+SubsystemInterfaceList::~SubsystemInterfaceList() { shutdownAll(); }
+void SubsystemInterfaceList::validateCandidate(SubsystemInterface* sys,
+    SubsystemPublication publication) const {
+    if (!sys || !publication.valid() || m_shuttingDown) throw ERROR_BAD_ARG;
+    // These are known live construction owners, never malformed borrowed input.
+    for (const auto& entry : m_subsystems)
+        if (entry.owner == sys) throw ERROR_BAD_ARG;
+}
+void SubsystemInterfaceList::postProcessLoadAll() {
+    for (const auto& entry : m_subsystems) entry.owner->postProcessLoad();
+}
+void SubsystemInterfaceList::resetAll() {
+    for (auto it=m_subsystems.rbegin(); it!=m_subsystems.rend(); ++it)
+        it->owner->reset();
+}
+void SubsystemInterfaceList::shutdownAll() noexcept {
+    if (m_shuttingDown) return;
+    m_shuttingDown=TRUE;
+    while (!m_subsystems.empty()) {
+        const OwnedSubsystem retiring=m_subsystems.back();
+        m_subsystems.pop_back(); // No registry callback can observe this owner.
+        // Object/Drawable destructors legitimately call their live parent.
+        delete retiring.owner;
+        retiring.publication.withdraw(); // No callbacks/allocations after cleanup.
+    }
+    m_shuttingDown=FALSE;
+}
 void SubsystemInterfaceList::removeSubsystem(SubsystemInterface* sys)
 {
 	(void)sys;

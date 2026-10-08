@@ -50,6 +50,10 @@
 
 #include "Common/Errors.h"
 #include "Common/NameKeyGenerator.h"
+#include "Common/UnicodeString.h"
+#include <memory>
+#include <variant>
+#include <vector>
 
 // -----------------------------------------------------
 /**
@@ -71,7 +75,7 @@ public:
 		MAX_LEN = 32767							///< max total len of any Dict, in Pairs
 	};
 
-	enum DataType
+	enum DataType : Int
 	{
 		DICT_NONE = -1,	// this is returned by getType and getNthType to indicate "invalid key/index"
 		DICT_BOOL = 0,	// note, we rely on the fact that this constant is zero in the code. so don't change it.
@@ -92,16 +96,16 @@ public:
 		they will simply share the same data and increment the
 		refcount.)
 	*/
-	Dict(const Dict& src);
+	Dict(const Dict& src) = default;
 
 	/**
 		Destructor. Not too exciting... clean up the works and such.
 	*/
-	~Dict();
+	~Dict() = default;
 
 	/**
 	*/
-	Dict& operator=(const Dict& src);
+	Dict& operator=(const Dict& src) = default;
 
 	/**
 		remove all pairs.
@@ -255,114 +259,23 @@ public:
 	void copyPairFrom(const Dict& that, NameKeyType key);
 
 private:
-	
-	struct DictPair;
-	struct DictPairData;
+    // Typed values have real lifetimes. No strings are constructed in void*
+    // storage, and no byte-zero/refcount convention leaks into native storage.
+    using Value = std::variant<Bool, Int, Real, AsciiString, UnicodeString>;
+    struct Pair {
+        NameKeyType key;
+        std::shared_ptr<const Value> value;
+    };
+    struct Data {
+        std::vector<Pair> pairs;
+    };
+    std::shared_ptr<Data> m_data;
 
-	DictPairData* m_data;   // pointer to ref counted Pair data
-
-	void sortPairs();
-	Dict::DictPair *setPrep(NameKeyType key, Dict::DataType type);
-	DictPair* findPairByKey(NameKeyType key) const;
-	void releaseData();
-	DictPair *ensureUnique(int numPairsNeeded, Bool preserveData, DictPair *pairToTranslate);
-	
-	enum DictPairKeyType
-	{
-		DICTPAIRKEY_ILLEGAL = 0
-	};
-
-	// danger... this is Plain Old Data and allocated in a skanky way;
-	// and thus the ctor/dtor for DictPair will never be called. so don't
-	// bother writing one.
-	struct DictPair
-	{
-	private:
-		DictPairKeyType		m_key;
-		void*							m_value;
-
-		inline static DictPairKeyType createKey(NameKeyType keyVal, DataType nt)
-		{
-			return (DictPairKeyType)((((UnsignedInt)(keyVal)) << 8) | ((UnsignedInt)nt));
-		}
-
-		inline static DataType getTypeFromKey(DictPairKeyType nk)
-		{
-			return (DataType)(((UnsignedInt)nk) & 0xff);
-		}
-
-		inline static NameKeyType getNameFromKey(DictPairKeyType nk)
-		{
-			return (NameKeyType)(((UnsignedInt)nk) >> 8);
-		}
-
-
-	public:
-		void clear();
-		void copyFrom(DictPair* that);
-		void setNameAndType(NameKeyType key, DataType type);
-		inline DataType getType() const { return getTypeFromKey(m_key); }
-		inline NameKeyType getName() const { return getNameFromKey(m_key); }
-		inline Bool* asBool() { return (Bool*)&m_value; }
-		inline Int* asInt() { return (Int*)&m_value; }
-		inline Real* asReal() { return (Real*)&m_value; }
-		inline AsciiString* asAsciiString() { return (AsciiString*)&m_value; }
-		inline UnicodeString* asUnicodeString() { return (UnicodeString*)&m_value; }
-	};
-
-	struct DictPairData
-	{
-		unsigned short	m_refCount;						// reference count
-		unsigned short	m_numPairsAllocated;  // length of data allocated
-		unsigned short	m_numPairsUsed;				// length of data allocated
-		//DictPair m_pairs[];
-
-		inline DictPair* peek() { return (DictPair*)(this+1); }
-	};
-
-	#ifdef _DEBUG
-	void validate() const;
-	#else
-	inline void validate() const { }
-	#endif
-
+    static void validateKey(NameKeyType key);
+    const Pair* findPairByKey(NameKeyType key) const;
+    const Pair* nthPair(Int n) const;
+    void setValue(NameKeyType key, const Value& value);
+    template<class T> T getValue(const Pair* pair, Bool* exists = nullptr) const;
 };
 
-// -----------------------------------------------------
-inline Dict::Dict(const Dict& src) : m_data(src.m_data)
-{
-	if (m_data)
-		++m_data->m_refCount;
-}
-
-// -----------------------------------------------------
-inline Dict::~Dict()
-{
-	releaseData();
-}
-
-// -----------------------------------------------------
-inline Int Dict::getPairCount() const
-{
-	return m_data ? m_data->m_numPairsUsed : 0;
-}
-
-// -----------------------------------------------------
-inline NameKeyType Dict::getNthKey(Int n) const
-{
-	if (!m_data || n < 0 || n >= m_data->m_numPairsUsed)
-		return NAMEKEY_INVALID;
-	return m_data->peek()[n].getName();
-}
-
-// -----------------------------------------------------
-inline Dict::DataType Dict::getNthType(Int n) const
-{
-	if (!m_data || n < 0 || n >= m_data->m_numPairsUsed)
-		return DICT_NONE;
-	return m_data->peek()[n].getType();
-}
-
 #endif // Dict_H
-
-

@@ -168,7 +168,8 @@ void ToppleUpdate::applyTopplingForce( const Coord3D* toppleDirection, Real topp
 
 	// tell the drawable to stop swaying
 	Drawable * draw = getObject()->getDrawable();
-	static NameKeyType nameKeySwayUpdate = NAMEKEY("SwayClientUpdate");
+	static const StaticNameKey nativeCached_nameKeySwayUpdate("SwayClientUpdate");
+	NameKeyType nameKeySwayUpdate = nativeCached_nameKeySwayUpdate.key();
 
 	ClientUpdateModule ** clientModules = draw->getClientUpdateModules();
 	if (clientModules)

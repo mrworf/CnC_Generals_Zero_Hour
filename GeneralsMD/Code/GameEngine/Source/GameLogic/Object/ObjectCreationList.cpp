@@ -29,6 +29,8 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/NativeSourceMath.h"
+#include <strings.h>
 
 #define DEFINE_SHADOW_NAMES								// for TheShadowNames[]
 #define DEFINE_WEAPONSLOTTYPE_NAMES
@@ -94,7 +96,7 @@ static void adjustVector(Coord3D *vec, const Matrix3D* mtx)
 		vectmp.X = vec->x;
 		vectmp.Y = vec->y;
 		vectmp.Z = vec->z;
-		vectmp = mtx->Rotate_Vector(vectmp);
+		vectmp = nativeSourceRotateVector(*mtx, vectmp);
 		vec->x = vectmp.X;
 		vec->y = vectmp.Y;
 		vec->z = vectmp.Z;
@@ -210,7 +212,8 @@ public:
 			ai->aiAttackPosition( secondary, m_numberOfShots, CMD_FROM_AI );
 		}
 
-		static NameKeyType key_RadiusDecalUpdate = NAMEKEY("RadiusDecalUpdate");
+		static const StaticNameKey nativeCached_key_RadiusDecalUpdate("RadiusDecalUpdate");
+		NameKeyType key_RadiusDecalUpdate = nativeCached_key_RadiusDecalUpdate.key();
 		RadiusDecalUpdate *rd = (RadiusDecalUpdate*)primaryObject->findUpdateModule(key_RadiusDecalUpdate);
 		if (rd)
 		{
@@ -416,7 +419,8 @@ public:
 					die->setCreator(INVALID_ID);
 			}
 
-			static NameKeyType key_DeliverPayloadAIUpdate = NAMEKEY("DeliverPayloadAIUpdate");
+			static const StaticNameKey nativeCached_key_DeliverPayloadAIUpdate("DeliverPayloadAIUpdate");
+			NameKeyType key_DeliverPayloadAIUpdate = nativeCached_key_DeliverPayloadAIUpdate.key();
 			DeliverPayloadAIUpdate *ai = (DeliverPayloadAIUpdate*)transport->findUpdateModule(key_DeliverPayloadAIUpdate);
 			if( ai )
 			{
@@ -940,7 +944,8 @@ protected:
 	{
 		obj->setProducer(sourceObj);
 
-		static NameKeyType key_LifetimeUpdate = NAMEKEY("LifetimeUpdate");
+		static const StaticNameKey nativeCached_key_LifetimeUpdate("LifetimeUpdate");
+		NameKeyType key_LifetimeUpdate = nativeCached_key_LifetimeUpdate.key();
 		LifetimeUpdate* lup = (LifetimeUpdate*)obj->findUpdateModule(key_LifetimeUpdate);
 		if( lup )
 		{
@@ -1235,7 +1240,8 @@ protected:
 		
 		if( BitTest( m_disposition, FLOATING ) )
 		{
-			static NameKeyType key = NAMEKEY( "FloatUpdate" );
+			static const StaticNameKey nativeCached_key("FloatUpdate");
+			NameKeyType key = nativeCached_key.key();
 			FloatUpdate *floatUpdate = (FloatUpdate *)obj->findUpdateModule( key );
 
 			if( floatUpdate )
@@ -1597,7 +1603,7 @@ ObjectCreationListStore::~ObjectCreationListStore()
 //-------------------------------------------------------------------------------------------------
 const ObjectCreationList *ObjectCreationListStore::findObjectCreationList(const char* name) const
 {
-	if (stricmp(name, "None") == 0)
+	if (strcasecmp(name, "None") == 0)
 		return NULL;
 
   ObjectCreationListMap::const_iterator it = m_ocls.find(NAMEKEY(name));

@@ -27,6 +27,10 @@
 // Author: Michael S. Booth, November 2001
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/NativeSourceMath.h"
+#include <cmath>
+#include <algorithm>
+#include "Common/GlobalData.h"
 
 // please talk to MDC (x36804) before taking this out
 #define NO_DEBUG_CRC
@@ -321,8 +325,8 @@ Real PhysicsBehavior::getZFriction() const
  */
 void PhysicsBehavior::applyForce( const Coord3D *force )
 {
-	DEBUG_ASSERTCRASH(!(_isnan(force->x) || _isnan(force->y) || _isnan(force->z)), ("PhysicsBehavior::applyForce force NAN!\n"));
-	if (_isnan(force->x) || _isnan(force->y) || _isnan(force->z)) {
+	DEBUG_ASSERTCRASH(!(std::isnan(force->x) || std::isnan(force->y) || std::isnan(force->z)), ("PhysicsBehavior::applyForce force NAN!\n"));
+	if (std::isnan(force->x) || std::isnan(force->y) || std::isnan(force->z)) {
 		return;
 	}
 	// F = ma  -->  a = F/m  (divide force by mass)
@@ -342,8 +346,8 @@ void PhysicsBehavior::applyForce( const Coord3D *force )
 	m_accel.y += modForce.y * massInv;
 	m_accel.z += modForce.z * massInv;
 
-	//DEBUG_ASSERTCRASH(!(_isnan(m_accel.x) || _isnan(m_accel.y) || _isnan(m_accel.z)), ("PhysicsBehavior::applyForce accel NAN!\n"));
-	//DEBUG_ASSERTCRASH(!(_isnan(m_vel.x) || _isnan(m_vel.y) || _isnan(m_vel.z)), ("PhysicsBehavior::applyForce vel NAN!\n"));
+	//DEBUG_ASSERTCRASH(!(std::isnan(m_accel.x) || std::isnan(m_accel.y) || std::isnan(m_accel.z)), ("PhysicsBehavior::applyForce accel NAN!\n"));
+	//DEBUG_ASSERTCRASH(!(std::isnan(m_vel.x) || std::isnan(m_vel.y) || std::isnan(m_vel.z)), ("PhysicsBehavior::applyForce vel NAN!\n"));
 	//DEBUG_ASSERTCRASH(fabs(force->z) < 3, ("unlikely z-force"));
 #ifdef SLEEPY_PHYSICS
 	if (getFlag(IS_IN_UPDATE))
@@ -366,7 +370,7 @@ void PhysicsBehavior::applyForce( const Coord3D *force )
 void PhysicsBehavior::applyShock( const Coord3D *force )
 {
 	Coord3D resistedForce = *force;
-	resistedForce.scale( 1.0f - min( 1.0f, max( 0.0f, getPhysicsBehaviorModuleData()->m_shockResistance ) ) );
+	resistedForce.scale( 1.0f - std::min( 1.0f, std::max( 0.0f, getPhysicsBehaviorModuleData()->m_shockResistance ) ) );
 
 	// Apply the processed shock force to the object
 	applyForce(&resistedForce);
@@ -532,7 +536,7 @@ Bool PhysicsBehavior::handleBounce(Real oldZ, Real newZ, Real groundZ, Coord3D* 
 			const Real rollAngle = (zvec.Z > 0) ? 0 : PI;
 			// don't flip both pitch and roll... we'll "flip" twice.
 			const Real pitchAngle = 0;
-			Real yawAngle = getObject()->getTransformMatrix()->Get_Z_Rotation();
+			Real yawAngle = nativeSourceYaw(*getObject()->getTransformMatrix());
 			setAngles(yawAngle, pitchAngle, rollAngle);
 		}
 
@@ -686,8 +690,8 @@ UpdateSleepTime PhysicsBehavior::update()
 			mtx.Adjust_Z_Translation(m_vel.z);
 		}
 
-		if (_isnan(mtx.Get_X_Translation()) || _isnan(mtx.Get_Y_Translation()) ||
-			_isnan(mtx.Get_Z_Translation())) {
+		if (std::isnan(mtx.Get_X_Translation()) || std::isnan(mtx.Get_Y_Translation()) ||
+			std::isnan(mtx.Get_Z_Translation())) {
 			DEBUG_CRASH(("Object position is NAN, deleting."));
 			TheGameLogic->destroyObject(obj);
 		}
@@ -715,7 +719,7 @@ UpdateSleepTime PhysicsBehavior::update()
 				
 					Real rollAngle = -mtx.Get_X_Rotation();
 					Real pitchAngle = mtx.Get_Y_Rotation();
-					Real yawAngle = mtx.Get_Z_Rotation();
+					Real yawAngle = nativeSourceYaw(mtx);
 					// do stuff to angles, then rebuild the mtx with 'em
 
 				You must resist this temptation, because your code will be wrong!
@@ -809,7 +813,7 @@ UpdateSleepTime PhysicsBehavior::update()
 		if (gotBounceForce)
 		{
 			// Right the object after the bounce since the pitch and roll may have been affected
-			Real yawAngle = getObject()->getTransformMatrix()->Get_Z_Rotation();
+			Real yawAngle = nativeSourceYaw(*getObject()->getTransformMatrix());
 			setAngles(yawAngle, 0.0f, 0.0f);
 
 			// Set the translation of the after bounce matrix to the one calculated above
@@ -1417,7 +1421,7 @@ void PhysicsBehavior::onCollide( Object *other, const Coord3D *loc, const Coord3
 		force.x = factor * delta.x / dist;
 		force.y = factor * delta.y / dist;
 		force.z = factor * delta.z / dist;	// will be zero for 2d case.
-		DEBUG_ASSERTCRASH(!(_isnan(force.x) || _isnan(force.y) || _isnan(force.z)), ("PhysicsBehavior::onCollide force NAN!\n"));
+		DEBUG_ASSERTCRASH(!(std::isnan(force.x) || std::isnan(force.y) || std::isnan(force.z)), ("PhysicsBehavior::onCollide force NAN!\n"));
 
 		applyForce( &force );
 	}

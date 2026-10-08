@@ -26,13 +26,14 @@
 // John McDonald, Jr
 // Do not distribute
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef _AUDIOAFFECT_H_
 #define _AUDIOAFFECT_H_
 
 // if it is set by the options panel, use the system setting parameter. Otherwise, this will be 
 // appended to whatever the current system volume is.
-enum AudioAffect
+enum AudioAffect : UnsignedInt
 {
 	AudioAffect_Music		= 0x01,
 	AudioAffect_Sound		= 0x02,

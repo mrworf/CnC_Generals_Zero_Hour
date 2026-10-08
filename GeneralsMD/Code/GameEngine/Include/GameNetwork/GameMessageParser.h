@@ -33,7 +33,7 @@ class GameMessageParserArgumentType : public MemoryPoolObject
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(GameMessageParserArgumentType, "GameMessageParserArgumentType")		
 public:
-	GameMessageParserArgumentType(GameMessageArgumentDataType type, Int argCount);
+	GameMessageParserArgumentType(Int type, Int argCount);
 	//virtual ~GameMessageParserArgumentType();
 
 	GameMessageParserArgumentType *getNext();
@@ -83,12 +83,13 @@ public:
 	//virtual ~GameMessageParser();
 
 	GameMessageParserArgumentType *getFirstArgumentType();
-	void addArgType(GameMessageArgumentDataType type, Int argCount);
+	void addArgType(Int type, Int argCount);
 	Int getNumTypes();
 
 protected:
 	GameMessageParserArgumentType *m_first, *m_last;
 	Int m_argTypeCount;
+    void clear() noexcept;
 };
 
 //----------------------------------------------------------------------------
@@ -102,4 +103,3 @@ inline Int GameMessageParser::getNumTypes()
 {
 	return m_argTypeCount;
 }
-

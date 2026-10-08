@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
   
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <strings.h>
 
 #include "Common/AudioEventInfo.h"
 #include "Common/DynamicAudioEventInfo.h"
@@ -235,7 +236,7 @@ static DrawableIconType drawableIconNameToIndex( const char *iconName )
 	DEBUG_ASSERTCRASH( iconName != NULL, ("drawableIconNameToIndex - Illegal name\n") );
 
 	for( Int i = ICON_FIRST; i < MAX_ICONS; ++i )
-		if( stricmp( TheDrawableIconNames[ i ], iconName ) == 0 )
+		if( strcasecmp( TheDrawableIconNames[ i ], iconName ) == 0 )
 			return (DrawableIconType)i;
 
 	return ICON_INVALID;
@@ -3507,7 +3508,8 @@ void Drawable::drawBombed(const IRegion2D* healthBarRegion)
 	//
 	// Bombed?
 	//
-	static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+	static const StaticNameKey nativeCached_key_StickyBombUpdate("StickyBombUpdate");
+	NameKeyType key_StickyBombUpdate = nativeCached_key_StickyBombUpdate.key();
 	StickyBombUpdate *update = (StickyBombUpdate*)obj->findUpdateModule( key_StickyBombUpdate );
 	if( update )
 	{
@@ -3947,7 +3949,7 @@ void Drawable::drawHealthBar(const IRegion2D* healthBarRegion)
 ///		Real scale = 1.3f / TheTacticalView->getZoom();
 		Real healthBoxWidth = healthBarRegion->hi.x - healthBarRegion->lo.x;
 			
-		Real healthBoxHeight = max(3, healthBarRegion->hi.y - healthBarRegion->lo.y);
+		Real healthBoxHeight = std::max(3, healthBarRegion->hi.y - healthBarRegion->lo.y);
 		Real healthBoxOutlineSize = 1.0f;
 
 		// draw the health box outline
@@ -5647,4 +5649,3 @@ void TintEnvelope::loadPostProcess( void )
 {
 
 }  // end loadPostProcess
-

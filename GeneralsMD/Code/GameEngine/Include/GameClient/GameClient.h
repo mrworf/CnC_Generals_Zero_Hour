@@ -31,7 +31,8 @@
 #ifndef _GAME_INTERFACE_H_
 #define _GAME_INTERFACE_H_
 
-#include "common/GameType.h"
+#include "Common/GameType.h"
+#include "Common/NativeServiceOwners.h"
 #include "Common/MessageStream.h"		// for GameMessageTranslator
 #include "Common/Snapshot.h"
 #include "Common/STLTypedefs.h"
@@ -155,6 +156,8 @@ public:
 
 
 protected:
+
+	NativeServiceOwners<32> m_serviceOwners;
 
 	// snapshot methods
 	virtual void crc( Xfer *xfer );

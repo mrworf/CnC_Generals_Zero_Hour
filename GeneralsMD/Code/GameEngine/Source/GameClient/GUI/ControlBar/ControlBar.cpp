@@ -29,7 +29,10 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 
-#include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "PreRTS.h"
+#include <strings.h>
+#include <cstdint>	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/GlobalData.h"
 #define DEFINE_GUI_COMMMAND_NAMES
 #define DEFINE_COMMAND_OPTION_NAMES
 #define DEFINE_WEAPONSLOTTYPE_NAMES
@@ -39,7 +42,7 @@
 #include "Common/GameType.h"
 #include "Common/MultiplayerSettings.h"
 #include "Common/NameKeyGenerator.h"
-#include "Common/OVERRIDE.h"
+#include "Common/Override.h"
 #include "Common/PlayerTemplate.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -519,7 +522,7 @@ void CommandButton::parseCommand( INI* ini, void *instance, void *store, const v
 	for( i = 0; TheGuiCommandNames[ i ]; i++ )
 	{
 
-		if( stricmp( TheGuiCommandNames[ i ], token ) == 0 )
+		if( strcasecmp( TheGuiCommandNames[ i ], token ) == 0 )
 		{
 
 			GUICommandType *command = (GUICommandType *)store;
@@ -793,6 +796,10 @@ void CommandButton::copyButtonTextFrom( const CommandButton *button, Bool shortc
 //-------------------------------------------------------------------------------------------------
 void CommandSet::parseCommandButton( INI* ini, void *instance, void *store, const void *userData )
 {
+    if (!ini || !store || !TheControlBar) throw INI_INVALID_DATA;
+    const auto rawIndex=reinterpret_cast<std::uintptr_t>(userData);
+    if (rawIndex>=MAX_COMMANDS_PER_SET) throw INI_INVALID_DATA;
+    const Int buttonIndex=static_cast<Int>(rawIndex);
 	const char *token = ini->getNextToken();
 
 	// get find the command button from this name
@@ -808,7 +815,6 @@ void CommandSet::parseCommandButton( INI* ini, void *instance, void *store, cons
 
 	// get the index to store the command at, and the command array itself
 	const CommandButton **buttonArray = (const CommandButton **)store;
-	Int buttonIndex = (Int)userData;
 
 	// sanity
 	DEBUG_ASSERTCRASH( buttonIndex < MAX_COMMANDS_PER_SET, ("parseCommandButton: button index '%d' out of range\n", 
@@ -914,7 +920,7 @@ ControlBar::ControlBar( void )
 	for( i = 0; i < MAX_PURCHASE_SCIENCE_RANK_8; i++ )
 		m_sciencePurchaseWindowsRank8[i] = NULL;
 
-	for( i = 0; i < MAX_SPECIAL_POWER_SHORTCUTS; i++ )
+	for( Int i = 0; i < MAX_SPECIAL_POWER_SHORTCUTS; i++ )
 	{
 		m_specialPowerShortcutButtons[i] = NULL;
 		m_specialPowerShortcutButtonParents[i] = NULL;
@@ -1513,7 +1519,8 @@ void ControlBar::update( void )
 		Int count;
 		const ThingTemplate *thing = TheThingFactory->findTemplate( ThePlayerList->getLocalPlayer()->getPlayerTemplate()->getBeaconTemplate() );
 		ThePlayerList->getLocalPlayer()->countObjectsByThingTemplate( 1, &thing, false, &count );
-		static NameKeyType beaconPlacementButtonID = NAMEKEY("ControlBar.wnd:ButtonPlaceBeacon");
+		static const StaticNameKey nativeCached_beaconPlacementButtonID("ControlBar.wnd:ButtonPlaceBeacon");
+		NameKeyType beaconPlacementButtonID = nativeCached_beaconPlacementButtonID.key();
 		GameWindow *win = TheWindowManager->winGetWindowFromId(NULL, beaconPlacementButtonID);
 		if (win)
 		{
@@ -1851,7 +1858,8 @@ void ControlBar::evaluateContextUI( void )
 		if( obj->getStatusBits().test( OBJECT_STATUS_SOLD ) )
 			return;
 
-		static const NameKeyType key_OCLUpdate = NAMEKEY( "OCLUpdate" );
+		static const StaticNameKey nativeCached_key_OCLUpdate("OCLUpdate");
+		const NameKeyType key_OCLUpdate = nativeCached_key_OCLUpdate.key();
 		OCLUpdate *update = (OCLUpdate*)obj->findUpdateModule( key_OCLUpdate );
 	
 		//
@@ -2752,9 +2760,12 @@ void ControlBar::setControlBarSchemeByPlayer(Player *p)
 	if(m_controlBarSchemeManager)
 		m_controlBarSchemeManager->setControlBarSchemeByPlayer(p);
 
-	static NameKeyType buttonPlaceBeaconID = NAMEKEY( "ControlBar.wnd:ButtonPlaceBeacon" );
-	static NameKeyType buttonIdleWorkerID = NAMEKEY("ControlBar.wnd:ButtonIdleWorker");
-	static NameKeyType buttonGeneralID = NAMEKEY("ControlBar.wnd:ButtonGeneral");
+	static const StaticNameKey nativeCached_buttonPlaceBeaconID("ControlBar.wnd:ButtonPlaceBeacon");
+	NameKeyType buttonPlaceBeaconID = nativeCached_buttonPlaceBeaconID.key();
+	static const StaticNameKey nativeCached_buttonIdleWorkerID("ControlBar.wnd:ButtonIdleWorker");
+	NameKeyType buttonIdleWorkerID = nativeCached_buttonIdleWorkerID.key();
+	static const StaticNameKey nativeCached_buttonGeneralID("ControlBar.wnd:ButtonGeneral");
+	NameKeyType buttonGeneralID = nativeCached_buttonGeneralID.key();
 	GameWindow *buttonPlaceBeacon = TheWindowManager->winGetWindowFromId( NULL, buttonPlaceBeaconID );
 	GameWindow *buttonIdleWorker = TheWindowManager->winGetWindowFromId( NULL, buttonIdleWorkerID );
 	GameWindow *buttonGeneral = TheWindowManager->winGetWindowFromId( NULL, buttonGeneralID );
@@ -2797,9 +2808,12 @@ void ControlBar::setControlBarSchemeByPlayerTemplate( const PlayerTemplate *pt)
 	if(m_controlBarSchemeManager)
 		m_controlBarSchemeManager->setControlBarSchemeByPlayerTemplate(pt);
 
-	static NameKeyType buttonPlaceBeaconID = NAMEKEY( "ControlBar.wnd:ButtonPlaceBeacon" );
-	static NameKeyType buttonIdleWorkerID = NAMEKEY("ControlBar.wnd:ButtonIdleWorker");
-	static NameKeyType buttonGeneralID = NAMEKEY("ControlBar.wnd:ButtonGeneral");
+	static const StaticNameKey nativeCached_buttonPlaceBeaconID("ControlBar.wnd:ButtonPlaceBeacon");
+	NameKeyType buttonPlaceBeaconID = nativeCached_buttonPlaceBeaconID.key();
+	static const StaticNameKey nativeCached_buttonIdleWorkerID("ControlBar.wnd:ButtonIdleWorker");
+	NameKeyType buttonIdleWorkerID = nativeCached_buttonIdleWorkerID.key();
+	static const StaticNameKey nativeCached_buttonGeneralID("ControlBar.wnd:ButtonGeneral");
+	NameKeyType buttonGeneralID = nativeCached_buttonGeneralID.key();
 	GameWindow *buttonPlaceBeacon = TheWindowManager->winGetWindowFromId( NULL, buttonPlaceBeaconID );
 	GameWindow *buttonIdleWorker = TheWindowManager->winGetWindowFromId( NULL, buttonIdleWorkerID );
 	GameWindow *buttonGeneral = TheWindowManager->winGetWindowFromId( NULL, buttonGeneralID );
@@ -3259,7 +3273,7 @@ void ControlBar::initSpecialPowershortcutBar( Player *player)
 	parentName = layoutName;
 	parentName.concat(":ButtonParent%d");
 	m_currentlyUsedSpecialPowersButtons = MIN(pt->getSpecialPowerShortcutButtonCount(), MAX_SPECIAL_POWER_SHORTCUTS);
-	for( i = 0; i < MAX_SPECIAL_POWER_SHORTCUTS; i++ )
+	for( Int i = 0; i < MAX_SPECIAL_POWER_SHORTCUTS; i++ )
 	{
 		windowName.format( tempName, i+1 );
 		id = TheNameKeyGenerator->nameToKey( windowName.str() );

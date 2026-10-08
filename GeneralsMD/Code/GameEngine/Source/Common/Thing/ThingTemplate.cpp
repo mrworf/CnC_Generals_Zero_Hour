@@ -28,6 +28,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
+#include <algorithm>
+#include <strings.h>
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #define DEFINE_POWER_NAMES								// for PowerNames[]
@@ -80,13 +82,20 @@
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-const Int USE_EXP_VALUE_FOR_SKILL_VALUE = -999;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+namespace {
+struct ModuleParseDescriptor { ModuleType type; Bool bodyOnly; };
+constexpr ModuleParseDescriptor behaviorModule{MODULETYPE_BEHAVIOR, false};
+constexpr ModuleParseDescriptor bodyModule{MODULETYPE_BEHAVIOR, true};
+constexpr ModuleParseDescriptor drawModule{MODULETYPE_DRAW, false};
+constexpr ModuleParseDescriptor clientUpdateModule{MODULETYPE_CLIENT_UPDATE, false};
+constexpr Int levelEntryCount = LEVEL_COUNT;
+}
 AudioEventRTS ThingTemplate::s_audioEventNoSound;
 
 /* 
@@ -130,9 +139,9 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "FactoryExitWidth",			INI::parseReal,												NULL,		offsetof( ThingTemplate, m_factoryExitWidth ) },
 	{ "FactoryExtraBibWidth",	INI::parseReal,												NULL,		offsetof( ThingTemplate, m_factoryExtraBibWidth ) },
 																											
-	{ "SkillPointValue",			ThingTemplate::parseIntList,					(void*)LEVEL_COUNT,		offsetof( ThingTemplate, m_skillPointValues ) },
-	{ "ExperienceValue",			ThingTemplate::parseIntList,					(void*)LEVEL_COUNT,		offsetof( ThingTemplate, m_experienceValues ) },
-	{ "ExperienceRequired",		ThingTemplate::parseIntList,					(void*)LEVEL_COUNT,		offsetof( ThingTemplate, m_experienceRequired ) },
+	{ "SkillPointValue",			ThingTemplate::parseIntList,					&levelEntryCount,		offsetof( ThingTemplate, m_skillPointValues ) },
+	{ "ExperienceValue",			ThingTemplate::parseIntList,					&levelEntryCount,		offsetof( ThingTemplate, m_experienceValues ) },
+	{ "ExperienceRequired",		ThingTemplate::parseIntList,					&levelEntryCount,		offsetof( ThingTemplate, m_experienceRequired ) },
 	{ "IsTrainable",					INI::parseBool,												NULL,									offsetof( ThingTemplate, m_isTrainable ) },
 	{ "EnterGuard",						INI::parseBool,												NULL,									offsetof( ThingTemplate, m_enterGuard ) },
 	{ "HijackGuard",					INI::parseBool,												NULL,									offsetof( ThingTemplate, m_hijackGuard ) },
@@ -157,10 +166,10 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 	{ "BuildVariations",			INI::parseAsciiStringVector,				NULL,		offsetof( ThingTemplate, m_buildVariations ) },
 
 // NOTE NOTE NOTE -- s_objectFieldParseTable and s_objectReskinFieldParseTable must be updated in tandem -- see comment above
-	{ "Behavior",							ThingTemplate::parseModuleName,		(const void*)MODULETYPE_BEHAVIOR, offsetof(ThingTemplate, m_behaviorModuleInfo) },
-	{ "Body",									ThingTemplate::parseModuleName,		(const void*)999, offsetof(ThingTemplate, m_behaviorModuleInfo) },
-	{ "Draw",									ThingTemplate::parseModuleName,		(const void*)MODULETYPE_DRAW, offsetof(ThingTemplate, m_drawModuleInfo) },
-	{ "ClientUpdate",					ThingTemplate::parseModuleName,		(const void*)MODULETYPE_CLIENT_UPDATE, offsetof(ThingTemplate, m_clientUpdateModuleInfo) },
+	{ "Behavior",							ThingTemplate::parseModuleName,		&behaviorModule, offsetof(ThingTemplate, m_behaviorModuleInfo) },
+	{ "Body",									ThingTemplate::parseModuleName,		&bodyModule, offsetof(ThingTemplate, m_behaviorModuleInfo) },
+	{ "Draw",									ThingTemplate::parseModuleName,		&drawModule, offsetof(ThingTemplate, m_drawModuleInfo) },
+	{ "ClientUpdate",					ThingTemplate::parseModuleName,		&clientUpdateModule, offsetof(ThingTemplate, m_clientUpdateModuleInfo) },
 // NOTE NOTE NOTE -- s_objectFieldParseTable and s_objectReskinFieldParseTable must be updated in tandem -- see comment above
 
 	{ "SelectPortrait",					INI::parseAsciiString,	NULL,		offsetof( ThingTemplate, m_selectedPortraitImageName ) },
@@ -258,7 +267,7 @@ const FieldParse ThingTemplate::s_objectFieldParseTable[] =
 // NOTE NOTE NOTE -- s_objectFieldParseTable and s_objectReskinFieldParseTable must be updated in tandem -- see comment above
 const FieldParse ThingTemplate::s_objectReskinFieldParseTable[] = 
 {
-	{ "Draw",									ThingTemplate::parseModuleName,		(const void*)MODULETYPE_DRAW, offsetof(ThingTemplate, m_drawModuleInfo) },
+	{ "Draw",									ThingTemplate::parseModuleName,		&drawModule, offsetof(ThingTemplate, m_drawModuleInfo) },
 
 	{ "Geometry",							GeometryInfo::parseGeometryType,				NULL,  offsetof( ThingTemplate, m_geometryInfo ) },
 	{ "GeometryMajorRadius",	GeometryInfo::parseGeometryMajorRadius,	NULL,		offsetof( ThingTemplate, m_geometryInfo ) },
@@ -511,7 +520,12 @@ void ThingTemplate::parseModuleName(INI* ini, void *instance, void* store, const
 {
 	ThingTemplate* self = (ThingTemplate*)instance;
 	ModuleInfo* mi = (ModuleInfo*)store;
-	ModuleType type = (ModuleType)(UnsignedInt)userData;
+	// Validate the table protocol before dereferencing borrowed userData.
+	if (userData != &behaviorModule && userData != &bodyModule &&
+		userData != &drawModule && userData != &clientUpdateModule)
+		throw INI_INVALID_DATA;
+	const auto& descriptor = *static_cast<const ModuleParseDescriptor*>(userData);
+	ModuleType type = descriptor.type;
 	const char* token = ini->getNextToken();
 	AsciiString tokenStr = token;
 
@@ -534,7 +548,7 @@ void ThingTemplate::parseModuleName(INI* ini, void *instance, void* store, const
 	Int interfaceMask;
 
 	// ugh -- special case for "Body".
-	if (type == 999)
+	if (descriptor.bodyOnly)
 	{
 		type = MODULETYPE_BEHAVIOR;
 	// what interface(s) does this module support?
@@ -618,7 +632,8 @@ void ThingTemplate::parseModuleName(INI* ini, void *instance, void* store, const
 //-------------------------------------------------------------------------------------------------
 void ThingTemplate::parseIntList(INI* ini, void *instance, void* store, const void* userData)
 {
-	Int numberEntries = (Int)userData;
+	if (userData != &levelEntryCount) throw INI_INVALID_DATA;
+	const Int numberEntries = levelEntryCount;
 	Int *intList = (Int*)store;
 
 	for( Int intIndex = 0; intIndex < numberEntries; intIndex ++ )
@@ -682,7 +697,7 @@ static void parseArbitraryFXIntoMap( INI* ini, void *instance, void* /* store */
 	const char* name = (const char*)userData;
 	const char* token = ini->getNextToken();
 	const FXList* fxl = TheFXListStore->findFXList(token);	// could be null!
-	DEBUG_ASSERTCRASH(fxl != NULL || stricmp(token, "None") == 0, ("FXList %s not found!\n",token));
+	DEBUG_ASSERTCRASH(fxl != NULL || strcasecmp(token, "None") == 0, ("FXList %s not found!\n",token));
 	mapFX->insert(std::make_pair(AsciiString(name), fxl));	
 }
 
@@ -964,7 +979,7 @@ void ThingTemplate::parseMaxSimultaneous(INI *ini, void *instance, void *store, 
   DEBUG_ASSERTCRASH ( &myTemplate->m_maxSimultaneousOfType == store, ("Bad store passed to parseMaxSimultaneous" ) );
 
   const char * token = ini->getNextToken();
-  if ( stricmp( token, DETERMINED_BY_SUPERWEAPON_KEYWORD ) == 0 )
+  if ( strcasecmp( token, DETERMINED_BY_SUPERWEAPON_KEYWORD ) == 0 )
   {
     myTemplate->m_maxSimultaneousDeterminedBySuperweaponRestriction = true;
     *(UnsignedShort *)store = 0;
@@ -986,70 +1001,8 @@ void ThingTemplate::parseMaxSimultaneous(INI *ini, void *instance, void *store, 
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ThingTemplate::ThingTemplate() :
-	m_geometryInfo(GEOMETRY_SPHERE, FALSE, 1, 1, 1)
-{
-	m_moduleParsingMode = MODULEPARSE_NORMAL;
-	m_reskinnedFrom = NULL;
-	m_radarPriority = RADAR_PRIORITY_INVALID;
+// Data construction is owned by NativeThingTemplateData.cpp.
 
-	m_nextThingTemplate = NULL;
-	m_transportSlotCount = 0;
-	m_fenceWidth = 0;
-	m_fenceXOffset = 0;
-	m_visionRange = 0.0f;
-	m_shroudClearingRange = -1.0f;
-	m_shroudRevealToAllRange = -1.0f;
-
-	m_buildCost = 0;
-	m_buildTime = 1;
-	m_refundValue = 0;
-	m_energyProduction = 0;
-	m_energyBonus = 0;
-	m_buildCompletion = BC_APPEARS_AT_RALLY_POINT;
-
-	for( Int levelIndex = 0; levelIndex < LEVEL_COUNT; levelIndex++ )
-	{
-		m_experienceValues[levelIndex] = 0;
-		m_experienceRequired[levelIndex] = 0;
-		// -1 means "same value as experienceValues for that level"
-		m_skillPointValues[levelIndex] = USE_EXP_VALUE_FOR_SKILL_VALUE;
-	}
-	m_isTrainable = FALSE;
-	m_enterGuard = FALSE;
-	m_hijackGuard = FALSE;
-
-	m_templateID = 0;
-	m_kindof = KINDOFMASK_NONE;
-	//m_defaultOwningSide = "";	// unnecessary
-	m_isBuildFacility = FALSE;
-	m_isPrerequisite = FALSE;
-	m_placementViewAngle = 0.0f;
-	m_factoryExitWidth = 0.0f;
-	m_factoryExtraBibWidth = 0.0f;
-
-	m_selectedPortraitImage = NULL;
-	m_buttonImage = NULL;
-
-	m_shadowType = SHADOW_NONE;
-	m_shadowSizeX = 0.0f;
-	m_shadowSizeY = 0.0f;
-	m_shadowOffsetX = 0.0f;
-	m_shadowOffsetY = 0.0f;
-	m_occlusionDelay = TheGlobalData->m_defaultOcclusionDelay;
-
-	m_structureRubbleHeight = 0;
-	m_instanceScaleFuzziness = 0;
-	m_threatValue = 0;
-	m_maxSimultaneousOfType = 0;	// unlimited
-  m_maxSimultaneousLinkKey = NAMEKEY_INVALID; // Not linked
-  m_maxSimultaneousDeterminedBySuperweaponRestriction = false;
-	m_crusherLevel = 0;			//Unspecified, this object is unable to crush anything!
-	m_crushableLevel = 255; //Unspecified, this object is unable to be crushed by anything!
-
-}
-
-//-------------------------------------------------------------------------------------------------
 AIUpdateModuleData *ThingTemplate::friend_getAIModuleInfo(void)
 {
 	Int numModInfos = m_behaviorModuleInfo.getCount();
@@ -1216,41 +1169,8 @@ void ThingTemplate::validate()
 
 //-------------------------------------------------------------------------------------------------
 // copy the guts of that into this, but preserve this' name, id, and list-links.
-void ThingTemplate::copyFrom(const ThingTemplate* that)
-{
-	if (!that)
-		return;
+// Data copying/retirement is owned by NativeThingTemplateData.cpp.
 
-	ThingTemplate* next = this->m_nextThingTemplate;
-	UnsignedShort id = this->m_templateID;
-	AsciiString name = this->m_nameString;
-
-	*this = *that;
-
-	this->m_nextThingTemplate = next;
-	this->m_templateID = id;
-	this->m_nameString = name;
-}
-
-//-------------------------------------------------------------------------------------------------
-void ThingTemplate::setCopiedFromDefault()
-{
-	m_armorCopiedFromDefault = true;
-	m_weaponsCopiedFromDefault = true;
-	m_behaviorModuleInfo.setCopiedFromDefault(true);
-	m_drawModuleInfo.setCopiedFromDefault(true);
-	m_clientUpdateModuleInfo.setCopiedFromDefault(true);
-}
-
-//-------------------------------------------------------------------------------------------------
-ThingTemplate::~ThingTemplate()
-{
-	// note, we don't need to take any special action for Armor/WeaponSets...
-	// though it is just a list of 'raw' pointers, we don't have ownership of 'em,
-	// and so we MUST NOT delete them
-} 
-
-//=============================================================================
 void ThingTemplate::resolveNames()
 {
 	Int i, j;
@@ -1322,7 +1242,8 @@ void ThingTemplate::initForLTA(const AsciiString& name)
 
 	char buffer[1024];
 	strncpy(buffer, name.str(), sizeof(buffer));
-	for (int i=0; buffer[i]; i++) {
+	int i=0;
+	for (; buffer[i]; i++) {
 		if (buffer[i] == '/') {
 			i++;
 			break;
@@ -1568,10 +1489,10 @@ Int ThingTemplate::calcTimeToBuild( const Player* player) const
 	Real EnergyShort = 1.0f - EnergyPercent;					//so I am 20% short
 	EnergyShort *= TheGlobalData->m_LowEnergyPenaltyModifier;	//which is a 40% penalty, or a 10% penalty
 	Real penaltyRate = 1.0f - EnergyShort;
-	penaltyRate = max(penaltyRate, TheGlobalData->m_MinLowEnergyProductionSpeed);	//bind so 0% does not dead stop you
+	penaltyRate = std::max(penaltyRate, TheGlobalData->m_MinLowEnergyProductionSpeed);	//bind so 0% does not dead stop you
 
 	if( EnergyPercent < 1.0f )	//and make 99% look like 80% (eg) since most of the time you are down only a little
-		penaltyRate = min(penaltyRate, TheGlobalData->m_MaxLowEnergyProductionSpeed);
+		penaltyRate = std::min(penaltyRate, TheGlobalData->m_MaxLowEnergyProductionSpeed);
 
 	if (penaltyRate <= 0.0f)
 		penaltyRate = 0.01f;	// Design won't make the minimum 0, they promise
@@ -1610,4 +1531,3 @@ ModuleData* ModuleInfo::friend_getNthData(Int i)
 	}
 	return NULL;
 }
-

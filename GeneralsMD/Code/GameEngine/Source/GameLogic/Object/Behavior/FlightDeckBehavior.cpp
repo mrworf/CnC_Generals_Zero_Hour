@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/NativeSourceMath.h"
 
 #include "Common/CRCDebug.h"
 #include "Common/Player.h"
@@ -205,7 +206,7 @@ void FlightDeckBehavior::buildInfo(Bool createUnits)
 
 			//Convert the module data bone names into coordinates that we can use
 			getObject()->getSingleLogicalBonePosition( it->str(), &flightDeckInfo.m_prep, &mtx );
-			flightDeckInfo.m_orientation = mtx.Get_Z_Rotation();
+			flightDeckInfo.m_orientation = nativeSourceYaw(mtx);
 
 			//Init basic runway stuff
 			flightDeckInfo.m_runway = col;
@@ -281,7 +282,7 @@ void FlightDeckBehavior::buildInfo(Bool createUnits)
 			if( firstTime )
 			{
 				firstTime = FALSE;
-				info.m_startOrient = mtx.Get_Z_Rotation();
+				info.m_startOrient = nativeSourceYaw(mtx);
 				info.m_startTransform = mtx;
 			}
 
@@ -405,7 +406,7 @@ FlightDeckBehavior::FlightDeckInfo* FlightDeckBehavior::findPPI(ObjectID id)
 	for (std::vector<FlightDeckInfo>::iterator it = m_spaces.begin(); it != m_spaces.end(); ++it)
 	{
 		if (it->m_objectInSpace == id)
-			return it;
+			return &*it;
 	}
 
 	return NULL; 
@@ -420,7 +421,7 @@ FlightDeckBehavior::FlightDeckInfo* FlightDeckBehavior::findEmptyPPI()
 	for (std::vector<FlightDeckInfo>::iterator it = m_spaces.begin(); it != m_spaces.end(); ++it)
 	{
 		if( it->m_objectInSpace == INVALID_ID )
-			return it;
+			return &*it;
 	}
 
 	return NULL;
@@ -853,7 +854,8 @@ Bool FlightDeckBehavior::calcBestParkingAssignment( ObjectID id, Coord3D *pos, I
 	//Find the runway the object is assigned to.
 	Int runway = -1;
 	Int myIndex = 0;
-	for( std::vector<FlightDeckInfo>::iterator myIt = m_spaces.begin(); myIt != m_spaces.end(); myIt++, myIndex++ )
+	auto myIt = m_spaces.begin();
+	for( ; myIt != m_spaces.end(); myIt++, myIndex++ )
 	{
 		if( myIt->m_objectInSpace == id )
 		{
@@ -879,7 +881,7 @@ Bool FlightDeckBehavior::calcBestParkingAssignment( ObjectID id, Coord3D *pos, I
 	//the back and keep looking at empty spaces until we find one with a plane blocking.
 
 	Bool checkForPlaneInWay = FALSE;
-	std::vector<FlightDeckInfo>::iterator bestIt = NULL;
+	auto bestIt = m_spaces.end();
 	Object *bestJet = NULL;
 	Int bestIndex = 0, index = 0;
 	for( std::vector<FlightDeckInfo>::iterator thatIt = m_spaces.begin(); thatIt != m_spaces.end(); thatIt++, index++ )
@@ -888,7 +890,7 @@ Bool FlightDeckBehavior::calcBestParkingAssignment( ObjectID id, Coord3D *pos, I
 		if( myIt == thatIt )
 		{
 			//Done, don't look at my spot, nor spots behind me.
-			if( bestIt )
+			if( bestIt != m_spaces.end() )
 			{
 				myIt->m_objectInSpace = bestJet ? bestJet->getID() : INVALID_ID;
 				bestIt->m_objectInSpace = id;
@@ -940,7 +942,7 @@ Bool FlightDeckBehavior::calcBestParkingAssignment( ObjectID id, Coord3D *pos, I
 				if( pos )
 				{
 					pos->set( &myIt->m_prep ); //reset the original position.
-					bestIt = NULL;
+					bestIt = m_spaces.end();
 				}
 			}
 		}
@@ -1015,7 +1017,8 @@ void FlightDeckBehavior::defectAllParkedUnits(Team* newTeam, UnsignedInt detecti
 				continue;
 
 			// srj sez: evil. fix better someday. 
-			static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
+			static const StaticNameKey nativeCached_jetKey("JetAIUpdate");
+			NameKeyType jetKey = nativeCached_jetKey.key();
 			JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
 			Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
 
@@ -1056,7 +1059,8 @@ void FlightDeckBehavior::killAllParkedUnits()
 				continue;
 
 			// srj sez: evil. fix better someday. 
-			static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
+			static const StaticNameKey nativeCached_jetKey("JetAIUpdate");
+			NameKeyType jetKey = nativeCached_jetKey.key();
 			JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
 			Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
 
@@ -1222,7 +1226,7 @@ UpdateSleepTime FlightDeckBehavior::update()
 
 	//If the carrier has at least one aircraft, then allow it to attack.
 	Bool hasAircraft = FALSE;
-	for( it = m_spaces.begin(); it != m_spaces.end(); it++ )
+	for( auto it = m_spaces.begin(); it != m_spaces.end(); it++ )
 	{
 		if( it->m_objectInSpace != INVALID_ID )
 		{
@@ -1329,7 +1333,8 @@ void FlightDeckBehavior::exitObjectViaDoor( Object *newObj, ExitDoorType exitDoo
 
 
 	/// @todo srj -- this is evil. fix.
-	static NameKeyType jetKey = TheNameKeyGenerator->nameToKey( "JetAIUpdate" );
+	static const StaticNameKey nativeCached_jetKey("JetAIUpdate");
+	NameKeyType jetKey = nativeCached_jetKey.key();
 	JetAIUpdate* ju = (JetAIUpdate *)newObj->findUpdateModule( jetKey );
 	Real parkingOffset = ju ? ju->friend_getParkingOffset() : 0.0f;
 
@@ -1348,13 +1353,13 @@ void FlightDeckBehavior::exitObjectViaDoor( Object *newObj, ExitDoorType exitDoo
 	}
 
 	const std::vector<Coord3D> *pCreationLocations = getCreationLocations( newObj->getID() );
-	if( !pCreationLocations )
+	if( !pCreationLocations || pCreationLocations->empty() )
 	{
 		DEBUG_CRASH( ("No creation locations specified for runway for FlightDeckBehavior (Kris).") );
 		return;
 	}
 
-	newObj->setPosition( pCreationLocations->begin() );
+	newObj->setPosition( &pCreationLocations->front() );
 	newObj->setOrientation( m_runways[ ppi->m_runway ].m_startOrient );
 	TheAI->pathfinder()->addObjectToPathfindMap( newObj );
 
@@ -1724,4 +1729,3 @@ void FlightDeckBehavior::loadPostProcess( void )
 	//setWakeFrame(getObject(), UPDATE_SLEEP_NONE); 
 
 }  // end loadPostProcess
-

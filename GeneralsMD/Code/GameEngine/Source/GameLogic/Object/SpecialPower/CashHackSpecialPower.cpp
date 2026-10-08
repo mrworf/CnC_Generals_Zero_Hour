@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <algorithm>
 
 #include "Common/Player.h"
 #include "Common/Team.h"
@@ -150,7 +151,7 @@ void CashHackSpecialPower::doSpecialPowerAtObject( Object *victim, UnsignedInt c
 		UnsignedInt cash = targetMoney->countMoney();
 		UnsignedInt desiredAmount = findAmountToSteal();
 		//Check to see if they have 1000 cash, otherwise, take the remainder!
-		cash = min( desiredAmount, cash );
+		cash = std::min( desiredAmount, cash );
 		if( cash > 0 )
 		{
 			//Steal the cash

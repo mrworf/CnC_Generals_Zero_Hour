@@ -116,7 +116,8 @@ void SpyVisionSpecialPower::doSpecialPower( UnsignedInt commandOptions )
 			duration = modData->m_maxDurationInFrames;
 	}
 
-	static const NameKeyType key_SpyVisionUpdate = NAMEKEY( "SpyVisionUpdate" );
+	static const StaticNameKey nativeCached_key_SpyVisionUpdate("SpyVisionUpdate");
+	const NameKeyType key_SpyVisionUpdate = nativeCached_key_SpyVisionUpdate.key();
 	SpyVisionUpdate *update = (SpyVisionUpdate*)source->findUpdateModule( key_SpyVisionUpdate );
 	if( !update )
 	{

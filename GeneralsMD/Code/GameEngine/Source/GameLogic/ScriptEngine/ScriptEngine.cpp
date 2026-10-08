@@ -28,10 +28,12 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
-#include "common/DataChunk.h"
-#include "Common/File.h"
+#include "Common/DataChunk.h"
+#include <memory>
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/GameEngine.h"
+#include "Common/GlobalData.h"
 #include "Common/GameState.h"
 #include "Common/LatchRestore.h"
 #include "Common/MessageStream.h"
@@ -63,67 +65,11 @@
 //#pragma MESSAGE("************************************** WARNING, optimization disabled for debugging purposes")
 #endif
 
-// These are for debugger window
-static int st_LastCurrentFrame;
-static int st_CurrentFrame;
-static Bool st_CanAppCont;
-static Bool st_AppIsFast = false;
-static void _appendMessage(const AsciiString& str, Bool isTrueMessage = true, Bool shouldPause = false);
-static void _adjustVariable(const AsciiString& str, Int value, Bool shouldPause = false);
-static void _updateFrameNumber( void );
-static HMODULE st_DebugDLL;
-// That's it for debugger window
-
-// These are for particle editor
+// Debugger/editor DLLs are excluded. Particle name tables remain owned here.
 #define DEFINE_PARTICLE_SYSTEM_NAMES 1
 #include "GameClient/ParticleSys.h"
 #include "Common/MapObject.h"
-#include "../../GameEngineDevice/Include/W3DDevice/GameClient/W3DAssetManagerExposed.h"
-
-static void _addUpdatedParticleSystem( AsciiString particleSystemName );
-static void _appendAllParticleSystems( void );
-static void _appendAllThingTemplates( void );
-static int _getEditorBehavior( void );
-static int _getNewCurrentParticleCap( void );
-static AsciiString _getParticleSystemName( void );
-static void _reloadParticleSystemFromINI( AsciiString particleSystemName );
-static void _updateAndSetCurrentSystem( void );
-extern void _updateAsciiStringParmsFromSystem( ParticleSystemTemplate *particleTemplate );
-extern void _updateAsciiStringParmsToSystem( ParticleSystemTemplate *particleTemplate );
-static void _updateCurrentParticleCap( void );
-static void _updateCurrentParticleCount( void );
-static void _updatePanelParameters( ParticleSystemTemplate *particleTemplate );
-static void _writeOutINI( void );
-extern void _writeSingleParticleSystem( File *out, ParticleSystemTemplate *particleTemplate );
-static void _reloadTextures( void );
-
-static HMODULE st_ParticleDLL;
-ParticleSystem *st_particleSystem;
-Bool st_particleSystemNeedsStopping = FALSE; ///< Set along with st_particleSystem if the particle system has infinite life
-#define ARBITRARY_BUFF_SIZE	128
-#define FORMAT_STRING "%.2f"
-#define FORMAT_STRING_LEADING_STRING		"%s%.2f"
-// That's it for particle editor
-
-#if defined(_INTERNAL)
-	#define DO_VTUNE_STUFF
-#endif
-
-#ifdef DO_VTUNE_STUFF
-
-//typedef __declspec(dllimport) void __cdecl (*VTProc)();
-	typedef void (*VTProc)();
-	
-	static Bool						st_EnableVTune = false;
-	static HMODULE				st_vTuneDLL = NULL;
-	static VTProc VTPause = NULL;
-	static VTProc VTResume = NULL;
-
-	static void _initVTune( void );
-	static void _updateVTune ( void );
-	static void _cleanUpVTune( void );
-
-#endif
+static void _appendMessage(const AsciiString& str, Bool isTrueMessage = true, Bool shouldPause = false);
 
 
 enum { K_SCRIPTS_DATA_VERSION_1 = 1 };
@@ -169,10 +115,13 @@ AttackPriorityInfo::~AttackPriorityInfo()
 void AttackPriorityInfo::setPriority(const ThingTemplate *tThing, Int priority)
 {
 	if (tThing==NULL) return;
-	if (m_priorityMap==NULL) {
-		m_priorityMap = NEW AttackPriorityMap;	// STL type, so impractical to use memorypool
-	}
 	tThing = (const ThingTemplate *)tThing->getFinalOverride();
+	if (m_priorityMap==NULL) {
+		std::unique_ptr<AttackPriorityMap> candidate(new AttackPriorityMap);
+		candidate->emplace(tThing, priority);
+		m_priorityMap = candidate.release();
+		return;
+	}
 	Int &thePriority = (*m_priorityMap)[tThing];
 	thePriority = priority;
 }
@@ -474,8 +423,6 @@ m_objectsShouldReceiveDifficultyBonus(TRUE),
 m_ChooseVictimAlwaysUsesNormal(false)
 //
 {
-	st_CanAppCont = true;
-	st_LastCurrentFrame = st_CurrentFrame = 0;
 	// By default, difficulty should be normal.
 	setGlobalDifficulty(DIFFICULTY_NORMAL);
 
@@ -485,29 +432,6 @@ m_ChooseVictimAlwaysUsesNormal(false)
 //-------------------------------------------------------------------------------------------------
 ScriptEngine::~ScriptEngine()
 {
-	if (st_DebugDLL) {
-		FARPROC proc = GetProcAddress(st_DebugDLL, "DestroyDebugDialog");
-		if (proc) {
-			proc();
-		}
-
-		FreeLibrary(st_DebugDLL);
-		st_DebugDLL = NULL;
-	}
-
-	if (st_ParticleDLL) {
-		FARPROC proc = GetProcAddress(st_ParticleDLL, "DestroyParticleSystemDialog");
-		if (proc) {
-			proc();
-		}
-
-		FreeLibrary(st_ParticleDLL);
-		st_ParticleDLL = NULL;
-	}
-
-#ifdef DO_VTUNE_STUFF
-	_cleanUpVTune();
-#endif
 
 	reset(); // just in case.
 #ifdef COUNT_SCRIPT_USAGE
@@ -531,36 +455,8 @@ ScriptEngine::~ScriptEngine()
 //-------------------------------------------------------------------------------------------------
 void ScriptEngine::init( void )
 {
-	if (TheGlobalData->m_windowed)
-		if (TheGlobalData->m_scriptDebug) {
-			st_DebugDLL = LoadLibrary("DebugWindow.dll");
-		} else {
-			st_DebugDLL = NULL;
-		}
-		
-		if (TheGlobalData->m_particleEdit) {
-			st_ParticleDLL = LoadLibrary("ParticleEditor.dll");
-		} else {
-			st_ParticleDLL = NULL;
-		}
-
-		if (st_DebugDLL) {
-			FARPROC proc = GetProcAddress(st_DebugDLL, "CreateDebugDialog");
-			if (proc) {
-				proc();
-			}
-		}
-
-	if (st_ParticleDLL) {
-		FARPROC proc = GetProcAddress(st_ParticleDLL, "CreateParticleSystemDialog");
-		if (proc) {
-			proc();
-		}
-	}
-
-#ifdef DO_VTUNE_STUFF
-	_initVTune();
-#endif
+	if (TheGlobalData->m_scriptDebug || TheGlobalData->m_particleEdit)
+		throw ERROR_BAD_ARG; // Unsupported optional Windows tools; reject before init.
 
 #ifdef SPECIAL_SCRIPT_PROFILING
 #ifdef DEBUG_LOGGING
@@ -5376,8 +5272,6 @@ void ScriptEngine::reset( void )
 #endif
 #endif
 
-	_updateCurrentParticleCap();
-
 	VecSequentialScriptPtrIt seqScriptIt;
 	for (seqScriptIt = m_sequentialScripts.begin(); seqScriptIt != m_sequentialScripts.end(); ) {
 		cleanupSequentialScript(seqScriptIt, TRUE);
@@ -5543,11 +5437,6 @@ void ScriptEngine::update( void )
 			//TheScriptActions->closeWindows(FALSE); // Close victory or defeat windows.
 		}
 	}
-	_updateFrameNumber();
-	if (isTimeFrozenDebug()) {
-		st_LastCurrentFrame = st_CurrentFrame - 1;	// Force us to get clean result from CanAppContinue
-		return;
-	}
 
 	if (m_fade!=FADE_NONE) {
 		updateFades(); 
@@ -5604,17 +5493,6 @@ void ScriptEngine::update( void )
 	// update all sequential stuff.
 	evaluateAndProgressAllSequentialScripts();
 
-	// Script debugger stuff
-	st_CurrentFrame++;
-	if (st_DebugDLL) { 
-		for (int j = 1; j < m_numCounters; ++j) {
-			_adjustVariable(m_counters[j].name.str(), m_counters[j].value);
-		}
-
-		for (int k = 1; k < m_numFlags; ++k) {
-			_adjustVariable(m_flags[k].name.str(), m_flags[k].value);
-		}
-	}
 #ifdef _DEBUG
 	if (TheGameLogic->getFrame()==0) {
 		for (i=0; i<m_numAttackInfo; i++) {
@@ -5634,9 +5512,6 @@ void ScriptEngine::update( void )
 #endif
 #endif
 	
-#ifdef DO_VTUNE_STUFF
-	_updateVTune();
-#endif
 
 }  // end update
 
@@ -8109,18 +7984,12 @@ Bool ScriptEngine::hasTeamCompletedSequentialScript( Team *team, const AsciiStri
 
 Bool ScriptEngine::getEnableVTune() const
 {
-#ifdef DO_VTUNE_STUFF
-	return st_EnableVTune;
-#else
-	return false;
-#endif
+	return false; // Original build without the optional VTune DLL.
 }
 
 void ScriptEngine::setEnableVTune(Bool value)
 {
-#ifdef DO_VTUNE_STUFF
-	st_EnableVTune = value;
-#endif
+	(void)value;
 }
 
 //----SequentialScript-----------------------------------------------------------------------------
@@ -8279,124 +8148,7 @@ void SequentialScriptStatus::loadPostProcess( void )
 //-------------------------------------------------------------------------------------------------
 void ScriptEngine::particleEditorUpdate( void )
 {
-	if (!st_ParticleDLL) {
-		return;
-	}
-
-	_updateCurrentParticleCount();
-	
-	Bool busyWait = false;
-	do {
-		if (m_firstUpdate) {
-			_appendAllParticleSystems();
-			_appendAllThingTemplates();
-		} else {
-			switch (_getEditorBehavior())
-			{			
-				case 0x00:
-				{
-					busyWait = false;
-					return;
-				}
-
-				case 0x01:
-				case 0x02:
-				{
-					_updateAndSetCurrentSystem();
-					busyWait = false;
-					break;
-				}
-				
-				case 0x03:
-				{
-					AsciiString particleSystemName = _getParticleSystemName();
-					_addUpdatedParticleSystem(particleSystemName);
-					ParticleSystemTemplate *pTemp = const_cast<ParticleSystemTemplate*>(TheParticleSystemManager->findTemplate(particleSystemName));
-					if (pTemp) {
-						// make sure that this system is fully up to date.
-						_updateAsciiStringParmsToSystem(pTemp);
-					}
-					_writeOutINI();
-					busyWait = false;
-					break;
-				}
-
-				case 0x04:
-				{
-					AsciiString particleSystemName = _getParticleSystemName();
-					_reloadParticleSystemFromINI(particleSystemName);
-					busyWait = false;
-					return;
-				}
-				
-				case 0x05:
-				{
-					int newCap = _getNewCurrentParticleCap();
-					if (newCap >= 0) {
-						TheWritableGlobalData->m_maxParticleCount = newCap;
-					}
-					busyWait = false;
-				}
-
-				case 0x06:
-				{
-					_reloadTextures();
-					busyWait = false;
-					break;
-				}
-
-				// destroy all particle systems
-				case 0x07:
-				{
-
-					TheParticleSystemManager->reset();
-
-/*
-					//iterate through particle system list and remove each particle system
-					ParticleSystemManager::ParticleSystemList particleSysList;
-					ParticleSystemManager::ParticleSystemListIt it;
-					while (true)
-					{
-						// reassign values into variables
-						particleSysList = TheParticleSystemManager->getAllParticleSystems();
-						it = particleSysList.begin();
-						if (it == particleSysList.end())
-							break;
-
-						// check to make sure the particle system is valid
-						ParticleSystem *sys = (*it);
-						if (!sys)
-							continue;
-
-						//before removing the system, make sure to remove all of its particles individually
-						while (sys->getParticleCount() > 0) {
-							TheParticleSystemManager->removeParticle(sys->getFirstParticle());
-							sys->removeParticle(sys->getFirstParticle());
-						}
-
-						TheParticleSystemManager->removeParticleSystem(sys);
-						++it;
-					}
-*/
-
-					//Int particleNum = TheParticleSystemManager->getParticleCount();
-					_updateCurrentParticleCount(); // probably don't need this...
-				}
-
-				case 0xFE:
-				{
-					busyWait = true;
-					break;
-				}
-
-				case 0xFF:
-				{
-					busyWait = false;
-					break;
-				}
-			}
-		}
-	} while (busyWait);
+	// Original absent-editor behavior: no simulation mutation.
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -8428,22 +8180,6 @@ void ScriptEngine::doUnfreezeTime( void )
 //-------------------------------------------------------------------------------------------------
 Bool ScriptEngine::isTimeFrozenDebug(void)
 {
-	typedef Bool (*funcptr)(void);
-
-	if (st_DebugDLL) {
-		if (st_LastCurrentFrame != st_CurrentFrame) {
-			st_LastCurrentFrame = st_CurrentFrame;
-
-			FARPROC proc = GetProcAddress(st_DebugDLL, "CanAppContinue");
-			if (proc) {
-				st_CanAppCont = ((funcptr)proc)();
-
-				if (st_CanAppCont) {
-				}
-			}
-		}
-		return !st_CanAppCont;
-	}
 	return false;
 }
 
@@ -8452,40 +8188,12 @@ Bool ScriptEngine::isTimeFrozenDebug(void)
 //-------------------------------------------------------------------------------------------------
 Bool ScriptEngine::isTimeFast(void)
 {
-	typedef Bool (*funcptr)(void);
-
-	if (st_DebugDLL) {
-		FARPROC proc = GetProcAddress(st_DebugDLL, "CanAppContinue");
- 		proc = GetProcAddress(st_DebugDLL, "RunAppFast");
-		if (proc && ((funcptr)proc)()) {
-			st_AppIsFast = true;
-		} else {
-			if (st_AppIsFast) {
-				st_AppIsFast = false;
-			} 
-		}
-		if (st_AppIsFast) {
-			if ((TheGameLogic->getFrame()%10) == 0) {
-				return false;
-			}	 
-			return true;
-		} else {
-			return false;
-		}
-	}
 	return false;
 }
 
 void ScriptEngine::forceUnfreezeTime(void)
 {
-	typedef void (*funcptr)(void);
-
-	if (st_DebugDLL) {
-		FARPROC proc = GetProcAddress(st_DebugDLL, "ForceAppContinue");
-		if (proc) {
-			((funcptr)proc)();
-		}
-	}
+	// Script freeze state is independent of the absent debugger.
 }
 
 void ScriptEngine::AppendDebugMessage(const AsciiString& strToAdd, Bool forcePause)
@@ -8493,30 +8201,15 @@ void ScriptEngine::AppendDebugMessage(const AsciiString& strToAdd, Bool forcePau
 #ifdef INTENSE_DEBUG
 	DEBUG_LOG(("-SCRIPT- %d %s\n", TheGameLogic->getFrame(), strToAdd.str()));
 #endif
-	typedef void (*funcptr)(const char*);
-	if (!st_DebugDLL) {
-		return;
-	}
-
-	FARPROC proc;
-	if (forcePause) {
-		proc = GetProcAddress(st_DebugDLL, "AppendMessageAndPause");
-	} else {
-		proc = GetProcAddress(st_DebugDLL, "AppendMessage");
-	}
-
-	if (!proc) {
-		return;
-	}
-	AsciiString msg;
-	msg.format("%d ", TheGameLogic->getFrame());
-	msg.concat(strToAdd);
-	((funcptr)proc)(msg.str());
+	(void)strToAdd;
+	(void)forcePause;
 }
 
 void ScriptEngine::AdjustDebugVariableData(const AsciiString& variableName, Int value, Bool forcePause)
 {
-	_adjustVariable(variableName, value, (forcePause != 0));
+	(void)variableName;
+	(void)value;
+	(void)forcePause;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -9349,1005 +9042,14 @@ void ScriptEngine::markMPLocalDefeatWindowShown(void)
 	m_shownMPLocalDefeatWindow = TRUE;
 }
 
-// ------------------------------------------------------------------------------------------------
-/** Misc helper functions (ParticleEdit, etc) */
-// ------------------------------------------------------------------------------------------------
-
-void _appendMessage(const AsciiString& str, Bool isTrueMessage, Bool shouldPause)
+// Original absent-debugger behavior, with optional diagnostic logging.
+static void _appendMessage(const AsciiString& str, Bool isTrueMessage, Bool shouldPause)
 {
-	typedef void (*funcptr)(const char*);
-
-	AsciiString msg;
-	msg.format("%d ", TheGameLogic->getFrame());
-	if (isTrueMessage) {
-		msg.concat("Run script - ");
-	} else {
-		msg.concat("Run script false -");
-	}
-	msg.concat(str);
-
 #ifdef INTENSE_DEBUG
-	DEBUG_LOG(("-SCRIPT- %s\n", msg.str()));
+	DEBUG_LOG(("-SCRIPT- %d Run script %s- %s\n", TheGameLogic->getFrame(),
+		isTrueMessage ? "" : "false ", str.str()));
 #endif
-	if (!st_DebugDLL) {
-		return;
-	}
-
-	FARPROC proc;
-	if (shouldPause) {
-		proc = GetProcAddress(st_DebugDLL, "AppendMessageAndPause");
-	} else {
-		proc = GetProcAddress(st_DebugDLL, "AppendMessage");
-	}
-	if (!proc) {
-		return;
-	}
-
-	((funcptr)proc)(msg.str());
+	(void)str;
+	(void)isTrueMessage;
+	(void)shouldPause;
 }
-
-void _adjustVariable(const AsciiString& str, Int value, Bool shouldPause)
-{
-	typedef void (*funcptr)(const char*, const char*);
-	if (!st_DebugDLL) {
-		return;
-	}
-
-	FARPROC proc;
-	if (shouldPause) {
-		proc = GetProcAddress(st_DebugDLL, "AdjustVariableAndPause");
-	} else {
-		proc = GetProcAddress(st_DebugDLL, "AdjustVariable");
-	}
-
-	if (!proc) {
-		return;
-	}
-
-	char buff[12];	// for sprintf
-	sprintf(buff, "%d", value);
-
-	((funcptr)proc)(str.str(), buff);
-}
-
-void _updateFrameNumber( void )
-{
-	if (TheScriptEngine->isTimeFast()) return;
-	typedef void (*funcptr)(int);
-	if (!st_DebugDLL) {
-		return;
-	}
-
-	FARPROC proc;
-	proc = GetProcAddress(st_DebugDLL, "SetFrameNumber");
-	if (!proc) {
-		return;
-	}
-
-	UnsignedInt frameNum = TheGameLogic->getFrame();
-
-	((funcptr)proc)(frameNum);
-}
-
-void _appendAllParticleSystems( void )
-{
-	typedef void (*funcptr)(const char*);
-	if (!st_ParticleDLL) {
-		return;
-	}
-	FARPROC proc;
-
-	proc = GetProcAddress(st_ParticleDLL, "RemoveAllParticleSystems");
-	if (proc) {
-		proc();
-	} else {
-		return;
-	}
-
-	proc = GetProcAddress(st_ParticleDLL, "AppendParticleSystem");
-	if (!proc) {
-		return;
-	}
-
-	// Copy just the names for the list of particle system templates
-	ParticleSystemManager::TemplateMap::iterator begin(TheParticleSystemManager->beginParticleSystemTemplate());
-	ParticleSystemManager::TemplateMap::iterator end(TheParticleSystemManager->endParticleSystemTemplate());
-	for (; begin != end; ++begin) {
-		((funcptr)proc)((*begin).first.str());
-	}
-}
-
-// all ThingTemplates can be thrown with a particle system, so...
-void _appendAllThingTemplates( void )
-{
-	typedef void (*funcptr)(const char*);
-	if (!st_ParticleDLL) {
-		return;
-	}
-	FARPROC proc;
-
-	proc = GetProcAddress(st_ParticleDLL, "RemoveAllThingTemplates");
-	if (proc) {
-		proc();
-	} else {
-		return;
-	}
-
-	proc = GetProcAddress(st_ParticleDLL, "AppendThingTemplate");
-	if (!proc) {
-		return;
-	}
-
-	const ThingTemplate *pTemplate = TheThingFactory->firstTemplate();
-	while (pTemplate) {
-		((funcptr)proc)(pTemplate->getName().str());
-		pTemplate = pTemplate->friend_getNextTemplate();
-	}
-
-}
-
-
-void _addUpdatedParticleSystem( AsciiString particleSystemName )
-{
-	typedef void (*funcptr)(const char*);
-	typedef void (*funcptr2)(ParticleSystemTemplate*);
-	if (!st_ParticleDLL) {
-		return;
-	}
-
-	if (TheParticleSystemManager->findTemplate(particleSystemName)) {
-		return;
-	}
-	
-	FARPROC proc, proc2;
-	proc = GetProcAddress(st_ParticleDLL, "AppendParticleSystem");
-	if (!proc) {
-		return;
-	}
-
-	proc2 = GetProcAddress(st_ParticleDLL, "UpdateSystemUseParameters");
-	if (!proc2) {
-		return;
-	}
-
-
-	ParticleSystemTemplate *pTemplate = TheParticleSystemManager->newTemplate(particleSystemName);
-	if (!pTemplate) {
-		return;
-	}
-
-	((funcptr)proc)(pTemplate->getName().str());
-	((funcptr2)proc2)(pTemplate);
-}
-
-AsciiString _getParticleSystemName( void )
-{
-	typedef void (*funcptr)(char*);
-
-	if (!st_ParticleDLL) {
-		return AsciiString::TheEmptyString;
-	}
-
-	FARPROC proc;
-	proc = GetProcAddress(st_ParticleDLL, "GetSelectedParticleSystemName");
-	if (!proc) {
-		return AsciiString::TheEmptyString;
-	}
-
-	static char buff[1024];
-
-	((funcptr) proc)(buff);
-
-	return AsciiString(buff);
-}
-
-void _updatePanelParameters( ParticleSystemTemplate *particleTemplate )
-{
-	typedef void (*funcptr)(ParticleSystemTemplate*);
-	
-	if (!st_ParticleDLL) {
-		return;
-	}
-
-	FARPROC proc;	
-	proc = GetProcAddress(st_ParticleDLL, "UpdateCurrentParticleSystem");
-	if (!proc) {
-		return;
-	}
-
-	((funcptr) proc)(particleTemplate);
-}
-
-void _updateAsciiStringParmsToSystem( ParticleSystemTemplate *particleTemplate )
-{
-	typedef void (*funcptr)(int, char*, ParticleSystemTemplate **);
-
-	if (!st_ParticleDLL || !particleTemplate) {
-		return;
-	}
-
-	FARPROC proc;	
-	proc = GetProcAddress(st_ParticleDLL, "GetSelectedParticleAsciiStringParm");
-
-	if (!proc) {
-		return;
-	}
-	
-	char buff[ARBITRARY_BUFF_SIZE];
-	ParticleSystemTemplate* otherTemp;
-
-	((funcptr) proc)(0, buff, &otherTemp); // PARM_ParticleTypeName
-	if (otherTemp == particleTemplate) {
-		particleTemplate->m_particleTypeName.set(buff);	
-	}
-
-	
-	((funcptr) proc)(1, buff, &otherTemp); // PARM_SlaveSystemName
-	if (otherTemp == particleTemplate) {
-		particleTemplate->m_slaveSystemName.set(buff);
-	}
-
-	((funcptr) proc)(2, buff, &otherTemp); // PARM_AttachedSystemName
-	if (otherTemp == particleTemplate) {
-		particleTemplate->m_attachedSystemName.set(buff);	
-	}
-}
-
-extern void _updateAsciiStringParmsFromSystem( ParticleSystemTemplate *particleTemplate )
-{
-	typedef void (*funcptr)(int, const char*, ParticleSystemTemplate**);
-
-	if (!st_ParticleDLL || !particleTemplate) {
-		return;
-	}
-
-	FARPROC proc;	
-	proc = GetProcAddress(st_ParticleDLL, "UpdateParticleAsciiStringParm");
-
-	if (!proc) {
-		return;
-	}
-
-	((funcptr) proc)(0, particleTemplate->m_particleTypeName.str(), NULL);	// PARM_ParticleTypeName
-	((funcptr) proc)(1, particleTemplate->m_slaveSystemName.str(), NULL);	// PARM_SlaveSystemName
-	((funcptr) proc)(2, particleTemplate->m_attachedSystemName.str(), NULL);	// PARM_AttachedSystemName
-
-}
-
-#define BACKUP_FILE_NAME	"Data\\INI\\ParticleSystem"
-#define BACKUP_EXT				"BAK"
-static void _writeOutINI( void )
-{
-	// currently, this uses NO intelligence. It blindly iterates through all of the 
-	// particle system templates and writes out every field that it thinks it should.
-	const int maxFileLength = 128;
-	char buff[maxFileLength];
-	
-	File *saveFile = NULL;
-	
-	int i = 0;
-	do {
-		if (saveFile) {
-				saveFile->close();
-				saveFile = NULL;
-		}
-		sprintf(buff, "%s%d.%s", BACKUP_FILE_NAME, i, BACKUP_EXT);
-		saveFile = TheFileSystem->openFile(buff, File::READ | File::TEXT);
-		++i;
-	} while (saveFile);
-
-	saveFile = TheFileSystem->openFile(buff, File::WRITE | File::TEXT);
-	if (!saveFile) {
-		return;
-	}
-	
-	// save the old file
-	File *oldINI = TheFileSystem->openFile("Data\\INI\\ParticleSystem.ini", File::READ | File::TEXT);
-	
-	if (oldINI) {
-		char singleChar;
-		while (oldINI->position() != oldINI->size()) {
-			oldINI->read(&singleChar, 1);
-			saveFile->write(&singleChar, 1);
-		}
-		oldINI->close();
-		oldINI = NULL;
-		saveFile->close();
-		saveFile = NULL;
-
-	}
-
-
-	// open the .ini file for writing, truncate.
-	File *newINI = TheFileSystem->openFile("Data\\INI\\ParticleSystem.ini", File::WRITE | File::TEXT);
-
-	if (!newINI) {
-		DEBUG_CRASH(("Unable to open ParticleSystem.ini. Is it write protected?"));
-		return;
-	}
-
-	ParticleSystemManager::TemplateMap::iterator begin(TheParticleSystemManager->beginParticleSystemTemplate());
-	ParticleSystemManager::TemplateMap::iterator end(TheParticleSystemManager->endParticleSystemTemplate());
-
-	for (; begin != end; ++begin) {
-		_writeSingleParticleSystem(newINI, (*begin).second);
-	}
-
-	newINI->close();
-	newINI = NULL;
-}
-
-
-static const std::string HEADER =					"ParticleSystem";
-static const std::string SEP_SPACE =			" ";
-static const std::string SEP_HEAD	=				"  ";
-static const std::string SEP_EOL =				"\n";
-static const std::string SEP_TAB =				"\t";
-static const std::string STR_TRUE	=				"Yes";
-static const std::string STR_FALSE =			"No";
-static const std::string EQ_WITH_SPACES	=	" = ";
-static const std::string STR_R = 					"R:";
-static const std::string STR_G =					"G:";
-static const std::string STR_B =					"B:";
-static const std::string STR_X = 					"X:";
-static const std::string STR_Y =					"Y:";
-static const std::string STR_Z =					"Z:";
-
-static const std::string STR_END =				"End";
-
-static const std::string F_PRIORITY =			"Priority";
-
-static const std::string F_ISONESHOT =		"IsOneShot";
-static const std::string F_SHADER =				"Shader";
-static const std::string F_TYPE =					"Type";
-static const std::string F_PARTICLENAME =	"ParticleName";
-static const std::string F_ANGLEX =				"AngleX";
-static const std::string F_ANGLEY =				"AngleY";
-static const std::string F_ANGLEZ	=				"AngleZ";
-static const std::string F_ANGLERATEX	=		"AngularRateX";
-static const std::string F_ANGLERATEY	=		"AngularRateY";
-static const std::string F_ANGLERATEZ	=		"AngularRateZ";
-static const std::string F_ANGLEDAMP =		"AngularDamping";
-static const std::string F_VELOCITYDAMP	=	"VelocityDamping";
-static const std::string F_GRAVITY =			"Gravity";
-static const std::string F_SLAVESYSTEM =	"SlaveSystem";
-static const std::string F_SLAVEPOS =			"SlavePosOffset";
-static const std::string F_ATTACHED =			"PerParticleAttachedSystem";
-static const std::string F_LIFETIME =			"Lifetime";
-static const std::string F_SYSLIFETIME =	"SystemLifetime";
-static const std::string F_SIZE =					"Size";
-static const std::string F_STARTSIZERATE ="StartSizeRate";
-static const std::string F_SIZERATE =			"SizeRate";
-static const std::string F_SIZERATEDAMP =	"SizeRateDamping";
-
-static const std::string F_ALPHA1 =				"Alpha1";
-static const std::string F_ALPHA2 =				"Alpha2";
-static const std::string F_ALPHA3 =				"Alpha3";
-static const std::string F_ALPHA4 =				"Alpha4";
-static const std::string F_ALPHA5 =				"Alpha5";
-static const std::string F_ALPHA6 =				"Alpha6";
-static const std::string F_ALPHA7 =				"Alpha7";
-static const std::string F_ALPHA8 =				"Alpha8";
-
-static const std::string F_COLOR1 =				"Color1";
-static const std::string F_COLOR2 =				"Color2";
-static const std::string F_COLOR3 =				"Color3";
-static const std::string F_COLOR4 =				"Color4";
-static const std::string F_COLOR5 =				"Color5";
-static const std::string F_COLOR6 =				"Color6";
-static const std::string F_COLOR7 =				"Color7";
-static const std::string F_COLOR8 =				"Color8";
-static const std::string F_COLORSCALE =		"ColorScale";
-
-static const std::string F_BURSTDELAY =		"BurstDelay";
-static const std::string F_BURSTCOUNT =		"BurstCount";
-static const std::string F_INITIALDELAY =	"InitialDelay";
-static const std::string F_DRIFTVELOCITY ="DriftVelocity";
-
-static const std::string F_VELOCITYTYPE =	"VelocityType";
-
-static const std::string F_VELORTHOX =		"VelOrthoX";
-static const std::string F_VELORTHOY =		"VelOrthoY";
-static const std::string F_VELORTHOZ =		"VelOrthoZ";
-
-static const std::string F_VELSPHERE =		"VelSpherical";
-static const std::string F_HEMISPHERE	= 	"VelHemispherical";
-
-static const std::string F_VELCYLRAD =		"VelCylindricalRadial";
-static const std::string F_VELCYLNOR =		"VelCylindricalNormal";
-
-static const std::string F_VELOUTWARD =		"VelOutward";
-static const std::string F_VELOUTOTHER =	"VelOutwardOther";
-
-static const std::string F_VOLUMETYPE = 	"VolumeType";
-
-static const std::string F_VOLLINESTART =	"VolLineStart";
-static const std::string F_VOLLINEEND =		"VolLineEnd";
-
-static const std::string F_VOLBOXHALF	=		"VolBoxHalfSize";
-static const std::string F_VOLSPHERERAD	=	"VolSphereRadius";
-static const std::string F_VOLCYLRAD =		"VolCylinderRadius";
-static const std::string F_VOLCYLLEN =		"VolCylinderLength";
-static const std::string F_ISHOLLOW =			"IsHollow";
-static const std::string F_ISXYPLANAR =		"IsGroundAligned";
-static const std::string F_ISEMITABOVEGROUNDONLY 
-																			=		"IsEmitAboveGroundOnly";
-static const std::string F_ISPARTICLEUPTOWARDSEMITTER 
-																			=		"IsParticleUpTowardsEmitter";
-
-static const std::string F_WINDMOTION = "WindMotion";
-static const std::string F_WINDANGLECHANGEMIN = "WindAngleChangeMin";
-static const std::string F_WINDANGLECHANGEMAX = "WindAngleChangeMax";
-static const std::string F_WINDPINGPONGSTARTANGLEMIN = "WindPingPongStartAngleMin";
-static const std::string F_WINDPINGPONGSTARTANGLEMAX = "WindPingPongStartAngleMax";
-static const std::string F_WINDPINGPONGENDANGLEMIN = "WindPingPongEndAngleMin";
-static const std::string F_WINDPINGPONGENDANGLEMAX = "WindPingPongEndAngleMax";
-
-void _writeSingleParticleSystem( File *out, ParticleSystemTemplate *templ )
-{
-	if (!templ || !out || templ->getName().isEmpty()) {
-		// sanity
-		return;
-	}
-
-	static char buff1[ARBITRARY_BUFF_SIZE];
-	static char buff2[ARBITRARY_BUFF_SIZE];
-	static char buff3[ARBITRARY_BUFF_SIZE];
-	static char buff4[ARBITRARY_BUFF_SIZE];
-	
-
-	// the .append looks REALLY ugly, but this code was written with streams in mind, and so 
-	// these were all originally << (feed-operator for streams)
-	// I might come back and re-write this later, if there are enough complaints. ;-) jkmcd
-	// in the meantime, move along...
-	std::string thisEntry = "";
-	thisEntry.append(HEADER).append(SEP_SPACE).append(templ->getName().str()).append(SEP_EOL);
-	thisEntry.append(SEP_HEAD).append(F_PRIORITY).append(EQ_WITH_SPACES).append(ParticlePriorityNames[templ->m_priority]).append(SEP_EOL);
-	thisEntry.append(SEP_HEAD).append(F_ISONESHOT).append(EQ_WITH_SPACES).append((templ->m_isOneShot ? STR_TRUE : STR_FALSE)).append(SEP_EOL);
-	thisEntry.append(SEP_HEAD).append(F_SHADER).append(EQ_WITH_SPACES).append(ParticleShaderTypeNames[templ->m_shaderType]).append(SEP_EOL);
-	thisEntry.append(SEP_HEAD).append(F_TYPE).append(EQ_WITH_SPACES).append(ParticleTypeNames[templ->m_particleType]).append(SEP_EOL);
-	thisEntry.append(SEP_HEAD).append(F_PARTICLENAME).append(EQ_WITH_SPACES).append(templ->m_particleTypeName.str()).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_angleZ.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_angleZ.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_ANGLEZ).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-
-	sprintf(buff1, FORMAT_STRING, templ->m_angularRateZ.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_angularRateZ.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_ANGLERATEZ).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-
-	sprintf(buff1, FORMAT_STRING, templ->m_angularDamping.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_angularDamping.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_ANGLEDAMP).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-
-	sprintf(buff1, FORMAT_STRING, templ->m_velDamping.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_velDamping.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_VELOCITYDAMP).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_gravity);
-	thisEntry.append(SEP_HEAD).append(F_GRAVITY).append(EQ_WITH_SPACES).append(buff1).append(SEP_EOL);
-	if (!templ->m_slaveSystemName.isEmpty()) {
-		thisEntry.append(SEP_HEAD).append(F_SLAVESYSTEM).append(EQ_WITH_SPACES).append(templ->m_slaveSystemName.str()).append(SEP_EOL);
-		sprintf(buff1, FORMAT_STRING_LEADING_STRING, STR_X.c_str(), templ->m_slavePosOffset.x);
-		sprintf(buff2, FORMAT_STRING_LEADING_STRING, STR_Y.c_str(), templ->m_slavePosOffset.y);
-		sprintf(buff3, FORMAT_STRING_LEADING_STRING, STR_Z.c_str(), templ->m_slavePosOffset.z);
-		thisEntry.append(SEP_HEAD).append(F_SLAVEPOS).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-	}
-
-	if (!templ->m_attachedSystemName.isEmpty()) {
-		thisEntry.append(SEP_HEAD).append(F_ATTACHED).append(EQ_WITH_SPACES).append(templ->m_attachedSystemName.str()).append(SEP_EOL);
-	}
-
-	sprintf(buff1, FORMAT_STRING, templ->m_lifetime.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_lifetime.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_LIFETIME).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-
-	sprintf(buff1, "%d", templ->m_systemLifetime);
-	thisEntry.append(SEP_HEAD).append(F_SYSLIFETIME).append(EQ_WITH_SPACES).append(buff1).append(SEP_EOL);
-
-	sprintf(buff1, FORMAT_STRING, templ->m_startSize.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_startSize.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_SIZE).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_startSizeRate.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_startSizeRate.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_STARTSIZERATE).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_sizeRate.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_sizeRate.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_SIZERATE).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_sizeRateDamping.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_sizeRateDamping.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_SIZERATEDAMP).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-
-	sprintf(buff1, FORMAT_STRING, templ->m_alphaKey[0].var.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_alphaKey[0].var.getMaximumValue());
-	sprintf(buff3, "%d", templ->m_alphaKey[0].frame);
-	thisEntry.append(SEP_HEAD).append(F_ALPHA1).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-
-	sprintf(buff1, FORMAT_STRING, templ->m_alphaKey[1].var.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_alphaKey[1].var.getMaximumValue());
-	sprintf(buff3, "%d", templ->m_alphaKey[1].frame);
-	thisEntry.append(SEP_HEAD).append(F_ALPHA2).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-
-	sprintf(buff1, FORMAT_STRING, templ->m_alphaKey[2].var.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_alphaKey[2].var.getMaximumValue());
-	sprintf(buff3, "%d", templ->m_alphaKey[2].frame);
-	thisEntry.append(SEP_HEAD).append(F_ALPHA3).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_alphaKey[3].var.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_alphaKey[3].var.getMaximumValue());
-	sprintf(buff3, "%d", templ->m_alphaKey[3].frame);
-	thisEntry.append(SEP_HEAD).append(F_ALPHA4).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_alphaKey[4].var.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_alphaKey[4].var.getMaximumValue());
-	sprintf(buff3, "%d", templ->m_alphaKey[4].frame);
-	thisEntry.append(SEP_HEAD).append(F_ALPHA5).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_alphaKey[5].var.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_alphaKey[5].var.getMaximumValue());
-	sprintf(buff3, "%d", templ->m_alphaKey[5].frame);
-	thisEntry.append(SEP_HEAD).append(F_ALPHA6).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_alphaKey[6].var.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_alphaKey[6].var.getMaximumValue());
-	sprintf(buff3, "%d", templ->m_alphaKey[6].frame);
-	thisEntry.append(SEP_HEAD).append(F_ALPHA7).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_alphaKey[7].var.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_alphaKey[7].var.getMaximumValue());
-	sprintf(buff3, "%d", templ->m_alphaKey[7].frame);
-	thisEntry.append(SEP_HEAD).append(F_ALPHA8).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-
-	sprintf(buff1, "%s%d", STR_R.c_str(), REAL_TO_INT(templ->m_colorKey[0].color.red * 255 + 0.5));
-	sprintf(buff2, "%s%d", STR_G.c_str(), REAL_TO_INT(templ->m_colorKey[0].color.green * 255 + 0.5));
-	sprintf(buff3, "%s%d", STR_B.c_str(), REAL_TO_INT(templ->m_colorKey[0].color.blue * 255 + 0.5));
-	sprintf(buff4, "%d", templ->m_colorKey[0].frame);
-	thisEntry.append(SEP_HEAD).append(F_COLOR1).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_SPACE).append(buff4).append(SEP_EOL);
-
-	sprintf(buff1, "%s%d", STR_R.c_str(), REAL_TO_INT(templ->m_colorKey[1].color.red * 255 + 0.5));
-	sprintf(buff2, "%s%d", STR_G.c_str(), REAL_TO_INT(templ->m_colorKey[1].color.green * 255 + 0.5));
-	sprintf(buff3, "%s%d", STR_B.c_str(), REAL_TO_INT(templ->m_colorKey[1].color.blue * 255 + 0.5));
-	sprintf(buff4, "%d", templ->m_colorKey[1].frame);
-	thisEntry.append(SEP_HEAD).append(F_COLOR2).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_SPACE).append(buff4).append(SEP_EOL);
-
-	sprintf(buff1, "%s%d", STR_R.c_str(), REAL_TO_INT(templ->m_colorKey[2].color.red * 255 + 0.5));
-	sprintf(buff2, "%s%d", STR_G.c_str(), REAL_TO_INT(templ->m_colorKey[2].color.green * 255 + 0.5));
-	sprintf(buff3, "%s%d", STR_B.c_str(), REAL_TO_INT(templ->m_colorKey[2].color.blue * 255 + 0.5));
-	sprintf(buff4, "%d", templ->m_colorKey[2].frame);
-	thisEntry.append(SEP_HEAD).append(F_COLOR3).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_SPACE).append(buff4).append(SEP_EOL);
-	
-	sprintf(buff1, "%s%d", STR_R.c_str(), REAL_TO_INT(templ->m_colorKey[3].color.red * 255 + 0.5));
-	sprintf(buff2, "%s%d", STR_G.c_str(), REAL_TO_INT(templ->m_colorKey[3].color.green * 255 + 0.5));
-	sprintf(buff3, "%s%d", STR_B.c_str(), REAL_TO_INT(templ->m_colorKey[3].color.blue * 255 + 0.5));
-	sprintf(buff4, "%d", templ->m_colorKey[3].frame);
-	thisEntry.append(SEP_HEAD).append(F_COLOR4).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_SPACE).append(buff4).append(SEP_EOL);
-	
-	sprintf(buff1, "%s%d", STR_R.c_str(), REAL_TO_INT(templ->m_colorKey[4].color.red * 255 + 0.5));
-	sprintf(buff2, "%s%d", STR_G.c_str(), REAL_TO_INT(templ->m_colorKey[4].color.green * 255 + 0.5));
-	sprintf(buff3, "%s%d", STR_B.c_str(), REAL_TO_INT(templ->m_colorKey[4].color.blue * 255 + 0.5));
-	sprintf(buff4, "%d", templ->m_colorKey[4].frame);
-	thisEntry.append(SEP_HEAD).append(F_COLOR5).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_SPACE).append(buff4).append(SEP_EOL);
-	
-	sprintf(buff1, "%s%d", STR_R.c_str(), REAL_TO_INT(templ->m_colorKey[5].color.red * 255 + 0.5));
-	sprintf(buff2, "%s%d", STR_G.c_str(), REAL_TO_INT(templ->m_colorKey[5].color.green * 255 + 0.5));
-	sprintf(buff3, "%s%d", STR_B.c_str(), REAL_TO_INT(templ->m_colorKey[5].color.blue * 255 + 0.5));
-	sprintf(buff4, "%d", templ->m_colorKey[5].frame);
-	thisEntry.append(SEP_HEAD).append(F_COLOR6).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_SPACE).append(buff4).append(SEP_EOL);
-	
-	sprintf(buff1, "%s%d", STR_R.c_str(), REAL_TO_INT(templ->m_colorKey[6].color.red * 255 + 0.5));
-	sprintf(buff2, "%s%d", STR_G.c_str(), REAL_TO_INT(templ->m_colorKey[6].color.green * 255 + 0.5));
-	sprintf(buff3, "%s%d", STR_B.c_str(), REAL_TO_INT(templ->m_colorKey[6].color.blue * 255 + 0.5));
-	sprintf(buff4, "%d", templ->m_colorKey[6].frame);
-	thisEntry.append(SEP_HEAD).append(F_COLOR7).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_SPACE).append(buff4).append(SEP_EOL);
-	
-	sprintf(buff1, "%s%d", STR_R.c_str(), REAL_TO_INT(templ->m_colorKey[7].color.red * 255 + 0.5));
-	sprintf(buff2, "%s%d", STR_G.c_str(), REAL_TO_INT(templ->m_colorKey[7].color.green * 255 + 0.5));
-	sprintf(buff3, "%s%d", STR_B.c_str(), REAL_TO_INT(templ->m_colorKey[7].color.blue * 255 + 0.5));
-	sprintf(buff4, "%d", templ->m_colorKey[7].frame);
-	thisEntry.append(SEP_HEAD).append(F_COLOR8).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_SPACE).append(buff4).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_colorScale.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_colorScale.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_COLORSCALE).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_burstDelay.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_burstDelay.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_BURSTDELAY).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_burstCount.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_burstCount.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_BURSTCOUNT).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING, templ->m_initialDelay.getMinimumValue());
-	sprintf(buff2, FORMAT_STRING, templ->m_initialDelay.getMaximumValue());
-	thisEntry.append(SEP_HEAD).append(F_INITIALDELAY).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-	
-	sprintf(buff1, FORMAT_STRING_LEADING_STRING, STR_X.c_str(), templ->m_driftVelocity.x);
-	sprintf(buff2, FORMAT_STRING_LEADING_STRING, STR_Y.c_str(), templ->m_driftVelocity.y);
-	sprintf(buff3, FORMAT_STRING_LEADING_STRING, STR_Z.c_str(), templ->m_driftVelocity.z);
-	thisEntry.append(SEP_HEAD).append(F_DRIFTVELOCITY).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-
-	thisEntry.append(SEP_HEAD).append(F_VELOCITYTYPE).append(EQ_WITH_SPACES).append(EmissionVelocityTypeNames[templ->m_emissionVelocityType]).append(SEP_EOL);
-
-	if (templ->m_emissionVelocityType == ParticleSystemInfo::ORTHO) {
-
-		sprintf(buff1, FORMAT_STRING, templ->m_emissionVelocity.ortho.x.getMinimumValue());
-		sprintf(buff2, FORMAT_STRING, templ->m_emissionVelocity.ortho.x.getMaximumValue());
-		thisEntry.append(SEP_HEAD).append(F_VELORTHOX).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-		
-		sprintf(buff1, FORMAT_STRING, templ->m_emissionVelocity.ortho.y.getMinimumValue());
-		sprintf(buff2, FORMAT_STRING, templ->m_emissionVelocity.ortho.y.getMaximumValue());
-		thisEntry.append(SEP_HEAD).append(F_VELORTHOY).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-		
-		sprintf(buff1, FORMAT_STRING, templ->m_emissionVelocity.ortho.z.getMinimumValue());
-		sprintf(buff2, FORMAT_STRING, templ->m_emissionVelocity.ortho.z.getMaximumValue());
-		thisEntry.append(SEP_HEAD).append(F_VELORTHOZ).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-	} else if (templ->m_emissionVelocityType == ParticleSystemInfo::SPHERICAL) {
-		sprintf(buff1, FORMAT_STRING, templ->m_emissionVelocity.spherical.speed.getMinimumValue());
-		sprintf(buff2, FORMAT_STRING, templ->m_emissionVelocity.spherical.speed.getMaximumValue());
-		thisEntry.append(SEP_HEAD).append(F_VELSPHERE).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-
-	} else if (templ->m_emissionVelocityType == ParticleSystemInfo::HEMISPHERICAL) {
-		sprintf(buff1, FORMAT_STRING, templ->m_emissionVelocity.hemispherical.speed.getMinimumValue());
-		sprintf(buff2, FORMAT_STRING, templ->m_emissionVelocity.hemispherical.speed.getMaximumValue());
-		thisEntry.append(SEP_HEAD).append(F_HEMISPHERE).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-
-	} else if (templ->m_emissionVelocityType == ParticleSystemInfo::CYLINDRICAL) {
-		sprintf(buff1, FORMAT_STRING, templ->m_emissionVelocity.cylindrical.radial.getMinimumValue());
-		sprintf(buff2, FORMAT_STRING, templ->m_emissionVelocity.cylindrical.radial.getMaximumValue());
-		thisEntry.append(SEP_HEAD).append(F_VELCYLRAD).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-
-		sprintf(buff1, FORMAT_STRING, templ->m_emissionVelocity.cylindrical.normal.getMinimumValue());
-		sprintf(buff2, FORMAT_STRING, templ->m_emissionVelocity.cylindrical.normal.getMaximumValue());
-		thisEntry.append(SEP_HEAD).append(F_VELCYLNOR).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-
-	} else if (templ->m_emissionVelocityType == ParticleSystemInfo::OUTWARD) {
-		sprintf(buff1, FORMAT_STRING, templ->m_emissionVelocity.outward.speed.getMinimumValue());
-		sprintf(buff2, FORMAT_STRING, templ->m_emissionVelocity.outward.speed.getMaximumValue());
-		thisEntry.append(SEP_HEAD).append(F_VELOUTWARD).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-
-		sprintf(buff1, FORMAT_STRING, templ->m_emissionVelocity.outward.otherSpeed.getMinimumValue());
-		sprintf(buff2, FORMAT_STRING, templ->m_emissionVelocity.outward.otherSpeed.getMaximumValue());
-		thisEntry.append(SEP_HEAD).append(F_VELOUTOTHER).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_EOL);
-	}	
-
-	thisEntry.append(SEP_HEAD).append(F_VOLUMETYPE).append(EQ_WITH_SPACES).append(EmissionVolumeTypeNames[templ->m_emissionVolumeType]).append(SEP_EOL);
-
-	if (templ->m_emissionVolumeType == ParticleSystemInfo::POINT) {
-		// nothing to output here for lines
-	} else if (templ->m_emissionVolumeType == ParticleSystemInfo::LINE) {
-		sprintf(buff1, FORMAT_STRING_LEADING_STRING, STR_X.c_str(), templ->m_emissionVolume.line.start.x);
-		sprintf(buff2, FORMAT_STRING_LEADING_STRING, STR_Y.c_str(), templ->m_emissionVolume.line.start.y);
-		sprintf(buff3, FORMAT_STRING_LEADING_STRING, STR_Z.c_str(), templ->m_emissionVolume.line.start.z);
-		thisEntry.append(SEP_HEAD).append(F_VOLLINESTART).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-
-		sprintf(buff1, FORMAT_STRING_LEADING_STRING, STR_X.c_str(), templ->m_emissionVolume.line.end.x);
-		sprintf(buff2, FORMAT_STRING_LEADING_STRING, STR_Y.c_str(), templ->m_emissionVolume.line.end.y);
-		sprintf(buff3, FORMAT_STRING_LEADING_STRING, STR_Z.c_str(), templ->m_emissionVolume.line.end.z);
-		thisEntry.append(SEP_HEAD).append(F_VOLLINEEND).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-
-	} else if (templ->m_emissionVolumeType == ParticleSystemInfo::BOX) {
-		sprintf(buff1, FORMAT_STRING_LEADING_STRING, STR_X.c_str(), templ->m_emissionVolume.box.halfSize.x);
-		sprintf(buff2, FORMAT_STRING_LEADING_STRING, STR_Y.c_str(), templ->m_emissionVolume.box.halfSize.y);
-		sprintf(buff3, FORMAT_STRING_LEADING_STRING, STR_Z.c_str(), templ->m_emissionVolume.box.halfSize.z);
-		thisEntry.append(SEP_HEAD).append(F_VOLBOXHALF).append(EQ_WITH_SPACES).append(buff1).append(SEP_SPACE).append(buff2).append(SEP_SPACE).append(buff3).append(SEP_EOL);
-
-	} else if (templ->m_emissionVolumeType == ParticleSystemInfo::SPHERE) {
-		sprintf(buff1, FORMAT_STRING, templ->m_emissionVolume.sphere.radius);
-		thisEntry.append(SEP_HEAD).append(F_VOLSPHERERAD).append(EQ_WITH_SPACES).append(buff1).append(SEP_EOL);
-
-	} else if (templ->m_emissionVolumeType == ParticleSystemInfo::CYLINDER) {
-		sprintf(buff1, FORMAT_STRING, templ->m_emissionVolume.cylinder.radius);
-		thisEntry.append(SEP_HEAD).append(F_VOLCYLRAD).append(EQ_WITH_SPACES).append(buff1).append(SEP_EOL);
-
-		sprintf(buff1, FORMAT_STRING, templ->m_emissionVolume.cylinder.length);
-		thisEntry.append(SEP_HEAD).append(F_VOLCYLLEN).append(EQ_WITH_SPACES).append(buff1).append(SEP_EOL);
-	}
-
-	thisEntry.append(SEP_HEAD).append(F_ISHOLLOW).append(EQ_WITH_SPACES).append((templ->m_isEmissionVolumeHollow ? STR_TRUE : STR_FALSE)).append(SEP_EOL);
-	thisEntry.append(SEP_HEAD).append(F_ISXYPLANAR).append(EQ_WITH_SPACES).append((templ->m_isGroundAligned ? STR_TRUE : STR_FALSE)).append(SEP_EOL);
-	thisEntry.append(SEP_HEAD).append(F_ISEMITABOVEGROUNDONLY).append(EQ_WITH_SPACES).append((templ->m_isEmitAboveGroundOnly ? STR_TRUE : STR_FALSE)).append(SEP_EOL);
-	thisEntry.append(SEP_HEAD).append(F_ISPARTICLEUPTOWARDSEMITTER).append(EQ_WITH_SPACES).append((templ->m_isParticleUpTowardsEmitter ? STR_TRUE : STR_FALSE)).append(SEP_EOL);
-
-	// wind angle and stuff
-	thisEntry.append(SEP_HEAD).append(F_WINDMOTION).append(EQ_WITH_SPACES).append(WindMotionNames[templ->m_windMotion]).append(SEP_EOL);
-
-	sprintf( buff1, "%f", templ->m_windAngleChangeMin );
-	thisEntry.append(SEP_HEAD).append(F_WINDANGLECHANGEMIN).append(EQ_WITH_SPACES).append(buff1).append(SEP_EOL);
-	sprintf( buff1, "%f", templ->m_windAngleChangeMax );
-	thisEntry.append(SEP_HEAD).append(F_WINDANGLECHANGEMAX).append(EQ_WITH_SPACES).append(buff1).append(SEP_EOL);
-
-	sprintf( buff1, "%f", templ->m_windMotionStartAngleMin );
-	thisEntry.append(SEP_HEAD).append(F_WINDPINGPONGSTARTANGLEMIN).append(EQ_WITH_SPACES).append(buff1).append(SEP_EOL);
-	sprintf( buff1, "%f", templ->m_windMotionStartAngleMax );
-	thisEntry.append(SEP_HEAD).append(F_WINDPINGPONGSTARTANGLEMAX).append(EQ_WITH_SPACES).append(buff1).append(SEP_EOL);
-
-	sprintf( buff1, "%f", templ->m_windMotionEndAngleMin );
-	thisEntry.append(SEP_HEAD).append(F_WINDPINGPONGENDANGLEMIN).append(EQ_WITH_SPACES).append(buff1).append(SEP_EOL);
-	sprintf( buff1, "%f", templ->m_windMotionEndAngleMax );
-	thisEntry.append(SEP_HEAD).append(F_WINDPINGPONGENDANGLEMAX).append(EQ_WITH_SPACES).append(buff1).append(SEP_EOL);
-
-	thisEntry.append(STR_END).append(SEP_EOL).append(SEP_EOL);
-
-//	fwrite(thisEntry.c_str(), thisEntry.size(), 1, out);
-	out->write(thisEntry.c_str(), thisEntry.size());
-}
-
-static int _getEditorBehavior( void )
-{
-	typedef int (*funcptr)( void );
-
-	if (!st_ParticleDLL) {
-		return 0x00;
-	}
-
-	FARPROC proc;	
-	proc = GetProcAddress(st_ParticleDLL, "NextParticleEditorBehavior");
-
-	if (!proc) {
-		return 0x00;
-	}
-
-	return ((funcptr)proc)();
-}
-
-static void _updateAndSetCurrentSystem( void )
-{
-	AsciiString particleSystemName = _getParticleSystemName();
-	_addUpdatedParticleSystem(particleSystemName);
-	ParticleSystemTemplate *pTemp = const_cast<ParticleSystemTemplate*>(TheParticleSystemManager->findTemplate(particleSystemName));
-	if (pTemp) {
-		_updateAsciiStringParmsToSystem(pTemp);
-		_updateAsciiStringParmsFromSystem(pTemp);
-		_updatePanelParameters(pTemp);
-
-		if( st_particleSystemNeedsStopping ) 
-		{
-			st_particleSystem->stop();
-			st_particleSystem->destroy();
-			st_particleSystemNeedsStopping = FALSE;
-		}
-		st_particleSystem = TheParticleSystemManager->createParticleSystem(pTemp);
-		if( st_particleSystem ) 
-		{
-			if( st_particleSystem->isSystemForever() )
-				st_particleSystemNeedsStopping = TRUE;// Only infinite lifetime systems need to be stopped.
-			// You can't stop others, because you can't know if they have deleted themselves.  That used
-			// to be a tiny memory overwrite, now it is a crash since destroy() now has a function call.
-
-			ParticleSystemTemplate *parentTemp = TheParticleSystemManager->findParentTemplate(pTemp->getName(), 0);
-			if (parentTemp) {
-				ParticleSystem *parentSystem = NULL;
-				parentSystem = TheParticleSystemManager->createParticleSystem(parentTemp);
-
-				if (parentSystem) {
-					ParticleSystem::mergeRelatedParticleSystems(parentSystem, st_particleSystem, true);
-					parentSystem->stop();
-					parentSystem->destroy();
-				}
-			}
-
-			Coord3D pos;
-			pos.x = pos.y = 50 * MAP_XY_FACTOR;
-			pos.z = TheTerrainLogic->getGroundHeight(pos.x, pos.y) + 5 * MAP_XY_FACTOR;
-			st_particleSystem->setPosition(&pos);
-		}
-	}
-}
-
-static void _reloadParticleSystemFromINI( AsciiString particleSystemName )
-{
-	if (!st_ParticleDLL || particleSystemName.isEmpty()) {
-		return;
-	}
-
-	// Here's what we're doing
-	// Find the entry in Data\\INI\\ParticleSystem.ini
-	// put that whole entry into a temp file
-	// force the INI to reload with INI_LOAD_OVERWRITE
-	// force the particle system editor to recognize that the system has changed without its consent.
-
-	static char linebuff[INI_MAX_CHARS_PER_LINE + 1];
-	linebuff[0] = 0;
-
-	// save the old file
-	File *iniFile = TheFileSystem->openFile("Data\\INI\\ParticleSystem.ini", File::READ | File::TEXT);
-	File *outTempINI = NULL;
-
-	if (!iniFile) {
-		return;
-	}
-	
-	try {
-		// find the entry
-		while (!((iniFile->eof()) || INI::isDeclarationOfType("ParticleSystem", particleSystemName, linebuff))) {
-			iniFile->nextLine(linebuff, INI_MAX_CHARS_PER_LINE);
-		}
-
-		{	// copy it to a temp file
-			if (iniFile->eof()) {
-				throw 0;
-			}
-			
-			outTempINI = TheFileSystem->openFile("temporary.ini", File::WRITE | File::TEXT);
-			if (!outTempINI) {	
-				throw 0;
-			}
-
-
-			while (!(iniFile->eof() || INI::isEndOfBlock(linebuff)) ) {
-				outTempINI->write(linebuff, strlen(linebuff));
-				iniFile->nextLine(linebuff, INI_MAX_CHARS_PER_LINE);
-			}
-
-			if (iniFile->eof()) {
-				throw 1;
-			}
-			
-
-			// write out the closing "END"
-			outTempINI->write(linebuff, strlen(linebuff));
-			outTempINI->close();
-			outTempINI = NULL;
-		}
-
-		// force the current system to stop.
-		if (st_particleSystemNeedsStopping) 
-		{
-			st_particleSystem->stop();
-			st_particleSystem->destroy();
-			st_particleSystemNeedsStopping = FALSE;
-		}
-		// reload that entry
-		INI ini;
-		ini.load("temporary.ini", INI_LOAD_OVERWRITE, NULL);
-		
-		// delete the file
-//		unlink("temporary.ini");
-
-		// force the particle system to update itself
-		ParticleSystemTemplate *pTemp = const_cast<ParticleSystemTemplate*>(TheParticleSystemManager->findTemplate(particleSystemName));
-		_updateAsciiStringParmsFromSystem(pTemp);
-		_updatePanelParameters(pTemp);
-
-	} catch (int why) {
-		switch(why) 
-		{
-			case 2:	
-			case 1: if (outTempINI) { outTempINI->close(); }
-			case 0: if (iniFile) { iniFile->close(); }
-		}
-	}
-
-}
-
-static int _getNewCurrentParticleCap( void )
-{
-	typedef int (*funcptr)( void );
-
-	if (!st_ParticleDLL) {
-		return -1;
-	}
-
-	FARPROC proc;	
-	proc = GetProcAddress(st_ParticleDLL, "GetNewParticleCap");
-
-	if (!proc) {
-		return -1;
-	}
-
-	return ((funcptr)proc)();
-}
-
-static void _updateCurrentParticleCap( void )
-{
-	typedef void (*funcptr)( int );
-
-	if (!st_ParticleDLL) {
-		return;
-	}
-
-	FARPROC proc;	
-	proc = GetProcAddress(st_ParticleDLL, "UpdateCurrentParticleCap");
-
-	if (!proc) {
-		return;
-	}
-
-	((funcptr)proc)(TheGlobalData->m_maxParticleCount);
-}
-
-static void _updateCurrentParticleCount( void )
-{
-	typedef void (*funcptr)( int );
-
-	if (!st_ParticleDLL) {
-		return;
-	}
-
-	FARPROC proc;	
-	proc = GetProcAddress(st_ParticleDLL, "UpdateCurrentNumParticles");
-
-	if (!proc) {
-		return;
-	}
-
-	((funcptr)proc)(TheParticleSystemManager->getParticleCount());
-}
-
-static void _reloadTextures( void )
-{
-	// Need no interaction with the particle editor now.
-	ReloadAllTextures();
-}
-
-#ifdef DO_VTUNE_STUFF
-static void _initVTune()
-{
-	// always try loading it, even if -vtune wasn't specified.
-	st_vTuneDLL = ::LoadLibrary("vtuneapi.dll");
-// nope, not here...
-//DEBUG_ASSERTCRASH(st_vTuneDLL != NULL, "VTuneAPI DLL not found!"));
-	
-	if (st_vTuneDLL)
-	{
-		VTPause = (VTProc)::GetProcAddress(st_vTuneDLL, "VTPause");
-		VTResume = (VTProc)::GetProcAddress(st_vTuneDLL, "VTResume");
-		DEBUG_ASSERTCRASH(VTPause != NULL && VTResume != NULL, ("VTuneAPI procs not found!\n"));
-	}
-	else
-	{
-		VTPause = NULL;
-		VTResume = NULL;
-	}
-
-	if (TheGlobalData->m_vTune) 
-	{
-		// if -vtune was specified, start it paused.
-		st_EnableVTune = false;
-		if (VTPause)
-			VTPause();		
-		// only complain about it being missing if they were expecting it to be present
-		DEBUG_ASSERTCRASH(st_vTuneDLL != NULL, ("VTuneAPI DLL not found!\n"));
-	}
-	else
-	{
-		// otherwise enable it.
-		st_EnableVTune = true;
-		if (VTResume)
-			VTResume();
-	}
-}
-
-static void _updateVTune()
-{
-	if (!st_vTuneDLL) 
-		return;
-
-	if (st_EnableVTune)
-	{
-		if (VTResume)
-			VTResume();
-	}
-	else
-	{
-		if (VTPause)
-			VTPause();		
-	}
-}
-
-static void _cleanUpVTune()
-{
-	if (st_vTuneDLL) 
-	{
-		FreeLibrary(st_vTuneDLL);
-	}
-	st_vTuneDLL = NULL;
-	VTPause = NULL;
-	VTResume = NULL;
-}
-#endif	// VTUNE
-

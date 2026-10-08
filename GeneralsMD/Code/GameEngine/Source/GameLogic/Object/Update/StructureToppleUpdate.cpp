@@ -317,7 +317,8 @@ UpdateSleepTime StructureToppleUpdate::update( void )
 //-------------------------------------------------------------------------------------------------
 void StructureToppleUpdate::doToppleDoneStuff() 
 {
-	static NameKeyType key_BoneFXUpdate = NAMEKEY("BoneFXUpdate");
+	static const StaticNameKey nativeCached_key_BoneFXUpdate("BoneFXUpdate");
+	NameKeyType key_BoneFXUpdate = nativeCached_key_BoneFXUpdate.key();
 	BoneFXUpdate *bfxu = (BoneFXUpdate *)getObject()->findUpdateModule(key_BoneFXUpdate);
 	if (bfxu != NULL) {
 		bfxu->stopAllBoneFX();
@@ -403,7 +404,8 @@ void StructureToppleUpdate::applyCrushingDamage(Real theta)
 	Real jcos;
 	Real jsin;
 //	Coord3D target;
-	for (Real j = m_lastCrushedLocation; j < maxDistance; j += WEAPON_SPACING_PERPENDICULAR) {
+	Real j = m_lastCrushedLocation;
+	for (; j < maxDistance; j += WEAPON_SPACING_PERPENDICULAR) {
 		jcos = j * Cos(toppleAngle);
 		jsin = j * Sin(toppleAngle);
 		doDamageLine(building, wt, jcos, jsin, facingWidth, toppleAngle);

@@ -142,7 +142,8 @@ WindowMsgHandledType GeneralsExpPointsSystem( GameWindow *window, UnsignedInt ms
 		{
 			GameWindow *control = (GameWindow *)mData1;
 			NameKeyType controlID = (NameKeyType)control->winGetWindowId();
-			static NameKeyType buttonExitID = NAMEKEY( "GeneralsExpPoints.wnd:ButtonExit" );
+			static const StaticNameKey nativeCached_buttonExitID("GeneralsExpPoints.wnd:ButtonExit");
+			NameKeyType buttonExitID = nativeCached_buttonExitID.key();
 			if (controlID == buttonExitID)
 			{
 				TheControlBar->hidePurchaseScience();
@@ -166,4 +167,3 @@ WindowMsgHandledType GeneralsExpPointsSystem( GameWindow *window, UnsignedInt ms
 //-----------------------------------------------------------------------------
 // PRIVATE FUNCTIONS //////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-

@@ -29,6 +29,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/NativeSourceMath.h"
 
 #include "Common/Xfer.h"
 #include "GameClient/Drawable.h"
@@ -39,7 +40,7 @@
 #include "GameLogic/TerrainLogic.h"
 #include "GameLogic/Module/SpawnPointProductionExitUpdate.h"
 
-#include "WWMath/Matrix3D.h"		///< @todo Replace with our own matrix library
+#include "WWMath/matrix3d.h"		///< @todo Replace with our own matrix library
 
 //-------------------------------------------------------------------------------------------------
 SpawnPointProductionExitUpdate::SpawnPointProductionExitUpdate( Thing *thing, const ModuleData* moduleData ) : UpdateModule( thing, moduleData )
@@ -71,7 +72,8 @@ void SpawnPointProductionExitUpdate::exitObjectViaDoor( Object *newObj, ExitDoor
 	Object *creationObject = getObject();
 	if (creationObject)
 	{
-		for( Int positionIndex = 0; positionIndex < m_spawnPointCount; positionIndex++ )
+		Int positionIndex = 0;
+		for( ; positionIndex < m_spawnPointCount; positionIndex++ )
 		{
 			if( m_spawnPointOccupier[positionIndex] == INVALID_ID )
 				break;
@@ -123,7 +125,8 @@ ExitDoorType SpawnPointProductionExitUpdate::reserveDoorForExit( const ThingTemp
 
 	revalidateOccupiers();
 
-	for( Int positionIndex = 0; positionIndex < m_spawnPointCount; positionIndex++ )
+	Int positionIndex = 0;
+		for( ; positionIndex < m_spawnPointCount; positionIndex++ )
 	{
 		if( m_spawnPointOccupier[positionIndex] == INVALID_ID )
 			return DOOR_1;
@@ -156,7 +159,7 @@ void SpawnPointProductionExitUpdate::initializeBonePositions()
 	const SpawnPointProductionExitUpdateModuleData* md = getSpawnPointProductionExitUpdateModuleData();
 	m_spawnPointCount = myDrawable->getPristineBonePositions( md->m_spawnPointBoneNameData.str(), 1, NULL, boneTransforms, MAX_SPAWN_POINTS );
 
-	for( matrixIndex = 0; matrixIndex < m_spawnPointCount; matrixIndex++ )
+	for( Int matrixIndex = 0; matrixIndex < m_spawnPointCount; matrixIndex++ )
 	{
 		Matrix3D *currentTransform = &(boneTransforms[matrixIndex]);
 		// Convert their matrix one by one
@@ -167,7 +170,7 @@ void SpawnPointProductionExitUpdate::initializeBonePositions()
 		m_worldCoordSpawnPoints[matrixIndex].y = currentTransform->Get_Y_Translation();
 		m_worldCoordSpawnPoints[matrixIndex].z = 0; //set at creation time
 
-		m_worldAngleSpawnPoints[matrixIndex] = currentTransform->Get_Z_Rotation();
+		m_worldAngleSpawnPoints[matrixIndex] = nativeSourceYaw(*currentTransform);
 	}
 
 	m_bonesInitialized = TRUE;
@@ -176,7 +179,8 @@ void SpawnPointProductionExitUpdate::initializeBonePositions()
 //-------------------------------------------------------------------------------------------------
 void SpawnPointProductionExitUpdate::revalidateOccupiers()
 {
-	for( Int positionIndex = 0; positionIndex < m_spawnPointCount; positionIndex++ )
+	Int positionIndex = 0;
+		for( ; positionIndex < m_spawnPointCount; positionIndex++ )
 	{
 		if( m_spawnPointOccupier[positionIndex] == INVALID_ID )
 			continue;

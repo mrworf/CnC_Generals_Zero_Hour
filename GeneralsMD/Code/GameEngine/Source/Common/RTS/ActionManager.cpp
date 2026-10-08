@@ -239,7 +239,8 @@ Bool ActionManager::canTransferSuppliesAt( const Object *obj, const Object *tran
 		return FALSE;
 
 	// If it is a warehouse, it must have boxes left and not be an enemy
-	static const NameKeyType key_warehouseUpdate = NAMEKEY("SupplyWarehouseDockUpdate");
+	static const StaticNameKey nativeCached_key_warehouseUpdate("SupplyWarehouseDockUpdate");
+	const NameKeyType key_warehouseUpdate = nativeCached_key_warehouseUpdate.key();
 	SupplyWarehouseDockUpdate *warehouseModule = (SupplyWarehouseDockUpdate*)transferDest->findUpdateModule( key_warehouseUpdate );
 	if( warehouseModule )
 		if( warehouseModule->getBoxesStored() == 0 || transferDest->getRelationship( obj ) == ENEMIES )
@@ -247,7 +248,8 @@ Bool ActionManager::canTransferSuppliesAt( const Object *obj, const Object *tran
 
 	// if it is a supply center, I must have boxes, and must be controlled by the same player
 	// (not merely an ally... otherwise you may find yourself funding your allies. ick.)
-	static const NameKeyType key_centerUpdate = NAMEKEY("SupplyCenterDockUpdate");
+	static const StaticNameKey nativeCached_key_centerUpdate("SupplyCenterDockUpdate");
+	const NameKeyType key_centerUpdate = nativeCached_key_centerUpdate.key();
 	SupplyCenterDockUpdate *centerModule = (SupplyCenterDockUpdate*)transferDest->findUpdateModule( key_centerUpdate );
 	if( centerModule  )
 		if( supplyTruck->getNumberBoxes() == 0  || transferDest->getControllingPlayer() != obj->getControllingPlayer() )
@@ -311,7 +313,8 @@ Bool ActionManager::canDockAt( const Object *obj, const Object *dockDest, Comman
 		return TRUE;
 
 	// units and infantry can dock with a railed transport
-	static const NameKeyType key = NAMEKEY( "RailedTransportDockUpdate" );
+	static const StaticNameKey nativeCached_key("RailedTransportDockUpdate");
+	const NameKeyType key = nativeCached_key.key();
 	RailedTransportDockUpdate *fdu = (RailedTransportDockUpdate *)dockDest->findUpdateModule( key );
 	if( fdu )
 	{
@@ -1707,7 +1710,8 @@ Bool ActionManager::canDoSpecialPowerAtObject( const Object *obj, const Object *
 					{
 						//Don't allow it to disguise as a train -- they don't have KINDOF_TRAIN yet, but
 						//if added, please change this code so it'll be faster!
-						static const NameKeyType key = NAMEKEY( "RailroadBehavior" );
+						static const StaticNameKey nativeCached_key("RailroadBehavior");
+						const NameKeyType key = nativeCached_key.key();
 						RailroadBehavior *rBehavior = (RailroadBehavior*)target->findUpdateModule( key );
 						if( !rBehavior )
 						{

@@ -29,6 +29,7 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <algorithm>
 
 #include "GameLogic/Module/StickyBombUpdate.h"
 
@@ -104,7 +105,8 @@ void StickyBombUpdate::initStickyBomb( Object *target, const Object *bomber, con
 	UnsignedInt now = TheGameLogic->getFrame();
 
 	//Also determine our lifetime.... for countdown purposes.
-	static NameKeyType key_LifetimeUpdate = NAMEKEY( "LifetimeUpdate" );
+	static const StaticNameKey nativeCached_key_LifetimeUpdate("LifetimeUpdate");
+	NameKeyType key_LifetimeUpdate = nativeCached_key_LifetimeUpdate.key();
 	LifetimeUpdate *update = (LifetimeUpdate*)getObject()->findUpdateModule( key_LifetimeUpdate );
 	if( update )
 	{
@@ -248,7 +250,7 @@ void StickyBombUpdate::detonate()
 			primaryDamageRange += boundingCircle;
 			secondaryDamageRange += boundingCircle;
 			Real primaryDamageRangeSqr = sqr(primaryDamageRange);
-			Real radius = max(primaryDamageRange, secondaryDamageRange);
+			Real radius = std::max(primaryDamageRange, secondaryDamageRange);
 
 			SimpleObjectIterator *iter;
 			iter = ThePartitionManager->iterateObjectsInRange(boobyTrappedObject->getPosition(), radius, FROM_BOUNDINGSPHERE_3D);

@@ -32,6 +32,7 @@
 #ifndef _MULTIPLAYERSETTINGS_H_
 #define _MULTIPLAYERSETTINGS_H_
 
+#include "Common/SubsystemInterface.h"
 #include "GameClient/Color.h"
 #include "Common/Money.h"
 

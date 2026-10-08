@@ -39,15 +39,16 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/SubsystemInterface.h"
+#include "Common/GameCommon.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Object;
 class Player;
 class SpecialPowerTemplate;
-enum SpecialPowerType;
-enum WeaponSlotType;
-enum CommandSourceType;
-enum CanAttackResult;
+enum SpecialPowerType : UnsignedInt;
+enum WeaponSlotType : UnsignedInt;
+enum CommandSourceType : UnsignedInt;
+enum CanAttackResult : UnsignedInt;
 
 enum CanEnterType
 {

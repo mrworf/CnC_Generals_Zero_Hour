@@ -43,8 +43,8 @@ class Object;
 class Weapon;
 class WeaponTemplate;
 
-enum CommandSourceType;
-enum DamageType;
+enum CommandSourceType : UnsignedInt;
+enum DamageType : UnsignedInt;
 
 // for WeaponSetType. Part of detangling.
 #include "GameLogic/WeaponSetType.h"
@@ -107,7 +107,7 @@ static const ModelConditionFlagType TheWeaponSetTypeToModelConditionTypeMap[WEAP
 #endif
 
 //-------------------------------------------------------------------------------------------------
-enum WeaponSetConditionType
+enum WeaponSetConditionType : Int
 {
 	WSF_INVALID = -1,
 
@@ -170,14 +170,14 @@ typedef std::vector<WeaponTemplateSet> WeaponTemplateSetVector;
 typedef SparseMatchFinder<WeaponTemplateSet, WeaponSetFlags> WeaponTemplateSetFinder;
 
 //-------------------------------------------------------------------------------------------------
-enum WeaponChoiceCriteria
+enum WeaponChoiceCriteria : UnsignedInt
 {
 	PREFER_MOST_DAMAGE,		///< choose the weapon that will do the most damage
 	PREFER_LONGEST_RANGE	///< choose the weapon with the longest range (that will do nonzero damage)
 };
 
 //-------------------------------------------------------------------------------------------------
-enum WeaponLockType
+enum WeaponLockType : UnsignedInt
 {
 	NOT_LOCKED,							///< Weapon is not locked
 	LOCKED_TEMPORARILY,			///< Weapon is locked until clip is empty, or current "attack" state exits
@@ -185,7 +185,7 @@ enum WeaponLockType
 };
 
 //-------------------------------------------------------------------------------------------------
-enum CanAttackResult
+enum CanAttackResult : UnsignedInt
 {
 	//Worst scenario to best scenario -- These must be done this way now!
 	ATTACKRESULT_NOT_POSSIBLE,					//Can't possibly attack target.

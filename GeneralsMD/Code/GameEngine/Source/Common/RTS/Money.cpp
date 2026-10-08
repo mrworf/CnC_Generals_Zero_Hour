@@ -102,44 +102,4 @@ void Money::deposit(UnsignedInt amountToDeposit, Bool playSound)
 // ------------------------------------------------------------------------------------------------
 /** CRC */
 // ------------------------------------------------------------------------------------------------
-void Money::crc( Xfer *xfer )
-{
-
-}  // end crc
-
-// ------------------------------------------------------------------------------------------------
-/** Xfer method
-	* Version Info:
-	* 1: Initial version */
-// ------------------------------------------------------------------------------------------------
-void Money::xfer( Xfer *xfer )
-{
-
-	// version
-	XferVersion currentVersion = 1;
-	XferVersion version = currentVersion;
-	xfer->xferVersion( &version, currentVersion );
-
-	// money value
-	xfer->xferUnsignedInt( &m_money );
-
-}  // end xfer
-
-// ------------------------------------------------------------------------------------------------
-/** Load post process */
-// ------------------------------------------------------------------------------------------------
-void Money::loadPostProcess( void )
-{
-
-}  // end loadPostProcess
-
-
-// ------------------------------------------------------------------------------------------------
-/** Parse a money amount for the ini file. E.g. DefaultStartingMoney = 10000 */
-// ------------------------------------------------------------------------------------------------
-void Money::parseMoneyAmount( INI *ini, void *instance, void *store, const void* userData )
-{
-  // Someday, maybe, have mulitple fields like Gold:10000 Wood:1000 Tiberian:10
-  Money * money = (Money *)store;
-  INI::parseUnsignedInt( ini, instance, &money->m_money, userData );
-}
+// Definition/snapshot methods are in Common/RTS/MoneyDefinition.cpp.

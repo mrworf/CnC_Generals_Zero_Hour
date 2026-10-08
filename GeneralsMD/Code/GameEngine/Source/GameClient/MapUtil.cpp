@@ -30,10 +30,15 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
-#include "Common/CRC.h"
+#include "Common/crc.h"
 #include "Common/FileSystem.h"
+#include "Common/NativeSourceStrings.h"
+#include "Common/NativeUserStorage.h"
 #include "Common/LocalFileSystem.h"
-#include "Common/File.h"
+#include "Common/file.h"
+#include "Common/FileOwner.h"
+#include <cmath>
+#include <cstdint>
 #include "Common/GlobalData.h"
 #include "Common/GameState.h"
 #include "Common/GameEngine.h"
@@ -47,7 +52,7 @@
 #include "Common/SkirmishBattleHonors.h"
 #include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
-#include "Common/MapObject.h"
+#include "Common/MapObject.h" // Authoritative MAP_XY_FACTOR; no MapObject acquisition.
 #include "GameClient/GameText.h" 
 #include "GameClient/WindowLayout.h"
 #include "GameClient/Gadget.h"
@@ -69,22 +74,30 @@
 
 //-------------------------------------------------------------------------------
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
-static char *mapExtension = ".map";
-
-static Int m_width = 0;						///< Height map width.
-static Int m_height = 0;					///< Height map height (y size of array).
-static Int m_borderSize = 0;			///< Non-playable border area.
-static std::vector<ICoord2D> m_boundaries;	///< All the boundaries we use for the map
-static Int m_dataSize = 0;				///< size of m_data.
-static UnsignedByte *m_data = 0;	///< array of z(height) values in the height map.
-static Dict worldDict = 0;
-
-static WaypointMap *m_waypoints = 0;
-static Coord3DList	m_supplyPositions;
-static Coord3DList	m_techPositions;
-
-static Int m_mapDX = 0;
-static Int m_mapDY = 0;
+static const char* mapExtension=".map";
+struct MapQueryContext {
+  Int width=0,height=0,border=0,mapDX=0,mapDY=0;
+  bool sawHeight=false;
+  std::vector<ICoord2D> boundaries;
+  Dict world{0};
+  WaypointMap waypoints;
+  Coord3DList supply,tech;
+};
+// Metadata parsing is synchronous on the owning simulation thread. Nested
+// source queries keep their own offside graph and restore the borrowed context.
+static thread_local MapQueryContext* activeQuery=nullptr;
+struct MapQueryScope {
+  MapQueryContext* prior;
+  explicit MapQueryScope(MapQueryContext& candidate):prior(activeQuery) {activeQuery=&candidate;}
+  ~MapQueryScope() {activeQuery=prior;}
+};
+static MapQueryContext& queryState() {
+  if(!activeQuery) throw ERROR_BAD_ARG;
+  return *activeQuery;
+}
+static WaypointMap* queryWaypoints() noexcept {
+  return activeQuery?&activeQuery->waypoints:nullptr;
+}
 
 static UnsignedInt calcCRC( AsciiString dirName, AsciiString fname )
 {
@@ -93,24 +106,11 @@ static UnsignedInt calcCRC( AsciiString dirName, AsciiString fname )
 
 	// Try the official map dir
 	AsciiString asciiFile;
-	char	tempBuf[_MAX_PATH];
-	char	filenameBuf[_MAX_PATH];
-	int length = 0;
-	strcpy(tempBuf, fname.str());
-	length = strlen( tempBuf );
-	if( length >= 4 )
-	{
-		memset( filenameBuf, '\0', _MAX_PATH);
-		strncpy( filenameBuf, tempBuf, length - 4);
-	}
 
-	File *fp;
-	asciiFile = fname;
-	fp = TheFileSystem->openFile(asciiFile.str(), File::READ);
+	FileCloseOwner fp(TheFileSystem->openFile(fname.str(),File::READ));
 	if( !fp )
 	{
-		DEBUG_CRASH(("Couldn't open '%s'\n", fname.str()));
-		return 0;
+    throw ERROR_CORRUPT_FILE_FORMAT;
 	}
 
 	UnsignedByte buf[4096];
@@ -120,9 +120,7 @@ static UnsignedInt calcCRC( AsciiString dirName, AsciiString fname )
 		theCRC.computeCRC(buf, num);
 	}
 
-	fp->close();
-	fp = NULL;
-
+  if(num<0) throw ERROR_CORRUPT_FILE_FORMAT;
 	return theCRC.get();
 }
 
@@ -147,31 +145,21 @@ static Bool ParseObjectDataChunk(DataChunkInput &file, DataChunkInfo *info, void
 	{
 		d = file.readDict();
 	}
-	MapObject *pThisOne;
-	
-	// create the map object
-	pThisOne = newInstance( MapObject )( loc, name, angle, flags, &d, 
-														TheThingFactory->findTemplate( name, FALSE ) );
+  if(!TheThingFactory) throw ERROR_BAD_ARG;
+  // Preserve source lookup for every record and final override classification.
+  // Metadata never observes MapObject's angle/render/shadow/bridge state.
+  const ThingTemplate* definition=TheThingFactory->findTemplate(name,FALSE);
+  if(definition) definition=static_cast<const ThingTemplate*>(definition->getFinalOverride());
+  if(!std::isfinite(loc.x) || !std::isfinite(loc.y) || !std::isfinite(loc.z) || !std::isfinite(angle))
+    throw ERROR_CORRUPT_FILE_FORMAT;
+  if(d.getType(TheKey_waypointID)==Dict::DICT_INT)
+    queryState().waypoints[d.getAsciiString(TheKey_waypointName)]=loc;
+  else if(definition && definition->isKindOf(KINDOF_TECH_BUILDING))
+    queryState().tech.push_back(loc);
+  else if(definition && definition->isKindOf(KINDOF_SUPPLY_SOURCE_ON_PREVIEW))
+    queryState().supply.push_back(loc);
+  (void)flags; // Only the unobserved MapObject presentation record stored these.
 
-//DEBUG_LOG(("obj %s owner %s\n",name.str(),d.getAsciiString(TheKey_originalOwner).str()));
-
-	if (pThisOne->getProperties()->getType(TheKey_waypointID) == Dict::DICT_INT)
-	{
-		pThisOne->setIsWaypoint();
-
-		// grab useful info
-		(*m_waypoints)[pThisOne->getWaypointName()] = loc;
-	}
-	else if (pThisOne->getThingTemplate() && pThisOne->getThingTemplate()->isKindOf(KINDOF_TECH_BUILDING))
-	{
-		m_techPositions.push_back(loc);
-	}
-	else if (pThisOne->getThingTemplate() && pThisOne->getThingTemplate()->isKindOf(KINDOF_SUPPLY_SOURCE_ON_PREVIEW))
-	{
-		m_supplyPositions.push_back(loc);
-	}
-
-	pThisOne->deleteInstance();
 	return TRUE;
 }
 
@@ -184,50 +172,29 @@ static Bool ParseObjectsDataChunk(DataChunkInput &file, DataChunkInfo *info, voi
 
 static Bool ParseWorldDictDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
 {
-	worldDict = file.readDict();
+	queryState().world = file.readDict();
 	return true;
 }
 
-static Bool ParseSizeOnly(DataChunkInput &file, DataChunkInfo *info, void *userData)
+static Bool ParseSizeOnly(DataChunkInput& file,DataChunkInfo* info,void*)
 {
-	m_width = file.readInt();
-	m_height = file.readInt();
-	if (info->version >= K_HEIGHT_MAP_VERSION_3) {
-		m_borderSize = file.readInt();
-	} else {
-		m_borderSize = 0;
-	}
-
-	if (info->version >= K_HEIGHT_MAP_VERSION_4) {
-		Int numBorders = file.readInt();
-		m_boundaries.resize(numBorders);
-		for (int i = 0; i < numBorders; ++i) {
-			m_boundaries[i].x = file.readInt();
-			m_boundaries[i].y = file.readInt();
-		}
-	}
-	return true;
-
-	m_dataSize = file.readInt();
-	m_data = NEW UnsignedByte[m_dataSize];	// pool[]ify
-	if (m_dataSize <= 0 || (m_dataSize != (m_width*m_height))) {
-		throw ERROR_CORRUPT_FILE_FORMAT	;
-	}
-	file.readArrayOfBytes((char *)m_data, m_dataSize);
-	// Resize me. 
-	if (info->version == K_HEIGHT_MAP_VERSION_1) {
-		Int newWidth = (m_width+1)/2;
-		Int newHeight = (m_height+1)/2;
-		Int i, j;
-		for (i=0; i<newHeight; i++) {
-			for (j=0; j<newWidth; j++) {
-				m_data[i*newWidth+j] = m_data[2*i*m_width+2*j];
-			}
-		}
-		m_width = newWidth;
-		m_height = newHeight;
-	}
-	return true;
+  auto& state=queryState();
+  const Int width=file.readInt(),height=file.readInt();
+  const Int border=info->version>=K_HEIGHT_MAP_VERSION_3?file.readInt():0;
+  if(width<=0 || height<=0 || border<0 || std::int64_t(border)*2>width ||
+      std::int64_t(border)*2>height) throw ERROR_CORRUPT_FILE_FORMAT;
+  std::vector<ICoord2D> boundaries;
+  if(info->version>=K_HEIGHT_MAP_VERSION_4) {
+    const Int count=file.readInt();
+    if(count<0 || std::uint64_t(count)>file.getChunkDataSizeLeft()/8) throw ERROR_CORRUPT_FILE_FORMAT;
+    boundaries.resize(static_cast<std::size_t>(count));
+    for(auto& point:boundaries) {point.x=file.readInt();point.y=file.readInt();}
+  }
+  state.width=width;state.height=height;state.border=border;
+  state.boundaries.swap(boundaries);state.sawHeight=true;
+  // The source metadata parser returned here; height payload/resampling below
+  // its old return was unreachable and is not a metadata conversion contract.
+  return TRUE;
 }
 
 static Bool ParseSizeOnlyInChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
@@ -237,19 +204,7 @@ static Bool ParseSizeOnlyInChunk(DataChunkInput &file, DataChunkInfo *info, void
 
 static Bool loadMap( AsciiString filename )
 {
-	char	tempBuf[_MAX_PATH];
-	char	filenameBuf[_MAX_PATH];
 	AsciiString asciiFile;
-	int length = 0;
-
-	strcpy(tempBuf, filename.str());
-
-	length = strlen( tempBuf );
-	if( length >= 4 )
-	{
-		memset( filenameBuf, '\0', _MAX_PATH);
-		strncpy( filenameBuf, tempBuf, length - 4);
-	}
 
 	CachedFileInputStream fileStrm;
 
@@ -263,7 +218,6 @@ static Bool loadMap( AsciiString filename )
 
 	DataChunkInput file( pStrm );
 
-	m_waypoints = NEW WaypointMap;
 
 	file.registerParser( AsciiString("HeightMapData"), AsciiString::TheEmptyString, ParseSizeOnlyInChunk );
 	file.registerParser( AsciiString("WorldInfo"), AsciiString::TheEmptyString, ParseWorldDictDataChunk );
@@ -272,27 +226,11 @@ static Bool loadMap( AsciiString filename )
 		throw(ERROR_CORRUPT_FILE_FORMAT);
 	}
 
-	m_mapDX = m_width  - 2*m_borderSize;
-	m_mapDY = m_height - 2*m_borderSize;
+  if(!queryState().sawHeight) throw ERROR_CORRUPT_FILE_FORMAT;
+	queryState().mapDX = queryState().width  - 2*queryState().border;
+	queryState().mapDY = queryState().height - 2*queryState().border;
 
 	return TRUE;
-}
-
-static void resetMap( void )
-{
-	if (m_data)
-	{
-		delete[] m_data;
-		m_data = 0;
-	}
-
-	if (m_waypoints)
-	{
-		delete m_waypoints;
-		m_waypoints = 0;
-	}
-	m_techPositions.clear();
-	m_supplyPositions.clear();
 }
 
 static void getExtent( Region3D *extent )
@@ -301,10 +239,10 @@ static void getExtent( Region3D *extent )
 
 	extent->lo.y = 0.0f;
 
-	// Note - m_mapDX & Y are the number of height map grids wide, so we have to
+	// Note - queryState().mapDX & Y are the number of height map grids wide, so we have to
 	// multiply by the grid width.
-	extent->hi.x = m_mapDX*MAP_XY_FACTOR;
-	extent->hi.y = m_mapDY*MAP_XY_FACTOR;
+	extent->hi.x = queryState().mapDX*MAP_XY_FACTOR;
+	extent->hi.y = queryState().mapDY*MAP_XY_FACTOR;
 
 	extent->lo.z = 0;
 	extent->hi.z = 0;
@@ -314,7 +252,7 @@ static void getExtent( Region3D *extent )
 
 void WaypointMap::update( void )
 {
-	if (!m_waypoints)
+	if (!queryWaypoints())
 	{
 		m_numStartSpots = 1;
 		return;
@@ -325,8 +263,8 @@ void WaypointMap::update( void )
 	AsciiString startingCamName = TheNameKeyGenerator->keyToName(TheKey_InitialCameraPosition);
 	WaypointMap::const_iterator it;
 
-	it = m_waypoints->find(startingCamName);
-	if (it != m_waypoints->end())
+	it = queryWaypoints()->find(startingCamName);
+	if (it != queryWaypoints()->end())
 	{
 		(*this)[startingCamName] = it->second;
 	}
@@ -335,8 +273,8 @@ void WaypointMap::update( void )
 	for (Int i=0; i<MAX_SLOTS; ++i)
 	{
 		startingCamName.format("Player_%d_Start", i+1); // start pos waypoints are 1-based
-		it = m_waypoints->find(startingCamName);
-		if (it != m_waypoints->end())
+		it = queryWaypoints()->find(startingCamName);
+		if (it != queryWaypoints()->end())
 		{
 			(*this)[startingCamName] = it->second;
 			++m_numStartSpots;
@@ -347,7 +285,7 @@ void WaypointMap::update( void )
 		}
 	}
 
-	m_numStartSpots = max(1, m_numStartSpots);
+	m_numStartSpots = std::max(1, m_numStartSpots);
 }
 
 const char * MapCache::m_mapCacheName = "MapCache.ini";
@@ -369,115 +307,30 @@ AsciiString MapCache::getMapExtension() const
 	return AsciiString("map");
 }
 
-void MapCache::writeCacheINI( Bool userDir )
-{
-	AsciiString mapDir;
-	if (!userDir || TheGlobalData->m_buildMapCache)
-	{
-		mapDir = getMapDir();
-	}
-	else
-	{
-		mapDir = getUserMapDir();
-	}
-
-	AsciiString filepath = mapDir;
-	filepath.concat('\\');
-
-	TheFileSystem->createDirectory(mapDir);
-
-	filepath.concat(m_mapCacheName);
-	FILE *fp = fopen(filepath.str(), "w");
-	DEBUG_ASSERTCRASH(fp != NULL, ("Failed to create %s", filepath.str()));
-	if (fp == NULL) {
-		return;
-	}
-	fprintf(fp, "; FILE: %s /////////////////////////////////////////////////////////////\n", filepath.str());
-	fprintf(fp, "; This INI file is auto-generated - do not modify\n");
-	fprintf(fp, "; /////////////////////////////////////////////////////////////////////////////\n");
-	mapDir.toLower();
-
-	MapCache::iterator it = begin();
-	MapMetaData md;
-	while (it != end())
-	{
-		if (it->first.startsWithNoCase(mapDir.str()))
-		{
-			md = it->second;
-			fprintf(fp, "\nMapCache %s\n", AsciiStringToQuotedPrintable(it->first.str()).str());
-			fprintf(fp, "  fileSize = %u\n", md.m_filesize);
-			fprintf(fp, "  fileCRC = %u\n", md.m_CRC);
-			fprintf(fp, "  timestampLo = %d\n", md.m_timestamp.m_lowTimeStamp);
-			fprintf(fp, "  timestampHi = %d\n", md.m_timestamp.m_highTimeStamp);
-			fprintf(fp, "  isOfficial = %s\n", (md.m_isOfficial)?"yes":"no");
-
-			fprintf(fp, "  isMultiplayer = %s\n", (md.m_isMultiplayer)?"yes":"no");
-			fprintf(fp, "  numPlayers = %d\n", md.m_numPlayers);
-
-			fprintf(fp, "  extentMin = X:%2.2f Y:%2.2f Z:%2.2f\n", md.m_extent.lo.x, md.m_extent.lo.y, md.m_extent.lo.z);
-			fprintf(fp, "  extentMax = X:%2.2f Y:%2.2f Z:%2.2f\n", md.m_extent.hi.x, md.m_extent.hi.y, md.m_extent.hi.z);
-
-// BAD AND NOW UNUSED:  the mapcache.ini should not contain localized data... using the lookup tag instead
-//			fprintf(fp, "  displayName = %s\n", UnicodeStringToQuotedPrintable(md.m_displayName).str());
-			fprintf(fp, "  nameLookupTag = %s\n", md.m_nameLookupTag.str());
-
-			Coord3D pos;
-			WaypointMap::iterator itw = md.m_waypoints.begin();
-			while (itw != md.m_waypoints.end())
-			{
-				pos = itw->second;
-				fprintf(fp, "  %s = X:%2.2f Y:%2.2f Z:%2.2f\n", itw->first.str(), pos.x, pos.y, pos.z);
-				++itw;
-			}
-			Coord3DList::iterator itc3d = md.m_techPositions.begin();
-			while (itc3d != md.m_techPositions.end())
-			{
-				pos = *itc3d;
-				fprintf(fp, "  techPosition = X:%2.2f Y:%2.2f Z:%2.2f\n", pos.x, pos.y, pos.z);
-				itc3d++;
-			}
-			
-			itc3d = md.m_supplyPositions.begin();
-			while (itc3d != md.m_supplyPositions.end())
-			{
-				pos = *itc3d;
-				fprintf(fp, "  supplyPosition = X:%2.2f Y:%2.2f Z:%2.2f\n", pos.x, pos.y, pos.z);
-				itc3d++;
-			}
-			fprintf(fp, "END\n\n");
-		}
-		else
-		{
-			//DEBUG_LOG(("%s does not start %s\n", mapDir.str(), it->first.str()));
-		}
-		++it;
-	}
-
-	fclose(fp);
-}
-
 void MapCache::updateCache( void )
 {
-	setFPMode();
-
-	TheFileSystem->createDirectory(getUserMapDir());
-
-	if (loadUserMaps())
-	{
-		writeCacheINI( TRUE );
-	}
-	loadStandardMaps();	// we shall overwrite info from matching user maps to prevent munkees from getting rowdy :)
-#if defined(_DEBUG) || defined(_INTERNAL)
-	if (TheLocalFileSystem->doesFileExist(getMapDir().str()))
-	{
-		// only create the map cache file if "Maps" exist
-		Bool wasBuildMapCache = TheGlobalData->m_buildMapCache;
-		TheWritableGlobalData->m_buildMapCache = true;
-		loadUserMaps();
-		TheWritableGlobalData->m_buildMapCache = wasBuildMapCache;
-		writeCacheINI( FALSE );
-	}
-#endif
+  if(!TheFileSystem || !TheGlobalData || !TheGameText || !TheNativeUserStorage || !TheNameKeyGenerator ||
+      TheMapCache!=this) throw ERROR_BAD_ARG;
+  setFPMode();
+  NameKeyTransaction keys(*TheNameKeyGenerator);
+  // All callbacks target the offside owner until every required parser returns.
+  MapCache candidate(*this);
+  struct Publication {
+    MapCache* prior;
+    explicit Publication(MapCache& cache):prior(TheMapCache) {TheMapCache=&cache;}
+    ~Publication() {TheMapCache=prior;}
+  } publication(candidate);
+  TheFileSystem->createDirectory(candidate.getUserMapDir());
+  const bool changed=candidate.loadUserMaps();
+  std::string serialized;
+  if(changed) serialized=candidate.serializeCacheINI(candidate.getUserMapDir());
+  // Preserve official-over-user selection; do not write before required parsing.
+  candidate.loadStandardMaps();
+  if(changed) (void)persistCacheINI(*TheNativeUserStorage,serialized);
+  std::map<AsciiString,MapMetaData>::swap(candidate);
+  m_seen.swap(candidate.m_seen);
+  m_allowedMaps.swap(candidate.m_allowedMaps);
+  keys.commit();
 }
 
 Bool MapCache::clearUnseenMaps( AsciiString dirName )
@@ -503,45 +356,19 @@ Bool MapCache::clearUnseenMaps( AsciiString dirName )
 
 void MapCache::loadStandardMaps(void)
 {
-	INI ini;
 	AsciiString fname;
 	fname.format("%s\\%s", getMapDir().str(), m_mapCacheName);
-#if defined(_DEBUG) || defined(_INTERNAL)
-	File *fp = TheFileSystem->openFile(fname.str(), File::READ);
-	if (fp != NULL)
-	{
-		fp->close();
-		fp = NULL;
-#endif
-		ini.load( fname, INI_LOAD_OVERWRITE, NULL );
-#if defined(_DEBUG) || defined(_INTERNAL)
-	}
-#endif
+  // Required metadata still fails startup on missing/corrupt input, but a
+  // foreign block must never escape into unrelated definition owners.
+  if (!loadCacheINI(fname)) throw ERROR_BAD_INI;
 }
 
 Bool MapCache::loadUserMaps()
 {
-	// Read in map list from disk
-	AsciiString mapDir;
-	if (TheGlobalData->m_buildMapCache)
-	{
-		mapDir = getMapDir();
-	}
-	else
-	{
-		mapDir = getUserMapDir();
-
-		INI ini;
-		AsciiString fname;
-		fname.format("%s\\%s", mapDir.str(), m_mapCacheName);
-		File *fp = TheFileSystem->openFile(fname.str(), File::READ);
-		if (fp)
-		{
-			fp->close();
-			ini.load( fname, INI_LOAD_OVERWRITE, NULL );
-		}
-
-	}
+  AsciiString mapDir=getUserMapDir();
+  AsciiString cacheName;
+  cacheName.format("%s\\%s",mapDir.str(),m_mapCacheName);
+  (void)loadCacheINI(cacheName); // Missing/corrupt optional cache triggers rescan.
 
 	// mark all as unseen
 	m_seen.clear();
@@ -571,6 +398,8 @@ Bool MapCache::loadUserMaps()
 		tempfilename.toLower();
 
 		const char *s = tempfilename.reverseFind('\\');
+		const char *nativeSlash = tempfilename.reverseFind('/');
+		if (!s || (nativeSlash && nativeSlash > s)) s = nativeSlash;
 		if (!s)
 		{
 			DEBUG_CRASH(("Couldn't find \\ in map name!"));
@@ -584,48 +413,24 @@ Bool MapCache::loadUserMaps()
 
 			endingStr.format("%s\\%s%s", fname.str(), fname.str(), mapExtension);
 
-			Bool skipMap = FALSE;
-			if (TheGlobalData->m_buildMapCache)
-			{
-				std::set<AsciiString>::const_iterator sit = m_allowedMaps.find(fname);
-				if (m_allowedMaps.size() != 0 && sit == m_allowedMaps.end())
-				{
-					//DEBUG_LOG(("Skipping map: '%s'\n", fname.str()));
-					skipMap = TRUE;
-				}
-				else
-				{
-					//DEBUG_LOG(("Parsing map: '%s'\n", fname.str()));
-				}
-			}
-
-			if (!skipMap)
-			{
-				if (!tempfilename.endsWithNoCase(endingStr.str()))
+        std::string comparedPath=tempfilename.str(),comparedSuffix=endingStr.str();
+        for(char& byte:comparedPath) if(byte=='\\') byte='/';
+        for(char& byte:comparedSuffix) if(byte=='\\') byte='/';
+				if (!comparedPath.ends_with(comparedSuffix))
 				{
 					DEBUG_CRASH(("Found map '%s' in wrong spot (%s)", fname.str(), tempfilename.str()));
 				}
 				else
 				{
-					if (TheFileSystem->getFileInfo(tempfilename, &fileInfo)) {
-						char funk[_MAX_PATH];
-						strcpy(funk, tempfilename.str());
-						char *filenameptr = funk;
-						char *tempchar = funk;
-						while (*tempchar != 0) {
-							if ((*tempchar == '\\') || (*tempchar == '/')) {
-								filenameptr = tempchar+1;
-							}
-							++tempchar;
-						}
+					// Fold metadata identity, never the actual physical-root query.
+					if (TheFileSystem->getFileInfo(*iter, &fileInfo)) {
 
 						m_seen[tempfilename] = TRUE;
-						parsedAMap |= addMap(mapDir, *iter, &fileInfo, TheGlobalData->m_buildMapCache);
+						parsedAMap |= addMap(mapDir, *iter, &fileInfo, FALSE);
 					} else {
 						DEBUG_CRASH(("Could not get file info for map %s", (*iter).str()));
 					}
 				}
-			}
 		}
 		iter++;
 	}
@@ -665,27 +470,28 @@ Bool MapCache::addMap( AsciiString dirName, AsciiString fname, FileInfo *fileInf
 			{
 				// unofficial maps or maps without names
 				AsciiString tempdisplayname;
-				tempdisplayname = fname.reverseFind('\\') + 1;
-				(*this)[lowerFname].m_displayName.translate(tempdisplayname);
+				tempdisplayname = nativePathLeaf(fname.str()).data();
+				md.m_displayName.translate(tempdisplayname);
 				if (md.m_numPlayers >= 2)
 				{
 					UnicodeString extension;
 					extension.format(L" (%d)", md.m_numPlayers);
-					(*this)[lowerFname].m_displayName.concat(extension);
+					md.m_displayName.concat(extension);
 				}
 			}
 			else
 			{
 				// official maps with name tags
-				(*this)[lowerFname].m_displayName = TheGameText->fetch(md.m_nameLookupTag);
+				md.m_displayName = TheGameText->fetchMapMetadataLabel(AsciiString::TheEmptyString,md.m_nameLookupTag);
 				if (md.m_numPlayers >= 2)
 				{
 					UnicodeString extension;
 					extension.format(L" (%d)", md.m_numPlayers);
-					(*this)[lowerFname].m_displayName.concat(extension);
+					md.m_displayName.concat(extension);
 				}
 			}
 //			DEBUG_LOG(("MapCache::addMap - found match for map %s\n", lowerFname.str()));
+			publishMetadata(lowerFname,std::move(md));
 			return FALSE;	// OK, it checks out.
 		}
 		DEBUG_LOG(("%s didn't match file in MapCache\n", fname.str()));
@@ -699,7 +505,9 @@ Bool MapCache::addMap( AsciiString dirName, AsciiString fname, FileInfo *fileInf
 
 	DEBUG_LOG(("MapCache::addMap(): caching '%s' because '%s' was not found\n", fname.str(), lowerFname.str()));
 
-	loadMap(fname); // Just load for querying the data, since we aren't playing this map.
+  MapQueryContext query;
+  MapQueryScope queryOwner(query);
+  if(!loadMap(fname)) throw ERROR_CORRUPT_FILE_FORMAT;
 
 	// The map is now loaded.  Pick out what we need.
 	md.m_fileName = lowerFname;
@@ -710,18 +518,18 @@ Bool MapCache::addMap( AsciiString dirName, AsciiString fname, FileInfo *fileInf
 	md.m_isMultiplayer = (md.m_numPlayers >= 2);
 	md.m_timestamp.m_highTimeStamp = fileInfo->timestampHigh;
 	md.m_timestamp.m_lowTimeStamp = fileInfo->timestampLow;
-	md.m_supplyPositions = m_supplyPositions;
-	md.m_techPositions = m_techPositions;
+	md.m_supplyPositions = queryState().supply;
+	md.m_techPositions = queryState().tech;
 	md.m_CRC = calcCRC(dirName, fname);
 
 	Bool exists = false;
-	AsciiString munkee = worldDict.getAsciiString(TheKey_mapName, &exists);
+	AsciiString munkee = queryState().world.getAsciiString(TheKey_mapName, &exists);
 	md.m_nameLookupTag = munkee;
 	if (!exists || munkee.isEmpty())
 	{
 		DEBUG_LOG(("Missing TheKey_mapName!\n"));
 		AsciiString tempdisplayname;
-		tempdisplayname = fname.reverseFind('\\') + 1;
+		tempdisplayname = nativePathLeaf(fname.str()).data();
 		md.m_displayName.translate(tempdisplayname);
 		if (md.m_numPlayers >= 2)
 		{
@@ -729,17 +537,12 @@ Bool MapCache::addMap( AsciiString dirName, AsciiString fname, FileInfo *fileInf
 			extension.format(L" (%d)", md.m_numPlayers);
 			md.m_displayName.concat(extension);
 		}
-		TheGameText->reset();
 	}
 	else
 	{
-		AsciiString stringFileName;
-		stringFileName.format("%s\\%s", dirName.str(), fname.str());
-		for (Int i=0; i<4; ++i)
-			stringFileName.removeLastChar();
-		stringFileName.concat("\\map.str");
-		TheGameText->initMapStringFile(stringFileName);
-		md.m_displayName = TheGameText->fetch(munkee);
+		const auto companion=nativeMapCompanionPath(fname.str(),"map.str",TheNativeUserStorage);
+		AsciiString stringFileName(companion.c_str());
+		md.m_displayName = TheGameText->fetchMapMetadataLabel(stringFileName,munkee);
 		if (md.m_numPlayers >= 2)
 		{
 			UnicodeString extension;
@@ -747,12 +550,11 @@ Bool MapCache::addMap( AsciiString dirName, AsciiString fname, FileInfo *fileInf
 			md.m_displayName.concat(extension);
 		}
 		DEBUG_LOG(("Map name is now '%ls'\n", md.m_displayName.str()));
-		TheGameText->reset();
 	}
 
 	getExtent(&(md.m_extent));
 
-	(*this)[lowerFname] = md;
+	publishMetadata(lowerFname,md);
 
 	DEBUG_LOG(("  filesize = %d bytes\n", md.m_filesize));
 	DEBUG_LOG(("  displayName = %ls\n", md.m_displayName.str()));
@@ -776,12 +578,11 @@ Bool MapCache::addMap( AsciiString dirName, AsciiString fname, FileInfo *fileInf
 		++itw;
 	}
 
-	resetMap();
 
 	return TRUE;
 }
 
-MapCache *TheMapCache = NULL;
+
 
 // PUBLIC FUNCTIONS //////////////////////////////////////////////////////////////////////////////
 
@@ -820,7 +621,7 @@ Int populateMapListboxNoReset( GameWindow *listbox, Bool useSystemMaps, Bool isM
 		battleHonors = new SkirmishBattleHonors;
 
 		w = (brutalImage)?brutalImage->getImageWidth():10;
-		w = min(GadgetListBoxGetColumnWidth(listbox, 0), w);
+		w = std::min(GadgetListBoxGetColumnWidth(listbox, 0), w);
 		h = w;
 	}
 
@@ -976,7 +777,7 @@ typedef MapDisplayToFileNameList::iterator MapDisplayToFileNameListIter;
 
 		if (selectionIndex >= bottomIndex)
 		{
-			Int newTop = max( 0, selectionIndex - max( 1, rowsOnScreen / 2 ) ); 
+			Int newTop = std::max( 0, selectionIndex - std::max( 1, rowsOnScreen / 2 ) );
 		//The trouble is that rowsonscreen/2 can be zero if bottom is 1 and top is zero
 			GadgetListBoxSetTopVisibleEntry( listbox, newTop );
 		}
@@ -1156,7 +957,7 @@ Image *getMapPreviewImage( AsciiString mapName )
 	tgaName.removeLastChar(); // m
 	tgaName.removeLastChar(); // .
 	name = tgaName;//.reverseFind('\\') + 1;
-	filename = tgaName.reverseFind('\\') + 1;
+	filename = nativePathLeaf(tgaName.str()).data();
 	//tgaName = name;
 	filename.concat(".tga");
 	tgaName.concat(".tga");
@@ -1205,6 +1006,7 @@ Image *getMapPreviewImage( AsciiString mapName )
 		if (success)
 		{
     	image = newInstance(Image);
+            MemoryPoolObjectHolder candidateOwner(image);
 			image->setName(tempName);
 			//image->setFullPath("mission.tga");
 			image->setFilename(name);
@@ -1218,6 +1020,7 @@ Image *getMapPreviewImage( AsciiString mapName )
 			image->setTextureHeight(128);
 			image->setTextureWidth(128);
 			TheMappedImageCollection->addImage(image);
+            candidateOwner.release();
 		}
 		else
 		{
@@ -1355,4 +1158,3 @@ void findDrawPositions( Int startX, Int startY, Int width, Int height, Region3D 
 	lr->y += startY;
 
 }  // end findDrawPositions
-

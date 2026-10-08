@@ -383,15 +383,22 @@ WindowMsgHandledType ControlBarSystem( GameWindow *window, UnsignedInt msg,
 		case GBM_SELECTED_RIGHT:
 		{
 			GameWindow *control = (GameWindow *)mData1;
-			static NameKeyType beaconPlacementButtonID = NAMEKEY("ControlBar.wnd:ButtonPlaceBeacon");
-			static NameKeyType beaconDeleteButtonID = NAMEKEY("ControlBar.wnd:ButtonDeleteBeacon");
-			static NameKeyType beaconClearTextButtonID = NAMEKEY("ControlBar.wnd:ButtonClearBeaconText");
-			static NameKeyType beaconGeneralButtonID = NAMEKEY("ControlBar.wnd:ButtonGeneral");
+			static const StaticNameKey nativeCached_beaconPlacementButtonID("ControlBar.wnd:ButtonPlaceBeacon");
+			NameKeyType beaconPlacementButtonID = nativeCached_beaconPlacementButtonID.key();
+			static const StaticNameKey nativeCached_beaconDeleteButtonID("ControlBar.wnd:ButtonDeleteBeacon");
+			NameKeyType beaconDeleteButtonID = nativeCached_beaconDeleteButtonID.key();
+			static const StaticNameKey nativeCached_beaconClearTextButtonID("ControlBar.wnd:ButtonClearBeaconText");
+			NameKeyType beaconClearTextButtonID = nativeCached_beaconClearTextButtonID.key();
+			static const StaticNameKey nativeCached_beaconGeneralButtonID("ControlBar.wnd:ButtonGeneral");
+			NameKeyType beaconGeneralButtonID = nativeCached_beaconGeneralButtonID.key();
 //			static NameKeyType buttonSmallID = NAMEKEY("ControlBar.wnd:ButtonSmall");
 //			static NameKeyType buttonMediumID = NAMEKEY("ControlBar.wnd:ButtonMedium");
-			static NameKeyType buttonLargeID = NAMEKEY("ControlBar.wnd:ButtonLarge");
-			static NameKeyType buttonOptions = NAMEKEY("ControlBar.wnd:ButtonOptions");
-			static NameKeyType buttonIdleWorker = NAMEKEY("ControlBar.wnd:ButtonIdleWorker");
+			static const StaticNameKey nativeCached_buttonLargeID("ControlBar.wnd:ButtonLarge");
+			NameKeyType buttonLargeID = nativeCached_buttonLargeID.key();
+			static const StaticNameKey nativeCached_buttonOptions("ControlBar.wnd:ButtonOptions");
+			NameKeyType buttonOptions = nativeCached_buttonOptions.key();
+			static const StaticNameKey nativeCached_buttonIdleWorker("ControlBar.wnd:ButtonIdleWorker");
+			NameKeyType buttonIdleWorker = nativeCached_buttonIdleWorker.key();
 
 			Int controlID = control->winGetWindowId();
 			if( controlID == buttonCommunicator )
@@ -410,7 +417,8 @@ WindowMsgHandledType ControlBarSystem( GameWindow *window, UnsignedInt msg,
 			}
 			else if( controlID == beaconClearTextButtonID && TheGameLogic->isInMultiplayerGame() )
 			{
-				static NameKeyType textID = NAMEKEY("ControlBar.wnd:EditBeaconText");
+				static const StaticNameKey nativeCached_textID("ControlBar.wnd:EditBeaconText");
+				NameKeyType textID = nativeCached_textID.key();
 				GameWindow *win = TheWindowManager->winGetWindowFromId(NULL, textID);
 				if (win)
 				{
@@ -461,7 +469,8 @@ WindowMsgHandledType ControlBarSystem( GameWindow *window, UnsignedInt msg,
 		{
 			GameWindow *control = (GameWindow *)mData1;
 			Int controlID = control->winGetWindowId();
-			static NameKeyType textID = NAMEKEY("ControlBar.wnd:EditBeaconText");
+			static const StaticNameKey nativeCached_textID("ControlBar.wnd:EditBeaconText");
+			NameKeyType textID = nativeCached_textID.key();
 			if (controlID == textID)
 			{
 				// set beacon text

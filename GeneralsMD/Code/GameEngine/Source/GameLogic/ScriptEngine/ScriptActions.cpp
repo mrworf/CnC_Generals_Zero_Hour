@@ -28,6 +28,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/GlobalData.h"
+#include "Common/NativeSourceStrings.h"
 
 #include "Common/AudioAffect.h"
 #include "Common/AudioHandleSpecialValues.h"
@@ -557,7 +559,8 @@ void ScriptActions::doCreateReinforcements(const AsciiString& team, const AsciiS
 
 	//Check to see if we have a transport, and if our transport has paradrop capabilities. If this is the
 	//case, we'll need to create each unit inside "parachute containers".
-	static NameKeyType key_DeliverPayloadAIUpdate = NAMEKEY("DeliverPayloadAIUpdate");
+	static const StaticNameKey nativeCached_key_DeliverPayloadAIUpdate("DeliverPayloadAIUpdate");
+	NameKeyType key_DeliverPayloadAIUpdate = nativeCached_key_DeliverPayloadAIUpdate.key();
 	DeliverPayloadAIUpdate *dp = NULL;
 	if( transport )
 	{
@@ -2148,7 +2151,8 @@ void ScriptActions::doTeamHuntWithCommandButton(const AsciiString& teamName, con
 			case GUICOMMANDMODE_CONVERT_TO_CARBOMB:
 			case GUICOMMANDMODE_SABOTAGE_BUILDING:
 			{
-					static NameKeyType key_CommandButtonHuntUpdate = NAMEKEY("CommandButtonHuntUpdate");
+					static const StaticNameKey nativeCached_key_CommandButtonHuntUpdate("CommandButtonHuntUpdate");
+					NameKeyType key_CommandButtonHuntUpdate = nativeCached_key_CommandButtonHuntUpdate.key();
 
 					CommandButtonHuntUpdate* huntUpdate = (CommandButtonHuntUpdate*)obj->findUpdateModule(key_CommandButtonHuntUpdate);
 					if( huntUpdate  )
@@ -2562,58 +2566,18 @@ void ScriptActions::doInGamePopupMessage( const AsciiString& message, Int x, Int
 //-------------------------------------------------------------------------------------------------
 void ScriptActions::doDisplayCinematicText(const AsciiString& displayText, const AsciiString& fontType, Int timeInSeconds)
 {
-	// set the text
-	UnicodeString uStr = TheGameText->fetch( displayText );
-	AsciiString aStr;
-	aStr.translate( uStr );
-	TheDisplay->setCinematicText( aStr );
-
-	// Gets the font info from parsing through fontType
-
-	// get the font name
-	AsciiString fontName = AsciiString::TheEmptyString;
-	char buf[256];
-	char *c;
-	strcpy(buf, fontType.str());
-	for( c = buf; c != '\0'; *c++ )
-	{
-		if( *c != ' ' && *c++ != '-' ) 
-			fontName.concat(c);
-		else
-			break;
-	}
-	while( *c != ':' )
-		*c++;
-	*c++;  // eat through " - Size:"
-
-	// get font size
-	AsciiString fontSize = AsciiString::TheEmptyString;
-	for( ; *c != '\0'; *c++ )
-	{
-		if( *c != '\0' && *c != ' ' )
-		{
-			fontSize.concat( *c );
-		}
-		else
-		{
-			break;
-		}
-	}
-	Int size = atoi( fontSize.str() );
-
-	// get font fold
-	Bool bold = FALSE;
-	if( fontType.endsWith( "[Bold]" ) )
-		bold = TRUE;
-
-	// phew, now set as new font
-	GameFont *font = TheFontLibrary->getFont( fontName, 
-		TheGlobalLanguageData->adjustFontSize(size), bold );
-	TheDisplay->setCinematicFont( font );
-
-	// set time
-	Int frames = LOGICFRAMES_PER_SECOND * timeInSeconds;
-	TheDisplay->setCinematicTextFrames( frames );
+	// Validate the editor-authored encoding and all conversions before display mutation.
+	const auto parsed = parseNativeCinematicFont(fontType.str());
+	const Int frames = nativeScriptFrames(timeInSeconds);
+	const AsciiString fontName(parsed.name.c_str());
+	UnicodeString text = TheGameText->fetch(displayText);
+	AsciiString translated;
+	translated.translate(text);
+	GameFont *font = TheFontLibrary->getFont(fontName,
+		TheGlobalLanguageData->adjustFontSize(parsed.pointSize), parsed.bold);
+	TheDisplay->setCinematicText(translated);
+	TheDisplay->setCinematicFont(font);
+	TheDisplay->setCinematicTextFrames(frames);
 }
 //-------------------------------------------------------------------------------------------------
 /** doCameoFlash */
@@ -3661,7 +3625,8 @@ void ScriptActions::doNamedSetBoobytrapped( const AsciiString& thingTemplateName
 			Object *boobytrap = TheThingFactory->newObject( thing, obj->getTeam() );
 			if( boobytrap )
 			{
-				static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+				static const StaticNameKey nativeCached_key_StickyBombUpdate("StickyBombUpdate");
+				NameKeyType key_StickyBombUpdate = nativeCached_key_StickyBombUpdate.key();
 				StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
 				if( update )
 				{
@@ -3700,7 +3665,8 @@ void ScriptActions::doTeamSetBoobytrapped( const AsciiString& thingTemplateName,
 			Object *boobytrap = TheThingFactory->newObject( thing, obj->getTeam() );
 			if( boobytrap )
 			{
-				static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+				static const StaticNameKey nativeCached_key_StickyBombUpdate("StickyBombUpdate");
+				NameKeyType key_StickyBombUpdate = nativeCached_key_StickyBombUpdate.key();
 				StickyBombUpdate *update = (StickyBombUpdate*)boobytrap->findUpdateModule( key_StickyBombUpdate );
 				if( update )
 				{
@@ -5002,7 +4968,7 @@ void ScriptActions::doForceObjectSelection(const AsciiString& teamName, const As
 	}
 }
 
-void* __cdecl killTheObject( Object *obj, void* userObj )
+void* killTheObject( Object *obj, void* userObj )
 {
 	userObj;
 	if (obj)
@@ -5110,7 +5076,8 @@ void ScriptActions::doSetWarehouseValue( const AsciiString& warehouseName, Int c
 		return;
 	}
 
-	static const NameKeyType warehouseModuleKey = TheNameKeyGenerator->nameToKey( "SupplyWarehouseDockUpdate" );
+	static const StaticNameKey nativeCached_warehouseModuleKey("SupplyWarehouseDockUpdate");
+	const NameKeyType warehouseModuleKey = nativeCached_warehouseModuleKey.key();
 	SupplyWarehouseDockUpdate *warehouseModule = (SupplyWarehouseDockUpdate *)obj->findUpdateModule( warehouseModuleKey );
 	if( warehouseModule == NULL )
 		return;
@@ -5316,7 +5283,7 @@ void ScriptActions::doMoveTeamTowardsNearest( const AsciiString& teamName, const
 			}
 		}
 	}
-	for( iter = team->iterate_TeamMemberList(); !iter.done(); iter.advance() )
+	for( DLINK_ITERATOR<Object> iter = team->iterate_TeamMemberList(); !iter.done(); iter.advance() )
 	{
 		Object *obj = iter.cur();
 		if( !obj )
@@ -6153,7 +6120,7 @@ void ScriptActions::doTeamFaceNamed( const AsciiString &teamName, const AsciiStr
 		if( faceObj )
 		{
 			DLINK_ITERATOR<Object> iter = team->iterate_TeamMemberList();
-			for( iter = team->iterate_TeamMemberList(); !iter.done(); iter.advance() )
+			for( DLINK_ITERATOR<Object> iter = team->iterate_TeamMemberList(); !iter.done(); iter.advance() )
 			{
 				Object *obj = iter.cur();
 				if( obj )
@@ -6182,7 +6149,7 @@ void ScriptActions::doTeamFaceWaypoint( const AsciiString &teamName, const Ascii
 		if( way )
 		{
 			DLINK_ITERATOR<Object> iter = team->iterate_TeamMemberList();
-			for( iter = team->iterate_TeamMemberList(); !iter.done(); iter.advance() )
+			for( DLINK_ITERATOR<Object> iter = team->iterate_TeamMemberList(); !iter.done(); iter.advance() )
 			{
 				Object *obj = iter.cur();
 				if( obj )
@@ -6388,7 +6355,8 @@ void ScriptActions::doNamedSetTrainHeld( const AsciiString &locoName, const Bool
 	if( obj ) 
 	{
 
-		static const NameKeyType rrkey = NAMEKEY( "RailroadBehavior" );
+		static const StaticNameKey nativeCached_rrkey("RailroadBehavior");
+		const NameKeyType rrkey = nativeCached_rrkey.key();
 		RailroadBehavior *rBehavior = (RailroadBehavior*)obj->findUpdateModule( rrkey );
 
     if ( rBehavior )

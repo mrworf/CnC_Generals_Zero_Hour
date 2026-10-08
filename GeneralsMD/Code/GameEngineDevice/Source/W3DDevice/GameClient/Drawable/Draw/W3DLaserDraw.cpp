@@ -256,7 +256,8 @@ void W3DLaserDraw::doDrawModule(const Matrix3D* transformMtx)
 
 	//Get the updatemodule that drives it...
 	Drawable *draw = getDrawable();
-	static NameKeyType key_LaserUpdate = NAMEKEY( "LaserUpdate" );
+	static const StaticNameKey nativeCached_key_LaserUpdate("LaserUpdate");
+	NameKeyType key_LaserUpdate = nativeCached_key_LaserUpdate.key();
 	LaserUpdate *update = (LaserUpdate*)draw->findClientUpdateModule( key_LaserUpdate );
 	if( !update )
 	{

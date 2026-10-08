@@ -60,10 +60,10 @@ class ProductionPrerequisite;
 struct FieldParse;
 class Player;
 class INI;
-enum RadarPriorityType;
+enum RadarPriorityType : UnsignedInt;
 #include "Common/ScienceType.h"
-enum EditorSortingType;
-enum ShadowType;
+enum EditorSortingType : UnsignedInt;
+enum ShadowType : UnsignedInt;
 class WeaponTemplateSet;
 class ArmorTemplateSet;
 class FXList;
@@ -71,6 +71,8 @@ class FXList;
 // TYPEDEFS FOR FILE //////////////////////////////////////////////////////////////////////////////
 typedef std::map<AsciiString, AudioEventRTS> PerUnitSoundMap;
 typedef std::map<AsciiString, const FXList*> PerUnitFXMap;
+
+inline constexpr Int USE_EXP_VALUE_FOR_SKILL_VALUE = -999;
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -158,14 +160,24 @@ public:
 				m_audio[i]->deleteInstance();
 	}
 
-	AudioArray(const AudioArray& that)
+	AudioArray(const AudioArray& that) : AudioArray()
 	{
+		AudioArray candidate;
 		for (Int i = 0; i < TTAUDIO_COUNT; ++i)
 		{
 			if (that.m_audio[i])
-				m_audio[i] = newInstance(DynamicAudioEventRTS)(*that.m_audio[i]);
-			else
-				m_audio[i] = NULL;
+				candidate.m_audio[i] = newInstance(DynamicAudioEventRTS)(*that.m_audio[i]);
+		}
+		swap(candidate);
+	}
+
+	void swap(AudioArray& that) noexcept
+	{
+		for (Int i = 0; i < TTAUDIO_COUNT; ++i)
+		{
+			DynamicAudioEventRTS* prior = m_audio[i];
+			m_audio[i] = that.m_audio[i];
+			that.m_audio[i] = prior;
 		}
 	}
 
@@ -173,20 +185,8 @@ public:
 	{
 		if (this != &that)
 		{
-			for (Int i = 0; i < TTAUDIO_COUNT; ++i)
-			{
-				if (that.m_audio[i])
-				{
-					if (m_audio[i])
-						*m_audio[i] = *that.m_audio[i];
-					else
-						m_audio[i] = newInstance(DynamicAudioEventRTS)(*that.m_audio[i]);
-				}
-				else
-				{
-					m_audio[i] = NULL;
-				}
-			}
+			AudioArray candidate(that);
+			swap(candidate);
 		}
 		return *this;
 	}
@@ -214,7 +214,7 @@ static const char *BuildCompletionNames[] =
 };
 #endif  // end DEFINE_BUILD_COMPLETION_NAMES
 
-enum BuildableStatus
+enum BuildableStatus : UnsignedInt
 {
 	// saved into savegames... do not change or remove values!
 	BSTATUS_YES = 0,
@@ -279,7 +279,7 @@ public:
 	ModuleInfo() { }
 
 	void addModuleInfo( ThingTemplate *thingTemplate, const AsciiString& name, const AsciiString& moduleTag, const ModuleData* data, Int interfaceMask, Bool inheritable, Bool overrideableByLikeKind = FALSE );
-	const ModuleInfo::Nugget *ModuleInfo::getNuggetWithTag( const AsciiString& tag ) const;
+	const ModuleInfo::Nugget *getNuggetWithTag( const AsciiString& tag ) const;
 
 	Int getCount() const 
 	{ 
@@ -592,6 +592,7 @@ public:
 	const FieldParse* getReskinFieldParse() const { return s_objectReskinFieldParseTable; }
 
 	Bool isBuildFacility() const { return m_isBuildFacility; }
+	void friend_setBuildFacility(Bool value) noexcept { m_isBuildFacility = value; }
 	Real getPlacementViewAngle( void ) const { return m_placementViewAngle; }
 
 	Real getFactoryExitWidth() const { return m_factoryExitWidth; }
@@ -720,7 +721,7 @@ private:
 	Real					m_factoryExitWidth;					///< when placing buildings this will be the width of the reserved exit area on the right side.
 	Real					m_factoryExtraBibWidth;					///< when placing buildings this will be the width of the reserved exit area on the right side.
 	Real					m_buildTime;									///< Seconds to build
-	Real					m_assetScale;
+	Real					m_assetScale = 0;
 	Real					m_instanceScaleFuzziness; ///< scale randomization tolerance to init for each Drawable instance, 
 	Real					m_shadowSizeX;				///< world-space extent of decal shadow texture
 	Real					m_shadowSizeY;				///< world-space extent of decal shadow texture
@@ -730,7 +731,7 @@ private:
 	// ---- Int-sized things
 	Int						m_energyProduction;						///< how much Energy this takes (negative values produce Energy, rather than consuming it)
 	Int						m_energyBonus;								///< how much extra Energy this produces due to the upgrade
-	Color					m_displayColor;								///< for the editor display color
+	Color					m_displayColor = 0;								///< for the editor display color
 	UnsignedInt		m_occlusionDelay;							///< delay after object creation before building occlusion is allowed.
   NameKeyType   m_maxSimultaneousLinkKey;     ///< If this is not NAMEKEY_INVALID, it indicates that all the templates which have the same name key should be counted as the same "type" when looking at getMaxSimultaneousOfType().
 
@@ -744,21 +745,21 @@ private:
 	// ---- Bool-sized things
   Bool          m_maxSimultaneousDeterminedBySuperweaponRestriction; ///< If true, override value in m_maxSimultaneousOfType with value from GameInfo::getSuperweaponRestriction()
 	Bool					m_isPrerequisite;							///< Is this thing considered in a prerequisite for any other thing?
-	Bool					m_isBridge;										///< True if this model is a bridge.
+	Bool					m_isBridge = 0;										///< True if this model is a bridge.
  	Bool					m_isBuildFacility;						///< is this the build facility for something? (calculated based on other template's prereqs)
 	Bool					m_isTrainable;								///< Whether or not I can even gain experience
 	Bool          m_enterGuard;									///< Whether or not I can enter objects when guarding
 	Bool          m_hijackGuard;								///< Whether or not I can hijack objects when guarding
-	Bool					m_isForbidden;								///< useful when overriding in <mapfile>.ini
-	Bool					m_armorCopiedFromDefault;
-	Bool					m_weaponsCopiedFromDefault;
+	Bool					m_isForbidden = 0;								///< useful when overriding in <mapfile>.ini
+	Bool					m_armorCopiedFromDefault = 0;
+	Bool					m_weaponsCopiedFromDefault = 0;
 
 	// ---- Byte-sized things
 	Byte					m_radarPriority;						///< does object appear on radar, and if so at what priority
 	Byte					m_transportSlotCount;				///< how many "slots" we take in a transport (0 == not transportable)
-	Byte					m_buildable;								///< is this thing buildable at all?
+	Byte					m_buildable = 0;								///< is this thing buildable at all?
 	Byte					m_buildCompletion;					///< how the units come into the world when build is complete
-	Byte					m_editorSorting;						///< editor sorting type, see EditorSortingType enum
+	Byte					m_editorSorting = 0;						///< editor sorting type, see EditorSortingType enum
 	Byte					m_structureRubbleHeight;
 	Byte					m_shadowType;								///< settings which determine the type of shadow rendered
 	Byte					m_moduleParsingMode;

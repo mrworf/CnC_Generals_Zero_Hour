@@ -30,6 +30,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <algorithm>
 #define DEFINE_SLOWDEATHPHASE_NAMES
 #include "Common/GameLOD.h"
 #include "Common/INI.h"
@@ -188,7 +189,7 @@ Int SlowDeathBehavior::getProbabilityModifier( const DamageInfo *damageInfo ) co
 	Real overkillPercent = (float)overkillDamage / (float)getObject()->getBodyModule()->getMaxHealth();
 	Int overkillModifier = overkillPercent * getSlowDeathBehaviorModuleData()->m_modifierBonusPerOverkillPercent;
 
-	return max( getSlowDeathBehaviorModuleData()->m_probabilityModifier + overkillModifier, 1 );
+	return std::max( getSlowDeathBehaviorModuleData()->m_probabilityModifier + overkillModifier, 1 );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -276,7 +277,8 @@ void SlowDeathBehavior::beginSlowDeath(const DamageInfo *damageInfo)
 			// with their own physics during slow death
 			if( obj->isDisabledByType( DISABLED_HELD ) )
 			{
-				static NameKeyType key_SlavedUpdate = NAMEKEY( "SlavedUpdate" );
+				static const StaticNameKey nativeCached_key_SlavedUpdate("SlavedUpdate");
+				NameKeyType key_SlavedUpdate = nativeCached_key_SlavedUpdate.key();
 				SlavedUpdate* slave = (SlavedUpdate*)obj->findUpdateModule( key_SlavedUpdate );
 				if( slave )
 				{
@@ -511,7 +513,7 @@ void SlowDeathBehavior::onDie( const DamageInfo *damageInfo )
 	// this returns a value from 1...total, inclusive
 	Int roll = GameLogicRandomValue(1, total);
 
-	for (/* UpdateModuleInterface** */ update = obj->getBehaviorModules(); *update; ++update)
+	for (BehaviorModule** update = obj->getBehaviorModules(); *update; ++update)
 	{
 		SlowDeathBehaviorInterface* sdu = (*update)->getSlowDeathBehaviorInterface();
 		if (sdu != NULL && sdu->isDieApplicable(damageInfo))

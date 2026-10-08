@@ -52,10 +52,7 @@ class Matrix3D;
 class WaterHandle;
 class Xfer;
 
-enum WaypointID
-{
-	INVALID_WAYPOINT_ID = 0x7FFFFFFF
-};
+#include "Common/EngineIDs.h"
 
 //-------------------------------------------------------------------------------------------------
 // Waypoint

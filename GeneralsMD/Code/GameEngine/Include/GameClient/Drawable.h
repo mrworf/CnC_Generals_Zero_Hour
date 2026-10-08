@@ -27,6 +27,7 @@
 // Author: Michael S. Booth, March 2001
 
 #pragma once
+#include "Lib/BaseType.h"
 #ifndef _DRAWABLE_H_
 #define _DRAWABLE_H_
 
@@ -37,7 +38,7 @@
 #include "Common/Thing.h"
 #include "Common/Geometry.h"
 #include "GameClient/Color.h"
-#include "WWMath/Matrix3D.h"
+#include "WWMath/matrix3d.h"
 #include "GameClient/DrawableInfo.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -56,7 +57,7 @@ class ModuleInfo;
 class Anim2DTemplate;
 class Image;
 class DynamicAudioEventInfo;
-enum BodyDamageType;
+enum BodyDamageType : UnsignedInt;
 
 // this is a very worthwhile performance win. left conditionally defined for now, just 
 // in case, but probably should be made permanent soon. (srj)
@@ -213,7 +214,7 @@ private:
 EMPTY_DTOR(TintEnvelope)
 
 //-----------------------------------------------------------------------------
-enum StealthLookType
+enum StealthLookType : UnsignedInt
 {
 	STEALTHLOOK_NONE,								///< unit is not stealthed at all
 	STEALTHLOOK_VISIBLE_FRIENDLY,		///< unit is stealthed-but-visible due to friendly status
@@ -254,7 +255,7 @@ enum TintStatus
 // Note: these values are saved in save files, so you MUST NOT REMOVE OR CHANGE
 // existing values!
 //
-enum TerrainDecalType
+enum TerrainDecalType : UnsignedInt
 {
 #ifdef ALLOW_DEMORALIZE
 	TERRAIN_DECAL_DEMORALIZED = 0,

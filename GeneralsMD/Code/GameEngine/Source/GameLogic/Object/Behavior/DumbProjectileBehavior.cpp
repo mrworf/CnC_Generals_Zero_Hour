@@ -27,6 +27,8 @@
 // Desc:   
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/NativeSourceMath.h"
+#include <algorithm>
 
 #include "Common/BezierSegment.h"
 #include "Common/GameCommon.h"
@@ -217,8 +219,8 @@ static Bool calcTrajectory(
 	Real pitches[2];
 	Real cosPitches[2];
 	Real sinPitches[2];
-	Real theta_min = max(minPitch, -PI/2);
-	Real theta_max = min(maxPitch, PI/2);
+	Real theta_min = std::max(minPitch, -PI/2);
+	Real theta_max = std::min(maxPitch, PI/2);
 	const Real MIN_ANGLE_DIFF = (PI/(180.0f*16.0f));	// 1/16th of a degree. yes, we need that accuracy.
 //Int numLoops = 0;
 	while (theta_max > theta_min + MIN_ANGLE_DIFF)
@@ -438,8 +440,8 @@ Bool DumbProjectileBehavior::calcFlightPath(Bool recalcNumSegments)
 	controlPoints[2].y = secondPointAlongLine.Y + controlPoints[0].y;
 
 	// Z's are determined using the highest intervening height so they won't hit hills, low end bounded by current Zs
-	highestInterveningTerrain = max( highestInterveningTerrain, controlPoints[0].z );
-	highestInterveningTerrain = max( highestInterveningTerrain, controlPoints[3].z );
+	highestInterveningTerrain = std::max( highestInterveningTerrain, controlPoints[0].z );
+	highestInterveningTerrain = std::max( highestInterveningTerrain, controlPoints[3].z );
 	controlPoints[1].z = highestInterveningTerrain + d->m_firstHeight;
 	controlPoints[2].z = highestInterveningTerrain + d->m_secondHeight;
 
@@ -646,7 +648,7 @@ UpdateSleepTime DumbProjectileBehavior::update()
 		  Vector3 curDir(flightStep.x - prevPos.x, flightStep.y - prevPos.y, flightStep.z - prevPos.z);
 		  curDir.Normalize();	// buildTransformMatrix wants it this way
       Matrix3D orientMtx;
-		  orientMtx.buildTransformMatrix(Vector3(flightStep.x, flightStep.y, flightStep.z), curDir);
+		  nativeSourceBuildTransformMatrix(orientMtx, Vector3(flightStep.x, flightStep.y, flightStep.z), curDir);
 		  getObject()->setTransformMatrix(&orientMtx);
     }
     else // oops! how do we orient the projectile on the zeroeth frame? This didn't matter until we started using the
@@ -659,7 +661,7 @@ UpdateSleepTime DumbProjectileBehavior::update()
 		  Vector3 curDir(curPos.x - prevPos.x, curPos.y - prevPos.y, curPos.z - prevPos.z);
 		  curDir.Normalize();	// buildTransformMatrix wants it this way
       Matrix3D orientMtx;
-		  orientMtx.buildTransformMatrix(Vector3(flightStep.x, flightStep.y, flightStep.z), curDir);
+		  nativeSourceBuildTransformMatrix(orientMtx, Vector3(flightStep.x, flightStep.y, flightStep.z), curDir);
 		  getObject()->setTransformMatrix(&orientMtx);
     }
 

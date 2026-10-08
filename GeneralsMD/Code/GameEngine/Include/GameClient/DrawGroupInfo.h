@@ -26,6 +26,9 @@
 // AudioEventRTS structure
 // Author: John K. McDonald, March 2002
 
+#include "Common/AsciiString.h"
+#include "Common/INI.h"
+#include "GameClient/Color.h"
 #pragma once
 #ifndef _H_DRAWGROUPINFO_
 #define _H_DRAWGROUPINFO_

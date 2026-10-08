@@ -53,6 +53,7 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////
 #include "Lib/BaseType.h"
+#include "GameClient/WindowMessageData.h"
 #include "Common/GameMemory.h"
 #include "GameClient/Image.h"
 #include "GameClient/DisplayString.h"
@@ -75,7 +76,7 @@ enum { WIN_COLOR_UNDEFINED = GAME_COLOR_UNDEFINED };
 
 // WindowMsgData --------------------------------------------------------------
 //-----------------------------------------------------------------------------
-typedef UnsignedInt WindowMsgData;
+// WindowMsgData is shared by every retained callback provider.
 
 //-----------------------------------------------------------------------------
 enum WindowMsgHandledType { MSG_IGNORED, MSG_HANDLED };
@@ -487,4 +488,3 @@ extern const char *WindowStatusNames[];
 extern const char *WindowStyleNames[];
 
 #endif // __GAMEWINDOW_H_
-

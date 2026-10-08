@@ -22,164 +22,68 @@
 //																																						//
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
-
+#include "PreRTS.h"
 #include "GameNetwork/IPEnumeration.h"
-
-IPEnumeration::IPEnumeration( void )
-{
-	m_IPlist = NULL;
-	m_isWinsockInitialized = false;
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <unistd.h>
+#include <cstring>
+#include <memory>
+namespace {
+struct IPChain {
+    EnumeratedIP* head = nullptr;
+    ~IPChain() {
+        while (head) {
+            EnumeratedIP* next = head->getNext();
+            head->deleteInstance(); head = next;
+        }
+    }
+    EnumeratedIP* release() noexcept { auto* result=head; head=nullptr; return result; }
+};
+void appendIP(IPChain& candidate, UnsignedInt ip) {
+    auto* node = newInstance(EnumeratedIP);
+    MemoryPoolObjectHolder owner(node);
+    AsciiString label;
+    label.format("%u.%u.%u.%u", (ip>>24)&255u, (ip>>16)&255u, (ip>>8)&255u, ip&255u);
+    node->setIPstring(label); node->setIP(ip);
+    EnumeratedIP* previous = nullptr;
+    EnumeratedIP* position = candidate.head;
+    while (position && position->getIP() <= ip) {
+        previous = position; position = position->getNext();
+    }
+    node->setNext(position);
+    if (previous) previous->setNext(node); else candidate.head=node;
+    owner.release();
 }
-
-IPEnumeration::~IPEnumeration( void )
-{
-	if (m_isWinsockInitialized)
-	{
-		WSACleanup();
-		m_isWinsockInitialized = false;
-	}
-
-	EnumeratedIP *ip = m_IPlist;
-	while (ip)
-	{
-		ip = ip->getNext();
-		m_IPlist->deleteInstance();
-		m_IPlist = ip;
-	}
 }
-
-EnumeratedIP * IPEnumeration::getAddresses( void )
-{
-	if (m_IPlist)
-		return m_IPlist;
-
-	if (!m_isWinsockInitialized)
-	{
-		WORD verReq = MAKEWORD(2, 2);
-		WSADATA wsadata;
-
-		int err = WSAStartup(verReq, &wsadata);
-		if (err != 0) {
-			return NULL;
-		}
-
-		if ((LOBYTE(wsadata.wVersion) != 2) || (HIBYTE(wsadata.wVersion) !=2)) {
-			WSACleanup();
-			return NULL;
-		}
-		m_isWinsockInitialized = true;
-	}
-
-	// get the local machine's host name
-	char hostname[256];
-	if (gethostname(hostname, sizeof(hostname)))
-	{
-		DEBUG_LOG(("Failed call to gethostname; WSAGetLastError returned %d\n", WSAGetLastError()));
-		return NULL;
-	}
-	DEBUG_LOG(("Hostname is '%s'\n", hostname));
-	
-	// get host information from the host name
-	HOSTENT* hostEnt = gethostbyname(hostname);
-	if (hostEnt == NULL)
-	{
-		DEBUG_LOG(("Failed call to gethostnyname; WSAGetLastError returned %d\n", WSAGetLastError()));
-		return NULL;
-	}
-	
-	// sanity-check the length of the IP adress
-	if (hostEnt->h_length != 4)
-	{
-		DEBUG_LOG(("gethostbyname returns oddly-sized IP addresses!\n"));
-		return NULL;
-	}
-	
-	// construct a list of addresses
-	int numAddresses = 0;
-	char *entry;
-	while ( (entry = hostEnt->h_addr_list[numAddresses++]) != 0 )
-	{
-		EnumeratedIP *newIP = newInstance(EnumeratedIP);
-
-		AsciiString str;
-		str.format("%d.%d.%d.%d", (unsigned char)entry[0], (unsigned char)entry[1], (unsigned char)entry[2], (unsigned char)entry[3]);
-
-		UnsignedInt testIP = *((UnsignedInt *)entry);
-		UnsignedInt ip = ntohl(testIP);
-
-		/*
-		ip = *entry++;
-		ip <<= 8;
-		ip += *entry++;
-		ip <<= 8;
-		ip += *entry++;
-		ip <<= 8;
-		ip += *entry++;
-		*/
-
-		newIP->setIPstring(str);
-		newIP->setIP(ip);
-
-		DEBUG_LOG(("IP: 0x%8.8X / 0x%8.8X (%s)\n", testIP, ip, str.str()));
-
-		// Add the IP to the list in ascending order
-		if (!m_IPlist)
-		{
-			m_IPlist = newIP;
-			newIP->setNext(NULL);
-		}
-		else
-		{
-			if (newIP->getIP() < m_IPlist->getIP())
-			{
-				newIP->setNext(m_IPlist);
-				m_IPlist = newIP;
-			}
-			else
-			{
-				EnumeratedIP *p = m_IPlist;
-				while (p->getNext() && p->getNext()->getIP() < newIP->getIP())
-				{
-					p = p->getNext();
-				}
-				newIP->setNext(p->getNext());
-				p->setNext(newIP);
-			}
-		}
-	}
-
-	return m_IPlist;
+IPEnumeration::IPEnumeration() : m_IPlist(nullptr) {}
+IPEnumeration::~IPEnumeration() { IPChain retired{m_IPlist}; m_IPlist=nullptr; }
+void IPEnumeration::replaceAddresses(std::span<const UnsignedInt> addresses) {
+    IPChain candidate;
+    for (UnsignedInt ip: addresses) appendIP(candidate,ip);
+    IPChain retired{m_IPlist};
+    m_IPlist=candidate.release();
 }
-
-AsciiString IPEnumeration::getMachineName( void )
-{
-	if (!m_isWinsockInitialized)
-	{
-		WORD verReq = MAKEWORD(2, 2);
-		WSADATA wsadata;
-
-		int err = WSAStartup(verReq, &wsadata);
-		if (err != 0) {
-			return NULL;
-		}
-
-		if ((LOBYTE(wsadata.wVersion) != 2) || (HIBYTE(wsadata.wVersion) !=2)) {
-			WSACleanup();
-			return NULL;
-		}
-		m_isWinsockInitialized = true;
-	}
-
-	// get the local machine's host name
-	char hostname[256];
-	if (gethostname(hostname, sizeof(hostname)))
-	{
-		DEBUG_LOG(("Failed call to gethostname; WSAGetLastError returned %d\n", WSAGetLastError()));
-		return NULL;
-	}
-
-	return AsciiString(hostname);
+EnumeratedIP* IPEnumeration::getAddresses() {
+    if (m_IPlist) return m_IPlist;
+    ifaddrs* interfaces = nullptr;
+    if (::getifaddrs(&interfaces) != 0) return nullptr;
+    std::unique_ptr<ifaddrs, decltype(&::freeifaddrs)> native(interfaces, &::freeifaddrs);
+    IPChain candidate;
+    for (const ifaddrs* item=interfaces; item; item=item->ifa_next) {
+        if (!item->ifa_addr || item->ifa_addr->sa_family != AF_INET ||
+            !(item->ifa_flags & IFF_UP)) continue;
+        const auto* address = reinterpret_cast<const sockaddr_in*>(item->ifa_addr);
+        const UnsignedInt ip = ntohl(address->sin_addr.s_addr);
+        appendIP(candidate,ip); // Same complete offside chain owner as replacement.
+    }
+    m_IPlist = candidate.release();
+    return m_IPlist;
 }
-
-
+AsciiString IPEnumeration::getMachineName() {
+    char name[256]{};
+    if (::gethostname(name, sizeof(name)) != 0 || !std::memchr(name, 0, sizeof(name)))
+        return AsciiString();
+    return AsciiString(name);
+}

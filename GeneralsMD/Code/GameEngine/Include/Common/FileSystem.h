@@ -58,6 +58,7 @@
 //           Forward References
 //----------------------------------------------------------------------------
 class File;
+class NativeUserStorage;
 
 //----------------------------------------------------------------------------
 //           Type Defines
@@ -84,18 +85,9 @@ class File;
 #define LEGACY_TGA_DIR_PATH "../LegacyArt/Textures/"	///< .tga texture files live here
 #endif  // MAINTAIN_LEGACY_FILES
 
-// LOAD_TEST_ASSETS automatically loads w3d assets from the TEST_W3D_DIR_PATH
-// without having to add an INI entry.
-///@todo this allows us to use the test art directory, it should be removed for FINAL release
-#define LOAD_TEST_ASSETS 1
-#ifdef LOAD_TEST_ASSETS
-	#define ROAD_DIRECTORY		"../TestArt/TestRoad/"
-	#define TEST_STRING				"***TESTING"
-// the following directories will be used to look for test art
-#define LOOK_FOR_TEST_ART
-#define TEST_W3D_DIR_PATH "../TestArt/"					///< .w3d files live here
-#define TEST_TGA_DIR_PATH "../TestArt/"		///< .tga texture files live here
-#endif
+// The release Linux runtime does not auto-discover development TestArt outside
+// its configured asset roots. Legacy authoring-only guards remain dormant; no
+// runtime build defines LOAD_TEST_ASSETS or LOOK_FOR_TEST_ART.
 
 struct FileInfo {
 	Int sizeHigh;
@@ -127,6 +119,11 @@ public:
 	// Explicit ordered roots: Zero Hour first, then original Generals assets.
 	// Replace mounts only after a complete offside read-only index is admitted.
 	void mountReadOnly(const std::vector<std::string>& roots);
+	// Caller resolves the complete prospective physical path before write admission.
+	bool admitsUserStorage(const std::string& canonicalPath) const;
+  // Borrowed storage outlives this attachment. Asset-relative names keep their
+  // immutable namespace; only explicit configured user-root paths use it.
+  void attachUserStorage(const NativeUserStorage* storage);
 
 	void init();
 	void reset();
@@ -145,8 +142,13 @@ public:
 protected:
   mutable std::map<unsigned,bool> m_fileExist;
 private:
+  friend class NativeUserStorage;
+  void withdrawUserStorage(const NativeUserStorage* storage) const noexcept {
+    if(m_userStorage==storage) m_userStorage=nullptr;
+  }
   struct NativeMounts;
   std::unique_ptr<NativeMounts> m_nativeMounts;
+  mutable const NativeUserStorage* m_userStorage = nullptr;
 };
 
 extern FileSystem*	TheFileSystem;

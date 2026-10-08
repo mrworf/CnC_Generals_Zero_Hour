@@ -35,6 +35,7 @@
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "Common/Xfer.h"
 #include "Common/XferCRC.h"
+#include "Common/NativeUserStorage.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Snapshot;
@@ -45,6 +46,8 @@ class XferDeepCRC : public XferCRC
 {
 
 public:
+	void abort() noexcept;
+	NativeCommitResult getCommitResult() const noexcept { return m_commitResult; }
 
 	XferDeepCRC( void );
 	virtual ~XferDeepCRC( void );
@@ -62,8 +65,8 @@ protected:
 
 	virtual void xferImplementation( void *data, Int dataSize );
 
-	FILE * m_fileFP;																			///< pointer to file
+	std::unique_ptr<NativeAtomicOutput> m_output;
+	NativeCommitResult m_commitResult=NativeCommitResult::Durable;
 };
 
 #endif // __XFERDEEPCRC_H_
-

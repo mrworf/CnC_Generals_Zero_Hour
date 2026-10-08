@@ -1,0 +1,2687 @@
+{
+  "kind": "unaccepted-source-compilation-census",
+  "source_root": "GeneralsMD/Code/GameEngine/Source/Common",
+  "compilers": [
+    "g++",
+    "clang++"
+  ],
+  "frozen_code_sha256": "667e788770e25cfc78bfb2d8ef785ed48001eeda75a14994dd13400ee4864633",
+  "translation_units": [
+    {
+      "path": "Audio/AudioEventRTS.cpp",
+      "sha256": "b3ff6fa56d73d696e68869ef2cc50d6f628179845a66d3a71b6d30281c8fcc0f",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Audio/AudioRequest.cpp",
+      "sha256": "d0d370c3e7a37a9f71e8108decec240bff68e32231a6aa3fd49397ee1b68a599",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Audio/DynamicAudioEventInfo.cpp",
+      "sha256": "0efabaacfa8ee6658f7f2d3c3c01fed096ad9ef3df668e01525691e98f23a45d",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Audio/GameAudio.cpp",
+      "sha256": "bc7e9a92fcb2773d66e473311a3f755484f485c8cdf27cfbcb394bf0c204e808",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Audio/GameMusic.cpp",
+      "sha256": "74a4032f1e6eeb962bcdad34c314cfb41b25b05321f7c96b68f7e80633b97f35",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Audio/GameSounds.cpp",
+      "sha256": "9f77f35f5f4cff894e643f263cb36e2d65b13b0b85b06d45e91b35bd16c42b6f",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Audio/GameSpeech.cpp",
+      "sha256": "ab734ff292c0b08aadf32acfcb83b84569ed6fec302bd82d79abaaf779b34cbb",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/GameSpeech.cpp:40": 1
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/GameSpeech.cpp:40": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "Audio/simpleplayer.cpp",
+      "sha256": "0019945fc5c7a69887c00d3f3bf333aa7331c00377b8ac1551a517367b70b3e2",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Include/Common/simpleplayer.h:23": 1
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Include/Common/simpleplayer.h:23": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "Audio/urllaunch.cpp",
+      "sha256": "fcbe15e901882fdee2cf6ffd325e099f64181517a254fd8d772c7ce4b3858d63",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 5,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Include/Common/urllaunch.h:23": 1,
+            "GeneralsMD/Code/GameEngine/Include/Common/urllaunch.h:25": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:26": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:126": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:228": 1
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 19,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Include/Common/urllaunch.h:23": 3,
+            "GeneralsMD/Code/GameEngine/Include/Common/urllaunch.h:25": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:26": 3,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:28": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:30": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:36": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:41": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:42": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:44": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:46": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:48": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:65": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp:68": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "Bezier/BezFwdIterator.cpp",
+      "sha256": "b5beffd8b1efa16b32f9e35e54ab8ee6918647cc4d6057af6acc082ef741fc47",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Bezier/BezierSegment.cpp",
+      "sha256": "43225651af1c708fb2093294b956169b921df1b38193626a0b1e6bf41ca1a58b",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "BitFlags.cpp",
+      "sha256": "e90564ad554f5e588dbb889f3afa43c58eee9dc69a33dde69aecae215102c374",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "CRCDebug.cpp",
+      "sha256": "10cd64a3acfacf8f16630b6a7e7498b0497703a865fa7a79f9b4a1389f9dcc16",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "CommandLine.cpp",
+      "sha256": "8155a9427f60e1cd1e4e10af768cb95de79ae8773c3d2e6de4b99a0dddc008d2",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "DamageFX.cpp",
+      "sha256": "125001812f7594ac2253b05a1ede78873add99b9a4ce6b276259ad593e187349",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Dict.cpp",
+      "sha256": "0c6f36dc84f1daa60cde97520fa7618cfe6ea220b7e9d16c6c66e0b0bf9c78e8",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "DiscreteCircle.cpp",
+      "sha256": "33013e2a104b89bfc01ec47a367806e8ec7e53ea321a1ca65a03648e59a4c315",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "GameEngine.cpp",
+      "sha256": "e66c7c48c768defcc0276714c844f7d051849dd72568805a773a7bb9fa29bd25",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "GameLOD.cpp",
+      "sha256": "222019958196482a1bdb51ede40f1ba82e2842a8fe6ec806daee24e8cfcb3371",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "GameMain.cpp",
+      "sha256": "61355c217af56c2124ba3502160d429d1ca2f5032f7bdfdcca849fc95773e8f8",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "GlobalData.cpp",
+      "sha256": "b25a27019fd7b82d45c20ba595d4d3ceff53d38a70f83727717bc3d009bf5d94",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INI.cpp",
+      "sha256": "e0c1845b3e0405d836da0c001d21f5a75108399d04f57b433ca888d65a3a6476",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIAiData.cpp",
+      "sha256": "b56ab1975bc82e91cb440c81595ad1faf2c793c7b89389c19fb80ce7a077d251",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIAnimation.cpp",
+      "sha256": "8ab1cc419af807505b1ca736e0a8c9accab15ccc59b92324050f0885d5798d7a",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIAudioEventInfo.cpp",
+      "sha256": "c5c3f07b0cbe4793cabbc12ee7ef1dd41b9e9cd031dc3aaf411ca0e425a22ce7",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INICommandButton.cpp",
+      "sha256": "84738e7d3b5e04ac56f4b80bf8eac9d3eea563e8244c568bb586cb69c6a9d4de",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INICommandSet.cpp",
+      "sha256": "8bee95cab190f64efc7a7de94729ecd4ce60590ad9ca4e38764f489a9d40a236",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIControlBarScheme.cpp",
+      "sha256": "4516cfeb795430f23eda8ec0417e434d9642a0c43bdc2b256aecf8c4206b8198",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INICore.cpp",
+      "sha256": "da37fcd4e7b20df0d0dda5ecae7be3bf0c4f43dcc98993c05531f64f994dc9fb",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INICrate.cpp",
+      "sha256": "c058cd007217a8ebef21d57c04b7611eeaa5b4b33dd51324de287a22a60be2d4",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIDamageFX.cpp",
+      "sha256": "6a6df3d8a280078c071c6052fb8cafab8f7f6bccd61572f55394d22b898be2a3",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIDrawGroupInfo.cpp",
+      "sha256": "0e9f0a8634598ea6c04f658cb77a268ccea3c632bd03d0bca76a08b334a188ba",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIGameData.cpp",
+      "sha256": "754582142452704df3998ed8ce0fdc29a681921ace4622ef17d2a886d9ff9a59",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIMapCache.cpp",
+      "sha256": "f9d438489bb927f44078ae7fc8461b9a6ad23a29f3cf3cf127ccba5a5043002a",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIMapData.cpp",
+      "sha256": "9a5895c2a92f51f5a1ae168e868cc16f0b62dcb904578d14d4fd511f78588387",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIMappedImage.cpp",
+      "sha256": "5306af033d304fcce6220af28546275bcde879ccf425726d2150a202e905f72c",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIMiscAudio.cpp",
+      "sha256": "8184729a66068383c9208fd6795e625fc2a5d28d233432ef48bff226702b532b",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIModel.cpp",
+      "sha256": "b65d9473100c90440aa7f223c37f3cbddfb5b4ab19777bbc2e299357a5b5d290",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIMultiplayer.cpp",
+      "sha256": "beb88ac4812aa50fe4d6c0e1741f7650d1ea890e9e59e6e46396945b301403dc",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIObject.cpp",
+      "sha256": "92815bd67873d7bf3934fdc4b6f22f8ef8da27fe4b62d0551b53df6a1e28e26e",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIParticleSys.cpp",
+      "sha256": "b8630fb23d3b5299a9b962baced17fa8a556670a223d42e2ede8864418e22b1c",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INISpecialPower.cpp",
+      "sha256": "5cfd545bade95cfbbf692dc996c0d13e5e3c06167686c197d9bfcd0a5907830b",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INITerrain.cpp",
+      "sha256": "527d5c98cef9b7f0716393aede6a606ac0dfa759ab4153f6c0de1e367f79ce38",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INITerrainBridge.cpp",
+      "sha256": "4d6be6ac2faa7b982bfad32c966303a2a64ed727625cd031cf77685285bea830",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INITerrainRoad.cpp",
+      "sha256": "608b642f5264d3a90ca2cc1c543675ec4742321d28be176c01de4d512af6280a",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIUpgrade.cpp",
+      "sha256": "94832d7af53046b95db72de2770f94853fc676457743b8d248b01a782ec72a2c",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIValueParsers.cpp",
+      "sha256": "39335a5d15321189f5aa358b08f6f403063d90765f86117d958353303d27e33c",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIVideo.cpp",
+      "sha256": "63bcef275c229100e28b35aef0d7f57cd4862480e36f4840ce3974d4743df134",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIWater.cpp",
+      "sha256": "ae5e7e4ad1a93a62c0cad6877205345f376ab45da229b848740c04aefd3fe7ce",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIWeapon.cpp",
+      "sha256": "adeca15e12f800fcd09af34476637cbc88f8b9aa38dd048d4044ceb0435b15b4",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "INI/INIWebpageURL.cpp",
+      "sha256": "bb4c6c0f70c3a1692624cb5272bc427a74ae3b4e46eae8afb613b1562d7960b2",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Include/GameNetwork/WOLBrowser/WebBrowser.h:49": 1
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Include/GameNetwork/WOLBrowser/WebBrowser.h:49": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "Language.cpp",
+      "sha256": "858195a93f1a6fb55356841b419c29360382a647f3b788679008a5a050ddc394",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "MessageStream.cpp",
+      "sha256": "8a3fb1e60f7d9d4ba846d0740b6af123d6aa14fd1caccb16d799a63170d34f1e",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "MiniLog.cpp",
+      "sha256": "136c941a6bb507548a511a3ef1104d0ecf834cfef5a60e6c64f23ef419d0ba5a",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "MultiplayerSettings.cpp",
+      "sha256": "e3e163ee3dfeba04c152266b9783f56da2b8222562aeb06a236f3859330fad0a",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "NameKeyGenerator.cpp",
+      "sha256": "20f3f0044ee55af9b8c67fa0cb619199971ebffec36959b40d81bc26956fc438",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "OptionPreferences.cpp",
+      "sha256": "c7d10271704af452906d8c6bc7832c1dfe9c69672866d98ede10e9d7fdd161dd",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "OptionServicePreferences.cpp",
+      "sha256": "1deef94c22edf63568f6793fc7ee8cee8e987980edf510f6efe9c44b734ed991",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "PartitionSolver.cpp",
+      "sha256": "017156f534c893393b8cb0700be24c23e83eb90e193ceb56ddcb4e4e3532cb98",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "PerfTimer.cpp",
+      "sha256": "c26134d7663def585b6941537564ef0173f7f8a6341d08270969fef4594a32fc",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 3,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/PerfTimer.cpp:38": 3
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 2,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/PerfTimer.cpp:38": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/PerfTimer.cpp:40": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "RTS/AcademyStats.cpp",
+      "sha256": "7177d0a640c5038a5b57a4285a486c7be68e9555a1bb3e9f3c2db0938a69d9c7",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/ActionManager.cpp",
+      "sha256": "a9d4ba67cbc7c90139b831a0a122912839a83e2dbfbca79df33332d5ff8e9449",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/Energy.cpp",
+      "sha256": "c6b2b94d27968055b14ef4f37002767a39d61c7d43b4b6d653fa3a95ba1a5742",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/Handicap.cpp",
+      "sha256": "f01d5c4e6a9454ef77c2d875318e5b39760be2c0ccf2dae0d847a087c41c0b44",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/MissionStats.cpp",
+      "sha256": "c5df68403387230459c7be2d3d5ee30481b61683f91dd7173a3456916215e755",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/Money.cpp",
+      "sha256": "213c2965ef9367a816190204a4609c691c4020629221ef43a736f79cb5f9307d",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/MoneyDefinition.cpp",
+      "sha256": "b7b8477a7bb669def831a09a9325cf7b15c9ab325b68e1444e59e4a0d37fa207",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/Player.cpp",
+      "sha256": "c80f65e793a4d574e52e151231f17ac532018c5f3577adb56ff208f1ba97d84b",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/PlayerList.cpp",
+      "sha256": "2c8954e98e81bcee4421bb4681755c6c502383a81e02c1d3eb0193589f350bc3",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/PlayerTemplate.cpp",
+      "sha256": "7094803b64c1be02fd1f23c4f4a6800286dee3b2f4e5734ad6c5e094f0ed8fa4",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/ProductionPrerequisite.cpp",
+      "sha256": "edc2f60b5831fcfce86de0050417cc4691f50c97115017fba1f544845264c751",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/ResourceGatheringManager.cpp",
+      "sha256": "9ef6693a790a42c921014a6e54afd0b1cde19d95a4fcd1fb43a27a6fd5978a12",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/Science.cpp",
+      "sha256": "df9d389ea3784f24deab6276407acf68c087231b35988a3dbd904e922fe90469",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/ScoreKeeper.cpp",
+      "sha256": "5dddfe206eea9d0f7a68e1f43a55013a55efa472fef02a4554717225c218720f",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/SpecialPower.cpp",
+      "sha256": "4bb389391620be5dd43c59ab81790a082594b88acac59c7fec4b3a4734d32470",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/Team.cpp",
+      "sha256": "f591893275044cbfc84121265e76e9b3e5cbc95f49e0b9b25d9d7811f100301b",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RTS/TunnelTracker.cpp",
+      "sha256": "361f463ec04a41d2634c89dff09ab37a618580332389f08513fa5978c8314c6d",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "RandomValue.cpp",
+      "sha256": "201b667765b8b6d52ad173973356ecf453451ead4d080655910fc01b8eb8c93e",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Recorder.cpp",
+      "sha256": "d2d7d235b748fdf9f054e477997ee8a19295badfc61a3dc925ee65674ea9e076",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h:34": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "SkirmishBattleHonors.cpp",
+      "sha256": "8e0938fc60718423eb10c30812b7ecb547891c4df28c584c24ea836a7100b21e",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "StateMachine.cpp",
+      "sha256": "4ae994b4d5c0da8c6a90ae31551dda0c83531cc5ba78b8e0e1fad508d8384efc",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "StatsCollector.cpp",
+      "sha256": "2f65a92c78f375c64f6f0814b8e7b924885b48b15a9012dffe60f8053e455640",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/ArchiveFile.cpp",
+      "sha256": "5181e668f04ed4fd5d0072cc1291ac15f9afdc5def4e0fb91a96a206e9d50a7a",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/ArchiveFileSystem.cpp",
+      "sha256": "bbaf064e39bd50ca69d7fe097ff167773a2c64b44273b4803c0300ad68b6db68",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/AsciiString.cpp",
+      "sha256": "418b7cd819f4534fab53cbe2c0043eb1de10b507eaf7bf8772335ac6901d80b9",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/BuildAssistant.cpp",
+      "sha256": "583b7efd2b1e0bb795b05462389fca3b2895d34387874d28c08491536b9ae836",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/CDManager.cpp",
+      "sha256": "416d9e45b15318bdd8bd43396adacca5b0ffdec9a47e7300a3a925ea03782702",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/CachedFileInputStream.cpp",
+      "sha256": "65c3a2918499510dd050c72574cdb48a78b45cf6f98f531842bb38e69e3e4363",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/Compression.cpp",
+      "sha256": "431dfac2e81f6bb82496485ce1f4e47db5171bcdb3d73459196f2b179fce974e",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/CopyProtection.cpp",
+      "sha256": "bffc74f5b7ace678199f50412db9e28aa110805bd301285091b0215f8e7ec990",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 36,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Include/Common/CopyProtection.h:45": 2,
+            "GeneralsMD/Code/GameEngine/Include/Common/CopyProtection.h:50": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:40": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:72": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:74": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:76": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:78": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:107": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:108": 4,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:111": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:113": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:117": 3,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:124": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:127": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:129": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:130": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:138": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:146": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:147": 4,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:161": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:178": 3,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:204": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:226": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:228": 1
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 19,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Include/Common/CopyProtection.h:45": 2,
+            "GeneralsMD/Code/GameEngine/Include/Common/CopyProtection.h:50": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:40": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:72": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:74": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:107": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:108": 3,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:111": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:113": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:115": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:117": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:124": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:134": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp:136": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "System/CriticalSection.cpp",
+      "sha256": "78704e7040380a53421e17f827f176a9aad578877cce8e9f6533873f5238b155",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/DataChunk.cpp",
+      "sha256": "af425a2a56b9b5863b8a19087748f05ca46ffda33a661aff27bb761475f27427",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/DataChunkInput.cpp",
+      "sha256": "a2fea2a791839550aea7c52864d42dad319cd16c460cae9f99d0c9c30a85be45",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/Debug.cpp",
+      "sha256": "1cb5ddad51ca92080ddfa8a6b2f3976c737088168348eb0b7f3574984e4ac645",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 61,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:66": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:107": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:144": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:151": 4,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:183": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:247": 5,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:250": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:255": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:260": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:262": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:267": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:269": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:654": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:655": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:667": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:670": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:674": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:676": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:686": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:690": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:691": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:699": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:700": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:714": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:716": 3,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:721": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:739": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:740": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:746": 4,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:756": 5,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:757": 4,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:760": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:763": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:765": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:779": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:780": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:787": 1
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 19,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:66": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:107": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:144": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:146": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:151": 3,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:153": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:155": 3,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:157": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:183": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:247": 4,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:250": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp:255": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "System/Directory.cpp",
+      "sha256": "7b4f066b847f2bdf080ac022950d139c95847629ef44dce4bb1be6eafa937260",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/DisabledTypes.cpp",
+      "sha256": "38c813c3a2994bea51ab7df30f14a9be51e6b46201b7373221e84d2bdc44f37b",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/File.cpp",
+      "sha256": "9f0cd7000d934117fa755e8f9821267983037a47bf79116f5f488a0ee5b5c747",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/FileSystem.cpp",
+      "sha256": "02fe45c795816acca8771edf9d3398763bda6ab571deae2ac86df81aecba5caa",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 2,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/FileSystem.cpp:200": 1,
+            "system-header/unique_ptr.h:90": 1
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 2,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/FileSystem.cpp:200": 1,
+            "system-header/unique_ptr.h:90": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "System/FunctionLexicon.cpp",
+      "sha256": "d9b631b06f8d8dde49c35dadd5edfba8c766eea8f611f863a76b77287b2b2b92",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/GameCommon.cpp",
+      "sha256": "a224cd00e045c816624a6512c8710bb740a3816b77a3a57c65608578456dbe64",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/GameMemory.cpp",
+      "sha256": "326c9e105713ca4b5575e366cd74647906ec720ce27740a159caf78c4d343d29",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/GameType.cpp",
+      "sha256": "e99638a1536e303663a7ee2994a0510d7517cd450869cd3061b2d15db3c5ccde",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/Geometry.cpp",
+      "sha256": "0e21e5fe639849bb204b52b97e5380f72be59f3eb3e078b7e1fe9fe5a95e7ece",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/KindOf.cpp",
+      "sha256": "1538c01fd225c03026a6e354263905e72073a499ac6f3a98d1c64290c1840e45",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/List.cpp",
+      "sha256": "4cff1518b7e61c7e4ea1b309738ab0e2b880e1f9fe449fe576f86cdcf7d0d855",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/LocalFile.cpp",
+      "sha256": "59fadc97b88c29d7f2669ccab7774c0e61302e39d33a196a5dd94019231c3d4e",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/LocalFile.cpp:52": 1
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/LocalFile.cpp:52": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "System/LocalFileSystem.cpp",
+      "sha256": "b1b57ba25ad3f70b6c77828489a7e8740612a8b99aa507127e48c5fb13e5e4ab",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/MemoryInit.cpp",
+      "sha256": "100bf1c6762e0305070f696f6ba7d6fd72d1257b62a15e98d1b0a8c197f0bf9c",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/NativeCalendar.cpp",
+      "sha256": "0ce1cc0b33097d1dac1db19d1e280c901557b83ee91adb9e70a4b416bd69fcc5",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/NativeClock.cpp",
+      "sha256": "8c91587454485e7ab472babe0c94262fb8c5a5a4dd2af5e3bb380f4a5130a3c9",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/NativeConversionCache.cpp",
+      "sha256": "b98a2c410083ceb5b99fb160b69eb95bee994c40efc5d65b5dd669efbd491534",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/NativeDataFile.cpp",
+      "sha256": "0e3ab2d9daf7a6b0733fec022aa4c4409b0af8e5b4e8bc0e97e02fba2b41c734",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/NativeFileSystem.cpp",
+      "sha256": "96fbf095c276c122d2d80c88b9b952c95d21c2ecf9086e90a63217a42956402b",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/NativeFunctionRegistry.cpp",
+      "sha256": "ac422a466efa5cd3df749d42af6417d15df8814a1adbc7b517132d4220ec7e50",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/NativeInputSettings.cpp",
+      "sha256": "d196317547f6c52c0ad6ef16c378d25ca1f6a387029a95f9b78f2b1dbc3c1f26",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/NativeMapCompression.cpp",
+      "sha256": "ddcb031f07b9a5d3261d33a6dc3fb0591372b4494587ef340f28dbb10e1afa62",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/NativeMemoryProfiles.cpp",
+      "sha256": "2b9f7b47db56031830d3acdf4313428aded276c16b6750dbe3d889d31686fb53",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/NativeSourceStrings.cpp",
+      "sha256": "931c57143a14c0e10d584c38920a800462dfde5084e6e59e2bcb33198257c090",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/NativeUserStorage.cpp",
+      "sha256": "53149131c9ecb0111b9ddcefaff7398be7345835480e23741867767db3a38e7a",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/ObjectStatusTypes.cpp",
+      "sha256": "481e7d282c01382aae72d3bd56ce4b473dc1aeb7741c2010752ee22cfbe09b04",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/QuickTrig.cpp",
+      "sha256": "81a632860e75455af128a58aca3202670203174121efc17184c15975266f9147",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/QuotedPrintable.cpp",
+      "sha256": "f91dd80b6cf54032e686a423367d592d51b33656d4582e87435578be94e939ab",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/QuotedPrintable.cpp:162": 1
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/QuotedPrintable.cpp:162": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "System/RAMFile.cpp",
+      "sha256": "84a3000a8c8967eb5832f76fafaf8aa54e262a14522e9d6127935cc74595e62d",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/Radar.cpp",
+      "sha256": "dba5b89c1c4341b2a3edf1dc2952bec0f367606e5a85e126c6872041129ac89c",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/SaveGame/GameState.cpp",
+      "sha256": "7e24388c6d2d3dabaa8cfc03ce6092c1e6cf9d36a72cb0b2368723028ae6e19d",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 27,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:446": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:493": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:685": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:705": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:727": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:961": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1192": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1193": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1196": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1199": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1200": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1211": 3,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1212": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1221": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1226": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1241": 3,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1247": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1554": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1556": 2
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 18,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:446": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:493": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:685": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:705": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:727": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:961": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1192": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1193": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1196": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1199": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1200": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1212": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1221": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1226": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1554": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1556": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp:1559": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "System/SaveGame/GameStateMap.cpp",
+      "sha256": "445aeedbf350bb02e08d7f52e52bdf1e931c2f314a09c1f07c1bce39a5f21fe2",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 19,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:464": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:465": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:468": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:472": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:473": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:487": 3,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:488": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:497": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:502": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:512": 3,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:517": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:522": 2
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 10,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:464": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:465": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:468": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:472": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:473": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:488": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:497": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:502": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp:517": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "System/Snapshot.cpp",
+      "sha256": "2db76cde2fb075e5a9f4567b9275d4e6c9c0bd9377e278e16bfd3a039faf93f8",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/StackDump.cpp",
+      "sha256": "e2f8d0cfed94fc9c66231912f62937870afc065612cd107e651416f4b3c52e4e",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/StreamingArchiveFile.cpp",
+      "sha256": "cfd7b3c3565dc154b629c92e318fc95f0a84c42c5598d3f3e9f3345bc79a3ce7",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/StreamingArchiveFile.cpp:52": 1
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 1,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/StreamingArchiveFile.cpp:52": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "System/String.cpp",
+      "sha256": "7d349221d46e6d54ed809db174ee5921e6e7386b74842591035ce3331be79302",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 3,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Include/Common/string.h:98": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/String.cpp:260": 1
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 2,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Include/Common/string.h:98": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/String.cpp:260": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "System/SubsystemBase.cpp",
+      "sha256": "d2a1a97858a77a6c16e9c32db6c088ae54b9492ef1d054fd6510e6b18b3dd63e",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/SubsystemInterface.cpp",
+      "sha256": "28310f1de22527303defb2f80c92df58616d7268f2f3aac6090dacb0f7dca447",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/Trig.cpp",
+      "sha256": "8f721a4f5c8cd3a5030b3a511334e136fbd9cf76de7c3c2688cd58fdf873916d",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/UnicodeString.cpp",
+      "sha256": "af335fc6798fab8b522e402d9cbd5dc7fdf8fce05352eb7b39d79ba7b7364934",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/Upgrade.cpp",
+      "sha256": "70f828f86d3a425b3235186c857ea75bd13868131e478e83ba0164294d352080",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/Xfer.cpp",
+      "sha256": "7d8781ff5a069e0ec1391e5b1ad21b703fdf74e652325e88da5cf19048417475",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/XferCRC.cpp",
+      "sha256": "a67190f8de6848c66fe1884538994de534362b30a0ff1719e62b65e3cb7c5bcb",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/XferLoad.cpp",
+      "sha256": "311eff8833ac247f967c90859d564fa02e0d82cb02c5e1dfc2c112bafb70b3d9",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/XferSave.cpp",
+      "sha256": "37826be6ed68f23bac4a2e37d4cc66fff3b71c5ddd065c12785fee65322e3040",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/encrypt.cpp",
+      "sha256": "0068bd5a01f79ecdc00e39a515dd7e3715ee647b810515aac0134f9f40e52514",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "System/registry.cpp",
+      "sha256": "5babdbeb9cd485c27ce62a5e9645d1b233eb41eb8625b02dbfd0c0d2cc7fbce4",
+      "results": {
+        "g++": {
+          "returncode": 1,
+          "diagnostic_count": 34,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:39": 6,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:62": 6,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:85": 5,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:103": 5,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:127": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:132": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:141": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:146": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:155": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:160": 2
+          }
+        },
+        "clang++": {
+          "returncode": 1,
+          "diagnostic_count": 19,
+          "locations": {
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:39": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:41": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:47": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:53": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:62": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:64": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:70": 2,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:76": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:85": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:87": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:92": 3,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:94": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:100": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:103": 1,
+            "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp:105": 1
+          }
+        }
+      }
+    },
+    {
+      "path": "TerrainTypes.cpp",
+      "sha256": "f701bc8bc9866867c75ae9a2e9c23228b92379a371c178953ca3c32f7060f617",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Thing/DrawModule.cpp",
+      "sha256": "690ffe055c5eff9ba919854934362daab115123046ae7615dd84980b6e354b9a",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Thing/Module.cpp",
+      "sha256": "297156166fbd0c77e67cc50f4fb3ea457540d79bd097031ae575f4e0ff5e8584",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Thing/ModuleFactory.cpp",
+      "sha256": "d3a287cb652dd0489350172fb12789063fbcb7714eb50cd2502283e23a487052",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Thing/Thing.cpp",
+      "sha256": "447b747520e56356a9f21f17215ceccb0d9a789b88ff3ca55d0d2bd3c43e202b",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Thing/ThingFactory.cpp",
+      "sha256": "43b8d7e54200749f12b80bc4f15cacda357787164c10c445c9025502281fbb48",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "Thing/ThingTemplate.cpp",
+      "sha256": "09ae715980bda64ae9446d394f2c50872a68d4e7174855856337a6e4c6bfda85",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "UserPreferences.cpp",
+      "sha256": "f79547383bb954d489ded974cdf5d5d8d672493e9b36225963b1cfb1ae8b3370",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "WeaponBonus.cpp",
+      "sha256": "0e81cfa0b8a72279adf2e30477ef918a37f6b9431bf3b31136e7fbeed3745a68",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "crc.cpp",
+      "sha256": "768af2e17c4e1b10c0d890396c9358e3f62b655b14edf814cab21ff177c40379",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    },
+    {
+      "path": "version.cpp",
+      "sha256": "7c64fee4ce8909cc9fe7cd713acaa2f07d8420cfb7ff2b1a9af6d0fcf89defc2",
+      "results": {
+        "g++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        },
+        "clang++": {
+          "returncode": 0,
+          "diagnostic_count": 0,
+          "locations": {}
+        }
+      }
+    }
+  ]
+}

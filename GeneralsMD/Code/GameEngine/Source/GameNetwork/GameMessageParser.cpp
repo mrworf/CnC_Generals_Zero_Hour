@@ -26,20 +26,24 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "GameNetwork/GameMessageParser.h"
+#include "Common/Xfer.h"
+#include <limits>
 
 //----------------------------------------------------------------------------
 GameMessageParser::GameMessageParser() 
 {
-	m_first = NULL;
+	m_first = m_last = NULL;
 	m_argTypeCount = 0;
 }
 
 //----------------------------------------------------------------------------
 GameMessageParser::GameMessageParser(GameMessage *msg) 
 {
-	m_first = NULL;
+	m_first = m_last = NULL;
 	m_argTypeCount = 0;
 
+    if (!msg) throw XFER_INVALID_PARAMETERS;
+    try {
 	UnsignedByte argCount = msg->getArgumentCount();
 	GameMessageArgumentDataType lasttype = ARGUMENTDATATYPE_UNKNOWN;
 	Int thisTypeCount = 0;
@@ -49,7 +53,6 @@ GameMessageParser::GameMessageParser(GameMessage *msg)
 		if (type != lasttype) {
 			if (thisTypeCount > 0) {
 				addArgType(lasttype, thisTypeCount);
-				++m_argTypeCount;
 			}
 			lasttype = type;
 			thisTypeCount = 0;
@@ -58,12 +61,15 @@ GameMessageParser::GameMessageParser(GameMessage *msg)
 	}
 	if (thisTypeCount > 0) {
 		addArgType(lasttype, thisTypeCount);
-		++m_argTypeCount;
 	}
+    } catch (...) { clear(); throw; }
+
 }
 
 //----------------------------------------------------------------------------
-GameMessageParser::~GameMessageParser() 
+GameMessageParser::~GameMessageParser() { clear(); }
+
+void GameMessageParser::clear() noexcept
 {
 	GameMessageParserArgumentType *temp = NULL;
 	while (m_first != NULL) {
@@ -71,26 +77,37 @@ GameMessageParser::~GameMessageParser()
 		m_first->deleteInstance();
 		m_first = temp;
 	}
+    m_last=nullptr; m_argTypeCount=0;
 }
 
 //----------------------------------------------------------------------------
-void GameMessageParser::addArgType(GameMessageArgumentDataType type, Int argCount) 
+void GameMessageParser::addArgType(Int type, Int argCount)
 {
-	if (m_first == NULL) {
-		m_first = newInstance(GameMessageParserArgumentType)(type, argCount);
-		m_last = m_first;
-		return;
-	}
-
-	m_last->setNext(newInstance(GameMessageParserArgumentType)(type, argCount));
-	m_last = m_last->getNext();
+    constexpr Int maximum=std::numeric_limits<UnsignedByte>::max();
+    if (type<ARGUMENTDATATYPE_INTEGER || type>=ARGUMENTDATATYPE_UNKNOWN
+        || argCount<=0 || argCount>maximum
+        || m_argTypeCount>=maximum) throw XFER_INVALID_PARAMETERS;
+    Int total=0,seen=0;
+    for (auto* node=m_first;node;node=node->getNext()) {
+        if (++seen>m_argTypeCount || node->getArgCount()<=0
+            || node->getArgCount()>maximum-total) throw XFER_INVALID_PARAMETERS;
+        total+=node->getArgCount();
+    }
+    if (seen!=m_argTypeCount || argCount>maximum-total) throw XFER_INVALID_PARAMETERS;
+    auto* candidate=newInstance(GameMessageParserArgumentType)(type,argCount);
+    if (m_last) m_last->setNext(candidate);
+    else m_first=candidate;
+    m_last=candidate;
+    ++m_argTypeCount;
 }
 
 //----------------------------------------------------------------------------
-GameMessageParserArgumentType::GameMessageParserArgumentType(GameMessageArgumentDataType type, Int argCount) 
+GameMessageParserArgumentType::GameMessageParserArgumentType(Int type, Int argCount)
 {
+    if (type<ARGUMENTDATATYPE_INTEGER || type>=ARGUMENTDATATYPE_UNKNOWN
+        || argCount<=0 || argCount>std::numeric_limits<UnsignedByte>::max()) throw XFER_INVALID_PARAMETERS;
 	m_next = NULL;
-	m_type = type;
+	m_type = static_cast<GameMessageArgumentDataType>(type);
 	m_argCount = argCount;
 }
 
@@ -98,4 +115,3 @@ GameMessageParserArgumentType::GameMessageParserArgumentType(GameMessageArgument
 GameMessageParserArgumentType::~GameMessageParserArgumentType() 
 {
 }
-

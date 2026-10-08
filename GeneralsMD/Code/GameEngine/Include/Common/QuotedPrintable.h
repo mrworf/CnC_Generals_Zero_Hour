@@ -32,6 +32,13 @@
 #ifndef __QUOTEDPRINTABLE_H__
 #define __QUOTEDPRINTABLE_H__
 
+#include "Common/AsciiString.h"
+#include "Common/UnicodeString.h"
+
+// Source underscore-hex protocol; Unicode bytes are UTF16LE, not native wchar_t.
+// Malformed escapes/scalars and unrepresentable complete outputs throw before
+// allocating result backing. Converters have no shared mutable buffer.
+
 UnicodeString QuotedPrintableToUnicodeString(AsciiString original);
 AsciiString UnicodeStringToQuotedPrintable(UnicodeString original);
 

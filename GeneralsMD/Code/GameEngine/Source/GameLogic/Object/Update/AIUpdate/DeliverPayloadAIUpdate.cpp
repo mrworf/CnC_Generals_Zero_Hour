@@ -766,7 +766,8 @@ StateReturnType DeliveringState::update() // Kick a dude out every so often
 			}
 			
 			/// @todo srj -- urg. icky.
-			static NameKeyType key_GenerateMinefieldBehavior = NAMEKEY("GenerateMinefieldBehavior");
+			static const StaticNameKey nativeCached_key_GenerateMinefieldBehavior("GenerateMinefieldBehavior");
+			NameKeyType key_GenerateMinefieldBehavior = nativeCached_key_GenerateMinefieldBehavior.key();
 			GenerateMinefieldBehavior* mfb = (GenerateMinefieldBehavior *)item->findUpdateModule(key_GenerateMinefieldBehavior);
 			if (mfb)
 			{
@@ -774,7 +775,8 @@ StateReturnType DeliveringState::update() // Kick a dude out every so often
 			}
 
 
-			static NameKeyType key_SmartBombTargetHomingUpdate = NAMEKEY("SmartBombTargetHomingUpdate");
+			static const StaticNameKey nativeCached_key_SmartBombTargetHomingUpdate("SmartBombTargetHomingUpdate");
+			NameKeyType key_SmartBombTargetHomingUpdate = nativeCached_key_SmartBombTargetHomingUpdate.key();
 			SmartBombTargetHomingUpdate* smthu = (SmartBombTargetHomingUpdate *)item->findUpdateModule(key_SmartBombTargetHomingUpdate);
 			if (smthu)
 			{
@@ -1243,4 +1245,3 @@ StateReturnType CleanUpState::onEnter() // Delete my successful butt
 
 	return STATE_CONTINUE;
 }
-

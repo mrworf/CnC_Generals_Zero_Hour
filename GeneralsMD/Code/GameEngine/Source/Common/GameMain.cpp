@@ -36,16 +36,16 @@
  */
 void GameMain( int argc, char *argv[] )
 {
-	// initialize the game engine using factory function
-	TheGameEngine = CreateGameEngine();
+	// Construction, initialization and execution share one ownership boundary.
+	// Keep the parent singleton alive through legitimate child cleanup.
+	NativeServiceOwners<1> engineOwner;
+	engineOwner.create(TheGameEngine, [] { return CreateGameEngine(); });
 	TheGameEngine->init(argc, argv);
 
 	// run it
 	TheGameEngine->execute();
 
 	// since execute() returned, we are exiting the game
-	delete TheGameEngine;
-	TheGameEngine = NULL;
+	engineOwner.retire(TheGameEngine);
 
 }
-

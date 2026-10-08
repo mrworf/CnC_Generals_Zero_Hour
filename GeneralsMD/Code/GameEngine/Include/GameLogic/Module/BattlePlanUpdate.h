@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef __BATTLE_PLAN_UPDATE_H_
 #define __BATTLE_PLAN_UPDATE_H_
@@ -41,8 +42,8 @@ class SpecialPowerModule;
 class ParticleSystem;
 class FXList;
 class AudioEventRTS;
-enum  MaxHealthChangeType;
-enum  CommandOption;
+enum MaxHealthChangeType : UnsignedInt;
+enum CommandOption : UnsignedInt;
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -98,7 +99,7 @@ enum TransitionStatus
 	TRANSITIONSTATUS_PACKING,
 };
 
-enum BattlePlanStatus
+enum BattlePlanStatus : UnsignedInt
 {
 	PLANSTATUS_NONE,
 	PLANSTATUS_BOMBARDMENT,
@@ -193,4 +194,3 @@ protected:
 
 
 #endif
-

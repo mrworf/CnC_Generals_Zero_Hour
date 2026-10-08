@@ -294,7 +294,8 @@ void CWorldBuilderDoc::Serialize(CArchive& ar)
 			mPreview.save(ar.GetFile()->GetFilePath());
 
 			CompressedCachedMFCFileOutputStream theStream(ar.GetFile());
-			DataChunkOutput *chunkWriter = new DataChunkOutput(&theStream);
+			DataChunkOutput chunkOwner(&theStream);
+			DataChunkOutput *chunkWriter = &chunkOwner;
 			
 
 			m_heightMap->saveToFile(*chunkWriter);
@@ -307,7 +308,7 @@ void CWorldBuilderDoc::Serialize(CArchive& ar)
 			}
 			chunkWriter->closeDataChunk();
 
-			delete chunkWriter;
+			chunkWriter->finish();
 			chunkWriter = NULL;
 			theStream.flush();
 		} catch(...) {
@@ -898,6 +899,7 @@ void CWorldBuilderDoc::autoSave(void)
 			}
 			chunkWriter.closeDataChunk();
 
+			chunkWriter.finish();
 		} catch(...) {
 		}
 		theFile.Close();
@@ -2670,4 +2672,3 @@ void CWorldBuilderDoc::findBoundaryNear(Coord3D *pt, float okDistance, Int *outN
 {
 	m_heightMap->findBoundaryNear(pt, okDistance, outNdx, outHandle);
 }
-

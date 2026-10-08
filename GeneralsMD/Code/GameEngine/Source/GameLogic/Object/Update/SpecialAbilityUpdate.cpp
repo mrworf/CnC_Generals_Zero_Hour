@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h" // This must go first in EVERY cpp file int the GameEngine
+#include <algorithm>
 
 #include "Common/GameAudio.h"
 #include "Common/GlobalData.h"
@@ -827,7 +828,7 @@ Bool SpecialAbilityUpdate::isWithinStartAbilityRange() const
   //stopping.
   Real range = data->m_startAbilityRange;
   const Real UNDERSIZE = PATHFIND_CELL_SIZE_F * 0.25f;
-  range = __max( 0.0f, range - UNDERSIZE );
+  range = std::max( 0.0f, range - UNDERSIZE );
 
   if( m_withinStartAbilityRange )
   {
@@ -907,7 +908,7 @@ Bool SpecialAbilityUpdate::isWithinAbilityAbortRange() const
   //stopping.
   Real range = data->m_startAbilityRange;
   const Real UNDERSIZE = PATHFIND_CELL_SIZE_F * 0.25f;
-  range = __max( 0.0f, range - UNDERSIZE );
+  range = std::max( 0.0f, range - UNDERSIZE );
 
   Real fDistSquared = 0.0f;
   Object *target = NULL;
@@ -1112,7 +1113,8 @@ SpecialPowerModuleInterface* SpecialAbilityUpdate::getMySPM()
 Bool SpecialAbilityUpdate::initLaser(Object* specialObject, Object* target )
 {
   const SpecialAbilityUpdateModuleData* data = getSpecialAbilityUpdateModuleData();
-  static NameKeyType key_LaserUpdate = NAMEKEY( "LaserUpdate" );
+  static const StaticNameKey nativeCached_key_LaserUpdate("LaserUpdate");
+  NameKeyType key_LaserUpdate = nativeCached_key_LaserUpdate.key();
   Drawable *draw = specialObject->getDrawable();
   if( !draw )
   {
@@ -1353,7 +1355,8 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
       Object *charge = createSpecialObject();
       if( charge )
       {
-        static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+        static const StaticNameKey nativeCached_key_StickyBombUpdate("StickyBombUpdate");
+        NameKeyType key_StickyBombUpdate = nativeCached_key_StickyBombUpdate.key();
         StickyBombUpdate *update = (StickyBombUpdate*)charge->findUpdateModule( key_StickyBombUpdate );
         if( !update )
         {
@@ -1493,7 +1496,7 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
         UnsignedInt cash = targetMoney->countMoney();
         UnsignedInt desiredAmount = 1000;
         //Check to see if they have 1000 cash, otherwise, take the remainder!
-        cash = min( desiredAmount, cash );
+        cash = std::min( desiredAmount, cash );
         if( cash > 0 )
         {
           //Steal the cash
@@ -1540,7 +1543,8 @@ void SpecialAbilityUpdate::triggerAbilityEffect()
         }
       }
 
-      static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+      static const StaticNameKey nativeCached_key_StickyBombUpdate("StickyBombUpdate");
+      NameKeyType key_StickyBombUpdate = nativeCached_key_StickyBombUpdate.key();
       if( m_targetID == INVALID_ID && !m_targetPos.x && !m_targetPos.y && !m_targetPos.z ) 
       {
         //If there is no target object nor position, then we are detonating the existing charges.

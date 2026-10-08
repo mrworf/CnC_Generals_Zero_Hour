@@ -43,6 +43,7 @@ struct Coord3D;
 struct FileInfo;
 class Image;
 class DataChunkInput;
+class NativeUserStorage;
 struct DataChunkInfo;
 // This matches the windows timestamp.
 enum { SUPPLY_TECH_SIZE = 15};
@@ -66,7 +67,7 @@ class WaypointMap : public std::map<AsciiString, Coord3D>
 {
 public:
 	void update( void );	///< returns the number of multiplayer start spots found
-	Int m_numStartSpots;
+	Int m_numStartSpots = 1;
 };
 
 typedef std::list <Coord3D> Coord3DList;
@@ -74,17 +75,27 @@ typedef std::list <Coord3D> Coord3DList;
 class MapMetaData
 {
 public:
+  void swap(MapMetaData& other) noexcept {
+    m_displayName.swap(other.m_displayName);m_nameLookupTag.swap(other.m_nameLookupTag);
+    std::swap(m_extent,other.m_extent);std::swap(m_numPlayers,other.m_numPlayers);
+    std::swap(m_isMultiplayer,other.m_isMultiplayer);std::swap(m_isOfficial,other.m_isOfficial);
+    std::swap(m_filesize,other.m_filesize);std::swap(m_CRC,other.m_CRC);
+    std::swap(m_timestamp,other.m_timestamp);m_waypoints.swap(other.m_waypoints);
+    std::swap(m_waypoints.m_numStartSpots,other.m_waypoints.m_numStartSpots);
+    m_supplyPositions.swap(other.m_supplyPositions);m_techPositions.swap(other.m_techPositions);
+    m_fileName.swap(other.m_fileName);
+  }
 	UnicodeString m_displayName;
 	AsciiString m_nameLookupTag;
-	Region3D m_extent;
-	Int m_numPlayers;
-	Bool m_isMultiplayer;
+	Region3D m_extent{};
+	Int m_numPlayers = 0;
+	Bool m_isMultiplayer = FALSE;
 
-	Bool m_isOfficial;
-	UnsignedInt m_filesize;
-	UnsignedInt m_CRC;
+	Bool m_isOfficial = FALSE;
+	UnsignedInt m_filesize = 0;
+	UnsignedInt m_CRC = 0;
 
-	WinTimeStamp m_timestamp;
+	WinTimeStamp m_timestamp{};
 
 	WaypointMap m_waypoints;
 	Coord3DList m_supplyPositions;
@@ -96,6 +107,16 @@ class MapCache : public std::map<AsciiString, MapMetaData>
 {
 public:
 	MapCache() {}
+  // Complete source-format output is prepared before any persistent write.
+  std::string serializeCacheINI(const AsciiString& mapDir) const;
+  static Bool persistCacheINI(const NativeUserStorage& storage,const std::string& serialized);
+  // Optional derived cache only: actual MapCache blocks, whole-file publication.
+  Bool loadCacheINI(AsciiString filename);
+  void publishMetadata(AsciiString name,MapMetaData candidate) {
+    auto entry=find(name);
+    if(entry!=end()) entry->second.swap(candidate);
+    else emplace(std::move(name),std::move(candidate));
+  }
 	void updateCache( void );
 
 	AsciiString getMapDir() const;
@@ -114,7 +135,6 @@ private:
 //	Bool addMap( AsciiString dirName, AsciiString fname, WinTimeStamp timestamp,
 //		UnsignedInt filesize, Bool isOfficial );	///< returns true if it had to (re)parse the map
 	Bool addMap( AsciiString dirName, AsciiString fname, FileInfo *fileInfo, Bool isOfficial); ///< returns true if it had to (re)parse the map
-	void writeCacheINI( Bool userDir );
 
 	static const char * m_mapCacheName;
 	std::map<AsciiString, Bool> m_seen;

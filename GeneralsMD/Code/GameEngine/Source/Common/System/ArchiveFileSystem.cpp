@@ -45,6 +45,7 @@
 //         Includes                                                      
 //----------------------------------------------------------------------------
 
+#include "Common/GlobalData.h"
 #include "PreRTS.h"
 #include "Common/ArchiveFile.h"
 #include "Common/ArchiveFileSystem.h"

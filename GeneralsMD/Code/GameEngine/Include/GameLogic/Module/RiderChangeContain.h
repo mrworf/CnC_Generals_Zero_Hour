@@ -37,16 +37,16 @@
 
 #define MAX_RIDERS 8 //***NOTE: If you change this, make sure you update the parsing section!
 
-enum WeaponSetType;
-enum ObjectStatusType;
-enum LocomotorSetType;
+enum WeaponSetType : UnsignedInt;
+enum ObjectStatusTypes : UnsignedInt;
+enum LocomotorSetType : Int;
 
 struct RiderInfo
 {
 	AsciiString m_templateName;
 	WeaponSetType m_weaponSetFlag;
 	ModelConditionFlagType m_modelConditionFlagType; 
-	ObjectStatusType m_objectStatusType;
+	ObjectStatusTypes m_objectStatusType;
 	AsciiString m_commandSet;
 	LocomotorSetType m_locomotorSetType;
 };
@@ -118,4 +118,3 @@ private:
 };
 
 #endif // __RIDER_CHANGE_CONTAIN_H
-

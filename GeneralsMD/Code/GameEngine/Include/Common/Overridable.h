@@ -99,6 +99,12 @@ class Overridable : public MemoryPoolObject
 		{
 			m_isOverride = true;
 		}
+		Bool friend_isOverride() const noexcept { return m_isOverride; }
+		void friend_restoreOverrideOwnership(Overridable* next, Bool status) noexcept
+		{
+			m_nextOverride = next;
+			m_isOverride = status;
+		}
 
 		// used in factory reset() calls at the end of a game to clean up overrides.  Can return NULL
 		// if the first Overridable is itself an override

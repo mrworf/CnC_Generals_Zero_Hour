@@ -34,6 +34,7 @@
 #include "Common/GameMemory.h"
 #include "Common/Dict.h"
 #include "Common/MapReaderWriterInfo.h"
+#include <vector>
 
 typedef unsigned short DataChunkVersionType;
 
@@ -91,18 +92,20 @@ class DataChunkTableOfContents
 {
 	Mapping*		m_list;																/// @TODO: This should be a hash table
 	Int					m_listLength;
-	UnsignedInt	m_nextID;											// simple ID allocator
+	UnsignedInt64	m_nextID;											// simple ID allocator
 	Bool				m_headerOpened;
 
 	Mapping *findMapping( const AsciiString& name );			// return mapping data
 
 public:
 	DataChunkTableOfContents( void );
+	DataChunkTableOfContents(const DataChunkTableOfContents&) = delete;
+	DataChunkTableOfContents& operator=(const DataChunkTableOfContents&) = delete;
 	~DataChunkTableOfContents();
 
 	UnsignedInt getID( const AsciiString& name );				// convert name to integer identifier
 	AsciiString getName( UnsignedInt id );	// convert integer identifier to name
-	UnsignedInt allocateID( const AsciiString& name );		// create new ID for given name or return existing mapping
+	UnsignedInt allocateID( const AsciiString& name, UnsignedInt maximum = 0xffffffffu );		// create new ID for given name or return existing mapping
 
 	Bool isOpenedForRead(void) {return m_headerOpened;};
 
@@ -114,27 +117,35 @@ public:
 //----------------------------------------------------------------------
 // DataChunkOutput
 //----------------------------------------------------------------------
+class DataChunkWriteGuard;
 class DataChunkOutput
 {
+	friend class DataChunkWriteGuard;
+	Bool m_poisoned = false;
+	Bool m_finished = false;
+	void ensureWritable() const;
 protected:
 	OutputStream*							m_pOut;										// The actual output stream.	
-	FILE *										m_tmp_file;												// tmp output file stream
 	DataChunkTableOfContents	m_contents;			// table of contents of data chunk types
-	OutputChunk*							m_chunkStack;													// current stack of open data chunks
+	std::vector<unsigned char> m_bytes;
+	std::vector<std::size_t> m_openSizes;
 
 public:
 	DataChunkOutput(  OutputStream *pOut  );
-	~DataChunkOutput();
+	~DataChunkOutput() = default;
+	DataChunkOutput(const DataChunkOutput&) = delete;
+	DataChunkOutput& operator=(const DataChunkOutput&) = delete;
+	void finish(); // Explicit fallible publication; destruction never writes.
 
-	void openDataChunk( char *name, DataChunkVersionType ver );
+	void openDataChunk( const char *name, DataChunkVersionType ver );
 	void closeDataChunk( void );
 
 	void writeReal(Real r);
 	void writeInt(Int i);
 	void writeByte(Byte b);
 	void writeAsciiString(const AsciiString& string);
-	void writeUnicodeString(UnicodeString string);
-	void writeArrayOfBytes(char *ptr, Int len);
+	void writeUnicodeString(const UnicodeString& string);
+	void writeArrayOfBytes(const char *ptr, Int len);
 	void writeDict(const Dict& d);
 	void writeNameKey(const NameKeyType key);
 };
@@ -171,9 +182,15 @@ EMPTY_DTOR(UserParser)
 //----------------------------------------------------------------------
 // DataChunkInput
 //----------------------------------------------------------------------
+class DataChunkReadGuard;
 class DataChunkInput
 {
-	enum {CHUNK_HEADER_BYTES = 4}; // 2 shorts in chunk file header.
+	friend class DataChunkReadGuard;
+	UnsignedInt64 m_consumed = 0;
+	Bool m_readPoisoned = false;
+	UnsignedInt readPosition();
+	void readRaw(void* bytes, Int size);
+	enum {CHUNK_HEADER_BYTES = 10}; // UInt32 ID, UInt16 version, Int32 payload size.
 protected:
 	ChunkInputStream*					m_file;															// input file stream
 	DataChunkTableOfContents	m_contents;							// table of contents of data chunk types
@@ -196,6 +213,8 @@ public:
 
 public:
 	DataChunkInput( ChunkInputStream *pStream );
+	DataChunkInput(const DataChunkInput&) = delete;
+	DataChunkInput& operator=(const DataChunkInput&) = delete;
 	~DataChunkInput();
 
 	// register a parser function for data chunks with labels matching "label", whose parent

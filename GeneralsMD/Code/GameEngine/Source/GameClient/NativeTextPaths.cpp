@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "GameClient/GameText.h"
+#include "Common/Registry.h"
 // Original WinMain's logical patterns, resolved only inside explicit mounts.
 const Char* g_strFile="data/Generals.str";
 const Char* g_csfFile="data/%s/Generals.csf";
@@ -11,3 +12,5 @@ void configureGameTextLanguage(const AsciiString& directory) {
     language=directory;
 }
 AsciiString getConfiguredGameTextLanguage(){return language;}
+// Source consumers retain the name, not a Windows registry or cached fallback.
+AsciiString GetRegistryLanguage(){return getConfiguredGameTextLanguage();}

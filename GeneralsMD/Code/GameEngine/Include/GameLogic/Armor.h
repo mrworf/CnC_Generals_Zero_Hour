@@ -122,7 +122,7 @@ public:
 
 private:
 
-	typedef std::hash_map< NameKeyType, ArmorTemplate, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > ArmorTemplateMap;
+	typedef std::unordered_map< NameKeyType, ArmorTemplate, rts::hash<NameKeyType>, rts::equal_to<NameKeyType> > ArmorTemplateMap;
 	ArmorTemplateMap m_armorTemplates;
 
 };
@@ -131,4 +131,3 @@ private:
 extern ArmorStore *TheArmorStore;
 
 #endif // _Armor_H_
-

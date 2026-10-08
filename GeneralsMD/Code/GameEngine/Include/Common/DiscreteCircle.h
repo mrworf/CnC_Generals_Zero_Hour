@@ -28,6 +28,9 @@
 // DO NOT DISTRIBUTE
 
 #pragma once
+#include "Lib/BaseType.h"
+#include <cstdint>
+#include <vector>
 
 #ifndef __DISCRETECIRCLE_H__
 #define __DISCRETECIRCLE_H__
@@ -62,7 +65,7 @@ class DiscreteCircle
 {
 	VecHorzLine m_edges;	// Should be HorzLines
 	Int m_yPos;						// Used to know when to draw the bottom scanline
-	Int m_yPosDoubled;		// Used to draw the bottom half of the circle.
+	std::int64_t m_yPosDoubled;	// Wide mirror intermediate; callback coordinates stay Int.
 
 	public:
 		DiscreteCircle(Int xCenter, Int yCenter, Int radius);
@@ -76,4 +79,3 @@ class DiscreteCircle
 };
 
 #endif /* __DISCRETECIRCLE_H__ */
-

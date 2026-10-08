@@ -344,7 +344,8 @@ void StructureCollapseUpdate::doPhaseStuff(StructureCollapsePhaseType scphase, c
 //-------------------------------------------------------------------------------------------------
 void StructureCollapseUpdate::doCollapseDoneStuff() 
 {
-	static NameKeyType key_BoneFXUpdate = NAMEKEY("BoneFXUpdate");
+	static const StaticNameKey nativeCached_key_BoneFXUpdate("BoneFXUpdate");
+	NameKeyType key_BoneFXUpdate = nativeCached_key_BoneFXUpdate.key();
 	BoneFXUpdate *bfxu = (BoneFXUpdate *)getObject()->findUpdateModule(key_BoneFXUpdate);
 	if (bfxu != NULL) 
 	{

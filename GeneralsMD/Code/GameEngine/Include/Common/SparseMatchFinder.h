@@ -131,7 +131,7 @@ private:
 		AsciiString curBestMatchStr, dupMatchStr;
 	#endif
 
-		for (std::vector<MATCHABLE>::const_iterator it = v.begin(); it != v.end(); ++it)
+		for (typename std::vector<MATCHABLE>::const_iterator it = v.begin(); it != v.end(); ++it)
 		{
 			for (Int i = it->getConditionsYesCount()-1; i >= 0; --i)
 			{
@@ -187,6 +187,15 @@ private:
 
 	//-------------------------------------------------------------------------------------------------
 public:
+	// Entries borrow elements of one exact vector owner. Clones must resolve
+	// against their own vectors rather than copy the source's cached addresses.
+	SparseMatchFinder() = default;
+	SparseMatchFinder(const SparseMatchFinder&) { }
+	SparseMatchFinder& operator=(const SparseMatchFinder& that)
+	{
+		if (this != &that) clear();
+		return *this;
+	}
 
 	//-------------------------------------------------------------------------------------------------
 	void clear()
@@ -197,7 +206,7 @@ public:
 	//-------------------------------------------------------------------------------------------------
 	const MATCHABLE* findBestInfo(const std::vector<MATCHABLE>& v, const BITSET& bits) const
 	{
-		MatchMap::const_iterator it = m_bestMatches.find(bits);
+		typename MatchMap::const_iterator it = m_bestMatches.find(bits);
 
 		const MATCHABLE *first = NULL;
 		if (it != m_bestMatches.end())
@@ -221,4 +230,3 @@ public:
 };
 
 #endif // __SparseMatchFinder_H_
-

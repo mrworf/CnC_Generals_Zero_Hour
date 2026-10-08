@@ -68,7 +68,7 @@ struct AcademyAdviceInfo
 	UnsignedInt numTips;
 };
 
-enum AcademyClassificationType
+enum AcademyClassificationType : UnsignedInt
 {
 	//Don't forget to update the strings too!
 	ACT_NONE,
@@ -277,4 +277,3 @@ private:
 };
 
 #endif // __ACADEMY_STATS_H
-

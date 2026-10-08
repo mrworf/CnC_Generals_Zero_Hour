@@ -104,6 +104,7 @@ public:
     void update() override {}
     Bool loadCSF(const AsciiString& filename) override;
     void initMapStringFile(const AsciiString& filename) override;
+    UnicodeString fetchMapMetadataLabel(const AsciiString& filename,const AsciiString& label) override;
     UnicodeString fetch(const Char* label,Bool* exists=nullptr) override;
     UnicodeString fetch(AsciiString label,Bool* exists=nullptr) override{return fetch(label.str(),exists);}
     AsciiStringVec& getStringsWithLabelPrefix(AsciiString label) override;
@@ -139,6 +140,20 @@ void GameTextManager::initMapStringFile(const AsciiString& filename) {
     if(!input)return;
     auto candidate=CatalogOwner::prepare(decodeOriginalStringFile(*input),TRUE);
     m_map=std::move(candidate);
+}
+UnicodeString GameTextManager::fetchMapMetadataLabel(const AsciiString& filename,const AsciiString& label) {
+    if(!TheFileSystem) throw ERROR_BAD_ARG;
+    CatalogOwner temporary;
+    if(!filename.isEmpty()) {
+        FileCloseOwner input(TheFileSystem->openFile(filename.str(),File::READ|File::TEXT));
+        if(input) temporary=CatalogOwner::prepare(decodeOriginalStringFile(*input),TRUE);
+    }
+    if(!m_initialized || !m_base.count) return m_failed;
+    const StringInfo* found=m_base.find(label);
+    if(!found) found=temporary.find(label);
+    if(found) return found->text;
+    UnicodeString missing;missing.format(L"MISSING: '%hs'",label.str());
+    return missing;
 }
 UnicodeString GameTextManager::fetch(const Char* raw,Bool* exists) {
     if(!raw)throw ERROR_BAD_ARG;

@@ -29,6 +29,8 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <strings.h>
+#include "Common/GlobalData.h"
 
 #include "Common/INI.h"
 #include "Common/MessageStream.h"
@@ -57,7 +59,7 @@
 
 
 #ifdef DUMP_ALL_KEYS_TO_LOG
-#include "GameClient\Keyboard.h"
+#include "GameClient/Keyboard.h"
 #endif
 
 MetaMap *TheMetaMap = NULL;
@@ -669,7 +671,7 @@ MetaMap::~MetaMap()
 GameMessage::Type MetaMap::findGameMessageMetaType(const char* name)
 {
 	for (const LookupListRec* metaNames = GameMessageMetaTypeNames; metaNames->name; metaNames++)
-		if (stricmp(metaNames->name, name) == 0)
+		if (strcasecmp(metaNames->name, name) == 0)
 			return (GameMessage::Type)metaNames->value;
 
 	DEBUG_CRASH(("MetaTypeName %s not found -- did you remember to add it to GameMessageMetaTypeNames[] ?", name));
@@ -723,4 +725,3 @@ MetaMapRec *MetaMap::getMetaMapRec(GameMessage::Type t)
 {
 	MetaMap::parseMetaMap(ini);
 }
-

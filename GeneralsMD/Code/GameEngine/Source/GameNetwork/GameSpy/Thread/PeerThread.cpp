@@ -34,7 +34,7 @@
 #include "Common/Registry.h"
 #include "Common/StackDump.h"
 #include "Common/UserPreferences.h"
-#include "Common/Version.h"
+#include "Common/version.h"
 #include "GameNetwork/IPEnumeration.h"
 #include "GameNetwork/GameSpy/BuddyThread.h"
 #include "GameNetwork/GameSpy/PeerDefs.h"
@@ -2982,4 +2982,3 @@ static void listingGamesCallback(PEER peer, PEERBool success, const char * name,
 }
 
 //-------------------------------------------------------------------------
-

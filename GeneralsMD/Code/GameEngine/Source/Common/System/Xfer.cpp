@@ -30,11 +30,15 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
+#include "Common/KindOf.h"
+#include "WWMath/matrix3d.h"
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 #include "Common/Upgrade.h"
-#include "Common/GameState.h"
+#include "Common/NativeTransferServices.h"
 #include "Common/Xfer.h"
 #include "Common/BitFlagsIO.h"
+#include "Common/NativeTransferWire.h"
+#include <limits>
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -43,26 +47,10 @@
 #endif
 
 //-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-Xfer::Xfer( void )
-{
-
-	m_options = XO_NONE;
-	m_xferMode = XFER_INVALID;
-
-}  // end Xfer
-
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-Xfer::~Xfer( void )
-{
-
-}  // end ~Xfer
-
 // ------------------------------------------------------------------------------------------------
 /** Open */
 // ------------------------------------------------------------------------------------------------
-void Xfer::open( AsciiString identifier )
+void XferBase::open( AsciiString identifier )
 {
 
 	// save identifier
@@ -72,8 +60,11 @@ void Xfer::open( AsciiString identifier )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferByte( Byte *byteData )
+void XferBase::xferByte( Byte *byteData )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!byteData) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( byteData, sizeof( Byte ) ); 
 
@@ -81,27 +72,29 @@ void Xfer::xferByte( Byte *byteData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferVersion( XferVersion *versionData, XferVersion currentVersion )
+void XferBase::xferVersion( XferVersion *versionData, XferVersion currentVersion )
 {
-
-	xferImplementation( versionData, sizeof( XferVersion ) );
-
-	// sanity, after the xfer, version data is never allowed to be higher than the current version
-	if( *versionData > currentVersion )
-	{
-
-		DEBUG_CRASH(( "XferVersion - Unknown version '%d' should be no higher than '%d'\n",
-									*versionData, currentVersion ));
-		throw XFER_INVALID_VERSION;
-
-	}  // end if
+    FailureScope failure(*this);
+    if (m_failed || !versionData) throw XFER_INVALID_PARAMETERS;
+    if (getXferMode()==XFER_LOAD) {
+        XferVersion candidate=0;
+        xferImplementation(&candidate,sizeof candidate);
+        if (candidate>currentVersion) throw XFER_INVALID_VERSION;
+        *versionData=candidate;
+    } else {
+        if (*versionData>currentVersion) throw XFER_INVALID_VERSION;
+        xferImplementation(versionData,sizeof *versionData);
+    }
 
 }  // end xferVersion
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferUnsignedByte( UnsignedByte *unsignedByteData )
+void XferBase::xferUnsignedByte( UnsignedByte *unsignedByteData )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!unsignedByteData) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( unsignedByteData, sizeof( UnsignedByte ) ); 
 
@@ -109,17 +102,29 @@ void Xfer::xferUnsignedByte( UnsignedByte *unsignedByteData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferBool( Bool *boolData )
+void XferBase::xferBool( Bool *boolData )
 {
-
-	xferImplementation( boolData, sizeof( Bool ) ); 
+    FailureScope failure(*this);
+    if (m_failed || !boolData) throw XFER_INVALID_PARAMETERS;
+    UnsignedByte encoded=0;
+    if (getXferMode()==XFER_LOAD) {
+        xferImplementation(&encoded,1);
+        if (encoded>1) throw XFER_INVALID_PARAMETERS;
+        *boolData=encoded!=0;
+    } else {
+        encoded=*boolData ? 1 : 0;
+        xferImplementation(&encoded,1);
+    }
 
 }  // end xferBool
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferInt( Int *intData ) 
+void XferBase::xferInt( Int *intData )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!intData) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( intData, sizeof( Int ) );
 	
@@ -127,8 +132,11 @@ void Xfer::xferInt( Int *intData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferInt64( Int64 *int64Data )
+void XferBase::xferInt64( Int64 *int64Data )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!int64Data) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( int64Data, sizeof( Int64 ) );
 
@@ -136,8 +144,11 @@ void Xfer::xferInt64( Int64 *int64Data )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferUnsignedInt( UnsignedInt *unsignedIntData ) 
+void XferBase::xferUnsignedInt( UnsignedInt *unsignedIntData )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!unsignedIntData) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( unsignedIntData, sizeof( UnsignedInt ) );
 	
@@ -145,8 +156,11 @@ void Xfer::xferUnsignedInt( UnsignedInt *unsignedIntData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferShort( Short *shortData )
+void XferBase::xferShort( Short *shortData )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!shortData) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( shortData, sizeof( Short ) ); 
 
@@ -154,8 +168,11 @@ void Xfer::xferShort( Short *shortData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferUnsignedShort( UnsignedShort *unsignedShortData )
+void XferBase::xferUnsignedShort( UnsignedShort *unsignedShortData )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!unsignedShortData) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( unsignedShortData, sizeof( UnsignedShort ) ); 
 
@@ -163,8 +180,11 @@ void Xfer::xferUnsignedShort( UnsignedShort *unsignedShortData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferReal( Real *realData )
+void XferBase::xferReal( Real *realData )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!realData) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( realData, sizeof( Real ) ); 
 	
@@ -172,24 +192,33 @@ void Xfer::xferReal( Real *realData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferMapName( AsciiString *mapNameData )
+void XferBase::xferMapName( AsciiString *mapNameData )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    const auto services=nativeTransferServices();
+    if (!mapNameData || ((getXferMode()==XFER_SAVE || getXferMode()==XFER_LOAD)
+        && !services.owner)) throw XFER_INVALID_PARAMETERS;
 	if (getXferMode() == XFER_SAVE)
 	{
-		AsciiString tmp = TheGameState->realMapPathToPortableMapPath(*mapNameData);
+		AsciiString tmp = services.encodeMap(services.owner,*mapNameData);
 		xferAsciiString(&tmp);
 	}
 	else if (getXferMode() == XFER_LOAD)
 	{
-		xferAsciiString(mapNameData);
-		*mapNameData = TheGameState->portableMapPathToRealMapPath(*mapNameData);
+        AsciiString candidate;
+        xferAsciiString(&candidate);
+        *mapNameData=services.decodeMap(services.owner,candidate);
 	}
 }  // end xferAsciiString
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferAsciiString( AsciiString *asciiStringData )
+void XferBase::xferAsciiString( AsciiString *asciiStringData )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!asciiStringData) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( (void *)asciiStringData->str(), sizeof( Byte ) * asciiStringData->getLength() );
 
@@ -197,115 +226,186 @@ void Xfer::xferAsciiString( AsciiString *asciiStringData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferMarkerLabel( AsciiString asciiStringData )
+void XferBase::xferMarkerLabel( AsciiString asciiStringData )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
 }  // end xferMarkerLabel
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferUnicodeString( UnicodeString *unicodeStringData )
+void XferBase::xferUnicodeString( UnicodeString *unicodeStringData )
 {
-
-	xferImplementation( (void *)unicodeStringData->str(), sizeof( WideChar ) * unicodeStringData->getLength() );
+    FailureScope failure(*this);
+    if (m_failed || !unicodeStringData) throw XFER_INVALID_PARAMETERS;
+    auto wire=nativeTransferUTF16(*unicodeStringData,
+        static_cast<std::size_t>(std::numeric_limits<Int>::max())/2);
+    xferImplementation(wire.data(),static_cast<Int>(wire.size()));
 
 }  // end xferUnicodeString
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferCoord3D( Coord3D *coord3D )
+void XferBase::xferCoord3D( Coord3D *coord3D )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!coord3D) throw XFER_INVALID_PARAMETERS;
+    Coord3D candidate{};
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : coord3D;
 
-	xferReal( &coord3D->x );
-	xferReal( &coord3D->y );
-	xferReal( &coord3D->z );
+	xferReal( &target->x );
+	xferReal( &target->y );
+	xferReal( &target->z );
+
+    if (getXferMode()==XFER_LOAD) *coord3D=candidate;
 
 }  // end xferCoord3D
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferICoord3D( ICoord3D *iCoord3D )
+void XferBase::xferICoord3D( ICoord3D *iCoord3D )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!iCoord3D) throw XFER_INVALID_PARAMETERS;
+    ICoord3D candidate{};
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : iCoord3D;
 
-	xferInt( &iCoord3D->x );
-	xferInt( &iCoord3D->y );
-	xferInt( &iCoord3D->z );
+	xferInt( &target->x );
+	xferInt( &target->y );
+	xferInt( &target->z );
+
+    if (getXferMode()==XFER_LOAD) *iCoord3D=candidate;
 
 }  // end xferICoor3D
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferRegion3D( Region3D *region3D )
+void XferBase::xferRegion3D( Region3D *region3D )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!region3D) throw XFER_INVALID_PARAMETERS;
+    Region3D candidate{};
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : region3D;
 
-	xferCoord3D( &region3D->lo );
-	xferCoord3D( &region3D->hi );
+	xferCoord3D( &target->lo );
+	xferCoord3D( &target->hi );
+
+    if (getXferMode()==XFER_LOAD) *region3D=candidate;
 
 }  // end xferRegion3D
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferIRegion3D( IRegion3D *iRegion3D )
+void XferBase::xferIRegion3D( IRegion3D *iRegion3D )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!iRegion3D) throw XFER_INVALID_PARAMETERS;
+    IRegion3D candidate{};
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : iRegion3D;
 
-	xferICoord3D( &iRegion3D->lo );
-	xferICoord3D( &iRegion3D->hi );
+	xferICoord3D( &target->lo );
+	xferICoord3D( &target->hi );
+
+    if (getXferMode()==XFER_LOAD) *iRegion3D=candidate;
 
 }  // end xferIRegion3D
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferCoord2D( Coord2D *coord2D )
+void XferBase::xferCoord2D( Coord2D *coord2D )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!coord2D) throw XFER_INVALID_PARAMETERS;
+    Coord2D candidate{};
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : coord2D;
 
-	xferReal( &coord2D->x );
-	xferReal( &coord2D->y );
+	xferReal( &target->x );
+	xferReal( &target->y );
+
+    if (getXferMode()==XFER_LOAD) *coord2D=candidate;
 
 }  // end xferCoord2D
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferICoord2D( ICoord2D *iCoord2D )
+void XferBase::xferICoord2D( ICoord2D *iCoord2D )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!iCoord2D) throw XFER_INVALID_PARAMETERS;
+    ICoord2D candidate{};
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : iCoord2D;
 
-	xferInt( &iCoord2D->x );
-	xferInt( &iCoord2D->y );
+	xferInt( &target->x );
+	xferInt( &target->y );
+
+    if (getXferMode()==XFER_LOAD) *iCoord2D=candidate;
 
 }  // end xferICoord2D
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferRegion2D( Region2D *region2D )
+void XferBase::xferRegion2D( Region2D *region2D )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!region2D) throw XFER_INVALID_PARAMETERS;
+    Region2D candidate{};
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : region2D;
 
-	xferCoord2D( &region2D->lo );
-	xferCoord2D( &region2D->hi );
+	xferCoord2D( &target->lo );
+	xferCoord2D( &target->hi );
+
+    if (getXferMode()==XFER_LOAD) *region2D=candidate;
 
 }  // end xferRegion2D
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferIRegion2D( IRegion2D *iRegion2D )
+void XferBase::xferIRegion2D( IRegion2D *iRegion2D )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!iRegion2D) throw XFER_INVALID_PARAMETERS;
+    IRegion2D candidate{};
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : iRegion2D;
 
-	xferICoord2D( &iRegion2D->lo );
-	xferICoord2D( &iRegion2D->hi );
+	xferICoord2D( &target->lo );
+	xferICoord2D( &target->hi );
+
+    if (getXferMode()==XFER_LOAD) *iRegion2D=candidate;
 
 }  // end xferIRegion2D
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferRealRange( RealRange *realRange )
+void XferBase::xferRealRange( RealRange *realRange )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!realRange) throw XFER_INVALID_PARAMETERS;
+    RealRange candidate{};
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : realRange;
 
-	xferReal( &realRange->lo );
-	xferReal( &realRange->hi );
+	xferReal( &target->lo );
+	xferReal( &target->hi );
+
+    if (getXferMode()==XFER_LOAD) *realRange=candidate;
 
 }  // end xferRealRange
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferColor( Color *color )
+void XferBase::xferColor( Color *color )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!color) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( color, sizeof( Color ) );
 
@@ -313,43 +413,67 @@ void Xfer::xferColor( Color *color )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferRGBColor( RGBColor *rgbColor )
+void XferBase::xferRGBColor( RGBColor *rgbColor )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!rgbColor) throw XFER_INVALID_PARAMETERS;
+    RGBColor candidate{};
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : rgbColor;
 
-	xferReal( &rgbColor->red );
-	xferReal( &rgbColor->green );
-	xferReal( &rgbColor->blue );
+	xferReal( &target->red );
+	xferReal( &target->green );
+	xferReal( &target->blue );
+
+    if (getXferMode()==XFER_LOAD) *rgbColor=candidate;
 
 }  // end xferRGBColor
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferRGBAColorReal( RGBAColorReal *rgbaColorReal )
+void XferBase::xferRGBAColorReal( RGBAColorReal *rgbaColorReal )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!rgbaColorReal) throw XFER_INVALID_PARAMETERS;
+    RGBAColorReal candidate{};
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : rgbaColorReal;
 
-	xferReal( &rgbaColorReal->red );
-	xferReal( &rgbaColorReal->green );
-	xferReal( &rgbaColorReal->blue );
-	xferReal( &rgbaColorReal->alpha );
+	xferReal( &target->red );
+	xferReal( &target->green );
+	xferReal( &target->blue );
+	xferReal( &target->alpha );
+
+    if (getXferMode()==XFER_LOAD) *rgbaColorReal=candidate;
 
 }  // end xferRGBAColorReal
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferRGBAColorInt( RGBAColorInt *rgbaColorInt )
+void XferBase::xferRGBAColorInt( RGBAColorInt *rgbaColorInt )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!rgbaColorInt) throw XFER_INVALID_PARAMETERS;
+    RGBAColorInt candidate{};
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : rgbaColorInt;
 
-	xferUnsignedInt( &rgbaColorInt->red );
-	xferUnsignedInt( &rgbaColorInt->green );
-	xferUnsignedInt( &rgbaColorInt->blue );
-	xferUnsignedInt( &rgbaColorInt->alpha );
+	xferUnsignedInt( &target->red );
+	xferUnsignedInt( &target->green );
+	xferUnsignedInt( &target->blue );
+	xferUnsignedInt( &target->alpha );
+
+    if (getXferMode()==XFER_LOAD) *rgbaColorInt=candidate;
 
 }  // end xferRGBAColorInt
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferObjectID( ObjectID *objectID )
+void XferBase::xferObjectID( ObjectID *objectID )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!objectID) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( objectID, sizeof( ObjectID ) );
 
@@ -357,8 +481,11 @@ void Xfer::xferObjectID( ObjectID *objectID )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferDrawableID( DrawableID *drawableID )
+void XferBase::xferDrawableID( DrawableID *drawableID )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!drawableID) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( drawableID, sizeof( DrawableID ) );
 
@@ -366,65 +493,30 @@ void Xfer::xferDrawableID( DrawableID *drawableID )
 
 
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferSTLObjectIDVector( std::vector<ObjectID> *objectIDVectorData )
+void XferBase::xferSTLObjectIDVector( std::vector<ObjectID> *objectIDVectorData )
 {
-	//
-	// the fact that this is a list and a little higher level than a simple data type
-	// is reason enough to have every one of these versioned
-	//
-	XferVersion currentVersion = 1;
-	XferVersion version = currentVersion;
-	xferVersion( &version, currentVersion );
-
-	// xfer the count of the vector
-	UnsignedShort listCount = objectIDVectorData->size();
-	xferUnsignedShort( &listCount );
-	
-	// xfer vector data
-	ObjectID objectID;
-	if( getXferMode() == XFER_SAVE || getXferMode() == XFER_CRC )
-	{
-
-		// save all ids
-		std::vector< ObjectID >::const_iterator it;
-		for( it = objectIDVectorData->begin(); it != objectIDVectorData->end(); ++it )
-		{
-
-			objectID = *it;
-			xferObjectID( &objectID );
-
-		}  // end for
-
-	}  // end if, save
-	else if( getXferMode() == XFER_LOAD )
-	{
-
-		// sanity, the list should be empty before we transfer more data into it
-		if( objectIDVectorData->size() != 0 )
-		{
-
-			DEBUG_CRASH(( "Xfer::xferSTLObjectIDList - object vector should be empty before loading\n" ));
-			throw XFER_LIST_NOT_EMPTY;
-
-		}  // end if
-
-		// read all ids
-		for( UnsignedShort i = 0; i < listCount; ++i )
-		{
-
-			xferObjectID( &objectID );
-			objectIDVectorData->push_back( objectID );
-
-		}  // end for, i
-
-	}  // end else if
-	else
-	{
-
-		DEBUG_CRASH(( "xferSTLObjectIDList - Unknown xfer mode '%d'\n", getXferMode() ));
-		throw XFER_MODE_UNKNOWN;
-
-	}  // end else
+    FailureScope failure(*this);
+    if (m_failed || !objectIDVectorData) throw XFER_INVALID_PARAMETERS;
+    const auto mode=getXferMode();
+    if (mode!=XFER_LOAD && mode!=XFER_SAVE && mode!=XFER_CRC) throw XFER_MODE_UNKNOWN;
+    if (mode==XFER_LOAD && !objectIDVectorData->empty()) throw XFER_LIST_NOT_EMPTY;
+    if (mode!=XFER_LOAD && objectIDVectorData->size()>std::numeric_limits<UnsignedShort>::max())
+        throw XFER_INVALID_PARAMETERS;
+    XferVersion version=1;
+    xferVersion(&version,1);
+    UnsignedShort count=mode==XFER_LOAD ? 0 : static_cast<UnsignedShort>(objectIDVectorData->size());
+    xferUnsignedShort(&count);
+    if (mode==XFER_LOAD) {
+        std::vector<ObjectID> candidate;
+        for (UnsignedInt i=0;i<count;++i) {
+            ObjectID value{};
+            xferObjectID(&value);
+            candidate.push_back(value);
+        }
+        objectIDVectorData->swap(candidate);
+    } else {
+        for (auto value : *objectIDVectorData) xferObjectID(&value);
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -432,139 +524,68 @@ void Xfer::xferSTLObjectIDVector( std::vector<ObjectID> *objectIDVectorData )
 	* Version Info;
 	* 1: Initial version */
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferSTLObjectIDList( std::list< ObjectID > *objectIDListData )
+void XferBase::xferSTLObjectIDList( std::list<ObjectID> *objectIDListData )
 {
-
-	//
-	// the fact that this is a list and a little higher level than a simple data type
-	// is reason enough to have every one of these versioned
-	//
-	XferVersion currentVersion = 1;
-	XferVersion version = currentVersion;
-	xferVersion( &version, currentVersion );
-
-	// xfer the count of the list
-	UnsignedShort listCount = objectIDListData->size();
-	xferUnsignedShort( &listCount );
-	
-	// xfer list data
-	ObjectID objectID;
-	if( getXferMode() == XFER_SAVE || getXferMode() == XFER_CRC )
-	{
-
-		// save all ids
-		std::list< ObjectID >::const_iterator it;
-		for( it = objectIDListData->begin(); it != objectIDListData->end(); ++it )
-		{
-
-			objectID = *it;
-			xferObjectID( &objectID );
-
-		}  // end for
-
-	}  // end if, save
-	else if( getXferMode() == XFER_LOAD )
-	{
-
-		// sanity, the list should be empty before we transfer more data into it
-		if( objectIDListData->size() != 0 )
-		{
-
-			DEBUG_CRASH(( "Xfer::xferSTLObjectIDList - object list should be empty before loading\n" ));
-			throw XFER_LIST_NOT_EMPTY;
-
-		}  // end if
-
-		// read all ids
-		for( UnsignedShort i = 0; i < listCount; ++i )
-		{
-
-			xferObjectID( &objectID );
-			objectIDListData->push_back( objectID );
-
-		}  // end for, i
-
-	}  // end else if
-	else
-	{
-
-		DEBUG_CRASH(( "xferSTLObjectIDList - Unknown xfer mode '%d'\n", getXferMode() ));
-		throw XFER_MODE_UNKNOWN;
-
-	}  // end else
-
-}  // end xferSTLObjectIDList
+    FailureScope failure(*this);
+    if (m_failed || !objectIDListData) throw XFER_INVALID_PARAMETERS;
+    const auto mode=getXferMode();
+    if (mode!=XFER_LOAD && mode!=XFER_SAVE && mode!=XFER_CRC) throw XFER_MODE_UNKNOWN;
+    if (mode==XFER_LOAD && !objectIDListData->empty()) throw XFER_LIST_NOT_EMPTY;
+    if (mode!=XFER_LOAD && objectIDListData->size()>std::numeric_limits<UnsignedShort>::max())
+        throw XFER_INVALID_PARAMETERS;
+    XferVersion version=1;
+    xferVersion(&version,1);
+    UnsignedShort count=mode==XFER_LOAD ? 0 : static_cast<UnsignedShort>(objectIDListData->size());
+    xferUnsignedShort(&count);
+    if (mode==XFER_LOAD) {
+        std::list<ObjectID> candidate;
+        for (UnsignedInt i=0;i<count;++i) {
+            ObjectID value{};
+            xferObjectID(&value);
+            candidate.push_back(value);
+        }
+        objectIDListData->swap(candidate);
+    } else {
+        for (auto value : *objectIDListData) xferObjectID(&value);
+    }
+}
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferSTLIntList( std::list< Int > *intListData )
+void XferBase::xferSTLIntList( std::list<Int> *intListData )
 {
-
-	// sanity
-	if( intListData == NULL )
-		return;
-
-	// version
-	XferVersion currentVersion = 1;
-	XferVersion version = currentVersion;
-	xferVersion( &version, currentVersion );
-
-	// xfer the count of the list
-	UnsignedShort listCount = intListData->size();
-	xferUnsignedShort( &listCount );
-	
-	// xfer list data
-	Int intData;
-	if( getXferMode() == XFER_SAVE || getXferMode() == XFER_CRC )
-	{
-
-		// save all ids
-		std::list< Int >::const_iterator it;
-		for( it = intListData->begin(); it != intListData->end(); ++it )
-		{
-
-			intData = *it;
-			xferInt( &intData );
-
-		}  // end for
-
-	}  // end if, save
-	else if( getXferMode() == XFER_LOAD )
-	{
-
-		// sanity, the list should be empty before we transfer more data into it
-		if( intListData->size() != 0 )
-		{
-
-			DEBUG_CRASH(( "Xfer::xferSTLIntList - int list should be empty before loading\n" ));
-			throw XFER_LIST_NOT_EMPTY;
-
-		}  // end if
-
-		// read all ids
-		for( UnsignedShort i = 0; i < listCount; ++i )
-		{
-
-			xferInt( &intData );
-			intListData->push_back( intData );
-
-		}  // end for, i
-
-	}  // end else if
-	else
-	{
-
-		DEBUG_CRASH(( "xferSTLIntList - Unknown xfer mode '%d'\n", getXferMode() ));
-		throw XFER_MODE_UNKNOWN;
-
-	}  // end else
-
-}  // end xferSTLIntList
+    FailureScope failure(*this);
+    if (m_failed || !intListData) throw XFER_INVALID_PARAMETERS;
+    const auto mode=getXferMode();
+    if (mode!=XFER_LOAD && mode!=XFER_SAVE && mode!=XFER_CRC) throw XFER_MODE_UNKNOWN;
+    if (mode==XFER_LOAD && !intListData->empty()) throw XFER_LIST_NOT_EMPTY;
+    if (mode!=XFER_LOAD && intListData->size()>std::numeric_limits<UnsignedShort>::max())
+        throw XFER_INVALID_PARAMETERS;
+    XferVersion version=1;
+    xferVersion(&version,1);
+    UnsignedShort count=mode==XFER_LOAD ? 0 : static_cast<UnsignedShort>(intListData->size());
+    xferUnsignedShort(&count);
+    if (mode==XFER_LOAD) {
+        std::list<Int> candidate;
+        for (UnsignedInt i=0;i<count;++i) {
+            Int value{};
+            xferInt(&value);
+            candidate.push_back(value);
+        }
+        intListData->swap(candidate);
+    } else {
+        for (auto value : *intListData) xferInt(&value);
+    }
+}
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferScienceType( ScienceType *science )
+void XferBase::xferScienceType( ScienceType *science )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    const auto services=nativeTransferServices();
+    if (!science || (getXferMode()!=XFER_CRC && !services.owner)) throw XFER_INVALID_PARAMETERS;
 
 	// sanity
 	DEBUG_ASSERTCRASH( science != NULL, ("xferScienceType - Invalid parameters\n") );
@@ -574,7 +595,7 @@ void Xfer::xferScienceType( ScienceType *science )
 	if( getXferMode() == XFER_SAVE )
 	{
 		// translate to string
-		scienceName = TheScienceStore->getInternalNameForScience( *science );
+		scienceName = services.encodeScience(services.owner,*science);
 
 		// write the string
 		xferAsciiString( &scienceName );
@@ -585,8 +606,8 @@ void Xfer::xferScienceType( ScienceType *science )
 		xferAsciiString( &scienceName );
 
 		// translate to science
-		*science = TheScienceStore->getScienceFromInternalName( scienceName );
-		if( *science == SCIENCE_INVALID )
+		const auto candidate = services.decodeScience(services.owner,scienceName);
+		if( candidate == SCIENCE_INVALID )
 		{
 
 			DEBUG_CRASH(( "xferScienceType - Unknown science '%s'\n", scienceName.str() ));
@@ -594,6 +615,7 @@ void Xfer::xferScienceType( ScienceType *science )
 
 		}  // end if
 			
+        *science=candidate;
 	}  // end else if, load
 	else if( getXferMode() == XFER_CRC )
 	{
@@ -612,8 +634,11 @@ void Xfer::xferScienceType( ScienceType *science )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferScienceVec( ScienceVec *scienceVec )
+void XferBase::xferScienceVec( ScienceVec *scienceVec )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!scienceVec) throw XFER_INVALID_PARAMETERS;
 
 	// sanity
 	DEBUG_ASSERTCRASH( scienceVec != NULL, ("xferScienceVec - Invalid parameters\n") );
@@ -624,7 +649,9 @@ void Xfer::xferScienceVec( ScienceVec *scienceVec )
 	xferVersion( &version, currentVersion );
 
 	// count of vector
-	UnsignedShort count = scienceVec->size();
+	if (getXferMode()!=XFER_LOAD && scienceVec->size()>std::numeric_limits<UnsignedShort>::max())
+        throw XFER_INVALID_PARAMETERS;
+    UnsignedShort count = getXferMode()==XFER_LOAD ? 0 : static_cast<UnsignedShort>(scienceVec->size());
 	xferUnsignedShort( &count );
 
 	if( getXferMode() == XFER_SAVE )
@@ -637,25 +664,15 @@ void Xfer::xferScienceVec( ScienceVec *scienceVec )
 	}
 	else if( getXferMode() == XFER_LOAD )
 	{
-		// vector should be empty at this point
-		if( scienceVec->empty() == FALSE )
-		{
-			// Not worth an assert, since things can give you Sciences on creation.  Just handle it and load.
-			scienceVec->clear();
+        ScienceVec candidate;
+        for (UnsignedInt i=0;i<count;++i) {
+            ScienceType science=SCIENCE_INVALID;
+            xferScienceType(&science);
+            candidate.push_back(science);
+        }
+        scienceVec->swap(candidate);
+    }
 
-			// Homework for today.  Write 2000 words reconciling "Your code must never crash" with "Intentionally putting crashes in the code".  Fucktard.
-//			DEBUG_CRASH(( "xferScienceVec - vector is not empty, but should be\n" ));
-//			throw XFER_LIST_NOT_EMPTY;
-		}
-
-		for( UnsignedShort i = 0; i < count; ++i )
-		{
-			ScienceType science;
-			xferScienceType(&science);
-			scienceVec->push_back( science );				
-		}
-			
-	}
 	else if( getXferMode() == XFER_CRC )
 	{
 		for( ScienceVec::const_iterator it = scienceVec->begin(); it != scienceVec->end(); ++it )
@@ -680,8 +697,11 @@ void Xfer::xferScienceVec( ScienceVec *scienceVec )
 	* Version Info:
 	* 1: Initial version */
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferKindOf( KindOfType *kindOfData )
+void XferBase::xferKindOf( KindOfType *kindOfData )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!kindOfData) throw XFER_INVALID_PARAMETERS;
 
 	// this deserves a version number
 	XferVersion currentVersion = 1;
@@ -729,8 +749,12 @@ void Xfer::xferKindOf( KindOfType *kindOfData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferUpgradeMask( UpgradeMaskType *upgradeMaskData )
+void XferBase::xferUpgradeMask( UpgradeMaskType *upgradeMaskData )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    const auto services=nativeTransferServices();
+    if (!upgradeMaskData || (getXferMode()!=XFER_CRC && !services.owner)) throw XFER_INVALID_PARAMETERS;
 
 	// this deserves a version number
 	XferVersion currentVersion = 1;
@@ -748,45 +772,24 @@ void Xfer::xferUpgradeMask( UpgradeMaskType *upgradeMaskData )
 	// check which type of xfer we're doing
 	if( getXferMode() == XFER_SAVE )
 	{
-		AsciiString upgradeName;
-
-		// count how many bits are set in the mask
-		UnsignedShort count = 0;
-		UpgradeTemplate *upgradeTemplate;
-		for( upgradeTemplate = TheUpgradeCenter->firstUpgradeTemplate(); upgradeTemplate; upgradeTemplate = upgradeTemplate->friend_getNext() )
-		{
-			// if the mask of this upgrade is set, it counts
-			if( upgradeMaskData->testForAll( upgradeTemplate->getUpgradeMask() ) )
-			{
-				count++;
-			}
-		}  // end for, upgradeTemplate
-
-		// write the count
-		xferUnsignedShort( &count );
-
-		// write out the upgrades as strings
-		for( upgradeTemplate = TheUpgradeCenter->firstUpgradeTemplate(); upgradeTemplate; upgradeTemplate = upgradeTemplate->friend_getNext() )
-		{
-			// if the mask of this upgrade is set, it counts
-			if( upgradeMaskData->testForAll( upgradeTemplate->getUpgradeMask() ) )
-			{
-				upgradeName = upgradeTemplate->getUpgradeName();
-				xferAsciiString( &upgradeName );
-			}  // end if
-		}  // end for, upgradeTemplate
+        auto names=services.encodeUpgrades(services.owner,*upgradeMaskData);
+        if (names.size()>std::numeric_limits<UnsignedShort>::max()) throw XFER_INVALID_PARAMETERS;
+        auto count=static_cast<UnsignedShort>(names.size());
+        xferUnsignedShort(&count);
+        for (auto& name : names) xferAsciiString(&name);
 	}  // end if, save
 	else if( getXferMode() == XFER_LOAD )
 	{
 		AsciiString upgradeName;
-		const UpgradeTemplate *upgradeTemplate;
+
 
 		// how many strings are we going to read from the file
 		UnsignedShort count;
 		xferUnsignedShort( &count );
 
 		// zero the mask data
-		upgradeMaskData->clear();
+		UpgradeMaskType candidate;
+        candidate.clear();
 
 		// read all the strings and set the mask vaules
 		for( UnsignedShort i = 0; i < count; ++i )
@@ -795,27 +798,20 @@ void Xfer::xferUpgradeMask( UpgradeMaskType *upgradeMaskData )
 			// read the string
 			xferAsciiString( &upgradeName );
 
-			// find this upgrade template
-			upgradeTemplate = TheUpgradeCenter->findUpgrade( upgradeName );
-			if( upgradeTemplate == NULL )
-			{
-
-				DEBUG_CRASH(( "Xfer::xferUpgradeMask - Unknown upgrade '%s'\n", upgradeName.str() ));
-				throw XFER_UNKNOWN_STRING;
-
-			}  // end if
-
-			// set the mask data
-			upgradeMaskData->set( upgradeTemplate->getUpgradeMask() );
+            candidate.set(services.decodeUpgrade(services.owner,upgradeName));
 
 		}  // end for i
 
+        *upgradeMaskData=candidate;
 	}  // end else if, load
 	else if( getXferMode() == XFER_CRC )
 	{
 
-		// just xfer implementation the data itself
-		xferImplementation( upgradeMaskData, sizeof( UpgradeMaskType ) );
+        std::array<UnsignedInt,(UPGRADE_MAX_COUNT+31)/32> words{};
+        static_assert(sizeof(UnsignedInt)==4);
+        for (Int i=0;i<UPGRADE_MAX_COUNT;++i)
+            if (upgradeMaskData->test(i)) words[i/32]|=UnsignedInt{1}<<(i%32);
+        xferImplementation(words.data(),static_cast<Int>(words.size()*sizeof(UnsignedInt)));
 
 	}  // end else if, crc
 	else
@@ -830,8 +826,10 @@ void Xfer::xferUpgradeMask( UpgradeMaskType *upgradeMaskData )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferUser( void *data, Int dataSize )
+void XferBase::xferUser( void *data, Int dataSize )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
 
 	xferImplementation( data, dataSize );
 
@@ -839,16 +837,21 @@ void Xfer::xferUser( void *data, Int dataSize )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void Xfer::xferMatrix3D( Matrix3D* mtx )
+void XferBase::xferMatrix3D( Matrix3D* mtx )
 {
+    FailureScope failure(*this);
+    if (m_failed) throw XFER_INVALID_PARAMETERS;
+    if (!mtx) throw XFER_INVALID_PARAMETERS;
+    Matrix3D candidate(true);
+    auto* target=getXferMode()==XFER_LOAD ? &candidate : mtx;
 	// this deserves a version number
 	const XferVersion currentVersion = 1;
 	XferVersion version = currentVersion;
 	xferVersion( &version, currentVersion );
 
- 	Vector4& tmp0 = (*mtx)[0];
- 	Vector4& tmp1 = (*mtx)[1];
- 	Vector4& tmp2 = (*mtx)[2];
+    Vector4& tmp0 = (*target)[0];
+    Vector4& tmp1 = (*target)[1];
+    Vector4& tmp2 = (*target)[2];
 
 	xferReal(&tmp0.X);
 	xferReal(&tmp0.Y);
@@ -864,6 +867,5 @@ void Xfer::xferMatrix3D( Matrix3D* mtx )
 	xferReal(&tmp2.Y);
 	xferReal(&tmp2.Z);
 	xferReal(&tmp2.W);
+    if (getXferMode()==XFER_LOAD) *mtx=candidate;
 }
-
-

@@ -32,31 +32,11 @@
 #define _GAME_TYPE_H_
 
 #include "Lib/BaseType.h"
+#include "Common/EngineIDs.h"
 
 // the default size of the world map
 #define DEFAULT_WORLD_WIDTH		64
 #define DEFAULT_WORLD_HEIGHT	64
-
-/// A unique, generic "identifier" used to access Objects.
-enum ObjectID
-{
-	INVALID_ID = 0,
-	FORCE_OBJECTID_TO_LONG_SIZE = 0x7ffffff
-};
-
-/// A unique, generic "identifier" used to access Drawables.
-enum DrawableID
-{
-	INVALID_DRAWABLE_ID = 0,
-	FORCE_DRAWABLEID_TO_LONG_SIZE = 0x7ffffff
-};
-
-/// A unique, generic "identifier" used to identify player specified formations.
-enum FormationID
-{
-	NO_FORMATION_ID = 0,					// Unit is not a member of any formation
-	FORCE_FORMATIONID_TO_LONG_SIZE = 0x7ffffff
-};
 
 #define INVALID_ANGLE -100.0f
 
@@ -65,7 +45,7 @@ class INI;
 //-------------------------------------------------------------------------------------------------
 /** The time of day enumeration, keep in sync with TimeOfDayNames[] */
 //-------------------------------------------------------------------------------------------------
-enum TimeOfDay
+enum TimeOfDay : UnsignedInt
 {
 	TIME_OF_DAY_INVALID = 0,
 	TIME_OF_DAY_FIRST = 1,
@@ -77,7 +57,7 @@ enum TimeOfDay
 	TIME_OF_DAY_COUNT					// keep this last
 };
 
-extern char *TimeOfDayNames[];
+extern const char* const TimeOfDayNames[];
 // defined in Common/GameType.cpp
 
 //-------------------------------------------------------------------------------------------------
@@ -89,7 +69,7 @@ enum Weather
 	WEATHER_COUNT					// keep this last
 };
 
-extern char *WeatherNames[];
+extern const char* const WeatherNames[];
 
 enum Scorches
 {
@@ -170,7 +150,7 @@ enum Scorches
 };
 
 //-------------------------------------------------------------------------------------------------
-enum WeaponSlotType
+enum WeaponSlotType : UnsignedInt
 {
 	PRIMARY_WEAPON = 0,
 	SECONDARY_WEAPON,
@@ -193,4 +173,3 @@ enum PathfindLayerEnum {LAYER_INVALID = 0, LAYER_GROUND = 1, LAYER_WALL = 15, LA
 //-------------------------------------------------------------------------------------------------
 
 #endif // _GAME_TYPE_H_
-

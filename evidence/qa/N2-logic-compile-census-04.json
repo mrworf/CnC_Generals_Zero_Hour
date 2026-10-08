@@ -1,0 +1,1817 @@
+{
+  "kind": "unaccepted-source-compilation-census",
+  "compiler": "g++",
+  "acceptance": false,
+  "pass": 244,
+  "fail": 16,
+  "diagnostic_occurrences": 57,
+  "code_build_fixture_sha256": "22ebf8674d184d4ebb6ee761b45a3eba2f6024d1cf0a5b372196deccf3978f15",
+  "preceding_census": "evidence/qa/N2-logic-compile-census-03.json",
+  "note": "Syntax-only census; no link/startup acceptance. Original support matrix79/79 passes normal/GCC/Clang sanitizer on the same frozen source.",
+  "translation_units": [
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AI.cpp",
+      "sha256": "7bdfcecc36f4fb8740e2d968c7a6a0b02f25a983dc15dafd56ceb4fbccb18f19",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIDock.cpp",
+      "sha256": "2f3dc9940c11ed8c563e2ec7c791eb9b983ecf5600f1671355ee557668b4f52a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIGroup.cpp",
+      "sha256": "79aaad48d34918767637b520cf513157fc826c2020317b89050d7f5054efaca5",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIGuard.cpp",
+      "sha256": "02cc7e839507462919407047fb1e74ec65e98ca7900876286178af6ab52b1b52",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIGuardRetaliate.cpp",
+      "sha256": "55b18fba6a75ebe058188c8e1d00bbb38f52e99696ec730c329f6969f5373dae",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIPathfind.cpp",
+      "sha256": "0882180e3230d26fc39f00067dc672de2de96a5bf571765f9fc7abf0a6b1be68",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIPlayer.cpp",
+      "sha256": "dfd3898996bbaac841e0ac0b7255895c963efa1538e7539f12f0b50a0c26c675",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AISkirmishPlayer.cpp",
+      "sha256": "2a28c9109a9dda25caaf3905aa21688a4c6c77b6da4940cc405fe5757dc30281",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIStates.cpp",
+      "sha256": "e939a48da94f1c526c891033a7ff3996e0151fea7ffd2b8507f7cb6f0e7b2add",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AITNGuard.cpp",
+      "sha256": "5495876eac102743289bf15b223a4ee4298c4f19df4f390a495bcccb6ab94efc",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/AI/Squad.cpp",
+      "sha256": "bfdddc0ca3783a251b5f2fae82533e56b5826dd9a12a9b98a0bda6965c8c74b7",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/AI/TurretAI.cpp",
+      "sha256": "c7ddb8d4ad845a12cf8ae27d8eeeecc2e830a8fcdfae41076022bb795de25e82",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Map/PolygonTrigger.cpp",
+      "sha256": "87c4ac204cc1fe7b82515004cc37748c8281088e3de1fe3761b19b5d98e51306",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Map/SidesList.cpp",
+      "sha256": "882f054cbe0321dd73b7affc63e07a6af05e790b45c6efbd48454299b00b181f",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Map/TerrainLogic.cpp",
+      "sha256": "7fbda20541fd19cf0d916ac65dfa4f48b32565dd750f7f8c883b18c4801c7870",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Armor.cpp",
+      "sha256": "76e67bd379ea161beaef378e54fc069b880ce077623d5d9b7276e7ac92a0107d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/AutoHealBehavior.cpp",
+      "sha256": "74b0c9de9d6d10b2cc46eafd0b4833065d94ea445e824d47f96850ba73587777",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/BattleBusSlowDeathBehavior.cpp",
+      "sha256": "d5f487e8fddf053ea4acfc30ee3a5c9c76a8024bc53bafb268150da8fd55ff3d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/BehaviorModule.cpp",
+      "sha256": "bc5861a88be521e112717ac6b57263d327958f812277f638251a88cf1d49f770",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/BridgeBehavior.cpp",
+      "sha256": "0e744daea3d2f73b634e5d9dcdd7c5ba4ce0c016096b79b64b97ea1156588245",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/BridgeScaffoldBehavior.cpp",
+      "sha256": "435bca92c8f43068a69cf26a477c660219ccfc48173651618630ff6557d1bde0",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/BridgeTowerBehavior.cpp",
+      "sha256": "baba301b1073ce937e20eb57fd41dc97e24ddc432f0e835eee765b9d0eb523de",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/BunkerBusterBehavior.cpp",
+      "sha256": "7da13d89d29f11f859a3e1f8dad14b206e04c2fd22f4ff9457a075d378fa8b0e",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/CountermeasuresBehavior.cpp",
+      "sha256": "9ca8f1a7baaefbfe2a2360bf8e89a31e18d006ad0879a1b83e9afff21715fb1e",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/CountermeasuresBehavior.cpp",
+          "line": 170
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/DumbProjectileBehavior.cpp",
+      "sha256": "e92abf1b0deaad21fab4f764a58cd97dfb02f5079c99c1f575cee168c0a33e5f",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/DumbProjectileBehavior.cpp",
+          "line": 441
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/DumbProjectileBehavior.cpp",
+          "line": 442
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/FireWeaponWhenDamagedBehavior.cpp",
+      "sha256": "04a109d71e7f182db6f2f5fecf75d3c0b4010bba2a5a307919d0f55771dfc16b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/FireWeaponWhenDeadBehavior.cpp",
+      "sha256": "44bafdc557dd48ad8d1b18d6493d399dd38923c3a77124afee0e60223e0ee0fa",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/FlightDeckBehavior.cpp",
+      "sha256": "06de337d9ffc8e54399937f07a621e4c1bbef297792abc67b8267d62a70f2cb6",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/FlightDeckBehavior.cpp",
+          "line": 408
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/FlightDeckBehavior.cpp",
+          "line": 423
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/FlightDeckBehavior.cpp",
+          "line": 882
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/FlightDeckBehavior.cpp",
+          "line": 888
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/FlightDeckBehavior.cpp",
+          "line": 891
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/FlightDeckBehavior.cpp",
+          "line": 942
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/FlightDeckBehavior.cpp",
+          "line": 943
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/FlightDeckBehavior.cpp",
+          "line": 1225
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/FlightDeckBehavior.cpp",
+          "line": 1357
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/GenerateMinefieldBehavior.cpp",
+      "sha256": "feb47e025af2adf58e39c4a44ad634b17a8beeb16401ca8b54d8fef224ec21c6",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/GrantStealthBehavior.cpp",
+      "sha256": "e836e2393076b89617bdce7d491341dc688a5413c3c98a9d527391a7a3631881",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/InstantDeathBehavior.cpp",
+      "sha256": "b2598c6f194dd2f380a505e93b571632bcc85450491928d3dcd397e1cd27e85d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/JetSlowDeathBehavior.cpp",
+      "sha256": "ba0952de6a4efcdac611dabb97a7c9842d8f81e4e4cfaf7a4d1bfba72c638220",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/MinefieldBehavior.cpp",
+      "sha256": "0c8ff149e367a9ee73c5dd197eb59337c7245ae556d86bada7493cad89ad4996",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/NeutonBlastBehavior.cpp",
+      "sha256": "5524d5166ae790792ffb812b978d0e2aa79ea0a99b2bc8a36a6b48ad77ef5d31",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/OverchargeBehavior.cpp",
+      "sha256": "46b8fd524a5673b9cd048d2983c177c6d8236afd7ac91ece5de518fd1fcb6249",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/POWTruckBehavior.cpp",
+      "sha256": "a5f6885518050048d1576fe1d2fdff414f98c2e4a97e85816116f16531fac710",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/ParkingPlaceBehavior.cpp",
+      "sha256": "45882b348a7a4cacdd50da43c6ea7feccb1577462e6bc8a9c6d0709760be4fa5",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/PoisonedBehavior.cpp",
+      "sha256": "175ff55b1dec9d6c47ab048b38215db8f7c7a36b6ee95f82d4756c8b167893d6",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/PrisonBehavior.cpp",
+      "sha256": "e4de115059ef01f664832ceef0019fc89e6a92a9025da1d444e51ada530de0d3",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/PropagandaCenterBehavior.cpp",
+      "sha256": "02693f3abefd5290be21eae37125ed1f42562405e4af5206d108b02b11058a5b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/PropagandaTowerBehavior.cpp",
+      "sha256": "0511992cd2f3fe35defb987c5e9482546064abb31b7508d231e683557d021b1d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/RebuildHoleBehavior.cpp",
+      "sha256": "7198e6bb65335548a56dcb9978d6e752bc5f68dba90fffc0d3099e7bcb6032b6",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/SlowDeathBehavior.cpp",
+      "sha256": "368b16ed813e5b015f2bf9d7a544aeb352368c2b5d4c12cd51a3a87689ef811a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/SpawnBehavior.cpp",
+      "sha256": "f14fa3d05e54f7b05372051a6749b028f25d2b810414acbc9d3072d61138c280",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/SupplyWarehouseCripplingBehavior.cpp",
+      "sha256": "511f2c124a302358a1708b7dcfd78d53ef8c94a824cdb96db56a34b9d16a49c6",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Behavior/TechBuildingBehavior.cpp",
+      "sha256": "99b30208b98e797d080a71fd6c566f7361b6f1ba70742775f6e50f025800a203",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Body/ActiveBody.cpp",
+      "sha256": "64eab92dce3dfcdf4f00f9cf90d473a9a8c4a77b52f0a1aef462f9a379f99a7a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Body/BodyModule.cpp",
+      "sha256": "3106d9967b133ba7565fe8541d7d556aede3568a8081a82b6e32195f70b2042c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Body/HighlanderBody.cpp",
+      "sha256": "f8e7032250225262ec7a7bf3841f53e8b29122f15100cbfaf5d2093df1a91d4a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Body/HiveStructureBody.cpp",
+      "sha256": "bbe5a13fc86690c3f82e37b1b25dfd9706d46040963c3c3971d771440618ed83",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Body/ImmortalBody.cpp",
+      "sha256": "f3d925de3c3518e7a932cc3573b5fc674a12157652b34a6c08ffa565f00d626d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Body/InactiveBody.cpp",
+      "sha256": "3dee5e13d5521a04e155b96bdc301d93158f7f8abffcdfb5439b3373d9da3756",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Body/StructureBody.cpp",
+      "sha256": "cbeff53b3ebdbe6db7c34d899a586ff37f3e54f734e87f00051af148bc990991",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Body/UndeadBody.cpp",
+      "sha256": "5ad91901585be019721968ff573d2fbb13a008de161f765ef06389a678ceb7c6",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CollideModule.cpp",
+      "sha256": "e3ecf22f35730d60ed2e04647a6f6c26f52e7a25f76d2fb6a144d50373c764d4",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/ConvertToCarBombCrateCollide.cpp",
+      "sha256": "90e247101ccaa3ae8b1dd4a2241ae0eaf289de11ebaa364d2d7ebd336ca400da",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/ConvertToHijackedVehicleCrateCollide.cpp",
+      "sha256": "1269317b0a11fdd09ee653042d1f1e306f582eb9ddc7b4f505f3bd52d33b3962",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/CrateCollide.cpp",
+      "sha256": "f7541d30ecedb43209751dc39e0dde4a296a9ed843eefc9e330a6c19106785b2",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/HealCrateCollide.cpp",
+      "sha256": "6fab917d47b51f47baf4ca6bfe7b4adf1c66f2920544470feeb4ae46e56e0257",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/MoneyCrateCollide.cpp",
+      "sha256": "ad367a193a0b3fa090ba1bda73fd8eb48a6a7916d37a3840d8e0f8997f747d07",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/SabotageCommandCenterCrateCollide.cpp",
+      "sha256": "237ef7df9fa2d421d6e3b59a659ee59a60d5c517cc6e7196509e16a2b362d66a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/SabotageFakeBuilding.cpp",
+      "sha256": "c2e3f2d1203a2b2c8de302e8d424d709102f67e3784a74bcda4261610cdc7879",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/SabotageInternetCenterCrateCollide.cpp",
+      "sha256": "d9a58ed6587aabaddc4e9a9d1f088ec63eecc97e3b0041462be37c437768d34f",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/SabotageMilitaryFactoryCrateCollide.cpp",
+      "sha256": "d1a73a75f8629b9cf39d1b72f7f4fabda2d7584cd392d8422e294cbe56e31a23",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/SabotagePowerPlantCrateCollide.cpp",
+      "sha256": "8159508193ccedf3e1b5a5977874a99bba40a5015edb6353e61527e51f7b5e84",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/SabotageSuperweaponCrateCollide.cpp",
+      "sha256": "c7f4bd770fe9ca051177113904a4a4850fcfb5ccb43223e194bbb3cf8138d39a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/SabotageSupplyCenterCrateCollide.cpp",
+      "sha256": "c4c3bd88c438d8d09ccbae6c5434f8b7c10ef3af617207c34f87988b38d027d8",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/SabotageSupplyDropzoneCrateCollide.cpp",
+      "sha256": "f40ff127e8dc5137ea707e7ee77e8f0f333b00cd5a8bbb9a8759cf5167c141f9",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/SalvageCrateCollide.cpp",
+      "sha256": "6e073b8815a8ad14093c02b82fbbb00a3cbb99dae1c5729dc32f0b228a123f00",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/ShroudCrateCollide.cpp",
+      "sha256": "771e940a6deea6e36b74c7ec0a2df6c8f9e90ec69c154c27851e6876c37c4a2a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/UnitCrateCollide.cpp",
+      "sha256": "99644f6e0bd2ebf6002892191aa29a8b27a63d242cfa86682a173e7363a7b370",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/CrateCollide/VeterancyCrateCollide.cpp",
+      "sha256": "aa7984f141ff6611697bfe32d727dd98003326b8223a6cf668a5662950b70a36",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/FireWeaponCollide.cpp",
+      "sha256": "b7ea0fbf2462dce05a11547710d76dd78565fd68b85f1321d7150aa2e13de28c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Collide/SquishCollide.cpp",
+      "sha256": "b90646e19a7301025724d3e7c4a83da98c3b9a05e8ca74550d0a20601847ef60",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/CaveContain.cpp",
+      "sha256": "d47457886b0022b04ed073175df4e5c804466e180604348e109620847152f547",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/GarrisonContain.cpp",
+      "sha256": "01dfa5bc998c1f9fa0096c394bf3f903763d4d7862424d1042b56179c8e63fd0",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/GarrisonContain.cpp",
+          "line": 2026
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/HealContain.cpp",
+      "sha256": "9c79eddf8900940dbc3ed338627937f6ab9f9e3a8d54ab3a89a3c98fe6b85b14",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/HelixContain.cpp",
+      "sha256": "bd63869a5f4ab2a2c7db8d80865b4e1aabdb44d052905b70354f09ef328cc187",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/InternetHackContain.cpp",
+      "sha256": "5e59224d2dad0e08d3a9f1e959bb87d918298bf51776f4badf2bdd4d40175be7",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/MobNexusContain.cpp",
+      "sha256": "94415b1a6b76af13116f1aeaa22376551ebbb2b13511c88156bf95595e94001e",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/OpenContain.cpp",
+      "sha256": "ce37d03d35c02a77c01b60d1011eb25a5368d82e13f180f96b2b91bb8fbeb3ad",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/OpenContain.cpp",
+          "line": 969
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/OpenContain.cpp",
+          "line": 1088
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/OpenContain.cpp",
+          "line": 1269
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/OverlordContain.cpp",
+      "sha256": "41b945d851baa8feb5e4574d084434f63791110c785fd195f8f951817551c7e7",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/ParachuteContain.cpp",
+      "sha256": "cdb66c36c8110bf248bb8430b4e6bac053792fac04baa4babb1602bff5c95065",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/RailedTransportContain.cpp",
+      "sha256": "aca2f94215b40f898abbb60019f220c00ce47e044148cfabbf8a5771b2d71c24",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/RiderChangeContain.cpp",
+      "sha256": "7054fa89d5ae8cbaf94dbe9a372da9304637671ab3248058cfec18f7f8230127",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/TransportContain.cpp",
+      "sha256": "3268b9a3ac499eb7bb8d1ef552fce72caa68582fcc2f201ed8c0d176110dd505",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/TransportContain.cpp",
+          "line": 584
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Contain/TunnelContain.cpp",
+      "sha256": "b9582cf5245ec940de9e43c99fa392fdf7ce772c6dd9311b5ccfa760b14b67c9",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Create/CreateModule.cpp",
+      "sha256": "7b8c82d5e2dcb977bf0a4425e60ffc4768080d78ca3b5123f6f4dc99f07946f3",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Create/GrantUpgradeCreate.cpp",
+      "sha256": "04864cab2aed768ec515e683b4057f84e813df291b2027e00917452aa138fda7",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Create/LockWeaponCreate.cpp",
+      "sha256": "da1c6f3d92fbc7fb9643014ce1cd66fa9dd1f4536f6159fb6f5c802f8d77bd43",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Create/PreorderCreate.cpp",
+      "sha256": "d6e04feacf07691a8a4167856622e48a34f92515aee66656047aeeb6d87d3f2c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Create/SpecialPowerCreate.cpp",
+      "sha256": "ba739840f6188a845365b2448f26f57829abc8b9a52a40bb7de3fed3679d21ba",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Create/SupplyCenterCreate.cpp",
+      "sha256": "139659a1239b6f6fca91a92570ba41610bb1ffaba5ccb6c54a4c815f532cad36",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Create/SupplyWarehouseCreate.cpp",
+      "sha256": "953e9595dff8af658a4b551f1eda041f568dbe8fe0886b60dc6cb9a6ec7188a8",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Create/VeterancyGainCreate.cpp",
+      "sha256": "862a583b850a0898c79e2c68f86bda9858a9cd305fe193c80c1f471745b360b5",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Damage/BoneFXDamage.cpp",
+      "sha256": "30039196accac7c3e1bdb919b6d6616d45a4a6d618edf63768e1e32d2c168dd0",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Damage/DamageModule.cpp",
+      "sha256": "52b1160dda1ac6b0e568ad319d3cfe64c8b76b4d1494e3f864d5fd46a9a87fc1",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Damage/TransitionDamageFX.cpp",
+      "sha256": "cc51890db32d53574341fe3f7d980b2a7b398c2ab9c841cd1e611c5ec47e9d95",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Destroy/DestroyModule.cpp",
+      "sha256": "5d6f0395269134a26bc3987bd6444d2dbf9993bc80fd24d0cb6bd73c253c9b24",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/CreateCrateDie.cpp",
+      "sha256": "6151eeb5cdf6e97ce4782ef7cb73f395055097b6a652021ee8987c48fb50b047",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/CreateObjectDie.cpp",
+      "sha256": "ace0c1a7b5c8dff43be5cc813e5d6c81d4424afbd52d07b901f323ed115d0551",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/CrushDie.cpp",
+      "sha256": "11c5fc8b90890ea568733e8b8df38d107dbb28f607a0621944fc6e431324f29d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/DamDie.cpp",
+      "sha256": "e1092e2406acfb2b617b65749d779613ca6efccf5492e4843bd520e5607d9332",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/DestroyDie.cpp",
+      "sha256": "59d25883343346d0b5974e47b10ad15d0183780389c68d1e495f2a6e456aed80",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/DieModule.cpp",
+      "sha256": "602677aa78e84a9b42736261346aa31dd914ba07a0e9c28d947f7d55f8908626",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/EjectPilotDie.cpp",
+      "sha256": "ff14e808ce5294ab5904933e0b65b8cef6efd7ab7fc3b38dbdafd08f70a9385b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/FXListDie.cpp",
+      "sha256": "1617403faaeb52787e2fa6773189b670c2c6cb3c4bdbad632a701f55bf121a03",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/KeepObjectDie.cpp",
+      "sha256": "babb9d488c0c25f747aff3f42bd1000a6f6b8177ed48f493bfb115b8408cb83c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/RebuildHoleExposeDie.cpp",
+      "sha256": "7ed82004627f54b367cf41919f4128e2ba669367097a5216aab4b22e46a01da4",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/SpecialPowerCompletionDie.cpp",
+      "sha256": "4129c72bab40e42bd0be573c9cc97d3fc905e46a98592d34fb84757d0cffc1d9",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Die/UpgradeDie.cpp",
+      "sha256": "adc54a6ae16d8beb1f3ff6bcff939965a206077dc492a566c78d96ec7ee55c44",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/ExperienceTracker.cpp",
+      "sha256": "f8af4a1edaba2c0a79e55c56d271c9b45f99675db3968871c3b85a7eb685227d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/FiringTracker.cpp",
+      "sha256": "35b59d031cdcc0993d5840d99ef3ce535a8b54be0091425883c98dcda969d510",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/GhostObject.cpp",
+      "sha256": "cb485a45d9d56007a502ad6da69c5d12fdfea00de1590eb04ab29457d1ceaf46",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/ObjectDefectionHelper.cpp",
+      "sha256": "9820f02cf3869433e589c3e13ade278d824178fd0140c2954f1a0bef413bb826",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/ObjectHelper.cpp",
+      "sha256": "d6ed939e44b0ab708c1bb927c204b7f53370774953db99ded07113cf57ea810e",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/ObjectRepulsorHelper.cpp",
+      "sha256": "71b114b4e8d4b9e83ebcd4afdd9c8b201b23fa1c336744351850b738ff0f7839",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/ObjectSMCHelper.cpp",
+      "sha256": "265249a3609ed2f269ea1b3dc9b40e95cd7baa05ea78296f844f5560be1f7a1b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/ObjectWeaponStatusHelper.cpp",
+      "sha256": "ff54fb1a678ab0ffe4f5276a2372eb1c10e78c8def87afa140c571c67adaf1ad",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/StatusDamageHelper.cpp",
+      "sha256": "ed0f5b94565b32c8e3787e574dc541413f631728384d4f06b1fec9f407741455",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/SubdualDamageHelper.cpp",
+      "sha256": "440864796e8e58eef377e895e27797f5ddae061b245868748cf9b9d3c41053cb",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Helper/TempWeaponBonusHelper.cpp",
+      "sha256": "4d76c3132667af496d837f12d98c3e78bc8e4477a4e247ee0eb5afa2becc47ea",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Locomotor.cpp",
+      "sha256": "c697271e9a15210a4a30f5282a38451cd7f201d0cc37c2cb31a39bf41d0f2da2",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Object.cpp",
+      "sha256": "2a6e9dab4fa8a0ecc1a005cef164e31e423bc9b88b55ebe521d834663458fa97",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/ObjectCreationList.cpp",
+      "sha256": "8d17f4a81059ff38e9be30e7e029adc3fb5ed2de05cbc9338d3fcd5935052c4c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/ObjectTypes.cpp",
+      "sha256": "738db1f58767116e37d8f82b3d0097633aa578af89186d35e6f3c87a333cc633",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+      "sha256": "c60ec718cfa6213e13da4d801e0141b0ad9b70ee042aa312aea20cbe2dc44385",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 3990
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 4055
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 4094
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 4116
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 4149
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 4182
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 4215
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 4248
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 5604
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 5609
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 5621
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 5626
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 5638
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 5643
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 5655
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 5660
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 5672
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 5700
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 5728
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/PartitionManager.cpp",
+          "line": 5756
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SimpleObjectIterator.cpp",
+      "sha256": "ca9d15c7741c728d32c7b24cbff119e05338cd7e32bb8db8c9c4dd0950cba4f2",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SpecialPower/BaikonurLaunchPower.cpp",
+      "sha256": "8a12ca6c1c7efd6b57942100e63e09e22e89865b29f41b0952780d6dd346cb27",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SpecialPower/CashBountyPower.cpp",
+      "sha256": "e6f29b2c8796a385ee0873407e62a964705cdd8956cf3f2e29d4d57de13b21a0",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SpecialPower/CashHackSpecialPower.cpp",
+      "sha256": "30979b3756c7495ed0708084c3cbb0eb4b7d63eafd0057b6caf06e4033ad9a73",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SpecialPower/CleanupAreaPower.cpp",
+      "sha256": "59d0764b9682c9771d696ef01c968f9b3ba9f01bb5ab8d1bec0f44a53e7162d8",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SpecialPower/DefectorSpecialPower.cpp",
+      "sha256": "c022bbde40bf92337fb92b51787721243c671c52ce6827524167d37369679868",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SpecialPower/DemoralizeSpecialPower.cpp",
+      "sha256": "ae4dc528ff86cf7c205fe137a11394526c2044123c09c82f046eeca71a0a15ba",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SpecialPower/FireWeaponPower.cpp",
+      "sha256": "75ca2e8630b4c945da9b8ef39e0e28cd26aae6f5667dbf5127b980d768ce4e22",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SpecialPower/OCLSpecialPower.cpp",
+      "sha256": "aa4d205c9281e63cc58a381f6a35259ed06ca0f09241967c0f31910239dfaa68",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SpecialPower/SpecialAbility.cpp",
+      "sha256": "4155fc979e5e83aa7b00e3bf4f2b5c7d8b3865bdf493a2406ea34fcc333e0e75",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SpecialPower/SpecialPowerModule.cpp",
+      "sha256": "b2d0d742a920ddffc3e6f3aebfbf07d5b40174f8783b62f70e259f6ed88de728",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/SpecialPower/SpyVisionSpecialPower.cpp",
+      "sha256": "a6cc7fbea42196037625e08e05bca6ab16e2a3c6f6d47cd703d15620176d1b33",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate.cpp",
+      "sha256": "bf07673b184647ebea6e591c5539349e727236c91775b2b39906b2fb1ca6861c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/AssaultTransportAIUpdate.cpp",
+      "sha256": "5fb308569925e96813609d981b300b682e07943616c86684a2d37be45092e729",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/ChinookAIUpdate.cpp",
+      "sha256": "de84dfd0eb2877d376ab7950ae64ccb5d8152126274b41faa7531a92b6cf6828",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/DeliverPayloadAIUpdate.cpp",
+      "sha256": "59bf56e04a8643071f7a4941674b8c67e33fe665148b75b2526b807d2c7f0467",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/DeployStyleAIUpdate.cpp",
+      "sha256": "9c251b0804c84b53e31e076fa51b8611f04bb6d1a2906be4d89fc47568212c1d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/DozerAIUpdate.cpp",
+      "sha256": "b4c4db3d921713d517395f655666d2a8e238e1eb6b9fbdb4fd1bb1565b12aacc",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/HackInternetAIUpdate.cpp",
+      "sha256": "b0cf0483cd0d94a4f9cba8847e24cc48b21dc04c04bda2f7bc97faefc000bb09",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/JetAIUpdate.cpp",
+      "sha256": "168b413c27bb8a3f8f06f0a5b709c08b2d54f01c9a2c51195a803e9202d18459",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/JetAIUpdate.cpp",
+          "line": 552
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/JetAIUpdate.cpp",
+          "line": 620
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/MissileAIUpdate.cpp",
+      "sha256": "9bf8d947e0abf7688c432d63c55cc30fb9c494375db6500a788d7c7a54f1d27a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/POWTruckAIUpdate.cpp",
+      "sha256": "1123dec8116b79a35456dc8a16d20793767621c5d5faea5103a4a40b807f1d01",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/RailedTransportAIUpdate.cpp",
+      "sha256": "3cab33994d2d366a92bee3982637c98de4027830f9e78431ef2e9a94564b8b64",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/RailroadGuideAIUpdate.cpp",
+      "sha256": "0ed90d9b35d8a8d1be0822976be70342a9efce9097d0b38d4fecdaac07480174",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/SupplyTruckAIUpdate.cpp",
+      "sha256": "bdf6ebb1b389e19ba34d09ae51e50894ab8b6dcccce3fbf3db88b92c3507730b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/TransportAIUpdate.cpp",
+      "sha256": "45911f6580d3e890d8e46bf8761503c88459ac9dad4acd862f3c7adfc3f8966b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/WanderAIUpdate.cpp",
+      "sha256": "0e6d38b0a30a67537a4b102fd2edeff5697d5c529f9fc88211052c5ce16a3c0a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AIUpdate/WorkerAIUpdate.cpp",
+      "sha256": "7ae481b1ad6e4524e8dd1d47917a1a5111a221b4d3cda29d9af09871251ae692",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AnimationSteeringUpdate.cpp",
+      "sha256": "ccd5d7692d09e0d40fc38804de49a9e5e9780e7827967d6362dd08932b2f17ce",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AssistedTargetingUpdate.cpp",
+      "sha256": "4112397b5106083c97d511b56b64861842e554b6103c4b7c6b1b27f76736388f",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AutoDepositUpdate.cpp",
+      "sha256": "c896db4c8160a6a89ab51ac694244833d81e2ff6ec76f96d8db5b8cde8030a99",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/AutoFindHealingUpdate.cpp",
+      "sha256": "280fd690a75062c93ea86d1368dc4e2582827be1cafe378972c5da61d3d6d54e",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/BaseRenerateUpdate.cpp",
+      "sha256": "cc30ba37b39565a28c73e8c7434c1dc6fd929e7c3f2fe2272ea83f57b51ce402",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/BattlePlanUpdate.cpp",
+      "sha256": "bdfb7b74372a9bee81c56632ed6ebd328942adff170f27a7db804281ee36200c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/BoneFXUpdate.cpp",
+      "sha256": "0120961e91fe20057ba64f09863116e96b7f6aee5f2a3df6956338d57e33be08",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/CheckpointUpdate.cpp",
+      "sha256": "828b97f9dada874e2291b40c683762e331f76d061b6c5784d0f723bf24bf297f",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/CleanupHazardUpdate.cpp",
+      "sha256": "76f459cc2cb5f09858bd89d4f7434758a70ebee77947a2649647e0718372da93",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/CommandButtonHuntUpdate.cpp",
+      "sha256": "50a304cef057f927c9dcf87522e1dd7b1e07c2fc7004cd6276a0b8bcd6d240f8",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DeletionUpdate.cpp",
+      "sha256": "f0e3218c7b23962462b6d2eedfc9b6539f89a0306e334731c7ae7e8a82ede166",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DemoTrapUpdate.cpp",
+      "sha256": "ed1d2b3f5aa7a6aff362aadfb9f8ee0e19de325fca0d3ca3f9470c3a55826663",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DockUpdate/DockUpdate.cpp",
+      "sha256": "a9be099f678235c1b15d37326430d1e120cebf3313c19ec399396e459c54b47e",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DockUpdate/DockUpdate.cpp",
+          "line": 177
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DockUpdate/DockUpdate.cpp",
+          "line": 598
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DockUpdate/DockUpdate.cpp",
+          "line": 607
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DockUpdate/PrisonDockUpdate.cpp",
+      "sha256": "df5a60276f60a560f7378a2f3f82b23057e046d44d92da9ba6ecd8b7266f07a4",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DockUpdate/RailedTransportDockUpdate.cpp",
+      "sha256": "6ed573cf34b84bb54ef9f6be3075680564eb422225197e48dba2c640164ae81e",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DockUpdate/RepairDockUpdate.cpp",
+      "sha256": "7e28ecdfd6e66485ebb66fe7e6052b348612cce0a321e66372e10d78c79a86d5",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DockUpdate/SupplyCenterDockUpdate.cpp",
+      "sha256": "b81ace2a1817069eb3c6b4af114f30cfee5b7bbdd653ff078cbbe9e4db282dfb",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DockUpdate/SupplyWarehouseDockUpdate.cpp",
+      "sha256": "4697576c1651301cb01024d253d6dfe0ff7dd02c751ffa4e5c1f2cdb36ee2278",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DynamicGeometryInfoUpdate.cpp",
+      "sha256": "2e59f80dfe7b46eff2d413766a0792293292d0372f03d9dc75d2d8e1f8a670dc",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/DynamicShroudClearingRangeUpdate.cpp",
+      "sha256": "3da1b0c1a3297285014dd98a1cc1fcf2fe3a81b4718ad6550e7da3d3e75f08cb",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/EMPUpdate.cpp",
+      "sha256": "e2748e5f99b5e9ae9751e51a231ceb5ac300f85605356fde3b5b6641506cb222",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/EnemyNearUpdate.cpp",
+      "sha256": "e832a568bd6c95880cb155a9bd897094bce2a184daba4318b80c37ded36b56c2",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/FireOCLAfterWeaponCooldownUpdate.cpp",
+      "sha256": "4cac337671ebf16d30f640b6a229bea9dfc3eee427f79ba8669cae6c3e6b6bf6",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/FireSpreadUpdate.cpp",
+      "sha256": "6231b8d2fa5df3eab630ce743235c033871fb4b1e4f46552ac6247a5506c7a54",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/FireWeaponUpdate.cpp",
+      "sha256": "f4dbdaa6371f07d52266fd373629dcebba9dc4d36cb719f5863ec05d691a6424",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/FirestormDynamicGeometryInfoUpdate.cpp",
+      "sha256": "9be4a007b6d26eebc9a14178ce04e67c21a04b152c77e9abc1351d110dd1f10b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/FlammableUpdate.cpp",
+      "sha256": "564f7b5a9c02453c985f0a1263316f4a39569aad58c0af984270e3a1e766c27d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/FloatUpdate.cpp",
+      "sha256": "f65c8420cc5d862556b333034e152df6cca3fdc0713099e3c8892cc081abc1dc",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/HeightDieUpdate.cpp",
+      "sha256": "6d81c6cecba6ae49657e8ddbbf378b8ff9dc13c643eda40aa973b0ab24816ade",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/HelicopterSlowDeathUpdate.cpp",
+      "sha256": "34867c83a5000bba202f9836ebb94102b87575270101f8a91ee1424faf9c08e4",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/HijackerUpdate.cpp",
+      "sha256": "e1e010c90ea6e2537157bb76753f123e83ec632fdacdbcd4a98031d7de1f3ccd",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/HordeUpdate.cpp",
+      "sha256": "2fa0f7963d5c6b89e381115def6f7a438e220a665e75462649b922f79d0de899",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/LaserUpdate.cpp",
+      "sha256": "fc70d56d1ae48b11c3c4173b06cfe6e4bd7a6a84279b1b2dfcd7042bc5dc996d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/LifetimeUpdate.cpp",
+      "sha256": "3ce46a475b8fdf465ee7ab35286981185daea81c0722e16c6854fa45f5868a4c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/MissileLauncherBuildingUpdate.cpp",
+      "sha256": "445800ea6ceeff0404ddc5392076f19a3c06009ee79cf8693931873c9ca01950",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/MobMemberSlavedUpdate.cpp",
+      "sha256": "2be794f2b08f03993f898f96102549baf7428e71dcb6ab6bc21f46428e298876",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/NeutronMissileSlowDeathUpdate.cpp",
+      "sha256": "458d73657d8c05b1f69eb02804c7d355bbcf92fdeceb5e6948563ac86bdca713",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/NeutronMissileUpdate.cpp",
+      "sha256": "38c8940c9924ab91d389e195ef23f1109301ae085064a3ebcd6b6a845c7d296e",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/OCLUpdate.cpp",
+      "sha256": "044b04180f238518d86435062eca35cf89859bb311e4105f56982304ec3f423b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ParticleUplinkCannonUpdate.cpp",
+      "sha256": "53e4d51692c8afc20cc5d800d57430132a894128e5b7074992329b8ff10ac1ec",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ParticleUplinkCannonUpdate.cpp",
+          "line": 308
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ParticleUplinkCannonUpdate.cpp",
+          "line": 342
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ParticleUplinkCannonUpdate.cpp",
+          "line": 538
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ParticleUplinkCannonUpdate.cpp",
+          "line": 538
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/PhysicsUpdate.cpp",
+      "sha256": "7850285511ecf94b1f5950576537666bf6b04289efc3b8f038bc0803d0ae744b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/PilotFindVehicleUpdate.cpp",
+      "sha256": "851d3bb5d428360320923b5acc00d2f308c880067375a13614119adf0114e6b2",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/PointDefenseLaserUpdate.cpp",
+      "sha256": "d66e57685a0e98bfd5f30c8d20b5a7adc45d9c253a6940050db4bd973f07d2b3",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/PowerPlantUpdate.cpp",
+      "sha256": "3c3237f7e6bbd3aa4553dad9ff95c873afb35d924aec50a5e1c510e22b0d3207",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProductionExitUpdate/DefaultProductionExitUpdate.cpp",
+      "sha256": "5ab1796ebf2ec1e30403046e9089d4b1be657bb4792c66a3659639b804a39cb1",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProductionExitUpdate/QueueProductionExitUpdate.cpp",
+      "sha256": "7d0e0fa237babd108a55dde890f19d0d22ee88f957a8636b484a7928cb641e86",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProductionExitUpdate/SpawnPointProductionExitUpdate.cpp",
+      "sha256": "82cc8cfc5d0f942c5a5ac0418713163e28dec14457f81b1925caeecdd1a7187a",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProductionExitUpdate/SpawnPointProductionExitUpdate.cpp",
+          "line": 79
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProductionExitUpdate/SpawnPointProductionExitUpdate.cpp",
+          "line": 89
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProductionExitUpdate/SpawnPointProductionExitUpdate.cpp",
+          "line": 159
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProductionExitUpdate/SupplyCenterProductionExitUpdate.cpp",
+      "sha256": "d08a29ce50658c945b7aae2d6de619672061ad302eeffe84733e9f0e5a56734a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProductionUpdate.cpp",
+      "sha256": "9d80aa33d27940a7d35dea5246a937cbc12dda538566d2f30c5bc57707f462db",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProjectileStreamUpdate.cpp",
+      "sha256": "ec4aa0f83b8e28b65ca8fe69502af7e99707a73e40c5fdc517d4ae397793626e",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProneUpdate.cpp",
+      "sha256": "762666b409b5a4abd22e1882661baab7495ea39b876d944f24956b4d509bb574",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/RadarUpdate.cpp",
+      "sha256": "ea02665b764143284bf13b7130810a8a1d7ed774fac07db9e6f57e18da65e3a1",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/RadiusDecalUpdate.cpp",
+      "sha256": "9d5aa62cca831db4c4d2ebfb1b2bcde50fd46106519d6f2a7af2afd8b584bcfc",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/SlavedUpdate.cpp",
+      "sha256": "0940878c438c23769fb46403e0148774979a8f4015a6cadba205301a60654a23",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/SmartBombTargetHomingUpdate.cpp",
+      "sha256": "eeaf4296050d454907ef3bb89f479172b54b5c9060d3d83d050f60582b76e264",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/SpecialAbilityUpdate.cpp",
+      "sha256": "fc0d411e9992ba46b86dedf589a908ab515c618ef69b01c98c7f63f3c2735054",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/SpecialPowerUpdateModule.cpp",
+      "sha256": "49523e09ca1144c9ec64ba0b867b897b767255c8a2b471d7db20fae056fc0196",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/SpectreGunshipDeploymentUpdate.cpp",
+      "sha256": "4a34fc6433e55a413800ec975a4cbe3de50e16a7d0fb1542cf0893b796cd4a3f",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/SpectreGunshipUpdate.cpp",
+      "sha256": "3290bb0096e9b5391a324a81455c0e48d6447535a4b99baa4b22714dab6e4c7d",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/SpectreGunshipUpdate.cpp",
+          "line": 427
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/SpyVisionUpdate.cpp",
+      "sha256": "219e2b4d9abe8e454880f8a24fad5a97d2a4268a8f79e8fcdadab507a9f66344",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/StealthDetectorUpdate.cpp",
+      "sha256": "960cc22d75c2dbce1d48c5187ef7ce9c82493593dd951b81458f2cf53d867ca1",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/StealthUpdate.cpp",
+      "sha256": "eef70abcc607d0df41c1d2ca119c5dc9c6936fdc2f98aaed76c1404b86460245",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/StickyBombUpdate.cpp",
+      "sha256": "5848d4617973a0414c6dbbca2e9888bf6cef073f19320c130a76930209b2262c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/StructureCollapseUpdate.cpp",
+      "sha256": "6168c7b0f5f17d92219a2b93296e135a5a4f612a37d71628b5b4b70b480f3c67",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/StructureToppleUpdate.cpp",
+      "sha256": "833ee7aaea5b4c381404237d210940606463f9b5d7d018a40d50e1bf440f4ad8",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/StructureToppleUpdate.cpp",
+          "line": 417
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/TensileFormationUpdate.cpp",
+      "sha256": "725537f996045c7df4fd3762b7c78d34d889c50b2a3976714eff87b6b8c04f52",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ToppleUpdate.cpp",
+      "sha256": "01b7bbafcc68614d38b0d99a3f504d7bc163d2a96218d8bd93e4710e0f81de5a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/UpdateModule.cpp",
+      "sha256": "59222b5e70983042b3784628c783a1d9c8ffd9216d0ff4e80565cd29a0329fb2",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/WaveGuideUpdate.cpp",
+      "sha256": "86ea73d9fba470f6d3f4f5e7669f5b98036dcd3d07049beb458609ea3efd187d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/WeaponBonusUpdate.cpp",
+      "sha256": "3996b755023d409987128010ce0d1c6d9394ec74ff0ba2bc90224542cf2eacc6",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/ActiveShroudUpgrade.cpp",
+      "sha256": "60443dc4f4d9b01279e50159b26185a357e2118f1b22b4ea4adeee36d161b650",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/ArmorUpgrade.cpp",
+      "sha256": "824d0a789791a7bcc8c7956e912512efe2e435479972f8ac5576719c1b8cdc51",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/CommandSetUpgrade.cpp",
+      "sha256": "ed3730f7e90747cf4497a1c37eca510deacc8f1b6f9ae400a3682a94f50f3433",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/CostModifierUpgrade.cpp",
+      "sha256": "274097ac8979fc643d72e3d47d1c268578a8eea8c344b0f83bd397ef32957b48",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/ExperienceScalarUpgrade.cpp",
+      "sha256": "e665589f39d2c66e6f6276b527d5fdaf2dbc77523b702111f59a1dde51b3f1fd",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/GrantScienceUpgrade.cpp",
+      "sha256": "520ba64a15e6c4cbbafa2922c61f0a1345b3b0021dcaaf5304820dde76d42596",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/LocomotorSetUpgrade.cpp",
+      "sha256": "32bcc1e03f9892065b5c7a314f60847347d132b00c437aa210d6db9053c22646",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/MaxHealthUpgrade.cpp",
+      "sha256": "a2f5b20b1d07de0f77aebf8a369c22aef7017fbdf0526278de3c88327827eedd",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/ModelConditionUpgrade.cpp",
+      "sha256": "142074a8c82ffacc458372df9077cd637ccfce34f91b2eb1941e2966b8f053f5",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/ObjectCreationUpgrade.cpp",
+      "sha256": "0e622a3c0d826d9fadf0955b8f2f587e798f018a8c66d986ce6913342f36dc9d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/PassengersFireUpgrade.cpp",
+      "sha256": "f5a79b34fbe28f5e8100b4a6f75847d2c1bd229749946cb9db5bcc58c5524931",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/PowerPlantUpgrade.cpp",
+      "sha256": "3b01f92e36c16b0dd36d2af02b4d10d44336cd16e29074ea89cc293377cc6142",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/RadarUpgrade.cpp",
+      "sha256": "17c891e85cedeeba04a4fe1287b3b2cb8efe4634d970ece924b16f57015d5ece",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/ReplaceObjectUpgrade.cpp",
+      "sha256": "dda46161aca7e6e2075139fca11f6c32e75ca300ac09d51171ad5c64e6f2792c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/StatusBitsUpgrade.cpp",
+      "sha256": "1e8270df876ab83bc6c62da9ae30cb571058670b8308daae208d9c1e30475ebb",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/StealthUpgrade.cpp",
+      "sha256": "d065161f209adcad5f44826ec3276ad39cf87c71be13657b4eaca8e8a9f205bf",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/SubObjectsUpgrade.cpp",
+      "sha256": "74070db47fd6cd4c19d8bccd8082c63e4c40585c4bff3c548d45c5322629a5d2",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/UnpauseSpecialPowerUpgrade.cpp",
+      "sha256": "c056b728dd472889edc5cb979c6d54caa1f4eacb85e68fc7c25143ca4add4f99",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/UpgradeModule.cpp",
+      "sha256": "f096c3207841094cac4048c13e07d7b971ddc43f5dc30db2a27fe91809851ec7",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/WeaponBonusUpgrade.cpp",
+      "sha256": "220367413aa665c11e979258066dd2eaf2def1255c668a6bb3c75a42f96c1fa8",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Upgrade/WeaponSetUpgrade.cpp",
+      "sha256": "e74ff08842da959e2cd99c33802c726c271b5d23c655de1103bb7550ac8de4a0",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Weapon.cpp",
+      "sha256": "be38d9c267c4a4a70b86810906a095cb48724949d86bc8633e72fff0cde8bac8",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/WeaponSet.cpp",
+      "sha256": "f4115ee3a434ab8d130bea363eb3b34ba05e3498ed963eac19cc361c420be2fa",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/ScriptActions.cpp",
+      "sha256": "5f3d4e54ac17592ea1f400efeb5e1cc41c7f57bc98c3cc26c7e9afdae290f6d3",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/ScriptActions.cpp",
+          "line": 2579
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/ScriptActions.cpp",
+          "line": 5320
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/ScriptConditions.cpp",
+      "sha256": "91acee5e95595d9351d33b764b8d8f9059a6ea28312f933699141c1f33e992dc",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/ScriptEngine.cpp",
+      "sha256": "4222012cc1ec10fc219643eb739bfd423baacf356a7ea9cf463015d7db570376",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/Scripts.cpp",
+      "sha256": "02e816541478fffd18eccc85ef558ce9d76b7f35138e5508ec7dc269ee0a0d12",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/ScriptEngine/VictoryConditions.cpp",
+      "sha256": "a03d85e8cad7a5c418a154865f569f6a6cfe9887b9d0e43cf94d1174bc1a5f59",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/System/CaveSystem.cpp",
+      "sha256": "ee0d7a04dc9eb5b2e8773e25989f6543b2707f030743f8fe0668fe6bf8d969f8",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/System/CrateSystem.cpp",
+      "sha256": "9b40f1c643fa2e7b0516f048dfd1bae19ecd8a9ab85b1daa36bf64857a0dbbfd",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/System/Damage.cpp",
+      "sha256": "6256a6e0b2e70c44aa05889cd0b942258f51efd35d7de1b4c8d09de83988624c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/System/FPUControl.cpp",
+      "sha256": "df242f196e717e1d22baec3b15707cc3f51746d34bfb8a67491a32a12d07e583",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogic.cpp",
+      "sha256": "949b43434d065ea4ec6c4c686b315a76fe7ea8c69a8bd859c556ed0455bc9732",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogic.cpp",
+          "line": 2367
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogic.cpp",
+          "line": 2370
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogic.cpp",
+          "line": 2396
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogicDispatch.cpp",
+      "sha256": "c8c27b0198dc700c023e1e0df60f0415dbef6b9855eba8ec6ad587c682f911e0",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogicDispatch.cpp",
+          "line": 1809
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/GameLogic/System/RankInfo.cpp",
+      "sha256": "6f455164871b7fa216117f9db543d702d2a5861dec9d12763d88ec1c3ec16b2b",
+      "returncode": 0,
+      "errors": []
+    }
+  ]
+}

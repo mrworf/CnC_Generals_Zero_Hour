@@ -84,6 +84,10 @@ class GameTextInterface : public SubsystemInterface
 		virtual AsciiStringVec& getStringsWithLabelPrefix(AsciiString label) = 0;
 
 		virtual void					initMapStringFile( const AsciiString& filename ) = 0;
+    // Temporary metadata lookup never replaces the active gameplay map catalog
+    // or leaves a missing-label cache acquisition on a rejected map query.
+    virtual UnicodeString fetchMapMetadataLabel(const AsciiString& filename,
+        const AsciiString& label) = 0;
 		// Rooted native startup selects its language/content explicitly.
 		virtual Bool loadCSF(const AsciiString& filename) = 0;
 };

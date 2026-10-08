@@ -38,6 +38,8 @@
 #include "Common/NameKeyGenerator.h"
 #include "Common/WellKnownKeys.h"
 #include "Common/QuotedPrintable.h"
+#include "Common/NativeSourceStrings.h"
+#include <cmath>
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -45,22 +47,27 @@
 //#pragma MESSAGE("************************************** WARNING, optimization disabled for debugging purposes")
 #endif
 
+static AsciiString decodeMapCacheIdentity(const AsciiString& encoded) {
+  try {return QuotedPrintableToAsciiString(encoded);}
+  catch(ErrorCode error) {if(error==ERROR_BAD_ARG)throw ERROR_BAD_INI;throw;}
+}
+
 class MapMetaDataReader
 {
 public:
-	Region3D m_extent;
-	Int m_numPlayers;
-	Bool m_isMultiplayer;
+	Region3D m_extent{};
+	Int m_numPlayers = 0;
+	Bool m_isMultiplayer = FALSE;
 	AsciiString m_asciiDisplayName;
 	AsciiString m_asciiNameLookupTag;
 
-	Bool m_isOfficial;
-	WinTimeStamp m_timestamp;
-	UnsignedInt m_filesize;
-	UnsignedInt m_CRC;
+	Bool m_isOfficial = FALSE;
+	WinTimeStamp m_timestamp{};
+	UnsignedInt m_filesize = 0;
+	UnsignedInt m_CRC = 0;
 
-	Coord3D m_waypoints[MAX_SLOTS];
-	Coord3D m_initialCameraPosition;
+	Coord3D m_waypoints[MAX_SLOTS]{};
+	Coord3D m_initialCameraPosition{};
 	Coord3DList m_supplyPositions;
 	Coord3DList m_techPositions;
 	static const FieldParse m_mapFieldParseTable[];		///< the parse table for INI definition
@@ -128,16 +135,23 @@ void INI::parseMapCacheDefinition( INI* ini )
 
 	// read the name
 	c = ini->getNextToken(" \n\r\t");
+  if(!c || !*c) throw ERROR_BAD_INI;
 	name.set( c );
-	name = QuotedPrintableToAsciiString(name);
+	name = decodeMapCacheIdentity(name);
+  if(name.isEmpty()) throw ERROR_BAD_INI;
 	md.m_waypoints.clear();
 
 	ini->initFromINI( &mdr, mdr.getFieldParse() );
+  if(mdr.m_numPlayers<0 || mdr.m_numPlayers>MAX_SLOTS || mdr.m_filesize>UnsignedInt(INT32_MAX) ||
+      mdr.m_extent.lo.x>mdr.m_extent.hi.x || mdr.m_extent.lo.y>mdr.m_extent.hi.y ||
+      mdr.m_extent.lo.z>mdr.m_extent.hi.z) throw ERROR_BAD_INI;
+  if(!TheNameKeyGenerator || !TheGameText) throw ERROR_BAD_ARG;
 
 	md.m_extent = mdr.m_extent;
 	md.m_isOfficial = mdr.m_isOfficial != 0;
 	md.m_isMultiplayer = mdr.m_isMultiplayer != 0;
 	md.m_numPlayers = mdr.m_numPlayers;
+  md.m_waypoints.m_numStartSpots=std::max(1,mdr.m_numPlayers);
 	md.m_filesize = mdr.m_filesize;
 	md.m_CRC = mdr.m_CRC;
 	md.m_timestamp = mdr.m_timestamp;
@@ -146,13 +160,13 @@ void INI::parseMapCacheDefinition( INI* ini )
 
 //	md.m_displayName = QuotedPrintableToUnicodeString(mdr.m_asciiDisplayName);
 // this string is never to be used, but we'll leave it in to allow people with an old mapcache.ini to parse it
-	md.m_nameLookupTag = QuotedPrintableToAsciiString(mdr.m_asciiNameLookupTag);
+	md.m_nameLookupTag = decodeMapCacheIdentity(mdr.m_asciiNameLookupTag);
 
 	if (md.m_nameLookupTag.isEmpty())
 	{
 		// maps without localized name tags
 		AsciiString tempdisplayname;
-		tempdisplayname = name.reverseFind('\\') + 1;
+		tempdisplayname = nativePathLeaf(name.str()).data();
 		md.m_displayName.translate(tempdisplayname);
 		if (md.m_numPlayers >= 2)
 		{
@@ -164,7 +178,7 @@ void INI::parseMapCacheDefinition( INI* ini )
 	else
 	{
 		// official maps with name tags
-		md.m_displayName = TheGameText->fetch(md.m_nameLookupTag);
+		md.m_displayName = TheGameText->fetchMapMetadataLabel(AsciiString::TheEmptyString,md.m_nameLookupTag);
 		if (md.m_numPlayers >= 2)
 		{
 			UnicodeString extension;
@@ -200,7 +214,6 @@ void INI::parseMapCacheDefinition( INI* ini )
 		lowerName.toLower();
 		md.m_fileName = lowerName;
 //		DEBUG_LOG(("INI::parseMapCacheDefinition - adding %s to map cache\n", lowerName.str()));
-		(*TheMapCache)[lowerName] = md;
+		TheMapCache->publishMetadata(std::move(lowerName),std::move(md));
 	}
 }
-

@@ -47,6 +47,7 @@
 #include "Common/AsciiString.h"
 #include "Common/NameKeyGenerator.h"
 #include "Common/Module.h"
+#include "Common/NativeModuleData.h"
 #include "Common/STLTypedefs.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
@@ -67,6 +68,7 @@ typedef ModuleData* (*NewModuleDataProc)(INI* ini);
 //-------------------------------------------------------------------------------------------------
 class ModuleFactory : public SubsystemInterface, public Snapshot
 {
+	friend class ThingFactory; // definition transaction retires its borrowed template graph first
 
 public:
 
@@ -77,12 +79,12 @@ public:
 	virtual void reset( void ) { }					///< We don't reset during the lifetime of the app
 	virtual void update( void ) { }					///< As of now, we don't have a need for an update
 
-	Module *newModule( Thing *thing, const AsciiString& name, const ModuleData* data, ModuleType type );  ///< allocate a new module
+	Module *newModule( Thing *thing, const AsciiString& name, const ModuleData* data, Int type );  ///< raw bucket admission before source enum use
 
 	// module-data 
-	ModuleData* newModuleDataFromINI(INI* ini, const AsciiString& name, ModuleType type, const AsciiString& moduleTag);
+	ModuleData* newModuleDataFromINI(INI* ini, const AsciiString& name, Int type, const AsciiString& moduleTag);
 
-	Int findModuleInterfaceMask(const AsciiString& name, ModuleType type);
+	Int findModuleInterfaceMask(const AsciiString& name, Int type);
 
 	virtual void crc( Xfer *xfer );
 	virtual void xfer( Xfer *xfer );
@@ -103,10 +105,10 @@ protected:
 		Int m_whichInterfaces;
 	};
 
-	const ModuleTemplate* findModuleTemplate(const AsciiString& name, ModuleType type);
+	const ModuleTemplate* findModuleTemplate(const AsciiString& name, Int type);
 
 	/// adding a new module template to the factory, and assisting macro to make it easier
-	void addModuleInternal( NewModuleProc proc, NewModuleDataProc dataproc, ModuleType type, const AsciiString& name, Int whichIntf );
+	void addModuleInternal( NewModuleProc proc, NewModuleDataProc dataproc, Int type, const AsciiString& name, Int whichIntf );
 	#define addModule( classname )											\
 		addModuleInternal( classname::friend_newModuleInstance,  \
 											 classname::friend_newModuleData,			\
@@ -114,13 +116,37 @@ protected:
 											 AsciiString( #classname ),			\
 											 classname::getInterfaceMask())
 
-	static NameKeyType makeDecoratedNameKey(const AsciiString& name, ModuleType type);
+	static NameKeyType makeDecoratedNameKey(const AsciiString& name, Int type);
 
 	typedef std::map< NameKeyType, ModuleTemplate, std::less<NameKeyType> > ModuleTemplateMap;
-	typedef std::vector<const ModuleData*> ModuleDataList;
+	typedef NativeModuleDataList ModuleDataList;
 
 	ModuleTemplateMap			m_moduleTemplateMap;
 	ModuleDataList				m_moduleDataList;
+
+	// Nested registration may extend a base registry. Keep the entire accepted
+	// map backing and namespace until every retained provider has registered.
+	class RegistryTransaction final {
+		ModuleTemplateMap& m_owner;
+		NameKeyTransaction m_keys;
+		ModuleTemplateMap m_previous;
+		bool m_committed = false;
+		static NameKeyGenerator& names() {
+			if (!TheNameKeyGenerator) throw ERROR_BAD_ARG;
+			return *TheNameKeyGenerator;
+		}
+	public:
+		explicit RegistryTransaction(ModuleFactory& factory)
+			: m_owner(factory.m_moduleTemplateMap), m_keys(names()), m_previous(m_owner) {
+			m_owner.swap(m_previous);
+		}
+		~RegistryTransaction() noexcept {
+			if (!m_committed) m_owner.swap(m_previous);
+		}
+		RegistryTransaction(const RegistryTransaction&) = delete;
+		RegistryTransaction& operator=(const RegistryTransaction&) = delete;
+		void commit() noexcept { m_keys.commit(); m_committed = true; }
+	};
 
 };  // end class ModuleFactory
 
@@ -128,4 +154,3 @@ protected:
 extern ModuleFactory *TheModuleFactory;  ///< singleton definition
 
 #endif // __MODULEFACTORY_H_
-

@@ -132,10 +132,14 @@ WindowMsgHandledType MessageBoxSystem( GameWindow *window, UnsignedInt msg,
 		{
 			GameWindow *control = (GameWindow *)mData1;
 			Int controlID = control->winGetWindowId();
-			static NameKeyType buttonOkID = TheNameKeyGenerator->nameToKey( AsciiString( "MessageBox.wnd:ButtonOk" ) );
-			static NameKeyType buttonYesID = TheNameKeyGenerator->nameToKey( AsciiString( "MessageBox.wnd:ButtonYes" ) );
-			static NameKeyType buttonNoID = TheNameKeyGenerator->nameToKey( AsciiString( "MessageBox.wnd:ButtonNo" ) );
-			static NameKeyType buttonCancelID = TheNameKeyGenerator->nameToKey( AsciiString( "MessageBox.wnd:ButtonCancel" ) );
+			static const StaticNameKey nativeCached_buttonOkID("MessageBox.wnd:ButtonOk");
+			NameKeyType buttonOkID = nativeCached_buttonOkID.key();
+			static const StaticNameKey nativeCached_buttonYesID("MessageBox.wnd:ButtonYes");
+			NameKeyType buttonYesID = nativeCached_buttonYesID.key();
+			static const StaticNameKey nativeCached_buttonNoID("MessageBox.wnd:ButtonNo");
+			NameKeyType buttonNoID = nativeCached_buttonNoID.key();
+			static const StaticNameKey nativeCached_buttonCancelID("MessageBox.wnd:ButtonCancel");
+			NameKeyType buttonCancelID = nativeCached_buttonCancelID.key();
 			WindowMessageBoxData *MsgBoxCallbacks = (WindowMessageBoxData *)window->winGetUserData();
 			
 			if( controlID == buttonOkID )
@@ -216,10 +220,14 @@ WindowMsgHandledType QuitMessageBoxSystem( GameWindow *window, UnsignedInt msg,
 		{
 			GameWindow *control = (GameWindow *)mData1;
 			Int controlID = control->winGetWindowId();
-			static NameKeyType buttonOkID = TheNameKeyGenerator->nameToKey( AsciiString( "QuitMessageBox.wnd:ButtonOk" ) );
-			static NameKeyType buttonYesID = TheNameKeyGenerator->nameToKey( AsciiString( "QuitMessageBox.wnd:ButtonYes" ) );
-			static NameKeyType buttonNoID = TheNameKeyGenerator->nameToKey( AsciiString( "QuitMessageBox.wnd:ButtonNo" ) );
-			static NameKeyType buttonCancelID = TheNameKeyGenerator->nameToKey( AsciiString( "QuitMessageBox.wnd:ButtonCancel" ) );
+			static const StaticNameKey nativeCached_buttonOkID("QuitMessageBox.wnd:ButtonOk");
+			NameKeyType buttonOkID = nativeCached_buttonOkID.key();
+			static const StaticNameKey nativeCached_buttonYesID("QuitMessageBox.wnd:ButtonYes");
+			NameKeyType buttonYesID = nativeCached_buttonYesID.key();
+			static const StaticNameKey nativeCached_buttonNoID("QuitMessageBox.wnd:ButtonNo");
+			NameKeyType buttonNoID = nativeCached_buttonNoID.key();
+			static const StaticNameKey nativeCached_buttonCancelID("QuitMessageBox.wnd:ButtonCancel");
+			NameKeyType buttonCancelID = nativeCached_buttonCancelID.key();
 			WindowMessageBoxData *MsgBoxCallbacks = (WindowMessageBoxData *)window->winGetUserData();
 			
 			if( controlID == buttonOkID )

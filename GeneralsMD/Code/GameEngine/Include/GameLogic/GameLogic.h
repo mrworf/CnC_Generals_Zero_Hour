@@ -34,6 +34,7 @@
 
 #include "Common/GameCommon.h"	// ensure we get DUMP_PERF_STATS, or not
 #include "Common/GameType.h"
+#include "Common/NativeServiceOwners.h"
 #include "Common/Snapshot.h"
 #include "Common/STLTypedefs.h"
 #include "Common/ObjectStatusTypes.h"
@@ -66,22 +67,12 @@ class WindowLayout;
 class TerrainLogic;
 class GhostObjectManager;
 class CommandButton;
-enum BuildableStatus;
+enum BuildableStatus : UnsignedInt;
 
 
 typedef const CommandButton* ConstCommandButtonPtr;
 
-// What kind of game we're in.
-enum
-{
-	GAME_SINGLE_PLAYER,
-	GAME_LAN,
-	GAME_SKIRMISH,
-	GAME_REPLAY,
-	GAME_SHELL,
-	GAME_INTERNET,
-	GAME_NONE
-};
+#include "GameLogic/GameModes.h"
 
 enum
 {
@@ -264,6 +255,8 @@ protected:
 
 private:
 
+	NativeServiceOwners<6> m_serviceOwners;
+
 	void pushSleepyUpdate(UpdateModulePtr u);
 	UpdateModulePtr peekSleepyUpdate() const;
 	void popSleepyUpdate();
@@ -280,13 +273,13 @@ private:
 		overrides to thing template buildable status. doesn't really belong here,
 		but has to go somewhere. (srj)
 	*/
-	typedef std::hash_map< AsciiString, BuildableStatus, rts::hash<AsciiString>, rts::equal_to<AsciiString> > BuildableMap;
+	typedef std::unordered_map< AsciiString, BuildableStatus, rts::hash<AsciiString>, rts::equal_to<AsciiString> > BuildableMap;
 	BuildableMap m_thingTemplateBuildableOverrides;
 
 	/**
 		overrides to control bars. doesn't really belong here, but has to go somewhere. (srj)
 	*/
-	typedef std::hash_map< AsciiString, ConstCommandButtonPtr, rts::hash<AsciiString>, rts::equal_to<AsciiString> > ControlBarOverrideMap;
+	typedef std::unordered_map< AsciiString, ConstCommandButtonPtr, rts::hash<AsciiString>, rts::equal_to<AsciiString> > ControlBarOverrideMap;
 	ControlBarOverrideMap m_controlBarOverrides;
 
 	Real m_width, m_height;																	///< Dimensions of the world
@@ -361,7 +354,7 @@ private:
 
 	Bool m_progressComplete[MAX_SLOTS];
 	enum { PROGRESS_COMPLETE_TIMEOUT = 60000 };							///< Timeout we wait for when we've completed our Load
-	Int m_progressCompleteTimeout[MAX_SLOTS];
+	UnsignedInt m_progressCompleteTimeout[MAX_SLOTS];
 	void testTimeOut( void );
 	void lastHeardFrom( Int playerId );
 	Bool m_forceGameStartByTimeOut;													///< If we timeout someone we're waiting to load, set this flag to start the game
@@ -397,7 +390,11 @@ inline Real GameLogic::getHeight( void ) { return m_height; }
 inline UnsignedInt GameLogic::getFrame( void ) { return m_frame; }
 
 inline Bool GameLogic::isInGame( void ) { return !(m_gameMode == GAME_NONE); }
-inline void GameLogic::setGameMode( Int mode ) { m_gameMode = mode; }
+inline void GameLogic::setGameMode( Int mode )
+{
+	if (!nativeGameModeSupported(mode)) throw ERROR_BAD_ARG;
+	m_gameMode = mode;
+}
 inline Int  GameLogic::getGameMode( void ) { return m_gameMode; }
 inline Bool GameLogic::isInLanGame( void ) { return (m_gameMode == GAME_LAN); }
 inline Bool GameLogic::isInSkirmishGame( void ) { return (m_gameMode == GAME_SKIRMISH); }
@@ -429,4 +426,3 @@ inline Object* GameLogic::findObjectByID( ObjectID id )
 extern GameLogic *TheGameLogic;
 
 #endif // _GAME_LOGIC_H_
-

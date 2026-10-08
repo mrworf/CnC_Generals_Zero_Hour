@@ -51,6 +51,12 @@
 
 #include "Common/AudioEventRTS.h"
 #include "Common/Language.h"
+#include "Common/NativeClock.h"
+#include "Common/NativeInputSettings.h"
+#include "GameClient/NativeListBoxSelection.h"
+#include <memory>
+#include <limits>
+#include <algorithm>
 #include "Common/Debug.h"
 #include "Common/GameAudio.h"
 #include "GameClient/DisplayStringManager.h"
@@ -72,7 +78,7 @@
 // DEFINES ////////////////////////////////////////////////////////////////////
 // Sets up the user's OS set doubleclick time so if they don't like it... they can
 // change it in their OS.
-static UnsignedInt doubleClickTime = GetDoubleClickTime();
+// Resolve the adopted native input policy when an event arrives, after SDL init.
 
 // PRIVATE TYPES //////////////////////////////////////////////////////////////
 typedef struct _AddMessageStruct
@@ -224,11 +230,7 @@ static Int getListboxBottomEntry( ListboxData *list )
 //=============================================================================
 static void removeSelection( ListboxData *list, Int i )
 {
-	memcpy( &list->selections[i], &list->selections[(i+1)],
-						((list->listLength - i) * sizeof(Int)) );
-
-	// put -1 at end of list just for safety
-	list->selections[(list->listLength - 1)] = -1;
+	nativeListBoxRemoveSelection(*list,i);
 }
 
 // adjustDisplay ==============================================================
@@ -393,50 +395,7 @@ static Int addImageEntry( const Image *image, Color color, Int row, Int column, 
 // startingRow will get moved to startingRow+1, etc.  This assumes there is space!!!!!
 static Int moveRowsDown(ListboxData *list, Int startingRow)
 {
-	//
-	// copy the cells down
-	//
-	Int copyLen = (list->endPos - startingRow) * sizeof(ListEntryRow);
-	char *buf = NEW char[copyLen];
-	memcpy(buf, list->listData + startingRow, copyLen);
-	memcpy(list->listData + startingRow + 1, buf, copyLen );
-	delete buf;
-
-	list->endPos ++;
-	list->insertPos = list->endPos;
-
-	//
-	// remove the display or links to images after the shift
-	//
-	list->listData[startingRow].cell = NULL;
-	list->listData[startingRow].height = 0;
-	list->listData[startingRow].listHeight = 0;
-
-	if( list->multiSelect )
-	{
-		Int i = 0;
-
-		while( list->selections[i] >= 0 )
-		{
-			if( startingRow <= list->selections[i] )
-				list->selections[i]++;
-			i++;
-		}
-	}
-	else
-	{
-		if( list->selectPos >= startingRow )
-			list->selectPos++;
-	}
-
-	/*
-	if( list->displayPos > 0 )
-		adjustDisplay( window, (-1 * mData1), TRUE );
-
-	computeTotalHeight( window );
-	*/
-
-	return 1;
+    return nativeListBoxInsertRow(*list,startingRow) ? 1 : 0;
 }
 
 // addEntry ===================================================================
@@ -482,9 +441,9 @@ static Int addEntry( UnicodeString *string, Int color, Int row, Int column, Game
 	else if (!overwrite)
 	{
 		// Shove things down
-		moveRowsDown(list, row);
-		listRow->cell = NEW ListEntryCell[list->columns];
-		memset(listRow->cell,0,list->columns * sizeof(ListEntryCell));
+		auto cells=std::make_unique<ListEntryCell[]>(list->columns);
+        if (!moveRowsDown(list,row)) return -1;
+        listRow->cell=cells.release();
 		rowsAdded = 1;
 	}
 	
@@ -729,7 +688,7 @@ WindowMsgHandledType GadgetListBoxInput( GameWindow *window, UnsignedInt msg,
 								DisplayString *dString = (DisplayString *)cell->data;
 								if(!dString)
 									continue;
-								for(j = 0; j < TheKeyboard->MAX_KEY_STATES; ++j)
+								for(Int j = 0; j < TheKeyboard->MAX_KEY_STATES; ++j)
 								{								
 									if(dString->getText().getCharAt(0) == TheKeyboard->getPrintableKey(mData1, j))
 									{
@@ -825,7 +784,8 @@ WindowMsgHandledType GadgetListBoxInput( GameWindow *window, UnsignedInt msg,
 			}
 			
 			//Bool dblClicked = FALSE;
-			if( list->doubleClickTime + doubleClickTime > timeGetTime() && 
+			if( list->doubleClickTime != 0 &&
+                nativeElapsedMilliseconds(nativeMilliseconds(),list->doubleClickTime) < nativeDoubleClickMilliseconds() &&
 					(i == oldPos || (oldPos == -1 && ( i>=0 && i<list->endPos ) )) )
 			{
 				int temp;
@@ -854,7 +814,7 @@ WindowMsgHandledType GadgetListBoxInput( GameWindow *window, UnsignedInt msg,
 			{
 				list->selectPos = oldPos;
 			}
-			list->doubleClickTime = timeGetTime();
+			list->doubleClickTime = nativeMilliseconds();
 			TheWindowManager->winSendSystemMsg( window->winGetOwner(), 
 																					GLM_SELECTED,
 																					(WindowMsgData)window, 
@@ -1057,25 +1017,8 @@ WindowMsgHandledType GadgetListBoxMultiInput( GameWindow *window, UnsignedInt ms
 			if( selectPos == -2 )
 				selectPos = i;
 
-			i = 0;
-			while( list->selections[i] >= 0 )
-			{
-				if( list->selections[i] == selectPos )
-				{
-					removeSelection( list, i );
-					removed = TRUE;
-					break;
-				}
-				
-				i++;
-			}
+            nativeListBoxToggleSelection(*list,selectPos);
 
-			if( removed == FALSE )
-			{
-				list->selections[ i] = selectPos;
-				list->selections[ i + 1 ] = -1;
-			}
-		
 			TheWindowManager->winSendSystemMsg( window->winGetOwner(), 
 																					GLM_SELECTED,
 																					(WindowMsgData)window, 
@@ -1290,7 +1233,7 @@ WindowMsgHandledType GadgetListBoxSystem( GameWindow *window, UnsignedInt msg,
 			if(pos->x >= list->columns || pos->y >= list->listLength || 
 					list->listData[pos->y].cell[pos->x].cellType != LISTBOX_TEXT)
 			{
-				tAndC->string = UnicodeString.TheEmptyString;
+				tAndC->string = UnicodeString::TheEmptyString;
 				tAndC->color = 0;				
 			}
 			else
@@ -1368,7 +1311,7 @@ WindowMsgHandledType GadgetListBoxSystem( GameWindow *window, UnsignedInt msg,
 					cells[j].userData = NULL;
 					cells[j].data = NULL;
 				}
-				delete(list->listData[i].cell);
+				delete[](list->listData[i].cell);
 				list->listData[i].cell = NULL;
 			}
 			//zero out the header structure
@@ -1399,12 +1342,12 @@ WindowMsgHandledType GadgetListBoxSystem( GameWindow *window, UnsignedInt msg,
 		{
 			Int i;
 
-			if( list->endPos <= (Int)mData1 )
+			if( mData1 >= static_cast<WindowMsgData>(list->endPos) )
 				break;
 
 			ListEntryCell *cells = list->listData[mData1].cell;
 			if(cells)
-				for( i = 0; i <= list->columns; i ++ )
+				for( i = 0; i < list->columns; i ++ )
 				{
 					if( cells[i].cellType == LISTBOX_TEXT && cells[i].data )
 						TheDisplayStringManager->freeDisplayString((DisplayString *) cells[i].data );	
@@ -1414,17 +1357,18 @@ WindowMsgHandledType GadgetListBoxSystem( GameWindow *window, UnsignedInt msg,
 			
 			delete [](list->listData[mData1].cell);
 
-			memcpy( &list->listData[mData1], &list->listData[(mData1+1)],
+			memmove( &list->listData[mData1], &list->listData[(mData1+1)],
 							(list->endPos - mData1 - 1) * sizeof(ListEntryRow) );
 
 			list->endPos--;
+            list->listData[list->endPos] = {};
 			list->insertPos = list->endPos;
 
 			if( list->multiSelect )
 			{
 				i = 0;
 
-				while( list->selections[i] >= 0 )
+				while( i < list->listLength && list->selections[i] >= 0 )
 				{
 					if( (Int)mData1 < list->selections[i] )
 						list->selections[i]--;
@@ -1530,7 +1474,7 @@ WindowMsgHandledType GadgetListBoxSystem( GameWindow *window, UnsignedInt msg,
 				{
 					Int i = 0;
 
-					while( list->selections[i] >= 0 )
+					while( i < list->listLength && list->selections[i] >= 0 )
 					{
 
 						if( (row = list->selections[i]) != 0 )
@@ -1557,109 +1501,22 @@ WindowMsgHandledType GadgetListBoxSystem( GameWindow *window, UnsignedInt msg,
 		case GLM_TOGGLE_MULTI_SELECTION:
 		{
 
-			if( (Int)mData1 < 0 )
-			{
-				// a negative number will purge the entire list.
-				if( list->multiSelect )
-					memset( list->selections, -1, list->listLength * sizeof(Int) );
-				else
-				{
-					// this message has no effect in a non-multi listbox
-				}
-
-				break;
-			}
-
-			// if there is no cells we shouldn't be selecting this entry
-			if( !list->listData[ mData1 ].cell )
-				break;
-
-			if( list->multiSelect )
-			{
-				Int i = 0;
-				Bool removed = FALSE;
-
-				while( list->selections[i] >= 0 )
-				{
-					if( list->selections[i] == (Int)mData1 )
-					{
-						removeSelection( list, i );
-						removed = TRUE;
-						break;
-					}
-					
-					i++;
-				}
-
-				if( removed == FALSE )
-				{
-					list->selections[i] = (Int)mData1;
-					list->selections[i+1] = -1;
-				}
-			}
-			else
-			{
-				// this message has no effect in a non-multi listbox
-			}
-			
-			break;
+            if (mData1==static_cast<WindowMsgData>(-1)) {
+                if (list->multiSelect) nativeListBoxClearSelection(*list);
+            } else if (mData1<static_cast<WindowMsgData>(list->endPos)) {
+                nativeListBoxToggleSelection(*list,static_cast<Int>(mData1));
+            }
+            break;
 
 		}  // end toggle multi-select
 
 		// ------------------------------------------------------------------------
 		case GLM_SET_SELECTION:
 		{
-			const Int *selectList = (const Int *)mData1;
-			Int selectCount = (Int)mData2;
-			DEBUG_ASSERTCRASH( list->multiSelect || selectCount == 1, ("Bad selection size"));
-
-			if( selectList[0] < 0 || list->listLength <= selectList[0] )
-			{
-
-				if( list->multiSelect )
-					memset( list->selections, -1, list->listLength * sizeof(Int) );
-				else
-					list->selectPos = -1;
-
-				TheWindowManager->winSendSystemMsg( window->winGetOwner(), 
-																						GLM_SELECTED,
-																						(WindowMsgData)window, 
-																						list->selectPos );
-
-				break;
-
-			}
-
-			if( list->multiSelect )
-			{
-				// forced selections override the entire selection list.
-				for (Int i=0; i<selectCount && i<list->endPos; ++i)
-				{
-					// don't select off the end
-					if (list->listLength <= selectList[i])
-					{
-						break;
-					}
-
-					// if there is no cells we shouldn't be selecting this entry
-					if( !list->listData[ selectList[i] ].cell )
-					{
-						break;
-					}
-
-					list->selections[i] = selectList[i];
-				}
-				list->selections[i] = -1;
-			}
-			else
-			{
-				// if there is no cells we shouldn't be selecting this entry
-				if( !list->listData[ selectList[0] ].cell )
-				{
-					break;
-				}
-
-				list->selectPos = selectList[0];
+            const Int *selectList = reinterpret_cast<const Int*>(mData1);
+            if (!nativeListBoxSetSelection(*list,selectList,mData2)) break;
+            if (!list->multiSelect && list->selectPos>=0)
+            {
 				GameWindow *parent = window->winGetParent();
 				if( parent && BitTest( parent->winGetStyle(), GWS_COMBO_BOX ) )
 				{
@@ -1703,7 +1560,7 @@ WindowMsgHandledType GadgetListBoxSystem( GameWindow *window, UnsignedInt msg,
 		case GLM_SCROLL_BUFFER:
 		{
 
-			if( list->endPos < (Int)mData1 )
+			if( mData1 == 0 || mData1 > static_cast<WindowMsgData>(list->endPos) )
 				break;
 
 			//
@@ -1733,7 +1590,7 @@ WindowMsgHandledType GadgetListBoxSystem( GameWindow *window, UnsignedInt msg,
 						cells[j].cellType = 0;
 					}
 				
-				delete(list->listData[i].cell);
+				delete[](list->listData[i].cell);
 				list->listData[i].cell = NULL;
 			}
 
@@ -1741,7 +1598,7 @@ WindowMsgHandledType GadgetListBoxSystem( GameWindow *window, UnsignedInt msg,
 			//
 			// copy the cells up 
 			//
-			memcpy(list->listData, &list->listData[mData1],
+			memmove(list->listData, &list->listData[mData1],
 						(list->endPos - mData1) * sizeof(ListEntryRow) );
 
 			list->endPos -= mData1;
@@ -1750,34 +1607,13 @@ WindowMsgHandledType GadgetListBoxSystem( GameWindow *window, UnsignedInt msg,
 			//
 			// remove the display or links to images after the shift
 			//
-			for(i = 0; i < (Int)mData1; i ++)
+			for(Int i = 0; i < (Int)mData1; i ++)
 			{
-				list->listData[list->endPos + i].cell = NULL;
+				list->listData[list->endPos + i] = {};
 			}
 
 
-			if( list->multiSelect )
-			{
-				Int i = 0;
-
-				while( list->selections[i] >= 0 )
-				{
-					if( (Int)mData1 >= list->selections[i] )
-						list->selections[i] -= (Int)mData1;
-					else
-					{
-						removeSelection( list, i );
-						i--;									// compensate for lost entry
-					}
-
-					i++;
-				}
-			}
-			else
-			{
-				if( list->selectPos > 0 )
-					list->selectPos -= mData1;
-			}
+            nativeListBoxScrollSelection(*list,static_cast<Int>(mData1));
 
 			if( list->displayPos > 0 )
 				adjustDisplay( window, (-1 * mData1), TRUE );
@@ -1792,10 +1628,7 @@ WindowMsgHandledType GadgetListBoxSystem( GameWindow *window, UnsignedInt msg,
 		case GLM_GET_SELECTION:
 		{
 			
-			if( list->multiSelect )
-				*(Int*)mData2 = (Int)list->selections;
-			else
-				*(Int*)mData2 = list->selectPos;
+            nativeListBoxGetSelection(*list,mData1,reinterpret_cast<void*>(mData2));
 
 			break;
 
@@ -2420,24 +2253,17 @@ void GadgetListboxCreateScrollbar( GameWindow *listbox )
 //=============================================================================
 void GadgetListBoxAddMultiSelect( GameWindow *listbox )
 {
+	if (!listbox) return;
 	ListboxData *listboxData = (ListboxData *)listbox->winGetUserData();
 
 	DEBUG_ASSERTCRASH(listboxData && listboxData->selections == NULL, ("selections is not NULL"));
-	listboxData->selections = NEW Int [listboxData->listLength];
+	if (!listboxData || listboxData->listLength<0 || listboxData->selections) return;
+    auto candidate=std::make_unique<Int[]>(static_cast<std::size_t>(listboxData->listLength)+1);
+    for (Int i=0;i<=listboxData->listLength;++i) candidate[i]=-1;
+    listboxData->selections=candidate.release();
 	DEBUG_LOG(( "Enable list box multi select: listLength (select) = %d * %d = %d bytes;\n",
 					 listboxData->listLength, sizeof(Int), 
 					 listboxData->listLength *sizeof(Int) ));
-
-	if( listboxData->selections == NULL )
-	{
-
-		delete( listboxData->listData );
-		return;
-
-	}  // end if
-
-	memset( listboxData->selections, -1,
-		      listboxData->listLength * sizeof(Int) );
 
 	// set mutliselect flag
 	listboxData->multiSelect = TRUE;
@@ -2452,12 +2278,14 @@ void GadgetListBoxAddMultiSelect( GameWindow *listbox )
 //=============================================================================
 void GadgetListBoxRemoveMultiSelect( GameWindow *listbox )
 {
+	if (!listbox) return;
 	ListboxData *listData = (ListboxData *)listbox->winGetUserData();
+	if (!listData) return;
 
 	if( listData->selections )
 	{
 
-		delete( listData->selections );
+		delete[]( listData->selections );
 		listData->selections = NULL;
 
 	}  // end if
@@ -2477,6 +2305,7 @@ void GadgetListBoxRemoveMultiSelect( GameWindow *listbox )
 //=============================================================================
 void GadgetListBoxSetListLength( GameWindow *listbox, Int newLength )
 {
+	if (!listbox) return;
 	ListboxData *listboxData = (ListboxData *)listbox->winGetUserData();
 
 
@@ -2489,15 +2318,12 @@ void GadgetListBoxSetListLength( GameWindow *listbox, Int newLength )
 	if( listboxData->columns < 1 )
 		return;
 	
-  Int columns = listboxData->columns;
-	ListEntryRow *newData = NEW ListEntryRow[ newLength ];	
-	DEBUG_ASSERTCRASH(newData, ("Unable to allocate new data structures for the Listbox"));
-	if( !newData )
-		return;
-	Int i;
-  // zero out the new Data structure
-	memset( newData, 0, newLength  * sizeof( ListEntryRow ) );
-	 
+    if (newLength<0 || newLength>std::numeric_limits<Short>::max()) return;
+    Int columns=listboxData->columns;
+    NativeListBoxBacking candidate(*listboxData,newLength);
+    ListEntryRow* newData=candidate.rows.get();
+    Int i;
+
 	// we want to copy over different amounts of data depending on if we're adding
 	// to the list box or removing from the listbox
 	if(newLength >= listboxData->listLength)
@@ -2511,12 +2337,12 @@ void GadgetListBoxSetListLength( GameWindow *listbox, Int newLength )
 		if( listboxData->displayPos >newLength)
 			listboxData->displayPos = newLength;
 		//if we're multiselect, just select no position
-		if(listboxData->selectPos > newLength || listboxData->multiSelect) 
+		if(listboxData->selectPos >= newLength || listboxData->multiSelect)
 			listboxData->selectPos = -1;
     if(listboxData->insertPos > newLength)
 			listboxData->insertPos = newLength;
 
-    listboxData->endPos = newLength;
+    listboxData->endPos = std::min<Int>(listboxData->endPos,newLength);
 		//copy only the data that we'll be needing.		
 		memcpy(newData,listboxData->listData,newLength * sizeof( ListEntryRow ) );
 	}
@@ -2545,15 +2371,19 @@ void GadgetListBoxSetListLength( GameWindow *listbox, Int newLength )
 			}
 		}
 		if ( i >= newLength )
-			delete(listboxData->listData[i].cell);
+			delete[](listboxData->listData[i].cell);
 		listboxData->listData[i].cell = NULL;
 	}
 
 	listboxData->listLength = newLength;
 
 	if( listboxData->listData )
-		delete( listboxData->listData );
-	listboxData->listData = newData;
+		delete[]( listboxData->listData );
+	listboxData->listData = candidate.rows.release();
+    if (listboxData->multiSelect) {
+        delete[] listboxData->selections;
+        listboxData->selections=candidate.selections.release();
+    }
 	
 	//reset the total height
 	computeTotalHeight(listbox);
@@ -2568,15 +2398,6 @@ void GadgetListBoxSetListLength( GameWindow *listbox, Int newLength )
 
 	}  // end if
 	
-	// adjust the selection array for multi select listboxes
-	if( listboxData->multiSelect )
-	{
-		
-		GadgetListBoxRemoveMultiSelect( listbox );
-		GadgetListBoxAddMultiSelect( listbox );
-
-	}  // end if
-
 }  // end GadgetListBoxSetListLength
 
 // GadgetListBoxGetListLength =================================================
@@ -2623,13 +2444,21 @@ void GadgetListBoxGetSelected( GameWindow *listbox, Int *selectList )
 {
 
 	// sanity
-	if( listbox == NULL )
+	if( listbox == NULL || selectList == NULL )
 		return;
 
 	// get selected indeces via system message
 	TheWindowManager->winSendSystemMsg( listbox, GLM_GET_SELECTION, 0, (WindowMsgData)selectList );
 
 }  // end GadgetListBoxGetSelected
+
+void GadgetListBoxGetSelected(GameWindow *listbox,Int **borrowedSelections)
+{
+    if (!listbox || !borrowedSelections) return;
+    TheWindowManager->winSendSystemMsg(listbox,GLM_GET_SELECTION,1,
+        reinterpret_cast<WindowMsgData>(borrowedSelections));
+}
+
 
 //-------------------------------------------------------------------------------------------------
 /** Set the selected item of a listbox.  The parameter is a single integer.  If
@@ -2822,4 +2651,3 @@ Int GadgetListBoxGetColumnWidth( GameWindow *listbox, Int column )
 
 	return listboxData->columnWidth[column];
 }  // end GadgetListBoxGetNumColumns
-

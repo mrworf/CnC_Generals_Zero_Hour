@@ -37,6 +37,17 @@
 
 class Xfer;
 
+// Code-owned borrowed publication. The slot must outlive its registry unit.
+// Restoration never calls an owner or allocates, including after owner cleanup.
+struct SubsystemPublication
+{
+	void* slot = nullptr;
+	void* prior = nullptr;
+	void (*restore)(void*, void*) noexcept = nullptr;
+	Bool valid() const noexcept { return slot ? restore != nullptr : !restore && !prior; }
+	void withdraw() const noexcept { if (restore) restore(slot, prior); }
+};
+
 //-------------------------------------------------------------------------------------------------
 /** This is the abstract base class from which all game engine subsytems should derive from.
 	* In order to provide consistent behaviors across all these systems, any implementation
@@ -149,13 +160,29 @@ public:
 	
 	SubsystemInterfaceList();
 	~SubsystemInterfaceList();
+	SubsystemInterfaceList(const SubsystemInterfaceList&) = delete;
+	SubsystemInterfaceList& operator=(const SubsystemInterfaceList&) = delete;
 
-	void initSubsystem(SubsystemInterface* sys, const char* path1, const char* path2, const char* dirpath, Xfer *pXfer, AsciiString name="");
+	void initSubsystem(SubsystemInterface* sys, const char* path1, const char* path2, const char* dirpath, Xfer *pXfer, AsciiString name="", SubsystemPublication publication={});
+	static void loadDefinitions(const char* path1, const char* path2, const char* dirpath, Xfer*);
+	// Both complete original INI loading and bounded generated owner tables use
+	// this transaction. The caller retains candidate ownership until it returns.
+	template<class LOAD>
+	void initializeSubsystem(SubsystemInterface* sys, AsciiString name, LOAD&& load,
+	                         SubsystemPublication publication={})
+	{
+		validateCandidate(sys, publication);
+		sys->setName(name);
+		sys->init();
+		load();
+		m_subsystems.push_back({sys, publication}); // Last fallible acquisition.
+	}
+	std::size_t ownedCount() const noexcept { return m_subsystems.size(); }
 	void addSubsystem(SubsystemInterface* sys);
 	void removeSubsystem(SubsystemInterface* sys);
 	void postProcessLoadAll();
 	void resetAll();
-	void shutdownAll();
+	void shutdownAll() noexcept;
 #ifdef DUMP_PERF_STATS
  	AsciiString dumpTimesForAll();
 #endif
@@ -163,8 +190,11 @@ public:
 private:
 
 	typedef std::vector<SubsystemInterface*> SubsystemList;
-	SubsystemList m_subsystems;
+	struct OwnedSubsystem { SubsystemInterface* owner; SubsystemPublication publication; };
+	void validateCandidate(SubsystemInterface*, SubsystemPublication) const;
+	std::vector<OwnedSubsystem> m_subsystems;
 	SubsystemList m_allSubsystems;
+	Bool m_shuttingDown = FALSE;
 
 };
 

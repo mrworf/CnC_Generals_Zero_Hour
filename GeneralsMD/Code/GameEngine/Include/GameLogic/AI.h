@@ -27,6 +27,7 @@
 // Author: Michael S. Booth, November 2000
 
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef _AI_H_
 #define _AI_H_
@@ -51,11 +52,10 @@ class PolygonTrigger;
 class UpgradeTemplate;
 class WeaponTemplate;
 
-enum GUICommandType;
-enum HackerAttackMode;
-enum WeaponSetType;
-enum WeaponLockType;
-enum SpecialPowerType;
+enum GUICommandType : UnsignedInt;
+enum WeaponSetType : UnsignedInt;
+enum WeaponLockType : UnsignedInt;
+enum SpecialPowerType : UnsignedInt;
 
 typedef std::vector<ObjectID> VecObjectID;
 typedef VecObjectID::iterator VecObjectIDIt;
@@ -63,16 +63,7 @@ typedef VecObjectID::iterator VecObjectIDIt;
 typedef std::list<Object *> ListObjectPtr;
 typedef ListObjectPtr::iterator ListObjectPtrIt;
 
-enum AIDebugOptions
-{
-	AI_DEBUG_NONE = 0, 
-	AI_DEBUG_PATHS,
-	AI_DEBUG_TERRAIN,
-	AI_DEBUG_CELLS,
-	AI_DEBUG_GROUND_PATHS,
-	AI_DEBUG_ZONES,
-	AI_DEBUG_END
-};
+#include "GameLogic/AIDebugOptions.h"
 
 enum 
 {
@@ -312,9 +303,9 @@ class Team;
 class Weapon;
 
 // Note - written out in save/load xfer and .map files, don't change these numbers.  
-enum AttitudeType { AI_SLEEP = -2, AI_PASSIVE=-1, AI_NORMAL=0, AI_ALERT=1, AI_AGGRESSIVE=2, AI_INVALID=3 };		///< AI "attitude" behavior modifiers
+enum AttitudeType : Int { AI_SLEEP = -2, AI_PASSIVE=-1, AI_NORMAL=0, AI_ALERT=1, AI_AGGRESSIVE=2, AI_INVALID=3 };		///< AI "attitude" behavior modifiers
 
-enum CommandSourceType;
+enum CommandSourceType : UnsignedInt;
 
 typedef UnsignedInt CommandSourceMask;
 

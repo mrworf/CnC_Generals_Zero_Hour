@@ -191,7 +191,8 @@ void AIPlayer::checkForSupplyCenter( BuildListInfo *info, Object *bldg )
 {
 	class SupplyCenterDockUpdate;
 	// if it is a supply center, I must have boxes
-	static const NameKeyType key_centerUpdate = NAMEKEY("SupplyCenterDockUpdate");
+	static const StaticNameKey nativeCached_key_centerUpdate("SupplyCenterDockUpdate");
+	const NameKeyType key_centerUpdate = nativeCached_key_centerUpdate.key();
 	SupplyCenterDockUpdate *centerModule = (SupplyCenterDockUpdate*)bldg->findUpdateModule( key_centerUpdate );
 	if( centerModule  )
 	{
@@ -296,7 +297,8 @@ void AIPlayer::queueSupplyTruck( void )
 					// No supplies.
 					continue;
 				}
-				static const NameKeyType key_warehouseUpdate = NAMEKEY("SupplyWarehouseDockUpdate");
+				static const StaticNameKey nativeCached_key_warehouseUpdate("SupplyWarehouseDockUpdate");
+				const NameKeyType key_warehouseUpdate = nativeCached_key_warehouseUpdate.key();
 				SupplyWarehouseDockUpdate *warehouseModule = (SupplyWarehouseDockUpdate*)supplySource->findUpdateModule( key_warehouseUpdate );
 				if( warehouseModule )	{	 
 					Int availableCash = warehouseModule->getBoxesStored()*TheGlobalData->m_baseValuePerSupplyBox;
@@ -2196,7 +2198,8 @@ Object *AIPlayer::findSupplyCenter(Int minimumCash)
 		{
 			if (!obj->isKindOf(KINDOF_STRUCTURE)) continue;
 			if (!obj->isKindOf(KINDOF_SUPPLY_SOURCE)) continue;
-			static const NameKeyType key_warehouseUpdate = NAMEKEY("SupplyWarehouseDockUpdate");
+			static const StaticNameKey nativeCached_key_warehouseUpdate("SupplyWarehouseDockUpdate");
+			const NameKeyType key_warehouseUpdate = nativeCached_key_warehouseUpdate.key();
 			SupplyWarehouseDockUpdate *warehouseModule = (SupplyWarehouseDockUpdate*)obj->findUpdateModule( key_warehouseUpdate );
 			if( warehouseModule )	{	 
 				Int availableCash = warehouseModule->getBoxesStored()*TheGlobalData->m_baseValuePerSupplyBox;

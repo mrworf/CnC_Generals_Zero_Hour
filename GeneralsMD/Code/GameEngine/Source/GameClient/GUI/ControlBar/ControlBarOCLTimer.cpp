@@ -141,7 +141,8 @@ void ControlBar::updateContextOCLTimer( void )
 {
 	Object *obj = m_currentSelectedDrawable->getObject();
 
-	static const NameKeyType key_OCLUpdate = NAMEKEY( "OCLUpdate" );
+	static const StaticNameKey nativeCached_key_OCLUpdate("OCLUpdate");
+	const NameKeyType key_OCLUpdate = nativeCached_key_OCLUpdate.key();
 	OCLUpdate *update = (OCLUpdate*)obj->findUpdateModule( key_OCLUpdate );
 
 	UnsignedInt frames = update->getRemainingFrames();

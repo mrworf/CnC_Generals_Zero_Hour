@@ -102,63 +102,20 @@ void SubsystemInterface::DRAW(void)
 
 
 //-----------------------------------------------------------------------------
-SubsystemInterfaceList::SubsystemInterfaceList()
+void SubsystemInterfaceList::initSubsystem(SubsystemInterface* sys, const char* path1,
+    const char* path2, const char* dirpath, Xfer* xfer, AsciiString name,
+    SubsystemPublication publication)
 {
+    initializeSubsystem(sys, name, [&] { loadDefinitions(path1, path2, dirpath, xfer); }, publication);
 }
 
-//-----------------------------------------------------------------------------
-SubsystemInterfaceList::~SubsystemInterfaceList()
+void SubsystemInterfaceList::loadDefinitions(const char* path1, const char* path2,
+    const char* dirpath, Xfer* xfer)
 {
-	DEBUG_ASSERTCRASH(m_subsystems.empty(), ("not empty"));
-	shutdownAll();
-}
-
-//-----------------------------------------------------------------------------
-void SubsystemInterfaceList::initSubsystem(SubsystemInterface* sys, const char* path1, const char* path2, const char* dirpath, Xfer *pXfer, AsciiString name)
-{
-	sys->setName(name);
-	sys->init();
-
-	INI ini;
-	if (path1)
-		ini.load(path1, INI_LOAD_OVERWRITE, pXfer );
-	if (path2)
-		ini.load(path2, INI_LOAD_OVERWRITE, pXfer );
-	if (dirpath)
-		ini.loadDirectory(dirpath, TRUE, INI_LOAD_OVERWRITE, pXfer );
-
-	m_subsystems.push_back(sys);
-}
-
-//-----------------------------------------------------------------------------
-void SubsystemInterfaceList::postProcessLoadAll()
-{
-	for (SubsystemList::iterator it = m_subsystems.begin(); it != m_subsystems.end(); ++it)
-	{
-		(*it)->postProcessLoad();
-	}
-}
-
-//-----------------------------------------------------------------------------
-void SubsystemInterfaceList::resetAll()
-{
-//	for (SubsystemList::iterator it = m_subsystems.begin(); it != m_subsystems.end(); ++it)
-	for (SubsystemList::reverse_iterator it = m_subsystems.rbegin(); it != m_subsystems.rend(); ++it)
-	{
-		(*it)->reset();
-	}
-}
-
-//-----------------------------------------------------------------------------
-void SubsystemInterfaceList::shutdownAll()
-{
-	// must go in reverse order!
-	for (SubsystemList::reverse_iterator it = m_subsystems.rbegin(); it != m_subsystems.rend(); ++it)
-	{
-		SubsystemInterface* sys = *it;
-		delete sys;
-	}
-	m_subsystems.clear();
+    INI ini;
+    if (path1) ini.load(path1, INI_LOAD_OVERWRITE, xfer);
+    if (path2) ini.load(path2, INI_LOAD_OVERWRITE, xfer);
+    if (dirpath) ini.loadDirectory(dirpath, TRUE, INI_LOAD_OVERWRITE, xfer);
 }
 
 #ifdef DUMP_PERF_STATS

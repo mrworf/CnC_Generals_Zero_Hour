@@ -9,6 +9,10 @@ struct NativeDataBacking {
     int descriptor=-1;
     std::uint64_t length=0;
     explicit NativeDataBacking(const std::string& path);
+    // Caller owns this already-admitted descriptor until construction returns.
+    // Failure leaves it with the caller; successful construction adopts it.
+    struct AdmittedDescriptor {};
+    NativeDataBacking(int descriptor, AdmittedDescriptor);
     ~NativeDataBacking();
     NativeDataBacking(const NativeDataBacking&)=delete;
     NativeDataBacking& operator=(const NativeDataBacking&)=delete;

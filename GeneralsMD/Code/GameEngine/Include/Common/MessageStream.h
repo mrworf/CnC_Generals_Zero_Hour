@@ -46,8 +46,8 @@ typedef UnsignedInt TranslatorID;								///< Unique identifiers for message str
 
 class Drawable;
 class GameMessageList;
-enum ObjectID;
-enum DrawableID;
+enum ObjectID : UnsignedInt;
+enum DrawableID : UnsignedInt;
 
 union GameMessageArgumentType														///< Union of possible data for given message type
 {
@@ -622,6 +622,8 @@ public:
 	};
 
 	GameMessage( Type type );
+    GameMessage(Type type,Int playerIndex);
+    GameMessageList* getOwningList() const noexcept { return m_list; }
 
 	GameMessage *next( void ) { return m_next; }		///< Return next message in the stream
 	GameMessage *prev( void ) { return m_prev; }		///< Return prev message in the stream
@@ -701,6 +703,7 @@ public:
 	GameMessage *getFirstMessage( void ) { return m_firstMessage; }	///< Return the first message 
 
 	virtual void appendMessage( GameMessage *msg );			///< Add message to end of the list
+    void transferMessage(GameMessage* msg);
 	virtual void insertMessage( GameMessage *msg, GameMessage *messageToInsertAfter );	// Insert message after messageToInsertAfter.
 	virtual void removeMessage( GameMessage *msg );			///< Remove message from the list
 	virtual Bool containsMessageOfType( GameMessage::Type type );	///< Return true if a message of type is in the message stream

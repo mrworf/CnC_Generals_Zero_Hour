@@ -65,7 +65,7 @@ static FunctionLexicon::TableEntry gameWinDrawTable[] =
 {
 	{ NAMEKEY_INVALID, "IMECandidateMainDraw",						IMECandidateMainDraw },
 	{ NAMEKEY_INVALID, "IMECandidateTextAreaDraw",				IMECandidateTextAreaDraw },
-	{ NAMEKEY_INVALID, NULL,																NULL }
+	{ NAMEKEY_INVALID, NULL,																nullptr }
 };
 
 // game window system table -----------------------------------------------------------------------
@@ -149,7 +149,7 @@ static FunctionLexicon::TableEntry gameWinSystemTable[] =
 	{ NAMEKEY_INVALID, "ScoreScreenSystem",							ScoreScreenSystem },
 	{ NAMEKEY_INVALID, "DownloadMenuSystem",            DownloadMenuSystem },
 
-	{ NAMEKEY_INVALID, NULL,																NULL }
+	{ NAMEKEY_INVALID, NULL,																nullptr }
 
 };
 
@@ -221,7 +221,7 @@ static FunctionLexicon::TableEntry gameWinInputTable[] =
 	{ NAMEKEY_INVALID, "DownloadMenuInput",							DownloadMenuInput },
 
 	{ NAMEKEY_INVALID, "IMECandidateWindowInput",				IMECandidateWindowInput },
-	{ NAMEKEY_INVALID, NULL,														NULL }
+	{ NAMEKEY_INVALID, NULL,														nullptr }
 
 };
 
@@ -232,7 +232,7 @@ static FunctionLexicon::TableEntry gameWinTooltipTable[] =
 
 	{ NAMEKEY_INVALID, "GameWinDefaultTooltip",		GameWinDefaultTooltip },
 
-	{ NAMEKEY_INVALID, NULL,											NULL }
+	{ NAMEKEY_INVALID, NULL,											nullptr }
 
 };
 
@@ -284,7 +284,7 @@ static FunctionLexicon::TableEntry winLayoutInitTable[] =
 	{ NAMEKEY_INVALID, "DifficultySelectInit",          DifficultySelectInit },
 	{ NAMEKEY_INVALID, "PopupReplayInit",							  PopupReplayInit },
 
-	{ NAMEKEY_INVALID, NULL,														NULL }  // keep this last
+	{ NAMEKEY_INVALID, NULL,														nullptr }  // keep this last
 
 };
 
@@ -325,7 +325,7 @@ static FunctionLexicon::TableEntry winLayoutUpdateTable[] =
 	{ NAMEKEY_INVALID, "ScoreScreenUpdate",							ScoreScreenUpdate },
 	{ NAMEKEY_INVALID, "DownloadMenuUpdate",						DownloadMenuUpdate },
 	{ NAMEKEY_INVALID, "PopupReplayUpdate",							PopupReplayUpdate },
-	{ NAMEKEY_INVALID, NULL,														NULL }  // keep this last
+	{ NAMEKEY_INVALID, NULL,														nullptr }  // keep this last
 
 };
 
@@ -366,7 +366,7 @@ static FunctionLexicon::TableEntry winLayoutShutdownTable[] =
 	{ NAMEKEY_INVALID, "ScoreScreenShutdown",						ScoreScreenShutdown },
 	{ NAMEKEY_INVALID, "DownloadMenuShutdown",          DownloadMenuShutdown },
 	{ NAMEKEY_INVALID, "PopupReplayShutdown",	          PopupReplayShutdown },
-	{ NAMEKEY_INVALID, NULL,														NULL }  // keep this last
+	{ NAMEKEY_INVALID, NULL,														nullptr }  // keep this last
 
 };
 
@@ -381,107 +381,27 @@ FunctionLexicon *TheFunctionLexicon = NULL;  ///< the function dictionary
 	* components we might want to add to the table, such as generating
 	* a key based off the name supplied in the table for faster access */
 //-------------------------------------------------------------------------------------------------
-void FunctionLexicon::loadTable( TableEntry *table, 
-																 TableIndex tableIndex )
+void FunctionLexicon::loadTable(std::span<TableEntry> table, TableIndex index)
 {
+	if (!TheNameKeyGenerator) throw ERROR_BAD_ARG;
+	const NativeFunctionTable input{table,index};
+	m_registry.loadTables(std::span(&input,1),*TheNameKeyGenerator);
+}
 
-	// sanity
-	if( table == NULL )
-		return;
-
-	// loop through all entries
-	TableEntry *entry = table;
-	while( entry->name )
-	{
-
-		// assign key from name key based on name provided in table
-		entry->key = TheNameKeyGenerator->nameToKey( AsciiString(entry->name) );
-
-		// next table entry please
-		entry++;
-
-	}  // end while
-
-	// assign table to the index specified
-	m_tables[ tableIndex ] = table;
-
-}  // end loadTable
-
-//-------------------------------------------------------------------------------------------------
-/** Search the provided table for a function matching the key */
-//-------------------------------------------------------------------------------------------------
-void *FunctionLexicon::keyToFunc( NameKeyType key, TableEntry *table )
+NativeWindowCallback FunctionLexicon::findFunction(NameKeyType key, TableIndex index)
 {
-
-	// sanity
-	if( key == NAMEKEY_INVALID )
-		return NULL;
-
-	// search table for key
-	TableEntry *entry = table;
-	while( entry && entry->key != NAMEKEY_INVALID )
-	{
-
-		if( entry->key == key )
-			return entry->func;
-		entry++;
-
-	}  // end if
-
-	return NULL;  // not found
-
-}  // end keyToFunc
-
-//-------------------------------------------------------------------------------------------------
-/** Search tables for the function given this key, if the index parameter
-	* is TABLE_ANY, then ALL tables will be searched.  Otherwise index refers
-	* to only a single table index to be searched */
-//-------------------------------------------------------------------------------------------------
-void *FunctionLexicon::findFunction( NameKeyType key, TableIndex index )
-{
-	void *func = NULL;
-
-	// sanity
-	if( key == NAMEKEY_INVALID )
-		return NULL;
-
-	// search ALL tables for function if the index paramater allows if
-	if( index == TABLE_ANY )
-	{
-
-		Int i;
-		for( i = 0; i < MAX_FUNCTION_TABLES; i++ )
-		{
-
-			func = keyToFunc( key, m_tables[ i ] );
-			if( func )
-				break;  // exit for i
-
-		}  // end for i
-
-	}  // end if
-	else
-	{
-
-		// do NOT search all tables, just the one specified by the parameter
-		func = keyToFunc( key, m_tables[ index ] );
-
-	}  // end else
-
-	// return function, if found
-	return func;
-
-}  // end findFunction
+	return m_registry.find(key,index);
+}
 
 #ifdef NOT_IN_USE
 //-------------------------------------------------------------------------------------------------
 /** Search for the function in the specified table */
 //-------------------------------------------------------------------------------------------------
-const char *FunctionLexicon::funcToName( void *func, TableEntry *table )
+const char *FunctionLexicon::funcToName( NativeWindowCallback func, TableEntry *table )
 {
 
 	// sanity
-	if( func == NULL )
+	if( !func )
 		return NULL;
 
 	// search the table
@@ -509,15 +429,7 @@ const char *FunctionLexicon::funcToName( void *func, TableEntry *table )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-FunctionLexicon::FunctionLexicon( void )
-{
-	Int i;
-
-	// empty the tables
-	for( i = 0; i < MAX_FUNCTION_TABLES; i++ )
-		m_tables[ i ] = NULL;
-
-}  // end FunctionLexicon
+FunctionLexicon::FunctionLexicon( void ) = default;
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -529,24 +441,25 @@ FunctionLexicon::~FunctionLexicon( void )
 //-------------------------------------------------------------------------------------------------
 /** Initialize our dictionary of funtion pointers and symbols */
 //-------------------------------------------------------------------------------------------------
-void FunctionLexicon::init( void )
+void FunctionLexicon::init() { initWithDeviceTables({},{}); }
+
+void FunctionLexicon::initWithDeviceTables(std::span<TableEntry> draw, std::span<TableEntry> layout)
 {
-
-	// if you change this method, check the reset() and make sure it's OK
-
-	// initialize the name key identifiers for the lookup table
-	loadTable( gameWinDrawTable,						TABLE_GAME_WIN_DRAW );
-	loadTable( gameWinSystemTable,					TABLE_GAME_WIN_SYSTEM );
-	loadTable( gameWinInputTable,						TABLE_GAME_WIN_INPUT );
-	loadTable( gameWinTooltipTable,					TABLE_GAME_WIN_TOOLTIP );
-
-	loadTable( winLayoutInitTable,					TABLE_WIN_LAYOUT_INIT );
-	loadTable( winLayoutUpdateTable,				TABLE_WIN_LAYOUT_UPDATE );
-	loadTable( winLayoutShutdownTable,			TABLE_WIN_LAYOUT_SHUTDOWN );
-
+	if (!TheNameKeyGenerator) throw ERROR_BAD_ARG;
+	const NativeFunctionTable inputs[]{
+		{gameWinDrawTable,TABLE_GAME_WIN_DRAW},
+		{gameWinSystemTable,TABLE_GAME_WIN_SYSTEM},
+		{gameWinInputTable,TABLE_GAME_WIN_INPUT},
+		{gameWinTooltipTable,TABLE_GAME_WIN_TOOLTIP},
+		{winLayoutInitTable,TABLE_WIN_LAYOUT_INIT},
+		{winLayoutUpdateTable,TABLE_WIN_LAYOUT_UPDATE},
+		{winLayoutShutdownTable,TABLE_WIN_LAYOUT_SHUTDOWN},
+		{draw,TABLE_GAME_WIN_DEVICEDRAW},
+		{layout,TABLE_WIN_LAYOUT_DEVICEINIT}};
+	if (draw.empty()!=layout.empty()) throw ERROR_BAD_ARG;
+	m_registry.loadTables(std::span(inputs,draw.empty()?7:9),*TheNameKeyGenerator);
 	validate();
-
-}  // end init
+}
 
 //-------------------------------------------------------------------------------------------------
 /** reset */
@@ -583,7 +496,7 @@ char *FunctionLexicon::functionToName( void *func )
 {
 	
 	// sanity
-	if( func == NULL )
+	if( !func )
 		return NULL;
 
 	// search ALL the tables
@@ -611,70 +524,7 @@ char *FunctionLexicon::functionToName( void *func )
 	* same parameters) which we MUST keep separate for when we add code to
 	* them */
 //-------------------------------------------------------------------------------------------------
-Bool FunctionLexicon::validate( void )
-{
-	Bool valid = TRUE;
-	Int i, j;
-	TableEntry *sourceEntry, *lookAtEntry;
-
-	// scan all talbes
-	for( i = 0; i < MAX_FUNCTION_TABLES; i++ )
-	{
-
-		// scan through this table
-		sourceEntry = m_tables[ i ];
-		while( sourceEntry && sourceEntry->key != NAMEKEY_INVALID )
-		{
-		
-			//
-			// scan all tables looking for the function in sourceEntry, do not bother
-			// of source entry is NULL (a valid entry in the table, but not a function)
-			//
-			if( sourceEntry->func )
-			{
-
-				// scan all tables
-				for( j = 0; j < MAX_FUNCTION_TABLES; j++ )
-				{
-
-					// scan all entries in this table
-					lookAtEntry = m_tables[ j ];
-					while( lookAtEntry && lookAtEntry->key != NAMEKEY_INVALID )
-					{
-
-						//
-						// check for match, do not match the entry source with itself
-						//
-						if( sourceEntry != lookAtEntry )
-							if( sourceEntry->func == lookAtEntry->func )
-							{
-
-								DEBUG_LOG(( "WARNING! Function lexicon entries match same address! '%s' and '%s'\n", 
-														sourceEntry->name, lookAtEntry->name ));
-								valid = FALSE;
-
-							}  // end if
-
-						// next entry in this target table
-						lookAtEntry++;
-
-					}  // end while
-
-				}  // end for j
-
-			}  // end if
-
-			// next source entry
-			sourceEntry++;
-
-		}  // end while	
-
-	}  // end for i
-
-	// return the valid state of our tables
-	return valid;
-
-}  // end validate
+Bool FunctionLexicon::validate( void ) { return m_registry.validate(); }
 
 //============================================================================
 // FunctionLexicon::gameWinDrawFunc
@@ -687,15 +537,15 @@ GameWinDrawFunc FunctionLexicon::gameWinDrawFunc( NameKeyType key, TableIndex in
 		// first search the device depended table then the device independent table
 		GameWinDrawFunc func;
 
-		func = (GameWinDrawFunc)findFunction( key, TABLE_GAME_WIN_DEVICEDRAW ); 
+		func = findFunction( key, TABLE_GAME_WIN_DEVICEDRAW ).get<GameWinDrawFunc>();
 		if ( func == NULL )
 		{
-			func = (GameWinDrawFunc)findFunction( key, TABLE_GAME_WIN_DRAW ); 
+			func = findFunction( key, TABLE_GAME_WIN_DRAW ).get<GameWinDrawFunc>();
 		}
 		return func;
 	}
 	// search the specified table
-	return (GameWinDrawFunc)findFunction( key, index ); 
+	return findFunction( key, index ).get<GameWinDrawFunc>();
 }
 
 WindowLayoutInitFunc FunctionLexicon::winLayoutInitFunc( NameKeyType key, TableIndex index )
@@ -705,13 +555,13 @@ WindowLayoutInitFunc FunctionLexicon::winLayoutInitFunc( NameKeyType key, TableI
 		// first search the device depended table then the device independent table
 		WindowLayoutInitFunc func;
 
-		func = (WindowLayoutInitFunc)findFunction( key, TABLE_WIN_LAYOUT_DEVICEINIT ); 
+		func = findFunction( key, TABLE_WIN_LAYOUT_DEVICEINIT ).get<WindowLayoutInitFunc>();
 		if ( func == NULL )
 		{
-			func = (WindowLayoutInitFunc)findFunction( key, TABLE_WIN_LAYOUT_INIT ); 
+			func = findFunction( key, TABLE_WIN_LAYOUT_INIT ).get<WindowLayoutInitFunc>();
 		}
 		return func;
 	}
 	// search the specified table
-	return (WindowLayoutInitFunc)findFunction( key, index );
+	return findFunction( key, index ).get<WindowLayoutInitFunc>();
 }

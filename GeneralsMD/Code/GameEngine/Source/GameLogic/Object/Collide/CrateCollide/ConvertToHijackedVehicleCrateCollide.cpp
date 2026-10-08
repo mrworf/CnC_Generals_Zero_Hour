@@ -220,7 +220,8 @@ Bool ConvertToHijackedVehicleCrateCollide::executeCrateBehavior( Object *other )
 
 	// I we have made it this far, we are going to ride in this vehicle for a while
 	// get the name of the hijackerupdate
-	static NameKeyType key_HijackerUpdate = NAMEKEY( "HijackerUpdate" );
+	static const StaticNameKey nativeCached_key_HijackerUpdate("HijackerUpdate");
+	NameKeyType key_HijackerUpdate = nativeCached_key_HijackerUpdate.key();
 	HijackerUpdate *hijackerUpdate = (HijackerUpdate*)obj->findUpdateModule( key_HijackerUpdate );
 	if( hijackerUpdate )
 	{

@@ -365,6 +365,7 @@ void shutdownMemoryManager() {
     std::lock_guard<std::recursive_mutex> lock(originalPoolMutex());
     if(!initialized)return;
     delete TheMemoryPoolFactory;TheMemoryPoolFactory=nullptr;TheDynamicMemoryAllocator=nullptr;initialized=false;
+    userMemoryManagerInitPools(); // Retire startup profile backing as well.
 }
 void* STLSpecialAlloc::allocate(std::size_t bytes){return ::operator new(bytes);}
 void STLSpecialAlloc::deallocate(void* pointer,std::size_t){::operator delete(pointer);}

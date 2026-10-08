@@ -109,18 +109,17 @@ class TempWeaponBonusHelper;
 class ObjectWeaponStatusHelper;
 class ObjectDefectionHelper;
 
-enum CommandSourceType;
-enum HackerAttackMode;
-enum NameKeyType;
-enum SpecialPowerType;
-enum WeaponBonusConditionType;
-enum WeaponChoiceCriteria;
-enum WeaponSetConditionType;
-enum WeaponSetType;
-enum ArmorSetType;
-enum WeaponStatus;
-enum RadarPriorityType;
-enum CanAttackResult;
+enum CommandSourceType : UnsignedInt;
+enum NameKeyType : Int;
+enum SpecialPowerType : UnsignedInt;
+enum WeaponBonusConditionType : Int;
+enum WeaponChoiceCriteria : UnsignedInt;
+enum WeaponSetConditionType : Int;
+enum WeaponSetType : UnsignedInt;
+enum ArmorSetType : UnsignedInt;
+enum WeaponStatus : UnsignedInt;
+enum RadarPriorityType : UnsignedInt;
+enum CanAttackResult : UnsignedInt;
 
 // For ObjectStatusTypes
 #include "Common/ObjectStatusTypes.h"
@@ -330,8 +329,8 @@ public:
 	SpecialPowerUpdateInterface* findSpecialPowerWithOverridableDestinationActive( SpecialPowerType type = SPECIAL_INVALID ) const;
 	SpecialPowerUpdateInterface* findSpecialPowerWithOverridableDestination( SpecialPowerType type = SPECIAL_INVALID ) const;
 
-	CountermeasuresBehaviorInterface* Object::getCountermeasuresBehaviorInterface();
-	const CountermeasuresBehaviorInterface* Object::getCountermeasuresBehaviorInterface() const;
+	CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface();
+	const CountermeasuresBehaviorInterface* getCountermeasuresBehaviorInterface() const;
 
 	inline ObjectStatusMaskType getStatusBits() const { return m_status; }
 	inline Bool testStatus( ObjectStatusTypes bit ) const { return m_status.test( bit ); }
@@ -467,7 +466,7 @@ public:
 	void setCommandSetStringOverride( AsciiString newCommandSetString ) { m_commandSetStringOverride = newCommandSetString; }
 
 	/// People are faking their commandsets, and, Surprise!, they are authoritative.  Challenge everything.
-	Bool Object::canProduceUpgrade( const UpgradeTemplate *upgrade ); 
+	Bool canProduceUpgrade( const UpgradeTemplate *upgrade );
 
 
 	// Weapons & Damage -------------------------------------------------------------------------------------------------

@@ -31,6 +31,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "Common/INI.h"
+#include "Common/NameKeyGenerator.h"
 #include "GameClient/Image.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -42,39 +43,21 @@
 //-------------------------------------------------------------------------------------------------
 void INI::parseMappedImageDefinition( INI* ini )
 {
-	AsciiString name;
-
-	// read the name
-	const char* c = ini->getNextToken();
-	name.set( c );	
-
-	//
-	// find existing item if present, note that we do not support overrides
-	// in the images like we do in systems that are more "design" oriented, images
-	// are assets as they are
-	//
-	if( !TheMappedImageCollection )
-	{
-		//We don't need it if we're in the builder... which doesn't have this.
-		return;
-	}
-	Image *image = const_cast<Image*>(TheMappedImageCollection->findImageByName( name ));
-	if(image)
-		DEBUG_ASSERTCRASH(!image->getRawTextureData(), ("We are trying to parse over an existing image that contains a non-null rawTextureData, you should fix that"));
-
-	if( image == NULL )
-	{
-
-		// image not found, create a new one
-  	image = newInstance(Image);
-		image->setName( name );
-		TheMappedImageCollection->addImage(image);
-		DEBUG_ASSERTCRASH( image, ("parseMappedImage: unable to allocate image for '%s'\n",
-															name.str()) );
-
-	}  // end if
-
-	// parse the ini definition
-	ini->initFromINI( image, image->getFieldParse());
-
+    if (!ini || !TheMappedImageCollection || !TheNameKeyGenerator) throw ERROR_BAD_ARG;
+    NameKeyTransaction keys(*TheNameKeyGenerator);
+    AsciiString name(ini->getNextToken());
+    if (name.isEmpty()) throw ERROR_BAD_INI;
+    Image* accepted=const_cast<Image*>(TheMappedImageCollection->findImageByName(name));
+    if (accepted && accepted->getRawTextureData()) throw ERROR_BAD_INI;
+    Image* candidate=newInstance(Image);
+    MemoryPoolObjectHolder owner(candidate);
+    if (accepted) candidate->copyDefinition(*accepted);
+    else candidate->setName(name);
+    ini->initFromINI(candidate,candidate->getFieldParse());
+    if (accepted) accepted->swapDefinition(*candidate);
+    else {
+        TheMappedImageCollection->addImage(candidate);
+        owner.release();
+    }
+    keys.commit();
 }  // end parseMappedImage

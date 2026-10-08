@@ -31,6 +31,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #define DEFINE_BODYDAMAGETYPE_NAMES
+#include <strings.h>
 #include "Common/INI.h"
 #include "GameClient/TerrainRoads.h"
 
@@ -105,9 +106,9 @@ const FieldParse TerrainRoadType::m_terrainBridgeFieldParseTable[] =
 	// which transition is this
 	Bool damageTransition;
 	token = ini->getNextSubToken( "Transition" );
-	if( stricmp( token, "Damage" ) == 0 )
+	if( strcasecmp( token, "Damage" ) == 0 )
 		damageTransition = TRUE;
-	else if( stricmp( token, "Repair" ) == 0 )
+	else if( strcasecmp( token, "Repair" ) == 0 )
 		damageTransition = FALSE;
 	else
 	{
@@ -161,9 +162,9 @@ const FieldParse TerrainRoadType::m_terrainBridgeFieldParseTable[] =
 	// which transition is this
 	Bool damageTransition;
 	token = ini->getNextSubToken( "Transition" );
-	if( stricmp( token, "Damage" ) == 0 )
+	if( strcasecmp( token, "Damage" ) == 0 )
 		damageTransition = TRUE;
-	else if( stricmp( token, "Repair" ) == 0 )
+	else if( strcasecmp( token, "Repair" ) == 0 )
 		damageTransition = FALSE;
 	else
 	{
@@ -455,4 +456,3 @@ TerrainRoadType *TerrainRoadCollection::nextBridge( TerrainRoadType *bridge )
 	return bridge->friend_getNext();
 
 }  // end nextBridge
-

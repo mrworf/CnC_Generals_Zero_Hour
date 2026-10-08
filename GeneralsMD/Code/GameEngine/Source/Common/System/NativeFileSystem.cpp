@@ -2,6 +2,9 @@
 // Native implementation of the original FileSystem consumer boundary.
 #include "Common/FileSystem.h"
 #include "Common/NativeDataFile.h"
+#include "Common/NativeUserStorage.h"
+#include "Common/FileOwner.h"
+#include "Common/NativeFileMetadata.h"
 #include <algorithm>
 #include <array>
 #include <cerrno>
@@ -12,6 +15,7 @@
 #include <unistd.h>
 #include <limits>
 #include <map>
+#include <bit>
 
 namespace {
 struct DirectoryCloser {void operator()(DIR* directory)const noexcept {if(directory)::closedir(directory);}};
@@ -127,6 +131,7 @@ bool matches(const std::string& filename,const std::string& pattern) {
 }
 struct FileSystem::NativeMounts {
     std::map<std::string,Range> loose,archived;
+    std::vector<std::string> roots;
 };
 FileSystem* TheFileSystem=nullptr;
 FileSystem::FileSystem()=default;
@@ -135,11 +140,14 @@ void FileSystem::init() {}
 void FileSystem::reset(){m_fileExist.clear();}
 void FileSystem::update() {}
 void FileSystem::mountReadOnly(const std::vector<std::string>& roots) {
+    // Withdraw user attachment before changing asset ownership underneath it.
+    if(m_userStorage) throw ERROR_BAD_ARG;
     if(roots.empty())throw ERROR_BAD_ARG;
     auto candidate=std::make_unique<NativeMounts>();
     for(const auto& supplied:roots) {
         if(supplied.empty())throw ERROR_BAD_ARG;
         const auto root=canonicalRoot(supplied);
+        candidate->roots.push_back(root);
         const auto paths=physicalFiles(root);
         for(const auto& [name,physical]:paths) {
             candidate->loose.try_emplace(name,Range{nullptr,physical.first,0,physical.second});
@@ -155,10 +163,32 @@ void FileSystem::mountReadOnly(const std::vector<std::string>& roots) {
     }
     m_nativeMounts.swap(candidate);m_fileExist.clear();
 }
+bool FileSystem::admitsUserStorage(const std::string& path) const {
+    if (!m_nativeMounts || path.empty() || path.front() != '/') return false;
+    for (const auto& root : m_nativeMounts->roots)
+        if (root == "/" || path == root || (path.starts_with(root) && path.size() > root.size() &&
+                            path[root.size()] == '/')) return false;
+    return true;
+}
+void FileSystem::attachUserStorage(const NativeUserStorage* storage) {
+    if(storage) {
+        if(storage->m_assets!=this) throw ERROR_BAD_ARG;
+        storage->validateRootOwnership();
+    }
+    m_userStorage=storage;
+}
 File* FileSystem::openFile(const Char* filename,Int access) {
     if(!filename || !m_nativeMounts)return nullptr;
     constexpr Int allowed=File::READ|File::TEXT|File::BINARY|File::STREAMING;
     if(access&~allowed)throw ERROR_BAD_ARG;
+    if(filename[0]=='/') {
+        if(!m_userStorage) throw ERROR_BAD_ARG;
+        const auto relative=m_userStorage->relativeDataPath(filename);
+        if(!relative) throw ERROR_BAD_ARG;
+        FileCloseOwner view(m_userStorage->openReadFile(NativeUserArea::Data,*relative,access));
+        if(view) view->setName(filename);
+        return view.release();
+    }
     const auto name=logicalPath(filename);
     const Range* range=nullptr;
     auto loose=m_nativeMounts->loose.find(name);
@@ -166,29 +196,73 @@ File* FileSystem::openFile(const Char* filename,Int access) {
     else {auto archived=m_nativeMounts->archived.find(name);if(archived!=m_nativeMounts->archived.end())range=&archived->second;}
     if(!range)return nullptr;
     auto backing=range->backing?range->backing:std::make_shared<NativeDataBacking>(range->loosePath);
+    // Loose providers open current physical backing, not mount-time byte length.
+    if (backing->length > std::uint64_t(INT32_MAX)) throw ERROR_BAD_ARG;
+    const Int size = range->backing ? range->size : Int(backing->length);
     auto* file=new(NativeDataFile::NativeDataFile_GLUE_NOT_IMPLEMENTED)
-        NativeDataFile(std::move(backing),range->offset,range->size,filename,access);
+        NativeDataFile(std::move(backing),range->offset,size,filename,access);
     file->deleteOnClose();return file;
 }
 Bool FileSystem::doesFileExist(const Char* filename) const {
     if(!filename || !m_nativeMounts)return FALSE;
+    if(filename[0]=='/') {
+        if(!m_userStorage) throw ERROR_BAD_ARG;
+        const auto relative=m_userStorage->relativeDataPath(filename);
+        if(!relative) throw ERROR_BAD_ARG;
+        FileCloseOwner view(m_userStorage->openReadFile(NativeUserArea::Data,*relative));
+        return view!=nullptr;
+    }
     const auto name=logicalPath(filename);
     return m_nativeMounts->loose.contains(name) || m_nativeMounts->archived.contains(name);
 }
 Bool FileSystem::getFileInfo(const AsciiString& filename,FileInfo* output) const {
     if(!output || !m_nativeMounts)return FALSE;
+    if(filename.str()[0]=='/') {
+        if(!m_userStorage) throw ERROR_BAD_ARG;
+        const auto relative=m_userStorage->relativeDataPath(filename.str());
+        if(!relative) throw ERROR_BAD_ARG;
+        return m_userStorage->getFileInfo(NativeUserArea::Data,*relative,*output);
+    }
     const auto name=logicalPath(filename.str());const Range* range=nullptr;
     auto loose=m_nativeMounts->loose.find(name);
     if(loose!=m_nativeMounts->loose.end())range=&loose->second;
     else {auto archived=m_nativeMounts->archived.find(name);if(archived!=m_nativeMounts->archived.end())range=&archived->second;}
     if(!range)return FALSE;
-    *output=FileInfo{0,range->size,0,0};return TRUE;
+    struct stat info{};
+    const auto status = range->backing ? ::fstat(range->backing->descriptor, &info) :
+                                        ::lstat(range->loosePath.c_str(), &info);
+    std::uint64_t timestamp = 0;
+    if (status != 0 || !S_ISREG(info.st_mode) || info.st_size < 0 ||
+        std::uint64_t(info.st_size) > std::uint64_t(INT32_MAX) ||
+        !nativeFileTimestamp(info, timestamp)) return FALSE;
+    *output=FileInfo{0,range->backing ? range->size : Int(info.st_size),
+        std::bit_cast<Int>(UnsignedInt(timestamp >> 32)),
+        std::bit_cast<Int>(UnsignedInt(timestamp))};
+    return TRUE;
 }
 void FileSystem::getFileListInDirectory(const AsciiString& directory,const AsciiString& mask,
  FilenameList& output,Bool recursive) const {
     if(!m_nativeMounts)return;
     std::string prefix=directory.str();
     while(!prefix.empty() && (prefix.back()=='/' || prefix.back()=='\\'))prefix.pop_back();
+    if(!prefix.empty() && prefix.front()=='/') {
+        if(!m_userStorage) throw ERROR_BAD_ARG;
+        const auto relative=m_userStorage->relativeDataPath(prefix);
+        if(!relative) throw ERROR_BAD_ARG;
+        const auto pattern=logicalPath(mask.str());FilenameList candidate(output);
+        const auto entries=m_userStorage->list(NativeUserArea::Data,*relative,recursive,
+            NativeUserStorage::MaximumDirectoryEntries);
+        for(const auto& entry:entries) {
+            if(entry.directory) continue;
+            const auto slash=entry.relative.find_last_of('/');
+            const auto base=entry.relative.substr(slash==std::string::npos?0:slash+1);
+            if(matches(logicalPath(base),pattern)) {
+                const auto physical=m_userStorage->paths().data+"/"+entry.relative;
+                candidate.insert(AsciiString(physical.c_str()));
+            }
+        }
+        output.swap(candidate);return;
+    }
     if(!prefix.empty())prefix=logicalPath(prefix)+"/";
     const auto pattern=logicalPath(mask.str());FilenameList candidate(output);
     const auto append=[&](const auto& table){for(const auto& [name,range]:table) {
@@ -200,7 +274,13 @@ void FileSystem::getFileListInDirectory(const AsciiString& directory,const Ascii
     }};
     append(m_nativeMounts->loose);append(m_nativeMounts->archived);output.swap(candidate);
 }
-Bool FileSystem::createDirectory(AsciiString){return FALSE;} // asset mounts never writable
+Bool FileSystem::createDirectory(AsciiString path) {
+    if(!m_userStorage) return FALSE;
+    const auto relative=m_userStorage->relativeDataPath(path.str());
+    if(!relative) return FALSE; // Never create anything in supplied mounts/CWD.
+    try {m_userStorage->ensureDirectory(NativeUserArea::Data,*relative);return TRUE;}
+    catch(const NativeStorageError&) {return FALSE;}
+}
 Bool FileSystem::areMusicFilesOnCD(){return FALSE;} // explicit roots, no CD discovery
 void FileSystem::loadMusicFilesFromCD() {}
 void FileSystem::unloadMusicFilesFromCD() {}

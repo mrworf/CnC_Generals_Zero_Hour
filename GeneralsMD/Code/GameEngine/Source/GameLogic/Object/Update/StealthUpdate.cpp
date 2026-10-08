@@ -28,6 +28,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <climits>
+#include "Common/GlobalData.h"
 
 #define DEFINE_STEALTHLEVEL_NAMES
 #define DEFINE_OBJECT_STATUS_NAMES

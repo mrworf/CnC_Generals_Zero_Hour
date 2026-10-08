@@ -46,11 +46,12 @@
 
 // SYSTEM INCLUDES ////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <strings.h>
 
 // USER INCLUDES //////////////////////////////////////////////////////////////
 #include "Lib/BaseType.h"
 #include "Common/Debug.h"
-#include "Common/File.h"
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/GameMemory.h"
 #include "Common/NameKeyGenerator.h"
@@ -213,7 +214,7 @@ static Bool parseBitFlag( const char *flagString, UnsignedInt *bits,
 	for( i = 0, c = flagList; *c; i++, c++ )
 	{
 
-		if( !stricmp( *c, flagString ) )
+		if( !strcasecmp( *c, flagString ) )
 		{
 			*bits |= (1 << i);
 			return TRUE;
@@ -847,7 +848,7 @@ static Bool parseListboxData( char *token, WinInstanceData *instData,
 
 	// "SCROLLIFATEND" (optional)
 	c = strtok( NULL, seps );  // label
-	if ( !stricmp(c, "ScrollIfAtEnd") )
+	if ( !strcasecmp(c, "ScrollIfAtEnd") )
 	{
 		c = strtok( NULL, seps );  // value
 		scanBool( c, listData->scrollIfAtEnd );
@@ -2710,7 +2711,7 @@ GameWindow *GameWindowManager::winCreateFromScript( AsciiString filenameString,
 	static char buffer[ WIN_BUFFER_LENGTH ]; 		// input buffer for reading
 	GameWindow *firstWindow = NULL;
   GameWindow *window;
-  char filepath[ _MAX_PATH ] = "Window\\";
+  AsciiString filepath;
   File *inFile;
 	WindowLayoutInfo scriptInfo;
 	AsciiString asciibuf;
@@ -2730,12 +2731,12 @@ GameWindow *GameWindowManager::winCreateFromScript( AsciiString filenameString,
 	// place for the window files subdirectory
 	//
 	if( strchr( filename, '\\' ) == NULL )
-		sprintf( filepath, "Window\\%s", filename );
+		filepath.format("Window\\%s",filename);
 	else
-		strcpy( filepath, filename );
+		filepath=filename;
 
   // Open the input file
-	inFile = TheFileSystem->openFile(filepath, File::READ);
+	inFile = TheFileSystem->openFile(filepath.str(), File::READ);
 	if (inFile == NULL)
 	{
 		DEBUG_LOG(( "WinCreateFromScript: Cannot access file '%s'.\n", filename ));
@@ -2759,7 +2760,7 @@ GameWindow *GameWindowManager::winCreateFromScript( AsciiString filenameString,
 		{
 
 			DEBUG_LOG(( "WinCreateFromScript: Error parsing layout block\n" ));
-			return FALSE;
+			return nullptr;
 
 		}  // end if
 
@@ -2890,4 +2891,3 @@ GameWindow *GameWindowManager::winCreateFromScript( AsciiString filenameString,
 	return firstWindow;
 
 }  // end WinCreateFromScript
-

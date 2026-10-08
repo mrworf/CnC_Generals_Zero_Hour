@@ -27,6 +27,7 @@
 // JKMCD Aug 2002
 
 #pragma once
+#include "Lib/BaseType.h"
 #ifndef __SPECIALPOWERTYPE_H__
 #define __SPECIALPOWERTYPE_H__
 
@@ -37,7 +38,7 @@
 // Note: these values are saved in save files, so you MUST NOT REMOVE OR CHANGE
 // existing values!
 //
-enum SpecialPowerType
+enum SpecialPowerType : UnsignedInt
 {
 	SPECIAL_INVALID,
 	// don't forget to add new strings to SpecialPowerMaskType::s_bitNameList[]

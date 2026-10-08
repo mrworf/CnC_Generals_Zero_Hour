@@ -78,11 +78,13 @@ void ShowInGameChat( Bool immediate )
 	{
 		chatWindow = TheWindowManager->winCreateFromScript( AsciiString("InGameChat.wnd") );
 
-		static NameKeyType textEntryChatID = TheNameKeyGenerator->nameToKey( "InGameChat.wnd:TextEntryChat" );
+		static const StaticNameKey nativeCached_textEntryChatID("InGameChat.wnd:TextEntryChat");
+		NameKeyType textEntryChatID = nativeCached_textEntryChatID.key();
 		chatTextEntry = TheWindowManager->winGetWindowFromId( NULL, textEntryChatID );
 		GadgetTextEntrySetText( chatTextEntry, UnicodeString::TheEmptyString );
 
-		static NameKeyType chatTypeStaticTextID = TheNameKeyGenerator->nameToKey( "InGameChat.wnd:StaticTextChatType" );
+		static const StaticNameKey nativeCached_chatTypeStaticTextID("InGameChat.wnd:StaticTextChatType");
+		NameKeyType chatTypeStaticTextID = nativeCached_chatTypeStaticTextID.key();
 		chatTypeStaticText = TheWindowManager->winGetWindowFromId( NULL, chatTypeStaticTextID );
 	}
 	TheWindowManager->winSetFocus( chatTextEntry );
@@ -338,7 +340,8 @@ WindowMsgHandledType InGameChatSystem( GameWindow *window, UnsignedInt msg,
 		case GBM_SELECTED:
 		{
 			GameWindow *control = (GameWindow *)mData1;
-			static NameKeyType buttonClearID = TheNameKeyGenerator->nameToKey( AsciiString( "InGameChat.wnd:ButtonClear" ) );
+			static const StaticNameKey nativeCached_buttonClearID("InGameChat.wnd:ButtonClear");
+			NameKeyType buttonClearID = nativeCached_buttonClearID.key();
 			if (control && control->winGetWindowId() == buttonClearID)
 			{
 				if (chatTextEntry)
@@ -358,4 +361,3 @@ WindowMsgHandledType InGameChatSystem( GameWindow *window, UnsignedInt msg,
 	return MSG_HANDLED;
 
 }  // end InGameChatSystem
-

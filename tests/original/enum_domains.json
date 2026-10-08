@@ -1,0 +1,300 @@
+{
+  "schema_version": 1,
+  "source_commit": "9e5c0e4f1a25d20e1d83843815ac39c4619fc08d",
+  "domains": [
+    {
+      "name": "AIDebugOptions",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/AIDebugOptions.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "572e0b5853f73bed9409790a650131d5659950f6b8c396673c249ce67a2da31f"
+    },
+    {
+      "name": "AIStateType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/AIStateMachine.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "d49ccef67abd9f960e3b2a950b90326b9f5181da15ae20f5640af355759cbbfc"
+    },
+    {
+      "name": "AcademyClassificationType",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/AcademyStats.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "4bf00d1767f942b319ac5a1a8a3bd8950e08aeccff2ef3d94f1b5f5a4e11e7be"
+    },
+    {
+      "name": "AnimTypes",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/AnimateWindowManager.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "b96b6e5266e9bebf0ed95cd178e119aa33b80e028890e27056f6a15a213bcf4e"
+    },
+    {
+      "name": "ArmorSetType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/ArmorSet.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "790ef293ae37435197829576dbb4cc9ba164bbafd6d94291e00213ac6d6ee0e6"
+    },
+    {
+      "name": "AttitudeType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/AI.h",
+      "underlying": "Int",
+      "enumerator_body_sha256": "359161c1da8a3d1fc1e015d2ff286504c1d5fc4b1d6cd92ccc238c33a4ff909e"
+    },
+    {
+      "name": "AudioAffect",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/AudioAffect.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "1e36a3d8d82189d04e763c8552a1f8f03017f0193e0e4bf30dd4b2cee828ae49"
+    },
+    {
+      "name": "AudioPriority",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/AudioEventInfo.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "eac052007516fc327d9342aff12d5851046ae65f82d177ff3a8bcc42caf04032"
+    },
+    {
+      "name": "AudioType",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/AudioEventInfo.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "0509297cf49aaf14419aa2fec6eb001595e9a7f428b92b72d76d3123db515e6c"
+    },
+    {
+      "name": "BattlePlanStatus",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/Module/BattlePlanUpdate.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "fce31f4249cb917a6cbc9e24bf7872d4454d11705d93aa91defa99b0d103ec21"
+    },
+    {
+      "name": "BodyDamageType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/BodyDamageType.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "2de3fd3d83baee9c287a1c93ba9dfb7649229c447d455341f8febc35788f851a"
+    },
+    {
+      "name": "BridgeTowerType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/TerrainRoads.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "ccd5181d7422af20d25bf77fb92aed3baf100044ea78471d51a038fec5538c46"
+    },
+    {
+      "name": "BuildableStatus",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/ThingTemplate.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "4b42a6e3342662fefa0e227d197de4b66673a30e760de981ac89adb971b48bbd"
+    },
+    {
+      "name": "CanAttackResult",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/WeaponSet.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "f7651ecf3c991e89db9acd87137bcbe464223f8d6d451111995c1490730e0039"
+    },
+    {
+      "name": "CanMakeType",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/BuildAssistant.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "a439d51ca1fe9569dbd18f470ecebb082e46e20ff1d765a62dbcc22b12b25a04"
+    },
+    {
+      "name": "CommandOption",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/ControlBar.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "81de4682425918cedc8f9e4f97ffa28f5e636ced4b7bf6dd1e27b1f58946b039"
+    },
+    {
+      "name": "CommandSourceType",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/GameCommon.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "1fdec1565e7d13b800e284df76909f22daf55ef693cb8ab1b946b8a761387d2e"
+    },
+    {
+      "name": "DamageType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/Damage.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "72b440d49793114f84f5a2e9f25f626cc627fbe1f77664160753162ed3cd48f9"
+    },
+    {
+      "name": "EditorSortingType",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/ThingSort.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "c80a9004140f8641b7d2dfffb610e021a9986ec11b1918e83d51be2a6954e6a4"
+    },
+    {
+      "name": "EvaMessage",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/Eva.h",
+      "underlying": "Int",
+      "enumerator_body_sha256": "a40d023536433355c2024699fc9342c4480ebacdd66135af5941dfeba3ccedc9"
+    },
+    {
+      "name": "GUICommandType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/ControlBar.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "2cb1b895adc9b72482e03a4d8e35f33137fec4e2022336c151a8614fb8e0530b"
+    },
+    {
+      "name": "GadgetGameMessage",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/Gadget.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "8c7115b78243c45db0c6ae7d9a7bd44b541b24c3aa5a9936278abc94b0adc9a6"
+    },
+    {
+      "name": "GeometryType",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/Geometry.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "cb3ac13bd30bef8c79492bd51d29e0a71b466ef08f34aa300abc619eb7f5ce10"
+    },
+    {
+      "name": "KindOfType",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/KindOf.h",
+      "underlying": "Int",
+      "enumerator_body_sha256": "14b8b4dca05c3f63386eb27aaf4e3ccc4eee8e417ecbdca176b794a82bc134a0"
+    },
+    {
+      "name": "LegalBuildCode",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/BuildAssistant.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "ad38c844dac3ba9bb26122fe6c08036866818a309f5cf3e9d527810ddb8d6ac5"
+    },
+    {
+      "name": "LocomotorSetType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/Module/AIUpdate.h",
+      "underlying": "Int",
+      "enumerator_body_sha256": "230a1ed3b0e2156a151f4034133f1a6637067671dff1dcd55d2bc7b9f416672e"
+    },
+    {
+      "name": "MaxHealthChangeType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/Module/BodyModule.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "f106d74224a69a50040fde4bef30bd0cee8066d1b9ef75c8329c192f411936ad"
+    },
+    {
+      "name": "ModelConditionFlagType",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/ModelState.h",
+      "underlying": "Int",
+      "enumerator_body_sha256": "8f6e7f4011eb5ab52b36ea016a72b1ec145a8e562a020fc654b9a4e63a703188"
+    },
+    {
+      "name": "ObjectStatusTypes",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/ObjectStatusTypes.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "1bb1706e40d9d4c65fcfc9cd64898c8c6c5e269c408a71394526874e3c67bb69"
+    },
+    {
+      "name": "ParticlePriorityType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/ParticleSys.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "3d34e75f2f269c5d6e93ae7ee3f08a2f5102a685a0edc3a7da54adbcacb9a2d4"
+    },
+    {
+      "name": "PhysicsTurningType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/Module/PhysicsUpdate.h",
+      "underlying": "Int",
+      "enumerator_body_sha256": "c6ee8015460951cd783108f94c1b29a0b51e16833a863304cac5378a136e291a"
+    },
+    {
+      "name": "ProductionType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/Module/ProductionUpdate.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "30b61010fa619526416909d2b8a728fa3298f1aedf2634879c222c12a0341d25"
+    },
+    {
+      "name": "RadarPriorityType",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/Radar.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "debe3f1105b8616fc83c0f2eef9eb5756134ea23c49192e55631d7f2166cb49a"
+    },
+    {
+      "name": "RadiusCursorType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/InGameUI.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "301af0013d7d95a772c14177b5cf4c3a7da3460106ca0cdb4628ba78ec1eccf8"
+    },
+    {
+      "name": "ShadowType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/Shadow.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "7917ac4fbf28f092a1971918af20017e90492d66cdb45bde93e4132c150afac5"
+    },
+    {
+      "name": "SpecialPowerType",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/SpecialPowerType.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "a886aa44d2a0704199ee9435203a4b02d64f4f86905800f0074c62ee28a3678a"
+    },
+    {
+      "name": "StaticGameLODLevel",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/GameLOD.h",
+      "underlying": "Int",
+      "enumerator_body_sha256": "dada238013500b038533cce074d078b3bae9a6dd624cab138c40d6a05e3f6d05"
+    },
+    {
+      "name": "StealthLookType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/Drawable.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "ec79e960477f92c39ce7ce1ebd286fafb310275bf831f0c10d30fe644eef2898"
+    },
+    {
+      "name": "TerrainDecalType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/Drawable.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "d0eeceb108868634e49b1be4ea02f8b3558184ccd61609dd3b0f5ddfd52f76a7"
+    },
+    {
+      "name": "TimeOfDay",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/GameType.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "4888529aa61f79d9f5963fffd8660c98025445c3e93075f693585d74b82f2c90"
+    },
+    {
+      "name": "UpgradeStatusType",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/Upgrade.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "b8d57d75311b2468b174bc74b7825d0ef0e42f54fb29c9ec90530ef0ebcbd295"
+    },
+    {
+      "name": "WeaponBonusConditionType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/WeaponBonus.h",
+      "underlying": "Int",
+      "enumerator_body_sha256": "b295091820d890700c6ae15c978f1691c75f357e1f6b02221c3fd61994802ef0"
+    },
+    {
+      "name": "WeaponChoiceCriteria",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/WeaponSet.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "a5c0e17bfc762c761d75857bc5d0a56c716f1fed11942a58d6656d95bef21568"
+    },
+    {
+      "name": "WeaponLockType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/WeaponSet.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "c54c91aa7ad007980615e7a4eb40c1859eb818c79bffe48d54005c4b02ec8bae"
+    },
+    {
+      "name": "WeaponSetConditionType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/WeaponSet.h",
+      "underlying": "Int",
+      "enumerator_body_sha256": "87629596a39b81d3c19e10895c29374980c14a2b472ca6b5074091a7209657ce"
+    },
+    {
+      "name": "WeaponSetType",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/WeaponSetType.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "7ebb5441e4f4b8d62e811c4d29e3d314f73a2eb2359f5a117772ba52361085d3"
+    },
+    {
+      "name": "WeaponSlotType",
+      "header": "GeneralsMD/Code/GameEngine/Include/Common/GameType.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "3cb2739894e37fd9091a06e5f39617260c2fd5ae76ff9cda079fbc07f295051e"
+    },
+    {
+      "name": "WeaponStatus",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameLogic/WeaponStatus.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "81b8d00eac7bc684df898d83e2484e388f7175ba38c61ee63f2fdcad7e42c366"
+    },
+    {
+      "name": "_TerrainLOD",
+      "header": "GeneralsMD/Code/GameEngine/Include/GameClient/TerrainLOD.h",
+      "underlying": "UnsignedInt",
+      "enumerator_body_sha256": "bb223e22ebabfd49968d06c078214a0f74e8280e94f3e8be2b7f1896e61bda38"
+    }
+  ]
+}

@@ -28,6 +28,8 @@
 // Subsequently : John Ahlquist 2002 and a cast of thousands.
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <strings.h>
+#include <algorithm>
 
 #define DEFINE_LOCOMOTORSET_NAMES					// for TheLocomotorSetNames[]
 #define DEFINE_AUTOACQUIRE_NAMES
@@ -185,7 +187,7 @@ const LocomotorTemplateVector* AIUpdateModuleData::findLocomotorTemplateVector(L
 	self->m_locomotorTemplates[set].clear();
 	for (const char* locoName = ini->getNextToken(); locoName; locoName = ini->getNextTokenOrNull())
 	{
-		if (!*locoName || !stricmp(locoName, "None"))
+		if (!*locoName || !strcasecmp(locoName, "None"))
 			continue;
 
 		NameKeyType locoKey = NAMEKEY(locoName);
@@ -365,7 +367,7 @@ void AIUpdateInterface::setGoalPositionClipped(const Coord3D* in, CommandSourceT
 			if (getObject()->isKindOf(KINDOF_AIRCRAFT) && getObject()->isSignificantlyAboveTerrain() && m_curLocomotor != NULL)
 			{
 				// aircraft must stay further away from the map edges, to prevent getting "lost"
-				fudge = max(fudge, m_curLocomotor->getPreferredHeight());
+				fudge = std::max(fudge, m_curLocomotor->getPreferredHeight());
 			}
 			Region3D mapRegion;
 			TheTerrainLogic->getExtent( &mapRegion );
@@ -3071,7 +3073,8 @@ void AIUpdateInterface::privateMoveToAndEvacuateAndExit( const Coord3D *pos, Com
 	m_isBlockedAndStuck = FALSE;
 	setLastCommandSource( cmdSource );
 
-	static NameKeyType key_DeliverPayloadAIUpdate = NAMEKEY("DeliverPayloadAIUpdate");
+	static const StaticNameKey nativeCached_key_DeliverPayloadAIUpdate("DeliverPayloadAIUpdate");
+	NameKeyType key_DeliverPayloadAIUpdate = nativeCached_key_DeliverPayloadAIUpdate.key();
 	DeliverPayloadAIUpdate *dp = (DeliverPayloadAIUpdate*)getObject()->findUpdateModule( key_DeliverPayloadAIUpdate );
 	if( dp )
 	{
@@ -3943,7 +3946,8 @@ void AIUpdateInterface::privateExecuteRailedTransport( CommandSourceType cmdSour
 ///< life altering state change, if this AI can do it
 void AIUpdateInterface::privateGoProne( const DamageInfo *damageInfo, CommandSourceType )
 {
-	static NameKeyType proneModuleKey = TheNameKeyGenerator->nameToKey( "ProneUpdate" );
+	static const StaticNameKey nativeCached_proneModuleKey("ProneUpdate");
+	NameKeyType proneModuleKey = nativeCached_proneModuleKey.key();
 	ProneUpdate *proneModule = (ProneUpdate *)getObject()->findUpdateModule( proneModuleKey );
 
 	if( proneModule )
@@ -4150,7 +4154,8 @@ void AIUpdateInterface::privateHackInternet( CommandSourceType cmdSource )
 	getStateMachine()->clear();
 	setLastCommandSource( cmdSource );
 
-	static NameKeyType key_HackInternetAIUpdate = NAMEKEY("HackInternetAIUpdate");
+	static const StaticNameKey nativeCached_key_HackInternetAIUpdate("HackInternetAIUpdate");
+	NameKeyType key_HackInternetAIUpdate = nativeCached_key_HackInternetAIUpdate.key();
 	HackInternetAIUpdate *ai = (HackInternetAIUpdate*)getObject()->findUpdateModule( key_HackInternetAIUpdate );
 	if( ai )
 	{

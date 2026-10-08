@@ -261,10 +261,14 @@ WindowMsgHandledType ExtendedMessageBoxSystem( GameWindow *window, UnsignedInt m
 		{
 			GameWindow *control = (GameWindow *)mData1;
 			Int controlID = control->winGetWindowId();
-			static NameKeyType buttonOkID = TheNameKeyGenerator->nameToKey( AsciiString( "MessageBox.wnd:ButtonOk" ) );
-			static NameKeyType buttonYesID = TheNameKeyGenerator->nameToKey( AsciiString( "MessageBox.wnd:ButtonYes" ) );
-			static NameKeyType buttonNoID = TheNameKeyGenerator->nameToKey( AsciiString( "MessageBox.wnd:ButtonNo" ) );
-			static NameKeyType buttonCancelID = TheNameKeyGenerator->nameToKey( AsciiString( "MessageBox.wnd:ButtonCancel" ) );
+			static const StaticNameKey nativeCached_buttonOkID("MessageBox.wnd:ButtonOk");
+			NameKeyType buttonOkID = nativeCached_buttonOkID.key();
+			static const StaticNameKey nativeCached_buttonYesID("MessageBox.wnd:ButtonYes");
+			NameKeyType buttonYesID = nativeCached_buttonYesID.key();
+			static const StaticNameKey nativeCached_buttonNoID("MessageBox.wnd:ButtonNo");
+			NameKeyType buttonNoID = nativeCached_buttonNoID.key();
+			static const StaticNameKey nativeCached_buttonCancelID("MessageBox.wnd:ButtonCancel");
+			NameKeyType buttonCancelID = nativeCached_buttonCancelID.key();
 			WindowExMessageBoxData *MsgBoxCallbacks = (WindowExMessageBoxData *)window->winGetUserData();
 
 			MessageBoxReturnType ret = MB_RETURN_CLOSE;

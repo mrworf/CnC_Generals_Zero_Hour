@@ -27,7 +27,9 @@
 // Author: Michael S. Booth, March 2001
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "PreRTS.h"
+#include <cwchar>	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/GlobalData.h"
 
 #define DEFINE_SHADOW_NAMES
 
@@ -1800,8 +1802,10 @@ void InGameUI::update( void )
 	// update the player money window if the money amount has changed
 	// this seems like as good a place as any to do the power hide/show
 	static Int lastMoney = -1;
-	static NameKeyType moneyWindowKey = TheNameKeyGenerator->nameToKey( "ControlBar.wnd:MoneyDisplay" );	
-	static NameKeyType powerWindowKey = TheNameKeyGenerator->nameToKey( "ControlBar.wnd:PowerWindow" );	
+	static const StaticNameKey nativeCached_moneyWindowKey("ControlBar.wnd:MoneyDisplay");
+	NameKeyType moneyWindowKey = nativeCached_moneyWindowKey.key();
+	static const StaticNameKey nativeCached_powerWindowKey("ControlBar.wnd:PowerWindow");
+	NameKeyType powerWindowKey = nativeCached_powerWindowKey.key();
 
 	GameWindow *moneyWin = TheWindowManager->winGetWindowFromId( NULL, moneyWindowKey );
 	GameWindow *powerWin = TheWindowManager->winGetWindowFromId( NULL, powerWindowKey );
@@ -2013,74 +2017,11 @@ void InGameUI::freeMessageResources( void )
 /** Same as the unicode message method, but this takes an ascii string which is assumed
 	* to me a string manager label */
 //-------------------------------------------------------------------------------------------------
-// srj sez: passing as const-ref screws up varargs for some reason. dunno why. just pass by value.
-void InGameUI::message( AsciiString stringManagerLabel, ... )
-{
-	UnicodeString stringManagerString;
-	UnicodeString formattedMessage;
+UnicodeString InGameUI::resolveMessageFormat(const AsciiString& label) const {
+    if (!TheGameText) throw ERROR_BAD_ARG;
+    return TheGameText->fetch(label.str());
+}
 
-	// fetch the string from the string manger
-	stringManagerString = TheGameText->fetch( stringManagerLabel.str() );
-
-	// construct the final text after formatting
-	va_list args;
-  va_start( args, stringManagerLabel );
-	WideChar buf[ UnicodeString::MAX_FORMAT_BUF_LEN ];
-  if( _vsnwprintf(buf, sizeof( buf )/sizeof( WideChar ) - 1, stringManagerString.str(), args ) < 0 )
-			throw ERROR_OUT_OF_MEMORY;
-	formattedMessage.set( buf );
-  va_end(args);
-
-	// add the text to the ui
-	addMessageText( formattedMessage );
-
-}  // end 
-
-//-------------------------------------------------------------------------------------------------
-/** Interface for display text messages to the user */
-//-------------------------------------------------------------------------------------------------
-// srj sez: passing as const-ref screws up varargs for some reason. dunno why. just pass by value.
-void InGameUI::message( UnicodeString format, ... )
-{
-	UnicodeString formattedMessage;
-
-	// construct the final text after formatting
-	va_list args;
-  va_start( args, format );
-	WideChar buf[ UnicodeString::MAX_FORMAT_BUF_LEN ];
-  if( _vsnwprintf(buf, sizeof( buf )/sizeof( WideChar ) - 1, format.str(), args ) < 0 )
-			throw ERROR_OUT_OF_MEMORY;
-	formattedMessage.set( buf );
-  va_end(args);
-
-	// add the text to the ui
-	addMessageText( formattedMessage );
-
-}  // end message
-
-//-------------------------------------------------------------------------------------------------
-/** Interface for display text messages to the user */
-//-------------------------------------------------------------------------------------------------
-// srj sez: passing as const-ref screws up varargs for some reason. dunno why. just pass by value.
-void InGameUI::messageColor( const RGBColor *rgbColor, UnicodeString format, ... )
-{
-	UnicodeString formattedMessage;
-
-	// construct the final text after formatting
-	va_list args;
-  va_start( args, format );
-	WideChar buf[ UnicodeString::MAX_FORMAT_BUF_LEN ];
-  if( _vsnwprintf(buf, sizeof( buf )/sizeof( WideChar ) - 1, format.str(), args ) < 0 )
-			throw ERROR_OUT_OF_MEMORY;
-	formattedMessage.set( buf );
-  va_end(args);
-
-	// add the text to the ui
-	addMessageText( formattedMessage, rgbColor );
-
-}  // end message
-
-//-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 void InGameUI::addMessageText( const UnicodeString& formattedMessage, const RGBColor *rgbColor )
 {
@@ -2290,7 +2231,8 @@ void InGameUI::createMouseoverHint( const GameMessage *msg )
 			//(e.g. AngryMob), Lets fool the UI into creating the hint for the NEXUS instead...
  			if (obj->isKindOf( KINDOF_IGNORED_IN_GUI ))
  			{
- 				static NameKeyType key_MobMemberSlavedUpdate = NAMEKEY( "MobMemberSlavedUpdate" );
+				static const StaticNameKey nativeCached_key_MobMemberSlavedUpdate("MobMemberSlavedUpdate");
+				NameKeyType key_MobMemberSlavedUpdate = nativeCached_key_MobMemberSlavedUpdate.key();
  				MobMemberSlavedUpdate *MMSUpdate = (MobMemberSlavedUpdate*)obj->findUpdateModule( key_MobMemberSlavedUpdate );
  				if( MMSUpdate )
  				{
@@ -2411,7 +2353,8 @@ void InGameUI::createMouseoverHint( const GameMessage *msg )
 #endif
 			UnicodeString warehouseFeedback;
 			// Add on dollar amount of warehouse contents so people don't freak out until the art is hooked up
-			static const NameKeyType warehouseModuleKey = TheNameKeyGenerator->nameToKey( "SupplyWarehouseDockUpdate" );
+			static const StaticNameKey nativeCached_warehouseModuleKey("SupplyWarehouseDockUpdate");
+			const NameKeyType warehouseModuleKey = nativeCached_warehouseModuleKey.key();
 			SupplyWarehouseDockUpdate *warehouseModule = (SupplyWarehouseDockUpdate *)obj->findUpdateModule( warehouseModuleKey );
 			if( warehouseModule != NULL )
 			{
@@ -5690,7 +5633,8 @@ WindowMsgHandledType IdleWorkerSystem( GameWindow *window, UnsignedInt msg,
 		case GBM_SELECTED:
 		{
 			GameWindow *control = (GameWindow *)mData1;
-			static NameKeyType buttonSelectID = NAMEKEY( "IdleWorker.wnd:ButtonSelectNextIdleWorker" );
+			static const StaticNameKey nativeCached_buttonSelectID("IdleWorker.wnd:ButtonSelectNextIdleWorker");
+			NameKeyType buttonSelectID = nativeCached_buttonSelectID.key();
 			if (control && control->winGetWindowId() == buttonSelectID)
 			{
 				TheInGameUI->selectNextIdleWorker( );
@@ -5708,5 +5652,3 @@ WindowMsgHandledType IdleWorkerSystem( GameWindow *window, UnsignedInt msg,
 	return MSG_HANDLED;
 
 }
-
-

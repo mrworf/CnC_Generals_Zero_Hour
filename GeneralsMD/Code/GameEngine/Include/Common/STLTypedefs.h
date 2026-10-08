@@ -64,13 +64,16 @@ class STLSpecialAlloc;
 
 // FORWARD DECLARATIONS
 class Object;
-enum NameKeyType;
-enum ObjectID;
-enum DrawableID;
+enum NameKeyType : Int;
+enum ObjectID : UnsignedInt;
+enum DrawableID : UnsignedInt;
 
 #include <algorithm>
 #include <bitset>
-#include <hash_map>
+#include <unordered_map>
+#include <cstring>
+#include <string_view>
+#include <type_traits>
 #include <list>
 #include <map>
 #include <queue>
@@ -190,12 +193,32 @@ namespace rts
 
 	template<> struct hash<AsciiString>
 	{
-		size_t operator()(AsciiString ast) const
+		size_t operator()(const AsciiString& ast) const noexcept
 		{ 
-			std::hash<const char *> tmp;
-			return tmp((const char *) ast.str());
+			return std::hash<std::string_view>{}(ast.str());
 		}
 	};
+
+	template<> struct hash<const char*>
+	{
+		size_t operator()(const char* text) const noexcept
+		{
+			return std::hash<std::string_view>{}(text);
+		}
+	};
+
+	// Named/numeric snapshot records have canonical order, never bucket order.
+	// Preparation may allocate; callers retain their ordinary fallible Xfer owner.
+	template<class Map> auto keysInOrder(const Map& map)
+	{
+		static_assert(!std::is_pointer_v<typename Map::key_type>,
+			"Snapshot order requires named/numeric keys, not pointer identity");
+		std::vector<typename Map::key_type> keys;
+		keys.reserve(map.size());
+		for (const auto& entry : map) keys.push_back(entry.first);
+		std::sort(keys.begin(), keys.end());
+		return keys;
+	}
 
 	template<> struct equal_to<AsciiString>
 	{

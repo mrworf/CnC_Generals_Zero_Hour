@@ -26,6 +26,7 @@
 // Implementation of AI behavior states
 // Author: Michael S. Booth, January 2002
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <algorithm>
 
 
 #include "Common/ActionManager.h"
@@ -42,7 +43,7 @@
 #include "Common/ThingTemplate.h"
 #include "Common/ThingFactory.h"
 #include "Common/Xfer.h"
-#include "Common/XFerCRC.h"
+#include "Common/XferCRC.h"
 
 #include "GameClient/ControlBar.h"
 #include "GameClient/FXList.h"
@@ -75,6 +76,8 @@
 //#pragma MESSAGE("************************************** WARNING, optimization disabled for debugging purposes")
 #endif
 
+static AbleToAttackType st_continuedAttack = ATTACK_CONTINUED_TARGET;
+static AbleToAttackType st_forcedContinuedAttack = ATTACK_CONTINUED_TARGET_FORCED;
 static Bool cannotPossiblyAttackObject( State *thisState, void* userData );
 
 //----------------------------------------------------------------------------------------------------------
@@ -275,7 +278,7 @@ AttackStateMachine::AttackStateMachine( Object *obj, AIAttackState* att, AsciiSt
 	{
 		StateConditionInfo(outOfWeaponRangeObject, AttackStateMachine::CHASE_TARGET, NULL),
 		StateConditionInfo(wantToSquishTarget, AttackStateMachine::CHASE_TARGET, NULL),
-		StateConditionInfo(cannotPossiblyAttackObject, EXIT_MACHINE_WITH_FAILURE, (void*)ATTACK_CONTINUED_TARGET),
+		StateConditionInfo(cannotPossiblyAttackObject, EXIT_MACHINE_WITH_FAILURE, &st_continuedAttack),
 		StateConditionInfo(NULL, NULL, NULL)	// keep last
 	};
 
@@ -283,7 +286,7 @@ AttackStateMachine::AttackStateMachine( Object *obj, AIAttackState* att, AsciiSt
 	static const StateConditionInfo objectConditionsForced[] =
 	{
 		StateConditionInfo(outOfWeaponRangeObject, AttackStateMachine::CHASE_TARGET, NULL),
-		StateConditionInfo(cannotPossiblyAttackObject, EXIT_MACHINE_WITH_FAILURE, (void*)ATTACK_CONTINUED_TARGET_FORCED),
+		StateConditionInfo(cannotPossiblyAttackObject, EXIT_MACHINE_WITH_FAILURE, &st_forcedContinuedAttack),
 		StateConditionInfo(wantToSquishTarget, AttackStateMachine::CHASE_TARGET, NULL),
 		StateConditionInfo(NULL, NULL, NULL)	// keep last
 	};
@@ -533,7 +536,7 @@ StateReturnType AIRappelState::onEnter()
 
 	AIUpdateInterface *ai = obj->getAI();
 	Real MAX_RAPPEL_RATE = fabs(TheGlobalData->m_gravity) * LOGICFRAMES_PER_SECOND * 2.5f;
-	m_rappelRate = -min(ai->getDesiredSpeed(), MAX_RAPPEL_RATE);
+	m_rappelRate = -std::min(ai->getDesiredSpeed(), MAX_RAPPEL_RATE);
 
 	return STATE_CONTINUE;
 }
@@ -608,7 +611,7 @@ StateReturnType AIRappelState::update()
 					// Garrison doesn't have reserveDoor or exitDelay, so if we do nothing, everyone will appear on top 
 					// of each other and get stuck inside each others' extent (except for the first guy).  So we'll
 					// scatter the start point around a little to make it better.
-					Real offset = min(obj->getGeometryInfo().getBoundingCircleRadius(), 
+					Real offset = std::min(obj->getGeometryInfo().getBoundingCircleRadius(),
 														bldg->getGeometryInfo().getBoundingCircleRadius());
 					Real angle = GameLogicRandomValueReal( PI, 2*PI );//Downish.
 					Coord3D startPosition = *bldg->getPosition();
@@ -1242,7 +1245,7 @@ Bool outOfWeaponRangePosition( State *thisState, void* userData )
  */
 static Bool cannotPossiblyAttackObject( State *thisState, void* userData )
 {
-	AbleToAttackType attackType = (AbleToAttackType)(UnsignedInt)userData;
+	const AbleToAttackType attackType = *static_cast<const AbleToAttackType*>(userData);
 	Object *obj = thisState->getMachineOwner();
 	Object *victim = thisState->getMachineGoalObject();
 

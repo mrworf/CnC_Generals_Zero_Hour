@@ -28,25 +28,27 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef __UPGRADE_H_
 #define __UPGRADE_H_
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "Common/AudioEventRTS.h"
+#include "Common/BitFlags.h"
 #include "Common/INI.h"
 #include "Common/Snapshot.h"
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Player;
 class UpgradeTemplate;
-enum NameKeyType;
+enum NameKeyType : Int;
 class Image;
-enum AcademyClassificationType;
+enum AcademyClassificationType : UnsignedInt;
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-enum UpgradeStatusType
+enum UpgradeStatusType : UnsignedInt
 {
 	UPGRADE_STATUS_INVALID = 0,
 	UPGRADE_STATUS_IN_PRODUCTION,

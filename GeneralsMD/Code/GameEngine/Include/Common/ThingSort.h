@@ -28,12 +28,13 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef __THINGSORT_H_
 #define __THINGSORT_H_
 
 //-------------------------------------------------------------------------------------------------
-enum EditorSortingType
+enum EditorSortingType : UnsignedInt
 {
 	ES_FIRST = 0,
 
@@ -78,4 +79,3 @@ static char *EditorSortingNames[] =
 #endif
 
 #endif // __THINGSORT_H_
-

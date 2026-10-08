@@ -25,7 +25,7 @@
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
-#include "Common/CRC.h"
+#include "Common/crc.h"
 #include "GameNetwork/Transport.h"
 #include "GameNetwork/NetworkInterface.h"
 
@@ -503,6 +503,5 @@ Real Transport::getUnknownPacketsPerSecond( void )
 	}
 	return val / (MAX_TRANSPORT_STATISTICS_SECONDS-1);
 }
-
 
 

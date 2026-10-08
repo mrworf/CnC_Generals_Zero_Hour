@@ -29,13 +29,22 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"
-#include "Common/File.h"
+#include "Common/file.h"
 #include "Common/FileSystem.h"
 #include "Common/GameEngine.h"
 #include "Common/GameState.h"
 #include "Common/GameStateMap.h"
 #include "Common/LatchRestore.h"
 #include "Common/MapObject.h"
+#include "Common/GlobalData.h"
+#include "Common/NativeUserStorage.h"
+#include "Common/NativeSourceStrings.h"
+#include "Common/NativeTransferWire.h"
+#include "Common/NativeTransferServices.h"
+#include <strings.h>
+#include <string_view>
+#include <memory>
+#include <limits>
 #include "Common/PlayerList.h"
 #include "Common/RandomValue.h"
 #include "Common/Radar.h"
@@ -64,6 +73,24 @@
 //#pragma optimize("", off)
 //#pragma MESSAGE("************************************** WARNING, optimization disabled for debugging purposes")
 #endif
+
+namespace {
+class SaveMetadataRollback {
+    SaveGameInfo& m_owner;
+    SaveGameInfo m_before;
+    bool m_keep=false;
+public:
+    explicit SaveMetadataRollback(SaveGameInfo& owner) : m_owner(owner),m_before(owner) {}
+    ~SaveMetadataRollback() noexcept { if (!m_keep) m_owner.swap(m_before); }
+    void accept() noexcept { m_keep=true; }
+};
+bool nativeSaveExists(const AsciiString& path) {
+    if (!TheNativeUserStorage) throw XFER_FILE_NOT_OPEN;
+    FileInfo info{};
+    return TheNativeUserStorage->getFileInfo(NativeUserArea::Data,
+        nativeTransferUserPath(*TheNativeUserStorage,path),info);
+}
+}
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 GameState *TheGameState = NULL;
@@ -210,71 +237,6 @@ GameState::SnapshotBlock *GameState::findBlockInfoByToken( AsciiString token, Sn
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-UnicodeString getUnicodeDateBuffer(SYSTEMTIME timeVal) 
-{
-	// setup date buffer for local region date format
-	#define DATE_BUFFER_SIZE 256
-	OSVERSIONINFO	osvi;
-	osvi.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);
-	UnicodeString displayDateBuffer;
-	if (GetVersionEx(&osvi))
-	{	//check if we're running Win9x variant since they may need different characters
-		if (osvi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
-		{		
-			char dateBuffer[ DATE_BUFFER_SIZE ];
-			GetDateFormat( LOCALE_SYSTEM_DEFAULT,
-										 DATE_SHORTDATE,
-										 &timeVal,
-										 NULL,
-										 dateBuffer, sizeof(dateBuffer) );
-			displayDateBuffer.translate(dateBuffer);
-			return displayDateBuffer;
-		}	
-	}
-	wchar_t dateBuffer[ DATE_BUFFER_SIZE ];
-	GetDateFormatW( LOCALE_SYSTEM_DEFAULT,
-								 DATE_SHORTDATE,
-								 &timeVal,
-								 NULL,
-								 dateBuffer, sizeof(dateBuffer) );
-	displayDateBuffer.set(dateBuffer);
-	return displayDateBuffer;
-	//displayDateBuffer.format( L"%ls", dateBuffer );
-}															
-
-UnicodeString getUnicodeTimeBuffer(SYSTEMTIME timeVal) 
-{
-	// setup time buffer for local region time format
-	UnicodeString displayTimeBuffer;
-	OSVERSIONINFO	osvi;
-	osvi.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);
-	if (GetVersionEx(&osvi))
-	{	//check if we're running Win9x variant since they may need different characters
-		if (osvi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
-		{		
-			char timeBuffer[ DATE_BUFFER_SIZE ];
-			GetTimeFormat( LOCALE_SYSTEM_DEFAULT,
-										 TIME_NOSECONDS|TIME_FORCE24HOURFORMAT|TIME_NOTIMEMARKER,
-										 &timeVal,
-										 NULL,
-										 timeBuffer, sizeof(timeBuffer) );
-			displayTimeBuffer.translate(timeBuffer);
-			return displayTimeBuffer;
-		}
-	}
-	// setup time buffer for local region time format
-	#define TIME_BUFFER_SIZE 256
-	wchar_t timeBuffer[ TIME_BUFFER_SIZE ];
-	GetTimeFormatW( LOCALE_SYSTEM_DEFAULT,
-								 TIME_NOSECONDS,
-								 &timeVal,
-								 NULL,
-								 timeBuffer,
-								 sizeof(timeBuffer) );
-	displayTimeBuffer.set(timeBuffer);
-	return displayTimeBuffer;
-}
-
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -290,6 +252,7 @@ GameState::GameState( void )
 // ------------------------------------------------------------------------------------------------
 GameState::~GameState( void )
 {
+    nativeWithdrawTransferServices(this);
 
 	// clear our snapshot block list
 	for (Int i=0; i<SNAPSHOT_MAX; ++i)
@@ -308,6 +271,9 @@ GameState::~GameState( void )
 // ------------------------------------------------------------------------------------------------
 void GameState::init( void )
 {
+    // Reject conflicting ownership before mutating the block registries.
+    if (nativeTransferServices().owner && nativeTransferServices().owner!=this)
+        throw XFER_INVALID_PARAMETERS;
 
 	// add all the snapshot objects to our list of data blocks for save game files
 	addSnapshotBlock( GAME_STATE_BLOCK_STRING,				TheGameState,							SNAPSHOT_SAVELOAD );
@@ -337,6 +303,34 @@ void GameState::init( void )
 	addSnapshotBlock( "CHUNK_Partition",							ThePartitionManager,			SNAPSHOT_DEEPCRC_LOGICONLY );
 
 	m_isInLoadGame = FALSE;
+    nativeBindTransferServices({this,
+        [](void* owner,const AsciiString& map) { return static_cast<GameState*>(owner)->realMapPathToPortableMapPath(map); },
+        [](void* owner,const AsciiString& map) { return static_cast<GameState*>(owner)->portableMapPathToRealMapPath(map); },
+        [](void* owner,Snapshot* snapshot) { static_cast<GameState*>(owner)->addPostProcessSnapshot(snapshot); },
+        [](void*,ScienceType science) {
+            if (!TheScienceStore) throw XFER_INVALID_PARAMETERS;
+            return TheScienceStore->getInternalNameForScience(science);
+        },
+        [](void*,const AsciiString& name) {
+            if (!TheScienceStore) throw XFER_INVALID_PARAMETERS;
+            return TheScienceStore->getScienceFromInternalName(name);
+        },
+        [](void*,const UpgradeMaskType& mask) {
+            if (!TheUpgradeCenter) throw XFER_INVALID_PARAMETERS;
+            std::vector<AsciiString> names;
+            for (auto* item=TheUpgradeCenter->firstUpgradeTemplate();item;item=item->friend_getNext()) {
+                if (!mask.testForAll(item->getUpgradeMask())) continue;
+                if (names.size()==std::numeric_limits<UnsignedShort>::max()) throw XFER_INVALID_PARAMETERS;
+                names.push_back(item->getUpgradeName());
+            }
+            return names;
+        },
+        [](void*,const AsciiString& name) {
+            if (!TheUpgradeCenter) throw XFER_INVALID_PARAMETERS;
+            const auto* item=TheUpgradeCenter->findUpgrade(name);
+            if (!item) throw XFER_UNKNOWN_STRING;
+            return item->getUpgradeMask();
+        }});
 
 }  // end init
 
@@ -461,7 +455,7 @@ AsciiString GameState::findNextSaveFilename( UnicodeString desc )
 		leaf.format("%s_%04d%s", adesc.str(), i, SAVE_GAME_EXTENSION);
 
 		AsciiString path = getFilePathInSaveDirectory(leaf);
-		if( _access( path.str(), 0 ) == -1 )
+		if( !nativeSaveExists(path) )
 			return leaf;	// note that this returns the leaf, not the full path
 	}
 #else
@@ -508,7 +502,7 @@ AsciiString GameState::findNextSaveFilename( UnicodeString desc )
 			fullPath = getFilePathInSaveDirectory(filename);
 
 			// if file does not exist we're all good
-			if( _access( fullPath.str(), 0 ) == -1 )
+			if( !nativeSaveExists(fullPath) )
 				return filename;
 
 			// test the text filename
@@ -542,85 +536,38 @@ AsciiString GameState::findNextSaveFilename( UnicodeString desc )
 SaveCode GameState::saveGame( AsciiString filename, UnicodeString desc, 
 															SaveFileType saveType, SnapshotType which )
 {
-
-	// if there is no filename, this is a new file being created, find an appropriate filename
-	if( filename.isEmpty() )
-		filename = findNextSaveFilename( desc );
-	if( filename.isEmpty() )
-	{
-
-		DEBUG_CRASH(( "GameState::saveGame - Unable to find valid filename for save game\n" ));
-		return SC_NO_FILE_AVAILABLE;
-
-	}  // end if
-
-	// make absolutely sure the save directory exists
-	CreateDirectory( getSaveDirectory().str(), NULL );
-
-	// construct path to file
-	AsciiString filepath = getFilePathInSaveDirectory(filename);
-
-	// save description as current description in the game state
-	m_gameInfo.description = desc;
-
-	// open the save file
-	XferSave xferSave;
-	try {
-		xferSave.open( filepath );
-	} catch(...) {
-		// print error message to the user
-		TheInGameUI->message( "GUI:Error" );
-		DEBUG_LOG(( "Error opening file '%s'\n", filepath.str() ));
-		return SC_ERROR;
-	}
-
-	// save our save file type
-	SaveGameInfo *gameInfo = getSaveGameInfo();
-	gameInfo->saveFileType = saveType;
-
-	// save our mission map name if applicable
-	if( saveType == SAVE_FILE_TYPE_MISSION )
-		gameInfo->missionMapName = TheCampaignManager->getCurrentMap();
-	else
-		gameInfo->missionMapName.clear();
-
-	// set the pristine map to the current campaign map
-	// this is now done during startNewGame()
-//	gameInfo->pristineMapName = TheCampaignManager->getCurrentMap();
-
-	// write the save file
-	try
-	{
-
-		// save file
-		xferSaveData( &xferSave, which );
-
-	}  // end try
-	catch( ... )
-	{
-
-		UnicodeString ufilepath;
-		ufilepath.translate(filepath);
-
-		UnicodeString msg;
-		msg.format( TheGameText->fetch("GUI:ErrorSavingGame"), ufilepath.str() );
-
-		MessageBoxOk(TheGameText->fetch("GUI:Error"), msg, NULL);
-
-		// close the file and get out of here
-		xferSave.close();
-		return SC_ERROR;
-		
-	}  // end catch
-
-	// close the file
-	xferSave.close();
-
-	// print message to the user for game successfully saved
-	UnicodeString msg = TheGameText->fetch( "GUI:GameSaveComplete" );
-	TheInGameUI->message( msg );
-
-	return SC_OK;
+    SaveMetadataRollback metadata(m_gameInfo);
+    XferSave output;
+    try {
+        if (filename.isEmpty()) filename=findNextSaveFilename(desc);
+        if (filename.isEmpty()) return SC_NO_FILE_AVAILABLE;
+        if (!TheNativeUserStorage) throw XFER_FILE_NOT_OPEN;
+        TheNativeUserStorage->ensureDirectory(NativeUserArea::Data,"Save");
+        m_gameInfo.description=desc;
+        m_gameInfo.saveFileType=saveType;
+        if (saveType==SAVE_FILE_TYPE_MISSION) {
+            if (!TheCampaignManager) throw XFER_INVALID_PARAMETERS;
+            m_gameInfo.missionMapName=TheCampaignManager->getCurrentMap();
+        } else m_gameInfo.missionMapName.clear();
+        output.open(getFilePathInSaveDirectory(filename));
+        xferSaveData(&output,which);
+        output.close();
+        metadata.accept();
+    } catch (...) {
+        output.abort();
+        DEBUG_LOG(("Save transaction failed; accepted file was not overwritten.\n"));
+        return SC_ERROR;
+    }
+    if (output.getCommitResult()==NativeCommitResult::PublishedDurabilityUnknown)
+        DEBUG_LOG(("Save published; durable storage confirmation is unavailable.\n"));
+    // Notification failure cannot revoke an already-published filesystem rename.
+    try {
+        if (TheInGameUI && TheGameText)
+            TheInGameUI->message(TheGameText->fetch("GUI:GameSaveComplete"));
+    } catch (...) {
+        DEBUG_LOG(("Save published; completion notification failed.\n"));
+    }
+    return SC_OK;
 
 }  // end saveGame
 
@@ -708,8 +655,9 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 
 	try
 	{
-		// do the post-process from a save game load
-		gameStatePostProcessLoad();
+		// do the post-process only after complete source transfer
+        if (!error) gameStatePostProcessLoad();
+        else m_snapshotPostProcessList.clear();
 	}
 	catch (...)
 	{
@@ -767,14 +715,18 @@ SaveCode GameState::loadGame( AvailableGameInfo gameInfo )
 //-------------------------------------------------------------------------------------------------
 AsciiString GameState::getSaveDirectory() const
 {
-	AsciiString tmp = TheGlobalData->getPath_UserData();
-	tmp.concat("Save\\");
-	return tmp;
+    if (!TheNativeUserStorage) throw XFER_FILE_NOT_OPEN;
+    std::string root=TheNativeUserStorage->paths().data;
+    while (root.size()>1 && root.back()=='/') root.pop_back();
+    root+="/Save/";
+    return AsciiString(root.c_str());
 }
 
 //-------------------------------------------------------------------------------------------------
 AsciiString GameState::getFilePathInSaveDirectory(const AsciiString& leaf) const
 {
+	if (leaf.isEmpty() || std::string_view(leaf.str()).find_first_of("/\\:")!=std::string_view::npos)
+        throw XFER_INVALID_PARAMETERS;
 	AsciiString tmp = getSaveDirectory();
 	tmp.concat(leaf);
 	return tmp;
@@ -783,84 +735,36 @@ AsciiString GameState::getFilePathInSaveDirectory(const AsciiString& leaf) const
 //-------------------------------------------------------------------------------------------------
 Bool GameState::isInSaveDirectory(const AsciiString& path) const
 {
-	return path.startsWithNoCase(getSaveDirectory());
+	if (!TheNativeUserStorage) return FALSE;
+    const auto relative=TheNativeUserStorage->relativeDataPath(path.str());
+    return relative && relative->starts_with("Save/");
 }
 
 // ------------------------------------------------------------------------------------------------
 AsciiString GameState::getMapLeafName(const AsciiString& in) const
 {
-	char* p = strrchr(in.str(), '\\');
-	if (p)
-	{
-		//
-		// p points to the last '\' (if found), however, if a '\' was found there better
-		// be another character beyond it, otherwise the map filename would actually
-		// be a *directory*  Just move to the first character beyond it so we are looking
-		// at the name only
-		//
-		++p;
-		DEBUG_ASSERTCRASH( p != NULL && *p != 0, ("GameState::xfer - Illegal map name encountered\n") );
-		return p;
-	}
-	else
-	{
-		return in;
-	}
-}
-
-// ------------------------------------------------------------------------------------------------
-static const char* findLastBackslashInRangeInclusive(const char* start, const char* end)
-{
-	while (end >= start)
-	{
-		if (*end == '\\')
-			return end;
-		--end;
-	}
-	return NULL;
+    const auto leaf=nativePathLeaf(in.str());
+    if (leaf.empty()) throw XFER_INVALID_PARAMETERS;
+    return AsciiString(std::string(leaf).c_str());
 }
 
 // ------------------------------------------------------------------------------------------------
 static AsciiString getMapLeafAndDirName(const AsciiString& in)
 {
-	const char* start = in.str();
-	const char* end = in.str() + in.getLength() - 1;
-	const char* p = findLastBackslashInRangeInclusive(start, end);
-	if (p)
-	{
-		const char* p2 = findLastBackslashInRangeInclusive(start, p-1);
-		if (p2)
-		{
-			// we have something like:
-			//	maps\foo\foo.map
-			//	c:\mydocs\c&cdata\maps\foo\foo.map
-			return p2 + 1;
-		}
-		else
-		{
-			// we have something like:
-			//  save\foo.map
-			return in;
-		}
-	}
-	else
-	{
-		DEBUG_CRASH(("Illegal map-dir-name... should have at least one backslash"));
-		return in;
-	}
+    std::string_view path(in.str(),static_cast<std::size_t>(in.getLength()));
+    const auto last=path.find_last_of("/\\");
+    if (last==path.npos || last==0) return in;
+    const auto prior=path.substr(0,last).find_last_of("/\\");
+    return prior==path.npos ? in : AsciiString(std::string(path.substr(prior+1)).c_str());
 }
 
 // ------------------------------------------------------------------------------------------------
 static AsciiString removeExtension(const AsciiString& in)
 {
-	char buf[1024];
-	strcpy(buf, in.str());
-	char* p = strrchr(buf, '.');
-	if (p)
-	{
-		*p = 0;
-	}
-	return AsciiString(buf);
+    std::string path(in.str(),static_cast<std::size_t>(in.getLength()));
+    const auto dot=path.find_last_of('.');
+    if (dot!=path.npos) path.resize(dot);
+    return AsciiString(path.c_str());
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -872,7 +776,7 @@ const char* PORTABLE_USER_MAPS	= "UserData\\Maps\\";
 AsciiString GameState::realMapPathToPortableMapPath(const AsciiString& in) const
 {
 	AsciiString prefix;
-	if (in.startsWithNoCase(getSaveDirectory()))
+	if (isInSaveDirectory(in))
 	{
 		prefix = PORTABLE_SAVE;
 		prefix.concat(getMapLeafName(in));
@@ -1023,7 +927,7 @@ void GameState::getSaveGameInfoFromFile( AsciiString filename, SaveGameInfo *sav
 			blockSize = xferLoad.beginBlock();
 
 			// is this the block of game info data
-			if( stricmp( token.str(), GAME_STATE_BLOCK_STRING ) == 0 )
+			if( strcasecmp( token.str(), GAME_STATE_BLOCK_STRING ) == 0 )
 			{
 				GameState tempGameState;
 
@@ -1179,7 +1083,7 @@ void GameState::populateSaveGameListbox( GameWindow *listbox, SaveLoadLayoutType
 	// add all games found to the list box
 	AvailableGameInfo *info;
 	SaveGameInfo *saveGameInfo;
-	SYSTEMTIME systemTime;
+	NativeCalendarTime systemTime;
 	UnsignedInt count = 0;
 	for( info = m_availableGames; info; info = info->next, count++ )
 	{
@@ -1248,71 +1152,17 @@ void GameState::populateSaveGameListbox( GameWindow *listbox, SaveLoadLayoutType
 // ------------------------------------------------------------------------------------------------
 void GameState::iterateSaveFiles( IterateSaveFileCallback callback, void *userData )
 {
-
-	// sanity
-	if( callback == NULL )
-		return;
-
-	// save the current directory
-	char currentDirectory[ _MAX_PATH ];
-	GetCurrentDirectory( _MAX_PATH, currentDirectory );
-
-	// switch into the save directory
-	SetCurrentDirectory( getSaveDirectory().str() );
-
-	// iterate all items in the directory
-	WIN32_FIND_DATA item;  // search item
-	HANDLE hFile = INVALID_HANDLE_VALUE;  // handle for search resources
-	Bool done = FALSE;
-	Bool first = TRUE;
-	while( done == FALSE )
-	{
-
-		// if our first time through we need to start the search
-		if( first )
-		{
-
-			// start search
-			hFile = FindFirstFile( "*", &item );
-			if( hFile == INVALID_HANDLE_VALUE )
-				return;
-
-			// we are no longer on our first item
-			first = FALSE;
-
-		}  // end if, first
-
-		// see if this is a file, and therefore a possible save file
-		if( !(item.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) )
-		{
-
-			// see if there is a ".sav" at end of this filename
-			Char *c = strrchr( item.cFileName, '.' );
-			if( c && stricmp( c, ".sav" ) == 0 )
-			{
-
-				// construction asciistring filename
-				AsciiString filename;
-				filename.set( item.cFileName );
-
-				// call the callback
-				callback( filename, userData );
-
-			}  // end if, a save file
-
-		}  // end if
-
-		// on to the next file
-		if( FindNextFile( hFile, &item ) == 0 )
-			done = TRUE;
-
-	}  // end while
-
-	// close search resources
-	FindClose( hFile );
-
-	// restore the current directory
-	SetCurrentDirectory( currentDirectory );
+    if (!callback) return;
+    if (!TheNativeUserStorage) throw XFER_FILE_NOT_OPEN;
+    const auto entries=TheNativeUserStorage->list(NativeUserArea::Data,"Save",false,
+        NativeUserStorage::MaximumDirectoryEntries);
+    for (const auto& entry:entries) {
+        if (entry.directory) continue;
+        const auto dot=entry.relative.find_last_of('.');
+        if (dot==entry.relative.npos || strcasecmp(entry.relative.c_str()+dot,".sav")!=0) continue;
+        const auto leaf=nativePathLeaf(entry.relative);
+        callback(AsciiString(std::string(leaf).c_str()),userData);
+    }
 
 }  // end iterateSaveFiles
 
@@ -1321,6 +1171,7 @@ void GameState::iterateSaveFiles( IterateSaveFileCallback callback, void *userDa
 // ------------------------------------------------------------------------------------------------
 void GameState::friend_xferSaveDataForCRC( Xfer *xfer, SnapshotType which )
 {
+	SaveMetadataRollback metadata(m_gameInfo);
 	DEBUG_LOG(("GameState::friend_xferSaveDataForCRC() - SnapshotType %d\n", which));
 	SaveGameInfo *gameInfo = getSaveGameInfo();
 	gameInfo->description.clear();
@@ -1584,8 +1435,8 @@ void GameState::xfer( Xfer *xfer )
 	}  // end if
 
 	// current system time
-	SYSTEMTIME systemTime;
-	GetLocalTime( &systemTime );
+	NativeCalendarTime systemTime;
+	systemTime = nativeCalendarNow();
 
 	// date and time
 	saveGameInfo->date.year = systemTime.wYear;
@@ -1616,19 +1467,7 @@ void GameState::xfer( Xfer *xfer )
 	// if no label was found, we'll use the map name (just filename, no directory info)
 	if( exists == FALSE || saveGameInfo->mapLabel == AsciiString::TheEmptyString )
 	{
-		char string[ _MAX_PATH ];
-
-		strcpy( string, TheGlobalData->m_mapName.str() );
-		char *p = strrchr( string, '\\' );
-		if( p == NULL )
-			saveGameInfo->mapLabel = TheGlobalData->m_mapName;
-		else
-		{
-
-			p++;  // skip the '\' we're on
-			saveGameInfo->mapLabel.set( p );
-
-		}  // end else
+        saveGameInfo->mapLabel=getMapLeafName(TheGlobalData->m_mapName);
 
 	}  // end if
 

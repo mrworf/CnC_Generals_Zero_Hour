@@ -24,6 +24,8 @@
 
 
 #pragma once
+#include "Common/NativeCalendar.h"
+#include "Common/NativeReplaySession.h"
 
 #include "Common/MessageStream.h"
 #include "GameNetwork/GameInfo.h"
@@ -86,22 +88,34 @@ public:
 	struct ReplayHeader
 	{
 		AsciiString filename;
-		Bool forPlayback;
+		Bool forPlayback=false;
 		UnicodeString replayName;
-		SYSTEMTIME timeVal;
+		NativeCalendarTime timeVal;
 		UnicodeString versionString;
 		UnicodeString versionTimeString;
-		UnsignedInt versionNumber;
-		UnsignedInt exeCRC;
-		UnsignedInt iniCRC;
-		time_t startTime;
-		time_t endTime;
-		UnsignedInt frameDuration;
-		Bool quitEarly;
-		Bool desyncGame;
-		Bool playerDiscons[MAX_SLOTS];
+		UnsignedInt versionNumber=0;
+		UnsignedInt exeCRC=0;
+		UnsignedInt iniCRC=0;
+		time_t startTime=0;
+		time_t endTime=0;
+		UnsignedInt frameDuration=0;
+		Bool quitEarly=false;
+		Bool desyncGame=false;
+		Bool playerDiscons[MAX_SLOTS]{};
 		AsciiString gameOptions;
-		Int localPlayerIndex;
+		Int localPlayerIndex=-1;
+        void swap(ReplayHeader& other) noexcept {
+            filename.swap(other.filename); replayName.swap(other.replayName);
+            versionString.swap(other.versionString); versionTimeString.swap(other.versionTimeString);
+            gameOptions.swap(other.gameOptions);
+            using std::swap;
+            swap(forPlayback,other.forPlayback); swap(timeVal,other.timeVal);
+            swap(versionNumber,other.versionNumber); swap(exeCRC,other.exeCRC); swap(iniCRC,other.iniCRC);
+            swap(startTime,other.startTime); swap(endTime,other.endTime); swap(frameDuration,other.frameDuration);
+            swap(quitEarly,other.quitEarly); swap(desyncGame,other.desyncGame);
+            for (Int i=0;i<MAX_SLOTS;++i) swap(playerDiscons[i],other.playerDiscons[i]);
+            swap(localPlayerIndex,other.localPlayerIndex);
+        }
 	};
 	Bool readReplayHeader( ReplayHeader& header );
 
@@ -139,7 +153,7 @@ protected:
 
 	void cullBadCommands();														///< prevent the user from giving mouse commands that he shouldn't be able to do during playback.
 
-	FILE *m_file;
+	std::unique_ptr<NativeReplaySession> m_file;
 	AsciiString m_fileName;
 	Int m_currentFilePosition;
 	RecorderModeType m_mode;
@@ -153,6 +167,7 @@ protected:
 	Int m_originalGameMode; // valid in replays
 
 	UnsignedInt m_nextFrame;												///< The Frame that the next message is to be executed on.  This can be -1.
+    std::time_t m_startTime=0; // One session owner, not process-global replay state.
 };
 
 extern RecorderClass *TheRecorder;

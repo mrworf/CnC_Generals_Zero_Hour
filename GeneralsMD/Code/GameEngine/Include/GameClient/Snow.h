@@ -25,9 +25,10 @@
 #include "Lib/BaseType.h"
 #include "Common/SubsystemInterface.h"
 #include "Common/Overridable.h"
+#include "Common/INI.h"
 #include "Common/Override.h"
-#include "WWMATH/Vector3.h"
-#include "WWMATH/Vector4.h"
+#include "WWMath/vector3.h"
+#include "WWMath/vector4.h"
 
 //-------------------------------------------------------------------------------------------------
 /** This structure keeps the transparency and vertex settings, which are the same regardless of the
@@ -117,4 +118,3 @@ class SnowManager : public SubsystemInterface
 extern SnowManager *TheSnowManager;  ///< the ray effects singleton external
 
 #endif // _SNOW_H_
-

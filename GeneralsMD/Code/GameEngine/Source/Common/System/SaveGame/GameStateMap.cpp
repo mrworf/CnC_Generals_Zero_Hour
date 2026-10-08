@@ -30,7 +30,9 @@
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"
 
-#include "Common/File.h"
+#include "Common/file.h"
+#include "Common/FileOwner.h"
+#include "Common/NativeUserStorage.h"
 #include "Common/FileSystem.h"
 #include "Common/GameState.h"
 #include "Common/GameStateMap.h"
@@ -55,7 +57,8 @@ GameStateMap *TheGameStateMap = NULL;
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-GameStateMap::GameStateMap( void )
+GameStateMap::GameStateMap(const NativeUserStorage* storage)
+    :m_storage(storage?storage:TheNativeUserStorage)
 {
 
 }  // end GameStateMap
@@ -76,166 +79,44 @@ GameStateMap::~GameStateMap( void )
 // ------------------------------------------------------------------------------------------------
 /** Embed the pristine map into the xfer stream */
 // ------------------------------------------------------------------------------------------------
-static void embedPristineMap( AsciiString map, Xfer *xfer )
+static void embedPristineMap(AsciiString map,Xfer* xfer)
 {
- 
-	// open the map file
-	File *file = TheFileSystem->openFile( map.str(), File::READ | File::BINARY );
-	if( file == NULL )
-	{
+  if(!xfer || xfer->getXferMode()!=XFER_SAVE || !TheFileSystem) throw SC_INVALID_DATA;
+  FileCloseOwner file(TheFileSystem->openFile(map.str(),File::READ|File::BINARY));
+  if(!file) throw SC_INVALID_DATA;
+  const Int size=file->size();
+  if(size<0) throw SC_INVALID_DATA;
+  auto payload=std::make_unique<char[]>(static_cast<std::size_t>(size));
+  if(file->read(payload.get(),size)!=size) throw SC_INVALID_DATA;
+  xfer->beginBlock();
+  xfer->xferUser(payload.get(),size);
+  xfer->endBlock();
+}
 
-		DEBUG_CRASH(( "embedPristineMap - Error opening source file '%s'\n", map.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // end if
- 
-	// how big is the map file
-	Int fileSize = file->seek( 0, File::END );
- 
-	// rewind to beginning of file
-	file->seek( 0, File::START );
-
-	// allocate buffer big enough to hold the entire map file
-	char *buffer = new char[ fileSize ];
-	if( buffer == NULL )
-	{
-
-		DEBUG_CRASH(( "embedPristineMap - Unable to allocate buffer for file '%s'\n", map.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // end if
- 
-	// copy the file to the buffer
-	if( file->read( buffer, fileSize ) != fileSize )
-	{
-
-		DEBUG_CRASH(( "embeddPristineMap - Error reading from file '%s'\n", map.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // end if
- 
-	// close the BIG file
-	file->close();
- 
-	// write the contents to the save file
-	DEBUG_ASSERTCRASH( xfer->getXferMode() == XFER_SAVE, ("embedPristineMap - Unsupposed xfer mode\n") );
-	xfer->beginBlock();
-	xfer->xferUser( buffer, fileSize );
-	xfer->endBlock();
-
-	// delete the buffer
-	delete [] buffer;
- 
-}  // end embedPristineMap
-
-// ------------------------------------------------------------------------------------------------
-/** Embed an "in use" map into the xfer stream.  An "in use" map is one that has already
-	* been pulled out of a save game file and parked in a temporary file in the save directory */
-// ------------------------------------------------------------------------------------------------
-static void embedInUseMap( AsciiString map, Xfer *xfer )
+static void embedInUseMap(AsciiString map,Xfer* xfer)
 {
-	FILE *fp = fopen( map.str(), "rb" );
+  // Both immutable pristine maps and protected extracted maps enter through
+  // the real File owner. No raw physical FILE fallback bypasses XDG admission.
+  embedPristineMap(map,xfer);
+}
 
-	// sanity
-	if( fp == NULL )
-	{
-
-		DEBUG_CRASH(( "embedInUseMap - Unable to open file '%s'\n", map.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // end if
-
-	// how big is the file
-	fseek( fp, 0, SEEK_END );
-	Int fileSize = ftell( fp );
-
-	// rewind file back to start
-	fseek( fp, 0, SEEK_SET );
-
-	// allocate a buffer big enough for the entire file
-	char *buffer = new char[ fileSize ];
-	if( buffer == NULL )
-	{
-
-		DEBUG_CRASH(( "embedInUseMap - Unable to allocate buffer for file '%s'\n", map.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // end if
-
-	// read the entire file
-	if( fread( buffer, 1, fileSize, fp ) != fileSize )
-	{
-
-		DEBUG_CRASH(( "embedInUseMap - Error reading from file '%s'\n", map.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // end if
-
-	// embed file into xfer stream
-	xfer->beginBlock();
-	xfer->xferUser( buffer, fileSize );
-	xfer->endBlock();
-
-	// close the file
-	fclose( fp );
-
-	// delete buffer
-	delete [] buffer;
-
-}  // embedInUseMap
-
-// ------------------------------------------------------------------------------------------------
-/** Extract the map from the xfer stream and save as a file with filename 'mapToSave' */
-// ------------------------------------------------------------------------------------------------
-static void extractAndSaveMap( AsciiString mapToSave, Xfer *xfer )
+void GameStateMap::extractAndSaveMap(AsciiString map,Xfer* xfer)
 {
-	UnsignedInt dataSize;
-
-	// open handle to output file
-	FILE *fp = fopen( mapToSave.str(), "w+b" );
-	if( fp == NULL )
-	{
-
-		DEBUG_CRASH(( "extractAndSaveMap - Unable to open file '%s'\n", mapToSave.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // en
-
-	// read data size from file
-	dataSize = xfer->beginBlock();
-
-	// allocate buffer big enough for the entire map file
-	char *buffer = new char[ dataSize ];
-	if( buffer == NULL )
-	{
-
-		DEBUG_CRASH(( "extractAndSaveMap - Unable to allocate buffer for file '%s'\n", mapToSave.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // end if
-
-	// read map file
-	xfer->xferUser( buffer, dataSize );
-
-	// write contents of buffer to new file
-	if( fwrite( buffer, 1, dataSize, fp ) != dataSize )
-	{
-
-		DEBUG_CRASH(( "extractAndSaveMap - Error writing to file '%s'\n", mapToSave.str() ));
-		throw SC_INVALID_DATA;
-
-	}  // end if
-
-	// close the new file
-	fclose( fp );
-
-	// end of data block
-	xfer->endBlock();
-
-	// delete the buffer
-	delete [] buffer;
-
-}  // end extractAndSaveMap
+  if(!m_storage || !xfer || xfer->getXferMode()!=XFER_LOAD) throw SC_INVALID_DATA;
+  const auto relative=m_storage->relativeDataPath(map.str());
+  if(!relative || !relative->starts_with("Save/")) throw SC_INVALID_DATA;
+  const Int size=xfer->beginBlock();
+  if(size<0) throw SC_INVALID_DATA;
+  auto payload=std::make_unique<char[]>(static_cast<std::size_t>(size));
+  xfer->xferUser(payload.get(),size);
+  xfer->endBlock();
+  auto candidate=m_storage->beginScratchWrite(*relative);
+  candidate->write(payload.get(),size);
+  // Allocate the complete retirement journal entry before irreversible publish.
+  const auto entry=m_scratchMaps.insert(m_scratchMaps.end(),std::move(candidate));
+  try { (*entry)->commit(); }
+  catch(...) { m_scratchMaps.erase(entry);throw; }
+}
 
 // ------------------------------------------------------------------------------------------------
 /** Xfer method
@@ -457,71 +338,9 @@ void GameStateMap::xfer( Xfer *xfer )
 	* their own file so that those map files could be loaded as a part of the load game
 	* process */
 // ------------------------------------------------------------------------------------------------
-void GameStateMap::clearScratchPadMaps( void )
+void GameStateMap::clearScratchPadMaps(void) noexcept
 {
-
-	// remember the current directory
-	char currentDirectory[ _MAX_PATH ];
-	GetCurrentDirectory( _MAX_PATH, currentDirectory );
-
-	// switch into the save directory
-	SetCurrentDirectory( TheGameState->getSaveDirectory().str() );
-
-	// iterate all items in the directory
-	AsciiString fileToDelete;
-	WIN32_FIND_DATA item;  // search item
-	HANDLE hFile = INVALID_HANDLE_VALUE;  // handle for search resources
-	Bool done = FALSE;
-	Bool first = TRUE;
-	while( done == FALSE )
-	{
-
-		// first, clear flag for deleting file
-		fileToDelete.clear();
-
-		// if our first time through we need to start the search
-		if( first )
-		{
-
-			// start search
-			hFile = FindFirstFile( "*", &item );
-			if( hFile == INVALID_HANDLE_VALUE )
-				return;
-
-			// we are no longer on our first item
-			first = FALSE;
-
-		}  // end if, first
-
-		// see if this is a file, and therefore a possible .map file
-		if( !(item.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) )
-		{
-
-			// see if there is a ".map" at end of this filename
-			Char *c = strrchr( item.cFileName, '.' );
-			if( c && stricmp( c, ".map" ) == 0 )
-				fileToDelete.set( item.cFileName );  // we want to delete this one
-
-		}  // end if
-
-		//
-		// find the next file before we delete this one, this is probably not necessary
-		// to strcuture things this way so that the find next occurs before the file
-		// delete, but it seems more correct to do so
-		//
-		if( FindNextFile( hFile, &item ) == 0 )
-			done = TRUE;
-
-		// delete file if set
-		if( fileToDelete.isEmpty() == FALSE )
-			DeleteFile( fileToDelete.str() );
-
-	}  // end while
-
-	// close search resources
-	FindClose( hFile );
-
-	// restore our directory to the current directory
-	SetCurrentDirectory( currentDirectory );
-
-}  // end clearScratchPadMaps
+  // Reverse subsystem shutdown has already retired GameState. Captured native
+  // descriptor/inode records require neither that peer nor a live storage owner.
+  m_scratchMaps.clear();
+}

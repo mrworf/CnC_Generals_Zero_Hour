@@ -79,34 +79,38 @@ wchar_t ignoredChars[] = L"-_*'\"";
 
 void LanguageFilter::filterLine(UnicodeString &line) 
 {
-	auto backing=std::make_unique<WideChar[]>(std::size_t(line.getLength())+1);
-	WideChar* buf=backing.get();
-	wcscpy(buf,line.str());
+	std::wstring candidate(line.str());
 
 	UnicodeString newLine(line);
 	UnicodeString token(L"");
 
 	while (newLine.nextToken(&token, UnicodeString(L" ;,.!?:=\\/><`~()&^%#\n\t"))) {
-		wchar_t *pos = wcsstr(buf, token.str());
+		const wchar_t *pos = wcsstr(candidate.c_str(), token.str());
 		if (pos == NULL) {
 			DEBUG_CRASH(("Couldn't find the token in its own string."));
 			continue;
 		}
 
-		Int len = token.getLength(); // need to get the length of the original word, not the unhaxor'd word.
+		const auto offset = static_cast<std::size_t>(pos - candidate.c_str());
+		const Int len = token.getLength();
+		std::size_t units = 0;
+		for (Int n = 0; n < len; ++n) {
+			const auto scalar = static_cast<UnsignedInt>(token.getCharAt(n));
+			if (scalar > 0x10ffff || (scalar >= 0xd800 && scalar <= 0xdfff))
+				throw ERROR_BAD_ARG;
+			units += scalar >= 0x10000 ? 2 : 1;
+		}
 
 		unHaxor(token);
 		LangMapIter iter = m_wordList.find(token);
 		if (iter != m_wordList.end()) {
 			DEBUG_LOG(("Found word %ls in bad word list. Token was %ls\n", (*iter).first.str(), token.str()));
-			for (Int i = 0; i < len; ++i) {
-				*pos = L'*';
-				++pos;
-			}
+			// Original Windows masking counted UTF-16 units, not native scalars.
+			candidate.replace(offset, static_cast<std::size_t>(len), units, L'*');
 		}
 	}
 
-	line.set(buf);
+	line.set(candidate.c_str());
 }
 
 void LanguageFilter::unHaxor(UnicodeString &word) {

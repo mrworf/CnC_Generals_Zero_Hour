@@ -34,6 +34,8 @@
 
 // USER INCLUDES //////////////////////////////////////////////////////////////////////////////////
 #include "Common/Xfer.h"
+#include "Common/NativeUserStorage.h"
+#include <vector>
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class XferBlockData;
@@ -44,7 +46,7 @@ typedef long XferFilePos;
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-class XferSave : public Xfer
+class XferSave : public XferBase
 {
 
 public:
@@ -55,6 +57,8 @@ public:
 	// Xfer methods
 	virtual void open( AsciiString identifier );		///< open file for writing
 	virtual void close( void );											///< close file
+	void abort() noexcept;
+	NativeCommitResult getCommitResult() const noexcept { return m_commitResult; }
 	virtual Int beginBlock( void );									///< write placeholder block size
 	virtual void endBlock( void );									///< backup to last begin block and write size
 	virtual void skip( Int dataSize );							///< skipping during a write is a no-op
@@ -69,10 +73,10 @@ protected:
 
 	virtual void xferImplementation( void *data, Int dataSize );		///< the xfer implementation
 
-	FILE * m_fileFP;																			///< pointer to file
-	XferBlockData *m_blockStack;													///< stack of block data
+	std::unique_ptr<NativeAtomicOutput> m_output;
+	std::vector<std::uint64_t> m_blocks;
+	NativeCommitResult m_commitResult=NativeCommitResult::Durable;
 
 };
 
 #endif // __XFER_SAVE_H_
-

@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <strings.h>
 
 
 #include "Common/INI.h"
@@ -87,7 +88,7 @@ Real ArmorTemplate::adjustDamage(DamageType t, Real damage) const
 	const char* damageName = ini->getNextToken();
 	Real pct = INI::scanPercentToReal(ini->getNextToken());
 
-	if (stricmp(damageName, "Default") == 0)
+	if (strcasecmp(damageName, "Default") == 0)
 	{
 		for (Int i = 0; i < DAMAGE_NUM_TYPES; i++)
 		{
@@ -150,4 +151,3 @@ const ArmorTemplate* ArmorStore::findArmorTemplate(AsciiString name) const
 {
 	ArmorStore::parseArmorDefinition(ini);
 }
-

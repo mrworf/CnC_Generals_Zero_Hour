@@ -44,13 +44,23 @@
 
 #include "PreRTS.h"
 #include "Common/DiscreteCircle.h"
+#include "Common/Errors.h"
+#include <limits>
 
 //-------------------------------------------------------------------------------------------------
 DiscreteCircle::DiscreteCircle(Int xCenter, Int yCenter, Int radius)
 {
+	const auto r = static_cast<std::int64_t>(radius);
+	const auto low = std::numeric_limits<Int>::min();
+	const auto high = std::numeric_limits<Int>::max();
+	if (radius < 0 || static_cast<std::int64_t>(xCenter)-r < low ||
+		static_cast<std::int64_t>(xCenter)+r > high ||
+		static_cast<std::int64_t>(yCenter)-r < low ||
+		static_cast<std::int64_t>(yCenter)+r > high)
+		throw ERROR_BAD_ARG;
 	m_yPos = yCenter;
-	m_yPosDoubled = (yCenter << 1);
-	m_edges.reserve(radius << 1);	// largest that it should ever be.
+	m_yPosDoubled = static_cast<std::int64_t>(yCenter)*2;
+	m_edges.reserve(static_cast<std::size_t>(radius)*2);
 
 	generateEdgePairs(xCenter, yCenter, radius);
 	removeDuplicates();
@@ -59,10 +69,11 @@ DiscreteCircle::DiscreteCircle(Int xCenter, Int yCenter, Int radius)
 //-------------------------------------------------------------------------------------------------
 void DiscreteCircle::drawCircle(ScanlineDrawFunc functionToDrawWith, void *parmToPass)
 {
+	if (!functionToDrawWith) throw ERROR_BAD_ARG;
 	for (VecHorzLine::const_iterator it = m_edges.begin(); it != m_edges.end(); ++it) {
 		(functionToDrawWith)(it->xStart, it->xEnd, it->yPos, parmToPass);
 		if (it->yPos != m_yPos) {
-			(functionToDrawWith)(it->xStart, it->xEnd, m_yPosDoubled - it->yPos, parmToPass);
+			(functionToDrawWith)(it->xStart, it->xEnd, static_cast<Int>(m_yPosDoubled - it->yPos), parmToPass);
 		}
 	}
 }
@@ -71,25 +82,25 @@ void DiscreteCircle::drawCircle(ScanlineDrawFunc functionToDrawWith, void *parmT
 void DiscreteCircle::generateEdgePairs(Int xCenter, Int yCenter, Int radius)
 {
 	// Uses Bresenham to generate points.
-	Int x = 0;
-	Int y = radius;
-	Int d = (1 - radius) << 1;
+	std::int64_t x = 0;
+	std::int64_t y = radius;
+	std::int64_t d = (1 - static_cast<std::int64_t>(radius))*2;
 
 	while (y >= 0) {
 		HorzLine hl;
-		hl.xStart = xCenter - x;
-		hl.xEnd		= xCenter + x;
-		hl.yPos		= yCenter + y;
+		hl.xStart = static_cast<Int>(xCenter - x);
+		hl.xEnd		= static_cast<Int>(xCenter + x);
+		hl.yPos		= static_cast<Int>(yCenter + y);
 		m_edges.push_back(hl);
 		
 		if (d + y > 0) {
 			--y;
-			d -= ((y << 1) - 1);
+			d -= ((y*2) - 1);
 		} 
 
 		if (x > d) {
 			++x;
-			d += ((x << 1) + 1);
+			d += ((x*2) + 1);
 		}
 	}
 }

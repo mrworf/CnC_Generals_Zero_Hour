@@ -37,9 +37,13 @@
 #include "Lib/BaseType.h"
 #include "Common/Debug.h"
 #include "Common/INI.h"
+#include "Common/FileSystem.h"
 #include "Common/GlobalData.h"
 #include "GameClient/Image.h"
 #include "Common/NameKeyGenerator.h"
+#include <cstdint>
+#include <limits>
+#include <utility>
 
 // PRIVATE DATA ///////////////////////////////////////////////////////////////////////////////////
 const FieldParse Image::m_imageFieldParseTable[] = 
@@ -67,6 +71,11 @@ void Image::parseImageCoords( INI* ini, void *instance, void *store, const void*
 	Int top = INI::scanInt(ini->getNextSubToken("Top"));
 	Int right = INI::scanInt(ini->getNextSubToken("Right"));
 	Int bottom = INI::scanInt(ini->getNextSubToken("Bottom"));
+    const auto width=std::int64_t(right)-std::int64_t(left);
+    const auto height=std::int64_t(bottom)-std::int64_t(top);
+    if (width<std::numeric_limits<Int>::min() || width>std::numeric_limits<Int>::max() ||
+        height<std::numeric_limits<Int>::min() || height>std::numeric_limits<Int>::max())
+        throw ERROR_BAD_INI;
 
 	// get the image we're storing in
 	Image *theImage = (Image *)instance;
@@ -100,8 +109,8 @@ void Image::parseImageCoords( INI* ini, void *instance, void *store, const void*
 
 	// compute the image size based on the coords we read and store
 	ICoord2D imageSize;
-	imageSize.x = right - left;
-	imageSize.y = bottom - top;
+	imageSize.x = static_cast<Int>(width);
+	imageSize.y = static_cast<Int>(height);
 	theImage->setImageSize( &imageSize );
 
 }  // end parseImageCoord
@@ -159,6 +168,20 @@ Image::Image( void )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+void Image::copyDefinition(const Image& source) {
+    // Raw texture data is borrowed; the source destructor does not release it.
+    m_name=source.m_name; m_filename=source.m_filename;
+    m_textureSize=source.m_textureSize; m_UVCoords=source.m_UVCoords;
+    m_imageSize=source.m_imageSize; m_rawTextureData=source.m_rawTextureData;
+    m_status=source.m_status;
+}
+void Image::swapDefinition(Image& other) noexcept {
+    m_name.swap(other.m_name); m_filename.swap(other.m_filename);
+    std::swap(m_textureSize,other.m_textureSize);std::swap(m_UVCoords,other.m_UVCoords);
+    std::swap(m_imageSize,other.m_imageSize);std::swap(m_rawTextureData,other.m_rawTextureData);
+    std::swap(m_status,other.m_status);
+}
+
 Image::~Image( void )
 {
 
@@ -213,7 +236,11 @@ ImageCollection::~ImageCollection( void )
 //-------------------------------------------------------------------------------------------------
 void ImageCollection::addImage( Image *image )
 {
-  m_imageMap[TheNameKeyGenerator->nameToLowercaseKey(image->getName())]=image;
+    if (!image || !TheNameKeyGenerator || image->getName().isEmpty()) throw ERROR_BAD_ARG;
+    NameKeyTransaction keys(*TheNameKeyGenerator);
+    const auto key=TheNameKeyGenerator->nameToLowercaseKey(image->getName());
+    if (!m_imageMap.emplace(key,image).second) throw ERROR_BAD_INI;
+    keys.commit();
 }  // end newImage
 
 //-------------------------------------------------------------------------------------------------
@@ -221,8 +248,12 @@ void ImageCollection::addImage( Image *image )
 //-------------------------------------------------------------------------------------------------
 const Image *ImageCollection::findImageByName( const AsciiString& name )
 {
-  std::map<unsigned,Image *>::iterator i=m_imageMap.find(TheNameKeyGenerator->nameToLowercaseKey(name));
-  return i==m_imageMap.end()?NULL:i->second;
+    if (!TheNameKeyGenerator) throw ERROR_BAD_ARG;
+    NameKeyTransaction keys(*TheNameKeyGenerator);
+    const auto found=m_imageMap.find(TheNameKeyGenerator->nameToLowercaseKey(name));
+    if (found==m_imageMap.end()) return nullptr;
+    keys.commit();
+    return found->second;
 }  // end findImageByName
 
 //-------------------------------------------------------------------------------------------------
@@ -231,29 +262,50 @@ const Image *ImageCollection::findImageByName( const AsciiString& name )
 //-------------------------------------------------------------------------------------------------
 void ImageCollection::load( Int textureSize )
 {
-	char buffer[ _MAX_PATH ];
-	INI ini;
-	// first load in the user created mapped image files if we have them.
-	WIN32_FIND_DATA findData;
-	AsciiString userDataPath;	
-	if(TheGlobalData)
-	{
-		userDataPath.format("%sINI\\MappedImages\\*.ini",TheGlobalData->getPath_UserData().str());
-		if(FindFirstFile(userDataPath.str(), &findData) !=INVALID_HANDLE_VALUE)
-		{
-			userDataPath.format("%sINI\\MappedImages",TheGlobalData->getPath_UserData().str());
-			ini.loadDirectory(userDataPath, TRUE, INI_LOAD_OVERWRITE, NULL );
-		}
-	}
-
-	// construct path to the mapped images folder of the correct texture size
-	sprintf( buffer, "Data\\INI\\MappedImages\\TextureSize_%d", textureSize );
-
-	// load all the ine files in that directory
-
-	ini.loadDirectory( AsciiString( buffer ), TRUE, INI_LOAD_OVERWRITE, NULL );
-
-	ini.loadDirectory("Data\\INI\\MappedImages\\HandCreated", TRUE, INI_LOAD_OVERWRITE, NULL );
-
-
+    if (!TheFileSystem || !TheNameKeyGenerator || TheMappedImageCollection!=this) throw ERROR_BAD_ARG;
+    NameKeyTransaction keys(*TheNameKeyGenerator);
+    ImageCollection candidate;
+    for (const auto& entry:m_imageMap) {
+        if (!entry.second) throw ERROR_BAD_ARG;
+        Image* clone=newInstance(Image);
+        MemoryPoolObjectHolder owner(clone);
+        clone->copyDefinition(*entry.second);
+        if (!candidate.m_imageMap.emplace(entry.first,clone).second) throw ERROR_BAD_ARG;
+        owner.release();
+    }
+    struct Publication {
+        ImageCollection* previous;
+        explicit Publication(ImageCollection& value):previous(TheMappedImageCollection) {
+            TheMappedImageCollection=&value;
+        }
+        ~Publication() noexcept {TheMappedImageCollection=previous;}
+    } publication(candidate);
+    const INIBlockDefinition blocks[]{{"MappedImage",INI::parseMappedImageDefinition}};
+    INI ini;
+    // Preserve the source's top-level user-INI gate and recursive load order.
+    if (TheGlobalData) {
+        AsciiString directory;
+        directory.format("%sINI\\MappedImages",TheGlobalData->getPath_UserData().str());
+        FilenameList present;
+        TheFileSystem->getFileListInDirectory(directory,"*.ini",present,FALSE);
+        if (!present.empty()) ini.loadDirectoryBlocks(directory,TRUE,INI_LOAD_OVERWRITE,blocks);
+    }
+    AsciiString directory;
+    directory.format("Data\\INI\\MappedImages\\TextureSize_%d",textureSize);
+    ini.loadDirectoryBlocks(directory,TRUE,INI_LOAD_OVERWRITE,blocks);
+    ini.loadDirectoryBlocks("Data\\INI\\MappedImages\\HandCreated",TRUE,INI_LOAD_OVERWRITE,blocks);
+    // Validate the entire commit ledger before any accepted payload changes.
+    for (const auto& entry:m_imageMap) {
+        const auto prepared=candidate.m_imageMap.find(entry.first);
+        if (prepared==candidate.m_imageMap.end() || !prepared->second) throw ERROR_BAD_ARG;
+    }
+    // Keep every accepted Image address stable. Candidate clones retire the old
+    // payloads/index only after this allocation-free complete publication.
+    for (auto& entry:m_imageMap) {
+        auto prepared=candidate.m_imageMap.find(entry.first);
+        entry.second->swapDefinition(*prepared->second);
+        std::swap(entry.second,prepared->second);
+    }
+    m_imageMap.swap(candidate.m_imageMap);
+    keys.commit();
 }  // end load

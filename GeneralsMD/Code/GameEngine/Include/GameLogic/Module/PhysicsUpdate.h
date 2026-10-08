@@ -27,6 +27,7 @@
 // Author: Michael S. Booth, November 2001
 
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef _PHYSICSUPDATE_H_
 #define _PHYSICSUPDATE_H_
@@ -37,9 +38,9 @@
 #include "GameLogic/Module/UpdateModule.h"
 #include "GameLogic/Module/CollideModule.h"
 
-enum ObjectID;
+enum ObjectID : UnsignedInt;
 
-enum PhysicsTurningType
+enum PhysicsTurningType : Int
 {
 	TURN_NEGATIVE = -1,
 	TURN_NONE = 0,
@@ -309,4 +310,3 @@ inline ObjectID PhysicsBehavior::getLastCollidee() const
 }
 
 #endif // _PHYSICSUPDATE_H_
-

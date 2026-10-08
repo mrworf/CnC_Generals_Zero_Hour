@@ -220,12 +220,14 @@ void WorkerAIUpdate::createMachines( void )
 UnsignedInt WorkerAIUpdate::getActionDelayForDock( Object *dock )
 {
 	// Decide whether to use my Center or Warehouse delay time
-	static const NameKeyType key_warehouseUpdate = NAMEKEY("SupplyWarehouseDockUpdate");
+	static const StaticNameKey nativeCached_key_warehouseUpdate("SupplyWarehouseDockUpdate");
+	const NameKeyType key_warehouseUpdate = nativeCached_key_warehouseUpdate.key();
 	SupplyWarehouseDockUpdate *warehouseModule = (SupplyWarehouseDockUpdate*) dock->findUpdateModule( key_warehouseUpdate );
 	if (warehouseModule) {
 		return getWorkerAIUpdateModuleData()->m_warehouseDelay;
 	}
-	static const NameKeyType key_centerUpdate = NAMEKEY("SupplyCenterDockUpdate");
+	static const StaticNameKey nativeCached_key_centerUpdate("SupplyCenterDockUpdate");
+	const NameKeyType key_centerUpdate = nativeCached_key_centerUpdate.key();
 	SupplyCenterDockUpdate *centerModule = (SupplyCenterDockUpdate*) dock->findUpdateModule( key_centerUpdate );
 	if (centerModule) {
 		return getWorkerAIUpdateModuleData()->m_centerDelay;

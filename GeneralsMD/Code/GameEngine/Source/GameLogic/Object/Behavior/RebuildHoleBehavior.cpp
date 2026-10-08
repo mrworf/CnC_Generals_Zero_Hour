@@ -172,7 +172,8 @@ void RebuildHoleBehavior::transferBombs( Object *reconstruction )
 	{
 		if( obj->isKindOf( KINDOF_MINE ) )
 		{
-			static NameKeyType key_StickyBombUpdate = NAMEKEY( "StickyBombUpdate" );
+			static const StaticNameKey nativeCached_key_StickyBombUpdate("StickyBombUpdate");
+			NameKeyType key_StickyBombUpdate = nativeCached_key_StickyBombUpdate.key();
 			StickyBombUpdate *update = (StickyBombUpdate*)obj->findUpdateModule( key_StickyBombUpdate );
 			if( update && update->getTargetObject() == self )
 			{

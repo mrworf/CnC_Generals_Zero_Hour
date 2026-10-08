@@ -40,6 +40,7 @@
 #include "Common/Module.h"
 #include "Common/ModuleFactory.h"
 #include "Common/NameKeyGenerator.h"
+#include "Common/NativeModuleData.h"
 
 // behavior includes
 #include "GameLogic/Module/AutoHealBehavior.h"
@@ -323,6 +324,7 @@ ModuleFactory::~ModuleFactory( void )
 //-------------------------------------------------------------------------------------------------
 void ModuleFactory::init( void )
 {
+	RegistryTransaction registration(*this);
 
 	// behavior modules
 	addModule( AutoHealBehavior );
@@ -563,12 +565,14 @@ void ModuleFactory::init( void )
 	addModule( AnimatedParticleSysBoneClientUpdate );
 	addModule( SwayClientUpdate );
 	addModule( BeaconClientUpdate );
+	registration.commit();
 
 }  // end init
 
 //-------------------------------------------------------------------------------------------------
-Int ModuleFactory::findModuleInterfaceMask(const AsciiString& name, ModuleType type)
+Int ModuleFactory::findModuleInterfaceMask(const AsciiString& name, Int type)
 {
+	nativeValidateModuleBucket(type);
 	if (name.isEmpty())
 		return 0;
 
@@ -582,19 +586,26 @@ Int ModuleFactory::findModuleInterfaceMask(const AsciiString& name, ModuleType t
 }
 
 //-------------------------------------------------------------------------------------------------
-ModuleData* ModuleFactory::newModuleDataFromINI(INI* ini, const AsciiString& name, ModuleType type,
+ModuleData* ModuleFactory::newModuleDataFromINI(INI* ini, const AsciiString& name, Int type,
 																								const AsciiString& moduleTag)
 {
+	nativeValidateModuleBucket(type);
 	if (name.isEmpty())
 		return NULL;
 
+	if (!TheNameKeyGenerator) throw ERROR_BAD_ARG;
+	NameKeyGenerator& names = *TheNameKeyGenerator;
+	NameKeyTransaction keys(names);
 	const ModuleTemplate* moduleTemplate = findModuleTemplate(name, type);
 	if (moduleTemplate)
 	{
-		ModuleData* md = (*moduleTemplate->m_createDataProc)(ini);
-		md->setModuleTagNameKey( NAMEKEY( moduleTag ) );
-		m_moduleDataList.push_back(md);
-		return md;
+		if (!moduleTemplate->m_createDataProc) throw ERROR_BAD_ARG;
+		std::unique_ptr<ModuleData> md((*moduleTemplate->m_createDataProc)(ini));
+		if (!md) throw ERROR_BAD_ARG;
+		md->setModuleTagNameKey(names.nameToKey(moduleTag.str()));
+		m_moduleDataList.push_back(md.get());
+		keys.commit();
+		return md.release();
 	}
 
 	return NULL;
@@ -603,17 +614,17 @@ ModuleData* ModuleFactory::newModuleDataFromINI(INI* ini, const AsciiString& nam
 // PRIVATE FUNCTIONS //////////////////////////////////////////////////////////////////////////////
 
 //-------------------------------------------------------------------------------------------------
-/*static*/ NameKeyType ModuleFactory::makeDecoratedNameKey(const AsciiString& name, ModuleType type)
+/*static*/ NameKeyType ModuleFactory::makeDecoratedNameKey(const AsciiString& name, Int type)
 {
-	char tmp[256];
-	tmp[0] = '0' + (int)type;
-	strcpy(&tmp[1], name.str());
-	return TheNameKeyGenerator->nameToKey(tmp);
+	if (!TheNameKeyGenerator) throw ERROR_BAD_ARG;
+	return nativeModuleNameKey(*TheNameKeyGenerator, name, type);
 }
 
 //-------------------------------------------------------------------------------------------------
-const ModuleFactory::ModuleTemplate* ModuleFactory::findModuleTemplate(const AsciiString& name, ModuleType type)
+const ModuleFactory::ModuleTemplate* ModuleFactory::findModuleTemplate(const AsciiString& name, Int type)
 {
+	if (!TheNameKeyGenerator) throw ERROR_BAD_ARG;
+	NameKeyTransaction keys(*TheNameKeyGenerator);
 	NameKeyType namekey = makeDecoratedNameKey(name, type);
 
   ModuleTemplateMap::const_iterator it = m_moduleTemplateMap.find(namekey);
@@ -624,6 +635,7 @@ const ModuleFactory::ModuleTemplate* ModuleFactory::findModuleTemplate(const Asc
 	}
 	else
 	{
+		keys.commit();
 		return &(*it).second;
 	}
 }
@@ -631,8 +643,9 @@ const ModuleFactory::ModuleTemplate* ModuleFactory::findModuleTemplate(const Asc
 //-------------------------------------------------------------------------------------------------
 /** Allocate a new acton class istance given the name */
 //-------------------------------------------------------------------------------------------------
-Module *ModuleFactory::newModule( Thing *thing, const AsciiString& name, const ModuleData* moduleData, ModuleType type )
+Module *ModuleFactory::newModule( Thing *thing, const AsciiString& name, const ModuleData* moduleData, Int type )
 {
+	nativeValidateModuleBucket(type);
 	// sanity
 	if( name.isEmpty() )
 	{
@@ -692,13 +705,16 @@ Module *ModuleFactory::newModule( Thing *thing, const AsciiString& name, const M
 //-------------------------------------------------------------------------------------------------
 /** Add a module template to our list of templates */
 //-------------------------------------------------------------------------------------------------
-void ModuleFactory::addModuleInternal( NewModuleProc proc, NewModuleDataProc dataproc, ModuleType type, const AsciiString& name, Int whichIntf )
+void ModuleFactory::addModuleInternal( NewModuleProc proc, NewModuleDataProc dataproc, Int type, const AsciiString& name, Int whichIntf )
 {
+	if (!TheNameKeyGenerator || !proc || !dataproc) throw ERROR_BAD_ARG;
+	NameKeyTransaction keys(*TheNameKeyGenerator);
 	NameKeyType namekey = makeDecoratedNameKey(name, type);
 	ModuleTemplate& mtm = m_moduleTemplateMap[namekey];	// this creates it if it does not exist already
 	mtm.m_createProc = proc;
 	mtm.m_createDataProc = dataproc;
 	mtm.m_whichInterfaces = whichIntf;
+	keys.commit();
 }
 
 //-------------------------------------------------------------------------------------------------

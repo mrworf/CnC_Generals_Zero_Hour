@@ -129,7 +129,8 @@ void W3DProjectileStreamDraw::doDrawModule(const Matrix3D* )
 	if (me == NULL)
 		return;
 
-	static NameKeyType key_ProjectileStreamUpdate = NAMEKEY("ProjectileStreamUpdate");
+	static const StaticNameKey nativeCached_key_ProjectileStreamUpdate("ProjectileStreamUpdate");
+	NameKeyType key_ProjectileStreamUpdate = nativeCached_key_ProjectileStreamUpdate.key();
 	ProjectileStreamUpdate* update = (ProjectileStreamUpdate*)me->findUpdateModule(key_ProjectileStreamUpdate);
 
 	const W3DProjectileStreamDrawModuleData *data = getW3DProjectileStreamDrawModuleData();

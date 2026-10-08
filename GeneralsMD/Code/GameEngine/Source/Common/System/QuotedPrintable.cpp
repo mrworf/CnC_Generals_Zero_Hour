@@ -26,180 +26,109 @@
 // Author: Matt Campbell, February 2002
 // Description: Quoted-printable encode/decode
 ////////////////////////////////////////////////////////////////////////////
-#include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
-
+#include "PreRTS.h"
 #include "Common/QuotedPrintable.h"
+#include <cstdint>
+#include <string>
+#include <string_view>
 
-#define MAGIC_CHAR '_'
-
-// takes an integer and returns an ASCII representation
-static char intToHexDigit(int num)
-{
-	if (num<0 || num >15) return '\0';
-	if (num<10)
-	{
-		return '0' + num;
-	}
-	return 'A' + (num-10);
+namespace {
+constexpr char hex[]="0123456789ABCDEF";
+bool literal(unsigned byte) noexcept {
+    return (byte>='0' && byte<='9') || (byte>='A' && byte<='Z') ||
+           (byte>='a' && byte<='z');
 }
-
-// convert an ASCII representation of a hex digit into the digit itself
-static int hexDigitToInt(char c)
-{
-	if (c <= '9' && c >= '0') return (c - '0');
-	if (c <= 'f' && c >= 'a') return (c - 'a' + 10);
-	if (c <= 'F' && c >= 'A') return (c - 'A' + 10);
-	return 0;
+unsigned digit(char value) {
+    if(value>='0' && value<='9') return unsigned(value-'0');
+    if(value>='a' && value<='f') return unsigned(value-'a')+10;
+    if(value>='A' && value<='F') return unsigned(value-'A')+10;
+    throw ERROR_BAD_ARG;
 }
-
-// Convert unicode strings into ascii quoted-printable strings
-AsciiString UnicodeStringToQuotedPrintable(UnicodeString original)
-{
-	static char dest[1024];
-	const char *src = (const char *)original.str();
-	int i=0;
-	while ( !(src[0]=='\0' && src[1]=='\0') && i<1021 )
-	{
-		if (!isalnum(*src))
-		{
-			dest[i++] = MAGIC_CHAR;
-			dest[i++] = intToHexDigit((*src)>>4);
-			dest[i++] = intToHexDigit((*src)&0xf);
-		} else
-		{
-			dest[i++] = *src;
-		}
-		src ++;
-		if (!isalnum(*src))
-		{
-			dest[i++] = MAGIC_CHAR;
-			dest[i++] = intToHexDigit((*src)>>4);
-			dest[i++] = intToHexDigit((*src)&0xf);
-		}
-		else
-		{
-			dest[i++] = *src;
-		}
-		src ++;
-	}
-	dest[i] = '\0';
-
-	return dest;
+struct Bytes {
+    std::string_view input;
+    std::size_t position=0;
+    bool empty() const noexcept {return position==input.size();}
+    unsigned next() {
+        if(empty()) throw ERROR_BAD_ARG;
+        const auto value=static_cast<unsigned char>(input[position++]);
+        if(value!='_') return value;
+        if(input.size()-position<2) throw ERROR_BAD_ARG;
+        const unsigned high=digit(input[position++]);
+        return (high<<4)|digit(input[position++]);
+    }
+    unsigned word() {
+        const unsigned low=next();
+        // Source odd-tail policy pads the last low byte, not a stale tail.
+        return low | (empty()?0u:next()<<8);
+    }
+};
+std::string_view view(const AsciiString& value) {
+    return {value.str(),static_cast<std::size_t>(value.getLength())};
 }
-
-// Convert ascii strings into ascii quoted-printable strings
-AsciiString AsciiStringToQuotedPrintable(AsciiString original)
-{
-	static char dest[1024];
-	const char *src = (const char *)original.str();
-	int i=0;
-	while ( src[0]!='\0' && i<1021 )
-	{
-		if (!isalnum(*src))
-		{
-			dest[i++] = MAGIC_CHAR;
-			dest[i++] = intToHexDigit((*src)>>4);
-			dest[i++] = intToHexDigit((*src)&0xf);
-		} else
-		{
-			dest[i++] = *src;
-		}
-		src ++;
-	}
-	dest[i] = '\0';
-
-	return dest;
+void countByte(std::size_t& count,unsigned value) {
+    const std::size_t cost=literal(value)?1u:3u;
+    if(count>std::size_t(AsciiString::MAX_LEN-1)-cost) throw ERROR_OUT_OF_MEMORY;
+    count+=cost;
 }
-
-// Convert ascii quoted-printable strings into unicode strings
-UnicodeString QuotedPrintableToUnicodeString(AsciiString original)
-{
-	static unsigned short dest[1024];
-	int i=0;
-
-	unsigned char *c = (unsigned char *)dest;
-	const unsigned char *src = (const unsigned char *)original.str();
-
-	while (*src && i<1023)
-	{
-		if (*src == MAGIC_CHAR)
-		{
-			if (src[1] == '\0')
-			{
-				// string ends with MAGIC_CHAR
-				break;
-			}
-			*c = hexDigitToInt(src[1]);
-			src++;
-			if (src[1] != '\0')
-			{
-				*c = *c<<4;
-				*c = *c | hexDigitToInt(src[1]);
-				src++;
-			}
-		}
-		else
-		{
-			*c = *src;
-		}
-		src++;
-		c++;
-	}
-
-	// Fixup odd-length strings
-	if ((c-(unsigned char *)dest)%2)
-	{
-		// OK
-	}
-	else
-	{
-		*c = '\0';
-		c++;
-	}
-
-	*c = 0;
-
-	UnicodeString out(dest);
-	return out;
+void appendByte(std::string& output,unsigned value) {
+    if(literal(value)) output.push_back(static_cast<char>(value));
+    else {output.push_back('_');output.push_back(hex[value>>4]);output.push_back(hex[value&15]);}
 }
-
-// Convert ascii quoted-printable strings into ascii strings
-AsciiString QuotedPrintableToAsciiString(AsciiString original)
-{
-	static unsigned char dest[1024];
-	int i=0;
-
-	unsigned char *c = (unsigned char *)dest;
-	const unsigned char *src = (const unsigned char *)original.str();
-
-	while (*src && i<1023)
-	{
-		if (*src == MAGIC_CHAR)
-		{
-			if (src[1] == '\0')
-			{
-				// string ends with MAGIC_CHAR
-				break;
-			}
-			*c = hexDigitToInt(src[1]);
-			src++;
-			if (src[1] != '\0')
-			{
-				*c = *c<<4;
-				*c = *c | hexDigitToInt(src[1]);
-				src++;
-			}
-		}
-		else
-		{
-			*c = *src;
-		}
-		src++;
-		c++;
-	}
-
-	*c = 0;
-
-	return AsciiString((const char *)dest);
+template<class EMIT> void unicodeBytes(const UnicodeString& input,EMIT emit) {
+    for(Int index=0;index<input.getLength();++index) {
+        std::uint32_t scalar=static_cast<std::uint32_t>(input.getCharAt(index));
+        if(!scalar || scalar>0x10ffffu || (scalar>=0xd800u && scalar<=0xdfffu))
+            throw ERROR_BAD_ARG;
+        const auto unit=[&](std::uint32_t value) {emit(value&255u);emit(value>>8);};
+        if(scalar<0x10000u) unit(scalar);
+        else {scalar-=0x10000u;unit(0xd800u+(scalar>>10));unit(0xdc00u+(scalar&1023u));}
+    }
 }
-
+template<class EMIT> void unicodeScalars(Bytes bytes,EMIT emit) {
+    while(!bytes.empty()) {
+        std::uint32_t scalar=bytes.word();
+        if(!scalar) throw ERROR_BAD_ARG;
+        if(scalar>=0xd800u && scalar<=0xdbffu) {
+            if(bytes.empty()) throw ERROR_BAD_ARG;
+            const unsigned low=bytes.word();
+            if(low<0xdc00u || low>0xdfffu) throw ERROR_BAD_ARG;
+            scalar=0x10000u+((scalar-0xd800u)<<10)+(low-0xdc00u);
+        } else if(scalar>=0xdc00u && scalar<=0xdfffu) throw ERROR_BAD_ARG;
+        emit(static_cast<WideChar>(scalar));
+    }
+}
+}
+AsciiString AsciiStringToQuotedPrintable(AsciiString original) {
+    std::size_t size=0;
+    for(unsigned char byte:view(original)) countByte(size,byte);
+    std::string output;output.reserve(size);
+    for(unsigned char byte:view(original)) appendByte(output,byte);
+    return AsciiString(output.c_str());
+}
+AsciiString UnicodeStringToQuotedPrintable(UnicodeString original) {
+    std::size_t size=0;
+    unicodeBytes(original,[&](unsigned byte){countByte(size,byte);});
+    std::string output;output.reserve(size);
+    unicodeBytes(original,[&](unsigned byte){appendByte(output,byte);});
+    return AsciiString(output.c_str());
+}
+AsciiString QuotedPrintableToAsciiString(AsciiString original) {
+    Bytes prepared{view(original)};std::size_t size=0;
+    while(!prepared.empty()) {
+        if(!prepared.next()) throw ERROR_BAD_ARG;
+        if(++size>=std::size_t(AsciiString::MAX_LEN)) throw ERROR_OUT_OF_MEMORY;
+    }
+    std::string output;output.reserve(size);
+    Bytes bytes{view(original)};
+    while(!bytes.empty()) output.push_back(static_cast<char>(bytes.next()));
+    return AsciiString(output.c_str());
+}
+UnicodeString QuotedPrintableToUnicodeString(AsciiString original) {
+    std::size_t size=0;
+    unicodeScalars(Bytes{view(original)},[&](WideChar) {
+        if(++size>=std::size_t(UnicodeString::MAX_LEN)) throw ERROR_OUT_OF_MEMORY;
+    });
+    std::wstring output;output.reserve(size);
+    unicodeScalars(Bytes{view(original)},[&](WideChar scalar){output.push_back(scalar);});
+    return UnicodeString(output.c_str());
+}

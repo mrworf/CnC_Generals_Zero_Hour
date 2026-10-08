@@ -34,6 +34,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/STLTypedefs.h"
+#include <strings.h>
 
 class INI;
 class Xfer;
@@ -276,7 +277,7 @@ public:
     Int i = 0;
 	  for(const char** name = s_bitNameList; *name; ++name, ++i )
 	  {
-		  if( stricmp( *name, token ) == 0 )
+		  if( strcasecmp( *name, token ) == 0 )
 		  {
         return i;
 		  }
@@ -330,4 +331,3 @@ public:
 };
 
 #endif // __BitFlags_H_
-

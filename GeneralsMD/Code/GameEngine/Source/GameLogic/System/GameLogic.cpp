@@ -32,10 +32,16 @@
 #include "Common/AudioAffect.h"
 #include "Common/AudioHandleSpecialValues.h"
 #include "Common/BuildAssistant.h"
+#ifdef DO_COPY_PROTECTION
 #include "Common/CopyProtection.h"
+#endif
 #include "Common/CRCDebug.h"
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
+#include "Common/NativeClock.h"
+#include "Common/GlobalData.h"
+#include "Common/NativeSourceStrings.h"
+#include "Common/NativeUserStorage.h"
 #include "Common/GameLOD.h"
 #include "Common/GameState.h"
 #include "Common/INI.h"
@@ -59,7 +65,6 @@
 #include "Common/Xfer.h"
 #include "Common/XferCRC.h"
 #include "Common/XferDeepCRC.h"
-#include "Common/GameSpyMiscPreferences.h"
 
 #include "GameClient/ControlBar.h"
 #include "GameClient/Drawable.h"
@@ -103,14 +108,12 @@
 #include "Common/DataChunk.h"
 #include "GameLogic/Scripts.h"
 
-#include "GameNetwork/GameSpy/BuddyThread.h"
-#include "GameNetwork/GameSpy/PeerDefs.h"
-#include "GameNetwork/GameSpy/ThreadUtils.h"
 #include "GameNetwork/LANAPICallbacks.h"
 #include "GameNetwork/NetworkInterface.h"
-#include "GameNetwork/GameSpy/PersistentStorageThread.h"
 
+#ifdef _PROFILE
 #include <rts/profile.h>
+#endif
 
 DECLARE_PERF_TIMER(SleepyMaintenance)
 
@@ -195,27 +198,8 @@ static Waypoint * findNamedWaypoint(AsciiString name)
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void setFPMode( void )
-{
-  // Set floating point round mode to CHOP, which only comes
-  // into play when precision is exceeded.  This is necessary
-  // for the fast float to int routines used elsewhere in the
-  // system.
-	//
-	// Also set floating point precision to low.  It could be
-	// anything as long as it is consistent, really, but this
-	// is in the (vain?) hope of any slight speed boost.
-	//
-	_fpreset();
-
-	UnsignedInt curVal = _statusfp();
-	UnsignedInt newVal = curVal;
-	newVal = (newVal & ~_MCW_RC) | (_RC_NEAR & _MCW_RC);
-	//newVal = (newVal & ~_MCW_RC) | (_RC_CHOP & _MCW_RC);
-	newVal = (newVal & ~_MCW_PC) | (_PC_24   & _MCW_PC);
-
-	_controlfp(newVal, _MCW_PC | _MCW_RC);
-}
+// Floating-point service is shared by native startup and real GameLogic frames.
+// Its implementation is in GameLogic/System/FPUControl.cpp.
 
 // ------------------------------------------------------------------------------------------------
 /** GameLogic class constructor */
@@ -344,28 +328,22 @@ GameLogic::~GameLogic()
 	destroyAllObjectsImmediate();
 
 	// delete the logical terrain
-	delete TheTerrainLogic;
-	TheTerrainLogic = NULL;
+	m_serviceOwners.retire(TheTerrainLogic);
 
-	delete TheGhostObjectManager;
-	TheGhostObjectManager=NULL;
+	m_serviceOwners.retire(TheGhostObjectManager);
 
 	// delete the partition manager
-	delete ThePartitionManager;
-	ThePartitionManager = NULL;
+	m_serviceOwners.retire(ThePartitionManager);
 
-	delete TheScriptActions;
-	TheScriptActions = NULL;
+	m_serviceOwners.retire(TheScriptActions);
 
-	delete TheScriptConditions;
-	TheScriptConditions = NULL;
+	m_serviceOwners.retire(TheScriptConditions);
 
 	// delete the Script Engine
-	delete TheScriptEngine;
-	TheScriptEngine = NULL;
+	m_serviceOwners.retire(TheScriptEngine);
 	
 	// Null out TheGameLogic
-	TheGameLogic = NULL;
+	if (TheGameLogic == this) TheGameLogic = NULL;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -380,7 +358,7 @@ void GameLogic::init( void )
 	setDefaults( FALSE );
 
 	// create the partition manager
-	ThePartitionManager = NEW PartitionManager;
+	m_serviceOwners.create(ThePartitionManager, [&] { return NEW PartitionManager; });
 	ThePartitionManager->init();
 	ThePartitionManager->setName("ThePartitionManager");
 
@@ -388,17 +366,17 @@ void GameLogic::init( void )
 	// Create system for holding deleted objects that are
 	// still in the partition manager because player has a fogged
 	// view of them.
-	TheGhostObjectManager = createGhostObjectManager();
+	m_serviceOwners.create(TheGhostObjectManager, [&] { return createGhostObjectManager(); });
 
 	// create the terrain logic
-	TheTerrainLogic = createTerrainLogic();
+	m_serviceOwners.create(TheTerrainLogic, [&] { return createTerrainLogic(); });
 	TheTerrainLogic->init();
 	TheTerrainLogic->setName("TheTerrainLogic");
 
 	// Create script engine system.
-	TheScriptActions = NEW ScriptActions;		 // Basically, a subsystem of TheScriptEngine.
-	TheScriptConditions = NEW ScriptConditions;	 // Basically, a subsystem of TheScriptEngine.
-	TheScriptEngine = NEW ScriptEngine;
+	m_serviceOwners.create(TheScriptActions, [&] { return NEW ScriptActions; });		 // Basically, a subsystem of TheScriptEngine.
+	m_serviceOwners.create(TheScriptConditions, [&] { return NEW ScriptConditions; });	 // Basically, a subsystem of TheScriptEngine.
+	m_serviceOwners.create(TheScriptEngine, [&] { return NEW ScriptEngine; });
 	TheScriptEngine->init();
 	TheScriptEngine->setName("TheScriptEngine");
 
@@ -650,8 +628,7 @@ LoadScreen *GameLogic::getLoadScreen( Bool loadingSaveGame )
 		return NEW ShellGameLoadScreen;
 		break;
 	case GAME_INTERNET:
-		return NEW GameSpyLoadScreen;
-		break;
+		throw ERROR_BAD_ARG; // Internet services are outside the native product.
 	case GAME_NONE:
 	default:
 		return NULL;
@@ -1104,6 +1081,8 @@ void GameLogic::deleteLoadScreen( void )
 // ------------------------------------------------------------------------------------------------
 void GameLogic::startNewGame( Bool loadingSaveGame )
 {
+	if (!nativeGameModeSupported(m_gameMode) || m_gameMode == GAME_NONE || (TheNetwork && !TheLAN))
+		throw ERROR_BAD_ARG;
 
 	#ifdef DUMP_PERF_STATS
 	__int64 startTime64;
@@ -1187,8 +1166,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 		}
 		else
 		{
-			DEBUG_LOG(("Starting gamespy game\n"));
-			TheGameInfo = game = TheGameSpyGame;	/// @todo: MDC add back in after demo
+			throw ERROR_BAD_ARG; // Native network matches require the LAN owner.
 		}
 	}
 	else
@@ -1778,7 +1756,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	}
 
 	progressCount = LOAD_PROGRESS_LOOP_ALL_THE_FREAKN_OBJECTS;
-	Int timer = timeGetTime();
+	UnsignedInt timer = nativeMilliseconds();
 	if( loadingSaveGame ) {
 		// Loading a loadingSaveGame, need to add the trees to the client. jba. [8/11/2003]
 		for (pMapObj = MapObject::getFirstMapObject(); pMapObj; pMapObj = pMapObj->getNext()) 
@@ -1824,10 +1802,8 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 
 			//
 			// if no template continue, some map objects don't have thing templates like
-			// lights (handled in the device).  Objects that are test objects have a 
-			// test string (designated with *** and the define TEST_STRING) and will 
-			// have temporary templates created 'on the fly' during a 
-			// ThingFactory->findTemplate() call when loading from the map file
+			// lights (handled in the device). Development TestArt lookup is not
+			// retained by the release runtime; a missing template stays missing.
 			//
 			if( thingTemplate == NULL )
 				continue;
@@ -1914,12 +1890,12 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 
 			}  // end if
 		
-			if(timeGetTime() > timer + 500)
+			if(nativeElapsedMilliseconds(nativeMilliseconds(), timer) > 500)
 			{
 				if(progressCount < LOAD_PROGRESS_MAX_ALL_THE_FREAKN_OBJECTS)
 					progressCount ++;
 				updateLoadProgress(progressCount);
-				timer = timeGetTime();
+				timer = nativeMilliseconds();
 			}
 
 		}	// for, loading map objects
@@ -2174,7 +2150,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	{
 		updateLoadProgress(101); // keep greater then 100
 		testTimeOut();
-		Sleep(100);
+		nativeSleepMilliseconds(100);
 	}
 
 	// if we're in a load game, don't fade yet
@@ -2188,7 +2164,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 			{
 				TheDisplay->draw();
 				setFPMode();
-				Sleep(33);
+				nativeSleepMilliseconds(33);
 			}
 			
 		}
@@ -2320,16 +2296,6 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 #endif
 	TheWritableGlobalData->m_loadScreenRender = FALSE;	///< mark to resume rendering as normal
 	
-	// if we're in a gamespy game, mark us as playing
-	if (TheGameSpyBuddyMessageQueue && TheGameSpyGame && isInInternetGame())
-	{
-		BuddyRequest req;
-		req.buddyRequestType = BuddyRequest::BUDDYREQUEST_SETSTATUS;
-		req.arg.status.status = GP_PLAYING;
-		strcpy(req.arg.status.statusString, "Playing");
-		sprintf(req.arg.status.locationString, "%s", WideCharStringToMultiByte(TheGameSpyGame->getGameName().str()).c_str());
-		TheGameSpyBuddyMessageQueue->addRequest(req);
-	}	
 	
   if( loadingSaveGame == FALSE )
   {
@@ -2355,10 +2321,6 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	DEBUG_LOG(("%s", Buf));
 #endif
 
-	//Assume that getting this far means we've successfully entered an online game.
-	//Add an additional disconnection to player stats in case he doesn't complete this game. -MW
-	if (TheGameSpyInfo)
-		TheGameSpyInfo->updateAdditionalGameSpyDisconnections(1);
 
   
   if ( isInReplayGame() && TheInGameUI && TheGameText )
@@ -2396,43 +2358,24 @@ void GameLogic::loadMapINI( AsciiString mapName )
 		return;
 	}
 
-	char filename[_MAX_PATH];
-	char fullFledgeFilename[_MAX_PATH];
-
-	memset(filename, 0, _MAX_PATH);
-	strcpy(filename, mapName.str());
-
-	//
-	// if map name begins with a "SAVE_DIRECTORY\", then the map refers to a map
-	// that has been extracted from a save game file ... in that case we need to get
-	// the pristine map name string in order to manipulate and load the right map.ini
-	// for that map from it's original location
-	//
-	if (TheGameState->isInSaveDirectory(filename))
-		strcpy( filename, TheGameState->getSaveGameInfo()->pristineMapName.str() );
-
-	// sanity
-	int length = strlen(filename);
-	if (length < 4) { 
-		return;
-	}
-
-	// back up over the ".map" extension and to the first directory separator
-	char *extension = filename + length - 4;
-	while ((extension > filename) && (*extension != '\\') && (*extension != '/')) {
-		--extension;
-	}
-	*extension = 0;
-
-
-	sprintf(fullFledgeFilename, "%s\\map.ini", filename);
+	AsciiString filename = mapName;
+	// Saved maps resolve companion definitions against their pristine source.
+	if (TheGameState->isInSaveDirectory(filename.str()))
+		filename = TheGameState->getSaveGameInfo()->pristineMapName;
+	if (filename.getLength() < 4) return;
+	// Complete fallible path preparation before the first definition mutation.
+	const auto mapINI = nativeMapCompanionPath(filename.str(), "map.ini", TheNativeUserStorage);
+	const auto soloINI = nativeMapCompanionPath(filename.str(), "solo.ini", TheNativeUserStorage);
+	const auto mapStrings = nativeMapCompanionPath(filename.str(), "map.str", TheNativeUserStorage);
+	const auto assetUsage = nativeMapCompanionPath(filename.str(), "AssetUsage.txt", TheNativeUserStorage);
+	const char* fullFledgeFilename = mapINI.c_str();
 	if (TheFileSystem->doesFileExist(fullFledgeFilename)) {
 		DEBUG_LOG(("Loading map.ini\n"));
 		INI ini;
 		ini.load( AsciiString(fullFledgeFilename), INI_LOAD_CREATE_OVERRIDES, NULL );
 	}
 
-	sprintf(fullFledgeFilename, "%s\\solo.ini", filename);
+	fullFledgeFilename = soloINI.c_str();
 	if (TheFileSystem->doesFileExist(fullFledgeFilename)) {
 		DEBUG_LOG(("Loading solo.ini\n"));
 		INI ini;
@@ -2442,7 +2385,7 @@ void GameLogic::loadMapINI( AsciiString mapName )
 	// No error here. There could've just *not* been a map.ini file.
 
 	// now look for a string file
-	sprintf(fullFledgeFilename, "%s\\map.str", filename);
+	fullFledgeFilename = mapStrings.c_str();
 
 	if (TheFileSystem->doesFileExist(fullFledgeFilename)) {
 		TheGameText->initMapStringFile(fullFledgeFilename);
@@ -2451,8 +2394,7 @@ void GameLogic::loadMapINI( AsciiString mapName )
 	// we want to do this before doing the actual map load!
 	if (TheDisplay)
 	{
-		const char* ASSET_USAGE_FILE_NAME = "AssetUsage.txt";
-		sprintf(fullFledgeFilename, "%s\\%s", filename, ASSET_USAGE_FILE_NAME);
+		fullFledgeFilename = assetUsage.c_str();
 		// note: call this EVEN IF THE FILE IN QUESTION DOES NOT EXIST.
 		TheDisplay->doSmartAssetPurgeAndPreload(fullFledgeFilename);
 	}
@@ -4312,7 +4254,7 @@ void GameLogic::lastHeardFrom( Int playerId )
 {
 	if( playerId < 0 || playerId >= MAX_SLOTS)
 		return;
-	m_progressCompleteTimeout[playerId] = timeGetTime();
+	m_progressCompleteTimeout[playerId] = nativeMilliseconds();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -4323,14 +4265,14 @@ void GameLogic::testTimeOut( void )
 	if(isProgressComplete())
 		return;
 
-	Int curTime = timeGetTime();
+	UnsignedInt curTime = nativeMilliseconds();
 	// Loop and test everyone in our game.
 	for(Int i =0; i < MAX_SLOTS; ++i)
 	{
 		// If they've completed their progress, ignore them
 		if(m_progressComplete[i])
 			continue;
-		if(	m_progressCompleteTimeout[i] + PROGRESS_COMPLETE_TIMEOUT > curTime )
+		if(nativeElapsedMilliseconds(curTime,m_progressCompleteTimeout[i]) < PROGRESS_COMPLETE_TIMEOUT)
 			return;
 	}
 	// if we made it this far, that means everyone has timed out.
@@ -4353,7 +4295,7 @@ void GameLogic::initTimeOutValues( void )
 		return;
 	for(Int i = 0; i < TheNetwork->getNumPlayers(); ++i)
 	{
-		m_progressCompleteTimeout[i] = timeGetTime();
+		m_progressCompleteTimeout[i] = nativeMilliseconds();
 	}
 }
 
@@ -4922,8 +4864,9 @@ void GameLogic::xfer( Xfer *xfer )
 	{
 		if( xfer->getXferMode() == XFER_SAVE )
 		{
-			for (BuildableMap::const_iterator it = m_thingTemplateBuildableOverrides.begin(); it != m_thingTemplateBuildableOverrides.end(); ++it )
+			for (const auto& key : rts::keysInOrder(m_thingTemplateBuildableOverrides))
 			{
+				auto it = m_thingTemplateBuildableOverrides.find(key);
 				AsciiString name = it->first;
 				BuildableStatus bs = it->second;
 				xfer->xferAsciiString(&name);
@@ -4962,8 +4905,9 @@ void GameLogic::xfer( Xfer *xfer )
 
 		if( xfer->getXferMode() == XFER_SAVE )
 		{
-			for (ControlBarOverrideMap::const_iterator it = m_controlBarOverrides.begin(); it != m_controlBarOverrides.end(); ++it )
+			for (const auto& key : rts::keysInOrder(m_controlBarOverrides))
 			{
+				auto it = m_controlBarOverrides.find(key);
 				AsciiString name = it->first;
 				AsciiString value = it->second ? it->second->getName() : AsciiString::TheEmptyString;
 				xfer->xferAsciiString(&name);
@@ -5093,5 +5037,3 @@ void GameLogic::loadPostProcess( void )
 	remakeSleepyUpdate();
 
 }  // end loadPostProcess
-
-

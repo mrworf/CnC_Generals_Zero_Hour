@@ -60,7 +60,8 @@ public:
 Bool PartitionFilterFlammable::allow(Object *objOther)
 {
 	// It must be burnable in general, and burnable now
-	static NameKeyType key_FlammableUpdate = NAMEKEY("FlammableUpdate");
+	static const StaticNameKey nativeCached_key_FlammableUpdate("FlammableUpdate");
+	NameKeyType key_FlammableUpdate = nativeCached_key_FlammableUpdate.key();
 	FlammableUpdate* fu = (FlammableUpdate*)objOther->findUpdateModule(key_FlammableUpdate);
 	if (fu == NULL)
 		return FALSE;
@@ -147,7 +148,8 @@ UpdateSleepTime FireSpreadUpdate::update( void )
 			Object* objectToLight = ThePartitionManager->getClosestObject(getObject(), d->m_spreadTryRange, FROM_CENTER_3D, filters);
 			if( objectToLight )
 			{
-				static NameKeyType key_FlammableUpdate = NAMEKEY("FlammableUpdate");
+				static const StaticNameKey nativeCached_key_FlammableUpdate("FlammableUpdate");
+				NameKeyType key_FlammableUpdate = nativeCached_key_FlammableUpdate.key();
 				FlammableUpdate* fu = (FlammableUpdate*)objectToLight->findUpdateModule(key_FlammableUpdate);
 				if( fu )
 					fu->tryToIgnite();

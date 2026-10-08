@@ -34,6 +34,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <algorithm>
 
 #include "Common/GameAudio.h"
 #include "Common/MiscAudio.h"
@@ -133,7 +134,8 @@ Bool SabotageSupplyDropzoneCrateCollide::executeCrateBehavior( Object *other )
 	//Reset the timer on the dropzone. Um... only the dropzone has an OCLUpdate and one, so 
 	//we can "assume" it's going to be safe. Otherwise, we'll have to write code to search for
 	//a specific OCLUpdate.
-	static NameKeyType key_ocl = NAMEKEY( "OCLUpdate" );
+	static const StaticNameKey nativeCached_key_ocl("OCLUpdate");
+	NameKeyType key_ocl = nativeCached_key_ocl.key();
 	OCLUpdate *update = (OCLUpdate*)other->findUpdateModule( key_ocl );
 	if( update )
 	{
@@ -148,7 +150,7 @@ Bool SabotageSupplyDropzoneCrateCollide::executeCrateBehavior( Object *other )
 		UnsignedInt cash = targetMoney->countMoney();
 		UnsignedInt desiredAmount = getSabotageSupplyDropzoneCrateCollideModuleData()->m_stealCashAmount;
 		//Check to see if they have the cash, otherwise, take the remainder!
-		cash = min( desiredAmount, cash );
+		cash = std::min( desiredAmount, cash );
 		if( cash > 0 )
 		{
 			//Steal the cash

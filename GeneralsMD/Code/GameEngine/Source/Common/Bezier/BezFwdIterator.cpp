@@ -36,8 +36,10 @@ BezFwdIterator::BezFwdIterator(): mStep(0), mStepsDesired(0)
 } 
 
 //-------------------------------------------------------------------------------------------------
-BezFwdIterator::BezFwdIterator(Int stepsDesired, const BezierSegment *bezSeg)
+BezFwdIterator::BezFwdIterator(Int stepsDesired, const BezierSegment *bezSeg): mStep(0), mStepsDesired(stepsDesired)
 {
+	if (stepsDesired < 0 || !bezSeg)
+		throw ERROR_BAD_ARG;
 	// Added by Sadullah Nader
 	mCurrPoint.zero();
 	mDDDq.zero();
@@ -53,6 +55,10 @@ BezFwdIterator::BezFwdIterator(Int stepsDesired, const BezierSegment *bezSeg)
 void BezFwdIterator::start(void)
 {
 	mStep = 0;
+	mCurrPoint = mBezSeg.m_controlPoints[0];
+	mDq.zero();
+	mDDq.zero();
+	mDDDq.zero();
 
 	if (mStepsDesired <= 1)
 		return;
@@ -61,22 +67,22 @@ void BezFwdIterator::start(void)
 	float d2 = d * d;
 	float d3 = d * d2;
 
-	D3DXVECTOR4 px(mBezSeg.m_controlPoints[0].x, mBezSeg.m_controlPoints[1].x, mBezSeg.m_controlPoints[2].x, mBezSeg.m_controlPoints[3].x);
-	D3DXVECTOR4 py(mBezSeg.m_controlPoints[0].y, mBezSeg.m_controlPoints[1].y, mBezSeg.m_controlPoints[2].y, mBezSeg.m_controlPoints[3].y);
-	D3DXVECTOR4 pz(mBezSeg.m_controlPoints[0].z, mBezSeg.m_controlPoints[1].z, mBezSeg.m_controlPoints[2].z, mBezSeg.m_controlPoints[3].z);
-
-	D3DXVECTOR4 cVec[3];
-	D3DXVec4Transform(&cVec[0], &px, &BezierSegment::s_bezBasisMatrix);
-	D3DXVec4Transform(&cVec[1], &py, &BezierSegment::s_bezBasisMatrix);
-	D3DXVec4Transform(&cVec[2], &pz, &BezierSegment::s_bezBasisMatrix);
+	const Real points[3][4] = {
+		{mBezSeg.m_controlPoints[0].x, mBezSeg.m_controlPoints[1].x, mBezSeg.m_controlPoints[2].x, mBezSeg.m_controlPoints[3].x},
+		{mBezSeg.m_controlPoints[0].y, mBezSeg.m_controlPoints[1].y, mBezSeg.m_controlPoints[2].y, mBezSeg.m_controlPoints[3].y},
+		{mBezSeg.m_controlPoints[0].z, mBezSeg.m_controlPoints[1].z, mBezSeg.m_controlPoints[2].z, mBezSeg.m_controlPoints[3].z}
+	};
+	Real cVec[3][4];
+	for (Int axis = 0; axis < 3; ++axis)
+		BezierSegment::transformBasis(points[axis], cVec[axis]);
 
 	mCurrPoint = mBezSeg.m_controlPoints[0];
 
 	int i = 3;
 	while (i--) {
-		float a = cVec[i].x;
-		float b = cVec[i].y;
-		float c = cVec[i].z;
+		float a = cVec[i][0];
+		float b = cVec[i][1];
+		float c = cVec[i][2];
 
 		float *pD, *pDD, *pDDD;
 
@@ -88,7 +94,7 @@ void BezFwdIterator::start(void)
 			pD = &mDq.y;
 			pDD = &mDDq.y;
 			pDDD = &mDDDq.y;
-		} else if (i == 0) {
+		} else { // The bounded loop's remaining axis is x.
 			pD = &mDq.x;
 			pDD = &mDDq.x;
 			pDDD = &mDDDq.x;
@@ -121,4 +127,3 @@ void BezFwdIterator::next(void)
 
 	++mStep;
 }
-

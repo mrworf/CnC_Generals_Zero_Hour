@@ -35,9 +35,13 @@
 // INLCUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "Common/Snapshot.h"
 #include "Common/SubsystemInterface.h"
+#include <list>
+#include <memory>
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
 class Xfer;
+class NativeUserStorage;
+class NativeScratchOutput;
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
@@ -47,7 +51,7 @@ class GameStateMap : public SubsystemInterface,
 
 public:
 
-	GameStateMap( void );
+	explicit GameStateMap(const NativeUserStorage* storage=nullptr);
 	virtual ~GameStateMap( void );
 
 	// subsystem interface methods
@@ -60,10 +64,12 @@ public:
 	virtual void xfer( Xfer *xfer );
 	virtual void loadPostProcess( void ) { }
 
-	void clearScratchPadMaps( void );		///< clear any scratch pad maps from the save directory
+	void clearScratchPadMaps( void ) noexcept;	///< retire only this owner's extracted scratch maps
 
 protected:
-
+  const NativeUserStorage* m_storage;
+  std::list<std::unique_ptr<NativeScratchOutput>> m_scratchMaps;
+  void extractAndSaveMap(AsciiString map,Xfer* xfer);
 
 };
 

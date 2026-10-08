@@ -72,7 +72,7 @@ typedef ObjectSellList::iterator ObjectSellListIterator;
 //-------------------------------------------------------------------------------------------------
 /** Return codes for queries about being able to build */
 //-------------------------------------------------------------------------------------------------
-enum CanMakeType
+enum CanMakeType : UnsignedInt
 {
 	CANMAKE_OK,
 	CANMAKE_NO_PREREQ,
@@ -86,7 +86,7 @@ enum CanMakeType
 //-------------------------------------------------------------------------------------------------
 /** Return codes for queries about legal build locations */
 //-------------------------------------------------------------------------------------------------
-enum LegalBuildCode
+enum LegalBuildCode : UnsignedInt
 {
 	LBC_OK = 0,
 	LBC_RESTRICTED_TERRAIN,
@@ -217,4 +217,3 @@ protected:
 extern BuildAssistant *TheBuildAssistant;
 
 #endif // __BUILDASSISTANT_H_
-

@@ -37,6 +37,7 @@
 #include "Common/SubsystemInterface.h"
 #include "Common/GameMemory.h"
 #include "Common/AsciiString.h"
+class INI;
 
 //------------------------------------------------------------------------------------------------- 
 /**
@@ -46,7 +47,7 @@
 	determined at runtime. (The generated code is basically identical, of course.)
 */
 //------------------------------------------------------------------------------------------------- 
-enum NameKeyType
+enum NameKeyType : Int
 {
 	NAMEKEY_INVALID					= 0,
 	NAMEKEY_MAX							= 1<<23,					// max ordinal value of a NameKey (some code relies on these fitting into 24 bits safely)
@@ -82,17 +83,20 @@ inline Bucket::~Bucket() { }
 	* instance's catalog of names.  Multiple instances of this class can be 
 	* created to service multiple namespaces. */
 //------------------------------------------------------------------------------------------------- 
+class NameKeyTransaction;
 class NameKeyGenerator : public SubsystemInterface
 {
+  friend class NameKeyTransaction;
 
 public:
 
-	NameKeyGenerator();
+	explicit NameKeyGenerator(Int capacity=NAMEKEY_MAX);
 	virtual ~NameKeyGenerator();
 
 	virtual void init();
 	virtual void reset();
 	virtual void update() { }
+    UnsignedInt64 getNamespaceGeneration() const noexcept {return m_generation;}
 
 	/// Given a string, convert into a unique integer key.
 	NameKeyType nameToKey(const AsciiString& name) { return nameToKey(name.str()); }
@@ -125,8 +129,26 @@ private:
 
 	Bucket*				m_sockets[SOCKET_COUNT];			///< Catalog of all Buckets already generated
 	UnsignedInt		m_nextID;											///< Next available ID
+    UnsignedInt64 m_generation=0;
+    UnsignedInt m_capacity;
+    UnsignedInt m_transactionDepth=0;
 
 };  // end class NameKeyGenerator
+
+// Synchronous owner scope: returned key-bearing candidates must retire before
+// an uncommitted scope. Nested success remains covered by its outer owner.
+class NameKeyTransaction final {
+  NameKeyGenerator& m_owner;
+  UnsignedInt m_start;
+  UnsignedInt64 m_rollbackGeneration;
+  bool m_committed=false;
+public:
+  explicit NameKeyTransaction(NameKeyGenerator& owner);
+  ~NameKeyTransaction() noexcept;
+  NameKeyTransaction(const NameKeyTransaction&)=delete;
+  NameKeyTransaction& operator=(const NameKeyTransaction&)=delete;
+  void commit() noexcept {m_committed=true;}
+};
 
 //------------------------------------------------------------------------------------------------- 
 //           Externals                                                     
@@ -144,6 +166,7 @@ class StaticNameKey
 {
 private:
 	mutable NameKeyType m_key;
+    mutable UnsignedInt64 m_generation=0;
 	const char* m_name;
 public:
 	StaticNameKey(const char* p) : m_key(NAMEKEY_INVALID), m_name(p) {}
@@ -153,4 +176,3 @@ public:
 };
 
 #endif // __NAMEKEYGENERATOR_H_
-

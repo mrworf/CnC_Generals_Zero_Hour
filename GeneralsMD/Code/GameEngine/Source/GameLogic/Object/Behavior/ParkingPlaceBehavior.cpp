@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/NativeSourceMath.h"
 #include "Common/CRCDebug.h"
 #include "Common/Xfer.h"
 #include "Common/ThingTemplate.h"
@@ -103,11 +104,11 @@ void ParkingPlaceBehavior::buildInfo()
 				
 				tmp.format("Runway%dPark%dHan",col+1,row+1);
 				getObject()->getSingleLogicalBonePosition(tmp.str(), &info.m_hangarStart, &mtx);
-				info.m_hangarStartOrient = mtx.Get_Z_Rotation();
+				info.m_hangarStartOrient = nativeSourceYaw(mtx);
 
 				tmp.format("Runway%dParking%d",col+1,row+1);
 				getObject()->getSingleLogicalBonePosition(tmp.str(), &info.m_location, &mtx);
-				info.m_orientation = mtx.Get_Z_Rotation();
+				info.m_orientation = nativeSourceYaw(mtx);
 
 				tmp.format("Runway%dPrep%d",col+1,row+1);
 				getObject()->getSingleLogicalBonePosition(tmp.str(), &info.m_prep, NULL);
@@ -610,7 +611,8 @@ void ParkingPlaceBehavior::defectAllParkedUnits(Team* newTeam, UnsignedInt detec
 				continue;
 
 			// srj sez: evil. fix better someday. 
-			static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
+			static const StaticNameKey nativeCached_jetKey("JetAIUpdate");
+			NameKeyType jetKey = nativeCached_jetKey.key();
 			JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
 			Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
 
@@ -649,7 +651,8 @@ void ParkingPlaceBehavior::killAllParkedUnits()
 				continue;
 
 			// srj sez: evil. fix better someday. 
-			static NameKeyType jetKey = TheNameKeyGenerator->nameToKey("JetAIUpdate");
+			static const StaticNameKey nativeCached_jetKey("JetAIUpdate");
+			NameKeyType jetKey = nativeCached_jetKey.key();
 			JetAIUpdate* ju = (JetAIUpdate *)obj->findUpdateModule(jetKey);
 			Bool takeoffOrLanding = ju ? ju->friend_isTakeoffOrLandingInProgress() : false;
 
@@ -765,7 +768,8 @@ void ParkingPlaceBehavior::exitObjectViaDoor( Object *newObj, ExitDoorType exitD
 	}
 
 	/// @todo srj -- this is evil. fix.
-	static NameKeyType jetKey = TheNameKeyGenerator->nameToKey( "JetAIUpdate" );
+	static const StaticNameKey nativeCached_jetKey("JetAIUpdate");
+	NameKeyType jetKey = nativeCached_jetKey.key();
 	JetAIUpdate* ju = (JetAIUpdate *)newObj->findUpdateModule( jetKey );
 	Real parkingOffset = ju ? ju->friend_getParkingOffset() : 0.0f;
 	Bool producedAtHelipad = newObj->isKindOf(KINDOF_PRODUCED_AT_HELIPAD);
@@ -784,7 +788,7 @@ void ParkingPlaceBehavior::exitObjectViaDoor( Object *newObj, ExitDoorType exitD
 			getObject()->getSingleLogicalBonePosition("HeliPark01", &ppinfo.hangarInternal, &mtx);
 
 		DEBUG_ASSERTCRASH(boneOk, ("Could not get bone!"));
-		ppinfo.hangarInternalOrient = mtx.Get_Z_Rotation();
+		ppinfo.hangarInternalOrient = nativeSourceYaw(mtx);
 		ppinfo.parkingSpace = ppinfo.hangarInternal;
 		ppinfo.parkingOrientation = ppinfo.hangarInternalOrient;
 	}

@@ -33,6 +33,7 @@
 
 #include <stdio.h>
 #include "Common/SubsystemInterface.h"
+#include "Common/GameCommon.h"
 #include "View.h"
 #include "GameClient/Color.h"
 #include "GameClient/GameFont.h"
@@ -51,7 +52,7 @@ class DebugDisplayInterface;
 class Radar;
 class Image;
 class DisplayString;
-enum StaticGameLODLevel;
+enum StaticGameLODLevel : Int;
 /**
  * The Display class implements the Display interface
  */
@@ -67,7 +68,7 @@ public:
 		DRAW_IMAGE_ADDITIVE	//additive blend the image into frame buffer
 	};
 
-	typedef void (DebugDisplayCallback)( DebugDisplayInterface *debugDisplay, void *userData, FILE *fp = NULL );
+	typedef void (DebugDisplayCallback)( DebugDisplayInterface *debugDisplay, void *userData, FILE *fp );
 
 	Display();
 	virtual ~Display();

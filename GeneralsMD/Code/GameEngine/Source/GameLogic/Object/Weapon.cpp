@@ -29,16 +29,18 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <strings.h>
+#include <climits>
+#include <algorithm>
+#include "Common/GlobalData.h"
 
 #define DEFINE_DEATH_NAMES
-#define DEFINE_WEAPONBONUSCONDITION_NAMES
-#define DEFINE_WEAPONBONUSFIELD_NAMES
 #define DEFINE_WEAPONCOLLIDEMASK_NAMES
 #define DEFINE_WEAPONAFFECTSMASK_NAMES
 #define DEFINE_WEAPONRELOAD_NAMES
 #define DEFINE_WEAPONPREFIRE_NAMES
 
-#include "Common/CRC.h"
+#include "Common/crc.h"
 #include "Common/CRCDebug.h"
 #include "Common/GameAudio.h"
 #include "Common/GameState.h"
@@ -382,12 +384,12 @@ void WeaponTemplate::reset( void )
 
 	const char* token = ini->getNextTokenOrNull(ini->getSepsColon());
 
-	if( stricmp(token, MIN_LABEL) == 0 )
+	if( strcasecmp(token, MIN_LABEL) == 0 )
 	{
 		// Two entry min/max
 		self->m_minDelayBetweenShots = INI::scanInt(ini->getNextToken(ini->getSepsColon()));
 		token = ini->getNextTokenOrNull(ini->getSepsColon());
-		if( stricmp(token, MAX_LABEL) != 0 )
+		if( strcasecmp(token, MAX_LABEL) != 0 )
 		{
 			// Messed up double entry
 			self->m_maxDelayBetweenShots = self->m_minDelayBetweenShots;
@@ -1301,7 +1303,7 @@ void WeaponTemplate::dealDamageInternal(ObjectID sourceID, ObjectID victimID, co
 		DEBUG_ASSERTCRASH(secondaryRadius >= primaryRadius || secondaryRadius == 0.0f, ("secondary radius should be >= primary radius (or zero)\n"));
 
 		Real primaryRadiusSqr = sqr(primaryRadius);
-		Real radius = max(primaryRadius, secondaryRadius);
+		Real radius = std::max(primaryRadius, secondaryRadius);
 		if (radius > 0.0f)
 		{
 			iter = ThePartitionManager->iterateObjectsInRange(pos, radius, DAMAGE_RANGE_CALC_TYPE);
@@ -1559,7 +1561,7 @@ void WeaponStore::createAndFireTempWeapon(const WeaponTemplate* wt, const Object
 //-------------------------------------------------------------------------------------------------
 const WeaponTemplate *WeaponStore::findWeaponTemplate( AsciiString name ) const 
 { 
-	if (stricmp(name.str(), "None") == 0)
+	if (strcasecmp(name.str(), "None") == 0)
 		return NULL;
 	const WeaponTemplate * wt = findWeaponTemplatePrivate( TheNameKeyGenerator->nameToKey( name ) );
 	DEBUG_ASSERTCRASH(wt != NULL, ("Weapon %s not found!\n",name.str()));
@@ -1618,7 +1620,7 @@ void WeaponStore::update()
 		if (curFrame >= ddi->m_delayDamageFrame)
 		{
 			// we never do projectile-detonation-damage via this code path.
-			const isProjectileDetonation = false;
+			const Bool isProjectileDetonation = false;
 			ddi->m_delayedWeapon->dealDamageInternal(ddi->m_delaySourceID, ddi->m_delayIntendedVictimID, &ddi->m_delayDamagePos, ddi->m_bonus, isProjectileDetonation);
 			ddi = m_weaponDDI.erase(ddi);
 		}
@@ -2427,7 +2429,8 @@ void Weapon::newProjectileFired(const Object *sourceObj, const Object *projectil
 	}
 
 	//Check for projectile stream update
-	static NameKeyType key_ProjectileStreamUpdate = NAMEKEY("ProjectileStreamUpdate");
+	static const StaticNameKey nativeCached_key_ProjectileStreamUpdate("ProjectileStreamUpdate");
+	NameKeyType key_ProjectileStreamUpdate = nativeCached_key_ProjectileStreamUpdate.key();
 	ProjectileStreamUpdate* update = (ProjectileStreamUpdate*)projectileStream->findUpdateModule(key_ProjectileStreamUpdate);
 	if( update )
 	{
@@ -2459,7 +2462,8 @@ void Weapon::createLaser( const Object *sourceObj, const Object *victimObj, cons
 	Drawable *draw = laser->getDrawable();
 	if( draw )
 	{
-		static NameKeyType key_LaserUpdate = NAMEKEY( "LaserUpdate" );
+		static const StaticNameKey nativeCached_key_LaserUpdate("LaserUpdate");
+		NameKeyType key_LaserUpdate = nativeCached_key_LaserUpdate.key();
 		LaserUpdate *update = (LaserUpdate*)draw->findClientUpdateModule( key_LaserUpdate );
 		if( update )
 		{
@@ -2904,7 +2908,8 @@ static void makeAssistanceRequest( Object *requestOf, void *userData )
 		return;
 
 	// and respond to requests
-	static const NameKeyType key_assistUpdate = NAMEKEY("AssistedTargetingUpdate");
+	static const StaticNameKey nativeCached_key_assistUpdate("AssistedTargetingUpdate");
+	const NameKeyType key_assistUpdate = nativeCached_key_assistUpdate.key();
 	AssistedTargetingUpdate *assistModule = (AssistedTargetingUpdate*)requestOf->findUpdateModule(key_assistUpdate);
 	if( assistModule == NULL )
 		return;
@@ -3484,48 +3489,4 @@ void Weapon::loadPostProcess( void )
 //-------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------
-void WeaponBonus::appendBonuses(WeaponBonus& bonus) const
-{
-	for (int f = 0; f < WeaponBonus::FIELD_COUNT; ++f)
-	{
-		bonus.m_field[f] += this->m_field[f] - 1.0f;
-	}
-}
-
-//-------------------------------------------------------------------------------------------------
-/*static*/ void WeaponBonusSet::parseWeaponBonusSet(INI* ini, void* /*instance*/, void* store, const void* /*userData*/)
-{
-	WeaponBonusSet* self = (WeaponBonusSet*)store;
-	self->parseWeaponBonusSet(ini);
-}
-
-//-------------------------------------------------------------------------------------------------
-/*static*/ void WeaponBonusSet::parseWeaponBonusSetPtr(INI* ini, void* /*instance*/, void* store, const void* /*userData*/)
-{
-	WeaponBonusSet** selfPtr = (WeaponBonusSet**)store;
-	(*selfPtr)->parseWeaponBonusSet(ini);
-}
-
-//-------------------------------------------------------------------------------------------------
-void WeaponBonusSet::parseWeaponBonusSet(INI* ini)
-{
-	WeaponBonusConditionType wb = (WeaponBonusConditionType)INI::scanIndexList(ini->getNextToken(), TheWeaponBonusNames);
-	WeaponBonus::Field wf = (WeaponBonus::Field)INI::scanIndexList(ini->getNextToken(), TheWeaponBonusFieldNames);
-	m_bonus[wb].setField(wf, INI::scanPercentToReal(ini->getNextToken()));
-}
-
-//-------------------------------------------------------------------------------------------------
-void WeaponBonusSet::appendBonuses(WeaponBonusConditionFlags flags, WeaponBonus& bonus) const
-{
-	if (flags == 0)
-		return;	// my, that was easy
-
-	for (int i = 0; i < WEAPONBONUSCONDITION_COUNT; ++i)
-	{
-		if ((flags & (1 << i)) == 0)
-			continue;
-		
-		this->m_bonus[i].appendBonuses(bonus);
-	}
-}
-
+// Bonus owner implementation lives in Common/WeaponBonus.cpp.

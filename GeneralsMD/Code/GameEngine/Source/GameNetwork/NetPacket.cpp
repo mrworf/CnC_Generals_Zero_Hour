@@ -29,7 +29,7 @@
 #include "GameNetwork/NetPacket.h"
 #include "GameNetwork/NetCommandMsg.h"
 #include "GameNetwork/NetworkDefs.h"
-#include "GameNetwork/NetworkUtil.h"
+#include "GameNetwork/networkutil.h"
 #include "GameNetwork/GameMessageParser.h"
 
 #ifdef _INTERNAL
@@ -5228,7 +5228,7 @@ NetCommandMsg * NetPacket::readGameMessage(UnsignedByte *data, Int &i)
 		memcpy(&argCount, data + i, sizeof(argCount));
 		i += sizeof(argCount);
 
-		parser->addArgType((GameMessageArgumentDataType)type, argCount);
+		parser->addArgType(type, argCount);
 		totalArgCount += argCount;
 	}
 

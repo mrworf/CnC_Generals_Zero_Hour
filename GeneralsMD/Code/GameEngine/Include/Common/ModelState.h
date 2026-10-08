@@ -90,7 +90,7 @@
 // IMPORTANT NOTE: you should endeavor to set up states such that the most "normal"
 // state is defined by the bit being off. That is, the typical "normal" condition
 // has all condition flags set to zero.
-enum ModelConditionFlagType
+enum ModelConditionFlagType : Int
 {
 	MODELCONDITION_INVALID = -1,
 
@@ -263,4 +263,3 @@ typedef BitFlags<MODELCONDITION_COUNT> ModelConditionFlags;
 //-------------------------------------------------------------------------------------------------
 
 #endif // _ModelState_H_
-

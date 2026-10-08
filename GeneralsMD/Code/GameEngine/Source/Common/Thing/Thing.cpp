@@ -33,6 +33,7 @@
 //
 //-----------------------------------------------------------------------------
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/NativeSourceMath.h"
 
 #include "Common/PerfTimer.h"
 #include "Common/Thing.h"
@@ -43,7 +44,7 @@
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "Common/Team.h"
-#include "Lib/Trig.h"
+#include "Lib/trig.h"
 #include "GameLogic/TerrainLogic.h"
 
 #ifdef _INTERNAL
@@ -258,7 +259,7 @@ void Thing::setTransformMatrix( const Matrix3D *mx )
 	m_cachedPos.x = m_transform.Get_X_Translation();
 	m_cachedPos.y = m_transform.Get_Y_Translation();
 	m_cachedPos.z = m_transform.Get_Z_Translation();
-	m_cachedAngle = m_transform.Get_Z_Rotation();
+	m_cachedAngle = nativeSourceYaw(m_transform);
 	m_cacheFlags = 0;
 
 	reactToTransformChange(&oldMtx, &oldPos, oldAngle);

@@ -26,7 +26,7 @@
 // Class to encapsulate height map.
 // Author: John Ahlquist, April 2001
 
-#define INSTANTIATE_WELL_KNOWN_KEYS
+// Shared key definitions are owned by Common/System/NativeWellKnownKeys.cpp.
 
 #include "windows.h"
 #include "stdlib.h"
@@ -2575,4 +2575,3 @@ Bool  WorldHeightMap::getRawTileData(Short tileNdx, Int width,
 	}
 	return(false);
 }
-

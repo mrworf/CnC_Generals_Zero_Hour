@@ -31,15 +31,15 @@
 #ifndef __BEZIERSEGMENT_H__
 #define __BEZIERSEGMENT_H__
 
-#include <D3DX8Math.h>
-#include "Common/STLTypeDefs.h"
+#include "Common/STLTypedefs.h"
 
 #define USUAL_TOLERANCE 1.0f
 
 class BezierSegment
 {
 	protected:
-		static const D3DXMATRIX s_bezBasisMatrix;
+		static const Real s_bezBasisMatrix[4][4];
+		static void transformBasis(const Real input[4], Real output[4]);
 		Coord3D m_controlPoints[4];
 
 	public:	// Constructors
@@ -49,7 +49,7 @@ class BezierSegment
 									Real x2, Real y2, Real z2,
 									Real x3, Real y3, Real z3);
 
-		BezierSegment(Real cp[16]);
+		BezierSegment(Real cp[12]);
 
 
 		BezierSegment(const Coord3D& cp0, 

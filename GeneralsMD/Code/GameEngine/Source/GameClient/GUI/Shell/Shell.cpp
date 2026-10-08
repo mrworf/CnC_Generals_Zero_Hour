@@ -29,6 +29,8 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/GlobalData.h"
+#include "Common/NativeClock.h"
 
 #include "Common/RandomValue.h"
 #include "GameClient/Shell.h"
@@ -39,10 +41,10 @@
 #include "GameClient/AnimateWindowManager.h"
 #include "GameClient/ShellMenuScheme.h"
 #include "GameLogic/GameLogic.h"
-#include "GameNetwork/GameSpyOverlay.h"
-#include "GameNetwork/GameSpy/PeerDefsImplementation.h"
 
+#ifdef _PROFILE
 #include <rts/profile.h>
+#endif
 
 // PUBLIC DATA ////////////////////////////////////////////////////////////////////////////////////
 Shell *TheShell = NULL;  ///< the shell singleton definition
@@ -177,9 +179,9 @@ void Shell::reset( void )
 //-------------------------------------------------------------------------------------------------
 void Shell::update( void )
 {
-	static Int lastUpdate = timeGetTime();
+	static Int lastUpdate = nativeMilliseconds();
 	static const Int shellUpdateDelay = 30;  // try to update 30 frames a second
-	Int now = timeGetTime();
+	Int now = nativeMilliseconds();
 	
 	//
 	// we keep the shell updates fixed in time so that we can write consitent animation
@@ -267,8 +269,7 @@ void Shell::push( AsciiString filename, Bool shutdownImmediate )
 	// sanity
 	if( filename.isEmpty() )
 		return;
-	if(TheGameSpyInfo)
-			GameSpyCloseAllOverlays();
+
 
 
 #ifdef DEBUG_LOGGING
@@ -330,8 +331,7 @@ void Shell::push( AsciiString filename, Bool shutdownImmediate )
 void Shell::pop( void )
 {
 	WindowLayout *screen = top();
-	if(TheGameSpyInfo)
-			GameSpyCloseAllOverlays();
+
 
 
 	// sanity
@@ -606,8 +606,7 @@ void Shell::unlinkScreen( WindowLayout *screen )
 //-------------------------------------------------------------------------------------------------
 void Shell::doPush( AsciiString layoutFile )
 {
-	if(TheGameSpyInfo)
-			GameSpyCloseAllOverlays();
+
 	WindowLayout *newScreen;
 	
 	// create new layout and load from window manager

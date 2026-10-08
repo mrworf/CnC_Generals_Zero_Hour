@@ -77,3 +77,4 @@ foreach(family IN ITEMS capacity draw-boundary uploads lifetimes presentation-in
 endforeach()
 endif()
 include(cmake/OriginalCore.cmake)
+include(cmake/OriginalRuntime.cmake)

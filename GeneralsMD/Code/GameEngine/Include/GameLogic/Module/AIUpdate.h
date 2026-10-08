@@ -27,6 +27,7 @@
 // Author: Michael S. Booth, 2001-2002
 
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef _AI_UPDATE_H_
 #define _AI_UPDATE_H_
@@ -59,8 +60,8 @@ class HackInternetAIInterface;
 class AssaultTransportAIInterface;
 class JetAIUpdate;
 
-enum AIStateType;
-enum ObjectID;
+enum AIStateType : UnsignedInt;
+enum ObjectID : UnsignedInt;
 
 
 //-------------------------------------------------------------------------------------------------
@@ -71,7 +72,7 @@ const Real FAST_AS_POSSIBLE = 999999.0f;
 // Note: these values are saved in save files, so you MUST NOT REMOVE OR CHANGE
 // existing values!
 //
-enum LocomotorSetType
+enum LocomotorSetType : Int
 {
 	LOCOMOTORSET_INVALID = -1,
 
@@ -803,4 +804,3 @@ private:
 //
 
 #endif // _AI_UPDATE_H_
-

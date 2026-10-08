@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <algorithm>
 #include "Common/Xfer.h"
 #include "GameLogic/Module/UndeadBody.h"
 
@@ -85,7 +86,7 @@ void UndeadBody::attemptDamage( DamageInfo *damageInfo )
 			&& IsHealthDamagingDamage(damageInfo->in.m_damageType)
 			)
 	{
-		damageInfo->in.m_amount = min( damageInfo->in.m_amount, getHealth() - 1 );
+		damageInfo->in.m_amount = std::min( damageInfo->in.m_amount, getHealth() - 1 );
 		shouldStartSecondLife = TRUE;
 	}
 
@@ -127,7 +128,7 @@ void UndeadBody::startSecondLife(DamageInfo *damageInfo)
 	// this returns a value from 1...total, inclusive
 	Int roll = GameLogicRandomValue(1, total);
 
-	for( update = getObject()->getBehaviorModules(); *update; ++update)
+	for( BehaviorModule** update = getObject()->getBehaviorModules(); *update; ++update)
 	{
 		SlowDeathBehaviorInterface* sdu = (*update)->getSlowDeathBehaviorInterface();
 		if (sdu != NULL && sdu->isDieApplicable(damageInfo))

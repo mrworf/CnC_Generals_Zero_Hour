@@ -90,6 +90,17 @@ settled engineering details in these existing plans, not create tiny replacement
 plans. A genuine unresolved authority/external condition is recorded precisely;
 ordinary port/build/fixture work remains inside this transaction.
 
+User-requested worktree checkpoint: the Product Owner explicitly requested
+sorting and committing the accumulated changed/untracked files. Preserve the
+existing slice03 outcome/plan and incomplete status; do not claim full startup
+from the supporting matrix. Commit the coherent, cross-dependent original-source
+providers, build graph, generated tests and evidence together as an implementation
+progress checkpoint, with the updated repository instructions separately. This
+is not a replacement slice, milestone acceptance, or permission to skip N2.
+The frozen canonical527 source identity and all3 full178/178 evidence remain
+unchanged. Subsequent implementation continues from that committed checkpoint;
+completed slice01/02 and N1 history is preserved.
+
 N1 output is committed at 11295c4f and untouched upstream. N2 planning is
 persisted before any original-runtime production edit. PRE04 completeness is
 still pending at the actual retail boundary, not inferred from the symlink.
@@ -99,3 +110,26 @@ supplied-data probe reached stage4/mask63 with unchanged complete input snapshot
 This establishes basic indexing/families/text, not full PRE04 scenario or runtime
 acceptance. The existing slice03 continues actual original startup; see its
 explicit carry-forward service/encoding gates and the slice02 evidence limits.
+
+Slice03 supporting owner checkpoint: `evidence/qa/N2-runtime-support.md` records
+69/69 normal/GCC/Clang original-owner results, including namespace/FP, typed Dict,
+raw/RefPack/zlib/EAB/EAH maps, TOC/chunk input/output, rooted memory profiles,
+physical metadata and UTF-16-width filtering with batched rollback
+sweeps. These are uncommitted work within the existing slice03, not accepted
+startup/simulation or a reason to mark N2 completed. Continue the source graph,
+NOX qualification and actual original execution gates. XDG atomic publication
+and content/version-keyed CachedFileInputStream conversion pass supporting
+fixtures; actual startup and whole MapCache binding remain pending.
+The graph batch corrects unambiguous include casing and all six dynamic-ID
+declarations together. Its representative ABI tests do not accept uncompiled
+owner classes. An unchanged upstream NOX candidate's public C API fails the
+rejection/consumption contract; other providers/interfaces remain investigation,
+not authority to fork a dependency or silently drop that format.
+All13 active hash-map typedefs use native containers with content hashes and
+canonical named/numeric save traversal. Shared-header tests pass; actual owner
+classes remain uncompiled. Complete DSP-root caller casing census passes.
+Retain the original audio startup readiness gate; it is not purely a CD check.
+The49-domain enum source lock preserves all named values and proves signedness,
+width/alignment/representative offsets and defined raw representations in both
+conditional configurations. Whole owner ABI/INI/module lifecycle remains pending;
+RiderInfo's real status member must not be mistaken for an unused declaration.

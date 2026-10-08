@@ -29,13 +29,28 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/NameKeyGenerator.h"
+#include "Common/INI.h"
+#include <atomic>
+#include <strings.h>
+
+namespace {
+UnsignedInt64 nextNamespaceGeneration() {
+    static std::atomic<UnsignedInt64> generation{0};
+    auto prior=generation.load(std::memory_order_relaxed);
+    do {if(prior==std::numeric_limits<UnsignedInt64>::max())throw ERROR_OUT_OF_MEMORY;}
+    while(!generation.compare_exchange_weak(prior,prior+1,std::memory_order_relaxed));
+    return prior+1;
+}
+}
 
 // Public Data ////////////////////////////////////////////////////////////////////////////////////
 NameKeyGenerator *TheNameKeyGenerator = NULL;  ///< name key gen. singleton
 
 //------------------------------------------------------------------------------------------------- 
-NameKeyGenerator::NameKeyGenerator()
+NameKeyGenerator::NameKeyGenerator(Int capacity):m_capacity(UnsignedInt(capacity))
 {
+    if(capacity<1 || capacity>NAMEKEY_MAX)throw ERROR_BAD_ARG;
 
 	m_nextID = (UnsignedInt)NAMEKEY_INVALID;  // uninitialized system
 
@@ -56,21 +71,50 @@ NameKeyGenerator::~NameKeyGenerator()
 //------------------------------------------------------------------------------------------------- 
 void NameKeyGenerator::init()
 {
+	if(m_transactionDepth) throw ERROR_BAD_ARG;
 	DEBUG_ASSERTCRASH(m_nextID == (UnsignedInt)NAMEKEY_INVALID, ("NameKeyGen already inited"));
+    if(m_nextID!=UnsignedInt(NAMEKEY_INVALID))throw ERROR_BAD_ARG;
+    const auto generation=nextNamespaceGeneration();
 
 	// start keys at the beginning again
 	freeSockets();
 	m_nextID = 1;
+    m_generation=generation;
 
 }  // end init
 
 //------------------------------------------------------------------------------------------------- 
 void NameKeyGenerator::reset()
 {
+    if(m_transactionDepth) throw ERROR_BAD_ARG;
+    const auto generation=nextNamespaceGeneration();
 	freeSockets();
 	m_nextID = 1;
+    m_generation=generation;
 
 }  // end reset
+
+NameKeyTransaction::NameKeyTransaction(NameKeyGenerator& owner)
+  :m_owner(owner),m_start(owner.m_nextID),m_rollbackGeneration(0) {
+  if(!m_start || owner.m_transactionDepth==std::numeric_limits<UnsignedInt>::max()) throw ERROR_BAD_ARG;
+  // Reserve a unique cache-invalidation token before acquiring anything.
+  // Rollback must not throw when the global issuance boundary is exhausted.
+  m_rollbackGeneration=nextNamespaceGeneration();
+  ++owner.m_transactionDepth;
+}
+NameKeyTransaction::~NameKeyTransaction() noexcept {
+  if(!m_committed && m_owner.m_nextID!=m_start) {
+    // Every insertion pushes onto its socket. Assigned ordinals are ownership
+    // units; no allocations/callbacks or unowned key retirement are needed.
+    for(Bucket*& socket:m_owner.m_sockets)
+      while(socket && UnsignedInt(socket->m_key)>=m_start) {
+        Bucket* retired=socket;socket=retired->m_nextInSocket;retired->deleteInstance();
+      }
+    m_owner.m_nextID=m_start;
+    m_owner.m_generation=m_rollbackGeneration;
+  }
+  --m_owner.m_transactionDepth;
+}
 
 //------------------------------------------------------------------------------------------------- 
 void NameKeyGenerator::freeSockets()
@@ -104,7 +148,7 @@ inline UnsignedInt calcHashForLowercaseString(const char* p)
 	UnsignedInt result = 0; 
 	Byte *pp = (Byte*)p;
 	while (*pp) 
-		result = (result << 5) + result + tolower(*pp++); 
+		result = (result << 5) + result + std::tolower(static_cast<unsigned char>(*pp++));
 	return result;
 }
 
@@ -125,6 +169,7 @@ AsciiString NameKeyGenerator::keyToName(NameKeyType key)
 //------------------------------------------------------------------------------------------------- 
 NameKeyType NameKeyGenerator::nameToKey(const char* nameString)
 {
+    if(!nameString || !m_nextID)throw ERROR_BAD_ARG;
 	Bucket *b;
 
 	UnsignedInt hash = calcHashForString(nameString) % SOCKET_COUNT;
@@ -137,11 +182,14 @@ NameKeyType NameKeyGenerator::nameToKey(const char* nameString)
 	}
 
 	// nope, guess not. let's allocate it.
+    if(m_nextID>m_capacity)throw ERROR_OUT_OF_MEMORY;
 	b = newInstance(Bucket);
-	b->m_key = (NameKeyType)m_nextID++;
+    MemoryPoolObjectHolder candidate(b);
+	b->m_key = (NameKeyType)m_nextID;
 	b->m_nameString = nameString;
 	b->m_nextInSocket = m_sockets[hash];
 	m_sockets[hash] = b;
+    ++m_nextID;candidate.release();
 
 	NameKeyType result = b->m_key;
 
@@ -173,6 +221,7 @@ NameKeyType NameKeyGenerator::nameToKey(const char* nameString)
 //------------------------------------------------------------------------------------------------- 
 NameKeyType NameKeyGenerator::nameToLowercaseKey(const char* nameString)
 {
+    if(!nameString || !m_nextID)throw ERROR_BAD_ARG;
 	Bucket *b;
 
 	UnsignedInt hash = calcHashForLowercaseString(nameString) % SOCKET_COUNT;
@@ -180,16 +229,19 @@ NameKeyType NameKeyGenerator::nameToLowercaseKey(const char* nameString)
 	// hmm, do we have it already?
 	for (b = m_sockets[hash]; b; b = b->m_nextInSocket)
 	{
-		if (_stricmp(nameString, b->m_nameString.str()) == 0)
+		if (strcasecmp(nameString, b->m_nameString.str()) == 0)
 			return b->m_key; 
 	}
 
 	// nope, guess not. let's allocate it.
+    if(m_nextID>m_capacity)throw ERROR_OUT_OF_MEMORY;
 	b = newInstance(Bucket);
-	b->m_key = (NameKeyType)m_nextID++;
+    MemoryPoolObjectHolder candidate(b);
+	b->m_key = (NameKeyType)m_nextID;
 	b->m_nameString = nameString;
 	b->m_nextInSocket = m_sockets[hash];
 	m_sockets[hash] = b;
+    ++m_nextID;candidate.release();
 
 	NameKeyType result = b->m_key;
 
@@ -230,11 +282,11 @@ void NameKeyGenerator::parseStringAsNameKeyType( INI *ini, void *instance, void 
 //------------------------------------------------------------------------------------------------- 
 NameKeyType StaticNameKey::key() const
 {
-	if (m_key == NAMEKEY_INVALID)
-	{
-		DEBUG_ASSERTCRASH(TheNameKeyGenerator, ("no TheNameKeyGenerator yet"));
-		if (TheNameKeyGenerator)
-			m_key = TheNameKeyGenerator->nameToKey(m_name);
-	}
-	return m_key;
+    if(!TheNameKeyGenerator){m_key=NAMEKEY_INVALID;m_generation=0;return NAMEKEY_INVALID;}
+    const auto generation=TheNameKeyGenerator->getNamespaceGeneration();
+    if(m_key==NAMEKEY_INVALID || m_generation!=generation) {
+        const auto candidate=TheNameKeyGenerator->nameToKey(m_name);
+        m_key=candidate;m_generation=generation;
+    }
+    return m_key;
 }

@@ -223,6 +223,23 @@ void textManager() {
         try {
             text->initMapStringFile("map.str");
             require(text->fetch("map:name",&exists).compare(L"a *** map\nnext")==0&&exists,"original map text/filter owner publication");
+            tree.write("candidate.str","MAP:Name\n\"bad metadata\"\nEnd\nLABEL\n\"not the base\"\nEnd\n");
+            fs.mountReadOnly({tree.root()});
+            for(int repeat=0;repeat<3;++repeat) {
+                require(text->fetchMapMetadataLabel("candidate.str","MAP:Name").compare(L"*** metadata")==0,
+                    "metadata lookup uses temporary filtered catalog");
+                require(text->fetchMapMetadataLabel("candidate.str","LABEL").compare(L"Ω 😀\nB")==0,
+                    "metadata preserves base-before-map precedence");
+                require(text->fetchMapMetadataLabel("missing.str","MAP:Name").compare(L"MISSING: 'MAP:Name'")==0,
+                    "missing metadata companion cannot borrow active gameplay map");
+                require(text->fetchMapMetadataLabel(AsciiString::TheEmptyString,"LABEL").compare(L"Ω 😀\nB")==0,
+                    "official cached metadata uses base without physical file");
+                require(text->fetch("MAP:Name").compare(L"a *** map\nnext")==0,
+                    "metadata lookup preserves accepted gameplay catalog");
+            }
+            tree.write("candidate.str","MAP:Name\n\"unclosed\n");fs.mountReadOnly({tree.root()});
+            rejects([&]{text->fetchMapMetadataLabel("candidate.str","MAP:Name");},"metadata malformed catalog rejection");
+            require(text->fetch("MAP:Name").compare(L"a *** map\nnext")==0,"metadata rejection preserves gameplay links");
             for(const std::string bad:{"MAP:Name\n\"unclosed\n","MAP:Name\n\"first\"\n\"second\"\nEnd\n","MAP:Name\n\"first\"\nEnd\nmap:name\n\"duplicate\"\nEnd\n"}) {
                 tree.write("map.str",bad);fs.mountReadOnly({tree.root()});rejects([&]{text->initMapStringFile("map.str");},"map-text malformed candidate");
                 require(text->fetch("MAP:Name",&exists).compare(L"a *** map\nnext")==0&&exists,"map-text rejection preserves both lookup/backing links");
@@ -351,6 +368,15 @@ void faults(const std::string& family) {
             try{sweep([&]{text->initMapStringFile("candidate.str");},
                 [&]{require(text->fetch("MAP:Name").compare(L"accepted")==0,"map graph and callback rollback");},
                 [&]{text->initMapStringFile("map.str");});}catch(...){TheLanguageFilter=nullptr;throw;}
+            TheLanguageFilter=nullptr;
+        }else if(family=="fault_metadata") {
+            LanguageFilter filter;filter.init();TheLanguageFilter=&filter;
+            std::unique_ptr<GameTextInterface> text(CreateGameTextInterface());text->init();text->initMapStringFile("map.str");
+            try{sweep([&]{require(text->fetchMapMetadataLabel("candidate.str","MAP:Name").compare(L"*** candidate")==0,
+                    "temporary metadata callback result");},
+                [&]{require(text->fetch("MAP:Name").compare(L"accepted")==0,"temporary metadata rollback preserves active owner");},[]{});
+                require(text->fetch("MAP:Name").compare(L"accepted")==0,"successful temporary metadata retires backing");
+            }catch(...){TheLanguageFilter=nullptr;throw;}
             TheLanguageFilter=nullptr;
         }else if(family=="fault_filter") {
             LanguageFilter filter;filter.init();

@@ -41,15 +41,17 @@
 #include "Common/STLTypedefs.h"
 #include "Common/GameCommon.h"
 #include "Common/Money.h"
+#include <memory>
+#include <utility>
 
 // FORWARD DECLARATIONS ///////////////////////////////////////////////////////////////////////////
 struct FieldParse;
-typedef enum _TerrainLOD;
+enum _TerrainLOD : UnsignedInt;
 class GlobalData;
 class INI;
 class WeaponBonusSet;
-enum BodyDamageType;
-enum AIDebugOptions;
+enum BodyDamageType : UnsignedInt;
+enum AIDebugOptions : UnsignedInt;
 
 // PUBLIC /////////////////////////////////////////////////////////////////////////////////////////
 
@@ -62,22 +64,13 @@ const Int MAX_GLOBAL_LIGHTS	= 3;
 	* and will cause re-compilation dependancies throughout the codebase. 
   * OOPS -- TOO LATE! :) */
 //-------------------------------------------------------------------------------------------------
-class GlobalData : public SubsystemInterface
+// Configuration values are copied offside without copying subsystem identity.
+// The raw bonus pointer is owned only by GlobalData; configuration copy alone
+// never acquires/releases it. Native clone neutralizes the borrowed pointer
+// before the next fallible operation and acquires independent backing.
+class GlobalDataConfiguration
 {
-
 public:
-
-	GlobalData();
-	virtual ~GlobalData();
-
-	void init();
-	void reset();
-	void update() { }
-
-	Bool setTimeOfDay( TimeOfDay tod );		///< Use this function to set the Time of day;
-
-	static void parseGameDataDefinition( INI* ini );
-
 	//-----------------------------------------------------------------------------------------------
 	struct TerrainLighting
 	{
@@ -515,6 +508,36 @@ public:
 	//Bool m_allAdvice;
 
 
+protected:
+	AsciiString m_userDataDir;
+	GlobalDataConfiguration() = default;
+	GlobalDataConfiguration(const GlobalDataConfiguration&) = default;
+	GlobalDataConfiguration(GlobalDataConfiguration&&) = default;
+	GlobalDataConfiguration& operator=(const GlobalDataConfiguration&) = default;
+	GlobalDataConfiguration& operator=(GlobalDataConfiguration&&) = default;
+	~GlobalDataConfiguration() = default;
+	void adoptConfiguration(GlobalDataConfiguration&& candidate) noexcept
+	{
+		static_assert(noexcept(operator=(std::move(candidate))));
+		operator=(std::move(candidate));
+	}
+};
+
+class GlobalData : public SubsystemInterface, public GlobalDataConfiguration
+{
+public:
+	GlobalData();
+	virtual ~GlobalData();
+
+	void init();
+	void reset();
+	void update() { }
+
+	Bool setTimeOfDay( TimeOfDay tod );		///< Use this function to set the Time of day;
+
+	static void parseGameDataDefinition( INI* ini );
+
+
 	// the trailing '\' is included!
   const AsciiString &getPath_UserData() const { return m_userDataDir; }
 
@@ -522,18 +545,14 @@ private:
 
 	static const FieldParse s_GlobalDataFieldParseTable[];
 
-	// this is private, since we read the info from Windows and cache it for
-	// future use. No one is allowed to change it, ever. (srj)
-	AsciiString m_userDataDir;
-	
 	static GlobalData *m_theOriginal;		///< the original global data instance (no overrides)
-	GlobalData *m_next;									///< next instance (for overrides)
-	GlobalData *newOverride( void );		/** create a new override, copy data from previous
-																			override, and return it */
+	GlobalData *m_next = nullptr;									///< next instance (for overrides)
+	GlobalData *m_latest = nullptr; // Root-owned head, independent of singleton withdrawal.
+	void retireOverrides() noexcept;
 
 
-	GlobalData(const GlobalData& that) { DEBUG_CRASH(("unimplemented")); }
-	GlobalData& operator=(const GlobalData& that) { DEBUG_CRASH(("unimplemented")); return *this; }
+	GlobalData(const GlobalData& that);
+	GlobalData& operator=(const GlobalData&) = delete;
 
 };
 

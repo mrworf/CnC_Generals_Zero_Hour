@@ -1,0 +1,3189 @@
+{
+  "kind": "unaccepted-source-compilation-census",
+  "scope": "common",
+  "compiler": "g++",
+  "acceptance": false,
+  "pass": 98,
+  "fail": 47,
+  "diagnostic_occurrences": 565,
+  "note": "Full physical Common145-source inventory, not retained-set acceptance; classify excluded/obsolete providers separately rather than attempting to adopt their unavailable SDKs. Syntax-only, no executable acceptance.",
+  "translation_units": [
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Audio/AudioEventRTS.cpp",
+      "sha256": "8a473696635a1415e5e50689f556a7b643ea2333bd6c63f3cf1032254c4a07cd",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Audio/AudioRequest.cpp",
+      "sha256": "d0d370c3e7a37a9f71e8108decec240bff68e32231a6aa3fd49397ee1b68a599",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Audio/DynamicAudioEventInfo.cpp",
+      "sha256": "0efabaacfa8ee6658f7f2d3c3c01fed096ad9ef3df668e01525691e98f23a45d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Audio/GameAudio.cpp",
+      "sha256": "bc7e9a92fcb2773d66e473311a3f755484f485c8cdf27cfbcb394bf0c204e808",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Audio/GameMusic.cpp",
+      "sha256": "74a4032f1e6eeb962bcdad34c314cfb41b25b05321f7c96b68f7e80633b97f35",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Audio/GameSounds.cpp",
+      "sha256": "9f77f35f5f4cff894e643f263cb36e2d65b13b0b85b06d45e91b35bd16c42b6f",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Audio/GameSpeech.cpp",
+      "sha256": "ab734ff292c0b08aadf32acfcb83b84569ed6fec302bd82d79abaaf779b34cbb",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/Audio/GameSpeech.cpp",
+          "line": 40
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Audio/simpleplayer.cpp",
+      "sha256": "0019945fc5c7a69887c00d3f3bf333aa7331c00377b8ac1551a517367b70b3e2",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/Common/simpleplayer.h",
+          "line": 23
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp",
+      "sha256": "fcbe15e901882fdee2cf6ffd325e099f64181517a254fd8d772c7ce4b3858d63",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/Common/urllaunch.h",
+          "line": 23
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/Common/urllaunch.h",
+          "line": 25
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp",
+          "line": 26
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp",
+          "line": 126
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/Audio/urllaunch.cpp",
+          "line": 228
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Bezier/BezFwdIterator.cpp",
+      "sha256": "b5beffd8b1efa16b32f9e35e54ab8ee6918647cc4d6057af6acc082ef741fc47",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Bezier/BezierSegment.cpp",
+      "sha256": "43225651af1c708fb2093294b956169b921df1b38193626a0b1e6bf41ca1a58b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/BitFlags.cpp",
+      "sha256": "3d89cb382ce4c8d1dd9eb2fece1dfdcbd103505cbf6bf0d00140e0460659c121",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/BitFlags.cpp",
+          "line": 40
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/BitFlags.cpp",
+          "line": 177
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/CRCDebug.cpp",
+      "sha256": "10cd64a3acfacf8f16630b6a7e7498b0497703a865fa7a79f9b4a1389f9dcc16",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+      "sha256": "04807c39b82e6cc85f833aad229f24ddad3ba070309cf91e8aa13f61158f5a39",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 124
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 135
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 147
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 346
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 360
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 378
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 388
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 398
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 408
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 603
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 613
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 625
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 702
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 722
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 731
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 754
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 763
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 772
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 794
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 803
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 812
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 821
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 844
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 876
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 909
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 918
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 927
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 936
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 945
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 1050
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 1060
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 1069
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 1080
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 1089
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 1098
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 1109
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 1110
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 1116
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/CommandLine.cpp",
+          "line": 1282
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/DamageFX.cpp",
+      "sha256": "33f769404286ee806eaae1226047b4940f097db318abaaee3427c20d31d93de7",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/DamageFX.cpp",
+          "line": 160
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Dict.cpp",
+      "sha256": "0c6f36dc84f1daa60cde97520fa7618cfe6ea220b7e9d16c6c66e0b0bf9c78e8",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/DiscreteCircle.cpp",
+      "sha256": "33013e2a104b89bfc01ec47a367806e8ec7e53ea321a1ca65a03648e59a4c315",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/GameEngine.cpp",
+      "sha256": "89b571291f0cbc61e859ce554ca899a7e9b621b3e14f89db34253b92b35b0066",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp",
+      "sha256": "abb094e030774dd9da353b0912b967476dd84f293b23c7bc2ddaffe8a19c8c90",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp",
+          "line": 294
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp",
+          "line": 346
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp",
+          "line": 369
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp",
+          "line": 429
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp",
+          "line": 495
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp",
+          "line": 540
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp",
+          "line": 542
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp",
+          "line": 587
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GameLOD.cpp",
+          "line": 622
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/GameMain.cpp",
+      "sha256": "61355c217af56c2124ba3502160d429d1ca2f5032f7bdfdcca849fc95773e8f8",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp",
+      "sha256": "529a72f6e0cca58a734ab9b8cc03d78989f3398cc365978a7c0a9d0bd6e54eb8",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp",
+          "line": 992
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp",
+          "line": 994
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp",
+          "line": 994
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp",
+          "line": 1043
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp",
+          "line": 1058
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp",
+          "line": 1058
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp",
+          "line": 1058
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/GlobalData.cpp",
+          "line": 1078
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+      "sha256": "fa61470a8900041516215ba2e75b03b7a46fe6755e8de9f5ba11c95b00c83414",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 466
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 598
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 704
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 756
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 826
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 855
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 878
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 902
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 977
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 1043
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 1240
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 1295
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 1301
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 1330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 1335
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 1384
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 1402
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INI.cpp",
+          "line": 1448
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIAiData.cpp",
+      "sha256": "b56ab1975bc82e91cb440c81595ad1faf2c793c7b89389c19fb80ce7a077d251",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIAnimation.cpp",
+      "sha256": "8ab1cc419af807505b1ca736e0a8c9accab15ccc59b92324050f0885d5798d7a",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/GameClient/Anim2D.h",
+          "line": 196
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIAudioEventInfo.cpp",
+      "sha256": "c5c3f07b0cbe4793cabbc12ee7ef1dd41b9e9cd031dc3aaf411ca0e425a22ce7",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INICommandButton.cpp",
+      "sha256": "84738e7d3b5e04ac56f4b80bf8eac9d3eea563e8244c568bb586cb69c6a9d4de",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INICommandSet.cpp",
+      "sha256": "8bee95cab190f64efc7a7de94729ecd4ce60590ad9ca4e38764f489a9d40a236",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/GameClient/ControlBar.h",
+          "line": 337
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIControlBarScheme.cpp",
+      "sha256": "4516cfeb795430f23eda8ec0417e434d9642a0c43bdc2b256aecf8c4206b8198",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/GameClient/ControlBar.h",
+          "line": 337
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INICore.cpp",
+      "sha256": "104136ac53f99f0fc40d1ec93dd41635184917261886e3186d976686f3792d2f",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INICrate.cpp",
+      "sha256": "c058cd007217a8ebef21d57c04b7611eeaa5b4b33dd51324de287a22a60be2d4",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIDamageFX.cpp",
+      "sha256": "6a6df3d8a280078c071c6052fb8cafab8f7f6bccd61572f55394d22b898be2a3",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIDrawGroupInfo.cpp",
+      "sha256": "0e9f0a8634598ea6c04f658cb77a268ccea3c632bd03d0bca76a08b334a188ba",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/GameClient/DrawGroupInfo.h",
+          "line": 40
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/GameClient/DrawGroupInfo.h",
+          "line": 41
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIDrawGroupInfo.cpp",
+          "line": 67
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIDrawGroupInfo.cpp",
+          "line": 68
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIGameData.cpp",
+      "sha256": "754582142452704df3998ed8ce0fdc29a681921ace4622ef17d2a886d9ff9a59",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIMapCache.cpp",
+      "sha256": "f9d438489bb927f44078ae7fc8461b9a6ad23a29f3cf3cf127ccba5a5043002a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIMapData.cpp",
+      "sha256": "9a5895c2a92f51f5a1ae168e868cc16f0b62dcb904578d14d4fd511f78588387",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIMappedImage.cpp",
+      "sha256": "5306af033d304fcce6220af28546275bcde879ccf425726d2150a202e905f72c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIMiscAudio.cpp",
+      "sha256": "8184729a66068383c9208fd6795e625fc2a5d28d233432ef48bff226702b532b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIModel.cpp",
+      "sha256": "b65d9473100c90440aa7f223c37f3cbddfb5b4ab19777bbc2e299357a5b5d290",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIMultiplayer.cpp",
+      "sha256": "beb88ac4812aa50fe4d6c0e1741f7650d1ea890e9e59e6e46396945b301403dc",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/Common/MultiplayerSettings.h",
+          "line": 81
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIObject.cpp",
+      "sha256": "92815bd67873d7bf3934fdc4b6f22f8ef8da27fe4b62d0551b53df6a1e28e26e",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIParticleSys.cpp",
+      "sha256": "b8630fb23d3b5299a9b962baced17fa8a556670a223d42e2ede8864418e22b1c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INISpecialPower.cpp",
+      "sha256": "5cfd545bade95cfbbf692dc996c0d13e5e3c06167686c197d9bfcd0a5907830b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INITerrain.cpp",
+      "sha256": "527d5c98cef9b7f0716393aede6a606ac0dfa759ab4153f6c0de1e367f79ce38",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INITerrainBridge.cpp",
+      "sha256": "4d6be6ac2faa7b982bfad32c966303a2a64ed727625cd031cf77685285bea830",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INITerrainRoad.cpp",
+      "sha256": "608b642f5264d3a90ca2cc1c543675ec4742321d28be176c01de4d512af6280a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIUpgrade.cpp",
+      "sha256": "94832d7af53046b95db72de2770f94853fc676457743b8d248b01a782ec72a2c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIVideo.cpp",
+      "sha256": "63bcef275c229100e28b35aef0d7f57cd4862480e36f4840ce3974d4743df134",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/GameClient/VideoPlayer.h",
+          "line": 52
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIWater.cpp",
+      "sha256": "0f0910cf6cbeddaa7b98c16a8edfef02416ff515986e2d1b5bd8199110763b69",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIWater.cpp",
+          "line": 65
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIWeapon.cpp",
+      "sha256": "adeca15e12f800fcd09af34476637cbc88f8b9aa38dd048d4044ceb0435b15b4",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/INI/INIWebpageURL.cpp",
+      "sha256": "bb4c6c0f70c3a1692624cb5272bc427a74ae3b4e46eae8afb613b1562d7960b2",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/GameNetwork/WOLBrowser/WebBrowser.h",
+          "line": 49
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Language.cpp",
+      "sha256": "858195a93f1a6fb55356841b419c29360382a647f3b788679008a5a050ddc394",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/MessageStream.cpp",
+      "sha256": "9f09afaf0ac43fada87148bc87fd48ea27d90ce9d24dc5eb558d9df6d080171f",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/MessageStream.cpp",
+          "line": 118
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/MiniLog.cpp",
+      "sha256": "136c941a6bb507548a511a3ef1104d0ecf834cfef5a60e6c64f23ef419d0ba5a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/MultiplayerSettings.cpp",
+      "sha256": "e3e163ee3dfeba04c152266b9783f56da2b8222562aeb06a236f3859330fad0a",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/Common/MultiplayerSettings.h",
+          "line": 81
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/NameKeyGenerator.cpp",
+      "sha256": "20f3f0044ee55af9b8c67fa0cb619199971ebffec36959b40d81bc26956fc438",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/PartitionSolver.cpp",
+      "sha256": "017156f534c893393b8cb0700be24c23e83eb90e193ceb56ddcb4e4e3532cb98",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/PerfTimer.cpp",
+      "sha256": "c26134d7663def585b6941537564ef0173f7f8a6341d08270969fef4594a32fc",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/PerfTimer.cpp",
+          "line": 38
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/PerfTimer.cpp",
+          "line": 38
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/PerfTimer.cpp",
+          "line": 38
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/AcademyStats.cpp",
+      "sha256": "491fc96a9db62cfac00f3f25d1926f7ffc147c8d0687e8a55741bc7fbb2ae757",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/RTS/AcademyStats.cpp",
+          "line": 896
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/ActionManager.cpp",
+      "sha256": "a9d4ba67cbc7c90139b831a0a122912839a83e2dbfbca79df33332d5ff8e9449",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Energy.cpp",
+      "sha256": "c6b2b94d27968055b14ef4f37002767a39d61c7d43b4b6d653fa3a95ba1a5742",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Handicap.cpp",
+      "sha256": "f01d5c4e6a9454ef77c2d875318e5b39760be2c0ccf2dae0d847a087c41c0b44",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/MissionStats.cpp",
+      "sha256": "c5df68403387230459c7be2d3d5ee30481b61683f91dd7173a3456916215e755",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Money.cpp",
+      "sha256": "dc1ebd216f4f3ccbf3b31ac1175d6274536f8dffd33a7229f0fbf42bfba1fa3a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Player.cpp",
+      "sha256": "03aac8347761920c7456428622fa1223676023acae61ed0c1b92104f9c13fb33",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Player.cpp",
+          "line": 1304
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Player.cpp",
+          "line": 1362
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Player.cpp",
+          "line": 2070
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Player.cpp",
+          "line": 2477
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Player.cpp",
+          "line": 2481
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Player.cpp",
+          "line": 2675
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Player.cpp",
+          "line": 2735
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Player.cpp",
+          "line": 3478
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Player.cpp",
+          "line": 3611
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/PlayerList.cpp",
+      "sha256": "2c8954e98e81bcee4421bb4681755c6c502383a81e02c1d3eb0193589f350bc3",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/PlayerTemplate.cpp",
+      "sha256": "7094803b64c1be02fd1f23c4f4a6800286dee3b2f4e5734ad6c5e094f0ed8fa4",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/ProductionPrerequisite.cpp",
+      "sha256": "edc2f60b5831fcfce86de0050417cc4691f50c97115017fba1f544845264c751",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/ResourceGatheringManager.cpp",
+      "sha256": "9ef6693a790a42c921014a6e54afd0b1cde19d95a4fcd1fb43a27a6fd5978a12",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Science.cpp",
+      "sha256": "df9d389ea3784f24deab6276407acf68c087231b35988a3dbd904e922fe90469",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/ScoreKeeper.cpp",
+      "sha256": "5dddfe206eea9d0f7a68e1f43a55013a55efa472fef02a4554717225c218720f",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/SpecialPower.cpp",
+      "sha256": "7046802aaa12e9eeae437915d32783b616a6127803ac701c3314b923e18d5a13",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/RTS/SpecialPower.cpp",
+          "line": 56
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/Team.cpp",
+      "sha256": "f591893275044cbfc84121265e76e9b3e5cbc95f49e0b9b25d9d7811f100301b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RTS/TunnelTracker.cpp",
+      "sha256": "361f463ec04a41d2634c89dff09ab37a618580332389f08513fa5978c8314c6d",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/GameClient/ControlBar.h",
+          "line": 337
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp",
+      "sha256": "201b667765b8b6d52ad173973356ecf453451ead4d080655910fc01b8eb8c93e",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Recorder.cpp",
+      "sha256": "d2d7d235b748fdf9f054e477997ee8a19295badfc61a3dc925ee65674ea9e076",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h",
+          "line": 34
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/SkirmishBattleHonors.cpp",
+      "sha256": "8e0938fc60718423eb10c30812b7ecb547891c4df28c584c24ea836a7100b21e",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/StateMachine.cpp",
+      "sha256": "4ae994b4d5c0da8c6a90ae31551dda0c83531cc5ba78b8e0e1fad508d8384efc",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/StatsCollector.cpp",
+      "sha256": "2f65a92c78f375c64f6f0814b8e7b924885b48b15a9012dffe60f8053e455640",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/ArchiveFile.cpp",
+      "sha256": "5181e668f04ed4fd5d0072cc1291ac15f9afdc5def4e0fb91a96a206e9d50a7a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/ArchiveFileSystem.cpp",
+      "sha256": "539ec180b93c83ec2344d2d4a904a249187126ed3a21947a9da2591f41948bff",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/ArchiveFileSystem.cpp",
+          "line": 175
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/ArchiveFileSystem.cpp",
+          "line": 191
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/AsciiString.cpp",
+      "sha256": "418b7cd819f4534fab53cbe2c0043eb1de10b507eaf7bf8772335ac6901d80b9",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/BuildAssistant.cpp",
+      "sha256": "583b7efd2b1e0bb795b05462389fca3b2895d34387874d28c08491536b9ae836",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/CDManager.cpp",
+      "sha256": "416d9e45b15318bdd8bd43396adacca5b0ffdec9a47e7300a3a925ea03782702",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/CachedFileInputStream.cpp",
+      "sha256": "65c3a2918499510dd050c72574cdb48a78b45cf6f98f531842bb38e69e3e4363",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/Compression.cpp",
+      "sha256": "431dfac2e81f6bb82496485ce1f4e47db5171bcdb3d73459196f2b179fce974e",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+      "sha256": "bffc74f5b7ace678199f50412db9e28aa110805bd301285091b0215f8e7ec990",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/Common/CopyProtection.h",
+          "line": 45
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/Common/CopyProtection.h",
+          "line": 45
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/Common/CopyProtection.h",
+          "line": 50
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 40
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 72
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 74
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 74
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 76
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 78
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 107
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 108
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 108
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 108
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 108
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 111
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 113
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 117
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 117
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 117
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 124
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 127
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 129
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 130
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 138
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 146
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 147
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 147
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 147
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 147
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 161
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 178
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 178
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 178
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 204
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/CopyProtection.cpp",
+          "line": 228
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/CriticalSection.cpp",
+      "sha256": "78704e7040380a53421e17f827f176a9aad578877cce8e9f6533873f5238b155",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/DataChunk.cpp",
+      "sha256": "af425a2a56b9b5863b8a19087748f05ca46ffda33a661aff27bb761475f27427",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/DataChunkInput.cpp",
+      "sha256": "a2fea2a791839550aea7c52864d42dad319cd16c460cae9f99d0c9c30a85be45",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+      "sha256": "1cb5ddad51ca92080ddfa8a6b2f3976c737088168348eb0b7f3574984e4ac645",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 66
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 107
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 144
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 151
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 151
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 151
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 151
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 183
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 247
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 247
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 247
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 247
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 247
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 250
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 255
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 260
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 262
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 267
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 269
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 654
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 655
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 655
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 667
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 670
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 674
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 674
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 676
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 686
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 690
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 691
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 699
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 700
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 700
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 714
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 716
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 716
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 716
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 721
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 739
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 740
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 740
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 746
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 746
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 746
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 746
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 756
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 756
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 756
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 756
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 756
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 757
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 757
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 757
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 757
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 760
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 763
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 763
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 765
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 779
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 780
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Debug.cpp",
+          "line": 787
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/Directory.cpp",
+      "sha256": "7b4f066b847f2bdf080ac022950d139c95847629ef44dce4bb1be6eafa937260",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/DisabledTypes.cpp",
+      "sha256": "7c9440c442a2a5620971d85238391d3b925e72145c804c50ee640c1601b93a2e",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/DisabledTypes.cpp",
+          "line": 33
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/File.cpp",
+      "sha256": "9f0cd7000d934117fa755e8f9821267983037a47bf79116f5f488a0ee5b5c747",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/FileSystem.cpp",
+      "sha256": "02fe45c795816acca8771edf9d3398763bda6ab571deae2ac86df81aecba5caa",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FileSystem.cpp",
+          "line": 200
+        },
+        {
+          "source": "system-header/unique_ptr.h",
+          "line": 90
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+      "sha256": "b94fa5ae57f334e5032de2542b11956995ea71289309f06813bbfa85720158d3",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 69
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 69
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 154
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 237
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 289
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 330
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/FunctionLexicon.cpp",
+          "line": 371
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/GameCommon.cpp",
+      "sha256": "f5e0532dcab8978de580450b3999b96506a5d7f04c65d5d49c737622a086a4af",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/GameCommon.cpp",
+          "line": 55
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/GameMemory.cpp",
+      "sha256": "326c9e105713ca4b5575e366cd74647906ec720ce27740a159caf78c4d343d29",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/GameType.cpp",
+      "sha256": "ad23db1ef703b436c7d58fceb46caac80cdd5cb2a529bfdcfac35fa45354f4c6",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/Geometry.cpp",
+      "sha256": "0e21e5fe639849bb204b52b97e5380f72be59f3eb3e078b7e1fe9fe5a95e7ece",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/KindOf.cpp",
+      "sha256": "c6f18b9c18bac3275fd36623aaddd14cea5fa7dd5a26c8adb46653eb267868af",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/KindOf.cpp",
+          "line": 34
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/List.cpp",
+      "sha256": "4cff1518b7e61c7e4ea1b309738ab0e2b880e1f9fe449fe576f86cdcf7d0d855",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/LocalFile.cpp",
+      "sha256": "59fadc97b88c29d7f2669ccab7774c0e61302e39d33a196a5dd94019231c3d4e",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/LocalFile.cpp",
+          "line": 52
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/LocalFileSystem.cpp",
+      "sha256": "b1b57ba25ad3f70b6c77828489a7e8740612a8b99aa507127e48c5fb13e5e4ab",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/MemoryInit.cpp",
+      "sha256": "100bf1c6762e0305070f696f6ba7d6fd72d1257b62a15e98d1b0a8c197f0bf9c",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/NativeCalendar.cpp",
+      "sha256": "0ce1cc0b33097d1dac1db19d1e280c901557b83ee91adb9e70a4b416bd69fcc5",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/NativeClock.cpp",
+      "sha256": "8c91587454485e7ab472babe0c94262fb8c5a5a4dd2af5e3bb380f4a5130a3c9",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/NativeConversionCache.cpp",
+      "sha256": "b98a2c410083ceb5b99fb160b69eb95bee994c40efc5d65b5dd669efbd491534",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/NativeDataFile.cpp",
+      "sha256": "0e3ab2d9daf7a6b0733fec022aa4c4409b0af8e5b4e8bc0e97e02fba2b41c734",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/NativeFileSystem.cpp",
+      "sha256": "96fbf095c276c122d2d80c88b9b952c95d21c2ecf9086e90a63217a42956402b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/NativeMapCompression.cpp",
+      "sha256": "ddcb031f07b9a5d3261d33a6dc3fb0591372b4494587ef340f28dbb10e1afa62",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/NativeMemoryProfiles.cpp",
+      "sha256": "2b9f7b47db56031830d3acdf4313428aded276c16b6750dbe3d889d31686fb53",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/NativeSourceStrings.cpp",
+      "sha256": "931c57143a14c0e10d584c38920a800462dfde5084e6e59e2bcb33198257c090",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/NativeUserStorage.cpp",
+      "sha256": "3fca43f0b1fcf25ca68cf6a86239cdb26001a5525e9b4ae806ff5f73ba8304cb",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/ObjectStatusTypes.cpp",
+      "sha256": "3fc164132ed631afb32439be0266d916405adcbb003446cbbb5448ef906c5847",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/ObjectStatusTypes.cpp",
+          "line": 35
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/QuickTrig.cpp",
+      "sha256": "81a632860e75455af128a58aca3202670203174121efc17184c15975266f9147",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/QuotedPrintable.cpp",
+      "sha256": "f91dd80b6cf54032e686a423367d592d51b33656d4582e87435578be94e939ab",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/QuotedPrintable.cpp",
+          "line": 162
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/RAMFile.cpp",
+      "sha256": "84a3000a8c8967eb5832f76fafaf8aa54e262a14522e9d6127935cc74595e62d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/Radar.cpp",
+      "sha256": "ec64285939616118bbd224e718ea149c04231da976bc3ade18b6ba0d9a52acfb",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Radar.cpp",
+          "line": 1043
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+      "sha256": "7e24388c6d2d3dabaa8cfc03ce6092c1e6cf9d36a72cb0b2368723028ae6e19d",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 446
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 493
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 685
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 705
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 727
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 961
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1192
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1193
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1193
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1196
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1199
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1200
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1211
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1211
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1211
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1212
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1221
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1221
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1226
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1241
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1241
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1241
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1247
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1247
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1554
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1556
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameState.cpp",
+          "line": 1556
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+      "sha256": "445aeedbf350bb02e08d7f52e52bdf1e931c2f314a09c1f07c1bce39a5f21fe2",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 464
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 465
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 465
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 468
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 472
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 473
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 487
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 487
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 487
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 488
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 497
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 497
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 502
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 512
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 512
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 512
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 517
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 522
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/SaveGame/GameStateMap.cpp",
+          "line": 522
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/Snapshot.cpp",
+      "sha256": "2db76cde2fb075e5a9f4567b9275d4e6c9c0bd9377e278e16bfd3a039faf93f8",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/StackDump.cpp",
+      "sha256": "e2f8d0cfed94fc9c66231912f62937870afc065612cd107e651416f4b3c52e4e",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/StreamingArchiveFile.cpp",
+      "sha256": "cfd7b3c3565dc154b629c92e318fc95f0a84c42c5598d3f3e9f3345bc79a3ce7",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/StreamingArchiveFile.cpp",
+          "line": 52
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/String.cpp",
+      "sha256": "7d349221d46e6d54ed809db174ee5921e6e7386b74842591035ce3331be79302",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/Common/string.h",
+          "line": 98
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/Common/string.h",
+          "line": 98
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/String.cpp",
+          "line": 260
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/SubsystemBase.cpp",
+      "sha256": "f8dade7904da859bc99f1a8d8c85fb4efe103fec779217b6930b476097c7673f",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/SubsystemInterface.cpp",
+      "sha256": "01325697883e9b74e9b12148130a7464286515835b6979feec94f781177d22c2",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/Trig.cpp",
+      "sha256": "8f721a4f5c8cd3a5030b3a511334e136fbd9cf76de7c3c2688cd58fdf873916d",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/UnicodeString.cpp",
+      "sha256": "af335fc6798fab8b522e402d9cbd5dc7fdf8fce05352eb7b39d79ba7b7364934",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/Upgrade.cpp",
+      "sha256": "70f828f86d3a425b3235186c857ea75bd13868131e478e83ba0164294d352080",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp",
+      "sha256": "3ba9bfa2aa1c6d7c5dc498f52b4895fb184e003518cb4acb2555aa0fb57c62b8",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp",
+          "line": 696
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp",
+          "line": 708
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp",
+          "line": 849
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp",
+          "line": 849
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp",
+          "line": 849
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp",
+          "line": 850
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp",
+          "line": 850
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp",
+          "line": 851
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/Xfer.cpp",
+          "line": 851
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/XferCRC.cpp",
+      "sha256": "259c4781026fd4e9721ef61dca360b57de92654fa1af1d577e7235a76bd63e1b",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/XferCRC.cpp",
+          "line": 37
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/XferLoad.cpp",
+      "sha256": "0f3d3527d400b7e97300db96ea59150eb30ec5df39fd58b2f732cadc5b49ae63",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/XferSave.cpp",
+      "sha256": "64a5aa4d8a39b7191d16b31877601daa56ffaf64bfeed0e20af55264849e0fa0",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/encrypt.cpp",
+      "sha256": "0068bd5a01f79ecdc00e39a515dd7e3715ee647b810515aac0134f9f40e52514",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+      "sha256": "5babdbeb9cd485c27ce62a5e9645d1b233eb41eb8625b02dbfd0c0d2cc7fbce4",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 39
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 39
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 39
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 39
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 39
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 39
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 62
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 62
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 62
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 62
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 62
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 62
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 85
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 85
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 85
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 85
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 85
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 103
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 103
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 103
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 103
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 103
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 127
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 127
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 132
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 132
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 141
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 141
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 146
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 146
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 155
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 155
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 160
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/System/registry.cpp",
+          "line": 160
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/TerrainTypes.cpp",
+      "sha256": "f701bc8bc9866867c75ae9a2e9c23228b92379a371c178953ca3c32f7060f617",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Thing/DrawModule.cpp",
+      "sha256": "690ffe055c5eff9ba919854934362daab115123046ae7615dd84980b6e354b9a",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Thing/Module.cpp",
+      "sha256": "c4a50f07745398f542f98d0f899abb48327bfd0e7ff71065e1e39f2dd9c56996",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/Thing/Module.cpp",
+          "line": 278
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Thing/ModuleFactory.cpp",
+      "sha256": "d3a287cb652dd0489350172fb12789063fbcb7714eb50cd2502283e23a487052",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Thing/Thing.cpp",
+      "sha256": "447b747520e56356a9f21f17215ceccb0d9a789b88ff3ca55d0d2bd3c43e202b",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingFactory.cpp",
+      "sha256": "43b8d7e54200749f12b80bc4f15cacda357787164c10c445c9025502281fbb48",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingTemplate.cpp",
+      "sha256": "899229f2f802ccf1610ed127faf00bcc131f60fd98d9233918aaee7afbc216c7",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingTemplate.cpp",
+          "line": 514
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingTemplate.cpp",
+          "line": 621
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingTemplate.cpp",
+          "line": 967
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingTemplate.cpp",
+          "line": 1331
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingTemplate.cpp",
+          "line": 1571
+        },
+        {
+          "source": "GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingTemplate.cpp",
+          "line": 1574
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/UserPreferences.cpp",
+      "sha256": "232224a9bde0b25d7f3a41f44c20b6f1fa470937a3aa2bf8aac70d05c76f013d",
+      "returncode": 1,
+      "errors": [
+        {
+          "source": "GeneralsMD/Code/GameEngine/Include/GameNetwork/GameSpy/PeerDefs.h",
+          "line": 34
+        }
+      ]
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/crc.cpp",
+      "sha256": "768af2e17c4e1b10c0d890396c9358e3f62b655b14edf814cab21ff177c40379",
+      "returncode": 0,
+      "errors": []
+    },
+    {
+      "translation_unit": "GeneralsMD/Code/GameEngine/Source/Common/version.cpp",
+      "sha256": "7c64fee4ce8909cc9fe7cd713acaa2f07d8420cfb7ff2b1a9af6d0fcf89defc2",
+      "returncode": 0,
+      "errors": []
+    }
+  ]
+}

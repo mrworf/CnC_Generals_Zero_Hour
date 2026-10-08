@@ -54,6 +54,7 @@
 //-------------------------------------------------------------------------------------------------
 void W3DModuleFactory::init( void )
 {
+	RegistryTransaction registration(*this);
 
 	// extending functionality
 	ModuleFactory::init();
@@ -78,5 +79,6 @@ void W3DModuleFactory::init( void )
 	addModule( W3DTankTruckDraw );
 	addModule( W3DTreeDraw );
 	addModule( W3DPropDraw );
+	registration.commit();
 
 }  // end init

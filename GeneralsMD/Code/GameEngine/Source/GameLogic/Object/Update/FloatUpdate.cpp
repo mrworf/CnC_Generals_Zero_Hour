@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/NativeSourceMath.h"
 
 #include "Common/Xfer.h"
 #include "GameLogic/Object.h"
@@ -129,7 +130,7 @@ UpdateSleepTime FloatUpdate::update( void )
 
 		Matrix3D mx = *draw->getInstanceMatrix();
 
-		Real zRot = mx.Get_Z_Rotation();
+		Real zRot = nativeSourceYaw(mx);
 		mx.Make_Identity();
 		mx.Rotate_Z(zRot);
 		mx.Rotate_Y(yaw);

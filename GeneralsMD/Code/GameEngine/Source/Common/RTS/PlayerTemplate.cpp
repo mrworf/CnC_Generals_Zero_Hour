@@ -307,23 +307,38 @@ Int PlayerTemplateStore::getTemplateNumByName(AsciiString name) const
 const PlayerTemplate* PlayerTemplateStore::findPlayerTemplate(NameKeyType namekey) const
 {
 // begin ugly, hokey code to quietly load old maps...
-	static NameKeyType a0 = NAMEKEY("FactionAmerica");
-	static NameKeyType a1 = NAMEKEY("FactionAmericaChooseAGeneral");
-	static NameKeyType a2 = NAMEKEY("FactionAmericaTankCommand");
-	static NameKeyType a3 = NAMEKEY("FactionAmericaSpecialForces");
-	static NameKeyType a4 = NAMEKEY("FactionAmericaAirForce");
+	static const StaticNameKey nativeCached_a0("FactionAmerica");
+	NameKeyType a0 = nativeCached_a0.key();
+	static const StaticNameKey nativeCached_a1("FactionAmericaChooseAGeneral");
+	NameKeyType a1 = nativeCached_a1.key();
+	static const StaticNameKey nativeCached_a2("FactionAmericaTankCommand");
+	NameKeyType a2 = nativeCached_a2.key();
+	static const StaticNameKey nativeCached_a3("FactionAmericaSpecialForces");
+	NameKeyType a3 = nativeCached_a3.key();
+	static const StaticNameKey nativeCached_a4("FactionAmericaAirForce");
+	NameKeyType a4 = nativeCached_a4.key();
 
-	static NameKeyType c0 = NAMEKEY("FactionChina");
-	static NameKeyType c1 = NAMEKEY("FactionChinaChooseAGeneral");
-	static NameKeyType c2 = NAMEKEY("FactionChinaRedArmy");
-	static NameKeyType c3 = NAMEKEY("FactionChinaSpecialWeapons");
-	static NameKeyType c4 = NAMEKEY("FactionChinaSecretPolice");
+	static const StaticNameKey nativeCached_c0("FactionChina");
+	NameKeyType c0 = nativeCached_c0.key();
+	static const StaticNameKey nativeCached_c1("FactionChinaChooseAGeneral");
+	NameKeyType c1 = nativeCached_c1.key();
+	static const StaticNameKey nativeCached_c2("FactionChinaRedArmy");
+	NameKeyType c2 = nativeCached_c2.key();
+	static const StaticNameKey nativeCached_c3("FactionChinaSpecialWeapons");
+	NameKeyType c3 = nativeCached_c3.key();
+	static const StaticNameKey nativeCached_c4("FactionChinaSecretPolice");
+	NameKeyType c4 = nativeCached_c4.key();
 
-	static NameKeyType g0 = NAMEKEY("FactionGLA");
-	static NameKeyType g1 = NAMEKEY("FactionGLAChooseAGeneral");
-	static NameKeyType g2 = NAMEKEY("FactionGLATerrorCell");
-	static NameKeyType g3 = NAMEKEY("FactionGLABiowarCommand");
-	static NameKeyType g4 = NAMEKEY("FactionGLAWarlordCommand");
+	static const StaticNameKey nativeCached_g0("FactionGLA");
+	NameKeyType g0 = nativeCached_g0.key();
+	static const StaticNameKey nativeCached_g1("FactionGLAChooseAGeneral");
+	NameKeyType g1 = nativeCached_g1.key();
+	static const StaticNameKey nativeCached_g2("FactionGLATerrorCell");
+	NameKeyType g2 = nativeCached_g2.key();
+	static const StaticNameKey nativeCached_g3("FactionGLABiowarCommand");
+	NameKeyType g3 = nativeCached_g3.key();
+	static const StaticNameKey nativeCached_g4("FactionGLAWarlordCommand");
+	NameKeyType g4 = nativeCached_g4.key();
 
 	if (namekey == a1 || namekey == a2 || namekey == a3 || namekey == a4)
 		namekey = a0;
@@ -415,4 +430,3 @@ void INI::parsePlayerTemplateDefinition( INI* ini )
 {
 	PlayerTemplateStore::parsePlayerTemplateDefinition(ini);
 }
-

@@ -27,6 +27,7 @@
 // DO NOT DISTRIBUTE
 
 #pragma once
+#include "Lib/BaseType.h"
 #ifndef __EVA_H__
 #define __EVA_H__
 
@@ -38,7 +39,7 @@ class INI;
 
 //------------------------------------------------------------------------------------ Eva Messages
 // Keep in sync with TheEvaMessageNames AND Eva::s_shouldPlayFuncs
-enum EvaMessage
+enum EvaMessage : Int
 {
   EVA_Invalid = -1,
     

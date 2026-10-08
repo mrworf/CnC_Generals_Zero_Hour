@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include "Lib/BaseType.h"
 
 #ifndef __DAMAGE_H_
 #define __DAMAGE_H_
@@ -47,7 +48,7 @@ class ThingTemplate;
 //-------------------------------------------------------------------------------------------------
 /** Damage types, keep this in sync with DamageTypeFlags::s_bitNameList[] */
 //-------------------------------------------------------------------------------------------------
-enum DamageType
+enum DamageType : UnsignedInt
 {	
 	DAMAGE_EXPLOSION							= 0,			
 	DAMAGE_CRUSH									= 1,					
@@ -373,4 +374,3 @@ protected:
 };
 
 #endif // __DAMAGE_H_
-

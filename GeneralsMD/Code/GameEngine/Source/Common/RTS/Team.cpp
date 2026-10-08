@@ -112,8 +112,9 @@ void TeamRelationMap::xfer( Xfer *xfer )
 	{
 
 		// go through all team relations
-		for( teamRelationIt = m_map.begin(); teamRelationIt != m_map.end(); ++teamRelationIt )
+		for (const auto& key : rts::keysInOrder(m_map))
 		{
+			teamRelationIt = m_map.find(key);
 
 			// write team ID
 			teamID = (*teamRelationIt).first;
@@ -2752,4 +2753,3 @@ void Team::loadPostProcess( void )
 // ------------------------------------------------------------------------
 // ------------------------------------------------------------------------
 // ------------------------------------------------------------------------
-

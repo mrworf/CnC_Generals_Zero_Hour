@@ -39,10 +39,11 @@
 #include "Common/GameMemory.h"
 #include "Common/NameKeyGenerator.h"
 #include "Common/Snapshot.h"
+#include <memory>
 
 // FORWARD REFERENCES /////////////////////////////////////////////////////////////////////////////
-enum TimeOfDay;
-enum StaticGameLODLevel;
+enum TimeOfDay : UnsignedInt;
+enum StaticGameLODLevel : Int;
 class Drawable;
 class Object;
 class Player;
@@ -103,7 +104,7 @@ enum ModuleInterfaceType
 class ModuleData : public Snapshot
 {
 public:
-	ModuleData() { }
+	ModuleData() : m_moduleTagNameKey(NAMEKEY_INVALID) { }
 	virtual ~ModuleData() { }
 
 	void setModuleTagNameKey( NameKeyType key ) { m_moduleTagNameKey = key; }
@@ -139,7 +140,7 @@ private:
 #define MAKE_STANDARD_MODULE_MACRO( cls ) \
 public: \
 	static Module* friend_newModuleInstance( Thing *thing, const ModuleData* moduleData ) { return newInstance( cls )( thing, moduleData ); } \
-	virtual NameKeyType getModuleNameKey() const { static NameKeyType nk = NAMEKEY(#cls); return nk; } \
+	virtual NameKeyType getModuleNameKey() const { static const StaticNameKey nativeCached_nk(#cls); NameKeyType nk = nativeCached_nk.key(); return nk; } \
 protected: \
 	virtual void crc( Xfer *xfer ); \
 	virtual void xfer( Xfer *xfer ); \
@@ -162,9 +163,9 @@ private: \
 public: \
 	static ModuleData* friend_newModuleData(INI* ini) \
 	{ \
-		clsmd* data = MSGNEW( "AllModuleData" ) clsmd; \
-		if (ini) ini->initFromINIMultiProc(data, clsmd::buildFieldParse); \
-		return data; \
+		std::unique_ptr<clsmd> data(MSGNEW( "AllModuleData" ) clsmd); \
+		if (ini) ini->initFromINIMultiProc(data.get(), clsmd::buildFieldParse); \
+		return data.release(); \
 	}
 
 //-------------------------------------------------------------------------------------------------
@@ -321,4 +322,3 @@ private:
 
 
 #endif // __MODULE_H_
-

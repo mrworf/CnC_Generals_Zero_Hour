@@ -513,7 +513,8 @@ void SpecialPowerModule::createViewObject( const Coord3D *location )
 	viewObject->setPosition( location );
 	viewObject->setShroudClearingRange( visionRange );
 
-	static NameKeyType key_DeletionUpdate = NAMEKEY("DeletionUpdate");
+	static const StaticNameKey nativeCached_key_DeletionUpdate("DeletionUpdate");
+	NameKeyType key_DeletionUpdate = nativeCached_key_DeletionUpdate.key();
 	DeletionUpdate* dup = (DeletionUpdate*)viewObject->findUpdateModule(key_DeletionUpdate);
 	if( dup )
 	{

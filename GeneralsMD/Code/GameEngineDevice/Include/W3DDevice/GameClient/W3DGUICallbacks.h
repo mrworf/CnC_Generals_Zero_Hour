@@ -46,6 +46,9 @@ extern void W3DRightHUDDraw( GameWindow *window, WinInstanceData *instData );
 extern void W3DPowerDraw( GameWindow *window, WinInstanceData *instData );
 extern void W3DMainMenuDraw( GameWindow *window, WinInstanceData *instData );
 extern void W3DMainMenuFourDraw( GameWindow *window, WinInstanceData *instData );
+#include "GameClient/GameWindow.h"
+#include "GameClient/WindowLayout.h"
+extern void W3DGameWinDefaultDraw( GameWindow *window, WinInstanceData *instData );
 extern void W3DMetalBarMenuDraw( GameWindow *window, WinInstanceData *instData );
 extern void W3DCreditsMenuDraw( GameWindow *window, WinInstanceData *instData );
 extern void W3DClockDraw( GameWindow *window, WinInstanceData *instData );
@@ -69,4 +72,3 @@ extern void W3DDrawMapPreview( GameWindow *window, WinInstanceData *instData );
 void W3DMainMenuInit( WindowLayout *layout, void *userData );
 
 #endif // __W3DGUICALLBACKS_H_
-

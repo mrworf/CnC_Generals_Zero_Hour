@@ -27,6 +27,7 @@
 // Author: John K. McDonald, March 2002
 
 #pragma once
+#include "Lib/BaseType.h"
 #ifndef _H_AUDIOEVENTINFO_
 #define _H_AUDIOEVENTINFO_
 
@@ -41,7 +42,7 @@
 struct FieldParse;
 
 // USEFUL DECLARATIONS ////////////////////////////////////////////////////////////////////////////
-enum AudioType
+enum AudioType : UnsignedInt
 {
 	AT_Music,
 	AT_Streaming,
@@ -49,7 +50,7 @@ enum AudioType
 };
 
 extern char *theAudioPriorityNames[];
-enum AudioPriority
+enum AudioPriority : UnsignedInt
 {
 	AP_LOWEST,
 	AP_LOW,

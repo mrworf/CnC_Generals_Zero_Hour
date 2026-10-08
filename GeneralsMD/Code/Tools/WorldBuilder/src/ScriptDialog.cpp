@@ -1504,6 +1504,7 @@ void ScriptDialog::OnSave()
 			}
 		chunkWriter.closeDataChunk();
 
+		chunkWriter.finish();
 	} catch(...) {
 			DEBUG_CRASH(("threw exception in ScriptDialog::OnSave"));
 	}

@@ -38,6 +38,7 @@
 #include "Common/GameMemory.h"
 #include "GameClient/GameWindow.h"
 #include "GameClient/WindowLayout.h"
+#include "Common/NativeFunctionRegistry.h"
 
 //-------------------------------------------------------------------------------------------------
 /** Collection of function pointers to help us in managing callbacks */
@@ -47,29 +48,9 @@ class FunctionLexicon : public SubsystemInterface
 
 public:
 
-	struct TableEntry
-	{
-		NameKeyType key;
-		const char *name;
-		void *func;
-	};
-
-	enum TableIndex
-	{
-		TABLE_ANY = -1,					///< use this when searching to search any table
-
-		TABLE_GAME_WIN_SYSTEM = 0,
-		TABLE_GAME_WIN_INPUT,
-		TABLE_GAME_WIN_TOOLTIP,
-		TABLE_GAME_WIN_DEVICEDRAW,
-		TABLE_GAME_WIN_DRAW,
-		TABLE_WIN_LAYOUT_INIT,
-		TABLE_WIN_LAYOUT_DEVICEINIT,
-		TABLE_WIN_LAYOUT_UPDATE,
-		TABLE_WIN_LAYOUT_SHUTDOWN,
-
-		MAX_FUNCTION_TABLES			// keep this last
-	};
+	using TableEntry = NativeFunctionEntry;
+	using TableIndex = NativeFunctionTableIndex;
+	using enum NativeFunctionTableIndex;
 
 public:
 
@@ -112,18 +93,19 @@ public:
 protected:
 
 	/// load a lookup table with run time values needed and save in table list
-	void loadTable( TableEntry *table, TableIndex tableIndex );
+	void loadTable(std::span<TableEntry> table, TableIndex index);
+	void initWithDeviceTables(std::span<TableEntry> draw, std::span<TableEntry> layout);
 
 	/** given a key find the function, the index parameter can limit the search
 	to a single table or to ANY of the tables */
-	void *findFunction( NameKeyType key, TableIndex index );
+	NativeWindowCallback findFunction( NameKeyType key, TableIndex index );
 	
 #ifdef NOT_IN_USE
-	const char *funcToName( void *func, TableEntry *table );  ///< internal searching
+	const char *funcToName( NativeWindowCallback func, TableEntry *table );  ///< internal searching
 #endif
-	void *keyToFunc( NameKeyType key, TableEntry *table );  ///< internal searching
 
-	TableEntry *m_tables[ MAX_FUNCTION_TABLES ];  ///< the lookup tables
+
+	NativeFunctionRegistry m_registry;
 
 };  // end class FunctionLexicon
 
@@ -131,19 +113,19 @@ protected:
 // INLINING 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 inline FunctionLexicon::TableEntry *FunctionLexicon::getTable( TableIndex index )
-	{ return m_tables[ index ]; }
+	{ return m_registry.table(index).data(); }
 
 inline GameWinSystemFunc FunctionLexicon::gameWinSystemFunc( NameKeyType key, TableIndex index )
-	{ return (GameWinSystemFunc)findFunction( key, index ); }
+	{ return findFunction( key, index ).get<GameWinSystemFunc>(); }
 inline GameWinInputFunc FunctionLexicon::gameWinInputFunc( NameKeyType key, TableIndex index )
-	{ return (GameWinInputFunc)findFunction( key, index ); }
+	{ return findFunction( key, index ).get<GameWinInputFunc>(); }
 inline GameWinTooltipFunc FunctionLexicon::gameWinTooltipFunc( NameKeyType key, TableIndex index )
-	{ return (GameWinTooltipFunc)findFunction( key, index ); }
+	{ return findFunction( key, index ).get<GameWinTooltipFunc>(); }
 
 inline WindowLayoutUpdateFunc FunctionLexicon::winLayoutUpdateFunc( NameKeyType key, TableIndex index )
-	{ return (WindowLayoutUpdateFunc)findFunction( key, index ); }
+	{ return findFunction( key, index ).get<WindowLayoutUpdateFunc>(); }
 inline WindowLayoutShutdownFunc FunctionLexicon::winLayoutShutdownFunc( NameKeyType key, TableIndex index )
-	{ return (WindowLayoutShutdownFunc)findFunction( key, index ); }
+	{ return findFunction( key, index ).get<WindowLayoutShutdownFunc>(); }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // EXTERNALS 
@@ -151,4 +133,3 @@ inline WindowLayoutShutdownFunc FunctionLexicon::winLayoutShutdownFunc( NameKeyT
 extern FunctionLexicon *TheFunctionLexicon;  ///< function dictionary external
 
 #endif // end __FUNCTIONLEXICON_H_
-

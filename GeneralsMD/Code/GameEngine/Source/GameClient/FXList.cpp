@@ -29,6 +29,8 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <strings.h>
+#include "Common/NativeSourceMath.h"
 
 #include "GameClient/FXList.h"
 
@@ -71,7 +73,7 @@ static void adjustVector(Coord3D *vec, const Matrix3D* mtx)
 		vectmp.X = vec->x;
 		vectmp.Y = vec->y;
 		vectmp.Z = vec->z;
-		vectmp = mtx->Rotate_Vector(vectmp);
+		vectmp = nativeSourceRotateVector(*mtx, vectmp);
 		vec->x = vectmp.X;
 		vec->y = vectmp.Y;
 		vec->z = vectmp.Z;
@@ -191,7 +193,7 @@ public:
 			Vector3 pos( primary->x, primary->y, primary->z );
 			Vector3 dir( secondary->x - primary->x, secondary->y - primary->y, secondary->z - primary->z );
 			dir.Normalize(); //This is fantastically crucial for calling buildTransformMatrix!!!!!
-			tracerMtx.buildTransformMatrix( pos, dir );
+			nativeSourceBuildTransformMatrix(tracerMtx,  pos, dir );
 			tracer->setTransformMatrix( &tracerMtx );
 			tracer->setPosition(primary);
 
@@ -848,7 +850,7 @@ FXListStore::~FXListStore()
 //-------------------------------------------------------------------------------------------------
 const FXList *FXListStore::findFXList(const char* name) const
 {
-	if (stricmp(name, "None") == 0)
+	if (strcasecmp(name, "None") == 0)
 		return NULL;
 
   FXListMap::const_iterator it = m_fxmap.find(NAMEKEY(name));

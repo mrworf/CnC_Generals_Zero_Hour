@@ -91,7 +91,7 @@ namespace rts
 		T sum(std::vector<T>& vecOfValues )
 	{
 		T retVal = 0;
-		std::vector<T>::iterator it;
+		typename std::vector<T>::iterator it;
 		for (it = vecOfValues.begin(); it != vecOfValues.end(); ++it) {
 			retVal += (*it);
 		}
@@ -2235,7 +2235,8 @@ Bool ScriptConditions::evaluateSkirmishSuppliesWithinDistancePerimeter(Parameter
 
 	Real maxValue = 0;
 	for (Object *them = iter->first(); them; them = iter->next()) {
-		static const NameKeyType key_warehouseUpdate = NAMEKEY("SupplyWarehouseDockUpdate");
+		static const StaticNameKey nativeCached_key_warehouseUpdate("SupplyWarehouseDockUpdate");
+		const NameKeyType key_warehouseUpdate = nativeCached_key_warehouseUpdate.key();
 		SupplyWarehouseDockUpdate *warehouseModule = (SupplyWarehouseDockUpdate*) them->findUpdateModule( key_warehouseUpdate );
 		if (!warehouseModule) {
 			continue;
@@ -2988,5 +2989,3 @@ Bool ScriptConditions::evaluateCondition( Condition *pCondition )
 		
 	}
 }
-
-

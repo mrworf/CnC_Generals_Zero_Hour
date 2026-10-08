@@ -20,6 +20,14 @@ NativeDataBacking::NativeDataBacking(const std::string& path) {
     descriptor=candidate;length=std::uint64_t(info.st_size);
 }
 NativeDataBacking::~NativeDataBacking(){if(descriptor>=0)::close(descriptor);}
+NativeDataBacking::NativeDataBacking(int candidate, AdmittedDescriptor) {
+    struct stat info{};
+    const int flags=candidate>=0 ? ::fcntl(candidate,F_GETFL) : -1;
+    if(flags<0 || (flags&O_ACCMODE)!=O_RDONLY || ::fstat(candidate,&info)!=0 ||
+       !S_ISREG(info.st_mode) || info.st_size<0 || std::uint64_t(info.st_size)>INT32_MAX)
+        throw ERROR_BAD_ARG;
+    descriptor=candidate;length=std::uint64_t(info.st_size);
+}
 Int NativeDataBacking::readAt(void* data,Int bytes,std::uint64_t offset) const {
     if(bytes<0 || (bytes && !data) || offset>length || std::uint64_t(bytes)>length-offset)return -1;
     Int done=0;

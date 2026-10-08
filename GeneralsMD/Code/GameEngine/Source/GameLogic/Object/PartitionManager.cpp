@@ -48,6 +48,9 @@
 //         Includes                                                      
 //-----------------------------------------------------------------------------
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <climits>
+#include <algorithm>
+#include "Common/GlobalData.h"
 
 #include "Common/ActionManager.h"
 #include "Common/DiscreteCircle.h"
@@ -72,6 +75,15 @@
 #include "GameLogic/Module/ContainModule.h"
 #include "GameLogic/Module/StealthUpdate.h"
 #include "GameLogic/PartitionManager.h"
+#include "Common/NativeCellSpan.h"
+void hLineAddLooker(Int x1, Int x2, Int y, void* userData);
+void hLineRemoveLooker(Int x1, Int x2, Int y, void* userData);
+void hLineAddShrouder(Int x1, Int x2, Int y, void* userData);
+void hLineRemoveShrouder(Int x1, Int x2, Int y, void* userData);
+void hLineAddThreat(Int x1, Int x2, Int y, void* userData);
+void hLineRemoveThreat(Int x1, Int x2, Int y, void* userData);
+void hLineAddValue(Int x1, Int x2, Int y, void* userData);
+void hLineRemoveValue(Int x1, Int x2, Int y, void* userData);
 #include "GameLogic/PolygonTrigger.h"
 #include "GameLogic/Squad.h"
 #include "GameLogic/GhostObject.h"
@@ -85,7 +97,7 @@
 #endif
 
 #ifdef PM_CACHE_TERRAIN_HEIGHT
-#include "common/mapobject.h"
+#include "Common/MapObject.h"
 #endif
 
 #ifdef DUMP_PERF_STATS
@@ -1273,7 +1285,7 @@ void PartitionCell::addLooker(Int playerIndex)
 {
 	CellShroudStatus oldShroud = getShroudStatusForPlayer( playerIndex );
 	// The decreasing Algorithm: A 1 will go straight to -1, otherwise it just gets decremented
-	m_shroudLevel[playerIndex].m_currentShroud = min( m_shroudLevel[playerIndex].m_currentShroud - 1, -1 );
+	m_shroudLevel[playerIndex].m_currentShroud = std::min( m_shroudLevel[playerIndex].m_currentShroud - 1, -1 );
 
 	CellShroudStatus newShroud = getShroudStatusForPlayer( playerIndex );
 
@@ -1305,7 +1317,7 @@ void PartitionCell::removeLooker(Int playerIndex)
 	CellShroudStatus oldShroud = getShroudStatusForPlayer( playerIndex );
 	// the increasing Algorithm: a -1 goes up to min(1,activeLevel), otherwise it just gets incremented
 	if( m_shroudLevel[playerIndex].m_currentShroud == -1 )
-		m_shroudLevel[playerIndex].m_currentShroud = min( m_shroudLevel[playerIndex].m_activeShroudLevel, (Short)1 );
+		m_shroudLevel[playerIndex].m_currentShroud = std::min( m_shroudLevel[playerIndex].m_activeShroudLevel, (Short)1 );
 	else
 	{
 		DEBUG_ASSERTCRASH( m_shroudLevel[playerIndex].m_currentShroud < 0, ("Someone is RemoveLooker-ing on a cell that is not looked at.  This will make a permanent shroud blob.") );
@@ -1746,7 +1758,7 @@ void PartitionData::addSubPixToCoverage(PartitionCell *cell)
 		// see if we already have a coi for this cell.
 		CellAndObjectIntersection *coi = m_coiArray;
 		CellAndObjectIntersection *coiToUse = NULL;
-		for (Int i = __min(m_coiInUseCount,m_coiArrayCount); i; --i, ++coi)
+		for (Int i = std::min(m_coiInUseCount,m_coiArrayCount); i; --i, ++coi)
 		{
 			if (coi->getCell() == cell)
 			{
@@ -3984,7 +3996,7 @@ void PartitionManager::doShroudReveal(Real centerX, Real centerY, Real radius, P
 		const Player *currentPlayer = ThePlayerList->getNthPlayer( currentIndex );
 		if( BitTest( playerMask, currentPlayer->getPlayerMask() ) )
 		{
-			circle.drawCircle(hLineAddLooker, (void*)currentIndex);
+			circle.drawCircle(hLineAddLooker, &currentIndex);
 		}
 	}
 }
@@ -4049,7 +4061,7 @@ void PartitionManager::undoShroudReveal(Real centerX, Real centerY, Real radius,
 		const Player *currentPlayer = ThePlayerList->getNthPlayer( currentIndex );
 		if( BitTest( playerMask, currentPlayer->getPlayerMask() ) )
 		{
-			circle.drawCircle(hLineRemoveLooker, (void*)currentIndex);
+			circle.drawCircle(hLineRemoveLooker, &currentIndex);
 		}
 	}
 }
@@ -4088,7 +4100,7 @@ void PartitionManager::doShroudCover(Real centerX, Real centerY, Real radius, Pl
 		const Player *currentPlayer = ThePlayerList->getNthPlayer( currentIndex );
 		if( BitTest( playerMask, currentPlayer->getPlayerMask() ) )
 		{
-			circle.drawCircle(hLineAddShrouder, (void*)currentIndex);
+			circle.drawCircle(hLineAddShrouder, &currentIndex);
 		}
 	}
 }
@@ -4110,7 +4122,7 @@ void PartitionManager::undoShroudCover(Real centerX, Real centerY, Real radius, 
 		const Player *currentPlayer = ThePlayerList->getNthPlayer( currentIndex );
 		if( BitTest( playerMask, currentPlayer->getPlayerMask() ) )
 		{
-			circle.drawCircle(hLineRemoveShrouder, (void*)currentIndex);
+			circle.drawCircle(hLineRemoveShrouder, &currentIndex);
 		}
 	}
 }
@@ -4127,7 +4139,7 @@ void PartitionManager::doThreatAffect( Real centerX, Real centerY, Real radius, 
 	if (cellRadius < 1) 
 		cellRadius = 1;
 
-	Real fCellRadius = INT_TO_REAL(cellRadius + 1);
+	Real fCellRadius = static_cast<Real>(static_cast<std::int64_t>(cellRadius) + 1);
 
 	DiscreteCircle circle(cellCenterX, cellCenterY, cellRadius);
 
@@ -4160,7 +4172,7 @@ void PartitionManager::undoThreatAffect( Real centerX, Real centerY, Real radius
 	if (cellRadius < 1) 
 		cellRadius = 1;
 
-	Real fCellRadius = INT_TO_REAL(cellRadius + 1);
+	Real fCellRadius = static_cast<Real>(static_cast<std::int64_t>(cellRadius) + 1);
 
 	DiscreteCircle circle(cellCenterX, cellCenterY, cellRadius);
 
@@ -4193,7 +4205,7 @@ void PartitionManager::doValueAffect( Real centerX, Real centerY, Real radius, U
 	if (cellRadius < 1) 
 		cellRadius = 1;
 
-	Real fCellRadius = INT_TO_REAL(cellRadius + 1);
+	Real fCellRadius = static_cast<Real>(static_cast<std::int64_t>(cellRadius) + 1);
 
 	DiscreteCircle circle(cellCenterX, cellCenterY, cellRadius);
 
@@ -4226,7 +4238,7 @@ void PartitionManager::undoValueAffect( Real centerX, Real centerY, Real radius,
 	if (cellRadius < 1) 
 		cellRadius = 1;
 
-	Real fCellRadius = INT_TO_REAL(cellRadius + 1);
+	Real fCellRadius = static_cast<Real>(static_cast<std::int64_t>(cellRadius) + 1);
 
 	DiscreteCircle circle(cellCenterX, cellCenterY, cellRadius);
 
@@ -5598,89 +5610,84 @@ static int cellValueProc(PartitionCell* cell, void* userData)
 }
 
 // -----------------------------------------------------------------------------
-static void hLineAddLooker(Int x1, Int x2, Int y, void *playerIndexVoid)
+void hLineAddLooker(Int x1, Int x2, Int y, void *playerIndexVoid)
 {
-	if (y < 0 || y >= ThePartitionManager->m_cellCountY || x1 >= ThePartitionManager->m_cellCountX || x2 < 0)
-		return;
+	NativeCellSpan span;
+	if (!nativeCellSpan(ThePartitionManager->m_cellCountX, ThePartitionManager->m_cellCountY,
+		x1, x2, y, span)) return;
 
-	Int playerIndex = (Int)(playerIndexVoid);
+	const Int playerIndex = *static_cast<const Int*>(playerIndexVoid);
 
-	PartitionCell* cell = &ThePartitionManager->m_cells[y * ThePartitionManager->m_cellCountX + x1];	// yes, this could be invalid. we'll skip the bad ones.
-	for (Int x = x1; x <= x2; ++x, ++cell)
+	PartitionCell* cell = &ThePartitionManager->m_cells[span.offset];
+	for (Int x = span.first; x <= span.last; ++x, ++cell)
 	{
-		if (x < 0 || x >= ThePartitionManager->m_cellCountX)
-			continue;
 		cell->addLooker(playerIndex);
 	}
 }
 
 // -----------------------------------------------------------------------------
-static void hLineRemoveLooker(Int x1, Int x2, Int y, void *playerIndexVoid)
+void hLineRemoveLooker(Int x1, Int x2, Int y, void *playerIndexVoid)
 {
-	if (y < 0 || y >= ThePartitionManager->m_cellCountY || x1 >= ThePartitionManager->m_cellCountX || x2 < 0)
-		return;
+	NativeCellSpan span;
+	if (!nativeCellSpan(ThePartitionManager->m_cellCountX, ThePartitionManager->m_cellCountY,
+		x1, x2, y, span)) return;
 
-	Int playerIndex = (Int)(playerIndexVoid);
+	const Int playerIndex = *static_cast<const Int*>(playerIndexVoid);
 
-	PartitionCell* cell = &ThePartitionManager->m_cells[y * ThePartitionManager->m_cellCountX + x1];	// yes, this could be invalid. we'll skip the bad ones.
-	for (Int x = x1; x <= x2; ++x, ++cell)
+	PartitionCell* cell = &ThePartitionManager->m_cells[span.offset];
+	for (Int x = span.first; x <= span.last; ++x, ++cell)
 	{
-		if (x < 0 || x >= ThePartitionManager->m_cellCountX)
-			continue;
 		cell->removeLooker(playerIndex);
 	}
 }
 
 // -----------------------------------------------------------------------------
-static void hLineAddShrouder(Int x1, Int x2, Int y, void *playerIndexVoid)
+void hLineAddShrouder(Int x1, Int x2, Int y, void *playerIndexVoid)
 {
-	if (y < 0 || y >= ThePartitionManager->m_cellCountY || x1 >= ThePartitionManager->m_cellCountX || x2 < 0)
-		return;
+	NativeCellSpan span;
+	if (!nativeCellSpan(ThePartitionManager->m_cellCountX, ThePartitionManager->m_cellCountY,
+		x1, x2, y, span)) return;
 
-	Int playerIndex = (Int)(playerIndexVoid);
+	const Int playerIndex = *static_cast<const Int*>(playerIndexVoid);
 
-	PartitionCell* cell = &ThePartitionManager->m_cells[y * ThePartitionManager->m_cellCountX + x1];	// yes, this could be invalid. we'll skip the bad ones.
-	for (Int x = x1; x <= x2; ++x, ++cell)
+	PartitionCell* cell = &ThePartitionManager->m_cells[span.offset];
+	for (Int x = span.first; x <= span.last; ++x, ++cell)
 	{
-		if (x < 0 || x >= ThePartitionManager->m_cellCountX)
-			continue;
 		cell->addShrouder( playerIndex );
 	}
 }
 
 // -----------------------------------------------------------------------------
-static void hLineRemoveShrouder(Int x1, Int x2, Int y, void *playerIndexVoid)
+void hLineRemoveShrouder(Int x1, Int x2, Int y, void *playerIndexVoid)
 {
-	if (y < 0 || y >= ThePartitionManager->m_cellCountY || x1 >= ThePartitionManager->m_cellCountX || x2 < 0)
-		return;
+	NativeCellSpan span;
+	if (!nativeCellSpan(ThePartitionManager->m_cellCountX, ThePartitionManager->m_cellCountY,
+		x1, x2, y, span)) return;
 
-	Int playerIndex = (Int)(playerIndexVoid);
+	const Int playerIndex = *static_cast<const Int*>(playerIndexVoid);
 
-	PartitionCell* cell = &ThePartitionManager->m_cells[y * ThePartitionManager->m_cellCountX + x1];	// yes, this could be invalid. we'll skip the bad ones.
-	for (Int x = x1; x <= x2; ++x, ++cell)
+	PartitionCell* cell = &ThePartitionManager->m_cells[span.offset];
+	for (Int x = span.first; x <= span.last; ++x, ++cell)
 	{
-		if (x < 0 || x >= ThePartitionManager->m_cellCountX)
-			continue;
 		cell->removeShrouder( playerIndex );
 	}
 }
 
 // -----------------------------------------------------------------------------
-static void hLineAddThreat(Int x1, Int x2, Int y, void *threatValueParms)
+void hLineAddThreat(Int x1, Int x2, Int y, void *threatValueParms)
 {
-	if (y < 0 || y >= ThePartitionManager->m_cellCountY || x1 >= ThePartitionManager->m_cellCountX || x2 < 0)
-		return;
+	NativeCellSpan span;
+	if (!nativeCellSpan(ThePartitionManager->m_cellCountX, ThePartitionManager->m_cellCountY,
+		x1, x2, y, span)) return;
 
 	ThreatValueParms *parms = (ThreatValueParms*)threatValueParms;
 
 	Real distance;
 	Real mulVal = 1.0f;
 
-	PartitionCell* cell = &ThePartitionManager->m_cells[y * ThePartitionManager->m_cellCountX + x1];	// yes, this could be invalid. we'll skip the bad ones.
-	for (Int x = x1; x <= x2; ++x, ++cell)
+	PartitionCell* cell = &ThePartitionManager->m_cells[span.offset];
+	for (Int x = span.first; x <= span.last; ++x, ++cell)
 	{
-		if (x < 0 || x >= ThePartitionManager->m_cellCountX)
-			continue;
 
 		distance = sqrt( pow(x - parms->xCenter, 2) + pow(y - parms->yCenter, 2) );
 		mulVal = 1 - distance / parms->radius;
@@ -5694,21 +5701,20 @@ static void hLineAddThreat(Int x1, Int x2, Int y, void *threatValueParms)
 }
 
 // -----------------------------------------------------------------------------
-static void hLineRemoveThreat(Int x1, Int x2, Int y, void *threatValueParms)
+void hLineRemoveThreat(Int x1, Int x2, Int y, void *threatValueParms)
 {
-	if (y < 0 || y >= ThePartitionManager->m_cellCountY || x1 >= ThePartitionManager->m_cellCountX || x2 < 0)
-		return;
+	NativeCellSpan span;
+	if (!nativeCellSpan(ThePartitionManager->m_cellCountX, ThePartitionManager->m_cellCountY,
+		x1, x2, y, span)) return;
 
 	ThreatValueParms *parms = (ThreatValueParms*)threatValueParms;
 
 	Real distance;
 	Real mulVal = 1.0f;
 
-	PartitionCell* cell = &ThePartitionManager->m_cells[y * ThePartitionManager->m_cellCountX + x1];	// yes, this could be invalid. we'll skip the bad ones.
-	for (Int x = x1; x <= x2; ++x, ++cell)
+	PartitionCell* cell = &ThePartitionManager->m_cells[span.offset];
+	for (Int x = span.first; x <= span.last; ++x, ++cell)
 	{
-		if (x < 0 || x >= ThePartitionManager->m_cellCountX)
-			continue;
 
 		distance = sqrt( pow(x - parms->xCenter, 2) + pow(y - parms->yCenter, 2) );
 		mulVal = 1 - distance / parms->radius;
@@ -5722,21 +5728,20 @@ static void hLineRemoveThreat(Int x1, Int x2, Int y, void *threatValueParms)
 }
 
 // -----------------------------------------------------------------------------
-static void hLineAddValue(Int x1, Int x2, Int y, void *threatValueParms)
+void hLineAddValue(Int x1, Int x2, Int y, void *threatValueParms)
 {
-	if (y < 0 || y >= ThePartitionManager->m_cellCountY || x1 >= ThePartitionManager->m_cellCountX || x2 < 0)
-		return;
+	NativeCellSpan span;
+	if (!nativeCellSpan(ThePartitionManager->m_cellCountX, ThePartitionManager->m_cellCountY,
+		x1, x2, y, span)) return;
 
 	ThreatValueParms *parms = (ThreatValueParms*)threatValueParms;
 
 	Real distance;
 	Real mulVal = 1.0f;
 
-	PartitionCell* cell = &ThePartitionManager->m_cells[y * ThePartitionManager->m_cellCountX + x1];	// yes, this could be invalid. we'll skip the bad ones.
-	for (Int x = x1; x <= x2; ++x, ++cell)
+	PartitionCell* cell = &ThePartitionManager->m_cells[span.offset];
+	for (Int x = span.first; x <= span.last; ++x, ++cell)
 	{
-		if (x < 0 || x >= ThePartitionManager->m_cellCountX)
-			continue;
 
 		distance = sqrt( pow(x - parms->xCenter, 2) + pow(y - parms->yCenter, 2) );
 		mulVal = 1 - distance / parms->radius;
@@ -5750,21 +5755,20 @@ static void hLineAddValue(Int x1, Int x2, Int y, void *threatValueParms)
 }
 
 // -----------------------------------------------------------------------------
-static void hLineRemoveValue(Int x1, Int x2, Int y, void *threatValueParms)
+void hLineRemoveValue(Int x1, Int x2, Int y, void *threatValueParms)
 {
-	if (y < 0 || y >= ThePartitionManager->m_cellCountY || x1 >= ThePartitionManager->m_cellCountX || x2 < 0)
-		return;
+	NativeCellSpan span;
+	if (!nativeCellSpan(ThePartitionManager->m_cellCountX, ThePartitionManager->m_cellCountY,
+		x1, x2, y, span)) return;
 
 	ThreatValueParms *parms = (ThreatValueParms*)threatValueParms;
 
 	Real distance;
 	Real mulVal = 1.0f;
 
-	PartitionCell* cell = &ThePartitionManager->m_cells[y * ThePartitionManager->m_cellCountX + x1];	// yes, this could be invalid. we'll skip the bad ones.
-	for (Int x = x1; x <= x2; ++x, ++cell)
+	PartitionCell* cell = &ThePartitionManager->m_cells[span.offset];
+	for (Int x = span.first; x <= span.last; ++x, ++cell)
 	{
-		if (x < 0 || x >= ThePartitionManager->m_cellCountX)
-			continue;
 
 		distance = sqrt( pow(x - parms->xCenter, 2) + pow(y - parms->yCenter, 2) );
 		mulVal = 1 - distance / parms->radius;
@@ -5850,4 +5854,3 @@ SightingInfo::~SightingInfo()
 {
 
 }  // end loadPostProcess
-

@@ -85,7 +85,7 @@
 #include "GameClient/GameText.h"
 #include "GameClient/GUICallbacks.h"
 #include "GameClient/InGameUI.h"
-#include "GameClient/Controlbar.h"
+#include "GameClient/ControlBar.h"
 #include "GameClient/DisplayStringManager.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Module/OverchargeBehavior.h"
@@ -624,7 +624,8 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 	if(win)
 	{
 
-		static NameKeyType winNamekey	= TheNameKeyGenerator->nameToKey( AsciiString( "ControlBar.wnd:BackgroundMarker" ) );
+		static const StaticNameKey nativeCached_winNamekey("ControlBar.wnd:BackgroundMarker");
+		NameKeyType winNamekey = nativeCached_winNamekey.key();
 		static ICoord2D lastOffset = { 0, 0 };
 
 		ICoord2D size, newSize, pos;
