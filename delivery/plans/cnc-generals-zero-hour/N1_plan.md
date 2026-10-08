@@ -19,6 +19,17 @@ go/no-go failure, not permission to add a patch or approximate the visual result
 2. [Capacity and lifecycle](N1_plan_slice_02.md): source-derived scene workloads,
    repeated replacement/cancel/resize/shutdown and complete frozen acceptance.
 
+Slice 01 completed in `22c25e7be6c7613a119d8a2becec6da71b1c25d4`.
+Slice 02 resumes this same milestone transaction under milestone delivery;
+no replacement implementation plan or archived provider is introduced.
+
+Slice 02 completed with the commit introducing
+`evidence/qa/N1-stock-renderer-capacity-lifecycle.md`: all seven suitability gates
+passed, final normal/GCC-sanitizer/Clang-sanitizer CTest matrices 18/18 each.
+The new stock renderer is accepted for integration; whole-game acceptance remains
+later milestones. The introducing commit is the slice's non-self-referential
+commit reference. Original source and all dependencies remain unchanged.
+
 ## Validation
 
 Source inspection precedes implementation. Check mandatory API contracts against

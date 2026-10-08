@@ -30,7 +30,7 @@
       "id": "N1",
       "title": "Stock renderer suitability",
       "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N1-stock-renderer-suitability.md",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": [
         "N0"
       ],
@@ -38,9 +38,9 @@
         "R02",
         "R06"
       ],
-      "completed_at": null,
-      "evidence": "evidence/qa/N1-stock-renderer-semantics.md",
-      "notes": "Slice 01 semantics passed; source-derived capacity/lifecycle gate remains pending."
+      "completed_at": "2026-10-07",
+      "evidence": "evidence/qa/N1-stock-renderer-capacity-lifecycle.md",
+      "notes": "All seven gates passed; normal and GCC/Clang owner sanitizer matrices 18/18. Slice 01: 22c25e7b; slice 02: commit introducing capacity/lifecycle evidence. Dependencies pristine."
     },
     {
       "id": "N2",

@@ -97,3 +97,42 @@ decoder or all asset formats. Engine decoding and format dispatch remain N2/N3.
 
 See `evidence/qa/N1-stock-renderer-semantics.md` for current configuration and
 acceptance boundaries. None of these tests load proprietary assets.
+
+## Renderer loading and capacity findings
+
+Fresh source census and formulas are in `docs/renderer-workload-census.md`.
+Flat terrain represents independent 16-cell regions; grouping their GPU storage
+does not require changing source data or simulation. Stock bgfx's 4096 handle
+tables are shared; 32-layer texture arrays and grouped vertex/index storage
+preserve tile-selected layers and ranges while reducing 4096 handles to 128.
+The generated mixed-frame test physically samples every terrain layer.
+
+Public `createTexture2D` with initial memory creates immutable storage. Providers
+that update must create with null memory then initialize all declared layers.
+`tests/renderer/lifecycle.cpp` covers initialization, changed texture content,
+dynamic vertex/index updates, canceled candidates and corrected retry. The
+upload holder ledger owns plain C++ allocation in these generated fixtures; the
+original pooled process is not linked and needs its own allocation boundary in N2.
+
+`bgfx::touch` is a public dummy submit and consumes a render item, including a
+clear-only view. Draw-budget admission must include touches alongside visible
+draws; copies have their separate budget. Public `numDrawCallsPeak` is requested
+demand before drops. Use distinct completed pixel witnesses to prove accepted
+draws instead of treating the peak alone as completion. Rotating per-frame
+statistics must not be attributed to an unrelated queued owner.
+
+`bgfx::SwapChain` now needs an explicit color format for the native-window path;
+its default Count is neutral, not an inferred host surface format. Fresh SDL3
+fixtures select BGRA8/D24S8, Vulkan-capable windows and public native properties.
+Three contexts/four resize sizes physically ran on the host Wayland environment.
+Keep one balanced public SDL Vulkan-loader acquisition around every window/device
+generation, then unload before SDL_Quit. Implicit per-window loader ownership
+produced a 224-byte residual in both compiler sanitizers, including a native
+initialization-only control. Loader diagnostics mapped return addresses into
+unloaded NVIDIA driver mappings. Explicit SDL_Vulkan_LoadLibrary/UnloadLibrary
+service ownership passes both controls with all leak checks enabled, without
+pinning driver libraries or modifying SDL/bgfx. The source contract is documented
+in installed `SDL3/SDL_vulkan.h`; the exercised owner is `lifecycle.cpp::Video`.
+Final normal-host, GCC sanitizer and Clang sanitizer matrices passed 18/18 each.
+See `evidence/qa/N1-stock-renderer-capacity-lifecycle.md` for attributable
+qualification acceptance and explicit original-integration limits.

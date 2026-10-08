@@ -5,8 +5,10 @@ the renderer/toolchain only. Run from the repository root on x86-64 Linux.
 
 Prerequisites: Git, Python3, Make, GCC/G++, Clang/Clang++, CMake, Ninja, pkg-config,
 X11/OpenGL/Wayland and Vulkan development packages, a Vulkan driver and Khronos
-validation layer. SDL3, FreeType, Fontconfig, zlib and FFmpeg development packages
-are required for later original-process integration. No private asset is needed.
+validation layer. SDL3 development files are required for the native-window
+qualification; this host uses SDL3 3.4.16. FreeType, Fontconfig, zlib and FFmpeg
+development packages are required for later original-process integration.
+No private asset is needed.
 
 ```sh
 python3 tools/upstream_bgfx.py acquire
@@ -51,9 +53,24 @@ processes. Fresh normal-host init-only and full controls reproduced the same
 enabled. There are no suppressions or library edits. The normal functional build
 leaves the host bus environment unchanged. See the evidence report for limits.
 
-CTest registers initialization, nine independent semantic families and a combined
-same-process repeat. Per-family logs are in the build directory. Failures,
+CTest registers 18 cases: provenance, initialization, nine semantic families,
+a combined same-process repeat, and six capacity/lifecycle families. The latter
+are `capacity`, `draw-boundary`, `uploads`, `lifetimes`, `presentation-init`, and
+`presentation`. Per-family logs are in the build directory. Failures,
 sanitizer diagnostics, absent enabled validation, or missing completion markers
-are errors. All graphics cases are generated, offscreen and asset-free.
-Neither these semantics checks nor successful bootstrap alone accepts N1 or the
-game: source-derived capacity and scene lifecycle qualification is still required.
+are errors. All graphics cases are generated and asset-free. Most are offscreen;
+the two presentation families open native Vulkan windows, with the full case
+rendering and resizing three successive windows. A visible brief test window is
+expected. Run these cases from a live supported X11/Wayland session.
+
+The SDL video and Vulkan-loader services outlive all windows/devices and are
+explicitly released at the end. Use balanced public
+`SDL_Vulkan_LoadLibrary`/`SDL_Vulkan_UnloadLibrary` ownership, rather than implicit
+load/unload per window. On this NVIDIA host the implicit loader lifetime caused
+a 224-byte sanitizer residual even in the initialization-only control; balanced
+service ownership passes both compiler sanitizer controls without suppressions.
+No driver library is pinned, and no dependency source is modified.
+
+See `docs/renderer-workload-census.md` for formulas and bounded workload claims.
+Renderer qualification does not prove original-game visual parity or whole-map
+capacity; integrated scene demand and original ownership remain later gates.
