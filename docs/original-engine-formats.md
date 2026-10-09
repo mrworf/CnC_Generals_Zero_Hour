@@ -2586,3 +2586,57 @@ providers were not silently replaced. All probes are link-only, never execution
 or startup acceptance. Remaining sanitized roots include native IME/warning/
 terrain/network-status and diplomacy briefing/Toggling paths; inspect them as
 coupled providers rather than replacing them with constants.
+
+### Original map-preview placement and slot visibility
+
+The skirmish menu's placement/update entry points are now compiled separately in
+`GameClient/GUI/NativeMapPreview.cpp`; LAN, online map selection and LoadScreen
+still call the same source entry points. The old single-control helper was only
+an internal caller of that removed block, not an independent external provider.
+Actual window/image/gadget/text calls remain; no visual or GUI success stub is
+introduced. Nonnull GUI execution and parent/window/image retirement still await
+the complete native factory/GUI providers, not acceptance from CPU fixtures.
+
+`NativeMapPreviewLayout` prepares an entire candidate before publishing arrays/
+marker lists. It retains original Real aspect-fit intermediates/truncation,
+letterboxing, inverted Y, integer half-marker offsets, push_front supply/tech
+ordering and ordered start collision adjustment. Integer conversion/addition,
+dimensions, extents, counts and used coordinates are checked together. Collision
+coordinates are consistently local, and rectangles use each preceding control's
+actual size rather than comparing local positions to screen positions. Sparse
+controls and selected-position targets are checked; absent source-slot controls
+do not suppress labels on an existing destination. Duplicate destinations retain
+the original last-slot-wins order. Missing candidate waypoints reject, not assert
+and continue. No metadata/window/image pointer is retained by the CPU owner.
+
+The ineffective previous-metadata cache is removed. Missing maps/views withdraw
+marker state; fallback UnknownMap is looked up in the current collection every
+time, eliminating the old cross-collection static pointer. Actual window userdata
+still borrows MapCache backing and must be withdrawn before its parent retires.
+CPU admission is transactional, but GUI callbacks may be fallible after it: do
+not claim complete message rollback or physical presentation acceptance.
+
+The original copy helper had raw source/file/buffer acquisitions that leaked on
+multiple exits, and native VFS correctly refuses its WRITE open. The replacement
+`NativeMapPreviewStorage.cpp::nativeCopyMapPreview` guards the actual File view,
+streams bounded blocks into captured NativeUserStorage, and commits one complete
+file. Any prepublication allocation/I/O/input failure preserves the prior file
+and removes temporary backing; failed directory sync after rename retains a
+complete published file. Source assets are never write targets. Preview names
+require a .map suffix; prerequisites are checked before deriving paths, and
+portable separators encode into the local preview leaf. Failed optional copying
+does not publish Image metadata for nonexistent backing. Generated opaque-byte
+copy tests do not validate TGA decoding or physical preview drawing.
+
+`GameSlotVisibility.cpp` retains the three original scalar apparent-value getters
+and the shared source alliance predicate; translated names remain in
+GameInfoPresentation.cpp. The alliance predicate checks borrowed game membership,
+local index and local slot before dereferencing (the original fetched slot -1
+before rejecting it). Local/team/observer visibility and hidden original opponent
+random selections are unchanged. Missing publications/identity are not allies.
+MultiplayerSettings singleton publication is independent of INI metadata; all
+metadata/default providers remain compiled and instrumentation is unchanged.
+
+Evidence: `tests/original/map_preview.cpp`, `evidence/qa/N2-map-preview-checkpoint.md`.
+This is actual shared CPU/storage/slot ownership, not complete original startup,
+world simulation, GUI rendering, or whole map-preview image lifecycle acceptance.

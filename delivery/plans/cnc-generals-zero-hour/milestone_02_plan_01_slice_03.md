@@ -1269,3 +1269,63 @@ Full215, actual GameEngine startup/scenario/statistics sampler and physical GUI
 remain pending. Continue map/diplomacy/capability/IME/warnings/terrain/hosting roots
 as coherent providers from documented source, not no-op definitions.
 See `evidence/qa/N2-lexicon-checkpoint.md`; N2/slice03 remain in progress.
+
+Continue from adf48b9e (clean worktree) with the complete map-preview placement
+cohort inside this same slice. Extract the original five placement/update entry
+points and marker publication from the GameSpy-dependent skirmish menu, retaining
+real window/gadget/text calls, not success stubs. Introduce a transactional CPU
+layout owner used by those entry points: original aspect-fit float/truncation,
+inverted map Y, half-marker offsets, reverse supply/tech list order, ordered
+start-spot collision adjustment, sparse controls, and source actual/apparent
+GameSlot selection. Validate dimensions/extents/counts/finite coordinate and
+integer conversion/addition together. Use common local coordinates for collision
+tests; reject malformed candidates before marker/position publication. An absent
+map/window hides available controls and withdraws marker state. Look up fallback
+images in the current collection on each call, never cache borrowed pointers.
+
+Inspect preview-copy acquisitions and failures together. Guard source/destination
+File handles and bounded buffers; validate preview prerequisites and .map suffix
+before deriving names. Optional preview failure must fall back without publishing
+an Image backed by an unsuccessful copy. No retail mutation or distributed cache.
+GUI callbacks may still be fallible after CPU admission; do not claim atomic GUI
+message rollback or complete window/image lifecycle acceptance from CPU tests.
+
+Own only map placement/layout source/header, existing MapUtil/menu consumers,
+explicit CMake source/test registration, generated fixtures, this plan, formats/
+graph docs, QA and delivery state. Test actual layout/MapMetaData/GameInfo owners:
+source-derived valid geometry, sparse/collision/slot selection, malformed/extreme
+inputs, candidate failure/retry and exact terminal, repeated complete ownership.
+Build configured targets and run focused then related matrix under normal GCC,
+GCC and Clang sanitizers. Real GUI bindings remain compiled rather than falsely
+accepted. The attempted null-view fixture retains the real GameWindow callback
+closure under intact sanitizer instrumentation and cannot link before the
+remaining original GUI providers; retain that as an explicit diagnostic limit,
+not a reason to stub them or disable instrumentation. CPU/storage/slot tests
+must remain separate from this still-incomplete GUI execution gate. Retain
+link-only startup diagnostics; do not execute them. N2 still requires actual
+native factories, startup and compiler-matching original simulation.
+
+Link-map evidence refines the visibility dependency: calling the actual apparent
+start-position method currently admits PlayerTemplate metadata from the combined
+GameInfoPresentation TU, then Money/Player/audio/GUI. Separate the original
+scalar visibility/alliance predicates from translated template-name presentation,
+without suppressing any instrumentation or changing random/team/observer policy.
+The shared original alliance helper must check borrowed game/local-slot identity
+before dereferencing: it currently calls getConstSlot(-1) before rejecting an
+absent local slot. Withdraw MultiplayerSettings publication from its metadata
+TU independently. Add actual random-start visibility and missing/local/team/
+observer tests; constructor fixtures must supply actual required FileSystem and
+GlobalData services rather than bypass their preconditions.
+
+Map-preview checkpoint: all configured targets build all3; focused7/7 PASS
+1.09s/8.26s/4.82s, related89/89 PASS18.41s/79.78s/71.98s with sanitizer/leak
+checks intact. Exact layout5/copy-allocation21/copy-storage7 terminals across
+three repeated complete owners all3. Actual scalar visibility/local-alliance
+tests preserve source random/team/observer behavior and validate borrowed
+identity before slot lookup. No actual GUI lifecycle/render claim. Never-executed
+startup probes still fail4/6/13; full222 not run. Canonical570
+SHAfc26d016de1d840104ac96874c0c52eeb0031cf4ccfcd22d1e8352aac08ba9e8;
+toolchain577 SHAb06a60d3ed6c94fd552914d84e6d78d1d45d61d39173005cc5b9bd323fbf05a7.
+See `evidence/qa/N2-map-preview-checkpoint.md`. This coherent provider checkpoint
+does not close N2/slice03; continue diplomacy/capability/native boundaries, then
+actual factories and original startup/world/scenario acceptance.

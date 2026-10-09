@@ -58,42 +58,6 @@
 
 
 // Actual original provider split; no alternate implementation.
-static Int getSlotIndex(const GameSlot *slot)
-{
-	for (Int i=0; i<MAX_SLOTS; ++i)
-	{
-		if (TheGameInfo->getConstSlot(i) == slot)
-			return i;
-	}
-	return -1;
-}
-
-static Bool isSlotLocalAlly(const GameSlot *slot)
-{
-	Int slotIndex = getSlotIndex(slot);
-	Int localIndex = TheGameInfo->getLocalSlotNum();
-	const GameSlot *localSlot = TheGameInfo->getConstSlot(localIndex);
-
-	// if either doesn't exist, not an ally
-	if (slotIndex < 0 || localIndex < 0)
-		return FALSE;
-
-	// if slot is us, ally
-	if (slotIndex == localIndex)
-		return TRUE;
-
-	// if slot is same team as us, ally
-	if (slot->getTeamNumber() == localSlot->getTeamNumber() && slot->getTeamNumber() >= 0)
-		return TRUE;
-
-	// if we're an observer, we see all
-	if (localSlot->getOriginalPlayerTemplate() == PLAYERTEMPLATE_OBSERVER)
-		return TRUE;
-
-	// nope
-	return FALSE;
-}
-
 UnicodeString GameSlot::getApparentPlayerTemplateDisplayName( void ) const
 {
 	if (TheMultiplayerSettings && TheMultiplayerSettings->showRandomPlayerTemplate() &&
@@ -113,41 +77,6 @@ UnicodeString GameSlot::getApparentPlayerTemplateDisplayName( void ) const
 	}
 	return ThePlayerTemplateStore->getNthPlayerTemplate(m_playerTemplate)->getDisplayName();
 }
-
-Int GameSlot::getApparentPlayerTemplate( void ) const
-{
-	if (TheMultiplayerSettings && TheMultiplayerSettings->showRandomPlayerTemplate() &&
-		!isSlotLocalAlly(this))
-	{
-		return m_origPlayerTemplate;
-	}
-	return m_playerTemplate;
-}
-
-Int GameSlot::getApparentColor( void ) const
-{
-	if (TheMultiplayerSettings && m_origPlayerTemplate == PLAYERTEMPLATE_OBSERVER)
-		return TheMultiplayerSettings->getColor(PLAYERTEMPLATE_OBSERVER)->getColor();
-
-	if (TheMultiplayerSettings && TheMultiplayerSettings->showRandomColor() &&
-		!isSlotLocalAlly(this))
-	{
-		return m_origColor;
-	}
-	return m_color;
-}
-
-Int GameSlot::getApparentStartPos( void ) const
-{
-	if (TheMultiplayerSettings && TheMultiplayerSettings->showRandomStartPos() &&
-		!isSlotLocalAlly(this))
-	{
-		return m_origStartPos;
-	}
-	return m_startPos;
-}
-
-
 
 Bool GameInfo::isSkirmish(void)
 {

@@ -38,6 +38,8 @@
 #include <array>
 
 class NativeGameInfoTransaction;
+class GameSlot;
+Bool isSlotLocalAlly(const GameSlot*);
 
 enum SlotState
 {

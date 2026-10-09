@@ -746,3 +746,16 @@ borrowed singleton publication does not load menus. Default GUI still requires
 its real providers. Startup link diagnostics fail6/8/15 and default-GUI212/214/222
 (normal/GCCsan/Clangsan), all never executed. These distinct scopes are not startup
 acceptance. See `evidence/qa/N2-lexicon-checkpoint.md`.
+
+Original map placement/update now binds explicit logical-client providers outside
+the GameSpy-dependent menu. Transactional CPU geometry/marker state and protected
+preview copying share source behavior with the original GUI entry points; their
+generated fixtures execute actual MapMetaData/GameInfo/scalar visibility and
+File/NativeUserStorage owners, not a replacement simulation. Scalar GameSlot
+visibility/alliance is separate from translated template-name metadata; borrowed
+MultiplayerSettings publication no longer loads its metadata as a side effect.
+All original translated-name and GUI providers remain required. Sanitizers are
+unchanged. Startup probes still fail4/6/13 (normal/GCCsan/Clangsan); the GCCsan
+closure explicitly exposes missing DisconnectMenu/LANAPI RTTI. Counts are not
+startup acceptance. Physical/non-null GUI bindings and complete factories remain
+pending. See `evidence/qa/N2-map-preview-checkpoint.md`.

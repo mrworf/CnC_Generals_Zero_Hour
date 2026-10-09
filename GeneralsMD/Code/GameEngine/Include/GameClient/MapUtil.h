@@ -38,6 +38,7 @@
 #include "Common/STLTypedefs.h"
 
 class GameWindow;
+class GameInfo;
 class AsciiString;
 struct Coord3D;
 struct FileInfo;
@@ -144,6 +145,10 @@ private:
 
 extern MapCache *TheMapCache;
 extern TechAndSupplyImages TheSupplyAndTechImageLocations;
+void positionAdditionalImages(MapMetaData*,GameWindow*,Bool force);
+void positionStartSpots(AsciiString,GameWindow*[],GameWindow*);
+void positionStartSpots(GameInfo*,GameWindow*[],GameWindow*);
+void updateMapStartSpots(GameInfo*,GameWindow*[],Bool loadScreen);
 Int populateMapListbox( GameWindow *listbox, Bool useSystemMaps, Bool isMultiplayer, AsciiString mapToSelect = AsciiString::TheEmptyString );		/// Read a list of maps from the run directory and fill in the listbox.  Return the selected index
 Int populateMapListboxNoReset( GameWindow *listbox, Bool useSystemMaps, Bool isMultiplayer, AsciiString mapToSelect = AsciiString::TheEmptyString );		/// Read a list of maps from the run directory and fill in the listbox.  Return the selected index
 Bool isValidMap( AsciiString mapName, Bool isMultiplayer );						/// Validate a map

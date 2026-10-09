@@ -61,6 +61,7 @@
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/GadgetListBox.h"
 #include "GameClient/MapUtil.h"
+#include "GameClient/NativeMapPreviewLayout.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/FPUControl.h"
 #include "GameNetwork/GameInfo.h"
@@ -881,64 +882,15 @@ Bool isOfficialMap( AsciiString mapName )
 	return FALSE;
 }
 
-
 // ------------------------------------------------------------------------------------------------
 /** Embed the pristine map into the xfer stream */
 // ------------------------------------------------------------------------------------------------
-static void copyFromBigToDir( const AsciiString& infile, const AsciiString& outfile )
-{
-	// open the map file
-
-	File *file = TheFileSystem->openFile( infile.str(), File::READ | File::BINARY );
-	if( file == NULL )
-	{
-		DEBUG_CRASH(( "copyFromBigToDir - Error opening source file '%s'\n", infile.str() ));
-		throw SC_INVALID_DATA;
-	} // end if
-
-	// how big is the map file
-	Int fileSize = file->seek( 0, File::END );
-
-
-	// rewind to beginning of file
-	file->seek( 0, File::START );
-
-	// allocate buffer big enough to hold the entire map file
-	char *buffer = NEW char[ fileSize ];
-	if( buffer == NULL )
-	{
-		DEBUG_CRASH(( "copyFromBigToDir - Unable to allocate buffer for file '%s'\n", infile.str() ));
-		throw SC_INVALID_DATA;
-	} // end if
-
-	// copy the file to the buffer
-	if( file->read( buffer, fileSize ) < fileSize )
-	{
-		DEBUG_CRASH(( "copyFromBigToDir - Error reading from file '%s'\n", infile.str() ));
-		throw SC_INVALID_DATA;
-	} // end if
-	// close the BIG file
-	file->close();
-	
-	File *filenew = TheFileSystem->openFile( outfile.str(), File::WRITE | File::CREATE | File::BINARY );
-	
-	if( !filenew || filenew->write(buffer, fileSize) < fileSize)
-	{
-		DEBUG_CRASH(( "copyFromBigToDir - Error writing to file '%s'\n", outfile.str() ));
-		throw SC_INVALID_DATA;
-	} // end if
-
-	filenew->close();
-
-	// delete the buffer
-	delete [] buffer;
-} // end embedPristineMap
-
 Image *getMapPreviewImage( AsciiString mapName )
 {
-	if(!TheGlobalData)
+	if(!TheGlobalData || !TheGameState || !TheMappedImageCollection || !TheFileSystem || !TheNativeUserStorage)
 		return NULL;
-	DEBUG_LOG(("%s Map Name \n", mapName.str()));
+	if(mapName.getLength()<4 || AsciiString(mapName.str()+mapName.getLength()-4).compareNoCase(".map")!=0)
+		return NULL;
 	AsciiString tgaName = mapName;
 	AsciiString name;
 	AsciiString tempName;
@@ -958,7 +910,7 @@ Image *getMapPreviewImage( AsciiString mapName )
 	for(Int i = 0; i < portableName.getLength(); ++i)
 	{
 		char c = portableName.getCharAt(i);
-		if (c == '\\' || c == ':')
+		if (c == '\\' || c == '/' || c == ':')
 			tempName.concat('_');
 		else
 			tempName.concat(c);
@@ -979,14 +931,14 @@ Image *getMapPreviewImage( AsciiString mapName )
 			return NULL;	
 		AsciiString mapPreviewDir;
 		mapPreviewDir.format(MAP_PREVIEW_DIR_PATH, TheGlobalData->getPath_UserData().str());
-		TheFileSystem->createDirectory(mapPreviewDir);
-
 		mapPreviewDir.concat(name);
 
 		Bool success = false;
 		try
 		{
-			copyFromBigToDir(tgaName, mapPreviewDir);	
+			const auto relative=TheNativeUserStorage->relativeDataPath(mapPreviewDir.str());
+			if(!relative)return NULL;
+			nativeCopyMapPreview(*TheFileSystem,*TheNativeUserStorage,tgaName,*relative);
 			success = true;
 		} 
 		catch (...)
@@ -1112,40 +1064,3 @@ Bool parseMapPreviewChunk(DataChunkInput &file, DataChunkInfo *info, void *userD
 */
 	return FALSE;
 }
-
-void findDrawPositions( Int startX, Int startY, Int width, Int height, Region3D extent,
-															 ICoord2D *ul, ICoord2D *lr )
-{
-
-	Real ratioWidth;
-	Real ratioHeight;
-	Coord2D radar;
-	ratioWidth = extent.width()/(width * 1.0f);
-	ratioHeight = extent.height()/(height* 1.0f);
-	
-	if( ratioWidth >= ratioHeight)
-	{
-		radar.x = extent.width() / ratioWidth;
-		radar.y = extent.height()/ ratioWidth;
-		ul->x = 0;
-		ul->y = (height - radar.y) / 2.0f;
-		lr->x = radar.x;
-		lr->y = height - ul->y;
-	}
-	else
-	{
-		radar.x = extent.width() / ratioHeight;
-		radar.y = extent.height()/ ratioHeight;
-		ul->x = (width - radar.x ) / 2.0f;
-		ul->y = 0;
-		lr->x = width - ul->x;
-		lr->y = radar.y;
-	}
-
-	// make them pixel positions
-	ul->x += startX;
-	ul->y += startY;
-	lr->x += startX;
-	lr->y += startY;
-
-}  // end findDrawPositions

@@ -26,7 +26,7 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "scope": "remaining",
-  "resume_point": "N2 same plan01/slice03 continues from45b61c12 with actual FunctionLexicon captured table ownership. Generic lookup/publication separated from byte-locked original GUI tables/default constructor; explicit empty headless metadata does not claim GUI readiness. Actual init/reset/typed dispatch/device-first policy tested with three complete owner/name/publication lifetimes and every warm1/cold9/device9 fault/retry terminal. All configured targets build all3; related67/67 PASS16.23s/65.25s/62.24s; final strengthened six-family fixture PASS0.23s/1.33s/0.96s. Final canonical563 SHA6944a8345a61aa61246ce149590bfdc8dcbe84807f4bf2a221261d98ffbb6871; toolchain570 SHAf2be068e779cf985d6eaad2cf3b7c75edab676b1d896aec0f385bbe159a2446b. QA records earlier related identities/delta honestly. Startup link fails6/8/15; default GUI still fails212/214/222, all never executed. Full215 not run. Continue documented whole map/diplomacy/capability/IME/warning/terrain/hosting providers, then native factory/CPU world/startup/scenario. N2/slice03 incomplete; no agents/vendor/assets/recovery changes.",
+  "resume_point": "N2 same plan01/slice03 continues from adf48b9e with original map-preview placement, transactional shared CPU layout, protected streamed preview copying and actual scalar GameSlot visibility/alliance. All configured builds pass all3; focused7 PASS1.09s/8.26s/4.82s and related89 PASS18.41s/79.78s/71.98s. Complete repeated owners and every layout5/copy allocation21/copy storage7 fault/retry terminal pass. Frozen canonical570 SHAfc26d016de1d840104ac96874c0c52eeb0031cf4ccfcd22d1e8352aac08ba9e8; toolchain577 SHAb06a60d3ed6c94fd552914d84e6d78d1d45d61d39173005cc5b9bd323fbf05a7. Startup link-only probes fail4/6/13; none executed. GUI/window/image lifetime binding remains compiled, not accepted. Full222 not run. Continue diplomacy/capability/native boundaries, actual factories/startup/world/scenario; N2/slice03 incomplete. No agents/vendor/retail/recovery changes.",
   "transaction_parent": "11295c4feb535f97978b8335632440fccae82794",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -36,28 +36,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-runtime-support.md",
+  "evidence": "evidence/qa/N2-map-preview-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Implement the original map/diplomacy startup lifecycle cohort; native capability/LOD/IME/warning/terrain/hosting providers and actual headless factories/startup/world/scenario remain. Preserve all GUI tables/default providers; no fake callback or benchmark admission.",
+  "next": "Implement complete original diplomacy/capability/native boundary cohort, including missing native IME/warnings/terrain/hosting and DisconnectMenu/LANAPI source RTTI. Then actual headless factories/startup/world/compiler-matching scenario. Do not substitute stubs or confuse CPU map/slot fixtures with GUI lifecycle acceptance.",
   "implementation_checkpoint": {
-    "label": "native-original-lexicon-owner",
-    "reason": "Actual captured-metadata FunctionLexicon init/reset/dispatch/ownership; default GUI providers remain required, not process acceptance",
-    "prior_commit": "45b61c12",
-    "canonical_source_sha256": "6944a8345a61aa61246ce149590bfdc8dcbe84807f4bf2a221261d98ffbb6871",
-    "toolchain_inclusive_sha256": "f2be068e779cf985d6eaad2cf3b7c75edab676b1d896aec0f385bbe159a2446b",
-    "configured_suite_tests": 215,
-    "related_suite_tests_passed": 67,
+    "label": "native-original-map-preview",
+    "reason": "Original map placement bindings plus actual shared CPU/storage/slot visibility ownership; original GUI/default factories and startup/scenario remain pending",
+    "prior_commit": "adf48b9e",
+    "canonical_source_sha256": "fc26d016de1d840104ac96874c0c52eeb0031cf4ccfcd22d1e8352aac08ba9e8",
+    "toolchain_inclusive_sha256": "b06a60d3ed6c94fd552914d84e6d78d1d45d61d39173005cc5b9bd323fbf05a7",
+    "configured_suite_tests": 222,
+    "related_suite_tests_passed": 89,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; related67 and final focused6 PASS all3 with exact source identities in QA",
+    "full_current_matrix": "not run; focused7 and related89 PASS all3 on frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-lexicon-checkpoint.md"
+    "evidence": "evidence/qa/N2-map-preview-checkpoint.md"
   }
 }

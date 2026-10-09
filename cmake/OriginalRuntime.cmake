@@ -157,6 +157,7 @@ add_library(original_bootstrap STATIC
   "${ZH_CODE}/GameEngine/Source/Common/Recorder.cpp"
   "${ZH_CODE}/GameEngine/Source/GameNetwork/GameInfo.cpp"
   "${ZH_CODE}/GameEngine/Source/GameNetwork/GameInfoPresentation.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameNetwork/GameSlotVisibility.cpp"
   "${ZH_CODE}/GameEngine/Source/GameNetwork/GameInfoSerialization.cpp"
   "${ZH_CODE}/GameEngine/Source/GameNetwork/GameMessageParser.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/SubsystemInterface.cpp"
@@ -274,6 +275,9 @@ list(TRANSFORM ZH_ORIGINAL_LOGICAL_CLIENT PREPEND "${ZH_CODE}/GameEngine/Source/
 add_library(original_logical_client STATIC ${ZH_ORIGINAL_LOGICAL_CLIENT})
 target_sources(original_logical_client PRIVATE
   "${ZH_CODE}/GameEngine/Source/Common/INI/INIMappedImage.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeMapPreviewLayout.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeMapPreviewStorage.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/GUI/NativeMapPreview.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/GUI/NativeScoreScreenState.cpp")
 target_link_libraries(original_logical_client PUBLIC original_runtime_common)
 target_include_directories(original_logical_client PRIVATE
@@ -424,6 +428,15 @@ foreach(family IN ITEMS functional negative fault-override fault-overwrite fault
 endforeach()
 add_executable(original_function_registry_fixture tests/original/function_registry.cpp tests/original/AllocationFault.cpp)
 add_executable(original_lexicon_fixture tests/original/lexicon.cpp tests/original/AllocationFault.cpp)
+add_executable(original_map_preview_fixture tests/original/map_preview.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_map_preview_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_map_preview_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS geometry negative labels layout-faults copy copy-allocation-faults copy-storage-faults)
+  add_test(NAME original_map_preview_${family} COMMAND original_map_preview_fixture "${family}")
+  set_tests_properties(original_map_preview_${family} PROPERTIES LABELS "original;runtime;map" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 target_link_libraries(original_lexicon_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_lexicon_fixture PRIVATE -Wl,--gc-sections)
