@@ -171,12 +171,6 @@ WaterRenderObjClass *TheWaterRenderObj=NULL; ///<global water rendering object
 
 #define SAFE_RELEASE(p)      { if(p) { (p)->Release(); (p)=NULL; } }
 
-void doSkyBoxSet(Bool startDraw)
-{
-	if (TheWritableGlobalData)
-		TheWritableGlobalData->m_drawSkyBox = startDraw;
-}
-
 
 #define DONUT_SIDES	90
 #define INNER_RADIUS 200.0f

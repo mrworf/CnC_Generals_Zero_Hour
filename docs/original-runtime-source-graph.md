@@ -772,3 +772,15 @@ animation fixture is EXCLUDE_FROM_ALL, not CTest or startup evidence: constructo
 fault/retry terminal8 passes normal/GCCsan, but Clang's native closure does not
 link yet. Registered windows and nonnull diplomacy GUI retirement remain pending.
 See `evidence/qa/N2-diplomacy-checkpoint.md`.
+
+Shared script visual state now has explicit common entry points and a required
+TerrainVisual operation rather than dependencies on obsolete W3D free symbols.
+GameClient uses its required device IME factory; source W3D forwarding remains,
+not native input acceptance. Native warnings bind actual GameText/owned UTF-8 to
+public SDL3, with explicit failure and affirmative-only source music retry.
+The excluded GameSpy-only in-game hosting diagnostic is removed rather than
+replaced with fake online status. All configured targets build all3. Current
+root and pending animation link diagnostics fail the same one native capability
+symbol on all3; none is executed. Actual skybox state and warning ownership pass
+focused checks all3, but dialogs, nonnull terrain/IME/GUI and full startup remain
+pending. See `evidence/qa/N2-native-boundaries-checkpoint.md`.

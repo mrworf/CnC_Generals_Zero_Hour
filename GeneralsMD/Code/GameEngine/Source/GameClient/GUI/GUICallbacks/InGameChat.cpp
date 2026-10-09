@@ -157,11 +157,6 @@ Bool IsInGameChatActive() {
 }
 
 // Slash commands -------------------------------------------------------------------------
-extern "C" {
-int getQR2HostingStatus(void);
-}
-extern int isThreadHosting;
-
 Bool handleInGameSlashCommands(UnicodeString uText)
 {
 	AsciiString message;
@@ -177,13 +172,7 @@ Bool handleInGameSlashCommands(UnicodeString uText)
 	remainder.nextToken(&token);
 	token.toLower();
 
-	if (token == "host")
-	{
-		UnicodeString s;
-		s.format(L"Hosting qr2:%d thread:%d", getQR2HostingStatus(), isThreadHosting);
-		TheInGameUI->message(s);
-		return TRUE; // was a slash command
-	}
+	// The obsolete GameSpy hosting diagnostic is not a native chat command.
 
 	return FALSE; // not a slash command
 }

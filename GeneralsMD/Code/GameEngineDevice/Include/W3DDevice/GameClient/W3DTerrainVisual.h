@@ -63,6 +63,7 @@ public:
 	virtual void update( void );
 	
 	virtual Bool load( AsciiString filename );
+  void oversizeTerrain(Int amount) override;
 
 	void getTerrainColorAt( Real x, Real y, RGBColor *pColor );
 

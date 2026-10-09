@@ -26,7 +26,7 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 diplomacy checkpoint: all configured builds pass all3; related96 PASS18.40s/81.12s/72.95s, briefing fault/retry terminals append6/clear2/attach2 all3. Actual animation constructor terminal8 passes normal/GCCsan; Clang fixture link and nonnull GUI remain pending. Root link-only probes fail1/1/7, never executed; full229 not run. N2/slice03 incomplete. See evidence/qa/N2-diplomacy-checkpoint.md.",
+  "resume_point": "N2 plan01/slice03 native-presentation checkpoint: all configured builds pass all3; focused5 PASS1.79s/3.38s/3.16s and related100 PASS20.37s/84.56s/75.68s. Warning fault/retry terminal6 passes complete repeated owners and whole metadata retirement all3; actual skybox state and typed device contracts pass. Physical dialogs/localized button labels, nonnull terrain/IME/GUI remain pending. Root/animation link-only diagnostics expose only native capability all3, never executed; full232 not run. Continue coupled hardware metadata/LOD/absent benchmark/protected report, actual factories/startup/world/scenario. N2/slice03 incomplete.",
   "transaction_parent": "11295c4feb535f97978b8335632440fccae82794",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -36,28 +36,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-diplomacy-checkpoint.md",
+  "evidence": "evidence/qa/N2-native-boundaries-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Complete native capability/IME/warning/terrain/hosting providers, pending Clang animation ownership and real GUI lifecycle; then actual headless factories/startup/world/compiler-matching scenario. No fake providers or vendor changes.",
+  "next": "Resolve native capability admission together with source LOD preset units, absent historical benchmark, wide RAM and protected optional report; then pending Clang animation ownership, actual device factories and original startup/world/compiler-matching scenario. Do not synthesize scores or renderer capabilities.",
   "implementation_checkpoint": {
-    "label": "native-original-diplomacy",
-    "reason": "Actual retained briefing/DisconnectMenu ownership and compiled guarded diplomacy lifecycle; native factories and original startup/scenario remain pending",
-    "prior_commit": "55f239840b6e9353bd18baa25dbea5c30a013ccb",
-    "canonical_source_sha256": "2708266f4b85f6f4b064553838f6ea48bd8bf46842c84970246f8b4ed4ffb944",
-    "toolchain_inclusive_sha256": "b4387b4ab456b68ea44f14e1dfe6704bcac10d44dfd5a2add340862984f621b4",
-    "configured_suite_tests": 229,
-    "related_suite_tests_passed": 96,
+    "label": "native-original-presentation-boundaries",
+    "reason": "Actual warning/catalog ownership and shared skybox state; required input/terrain device contracts separate common startup from Windows/GameSpy implementations; original factories/startup remain pending",
+    "prior_commit": "a549a581",
+    "canonical_source_sha256": "34365252fb700503f4c0f27b628dca7b109e4743afcea6cf0ca1bb5018827282",
+    "toolchain_inclusive_sha256": "347362305fbaa19f115d0d0361510ea2081f72fa4fd0a1a0af4b75f1096d3b23",
+    "configured_suite_tests": 232,
+    "related_suite_tests_passed": 100,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; related96 including focused7 PASS all3 on frozen source",
+    "full_current_matrix": "not run; focused5 and related100 PASS all3 on frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-diplomacy-checkpoint.md"
+    "evidence": "evidence/qa/N2-native-boundaries-checkpoint.md"
   }
 }

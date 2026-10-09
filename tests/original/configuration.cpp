@@ -15,6 +15,7 @@
 #include "Common/Registry.h"
 #include "Common/NameKeyGenerator.h"
 #include "GameClient/GameText.h"
+#include "GameClient/NativePresentationState.h"
 #include "GameClient/GlobalLanguage.h"
 #include "GameClient/Image.h"
 #include "GameClient/OnlineChatColors.h"
@@ -560,6 +561,16 @@ void webpage() {
     configureGameTextLanguage(prior);
 }
 void functional() {
+    // Exercise the actual shared skybox entry point against an original owner,
+    // including borrowed withdrawal, not a renderer or fake GlobalData.
+    {
+        Context context;context.start();auto* root=TheWritableGlobalData;
+        doSkyBoxSet(FALSE);require(!root->m_drawSkyBox,"source skybox disable");
+        doSkyBoxSet(TRUE);require(root->m_drawSkyBox,"source skybox enable");
+        TheWritableGlobalData=nullptr;doSkyBoxSet(FALSE);
+        require(root->m_drawSkyBox,"absent publication cannot mutate retired source state");
+        TheWritableGlobalData=root;
+    }
     Context context;context.start();GlobalData* root=context.original;
     require(root->m_xResolution==640 && root->m_yResolution==480 && !root->m_useTrees &&
             root->m_defaultStartingCash.countMoney()==12345 && damage(*root)==1.25f,"original complete GameData dispatch");

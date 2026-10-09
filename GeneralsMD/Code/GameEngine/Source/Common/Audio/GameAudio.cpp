@@ -57,6 +57,8 @@
 #include "Common/GameSounds.h"
 #include "Common/MiscAudio.h"
 #include "Common/OSDisplay.h"
+#include "Common/NativeWarningBox.h"
+#include <cstdio>
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "Common/UserPreferences.h"
@@ -253,7 +255,9 @@ void AudioManager::init()
 			{
 				// Display the warning.
 				
-				if (OSDisplayWarningBox("GUI:InsertCDPrompt", "GUI:InsertCDMessage", OSDBT_OK | OSDBT_CANCEL, OSDOF_SYSTEMMODAL | OSDOF_EXCLAMATIONICON) == OSDBT_CANCEL) {
+        const auto response=OSDisplayWarningBox("GUI:InsertCDPrompt", "GUI:InsertCDMessage", OSDBT_OK | OSDBT_CANCEL, OSDOF_SYSTEMMODAL | OSDOF_EXCLAMATIONICON);
+        if(response==OSDBT_ERROR)std::fputs("Zero Hour: music data unavailable; warning dialog could not be displayed.\n",stderr);
+				if (!nativeMusicRetryRequested(response)) {
 					//TheGameEngine->setQuitting(TRUE);  // Can't do this to WorldBuilder
 					break;
 				}

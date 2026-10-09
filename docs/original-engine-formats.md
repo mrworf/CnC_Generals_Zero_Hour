@@ -2693,3 +2693,68 @@ acceptance are supplied by this type correction.
 
 Evidence: `tests/original/diplomacy.cpp`, pending `tests/original/animation.cpp`,
 and `evidence/qa/N2-diplomacy-checkpoint.md`. N2/slice03 remains incomplete.
+
+### Native presentation boundary cohort and remaining capability gate
+
+`NativePresentationState.cpp` owns the actual source script entry points.
+doSkyBoxSet retains the exact optional WritableGlobalData field mutation, now
+outside the Windows water renderer. oversizeTheTerrain dispatches through a
+required TerrainVisual::oversizeTerrain operation; the original W3D device
+forwards to its original terrain object. No object means no visual operation,
+as in the original free provider, not accepted output. The base renderer's
+oversize method is intentionally empty for flat terrain; concrete HeightMap/
+FlatHeightMap overrides remain source authority. Nonnull native dispatch and
+physical terrain acceptance are pending, not inferred from type checks.
+
+GameClient now obtains optional IME ownership through its device factory, using
+the same NativeServiceOwners transaction. Interactive implementations must
+supply real input; a headless device may explicitly omit presentation/input.
+The original W3D device calls the original CreateIMEManagerInterface factory.
+No fake IME object or fabricated composition/candidate state is introduced.
+This removes the Windows input factory from the common startup closure without
+accepting native text/IME event transport. Actual GameClient device startup
+still remains required. The in-game /host command only reported excluded GameSpy
+QR2/thread state; its obsolete diagnostic branch is removed, not implemented as
+zero-valued pretend hosting. LAN/game chat paths remain source code.
+
+`NativeWarningBox.cpp` resolves actual GameText labels and owns complete UTF-8
+request backing until synchronous borrowed presentation returns or throws.
+AsciiString::translate only truncates wchar_t to bytes in the original source;
+it is not a Unicode encoder and is deliberately not used for SDL dialog text.
+Invalid/missing prerequisites or labels reject before output. Defined source
+buttons are checked both before presentation and on return. Public SDL3
+SDL_ShowMessageBox is the actual backend, on SDL's main thread; unavailable
+output returns OSDBT_ERROR, never invented OK. Modal scope is platform-managed;
+original icon constants overlap, so error/stop precedence is explicit. Physical
+dialogs, parent-window integration and non-English button labels remain N4 gates;
+the current adapter uses English OK/Cancel labels, not locale acceptance.
+
+The source audio loop previously retried indefinitely if the warning backend
+returned ERROR instead of CANCEL. Retry now requires actual OK; cancellation
+remains source behavior and unavailable output emits a fixed redacted diagnostic.
+This does not claim missing music is loaded; GameEngine's separate actual music
+readiness check remains. No raw localized text, selector or SDL error is logged.
+
+Generated real CSF/GameText fixtures verify non-ASCII/supplementary characters,
+captured request lifetimes, missing/invalid inputs, callback failure with retry,
+all six allocation prefixes and exact terminal across three complete owners.
+Original file pools warm during retired discovery; live owner baselines then
+hold exactly and whole memory-manager shutdown retires warmed metadata exactly.
+The observer does not display a dialog or substitute a gameplay service. Actual
+skybox state executes against GlobalData, including withdrawn publication;
+typed device contracts and original source forwarding are also checked.
+
+Startup diagnostics now expose only testMinimumRequirements on all three
+toolchains. The absent Benchmark implementation is not replaced by fabricated
+scores. Its header defines int RunBenchmark(int,char*[],float* float,float* integer,
+float* memory); the project lists nbench0.c, nbench1.c, emfloat.c,
+misc.c and sysspec.c, absent here. Native metadata, source LOD preset comparisons,
+wide RAM representation, explicit benchmark capability/error and protected
+optional report output must be resolved together before actual startup.
+`GameLODManager::init` ignores capability returns, writes Benchmark.txt into CWD
+and maps unknown CPU via these legacy score units. `findStaticLODLevel` also
+ignores capability failure and maps unknown chipset to TNT2; neither fallback
+proves native renderer capability. N2's actual startup/scenario remains pending.
+
+Evidence: `evidence/qa/N2-native-boundaries-checkpoint.md`,
+`tests/original/native_warning.cpp`, actual configuration and source-contract tests.

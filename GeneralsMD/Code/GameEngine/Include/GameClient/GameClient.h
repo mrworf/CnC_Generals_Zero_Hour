@@ -57,6 +57,7 @@ class VideoPlayerInterface;
 struct RayEffectData;
 class ChallengeGenerals;
 class SnowManager;
+class IMEManagerInterface;
 
 /// Function pointers for use by GameClient callback functions.
 typedef void (*GameClientFuncPtr)( Drawable *draw, void *userData ); 
@@ -191,6 +192,7 @@ private:
 	virtual FontLibrary *createFontLibrary( void ) = 0;					///< Factory for font library
 	virtual DisplayStringManager *createDisplayStringManager( void ) = 0;  ///< Factory for display strings
 	virtual VideoPlayerInterface *createVideoPlayer( void ) = 0;///< Factory for video device
+  virtual IMEManagerInterface* createIMEManager() = 0; ///< Device input; headless may explicitly omit it.
 	virtual TerrainVisual *createTerrainVisual( void ) = 0;			///< Factory for TerrainVisual classes. Called during init to instance TheTerrainVisual
 	virtual Keyboard *createKeyboard( void ) = 0;								///< factory for the keyboard
 	virtual Mouse *createMouse( void ) = 0;											///< factory for the mouse

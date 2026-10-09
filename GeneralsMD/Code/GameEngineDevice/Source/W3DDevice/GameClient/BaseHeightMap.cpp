@@ -130,14 +130,6 @@ void DoTrees(RenderInfoClass & rinfo)
 	}
 }
 
-void oversizeTheTerrain(Int amount)
-{
-	if (TheTerrainRenderObject) 
-	{
-		TheTerrainRenderObject->oversizeTerrain(amount);
-	}
-}
-
 #define DEFAULT_MAX_BATCH_SHORELINE_TILES		512	//maximum number of terrain tiles rendered per call (must fit in one VB)
 #define DEFAULT_MAX_MAP_SHORELINE_TILES		4096	//default size of array allocated to hold all map shoreline tiles.
 

@@ -95,7 +95,7 @@
 #endif
 
 // Kind of hacky, but we need to dance on the guts of the terrain.
-extern void oversizeTheTerrain(Int amount);
+#include "GameClient/NativePresentationState.h"
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -3773,7 +3773,6 @@ void ScriptActions::doBlackWhiteMode(Bool startBWMode, Int frames)
 //-------------------------------------------------------------------------------------------------
 /** doSkyBox */
 //-------------------------------------------------------------------------------------------------
-extern void doSkyBoxSet(Bool startDraw);	//hack to avoid including globaldata here.
 
 void ScriptActions::doSkyBox(Bool startDraw)
 {

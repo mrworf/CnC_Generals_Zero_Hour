@@ -339,7 +339,7 @@ void GameClient::init( void )
 	}  // end if
 
 	// create the IME manager
-	m_serviceOwners.create(TheIMEManager, [&] { return CreateIMEManagerInterface(); }, false);
+	m_serviceOwners.create(TheIMEManager, [&] { return createIMEManager(); }, false);
 	if ( TheIMEManager )
 	{
 		TheIMEManager->init();

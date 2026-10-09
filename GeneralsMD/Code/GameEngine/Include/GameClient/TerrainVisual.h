@@ -194,6 +194,7 @@ public:
 	virtual void update( void );
 
 	virtual Bool load( AsciiString filename );
+  virtual void oversizeTerrain(Int amount) = 0; ///< Source script operation, implemented by the device.
 
 	/// get color of texture on the terrain at location specified
 	virtual void getTerrainColorAt( Real x, Real y, RGBColor *pColor ) = 0;

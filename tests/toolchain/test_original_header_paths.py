@@ -42,7 +42,7 @@ class OriginalHeaderPaths(unittest.TestCase):
     def test_shared_startup_data_has_one_actual_provider(self):
         sources = sorted((CODE / "GameEngine/Source").rglob("*.cpp"))
         publications = {
-            "TheNetwork": "NetworkInterface", "TheLAN": "LANAPI",
+            "TheNetwork": "NetworkInterface", "TheLAN": "LANAPIInterface",
             "TheIMEManager": "IMEManagerInterface", "TheDisconnectMenu": "DisconnectMenu",
             "TheChallengeGameInfo": "SkirmishGameInfo", "TheSkirmishGameInfo": "SkirmishGameInfo",
         }
@@ -72,6 +72,25 @@ class OriginalHeaderPaths(unittest.TestCase):
             self.assertIsNotNone(match)
             body = re.sub(r'/\*.*?\*/|//[^\n]*', '', match[1], flags=re.S)
             self.assertEqual(hashlib.sha256(re.sub(r'\s+', '', body).encode()).hexdigest(), digest)
+
+    def test_native_presentation_contracts_are_real_source_boundaries(self):
+        source = CODE / "GameEngine/Source/GameClient/NativePresentationState.cpp"
+        body = source.read_text()
+        self.assertIn("TheTerrainVisual->oversizeTerrain(amount)", body)
+        self.assertIn("TheWritableGlobalData->m_drawSkyBox=startDraw", body)
+        for filename, symbol in (("BaseHeightMap.cpp", "oversizeTheTerrain"),
+                                 ("Water/W3DWater.cpp", "doSkyBoxSet")):
+            legacy = CODE / "GameEngineDevice/Source/W3DDevice/GameClient" / filename
+            self.assertNotRegex(legacy.read_text(), r'\bvoid\s+' + symbol + r'\s*\(')
+        client = (CODE / "GameEngine/Source/GameClient/GameClient.cpp").read_text()
+        self.assertIn("return createIMEManager();", client)
+        self.assertNotIn("CreateIMEManagerInterface()", client)
+        chat = (CODE / "GameEngine/Source/GameClient/GUI/GUICallbacks/InGameChat.cpp").read_text()
+        self.assertNotIn("getQR2HostingStatus", chat)
+        self.assertNotIn("isThreadHosting", chat)
+        warning = (CODE / "GameEngine/Source/Common/System/NativeWarningBox.cpp").read_text()
+        self.assertIn("SDL_ShowMessageBox", warning)
+        self.assertNotIn("SDL_GetError", warning)  # Never emit private backend diagnostics.
 
     def test_native_runtime_retained_source_graph(self):
         cmake = (REPO / "cmake/OriginalRuntime.cmake").read_text()

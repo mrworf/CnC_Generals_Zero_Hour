@@ -1308,3 +1308,7 @@ void W3DTerrainVisual::loadPostProcess( void )
 
 }  // end loadPostProcess
 
+void W3DTerrainVisual::oversizeTerrain(Int amount)
+{
+  if(TheTerrainRenderObject)TheTerrainRenderObject->oversizeTerrain(amount);
+}

@@ -1413,3 +1413,47 @@ and recovery archive remain untouched. All 18 original pending paths are owned
 by the cohort, not unrelated user changes. N2/slice03 remains incomplete.
 Continue native capability/IME/warning/terrain/hosting, then actual factories,
 startup/world/compiler-matching scenario. No synthetic providers or vendor edits.
+
+Resume froma549a581 with one coupled native-presentation boundary batch. Preserve
+the source skybox GlobalData mutation in a common provider and route terrain
+oversizing through a required TerrainVisual virtual operation, not a W3D free
+symbol or success stub. Original W3D device forwarding stays behavior-equivalent;
+future native/headless factories must implement their explicit visual contract.
+Move IME acquisition into GameClient's required device factory so a headless
+device can explicitly omit optional input, while an interactive device supplies
+real text/IME behavior. Do not create a fake IME object to satisfy RTTI.
+
+Implement the actual OS warning boundary through public SDL3 message-box APIs:
+localized text is captured into owned UTF-8, supported buttons/results are checked,
+backend failure is OSDBT_ERROR rather than invented confirmation. Test a captured
+synchronous presenter as request observation, not physical GUI acceptance. Reject
+invalid/missing prerequisites before callbacks. Preserve source audio cancellation,
+but stop its obsolete CD retry loop also on unavailable/error output with a fixed
+redacted diagnostic; never claim missing music became available. Remove obsolete
+GameSpy-only /host diagnostic dependencies from the in-game chat source; the
+excluded online menus remain excluded, LAN/game chat is not removed.
+
+Test actual shared state and generated real text ownership, every warning-owner
+allocation failure/retry and complete repeated retirement, plus compile-time
+factory contracts. Run normal/GCC/Clang focused and related checks on frozen source.
+Native dialog display, nonnull TerrainVisual and IME event transport remain N4/
+native-factory gates, not claims from observers. The absent historical benchmark
+implementation remains a separately documented capability/LOD admission task;
+do not synthesize scores, modern CPU classes or GPU acceptance to clear its root.
+Keep N2/slice03 incomplete and use the existing plan/evidence/state transaction.
+
+Native-presentation checkpoint froma549a581: all configured targets build all3;
+focused5 PASS1.79s/3.38s/3.16s and related100/100 PASS20.37s/84.56s/75.68s with
+intact sanitizer/leak checks. Actual warning/catalog allocation terminal6 and
+all failure/retry pairs pass three complete owners all3; whole memory-manager
+destruction retires warmed registry capacity exactly. Actual skybox GlobalData
+state and typed input/terrain contracts pass. Physical dialogs/localized button
+labels, nonnull terrain/IME/GUI remain pending; the English dialog buttons do
+not establish locale parity. Pending root/animation link diagnostics expose only
+native capability admission all3, never executed. Full232 not run. Canonical591
+SHA34365252fb700503f4c0f27b628dca7b109e4743afcea6cf0ca1bb5018827282;
+toolchain598 SHA347362305fbaa19f115d0d0361510ea2081f72fa4fd0a1a0af4b75f1096d3b23.
+See `evidence/qa/N2-native-boundaries-checkpoint.md`. Continue the coupled hardware
+metadata/LOD/absent historical benchmark/protected report task, then real factories
+and actual original startup/world/compiler-matching scenario. Do not fabricate
+legacy scores or renderer capability. N2/slice03 remains incomplete.
