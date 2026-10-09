@@ -157,10 +157,22 @@ NativeUserStorage::NativeUserStorage(NativeUserPaths paths,
 }
 NativeUserStorage::~NativeUserStorage() {m_assets->withdrawUserStorage(this);}
 void NativeUserStorage::validateRootOwnership() const {
+  validateRootOwnership(*m_assets);
+}
+void NativeUserStorage::validateRootOwnership(const FileSystem& assets) const {
   const auto data=prospectivePath(m_paths.data);
   const auto cache=prospectivePath(m_paths.cache);
-  if(!m_assets->admitsUserStorage(data) || !m_assets->admitsUserStorage(cache))
+  if(!assets.admitsUserStorage(data) || !assets.admitsUserStorage(cache))
     throw NativeStorageError();
+}
+void NativeUserStorage::validateWriteTarget(NativeUserArea area,std::string_view relative) const {
+  if(area!=NativeUserArea::Data && area!=NativeUserArea::Cache) throw NativeStorageError();
+  if(components(relative).empty()) throw NativeStorageError();
+  auto path=area==NativeUserArea::Data?m_paths.data:m_paths.cache;
+  if(path.empty()) throw NativeStorageError();
+  if(path.back()!='/') path+='/';
+  path+=relative;
+  if(!m_assets->admitsUserStorage(prospectivePath(std::move(path)))) throw NativeStorageError();
 }
 std::optional<std::string> NativeUserStorage::relativeDataPath(std::string_view absolute) const {
   validateAbsolute(m_paths.data);
@@ -277,6 +289,7 @@ NativeCommitResult NativeUserStorage::copy(NativeUserArea area,std::string_view 
   return output->commit();
 }
 bool NativeUserStorage::removeFile(NativeUserArea area,std::string_view relative) const {
+  validateWriteTarget(area,relative);
   const auto parts=components(relative);
   if(parts.empty()) throw NativeStorageError();
   const auto slash=relative.find_last_of('/');
@@ -335,6 +348,7 @@ int NativeUserStorage::openDirectory(NativeUserArea area,
 std::unique_ptr<NativeAtomicOutput>
 NativeUserStorage::beginWrite(NativeUserArea area,
                               std::string_view relative) const {
+  validateWriteTarget(area,relative);
   auto parts = components(relative);
   if (parts.empty())
     throw NativeStorageError();
@@ -349,7 +363,7 @@ NativeUserStorage::beginWrite(NativeUserArea area,
   Descriptor directory(openDirectory(area, parents, true));
   // Allocate before handing the directory into a fallible constructor.
   auto owner = std::unique_ptr<NativeAtomicOutput>(
-      new NativeAtomicOutput(directory.value, std::move(leaf), *m_io));
+      new NativeAtomicOutput(directory.value, std::move(leaf), *m_io,m_assets->m_outputLease));
   directory.release();
   return owner;
 }
@@ -437,8 +451,9 @@ bool NativeUserStorage::getFileInfo(NativeUserArea area,std::string_view relativ
   return true;
 }
 NativeAtomicOutput::NativeAtomicOutput(int directory, std::string target,
-                                       NativeStorageIO &io)
-    : m_directory(directory), m_target(std::move(target)), m_io(&io) {
+                                       NativeStorageIO &io,std::shared_ptr<const int> namespaceLease)
+    : m_directory(directory), m_target(std::move(target)), m_io(&io),
+      m_namespaceLease(std::move(namespaceLease)) {
   static std::atomic<std::uint64_t> sequence{0};
   for (unsigned attempt = 0; attempt < 64; ++attempt) {
     const auto number = sequence.fetch_add(1, std::memory_order_relaxed);

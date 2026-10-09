@@ -703,15 +703,22 @@ void allocationFaults() {
   write(storage, "accepted", "accepted");
   const auto target =
       std::filesystem::path("data/cnc-generals-zero-hour/accepted");
+  const auto run=[&] {
+    auto candidate=storage.beginWrite(NativeUserArea::Data,"accepted");
+    candidate->write("candidate",9);candidate->commit();
+  };
+  AllocationFault::arm(SIZE_MAX);
+  try {run();} catch(...) {AllocationFault::disarm();throw;}
+  const auto expected=AllocationFault::attempts();AllocationFault::disarm();
+  require(expected<128,"atomic independently calibrated manifest bound");
+  write(storage,"accepted","accepted");
   for (std::size_t ordinal = 0; ordinal < 128; ++ordinal) {
     const auto baseline = AllocationFault::live(),
                fds = std::size_t(descriptors());
     bool failed = false;
     AllocationFault::arm(ordinal);
     try {
-      auto candidate = storage.beginWrite(NativeUserArea::Data, "accepted");
-      candidate->write("candidate", 9);
-      candidate->commit();
+      run();
     } catch (const std::bad_alloc &) {
       failed = true;
     } catch (...) {
@@ -723,7 +730,7 @@ void allocationFaults() {
                 noTemporary(user.path),
             "allocation exact candidate retirement");
     if (!failed) {
-      require(!AllocationFault::triggered() && ordinal == 9 &&
+      require(!AllocationFault::triggered() && ordinal == expected && AllocationFault::attempts()==expected &&
                   user.read(target) == "candidate",
               "atomic exact terminal");
       std::cout << "atomic allocation ordinals [0," << ordinal << "); terminal "
@@ -879,6 +886,12 @@ void cache(bool faults, bool miss = false) {
   }
   // Cache-only allocation faults may be handled as misses. Enumerate through
   // the first *untriggered* success, not merely the first successful fallback.
+  if(miss) {std::ofstream reset(file,std::ios::binary|std::ios::trunc);reset<<"generated invalid cache";}
+  AllocationFault::arm(SIZE_MAX);
+  try {auto result=run({1,1},source);require(result.bytes==expected,"cache census output");}
+  catch(...) {AllocationFault::disarm();throw;}
+  const auto count=AllocationFault::attempts();AllocationFault::disarm();
+  require(count<128,"cache independently calibrated manifest bound");
   for (std::size_t ordinal = 0; ordinal < 128; ++ordinal) {
     if (miss) {
       std::ofstream reset(file, std::ios::binary | std::ios::trunc);
@@ -902,7 +915,7 @@ void cache(bool faults, bool miss = false) {
                 noTemporary(user.path),
             "cache allocation exact retirement");
     if (!AllocationFault::triggered()) {
-      require(!failed && ordinal == (miss ? 21 : 11),
+      require(!failed && ordinal == count && AllocationFault::attempts()==count,
               "untriggered cache exact terminal");
       std::cout << (miss ? "cache miss" : "cache hit")
                 << " allocation ordinals [0," << ordinal << "); terminal "

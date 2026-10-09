@@ -97,6 +97,10 @@ class OriginalHeaderPaths(unittest.TestCase):
         self.assertIn('TheAudio->isMusicAlreadyLoaded()', body)
         self.assertIn('TheGameLogic->UPDATE()', body)
         self.assertIn('TheNetwork->UPDATE()', body)
+        self.assertNotRegex(body, r'\b(TheLocalFileSystem|TheArchiveFileSystem|updateTGAtoDDS|CONVERT_EXEC1)\b')
+        self.assertNotRegex(body, r'\bsystem\s*\(')
+        self.assertIn('TheFileSystem->init()', body)
+        self.assertIn('supplied assets are read-only', body)
 
     def test_release_lookup_has_no_development_test_art(self):
         header = (CODE / "GameEngine/Include/Common/FileSystem.h").read_text()

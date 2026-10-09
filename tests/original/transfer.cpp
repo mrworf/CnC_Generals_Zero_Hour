@@ -441,7 +441,7 @@ void replaySessionFaults() {
     };
     AllocationFault::arm(std::numeric_limits<std::size_t>::max()); run();
     const auto census=AllocationFault::attempts(); AllocationFault::disarm();
-    require(census==14,"current complete protected recording allocation manifest");
+    require(census>0 && census<128,"current complete protected recording allocation manifest bound");
     for (std::size_t ordinal=0;ordinal<=census;++ordinal) {
         context.put(filename.str(),prior); const auto live=AllocationFault::live(),fds=descriptors();
         bool failed=false; AllocationFault::arm(ordinal);

@@ -1082,3 +1082,39 @@ production startup provider; original owners still control lifetimes. Source
 census locks exactly one definition each and original color enum/default hashes.
 Add three configuration families for actual color/table mapping, malformed and
 complete allocation/retry/terminal admission, retaining every sibling color.
+
+Continue from7ecee6df with one coupled native asset/mod namespace batch. Preserve
+the actual original loose-before-archive selection and mod BIG overwrite order;
+directory mods admit their BIG contents, not a new loose-file precedence rule.
+Prepare the complete replacement index offside, validate attached Data/Cache roots
+against it, and publish without changing accepted backing on any failure. Direct
+base remount remains forbidden while user storage is attached. Native output and
+scratch owners capture a shared, callback-free namespace lease; reject any mount
+change until every such owner retires, including committed scratch cleanup. Check
+complete physical leaf targets for writes, copies and removal, not just parents.
+Exercise generated archive overrides, loose precedence, missing/malformed mods,
+root alias rejection, live output/scratch leases, same-process corrected retries
+and every allocation failure prefix with exact resource retirement under GCC and
+Clang sanitizers. Retire GameEngine's obsolete duplicate Local/Archive service
+factories and asset-writing TGA converter; a requested legacy asset update fails
+explicitly instead of writing content or claiming conversion success. Native
+command-line binding, complete GameEngine startup and simulation remain pending;
+this batch does not fabricate their acceptance. Commit implementation, tests,
+source findings and honest supporting evidence together in this same slice.
+Protection roots are deduplicated;100 repeated same-mod admissions must preserve
+exact standard-backing and descriptor counts, in addition to complete owner
+retirement across three lifetimes. Keep the pre-growth-review matrix historical
+and validate the final frozen cohort after this coupled lifecycle check.
+
+Native namespace support checkpoint: all198 final frozen tests PASS normal
+GCC19.59s/GCCsan91.67s/Clangsan72.16s, all checks intact. Canonical555
+SHAe95ae6eb90b4e9e9d74f93a7098a6ad5441e7752ce8095ff24a9071014ff5281;
+toolchain560 SHAa92eb02aab978e50c22fe4e5e4b594c73f295ec22804aeeb1cffd61a78379b42.
+Actual native mod/protected-output lifetimes pass all44 failure/retry pairs and
+100 repeated admissions; full matrix includes the three coupled consumer
+manifests repaired through independent discovery, not weakened coverage.
+Final never-executed root link fails12/224/235. This is a coherent progress
+checkpoint in the existing incomplete slice, not startup/scenario acceptance.
+Continue native CommandLine mod binding and protected StatsCollector/capabilities,
+then full callback/map/factory/GameLogic/Recorder/scenario gates. Evidence:
+`evidence/qa/N2-runtime-support.md`, latest native namespace cohort.

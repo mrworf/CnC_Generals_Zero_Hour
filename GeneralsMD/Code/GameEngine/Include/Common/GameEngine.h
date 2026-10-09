@@ -44,9 +44,6 @@ class GameClient;
 class MessageStream;															///< @todo Create a MessageStreamInterface abstract class
 class FileSystem;
 class Keyboard;
-class LocalFileSystem;
-class ArchiveFileSystem;
-class FileSystem;
 class Mouse;
 class NetworkInterface;
 class ModuleFactory;
@@ -89,8 +86,6 @@ protected:
 	NativeServiceOwners<6> m_serviceOwners;
 
 	virtual FileSystem *createFileSystem( void );								///< Factory for FileSystem classes
-	virtual LocalFileSystem *createLocalFileSystem( void ) = 0;	///< Factory for LocalFileSystem classes
-	virtual ArchiveFileSystem *createArchiveFileSystem( void ) = 0;	///< Factory for ArchiveFileSystem classes
 	virtual GameLogic *createGameLogic( void ) = 0;							///< Factory for GameLogic classes.
 	virtual GameClient *createGameClient( void ) = 0;						///< Factory for GameClient classes.
 	virtual MessageStream *createMessageStream( void );					///< Factory for the message stream

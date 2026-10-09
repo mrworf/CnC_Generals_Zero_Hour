@@ -57,9 +57,11 @@ class NativeAtomicOutput final : public OutputStream {
   NativeStorageIO *m_io;
   bool m_poisoned = false, m_published = false;
   std::uint64_t m_position = 0, m_length = 0;
+  std::shared_ptr<const int> m_namespaceLease;
   friend class NativeUserStorage;
   friend class NativeScratchOutput;
-  NativeAtomicOutput(int directory, std::string target, NativeStorageIO &io);
+  NativeAtomicOutput(int directory, std::string target, NativeStorageIO &io,
+                     std::shared_ptr<const int> namespaceLease);
 
 public:
   ~NativeAtomicOutput();
@@ -100,6 +102,8 @@ class NativeUserStorage {
   NativeStorageIO *m_io;
   int openDirectory(NativeUserArea area, std::string_view relative,
                     bool create) const;
+  void validateRootOwnership(const FileSystem& assets) const;
+  void validateWriteTarget(NativeUserArea area, std::string_view relative) const;
 
 public:
   NativeUserStorage(NativeUserPaths paths, const FileSystem &assets,

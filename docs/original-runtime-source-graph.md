@@ -692,3 +692,19 @@ graphs, not acceptance or a whole-runtime reachability guarantee. Probe never ru
 Keep archive/local filesystem, protected StatsCollector, command-line/native
 capability providers, diplomacy/start-position callbacks and complete sanitizer
 callback/metadata roots pending. See current census/QA for exact source identities.
+
+Native asset/mod namespace continuation: the existing production FileSystem owns
+both BIG and loose providers. GameEngine now initializes this actual captured
+service instead of acquiring duplicate Local/Archive platform services. Its
+asset-writing authoring converter and corresponding factory requirements are
+removed; a requested legacy image update fails explicitly. Native mod admission
+preserves source archive precedence and publishes the complete candidate only
+after attached storage admission. Full leaf write checks and captured output
+leases protect mod files/directories within user storage, including scratch
+destructors after owner retirement. Three new actual namespace families cover
+these paths and all44 allocation failure/retry pairs plus terminal44. Normal
+root-link diagnostic now fails12 symbols, GCC sanitizer224 and Clang235; all
+three are link-only and never run. CommandLine binding, StatsCollector, native
+capabilities, diplomacy/start spots and actual process/scenario still require
+implementation. The full198 supporting matrix is recorded separately in QA;
+neither the namespace fixtures nor reduced unresolved counts accept N2.

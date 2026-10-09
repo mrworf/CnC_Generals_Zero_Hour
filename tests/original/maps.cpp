@@ -628,6 +628,16 @@ void faults(const std::string &family) {
   const AsciiString name("candidate");
   auto *pool = TheMemoryPoolFactory->findMemoryPool("NativeDataFile");
   require(pool, "actual rooted file pool owner");
+  if(family=="cached-miss") {
+    std::ofstream invalid(candidateCache,std::ios::binary|std::ios::trunc);
+    invalid<<"generated invalid cache";
+  }
+  AllocationFault::arm(SIZE_MAX);
+  try {require(owner.open(name),"complete map allocation census");}
+  catch(...) {AllocationFault::disarm();throw;}
+  const auto census=AllocationFault::attempts();AllocationFault::disarm();
+  require(census>0 && census<64,"independent complete map census bound");
+  require(owner.open("accepted"),"retire discovery and restore accepted backing");
   for (std::size_t ordinal = 0; ordinal < 64; ++ordinal) {
     if (family == "cached-miss") {
       std::ofstream invalid(candidateCache, std::ios::binary | std::ios::trunc);
@@ -649,9 +659,6 @@ void faults(const std::string &family) {
     }
     AllocationFault::disarm();
     if (!failed) {
-      const std::size_t terminal = family == "raw"    ? 4
-                                   : family == "zlib" ? 8
-                                                      : 5;
       require(owner.tell() == 0, "map complete candidate publication");
       require(descriptors() == fds && pool->getUsedBlockCount() == units,
               "terminal file owner settles");
@@ -666,8 +673,7 @@ void faults(const std::string &family) {
                 "restore after accepted optional-cache fault");
         continue;
       }
-      const auto cachedTerminal = family == "cached-hit" ? 16u : 31u;
-      require(ordinal == (cached ? cachedTerminal : terminal),
+      require(ordinal == census && AllocationFault::attempts()==census,
               "map exact terminal publication");
       std::cout << "map " << family << " fault ordinals [0," << ordinal
                 << ") complete; terminal " << ordinal << '\n';

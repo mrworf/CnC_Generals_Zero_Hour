@@ -1,5 +1,54 @@
 # N2 slice03 supporting owner checkpoint — not milestone acceptance
 
+## Native asset/mod namespace cohort (same incomplete N2 slice03)
+
+Parent7ecee6df; worktree clean at start. Canonical555 SHA256
+`e95ae6eb90b4e9e9d74f93a7098a6ad5441e7752ce8095ff24a9071014ff5281`;
+toolchain560 SHA256
+`a92eb02aab978e50c22fe4e5e4b594c73f295ec22804aeeb1cffd61a78379b42`.
+All configured targets build under normal GCC and both sanitizer configurations.
+Final full198/198 PASS normal GCC19.59s, GCCsan91.67s, Clangsan72.16s. No suppression,
+disabled leak/vptr check or isolated-bus fixture is used for these CPU families.
+Logs `/tmp/zh-mod-namespace-<variant>-growth-build.log` and
+`/tmp/zh-mod-namespace-<variant>-finalmatrix-test.log`.
+
+Actual native FileSystem mod admission preserves original loose-first selection,
+explicit BIG then recursive sorted directory BIG overwrite order. Complete index
+and attached Data/Cache ownership admission happen before publication. Malformed,
+missing and NUL-bearing selectors, candidate-root aliases and active output/scratch
+owners reject without replacing accepted backing. Full physical-leaf write,
+copy and removal checks protect mod BIGs within user storage. Captured leases
+also prohibit base remount with a detached attachment and pending output. Scratch
+cleanup after complete service retirement uses captured descriptors, not globals
+or callbacks. Three new families execute across three lifetimes;100 repeated
+same-mod admissions per lifetime prove exact descriptor and standard-allocation
+count stability. All44 mod allocation failure/retry pairs and exact terminal44
+execute independently of whole startup, with exact whole-owner retirement.
+
+GameEngine uses the captured native FileSystem instead of duplicate Local/Archive
+services. The CWD/Art-writing TGA authoring converter is removed; a requested
+legacy asset update fails explicitly. Source graph tests lock absence of the
+converter/platform acquisitions and retain genuine logic/network update calls.
+This is not executed GameEngine initialization or N3 conversion acceptance.
+
+Initial full198 runs failed only three stale literal allocation-total assertions
+in protected recording, preferences and cached-map misses. Those tests now run a
+separate complete discovery, retire it before baselines, and prove every ordinal
+and exact terminal without omitting failure/retry pairs. Focused repaired6/6 PASS
+all3 (0.27/1.60/1.15s). Full final matrices include all those families. Actual
+writer/preferences terminals are13, cache-miss27, cached-map-miss37, mod44.
+Initial logs `*-full-test.log` and pre-growth-review `*-frozen-test.log` remain
+historical; the latter passed198 all3 before root deduplication/growth assertions.
+
+Final link-only init diagnostic still FAILS12 normal GCC/224 GCCsan/235 Clangsan;
+never executed. Exact inventories and frozen identities are in
+`N2-runtime-link-census.json::native_asset_mod_namespace_cohort`; logs
+`/tmp/zh-mod-namespace-<variant>-final-root-link.log`. Command-line binding,
+protected StatsCollector, native capabilities, diplomacy/start spots, sanitizer
+callback roots, whole CPU map, actual factories/GameLogic/Recorder and matching
+scenario/compiler checkpoints remain pending. No N2/slice03 acceptance,
+vendor/retail/recovery edits, agents or later-milestone work.
+
 ## Startup callbacks/shared data cohort (same incomplete N2 slice03)
 
 Canonical554 SHA256

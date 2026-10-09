@@ -119,6 +119,9 @@ public:
 	// Explicit ordered roots: Zero Hour first, then original Generals assets.
 	// Replace mounts only after a complete offside read-only index is admitted.
 	void mountReadOnly(const std::vector<std::string>& roots);
+  // Original mod semantics: archive overrides only, explicit BIG before sorted
+  // recursive directory BIGs. Complete admission preserves attached storage.
+  void mountReadOnlyMods(const std::string& bigFile, const std::string& directory);
 	// Caller resolves the complete prospective physical path before write admission.
 	bool admitsUserStorage(const std::string& canonicalPath) const;
   // Borrowed storage outlives this attachment. Asset-relative names keep their
@@ -148,6 +151,9 @@ private:
   }
   struct NativeMounts;
   std::unique_ptr<NativeMounts> m_nativeMounts;
+  // Outputs retain this token without callbacks into a possibly retired owner.
+  // Its outstanding references prohibit changes to asset/write ownership.
+  std::shared_ptr<const int> m_outputLease;
   mutable const NativeUserStorage* m_userStorage = nullptr;
 };
 

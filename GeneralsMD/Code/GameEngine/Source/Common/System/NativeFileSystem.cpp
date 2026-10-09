@@ -27,6 +27,7 @@ Directory ownedDirectory(int descriptor) {
     return Directory(directory);
 }
 std::string canonicalRoot(const std::string& supplied) {
+    if(supplied.empty() || supplied.find('\0')!=std::string::npos) throw ERROR_BAD_ARG;
     std::unique_ptr<char,decltype(&std::free)> resolved(::realpath(supplied.c_str(),nullptr),&std::free);
     if(!resolved)throw ERROR_BAD_ARG;
     return resolved.get();
@@ -134,14 +135,14 @@ struct FileSystem::NativeMounts {
     std::vector<std::string> roots;
 };
 FileSystem* TheFileSystem=nullptr;
-FileSystem::FileSystem()=default;
+FileSystem::FileSystem():m_outputLease(std::make_shared<const int>(0)) {}
 FileSystem::~FileSystem()=default;
 void FileSystem::init() {}
 void FileSystem::reset(){m_fileExist.clear();}
 void FileSystem::update() {}
 void FileSystem::mountReadOnly(const std::vector<std::string>& roots) {
     // Withdraw user attachment before changing asset ownership underneath it.
-    if(m_userStorage) throw ERROR_BAD_ARG;
+    if(m_userStorage || m_outputLease.use_count()!=1) throw ERROR_BAD_ARG;
     if(roots.empty())throw ERROR_BAD_ARG;
     auto candidate=std::make_unique<NativeMounts>();
     for(const auto& supplied:roots) {
@@ -162,6 +163,37 @@ void FileSystem::mountReadOnly(const std::vector<std::string>& roots) {
         }
     }
     m_nativeMounts.swap(candidate);m_fileExist.clear();
+}
+void FileSystem::mountReadOnlyMods(const std::string& bigFile,const std::string& directory) {
+    if(!m_nativeMounts || m_outputLease.use_count()!=1) throw ERROR_BAD_ARG;
+    if(bigFile.empty() && directory.empty()) return;
+    FileSystem candidate;
+    candidate.m_nativeMounts=std::make_unique<NativeMounts>(*m_nativeMounts);
+    const auto protect=[&](const std::string& root) {
+        auto& roots=candidate.m_nativeMounts->roots;
+        if(std::find(roots.begin(),roots.end(),root)==roots.end()) roots.push_back(root);
+    };
+    auto append=[&](const std::string& path) {
+        auto archive=readBig(path);
+        for(auto& [name,range]:archive)
+            candidate.m_nativeMounts->archived.insert_or_assign(name,std::move(range));
+    };
+    if(!bigFile.empty()) {
+        const auto path=canonicalRoot(bigFile);
+        append(path);
+        protect(path);
+    }
+    if(!directory.empty()) {
+        const auto root=canonicalRoot(directory);
+        const auto paths=physicalFiles(root);
+        for(const auto& [name,physical]:paths)
+            if(name.ends_with(".big")) append(physical.first);
+        protect(root);
+    }
+    if(m_userStorage) m_userStorage->validateRootOwnership(candidate);
+    // No fallible work after complete archive/storage ownership admission.
+    m_nativeMounts.swap(candidate.m_nativeMounts);
+    m_fileExist.clear();
 }
 bool FileSystem::admitsUserStorage(const std::string& path) const {
     if (!m_nativeMounts || path.empty() || path.front() != '/') return false;

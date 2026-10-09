@@ -47,8 +47,6 @@
 #include "Common/ThingFactory.h"
 #include "Common/file.h"
 #include "Common/FileSystem.h"
-#include "Common/ArchiveFileSystem.h"
-#include "Common/LocalFileSystem.h"
 #include "Common/GlobalData.h"
 #include "Common/PerfTimer.h"
 #include "Common/RandomValue.h"
@@ -162,7 +160,6 @@ GameEngine *TheGameEngine = NULL;
 //-------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------
-static void updateTGAtoDDS();
 
 Int GameEngine::getFramesPerSecondLimit( void )
 {
@@ -328,26 +325,8 @@ void GameEngine::init( int argc, char *argv[] )
 		xferCRC.open("lightCRC");
 
 
-		initSubsystem(TheLocalFileSystem, "TheLocalFileSystem", createLocalFileSystem(), NULL);
-
-
-    	#ifdef DUMP_PERF_STATS///////////////////////////////////////////////////////////////////////////
-	GetPrecisionTimer(&endTime64);//////////////////////////////////////////////////////////////////
-	sprintf(Buf,"----------------------------------------------------------------------------After TheLocalFileSystem  = %f seconds \n",((double)(endTime64-startTime64)/(double)(freq64)));
-  startTime64 = endTime64;//Reset the clock ////////////////////////////////////////////////////////
-	DEBUG_LOG(("%s", Buf));////////////////////////////////////////////////////////////////////////////
-	#endif/////////////////////////////////////////////////////////////////////////////////////////////
-
-
-		initSubsystem(TheArchiveFileSystem, "TheArchiveFileSystem", createArchiveFileSystem(), NULL); // this MUST come after TheLocalFileSystem creation
-
-    	#ifdef DUMP_PERF_STATS///////////////////////////////////////////////////////////////////////////
-	GetPrecisionTimer(&endTime64);//////////////////////////////////////////////////////////////////
-	sprintf(Buf,"----------------------------------------------------------------------------After TheArchiveFileSystem  = %f seconds \n",((double)(endTime64-startTime64)/(double)(freq64)));
-  startTime64 = endTime64;//Reset the clock ////////////////////////////////////////////////////////
-	DEBUG_LOG(("%s", Buf));////////////////////////////////////////////////////////////////////////////
-	#endif/////////////////////////////////////////////////////////////////////////////////////////////
-
+		// Native FileSystem already owns both loose and BIG providers.
+		TheFileSystem->init();
 
 		initSubsystem(TheWritableGlobalData, "TheWritableGlobalData", MSGNEW("GameEngineSubsystem") GlobalData(), &xferCRC, "Data\\INI\\Default\\GameData.ini", "Data\\INI\\GameData.ini");
 
@@ -373,11 +352,10 @@ void GameEngine::init( int argc, char *argv[] )
 		m_serviceOwners.create(TheGameLODManager, [&] { return MSGNEW("GameEngineSubsystem") GameLODManager; });
 		TheGameLODManager->init();
 		
-		// after parsing the command line, we may want to perform dds stuff. Do that here.
-		if (TheGlobalData->m_shouldUpdateTGAToDDS) {
-			// update any out of date targas here.
-			updateTGAtoDDS();
-		}
+        // The legacy authoring converter writes into Art/Textures. Supplied
+        // assets are immutable; native decoding/cache conversion is separate.
+        if (TheGlobalData->m_shouldUpdateTGAToDDS)
+            throw std::runtime_error("Asset-writing image updates are unsupported; supplied assets are read-only");
 
 		// read the water settings from INI (must do prior to initing GameClient, apparently)
 		ini.load( AsciiString( "Data\\INI\\Default\\Water.ini" ), INI_LOAD_OVERWRITE, &xferCRC );
@@ -861,73 +839,6 @@ Bool GameEngine::isMultiplayerSession( void )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-#define CONVERT_EXEC1	"..\\Build\\nvdxt -list buildDDS.txt -dxt5 -full -outdir Art\\Textures > buildDDS.out"
-
-void updateTGAtoDDS()
-{
-	// Here's the scoop. We're going to traverse through all of the files in the Art\Textures folder
-	// and determine if there are any .tga files that are newer than associated .dds files. If there 
-	// are, then we will re-run the compression tool on them.
-	
-	File *fp = TheLocalFileSystem->openFile("buildDDS.txt", File::WRITE | File::CREATE | File::TRUNCATE | File::TEXT);
-	if (!fp) {
-		return;
-	}
-
-	FilenameList files;
-	TheLocalFileSystem->getFileListInDirectory("Art\\Textures\\", "", "*.tga", files, TRUE);
-	FilenameList::iterator it;
-	for (it = files.begin(); it != files.end(); ++it) {
-		AsciiString filenameTGA = *it;
-		AsciiString filenameDDS = *it;
-		FileInfo infoTGA;
-		TheLocalFileSystem->getFileInfo(filenameTGA, &infoTGA);
-
-		// skip the water textures, since they need to be NOT compressed
-		filenameTGA.toLower();
-		if (strstr(filenameTGA.str(), "caust"))
-		{
-			continue;
-		}
-		// and the recolored stuff.
-		if (strstr(filenameTGA.str(), "zhca"))
-		{
-			continue;
-		}
-
-		// replace tga with dds
-		filenameDDS.removeLastChar();	// a
-		filenameDDS.removeLastChar();	// g
-		filenameDDS.removeLastChar();	// t
-		filenameDDS.concat("dds");
-
-		Bool needsToBeUpdated = FALSE;
-		FileInfo infoDDS;
-		if (TheFileSystem->doesFileExist(filenameDDS.str())) {
-			TheFileSystem->getFileInfo(filenameDDS, &infoDDS);
-			if (infoTGA.timestampHigh > infoDDS.timestampHigh || 
-					(infoTGA.timestampHigh == infoDDS.timestampHigh && 
-					 infoTGA.timestampLow > infoDDS.timestampLow)) {
-				needsToBeUpdated = TRUE;
-			}
-		} else {
-			needsToBeUpdated = TRUE;
-		}
-
-		if (!needsToBeUpdated) {
-			continue;
-		}
-
-		filenameTGA.concat("\n");
-		fp->write(filenameTGA.str(), filenameTGA.getLength());
-	}
-
-	fp->close();
-
-	system(CONVERT_EXEC1);
-}
-
 //-------------------------------------------------------------------------------------------------
 // System things
 

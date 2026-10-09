@@ -2415,3 +2415,36 @@ transport is outside the native LAN contract. Actual in-game diplomacy and score
 behavior still require source separation from that transport, not removal/stubs.
 Root14 normal and227/237 sanitizer symbol inventories are diagnostics only;
 the exact frozen cohort and executed36-test support are recorded in QA.
+
+### Native mod admission and write ownership
+
+Source `ArchiveFileSystem.cpp::loadMods` loads an explicit mod BIG first with
+overwrite enabled, then directory BIGs with overwrite enabled. Device
+`Win32BIGFileSystem.cpp::loadBigFilesFromDirectory` requests recursive discovery
+and iterates the sorted FilenameList. The original FileSystem checks local loose
+files before archives. A directory mod is therefore an archive override source,
+not authority to add a new loose-file precedence rule. Native
+`FileSystem::mountReadOnlyMods` keeps that selection and publishes a complete
+offside index only after the attached storage's prospective Data/Cache roots are
+admitted against the candidate. Base remount still forbids an active attachment.
+The explicit mod file and whole mod directory become read-only asset boundaries.
+
+Parent-directory admission alone does not protect a mod BIG stored inside the
+user data directory: atomic rename or unlink could mutate the protected leaf.
+`NativeUserStorage::beginWrite/removeFile` now admit the full prospective physical
+target; copy/scratch use the same writer. Output owners also retain a shared
+namespace lease. Any mount mutation rejects until all output owners retire,
+including already committed scratch owners whose destructor may unlink backing.
+The token has no owner callback and can outlive FileSystem/storage; it introduces
+no serialized data or allocation/deallocation crossover. Discovery/lease checks
+are synchronous startup/storage operations, not render-thread callbacks.
+
+GameEngine no longer acquires duplicate Local/Archive platform services: its
+existing native FileSystem owns both providers. The legacy TGA-to-DDS authoring
+path generated files in CWD and invoked a converter writing Art/Textures. That
+path is removed, and a requested legacy asset update fails explicitly. This is
+not native decoding/cache conversion acceptance. CommandLine still needs native
+mod binding and broader argument/provider integration; complete startup remains
+pending. Generated mod fixtures cover selection, malformed/root rejection, every
+mutation path, leases and complete allocation/retry ownership. Current executed
+results belong in `evidence/qa/N2-runtime-support.md`, not this source finding.

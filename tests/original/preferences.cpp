@@ -124,6 +124,17 @@ void persistence() {
 void faults(bool writing) {
   Context c; c.put("Previous.ini","Name = accepted\n"); c.put("Target.ini","Name = candidate\nOther = added\n");
   const AsciiString target("Target.ini"); std::size_t terminal=0;
+  std::size_t census=0;
+  {
+    UserPreferences prefs(&c.storage);prefs.load("Previous.ini");
+    if(writing) prefs.setAsciiString("Name","candidate");
+    AllocationFault::arm(SIZE_MAX);
+    try {if(writing) prefs.write();else prefs.load(target);}
+    catch(...) {AllocationFault::disarm();throw;}
+    census=AllocationFault::attempts();AllocationFault::disarm();
+  }
+  require(census>0 && census<256,"complete independent preferences census bound");
+  c.put("Previous.ini","Name = accepted\n");
   for (std::size_t ordinal=0;ordinal<256;++ordinal) {
     UserPreferences prefs(&c.storage); prefs.load("Previous.ini");
     if (writing) prefs.setAsciiString("Name","candidate");
@@ -134,7 +145,7 @@ void faults(bool writing) {
     catch(...) { AllocationFault::disarm(); throw; }
     AllocationFault::disarm();
     require(descriptors()==fds && c.noTemporary(),"every injected ordinal retires descriptors/temporary files");
-    if (!AllocationFault::triggered()) { require(!failed,"untriggered terminal accepts"); terminal=ordinal; break; }
+    if (!AllocationFault::triggered()) { require(!failed && AllocationFault::attempts()==census,"untriggered exact terminal accepts"); terminal=ordinal; break; }
     require(failed && AllocationFault::live()==baseline,"injected allocation rejected with exact owner residuals");
     if (writing) {
       require(c.get("Previous.ini")=="Name = accepted\n","failed serialization preserves file");
@@ -146,7 +157,7 @@ void faults(bool writing) {
       require(prefs.load(target) && prefs.getAsciiString("Name","")=="candidate" && prefs.size()==2,"same-owner load retry");
     }
   }
-  require(terminal==(writing?9u:19u),"complete disjoint allocation manifest and exact terminal");
+  require(terminal==census,"complete disjoint allocation manifest and exact terminal");
   std::cout << (writing?"write":"load") << " allocation ordinals [0," << terminal << "); terminal " << terminal << '\n';
 }
 }

@@ -423,6 +423,13 @@ foreach(family IN ITEMS parsing persistence fault-load fault-write)
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()
 target_link_libraries(original_storage_fixture PRIVATE original_runtime_common)
+add_executable(original_mods_fixture tests/original/mods.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_mods_fixture PRIVATE original_runtime_common)
+foreach(family IN ITEMS precedence protection faults)
+  add_test(NAME original_mods_${family} COMMAND original_mods_fixture "${family}")
+  set_tests_properties(original_mods_${family} PROPERTIES LABELS "original;runtime;storage" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 foreach(family IN ITEMS paths atomic io-faults allocation-faults cache cache-faults cache-miss-faults namespace namespace-faults scratch scratch-faults map-identities map-identity-faults)
   add_test(NAME original_storage_${family} COMMAND original_storage_fixture "${family}")
   set_tests_properties(original_storage_${family} PROPERTIES LABELS "original;runtime;storage" TIMEOUT 60
