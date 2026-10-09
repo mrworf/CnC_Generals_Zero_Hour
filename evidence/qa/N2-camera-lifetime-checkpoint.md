@@ -1,6 +1,7 @@
 # N2 camera/View/Drawable lifetime checkpoint
 
-Status: coupled lifetime checkpoint validated; payload commit pending.
+Status: coupled lifetime checkpoint validated and committed.
+Payload commit: `02e437e0748dc8744d582d3bdc056dc8e45999b2`.
 Existing N2 plan01/slice03 continues; concrete frame/constraints/model/shake/
 slave/UI/root and full369 remain pending. No framework, retail asset or recovery
 file was changed.

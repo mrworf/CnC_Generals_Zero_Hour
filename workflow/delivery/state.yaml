@@ -67,7 +67,7 @@
     "milestone_complete": false,
     "slice_complete": false,
     "evidence": "evidence/qa/N2-camera-lifetime-checkpoint.md",
-    "repository_commit": "pending payload commit"
+    "repository_commit": "02e437e0748dc8744d582d3bdc056dc8e45999b2"
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
@@ -97,7 +97,7 @@
     },
     "next": "Continue concrete camera frame/actor lock/chase/model/constraints/shake/slave and actual UI/headless root integration under existing N2 plan01/slice03. Full369 and remaining N2 acceptance gates pending.",
     "milestone_complete": false,
-    "repository_commit": "pending payload commit",
+    "repository_commit": "02e437e0748dc8744d582d3bdc056dc8e45999b2",
     "validation": {
       "GCC": {
         "job": 95176,
