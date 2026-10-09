@@ -67,7 +67,7 @@
     "milestone_complete": false,
     "slice_complete": false,
     "evidence": "evidence/qa/N2-script-camera-checkpoint.md",
-    "repository_commit": null
+    "repository_commit": "1f9e4b18d5eda746193b37beb6870942e82249d8"
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
