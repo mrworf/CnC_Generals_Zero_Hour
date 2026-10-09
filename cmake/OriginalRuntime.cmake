@@ -276,6 +276,7 @@ set(ZH_ORIGINAL_LOGICAL_CLIENT
 list(TRANSFORM ZH_ORIGINAL_LOGICAL_CLIENT PREPEND "${ZH_CODE}/GameEngine/Source/GameClient/")
 add_library(original_logical_client STATIC ${ZH_ORIGINAL_LOGICAL_CLIENT})
 target_sources(original_logical_client PRIVATE
+  "${ZH_CODE}/GameEngine/Source/GameClient/ScriptedView.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeHeadlessGameClient.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeWaterGrid.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeTerrainVisual.cpp"
@@ -458,6 +459,7 @@ add_executable(original_polygon_world_fixture tests/original/polygon_world.cpp t
 add_executable(original_sides_scripts_fixture tests/original/sides_scripts.cpp tests/original/AllocationFault.cpp)
 add_executable(original_logical_world_fixture tests/original/logical_world.cpp tests/original/AllocationFault.cpp)
 add_executable(original_waypoint_graph_fixture tests/original/waypoint_graph.cpp tests/original/AllocationFault.cpp)
+add_executable(original_script_camera_fixture tests/original/script_camera.cpp tests/original/AllocationFault.cpp)
 add_executable(original_ai_pathfinder_fixture tests/original/ai_pathfinder.cpp tests/original/AllocationFault.cpp)
 add_executable(original_player_ownership_fixture tests/original/player_ownership.cpp tests/original/AllocationFault.cpp)
 add_executable(original_team_ownership_fixture tests/original/team_ownership.cpp tests/original/AllocationFault.cpp)
@@ -508,6 +510,18 @@ foreach(family IN ITEMS functional negative faults pool-failures zone-backing zo
 endforeach()
 target_link_libraries(original_waypoint_graph_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_libraries(original_script_camera_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_compile_definitions(original_script_camera_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+target_include_directories(original_script_camera_fixture PRIVATE
+  "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
+target_compile_options(original_script_camera_fixture PRIVATE -ffp-contract=off)
+target_link_options(original_script_camera_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS modes paths negative ownership)
+  add_test(NAME original_script_camera_${family} COMMAND original_script_camera_fixture "${family}")
+  set_tests_properties(original_script_camera_${family} PROPERTIES LABELS "original;runtime;camera" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 target_include_directories(original_waypoint_graph_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_definitions(original_waypoint_graph_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
@@ -523,7 +537,7 @@ target_compile_definitions(original_logical_world_fixture PRIVATE _OPERATOR_NEW_
 target_include_directories(original_logical_world_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_link_options(original_logical_world_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS functional negative faults ownership pool-failures continuation terrain terrain-negative terrain-faults pathfinder-map pathfinder-map-faults partition-grid partition-grid-faults partition-actors partition-ghost-attachment factory-creation factory-creation-faults factory-creation-binding)
+foreach(family IN ITEMS functional negative faults ownership pool-failures continuation terrain terrain-negative terrain-faults pathfinder-map pathfinder-map-faults partition-grid partition-grid-faults partition-actors partition-ghost-attachment factory-creation factory-creation-faults factory-creation-binding factory-creation-camera)
   add_test(NAME original_logical_world_${family} COMMAND original_logical_world_fixture "${family}")
   set_tests_properties(original_logical_world_${family} PROPERTIES LABELS "original;runtime;map" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

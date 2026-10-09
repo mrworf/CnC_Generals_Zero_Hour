@@ -64,6 +64,12 @@ private addresses or host names. Registry metadata may retain legitimate warmed
 capacity after shutdown; whole-owner destruction still must retire it exactly.
 Fault manifests must also start from identical source cursor/ID state: formatted
 generated names can cross string-allocation thresholds during repeated success.
+When adding a provider to a generated root fixture, inspect its entire source
+initialization contract before execution and warm that identical whole cohort.
+GameData parsing needs its initialized registered root and explicit user-storage
+parent; camera defaults alone are not valid parsed configuration. Keep generated
+user storage separate from asset mounts; do not waive ownership checks for a
+creation-only warm-up that omitted new provider parents.
 Prove production cursor advancement before an outer fixture lease restores it.
 Zero standard-allocation demand is valid for warmed explicit pools; prove its
 exact terminal and separately exercise pooled exhaustion/used-unit retirement.

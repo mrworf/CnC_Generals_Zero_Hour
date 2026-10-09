@@ -2752,3 +2752,37 @@ Additional paired-path findings before native provider implementation:
   still live and before borrowed display strings lose their font parent. Inspect
   this with SuperweaponInfo's two strings and named-timer replacement, not after
   an isolated font test. No new provider production changes have begun yet.
+
+Shared camera implementation checkpoint (parent3b2f6d78, same native-root batch):
+ScriptedView now carries the original W3DView choreography in game-owned shared
+code, with concrete projection/camera backing still abstract. Original snapshot
+layout stays in View. The four activity modes, easing, tracked actual source
+actors/hold/destruction, motion-blur predicate exceptions, explicit path clock,
+shutter/interpolation/arrival/instant retirement, padded maximum path and source
+disabled-motion rules are exercised. Initial target position and every padded
+array are initialized; discarded near-coincident cycles reject before replacing
+accepted motion; near-coincident facing does not silently mutate live tracking.
+Counter/time-multiplier arithmetic has defined full-width intermediates.
+
+Current frozen canonical630 9fc886d515135df304cda898654a2746e7721275820680926a9be22497bab3fd,
+inclusive637 d5f4c929c1937c06df41d07f764d793590b50e4aa7e38f128039fb3d89534630.
+All3 full configured builds and focused5 PASS. Camera owner manifests [0,1),
+terminal1/every retry and zero-allocation choreography terminal0 match all3.
+Repeated actual Waypoint/whole-manager retirement passes. Related145 PASS all3:
+GCC140.06s/GCCsan627.19s/Clangsan377.31s. Full335 has not run. Evidence:
+evidence/qa/N2-script-camera-checkpoint.md retains initial build/fixture failures,
+complete corrected validation and limitations. This is supporting implementation
+progress, not a finished slice, native root or N2 acceptance.
+
+Carry-forward source ordering is now pinned in docs/original-engine-formats.md:
+sample camera/script/debug/pause freeze and update Drawables before the source
+display/view phase advances camera. Script freeze allows camera movement; debug
+freeze/game pause do not. GameLogic later sees the resulting camera predicate;
+audio samples the earlier eye before client update. Do not reorder motion to
+the start of client update. Source scripted lock, concrete native eye/projection,
+legitimate logical UI/text/font owner lifecycle and NativeHeadlessGameClient
+integration are still required. The client continues rejecting UI/view until the
+whole legitimate ownership path exists. No constant-finished or fabricated
+spatial adapter is accepted. Continue this existing plan toward actual original
+GameEngine/GameLogic startup/frame, source root journal, fog/geometry/walls/bridges
+and CPU model-query providers; do not generate replacement tiny plans.

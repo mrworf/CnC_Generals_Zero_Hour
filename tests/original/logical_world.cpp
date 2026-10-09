@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "AllocationFault.h"
+#include "ScriptCameraFixture.h"
 #include "NativeTerrainDeviceFixture.h"
 #include "GameLogic/NativeTerrainLogic.h"
 #include "GameLogic/NativeTerrainLightingState.h"
 #include "Common/FileSystem.h"
 #include "Common/GlobalData.h"
+#include "Common/NativeUserStorage.h"
+#include "Common/NativeServiceOwners.h"
 #include "Common/MapObject.h"
 #include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
@@ -543,7 +546,15 @@ struct GhostAttachment:GhostObject{
   void freeSnapShot(int)override{throw ERROR_BAD_ARG;}
   void updateParentObject(Object* object,PartitionData* data)override{m_parentObject=object;m_partitionData=data;}
 };
-void factoryCreation(Context& context,bool faults,bool binding=false){
+void factoryCreation(Context& context,bool faults,bool binding=false,bool cameraTracking=false){
+  std::unique_ptr<Tree> generatedUser;
+  NativeServiceOwners<1> userOwner;
+  if(cameraTracking){
+    generatedUser=std::make_unique<Tree>();
+    userOwner.create(TheNativeUserStorage,[&]{return new NativeUserStorage(
+      NativeUserPaths::resolve(generatedUser->path.string(),(generatedUser->path/"data").string(),
+        (generatedUser->path/"cache").string()),context.files);});
+  }
   context.load(wire());DeviceFixture visual;LogicFixture terrain(visual);logicLoad(terrain,providerWorld(),"GeneratedCreation.map");
   const auto oldTerrain=TheTerrainLogic;TheTerrainLogic=&terrain;
   struct Restore{TerrainLogic* previous;~Restore(){TheTerrainLogic=previous;}} restore{oldTerrain};
@@ -551,10 +562,12 @@ void factoryCreation(Context& context,bool faults,bool binding=false){
   {std::ofstream definitions(context.tree.path/"creation.ini");
     definitions<<"Object GeneratedCreatedActor\n Geometry = BOX\n GeometryMajorRadius = 5\n GeometryMinorRadius = 3\n IsTrainable = Yes\n"
       " Body = InactiveBody GeneratedBody\n End\n Behavior = VeterancyGainCreate GeneratedCreate\n StartingLevel = VETERAN\n End\n End\n";
+    if(cameraTracking)definitions<<"GameData\n CameraHeight = 300\n CameraPitch = 45\n CameraYaw = 0\n End\n";
     definitions.close();require(bool(definitions),"generated actual body/create definitions");}
   // Generated files must exist before the read-only mount indexes this tree.
   // No user-storage lease or open input survives here; refresh through the VFS.
   context.files.mountReadOnly({context.tree.path.string()});
+  if(cameraTracking)context.data->init(); // Actual GameData parser requires an initialized registered root.
   INI ini;ini.load("creation.ini",INI_LOAD_OVERWRITE,nullptr);
   auto* definition=const_cast<ThingTemplate*>(context.factory->findTemplate("GeneratedCreatedActor",FALSE));
   if(binding){parents.modules.owner->addBindingProbes();
@@ -570,6 +583,21 @@ void factoryCreation(Context& context,bool faults,bool binding=false){
   auto retire=[&](Object* actor){parents.logic.owner->destroyObject(actor);parents.logic.owner->processDestroyList();};
   auto* survivor=make();verify(survivor);auto* survivorDraw=survivor->getDrawable();auto* survivorPartition=survivor->friend_getPartitionData();
   auto* warm=make();verify(warm);retire(warm);
+  if(cameraTracking){
+    ScriptCameraFixture camera;camera.init();camera.setFrameLengthMilliseconds(10);
+    const Coord3D origin{},east{40,0,0},north{0,40,0};camera.lookAt(&origin);
+    survivor->setPosition(&east);camera.rotateCameraTowardObject(survivor->getID(),20,20,0,0);camera.cameraModFreezeTime();
+    camera.updateCameraMovements(10);require(!camera.isCameraMovementFinished() && camera.isTimeFrozen(),"actual tracked actor keeps camera freeze active");
+    camera.rotateCameraTowardPosition(&origin,100,0,0,FALSE); // Near-coincident facing is an intended no-op, including live tracking/hold.
+    survivor->setPosition(&north);camera.updateCameraMovements(10);require(std::abs(camera.getAngle())<0.0001f,"source GameLogic lookup tracks changed actual actor position");
+    const auto id=survivor->getID();retire(survivor);require(!parents.logic.owner->findObjectByID(id),"actual actor destruction withdraws lookup");
+    camera.updateCameraMovements(10);require(!camera.isCameraMovementFinished() && std::abs(camera.getAngle())<0.0001f,"source hold preserves last valid position after actual actor retirement");
+    camera.updateCameraMovements(10);require(camera.isCameraMovementFinished() && !camera.isTimeFrozen(),"tracking plus hold exact retirement clears freeze");
+    bool rejected=false;try{camera.rotateCameraTowardObject(id,20,20,0,0);}catch(ErrorCode error){rejected=error==ERROR_BAD_ARG;}
+    require(rejected && camera.isCameraMovementFinished(),"missing initial tracked actor rejects without stale target activation");
+    auto* retry=make();verify(retry);retry->setPosition(&east);camera.rotateCameraTowardObject(retry->getID(),10,0,0,0);camera.updateCameraMovements(10);
+    require(camera.isCameraMovementFinished() && std::abs(camera.getAngle()+PI/2)<0.0001f,"corrected source actor tracking retry");retire(retry);return;
+  }
   auto units=[] {const std::array<const char*,17> names{"ObjectPool","SightingInfo","ObjectSMCHelperPool","StatusDamageHelper",
       "SubdualDamageHelper","ObjectDefectionHelperPool","ExperienceTrackerPool","RadarObject","PartitionDataPool","InactiveBody","VeterancyGainCreate","Drawable","TintEnvelope","DrawableLocoInfo","DrawableIconInfo","BindingDrawProbe","BindingBehaviorProbe"};
     std::array<Int,17> result{};for(unsigned n=0;n<names.size();++n)if(auto* pool=TheMemoryPoolFactory->findMemoryPool(names[n]))result[n]=pool->getUsedBlockCount();return result;};
@@ -825,7 +853,8 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
       if(std::string_view(argv[1])=="partition-ghost-attachment")partitionGhostAttachment(warm);}
     // Module definitions borrow their registry's data: warm complete roots,
     // not a template graph retained after its module-data owner was retired.
-    if(std::string_view(argv[1]).starts_with("factory-creation"))for(unsigned repeat=0;repeat<2;++repeat){Context warm;factoryCreation(warm,false,std::string_view(argv[1])=="factory-creation-binding");}
+    if(std::string_view(argv[1]).starts_with("factory-creation"))for(unsigned repeat=0;repeat<2;++repeat){Context warm;factoryCreation(warm,false,
+      std::string_view(argv[1])=="factory-creation-binding",std::string_view(argv[1])=="factory-creation-camera");}
     for(unsigned repeat=0;repeat<3;++repeat){auto live=AllocationFault::live();const PoolUsage pools;
       {Context context;const std::string_view family=argv[1];if(family=="functional")functional(context);
         else if(family=="negative")negative(context);else if(family=="faults"){faults(context);optionalFaults(context);}
@@ -838,6 +867,7 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
         else if(family=="partition-ghost-attachment")partitionGhostAttachment(context);
         else if(family=="factory-creation")factoryCreation(context,false);else if(family=="factory-creation-faults")factoryCreation(context,true);
         else if(family=="factory-creation-binding")factoryCreation(context,false,true);
+        else if(family=="factory-creation-camera")factoryCreation(context,false,false,true);
         else require(false,"unknown world family");}
       require(AllocationFault::live()==live && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
         !MapObject::getFirstMapObject() && !PolygonTrigger::getFirstPolygonTrigger(),"repeated full-world owner retirement");}

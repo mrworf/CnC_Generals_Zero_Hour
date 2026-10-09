@@ -26,16 +26,16 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "e5a0fefb8275d933f16ad4234e88c57ac1e49e60",
-    "label": "original-full-creation-ownership",
-    "evidence": "evidence/qa/N2-full-creation-ownership-checkpoint.md",
-    "validation": "All3 full configured builds, focused3 and related140 PASS on frozen canonical626/inclusive633. Actual stock body/create callbacks, partition and reciprocal Drawable binding, complete creation11 manifests and actual three-pool exhaustion/retry; both partial-binding callback failure phases retire candidate ownership and preserve source destructor unbind. Full330/root/startup/frame remain pending.",
-    "next": "Integrate legitimate native logical UI/client/camera-freeze and whole-root journal with real original GameEngine/GameLogic init/update; preserve child/script/RNG state. Shipped ghost snapshot/orphan/border/load, accepted geometry replacement, walls/model bridges and compiler-matching actual simulation remain mandatory.",
+    "parent": "3b2f6d78e81efe909db52b72d00b0a9c84d82564",
+    "label": "original-shared-script-camera",
+    "evidence": "evidence/qa/N2-script-camera-checkpoint.md",
+    "validation": "All3 full configured builds, focused5 and related145 PASS on frozen canonical630/inclusive637. Real source actor tracking/hold/destruction, source camera activities/ease/path/arrival/freeze semantics, camera owner1 and choreography0 complete manifests with every retry and whole-manager cleanup. Full335/native UI/root/startup/frame/output remain pending.",
+    "next": "Integrate ScriptedView with concrete native eye/projection/scripted lock and legitimate logical UI/text/font/client ownership. Preserve Drawable freeze sampling before source view-phase camera advancement, debug/pause gates and script-freeze exception, and audio-before-client ordering. Retire all UI strings/maps and concrete manager caches before font backing; preserve legitimate parent publications. Continue actual original GameEngine/GameLogic init/update, whole-root child/script/RNG journal, required CPU model-query providers, shipped fog/geometry/walls/bridges and compiler-matching simulation in existing N2 plan01/slice03.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 complete creation ownership committed in 05d4f891; all3 full builds/focused3/related140 PASS on canonical626 97bfe4fa. Full330 not run. Original startup link-only probe now PASS, not execution acceptance. Native-root composition batch is planned in the same slice: implement legitimate logical UI/text/font/camera/audio and required native definition/model-query providers, real GameEngine/GameLogic init/update and whole-root journal. Keep source camera padding/target-position hazards and font virtual-retirement boundaries in the coupled implementation review. Shipped fog/geometry/walls/bridges and actual compiler-matching simulation remain mandatory. N2 incomplete.",
-  "transaction_parent": "e5a0fefb8275d933f16ad4234e88c57ac1e49e60",
+  "resume_point": "N2 plan01/slice03 shared ScriptedView choreography supporting checkpoint is verified: all3 full builds/focused5/related145 PASS on canonical630 9fc886d5; full335 not run. Creation ownership from 05d4f891 remains preserved. Integrate ScriptedView with concrete native eye/projection/scripted lock and legitimate logical UI/text/font/client ownership. Preserve Drawable freeze sampling before source view-phase camera advancement, debug/pause gates and script-freeze exception, and audio-before-client ordering. Retire all UI strings/maps and concrete manager caches before font backing; preserve legitimate parent publications. Continue actual original GameEngine/GameLogic init/update, whole-root child/script/RNG journal, required CPU model-query providers, shipped fog/geometry/walls/bridges and compiler-matching simulation in existing N2 plan01/slice03. N2 and slice03 remain incomplete.",
+  "transaction_parent": "3b2f6d78e81efe909db52b72d00b0a9c84d82564",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -44,30 +44,30 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-full-creation-ownership-checkpoint.md",
+  "evidence": "evidence/qa/N2-script-camera-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Integrate legitimate native logical UI/client/camera-freeze and whole-root journal with real original GameEngine/GameLogic init/update; preserve child/script/RNG state. Shipped ghost snapshot/orphan/border/load, accepted geometry replacement, walls/model bridges and compiler-matching actual simulation remain mandatory.",
+  "next": "Integrate ScriptedView with concrete native eye/projection/scripted lock and legitimate logical UI/text/font/client ownership. Preserve Drawable freeze sampling before source view-phase camera advancement, debug/pause gates and script-freeze exception, and audio-before-client ordering. Retire all UI strings/maps and concrete manager caches before font backing; preserve legitimate parent publications. Continue actual original GameEngine/GameLogic init/update, whole-root child/script/RNG journal, required CPU model-query providers, shipped fog/geometry/walls/bridges and compiler-matching simulation in existing N2 plan01/slice03.",
   "implementation_checkpoint": {
-    "label": "original-full-creation-ownership",
-    "reason": "Actual complete ThingFactory creation and both source binding callback failure phases now have verified candidate ownership and corrected retries; full root/startup/frame and shipped fog remain pending",
-    "prior_commit": "587b1234",
-    "canonical_source_sha256": "97bfe4fa32b00f1e6a8629352c2f03ead5471990fa98ff802f3479a878476677",
-    "toolchain_inclusive_sha256": "3ca742ad1ed229dce339005c9ca2dbc790b052d83b7ee30ccb296163332d095c",
-    "configured_suite_tests": 330,
-    "related_suite_tests_passed": 140,
+    "label": "original-shared-script-camera",
+    "reason": "Shared original camera choreography and actual actor tracking/hold/retirement are verified; concrete native UI/view/client-clock and root/startup/frame remain pending",
+    "prior_commit": "05d4f891",
+    "canonical_source_sha256": "9fc886d515135df304cda898654a2746e7721275820680926a9be22497bab3fd",
+    "toolchain_inclusive_sha256": "d5f4c929c1937c06df41d07f764d793590b50e4aa7e38f128039fb3d89534630",
+    "configured_suite_tests": 335,
+    "related_suite_tests_passed": 145,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; related140 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; related145 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-full-creation-ownership-checkpoint.md",
-    "repository_commit": "05d4f89159f10d43a8d3c1fd04d273fa61ad066a"
+    "evidence": "evidence/qa/N2-script-camera-checkpoint.md",
+    "repository_commit": null
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
@@ -75,6 +75,6 @@
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "findings": "docs/original-engine-formats.md",
     "diagnostic": "Original GameEngine::init link-only probe PASS on current source; no initialization/frame execution acceptance",
-    "production_changes_started": false
+    "production_changes_started": true
   }
 }

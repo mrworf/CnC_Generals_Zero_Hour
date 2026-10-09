@@ -4263,3 +4263,66 @@ that point. A native derived backend must retire owned faces/data before that
 dispatch boundary, while display strings and their legitimate font parent still
 have a valid retirement order. Source anchors: GameAudio.cpp::{
 isMusicAlreadyLoaded,update}; GUI/GameFont.cpp::{getFont,~FontLibrary,deleteAllFonts}.
+
+Shared camera choreography implementation (current source, concrete native root
+still pending): GameClient/ScriptedView extracts original W3DView script motion
+into game-owned shared code. It deliberately remains abstract for physical
+queries/transformed camera backing; test adapters reject those operations. Four
+activity flags and source completion rules are retained, with explicit path
+elapsed milliseconds and separately configured frame quantization. All padded
+path arrays have MAX_WAYPOINTS+2; tracking caches an actual initial Object position
+before publishing motion. Discarded near-coincident cycles require constant-
+storage progress detection because the source point count otherwise never
+increases. Noncoincident cyclic links still terminate at the original capped
+point count. Near-coincident rotate-toward-position must return before changing
+accepted tracking/hold/frame state (original source wrote those fields too early).
+Full-width counters/interpolation require defined intermediate arithmetic rather
+than transplanting signed overflow or out-of-range float-to-Int conversions.
+
+Generated actual-actor tracking fixtures must supply camera parameters through
+the initialized original GameData root/parser, which also needs explicit
+NativeUserStorage for Options.ini. Use a separate generated user tree, never the
+asset mount. Warm that identical whole parent/configuration/camera/actor cohort
+before measuring retained metadata; an earlier creation-only warm-up is not its
+baseline. Preserve standard/pool/whole-manager checks, not exemptions. Current
+focused5 all3 PASS and complete camera owner1/choreography0 manifests are recorded
+in evidence/qa/N2-script-camera-checkpoint.md; related145 PASS all3 on canonical630
+9fc886d515135df304cda898654a2746e7721275820680926a9be22497bab3fd.
+No concrete native UI/view/client-clock, root startup/frame or rendering acceptance
+is established. Earlier camera integration requirements remain pending.
+
+Native clock ordering carry-forward (source inspection while camera matrix is
+frozen): GameClient::update computes the camera/script/debug/pause freeze mask
+and runs updateDrawableState BEFORE terrain/display update/draw. W3DDisplay::draw
+calls Display::updateViews, which calls each View::updateView; W3DView::update
+then permits updateCameraMovements when debug freeze and game pause are both
+false. Script freeze deliberately does not gate camera choreography. GameLogic
+runs later, after client/message propagation, and sees the post-camera motion
+predicate. Therefore moving camera advancement ahead of Drawable freeze-mask
+sampling changes the original final-motion frame. Native headless integration
+must retain logical camera advancement at the source display/view phase, not
+silently reorder it to the start of client update or tie it to logic frame
+advancement. Audio still samples the earlier eye in GameEngine's preceding audio
+phase. These are pending integration tests, not acceptance of the test adapter's
+direct updateCameraMovements calls.
+Source anchors: GameClient.cpp::update (freezeTime/updateDrawableState then
+TheDisplay UPDATE/DRAW); W3DDisplay.cpp::draw/updateViews;
+Display.cpp::updateViews; W3DView.cpp::update (debug/pause gate; script-freeze
+exception); GameEngine.cpp::update; GameLogic.cpp::update.
+
+Logical text/font teardown carry-forward (same source cohort inspection):
+DisplayStringManager's base destructor asserts its tracked list is empty; it is
+not the owner that deletes the strings. A concrete manager must retire owned and
+cached group/formation strings before reaching that destructor. DisplayString
+borrows GameFont, so manager/string backing must retire before native font faces.
+Current GameClient::~GameClient resets/retires FontLibrary before retiring
+DisplayStringManager much later; a native font-backed manager cannot adopt that
+order blindly. Drawables and UI bookkeeping retire first with legitimate parents
+still published, then strings, then fonts (and camera according to actual UI
+cleanup use). InGameUI::~InGameUI does not perform reset's superweapon/timer-map
+retirement, so a logical UI owner needs paired map retirement even when init fails
+or shutdown occurs without reset. These are implementation requirements for the
+next coupled UI/font/client batch, not acceptance from shared camera ownership.
+Source anchors: DisplayStringManager.cpp::{~DisplayStringManager,link,unLink};
+DisplayString.h m_font; GameClient.cpp::~GameClient;
+InGameUI.cpp::{~InGameUI,reset,addNamedTimer,SuperweaponInfo}.
