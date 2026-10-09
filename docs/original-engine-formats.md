@@ -3212,3 +3212,106 @@ Current actual-trigger support evidence: `evidence/qa/N2-original-world-checkpoi
 No retail assets, vendor sources or recovery artifacts were used or changed.
 Whole-world/weather/sides/scripts/waypoint/TerrainLogic/ghost/root and compiler-
 matching original simulation remain N2 completion requirements.
+
+### Actual side/script ownership and wire-format continuation
+
+Scripts.cpp's `K_SCRIPTS_DATA_VERSION_1` has numeric value **5**, not1: it follows
+the explicitly assigned condition version4 in the same enum. The original writer
+emits5. PlayerScriptsList/ScriptList containers have no version-selected payload
+fields; their original readers treat them as envelopes. Nested Script/ScriptGroup
+versions1–2, Condition versions1–4 and ScriptAction versions1–2 do select fields.
+Modern conditionv4/actionv2 keys are packed table-name references read by
+DataChunkInput::readNameKey, **not** an inline ASCII string or raw runtime ordinal.
+The numeric condition/action may change while the internal name rematches the
+actual ScriptEngine registry. Unknown names or mismatched arity retain the source
+CONDITION_FALSE/NO_OP fallback, with discarded Parameter ownership retired.
+
+SidesInfo and TeamsInfoRec now prepare complete owned candidates before swap;
+BuildListInfo copies detach the borrowed source tail even if field copying throws.
+Side parsing stages side/team/build owners, pending script publication, group-ID
+cursor and the actual name namespace. Original validateSides neutral/default-team,
+owner and ally/enemy repair still runs on the candidate. Side content exchange
+is nonallocating. This is chunk-level ownership, **not** enclosing-world atomicity:
+later object/weather/terrain failure still needs a combined world transaction.
+
+ScriptList/ScriptGroup/Script/OrCondition/Condition/Action deep and qualified copies
+guard the entire acquired tree. Typed parameter setters prepare all slots before
+publishing type/count; partial trees initialize all12 slots and retire every
+nonnull slot. ScriptAction's typed constructor now delegates to initialized
+defaults, including next-action and warnings. Parameter's actual physical reader
+guards the acquired node through string/conversion reads and rejects raw enum
+numbers before constructing a non-fixed enum. Empty KIND_OF_PARAM name conversion
+checks the file integer against KINDOF_COUNT before indexing the original table.
+Long Fundamentalist→GLA object-type migration uses dynamic source string storage,
+not the original256-byte scratch buffers. Original capture-upgrade/status/kind
+conversions remain source-defined; no broad kind-name migration redesign is claimed.
+
+All seven v1 team surface-condition repairs preserve SURFACES_ALLOWED3. Legacy
+special-power SIDE insertion acquires/formats before alias shifting; attitude
+INT→AI_MOOD replacement retires the old parameter; front→flank conversion nulls
+its discarded boolean slot. Waypoint/speech/camera/map-reveal repairs keep original
+parameter order, boolean/real/percent defaults and source arity checks. The -1
+surface-conversion sentinel is an Int, never an out-of-domain ConditionType.
+Sources: Scripts.cpp::ParameterChangesVer2, Condition::ParseConditionDataChunk,
+ScriptAction::ParseAction, Parameter::ReadParameter; ScriptEngine.cpp::init template
+definitions. Registry initialization is actual source metadata, not simulation.
+
+ScriptGroup default construction advances the global ID even if the authored
+group name immediately replaces it. AsciiString::ensureUniqueBufferOfSize snapshots
+through std::string; default names crossing its small-buffer capacity alter
+standard-allocation demand. Fault manifests must stabilize starting ID state and
+prove committed advancement before fixture restoration. Warmed explicit pools
+can make a copy/setter's standard census zero; prove that exact terminal and
+measure original pool units separately. Pool backing may legitimately grow and
+remain warmed until manager shutdown. Warm simultaneous accepted/candidate owners
+before residual baselines, then require exact used-unit retirement and final
+manager destruction, rather than interpreting capacity growth as an owner leak.
+
+Actual ScriptEngine::init initializes the complete condition/action registry and
+resets source side scripts. Keep legitimate TheSidesList identity through registry
+initialization and cleanup; retire side scripts before the engine and restore
+borrowed singleton publication afterward. Pending ScriptList read arrays are a
+separate owner publication: admit exactly MAX_PLAYER_COUNT, reject excess without
+replacing accepted pending trees, and preserve borrowed reads across side parsing.
+Sources: SidesList.cpp::ParseSidesDataChunk/SidesInfo/TeamsInfoRec;
+Scripts.cpp::ReadState/exchangeReadState/exchangeReadLists/ParseScriptsDataChunk;
+tests/original/sides_scripts.cpp. The original read-array's old strict final `<`
+assert was inconsistent with its actual admission capacity.
+
+Current batch evidence and remaining limits are recorded separately from the
+preceding WIP checkpoint. No script action/condition execution, gameplay parity,
+retail-world or native startup acceptance follows from these owner/format fixtures.
+
+### Source root terrain/waypoint provider phases (integration still pending)
+
+The root trace resolves the previously open height-provider ordering question.
+GameLogic::startNewGame calls loadMapINI then TheTerrainLogic->loadMap at1272.
+Common TerrainLogic::loadMap initially creates/prepends waypoint nodes using its
+virtual getGroundHeight, parses WaypointsList links, and only then calls the
+visual terrain load for non-query startup. W3DTerrainLogic delegates ground height
+to TheTerrainRenderObject, but BaseHeightMapRenderObjClass::getHeightMapHeight
+selects **TheTerrainVisual->getLogicHeightMap()** when a visual exists, otherwise
+its own m_map. It returns0/up-normal with no selected logical map. It is not
+necessarily reading the temporary metadata grid or renderer's own mesh backing.
+W3DTerrainVisual::reset/BaseHeightMap::reset clear presentation buffers/shroud,
+not the visual's retained logical map; W3DTerrainVisual::load replaces that map.
+Thus initial waypoint z may use absent/prior visual data during the load phase.
+
+This is explicitly corrected by the original later phase, not evidence that
+native startup should reorder the initial load. GameLogic::startNewGame calls
+TheTerrainLogic->newMap at1631, after partition initialization and ghost reset.
+W3DTerrainLogic::newMap loads roads/bridges and delegates to the common newMap;
+TerrainLogic::newMap re-evaluates **every existing waypoint z** against the now
+loaded ground provider before configuring WaveGuide water-grid behavior. Query
+loads do not invoke visual loading and must not be treated as playing-map startup.
+Keep initial admission/link selection and final post-load snap as separate source
+phases, with absent/prior/replacement height providers in integration evidence.
+GameClient::loadMap is an unused assert-bearing stub, not an earlier preload:
+the source runtime terrain-visual load call is in TerrainLogic::loadMap. No code
+ordering change or gameplay acceptance is claimed by this read-only source trace.
+
+Sources: GameLogic/System/GameLogic.cpp::startNewGame (1272,1631);
+GameLogic/Map/TerrainLogic.cpp::loadMap/addWaypoint/newMap;
+W3DDevice/GameLogic/W3DTerrainLogic.cpp::loadMap/getGroundHeight/newMap;
+W3DDevice/GameClient/BaseHeightMap.cpp::getHeightMapHeight/reset;
+W3DTerrainVisual.cpp::init/load/reset; GameClient/GameClient.cpp::loadMap.

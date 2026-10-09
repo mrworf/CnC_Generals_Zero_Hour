@@ -25,18 +25,9 @@
   "source_commit": "d0483ca911b029460fb46d878fe260e90ec8d071",
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
-  "working_checkpoint": {
-    "label": "sides-scripts-wip",
-    "parent": "8d705d9d329d5aba2cbc375a70ec931a201605f4",
-    "reason": "User requested sorting and committing outstanding work; not acceptance",
-    "evidence": "evidence/qa/N2-sides-scripts-wip.md",
-    "validation": "GCC build succeeds; focused5 completes with 2 PASS and 3 FAIL; current-batch sanitizer and broader matrices pending",
-    "next": "Resolve complete side/script fault-manifest invariants and outstanding planned coverage before frozen acceptance",
-    "accepted": false
-  },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 actual trigger world owner: configured builds, focused5 and related77 PASS all3. All4 trigger versions preserve source defaults/order/water/river/layer/ID policy, list plus ID-cursor rollback, physical-record growth and snapshots. Version small/large manifests15/25,14/24,14/24,20/30 plus snapshot6 retain every failure/distinct-candidate retry and exact terminal. Full263 not run. Continue coupled side/build/team/script ownership and whole-world object/Dict/weather/namespace transaction; actual waypoint versus render-side ground-provider ordering is documented and still requires root tracing. N2/slice03 incomplete.",
-  "transaction_parent": "669d65f41daba83ee7750f377679660250d76c5b",
+  "resume_point": "N2 plan01/slice03 actual side/script owners: configured builds, focused9 and affected96 PASS all3. Side versions1-3, real nested templates, all seven surface-condition and 23 legacy action input repairs, name rematching/fallback, malformed fields, strong copies/assignments, pending read rollback/capacity and all eight pooled exhaustion/retries are covered. Standard manifests295/619/291/615 plus repair634, qualified30, copy1, Parameter8 and warmed zero terminals retain every failure/retry. Full272 not run. Continue enclosing object/Dict/weather/names and accepted side/trigger/terrain owners into whole-world publication. Source root trace resolves initial waypoint admission versus final newMap height snap after visual load/partition/ghost phases. N2/slice03 incomplete.",
+  "transaction_parent": "69ec42824b4fdf44479168d7a2aa8a762a9fd623",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -45,28 +36,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-original-world-checkpoint.md",
+  "evidence": "evidence/qa/N2-sides-scripts-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Complete coupled original SidesList/BuildListInfo/TeamsInfoRec and ScriptList/nested script ownership with strong rollback, then enclose actual objects/world Dict/weather/namespaces and accepted trigger/terrain owners in whole-world publication. Trace client/root render-map preparation before fixing native waypoint ground-height provider order. Complete actual NativeTerrainLogic layers, shipped ghost/partition semantics and native GameEngine/root, camera/audio/particle/radar and compiler-matching original simulation. Neither terrain metadata nor trigger acceptance is whole-world startup/image readiness.",
+  "next": "Enclose actual objects/world Dict/weather/namespaces and accepted side/script/trigger/terrain owners in whole-world publication. Preserve source initial waypoint/link admission and final TerrainLogic::newMap height snap after visual load/partition/ghost preparation. Complete actual NativeTerrainLogic layers, shipped ghost/partition semantics and native GameEngine/root, camera/audio/particle/radar and compiler-matching original simulation. Neither owner fixtures nor terrain metadata are whole-world startup/image readiness.",
   "implementation_checkpoint": {
-    "label": "original-transactional-trigger-worlds",
-    "reason": "Actual original trigger parser/owner across all4 versions, physical growth, ID cursor and snapshot rollback pass focused5 and affected related77 all3. Coupled sides/scripts/whole-world/layers/ghost/camera/audio/lighting/textures/root remain required before native startup",
-    "prior_commit": "669d65f4",
-    "canonical_source_sha256": "501c158872a3f11723a47fd178b6dbb046e0a6b77ed9d7f0529f556e309a3b1e",
-    "toolchain_inclusive_sha256": "288968266db177084c6481c4ef83982c3a282c4cc0e5c839bbfaca4a4445dca5",
-    "configured_suite_tests": 263,
-    "related_suite_tests_passed": 77,
+    "label": "original-transactional-sides-scripts",
+    "reason": "Actual original side/script ownership and formats pass focused9 and affected96 all3, resolving the WIP census faults. Whole-world/layers/ghost/camera/audio/lighting/textures/root remain required before native startup",
+    "prior_commit": "69ec4282",
+    "canonical_source_sha256": "db977a56d3fbb8b347cd4b838a7f1b0108b54f325845b0a20964e35e63dc252d",
+    "toolchain_inclusive_sha256": "7f2d11760ece12f6bea4166ad3c0dcd05a7c258cbf465406d217f5461a096c01",
+    "configured_suite_tests": 272,
+    "related_suite_tests_passed": 96,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; focused5 and affected related77 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; focused9 and affected96 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-original-world-checkpoint.md"
+    "evidence": "evidence/qa/N2-sides-scripts-checkpoint.md"
   }
 }

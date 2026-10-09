@@ -446,7 +446,7 @@ target_link_libraries(original_sides_scripts_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_compile_definitions(original_sides_scripts_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
 target_link_options(original_sides_scripts_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS functional negative copies faults setters)
+foreach(family IN ITEMS functional negative copies faults setters formats parameters publication pool-failures)
   add_test(NAME original_sides_scripts_${family} COMMAND original_sides_scripts_fixture "${family}")
   set_tests_properties(original_sides_scripts_${family} PROPERTIES LABELS "original;runtime;map;scripts" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

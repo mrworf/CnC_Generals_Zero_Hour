@@ -174,7 +174,7 @@ static Int ParameterChangesVer2[] =
 	Condition::TEAM_ENTERED_AREA_ENTIRELY, 
 	Condition::TEAM_EXITED_AREA_ENTIRELY, 
 	Condition::TEAM_EXITED_AREA_PARTIALLY, 
-	(Condition::ConditionType) -1,
+	-1,
 };
 
 enum { AT_END = 0x00FFFFFF };
@@ -2347,6 +2347,7 @@ Parameter *Parameter::ReadParameter(DataChunkInput &file)
     else 
     {
 			// Seems weird, but this is so WB will load them into the proper format.
+			if(pParm->m_int<0 || pParm->m_int>=KINDOF_COUNT)throw ERROR_CORRUPT_FILE_FORMAT;
 			pParm->m_string = kindofNames[pParm->m_int];
 		}
 	}

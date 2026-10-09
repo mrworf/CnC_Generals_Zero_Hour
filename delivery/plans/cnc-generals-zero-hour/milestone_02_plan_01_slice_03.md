@@ -1842,3 +1842,52 @@ unverified census causes and remaining coverage are recorded in
 `evidence/qa/N2-sides-scripts-wip.md`. Resume this coherent ownership batch before
 claiming sanitizer, broader-matrix or slice acceptance; prior trigger acceptance
 is not evidence for the modified side/script source.
+
+Resume from69ec4282: diagnose all three fault-family invariants as a coherent
+batch. Standard-allocation census may legitimately be zero for warmed explicit
+pools; prove its exact zero terminal instead of fabricating a heap acquisition.
+Retain count-only diagnostics for mismatched manifests and compare cold/warm
+candidate paths before changing production behavior. Add explicit pooled-owner
+residual/boundary evidence so a standard-allocation sweep is never presented as
+every pooled acquisition. All planned format and lifecycle coverage remains
+required before this batch's acceptance.
+
+Source-verified manifest instability: successful ScriptGroup constructors advance
+the global ID; their formatted default names eventually exceed std::string's
+small-buffer capacity in AsciiString::ensureUniqueBufferOfSize. Keep an outer
+fixture IDTransaction around each measured/retried operation so its starting
+state is identical, while asserting that real successful admission advances
+the two group IDs before fixture restoration. Production ID behavior is unchanged.
+Exercise every source legacy action repair and all seven surface-condition
+repairs together, with typed order/defaults, raw-number/name rematching and
+false/no-op retirement. Check original pool usage as well as standard heap units.
+Parameter's empty KIND_OF_PARAM string path indexes the source kind-name table
+using the file integer; reject out-of-range indices before access, retaining
+valid original conversions. Include direct original Parameter reader/writer
+cases, long object-prefix migration and upgrade/status/kind-name conversions.
+
+Final side/script supporting checkpoint: all configured builds, focused9 and
+affected96 PASS GCC/GCCsan/Clangsan on canonical605/toolchain-inclusive612 frozen
+source. Four complete side parse manifests295/619/291/615; all-format repair634,
+qualified clone30, copy/assignment1, long Parameter8 and legitimate warmed zero
+terminals retain every failure/retry pair. Eight explicit source pool exhaustion/
+retry cases supplement heap sweeps; all families repeat three source lifetimes.
+Evidence: `evidence/qa/N2-sides-scripts-checkpoint.md`; full272 not run.
+This resolves the69ec4282 WIP faults without altering production sequencing to
+fit fixture counts. Commit checkpoint: `delivery: verify transactional original
+sides and scripts`. N2/slice03 remains incomplete.
+
+Continue enclosing actual world objects/Dict/weather/name namespace and accepted
+side/script/trigger/terrain owners in one candidate publication before replacing
+an accepted world. Source root trace now resolves waypoint phases: initial nodes
+use the currently published visual logical-height provider; the original later
+TerrainLogic::newMap re-snaps every waypoint after visual load (GameLogic1631),
+after partition init/ghost reset. Preserve those source phases instead of moving
+the first waypoint load ahead of/behind client preparation speculatively. Detailed
+source references and remaining limits are in docs/original-engine-formats.md.
+
+Carry forward one explicit coverage limit: warmed typed constructor/setter heap
+terminals are zero, while the current pooled exhaustion cohort covers parsing.
+Add partial pooled Parameter prefixes for typed constructors/setters in the
+enclosing runtime ownership batch; do not present the zero heap census as that
+missing evidence or mark slice03/N2 complete before it is supplied.

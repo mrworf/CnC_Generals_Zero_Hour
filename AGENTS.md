@@ -62,6 +62,11 @@ before resource baselines, and derive/prove an exact terminal rather than
 reusing a sandbox-only constant. Retain every failure/retry pair; never record
 private addresses or host names. Registry metadata may retain legitimate warmed
 capacity after shutdown; whole-owner destruction still must retire it exactly.
+Fault manifests must also start from identical source cursor/ID state: formatted
+generated names can cross string-allocation thresholds during repeated success.
+Prove production cursor advancement before an outer fixture lease restores it.
+Zero standard-allocation demand is valid for warmed explicit pools; prove its
+exact terminal and separately exercise pooled exhaustion/used-unit retirement.
 Source Object/Drawable cleanup calls its parent singleton. Preserve that valid
 identity through legitimate cleanup, then restore borrowed publication without
 callbacks or allocations; registry removal alone does not withdraw all globals.
