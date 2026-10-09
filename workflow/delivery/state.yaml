@@ -34,7 +34,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 real displayed-terrain virtual ray query verified all3 builds/focused15/related172; no live jobs. Commit payload/provenance, then continue concrete camera/view and actual UI/headless root admission/frame/cleanup. Slice03/N2 remain incomplete.",
+  "resume_point": "N2 plan01/slice03 real displayed-terrain virtual ray query verified all3 builds/focused15/related172 and committed at da595743; no live jobs. Continue concrete camera/view and actual UI/headless root admission/frame/cleanup. Slice03/N2 remain incomplete.",
   "transaction_parent": "10b43a84977f750dee0f4fc66ceacd7cc0b7c831",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -67,7 +67,7 @@
     "milestone_complete": false,
     "slice_complete": false,
     "evidence": "evidence/qa/N2-terrain-ray-checkpoint.md",
-    "repository_commit": null
+    "repository_commit": "da595743d1bd6c3160ea28439f7f2a6f1cc7581e"
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
