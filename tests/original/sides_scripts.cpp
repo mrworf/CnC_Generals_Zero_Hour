@@ -364,6 +364,31 @@ void poolFailures(Context& context){const auto valid=wire();load(valid);
     try{load(valid);}catch(ErrorCode error){require(error==ERROR_OUT_OF_MEMORY,"explicit pooled acquisition failure class");failed=true;}
     require(failed && pools.matches() && AllocationFault::live()==live && InspectRead::id()==id &&
       context.sides.getSideInfo(0)->getScriptList()==accepted && context.sides.getSideInfo(0)->getBuildList()==build,"each source pool exhaustion retires partial candidate and preserves accepted world");
+    if(index==7){
+      Owner<Condition> predicate(newInstance(Condition)(Condition::CONDITION_TRUE));
+      Owner<ScriptAction> command(newInstance(ScriptAction)(ScriptAction::NO_OP));
+      auto partial=[&](auto operation,bool expectFailure){const PoolUsage before;const auto heap=AllocationFault::live();
+        const auto freeBefore=pool->getFreeBlockCount();bool rejected=false;
+        try{operation();}catch(ErrorCode error){require(error==ERROR_OUT_OF_MEMORY,"partial typed pool failure class");rejected=true;}
+        require(rejected==expectFailure && before.matches() && AllocationFault::live()==heap &&
+          predicate->getConditionType()==Condition::CONDITION_TRUE && predicate->getNumParameters()==0 &&
+          command->getActionType()==ScriptAction::NO_OP && command->getNumParameters()==0,"partial typed constructor/setter preserves accepted values and all acquired units");
+        if(rejected){for(auto* value:held)pool->freeBlock(value);held.clear();const PoolUsage retryBefore;
+          operation();require(retryBefore.matches() && AllocationFault::live()==heap &&
+            predicate->getConditionType()==Condition::CONDITION_TRUE && command->getActionType()==ScriptAction::NO_OP,
+            "each partial typed failure gets a corrected same-process retry");
+          while(pool->getFreeBlockCount()>freeBefore)held.push_back(pool->allocateBlock("generated partial typed capacity"));
+          require(before.matches(),"restore exact partial capacity for the next independent factory path");}
+      };
+      for(unsigned available=0;available<=3;++available){
+        if(available){pool->freeBlock(held.back());held.pop_back();}
+        partial([]{Owner<Condition> value(newInstance(Condition)(Condition::COUNTER));},available<3);
+        partial([]{Owner<ScriptAction> value(newInstance(ScriptAction)(ScriptAction::SET_FLAG));},available<2);
+        partial([&]{predicate->setConditionType(Condition::COUNTER);predicate->setConditionType(Condition::CONDITION_TRUE);},available<3);
+        partial([&]{command->setActionType(ScriptAction::SET_FLAG);command->setActionType(ScriptAction::NO_OP);},available<2);
+      }
+      std::cout<<"partial typed pool prefixes condition 3 action 2; all failure/retry pairs and terminals\n";
+    }
     for(auto* value:held)pool->freeBlock(value);held.clear();load(valid);check(context);
     std::cout<<"pool-exhaustion "<<index<<" failure and corrected retry\n";
   }

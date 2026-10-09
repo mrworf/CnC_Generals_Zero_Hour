@@ -106,3 +106,25 @@ The zero standard-allocation constructor/setter terminals are not proof of
 mid-construction pooled failure coverage. The pool-exhaustion family currently
 exercises full parse paths; explicit partial pooled prefixes for typed setters
 and factories remain to be covered alongside the enclosing runtime owner tests.
+
+## Post-checkpoint typed-pool coverage extension
+
+Parent3e36918a is the committed frozen checkpoint above. The continuation adds
+fixture coverage only; no production source or dependency changes occur in this
+extension. Within the fixed Parameter pool, free capacity0/1/2/3 independently
+exercises typed Condition(COUNTER), ScriptAction(SET_FLAG), and both type setters.
+Each failed acquisition prefix proves all pool/heap units retire and accepted
+predicate/action type/count remains unchanged. That exact failure receives an
+immediate corrected retry after held capacity is released; original capacity is
+then re-established before the next independent path. Terminals are3 parameters
+for conditions and2 for actions. All cases repeat across three whole owners.
+
+Builds of the extended fixture and normal-host
+`ctest --test-dir build/<configuration> -R '^original_sides_scripts_pool-failures$' --output-on-failure`
+pass: GCC1/1 (1.85 seconds), GCC sanitizers1/1 (8.22 seconds), Clang sanitizers1/1
+(4.76 seconds). Leak detection remains enabled. This supplies the explicit typed
+pooled-prefix evidence missing at3e36918a. It does not relabel the preceding
+96-test matrix as execution of this expanded fixture. The user requested a
+repository-housekeeping commit of this verified support checkpoint. Carry the
+extension into the enclosing-world batch's frozen matrix before that batch's
+acceptance; this checkpoint does not complete slice03 or N2.

@@ -1891,3 +1891,34 @@ terminals are zero, while the current pooled exhaustion cohort covers parsing.
 Add partial pooled Parameter prefixes for typed constructors/setters in the
 enclosing runtime ownership batch; do not present the zero heap census as that
 missing evidence or mark slice03/N2 complete before it is supplied.
+
+Continuation from3e36918a: partial typed Parameter pool prefixes now pass focused
+pool-failures under GCC and both sanitizers, with immediate failure/retry pairs
+and terminals3/2 for both factories/setters. The extension is fixture-only and
+remains in this same slice. At the user's repository-housekeeping request, save
+it as a verified support checkpoint, not a new plan or independent acceptance of
+startup. Include it in the next whole-world batch's frozen matrix. Evidence appendix:
+`evidence/qa/N2-sides-scripts-checkpoint.md`.
+
+Next coherent implementation batch: extract the actual logical-world entry
+callbacks from the device-bound WorldHeightMap into game-owned native source,
+retaining actual MapObject/ThingFactory/Dict, side/script/trigger owners and
+accepted height readers. Stage the map object list and world Dict, writable
+weather, source side contents, pending reads/group cursor, trigger list/cursor,
+height metadata and actual namespace together. Begin namespace ownership before
+DataChunkInput TOC admission, not merely inside the side callback. Retire failed
+candidate worlds while legitimate singleton identity remains published, then
+restore borrowed state without allocations/callbacks. Publish complete candidate
+content only after all physical chunk/field reads and source validation succeed.
+
+Inspect original map writers/defaults and logical-only versus visual load
+semantics before choosing mandatory/optional chunk and version policies; do not
+silently impose new format caps or skip nonempty objects/scripts. Preserve object
+file order, old z/default/discard rules, actual template binding, waypoint/light/
+scorch classification, source weather semantics, and metadata versus visual
+height-grid purpose. Test successful/rejected/retried full nonempty worlds and
+late failures after each owner, complete allocation manifests, namespace rollback,
+borrowed publication identity, source writer encodings and repeated lifetimes.
+WorldInfo/ObjectsList/SidesList/PolygonTriggers/height metadata form one behavior
+batch. Waypoint initial/final height phases, layers/ghost/partition and native
+GameEngine startup remain required afterward; no headless gameplay substitutes.
