@@ -793,3 +793,13 @@ allocation/report failures and retries; full factories/startup and nonnull devic
 behavior remain pending. No new root/animation link or execution claim is made at
 this checkpoint. See `evidence/qa/N2-lod-checkpoint.md` and the durable source
 findings in `docs/original-engine-formats.md`.
+
+From900b561d, original root and animation link closure succeeds all3; root probes
+remain never executed. Actual animation constructor fault/retry coverage executes
+all3 and is registered as original_animation_constructor. LOD recommendation faults
+and corrected retries now pass all3. Default GUI lexicon independently still has205
+unresolved callbacks all3, including excluded GameSpy. Native headless factories
+may explicitly omit GUI table descriptors, not gameplay registries or logical
+drawable/map/frame state. Actual GameLogic default factories create common source
+terrain/ghost/script owners; do not invent an alternative simulation. Next is the
+concrete native GameEngine/GameClient factory and original startup/world cohort.

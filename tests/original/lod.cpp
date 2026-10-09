@@ -161,6 +161,55 @@ void native(){const auto live=AllocationFault::live();const auto fds=descriptors
   require(!nativeLODProbe().legacyScores() && !nativeLODProbe().chipset(),"unmeasured calibration/renderer classification remains explicitly unavailable");
   require(AllocationFault::live()==live && descriptors()==fds,"native hardware query retires acquired descriptor exactly");
 }
+void recommendationProbes(){
+  Context context;Probe probe;probe.facts={std::uint64_t{8}<<30,P4,2000,TRUE};
+  Owner owner(probe,&context.storage);Publication publication(owner);owner.init();
+  const auto state=owner.state();
+  require(owner.findStaticLODLevel()==STATIC_GAME_LOD_UNKNOWN && owner.state()==state,"absent renderer class is not a guessed profile");
+  probe.chip=DC_UNKNOWN;
+  require(owner.findStaticLODLevel()==STATIC_GAME_LOD_UNKNOWN && owner.state()==state,"unknown renderer class remains unpersisted");
+  probe.chip=DC_MAX;rejects([&]{owner.findStaticLODLevel();});require(owner.state()==state,"invalid chipset sentinel preserves complete source owner");
+  probe.failChip=TRUE;rejects([&]{owner.findStaticLODLevel();});probe.failChip=FALSE;
+  require(owner.state()==state && context.read("Options.ini").empty(),"failed chipset acquisition retains old metadata and settings");
+  probe.chip=DC_GENERIC_PIXEL_SHADER_2_0;
+  require(owner.findStaticLODLevel()==STATIC_GAME_LOD_HIGH,"corrected same-owner chipset probe selects source preset");
+}
+void recommendationFaults(bool storageFaults){
+  Context context;Probe probe;probe.facts={std::uint64_t{8}<<30,P4,2000,TRUE};probe.chip=DC_GENERIC_PIXEL_SHADER_2_0;
+  Owner owner(probe,&context.storage);Publication publication(owner);
+  auto prepare=[&]{context.output("Options.ini","Retained = yes\n");owner.init();};
+  auto accepted=[&]{require(owner.findStaticLODLevel()==STATIC_GAME_LOD_HIGH &&
+      owner.recommendationPersistenceStatus()==NativeLODReportStatus::Published,"corrected actual recommendation/persistence retry");
+    const auto settings=context.read("Options.ini");require(settings.find("Retained = yes")!=std::string::npos &&
+      settings.find("IdealStaticGameLOD = High")!=std::string::npos && settings.find("StaticGameLOD = High")!=std::string::npos,
+      "complete source preference publication preserves unrelated user settings");};
+  prepare();std::size_t census;
+  if(storageFaults){context.io.arm(SIZE_MAX);try{owner.findStaticLODLevel();}catch(...){context.io.disarm();throw;}
+    census=context.io.calls;context.io.disarm();}
+  else {AllocationFault::arm(SIZE_MAX);try{owner.findStaticLODLevel();}catch(...){AllocationFault::disarm();throw;}
+    census=AllocationFault::attempts();AllocationFault::disarm();}
+  require(census>0 && census<(storageFaults?32:4096),"complete bounded actual recommendation fault manifest");
+  for(std::size_t ordinal=0;ordinal<=census;++ordinal){
+    prepare();const auto state=owner.state();const auto live=AllocationFault::live();const auto fds=descriptors();bool failed=false;
+    if(storageFaults)context.io.arm(ordinal);else AllocationFault::arm(ordinal);
+    try {require(owner.findStaticLODLevel()==STATIC_GAME_LOD_HIGH,"established source recommendation");}
+    catch(const std::bad_alloc&){if(storageFaults){context.io.disarm();throw;}failed=true;}
+    catch(const NativeStorageError&){if(!storageFaults){AllocationFault::disarm();throw;}failed=true;}
+    if(storageFaults)context.io.disarm();else AllocationFault::disarm();
+    const bool triggered=storageFaults?context.io.triggered:AllocationFault::triggered();
+    const auto calls=storageFaults?context.io.calls:AllocationFault::attempts();
+    require(triggered==(ordinal<census) && (triggered || calls==census),"every recommendation fault prefix and exact terminal");
+    if(!storageFaults)require(failed==triggered,"all recommendation allocation failures propagate before publication");
+    require(AllocationFault::live()==live && descriptors()==fds && TheGameLODManager==&owner,
+      "recommendation candidate retires backing and preserves parent identity");
+    {const auto settings=context.read("Options.ini");
+      if(failed)require(owner.state()==state && settings=="Retained = yes\n","required acquisition failure preserves complete old owner and settings");
+      else if(owner.recommendationPersistenceStatus()==NativeLODReportStatus::Unavailable)
+        require(settings=="Retained = yes\n","optional failed preference publication preserves prior settings");
+      else require(settings.find("IdealStaticGameLOD = High")!=std::string::npos,"complete published recommendation, never partial output");}
+    accepted();require(AllocationFault::live()==live && descriptors()==fds,"same-owner recommendation retry retires backing exactly");
+  }std::cout<<"recommendation "<<(storageFaults?"storage":"allocation")<<" ordinals [0,"<<census<<"); terminal "<<census<<'\n';
+}
 void faults(const std::string& family){
   Context context;Probe probe;Owner owner(probe,&context.storage);Publication publication(owner);owner.init();
   if(family=="fault-report"){
@@ -214,7 +263,9 @@ int main(int argc,char** argv){bool initialized=false;const auto initial=Allocat
     {Context warm;Probe probe;Owner owner(probe,&warm.storage);Publication publication(owner);owner.init();}
     for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();const auto fds=descriptors();const std::string family=argv[1];
       if(family=="functional")functional();else if(family=="negative")negative();else if(family=="native")native();
-      else if(family=="fault-storage")ioFaults();else if(family=="fault-init" || family=="fault-report")faults(family);else throw std::runtime_error("unknown LOD family");
+      else if(family=="fault-storage")ioFaults();else if(family=="probes")recommendationProbes();
+      else if(family=="recommend-alloc")recommendationFaults(false);else if(family=="recommend-io")recommendationFaults(true);
+      else if(family=="fault-init" || family=="fault-report")faults(family);else throw std::runtime_error("unknown LOD family");
       require(AllocationFault::live()==live && descriptors()==fds && !TheGameLODManager && !TheWritableGlobalData && !TheFileSystem,"complete original LOD/context retirement");
     }shutdownMemoryManager();initialized=false;require(AllocationFault::live()==initial,"whole original pool metadata retires exactly");
     std::cout<<"PASS actual LOD owner; native legacy calibration and full startup pending\n";return 0;

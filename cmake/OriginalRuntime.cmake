@@ -443,7 +443,7 @@ target_include_directories(original_lod_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_definitions(original_lod_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
 target_link_options(original_lod_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS functional negative native fault-init fault-report fault-storage)
+foreach(family IN ITEMS functional negative native fault-init fault-report fault-storage probes recommend-alloc recommend-io)
   add_test(NAME original_lod_${family} COMMAND original_lod_fixture "${family}")
   set_tests_properties(original_lod_${family} PROPERTIES LABELS "original;runtime;lod" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
@@ -459,10 +459,13 @@ foreach(family IN ITEMS functional negative faults)
   set_tests_properties(original_native_warning_${family} PROPERTIES LABELS "original;runtime;native" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()
-add_executable(original_animation_fixture EXCLUDE_FROM_ALL tests/original/animation.cpp tests/original/AllocationFault.cpp)
+add_executable(original_animation_fixture tests/original/animation.cpp tests/original/AllocationFault.cpp)
 target_link_libraries(original_animation_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_animation_fixture PRIVATE -Wl,--gc-sections)
+add_test(NAME original_animation_constructor COMMAND original_animation_fixture)
+set_tests_properties(original_animation_constructor PROPERTIES LABELS "original;runtime;animation" TIMEOUT 60
+  ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 target_link_libraries(original_diplomacy_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_diplomacy_fixture PRIVATE -Wl,--gc-sections)

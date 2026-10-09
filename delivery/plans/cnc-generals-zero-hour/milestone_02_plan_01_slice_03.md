@@ -1523,3 +1523,27 @@ and honest limits. Full238 was not run. Recommendation-specific allocation/I/O
 sweeps, nonnull callbacks, animation ownership and actual factories/startup/world
 remain pending. This checkpoint commits the coherent verified pending batch;
 N2/slice03 remains in progress, not accepted.
+
+Follow-on from900b561d continues this same plan: close actual recommendation
+allocation and storage failure/retry coverage, including unavailable/failed/invalid
+chipset probes and legitimate parent restoration. Discover each manifest with
+the same retained preferences and initialized source owner used by every ordinal;
+retire discovery before baselines. Required read/acquisition failure keeps the
+prior owner/settings; optional publication failure may retain a valid measured
+recommendation with explicit unavailable persistence, followed by corrected retry.
+Never manufacture modern hardware equivalence. Recheck actual root and animation
+link closure all3; execute only the real animation owner, never the link probe.
+If actual constructor ownership passes all3, register that unchanged fixture in
+CTest, keeping registered-window behavior and full startup explicitly pending.
+Own LOD tests/CMake and directly required source/plan/evidence/state only. Focused
+and related frozen normal/GCCsan/Clangsan checks precede a coherent checkpoint.
+
+Follow-on gate passes all3: focused10 in7.77s/33.17s/20.36s; related110 in17.84s/
+74.94s/57.64s; all configured builds. Recommendation allocation/storage manifest
+prefixes/retries and exact terminals preserve original owner/settings; actual
+animation constructor terminal8 passes and is registered in CTest. Root link
+closure succeeds all3, never executed. Separate default GUI lexicon still needs205
+callbacks all3; headless GUI tables may be explicitly omitted, never gameplay or
+logical Drawable state. Current evidence and source identities are appended to
+`evidence/qa/N2-lod-checkpoint.md`. Full242 not run; N2/slice03 still incomplete.
+Continue native root/client factories and actual original startup/world cohort.

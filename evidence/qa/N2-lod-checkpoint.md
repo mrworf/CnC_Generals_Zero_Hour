@@ -67,3 +67,42 @@ animation diagnostics were not rerun or executed in this cleanup checkpoint.
 N0/N1 remain accepted; N2/slice03 and N3–N7 remain incomplete. Verified format and
 ownership facts are in `docs/original-engine-formats.md` and source integration
 limits in `docs/original-runtime-source-graph.md`.
+
+## Follow-on from 900b561d: recommendation recovery and animation closure
+
+Recommendation-specific allocation and storage sweeps now execute every discovered
+prefix and exact terminal across three whole owners. An absent/unknown chipset
+remains unclassified; failed/invalid chipset acquisition preserves the complete
+owner. Required preference-read or allocation failure preserves metadata and prior
+settings; optional failed publication retains the valid selected level with an
+explicit unavailable persistence status. Corrected same-owner retry publishes the
+original keys while preserving an unrelated retained setting. The first fixture
+attempt counted its own still-live settings string in the post-retry heap baseline;
+that observation backing is now retired before the check, without changing product
+behavior or weakening the baseline.
+
+Actual startup link probe and animation fixture link successfully all3. The root
+probe was never executed. The actual animation owner executes all eight constructor
+failure/retry pairs and exact terminal8 three times all3; it is now a normal build
+target and CTest `original_animation_constructor`. Registered windows, rendering
+and complete startup are not inferred from constructor helper ownership.
+
+All configured targets build all3. Frozen focused10/10 pass normal/GCCsan/Clangsan
+in7.77s/33.17s/20.36s; related110/110 pass in17.84s/74.94s/57.64s. Full242 is not
+run. Sanitizer checks use the normal host with instrumentation/leak checks intact.
+Logs `/tmp/zh-lod-follow-<variant>-{build,focused,related}.log`; link diagnostics
+`/tmp/zh-lod-closure-{gcc,gccsan,clangsan}.log`. Default GUI FunctionLexicon's
+separate never-executed link diagnostic still has205 unique missing callbacks in
+each configuration; logs `/tmp/zh-factory-lexicon-{gcc,gccsan,clangsan}.log`.
+This includes original menus, IME and excluded GameSpy callbacks. Headless GUI
+omission must be explicit, never a made-up success provider or missing gameplay
+registry. Native interactive callback integration remains N4 work.
+
+Current canonical593 SHA256:
+`7eb1a193c743e204d74b9a047fff5bf67de6473b325d4fcd56666f67f3ac8dee`;
+toolchain-inclusive600:
+`ec28587e730a433da94aff51a9a98930a4b6fbb1d52745b70d2ba6b31905b7a2`.
+Same cumulative hashing procedure and unchanged specification as above. Remaining:
+nonnull presentation callbacks, native root/client factories, actual GameEngine
+startup and compiler-matching original world/scenario, full N2 ownership matrix
+and native device evidence. N2/slice03 remains in progress.

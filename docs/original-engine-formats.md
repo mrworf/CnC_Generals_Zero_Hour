@@ -2820,3 +2820,21 @@ namespace first: an absent directory otherwise skips the preference-file open,
 making a later warmed manifest one operation longer. Full startup, native automatic
 tuning and nonnull renderer/audio behavior are not established by these tests.
 See `evidence/qa/N2-lod-checkpoint.md`.
+
+Follow-on ownership evidence closes recommendation acquisition/publication faults
+and corrected same-owner retries all3, preserving unrelated preferences and exact
+owner/descriptor retirement. Actual animation constructor's eight helper prefixes
+and exact terminal pass all3 and are registered in CTest; registered-window behavior
+remains pending. Common startup link closure now succeeds all3, but no root probe
+is executed. Default GUI FunctionLexicon still requires205 callbacks all3, including
+excluded GameSpy entries: explicit headless omission of GUI tables is not omission
+of simulation modules/script behavior. `GameLogic::init` creates the actual common
+PartitionManager, GhostObjectManager, TerrainLogic, ScriptActions/Conditions/Engine;
+its default factories return original common owners, not W3D replacements. Native
+GameEngine still needs a real concrete root and GameClient presentation boundary.
+GameClient's drawable/map/frame methods carry simulation-facing state; do not
+replace that state with an empty success implementation. Source references:
+`GameLogic/System/GameLogic.cpp` (init and createTerrainLogic/createGhostObjectManager),
+`Common/GameEngine.cpp` (startup factory order), `GameClient/GameClient.h` (device
+factories and logical drawable state). These are current integration tasks, not
+startup or world acceptance.
