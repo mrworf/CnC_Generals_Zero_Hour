@@ -2537,3 +2537,73 @@ client/freeze composition, shipped ghost/snapshot/border/load ownership,
 accepted-actor geometry replacement, walls/model bridges, full startup and real
 compiler-matching simulation. Source findings are durable in
 docs/original-engine-formats.md; no new replacement plan or milestone is created.
+
+Next full-creation ownership batch (parent587b1234): actual ThingFactory::newObject
+must retain candidate ownership across create interfaces, partition admission,
+Drawable creation/binding and initObject. Guard the actor after complete
+construction, withdraw its source registrations and retire that candidate on
+later failure while legitimate parents remain live. This is candidate resource
+ownership, not arbitrary gameplay-side-effect rollback: callback-created children,
+scripts, RNG and accepted-world state still require the whole native root journal.
+Do not rewind over IDs consumed by other actors. Review Drawable binding callbacks
+and reciprocal pointers together; no half-bound candidate may outlive its owner.
+Use the real NativeHeadlessGameClient initialized before logical UI publication,
+with actual MessageStream, rank/module/script/team/radar/terrain/partition parents,
+not temporarily nulled globals or fixture-written simulation. Generated source
+definitions should exercise an actual body and create callback, then full
+Object/Drawable/partition identity, retirement and every complete late allocation
+failure/retry pair preserving an accepted survivor. Execute both compiler
+sanitizers; batch surrounding ownership/cleanup paths before broad frozen tests.
+The UI/headless update contradiction, camera freeze behavior, authored child/
+script/RNG side effects, real fog and actual GameLogic::update remain explicit
+integration requirements; creation fixtures cannot accept them by omission.
+
+Binding review refinement before code: Drawable::friend_bindToObject publishes
+its actor pointer before draw callbacks, then Object::friend_bindToDrawable
+publishes the reciprocal pointer before behavior callbacks. A callback failure
+can therefore leave a half-bound pair. Guard the newly created Drawable in
+sendObjectCreated and withdraw only matching candidate pointers without callbacks
+or allocation on rollback; retire its registry while both real owners live.
+Preserve normal callback order and complete destruction. Reject a duplicate
+sendObjectCreated before acquiring another Drawable. Scope actor-ID restoration
+to an otherwise unconsumed candidate ID; no rewind over child/other acquisitions.
+
+First creation build retained: the owner guard called Object's protected pooled
+delete endpoint and passed unsigned storage to the typed ObjectID setter. Use
+the existing public friend_deleteInstance owner endpoint after registry withdrawal
+and retain ObjectID as the candidate identity; do not change pooled deletion
+visibility or serialized types. No creation test was launched after that failed
+build. Retry only after the source API corrections, then inspect runtime lifecycle
+families rather than introducing fixture-written create behavior.
+
+Worktree review and unfinished handoff (parent
+`587b12343a51164c592433c6cb033271eedc9f5a`): the corrected GCC target build
+passed, but both `original_logical_world_factory-creation` and
+`original_logical_world_factory-creation-faults` failed during fixture setup
+with `ERROR_BAD_INI`, before creation ownership was exercised. Context mounts
+its initially empty generated tree before factoryCreation writes creation.ini;
+NativeFileSystem::mountReadOnly indexes files at mount time. INI::prepFile rejects
+the undiscoverable generated file. Correct generated-file preparation/discovery
+using the existing mount contract, not a production filesystem bypass. Then
+exercise the real creation families and both partial-binding callback-failure
+phases before freezing source for the GCC/Clang sanitizer and related matrix.
+The callback-failure branches are not yet specifically tested. No current batch
+ownership, sanitizer, or milestone acceptance is claimed.
+
+Six executable paths remain deliberately uncommitted as one coupled batch:
+Drawable.h and Object.h candidate-binding withdrawal; ThingFactory.cpp candidate
+actor ownership; GameLogic.cpp candidate Drawable ownership;
+cmake/OriginalRuntime.cmake new test registration; and
+tests/original/logical_world.cpp real body/create/binding fixtures. Commit them
+together with eventual truthful evidence only after required validation passes.
+Do not split header/source/test changes into unrelated commits or commit failing
+tests as a completed delivery checkpoint. No untracked files, vendor modifications,
+retail modifications, or recovery-archive modifications were found in the tracked
+worktree review. Ignored build outputs are not deliverables and were not removed.
+
+Retained local logs (ephemeral; this account is the durable failure handoff):
+`/tmp/n2-factory-creation-gcc-build.log` (first compile failure),
+`/tmp/n2-factory-creation-gcc-build-retry.log` (corrected build),
+`/tmp/n2-factory-creation-gcc-build-current.log` (current build), and
+`/tmp/n2-factory-creation-gcc-focused.log` (both setup failures). Previous partition
+checkpoint acceptance applies to its committed source, not this unfinished batch.

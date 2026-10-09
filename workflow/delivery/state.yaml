@@ -34,7 +34,23 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 nonempty partition admission ownership verified; all3 builds/focused4/related137 PASS on canonical626 f0dcee42. Complete grid31/actor1/ghost-attachment1 failure/retry manifests, actual actor cells and partition pool exhaustion. Full327 not run. Full creation and native root/UI/client/freeze composition, shipped fog/snapshot/border/load, accepted geometry replacement, walls/model bridges, full startup and actual matching simulation remain mandatory. Slice03/N2 incomplete.",
+  "resume_point": "N2 plan01/slice03 full creation ownership batch is uncommitted and unaccepted. GCC target build passes, but both new creation families fail in INI fixture setup: creation.ini was written after the generated tree was indexed. Correct fixture discovery via the existing mount contract, exercise both partial-binding callback-failure phases and complete creation failure/retry manifests, then freeze source for required compiler sanitizer and related validation. Last verified source remains partition commit 587b1234 (all3 builds/focused4/related137 PASS); its evidence does not accept current modifications. Full native root/UI/client/freeze, shipped fog, geometry replacement, walls/bridges, startup and actual simulation remain mandatory. Slice03/N2 incomplete.",
+  "uncommitted_batch": {
+    "label": "original-full-creation-ownership",
+    "parent_commit": "587b12343a51164c592433c6cb033271eedc9f5a",
+    "status": "unfinished_not_accepted",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "paths": [
+      "GeneralsMD/Code/GameEngine/Include/GameClient/Drawable.h",
+      "GeneralsMD/Code/GameEngine/Include/GameLogic/Object.h",
+      "GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingFactory.cpp",
+      "GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogic.cpp",
+      "cmake/OriginalRuntime.cmake",
+      "tests/original/logical_world.cpp"
+    ],
+    "validation": "Corrected GCC fixture target build PASS; both new creation tests FAIL during INI fixture setup before creation. Creation sanitizers and related matrix not run. Partial-binding callback-failure branch coverage pending.",
+    "next": "Correct generated-file discovery in fixture, complete coupled lifecycle validation, then commit this batch with evidence. Preserve all six paths in the meantime."
+  },
   "transaction_parent": "ce04706030bffa9f511d57207c08bf43d088c81e",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
