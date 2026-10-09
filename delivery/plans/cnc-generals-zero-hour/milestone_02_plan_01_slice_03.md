@@ -2899,3 +2899,79 @@ Native-font related159 passed all3: GCC148.46s, GCC sanitizer642.98s, Clang
 sanitizer393.10s; full configured builds/focused6 passed all3. All handles are
 terminal0. Commit this coherent backing checkpoint, then continue the planned
 string/UI/client/root follow-through. Full349 and N2 acceptance remain pending.
+
+String implementation refinement (parent0d56ee9c, same coherent UI/root batch):
+NativeDisplayString will stage copied glyphs, raw per-position advances and line
+placements before a nonfallible text/font/layout swap. Override every inherited
+mutation that otherwise publishes before fallible notification. Expose owned CPU
+layout for a later explicit renderer; nonempty draw without that integration
+rejects, never reports headless output success. NativeDisplayStringManager guards
+default-font admission, keeps localized group/formation cache replacement offside,
+and retires all tracked records before font backing. Extend real-font generated
+tests with exact raw/formatted widths, overlap, soft/hard >= boundaries, trailing
+newlines, ampersands, centered placements, mutation rollback and repeated manager
+lifetimes; test cache initialization against original text/DrawGroupInfo parents.
+Complete native/client integration and source-output parity are not inferred from
+these CPU tests. Use actual UI consumers and coupled admission paths next.
+
+Current implementation progress: real NativeDisplayString and manager compile;
+focused8 passes all3 (GCC2.47s/GCC sanitizer7.79s/Clang sanitizer6.97s), with
+actual generated CSF/GameText and DrawGroupInfo caches, complete text mutation7
+and cache replacement76 standard-fault terminals and every retry, repeated3.
+Details/limits are durable in docs/original-engine-formats.md. No live jobs,
+implementation commit or broader acceptance for this batch yet. Continue actual
+UI/client consumers, native hook failure cross-products and remaining layout
+boundaries before freezing the related matrix; do not accept a separate manager
+fixture as whole original-root adoption. N2 and slice03 remain incomplete.
+
+Actual client integration ordering: GameClient::init constructs/initializes the
+string manager before creating FontLibrary; localized cache postProcessLoad is
+later, after fonts. The native manager must support this legitimate unbound
+construction and resolve the published native font owner at admission, rather
+than dereference a font that does not exist or reorder the original initialization
+graph. Implement the original headless client's real font/string factories and
+test their source registry composition/destructor with actual timer/superweapon
+consumers, missing parents and paired native/standard admission failures. Keep
+UI/view/display factories explicitly pending; this does not accept full init.
+
+Current coupled composition evidence: production NativeHeadlessGameClient text
+factories and source registry/destructor now exercise real manager/fonts plus
+actual generated CSF caches, timer replacement, superweapon constructor/admission
+and ordinary glyph-backed strings. The UI fixture rejects physical draw/view;
+full source init and public player/science admission remain pending. Whole client
+115 standard acquisitions are covered in early/late sweeps with every retry and
+exact terminal, repeated3, under all3 focused11 (18.25s/59.73s/45.32s). All jobs
+terminal0. Failed-development boundaries and paired source census are recorded
+in docs/original-engine-formats.md and AGENTS.md. No implementation commit or
+broader acceptance yet. Complete remaining native-hook/layout mutation boundary
+coverage and truthful root adoption, then freeze this coherent batch for related
+validation; preserve all N2 startup/frame/camera/popup/snapshot gates.
+
+Coupled native text/client batch is now frozen canonical640/inclusive647. Full
+configured builds/focused16/related169 run all3; exact jobs/logs and acquisition
+manifests are in evidence/qa/N2-native-text-checkpoint.md. Added independent
+standard/native sweeps for all seven mutations, native cache11, source-derived
+space/marker/wrap/newline/centering/Unicode boundaries and negative manager
+parents/default descriptors/foreign free. No full359, implementation commit,
+slice03 or N2 acceptance yet. Poll exact live jobs; do not mutate the tested
+runtime or restart based on a yield. Commit only after required terminal passes,
+then continue original UI/view/root startup in this same governing transaction.
+
+Actual-root follow-through reminder from source census during frozen validation:
+initHeadless/updateHeadless still reject UI/view/window/display and do not invoke
+the verified text factories or advance a camera. Actual native root adoption must
+close that route deliberately with staged legitimate providers and source phase
+ordering. Original InGameUI::init has early tactical-view/ControlBar publication
+and fallible attachment/init; guard that whole cohort and pending popup/snapshot
+paths rather than reuse the test subclass or nullable parents. Durable source
+anchors and constraints: docs/original-engine-formats.md. This refines the
+existing root/camera/UI scope, not another plan or a relaxed N2 acceptance gate.
+
+Frozen coupled native text/client checkpoint complete: all3 full configured
+builds/focused16/related169 PASS canonical640/inclusive647. Related times:
+GCC166.19s, GCC sanitizer716.62s, Clang sanitizer434.11s. All validation handles
+terminal0. Supporting evidence: evidence/qa/N2-native-text-checkpoint.md.
+Commit the coherent provider/actual client factory/ownership/validation batch;
+full359, slice03 and N2 acceptance remain pending. Continue the documented actual
+headless UI/view/root adoption and original source phase/snapshot/popup/shutdown
+gates, not another isolated text-only plan.

@@ -41,7 +41,12 @@ The original engine replaces ordinary global allocation with memory pools.
 Inspect allocation and deallocation together, including temporary/nothrow paths,
 and validate new original-runtime ownership with GCC and Clang sanitizers.
 Native handles can represent multiple acquired references; release ownership
-units, not distinct numerical handles. Guard constructor acquisitions before
+units, not distinct numerical handles. Stage fallible argument conversions before
+constructing a raw candidate handed to an owning admission function: a callee's
+guard cannot unwind an object if another argument throws before call entry.
+Inspect production callers and fixtures together; existing parsed keys and
+inline literal-to-string conversions have different acquisition boundaries.
+Guard constructor acquisitions before
 fallible helpers. Avoid callbacks into simulation from render/audio threads.
 
 Preserve packed attributes, source-selected mip levels, filters and transforms.

@@ -3,7 +3,12 @@
 #include "GameClient/NativeHeadlessGameClient.h"
 #include "GameClient/Drawable.h"
 #include "GameClient/RayEffect.h"
+#include "GameClient/NativeFontLibrary.h"
+#include "GameClient/NativeDisplayStringManager.h"
 #include <memory>
+
+FontLibrary* NativeHeadlessGameClient::createFontLibrary() { return new NativeFontLibrary; }
+DisplayStringManager* NativeHeadlessGameClient::createDisplayStringManager() { return new NativeDisplayStringManager; }
 
 Drawable* NativeHeadlessGameClient::friend_createDrawable(const ThingTemplate* definition,DrawableStatus status)
 {

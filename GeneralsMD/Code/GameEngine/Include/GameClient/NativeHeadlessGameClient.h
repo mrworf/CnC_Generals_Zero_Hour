@@ -17,8 +17,10 @@ private:
   Display* createGameDisplay() override {throw ERROR_BAD_ARG;}
   InGameUI* createInGameUI() override {throw ERROR_BAD_ARG;}
   GameWindowManager* createWindowManager() override {throw ERROR_BAD_ARG;}
-  FontLibrary* createFontLibrary() override {throw ERROR_BAD_ARG;}
-  DisplayStringManager* createDisplayStringManager() override {throw ERROR_BAD_ARG;}
+protected:
+  FontLibrary* createFontLibrary() override;
+  DisplayStringManager* createDisplayStringManager() override;
+private:
   VideoPlayerInterface* createVideoPlayer() override {throw ERROR_BAD_ARG;}
   IMEManagerInterface* createIMEManager() override {throw ERROR_BAD_ARG;}
   TerrainVisual* createTerrainVisual() override {throw ERROR_BAD_ARG;}

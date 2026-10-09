@@ -4527,3 +4527,108 @@ Keep it as a pending input/compatibility gate before native original-root
 adoption, not evidence that a source requirement can be dropped. The current
 generated backend fixture deliberately tests rejection; it is not a retail-font
 configuration census or default-size parity oracle.
+
+Native string implementation progress (same N2 plan01/slice03, uncommitted):
+NativeDisplayString overrides text/font/append/remove/wrap/hotkey mutations and
+builds its copied CPU glyph/advance/placement cohort before nonfallible adoption.
+Raw widths retain newline position accounting; formatted extent restores source
+overlap and retains >= hard wrapping. Center offsets are measured from stable
+per-line widths before placements change, not from already-centered peers.
+NativeDisplayStringManager guards default-font admission and stages the entire
+original group/formation cache; its retirement guard owns old caches after a
+single completed replacement. Ordinary strings survive cache replacement, free
+withdraws cache aliases, and reset/destructor retire every tracked pooled string
+before font backing. Nonempty draw currently rejects absent renderer integration.
+No physical output success is claimed.
+
+tests/original/native_font.cpp now executes generated CSF through actual GameText
+plus actual DrawGroupInfo/GlobalLanguage and the native manager, not a text stub.
+Focused8 passes GCC/GCC sanitizer/Clang sanitizer (2.47s/7.79s/6.97s), including
+all prior font families and new string/cache families. Complete standard text
+mutation7 and localized-cache76 acquisition terminals each retain every failed
+prefix/corrected retry, repeated3, exact pooled and whole-manager game storage;
+native backing leak checks remain unsuppressed. This is not a frozen broader
+matrix, original UI/client adoption, full raw/soft/hard/center/hotkey mutation
+cross-product, native fault manifest for entire strings/cache, source-output
+parity, popup/snapshot or original root startup/frame acceptance. Continue those
+coupled integration gates in the existing plan before a delivery commit.
+
+Original client/native text composition now has execution evidence (uncommitted
+same batch): GameClient::init creates/initializes DisplayStringManager before
+FontLibrary, then calls cache postProcessLoad after fonts are initialized.
+NativeDisplayStringManager supports legitimate unbound construction and resolves
+the actually published initialized NativeFontLibrary at admission; it rejects
+missing/wrong owners without dereferencing them. NativeHeadlessGameClient's two
+production factories now construct real native font/string owners. The source
+GameClient destructor retires the actual timer/superweapon UI consumers, manager
+tracked strings/caches and native font backing in that order, while the client
+identity stays legitimate through cleanup.
+
+The generated fixture exercises actual production text factories/source registry,
+GameText CSF, GlobalData/GlobalLanguage configuration and original UI timer and
+superweapon admission helpers. Its test-only UI subclass rejects draw/view and
+does not establish full native UI init or public player/science admission. Full
+GameClient::init, snapshot/popup, camera/view and original root init/frame remain
+unexecuted. Complete client115 standard acquisitions are split into independent
+early/late sweeps, preserving every prefix and retry plus exact terminal, each
+repeated3. Focused11 passes GCC18.25s/GCC sanitizer59.73s/Clang sanitizer45.32s;
+individual tests retain60s timeout and unsuppressed leak checks. No live jobs or
+broader matrix for this string batch yet.
+
+Retained fixture failures/corrections: original UI headers required the same
+original WWVegas include graph/operator-new definition as existing UI-owner
+fixtures; no dependency source/header was patched. The initial font-only warm-up
+omitted complete client/configuration/provider acquisition and measured newly
+retained metadata; warm the identical whole cohort before baselines, not a waiver.
+A literal-to-AsciiString argument could throw after a raw SuperweaponInfo was
+created but before admitSuperweapon entry. Prestage parsed keys, as both real
+runtime and snapshot source callers already do; a callee guard cannot own a
+candidate before call entry. The corrected complete115 sweep verifies that no
+typed candidate/string units remain after any failure or retry. Source anchors:
+GameClient.cpp::init/~GameClient; NativeHeadlessGameClient.cpp::createFontLibrary/
+createDisplayStringManager; NativeDisplayStringManager.cpp::fonts; InGameUI.cpp::
+admitSuperweapon callers near snapshot restoration and addSuperweapon.
+
+Native string boundary/failure matrix expansion (same uncommitted frozen batch):
+generated fonts now include a zero-bitmap space with actual advance3 and an
+ampersand. Execution proves raw marker widths differ from parsed formatted
+widths, source soft-wrap retains the space on the next line, >= equality wraps,
+soft wrap does not split unbroken words, trailing newline adds a line, source
+hard-wrap equality can advance before a first wide character, and centered
+offsets use stable line widths. Multiple markers preserve last sentence location
+with first search glyph; trailing/pre-whitespace markers remain ordinary glyphs.
+Alternate Unicode and malformed append/foreign font/clip rejection use defined
+representations. All seven mutations now have complete independent standard and
+native acquisition manifests; cache replacement also has native11 in addition
+to standard76. Missing font/uninitialized library/catalog/group parents, invalid
+default descriptors and foreign frees reject without partial publication.
+Evidence, frozen identity, exact manifests and live jobs:
+evidence/qa/N2-native-text-checkpoint.md. Physical parity/full root remain pending;
+do not infer them from these CPU boundaries. Preserve source while broader169
+validation executes before a delivery commit.
+
+Next actual-root adoption boundary verified while text source is frozen:
+GameClient::init dispatches m_headless to initHeadless, which currently creates
+only the RayEffect owner/drawable lookup and rejects any Display/InGameUI/
+WindowManager/TacticalView. updateHeadless repeats that exclusion and computes
+only script/debug/pause freeze, without camera/view progression. Thus passing
+production text factories in a composed registry does not integrate them into
+that actual initialization/frame route. Preserve existing low-level owner
+fixtures' scope, but the actual root requires legitimate staged text/UI/view
+adoption and source clock ordering; do not declare integration from factory
+existence or skip required scripted camera behavior.
+
+Original InGameUI::init loads InGameUI.ini and localized font descriptors, then
+publishes TheTacticalView before view init/display attachment. Its conditional
+display check is followed by unconditional tactical-view setDefaultView. It then
+creates control/replay windows and publishes ControlBar before fallible init.
+These are coupled partial-init ownership/publication paths, not permission to
+call it with null parents or waive window/view requirements. Root work must guard
+the entire UI/view/control acquisition, preserve valid identities through cleanup
+and restore publications on failure. Native logical UI must distinguish physical
+output from required source script/UI state rather than use the test-only UI
+subclass as a production provider. Source anchors: GameClient.cpp::{init,
+initHeadless,updateHeadless}; InGameUI.cpp::init. Camera source transformation
+and lock behavior must be implemented from W3DView::buildCameraTransform/update
+using game-owned CPU math and real terrain/model queries, not renderer-private
+internals or a constant eye/finished state.

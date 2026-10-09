@@ -143,6 +143,14 @@ void NativeFontLibrary::init() {
 void NativeFontLibrary::reset() { deleteAllFonts(); }
 bool NativeFontLibrary::initialized() const noexcept { return bool(m_impl); }
 std::size_t NativeFontLibrary::localFaceCount() const noexcept { return m_impl?m_impl->locals.size():0; }
+bool NativeFontLibrary::owns(const GameFont* font) const noexcept {
+  for(auto* owned=m_fontList;owned;owned=owned->next)if(owned==font)return true;
+  return false;
+}
+Int NativeFontLibrary::extraOverlap(const GameFont* font) const {
+  valid(m_impl && owns(font));
+  return std::clamp(Int(std::lround(font->pointSize*96.0/72.0))/8,0,4);
+}
 Bool NativeFontLibrary::loadFontData(GameFont* font) {
   if(!m_impl || !font || font->nameString.isEmpty() || font->pointSize<=0 || font->pointSize>100)throw ERROR_BAD_ARG;
   auto data=std::make_unique<FontData>();

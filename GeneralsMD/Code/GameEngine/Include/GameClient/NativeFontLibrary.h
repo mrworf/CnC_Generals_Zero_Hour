@@ -24,6 +24,8 @@ public:
   void reset() override;
   bool initialized() const noexcept;
   std::size_t localFaceCount() const noexcept;
+  bool owns(const GameFont* font) const noexcept;
+  Int extraOverlap(const GameFont* font) const;
   Glyph readGlyph(const GameFont* font,WideChar character);
 private:
   struct Impl;

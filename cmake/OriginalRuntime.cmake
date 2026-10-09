@@ -279,6 +279,10 @@ list(TRANSFORM ZH_ORIGINAL_LOGICAL_CLIENT PREPEND "${ZH_CODE}/GameEngine/Source/
 add_library(original_logical_client STATIC ${ZH_ORIGINAL_LOGICAL_CLIENT})
 target_sources(original_logical_client PRIVATE
   "${ZH_CODE}/GameEngine/Source/GameClient/GUI/NativeFontLibrary.cpp")
+target_sources(original_logical_client PRIVATE
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeDisplayString.cpp")
+target_sources(original_logical_client PRIVATE
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeDisplayStringManager.cpp")
 target_link_libraries(original_logical_client PUBLIC Freetype::Freetype Fontconfig::Fontconfig)
 target_sources(original_logical_client PRIVATE
   "${ZH_CODE}/GameEngine/Source/GameClient/ScriptedView.cpp"
@@ -466,10 +470,13 @@ add_executable(original_logical_world_fixture tests/original/logical_world.cpp t
 add_executable(original_waypoint_graph_fixture tests/original/waypoint_graph.cpp tests/original/AllocationFault.cpp)
 add_executable(original_script_camera_fixture tests/original/script_camera.cpp tests/original/AllocationFault.cpp)
 add_executable(original_native_font_fixture tests/original/native_font.cpp tests/original/AllocationFault.cpp)
+target_compile_definitions(original_native_font_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+target_include_directories(original_native_font_fixture PRIVATE
+  "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_link_libraries(original_native_font_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_native_font_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS functional negative native-faults allocation-faults host pool-failures)
+foreach(family IN ITEMS functional negative native-faults allocation-faults host pool-failures strings string-boundaries string-mutation-faults string-native-faults manager manager-native-faults manager-negative client client-faults-early client-faults-late)
   add_test(NAME original_native_font_${family} COMMAND original_native_font_fixture "${family}")
   set_tests_properties(original_native_font_${family} PROPERTIES LABELS "original;runtime;fonts" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
