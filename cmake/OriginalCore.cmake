@@ -1,6 +1,7 @@
 find_package(Threads REQUIRED)
 set(ZH_CODE "${CMAKE_SOURCE_DIR}/GeneralsMD/Code")
 add_library(original_core STATIC
+  "${ZH_CODE}/GameEngine/Source/Common/System/NativeFatal.cpp"
   "${ZH_CODE}/GameEngine/Source/GameLogic/System/FPUControl.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/RandomValue.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/crc.cpp"
@@ -26,6 +27,14 @@ target_link_libraries(original_core_fixture PRIVATE original_core)
 foreach(family IN ITEMS values random strings pools repeat)
   add_test(NAME original_core_${family} COMMAND original_core_fixture "${family}")
   set_tests_properties(original_core_${family} PROPERTIES LABELS "original;core" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
+
+add_executable(original_fatal_fixture tests/original/fatal.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_fatal_fixture PRIVATE original_core)
+foreach(family IN ITEMS reporting failures)
+  add_test(NAME original_fatal_${family} COMMAND original_fatal_fixture "${family}")
+  set_tests_properties(original_fatal_${family} PROPERTIES LABELS "original;core;runtime;fatal" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()
 

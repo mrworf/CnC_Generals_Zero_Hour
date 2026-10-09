@@ -728,3 +728,13 @@ GameLogic. The never-executed root-link diagnostic now has 7 normal GCC,
 providers are diplomacy, start spots, native capability admission and ReleaseCrash;
 sanitizer-retained callback roots remain wider. This is compilation evidence,
 not startup acceptance. See `evidence/qa/N2-statistics-checkpoint.md`.
+
+Both original fatal APIs now bind the native original_core provider. It exits
+failure with a fixed redacted report independently of GameLogic/GlobalData/text
+and storage lifetimes, including exhausted allocation and failed stderr output.
+Original Windows Debug.cpp is not admitted by the native graph; do not compile
+both fatal providers. This supplies the actual release-crash path, not a returning
+stub or an assertion suppression. Current link-only diagnostics remain failures:
+6 normal GCC,218 GCC sanitizer,222 Clang sanitizer unresolved symbols. The
+remaining normal set is capability admission, diplomacy and map start spots.
+None of these probe binaries is run. See `evidence/qa/N2-fatal-checkpoint.md`.

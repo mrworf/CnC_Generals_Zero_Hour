@@ -1189,3 +1189,39 @@ Never-executed root-link diagnostics fail7/219/223. Full207 not run. Whole origi
 sampling and N2 process/scenario remain pending. See
 `evidence/qa/N2-statistics-checkpoint.md`; this coherent commit does not close N2
 or the governing slice03.
+
+Continue from717a474b with the complete native fatal-error boundary used by
+GameEngine exception handling and GameLogic invariant failures. Both original
+ReleaseCrash and ReleaseCrashLocalized must terminate with failure even before
+initialization or after owner withdrawal, without looking up simulation globals,
+allocating, invoking teardown callbacks, or modifying assets/CWD. Replace the
+Windows dialog/raw-stack/raw-reason report with a fixed redacted stderr message;
+do not dereference or echo caller selectors/localized identifiers. No fake game
+provider or returning fatal stub. Use bounded POSIX output and immediate failure
+termination; failed stderr output still must terminate. Test both entry points
+in generated child processes, null/hostile reason data, exhausted allocation,
+closed/broken stderr, and no atexit callbacks or output files. Run focused and
+related original-core/configuration/runtime tests with normal/GCC/Clang
+sanitizers, refresh link-only diagnostics, and commit one coherent checkpoint.
+
+Source findings for subsequent coupled work: original testMinimumRequirements
+lives in device-owned W3DShaderManager, returns true and supplies legacy CPU/GPU
+profile identities. RunBenchmark has only a header/project here, no implementation.
+GameLOD also writes raw Benchmark.txt on force-benchmark and overwrites unknown
+CPU identity with P3 defaults. Do not fabricate benchmark values or silently
+interpret a modern GPU as an accepted old profile. Native capability/LOD and
+its protected optional report must be implemented together. Diplomacy and
+start-spot functions live in full GUI menus with GameSpy dependencies; extract
+or decouple legitimate original behavior rather than installing no-op callbacks.
+
+Native fatal checkpoint: both original entry points now terminate failure without
+owner/global lookups, allocations, raw selectors, callback-driven cleanup or
+report files.27 generated cases test complete error-output/exit behavior across
+three repetitions. All configured targets build all3; related74/74 PASS
+GCC16.78s/GCCsan67.13s/Clangsan63.74s with checks intact. Canonical561
+SHA8638d4c6722e00c1979964ffff6704522d5e1acea9b4da19b88b5869effc481a;
+toolchain566 SHAcef73d71e18665ba890676775d229e72166b8e003c1a318d08ed08f131917004.
+Never-executed root link still fails6/218/222; full209 pending. Source-reviewed
+LOD and whole diplomacy/start-spot lifecycle findings are durable in formats.
+See `evidence/qa/N2-fatal-checkpoint.md`. N2/slice03 and whole original startup/
+simulation/default stats sampler remain unaccepted.

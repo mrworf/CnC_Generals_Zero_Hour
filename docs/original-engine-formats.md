@@ -2510,3 +2510,49 @@ simulation callback or I/O. Allocation failures unwind candidates; optional
 storage failures expose output status. Actual default-adapter execution,
 debug/LAN naming and whole GameLogic/scenario acceptance remain pending.
 Current evidence: `evidence/qa/N2-statistics-checkpoint.md`.
+
+### Fatal reporting and LOD capability source dependencies
+
+`Common/System/Debug.cpp` implements both ReleaseCrash entry points using Win32
+dialogs, raw reason/stack reports and user-path file rotation; localized reporting
+also calls the text singleton. Ordinary ReleaseCrash could return during shutdown
+if GlobalData was withdrawn, despite GameEngine's explicit nonreturning contract.
+The native provider in `Common/System/NativeFatal.cpp` instead emits one fixed
+redacted stderr report and immediately exits failure without allocations,
+simulation globals, localization callbacks, filesystem mutations or atexit.
+Closed/broken stderr does not prevent failure exit. Reasons/identifiers are not
+read, because they can contain private roots or refer to retired owners. This
+boundary is not restart/teardown or whole-runtime acceptance.
+
+The remaining capability entry point is defined in device-owned
+`W3DShaderManager.cpp::testMinimumRequirements`, not common GameLOD. It reports
+legacy CPU classes from CPUDetect, RAM/speed and W3D chipset, then returns true;
+when all three benchmark outputs are supplied, it calls RunBenchmark. This tree's
+Benchmark directory contains its header and project, but none of the project-
+listed nbench/misc/sysspec implementations. GameLOD invokes hardware discovery
+before GameClient initialization; it additionally writes raw Benchmark.txt on
+force-benchmark and substitutes P3/1000 when selecting unknown-CPU profiles.
+Native capability results, optional report ownership and legacy-profile mapping
+must be settled together. Do not manufacture benchmark acceptance or accepted
+modern renderer capability from old profile ordinals. These dependencies remain
+pending, alongside full diplomacy/start-spot menu decoupling and original startup.
+
+Before admitting the remaining GUI roots, review their complete lifecycle:
+`SkirmishGameOptionsMenu.cpp::positionStartSpots` dereferences mapWindow on its
+missing-map path, caches UnknownMap Image pointers statically across collection
+lifetimes, copies MapMetaData, and iterates player count into fixed MAX_SLOTS
+button backing. `positionStartSpotControls` divides by map extents and reads
+preceding buttons without sparse-array checks; screen-coordinate rectangles are
+compared with locally computed gadget coordinates. `updateMapStartSpots` checks
+the source-slot button but then writes the selected-position button, which can
+be a different null entry. Admit counts, extents, positions and target pointers
+together while preserving map aspect/projection and apparent-versus-real slot
+selection. These are source findings, not executed defect reproduction.
+
+`Diplomacy.cpp` keeps layout/window/animation/control pointers as static state.
+Hide releases control pointers; Reset destroys layout windows through InGameUI
+and clears only its layout/window/animation members directly. Preserve legitimate
+parent identity through cleanup, withdraw all borrowed controls, and test reset/
+hide/populate order across whole owner lifetimes. Full GameSpy-dependent menus
+remain uncompiled; their callback definitions must not be replaced with returning
+no-ops to make the startup link green.
