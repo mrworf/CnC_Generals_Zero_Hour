@@ -26,8 +26,8 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 registered nonempty client-module integration: all configured builds, focused10 and related136 PASS all3. Complete source registry has198 distinct entries and1036 acquired operations; four fault/retry shards prove all prefixes and exact terminals. Actual three client modules and hidden/selectable state pass. Native startup must preserve shipped W3DGameLogic terrain/ghost semantics, not common zero-height defaults, plus real camera/audio dependencies. Full252 not run; N2/slice03 incomplete.",
-  "transaction_parent": "38375d10f9b27acc207d2b726e222a8afad7d81a",
+  "resume_point": "N2 plan01/slice03 native height backing/query integration: final bounded-acquisition source builds, focused3 and related145 PASS all3. Original nonflat triangle/normal/LOS queries, distinct display clipping, all height versions, forged large-envelope rejection and allocation censuses6/10/all failure-retry pairs/exact terminals pass. Complete BlendTileData/world candidate, authored cliffs/layers/ghosts and native root remain required. Version1 blend completes its height-chunk intermediate; not an established engine bug. Full255 not run; N2/slice03 incomplete.",
+  "transaction_parent": "b984fff1fb0f804014109927c30f5bcb4754f766",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -36,28 +36,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-native-client-checkpoint.md",
+  "evidence": "evidence/qa/N2-native-terrain-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Integrate real native GameEngine/root with shipped logical terrain/ghost, camera timing, audio readiness, particle/radar owners and actual original world/compiler-matching simulation. Do not substitute common zero-height terrain or null camera/audio success.",
+  "next": "Complete actual native BlendTileData/world/TerrainLogic integration, preserving authored cliffs, legacy blend transitions, map objects/world dictionary/triggers/sides, walls/bridges and waypoint order. Then integrate shipped ghost/partition semantics and real native GameEngine/root, camera timing, audio readiness, particle/radar owners and compiler-matching original simulation. Height-only input is not full world admission.",
   "implementation_checkpoint": {
-    "label": "native-original-registered-client-modules",
-    "reason": "Actual nonempty client modules and complete original registry fault/retry coverage pass all3; shipped terrain/camera/audio remain required before native startup",
-    "prior_commit": "38375d10",
-    "canonical_source_sha256": "88d9cbad253a633973be78fc6192cbc92b506ac57bc10569ede912ae942eca7c",
-    "toolchain_inclusive_sha256": "f461cda8f7bfc65ca68fed0de4d185bf645f40b487ca34b027ff79d7090185d0",
-    "configured_suite_tests": 252,
-    "related_suite_tests_passed": 136,
+    "label": "native-original-terrain-height-queries",
+    "reason": "Actual source height backing/query semantics and bounded acquisition ownership/retry coverage pass focused3 and related145 all3. Full world/blend/cliff/ghost/camera/audio/root remain required before native startup",
+    "prior_commit": "b984fff1",
+    "canonical_source_sha256": "c1f67920e095f8250aff4d3f20da4bf81e636d7350bdfe573331b76d629150cb",
+    "toolchain_inclusive_sha256": "07e84d571f370bed7ed744fda32c2809364a336825258e4c15e4965ea4565f5f",
+    "configured_suite_tests": 255,
+    "related_suite_tests_passed": 145,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; focused10 and related136 PASS all3 on frozen source",
+    "full_current_matrix": "not run; focused3 and related145 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-native-client-checkpoint.md"
+    "evidence": "evidence/qa/N2-native-terrain-checkpoint.md"
   }
 }

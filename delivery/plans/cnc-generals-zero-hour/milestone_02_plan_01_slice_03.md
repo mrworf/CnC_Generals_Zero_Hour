@@ -1640,3 +1640,72 @@ logical state without an invented UI. Evidence/current hashes are appended to
 `delivery: integrate original registered client modules`. Native shipped terrain/
 ghost and camera/audio/startup/world gates remain pending; full252 not run.
 N2/slice03 stays incomplete; continue the factory gate above within this plan.
+
+Continuation from b984fff1 (clean worktree): extract the shipped height-data
+reader and ground/normal/LOS queries into a game-owned NativeTerrainHeightMap,
+using the actual DataChunkInput transaction and original grid constants. This
+is a supporting integration owner within this same slice, not an alternate
+world loader or flat terrain provider. Expose a height-chunk reader for the
+eventual complete world candidate; a height-only stream entry point must be
+named explicitly and never claim world/object/script load acceptance. Stage
+complete backing before replacing accepted state, reject invalid wire lengths,
+dimensions/borders/boundaries and duplicate/missing height chunks, and retain
+all failure/retry pairs plus exact acquisition terminals. No globals or retail
+assets are modified by this owner.
+
+Preserve both source version-1 height-chunk interpretations explicitly:
+ParseSizeOnly halves dimensions after resampling, whereas ParseHeightMapData
+keeps dimensions and resamples only the prefix. The coupled BlendTileData v1
+reader subsequently halves dimensions and updates dataSize; this is a staged
+format transition, not an established engine bug. Do not silently normalize
+the height chunk before that reader. Name the full-reader intermediate purpose
+HeightChunkBacking, not RuntimeGrid; version1 world-query admission remains
+pending the complete blend transition. The current writer emits version4.
+Runtime queries preserve the original 0–2
+triangle diagonal, unusual normal stencil (X3 equals X1), clipping from an
+explicit display grid, and endpoint-exclusive Bresenham LOS with 0.5 tolerance.
+Guard nonfinite/out-of-range coordinates before integer conversion and use
+wide intermediate traversal arithmetic. Same-cell LOS retains the source true
+result without its unused division by zero. Query tests require nonplanar
+generated data and independent source-derived golden values, both orientations,
+edges, distinct logical/display owners, and repeated replacement.
+
+Cliff flags are authored BlendTileData v7/v8, not inferred from modern heights;
+v7 uses the original undersized row stride. Full BlendTileData/WorldInfo/objects/
+triggers/sides, terrain layers/bridges, native TerrainLogic/root and ghost fog
+ownership remain required follow-on integration, not accepted by this owner.
+Own the new game header/source, generated terrain fixture/build wiring, durable
+format findings and existing plan/state/evidence. Focused functional/negative/
+allocation cohorts then related data/map/source-boundary matrix on frozen GCC
+and both sanitizer configurations; no repeated full-suite/assert loop.
+
+The initial extracted terrain cohort passed all configured builds, focused3 and related145
+in all three configurations. Complete height acquisition census5 retained all
+failure/retry pairs and exact terminal; nonflat source triangle/normal/LOS goldens,
+distinct display clipping and malformed wire/query inputs pass repeated owner
+retirement. Evidence and current source hashes:
+`evidence/qa/N2-native-terrain-checkpoint.md`. Commit checkpoint title:
+`delivery: extract original terrain height queries`. Full255 not run; complete
+world/blend/cliff/layer/ghost/root startup still gates this slice and N2. Continue
+the coupled original world integration above; do not infer v1 world completion
+from its height-chunk intermediate or substitute a height-only world loader.
+
+Final envelope/backing audit before this checkpoint's commit: a chunk's declared
+remaining size is not proof its physical bytes exist. Do not eagerly resize
+boundary/height arrays from a forged-but-internally-consistent envelope. Acquire
+boundary pairs after their reads and grow height backing after bounded byte-block
+reads; preserve the candidate transaction and exact failure/retry coverage across
+both small and multi-block shapes. Add forged large boundary and height envelopes
+without allocating their declared payload in the fixture. Re-freeze the coherent
+change and validate focused plus related matrix; replace the pre-audit source
+identity/evidence with the resulting verified current cohort before committing.
+
+Final bounded-acquisition cohort: all configured builds PASS all3; focused3
+PASS in0.10s/0.79s/0.53s and related145 PASS in66.64s/273.36s/195.33s.
+Actual small/multi-block censuses6/10 retain every failure/distinct-data retry
+and exact terminal; failed candidates preserve accepted backing identity.
+Forged large-envelope physical truncation rejects without eager arrays. Current
+canonical599/toolchain-inclusive606 identities are recorded in the terrain QA
+checkpoint. This supersedes the preliminary census5/source snapshot above.
+N2/slice03 remains incomplete; proceed with full original world/blend integration
+and native root. No asset, dependency or product-authority edits occurred.

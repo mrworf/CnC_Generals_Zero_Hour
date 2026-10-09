@@ -2916,3 +2916,133 @@ only. Sources: GameEngineDevice/Include/Win32Device/Common/Win32GameEngine.h;
 GameEngineDevice/Include/W3DDevice/GameLogic/W3DGameLogic.h;
 GameEngineDevice/Source/W3DDevice/GameLogic/W3DTerrainLogic.cpp;
 GameEngine/Source/GameLogic/Map/TerrainLogic.cpp (getGroundHeight).
+
+### Shipped terrain height/query extraction and remaining world ownership
+
+The current game-owned `GameLogic/NativeTerrainHeightMap` reads height backing
+through the actual DataChunkInput, not a second map envelope/TOC decoder. Its
+height-only entry point is explicitly not world/map admission. A complete world
+candidate must consume the other gameplay-bearing chunks and original owners.
+DataChunkInput::parse passes its call argument to callbacks; the registered
+UserParser::userData field is not dispatched. This is why the extraction passes
+the candidate context to parse, not only registerParser.
+
+HeightMapData fields are signed little-endian Int32 width/height, border from
+v3, boundary count and signed XY pairs from v4, signed byte count, then raw
+unsigned height bytes. Counts/product/remaining payload are checked before
+backing acquisition; publication occurs only after the complete height input
+passes. Earlier versions synthesize one boundary from width/height minus twice
+border. The editor can retain zero-valued dormant boundary entries; parsing
+must not reject them by inventing a strictly-positive playable-boundary rule.
+World selection must separately validate its active boundary. Sources:
+WorldHeightMap.cpp::ParseHeightMapData/ParseSizeOnly;
+WorldBuilder/src/WHeightMapEdit.cpp::saveToFile/addBoundary/findBoundaryNear.
+
+A declared chunk extent is not proof that its physical bytes exist. Native
+boundary storage grows after actual XY reads; height backing grows after bounded
+4KiB reads. This avoids eager arrays from forged internally-consistent envelopes
+before detecting truncated input. Generated1GiB height and large boundary claims
+with tiny physical backing reject, while genuine multi-block backing retains
+complete ownership-failure/retry coverage. Source header/payload widths remain
+unchanged; no arbitrary map-size or asset-version compatibility cap is introduced.
+
+The current writer's world order is also explicit: WorldInfo precedes SidesList
+(player dictionaries), which precedes ObjectsList. Preserve that ordering and
+the original owner parser dependencies in native world publication. Sources:
+WHeightMapEdit.cpp::saveToFile; SidesList::WriteSidesDataChunk. The height-only
+entry point does not establish any of these world transitions.
+
+Version1 is a coupled transition, not a proved bug: both height readers resample
+every second source row/column into the prefix. ParseSizeOnly updates dimensions
+immediately; the full height reader initially retains dimensions, then its
+ParseBlendTileData v1 halves dimensions and updates dataSize. Original boundaries
+are retained. Native `Purpose::HeightChunkBacking` names that intermediate state
+and must not be used to claim a complete v1 world grid. LogicalMetadata preserves
+the size-only result; unused backing bytes remain retained. Current writer emits
+HeightMapData v4 and BlendTileData v8. Full native blend transition remains pending.
+
+Ground sampling uses MAP_XY_FACTOR=10 and MAP_HEIGHT_SCALE=0.625. Floored world
+coordinates plus logical border identify a cell; the source 0–2 diagonal uses
+different triangle planes for fy>fx and fy<=fx, not bilinear interpolation.
+Interior bounds are 1 through extent-3 to protect the normal stencil. Outside
+those bounds, getClipHeight clamps each coordinate independently against the
+display grid and returns an up normal. The logical/display distinction matters
+for source seismic deformation. Native queries allow an explicit display grid
+while keeping interior samples on the logical backing. Smoothed normals retain
+the original X3=X1 stencil, original mixed float/double interpolation and portable
+Vector3 cross/Inv_Sqrt representation, including positive zero on flat normals.
+Sources: BaseHeightMap.cpp::getHeightMapHeight;
+BaseHeightMap.h::getClipHeight; WWMath/vector3.h::Normalized_Cross_Product;
+WWMath/wwmath.h::Inv_Sqrt (portable branch).
+
+LOS is the source dominant-axis Bresenham traversal, excludes the endpoint,
+compares each visited cell's maximum four-corner height with z+0.5, and stops
+when leaving the grid. Offmap-start and same-cell queries therefore return true
+when backing exists; unloaded backing returns false. The source early exit uses
+the render owner's maximum height, supplied explicitly to the extraction rather
+than silently substituting a different logical maximum. Native code avoids the
+unused same-cell division by zero and guards hostile coordinates before integer
+conversion; wide intermediate arithmetic prevents delta/numerator overflow.
+Sources: BaseHeightMap.cpp::isClearLineOfSight and initHeightData.
+
+Cliff flags are NOT equivalent to height slope for current formats. BlendTileData
+stores tile/blend arrays, extra blend indices from v6, cliff mapping indices from
+v5, and authored impassable bits from v7. v8 uses (width+7)/8 row bytes; v7 uses
+the historically undersized (width+1)/8 and copies those bytes into a zero-filled
+full stride. Older formats derive flags from four-corner max-minus-min height
+strictly greater than 9.8. WorldHeightMap::getCliffState and BaseHeightMap's cliff
+query use those authored bits; the latter truncates world coordinates toward
+zero and clamps to extent-2, unlike ground sampling's floor. Native full blend/
+cliff ownership is pending; do not infer authored cliff behavior from this new
+height-only cohort. Sources: WorldHeightMap.cpp::ParseBlendTileData,
+initCliffFlagsFromHeights/setCellCliffFlagFromHeights; BaseHeightMap.cpp::isCliffCell.
+
+The remaining blend payload carries gameplay-independent but compatibility-
+required texture-class/edge-class records and named source tiles, blend entries
+from index1 with five byte flags, long-diagonal byte from v3, custom edge-class
+Int32 from v4 and the source FLAG_VAL marker. Cliff records from index1 (v5+)
+carry tile index, eight float UV values and flip/mutant bytes. Do not read modern
+flags and silently skip or fabricate this remainder: source mapping metadata is
+needed for later audiovisual parity. The original full-reader postpass clamps
+out-of-range cliff/blend/extra-blend indices to zero; that source repair policy
+must not be mistaken for blanket native rejection. Sources: ParseBlendTileData,
+WorldHeightMap stream constructor's postpass, WHeightMapEdit.cpp::saveToFile.
+
+Terrain layers remain original simulation behavior: wall queries return the AI
+pathfinder wall height only when unclipped or actually on the wall; bridge queries
+use findBridgeLayerAt and return bridge height only above ground. The source calls
+Bridge::getBridgeHeight with the caller's normal before that height comparison,
+so normal behavior must be traced through that call rather than silently rewritten
+as a generic max-height function. Source: W3DTerrainLogic.cpp::getLayerHeight.
+
+Original logical-only WorldHeightMap construction also clears the static map
+object list and polygon triggers, empties SidesList, then dispatches WorldInfo,
+ObjectsList, PolygonTriggers and SidesList. WorldInfo publishes MapObject's world
+Dict and optional GlobalData weather. Full visual construction dispatches height,
+blend and lighting; both construction paths finish with validateSides and
+setupAlphaTiles. A native world transaction must stage/retire these shared owners
+coherently; validating height data alone does not justify discarding an accepted
+world or skipping objects/scripts. Sources: WorldHeightMap stream constructor,
+ParseWorldDictDataChunk/ParseObjectsDataChunk; W3DTerrainVisual::load.
+
+Shipped ghost ownership also differs from common no-op defaults:
+W3DGhostObjectManager maintains used/free lists, suppresses acquisition under
+either source lock, and retains dead-parent ghosts while fog snapshots exist.
+updateOrphanedObjects queries PartitionData shroud status, unregisters the orphan
+when its last relevant snapshot disappears, then returns it to the free list.
+Border changes release parent links/orphan partition registrations and restore
+them with previous fogged state. Normal builds snapshot only the local player;
+DEBUG_FOG_MEMORY extends that rule. Snapshot retirement can restore a live parent
+render object and therefore requires legitimate parent/manager/partition lifetime.
+These semantics, source snapshot/save representation and native render attachment
+remain integration gates, not acceptance from common GhostObjectManager fixtures.
+Sources: GameLogic/Object/GhostObject.cpp; W3DDevice/GameLogic/W3DGhostObject.cpp::
+snapShot/freeAllSnapShots/addGhostObject/updateOrphanedObjects/releasePartitionData/
+restorePartitionData/reset.
+
+The generated native terrain fixture exercises nonplanar source-derived triangle/
+normal goldens, separate display clipping, directional/diagonal LOS, all four
+height versions, hostile wire/coordinate rejection, duplicate/missing/truncated
+chunks, complete allocation prefixes and exact terminals, corrected same-owner
+retry and repeated whole-owner retirement. It establishes height backing/query
+integration only. Full world/cliff/layer/ghost/root startup remains pending.
