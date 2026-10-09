@@ -898,6 +898,9 @@ void INI::parseInGameUIDefinition( INI* ini )
 InGameUI::InGameUI()
 {
 	Int i;
+	if (!TheGlobalData || TheGlobalData->m_maxLineBuildObjects < 0)
+		throw ERROR_BAD_ARG;
+	m_placeIcon = NULL;
 
 	
   m_inputEnabled = true;
@@ -973,10 +976,7 @@ InGameUI::InGameUI()
 
 	m_pendingGUICommand = NULL;
 
-	// allocate an array for the placement icons
-	m_placeIcon = NEW Drawable* [ TheGlobalData->m_maxLineBuildObjects ];
-	for( i = 0; i < TheGlobalData->m_maxLineBuildObjects; i++ )
-		m_placeIcon[ i ] = NULL;
+	// Placement backing is acquired after all fallible member initialization.
 	m_pendingPlaceType = NULL;
 	m_pendingPlaceSourceObjectID = INVALID_ID;
 	m_preventLeftClickDeselectionInAlternateMouseModeForOneClick = FALSE;
@@ -1061,6 +1061,7 @@ InGameUI::InGameUI()
 	m_curRcType = RADIUSCURSOR_NONE;
 	
 	m_soloNexusSelectedDrawableID = INVALID_DRAWABLE_ID;
+	m_placeIcon = NEW Drawable* [ TheGlobalData->m_maxLineBuildObjects ]();
 
 }  // end InGameUI
 
@@ -3925,6 +3926,9 @@ void InGameUI::playCameoMovie( const AsciiString& movieName )
 // ------------------------------------------------------------------------------------------------
 void InGameUI::stopCameoMovie( void )
 {
+	// An uninitialized/headless UI owns no cameo and must not mutate a borrowed
+	// GUI window merely because its destructor retires that empty state.
+	if (!m_cameoVideoBuffer && !m_cameoVideoStream) return;
 //RightHUD
 	//GameWindow *window = TheWindowManager->winGetWindowFromId(NULL,TheNameKeyGenerator->nameToKey( AsciiString("ControlBar.wnd:CameoMovieWindow") ));
 	GameWindow *window = TheWindowManager->winGetWindowFromId(NULL,TheNameKeyGenerator->nameToKey( AsciiString("ControlBar.wnd:RightHUD") ));

@@ -680,6 +680,8 @@ protected:
 	virtual void reactToTransformChange(const Matrix3D* oldMtx, const Coord3D* oldPos, Real oldAngle);
 
 private:
+	// Shared resource retirement; partial construction must not emit destruction events.
+	void releaseOwnedResources();
 
 	// yes, private. No, really. Private. Don't expose.
 	enum ObjectPrivateStatusBits

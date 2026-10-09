@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <memory>
 
 #include "Common/GameAudio.h"
 #include "Common/GameState.h"
@@ -416,6 +417,8 @@ void Radar::addObject( Object *obj )
 
 	// allocate a new object
 	newObj = newInstance(RadarObject);
+	auto retire = [](RadarObject* value) { value->deleteInstance(); };
+	std::unique_ptr<RadarObject, decltype(retire)> pending(newObj, retire);
 
 	// set the object data
 	newObj->friend_setObject( obj );
@@ -466,6 +469,9 @@ void Radar::addObject( Object *obj )
 		newObj->setColor( player->getPlayerColor() );
 	}
 
+	// All fallible apparent-controller work is complete. The following source
+	// publication/list insertion only manipulates acquired pointers and colors.
+	pending.release();
 	// set a chunk of radar data in the object
 	obj->friend_setRadarData( newObj );
 

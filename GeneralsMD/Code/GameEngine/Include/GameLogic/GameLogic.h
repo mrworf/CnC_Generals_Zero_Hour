@@ -105,9 +105,7 @@ public:
 	virtual void reset( void );															///< Reset the logic system
 	virtual void update( void );														///< update the world
 
-#if defined(_DEBUG) || defined(_INTERNAL)
-	Int getNumberSleepyUpdates() const {return m_sleepyUpdates.size();} //For profiling, so not in Release.
-#endif
+	Int getNumberSleepyUpdates() const {return m_sleepyUpdates.size();}
 	void processCommandList( CommandList *list );		///< process the command list
 
 	void prepareNewGame( Int gameMode, GameDifficulty diff, Int rankPoints );						///< prepare for new game 
@@ -116,6 +114,8 @@ public:
 																			 void *userData );	///< Logic command list processing
 
 	void registerObject( Object *obj );							///< Given an object, register it with the GameLogic and give it a unique ID
+	// Admission rollback/retirement only; no complete-object gameplay callbacks.
+	void withdrawObjectRegistration(Object *obj) noexcept;
 
 	void addObjectToLookupTable( Object *obj );			///< add object ID to hash lookup table
 	void removeObjectFromLookupTable( Object *obj );///< remove object ID from hash lookup table
@@ -144,6 +144,8 @@ public:
 	/// create an object given the thing template. (Only for use by ThingFactory.)
 	Object *friend_createObject( const ThingTemplate *thing, const ObjectStatusMaskType &objectStatusMask, Team *team );
 	void destroyObject( Object *obj );							///< Mark object as destroyed for later deletion
+	void processDestroyList(); ///< Retire the pending queue at a frame/owner boundary.
+	void destroyAllObjectsImmediate(); ///< Complete actor retirement while root parents remain live.
 	Object *findObjectByID( ObjectID id );								///< Given an ObjectID, return a pointer to the object.
  	Object *getFirstObject( void );									///< Returns the "first" object in the world. When used with the object method "getNextObject()", all objects in the world can be iterated.
 	ObjectID allocateObjectID( void );							///< Returns a new unique object id
@@ -258,6 +260,7 @@ private:
 	NativeServiceOwners<6> m_serviceOwners;
 
 	void pushSleepyUpdate(UpdateModulePtr u);
+	void retireObjectUpdates(Object *obj) noexcept;
 	UpdateModulePtr peekSleepyUpdate() const;
 	void popSleepyUpdate();
 	void eraseSleepyUpdate(Int i);
@@ -334,9 +337,6 @@ private:
 	ObjectID m_nextObjID;																		///< For allocating object id's
 
 	void setDefaults( Bool loadSaveGame );									///< Set default values of class object
-	void processDestroyList( void );												///< Destroy all pending objects on the destroy list
-
-	void destroyAllObjectsImmediate();											///< destroy, and process destroy list immediately
 
 	/// factory for TheTerrainLogic, called from init()
 	virtual TerrainLogic *createTerrainLogic( void );
@@ -414,8 +414,8 @@ inline Object* GameLogic::findObjectByID( ObjectID id )
 //		return NULL;
 //	
 //	return (*it).second;
-	if( (Int)id < m_objVector.size() )
-		return m_objVector[(Int)id];
+	if( UnsignedInt(id) < m_objVector.size() )
+		return m_objVector[UnsignedInt(id)];
 
 	return NULL;
 }

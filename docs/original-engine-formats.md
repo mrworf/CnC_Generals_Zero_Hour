@@ -3955,3 +3955,81 @@ fixture must bind these real parents and execute that entry point; invoking a
 single helper update or advancing a fixture counter is not matching simulation.
 These are current source findings/pending requirements, not architecture blockers
 or completed runtime evidence.
+
+Registered-actor implementation review (parent90f99df8; validation pending):
+Object constructor cleanup is not its destructor. The destructor first sends
+pathfinder/script/client notifications and assumes complete sightings/modules;
+constructor failure instead withdraws scheduler/lookup/list, radar and team
+membership while parents remain live, then retires only acquired resources.
+The module pointer array must be zero-terminated throughout prefix construction,
+not only after all helpers and configured modules succeed. Preserve source
+forward module destruction and clearing each slot, because later module
+destructors may query the surviving owner. Shadow interfaces are borrowed, not
+separate acquisitions. Strong setID stages lookup growth/new entry before
+withdrawing the old identity. Initial lookup removal must tolerate INVALID_ID
+and empty backing; externally supplied unsigned IDs must not become signed
+indices. Serialized ObjectID width remains unchanged.
+
+Sleepy update modules retain their current heap index after every source heap
+rebalance. Preserve the source reverse heap-discovery erasure order: changing
+to behavior-array order can change survivor layout for equal-priority updates.
+Use the original256-entry stack batch repeatedly until no owned entry remains;
+this retains ordinary source order without truncating larger cardinality or
+requiring fallible scratch allocation. Admission preflights duplicate ownership and initial wake-frame legality,
+reserves geometric backing, then publishes intrusive and scheduler ownership.
+The destruction queue node is acquired before callbacks or the destroyed flag,
+but spliced at the original phase to retain parent/child ordering. If an AI
+helper fails after the flag, the node still reaches the owned queue. Authored
+callback side effects remain the whole candidate-root responsibility; these
+changes do not claim a gameplay rewind. Original processDestroyList and whole
+actor retirement are now callable owner/frame boundaries for native root
+cleanup; diagnostics expose the real scheduler cardinality in normal builds.
+Sources: Object.cpp::{Object,~Object,setID},
+GameLogic.cpp::{registerObject,eraseSleepyUpdate,destroyObject,processDestroyList}.
+
+Adjacent parent acquisitions: InGameUI's constructor creates placement-array
+backing before later fallible string assignments. Acquire it last, with zeroed
+slots and a validated nonnegative source capacity; automatic members then
+unwind without leaking that raw array. Radar::addObject acquires RadarObject
+before apparent-controller containment/disguise helpers; retain a pooled-node
+guard until those helpers complete. Candidate root still must lease borrowed
+TheControlBar correctly; constructor ownership evidence does not establish
+control-bar init/recreation or full UI startup. Fixtures under
+tests/original/object_ownership.cpp exercise actual stock actors/modules and
+original logical UI/radar/partition parents. Their constructor-level root and
+empty partition are not full GameEngine startup, fog or simulation evidence.
+
+Actual many-module retirement exposed legacy scheduler UB: optimized child
+rebalance forms vector element addresses for nonexistent children and for
+size(), before checking them. Use bounded unsigned indices while preserving
+source priority comparison/left-child tie choice and updating both moved
+modules' heap indices. The parallel nonoptimized child formula and debug
+child validation also need unsigned arithmetic; empty/singleton heap rebuild
+must not call child rebalance with index0 into no backing. This is an original
+representation defect, not new simulation scheduling behavior.
+
+Radar::deleteListResources consults TheGameLogic->getFirstObject even with no
+remaining radar nodes (Radar.cpp around113). Complete actor retirement must
+therefore precede parent teardown, but GameLogic publication must remain alive
+until radar itself retires. Simple reverse owner construction is insufficient
+for the source dependency cycle. Preserve source callback identity rather than
+null-guarding it away in a fixture. Candidate failure must use the same parent
+retirement graph as normal shutdown. Current evidence and retries are retained
+in the existing slice03 plan; acceptance is still pending.
+
+InGameUI::stopCameoMovie originally looks up/clears RightHUD even when neither
+owned cameo pointer exists. The source destructor calls it for a constructor-
+only UI, where no window manager is required for logical callbacks. Empty cameo
+retirement is now an ownership no-op; acquired media still uses the original
+window unbinding, buffer deletion and stream close. This does not accept media
+startup, replacement or error rollback. Keep those paired acquisition/release
+paths in the real native UI/media lifecycle work, not a fake window provider.
+
+Current registered-actor ownership evidence supersedes the pending-validation
+notes above only for its stated constructor/registry scope:
+evidence/qa/N2-actor-ownership-checkpoint.md. Actual stock actor/module ownership,
+complete manifests and repeated retirement pass focused11/related133 and full
+configured builds on GCC, GCC sanitizers and Clang sanitizers, frozen canonical
+source fc86107a3c7b7a4b15bdb20eb25f5c563024bde45fa941390a07e345c20b3dc5.
+It does not establish full creation callbacks, nonempty partition/ghost, native
+UI/media startup, whole candidate-root rollback or GameLogic::update parity.

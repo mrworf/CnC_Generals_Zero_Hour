@@ -36,6 +36,7 @@
 #include "Common/GameEngine.h"
 #include "Common/GlobalData.h"
 #include <cmath>
+#include <limits>
 #include "Common/GameState.h"
 #include "Common/ModuleFactory.h"
 #include "Common/Player.h"
@@ -183,8 +184,16 @@ AsciiString DescribeObject(const Object *obj)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+namespace {
+const ThingTemplate* requireObjectTemplate(const ThingTemplate* tt)
+{
+	if (!tt) throw ERROR_BAD_ARG;
+	return tt;
+}
+}
+
 Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatusMask, Team *team ) : 
-	Thing(tt),
+	Thing(requireObjectTemplate(tt)),
 	m_indicatorColor(0),
 	m_ai(NULL),
 	m_physics(NULL),
@@ -258,14 +267,22 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	m_weaponBonusCondition = 0;
 	m_curWeaponSetFlags.clear();
 
-	// sanity
-	if( TheGameLogic == NULL || tt == NULL )
-	{
-
-		assert( 0 );
-		return;
-
-	}  // end if
+	if (!TheGameLogic || !ThePlayerList || !TheRadar || !TheInGameUI ||
+			!TheModuleFactory || !TheNameKeyGenerator || !TheScriptEngine)
+		throw ERROR_BAD_ARG;
+	Team* initialTeam = team ? team : ThePlayerList->getNeutralPlayer()->getDefaultTeam();
+	if (!initialTeam) throw ERROR_BAD_ARG;
+	// Initialize every field used by partial-resource retirement before acquisition.
+	m_id = m_producerID = m_builderID = INVALID_ID;
+	m_status = objectStatusMask;
+	m_layer = LAYER_GROUND;
+	m_group = NULL;
+	m_isSelectable = tt->isKindOf(KINDOF_SELECTABLE);
+	m_healthBoxOffset.zero();
+	m_soleHealingBenefactorID = INVALID_ID;
+	m_soleHealingBenefactorExpirationFrame = 0;
+	const auto previousCursor = TheGameLogic->getObjectIDCounter();
+	try {
 
 	// Object's set of these persist for the life of the object.
 	m_partitionLastLook = newInstance(SightingInfo);
@@ -309,18 +326,21 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	// this at or near the end of the drawable construction so that we have
 	// all the valid data about the thing when we create the module
 	//
-	Int totalModules = tt->getBehaviorModuleInfo().getCount() + NUM_SLEEP_HELPERS;  // need to take into account all the helper modules
+	const Int moduleCount = tt->getBehaviorModuleInfo().getCount();
+	if (moduleCount < 0 || moduleCount > std::numeric_limits<Int>::max() - NUM_SLEEP_HELPERS - 1)
+		throw ERROR_BAD_ARG;
+	Int totalModules = moduleCount + NUM_SLEEP_HELPERS;  // include all helper modules
 
 	// allocate the publicModule arrays
 // pool[]ify
-	m_behaviors = MSGNEW("ModulePtrs") BehaviorModule*[totalModules + 1];
+	m_behaviors = MSGNEW("ModulePtrs") BehaviorModule*[totalModules + 1]();
 	BehaviorModule** curB = m_behaviors;
 	const ModuleInfo& mi = tt->getBehaviorModuleInfo();
 
 	// set m_team to null before the first call, to avoid naughtiness...
 	// If no team is specified in the constructor, then assign the object
 	// to the neutral team.
-	setTeam(team ? team : ThePlayerList->getNeutralPlayer()->getDefaultTeam());
+	setTeam(initialTeam);
 
 	// the helpers are done first -- even before Behaviors! -- in case a module needs
 	// to call something that uses them.
@@ -426,11 +446,13 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 			continue;
 
 		BehaviorModule* newMod = (BehaviorModule*)TheModuleFactory->newModule(this, modName, mi.getNthData(modIdx), MODULETYPE_BEHAVIOR);
+		if (!newMod) throw ERROR_BAD_ARG;
 		*curB++ = newMod;
 
 		BodyModuleInterface* body = newMod->getBody();
 		if (body) 
 		{
+			if (m_body) throw ERROR_BAD_ARG;
 			DEBUG_ASSERTCRASH(m_body == NULL, ("Duplicate bodies"));
 			m_body = body;
 		}
@@ -438,6 +460,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 		ContainModuleInterface* contain = newMod->getContain();
 		if (contain) 
 		{
+			if (m_contain) throw ERROR_BAD_ARG;
 			DEBUG_ASSERTCRASH(m_contain == NULL, ("Duplicate containers"));
 			m_contain = contain;
 		}
@@ -445,6 +468,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
     StealthUpdate* stealth = (StealthUpdate*)newMod->getStealth();
     if ( stealth )
     {
+      if (m_stealth) throw ERROR_BAD_ARG;
       DEBUG_ASSERTCRASH( m_stealth == NULL, ("DuplicateStealthUpdates!") );
       m_stealth = stealth;
     }
@@ -453,6 +477,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 		AIUpdateInterface* ai = newMod->getAIUpdateInterface();
 		if (ai)
 		{
+			if (m_ai) throw ERROR_BAD_ARG;
 			if( m_ai ) 
 			{
 				DEBUG_ASSERTCRASH( m_ai == NULL, ("%s has more than one AI module. This is illegal!\n", getTemplate()->getName().str()) );
@@ -464,6 +489,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 		NameKeyType key_PhysicsUpdate = nativeCached_key_PhysicsUpdate.key();
 		if (newMod->getModuleNameKey() == key_PhysicsUpdate)
 		{
+			if (m_physics) throw ERROR_BAD_ARG;
 			DEBUG_ASSERTCRASH(m_physics == NULL, ("You should never have more than one Physics module (%s)\n",getTemplate()->getName().str()));
 			m_physics = (PhysicsBehavior*)newMod;
 		}
@@ -516,9 +542,20 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 
 	m_soleHealingBenefactorID = INVALID_ID; ///< who is the only other object that can give me this non-stacking heal benefit?
 	m_soleHealingBenefactorExpirationFrame = 0; ///< on what frame can I accept healing (thus to switch) from a new benefactor
-
-
-
+	} catch (...) {
+		// Constructor failure is not complete-object destruction. Withdraw every
+		// acquired registry while legitimate parents and module identities live.
+		TheGameLogic->withdrawObjectRegistration(this);
+		if (m_radarData) TheRadar->removeObject(this);
+		setTeam(NULL);
+		releaseOwnedResources();
+		// A callback can create other actors. Do not rewind over their acquired
+		// IDs; the enclosing candidate-root transaction owns those side effects.
+		if (TheGameLogic->getObjectIDCounter() == previousCursor ||
+				TheGameLogic->getObjectIDCounter() == previousCursor + 1)
+			TheGameLogic->setObjectIDCounter(previousCursor);
+		throw;
+	}
 }  // end Object
 
 //-------------------------------------------------------------------------------------------------
@@ -640,17 +677,25 @@ Object::~Object()
 
 	// empty the team
 	setTeam( NULL );
+	releaseOwnedResources();
+
+	// Named-cache/current-script identity is retired only for a complete object.
+	TheScriptEngine->notifyOfObjectDestruction(this);
+}
+
+void Object::releaseOwnedResources()
+{
 
 	// Object's set of these persist for the life of the object.
-	m_partitionLastLook->deleteInstance();
+	if (m_partitionLastLook) m_partitionLastLook->deleteInstance();
 	m_partitionLastLook = NULL;
-	m_partitionRevealAllLastLook->deleteInstance();
+	if (m_partitionRevealAllLastLook) m_partitionRevealAllLastLook->deleteInstance();
 	m_partitionRevealAllLastLook = NULL;
-	m_partitionLastShroud->deleteInstance();
+	if (m_partitionLastShroud) m_partitionLastShroud->deleteInstance();
 	m_partitionLastShroud = NULL;
-	m_partitionLastThreat->deleteInstance();
+	if (m_partitionLastThreat) m_partitionLastThreat->deleteInstance();
 	m_partitionLastThreat = NULL;
-	m_partitionLastValue->deleteInstance();
+	if (m_partitionLastValue) m_partitionLastValue->deleteInstance();
 	m_partitionLastValue = NULL;
 
 	// remove the object from the partition system if present
@@ -666,7 +711,7 @@ Object::~Object()
 	m_physics = NULL;
 
 	// delete any modules present
-	for (BehaviorModule** b = m_behaviors; *b; ++b)
+	for (BehaviorModule** b = m_behaviors; b && *b; ++b)
 	{
 		(*b)->deleteInstance();
 		*b = NULL;	// in case other modules call findModule from their dtor!
@@ -694,10 +739,6 @@ Object::~Object()
 	// reset id to zero so we never mistaken grab "dead" objects
 	m_id = INVALID_ID;
 
-	// Instead of removing it from the named cache, notify the script engine that it has died.
-	// The script engine will remove it from the cache if necessary. The script engine needs to take
-	// a crack at this in case it is the current "This Object" pointer.
-	TheScriptEngine->notifyOfObjectDestruction(this);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2768,21 +2809,21 @@ void Object::setDestinationLayer(PathfindLayerEnum layer)
 void Object::setID( ObjectID id )
 {
 
-	// sanity 
-	DEBUG_ASSERTCRASH( id != INVALID_ID, ("Object::setID - Invalid id\n") );
+	if (id == INVALID_ID || !TheGameLogic) throw ERROR_BAD_ARG;
 
 	// if id hasn't changed do nothing
 	if( m_id == id )
 		return;
 			
-	// remove this objects previous id from the lookup table
-	TheGameLogic->removeObjectFromLookupTable( this );
-
-	// assign new id
+	// Prepare the new entry while the old lookup remains authoritative. Growth
+	// or collision failure must preserve both this ID and its accepted entry.
+	const ObjectID previous = m_id;
 	m_id = id;
-
-	// add new id to lookup table
-	TheGameLogic->addObjectToLookupTable( this );
+	try { TheGameLogic->addObjectToLookupTable(this); }
+	catch (...) { m_id = previous; throw; }
+	m_id = previous;
+	TheGameLogic->removeObjectFromLookupTable(this);
+	m_id = id;
 
 }  // end setID
 

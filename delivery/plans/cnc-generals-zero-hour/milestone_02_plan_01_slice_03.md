@@ -2392,3 +2392,90 @@ commit these helpers as a completed independent delivery slice. N2 and slice03
 remain in progress; the last verified runtime checkpoint is the team evidence.
 No non-ignored untracked files were present during this housekeeping check.
 Ignored build outputs, user asset links and recovery storage are retained.
+
+Resume parent90f99df8: the two pre-existing dirty GameLogic files belong to this
+same unfinished actor batch and are preserved. Couple the Object partial-owner
+cleanup and strong ID replacement with actual original helper/module ownership,
+source team/energy callbacks and queue retirement. Use real constructor-level
+UI, radar, partition, scripts, rank, players/teams and AI parents for ownership
+fixtures; presentation-only subclasses may omit drawing, never logical
+callbacks. InGameUI allocates placement backing before subsequent fallible
+string construction; move that acquisition to the final constructor phase and
+reject invalid capacity first. Radar's acquired node needs a guard through
+fallible apparent-controller helpers. Exercise many actual stock updates above
+256 and survivor scheduling, duplicate registration, ID collision/growth,
+destruction queue allocation failure and all constructor failure/retry prefixes.
+This does not replace the required native full-root/startup, nonempty partition,
+wall/bridge/ghost and actual GameLogic::update evidence.
+
+First actor validation retained: initial GCC build rejected fixture-only enum
+conversion and protected setID calls. Correct the fixture with explicit ObjectID
+construction and an actually constructed, same-sized InspectObject subtype that
+only exposes that protected operation; never downcast a base actor or change
+production visibility to bypass the contract. The corrected build passed, but
+all9 actor families stopped in shared many-module warm-up before individual
+sweeps. Redacted stack identified rebalanceChildSleepyUpdate forming
+&m_sleepyUpdates[319] for a159 parent after heap shrink. Review the full heap
+family before retry: both child-loop versions form/compute children before
+bounds, the optimized version also uses operator[] at size(), debug validation
+multiplies signed indices, and remakeSleepyUpdate calls child rebalance on an
+empty heap. Replace only the unsafe representation with bounded size_t indices,
+retaining source comparison/tie/swap/index-update semantics. Exercise many
+stock DeletionUpdate wake changes both earlier and later, then full and survivor
+retirement. No full build/test-after-single-assert loop and no coverage waiver.
+
+Second focused retry retained: scheduler warm-up proceeds, but every family
+fails during fixture whole-context teardown. The redacted stack identifies
+Radar::deleteListResources unconditionally consulting TheGameLogic after the
+fixture's automatic reverse-member destruction retired it. This is a fixture
+parent-order defect, not permission to null-guard away source callbacks. Review
+UI/radar/partition/team/player/AI/script/template/module cleanup together; use
+explicit two-phase actor then parent retirement with GameLogic kept alive
+through radar cleanup, and the same order on constructor failure. Borrowed
+globals are restored only after their actual acquired owner retires. Production
+radar's source callback remains intact.
+
+Parent-graph retry retained: normal/GCCsan/Clangsan all reach UI retirement and
+report the same stopCameoMovie call into absent GameWindowManager. Reviewing
+both movie acquire/stop pairs and all UI destructor helpers confirms the idle
+constructor owns neither a cameo stream nor a buffer, but the original stop
+still looks up and clears a GUI window. Empty cameo retirement should be an
+ownership no-op, not an invented window-manager mock or swallowed callback for
+an acquired movie. Return only when both owned pointers are absent; retain the
+source window unbinding and media retirement when either exists. Actual media
+acquisition/unbinding faults and view/control-bar startup remain pending, not
+accepted from constructor-only headless UI. No new full build or acceptance
+claim follows this focused root-parent correction alone.
+
+Eight focused families now pass all3. Remaining ID/cold/scheduler families have
+fixture-contract failures, not sanitizer errors. Redacted pool counters prove
+nested real cohorts grow Squad capacity256 ->384 while used176 returns unchanged;
+warm the actual two-root lifetime before baselines and retain exact whole-memory-
+manager retirement. Entry-point template lookup constructs AsciiString: the
+short generated name adds one standard acquisition, the long name adds two.
+Thus cold array/lookup/scheduler demand3+1 and late array/scheduler demand2+2
+both have exact terminal4; do not omit caller allocations from the manifest.
+
+Fidelity correction before acceptance: direct behavior-array-order heap erasure
+would change survivor layout for equal priorities relative to the source's
+reverse heap-discovery order. Preserve the original 256-entry stack batch and
+its reverse erasure order, but repeat discovery until no owned entry remains.
+Ordinary <=256-module retirement retains the original sequence exactly; larger
+cardinality completes formerly truncated/unsafe ownership. Stack batching is a
+bounded workspace, not a cardinality cap. Existing many-module wake/survivor,
+exhaustion and complete-retirement evidence still applies after frozen rerun.
+
+Registered-actor ownership checkpoint verified on canonical626
+fc86107a3c7b7a4b15bdb20eb25f5c563024bde45fa941390a07e345c20b3dc5 and
+toolchain-inclusive633
+ff6cfcd98fdf25a4eeb72a18e266018b91c45d5eef40d4ae774e972d9f596813:
+all3 full configured builds, focused11 and related133 PASS. Related elapsed
+times are GCC116.58s, GCCsan504.84s and Clangsan318.88s. Exact warm/cold/late
+scheduler/UI/ID manifests2/4/4/10/1, eight typed actor pool exhaustion/retry
+pairs and every stock update acquisition prefix through terminal270 are
+retained. See evidence/qa/N2-actor-ownership-checkpoint.md for all failure/retry
+history and scope limits. Full323 not run; this is a coherent supporting
+ownership checkpoint, not completed slice03 or N2. Continue with nonempty
+partition/ghost, full ThingFactory creation and candidate-root/startup/actual
+simulation under legitimate parents. Commit boundary remains
+`delivery: preserve original registered actor ownership`.

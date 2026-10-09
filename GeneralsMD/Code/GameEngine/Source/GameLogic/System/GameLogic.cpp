@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <limits>
 
 #include "Common/AudioAffect.h"
 #include "Common/AudioHandleSpecialValues.h"
@@ -2416,53 +2417,7 @@ void GameLogic::processDestroyList( void )
 	{
 		Object* currentObject = (*iterator);
 
-#ifdef ALLOW_NONSLEEPY_UPDATES
-		for (std::list<UpdateModulePtr>::iterator it = m_normalUpdates.begin(); it != m_normalUpdates.end(); /* nothing */)
-		{
-			if ((*it)->friend_getObject() == currentObject)
-			{
-				it = m_normalUpdates.erase(it);
-			}
-			else
-			{
-				++it;
-			}
-		}
-#endif
-
-		/*
-			this looks odd, but is necessary; since erasing a single entry can shuffle others in the list
-			(in order to maintain its heap-ness), we must do two passes: one to find the updates for this
-			object, another to actually erase 'em. 
-			
-			(in case you're wondering: yes, this is still more efficient than just deleting them
-			and rebalancing the entire heap afterwards, at least for real-world maps, since an individual
-			rebalance is O(log N) and a full rebalance is O(N)... so unless you are deleting the majority
-			of the objects in the world every frame, we come out well ahead this way.)
-		*/
-
-		const Int MAX_SUO = 256;
-		UpdateModulePtr sleepyUpdatesForThisObject[MAX_SUO];
-		Int numSUO = 0;
-
-		for (std::vector<UpdateModulePtr>::iterator it2 = m_sleepyUpdates.begin(); it2 != m_sleepyUpdates.end(); ++it2)
-		{
-			UpdateModulePtr u = *it2;
-			if (u->friend_getObject() == currentObject && numSUO < MAX_SUO)
-			{
-				sleepyUpdatesForThisObject[numSUO++] = u;
-			}
-		}
-
-		for (--numSUO; numSUO >= 0; --numSUO)
-		{
-			// have to re-get idx each time since each call to erase might change others.
-			Int idx = sleepyUpdatesForThisObject[numSUO]->friend_getIndexInLogic();
-			DEBUG_ASSERTCRASH(m_sleepyUpdates[idx] == sleepyUpdatesForThisObject[numSUO], ("Hmm, expected update mismatch here"));
-			eraseSleepyUpdate(idx);
-			DEBUG_ASSERTCRASH(sleepyUpdatesForThisObject[numSUO]->friend_getIndexInLogic() == -1, ("Hmm, expected index to be -1 here"));
-		}
-
+		retireObjectUpdates(currentObject);
 
 		currentObject->removeFromList(&m_objList);//remove from object list
 
@@ -2683,8 +2638,8 @@ inline void GameLogic::validateSleepyUpdate() const
 			UnsignedInt pri0 = m_sleepyUpdates[i0]->friend_getPriority();
 			DEBUG_ASSERTCRASH(pri >= pri0, ("sleepyUpdates are munged (0)"));
 		}
-		Int i1 = 2*(i+1)-1;
-		Int i2 = 2*(i+1);
+		const std::size_t i1 = std::size_t(i) * 2 + 1;
+		const std::size_t i2 = i1 + 1;
 		if (i1 < sz)
 		{
 			UnsignedInt pri1 = m_sleepyUpdates[i1]->friend_getPriority();
@@ -2768,78 +2723,25 @@ Int GameLogic::rebalanceChildSleepyUpdate(Int i)
 
 	DEBUG_ASSERTCRASH(i >= 0 && i < m_sleepyUpdates.size(), ("bad sleepy idx"));
 
-// this function gets the brunt of the work (we frequently
-// balance down, not up), so this one is hand-unrolled for
-// max efficiency. I have left the pristine non-unrolled
-// version present for clarity. (Yes, this is worth doing.) (srj) 
-#if 1
-	UpdateModulePtr* pI = &m_sleepyUpdates[i];
-
-	// our children are i*2 and i*2+1
-  Int child = ((i+1)<<1)-1;
-	UpdateModulePtr* pChild = &m_sleepyUpdates[child];
-	UpdateModulePtr* pSZ = &m_sleepyUpdates[m_sleepyUpdates.size()];	// yes, this is off the end.
-
-  while (pChild < pSZ) 
-	{
-		// choose the higher-priority of the two children; we must be higher-pri than that.
-		if (pChild < pSZ-1 && isLowerPriority(*pChild, *(pChild+1)))
-		{
-      ++pChild;
+	// Preserve source comparison and left-child tie choice, but form indices
+	// only within the actual heap. Pointer formation beyond vector backing is
+	// undefined even when the pointer would never be dereferenced.
+	const std::size_t size = m_sleepyUpdates.size();
+	std::size_t current = std::size_t(i);
+	while (current < size / 2) {
+		std::size_t child = current * 2 + 1;
+		if (child + 1 < size && isLowerPriority(m_sleepyUpdates[child], m_sleepyUpdates[child + 1]))
 			++child;
-		}
-
-		// if we're higher-pri than our children, we're done.
-		if (!isLowerPriority(*pI, *pChild))
-		{
-			break;
-		}
-
-		// doh. swap with the highest-pri child we have.
-		UpdateModulePtr a = *pChild;
-		UpdateModulePtr b = *pI;
-
-		*pI = a;
-		*pChild = b;
-
-		a->friend_setIndexInLogic(i);
-		b->friend_setIndexInLogic(child);
-
-		i = child;
-		pI = pChild;
-
-		child = ((i+1)<<1)-1;
-		pChild = &m_sleepyUpdates[child];
-  }
-#else
-	// our children are i*2 and i*2+1
-	Int sz = m_sleepyUpdates.size();
-  Int child = ((i+1)<<1)-1;
-  while (child < sz) 
-	{
-		// choose the higher-priority of the two children; we must be higher-pri than that.
-		if (child < sz-1 && isLowerPriority(m_sleepyUpdates[child], m_sleepyUpdates[child+1]))
-      ++child;
-		
-		// if we're higher-pri than our children, we're done.
-		if (!isLowerPriority(m_sleepyUpdates[i], m_sleepyUpdates[child]))
-		{
-			break;
-		}
-
-		// doh. swap with the highest-pri child we have.
+		if (!isLowerPriority(m_sleepyUpdates[current], m_sleepyUpdates[child])) break;
 		UpdateModulePtr a = m_sleepyUpdates[child];
-		UpdateModulePtr b = m_sleepyUpdates[i];
-
-		m_sleepyUpdates[i] = a;
+		UpdateModulePtr b = m_sleepyUpdates[current];
+		m_sleepyUpdates[current] = a;
 		m_sleepyUpdates[child] = b;
-
-		a->friend_setIndexInLogic(i);
-		b->friend_setIndexInLogic(child);
-		i = child;
-		child = ((i+1)<<1)-1;
-  }
-#endif
+		a->friend_setIndexInLogic(Int(current));
+		b->friend_setIndexInLogic(Int(child));
+		current = child;
+	}
+	i = Int(current);
 	return i;
 }
 
@@ -2857,7 +2759,8 @@ void GameLogic::remakeSleepyUpdate()
 {
 	USE_PERF_TIMER(SleepyMaintenance)
 
-	Int parent = m_sleepyUpdates.size() / 2;
+	if (m_sleepyUpdates.size() < 2) { validateSleepyUpdate(); return; }
+	Int parent = Int((m_sleepyUpdates.size() - 2) / 2);
   while (true) 
 	{
     rebalanceChildSleepyUpdate(parent);
@@ -3779,9 +3682,44 @@ Object *GameLogic::getFirstObject( void )
 // ------------------------------------------------------------------------------------------------
 /** Return a new unique object id. */
 // ------------------------------------------------------------------------------------------------
+void GameLogic::retireObjectUpdates(Object *obj) noexcept
+{
+#ifdef ALLOW_NONSLEEPY_UPDATES
+	for (auto it = m_normalUpdates.begin(); it != m_normalUpdates.end();)
+		if ((*it)->friend_getObject() == obj) it = m_normalUpdates.erase(it);
+		else ++it;
+#endif
+	// Preserve source heap-discovery/reverse-erasure order (including survivor
+	// tie layout). The stack batch bounds scratch space, not owner cardinality:
+	// repeat until every acquired update has retired, including >256 modules.
+	for (;;) {
+		UpdateModulePtr pending[256];
+		Int count = 0;
+		for (auto* update : m_sleepyUpdates)
+			if (update->friend_getObject() == obj && count < 256) pending[count++] = update;
+		if (!count) break;
+		while (count) {
+			auto* update = pending[--count];
+			eraseSleepyUpdate(update->friend_getIndexInLogic());
+		}
+	}
+	if (m_curUpdateModule && m_curUpdateModule->friend_getObject() == obj) m_curUpdateModule = NULL;
+}
+
+void GameLogic::withdrawObjectRegistration(Object *obj) noexcept
+{
+	if (!obj) return;
+	retireObjectUpdates(obj);
+	m_objectsToDestroy.remove(obj);
+	if (obj->isInList(&m_objList)) obj->removeFromList(&m_objList);
+	removeObjectFromLookupTable(obj);
+}
+
 ObjectID GameLogic::allocateObjectID( void )
 {
 	/// @todo Find unused value in current object set
+	if (m_nextObjID == INVALID_ID || UnsignedInt(m_nextObjID) >= UnsignedInt(std::numeric_limits<Int>::max()))
+		throw ERROR_BAD_ARG; // Source lookup/scheduler indices are signed Int.
 	ObjectID ret = m_nextObjID;
 	m_nextObjID = (ObjectID)((UnsignedInt)m_nextObjID + 1);
 	return ret;
@@ -3800,8 +3738,19 @@ void GameLogic::addObjectToLookupTable( Object *obj )
 	// add to lookup
 //	m_objHash[ obj->getID() ] = obj;
 	ObjectID newID = obj->getID();
+	if (newID == INVALID_ID || UnsignedInt(newID) >= UnsignedInt(std::numeric_limits<Int>::max()))
+		throw ERROR_BAD_ARG;
+	if (UnsignedInt(newID) < m_objVector.size() && m_objVector[UnsignedInt(newID)] && m_objVector[UnsignedInt(newID)] != obj)
+		throw ERROR_BAD_ARG;
+	if (m_objVector.empty()) m_objVector.resize(OBJ_HASH_SIZE, NULL);
 	while( newID >= m_objVector.size() ) // Fail case is hella rare, so faster to double up on size() call
-		m_objVector.resize(m_objVector.size() * 2, NULL);
+	{
+		const auto limit = std::size_t(std::numeric_limits<Int>::max());
+		const auto size = m_objVector.size();
+		const auto next = size > limit / 2 ? limit : size * 2;
+		if (next <= size || next > m_objVector.max_size()) throw ERROR_BAD_ARG;
+		m_objVector.resize(next, NULL);
+	}
 
 	m_objVector[ newID ] = obj;
 
@@ -3819,7 +3768,8 @@ void GameLogic::removeObjectFromLookupTable( Object *obj )
 
 	// remove from lookup table
 //	m_objHash.erase( obj->getID() );
-	m_objVector[ obj->getID() ] = NULL;
+	const auto id = UnsignedInt(obj->getID());
+	if (id < m_objVector.size() && m_objVector[id] == obj) m_objVector[id] = NULL;
 
 }  // end removeObjectFromLookupTable
 
@@ -3828,12 +3778,38 @@ void GameLogic::removeObjectFromLookupTable( Object *obj )
 // ------------------------------------------------------------------------------------------------
 void GameLogic::registerObject( Object *obj )
 {
+	if (!obj || TheGameLogic != this || !obj->getBehaviorModules()) throw ERROR_BAD_ARG;
+	if (obj->isInList(&m_objList)) throw ERROR_BAD_ARG;
+	const UnsignedInt initialFrame = getFrame() ? getFrame() : 1;
+	std::size_t count = 0;
+#ifdef ALLOW_NONSLEEPY_UPDATES
+	std::list<UpdateModulePtr> normal;
+#endif
+	for (BehaviorModule** b = obj->getBehaviorModules(); *b; ++b)
+	{
+		UpdateModulePtr update = (UpdateModulePtr)(*b)->getUpdate();
+		if (!update) continue;
+		if (update->friend_getIndexInLogic() != -1) throw ERROR_BAD_ARG;
+		const auto when = update->friend_getNextCallFrame();
+		if (when && when < initialFrame) throw ERROR_BAD_ARG;
+#ifdef ALLOW_NONSLEEPY_UPDATES
+		if (update->friend_getNextCallFrame() == 0) { normal.push_back(update); continue; }
+#endif
+		++count;
+	}
+	const auto limit = std::size_t(std::numeric_limits<Int>::max());
+	if (m_sleepyUpdates.size() > limit || count > limit - m_sleepyUpdates.size()) throw ERROR_BAD_ARG;
+	const auto desired = m_sleepyUpdates.size() + count;
+	if (desired > m_sleepyUpdates.capacity()) {
+		const auto capacity = m_sleepyUpdates.capacity();
+		const auto grown = capacity > limit / 2 ? limit : capacity * 2;
+		m_sleepyUpdates.reserve(std::max(desired, grown));
+	}
+	// Complete fallible backing before intrusive/scheduler publication.
+	addObjectToLookupTable(obj);
 
 	// add the object to the global list
 	obj->prependToList(&m_objList);
-
-	// add object to lookup table
-	addObjectToLookupTable( obj );
 
 	UnsignedInt now = TheGameLogic->getFrame();
 	if (now == 0)
@@ -3854,7 +3830,7 @@ void GameLogic::registerObject( Object *obj )
 		if (when == 0)
 		{
 			// zero is the magic value for "never sleeps"
-			m_normalUpdates.push_back(u);
+			// Pointer nodes were staged before publication.
 		}
 		else
 #else
@@ -3869,6 +3845,9 @@ void GameLogic::registerObject( Object *obj )
 			pushSleepyUpdate(u);
 		}
 	}
+#ifdef ALLOW_NONSLEEPY_UPDATES
+	m_normalUpdates.splice(m_normalUpdates.end(), normal);
+#endif
 
 }
 
@@ -3905,6 +3884,11 @@ void GameLogic::destroyObject( Object *obj )
 	// if already flagged for destruction, ignore
 	if (!obj || obj->isDestroyed())
 		return;
+	// Reserve the eventual queue node before callbacks or the destroyed flag.
+	// Splice at the original phase so child/parent callback ordering is unchanged.
+	ObjectPointerList pending;
+	pending.push_back(obj);
+	try {
 
 	// run the object onDestroy event if provied
 	for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
@@ -3927,8 +3911,15 @@ void GameLogic::destroyObject( Object *obj )
 	}
 
 	// add to end of destruction list, in case something is being destroyed and trying to destroy subobjects
-	m_objectsToDestroy.push_back(obj);
+	m_objectsToDestroy.splice(m_objectsToDestroy.end(), pending);
 
+	} catch (...) {
+		// A fallible AI helper after marking must not strand a marked, unqueued actor.
+		if (obj->isDestroyed() && !pending.empty() &&
+				std::find(m_objectsToDestroy.begin(), m_objectsToDestroy.end(), obj) == m_objectsToDestroy.end())
+			m_objectsToDestroy.splice(m_objectsToDestroy.end(), pending);
+		throw;
+	}
 	// run any on destroy logic internal to the object
 	obj->onDestroy();
 
