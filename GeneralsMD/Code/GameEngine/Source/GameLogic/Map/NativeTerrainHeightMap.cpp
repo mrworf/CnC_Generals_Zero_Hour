@@ -4,6 +4,7 @@
 #include "Common/Terrain.h"
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -15,6 +16,52 @@ struct HeightRead {
   NativeTerrainHeightMap::Purpose purpose;
   bool seen = false;
 };
+struct TopologyRead {
+  NativeTerrainHeightMap& candidate;
+  Bool useThreeWayBlends;
+  bool heightSeen = false, blendSeen = false;
+};
+Bool parseTopologyHeight(DataChunkInput& input, DataChunkInfo* info, void* raw) {
+  auto& read = *static_cast<TopologyRead*>(raw);
+  if (read.heightSeen || read.blendSeen) throw ERROR_CORRUPT_FILE_FORMAT;
+  read.candidate.readHeightChunk(input, info->version,
+                                NativeTerrainHeightMap::Purpose::HeightChunkBacking);
+  read.heightSeen = true; return TRUE;
+}
+Bool parseTopologyBlend(DataChunkInput& input, DataChunkInfo* info, void* raw) {
+  auto& read = *static_cast<TopologyRead*>(raw);
+  if (!read.heightSeen || read.blendSeen) throw ERROR_CORRUPT_FILE_FORMAT;
+  read.candidate.readBlendChunk(input, info->version, read.useThreeWayBlends);
+  read.blendSeen = true; return TRUE;
+}
+void readShorts(DataChunkInput& input, std::vector<Short>& output, std::size_t count) {
+  if (count > input.getChunkDataSizeLeft()/2) throw ERROR_CORRUPT_FILE_FORMAT;
+  std::array<UnsignedByte,4096> block;
+  while (count) {
+    const auto units = std::min(count, block.size()/2);
+    input.readArrayOfBytes(reinterpret_cast<char*>(block.data()), static_cast<Int>(units*2));
+    for (std::size_t index = 0; index < units; ++index) {
+      const auto value = static_cast<UnsignedShort>(block[index*2] | (UnsignedShort(block[index*2+1])<<8));
+      output.push_back(std::bit_cast<Short>(value));
+    }
+    count -= units;
+  }
+}
+Int tableCount(DataChunkInput& input, Int minimum, unsigned minimumRecordBytes) {
+  const Int count = input.readInt();
+  if (count < minimum || std::uint64_t(count-minimum)*minimumRecordBytes > input.getChunkDataSizeLeft())
+    throw ERROR_CORRUPT_FILE_FORMAT;
+  return count;
+}
+NativeTerrainHeightMap::TextureClass readTextureClass(DataChunkInput& input, bool legacyField) {
+  NativeTerrainHeightMap::TextureClass entry;
+  entry.firstTile = input.readInt(); entry.numTiles = input.readInt(); entry.width = input.readInt();
+  if (legacyField) (void)input.readInt();
+  entry.name = input.readAsciiString().str();
+  // Source texture acquisition is intentionally separate; names/metadata are not
+  // initialized image backing or success evidence for audiovisual output.
+  return entry;
+}
 Bool parseHeight(DataChunkInput& input, DataChunkInfo* info, void* raw) {
   auto& read = *static_cast<HeightRead*>(raw);
   if (read.seen) throw ERROR_CORRUPT_FILE_FORMAT;
@@ -40,6 +87,17 @@ void NativeTerrainHeightMap::swap(NativeTerrainHeightMap& candidate) noexcept {
   std::swap(m_border, candidate.m_border);
   m_boundaries.swap(candidate.m_boundaries);
   m_bytes.swap(candidate.m_bytes);
+  std::swap(m_purpose, candidate.m_purpose);
+  std::swap(m_topology, candidate.m_topology);
+}
+void NativeTerrainHeightMap::loadTerrainTopology(ChunkInputStream& stream, Bool useThreeWayBlends) {
+  NativeTerrainHeightMap candidate;
+  DataChunkInput input(&stream);
+  TopologyRead read{candidate, useThreeWayBlends};
+  input.registerParser(AsciiString("HeightMapData"), AsciiString::TheEmptyString, parseTopologyHeight);
+  input.registerParser(AsciiString("BlendTileData"), AsciiString::TheEmptyString, parseTopologyBlend);
+  if (!input.parse(&read) || !read.heightSeen || !read.blendSeen) throw ERROR_CORRUPT_FILE_FORMAT;
+  swap(candidate);
 }
 void NativeTerrainHeightMap::loadHeightData(ChunkInputStream& stream, Purpose purpose) {
   NativeTerrainHeightMap candidate;
@@ -50,12 +108,115 @@ void NativeTerrainHeightMap::loadHeightData(ChunkInputStream& stream, Purpose pu
   if (!input.parse(&read) || !read.seen) throw ERROR_CORRUPT_FILE_FORMAT;
   swap(candidate);
 }
+void NativeTerrainHeightMap::readBlendChunk(DataChunkInput& input, DataChunkVersionType version,
+                                          Bool useThreeWayBlends) {
+  if (m_bytes.empty() || m_purpose != Purpose::HeightChunkBacking || topologyReady())
+    throw ERROR_BAD_ARG;
+  if (version < K_BLEND_TILE_VERSION_1 || version > K_BLEND_TILE_VERSION_8)
+    throw ERROR_CORRUPT_FILE_FORMAT;
+  const Int length = input.readInt();
+  if (length <= 0 || std::size_t(length) != m_bytes.size()) throw ERROR_CORRUPT_FILE_FORMAT;
+  Topology candidate; candidate.version = version;
+  readShorts(input, candidate.tiles, length);
+  readShorts(input, candidate.blends, length);
+  if (version >= K_BLEND_TILE_VERSION_6) readShorts(input, candidate.extraBlends, length);
+  else candidate.extraBlends.assign(length, 0);
+  if (!useThreeWayBlends) std::fill(candidate.extraBlends.begin(), candidate.extraBlends.end(),0);
+  if (version >= K_BLEND_TILE_VERSION_5) readShorts(input, candidate.cliffs, length);
+  else candidate.cliffs.assign(length, 0);
+  candidate.cliffStride = (std::size_t(m_width)+7)/8;
+  candidate.cliffFlags.assign(candidate.cliffStride*std::size_t(m_height),0);
+  if (version >= K_BLEND_TILE_VERSION_7) {
+    const auto sourceStride = version == K_BLEND_TILE_VERSION_7 ? (std::size_t(m_width)+1)/8 : candidate.cliffStride;
+    std::array<UnsignedByte,4096> block;
+    for (Int y = 0; y < m_height; ++y) {
+      for (std::size_t x = 0; x < sourceStride;) {
+        const auto bytes = std::min(sourceStride-x,block.size());
+        input.readArrayOfBytes(reinterpret_cast<char*>(block.data()),static_cast<Int>(bytes));
+        std::copy_n(block.begin(),bytes,candidate.cliffFlags.begin()+std::size_t(y)*candidate.cliffStride+x);
+        x += bytes;
+      }
+    }
+  } else {
+    // Match source pre-resize ordering for legacy height/blend version1.
+    for (Int y = 0; y < m_height-1; ++y) for (Int x = 0; x < m_width-1; ++x) {
+      const auto values = {rawHeight(x,y),rawHeight(x+1,y),rawHeight(x,y+1),rawHeight(x+1,y+1)};
+      const auto [low,high] = std::minmax_element(values.begin(),values.end());
+      if ((*high-*low)*MAP_HEIGHT_SCALE > 9.8f)
+        candidate.cliffFlags[std::size_t(y)*candidate.cliffStride+std::size_t(x)/8] |= UnsignedByte(1u<<(x&7));
+    }
+  }
+  candidate.bitmapTiles = input.readInt();
+  if (candidate.bitmapTiles <= 0) throw ERROR_CORRUPT_FILE_FORMAT;
+  const auto blendCount = tableCount(input,1,13);
+  const auto cliffCount = version >= K_BLEND_TILE_VERSION_5 ? tableCount(input,1,38) : 1;
+  const auto classes = tableCount(input,0,18);
+  for (Int index = 0; index < classes; ++index)
+    candidate.textureClasses.push_back(readTextureClass(input,true));
+  if (version >= K_BLEND_TILE_VERSION_4) {
+    candidate.edgeTiles = input.readInt();
+    if (candidate.edgeTiles < 0) throw ERROR_CORRUPT_FILE_FORMAT;
+    const auto edges = tableCount(input,0,14);
+    for (Int index = 0; index < edges; ++index)
+      candidate.edgeClasses.push_back(readTextureClass(input,false));
+  }
+  candidate.blendEntries.emplace_back(); // Source index0 is the no-blend sentinel.
+  for (Int index = 1; index < blendCount; ++index) {
+    BlendEntry entry; entry.tileIndex = input.readInt();
+    for (unsigned flag = 0; flag < 5; ++flag) entry.flags[flag] = static_cast<UnsignedByte>(input.readByte());
+    if (!useThreeWayBlends) entry.flags[4] &= ~UnsignedByte(2); // Source FLIPPED_MASK.
+    if (version >= K_BLEND_TILE_VERSION_3) entry.flags[5] = static_cast<UnsignedByte>(input.readByte());
+    if (version >= K_BLEND_TILE_VERSION_4) entry.customEdgeClass = input.readInt();
+    if (input.readInt() != 0x7ada0000) throw ERROR_CORRUPT_FILE_FORMAT;
+    candidate.blendEntries.push_back(entry);
+  }
+  candidate.cliffEntries.emplace_back();
+  for (Int index = 1; index < cliffCount; ++index) {
+    CliffEntry entry; entry.tileIndex = input.readInt();
+    for (auto& value : entry.uv) value = input.readReal();
+    for (auto& flag : entry.flags) flag = static_cast<UnsignedByte>(input.readByte());
+    candidate.cliffEntries.push_back(entry);
+  }
+  if (!input.atEndOfChunk()) throw ERROR_CORRUPT_FILE_FORMAT;
+  Int finalWidth = m_width, finalHeight = m_height;
+  if (version == K_BLEND_TILE_VERSION_1) {
+    finalWidth = m_width/2+m_width%2; finalHeight = m_height/2+m_height%2;
+    for (Int y = 0; y < finalHeight; ++y) for (Int x = 0; x < finalWidth; ++x) {
+      const auto destination = std::size_t(y)*finalWidth+x;
+      candidate.tiles[destination] = candidate.tiles[std::size_t(2)*y*m_width+2*x];
+      candidate.blends[destination] = candidate.extraBlends[destination] = candidate.cliffs[destination] = 0;
+    }
+    candidate.blendEntries.resize(1); candidate.cliffEntries.resize(1);
+  }
+  const auto active = std::size_t(finalWidth)*finalHeight;
+  for (std::size_t index = 0; index < active; ++index) {
+    if (candidate.blends[index] < 0 || std::size_t(candidate.blends[index]) >= candidate.blendEntries.size()) candidate.blends[index] = 0;
+    if (candidate.extraBlends[index] < 0 || std::size_t(candidate.extraBlends[index]) >= candidate.blendEntries.size()) candidate.extraBlends[index] = 0;
+    if (candidate.cliffs[index] < 0 || std::size_t(candidate.cliffs[index]) >= candidate.cliffEntries.size()) candidate.cliffs[index] = 0;
+  }
+  m_topology = std::move(candidate);
+  m_width = finalWidth; m_height = finalHeight;
+}
+Bool NativeTerrainHeightMap::isCliffCell(Real x, Real y) const {
+  const Real tx = std::trunc(x/MAP_XY_FACTOR), ty = std::trunc(y/MAP_XY_FACTOR);
+  const auto representable = [](Real value) { return std::isfinite(value) &&
+    static_cast<double>(value) >= std::numeric_limits<Int>::min() &&
+    static_cast<double>(value) <= std::numeric_limits<Int>::max(); };
+  if (!representable(tx) || !representable(ty)) throw ERROR_BAD_ARG;
+  if (m_bytes.empty()) return FALSE;
+  if (!topologyReady()) throw ERROR_BAD_ARG;
+  if (m_width < 2 || m_height < 2) return FALSE;
+  const auto ix = std::clamp<std::int64_t>(static_cast<std::int64_t>(tx)+m_border,0,m_width-2);
+  const auto iy = std::clamp<std::int64_t>(static_cast<std::int64_t>(ty)+m_border,0,m_height-2);
+  return (m_topology.cliffFlags[std::size_t(iy)*m_topology.cliffStride+std::size_t(ix)/8] & (1u<<(ix&7))) != 0;
+}
 void NativeTerrainHeightMap::readHeightChunk(DataChunkInput& input,
                                             DataChunkVersionType version,
                                             Purpose purpose) {
   if (version < K_HEIGHT_MAP_VERSION_1 || version > K_HEIGHT_MAP_VERSION_4)
     throw ERROR_CORRUPT_FILE_FORMAT;
   NativeTerrainHeightMap candidate;
+  candidate.m_purpose = purpose;
   candidate.m_width = input.readInt();
   candidate.m_height = input.readInt();
   candidate.m_border = version >= K_HEIGHT_MAP_VERSION_3 ? input.readInt() : 0;

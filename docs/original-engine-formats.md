@@ -2959,7 +2959,9 @@ ParseBlendTileData v1 halves dimensions and updates dataSize. Original boundarie
 are retained. Native `Purpose::HeightChunkBacking` names that intermediate state
 and must not be used to claim a complete v1 world grid. LogicalMetadata preserves
 the size-only result; unused backing bytes remain retained. Current writer emits
-HeightMapData v4 and BlendTileData v8. Full native blend transition remains pending.
+HeightMapData v4 and BlendTileData v8. The native topology entry point now completes
+the full-reader blend transition as described below; height-only input still does
+not establish it.
 
 Ground sampling uses MAP_XY_FACTOR=10 and MAP_HEIGHT_SCALE=0.625. Floored world
 coordinates plus logical border identify a cell; the source 0–2 diagonal uses
@@ -2992,9 +2994,9 @@ the historically undersized (width+1)/8 and copies those bytes into a zero-fille
 full stride. Older formats derive flags from four-corner max-minus-min height
 strictly greater than 9.8. WorldHeightMap::getCliffState and BaseHeightMap's cliff
 query use those authored bits; the latter truncates world coordinates toward
-zero and clamps to extent-2, unlike ground sampling's floor. Native full blend/
-cliff ownership is pending; do not infer authored cliff behavior from this new
-height-only cohort. Sources: WorldHeightMap.cpp::ParseBlendTileData,
+zero and clamps to extent-2, unlike ground sampling's floor. The initial height-
+only cohort did not establish blend/cliff behavior; the topology cohort below
+now covers it explicitly. Sources: WorldHeightMap.cpp::ParseBlendTileData,
 initCliffFlagsFromHeights/setCellCliffFlagFromHeights; BaseHeightMap.cpp::isCliffCell.
 
 The remaining blend payload carries gameplay-independent but compatibility-
@@ -3045,4 +3047,62 @@ normal goldens, separate display clipping, directional/diagonal LOS, all four
 height versions, hostile wire/coordinate rejection, duplicate/missing/truncated
 chunks, complete allocation prefixes and exact terminals, corrected same-owner
 retry and repeated whole-owner retirement. It establishes height backing/query
-integration only. Full world/cliff/layer/ghost/root startup remains pending.
+integration only. Full world/layer/ghost/root startup remains pending; the
+following continuation establishes complete blend/cliff topology separately.
+
+### Complete native height/blend topology continuation
+
+`NativeTerrainHeightMap::loadTerrainTopology` now consumes exactly one height
+chunk followed by exactly one blend chunk through the actual DataChunkInput,
+stages the complete candidate, and only then replaces accepted backing. It is
+still not a world, lighting, texture/image or startup loader. Explicit topology
+readiness means parsed and owned topology, not initialized audiovisual assets.
+`readBlendChunk` is also available to the eventual complete world transaction;
+logical-metadata backing is not a valid full-reader blend input.
+
+The game-owned metadata retains fixed little-endian signed Short tile/blend/
+extra/cliff arrays, every texture/edge-class range and name, bitmap/edge counts,
+packed blend records (including flags wider than Boolean), custom edge class,
+FLAG_VAL=0x7ADA0000, and complete cliff tile/UV/flag records. Readers consume
+records before growing candidate tables; short arrays decode in bounded blocks.
+Names/records do not open files or mutate global owners. Source texture acquisition
+through TerrainTypes/readTexClass and alpha-tile construction remain later
+integration, not a fake successful image implementation. Sources:
+WorldHeightMap.cpp::ParseBlendTileData/readTexClass; WorldHeightMap.h; TileData.h.
+
+The source postpass repairs out-of-range blend, extra-blend and cliff indices to
+zero. Native import preserves this repair instead of rejecting maps the original
+repairs. With three-way blending disabled, extra indices become zero and only
+FLIPPED_MASK=2 is cleared from the inverted flag; other packed bits remain.
+Modern authored cliff rows override geometric slope, so flat terrain can be
+impassable and steep cells can be authored passable. v7 missing row bytes stay
+zero; v8 retains the full row. Older formats use strict9.8 slope derivation.
+The cliff world query truncates toward zero, clamps to extent-2 and guards
+nonfinite/out-of-range conversion. Single-point maps have no cliff cells.
+
+For blend v1, tile prefixes resample every second row/column, valid prefixes of
+blend/extra/cliff indices become zero, blend/cliff record counts become one,
+and active dimensions halve. Height backing/tail and old cliff stride/flags are
+retained. Cliff derivation occurs BEFORE that dimension transition, matching
+the original ordering; do not silently regenerate flags from the final grid.
+The index-repair postpass applies to the final active width*height prefix only.
+
+Verified old-reader defect: ParseBlendTileData allocates extra/cliff Short arrays
+without initialization even when their versions have no serialized fields, then
+its constructor postpass reads them. Native import defines absent extra/cliff
+mapping as zero, the format's no-mapping sentinel, and tests versions2–5 explicitly.
+It does not attempt to preserve an uninitialized read or invent extra authored
+blends/cliff mapping where no field exists. This fixes undefined original-reader
+state, not gameplay rules, file bytes or retail assets. Sources: array allocation/
+versioned reads at WorldHeightMap.cpp::ParseBlendTileData and constructor postpass.
+
+Generated topology tests cover all eight blend versions, complete metadata and
+UV records, authored-flat versus derived-slope semantics, source v7 row loss,
+coupled v1 shape/backing/stride, packed flags and three-way filtering, repaired
+indices, every truncated wire prefix, reordered/missing/duplicate chunks, bad
+lengths/counts/markers/UVs and hostile cliff coordinates. Complete small/multi-
+block acquisition censuses67/201 retain all failure/distinct-candidate retry pairs
+and exact terminals, accepted backing identities and repeated whole-owner heap
+retirement under both sanitizer compilers. The actual world objects/dictionary/
+sides/triggers, layer/bridge/wall behavior, lighting/texture acquisition, fog/ghost
+owners and GameEngine/root execution are still separate pending N2/N3 gates.

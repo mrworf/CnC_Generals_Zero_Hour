@@ -95,3 +95,65 @@ partition fog lifecycle, real camera timing, audio readiness, particle/radar
 owners, actual native GameEngine startup and compiler-matching original world/
 simulation. Root link closure and this query cohort are not execution acceptance.
 N3–N7 remain dependency-gated; no new milestone or replacement plan was created.
+
+## Complete topology continuation from8740ec65
+
+Parent: `8740ec65db1b6e1aee0d2219b8f605d04caa105f`; clean worktree at start.
+Commit checkpoint title: `delivery: integrate original terrain blend topology`.
+This continuation supersedes the current source identity/result scope above;
+the earlier height-only acceptance remains historical supporting evidence.
+N2/slice03 remains incomplete, with the same packet, goal and governing plan.
+
+The existing game-owned owner now stages complete height/blend topology, retains
+all source mapping metadata, preserves packed flags/UVs and source index repair,
+honors the three-way option, imports authored v7/v8 cliffs or old9.8 slope flags,
+and completes the v1 dimension/tile-prefix transition with original pre-resize
+cliff ordering/stride. Absent old-format mapping arrays become defined zero
+sentinels instead of the source uninitialized arrays later read by its postpass.
+No assets are read/written, no framework changes occur, and no replacement
+simulation or image-readiness success is introduced. Full world/lighting/texture/
+root admission remains pending; loadTerrainTopology names its narrow data role.
+
+Tests retain every actual fault/retry pair in independently discovered67/201
+manifests (small and multi-block), each exact terminal and three complete owner
+lifetimes. Failed late candidates preserve accepted height/tile/cliff backing
+identity; corrected candidate changes authored cliff semantics and retires all
+previous backing. All8 format variants, metadata names/ranges/UVs, flag masking,
+legacy stride/resize, slope/authored disagreement and source index repair pass.
+Every truncated prefix, missing/duplicate/reordered chunks, unsupported versions,
+bad counts/lengths/marker/nonfinite UV and hostile coordinate cases reject while
+preserving accepted owners; corrected same-owner retries succeed.
+
+| Configuration | All configured targets | Focused terrain6 | Related data/map/core59 |
+| --- | --- | --- | --- |
+| GCC | PASS | 6/6, 2.95s | 59/59, 9.46s |
+| GCC ASan/UBSan/LSan | PASS | 6/6, 26.98s | 59/59, 51.68s |
+| Clang ASan/UBSan/LSan | PASS | 6/6, 19.65s | 59/59, 36.38s |
+
+Normal-host sanitizer CTest retains the same ASan/UBSan/LSan settings and each
+individual60s timeout. No source/test failures occurred on the frozen cohort.
+The source topology manifests appear in each configuration's CTest LastTest.log
+as count/status only; no private addresses or asset selectors are retained.
+Related checks are deliberately the affected source/core/chunk/map boundary
+contracts, not a repeat of unchanged client-module/registry acceptance.
+Commands use the existing three build directories:
+
+```sh
+cmake --build <build> -j 4
+ctest --test-dir <build> -R '^original_native_terrain_' --output-on-failure
+ctest --test-dir <build> -R 'original_(native_terrain|header_paths|map|chunk|runtime|core|enum|source_boundaries)' --output-on-failure
+```
+
+Current terminal logs: `/tmp/zh-terrain-topology-{gcc,gccsan,clangsan}-final-build.log`,
+`...-focused.log`, `...-related.log`. The configured suite is258; full258 was not
+run. No original engine startup, complete world, rendering or milestone completion
+is inferred from this related subset.
+
+Canonical599 SHA256:
+`5f6b22d3e129989c4ef2c24ce798a844b0bd228d34e96667ebe9d400863183fe`.
+Toolchain-inclusive606 SHA256:
+`caf4160ac105db88489fbb6074e97501ca5c9751a7dde0d9ca738c8318952053`.
+Same cumulative snapshot recipe and unchanged authoritative specification/packet
+as above. Continue native full world/TerrainLogic, actual source objects/sides/
+triggers/dictionary and legitimate waypoint/ghost/partition lifecycle, then real
+camera/audio/particle/radar/root execution and matching original simulation.

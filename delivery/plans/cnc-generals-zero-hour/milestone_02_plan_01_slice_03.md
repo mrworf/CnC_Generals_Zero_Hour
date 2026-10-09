@@ -1709,3 +1709,45 @@ canonical599/toolchain-inclusive606 identities are recorded in the terrain QA
 checkpoint. This supersedes the preliminary census5/source snapshot above.
 N2/slice03 remains incomplete; proceed with full original world/blend integration
 and native root. No asset, dependency or product-authority edits occurred.
+
+Continuation from8740ec65, clean worktree: extend the existing terrain owner
+through complete HeightMapData/BlendTileData topology, not just the authored bit
+prefix. Retain all fixed-width tile/blend/extra/cliff indices, texture and edge
+class names/ranges, packed blend flags/custom edge/marker, and cliff UV records.
+Apply source index repair, three-way option filtering, old slope-derived flags,
+v7 undersized authored rows, v8 full rows and the coupled v1 blend transition.
+Ground/normal/LOS and cliff queries then operate on the same actual accepted
+terrain candidate. Explicit loadTerrainTopology is not a full world/visual loader:
+lighting, world dictionary, objects, sides, triggers, assets and native root remain
+required; no discarded gameplay chunk or texture readiness success is inferred.
+
+Read candidate records before growing backing; decode Short arrays explicitly
+little-endian, guard declared extents and do not introduce arbitrary legacy map
+caps. Absent old-version extra/cliff index arrays are defined zero sentinels,
+not the original uninitialized arrays later inspected by its repair postpass.
+Never preserve undefined uninitialized reads as a compatibility contract.
+Keep accepted owner/backing through any late field/marker/UV/allocation failure,
+then publish a distinct corrected candidate without global callbacks. Legacy
+cliff derivation and row stride must follow the source's pre-resize ordering.
+Document those limits; do not silently resample authored flags differently.
+
+Own existing native terrain header/source/fixture, CTest wiring and existing
+plan/findings/QA/state. Positive cases cover all blend versions, nonflat and
+authored-flat disagreement, legacy shape/stride, flags/names/UV preservation,
+three-way filtering and repaired bad indices. Negative cases include complete
+truncation sweeps, missing/duplicate/reordered chunks, bad lengths/counts/markers/
+UVs and hostile queries. Discover small/multi-block manifests, retain every
+failure/distinct-candidate retry and exact terminal under both sanitizers, and
+run focused then related matrix on frozen source before the supporting commit.
+N2/slice03 is still incomplete; this is not a replacement milestone or plan.
+
+The complete topology cohort passes all configured builds, focused6 and related59
+in all three configurations. Small/multi-block manifests67/201 retain all fault/
+distinct-candidate retry pairs and exact terminals; original authored/derived
+cliffs, all8 blend versions, v1 transition, v7 stride, complete metadata/UVs and
+packed flags pass. Exact evidence/current identities are appended to
+`evidence/qa/N2-native-terrain-checkpoint.md`. Commit checkpoint title:
+`delivery: integrate original terrain blend topology`. Full258 not run.
+N2/slice03 remains incomplete: continue actual full world/TerrainLogic and
+objects/dictionary/sides/triggers/waypoint/ghost/partition integration plus native
+root. Texture/lighting and audiovisual acceptance are not inferred from metadata.
