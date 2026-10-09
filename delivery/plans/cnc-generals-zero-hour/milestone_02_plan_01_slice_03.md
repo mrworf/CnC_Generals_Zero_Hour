@@ -1225,3 +1225,47 @@ Never-executed root link still fails6/218/222; full209 pending. Source-reviewed
 LOD and whole diplomacy/start-spot lifecycle findings are durable in formats.
 See `evidence/qa/N2-fatal-checkpoint.md`. N2/slice03 and whole original startup/
 simulation/default stats sampler remain unaccepted.
+
+Continue from45b61c12 with explicit original FunctionLexicon table ownership as
+the first coupled GUI/startup foundation correction. Generic lookup/publication
+currently shares a TU with the complete menu table metadata; GCC/Clang sanitizer
+module initializers admit its GUI dependency closure even without invoking GUI
+initialization. Do not disable sanitizer instrumentation or replace callbacks.
+Move the original tables/default constructor to a dedicated compiled TU, preserve
+all table/declaration bytes (SHAc5070a715576d4bd607502f9bbf987efd98bd8c0f81b6a08e683db5af53b4d3d),
+and separate borrowed singleton publication. Capture bounded explicit table
+descriptors in the actual FunctionLexicon owner for generated/native headless
+callers. An explicitly empty set means no GUI callbacks; it does not claim GUI
+initialization. Default construction still requires all original GUI providers.
+Init/reset/typed lookup and device-first selection must execute in the actual
+owner; failed descriptor/table/key admission must preserve accepted publication
+and support corrected same-owner retry. Dependencies remain borrowed and valid
+through service lifetime; no table/address serialization or ownership crossover.
+
+Test actual FunctionLexicon with generated callbacks and empty headless metadata,
+missing name service, malformed/sentinel/prototype/duplicate/device-table input,
+every allocation failure/retry with exact terminal and repeated complete owner
+lifetimes under GCC/Clang sanitizers. Source-lock the complete original GUI table
+payload; retain a default-constructor link-only diagnostic that must still expose
+missing GUI providers. Compare normal/sanitized startup diagnostics but never use
+reduced counts as startup acceptance. Then continue complete map/diplomacy native
+source admission using the already-recorded lifecycle and projection findings.
+
+Retain the source name namespace's accepted monotonic interning on failed cold
+registration: unpublished entry keys and table spans roll back, but legitimately
+interned names retire with the whole NameKeyGenerator. Warm failures must retire
+exactly; cold residuals must equal the counted interned-name ownership units.
+
+Actual lexicon checkpoint: all configured targets build all3; related67/67 PASS
+16.23s/65.25s/62.24s; final strengthened six-family fixture PASS0.23s/1.33s/0.96s.
+Three complete owner lifetimes, exact warm1/cold9/device9 fault/retry terminals.
+All original GUI tables source-locked; default constructor still requires genuine
+providers. Startup link-only diagnostics fail6/8/15, default GUI212/214/222,
+never executed. Final canonical563
+SHA6944a8345a61aa61246ce149590bfdc8dcbe84807f4bf2a221261d98ffbb6871;
+toolchain570 SHAf2be068e779cf985d6eaad2cf3b7c75edab676b1d896aec0f385bbe159a2446b.
+QA retains the earlier related-run identities and their final fixture-only delta.
+Full215, actual GameEngine startup/scenario/statistics sampler and physical GUI
+remain pending. Continue map/diplomacy/capability/IME/warnings/terrain/hosting roots
+as coherent providers from documented source, not no-op definitions.
+See `evidence/qa/N2-lexicon-checkpoint.md`; N2/slice03 remain in progress.

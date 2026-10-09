@@ -738,3 +738,11 @@ stub or an assertion suppression. Current link-only diagnostics remain failures:
 6 normal GCC,218 GCC sanitizer,222 Clang sanitizer unresolved symbols. The
 remaining normal set is capability admission, diplomacy and map start spots.
 None of these probe binaries is run. See `evidence/qa/N2-fatal-checkpoint.md`.
+
+FunctionLexicon now separates generic owner/lookup from original GUI table/default
+constructor admission. Seven original table payloads are source-locked, not stubbed
+or reduced. Captured metadata supports actual native/headless owner execution;
+borrowed singleton publication does not load menus. Default GUI still requires
+its real providers. Startup link diagnostics fail6/8/15 and default-GUI212/214/222
+(normal/GCCsan/Clangsan), all never executed. These distinct scopes are not startup
+acceptance. See `evidence/qa/N2-lexicon-checkpoint.md`.

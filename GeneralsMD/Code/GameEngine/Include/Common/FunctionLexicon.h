@@ -55,6 +55,9 @@ public:
 public:
 
 	FunctionLexicon( void );
+  // Captured descriptors; backing is borrowed through this owner lifetime.
+  // An explicitly empty set provides no GUI callbacks.
+  explicit FunctionLexicon(std::span<const NativeFunctionTable> tables);
 	virtual ~FunctionLexicon( void );
 
 	virtual void init( void );
@@ -106,6 +109,8 @@ protected:
 
 
 	NativeFunctionRegistry m_registry;
+  std::array<NativeFunctionTable,static_cast<std::size_t>(MAX_FUNCTION_TABLES)> m_sources{};
+  std::size_t m_sourceCount=0;
 
 };  // end class FunctionLexicon
 

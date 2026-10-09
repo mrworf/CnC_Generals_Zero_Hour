@@ -222,6 +222,7 @@ add_library(original_gameplay_common STATIC ${ZH_ORIGINAL_GAMEPLAY_COMMON})
 # Actual CPU map owners extracted from the original device-owned translation unit.
 target_sources(original_gameplay_common PRIVATE
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeOriginalStatsSource.cpp"
+  "${ZH_CODE}/GameEngine/Source/Common/System/FunctionLexiconTables.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/MapObject.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/MapObjectTeams.cpp")
 target_link_libraries(original_gameplay_common PUBLIC original_runtime_common)
@@ -422,6 +423,22 @@ foreach(family IN ITEMS functional negative fault-override fault-overwrite fault
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()
 add_executable(original_function_registry_fixture tests/original/function_registry.cpp tests/original/AllocationFault.cpp)
+add_executable(original_lexicon_fixture tests/original/lexicon.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_lexicon_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_lexicon_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS functional negative fault-warm fault-cold fault-device)
+  add_test(NAME original_lexicon_${family} COMMAND original_lexicon_fixture "${family}")
+  set_tests_properties(original_lexicon_${family} PROPERTIES LABELS "original;runtime;callbacks" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
+add_test(NAME original_lexicon_source_tables COMMAND "${Python3_EXECUTABLE}"
+  "${CMAKE_SOURCE_DIR}/tests/toolchain/test_original_lexicon_tables.py")
+set_tests_properties(original_lexicon_source_tables PROPERTIES LABELS "original;runtime;callbacks" TIMEOUT 60)
+add_executable(original_lexicon_default_link_probe EXCLUDE_FROM_ALL tests/toolchain/original_lexicon_default_link_probe.cpp)
+target_link_libraries(original_lexicon_default_link_probe PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_lexicon_default_link_probe PRIVATE -Wl,--gc-sections)
 target_link_libraries(original_function_registry_fixture PRIVATE original_runtime_common)
 foreach(family IN ITEMS functional malformed fault-warm fault-cold)
   add_test(NAME original_function_registry_${family} COMMAND original_function_registry_fixture "${family}")

@@ -26,7 +26,7 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "scope": "remaining",
-  "resume_point": "N2 same plan01/slice03 continues from717a474b with both original native fatal APIs. Allocation-free/global-independent redacted stderr report and immediate failure exit, including broken/closed stderr; no raw file writes or callbacks.27 generated child cases over three repetitions; actual process teardown not accepted by immediate-exit cases. All configured builds PASS all3; related74/74 PASS GCC16.78s/GCCsan67.13s/Clangsan63.74s, all checks intact. Canonical561 SHA8638d4c6722e00c1979964ffff6704522d5e1acea9b4da19b88b5869effc481a; toolchain566 SHAcef73d71e18665ba890676775d229e72166b8e003c1a318d08ed08f131917004. Never-executed root diagnostics fail6/218/222, full209 not run. LOD benchmark absence/raw report and GUI whole lifecycle/count/extents/sparse-target findings documented. Continue legitimate capability/diplomacy/start-spot providers and sanitizer roots, then actual CPU world/startup/scenario. N2/slice03 remain incomplete; no agents/vendor/assets/recovery changes.",
+  "resume_point": "N2 same plan01/slice03 continues from45b61c12 with actual FunctionLexicon captured table ownership. Generic lookup/publication separated from byte-locked original GUI tables/default constructor; explicit empty headless metadata does not claim GUI readiness. Actual init/reset/typed dispatch/device-first policy tested with three complete owner/name/publication lifetimes and every warm1/cold9/device9 fault/retry terminal. All configured targets build all3; related67/67 PASS16.23s/65.25s/62.24s; final strengthened six-family fixture PASS0.23s/1.33s/0.96s. Final canonical563 SHA6944a8345a61aa61246ce149590bfdc8dcbe84807f4bf2a221261d98ffbb6871; toolchain570 SHAf2be068e779cf985d6eaad2cf3b7c75edab676b1d896aec0f385bbe159a2446b. QA records earlier related identities/delta honestly. Startup link fails6/8/15; default GUI still fails212/214/222, all never executed. Full215 not run. Continue documented whole map/diplomacy/capability/IME/warning/terrain/hosting providers, then native factory/CPU world/startup/scenario. N2/slice03 incomplete; no agents/vendor/assets/recovery changes.",
   "transaction_parent": "11295c4feb535f97978b8335632440fccae82794",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -41,23 +41,23 @@
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Continue native capability/diplomacy/start-spot providers and sanitizer callback roots, then original CPU world/factories/GameLogic/GameState/Recorder/scenario gates; actual stats sampler execution still pending.",
+  "next": "Implement the original map/diplomacy startup lifecycle cohort; native capability/LOD/IME/warning/terrain/hosting providers and actual headless factories/startup/world/scenario remain. Preserve all GUI tables/default providers; no fake callback or benchmark admission.",
   "implementation_checkpoint": {
-    "label": "native-original-fatal-boundary",
-    "reason": "Both actual original fatal entry points and redacted failure behavior, not startup/teardown acceptance",
-    "prior_commit": "717a474b",
-    "canonical_source_sha256": "8638d4c6722e00c1979964ffff6704522d5e1acea9b4da19b88b5869effc481a",
-    "toolchain_inclusive_sha256": "cef73d71e18665ba890676775d229e72166b8e003c1a318d08ed08f131917004",
-    "configured_suite_tests": 209,
-    "related_suite_tests_passed": 74,
+    "label": "native-original-lexicon-owner",
+    "reason": "Actual captured-metadata FunctionLexicon init/reset/dispatch/ownership; default GUI providers remain required, not process acceptance",
+    "prior_commit": "45b61c12",
+    "canonical_source_sha256": "6944a8345a61aa61246ce149590bfdc8dcbe84807f4bf2a221261d98ffbb6871",
+    "toolchain_inclusive_sha256": "f2be068e779cf985d6eaad2cf3b7c75edab676b1d896aec0f385bbe159a2446b",
+    "configured_suite_tests": 215,
+    "related_suite_tests_passed": 67,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; related74 PASS all3",
+    "full_current_matrix": "not run; related67 and final focused6 PASS all3 with exact source identities in QA",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-fatal-checkpoint.md"
+    "evidence": "evidence/qa/N2-lexicon-checkpoint.md"
   }
 }

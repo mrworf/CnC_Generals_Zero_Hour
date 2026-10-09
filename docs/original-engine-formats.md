@@ -2556,3 +2556,33 @@ parent identity through cleanup, withdraw all borrowed controls, and test reset/
 hide/populate order across whole owner lifetimes. Full GameSpy-dependent menus
 remain uncompiled; their callback definitions must not be replaced with returning
 no-ops to make the startup link green.
+
+### Explicit FunctionLexicon metadata and dependency ownership
+
+The original seven GUI table/declaration payloads now live in
+`Common/System/FunctionLexiconTables.cpp`, source-locked byte-for-byte by
+`tests/toolchain/test_original_lexicon_tables.py` (SHA256
+c5070a715576d4bd607502f9bbf987efd98bd8c0f81b6a08e683db5af53b4d3d).
+Default construction still captures every original GUI table and requires their
+real providers; no callback is replaced/deleted. Generic lookup/init/reset and
+destruction remain in FunctionLexicon.cpp. Borrowed TheFunctionLexicon publication
+is independent in NativeStartupPublications.cpp, not a menu-loader side effect.
+
+The actual owner also accepts explicit bounded table descriptors, copied at
+construction while entry backing remains borrowed. This supports native/headless
+service ownership with explicitly empty metadata, not apparent GUI initialization.
+Init validates complete candidate tables before key/span publication; optional
+device draw/layout tables preserve paired admission and device-first lookup.
+Rejected cold registration may retain source-monotonic interned names, but no
+unpublished entry keys/table spans publish; whole name-owner destruction retires
+those legitimate units. External mutation/retirement of admitted entry backing
+is not an owner rollback guarantee. Valid backing must outlive its borrower.
+
+Before separation, GCC/Clang sanitizer module constructors in the combined lookup/
+table TU kept the full uninvoked GUI metadata closure in the startup diagnostic.
+Instrumentation is unchanged. Current startup link still fails6/8/15 symbols;
+default GUI constructor diagnostics still fail212/214/222, proving missing menu
+providers were not silently replaced. All probes are link-only, never execution
+or startup acceptance. Remaining sanitized roots include native IME/warning/
+terrain/network-status and diplomacy briefing/Toggling paths; inspect them as
+coupled providers rather than replacing them with constants.
