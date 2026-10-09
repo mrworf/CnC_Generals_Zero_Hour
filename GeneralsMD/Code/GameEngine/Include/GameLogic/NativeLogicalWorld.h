@@ -8,6 +8,10 @@
 class NativeLogicalWorld {
   NativeTerrainHeightMap m_height;
 public:
+  using Admission = void (*)(const NativeTerrainHeightMap& candidateHeight, void* context);
   void load(ChunkInputStream& stream);
+  // Synchronous CPU continuation while original world rollback remains live.
+  // The caller must retain its own staged owners until this method succeeds.
+  void load(ChunkInputStream& stream, Admission admission, void* context);
   const NativeTerrainHeightMap& height() const noexcept { return m_height; }
 };

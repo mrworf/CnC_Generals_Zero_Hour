@@ -6,6 +6,8 @@
 #include "Common/ThingFactory.h"
 #include "Common/WellKnownKeys.h"
 #include "GameLogic/NativeLogicalWorld.h"
+#include "GameLogic/NativeWaypointGraph.h"
+#include "GameLogic/TerrainLogic.h"
 #include "GameLogic/PolygonTrigger.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/SidesList.h"
@@ -112,10 +114,12 @@ void triggers(DataChunkOutput& out){out.openDataChunk("PolygonTriggers",4);out.w
   for(const ICoord3D p: {ICoord3D{0,0,0},ICoord3D{100,0,0},ICoord3D{0,100,0}}){out.writeInt(p.x);out.writeInt(p.y);out.writeInt(p.z);}
   out.closeDataChunk();}
 std::string wire(const char* name="AcceptedSide",unsigned objectVersion=3,unsigned heightVersion=4,
-                 Real angle=0.5f,Int weather=WEATHER_SNOWY,unsigned omit=0,unsigned duplicate=0,bool heightLast=false){
+                 Real angle=0.5f,Int weather=WEATHER_SNOWY,unsigned omit=0,unsigned duplicate=0,bool heightLast=false,const char* extraWorldKey=nullptr){
   Output output;DataChunkOutput out(&output);
   if(!(omit&1) && !heightLast)height(out,heightVersion);
-  if(!(omit&2)){out.openDataChunk("WorldInfo",1);Dict dict;dict.setInt(TheKey_weather,weather);out.writeDict(dict);out.closeDataChunk();}
+  if(!(omit&2)){out.openDataChunk("WorldInfo",1);Dict dict;dict.setInt(TheKey_weather,weather);
+    if(extraWorldKey)dict.setInt(TheNameKeyGenerator->nameToKey(extraWorldKey),42);
+    out.writeDict(dict);out.closeDataChunk();}
   if(!(omit&8))sides(out,name);
   if(!(omit&4))objects(out,objectVersion,angle);
   if(!(omit&16))triggers(out);
@@ -278,6 +282,71 @@ void fixedPools(){
   TheMemoryPoolFactory->createMemoryPool("ScriptAction",sizeof(ScriptAction),64,0);
   TheMemoryPoolFactory->createMemoryPool("Parameter",sizeof(Parameter),128,0);
 }
+struct AdmissionState {
+  Context& context;const std::string& bytes;NativeWaypointGraph graph;
+  ScriptList* acceptedScript=context.sides.getSideInfo(0)->getScriptList();
+  bool reject=false,called=false;
+};
+void admitWaypoints(const NativeTerrainHeightMap& height,void* raw){auto& state=*static_cast<AdmissionState*>(raw);
+  require(TheSidesList!=&state.context.sides && TheSidesList->getNumSides()==2 &&
+    state.context.sides.getSideInfo(0)->getScriptList()==state.acceptedScript,
+    "candidate sides remain legitimately published while accepted parent contents are unmodified");
+  require(height.bytes().data()!=state.context.world.height().bytes().data() && height.bytes().size()==49,
+    "continuation sees offside logical metadata, not prematurely committed backing");
+  Input input(state.bytes);state.graph.load(input,MapObject::getFirstMapObject());state.called=true;
+  require(state.graph.first() && !state.graph.first()->getNext() && state.graph.first()->getLocation()->z==0,
+    "actual pooled graph admits source waypoint classification with absent initial grid");
+  if(state.reject)throw ERROR_CORRUPT_FILE_FORMAT;
+}
+void continuation(Context& context){const auto valid=wire(),replacement=wire("ReplacementSide");context.load(valid);
+  {AdmissionState warm{context,replacement};Input input(replacement);context.world.load(input,admitWaypoints,&warm);}
+  context.load(valid);ScriptList::IDTransaction stable;
+  auto* pool=TheMemoryPoolFactory->findMemoryPool("Waypoint");require(pool,"actual continuation Waypoint pool exists");
+  auto reject=[&]{auto* objects=MapObject::getFirstMapObject();auto* trigger=PolygonTrigger::getFirstPolygonTrigger();
+    auto* script=context.sides.getSideInfo(0)->getScriptList();auto* backing=context.world.height().bytes().data();
+    const auto live=AllocationFault::live();const auto id=InspectRead::id();const auto used=pool->getUsedBlockCount();bool failed=false;
+    {AdmissionState state{context,replacement};state.reject=true;Input input(replacement);
+      try{context.world.load(input,admitWaypoints,&state);}catch(ErrorCode error){failed=error==ERROR_CORRUPT_FILE_FORMAT;}
+      require(state.called,"late rejection occurs after actual graph construction");}
+    require(failed && MapObject::getFirstMapObject()==objects && PolygonTrigger::getFirstPolygonTrigger()==trigger &&
+      context.sides.getSideInfo(0)->getScriptList()==script && context.world.height().bytes().data()==backing &&
+      InspectRead::id()==id && pool->getUsedBlockCount()==used && AllocationFault::live()==live,
+      "failure after source world parse and waypoint phase restores complete accepted owner group");check(context);
+  };
+  reject();
+  const auto boundary=context.names.nameToKey("GeneratedContinuationNamespaceBoundary");
+  const auto next=static_cast<NameKeyType>(static_cast<UnsignedInt>(boundary)+1);std::string fresh;
+  {NameKeyTransaction generation(context.names);fresh=wire("ReplacementSide",3,4,0.5f,WEATHER_NORMAL,0,0,false,"GeneratedFreshContinuationWorldKey");}
+  require(context.names.keyToName(next).isEmpty(),"continuation wire generation withdraws fixture-only namespace entry");
+  {AdmissionState state{context,fresh};state.reject=true;Input input(fresh);bool failed=false;
+    try{context.world.load(input,admitWaypoints,&state);}catch(ErrorCode error){failed=error==ERROR_CORRUPT_FILE_FORMAT;}
+    require(failed && state.called && context.names.keyToName(next).isEmpty(),"failure after original graph phase also rolls back fresh world namespace");}
+  check(context);
+  {AdmissionState corrected{context,fresh};Input input(fresh);context.world.load(input,admitWaypoints,&corrected);
+    require(context.names.nameToKey("GeneratedFreshContinuationWorldKey")==next && MapObject::TheWorldDict.getInt(next)==42,
+      "corrected late-phase retry commits identical namespace ordinal and actual world dictionary");}
+  context.load(valid);
+  std::size_t census;
+  {ScriptList::IDTransaction start;AdmissionState state{context,replacement};Input input(replacement);AllocationFault::arm(SIZE_MAX);
+    try{context.world.load(input,admitWaypoints,&state);}catch(...){AllocationFault::disarm();throw;}
+    census=AllocationFault::attempts();require(!AllocationFault::triggered() && state.called,"whole continuation allocation census");AllocationFault::disarm();}
+  {ScriptList::IDTransaction restore;context.load(valid);}
+  for(std::size_t ordinal=0;ordinal<=census;++ordinal){ScriptList::IDTransaction start;
+    auto* objects=MapObject::getFirstMapObject();auto* trigger=PolygonTrigger::getFirstPolygonTrigger();auto* script=context.sides.getSideInfo(0)->getScriptList();
+    const auto id=InspectRead::id();const auto live=AllocationFault::live();const PoolUsage pools;const auto used=pool->getUsedBlockCount();bool failed=false;
+    {AdmissionState state{context,replacement};Input input(replacement);AllocationFault::arm(ordinal);
+      try{context.world.load(input,admitWaypoints,&state);}catch(const std::bad_alloc&){failed=true;}
+      catch(ErrorCode error){require(error==ERROR_OUT_OF_MEMORY,"continuation ownership failure class");failed=true;}
+      const auto hit=AllocationFault::triggered();AllocationFault::disarm();require(hit==failed && failed==(ordinal<census),"complete combined world/waypoint manifest and exact terminal");}
+    if(failed){require(MapObject::getFirstMapObject()==objects && PolygonTrigger::getFirstPolygonTrigger()==trigger &&
+      context.sides.getSideInfo(0)->getScriptList()==script && InspectRead::id()==id,"every late acquisition restores accepted world identities and cursor");check(context);}
+    require(AllocationFault::live()==live && pools.matches() && pool->getUsedBlockCount()==used,"combined world/waypoint partial owners retire exactly");
+    {AdmissionState corrected{context,replacement};Input input(replacement);context.world.load(input,admitWaypoints,&corrected);
+      require(corrected.called,"each combined failure has immediate successful same-world/graph retry");check(context,"ReplacementSide");}
+    context.load(valid);check(context);require(AllocationFault::live()==live && pools.matches() && pool->getUsedBlockCount()==used,"complete continuation retry restores resource baseline");
+  }
+  std::cout<<"world-waypoint prefixes [0,"<<census<<"); terminal "<<census<<"; every retry\n";
+}
 void poolFailures(Context& context){const auto valid=wire(),replacement=wire("ReplacementSide");context.load(valid);
   for(const char* name:poolNames){auto* pool=TheMemoryPoolFactory->findMemoryPool(name);
     std::vector<void*> held;held.reserve(pool->getFreeBlockCount());
@@ -298,11 +367,14 @@ void poolFailures(Context& context){const auto valid=wire(),replacement=wire("Re
 int main(int argc,char** argv){const auto initial=AllocationFault::live();bool initialized=false;
   try{require(argc==2,"world family");initMemoryManager();initialized=true;
     if(std::string_view(argv[1])=="pool-failures")fixedPools();
-    {Context warm;warm.load(wire());warm.load(wire("ReplacementSide"));}
+    {Context warm;warm.load(wire());warm.load(wire("ReplacementSide"));
+      const auto bytes=wire();Input input(bytes);NativeWaypointGraph graph;
+      graph.load(input,MapObject::getFirstMapObject());}
     for(unsigned repeat=0;repeat<3;++repeat){auto live=AllocationFault::live();const PoolUsage pools;
       {Context context;const std::string_view family=argv[1];if(family=="functional")functional(context);
         else if(family=="negative")negative(context);else if(family=="faults"){faults(context);optionalFaults(context);}
-        else if(family=="ownership")ownership(context);else if(family=="pool-failures")poolFailures(context);else require(false,"unknown world family");}
+        else if(family=="ownership")ownership(context);else if(family=="pool-failures")poolFailures(context);
+        else if(family=="continuation")continuation(context);else require(false,"unknown world family");}
       require(AllocationFault::live()==live && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
         !MapObject::getFirstMapObject() && !PolygonTrigger::getFirstPolygonTrigger(),"repeated full-world owner retirement");}
     shutdownMemoryManager();initialized=false;require(AllocationFault::live()==initial,"whole original pool metadata retirement");

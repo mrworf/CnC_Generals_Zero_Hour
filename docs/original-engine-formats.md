@@ -3393,16 +3393,50 @@ silently caps each node at8. Keep source behavior even when the forward node is
 full and a reverse link can still be admitted. IDs remain fixed unsigned32 even
 though the wire pair uses signed Int32 raw representations.
 
-Pending native corrections: getLink currently admits index8 despite an eight-
-element array; reject it without altering valid graph selection. The waypoint
-chunk reader must reject negative or physically impossible link counts and
-trailing payload, not rely on its final debug assert. deleteWaypoints retires
-actual pooled nodes iteratively and detaches the head only after its walk;
-candidate cleanup/publication must keep the valid terrain parent until legitimate
-retirement. These are audited pending work, not implemented/accepted fixes.
+Current native corrections: getLink rejects index8 for its eight-element array.
+The shared waypoint chunk reader rejects negative/physically impossible link
+counts and trailing payload rather than rely on the final debug assert.
+NativeWaypointGraph owns actual pooled nodes and shares constructor/prepend/link/
+read/delete operations with TerrainLogic, preserving source graph selection.
+Node destruction releases strings but does not call TerrainLogic or own neighbor
+links. Graph cleanup advances/detaches the head before each iterative release.
+Other owners that call a parent singleton still require legitimate publication
+through cleanup; this graph is not an exemption for those owners.
 Sources: TerrainLogic.h::Waypoint::getLink/addLink;
 TerrainLogic.cpp::Waypoint ctor/dtor/addWaypoint/addWaypointLink/
 parseWaypointData/deleteWaypoints.
+
+Native graph admission constructs all nodes/links offside, using source-classified
+MapObjects and either absent or prior retained height backing. Optional missing
+WaypointsList leaves nodes with empty links, not synthetic connectivity; duplicate
+chunks reject. The actual DataChunkInput considers a bare TOC without payload
+unopened, so omission fixtures require another complete chunk. Later resnap dry-
+runs all arithmetic before changing any accepted node, using the newly retained
+terrain grid. Signed wire IDs preserve all unsigned32 bit patterns, including the
+high bit; labels/names remain actual AsciiString ownership. The graph can exchange
+its head nonallocating with the actual TerrainLogic publication.
+
+NativeLogicalWorld's synchronous CPU admission continuation runs after actual
+side validation but before committing sides/height/name/script-ID/world owners.
+During that call, candidate objects/triggers/sides are legitimately published;
+accepted parent-side contents and accepted metadata remain unchanged. A failed
+continuation restores all guarded world state, including fresh namespace entries,
+even after actual Waypoint construction. Caller-owned graph/terrain/root candidates
+must remain staged or have their own rollback; the continuation does not magically
+undo arbitrary external side effects. Standalone load uses the same path without
+a continuation. Do not use this hook from renderer/audio threads or as acceptance
+of root startup. Source common loadMap's legacy catch-all path still exists and
+must not swallow ownership failures in the native multi-phase entry.
+
+Standard graph allocation census can be small because source nodes use explicit
+pools and AsciiString copies share backing. Independently exhaust the actual
+Waypoint pool and prove used-unit retirement. Warm pool metadata before resource
+baselines, then prove its exact retirement at whole-manager destruction.
+Sources: NativeLogicalWorld.cpp::load/Publication; NativeWaypointGraph.cpp;
+TerrainLogic.cpp shared graph adapters; original Waypoint constructor/destructor;
+`tests/original/waypoint_graph.cpp` and logical_world.cpp::continuation.
+Current evidence: `evidence/qa/N2-waypoint-world-continuation.md`. Native provider/
+root integration, layer/ghost/partition and original simulation remain pending.
 
 Native TerrainVisual is not merely an optional-output stub. Its public source
 interface contains pure water-grid transforms/resolution/clamps/height queries,

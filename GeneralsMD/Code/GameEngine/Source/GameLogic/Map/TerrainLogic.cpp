@@ -52,6 +52,7 @@
 #include "GameLogic/Scripts.h"
 #include "GameLogic/SidesList.h"
 #include "GameLogic/TerrainLogic.h"
+#include "GameLogic/NativeWaypointGraph.h"
 #include "GameLogic/Module/BodyModule.h"
 #include "GameLogic/Module/BridgeBehavior.h"
 #include "GameLogic/Module/BridgeTowerBehavior.h"
@@ -76,30 +77,7 @@ WaterHandle TerrainLogic::m_gridWaterHandle;
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-Waypoint::Waypoint(WaypointID id, AsciiString name, const Coord3D *pLoc, AsciiString label1, AsciiString label2, 
-									 AsciiString label3, Bool biDirectional) :
-m_name(name),
-m_pNext(NULL),
-m_location(*pLoc),
-m_id(id),
-m_pathLabel1(label1),
-m_pathLabel2(label2),
-m_pathLabel3(label3),
-m_numLinks(0),
-m_biDirectional(biDirectional)
-{
-	Int i;
-	for (i=0; i<MAX_LINKS; i++) {
-		m_links[i] = NULL;
-	}
-}  // end Waypoint
-
-//-------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------
-Waypoint::~Waypoint()
-{
-
-}  // end ~Waypoint
+// Waypoint construction and graph ownership are shared in NativeWaypointGraph.cpp.
 
 // Bridge ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1338,15 +1316,7 @@ Bool TerrainLogic::parseWaypointDataChunk(DataChunkInput &file, DataChunkInfo *i
 //-------------------------------------------------------------------------------------------------
 Bool TerrainLogic::parseWaypointData(DataChunkInput &file, DataChunkInfo *info, void *userData)
 {
-	Int numWaypointLinks = file.readInt();
-	Int i;
-	for (i=0; i<numWaypointLinks; i++) {
-		Int waypoint1 = file.readInt();
-		Int waypoint2 = file.readInt();
-		addWaypointLink(waypoint1, waypoint2);
-	}
-	DEBUG_ASSERTCRASH(file.atEndOfChunk(), ("Unexpected data left over."));
-	return true;
+	return NativeWaypointGraph::readLinks(m_waypointListHead, file);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1354,21 +1324,8 @@ Bool TerrainLogic::parseWaypointData(DataChunkInput &file, DataChunkInfo *info, 
 //-------------------------------------------------------------------------------------------------
 void TerrainLogic::addWaypoint(MapObject *pMapObj)
 {
-	Coord3D loc = *pMapObj->getLocation();
-	// Snap the waypoint down to the terrain.
-	loc.z = getGroundHeight(loc.x, loc.y);
-	Bool exists;
-	AsciiString label1, label2, label3;
-	label1 = pMapObj->getProperties()->getAsciiString(TheKey_waypointPathLabel1, &exists);
-	label2 = pMapObj->getProperties()->getAsciiString(TheKey_waypointPathLabel2, &exists);
-	label3 = pMapObj->getProperties()->getAsciiString(TheKey_waypointPathLabel3, &exists);
-	Bool biDirectional;
-	biDirectional = pMapObj->getProperties()->getBool(TheKey_waypointPathBiDirectional, &exists);
-	DEBUG_ASSERTCRASH(pMapObj->isWaypoint(), ("not a waypoint"));
-	Waypoint *pWay = newInstance(Waypoint)(pMapObj->getWaypointID(), pMapObj->getWaypointName(), 
-																&loc, label1, label2, label3, biDirectional);
-	pWay->setNext(m_waypointListHead);
-	m_waypointListHead = pWay;
+	const Coord3D* loc = pMapObj->getLocation();
+	NativeWaypointGraph::prepend(m_waypointListHead, pMapObj, getGroundHeight(loc->x, loc->y));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1376,38 +1333,7 @@ void TerrainLogic::addWaypoint(MapObject *pMapObj)
 //-------------------------------------------------------------------------------------------------
 void TerrainLogic::addWaypointLink(Int id1, Int id2)
 {
-	Waypoint *pWay1 = NULL;
-	Waypoint *pWay2 = NULL;
-	Waypoint *pWay;
-	// Traverse all waypoints.
-	/// @todo ID's should be UnsignedInts (MSB)
-	for (pWay = getFirstWaypoint(); pWay; pWay = pWay->getNext()) {
-		if (pWay->getID() == (UnsignedInt)id1) {
-			pWay1 = pWay;
-		}
-		if (pWay->getID() == (UnsignedInt)id2) {
-			pWay2 = pWay;
-		}
-	}
-	if (pWay1 && pWay2 && (pWay1 != pWay2)) {
-		Int i;
-		for (i=0; i<pWay1->getNumLinks(); i++) {
-			if (pWay1->getLink(i) == pWay2) {
-				return; // already linked;
-			}
-		}
-		pWay1->addLink(pWay2);
-
-		if (pWay1->getBiDirectional()) {
-			// Link the other way.
-			for (i=0; i<pWay2->getNumLinks(); i++) {
-				if (pWay2->getLink(i) == pWay1) {
-					return; // already linked;
-				}
-			}
-			pWay2->addLink(pWay1);
-		}
-	}
+	NativeWaypointGraph::link(m_waypointListHead, id1, id2);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1415,15 +1341,7 @@ void TerrainLogic::addWaypointLink(Int id1, Int id2)
 //-------------------------------------------------------------------------------------------------
 void TerrainLogic::deleteWaypoints(void)
 {
-	Waypoint *pNext = NULL;
-	Waypoint *pWay;
-	// Traverse all waypoints.
-	for (pWay = getFirstWaypoint(); pWay; pWay = pNext) {
-		pNext = pWay->getNext();
-		pWay->setNext(NULL);
-		pWay->deleteInstance();
-	}
-	m_waypointListHead = NULL;
+	NativeWaypointGraph::clear(m_waypointListHead);
 }
 
 //-------------------------------------------------------------------------------------------------

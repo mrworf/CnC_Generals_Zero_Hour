@@ -2067,3 +2067,38 @@ retained full grid and the accepted water CPU owner; an outer admission scope
 must keep original logical world publication rollback live through waypoint,
 provider and later root failure, rather than call NativeLogicalWorld::load and
 assume an already committed logical parse can unwind a later terrain failure.
+
+Waypoint/world continuation refinement (parent253c2e46; clean start): keep the
+actual NativeLogicalWorld publication, name and script-ID transactions open
+through a synchronous CPU admission continuation after side validation and before
+any accepted-world swap. The caller stages its own terrain/root candidate; the
+world owner restores objects/Dict/weather/triggers/sides/script publication and
+names/IDs if that continuation fails. No render/audio-thread callbacks or generic
+simulation substitutes. Standalone load delegates to the same admission path.
+Extract the original Waypoint constructor and graph operations into a game-owned
+NativeWaypointGraph and reuse them from actual TerrainLogic add/link/delete/read
+methods, not a second incompatible graph. Retain original pooled nodes, reverse
+file traversal, first-file duplicate-ID choice, duplicate/self/missing suppression,
+source-node-only bidirectionality and capacity8 including independently admitted
+reverse edges after forward saturation. Fix getLink index8 bounds and physically
+validate counts/trailing records. Stage all nodes/links, preserve prior/absent
+initial height and apply later nonallocating atomic resnap using the retained
+terrain grid. Provide explicit head exchange for subsequent actual TerrainLogic
+publication. Test source graphs, malformed/late replacement and every corrected
+retry, standard allocation census and actual Waypoint pool exhaustion, repeated
+owners and outer-world continuation failure across all3 configurations. This
+continues the existing provider/root cohort; no new helper slice or plan. Provider
+binding and original startup/simulation remain the next integration boundary.
+
+World/waypoint checkpoint: frozen all3 configured builds and related77 pass on
+canonical614 sourcecbbeff2d / inclusive621 sourceb2f07b54. Actual pooled graph
+and shared TerrainLogic operations retain source graph semantics. Standard graph
+prefixes[0,4), actual Waypoint-pool exhaustion and world-plus-waypoint prefixes
+[0,175) each retain every corrected retry/exact terminal across three owners.
+Later continuation failure also restores fresh world namespace, accepted parent
+side identity and source height/ID/publication state. Evidence:
+`evidence/qa/N2-waypoint-world-continuation.md`. Commit boundary:
+`delivery: retain world rollback through original waypoint admission`.
+Full configured290 is not run; this does not complete slice03/N2 or bind the
+native terrain providers/root. Continue actual TerrainVisual/TerrainLogic using
+the existing staged terrain/water/graph owners and synchronous world scope.

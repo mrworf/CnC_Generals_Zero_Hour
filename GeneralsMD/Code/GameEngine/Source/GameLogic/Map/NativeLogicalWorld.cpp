@@ -111,6 +111,9 @@ Bool triggers(DataChunkInput& file, DataChunkInfo* info, void* context) {
 }
 
 void NativeLogicalWorld::load(ChunkInputStream& stream) {
+  load(stream,nullptr,nullptr);
+}
+void NativeLogicalWorld::load(ChunkInputStream& stream,Admission admission,void* context) {
   if(!TheNameKeyGenerator || !TheSidesList || !TheWritableGlobalData || !TheThingFactory)
     throw ERROR_BAD_ARG;
   NameKeyTransaction names(*TheNameKeyGenerator);
@@ -128,6 +131,7 @@ void NativeLogicalWorld::load(ChunkInputStream& stream) {
   // clears teams itself, but an omitted chunk preserves both prior team sets.
   if(!(candidate.seen & 8)) publication.sides.copyTeamsFrom(*publication.parent);
   publication.sides.validateSides();
+  if(admission)admission(candidate.height,context);
   publication.parent->swapContents(publication.sides);
   m_height.swap(candidate.height);
   publication.keep=true;
