@@ -2839,3 +2839,36 @@ while legitimate logic/player/script/client parents remain published. Do not inf
 safe loaded-root shutdown from an empty registry or fixture-managed teardown.
 This continues the original root journal/frame/model/fog/geometry scope; it does
 not complete slice03 or add a new milestone or tiny plan.
+
+Native font backing refinement (parent37ae7acf, same slice03/root batch):
+Implement a real derived FontLibrary with an explicit, game-owned FreeType
+library and Fontconfig configuration/font set. Stage initialization offside;
+read LocalFontFile only through original read-only VFS, retain bytes through
+face retirement and use public metadata/matching APIs, without host installation,
+global-config replacement or FcFini. Preserve requested name/point/bold cache keys,
+96dpi source sizing, the Generals->Arial requested-width rule, and primary below256
+versus alternate Unicode selection. Native face resources must remain alive until
+all pooled GameFont records retire. Failed init permits same-owner retry; font
+candidate and glyph-copy failure cannot leak backing or publish partial state.
+
+Expose copied CPU glyph coverage/advance/bearings and real font ascent/height for
+logical strings and later rendering. Never return raw borrowed glyph-slot pixels
+whose next FreeType call can replace them. Check defined codepoint/size/stride
+arithmetic and paired backing; no pair kerning is introduced. Source W's extra
+pixel belongs to spacing. Treat exact native metric/raster visual comparison,
+full wrapping/hotkey/string manager and interactive rendering as outstanding
+integration gates, not proven by a successful glyph. Source-controlled sizing
+must not be discarded merely to make a test pass.
+
+Use deterministic generated BDF fonts/configuration to prove real VFS font bytes,
+local matching, alternate selection and mono coverage without proprietary
+fixtures; separately prove host matching/Generals outline sizing. Exercise source
+getFont/list/reset/destructor, null/missing/malformed local data, corrected init
+retry, actual pooled exhaustion and repeat whole-owner retirement. Derive exact
+standard/native acquisition terminals for each complete operation; native
+checkpoints are game-owned post-acquisition observers, never vendor interposition.
+Each acquired unit is guarded before a fallible observer. Retain every failure/
+retry pair, including zero demand for warmed APIs, under GCC and Clang sanitizers.
+Use focused builds/tests during implementation, then frozen related matrix.
+Native string/UI/client/root/camera/snapshot/popup/journal integration remains
+mandatory follow-through in this same governing plan; no fake adapter is adopted.
