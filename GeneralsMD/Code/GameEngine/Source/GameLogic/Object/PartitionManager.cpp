@@ -50,6 +50,8 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 #include <climits>
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include "Common/GlobalData.h"
 
 #include "Common/ActionManager.h"
@@ -2149,42 +2151,21 @@ static AsciiString theObjName;
 //-----------------------------------------------------------------------------
 Int PartitionData::calcMaxCoiForShape(GeometryType geom, Real majorRadius, Real minorRadius, Bool isSmall)
 {
-	Int result;
-
-
-  // THis is commented out, since some cases od big extets labeled small seem to be escaping.
-  //M Lorenzen 8/26/03
-//	if (isSmall)
-//	{
-//		#if defined(_DEBUG) || defined(_INTERNAL)
-//		Int chk = calcMaxCoiForShape(geom, majorRadius, minorRadius, false);
-//		DEBUG_ASSERTCRASH(chk <= 4, ("Small objects should be <= 4 cells, but I calced %s as %d\n",theObjName.str(),chk));
-//		#endif
-//		result = 4;
-//	}
-//	else
-	{
-		switch(geom)
-		{
-			case GEOMETRY_SPHERE:
-			case GEOMETRY_CYLINDER:
-			{
-				// note that majorRadius is a radius, not a diameter.
-				// this actually allocates a few too many, but that's ok.
-				Int cells = ThePartitionManager->worldToCellDist(majorRadius*2) + 1;
-				result = cells * cells;
-			}
-			case GEOMETRY_BOX:
-			{
-				Real diagonal = (Real)(sqrtf(majorRadius*majorRadius + minorRadius*minorRadius));
-				Int cells = ThePartitionManager->worldToCellDist(diagonal*2) + 1;
-				result = cells * cells;
-			}
-		};
-	}
-	if (result < 4)
-		result = 4;
-	return result;
+	if (geom < GEOMETRY_FIRST || geom >= GEOMETRY_NUM_TYPES ||
+			!std::isfinite(majorRadius) || !std::isfinite(minorRadius) ||
+			majorRadius < 0 || minorRadius < 0) throw ERROR_BAD_ARG;
+	// All source cases reach the box-diagonal calculation (the sphere/cylinder
+	// cases intentionally retain their original conservative fall-through).
+	const Real diagonal = sqrtf(majorRadius*majorRadius + minorRadius*minorRadius);
+	const Real diameter = diagonal * 2;
+	const Real cellSize = ThePartitionManager->getCellSize();
+	const Real scaled = diameter * ThePartitionManager->getCellSizeInv();
+	if (!std::isfinite(diameter) || !std::isfinite(cellSize) || cellSize <= 0 ||
+			!std::isfinite(scaled) || std::ceil(double(scaled)) > std::floor(std::sqrt(double(INT_MAX))) - 1)
+		throw ERROR_BAD_ARG;
+	const Int cells = ThePartitionManager->worldToCellDist(diameter) + 1;
+	if (cells <= 0 || cells > INT_MAX / cells) throw ERROR_BAD_ARG;
+	return std::max(4, cells * cells);
 }
 
 //-----------------------------------------------------------------------------
@@ -2228,8 +2209,9 @@ void PartitionData::allocCoiArray()
 {
 	DEBUG_ASSERTCRASH(m_coiArrayCount == 0 && m_coiArray == NULL, ("hmm, coi should probably be null here"));
 	DEBUG_ASSERTCRASH(m_coiInUseCount == 0, ("hmm, coi count mismatch"));
-	m_coiArrayCount = calcMaxCoiForObject();
-	m_coiArray = MSGNEW("PartitionManager_COI") CellAndObjectIntersection[m_coiArrayCount];	// may throw!
+	const Int count = calcMaxCoiForObject();
+	m_coiArray = MSGNEW("PartitionManager_COI") CellAndObjectIntersection[count];	// may throw!
+	m_coiArrayCount = count; // Publish initialized backing and its count together.
 	m_coiInUseCount = 0;
 	makeDirty(true);
 }
@@ -2264,8 +2246,10 @@ void PartitionData::attachToObject(Object* object)
 				break;
 			}
 		}
-		if (makeGhostObject)
+		if (makeGhostObject) {
+			if (!TheGhostObjectManager) throw ERROR_BAD_ARG;
 			m_ghostObject = TheGhostObjectManager->addGhostObject(object, this);
+		}
 	}
 
 	//DEBUG_LOG(("attach pd for pd %08lx obj %08lx\n",this,m_object));
@@ -2320,8 +2304,9 @@ void PartitionData::attachToGhostObject(GhostObject* object)
 	DEBUG_ASSERTCRASH(m_coiInUseCount == 0, ("hmm, coi count mismatch"));
 	freeCoiArray();
 
-	m_coiArrayCount = calcMaxCoiForShape(object->getGeometryType(), object->getGeometryMajorRadius(), object->getGeometryMinorRadius(),object->getGeometrySmall());
-	m_coiArray = MSGNEW("PartitionManager_COI") CellAndObjectIntersection[m_coiArrayCount];	// may throw!
+	const Int count = calcMaxCoiForShape(object->getGeometryType(), object->getGeometryMajorRadius(), object->getGeometryMinorRadius(),object->getGeometrySmall());
+	m_coiArray = MSGNEW("PartitionManager_COI") CellAndObjectIntersection[count];	// may throw!
+	m_coiArrayCount = count;
 	m_coiInUseCount = 0;
 	makeDirty(true);
 
@@ -2608,6 +2593,9 @@ static void calcHeights(const Region3D& world, Real cellSize, Int x, Int y, Real
 //-----------------------------------------------------------------------------
 void PartitionManager::init()
 {
+	if (!TheGlobalData || m_cells || !std::isfinite(TheGlobalData->m_partitionCellSize))
+		throw ERROR_BAD_ARG;
+	try {
 	m_cellSize = TheGlobalData->m_partitionCellSize;
 	if (m_cellSize < 1.0)
 		m_cellSize = 1.0;
@@ -2619,6 +2607,9 @@ void PartitionManager::init()
 	if (TheTerrainLogic)
 	{
 		TheTerrainLogic->getExtent(&m_worldExtents);
+		for (Real value : {m_worldExtents.lo.x, m_worldExtents.lo.y, m_worldExtents.lo.z,
+				m_worldExtents.hi.x, m_worldExtents.hi.y, m_worldExtents.hi.z})
+			if (!std::isfinite(value)) throw ERROR_BAD_ARG;
 		//DEBUG_ASSERTLOG(m_worldExtents.width() > 0 && m_worldExtents.height() > 0, ("TheTerrainLogic must be loaded before ThePartitionManager"));
 		// you'd think it wouldn't be legal for terrainlogic to have zero area, but apparently
 		// that's what it resets itself to. let's just make the world a simple place and pretend
@@ -2627,8 +2618,14 @@ void PartitionManager::init()
 			m_worldExtents.hi.x = m_worldExtents.lo.x + 1.0f;
 		if (m_worldExtents.height() < 1.0f)
 			m_worldExtents.hi.y = m_worldExtents.lo.y + 1.0f;
-		m_cellCountX = REAL_TO_INT_CEIL(m_worldExtents.width() * m_cellSizeInv);
-		m_cellCountY = REAL_TO_INT_CEIL(m_worldExtents.height() * m_cellSizeInv);
+		const double x = std::ceil(double(m_worldExtents.width() * m_cellSizeInv));
+		const double y = std::ceil(double(m_worldExtents.height() * m_cellSizeInv));
+		if (!std::isfinite(x) || !std::isfinite(y) || x < 1 || y < 1 ||
+				x > INT_MAX || y > INT_MAX || x * y > INT_MAX ||
+				(2*x-1)*(2*y-1) > INT_MAX || std::ceil(std::hypot(x,y)) >= INT_MAX)
+			throw ERROR_BAD_ARG;
+		m_cellCountX = Int(x);
+		m_cellCountY = Int(y);
 		m_totalCellCount = m_cellCountX * m_cellCountY;
 		m_cells = MSGNEW("PartitionManager_Cells") PartitionCell[m_totalCellCount];
 		for (Int x = 0; x < m_cellCountX; x++)
@@ -2659,6 +2656,21 @@ void PartitionManager::init()
 		m_cells = NULL;
 		m_worldExtents.lo.zero();
 		m_worldExtents.hi.zero();
+	}
+	} catch (...) {
+		// No registered module exists during grid admission. Retire the entire
+		// partial backing, including radius capacity, before same-owner retry.
+#ifdef FASTER_GCO
+		RadiusVec().swap(m_radiusVec);
+		m_maxGcoRadius = 0;
+#endif
+		delete [] m_cells;
+		m_cells = NULL;
+		m_cellSize = m_cellSizeInv = 0;
+		m_cellCountX = m_cellCountY = m_totalCellCount = 0;
+		m_worldExtents.lo.zero();
+		m_worldExtents.hi.zero();
+		throw;
 	}
 }
 
@@ -2862,6 +2874,7 @@ void PartitionManager::registerObject( Object* object )
 	}  // end if
 
 	// allocate a new module of partition data
+	if (ThePartitionManager != this) throw ERROR_BAD_ARG;
 	PartitionData *mod = newInstance( PartitionData );
 
 	// link the module to the list in the partition manager
@@ -2872,7 +2885,18 @@ void PartitionManager::registerObject( Object* object )
 	m_moduleList = mod;
 
 	// add module to object
-	mod->attachToObject( object );
+	try { mod->attachToObject(object); }
+	catch (...) {
+		// An unpublished candidate must not take the normal fog-orphan path.
+		if (mod->getGhostObject()) TheGhostObjectManager->removeGhostObject(mod->getGhostObject());
+		mod->friend_setGhostObject(NULL);
+		if (object->friend_getPartitionData() == mod) object->friend_setPartitionData(NULL);
+		if (mod->getNext()) mod->getNext()->setPrev(mod->getPrev());
+		if (mod->getPrev()) mod->getPrev()->setNext(mod->getNext());
+		else m_moduleList = mod->getNext();
+		mod->deleteInstance();
+		throw;
+	}
 
 }
 
@@ -2936,6 +2960,7 @@ void PartitionManager::registerGhostObject( GhostObject* object)
 	}  // end if
 
 	// allocate a new module of partition data
+	if (ThePartitionManager != this) throw ERROR_BAD_ARG;
 	PartitionData *mod = newInstance( PartitionData );
 
 	// link the module to the list in the partition manager
@@ -2946,7 +2971,16 @@ void PartitionManager::registerGhostObject( GhostObject* object)
 	m_moduleList = mod;
 
 	// add module to object
-	mod->attachToGhostObject( object);
+	try { mod->attachToGhostObject(object); }
+	catch (...) {
+		if (object->friend_getPartitionData() == mod) object->updateParentObject(NULL,NULL);
+		mod->friend_setGhostObject(NULL);
+		if (mod->getNext()) mod->getNext()->setPrev(mod->getPrev());
+		if (mod->getPrev()) mod->getPrev()->setNext(mod->getNext());
+		else m_moduleList = mod->getNext();
+		mod->deleteInstance();
+		throw;
+	}
 }
 
 //------------------------------------------------------------------------------

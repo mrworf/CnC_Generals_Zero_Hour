@@ -26,16 +26,16 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "90f99df8e7659ebf6cd642bccfdcaa083c6896d1",
-    "label": "original-registered-actor-ownership",
-    "evidence": "evidence/qa/N2-actor-ownership-checkpoint.md",
-    "validation": "All3 full configured builds, focused11 and related133 PASS on frozen canonical626/inclusive633. Actual registered actors, 278 scheduler entries and survivor retirement; source reverse-discovery tie order preserved. Complete heap manifests2/4/4/10/1, queue failure/retry, eight typed pool exhaustion/retries and every stock module prefix [0,270) plus terminal270 retire ownership exactly",
-    "next": "Integrate actual nonempty partition/ghost and full ThingFactory creation under legitimate client/body/AI/contain parents; then registered wall/model-derived bridge and whole candidate-root rollback, full GameEngine startup and compiler-matching GameLogic::update",
+    "parent": "ce04706030bffa9f511d57207c08bf43d088c81e",
+    "label": "original-nonempty-partition-ownership",
+    "evidence": "evidence/qa/N2-partition-ownership-checkpoint.md",
+    "validation": "All3 full configured builds, focused4 and related137 PASS on frozen canonical626/inclusive633. Actual terrain-backed cells/radius admission, real actor touched-cell callbacks and survivor preservation; complete grid31/actor1/ghost-attachment1 manifests and actual partition pool exhaustion/retry retire ownership exactly. Shipped fog remains pending",
+    "next": "Integrate full ThingFactory creation and legitimate native root/UI/client/freeze parents; shipped ghost snapshot/orphan/border/load ownership, accepted geometry replacement and registered walls/model bridges; then full GameEngine startup and compiler-matching GameLogic::update",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 registered-actor constructor/registry/scheduler/queue ownership verified; all3 full builds/focused11/related133 PASS on canonical626 fc86107a. Complete failure/retry manifests and all270 stock module prefixes; actual parent teardown preserves valid publication. Full323 not run. Nonempty partition/ghost, full ThingFactory callbacks, walls/model bridges, whole candidate-root rollback, UI/client startup and actual compiler-matching simulation remain mandatory. Slice03/N2 incomplete.",
-  "transaction_parent": "90f99df8e7659ebf6cd642bccfdcaa083c6896d1",
+  "resume_point": "N2 plan01/slice03 nonempty partition admission ownership verified; all3 builds/focused4/related137 PASS on canonical626 f0dcee42. Complete grid31/actor1/ghost-attachment1 failure/retry manifests, actual actor cells and partition pool exhaustion. Full327 not run. Full creation and native root/UI/client/freeze composition, shipped fog/snapshot/border/load, accepted geometry replacement, walls/model bridges, full startup and actual matching simulation remain mandatory. Slice03/N2 incomplete.",
+  "transaction_parent": "ce04706030bffa9f511d57207c08bf43d088c81e",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -44,28 +44,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-actor-ownership-checkpoint.md",
+  "evidence": "evidence/qa/N2-partition-ownership-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Integrate actual nonempty partition/ghost and full ThingFactory creation under legitimate client/body/AI/contain parents; then registered wall/model-derived bridge and whole candidate-root rollback, full GameEngine startup and compiler-matching GameLogic::update",
+  "next": "Integrate full ThingFactory creation and legitimate native root/UI/client/freeze parents; shipped ghost snapshot/orphan/border/load ownership, accepted geometry replacement and registered walls/model bridges; then full GameEngine startup and compiler-matching GameLogic::update",
   "implementation_checkpoint": {
-    "label": "original-registered-actor-ownership",
-    "reason": "Actual registered Object/helper/module/team/radar/lookup/scheduler admission and retirement execute under legitimate original parents; full creation/root/startup/simulation remain pending",
-    "prior_commit": "90f99df8",
-    "canonical_source_sha256": "fc86107a3c7b7a4b15bdb20eb25f5c563024bde45fa941390a07e345c20b3dc5",
-    "toolchain_inclusive_sha256": "ff6cfcd98fdf25a4eeb72a18e266018b91c45d5eef40d4ae774e972d9f596813",
-    "configured_suite_tests": 323,
-    "related_suite_tests_passed": 133,
+    "label": "original-nonempty-partition-ownership",
+    "reason": "Actual native terrain-backed partition and mobile actors now execute source cell ownership and callbacks with complete admission rollback; parallel ghost attachment is tested but shipped fog/full root/startup/simulation remain pending",
+    "prior_commit": "ce047060",
+    "canonical_source_sha256": "f0dcee42be5fa88b88ba5c45b9ae6369ece3bd706f627cbe938e7463f9ae90ec",
+    "toolchain_inclusive_sha256": "88679126a0a6e2a3b38753556d8e66955e45980108cb4e42543b4c84946c650d",
+    "configured_suite_tests": 327,
+    "related_suite_tests_passed": 137,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; related133 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; related137 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-actor-ownership-checkpoint.md"
+    "evidence": "evidence/qa/N2-partition-ownership-checkpoint.md"
   }
 }

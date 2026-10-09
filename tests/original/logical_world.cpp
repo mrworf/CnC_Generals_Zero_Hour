@@ -16,6 +16,18 @@
 #include "GameLogic/SidesList.h"
 #include "GameLogic/AI.h"
 #include "GameLogic/AIPathfind.h"
+#include "GameLogic/PartitionManager.h"
+#include "GameLogic/GameLogic.h"
+#include "GameLogic/Object.h"
+#include "GameLogic/GhostObject.h"
+#include "GameLogic/RankInfo.h"
+#include "Common/ModuleFactory.h"
+#include "Common/PlayerList.h"
+#include "Common/Player.h"
+#include "Common/Team.h"
+#include "Common/Radar.h"
+#include "GameClient/InGameUI.h"
+#include "GameClient/ControlBar.h"
 #include <algorithm>
 #include <bit>
 #include <cmath>
@@ -383,6 +395,161 @@ bool sameLighting(const NativeTerrainLightingState& a,const NativeTerrainLightin
 }
 void logicLoad(LogicFixture& owner,const std::string& bytes,const AsciiString& name,Bool query=FALSE,
                NativeTerrainLogic::Admission callback=nullptr,void* context=nullptr){Input input(bytes);owner.loadStream(input,name,query,callback,context);require(input.eof(),"complete integrated terrain/world admission");}
+struct PartitionPublication {
+  PartitionManager* previous=ThePartitionManager;
+  std::unique_ptr<PartitionManager> owner=std::make_unique<PartitionManager>();
+  PartitionPublication(){ThePartitionManager=owner.get();}
+  ~PartitionPublication(){owner.reset();ThePartitionManager=previous;}
+};
+// Real constructor/callback parents. Only presentation is omitted; this common
+// ghost owner is used solely for mobile actors and is never fog acceptance.
+struct ActorUI:InGameUI{void draw()override{} View* createView()override{throw ERROR_BAD_ARG;}};
+struct ActorRadar:Radar{void draw(Int,Int,Int,Int)override{} void clearShroud()override{} void setShroudLevel(Int,Int,CellShroudStatus)override{}};
+template<class Base,class Concrete=Base>struct ActorParent{
+  Base*& slot;Base* previous;std::unique_ptr<Concrete> owner;
+  explicit ActorParent(Base*& value):slot(value),previous(value){}
+  void create(){owner=std::make_unique<Concrete>();slot=owner.get();}
+  void retire(){if(owner){slot=owner.get();owner.reset();slot=previous;}}
+  ~ActorParent(){retire();}
+};
+struct ActorParents{
+  ControlBar* previousControl=TheControlBar;
+  ActorParent<RankInfoStore> ranks{TheRankInfoStore};ActorParent<AI> ai{TheAI};
+  ActorParent<GameLogic> logic{TheGameLogic};ActorParent<InGameUI,ActorUI> ui{TheInGameUI};
+  ActorParent<Radar,ActorRadar> radar{TheRadar};ActorParent<ModuleFactory> modules{TheModuleFactory};
+  ActorParent<PlayerList> players{ThePlayerList};ActorParent<TeamFactory> teams{TheTeamFactory};
+  ActorParent<GhostObjectManager> ghosts{TheGhostObjectManager};
+  ActorParents(){TheControlBar=nullptr;try{ranks.create();ranks.owner->init();ai.create();ai.owner->init();
+    logic.create();logic.owner->setObjectIDCounter(ObjectID(1));ui.create();radar.create();modules.create();modules.owner->init();
+    players.create();teams.create();teams.owner->init();Dict definition;teams.owner->initTeam("team","",TRUE,&definition);
+    players.owner->getNeutralPlayer()->setDefaultTeam();ghosts.create();}catch(...){retire();throw;}}
+  void retire(){if(logic.owner)logic.owner->destroyAllObjectsImmediate();ui.retire();radar.retire();teams.retire();players.retire();
+    ghosts.retire();ai.retire();modules.retire();logic.retire();ranks.retire();TheControlBar=previousControl;}
+  ~ActorParents(){retire();}
+};
+void partitionActors(Context& context){
+  context.load(wire());DeviceFixture visual;LogicFixture terrain(visual);logicLoad(terrain,providerWorld(),"GeneratedActorPartition.map");
+  const auto oldTerrain=TheTerrainLogic;TheTerrainLogic=&terrain;
+  struct Restore{TerrainLogic* previous;~Restore(){TheTerrainLogic=previous;}} restore{oldTerrain};
+  const auto oldSize=context.data->m_partitionCellSize;context.data->m_partitionCellSize=10;
+  struct RestoreSize{Real& slot;Real value;~RestoreSize(){slot=value;}} size{context.data->m_partitionCellSize,oldSize};
+  PartitionPublication partition;partition.owner->init();ActorParents parents;
+  auto make=[&]{return parents.logic.owner->friend_createObject(context.factory->findTemplate("GeneratedTemplate",FALSE),OBJECT_STATUS_MASK_NONE,nullptr);};
+  auto* survivor=make();auto* candidate=make();const auto survivorID=survivor->getID();
+  partition.owner->registerObject(survivor);auto* accepted=survivor->friend_getPartitionData();
+  accepted->friend_updateCellsTouched();require(accepted->friend_getCoiInUseCount()>0,"actual actor populates nonempty source cell intersections");
+  AllocationFault::arm(SIZE_MAX);try{partition.owner->registerObject(candidate);}catch(...){AllocationFault::disarm();throw;}
+  const auto count=AllocationFault::attempts();AllocationFault::disarm();partition.owner->unRegisterObject(candidate);
+  require(count==1,"warmed actual actor attachment exact COI allocation terminal");
+  auto* pool=TheMemoryPoolFactory->findMemoryPool("PartitionDataPool");require(pool,"actual partition data pool");
+  for(std::size_t ordinal=0;ordinal<=count;++ordinal){const auto live=AllocationFault::live();const auto used=pool->getUsedBlockCount();bool failed=false;
+    AllocationFault::arm(ordinal);try{partition.owner->registerObject(candidate);}catch(const std::bad_alloc&){failed=true;}
+    catch(...){AllocationFault::disarm();throw;}const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+    require(hit==failed && failed==(ordinal<count),"every actual attachment failure prefix and terminal");
+    if(failed)require(!candidate->friend_getPartitionData() && pool->getUsedBlockCount()==used && AllocationFault::live()==live,"failed candidate withdraws module/dirty/master-list ownership");
+    else partition.owner->unRegisterObject(candidate);
+    require(survivor->friend_getPartitionData()==accepted && parents.logic.owner->findObjectByID(survivorID)==survivor && accepted->friend_getCoiInUseCount()>0,"attachment failure preserves accepted actor and cell membership");
+    partition.owner->registerObject(candidate);candidate->friend_getPartitionData()->friend_updateCellsTouched();
+    require(candidate->friend_getPartitionData()->friend_getCoiInUseCount()>0,"corrected same-actor retry populates actual intersections");
+    partition.owner->unRegisterObject(candidate);require(pool->getUsedBlockCount()==used && AllocationFault::live()==live,"corrected attachment retires every acquired unit");}
+  const auto geometry=candidate->getGeometryInfo();
+  for(Real radius:{-1.0f,std::numeric_limits<Real>::quiet_NaN(),std::numeric_limits<Real>::infinity(),std::numeric_limits<Real>::max()}){
+    auto bad=geometry;bad.setMajorRadius(radius);candidate->setGeometryInfo(bad);
+    const auto live=AllocationFault::live();const auto used=pool->getUsedBlockCount();bool rejected=false;
+    try{partition.owner->registerObject(candidate);}catch(ErrorCode code){rejected=code==ERROR_BAD_ARG;}
+    require(rejected && !candidate->friend_getPartitionData() && pool->getUsedBlockCount()==used && AllocationFault::live()==live &&
+      survivor->friend_getPartitionData()==accepted,"malformed geometry rejects and withdraws candidate without touching survivor");
+    candidate->setGeometryInfo(geometry);partition.owner->registerObject(candidate);partition.owner->unRegisterObject(candidate);}
+  for(GeometryType shape:{GEOMETRY_SPHERE,GEOMETRY_CYLINDER,GEOMETRY_BOX}){
+    candidate->setGeometryInfo(GeometryInfo(shape,FALSE,1,5,3));partition.owner->registerObject(candidate);
+    candidate->friend_getPartitionData()->friend_updateCellsTouched();
+    require(candidate->friend_getPartitionData()->friend_getCoiInUseCount()>0,"all original shape families retain real cell coverage");
+    partition.owner->unRegisterObject(candidate);}
+  candidate->setGeometryInfo(geometry);
+  {std::vector<void*> held;held.reserve(pool->getFreeBlockCount());
+    struct Retire{MemoryPool* pool;std::vector<void*>& held;~Retire(){for(auto* value:held)pool->freeBlock(value);}} retire{pool,held};
+    while(pool->getFreeBlockCount())held.push_back(pool->allocateBlock("generated partition module exhaustion"));
+    const auto used=pool->getUsedBlockCount();const auto live=AllocationFault::live();bool rejected=false;
+    try{partition.owner->registerObject(candidate);}catch(ErrorCode code){rejected=code==ERROR_OUT_OF_MEMORY;}
+    require(rejected && !candidate->friend_getPartitionData() && pool->getUsedBlockCount()==used && AllocationFault::live()==live &&
+      survivor->friend_getPartitionData()==accepted,"actual partition pool exhaustion preserves candidate and accepted ownership");
+    for(auto* value:held)pool->freeBlock(value);held.clear();partition.owner->registerObject(candidate);partition.owner->unRegisterObject(candidate);}
+  parents.logic.owner->destroyAllObjectsImmediate();require(pool->getUsedBlockCount()==0,"actual actor destruction withdraws partition units while parents live");
+  for(Int y=0;y<partition.owner->getCellCountY();++y)for(Int x=0;x<partition.owner->getCellCountX();++x)
+    require(!partition.owner->getCellAt(x,y)->getFirstCoiInCell(),"actual cell intersection publication retires completely");
+  std::cout<<"mobile actor partition prefixes [0,"<<count<<"); terminal "<<count<<"; every retry; fog pending\n";
+}
+// Isolate the common PartitionData ghost-attachment contract. No render snapshot
+// or fog behavior is implemented by this test object or accepted from this test.
+struct GhostAttachment:GhostObject{
+  GhostAttachment(){m_parentObject=nullptr;m_partitionData=nullptr;m_parentGeometryType=GEOMETRY_BOX;
+    m_parentGeometryIsSmall=FALSE;m_parentGeometryMajorRadius=5;m_parentGeometryminorRadius=3;
+    m_parentAngle=0;m_parentPosition={20,20,0};}
+  void snapShot(int)override{throw ERROR_BAD_ARG;}
+  void freeSnapShot(int)override{throw ERROR_BAD_ARG;}
+  void updateParentObject(Object* object,PartitionData* data)override{m_parentObject=object;m_partitionData=data;}
+};
+void partitionGhostAttachment(Context& context){
+  context.load(wire());DeviceFixture visual;LogicFixture terrain(visual);logicLoad(terrain,providerWorld(),"GeneratedGhostPartition.map");
+  const auto oldTerrain=TheTerrainLogic;TheTerrainLogic=&terrain;
+  struct Restore{TerrainLogic* previous;~Restore(){TheTerrainLogic=previous;}} restore{oldTerrain};
+  const auto oldSize=context.data->m_partitionCellSize;context.data->m_partitionCellSize=10;
+  struct RestoreSize{Real& slot;Real value;~RestoreSize(){slot=value;}} size{context.data->m_partitionCellSize,oldSize};
+  PartitionPublication partition;partition.owner->init();GhostAttachment ghost;
+  auto retire=[&]{partition.owner->unRegisterGhostObject(&ghost);ghost.updateParentObject(nullptr,nullptr);};
+  struct Retire{decltype(retire)& action;~Retire(){action();}} cleanup{retire};
+  partition.owner->registerGhostObject(&ghost);ghost.friend_getPartitionData()->friend_updateCellsTouched();retire();
+  auto* pool=TheMemoryPoolFactory->findMemoryPool("PartitionDataPool");require(pool,"actual ghost partition data pool");
+  std::size_t count;AllocationFault::arm(SIZE_MAX);
+  try{partition.owner->registerGhostObject(&ghost);}catch(...){AllocationFault::disarm();throw;}
+  count=AllocationFault::attempts();AllocationFault::disarm();retire();require(count==1,"parallel ghost attachment exact COI terminal");
+  for(std::size_t ordinal=0;ordinal<=count;++ordinal){const auto used=pool->getUsedBlockCount();const auto live=AllocationFault::live();bool failed=false;
+    AllocationFault::arm(ordinal);try{partition.owner->registerGhostObject(&ghost);}catch(const std::bad_alloc&){failed=true;}
+    catch(...){AllocationFault::disarm();throw;}const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+    require(hit==failed && failed==(ordinal<count),"parallel ghost attachment every failure prefix/terminal");
+    if(failed)require(!ghost.friend_getPartitionData() && pool->getUsedBlockCount()==used && AllocationFault::live()==live,"failed ghost attachment retires backing/dirty/master-list ownership");
+    else retire();
+    partition.owner->registerGhostObject(&ghost);auto* data=ghost.friend_getPartitionData();data->friend_updateCellsTouched();
+    require(data->friend_getCoiInUseCount()>0,"corrected ghost attachment populates actual intersections");retire();
+    require(pool->getUsedBlockCount()==used && AllocationFault::live()==live,"parallel ghost corrected retry retires exactly");}
+  std::cout<<"ghost attachment prefixes [0,"<<count<<"); terminal "<<count<<"; every retry; full fog pending\n";
+}
+void partitionGrid(Context& context,bool faults){
+  context.load(wire());DeviceFixture visual;LogicFixture terrain(visual);
+  logicLoad(terrain,providerWorld(),"GeneratedPartition.map");
+  const auto oldTerrain=TheTerrainLogic;TheTerrainLogic=&terrain;
+  struct RestoreTerrain{TerrainLogic* previous;~RestoreTerrain(){TheTerrainLogic=previous;}} restore{oldTerrain};
+  const Real oldSize=context.data->m_partitionCellSize;context.data->m_partitionCellSize=10;
+  struct RestoreSize{Real& slot;Real previous;~RestoreSize(){slot=previous;}} size{context.data->m_partitionCellSize,oldSize};
+  auto check=[](PartitionManager& owner){require(owner.getCellCountX()==5 && owner.getCellCountY()==5 && owner.getCellAt(4,4) &&
+    !owner.getCellAt(5,0) && !owner.getCellAt(-1,0),"actual generated terrain admits bounded nonempty original partition cells");};
+  if(!faults){PartitionPublication partition;auto& owner=*partition.owner;
+    for(unsigned n=0;n<3;++n){owner.init();check(owner);const auto* backing=owner.getCellAt(0,0);bool rejected=false;
+      try{owner.init();}catch(ErrorCode code){rejected=code==ERROR_BAD_ARG;}
+      require(rejected && owner.getCellAt(0,0)==backing,"duplicate grid admission preserves accepted cells");owner.reset();
+      require(!owner.getCellAt(0,0),"reset withdraws grid backing");}
+    for(Real bad:{std::numeric_limits<Real>::quiet_NaN(),std::numeric_limits<Real>::infinity()}){
+      context.data->m_partitionCellSize=bad;bool rejected=false;try{owner.init();}catch(ErrorCode code){rejected=code==ERROR_BAD_ARG;}
+      require(rejected && !owner.getCellAt(0,0),"nonfinite grid profile rejects before backing");
+      context.data->m_partitionCellSize=10;owner.init();check(owner);owner.reset();}
+    context.data->m_partitionCellSize=0;owner.init();require(owner.getCellSize()==1 && owner.getCellCountX()==50,"source minimum cell-size behavior retained");
+    owner.reset();return;}
+  std::size_t count;
+  {PartitionPublication discovery;AllocationFault::arm(SIZE_MAX);
+    try{discovery.owner->init();}catch(...){AllocationFault::disarm();throw;}
+    count=AllocationFault::attempts();AllocationFault::disarm();check(*discovery.owner);}
+  require(count>1,"grid census includes cells and real radius-vector backing");
+  for(std::size_t ordinal=0;ordinal<=count;++ordinal){const auto outside=AllocationFault::live();
+    {PartitionPublication partition;auto& owner=*partition.owner;const auto live=AllocationFault::live();bool failed=false;
+      AllocationFault::arm(ordinal);try{owner.init();}catch(const std::bad_alloc&){failed=true;}
+      catch(...){AllocationFault::disarm();throw;}const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+      require(hit==failed && failed==(ordinal<count),"every cold grid prefix and exact terminal");
+      if(failed)require(!owner.getCellAt(0,0) && owner.getCellSize()==0 && AllocationFault::live()==live,"failed grid retires all cells/radius backing");
+      else{check(owner);owner.reset();}
+      owner.init();check(owner);owner.reset();require(!owner.getCellAt(0,0),"same-owner corrected grid retry and reset");}
+    require(AllocationFault::live()==outside,"whole grid owner retires legitimate retained radius capacity");}
+  std::cout<<"partition grid prefixes [0,"<<count<<"); terminal "<<count<<"; every retry\n";
+}
 void terrainLogic(Context& context){context.load(wire());DeviceFixture visual;LogicFixture logic(visual);TerrainLogic& api=logic;
   const auto valid=providerWorld();Coord3D normal;Region3D region;
   require(api.getGroundHeight(0,0,&normal)==0 && normal.z==1 && !api.isClearLineOfSight({0,0,0},{10,0,0}),"actual unloaded native source query defaults");
@@ -515,10 +682,12 @@ void poolFailures(Context& context){const auto valid=wire(),replacement=wire("Re
 }
 int main(int argc,char** argv){const auto initial=AllocationFault::live();bool initialized=false;
   try{require(argc==2,"world family");initMemoryManager();initialized=true;
+    if(std::string_view(argv[1])=="partition-actors")TheMemoryPoolFactory->createMemoryPool("PartitionDataPool",sizeof(PartitionData),8,0);
     if(std::string_view(argv[1])=="pool-failures")fixedPools();
     {Context warm;warm.load(wire());warm.load(wire("ReplacementSide"));
       const auto bytes=wire();Input input(bytes);NativeWaypointGraph graph;
-      graph.load(input,MapObject::getFirstMapObject());}
+      graph.load(input,MapObject::getFirstMapObject());if(std::string_view(argv[1])=="partition-actors"){partitionActors(warm);partitionActors(warm);}
+      if(std::string_view(argv[1])=="partition-ghost-attachment")partitionGhostAttachment(warm);}
     for(unsigned repeat=0;repeat<3;++repeat){auto live=AllocationFault::live();const PoolUsage pools;
       {Context context;const std::string_view family=argv[1];if(family=="functional")functional(context);
         else if(family=="negative")negative(context);else if(family=="faults"){faults(context);optionalFaults(context);}
@@ -526,6 +695,9 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
         else if(family=="continuation")continuation(context);else if(family=="terrain")terrainLogic(context);
         else if(family=="terrain-negative")terrainLogicNegative(context);else if(family=="terrain-faults")terrainLogicFaults(context);
         else if(family=="pathfinder-map")pathfinderMap(context);else if(family=="pathfinder-map-faults")pathfinderMapFaults(context);
+        else if(family=="partition-grid")partitionGrid(context,false);else if(family=="partition-grid-faults")partitionGrid(context,true);
+        else if(family=="partition-actors")partitionActors(context);
+        else if(family=="partition-ghost-attachment")partitionGhostAttachment(context);
         else require(false,"unknown world family");}
       require(AllocationFault::live()==live && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
         !MapObject::getFirstMapObject() && !PolygonTrigger::getFirstPolygonTrigger(),"repeated full-world owner retirement");}

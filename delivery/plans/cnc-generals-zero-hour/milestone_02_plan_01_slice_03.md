@@ -2479,3 +2479,61 @@ ownership checkpoint, not completed slice03 or N2. Continue with nonempty
 partition/ghost, full ThingFactory creation and candidate-root/startup/actual
 simulation under legitimate parents. Commit boundary remains
 `delivery: preserve original registered actor ownership`.
+
+Next coupled partition lifecycle batch (parent ce047060): review grid init/reset,
+radius backing, actor and orphan-ghost attachment, COI geometry sizing, dirty
+lists and master-list withdrawal together before implementation. Grid admission
+must validate finite source extents/cell size and signed index/product limits,
+retain valid source minimum-size behavior, and retire all partially initialized
+cells/radius backing on failure so the same owner can retry. Attachment failure
+must withdraw acquired ghost/dirty/master-list ownership without invoking normal
+fog-retention logic for a candidate that never became accepted. Preserve normal
+orphan/snapshot semantics and source publication order. Both object and ghost
+paths need the same acquisition guard; COI sizing must preserve the actual source
+shape calculations while rejecting undefined conversion/multiplication inputs.
+Start executable evidence with the existing actual NativeTerrainLogic generated
+world: nonempty grid, repeated reset/init, every cold allocation prefix/terminal
+and corrected retry on the same PartitionManager. Then integrate real actors,
+dirty-cell contacts and shipped ghost semantics under legitimate parents. Empty
+common GhostObjectManager is never fog acceptance. Focused normal/GCC/Clang
+sanitizer tests precede a frozen related matrix; do not declare the whole batch
+complete from grid-only tests or create a replacement slice plan.
+
+Partition batch preliminary evidence: grid2 passes normal/GCCsan/Clangsan on
+actual generated NativeTerrainLogic, including complete cold allocation demand
+and every same-owner retry. These runs precede actor integration and are not a
+frozen complete-batch acceptance. The first actor fixture build needs the full
+Player declaration (not only PlayerList's forward declaration); its inadvertently
+started CTest used the old executable and rejects the new family, so neither
+that invocation nor the failed compilation is runtime defect evidence. Add the
+required source header, rebuild successfully, then run the new family. Retain
+both logs; subsequent builds/tests must be conditioned on successful compilation.
+
+Actual actor attachment failure reached the intended allocation prefix but
+cleanup stopped in removeAllTouchedCells: both source COI acquisition paths
+publish count before new[] backing exists. Review all assignments to count,
+backing and used count together; publish the array count only after new[]
+completes, on actor and ghost paths. This couples the missing rollback
+representation with the planned list/ghost guards, rather than masking the
+destructor traversal. Retain the failed run and redacted stack; focused retry
+follows the whole-family correction, not a broad acceptance rerun.
+
+Nonempty partition ownership checkpoint verified on canonical626
+f0dcee42be5fa88b88ba5c45b9ae6369ece3bd706f627cbe938e7463f9ae90ec,
+inclusive633 88679126a0a6e2a3b38753556d8e66955e45980108cb4e42543b4c84946c650d:
+all3 full configured builds, focused4 and related137 PASS. Related elapsed
+GCC125.09s/GCCsan557.03s/Clangsan337.72s; configured327, full327 not run.
+Actual generated NativeTerrainLogic supplies nonempty cells/radius backing;
+real actors exercise touched-cell callbacks, survivor preservation, every COI
+failure/retry, all three shapes, malformed candidate geometry and actual fixed
+partition pool exhaustion/retry. Grid manifest31, warmed actor1 and parallel
+ghost attachment1 have exact terminals and all failure/retry pairs. Ghost
+attachment test uses source contract geometry/pointer publication only, with
+snapshot calls explicitly rejected; shipped fog/snapshots are NOT accepted.
+Evidence: evidence/qa/N2-partition-ownership-checkpoint.md. Supporting commit:
+`delivery: preserve original partition admission ownership`. Slice03/N2 remain
+incomplete. Continue full ThingFactory creation and legitimate native root/UI/
+client/freeze composition, shipped ghost/snapshot/border/load ownership,
+accepted-actor geometry replacement, walls/model bridges, full startup and real
+compiler-matching simulation. Source findings are durable in
+docs/original-engine-formats.md; no new replacement plan or milestone is created.

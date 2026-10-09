@@ -4033,3 +4033,114 @@ configured builds on GCC, GCC sanitizers and Clang sanitizers, frozen canonical
 source fc86107a3c7b7a4b15bdb20eb25f5c563024bde45fa941390a07e345c20b3dc5.
 It does not establish full creation callbacks, nonempty partition/ghost, native
 UI/media startup, whole candidate-root rollback or GameLogic::update parity.
+
+Partition lifecycle review (parent ce047060, implementation pending): init
+publishes raw cell backing before fallible FASTER_GCO radius-vector construction;
+the source shutdown clears radius elements but legitimately retains outer vector
+capacity until whole-owner destruction. Both registerObject and
+registerGhostObject link their acquired PartitionData before fallible attach/COI
+allocation. Actor attach can additionally acquire a shipped ghost before COI
+backing; normal unRegisterObject may deliberately orphan it when fog memory
+exists, so candidate rollback must not call that normal retention path.
+PartitionData destruction removes dirty publication but does not withdraw master
+list or ghost ownership. Source calcMaxCoiForShape sphere/cylinder cases fall
+through to box-diagonal sizing; preserve this conservative source result, while
+rejecting nonfinite/negative radii and signed square/conversion overflow.
+Ghost attach has parallel COI acquisition and late updateParentObject publication.
+Sources: PartitionManager.cpp::{init,shutdown,registerObject,registerGhostObject},
+PartitionData::{attachToObject,attachToGhostObject,calcMaxCoiForShape,~PartitionData}.
+W3DGhostObjectManager::addGhostObject publishes used-list membership and parent/
+partition pointers only after acquiring a free/new node; removeGhostObject frees
+snapshots then returns the node to the free list. Snapshot renderer ownership and
+save fields remain required native integration, not accepted by this review.
+
+Actual actor attachment failure confirms an additional paired-publication rule:
+removeAllTouchedCells iterates m_coiArrayCount, not only m_coiInUseCount. Both
+allocCoiArray and attachToGhostObject originally publish a positive count before
+new[] succeeds; a failed allocation therefore makes destructor rollback walk
+absent backing. Compute sizing locally and publish the count only after all
+CellAndObjectIntersection constructors complete, on both paths. No destructor
+null guard substitutes for valid count/backing state. Redacted source stack and
+retained retry are tracked in existing slice03; final batch evidence pending.
+
+Shipped ghost integration carry-forward (source review, not runtime acceptance):
+W3DGhostObject::snapShot takes only the local player in normal builds, skips
+effectively hidden Drawables, and clones each nonnull object-draw render object.
+Clones retain transform/color and animation frame; UV scroll animation is disabled
+and MUZZLEFX subobjects hidden. Parent geometry/position/angle is captured only
+when at least one snapshot exists. Scene replacement and restoration also toggle
+Drawable::setFullyObscuredByShroud, not just render-object list membership.
+PartitionData::getShroudedStatus is the transition owner: cached invalid state,
+ever-seen enemy structures, neutral mobile suppression, mines, clear/partially
+clear/shrouded transitions and previous fog status govern snapshot/free callbacks.
+Do not implement a generic visible/hidden toggle in place of these rules.
+
+Concrete ghost transfer writes its own version1, base version1/parent ID/geometry,
+DrawableInfo shroud-object ID/flags/drawable ID, then one-byte snapshot counts for
+each player. Each snapshot writes asset name, scale, color, snapshot version1,
+raw Matrix3D, signed subobject count, and per-subobject name/visibility/Matrix3D.
+Absent named subobjects are still consumed on load (art may have changed).
+Previous shroud records follow as byte count/index plus fixed enum representation.
+Manager transfer adds version1/base transfer, unsigned16 used count and parent
+ID per used-list entry. These widths/field order are file authority; native internal
+types and renderer ownership may change without changing this representation.
+
+Native load must inspect admission order: the source manager registers an orphan
+with PartitionManager before ghost geometry is read. Base GhostObject's ctor does
+not initialize m_parentGeometryType, and its initial radii are zero. Reading that
+type before xfer is undefined; even a deterministic initial type would size COI
+backing from pre-load geometry. Stage loaded geometry before sizing/publishing
+orphan partition backing (without changing byte order), and retain guarded
+whole-load rollback before restoring previous shroud records. Snapshot acquisition
+and parent/scene replacement are likewise coupled: source update releases prior
+render backing before clone, while snapshot iteration's reuse branch updates the
+head rather than its current node. Verify intended multi-model refresh and
+failure/retry behavior in the native snapshot provider before implementation.
+These are investigation/implementation requirements, not accepted fixes or a
+reason to modify any adopted framework. Source anchors: W3DGhostObject.cpp::
+snapShot/xfer, W3DRenderObjectSnapshot::update/xfer,
+W3DGhostObjectManager::xfer; GhostObject.cpp::{GhostObject,xfer};
+PartitionManager.cpp::PartitionData::getShroudedStatus.
+
+Full creation/root composition review (parent ce047060; implementation pending):
+ThingFactory::newObject calls registered Object construction, every create
+interface, partition admission, then Object::initObject. The latter calls actual
+GameLogic::sendObjectCreated -> ThingFactory::newDrawable -> GameClient creation
+and Object/Drawable binding, then upgrade/difficulty/battle-plan/special-power,
+script/trigger counts, weapons and optional academy effects. Creation action may
+make children and consume RNG before later failure; an actor-only ID rollback
+cannot undo that whole-root state. NativeHeadlessGameClient::initHeadless and
+updateHeadless currently reject any TheInGameUI publication, while registered
+Object construction/setTeam requires the original logical UI callback owner.
+These separately tested provider boundaries must be reconciled in native root
+composition before full creation/frame tests; do not alternate nulling globals
+or bypass the constructor checks to make a fixture pass.
+
+InGameUI::objectChangedTeam retains superweapon per-player lists, not just drawing:
+it examines SpecialPower modules and transfers/adds entries at source frame0
+conditions. Retain that logical state/callback in a legitimate root, separating
+explicitly absent physical output from UI bookkeeping. GameClient headless reset
+already calls a published UI's reset; client retirement disregards Drawables
+through that owner. Preserve its valid identity until linked Drawables retire.
+Drawable::applyPhysicsXform also calls TacticalView time/camera completion before
+ScriptEngine freeze checks when client physics is enabled. Full native frame
+composition must review these related freeze/camera and callback parents, not
+merely relax the headless init guard. Sources: ThingFactory.cpp::newObject,
+Object.cpp::{initObject,setTeam}, GameLogic.cpp::sendObjectCreated,
+GameClient.cpp::{initHeadless,updateHeadless,reset,destroyDrawable},
+InGameUI.cpp::objectChangedTeam; Drawable.cpp::applyPhysicsXform.
+
+Accepted geometry mutation remains a separate pending source path:
+Object::setGeometryInfo publishes geometry, unregisters the old partition module,
+then performs fallible re-registration. Admission guards alone do not give strong
+replacement or restore pre-existing fog/partition state on that failure. Actual
+native geometry/candidate-root work must stage the replacement and include its
+cell/snapshot side effects; this checkpoint tests malformed unattached candidates,
+not accepted-actor geometry replacement.
+
+Current nonempty partition evidence: evidence/qa/N2-partition-ownership-checkpoint.md,
+all3 full configured builds/focused4/related137 PASS on canonical626
+f0dcee42be5fa88b88ba5c45b9ae6369ece3bd706f627cbe938e7463f9ae90ec.
+This supersedes pending validation only for grid admission and stated actor/
+ghost-attachment ownership. Shipped fog, accepted geometry replacement, full
+creation/root/startup and simulation requirements above remain unaccepted.
