@@ -29,6 +29,7 @@
 
 #include "GameLogic/AIPathfind.h"
 #include <cstdint>
+#include <cmath>
 #include <limits>
 #include <memory>
 
@@ -72,6 +73,36 @@
 #include "Common/PerfTimer.h"
 
 //-------------------------------------------------------------------------------------------------
+
+namespace {
+std::size_t pathfindArrayCount(Int width, Int height, std::size_t elementSize)
+{
+	if (width<=0 || height<=0) throw ERROR_BAD_ARG;
+	const auto count=std::size_t(width)*std::size_t(height);
+	// Source linear-index expressions use Int, even on a 64-bit host.
+	if (count>std::size_t(std::numeric_limits<Int>::max()) ||
+	    count>std::numeric_limits<std::size_t>::max()/elementSize) throw ERROR_BAD_ARG;
+	return count;
+}
+UnsignedShort pathfindZoneCapacity(UnsignedShort current, UnsignedShort required, unsigned initial)
+{
+	unsigned capacity=current ? current : initial;
+	while (capacity<=required) {
+		if (capacity>std::numeric_limits<UnsignedShort>::max()/2u) throw ERROR_BAD_ARG;
+		capacity*=2;
+	}
+	return static_cast<UnsignedShort>(capacity);
+}
+Int pathfindGridCoordinate(Real value, Bool ceiling=FALSE)
+{
+	if (!std::isfinite(value)) throw ERROR_BAD_ARG;
+	const double rounded=ceiling ? std::ceil(double(value)) : std::floor(double(value));
+	// Preserve room for the original extra-cell padding before clamping.
+	if (rounded<double(std::numeric_limits<Int>::min())+2 ||
+	    rounded>double(std::numeric_limits<Int>::max())-2) throw ERROR_BAD_ARG;
+	return static_cast<Int>(rounded);
+}
+}
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -2003,6 +2034,7 @@ void ZoneBlock::freeZones(void)
 		delete [] m_crusherZones;
 		m_crusherZones = NULL;
 	}
+	m_zonesAllocated=0;
 }
 
 /* Allocate zone equivalency arrays large enough to hold required entries.  If the arrays are already
@@ -2010,7 +2042,8 @@ large enough, reuse.  Then calculate terrain equivalencies. */
 void ZoneBlock::blockCalculateZones(PathfindCell **map, PathfindLayer layers[], const IRegion2D &bounds) 
 {
 	Int i, j;
-	m_cellOrigin = bounds.lo;
+	const auto previousOrigin=m_cellOrigin;
+	const auto previousFirst=m_firstZone,previousCount=m_numZones;
 	UnsignedInt minZone = map[bounds.lo.x][bounds.lo.y].getZone();
 	UnsignedInt maxZone = minZone;
 
@@ -2022,10 +2055,12 @@ void ZoneBlock::blockCalculateZones(PathfindCell **map, PathfindLayer layers[], 
 			if (maxZone<zone) maxZone=zone;
 		}
 	}
-	m_firstZone = minZone;
-	m_numZones = 1 + maxZone - minZone;
+	const auto required=1u+maxZone-minZone;
+	if (!minZone || required>std::numeric_limits<UnsignedShort>::max()) throw ERROR_BAD_ARG;
+	m_cellOrigin=bounds.lo;m_firstZone=minZone;m_numZones=static_cast<UnsignedShort>(required);
 
-	allocateZones();
+	try { allocateZones(); }
+	catch (...) {m_cellOrigin=previousOrigin;m_firstZone=previousFirst;m_numZones=previousCount;throw;}
 
 	if (m_numZones==1) return; // all zones are equivalent.
 
@@ -2141,28 +2176,20 @@ zoneStorageType ZoneBlock::getEffectiveZone( LocomotorSurfaceTypeMask acceptable
 
 /* Allocate zone equivalency arrays large enough to hold m_maxZone entries.  If the arrays are already
 large enough, just return. */
-void ZoneBlock::allocateZones(void) 
+void ZoneBlock::allocateZones(void)
 {
-	if (m_zonesAllocated>m_numZones && m_groundCliffZones!=NULL) {
-		return;
-	}
+	if (m_numZones==1) return;
+	if (m_zonesAllocated>m_numZones && m_groundCliffZones && m_groundWaterZones &&
+	    m_groundRubbleZones && m_crusherZones) return;
+	const auto capacity=pathfindZoneCapacity(m_zonesAllocated,m_numZones,4);
+	std::unique_ptr<zoneStorageType[]> cliff(new zoneStorageType[capacity]);
+	std::unique_ptr<zoneStorageType[]> water(new zoneStorageType[capacity]);
+	std::unique_ptr<zoneStorageType[]> rubble(new zoneStorageType[capacity]);
+	std::unique_ptr<zoneStorageType[]> crusher(new zoneStorageType[capacity]);
 	freeZones();
-
-	if (m_numZones==1) {
-		return; // we don't need any zone equivalency tables.
-	}
-	
-	if (m_zonesAllocated == 0) {
-		m_zonesAllocated = 4;
-	}
-	while (m_zonesAllocated <= m_numZones) {
-		m_zonesAllocated *= 2;
-	}
-	// pool[]ify
-	m_groundCliffZones = MSGNEW("PathfindZoneInfo") zoneStorageType [m_zonesAllocated];
-	m_groundWaterZones = MSGNEW("PathfindZoneInfo") zoneStorageType[m_zonesAllocated];
-	m_groundRubbleZones = MSGNEW("PathfindZoneInfo") zoneStorageType[m_zonesAllocated];
-	m_crusherZones = MSGNEW("PathfindZoneInfo") zoneStorageType[m_zonesAllocated];
+	m_groundCliffZones=cliff.release();m_groundWaterZones=water.release();
+	m_groundRubbleZones=rubble.release();m_crusherZones=crusher.release();
+	m_zonesAllocated=capacity;
 }
 
 
@@ -2234,43 +2261,37 @@ void PathfindZoneManager::freeBlocks()
 
 /* Allocate zone equivalency arrays large enough to hold m_maxZone entries.  If the arrays are already
 large enough, just return. */
-void PathfindZoneManager::allocateZones(void) 
+void PathfindZoneManager::allocateZones(void)
 {
-	if (m_zonesAllocated>m_maxZone && m_groundCliffZones!=NULL) {
-		return;
-	}
+	if (m_zonesAllocated>m_maxZone && m_groundCliffZones && m_groundWaterZones &&
+	    m_groundRubbleZones && m_terrainZones && m_crusherZones && m_hierarchicalZones) return;
+	const auto capacity=pathfindZoneCapacity(m_zonesAllocated,m_maxZone,INITIAL_ZONES);
+	std::unique_ptr<zoneStorageType[]> cliff(new zoneStorageType[capacity]);
+	std::unique_ptr<zoneStorageType[]> water(new zoneStorageType[capacity]);
+	std::unique_ptr<zoneStorageType[]> rubble(new zoneStorageType[capacity]);
+	std::unique_ptr<zoneStorageType[]> terrain(new zoneStorageType[capacity]);
+	std::unique_ptr<zoneStorageType[]> crusher(new zoneStorageType[capacity]);
+	std::unique_ptr<zoneStorageType[]> hierarchical(new zoneStorageType[capacity]);
 	freeZones();
-	
-	if (m_zonesAllocated == 0) {
-		m_zonesAllocated = INITIAL_ZONES;
-	}
-	while (m_zonesAllocated <= m_maxZone) {
-		m_zonesAllocated *= 2;
-	}
-	DEBUG_LOG(("Allocating zone tables of size %d\n", m_zonesAllocated));
-	// pool[]ify
-	m_groundCliffZones = MSGNEW("PathfindZoneInfo") zoneStorageType[m_zonesAllocated];
-	m_groundWaterZones = MSGNEW("PathfindZoneInfo") zoneStorageType[m_zonesAllocated];
-	m_groundRubbleZones = MSGNEW("PathfindZoneInfo") zoneStorageType[m_zonesAllocated];
-	m_terrainZones = MSGNEW("PathfindZoneInfo") zoneStorageType[m_zonesAllocated];
-	m_crusherZones = MSGNEW("PathfindZoneInfo") zoneStorageType[m_zonesAllocated];
-	m_hierarchicalZones = MSGNEW("PathfindZoneInfo") zoneStorageType[m_zonesAllocated];
+	m_groundCliffZones=cliff.release();m_groundWaterZones=water.release();
+	m_groundRubbleZones=rubble.release();m_terrainZones=terrain.release();
+	m_crusherZones=crusher.release();m_hierarchicalZones=hierarchical.release();
+	m_zonesAllocated=capacity;
 }
 
 /* Allocate zone blocks for hierarchical pathfinding.   */
-void PathfindZoneManager::allocateBlocks(const IRegion2D &globalBounds) 
+void PathfindZoneManager::allocateBlocks(const IRegion2D &globalBounds)
 {
+	const auto width=std::int64_t(globalBounds.hi.x)-globalBounds.lo.x+1;
+	const auto height=std::int64_t(globalBounds.hi.y)-globalBounds.lo.y+1;
+	if (width<=0 || height<=0 || width>std::numeric_limits<Int>::max() || height>std::numeric_limits<Int>::max()) throw ERROR_BAD_ARG;
+	const ICoord2D extent{Int((width+ZONE_BLOCK_SIZE-1)/ZONE_BLOCK_SIZE),Int((height+ZONE_BLOCK_SIZE-1)/ZONE_BLOCK_SIZE)};
+	const auto count=pathfindArrayCount(extent.x,extent.y,sizeof(ZoneBlock));
+	std::unique_ptr<ZoneBlock[]> backing(new ZoneBlock[count]);
+	std::unique_ptr<ZoneBlockP[]> indexes(new ZoneBlockP[extent.x]);
+	for (Int i=0;i<extent.x;++i) indexes[i]=&backing[std::size_t(i)*extent.y];
 	freeBlocks();
-
-	m_zoneBlockExtent.x = (globalBounds.hi.x-globalBounds.lo.x+1+ZONE_BLOCK_SIZE-1)/ZONE_BLOCK_SIZE;
-	m_zoneBlockExtent.y = (globalBounds.hi.y-globalBounds.lo.y+1+ZONE_BLOCK_SIZE-1)/ZONE_BLOCK_SIZE;
-
-	m_blockOfZoneBlocks = MSGNEW("PathfindZoneBlocks") ZoneBlock[(m_zoneBlockExtent.x)*(m_zoneBlockExtent.y)];
-	m_zoneBlocks = MSGNEW("PathfindZoneBlocks") ZoneBlockP[m_zoneBlockExtent.x];
-	Int i;
-	for (i=0; i<m_zoneBlockExtent.x; i++) {
-		m_zoneBlocks[i] = &m_blockOfZoneBlocks[i*(m_zoneBlockExtent.y)];
-	}
+	m_blockOfZoneBlocks=backing.release();m_zoneBlocks=indexes.release();m_zoneBlockExtent=extent;
 }
 
 void PathfindZoneManager::reset(void)  ///< Called when the map is reset.
@@ -2374,6 +2395,7 @@ void PathfindZoneManager::calculateZones( PathfindCell **map, PathfindLayer laye
 						}
 					}
 					if (cell->getZone()==0) {
+						if (m_maxZone>=maxZones || m_maxZone>PathfindCell::MAX_ZONE) throw ERROR_BAD_ARG;
 						cell->setZone(m_maxZone);
 						m_maxZone++;
 //						if (m_maxZone>= maxZones) {
@@ -3217,6 +3239,7 @@ m_height(0),
 m_width(0),
 m_xOrigin(0),
 m_yOrigin(0),
+m_layer(LAYER_GROUND),
 m_zone(0)
 //
 {
@@ -3234,33 +3257,29 @@ PathfindLayer::~PathfindLayer()
 /**
  * Returns true if the layer is avaialble for use.
  */
-void PathfindLayer::reset(void) 
+void PathfindLayer::reset(void)
 {
-	m_bridge = NULL;
-	if (m_layerCells) {
-		Int i, j;
-		for (i=0; i<m_width; i++) {
-			for (j=0; j<m_height; j++) {
-				PathfindCell *cell = &m_layerCells[i][j];
-				cell->reset();
-			}
-		}
-		delete [] m_layerCells;
-		m_layerCells = NULL;
-	}
-	if (m_blockOfMapCells) {
-		delete [] m_blockOfMapCells;
-		m_blockOfMapCells = NULL;
-	}
-	m_width = 0;
-	m_height = 0;
-	m_xOrigin = 0;
-	m_yOrigin = 0;	 
-	m_startCell.x = -1;
-	m_startCell.y = -1;
-	m_endCell.x = -1;
-	m_endCell.y = -1;
-	m_layer = LAYER_GROUND;
+	releaseCells();
+	m_bridge=NULL;m_layer=LAYER_GROUND;
+}
+
+void PathfindLayer::releaseCells() noexcept
+{
+	delete[] m_layerCells;m_layerCells=NULL;
+	delete[] m_blockOfMapCells;m_blockOfMapCells=NULL;
+	m_width=m_height=m_xOrigin=m_yOrigin=m_zone=0;
+	m_startCell={-1,-1};m_endCell={-1,-1};
+}
+
+void PathfindLayer::allocateBacking(Int xOrigin,Int yOrigin,Int width,Int height)
+{
+	if (width<=0 || height<=0) {releaseCells();m_xOrigin=xOrigin;m_yOrigin=yOrigin;return;}
+	const auto count=pathfindArrayCount(width,height,sizeof(PathfindCell));
+	std::unique_ptr<PathfindCell[]> backing(new PathfindCell[count]);
+	std::unique_ptr<PathfindCellP[]> indexes(new PathfindCellP[width]);
+	for (Int i=0;i<width;++i) indexes[i]=&backing[std::size_t(i)*height];
+	releaseCells();m_blockOfMapCells=backing.release();m_layerCells=indexes.release();
+	m_xOrigin=xOrigin;m_yOrigin=yOrigin;m_width=width;m_height=height;
 }
 
 /**
@@ -3384,96 +3403,46 @@ Bool PathfindLayer::init(Bridge *theBridge, PathfindLayerEnum layer)
  */
 void PathfindLayer::allocateCells(const IRegion2D *extent)
 {
-	if (m_bridge == NULL) return;
-	Region2D bridgeBounds = *m_bridge->getBounds();
-	Int maxX, maxY;
-	m_xOrigin = REAL_TO_INT_FLOOR((bridgeBounds.lo.x-PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE);
-	m_yOrigin = REAL_TO_INT_FLOOR((bridgeBounds.lo.y-PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE);
-	m_width = 0;
-	m_height = 0;
-	maxX = REAL_TO_INT_CEIL((bridgeBounds.hi.x+PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE);
-	maxY = REAL_TO_INT_CEIL((bridgeBounds.hi.y+PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE);
-	// Pad with 1 extra;
-	m_xOrigin--;
-	m_yOrigin--;
-	maxX++;
-	maxY++;
-
-	if (m_xOrigin < extent->lo.x) m_xOrigin = extent->lo.x;
-	if (m_yOrigin < extent->lo.y) m_yOrigin = extent->lo.y;
-	if (maxX > extent->hi.x) maxX = extent->hi.x;
-	if (maxY > extent->hi.y) maxY = extent->hi.y;
-	if (maxX <= m_xOrigin) return;
-	if (maxY <= m_yOrigin) return;
-	m_width = maxX - m_xOrigin;
-	m_height = maxY - m_yOrigin;
-
-	// Allocate cells.
-	// pool[]ify
-	m_blockOfMapCells = MSGNEW("PathfindMapCells") PathfindCell[m_width*m_height];
-	m_layerCells = MSGNEW("PathfindMapCells") PathfindCellP[m_width];
-	Int i;
-	for (i=0; i<m_width; i++) {
-		m_layerCells[i] = &m_blockOfMapCells[i*m_height];
-	}
+	if (!m_bridge) return;
+	if (!extent || extent->lo.x>extent->hi.x || extent->lo.y>extent->hi.y) throw ERROR_BAD_ARG;
+	const Region2D bounds=*m_bridge->getBounds();
+	const Int xOrigin=std::max(extent->lo.x,pathfindGridCoordinate((bounds.lo.x-PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE)-1);
+	const Int yOrigin=std::max(extent->lo.y,pathfindGridCoordinate((bounds.lo.y-PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE)-1);
+	const Int maxX=std::min(extent->hi.x,pathfindGridCoordinate((bounds.hi.x+PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE,TRUE)+1);
+	const Int maxY=std::min(extent->hi.y,pathfindGridCoordinate((bounds.hi.y+PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE,TRUE)+1);
+	if (maxX<=xOrigin || maxY<=yOrigin) {allocateBacking(xOrigin,yOrigin,0,0);return;}
+	const auto width=std::int64_t(maxX)-xOrigin,height=std::int64_t(maxY)-yOrigin;
+	if (width>std::numeric_limits<Int>::max() || height>std::numeric_limits<Int>::max()) throw ERROR_BAD_ARG;
+	allocateBacking(xOrigin,yOrigin,Int(width),Int(height));
 }
 
 /**
  * Allocates the pathfind cells for the wall bridge layer.
  */
-void PathfindLayer::allocateCellsForWallLayer(const IRegion2D *extent, ObjectID *wallPieces, Int numPieces)
+void PathfindLayer::allocateCellsForWallLayer(const IRegion2D *extent,ObjectID *wallPieces,Int numPieces)
 {
-	DEBUG_ASSERTCRASH(m_layer==LAYER_WALL, ("Wrong layer for wall."));
-	if (m_layer != LAYER_WALL) return;
-	Region2D bridgeBounds;
-
-	Int i; 
-	Bool first = true;
-	for (i=0; i<numPieces; i++) {
-		Object *obj = TheGameLogic->findObjectByID(wallPieces[i]);
-		Region2D objBounds;
-		if (obj==NULL) continue;
-		obj->getGeometryInfo().get2DBounds(*obj->getPosition(), obj->getOrientation(), objBounds);
-		if (first) {
-			bridgeBounds = objBounds;
-			first = false;
-		} else {
-			if (bridgeBounds.lo.x>objBounds.lo.x) bridgeBounds.lo.x = objBounds.lo.x;
-			if (bridgeBounds.lo.y>objBounds.lo.y) bridgeBounds.lo.y = objBounds.lo.y;
-			if (bridgeBounds.hi.x<objBounds.hi.x) bridgeBounds.hi.x = objBounds.hi.x;
-			if (bridgeBounds.hi.y<objBounds.hi.y) bridgeBounds.hi.y = objBounds.hi.y;
-		}
+	if (m_layer!=LAYER_WALL) return;
+	if (!extent || !TheGameLogic || numPieces<0 || (numPieces && !wallPieces) ||
+	    extent->lo.x>extent->hi.x || extent->lo.y>extent->hi.y) throw ERROR_BAD_ARG;
+	Region2D bounds{};Bool first=TRUE;
+	for (Int i=0;i<numPieces;++i) {
+		auto* obj=TheGameLogic->findObjectByID(wallPieces[i]);if (!obj) continue;
+		Region2D objBounds;obj->getGeometryInfo().get2DBounds(*obj->getPosition(),obj->getOrientation(),objBounds);
+		if (!std::isfinite(objBounds.lo.x) || !std::isfinite(objBounds.lo.y) ||
+		    !std::isfinite(objBounds.hi.x) || !std::isfinite(objBounds.hi.y)) throw ERROR_BAD_ARG;
+		if (first) {bounds=objBounds;first=FALSE;}
+		else {bounds.lo.x=std::min(bounds.lo.x,objBounds.lo.x);bounds.lo.y=std::min(bounds.lo.y,objBounds.lo.y);
+			bounds.hi.x=std::max(bounds.hi.x,objBounds.hi.x);bounds.hi.y=std::max(bounds.hi.y,objBounds.hi.y);}
 	}
-
-	Int maxX, maxY;
-	m_xOrigin = REAL_TO_INT_FLOOR((bridgeBounds.lo.x-PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE);
-	m_yOrigin = REAL_TO_INT_FLOOR((bridgeBounds.lo.y-PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE);
-	m_width = 0;
-	m_height = 0;
-	maxX = REAL_TO_INT_CEIL((bridgeBounds.hi.x+PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE);
-	maxY = REAL_TO_INT_CEIL((bridgeBounds.hi.y+PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE);
-	// Pad with 1 extra;
-	m_xOrigin--;
-	m_yOrigin--;
-	maxX++;
-	maxY++;
-
-	if (m_xOrigin < extent->lo.x) m_xOrigin = extent->lo.x;
-	if (m_yOrigin < extent->lo.y) m_yOrigin = extent->lo.y;
-	if (maxX > extent->hi.x) maxX = extent->hi.x;
-	if (maxY > extent->hi.y) maxY = extent->hi.y;
-	if (maxX <= m_xOrigin) return;
-	if (maxY <= m_yOrigin) return;
-	m_width = maxX - m_xOrigin;
-	m_height = maxY - m_yOrigin;
-
-	// Allocate cells.
-	m_blockOfMapCells = MSGNEW("PathfindMapCells") PathfindCell[m_width*m_height];
-	m_layerCells = MSGNEW("PathfindMapCells") PathfindCellP[m_width];
-
-	for (i=0; i<m_width; i++) {
-		m_layerCells[i] = &m_blockOfMapCells[i*m_height];
-	}
+	if (first) {releaseCells();return;}
+	const Int xOrigin=std::max(extent->lo.x,pathfindGridCoordinate((bounds.lo.x-PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE)-1);
+	const Int yOrigin=std::max(extent->lo.y,pathfindGridCoordinate((bounds.lo.y-PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE)-1);
+	const Int maxX=std::min(extent->hi.x,pathfindGridCoordinate((bounds.hi.x+PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE,TRUE)+1);
+	const Int maxY=std::min(extent->hi.y,pathfindGridCoordinate((bounds.hi.y+PATHFIND_CELL_SIZE/100)/PATHFIND_CELL_SIZE,TRUE)+1);
+	if (maxX<=xOrigin || maxY<=yOrigin) {allocateBacking(xOrigin,yOrigin,0,0);return;}
+	const auto width=std::int64_t(maxX)-xOrigin,height=std::int64_t(maxY)-yOrigin;
+	if (width>std::numeric_limits<Int>::max() || height>std::numeric_limits<Int>::max()) throw ERROR_BAD_ARG;
+	allocateBacking(xOrigin,yOrigin,Int(width),Int(height));
 }
 
 /**
@@ -3662,15 +3631,12 @@ ObjectID PathfindLayer::getBridgeID(void)
  */
 PathfindCell *PathfindLayer::getCell(Int x, Int y)
 {
-	DEBUG_ASSERTCRASH(m_layerCells, ("no data in layer, why get cells?"));
 	if (m_layerCells==NULL) {
 		return NULL;
 	}
-	x -= m_xOrigin;
-	y -= m_yOrigin;
-	if (x<0 || x>=m_width) return NULL;
-	if (y<0 || y>=m_height) return NULL;
-	PathfindCell *cell = &m_layerCells[x][y];
+	const auto localX=std::int64_t(x)-m_xOrigin,localY=std::int64_t(y)-m_yOrigin;
+	if (localX<0 || localX>=m_width || localY<0 || localY>=m_height) return NULL;
+	PathfindCell *cell = &m_layerCells[Int(localX)][Int(localY)];
 	if (cell->getType() == PathfindCell::CELL_IMPASSABLE) {
 		return NULL; // Impassable cells are ignored.
 	}
@@ -4560,56 +4526,54 @@ void Pathfinder::classifyMapCell( Int i, Int j , PathfindCell *cell)
 /**
  * Set up for a new map.
  */
-void Pathfinder::newMap( void )
+void Pathfinder::newMap(void)
 {
-	m_wallHeight = TheAI->getAiData()->m_wallHeight; // may be updated by map.ini.
-	Region3D terrainExtent;
-	TheTerrainLogic->getMaximumPathfindExtent( &terrainExtent );
+	if (!TheAI || TheAI->pathfinder()!=this || !TheTerrainLogic || !TheGameLogic) throw ERROR_BAD_ARG;
+	Region3D terrainExtent;TheTerrainLogic->getMaximumPathfindExtent(&terrainExtent);
 	IRegion2D bounds;
-	bounds.lo.x = REAL_TO_INT_FLOOR(terrainExtent.lo.x / PATHFIND_CELL_SIZE_F);
-	bounds.hi.x = REAL_TO_INT_FLOOR(terrainExtent.hi.x / PATHFIND_CELL_SIZE_F);
-	bounds.lo.y = REAL_TO_INT_FLOOR(terrainExtent.lo.y / PATHFIND_CELL_SIZE_F);
-	bounds.hi.y = REAL_TO_INT_FLOOR(terrainExtent.hi.y / PATHFIND_CELL_SIZE_F);
-	bounds.hi.x--;
-	bounds.hi.y--;
-	Bool dataAllocated = false;
-	if (m_extent.hi.x==bounds.hi.x && m_extent.hi.y==bounds.hi.y) {
-		if (m_blockOfMapCells != NULL && m_map!=NULL) {
-			dataAllocated = true;
-		}
-	}
-	// For map load from file, we have to call newMap twice to do sequencing issues.
-	// so the second time through, dataAllocated==TRUE, so we skip the allocate.
-	if (!dataAllocated) {
-		m_extent = bounds;
-		DEBUG_ASSERTCRASH(m_map == NULL, ("Can't reallocate pathfind cells."));
- 		m_zoneManager.allocateBlocks(m_extent);
-		// Allocate cells.
-		m_blockOfMapCells = MSGNEW("PathfindMapCells") PathfindCell[(bounds.hi.x+1)*(bounds.hi.y+1)];
-		m_map = MSGNEW("PathfindMapCells") PathfindCellP[bounds.hi.x+1];
-		Int i;
-		for (i=0; i<=bounds.hi.x; i++) {
-			m_map[i] = &m_blockOfMapCells[i*(bounds.hi.y+1)];
-		}
-		for (i=0; i<LAYER_LAST; i++) {
-			if (!m_layers[i].isUnused()) {
-				m_layers[i].allocateCells(&m_extent);
+	bounds.lo.x=pathfindGridCoordinate(terrainExtent.lo.x/PATHFIND_CELL_SIZE_F);
+	bounds.lo.y=pathfindGridCoordinate(terrainExtent.lo.y/PATHFIND_CELL_SIZE_F);
+	bounds.hi.x=pathfindGridCoordinate(terrainExtent.hi.x/PATHFIND_CELL_SIZE_F)-1;
+	bounds.hi.y=pathfindGridCoordinate(terrainExtent.hi.y/PATHFIND_CELL_SIZE_F)-1;
+	// Source indexes absolute nonnegative grid coordinates into zero-based arrays.
+	if (bounds.lo.x<0 || bounds.lo.y<0 || bounds.lo.x>bounds.hi.x || bounds.lo.y>bounds.hi.y) throw ERROR_BAD_ARG;
+	const auto count=pathfindArrayCount(bounds.hi.x+1,bounds.hi.y+1,sizeof(PathfindCell));
+	const Bool reuse=m_blockOfMapCells && m_map && m_extent.lo.x==bounds.lo.x && m_extent.lo.y==bounds.lo.y &&
+		m_extent.hi.x==bounds.hi.x && m_extent.hi.y==bounds.hi.y;
+	if ((m_blockOfMapCells || m_map) && !reuse) throw ERROR_BAD_ARG; // Source requires reset before resizing.
+	m_wallHeight=TheAI->getAiData()->m_wallHeight;
+	m_isMapReady=false;
+	try {
+		if (!reuse) {
+			m_zoneManager.allocateBlocks(bounds);
+			std::unique_ptr<PathfindCell[]> backing(new PathfindCell[count]);
+			std::unique_ptr<PathfindCellP[]> indexes(new PathfindCellP[bounds.hi.x+1]);
+			for (Int i=0;i<=bounds.hi.x;++i) indexes[i]=&backing[std::size_t(i)*(bounds.hi.y+1)];
+			m_blockOfMapCells=backing.release();m_map=indexes.release();m_extent=bounds;
+			for (Int i=0;i<LAYER_LAST;++i) if (!m_layers[i].isUnused()) m_layers[i].allocateCells(&m_extent);
+			if (m_numWallPieces>0) {
+				m_layers[LAYER_WALL].init(NULL,LAYER_WALL);
+				m_layers[LAYER_WALL].allocateCellsForWallLayer(&m_extent,m_wallPieces,m_numWallPieces);
 			}
 		}
-		if (m_numWallPieces>0) {
-			m_layers[LAYER_WALL].init(NULL, LAYER_WALL);
-			m_layers[LAYER_WALL].allocateCellsForWallLayer(&m_extent, m_wallPieces, m_numWallPieces);
-		}
+		// Source loading calls this twice: retain ground backing on the second pass.
+		classifyMap();
+		for (Object* obj=TheGameLogic->getFirstObject();obj;obj=obj->getNextObject()) classifyObjectFootprint(obj,true);
+		m_isMapReady=true;
+	} catch (...) {
+		retireMapBacking();
+		throw;
 	}
-	classifyMap();
-	// Add existing objects.
-	Object *obj;
-	for( obj = TheGameLogic->getFirstObject(); obj; obj = obj->getNextObject() )
-	{
-		classifyObjectFootprint(obj, true);
-	}
+}
 
-	m_isMapReady = true;
+void Pathfinder::retireMapBacking() noexcept
+{
+	m_isMapReady=false;m_openList=NULL;m_closedList=NULL;
+	delete[] m_map;m_map=NULL;
+	delete[] m_blockOfMapCells;m_blockOfMapCells=NULL;
+	for (Int i=0;i<=LAYER_LAST;++i) m_layers[i].releaseCells();
+	m_zoneManager.reset();
+	m_extent={{0,0},{0,0}};m_logicalExtent={{0,0},{0,0}};
 }
 
 /**

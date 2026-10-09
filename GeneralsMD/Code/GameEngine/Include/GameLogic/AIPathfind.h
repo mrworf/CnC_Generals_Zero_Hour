@@ -352,7 +352,8 @@ public:
 	void releaseInfo(void);
 	Bool hasInfo(void) const {return m_info!=NULL;}
 	zoneStorageType getZone(void) const {return m_zone;}
-	void setZone(zoneStorageType zone) {m_zone = zone;}
+	enum {MAX_ZONE=(1u<<14)-1}; // Source packed zone attribute, not the 16-bit table element width.
+	void setZone(zoneStorageType zone) {if (zone>MAX_ZONE) throw ERROR_BAD_ARG; m_zone = zone;}
 	void setGoalUnit(ObjectID unit, const ICoord2D &pos );
 	void setGoalAircraft(ObjectID unit, const ICoord2D &pos );
 	void setPosUnit(ObjectID unit, const ICoord2D &pos );
@@ -397,6 +398,7 @@ public:
 public:
 	void reset(void);
 	Bool init(Bridge *theBridge, PathfindLayerEnum layer);
+	void releaseCells() noexcept; // Retire backing without withdrawing borrowed bridge/layer identity.
 	void allocateCells(const IRegion2D *extent);
 	void allocateCellsForWallLayer(const IRegion2D *extent, ObjectID *wallPieces, Int numPieces);
 	void classifyCells();
@@ -406,7 +408,7 @@ public:
 	Bool isDestroyed(void) {return m_destroyed;} // True if it has been destroyed.
 	PathfindCell *getCell(Int x, Int y);
 	Int getZone(void) {return m_zone;}
-	void setZone(Int zone) {m_zone = zone;}
+	void setZone(Int zone) {if (zone<0 || zone>PathfindCell::MAX_ZONE) throw ERROR_BAD_ARG; m_zone = zone;}
 	void applyZone(void); // Propagates m_zone to all cells.
 	void getStartCellIndex(ICoord2D *start) {*start = m_startCell;}
 	void getEndCellIndex(ICoord2D *end) {*end = m_endCell;}
@@ -422,6 +424,9 @@ protected:
 	void classifyLayerMapCell( Int i, Int j , PathfindCell *cell, Bridge *theBridge);
 	void classifyWallMapCell( Int i, Int j, PathfindCell *cell , ObjectID *wallPieces, Int numPieces);
 
+
+protected:
+	void allocateBacking(Int xOrigin, Int yOrigin, Int width, Int height);
 private:
 	PathfindCell *m_blockOfMapCells;		///< Pathfinding map - contains iconic representation of the map
 	PathfindCell **m_layerCells;		///< Pathfinding map indexes - contains matrix indexing into the map.
@@ -838,6 +843,7 @@ protected:
 
 private:
 	/// This uses WAY too much memory.  Should at least be array of pointers to cells w/ many fewer cells
+	void retireMapBacking() noexcept;
 	PathfindCell *m_blockOfMapCells;		///< Pathfinding map - contains iconic representation of the map
 	PathfindCell **m_map;		///< Pathfinding map indexes - contains matrix indexing into the map.
 	IRegion2D m_extent;														///< Grid extent limits
@@ -927,6 +933,7 @@ inline void Pathfinder::removeObjectFromPathfindMap( class Object *obj )
 
 inline PathfindCell *Pathfinder::getCell( PathfindLayerEnum layer, Int x, Int y ) 
 { 
+	if (!m_map) return NULL;
 	if (x >= m_extent.lo.x && x <= m_extent.hi.x &&
 		y >= m_extent.lo.y && y <= m_extent.hi.y)	
 	{

@@ -3700,6 +3700,46 @@ configurations. See `evidence/qa/N2-ai-pathfinder-ownership-checkpoint.md` for
 frozen source, exact allocation manifests and actual typed-pool exhaustion.
 This does not validate the classified-map allocation hazards described above.
 
+Classified-map backing implementation findings (parentb1f32299): actual global
+zone equivalence owns six arrays; each ZoneBlock owns four. Both owners must
+publish capacity only after all their arrays exist, not infer completion from
+the cliff-array pointer. ZoneBlock growth also stages/restores its origin and
+first/count metadata so a failed allocation does not reinterpret retained tables.
+Zone blocks, ground cells and bridge/wall layer cells each own a separate pointer
+index table over contiguous backing; acquire both before replacing prior units.
+The layer's default identity is LAYER_GROUND before `isUnused`. Releasing layer
+backing during failed candidate admission retains borrowed bridge/layer identity;
+full reset additionally withdraws it. A wall-ID list whose objects all retired
+has no bounds: return an empty layer rather than interpreting uninitialized
+Region2D values. Coordinate subtraction uses a wide temporary before local
+layer indexing; dimension products and padded geometry conversions are checked.
+
+PathfindCell's zone attribute is **14 bits**, despite 16-bit zoneStorageType and
+the source calculateZones workspace's 24,000 elements. Setter values above
+16383 would truncate before tests or algorithms observed them. Preserve source
+packing and reject excessive cell/layer IDs before assignment; reject completed
+block inputs containing the UNINITIALIZED_ZONE zero marker. Source classification
+must reject excessive distinct zones before packed truncation or workspace access.
+Do not fabricate a malformed 16-bit cell zone and claim the algorithm saw it.
+
+`Pathfinder::newMap` still classifies terrain/layers/zones, then existing actual
+object footprints, and marks readiness only afterward. Same-sized second-pass
+admission reuses ground backing and warmed zone tables; the generated provider
+fixture proves its exact zero standard-allocation demand. Failure retires the
+incomplete candidate grid, zones and layer backing, clears open/closed pointers
+and readiness, but retains wall IDs and borrowed bridge descriptors for rebuilding.
+Cell queries are safe while backing is absent. Resizing a live grid requires
+the original reset boundary. This local candidate-owner recovery is **not**
+accepted-root rollback: concrete root publication must still enclose these phases
+and retire/restore complete roots on failure. Nonempty registered object/wall and
+model-derived bridge execution remain pending integration evidence.
+
+Validation for the backing implementation and generated real-terrain source
+classification is in `evidence/qa/N2-classified-map-backing-checkpoint.md`:
+all3 configured builds, focused8 and related91 PASS on frozen source. Scope
+explicitly separates direct actual layer/zone backing ownership from pending
+nonempty geometry/actor/root acceptance.
+
 ### Retained visual-owned terrain admission and deformation
 
 The full source WorldHeightMap constructor reads HeightMapData, BlendTileData

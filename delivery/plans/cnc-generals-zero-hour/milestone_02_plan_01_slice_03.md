@@ -2218,3 +2218,54 @@ admission with source two-pass reuse, nonempty walls/bridge model-derived bounds
 and registered-object rollback, then concrete root/partition/ghost/startup and
 compiler-matching original simulation. Original source allocation hazards for
 the next batch are durable in original-engine-formats.md, not accepted behavior.
+
+Classified-map backing refinement (parentb1f32299, clean start): batch both
+ZoneBlock's four arrays and PathfindZoneManager's six arrays, zone-block backing
+and index table, bridge/wall layer backing and index table, and the ground grid.
+Acquire each complete backing group before publishing its capacity/pointers;
+retain previous complete backing on individual acquisition failure. Validate
+dimension products, finite geometry conversion and zone capacity before unsafe
+arithmetic. Initialize layer identity before isUnused, and treat a wall-ID set
+with no surviving objects as empty rather than consuming uninitialized bounds.
+For actual newMap, preserve source same-size two-pass ground backing reuse and
+source terrain/footprint/zone ordering. An allocation/classification failure
+retires incomplete grid backing and withdraws readiness/open/closed pointers,
+while preserving borrowed bridge descriptors and wall registrations so corrected
+same-process admission can rebuild. This is candidate-owner recovery, not a
+claim that a previously accepted root can remain published after its grid fails;
+the outer root candidate/rollback transaction remains a mandatory later gate.
+Exercise actual generated terrain through the published original AI/GameLogic
+and NativeTerrainLogic/Visual providers, initial and repeated map admission,
+source-classified mixed zone blocks/tables and exact allocation failure/retry
+manifests under all3 configurations. Keep nonempty model-derived bridge geometry,
+registered wall/object footprints and concrete root acceptance pending until
+their actual source participants execute; do not substitute isolated cells for
+whole-game or nonempty layer evidence. No new slice or replacement plan.
+
+Packed-zone review refinement: PathfindCell retains a 14-bit zone attribute even
+though zoneStorageType and equivalence arrays use 16-bit values. Derive the
+admissible cell/layer IDs from that source packing, reject overflow before
+assignment and preserve the packing. Source UNINITIALIZED_ZONE zero is not a
+valid completed ZoneBlock input. Use representable 14-bit values and zero in
+the malformed fixture; the earlier 65535 setter value was silently truncated by
+the bitfield, invalidating that test oracle. Cover source classification overflow
+and direct setter/layer rejection together rather than widening source fields
+or allowing malformed data to corrupt zone equivalence indexing.
+
+Classified-map backing checkpoint: all3 full configured builds, focused8 and
+related91 PASS on canonical622 source653415f3 / inclusive629 source8864c904.
+Actual generated terrain runs source Pathfinder newMap classification and zones
+under legitimate AI/GameLogic/native terrain publications; same-size second pass
+retains ground cell identity with exact zero standard allocations. Complete heap
+manifests cover layer backing2, block growth4, whole mixed-zone owner46 and actual
+map admission14, with all prefixes and corrected retries. Layer/zone growth
+preserves accepted backing; failed map candidate admission retires incomplete
+grid state and directly retries without reset hiding partial acquisition. Packed
+zone limits and dimensions reject before truncation/overflow. Evidence:
+`evidence/qa/N2-classified-map-backing-checkpoint.md`. Commit boundary:
+`delivery: stage original classified map backing`.
+Full304 not run; slice03/N2 incomplete. Next execute nonempty registered wall/
+object footprint and model-derived bridge participants, bridge/tower construction
+rollback and concrete root candidate publication, followed by partition/ghost/
+startup and compiler-matching original simulation. Backing-helper evidence does
+not substitute for those source participants or whole-game acceptance.

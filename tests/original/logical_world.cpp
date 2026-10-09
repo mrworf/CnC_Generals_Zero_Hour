@@ -462,6 +462,40 @@ void terrainLogicFaults(Context& context){context.load(wire());DeviceFixture vis
       sameLighting(NativeTerrainLightingState(*context.data),lights),"every corrected integrated retry retires candidate ownership");
   }std::cout<<"terrain-world prefixes [0,"<<census<<"); terminal "<<census<<"; every retry\n";
 }
+struct PublishedMap {
+  AI* previousAI=TheAI;GameLogic* previousSimulation=TheGameLogic;
+  TerrainLogic* previousLogic=TheTerrainLogic;TerrainVisual* previousVisual=TheTerrainVisual;
+  std::unique_ptr<GameLogic> simulation=std::make_unique<GameLogic>();
+  std::unique_ptr<AI> ai=std::make_unique<AI>();
+  PublishedMap(LogicFixture& logic,DeviceFixture& visual){TheGameLogic=simulation.get();TheAI=ai.get();TheTerrainLogic=&logic;TheTerrainVisual=&visual;ai->init();}
+  ~PublishedMap(){ai.reset();simulation.reset();TheAI=previousAI;TheGameLogic=previousSimulation;TheTerrainLogic=previousLogic;TheTerrainVisual=previousVisual;}
+};
+void checkPathfindMap(Pathfinder& map){unsigned count=0,cliffs=0,clear=0;
+  for(Int x=0;x<5;++x)for(Int y=0;y<5;++y){auto* cell=map.getCell(LAYER_GROUND,x,y);require(cell && cell->getZone(),"actual original source cell classification and zones");++count;
+    cliffs+=cell->getType()==PathfindCell::CELL_CLIFF;clear+=cell->getType()==PathfindCell::CELL_CLEAR;}
+  require(count==25 && cliffs && clear && !map.getCell(LAYER_GROUND,-1,0) && !map.getCell(LAYER_GROUND,5,0),"actual source mixed terrain and exact grid extent");
+}
+void pathfinderMap(Context& context){context.load(wire());DeviceFixture visual;LogicFixture logic(visual);logicLoad(logic,providerWorld(),"GeneratedPathfinder.map");
+  PublishedMap owner(logic,visual);auto& map=*owner.ai->pathfinder();require(!map.getCell(LAYER_GROUND,0,0),"no grid before actual admission");
+  map.newMap();checkPathfindMap(map);const auto* first=map.getCell(LAYER_GROUND,0,0);const auto live=AllocationFault::live();
+  AllocationFault::arm(0);try{map.newMap();}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+  require(!hit && attempts==0 && map.getCell(LAYER_GROUND,0,0)==first && AllocationFault::live()==live,"source two-pass reuse has exact zero-allocation terminal");checkPathfindMap(map);
+  owner.ai->reset();require(!map.getCell(LAYER_GROUND,0,0),"reset retires admitted grid");map.newMap();checkPathfindMap(map);
+}
+void pathfinderMapFaults(Context& context){context.load(wire());DeviceFixture visual;LogicFixture logic(visual);logicLoad(logic,providerWorld(),"GeneratedPathfinder.map");
+  PublishedMap owner(logic,visual);auto& map=*owner.ai->pathfinder();std::size_t count;
+  AllocationFault::arm(SIZE_MAX);try{map.newMap();}catch(...){AllocationFault::disarm();throw;}count=AllocationFault::attempts();AllocationFault::disarm();checkPathfindMap(map);owner.ai->reset();
+  const auto baseline=AllocationFault::live();const PoolUsage pools;
+  for(std::size_t ordinal=0;ordinal<=count;++ordinal){bool failed=false;AllocationFault::arm(ordinal);
+    try{map.newMap();}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+    const auto hit=AllocationFault::triggered();AllocationFault::disarm();require(hit==failed && failed==(ordinal<count),"complete actual map admission manifest and exact terminal");
+    if(failed)require(!map.getCell(LAYER_GROUND,0,0) && AllocationFault::live()==baseline && pools.matches(),"failed classification retires incomplete ground, blocks, layers and zone tables");
+    else checkPathfindMap(map);
+    map.newMap();checkPathfindMap(map);owner.ai->reset();require(AllocationFault::live()==baseline && pools.matches(),"every corrected actual map retry retires ownership exactly");
+  }
+  std::cout<<"actual pathfinder map prefixes [0,"<<count<<"); terminal "<<count<<"; every retry\n";
+}
 void poolFailures(Context& context){const auto valid=wire(),replacement=wire("ReplacementSide");context.load(valid);
   for(const char* name:poolNames){auto* pool=TheMemoryPoolFactory->findMemoryPool(name);
     std::vector<void*> held;held.reserve(pool->getFreeBlockCount());
@@ -491,6 +525,7 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
         else if(family=="ownership")ownership(context);else if(family=="pool-failures")poolFailures(context);
         else if(family=="continuation")continuation(context);else if(family=="terrain")terrainLogic(context);
         else if(family=="terrain-negative")terrainLogicNegative(context);else if(family=="terrain-faults")terrainLogicFaults(context);
+        else if(family=="pathfinder-map")pathfinderMap(context);else if(family=="pathfinder-map-faults")pathfinderMapFaults(context);
         else require(false,"unknown world family");}
       require(AllocationFault::live()==live && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
         !MapObject::getFirstMapObject() && !PolygonTrigger::getFirstPolygonTrigger(),"repeated full-world owner retirement");}
