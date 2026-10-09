@@ -1547,3 +1547,44 @@ callbacks all3; headless GUI tables may be explicitly omitted, never gameplay or
 logical Drawable state. Current evidence and source identities are appended to
 `evidence/qa/N2-lod-checkpoint.md`. Full242 not run; N2/slice03 still incomplete.
 Continue native root/client factories and actual original startup/world cohort.
+
+Native client integration from0a44f4be is one coupled source-owner task, not a
+replacement plan or fake renderer. Add an explicit headless construction mode to
+actual GameClient and a concrete native headless client factory. Physical device
+factories must never execute in that mode; unsupported physical calls reject.
+Retain actual drawable IDs/list/lookup, frame ticks, ghost/fog updates, script pause
+and source drawable updates. Isolate the existing drawable-update loop so both
+interactive/headless entry points use it. Per-client repeated-frame state must
+not survive owner replacement as a function static. Retain real RayEffectSystem
+ownership and reject update before required original simulation owners exist.
+No toy GameLogic, synthesized module registry, camera/movie success or discarded
+logical drawables. Nonnull output and camera/model-dependent behavior stay explicit
+pending gates, not accepted from headless tests.
+
+The source constructor census also exposes early Drawable publication before ID/
+ambient pointers are initialized, nonterminated partial module arrays and fallible
+caption/module construction without rollback. Resolve initialization, partial
+owner retirement and client registry withdrawal together before admitting actual
+drawables. Lookup growth must start from nonzero capacity and reject duplicate or
+invalid IDs without dropping existing entries. Constructor failure must preserve
+legitimate parent identity and accepted owners; callback/device side effects are
+not inferred reversible. First generated fixtures exercise actual empty source
+templates, not replacement modules, and preserve exact original construction and
+update behavior. Extend through actual source modules and native root startup
+within this same slice before N2 acceptance. Focused owner/failure/retry tests and
+GCC/Clang sanitizers are required; do not compile/test/fix individual assert leaves.
+Own actual client/Drawable/native boundary, associated tests/build, source findings
+and existing plan/state/evidence. Retail assets/dependencies remain untouched.
+
+User-requested worktree checkpoint from0a44f4be: actual headless-client/Drawable
+ownership cohort passes all configured builds and related114/114 all3 in21.58s/
+89.73s/66.51s. The retained-source inventory rejected the new adapter's initial
+placement; moving it beside the other native adapters preserves that source-lock
+contract, and the focused retry plus frozen related matrix pass. Complete empty-
+template constructor failure/retry, exact terminals, reset rejection/retry and
+owner-local source fade regression are covered. Durable findings and current
+source hashes: `evidence/qa/N2-native-client-checkpoint.md`. This checkpoint is the
+commit titled `delivery: verify native headless client ownership`; it is supporting
+progress, not full slice03 or N2 acceptance. Full246 not run. Continue actual
+native GameEngine startup, nonempty module/callback ownership and matching world/
+simulation before completion; physical output remains a separate later gate.

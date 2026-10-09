@@ -803,3 +803,12 @@ may explicitly omit GUI table descriptors, not gameplay registries or logical
 drawable/map/frame state. Actual GameLogic default factories create common source
 terrain/ghost/script owners; do not invent an alternative simulation. Next is the
 concrete native GameEngine/GameClient factory and original startup/world cohort.
+
+The actual common GameClient now has an explicit headless presentation boundary
+and concrete NativeHeadlessGameClient adapter. Its real Drawable/RayEffect owners,
+registry/reset preparation and shared source update loop have focused ownership
+coverage; required simulation globals still gate whole-client update. Native
+adapters are separate from the retained-original-provider inventory. Empty source
+templates and bare frame-owner fixtures establish neither nonempty gameplay module
+integration nor concrete GameEngine startup/world parity. N2 remains incomplete;
+see `evidence/qa/N2-native-client-checkpoint.md`.

@@ -98,7 +98,7 @@
 GameClient *TheGameClient = NULL;
 
 //-------------------------------------------------------------------------------------------------
-GameClient::GameClient()
+GameClient::GameClient(Bool headless):m_headless(headless)
 {
 
 	// zero our translator list
@@ -229,6 +229,7 @@ GameClient::~GameClient()
 //-------------------------------------------------------------------------------------------------
 void GameClient::init( void )
 {
+	if (m_headless) { initHeadless(); return; }
 
 	setFrameRate(MSEC_PER_LOGICFRAME_REAL);		// from GameCommon.h... tell W3D what our expected framerate is
 
@@ -433,6 +434,62 @@ void GameClient::init( void )
 
 }  // end init
 
+void GameClient::initHeadless()
+{
+	if (TheGameClient != this || !TheGlobalData || !TheMessageStream || m_drawableList) throw ERROR_BAD_ARG;
+	if (TheDisplay || TheInGameUI || TheWindowManager || TheTacticalView) throw ERROR_BAD_ARG;
+	auto lookup = m_drawableVector;
+	lookup.resize(DRAWABLE_HASH_SIZE, nullptr);
+	if (!m_serviceOwners.owns(TheRayEffects)) {
+		auto ray = std::make_unique<RayEffectSystem>();
+		ray->init();
+		ray->setName("TheRayEffects");
+		m_serviceOwners.create(TheRayEffects, [&] { return ray.release(); });
+	}
+	m_drawableVector.swap(lookup);
+}
+
+void GameClient::updateHeadless()
+{
+	if (TheGameClient != this || !TheGlobalData || !TheMessageStream || !TheGameLogic ||
+		!TheScriptEngine || !TheGhostObjectManager || !ThePlayerList || !ThePlayerList->getLocalPlayer()) throw ERROR_BAD_ARG;
+	if (TheDisplay || TheInGameUI || TheWindowManager || TheTacticalView) throw ERROR_BAD_ARG;
+	const Int player = ThePlayerList->getLocalPlayer()->getPlayerIndex();
+	auto retire = [](GameMessage* value) { value->deleteInstance(); };
+	std::unique_ptr<GameMessage, decltype(retire)> frame(newInstance(GameMessage)(GameMessage::MSG_FRAME_TICK, player), retire);
+	frame->appendTimestampArgument(getFrame());
+	TheMessageStream->GameMessageList::appendMessage(frame.release());
+	const Bool freeze = TheScriptEngine->isTimeFrozenDebug() || TheScriptEngine->isTimeFrozenScript() || TheGameLogic->isGamePaused();
+	updateDrawableState(freeze, player);
+	if (!freeze && TheParticleSystemManager) TheParticleSystemManager->setLocalPlayerIndex(player);
+}
+
+void GameClient::prepareDrawableID(Drawable* draw, DrawableID value)
+{
+	if (!draw || TheGameClient != this) throw ERROR_BAD_ARG;
+	const auto id = static_cast<std::size_t>(value);
+	if (value == INVALID_DRAWABLE_ID) return;
+	if (id < m_drawableVector.size()) {
+		if (m_drawableVector[id] && m_drawableVector[id] != draw) throw ERROR_BAD_ARG;
+		return;
+	}
+	std::size_t capacity = m_drawableVector.empty() ? DRAWABLE_HASH_SIZE : m_drawableVector.size();
+	while (capacity <= id) {
+		if (capacity > m_drawableVector.max_size() / 2) throw ERROR_BAD_ARG;
+		capacity *= 2;
+	}
+	m_drawableVector.resize(capacity, nullptr);
+}
+
+void GameClient::cancelDrawableConstruction(Drawable* draw) noexcept
+{
+	const auto id = draw->getID();
+	removeDrawableFromLookupTable(draw);
+	draw->removeFromList(&m_drawableList);
+	if (static_cast<UnsignedInt>(m_nextDrawableID) == static_cast<UnsignedInt>(id) + 1)
+		m_nextDrawableID = id;
+}
+
 //-------------------------------------------------------------------------------------------------
 /** Reset the game client for a new game */
 void GameClient::reset( void )
@@ -441,11 +498,11 @@ void GameClient::reset( void )
 //	m_drawableHash.clear();
 //	m_drawableHash.resize(DRAWABLE_HASH_SIZE);
 
-	m_drawableVector.clear();
-	m_drawableVector.resize(DRAWABLE_HASH_SIZE, NULL);
+	DrawablePtrVector replacement(DRAWABLE_HASH_SIZE, nullptr);
 
 	// need to reset the in game UI to clear drawables before they are destroyed
-	TheInGameUI->reset();
+	if (TheInGameUI) TheInGameUI->reset();
+	else if (!m_headless) throw ERROR_BAD_ARG;
 
 	// destroy all Drawables
 	for( draw = m_drawableList; draw; draw = nextDraw )
@@ -454,12 +511,11 @@ void GameClient::reset( void )
 		destroyDrawable( draw );
 	}
 	m_drawableList = NULL;
+	m_drawableVector.swap(replacement);
+	m_lastDrawableFrame = ~UnsignedInt{0};
 
-	TheDisplay->reset();
-	TheTerrainVisual->reset();
-	TheRayEffects->reset();
-	TheVideoPlayer->reset();
-	TheEva->reset();
+	if (!m_headless) { TheDisplay->reset(); TheTerrainVisual->reset(); TheVideoPlayer->reset(); TheEva->reset(); }
+	if (TheRayEffects) TheRayEffects->reset();
 	if (TheSnowManager)
 		TheSnowManager->reset();
 
@@ -486,7 +542,10 @@ void GameClient::registerDrawable( Drawable *draw )
 {
 
 	// assign this drawable a unique ID, this will add it to the fast lookup table too
-	draw->setID( allocDrawableID() );
+	if (!draw || TheGameClient != this || draw->getID() != INVALID_DRAWABLE_ID || m_nextDrawableID == INVALID_DRAWABLE_ID) throw ERROR_BAD_ARG;
+	prepareDrawableID(draw, m_nextDrawableID);
+	draw->setID(m_nextDrawableID);
+	m_nextDrawableID = static_cast<DrawableID>(static_cast<UnsignedInt>(m_nextDrawableID) + 1);
 
 	// add the drawable to the master list
 	draw->prependToList( &m_drawableList );
@@ -498,8 +557,87 @@ void GameClient::registerDrawable( Drawable *draw )
  */
 DECLARE_PERF_TIMER(GameClient_update)
 DECLARE_PERF_TIMER(GameClient_draw)
+void GameClient::updateDrawableState(Bool freezeTime, Int localPlayerIndex)
+{
+	// hack to let client spin fast in network games but still do effects at the same pace. -MDC
+	freezeTime = freezeTime || (m_lastDrawableFrame == m_frame);
+	m_lastDrawableFrame = m_frame;
+
+	if (!freezeTime)
+	{
+#if defined(_DEBUG) || defined(_INTERNAL)
+		if (TheGlobalData->m_shroudOn)
+#else
+		if (true)
+#endif
+		{
+			//localPlayerIndex=TheGhostObjectManager->getLocalPlayerIndex();	//always use the first local player set since normally can't change.  Doesn't work with debug "CTRL_SHIFT_SPACE"
+#ifdef DEBUG_FOG_MEMORY
+			//Find indices of all active players
+			Int numPlayers=ThePlayerList->getPlayerCount();
+			Int numNonLocalPlayers=0;
+			Int nonLocalPlayerIndices[MAX_PLAYER_COUNT];
+			for (Int i=0; i<numPlayers; i++)
+			{	Player *player=ThePlayerList->getNthPlayer(i);
+				//if (player->getPlayerType == PLAYER_HUMAN)
+				if (player->getPlayerIndex() != localPlayerIndex)
+					nonLocalPlayerIndices[numNonLocalPlayers++]=player->getPlayerIndex();
+			}
+			//update ghostObjects which don't have drawables or objects.
+			TheGhostObjectManager->updateOrphanedObjects(nonLocalPlayerIndices,numNonLocalPlayers);
+#else
+			TheGhostObjectManager->updateOrphanedObjects(NULL,0);
+#endif
+		}
+
+
+		// call the update for all client drawables
+		Drawable* draw = firstDrawable();
+		while (draw)
+		{	// update() could free the Drawable, so go ahead and grab 'next'
+			Drawable* next = draw->getNextDrawable();
+#if defined(_DEBUG) || defined(_INTERNAL)
+			if (TheGlobalData->m_shroudOn)
+#else
+			if (true)
+#endif
+			{	//immobile objects need to take snapshots whenever they become fogged
+				//so need to refresh their status.  We can't rely on external calls
+				//to getShroudStatus() because they are only made for visible on-screen
+				//objects.
+				Object *object=draw->getObject();
+				if (object)
+				{
+	#ifdef DEBUG_FOG_MEMORY
+					Int *playerIndex=nonLocalPlayerIndices;
+					for (i=0; i<numNonLocalPlayers; i++, playerIndex++)
+						object->getShroudedStatus(*playerIndex);
+	#endif
+					ObjectShroudStatus ss=object->getShroudedStatus(localPlayerIndex);
+					if (ss >= OBJECTSHROUD_FOGGED && draw->getShroudClearFrame()!=0) {
+						UnsignedInt limit = 2*LOGICFRAMES_PER_SECOND;
+						if (object->isEffectivelyDead()) {
+							// extend the time, so we can see the dead plane blow up & crash.
+							limit += 3*LOGICFRAMES_PER_SECOND;
+						}
+						if (TheGameLogic->getFrame() < limit + draw->getShroudClearFrame()) {
+							// It's been less than 2 seconds since we could see them clear, so keep showing them.
+							ss = OBJECTSHROUD_CLEAR;
+						}
+					}
+					draw->setFullyObscuredByShroud(ss >= OBJECTSHROUD_FOGGED);
+				}
+			}
+			draw->updateDrawable();
+			draw = next;
+		}
+	}
+
+}
+
 void GameClient::update( void )
 {
+	if (m_headless) { updateHeadless(); return; }
 	USE_PERF_TIMER(GameClient_update)
 	// create the FRAME_TICK message
 	GameMessage *frameMsg = TheMessageStream->appendMessage( GameMessage::MSG_FRAME_TICK );
@@ -636,80 +774,7 @@ void GameClient::update( void )
 	freezeTime = freezeTime || TheGameLogic->isGamePaused();
 	Int localPlayerIndex = ThePlayerList ? ThePlayerList->getLocalPlayer()->getPlayerIndex() : 0;
 
-	// hack to let client spin fast in network games but still do effects at the same pace. -MDC
-	static UnsignedInt lastFrame = ~0;
-	freezeTime = freezeTime || (lastFrame == m_frame);
-	lastFrame = m_frame;
-
-	if (!freezeTime)
-	{
-#if defined(_DEBUG) || defined(_INTERNAL)
-		if (TheGlobalData->m_shroudOn)
-#else
-		if (true)
-#endif
-		{	
-			//localPlayerIndex=TheGhostObjectManager->getLocalPlayerIndex();	//always use the first local player set since normally can't change.  Doesn't work with debug "CTRL_SHIFT_SPACE"
-#ifdef DEBUG_FOG_MEMORY
-			//Find indices of all active players
-			Int numPlayers=ThePlayerList->getPlayerCount();
-			Int numNonLocalPlayers=0;
-			Int nonLocalPlayerIndices[MAX_PLAYER_COUNT];
-			for (Int i=0; i<numPlayers; i++)
-			{	Player *player=ThePlayerList->getNthPlayer(i);
-				//if (player->getPlayerType == PLAYER_HUMAN)
-				if (player->getPlayerIndex() != localPlayerIndex)
-					nonLocalPlayerIndices[numNonLocalPlayers++]=player->getPlayerIndex();
-			}
-			//update ghostObjects which don't have drawables or objects.
-			TheGhostObjectManager->updateOrphanedObjects(nonLocalPlayerIndices,numNonLocalPlayers);
-#else
-			TheGhostObjectManager->updateOrphanedObjects(NULL,0);
-#endif
-		}
-
-
-		// call the update for all client drawables
-		Drawable* draw = firstDrawable();
-		while (draw)
-		{	// update() could free the Drawable, so go ahead and grab 'next'
-			Drawable* next = draw->getNextDrawable();
-#if defined(_DEBUG) || defined(_INTERNAL)
-			if (TheGlobalData->m_shroudOn)
-#else
-			if (true)
-#endif
-			{	//immobile objects need to take snapshots whenever they become fogged
-				//so need to refresh their status.  We can't rely on external calls
-				//to getShroudStatus() because they are only made for visible on-screen
-				//objects.
-				Object *object=draw->getObject();
-				if (object)
-				{
-	#ifdef DEBUG_FOG_MEMORY
-					Int *playerIndex=nonLocalPlayerIndices;
-					for (i=0; i<numNonLocalPlayers; i++, playerIndex++)
-						object->getShroudedStatus(*playerIndex);
-	#endif
-					ObjectShroudStatus ss=object->getShroudedStatus(localPlayerIndex);
-					if (ss >= OBJECTSHROUD_FOGGED && draw->getShroudClearFrame()!=0) {
-						UnsignedInt limit = 2*LOGICFRAMES_PER_SECOND;
-						if (object->isEffectivelyDead()) {
-							// extend the time, so we can see the dead plane blow up & crash.
-							limit += 3*LOGICFRAMES_PER_SECOND;
-						}
-						if (TheGameLogic->getFrame() < limit + draw->getShroudClearFrame()) {
-							// It's been less than 2 seconds since we could see them clear, so keep showing them.
-							ss = OBJECTSHROUD_CLEAR;
-						}
-					}
-					draw->setFullyObscuredByShroud(ss >= OBJECTSHROUD_FOGGED);
-				}
-			}
-			draw->updateDrawable();
-			draw = next;
-		}
-	}
+	updateDrawableState(freezeTime, localPlayerIndex);
 
 #if defined(_INTERNAL) || defined(_DEBUG)
 	// need to draw the first frame, then don't draw again until TheGlobalData->m_noDraw
@@ -812,7 +877,8 @@ void GameClient::destroyDrawable( Drawable *draw )
 {
 
 	// remove any notion of the Drawable in the in-game user interface
-	TheInGameUI->disregardDrawable( draw );
+	if (TheInGameUI) TheInGameUI->disregardDrawable( draw );
+	else if (!m_headless) throw ERROR_BAD_ARG;
 
 	// remove from the master list
 	draw->removeFromList(&m_drawableList);
@@ -852,8 +918,7 @@ void GameClient::addDrawableToLookupTable(Drawable *draw )
 	// add to lookup
 //	m_drawableHash[ draw->getID() ] = draw;
 	DrawableID newID = draw->getID();
-	while( newID >= m_drawableVector.size() ) // Fail case is hella rare, so faster to double up on size() call
-		m_drawableVector.resize(m_drawableVector.size() * 2, NULL);
+	prepareDrawableID(draw, newID);
 
 	m_drawableVector[ newID ] = draw;
 
@@ -871,7 +936,8 @@ void GameClient::removeDrawableFromLookupTable( Drawable *draw )
 
 	// remove from table
 //	m_drawableHash.erase( draw->getID() );
-	m_drawableVector[ draw->getID() ] = NULL;
+	const auto id = static_cast<std::size_t>(draw->getID());
+	if (id < m_drawableVector.size() && m_drawableVector[id] == draw) m_drawableVector[id] = NULL;
 
 }  // end removeDrawableFromLookupTable
 
@@ -1020,7 +1086,7 @@ void GameClient::getRayEffectData( Drawable *draw, RayEffectData *effectData )
 void GameClient::removeFromRayEffects( Drawable *draw )
 {
 
-	TheRayEffects->deleteRayEffect( draw );
+	if (TheRayEffects) TheRayEffects->deleteRayEffect( draw );
 
 }  // end removeFromRayEffects
 

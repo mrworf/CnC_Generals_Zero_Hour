@@ -29,6 +29,7 @@
   
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 #include <strings.h>
+#include <memory>
 
 #include "Common/AudioEventInfo.h"
 #include "Common/DynamicAudioEventInfo.h"
@@ -350,6 +351,7 @@ void Drawable::saturateRGB(RGBColor& color, Real factor)
 Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBits ) 
 				: Thing( thingTemplate )
 {
+	if (!TheGameClient || !thingTemplate || !TheGlobalData) throw ERROR_BAD_ARG;
 
 	// assign status bits before anything else can be done
 	m_status = statusBits;
@@ -367,6 +369,11 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	// members of the drawable before this registration happens
 	//
 	TheGameClient->registerDrawable( this );
+	auto rollback = [](Drawable* candidate) {
+		candidate->releaseOwnedState();
+		TheGameClient->cancelDrawableConstruction(candidate);
+	};
+	std::unique_ptr<Drawable, decltype(rollback)> construction(this, rollback);
 
 	Int i;
 
@@ -382,10 +389,13 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	
 	//Added By Sadullah Nader
 	//Fix for the building percent
+	if (!TheGameClient->isHeadless()) {
+	if (!TheDisplayStringManager || !TheFontLibrary || !TheInGameUI || !TheGlobalLanguageData) throw ERROR_BAD_ARG;
 	m_constructDisplayString = TheDisplayStringManager->newDisplayString();
 	m_constructDisplayString->setFont(TheFontLibrary->getFont(TheInGameUI->getDrawableCaptionFontName(),
 																TheGlobalLanguageData->adjustFontSize(TheInGameUI->getDrawableCaptionPointSize()),
 																TheInGameUI->isDrawableCaptionBold() ));
+	}
 
 	m_ambientSound = NULL;
   m_ambientSoundEnabled = true;
@@ -459,7 +469,7 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	Module** m;
 
 	const ModuleInfo& drawMI = thingTemplate->getDrawModuleInfo();
-	m_modules[MODULETYPE_DRAW - FIRST_DRAWABLE_MODULE_TYPE] = MSGNEW("ModulePtrs") Module*[drawMI.getCount()+1];	// pool[]ify
+	m_modules[MODULETYPE_DRAW - FIRST_DRAWABLE_MODULE_TYPE] = MSGNEW("ModulePtrs") Module*[drawMI.getCount()+1]{};
 	m = m_modules[MODULETYPE_DRAW - FIRST_DRAWABLE_MODULE_TYPE];
 	for (modIdx = 0; modIdx < drawMI.getCount(); ++modIdx)
 	{
@@ -475,7 +485,7 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	if (cuMI.getCount())
 	{
 		// since most things don't have CU modules, we allow this to be null!
-		m_modules[MODULETYPE_CLIENT_UPDATE - FIRST_DRAWABLE_MODULE_TYPE] = MSGNEW("ModulePtrs") Module*[cuMI.getCount()+1];	// pool[]ify
+		m_modules[MODULETYPE_CLIENT_UPDATE - FIRST_DRAWABLE_MODULE_TYPE] = MSGNEW("ModulePtrs") Module*[cuMI.getCount()+1]{};
 		m = m_modules[MODULETYPE_CLIENT_UPDATE - FIRST_DRAWABLE_MODULE_TYPE];
 		for (modIdx = 0; modIdx < cuMI.getCount(); ++modIdx)
 		{
@@ -508,7 +518,7 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	m_selectionFlashEnvelope = NULL;	// lazily allocate!
 	m_colorTintEnvelope = NULL;				// lazily allocate!
 
-	initStaticImages(); 
+	if (!TheGameClient->isHeadless()) initStaticImages();
 
   // If we are inside GameLogic::startNewGame(), then starting the ambient sound 
   // will be taken care of by Drawable::onLevelStart(). It's important that we 
@@ -527,11 +537,17 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
   	startAmbientSound();
   }
 
+	construction.release();
 }  // end Drawable
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 Drawable::~Drawable()
+{
+	releaseOwnedState();
+}
+
+void Drawable::releaseOwnedState()
 {
 	Int i;
 
@@ -4125,6 +4141,8 @@ const GeometryInfo& Drawable::getDrawableGeometryInfo() const
 // ------------------------------------------------------------------------------------------------
 void Drawable::setID( DrawableID id )
 {
+	if (!TheGameClient) throw ERROR_BAD_ARG;
+	TheGameClient->prepareDrawableID(this, id);
 
 	// if id hasn't changed do nothing
 	if( m_id == id )

@@ -2838,3 +2838,31 @@ replace that state with an empty success implementation. Source references:
 `Common/GameEngine.cpp` (startup factory order), `GameClient/GameClient.h` (device
 factories and logical drawable state). These are current integration tasks, not
 startup or world acceptance.
+
+### Actual headless client and Drawable ownership checkpoint
+
+`NativeHeadlessGameClient` selects an explicit absent-physical-output mode of
+the original `GameClient`; physical device factories reject instead of providing
+fake devices. Actual source Drawable, RayEffectSystem, list/ID lookup and the
+original drawable update loop remain. Whole-client update rejects until original
+simulation owners exist. This is not full startup or interactive acceptance.
+
+Drawable previously published itself before initializing identity/audio fields,
+and fallible caption/module acquisition could leave partially registered state.
+Acquired pointer fields now initialize before publication, module pointer arrays
+are zero-terminated throughout construction, and a construction guard retires
+acquired state under the legitimate parent before withdrawing lookup/list identity.
+ID preparation rejects collisions before removing the old mapping; lookup compares
+unsigned IDs without signed narrowing. Reset prepares replacement backing before
+destroying accepted drawables, leaving their lookup available during cleanup.
+
+The original repeated-frame suppression was function-static, so replacing a client
+at the previous client's final frame could suppress its first update. The actual
+source fade regression exercises that sequence; suppression is now owner-local.
+`tests/original/native_client.cpp` covers actual empty-template Drawables, rays,
+reset preparation failure/retry and complete discovered allocation prefixes plus
+exact terminals across repeated client lifetimes. Nonempty module callbacks,
+caption/audio/static-image rollback, object-bound fog/camera/model behavior and
+whole startup/simulation remain pending. Headless team color, texture LOD, scorch
+and terrain decoration output omissions do not validate their interactive behavior.
+See `evidence/qa/N2-native-client-checkpoint.md`.

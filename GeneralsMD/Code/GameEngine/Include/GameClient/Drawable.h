@@ -642,8 +642,8 @@ protected:
 private:
 
 	// note, these are lazily allocated!
-	TintEnvelope*		m_selectionFlashEnvelope;	///< used for selection flash, works WITH m_colorTintEnvelope
-	TintEnvelope*		m_colorTintEnvelope;			///< house color flashing, etc... works WITH m_selectionFlashEnvelope
+	TintEnvelope*		m_selectionFlashEnvelope = nullptr;	///< used for selection flash, works WITH m_colorTintEnvelope
+	TintEnvelope*		m_colorTintEnvelope = nullptr;			///< house color flashing, etc... works WITH m_selectionFlashEnvelope
 																//   this used to use m_ambientLight... but this replaces it
 																//   int most places. It works harder to change the drawable's
 																//   color, by tinting all four scene lights, not just ambient
@@ -660,9 +660,9 @@ private:
 	Real m_decalOpacityFadeRate;
 	Real m_decalOpacity;
 
-	Object *m_object;						///< object (if any) that this drawable represents
+	Object *m_object = nullptr;						///< object (if any) that this drawable represents
 		
-	DrawableID m_id;						///< this drawable's unique ID
+	DrawableID m_id = INVALID_DRAWABLE_ID;						///< this drawable's unique ID
 	Drawable *m_nextDrawable; 
 	Drawable *m_prevDrawable;		///< list links
 
@@ -684,11 +684,11 @@ private:
 
 	UnsignedInt		m_shroudClearFrame;						///< Last frame the local player saw this drawable "OBJECTSHROUD_CLEAR"
 
-	DrawableLocoInfo*	m_locoInfo;	// lazily allocated
+	DrawableLocoInfo*	m_locoInfo = nullptr;	// lazily allocated
 
-	DynamicAudioEventRTS*	m_ambientSound;		///< sound module for ambient sound (lazily allocated)
+	DynamicAudioEventRTS*	m_ambientSound = nullptr;		///< sound module for ambient sound (lazily allocated)
 
-	Module** m_modules[NUM_DRAWABLE_MODULE_TYPES];
+	Module** m_modules[NUM_DRAWABLE_MODULE_TYPES]{};
 
 	StealthLookType m_stealthLook;
 
@@ -702,12 +702,12 @@ private:
 
 	ModelConditionFlags	m_conditionState;				///< The Drawables current behavior state
 	Real								m_lastConstructDisplayed;						///< last construct percent used to make the string
-	DisplayString*			m_constructDisplayString;  ///< string to display construction % complete
-	DisplayString*			m_captionDisplayString;		///< string to display caption
-	DisplayString*			m_groupNumber;						///< string to display the group number of this drawable
+	DisplayString*			m_constructDisplayString = nullptr;  ///< string to display construction % complete
+	DisplayString*			m_captionDisplayString = nullptr;		///< string to display caption
+	DisplayString*			m_groupNumber = nullptr;						///< string to display the group number of this drawable
 
 	UnsignedInt					m_expirationDate;		///< if nonzero, Drawable should destroy itself at this frame
-	DrawableIconInfo*		m_iconInfo;					///< lazily allocated!
+	DrawableIconInfo*		m_iconInfo = nullptr;					///< lazily allocated!
 
 	Real m_secondMaterialPassOpacity;			///< drawable gets rendered again in hardware with an extra material layer
 	// --------- BYTE-SIZED THINGS GO HERE
@@ -743,6 +743,7 @@ public:
 private:
 	// "icon" drawing methods **************
 	void drawConstructPercent( const IRegion2D *healthBarRegion );  ///< display % construction complete
+	void releaseOwnedState();
 	void drawCaption( const IRegion2D *healthBarRegion );						///< draw caption
 	void drawAmmo( const IRegion2D *healthBarRegion );							///< draw icons
 	void drawContained( const IRegion2D *healthBarRegion );					///< draw icons

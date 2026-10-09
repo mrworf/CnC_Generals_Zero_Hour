@@ -90,7 +90,10 @@ class GameClient : public SubsystemInterface,
 
 public:
 
-	GameClient();
+	explicit GameClient(Bool headless = FALSE);
+	Bool isHeadless() const noexcept { return m_headless; }
+	void prepareDrawableID(Drawable*, DrawableID);
+	void cancelDrawableConstruction(Drawable*) noexcept;
 	virtual ~GameClient();
 
 	// subsystem methods
@@ -157,6 +160,11 @@ public:
 
 
 protected:
+	void updateDrawableState(Bool freezeTime, Int localPlayerIndex);
+	void initHeadless();
+	void updateHeadless();
+	Bool m_headless;
+	UnsignedInt m_lastDrawableFrame = ~UnsignedInt{0};
 
 	NativeServiceOwners<32> m_serviceOwners;
 
@@ -254,8 +262,8 @@ inline Drawable* GameClient::findDrawableByID( const DrawableID id )
 //
 //	return (*it).second;
 
-	if( (Int)id < m_drawableVector.size() )
-		return m_drawableVector[(Int)id];
+	if( static_cast<std::size_t>(id) < m_drawableVector.size() )
+		return m_drawableVector[static_cast<std::size_t>(id)];
 
 	return NULL;
 }

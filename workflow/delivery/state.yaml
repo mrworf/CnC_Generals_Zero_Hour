@@ -26,8 +26,8 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 native LOD recovery and animation closure: all configured builds pass all3; focused10 PASS7.77s/33.17s/20.36s and related110 PASS17.84s/74.94s/57.64s. Recommendation allocation/storage failure/retry manifests and exact terminals pass complete repeated owners. Actual animation constructor terminal8 passes all3 and is registered. Root/animation links now succeed all3; root probe never executed. Separate default GUI lexicon still requires205 callbacks all3. Continue concrete native root/client factories and actual original startup/world/scenario. Full242 not run; N2/slice03 incomplete.",
-  "transaction_parent": "900b561dbd50d5c44fdd905f6fc03f04352547da",
+  "resume_point": "N2 plan01/slice03 native headless-client/Drawable ownership checkpoint: all configured builds and related114 PASS all3 in21.58s/89.73s/66.51s. Actual empty-template Drawable/ray/reset/failure-retry and source frame replacement regression covered. Native adapter separated from exact retained-original inventory. Continue concrete GameEngine startup, nonempty source modules/callbacks and original world/compiler-matching scenario. Full246 not run; N2/slice03 incomplete.",
+  "transaction_parent": "0a44f4be7af018fc90ca88d4316b2ad0be4a248b",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -36,28 +36,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-lod-checkpoint.md",
+  "evidence": "evidence/qa/N2-native-client-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Implement concrete native root/client factories preserving original GameLogic, script/module and logical drawable/map/frame state; execute actual original startup/world/compiler-matching scenario. Explicit headless GUI omission must not supply fake success or gameplay. Nonnull presentation/native quality evidence remains pending.",
+  "next": "Integrate concrete native GameEngine startup with actual simulation owners and nonempty modules/callbacks; execute original world/compiler-matching scenario. Headless ownership is not full startup acceptance; nonnull physical output stays pending.",
   "implementation_checkpoint": {
-    "label": "native-original-lod-recovery-animation",
-    "reason": "Actual recommendation fault/retry coverage and animation constructor execution all3; root closure links, but native factories/startup remain pending",
-    "prior_commit": "900b561d",
-    "canonical_source_sha256": "7eb1a193c743e204d74b9a047fff5bf67de6473b325d4fcd56666f67f3ac8dee",
-    "toolchain_inclusive_sha256": "ec28587e730a433da94aff51a9a98930a4b6fbb1d52745b70d2ba6b31905b7a2",
-    "configured_suite_tests": 242,
-    "related_suite_tests_passed": 110,
+    "label": "native-original-headless-client-ownership",
+    "reason": "Actual headless client/Drawable ownership and source frame regression pass all3; full startup/modules remain pending",
+    "prior_commit": "0a44f4be",
+    "canonical_source_sha256": "8aa5b1a2c8ce0745ad82c2ffd728e63ea799d05ce10ac9311f0d93cdbed809c5",
+    "toolchain_inclusive_sha256": "6c49e5e9f661881d588d0830454d438153fce1eab6026fb70d9b270d91b80d68",
+    "configured_suite_tests": 246,
+    "related_suite_tests_passed": 114,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; focused10 and related110 PASS all3 on frozen source",
+    "full_current_matrix": "not run; related114 PASS all3 on frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-lod-checkpoint.md"
+    "evidence": "evidence/qa/N2-native-client-checkpoint.md"
   }
 }
