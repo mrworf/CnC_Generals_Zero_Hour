@@ -1751,3 +1751,53 @@ packed flags pass. Exact evidence/current identities are appended to
 N2/slice03 remains incomplete: continue actual full world/TerrainLogic and
 objects/dictionary/sides/triggers/waypoint/ghost/partition integration plus native
 root. Texture/lighting and audiovisual acceptance are not inferred from metadata.
+
+Continuation from669d65f4 (clean worktree): audit the coupled world publication
+before connecting NativeTerrainLogic. Source objects are appended in file order;
+WorldInfo writes both the world Dict and weather; SidesList owns build lists,
+teams and scripts and validates them after parsing; triggers own a static list
+AND next-ID cursor. All must join a whole-world candidate before replacing an
+accepted map. Original side/script parsing and actual waypoint height-provider
+order remain required; do not copy archived parsers or replace them with mocks.
+
+First coherent ownership prerequisite is the actual PolygonTrigger lifecycle,
+not one assert fix: stage all four chunk versions, list and ID cursor together;
+guard every constructor/record/point acquisition; retain accepted identity on
+malformed or allocation failure; consume physical point records before growing
+backing. Expose a game-owned nonallocating owner exchange so the later combined
+world transaction can stage and retire this exact original owner. Preserve file
+order, version defaults, water/river/layer fields, discarded short polygons and
+the original v1 water rectangle/ID policy. No gameplay oracle is inferred from
+common terrain stubs. Audit edit/query/snapshot paths for the same capacity and
+overflow hazards; preserve defined source geometry and serialized field order.
+
+Own PolygonTrigger header/source, new actual-source fixture and CTest wiring,
+this plan, source findings, QA and delivery state. Exercise all versions and
+writer round trips, real nonempty polygons, borrowed publication exchange,
+point growth/insert/remove, truncations/hostile counts/IDs, late failures,
+constructor/growth and full parse allocation manifests with every failure/retry
+pair and exact terminal. Run GCC plus both sanitizers with all leak checks, then
+affected map/terrain/chunk/core/source suites on frozen source. This support
+checkpoint cannot complete slice03/N2: sides/scripts/object/world-weather and
+full TerrainLogic/root integration still follow in this same governing plan.
+
+Snapshot audit refinement before freezing: internal array capacity is not a file
+format limit (the old parser reserved numPoints+1). Preserve serialized variable
+point counts without depending on the new geometric growth strategy. Read each
+physical snapshot point before staging it; after all fields succeed, acquire any
+larger backing and publish it atomically. A forged large count with a short file
+must fail after actual reads, not eagerly allocate from the count. Validate
+growth/shrink/empty loads and complete snapshot failure/retry manifests too.
+
+Final actual-trigger cohort: all configured builds, focused5 and affected
+related77 PASS all3 on canonical601/toolchain-inclusive608 frozen source.
+Version1/2/3/4 small/large allocation manifests15/25,14/24,14/24,20/30 and
+snapshot6 retain every failure/distinct-candidate retry and exact terminal;
+three complete lifetimes retire original pools/publications exactly. Current
+evidence: `evidence/qa/N2-original-world-checkpoint.md`. Full263 not run.
+Commit checkpoint: `delivery: integrate transactional original polygon worlds`.
+Continue this same slice with the coupled actual SidesList/BuildListInfo/
+TeamsInfoRec and ScriptList/ScriptGroup/script-condition/action ownership paths,
+then the enclosing object/Dict/weather/namespace/world transaction and actual
+waypoint/render-ground-provider ordering. Durable source findings specify those
+dependencies; do not infer startup or gameplay acceptance from this checkpoint.

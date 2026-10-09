@@ -26,8 +26,8 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 complete height/blend topology integration: all configured builds, focused6 and related59 PASS all3. All8 blend versions, authored/derived cliffs, v1 completion/v7 stride, full metadata/UV/packed flags and source index repair pass. Complete allocation manifests67/201 retain every failure/distinct-candidate retry and exact terminal. Actual full world/TerrainLogic, objects/dictionary/sides/triggers/waypoint/ghost/partition, lighting/textures and native root remain required. Full258 not run; N2/slice03 incomplete.",
-  "transaction_parent": "8740ec65db1b6e1aee0d2219b8f605d04caa105f",
+  "resume_point": "N2 plan01/slice03 actual trigger world owner: configured builds, focused5 and related77 PASS all3. All4 trigger versions preserve source defaults/order/water/river/layer/ID policy, list plus ID-cursor rollback, physical-record growth and snapshots. Version small/large manifests15/25,14/24,14/24,20/30 plus snapshot6 retain every failure/distinct-candidate retry and exact terminal. Full263 not run. Continue coupled side/build/team/script ownership and whole-world object/Dict/weather/namespace transaction; actual waypoint versus render-side ground-provider ordering is documented and still requires root tracing. N2/slice03 incomplete.",
+  "transaction_parent": "669d65f41daba83ee7750f377679660250d76c5b",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -36,28 +36,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-native-terrain-checkpoint.md",
+  "evidence": "evidence/qa/N2-original-world-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Complete actual native world/TerrainLogic integration using accepted height/blend topology, preserving map objects/world dictionary/triggers/sides, walls/bridges and waypoint order, plus original lighting/texture acquisition where required. Integrate shipped ghost/partition semantics and real native GameEngine/root, camera timing, audio readiness, particle/radar owners and compiler-matching original simulation. Topology metadata is not full world or image readiness.",
+  "next": "Complete coupled original SidesList/BuildListInfo/TeamsInfoRec and ScriptList/nested script ownership with strong rollback, then enclose actual objects/world Dict/weather/namespaces and accepted trigger/terrain owners in whole-world publication. Trace client/root render-map preparation before fixing native waypoint ground-height provider order. Complete actual NativeTerrainLogic layers, shipped ghost/partition semantics and native GameEngine/root, camera/audio/particle/radar and compiler-matching original simulation. Neither terrain metadata nor trigger acceptance is whole-world startup/image readiness.",
   "implementation_checkpoint": {
-    "label": "native-original-terrain-blend-topology",
-    "reason": "Complete source height/blend topology and ownership/retry coverage pass focused6 and affected related59 all3. Full world/layers/ghost/camera/audio/lighting/textures/root remain required before native startup",
-    "prior_commit": "8740ec65",
-    "canonical_source_sha256": "5f6b22d3e129989c4ef2c24ce798a844b0bd228d34e96667ebe9d400863183fe",
-    "toolchain_inclusive_sha256": "caf4160ac105db88489fbb6074e97501ca5c9751a7dde0d9ca738c8318952053",
-    "configured_suite_tests": 258,
-    "related_suite_tests_passed": 59,
+    "label": "original-transactional-trigger-worlds",
+    "reason": "Actual original trigger parser/owner across all4 versions, physical growth, ID cursor and snapshot rollback pass focused5 and affected related77 all3. Coupled sides/scripts/whole-world/layers/ghost/camera/audio/lighting/textures/root remain required before native startup",
+    "prior_commit": "669d65f4",
+    "canonical_source_sha256": "501c158872a3f11723a47fd178b6dbb046e0a6b77ed9d7f0529f556e309a3b1e",
+    "toolchain_inclusive_sha256": "288968266db177084c6481c4ef83982c3a282c4cc0e5c839bbfaca4a4445dca5",
+    "configured_suite_tests": 263,
+    "related_suite_tests_passed": 77,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; focused6 and affected related59 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; focused5 and affected related77 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-native-terrain-checkpoint.md"
+    "evidence": "evidence/qa/N2-original-world-checkpoint.md"
   }
 }

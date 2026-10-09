@@ -35,10 +35,26 @@
 #include "Common/Xfer.h"
 #include "GameLogic/PolygonTrigger.h"
 #include "GameLogic/TerrainLogic.h"
+#include <cmath>
+#include <limits>
+#include <memory>
+#include <utility>
+#include <vector>
 
 /* ********* PolygonTrigger class ****************************/
 PolygonTrigger *PolygonTrigger::ThePolygonTriggerListPtr = NULL;
 Int PolygonTrigger::s_currentID = 1;
+
+PolygonTrigger::WorldState::~WorldState() noexcept
+{
+	if (m_head) m_head->deleteInstance();
+}
+
+void PolygonTrigger::exchangeWorldState(WorldState& state) noexcept
+{
+	std::swap(ThePolygonTriggerListPtr, state.m_head);
+	std::swap(s_currentID, state.m_nextID);
+}
 /**
  PolygonTrigger - Constructor.
 */
@@ -47,6 +63,9 @@ m_nextPolygonTrigger(NULL),
 m_points(NULL),
 m_numPoints(0),
 m_sizePoints(0),
+m_bounds{},
+m_radius(0),
+m_boundsNeedsUpdate(true),
 m_exportWithScripts(false),
 m_isWaterArea(false),
 m_shouldRender(true),
@@ -58,6 +77,7 @@ m_riverStart(0)
 //
 {
 	if (initialAllocation < 2) initialAllocation = 2;
+	if (s_currentID == std::numeric_limits<Int>::max()) throw ERROR_BAD_ARG;
 	m_points = NEW ICoord3D[initialAllocation];		// pool[]ify
 	m_sizePoints = initialAllocation;
 	m_triggerID = s_currentID++;
@@ -99,14 +119,16 @@ void PolygonTrigger::reallocate(void)
 	DEBUG_ASSERTCRASH(m_numPoints <= m_sizePoints, ("Invalid m_numPoints."));
 	if (m_numPoints == m_sizePoints) {
 		// Reallocate.
-		m_sizePoints += m_sizePoints;
-		ICoord3D *newPts = NEW ICoord3D[m_sizePoints];
+		if (m_sizePoints > std::numeric_limits<Int>::max()/2) throw ERROR_OUT_OF_MEMORY;
+		const Int nextSize = m_sizePoints * 2;
+		ICoord3D *newPts = NEW ICoord3D[nextSize];
 		Int i;
 		for (i=0; i<m_numPoints; i++) {
 			newPts[i] = m_points[i];
 		}
 		delete [] m_points;
 		m_points = newPts;
+		m_sizePoints = nextSize;
 	}
 }
 
@@ -135,6 +157,16 @@ PolygonTrigger *PolygonTrigger::getPolygonTriggerByID(Int triggerID)
 */
 Bool PolygonTrigger::ParsePolygonTriggersDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
 {
+	if (!info || info->version < K_TRIGGERS_VERSION_1 || info->version > K_TRIGGERS_VERSION_4)
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	// Original consumers see a legitimate candidate publication while parsing.
+	// No callback/allocation occurs during rollback or ownership exchange.
+	struct Transaction {
+		WorldState previous;
+		Bool keep = false;
+		Transaction() { exchangeWorldState(previous); }
+		~Transaction() noexcept { if (!keep) exchangeWorldState(previous); }
+	} transaction;
 	Int count;
 	Int numPoints;
 	Int triggerID;
@@ -144,11 +176,13 @@ Bool PolygonTrigger::ParsePolygonTriggersDataChunk(DataChunkInput &file, DataChu
 	Int riverStart;
 	AsciiString triggerName;
 	AsciiString layerName;
-	// Remove any existing polygon triggers, if any.
-	PolygonTrigger::deleteTriggers(); // just in case.
 	PolygonTrigger *pPrevTrig = NULL;
 	ICoord3D loc;
 	count = file.readInt(); 
+	const unsigned minimumRecord = 10 + (info->version >= 2 ? 1 : 0) +
+		(info->version >= 3 ? 5 : 0) + (info->version >= 4 ? 2 : 0);
+	if (count < 0 || static_cast<unsigned>(count) > file.getChunkDataSizeLeft()/minimumRecord)
+		throw ERROR_CORRUPT_FILE_FORMAT;
 	while (count>0) {
 		count--;
 		triggerName = file.readAsciiString();
@@ -156,6 +190,7 @@ Bool PolygonTrigger::ParsePolygonTriggersDataChunk(DataChunkInput &file, DataChu
 			layerName = file.readAsciiString();
 		}
 		triggerID = file.readInt();
+		if (triggerID == std::numeric_limits<Int>::max()) throw ERROR_CORRUPT_FILE_FORMAT;
 		isWater = false;
 		if (info->version >= K_TRIGGERS_VERSION_2) {
 			isWater = file.readByte();
@@ -168,7 +203,12 @@ Bool PolygonTrigger::ParsePolygonTriggersDataChunk(DataChunkInput &file, DataChu
 		}
 
 		numPoints = file.readInt(); 
-		PolygonTrigger *pTrig = newInstance(PolygonTrigger)(numPoints+1);	
+		if (numPoints < 0 || static_cast<unsigned>(numPoints) > file.getChunkDataSizeLeft()/12)
+			throw ERROR_CORRUPT_FILE_FORMAT;
+		// Read physical points before growing; an envelope is not physical backing.
+		struct Retire { void operator()(PolygonTrigger* p) const noexcept { if (p) p->deleteInstance(); } };
+		std::unique_ptr<PolygonTrigger, Retire> owner(newInstance(PolygonTrigger)(2));
+		PolygonTrigger *pTrig = owner.get();
 		pTrig->setTriggerName(triggerName);
 		if (info->version >= K_TRIGGERS_VERSION_4) {
 			pTrig->setLayerName(layerName);
@@ -188,9 +228,6 @@ Bool PolygonTrigger::ParsePolygonTriggersDataChunk(DataChunkInput &file, DataChu
 			pTrig->addPoint(loc);
 		}
 		if (numPoints<2) {
-			DEBUG_LOG(("Deleting polygon trigger '%s' with %d points.\n", 
-					pTrig->getTriggerName().str(), numPoints));
-			pTrig->deleteInstance();
 			continue;
 		}
 		if (pPrevTrig) {
@@ -199,11 +236,24 @@ Bool PolygonTrigger::ParsePolygonTriggersDataChunk(DataChunkInput &file, DataChu
 			PolygonTrigger::addPolygonTrigger(pTrig);
 		}
 		pPrevTrig = pTrig;
+		owner.release();
 	}
 	if (info->version == K_TRIGGERS_VERSION_1) 
 	{
 		// before water areas existed, so create a default one.
-		PolygonTrigger *pTrig = newInstance(PolygonTrigger)(4);
+		if (!TheGlobalData || maxTriggerId >= std::numeric_limits<Int>::max()-1)
+			throw ERROR_CORRUPT_FILE_FORMAT;
+		auto extent = [](Real value) -> Int {
+			const Real result = 30*MAP_XY_FACTOR + value;
+			if (!std::isfinite(result) || static_cast<double>(result) < std::numeric_limits<Int>::min() ||
+				static_cast<double>(result) > std::numeric_limits<Int>::max()) throw ERROR_CORRUPT_FILE_FORMAT;
+			return static_cast<Int>(result);
+		};
+		const Int right = extent(TheGlobalData->m_waterExtentX);
+		const Int top = extent(TheGlobalData->m_waterExtentY);
+		struct Retire { void operator()(PolygonTrigger* p) const noexcept { if (p) p->deleteInstance(); } };
+		std::unique_ptr<PolygonTrigger, Retire> owner(newInstance(PolygonTrigger)(4));
+		PolygonTrigger *pTrig = owner.get();
 		pTrig->setWaterArea(true);
 #ifdef _DEBUG
 		pTrig->setTriggerName("AutoAddedWaterAreaTrigger");
@@ -213,9 +263,9 @@ Bool PolygonTrigger::ParsePolygonTriggersDataChunk(DataChunkInput &file, DataChu
 		loc.y = -30*MAP_XY_FACTOR;
 		loc.z = 7;  // The old water position.
 		pTrig->addPoint(loc);
-		loc.x = 30*MAP_XY_FACTOR + TheGlobalData->m_waterExtentX;
+		loc.x = right;
 		pTrig->addPoint(loc);
-		loc.y = 30*MAP_XY_FACTOR + TheGlobalData->m_waterExtentY;
+		loc.y = top;
 		pTrig->addPoint(loc);
 		loc.x = -30*MAP_XY_FACTOR;
 		pTrig->addPoint(loc);
@@ -225,9 +275,11 @@ Bool PolygonTrigger::ParsePolygonTriggersDataChunk(DataChunkInput &file, DataChu
 			PolygonTrigger::addPolygonTrigger(pTrig);
 		}
 		pPrevTrig = pTrig;
+		owner.release();
 	}
 	s_currentID = maxTriggerId+1;
-	DEBUG_ASSERTCRASH(file.atEndOfChunk(), ("Incorrect data file length."));
+	if (!file.atEndOfChunk()) throw ERROR_CORRUPT_FILE_FORMAT;
+	transaction.keep = true;
 	return true;
 }
 
@@ -284,8 +336,9 @@ void PolygonTrigger::updateBounds(void)	const
 		if (m_points[i].y > m_bounds.hi.y) m_bounds.hi.y = m_points[i].y;
 	}
 	m_boundsNeedsUpdate = 0;
-	Real halfWidth = (m_bounds.hi.x - m_bounds.lo.x) / 2.0f;
-	Real halfHeight = (m_bounds.hi.y + m_bounds.lo.y) / 2.0f;
+	// Preserve the source radius formula, including its Y sum, without signed UB.
+	Real halfWidth = (static_cast<double>(m_bounds.hi.x) - m_bounds.lo.x) / 2.0f;
+	Real halfHeight = (static_cast<double>(m_bounds.hi.y) + m_bounds.lo.y) / 2.0f;
 
 	m_radius = sqrt(halfHeight*halfHeight + halfWidth*halfWidth);
 }
@@ -338,7 +391,7 @@ void PolygonTrigger::deleteTriggers(void)
 	PolygonTrigger *pList = ThePolygonTriggerListPtr;	
 	ThePolygonTriggerListPtr = NULL;
 	s_currentID = 1;
-	pList->deleteInstance();
+	if (pList) pList->deleteInstance();
 }
 
 /**
@@ -386,6 +439,7 @@ void PolygonTrigger::insertPoint(const ICoord3D &point, Int ndx)
 {	
 	DEBUG_ASSERTCRASH(ndx>=0 && ndx <= m_numPoints, ("Invalid ndx."));
 	if (ndx<0) return;
+	if (ndx>m_numPoints) return;
 	if (ndx == m_numPoints) {	// we are setting first available unused point
 		addPoint(point);
 		return;
@@ -429,8 +483,8 @@ void PolygonTrigger::getCenterPoint(Coord3D* pOutCoord)	const
 	if (m_boundsNeedsUpdate) {
 		updateBounds();
 	}
-	(*pOutCoord).x = (m_bounds.lo.x + m_bounds.hi.x) / 2.0f;
-	(*pOutCoord).y = (m_bounds.lo.y + m_bounds.hi.y) / 2.0f;
+	(*pOutCoord).x = (static_cast<double>(m_bounds.lo.x) + m_bounds.hi.x) / 2.0f;
+	(*pOutCoord).y = (static_cast<double>(m_bounds.lo.y) + m_bounds.hi.y) / 2.0f;
 
 	(*pOutCoord).z = TheTerrainLogic->getGroundHeight(pOutCoord->x, pOutCoord->y);
 }
@@ -474,10 +528,18 @@ Bool PolygonTrigger::pointInTrigger(ICoord3D &point) const
 		if (pt1.y >= point.y && pt2.y >= point.y) continue;
 		if (pt1.x<point.x && pt2.x < point.x) continue;
 		// Line segment crosses ray from point x->infinity.
-		Int dy = pt2.y-pt1.y;
-		Int dx = pt2.x-pt1.x;
-
-		Real intersectionX = pt1.x + (dx * (point.y-pt1.y)) / ((Real)dy);
+		// Retain exact source integer products/rounding whenever they are defined.
+		const auto dy = static_cast<Int64>(pt2.y)-pt1.y;
+		const auto dx = static_cast<Int64>(pt2.x)-pt1.x;
+		const auto offset = static_cast<Int64>(point.y)-pt1.y;
+		const double product = static_cast<double>(dx)*static_cast<double>(offset);
+		Real intersectionX;
+		if (dy >= std::numeric_limits<Int>::min() && dy <= std::numeric_limits<Int>::max() &&
+			dx >= std::numeric_limits<Int>::min() && dx <= std::numeric_limits<Int>::max() &&
+			offset >= std::numeric_limits<Int>::min() && offset <= std::numeric_limits<Int>::max() &&
+			product >= std::numeric_limits<Int>::min() && product <= std::numeric_limits<Int>::max())
+			intersectionX = pt1.x + (static_cast<Int>(dx)*static_cast<Int>(offset))/static_cast<Real>(dy);
+		else intersectionX = static_cast<Real>(pt1.x + product/static_cast<double>(dy));
 		if (intersectionX >= point.x) {
 			inside = !inside;
 		}
@@ -527,29 +589,55 @@ void PolygonTrigger::xfer( Xfer *xfer )
 	xfer->xferVersion( &version, currentVersion );
 
 	// number of data points
-	xfer->xferInt( &m_numPoints );
+	Int count = m_numPoints;
+	xfer->xferInt( &count );
+	if (count < 0) throw ERROR_CORRUPT_FILE_FORMAT;
+	// Serialized counts are not constrained by an internal allocation strategy.
+	// Grow only after complete physical records; publish after all fields succeed.
+	const Bool loading = xfer->getXferMode() == XFER_LOAD;
+	std::vector<ICoord3D> candidate;
 
 	// xfer all data points
 	ICoord3D *point;
-	for( Int i = 0; i < m_numPoints; ++i )
+	for( Int i = 0; i < count; ++i )
 	{
 
 		// get this point
-		point = &m_points[ i ];
+		ICoord3D decoded{};
+		point = loading ? &decoded : &m_points[ i ];
 
 		// xfer point
 		xfer->xferICoord3D( point );
+		if (loading) candidate.push_back(decoded);
 
 	}  // end for, i
 
 	// bounds
-	xfer->xferIRegion2D( &m_bounds );
+	IRegion2D bounds = m_bounds;
+	xfer->xferIRegion2D( &bounds );
 
 	// radius
-	xfer->xferReal( &m_radius );
+	Real radius = m_radius;
+	xfer->xferReal( &radius );
 
 	// bounds need update
-	xfer->xferBool( &m_boundsNeedsUpdate );
+	Bool needsUpdate = m_boundsNeedsUpdate;
+	xfer->xferBool( &needsUpdate );
+	if (loading) {
+		std::unique_ptr<ICoord3D[]> larger;
+		if (count > m_sizePoints) larger.reset(NEW ICoord3D[count]);
+		ICoord3D* backing = larger ? larger.get() : m_points;
+		for (Int i = 0; i < count; ++i) backing[i] = candidate[i];
+		if (larger) {
+			delete[] m_points;
+			m_points = larger.release();
+			m_sizePoints = count;
+		}
+		m_numPoints = count;
+		m_bounds = bounds;
+		m_radius = radius;
+		m_boundsNeedsUpdate = needsUpdate;
+	}
 
 }  // end xfer
 

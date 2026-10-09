@@ -105,6 +105,21 @@ public:
 	//~PolygonTrigger(void);		///< Note that deleting the head of a list deletes all linked objects in the list.
 
 public:
+	// Owns the complete polygon publication, including future ID allocation.
+	// A detached state's destruction retires only its own original pooled list.
+	class WorldState final
+	{
+		friend class PolygonTrigger;
+		PolygonTrigger* m_head = NULL;
+		Int m_nextID = 1;
+	public:
+		WorldState() = default;
+		~WorldState() noexcept;
+		WorldState(const WorldState&) = delete;
+		WorldState& operator=(const WorldState&) = delete;
+	};
+	static void exchangeWorldState(WorldState& state) noexcept;
+
 	static PolygonTrigger *getFirstPolygonTrigger(void) {return ThePolygonTriggerListPtr;}
 	static PolygonTrigger *getPolygonTriggerByID(Int triggerID);
 	static Bool ParsePolygonTriggersDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData);
@@ -135,7 +150,7 @@ public:
 	Real getRadius(void) const;
 
 public:
-	const ICoord3D *getPoint(Int ndx) const {if (ndx<0) ndx=0; if (ndx>=m_numPoints) ndx=m_numPoints-1; return m_points+ndx;} ///< Get a point.
+	const ICoord3D *getPoint(Int ndx) const {if (!m_numPoints) return NULL; if (ndx<0) ndx=0; if (ndx>=m_numPoints) ndx=m_numPoints-1; return m_points+ndx;} ///< Get a point.
 	Int getNumPoints(void) const {return m_numPoints;}
 	Int getID(void) const {return m_triggerID;}
 	PolygonTrigger *getNext(void) {return m_nextPolygonTrigger;}

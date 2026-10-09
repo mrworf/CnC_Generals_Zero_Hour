@@ -3106,3 +3106,109 @@ and exact terminals, accepted backing identities and repeated whole-owner heap
 retirement under both sanitizer compilers. The actual world objects/dictionary/
 sides/triggers, layer/bridge/wall behavior, lighting/texture acquisition, fog/ghost
 owners and GameEngine/root execution are still separate pending N2/N3 gates.
+
+### Original world publication and trigger lifecycle checkpoint
+
+Source world ownership is not just a height grid. WorldHeightMap's logical
+constructor destroys MapObject and PolygonTrigger publications and empties
+SidesList before reading the replacement. ParseWorldDictDataChunk publishes both
+TheWorldDict and optional writable GlobalData weather. ParseObjectData reads
+position/angle/flags/name/Dict, forces z=0 through object version2, discards z
+outside [-100*MAP_XY_FACTOR,2550*MAP_HEIGHT_SCALE], resolves the actual ThingFactory
+template and appends in file order; typed Dict entries classify waypoints, lights
+and scorch records. Its file.m_currentObject is a parse-order cursor, not owner
+storage. Whole-world replacement must retain these publications, weather and
+namespace admission together through every later failure. Source: device
+WorldHeightMap.cpp::stream constructor/ParseWorldDictDataChunk/ParseObjectsDataChunk/
+ParseObjectData. This is a source finding, not current whole-world acceptance.
+
+The actual PolygonTrigger.cpp parser now owns an atomic candidate for the static
+list AND the next-ID cursor. PolygonTrigger::WorldState stores both and exchanges
+them without allocation or callback; detached destruction retires only its
+original pooled chain, iteratively. This is intended for the later enclosing
+world transaction. A successful trigger chunk is not proof that a later world
+chunk succeeds: the enclosing loader must still stage all original owners.
+
+PolygonTriggers versions1–4 have count:Int32 followed by a length-prefixed ASCII
+name, layer name fromv4, ID:Int32, water byte fromv2, river byte and river-start
+Int32 fromv3, point count:Int32 and xyz:Int32 triples. Keep exact file order and
+source byte-to-bool conversion. Fewer than two points are consumed/discarded but
+their IDs still influence the source maximum. Version1 appends the original
+water rectangle: low x/y=-300, high x=300+waterExtentX, high y=300+waterExtentY,
+z=7. Its source assignment is ID=maxID followed by increment and nextID=maxID+1;
+it can duplicate a retained maximum ID. That historical ID policy is preserved,
+not silently corrected or accepted as a general uniqueness rule. It needs an
+original-bug qualification before changing it. Sources: Common/
+MapReaderWriterInfo.h::K_TRIGGERS_VERSION_1..4;
+GameLogic/Map/PolygonTrigger.cpp::ParsePolygonTriggersDataChunk/
+WritePolygonTriggersDataChunk. Missing v1 water configuration or an unrepresentable
+extent rejects without withdrawing the accepted world.
+
+The prior reader acquired numPoints+1 backing before reading points and did not
+guard its acquired node against a later field/point failure. The native source
+parser reads physical records before geometric backing growth and guards each
+node until list admission. It rejects negative/impossible counts, unknown
+versions, cursor overflow and trailing payload. Bounds, radius and dirty state
+initialize before fallible point allocation; growth publishes capacity only
+after acquisition. Empty point lookup returns null and insertion cannot skip
+indices. Geometry retains the original ray boundary rules and original radius
+Y-sum formula. Signed overflow in extreme coordinate arithmetic uses defined
+wider operations; the original integer-product/Real rounding path is unchanged
+where that source arithmetic is defined. These are ownership/UB corrections,
+not a redesign of valid trigger geometry.
+
+The trigger snapshot is version byte, point count:Int32, xyz triples, IRegion2D,
+radius:Real and bounds-dirty:Bool, in exactly the original order. Internal
+allocation capacity is not serialized input authority: the original parser
+reserved a spare point. Snapshot load stages actual physical records and cached
+fields, acquires larger backing only after all fields succeed, then publishes
+atomically. Save/CRC avoids candidate allocations. Growth/shrink/empty counts,
+every truncated prefix, hostile counts and every acquisition failure/retry pass
+through the actual XferLoad dispatcher and original scalar adapters. No alternate
+Snapshot/gameplay/terrain implementation is supplied by the fixture.
+
+Verified next-batch side/script risks are coupled, not one-assert tasks:
+SidesInfo copy construction delegates to destructive assignment; partially
+acquired raw build lists/scripts can outlive a thrown constructor. BuildListInfo's
+destructor owns its linked tail, so default copying next before guarding or
+detaching can misclassify borrowed source links as ownership. ParseSidesDataChunk
+clears accepted state first, acquires a BuildListInfo before fallible field reads,
+and breaks at MAX_PLAYER_COUNT without consuming excess records. TeamsInfoRec
+uses raw arrays, destructive copy and increment-before-init admission. Preserve
+actual neutral-side/default-team/ally-enemy repair behavior in validateSides;
+do not reject every source-repaired team or substitute an empty team registry.
+Sources: GameLogic/Map/SidesList.cpp::SidesInfo constructors/operator=/init,
+ParseSidesDataChunk, validateSides, TeamsInfoRec constructors/operator=/addTeam;
+SidesList.h::SidesInfo/TeamsInfoRec/BuildListInfo.
+
+Actual ScriptList nested parsing also needs the same candidate owner: Scripts.cpp
+::ParseScriptsDataChunk collects raw lists into stack TScriptListReadInfo and
+publishes static s_readLists only after nested parse; failure/exception lacks
+local candidate retirement. getReadScripts drains that static publication into
+SidesInfo. ParseScriptListDataChunk allocates/publishes before registering and
+parsing child Script/ScriptGroup callbacks. The source final MAX_PLAYER_COUNT
+assert is strict `<` although the nested guard admits up to `MAX_PLAYER_COUNT`;
+use actual capacity, not that contradictory assertion, when validating the real
+array. Complete script/group/condition/action parsing, copy/duplicate paths,
+parent publications and NameKeyTransaction retirement still require audit and
+batched integration. Do not mock scripts or import recovery implementations.
+
+Waypoint ordering is now source-verified more narrowly: GameLogic::startNewGame
+loads Map.ini then calls TheTerrainLogic->loadMap(false). W3DTerrainLogic first
+reads logical metadata/world owners, extracts dimensions/boundaries/minmax, then
+calls TerrainLogic::loadMap. The common function adds waypoint nodes (prepending
+them, with z from its virtual getGroundHeight), parses WaypointsList links, then
+calls TheTerrainVisual->load when not a query. W3DTerrainLogic::getGroundHeight
+uses TheTerrainRenderObject, not its temporary logical height grid. Therefore
+logical metadata arrival is NOT proof that waypoint z already uses the replacement
+render map. Root/client preload and render-map publication still need tracing
+before choosing native provider order. Preserve source duplicate-ID last-match
+selection, link order and bidirectional policy; do not infer height/provider
+parity from a flat fixture. Sources: GameLogic/System/GameLogic.cpp::startNewGame;
+device W3DTerrainLogic.cpp::loadMap/getGroundHeight; GameLogic/Map/TerrainLogic.cpp
+::loadMap/addWaypoint/addWaypointLink/parseWaypointData.
+
+Current actual-trigger support evidence: `evidence/qa/N2-original-world-checkpoint.md`.
+No retail assets, vendor sources or recovery artifacts were used or changed.
+Whole-world/weather/sides/scripts/waypoint/TerrainLogic/ghost/root and compiler-
+matching original simulation remain N2 completion requirements.
