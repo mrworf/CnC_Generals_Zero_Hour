@@ -2866,3 +2866,53 @@ caption/audio/static-image rollback, object-bound fog/camera/model behavior and
 whole startup/simulation remain pending. Headless team color, texture LOD, scorch
 and terrain decoration output omissions do not validate their interactive behavior.
 See `evidence/qa/N2-native-client-checkpoint.md`.
+
+The follow-on nonempty-module audit distinguishes the complete common registry
+from the device draw registry. `ModuleFactory::init` contains205 registration
+calls, five conditional on ALLOW_SURRENDER, one on ALLOW_DEMORALIZE, and a repeated
+WeaponBonusUpgrade entry. The normal common registry therefore has198 distinct
+entries and preserves the original repeat-name replacement. Its three retained
+client-update providers are AnimatedParticleSysBoneClientUpdate, SwayClientUpdate
+and BeaconClientUpdate; headless mode must not shorten this gameplay registry.
+
+`ModuleFactory::newModule` returns nullptr for an absent provider. Original
+Drawable appended that value and continued, creating an interior sentinel which
+could hide later acquired modules from update and destruction. Both draw and CU
+paths now reject absent data/provider before accepting the next array entry.
+LOD-filtered draw modules remain source-filtered, not forcibly instantiated.
+Partial constructor retirement retains the accepted module prefix and parent
+identity. The real Beacon hidden action and parallel selectable path also reached
+unconditional UI deselection: interactive mode retains source UI delegation;
+explicit headless mode invokes actual friend_clearSelected/onUnselected, not an
+invented selection list. Visibility/shadow module propagation is unchanged.
+
+Full startup dependencies require more than these module constructors. Source
+GameEngine startup ends in resetAll/HideControlBar, its reset creates a physical
+blank-window layout, and execute reads tactical camera speed. GameLogic::update
+reads Display movie status before deferred world start and tactical camera freeze
+after ScriptEngine update. Camera timing therefore cannot be replaced by a
+constant false without defining a supported headless source boundary. AudioManager
+loads actual audio definitions and checks a real music event filename; an empty
+event table is not successful readiness. Its common update computes listener
+position from tactical camera and terrain. Radar::newMap binds a HUD window before
+logical map extents; its update retains timed events/terrain refresh. Common
+ParticleSystemManager owns templates, updates and repeated-frame state separately
+from its physical render methods. These are required native factory/startup tasks,
+not acceptance derived from bare owner fixtures. Source references:
+Common/GameEngine.cpp; GameLogic/System/GameLogic.cpp; Common/Audio/GameAudio.cpp;
+Common/System/Radar.cpp; GameClient/System/ParticleSys.cpp.
+
+Critical factory qualification: Win32GameEngine.h selects W3DGameLogic, not the
+common GameLogic directly. W3DGameLogic.h overrides the terrain and ghost factories
+with W3DTerrainLogic/W3DGhostObjectManager. Common TerrainLogic::getGroundHeight
+returns zero and zeros its normal; that base behavior is not shipped height
+sampling. W3DTerrainLogic::loadMap first reads a logical WorldHeightMap, establishes
+dimensions/boundaries and min/max heights, then calls the common waypoint loader.
+Its ground/layer/cliff/extents/line-of-sight methods carry simulation semantics.
+Native startup must preserve those shipped semantics without the old renderer,
+not prove a flat-world fixture against common defaults and call it compatibility.
+Bare common GameLogic constructor/frame fixtures above remain ownership evidence
+only. Sources: GameEngineDevice/Include/Win32Device/Common/Win32GameEngine.h;
+GameEngineDevice/Include/W3DDevice/GameLogic/W3DGameLogic.h;
+GameEngineDevice/Source/W3DDevice/GameLogic/W3DTerrainLogic.cpp;
+GameEngine/Source/GameLogic/Map/TerrainLogic.cpp (getGroundHeight).

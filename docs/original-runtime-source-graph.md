@@ -812,3 +812,27 @@ adapters are separate from the retained-original-provider inventory. Empty sourc
 templates and bare frame-owner fixtures establish neither nonempty gameplay module
 integration nor concrete GameEngine startup/world parity. N2 remains incomplete;
 see `evidence/qa/N2-native-client-checkpoint.md`.
+
+Follow-on integration executes the unshortened actual common ModuleFactory
+registration, including conditional original providers and duplicate-name
+replacement. Real AnimatedParticleSysBoneClientUpdate, BeaconClientUpdate and
+SwayClientUpdate attach to actual source Drawables; no replacement creator or
+mock module is registered. Fixtures explicitly stop sway (breeze/world still
+pending), execute actual Beacon/animated-particle callbacks, and validate logical
+visibility/selection while physical output is absent. Missing module providers
+must reject instead of inserting an interior null sentinel which hides later
+owners. Registry discovery and four round-robin failure/retry shards cover every
+allocation ordinal and independently prove the exact terminal; fixed source
+module pools separately cover each acquired prefix. This still does not establish
+native draw providers, nonempty gameplay actors, camera timing or full GameEngine
+startup. Verified startup/device dependencies are in
+`docs/original-engine-formats.md`, not inferred from filename/link closure.
+
+Factory correction for future integration: common GameLogic's factories are
+real base owners, but are not the shipped complete terrain/ghost providers.
+Win32GameEngine selects W3DGameLogic, whose overrides select W3DTerrainLogic and
+W3DGhostObjectManager. Common ground-height sampling is a zero stub. Preserve
+the shipped logical height/layer/cliff/extents behavior and ghost lifecycle in
+native factories; common constructor/frame or flat-world evidence cannot accept
+those semantics. This source finding qualifies prior base-factory descriptions;
+it does not invalidate their narrow constructor ownership evidence.

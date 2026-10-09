@@ -744,6 +744,7 @@ private:
 	// "icon" drawing methods **************
 	void drawConstructPercent( const IRegion2D *healthBarRegion );  ///< display % construction complete
 	void releaseOwnedState();
+	void deselectForPresentation();
 	void drawCaption( const IRegion2D *healthBarRegion );						///< draw caption
 	void drawAmmo( const IRegion2D *healthBarRegion );							///< draw icons
 	void drawContained( const IRegion2D *healthBarRegion );					///< draw icons

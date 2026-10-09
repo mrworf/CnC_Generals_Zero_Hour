@@ -57,3 +57,52 @@ and compiler-matching simulation remain pending. Physical team-color/texture-LOD
 scorch/terrain-decoration omissions do not establish interactive compatibility.
 No assets, dependencies, or recovery contents were read or modified here.
 N2 and slice03 remain in progress; configured full246 acceptance is not claimed.
+
+## Follow-on: registered nonempty client modules
+
+From38375d10, the unshortened actual common ModuleFactory registers198 distinct
+providers in the executed normal conditional configuration. Source registration
+contains205 calls with conditional entries and a duplicate-name replacement.
+All three actual retained client-update providers attach in source order to real
+Drawables. Source Beacon hidden action and parallel selectable transition retain
+logical selection/visibility/shadows with explicit absent physical UI. Sway is
+explicitly stopped through its real method; breeze/world behavior is not claimed.
+Animated-particle and Beacon callbacks execute with empty draw tables and no
+bound simulation object. This supersedes the empty-template-only limit only for
+these named constructors/actions, not arbitrary gameplay or draw callbacks.
+
+Both module arrays reject missing data/provider instead of accepting an interior
+null sentinel. A generated late unknown entry followed by a real source provider
+rejects, retires its acquired prefix, preserves accepted ID/list/lookup and permits
+corrected retry. Actual pool capacity exhaustion covers each of the three module
+acquisitions and exact terminal3; complete standard allocation discovery covers
+nonempty constructor backing. Full original registry census is1036 operations in
+each executed configuration. Four round-robin shards cover every ordinal with
+its corrected retry and independently prove the exact discovered terminal, over
+three lifetimes. No ordinal/retry pair is omitted to split runtime.
+
+Initial registry checks counted the fixture's live long test-name string at final
+whole-owner baseline; that observation now retires before memory-manager teardown.
+A source Beacon action then exposed UI dereference in shared hidden status.
+Both hidden/selectable source paths were audited and corrected together; original
+interactive delegation remains. The sanitizer failure logs have addresses redacted
+and remain `/tmp/zh-client-modules-{gccsan,clangsan}-focused-final.log`.
+No leak suppression, timeout expansion or weakened coverage was used.
+
+All configured builds pass all3. Focused10/10 passes normal/GCCsan/Clangsan in
+13.80s/56.21s/36.42s. Frozen related136/136, including module-data/template/enum
+checks, passes in33.04s/134.64s/96.61s. Sanitizers execute normal-host with all leak
+checks intact. Logs `/tmp/zh-client-modules-<variant>-visibility-focused.log`,
+`/tmp/zh-client-modules-<variant>-final-build.log` and
+`/tmp/zh-client-modules-<variant>-related.log`. Full252 not run.
+
+Current canonical596 SHA256:
+`88d9cbad253a633973be78fc6192cbc92b506ac57bc10569ede912ae942eca7c`;
+toolchain-inclusive603:
+`f461cda8f7bfc65ca68fed0de4d185bf645f40b487ca34b027ff79d7090185d0`.
+Same cumulative procedure and unchanged specification as above. Source startup
+census qualifies common factory descriptions: shipped W3DGameLogic overrides
+terrain/ghost factories and common terrain height is zero. Native root integration
+must preserve real shipped height/layer and camera/audio dependencies, not accept
+these base-owner fixtures as world parity. Details in original-engine-formats.md.
+Assets, adopted dependencies and recovery remain untouched; N2/slice03 incomplete.

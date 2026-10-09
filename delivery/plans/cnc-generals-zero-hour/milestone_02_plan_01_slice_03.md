@@ -1588,3 +1588,55 @@ commit titled `delivery: verify native headless client ownership`; it is support
 progress, not full slice03 or N2 acceptance. Full246 not run. Continue actual
 native GameEngine startup, nonempty module/callback ownership and matching world/
 simulation before completion; physical output remains a separate later gate.
+
+Continuation from38375d10: close actual registered nonempty module integration
+before wiring startup factories. Audit both draw/CU arrays and all source creator
+return paths together: unknown providers return nullptr, which must reject the
+candidate rather than silently terminating an array with acquired suffix owners.
+Validate null data/provider admission before dereference, retain zero-terminated
+partial backing, and keep actual parent identity through retirement. Exercise
+the complete original ModuleFactory registration (no shortened registry), real
+AnimatedParticleSysBoneClientUpdate and BeaconClientUpdate construction/callback/
+retirement, a late unknown-provider rejection and corrected same-owner retry.
+Discover complete allocation manifests and prove every failure/retry pair plus
+exact terminal; split independent registry sweeps if runtime warrants without
+losing ordinal coverage. Only actual empty draw-module tables are used until a
+native render provider exists; no mock draw module or gameplay replacement.
+Source GameLogic's camera freeze and startup's music readiness are legitimate
+dependencies, not null-device success gates; real camera/audio integration remains
+required before full startup acceptance. Own existing native-client fixture,
+Drawable source checks and directly coupled build/evidence/state. Focused then
+related GCC/both sanitizer validation on frozen source; no asset/library writes.
+
+The nonempty Beacon action reaches shared hidden/selectable deselection, which
+unconditionally called the absent UI owner. Audit both callers and source
+InGameUI::deselectDrawable together. A shared boundary must keep the original
+interactive delegation, clear actual Drawable selected state in explicitly
+headless mode, and reject an unexpectedly absent interactive UI. No invented UI
+list/callback. Retain the normal module visibility/shadow propagation loops;
+verify selected-to-hidden and selected-to-unselectable transitions. Caption,
+camera physics, script presentation and object-bound behavior remain distinct
+pending paths, not silently accepted from this action test.
+
+Native-root factory gate from verified shipped declarations: do not instantiate
+common GameLogic and assume its default terrain/ghost providers match the game.
+Win32GameEngine selects W3DGameLogic, overriding those factories; common ground
+height is a zero stub. Port the original logical height/layer/cliff/extents/
+line-of-sight and ghost-owner semantics outside the renderer, preserving original
+map dimensions/boundaries and waypoint load order. Nonflat generated terrain and
+source-matching samples must gate the actual world fixture. Likewise preserve
+camera timing/freeze state, original audio definition/music readiness and actual
+particle/radar logical owners while omitting only explicit physical output.
+These are locally implementable source-foundation work within slice03, not a
+replacement architecture, fake-provider permission or new milestone packet.
+
+Registered nonempty-module cohort passes all configured builds all3; focused10
+in13.80s/56.21s/36.42s and related136 in33.04s/134.64s/96.61s. Actual complete
+common registry198 and discovered1036-operation failure/retry manifests execute;
+four shards retain every pair and exact terminal. Three actual client module pool
+prefixes and terminal3 retire exactly; hidden/selectable source actions preserve
+logical state without an invented UI. Evidence/current hashes are appended to
+`evidence/qa/N2-native-client-checkpoint.md`. Commit checkpoint title:
+`delivery: integrate original registered client modules`. Native shipped terrain/
+ghost and camera/audio/startup/world gates remain pending; full252 not run.
+N2/slice03 stays incomplete; continue the factory gate above within this plan.

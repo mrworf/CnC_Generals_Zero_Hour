@@ -474,10 +474,14 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 	for (modIdx = 0; modIdx < drawMI.getCount(); ++modIdx)
 	{
 		const ModuleData* newModData = drawMI.getNthData(modIdx);
+		if (!newModData || !TheModuleFactory) throw ERROR_BAD_ARG;
+		if (TheGlobalData->m_useDrawModuleLOD && !TheGameLODManager) throw ERROR_BAD_ARG;
 		if (TheGlobalData->m_useDrawModuleLOD && 
 				newModData->getMinimumRequiredGameLOD() > TheGameLODManager->getStaticLODLevel())
 			continue;
-		*m++ = TheModuleFactory->newModule(this, drawMI.getNthName(modIdx), newModData, MODULETYPE_DRAW);
+		Module* acquired = TheModuleFactory->newModule(this, drawMI.getNthName(modIdx), newModData, MODULETYPE_DRAW);
+		if (!acquired) throw ERROR_BAD_ARG;
+		*m++ = acquired;
 	}
 	*m = NULL;
 
@@ -490,6 +494,7 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 		for (modIdx = 0; modIdx < cuMI.getCount(); ++modIdx)
 		{
 			const ModuleData* newModData = cuMI.getNthData(modIdx);
+			if (!newModData || !TheModuleFactory) throw ERROR_BAD_ARG;
 
 	/// @todo srj -- this is evil, we shouldn't look at the module name directly!
 			if (thingTemplate->isKindOf(KINDOF_SHRUBBERY) && 
@@ -497,7 +502,9 @@ Drawable::Drawable( const ThingTemplate *thingTemplate, DrawableStatus statusBit
 					cuMI.getNthName(modIdx).compareNoCase("SwayClientUpdate") == 0)
 				continue;
 
-			*m++ = TheModuleFactory->newModule(this, cuMI.getNthName(modIdx), newModData, MODULETYPE_CLIENT_UPDATE);
+			Module* acquired = TheModuleFactory->newModule(this, cuMI.getNthName(modIdx), newModData, MODULETYPE_CLIENT_UPDATE);
+			if (!acquired) throw ERROR_BAD_ARG;
+			*m++ = acquired;
 		}
 		*m = NULL;
 	}
@@ -4670,11 +4677,18 @@ void Drawable::removeFromList(Drawable **pListHead)
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
+void Drawable::deselectForPresentation()
+{
+	if (TheInGameUI) TheInGameUI->deselectDrawable(this);
+	else if (TheGameClient && TheGameClient->isHeadless()) friend_clearSelected();
+	else throw ERROR_BAD_ARG;
+}
+
 void Drawable::updateHiddenStatus()
 {
 	Bool hidden = m_hidden || m_hiddenByStealth;
 	if( hidden )
-		TheInGameUI->deselectDrawable( this );
+		deselectForPresentation();
 
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
@@ -4737,7 +4751,7 @@ void Drawable::setSelectable( Bool selectable )
 {
 	// unselct drawable if it is no longer selectable.
 	if( !selectable )
-		TheInGameUI->deselectDrawable( this );
+		deselectForPresentation();
 
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
