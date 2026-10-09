@@ -90,6 +90,7 @@ add_library(original_runtime_common STATIC
   "${ZH_CODE}/GameEngine/Source/Common/DiscreteCircle.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeCalendar.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeClock.cpp"
+  "${ZH_CODE}/GameEngine/Source/Common/System/NativeLODProbe.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeWarningBox.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeSourceStrings.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeMapMetadata.cpp"
@@ -435,6 +436,18 @@ add_executable(original_function_registry_fixture tests/original/function_regist
 add_executable(original_lexicon_fixture tests/original/lexicon.cpp tests/original/AllocationFault.cpp)
 add_executable(original_map_preview_fixture tests/original/map_preview.cpp tests/original/AllocationFault.cpp)
 add_executable(original_diplomacy_fixture tests/original/diplomacy.cpp tests/original/AllocationFault.cpp)
+add_executable(original_lod_fixture tests/original/lod.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_lod_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_include_directories(original_lod_fixture PRIVATE
+  "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
+target_compile_definitions(original_lod_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+target_link_options(original_lod_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS functional negative native fault-init fault-report fault-storage)
+  add_test(NAME original_lod_${family} COMMAND original_lod_fixture "${family}")
+  set_tests_properties(original_lod_${family} PROPERTIES LABELS "original;runtime;lod" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 add_executable(original_native_warning_fixture tests/original/native_warning.cpp tests/original/AllocationFault.cpp)
 target_link_libraries(original_native_warning_fixture PRIVATE original_runtime_common)
 target_include_directories(original_native_warning_fixture PRIVATE

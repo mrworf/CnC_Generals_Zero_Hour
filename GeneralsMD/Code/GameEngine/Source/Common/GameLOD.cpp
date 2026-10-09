@@ -36,9 +36,15 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
 #include "Common/GameLOD.h"
+#include "Common/FileSystem.h"
 #include "GameClient/TerrainVisual.h"
 #include "GameClient/GameClient.h"
 #include "Common/UserPreferences.h"
+#include "Common/NativeUserStorage.h"
+#include <cmath>
+#include <limits>
+#include <type_traits>
+#include <cstdio>
 
 #define DEFINE_PARTICLE_SYSTEM_NAMES
 #include "GameClient/ParticleSys.h"
@@ -50,9 +56,6 @@
 #endif
 
 #define PROFILE_ERROR_LIMIT	0.94f	//fraction of profiled result needed to get a match.  Allows some room for error/fluctuation.
-
-//Hack to get access to a static method on the W3DDevice side. -MW
-extern Bool testMinimumRequirements(ChipsetType *videoChipType, CpuType *cpuType, Int *cpuFreq, Int *numRAM, Real *intBenchIndex, Real *floatBenchIndex, Real *memBenchIndex);
 
 GameLODManager *TheGameLODManager=NULL;
 
@@ -194,6 +197,7 @@ void INI::parseLODPreset( INI* ini )
 	if( TheGameLODManager )
 	{
 		StaticGameLODLevel index = (StaticGameLODLevel)TheGameLODManager->getStaticGameLODIndex(name);
+		if (index == STATIC_GAME_LOD_UNKNOWN) throw INI_INVALID_DATA;
 		if (index != STATIC_GAME_LOD_UNKNOWN)
 		{
 			LODPresetInfo *preset = TheGameLODManager->newLODPreset(index);
@@ -209,8 +213,10 @@ void INI::parseLODPreset( INI* ini )
 	}
 }
 
-GameLODManager::GameLODManager(void)
+GameLODManager::GameLODManager():GameLODManager(nativeLODProbe(),TheNativeUserStorage){}
+GameLODManager::GameLODManager(NativeLODProbe& probe,NativeUserStorage* storage)
 {
+  m_probe=&probe;m_storage=storage;
 	m_currentStaticLOD = STATIC_GAME_LOD_UNKNOWN;
 	m_currentDynamicLOD = DYNAMIC_GAME_LOD_HIGH;
 	m_numParticleGenerations=0;
@@ -221,6 +227,8 @@ GameLODManager::GameLODManager(void)
 	m_cpuPassed=false;
 	m_memPassed=false;
 	m_slowDeathScale=1.0f;
+  m_minDynamicParticlePriority=PARTICLE_PRIORITY_LOWEST;
+  m_minDynamicParticleSkipPriority=PARTICLE_PRIORITY_LOWEST;
 	m_idealDetailLevel = STATIC_GAME_LOD_UNKNOWN;
 	m_videoChipType = DC_MAX;
 	m_cpuType = XX;
@@ -251,67 +259,72 @@ BenchProfile *GameLODManager::newBenchProfile(void)
 		return &m_benchProfiles[m_numBenchProfiles-1];
 	}
 
-	DEBUG_CRASH(( "GameLODManager::newBenchProfile - Too many profiles defined\n"));
-	return NULL;
+  throw INI_INVALID_DATA;
 }
 
 LODPresetInfo *GameLODManager::newLODPreset(StaticGameLODLevel index)
 {
+  if(index<STATIC_GAME_LOD_LOW || index>=STATIC_GAME_LOD_CUSTOM)throw INI_INVALID_DATA;
 	if (m_numLevelPresets[index] < MAX_LOD_PRESETS_PER_LEVEL)
 	{	
 		m_numLevelPresets[index]++;
 		return &m_lodPresets[index][m_numLevelPresets[index]-1];
 	}
 
-	DEBUG_CRASH(( "GameLODManager::newLODPreset - Too many presets defined for '%s'\n", TheGameLODManager->getStaticGameLODLevelName(index)));
-	return NULL;
+  throw INI_INVALID_DATA;
 }
 
-void GameLODManager::init(void)
-{
-	INI ini;
-	//Get Presets for each LOD level.
-	ini.load( AsciiString( "Data\\INI\\GameLOD.ini" ), INI_LOAD_OVERWRITE, NULL );
-
-	//Get presets for each known hardware configuration
-	ini.load( AsciiString( "Data\\INI\\GameLODPresets.ini"), INI_LOAD_OVERWRITE, NULL);
-
-	//Get Presets for custom LOD level by pulling them out of initial globaldata (which should
-	//have all settings already applied).
-	refreshCustomStaticLODLevel();
-
-	//Override with user preferences
-	OptionPreferences optionPref;
-
-	StaticGameLODLevel userSetDetail=(StaticGameLODLevel)optionPref.getStaticGameDetail();
-
-	m_idealDetailLevel=(StaticGameLODLevel)optionPref.getIdealStaticGameDetail();
-
-	//always get this data in case we need it later.
-	testMinimumRequirements(NULL,&m_cpuType,&m_cpuFreq,&m_numRAM,NULL,NULL,NULL);
-
-	if ((Real)(m_numRAM)/(Real)(256*1024*1024) >= PROFILE_ERROR_LIMIT)
-		m_memPassed=TRUE;	//check if they have at least 256 MB
-
-	if (m_idealDetailLevel == STATIC_GAME_LOD_UNKNOWN || TheGlobalData->m_forceBenchmark)
-	{
-		if (m_cpuType == XX || TheGlobalData->m_forceBenchmark)
-		{
-			//need to run the benchmark
-			testMinimumRequirements(NULL,NULL,NULL,NULL,&m_intBenchIndex,&m_floatBenchIndex,&m_memBenchIndex);
-			
-			if (TheGlobalData->m_forceBenchmark)
-			{	//we want to see the numbers.  So dump them to a logfile.
-				FILE *fp=fopen("Benchmark.txt","w");
-				if (fp)
-				{
-					fprintf(fp,"BenchProfile = %s %d %f %f %f", CPUNames[m_cpuType], m_cpuFreq, m_intBenchIndex, m_floatBenchIndex, m_memBenchIndex);
-					fclose(fp);
-				}
-			}
-
-	 		m_compositeBenchIndex = m_intBenchIndex + m_floatBenchIndex;	///@todo: Need to scale these based on our apps usage of int/float/mem ops.
-
+namespace {
+struct LODPublication {
+  GameLODManager* previous=TheGameLODManager;
+  explicit LODPublication(GameLODManager& candidate){TheGameLODManager=&candidate;}
+  ~LODPublication(){TheGameLODManager=previous;}
+};
+NativeLODReportStatus writeLODReport(NativeUserStorage* storage,const NativeLODHardware& hardware,
+    const NativeLODLegacyScores& scores) {
+  if(!storage)return NativeLODReportStatus::Unavailable;
+  char bytes[512];const int size=std::snprintf(bytes,sizeof(bytes),"BenchProfile = %s %d %f %f %f",
+      CPUNames[hardware.cpu],hardware.frequencyMHz,scores.integer,scores.floating,scores.memory);
+  if(size<0 || size>=sizeof(bytes))throw ERROR_BAD_ARG;
+  try {
+    auto output=storage->beginWrite(NativeUserArea::Data,"Benchmark.txt");output->write(bytes,size);output->commit();
+    return NativeLODReportStatus::Published;
+  }catch(const NativeStorageError&){return NativeLODReportStatus::Unavailable;}
+}
+}
+void GameLODManager::loadNativePresetData(){
+  const INIBlockDefinition blocks[]{
+    {"StaticGameLOD",INI::parseStaticGameLODDefinition},
+    {"DynamicGameLOD",INI::parseDynamicGameLODDefinition},
+    {"LODPreset",INI::parseLODPreset},{"BenchProfile",INI::parseBenchProfile},
+    {"ReallyLowMHz",parseReallyLowMHz}};
+  INI ini;ini.loadBlocks("Data\\INI\\GameLOD.ini",INI_LOAD_OVERWRITE,blocks);
+  ini.loadBlocks("Data\\INI\\GameLODPresets.ini",INI_LOAD_OVERWRITE,blocks);
+  refreshCustomStaticLODLevel();validateNativePresetData();
+}
+void GameLODManager::validateNativePresetData() const {
+  if(m_reallyLowMHz<0)throw INI_INVALID_DATA;
+  for(Int level=0;level<STATIC_GAME_LOD_CUSTOM;++level){
+    for(Int index=0;index<m_numLevelPresets[level];++index){const auto& preset=m_lodPresets[level][index];
+      if(preset.m_mhz<=0 || preset.m_memory<=0 || preset.m_videoType==DC_MAX)throw INI_INVALID_DATA;
+    }
+  }
+  for(Int index=0;index<m_numBenchProfiles;++index){const auto& profile=m_benchProfiles[index];
+    if(profile.m_mhz<=0 || !std::isfinite(profile.m_intBenchIndex) || profile.m_intBenchIndex<=0 ||
+       !std::isfinite(profile.m_floatBenchIndex) || profile.m_floatBenchIndex<=0 ||
+       !std::isfinite(profile.m_memBenchIndex) || profile.m_memBenchIndex<=0)throw INI_INVALID_DATA;
+  }
+  for(const auto& profile:m_dynamicGameLODInfo){
+    if(!std::isfinite(profile.m_slowDeathScale) || profile.m_slowDeathScale<0 ||
+       profile.m_minDynamicParticlePriority<PARTICLE_PRIORITY_LOWEST || profile.m_minDynamicParticlePriority>PARTICLE_PRIORITY_HIGHEST ||
+       profile.m_minDynamicParticleSkipPriority<PARTICLE_PRIORITY_LOWEST || profile.m_minDynamicParticleSkipPriority>PARTICLE_PRIORITY_HIGHEST)throw INI_INVALID_DATA;
+  }
+}
+void GameLODManager::calibrateNativeCPU(const NativeLODLegacyScores& scores){
+  if(!std::isfinite(scores.integer) || scores.integer<=0 || !std::isfinite(scores.floating) || scores.floating<=0 ||
+     !std::isfinite(scores.memory) || scores.memory<=0 || !std::isfinite(scores.integer+scores.floating))throw ERROR_BAD_ARG;
+  m_intBenchIndex=scores.integer;m_floatBenchIndex=scores.floating;m_memBenchIndex=scores.memory;
+  m_compositeBenchIndex=m_intBenchIndex+m_floatBenchIndex;m_calibrated=TRUE;
 			StaticGameLODLevel currentLevel=STATIC_GAME_LOD_LOW;
 			BenchProfile *prof=m_benchProfiles;
 			m_cpuType = P3;	//assume lowest spec.
@@ -340,28 +353,57 @@ void GameLODManager::init(void)
 				}
 				prof++;
 			}
-		}	//finding equivalent CPU to unkown cpu.
-	}	//find data needed to determine m_idealDetailLevel
-
-	if (userSetDetail == STATIC_GAME_LOD_CUSTOM)
-	{
-		TheWritableGlobalData->m_textureReductionFactor = optionPref.getTextureReduction();
-		TheWritableGlobalData->m_useShadowVolumes = optionPref.get3DShadowsEnabled();
-		TheWritableGlobalData->m_useShadowDecals = optionPref.get2DShadowsEnabled();
-		TheWritableGlobalData->m_enableBehindBuildingMarkers = optionPref.getBuildingOcclusionEnabled();
-		TheWritableGlobalData->m_maxParticleCount = optionPref.getParticleCap();
-		TheWritableGlobalData->m_enableDynamicLOD = optionPref.getDynamicLODEnabled();
-		TheWritableGlobalData->m_useFpsLimit = optionPref.getFPSLimitEnabled();
-		TheWritableGlobalData->m_useLightMap = optionPref.getLightmapEnabled();
-		TheWritableGlobalData->m_useCloudMap = optionPref.getCloudShadowsEnabled();
-		TheWritableGlobalData->m_showSoftWaterEdge = optionPref.getSmoothWaterEnabled();
-		TheWritableGlobalData->m_useHeatEffects = optionPref.getUseHeatEffects();
-		TheWritableGlobalData->m_useDrawModuleLOD = optionPref.getExtraAnimationsDisabled();
-		TheWritableGlobalData->m_useTreeSway = !TheWritableGlobalData->m_useDrawModuleLOD;	//borrow same setting.
-		TheWritableGlobalData->m_useTrees = optionPref.getTreesEnabled();
-	}
-
-	setStaticLODLevel(userSetDetail);
+  // The source profile equivalence supplies its own measured MHz.
+  m_frequencyKnown=TRUE;
+}
+void GameLODManager::init(void){
+  if(!TheGlobalData || !TheFileSystem || TheGameLODManager!=this || !m_probe)throw ERROR_BAD_ARG;
+  GameLODManager candidate(*m_probe,m_storage);
+  StaticGameLODLevel userSetDetail;
+  std::optional<NativeLODLegacyScores> scores;
+  NativeLODHardware hardware{};
+  struct CustomValues {Int texture,particles;Bool volumes,decals,markers,dynamic,limit,light,cloud,water,heat,drawLOD,trees;} custom{};
+  {
+    LODPublication publication(candidate);
+    candidate.loadNativePresetData();
+    OptionPreferences preferences(*TheGlobalData,m_storage);
+    userSetDetail=static_cast<StaticGameLODLevel>(preferences.getStaticGameDetail());
+    candidate.m_idealDetailLevel=static_cast<StaticGameLODLevel>(preferences.getIdealStaticGameDetail());
+    hardware=m_probe->hardware();
+    if(!hardware.ramBytes || hardware.frequencyMHz<0 || (hardware.frequencyKnown && hardware.frequencyMHz==0) ||
+       (!hardware.frequencyKnown && hardware.frequencyMHz!=0))throw ERROR_BAD_ARG;
+    candidate.m_cpuType=hardware.cpu;candidate.m_cpuFreq=hardware.frequencyMHz;
+    candidate.m_frequencyKnown=hardware.frequencyKnown;candidate.m_numRAM=hardware.ramBytes;
+    candidate.m_memPassed=(Real(candidate.m_numRAM)/Real(256*1024*1024)>=PROFILE_ERROR_LIMIT);
+    if(candidate.m_idealDetailLevel==STATIC_GAME_LOD_UNKNOWN || TheGlobalData->m_forceBenchmark){
+      if(candidate.m_cpuType==XX || TheGlobalData->m_forceBenchmark){
+        scores=m_probe->legacyScores();
+        if(scores)candidate.calibrateNativeCPU(*scores);
+        else if(TheGlobalData->m_forceBenchmark)throw NativeLODCalibrationUnavailable();
+      }
+    }
+    if(userSetDetail==STATIC_GAME_LOD_CUSTOM){
+      custom={preferences.getTextureReduction(),preferences.getParticleCap(),preferences.get3DShadowsEnabled(),
+        preferences.get2DShadowsEnabled(),preferences.getBuildingOcclusionEnabled(),preferences.getDynamicLODEnabled(),
+        preferences.getFPSLimitEnabled(),preferences.getLightmapEnabled(),preferences.getCloudShadowsEnabled(),
+        preferences.getSmoothWaterEnabled(),preferences.getUseHeatEffects(),preferences.getExtraAnimationsDisabled(),
+        preferences.getTreesEnabled()};
+    }
+  }
+  // Optional reporting is the last fallible acquisition before metadata commit.
+  if(TheGlobalData->m_forceBenchmark && scores)candidate.m_reportStatus=writeLODReport(m_storage,hardware,*scores);
+  static_assert(std::is_nothrow_copy_assignable_v<GameLODManager>);
+  *this=candidate;
+  if(userSetDetail==STATIC_GAME_LOD_CUSTOM){
+    auto& data=*TheWritableGlobalData;data.m_textureReductionFactor=custom.texture;data.m_maxParticleCount=custom.particles;
+    data.m_useShadowVolumes=custom.volumes;data.m_useShadowDecals=custom.decals;data.m_enableBehindBuildingMarkers=custom.markers;
+    data.m_enableDynamicLOD=custom.dynamic;data.m_useFpsLimit=custom.limit;data.m_useLightMap=custom.light;
+    data.m_useCloudMap=custom.cloud;data.m_showSoftWaterEdge=custom.water;data.m_useHeatEffects=custom.heat;
+    data.m_useDrawModuleLOD=custom.drawLOD;data.m_useTreeSway=!custom.drawLOD;data.m_useTrees=custom.trees;
+  }
+  // Actual device callbacks retain their source behavior. Nonnull presentation
+  // rollback is not established by candidate metadata or headless fixtures.
+  setStaticLODLevel(userSetDetail);
 }
 
 void GameLODManager::refreshCustomStaticLODLevel(void)
@@ -396,7 +438,6 @@ Int GameLODManager::getStaticGameLODIndex(AsciiString name)
 			return i;
 	}
 
-	DEBUG_CRASH(( "GameLODManager::getGameLODIndex - Invalid LOD name '%s'\n", name.str() ));
 	return STATIC_GAME_LOD_UNKNOWN;
 }
 
@@ -413,6 +454,7 @@ void INI::parseStaticGameLODDefinition( INI* ini )
 	if( TheGameLODManager )
 	{
 		Int index = TheGameLODManager->getStaticGameLODIndex(name);
+    if(index==STATIC_GAME_LOD_UNKNOWN)throw INI_INVALID_DATA;
 		if (index != STATIC_GAME_LOD_UNKNOWN)
 		{
 			StaticGameLODInfo *lodInfo = &(TheGameLODManager->m_staticGameLODInfo[index]);
@@ -439,61 +481,52 @@ void INI::parseStaticGameLODLevel( INI* ini, void * , void *store, const void*)
 
 const char *GameLODManager::getStaticGameLODLevelName(StaticGameLODLevel level)
 {
+  if(level==STATIC_GAME_LOD_UNKNOWN)return "Unknown";
+  if(level<STATIC_GAME_LOD_LOW || level>=STATIC_GAME_LOD_COUNT)throw ERROR_BAD_ARG;
 	return StaticGameLODNames[level];
 }
 
 /**Function which calculates the recommended LOD level for current hardware
 configuration.*/
-StaticGameLODLevel GameLODManager::findStaticLODLevel(void)
-{
-	//Check if we have never done the test on current system
-	if (m_idealDetailLevel == STATIC_GAME_LOD_UNKNOWN)
-	{
-		//search all our presets for matching hardware
-		m_idealDetailLevel = STATIC_GAME_LOD_LOW;
-
-		//get system configuration - only need vide chip type, got rest in ::init().
-		testMinimumRequirements(&m_videoChipType,NULL,NULL,NULL,NULL,NULL,NULL);
-		if (m_videoChipType == DC_UNKNOWN)
-			m_videoChipType = DC_TNT2;	//presume it's at least TNT2 level
-
-		Int numMBRam=m_numRAM/(1024*1024);
-
-		for (Int i=STATIC_GAME_LOD_HIGH; i >= STATIC_GAME_LOD_LOW; i--)
-		{
-				LODPresetInfo *preset=&m_lodPresets[i][0];	//pointer to first preset at this LOD level.
-				for (Int j=0; j<m_numLevelPresets[i]; j++)
-				{
-
-					if(	m_cpuType == preset->m_cpuType &&
-							((Real)m_cpuFreq/(Real)preset->m_mhz >= PROFILE_ERROR_LIMIT) &&//make sure we're within 5% or higher
-							m_videoChipType >= preset->m_videoType &&
-							((Real)numMBRam/(Real)preset->m_memory >= PROFILE_ERROR_LIMIT)
-						)
-					{	m_idealDetailLevel = (StaticGameLODLevel)i;
-						break;
-					}
-
-					preset++;	//skip to next preset
-
-				}
-				if (m_idealDetailLevel >= i)
-					break;	//we already found a higher level than the remaining presets so no need to keep searching.
-		}
-		//Save ideal detail level for future usage
-		OptionPreferences optionPref;
-		optionPref["IdealStaticGameLOD"] = getStaticGameLODLevelName(m_idealDetailLevel);
-		if (getStaticLODLevel() == STATIC_GAME_LOD_UNKNOWN)	//save for future usage.
-			optionPref["StaticGameLOD"] = getStaticGameLODLevelName(m_idealDetailLevel);
-		optionPref.write();
-	}
-
-	return m_idealDetailLevel;
+NativeLODReportStatus GameLODManager::persistNativeRecommendation(StaticGameLODLevel level){
+  if(!m_storage)return NativeLODReportStatus::Unavailable;
+  OptionPreferences preferences(*TheGlobalData,m_storage);
+  preferences["IdealStaticGameLOD"]=getStaticGameLODLevelName(level);
+  if(getStaticLODLevel()==STATIC_GAME_LOD_UNKNOWN)preferences["StaticGameLOD"]=getStaticGameLODLevelName(level);
+  try {preferences.write();return NativeLODReportStatus::Published;}
+  catch(const NativeStorageError&){return NativeLODReportStatus::Unavailable;}
+}
+StaticGameLODLevel GameLODManager::findStaticLODLevel(void){
+  if(!TheGlobalData || !m_probe)throw ERROR_BAD_ARG;
+  if(m_idealDetailLevel!=STATIC_GAME_LOD_UNKNOWN){
+    if(m_recommendationStatus==NativeLODReportStatus::Unavailable)
+      m_recommendationStatus=persistNativeRecommendation(m_idealDetailLevel);
+    return m_idealDetailLevel;
+  }
+  // Unknown modern hardware is not a justified legacy equivalence or low-quality
+  // recommendation. Existing game/user settings remain unchanged and uncached.
+  if(m_cpuType==XX || !m_frequencyKnown)return STATIC_GAME_LOD_UNKNOWN;
+  const auto chip=m_probe->chipset();
+  if(!chip || *chip==DC_UNKNOWN)return STATIC_GAME_LOD_UNKNOWN;
+  if(*chip==DC_MAX)throw ERROR_BAD_ARG;
+  const auto ramMB=m_numRAM/(1024*1024);
+  StaticGameLODLevel selected=STATIC_GAME_LOD_LOW;
+  for(Int level=STATIC_GAME_LOD_HIGH;level>=STATIC_GAME_LOD_LOW;--level){
+    for(Int index=0;index<m_numLevelPresets[level];++index){const auto& preset=m_lodPresets[level][index];
+      if(m_cpuType==preset.m_cpuType && Real(m_cpuFreq)/Real(preset.m_mhz)>=PROFILE_ERROR_LIMIT &&
+         *chip>=preset.m_videoType && Real(ramMB)/Real(preset.m_memory)>=PROFILE_ERROR_LIMIT){selected=static_cast<StaticGameLODLevel>(level);break;}
+    }
+    if(selected>=level)break;
+  }
+  const auto persistence=persistNativeRecommendation(selected);
+  m_videoChipType=*chip;m_idealDetailLevel=selected;m_recommendationStatus=persistence;
+  return selected;
 }
 
 /**Set all game systems to match the desired LOD level.*/
 Bool GameLODManager::setStaticLODLevel(StaticGameLODLevel level)
 {
+  if(level<STATIC_GAME_LOD_UNKNOWN || level>=STATIC_GAME_LOD_COUNT || !TheGlobalData)throw ERROR_BAD_ARG;
 	if (!TheGlobalData->m_enableStaticLOD)
 	{	m_currentStaticLOD = STATIC_GAME_LOD_CUSTOM; 
 		return FALSE;
@@ -606,6 +639,7 @@ void INI::parseDynamicGameLODDefinition( INI* ini )
 	if( TheGameLODManager )
 	{
 		Int index = TheGameLODManager->getDynamicGameLODIndex(name);
+    if(index==DYNAMIC_GAME_LOD_UNKNOWN)throw INI_INVALID_DATA;
 		if (index != DYNAMIC_GAME_LOD_UNKNOWN)
 		{
 			DynamicGameLODInfo *lodInfo = &(TheGameLODManager->m_dynamicGameLODInfo[index]);
@@ -639,18 +673,20 @@ Int GameLODManager::getDynamicGameLODIndex(AsciiString name)
 			return i;
 	}
 
-	DEBUG_CRASH(( "GameLODManager::getGameLODIndex - Invalid LOD name '%s'\n", name.str() ));
-	return STATIC_GAME_LOD_UNKNOWN;
+	return DYNAMIC_GAME_LOD_UNKNOWN;
 }
 
 const char *GameLODManager::getDynamicGameLODLevelName(DynamicGameLODLevel level)
 {
+  if(level==DYNAMIC_GAME_LOD_UNKNOWN)return "Unknown";
+  if(level<DYNAMIC_GAME_LOD_LOW || level>=DYNAMIC_GAME_LOD_COUNT)throw ERROR_BAD_ARG;
 	return DynamicGameLODNames[level];
 }
 
 /**Given an average fps, return the optimal dynamic LOD level that matches this fps.*/
 DynamicGameLODLevel GameLODManager::findDynamicLODLevel(Real averageFPS)
 {
+  if(!std::isfinite(averageFPS) || averageFPS<0 || double(averageFPS)>double(std::numeric_limits<Int>::max()))throw ERROR_BAD_ARG;
 	Int ifps=(Int)(averageFPS);	//convert to integer.
 
 	for (Int i=DYNAMIC_GAME_LOD_VERY_HIGH; i>=DYNAMIC_GAME_LOD_LOW; i--)
@@ -664,6 +700,7 @@ DynamicGameLODLevel GameLODManager::findDynamicLODLevel(Real averageFPS)
 /**Set all game systems to match the desired LOD level.*/
 Bool GameLODManager::setDynamicLODLevel(DynamicGameLODLevel level)
 {
+  if(level<DYNAMIC_GAME_LOD_UNKNOWN || level>=DYNAMIC_GAME_LOD_COUNT)throw ERROR_BAD_ARG;
 	if (level == DYNAMIC_GAME_LOD_UNKNOWN || m_currentDynamicLOD == level)
 		return FALSE;
 
@@ -694,12 +731,16 @@ Int GameLODManager::getRecommendedTextureReduction(void)
 
 	if (!m_memPassed)	//if they have < 256 MB, force them to low res textures.
 		return m_staticGameLODInfo[STATIC_GAME_LOD_LOW].m_textureReduction;
-
+  if(m_idealDetailLevel==STATIC_GAME_LOD_UNKNOWN){
+    if(!TheGlobalData)throw ERROR_BAD_ARG;
+    return TheGlobalData->m_textureReductionFactor;
+  }
 	return m_staticGameLODInfo[m_idealDetailLevel].m_textureReduction;
 }
 
 Int GameLODManager::getLevelTextureReduction(StaticGameLODLevel level)
 {
+  if(level<STATIC_GAME_LOD_LOW || level>=STATIC_GAME_LOD_COUNT)throw ERROR_BAD_ARG;
 	return m_staticGameLODInfo[level].m_textureReduction;
 }
 

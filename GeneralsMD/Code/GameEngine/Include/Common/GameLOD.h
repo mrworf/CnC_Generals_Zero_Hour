@@ -32,6 +32,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include <cstdint>
+#include <optional>
+#include <stdexcept>
 #include "Lib/BaseType.h"
 
 #ifndef _GAME_LOD_H_
@@ -93,6 +96,31 @@ enum ChipsetType
 	DC_RADEON_9700,
 	DC_MAX
 };
+
+class NativeUserStorage;
+struct NativeLODHardware {
+  std::uint64_t ramBytes;
+  CpuType cpu;
+  Int frequencyMHz;
+  Bool frequencyKnown;
+};
+struct NativeLODLegacyScores {Real integer,floating,memory;};
+// Main-thread borrowed probe. Legacy scores must use established original units,
+// not fabricated modern equivalence; absent measurement is explicit nullopt.
+class NativeLODProbe {
+public:
+  virtual ~NativeLODProbe()=default;
+  virtual NativeLODHardware hardware()=0;
+  virtual std::optional<NativeLODLegacyScores> legacyScores()=0;
+  virtual std::optional<ChipsetType> chipset()=0;
+};
+NativeLODProbe& nativeLODProbe();
+class NativeLODCalibrationUnavailable:public std::runtime_error {
+public:
+  NativeLODCalibrationUnavailable():std::runtime_error(
+      "Legacy hardware calibration is unavailable; select graphics quality manually."){}
+};
+enum class NativeLODReportStatus {NotRequested,Published,Unavailable};
 
 struct StaticGameLODInfo
 {
@@ -160,6 +188,7 @@ class GameLODManager
 {
 public:
 	GameLODManager(void);
+  GameLODManager(NativeLODProbe&,NativeUserStorage*);
 	~GameLODManager();
 
 	const char *getStaticGameLODLevelName(StaticGameLODLevel level);
@@ -186,7 +215,11 @@ public:
 	BenchProfile *newBenchProfile(void);
 	Bool didMemPass( void );
 	void setReallyLowMHz(Int mhz) { m_reallyLowMHz = mhz; }
-	Bool isReallyLowMHz() const { return m_cpuFreq < m_reallyLowMHz; }
+  Bool isReallyLowMHz() const {return m_frequencyKnown && m_cpuFreq<m_reallyLowMHz;}
+  std::uint64_t physicalRAMBytes() const noexcept {return m_numRAM;}
+  Bool hasLegacyCalibration() const noexcept {return m_calibrated;}
+  NativeLODReportStatus benchmarkReportStatus() const noexcept {return m_reportStatus;}
+  NativeLODReportStatus recommendationPersistenceStatus() const noexcept {return m_recommendationStatus;}
 
 	StaticGameLODInfo m_staticGameLODInfo[STATIC_GAME_LOD_COUNT];
 	DynamicGameLODInfo m_dynamicGameLODInfo[DYNAMIC_GAME_LOD_COUNT];
@@ -201,10 +234,10 @@ protected:
 	static const FieldParse m_staticGameLODFieldParseTable[];
 	StaticGameLODLevel m_currentStaticLOD;		///< current value of static LOD.
 	DynamicGameLODLevel m_currentDynamicLOD;		///< current value of dynamic LOD.
-	Int m_numParticleGenerations;	///<number of particles that have been generated since dynamic LOD reduction started.
-	Int m_dynamicParticleSkipMask;	///<mask used to enable rendering of every Nth particle.
-	Int m_numDebrisGenerations;		///<number of debris that have been generated since dynamic LOD reduction started.
-	Int m_dynamicDebrisSkipMask;	///<mask used to enable rendering of every Nth debris.
+  UnsignedInt m_numParticleGenerations; ///< Source 32-bit counters wrap with defined arithmetic.
+  UnsignedInt m_dynamicParticleSkipMask;
+  UnsignedInt m_numDebrisGenerations;
+  UnsignedInt m_dynamicDebrisSkipMask;
 	Real m_slowDeathScale;			///<values < 1.0f are used to accelerate deaths
 	ParticlePriorityType m_minDynamicParticlePriority;	///<only priorities above/including this value are allowed to render.
 	ParticlePriorityType m_minDynamicParticleSkipPriority;	///<priorities above/including this value never skip particles.
@@ -216,7 +249,7 @@ protected:
 	StaticGameLODLevel m_idealDetailLevel;
 	ChipsetType m_videoChipType;
 	CpuType m_cpuType;
-	Int m_numRAM;
+  std::uint64_t m_numRAM;
 	Int m_cpuFreq;
 	Real m_intBenchIndex;
 	Real m_floatBenchIndex;
@@ -224,6 +257,15 @@ protected:
 	Real m_compositeBenchIndex;
 	Int m_currentTextureReduction;
 	Int m_reallyLowMHz;
+  NativeLODProbe* m_probe;
+  NativeUserStorage* m_storage;
+  Bool m_frequencyKnown=FALSE,m_calibrated=FALSE;
+  NativeLODReportStatus m_reportStatus=NativeLODReportStatus::NotRequested;
+  NativeLODReportStatus m_recommendationStatus=NativeLODReportStatus::NotRequested;
+  NativeLODReportStatus persistNativeRecommendation(StaticGameLODLevel);
+  void loadNativePresetData();
+  void validateNativePresetData() const;
+  void calibrateNativeCPU(const NativeLODLegacyScores&);
 };
 
 Bool GameLODManager::isParticleSkipped(void)

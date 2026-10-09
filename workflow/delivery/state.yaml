@@ -26,8 +26,8 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 native-presentation checkpoint: all configured builds pass all3; focused5 PASS1.79s/3.38s/3.16s and related100 PASS20.37s/84.56s/75.68s. Warning fault/retry terminal6 passes complete repeated owners and whole metadata retirement all3; actual skybox state and typed device contracts pass. Physical dialogs/localized button labels, nonnull terrain/IME/GUI remain pending. Root/animation link-only diagnostics expose only native capability all3, never executed; full232 not run. Continue coupled hardware metadata/LOD/absent benchmark/protected report, actual factories/startup/world/scenario. N2/slice03 incomplete.",
-  "transaction_parent": "11295c4feb535f97978b8335632440fccae82794",
+  "resume_point": "N2 plan01/slice03 native LOD checkpoint: all configured builds pass all3; focused6 PASS5.46s/22.32s/14.06s and related106 PASS15.06s/62.20s/50.37s. Actual LOD tables/owner, wide native RAM, truthful missing calibration, protected reports and complete init/report failure/retry sweeps pass repeated lifetimes. Recommendation-specific failure sweeps, nonnull callbacks, animation ownership and actual factories/startup/world/scenario remain pending. No new root/animation diagnostic or execution claim. Full238 not run; N2/slice03 incomplete.",
+  "transaction_parent": "6640b86820594027ecf95e40fa81875737a1b840",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -36,28 +36,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-native-boundaries-checkpoint.md",
+  "evidence": "evidence/qa/N2-lod-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Resolve native capability admission together with source LOD preset units, absent historical benchmark, wide RAM and protected optional report; then pending Clang animation ownership, actual device factories and original startup/world/compiler-matching scenario. Do not synthesize scores or renderer capabilities.",
+  "next": "Complete recommendation-specific failure/retry validation and nonnull presentation boundaries; verify actual animation ownership and native factories/startup/world/compiler-matching scenario. Do not synthesize legacy scores or renderer capabilities; native quality evidence remains pending.",
   "implementation_checkpoint": {
-    "label": "native-original-presentation-boundaries",
-    "reason": "Actual warning/catalog ownership and shared skybox state; required input/terrain device contracts separate common startup from Windows/GameSpy implementations; original factories/startup remain pending",
-    "prior_commit": "a549a581",
-    "canonical_source_sha256": "34365252fb700503f4c0f27b628dca7b109e4743afcea6cf0ca1bb5018827282",
-    "toolchain_inclusive_sha256": "347362305fbaa19f115d0d0361510ea2081f72fa4fd0a1a0af4b75f1096d3b23",
-    "configured_suite_tests": 232,
-    "related_suite_tests_passed": 100,
+    "label": "native-original-lod-capability",
+    "reason": "Verified coherent pending LOD batch and durable findings; truthful native metadata and protected report ownership, not full startup acceptance",
+    "prior_commit": "6640b868",
+    "canonical_source_sha256": "cb7760b9ae1633504d794b4e03aaec73cfeae4e782647c938751717880a2e9bc",
+    "toolchain_inclusive_sha256": "574621f88ae31a37ded3ee0577bfbb50da24d9ac7ea5c042aefe523bd3f3c9c2",
+    "configured_suite_tests": 238,
+    "related_suite_tests_passed": 106,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; focused5 and related100 PASS all3 on frozen source",
+    "full_current_matrix": "not run; focused6 and related106 PASS all3 on frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-native-boundaries-checkpoint.md"
+    "evidence": "evidence/qa/N2-lod-checkpoint.md"
   }
 }

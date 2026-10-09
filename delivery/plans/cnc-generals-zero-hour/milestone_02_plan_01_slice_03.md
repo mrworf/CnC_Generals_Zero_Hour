@@ -1472,3 +1472,54 @@ behavior. The required owner test must exercise real GameLOD selection/admission
 not only a stand-alone metadata query, with failure/retry and captured services.
 These verified facts are recorded in `docs/original-engine-formats.md`; no new
 capability policy or production change is authorized by an unresolved score guess.
+
+Resolve the native capability bridge in the same transaction, preserving original
+LOD tables/score comparison and dynamic gameplay rules, not synthesizing the
+missing RunBenchmark implementation. Capture a synchronous hardware/calibration/
+chipset probe and protected user storage in actual GameLODManager. Default native
+hardware reports checked POSIX physical RAM in wide bytes; era-specific CPU
+classification/frequency, calibration and renderer classification remain explicitly
+unknown when not measured. Unknown frequency must not be misreported as a slow
+CPU. Missing calibration/chipset yields no justified automatic recommendation;
+retain existing GlobalData/user-selected quality and do not force LOW, manufacture
+TNT2/P4 identities, or persist a false IdealStaticGameLOD. Explicit forced legacy
+calibration without equivalent score units fails with a fixed actionable error.
+The supplied profile formats remain unchanged. A valid equivalent-score provider
+still runs original selection rules; synthetic generated providers test those
+rules, not native performance acceptance. N4 must supply physical/native quality
+and input/renderer evidence; this bridge alone does not accept automatic tuning.
+
+Stage original table parsing, hardware admission and optional calibrated metadata
+in a complete GameLOD candidate, with legitimate borrowed singleton publication
+restored before commit. Restrict its file-loading entry point to the five original
+LOD blocks; reject invalid preset domains/counts/nonpositive divisors, malformed
+values and unsafe indices before storage access. Correct initial uninitialized
+particle-priority backing from source default LOWEST data; retain all original
+dynamic masks/scales and their non-LOD-effect guards. Do not change death behavior.
+Protect optional valid benchmark reports through captured atomic user storage;
+no CWD or asset writes. Report failure cannot claim missing calibration succeeded.
+Actual presentation callback rollback remains a separate nonnull-device gate.
+
+Run actual GameLOD init/selection/retry against generated original INI and original
+GlobalData/FileSystem/Options owners. Cover hardware >2GB, memory/CPU boundaries,
+missing/failed probes, unavailable/invalid/valid calibration, manual settings,
+source dynamic masks/scale/priorities, preset limits, protected reports, every
+allocation/storage failure and corrected retry across complete lifetimes. Native
+physical metadata is checked without printing values/roots. Freeze then run
+focused/related normal/GCCsan/Clangsan builds/tests; link diagnostics are never
+startup acceptance. Once the actual animation fixture links all3, execute its
+existing complete constructor fault coverage without weakening instrumentation.
+Own only actual LOD/probe, build/tests, original format/source findings and existing
+plan/QA/state. Continue native factories/startup/world after this coherent gate.
+
+LOD checkpoint from6640b868: native hardware/calibration/storage capture and actual
+candidate LOD initialization are implemented. Focused6 PASS all3 in5.46s/22.32s/
+14.06s; all configured builds and related106 PASS all3 in15.06s/62.20s/50.37s.
+Generated source tables validate retained quality/threshold/scale/mask behavior;
+native probe reports no fabricated legacy equivalence. Complete init/report
+allocation and report-I/O failure/retry sweeps pass repeated owners and whole pool
+retirement. See `evidence/qa/N2-lod-checkpoint.md` for identities, earlier failures
+and honest limits. Full238 was not run. Recommendation-specific allocation/I/O
+sweeps, nonnull callbacks, animation ownership and actual factories/startup/world
+remain pending. This checkpoint commits the coherent verified pending batch;
+N2/slice03 remains in progress, not accepted.

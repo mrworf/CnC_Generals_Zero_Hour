@@ -784,3 +784,12 @@ root and pending animation link diagnostics fail the same one native capability
 symbol on all3; none is executed. Actual skybox state and warning ownership pass
 focused checks all3, but dialogs, nonnull terrain/IME/GUI and full startup remain
 pending. See `evidence/qa/N2-native-boundaries-checkpoint.md`.
+
+The common GameLOD dependency on W3D `testMinimumRequirements` is replaced by
+captured public game-owned hardware/calibration/storage boundaries. Native POSIX
+RAM/frequency metadata does not manufacture legacy scores, CPU classes or renderer
+capability. Actual LOD owner tests cover source selection, malformed inputs,
+allocation/report failures and retries; full factories/startup and nonnull device
+behavior remain pending. No new root/animation link or execution claim is made at
+this checkpoint. See `evidence/qa/N2-lod-checkpoint.md` and the durable source
+findings in `docs/original-engine-formats.md`.

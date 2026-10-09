@@ -2778,3 +2778,45 @@ native hardware discovery must not wrap RAM above signed32 capacity. No binary
 save/network field for that hardware-derived member has been identified; verify
 all consumers before widening. The native capability bridge must distinguish
 measured facts, unavailable legacy calibration, and renderer suitability.
+
+### Native LOD capability bridge (current, not full-startup acceptance)
+
+Actual `GameLODManager` now captures a borrowed synchronous `NativeLODProbe`
+and protected `NativeUserStorage`. `NativeLODProbe.cpp` measures POSIX physical
+RAM with checked 64-bit multiplication and optionally reads the Linux CPU maximum
+frequency in kHz, converting to MHz. Neither frequency nor vendor establishes a
+legacy CPU class: native class stays XX; equivalent historical scores and chipset
+classification stay unavailable. A normal unclassified machine retains current
+game/user quality without persisting a made-up ideal profile. Explicit forced
+legacy calibration fails with an actionable error if equivalent scores are absent.
+Generated fixture scores validate the retained comparison algorithm, not native
+performance or renderer capability.
+
+The five original LOD block handlers and existing Int/Real INI representations
+remain. Table loading, preferences and hardware/calibration acquisition occur in
+a candidate under legitimate borrowed singleton publication; precommit failure
+restores the original owner. Reports use atomic protected `Benchmark.txt` output,
+not CWD. Required preference-read failure rejects initialization; optional report
+publication failure is distinguished from complete publication with uncertain
+durability. Real nonnull device callback rollback is still a separate pending gate.
+Unknown preset names, invalid domains, count overflow, nonpositive divisors and
+nonfinite score/scale values reject before unsafe indexing or division.
+
+Only the hardware-derived internal RAM quantity is widened; no serialized member
+consumer was found. Original dynamic thresholds, truncation, masks and death
+scales are retained. Previously uninitialized owner particle priorities now use
+the existing source LOWEST default; initial scale remains 1, not the configured
+HIGH scale until a source transition occurs. Generation counters use defined
+unsigned 32-bit wraparound, retaining mask bits without signed-overflow UB.
+`applyStaticLODLevel` still compares requested texture reduction with the owner
+cache before writing GlobalData: requesting the initial cached zero does not
+overwrite an independently initialized GlobalData texture value. Tests follow
+that existing source behavior rather than inventing a visual oracle.
+
+`tests/original/lod.cpp` exercises real GameLOD/INI/GlobalData/FileSystem and
+protected storage, repeated whole-owner destruction, complete allocation and I/O
+failure/retry sweeps and exact terminals. I/O discovery establishes the protected
+namespace first: an absent directory otherwise skips the preference-file open,
+making a later warmed manifest one operation longer. Full startup, native automatic
+tuning and nonnull renderer/audio behavior are not established by these tests.
+See `evidence/qa/N2-lod-checkpoint.md`.
