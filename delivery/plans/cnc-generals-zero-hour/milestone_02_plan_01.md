@@ -143,3 +143,13 @@ view/window/layout/transition-parent admission findings. Do not treat earlier
 supporting observations above as current acceptance. Continue concrete camera
 frame/constraint/lock/model behavior and actual headless UI/root initialization,
 frame and cleanup; slice03 and N2 remain incomplete, full365 remains required.
+
+Active continuation after the camera spatial checkpoint: production navigation
+and shared lock/snap choreography are frozen canonical644/inclusive651 with367
+configured tests. See `evidence/qa/N2-native-camera-navigation-checkpoint.md`:
+all3 full configured builds/focused9/related177 PASS. Related elapsed times:
+GCC171.36s/GCC sanitizer740.94s/Clang sanitizer450.43s. All jobs terminal0; frozen
+source hashes match. Commit this checkpoint and continue the concrete camera,
+real-map constraints and staged UI/root work. Full367 remains the unrun N2 completion gate.
+Constraint rebuild/shake cardinality and Drawable borrow teardown findings are
+durable in `docs/original-engine-formats.md`, not accepted concrete frame behavior.

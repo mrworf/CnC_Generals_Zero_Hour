@@ -59,3 +59,20 @@ Coord3D NativeCameraView::projectElevatedLookAt(const Coord3D& point){
 void NativeCameraView::setGuardBandBias(const Coord2D* value){
   if(!value || !std::isfinite(value->x) || !std::isfinite(value->y))throw ERROR_BAD_ARG;m_guardBandBias=*value;
 }
+void NativeCameraView::scrollBy(Coord2D* delta){
+  if(!delta)return;
+  if(!std::isfinite(delta->x) || !std::isfinite(delta->y))throw ERROR_BAD_ARG;
+  if(delta->x==0 && delta->y==0)return;
+  synchronizeCamera();
+  // Preserve the source integer division; do not silently change non-square
+  // viewport motion while porting. Full frame settlement consumes this delta.
+  const Coord2D pixels{delta->x*250.0f,delta->y*250.0f*(m_width/m_height)};
+  const auto displacement=m_spatialCamera.viewPlaneDisplacement(pixels);
+  Coord3D position=m_pos;position.x+=displacement.x;position.y+=displacement.y;
+  const NativeCamera::State state{position,m_cameraOffset,m_groundLevel,m_zoom,m_angle,m_pitchAngle,getFXPitch(),
+    m_FOV,m_width,m_height,m_originX,m_originY,TheGlobalData->m_drawEntireTerrain};
+  NativeCamera candidate;candidate.configure(state);
+  // All fallible calculations precede adoption and rotation cancellation.
+  setPosition(&position);m_spatialCamera=candidate;m_cameraDirty=FALSE;
+  m_scrollAmount=*delta;cancelCameraRotation();
+}

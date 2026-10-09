@@ -25,6 +25,8 @@ public:
   void setZoomToDefault() override;
   void setAngleAndPitchToDefault() override;
   void setDefaultView(Real,Real,Real) override;
+  void setCameraLock(ObjectID) override;
+  void setSnapMode(CameraLockType,Real) override;
   void moveCameraTo(const Coord3D*,Int,Int,Bool,Real,Real) override;
   void moveCameraAlongWaypointPath(Waypoint*,Int,Int,Bool,Real,Real) override;
   void rotateCamera(Real,Int,Real,Real) override;
@@ -56,6 +58,7 @@ protected:
   // camera backing. No false success for missing output or elevated look-at.
   virtual void cameraStateChanged() noexcept = 0;
   virtual Coord3D projectElevatedLookAt(const Coord3D&) = 0;
+  void cancelCameraRotation() noexcept { m_doingRotateCamera=FALSE; }
   Coord3D m_cameraOffset{};
   Real m_groundLevel=10.0f;
   Region2D m_cameraConstraint{};

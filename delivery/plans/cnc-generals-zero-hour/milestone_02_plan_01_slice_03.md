@@ -3046,3 +3046,36 @@ were recomputed unchanged. Evidence:
 evidence/qa/N2-native-camera-view-checkpoint.md. Commit this coherent batch, then continue
 the same source camera/frame/model/constraint and staged UI/headless root work.
 No full365, completed slice03/N2 or whole-game rendering claim is established.
+
+Next coupled navigation refinement (parent f3a4f0cb; existing slice03): supply
+allocation-free unnormalized view-plane displacement in NativeCamera and consume
+it in production NativeCameraView::scrollBy. Preserve source scale250, integer
+aspect, XY-only adoption, recorded scroll amount and rotation-only cancellation.
+Stage checked displacement, position and resulting camera before publication;
+nonfinite/overflow input must preserve accepted eye, position, scroll state and
+choreography. Complete actual lock/snap choreography flags in shared ScriptedView
+with disabled-motion and malformed-distance boundaries. Positive/negative tests
+must use production navigation, rotated/odd/non-square viewports, retained path/
+zoom/pitch activities, allocation terminal0 and corrected retry. Keep concrete
+frame/chase/model/shake/slave, real-map constraints and UI/root adoption pending;
+this shared provider remains abstract and cannot fake a complete headless View.
+Run all camera families all3 during iteration, then the related ownership/world
+matrix on frozen source before commit. No new slice or milestone plan is created.
+
+Navigation batch now frozen canonical644/inclusive651 with367 configured tests.
+GCC iteration build/focused9 PASS4.33s; all3 full build/focused9/related177 jobs
+started in exact sessions99342/32125/65854. Evidence:
+evidence/qa/N2-native-camera-navigation-checkpoint.md. Poll those jobs and retain
+source unchanged through validation; no completed slice/N2 or source commit yet.
+
+All3 frozen full configured builds/focused9 now PASS4.43s/20.41s/11.87s;
+related177 remain live in those same handles. No failure or retry observed in
+this batch. Source/root/extent carry-forward census is durable in the engine
+formats document; actual root adoption remains pending, not bypassed.
+
+Navigation checkpoint terminal acceptance: all3 full configured builds/focused9/
+related177 PASS; related times171.36s/740.94s/450.43s. All exact jobs terminal0,
+canonical644/inclusive651 recomputed unchanged. Commit the coherent navigation
+behavior/tests/source findings/evidence, then continue concrete camera frame/
+model/constraints/shake/slave and staged actual UI/headless root admission and
+cleanup in this same slice. Full367, slice03 and N2 remain incomplete.

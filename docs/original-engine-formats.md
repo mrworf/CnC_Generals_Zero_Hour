@@ -4817,3 +4817,150 @@ unsupported tracing boundary for every family. Unchanged normal-host tests with
 all leak checks enabled passed; neither source behavior nor sanitizer settings
 were weakened. Logs retained under /tmp/n2-camera-spatial-* and
 /tmp/n2-camera-view-* for the original failure and corrected retry respectively.
+
+Source navigation/lifetime census for the next coupled camera batch (parent
+f3a4f0cb, not runtime acceptance): W3DView::scrollBy records the input delta,
+unprojects start(width,height) and end(start+delta*250) at local view-plane Z=-1,
+and adopts only their world X/Y difference. The Y increment is additionally
+multiplied by getWidth()/getHeight(), an integer division before Real conversion.
+Normalized display resolution/viewport factors cancel to viewport-relative
+2*pixelDelta/width and -2*pixelDelta/height; neither terrain picking nor a
+normalized ray is the source displacement. Preserve this actual arithmetic
+until an explicitly justified original-bug repair; scrolling cancels rotation
+only, not active path, zoom or pitch. It does not invalidate cached constraints.
+Anchors: W3DView.cpp::scrollBy; WW3D2/camera.cpp::Device_To_View_Space;
+W3DView.cpp::{setWidth,setHeight,setOrigin}.
+
+calcCameraConstraints samples truncated absolute center and 95%-height pixels
+at ground Z. It subtracts X/Y only; the length used for the border retains the
+ground Z component. DebugAI uses offset -1000. Clipping is max(lo) then min(hi),
+even for inverted small-map bounds; midpoint substitution is not source behavior.
+The base TerrainLogic::getExtent is unimplemented: adoption needs the actual
+NativeTerrainLogic map extent, not an invented fallback or base-provider success.
+These constraints and their invalidation/init/frame timing remain pending.
+
+W3DView::setCameraLock ignores non-invalid locks when movement is disabled,
+otherwise resets source follow/distance and scripted-lock flag. setSnapMode sets
+the scripted-lock flag, which makes updateCameraMovements report work while
+isCameraMovementFinished still excludes that flag. A native adaptation must keep
+these distinct predicates; it must not cancel every other activity when changing
+an actor lock. Source chase/follow/shake/height and draw frame phase remain pending.
+
+Drawable lifetime hazard: GameClient::destroyDrawable unlinks and clears its
+Object binding/lookup before deleteInstance; InGameUI::disregardDrawable only
+deselects. Neither withdraws View::m_cameraLockDrawable. Object-ID validity does
+not prove its old Drawable remains alive when the Drawable is replaced without
+destroying the Object. CommandXlat explicitly acquires both the Object lock and
+Drawable borrow; scrolling UI withdraws both, but W3DView only clears the borrow
+when its Object lookup fails. Native frame adoption must withdraw/validate that
+borrow with actual child destruction/lookup identity before any model-camera
+query; do not dereference a stale raw pointer to discover its ID.
+Anchors: GameClient.cpp::destroyDrawable; InGameUI.cpp::{disregardDrawable,
+setScrolling}; CommandXlat.cpp chase-camera branch; W3DView.cpp::update.
+
+Concrete extent/root carry-forward: NativeTerrainLogic.cpp is under
+Source/GameLogic/Map, not directly Source/GameLogic. Its getExtent reads active
+authored boundary times MAP_XY_FACTOR plus logical cached min/max Z; unloaded
+state is zero XY and Z0..1. getExtentIncludingBorder has a different map-dimension/
+visual-border contract and leaves Z unchanged. The existing logical_world terrain
+family already proves real authored boundary50x50 and extrema12.5..13.75;
+compose constraint tests with that actual provider, not a fixture that fabricates
+an extent. Source anchors: NativeTerrainLogic::{getExtent,getExtentIncludingBorder};
+tests/original/logical_world.cpp terrain provider family.
+
+Actual source root still needs tactical/UI state even when physical output is
+omitted: GameLogic.cpp (Source/GameLogic/System) calls TacticalView default/zoom/
+look-at/height methods during setup, samples camera freeze plus movement-finished
+in update, and changes UI input/selection state. GameEngine::execute samples the
+camera time multiplier. Existing GameClient::{initHeadless,updateHeadless}
+explicitly reject TacticalView/Display/WindowManager/InGameUI and never advance
+camera. That owner-only route is not full original startup/frame acceptance and
+cannot be retained unchanged as the final N2 entry point. Preserve original
+camera/client/logic phase and source logical UI state while separating physical
+N3/N4 output; do not silently skip these callers to make a generated scene pass.
+
+Constraint transform/cleanup refinement while navigation validation is frozen:
+buildCameraTransform adds legacy shake to a local copy of the look-at position,
+then applies cached constraints to that local position. setCameraTransform also
+clips and publishes canonical m_pos separately; collapsing these two operations
+would change edge shake. On invalid constraints setCameraTransform builds a
+temporary transform, installs it for pixel/ground queries, calculates constraints,
+then builds the final transform again. Each source build steps CameraShakerSystem
+1/30 and can resolve a slave bone/publish listener m_pos. Thus rebuild cardinality
+and frame phase matter; do not bury shake advancement or callback-bearing model
+resolution inside const projection/eye queries or count only update calls.
+Viewport width/height/origin changes do not invalidate the original cached
+constraints; source zoom/desired-height/default-zoom/map-height initialization do.
+forceCameraConstraintRecalc only calculates against the existing camera transform;
+the subsequent transform call performs canonical clipping. Tests need to retain
+these distinctions, including inverted small-map bounds, before native adoption.
+Anchors: W3DView.cpp::{buildCameraTransform,setCameraTransform,
+calcCameraConstraints,setWidth,setHeight,setOrigin}; W3DView.h inline
+forceCameraConstraintRecalc; ScriptedView.cpp zoom/height initialization paths.
+
+Camera Drawable borrow withdrawal must cover both client destruction/reset and
+construction cancellation. GameClient::{~GameClient,reset} call destroyDrawable
+for every published child; cancelDrawableConstruction removes lookup/master-list
+admission without full destroy. Drawable::releaseOwnedState itself calls the
+legitimate client to remove ray effects and retires module callbacks while that
+parent is valid. A destructor guard that restores parent publication too early
+or clears only a registry is not sufficient. Region traversal stores next before
+callback, so callbacks may remove the current child; camera lookup/selection must
+not borrow such a record across mutation without identity/lifetime validation.
+The existing factory-creation-camera test uses ScriptCameraFixture and does not
+prove production NativeCameraView frame/lock/model lifetime behavior.
+Anchors: GameClient.cpp::{~GameClient,reset,cancelDrawableConstruction,
+destroyDrawable,iterateDrawablesInRegion}; Drawable.cpp::releaseOwnedState;
+tests/original/logical_world.cpp factory-creation-camera family.
+
+CPU model/camera query qualification (source-only, no model acceptance):
+Drawable::clientOnly_getFirstRenderObjInfo inspects only its first DrawModule's
+ObjectDrawInterface, not the first usable interface anywhere in the list. Slave
+camera selection instead walks until the first ObjectDrawInterface. Its original
+W3DView caller ignores clientOnly_getRenderObjBoneTransform's Bool: W3DModelDraw
+returns false without touching output when no render object exists, but writes
+identity and false for bone index0. Copying that call blindly can adopt an
+uninitialized matrix. Native adaptation must stage a defined output and
+distinguish missing-model/bone failure from valid source bone transforms; it is
+not permission to fabricate an accepted model or alter available bone data.
+Source render-object info includes actual transformed position, world transform
+and bounding-sphere radius. Chase camera uses that radius and transform X axis;
+slaving uses the selected bone transform and publishes its translation to m_pos
+for listener state. These remain client-phase queries, not simulation callbacks.
+
+Simulation pristine bone/projectile queries independently reselect the best
+model condition (clear ignored condition flags first), rather than borrowing a
+possibly transitional client m_curState. Pristine validation uses source model
+scale and extra-public-bone names. Pristine/current named-bone sweeps use an exact
+name for startIndex0, otherwise suffixed indices through99, stop on first miss,
+and cap maxBones at64. Pristine names are lowercased into the cached NAMEKEY map;
+current names go through the actual model lookup. Current model-space queries
+apply the orthogonal inverse of world transform and Drawable scale. Do not replace
+all three APIs with one generic world-space bone query. Both source loops write
+before testing a nonpositive maxBones limit, and use fixed256-byte unchecked
+formatting: native decoding/query admission needs defined bounded inputs and
+zero-capacity tests, not a transplanted overrun. Historical identity/fallback
+behavior on a missing query does not accept omitted available retail metadata.
+Anchors: Drawable.cpp::{clientOnly_getFirstRenderObjInfo,getPristineBonePositions,
+getCurrentBonePositions,getProjectileLaunchOffset}; W3DModelDraw.cpp::{
+clientOnly_getRenderObjInfo,clientOnly_getRenderObjBoneTransform,
+getPristineBonePositionsForConditionState,getCurrentBonePositions,
+getProjectileLaunchOffset}; W3DModelDrawModuleData::findBestInfo;
+W3DView.cpp::{update,buildCameraTransform}.
+
+The uninitialized-matrix finding is source-verified rather than assumed:
+WWMath/matrix3d.h declares the default constructor as an empty body; only the
+explicit bool constructor conditionally calls Make_Identity. W3DView's local
+Matrix3D tm uses the default constructor before the ignored Bool-returning query.
+Generated regression inputs must define their raw matrix contents rather than
+try to test rejection by reading this original uninitialized state.
+
+Native navigation checkpoint verified: production NativeCameraView::scrollBy
+now uses the source unnormalized view-plane displacement, scale250/integer aspect,
+XY-only adoption and rotation-only cancellation, staging candidate position and
+camera before publishing scroll state. ScriptedView now supplies source lock/snap
+activity flags with disabled-motion admission/withdrawal. All3 full configured
+builds/focused9/related177 PASS on unchanged canonical644/inclusive651; see
+evidence/qa/N2-native-camera-navigation-checkpoint.md. Real-map constraints,
+concrete actor/chase/frame, shake/slave, native model metadata and actual UI/root
+adoption remain pending. This supporting checkpoint does not accept full367/N2.

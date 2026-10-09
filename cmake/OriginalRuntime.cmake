@@ -552,7 +552,7 @@ target_include_directories(original_script_camera_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_options(original_script_camera_fixture PRIVATE -ffp-contract=off)
 target_link_options(original_script_camera_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS modes paths negative ownership spatial spatial-negative spatial-ownership)
+foreach(family IN ITEMS modes paths negative ownership spatial spatial-negative spatial-ownership navigation navigation-negative)
   add_test(NAME original_script_camera_${family} COMMAND original_script_camera_fixture "${family}")
   set_tests_properties(original_script_camera_${family} PROPERTIES LABELS "original;runtime;camera" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

@@ -106,6 +106,16 @@ Bool ScriptedView::updateCameraMovements(Int elapsedMilliseconds) {
   if(updated)cameraStateChanged();
   return updated;
 }
+void ScriptedView::setCameraLock(ObjectID id){
+  if(!TheGlobalData)throw ERROR_BAD_ARG;
+  if(TheGlobalData->m_disableCameraMovement && id!=INVALID_ID)return;
+  View::setCameraLock(id);m_doingScriptedCameraLock=FALSE;
+}
+void ScriptedView::setSnapMode(CameraLockType type,Real distance){
+  finite(distance);
+  if((type!=LOCK_FOLLOW && type!=LOCK_TETHER) || distance<0)throw ERROR_BAD_ARG;
+  View::setSnapMode(type,distance);m_doingScriptedCameraLock=TRUE;
+}
 
 static void normAngle(Real &angle)
 {

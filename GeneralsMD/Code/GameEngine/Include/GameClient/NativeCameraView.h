@@ -20,7 +20,7 @@ public:
   void screenToWorldAtZ(const ICoord2D*,Coord3D*,Real) override;
   void setGuardBandBias(const Coord2D*) override;
   // Do not inherit View's old 2D scroll or empty reachable effect callbacks.
-  void scrollBy(Coord2D*) override = 0;
+  void scrollBy(Coord2D*) override;
   void shake(const Coord3D*,CameraShakeType) override = 0;
   void Add_Camera_Shake(const Coord3D&,float,float,float) override = 0;
   void cameraEnableSlaveMode(const AsciiString&,const AsciiString&) override = 0;
@@ -31,6 +31,7 @@ protected:
   Coord3D projectElevatedLookAt(const Coord3D&) override;
   void synchronizeCamera() const;
   mutable NativeCamera m_spatialCamera;
+  Coord2D m_scrollAmount{};
 private:
   mutable Bool m_cameraDirty=TRUE;
 };

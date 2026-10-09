@@ -20,6 +20,7 @@ public:
   std::array<Coord3D,2> ray(const ICoord2D&) const;
   std::array<Coord3D,2> centerRay() const;
   Coord3D atZ(const ICoord2D&,Real z) const;
+  Coord3D viewPlaneDisplacement(const Coord2D& pixelDelta) const;
   Bool ready() const noexcept {return m_ready;}
 private:
   using Vector=std::array<double,3>;

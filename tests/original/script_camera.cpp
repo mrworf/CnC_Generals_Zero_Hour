@@ -145,12 +145,13 @@ struct SpatialCamera:NativeCameraView {
   Int iterateDrawablesInRegion(IRegion2D*,Bool(*)(Drawable*,void*),void*)override{throw ERROR_BAD_ARG;}
   void drawView()override{throw ERROR_BAD_ARG;}
   void updateView()override{throw ERROR_BAD_ARG;} // Full frame/lock lifecycle is not this fixture.
-  void scrollBy(Coord2D*)override{throw ERROR_BAD_ARG;}
   void shake(const Coord3D*,CameraShakeType)override{throw ERROR_BAD_ARG;}
   void Add_Camera_Shake(const Coord3D&,float,float,float)override{throw ERROR_BAD_ARG;}
   void cameraEnableSlaveMode(const AsciiString&,const AsciiString&)override{throw ERROR_BAD_ARG;}
   void cameraDisableSlaveMode()override{throw ERROR_BAD_ARG;}
   void forceCameraConstraintRecalc()override{throw ERROR_BAD_ARG;}
+  Coord3D position()const{return m_pos;}
+  Coord2D scrollAmount()const{return m_scrollAmount;}
 };
 struct HeightInput:ChunkInputStream {
   std::string bytes;UnsignedInt position=0;
@@ -245,6 +246,59 @@ void spatialOwnership(){
   const auto count=AllocationFault::attempts();const auto hit=AllocationFault::triggered();AllocationFault::disarm();
   require(count==0 && !hit,"complete native camera acquisition terminal0 across repeated lifetimes/queries");
 }
+void navigation(Parents& parents){
+  SpatialCamera camera;camera.init();camera.setZoom(1);
+  const Real scale=500.0f*std::tan(25*PI/180)/640;
+  Coord2D delta{4,-3};camera.scrollBy(&delta);
+  require(close(camera.position().x,4*scale) && close(camera.position().y,3*scale/std::sqrt(2.0f)) && camera.position().z==0,
+    "production source view-plane scroll scale and XY-only adoption");
+  require(camera.scrollAmount().x==4 && camera.scrollAmount().y==-3 &&
+    close(camera.get3DCameraPosition().x,camera.position().x),"scroll delta and accepted real eye published together");
+  camera.setAngle(PI/2);const auto before=camera.position();delta={1,0};camera.scrollBy(&delta);
+  require(close(camera.position().x,before.x) && close(camera.position().y,before.y+scale),"source rotated screen X follows camera right, not world X");
+  camera.setAngle(0);camera.setHeight(1001);camera.setOrigin(101,-23);
+  const auto portrait=camera.position();delta={0,2};camera.scrollBy(&delta);
+  require(camera.position().x==portrait.x && camera.position().y==portrait.y && camera.scrollAmount().y==2,
+    "source integer aspect zero in portrait viewport still records scroll");
+  camera.setHeight(480);camera.rotateCamera(.25f,99,0,0);camera.zoomCamera(.8f,99,0,0);camera.pitchCamera(.7f,99,0,0);
+  delta={1,1};camera.scrollBy(&delta);camera.updateCameraMovements(33);
+  require(camera.getAngle()==0 && !camera.isCameraMovementFinished() && camera.getZoom()<1 && camera.getFXPitch()<1,
+    "scroll cancels rotation only and retains independent zoom/pitch");
+  camera.updateCameraMovements(33);camera.updateCameraMovements(33);
+  require(camera.isCameraMovementFinished() && close(camera.getZoom(),.8f) && close(camera.getFXPitch(),.7f),"retained activities reach original terminal");
+  camera.setZoom(1);const Coord3D destination{100,100,0};camera.moveCameraTo(&destination,99,0,FALSE,0,0);
+  delta={1,0};camera.scrollBy(&delta);for(unsigned i=0;i<4;++i)camera.updateCameraMovements(33);
+  require(camera.isCameraMovementFinished() && close(camera.position().x,100) && close(camera.position().y,100),"scroll does not cancel original waypoint path");
+  camera.setSnapMode(View::LOCK_TETHER,2);require(camera.isCameraMovementFinished() && camera.updateCameraMovements(0),
+    "scripted lock work and source movement-finished predicates are distinct");
+  camera.setCameraLock(static_cast<ObjectID>(17));require(camera.getCameraLock()==static_cast<ObjectID>(17) && !camera.updateCameraMovements(0),"actual lock resets scripted-lock flag");
+  parents.data->m_disableCameraMovement=TRUE;camera.setSnapMode(View::LOCK_FOLLOW,0);
+  camera.setCameraLock(static_cast<ObjectID>(18));require(camera.getCameraLock()==static_cast<ObjectID>(17) && camera.updateCameraMovements(0),"disabled lock admission preserves accepted lock and scripted flag");
+  camera.setCameraLock(INVALID_ID);require(camera.getCameraLock()==INVALID_ID && !camera.updateCameraMovements(0),"disabled motion still allows lock withdrawal");
+  parents.data->m_disableCameraMovement=FALSE;
+  AllocationFault::arm(0);try{for(unsigned i=0;i<100;++i)camera.scrollBy(&delta);}
+  catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+  require(attempts==0 && !hit,"complete repeated navigation acquisition terminal0");
+}
+void navigationNegative(){
+  SpatialCamera camera;camera.init();camera.setZoom(1);camera.rotateCamera(.25f,99,0,0);
+  const auto position=camera.position(),eye=camera.get3DCameraPosition();const auto scroll=camera.scrollAmount();
+  for(Coord2D bad:{Coord2D{std::numeric_limits<Real>::quiet_NaN(),0},Coord2D{0,std::numeric_limits<Real>::infinity()},
+    Coord2D{std::numeric_limits<Real>::max(),0},Coord2D{0,std::numeric_limits<Real>::max()}}){
+    rejects([&]{camera.scrollBy(&bad);});require(camera.position().x==position.x && camera.position().y==position.y &&
+      camera.get3DCameraPosition().x==eye.x && camera.get3DCameraPosition().y==eye.y && camera.scrollAmount().x==scroll.x &&
+      camera.scrollAmount().y==scroll.y && !camera.isCameraMovementFinished(),"malformed scroll preserves complete accepted navigation/choreography");}
+  camera.scrollBy(nullptr);Coord2D zero{};camera.scrollBy(&zero);require(!camera.isCameraMovementFinished(),"optional/zero scroll does not cancel motion");
+  rejects([&]{camera.setSnapMode(View::LOCK_TETHER,std::numeric_limits<Real>::quiet_NaN());});
+  rejects([&]{camera.setSnapMode(View::LOCK_FOLLOW,-1);});
+  camera.updateCameraMovements(33);require(camera.getAngle()!=0,"failed navigation did not cancel original rotation");
+  Coord2D retry{1,0};camera.scrollBy(&retry);require(camera.isCameraMovementFinished() && camera.scrollAmount().x==1,"corrected same-owner scroll retry adopts and cancels rotation");
+  camera.setCameraLock(static_cast<ObjectID>(19));const auto* previous=TheGlobalData;TheWritableGlobalData=nullptr;
+  try{rejects([&]{camera.setCameraLock(INVALID_ID);});}catch(...){TheWritableGlobalData=const_cast<GlobalData*>(previous);throw;}
+  TheWritableGlobalData=const_cast<GlobalData*>(previous);require(camera.getCameraLock()==static_cast<ObjectID>(19),"missing lock parent preserves accepted ID");
+  camera.setCameraLock(INVALID_ID);
+}
 void ownership(){
   require(!TheTacticalView,"camera fixture requires no foreign tactical publication");
   NativeServiceOwners<1> owners;
@@ -277,7 +331,8 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
       spatial();
       for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
         const std::string_view family=argv[1];if(family=="modes")modes(parents);else if(family=="paths")paths(parents);else if(family=="negative")negative();else if(family=="ownership")ownership();
-        else if(family=="spatial")spatial();else if(family=="spatial-negative")spatialNegative();else if(family=="spatial-ownership")spatialOwnership();else require(false,"unknown family");
+        else if(family=="spatial")spatial();else if(family=="spatial-negative")spatialNegative();else if(family=="spatial-ownership")spatialOwnership();
+        else if(family=="navigation")navigation(parents);else if(family=="navigation-negative")navigationNegative();else require(false,"unknown family");
         require(AllocationFault::live()==live && TheMemoryPoolFactory->findMemoryPool("Waypoint")->getUsedBlockCount()==0,"repeated camera and actual waypoint owners retire exactly");}}
     shutdownMemoryManager();initialized=false;require(AllocationFault::live()==initial,"whole memory manager retirement");
     std::cout<<"PASS original camera choreography; native UI/root/output still pending\n";return 0;

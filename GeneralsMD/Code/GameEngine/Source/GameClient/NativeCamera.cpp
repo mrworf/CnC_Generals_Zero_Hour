@@ -90,3 +90,12 @@ std::array<Coord3D,2> NativeCamera::centerRay()const{
   if(!m_ready)throw ERROR_BAD_ARG;
   return {m_eye,Coord3D{real(m_eye.x+m_forward[0]*m_far),real(m_eye.y+m_forward[1]*m_far),real(m_eye.z+m_forward[2]*m_far)}};
 }
+Coord3D NativeCamera::viewPlaneDisplacement(const Coord2D& delta)const{
+  if(!m_ready)throw ERROR_BAD_ARG;requireFinite(delta.x);requireFinite(delta.y);
+  // Difference of source Device_To_World_Space at local Z=-1. Do not
+  // normalize: terrain/far-depth rays have a different displacement scale.
+  const double x=2*double(delta.x)*m_halfWidth/m_state.width;
+  const double y=-2*double(delta.y)*m_halfHeight/m_state.height;
+  return {real(x*m_right[0]+y*m_up[0]),real(x*m_right[1]+y*m_up[1]),
+    real(x*m_right[2]+y*m_up[2])};
+}
