@@ -41,8 +41,7 @@ public:
   Bool getWaterGridHeight(Real x, Real y, Real* height) override;
   void setRawMapHeight(const ICoord2D*, Int height) override;
   Int getRawMapHeight(const ICoord2D*) override;
-  // Picking cannot inherit TerrainVisual's false stub in a graphical provider.
-  Bool intersectTerrain(Coord3D*, Coord3D*, Coord3D*) override = 0;
+  Bool intersectTerrain(Coord3D*, Coord3D*, Coord3D*) override;
 protected:
   // Devices mark dirty state here; fallible upload belongs in device admission.
   virtual void terrainHeightsChanged() noexcept = 0;

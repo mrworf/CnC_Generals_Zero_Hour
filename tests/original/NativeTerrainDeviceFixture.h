@@ -6,7 +6,6 @@ struct DeviceFixture final:NativeTerrainVisual {
   unsigned dirty=0;
   void terrainHeightsChanged()noexcept override{++dirty;}
   void getTerrainColorAt(Real,Real,RGBColor*)override{throw ERROR_BAD_ARG;}
-  Bool intersectTerrain(Coord3D*,Coord3D*,Coord3D*)override{throw ERROR_BAD_ARG;}
   void setTerrainTracksDetail()override{}
   void setShoreLineDetail()override{}
   void addFactionBib(Object*,Bool,Real)override{}

@@ -4632,3 +4632,135 @@ initHeadless,updateHeadless}; InGameUI.cpp::init. Camera source transformation
 and lock behavior must be implemented from W3DView::buildCameraTransform/update
 using game-owned CPU math and real terrain/model queries, not renderer-private
 internals or a constant eye/finished state.
+
+Native view spatial prerequisite (N2 plan01/slice03, current implementation;
+validation in progress, not root/view acceptance): BaseHeightMap.cpp::Cast_Ray
+uses the displayed map's clamped vertex samples, fixed 0-1-2 / 2-3-0 triangles,
+two-sided line/plane intersections, and a source bounding box allowing
+64+border cells past the edges. It is not getHeightMapHeight's logical/smoothed
+stencil, blend/cliff triangle-flip state, water picking or TerrainLogic bridge
+picking. W3DTerrainVisual::intersectTerrain has optional contact output and
+nullable endpoints; a miss does not publish a contact. CollisionMath::Collide
+in WWMath/colmathline.cpp accepts t>=0 and strictly t<current Fraction (initial1),
+so an exact end contact is excluded, a nonparallel surface start is accepted,
+and coplanar/zero-length segments miss.
+
+Verified original bug: Cast_Ray writes hit = hit || CollisionMath::Collide inside
+both triangle loops, so its first success skips subsequent collision calls even
+though comments explicitly require nearer-hit selection. NativeTerrainHeightMap
+intersectSegment tests every candidate and admits the nearest fraction. It uses
+a conservative source rectangle with three-cell padding instead of the old
+iterated bounding-box narrowing. It retains displayed vertices/overhang and
+segment bounds, without allocating or borrowing result storage. Finite bounded
+XY conversion is validated before clipping; differences and plane intermediates
+are double to avoid Real overflow. Contact Z is recovered from the selected plane
+because interpolating between full-range opposite Z endpoints loses terrain
+altitude even in double. This is defined numerical repair, not exact bit-for-bit
+legacy arithmetic or a visual-output claim.
+
+NativeTerrainVisual now supplies that real virtual intersectTerrain entry point;
+the device fixture inherits it rather than rejecting the query. Reset retains
+accepted source height backing; construction lowering affects immediate picks;
+replacement/exchange uses the current visual map, with no stale contact cache.
+Generated tests cover both triangles in every fixture cell, edge/diagonal ties,
+two-sided and multiple-hit reversed segments, clamped overhang, nullable output,
+aliasing, unchanged misses, source endpoint rules, one-sample/unloaded maps,
+construction/reset/replacement/exchange, independent water backing, hostile
+defined inputs, full-range Z, corrected retry and exact allocation terminal0.
+Validation/evidence is separate from actual camera projection/bridge/model
+composition. Concrete view/root ownership and source frame order remain pending.
+
+Further concrete camera source facts: W3DView::getPickRay unprojects the absolute
+pixel minus viewport origin to the view plane at local Z=-1, then normalizes the
+eye-to-point vector and extends by camera far depth. CameraClass::Project rejects
+before near depth, then far depth, while offscreen X/Y is OUTSIDE rather than
+INVALID. W3DConvert.cpp uses REAL_TO_INT on normalized pixel conversion (not
+nearest-rounding); view origin is added afterward. Source setWidth changes the
+horizontal field of view in proportion to display width; setHeight updates the
+aspect ratio. buildCameraTransform has real-zoom/FX pitch, constraints, legacy
+shake, CameraShakerSystem and slaved model-bone modes. update includes actor
+follow/tether/snap and airborne orientation, drawable first-render-object camera,
+source freeze ordering and scrolling-dependent height settlement. These cannot
+be collapsed into a constant eye or silently omitted by headless root adoption.
+Source anchors: W3DView.cpp::{buildCameraTransform,getPickRay,setCameraTransform,
+setWidth,setHeight,update}; WW3D2/camera.cpp::{Project,Un_Project,Set_View_Plane};
+WWMath/matrix3d.cpp::Look_At. No adopted dependency source is changed.
+
+Native UI/view parent census while the terrain matrix is frozen (source findings,
+not new initialization acceptance): Display owns its attached View list and
+deleteViews destroys those views; TacticalView is only a publication/borrow.
+Display::attachView currently prepends without null/duplicate admission checks,
+and has no detach operation. Guard UI candidate ownership and view publication
+together; do not leave both a candidate guard and Display owning the same view
+after a fallible virtual attachment or permit duplicate links/cycles. Preserve
+the original source-client UI-before-display/strings-before-font retirement order.
+
+GameWindowManager::init creates/publishes TheTransitionHandler before fallible
+load/init. Its destructor deletes any published transition handler without
+checking whether it was acquired by that manager. reset/update also call it.
+Native logical window adoption must guard the actual transition parent and
+distinguish owned versus borrowed publication, with every failure/retry and valid
+window-manager identity through window destruction. Its shared constructor has
+no text/font acquisition; original GameClient creates the unbound string manager
+first, then fonts before Display/WindowManager, so real window text has legitimate
+parents at admission. GameWindow only requires a concrete pooled winDrawBorder;
+GameWindowManager requires allocateNewWindow and original gadget draw callbacks.
+Headless adapters may explicitly reject physical drawing but must retain actual
+window scripts, gadget callbacks/state and text backing, not return fake windows
+or skip those initialization contracts. Original W3DView::screenToWorld itself
+is an unimplemented/debug-crash method; inspect actual callers before inventing
+its semantics. The implemented source methods are screenToTerrain and
+screenToWorldAtZ, with separate hit/miss/bridge and plane contracts.
+Source anchors: Display.cpp::{attachView,deleteViews,updateViews};
+GameWindowManager.cpp::{init,reset,update,~GameWindowManager};
+GameWindow.h/GameWindowManager.h concrete factory contracts; GameClient.cpp::init;
+W3DView.cpp::{screenToWorld,screenToTerrain,screenToWorldAtZ}.
+
+Camera reachability qualification from the complete active GeneralsMD engine/
+device source census: screenToWorld has no shared/device source call sites beyond
+its implementation. RealZoom references are confined to W3DView's own field,
+constructor, transform/clip branches, declarations and enable/disable definitions;
+no caller enables it, and the constructor initializes it false. That bounds the
+initial native original-runtime route to normal zoom plus actually called FX
+pitch/script/lock behavior; it does not establish whole-game visual acceptance
+or waive any later explicitly exposed camera mode. Do not spend root-startup
+work treating an uncalled device-only toggle as a source script prerequisite.
+By contrast, slave-camera/shake are View-level methods and need their actual
+script/effect call and CPU model/query dependencies closed before acceptance.
+
+Reachable camera shake/slave source anchors: FXList.cpp and
+ScriptActions.cpp::doScreenShake call View::shake;
+ScriptActions.cpp::{doC3CameraEnableSlaveMode,doC3CameraDisableSlaveMode,
+doC3CameraShake} call the View-level interfaces. The last resolves an actual
+TerrainLogic waypoint then uses position/radius/duration/amplitude. Source
+W3DDevice/GameClient/camerashakesystem.cpp contains game-owned shake algorithms,
+not needed renderer backend internals despite its unused graphics includes.
+It acquires an AutoPool shaker then admits it to a fallible MultiList; expired
+records enter another temporary MultiList before retirement. The global system
+steps 1/30 per buildCameraTransform, draws three initial frequencies/three phases,
+and adds a three-component random secondary angle INSIDE each of the three axis
+iterations (nine extra draws, not three). Radius/duration divisors need finite,
+nonzero contracts and failure admission must preserve accepted records. Its
+WWMath::Clamp return value is discarded, so do not claim the commented clamp
+is executed. Lifetime/clock/RNG ownership and intended bug repair must be explicit
+in native adaptation; do not import its global pool/temporary admission leaks or
+mix the shake RNG with simulation RNG. Concrete camera source acceptance remains
+pending; these observations are not proof from a text or terrain fixture.
+
+Window admission carry-forward for the same native UI batch: shared
+GameWindowManager::winCreate allocates a concrete pooled window, links it to its
+parent/master list, computes x+width/y+height, installs the system callback and
+sends GWM_CREATE BEFORE copying optional instance data and selecting/loading the
+default font. A late font/string/callback failure therefore occurs after visible
+admission; a factory-only guard does not cover that lifetime. Native adoption must
+cover the shared admission path, constructor initialization, defined region
+arithmetic, parent/child/list/callback identities and font/text cleanup together.
+Preserve original CREATE-before-instance-data/font observable ordering; staging
+fallible backing is not permission to call CREATE with a different state.
+winDestroy marks a record destroyed and queues deferred retirement rather than
+immediately freeing it; inspect processDestroyList and script/layout subtree
+ownership together when building rollback, not ordinary delete on an admitted
+window. Concrete Window creation alone is not whole WindowLayout/InGameUI init.
+Source anchors: GameWindowManager.cpp::{winCreate,winDestroy,processDestroyList};
+GameWindowManagerScript.cpp::{winCreateFromScript,winCreateLayout};
+WindowLayout.cpp::load; GameWindow.cpp::{GameWindow,~GameWindow,winSetFont}.

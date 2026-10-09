@@ -44,6 +44,10 @@ void NativeTerrainVisual::exchangeTerrainState(TerrainState& other) noexcept {
   m_height.swap(other.height);
   m_filenameString.swap(other.filename);
 }
+Bool NativeTerrainVisual::intersectTerrain(Coord3D* from, Coord3D* to, Coord3D* output) {
+  if (!from || !to) return FALSE;
+  return m_height.intersectSegment(*from, *to, output);
+}
 TerrainType* NativeTerrainVisual::getTerrainTile(Real x, Real y) {
   if (!m_height.width()) return nullptr;
   if (!TheTerrainTypes) throw ERROR_BAD_ARG;

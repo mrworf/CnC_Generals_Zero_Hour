@@ -5,6 +5,7 @@
 #include "GameClient/NativeTerrainVisual.h"
 #include "GameLogic/GameLogic.h"
 #include "Common/TerrainTypes.h"
+#include "Common/Terrain.h"
 #include "Common/GlobalData.h"
 #include "Common/FileSystem.h"
 #include <algorithm>
@@ -135,6 +136,83 @@ void functional() {
   }
   Map single; load(single,wire(payload(2,1,1,0,9),2));
   near(single.groundHeight(-10,10,&normal),5.625f,"one-sample map safe clipping");
+}
+void rays() {
+  Map owner;load(owner,wire(payload()));
+  Coord3D contact{-99,-98,-97};
+  // Independent source plane oracle for every cell and both diagonals. Unlike
+  // groundHeight, this query interpolates display vertices even at map edges.
+  for(Int y=0;y<6;++y)for(Int x=0;x<6;++x)
+    for(const auto& fraction : {Coord2D{.25f,.75f},Coord2D{.75f,.25f},Coord2D{.5f,.5f}}){
+      const Real z0=owner.rawHeight(x,y),z1=owner.rawHeight(x+1,y);
+      const Real z2=owner.rawHeight(x+1,y+1),z3=owner.rawHeight(x,y+1);
+      const Real expected=(fraction.y>fraction.x ? z0+(z2-z3)*fraction.x+(z3-z0)*fraction.y
+                                                : z0+(z1-z0)*fraction.x+(z2-z1)*fraction.y)*MAP_HEIGHT_SCALE;
+      const Real wx=(x-1+fraction.x)*MAP_XY_FACTOR,wy=(y-1+fraction.y)*MAP_XY_FACTOR;
+      require(owner.intersectSegment({wx,wy,200},{wx,wy,-20},&contact),"display mesh both triangle intersections");
+      near(contact.x,wx,"mesh X contact");near(contact.y,wy,"mesh Y contact");near(contact.z,expected,"independent source display plane");
+      require(owner.intersectSegment({wx,wy,-20},{wx,wy,200},&contact),"two-sided terrain segment");
+      near(contact.z,expected,"reverse terrain contact");
+    }
+  require(owner.intersectSegment({10,10,200},{10,10,-20},nullptr),"optional contact output");
+  for(const auto& xy : {Coord2D{-100,-100},Coord2D{100,100},Coord2D{-100,100},Coord2D{100,-100}}){
+    const Int x=xy.x<0 ? 0 : 6,y=xy.y<0 ? 0 : 6;
+    require(owner.intersectSegment({xy.x,xy.y,200},{xy.x,xy.y,-20},&contact),"clamped overhang mesh intersection");
+    near(contact.z,owner.rawHeight(x,y)*MAP_HEIGHT_SCALE,"source clamped overhang vertex heights");
+  }
+  // Two crossings. Reversed direction must choose the other nearest contact,
+  // not the first triangle in ascending grid order.
+  auto ridge=payload(4,7,7,1,0);
+  for(Int y=0;y<7;++y)ridge[ridge.size()-49+y*7+3]=char(160);
+  load(owner,wire(ridge));
+  require(owner.intersectSegment({0,10,50},{40,10,50},&contact),"ridge multiple-hit forward");
+  near(contact.x,15,"forward nearest terrain hit");near(contact.z,50,"forward ridge height");
+  require(owner.intersectSegment({40,10,50},{0,10,50},&contact),"ridge multiple-hit reverse");
+  near(contact.x,25,"reverse nearest terrain hit independent of grid order");
+  Coord3D alias{40,10,50};const Coord3D destination{0,10,50};
+  require(owner.intersectSegment(alias,destination,&alias),"contact aliases input safely");near(alias.x,25,"aliased contact");
+  load(owner,wire(payload(4,7,7,1,80)));
+  require(owner.intersectSegment({10,10,50},{10,10,0},&contact),"start on surface accepted");near(contact.z,50,"surface start contact");
+  contact={-99,-98,-97};
+  require(!owner.intersectSegment({10,10,100},{10,10,50},&contact),"source exact end excluded");
+  require(contact.x==-99 && contact.y==-98 && contact.z==-97,"miss leaves contact unchanged");
+  require(!owner.intersectSegment({0,0,50},{40,0,50},&contact),"coplanar segment is not a source hit");
+  require(!owner.intersectSegment({10,10,50},{10,10,50},&contact),"zero-length surface segment misses");
+  require(!owner.intersectSegment({0,0,100},{40,0,100},&contact),"parallel elevated ray misses");
+  require(!owner.intersectSegment({-1000,-1000,100},{-1000,-1000,0},&contact),"outside finite source overhang misses");
+  Map empty;require(!empty.intersectSegment({0,0,100},{0,0,-10},&contact),"unloaded query misses");
+  Map single;load(single,wire(payload(2,1,1,0,9),2));
+  require(single.intersectSegment({0,0,100},{0,0,-10},&contact),"one-sample clamped mesh");near(contact.z,5.625f,"one-sample display contact");
+}
+void rayNegative() {
+  Map owner;load(owner,wire(payload()));
+  const auto* backing=owner.bytes().data();const auto live=AllocationFault::live();
+  for(const Real value : {std::numeric_limits<Real>::quiet_NaN(),std::numeric_limits<Real>::infinity(),
+                         -std::numeric_limits<Real>::infinity(),std::numeric_limits<Real>::max(),
+                         -std::numeric_limits<Real>::max()})
+    for(unsigned axis=0;axis<3;++axis)for(unsigned endpoint=0;endpoint<2;++endpoint){
+      // Finite full-range Z is supported using double intermediates. XY must
+      // obey the same bounded grid conversion as the original native queries.
+      if(axis==2 && std::isfinite(value))continue;
+      Coord3D a{10,10,200},b{10,10,-20},contact{-99,-98,-97};
+      auto& point=endpoint ? b : a;
+      if(axis==0)point.x=value;else if(axis==1)point.y=value;else point.z=value;
+      bool rejected=false;try{owner.intersectSegment(a,b,&contact);}catch(ErrorCode error){rejected=error==ERROR_BAD_ARG;}
+      require(rejected && contact.x==-99 && contact.y==-98 && contact.z==-97 &&
+        owner.bytes().data()==backing && AllocationFault::live()==live,"hostile segment rejects without mutation or ownership drift");
+      require(owner.intersectSegment({10,10,200},{10,10,-20},&contact),"corrected segment retry");
+    }
+  // Exact no-acquisition terminal, including virtual entry point in provider
+  // family below. Do not invent a fault prefix for allocation-free queries.
+  AllocationFault::arm(0);bool hit=false;
+  try{hit=owner.intersectSegment({10,10,200},{10,10,-20});}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();const auto triggered=AllocationFault::triggered();AllocationFault::disarm();
+  require(hit && attempts==0 && !triggered,"complete terrain query allocation terminal0");
+  const Real huge=std::numeric_limits<Real>::max();Coord3D contact;
+  require(owner.intersectSegment({10,10,huge},{10,10,-huge},&contact),"finite full-range Z crossing without intermediate overflow");
+  near(contact.z,12.5f,"huge Z cancellation cannot erase display altitude");
+  require(owner.intersectSegment({10,10,-huge},{10,10,huge},&contact),"finite full-range reversed Z crossing");
+  near(contact.z,12.5f,"reversed huge Z plane contact");
 }
 void negative() {
   Map owner; const auto valid = wire(payload()); load(owner, valid);
@@ -498,6 +576,34 @@ void providerFunctional(){ProviderContext context;DeviceFixture owner;TerrainVis
   owner.exchangeCpuState(candidate);const auto* backing=owner.heightMap().bytes().data();api.reset();
   require(owner.filename().isEmpty() && owner.heightMap().bytes().data()==backing && owner.waterGrid().enabled() && owner.waterGrid().vertex(0,0).height==0,"source reset keeps prior terrain/enabled water backing and clears waves/name");
 }
+void providerRays(){ProviderContext context;DeviceFixture owner;TerrainVisual& api=owner;
+  Coord3D from{10,10,200},to{10,10,-20},contact{-99,-98,-97};
+  require(!api.intersectTerrain(&from,&to,&contact),"unloaded virtual terrain ray misses");
+  require(!api.intersectTerrain(nullptr,&to,&contact) && !api.intersectTerrain(&from,nullptr,&contact),"nullable ray endpoints miss");
+  const auto flat=[&](Int value){return visualToc()+chunk(payload(4,10,6,1,value))+chunk(blendPayload(8,10,6,true,true),8,2);};
+  providerLoad(owner,flat(80),"GeneratedDisplay.map");
+  require(api.intersectTerrain(&from,&to,&contact),"actual virtual terrain ray admission");near(contact.z,50,"visual source height contact");
+  api.setWaterGridResolution(nullptr,3,3,10);api.setWaterGridHeightClamps(nullptr,0,100);
+  api.setWaterAttenuationFactors(nullptr,1,0,0,0);api.enableWaterGrid(TRUE);api.changeWaterHeight(10,10,80);
+  require(api.intersectTerrain(&from,&to,&contact),"water backing does not replace mesh picking");near(contact.z,50,"terrain query separate from water");
+  const ICoord2D lowered{1,1};const auto dirty=owner.dirty;api.setRawMapHeight(&lowered,0);
+  require(owner.dirty==dirty+1 && api.intersectTerrain(&from,&to,&contact),"construction lowering immediately updates ray backing");near(contact.z,0,"lowered display vertex contact");
+  api.reset();require(api.intersectTerrain(&from,&to,&contact),"source reset retains accepted mesh");near(contact.z,0,"reset retained lowered vertex");
+  providerLoad(owner,flat(160),"GeneratedReplacement.map");
+  require(api.intersectTerrain(&from,&to,&contact),"replacement query uses new backing");near(contact.z,100,"replacement contact height");
+  NativeTerrainVisual::TerrainState exchange;
+  owner.exchangeTerrainState(exchange);
+  require(!api.intersectTerrain(&from,&to,&contact),"withdrawn CPU mesh cannot fabricate contact");
+  owner.exchangeTerrainState(exchange);
+  AllocationFault::arm(0);bool hit=false;
+  try{hit=api.intersectTerrain(&from,&to,&contact);}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();const auto triggered=AllocationFault::triggered();AllocationFault::disarm();
+  require(hit && attempts==0 && !triggered,"actual virtual query complete allocation terminal0");near(contact.z,100,"restored backing contact");
+  const Coord3D accepted=contact;from.x=std::numeric_limits<Real>::quiet_NaN();
+  bool rejected=false;try{api.intersectTerrain(&from,&to,&contact);}catch(ErrorCode error){rejected=error==ERROR_BAD_ARG;}
+  require(rejected && contact.x==accepted.x && contact.y==accepted.y && contact.z==accepted.z,"virtual rejection preserves accepted result");
+  from={10,10,200};require(api.intersectTerrain(&from,&to,&contact),"virtual corrected retry");
+}
 void providerNegative(){ProviderContext context;DeviceFixture owner;TerrainVisual& api=owner;
   // Lighting is optional; put it first so every tested physical prefix ends
   // before mandatory terrain admission, rather than reject valid omission.
@@ -566,6 +672,7 @@ int main(int argc,char** argv) {
     {const std::string family=argv[1];
       for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
         if(family=="functional")functional();else if(family=="negative")negative();else if(family=="faults")faults();
+        else if(family=="rays")rays();else if(family=="rays-negative")rayNegative();else if(family=="provider-rays")providerRays();
         else if(family=="topology")topologyFunctional();else if(family=="topology-negative")topologyNegative();
         else if(family=="topology-faults")topologyFaults();
         else if(family=="visual")visualFunctional();else if(family=="visual-negative")visualNegative();

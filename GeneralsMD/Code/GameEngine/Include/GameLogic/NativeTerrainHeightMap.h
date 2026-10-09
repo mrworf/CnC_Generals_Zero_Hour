@@ -72,6 +72,10 @@ public:
   Real maximumHeight() const noexcept { return m_maximumHeight; }
   Bool clearLineOfSight(const Coord3D& from, const Coord3D& to,
                        Real displayMaximumHeight) const;
+  // Display mesh query, not logical height/LOS, water or bridge picking.
+  // Misses leave output untouched; output is optional. No query allocation.
+  Bool intersectSegment(const Coord3D& from, const Coord3D& to,
+                        Coord3D* output = nullptr) const;
   void swap(NativeTerrainHeightMap& candidate) noexcept;
 private:
   Int m_width = 0, m_height = 0, m_border = 0;

@@ -418,6 +418,80 @@ Real NativeTerrainHeightMap::groundHeight(Real x, Real y, Coord3D* normal,
   }
   return result;
 }
+Bool NativeTerrainHeightMap::intersectSegment(const Coord3D& from, const Coord3D& to,
+                                            Coord3D* output) const {
+  // Validate before clipping/conversion. Promote differences before subtracting
+  // so even finite opposite-sign Real endpoints cannot overflow intermediates.
+  for (const auto& point : {from,to}) {
+    (void)gridCoordinate(point.x, m_border);
+    (void)gridCoordinate(point.y, m_border);
+    if (!std::isfinite(point.z)) throw ERROR_BAD_ARG;
+  }
+  if (m_bytes.empty()) return FALSE;
+  const std::array<double,3> start{from.x,from.y,from.z};
+  const std::array<double,3> delta{double(to.x)-from.x,double(to.y)-from.y,double(to.z)-from.z};
+  if (delta[0]==0 && delta[1]==0 && delta[2]==0) return FALSE;
+
+  // Source bounds allow 64 cells plus the authored border past either edge.
+  // This is candidate culling, not an extension of the input segment.
+  const auto overhang=std::int64_t(64)+m_border;
+  const std::array<double,3> low{-MAP_XY_FACTOR*double(overhang),
+    -MAP_XY_FACTOR*double(overhang),-double(MAP_XY_FACTOR)};
+  const std::array<double,3> high{MAP_XY_FACTOR*(double(m_width)+overhang),
+    MAP_XY_FACTOR*(double(m_height)+overhang),double(m_maximumHeight)+MAP_XY_FACTOR};
+  double begin=0,end=1;
+  for (unsigned axis=0;axis<3;++axis) {
+    if (delta[axis]==0) {
+      if (start[axis]<low[axis] || start[axis]>high[axis]) return FALSE;
+    } else {
+      double a=(low[axis]-start[axis])/delta[axis],b=(high[axis]-start[axis])/delta[axis];
+      if (a>b) std::swap(a,b);
+      begin=std::max(begin,a);end=std::min(end,b);
+      if (begin>end) return FALSE;
+    }
+  }
+  // Conservative source rectangle with its three-cell second-pass padding.
+  // Avoid the old repeated-box reduction and its order-dependent early hit.
+  std::array<std::int64_t,2> first,last;
+  for (unsigned axis=0;axis<2;++axis) {
+    const double a=std::clamp(start[axis]+begin*delta[axis],low[axis],high[axis]);
+    const double b=std::clamp(start[axis]+end*delta[axis],low[axis],high[axis]);
+    first[axis]=static_cast<std::int64_t>(std::floor(std::min(a,b)/MAP_XY_FACTOR))+m_border-3;
+    last[axis]=static_cast<std::int64_t>(std::ceil(std::max(a,b)/MAP_XY_FACTOR))+m_border+3;
+  }
+  auto height=[&](std::int64_t x,std::int64_t y) -> double {
+    return rawHeight(static_cast<Int>(std::clamp<std::int64_t>(x,0,m_width-1)),
+                     static_cast<Int>(std::clamp<std::int64_t>(y,0,m_height-1)))*double(MAP_HEIGHT_SCALE);
+  };
+  double nearest=1; // Source CollisionMath accepts t >= 0 and strictly t < Fraction.
+  bool hit=false;
+  Coord3D contact{};
+  for (auto y=first[1];y<=last[1];++y) for (auto x=first[0];x<=last[0];++x) {
+    const double wx=(x-m_border)*double(MAP_XY_FACTOR),wy=(y-m_border)*double(MAP_XY_FACTOR);
+    const double z0=height(x,y),z1=height(x+1,y),z2=height(x+1,y+1),z3=height(x,y+1);
+    for (unsigned upper=0;upper<2;++upper) {
+      // Source diagonals: lower 0-1-2 and upper 2-3-0. Each is a height plane.
+      const double sx=(upper ? z2-z3 : z1-z0)/MAP_XY_FACTOR;
+      const double sy=(upper ? z3-z0 : z2-z1)/MAP_XY_FACTOR;
+      const double denominator=delta[2]-sx*delta[0]-sy*delta[1];
+      if (denominator==0) continue; // Parallel/coplanar is not a source hit.
+      const double fraction=(z0+sx*(start[0]-wx)+sy*(start[1]-wy)-start[2])/denominator;
+      if (fraction<0 || fraction>=nearest) continue;
+      const double fx=(start[0]+fraction*delta[0]-wx)/MAP_XY_FACTOR;
+      const double fy=(start[1]+fraction*delta[1]-wy)/MAP_XY_FACTOR;
+      if (fx<0 || fx>1 || fy<0 || fy>1 || (upper ? fy<fx : fy>fx)) continue;
+      nearest=fraction;hit=true;
+      // Recover Z from the hit plane rather than subtracting opposite huge Z
+      // endpoints. The latter loses the terrain altitude even in double.
+      contact={static_cast<Real>(wx+fx*MAP_XY_FACTOR),static_cast<Real>(wy+fy*MAP_XY_FACTOR),
+        static_cast<Real>(z0+sx*fx*MAP_XY_FACTOR+sy*fy*MAP_XY_FACTOR)};
+    }
+  }
+  if (hit && output) {
+    *output=contact; // Also safe when output aliases either input.
+  }
+  return hit;
+}
 Bool NativeTerrainHeightMap::clearLineOfSight(const Coord3D& from, const Coord3D& to,
                                             Real displayMaximumHeight) const {
   auto x = gridCoordinate(from.x, m_border), y = gridCoordinate(from.y, m_border);

@@ -133,3 +133,12 @@ The49-domain enum source lock preserves all named values and proves signedness,
 width/alignment/representative offsets and defined raw representations in both
 conditional configurations. Whole owner ABI/INI/module lifecycle remains pending;
 RiderInfo's real status member must not be mistaken for an unused declaration.
+
+Current slice03 resume: committed native text/client backing is followed by real
+displayed-terrain ray queries in the same existing transaction. See
+`evidence/qa/N2-terrain-ray-checkpoint.md` for the frozen source/matrix and exact
+live handles, and `docs/original-engine-formats.md` for the coupled camera/view,
+window/layout/transition-parent admission findings. Do not treat earlier
+supporting observations above as current acceptance. Complete this query matrix
+and commit, then continue concrete camera/View and actual headless UI/root
+init/frame/cleanup; slice03 and N2 remain incomplete, full362 remains required.

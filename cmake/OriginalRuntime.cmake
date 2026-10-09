@@ -600,7 +600,8 @@ target_include_directories(original_native_terrain_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_link_options(original_native_terrain_fixture PRIVATE -Wl,--gc-sections)
 foreach(family IN ITEMS functional negative faults topology topology-negative topology-faults
-    visual visual-negative visual-faults provider provider-negative provider-faults)
+    visual visual-negative visual-faults provider provider-negative provider-faults
+    rays rays-negative provider-rays)
   add_test(NAME original_native_terrain_${family} COMMAND original_native_terrain_fixture "${family}")
   set_tests_properties(original_native_terrain_${family} PROPERTIES LABELS "original;runtime;native_terrain" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

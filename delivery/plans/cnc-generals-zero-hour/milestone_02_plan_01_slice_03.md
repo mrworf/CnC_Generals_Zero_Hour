@@ -2975,3 +2975,38 @@ Commit the coherent provider/actual client factory/ownership/validation batch;
 full359, slice03 and N2 acceptance remain pending. Continue the documented actual
 headless UI/view/root adoption and original source phase/snapshot/popup/shutdown
 gates, not another isolated text-only plan.
+
+Camera/view spatial follow-through (parent10b43a84, same slice): source inspection
+found NativeTerrainVisual still rejects intersectTerrain. Implement the real
+display-height-mesh segment query before concrete view adoption; it must use the
+visual grid, source 0-1-2 / 2-3-0 diagonal and clamped overhang vertices, not the
+logical ground-height stencil or water/bridge shortcuts. Preserve nullable result,
+unchanged output on a miss, two-sided segment intersections and endpoint exclusion
+from the original Fraction=1 / t<Fraction admission. Validate nearest contact
+across all candidates: original Cast_Ray's hit || Collide expression short-circuits
+after its first hit despite its nearest-hit comment; correcting that original bug
+is authorized, not permission to change ordinary terrain behavior. Keep terrain,
+bridge and drawable queries separate; the view must compose bridge selection later.
+Inspect replacement/lowering/reset, edge/diagonal/sloped/multiple-hit rays, extreme
+defined inputs and allocation-free repeated queries together. Exercise the actual
+TerrainVisual virtual entry point as well as backing, all3 sanitizer configurations,
+and related terrain/world/camera/client families on frozen source before committing
+this useful spatial behavior checkpoint. Then continue concrete camera transforms,
+source clock ordering and staged original UI/root adoption. No ray fixture is
+whole-root or physical-rendering acceptance; existing N2 completion gates remain.
+
+Current displayed-terrain query implementation is frozen canonical640/inclusive647
+at f52556b3/473cda14 (full digests in evidence/qa/N2-terrain-ray-checkpoint.md).
+GCC full configured build/focused15/related172 PASS (21.55s/168.10s), handle44939
+terminal0. Both sanitizer full configured builds/focused15 PASS (GCC112.07s,
+Clang68.68s); related172 are live in exact handles22250/48724. No runtime mutation
+or implementation commit until required terminal validation passes. Poll rather
+than restart; full362, concrete camera/root and N2 acceptance remain pending.
+
+Displayed-terrain query checkpoint now verified all3 full configured builds,
+focused15 and related172. Related times168.10s/727.05s/442.76s; all jobs terminal0,
+no required failures and no live jobs. Source digests remain identical to the
+frozen evidence. Commit this real virtual spatial-query behavior with its tests,
+source findings and provenance, then resume concrete camera/view and staged
+original UI/headless root adoption in the same slice. This is supporting behavior,
+not another slice/plan or whole-root/whole-game acceptance.
