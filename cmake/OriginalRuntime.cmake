@@ -441,6 +441,16 @@ add_executable(original_lod_fixture tests/original/lod.cpp tests/original/Alloca
 add_executable(original_native_client_fixture tests/original/native_client.cpp tests/original/AllocationFault.cpp)
 add_executable(original_native_terrain_fixture tests/original/native_terrain.cpp tests/original/AllocationFault.cpp)
 add_executable(original_polygon_world_fixture tests/original/polygon_world.cpp tests/original/AllocationFault.cpp)
+add_executable(original_sides_scripts_fixture tests/original/sides_scripts.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_sides_scripts_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_compile_definitions(original_sides_scripts_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+target_link_options(original_sides_scripts_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS functional negative copies faults setters)
+  add_test(NAME original_sides_scripts_${family} COMMAND original_sides_scripts_fixture "${family}")
+  set_tests_properties(original_sides_scripts_${family} PROPERTIES LABELS "original;runtime;map;scripts" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 target_link_libraries(original_polygon_world_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_compile_definitions(original_polygon_world_fixture PRIVATE _OPERATOR_NEW_DEFINED_)

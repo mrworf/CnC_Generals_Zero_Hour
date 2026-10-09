@@ -1109,7 +1109,30 @@ public:
 public:
 	static void updateDefaults(void);
 	static void reset(void); 
-	static Int getNextID(void) {m_curId++; return m_curId;};
+	static Int getNextID(void);
+	class IDTransaction final {
+		Int m_before=m_curId;
+		Bool m_keep=false;
+	public:
+		IDTransaction()=default;
+		~IDTransaction()noexcept{if(!m_keep)m_curId=m_before;}
+		IDTransaction(const IDTransaction&)=delete;
+		IDTransaction& operator=(const IDTransaction&)=delete;
+		void commit()noexcept{m_keep=true;}
+	};
+	class ReadState final {
+		friend class ScriptList;
+		ScriptList* m_lists[MAX_PLAYER_COUNT]{};
+		Int m_count = 0;
+		Int m_id;
+	public:
+		ReadState() noexcept;
+		~ReadState() noexcept;
+		ReadState(const ReadState&) = delete;
+		ReadState& operator=(const ReadState&) = delete;
+	};
+	static void exchangeReadState(ReadState& state) noexcept;
+	static void exchangeReadLists(ReadState& state) noexcept;
 	
 public:
 	ScriptGroup *getScriptGroup(void) {return m_firstGroup;};

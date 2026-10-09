@@ -65,6 +65,20 @@
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/SidesList.h"
 #include "GameLogic/Module/ContainModule.h"
+#include <array>
+#include <limits>
+#include <memory>
+#include <utility>
+
+namespace {
+struct ParameterRetire { void operator()(Parameter* value) const noexcept { if(value)value->deleteInstance(); } };
+using ParameterOwners = std::array<std::unique_ptr<Parameter,ParameterRetire>, MAX_PARMS>;
+NameKeyGenerator& scriptNamespace() { if(!TheNameKeyGenerator)throw ERROR_BAD_ARG;return *TheNameKeyGenerator; }
+void clearParameters(Parameter* (&values)[MAX_PARMS], Int& count) noexcept {
+	for(Int i=0;i<MAX_PARMS;++i) {if(values[i])values[i]->deleteInstance();values[i]=NULL;}
+	count=0;
+}
+}
 
 
 #ifdef _INTERNAL
@@ -150,7 +164,7 @@ enum { K_SCRIPT_LIST_DATA_VERSION_1 = 1,
 			end_of_the_enumeration
 };
 
-static Condition::ConditionType ParameterChangesVer2[] = 
+static Int ParameterChangesVer2[] =
 { 
 	// Seven Changed from version 1.
 	Condition::TEAM_INSIDE_AREA_PARTIALLY, 
@@ -173,6 +187,23 @@ ScriptList *ScriptList::s_readLists[MAX_PLAYER_COUNT] = {NULL,NULL,NULL,NULL,NUL
 Int					ScriptList::s_numInReadList = 0;
 
 Int ScriptList::m_curId = 0;
+
+Int ScriptList::getNextID(void) {
+	if(m_curId==std::numeric_limits<Int>::max())throw ERROR_OUT_OF_MEMORY;
+	return ++m_curId;
+}
+ScriptList::ReadState::ReadState() noexcept : m_id(m_curId) {}
+ScriptList::ReadState::~ReadState() noexcept {
+	for(auto* list:m_lists)if(list)list->deleteInstance();
+}
+void ScriptList::exchangeReadState(ReadState& state) noexcept {
+	exchangeReadLists(state);
+	std::swap(m_curId,state.m_id);
+}
+void ScriptList::exchangeReadLists(ReadState& state) noexcept {
+	for(Int i=0;i<MAX_PLAYER_COUNT;++i)std::swap(s_readLists[i],state.m_lists[i]);
+	std::swap(s_numInReadList,state.m_count);
+}
 
 /**
  ScriptList::updateDefaults -  checks for empty script lists, and adds some default stuff
@@ -329,7 +360,9 @@ void ScriptList::loadPostProcess( void )
 */
 ScriptList *ScriptList::duplicate(void) const 
 {
+	IDTransaction ids;
 	ScriptList *pNew = newInstance(ScriptList);
+	MemoryPoolObjectHolder owner(pNew);
 
 	{
 		const ScriptGroup *src = this->m_firstGroup;
@@ -365,6 +398,8 @@ ScriptList *ScriptList::duplicate(void) const
 		}
 	}
 
+	owner.release();
+	ids.commit();
 	return pNew;
 }
 
@@ -375,7 +410,9 @@ ScriptList *ScriptList::duplicate(void) const
 ScriptList *ScriptList::duplicateAndQualify(const AsciiString& qualifier, 
 			const AsciiString& playerTemplateName, const AsciiString& newPlayerName) const 
 {
+	IDTransaction ids;
 	ScriptList *pNew = newInstance(ScriptList);
+	MemoryPoolObjectHolder owner(pNew);
 
 	{
 		const ScriptGroup *src = this->m_firstGroup;
@@ -411,6 +448,8 @@ ScriptList *ScriptList::duplicateAndQualify(const AsciiString& qualifier,
 		}
 	}
 
+	owner.release();
+	ids.commit();
 	return pNew;
 }
 
@@ -530,26 +569,29 @@ void ScriptList::deleteGroup(ScriptGroup *pGrp)
 */
 Bool ScriptList::ParseScriptsDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
 {
+	if(!info)throw ERROR_CORRUPT_FILE_FORMAT;
+	struct Transaction {
+		ReadState previous;Bool keep=false;
+		Transaction(){exchangeReadState(previous);}
+		~Transaction()noexcept{if(!keep)exchangeReadState(previous);}
+	} transaction;
+	NameKeyTransaction names(scriptNamespace());
 	Int i;
 	file.registerParser( AsciiString("ScriptList"), info->label, ScriptList::ParseScriptListDataChunk );
-	DEBUG_ASSERTCRASH(s_numInReadList==0, ("Leftover scripts floating aroung."));
-	for (i=0; i<s_numInReadList; i++) {
-		if (s_readLists[i]) {
-			s_readLists[i]->deleteInstance();
-			s_readLists[i] = NULL;
-		}
-	}
-	TScriptListReadInfo readInfo;
-	for (i=0; i<MAX_PLAYER_COUNT; i++) {
-		readInfo.readLists[i] = 0;
-	}
-	readInfo.numLists = 0;
+	struct ReadOwner {
+		TScriptListReadInfo info{};
+		~ReadOwner()noexcept{for(auto* list:info.readLists)if(list)list->deleteInstance();}
+	} candidate;
+	TScriptListReadInfo& readInfo=candidate.info;
 	if (file.parse(&readInfo)) {
-		DEBUG_ASSERTCRASH(readInfo.numLists<MAX_PLAYER_COUNT, ("Read too many, overrun buffer."));
+		if(!file.atEndOfChunk())throw ERROR_CORRUPT_FILE_FORMAT;
 		s_numInReadList = readInfo.numLists;
 		for (i=0; i<s_numInReadList; i++) {
 			s_readLists[i] = readInfo.readLists[i];
+			readInfo.readLists[i]=NULL;
 		}
+		names.commit();
+		transaction.keep=true;
 		return true;
 	}
 	return false;
@@ -618,6 +660,7 @@ void ScriptList::WriteScriptListDataChunk(DataChunkOutput &chunkWriter)
 */
 Bool ScriptList::ParseScriptListDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
 {
+	if(!userData || !info)throw ERROR_CORRUPT_FILE_FORMAT;
 	TScriptListReadInfo *pInfo = (TScriptListReadInfo*)userData;
 	DEBUG_ASSERTCRASH(pInfo->numLists < MAX_PLAYER_COUNT, ("Too many."));
 	if (pInfo->numLists >= MAX_PLAYER_COUNT) return false;
@@ -648,7 +691,9 @@ m_isGroupSubroutine(false),
 m_nextGroup(NULL)
 //
 {
+	ScriptList::IDTransaction ids;
 	m_groupName.format("Script Group %d", ScriptList::getNextID());
+	ids.commit();
 }
 
 /**
@@ -747,7 +792,9 @@ void ScriptGroup::loadPostProcess( void )
 */
 ScriptGroup *ScriptGroup::duplicate(void) const 
 {
+	ScriptList::IDTransaction ids;
 	ScriptGroup *pNew = newInstance(ScriptGroup);	
+	MemoryPoolObjectHolder owner(pNew);
 
 	{
 		Script *src = this->m_firstScript;
@@ -771,6 +818,8 @@ ScriptGroup *ScriptGroup::duplicate(void) const
 	pNew->m_isGroupSubroutine = this->m_isGroupSubroutine;
 	pNew->m_nextGroup = NULL;
 
+	owner.release();
+	ids.commit();
 	return pNew;
 }
 
@@ -782,7 +831,9 @@ ScriptGroup *ScriptGroup::duplicate(void) const
 ScriptGroup *ScriptGroup::duplicateAndQualify(const AsciiString& qualifier, 
 			const AsciiString& playerTemplateName, const AsciiString& newPlayerName) const 
 {
+	ScriptList::IDTransaction ids;
 	ScriptGroup *pNew = newInstance(ScriptGroup);
+	MemoryPoolObjectHolder owner(pNew);
 
 	{
 		Script *src = this->m_firstScript;
@@ -807,6 +858,8 @@ ScriptGroup *ScriptGroup::duplicateAndQualify(const AsciiString& qualifier,
 	pNew->m_isGroupSubroutine = this->m_isGroupSubroutine;
 	pNew->m_nextGroup = NULL;
 
+	owner.release();
+	ids.commit();
 	return pNew;
 }
 
@@ -888,8 +941,11 @@ void ScriptGroup::WriteGroupDataChunk(DataChunkOutput &chunkWriter, ScriptGroup 
 */
 Bool ScriptGroup::ParseGroupDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
 {
+	if(!userData || !info || info->version<K_SCRIPT_GROUP_DATA_VERSION_1 || info->version>K_SCRIPT_GROUP_DATA_VERSION_2)
+		throw ERROR_CORRUPT_FILE_FORMAT;
 	ScriptList *pList = (ScriptList *)userData;
 	ScriptGroup *pGroup = newInstance(ScriptGroup);
+	MemoryPoolObjectHolder owner(pGroup);
 
 	pGroup->m_groupName = file.readAsciiString();
 	pGroup->m_isGroupActive = file.readByte();
@@ -897,6 +953,7 @@ Bool ScriptGroup::ParseGroupDataChunk(DataChunkInput &file, DataChunkInfo *info,
 		pGroup->m_isGroupSubroutine= file.readByte();
 	}
 	pList->addGroup(pGroup, AT_END);
+	owner.release();
 	file.registerParser( AsciiString("Script"), info->label, Script::ParseScriptFromGroupDataChunk );
 	return file.parse(pGroup);
 	
@@ -1003,6 +1060,7 @@ void Script::loadPostProcess( void )
 Script *Script::duplicate(void) const 
 {
 	Script *pNew = newInstance(Script);	
+	MemoryPoolObjectHolder owner(pNew);
 	if (pNew->m_condition) {
 		pNew->m_condition->deleteInstance();
 	}
@@ -1029,6 +1087,7 @@ Script *Script::duplicate(void) const
 	if (m_actionFalse) {
 		pNew->m_actionFalse = m_actionFalse->duplicate();
 	}
+	owner.release();
 	return pNew;
 }
 
@@ -1042,6 +1101,7 @@ Script *Script::duplicateAndQualify(const AsciiString& qualifier,
 			const AsciiString& playerTemplateName, const AsciiString& newPlayerName) const 
 {
 	Script *pNew = newInstance(Script);
+	MemoryPoolObjectHolder owner(pNew);
 	if (pNew->m_condition) {
 		pNew->m_condition->deleteInstance();
 	}
@@ -1069,6 +1129,7 @@ Script *Script::duplicateAndQualify(const AsciiString& qualifier,
 	if (m_actionFalse) {
 		pNew->m_actionFalse = m_actionFalse->duplicateAndQualify(qualifier, playerTemplateName, newPlayerName);
 	}
+	owner.release();
 	return pNew;
 }
 
@@ -1263,7 +1324,9 @@ void Script::WriteScriptDataChunk(DataChunkOutput &chunkWriter, Script *pScript)
 */
 Script *Script::ParseScript(DataChunkInput &file, unsigned short version)
 {
+	if(version<K_SCRIPT_DATA_VERSION_1 || version>K_SCRIPT_DATA_VERSION_2)throw ERROR_CORRUPT_FILE_FORMAT;
 	Script *pScript = newInstance(Script);
+	MemoryPoolObjectHolder owner(pScript);
 
 	pScript->m_scriptName = file.readAsciiString();
 	pScript->m_comment = file.readAsciiString();
@@ -1286,7 +1349,8 @@ Script *Script::ParseScript(DataChunkInput &file, unsigned short version)
 	{
 		return NULL;
 	}
-	DEBUG_ASSERTCRASH(file.atEndOfChunk(), ("Unexpected data left over."));	
+	if(!file.atEndOfChunk())throw ERROR_CORRUPT_FILE_FORMAT;
+	owner.release();
 	return pScript;
 }
 
@@ -1301,6 +1365,7 @@ Bool Script::ParseScriptFromListDataChunk(DataChunkInput &file, DataChunkInfo *i
 {
 	ScriptList *pList = (ScriptList *)userData;
 	Script *pScript = ParseScript(file, info->version);
+	if(!pScript)return false;
 	pList->addScript(pScript, AT_END);
 	DEBUG_ASSERTCRASH(file.atEndOfChunk(), ("Unexpected data left over."));	
 	return true;
@@ -1317,6 +1382,7 @@ Bool Script::ParseScriptFromGroupDataChunk(DataChunkInput &file, DataChunkInfo *
 {
 	ScriptGroup *pGroup = (ScriptGroup *)userData;
 	Script *pScript = ParseScript(file, info->version);
+	if(!pScript)return false;
 	pGroup->addScript(pScript, AT_END);
 	DEBUG_ASSERTCRASH(file.atEndOfChunk(), ("Unexpected data left over."));	
 	return true;
@@ -1370,6 +1436,7 @@ OrCondition::~OrCondition(void)
 OrCondition *OrCondition::duplicate(void) const 
 {
 	OrCondition *pNew = newInstance(OrCondition);	
+	MemoryPoolObjectHolder owner(pNew);
 	if (m_firstAnd) {
 		pNew->m_firstAnd = m_firstAnd->duplicate();
 	}
@@ -1383,6 +1450,7 @@ OrCondition *OrCondition::duplicate(void) const
 		}
 		pLink = pLink->m_nextOr;
 	}
+	owner.release();
 	return pNew;
 }
 
@@ -1390,6 +1458,7 @@ OrCondition *OrCondition::duplicateAndQualify(const AsciiString& qualifier,
 			const AsciiString& playerTemplateName, const AsciiString& newPlayerName) const 
 {
 	OrCondition *pNew = newInstance(OrCondition);
+	MemoryPoolObjectHolder owner(pNew);
 	if (m_firstAnd) {
 		pNew->m_firstAnd = m_firstAnd->duplicateAndQualify(qualifier, playerTemplateName, newPlayerName);
 	}
@@ -1403,6 +1472,7 @@ OrCondition *OrCondition::duplicateAndQualify(const AsciiString& qualifier,
 		}
 		pLink = pLink->m_nextOr;
 	}
+	owner.release();
 	return pNew;
 }
 
@@ -1542,23 +1612,23 @@ m_nextAndCondition(NULL)
 
 void Condition::setConditionType(enum ConditionType type)
 {
-	Int i;
-	for (i=0; i<m_numParms; i++) {
-		if (m_parms[i]) 
-			m_parms[i]->deleteInstance();
-		m_parms[i] = NULL;
-	}
-	m_conditionType = type;
-	const ConditionTemplate *pTemplate = TheScriptEngine->getConditionTemplate(m_conditionType);
-	m_numParms = pTemplate->getNumParameters();
-	for (i=0; i<m_numParms; i++) {
-		m_parms[i] = newInstance(Parameter)(pTemplate->getParameterType(i));	
-	}
+	if(!TheScriptEngine)throw ERROR_BAD_ARG;
+	if(type<0 || type>=NUM_ITEMS)throw ERROR_BAD_ARG;
+	const ConditionTemplate *pTemplate=TheScriptEngine->getConditionTemplate(type);
+	const Int count=pTemplate->getNumParameters();
+	if(count<0 || count>MAX_PARMS)throw ERROR_BAD_ARG;
+	ParameterOwners candidate;
+	for(Int i=0;i<count;++i)candidate[i].reset(newInstance(Parameter)(pTemplate->getParameterType(i)));
+	clearParameters(m_parms,m_numParms);
+	for(Int i=0;i<count;++i)m_parms[i]=candidate[i].release();
+	m_numParms=count;
+	m_conditionType=type;
 }
 
 Condition *Condition::duplicate(void) const 
 {
 	Condition *pNew = newInstance(Condition)(m_conditionType);	
+	MemoryPoolObjectHolder owner(pNew);
 	Int i;
 	for (i=0; i<m_numParms && i<pNew->m_numParms; i++) {
 		*pNew->m_parms[i] = *m_parms[i];
@@ -1573,6 +1643,7 @@ Condition *Condition::duplicate(void) const
 		}
 		pLink = pLink->m_nextAndCondition;
 	}
+	owner.release();
 	return pNew;
 }
 
@@ -1580,6 +1651,7 @@ Condition *Condition::duplicateAndQualify(const AsciiString& qualifier,
 			const AsciiString& playerTemplateName, const AsciiString& newPlayerName) const 
 {
 	Condition *pNew = newInstance(Condition)(m_conditionType);
+	MemoryPoolObjectHolder owner(pNew);
 	Int i;
 	for (i=0; i<m_numParms && i<pNew->m_numParms; i++) {
 		*pNew->m_parms[i] = *m_parms[i];
@@ -1596,16 +1668,13 @@ Condition *Condition::duplicateAndQualify(const AsciiString& qualifier,
 		}
 		pLink = pLink->m_nextAndCondition;
 	}
+	owner.release();
 	return pNew;
 }
 
 Condition::~Condition(void) 
 {
-	Int i;
-	for (i=0; i<m_numParms; i++) {
-		m_parms[i]->deleteInstance();
-		m_parms[i] = NULL;
-	}
+	clearParameters(m_parms,m_numParms);
 	if (m_nextAndCondition) {
 		Condition *cur = m_nextAndCondition;
 		Condition *next;
@@ -1687,10 +1756,16 @@ void Condition::WriteConditionDataChunk(DataChunkOutput &chunkWriter, Condition	
 */
 Bool Condition::ParseConditionDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
 {
+	if(!TheScriptEngine || !userData)throw ERROR_BAD_ARG;
+	if(!info || info->version<K_SCRIPT_CONDITION_VERSION_1 || info->version>K_SCRIPT_CONDITION_VERSION_4)
+		throw ERROR_CORRUPT_FILE_FORMAT;
 	Condition	*pCondition = newInstance(Condition);
+	MemoryPoolObjectHolder owner(pCondition);
 	OrCondition *pOr = (OrCondition *)userData;
-	pCondition->m_conditionType = (enum ConditionType)file.readInt();
-	const ConditionTemplate* ct = TheScriptEngine->getConditionTemplate(pCondition->m_conditionType);
+	const Int rawType=file.readInt();
+	const ConditionTemplate* ct=NULL;
+	Bool admitted=rawType>=0 && rawType<NUM_ITEMS;
+	if(admitted){pCondition->m_conditionType=static_cast<ConditionType>(rawType);ct=TheScriptEngine->getConditionTemplate(rawType);}
 	if (info->version >= K_SCRIPT_CONDITION_VERSION_4) {
 		NameKeyType key = file.readNameKey();
 		Bool match = false;
@@ -1716,8 +1791,12 @@ Bool Condition::ParseConditionDataChunk(DataChunkInput &file, DataChunkInfo *inf
 			pCondition->m_conditionType = CONDITION_FALSE;
 			pCondition->m_numParms = 0;
 		}
+		admitted=match;
 	}
-	pCondition->m_numParms =file.readInt();
+	const Int count=file.readInt();
+	if(count<0 || count>MAX_PARMS || static_cast<unsigned>(count)>file.getChunkDataSizeLeft()/14)
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	pCondition->m_numParms=count;
 	Int i;
 	for (i=0; i<pCondition->m_numParms; i++) 
 	{
@@ -1727,8 +1806,14 @@ Bool Condition::ParseConditionDataChunk(DataChunkInput &file, DataChunkInfo *inf
 	if (file.getChunkVersion() < K_SCRIPT_CONDITION_VERSION_2) {
 		for (int j = 0; ParameterChangesVer2[j] != -1; ++j) {
 			if (pCondition->m_conditionType == ParameterChangesVer2[j]) {
-				pCondition->m_parms[pCondition->m_numParms] = newInstance(Parameter)(Parameter::SURFACES_ALLOWED, 3);
-				pCondition->m_numParms = 3;
+				if(pCondition->m_numParms<2)admitted=false;
+				else if(pCondition->m_numParms==2) {
+					pCondition->m_parms[2]=newInstance(Parameter)(Parameter::SURFACES_ALLOWED,3);
+					pCondition->m_numParms=3;
+				} else {
+					for(Int extra=3;extra<pCondition->m_numParms;++extra){pCondition->m_parms[extra]->deleteInstance();pCondition->m_parms[extra]=NULL;}
+					pCondition->m_numParms=3;
+				}
 			}
 		}
 	}
@@ -1738,10 +1823,11 @@ Bool Condition::ParseConditionDataChunk(DataChunkInput &file, DataChunkInfo *inf
 		case SKIRMISH_SPECIAL_POWER_READY:
 			if (pCondition->m_numParms == 1)
 			{
-				pCondition->m_numParms = 2;
-				pCondition->m_parms[1] = pCondition->m_parms[0];
-				pCondition->m_parms[0] = newInstance(Parameter)(Parameter::SIDE, 0);
-				pCondition->m_parms[0]->friend_setString(THIS_PLAYER);
+				std::unique_ptr<Parameter,ParameterRetire> replacement(newInstance(Parameter)(Parameter::SIDE,0));
+				replacement->friend_setString(THIS_PLAYER);
+				pCondition->m_parms[1]=pCondition->m_parms[0];
+				pCondition->m_parms[0]=replacement.release();
+				pCondition->m_numParms=2;
 			}
 			break;
 	}
@@ -1750,12 +1836,13 @@ Bool Condition::ParseConditionDataChunk(DataChunkInput &file, DataChunkInfo *inf
 	conT->m_numTimesUsed++;
 	conT->m_firstMapUsed = TheGlobalData->m_mapName;
 #endif
-	if (ct->getNumParameters() != pCondition->getNumParameters()) {
+	if (!admitted || !ct || ct->getNumParameters() != pCondition->getNumParameters()) {
 		// Invalid script [3/20/2003]
 		DEBUG_CRASH(("Invalid script condition.  Making it false. jba."));
 		pCondition->m_conditionType = ConditionType::CONDITION_FALSE;
-		pCondition->m_numParms = 0;
+		clearParameters(pCondition->m_parms,pCondition->m_numParms);
 	}
+	if(!file.atEndOfChunk())throw ERROR_CORRUPT_FILE_FORMAT;
 	Condition *pLast = pOr->getFirstAndCondition();
 	while (pLast && pLast->getNext()) {
 		pLast = pLast->getNext();
@@ -1765,7 +1852,7 @@ Bool Condition::ParseConditionDataChunk(DataChunkInput &file, DataChunkInfo *inf
 	} else {
 		pOr->setFirstAndCondition(pCondition);
 	}
-	DEBUG_ASSERTCRASH(file.atEndOfChunk(), ("Unexpected data left over."));	
+	owner.release();
 	return true;
 }
 
@@ -2141,7 +2228,10 @@ void Parameter::WriteParameter(DataChunkOutput &chunkWriter)
 */
 Parameter *Parameter::ReadParameter(DataChunkInput &file)
 {
-	Parameter *pParm = newInstance(Parameter)( (ParameterType)file.readInt());
+	const Int rawType=file.readInt();
+	if(rawType<0 || rawType>=NUM_ITEMS)throw ERROR_CORRUPT_FILE_FORMAT;
+	Parameter *pParm = newInstance(Parameter)(static_cast<ParameterType>(rawType));
+	MemoryPoolObjectHolder owner(pParm);
 	pParm->m_initialized = true;
 	if (pParm->getParameterType() == COORD3D) {
 		Coord3D pos;
@@ -2162,13 +2252,9 @@ Parameter *Parameter::ReadParameter(DataChunkInput &file)
 		// quick hack to make loading models with "Fundamentalist" switch to "GLA"
 		if (pParm->m_string.startsWith("Fundamentalist")) 
 		{
-			char oldName[256];
-			char newName[256];
-			strcpy(oldName, pParm->m_string.str());
-			strcpy(newName, "GLA");
-			strcat(newName, oldName+strlen("Fundamentalist"));
-			pParm->m_string.set(newName);
-			DEBUG_LOG(("Changing Script Ref from %s to %s\n", oldName, newName));
+			AsciiString replacement("GLA");
+			replacement.concat(pParm->m_string.str()+strlen("Fundamentalist"));
+			pParm->m_string.swap(replacement);
 		}
 	}
 
@@ -2265,6 +2351,7 @@ Parameter *Parameter::ReadParameter(DataChunkInput &file)
 		}
 	}
 
+	owner.release();
 	return pParm;
 }
 
@@ -2280,11 +2367,11 @@ m_numParms(0),
 m_nextAction(NULL)
 //
 {
+	for(Int i=0;i<MAX_PARMS;++i)m_parms[i]=NULL;
 }
 
 ScriptAction::ScriptAction(enum ScriptActionType type):
-m_actionType(type),
-m_numParms(0)
+ScriptAction()
 {
 	Int i;
 	for (i=0; i<MAX_PARMS; i++) {
@@ -2295,23 +2382,22 @@ m_numParms(0)
 
 void ScriptAction::setActionType(enum ScriptActionType type)
 {
-	Int i;
-	for (i=0; i<m_numParms; i++) {
-		if (m_parms[i]) 
-			m_parms[i]->deleteInstance();
-		m_parms[i] = NULL;
-	}
-	m_actionType = type;
-	const ActionTemplate *pTemplate = TheScriptEngine->getActionTemplate(m_actionType);
-	m_numParms = pTemplate->getNumParameters();
-	for (i=0; i<m_numParms; i++) {
-		m_parms[i] = newInstance(Parameter)(pTemplate->getParameterType(i));
-	}
+	if(!TheScriptEngine || type<0 || type>=NUM_ITEMS)throw ERROR_BAD_ARG;
+	const ActionTemplate *pTemplate=TheScriptEngine->getActionTemplate(type);
+	const Int count=pTemplate->getNumParameters();
+	if(count<0 || count>MAX_PARMS)throw ERROR_BAD_ARG;
+	ParameterOwners candidate;
+	for(Int i=0;i<count;++i)candidate[i].reset(newInstance(Parameter)(pTemplate->getParameterType(i)));
+	clearParameters(m_parms,m_numParms);
+	for(Int i=0;i<count;++i)m_parms[i]=candidate[i].release();
+	m_numParms=count;
+	m_actionType=type;
 }
 
 ScriptAction *ScriptAction::duplicate(void) const 
 {
 	ScriptAction *pNew = newInstance(ScriptAction)(m_actionType);	
+	MemoryPoolObjectHolder owner(pNew);
 	Int i;
 	for (i=0; i<m_numParms; i++) {
 		if (pNew->m_parms[i]) {
@@ -2330,6 +2416,7 @@ ScriptAction *ScriptAction::duplicate(void) const
 		}
 		pLink = pLink->m_nextAction;
 	}
+	owner.release();
 	return pNew;
 }
 
@@ -2337,6 +2424,7 @@ ScriptAction *ScriptAction::duplicateAndQualify(const AsciiString& qualifier,
 			const AsciiString& playerTemplateName, const AsciiString& newPlayerName) const 
 {
 	ScriptAction *pNew = newInstance(ScriptAction)(m_actionType);
+	MemoryPoolObjectHolder owner(pNew);
 	Int i;
 	for (i=0; i<m_numParms; i++) {
 		if (pNew->m_parms[i]) {
@@ -2357,16 +2445,13 @@ ScriptAction *ScriptAction::duplicateAndQualify(const AsciiString& qualifier,
 		}
 		pLink = pLink->m_nextAction;
 	}
+	owner.release();
 	return pNew;
 }
 
 ScriptAction::~ScriptAction(void) 
 {
-	Int i;
-	for (i=0; i<m_numParms; i++) {
-		m_parms[i]->deleteInstance();
-		m_parms[i] = NULL;
-	}
+	clearParameters(m_parms,m_numParms);
 	if (m_nextAction) {
 		ScriptAction *cur = m_nextAction;
 		ScriptAction *next;
@@ -2448,11 +2533,16 @@ void ScriptAction::WriteActionDataChunk(DataChunkOutput &chunkWriter, ScriptActi
 */
 ScriptAction *ScriptAction::ParseAction(DataChunkInput &file, DataChunkInfo *info, void *userData)
 {
+	if(!TheScriptEngine)throw ERROR_BAD_ARG;
+	if(!info || info->version<K_SCRIPT_ACTION_VERSION_1 || info->version>K_SCRIPT_ACTION_VERSION_2)
+		throw ERROR_CORRUPT_FILE_FORMAT;
 	ScriptAction	*pScriptAction = newInstance(ScriptAction);
+	MemoryPoolObjectHolder owner(pScriptAction);
 
-	pScriptAction->m_actionType = (enum ScriptActionType)file.readInt();
-
-	const ActionTemplate* at = TheScriptEngine->getActionTemplate(pScriptAction->m_actionType);
+	const Int rawType=file.readInt();
+	const ActionTemplate* at=NULL;
+	Bool admitted=rawType>=0 && rawType<NUM_ITEMS;
+	if(admitted){pScriptAction->m_actionType=static_cast<ScriptActionType>(rawType);at=TheScriptEngine->getActionTemplate(rawType);}
 	if (info->version >= K_SCRIPT_ACTION_VERSION_2) {
 		NameKeyType key = file.readNameKey();
 		Bool match = false;
@@ -2478,6 +2568,7 @@ ScriptAction *ScriptAction::ParseAction(DataChunkInput &file, DataChunkInfo *inf
 				pScriptAction->m_numParms = 0;
 			}
 		}
+		admitted=match;
 	}
 #if defined(_DEBUG) || defined(_INTERNAL)
 	Script *pScript = (Script *)userData;
@@ -2490,7 +2581,10 @@ ScriptAction *ScriptAction::ParseAction(DataChunkInput &file, DataChunkInfo *inf
 	at2->m_numTimesUsed++;
 	at2->m_firstMapUsed = TheGlobalData->m_mapName;
 #endif
-	pScriptAction->m_numParms =file.readInt();
+	const Int count=file.readInt();
+	if(count<0 || count>MAX_PARMS || static_cast<unsigned>(count)>file.getChunkDataSizeLeft()/14)
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	pScriptAction->m_numParms=count;
 	Int i;
 	for (i=0; i<pScriptAction->m_numParms; i++) 
 	{
@@ -2503,10 +2597,11 @@ ScriptAction *ScriptAction::ParseAction(DataChunkInput &file, DataChunkInfo *inf
 		case SKIRMISH_FIRE_SPECIAL_POWER_AT_MOST_COST:
 			if (pScriptAction->m_numParms == 1)
 			{
-				pScriptAction->m_numParms = 2;
-				pScriptAction->m_parms[1] = pScriptAction->m_parms[0];
-				pScriptAction->m_parms[0] = newInstance(Parameter)(Parameter::SIDE, 0);
-				pScriptAction->m_parms[0]->friend_setString(THIS_PLAYER);
+				std::unique_ptr<Parameter,ParameterRetire> replacement(newInstance(Parameter)(Parameter::SIDE,0));
+				replacement->friend_setString(THIS_PLAYER);
+				pScriptAction->m_parms[1]=pScriptAction->m_parms[0];
+				pScriptAction->m_parms[0]=replacement.release();
+				pScriptAction->m_numParms=2;
 			}
 			break;
 		case TEAM_FOLLOW_WAYPOINTS:
@@ -2521,6 +2616,7 @@ ScriptAction *ScriptAction::ParseAction(DataChunkInput &file, DataChunkInfo *inf
 			{		
 				Bool flank = pScriptAction->m_parms[0]->getInt()!=0;
 				pScriptAction->m_parms[0]->deleteInstance();
+				pScriptAction->m_parms[0]=NULL;
 				pScriptAction->m_numParms = 0;
 				if (flank) pScriptAction->m_actionType = SKIRMISH_BUILD_BASE_DEFENSE_FLANK;
 			}
@@ -2529,7 +2625,9 @@ ScriptAction *ScriptAction::ParseAction(DataChunkInput &file, DataChunkInfo *inf
 		case TEAM_SET_ATTITUDE:
 			if (pScriptAction->m_numParms >= 2 && pScriptAction->m_parms[1]->getParameterType() == Parameter::INT) 
 			{
-				pScriptAction->m_parms[1] = newInstance(Parameter)(Parameter::AI_MOOD, pScriptAction->m_parms[1]->getInt());
+				Parameter* replacement=newInstance(Parameter)(Parameter::AI_MOOD,pScriptAction->m_parms[1]->getInt());
+				pScriptAction->m_parms[1]->deleteInstance();
+				pScriptAction->m_parms[1]=replacement;
 			}
 			break;
 		case MAP_REVEAL_AT_WAYPOINT:
@@ -2605,13 +2703,16 @@ ScriptAction *ScriptAction::ParseAction(DataChunkInput &file, DataChunkInfo *inf
 			break;
 	}
 
-	if (at->getNumParameters() != pScriptAction->getNumParameters()) {
+	// A legacy conversion can change the action type (front versus flank).
+	if(admitted)at=TheScriptEngine->getActionTemplate(pScriptAction->m_actionType);
+	if (!admitted || !at || at->getNumParameters() != pScriptAction->getNumParameters()) {
 		// Invalid script [3/20/2003]
 		DEBUG_CRASH(("Invalid script action.  Making it noop. jba."));
 		pScriptAction->m_actionType = ScriptAction::NO_OP;
-		pScriptAction->m_numParms = 0;
+		clearParameters(pScriptAction->m_parms,pScriptAction->m_numParms);
 	}
-	DEBUG_ASSERTCRASH(file.atEndOfChunk(), ("Unexpected data left over."));	
+	if(!file.atEndOfChunk())throw ERROR_CORRUPT_FILE_FORMAT;
+	owner.release();
 	return pScriptAction;
 }
 

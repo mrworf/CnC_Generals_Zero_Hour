@@ -1801,3 +1801,44 @@ TeamsInfoRec and ScriptList/ScriptGroup/script-condition/action ownership paths,
 then the enclosing object/Dict/weather/namespace/world transaction and actual
 waypoint/render-ground-provider ordering. Durable source findings specify those
 dependencies; do not infer startup or gameplay acceptance from this checkpoint.
+
+Continuation from8d705d9d, clean worktree: complete the coupled actual sides and
+script admission/clone owners before enclosing a world candidate. Keep the
+existing plan/slice and source gameplay conversions; do not replace script
+templates or simulation with a fixture. Stage source side/build/team arrays,
+ScriptList read publication and generated group-ID cursor, and the name namespace
+together. All parser false/throw/late-field and allocation paths must retire
+candidate trees and preserve accepted side/script identity. Provide nonallocating
+content exchange for enclosing world transactions. Fix copy/constructor/setter
+ownership as part of this same batch, not as independently accepted leaf fixes.
+
+Actual ScriptEngine templates are required for conditions/actions. Validate raw
+file numbers before converting non-fixed enums; modern name keys can rematch a
+changed numeric ordinal as source does. Retain source false/no-op fallback,
+parameter arity repairs and every old-format conversion, releasing overwritten
+or discarded parameters exactly once. Guard Parameter physical reads, Script/
+Group/Or/Condition/Action parse/duplicate/qualified duplicate trees, and typed
+constructors before helper acquisitions. Capacity MAX_PARMS and MAX_PLAYER_COUNT
+are actual owner array limits, not invented data caps. Do not silently shorten
+the registry or skip nonempty scripts. Default group names consume a global ID;
+rollback must restore it even if a constructor's later formatting fails.
+
+Own SidesList/Scripts headers and sources, actual-source side/script fixture,
+CTest wiring, current plan/findings/QA/state. Positive cases must exercise all
+side versions, build metadata/defaults, neutral/default-team repair, real nested
+groups/conditions/actions/false actions, name-key rematching, legacy repairs,
+writer round trips, independent deep and qualified copies and repeated owners.
+Negative cases include every physical prefix, bad counts/types/versions/arity,
+late nested failure and constructor/setter/copy rejection. Discover complete
+parse/copy/qualified-copy/constructor/setter manifests, retain every failure/
+distinct-candidate retry and exact terminal, then validate focused and affected
+matrix under GCC and both sanitizers on frozen source. Keep the full source
+world/weather/object/waypoint/layers/ghost/root acceptance gates pending.
+
+User-requested worktree housekeeping checkpoint: the side/script batch is
+preserved as WIP, not accepted delivery. Normal GCC builds; focused5 completes
+with functional/negative PASS and copies/faults/setters FAIL. Current findings,
+unverified census causes and remaining coverage are recorded in
+`evidence/qa/N2-sides-scripts-wip.md`. Resume this coherent ownership batch before
+claiming sanitizer, broader-matrix or slice acceptance; prior trigger acceptance
+is not evidence for the modified side/script source.

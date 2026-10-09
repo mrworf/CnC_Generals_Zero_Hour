@@ -66,6 +66,7 @@ public:
 	~SidesInfo(void);
 	void init(const Dict* d);
 	void clear() { init(NULL); }
+	void swap(SidesInfo& other) noexcept;
 	Dict* getDict() { return &m_dict; }
 	void addToBuildList(BuildListInfo *pBuildList, Int position);
 	Int removeFromBuildList(BuildListInfo *pBuildList);
@@ -86,8 +87,9 @@ private:
 	Dict m_dict;
 public:
 	Dict* getDict() { return &m_dict; }
-	void init(const Dict* d) { m_dict.clear(); if (d) m_dict = *d; }
+	void init(const Dict* d) { Dict candidate; if (d) candidate = *d; m_dict.swap(candidate); }
 	void clear() { init(NULL); }
+	void swap(TeamsInfo& other) noexcept { m_dict.swap(other.m_dict); }
 };
 
 
@@ -105,6 +107,7 @@ public:
 	TeamsInfoRec(const TeamsInfoRec& thatref);
 	~TeamsInfoRec();
 	TeamsInfoRec& operator=(const TeamsInfoRec& thatref);
+	void swap(TeamsInfoRec& other) noexcept;
 	void clear();
 	TeamsInfo *findTeamInfo(AsciiString name, Int* index);
 	void addTeam(const Dict* d);
@@ -144,6 +147,7 @@ public:
 	void init() { }
 	void update() { }
 	void reset();
+	void swapContents(SidesList& other) noexcept;
 
 	/// Reads sides (including build list info && player dicts.)
 	static Bool ParseSidesDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData);

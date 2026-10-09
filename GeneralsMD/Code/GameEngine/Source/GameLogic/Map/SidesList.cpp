@@ -53,6 +53,23 @@
 #include "GameLogic/AI.h"
 #include "GameLogic/Scripts.h"
 #include "GameLogic/SidesList.h"
+#include <limits>
+#include <memory>
+#include <utility>
+
+namespace {
+struct BuildNodeRetire {
+	void operator()(BuildListInfo* node) const noexcept {
+		if (node) { node->setNextBuildList(NULL); node->deleteInstance(); }
+	}
+};
+BuildListInfo* copyBuildNode(const BuildListInfo& source) {
+	std::unique_ptr<BuildListInfo, BuildNodeRetire> node(newInstance(BuildListInfo));
+	*node = source;
+	node->setNextBuildList(NULL);
+	return node.release();
+}
+}
 
 static const Int K_SIDES_DATA_VERSION_1 = 1;
 static const Int K_SIDES_DATA_VERSION_2 = 2;	// includes Team list.
@@ -80,19 +97,21 @@ SidesInfo::SidesInfo(const SidesInfo& thatref) :
 */
 SidesInfo::~SidesInfo(void)
 {
-	clear();
+	if (m_pBuildList) m_pBuildList->deleteInstance();
+	if (m_scripts) m_scripts->deleteInstance();
 }
 
 void SidesInfo::init(const Dict* d)
 {
-	m_pBuildList->deleteInstance();
-	m_pBuildList = NULL;
-	m_dict.clear();
-	if (m_scripts) 
-		m_scripts->deleteInstance();
-	m_scripts = NULL;
-	if (d)
-		m_dict = *d;
+	SidesInfo candidate;
+	if (d) candidate.m_dict = *d;
+	swap(candidate);
+}
+
+void SidesInfo::swap(SidesInfo& other) noexcept {
+	m_dict.swap(other.m_dict);
+	std::swap(m_pBuildList, other.m_pBuildList);
+	std::swap(m_scripts, other.m_scripts);
 }
 
 // ug, I hate having to overload stuff, but this makes it a lot easier to make copies safely
@@ -100,28 +119,25 @@ SidesInfo& SidesInfo::operator=(const SidesInfo& that)
 {
 	if (this != &that)
 	{
-		this->clear();
-		this->m_dict = that.m_dict;
+		SidesInfo candidate;
+		candidate.m_dict = that.m_dict;
 
 		BuildListInfo* thisBLTail = NULL;
 		for (BuildListInfo* thatBL = that.m_pBuildList; thatBL; thatBL = thatBL->getNext())
 		{
-			BuildListInfo* thisBL = newInstance( BuildListInfo );	
-			*thisBL = *thatBL;
-			thisBL->setNextBuildList(NULL);
+			BuildListInfo* thisBL = copyBuildNode(*thatBL);
 
 			if (thisBLTail)
 				thisBLTail->setNextBuildList(thisBL);
 			else
-				this->m_pBuildList = thisBL;
+				candidate.m_pBuildList = thisBL;
 				
 			thisBLTail = thisBL;
 		}
 
 		if (that.m_scripts)
-			this->m_scripts = that.m_scripts->duplicate();
-		else
-			this->m_scripts = NULL;
+			candidate.m_scripts = that.m_scripts->duplicate();
+		swap(candidate);
 	}
 	return *this;
 }
@@ -214,6 +230,17 @@ SidesList::~SidesList(void)
 {
 }
 
+void SidesList::swapContents(SidesList& other) noexcept {
+	std::swap(m_numSides, other.m_numSides);
+	std::swap(m_numSkirmishSides, other.m_numSkirmishSides);
+	for (Int i = 0; i < MAX_PLAYER_COUNT; ++i) {
+		m_sides[i].swap(other.m_sides[i]);
+		m_skirmishSides[i].swap(other.m_skirmishSides[i]);
+	}
+	m_teamrec.swap(other.m_teamrec);
+	m_skirmishTeamrec.swap(other.m_skirmishTeamrec);
+}
+
 /**
  SidesList - reset - 
 */
@@ -242,25 +269,40 @@ void SidesList::clear(void)
 */
 Bool SidesList::ParseSidesDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData)
 {
-	DEBUG_ASSERTCRASH(TheSidesList, ("TheSidesList is null"));
-
-	if (TheSidesList==NULL) 
-		return false;
-
-	TheSidesList->clear();
+	if(!TheSidesList || !TheNameKeyGenerator)throw ERROR_BAD_ARG;
+	if(!info || info->version<K_SIDES_DATA_VERSION_1 || info->version>K_SIDES_DATA_VERSION_3)
+		throw ERROR_CORRUPT_FILE_FORMAT;
+	NameKeyTransaction names(*TheNameKeyGenerator);
+	// Preserve any separately pending script read publication through this chunk.
+	struct ScriptPublication {
+		ScriptList::ReadState previous;
+		ScriptPublication(){ScriptList::exchangeReadState(previous);}
+		~ScriptPublication()noexcept{ScriptList::exchangeReadLists(previous);}
+	} scriptPublication;
+	ScriptList::IDTransaction ids;
+	struct Publication {
+		SidesList* previous=TheSidesList;
+		SidesList candidate;
+		Publication(){TheSidesList=&candidate;}
+		~Publication(){candidate.clear();TheSidesList=previous;}
+	} publication;
 	Int count = file.readInt();
+	if(count<0 || count>MAX_PLAYER_COUNT)throw ERROR_CORRUPT_FILE_FORMAT;
 	Int i, j;
 	TheSidesList->emptySides();
 	for (i=0; i<count; i++) 
 	{
-		if (i >= MAX_PLAYER_COUNT) break;
 		Dict d =  file.readDict();
 		TheSidesList->addSide(&d);
 		BuildListInfo* pBuildList;
 		Int count = file.readInt();
+		const unsigned minimumBuild=25+(info->version>=K_SIDES_DATA_VERSION_3 ? 9 : 0);
+		if(count<0 || static_cast<unsigned>(count)>file.getChunkDataSizeLeft()/minimumBuild)
+			throw ERROR_CORRUPT_FILE_FORMAT;
 		for (j=0; j<count; j++) 
 		{
 			pBuildList = newInstance( BuildListInfo );
+			MemoryPoolObjectHolder owner(pBuildList);
 			pBuildList->setBuildingName(file.readAsciiString());
 			pBuildList->setTemplateName(file.readAsciiString());
 			Coord3D loc;
@@ -281,11 +323,13 @@ Bool SidesList::ParseSidesDataChunk(DataChunkInput &file, DataChunkInfo *info, v
 				pBuildList->setRepairable(file.readByte());
 			}
 			TheSidesList->getSideInfo(i)->addToBuildList(pBuildList, j);
+			owner.release();
 		}
 	}	
 	if (info->version >= K_SIDES_DATA_VERSION_2)
 	{
 		count = file.readInt();
+		if(count<0 || static_cast<unsigned>(count)>file.getChunkDataSizeLeft()/2)throw ERROR_CORRUPT_FILE_FORMAT;
 		TheSidesList->emptyTeams();
 		for (i=0; i<count; i++) 
 		{
@@ -298,12 +342,16 @@ Bool SidesList::ParseSidesDataChunk(DataChunkInput &file, DataChunkInfo *info, v
 	if (!file.parse(NULL)) {
 		throw(ERROR_CORRUPT_FILE_FORMAT);
 	}
-	ScriptList *scripts[MAX_PLAYER_COUNT];
+	ScriptList *scripts[MAX_PLAYER_COUNT]{};
 	count = ScriptList::getReadScripts(scripts);
+	struct ScriptOwners {
+		ScriptList** scripts;
+		~ScriptOwners()noexcept{for(Int i=0;i<MAX_PLAYER_COUNT;++i)if(scripts[i])scripts[i]->deleteInstance();}
+	} owners{scripts};
 	for (i=0; i<count; i++) {
 		if (i<TheSidesList->getNumSides()) {
 			ScriptList *pSL = TheSidesList->getSideInfo(i)->getScriptList();
-			pSL->deleteInstance();
+			if(pSL)pSL->deleteInstance();
 			TheSidesList->getSideInfo(i)->setScriptList(scripts[i]);
 			scripts[i] = NULL;
 		} else {
@@ -314,7 +362,10 @@ Bool SidesList::ParseSidesDataChunk(DataChunkInput &file, DataChunkInfo *info, v
 	}
 	TheSidesList->validateSides();
 
-	DEBUG_ASSERTCRASH(file.atEndOfChunk(), ("Incorrect data file length."));
+	if(!file.atEndOfChunk())throw ERROR_CORRUPT_FILE_FORMAT;
+	publication.previous->swapContents(publication.candidate);
+	ids.commit();
+	names.commit();
 	return true;
 }
 
@@ -603,7 +654,10 @@ void SidesList::addSide(const Dict* d)
 {
 	DEBUG_ASSERTCRASH(m_numSides < MAX_PLAYER_COUNT, ("too many players"));
 	if (m_numSides < MAX_PLAYER_COUNT)
-		m_sides[m_numSides++].init(d);
+	{
+		m_sides[m_numSides].init(d);
+		++m_numSides;
+	}
 }
 
 void SidesList::addTeam(const Dict* d)
@@ -990,19 +1044,17 @@ void BuildListInfo::parseStructure(INI *ini, void *instance, void* /*store*/, co
 */
 BuildListInfo *BuildListInfo::duplicate(void)
 {
-	BuildListInfo *first = newInstance( BuildListInfo );
-	*first = *this;
-	first->m_nextBuildList = NULL;
+	BuildListInfo *first = copyBuildNode(*this);
+	MemoryPoolObjectHolder owner(first);
 	BuildListInfo *next = this->m_nextBuildList;
 	BuildListInfo *cur = first;
 	while (next) {
-		BuildListInfo *link = newInstance( BuildListInfo );
-		*link = *next;
-		link->m_nextBuildList = NULL;
+		BuildListInfo *link = copyBuildNode(*next);
 		cur->m_nextBuildList = link;
 		cur = link;
 		next = next->m_nextBuildList;
 	}
+	owner.release();
 	return first;
 }
 
@@ -1087,13 +1139,20 @@ TeamsInfoRec& TeamsInfoRec::operator=(const TeamsInfoRec& thatref)
 	const TeamsInfoRec* that = &thatref;
 	if (this != that)
 	{
-		this->clear();
+		TeamsInfoRec candidate;
 		for (int i = 0; i < that->m_numTeams; i++) 
 		{
-			this->addTeam(that->m_teams[i].getDict());
+			candidate.addTeam(that->m_teams[i].getDict());
 		}
+		swap(candidate);
 	}
 	return *this;
+}
+
+void TeamsInfoRec::swap(TeamsInfoRec& other) noexcept {
+	std::swap(m_numTeams, other.m_numTeams);
+	std::swap(m_numTeamsAllocated, other.m_numTeamsAllocated);
+	std::swap(m_teams, other.m_teams);
 }
 
 void TeamsInfoRec::clear() 
@@ -1125,6 +1184,8 @@ TeamsInfo *TeamsInfoRec::findTeamInfo(AsciiString name, Int* index /*= NULL*/)
 
 void TeamsInfoRec::addTeam(const Dict* d)
 {
+	TeamsInfo value;
+	value.init(d); // Prepare before growth, including a dictionary borrowed from this array.
 	enum
 	{
 		TEAM_ALLOC_CHUNK = 8	///< how many teams to alloc at a time
@@ -1134,7 +1195,9 @@ void TeamsInfoRec::addTeam(const Dict* d)
 	if (m_numTeams >= m_numTeamsAllocated)
 	{
 	// pool[]ify
-		TeamsInfo* nti = NEW TeamsInfo[m_numTeamsAllocated + TEAM_ALLOC_CHUNK];	// throws on failure
+		if (m_numTeamsAllocated > std::numeric_limits<Int>::max()-TEAM_ALLOC_CHUNK) throw ERROR_OUT_OF_MEMORY;
+		std::unique_ptr<TeamsInfo[]> candidate(NEW TeamsInfo[m_numTeamsAllocated + TEAM_ALLOC_CHUNK]);
+		TeamsInfo* nti = candidate.get();
 		
 		Int i;
 
@@ -1146,11 +1209,12 @@ void TeamsInfoRec::addTeam(const Dict* d)
 		
 		delete [] m_teams;
 
-		m_teams = nti;
+		m_teams = candidate.release();
 		m_numTeamsAllocated += TEAM_ALLOC_CHUNK;
 	}
 
-	m_teams[m_numTeams++].init(d);
+	m_teams[m_numTeams].swap(value);
+	++m_numTeams;
 }
 
 void TeamsInfoRec::removeTeam(Int i)
