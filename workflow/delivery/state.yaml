@@ -26,16 +26,16 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "7737aea10dcba4eb687f944064b58baf69ef5e85",
-    "label": "original-player-cohort-ownership",
-    "evidence": "evidence/qa/N2-player-ownership-checkpoint.md",
-    "validation": "All3 configured builds, focused4 and related118 PASS. Actual neutral player/cohort acquisition/nonempty build/production/selection/reset/destruction manifests player4/cohort81/reset4/production1 and exact pooled squad11 replacement failure/retry pairs retire original heap/pool units",
-    "next": "Integrate actual team/default-team factory/prototype/member ownership and cursor rollback, then Object lookup/ID/modules/late creation and local-player partition callbacks; nonempty walls/model-derived bridge/root admission, partition/ghost/startup and compiler-matching simulation remain mandatory",
+    "parent": "872cdd97826ef7583f6b565d4bc2c3111b63f6ee",
+    "label": "original-default-team-ownership",
+    "evidence": "evidence/qa/N2-team-ownership-checkpoint.md",
+    "validation": "All3 full configured builds, focused4 and related122 PASS. Actual neutral default-team/singleton/multi-instance lifetimes, relationship callbacks, dual registration and cursor rollback/advance; complete heap manifests39/5/5 and four typed pool exhaustion/retry pairs retire all original heap/pool ownership",
+    "next": "Integrate actual Object constructor/module/team/radar/lookup ownership with GameLogic scheduler registration and destruction-queue retirement under legitimate UI/partition/script parents; then registered wall/model-derived bridge/root rollback, partition/ghost/startup and compiler-matching simulation",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 real player/cohort ownership verified; all3 builds/focused4/related118 PASS on canonical624 sourceb2574cec. Neutral defaults, complete16 cohort, build-chain/production/selection ownership, constructor rollback and non-allocating teardown pass. Every warmed heap failure/retry plus typed relation/squad exhaustion and pooled replacement[0,11)/terminal11 validated. Full308 not run; actual team/default-team, rank/science callbacks, Object/wall/model-derived bridge/root/partition/ghost/startup and original simulation remain pending. Slice03/N2 incomplete.",
-  "transaction_parent": "7737aea10dcba4eb687f944064b58baf69ef5e85",
+  "resume_point": "N2 plan01/slice03 actual default-team/factory/prototype/member ownership verified; all3 builds/focused4/related122 PASS on canonical625 source21b32f18. Allocation-free clear preserves source publication/retirement order; complete heap39/5/5 and four typed pool exhaustion/retry cases preserve accepted participants and source cursors, whole player/context/manager retirement exact. Full312 not run. Real Object scheduler/queue/UI/partition/script, wall/model-derived bridge/root/ghost/startup and original simulation remain mandatory. Slice03/N2 incomplete.",
+  "transaction_parent": "872cdd97826ef7583f6b565d4bc2c3111b63f6ee",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -44,28 +44,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-player-ownership-checkpoint.md",
+  "evidence": "evidence/qa/N2-team-ownership-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Integrate actual team/default-team factory/prototype/member ownership and cursor rollback, then Object lookup/ID/modules/late creation and local-player partition callbacks; nonempty walls/model-derived bridge/root admission, partition/ghost/startup and compiler-matching simulation remain mandatory",
+  "next": "Integrate actual Object constructor/module/team/radar/lookup ownership with GameLogic scheduler registration and destruction-queue retirement under legitimate UI/partition/script parents; then registered wall/model-derived bridge/root rollback, partition/ghost/startup and compiler-matching simulation",
   "implementation_checkpoint": {
-    "label": "original-player-cohort-ownership",
-    "reason": "Actual source player/cohort acquisition and retirement now guard paired pooled maps/selection and complete owner chains; actor/root startup and original simulation remain pending",
-    "prior_commit": "7737aea1",
-    "canonical_source_sha256": "b2574cec2d7e5b16520e3f097d181d35dc01567d72d603df07378a498bb795da",
-    "toolchain_inclusive_sha256": "bb07b9f28e524e6a3fcc20cc8760223bee7a056ec0b8c084bf8bd98f0cd79ca7",
-    "configured_suite_tests": 308,
-    "related_suite_tests_passed": 118,
+    "label": "original-default-team-ownership",
+    "reason": "Actual factory/prototype/member/default-team source admission/retirement now executes under legitimate parents; registered actor and root/startup/simulation remain pending",
+    "prior_commit": "872cdd97",
+    "canonical_source_sha256": "21b32f18dc8f411ed0b69aefc1b26b18dac406f09ebe0354e73e760a4e94a303",
+    "toolchain_inclusive_sha256": "0da9af4a68ff3b6f296ac69f7f6b2e12c0b92d431dc4d09ea4deb9d090864a8d",
+    "configured_suite_tests": 312,
+    "related_suite_tests_passed": 122,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; related118 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; related122 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-player-ownership-checkpoint.md"
+    "evidence": "evidence/qa/N2-team-ownership-checkpoint.md"
   }
 }

@@ -3863,3 +3863,65 @@ Candidate-root construction must establish the correct parent/global identities
 through local-player selection, not borrow an accepted root's partition/client
 while building a new cohort. This callback ownership and phase order are pending
 actual root evidence, not established by the CPU-only cohort manifest81.
+
+Team ownership implementation (parent872cdd97; broader validation pending):
+TeamFactory clear now swaps its ordered map into a local owner, preserving the
+original entire-registry withdrawal before callbacks without allocating a copy.
+TeamPrototype initializes script pointers before dual factory/player registration
+and withdraws factory membership if player-list insertion fails. Team's relation
+maps and intrusive prototype membership unwind locally on constructor failure;
+complete-team script/player notifications are not called on partial construction.
+Factory creation retains pre-acquisition prototype/team cursors and restores them
+after failed constructor or owned late-creation phases. Completed candidate
+retirement uses legitimate factory/player/script publication, preserves the
+accepted neutral default team, and proves production IDs advance before the
+fixture destroys its whole factory. Unsigned32 IDs are not widened; exhaustion
+rejects before increment. Singleton reuse and active/inactive instance transitions
+remain source-established behavior.
+
+Original Player::setTeamRelationship stores entries in an unordered_map that is
+owned by the player, not the TeamFactory. Removal erases nodes but retains bucket
+capacity until the player retires. Warm actual nonempty relationship callbacks
+before factory-lifetime baselines; still require whole player/context destruction
+to retire that capacity. Factory clear destroys teams while parent players remain
+alive, and the default-team pointer is only withdrawn during the subsequent
+original player init phase. Do not dereference retired team identities or skip
+that source phase order. Actual fixture declarations and failure/retry evidence
+are in `tests/original/team_ownership.cpp`; broader matrix acceptance is pending.
+The fixture uses an actual ScriptEngine owner for team lifecycle notifications
+and actual PlayerList/RankInfoStore/NameKeyGenerator, not a substitute notifier.
+It does not execute authored creation actions or real Object participants. Script
+actions' gameplay effects and any child objects belong to the later entire
+candidate-root transaction, not a fictional team-local simulation rewind.
+
+Actor scheduler/retirement carry-forward (verified source, pending work):
+GameLogic::registerObject prepends the Object, republishes lookup, then performs
+fallible sleepy-update vector pushes. Source Object marks modules ready and adds
+radar ownership before this call. Constructor rollback must therefore withdraw
+radar, partial scheduler entries, lookup and intrusive object membership together,
+not only delete modules. GameLogic::processDestroyList removes scheduler entries
+before object/lookup retirement and actual object deletion; its temporary fixed
+256-module collection can leave extra update pointers if externally supplied
+module cardinality exceeds that assumption. Inspect original limits and the
+whole scheduler lifecycle rather than claiming complete retirement from a small
+fixture. GameLogic::destroyObject calls onDestroy hooks, marks destroyed and
+retires AI goals before its fallible destruction-list push. An allocation failure
+at that final push can leave a destroyed-marked but unqueued live object; later
+destroyAllObjectsImmediate ignores already marked objects. Batch queue admission,
+source callback/destruction order and repeated whole-owner cleanup with actual
+actor construction. Do not change callback order or skip gameplay destruction
+hooks merely to make ownership tests pass. Source public get/setObjectIDCounter
+already supports cursor inspection; prove real advance before any external
+fixture lease restores it. Update helpers must retire before their GameLogic
+parent/global publication is withdrawn.
+Sources: GameLogic/System/GameLogic.cpp::registerObject (around3832),
+destroyObject (3900), destroyAllObjectsImmediate (293), processDestroyList (2411),
+pushSleepyUpdate (2873); Object.cpp final constructor phases (around498–519);
+GameLogic.h::getObjectIDCounter/setObjectIDCounter (around133).
+
+The actual team ownership checkpoint now passes all3 configured builds,
+focused4 and related122 on frozen canonical625 source21b32f18 / inclusive632
+source0da9af4a. Evidence: `evidence/qa/N2-team-ownership-checkpoint.md`.
+This closes the pending isolated factory/prototype/member/default-team lifetime
+evidence above, not authored creation actions, registered Object/partition
+participants or complete candidate-root/startup/simulation acceptance.

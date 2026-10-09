@@ -460,6 +460,18 @@ add_executable(original_logical_world_fixture tests/original/logical_world.cpp t
 add_executable(original_waypoint_graph_fixture tests/original/waypoint_graph.cpp tests/original/AllocationFault.cpp)
 add_executable(original_ai_pathfinder_fixture tests/original/ai_pathfinder.cpp tests/original/AllocationFault.cpp)
 add_executable(original_player_ownership_fixture tests/original/player_ownership.cpp tests/original/AllocationFault.cpp)
+add_executable(original_team_ownership_fixture tests/original/team_ownership.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_team_ownership_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_include_directories(original_team_ownership_fixture PRIVATE
+  "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
+target_compile_definitions(original_team_ownership_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+target_link_options(original_team_ownership_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS functional negative faults pool-failures)
+  add_test(NAME original_team_ownership_${family} COMMAND original_team_ownership_fixture "${family}")
+  set_tests_properties(original_team_ownership_${family} PROPERTIES LABELS "original;runtime;team" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 target_link_libraries(original_player_ownership_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_include_directories(original_player_ownership_fixture PRIVATE

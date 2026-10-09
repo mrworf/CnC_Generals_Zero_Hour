@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <limits>
 #include "Common/GameState.h"
 #include "Common/Team.h"
 #include "Common/ThingFactory.h"
@@ -211,8 +212,8 @@ void TeamFactory::clear()
 {
 		// must remove it from the map before deleting the TeamProto, since
 		// the TeamProto will try to remove itself from the list when it goes away
-	TeamPrototypeMap tmp = m_prototypes;
-	m_prototypes.clear();
+	TeamPrototypeMap tmp;
+	tmp.swap(m_prototypes); // Same withdrawal phase, no fallible teardown copy.
 	for (TeamPrototypeMap::iterator it = tmp.begin(); it != tmp.end(); ++it)
 	{
 		it->second->deleteInstance();
@@ -240,15 +241,24 @@ void TeamFactory::initFromSides(SidesList *sides)
 // ------------------------------------------------------------------------
 void TeamFactory::initTeam(const AsciiString& name, const AsciiString& owner, Bool isSingleton, Dict *d)
 {
-	DEBUG_ASSERTCRASH(findTeamPrototype(name)==NULL,("team already exists"));
+	if (!d || !TheNameKeyGenerator || !ThePlayerList || !TheScriptEngine || TheTeamFactory != this ||
+			findTeamPrototype(name) || m_uniqueTeamPrototypeID == std::numeric_limits<TeamPrototypeID>::max())
+		throw ERROR_BAD_ARG;
 	Player *pOwner = ThePlayerList->findPlayerWithNameKey(NAMEKEY(owner));
 	DEBUG_ASSERTCRASH(pOwner, ("no owner found for team %s (%s)\n",name.str(),owner.str()));
 	if (!pOwner)
 		pOwner = ThePlayerList->getNeutralPlayer(); 
-	/*TeamPrototype *tp =*/ newInstance(TeamPrototype)(this, name, pOwner, isSingleton, d, ++m_uniqueTeamPrototypeID);
-	if (isSingleton) {
-		// Create the singleton team.
-		createInactiveTeam(name);
+	const auto prototypeCursor = m_uniqueTeamPrototypeID;
+	const auto teamCursor = m_uniqueTeamID;
+	TeamPrototype* candidate = NULL;
+	try {
+		candidate = newInstance(TeamPrototype)(this, name, pOwner, isSingleton, d, ++m_uniqueTeamPrototypeID);
+		if (isSingleton) createInactiveTeam(name);
+	} catch (...) {
+		if (candidate) candidate->deleteInstance();
+		m_uniqueTeamPrototypeID = prototypeCursor;
+		m_uniqueTeamID = teamCursor;
+		throw;
 	}
 }
 
@@ -259,7 +269,7 @@ void TeamFactory::addTeamPrototypeToList(TeamPrototype* team)
 	TeamPrototypeMap::iterator it = m_prototypes.find(nk);
 	if (it != m_prototypes.end())
 	{
-		DEBUG_ASSERTCRASH((*it).second==team, ("TeamFactory::addTeamPrototypeToList: Team %s already exists... skipping.", team->getName().str()));
+		if ((*it).second != team) throw ERROR_BAD_ARG;
 		return;	// already present
 	}
 
@@ -271,7 +281,7 @@ void TeamFactory::removeTeamPrototypeFromList(TeamPrototype* team)
 {
 	NameKeyType nk = NAMEKEY(team->getName());
 	TeamPrototypeMap::iterator it = m_prototypes.find(nk);
-	if (it != m_prototypes.end())
+	if (it != m_prototypes.end() && it->second == team)
 		m_prototypes.erase(it);
 }
 
@@ -335,6 +345,7 @@ Team *TeamFactory::findTeamByID( TeamID teamID )
 Call team->setActive() when all members are added. */
 Team *TeamFactory::createInactiveTeam(const AsciiString& name)
 {
+	if (!TheScriptEngine || !ThePlayerList || TheTeamFactory != this) throw ERROR_BAD_ARG;
 	TeamPrototype *tp = findTeamPrototype(name);
 	if (!tp)
 		throw ERROR_BAD_ARG;
@@ -354,12 +365,19 @@ Team *TeamFactory::createInactiveTeam(const AsciiString& name)
 		}
 	}
 
-	t = newInstance(Team)(tp, ++m_uniqueTeamID );
-	if (tp->getTemplateInfo()->m_executeActions) {
-		const Script *script = TheScriptEngine->findScriptByName(tp->getTemplateInfo()->m_productionCondition);
-		if (script) {
-			TheScriptEngine->friend_executeAction(script->getAction());
+	if (!TheScriptEngine || !ThePlayerList || TheTeamFactory != this ||
+			m_uniqueTeamID == std::numeric_limits<TeamID>::max()) throw ERROR_BAD_ARG;
+	const auto cursor = m_uniqueTeamID;
+	try {
+		t = newInstance(Team)(tp, ++m_uniqueTeamID );
+		if (tp->getTemplateInfo()->m_executeActions) {
+			const Script *script = TheScriptEngine->findScriptByName(tp->getTemplateInfo()->m_productionCondition);
+			if (script) TheScriptEngine->friend_executeAction(script->getAction());
 		}
+	} catch (...) {
+		if (t) { teamAboutToBeDeleted(t); t->deleteInstance(); }
+		m_uniqueTeamID = cursor;
+		throw;
 	}
 	
 	return t;
@@ -377,7 +395,8 @@ Team *TeamFactory::createTeam(const AsciiString& name)
 // ------------------------------------------------------------------------
 Team *TeamFactory::createTeamOnPrototype( TeamPrototype *prototype )
 {
-	if( prototype == NULL )
+	if (!prototype || !TheScriptEngine || !ThePlayerList || TheTeamFactory != this ||
+			findTeamPrototypeByID(prototype->getID()) != prototype)
 		throw ERROR_BAD_ARG;
 
 	Team *t = NULL;
@@ -387,7 +406,11 @@ Team *TeamFactory::createTeamOnPrototype( TeamPrototype *prototype )
 		if( t )
 			return t;
 	}
-	t = newInstance(Team)( prototype, ++m_uniqueTeamID );
+	if (!TheScriptEngine || !ThePlayerList || TheTeamFactory != this ||
+			m_uniqueTeamID == std::numeric_limits<TeamID>::max()) throw ERROR_BAD_ARG;
+	const auto cursor = m_uniqueTeamID;
+	try { t = newInstance(Team)( prototype, ++m_uniqueTeamID ); }
+	catch (...) { m_uniqueTeamID = cursor; throw; }
 	t->setActive();
 	return t;
 }
@@ -618,6 +641,7 @@ fclose( fp );
 TeamTemplateInfo::TeamTemplateInfo(Dict *d) :
 	m_numUnitsInfo(0)
 {
+	if (!d || !TheNameKeyGenerator) throw ERROR_BAD_ARG;
 	Bool exists;
 	Int min, max;
 	AsciiString templateName;
@@ -818,16 +842,14 @@ TeamPrototype::TeamPrototype( TeamFactory *tf,
 	m_productionConditionScript(NULL)
 {
 	DEBUG_ASSERTCRASH(!(m_owningPlayer == NULL), ("bad args to TeamPrototype ctor"));
-	if (m_factory)
-		m_factory->addTeamPrototypeToList(this);
-
-	if (m_owningPlayer)
-		m_owningPlayer->addTeamToList(this);
-	
 	m_retrievedGenericScripts = false;
 	for (Int i = 0; i < MAX_GENERIC_SCRIPTS; ++i) {
 		m_genericScriptsToRun[i] = NULL;
 	}
+	if (!m_factory || !m_owningPlayer) throw ERROR_BAD_ARG;
+	m_factory->addTeamPrototypeToList(this);
+	try { m_owningPlayer->addTeamToList(this); }
+	catch (...) { m_factory->removeTeamPrototypeFromList(this); throw; }
 }
 
 // ------------------------------------------------------------------------
@@ -1331,7 +1353,11 @@ Team::Team(TeamPrototype *proto, TeamID id ) :
 	//
 	m_commonAttackTarget = INVALID_ID;
 
-	// allocate new relation map pools
+	// A failed constructor must not invoke complete-team destruction callbacks.
+	m_playerRelations = NULL;
+	m_teamRelations = NULL;
+	if (!proto || !TheScriptEngine) throw ERROR_BAD_ARG;
+	try {
 	m_playerRelations = newInstance(PlayerRelationMap);
 	m_teamRelations = newInstance(TeamRelationMap);
 
@@ -1347,6 +1373,12 @@ Team::Team(TeamPrototype *proto, TeamID id ) :
 		AsciiString teamName = proto->getName();
 		teamName.concat(" - creating team instance.");
 		TheScriptEngine->AppendDebugMessage(teamName, false);
+	}
+	} catch (...) {
+		if (proto->isInList_TeamInstanceList(this)) proto->removeFrom_TeamInstanceList(this);
+		if (m_teamRelations) m_teamRelations->deleteInstance();
+		if (m_playerRelations) m_playerRelations->deleteInstance();
+		throw;
 	}
 
 	for (Int i = 0; i < MAX_GENERIC_SCRIPTS; ++i) 

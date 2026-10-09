@@ -2309,3 +2309,47 @@ registered wall/model-derived bridge/root admission and original simulation.
 Source GameEngine initializes partition before the cohort; actual callback
 publication order remains mandatory and is durable in engine-format notes.
 Slice03/N2 remains incomplete; no new plan or upstream library changes.
+
+Actual-team integration refinement (parent872cdd97, clean start): preserve source
+neutral default-team naming, singleton reuse, activation and prototype/member
+order. Batch factory clear's whole-map retirement, prototype factory/player dual
+registration, Team's paired pooled relation maps and intrusive membership, and
+both factory ID cursors across constructor/late creation failures. Keep source
+clear semantics (withdraw the entire factory map before callbacks) via a map swap,
+not a fallible copy. Reject missing definitions/parents, duplicate prototypes and
+ID exhaustion before unsafe publication; retain fixed-width serialized IDs.
+Exercise actual factory/prototype/team with real player/name/rank/script parents,
+neutral setDefaultTeam, alliance/relationship cleanup and singleton versus
+multi-instance behavior. Prove every heap failure/retry and typed-pool exhaustion,
+accepted participant identity and corrected ID advancement, three complete owner
+lifetimes and allocation-free clear/destruction under all3 configurations. Script
+creation actions remain source callbacks; any gameplay side effects require the
+later whole candidate-root rollback, not an invented per-team simulation rewind.
+Actual Object/partition/wall/bridge and whole startup remain pending gates.
+
+Team fixture baseline correction: the first normal focused4 run passed3 and
+failed functional whole-factory heap equality. Player::setTeamRelationship uses
+its persistent unordered_map; removing the entry retires the node but legitimately
+retains bucket capacity in the still-live player owner. Warm the actual nonempty
+relationship/clear/default-team sequence before repeated-factory baselines, then
+still require whole player/context/memory-manager destruction to retire that
+capacity exactly. No production workaround or weakened lifetime oracle.
+
+Actual default-team ownership checkpoint: all3 full configured builds, focused4
+and related122 PASS on canonical625 source21b32f18 / inclusive632 source0da9af4a.
+Real source neutral default-team activation, singleton reuse, non-singleton
+active/inactive instances, relationship notification and intrusive retirement
+execute. Prototype/member39 and existing-prototype inactive5/active5 heap
+manifests preserve accepted participants and prove cursor rollback/advance before
+each corrected retry. Four actual typed pools exhaust/retry separately. Source
+whole-factory clear is allocation-free; whole player/context/manager ownership
+retires warmed relationship capacity exactly. Evidence:
+`evidence/qa/N2-team-ownership-checkpoint.md`. Commit boundary:
+`delivery: preserve original team admission ownership`.
+Full312 not run; actual actors/root and authored script creation actions remain
+pending. Next couple Object constructor/module/team/radar/early lookup ownership
+with GameLogic scheduler registration and destruction-queue admission (including
+the fixed256 cleanup assumption), plus legitimate UI/partition/script parents.
+Execute actual registered wall/object footprints, model-derived bridge/root
+rollback, then complete partition/ghost/startup and compiler-matching simulation.
+Slice03/N2 incomplete; no new plan or upstream modifications.
