@@ -7,6 +7,7 @@
 #include "Common/GlobalData.h"
 #include "Common/MapObject.h"
 #include "Common/ThingFactory.h"
+#include "Common/ThingTemplate.h"
 #include "Common/WellKnownKeys.h"
 #include "GameLogic/NativeLogicalWorld.h"
 #include "GameLogic/NativeWaypointGraph.h"
@@ -24,6 +25,15 @@
 #include "Common/ModuleFactory.h"
 #include "Common/PlayerList.h"
 #include "Common/Player.h"
+#include "Common/Upgrade.h"
+#include "Common/MessageStream.h"
+#include "Common/INI.h"
+#include "Common/DrawModule.h"
+#include "GameClient/NativeHeadlessGameClient.h"
+#include "GameClient/Drawable.h"
+#include "GameLogic/ExperienceTracker.h"
+#include "GameLogic/Module/InactiveBody.h"
+#include "GameLogic/Module/VeterancyGainCreate.h"
 #include "Common/Team.h"
 #include "Common/Radar.h"
 #include "GameClient/InGameUI.h"
@@ -33,6 +43,7 @@
 #include <cmath>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -405,6 +416,45 @@ struct PartitionPublication {
 // ghost owner is used solely for mobile actors and is never fog acceptance.
 struct ActorUI:InGameUI{void draw()override{} View* createView()override{throw ERROR_BAD_ARG;}};
 struct ActorRadar:Radar{void draw(Int,Int,Int,Int)override{} void clearShroud()override{} void setShroudLevel(Int,Int,CellShroudStatus)override{}};
+// Test-only callback faults, not replacement gameplay or presentation modules.
+// Execute original registry, pooled construction and binding notification paths.
+unsigned bindingFaultPhase=0,bindingDrawCalls=0,bindingBehaviorCalls=0,bindingUnbindCalls=0;
+struct BindingDrawProbe:DrawModule{
+  MEMORY_POOL_GLUE_WITH_EXPLICIT_CREATE(BindingDrawProbe,"BindingDrawProbe",8,0)
+public:
+  BindingDrawProbe(Thing* thing,const ModuleData* data):DrawModule(thing,data){}
+  NameKeyType getModuleNameKey()const override{static const StaticNameKey name("BindingDrawProbe");return name.key();}
+  void onDrawableBoundToObject()override{++bindingDrawCalls;auto* actor=getDrawable()->getObject();
+    require(actor && !actor->getDrawable(),"first binding callback sees only Drawable-to-Object publication");
+    if(bindingFaultPhase==1)throw ERROR_BAD_ARG;}
+  void doDrawModule(const Matrix3D*)override{throw ERROR_BAD_ARG;}
+  void setShadowsEnabled(Bool)override{} void releaseShadows()override{} void allocateShadows()override{throw ERROR_BAD_ARG;}
+  void setFullyObscuredByShroud(Bool)override{} void reactToTransformChange(const Matrix3D*,const Coord3D*,Real)override{}
+  void reactToGeometryChange()override{}
+};
+BindingDrawProbe::~BindingDrawProbe()=default;
+struct BindingBehaviorProbe:BehaviorModule{
+  MEMORY_POOL_GLUE_WITH_EXPLICIT_CREATE(BindingBehaviorProbe,"BindingBehaviorProbe",8,0)
+public:
+  BindingBehaviorProbe(Thing* thing,const ModuleData* data):BehaviorModule(thing,data){}
+  NameKeyType getModuleNameKey()const override{static const StaticNameKey name("BindingBehaviorProbe");return name.key();}
+  void onDrawableBoundToObject()override{
+    // The original complete Object destructor also notifies a null binding.
+    // Fault only real acquisition, never legitimate destruction callbacks.
+    if(!getObject()->getDrawable()){++bindingUnbindCalls;return;}
+    ++bindingBehaviorCalls;
+    require(getObject()->getDrawable()->getObject()==getObject(),"second binding callback sees reciprocal publication");
+    if(bindingFaultPhase==2)throw ERROR_BAD_ARG;}
+};
+BindingBehaviorProbe::~BindingBehaviorProbe()=default;
+struct ActorModuleFactory:ModuleFactory{
+  void addBindingProbes(){
+    addModuleInternal([](Thing* thing,const ModuleData* data)->Module*{return newInstance(BindingDrawProbe)(thing,data);},
+      [](INI* ini)->ModuleData*{if(ini)throw ERROR_BAD_ARG;return new ModuleData;},MODULETYPE_DRAW,"BindingDrawProbe",MODULEINTERFACE_DRAW);
+    addModuleInternal([](Thing* thing,const ModuleData* data)->Module*{return newInstance(BindingBehaviorProbe)(thing,data);},
+      [](INI* ini)->ModuleData*{if(ini)throw ERROR_BAD_ARG;return new BehaviorModuleData;},MODULETYPE_BEHAVIOR,"BindingBehaviorProbe",0);
+  }
+};
 template<class Base,class Concrete=Base>struct ActorParent{
   Base*& slot;Base* previous;std::unique_ptr<Concrete> owner;
   explicit ActorParent(Base*& value):slot(value),previous(value){}
@@ -416,15 +466,19 @@ struct ActorParents{
   ControlBar* previousControl=TheControlBar;
   ActorParent<RankInfoStore> ranks{TheRankInfoStore};ActorParent<AI> ai{TheAI};
   ActorParent<GameLogic> logic{TheGameLogic};ActorParent<InGameUI,ActorUI> ui{TheInGameUI};
-  ActorParent<Radar,ActorRadar> radar{TheRadar};ActorParent<ModuleFactory> modules{TheModuleFactory};
+  ActorParent<Radar,ActorRadar> radar{TheRadar};ActorParent<ModuleFactory,ActorModuleFactory> modules{TheModuleFactory};
   ActorParent<PlayerList> players{ThePlayerList};ActorParent<TeamFactory> teams{TheTeamFactory};
   ActorParent<GhostObjectManager> ghosts{TheGhostObjectManager};
-  ActorParents(){TheControlBar=nullptr;try{ranks.create();ranks.owner->init();ai.create();ai.owner->init();
-    logic.create();logic.owner->setObjectIDCounter(ObjectID(1));ui.create();radar.create();modules.create();modules.owner->init();
+  ActorParent<MessageStream> messages{TheMessageStream};ActorParent<GameClient,NativeHeadlessGameClient> client{TheGameClient};
+  ActorParent<UpgradeCenter> upgrades{TheUpgradeCenter};
+  explicit ActorParents(bool fullCreation=false){TheControlBar=nullptr;try{ranks.create();ranks.owner->init();ai.create();ai.owner->init();
+    logic.create();logic.owner->setObjectIDCounter(ObjectID(1));
+    if(fullCreation){messages.create();client.create();client.owner->init();upgrades.create();logic.owner->setDrawIconUI(FALSE);}
+    ui.create();radar.create();modules.create();modules.owner->init();
     players.create();teams.create();teams.owner->init();Dict definition;teams.owner->initTeam("team","",TRUE,&definition);
     players.owner->getNeutralPlayer()->setDefaultTeam();ghosts.create();}catch(...){retire();throw;}}
-  void retire(){if(logic.owner)logic.owner->destroyAllObjectsImmediate();ui.retire();radar.retire();teams.retire();players.retire();
-    ghosts.retire();ai.retire();modules.retire();logic.retire();ranks.retire();TheControlBar=previousControl;}
+  void retire(){if(logic.owner)logic.owner->destroyAllObjectsImmediate();client.retire();ui.retire();radar.retire();teams.retire();players.retire();
+    ghosts.retire();ai.retire();upgrades.retire();modules.retire();logic.retire();messages.retire();ranks.retire();TheControlBar=previousControl;}
   ~ActorParents(){retire();}
 };
 void partitionActors(Context& context){
@@ -489,6 +543,83 @@ struct GhostAttachment:GhostObject{
   void freeSnapShot(int)override{throw ERROR_BAD_ARG;}
   void updateParentObject(Object* object,PartitionData* data)override{m_parentObject=object;m_partitionData=data;}
 };
+void factoryCreation(Context& context,bool faults,bool binding=false){
+  context.load(wire());DeviceFixture visual;LogicFixture terrain(visual);logicLoad(terrain,providerWorld(),"GeneratedCreation.map");
+  const auto oldTerrain=TheTerrainLogic;TheTerrainLogic=&terrain;
+  struct Restore{TerrainLogic* previous;~Restore(){TheTerrainLogic=previous;}} restore{oldTerrain};
+  PartitionPublication partition;partition.owner->init();ActorParents parents(true);
+  {std::ofstream definitions(context.tree.path/"creation.ini");
+    definitions<<"Object GeneratedCreatedActor\n Geometry = BOX\n GeometryMajorRadius = 5\n GeometryMinorRadius = 3\n IsTrainable = Yes\n"
+      " Body = InactiveBody GeneratedBody\n End\n Behavior = VeterancyGainCreate GeneratedCreate\n StartingLevel = VETERAN\n End\n End\n";
+    definitions.close();require(bool(definitions),"generated actual body/create definitions");}
+  // Generated files must exist before the read-only mount indexes this tree.
+  // No user-storage lease or open input survives here; refresh through the VFS.
+  context.files.mountReadOnly({context.tree.path.string()});
+  INI ini;ini.load("creation.ini",INI_LOAD_OVERWRITE,nullptr);
+  auto* definition=const_cast<ThingTemplate*>(context.factory->findTemplate("GeneratedCreatedActor",FALSE));
+  if(binding){parents.modules.owner->addBindingProbes();
+    auto add=[&](ModuleInfo& info,const char* name,ModuleType type,Int interfaces){const AsciiString tag(name);
+      auto* data=parents.modules.owner->newModuleDataFromINI(nullptr,name,type,tag);
+      require(data,"test-only binding callback data");info.addModuleInfo(definition,name,tag,data,interfaces,FALSE);};
+    add(const_cast<ModuleInfo&>(definition->getDrawModuleInfo()),"BindingDrawProbe",MODULETYPE_DRAW,MODULEINTERFACE_DRAW);
+    add(const_cast<ModuleInfo&>(definition->getBehaviorModuleInfo()),"BindingBehaviorProbe",MODULETYPE_BEHAVIOR,0);}
+  auto make=[&]{return context.factory->newObject(context.factory->findTemplate("GeneratedCreatedActor",FALSE),nullptr,OBJECT_STATUS_MASK_NONE);};
+  auto verify=[&](Object* actor){auto* draw=actor->getDrawable();require(actor->getBodyModule() && actor->getExperienceTracker()->getVeterancyLevel()==LEVEL_VETERAN &&
+      actor->friend_getPartitionData() && draw && draw->getObject()==actor && parents.client.owner->findDrawableByID(draw->getID())==draw &&
+      parents.logic.owner->findObjectByID(actor->getID())==actor,"full source create callback/body/partition/Drawable binding and lookup");};
+  auto retire=[&](Object* actor){parents.logic.owner->destroyObject(actor);parents.logic.owner->processDestroyList();};
+  auto* survivor=make();verify(survivor);auto* survivorDraw=survivor->getDrawable();auto* survivorPartition=survivor->friend_getPartitionData();
+  auto* warm=make();verify(warm);retire(warm);
+  auto units=[] {const std::array<const char*,17> names{"ObjectPool","SightingInfo","ObjectSMCHelperPool","StatusDamageHelper",
+      "SubdualDamageHelper","ObjectDefectionHelperPool","ExperienceTrackerPool","RadarObject","PartitionDataPool","InactiveBody","VeterancyGainCreate","Drawable","TintEnvelope","DrawableLocoInfo","DrawableIconInfo","BindingDrawProbe","BindingBehaviorProbe"};
+    std::array<Int,17> result{};for(unsigned n=0;n<names.size();++n)if(auto* pool=TheMemoryPoolFactory->findMemoryPool(names[n]))result[n]=pool->getUsedBlockCount();return result;};
+  const auto start=parents.logic.owner->getObjectIDCounter();const auto drawStart=parents.client.owner->getDrawableIDCounter();
+  if(binding){for(unsigned phase:{1u,2u}){const auto live=AllocationFault::live();const auto used=units();
+      const auto drawCalls=bindingDrawCalls,behaviorCalls=bindingBehaviorCalls,unbindCalls=bindingUnbindCalls;bindingFaultPhase=phase;
+      struct Disarm{~Disarm(){bindingFaultPhase=0;}} disarm;bool failed=false;
+      try{make();}catch(ErrorCode code){failed=code==ERROR_BAD_ARG;}
+      bindingFaultPhase=0;
+      require(failed && bindingDrawCalls==drawCalls+1 && bindingBehaviorCalls==behaviorCalls+(phase==2) && bindingUnbindCalls==unbindCalls+1,
+        "exact acquisition callback order; complete actor retirement retains source unbind notification");
+      require(units()==used && AllocationFault::live()==live && parents.logic.owner->getObjectIDCounter()==start &&
+        !parents.logic.owner->findObjectByID(ObjectID(start)) && parents.logic.owner->getFirstObject()==survivor &&
+        parents.client.owner->getDrawableList()==survivorDraw,"half-bound candidate rollback retires every owner/registry");
+      require(survivor->getDrawable()==survivorDraw && survivorDraw->getObject()==survivor && survivor->friend_getPartitionData()==survivorPartition,"callback failure preserves accepted reciprocal pair and partition");
+      auto* retry=make();verify(retry);require(retry->getID()==ObjectID(start) && parents.logic.owner->getObjectIDCounter()==start+1,"corrected binding retry advances real actor cursor");retire(retry);
+      require(units()==used && AllocationFault::live()==live,"binding retry retires pooled and standard ownership");
+      parents.logic.owner->setObjectIDCounter(start);parents.client.owner->setDrawableIDCounter(drawStart);}
+    return;}
+  if(!faults){auto* candidate=make();verify(candidate);const auto live=AllocationFault::live();bool rejected=false;
+    try{parents.logic.owner->sendObjectCreated(candidate);}catch(ErrorCode code){rejected=code==ERROR_BAD_ARG;}
+    require(rejected && candidate->getDrawable()->getObject()==candidate && AllocationFault::live()==live,"duplicate creation notification preserves accepted pair");retire(candidate);return;}
+  std::size_t count;AllocationFault::arm(SIZE_MAX);Object* discovered=nullptr;
+  try{discovered=make();}catch(...){AllocationFault::disarm();throw;}count=AllocationFault::attempts();AllocationFault::disarm();
+  verify(discovered);retire(discovered);parents.logic.owner->setObjectIDCounter(start);parents.client.owner->setDrawableIDCounter(drawStart);
+  require(count>2,"complete creation census includes callback/partition/Drawable acquisitions");
+  for(std::size_t ordinal=0;ordinal<=count;++ordinal){const auto live=AllocationFault::live();const auto used=units();Object* candidate=nullptr;bool failed=false;
+    AllocationFault::arm(ordinal);try{candidate=make();}catch(const std::bad_alloc&){failed=true;}
+    catch(ErrorCode code){require(code==ERROR_OUT_OF_MEMORY,"source creation allocation error class");failed=true;}
+    catch(...){AllocationFault::disarm();throw;}const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+    require(hit==failed && failed==(ordinal<count),"every full source creation prefix and exact terminal");
+    if(failed)require(!parents.logic.owner->findObjectByID(ObjectID(start)) && parents.logic.owner->getObjectIDCounter()==start &&
+      parents.logic.owner->getFirstObject()==survivor && parents.client.owner->getDrawableList()==survivorDraw && AllocationFault::live()==live && units()==used,"late creation failure retires candidate actor/partition/Drawable registration");
+    else{verify(candidate);require(candidate->getID()==ObjectID(start) && parents.logic.owner->getObjectIDCounter()==start+1,"terminal proves production actor cursor advancement");retire(candidate);}
+    require(survivor->getDrawable()==survivorDraw && survivorDraw->getObject()==survivor && survivor->friend_getPartitionData()==survivorPartition,"creation failure preserves actual accepted survivor");
+    candidate=make();verify(candidate);require(candidate->getID()==ObjectID(start+(failed?0:1)),"corrected same-root creation uses valid source cursor");retire(candidate);
+    require(AllocationFault::live()==live && units()==used && parents.logic.owner->getFirstObject()==survivor && parents.client.owner->getDrawableList()==survivorDraw,"every corrected complete creation retires all standard/pooled ownership");
+    parents.logic.owner->setObjectIDCounter(start);parents.client.owner->setDrawableIDCounter(drawStart);}
+  for(const char* name:{"InactiveBody","VeterancyGainCreate","Drawable"}){
+    auto* pool=TheMemoryPoolFactory->findMemoryPool(name);require(pool,"actual body/create/Drawable pool");std::vector<void*> held;held.reserve(pool->getFreeBlockCount());
+    struct Retire{MemoryPool* pool;std::vector<void*>& held;~Retire(){for(auto* value:held)pool->freeBlock(value);}} release{pool,held};
+    while(pool->getFreeBlockCount())held.push_back(pool->allocateBlock("generated full creation exhaustion"));
+    const auto used=units();const auto live=AllocationFault::live();bool rejected=false;
+    try{make();}catch(ErrorCode code){rejected=code==ERROR_OUT_OF_MEMORY;}
+    require(rejected && units()==used && AllocationFault::live()==live && parents.logic.owner->getObjectIDCounter()==start &&
+      parents.logic.owner->getFirstObject()==survivor && parents.client.owner->getDrawableList()==survivorDraw,"actual late pooled exhaustion retires candidate and preserves survivor");
+    for(auto* value:held)pool->freeBlock(value);held.clear();auto* candidate=make();verify(candidate);retire(candidate);
+    parents.logic.owner->setObjectIDCounter(start);parents.client.owner->setDrawableIDCounter(drawStart);}
+  std::cout<<"full creation prefixes [0,"<<count<<"); terminal "<<count<<"; every retry; child/root/frame parity pending\n";
+}
 void partitionGhostAttachment(Context& context){
   context.load(wire());DeviceFixture visual;LogicFixture terrain(visual);logicLoad(terrain,providerWorld(),"GeneratedGhostPartition.map");
   const auto oldTerrain=TheTerrainLogic;TheTerrainLogic=&terrain;
@@ -682,12 +813,19 @@ void poolFailures(Context& context){const auto valid=wire(),replacement=wire("Re
 }
 int main(int argc,char** argv){const auto initial=AllocationFault::live();bool initialized=false;
   try{require(argc==2,"world family");initMemoryManager();initialized=true;
+    if(std::string_view(argv[1]).starts_with("factory-creation")){
+      TheMemoryPoolFactory->createMemoryPool("InactiveBody",sizeof(InactiveBody),32,0);
+      TheMemoryPoolFactory->createMemoryPool("VeterancyGainCreate",sizeof(VeterancyGainCreate),32,0);
+      TheMemoryPoolFactory->createMemoryPool("Drawable",sizeof(Drawable),32,0);}
     if(std::string_view(argv[1])=="partition-actors")TheMemoryPoolFactory->createMemoryPool("PartitionDataPool",sizeof(PartitionData),8,0);
     if(std::string_view(argv[1])=="pool-failures")fixedPools();
     {Context warm;warm.load(wire());warm.load(wire("ReplacementSide"));
       const auto bytes=wire();Input input(bytes);NativeWaypointGraph graph;
       graph.load(input,MapObject::getFirstMapObject());if(std::string_view(argv[1])=="partition-actors"){partitionActors(warm);partitionActors(warm);}
       if(std::string_view(argv[1])=="partition-ghost-attachment")partitionGhostAttachment(warm);}
+    // Module definitions borrow their registry's data: warm complete roots,
+    // not a template graph retained after its module-data owner was retired.
+    if(std::string_view(argv[1]).starts_with("factory-creation"))for(unsigned repeat=0;repeat<2;++repeat){Context warm;factoryCreation(warm,false,std::string_view(argv[1])=="factory-creation-binding");}
     for(unsigned repeat=0;repeat<3;++repeat){auto live=AllocationFault::live();const PoolUsage pools;
       {Context context;const std::string_view family=argv[1];if(family=="functional")functional(context);
         else if(family=="negative")negative(context);else if(family=="faults"){faults(context);optionalFaults(context);}
@@ -698,6 +836,8 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
         else if(family=="partition-grid")partitionGrid(context,false);else if(family=="partition-grid-faults")partitionGrid(context,true);
         else if(family=="partition-actors")partitionActors(context);
         else if(family=="partition-ghost-attachment")partitionGhostAttachment(context);
+        else if(family=="factory-creation")factoryCreation(context,false);else if(family=="factory-creation-faults")factoryCreation(context,true);
+        else if(family=="factory-creation-binding")factoryCreation(context,false,true);
         else require(false,"unknown world family");}
       require(AllocationFault::live()==live && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
         !MapObject::getFirstMapObject() && !PolygonTrigger::getFirstPolygonTrigger(),"repeated full-world owner retirement");}

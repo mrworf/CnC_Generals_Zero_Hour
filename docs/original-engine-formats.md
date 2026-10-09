@@ -4144,3 +4144,55 @@ f0dcee42be5fa88b88ba5c45b9ae6369ece3bd706f627cbe938e7463f9ae90ec.
 This supersedes pending validation only for grid admission and stated actor/
 ghost-attachment ownership. Shipped fog, accepted geometry replacement, full
 creation/root/startup and simulation requirements above remain unaccepted.
+
+Full creation binding/retirement findings (current frozen source, all3 full
+build/focused3/related140 evidence): actual ThingFactory::newObject runs
+InactiveBody and VeterancyGainCreate through original ModuleFactory/INI creators,
+then partition admission and reciprocal Drawable binding. Source Drawable binding
+publishes its Object pointer and runs draw callbacks first; Object binding then
+publishes its Drawable pointer and runs behavior callbacks. Candidate withdrawal
+must clear only this pair without emitting another acquisition callback, then
+retire the client registration and pooled Drawable while the Object still lives.
+Complete Object retirement still calls GameLogic::sendObjectDestroyed even when
+the pair never completed. That calls Object::friend_bindToDrawable(NULL), which
+legitimately notifies behavior modules of an unbind. Normal accepted retirement
+can notify this null binding from both GameClient::destroyDrawable and
+GameLogic::sendObjectDestroyed. Do not suppress those source notifications or
+fault unbind in an acquisition-failure probe.
+Source anchors: Drawable.cpp::friend_bindToObject; Object/Object.cpp::{
+friend_bindToDrawable,~Object}; GameLogic.cpp::{bindObjectAndDrawable,
+sendObjectCreated,sendObjectDestroyed}; GameClient.cpp::destroyDrawable.
+
+Generated full-creation fixture lifetime: NativeFileSystem::mountReadOnly takes a
+snapshot index of available files; generate/close INI input before indexing or
+explicitly refresh the generated-only mount through its public API. A factory
+retains templates whose module data belongs to ModuleFactory. Repeating creation
+setup must warm whole roots, not reload an already-defined template after retiring
+that module-data owner. ThingFactory::parseObjectDefinition intentionally rejects
+duplicate definitions outside INI_LOAD_CREATE_OVERRIDES. A bad fixture is not a
+reason to bypass duplicate checks or add a production native filesystem fallback.
+
+Camera/freeze integration source anchors for the next native root batch:
+GameLogic::update and Drawable::applyPhysicsXform consult TacticalView time freeze
+AND unfinished camera movement; native GameClient::updateHeadless currently
+includes script/pause freeze only and rejects a TacticalView or logical UI.
+W3DView::cameraModFreezeTime records m_freezeTimeForCameraMovement; source camera
+movement completion checks waypoint-path, rotate, pitch and zoom activity, with
+specific motion-blur filter modes returning finished. Movement completion/reset
+paths retire the freeze request. View's default constant false/true methods are
+not a substitute for these shipped script-camera semantics. Preserve the original
+logical camera state/timing independently of physical rendering and give the
+logical UI, client and actual GameLogic frame the same legitimate owner. This is
+a pending implementation requirement, not current native frame acceptance.
+Source anchors: GameClient.cpp::{initHeadless,updateHeadless}; GameLogic.cpp::update;
+Drawable.cpp::applyPhysicsXform; W3DView.h::{cameraModFreezeTime,isTimeFrozen};
+W3DView.cpp::{isCameraMovementFinished,moveCameraTo,updateCameraMovements}.
+
+Current creation ownership evidence:
+evidence/qa/N2-full-creation-ownership-checkpoint.md. Canonical626
+97bfe4fa32b00f1e6a8629352c2f03ead5471990fa98ff802f3479a878476677,
+all3 full configured builds/focused3/related140 PASS; matching complete creation
+allocation manifests [0,11), terminal11 with every corrected retry, three actual
+typed pool exhaustions and both binding-callback failure phases. No full330,
+whole-root child/script/RNG rollback, native frame/startup, shipped fog or visual
+acceptance is claimed.

@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include <memory>
 
 #include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
@@ -305,7 +306,7 @@ ThingTemplate *ThingFactory::findTemplateInternal( const AsciiString& name, Bool
 //=============================================================================
 Object *ThingFactory::newObject( const ThingTemplate *tmplate, Team *team, ObjectStatusMaskType statusBits )
 {
-	if (tmplate == NULL)
+	if (!tmplate || !TheGameLogic || !ThePartitionManager)
 		throw ERROR_BAD_ARG;
 
 	const std::vector<AsciiString>& asv = tmplate->getBuildVariations();
@@ -324,6 +325,17 @@ Object *ThingFactory::newObject( const ThingTemplate *tmplate, Team *team, Objec
 	//Added ability to pass in optional statusBits. This is needed to be set prior to
 	//the onCreate() calls... in the case of constructing.
 	Object *obj = TheGameLogic->friend_createObject( tmplate, statusBits, team );
+	if (!obj) throw ERROR_BAD_ARG;
+	const ObjectID candidateID = obj->getID();
+	auto retire = [candidateID](Object* candidate) {
+		// Construction completed, but creation/admission did not. Its actual
+		// destructor can retire all acquired modules and parent registrations.
+		TheGameLogic->withdrawObjectRegistration(candidate);
+		candidate->friend_deleteInstance();
+		if (TheGameLogic->getObjectIDCounter() == candidateID + 1)
+			TheGameLogic->setObjectIDCounter(candidateID);
+	};
+	std::unique_ptr<Object, decltype(retire)> candidate(obj, retire);
 
 	// run the create function for the thing
 	for (BehaviorModule** m = obj->getBehaviorModules(); *m; ++m)
@@ -343,7 +355,7 @@ Object *ThingFactory::newObject( const ThingTemplate *tmplate, Team *team, Objec
 
 	obj->initObject();
 
-	return obj;
+	return candidate.release();
 
 } 
 

@@ -26,32 +26,16 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "ce04706030bffa9f511d57207c08bf43d088c81e",
-    "label": "original-nonempty-partition-ownership",
-    "evidence": "evidence/qa/N2-partition-ownership-checkpoint.md",
-    "validation": "All3 full configured builds, focused4 and related137 PASS on frozen canonical626/inclusive633. Actual terrain-backed cells/radius admission, real actor touched-cell callbacks and survivor preservation; complete grid31/actor1/ghost-attachment1 manifests and actual partition pool exhaustion/retry retire ownership exactly. Shipped fog remains pending",
-    "next": "Integrate full ThingFactory creation and legitimate native root/UI/client/freeze parents; shipped ghost snapshot/orphan/border/load ownership, accepted geometry replacement and registered walls/model bridges; then full GameEngine startup and compiler-matching GameLogic::update",
+    "parent": "e5a0fefb8275d933f16ad4234e88c57ac1e49e60",
+    "label": "original-full-creation-ownership",
+    "evidence": "evidence/qa/N2-full-creation-ownership-checkpoint.md",
+    "validation": "All3 full configured builds, focused3 and related140 PASS on frozen canonical626/inclusive633. Actual stock body/create callbacks, partition and reciprocal Drawable binding, complete creation11 manifests and actual three-pool exhaustion/retry; both partial-binding callback failure phases retire candidate ownership and preserve source destructor unbind. Full330/root/startup/frame remain pending.",
+    "next": "Integrate legitimate native logical UI/client/camera-freeze and whole-root journal with real original GameEngine/GameLogic init/update; preserve child/script/RNG state. Shipped ghost snapshot/orphan/border/load, accepted geometry replacement, walls/model bridges and compiler-matching actual simulation remain mandatory.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 full creation ownership batch is uncommitted and unaccepted. GCC target build passes, but both new creation families fail in INI fixture setup: creation.ini was written after the generated tree was indexed. Correct fixture discovery via the existing mount contract, exercise both partial-binding callback-failure phases and complete creation failure/retry manifests, then freeze source for required compiler sanitizer and related validation. Last verified source remains partition commit 587b1234 (all3 builds/focused4/related137 PASS); its evidence does not accept current modifications. Full native root/UI/client/freeze, shipped fog, geometry replacement, walls/bridges, startup and actual simulation remain mandatory. Slice03/N2 incomplete.",
-  "uncommitted_batch": {
-    "label": "original-full-creation-ownership",
-    "parent_commit": "587b12343a51164c592433c6cb033271eedc9f5a",
-    "status": "unfinished_not_accepted",
-    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
-    "paths": [
-      "GeneralsMD/Code/GameEngine/Include/GameClient/Drawable.h",
-      "GeneralsMD/Code/GameEngine/Include/GameLogic/Object.h",
-      "GeneralsMD/Code/GameEngine/Source/Common/Thing/ThingFactory.cpp",
-      "GeneralsMD/Code/GameEngine/Source/GameLogic/System/GameLogic.cpp",
-      "cmake/OriginalRuntime.cmake",
-      "tests/original/logical_world.cpp"
-    ],
-    "validation": "Corrected GCC fixture target build PASS; both new creation tests FAIL during INI fixture setup before creation. Creation sanitizers and related matrix not run. Partial-binding callback-failure branch coverage pending.",
-    "next": "Correct generated-file discovery in fixture, complete coupled lifecycle validation, then commit this batch with evidence. Preserve all six paths in the meantime."
-  },
-  "transaction_parent": "ce04706030bffa9f511d57207c08bf43d088c81e",
+  "resume_point": "N2 plan01/slice03 complete candidate creation ownership verified; all3 builds/focused3/related140 PASS on canonical626 97bfe4fa. Matching full-creation11 failure/retry manifests, three actual late pool exhaustions and both source binding phases with accepted-survivor preservation. Previously unfinished creation batch is now ready for its verified supporting commit. Full330 not run. Integrate legitimate native logical UI/client/camera-freeze and whole-root journal with real original GameEngine/GameLogic init/update; preserve child/script/RNG state. Shipped ghost snapshot/orphan/border/load, accepted geometry replacement, walls/model bridges and compiler-matching actual simulation remain mandatory. Slice03/N2 incomplete.",
+  "transaction_parent": "e5a0fefb8275d933f16ad4234e88c57ac1e49e60",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -60,28 +44,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-partition-ownership-checkpoint.md",
+  "evidence": "evidence/qa/N2-full-creation-ownership-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Integrate full ThingFactory creation and legitimate native root/UI/client/freeze parents; shipped ghost snapshot/orphan/border/load ownership, accepted geometry replacement and registered walls/model bridges; then full GameEngine startup and compiler-matching GameLogic::update",
+  "next": "Integrate legitimate native logical UI/client/camera-freeze and whole-root journal with real original GameEngine/GameLogic init/update; preserve child/script/RNG state. Shipped ghost snapshot/orphan/border/load, accepted geometry replacement, walls/model bridges and compiler-matching actual simulation remain mandatory.",
   "implementation_checkpoint": {
-    "label": "original-nonempty-partition-ownership",
-    "reason": "Actual native terrain-backed partition and mobile actors now execute source cell ownership and callbacks with complete admission rollback; parallel ghost attachment is tested but shipped fog/full root/startup/simulation remain pending",
-    "prior_commit": "ce047060",
-    "canonical_source_sha256": "f0dcee42be5fa88b88ba5c45b9ae6369ece3bd706f627cbe938e7463f9ae90ec",
-    "toolchain_inclusive_sha256": "88679126a0a6e2a3b38753556d8e66955e45980108cb4e42543b4c84946c650d",
-    "configured_suite_tests": 327,
-    "related_suite_tests_passed": 137,
+    "label": "original-full-creation-ownership",
+    "reason": "Actual complete ThingFactory creation and both source binding callback failure phases now have verified candidate ownership and corrected retries; full root/startup/frame and shipped fog remain pending",
+    "prior_commit": "587b1234",
+    "canonical_source_sha256": "97bfe4fa32b00f1e6a8629352c2f03ead5471990fa98ff802f3479a878476677",
+    "toolchain_inclusive_sha256": "3ca742ad1ed229dce339005c9ca2dbc790b052d83b7ee30ccb296163332d095c",
+    "configured_suite_tests": 330,
+    "related_suite_tests_passed": 140,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; related137 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; related140 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-partition-ownership-checkpoint.md"
+    "evidence": "evidence/qa/N2-full-creation-ownership-checkpoint.md"
   }
 }

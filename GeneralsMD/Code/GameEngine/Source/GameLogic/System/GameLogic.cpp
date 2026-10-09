@@ -29,6 +29,7 @@
 
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 #include <limits>
+#include <memory>
 
 #include "Common/AudioAffect.h"
 #include "Common/AudioHandleSpecialValues.h"
@@ -4069,12 +4070,24 @@ UnsignedInt GameLogic::getCRC( Int mode, AsciiString deepCRCFileName )
 // ------------------------------------------------------------------------------------------------
 void GameLogic::sendObjectCreated( Object *obj )
 {
+	if (!obj || obj->getDrawable() || !TheThingFactory || !TheGameClient) throw ERROR_BAD_ARG;
 	Drawable *draw = TheThingFactory->newDrawable(obj->getTemplate());
+	if (!draw) throw ERROR_BAD_ARG;
+	auto retire = [obj](Drawable* candidate) {
+		// Partial binding is not a complete-object unbind notification. Withdraw
+		// only this pair's publication before retiring its acquired registration.
+		obj->withdrawCandidateDrawableBinding(candidate);
+		candidate->withdrawCandidateObjectBinding(obj);
+		TheGameClient->cancelDrawableConstruction(candidate);
+		candidate->deleteInstance();
+	};
+	std::unique_ptr<Drawable, decltype(retire)> candidate(draw, retire);
 
 /// @todo COLIN ... shouldn't we have a check here for existing drawable!!!!!
 
 	// bind drawable to object and object to drawable
 	bindObjectAndDrawable(obj, draw);
+	candidate.release();
 
 }
 

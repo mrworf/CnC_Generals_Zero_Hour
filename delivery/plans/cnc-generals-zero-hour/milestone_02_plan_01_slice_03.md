@@ -2607,3 +2607,55 @@ Retained local logs (ephemeral; this account is the durable failure handoff):
 `/tmp/n2-factory-creation-gcc-build-current.log` (current build), and
 `/tmp/n2-factory-creation-gcc-focused.log` (both setup failures). Previous partition
 checkpoint acceptance applies to its committed source, not this unfinished batch.
+
+Creation fixture correction and binding coverage refinement before changes:
+refresh the generated-only VFS mount after closing creation.ini. Its index is a
+snapshot, not a live directory watch. The first corrected run reaches real
+creation and the expected duplicate-notification rejection, then a second warm
+call fails because the same factory retains an already-defined template after
+its ModuleFactory data owner has retired. Warm two complete fresh roots instead;
+do not bypass duplicate-definition validation or retain dangling module data.
+Both corrected creation families pass on GCC (6.33s); no sanitizer acceptance yet.
+
+Add a separately named binding-failure family with explicitly test-only source
+ModuleFactory registrations. One DrawModule fault callback observes the first
+one-way publication and one BehaviorModule fault callback observes the later
+reciprocal publication. Inject a typed error at each phase and prove both parent
+registries, source IDs, heap/pool ownership and an accepted survivor are preserved;
+then retry full real creation. Record callback order and ensure pointer withdrawal
+adds no callbacks. These probes test original binding/ownership only: they must reject
+physical rendering and must not stand in for shipped modules, visuals or gameplay.
+Keep the existing InactiveBody/VeterancyGainCreate allocation families probe-free.
+
+Binding-probe failures retained: first builds required the complete ThingTemplate
+header, explicit public constructors after pooled macros and the actual mutable
+generated template for ModuleInfo admission. No tests ran after compile failures.
+The corrected callback family then exposed a fixture assumption: the original
+complete Object destructor calls sendObjectDestroyed even without an accepted
+Drawable, and that notifies behaviors of a null binding. Preserve this legitimate
+source unbind callback; probes fault acquisition only, record unbind separately,
+and require exactly one destructor unbind on candidate failure. Candidate pointer
+withdrawal itself adds no callback. Do not suppress source destruction callbacks
+or interpret this fixture failure as an ownership implementation defect.
+
+Full creation ownership supporting checkpoint: all3 full configured builds,
+focused3 and related140 PASS on canonical626
+97bfe4fa32b00f1e6a8629352c2f03ead5471990fa98ff802f3479a878476677 and
+inclusive633 3ca742ad1ed229dce339005c9ca2dbc790b052d83b7ee30ccb296163332d095c.
+Matching manifests cover every failure prefix [0,11), exact terminal11 and every
+corrected creation retry; actual InactiveBody/VeterancyGainCreate/Drawable pool
+exhaustion; both original partial-binding phases and legitimate destructor unbind;
+three whole-context lifetimes and memory-manager retirement. No test timeout or
+sanitizer suppression. Focused3: GCC9.51s/GCCsan38.46s/Clangsan22.06s;
+related140: GCC135.26s/GCCsan593.13s/Clangsan359.44s. Full330 not run.
+Evidence: evidence/qa/N2-full-creation-ownership-checkpoint.md. Supporting commit:
+`delivery: preserve original complete creation ownership`. All six previously
+uncommitted executable paths belong to this verified coupled batch, not a WIP
+delivery commit. Slice03 and N2 remain incomplete.
+
+Continue native logical UI/client/camera-freeze and whole-root journal integration,
+with real original GameEngine/GameLogic init/update. Preserve source callbacks,
+script/RNG/child state and legitimate parent identities; no global-null alternation
+or constant camera-finished substitute. Shipped fog snapshot/orphan/border/load,
+accepted geometry replacement, walls/model bridges and compiler-matching actual
+simulation remain mandatory. No replacement plan or milestone is created.

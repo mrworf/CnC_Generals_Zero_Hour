@@ -183,6 +183,7 @@ public:
 	// ids and binding
 	ObjectID getID() const { return m_id; }												///< this object's unique ID
 	void friend_bindToDrawable( Drawable *draw );									///< set drawable association. for use ONLY by GameLogic!
+	void withdrawCandidateDrawableBinding(Drawable* draw) noexcept { if (m_drawable == draw) m_drawable = NULL; }
 	Drawable* getDrawable() const { return m_drawable; }					///< drawable (if any) bound to obj
 
 	ObjectID getProducerID() const { return m_producerID; }

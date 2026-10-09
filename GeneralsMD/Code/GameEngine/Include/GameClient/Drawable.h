@@ -318,6 +318,7 @@ public:
 	void setTerrainDecalFadeTarget(Real target, Real rate = 0.1f);
 
 	inline Object *getObject( void ) { return m_object; }								///< return object ID bound to this drawble
+	void withdrawCandidateObjectBinding(Object* object) noexcept { if (m_object == object) m_object = NULL; }
 	inline const Object *getObject( void ) const { return m_object; }		///< return object ID bound to this drawble
 
 	inline DrawableInfo *getDrawableInfo(void) {return &m_drawableInfo;}
