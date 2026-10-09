@@ -1457,3 +1457,18 @@ See `evidence/qa/N2-native-boundaries-checkpoint.md`. Continue the coupled hardw
 metadata/LOD/absent historical benchmark/protected report task, then real factories
 and actual original startup/world/compiler-matching scenario. Do not fabricate
 legacy scores or renderer capability. N2/slice03 remains incomplete.
+
+Capability follow-on investigation from9b9eff8e must preserve more than graphics:
+SlowDeathBehavior activation/update consult dynamic SlowDeathScale and may retire
+original objects faster when they have no non-LOD effects. isReallyLowMHz also
+affects source audio limits. Do not arbitrarily force a profile or change dynamic
+LOD thresholds/counters to bypass hardware admission. The old CPUDetect decoder
+does not prove a modern Intel is P4 simply from vendor/x86-64; keep unknown states
+honest. Native RAM must use a checked wide internal quantity rather than unsigned
+physical bytes cast into signed32. Inspect all LOD/member/format consumers and
+the absent benchmark's original score-unit contract before selecting the native
+admission policy. Keep source file/INI representations and original simulation
+behavior. The required owner test must exercise real GameLOD selection/admission,
+not only a stand-alone metadata query, with failure/retry and captured services.
+These verified facts are recorded in `docs/original-engine-formats.md`; no new
+capability policy or production change is authorized by an unresolved score guess.

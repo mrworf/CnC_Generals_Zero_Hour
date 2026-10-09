@@ -2758,3 +2758,23 @@ proves native renderer capability. N2's actual startup/scenario remains pending.
 
 Evidence: `evidence/qa/N2-native-boundaries-checkpoint.md`,
 `tests/original/native_warning.cpp`, actual configuration and source-contract tests.
+
+Capability follow-on source audit: LOD is not exclusively renderer state.
+`SlowDeathBehavior.cpp` reads getSlowDeathScale at activation and during update;
+when no non-LOD effects are present, zero can immediately destroy the original
+Object and nonzero values can alter retirement timing. Preserve original dynamic
+LOD state/scale/guards while changing hardware discovery or recommendation.
+Do not substitute an arbitrary quality profile to make a headless fixture pass.
+GameLODManager::isReallyLowMHz also affects audio stream/sample limits through
+applyStaticLODLevel. Native clock/memory/profile changes therefore need actual
+source consumer coverage, not only query-helper tests.
+
+The original CPUDetect Intel decoder only recognizes selected family6 models
+through0xb and family0xf as Pentium4; newer CPUs are not proven P4 merely by
+vendor or x86-64 support. Its AMD decoder is likewise era-specific. Preserve
+unknown classification rather than asserting a modern chip is an old benchmark
+equivalent. CPUDetect returns unsigned physical bytes while GameLOD stores Int;
+native hardware discovery must not wrap RAM above signed32 capacity. No binary
+save/network field for that hardware-derived member has been identified; verify
+all consumers before widening. The native capability bridge must distinguish
+measured facts, unavailable legacy calibration, and renderer suitability.
