@@ -3010,3 +3010,39 @@ frozen evidence. Commit this real virtual spatial-query behavior with its tests,
 source findings and provenance, then resume concrete camera/view and staged
 original UI/headless root adoption in the same slice. This is supporting behavior,
 not another slice/plan or whole-root/whole-game acceptance.
+
+Concrete spatial backing refinement (parentce4c7e4b, same camera/UI/root batch):
+implement game-owned NativeCamera value backing for the original normal camera
+transform, orthonormal eye/right/up/forward basis, source near/far frustum,
+absolute-pixel projection/unprojection and Z-plane rays. Build each candidate
+offside and preserve the accepted camera on invalid/degenerate input; keep eye
+references owner-local, avoid global static eye storage, and make queries
+allocation-free. Validate source yaw/pitch rotation order, ground factor/FX pitch,
+viewport aspect/origin, near/far versus offscreen classification, truncation and
+defined extreme-coordinate arithmetic together. Use the actual ScriptedView
+choreography plus generated real visual height maps to prove transformed movement
+and ray contacts, not only isolated triangles or constant-eye adapters. Then use
+this backing in the concrete native View: source constraints, actor follow/tether,
+scroll/height settlement, reachable shake/slave and bridge/model selection plus
+the original frame phase remain mandatory, not waived by backing tests. Physical
+submission remains N3; no absent model query or rendering request may fake success.
+Keep existing script/terrain owners' focused tests during iteration, then the
+required all3 sanitizer/related matrix on a coherent frozen integration batch.
+
+Spatial backing is now consumed by production NativeCameraView's real View
+eye/projection/plane/terrain/elevated-look-at entry points, not just a fixture's
+manual eye substitute. It remains abstract for actual frame/model/constraint/
+scroll/shake/slave/output providers so unsupported source behavior cannot inherit
+false no-op success. Focused7 passed all3 before latest negative additions;
+development failure/retry boundaries are in docs/original-engine-formats.md.
+The subsequent final frozen evidence below supersedes these intermediate results;
+no completed slice or native root acceptance is claimed.
+
+Coupled NativeCamera/NativeCameraView batch frozen canonical644/inclusive651.
+All3 full configured builds and focused7 PASS3.38s/15.75s/9.28s, including final
+FX pitch/odd viewport/near-far/negative/real generated mesh coverage. Related175
+passed all3 in170.01s/733.28s/446.08s; all exact jobs completed and source digests
+were recomputed unchanged. Evidence:
+evidence/qa/N2-native-camera-view-checkpoint.md. Commit this coherent batch, then continue
+the same source camera/frame/model/constraint and staged UI/headless root work.
+No full365, completed slice03/N2 or whole-game rendering claim is established.

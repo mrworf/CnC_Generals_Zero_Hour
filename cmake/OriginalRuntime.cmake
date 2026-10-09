@@ -286,6 +286,8 @@ target_sources(original_logical_client PRIVATE
 target_link_libraries(original_logical_client PUBLIC Freetype::Freetype Fontconfig::Fontconfig)
 target_sources(original_logical_client PRIVATE
   "${ZH_CODE}/GameEngine/Source/GameClient/ScriptedView.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeCamera.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeCameraView.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeHeadlessGameClient.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeWaterGrid.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeTerrainVisual.cpp"
@@ -550,7 +552,7 @@ target_include_directories(original_script_camera_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_options(original_script_camera_fixture PRIVATE -ffp-contract=off)
 target_link_options(original_script_camera_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS modes paths negative ownership)
+foreach(family IN ITEMS modes paths negative ownership spatial spatial-negative spatial-ownership)
   add_test(NAME original_script_camera_${family} COMMAND original_script_camera_fixture "${family}")
   set_tests_properties(original_script_camera_${family} PROPERTIES LABELS "original;runtime;camera" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

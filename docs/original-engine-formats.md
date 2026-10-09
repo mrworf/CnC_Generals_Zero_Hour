@@ -4764,3 +4764,56 @@ window. Concrete Window creation alone is not whole WindowLayout/InGameUI init.
 Source anchors: GameWindowManager.cpp::{winCreate,winDestroy,processDestroyList};
 GameWindowManagerScript.cpp::{winCreateFromScript,winCreateLayout};
 WindowLayout.cpp::load; GameWindow.cpp::{GameWindow,~GameWindow,winSetFont}.
+
+Native spatial camera supporting implementation verified (N2 plan01/slice03, parent
+ce4c7e4b; not root or visual acceptance): NativeCamera owns source normal-zoom
+eye/right/up/forward backing and the near10 / far1200-or12000 frustum. Normal
+transform applies pitch-about-X then angle-about-Z, source ground factor and FX
+pitch target/XY adjustment. Look-at vertical orientation uses the source -Y right
+fallback, not an arbitrary up axis. Configuration is staged in a complete value
+before adoption; degenerate/nonfinite/unrepresentable values preserve accepted
+backing. Eye references are per owner, not W3DView's shared static buffer.
+Projection distinguishes near/far invalid from valid offscreen, uses the source
+Real pixel arithmetic/truncation and checked origin addition. Ray endpoints use
+normalized eye-to-view-plane direction times far depth; Z-plane parallel/horizon
+queries reject rather than divide by zero. Center-ray unprojection uses exact
+logical (0,0), not a rounded center pixel (important for odd viewport dimensions).
+No native handles, asset changes, vendor internals or query allocations.
+
+NativeCameraView now consumes that backing in production ScriptedView hooks and
+actual View eye/projection/plane/terrain methods. Terrain composition uses the
+real TerrainVisual virtual mesh query then original TerrainLogic::pickBridge and
+source higher-bridge-Z selection. Ordinary source terrain miss publishes zero;
+missing required parents reject without changing caller output. Elevated look-at
+uses the source old-camera center direction but starts its segment at the supplied
+point, adopts only contact X/Y and leaves shared ScriptedView to set position Z0.
+The shared view remains abstract for actual scene picking, frame, physical output,
+constraints/scroll and reachable shake/slave adapters. Those methods must be
+implemented by the concrete native route; this is not a test shim adopted as the
+production headless View. Nonempty bridge/model, lock/frame source ordering and
+actual UI/root integration remain pending.
+
+Generated source-camera tests now cover real original choreography followed by
+production spatial queries and an actual HeightMapData-v2 decoded display mesh,
+with all three original memory-manager/pool/whole-owner boundaries. Camera-state
+and query allocation terminal0 is explicit. Production real viewport/plane/missing
+terrain-parent errors preserve accepted eye/output and have corrected retries.
+Final frozen full configured builds/focused7/related175 passed all3:
+GCC3.38s/170.01s, GCC sanitizer15.75s/733.28s and Clang sanitizer9.28s/446.08s.
+Source digests were recomputed unchanged; see
+evidence/qa/N2-native-camera-view-checkpoint.md. Full365 and concrete camera/frame/
+UI/root adoption remain pending; these results do not complete slice03 or N2.
+
+Retained development pairs: first NativeCamera build had a helper named finite
+colliding with the POSIX finite declaration; renamed the whole helper/call cohort
+to requireFinite. First spatial fixture ownership check had warmed only old
+camera/waypoint parents, not its newly added HeightMapData parser/name metadata;
+warming the identical complete spatial cohort before baselines restored exact
+retirement (existing AGENTS rule, not an allocation waiver). First NativeCameraView
+build used TerrainLogic's forward-declared Vector3 without its original public
+WWMath/vector3.h definition; explicit source include fixed that type/link boundary.
+Initial sanitizer runs in the default ptrace sandbox failed at LeakSanitizer's
+unsupported tracing boundary for every family. Unchanged normal-host tests with
+all leak checks enabled passed; neither source behavior nor sanitizer settings
+were weakened. Logs retained under /tmp/n2-camera-spatial-* and
+/tmp/n2-camera-view-* for the original failure and corrected retry respectively.

@@ -3,6 +3,9 @@
 #include "PreRTS.h"
 #include "AllocationFault.h"
 #include "ScriptCameraFixture.h"
+#include "NativeTerrainDeviceFixture.h"
+#include "GameClient/NativeCamera.h"
+#include "GameClient/NativeCameraView.h"
 #include "Common/FileSystem.h"
 #include "Common/GlobalData.h"
 #include "Common/NativeServiceOwners.h"
@@ -11,6 +14,7 @@
 #include "GameLogic/TerrainLogic.h"
 #include <array>
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -132,6 +136,115 @@ void negative(){
   camera.moveCameraTo(&target,99,0,FALSE,0,0);camera.updateCameraMovements(100);
   require(camera.isCameraMovementFinished(),"corrected same owner retry");
 }
+struct SpatialCamera:NativeCameraView {
+  const NativeCamera& spatial=m_spatialCamera;
+  NativeCamera::State state(){return {m_pos,m_cameraOffset,m_groundLevel,m_zoom,m_angle,m_pitchAngle,getFXPitch(),
+    m_FOV,m_width,m_height,m_originX,m_originY,FALSE};}
+  void refresh(){synchronizeCamera();}
+  Drawable* pickDrawable(const ICoord2D*,Bool,PickType)override{throw ERROR_BAD_ARG;}
+  Int iterateDrawablesInRegion(IRegion2D*,Bool(*)(Drawable*,void*),void*)override{throw ERROR_BAD_ARG;}
+  void drawView()override{throw ERROR_BAD_ARG;}
+  void updateView()override{throw ERROR_BAD_ARG;} // Full frame/lock lifecycle is not this fixture.
+  void scrollBy(Coord2D*)override{throw ERROR_BAD_ARG;}
+  void shake(const Coord3D*,CameraShakeType)override{throw ERROR_BAD_ARG;}
+  void Add_Camera_Shake(const Coord3D&,float,float,float)override{throw ERROR_BAD_ARG;}
+  void cameraEnableSlaveMode(const AsciiString&,const AsciiString&)override{throw ERROR_BAD_ARG;}
+  void cameraDisableSlaveMode()override{throw ERROR_BAD_ARG;}
+  void forceCameraConstraintRecalc()override{throw ERROR_BAD_ARG;}
+};
+struct HeightInput:ChunkInputStream {
+  std::string bytes;UnsignedInt position=0;
+  HeightInput(){auto put=[&](UnsignedInt n,unsigned width=4){for(unsigned i=0;i<width;++i)bytes.push_back(char(n>>(8*i)));};
+    bytes="CkMp";put(1);put(13,1);bytes+="HeightMapData";put(1);
+    put(1);put(2,2);put(12+400);put(20);put(20);put(400);bytes.append(400,char(32));
+  }
+  Int read(void* output,Int count)override{if(count<0 || (!output && count))throw ERROR_BAD_ARG;
+    const auto n=std::min<std::size_t>(count,bytes.size()-position);if(n)std::memcpy(output,bytes.data()+position,n);position+=n;return n;}
+  UnsignedInt tell()override{return position;}
+  Bool absoluteSeek(UnsignedInt n)override{if(n>bytes.size())return FALSE;position=n;return TRUE;}
+  Bool eof()override{return position==bytes.size();}
+};
+void spatial(){
+  SpatialCamera camera;camera.init();camera.setZoom(1);camera.setOrigin(17,23);camera.refresh();
+  require(close(camera.get3DCameraPosition().x,0) && close(camera.get3DCameraPosition().y,-290) &&
+    close(camera.get3DCameraPosition().z,300),"actual script camera source transformed eye");
+  const Coord3D target{0,0,10};ICoord2D screen;
+  require(camera.worldToScreenTriReturn(&target,&screen)==View::WTS_INSIDE_FRUSTUM && screen.x==337 && screen.y==263,"source look-at projects to viewport center with origin");
+  const auto plane=camera.spatial.atZ(screen,10);require(close(plane.x,0) && close(plane.y,0) && plane.z==10,"project/unproject source center plane");
+  const Coord3D offscreen{500,0,10};require(camera.worldToScreenTriReturn(&offscreen,&screen)==View::WTS_OUTSIDE_FRUSTUM,"offscreen is valid projection, not invalid");
+  const auto behind=camera.get3DCameraPosition();require(camera.worldToScreenTriReturn(&behind,&screen)==View::WTS_INVALID && screen.x==0 && screen.y==0,"eye/near exclusion zeros invalid projection");
+  NativeCamera::State state=camera.state();state.offset={0,0,300};state.zoom=1;state.lookAt={0,0,0};
+  NativeCamera vertical;vertical.configure(state);const Coord3D nearPoint{0,0,290},farPoint{0,0,-900},beyond{0,0,-901};
+  require(vertical.project(&nearPoint,&screen)==View::WTS_INSIDE_FRUSTUM && vertical.project(&farPoint,&screen)==View::WTS_INSIDE_FRUSTUM &&
+    vertical.project(&beyond,&screen)==View::WTS_INVALID,"source inclusive near/far depths versus invalid beyond");
+  state.zoom=1.3f;vertical.configure(state);const Coord3D expanded{0,0,-2000};require(vertical.project(&expanded,&screen)==View::WTS_INSIDE_FRUSTUM,"source zoom extends far clip");
+  NativeCamera effects;auto effect=camera.state();effect.originX=0;effect.originY=0;effect.fxPitch=.5f;
+  effects.configure(effect);const Coord3D raisedTarget{0,0,155};
+  require(effects.project(&raisedTarget,&screen)==View::WTS_INSIDE_FRUSTUM && screen.x==320 && screen.y==240,"source FX pitch below one raises target, not eye");
+  effect.fxPitch=2;effects.configure(effect);require(close(effects.eye().y,-145) && close(effects.eye().z,300),"source FX pitch above one divides horizontal eye displacement");
+  effect.fxPitch=1;effect.pitch=.2f;effects.configure(effect);
+  require(close(effects.eye().y,(-300*std::cos(.2f)-300*std::sin(.2f))*(1-10.0f/300)) &&
+    close(effects.eye().z,(-300*std::sin(.2f)+300*std::cos(.2f))*(1-10.0f/300)+10),"source X pitch rotates Y/Z before ground translation");
+  effect.pitch=0;effect.width=601;effect.height=451;effect.originX=101;effect.originY=-23;effects.configure(effect);
+  const auto logicalCenter=effects.centerRay();const auto roundedCenter=effects.ray({401,202});
+  require(logicalCenter[1].x!=roundedCenter[1].x,"source logical center is not a floored odd-viewport pixel");
+  for(const ICoord2D sample : {ICoord2D{111,0},ICoord2D{200,100},ICoord2D{650,350}}){
+    const auto plane=effects.atZ(sample,10);require(effects.project(&plane,&screen)!=View::WTS_INVALID &&
+      std::abs(screen.x-sample.x)<=1 && std::abs(screen.y-sample.y)<=1,"source normalized pixel/plane inverse within Real/truncation quantization");}
+  camera.setAngle(PI/2);camera.refresh();require(close(camera.get3DCameraPosition().x,290) && close(camera.get3DCameraPosition().y,0),"pitch-then-yaw transform order");
+  camera.setAngle(0);camera.setZoom(1);
+  const Coord3D destination{100,100,0};camera.moveCameraTo(&destination,99,0,FALSE,0,0);
+  for(unsigned i=0;i<4;++i){camera.updateCameraMovements(33);camera.refresh();}
+  require(camera.isCameraMovementFinished() && close(camera.get3DCameraPosition().x,100) && close(camera.get3DCameraPosition().y,-200),"actual original choreography updates real eye and sampled ground");
+  NativeTerrainHeightMap map;HeightInput input;map.loadHeightData(input,NativeTerrainHeightMap::Purpose::HeightChunkBacking);
+  const auto ray=camera.spatial.ray({337,263});Coord3D contact;
+  require(map.intersectSegment(ray[0],ray[1],&contact) && close(contact.z,20) && close(contact.x,100),"scripted camera ray reaches real generated display mesh");
+  DeviceFixture visual;NativeTerrainVisual::TerrainState backing;backing.height.swap(map);visual.exchangeTerrainState(backing);
+  auto* previous=TheTerrainVisual;TheTerrainVisual=&visual;
+  struct Restore{TerrainVisual* previous;~Restore(){TheTerrainVisual=previous;}}restore{previous};
+  const ICoord2D center{337,263};camera.screenToTerrain(&center,&contact);
+  require(close(contact.x,100) && close(contact.z,20),"production View virtual ray composes real visual backing and original empty bridge list");
+  const Coord3D elevated{100,100,100};camera.lookAt(&elevated);camera.refresh();
+  require(close(camera.state().lookAt.x,100) && close(camera.state().lookAt.y,180),"production elevated look-at uses source center ray and real display mesh");
+}
+void spatialNegative(){
+  NativeCamera camera;NativeCamera::State valid;valid.offset={0,-300,300};camera.configure(valid);const Coord3D accepted=camera.eye();
+  for(unsigned field=0;field<8;++field){auto bad=valid;
+    if(field==0)bad.width=0;else if(field==1)bad.height=-1;else if(field==2)bad.zoom=0;else if(field==3)bad.offset={0,0,0};
+    else if(field==4)bad.fieldOfView=PI;else if(field==5)bad.angle=std::numeric_limits<Real>::quiet_NaN();
+    else if(field==6)bad.lookAt.x=std::numeric_limits<Real>::infinity();else {bad.zoom=1;bad.ground=300;}
+    rejects([&]{camera.configure(bad);});require(camera.eye().x==accepted.x && camera.eye().y==accepted.y && camera.eye().z==accepted.z,"rejected candidate preserves accepted camera");
+    camera.configure(valid);
+  }
+  auto horizon=valid;horizon.fxPitch=0;camera.configure(horizon);rejects([&]{camera.atZ({320,240},10);});camera.configure(valid);
+  ICoord2D output{19,21};require(camera.project(nullptr,&output)==View::WTS_INVALID && output.x==19 && output.y==21,"null projection preserves source optional-output contract");
+  const Coord3D nan{std::numeric_limits<Real>::quiet_NaN(),0,0};require(camera.project(&nan,&output)==View::WTS_INVALID && output.x==0 && output.y==0,"defined malformed projection invalid");
+  const auto extreme=camera.ray({std::numeric_limits<Int>::min(),std::numeric_limits<Int>::max()});
+  require(std::isfinite(extreme[1].x) && std::isfinite(extreme[1].y) && std::isfinite(extreme[1].z),"full-width pixel subtraction cannot overflow");
+  NativeCamera empty;rejects([&]{empty.eye();});rejects([&]{empty.ray({0,0});});
+  SpatialCamera view;view.init();const auto acceptedEye=view.get3DCameraPosition();
+  rejects([&]{view.setHeight(0);});rejects([&]{view.setFieldOfView(std::numeric_limits<Real>::quiet_NaN());});
+  rejects([&]{view.setWidth(100);}); // Missing legitimate Display width parent.
+  rejects([&]{view.setGuardBandBias(nullptr);});
+  require(view.get3DCameraPosition().x==acceptedEye.x && view.get3DCameraPosition().y==acceptedEye.y &&
+    view.get3DCameraPosition().z==acceptedEye.z,"production View rejection preserves real accepted eye");
+  Coord3D result{19,21,23};const ICoord2D center{320,240};
+  rejects([&]{view.screenToTerrain(&center,&result);});
+  require(result.x==19 && result.y==21 && result.z==23,"missing terrain parent cannot fabricate or publish a contact");
+  rejects([&]{view.screenToWorldAtZ(nullptr,&result,0);});
+  rejects([&]{view.screenToWorldAtZ(&center,&result,std::numeric_limits<Real>::infinity());});
+  require(result.x==19 && result.y==21 && result.z==23,"malformed plane requests preserve caller output");
+  view.screenToWorldAtZ(&center,&result,10);require(std::isfinite(result.x) && result.z==10,"production plane corrected retry");
+}
+void spatialOwnership(){
+  NativeCamera camera;NativeCamera::State state;state.offset={0,-300,300};
+  AllocationFault::arm(0);
+  try{for(unsigned i=0;i<100;++i){state.lookAt={Real(i),Real(i),0};camera.configure(state);const auto ray=camera.ray({320,240});
+    ICoord2D screen;camera.project(&ray[1],&screen);camera.atZ({320,240},10);}}
+  catch(...){AllocationFault::disarm();throw;}
+  const auto count=AllocationFault::attempts();const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+  require(count==0 && !hit,"complete native camera acquisition terminal0 across repeated lifetimes/queries");
+}
 void ownership(){
   require(!TheTacticalView,"camera fixture requires no foreign tactical publication");
   NativeServiceOwners<1> owners;
@@ -159,8 +272,12 @@ void ownership(){
 int main(int argc,char** argv){const auto initial=AllocationFault::live();bool initialized=false;
   try{require(argc==2,"camera test family");initMemoryManager();initialized=true;
     {Parents parents;{Camera warm;warm.init();Points points;points.add(0,{20,0,0});}
+      // Warm the identical complete spatial/parser cohort, not just its old
+      // camera/waypoint parents. Name metadata retires with the whole manager.
+      spatial();
       for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
-        const std::string_view family=argv[1];if(family=="modes")modes(parents);else if(family=="paths")paths(parents);else if(family=="negative")negative();else if(family=="ownership")ownership();else require(false,"unknown family");
+        const std::string_view family=argv[1];if(family=="modes")modes(parents);else if(family=="paths")paths(parents);else if(family=="negative")negative();else if(family=="ownership")ownership();
+        else if(family=="spatial")spatial();else if(family=="spatial-negative")spatialNegative();else if(family=="spatial-ownership")spatialOwnership();else require(false,"unknown family");
         require(AllocationFault::live()==live && TheMemoryPoolFactory->findMemoryPool("Waypoint")->getUsedBlockCount()==0,"repeated camera and actual waypoint owners retire exactly");}}
     shutdownMemoryManager();initialized=false;require(AllocationFault::live()==initial,"whole memory manager retirement");
     std::cout<<"PASS original camera choreography; native UI/root/output still pending\n";return 0;
