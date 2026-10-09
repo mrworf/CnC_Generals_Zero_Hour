@@ -1128,6 +1128,7 @@ public:
 	public:
 		ReadState() noexcept;
 		~ReadState() noexcept;
+		void clear() noexcept;
 		ReadState(const ReadState&) = delete;
 		ReadState& operator=(const ReadState&) = delete;
 	};

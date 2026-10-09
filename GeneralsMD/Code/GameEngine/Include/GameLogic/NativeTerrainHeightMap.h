@@ -57,11 +57,11 @@ public:
                     const NativeTerrainHeightMap* displayGrid = nullptr) const;
   Bool clearLineOfSight(const Coord3D& from, const Coord3D& to,
                        Real displayMaximumHeight) const;
+  void swap(NativeTerrainHeightMap& candidate) noexcept;
 private:
   Int m_width = 0, m_height = 0, m_border = 0;
   std::vector<ICoord2D> m_boundaries;
   std::vector<UnsignedByte> m_bytes;
   Purpose m_purpose = Purpose::HeightChunkBacking;
   Topology m_topology;
-  void swap(NativeTerrainHeightMap& candidate) noexcept;
 };

@@ -56,6 +56,17 @@ static AsciiString validateName(AsciiString n, Int flags)
 /*static*/ MapObject *MapObject::TheMapObjectListPtr = NULL;
 /*static*/ Dict MapObject::TheWorldDict;
 
+void MapObject::WorldState::clear() noexcept {
+    auto* head = m_head;
+    m_head = NULL;
+    if(head) head->deleteInstance();
+    m_dict.clear();
+}
+void MapObject::exchangeWorldState(WorldState& state) noexcept {
+    std::swap(TheMapObjectListPtr, state.m_head);
+    TheWorldDict.swap(state.m_dict);
+}
+
 MapObject::MapObject(Coord3D loc, AsciiString name, Real angle, Int flags, const Dict* props,
 										 const ThingTemplate *thingTemplate )
 {

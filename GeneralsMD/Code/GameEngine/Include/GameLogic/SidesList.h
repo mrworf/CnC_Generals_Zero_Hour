@@ -148,6 +148,7 @@ public:
 	void update() { }
 	void reset();
 	void swapContents(SidesList& other) noexcept;
+	void copyTeamsFrom(const SidesList& other);
 
 	/// Reads sides (including build list info && player dicts.)
 	static Bool ParseSidesDataChunk(DataChunkInput &file, DataChunkInfo *info, void *userData);

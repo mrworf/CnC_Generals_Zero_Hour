@@ -1922,3 +1922,65 @@ borrowed publication identity, source writer encodings and repeated lifetimes.
 WorldInfo/ObjectsList/SidesList/PolygonTriggers/height metadata form one behavior
 batch. Waypoint initial/final height phases, layers/ghost/partition and native
 GameEngine startup remain required afterward; no headless gameplay substitutes.
+
+Whole-world implementation refinement (parent3ef97998): original emptySides and
+emptyTeams clear both ordinary and skirmish ownership. Logical source loading
+preserves the prior world Dict/weather if WorldInfo is absent, but empties
+objects/triggers/sides and validates the resulting neutral side. Preserve these
+optional defaults; require usable height metadata and reject duplicate owner
+chunks rather than permit source list overwrite/leaks. Unknown visual chunks
+remain skipped by the logical path. ObjectsList/WorldInfo are schema-neutral
+containers; Object versions1–3 select fields. Read complete records before z
+discard, retain v1's empty Dict (not constructor defaults), and use actual
+ThingFactory lookup. Reject nonfinite physical coordinates/angles and weather
+integers outside the source Weather domain before enum construction.
+
+Add a game-owned NativeLogicalWorld entry and nonallocating MapObject WorldState,
+pending-script retirement and height swap. Its loader stages all source globals
+under legitimate candidate SidesList publication; explicit cleanup precedes
+borrowed pointer restoration. The loader owns height metadata, not arbitrary
+borrowed process-global world lifetimes. Preserve normal normalizeAngle arithmetic;
+repair only nonfinite/nonprogressing loops using bounded remainder reduction.
+Generated full-world positive/rejection/retry tests must use actual owners and
+DataChunkOutput, then extend complete fault/pooled/lifetime evidence across GCC
+and both sanitizer configurations before accepting this batch.
+
+Final source-call audit: the logical WorldHeightMap constructor calls emptySides,
+not clear, so omitting SidesList retains previous ordinary/skirmish team records
+through validateSides. The original SidesList callback itself begins with clear
+for EVERY version, so a present v1 chunk does not inherit prior teams. Preserve
+the omission-only carryover by strongly copying both team records into the
+candidate before final validateSides; do not copy side/skirmish-side contents.
+Add explicit omitted-side preservation/owner-repair and allocation-failure tests.
+This is a coupled logical-world compatibility correction from direct source
+review, not an authority change or a newly introduced slice.
+
+Native terrain/provider continuation remains this same slice03. Enclose the
+logical world transaction in an actual terrain/root candidate before later
+waypoint/visual/provider work can fail. Extract W3DTerrainLogic extent/boundary/
+minimum/maximum and ground/LOS/cliff/layer semantics through game-owned CPU
+providers and actual AI pathfinder/Bridge logic. Temporary logical metadata is
+not the retained full visual-owned simulation grid. Preserve initial absent/prior
+ground queries, source waypoint prepend and duplicate-ID/link selection, then
+visual load and final newMap snap. Query mode must not invoke visual loading.
+Stage filename, dimensions/boundaries, waypoint list/links and borrowed provider
+publication; retire failure before restoring legitimate singleton identities.
+Guard the eight-link accessor and physical link count/payload together with
+constructor/retirement, without changing valid graph admission/capacity policy.
+Source findings: original-engine-formats.md Combined native logical-world owner
+and Waypoint source cohort. Couple generated map/provider failure/retry and
+absent/prior/replacement height phases with real layers/bridge/pathfinder and
+repeated lifetimes. Do not promote basic TerrainLogic's default ground/layer/LOS
+stubs or a mock provider to gameplay acceptance. Actual ghost/partition/root,
+camera/audio/particle/radar and compiler-matching simulation remain required.
+
+Combined logical-world batch verified: final canonical608
+`b10129e0d32eb1a9b04064951305a23c8d422030413985f5e421077113286a01`,
+inclusive615 `c089e91fb87e608103c21b98f577fe070113ba8839803c678bec62d1200056e9`.
+Full configured builds and affected101 PASS GCC/GCC sanitizer/Clang sanitizer;
+authored-side manifest150 and omitted-side manifest75 retain every failure/retry
+and exact terminal; ten source pool exhaustion paths and borrowed pending/fresh
+namespace behavior repeat across three whole owners. Evidence:
+`evidence/qa/N2-logical-world-checkpoint.md`. Commit boundary is this complete
+logical-world behavior, not slice03/N2 completion; configured277 full suite has
+not run. Continue the native terrain/provider/root batch documented above.

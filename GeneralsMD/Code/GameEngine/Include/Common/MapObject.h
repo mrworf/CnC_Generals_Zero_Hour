@@ -104,6 +104,18 @@ class MapObject : public MemoryPoolObject
 public:
 	static MapObject *TheMapObjectListPtr;
 	static Dict TheWorldDict;
+	class WorldState final {
+		friend class MapObject;
+		MapObject* m_head = NULL;
+		Dict m_dict;
+	public:
+		WorldState() = default;
+		~WorldState() noexcept { clear(); }
+		WorldState(const WorldState&) = delete;
+		WorldState& operator=(const WorldState&) = delete;
+		void clear() noexcept;
+	};
+	static void exchangeWorldState(WorldState& state) noexcept;
 
 public:
 	MapObject(Coord3D loc, AsciiString name, Real angle, Int flags, const Dict* props,

@@ -241,6 +241,13 @@ void SidesList::swapContents(SidesList& other) noexcept {
 	m_skirmishTeamrec.swap(other.m_skirmishTeamrec);
 }
 
+void SidesList::copyTeamsFrom(const SidesList& other) {
+	TeamsInfoRec ordinary(other.m_teamrec);
+	TeamsInfoRec skirmish(other.m_skirmishTeamrec);
+	m_teamrec.swap(ordinary);
+	m_skirmishTeamrec.swap(skirmish);
+}
+
 /**
  SidesList - reset - 
 */

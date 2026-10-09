@@ -194,7 +194,11 @@ Int ScriptList::getNextID(void) {
 }
 ScriptList::ReadState::ReadState() noexcept : m_id(m_curId) {}
 ScriptList::ReadState::~ReadState() noexcept {
-	for(auto* list:m_lists)if(list)list->deleteInstance();
+	clear();
+}
+void ScriptList::ReadState::clear() noexcept {
+	for(auto*& list:m_lists){auto* owned=list;list=NULL;if(owned)owned->deleteInstance();}
+	m_count=0;
 }
 void ScriptList::exchangeReadState(ReadState& state) noexcept {
 	exchangeReadLists(state);

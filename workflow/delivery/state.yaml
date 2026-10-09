@@ -26,16 +26,16 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "3e36918a",
-    "label": "typed-pool-support-checkpoint",
-    "evidence": "evidence/qa/N2-sides-scripts-checkpoint.md",
-    "validation": "Fixture-only partial pooled typed factory/setter prefixes and immediate retries PASS focused1 under GCC and both sanitizers; no production changes since the committed focused9/affected96 checkpoint",
-    "next": "Include typed-pool extension in the enclosing world owner batch. Implement actual object/Dict/weather/names and accepted side/trigger/height candidate publication; preserve documented initial/final waypoint phases",
+    "parent": "3ef97998bf8d7ce4f190fd584cf3d447ad11f8ce",
+    "label": "original-transactional-logical-world",
+    "evidence": "evidence/qa/N2-logical-world-checkpoint.md",
+    "validation": "Final full configured builds and affected101 PASS GCC and both unsuppressed sanitizers. Combined world manifests150/75, all ten pool failure/retry paths, borrowed pending scripts, fresh names and omitted-team carryover repeat across three whole owners",
+    "next": "Enclose original waypoint/provider phases and actual NativeTerrainLogic/root startup using the verified combined logical-world owner; preserve temporary metadata versus retained full visual grid and initial/final waypoint snaps",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 actual side/script owners: configured builds, focused9 and affected96 PASS all3. Side versions1-3, real nested templates, all seven surface-condition and 23 legacy action input repairs, name rematching/fallback, malformed fields, strong copies/assignments, pending read rollback/capacity and all eight pooled exhaustion/retries are covered. Standard manifests295/619/291/615 plus repair634, qualified30, copy1, Parameter8 and warmed zero terminals retain every failure/retry. Full272 not run. Continue enclosing object/Dict/weather/names and accepted side/trigger/terrain owners into whole-world publication. Source root trace resolves initial waypoint admission versus final newMap height snap after visual load/partition/ghost phases. N2/slice03 incomplete.",
-  "transaction_parent": "69ec42824b4fdf44479168d7a2aa8a762a9fd623",
+  "resume_point": "N2 plan01/slice03 combined actual logical-world owner verified. Configured builds and affected101 PASS all3 on final canonical608 source; manifests150/75 and ten pool exhaustion paths retain every failure/retry/terminal. Object1-3/Height1-4, original factory/scripts/builds/teams/triggers, weather/Dict, pending read/ID/names, optional prior-team carryover and strong late rollback are covered. Full277 not run. Continue actual NativeTerrainLogic extents/layers and original waypoint/provider phases, then ghost/partition/presentation metadata/root and compiler-matching original simulation. Slice03/N2 incomplete.",
+  "transaction_parent": "3ef97998bf8d7ce4f190fd584cf3d447ad11f8ce",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -44,28 +44,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-sides-scripts-checkpoint.md",
+  "evidence": "evidence/qa/N2-logical-world-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Enclose actual objects/world Dict/weather/namespaces and accepted side/script/trigger/terrain owners in whole-world publication. Preserve source initial waypoint/link admission and final TerrainLogic::newMap height snap after visual load/partition/ghost preparation. Complete actual NativeTerrainLogic layers, shipped ghost/partition semantics and native GameEngine/root, camera/audio/particle/radar and compiler-matching original simulation. Neither owner fixtures nor terrain metadata are whole-world startup/image readiness.",
+  "next": "Integrate the verified combined logical-world owner into actual NativeTerrainLogic and preserve source initial waypoint/link admission versus final TerrainLogic::newMap height snap after full visual-owned grid load/partition/ghost preparation. Complete actual layers, shipped ghost/partition semantics and native GameEngine/root, camera/audio/particle/radar and compiler-matching original simulation. Logical-world fixtures are not whole-world startup/image readiness.",
   "implementation_checkpoint": {
-    "label": "original-transactional-sides-scripts",
-    "reason": "Actual original side/script ownership and formats pass focused9 and affected96 all3, resolving the WIP census faults. Whole-world/layers/ghost/camera/audio/lighting/textures/root remain required before native startup",
-    "prior_commit": "69ec4282",
-    "canonical_source_sha256": "db977a56d3fbb8b347cd4b838a7f1b0108b54f325845b0a20964e35e63dc252d",
-    "toolchain_inclusive_sha256": "7f2d11760ece12f6bea4166ad3c0dcd05a7c258cbf465406d217f5461a096c01",
-    "configured_suite_tests": 272,
-    "related_suite_tests_passed": 96,
+    "label": "original-transactional-logical-world",
+    "reason": "Actual combined logical-world admission and rollback pass affected101 all3, including prior typed-pool extension and omission-only team carryover. Waypoints/providers/layers/ghost/camera/audio/lighting/textures/root remain required before native startup",
+    "prior_commit": "3ef97998",
+    "canonical_source_sha256": "b10129e0d32eb1a9b04064951305a23c8d422030413985f5e421077113286a01",
+    "toolchain_inclusive_sha256": "c089e91fb87e608103c21b98f577fe070113ba8839803c678bec62d1200056e9",
+    "configured_suite_tests": 277,
+    "related_suite_tests_passed": 101,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; focused9 and affected96 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; affected101 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-sides-scripts-checkpoint.md"
+    "evidence": "evidence/qa/N2-logical-world-checkpoint.md"
   }
 }

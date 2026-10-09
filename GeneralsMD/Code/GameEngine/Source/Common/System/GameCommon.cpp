@@ -53,14 +53,22 @@ Real normalizeAngle(Real angle)
 {
 	DEBUG_ASSERTCRASH(!std::isnan(angle), ("Angle is NAN in normalizeAngle!\n"));
 
-	if( std::isnan(angle) )
+	if( !std::isfinite(angle) )
 		return 0;// ARGH!!!! Don't assert and then not handle it!  Error bad!  Fix error!
 
-	while (angle > PI) 
-		angle -= 2*PI;
+	while (angle > PI) {
+		Real next = angle - 2*PI;
+		if(next==angle){angle=static_cast<Real>(std::fmod(double(angle),2*PI));
+			if(angle>PI)angle-=2*PI;break;}
+		angle=next;
+	}
 
-	while (angle <= -PI) 
-		angle += 2*PI;
+	while (angle <= -PI) {
+		Real next = angle + 2*PI;
+		if(next==angle){angle=static_cast<Real>(std::fmod(double(angle),2*PI));
+			if(angle<=-PI)angle+=2*PI;break;}
+		angle=next;
+	}
 
 	return angle;
 }

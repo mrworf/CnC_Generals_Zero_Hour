@@ -3310,6 +3310,100 @@ GameClient::loadMap is an unused assert-bearing stub, not an earlier preload:
 the source runtime terrain-visual load call is in TerrainLogic::loadMap. No code
 ordering change or gameplay acceptance is claimed by this read-only source trace.
 
+### Combined native logical-world owner (implementation under validation)
+
+`GameLogic/Map/NativeLogicalWorld.cpp` extracts the actual logical-only
+WorldHeightMap callbacks, using the accepted source height reader and actual
+MapObject, ThingFactory, SidesList/ScriptList and PolygonTrigger owners. It is not
+the visual reader, original simulation execution or native GameEngine startup.
+Its namespace transaction precedes DataChunkInput construction. A candidate
+publishes original object/world-Dict, side content, pending script reads/group
+cursor, trigger list/cursor and writable weather together; height metadata swaps
+only after the complete logical parse and original validateSides succeed.
+Failure restores accepted identities and retires candidate owners before
+restoring borrowed SidesList publication. MapObject::WorldState includes its
+Dict as well as its linked list. ScriptList::ReadState::clear explicitly retires
+pending trees under legitimate parent publication. Neither state owns external
+factory/registry lifetimes, and NativeLogicalWorld destruction does not destroy
+arbitrary borrowed process-global worlds.
+
+Original emptySides/emptyTeams clear BOTH ordinary and skirmish side/team state.
+Missing WorldInfo retains the previous Dict and weather; missing object/side/
+trigger chunks starts empty and original side validation adds neutral/default
+team state. A missing SidesList retains both prior team sets: logical construction
+calls emptySides, not clear. A present SidesList callback begins with clear for
+all versions, includingv1. The native candidate strongly copies only the team
+records on omission, before final validation; it never carries old side contents.
+WorldInfo/ObjectsList have no version-selected fields; Object1 has
+no Dict but still passes an empty Dict pointer (not null/default properties).
+Object1–2 force z=0; Object3 retains z and discards complete records outside
+[-1000,1593.75]. Retained nodes append in file order, including unknown-template
+null bindings from actual ThingFactory::findTemplate(name,FALSE). Waypoint/light/
+scorch flags depend on exact Dict types, not name presence. The logical entry
+requires height data, rejects duplicate owner chunks to prevent overwritten
+lists, and skips unrelated visual chunks as the source logical reader does.
+Source callbacks/writer: WorldHeightMap.cpp::stream constructor,
+ParseWorldDictDataChunk/ParseObjectsDataChunk/ParseObjectData;
+WorldBuilder/src/WHeightMapEdit.cpp::saveToFile; SidesList.cpp::emptySides/
+emptyTeams; ThingFactory.cpp::findTemplateInternal.
+
+Physical nonfinite coordinates/angles and out-of-domain weather integers reject
+before unsafe arithmetic/enum construction. The shared normalizeAngle retains
+ordinary source repeated-subtraction rounding. Nonfinite inputs return0 and
+only a nonprogressing finite subtraction/addition switches to bounded fmod;
+the original loop could hang when float spacing exceeded a revolution. This
+repairs nontermination, not a new gameplay angle convention. Generated malformed
+float fixtures use explicit IEEE raw words because DataChunkOutput::writeReal
+correctly rejects nonfinite input. Optional chunk boundaries are not inherently
+truncation errors: all-prefix rejection fixtures put mandatory height last.
+Current generated-world validation and pending limits must be recorded in
+separate QA evidence; this source description is not acceptance.
+
+The next terrain entry must distinguish three source phases. W3DTerrainLogic::
+loadMap constructs a temporary **logical-only** WorldHeightMap to admit world
+owners and compute extents/boundaries/minimum/maximum, then releases it before
+common TerrainLogic::loadMap creates waypoints and reads their links. Non-query
+common loading invokes TerrainVisual::load afterward. W3DTerrainVisual::load's
+retained `m_logicHeightMap` instead uses the default **full** WorldHeightMap
+constructor, completing blend/version1 topology and lighting; it does not
+reparse world owners. Thus its retained simulation-height grid is not the
+temporary logical metadata grid, even when both came from the same file.
+Seismic-enabled builds create a second full client/display grid. Do not retain
+the temporary metadata as a substitute for either source visual-owned grid.
+Sources: W3DTerrainLogic.cpp::loadMap; TerrainLogic.cpp::loadMap;
+W3DTerrainVisual.cpp::load (594,607); WorldHeightMap.h constructor defaults.
+
+Common TerrainLogic::loadMap currently prepends waypoints directly and catches
+all exceptions while reading their links as legacy compatibility. That is not
+strong native root admission and cannot justify swallowing an ownership failure
+after world owners have changed. An enclosing native terrain/startup candidate
+must guard original waypoints/links and provider publication through later
+failure, preserve valid source link selection/order, and keep initial absent/
+prior-height admission distinct from TerrainLogic::newMap's final height snap.
+Logical-world loader tests do not prove these later phases or root atomicity.
+
+Waypoint source cohort for that continuation: actual nodes initialize all eight
+borrowed link slots to null, own their string fields, and do not own linked
+neighbors. TerrainLogic::addWaypoint prepends in MapObject file order, so graph
+traversal reverses object order. addWaypointLink scans the entire prepended list,
+retaining the last matching ID (the earliest corresponding file object when IDs
+repeat). It ignores missing/self links and suppresses already-linked edges.
+Only the source node's bi-directional flag requests a reverse edge; addLink
+silently caps each node at8. Keep source behavior even when the forward node is
+full and a reverse link can still be admitted. IDs remain fixed unsigned32 even
+though the wire pair uses signed Int32 raw representations.
+
+Pending native corrections: getLink currently admits index8 despite an eight-
+element array; reject it without altering valid graph selection. The waypoint
+chunk reader must reject negative or physically impossible link counts and
+trailing payload, not rely on its final debug assert. deleteWaypoints retires
+actual pooled nodes iteratively and detaches the head only after its walk;
+candidate cleanup/publication must keep the valid terrain parent until legitimate
+retirement. These are audited pending work, not implemented/accepted fixes.
+Sources: TerrainLogic.h::Waypoint::getLink/addLink;
+TerrainLogic.cpp::Waypoint ctor/dtor/addWaypoint/addWaypointLink/
+parseWaypointData/deleteWaypoints.
+
 Sources: GameLogic/System/GameLogic.cpp::startNewGame (1272,1631);
 GameLogic/Map/TerrainLogic.cpp::loadMap/addWaypoint/newMap;
 W3DDevice/GameLogic/W3DTerrainLogic.cpp::loadMap/getGroundHeight/newMap;
