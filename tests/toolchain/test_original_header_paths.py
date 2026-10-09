@@ -110,6 +110,18 @@ class OriginalHeaderPaths(unittest.TestCase):
             text = re.sub(r'#[^\n]*', '', source.read_text())
             self.assertNotRegex(text, r'\b(LOAD_TEST_ASSETS|LOOK_FOR_TEST_ART)\b')
 
+    def test_native_command_line_preserves_source_table(self):
+        source = (CODE / 'GameEngine/Source/Common/CommandLine.cpp').read_text()
+        table = source[source.index('static CommandLineParam params[]'):source.index('// parseCommandLine')]
+        self.assertEqual(hashlib.sha256(table.encode()).hexdigest(),
+                         '5c4bb5b78b547b75c4e2340693b7a4a685d1dd84cb3e681c6d4a4905d397f6cc')
+        body = re.sub(r'/\*.*?\*/|//[^\n]*', '', source, flags=re.S)
+        self.assertNotRegex(body, r'\b(atoi|fopen|TheArchiveFileSystem|TheLocalFileSystem|DX8Wrapper_PreserveFPU)\b')
+        self.assertNotIn('DEBUG_LOG', body)
+        self.assertIn('mountReadOnlyMods', body)
+        self.assertIn('ModPublicationGuard', body)
+        self.assertIn('std::from_chars', body)
+
     def test_native_key_protocol(self):
         manifest = json.loads((REPO / "tests/original/key_protocol.json").read_text())
         text = (CODE / "GameEngine/Include/GameClient/KeyDefs.h").read_text()

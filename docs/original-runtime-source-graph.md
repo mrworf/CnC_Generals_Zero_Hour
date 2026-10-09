@@ -708,3 +708,13 @@ three are link-only and never run. CommandLine binding, StatsCollector, native
 capabilities, diplomacy/start spots and actual process/scenario still require
 implementation. The full198 supporting matrix is recorded separately in QA;
 neither the namespace fixtures nor reduced unresolved counts accept N2.
+
+Actual CommandLine.cpp now compiles in original_runtime_common. Its original
+option table is source-locked; the native mod provider replaces obsolete archive
+singleton loading, and its captured mod publications roll back together on failed
+admission. Three original configuration families exercise source release options,
+malformed inputs and60 complete allocation failure/retry pairs across repeated
+GlobalData/storage lifetimes. All configured targets build all3, related71 pass
+all3; full201 remains unrun. Current never-executed root link fails11/223/234.
+Protected StatsCollector and native capability/diplomacy/start-position providers
+remain the normal root cohort; sanitizer callback metadata remains wider.

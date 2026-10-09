@@ -68,6 +68,7 @@ endforeach()
 find_package(OpenSSL 3 REQUIRED COMPONENTS Crypto)
 find_package(SDL3 REQUIRED CONFIG)
 add_library(original_runtime_common STATIC
+  "${ZH_CODE}/GameEngine/Source/Common/CommandLine.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/GlobalData.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/GameType.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/OptionPreferences.cpp"
@@ -404,7 +405,7 @@ target_link_libraries(original_configuration_fixture PRIVATE original_definition
 target_include_directories(original_configuration_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_definitions(original_configuration_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
-foreach(family IN ITEMS functional negative fault-override fault-overwrite fault-constructor platform interfaces values bootstrap webpage locale locale-faults images images-negative images-fault-new images-fault-replace images-fault-collection colors colors-negative colors-faults)
+foreach(family IN ITEMS functional negative fault-override fault-overwrite fault-constructor platform interfaces values bootstrap webpage locale locale-faults images images-negative images-fault-new images-fault-replace images-fault-collection colors colors-negative colors-faults commands commands-negative commands-faults)
   add_test(NAME original_configuration_${family} COMMAND original_configuration_fixture "${family}")
   set_tests_properties(original_configuration_${family} PROPERTIES LABELS "original;runtime;configuration" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

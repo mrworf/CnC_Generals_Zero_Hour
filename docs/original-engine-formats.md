@@ -2448,3 +2448,39 @@ mod binding and broader argument/provider integration; complete startup remains
 pending. Generated mod fixtures cover selection, malformed/root rejection, every
 mutation path, leases and complete allocation/retry ownership. Current executed
 results belong in `evidence/qa/N2-runtime-support.md`, not this source finding.
+
+### Original CommandLine and pending statistics integration
+
+Actual `Common/CommandLine.cpp` keeps the original option table byte-for-byte
+(SHA2565c4bb5b78b547b75c4e2340693b7a4a685d1dd84cb3e681c6d4a4905d397f6cc).
+Release handlers retain their original effects, including quickstart's sizzle/
+shell/window-animation selection. Numeric values now use defined Int-width
+decoding, not overflowing atoi. Active release value options are validated
+before dispatch; unknown flags still skip. FullVersion consumes its value before
+the following option. Whole unrelated-option rollback is not claimed. Relative
+mods use the explicit user namespace; absolute user-selected mods remain read-only
+inputs. Both mod metadata publications have a captured no-allocation rollback
+guard through native archive admission. Raw argv/path logging is retired.
+
+Native simulation owns floating-point setup; the former DX preservation toggle
+has no backend variable. Its direct handler admits preserve1 and rejects changes
+that would disable preservation. Debug asset reports still have downstream CWD
+writers: the request now rejects explicitly rather than creating files or
+claiming success. Complete debug-authoring/RunAhead and runtime semantic range
+validation are pending; encoded integer representability is not proof of valid
+whole-game configuration. Release command fixtures bind actual GlobalData and
+native storage, not fake configuration or a replacement argument table.
+
+`Common/StatsCollector.cpp` still is not compiled/admitted. Its constructor reads
+the live GameLogic frame. Reset publishes a filename and writes a header before
+zeroing counters; collectUnitCountStats adds to current counts. Update computes
+the interval with signed frame addition/multiplication, then updates counters
+before writing. End opens one append stream and invokes another append writer
+before writing the footer. All three writers use raw fopen and ignore write/close
+errors; debug path generation may include LAN player names and a caller-selected
+base directory. Native integration must bind the whole logging lifecycle to
+captured protected storage, preserve intended TSV field/row/footer order and
+sampling behavior, and make elapsed-frame arithmetic defined. Do not just replace
+one fopen or execute the provider before its ownership/metadata boundaries are
+settled. Actual GameLogic/player sampling and debug/LAN naming are separate from
+isolated output ownership evidence; no current StatsCollector acceptance exists.

@@ -1,5 +1,54 @@
 # N2 slice03 supporting owner checkpoint — not milestone acceptance
 
+## Actual original CommandLine cohort (same incomplete N2 slice03)
+
+Parentfa973fde; clean worktree at start. Final canonical555 SHA256
+`62f420b4d18d6fbc13cd6ea603f3a131b30e8c38c557f3bd77eacf4a5ad6784d`;
+toolchain560 SHA256
+`95f981d78922a4e8d49cb3334cce39e45564b488ea22e44c2983d9206a449938`.
+All configured targets build all3. Related71/71 PASS normal GCC18.61s,
+GCCsan64.71s/Clangsan63.92s, checks intact on normal host. This run used
+canonical555 `dae0a60d3f3fb06b89f88fe76588dbe5bc82fcd2687c7fdaa021595fc2c65077`
+and toolchain560 `8d379f67fbfd84d601e159eed634b5709b474bc0bd9ff8826085a57955dce341`.
+The only subsequent executable change adds the Version getter assertion to the
+already-run positive command family. That final family additionally PASS all3
+0.15/0.62/0.58s; no production source changed afterward. Logs
+`/tmp/zh-commandline-<variant>-{related-test,final-positive-test}.log` and
+`*-verified-build.log`. Full201 is not run; prior full198 remains historical.
+
+Actual original CommandLine.cpp is now in original_runtime_common. All original
+table bytes/hash are preserved, with case-insensitive release handlers, unknown
+flag skipping and source quickstart/media/configuration effects. Active numeric
+values validate before dispatch, defined signed widths reject overflow/junk, and
+FullVersion consumes its value. Null/negative/missing argv and malformed mod
+inputs reject without raw-path diagnostics. Relative mod paths stay within the
+configured user namespace; explicit absolute mod inputs remain possible.
+
+Three new actual configuration families execute over three complete original
+GlobalData/storage lifetimes. Every60 allocation failure/retry pairs and exact
+terminal60 prove mod metadata rollback, accepted archive selection and exact
+descriptor/standard-backing retirement. Both mod publications restore with
+captured no-allocation swaps. Unrelated option rollback is not claimed. Whole
+runtime semantic ranges and complete debug handlers are not accepted merely
+because their numeric encoding is defined. DX preservation has no dummy backend
+global; direct changes disabling preservation reject. Debug asset reports with
+downstream unprotected writers reject rather than creating a CWD file.
+
+An initial compile failed on the fixture's missing FileOwner import; an initial
+negative family failed because its rejection helper did not admit the expected
+NativeStorageError for traversal. Both fixture defects were corrected; retained
+initial logs are not accepted results. No required validation was waived.
+
+Link-only GameEngine::init diagnostic FAILS11 normal GCC/223 GCCsan/234 Clangsan,
+never executed; logs `*-root-link.log` and exact census
+`N2-runtime-link-census.json::native_command_line_cohort`. Root diagnostics used
+the related-run identities above; the final fixture assertion changes no root
+provider. StatsCollector's whole writer/update/end/filename lifecycle findings are
+recorded in formats documentation. Protected collector output, native capability
+providers, diplomacy/start spots, sanitizer callback roots, CPU map/factories/
+GameLogic/GameState/BuildAssistant/Recorder and scenario/compiler checkpoints
+remain mandatory. No N2/slice03 acceptance or vendor/asset/recovery mutation.
+
 ## Native asset/mod namespace cohort (same incomplete N2 slice03)
 
 Parent7ecee6df; worktree clean at start. Canonical555 SHA256

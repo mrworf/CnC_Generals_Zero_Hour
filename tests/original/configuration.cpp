@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "AllocationFault.h"
 #include "Common/GlobalData.h"
+#include "Common/CommandLine.h"
 #include "Common/INI.h"
 #include "Common/INIException.h"
 #include "Common/FileSystem.h"
+#include "Common/FileOwner.h"
 #include "Common/NativeUserStorage.h"
 #include "Common/NativeInputSettings.h"
 #include "Common/NativeSubsystemInit.h"
@@ -35,6 +37,7 @@ namespace {
 void require(bool value,const char* message) {if(!value)throw std::runtime_error(message);}
 template<class F> void rejects(F action) {
     bool rejected=false; try{action();}catch(ErrorCode){rejected=true;}catch(const INIException&){rejected=true;}
+    catch(const NativeStorageError&){rejected=true;}
     require(rejected,"source input rejected");
 }
 unsigned descriptors() {
@@ -821,6 +824,102 @@ void bootstrap() {
     require(!TheWritableGlobalData && AllocationFault::live()==live,
             "same-registry real owner restarts after complete shutdown");
 }
+void commandArguments(std::initializer_list<const char*> options) {
+    std::vector<char*> arguments;
+    for(const auto* text:options) arguments.push_back(const_cast<char*>(text));
+    parseCommandLine(static_cast<int>(arguments.size()),arguments.data());
+}
+void commandModInput(Context& context,const char* name,const char* value) {
+    const std::string key="Injected.ini",payload=value;
+    const std::uint32_t offset=16+9+key.size();
+    std::string bytes="BIGF";
+    const auto word=[&](std::uint32_t value){for(int shift:{24,16,8,0}) bytes+=char(value>>shift);};
+    word(0);word(1);word(offset);word(offset);word(payload.size());bytes+=key;bytes+='\0';bytes+=payload;
+    auto output=context.storage.beginWrite(NativeUserArea::Data,name);
+    output->write(bytes.data(),static_cast<Int>(bytes.size()));output->commit();
+}
+std::string commandContent(Context& context) {
+    FileCloseOwner file(context.files.openFile("Injected.ini"));require(bool(file),"actual mod command reachability");
+    std::string result(file->size(),'\0');
+    require(file->read(result.data(),static_cast<Int>(result.size()))==static_cast<Int>(result.size()),"complete mod command bytes");
+    return result;
+}
+void commands(int mode) {
+    const auto setup=[](Context& context) {
+        context.start();context.files.attachUserStorage(&context.storage);
+        commandModInput(context,"Mods/accepted.big","accepted");
+        commandModInput(context,"Mods/candidate.big","candidate");
+        commandArguments({"game","-mod","Mods/accepted.big"});
+        require(commandContent(context)=="accepted","actual initial mod admission");
+    };
+    if(mode==2) {
+        std::size_t census=0;
+        {
+            Context context;setup(context);
+            char executable[]="game",option[]="-mod",name[]="Mods/candidate.big";
+            char* args[]{executable,option,name};
+            AllocationFault::arm(SIZE_MAX);
+            try {parseCommandLine(3,args);}catch(...){AllocationFault::disarm();throw;}
+            census=AllocationFault::attempts();AllocationFault::disarm();
+        }
+        require(census>0 && census<256,"complete command/mod manifest bounded");
+        for(std::size_t ordinal=0;ordinal<=census;++ordinal) {
+            Context context;setup(context);
+            const AsciiString previous=context.original->m_modBIG;
+            char executable[]="game",option[]="-mod",name[]="Mods/candidate.big";
+            char* args[]{executable,option,name};
+            const auto live=AllocationFault::live(),fds=std::size_t(descriptors());bool failed=false;
+            AllocationFault::arm(ordinal);
+            try {parseCommandLine(3,args);}catch(const std::bad_alloc&){failed=true;}
+            catch(...){AllocationFault::disarm();throw;}
+            AllocationFault::disarm();
+            require(failed==(ordinal<census) && AllocationFault::triggered()==failed &&
+                (failed || AllocationFault::attempts()==census),"all command/mod pairs and exact terminal");
+            if(failed) {
+                require(AllocationFault::live()==live && descriptors()==fds && context.original->m_modBIG==previous &&
+                    context.original->m_modDir.isEmpty(),"failed command restores publications and ownership");
+                require(commandContent(context)=="accepted","failed command preserves accepted namespace");
+                parseCommandLine(3,args);
+            }
+            require(commandContent(context)=="candidate","every same-owner corrected command retry");
+        }
+        std::cout<<"command/mod ordinals [0,"<<census<<"); terminal "<<census<<'\n';return;
+    }
+    Context context;setup(context);
+    if(mode==0) {
+        commandArguments({"game","-WIN","-xres"," +1920 ","-yres","1080","-playStats","2",
+            "-noshellmap","-scriptDebug","-particleEdit","-noshaders","-quickstart","-unknown"});
+        const auto& data=*context.original;
+        require(data.m_windowed && data.m_xResolution==1920 && data.m_yResolution==1080 && data.m_playStats==2 &&
+            !data.m_shellMapOn && data.m_scriptDebug && data.m_particleEdit && data.m_winCursors &&
+            data.m_chipSetType==1 && !data.m_playSizzle && !data.m_animateWindows,"actual source release option effects");
+        commandArguments({"game","-fullVersion","1","-fullscreen"});
+        require(context.version.showFullVersion() && !context.original->m_windowed,
+                "full-version value effect and consumption preserve following option");
+        commandArguments({"game","-mod","Mods/candidate.big"});
+        require(commandContent(context)=="candidate","actual command binds new native mod");
+        return;
+    }
+    const auto previous=context.original->m_modBIG;
+    for(const auto* value:{"","invalid","2147483648","-2147483649","12junk","+-1"}) {
+        rejects([&]{commandArguments({"game","-win","-xres",value});});
+        require(context.original->m_xResolution==640,"malformed integer rejected before dispatch");
+    }
+    for(const auto* option:{"-xres","-yres","-fullVersion","-playStats","-mod"})
+        rejects([&]{commandArguments({"game",option});});
+    for(const auto* mod:{"Mods/missing.big","../escape.big","C:invalid"}) {
+        rejects([&]{commandArguments({"game","-mod",mod});});
+        require(context.original->m_modBIG==previous && commandContent(context)=="accepted","mod rejection preserves publications/index");
+    }
+    auto bad=context.storage.beginWrite(NativeUserArea::Data,"Mods/bad.big");bad->write("BIGF",4);bad->commit();bad.reset();
+    rejects([&]{commandArguments({"game","-mod","Mods/bad.big"});});
+    require(context.original->m_modBIG==previous && commandContent(context)=="accepted","malformed archive transaction rejection");
+    char executable[]="game";char* nullArgument[]{executable,nullptr};
+    rejects([&]{parseCommandLine(2,nullArgument);});rejects([&]{parseCommandLine(1,nullptr);});
+    rejects([&]{parseCommandLine(-1,nullptr);});parseCommandLine(0,nullptr);
+    commandArguments({"game","-yres","-2147483648","-playStats","2147483647"});
+    require(context.original->m_yResolution==INT32_MIN && context.original->m_playStats==INT32_MAX,"defined signed integer wire boundaries");
+}
 }
 int main(int argc,char** argv) {
     bool initialized=false;
@@ -850,6 +949,9 @@ int main(int argc,char** argv) {
             else if(family=="colors")colors(0);
             else if(family=="colors-negative")colors(1);
             else if(family=="colors-faults")colors(2);
+            else if(family=="commands")commands(0);
+            else if(family=="commands-negative")commands(1);
+            else if(family=="commands-faults")commands(2);
             else if(family=="locale")locale();
             else if(family=="locale-faults")localeFaults();
             else if(family=="images")imagesFunctional();

@@ -28,13 +28,14 @@
 #include "Common/GlobalData.h"
 #include "PreRTS.h"	// This must go first in EVERY cpp file in the GameEngine
 
-#include "Common/ArchiveFileSystem.h"
+#include "Common/FileSystem.h"
+#include "Common/NativeUserStorage.h"
+#include <charconv>
+#include <string_view>
 #include "Common/CommandLine.h"
 #include "Common/CRCDebug.h"
-#include "Common/LocalFileSystem.h"
 #include "Common/version.h"
-#include "GameClient/TerrainVisual.h" // for TERRAIN_LOD_MIN definition
-#include "GameClient/GameText.h"
+#include "GameClient/TerrainLOD.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -45,7 +46,7 @@
 
 
 Bool TheDebugIgnoreSyncErrors = FALSE;
-extern Int DX8Wrapper_PreserveFPU;
+
 
 #ifdef DEBUG_CRC
 Int TheCRCFirstFrameToLog = -1;
@@ -61,6 +62,34 @@ Bool g_logObjectCRCs = FALSE;
 #if defined(_DEBUG) || defined(_INTERNAL)
 extern Bool g_useStringFile;
 #endif
+
+namespace {
+Int commandInteger(const char* text) {
+    if(!text) throw ERROR_BAD_ARG;
+    std::string_view value(text);
+    while(!value.empty() && (value.front()==' ' || value.front()=='\t')) value.remove_prefix(1);
+    while(!value.empty() && (value.back()==' ' || value.back()=='\t')) value.remove_suffix(1);
+    if(!value.empty() && value.front()=='+') {
+        value.remove_prefix(1);
+        if(!value.empty() && value.front()=='-') throw ERROR_BAD_ARG;
+    }
+    if(value.empty()) throw ERROR_BAD_ARG;
+    Int result=0;
+    const auto parsed=std::from_chars(value.data(),value.data()+value.size(),result);
+    if(parsed.ec!=std::errc{} || parsed.ptr!=value.data()+value.size()) throw ERROR_BAD_ARG;
+    return result;
+}
+struct ModPublicationGuard {
+    GlobalData* owner;
+    AsciiString big,directory;
+    bool admitted=false;
+    explicit ModPublicationGuard(GlobalData* value):owner(value),
+        big(value?value->m_modBIG:AsciiString{}),directory(value?value->m_modDir:AsciiString{}) {}
+    ~ModPublicationGuard() {
+        if(owner && !admitted) {owner->m_modBIG.swap(big);owner->m_modDir.swap(directory);}
+    }
+};
+}
 
 // Retval is number of cmd-line args eaten
 typedef Int (*FuncPtr)( char *args[], int num );
@@ -81,7 +110,7 @@ static void ConvertShortMapPathToLongMapPath(AsciiString &mapName)
 
 	if ((path.find('\\') == NULL) && (path.find('/') == NULL))
 	{
-		DEBUG_CRASH(("Invalid map name %s", mapName.str()));
+		DEBUG_CRASH(("Invalid map name"));
 		return;
 	}
 	path.nextToken(&token, "\\/");
@@ -94,7 +123,7 @@ static void ConvertShortMapPathToLongMapPath(AsciiString &mapName)
 
 	if (!token.endsWithNoCase(".map"))
 	{
-		DEBUG_CRASH(("Invalid map name %s", mapName.str()));
+		DEBUG_CRASH(("Invalid map name"));
 	}
 	// remove the .map from the end.
 	token.removeLastChar();
@@ -158,11 +187,10 @@ Int parseNoVideo(char *args[], int)
 //=============================================================================
 Int parseFPUPreserve(char *args[], int argc)
 {
-	if (argc > 1)
-	{
-		DX8Wrapper_PreserveFPU = atoi(args[1]);
-	}
-	return 2;
+    // Native simulation owns its floating-point environment; no DX backend
+    // is allowed to change it. Preserve is the only meaningful native request.
+    if(argc<2 || commandInteger(args[1])!=1) throw ERROR_BAD_ARG;
+    return 2;
 }
 
 #if defined(_DEBUG) || defined(_INTERNAL)
@@ -214,7 +242,7 @@ Int parseDebugCRCFromFrame(char *args[], int argc)
 #ifdef DEBUG_CRC
 	if (argc > 1)
 	{
-		TheCRCFirstFrameToLog = atoi(args[1]);
+		TheCRCFirstFrameToLog = commandInteger(args[1]);
 	}
 #endif
 	return 2;
@@ -227,7 +255,7 @@ Int parseDebugCRCUntilFrame(char *args[], int argc)
 #ifdef DEBUG_CRC
 	if (argc > 1)
 	{
-		TheCRCLastFrameToLog = atoi(args[1]);
+		TheCRCLastFrameToLog = commandInteger(args[1]);
 	}
 #endif
 	return 2;
@@ -300,7 +328,7 @@ Int parseNetCRCInterval(char *args[], int argc)
 #ifdef DEBUG_CRC
 	if (argc > 1)
 	{
-		NET_CRC_INTERVAL = atoi(args[1]);
+		NET_CRC_INTERVAL = commandInteger(args[1]);
 	}
 #endif
 	return 2;
@@ -313,7 +341,7 @@ Int parseReplayCRCInterval(char *args[], int argc)
 #ifdef DEBUG_CRC
 	if (argc > 1)
 	{
-		REPLAY_CRC_INTERVAL = atoi(args[1]);
+		REPLAY_CRC_INTERVAL = commandInteger(args[1]);
 	}
 #endif
 	return 2;
@@ -371,9 +399,9 @@ Int parseFullVersion(char *args[], int num)
 {
 	if (TheVersion && num > 1)
 	{
-		TheVersion->setShowFullVersion(atoi(args[1]) != 0);
+		TheVersion->setShowFullVersion(commandInteger(args[1]) != 0);
 	}
-	return 1;
+	return num>1?2:1;
 }
 
 Int parseNoShadows(char *args[], int)
@@ -400,7 +428,7 @@ Int parseXRes(char *args[], int num)
 {
 	if (TheWritableGlobalData && num > 1)
 	{
-		TheWritableGlobalData->m_xResolution = atoi(args[1]);
+		TheWritableGlobalData->m_xResolution = commandInteger(args[1]);
 		return 2;
 	}
 	return 1;
@@ -410,7 +438,7 @@ Int parseYRes(char *args[], int num)
 {
 	if (TheWritableGlobalData && num > 1)
 	{
-		TheWritableGlobalData->m_yResolution = atoi(args[1]);
+		TheWritableGlobalData->m_yResolution = commandInteger(args[1]);
 		return 2;
 	}
 	return 1;
@@ -423,7 +451,7 @@ Int parseLatencyAverage(char *args[], int num)
 {
 	if (TheWritableGlobalData && num > 1)
 	{
-		TheWritableGlobalData->m_latencyAverage = atoi(args[1]);
+		TheWritableGlobalData->m_latencyAverage = commandInteger(args[1]);
 	}
 	return 2;
 }
@@ -434,7 +462,7 @@ Int parseLatencyAmplitude(char *args[], int num)
 {
 	if (TheWritableGlobalData && num > 1)
 	{
-		TheWritableGlobalData->m_latencyAmplitude = atoi(args[1]);
+		TheWritableGlobalData->m_latencyAmplitude = commandInteger(args[1]);
 	}
 	return 2;
 }
@@ -445,7 +473,7 @@ Int parseLatencyPeriod(char *args[], int num)
 {
 	if (TheWritableGlobalData && num > 1)
 	{
-		TheWritableGlobalData->m_latencyPeriod = atoi(args[1]);
+		TheWritableGlobalData->m_latencyPeriod = commandInteger(args[1]);
 	}
 	return 2;
 }
@@ -456,7 +484,7 @@ Int parseLatencyNoise(char *args[], int num)
 {
 	if (TheWritableGlobalData && num > 1)
 	{
-		TheWritableGlobalData->m_latencyNoise = atoi(args[1]);
+		TheWritableGlobalData->m_latencyNoise = commandInteger(args[1]);
 	}
 	return 2;
 }
@@ -467,7 +495,7 @@ Int parsePacketLoss(char *args[], int num)
 {
 	if (TheWritableGlobalData && num > 1)
 	{
-		TheWritableGlobalData->m_packetLoss = atoi(args[1]);
+		TheWritableGlobalData->m_packetLoss = commandInteger(args[1]);
 	}
 	return 2;
 }
@@ -522,7 +550,7 @@ Int parseFPSLimit(char *args[], int num)
 {
 	if (TheWritableGlobalData && num > 1)
 	{
-		TheWritableGlobalData->m_framesPerSecondLimit = atoi(args[1]);
+		TheWritableGlobalData->m_framesPerSecondLimit = commandInteger(args[1]);
 	}
 	return 2;
 }
@@ -674,16 +702,11 @@ Int parsePreloadEverything( char *args[], int num )
 	return 1;
 }
 
-Int parseLogAssets( char *args[], int num )
+Int parseLogAssets(char *[], int)
 {
-	if( TheWritableGlobalData )
-	{
-		FILE *logfile=fopen("PreloadedAssets.txt","w");
-		if (logfile)	//clear the file
-			fclose(logfile);
-		TheWritableGlobalData->m_preloadReport = TRUE;
-	}
-	return 1;
+    // This authoring report has downstream CWD writers, not protected owners.
+    // Reject until that whole report path is bound to native user storage.
+    throw ERROR_BAD_ARG;
 }
 
 /// begin stuff for VTUNE
@@ -898,8 +921,8 @@ Int parseRunAhead( char *args[], Int num )
 {
 	if (num > 2)
 	{
-		MIN_RUNAHEAD = atoi(args[1]);
-		MAX_FRAMES_AHEAD = atoi(args[2]);
+		MIN_RUNAHEAD = commandInteger(args[1]);
+		MAX_FRAMES_AHEAD = commandInteger(args[2]);
 		FRAME_DATA_LENGTH = (MAX_FRAMES_AHEAD + 1)*2;
 	}
 	return 3;
@@ -911,7 +934,7 @@ Int parseSeed(char *args[], int num)
 {
 	if (TheWritableGlobalData && num > 1)
 	{
-		TheWritableGlobalData->m_fixedSeed = atoi(args[1]);
+		TheWritableGlobalData->m_fixedSeed = commandInteger(args[1]);
 	}
 	return 2;
 }
@@ -929,7 +952,7 @@ Int parseNetMinPlayers(char *args[], int num)
 {
 	if (TheWritableGlobalData && num > 1)
 	{
-		TheWritableGlobalData->m_netMinPlayers = atoi(args[1]);
+		TheWritableGlobalData->m_netMinPlayers = commandInteger(args[1]);
 	}
 	return 2;
 }
@@ -938,7 +961,7 @@ Int parsePlayStats(char *args[], int num)
 {
 	if (TheWritableGlobalData  && num > 1)
 	{
-		TheWritableGlobalData->m_playStats  = atoi(args[1]);
+		TheWritableGlobalData->m_playStats  = commandInteger(args[1]);
 	}
 	return 2;
 }
@@ -1005,8 +1028,8 @@ Int parseBenchmark(char *args[], int num)
 {
 	if (TheWritableGlobalData && num > 1)
 	{
-		TheWritableGlobalData->m_benchmarkTimer = atoi(args[1]);
-		TheWritableGlobalData->m_playStats  = atoi(args[1]);
+		TheWritableGlobalData->m_benchmarkTimer = commandInteger(args[1]);
+		TheWritableGlobalData->m_playStats  = commandInteger(args[1]);
 	}
 	return 2;
 }
@@ -1019,7 +1042,7 @@ Int parseStats(char *args[], int num)
 	if (TheWritableGlobalData && num > 1)
 	{
 		TheWritableGlobalData->m_dumpStatsAtInterval = TRUE;
-		TheWritableGlobalData->m_statsInterval  = atoi(args[1]);
+		TheWritableGlobalData->m_statsInterval  = commandInteger(args[1]);
 	}
 	return 2;
 }
@@ -1072,7 +1095,7 @@ Int parseJumpToFrame(char *args[], int num)
 	if (TheWritableGlobalData && num > 1)
 	{
 		parseNoFPSLimit(args, num);
-		TheWritableGlobalData->m_noDraw = atoi(args[1]);
+		TheWritableGlobalData->m_noDraw = commandInteger(args[1]);
 		return 2;
 	}
 	return 1;
@@ -1089,49 +1112,20 @@ Int parseUpdateImages(char *args[], int num)
 
 Int parseMod(char *args[], Int num)
 {
-	if (TheWritableGlobalData && num > 1)
-	{
-		AsciiString modPath = args[1];
-		if (strchr(modPath.str(), ':') || modPath.startsWith("/") || modPath.startsWith("\\"))
-		{
-			// full path passed in.  Don't append base path.
-		}
-		else
-		{
-			modPath.format("%s%s", TheGlobalData->getPath_UserData().str(), args[1]);
-		}
-		DEBUG_LOG(("Looking for mod '%s'\n", modPath.str()));
-
-		if (!TheLocalFileSystem->doesFileExist(modPath.str()))
-		{
-			DEBUG_LOG(("Mod does not exist.\n"));
-			return 2; // no such file/dir.
-		}
-
-		// now check for dir-ness
-		struct stat statBuf;
-		if (::stat(modPath.str(), &statBuf) != 0)
-		{
-			DEBUG_LOG(("Could not _stat() mod.\n"));
-			return 2; // could not stat the file/dir.
-		}
-
-		if (S_ISDIR(statBuf.st_mode))
-		{
-			if (!modPath.endsWith("\\") && !modPath.endsWith("/"))
-				modPath.concat('\\');
-			DEBUG_LOG(("Mod dir is '%s'.\n", modPath.str()));
-			TheWritableGlobalData->m_modDir = modPath;
-		}
-		else
-		{
-			DEBUG_LOG(("Mod file is '%s'.\n", modPath.str()));
-			TheWritableGlobalData->m_modBIG = modPath;
-		}
-
-		return 2;
-	}
-	return 1;
+    if(!TheWritableGlobalData || num<2 || !args || !args[1]) throw ERROR_BAD_ARG;
+    std::string selected=args[1];
+    if(selected.empty() || selected.find(':')!=std::string::npos) throw ERROR_BAD_ARG;
+    for(char& byte:selected) if(byte=='\\') byte='/';
+    if(selected.front()!='/') {
+        selected=std::string(TheGlobalData->getPath_UserData().str())+selected;
+        if(!TheNativeUserStorage || !TheNativeUserStorage->relativeDataPath(selected)) throw ERROR_BAD_ARG;
+    }
+    struct stat info{};
+    if(::stat(selected.c_str(),&info)!=0) throw ERROR_BAD_ARG;
+    if(S_ISDIR(info.st_mode)) TheWritableGlobalData->m_modDir=selected.c_str();
+    else if(S_ISREG(info.st_mode)) TheWritableGlobalData->m_modBIG=selected.c_str();
+    else throw ERROR_BAD_ARG;
+    return 2;
 }
 
 static CommandLineParam params[] =
@@ -1259,18 +1253,21 @@ void parseCommandLine(int argc, char *argv[])
 	int arg=1, param;
 	Bool found;
 
-#ifdef DEBUG_LOGGING
-	DEBUG_LOG(("Command-line args:"));
-	int debugFlags = DebugGetFlags();
-	DebugSetFlags(debugFlags & ~DEBUG_FLAG_PREPEND_TIME); // turn off timestamps
-	for (arg=1; arg<argc; arg++)
-	{
-		DEBUG_LOG((" %s", argv[arg]));
-	}
-	DEBUG_LOG(("\n"));
-	DebugSetFlags(debugFlags); // turn timestamps back on iff they were on before
-	arg = 1;
-#endif // DEBUG_LOGGING
+    if(argc<0 || (argc && !argv)) throw ERROR_BAD_ARG;
+    for(int index=0;index<argc;++index) if(!argv[index]) throw ERROR_BAD_ARG;
+    // Validate active value options before dispatch changes any configuration.
+    for(int index=1;index<argc;++index) {
+        const bool integer=!strcasecmp(argv[index],"-xres") || !strcasecmp(argv[index],"-yres") ||
+            !strcasecmp(argv[index],"-fullVersion") || !strcasecmp(argv[index],"-playStats");
+        const bool mod=!strcasecmp(argv[index],"-mod");
+        if(integer || mod) {
+            if(index+1>=argc) throw ERROR_BAD_ARG;
+            if(integer) (void)commandInteger(argv[index+1]);
+            ++index;
+        }
+    }
+    ModPublicationGuard modPublication(TheWritableGlobalData);
+
 
 	while (arg<argc)
 	{
@@ -1294,5 +1291,9 @@ void parseCommandLine(int argc, char *argv[])
 		}
 	}
 
-	TheArchiveFileSystem->loadMods();
+	if(TheWritableGlobalData && (TheGlobalData->m_modBIG.isNotEmpty() || TheGlobalData->m_modDir.isNotEmpty())) {
+        if(!TheFileSystem) throw ERROR_BAD_ARG;
+        TheFileSystem->mountReadOnlyMods(TheGlobalData->m_modBIG.str(),TheGlobalData->m_modDir.str());
+    }
+    modPublication.admitted=true;
 }

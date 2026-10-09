@@ -1118,3 +1118,33 @@ checkpoint in the existing incomplete slice, not startup/scenario acceptance.
 Continue native CommandLine mod binding and protected StatsCollector/capabilities,
 then full callback/map/factory/GameLogic/Recorder/scenario gates. Evidence:
 `evidence/qa/N2-runtime-support.md`, latest native namespace cohort.
+
+Continue fromfa973fde with actual CommandLine provider integration. Inspect the
+complete option table/handlers together, including obsolete DX floating-point
+toggles, raw argv logging and authoring writes, before compiling the provider.
+Retain active original option names and effects, case-insensitive matching and
+unknown-option skipping. Validate argv shape and integer encodings before
+dispatch (defined overflow/malformed rejection); consume value options correctly.
+Native mod selection resolves relative names within configured user data, uses
+the admitted native archive namespace, and restores both mod publications with
+no allocation if admission fails. This does not claim rollback of unrelated
+options or complete GameEngine startup. Reject unsupported asset/debug authoring
+requests explicitly instead of writing CWD, assets or inventing DX state. Cover
+the actual release table, malformed/missing/overflow/null inputs, supplied mod
+selection and all allocation failure/retry/terminal paths through three repeated
+original GlobalData/storage lifetimes under GCC/Clang sanitizers. Keep protected
+StatsCollector and complete debug-authoring execution pending; its inspected
+writer/update/end ordering findings must be retained durably. This remains the
+existing N2 slice03, not a new tiny plan or a replacement simulation.
+
+CommandLine supporting checkpoint: related71/71 PASS normal18.61s/GCCsan64.71s/
+Clangsan63.92s, all checks intact; final added Version effect assertion PASS
+all3 in0.15/0.62/0.58s. Three complete original owner lifetimes exercise every60
+allocation failure/retry pair and exact terminal60. Final canonical555
+SHA62f420b4d18d6fbc13cd6ea603f3a131b30e8c38c557f3bd77eacf4a5ad6784d;
+toolchain560 SHA95f981d78922a4e8d49cb3334cce39e45564b488ea22e44c2983d9206a449938.
+QA records the related-run pre-final-assert identities and initial fixture defects
+honestly. Link-only root fails11/223/234, never executed. Full201 pending,
+StatsCollector/capability/callback/CPU map and actual process/scenario pending.
+Keep this slice and N2 in progress. Continue from this actual source integration,
+not archived providers or acceptance. See QA's current CommandLine cohort.
