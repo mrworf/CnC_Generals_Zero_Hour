@@ -3664,6 +3664,42 @@ retires prior shared backing and pairs new[] with scalar delete. Both the array
 ownership mismatch and live-cell/shared-owner retirement must be addressed in
 that same batch; constructor pointer initialization alone is insufficient.
 
+AI ownership batch source review (not yet acceptance): `AI::newOverride` copies
+scalar data and clones source side/build lists. Both `TAiData::addSideInfo` and
+`addFactionBuildList` prepend, so the clone reverses source list order; preserve
+this behavior. `AISideBuildList::addInfo` instead appends BuildListInfo nodes,
+whose existing guarded `duplicate()` preserves build-node order. A valid empty
+build list has a null head; never dereference it during override cloning.
+`AISideInfo` has five optional skill sets whose original constructor did not
+initialize their counts or storage: whole-node assignment must not copy
+indeterminate values. Empty, zero-active-skill defaults fix this source bug without
+changing configured skills. `AIGroup` acquires its source ID after member
+construction; the enclosing group's list insertion can still fail and must
+retire the group and restore the cursor. Whole AI destruction also owns any
+groups not already removed by `reset`. Nonempty group members, classified map
+allocation and complete INI parse transactions remain pending evidence.
+
+Classified-map continuation source anchors: `Pathfinder::newMap` intentionally
+runs twice during source loading and reuses same-sized backing on its second
+call. It currently publishes bounds before zone blocks, ground backing, index
+tables and active/wall layers have all allocated. Batch that entire admission
+with classification and original registered-object footprints rather than
+testing an empty artificial grid. `PathfindZoneManager::allocateZones` frees old
+tables and advertises capacity before acquiring all six arrays; its early-return
+guard checks only the cliff array. A partial allocation can therefore make a
+retry skip missing backing. `allocateBlocks` similarly changes extents before
+both contiguous backing and its index table exist. Stage paired acquisitions,
+retain all failure/retry pairs, and prove legitimate two-pass reuse and full
+retirement in the next map/layer/bridge/root batch. These source findings are
+pending implementation, not successful map acceptance.
+
+The AI/pathfinder ownership checkpoint now validates constructor/reset/destructor,
+shared cell-info backing, actual pooled override/group ownership and native
+terrain's empty-wall dispatch under normal GCC and both compiler sanitizer
+configurations. See `evidence/qa/N2-ai-pathfinder-ownership-checkpoint.md` for
+frozen source, exact allocation manifests and actual typed-pool exhaustion.
+This does not validate the classified-map allocation hazards described above.
+
 ### Retained visual-owned terrain admission and deformation
 
 The full source WorldHeightMap constructor reads HeightMapData, BlendTileData

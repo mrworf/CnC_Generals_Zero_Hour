@@ -14,6 +14,8 @@
 #include "GameLogic/PolygonTrigger.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/SidesList.h"
+#include "GameLogic/AI.h"
+#include "GameLogic/AIPathfind.h"
 #include <algorithm>
 #include <bit>
 #include <cmath>
@@ -404,6 +406,16 @@ void terrainLogic(Context& context){context.load(wire());DeviceFixture visual;Lo
   require(visual.heightMap().bytes().data()==visualBacking && visual.filename()=="GeneratedReplacement.map" && visual.dirty==dirty && api.getSourceFilename()=="GeneratedQuery.map","source query mode never loads retained visual terrain");
   bool failed=false;try{api.getLayerHeight(0,0,LAYER_WALL);}catch(ErrorCode){failed=true;}
   require(failed,"wall layer requires actual AI/pathfinder, not a ground-only substitute");
+  struct WallAI:AI {void setWallHeight(Real height){m_aiData->m_wallHeight=height;pathfinder()->reset();}};
+  struct PublishedWall {
+    AI* previous=TheAI;std::unique_ptr<WallAI> owner=std::make_unique<WallAI>();
+    PublishedWall(){TheAI=owner.get();owner->init();}
+    ~PublishedWall(){owner.reset();TheAI=previous;}
+  } wall;
+  wall.owner->setWallHeight(40);
+  require(api.getLayerHeight(0,0,LAYER_WALL,nullptr,FALSE)==40 &&
+    api.getLayerHeight(0,0,LAYER_WALL,nullptr,TRUE)==api.getGroundHeight(0,0),
+    "actual source AI wall height and clipped empty-wall ground fallback");
 }
 void terrainLogicNegative(Context& context){context.load(wire());DeviceFixture visual;LogicFixture logic(visual);const auto valid=providerWorld();logicLoad(logic,valid,"GeneratedAccepted.map");
   auto reject=[&](const std::string& bytes,bool deviceFailure=false){const auto* objects=MapObject::getFirstMapObject();const auto* triggers=PolygonTrigger::getFirstPolygonTrigger();

@@ -2175,3 +2175,46 @@ objects before fallible helpers. Resolve allocation/publication/retirement
 together, preserving actual wall/layer and model-derived BridgeInfo semantics,
 then bind concrete native root/partition/ghost/startup/simulation. Verified source
 anchors are durable in original-engine-formats.md. Slice03/N2 remains incomplete.
+
+AI/pathfinder ownership implementation refinement (parent7176f853, clean start):
+guard actual TAiData/Pathfinder constructor acquisitions, initialize source reset
+inputs before use, and reset all owned cells/layers/zones before shared-info
+release. Shared cell-info backing is acquired per owner without evicting another
+owner's live cells; acquired info units retain backing until both owner and cell
+counts reach zero. Pair array ownership correctly and reject duplicate/foreign
+info retirement before mutation. Batch AI group acquisition/ID rollback and
+whole-owner group cleanup with strong override side/build-list cloning so later
+fallible helpers cannot leave stale registered ownership. Preserve valid source
+group sequencing, data defaults and override list order. Exercise real AI and
+Pathfinder constructors, concurrent owners, all30000 info units/exhaustion/reuse,
+last-owner/live-cell retirement, repeated reset/destruction, nonempty override
+and group failure/retry using original pooled nodes. Bind actual wall-height and
+clipped empty-wall queries to native terrain in the existing generated-world
+fixture. Validate complete heap manifests and actual typed pool exhaustion under
+all3 configurations. Full map/layer/zone allocation, nonempty wall/bridge model
+geometry and concrete root admission remain the next coupled integration work;
+do not infer those from this ownership checkpoint or create another plan.
+
+Ownership fixture review also found AISideInfo's five optional skill sets are
+uninitialized before whole-node override copying. Initialize each to an empty
+defined representation (zero active skills); populated parsed skill sets remain
+unchanged. The generated fixture retains source side-list prepend reversal and
+BuildListInfo append order, checks nonempty independent build clones and empty
+build lists, and exercises each actual typed pool separately from heap manifests.
+
+Actual AI/pathfinder ownership checkpoint: all3 full configured builds, focused5
+and related87 PASS on canonical622 source6f61efe1 / inclusive629 source5e82472b.
+The real concurrent owner/cell-info lifetime, source capacity30000, actual cell
+reset, override clone and group constructor/registration/reset/destruction paths
+now retire exactly. Standard-allocation terminals are coldAI3, warmAI2,
+override1 and group1; every failure has a corrected retry. Actual side/build/
+build-node/group typed-pool exhaustion has separate failure/retry proof. Native
+TerrainLogic's wall query is now tested with actual AI/pathfinder wall height and
+clipped empty-wall behavior. Evidence:
+`evidence/qa/N2-ai-pathfinder-ownership-checkpoint.md`. Commit boundary:
+`delivery: preserve original AI and pathfinder ownership`.
+Full300 not run; slice03/N2 incomplete. Continue coupled classified map/zone/layer
+admission with source two-pass reuse, nonempty walls/bridge model-derived bounds
+and registered-object rollback, then concrete root/partition/ghost/startup and
+compiler-matching original simulation. Original source allocation hazards for
+the next batch are durable in original-engine-formats.md, not accepted behavior.

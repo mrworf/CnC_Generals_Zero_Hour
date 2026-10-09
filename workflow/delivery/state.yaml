@@ -26,16 +26,16 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "26da2238885d0bd59dfbe9263baa9c4c4e1e721f",
-    "label": "original-terrain-world-admission",
-    "evidence": "evidence/qa/N2-native-terrain-logic-checkpoint.md",
-    "validation": "All3 configured builds, focused3 and related83 PASS. Native TerrainLogic actual world/graph/terrain/time/lighting admission retains late rollback; prefixes[0,259), exact terminal259 and every corrected retry retire standard and source pool units across three owners",
-    "next": "Complete coupled native AI/pathfinder/bridge ownership and model-derived BridgeInfo; bind mandatory concrete headless/root providers, final newMap/partition/ghost ordering and compiler-matching original startup/simulation",
+    "parent": "7176f853623b56f38b535d17128c91e3e1ddd53d",
+    "label": "original-ai-pathfinder-ownership",
+    "evidence": "evidence/qa/N2-ai-pathfinder-ownership-checkpoint.md",
+    "validation": "All3 configured builds, focused5 and related87 PASS. Actual concurrent Pathfinder owners and 30000 cell infos, TAiData override and group registration/reset/destruction retire exactly; complete heap failure/retry terminals coldAI3/warmAI2/override1/group1 and separate actual typed-pool exhaustion",
+    "next": "Complete coupled classified map/zone/layer admission with source two-pass reuse, nonempty walls and model-derived BridgeInfo/registered bridge rollback; then concrete root/partition/ghost/startup and compiler-matching original simulation",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 native TerrainLogic combined map admission verified. All3 builds/focused3/related83 PASS on canonical620 source26e0eb24. Distinct world/provider lighting, shadow, names/IDs, extents, filenames and original graph restore through late failure; query mode preserves prior visual state. Full296 not run. Device/road-bridge hooks remain abstract. Next coupled actual AI/pathfinder/bridge/root ownership: constructor backing initialization, shared cell-info new[]/delete mismatch and premature release, TAiData acquisition guard, factory-owned bridge template cache and registered object rollback. Preserve model-derived bridge width/corners and actual wall/layer semantics, then concrete roots/partition/ghost/startup/simulation. Slice03/N2 incomplete.",
-  "transaction_parent": "26da2238885d0bd59dfbe9263baa9c4c4e1e721f",
+  "resume_point": "N2 plan01/slice03 actual AI/pathfinder ownership verified; all3 builds/focused5/related87 PASS on canonical622 source6f61efe1. Shared cell backing, source override list order, group registry/ID rollback and actual terrain empty-wall dispatch verified. Full300 not run. Continue coupled classified map/zone/layer and nonempty wall/bridge/root admission; preserve source two-pass newMap reuse and all failure/retry pairs. Slice03/N2 incomplete.",
+  "transaction_parent": "7176f853623b56f38b535d17128c91e3e1ddd53d",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -44,28 +44,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-native-terrain-logic-checkpoint.md",
+  "evidence": "evidence/qa/N2-ai-pathfinder-ownership-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Complete coupled native AI/pathfinder/bridge ownership and model-derived BridgeInfo; bind mandatory concrete headless/root providers, final newMap/partition/ghost ordering and compiler-matching original startup/simulation",
+  "next": "Complete coupled classified map/zone/layer admission with source two-pass reuse, nonempty walls and model-derived BridgeInfo/registered bridge rollback; then concrete root/partition/ghost/startup and compiler-matching original simulation",
   "implementation_checkpoint": {
-    "label": "original-terrain-world-admission",
-    "reason": "Actual native TerrainLogic admission passes related83 all3, including original nonempty world and staged provider rollback. Mandatory concrete device/bridge/root, actual nonempty wall/bridge and whole startup/simulation remain pending",
-    "prior_commit": "26da2238",
-    "canonical_source_sha256": "26e0eb246c0c71bc01f153ced28d1fadf1985d46a56b72252f1a2a23d464826e",
-    "toolchain_inclusive_sha256": "af4054cb6f1483f03b0779adf70f76ca918246ed7bdee7d99057212a3e23bc1b",
-    "configured_suite_tests": 296,
-    "related_suite_tests_passed": 83,
+    "label": "original-ai-pathfinder-ownership",
+    "reason": "Actual AI/pathfinder ownership and native wall dispatch pass all3 affected matrices; classified map/wall/bridge/root startup and original simulation remain pending",
+    "prior_commit": "7176f853",
+    "canonical_source_sha256": "6f61efe126b833f504210c247b2b7be185c0c8738daea769c98e2b1dd8c993f8",
+    "toolchain_inclusive_sha256": "5e82472b49f1e9ed2b5db9db1a52b15f819913e845daf649eb95f1716d8d6e63",
+    "configured_suite_tests": 300,
+    "related_suite_tests_passed": 87,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; related83 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; related87 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-native-terrain-logic-checkpoint.md"
+    "evidence": "evidence/qa/N2-ai-pathfinder-ownership-checkpoint.md"
   }
 }

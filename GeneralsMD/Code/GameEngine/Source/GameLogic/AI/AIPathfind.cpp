@@ -28,6 +28,9 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "GameLogic/AIPathfind.h"
+#include <cstdint>
+#include <limits>
+#include <memory>
 
 #include "Common/PerfTimer.h"
 #include "Common/Player.h"
@@ -1103,41 +1106,44 @@ Real Path::computeFlightDistToGoal( const Coord3D *pos, Coord3D& goalPos )
 enum { PATHFIND_CELLS_PER_FRAME=5000}; // Number of cells we will search pathfinding per frame.
 enum {CELL_INFOS_TO_ALLOCATE = 30000};
 PathfindCellInfo *PathfindCellInfo::s_infoArray = NULL;
+std::size_t PathfindCellInfo::s_owners = 0;
+std::size_t PathfindCellInfo::s_used = 0;
 PathfindCellInfo *PathfindCellInfo::s_firstFree = NULL;						
 /**
  * Allocates a pool of pathfind cell infos.
  */
-void PathfindCellInfo::allocateCellInfos(void) 
+void PathfindCellInfo::allocateCellInfos(void)
 {
-	releaseCellInfos();
-	s_infoArray = MSGNEW("PathfindCellInfo") PathfindCellInfo[CELL_INFOS_TO_ALLOCATE];	// pool[]ify
-	s_infoArray[CELL_INFOS_TO_ALLOCATE-1].m_pathParent = NULL;
-	s_infoArray[CELL_INFOS_TO_ALLOCATE-1].m_isFree = true;
-	s_firstFree = s_infoArray;
-	for (Int i=0; i<CELL_INFOS_TO_ALLOCATE-1; i++) {
-		s_infoArray[i].m_pathParent = &s_infoArray[i+1];
-		s_infoArray[i].m_isFree = true; 
+	if (s_owners == std::numeric_limits<std::size_t>::max()) throw ERROR_BAD_ARG;
+	if (s_infoArray) {
+		++s_owners;
+		return;
 	}
+	std::unique_ptr<PathfindCellInfo[]> candidate(new PathfindCellInfo[CELL_INFOS_TO_ALLOCATE]);
+	for (Int i=0; i<CELL_INFOS_TO_ALLOCATE; ++i) {
+		candidate[i].m_pathParent = i+1<CELL_INFOS_TO_ALLOCATE ? &candidate[i+1] : NULL;
+		candidate[i].m_isFree = true;
+	}
+	s_infoArray = candidate.release();
+	s_firstFree = s_infoArray;
+	s_owners = 1;
 }
 
 /**
  * Releases a pool of pathfind cell infos.
  */
-void PathfindCellInfo::releaseCellInfos(void) 
+void PathfindCellInfo::releaseCellInfos(void)
 {
-	if (s_infoArray==NULL) {
-		return; // haven't allocated any yet.
-	}
-	Int count=0;
-	while (s_firstFree) {
-		count++;
-		DEBUG_ASSERTCRASH(s_firstFree->m_isFree, ("Should be freed."));
-		s_firstFree = s_firstFree->m_pathParent;
-	}
-	DEBUG_ASSERTCRASH(count==CELL_INFOS_TO_ALLOCATE, ("Error - Allocated cellinfos."));
-	delete s_infoArray;
+	if (s_owners) --s_owners;
+	retireUnusedBacking();
+}
+void PathfindCellInfo::retireUnusedBacking() noexcept
+{
+	if (s_owners || s_used) return;
+	auto* backing = s_infoArray;
 	s_infoArray = NULL;
 	s_firstFree = NULL;
+	delete[] backing;
 }
 
 /**
@@ -1145,6 +1151,7 @@ void PathfindCellInfo::releaseCellInfos(void)
  */
 PathfindCellInfo *PathfindCellInfo::getACellInfo(PathfindCell *cell,const ICoord2D &pos) 
 {
+	if (!s_owners) return NULL;
 	PathfindCellInfo *info = s_firstFree;
 	if (s_firstFree) {
 		DEBUG_ASSERTCRASH(s_firstFree->m_isFree, ("Should be freed."));
@@ -1167,6 +1174,7 @@ PathfindCellInfo *PathfindCellInfo::getACellInfo(PathfindCell *cell,const ICoord
 		info->m_obstacleIsFence = false;
 		info->m_obstacleIsTransparent = false;
 		info->m_blockedByAlly = false;
+		++s_used;
 	}
 	return info;
 }
@@ -1176,12 +1184,18 @@ PathfindCellInfo *PathfindCellInfo::getACellInfo(PathfindCell *cell,const ICoord
  */
 void PathfindCellInfo::releaseACellInfo(PathfindCellInfo *theInfo) 
 {
+	const auto base=reinterpret_cast<std::uintptr_t>(s_infoArray);
+	const auto address=reinterpret_cast<std::uintptr_t>(theInfo);
+	if (!s_infoArray || address<base || address-base>=sizeof(PathfindCellInfo)*CELL_INFOS_TO_ALLOCATE ||
+	    (address-base)%sizeof(PathfindCellInfo) || theInfo->m_isFree || !s_used) throw ERROR_BAD_ARG;
 	DEBUG_ASSERTCRASH(!theInfo->m_isFree, ("Shouldn't be free."));
 	//@ todo -fix this assert on usa04.  jba.
 	//DEBUG_ASSERTCRASH(theInfo->m_obstacleID==0, ("Shouldn't be obstacle."));
 	theInfo->m_pathParent = s_firstFree;
 	s_firstFree = theInfo;
 	s_firstFree->m_isFree = true;
+	--s_used;
+	retireUnusedBacking();
 }
 
 //-----------------------------------------------------------------------------------
@@ -3825,15 +3839,16 @@ void PathfindLayer::classifyWallMapCell( Int i, Int j , PathfindCell *cell, Obje
 
 //----------------------- Pathfinder ---------------------------------------
 
-Pathfinder::Pathfinder( void ) :m_map(NULL)
+Pathfinder::Pathfinder( void ) :m_blockOfMapCells(NULL), m_map(NULL)
 {
 	debugPath = NULL;
 	PathfindCellInfo::allocateCellInfos();
-	reset();
+	try { reset(); } catch (...) { PathfindCellInfo::releaseCellInfos(); throw; }
 }
 
 Pathfinder::~Pathfinder( void )
 {
+	reset(); // Cells and layers retire acquired info units before shared backing.
 	PathfindCellInfo::releaseCellInfos();
 }
 

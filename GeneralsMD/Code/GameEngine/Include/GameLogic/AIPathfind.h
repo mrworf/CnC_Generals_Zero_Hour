@@ -28,6 +28,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 #ifndef _PATHFIND_H_
 #define _PATHFIND_H_												 
 
@@ -217,6 +219,8 @@ public:
 
 protected:
 	static PathfindCellInfo *s_infoArray;
+	static std::size_t s_owners, s_used;
+	static void retireUnusedBacking() noexcept;
 	static PathfindCellInfo *s_firstFree;							///< 
 
 

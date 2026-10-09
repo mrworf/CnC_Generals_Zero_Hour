@@ -97,11 +97,11 @@ public:
 	Int					m_easy;						///< Number of gatherers to use in easy, normal & hard
 	Int					m_normal;	
 	Int					m_hard;
-	TSkillSet		m_skillSet1;
-	TSkillSet		m_skillSet2;
-	TSkillSet		m_skillSet3;
-	TSkillSet		m_skillSet4;
-	TSkillSet		m_skillSet5;
+	TSkillSet		m_skillSet1{};
+	TSkillSet		m_skillSet2{};
+	TSkillSet		m_skillSet3{};
+	TSkillSet		m_skillSet4{};
+	TSkillSet		m_skillSet5{};
 	AsciiString m_baseDefenseStructure1;
 	AISideInfo *m_next;
 };

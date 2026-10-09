@@ -44,6 +44,7 @@
 #include "GameLogic/SidesList.h"
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/Weapon.h"
+#include <memory>
 
 extern void addIcon(const Coord3D *pos, Real width, Int numFramesDuration, RGBColor color);
 
@@ -307,11 +308,11 @@ AI *TheAI = NULL;
 /**
  * Constructor for the AI system
  */
-AI::AI( void )
+AI::AI( void ) : m_pathfinder(NULL), m_aiData(NULL), m_nextGroupID(0), m_nextFormationID(NO_FORMATION_ID)
 {
-	m_aiData = NEW TAiData;
-	m_pathfinder = NEW Pathfinder;
-	m_nextFormationID = NO_FORMATION_ID;
+	std::unique_ptr<TAiData> data(new TAiData);
+	std::unique_ptr<Pathfinder> pathfinder(new Pathfinder);
+	m_aiData = data.release(); m_pathfinder = pathfinder.release();
 }
 
 /**
@@ -370,6 +371,10 @@ void AI::update( void )
  */
 AI::~AI()
 {
+	while (!m_groupList.empty()) {
+		if (m_groupList.front()) destroyGroup(m_groupList.front());
+		else m_groupList.pop_front();
+	}
 	if (m_pathfinder) {
 		delete m_pathfinder;
 	}
@@ -386,27 +391,29 @@ AI::~AI()
 void AI::newOverride(void)
 {
 	TAiData *cur = m_aiData;
-	m_aiData = NEW TAiData;
-	*m_aiData = *cur;
-	m_aiData->m_sideInfo = NULL;
+	std::unique_ptr<TAiData> candidate(new TAiData);
+	*candidate = *cur;
+	candidate->m_sideInfo = NULL; candidate->m_sideBuildLists = NULL; candidate->m_next = NULL;
 	AISideInfo *info = cur->m_sideInfo;
 	while (info) {
 		AISideInfo *newInfo = newInstance(AISideInfo);
 		*newInfo = *info;
 		newInfo->m_next = NULL;
-		addSideInfo(newInfo);
+		candidate->addSideInfo(newInfo);
 		info = info->m_next;
 	}									
-	m_aiData->m_sideBuildLists = NULL;
 	AISideBuildList *build = cur->m_sideBuildLists;
 	while (build) {
-		AISideBuildList *newbuild = newInstance(AISideBuildList)(build->m_side);
+		auto retire=[](AISideBuildList* value){value->deleteInstance();};
+		std::unique_ptr<AISideBuildList,decltype(retire)> owned(newInstance(AISideBuildList)(build->m_side),retire);
+		AISideBuildList *newbuild = owned.get();
 		newbuild->m_next = NULL;
-		newbuild->m_buildList = build->m_buildList->duplicate();
-		m_aiData->addFactionBuildList(newbuild);
+		newbuild->m_buildList = build->m_buildList ? build->m_buildList->duplicate() : NULL;
+		candidate->addFactionBuildList(owned.release());
 		build = build->m_next;
 	}
-	m_aiData->m_next = cur;
+	candidate->m_next = cur;
+	m_aiData = candidate.release();
 }
 
 void AI::addSideInfo(AISideInfo *infoToAdd)
@@ -446,12 +453,15 @@ void AI::parseAiDataDefinition( INI* ini )
  */
 AIGroup *AI::createGroup( void )
 {
+	if (TheAI != this) throw ERROR_BAD_ARG;
+	const auto previousID = m_nextGroupID;
 	// create a new instance
 	AIGroup *group = newInstance(AIGroup);
 
 	// add it to the list
 //	DEBUG_LOG(("***AIGROUP %x is being added to m_groupList.\n", group ));
-	m_groupList.push_back( group );
+	try { m_groupList.push_back( group ); }
+	catch (...) { group->deleteInstance(); m_nextGroupID=previousID; throw; }
 
 	return group;
 }
