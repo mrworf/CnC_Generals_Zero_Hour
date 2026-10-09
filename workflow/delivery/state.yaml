@@ -26,7 +26,7 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "scope": "remaining",
-  "resume_point": "N2 same plan01/slice03 continues from adf48b9e with original map-preview placement, transactional shared CPU layout, protected streamed preview copying and actual scalar GameSlot visibility/alliance. All configured builds pass all3; focused7 PASS1.09s/8.26s/4.82s and related89 PASS18.41s/79.78s/71.98s. Complete repeated owners and every layout5/copy allocation21/copy storage7 fault/retry terminal pass. Frozen canonical570 SHAfc26d016de1d840104ac96874c0c52eeb0031cf4ccfcd22d1e8352aac08ba9e8; toolchain577 SHAb06a60d3ed6c94fd552914d84e6d78d1d45d61d39173005cc5b9bd323fbf05a7. Startup link-only probes fail4/6/13; none executed. GUI/window/image lifetime binding remains compiled, not accepted. Full222 not run. Continue diplomacy/capability/native boundaries, actual factories/startup/world/scenario; N2/slice03 incomplete. No agents/vendor/retail/recovery changes.",
+  "resume_point": "N2 plan01/slice03 diplomacy checkpoint: all configured builds pass all3; related96 PASS18.40s/81.12s/72.95s, briefing fault/retry terminals append6/clear2/attach2 all3. Actual animation constructor terminal8 passes normal/GCCsan; Clang fixture link and nonnull GUI remain pending. Root link-only probes fail1/1/7, never executed; full229 not run. N2/slice03 incomplete. See evidence/qa/N2-diplomacy-checkpoint.md.",
   "transaction_parent": "11295c4feb535f97978b8335632440fccae82794",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -36,28 +36,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-map-preview-checkpoint.md",
+  "evidence": "evidence/qa/N2-diplomacy-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Implement complete original diplomacy/capability/native boundary cohort, including missing native IME/warnings/terrain/hosting and DisconnectMenu/LANAPI source RTTI. Then actual headless factories/startup/world/compiler-matching scenario. Do not substitute stubs or confuse CPU map/slot fixtures with GUI lifecycle acceptance.",
+  "next": "Complete native capability/IME/warning/terrain/hosting providers, pending Clang animation ownership and real GUI lifecycle; then actual headless factories/startup/world/compiler-matching scenario. No fake providers or vendor changes.",
   "implementation_checkpoint": {
-    "label": "native-original-map-preview",
-    "reason": "Original map placement bindings plus actual shared CPU/storage/slot visibility ownership; original GUI/default factories and startup/scenario remain pending",
-    "prior_commit": "adf48b9e",
-    "canonical_source_sha256": "fc26d016de1d840104ac96874c0c52eeb0031cf4ccfcd22d1e8352aac08ba9e8",
-    "toolchain_inclusive_sha256": "b06a60d3ed6c94fd552914d84e6d78d1d45d61d39173005cc5b9bd323fbf05a7",
-    "configured_suite_tests": 222,
-    "related_suite_tests_passed": 89,
+    "label": "native-original-diplomacy",
+    "reason": "Actual retained briefing/DisconnectMenu ownership and compiled guarded diplomacy lifecycle; native factories and original startup/scenario remain pending",
+    "prior_commit": "55f239840b6e9353bd18baa25dbea5c30a013ccb",
+    "canonical_source_sha256": "2708266f4b85f6f4b064553838f6ea48bd8bf46842c84970246f8b4ed4ffb944",
+    "toolchain_inclusive_sha256": "b4387b4ab456b68ea44f14e1dfe6704bcac10d44dfd5a2add340862984f621b4",
+    "configured_suite_tests": 229,
+    "related_suite_tests_passed": 96,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; focused7 and related89 PASS all3 on frozen source",
+    "full_current_matrix": "not run; related96 including focused7 PASS all3 on frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-map-preview-checkpoint.md"
+    "evidence": "evidence/qa/N2-diplomacy-checkpoint.md"
   }
 }

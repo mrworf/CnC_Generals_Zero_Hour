@@ -57,6 +57,8 @@
 #include "GameClient/GameWindow.h"
 #include "GameClient/Display.h"
 #include "GameClient/ProcessAnimateWindow.h"
+#include "Common/GameMemory.h"
+#include <memory>
 //-----------------------------------------------------------------------------
 // DEFINES ////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
@@ -118,17 +120,22 @@ static void clearWinList(AnimateWindowList &winList)
 	}
 }
 
-AnimateWindowManager::AnimateWindowManager( void )
+static UnsignedInt animationViewportWidth(){if(!TheDisplay)throw ERROR_BAD_ARG;return TheDisplay->getWidth();}
+AnimateWindowManager::AnimateWindowManager():AnimateWindowManager(animationViewportWidth()){}
+AnimateWindowManager::AnimateWindowManager(UnsignedInt viewportWidth)
 {
 // we don't allocate many of these, so no MemoryPools used
-	m_slideFromRight = NEW ProcessAnimateWindowSlideFromRight;
-	m_slideFromRightFast = NEW ProcessAnimateWindowSlideFromRightFast;
-	m_slideFromLeft = NEW ProcessAnimateWindowSlideFromLeft;
-	m_slideFromTop = NEW ProcessAnimateWindowSlideFromTop;
-	m_slideFromTopFast = NEW ProcessAnimateWindowSlideFromTopFast;
-	m_slideFromBottom = NEW ProcessAnimateWindowSlideFromBottom;
-	m_spiral = NEW ProcessAnimateWindowSpiral;
-	m_slideFromBottomTimed = NEW ProcessAnimateWindowSlideFromBottomTimed;
+  auto right=std::make_unique<ProcessAnimateWindowSlideFromRight>();
+  auto rightFast=std::make_unique<ProcessAnimateWindowSlideFromRightFast>();
+  auto left=std::make_unique<ProcessAnimateWindowSlideFromLeft>();
+  auto top=std::make_unique<ProcessAnimateWindowSlideFromTop>();
+  auto topFast=std::make_unique<ProcessAnimateWindowSlideFromTopFast>();
+  auto bottom=std::make_unique<ProcessAnimateWindowSlideFromBottom>();
+  auto spiral=std::make_unique<ProcessAnimateWindowSpiral>(viewportWidth);
+  auto bottomTimed=std::make_unique<ProcessAnimateWindowSlideFromBottomTimed>();
+  m_slideFromRight=right.release();m_slideFromRightFast=rightFast.release();
+  m_slideFromLeft=left.release();m_slideFromTop=top.release();m_slideFromTopFast=topFast.release();
+  m_slideFromBottom=bottom.release();m_spiral=spiral.release();m_slideFromBottomTimed=bottomTimed.release();
 	m_winList.clear();
 	m_needsUpdate = FALSE;
 	m_reverse = FALSE;
@@ -255,7 +262,17 @@ void AnimateWindowManager::registerGameWindow(GameWindow *win, AnimTypes animTyp
 	}
 
 	// Create a new AnimateWindow class and fill in it's data.
+  ICoord2D previous;win->winGetPosition(&previous.x,&previous.y);
+  struct PositionRollback {
+    GameWindow* window;ICoord2D position;Bool committed=FALSE;
+    ~PositionRollback(){if(!committed)window->winSetPosition(position.x,position.y);}
+  } positionRollback{win,previous};
+  struct DurationRollback {
+    ProcessAnimateWindowSlideFromBottomTimed* processor;UnsignedInt duration;Bool committed=FALSE;
+    ~DurationRollback(){if(!committed)processor->setMaxDuration(duration);}
+  } durationRollback{m_slideFromBottomTimed,m_slideFromBottomTimed->getMaxDuration()};
 	AnimateWindow *animWin = newInstance(AnimateWindow);	
+  MemoryPoolObjectHolder candidate(animWin);
 	animWin->setGameWindow(win);
 	animWin->setAnimType(animType);
 	animWin->setNeedsToFinish(needsToFinish);
@@ -277,6 +294,9 @@ void AnimateWindowManager::registerGameWindow(GameWindow *win, AnimTypes animTyp
 	}
 	else
 		m_winList.push_back(animWin);
+  candidate.release();
+  positionRollback.committed=TRUE;
+  durationRollback.committed=TRUE;
 }
 
 ProcessAnimateWindow *AnimateWindowManager::getProcessAnimate( AnimTypes animType )

@@ -759,3 +759,16 @@ unchanged. Startup probes still fail4/6/13 (normal/GCCsan/Clangsan); the GCCsan
 closure explicitly exposes missing DisconnectMenu/LANAPI RTTI. Counts are not
 startup acceptance. Physical/non-null GUI bindings and complete factories remain
 pending. See `evidence/qa/N2-map-preview-checkpoint.md`.
+
+Actual Diplomacy.cpp, independent retained briefing ownership and genuine
+DisconnectMenu lifetime/RTTI now compile in original_logical_client. The excluded
+GameSpy buddy provider is not admitted; LAN/skirmish paths retain source behavior.
+TheLAN borrows the existing abstract interface, avoiding artificial concrete
+Windows RTTI admission without supplying a native transport. All configured
+targets build with unchanged instrumentation. Root link-only diagnostics now
+fail1/1/7 (normal/GCCsan/Clangsan): capability admission on all, plus Clang's
+IME/warning/terrain/skybox/hosting providers. None is executed. A pending actual
+animation fixture is EXCLUDE_FROM_ALL, not CTest or startup evidence: constructor
+fault/retry terminal8 passes normal/GCCsan, but Clang's native closure does not
+link yet. Registered windows and nonnull diplomacy GUI retirement remain pending.
+See `evidence/qa/N2-diplomacy-checkpoint.md`.

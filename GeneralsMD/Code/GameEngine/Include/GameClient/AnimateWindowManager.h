@@ -46,6 +46,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include <list>
 
 #ifndef __ANIMATEWINDOWMANAGER_H_
 #define __ANIMATEWINDOWMANAGER_H_
@@ -157,6 +158,7 @@ class AnimateWindowManager : public SubsystemInterface
 {
 public:
 	AnimateWindowManager( void );
+  explicit AnimateWindowManager(UnsignedInt viewportWidth);
 	~AnimateWindowManager( void );
 
 	// Inhertited from subsystem ====================================================================

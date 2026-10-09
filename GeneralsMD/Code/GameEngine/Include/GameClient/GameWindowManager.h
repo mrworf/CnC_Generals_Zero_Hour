@@ -219,6 +219,9 @@ public:
 	// Manipulating windows in the system
 	virtual Int winDestroy( GameWindow *window );  ///< destroy this window
 	virtual Int winDestroyAll( void );  ///< destroy all windows in the system
+  // Retire already-destroyed windows while their legitimate parents remain
+  // published; do not run an input/animation/frame update merely for cleanup.
+  void retireDestroyedWindows() {while(m_destroyList)processDestroyList();}
 	virtual GameWindow *winGetWindowList( void );  ///< get head of master list
 
 	/// hide all windows in a certain range of id's (inclusinve );

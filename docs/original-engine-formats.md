@@ -2640,3 +2640,56 @@ metadata/default providers remain compiled and instrumentation is unchanged.
 Evidence: `tests/original/map_preview.cpp`, `evidence/qa/N2-map-preview-checkpoint.md`.
 This is actual shared CPU/storage/slot ownership, not complete original startup,
 world simulation, GUI rendering, or whole map-preview image lifecycle acceptance.
+
+### Original diplomacy briefing and presentation ownership
+
+`GUI/NativeDiplomacyBriefing.cpp` owns the actual GetBriefingTextList and
+UpdateDiplomacyBriefingText entry points independently of optional presentation.
+The list object retains its address, source order and case-sensitive deduplication;
+clear-plus-add stages a complete candidate. ResetDiplomacy retains entries, while
+the original InGameUI world-reset path explicitly clears them. The exposed mutable
+list pointer remains the source save/load protocol, not a transaction guarantee
+for arbitrary external mutations. Clear process-held entries before retiring the
+original memory manager.
+
+A borrowed main-thread view is captured only after successful initial replay.
+Ordinary updates append one entry; clear or a previously failed callback requests
+full replay. A partially failing callback does not publish model state. Corrected
+retry (including a duplicate/empty update) repairs the presentation from accepted
+state. Conflicting/reentrant capture or mutation rejects; detach cannot retire an
+active callback and never calls the borrowed view. Destruction has no callbacks.
+
+Actual `GUICallbacks/Diplomacy.cpp` remains the GUI provider. Its layout and eight
+animation helpers are guarded during acquisition. Required controls are scoped
+to the owned root; legitimate UI/manager identities are captured. Reset withdraws
+briefing capture, controls and IDs, retires animation/rest-position borrowing
+before windows, and drains original deferred window destruction with legitimate
+parents published. Borrowed publication is then restored without allocation.
+`GameWindowManager::retireDestroyedWindows` performs cleanup only, not an input
+or simulation frame. Actual callbacks must satisfy their nonthrowing teardown
+contract. Failed Show retires owned GUI state for retry; this is not an atomic
+rollback guarantee for every gadget callback. Nonnull GUI execution is pending.
+
+GameSpy buddy controls are hidden and their excluded Internet service is not
+replaced; actual LAN/skirmish diplomacy remains. Observer color uses the original
+observer palette selector rather than treating packed ARGB as a palette index;
+reoccupied rows explicitly unhide source controls. These source bug corrections
+have no physical-render acceptance yet.
+
+`AnimateWindowManager` guards all eight actual ProcessAnimate acquisitions and
+pooled registration/list insertion. Failed registration restores prior window
+position and timed duration. Explicit captured viewport metadata preserves the
+Spiral helper's original integer-half radius; default construction still requires
+the actual Display. GCC constructor failure/retry terminal8 passes normally and
+under sanitizers; Clang ownership and registered-window lifecycle remain pending
+native providers. Do not infer their acceptance from briefing observer tests.
+
+`DisconnectMenuLifetime.cpp` supplies the actual empty destructor, borrowed
+manager attachment and initialized SCREENOFF state (formerly undefined before
+init), including genuine RTTI. TheLAN now publishes the existing abstract
+LANAPIInterface instead of the Windows concrete owner. Existing LookupPlayer and
+GetLocalIP queries join its pure contract; no fake LAN, sockets or network
+acceptance are supplied by this type correction.
+
+Evidence: `tests/original/diplomacy.cpp`, pending `tests/original/animation.cpp`,
+and `evidence/qa/N2-diplomacy-checkpoint.md`. N2/slice03 remains incomplete.

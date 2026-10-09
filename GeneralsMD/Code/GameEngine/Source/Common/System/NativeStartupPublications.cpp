@@ -3,14 +3,14 @@
 // Actual original borrowed publications, independent of device/menu/transport
 // implementation. Their real owners still control creation and retirement.
 class NetworkInterface;
-class LANAPI;
+class LANAPIInterface;
 class IMEManagerInterface;
 class DisconnectMenu;
 class SkirmishGameInfo;
 class FunctionLexicon;
 class MultiplayerSettings;
 NetworkInterface *TheNetwork = nullptr;
-LANAPI *TheLAN = nullptr;
+LANAPIInterface *TheLAN = nullptr;
 IMEManagerInterface *TheIMEManager = nullptr;
 DisconnectMenu *TheDisconnectMenu = nullptr;
 SkirmishGameInfo *TheChallengeGameInfo = nullptr;

@@ -38,6 +38,11 @@
 #include "Common/Recorder.h"
 #include "GameClient/AnimateWindowManager.h"
 #include "GameClient/Diplomacy.h"
+#include "GameClient/NativeDiplomacyBriefing.h"
+#include "GameClient/GameWindowManager.h"
+#include "GameClient/WindowLayout.h"
+#include <memory>
+#include <vector>
 #include "GameClient/DisconnectMenu.h"
 #include "GameClient/GameWindow.h"
 #include "GameClient/Gadget.h"
@@ -54,8 +59,6 @@
 #include "GameLogic/VictoryConditions.h"
 #include "GameNetwork/GameInfo.h"
 #include "GameNetwork/NetworkInterface.h"
-#include "GameNetwork/GameSpy/BuddyDefs.h"
-#include "GameNetwork/GameSpy/PeerDefs.h"
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -94,10 +97,44 @@ static Int slotNumInRow[MAX_SLOTS];
 static WindowLayout *theLayout = NULL;
 static GameWindow *theWindow = NULL;
 static AnimateWindowManager *theAnimateWindowManager = NULL;
-WindowMsgHandledType BuddyControlSystem( GameWindow *window, UnsignedInt msg, 
-														 WindowMsgData mData1, WindowMsgData mData2);
-void InitBuddyControls(Int type);
-void updateBuddyInfo( void );
+static InGameUI* layoutUI=nullptr;
+static GameWindowManager* layoutManager=nullptr;
+struct BriefingView {
+  GameWindow* listbox=nullptr;
+  InGameUI* ui=nullptr;
+  GameWindowManager* manager=nullptr;
+  GameTextInterface* text=nullptr;
+};
+static BriefingView briefingView;
+struct ParentPublication {
+  InGameUI* ui=TheInGameUI;
+  GameWindowManager* manager=TheWindowManager;
+  ParentPublication(InGameUI* ownerUI,GameWindowManager* ownerManager){
+    TheInGameUI=ownerUI;TheWindowManager=ownerManager;
+  }
+  ~ParentPublication(){TheInGameUI=ui;TheWindowManager=manager;}
+};
+static void presentBriefing(const BriefingList& entries,Bool reset,void* context){
+  auto& view=*static_cast<BriefingView*>(context);
+  if(!view.listbox || !view.ui || !view.manager || !view.text)throw ERROR_BAD_ARG;
+  std::vector<UnicodeString> translated;
+  if(reset){translated.reserve(entries.size());for(const auto& label:entries)translated.push_back(view.text->fetch(label));}
+  else if(!entries.empty())translated.push_back(view.text->fetch(entries.back()));
+  ParentPublication parents(view.ui,view.manager);
+  if(reset)GadgetListBoxReset(view.listbox);
+  for(const auto& text:translated){
+    const Int index=GadgetListBoxGetNumEntries(view.listbox);if(index<0)throw ERROR_BAD_ARG;
+    GadgetListBoxAddEntryText(view.listbox,text,view.ui->getMessageColor(index%2),-1);
+  }
+}
+struct LayoutRetire {
+  InGameUI* ui;GameWindowManager* manager;
+  void operator()(WindowLayout* layout) const noexcept {
+    if(!layout)return;
+    ParentPublication parents(ui,manager);
+    layout->setUpdate(nullptr);layout->destroyWindows();manager->retireDestroyedWindows();layout->deleteInstance();
+  }
+};
 static void grabWindowPointers( void )
 {
 	for (Int i=0; i<MAX_SLOTS; ++i)
@@ -147,7 +184,7 @@ static void releaseWindowPointers( void )
 
 static void updateFunc( WindowLayout *layout, void *param )
 {
-	if (theAnimateWindowManager && TheGlobalData->m_animateWindows)
+	if (theWindow && theAnimateWindowManager && TheGlobalData && TheGlobalData->m_animateWindows)
 	{
 		Bool wasFinished = theAnimateWindowManager->isFinished();
 		theAnimateWindowManager->update();
@@ -158,146 +195,80 @@ static void updateFunc( WindowLayout *layout, void *param )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-static BriefingList theBriefingList;
-
-//-------------------------------------------------------------------------------------------------
-BriefingList* GetBriefingTextList(void)
-{
-	return &theBriefingList;
-}
-
-//-------------------------------------------------------------------------------------------------
-void UpdateDiplomacyBriefingText(AsciiString newText, Bool clear)
-{
-	GameWindow *listboxSolo = TheWindowManager->winGetWindowFromId(theWindow, NAMEKEY("Diplomacy.wnd:ListboxSolo"));
-
-	if (clear)
-	{
-		theBriefingList.clear();
-		if (listboxSolo)
-			GadgetListBoxReset(listboxSolo);
-	}
-
-	if (newText.isEmpty())
-		return;
-
-	if (std::find(theBriefingList.begin(), theBriefingList.end(), newText) != theBriefingList.end())
-		return;
-
-	theBriefingList.push_back(newText);
-	if (!listboxSolo)
-		return;
-
-	UnicodeString translated = TheGameText->fetch(newText);
-
-	Int numEntries = GadgetListBoxGetNumEntries(listboxSolo);
-	GadgetListBoxAddEntryText(listboxSolo, translated, TheInGameUI->getMessageColor(numEntries%2), -1);
-}
-
-// ------------------------------------------------------------------------------------------------
-// ------------------------------------------------------------------------------------------------
 void ShowDiplomacy( Bool immediate )
 {
-	if (!TheInGameUI->getInputEnabled() || TheGameLogic->isIntroMoviePlaying() || 
-			TheGameLogic->isLoadingMap())
-		return;
-	
-
-	if (TheInGameUI->isQuitMenuVisible())
-		return;
-
-	if (TheDisconnectMenu && TheDisconnectMenu->isScreenVisible())
-		return;
-
-	if (theWindow)
-	{
-		theWindow->winHide(FALSE);
-		theWindow->winEnable(TRUE);
-	}
-	else
-	{
-		theLayout = TheWindowManager->winCreateLayout( "Diplomacy.wnd" );
-		theWindow = theLayout->getFirstWindow();
-		theLayout->setUpdate(updateFunc);
-		theAnimateWindowManager = NEW AnimateWindowManager;
-		radioButtonInGameID = TheNameKeyGenerator->nameToKey("Diplomacy.wnd:RadioButtonInGame");
-		radioButtonBuddiesID = TheNameKeyGenerator->nameToKey("Diplomacy.wnd:RadioButtonBuddies");
-		radioButtonInGame = TheWindowManager->winGetWindowFromId(NULL, radioButtonInGameID);
-		radioButtonBuddies = TheWindowManager->winGetWindowFromId(NULL, radioButtonBuddiesID);
-		winInGameID = TheNameKeyGenerator->nameToKey("Diplomacy.wnd:InGameParent");
-		winBuddiesID = TheNameKeyGenerator->nameToKey("Diplomacy.wnd:BuddiesParent");
-		winSoloID = TheNameKeyGenerator->nameToKey("Diplomacy.wnd:SoloParent");
-		winInGame = TheWindowManager->winGetWindowFromId(NULL, winInGameID);
-		winBuddies = TheWindowManager->winGetWindowFromId(NULL, winBuddiesID);
-		winSolo = TheWindowManager->winGetWindowFromId(NULL, winSoloID);
-
-		if (!TheRecorder->isMultiplayer())
-		{
-			GameWindow *listboxSolo = TheWindowManager->winGetWindowFromId(theWindow, NAMEKEY("Diplomacy.wnd:ListboxSolo"));
-			if (listboxSolo)
-			{
-				for (BriefingList::iterator it = theBriefingList.begin(); it != theBriefingList.end(); ++it)
-				{
-					UnicodeString translated = TheGameText->fetch(*it);
-					Int numEntries = GadgetListBoxGetNumEntries(listboxSolo);
-					GadgetListBoxAddEntryText(listboxSolo, translated, TheInGameUI->getMessageColor(numEntries%2), -1);
-				}
-			}
-		}
-	}
-	theLayout->hide(FALSE);
-
-	radioButtonInGame->winHide(TRUE);
-	radioButtonBuddies->winHide(TRUE);
-	GadgetRadioSetSelection(radioButtonInGame, FALSE);
-	if (TheRecorder->isMultiplayer())
-	{
-		winInGame->winHide(FALSE);
-		winBuddies->winHide(TRUE);
-		winSolo->winHide(TRUE);
-	}
-	else
-	{
-		winInGame->winHide(TRUE);
-		winBuddies->winHide(TRUE);
-		winSolo->winHide(FALSE);
-	}
-
-	theAnimateWindowManager->reset();
-	if (!immediate && TheGlobalData->m_animateWindows)
-		theAnimateWindowManager->registerGameWindow( theWindow, WIN_ANIMATION_SLIDE_TOP, TRUE, 200 );
-
-	TheInGameUI->registerWindowLayout(theLayout);
-	grabWindowPointers();
-	PopulateInGameDiplomacyPopup();
-
-	if(TheGameSpyInfo && TheGameSpyInfo->getLocalProfileID() != 0)
-	{
-		radioButtonInGame->winHide(FALSE);
-		radioButtonBuddies->winHide(FALSE);
-		InitBuddyControls(1);
-		PopulateOldBuddyMessages();
-		updateBuddyInfo();
-	}
-	
+  if(!TheInGameUI || !TheGameLogic || !TheGlobalData)throw ERROR_BAD_ARG;
+  if(!TheInGameUI->getInputEnabled() || TheGameLogic->isIntroMoviePlaying() ||
+      TheGameLogic->isLoadingMap() || TheInGameUI->isQuitMenuVisible() ||
+      (TheDisconnectMenu && TheDisconnectMenu->isScreenVisible()))return;
+  if(!TheWindowManager || !TheNameKeyGenerator || !TheRecorder || !TheGameText)throw ERROR_BAD_ARG;
+  if(theLayout && (layoutUI!=TheInGameUI || layoutManager!=TheWindowManager ||
+      (briefingView.text && briefingView.text!=TheGameText)))throw ERROR_BAD_ARG;
+  try {
+    if(!theLayout){
+      std::unique_ptr<WindowLayout,LayoutRetire> candidate(
+          TheWindowManager->winCreateLayout("Diplomacy.wnd"),LayoutRetire{TheInGameUI,TheWindowManager});
+      if(!candidate || !candidate->getFirstWindow())throw ERROR_BAD_ARG;
+      auto animation=std::make_unique<AnimateWindowManager>();
+      layoutUI=TheInGameUI;layoutManager=TheWindowManager;
+      theWindow=candidate->getFirstWindow();theLayout=candidate.release();
+      theAnimateWindowManager=animation.release();theLayout->setUpdate(updateFunc);
+      radioButtonInGameID=NAMEKEY("Diplomacy.wnd:RadioButtonInGame");
+      radioButtonBuddiesID=NAMEKEY("Diplomacy.wnd:RadioButtonBuddies");
+      winInGameID=NAMEKEY("Diplomacy.wnd:InGameParent");
+      winBuddiesID=NAMEKEY("Diplomacy.wnd:BuddiesParent");
+      winSoloID=NAMEKEY("Diplomacy.wnd:SoloParent");
+      radioButtonInGame=TheWindowManager->winGetWindowFromId(theWindow,radioButtonInGameID);
+      radioButtonBuddies=TheWindowManager->winGetWindowFromId(theWindow,radioButtonBuddiesID);
+      winInGame=TheWindowManager->winGetWindowFromId(theWindow,winInGameID);
+      winBuddies=TheWindowManager->winGetWindowFromId(theWindow,winBuddiesID);
+      winSolo=TheWindowManager->winGetWindowFromId(theWindow,winSoloID);
+      if(!radioButtonInGame || !radioButtonBuddies || !winInGame || !winBuddies || !winSolo)throw ERROR_BAD_ARG;
+      auto* listbox=TheWindowManager->winGetWindowFromId(theWindow,NAMEKEY("Diplomacy.wnd:ListboxSolo"));
+      if(listbox){
+        briefingView={listbox,layoutUI,layoutManager,TheGameText};
+        originalDiplomacyBriefing().attach(presentBriefing,&briefingView);
+      }
+    }
+    theWindow->winHide(FALSE);theWindow->winEnable(TRUE);theLayout->hide(FALSE);
+    // The excluded Internet buddy service is not a functioning native feature.
+    radioButtonInGame->winHide(TRUE);radioButtonBuddies->winHide(TRUE);
+    GadgetRadioSetSelection(radioButtonInGame,FALSE);
+    winInGame->winHide(!TheRecorder->isMultiplayer());winBuddies->winHide(TRUE);
+    winSolo->winHide(TheRecorder->isMultiplayer());
+    theAnimateWindowManager->reset();
+    if(!immediate && TheGlobalData->m_animateWindows)
+      theAnimateWindowManager->registerGameWindow(theWindow,WIN_ANIMATION_SLIDE_TOP,TRUE,200);
+    TheInGameUI->registerWindowLayout(theLayout);grabWindowPointers();PopulateInGameDiplomacyPopup();
+  } catch(...) {
+    ResetDiplomacy();throw;
+  }
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 void ResetDiplomacy( void )
 {
-	if(theLayout)
-	{
-		TheInGameUI->unregisterWindowLayout(theLayout);
-		theLayout->destroyWindows();
-		theLayout->deleteInstance();
-		InitBuddyControls(-1);
-	}
-	theLayout = NULL;
-	theWindow = NULL;
-	if (theAnimateWindowManager)
-		delete theAnimateWindowManager;
-	theAnimateWindowManager = NULL;
+  if(!originalDiplomacyBriefing().detach())throw ERROR_BAD_ARG;
+  auto* layout=theLayout;auto* animation=theAnimateWindowManager;
+  auto* ownerUI=layoutUI;auto* ownerManager=layoutManager;
+  theLayout=nullptr;theWindow=nullptr;theAnimateWindowManager=nullptr;
+  layoutUI=nullptr;layoutManager=nullptr;briefingView={};
+  releaseWindowPointers();
+  radioButtonInGame=nullptr;radioButtonBuddies=nullptr;
+  winInGame=nullptr;winBuddies=nullptr;winSolo=nullptr;
+  radioButtonInGameID=radioButtonBuddiesID=winInGameID=winBuddiesID=winSoloID=NAMEKEY_INVALID;
+  for(Int i=0;i<MAX_SLOTS;++i){
+    staticTextPlayerID[i]=staticTextSideID[i]=staticTextTeamID[i]=staticTextStatusID[i]=NAMEKEY_INVALID;
+    buttonMuteID[i]=buttonUnMuteID[i]=NAMEKEY_INVALID;
+  }
+  delete animation;
+  if(layout){
+    if(!ownerUI || !ownerManager)throw ERROR_BAD_ARG;
+    ParentPublication parents(ownerUI,ownerManager);
+    ownerUI->unregisterWindowLayout(layout);
+    LayoutRetire{ownerUI,ownerManager}(layout);
+  }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -307,14 +278,14 @@ void HideDiplomacy( Bool immediate )
 	releaseWindowPointers();
 	if (theWindow)
 	{
-		if (immediate || !TheGlobalData->m_animateWindows)
+		if (immediate || !TheGlobalData || !TheGlobalData->m_animateWindows)
 		{
 			theWindow->winHide(TRUE);
 			theWindow->winEnable(FALSE);
 		}
 		else
 		{
-			if (theAnimateWindowManager->isFinished())
+			if (theAnimateWindowManager && theAnimateWindowManager->isFinished())
 				theAnimateWindowManager->reverseAnimateWindow();
 		}
 	}
@@ -384,10 +355,7 @@ WindowMsgHandledType DiplomacyInput( GameWindow *window, UnsignedInt msg,
 WindowMsgHandledType DiplomacySystem( GameWindow *window, UnsignedInt msg, 
 																			 WindowMsgData mData1, WindowMsgData mData2 )
 {
-	if(BuddyControlSystem(window, msg, mData1, mData2) == MSG_HANDLED)
-	{
-		return MSG_HANDLED;
-	}
+	// GameSpy/Internet buddy service replacement is outside this port's scope.
 	switch( msg ) 
 	{
 		//---------------------------------------------------------------------------------------------
@@ -403,7 +371,7 @@ WindowMsgHandledType DiplomacySystem( GameWindow *window, UnsignedInt msg,
 		case GWM_INPUT_FOCUS:
 		{	
 			// if we're given the opportunity to take the keyboard focus we must say we don't want it
-			if( mData1 == TRUE )
+			if( mData1 == TRUE && mData2 )
 				*(Bool *)mData2 = FALSE;
 
 			return MSG_HANDLED;
@@ -412,7 +380,9 @@ WindowMsgHandledType DiplomacySystem( GameWindow *window, UnsignedInt msg,
 		//---------------------------------------------------------------------------------------------
 		case GBM_SELECTED:
 		{
+      if(!theWindow)return MSG_IGNORED;
 			GameWindow *control = (GameWindow *)mData1;
+			if(!control)return MSG_IGNORED;
 			NameKeyType controlID = (NameKeyType)control->winGetWindowId();
 			static const StaticNameKey nativeCached_buttonHideID("Diplomacy.wnd:ButtonHide");
 			NameKeyType buttonHideID = nativeCached_buttonHideID.key();
@@ -420,26 +390,24 @@ WindowMsgHandledType DiplomacySystem( GameWindow *window, UnsignedInt msg,
 			{
 				HideDiplomacy( FALSE );
 			}
-			else if( controlID == radioButtonInGameID)
+			else if( controlID == radioButtonInGameID && winInGame && winBuddies)
 			{
 				winInGame->winHide(FALSE);
 				winBuddies->winHide(TRUE);
 			}
-			else if( controlID == radioButtonBuddiesID)
-			{
-				winInGame->winHide(TRUE);
-				winBuddies->winHide(FALSE);
-			}
+      else if(controlID==radioButtonBuddiesID)return MSG_IGNORED;
 
 			for (Int i=0; i<MAX_SLOTS; ++i)
 			{
-				if (controlID == buttonMuteID[i] && slotNumInRow[i] >= 0)
+				if (controlID == buttonMuteID[i] && TheGameInfo && slotNumInRow[i] >= 0 &&
+              slotNumInRow[i]<MAX_SLOTS && TheGameInfo->getSlot(slotNumInRow[i]))
 				{
 					TheGameInfo->getSlot(slotNumInRow[i])->mute(TRUE);
 					PopulateInGameDiplomacyPopup();
 					break;
 				}
-				if (controlID == buttonUnMuteID[i] && slotNumInRow[i] >= 0)
+				if (controlID == buttonUnMuteID[i] && TheGameInfo && slotNumInRow[i] >= 0 &&
+              slotNumInRow[i]<MAX_SLOTS && TheGameInfo->getSlot(slotNumInRow[i]))
 				{
 					TheGameInfo->getSlot(slotNumInRow[i])->mute(FALSE);
 					PopulateInGameDiplomacyPopup();
@@ -462,8 +430,10 @@ WindowMsgHandledType DiplomacySystem( GameWindow *window, UnsignedInt msg,
 
 void PopulateInGameDiplomacyPopup( void )
 {
-	if (!TheGameInfo)
+	if (!theWindow || !TheGameInfo)
 		return;
+  if(!ThePlayerList || !TheVictoryConditions || !TheMultiplayerSettings || !TheGameText || !TheNameKeyGenerator)
+    throw ERROR_BAD_ARG;
 
 	Int rowNum = 0;
 	for (Int slotNum=0; slotNum<MAX_SLOTS; ++slotNum)
@@ -484,6 +454,7 @@ void PopulateInGameDiplomacyPopup( void )
 			AsciiString playerName;
 			playerName.format("player%d", slotNum);
 			Player *player = ThePlayerList->findPlayerWithNameKey(NAMEKEY(playerName));
+      if(!player)throw ERROR_BAD_ARG;
 			Bool isAlive = !TheVictoryConditions->hasSinglePlayerBeenDefeated(player);
 			Bool isObserver = player->isPlayerObserver();
 
@@ -508,7 +479,10 @@ void PopulateInGameDiplomacyPopup( void )
 					buttonUnMute[rowNum]->winHide(TRUE);
 			}
 
-			Color playerColor = TheMultiplayerSettings->getColor(slot->getApparentColor())->getColor();
+      const Int colorIndex=slot->getOriginalPlayerTemplate()==PLAYERTEMPLATE_OBSERVER?
+          PLAYERTEMPLATE_OBSERVER:slot->getApparentColor();
+      auto* color=TheMultiplayerSettings->getColor(colorIndex);if(!color)throw ERROR_BAD_ARG;
+			Color playerColor = color->getColor();
 			Color backColor = GameMakeColor(0, 0, 0, 255);
 			Color aliveColor = GameMakeColor(0, 255, 0, 255);
 			Color deadColor = GameMakeColor(255, 0, 0, 255);
@@ -518,18 +492,22 @@ void PopulateInGameDiplomacyPopup( void )
 
 			if (staticTextPlayer[rowNum])
 			{
+        staticTextPlayer[rowNum]->winHide(FALSE);
 				staticTextPlayer[rowNum]->winSetEnabledTextColors( playerColor, backColor );
 				GadgetStaticTextSetText(staticTextPlayer[rowNum], slot->getName());
 			}
 			if (staticTextSide[rowNum])
 			{
+        staticTextSide[rowNum]->winHide(FALSE);
 				staticTextSide[rowNum]->winSetEnabledTextColors( playerColor, backColor );
 				GadgetStaticTextSetText(staticTextSide[rowNum], slot->getApparentPlayerTemplateDisplayName() );
 			}
 			if (staticTextTeam[rowNum])
 			{
+        staticTextTeam[rowNum]->winHide(FALSE);
 				staticTextTeam[rowNum]->winSetEnabledTextColors( playerColor, backColor );
 				AsciiString teamStr;
+        if(slot->getTeamNumber()==std::numeric_limits<Int>::max())throw ERROR_BAD_ARG;
 				teamStr.format("Team:%d", slot->getTeamNumber() + 1);
 				if (slot->isAI() && slot->getTeamNumber() == -1)
 					teamStr = "Team:AI";

@@ -953,9 +953,11 @@ Bool ProcessAnimateWindowSlideFromBottomTimed::reverseAnimateWindow( AnimateWind
 // ProcessAnimateWindowSpiral PUBLIC FUNCTIONS ////////////////////////
 //-----------------------------------------------------------------------------
 
-ProcessAnimateWindowSpiral::ProcessAnimateWindowSpiral( void )
+static UnsignedInt spiralViewportWidth(){if(!TheDisplay)throw ERROR_BAD_ARG;return TheDisplay->getWidth();}
+ProcessAnimateWindowSpiral::ProcessAnimateWindowSpiral():ProcessAnimateWindowSpiral(spiralViewportWidth()){}
+ProcessAnimateWindowSpiral::ProcessAnimateWindowSpiral(UnsignedInt viewportWidth)
 {
-	m_maxR = TheDisplay->getWidth() / 2;
+	m_maxR = viewportWidth / 2;
 	m_deltaTheta = .33f;	
 }
 

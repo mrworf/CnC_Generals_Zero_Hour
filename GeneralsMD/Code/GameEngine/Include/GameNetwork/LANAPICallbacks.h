@@ -40,7 +40,7 @@
 
 
 // LAN API Singleton ----------------------------------------------------------------------
-extern LANAPI *TheLAN;
+extern LANAPIInterface *TheLAN;
 
 //external declarations of the Gadgets the callbacks can use
 // LanLobby

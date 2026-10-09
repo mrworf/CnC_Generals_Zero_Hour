@@ -31,6 +31,9 @@
 #ifndef __DIPLOMACY_H__
 #define __DIPLOMACY_H__
 
+#include "Common/AsciiString.h"
+#include <list>
+
 void PopulateInGameDiplomacyPopup( void );
 void UpdateDiplomacyBriefingText(AsciiString newText, Bool clear);
 

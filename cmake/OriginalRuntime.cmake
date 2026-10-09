@@ -278,6 +278,9 @@ target_sources(original_logical_client PRIVATE
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeMapPreviewLayout.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeMapPreviewStorage.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/GUI/NativeMapPreview.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/GUI/NativeDiplomacyBriefing.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/GUI/DisconnectMenu/DisconnectMenuLifetime.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/GUI/GUICallbacks/Diplomacy.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/GUI/NativeScoreScreenState.cpp")
 target_link_libraries(original_logical_client PUBLIC original_runtime_common)
 target_include_directories(original_logical_client PRIVATE
@@ -429,6 +432,19 @@ endforeach()
 add_executable(original_function_registry_fixture tests/original/function_registry.cpp tests/original/AllocationFault.cpp)
 add_executable(original_lexicon_fixture tests/original/lexicon.cpp tests/original/AllocationFault.cpp)
 add_executable(original_map_preview_fixture tests/original/map_preview.cpp tests/original/AllocationFault.cpp)
+add_executable(original_diplomacy_fixture tests/original/diplomacy.cpp tests/original/AllocationFault.cpp)
+add_executable(original_animation_fixture EXCLUDE_FROM_ALL tests/original/animation.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_animation_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_animation_fixture PRIVATE -Wl,--gc-sections)
+target_link_libraries(original_diplomacy_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_diplomacy_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS functional negative globals disconnect fault-append fault-clear fault-attach)
+  add_test(NAME original_diplomacy_${family} COMMAND original_diplomacy_fixture "${family}")
+  set_tests_properties(original_diplomacy_${family} PROPERTIES LABELS "original;runtime;diplomacy" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 target_link_libraries(original_map_preview_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_map_preview_fixture PRIVATE -Wl,--gc-sections)

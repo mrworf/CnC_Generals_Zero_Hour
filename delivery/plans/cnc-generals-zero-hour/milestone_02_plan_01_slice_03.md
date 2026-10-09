@@ -1329,3 +1329,87 @@ toolchain577 SHAb06a60d3ed6c94fd552914d84e6d78d1d45d61d39173005cc5b9bd323fbf05a7
 See `evidence/qa/N2-map-preview-checkpoint.md`. This coherent provider checkpoint
 does not close N2/slice03; continue diplomacy/capability/native boundaries, then
 actual factories and original startup/world/scenario acceptance.
+
+Continue from55f23984 (clean worktree) with the original diplomacy lifecycle
+cohort, not individual unresolved symbols. Keep actual source UI/row/mute/
+animation bindings and preserve ordered, case-sensitive briefing deduplication,
+clear-plus-add semantics, stable mutable GetBriefingTextList identity and briefing
+retention across ResetDiplomacy. Separate the briefing owner/public entry points
+from optional presentation. Stage list candidates before publication; capture a
+borrowed synchronous view callback, reject conflicting/reentrant binding, detach
+without callbacks, and permit corrected retry after callback or allocation failure.
+If a view partially fails, retry must resynchronize the complete candidate, not
+duplicate an append. No callbacks on destruction or from render/audio threads.
+
+Compile the actual Diplomacy.cpp independent of excluded GameSpy/Internet buddy
+service replacement (spec exclusions); keep unsupported buddy tabs hidden, no
+returning fake provider. Initialize layout/animation candidates under guards,
+validate required windows/services before publication, and capture legitimate
+UI/manager parent identities for teardown. Reset detaches the briefing callback
+and withdraws all borrowed controls/IDs before window destruction, with legitimate
+parents published through cleanup and borrowed publication restored afterward.
+Hide preserves live layout/parent identity and only withdraws row bindings.
+Populate without a live view omits presentation, not gameplay. Real nonnull GUI
+execution remains an explicit pending gate until native factories/providers link.
+
+Inspect DisconnectMenu construction/destruction together and split its actual
+empty destructor and initialized borrowed-manager/menu state lifetime from GUI
+methods, supplying genuine RTTI rather than a synthetic typeinfo object. Constructor
+must define pre-init visibility. No socket/LAN implementation or N4 acceptance
+is implied; concrete LANAPI RTTI remains its own native-interface dependency.
+
+Own only original diplomacy header/source, new shared briefing owner, disconnect
+lifetime/source, explicit build registrations, generated fixtures and this plan/
+formats/graph/QA/state. Test actual public briefing entry points and independent
+owners, captured views, binding/update/reset/detach/reentrancy, stable list identity,
+case/order/duplicates and every allocation/callback failure with retry and exact
+terminal across complete repeated lifetimes. Test actual DisconnectMenu pre-init
+visibility and borrowed pointer lifetime without GUI claims. Focused then related
+normal/GCCsan/Clangsan builds/tests; preserve intact leak checks. Never execute
+link probes. Continue all remaining native startup providers/factories and actual
+original simulation; N2/slice03 remain incomplete.
+
+Surrounding lifecycle review found AnimateWindowManager acquires eight raw helper
+objects before constructor completion, and registerGameWindow acquires a pooled
+AnimateWindow before fallible list insertion. Guard all helper candidates and
+the pooled registration together. Destroy animation/rest-position borrowing
+before retiring its windows. Drain the original window destroy queue through a
+cleanup-only owner API while legitimate UI/manager parents remain published;
+never run a simulation/input frame merely to finish cleanup. Actual animation/
+nonnull GUI constructor fault execution remains required at the native-provider
+gate if current missing GUI dependencies prevent its fixture from linking. Do
+not infer that ownership acceptance from the separate briefing model tests.
+
+The LAN RTTI dependency is avoidable concretization, not a missing packet reader:
+all TheLAN consumers use the existing LANAPIInterface request/status contract,
+but publication is typed as the Windows LANAPI implementation. Publish the
+existing abstract interface, retaining its pure methods and adding only the
+already-existing concrete LookupPlayer/GetLocalIP queries to that contract.
+Native N4 transport remains required; do not instantiate a fake LAN, synthesize
+RTTI, or claim network acceptance. Add compile-time contract checks. The native
+implementation can satisfy the interface without preserving the Windows class.
+
+Capture the actual viewport width before constructor helper acquisitions, with
+an explicit metadata constructor for native/ownership callers; the default still
+reads the real Display. ProcessAnimateWindowSpiral accepts that captured width,
+preserving the original integer-half radius. This is not a fake Display or renderer.
+Exercise real eight-helper constructor failure/retry under all3 compilers if its
+actual vtable/provider graph now links; otherwise retain the precise diagnostic
+and required pending ownership fixture, never accept it from model-only checks.
+
+Diplomacy checkpoint from55f23984: all configured targets build all3. Related
+96/96 PASS normal18.40s/GCCsan81.12s/Clangsan72.95s with intact leak checks;
+briefing7 families pass within those runs. Complete repeated owner failure/retry
+terminals append6/clear2/attach2 pass all3. Actual eight-helper animation constructor
+terminal8 passes normal/GCCsan, but Clang's missing native closure prevents its
+fixture link. Retain this pending EXCLUDE_FROM_ALL fixture without CTest or
+cross-compiler ownership acceptance; registered windows and actual nonnull GUI
+remain pending. Root link-only diagnostics fail1/1/7; never executed. Full229
+not run. Canonical581 SHA2708266f4b85f6f4b064553838f6ea48bd8bf46842c84970246f8b4ed4ffb944;
+toolchain588 SHAb4387b4ab456b68ea44f14e1dfe6704bcac10d44dfd5a2add340862984f621b4.
+See `evidence/qa/N2-diplomacy-checkpoint.md` and the durable formats/source graph.
+User requested sorting/committing this cohort; ignored builds/caches, retail link
+and recovery archive remain untouched. All 18 original pending paths are owned
+by the cohort, not unrelated user changes. N2/slice03 remains incomplete.
+Continue native capability/IME/warning/terrain/hosting, then actual factories,
+startup/world/compiler-matching scenario. No synthetic providers or vendor edits.

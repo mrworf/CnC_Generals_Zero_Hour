@@ -203,6 +203,7 @@ class ProcessAnimateWindowSpiral : public ProcessAnimateWindow
 public:
 
 	ProcessAnimateWindowSpiral( void );
+  explicit ProcessAnimateWindowSpiral(UnsignedInt viewportWidth);
 	virtual ~ProcessAnimateWindowSpiral( void );
 
 	virtual void initAnimateWindow( AnimateWindow *animWin );
@@ -228,6 +229,7 @@ public:
 	virtual Bool updateAnimateWindow( AnimateWindow *animWin );
 	virtual Bool reverseAnimateWindow( AnimateWindow *animWin );
 	virtual void setMaxDuration(UnsignedInt maxDuration) { m_maxDuration = maxDuration; }
+  UnsignedInt getMaxDuration() const noexcept {return m_maxDuration;}
 
 private:
 	UnsignedInt m_maxDuration;

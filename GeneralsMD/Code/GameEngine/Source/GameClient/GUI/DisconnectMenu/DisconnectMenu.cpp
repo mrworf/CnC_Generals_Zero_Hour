@@ -86,21 +86,10 @@ static const Color chatNormalColor =  GameMakeColor(255,0,0,255);
 
 // Borrowed publication is defined once in NativeStartupPublications.cpp.
 
-DisconnectMenu::DisconnectMenu() {
-	m_disconnectManager = NULL;
-}
-
-DisconnectMenu::~DisconnectMenu() {
-}
-
 void DisconnectMenu::init() {
 	m_disconnectManager = NULL;
 	HideDisconnectWindow();
 	m_menuState = DISCONNECTMENUSTATETYPE_SCREENOFF;
-}
-
-void DisconnectMenu::attachDisconnectManager(DisconnectManager *disconnectManager) {
-	m_disconnectManager = disconnectManager;
 }
 
 void DisconnectMenu::showScreen() {
