@@ -460,6 +460,7 @@ add_executable(original_sides_scripts_fixture tests/original/sides_scripts.cpp t
 add_executable(original_logical_world_fixture tests/original/logical_world.cpp tests/original/AllocationFault.cpp)
 add_executable(original_waypoint_graph_fixture tests/original/waypoint_graph.cpp tests/original/AllocationFault.cpp)
 add_executable(original_script_camera_fixture tests/original/script_camera.cpp tests/original/AllocationFault.cpp)
+add_executable(original_text_ownership_fixture tests/original/text_ownership.cpp tests/original/AllocationFault.cpp)
 add_executable(original_ai_pathfinder_fixture tests/original/ai_pathfinder.cpp tests/original/AllocationFault.cpp)
 add_executable(original_player_ownership_fixture tests/original/player_ownership.cpp tests/original/AllocationFault.cpp)
 add_executable(original_team_ownership_fixture tests/original/team_ownership.cpp tests/original/AllocationFault.cpp)
@@ -512,6 +513,17 @@ target_link_libraries(original_waypoint_graph_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_libraries(original_script_camera_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_libraries(original_text_ownership_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_compile_definitions(original_text_ownership_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+target_include_directories(original_text_ownership_fixture PRIVATE
+  "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
+target_link_options(original_text_ownership_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS functional negative font-faults timer-faults superweapon-faults pool-failures client-retirement client-faults)
+  add_test(NAME original_text_ownership_${family} COMMAND original_text_ownership_fixture "${family}")
+  set_tests_properties(original_text_ownership_${family} PROPERTIES LABELS "original;runtime;text" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 target_compile_definitions(original_script_camera_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
 target_include_directories(original_script_camera_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")

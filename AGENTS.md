@@ -71,6 +71,10 @@ parent; camera defaults alone are not valid parsed configuration. Keep generated
 user storage separate from asset mounts; do not waive ownership checks for a
 creation-only warm-up that omitted new provider parents.
 Prove production cursor advancement before an outer fixture lease restores it.
+Ownership baselines must also use the same borrowed configuration identity.
+Replacing a constructor-owned string literal with an equal borrowed value can
+legitimately retire its storage; normalize the complete cohort before measuring,
+not by exempting changed allocation counts from failure/retry checks.
 Zero standard-allocation demand is valid for warmed explicit pools; prove its
 exact terminal and separately exercise pooled exhaustion/used-unit retirement.
 Source Object/Drawable cleanup calls its parent singleton. Preserve that valid

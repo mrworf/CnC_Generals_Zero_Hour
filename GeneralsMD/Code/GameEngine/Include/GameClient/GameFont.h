@@ -44,12 +44,12 @@ class GameFont : public MemoryPoolObject
 {
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE(GameFont, "GameFont")		
 public:
-	GameFont*			next;  ///< for library use
+	GameFont*			next = NULL;  ///< for library use
 	AsciiString		nameString;
-	Int						pointSize;		 ///< point size of font
-	Int						height;				///< pixel height of font
-	void*					fontData;  ///< font data to be filled out for device specific font
-	Bool					bold;				 ///< is this font bold
+	Int						pointSize = 0;		 ///< point size of font
+	Int						height = 0;				///< pixel height of font
+	void*					fontData = NULL;  ///< font data to be filled out for device specific font
+	Bool					bold = FALSE;				 ///< is this font bold
 };
 EMPTY_DTOR(GameFont)
 
@@ -80,13 +80,15 @@ public:
 
 protected:
 
+	// Derived backends must call this before their own resources/vtable retire;
+	// the base destructor cannot dispatch their releaseFontData implementation.
 	void deleteAllFonts( void );				///< delete all fonts in this library
 	void linkFont( GameFont *font );		///< add to font list
 	void unlinkFont( GameFont *font );  ///< remove font from list
 
 	/// load the font data pointer based on everything else we already have set
 	virtual Bool loadFontData( GameFont *font ) = 0;
-	/// release the font data pointer
+	/// Nonthrowing retirement, including partial/failed loadFontData acquisitions.
 	virtual void releaseFontData( GameFont *font ) { };
 
 	GameFont *m_fontList;  ///< list of fonts we have loaded

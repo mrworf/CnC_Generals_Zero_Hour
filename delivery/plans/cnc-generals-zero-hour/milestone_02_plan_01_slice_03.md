@@ -2786,3 +2786,56 @@ whole legitimate ownership path exists. No constant-finished or fabricated
 spatial adapter is accepted. Continue this existing plan toward actual original
 GameEngine/GameLogic startup/frame, source root journal, fog/geometry/walls/bridges
 and CPU model-query providers; do not generate replacement tiny plans.
+
+UI/text ownership implementation refinement (parent f26a7b4c; same slice03):
+Before native font/string providers are admitted into the root, correct the
+coupled source admission/retirement contract. Guard the pooled font through
+backend false/throw and list admission, initializing all backing fields. Guard
+both SuperweaponInfo strings through constructor failure; acquire a valid font
+before assigning either string. Use one guarded superweapon map/list admission
+for runtime and snapshot reconstruction, removing only newly inserted empty
+entries on list failure. Named-timer replacement must stage its complete candidate
+before a nonfallible pointer exchange; insertion failure retains existing entries.
+Retire timer/superweapon maps through one helper in reset and destruction, with
+the real string manager still published. Retire client-owned strings before fonts
+after other string consumers. Preserve source serialized fields and UI timing.
+
+Validate actual source operations with an explicitly test-only font/backing and
+display-string adapter that rejects rendering/metric operations; it is not a
+native provider or visual oracle. Cover partial backend failure/throw, two-string
+constructor stages, new/existing-key admissions, successful replacement/removal,
+reset-helper and destruction without reset, all standard-allocation prefixes and
+corrected retries, actual pooled units and repeated whole-manager retirement.
+Use focused tests while implementing, then frozen related matrix under GCC,
+GCC sanitizers and Clang sanitizers. Native FreeType/Fontconfig resources, source
+spacing/wrapping/alternate-Unicode metrics, concrete camera/UI/client ownership
+and actual root/frame remain mandatory subsequent work inside this same plan.
+No mock adapter establishes native or whole-game acceptance.
+
+Shared text/UI ownership checkpoint: the coupled source cohort above is
+implemented and verified on canonical633
+3d78803c12684934d0e6f1d83b084df388b91775cb332b7cf5d14b155a491ee6,
+inclusive640 cf08696bfd511a952b332c62ba6c219d00197ac286554376f1e2e4ed98f44724.
+All3 full configured builds/focused8/related153 PASS (related GCC145.51s,
+GCCsan647.20s, Clangsan389.52s). Source-client cohort prefixes[0,18), terminal18,
+each retry; font1/new-timer1/replacement0/new-power2/existing-power1 allocation
+terminals; timer4/two-string8 callback terminals; four actual fixed-capacity pools
+including both string-constructor acquisition failures; whole-manager retirement.
+Evidence: evidence/qa/N2-text-ownership-checkpoint.md. Retained fixture compile/
+configuration-baseline corrections did not change production to satisfy a test.
+Full343 and native game text/UI/root/startup/frame/output remain pending.
+
+Stock FreeType2.14.3/Fontconfig2.18.3 public-API preflight PASS under both compiler
+sanitizer stacks: actual memory-backed glyph, supplied font-set matching, acquired
+aliases and repeated teardown, without global-config replacement/FcFini/library
+edits. Durable reproducible control and scope limits are in the same evidence.
+Next implement the real native font/string provider and concrete camera/UI/client
+ownership, not adopt the test-only adapters. docs/original-engine-formats.md pins
+local-font/alternate/Generals-width/96dpi/per-character spacing requirements,
+remaining actual snapshot-version/count issues and popup acquisition/side effects.
+It also records that actual root reverse registration order retires PlayerList
+before Team cleanup needs it; implement dependency-aware actor/team/UI retirement
+while legitimate logic/player/script/client parents remain published. Do not infer
+safe loaded-root shutdown from an empty registry or fixture-managed teardown.
+This continues the original root journal/frame/model/fog/geometry scope; it does
+not complete slice03 or add a new milestone or tiny plan.

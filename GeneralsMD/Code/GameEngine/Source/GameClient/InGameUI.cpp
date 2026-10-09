@@ -29,7 +29,14 @@
 
 #include "PreRTS.h"
 #include <cwchar>	// This must go first in EVERY cpp file int the GameEngine
+#include <memory>
 #include "Common/GlobalData.h"
+
+namespace {
+template<class T> struct UIRecordDelete {
+	void operator()(T* value) const noexcept { if (value) value->deleteInstance(); }
+};
+}
 
 #define DEFINE_SHADOW_NAMES
 
@@ -283,15 +290,26 @@ SuperweaponInfo::SuperweaponInfo(
 	m_color(c),
 	m_powerTemplate(spt)
 {
-	m_nameDisplayString = TheDisplayStringManager->newDisplayString();
-	m_nameDisplayString->reset();
-	m_nameDisplayString->setText( UnicodeString::TheEmptyString );
-
-	m_timeDisplayString = TheDisplayStringManager->newDisplayString();
-	m_timeDisplayString->reset();
-	m_timeDisplayString->setText( UnicodeString::TheEmptyString );
-
-	setFont( superweaponNormalFont, superweaponNormalPointSize, superweaponNormalBold );
+	if (!TheDisplayStringManager) throw ERROR_BAD_ARG;
+	try
+	{
+		m_nameDisplayString = TheDisplayStringManager->newDisplayString();
+		if (!m_nameDisplayString) throw ERROR_BAD_ARG;
+		m_nameDisplayString->reset();
+		m_nameDisplayString->setText( UnicodeString::TheEmptyString );
+		m_timeDisplayString = TheDisplayStringManager->newDisplayString();
+		if (!m_timeDisplayString) throw ERROR_BAD_ARG;
+		m_timeDisplayString->reset();
+		m_timeDisplayString->setText( UnicodeString::TheEmptyString );
+		setFont( superweaponNormalFont, superweaponNormalPointSize, superweaponNormalBold );
+	}
+	catch (...)
+	{
+		// A failed constructor never reaches ~SuperweaponInfo.
+		if (m_timeDisplayString) TheDisplayStringManager->freeDisplayString(m_timeDisplayString);
+		if (m_nameDisplayString) TheDisplayStringManager->freeDisplayString(m_nameDisplayString);
+		throw;
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -311,10 +329,12 @@ SuperweaponInfo::~SuperweaponInfo()
 // ------------------------------------------------------------------------------------------------
 void SuperweaponInfo::setFont(const AsciiString& superweaponNormalFont, Int superweaponNormalPointSize, Bool superweaponNormalBold)
 {
-	m_nameDisplayString->setFont( TheFontLibrary->getFont( superweaponNormalFont, 
-		TheGlobalLanguageData->adjustFontSize(superweaponNormalPointSize), superweaponNormalBold ) );
-	m_timeDisplayString->setFont( TheFontLibrary->getFont( superweaponNormalFont, 
-		TheGlobalLanguageData->adjustFontSize(superweaponNormalPointSize), superweaponNormalBold ) );
+	if (!TheFontLibrary || !TheGlobalLanguageData || !TheGlobalData) throw ERROR_BAD_ARG;
+	GameFont* font = TheFontLibrary->getFont(superweaponNormalFont,
+		TheGlobalLanguageData->adjustFontSize(superweaponNormalPointSize), superweaponNormalBold);
+	if (!font) throw ERROR_BAD_ARG;
+	m_nameDisplayString->setFont(font);
+	m_timeDisplayString->setFont(font);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -498,7 +518,9 @@ void InGameUI::xfer( Xfer *xfer )
 			SuperweaponInfo* swInfo = findSWInfo(playerIndex, powerName, id, powerTemplate);
 			if (swInfo == NULL)
 			{
+				if (!ThePlayerList) throw ERROR_BAD_ARG;
 				const Player* player = ThePlayerList->getNthPlayer(playerIndex);
+				if (!player) throw ERROR_BAD_ARG;
 				swInfo = newInstance(SuperweaponInfo)(
 					id,
 					timestamp,
@@ -511,7 +533,7 @@ void InGameUI::xfer( Xfer *xfer )
 					m_superweaponNormalBold, 
 					player->getPlayerColor(), 
 					powerTemplate);
-				m_superweapons[playerIndex][powerName].push_back(swInfo);
+				admitSuperweapon(playerIndex, powerName, swInfo);
 			}
 			else
 			{
@@ -555,6 +577,7 @@ void InGameUI::setMouseCursor(Mouse::MouseCursor c)
 // ------------------------------------------------------------------------------------------------
 SuperweaponInfo* InGameUI::findSWInfo(Int playerIndex, const AsciiString& powerName, ObjectID id, const SpecialPowerTemplate *powerTemplate)
 {
+	if (playerIndex < 0 || playerIndex >= MAX_PLAYER_COUNT) throw ERROR_BAD_ARG;
 	SuperweaponMap::iterator mapIt = m_superweapons[playerIndex].find(powerName);
 	if (mapIt != m_superweapons[playerIndex].end())
 	{
@@ -581,7 +604,9 @@ void InGameUI::addSuperweapon(Int playerIndex, const AsciiString& powerName, Obj
 	if (swInfo != NULL)
 		return;
 
+	if (!ThePlayerList) throw ERROR_BAD_ARG;
 	const Player* player = ThePlayerList->getNthPlayer(playerIndex);
+	if (!player) throw ERROR_BAD_ARG;
 	Bool hiddenByScience = (powerTemplate->getRequiredScience() != SCIENCE_INVALID) && (player->hasScience(powerTemplate->getRequiredScience()) == false);
 
 #ifndef DO_UNIT_TIMINGS
@@ -602,13 +627,14 @@ void InGameUI::addSuperweapon(Int playerIndex, const AsciiString& powerName, Obj
 					player->getPlayerColor(), 
 					powerTemplate);
 
-	m_superweapons[playerIndex][powerName].push_back(info);
+	admitSuperweapon(playerIndex, powerName, info);
 }
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 Bool InGameUI::removeSuperweapon(Int playerIndex, const AsciiString& powerName, ObjectID id, const SpecialPowerTemplate *powerTemplate)
 {
+	if (playerIndex < 0 || playerIndex >= MAX_PLAYER_COUNT) throw ERROR_BAD_ARG;
 	DEBUG_LOG(("Removing superweapon UI timer\n"));
 	SuperweaponMap::iterator mapIt = m_superweapons[playerIndex].find(powerName);
 	if (mapIt != m_superweapons[playerIndex].end())
@@ -734,22 +760,41 @@ Bool InGameUI::getSuperweaponDisplayEnabledByScript(void) const
 // ------------------------------------------------------------------------------------------------
 void InGameUI::addNamedTimer( const AsciiString& timerName, const UnicodeString& text, Bool isCountdown )
 {
-	NamedTimerInfo *info = newInstance( NamedTimerInfo );	
+	if (!TheDisplayStringManager || !TheFontLibrary || !TheGlobalLanguageData || !TheGlobalData)
+		throw ERROR_BAD_ARG;
+	std::unique_ptr<NamedTimerInfo, UIRecordDelete<NamedTimerInfo>> candidate(newInstance(NamedTimerInfo));
+	NamedTimerInfo *info = candidate.get();
 	info->m_timerName = timerName;
 	info->color = m_namedTimerNormalColor;
 	info->timerText = text;
 	info->displayString = TheDisplayStringManager->newDisplayString();
+	if (!info->displayString) throw ERROR_BAD_ARG;
 	info->displayString->reset();
-	info->displayString->setFont( TheFontLibrary->getFont( m_namedTimerNormalFont, 
-		TheGlobalLanguageData->adjustFontSize(m_namedTimerNormalPointSize), m_namedTimerNormalBold ) );
+	GameFont* font = TheFontLibrary->getFont(m_namedTimerNormalFont,
+		TheGlobalLanguageData->adjustFontSize(m_namedTimerNormalPointSize), m_namedTimerNormalBold);
+	if (!font) throw ERROR_BAD_ARG;
+	info->displayString->setFont(font);
 	info->displayString->setText( UnicodeString::TheEmptyString );
 	info->timestamp = -1;
 	info->isCountdown = isCountdown;
 
-//	GameFont *font = info->displayString->getFont();
+	auto entry = m_namedTimers.find(timerName);
+	if (entry == m_namedTimers.end())
+	{
+		if (!m_namedTimers.emplace(timerName, info).second) throw ERROR_BAD_ARG;
+		candidate.release();
+	}
+	else
+	{
+		NamedTimerInfo* previous = entry->second;
+		entry->second = candidate.release();
+		previous->deleteInstance();
+	}
+}
 
-	removeNamedTimer(timerName);
-	m_namedTimers[timerName] = info;
+NamedTimerInfo::~NamedTimerInfo()
+{
+	if (displayString) TheDisplayStringManager->freeDisplayString(displayString);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -759,7 +804,6 @@ void InGameUI::removeNamedTimer( const AsciiString& timerName )
 	NamedTimerMapIt mapIt = m_namedTimers.find(timerName);
 	if (mapIt != m_namedTimers.end())
 	{
-		TheDisplayStringManager->freeDisplayString( mapIt->second->displayString );
 		mapIt->second->deleteInstance();
 		m_namedTimers.erase(mapIt);
 		return;
@@ -1069,6 +1113,7 @@ InGameUI::InGameUI()
 //-------------------------------------------------------------------------------------------------
 InGameUI::~InGameUI()
 {
+	clearTimerResources();
 	delete TheControlBar;
 	TheControlBar = NULL;
 
@@ -1903,6 +1948,37 @@ void InGameUI::unregisterWindowLayout( WindowLayout *layout )
 	}
 }
 
+// Admission owns its candidate immediately. Stage a new list before map
+// insertion so failure cannot leave an orphan empty map entry.
+void InGameUI::admitSuperweapon(Int playerIndex, const AsciiString& powerName, SuperweaponInfo* info)
+{
+	std::unique_ptr<SuperweaponInfo, UIRecordDelete<SuperweaponInfo>> candidate(info);
+	if (!info || playerIndex < 0 || playerIndex >= MAX_PLAYER_COUNT) throw ERROR_BAD_ARG;
+	auto& powers = m_superweapons[playerIndex];
+	auto entry = powers.find(powerName);
+	if (entry != powers.end())
+		entry->second.push_back(info);
+	else
+	{
+		SuperweaponList pending;
+		pending.push_back(info);
+		if (!powers.emplace(powerName, std::move(pending)).second) throw ERROR_BAD_ARG;
+	}
+	candidate.release();
+}
+
+void InGameUI::clearTimerResources() noexcept
+{
+	for (auto& powers : m_superweapons)
+	{
+		for (auto& entry : powers)
+			for (auto* info : entry.second) info->deleteInstance();
+		powers.clear();
+	}
+	for (auto& entry : m_namedTimers) entry.second->deleteInstance();
+	m_namedTimers.clear();
+}
+
 //-------------------------------------------------------------------------------------------------
 /** Reset the in game user interface */
 //-------------------------------------------------------------------------------------------------
@@ -1930,27 +2006,7 @@ void InGameUI::reset( void )
 	freeMessageResources();
 
 	Int i;
-	for (i=0; i<MAX_PLAYER_COUNT; ++i)
-	{
-		for (SuperweaponMap::iterator mapIt = m_superweapons[i].begin(); mapIt != m_superweapons[i].end(); ++mapIt)
-		{
-			for (SuperweaponList::iterator listIt = mapIt->second.begin(); listIt != mapIt->second.end(); ++listIt)
-			{
-				SuperweaponInfo *info = *listIt;
-				info->deleteInstance();
-			}
-			mapIt->second.clear();
-		}
-		m_superweapons[i].clear();
-	}
-
-	for (NamedTimerMapIt timerIt = m_namedTimers.begin(); timerIt != m_namedTimers.end(); ++timerIt)
-	{
-		NamedTimerInfo *info = timerIt->second;
-		TheDisplayStringManager->freeDisplayString(info->displayString);
-		info->deleteInstance();
-	}
-	m_namedTimers.clear();
+	clearTimerResources();
 	m_namedTimerLastFlashFrame = 0;
 	m_namedTimerUsedFlashColor = TRUE; // so next one is false
 	m_showNamedTimers = TRUE;

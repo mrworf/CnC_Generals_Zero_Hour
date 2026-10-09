@@ -202,22 +202,26 @@ GameFont *FontLibrary::getFont( AsciiString name, Int pointSize, Bool bold )
 
 	}  // end if
 
-	// copy font data over to new element
-	font->nameString = name;
-	font->pointSize = pointSize;
-	font->bold = bold;
-	font->fontData = NULL;
-
-	//DEBUG_LOG(("Font: Loading font '%s' %d point\n", font->nameString.str(), font->pointSize));
-	// load the device specific data pointer
-	if( loadFontData( font ) == FALSE )
+	// The candidate is not in the list yet. Pair every partial backend
+	// acquisition on both failure contracts, while derived dispatch is live.
+	try
 	{
-
-		DEBUG_CRASH(( "getFont: Unable to load font data pointer '%s'\n", name ));
+		font->nameString = name;
+		font->pointSize = pointSize;
+		font->bold = bold;
+		if( loadFontData( font ) == FALSE )
+		{
+			releaseFontData( font );
+			font->deleteInstance();
+			return NULL;
+		}
+	}
+	catch (...)
+	{
+		releaseFontData( font );
 		font->deleteInstance();
-		return NULL;
-
-	}  // end if
+		throw;
+	}
 
 	// tie font into list
 	linkFont( font );

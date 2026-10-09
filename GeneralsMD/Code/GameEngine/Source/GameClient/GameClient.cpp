@@ -182,10 +182,6 @@ GameClient::~GameClient()
 	// delete window manager
 	m_serviceOwners.retire(TheWindowManager);
 
-	// delete the font library
-	if (m_serviceOwners.owns(TheFontLibrary)) TheFontLibrary->reset();
-	m_serviceOwners.retire(TheFontLibrary);
-
 	m_serviceOwners.retire(TheMouse);
 
 	///@todo :  TheTerrainVisual used to be the first thing destroyed.
@@ -217,6 +213,10 @@ GameClient::~GameClient()
 	m_serviceOwners.retire(TheKeyboard);
 
 	m_serviceOwners.retire(TheDisplayStringManager);
+	// All UI/Drawable/window and manager-owned strings borrow their font.
+	// Keep font backing valid through their legitimate teardown callbacks.
+	if (m_serviceOwners.owns(TheFontLibrary)) TheFontLibrary->reset();
+	m_serviceOwners.retire(TheFontLibrary);
 
 	m_serviceOwners.retire(TheEva);
 

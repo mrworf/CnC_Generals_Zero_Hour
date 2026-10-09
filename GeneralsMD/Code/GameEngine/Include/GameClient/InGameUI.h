@@ -247,12 +247,11 @@ class NamedTimerInfo : public MemoryPoolObject
 public:
 	AsciiString			m_timerName;							///< Timer name, needed on Load to reconstruct Map.
 	UnicodeString		timerText;								///< timer text
-	DisplayString*	displayString;						///< display string used to render the message
-	UnsignedInt			timestamp;									///< seconds shown in display string
-	Color						color;
-	Bool						isCountdown;
+	DisplayString*	displayString = NULL;		///< owned display string; retired before its manager
+	UnsignedInt			timestamp = 0;				///< seconds shown in display string
+	Color						color = 0;
+	Bool						isCountdown = FALSE;
 };
-EMPTY_DTOR(NamedTimerInfo)
 
 // ------------------------------------------------------------------------------------------------
 typedef std::map<AsciiString, NamedTimerInfo *> NamedTimerMap;
@@ -687,6 +686,8 @@ protected:
 	void incrementSelectCount( void ) { ++m_selectCount; }			///< Increase by one the running total of "selected" drawables
 	void decrementSelectCount( void ) { --m_selectCount; }			///< Decrease by one the running total of "selected" drawables
 	virtual View *createView( void ) = 0;												///< Factory for Views
+	void clearTimerResources() noexcept; ///< reset and shutdown share paired retirement
+	void admitSuperweapon(Int playerIndex, const AsciiString& powerName, SuperweaponInfo* info);
 	void evaluateSoloNexus( Drawable *newlyAddedDrawable = NULL );
 
 	/// expire a hint from of the specified type at the hint index

@@ -4326,3 +4326,132 @@ next coupled UI/font/client batch, not acceptance from shared camera ownership.
 Source anchors: DisplayStringManager.cpp::{~DisplayStringManager,link,unLink};
 DisplayString.h m_font; GameClient.cpp::~GameClient;
 InGameUI.cpp::{~InGameUI,reset,addNamedTimer,SuperweaponInfo}.
+
+Shared text/UI admission implementation (same N2 native-root batch): GameFont
+initializes its next/point/height/backing/bold state before backend entry.
+FontLibrary::getFont pairs backend partial acquisitions on both FALSE and throw,
+before list admission. Backend releaseFontData is a nonthrowing retirement
+contract; derived font owners must deleteAllFonts while their own vtable and
+native library are live. The base destructor alone cannot release derived backing.
+SuperweaponInfo's failed constructor now frees either/both strings; valid font
+lookup precedes either string assignment. Its lifetime and NamedTimerInfo still
+require their legitimate display-string manager to stay published through cleanup.
+NamedTimerInfo owns its string directly; no caller may free it a second time.
+
+Runtime addSuperweapon and snapshot reconstruction share admitSuperweapon:
+existing list insertion is candidate-guarded; a new list is staged before map
+insertion, so failure cannot leave an empty key or leak its record/two strings.
+Named timer replacement stages its entire candidate before pointer exchange;
+new-key insertion remains guarded. clearTimerResources retires both maps in reset
+and shutdown, including shutdown without reset. GameClient now retires UI and
+other string consumers, then the string manager, then resets/retires font backing.
+Source anchors: GameFont.h; GUI/GameFont.cpp::getFont; InGameUI.cpp::{
+SuperweaponInfo,NamedTimerInfo,admitSuperweapon,addNamedTimer,clearTimerResources};
+GameClient.cpp::~GameClient. tests/original/text_ownership.cpp uses explicit
+test-only adapters rejecting rendering/metrics. It proves shared ownership paths,
+not native FreeType/Fontconfig resources, full UI initialization, physical output,
+public player/science admission or complete snapshot restoration.
+
+Native font/metric source requirements verified before backend implementation:
+W3DGameFont::loadFontData rejects unsigned pointSize>100 and selects primary name,
+size/bold plus a same-size/bold alternate Unicode face. Primary/alternate are
+separate acquired reference units even if their numerical handles alias. A
+missing alternate was optional in this source; do not claim locale glyph coverage
+from a successful primary lookup. FontChars::Get_Char_Data uses primary for values
+below256, otherwise routes to the alternate when nonnull and not itself. This is
+not merely "use alternate when primary has no glyph". Source spacing comes from
+each character's GDI extent, not pair kerning: Store_GDI_Char adds PixelOverlap
+and an extra pixel for uppercase W; Get_Char_Spacing subtracts overlap/overhang.
+Create_GDI_Font always uses96dpi, point->pixel MulDiv(point,96,72), metrics height
+and ascent, overlap clamped0..4. The special name Generals selects Arial with a
+0.40*pixel-height requested width and zero overhang; it is not an arbitrary alias.
+Formatted extents share Build_Sentence_Not_Centered with word/hard wrapping,
+hotkey parsing and original spacing. Inspect/correct defined behavior rather
+than transplant pointer-expression mistakes such as (*word+1), which is not
+lookahead. No native metric/visual parity oracle is accepted yet.
+Source anchors: W3DDevice/GameClient/GUI/W3DGameFont.cpp::{loadFontData,
+releaseFontData}; WWVegas/WW3D2/render2dsentence.cpp::{Get_Char_Data,
+Store_GDI_Char,Get_Char_Spacing,Create_GDI_Font,Build_Sentence_Not_Centered}.
+GlobalLanguage::init currently validates LocalFontFile through original read-only
+VFS and retains its identities; it does not install fonts into the host or publish
+their physical asset roots. Native font matching must make those supplied font
+bytes usable through supported APIs, not silently ignore local-font precedence.
+UnicodeFontFileName parsing is commented out in original field tables; do not
+invent it as an active input. Stock host matching, alternate selection, actual
+glyph backing and constructor/native acquisition cleanup remain pending.
+
+Snapshot carry-forward discovered in the same paired-path review, not fixed or
+accepted by shared ownership tests: InGameUI::xfer declares versions1–3 but
+guards EVA-ready transfer with currentVersion>=3, including load, rather than the
+decoded version. Consequently old versions would consume a field not present in
+their source-declared layout. Named-timer count is signed and currently lacks a
+negative-count rejection. The next actual UI snapshot cohort must test real
+version1/2/3 wire traversal, malformed counts and all admission failure/retry
+paths; preserve fixed-width encodings and distinguish per-record safe admission
+from whole-snapshot atomic restoration. No current helper test accepts these gates.
+
+Stock font API ownership preflight (not an executed native backend): installed
+pkg-config reports freetype2 26.6.20 and fontconfig2.18.3. Public Fontconfig
+FcFontSetAdd does not copy its pattern; successful admission transfers the
+pattern into the set whose destruction releases it. Keep a guard until successful
+admission. FcFontSetMatch requires query configuration/default substitution first
+and returns a prepared result pattern, or null on error. Passing a concrete
+configuration avoids implicit use of the process's current configuration; do not
+replace that current configuration or globally finalize someone else's owner.
+Supported font sets and FcFreeTypeQueryFace are candidate routes for supplied VFS
+font bytes without host font installation; exact local precedence and alias/bold
+selection still need source-linked execution evidence. Reference:
+[Fontconfig developer reference](https://fontconfig.pages.freedesktop.org/fontconfig/fontconfig-devel/).
+FreeType FT_New_Memory_Face borrows the supplied byte buffer through FT_Done_Face;
+retire face references before buffers and the FT_Library. FT_Reference_Face adds
+another ownership unit to the same numerical face; pair each with FT_Done_Face.
+Faces and shared-library create/destroy operations require disciplined thread
+ownership. Reference: [FreeType face creation](https://freetype.org/freetype2/docs/reference/ft2-face_creation.html).
+No dependency source or private header has been used or modified.
+
+Executed stock-public-API control: FreeType runtime2.14.3 and Fontconfig21803
+(2.18.3) both passed GCC and Clang ASan/UBSan/LSan, leak detection enabled,
+three repeated lifetimes. The control uses an explicit configuration, matches a
+host font without logging its path, retains read-only bytes through memory-face
+retirement, renders an actual W glyph at10pt/96dpi, creates/matches a supplied
+font set through public FcFreeTypeQueryFace, and separately releases acquired
+FT_Face/FcPattern aliases. No global font configuration is replaced or FcFini
+called. This establishes a usable public-API route without library edits, not
+the game backend, supplied-retail font precedence, original metrics or glyph
+parity. Control source SHA256:
+3f1947faf2d9c19ee4b94cda64354ac3c069505a4f539f728f9ee9d4883ffd80.
+Reproducible control source and commands: evidence/qa/N2-text-ownership-checkpoint.md.
+
+Further UI/root carry-forward from the complete paired-path census: source
+popupMessage clears the accepted popup before fetching/staging its replacement,
+publishes pooled PopupMessageData before fallible window creation, and pauses
+GameLogic before layout admission. PopupMessageData has uninitialized scalar/
+layout fields, and InGameUI's destructor does not call clearPopupMessageData.
+That cleanup calls the original GameLogic pause/audio path and original window
+layout owner. Native UI/root work must stage these coupled acquisitions/side
+effects, retain accepted state on failure, and retire legitimate layout/string/
+logic parents in the proper order. The current timer-only checkpoint does not
+accept popup ownership, interactive windows or whole-root script side effects.
+Source anchors: InGameUI.cpp::{popupMessage,clearPopupMessageData,~InGameUI};
+InGameUI.h::PopupMessageData. This belongs to the existing UI/root ownership and
+script journal work, not a new product behavior or a replacement tiny plan.
+
+Actual root shutdown order is not safe merely because registry retirement is
+reverse acquisition: GameEngine initializes GameClient, then AI/GameLogic, then
+TeamFactory and PlayerList (with other intervening owners). Its destructor calls
+SubsystemInterfaceList::shutdownAll, which deletes the last registered owner
+before withdrawing its publication. Team::~Team calls TheScriptEngine and
+ThePlayerList::getPlayerCount/preTeamDestroy and detaches actual actors through
+setTeam. Thus reverse initialization alone retires PlayerList before nonempty
+teams still need it. GameLogic destruction clears actors only later. Original
+fixture contexts already use a two-phase actor-before-parent cleanup; actual
+GameEngine requires its own dependency-aware phase with actors/radar/UI logical
+callbacks and teams retired while GameLogic, players, scripts and client parents
+remain legitimate, then whole owner retirement/publication withdrawal. Popup
+cleanup's pause callback adds another reason not to blindly delete GameClient
+after GameLogic. Do not invoke full UI reset on partial initialization or treat
+an empty-root destructor as evidence for loaded actor/team teardown.
+Source anchors: Common/GameEngine.cpp::{init,~GameEngine};
+Common/System/SubsystemBase.cpp::shutdownAll; Common/RTS/Team.cpp::{
+~TeamFactory,clear,~Team}; GameLogic/System/GameLogic.cpp::~GameLogic;
+tests/original/object_ownership.cpp::Context::retire.
