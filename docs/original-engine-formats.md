@@ -3462,6 +3462,58 @@ GlobalData.cpp vertex-water defaults; native implementation and
 `evidence/qa/N2-native-water-checkpoint.md`. This is CPU-provider coverage,
 not native TerrainVisual/TerrainLogic/root integration or visual/gameplay parity.
 
+### Retained visual-owned terrain admission and deformation
+
+The full source WorldHeightMap constructor reads HeightMapData, BlendTileData
+and optional GlobalLighting, not logical objects/sides/triggers. Native
+`loadVisualTerrain` retains that phase separation: height/topology and lighting
+are one offside candidate; only after complete parsing are accepted backing and
+actual GlobalData time/lighting fields published. Omitted lighting retains prior
+configuration. Lighting can precede height data; the candidate must still roll
+back lighting after a later corrupt blend record or allocation failure.
+
+GlobalLighting versions1–3 begin with fixed-width Int time-of-day, followed by
+four authored time rows. Each row contains terrain light0, object light0, then
+two extra object lights for version2+, then two extra terrain lights for version3.
+Each light is nine Real scalars: ambient RGB, diffuse RGB, direction XYZ. Before
+reading a present lighting chunk, the source initializes all three lights in each
+authored row to zero ambient/diffuse and direction(0,0,-1). Row0 remains untouched.
+Do not normalize authored directions or clamp authored color magnitudes here.
+The optional final unsigned32 shadow color is independent of chunk version;
+absence retains the shadow manager's previous color. Native CPU ownership
+retains an optional authored color without renderer callbacks. Duplicate chunks,
+invalid physical/version/enum input and trailing payload reject atomically.
+
+Terrain-name lookup floors world coordinates divided by MAP_XY_FACTOR, adds the
+border, clips each axis, divides the signed packed tile index by4 (source right
+shift), then returns the first matching texture class. Overlapping classes select
+the first, not the last. Texture names are not image backing: source terrain color
+uses actual TileData's mip1 BGRA pixel. Native image/color acquisition remains a
+provider integration requirement, not satisfied by metadata or an invented color.
+
+Source construction raw queries add the border to grid coordinates, not world
+coordinates. setRawMapHeight only changes a strictly higher raw byte; it never
+raises terrain. This mutation changes subsequent logical ground queries but does
+not regenerate authored cliff flags. Native lowering validates coordinates and
+byte domain before changing accepted backing, repairing out-of-bounds/negative
+conversion cases without changing valid lowering. BaseHeightMap's oversizeTerrain
+already does nothing in the original source; it must not be interpreted as CPU
+height-grid resizing.
+
+No DO_SEISMIC_SIMULATIONS definition was found in retained GeneralsMD headers,
+source, DSP/VC project or make files; native CMake likewise does not define it.
+The default source configuration therefore uses one retained visual-owned logic
+grid. Conditional second/client-grid seismic code is not a reason to enable that
+feature silently. Future configuration changes must re-audit its callbacks.
+
+Sources: WorldHeightMap.cpp full constructor and ParseLightingDataChunk
+(around206–255,489–563), getTerrainNameAt/getTerrainColorAt (2062–2115);
+WorldHeightMap.h::getHeight/setRawHeight; W3DTerrainVisual.cpp raw-height adapters
+(933–978); BaseHeightMap.cpp::oversizeTerrain (1334); native height-map loader and
+`tests/original/native_terrain.cpp` visual/visual-negative/visual-faults families.
+Current evidence belongs in `evidence/qa/N2-visual-terrain-checkpoint.md`;
+native TerrainVisual/TerrainLogic/root and original simulation remain pending.
+
 Sources: GameLogic/System/GameLogic.cpp::startNewGame (1272,1631);
 GameLogic/Map/TerrainLogic.cpp::loadMap/addWaypoint/newMap;
 W3DDevice/GameLogic/W3DTerrainLogic.cpp::loadMap/getGroundHeight/newMap;

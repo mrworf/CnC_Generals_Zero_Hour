@@ -3,8 +3,11 @@
 #include "Common/DataChunk.h"
 #include "Common/GameCommon.h"
 #include <array>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
+class GlobalData;
 
 // Game-owned extraction of WorldHeightMap height backing and BaseHeightMap's
 // simulation queries. This is not a complete world/visual map loader.
@@ -40,6 +43,15 @@ public:
   void loadHeightData(ChunkInputStream& stream, Purpose purpose);
   // Complete height/blend topology only: no world-object/lighting/asset readiness.
   void loadTerrainTopology(ChunkInputStream& stream, Bool useThreeWayBlends);
+  // Retained visual-owned CPU map: topology and source global lighting commit
+  // together. Does not parse objects, sides or polygon-trigger owners.
+  void loadVisualTerrain(ChunkInputStream& stream, Bool useThreeWayBlends,
+                         GlobalData& configuration);
+  std::optional<UnsignedInt> shadowColor() const noexcept { return m_shadowColor; }
+  std::string_view terrainName(Real x, Real y) const;
+  // Source construction adapter uses unbordered grid coordinates and only lowers.
+  Bool lowerRawHeight(const ICoord2D& gridPosition, Int height);
+  Int constructionHeight(const ICoord2D& gridPosition) const;
   void readHeightChunk(DataChunkInput& input, DataChunkVersionType version,
                        Purpose purpose);
   void readBlendChunk(DataChunkInput& input, DataChunkVersionType version,
@@ -64,4 +76,5 @@ private:
   std::vector<UnsignedByte> m_bytes;
   Purpose m_purpose = Purpose::HeightChunkBacking;
   Topology m_topology;
+  std::optional<UnsignedInt> m_shadowColor;
 };

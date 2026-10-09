@@ -2,6 +2,7 @@
 // Algorithms derived from EA WorldHeightMap.cpp and BaseHeightMap.cpp.
 #include "GameLogic/NativeTerrainHeightMap.h"
 #include "Common/Terrain.h"
+#include "Common/GlobalData.h"
 #include <algorithm>
 #include <array>
 #include <bit>
@@ -21,6 +22,56 @@ struct TopologyRead {
   Bool useThreeWayBlends;
   bool heightSeen = false, blendSeen = false;
 };
+struct LightingState {
+  TimeOfDay time;
+  std::array<std::array<GlobalData::TerrainLighting,MAX_GLOBAL_LIGHTS>,TIME_OF_DAY_COUNT> terrain,objects;
+  explicit LightingState(const GlobalData& source):time(source.m_timeOfDay) {
+    for(unsigned t=0;t<TIME_OF_DAY_COUNT;++t)for(unsigned l=0;l<MAX_GLOBAL_LIGHTS;++l){
+      terrain[t][l]=source.m_terrainLighting[t][l];objects[t][l]=source.m_terrainObjectsLighting[t][l];}
+  }
+  void publish(GlobalData& target) const noexcept {
+    target.m_timeOfDay=time;
+    for(unsigned t=0;t<TIME_OF_DAY_COUNT;++t)for(unsigned l=0;l<MAX_GLOBAL_LIGHTS;++l){
+      target.m_terrainLighting[t][l]=terrain[t][l];target.m_terrainObjectsLighting[t][l]=objects[t][l];}
+  }
+};
+struct VisualRead {
+  TopologyRead topology;
+  LightingState lighting;
+  std::optional<UnsignedInt> shadow;
+  bool lightSeen=false;
+};
+Bool parseTopologyHeight(DataChunkInput&,DataChunkInfo*,void*);
+Bool parseTopologyBlend(DataChunkInput&,DataChunkInfo*,void*);
+Bool parseVisualHeight(DataChunkInput& input,DataChunkInfo* info,void* raw) {
+  return parseTopologyHeight(input,info,&static_cast<VisualRead*>(raw)->topology);
+}
+Bool parseVisualBlend(DataChunkInput& input,DataChunkInfo* info,void* raw) {
+  return parseTopologyBlend(input,info,&static_cast<VisualRead*>(raw)->topology);
+}
+Bool parseVisualLighting(DataChunkInput& input,DataChunkInfo* info,void* raw) {
+  auto& read=*static_cast<VisualRead*>(raw);
+  if(read.lightSeen || info->version<K_LIGHTING_VERSION_1 || info->version>K_LIGHTING_VERSION_3)
+    throw ERROR_CORRUPT_FILE_FORMAT;
+  const Int time=input.readInt();
+  if(time<0 || time>=TIME_OF_DAY_COUNT)throw ERROR_CORRUPT_FILE_FORMAT;
+  read.lighting.time=static_cast<TimeOfDay>(time);
+  const GlobalData::TerrainLighting initial={{0,0,0},{0,0,0},{0,0,-1}};
+  auto light=[&](GlobalData::TerrainLighting& value){
+    value.ambient.red=input.readReal();value.ambient.green=input.readReal();value.ambient.blue=input.readReal();
+    value.diffuse.red=input.readReal();value.diffuse.green=input.readReal();value.diffuse.blue=input.readReal();
+    value.lightPos.x=input.readReal();value.lightPos.y=input.readReal();value.lightPos.z=input.readReal();
+  };
+  for(unsigned t=TIME_OF_DAY_FIRST;t<TIME_OF_DAY_COUNT;++t){
+    read.lighting.terrain[t].fill(initial);read.lighting.objects[t].fill(initial);
+    light(read.lighting.terrain[t][0]);light(read.lighting.objects[t][0]);
+    if(info->version>=K_LIGHTING_VERSION_2)for(unsigned l=1;l<3;++l)light(read.lighting.objects[t][l]);
+    if(info->version>=K_LIGHTING_VERSION_3)for(unsigned l=1;l<3;++l)light(read.lighting.terrain[t][l]);
+  }
+  if(!input.atEndOfChunk())read.shadow=std::bit_cast<UnsignedInt>(input.readInt());
+  if(!input.atEndOfChunk())throw ERROR_CORRUPT_FILE_FORMAT;
+  read.lightSeen=true;return TRUE;
+}
 Bool parseTopologyHeight(DataChunkInput& input, DataChunkInfo* info, void* raw) {
   auto& read = *static_cast<TopologyRead*>(raw);
   if (read.heightSeen || read.blendSeen) throw ERROR_CORRUPT_FILE_FORMAT;
@@ -69,13 +120,16 @@ Bool parseHeight(DataChunkInput& input, DataChunkInfo* info, void* raw) {
   read.seen = true;
   return TRUE;
 }
-std::int64_t gridCoordinate(Real value, Int border) {
+std::int64_t boundedCoordinate(Real scaled, Int border) {
   // Reserve traversal/subtraction headroom. No float-to-int UB for hostile queries.
-  const auto floored = std::floor(value * (1.0f / MAP_XY_FACTOR));
+  const auto floored = std::floor(scaled);
   if (!std::isfinite(floored) || floored < std::numeric_limits<Int>::min() ||
       static_cast<double>(floored) > std::numeric_limits<Int>::max())
     throw ERROR_BAD_ARG;
   return static_cast<std::int64_t>(floored) + border;
+}
+std::int64_t gridCoordinate(Real value,Int border) {
+  return boundedCoordinate(value*(1.0f/MAP_XY_FACTOR),border);
 }
 void upNormal(Coord3D* normal) {
   if (normal) { normal->x = 0; normal->y = 0; normal->z = 1; }
@@ -89,6 +143,46 @@ void NativeTerrainHeightMap::swap(NativeTerrainHeightMap& candidate) noexcept {
   m_bytes.swap(candidate.m_bytes);
   std::swap(m_purpose, candidate.m_purpose);
   std::swap(m_topology, candidate.m_topology);
+  std::swap(m_shadowColor,candidate.m_shadowColor);
+}
+void NativeTerrainHeightMap::loadVisualTerrain(ChunkInputStream& stream,Bool useThreeWayBlends,
+                                              GlobalData& configuration) {
+  NativeTerrainHeightMap candidate;
+  VisualRead read{{candidate,useThreeWayBlends},LightingState(configuration),m_shadowColor};
+  DataChunkInput input(&stream);
+  input.registerParser(AsciiString("HeightMapData"),AsciiString::TheEmptyString,parseVisualHeight);
+  input.registerParser(AsciiString("BlendTileData"),AsciiString::TheEmptyString,parseVisualBlend);
+  input.registerParser(AsciiString("GlobalLighting"),AsciiString::TheEmptyString,parseVisualLighting);
+  if(!input.parse(&read) || !read.topology.heightSeen || !read.topology.blendSeen)
+    throw ERROR_CORRUPT_FILE_FORMAT;
+  candidate.m_shadowColor=read.shadow;
+  swap(candidate);read.lighting.publish(configuration);
+}
+std::string_view NativeTerrainHeightMap::terrainName(Real x,Real y)const {
+  // This source query divides; groundHeight's source arithmetic multiplies by
+  // the reciprocal. Do not merge their floating-point rounding contracts.
+  const auto gx=boundedCoordinate(x/MAP_XY_FACTOR,m_border),gy=boundedCoordinate(y/MAP_XY_FACTOR,m_border);
+  if(m_bytes.empty())return {};
+  if(!topologyReady())throw ERROR_BAD_ARG;
+  const auto ix=std::clamp<std::int64_t>(gx,0,m_width-1),iy=std::clamp<std::int64_t>(gy,0,m_height-1);
+  const Int tile=Int(m_topology.tiles[std::size_t(iy)*m_width+std::size_t(ix)])>>2;
+  for(const auto& entry:m_topology.textureClasses)
+    if(tile>=entry.firstTile && std::int64_t(tile)<std::int64_t(entry.firstTile)+entry.numTiles)return entry.name;
+  return {};
+}
+Int NativeTerrainHeightMap::constructionHeight(const ICoord2D& position)const {
+  if(m_bytes.empty())return 0;
+  const auto x=std::int64_t(position.x)+m_border,y=std::int64_t(position.y)+m_border;
+  if(x<0 || y<0 || x>=m_width || y>=m_height)throw ERROR_BAD_ARG;
+  return rawHeight(static_cast<Int>(x),static_cast<Int>(y));
+}
+Bool NativeTerrainHeightMap::lowerRawHeight(const ICoord2D& position,Int height) {
+  if(height<0 || height>255)throw ERROR_BAD_ARG;
+  const Int previous=constructionHeight(position);
+  if(m_bytes.empty() || previous<=height)return FALSE;
+  const auto x=std::size_t(std::int64_t(position.x)+m_border),y=std::size_t(std::int64_t(position.y)+m_border);
+  m_bytes[y*std::size_t(m_width)+x]=static_cast<UnsignedByte>(height);
+  return TRUE;
 }
 void NativeTerrainHeightMap::loadTerrainTopology(ChunkInputStream& stream, Bool useThreeWayBlends) {
   NativeTerrainHeightMap candidate;

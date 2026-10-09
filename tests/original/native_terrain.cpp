@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "AllocationFault.h"
 #include "GameLogic/NativeTerrainHeightMap.h"
+#include "Common/GlobalData.h"
+#include "Common/FileSystem.h"
 #include <algorithm>
 #include <bit>
 #include <cmath>
@@ -209,7 +211,7 @@ std::string topologyToc() {
   return result;
 }
 void ascii(std::string& data,const char* name) {put(data,std::strlen(name),2);data+=name;}
-std::string blendPayload(unsigned version=8,Int width=10,Int height=6,bool marked=true) {
+std::string blendPayload(unsigned version=8,Int width=10,Int height=6,bool marked=true,bool splitClasses=false) {
   const Int count=width*height;std::string result;put(result,count);
   for(Int index=0;index<count;++index)put(result,index%64,2);
   for(Int index=0;index<count;++index)put(result,index==0 ? 0xffffu : index==1 ? 32767u : 1u,2);
@@ -221,8 +223,10 @@ std::string blendPayload(unsigned version=8,Int width=10,Int height=6,bool marke
       put(result,marked && y==1 ? (x==0 ? 2u : x==1 ? 1u : 0u) : 0u,1);
   }
   put(result,16);put(result,2);if(version>=5)put(result,2);
-  put(result,1);put(result,0);put(result,16);put(result,4);put(result,0);
+  put(result,splitClasses ? 3 : 1);put(result,0);put(result,splitClasses ? 2 : 16);put(result,4);put(result,0);
   ascii(result,"GeneratedTerrain");
+  if(splitClasses){put(result,0);put(result,1);put(result,1);put(result,0);ascii(result,"OverlappingTerrain");
+    put(result,2);put(result,14);put(result,4);put(result,0);ascii(result,"OtherTerrain");}
   if(version>=4) {put(result,1);put(result,1);put(result,0);put(result,1);put(result,1);ascii(result,"GeneratedEdge");}
   put(result,4);
   for(unsigned byte : {0xfeu,1u,2u,3u,0x83u})put(result,byte,1);
@@ -348,19 +352,124 @@ void topologyFaults() {
     std::cout<<"topology prefixes [0,"<<census<<"); terminal "<<census<<'\n';
   }
 }
+std::string visualToc(){auto data=topologyToc();overwrite(data,4,3);
+  put(data,14,1);data+="GlobalLighting";put(data,3);return data;}
+Real authoredLight(unsigned time,unsigned light,unsigned kind,unsigned field){
+  return Real(time*100+light*10+kind*1000+field)*0.25f;
+}
+std::string lightingPayload(unsigned version=3,bool shadow=true){std::string data;put(data,TIME_OF_DAY_NIGHT);
+  auto light=[&](unsigned t,unsigned l,unsigned kind){for(unsigned f=0;f<9;++f)
+    put(data,std::bit_cast<UnsignedInt>(authoredLight(t,l,kind,f)));};
+  for(unsigned t=TIME_OF_DAY_FIRST;t<TIME_OF_DAY_COUNT;++t){light(t,0,0);light(t,0,1);
+    if(version>=2)for(unsigned l=1;l<3;++l)light(t,l,1);
+    if(version>=3)for(unsigned l=1;l<3;++l)light(t,l,0);}
+  if(shadow)put(data,0x89abcdefu);return data;
+}
+std::string visualWire(unsigned lightVersion=3,bool shadow=true,bool lightFirst=false,unsigned blendVersion=8){
+  const auto lights=chunk(lightingPayload(lightVersion,shadow),lightVersion,3);
+  const auto heights=chunk(payload(blendVersion==1 ? 1 : 4,10,6,blendVersion==1 ? 0 : 1,80),blendVersion==1 ? 1 : 4);
+  const auto blends=chunk(blendPayload(blendVersion),blendVersion,2);
+  return visualToc()+(lightFirst ? lights+heights+blends : heights+blends+lights);
+}
+void loadVisual(Map& owner,GlobalData& data,const std::string& wire){MemoryInput input(wire);
+  owner.loadVisualTerrain(input,TRUE,data);require(input.eof() && owner.topologyReady(),"complete visual-owned terrain input");}
+bool sameLight(const GlobalData::TerrainLighting& a,const GlobalData::TerrainLighting& b){
+  return a.ambient.red==b.ambient.red && a.ambient.green==b.ambient.green && a.ambient.blue==b.ambient.blue &&
+    a.diffuse.red==b.diffuse.red && a.diffuse.green==b.diffuse.green && a.diffuse.blue==b.diffuse.blue &&
+    a.lightPos.x==b.lightPos.x && a.lightPos.y==b.lightPos.y && a.lightPos.z==b.lightPos.z;
+}
+struct LightCapture{TimeOfDay time;GlobalData::TerrainLighting terrain[TIME_OF_DAY_COUNT][MAX_GLOBAL_LIGHTS],objects[TIME_OF_DAY_COUNT][MAX_GLOBAL_LIGHTS];
+  explicit LightCapture(const GlobalData& data):time(data.m_timeOfDay){for(unsigned t=0;t<TIME_OF_DAY_COUNT;++t)for(unsigned l=0;l<MAX_GLOBAL_LIGHTS;++l){
+    terrain[t][l]=data.m_terrainLighting[t][l];objects[t][l]=data.m_terrainObjectsLighting[t][l];}}
+  bool matches(const GlobalData& data)const{if(time!=data.m_timeOfDay)return false;
+    for(unsigned t=0;t<TIME_OF_DAY_COUNT;++t)for(unsigned l=0;l<MAX_GLOBAL_LIGHTS;++l)
+      if(!sameLight(terrain[t][l],data.m_terrainLighting[t][l]) || !sameLight(objects[t][l],data.m_terrainObjectsLighting[t][l]))return false;
+    return true;}
+};
+void visualFunctional(){GlobalData data;Map owner;const auto unchanged=data.m_terrainLighting[0][0];
+  for(unsigned version=1;version<=3;++version)for(unsigned blend=1;blend<=8;++blend){
+    loadVisual(owner,data,visualWire(version,true,blend%2,blend));
+    require(owner.shadowColor()==0x89abcdefu && data.m_timeOfDay==TIME_OF_DAY_NIGHT,"source time and raw unsigned shadow color");
+    require(sameLight(unchanged,data.m_terrainLighting[0][0]),"source invalid-time row remains borrowed configuration");
+    for(unsigned t=TIME_OF_DAY_FIRST;t<TIME_OF_DAY_COUNT;++t)for(unsigned l=0;l<MAX_GLOBAL_LIGHTS;++l){
+      const auto& terrain=data.m_terrainLighting[t][l];const auto& object=data.m_terrainObjectsLighting[t][l];
+      if(l==0 || version>=3){near(terrain.ambient.red,authoredLight(t,l,0,0),"source terrain light selection");near(terrain.lightPos.z,authoredLight(t,l,0,8),"source terrain direction");}
+      else require(terrain.ambient.red==0 && terrain.diffuse.blue==0 && terrain.lightPos.z==-1,"legacy absent terrain lights initialized downward");
+      if(l==0 || version>=2){near(object.diffuse.green,authoredLight(t,l,1,4),"source object light selection");near(object.lightPos.z,authoredLight(t,l,1,8),"source object direction");}
+      else require(object.ambient.blue==0 && object.diffuse.green==0 && object.lightPos.z==-1,"legacy absent object lights initialized downward");
+    }
+    require(owner.terrainName(-100,-100)=="GeneratedTerrain" && owner.terrainName(10000,10000)=="GeneratedTerrain","source floor/border/clipped packed tile class query");
+  }
+  const LightCapture before(data);loadVisual(owner,data,topologyWire());
+  require(before.matches(data) && owner.shadowColor()==0x89abcdefu,"omitted global lighting retains accepted lights and manager shadow color");
+  loadVisual(owner,data,visualWire(1,false));require(owner.shadowColor()==0x89abcdefu,"old optional shadow omission retains previous color");
+  Map fresh;loadVisual(fresh,data,visualWire(1,false));require(!fresh.shadowColor(),"no invented shadow color before authored value");
+  loadVisual(owner,data,visualWire());const auto flags=owner.topology().cliffFlags;
+  const ICoord2D position{0,0};require(owner.constructionHeight(position)==80,"source raw-height query adds border");
+  require(!owner.lowerRawHeight(position,90) && !owner.lowerRawHeight(position,80),"construction never raises or rewrites equal height");
+  require(owner.lowerRawHeight(position,32) && owner.constructionHeight(position)==32,"source lower-only byte mutation");
+  near(owner.groundHeight(0,0),20,"deformation reaches logical ground query");
+  require(owner.topology().cliffFlags==flags,"authored cliffs are not silently regenerated by construction");
+  loadVisual(owner,data,visualToc()+chunk(payload(4,10,6,1,80))+chunk(blendPayload(8,10,6,true,true),8,2));
+  require(owner.terrainName(-10,-10)=="GeneratedTerrain" && owner.terrainName(-0.01f,-10)=="GeneratedTerrain" &&
+    owner.terrainName(60,-10)=="GeneratedTerrain" && owner.terrainName(70,-10)=="OtherTerrain",
+    "packed divide by4, floor/clipping, border and first overlapping class selection");
+  auto visualOnlyToc=visualToc();overwrite(visualOnlyToc,4,4);put(visualOnlyToc,11,1);visualOnlyToc+="ObjectsList";put(visualOnlyToc,4);
+  loadVisual(owner,data,visualOnlyToc+chunk("not a logical object list",1,4)+chunk(payload(4,10,6,1,80))+chunk(blendPayload(),8,2));
+  require(owner.topologyReady(),"full visual reader skips logical-owner payloads instead of reparsing them");
+}
+void visualNegative(){GlobalData data;Map owner;const auto valid=visualWire(3,true,true);loadVisual(owner,data,valid);
+  auto reject=[&](const std::string& bytes){const LightCapture lights(data);const auto shadow=owner.shadowColor();
+    const auto* backing=owner.bytes().data();const auto* tiles=owner.topology().tiles.data();const auto live=AllocationFault::live();bool failed=false;
+    try{loadVisual(owner,data,bytes);}catch(ErrorCode error){require(error==ERROR_CORRUPT_FILE_FORMAT,"visual map error classification");failed=true;}
+    require(failed && lights.matches(data) && owner.shadowColor()==shadow && owner.bytes().data()==backing && owner.topology().tiles.data()==tiles && AllocationFault::live()==live,"late failure preserves terrain and all configuration fields");
+    loadVisual(owner,data,valid);};
+  for(std::size_t n=0;n<valid.size();++n)reject(valid.substr(0,n));
+  const auto height=chunk(payload(4,10,6,1,80)),blend=chunk(blendPayload(),8,2),light=lightingPayload();
+  for(unsigned version:{0u,4u})reject(visualToc()+chunk(light,version,3)+height+blend);
+  reject(visualToc()+chunk(light,3,3)+height+blend+chunk(light,3,3));
+  reject(visualToc()+chunk(light+"x",3,3)+height+blend);
+  for(UnsignedInt time:{0xffffffffu,UnsignedInt(TIME_OF_DAY_COUNT)}){auto bad=light;overwrite(bad,0,time);reject(visualToc()+chunk(bad,3,3)+height+blend);}
+  for(std::size_t at:{std::size_t(4),light.size()-8}){auto bad=light;overwrite(bad,at,0x7fc00000u);reject(visualToc()+chunk(bad,3,3)+height+blend);}
+  auto corrupt=blendPayload();corrupt+='x';reject(visualToc()+chunk(light,3,3)+height+chunk(corrupt,8,2));
+  const auto before=owner.bytes();const auto* backing=owner.bytes().data();
+  auto badMutation=[&](auto operation){bool failed=false;try{operation();}catch(ErrorCode error){failed=error==ERROR_BAD_ARG;}
+    require(failed && owner.bytes()==before && owner.bytes().data()==backing,"invalid deformation/query preserves accepted backing");};
+  for(Int value:{-1,256})badMutation([&]{owner.lowerRawHeight({0,0},value);});
+  for(ICoord2D position:{ICoord2D{std::numeric_limits<Int>::min(),0},ICoord2D{std::numeric_limits<Int>::max(),0},ICoord2D{0,6}})
+    badMutation([&]{owner.lowerRawHeight(position,1);});
+  badMutation([&]{owner.terrainName(std::numeric_limits<Real>::quiet_NaN(),0);});
+  Map heightOnly;load(heightOnly,wire(payload()));badMutation([&]{heightOnly.terrainName(0,0);});
+}
+void visualFaults(){GlobalData data;Map owner;const auto valid=visualWire(1,true,true),replacement=visualWire(3,false,true);
+  loadVisual(owner,data,valid);AllocationFault::arm(SIZE_MAX);try{loadVisual(owner,data,replacement);}catch(...){AllocationFault::disarm();throw;}
+  const auto census=AllocationFault::attempts();AllocationFault::disarm();loadVisual(owner,data,valid);
+  for(std::size_t ordinal=0;ordinal<=census;++ordinal){const LightCapture lights(data);const auto* bytes=owner.bytes().data();const auto* tiles=owner.topology().tiles.data();const auto live=AllocationFault::live();bool failed=false;
+    AllocationFault::arm(ordinal);try{loadVisual(owner,data,replacement);}catch(const std::bad_alloc&){failed=true;}
+    catch(...){AllocationFault::disarm();throw;}const bool hit=AllocationFault::triggered();AllocationFault::disarm();
+    require(hit==failed && failed==(ordinal<census),"complete visual-owned terrain manifest and exact terminal");
+    if(failed)require(lights.matches(data) && owner.bytes().data()==bytes && owner.topology().tiles.data()==tiles && AllocationFault::live()==live,"every partial terrain/lighting owner rolls back");
+    loadVisual(owner,data,replacement);require(data.m_terrainLighting[TIME_OF_DAY_MORNING][1].lightPos.z==authoredLight(1,1,0,8),"corrected same-owner retry commits source extra lighting");
+    loadVisual(owner,data,valid);require(lights.matches(data) && AllocationFault::live()==live,"accepted lighting/terrain restore after every retry");
+  }std::cout<<"visual terrain prefixes [0,"<<census<<"); terminal "<<census<<"; every retry\n";
+}
 }
 int main(int argc,char** argv) {
   const auto initial=AllocationFault::live();bool initialized=false;
   try {
     require(argc==2,"terrain family required");initMemoryManager();initialized=true;
-    {Map warm;load(warm,wire(payload()));loadTopology(warm,topologyWire());}
+    {FileSystem files;auto* previous=TheFileSystem;TheFileSystem=&files;
+    struct RestoreFiles{FileSystem* previous;~RestoreFiles(){TheFileSystem=previous;}} restoreFiles{previous};
+    {GlobalData warmData;Map warm;load(warm,wire(payload()));loadTopology(warm,topologyWire());}
     {const std::string family=argv[1];
       for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
         if(family=="functional")functional();else if(family=="negative")negative();else if(family=="faults")faults();
         else if(family=="topology")topologyFunctional();else if(family=="topology-negative")topologyNegative();
         else if(family=="topology-faults")topologyFaults();
+        else if(family=="visual")visualFunctional();else if(family=="visual-negative")visualNegative();
+        else if(family=="visual-faults")visualFaults();
         else throw std::runtime_error("unknown terrain family");
-        require(AllocationFault::live()==live,"whole height owner retirement");}}
+        require(AllocationFault::live()==live,"whole height owner retirement");}}}
     shutdownMemoryManager();initialized=false;
     require(AllocationFault::live()==initial,"whole source memory metadata retirement");
     std::cout<<"PASS source height/topology/queries; full world/ghost/startup pending\n";return 0;

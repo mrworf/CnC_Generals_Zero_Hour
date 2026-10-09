@@ -2032,3 +2032,38 @@ notes, QA evidence and current delivery checkpoint together. Exact validation
 and frozen source identity: `evidence/qa/N2-native-water-checkpoint.md`.
 This checkpoint does not complete slice03/N2; continue the native terrain
 provider/waypoint/root integration, without importing historical implementation.
+
+Retained terrain-content continuation (parent029730a6; clean transaction start):
+extend NativeTerrainHeightMap with the full source height/blend/GlobalLighting
+admission path consumed by TerrainVisual. Parse lighting versions1–3 into an
+offside copy of actual GlobalData lighting/time fields; retain omitted lighting
+and shadow color, initialize absent old-version extra lights to source zero
+ambient/diffuse and downward direction, and retain an optional authored shadow
+color without a renderer callback. Commit map and scalar configuration only
+after the complete stream succeeds. Never reparse logical world owners here.
+Reject invalid versions, enum values, duplicates, truncated/trailing fields, and
+late failures without changing accepted map/configuration. Preserve source
+height/blend legacy resampling and optional lighting order. Add source terrain-
+name lookup (floor, border, clipping, packed tile divide by4, first class match)
+and construction's lower-only raw-height mutation with bounded coordinates and
+defined byte admission; do not regenerate authored cliff flags on deformation.
+OversizeTerrain is already a no-op in the original BaseHeightMap; don't invent
+CPU resizing. Color still requires actual decoded source tile mip1 backing and
+is not proven by class metadata. This is the same provider/root batch and slice,
+not a new helper plan. Test all lighting versions, omitted/optional shadow state,
+late rollback/each corrected retry, exact allocation terminal and repeated owners
+under all3 configurations before a coherent checkpoint. Full N2/root remains
+pending; attach only current, actually executed evidence.
+
+Retained CPU terrain checkpoint: all3 configured builds and related72 pass on
+canonical611 source79af2341 / inclusive618 source5483f992. Three new visual
+families cover lighting1–3 × blend1–8, source tile-name selection and deformation,
+all incomplete/late malformed prefixes and complete allocation prefixes[0,61)
+with terminal61 and every corrected retry across three whole owners. Evidence:
+`evidence/qa/N2-visual-terrain-checkpoint.md`. Commit boundary is
+`delivery: admit retained terrain and lighting atomically`, not N2/slice completion.
+Full configured285 is not run. Native TerrainVisual integration must use this
+retained full grid and the accepted water CPU owner; an outer admission scope
+must keep original logical world publication rollback live through waypoint,
+provider and later root failure, rather than call NativeLogicalWorld::load and
+assume an already committed logical parse can unwind a later terrain failure.
