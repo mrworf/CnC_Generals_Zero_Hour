@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "AllocationFault.h"
 #include "GameLogic/NativeTerrainHeightMap.h"
+#include "GameClient/NativeTerrainVisual.h"
+#include "GameLogic/GameLogic.h"
+#include "Common/TerrainTypes.h"
 #include "Common/GlobalData.h"
 #include "Common/FileSystem.h"
 #include <algorithm>
@@ -453,6 +456,121 @@ void visualFaults(){GlobalData data;Map owner;const auto valid=visualWire(1,true
     loadVisual(owner,data,valid);require(lights.matches(data) && AllocationFault::live()==live,"accepted lighting/terrain restore after every retry");
   }std::cout<<"visual terrain prefixes [0,"<<census<<"); terminal "<<census<<"; every retry\n";
 }
+
+// Test-only device, intentionally no presentation acceptance. Production's CPU
+// adapter stays abstract until real output and the complete snapshot are bound.
+struct DeviceFixture final:NativeTerrainVisual {
+  unsigned dirty=0;
+  void terrainHeightsChanged()noexcept override{++dirty;}
+  void getTerrainColorAt(Real,Real,RGBColor*)override{throw ERROR_BAD_ARG;}
+  Bool intersectTerrain(Coord3D*,Coord3D*,Coord3D*)override{throw ERROR_BAD_ARG;}
+  void setTerrainTracksDetail()override{}
+  void setShoreLineDetail()override{}
+  void addFactionBib(Object*,Bool,Real)override{}
+  void removeFactionBib(Object*)override{}
+  void addFactionBibDrawable(Drawable*,Bool,Real)override{}
+  void removeFactionBibDrawable(Drawable*)override{}
+  void removeAllBibs()override{}
+  void removeBibHighlighting()override{}
+  void removeTreesAndPropsForConstruction(const Coord3D*,const GeometryInfo&,Real)override{}
+  void addProp(const ThingTemplate*,const Coord3D*,Real)override{}
+  void replaceSkyboxTextures(const AsciiString* [5],const AsciiString* [5])override{}
+  void xfer(Xfer*)override{throw ERROR_BAD_ARG;}
+};
+struct ProviderContext {
+  GlobalData data;
+  TerrainTypeCollection types;
+  GlobalData* oldData=TheWritableGlobalData;
+  TerrainTypeCollection* oldTypes=TheTerrainTypes;
+  ProviderContext(){TheWritableGlobalData=&data;TheTerrainTypes=&types;}
+  ~ProviderContext(){TheWritableGlobalData=oldData;TheTerrainTypes=oldTypes;}
+};
+void providerLoad(DeviceFixture& owner,const std::string& bytes,const AsciiString& name){
+  MemoryInput input(bytes);owner.loadStream(input,name,TRUE);require(input.eof(),"complete native provider terrain admission");
+}
+void providerFunctional(){ProviderContext context;DeviceFixture owner;TerrainVisual& api=owner;
+  const ICoord2D position{0,0};require(api.getRawMapHeight(nullptr)==0 && api.getTerrainTile(0,0)==nullptr,"absent source provider defaults");
+  api.setRawMapHeight(nullptr,1);api.init();require(!owner.waterGrid().enabled(),"actual default profile inert through base dispatch");
+  providerLoad(owner,visualToc()+chunk(payload(4,10,6,1,80))+chunk(blendPayload(8,10,6,true,true),8,2),"GeneratedAccepted.map");
+  TerrainType* type=context.types.newTerrain("GeneratedTerrain");type->friend_setRestrictConstruction(TRUE);
+  require(api.getTerrainTile(-10,-10)==type && api.getTerrainTile(-10,-10)->getRestrictConstruction(),"construction receives actual authored restricted TerrainType");
+  require(api.getTerrainTile(70,-10)==nullptr,"unknown source terrain class remains absent");
+  const auto dirty=owner.dirty;api.setRawMapHeight(&position,90);require(owner.dirty==dirty,"no dirty upload on nonlowering construction");
+  api.setRawMapHeight(&position,32);require(api.getRawMapHeight(&position)==32 && owner.dirty==dirty+1,"original virtual deformation and dirty notification");
+  near(owner.heightMap().groundHeight(0,0),20,"provider deformation reaches retained simulation grid");
+  api.oversizeTerrain(100);require(owner.heightMap().width()==10,"original oversize method remains inert");
+  api.setWaterGridResolution(nullptr,3,3,10);api.setWaterGridHeightClamps(nullptr,0,20);
+  api.setWaterTransform(nullptr,0,100,200,5);api.setWaterAttenuationFactors(nullptr,1,0,0,0);api.enableWaterGrid(TRUE);
+  api.changeWaterHeight(100,200,6);Real height=0;require(api.getWaterGridHeight(100,200,&height),"actual virtual water query");near(height,11,"actual virtual source water mutation");
+  Real x=0,y=0,spacing=0;api.getWaterGridResolution(nullptr,&x,&y,&spacing);require(x==3 && y==3 && spacing==10,"virtual resolution outputs");
+  api.getWaterGridResolution(nullptr,nullptr,&y,nullptr);api.setWaterTransform(static_cast<const Matrix3D*>(nullptr));api.getWaterTransform(nullptr,nullptr);
+  Matrix3D transform(1);api.getWaterTransform(nullptr,&transform);near(transform.Get_Translation().Z,5,"virtual matrix output");
+  api.addWaterVelocity(100,200,2,10);
+  {GameLogic logic;auto* prior=TheGameLogic;TheGameLogic=&logic;
+    struct Restore{GameLogic* prior;~Restore(){TheGameLogic=prior;}} restore{prior};api.update();
+    near(owner.waterGrid().vertex(0,0).height,6,"source frame zero through actual GameLogic publication");}
+  DeviceFixture candidate;providerLoad(candidate,visualWire(1,false),"GeneratedCandidate.map");
+  auto* original=owner.heightMap().bytes().data();auto* next=candidate.heightMap().bytes().data();
+  owner.exchangeCpuState(candidate);require(owner.heightMap().bytes().data()==next && candidate.heightMap().bytes().data()==original && candidate.waterGrid().enabled(),"nonallocating complete provider CPU publication exchange");
+  owner.exchangeCpuState(candidate);const auto* backing=owner.heightMap().bytes().data();api.reset();
+  require(owner.filename().isEmpty() && owner.heightMap().bytes().data()==backing && owner.waterGrid().enabled() && owner.waterGrid().vertex(0,0).height==0,"source reset keeps prior terrain/enabled water backing and clears waves/name");
+}
+void providerNegative(){ProviderContext context;DeviceFixture owner;TerrainVisual& api=owner;
+  // Lighting is optional; put it first so every tested physical prefix ends
+  // before mandatory terrain admission, rather than reject valid omission.
+  const auto valid=visualWire(3,true,true);providerLoad(owner,valid,"GeneratedAccepted.map");
+  auto rejected=[&](auto operation){const auto* backing=owner.heightMap().bytes().data();const auto dirty=owner.dirty;const LightCapture lighting(context.data);
+    bool failed=false;try{operation();}catch(ErrorCode){failed=true;}
+    require(failed && owner.heightMap().bytes().data()==backing && owner.filename()=="GeneratedAccepted.map" && owner.dirty==dirty && lighting.matches(context.data),"provider failure retains accepted map/filename/lighting/dirty publication");};
+  for(std::size_t n=0;n<valid.size();++n){rejected([&]{providerLoad(owner,valid.substr(0,n),"GeneratedRejected.map");});
+    providerLoad(owner,valid,"GeneratedAccepted.map");}
+  rejected([&]{providerLoad(owner,valid,AsciiString());});rejected([&]{api.setRawMapHeight(nullptr,1);});
+  const ICoord2D position{0,0};rejected([&]{api.setRawMapHeight(&position,256);});
+  {auto* prior=TheWritableGlobalData;TheWritableGlobalData=nullptr;
+    struct Restore{GlobalData* prior;~Restore(){TheWritableGlobalData=prior;}}restore{prior};
+    rejected([&]{api.init();});rejected([&]{providerLoad(owner,valid,"GeneratedRejected.map");});}
+  {auto* prior=TheTerrainTypes;TheTerrainTypes=nullptr;
+    struct Restore{TerrainTypeCollection* prior;~Restore(){TheTerrainTypes=prior;}}restore{prior};rejected([&]{api.getTerrainTile(0,0);});}
+  {auto* prior=TheGameLogic;TheGameLogic=nullptr;
+    struct Restore{GameLogic* prior;~Restore(){TheGameLogic=prior;}}restore{prior};rejected([&]{api.update();});}
+  require(!api.load(AsciiString()) && !api.load("GeneratedMissing.map"),"empty/missing filename fails without accepted mutation");
+  api.setWaterGridResolution(nullptr,3,3,10);api.setWaterGridHeightClamps(nullptr,0,20);
+  api.setWaterAttenuationFactors(nullptr,1,0,0,0);api.enableWaterGrid(TRUE);api.changeWaterHeight(0,0,5);
+  const auto water=owner.waterGrid().backing();const auto* waterPointer=owner.waterGrid().backing().data();
+  context.data.m_vertexWaterGridSize[0]=std::numeric_limits<Real>::quiet_NaN();
+  rejected([&]{api.init();});
+  require(owner.waterGrid().backing()==water && owner.waterGrid().backing().data()==waterPointer && owner.waterGrid().enabled(),"late profile failure preserves accepted virtual water owner");
+  const auto dirty=owner.dirty;providerLoad(owner,valid,"GeneratedRetry.map");require(owner.filename()=="GeneratedRetry.map" && owner.dirty==dirty+1,"corrected provider replacement retry");
+}
+void providerFaults(){ProviderContext context;DeviceFixture owner;
+  const auto valid=visualWire(1,true,true),replacement=visualWire(3,false,true);
+  const AsciiString acceptedName("GeneratedAccepted.map"),candidateName("GeneratedCandidate.map");
+  providerLoad(owner,valid,acceptedName);AllocationFault::arm(SIZE_MAX);
+  try{providerLoad(owner,replacement,candidateName);}catch(...){AllocationFault::disarm();throw;}
+  const auto census=AllocationFault::attempts();AllocationFault::disarm();providerLoad(owner,valid,acceptedName);
+  for(std::size_t ordinal=0;ordinal<=census;++ordinal){const LightCapture lights(context.data);
+    const auto* bytes=owner.heightMap().bytes().data();const auto live=AllocationFault::live();const auto dirty=owner.dirty;bool failed=false;
+    AllocationFault::arm(ordinal);try{providerLoad(owner,replacement,candidateName);}catch(const std::bad_alloc&){failed=true;}
+    catch(...){AllocationFault::disarm();throw;}const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+    require(hit==failed && failed==(ordinal<census),"complete virtual provider fault manifest and exact terminal");
+    if(failed)require(lights.matches(context.data) && owner.heightMap().bytes().data()==bytes && owner.filename()==acceptedName && owner.dirty==dirty && AllocationFault::live()==live,"every provider admission prefix restores accepted publication");
+    providerLoad(owner,replacement,candidateName);require(owner.filename()==candidateName,"every provider corrected retry");
+    providerLoad(owner,valid,acceptedName);require(lights.matches(context.data) && AllocationFault::live()==live,"accepted provider restore after every retry");
+  }std::cout<<"native provider prefixes [0,"<<census<<"); terminal "<<census<<"; every retry\n";
+  TerrainVisual& api=owner;
+  api.setWaterGridResolution(nullptr,3,3,10);
+  auto waterFault=[&](auto operation){const auto* backing=owner.waterGrid().backing().data();const auto live=AllocationFault::live();
+    AllocationFault::arm(0);bool failed=false;try{operation();}catch(const std::bad_alloc&){failed=true;}
+    catch(...){AllocationFault::disarm();throw;}const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+    require(failed && hit && owner.waterGrid().backing().data()==backing && AllocationFault::live()==live,"virtual water allocation prefix retires and restores");
+    AllocationFault::arm(1);try{operation();}catch(...){AllocationFault::disarm();throw;}
+    const auto terminal=AllocationFault::attempts();const auto terminalHit=AllocationFault::triggered();AllocationFault::disarm();
+    require(terminal==1 && !terminalHit,"virtual water corrected retry and exact terminal1");};
+  waterFault([&]{api.enableWaterGrid(TRUE);});
+  auto* original=owner.waterGrid().backing().data();
+  waterFault([&]{api.setWaterGridResolution(nullptr,3,4,10);});
+  require(owner.waterGrid().cellsY()==4 && owner.waterGrid().backing().data()!=original,"actual virtual Y-only resize replacement");
+}
 }
 int main(int argc,char** argv) {
   const auto initial=AllocationFault::live();bool initialized=false;
@@ -460,7 +578,8 @@ int main(int argc,char** argv) {
     require(argc==2,"terrain family required");initMemoryManager();initialized=true;
     {FileSystem files;auto* previous=TheFileSystem;TheFileSystem=&files;
     struct RestoreFiles{FileSystem* previous;~RestoreFiles(){TheFileSystem=previous;}} restoreFiles{previous};
-    {GlobalData warmData;Map warm;load(warm,wire(payload()));loadTopology(warm,topologyWire());}
+    {GlobalData warmData;Map warm;load(warm,wire(payload()));loadTopology(warm,topologyWire());
+      TerrainTypeCollection warmTypes;warmTypes.newTerrain("GeneratedTerrain");}
     {const std::string family=argv[1];
       for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
         if(family=="functional")functional();else if(family=="negative")negative();else if(family=="faults")faults();
@@ -468,6 +587,8 @@ int main(int argc,char** argv) {
         else if(family=="topology-faults")topologyFaults();
         else if(family=="visual")visualFunctional();else if(family=="visual-negative")visualNegative();
         else if(family=="visual-faults")visualFaults();
+        else if(family=="provider")providerFunctional();else if(family=="provider-negative")providerNegative();
+        else if(family=="provider-faults")providerFaults();
         else throw std::runtime_error("unknown terrain family");
         require(AllocationFault::live()==live,"whole height owner retirement");}}}
     shutdownMemoryManager();initialized=false;

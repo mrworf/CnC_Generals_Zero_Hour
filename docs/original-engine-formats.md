@@ -3496,6 +3496,81 @@ GlobalData.cpp vertex-water defaults; native implementation and
 `evidence/qa/N2-native-water-checkpoint.md`. This is CPU-provider coverage,
 not native TerrainVisual/TerrainLogic/root integration or visual/gameplay parity.
 
+### Native TerrainVisual CPU interface binding
+
+`NativeTerrainVisual` now derives from the actual `TerrainVisual`, rather than
+presenting unrelated helper objects as a device. Its CPU virtual methods own and
+dispatch to the retained full height/topology and source vertex-water owners.
+`getTerrainTile` resolves the source-selected class name through the actual
+`TerrainTypeCollection`; BuildAssistant.cpp around502 consumes that returned
+TerrainType's construction restriction, so a universal null/no-op implementation
+would change gameplay. Unknown classes remain null. Absent-map raw-height queries
+return zero; loaded-map mutation validates the coordinate/byte and only lowers.
+A noexcept device dirty-height hook runs only after actual change or complete
+map/state publication, never during failed admission.
+
+Water handle selectors are ignored by the original W3DTerrainVisual adapters:
+they dispatch to one water-grid owner, not independently keyed water grids.
+Matrix pointers and each resolution output are individually optional in source
+W3DWater.cpp::getGridTransform/getGridResolution around2616/2648. Native virtual
+dispatch preserves those null behaviors, angle versus matrix query semantics,
+profile0 initialization and actual GameLogic frame/GlobalData gravity inputs.
+Reset clears the filename/waves but retains the previous terrain and enabled
+water backing. CPU-state exchange swaps height, water and filename without
+allocation; it does not itself roll back external GlobalData or world owners.
+The enclosing root candidate must retain those separate transactions.
+
+Filename loading uses the actual rooted/decompressing CachedFileInputStream and
+GlobalData::m_use3WayTerrainBlends; stream admission stages the filename before
+the existing atomic map/lighting reader and has no fallible publication afterward.
+Missing files return false; malformed maps and absent required configuration
+throw without accepted map/name/dirty-state publication. Source conditional
+seismic configuration remains unchanged. Native consumers use typed heightMap()
+access, not a fake cast to the legacy device-owned WorldHeightMap.
+
+This common class deliberately remains abstract for image-backed color, picking,
+presentation and snapshot transfer. W3DTerrainVisual::xfer around1198–1310 is
+version3: base version1, enabled flag/matching gate, conditional water snapshot,
+version2+ height length/bytes and version3 render-object snapshot. Transferring
+only the CPU prefix as a complete device snapshot would silently corrupt the
+format; implementing the complete native device snapshot is still pending.
+The fixture's output methods are test-only, not a production no-op renderer.
+W3DTerrainVisual/BaseHeightMap construction tree/prop methods around1100–1136
+and2176–2245 act on presentation buffers, but presentation preservation remains
+a later device obligation rather than inferred output success.
+
+Tests: `tests/original/native_terrain.cpp` provider/provider-negative/provider-
+faults families. They use actual base dispatch, TerrainTypeCollection restrictions,
+actual GameLogic frame0 publication, malformed-prefix corrected retries and
+complete provider allocation sweeps, with separate virtual water enable/resize
+failure/retry terminal1. Source water multiple-frame arithmetic remains covered
+by native_water; the new frame0 dispatch test is not whole simulation acceptance.
+Evidence: `evidence/qa/N2-terrain-provider-checkpoint.md`. Native TerrainLogic,
+layers/bridges/pathfinder, outer-root candidate and actual startup remain pending.
+
+Next TerrainLogic cohort source anchors (read-only review, not implementation):
+W3DTerrainLogic.cpp::loadMap around131–209 caches dimensions, all boundaries,
+active0 and byte-derived min/max Z from the temporary logical reader, before
+common waypoint and visual loading. Do not recalculate those cached extrema from
+later deformation without source authority. getExtent/getMaximumPathfindExtent
+around215–260 use active/all boundary dimensions respectively and cached Z.
+getExtentIncludingBorder around267 updates only XY using retained map border;
+its existing caller-provided Z is untouched. getLayerHeight around307–349 first
+queries retained ground, then uses actual AI pathfinder wall membership/height,
+or actual findBridgeLayerAt and the bridge's height/normal when above ground.
+It is not sufficient to map every layer back to ground.
+
+BaseHeightMap.cpp::loadRoadsAndBridges around1444 is not presentation-only:
+W3DBridgeBuffer.cpp::loadBridges around814 pairs adjacent POINT1/POINT2 source
+MapObjects, snaps endpoints to retained ground plus BRIDGE_FLOAT_AMT, and calls
+addBridge. Around1078–1097 addBridge loads pristine source bridge geometry,
+derives BridgeInfo, assigns source bridgeIndex and calls actual TerrainLogic::
+addBridgeToLogic. Preserve that game-owned CPU geometry/admission dependency in
+headless newMap; omitting the visual buffer must not omit bridges from simulation.
+Model-derived BridgeInfo and owned objects/pathfinder rollback require source
+inspection before choosing extraction/build surfaces. This is a recorded next
+implementation dependency, not a reason to accept a ground-only fixture.
+
 ### Retained visual-owned terrain admission and deformation
 
 The full source WorldHeightMap constructor reads HeightMapData, BlendTileData

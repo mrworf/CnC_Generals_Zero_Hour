@@ -2102,3 +2102,38 @@ side identity and source height/ID/publication state. Evidence:
 Full configured290 is not run; this does not complete slice03/N2 or bind the
 native terrain providers/root. Continue actual TerrainVisual/TerrainLogic using
 the existing staged terrain/water/graph owners and synchronous world scope.
+
+Native interface binding refinement (parent8b3cef21, clean worktree): introduce
+NativeTerrainVisual as the actual TerrainVisual CPU adapter, shared by later
+headless and graphical providers. Bind virtual water/profile/frame methods to
+the retained NativeWaterGrid and raw deformation/tile selection to retained
+NativeTerrainHeightMap plus actual TerrainTypeCollection. Keep presentation,
+image-backed color, picking and complete device snapshot responsibilities
+explicitly abstract; do not claim output readiness or silently serialize only
+the CPU prefix of the original version3 snapshot. A noexcept dirty-height hook
+allows a device to defer uploads without changing accepted gameplay mutation.
+Stage filenames before map admission; use actual CachedFileInputStream for the
+filename entry and a stream entry for the enclosing candidate. Preserve prior
+terrain through reset, source water reset/frame behavior, absent-map defaults,
+and nonallocating whole CPU-state exchange for outer rollback. Validate actual
+base-interface dispatch, restrictions, deformation and water/frame behavior,
+missing prerequisites, malformed replacement, every allocation failure/retry
+and repeated owners under GCC and both sanitizers. This is existing slice03
+integration, not a new plan, and does not replace the required original root,
+TerrainLogic/layer/ghost/partition or whole simulation gates.
+
+Native CPU virtual binding checkpoint: all3 configured builds, focused3 and
+related80 PASS on canonical616 source2dabfa05 / inclusive623 source4b9433ec.
+Actual TerrainVisual dispatch preserves retained height/water, construction type
+restrictions, reset/state exchange and source frame0 publication. Provider
+prefixes[0,61) retain every failure/retry and exact terminal61 across three
+owners; virtual water enable/Y-resize retain terminal1 failure/retry pairs.
+Image color/picking/presentation and complete device snapshot remain explicitly
+abstract, not no-op production acceptance. Evidence:
+`evidence/qa/N2-terrain-provider-checkpoint.md`. Commit boundary:
+`delivery: bind original terrain CPU virtual interface`.
+Full configured293 has not run; slice03/N2 remains incomplete. Continue actual
+TerrainLogic queries/layers/Bridge/pathfinder and enclosing world/provider/root
+candidate, then partition/ghost/startup and compiler-matching original simulation.
+Source bridge loading derives BridgeInfo from original model geometry and
+registers gameplay bridges: that dependency must survive headless execution.

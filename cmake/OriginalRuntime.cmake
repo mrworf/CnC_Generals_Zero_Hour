@@ -278,6 +278,7 @@ add_library(original_logical_client STATIC ${ZH_ORIGINAL_LOGICAL_CLIENT})
 target_sources(original_logical_client PRIVATE
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeHeadlessGameClient.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeWaterGrid.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeTerrainVisual.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/INI/INIMappedImage.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeMapPreviewLayout.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeMapPreviewStorage.cpp"
@@ -500,9 +501,11 @@ endforeach()
 target_link_libraries(original_native_terrain_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_compile_definitions(original_native_terrain_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+target_include_directories(original_native_terrain_fixture PRIVATE
+  "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_link_options(original_native_terrain_fixture PRIVATE -Wl,--gc-sections)
 foreach(family IN ITEMS functional negative faults topology topology-negative topology-faults
-    visual visual-negative visual-faults)
+    visual visual-negative visual-faults provider provider-negative provider-faults)
   add_test(NAME original_native_terrain_${family} COMMAND original_native_terrain_fixture "${family}")
   set_tests_properties(original_native_terrain_${family} PROPERTIES LABELS "original;runtime;native_terrain" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

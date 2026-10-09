@@ -26,16 +26,16 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "253c2e46353c2061ebd6148b275948f2d1d2c789",
-    "label": "original-waypoint-world-continuation",
-    "evidence": "evidence/qa/N2-waypoint-world-continuation.md",
-    "validation": "All3 configured builds and related77 PASS. Shared original graph operations, exact graph terminal4, actual Waypoint-pool exhaustion and world/waypoint terminal175 retain every failure/retry across three whole owners; later failure restores fresh names and accepted world identities",
-    "next": "Bind actual native TerrainVisual/TerrainLogic using retained full terrain, water and original graph; keep this logical-world scope open through provider/root failure, then finish layers/ghost/partition/presentation and original simulation",
+    "parent": "8b3cef21edc0a03a40a0695a3fa0bef54e4a3735",
+    "label": "original-terrain-cpu-virtual-binding",
+    "evidence": "evidence/qa/N2-terrain-provider-checkpoint.md",
+    "validation": "All3 configured builds, focused3 and related80 PASS. Actual TerrainVisual CPU dispatch, source construction restrictions, terrain/water lifecycle and provider terminal61 plus virtual water terminals1 retain failure/retry across three whole owners. Output and complete device snapshot remain explicitly abstract",
+    "next": "Bind native TerrainLogic ground/extents/layers with actual AI/Bridge behavior, retain logical-world rollback through provider/root admission, then finish partition/ghost/startup and original simulation",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 original pooled waypoint/world-continuation checkpoint verified. All3 builds and related77 PASS on canonical614 sourcecbbeff2d. Source graph semantics, staged admission, prior/absent versus final resnap, standard terminal4, actual pool exhaustion and combined world/waypoint terminal175 retain every failure/retry across three owners. Fresh world names and original publication/ID/backing roll back through later phase failure. Full290 not run. Continue actual native TerrainVisual/TerrainLogic provider binding, layers/ghost/partition/root and compiler-matching original simulation. Slice03/N2 incomplete.",
-  "transaction_parent": "253c2e46353c2061ebd6148b275948f2d1d2c789",
+  "resume_point": "N2 plan01/slice03 native TerrainVisual CPU binding verified. All3 builds/focused3/related80 PASS on canonical616 source2dabfa05. Actual virtual type restrictions, deformation/water/profile/frame0/reset/exchange and terminal61/1 retries pass across three owners. Full293 not run. Presentation/picking/image color and complete device snapshot remain abstract. Continue native TerrainLogic ground/extents/layers using actual AI/pathfinder/Bridge, then staged world/provider/root and partition/ghost/startup/compiler-matching original simulation. Source bridge buffers register gameplay bridges after model-derived BridgeInfo; preserve that dependency. Slice03/N2 incomplete.",
+  "transaction_parent": "8b3cef21edc0a03a40a0695a3fa0bef54e4a3735",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -44,28 +44,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-waypoint-world-continuation.md",
+  "evidence": "evidence/qa/N2-terrain-provider-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Bind actual native TerrainVisual/TerrainLogic using retained full terrain, water and original graph; keep this logical-world scope open through provider/root failure, then finish layers/ghost/partition/presentation and original simulation",
+  "next": "Bind native TerrainLogic ground/extents/layers with actual AI/Bridge behavior, retain logical-world rollback through provider/root admission, then finish partition/ghost/startup and original simulation",
   "implementation_checkpoint": {
-    "label": "original-waypoint-world-continuation",
-    "reason": "Actual pooled graph and world continuation pass related77 all3. Shared TerrainLogic graph operations preserve valid source behavior and later admission failure restores the logical world. Actual native providers/layers/ghost/partition/presentation/root and simulation remain pending",
-    "prior_commit": "253c2e46",
-    "canonical_source_sha256": "cbbeff2d1ee2d8adbdb8f7c82ce451166952a0c8ecc98388f1b19117cd8e126b",
-    "toolchain_inclusive_sha256": "b2f07b54df9e5860ad3d6e498aa20fc902bb4ea8ecf909ce3d0844fe5413c674",
-    "configured_suite_tests": 290,
-    "related_suite_tests_passed": 77,
+    "label": "original-terrain-cpu-virtual-binding",
+    "reason": "Actual TerrainVisual CPU virtual binding passes related80 all3. Source construction restrictions and water/terrain ownership are preserved, output remains abstract. Native TerrainLogic/layers/Bridge/pathfinder, enclosing provider/root, partition/ghost/startup and original simulation remain pending",
+    "prior_commit": "8b3cef21",
+    "canonical_source_sha256": "2dabfa052f0aba475517696eb6f57a475436b554984e21f002b3577d8b701603",
+    "toolchain_inclusive_sha256": "4b9433ec3604bf0c1857ecdd0fe14da99e34877f8bf3745f3ba156bc1986b21d",
+    "configured_suite_tests": 293,
+    "related_suite_tests_passed": 80,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; related77 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; related80 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-waypoint-world-continuation.md"
+    "evidence": "evidence/qa/N2-terrain-provider-checkpoint.md"
   }
 }
