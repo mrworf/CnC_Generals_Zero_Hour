@@ -67,7 +67,7 @@
     "milestone_complete": false,
     "slice_complete": false,
     "evidence": "evidence/qa/N2-text-ownership-checkpoint.md",
-    "repository_commit": null
+    "repository_commit": "f39a7d6a62325e994d9257f5fe3a912bbfa09044"
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
