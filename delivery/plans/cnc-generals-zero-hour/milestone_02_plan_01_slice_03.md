@@ -2659,3 +2659,96 @@ script/RNG/child state and legitimate parent identities; no global-null alternat
 or constant camera-finished substitute. Shipped fog snapshot/orphan/border/load,
 accepted geometry replacement, walls/model bridges and compiler-matching actual
 simulation remain mandatory. No replacement plan or milestone is created.
+
+Native-root composition batch planning refinement (parent05d4f891, before new
+production changes): the existing link-only original_runtime_link_probe now
+builds successfully against the full current original source group. It retains
+GameEngine::init; it does not execute initialization or any simulation and is
+not a CTest acceptance case. Log: /tmp/n2-native-root-link-census.log. Do not run
+it as a game, treat linking as startup acceptance, or replace unresolved runtime
+provider behavior with success stubs. The next gap is runtime provider/lifecycle
+composition, not another unchanged compilation census.
+
+Keep one coupled root integration outcome inside this existing slice:
+
+- Construct a real native GameEngine/actual GameLogic owner graph through the
+  original factory and subsystem transactions. Explicit headless selection omits
+  physical output only. Preserve original data/config loading, message propagation,
+  script execution, scheduler phases, terrain/AI/partition updates and source CRC
+  points. Generated tests must advance actual GameEngine::update/GameLogic::update
+  with nonempty source actors/modules, not set frame counters as a simulation.
+- Give the client one legitimate logical InGameUI and TacticalView ownership path.
+  Existing headless init/update reject any UI/view; do not bypass this by publishing
+  then nulling globals. Reject foreign/accepted publications before acquisition.
+  Retire objects/drawables while logical UI, camera and their parent identities
+  remain valid, then retire acquired services and restore outer borrowed leases.
+- Review logical UI init/reset/transfer, superweapon and named-timer acquisition
+  together. Current init assumes Display and creates physical controls; reset
+  dereferences ControlBar and TacticalView and frees retained timer strings through
+  DisplayStringManager. Explicitly separate absent physical output from retained
+  bookkeeping, paired string/font ownership and source timer behavior. Do not
+  discard timers/superweapon callbacks or fabricate font/render measurements.
+- Preserve shipped camera state, not View's no-op motion/default-finished methods.
+  Source order is zoom, pitch, then rotate OR waypoint-path; scripted-lock state
+  also updates. Motion completion examines all four activity flags, with the six
+  source motion-blur exceptions. Rotation/zoom/pitch use source frame quantization;
+  waypoint movement uses elapsed milliseconds. Source default frame length is
+  1000/LOGICFRAMES_PER_SECOND, but its configured value may change. Camera can
+  continue on client updates while logic is frozen. Retain tracking, hold, ease,
+  shutter, path arrival (consume-on-query), time multiplier and freeze retirement.
+  Use explicit timing input, not an invented always-finished camera or logic ticks
+  to advance a camera that is itself freezing logic. Common View transfer remains
+  version1, angle and XYZ Reals, without a new serialized camera layout.
+- The common198 module registry does not include the shipped W3D draw providers.
+  Original W3DModuleFactory extends it with 19 names/data creators. Retail Object
+  definitions must remain parseable and source model queries must retain their
+  actual CPU meaning even with no GPU output. Weapon launch offsets and Object
+  pristine logical bones use Drawable/ObjectDrawInterface, so empty draw tables or
+  universal identity transforms are not whole-game parity. Inspect decoder and
+  state-selection providers as a cohort; distinguish simulation-required metadata
+  from N3 physical submission. Do not skip unknown draw definitions or patch bgfx.
+
+Expected surfaces: GameEngine/GameMain native factories and entry wiring,
+GameClient/NativeHeadlessGameClient, InGameUI/View logical lifecycle and native
+camera provider, required logical text/font/data services, native GameLogic
+terrain/ghost composition and actual module-definition/model-query providers;
+root/frame generated fixtures and CMake. Use supported dependency APIs only.
+
+Required evidence: generated full-root init/load/update/retire with source-linked
+nonempty actor/module events and compiler-matching checkpoints; frozen/script/
+camera/pause and clear-game transitions; malformed/missing roots without writes;
+repeated root lifetimes preserving accepted/borrowed identities; complete native
+failure/retry manifests and actual typed exhaustion across coupled parents;
+GCC/Clang unsuppressed sanitizers, proportional focused tests and related matrix.
+Split independent sweeps if needed but retain every failure/retry pair and exact
+terminal. Shipped fog/geometry/wall/bridge and real read-only retail evidence remain
+mandatory follow-through; no model-only fixture accepts them. Unknown implementation
+details are source investigation, not authority to invent or weaken behavior.
+
+Additional paired-path findings before native provider implementation:
+
+- W3DView's waypoint storage pads all other arrays to MAX_WAYPOINTS+2, but
+  groundHeight has only MAX_WAYPOINTS+1 while setupWaypointPath writes through
+  numWaypoints+1. The maximum source path reaches that out-of-bounds final slot.
+  Native camera staging must size/check every padded array together and initialize
+  active paths, including empty/near-coincident paths; do not transplant the UB.
+  rotateCameraTowardObject sets a target ID without initially caching position;
+  first-frame lookup failure must not read an uninitialized/stale union target.
+- Preserve the real source completion details: pitch/zoom clear their activity
+  but do not clear the freeze flag; rotation/path completion clears freeze.
+  MoveCameraTo with one millisecond deliberately keeps a pending path/arrival
+  state for a later update. A segment-end arrival is consumed on query and final
+  path retirement occurs on the next update. Do not simplify these into a single
+  duration check. Sample ground via the source center/four corners at offset40.
+- AudioManager::isMusicAlreadyLoaded checks an actual original music event's
+  generated VFS file, not hardware availability. Native headless mode cannot
+  return fabricated music readiness. AudioManager::update uses TacticalView eye,
+  orientation and terrain for microphone placement/zoom volume before the client's
+  update in GameEngine's source ordering. This is a coupled camera/audio dependency.
+- FontLibrary::getFont owns a pooled GameFont before fallible loadFontData; failure
+  cleanup and list admission need pairing. Base FontLibrary destruction calls
+  deleteAllFonts, whose releaseFontData virtual dispatch is then the base method.
+  A native derived font backend must retire its resources while its own vtable is
+  still live and before borrowed display strings lose their font parent. Inspect
+  this with SuperweaponInfo's two strings and named-timer replacement, not after
+  an isolated font test. No new provider production changes have begun yet.

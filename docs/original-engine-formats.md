@@ -4196,3 +4196,70 @@ allocation manifests [0,11), terminal11 with every corrected retry, three actual
 typed pool exhaustions and both binding-callback failure phases. No full330,
 whole-root child/script/RNG rollback, native frame/startup, shipped fog or visual
 acceptance is claimed.
+
+Native-root provider review (parent05d4f891; implementation pending): current
+original_runtime_link_probe links the full original GameEngine::init graph
+successfully. It is deliberately link-only and does not execute the game; no
+startup/frame acceptance follows. Physical Device implementations are still
+abstract factories at runtime. Source GameEngine::update orders Radar, Audio,
+GameClient and MessageStream propagation, optional Network, then actual GameLogic
+when unpaused/frame-ready. Preserve this chain in native root integration.
+
+InGameUI::init creates/attaches TacticalView only when Display exists, then uses
+TacticalView unconditionally and creates physical controls. InGameUI::reset also
+uses ControlBar unconditionally, resets camera, retires source superweapon entries
+and frees named timer strings via DisplayStringManager. addNamedTimer acquires a
+pooled node, logical names/text and a display string/font before map insertion;
+SuperweaponInfo similarly acquires two display strings/fonts. A headless logical
+UI must retain this bookkeeping with paired owners, not just omit init/reset or
+erase callbacks. View inherits Snapshot; its common transfer is version1 followed
+by angle and XYZ Reals. W3DView has no separate transfer override. Source camera
+default frame length is integer 1000/LOGICFRAMES_PER_SECOND; configuration may
+change it. Preserve source frame quantization vs elapsed-time path updates and
+consume-on-query path arrival flag. Source anchors: GameEngine.cpp::update;
+InGameUI.cpp::{init,reset,addNamedTimer,SuperweaponInfo}; View.cpp::xfer;
+W3DView.cpp::{updateCameraMovements,isCameraMovementAtWaypointAlongPath}.
+
+The current common ModuleFactory registers gameplay/client-update providers,
+while W3DModuleFactory::init adds 19 device draw names/creators after the common
+registry. Those source-selected definitions cannot be silently skipped during
+native retail startup. Object::getSingleLogicalBonePosition and
+getSingleLogicalBonePositionOnTurret use Drawable pristine bone queries;
+Weapon::calcProjectileLaunchPosition uses Drawable::getProjectileLaunchOffset,
+then actual AI turret rotation/pitch and actor world transforms. Source identity
+fallback on a missing query is not permission to discard available retail model
+metadata. Headless native CPU model/condition/bone semantics must be separate from
+N3 physical submission, with source-derived readers and owner lifecycles. This
+is a pending requirement, not acceptance from probe-free empty draw tables.
+Source anchors: W3DDevice/Common/Thing/W3DModuleFactory.cpp::init;
+Object/Object.cpp::{getSingleLogicalBonePosition,getSingleLogicalBonePositionOnTurret};
+Object/Weapon.cpp::calcProjectileLaunchPosition;
+Drawable.cpp::{getProjectileLaunchOffset,getPristineBonePositions}.
+
+Native camera carry-forward hazards (verified source, no implementation claim):
+W3DView.h TMoveAlongWaypointPathInfo allocates groundHeight[MAX_WAYPOINTS+1],
+while setupWaypointPath writes through numWaypoints+1; numWaypoints can equal
+MAX_WAYPOINTS. Other padded arrays have MAX_WAYPOINTS+2. Native staging must
+correct the coupled bounds and initialize empty/near-coincident paths, rather
+than copy this original out-of-bounds state. rotateCameraTowardObject publishes
+targetObjectID but does not initialize targetObjectPos before first lookup; if
+that lookup fails, rotateCameraOneFrame reads stale/uninitialized target position.
+Do not infer safe storage from a previous target or reused pool bytes.
+Source completion is not a generic all-duration predicate: zoom/pitch retire
+their activity only; rotation/path also clear freeze. Single-millisecond move
+keeps pending path state and path segment completion retires on a later update.
+Source ground sampling uses center plus four offset40 corners of TerrainLogic,
+not a camera-height constant. These rules need complete native source-linked tests.
+
+Audio/font root carry-forward: AudioManager::isMusicAlreadyLoaded chooses a music
+definition, generates its filename and checks original VFS existence; it does
+not prove decoded playback or merely test an output device. AudioManager::update
+consults actual TacticalView eye/orientation plus terrain and audio settings to
+derive microphone placement and zoom volume. GameEngine runs this before client
+update; preserve ordering. FontLibrary::getFont acquires its pooled node before
+fallible backend loading. FontLibrary::~FontLibrary calls deleteAllFonts after
+derived destruction, so releaseFontData dispatches to the base empty method at
+that point. A native derived backend must retire owned faces/data before that
+dispatch boundary, while display strings and their legitimate font parent still
+have a valid retirement order. Source anchors: GameAudio.cpp::{
+isMusicAlreadyLoaded,update}; GUI/GameFont.cpp::{getFont,~FontLibrary,deleteAllFonts}.

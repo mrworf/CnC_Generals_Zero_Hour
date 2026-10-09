@@ -34,7 +34,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 complete candidate creation ownership verified; all3 builds/focused3/related140 PASS on canonical626 97bfe4fa. Matching full-creation11 failure/retry manifests, three actual late pool exhaustions and both source binding phases with accepted-survivor preservation. Previously unfinished creation batch is now ready for its verified supporting commit. Full330 not run. Integrate legitimate native logical UI/client/camera-freeze and whole-root journal with real original GameEngine/GameLogic init/update; preserve child/script/RNG state. Shipped ghost snapshot/orphan/border/load, accepted geometry replacement, walls/model bridges and compiler-matching actual simulation remain mandatory. Slice03/N2 incomplete.",
+  "resume_point": "N2 plan01/slice03 complete creation ownership committed in 05d4f891; all3 full builds/focused3/related140 PASS on canonical626 97bfe4fa. Full330 not run. Original startup link-only probe now PASS, not execution acceptance. Native-root composition batch is planned in the same slice: implement legitimate logical UI/text/font/camera/audio and required native definition/model-query providers, real GameEngine/GameLogic init/update and whole-root journal. Keep source camera padding/target-position hazards and font virtual-retirement boundaries in the coupled implementation review. Shipped fog/geometry/walls/bridges and actual compiler-matching simulation remain mandatory. N2 incomplete.",
   "transaction_parent": "e5a0fefb8275d933f16ad4234e88c57ac1e49e60",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -66,6 +66,15 @@
     "full_current_matrix": "not run; related140 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-full-creation-ownership-checkpoint.md"
+    "evidence": "evidence/qa/N2-full-creation-ownership-checkpoint.md",
+    "repository_commit": "05d4f89159f10d43a8d3c1fd04d273fa61ad066a"
+  },
+  "planning_checkpoint": {
+    "label": "native-root-composition",
+    "parent_commit": "05d4f89159f10d43a8d3c1fd04d273fa61ad066a",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "findings": "docs/original-engine-formats.md",
+    "diagnostic": "Original GameEngine::init link-only probe PASS on current source; no initialization/frame execution acceptance",
+    "production_changes_started": false
   }
 }
