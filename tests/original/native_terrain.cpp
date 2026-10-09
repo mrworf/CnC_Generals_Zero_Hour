@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "AllocationFault.h"
+#include "NativeTerrainDeviceFixture.h"
 #include "GameLogic/NativeTerrainHeightMap.h"
 #include "GameClient/NativeTerrainVisual.h"
 #include "GameLogic/GameLogic.h"
@@ -459,24 +460,6 @@ void visualFaults(){GlobalData data;Map owner;const auto valid=visualWire(1,true
 
 // Test-only device, intentionally no presentation acceptance. Production's CPU
 // adapter stays abstract until real output and the complete snapshot are bound.
-struct DeviceFixture final:NativeTerrainVisual {
-  unsigned dirty=0;
-  void terrainHeightsChanged()noexcept override{++dirty;}
-  void getTerrainColorAt(Real,Real,RGBColor*)override{throw ERROR_BAD_ARG;}
-  Bool intersectTerrain(Coord3D*,Coord3D*,Coord3D*)override{throw ERROR_BAD_ARG;}
-  void setTerrainTracksDetail()override{}
-  void setShoreLineDetail()override{}
-  void addFactionBib(Object*,Bool,Real)override{}
-  void removeFactionBib(Object*)override{}
-  void addFactionBibDrawable(Drawable*,Bool,Real)override{}
-  void removeFactionBibDrawable(Drawable*)override{}
-  void removeAllBibs()override{}
-  void removeBibHighlighting()override{}
-  void removeTreesAndPropsForConstruction(const Coord3D*,const GeometryInfo&,Real)override{}
-  void addProp(const ThingTemplate*,const Coord3D*,Real)override{}
-  void replaceSkyboxTextures(const AsciiString* [5],const AsciiString* [5])override{}
-  void xfer(Xfer*)override{throw ERROR_BAD_ARG;}
-};
 struct ProviderContext {
   GlobalData data;
   TerrainTypeCollection types;

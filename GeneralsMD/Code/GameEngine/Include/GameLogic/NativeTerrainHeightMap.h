@@ -13,6 +13,8 @@ class GlobalData;
 // simulation queries. This is not a complete world/visual map loader.
 class NativeTerrainHeightMap {
 public:
+  explicit NativeTerrainHeightMap(std::optional<UnsignedInt> shadow = std::nullopt)
+    : m_shadowColor(shadow) {}
   // HeightChunkBacking is the full reader's intermediate backing. For version1
   // the coupled BlendTileData reader still has to halve dimensions/dataSize.
   enum class Purpose { HeightChunkBacking, LogicalMetadata };
@@ -67,6 +69,7 @@ public:
   UnsignedByte rawHeight(Int x, Int y) const;
   Real groundHeight(Real x, Real y, Coord3D* normal = nullptr,
                     const NativeTerrainHeightMap* displayGrid = nullptr) const;
+  Real maximumHeight() const noexcept { return m_maximumHeight; }
   Bool clearLineOfSight(const Coord3D& from, const Coord3D& to,
                        Real displayMaximumHeight) const;
   void swap(NativeTerrainHeightMap& candidate) noexcept;
@@ -77,4 +80,6 @@ private:
   Purpose m_purpose = Purpose::HeightChunkBacking;
   Topology m_topology;
   std::optional<UnsignedInt> m_shadowColor;
+  Real m_maximumHeight = 0;
+  void cacheMaximumHeight() noexcept;
 };

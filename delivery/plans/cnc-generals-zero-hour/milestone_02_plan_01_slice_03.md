@@ -2137,3 +2137,41 @@ TerrainLogic queries/layers/Bridge/pathfinder and enclosing world/provider/root
 candidate, then partition/ghost/startup and compiler-matching original simulation.
 Source bridge loading derives BridgeInfo from original model geometry and
 registers gameplay bridges: that dependency must survive headless execution.
+
+TerrainLogic integration refinement (parent26da2238, clean start): implement the
+actual TerrainLogic-derived native CPU map provider using NativeLogicalWorld's
+synchronous transaction. Stage source logical dimensions/boundaries/min/max,
+initial original graph using prior visual ground, then retained full terrain and
+lighting; publish candidate CPU fields only within rollback guards. Keep world,
+names/IDs, metadata, graph, retained terrain/name and lighting live through an
+explicit synchronous late admission hook. Query mode skips retained visual load.
+Reuse actual AI/pathfinder wall queries and actual Bridge layer/height methods,
+not all-layer ground substitutions. Device-map admission and newMap's source
+road/bridge stage remain mandatory abstract device responsibilities, so this CPU
+base cannot accidentally become a complete ground-only runtime. Snapshot wrapper
+retains original native logic version1 plus actual TerrainLogic transfer.
+Test combined nonempty original worlds/terrain, query mode, absent/prior/new
+height phases, source extents/cached extrema, late provider rollback/retry and
+complete allocation manifests across three owners/all3 configurations. Keep
+bridge geometry, nonempty wall/bridge acceptance and actual root/simulation
+pending; no new slice/plan or milestone-complete claim.
+
+Native TerrainLogic combined admission checkpoint: all3 configured builds,
+focused3 and related83 PASS on canonical620 source26e0eb24 / inclusive627
+sourceaf4054cb. Original nonempty world, actual graph and retained terrain/light
+state now share late rollback through the CPU provider. Prefixes[0,259), exact
+terminal259 and every corrected retry retire standard and source pool units
+across three owners. Distinct authored/active light rows and shadow restore on
+late failure; query mode preserves prior visual backing and source phase order.
+Evidence: `evidence/qa/N2-native-terrain-logic-checkpoint.md`. Commit boundary:
+`delivery: integrate original terrain and world admission`.
+Full296 is not run; device/road-bridge hooks remain abstract, not accepted no-ops.
+Continue one coupled actual AI/pathfinder/bridge/root ownership batch: source
+Pathfinder resets an uninitialized backing pointer and acquires shared cell info
+before fallible work; shared array release uses scalar delete and forcibly
+retires prior live ownership. AI acquires TAiData before fallible Pathfinder;
+Bridge caches a factory-owned template across restarts and creates registered
+objects before fallible helpers. Resolve allocation/publication/retirement
+together, preserving actual wall/layer and model-derived BridgeInfo semantics,
+then bind concrete native root/partition/ghost/startup/simulation. Verified source
+anchors are durable in original-engine-formats.md. Slice03/N2 remains incomplete.

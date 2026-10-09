@@ -40,6 +40,10 @@ void NativeTerrainVisual::exchangeCpuState(NativeTerrainVisual& other) noexcept 
   m_filenameString.swap(other.m_filenameString);
   terrainHeightsChanged(); other.terrainHeightsChanged();
 }
+void NativeTerrainVisual::exchangeTerrainState(TerrainState& other) noexcept {
+  m_height.swap(other.height);
+  m_filenameString.swap(other.filename);
+}
 TerrainType* NativeTerrainVisual::getTerrainTile(Real x, Real y) {
   if (!m_height.width()) return nullptr;
   if (!TheTerrainTypes) throw ERROR_BAD_ARG;

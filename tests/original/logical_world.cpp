@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "AllocationFault.h"
+#include "NativeTerrainDeviceFixture.h"
+#include "GameLogic/NativeTerrainLogic.h"
+#include "GameLogic/NativeTerrainLightingState.h"
 #include "Common/FileSystem.h"
 #include "Common/GlobalData.h"
 #include "Common/MapObject.h"
@@ -114,7 +117,7 @@ void triggers(DataChunkOutput& out){out.openDataChunk("PolygonTriggers",4);out.w
   for(const ICoord3D p: {ICoord3D{0,0,0},ICoord3D{100,0,0},ICoord3D{0,100,0}}){out.writeInt(p.x);out.writeInt(p.y);out.writeInt(p.z);}
   out.closeDataChunk();}
 std::string wire(const char* name="AcceptedSide",unsigned objectVersion=3,unsigned heightVersion=4,
-                 Real angle=0.5f,Int weather=WEATHER_SNOWY,unsigned omit=0,unsigned duplicate=0,bool heightLast=false,const char* extraWorldKey=nullptr){
+                 Real angle=0.5f,Int weather=WEATHER_SNOWY,unsigned omit=0,unsigned duplicate=0,bool heightLast=false,const char* extraWorldKey=nullptr,bool includeVisual=false){
   Output output;DataChunkOutput out(&output);
   if(!(omit&1) && !heightLast)height(out,heightVersion);
   if(!(omit&2)){out.openDataChunk("WorldInfo",1);Dict dict;dict.setInt(TheKey_weather,weather);
@@ -126,6 +129,18 @@ std::string wire(const char* name="AcceptedSide",unsigned objectVersion=3,unsign
   if(duplicate==1)height(out,heightVersion);if(duplicate==2){out.openDataChunk("WorldInfo",1);out.writeDict(Dict());out.closeDataChunk();}
   if(duplicate==4)objects(out,objectVersion,angle);if(duplicate==8)sides(out,name);if(duplicate==16)triggers(out);
   if(!(omit&1) && heightLast)height(out,heightVersion);
+  if(includeVisual){out.openDataChunk("GlobalLighting",3);
+    const Bool replacement=std::strcmp(name,"ReplacementSide")==0;
+    out.writeInt(replacement ? TIME_OF_DAY_NIGHT : TIME_OF_DAY_AFTERNOON);
+    for(unsigned t=TIME_OF_DAY_FIRST;t<TIME_OF_DAY_COUNT;++t)for(unsigned light=0;light<6;++light)
+      for(unsigned field=0;field<9;++field)out.writeReal(Real(t*100+light*10+field+(replacement ? 1000 : 0))*0.25f);
+    out.writeInt(std::bit_cast<Int>(replacement ? 0x89abcdefu : 0x12345678u));out.closeDataChunk();
+    out.openDataChunk("BlendTileData",8);out.writeInt(49);
+    for(unsigned table=0;table<4;++table)for(unsigned n=0;n<49;++n){out.writeByte(0);out.writeByte(0);}
+    for(unsigned y=0;y<7;++y)out.writeByte(y==1 ? 2 : 0);
+    out.writeInt(16);out.writeInt(1);out.writeInt(1);out.writeInt(1);
+    out.writeInt(0);out.writeInt(16);out.writeInt(4);out.writeInt(0);out.writeAsciiString("GeneratedTerrain");
+    out.writeInt(0);out.writeInt(0);out.closeDataChunk();}
   out.finish();return output.bytes;
 }
 void check(Context& context,const char* name="AcceptedSide",unsigned version=3,unsigned hv=4){
@@ -347,6 +362,94 @@ void continuation(Context& context){const auto valid=wire(),replacement=wire("Re
   }
   std::cout<<"world-waypoint prefixes [0,"<<census<<"); terminal "<<census<<"; every retry\n";
 }
+struct LogicFixture:NativeTerrainLogic {
+  unsigned deviceCalls=0;
+  bool failDevice=false;
+  explicit LogicFixture(DeviceFixture& visual):NativeTerrainLogic(visual){}
+  void admitDeviceMap()override{++deviceCalls;if(failDevice)throw ERROR_CORRUPT_FILE_FORMAT;}
+  void loadRoadsAndBridges(Bool)override{throw ERROR_BAD_ARG;} // Never claim empty bridges as accepted newMap.
+};
+std::string providerWorld(const char* name="AcceptedSide"){return wire(name,3,4,0.5f,WEATHER_SNOWY,0,0,false,nullptr,true);}
+bool sameLighting(const NativeTerrainLightingState& a,const NativeTerrainLightingState& b){
+  auto rgb=[](const RGBColor& x,const RGBColor& y){return x.red==y.red && x.green==y.green && x.blue==y.blue;};
+  auto xyz=[](const Coord3D& x,const Coord3D& y){return x.x==y.x && x.y==y.y && x.z==y.z;};
+  if(a.time!=b.time)return false;
+  for(unsigned l=0;l<MAX_GLOBAL_LIGHTS;++l){if(!rgb(a.ambient[l],b.ambient[l]) || !rgb(a.diffuse[l],b.diffuse[l]) || !xyz(a.direction[l],b.direction[l]))return false;
+    for(unsigned t=0;t<TIME_OF_DAY_COUNT;++t)for(const auto pair:{std::pair{&a.terrain[t][l],&b.terrain[t][l]},std::pair{&a.objects[t][l],&b.objects[t][l]}})
+      if(!rgb(pair.first->ambient,pair.second->ambient) || !rgb(pair.first->diffuse,pair.second->diffuse) || !xyz(pair.first->lightPos,pair.second->lightPos))return false;}
+  return true;
+}
+void logicLoad(LogicFixture& owner,const std::string& bytes,const AsciiString& name,Bool query=FALSE,
+               NativeTerrainLogic::Admission callback=nullptr,void* context=nullptr){Input input(bytes);owner.loadStream(input,name,query,callback,context);require(input.eof(),"complete integrated terrain/world admission");}
+void terrainLogic(Context& context){context.load(wire());DeviceFixture visual;LogicFixture logic(visual);TerrainLogic& api=logic;
+  const auto valid=providerWorld();Coord3D normal;Region3D region;
+  require(api.getGroundHeight(0,0,&normal)==0 && normal.z==1 && !api.isClearLineOfSight({0,0,0},{10,0,0}),"actual unloaded native source query defaults");
+  api.init();logicLoad(logic,valid,"GeneratedAccepted.map");check(context);
+  require(logic.getFirstWaypoint() && logic.getFirstWaypoint()->getLocation()->z==0,"initial source graph uses absent prior visual grid");
+  require(visual.heightMap().width()==7 && logic.logicalMetadata().width()==7 && logic.deviceCalls==1,"complete original world plus retained visual admission");
+  require(context.data->m_timeOfDay==TIME_OF_DAY_AFTERNOON && visual.heightMap().shadowColor()==0x12345678u &&
+    context.data->m_terrainAmbient[0].red==context.data->m_terrainLighting[TIME_OF_DAY_AFTERNOON][0].ambient.red,"source selected active light row and authored shadow color publish with terrain");
+  api.getExtent(&region);require(region.lo.x==0 && region.hi.x==50 && region.hi.y==50 && region.lo.z==12.5f && region.hi.z==13.75f,"original boundary and logical cached extrema");
+  api.getMaximumPathfindExtent(&region);require(region.hi.x==50 && region.hi.y==50,"maximum authored pathfind boundary");
+  region.lo.z=123;region.hi.z=456;api.getExtentIncludingBorder(&region);
+  require(region.lo.x==-10 && region.hi.x==60 && region.lo.z==123 && region.hi.z==456,"original border query preserves caller Z");
+  const Real oldGround=api.getGroundHeight(10,20);logicLoad(logic,valid,"GeneratedReplacement.map");
+  require(logic.getFirstWaypoint()->getLocation()->z==oldGround,"initial source graph uses previously accepted retained ground before replacement");
+  require(api.isCliffCell(0,0) && api.getLayerHeight(10,20,LAYER_GROUND)==oldGround &&
+    api.getLayerHeight(10,20,static_cast<PathfindLayerEnum>(LAYER_GROUND+1))==oldGround,"actual cliff and absent bridge layer semantics");
+  const ICoord2D position{0,0};visual.setRawMapHeight(&position,1);api.getExtent(&region);
+  require(region.lo.z==12.5f && region.hi.z==13.75f && api.getGroundHeight(0,0)==0.625f,"deformation leaves original logical cached extent extrema");
+  const auto* visualBacking=visual.heightMap().bytes().data();const auto dirty=visual.dirty;
+  logicLoad(logic,wire(),"GeneratedQuery.map",TRUE);
+  require(visual.heightMap().bytes().data()==visualBacking && visual.filename()=="GeneratedReplacement.map" && visual.dirty==dirty && api.getSourceFilename()=="GeneratedQuery.map","source query mode never loads retained visual terrain");
+  bool failed=false;try{api.getLayerHeight(0,0,LAYER_WALL);}catch(ErrorCode){failed=true;}
+  require(failed,"wall layer requires actual AI/pathfinder, not a ground-only substitute");
+}
+void terrainLogicNegative(Context& context){context.load(wire());DeviceFixture visual;LogicFixture logic(visual);const auto valid=providerWorld();logicLoad(logic,valid,"GeneratedAccepted.map");
+  auto reject=[&](const std::string& bytes,bool deviceFailure=false){const auto* objects=MapObject::getFirstMapObject();const auto* triggers=PolygonTrigger::getFirstPolygonTrigger();
+    const auto* script=context.sides.getSideInfo(0)->getScriptList();const auto* graph=logic.getFirstWaypoint();const auto* backing=visual.heightMap().bytes().data();
+    const auto* metadata=logic.logicalMetadata().bytes().data();const auto dirty=visual.dirty;const auto live=AllocationFault::live();const auto id=InspectRead::id();
+    const NativeTerrainLightingState lights(*context.data);bool failed=false;logic.failDevice=deviceFailure;
+    try{logicLoad(logic,bytes,"GeneratedRejected.map");}catch(ErrorCode){failed=true;}logic.failDevice=false;
+    require(failed && MapObject::getFirstMapObject()==objects && PolygonTrigger::getFirstPolygonTrigger()==triggers && context.sides.getSideInfo(0)->getScriptList()==script &&
+      logic.getFirstWaypoint()==graph && visual.heightMap().bytes().data()==backing && logic.logicalMetadata().bytes().data()==metadata && visual.dirty==dirty &&
+      logic.getSourceFilename()=="GeneratedAccepted.map" && visual.filename()=="GeneratedAccepted.map" && InspectRead::id()==id && AllocationFault::live()==live,"all integrated late owners roll back together");
+    require(sameLighting(NativeTerrainLightingState(*context.data),lights) && visual.heightMap().shadowColor()==0x12345678u,"all authored/active terrain light rows and shadow restore after late failure");
+    logicLoad(logic,valid,"GeneratedAccepted.map");check(context);};
+  reject(wire()); // Complete logical map, but missing mandatory retained blend data.
+  reject(providerWorld("ReplacementSide"),true); // Failure after candidate provider and graph publication.
+  for(std::size_t n=0;n<valid.size();++n)reject(valid.substr(0,n));
+  bool lateCalled=false;
+  auto late=[](NativeTerrainLogic& candidate,void* raw){auto& called=*static_cast<bool*>(raw);called=true;
+    Region3D bounds;candidate.getExtent(&bounds);require(bounds.hi.x==50 && candidate.getFirstWaypoint(),"late hook observes candidate source dimensions/graph");
+    throw ERROR_CORRUPT_FILE_FORMAT;};
+  const auto* objects=MapObject::getFirstMapObject();const auto* backing=visual.heightMap().bytes().data();bool failed=false;
+  try{logicLoad(logic,providerWorld("ReplacementSide"),"GeneratedLate.map",FALSE,late,&lateCalled);}catch(ErrorCode){failed=true;}
+  require(failed && lateCalled && MapObject::getFirstMapObject()==objects && visual.heightMap().bytes().data()==backing,"outer native hook retains complete world/provider rollback");
+  logicLoad(logic,valid,"GeneratedAccepted.map");check(context);
+}
+void terrainLogicFaults(Context& context){context.load(wire());DeviceFixture visual;LogicFixture logic(visual);const auto valid=providerWorld(),replacement=providerWorld("ReplacementSide");
+  const AsciiString accepted("GeneratedAccepted.map"),candidate("GeneratedCandidate.map");logicLoad(logic,valid,accepted);ScriptList::IDTransaction stable;
+  std::size_t census;
+  {ScriptList::IDTransaction start;AllocationFault::arm(SIZE_MAX);try{logicLoad(logic,replacement,candidate);}catch(...){AllocationFault::disarm();throw;}
+    census=AllocationFault::attempts();AllocationFault::disarm();}
+  logicLoad(logic,valid,accepted);
+  for(std::size_t ordinal=0;ordinal<=census;++ordinal){ScriptList::IDTransaction start;const auto live=AllocationFault::live();const PoolUsage pools;
+    const auto* objects=MapObject::getFirstMapObject();const auto* graph=logic.getFirstWaypoint();const auto* backing=visual.heightMap().bytes().data();const auto dirty=visual.dirty;
+    const NativeTerrainLightingState lights(*context.data);auto* waypointPool=TheMemoryPoolFactory->findMemoryPool("Waypoint");const auto waypointUnits=waypointPool->getUsedBlockCount();
+    bool failed=false;AllocationFault::arm(ordinal);try{logicLoad(logic,replacement,candidate);}catch(const std::bad_alloc&){failed=true;}
+    catch(ErrorCode error){require(error==ERROR_OUT_OF_MEMORY,"integrated original owner failure classification");failed=true;}
+    catch(...){AllocationFault::disarm();throw;}const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+    require(hit==failed && failed==(ordinal<census),"complete integrated terrain/world manifest and exact terminal");
+    if(failed)require(MapObject::getFirstMapObject()==objects && logic.getFirstWaypoint()==graph && visual.heightMap().bytes().data()==backing && visual.dirty==dirty &&
+      logic.getSourceFilename()==accepted && visual.filename()==accepted && sameLighting(NativeTerrainLightingState(*context.data),lights) &&
+      AllocationFault::live()==live && pools.matches() && waypointPool->getUsedBlockCount()==waypointUnits,"every terrain/world acquisition preserves accepted original owners");
+    logicLoad(logic,replacement,candidate);check(context,"ReplacementSide");
+    require(context.data->m_timeOfDay==TIME_OF_DAY_NIGHT && visual.heightMap().shadowColor()==0x89abcdefu,"corrected replacement admits distinct lighting/shadow");
+    logicLoad(logic,valid,accepted);check(context);require(AllocationFault::live()==live && pools.matches() && waypointPool->getUsedBlockCount()==waypointUnits &&
+      sameLighting(NativeTerrainLightingState(*context.data),lights),"every corrected integrated retry retires candidate ownership");
+  }std::cout<<"terrain-world prefixes [0,"<<census<<"); terminal "<<census<<"; every retry\n";
+}
 void poolFailures(Context& context){const auto valid=wire(),replacement=wire("ReplacementSide");context.load(valid);
   for(const char* name:poolNames){auto* pool=TheMemoryPoolFactory->findMemoryPool(name);
     std::vector<void*> held;held.reserve(pool->getFreeBlockCount());
@@ -374,7 +477,9 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
       {Context context;const std::string_view family=argv[1];if(family=="functional")functional(context);
         else if(family=="negative")negative(context);else if(family=="faults"){faults(context);optionalFaults(context);}
         else if(family=="ownership")ownership(context);else if(family=="pool-failures")poolFailures(context);
-        else if(family=="continuation")continuation(context);else require(false,"unknown world family");}
+        else if(family=="continuation")continuation(context);else if(family=="terrain")terrainLogic(context);
+        else if(family=="terrain-negative")terrainLogicNegative(context);else if(family=="terrain-faults")terrainLogicFaults(context);
+        else require(false,"unknown world family");}
       require(AllocationFault::live()==live && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
         !MapObject::getFirstMapObject() && !PolygonTrigger::getFirstPolygonTrigger(),"repeated full-world owner retirement");}
     shutdownMemoryManager();initialized=false;require(AllocationFault::live()==initial,"whole original pool metadata retirement");

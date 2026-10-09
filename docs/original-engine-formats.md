@@ -3571,6 +3571,99 @@ Model-derived BridgeInfo and owned objects/pathfinder rollback require source
 inspection before choosing extraction/build surfaces. This is a recorded next
 implementation dependency, not a reason to accept a ground-only fixture.
 
+### Native TerrainLogic/world/provider admission
+
+`NativeTerrainLogic` derives from actual TerrainLogic and runs complete original
+logical world admission, source waypoint construction/links, retained full terrain
+and lighting in one synchronous rollback scope. Candidate dimensions/boundaries,
+active0 and logical byte-derived min/max are staged before graph/visual work.
+Graph construction uses the prior accepted visual grid, including source absent
+height0; final newMap resnap remains later, after actual road/bridge admission.
+Query mode consumes the world/graph but never replaces retained visual state.
+The original post-load setTimeOfDay condition also applies to query mode: valid
+authored time selects active terrain ambient/diffuse/direction arrays and calls
+mandatory device admission, invalid time0 does not call it.
+
+The late CPU hook observes candidate extents, graph and retained visual map while
+the original world/name/script-ID publication guard remains live. Accepted logical
+metadata backing remains unchanged until the outer world commits. Failure rolls
+back world objects/Dict/weather/triggers/sides/reads/namespace/IDs as before, plus
+native extents/filename/graph, visual height/name/shadow and all authored/active
+lighting rows. TerrainState exchanges avoid output callbacks during temporary
+publication; dirty-height notification occurs only after whole admission succeeds.
+Water state is not replaced by terrain loading (source visual load likewise leaves
+water grid state alone). Fallible device/root hooks must stage or guard their own
+external mutations; the CPU scope does not undo arbitrary renderer/client effects.
+
+Native ground/cliff/LOS and extent virtual methods now dispatch to actual retained
+state. LOS uses the cached full-grid maximum, not an O(map area) rescan per ray.
+Height/blend admission caches maximum after source legacy resampling; lowering
+does not eagerly regenerate it. Source BaseHeightMap::initHeightData around1800
+computes extrema during extra-pass preprocessing; a future device refresh can
+re-audit that scheduling, not invent a per-query rebuild. Extent Z remains the
+temporary logical reader's cached min/max, and border extents preserve caller Z.
+Wall queries call actual AI/pathfinder membership and wall height; other layers
+call actual findBridgeLayerAt/getBridgeHeight and use bridge height only above
+ground. Missing required wall provider throws rather than returning substitute
+ground. No nonempty wall/bridge acceptance is claimed by empty-layer fixtures.
+
+The common class remains abstract for device map admission and newMap road/bridge
+loading. Concrete root factories must supply those obligations. Native logic
+snapshot wraps original TerrainLogic transfer with the source W3D version1 byte;
+full snapshot execution evidence is pending, not inferred from the wrapper.
+Reset follows source map-object/Dict/trigger/graph retirement; owner destruction
+does not assert independent ownership of every process-global world singleton.
+
+Current combined tests use original nonempty scripts/sides/objects/triggers and
+source DataChunkOutput height/blend/lighting. Three families, each over three
+owners, cover absent/prior grid ordering, query mode, cached extents, restriction
+of missing wall provider, complete malformed-prefix/retry pairs, late device/hook
+failure and allocation prefixes[0,259)/terminal259 with each corrected retry.
+Replacement time/lighting/shadow differs from accepted content, proving rollback
+of those owners rather than merely comparing identical inputs. Actual Waypoint
+pool used units and original world pools retire along with standard allocations.
+Evidence: `evidence/qa/N2-native-terrain-logic-checkpoint.md`. Actual native root,
+nonempty bridge/model geometry and wall/pathfinder, partition/ghost/startup and
+compiler-matching simulation remain pending in the same N2 slice03.
+
+Bridge-owner carry-forward from direct source inspection: TerrainLogic.cpp around
+226 caches GenericBridge's ThingTemplate in a function-static pointer. That can
+retain a retired factory's pointer (or permanently retain an initial null) across
+whole-engine restart; resolve it in the actual bridge/object ownership batch,
+not by importing archived fixes. The BridgeInfo constructor builds geometry then
+creates a real GameLogic Object and runs fallible positioning/property helpers.
+Its source early returns can precede final next/layer initialization. Admission
+must inspect node allocation, those constructor exits, registered object ownership,
+pathfinder layer registration and retirement together. Current map-only rollback
+does not own GameLogic's object list; the mandatory concrete road/bridge/root
+transaction must guard it under the legitimate GameLogic singleton.
+
+W3DBridgeBuffer.cpp::load around197–350 finds model subobjects by case-insensitive
+prefix modelName.BRIDGE_LEFT/SPAN/RIGHT, retains each source subobject transform,
+and transforms actual vertices before deriving extrema. It requires a left mesh;
+missing span/right yields fixed bridge, whereas valid aligned parts yield
+sectional bridge. getBridgeInfo around363 derives width and corner offsets from
+left-mesh transformed minY/maxY times authored bridge scale and endpoint direction.
+Do not replace model-derived width with an INI/default width or bounding sphere.
+CPU mesh/hierarchy decoding is thus a gameplay prerequisite even without output.
+
+AI/pathfinder carry-forward: AI.cpp::AI around310 acquires TAiData before a
+fallible Pathfinder constructor; guard both acquisitions together. AIPathfind.cpp::
+Pathfinder around3828 initializes m_map but calls reset while m_blockOfMapCells
+has no initialization in the constructor or retained header (around837).
+reset tests/deletes that pointer. It also acquires shared PathfindCellInfo storage
+before reset, while the destructor releases that shared storage without itself
+calling reset. Revalidate whole constructor/reset/destructor and multi-owner
+reference semantics before instantiating native wall/pathfinder fixtures; zeroed
+allocator memory is not an ownership contract. PathfindLayer's separate
+constructor around3198 does initialize its backing pointers, so do not conflate
+those owners with the enclosing Pathfinder. These are locally actionable source
+findings for the next coupled AI/bridge/root batch, not current passing evidence.
+PathfindCellInfo::allocateCellInfos/releaseCellInfos around1110–1144 forcibly
+retires prior shared backing and pairs new[] with scalar delete. Both the array
+ownership mismatch and live-cell/shared-owner retirement must be addressed in
+that same batch; constructor pointer initialization alone is insufficient.
+
 ### Retained visual-owned terrain admission and deformation
 
 The full source WorldHeightMap constructor reads HeightMapData, BlendTileData

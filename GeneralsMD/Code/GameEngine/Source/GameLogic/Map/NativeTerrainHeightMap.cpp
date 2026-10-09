@@ -144,6 +144,12 @@ void NativeTerrainHeightMap::swap(NativeTerrainHeightMap& candidate) noexcept {
   std::swap(m_purpose, candidate.m_purpose);
   std::swap(m_topology, candidate.m_topology);
   std::swap(m_shadowColor,candidate.m_shadowColor);
+  std::swap(m_maximumHeight,candidate.m_maximumHeight);
+}
+void NativeTerrainHeightMap::cacheMaximumHeight() noexcept {
+  UnsignedByte maximum=0;
+  for(std::size_t n=0;n<std::size_t(m_width)*m_height;++n)maximum=std::max(maximum,m_bytes[n]);
+  m_maximumHeight=maximum*MAP_HEIGHT_SCALE;
 }
 void NativeTerrainHeightMap::loadVisualTerrain(ChunkInputStream& stream,Bool useThreeWayBlends,
                                               GlobalData& configuration) {
@@ -290,6 +296,7 @@ void NativeTerrainHeightMap::readBlendChunk(DataChunkInput& input, DataChunkVers
   }
   m_topology = std::move(candidate);
   m_width = finalWidth; m_height = finalHeight;
+  cacheMaximumHeight();
 }
 Bool NativeTerrainHeightMap::isCliffCell(Real x, Real y) const {
   const Real tx = std::trunc(x/MAP_XY_FACTOR), ty = std::trunc(y/MAP_XY_FACTOR);
@@ -366,6 +373,7 @@ void NativeTerrainHeightMap::readHeightChunk(DataChunkInput& input,
       candidate.m_width = newWidth; candidate.m_height = newHeight;
     }
   }
+  candidate.cacheMaximumHeight();
   swap(candidate);
 }
 UnsignedByte NativeTerrainHeightMap::rawHeight(Int x, Int y) const {

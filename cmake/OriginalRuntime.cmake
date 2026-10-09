@@ -475,7 +475,7 @@ target_compile_definitions(original_logical_world_fixture PRIVATE _OPERATOR_NEW_
 target_include_directories(original_logical_world_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_link_options(original_logical_world_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS functional negative faults ownership pool-failures continuation)
+foreach(family IN ITEMS functional negative faults ownership pool-failures continuation terrain terrain-negative terrain-faults)
   add_test(NAME original_logical_world_${family} COMMAND original_logical_world_fixture "${family}")
   set_tests_properties(original_logical_world_${family} PROPERTIES LABELS "original;runtime;map" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

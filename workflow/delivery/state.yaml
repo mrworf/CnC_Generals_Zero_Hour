@@ -26,16 +26,16 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "8b3cef21edc0a03a40a0695a3fa0bef54e4a3735",
-    "label": "original-terrain-cpu-virtual-binding",
-    "evidence": "evidence/qa/N2-terrain-provider-checkpoint.md",
-    "validation": "All3 configured builds, focused3 and related80 PASS. Actual TerrainVisual CPU dispatch, source construction restrictions, terrain/water lifecycle and provider terminal61 plus virtual water terminals1 retain failure/retry across three whole owners. Output and complete device snapshot remain explicitly abstract",
-    "next": "Bind native TerrainLogic ground/extents/layers with actual AI/Bridge behavior, retain logical-world rollback through provider/root admission, then finish partition/ghost/startup and original simulation",
+    "parent": "26da2238885d0bd59dfbe9263baa9c4c4e1e721f",
+    "label": "original-terrain-world-admission",
+    "evidence": "evidence/qa/N2-native-terrain-logic-checkpoint.md",
+    "validation": "All3 configured builds, focused3 and related83 PASS. Native TerrainLogic actual world/graph/terrain/time/lighting admission retains late rollback; prefixes[0,259), exact terminal259 and every corrected retry retire standard and source pool units across three owners",
+    "next": "Complete coupled native AI/pathfinder/bridge ownership and model-derived BridgeInfo; bind mandatory concrete headless/root providers, final newMap/partition/ghost ordering and compiler-matching original startup/simulation",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 native TerrainVisual CPU binding verified. All3 builds/focused3/related80 PASS on canonical616 source2dabfa05. Actual virtual type restrictions, deformation/water/profile/frame0/reset/exchange and terminal61/1 retries pass across three owners. Full293 not run. Presentation/picking/image color and complete device snapshot remain abstract. Continue native TerrainLogic ground/extents/layers using actual AI/pathfinder/Bridge, then staged world/provider/root and partition/ghost/startup/compiler-matching original simulation. Source bridge buffers register gameplay bridges after model-derived BridgeInfo; preserve that dependency. Slice03/N2 incomplete.",
-  "transaction_parent": "8b3cef21edc0a03a40a0695a3fa0bef54e4a3735",
+  "resume_point": "N2 plan01/slice03 native TerrainLogic combined map admission verified. All3 builds/focused3/related83 PASS on canonical620 source26e0eb24. Distinct world/provider lighting, shadow, names/IDs, extents, filenames and original graph restore through late failure; query mode preserves prior visual state. Full296 not run. Device/road-bridge hooks remain abstract. Next coupled actual AI/pathfinder/bridge/root ownership: constructor backing initialization, shared cell-info new[]/delete mismatch and premature release, TAiData acquisition guard, factory-owned bridge template cache and registered object rollback. Preserve model-derived bridge width/corners and actual wall/layer semantics, then concrete roots/partition/ghost/startup/simulation. Slice03/N2 incomplete.",
+  "transaction_parent": "26da2238885d0bd59dfbe9263baa9c4c4e1e721f",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -44,28 +44,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-terrain-provider-checkpoint.md",
+  "evidence": "evidence/qa/N2-native-terrain-logic-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Bind native TerrainLogic ground/extents/layers with actual AI/Bridge behavior, retain logical-world rollback through provider/root admission, then finish partition/ghost/startup and original simulation",
+  "next": "Complete coupled native AI/pathfinder/bridge ownership and model-derived BridgeInfo; bind mandatory concrete headless/root providers, final newMap/partition/ghost ordering and compiler-matching original startup/simulation",
   "implementation_checkpoint": {
-    "label": "original-terrain-cpu-virtual-binding",
-    "reason": "Actual TerrainVisual CPU virtual binding passes related80 all3. Source construction restrictions and water/terrain ownership are preserved, output remains abstract. Native TerrainLogic/layers/Bridge/pathfinder, enclosing provider/root, partition/ghost/startup and original simulation remain pending",
-    "prior_commit": "8b3cef21",
-    "canonical_source_sha256": "2dabfa052f0aba475517696eb6f57a475436b554984e21f002b3577d8b701603",
-    "toolchain_inclusive_sha256": "4b9433ec3604bf0c1857ecdd0fe14da99e34877f8bf3745f3ba156bc1986b21d",
-    "configured_suite_tests": 293,
-    "related_suite_tests_passed": 80,
+    "label": "original-terrain-world-admission",
+    "reason": "Actual native TerrainLogic admission passes related83 all3, including original nonempty world and staged provider rollback. Mandatory concrete device/bridge/root, actual nonempty wall/bridge and whole startup/simulation remain pending",
+    "prior_commit": "26da2238",
+    "canonical_source_sha256": "26e0eb246c0c71bc01f153ced28d1fadf1985d46a56b72252f1a2a23d464826e",
+    "toolchain_inclusive_sha256": "af4054cb6f1483f03b0779adf70f76ca918246ed7bdee7d99057212a3e23bc1b",
+    "configured_suite_tests": 296,
+    "related_suite_tests_passed": 83,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; related80 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; related83 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-terrain-provider-checkpoint.md"
+    "evidence": "evidence/qa/N2-native-terrain-logic-checkpoint.md"
   }
 }

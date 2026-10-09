@@ -14,6 +14,15 @@ public:
   Bool load(AsciiString filename) override;
   void loadStream(ChunkInputStream&, AsciiString filename, Bool threeWayBlends);
   void exchangeCpuState(NativeTerrainVisual&) noexcept;
+  struct TerrainState {
+    NativeTerrainHeightMap height;
+    AsciiString filename;
+    explicit TerrainState(std::optional<UnsignedInt> shadow = std::nullopt):height(shadow){}
+  };
+  // Root admission exchanges candidate CPU map state without output callbacks;
+  // invalidate only after the enclosing world transaction commits successfully.
+  void exchangeTerrainState(TerrainState&) noexcept;
+  void invalidateTerrainHeights() noexcept { terrainHeightsChanged(); }
   const NativeTerrainHeightMap& heightMap() const noexcept { return m_height; }
   const NativeWaterGrid& waterGrid() const noexcept { return m_water; }
   const AsciiString& filename() const noexcept { return m_filenameString; }
