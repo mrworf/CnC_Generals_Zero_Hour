@@ -26,16 +26,16 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "3ef97998bf8d7ce4f190fd584cf3d447ad11f8ce",
-    "label": "original-transactional-logical-world",
-    "evidence": "evidence/qa/N2-logical-world-checkpoint.md",
-    "validation": "Final full configured builds and affected101 PASS GCC and both unsuppressed sanitizers. Combined world manifests150/75, all ten pool failure/retry paths, borrowed pending scripts, fresh names and omitted-team carryover repeat across three whole owners",
-    "next": "Enclose original waypoint/provider phases and actual NativeTerrainLogic/root startup using the verified combined logical-world owner; preserve temporary metadata versus retained full visual grid and initial/final waypoint snaps",
+    "parent": "f300fca5df1fe3763bfd547fbaa2969e52f9e854",
+    "label": "original-cpu-water-provider",
+    "evidence": "evidence/qa/N2-native-water-checkpoint.md",
+    "validation": "Full configured builds and affected106 PASS GCC and both unsuppressed sanitizers. Source water queries, transforms, motion, invalid inputs, exact scalar snapshots and complete enable/resize/load failure/retry manifests1/1/2 repeat across three whole owners",
+    "next": "Integrate verified CPU water and logical-world owners into actual native terrain providers, then original waypoint/layer/root phases; preserve temporary metadata versus retained full visual grid and initial/final waypoint snaps",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 combined actual logical-world owner verified. Configured builds and affected101 PASS all3 on final canonical608 source; manifests150/75 and ten pool exhaustion paths retain every failure/retry/terminal. Object1-3/Height1-4, original factory/scripts/builds/teams/triggers, weather/Dict, pending read/ID/names, optional prior-team carryover and strong late rollback are covered. Full277 not run. Continue actual NativeTerrainLogic extents/layers and original waypoint/provider phases, then ghost/partition/presentation metadata/root and compiler-matching original simulation. Slice03/N2 incomplete.",
-  "transaction_parent": "3ef97998bf8d7ce4f190fd584cf3d447ad11f8ce",
+  "resume_point": "N2 plan01/slice03 source CPU water behavior verified. Configured builds and affected106 PASS all3 on frozen canonical611 source. Enable/resize/load manifests1/1/2 retain every failure/retry/terminal, source scalar snapshots round-trip and resume motion, and three whole-owner lifetimes retire exactly. Prior logical-world coverage remains in N2-logical-world-checkpoint.md. Full282 not run. Continue native terrain providers/waypoints/layers, then ghost/partition/presentation metadata/root and compiler-matching original simulation. Slice03/N2 incomplete.",
+  "transaction_parent": "f300fca5df1fe3763bfd547fbaa2969e52f9e854",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -44,28 +44,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-logical-world-checkpoint.md",
+  "evidence": "evidence/qa/N2-native-water-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Integrate the verified combined logical-world owner into actual NativeTerrainLogic and preserve source initial waypoint/link admission versus final TerrainLogic::newMap height snap after full visual-owned grid load/partition/ghost preparation. Complete actual layers, shipped ghost/partition semantics and native GameEngine/root, camera/audio/particle/radar and compiler-matching original simulation. Logical-world fixtures are not whole-world startup/image readiness.",
+  "next": "Integrate verified CPU water and combined logical-world owners into actual native terrain providers. Preserve source initial waypoint/link admission versus final TerrainLogic::newMap height snap after full visual-owned grid load/partition/ghost preparation. Complete layers, shipped ghost/partition semantics and native GameEngine/root, camera/audio/particle/radar and compiler-matching original simulation. Provider fixtures are not whole-world startup/image readiness.",
   "implementation_checkpoint": {
-    "label": "original-transactional-logical-world",
-    "reason": "Actual combined logical-world admission and rollback pass affected101 all3, including prior typed-pool extension and omission-only team carryover. Waypoints/providers/layers/ghost/camera/audio/lighting/textures/root remain required before native startup",
-    "prior_commit": "3ef97998",
-    "canonical_source_sha256": "b10129e0d32eb1a9b04064951305a23c8d422030413985f5e421077113286a01",
-    "toolchain_inclusive_sha256": "c089e91fb87e608103c21b98f577fe070113ba8839803c678bec62d1200056e9",
-    "configured_suite_tests": 277,
-    "related_suite_tests_passed": 101,
+    "label": "original-cpu-water-provider",
+    "reason": "Complete CPU water behavior and strong ownership pass affected106 all3, including prior logical-world coverage. Terrain/waypoint/layer/ghost/camera/audio/lighting/textures/root integration remains required before native startup",
+    "prior_commit": "f300fca5",
+    "canonical_source_sha256": "3ef47336350e06c7cdb98de96cb9b48c00a0f975cc740857f8854f65c6146b10",
+    "toolchain_inclusive_sha256": "047293bf72980103b8758687ce461722757cc66db4a08294b1718e2086d26247",
+    "configured_suite_tests": 282,
+    "related_suite_tests_passed": 106,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; affected101 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; affected106 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-logical-world-checkpoint.md"
+    "evidence": "evidence/qa/N2-native-water-checkpoint.md"
   }
 }

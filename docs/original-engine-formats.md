@@ -3404,6 +3404,64 @@ Sources: TerrainLogic.h::Waypoint::getLink/addLink;
 TerrainLogic.cpp::Waypoint ctor/dtor/addWaypoint/addWaypointLink/
 parseWaypointData/deleteWaypoints.
 
+Native TerrainVisual is not merely an optional-output stub. Its public source
+interface contains pure water-grid transforms/resolution/clamps/height queries,
+raw terrain mutation, terrain tile/color selection and other presentation
+operations. TerrainLogic::isUnderwater/getWaterHeight consume water-grid heights;
+construction/deformation calls setRawMapHeight. Retain their source CPU state and
+queries in headless execution rather than implement every pure method as a no-op.
+Visual-only output can be omitted, but gameplay-affecting grid/transform/height
+behavior cannot. Source seismic branches are conditional on
+DO_SEISMIC_SIMULATIONS; audit original build definitions before choosing their
+native configuration or claiming a second display grid is universally present.
+Sources: TerrainVisual.h public interface; TerrainLogic.cpp water queries
+(2165,2223) and raw map mutation (2718 onward); W3DTerrainVisual.cpp water/raw
+height adapters; W3DTerrainVisual.h conditional seismic state. This is a pending
+provider integration obligation, not evidence of its implementation.
+
+### Source CPU vertex-water contract (N2 provider checkpoint)
+
+`NativeWaterGrid` extracts the CPU behavior of `WaterRenderObjClass`, without
+rendering ownership or simulation callbacks. Its backing is `(cellsX+3) *
+(cellsY+3)` cells: visible vertices plus one invisible border on each side.
+World queries accept grid coordinates through `cellsX-1`/`cellsY-1`, truncate
+nonnegative coordinates to a vertex, and add transform Z; they do not interpolate.
+The angle transform changes query origin/axes and the matrix. The matrix-only
+overload changes only the matrix, intentionally leaving query origin/axes alone.
+Source strict bounds remain strict, including floating-point rotated boundaries.
+
+Height changes visit a floor/ceil rectangular influence box, including diagonal
+points outside the nominal circle, with reciprocal polynomial attenuation and
+low/high clamps. Velocity changes use the same box but uniform velocity, not
+distance attenuation. Preferred height is an unsigned byte: representable
+fractional inputs truncate (including -0.5 to zero); nonfinite/unrepresentable
+conversions are rejected. Motion uses source damping 0.93, gravity times three,
+one Euler step per changed logic frame and strict less-than-one rest thresholds.
+The native frame cursor belongs to each owner, replacing the original function
+static; reset preserves that cursor. Source Y-only resize contains a self-comparison
+typo; native resize handles either changed dimension and initializes replacement
+backing before publication. Disable keeps backing. Actual GlobalData profiles
+default to zero; initialization preserves this disabled inert state, while enable
+requires usable positive dimensions and spacing.
+
+Water snapshot version1 contains one version byte, two fixed-width Int dimensions,
+then each cell's Real height, Real velocity, unsigned-byte status and unsigned-byte
+preferred height: ten bytes per cell, not native padded struct layout. The
+source TerrainVisual wrapper transfers water only when enabled; dimensions must
+match existing backing. Native loading uses actual Snapshot/Xfer dispatch and
+stages the complete candidate, restoring motion from loaded status. Light CRC
+remains empty. Arithmetic mutations dry-run all affected cells before publication;
+enable/resize/load allocation failures preserve accepted backing and allow retry.
+
+Sources: W3DWater.cpp::enableWaterGrid/update (around1160–1286),
+setGridVertexHeight/setGridHeightClamps/addVelocity/changeGridHeight/
+setGridChangeAttenuationFactors/setGridTransform/setGridResolution (2454–2660),
+xfer (around3494); W3DTerrainVisual.cpp water adapters and xfer;
+GlobalData.cpp vertex-water defaults; native implementation and
+`tests/original/native_water.cpp`. Evidence:
+`evidence/qa/N2-native-water-checkpoint.md`. This is CPU-provider coverage,
+not native TerrainVisual/TerrainLogic/root integration or visual/gameplay parity.
+
 Sources: GameLogic/System/GameLogic.cpp::startNewGame (1272,1631);
 GameLogic/Map/TerrainLogic.cpp::loadMap/addWaypoint/newMap;
 W3DDevice/GameLogic/W3DTerrainLogic.cpp::loadMap/getGroundHeight/newMap;

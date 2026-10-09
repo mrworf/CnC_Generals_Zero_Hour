@@ -1984,3 +1984,51 @@ namespace behavior repeat across three whole owners. Evidence:
 `evidence/qa/N2-logical-world-checkpoint.md`. Commit boundary is this complete
 logical-world behavior, not slice03/N2 completion; configured277 full suite has
 not run. Continue the native terrain/provider/root batch documented above.
+
+Provider inspection afterf300fca5: TerrainVisual's pure methods include CPU water
+grid state/queries and raw terrain mutation consumed by actual TerrainLogic.
+Do not instantiate a universal no-op headless visual to satisfy the interface.
+Extract source water/height/transform gameplay state along with terrain queries;
+defer only presentation output. Trace original DO_SEISMIC_SIMULATIONS build
+configuration before enabling/disabling source conditional behavior. Details and
+source links are durable in original-engine-formats.md's provider continuation.
+
+Water/terrain provider implementation refinement (parentf300fca5; prior dirty
+plan/docs are owned carry-forward): extract complete CPU WaterRenderObjClass
+grid into NativeWaterGrid, retaining source vertex/border layout, nearest/truncate
+queries, attenuation box, motion/gravity/damping/rest thresholds, angle versus
+matrix transform behavior and source version1 scalar snapshot sequence. Use
+actual GlobalData profile0 and actual Xfer/Snapshot dispatch. Keep no renderer
+or simulation callbacks in the grid; caller passes logic frame/gravity.
+Initialize previously undefined constructor fields; repair the source Y-only
+resolution typo and keep per-owner frame state rather than a function-static
+cursor. Preserve preferredHeight's unsigned-byte representation, rejecting
+nonfinite/unrepresentable float-to-byte input rather than introducing UB.
+Stage enable/resize/restore backing; reject impossible dimensions, nonfinite
+arithmetic inputs and singular attenuation before mutating accepted state.
+All snapshot cells remain float,float,byte,byte (no raw native struct padding).
+Restore derives motion from loaded status so resumed waves do not freeze.
+Native terrain visual integration, dynamic terrain mutation, lighting/material,
+waypoint/layer/root and actual simulation remain this same slice's next work.
+Positive/negative source-derived motion/rotation/clamp/query/snapshot tests,
+complete enable/resize/load allocation manifests and repeated whole-owner
+retirement run under GCC and both unsuppressed sanitizers before this coherent
+provider batch commits. No extra plan or standalone helper-only slice is created.
+
+Profile default audit: GlobalData initializes every vertex-water profile to zero.
+Preserve disabled/inert zero resolution/spacing/factors during init; require
+usable positive dimensions/spacing only on enable/backed query, and validate
+actual attenuation denominators before a height mutation rather than forbid all
+zero profiles. Two-pass arithmetic admission preserves strong nonallocating
+height/velocity/frame updates. Source matrix-only transform updates only the
+presentation matrix, not the world-query origin/axes; preserve that distinction.
+
+Worktree consolidation requested by the user: transaction parent
+`f300fca5df1fe3763bfd547fbaa2969e52f9e854`; all six pending paths belong to
+this coherent provider batch, with no unrelated edits or generated files to
+discard. Commit boundary: `delivery: preserve original CPU water behavior`.
+Include implementation, five fixture families, build wiring, verified format
+notes, QA evidence and current delivery checkpoint together. Exact validation
+and frozen source identity: `evidence/qa/N2-native-water-checkpoint.md`.
+This checkpoint does not complete slice03/N2; continue the native terrain
+provider/waypoint/root integration, without importing historical implementation.

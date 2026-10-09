@@ -277,6 +277,7 @@ list(TRANSFORM ZH_ORIGINAL_LOGICAL_CLIENT PREPEND "${ZH_CODE}/GameEngine/Source/
 add_library(original_logical_client STATIC ${ZH_ORIGINAL_LOGICAL_CLIENT})
 target_sources(original_logical_client PRIVATE
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeHeadlessGameClient.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeWaterGrid.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/INI/INIMappedImage.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeMapPreviewLayout.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeMapPreviewStorage.cpp"
@@ -440,6 +441,18 @@ add_executable(original_diplomacy_fixture tests/original/diplomacy.cpp tests/ori
 add_executable(original_lod_fixture tests/original/lod.cpp tests/original/AllocationFault.cpp)
 add_executable(original_native_client_fixture tests/original/native_client.cpp tests/original/AllocationFault.cpp)
 add_executable(original_native_terrain_fixture tests/original/native_terrain.cpp tests/original/AllocationFault.cpp)
+add_executable(original_native_water_fixture tests/original/native_water.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_native_water_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_include_directories(original_native_water_fixture PRIVATE
+  "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
+target_compile_definitions(original_native_water_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+target_link_options(original_native_water_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS functional motion negative snapshots faults)
+  add_test(NAME original_native_water_${family} COMMAND original_native_water_fixture "${family}")
+  set_tests_properties(original_native_water_${family} PROPERTIES LABELS "original;runtime;water" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 add_executable(original_polygon_world_fixture tests/original/polygon_world.cpp tests/original/AllocationFault.cpp)
 add_executable(original_sides_scripts_fixture tests/original/sides_scripts.cpp tests/original/AllocationFault.cpp)
 add_executable(original_logical_world_fixture tests/original/logical_world.cpp tests/original/AllocationFault.cpp)
