@@ -185,6 +185,8 @@ public:
 	virtual Int getLastFrameDrawCalls( void ) = 0;  ///< returns the number of draw calls issued in the previous frame
 
 protected:
+	friend class View;
+	void withdrawView(View*) noexcept;
 
 	virtual void deleteViews( void );   ///< delete all views
 	UnsignedInt m_width, m_height;			///< Dimensions of the display

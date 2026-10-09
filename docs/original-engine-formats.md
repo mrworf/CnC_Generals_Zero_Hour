@@ -4964,3 +4964,35 @@ builds/focused9/related177 PASS on unchanged canonical644/inclusive651; see
 evidence/qa/N2-native-camera-navigation-checkpoint.md. Real-map constraints,
 concrete actor/chase/frame, shake/slave, native model metadata and actual UI/root
 adoption remain pending. This supporting checkpoint does not accept full367/N2.
+
+Coupled native camera/View lifetime checkpoint (parent e13b9605; all3 full builds/
+focused13/related179 PASS): View keeps a game-owned non-owning intrusive live chain,
+separate from Display's owning list. Terminal Drawable/client construction,
+destruction and direct owner cleanup withdraw every matching camera Drawable
+borrow without dereferencing the child, virtual callbacks or allocations. Object
+lock IDs survive Drawable-only removal/replacement; ordinary lookup rekey does
+not withdraw a still-live borrow. View copy is disabled because intrusive identity
+and owning-list links cannot be copied safely. Live-chain count is checked exactly
+alongside allocation/pool/whole-owner retirement; LSan reachability alone is not
+proof of registry retirement. These operations run only on the client/main thread.
+
+Display attachment now validates null/duplicate/cross-owner admission before
+direct infallible linking. Complete source census found no prepend override;
+the owning operation no longer delegates admission to that virtual callback.
+View retirement withdraws its exact owning-list link, including direct deletion.
+The tactical publication remains valid through derived cleanup and is cleared
+only if it still points at that exact View; unrelated borrowed publication is
+preserved. Root candidate publication still needs its explicit previous-borrow
+lease restoration, not an inference from this registry or automatic nulling.
+
+Generated tests compose production NativeCameraView spatial backing with actual
+client/Drawable lifetime, reset-preparation failure/retry, candidate cancellation,
+direct/whole-owner cleanup, failed derived View construction, ordinary Drawable
+ID rekey, allocation terminal0 and rejected Display ownership cycles. Existing
+factory-creation-camera now uses the production native spatial View and proves
+actual Object survival across Drawable removal/rebinding. Binding-callback failure
+tests acquire a real camera borrow before each of the two failure phases, then
+require its withdrawal during source rollback. Test output/frame/model providers
+remain deliberately absent/rejected; no concrete frame/root/physical acceptance
+follows. Evidence: evidence/qa/N2-camera-lifetime-checkpoint.md. Full369, slice03
+and N2 completion remain pending.

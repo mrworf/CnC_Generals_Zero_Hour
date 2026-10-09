@@ -483,6 +483,7 @@ void GameClient::prepareDrawableID(Drawable* draw, DrawableID value)
 
 void GameClient::cancelDrawableConstruction(Drawable* draw) noexcept
 {
+	View::withdrawDrawableBorrows(draw);
 	const auto id = draw->getID();
 	removeDrawableFromLookupTable(draw);
 	draw->removeFromList(&m_drawableList);
@@ -875,6 +876,7 @@ void GameClient::updateFakeDrawables(void)
  */
 void GameClient::destroyDrawable( Drawable *draw )
 {
+	View::withdrawDrawableBorrows(draw);
 
 	// remove any notion of the Drawable in the in-game user interface
 	if (TheInGameUI) TheInGameUI->disregardDrawable( draw );

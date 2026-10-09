@@ -153,3 +153,11 @@ source hashes match. Commit this checkpoint and continue the concrete camera,
 real-map constraints and staged UI/root work. Full367 remains the unrun N2 completion gate.
 Constraint rebuild/shake cardinality and Drawable borrow teardown findings are
 durable in `docs/original-engine-formats.md`, not accepted concrete frame behavior.
+
+Latest slice03 checkpoint: coupled View/Display/Drawable lifetime verified on
+canonical646/inclusive653,369 configured tests. All3 full builds/focused13/
+related179 PASS; see `evidence/qa/N2-camera-lifetime-checkpoint.md`. Exact live
+View registration retirement, camera borrow withdrawal, Object survival across
+Drawable replacement and callback rollback are covered. No live jobs remain.
+Concrete camera frame/model/constraints/shake/slave and actual UI/root adoption
+remain next under this same plan. Slice03/N2 incomplete; full369 unrun.

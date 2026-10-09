@@ -32,9 +32,11 @@
 #include "Common/GameEngine.h"
 #include "Common/Xfer.h"
 #include "GameClient/View.h"
+#include "GameClient/Display.h"
 #include "GameClient/Drawable.h"
 
 UnsignedInt View::m_idNext = 1;
+View* View::s_liveViews = nullptr;
 
 // the tactical view singleton
 View *TheTacticalView = NULL;
@@ -81,10 +83,32 @@ View::View( void )
 	
 	m_guardBandBias.x = 0.0f;
 	m_guardBandBias.y = 0.0f;
+	m_liveNext = s_liveViews;
+	s_liveViews = this;
 }
 
 View::~View()
 {
+	if (m_displayOwner) m_displayOwner->withdrawView(this);
+	View** slot = &s_liveViews;
+	while (*slot && *slot != this) slot = &(*slot)->m_liveNext;
+	if (*slot) *slot = m_liveNext;
+	// Derived cleanup has completed with legitimate publication intact.
+	if (TheTacticalView == this) TheTacticalView = nullptr;
+}
+
+void View::withdrawDrawableBorrows(Drawable* drawable) noexcept
+{
+	if (!drawable) return;
+	for (View* view = s_liveViews; view; view = view->m_liveNext)
+		if (view->m_cameraLockDrawable == drawable) view->m_cameraLockDrawable = nullptr;
+}
+
+std::size_t View::liveViewCount() noexcept
+{
+	std::size_t count = 0;
+	for (View* view = s_liveViews; view; view = view->m_liveNext) ++count;
+	return count;
 }
 
 void View::init( void )

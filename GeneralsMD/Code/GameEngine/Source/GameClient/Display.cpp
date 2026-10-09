@@ -89,14 +89,21 @@ Display::~Display()
 	*/
 void Display::deleteViews( void )
 {
-	View *v, *next;
-
-	for( v = m_viewList; v; v = next )
-	{
-		next = v->getNextView();
-		delete v;
+	while (m_viewList) {
+		View* view = m_viewList;
+		withdrawView(view);
+		delete view;
 	}
-	m_viewList = NULL;
+}
+
+void Display::withdrawView(View* view) noexcept
+{
+	if (!view || view->m_displayOwner != this) return;
+	View** slot = &m_viewList;
+	while (*slot && *slot != view) slot = &(*slot)->m_next;
+	if (*slot) *slot = view->m_next;
+	view->m_next = nullptr;
+	view->m_displayOwner = nullptr;
 }
 
 /**
@@ -105,8 +112,12 @@ void Display::deleteViews( void )
  */
 void Display::attachView( View *view )
 {
-	// prepend to head of list
-	m_viewList = view->prependViewToList( m_viewList );
+	if (!view || view->m_displayOwner || view->m_next) throw ERROR_BAD_ARG;
+	// Source census has no prepend overrides. Direct admission is infallible
+	// after validation; ownership cannot be lost behind a virtual callback.
+	view->m_next = m_viewList;
+	view->m_displayOwner = this;
+	m_viewList = view;
 }
 
 /**

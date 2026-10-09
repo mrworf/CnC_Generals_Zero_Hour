@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "AllocationFault.h"
 #include "ScriptCameraFixture.h"
+#include "NativeCameraViewFixture.h"
 #include "NativeTerrainDeviceFixture.h"
 #include "GameLogic/NativeTerrainLogic.h"
 #include "GameLogic/NativeTerrainLightingState.h"
@@ -429,6 +430,7 @@ public:
   NameKeyType getModuleNameKey()const override{static const StaticNameKey name("BindingDrawProbe");return name.key();}
   void onDrawableBoundToObject()override{++bindingDrawCalls;auto* actor=getDrawable()->getObject();
     require(actor && !actor->getDrawable(),"first binding callback sees only Drawable-to-Object publication");
+    if(bindingFaultPhase && TheTacticalView)TheTacticalView->setCameraLockDrawable(getDrawable());
     if(bindingFaultPhase==1)throw ERROR_BAD_ARG;}
   void doDrawModule(const Matrix3D*)override{throw ERROR_BAD_ARG;}
   void setShadowsEnabled(Bool)override{} void releaseShadows()override{} void allocateShadows()override{throw ERROR_BAD_ARG;}
@@ -584,7 +586,16 @@ void factoryCreation(Context& context,bool faults,bool binding=false,bool camera
   auto* survivor=make();verify(survivor);auto* survivorDraw=survivor->getDrawable();auto* survivorPartition=survivor->friend_getPartitionData();
   auto* warm=make();verify(warm);retire(warm);
   if(cameraTracking){
-    ScriptCameraFixture camera;camera.init();camera.setFrameLengthMilliseconds(10);
+    NativeCameraViewFixture camera;camera.init();camera.setFrameLengthMilliseconds(10);
+    auto* prior=TheTacticalView;TheTacticalView=&camera;
+    struct RestoreView{View* prior;~RestoreView(){TheTacticalView=prior;}}restoreView{prior};
+    const auto actorID=survivor->getID();auto* oldDraw=survivor->getDrawable();
+    camera.setCameraLock(actorID);camera.setCameraLockDrawable(oldDraw);parents.client.owner->destroyDrawable(oldDraw);
+    require(parents.logic.owner->findObjectByID(actorID)==survivor && !survivor->getDrawable() &&
+      camera.getCameraLock()==actorID && !camera.getCameraLockDrawable(),"actual source Object survives Drawable removal without stale native camera borrow or Object-lock loss");
+    auto* replacement=parents.client.owner->friend_createDrawable(definition,DRAWABLE_STATUS_NONE);
+    replacement->friend_bindToObject(survivor);survivor->friend_bindToDrawable(replacement);verify(survivor);
+    camera.setCameraLockDrawable(replacement);camera.setCameraLock(INVALID_ID);camera.setCameraLockDrawable(nullptr);
     const Coord3D origin{},east{40,0,0},north{0,40,0};camera.lookAt(&origin);
     survivor->setPosition(&east);camera.rotateCameraTowardObject(survivor->getID(),20,20,0,0);camera.cameraModFreezeTime();
     camera.updateCameraMovements(10);require(!camera.isCameraMovementFinished() && camera.isTimeFrozen(),"actual tracked actor keeps camera freeze active");
@@ -602,7 +613,10 @@ void factoryCreation(Context& context,bool faults,bool binding=false,bool camera
       "SubdualDamageHelper","ObjectDefectionHelperPool","ExperienceTrackerPool","RadarObject","PartitionDataPool","InactiveBody","VeterancyGainCreate","Drawable","TintEnvelope","DrawableLocoInfo","DrawableIconInfo","BindingDrawProbe","BindingBehaviorProbe"};
     std::array<Int,17> result{};for(unsigned n=0;n<names.size();++n)if(auto* pool=TheMemoryPoolFactory->findMemoryPool(names[n]))result[n]=pool->getUsedBlockCount();return result;};
   const auto start=parents.logic.owner->getObjectIDCounter();const auto drawStart=parents.client.owner->getDrawableIDCounter();
-  if(binding){for(unsigned phase:{1u,2u}){const auto live=AllocationFault::live();const auto used=units();
+  if(binding){NativeCameraViewFixture camera;
+    auto* prior=TheTacticalView;TheTacticalView=&camera;
+    struct RestoreView{View* prior;~RestoreView(){TheTacticalView=prior;}}restoreView{prior};
+    for(unsigned phase:{1u,2u}){const auto live=AllocationFault::live();const auto used=units();
       const auto drawCalls=bindingDrawCalls,behaviorCalls=bindingBehaviorCalls,unbindCalls=bindingUnbindCalls;bindingFaultPhase=phase;
       struct Disarm{~Disarm(){bindingFaultPhase=0;}} disarm;bool failed=false;
       try{make();}catch(ErrorCode code){failed=code==ERROR_BAD_ARG;}
@@ -613,6 +627,7 @@ void factoryCreation(Context& context,bool faults,bool binding=false,bool camera
         !parents.logic.owner->findObjectByID(ObjectID(start)) && parents.logic.owner->getFirstObject()==survivor &&
         parents.client.owner->getDrawableList()==survivorDraw,"half-bound candidate rollback retires every owner/registry");
       require(survivor->getDrawable()==survivorDraw && survivorDraw->getObject()==survivor && survivor->friend_getPartitionData()==survivorPartition,"callback failure preserves accepted reciprocal pair and partition");
+      require(!camera.getCameraLockDrawable(),"each actual half-bound actor failure withdraws the callback-acquired native camera borrow");
       auto* retry=make();verify(retry);require(retry->getID()==ObjectID(start) && parents.logic.owner->getObjectIDCounter()==start+1,"corrected binding retry advances real actor cursor");retire(retry);
       require(units()==used && AllocationFault::live()==live,"binding retry retires pooled and standard ownership");
       parents.logic.owner->setObjectIDCounter(start);parents.client.owner->setDrawableIDCounter(drawStart);}
@@ -855,7 +870,7 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
     // not a template graph retained after its module-data owner was retired.
     if(std::string_view(argv[1]).starts_with("factory-creation"))for(unsigned repeat=0;repeat<2;++repeat){Context warm;factoryCreation(warm,false,
       std::string_view(argv[1])=="factory-creation-binding",std::string_view(argv[1])=="factory-creation-camera");}
-    for(unsigned repeat=0;repeat<3;++repeat){auto live=AllocationFault::live();const PoolUsage pools;
+    for(unsigned repeat=0;repeat<3;++repeat){auto live=AllocationFault::live();const auto views=View::liveViewCount();const PoolUsage pools;
       {Context context;const std::string_view family=argv[1];if(family=="functional")functional(context);
         else if(family=="negative")negative(context);else if(family=="faults"){faults(context);optionalFaults(context);}
         else if(family=="ownership")ownership(context);else if(family=="pool-failures")poolFailures(context);
@@ -869,7 +884,7 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
         else if(family=="factory-creation-binding")factoryCreation(context,false,true);
         else if(family=="factory-creation-camera")factoryCreation(context,false,false,true);
         else require(false,"unknown world family");}
-      require(AllocationFault::live()==live && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
+      require(AllocationFault::live()==live && View::liveViewCount()==views && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
         !MapObject::getFirstMapObject() && !PolygonTrigger::getFirstPolygonTrigger(),"repeated full-world owner retirement");}
     shutdownMemoryManager();initialized=false;require(AllocationFault::live()==initial,"whole original pool metadata retirement");
     std::cout<<"PASS actual logical world; native startup still pending\n";return 0;

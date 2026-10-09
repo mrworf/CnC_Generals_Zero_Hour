@@ -329,11 +329,11 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
       // Warm the identical complete spatial/parser cohort, not just its old
       // camera/waypoint parents. Name metadata retires with the whole manager.
       spatial();
-      for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
+      for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();const auto views=View::liveViewCount();
         const std::string_view family=argv[1];if(family=="modes")modes(parents);else if(family=="paths")paths(parents);else if(family=="negative")negative();else if(family=="ownership")ownership();
         else if(family=="spatial")spatial();else if(family=="spatial-negative")spatialNegative();else if(family=="spatial-ownership")spatialOwnership();
         else if(family=="navigation")navigation(parents);else if(family=="navigation-negative")navigationNegative();else require(false,"unknown family");
-        require(AllocationFault::live()==live && TheMemoryPoolFactory->findMemoryPool("Waypoint")->getUsedBlockCount()==0,"repeated camera and actual waypoint owners retire exactly");}}
+        require(AllocationFault::live()==live && View::liveViewCount()==views && TheMemoryPoolFactory->findMemoryPool("Waypoint")->getUsedBlockCount()==0,"repeated camera/View registration and actual waypoint owners retire exactly");}}
     shutdownMemoryManager();initialized=false;require(AllocationFault::live()==initial,"whole memory manager retirement");
     std::cout<<"PASS original camera choreography; native UI/root/output still pending\n";return 0;
   }catch(const std::exception& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(ErrorCode error){std::cerr<<"FAIL camera "<<Int(error)<<'\n';}

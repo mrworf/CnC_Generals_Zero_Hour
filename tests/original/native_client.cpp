@@ -2,6 +2,8 @@
 // Actual client/Drawable owners, not a renderer or full startup acceptance.
 #include "PreRTS.h"
 #include "AllocationFault.h"
+#include "NativeCameraViewFixture.h"
+#include "DisplayOwnershipFixture.h"
 #include "Common/GameMemory.h"
 #include "Common/GlobalData.h"
 #include "Common/FileSystem.h"
@@ -43,7 +45,8 @@ struct Client {
   GameClient* previous=TheGameClient;
   std::unique_ptr<InspectableClient> owner;
   Client(){owner=std::make_unique<InspectableClient>();TheGameClient=owner.get();}
-  ~Client(){TheGameClient=owner.get();owner.reset();TheGameClient=previous;}
+  void retire(){TheGameClient=owner.get();owner.reset();TheGameClient=previous;}
+  ~Client(){retire();}
   void init(){owner->init();}
 };
 // Inspection exposes source state only, never replaces registration or creators.
@@ -162,6 +165,71 @@ void registryFaults(unsigned group){Context context;
   AllocationFault::arm(census);operation();AllocationFault::disarm();require(!AllocationFault::triggered() && AllocationFault::attempts()==census,"each shard proves independently discovered exact registry terminal");
   std::cout<<"registry group "<<group<<" of 4, prefixes [0,"<<census<<"); terminal "<<census<<'\n';
 }
+void cameraLifetime(){Context context;Definition definition;Client client;client.init();
+  context.data->m_cameraHeight=300;context.data->m_cameraPitch=45;context.data->m_cameraYaw=0;
+  context.data->m_disableCameraMovement=FALSE;
+  NativeCameraViewFixture first,second,unrelated;first.init();second.init();unrelated.init();
+  auto* prior=TheTacticalView;TheTacticalView=&first;
+  struct Restore{View* prior;~Restore(){TheTacticalView=prior;}}restore{prior};
+  first.setCameraLock(static_cast<ObjectID>(77));second.setCameraLock(static_cast<ObjectID>(78));
+  auto* a=client.owner->friend_createDrawable(&definition,DRAWABLE_STATUS_NONE);
+  auto* b=client.owner->friend_createDrawable(&definition,DRAWABLE_STATUS_NONE);
+  first.setCameraLockDrawable(a);second.setCameraLockDrawable(a);unrelated.setCameraLockDrawable(b);
+  View::withdrawDrawableBorrows(nullptr);require(first.getCameraLockDrawable()==a,"null withdrawal does not clear legitimate borrow");
+  struct FailedView:NativeCameraViewFixture {explicit FailedView(Drawable* draw){setCameraLockDrawable(draw);throw ERROR_BAD_ARG;}};
+  const auto viewCount=View::liveViewCount();
+  rejects([&]{FailedView candidate(a);}); // Base destruction must retire its live-View link.
+  require(View::liveViewCount()==viewCount,"failed derived construction retires its exact live-View registration");
+  AllocationFault::arm(0);try{client.owner->destroyDrawable(a);}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+  require(!hit && attempts==0 && !first.getCameraLockDrawable() && !second.getCameraLockDrawable() &&
+    unrelated.getCameraLockDrawable()==b && first.getCameraLock()==static_cast<ObjectID>(77) && second.getCameraLock()==static_cast<ObjectID>(78),
+    "actual destruction withdraws all matching native Views without allocation, dereference or Object-lock loss");
+  const auto changed=static_cast<DrawableID>(static_cast<UnsignedInt>(b->getID())+42);
+  b->setID(changed);require(unrelated.getCameraLockDrawable()==b && client.owner->findDrawableByID(changed)==b,
+    "ordinary lookup rekey preserves a live Drawable camera borrow");
+  client.owner->cancelDrawableConstruction(b);require(!unrelated.getCameraLockDrawable() && !client.owner->findDrawableByID(changed),
+    "candidate cancellation withdraws camera borrow and lookup together");b->deleteInstance();
+  auto* c=client.owner->friend_createDrawable(&definition,DRAWABLE_STATUS_NONE);first.setCameraLockDrawable(c);
+  AllocationFault::arm(0);bool failed=false;try{client.owner->reset();}catch(const std::bad_alloc&){failed=true;}
+  catch(...){AllocationFault::disarm();throw;}AllocationFault::disarm();
+  require(failed && first.getCameraLockDrawable()==c && client.owner->findDrawableByID(c->getID())==c,
+    "failed reset preparation preserves accepted native camera borrow and child");
+  client.owner->reset();require(!first.getCameraLockDrawable(),"corrected actual reset withdraws camera borrow");
+  auto* direct=client.owner->friend_createDrawable(&definition,DRAWABLE_STATUS_NONE);second.setCameraLockDrawable(direct);
+  // Retire registry/master-list admission separately, then exercise the actual
+  // Drawable owner path that also protects constructor rollback/direct cleanup.
+  client.owner->cancelDrawableConstruction(direct);second.setCameraLockDrawable(direct);direct->deleteInstance();
+  require(!second.getCameraLockDrawable(),"direct Drawable owner retirement independently withdraws borrow");
+  auto* last=client.owner->friend_createDrawable(&definition,DRAWABLE_STATUS_NONE);
+  first.setCameraLockDrawable(last);second.setCameraLockDrawable(last);client.retire();
+  require(!first.getCameraLockDrawable() && !second.getCameraLockDrawable() && TheTacticalView==&first,
+    "whole client retirement clears child borrows while preserving legitimate borrowed View publication");
+}
+void viewOwnership(){Context context;DisplayOwnershipFixture first,second;
+  auto* prior=TheTacticalView;struct Restore{View* prior;~Restore(){TheTacticalView=prior;}}restore{prior};
+  unsigned destroyed=0;bool identity=false;
+  struct Observed:NativeCameraViewFixture {
+    unsigned& destroyed;bool& identity;bool expected;
+    Observed(unsigned& count,bool& state,bool publication=false):destroyed(count),identity(state),expected(publication){}
+    ~Observed(){++destroyed;if(expected)identity=TheTacticalView==this;}
+  };
+  auto a=std::make_unique<Observed>(destroyed,identity,true),b=std::make_unique<Observed>(destroyed,identity);
+  auto* tactical=a.get();first.attachView(a.get());a.release();first.attachView(b.get());auto* other=b.release();TheTacticalView=tactical;
+  rejects([&]{first.attachView(nullptr);});rejects([&]{first.attachView(tactical);});rejects([&]{second.attachView(tactical);});
+  require(first.getFirstView()==other && first.getNextView(other)==tactical && !first.getNextView(tactical) && !second.getFirstView(),
+    "null/duplicate/cross-owner rejection preserves complete acyclic ownership");
+  delete other;require(destroyed==1 && first.getFirstView()==tactical && !first.getNextView(tactical),"direct View retirement withdraws exact owned-list link");
+  AllocationFault::arm(0);try{first.deleteViews();}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+  require(attempts==0 && !hit && destroyed==2 && identity && !first.getFirstView() && !TheTacticalView,
+    "whole owned View retirement has zero allocation and preserves tactical identity through derived cleanup, then withdraws it");
+  NativeCameraViewFixture borrowed;TheTacticalView=&borrowed;
+  {DisplayOwnershipFixture owner;auto candidate=std::make_unique<Observed>(destroyed,identity);owner.attachView(candidate.get());candidate.release();}
+  require(destroyed==3 && TheTacticalView==&borrowed,"Display teardown preserves unrelated borrowed tactical View");
+  auto retry=std::make_unique<Observed>(destroyed,identity);second.attachView(retry.get());retry.release();second.deleteViews();
+  require(destroyed==4 && !second.getFirstView(),"same-owner corrected attachment and whole retirement retry");
+}
 void functional(){Context context;Definition definition;Client client;client.init();
   require(client.owner->isHeadless() && TheRayEffects,"explicit absent output retains actual ray-effect owner");
   Drawable* first=client.owner->friend_createDrawable(&definition,DRAWABLE_STATUS_NONE);
@@ -243,13 +311,14 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
       moduleDefinition(registry,definition);auto* draw=client.owner->friend_createDrawable(&definition,DRAWABLE_STATUS_NONE);
       checkModules(draw);client.owner->destroyDrawable(draw);
     }
-    for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
+    for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();const auto views=View::liveViewCount();
       if(family=="functional")functional();else if(family=="frames")frames();else if(family=="draw-faults")drawFaults();else if(family=="client-faults")clientFaults();
+      else if(family=="camera-lifetime")cameraLifetime();else if(family=="view-ownership")viewOwnership();
       else if(family=="modules")modulesFunctional();else if(family=="module-faults")modulesFaults();
       else if(family=="registry-faults-0")registryFaults(0);else if(family=="registry-faults-1")registryFaults(1);
       else if(family=="registry-faults-2")registryFaults(2);else if(family=="registry-faults-3")registryFaults(3);
       else throw std::runtime_error("unknown native client family");
-      require(AllocationFault::live()==live && !TheGameClient && !TheRayEffects && !TheWritableGlobalData && !TheFileSystem && !TheMessageStream,"complete source client/context retirement");}}
+      require(AllocationFault::live()==live && View::liveViewCount()==views && !TheGameClient && !TheRayEffects && !TheWritableGlobalData && !TheFileSystem && !TheMessageStream,"complete source client/context/View retirement");}}
     shutdownMemoryManager();initialized=false;require(AllocationFault::live()==initial,"whole original metadata retirement");
     std::cout<<"PASS actual headless client/Drawable owner; full startup/modules/output pending\n";return 0;
   }catch(const std::exception& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(ErrorCode){std::cerr<<"FAIL native source client admission\n";}

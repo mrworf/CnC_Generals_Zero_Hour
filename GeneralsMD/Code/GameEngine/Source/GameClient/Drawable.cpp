@@ -556,6 +556,7 @@ Drawable::~Drawable()
 
 void Drawable::releaseOwnedState()
 {
+	View::withdrawDrawableBorrows(this);
 	Int i;
 
 	if( m_constructDisplayString )

@@ -26,16 +26,16 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "f3a4f0cba0b459b659d301b05b9c8519fa78344f",
-    "label": "original-native-camera-navigation",
-    "evidence": "evidence/qa/N2-native-camera-navigation-checkpoint.md",
-    "validation": "All3 full configured builds/focused9/related177 PASS on unchanged canonical644/inclusive651; real production view-plane scrolling and shared source lock/snap flags, rejection/retry and allocation terminal0. Full367 and concrete frame/UI/root remain pending.",
-    "next": "Continue concrete native camera frame/actor lock/chase/model/constraints/shake/slave, staged actual UI/headless root admission and source-ordered cleanup under existing N2 plan01/slice03. Full367 and remaining N2 acceptance gates pending.",
+    "parent": "e13b9605d43b36474a3caf3c8b98ed7a99e1a29b",
+    "label": "original-native-camera-view-lifetime",
+    "evidence": "evidence/qa/N2-camera-lifetime-checkpoint.md",
+    "validation": "All3 full configured builds/focused13/related179 PASS on unchanged canonical646/inclusive653 with unsuppressed GCC/Clang sanitizers; full369 and concrete frame/UI/root remain pending.",
+    "next": "Continue concrete camera frame/actor lock/chase/model/constraints/shake/slave and actual UI/headless root integration under existing N2 plan01/slice03. Full369 and remaining N2 acceptance gates pending.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 native camera navigation verified all3 builds/focused9/related177; no live jobs. Continue concrete frame/constraints/model and staged UI/headless root integration; slice03/N2 incomplete.",
-  "transaction_parent": "f3a4f0cba0b459b659d301b05b9c8519fa78344f",
+  "resume_point": "N2 plan01/slice03 lifetime checkpoint verified all3 full builds/focused13/related179; no live jobs. Continue concrete frame/model/constraints and actual UI/headless root integration; slice03/N2 incomplete.",
+  "transaction_parent": "e13b9605d43b36474a3caf3c8b98ed7a99e1a29b",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -44,30 +44,30 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-native-camera-navigation-checkpoint.md",
+  "evidence": "evidence/qa/N2-camera-lifetime-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Continue concrete native camera frame/actor lock/chase/model/constraints/shake/slave, staged actual UI/headless root admission and source-ordered cleanup under existing N2 plan01/slice03. Full367 and remaining N2 acceptance gates pending.",
+  "next": "Continue concrete camera frame/actor lock/chase/model/constraints/shake/slave and actual UI/headless root integration under existing N2 plan01/slice03. Full369 and remaining N2 acceptance gates pending.",
   "implementation_checkpoint": {
-    "label": "original-native-camera-navigation",
-    "reason": "Real production navigation and source lock/snap choreography verified; concrete frame/model/constraints/UI/root adoption remains pending",
-    "prior_commit": "892b0a2b138abb80932b987a9f41dad1630596fa",
-    "canonical_source_sha256": "171ae7088b4690ecd7c4663023c434318a9264af410a844fea7b0b69459003de",
-    "toolchain_inclusive_sha256": "9ed5db310044d259c558246dadf7361781d11c645fc4c27cf09cd6d867d7fd09",
-    "configured_suite_tests": 367,
-    "related_suite_tests_passed": 177,
+    "label": "original-native-camera-view-lifetime",
+    "reason": "Coupled View/Display/Drawable lifetime verified; concrete frame/model/constraints/UI/root adoption remains pending",
+    "prior_commit": "43b374ffeb62f6878ba74b956958df150b2a3af3",
+    "canonical_source_sha256": "d86dd51f842f010d51ed6911aab8262929414417ee8c1839f0020e412426716e",
+    "toolchain_inclusive_sha256": "690c7e7a115426af5f808603d6f75ce6371e47069dbcf90ce3bea9e4249a7214",
+    "configured_suite_tests": 369,
+    "related_suite_tests_passed": 179,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; focused9/related177 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; focused13/related179 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-native-camera-navigation-checkpoint.md",
-    "repository_commit": "43b374ffeb62f6878ba74b956958df150b2a3af3"
+    "evidence": "evidence/qa/N2-camera-lifetime-checkpoint.md",
+    "repository_commit": "pending payload commit"
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
@@ -76,5 +76,53 @@
     "findings": "docs/original-engine-formats.md",
     "diagnostic": "Original GameEngine::init link-only probe PASS on current source; no initialization/frame execution acceptance",
     "production_changes_started": true
+  },
+  "active_implementation": {
+    "label": "original-native-camera-view-lifetime",
+    "parent_commit": "e13b9605d43b36474a3caf3c8b98ed7a99e1a29b",
+    "evidence": "evidence/qa/N2-camera-lifetime-checkpoint.md",
+    "canonical_source_sha256": "d86dd51f842f010d51ed6911aab8262929414417ee8c1839f0020e412426716e",
+    "toolchain_inclusive_sha256": "690c7e7a115426af5f808603d6f75ce6371e47069dbcf90ce3bea9e4249a7214",
+    "configured_suite_tests": 369,
+    "iteration_sessions": {
+      "GCC": 24349,
+      "GCC sanitizer": 36152,
+      "Clang sanitizer": 92023
+    },
+    "status": "all3 full configured builds/focused13/related179 PASS; no live jobs",
+    "frozen_sessions": {
+      "GCC": 95176,
+      "GCC sanitizer": 62601,
+      "Clang sanitizer": 83544
+    },
+    "next": "Continue concrete camera frame/actor lock/chase/model/constraints/shake/slave and actual UI/headless root integration under existing N2 plan01/slice03. Full369 and remaining N2 acceptance gates pending.",
+    "milestone_complete": false,
+    "repository_commit": "pending payload commit",
+    "validation": {
+      "GCC": {
+        "job": 95176,
+        "exit_code": 0,
+        "focused_tests": 13,
+        "focused_seconds": 15.13,
+        "related_tests": 179,
+        "related_seconds": 175.35
+      },
+      "GCC sanitizer": {
+        "job": 62601,
+        "exit_code": 0,
+        "focused_tests": 13,
+        "focused_seconds": 64.66,
+        "related_tests": 179,
+        "related_seconds": 771.03
+      },
+      "Clang sanitizer": {
+        "job": 83544,
+        "exit_code": 0,
+        "focused_tests": 13,
+        "focused_seconds": 36.46,
+        "related_tests": 179,
+        "related_seconds": 465.61
+      }
+    }
   }
 }

@@ -3079,3 +3079,37 @@ canonical644/inclusive651 recomputed unchanged. Commit the coherent navigation
 behavior/tests/source findings/evidence, then continue concrete camera frame/
 model/constraints/shake/slave and staged actual UI/headless root admission and
 cleanup in this same slice. Full367, slice03 and N2 remain incomplete.
+
+Coupled camera lifetime batch refinement (parent e13b9605, clean tree): before
+concrete chase/slave/frame adoption, withdraw raw Drawable camera borrows across
+all live Views during client destruction, construction cancellation and direct
+Drawable owner retirement. Keep Object lock IDs when only the Drawable retires;
+never dereference a possibly stale pointer or invoke virtual callbacks/allocate
+during withdrawal. Use a game-owned intrusive live-View chain, distinct from
+Display ownership, whose construction/destruction registers/retires exactly.
+Protect actual Display View admission against null/duplicate/cross-owner cycles;
+link/withdraw owned Views directly without a fallible prepend callback. Retire
+Display-owned Views one by one with legitimate tactical publication through
+destruction, then withdraw only that exact publication. Preserve foreign Views
+and borrowed parents; support direct owned-View retirement without stale list
+links. This changes game-owned lifetime bookkeeping, not a framework or gameplay.
+Generated tests must compose actual native spatial Views, original Drawable/
+client lifecycle and source Object-survives-Drawable-replacement behavior, plus
+duplicate/cross-owner attachment rejection, constructor-failure cancellation,
+reset/direct/whole-owner destruction and zero-allocation withdrawal. Keep all
+repeated source parent/registry/pool/whole-owner boundaries. Use focused all3
+iteration checks before frozen broader ownership/world validation. Concrete
+constraints/frame/model/shake/slave/UI/root acceptance remains pending; no new
+milestone/slice plan or fake physical provider is introduced.
+
+The live-View chain is a non-owning process registry; sanitizer reachability alone
+cannot prove it retired. Expose only its count and require exact repeated and
+constructor-failure registration retirement alongside standard allocation/pool/
+whole-manager boundaries. No private addresses are diagnostic output.
+
+Lifetime checkpoint closeout: canonical646/inclusive653 remained unchanged;
+all3 full configured builds/focused13/related179 PASS with unsuppressed GCC and
+Clang ASan/UBSan/LSan. Evidence: evidence/qa/N2-camera-lifetime-checkpoint.md.
+Commit this coherent batch without marking slice03/N2 complete. Resume concrete
+camera frame/constraints/model/shake/slave and actual UI/root integration; full369
+is still unrun. No live validation jobs or failures remain.

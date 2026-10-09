@@ -36,6 +36,7 @@
 #include "Common/GameType.h"
 #include "GameClient/ViewFilters.h"
 #include "Common/Snapshot.h"
+#include <cstddef>
 #include "Lib/BaseType.h"
 #include "WW3D2/coltype.h"			///< we don't generally do this, but we need the W3D collision types
 
@@ -46,6 +47,7 @@
 
 // FORWARD DECLARATIONS ///////////////////////////////////////////////////////////////////////////
 class Drawable;
+class Display;
 class ViewLocation;
 class Thing;
 class Waypoint;
@@ -97,6 +99,8 @@ public:
 public:
 
 	View( void );
+	View(const View&) = delete;
+	View& operator=(const View&) = delete;
 	virtual ~View( void );
 
 	virtual void init( void );
@@ -222,6 +226,9 @@ public:
 
 	virtual Drawable *getCameraLockDrawable() const { return m_cameraLockDrawable; }
 	virtual void setCameraLockDrawable(Drawable *drawable) { m_cameraLockDrawable = drawable; m_lockDist = 0.0f; }
+	// Main/client-thread lifetime bookkeeping; no callbacks or allocations.
+	static void withdrawDrawableBorrows(Drawable*) noexcept;
+	static std::size_t liveViewCount() noexcept;
 
 	virtual void setMouseLock( Bool mouseLocked ) { m_mouseLocked = mouseLocked; }					///< lock/unlock the mouse input to the tactical view
 	virtual Bool isMouseLocked( void ) { return m_mouseLocked; }														///< is the mouse input locked to the tactical view?
@@ -236,6 +243,9 @@ public:
 protected:
 
 	friend class Display;
+	Display* m_displayOwner = nullptr;
+	View* m_liveNext = nullptr;
+	static View* s_liveViews;
 
 	// snapshot methods
 	virtual void crc( Xfer *xfer ) { }
