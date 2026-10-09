@@ -68,6 +68,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "Common/GlobalData.h"
+#include "Common/NativeClock.h"
 #include "Common/BuildAssistant.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -143,9 +144,9 @@ void ControlBar::showBuildTooltipLayout( GameWindow *cmdButton )
 	if(prevWindow == cmdButton)	
 	{
 		m_showBuildToolTipLayout = TRUE;
-		if(!isInitialized &&  beginWaitTime + cmdButton->getTooltipDelay() < timeGetTime())
+		if(!isInitialized &&  beginWaitTime + cmdButton->getTooltipDelay() < nativeMilliseconds())
 		{
-			//DEBUG_LOG(("%d beginwaittime, %d tooltipdelay, %dtimegettime\n", beginWaitTime, cmdButton->getTooltipDelay(), timeGetTime()));
+			//DEBUG_LOG(("%d beginwaittime, %d tooltipdelay, %dtimegettime\n", beginWaitTime, cmdButton->getTooltipDelay(), nativeMilliseconds()));
 			passedWaitTime = TRUE;
 		}
 		
@@ -176,7 +177,7 @@ void ControlBar::showBuildTooltipLayout( GameWindow *cmdButton )
 	if(!passedWaitTime)
 	{
 		prevWindow = cmdButton;
-		beginWaitTime = timeGetTime();
+		beginWaitTime = nativeMilliseconds();
 		isInitialized = FALSE;
 		return;
 	}
@@ -253,7 +254,7 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 
 	Player *player = ThePlayerList->getLocalPlayer();
 	UnicodeString name, cost, descrip;
-	UnicodeString requires = UnicodeString::TheEmptyString, requiresList;
+	UnicodeString requirementsText = UnicodeString::TheEmptyString, requiresList;
 	Bool firstRequirement = true;
 	const ProductionPrerequisite *prereq;
 	Bool fireScienceButton = false;
@@ -425,17 +426,17 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 					if (firstRequirement)
 						firstRequirement = false;
 					else
-						requires.concat(L", ");
+						requirementsText.concat(L", ");
 				}
-				requires.concat(requiresList);
+				requirementsText.concat(requiresList);
 			}
-			if( !requires.isEmpty() )
+			if( !requirementsText.isEmpty() )
 			{
 				UnicodeString requireFormat = TheGameText->fetch("CONTROLBAR:Requirements");
-				requires.format(requireFormat.str(), requires.str());
+				requirementsText.format(requireFormat.str(), requirementsText.str());
 				if(!descrip.isEmpty())
 					descrip.concat(L"\n");
-				descrip.concat(requires);
+				descrip.concat(requirementsText);
 
 			}
 		}
@@ -514,8 +515,8 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 				{
 					if( !descrip.isEmpty() )
 						descrip.concat(L"\n");
-					requires.format( TheGameText->fetch( "CONTROLBAR:Requirements" ).str(), TheGameText->fetch( "CONTROLBAR:GeneralsPromotion" ).str() );
-					descrip.concat( requires );
+					requirementsText.format( TheGameText->fetch( "CONTROLBAR:Requirements" ).str(), TheGameText->fetch( "CONTROLBAR:GeneralsPromotion" ).str() );
+					descrip.concat( requirementsText );
 				}
 			}
 		}	
@@ -543,17 +544,17 @@ void ControlBar::populateBuildTooltipLayout( const CommandButton *commandButton,
 						if (firstRequirement)
 							firstRequirement = false;
 						else
-							requires.concat(L", ");
+							requirementsText.concat(L", ");
 					}
-					requires.concat(requiresList);
+					requirementsText.concat(requiresList);
 				}
-				if( !requires.isEmpty() )
+				if( !requirementsText.isEmpty() )
 				{
 					UnicodeString requireFormat = TheGameText->fetch("CONTROLBAR:Requirements");
-					requires.format(requireFormat.str(), requires.str());
+					requirementsText.format(requireFormat.str(), requirementsText.str());
 					if(!descrip.isEmpty())
 						descrip.concat(L"\n");
-					descrip.concat(requires);
+					descrip.concat(requirementsText);
 				}
 			}
 

@@ -1056,3 +1056,29 @@ two-step override chain, template-derived unique IDs and duplicate identity.
 Borrow/restore the actual GlobalData publication through complete template/map
 retirement. Generated templates are original owners, not replacement providers;
 detach borrowed stack override links before their source destructors retire.
+
+Continue from174a2946 with a coupled startup-provider graph batch. Compile the
+actual original shared BitFlags definitions and the source callbacks for control
+bar/tooltip, diplomacy, in-game chat, quit and score-screen fixes. Preserve their
+behavior and typed callback contracts; batch native include/type/for-scope fixes
+without Win32 shims or fake callbacks. Separate the original shared color enum,
+defaults and OnlineChatColors parser from GameSpy transport, keeping its exact
+field names/colors and atomic parse admission. Move genuine borrowed runtime
+publications out of device/menu/transport implementation TUs where necessary,
+removing their old definitions rather than adding substitute singleton owners.
+Validate source tables and positive/malformed/failure/retry color input under
+both sanitizers, refresh normal and sanitizer root diagnostics, and keep unrun
+whole menu/network/entry/scenario paths explicitly pending. No WAN functionality
+or N3/N4/N6 acceptance is introduced by compile-only source reachability.
+The initial callback compile found unavailable GameSpy Peer/GP SDK headers in
+Diplomacy and ScoreScreen, plus source timer/include/C++20 keyword assumptions.
+Retain online implementation uncompiled; extract the actual shared color enum,
+table/parser and score-screen fixup/state without transport. Whole diplomacy and
+score-screen menus remain pending, not compiled/accepted. Compile the four actual
+control-bar/tooltip/chat/quit providers using nativeMilliseconds, explicit
+GlobalData imports, renamed local requirements text and defined pointer checks.
+Six genuine borrowed network/menu/input publications relocate once into the
+production startup provider; original owners still control lifetimes. Source
+census locks exactly one definition each and original color enum/default hashes.
+Add three configuration families for actual color/table mapping, malformed and
+complete allocation/retry/terminal admission, retaining every sibling color.

@@ -15,6 +15,9 @@
 #include "GameClient/GameText.h"
 #include "GameClient/GlobalLanguage.h"
 #include "GameClient/Image.h"
+#include "GameClient/OnlineChatColors.h"
+#include "Common/ModelState.h"
+#include "GameLogic/ArmorSet.h"
 #include "GameLogic/WeaponBonus.h"
 #include "GameNetwork/IPEnumeration.h"
 #include <SDL3/SDL.h>
@@ -455,6 +458,67 @@ void imagesFaults(ImageOperation operation) {
     }
     std::cout<<"mapped-image operation "<<static_cast<int>(operation)<<" allocation terminal "<<census<<'\n';
 }
+void colors(Int operation) {
+    Context context;
+    std::array<Color,GSCOLOR_MAX> accepted;
+    std::copy_n(GameSpyColor,GSCOLOR_MAX,accepted.begin());
+    struct RestoreColors {
+        const std::array<Color,GSCOLOR_MAX>& prior;
+        ~RestoreColors() noexcept {std::copy(prior.begin(),prior.end(),GameSpyColor);}
+    } restore{accepted};
+    const INIBlockDefinition selected[]{{"OnlineChatColors",INI::parseOnlineChatColorDefinition}};
+    context.put("colors.ini","OnlineChatColors\nDefault = R:1 G:2 B:3\nCurrentRoom = R:4 G:5 B:6\nMOTDHeading = R:7 G:8 B:9\nEnd\n");
+    context.put("bad-colors.ini","OnlineChatColors\nDefault = R:90 G:91 B:92\nUnknown = bad\nEnd\n");
+    context.put("wide-colors.ini","OnlineChatColors\nDefault = R:90 G:91 B:92\nCurrentRoom = R:256 G:0 B:0\nEnd\n");
+    context.put("short-colors.ini","OnlineChatColors\nDefault = R:90 G:91 B:92\nCurrentRoom = R:1 G:2\nEnd\n");
+    context.files.mountReadOnly({context.assets.root.string()});
+    auto load=[&](const char* name){INI reader;reader.loadBlocks(name,INI_LOAD_OVERWRITE,selected);};
+    auto unchanged=[&]{require(std::equal(accepted.begin(),accepted.end(),GameSpyColor),"every accepted shared color retained");};
+    auto result=[&]{
+        for(Int i=0;i<GSCOLOR_MAX;++i) {
+            const Color expected=i==GSCOLOR_DEFAULT?GameMakeColor(1,2,3,255):
+                i==GSCOLOR_CURRENTROOM?GameMakeColor(4,5,6,255):
+                i==GSCOLOR_MOTD_HEADING?GameMakeColor(7,8,9,255):accepted[i];
+            require(GameSpyColor[i]==expected,"original color field mapping and untouched sibling defaults");
+        }
+    };
+    load("colors.ini");result();
+    std::copy(accepted.begin(),accepted.end(),GameSpyColor);
+    if(operation==0) {
+        require(GSCOLOR_MAX==27 && ArmorSetFlags::getSingleBitFromName("crate_upgrade_two")==ARMORSET_CRATE_UPGRADE_TWO &&
+            ModelConditionFlags::getSingleBitFromName("snow")==MODELCONDITION_SNOW &&
+            ArmorSetFlags::getSingleBitFromName("unknown")==-1,"actual source bit tables retain case-insensitive domains");
+        return;
+    }
+    if(operation==1) {
+        for(const char* name:{"bad-colors.ini","wide-colors.ini","short-colors.ini"}) {
+            const auto live=AllocationFault::live();const auto fds=descriptors();
+            rejects([&]{load(name);});unchanged();
+            require(AllocationFault::live()==live && descriptors()==fds,"malformed shared color backing retires");
+            load("colors.ini");result();std::copy(accepted.begin(),accepted.end(),GameSpyColor);
+        }
+        rejects([&]{INI::parseOnlineChatColorDefinition(nullptr);});unchanged();return;
+    }
+    AllocationFault::arm(std::numeric_limits<std::size_t>::max());load("colors.ini");
+    const auto census=AllocationFault::attempts();AllocationFault::disarm();result();
+    std::copy(accepted.begin(),accepted.end(),GameSpyColor);
+    require(census>0,"shared color discovery");
+    const auto live=AllocationFault::live();const auto fds=descriptors();
+    auto* pool=TheMemoryPoolFactory->findMemoryPool("NativeDataFile");const auto used=pool->getUsedBlockCount();
+    for(std::size_t ordinal=0;ordinal<=census;++ordinal) {
+        bool failed=false;AllocationFault::arm(ordinal);
+        try{load("colors.ini");}catch(const std::bad_alloc&){failed=true;}
+        catch(...){AllocationFault::disarm();throw;}
+        const auto attempted=AllocationFault::attempts();const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+        require(AllocationFault::live()==live && descriptors()==fds && pool->getUsedBlockCount()==used,
+            "shared color complete acquired prefix retires before retry");
+        if(ordinal<census) {
+            require(failed && hit && attempted==ordinal+1,"every shared color allocation failure");unchanged();load("colors.ini");
+        } else require(!failed && !hit && attempted==census,"exact shared color terminal");
+        result();std::copy(accepted.begin(),accepted.end(),GameSpyColor);
+    }
+    std::cout<<"shared color allocation terminal "<<census<<" every failure/retry retained\n";
+}
 void webpage() {
     Context context;
     context.put("web.ini","WebpageURL GeneratedMetadata\nURL = https://example.invalid/help\nEnd\n");
@@ -783,6 +847,9 @@ int main(int argc,char** argv) {
             else if(family=="values")values();
             else if(family=="bootstrap")bootstrap();
             else if(family=="webpage")webpage();
+            else if(family=="colors")colors(0);
+            else if(family=="colors-negative")colors(1);
+            else if(family=="colors-faults")colors(2);
             else if(family=="locale")locale();
             else if(family=="locale-faults")localeFaults();
             else if(family=="images")imagesFunctional();

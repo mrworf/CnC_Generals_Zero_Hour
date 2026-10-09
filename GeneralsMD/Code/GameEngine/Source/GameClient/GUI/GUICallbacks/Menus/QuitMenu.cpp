@@ -29,6 +29,7 @@
 
 // INCLUDES ///////////////////////////////////////////////////////////////////////////////////////
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+#include "Common/GlobalData.h"
 
 #include "Common/GameEngine.h"
 #include "Common/GameState.h"
@@ -301,7 +302,7 @@ void ToggleQuitMenu()
 	// BGC- this is kind of hackish, but its the safest way to do it I think.
 	// Basically we're seeing if either the save/load window or the options window is up
 	// and if one of them is, we quit out of them rather than toggle the quit menu.
-	if (TheShell->getOptionsLayout(FALSE) != FALSE) {
+	if (TheShell->getOptionsLayout(FALSE) != nullptr) {
 		WindowLayout *optLayout = TheShell->getOptionsLayout(FALSE);
 		GameWindow *optionsParent = optLayout->getFirstWindow();
 		DEBUG_ASSERTCRASH(optionsParent != NULL, ("Not able to get the options layout parent window"));

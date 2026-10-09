@@ -156,7 +156,7 @@ void initSinglePlayer( void );
 void finishSinglePlayerInit( void );
 static Bool s_needToFinishSinglePlayerInit = FALSE;
 static Bool buttonIsFinishCampaign = FALSE;
-static WindowLayout *s_blankLayout = NULL;
+extern WindowLayout *s_blankLayout; // Defined by the shared score-screen state provider.
 
 void initSkirmish( void );
 void initLANMultiPlayer(void);
@@ -385,14 +385,7 @@ void ScoreScreenInit( WindowLayout *layout, void *userData )
 	
 }
 
-void FixupScoreScreenMovieWindow( void )
-{
-	if (s_blankLayout)
-	{
-		s_blankLayout->hide(FALSE);
-		s_blankLayout->bringForward();
-	}
-}
+// Shared score-screen fixup is defined in GUI/NativeScoreScreenState.cpp.
 
 /** Shutdown the ScoreScreen */
 //-------------------------------------------------------------------------------------------------

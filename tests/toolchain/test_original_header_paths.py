@@ -39,6 +39,40 @@ def mismatches():
 
 
 class OriginalHeaderPaths(unittest.TestCase):
+    def test_shared_startup_data_has_one_actual_provider(self):
+        sources = sorted((CODE / "GameEngine/Source").rglob("*.cpp"))
+        publications = {
+            "TheNetwork": "NetworkInterface", "TheLAN": "LANAPI",
+            "TheIMEManager": "IMEManagerInterface", "TheDisconnectMenu": "DisconnectMenu",
+            "TheChallengeGameInfo": "SkirmishGameInfo", "TheSkirmishGameInfo": "SkirmishGameInfo",
+        }
+        text = {p: re.sub(r'/\*.*?\*/|//[^\n]*', '', p.read_text(), flags=re.S) for p in sources}
+        provider = CODE / "GameEngine/Source/Common/System/NativeStartupPublications.cpp"
+        for symbol, kind in publications.items():
+            pattern = re.compile(r'^\s*' + kind + r'\s*\*\s*' + symbol + r'\s*=', re.M)
+            found = [p for p, body in text.items() for _ in pattern.finditer(body)]
+            self.assertEqual(found, [provider])
+        fixup = re.compile(r'\bvoid\s+FixupScoreScreenMovieWindow\s*\([^;]*?\)\s*\{')
+        found = [p for p, body in text.items() for _ in fixup.finditer(body)]
+        self.assertEqual(found, [CODE / "GameEngine/Source/GameClient/GUI/NativeScoreScreenState.cpp"])
+        # Source-locked to the original shared enum/defaults at 174a2946.
+        pairs = [
+            (CODE / "GameEngine/Include/GameClient/OnlineChatColors.h",
+             r'enum GameSpyColors\s*\{(.*?)\};',
+             "2183c4c9502658ab08c06edcc4ac45a73fb8593ca4b32921ef1d5280bf420f2b"),
+            (CODE / "GameEngine/Source/Common/INI/INIOnlineChatColors.cpp",
+             r'Color GameSpyColor\[GSCOLOR_MAX\]\s*=\s*\{(.*?)\};',
+             "b8574db363321ec1bed874ce51d3797c4f912c06fe16ceea1a82de403bd3c44b"),
+            (CODE / "GameEngine/Source/Common/INI/INIOnlineChatColors.cpp",
+             r'static const FieldParse GameSpyColorFieldParse\[\]\s*=\s*\{(.*?)\n\};',
+             "b8c0303450282983d0f4dd1f3577518a908dbf0d5f5a326de28272d63573b889"),
+        ]
+        for path, pattern, digest in pairs:
+            match = re.search(pattern, path.read_text(), re.S)
+            self.assertIsNotNone(match)
+            body = re.sub(r'/\*.*?\*/|//[^\n]*', '', match[1], flags=re.S)
+            self.assertEqual(hashlib.sha256(re.sub(r'\s+', '', body).encode()).hexdigest(), digest)
+
     def test_native_runtime_retained_source_graph(self):
         cmake = (REPO / "cmake/OriginalRuntime.cmake").read_text()
         project = (CODE / "GameEngine/GameEngine.dsp").read_text()

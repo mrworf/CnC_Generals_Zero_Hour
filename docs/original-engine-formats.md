@@ -2378,3 +2378,40 @@ two-step live override resolution, duplicate borrowed identity and final-templat
 ID naming. Generated temporary data parents preserve borrowed publications through
 retirement; borrowed stack override links detach before original destructors.
 Whole team validation and CPU WorldHeightMap acceptance remain pending.
+
+### Startup callback/shared metadata continuation
+
+Actual `Common/BitFlags.cpp` defines both model-condition and eight-bit armor
+names. The missing `BitFlags<8>::s_bitNameList` root symbol was the armor table,
+not a missing weapon provider (weapon sets have seventeen flags). Keep source
+domains separate and use their actual tables, not a generic replacement list.
+
+`OnlineChatColors` is shared INI/UI metadata despite its former placement in
+GameSpy/Chat.cpp. Exact enum, 27 defaults and field-to-slot table now live in the
+thin `GameClient/OnlineChatColors.h` and `Common/INI/INIOnlineChatColors.cpp`.
+Original transport includes the same declaration and no longer defines them.
+Hashes lock all three source bodies to174a2946. Block parsing works on a complete
+offside array and publishes all colors only on success. Configuration tests cover
+mapping/untouched siblings, unknown/wide/missing fields and eight allocation
+failure/retry pairs plus exact terminal8, over three lifetimes. This is block
+admission, not a claim of transaction rollback across several unrelated INI blocks.
+
+The four source control-bar, tooltip, chat and quit callback TUs compile natively
+using explicit GlobalData imports, native monotonic milliseconds, a non-keyword
+requirements-text local and defined pointer comparison. Their whole UI behavior
+has not executed. Tooltip static borrowed-window/wait state and unsigned clock
+deadline addition still need original UI lifecycle/rollover validation; compilation
+is not acceptance of those paths.
+
+`FixupScoreScreenMovieWindow` and its original blank-layout publication are
+extracted once into `GUI/NativeScoreScreenState.cpp`. The original score screen
+retains its shared declaration; no movie-state substitute was introduced.
+Six borrowed network/setup/input publications move once to the production
+`NativeStartupPublications.cpp`. Actual original owners still create/retire them;
+no dummy owner or typeinfo was added. Source census proves single definitions.
+Full Diplomacy/ScoreScreen TUs still import absent GameSpy Peer/GP headers and
+remain uncompiled, while their independent shared data is reachable. Online
+transport is outside the native LAN contract. Actual in-game diplomacy and score
+behavior still require source separation from that transport, not removal/stubs.
+Root14 normal and227/237 sanitizer symbol inventories are diagnostics only;
+the exact frozen cohort and executed36-test support are recorded in QA.

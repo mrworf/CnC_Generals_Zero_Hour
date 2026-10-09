@@ -84,7 +84,7 @@ char *DisconnectMenu::m_textDisplayControlName = "DisconnectScreen.wnd:ListboxTe
 
 static const Color chatNormalColor =  GameMakeColor(255,0,0,255);
 
-DisconnectMenu *TheDisconnectMenu = NULL;
+// Borrowed publication is defined once in NativeStartupPublications.cpp.
 
 DisconnectMenu::DisconnectMenu() {
 	m_disconnectManager = NULL;

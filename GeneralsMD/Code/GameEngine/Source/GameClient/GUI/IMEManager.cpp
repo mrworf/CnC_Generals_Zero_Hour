@@ -322,7 +322,7 @@ IMEManager::MessageInfo IMEManager::m_setSmodeInfo[] =
 //         Public Data                                                      
 //----------------------------------------------------------------------------
 
-IMEManagerInterface *TheIMEManager = NULL;
+// Borrowed publication is defined once in NativeStartupPublications.cpp.
 
 
 //----------------------------------------------------------------------------

@@ -89,7 +89,7 @@ static const int CmdMsgLen = 6; //< Minimum size of a command packet (Int + Unsi
 // PUBLIC DATA ////////////////////////////////////////////////////////////////
 
 /// The Network singleton instance
-NetworkInterface *TheNetwork = NULL;
+// Borrowed publication is defined once in NativeStartupPublications.cpp.
 
 // PRIVATE PROTOTYPES /////////////////////////////////////////////////////////
 

@@ -143,6 +143,7 @@ target_compile_definitions(original_templates PRIVATE _OPERATOR_NEW_DEFINED_)
 target_compile_options(original_templates PRIVATE -Wno-unknown-pragmas -Werror=return-type -ffp-contract=off)
 # Their archive is compilation evidence, not complete executable acceptance.
 add_library(original_bootstrap STATIC
+  "${ZH_CODE}/GameEngine/Source/Common/System/NativeStartupPublications.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/GameEngine.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/GameMain.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/GameClient.cpp"
@@ -209,7 +210,7 @@ set(ZH_ORIGINAL_GAMEPLAY_COMMON
   RTS/MissionStats.cpp RTS/Money.cpp RTS/Player.cpp RTS/PlayerList.cpp
   RTS/PlayerTemplate.cpp RTS/ProductionPrerequisite.cpp RTS/ResourceGatheringManager.cpp
   RTS/Science.cpp RTS/ScoreKeeper.cpp RTS/SpecialPower.cpp RTS/Team.cpp RTS/TunnelTracker.cpp
-  DamageFX.cpp GameLOD.cpp Language.cpp MultiplayerSettings.cpp PartitionSolver.cpp
+  BitFlags.cpp DamageFX.cpp GameLOD.cpp Language.cpp MultiplayerSettings.cpp PartitionSolver.cpp
   System/BuildAssistant.cpp System/FunctionLexicon.cpp
   SkirmishBattleHonors.cpp StateMachine.cpp TerrainTypes.cpp
   System/DisabledTypes.cpp System/GameCommon.cpp
@@ -262,11 +263,14 @@ set(ZH_ORIGINAL_LOGICAL_CLIENT
   GUI/Gadget/GadgetListBox.cpp GUI/Gadget/GadgetComboBox.cpp
   GUI/Gadget/GadgetStaticText.cpp GUI/Gadget/GadgetProgressBar.cpp
   GUI/Gadget/GadgetTabControl.cpp GUI/Gadget/GadgetTextEntry.cpp
-  GUI/Gadget/GadgetRadioButton.cpp)
+  GUI/Gadget/GadgetRadioButton.cpp
+  GUI/GUICallbacks/ControlBarCallback.cpp GUI/GUICallbacks/ControlBarPopupDescription.cpp
+  GUI/GUICallbacks/InGameChat.cpp GUI/GUICallbacks/Menus/QuitMenu.cpp)
 list(TRANSFORM ZH_ORIGINAL_LOGICAL_CLIENT PREPEND "${ZH_CODE}/GameEngine/Source/GameClient/")
 add_library(original_logical_client STATIC ${ZH_ORIGINAL_LOGICAL_CLIENT})
 target_sources(original_logical_client PRIVATE
-  "${ZH_CODE}/GameEngine/Source/Common/INI/INIMappedImage.cpp")
+  "${ZH_CODE}/GameEngine/Source/Common/INI/INIMappedImage.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/GUI/NativeScoreScreenState.cpp")
 target_link_libraries(original_logical_client PUBLIC original_runtime_common)
 target_include_directories(original_logical_client PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas"
@@ -396,11 +400,11 @@ foreach(family IN ITEMS functional negative faults)
   set_tests_properties(original_quoted_${family} PROPERTIES LABELS "original;runtime;format" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()
-target_link_libraries(original_configuration_fixture PRIVATE original_definitions original_logical_client)
+target_link_libraries(original_configuration_fixture PRIVATE original_definitions original_logical_client original_gameplay_common)
 target_include_directories(original_configuration_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_definitions(original_configuration_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
-foreach(family IN ITEMS functional negative fault-override fault-overwrite fault-constructor platform interfaces values bootstrap webpage locale locale-faults images images-negative images-fault-new images-fault-replace images-fault-collection)
+foreach(family IN ITEMS functional negative fault-override fault-overwrite fault-constructor platform interfaces values bootstrap webpage locale locale-faults images images-negative images-fault-new images-fault-replace images-fault-collection colors colors-negative colors-faults)
   add_test(NAME original_configuration_${family} COMMAND original_configuration_fixture "${family}")
   set_tests_properties(original_configuration_${family} PROPERTIES LABELS "original;runtime;configuration" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

@@ -47,7 +47,7 @@
 #include "GameNetwork/LANAPICallbacks.h"
 #include "GameNetwork/networkutil.h"
 
-LANAPI *TheLAN = NULL;
+// Borrowed publication is defined once in NativeStartupPublications.cpp.
 extern Bool LANbuttonPushed;
 
 #ifdef _INTERNAL

@@ -677,3 +677,18 @@ Actual ThingTemplate stack owners, borrowed publications and live override chain
 execute in the seventh map family, alongside six complete value/ownership families.
 The refreshed never-executed normal GameEngine::init root fails31 providers;
 earlier36 is historical. No whole map/team/native-entry acceptance is inferred.
+
+Startup callback/shared-data cohort: actual Common/BitFlags.cpp, four source
+control-bar/tooltip/chat/quit callback TUs, extracted score-screen fixup and six
+actual borrowed publications now compile in production archives. Shared online
+chat colors retain source enum/default/field hashes without importing the absent
+GameSpy SDK into basic INI/UI parsing. Three new configuration families execute
+actual source metadata/admission; all configured targets build all3. Initial
+attempts to compile complete Diplomacy/ScoreScreen exposed GameSpy Peer/GP header
+absence; those full menus remain uncompiled, with their source behavior preserved.
+Current link-only init diagnostic fails14 providers on normal GCC,227 on GCC
+sanitizers and237 on Clang sanitizers. Counts differ by retained instrumentation
+graphs, not acceptance or a whole-runtime reachability guarantee. Probe never runs.
+Keep archive/local filesystem, protected StatsCollector, command-line/native
+capability providers, diplomacy/start-position callbacks and complete sanitizer
+callback/metadata roots pending. See current census/QA for exact source identities.

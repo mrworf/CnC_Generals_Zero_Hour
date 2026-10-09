@@ -61,7 +61,7 @@
 //#pragma MESSAGE("************************************** WARNING, optimization disabled for debugging purposes")
 #endif
 
-SkirmishGameInfo *TheChallengeGameInfo = NULL;
+// Borrowed publication is defined once in NativeStartupPublications.cpp.
 
 // defines
 static const Int DEFAULT_GENERAL = 0;

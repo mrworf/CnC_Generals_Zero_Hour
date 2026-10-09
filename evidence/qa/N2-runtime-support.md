@@ -1,5 +1,44 @@
 # N2 slice03 supporting owner checkpoint — not milestone acceptance
 
+## Startup callbacks/shared data cohort (same incomplete N2 slice03)
+
+Canonical554 SHA256
+`67412ee2436221ea80c77aafda3a94c47a49c3fb253d9303a5400bc8c335f524`;
+toolchain559 SHA256
+`a90dd0afe0c5cc7dc02b3379dadb87485018b4eeeca3357d48a5d59f5c0df9b3`.
+All configured targets build all3. Related36/36 PASS normal GCC12.42s,
+GCC sanitizers38.58s, Clang sanitizers38.03s on the normal host; all leak/vptr/UB
+checks intact. Logs `/tmp/zh-startup-cohort-<variant>-{build,related-test}.log`.
+The related run's toolchain559 hash was
+`0f582643a3b1fa6e2f192b1f66f4ffb7f7c14615fec94a8e35466bfc280c1537`;
+the final change adds only a source-table hash assertion to the Python graph test,
+additionally PASS on normal GCC in1.34s. No C++ source changed afterward.
+
+Actual source control-bar/tooltip/chat/quit callbacks compile, but their full GUI
+lifetimes have not executed. Initial complete Diplomacy/ScoreScreen compilation
+failed due to absent GameSpy Peer/GP headers; full menus remain uncompiled.
+Actual shared score-screen fixup/state, 27 color defaults and INI fields now have
+independent production providers. Source census locks enum/default/field hashes
+and six actual borrowed publications' unique definitions. No dummy owners,
+callbacks/typeinfo or vendor changes. Native timer and C++ keyword/include/pointer
+fixes retain source behavior; tooltip static-state/rollover UI tests remain pending.
+
+Three new color families execute positive mappings/untouched siblings, malformed
+unknown/wide/missing fields and every allocation failure/retry. Discovery yields
+eight pairs and exact terminal8 through three lifetimes with complete descriptor,
+pool and standard-backing retirement before retries. Arrays publish only after
+the entire color block is admitted. This is not whole INI-file transaction proof.
+
+Link-only actual GameEngine::init diagnostic still FAILS: normal GCC14 unique
+symbols, GCC sanitizers227, Clang sanitizers237. Logs
+`/tmp/zh-startup-final-<variant>-root-link.log`; never executed. Instrumentation
+retains larger callback/metadata graphs; record each configuration separately.
+The exact inventories are in native_startup_shared_data_cohort in the census.
+Earlier31 is historical. Full195 suite is not run in this cohort (previous192
+full matrix remains historical). Actual entry/factories, whole terrain/map/team,
+protected StatsCollector/native storage, GameState/BuildAssistant and Recorder/
+simulation/compiler checkpoints remain mandatory. No N2/slice03 acceptance.
+
 ## CPU map cohort after integration repair
 
 Canonical543 SHA256

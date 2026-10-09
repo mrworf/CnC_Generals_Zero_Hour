@@ -75,7 +75,7 @@
 //#pragma MESSAGE("************************************** WARNING, optimization disabled for debugging purposes")
 #endif
 
-SkirmishGameInfo *TheSkirmishGameInfo = NULL;
+// Borrowed publication is defined once in NativeStartupPublications.cpp.
 
 // window ids ------------------------------------------------------------------------------
 static NameKeyType parentSkirmishGameOptionsID = NAMEKEY_INVALID;
