@@ -68,6 +68,7 @@ endforeach()
 find_package(OpenSSL 3 REQUIRED COMPONENTS Crypto)
 find_package(SDL3 REQUIRED CONFIG)
 add_library(original_runtime_common STATIC
+  "${ZH_CODE}/GameEngine/Source/Common/StatsCollector.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/CommandLine.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/GlobalData.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/GameType.cpp"
@@ -220,6 +221,7 @@ list(TRANSFORM ZH_ORIGINAL_GAMEPLAY_COMMON PREPEND "${ZH_CODE}/GameEngine/Source
 add_library(original_gameplay_common STATIC ${ZH_ORIGINAL_GAMEPLAY_COMMON})
 # Actual CPU map owners extracted from the original device-owned translation unit.
 target_sources(original_gameplay_common PRIVATE
+  "${ZH_CODE}/GameEngine/Source/Common/System/NativeOriginalStatsSource.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/MapObject.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/MapObjectTeams.cpp")
 target_link_libraries(original_gameplay_common PUBLIC original_runtime_common)
@@ -392,6 +394,15 @@ endforeach()
 target_compile_options(original_runtime_common PRIVATE -Wall -Wextra -Wno-unknown-pragmas -ffp-contract=off)
 add_executable(original_runtime_fixture tests/original/runtime.cpp tests/original/AllocationFault.cpp)
 add_executable(original_storage_fixture tests/original/storage.cpp tests/original/AllocationFault.cpp)
+add_executable(original_statistics_fixture tests/original/statistics.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_statistics_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_statistics_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS functional negative io-faults reset-faults update-faults end-faults)
+  add_test(NAME original_statistics_${family} COMMAND original_statistics_fixture "${family}")
+  set_tests_properties(original_statistics_${family} PROPERTIES LABELS "original;runtime;storage;statistics" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 add_executable(original_preferences_fixture tests/original/preferences.cpp tests/original/AllocationFault.cpp)
 add_executable(original_configuration_fixture tests/original/configuration.cpp tests/original/AllocationFault.cpp)
 add_executable(original_quoted_fixture tests/original/quoted.cpp tests/original/AllocationFault.cpp)

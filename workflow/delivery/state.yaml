@@ -26,7 +26,7 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "scope": "remaining",
-  "resume_point": "N2 same plan01/slice03 continues fromfa973fde with actual original CommandLine integration. Original option table source-locked; release option effects/case matching retained. Defined integer parsing and active-value prevalidation, protected native mod binding and no-allocation rollback of both mod publications execute through three original GlobalData/storage lifetimes and all60 failure/retry pairs/exact terminal60. Related71/71 PASS normal18.61s/GCCsan64.71s/Clangsan63.92s with all checks intact; final fixture-only Version effect assertion additionally PASS all3 0.15/0.62/0.58s. Canonical555 SHA62f420b4d18d6fbc13cd6ea603f3a131b30e8c38c557f3bd77eacf4a5ad6784d; toolchain560 SHA95f981d78922a4e8d49cb3334cce39e45564b488ea22e44c2983d9206a449938. QA records earlier related/root identities honestly. Root link fails11/223/234, never run. All configured targets build; full201 pending, earlier198 historical. StatsCollector whole writer/update/end findings documented before integration. Actual capabilities/diplomacy/start spots/sanitizer callbacks/CPU map/factories/GameLogic/GameState/BuildAssistant/Recorder/scenario remain pending. N2 and slice03 incomplete; no agents/vendor/assets/recovery edits or later milestones.",
+  "resume_point": "N2 same plan01/slice03: protected actual StatsCollector checkpoint after8cab2148. Captured synchronous storage/sampler; real GameLogic/player/object adapter compiled separately. Six collector families plus related67/67 PASS all3 normal-host GCC16.63s/GCCsan66.19s/Clangsan63.04s, leak checks intact. Three complete lifetimes with every reset22/update32/end37 allocation failure/retry and exact terminal. Failed new-session reset blocks old-report append; publication/durability state and counters advance atomically. Root-link diagnostics fail7/219/223, never executed. Full207 not run; whole original sampling/startup/scenario remain pending. No agents/vendor/assets/recovery edits.",
   "transaction_parent": "11295c4feb535f97978b8335632440fccae82794",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -41,23 +41,23 @@
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Implement whole protected StatsCollector logging and native capability providers using documented source findings; then original diplomacy/start spots and sanitizer callback metadata roots, CPU world/factories/GameLogic/GameState/Recorder/scenario gates.",
+  "next": "Continue native capability/diplomacy/start-spot providers and sanitizer callback roots, then original CPU world/factories/GameLogic/GameState/Recorder/scenario gates; actual stats sampler execution still pending.",
   "implementation_checkpoint": {
-    "label": "native-original-command-line",
-    "reason": "Actual original option dispatch and native mod publication/ownership validation, not process acceptance",
-    "prior_commit": "fa973fde",
-    "canonical_source_sha256": "62f420b4d18d6fbc13cd6ea603f3a131b30e8c38c557f3bd77eacf4a5ad6784d",
-    "toolchain_inclusive_sha256": "95f981d78922a4e8d49cb3334cce39e45564b488ea22e44c2983d9206a449938",
-    "configured_suite_tests": 201,
-    "related_suite_tests_passed": 71,
+    "label": "native-original-statistics",
+    "reason": "Actual collector/output ownership with generated synchronous inputs; real default sampler compiled, not simulation acceptance",
+    "prior_commit": "8cab2148",
+    "canonical_source_sha256": "bcc50fb3f0c0cc746c400170b9cfeb85b9efdcf47d81cadcc941fb050eafac0e",
+    "toolchain_inclusive_sha256": "abf08c7c215ca0b6c3360776b6d62dd10a84d18c013db4fc05b63a285f1e7d5c",
+    "configured_suite_tests": 207,
+    "related_suite_tests_passed": 67,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; related71 and final positive family PASS all3 with identities in QA",
+    "full_current_matrix": "not run; related67 PASS all3",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-runtime-support.md"
+    "evidence": "evidence/qa/N2-statistics-checkpoint.md"
   }
 }

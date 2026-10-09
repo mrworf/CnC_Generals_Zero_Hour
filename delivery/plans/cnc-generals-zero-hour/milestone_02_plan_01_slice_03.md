@@ -1148,3 +1148,44 @@ honestly. Link-only root fails11/223/234, never executed. Full201 pending,
 StatsCollector/capability/callback/CPU map and actual process/scenario pending.
 Keep this slice and N2 in progress. Continue from this actual source integration,
 not archived providers or acceptance. See QA's current CommandLine cohort.
+
+Continue from8cab2148 with the whole actual StatsCollector lifecycle. Separate
+its real GameLogic/player sampler from game-owned logging state rather than
+inventing GameLogic or borrowing renderer/private headers. The default source
+adapter still reads original objects, player money/index/side, configured interval
+and map/LAN metadata. An explicit borrowed sampler/storage constructor permits
+generated ownership tests of the actual collector, not simulation acceptance.
+Capture dependencies before use; do not call simulation from asynchronous threads.
+Replace every raw header/row/footer writer with protected atomic user-storage
+publication and streamed append of accepted backing. Preserve TSV fields, row
+order, command selection and normal sampling intervals. Prepare filename, header,
+row/footer and counter/frame changes offside; publish state only after file
+publication. Optional storage failures expose failed output status without
+breaking simulation, while allocation/invalid-input failures unwind candidates.
+Treat published-but-durability-unknown as published, never roll back accepted
+state or append twice. Define elapsed/frame rollover arithmetic and prevent
+duplicate footer/retry rows; reset establishes fresh scroll/unit baselines.
+Encode unsafe filename bytes reversibly, keep original report metadata unchanged,
+and admit requested directories only inside captured user storage. Test actual
+message filtering, TSV rows/end ordering, repeated reset/teardown, rollover,
+malformed naming/intervals, all storage phase failures and every allocation
+failure/retry/terminal for reset/update/end under GCC/Clang sanitizers. Compile
+the real sampler/default constructor into the original gameplay graph and refresh
+root diagnostics. Generated sampler tests are logging/ownership evidence only;
+whole original GameLogic/object/player sampling and scenario remain N2 gates.
+
+Pre-commit lifecycle review: a rejected new-session reset withdraws row/footer
+admission until a corrected reset publishes successfully. Accepted old backing
+remains unchanged, but new-world samples must never enter the old session report.
+Preserve absolute root directory rejection and explicit debug directory joining.
+
+Statistics checkpoint: all configured targets build all3; related67/67 PASS
+GCC16.63s/GCCsan66.19s/Clangsan63.04s with all checks intact. Exact repeated
+reset/update/end allocation terminals22/32/37; six actual collector families
+plus related storage/configuration/message/runtime tests. Canonical559
+SHAbcc50fb3f0c0cc746c400170b9cfeb85b9efdcf47d81cadcc941fb050eafac0e;
+toolchain564 SHAabf08c7c215ca0b6c3360776b6d62dd10a84d18c013db4fc05b63a285f1e7d5c.
+Never-executed root-link diagnostics fail7/219/223. Full207 not run. Whole original
+sampling and N2 process/scenario remain pending. See
+`evidence/qa/N2-statistics-checkpoint.md`; this coherent commit does not close N2
+or the governing slice03.

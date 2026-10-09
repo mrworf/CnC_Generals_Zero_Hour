@@ -718,3 +718,13 @@ GlobalData/storage lifetimes. All configured targets build all3, related71 pass
 all3; full201 remains unrun. Current never-executed root link fails11/223/234.
 Protected StatsCollector and native capability/diplomacy/start-position providers
 remain the normal root cohort; sanitizer callback metadata remains wider.
+
+The actual StatsCollector now compiles in original_runtime_common. Its real
+sampler/default constructor is a separate original_gameplay_common translation
+unit, avoiding fixture admission of GameLogic merely to test report ownership.
+Generated inputs test the actual protected logging owner, not a replacement
+GameLogic. The never-executed root-link diagnostic now has 7 normal GCC,
+219 GCC sanitizer and 223 Clang sanitizer unresolved symbols. Normal pending
+providers are diplomacy, start spots, native capability admission and ReleaseCrash;
+sanitizer-retained callback roots remain wider. This is compilation evidence,
+not startup acceptance. See `evidence/qa/N2-statistics-checkpoint.md`.

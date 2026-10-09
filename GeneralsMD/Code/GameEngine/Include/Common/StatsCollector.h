@@ -59,6 +59,10 @@
 //-----------------------------------------------------------------------------
 // FORWARD REFERENCES /////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
+#include "Common/NativeStatsSource.h"
+#include <cstdint>
+#include <string>
+class NativeUserStorage;
 class GameMessage;
 
 
@@ -69,6 +73,7 @@ class StatsCollector
 {
 public:
 	StatsCollector( void );
+  StatsCollector(const NativeUserStorage& storage,NativeStatsSource& source);
 	~StatsCollector( void );
 	
 	void reset( void );							///< Reset's all values and writes the file header
@@ -84,30 +89,26 @@ public:
 
 	void update( void );						///< called once a frame to see if we should poll this frame
 	
-	void writeFileEnd(void);				///< Write the end of the file
+	void writeFileEnd(void);
+  bool outputFailed() const noexcept {return m_outputFailed;}
+  bool outputReady() const noexcept {return !m_resetPending && !m_state.ended && !m_statsFileName.empty();}
+  bool outputDurable() const noexcept {return m_outputDurable;}				///< Write the end of the file
 private:
-	
-	void createFileName( void );		///< Create a snazzy filename
-	AsciiString m_statsFileName;		///< store the snazzy filename
-	
-	void writeInitialFileInfo(void );		///< write the header file info
-	void writeStatInfo( void );					///< write the stats we're keeping track of
+  struct State {
+    UnsignedInt build=0,move=0,attack=0,scrollMoves=0;
+    UnsignedInt scrollBegin=0,lastUpdate=0,startFrame=0;
+    std::uint64_t scrollFrames=0,timeSeconds=0;
+    bool scrolling=false,ended=false;
+    NativeStatsSample units;
+  } m_state;
+  const NativeUserStorage* m_storage;
+  NativeStatsSource* m_source;
+  std::string m_statsFileName;
+  bool m_outputFailed=false,m_outputDurable=true;
+  bool m_resetPending=true;
+  bool publish(const std::string& name,const std::string& bytes,bool append);
+  static std::string row(const State& state);
 
-	void zeroOutStats( void );			///< zero out the stats
-	UnsignedInt m_buildCommands;		///< count of the build commands the local player issued
-	UnsignedInt m_moveCommands;			///< count of the move commands
-	UnsignedInt m_attackCommands;		///< attack commands
-	UnsignedInt m_scrollMapCommands;///< scroll map commands
-	UnsignedInt m_AIUnits;					///< tally of all the AI Units
-	UnsignedInt m_playerUnits;			///< tally of all the player Units
-	
-	UnsignedInt m_scrollBeginTime;	///< Begin time in frames
-	UnsignedInt m_scrollTime;				///< our totals for the scrolltime
-	Bool m_isScrolling;							///< flag to make sure we are scrolling
-
-	Int m_timeCount;								///< the current timeframe we're on
-	Int m_lastUpdate;								///< last time we updated
-	Int m_startFrame;								///< frame we started on
 };
 
 

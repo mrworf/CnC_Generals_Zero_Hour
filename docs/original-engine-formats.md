@@ -2484,3 +2484,29 @@ sampling behavior, and make elapsed-frame arithmetic defined. Do not just replac
 one fopen or execute the provider before its ownership/metadata boundaries are
 settled. Actual GameLogic/player sampling and debug/LAN naming are separate from
 isolated output ownership evidence; no current StatsCollector acceptance exists.
+
+### Protected original statistics lifecycle (current source)
+
+The preceding raw-writer findings describe the pre-integration source. The actual
+collector now compiles in `original_runtime_common`; its default constructor and
+real GameLogic/object/player adapter compile separately in
+`Common/System/NativeOriginalStatsSource.cpp`. The adapter preserves source
+infantry/vehicle eligibility, neutral/Civilian exclusion, local/other partition,
+and money/configuration inputs. Generated tests supply explicit synchronous
+inputs to the actual collector; they do not execute or accept whole simulation.
+
+Reset, row and footer publication use captured NativeUserStorage and streamed
+atomic replacement, never retail writes or raw CWD writers. Counter/frame state
+advances only after publication; directory-sync uncertainty is published state,
+not rollback. A failed new-session reset withdraws row/footer admission until a
+successful reset, preventing new-world samples from entering an old report.
+Reset clears scroll/unit baselines; final samples precede one ordered footer.
+Frame differences use defined unsigned arithmetic, interval multiplication uses
+64-bit values, and unsafe filename bytes encode reversibly without changing
+report metadata. Absolute directories must belong to captured user storage.
+
+Borrowed sampler/storage dependencies are synchronous; destruction has no
+simulation callback or I/O. Allocation failures unwind candidates; optional
+storage failures expose output status. Actual default-adapter execution,
+debug/LAN naming and whole GameLogic/scenario acceptance remain pending.
+Current evidence: `evidence/qa/N2-statistics-checkpoint.md`.
