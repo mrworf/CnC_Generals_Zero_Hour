@@ -2353,3 +2353,42 @@ the fixed256 cleanup assumption), plus legitimate UI/partition/script parents.
 Execute actual registered wall/object footprints, model-derived bridge/root
 rollback, then complete partition/ghost/startup and compiler-matching simulation.
 Slice03/N2 incomplete; no new plan or upstream modifications.
+
+Registered-actor/root refinement (parenta16d24fc, clean start): next outcome is
+actual registered actors and nonempty pathfinder footprints under legitimate
+CPU root participants, not another isolated backing acceptance. Inspect and
+batch Object's five sightings, initialized/terminated module backing and source
+helpers, team/early ID lookup/radar/public creation, GameLogic scheduler and
+destruction queue as one admission/retirement chain. Preserve callback/destruction
+order, fixed-width IDs and packed frame phases; remove zero-size lookup growth
+and cursor overflow hazards before unsafe operations. Never invoke complete
+Object destructor notifications on partial construction. Constructor and late
+ThingFactory creation failure must withdraw every acquired registration before
+guarded module/resource retirement and permit corrected retry. Whole-root
+candidate rollback still encloses script/gameplay side effects and borrowed
+global publication. Bind actual UI logical callbacks, player/default-team,
+rank/script, module factory, radar, original partition, native terrain/visual and
+AI/GameLogic participants; inspect borrowed control-bar ownership and local-player
+partition iterators before construction. Common ghost manager's empty methods
+are not accepted ghost behavior. Execute real actor/module cardinality, failure/
+retry, repeated teardown, wall/footprint classification and nonempty lifecycle;
+then integrate model-derived bridge/ghost/full GameEngine startup and actual
+GameLogic::update compiler-matching checkpoints. Headless draw/audio omission is
+permitted; replacing simulation or logical callbacks is not. Required source
+anchors, queue/scheduler/UI/ghost hazards and acceptance limits are durable in
+original-engine-formats.md. All3 ownership matrices remain mandatory; full suite
+only when slice/milestone completion is actually established.
+
+Working-tree housekeeping checkpoint: the player and team ownership batches
+are committed as 872cdd97 and a16d24fc respectively. The source-review notes
+and this refinement are documentation only. The remaining working changes in
+GameLogic.h and GameLogic.cpp are an unfinished registered-actor batch: lookup
+admission, scheduler withdrawal and destruction-queue staging. They have not
+been compiled or tested and are not accepted behavior. Finish the coupled
+Object constructor/ID/module/radar rollback and actual actor fixtures before
+freezing source for the required validation matrix; review registration
+preconditions before publication and scheduler retirement cardinality. Do not
+commit these helpers as a completed independent delivery slice. N2 and slice03
+remain in progress; the last verified runtime checkpoint is the team evidence.
+No non-ignored untracked files were present during this housekeeping check.
+Ignored build outputs, user asset links and recovery storage are retained.

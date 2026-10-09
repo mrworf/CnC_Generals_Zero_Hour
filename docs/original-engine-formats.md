@@ -3925,3 +3925,33 @@ source0da9af4a. Evidence: `evidence/qa/N2-team-ownership-checkpoint.md`.
 This closes the pending isolated factory/prototype/member/default-team lifetime
 evidence above, not authored creation actions, registered Object/partition
 participants or complete candidate-root/startup/simulation acceptance.
+
+Native root source review carry-forward: common GameLogic::createGhostObjectManager
+returns common GhostObjectManager, whose add/remove/snapshot/orphan/partition
+operations are empty or return null (GhostObject.cpp around136–194). The source
+device overrides with W3DGhostObjectManager. A bare common owner is not accepted
+fog/partition behavior; native root must bind real logical ghost/snapshot
+semantics, with presentation output scoped separately. GhostObject base transfer
+retains version1 geometry/type/small/radii/angle/position but explicitly omits
+partition data; derive richer device transfer from its actual implementation,
+not the base alone. Relevant retained device source is
+GameEngineDevice/Source/W3DDevice/GameLogic/W3DGhostObject.cpp and its header.
+
+Common InGameUI has only draw/createView as pure presentation boundaries; its
+objectChangedTeam and other logical callbacks are concrete. Its destructor
+unconditionally deletes TheControlBar, while init and recreateControlBar acquire
+that global before fallible init (InGameUI.cpp around1071,1186,5595). Candidate
+root/global leases must prevent an uninitialized UI from deleting a borrowed
+accepted-root control bar, and keep legitimate publications through cleanup.
+Inspect all acquisition/replacement/destruction paths together before native UI
+root binding. A headless adapter may omit drawing, not replace logical callbacks
+with no-ops. Neither a bare UI constructor nor constructor-only ScriptEngine
+proves complete startup.
+
+GameLogic::update performs real ScriptEngine, tactical-view freeze checks,
+terrain, recorder, commands, sleepy modules, AI, production, partition,
+destruction, weapon/locomotor/victory and frame sequencing. The actual simulation
+fixture must bind these real parents and execute that entry point; invoking a
+single helper update or advancing a fixture counter is not matching simulation.
+These are current source findings/pending requirements, not architecture blockers
+or completed runtime evidence.
