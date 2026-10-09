@@ -26,16 +26,16 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "b1f32299f741bb959826e93b8ff99f89053cce86",
-    "label": "original-classified-map-backing",
-    "evidence": "evidence/qa/N2-classified-map-backing-checkpoint.md",
-    "validation": "All3 configured builds, focused8 and related91 PASS. Actual terrain newMap classification, source two-pass zero-allocation reuse and direct retry after failed candidate admission; complete layer2/block-growth4/mixed-zone-owner46/map14 manifests retire original heap/pool ownership",
-    "next": "Execute nonempty registered wall/object footprints and model-derived bridge participants, bridge/tower constructor rollback and concrete root candidate publication; then partition/ghost/startup and compiler-matching original simulation",
+    "parent": "7737aea10dcba4eb687f944064b58baf69ef5e85",
+    "label": "original-player-cohort-ownership",
+    "evidence": "evidence/qa/N2-player-ownership-checkpoint.md",
+    "validation": "All3 configured builds, focused4 and related118 PASS. Actual neutral player/cohort acquisition/nonempty build/production/selection/reset/destruction manifests player4/cohort81/reset4/production1 and exact pooled squad11 replacement failure/retry pairs retire original heap/pool units",
+    "next": "Integrate actual team/default-team factory/prototype/member ownership and cursor rollback, then Object lookup/ID/modules/late creation and local-player partition callbacks; nonempty walls/model-derived bridge/root admission, partition/ghost/startup and compiler-matching simulation remain mandatory",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 classified map backing verified; all3 builds/focused8/related91 PASS on canonical622 source653415f3. Actual native terrain plus AI/GameLogic runs 25-cell mixed source classification/zones and zero-allocation second pass. Layer and zone backing pairs stage complete acquisitions; original 14-bit zones and dimensions reject overflow. Full304 not run. Nonempty registered wall/actor and model-derived bridge admission, concrete root rollback, partition/ghost/startup and original simulation remain pending. Slice03/N2 incomplete.",
-  "transaction_parent": "b1f32299f741bb959826e93b8ff99f89053cce86",
+  "resume_point": "N2 plan01/slice03 real player/cohort ownership verified; all3 builds/focused4/related118 PASS on canonical624 sourceb2574cec. Neutral defaults, complete16 cohort, build-chain/production/selection ownership, constructor rollback and non-allocating teardown pass. Every warmed heap failure/retry plus typed relation/squad exhaustion and pooled replacement[0,11)/terminal11 validated. Full308 not run; actual team/default-team, rank/science callbacks, Object/wall/model-derived bridge/root/partition/ghost/startup and original simulation remain pending. Slice03/N2 incomplete.",
+  "transaction_parent": "7737aea10dcba4eb687f944064b58baf69ef5e85",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -44,28 +44,28 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-classified-map-backing-checkpoint.md",
+  "evidence": "evidence/qa/N2-player-ownership-checkpoint.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Execute nonempty registered wall/object footprints and model-derived bridge participants, bridge/tower constructor rollback and concrete root candidate publication; then partition/ghost/startup and compiler-matching original simulation",
+  "next": "Integrate actual team/default-team factory/prototype/member ownership and cursor rollback, then Object lookup/ID/modules/late creation and local-player partition callbacks; nonempty walls/model-derived bridge/root admission, partition/ghost/startup and compiler-matching simulation remain mandatory",
   "implementation_checkpoint": {
-    "label": "original-classified-map-backing",
-    "reason": "Actual generated terrain source classification and paired map/zone/layer backing pass all3 affected matrices; nonempty geometry/actor/root startup and original simulation remain pending",
-    "prior_commit": "b1f32299",
-    "canonical_source_sha256": "653415f3b379ba6141d140a746771b4758777cb8cc8eb4eb609a4715ce8feefd",
-    "toolchain_inclusive_sha256": "8864c904fef64a4683baff7d249f7264865b6deef0fdc471d6a446ff580b1e0e",
-    "configured_suite_tests": 304,
-    "related_suite_tests_passed": 91,
+    "label": "original-player-cohort-ownership",
+    "reason": "Actual source player/cohort acquisition and retirement now guard paired pooled maps/selection and complete owner chains; actor/root startup and original simulation remain pending",
+    "prior_commit": "7737aea1",
+    "canonical_source_sha256": "b2574cec2d7e5b16520e3f097d181d35dc01567d72d603df07378a498bb795da",
+    "toolchain_inclusive_sha256": "bb07b9f28e524e6a3fcc20cc8760223bee7a056ec0b8c084bf8bd98f0cd79ca7",
+    "configured_suite_tests": 308,
+    "related_suite_tests_passed": 118,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "not run; related91 PASS all3 on final frozen source",
+    "full_current_matrix": "not run; related118 PASS all3 on final frozen source",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-classified-map-backing-checkpoint.md"
+    "evidence": "evidence/qa/N2-player-ownership-checkpoint.md"
   }
 }

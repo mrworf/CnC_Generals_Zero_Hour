@@ -2269,3 +2269,43 @@ object footprint and model-derived bridge participants, bridge/tower constructio
 rollback and concrete root candidate publication, followed by partition/ghost/
 startup and compiler-matching original simulation. Backing-helper evidence does
 not substitute for those source participants or whole-game acceptance.
+
+Actor prerequisite refinement (parent7737aea1, clean start): actual Object
+construction requires a controlling neutral player/default team, rank data,
+module factory, UI/radar, partition and script services. Player currently acquires
+two pooled relation maps before initializing its raw owned fields, then creates
+eleven squads and runs fallible rank/name/relation initialization. PlayerList
+acquires the full MAX_PLAYER_COUNT cohort without an unwind guard and its
+destructor calls allocating init before deletion. Batch constructor rollback,
+complete pooled squad replacement and non-allocating whole player/cohort
+retirement, including ownership already retired by explicit Player::init but
+omitted from its destructor. Preserve source neutral defaults, rank/science
+callbacks, local-player selection, build-list ordering and explicit reset
+semantics. Missing rank authority rejects before dereference/acquisition, rather
+than silently inventing rank data. Exercise real players/cohorts and source
+selection/relationship/build-list behavior, every standard failure/retry prefix,
+separate actual relation-map/squad pool exhaustion, repeated reset/destruction
+and whole memory-manager retirement under all3 configurations. This prerequisite
+is part of the existing actor/root integration, not a replacement milestone or
+acceptance of empty actors. Team construction/publication, Object lookup and
+modules, model-derived bridge geometry, concrete root/startup and simulation
+remain pending. Record the source findings durably; do not create another plan.
+
+Real player/cohort checkpoint: all3 configured builds, focused4 and related118
+PASS on canonical624 sourceb2574cec / inclusive631 sourcebb07b9f2. Actual neutral
+players/cohorts, nonempty two-node builds/production changes/selection, explicit
+reset and non-allocating destruction retire exactly. Warmed heap manifests are
+player4/cohort81/reset-whole-owner4/production-registration1, all prefixes and
+corrected retries; actual relation-map/squad exhaustion and all pooled squad
+replacement prefixes[0,11)/terminal11 separately pass. Evidence:
+`evidence/qa/N2-player-ownership-checkpoint.md`. Commit boundary:
+`delivery: preserve original player cohort ownership`.
+Full308 not run; actual team/default-team and nonempty rank/science/optional
+owners are not established by this fixture. Next batch guards TeamFactory/
+TeamPrototype/Team relation-map and dual registration ownership/cursors together,
+preserving source clear phase order without a fallible map copy; then actual
+Object lookup/ID/modules/creation, local-player partition iterator callbacks,
+registered wall/model-derived bridge/root admission and original simulation.
+Source GameEngine initializes partition before the cohort; actual callback
+publication order remains mandatory and is durable in engine-format notes.
+Slice03/N2 remains incomplete; no new plan or upstream library changes.

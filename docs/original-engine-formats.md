@@ -3797,3 +3797,69 @@ GameLogic/Map/TerrainLogic.cpp::loadMap/addWaypoint/newMap;
 W3DDevice/GameLogic/W3DTerrainLogic.cpp::loadMap/getGroundHeight/newMap;
 W3DDevice/GameClient/BaseHeightMap.cpp::getHeightMapHeight/reset;
 W3DTerrainVisual.cpp::init/load/reset; GameClient/GameClient.cpp::loadMap.
+
+### Real actor initialization prerequisites and player ownership
+
+Source anchors: Common/RTS/Player.cpp constructor/init/destructor, resetRank,
+resetSciences and addKindOfProductionCostChange; PlayerList.cpp constructor,
+init/newGame/destructor; Team.cpp TeamFactory::initTeam/clear, TeamPrototype and
+Team constructors; System/GameLogic.cpp::init/reset/addObjectToLookupTable;
+GameLogic/Object/Object.cpp constructor/destructor; ThingFactory.cpp::newObject.
+
+Player owns two explicit pooled relation maps, ten hotkey squads and one current
+selection squad, plus upgrade/build chains, optional AI/resource/tunnel owners,
+production-change pooled entries and timer/container backing. BuildListInfo's
+head destructor retires the complete next chain iteratively. Source init already
+retires these optional owners; the original Player destructor omitted several of
+them. Constructor rollback must initialize all raw ownership before relation-map
+acquisition and retire partial maps/squads if later helpers fail. Source neutral
+initialization records self ALLIES, rank1 and no sciences unless rank data grants
+them. resetRank/resetSciences require actual RankInfoStore, even for neutral;
+missing authority is not permission to fabricate data or skip configured science
+notifications. Empty rank storage legitimately returns null entries and INT_MAX
+level-up. Squad replacement acquires all eleven units before retiring old
+selection. PlayerList owns all sixteen source players, although its initial
+active player count is one. Whole cohort destruction must not call allocating
+init merely to hide warnings. Actual player reset is explicit behavior, not a
+teardown requirement. A pooled production-change entry remains guarded until
+standard list registration succeeds; repeated identical entries increment its
+source reference count.
+
+The player ownership fixture is a prerequisite, not actual actor/startup
+acceptance. Nonempty rank/science callbacks, AI queues and optional owned
+resource/tunnel services still require their legitimate published parents.
+Player default teams are not supplied by constructor/init: PlayerList::newGame
+loads actual side/player definitions, creates teams, then calls setDefaultTeam
+to find the named `team` plus player name. Actor construction therefore cannot
+use a bare cohort as evidence that default-team startup is complete.
+
+Carry-forward actor closure: TeamFactory::clear copies its whole map before
+destruction (fallible teardown); TeamPrototype publishes factory membership
+before fallible player membership, and Team acquires relation maps and publishes
+prototype membership before a fallible debug string helper. Their cursor and
+registration rollback remains pending. GameLogic::init does not seed the object
+lookup vector; reset seeds OBJ_HASH_SIZE, while addObjectToLookupTable doubles
+its current size and would never grow from zero. Establish the real startup
+boundary and safe zero/overflow growth before constructing actors. Object
+acquires five sightings, publishes early lookup/ID and team membership, then
+builds raw modules and sends creation notifications; its full destructor assumes
+complete modules and legitimate AI/script/radar/GameLogic parents. Do not use
+that destructor as partial-constructor rollback. ThingFactory::newObject adds
+create callbacks, partition registration and initObject after constructor
+registration; the eventual candidate-root/actor transaction must enclose those
+late phases, not stop at pooled allocation. Bridge caches a factory-owned
+GenericBridge template across restarts and can return after registering an
+object but before initializing layer/list metadata when road data is missing.
+Actual model-derived bridge geometry and full actor rollback remain unaccepted.
+
+Original GameEngine.cpp initializes RankInfoStore before AI/GameLogic, then
+TeamFactory and PlayerList (around412,465–469). GameLogic has already published
+PartitionManager when the cohort selects its local neutral player. Therefore
+Player::becomingLocalPlayer's conditional partition branch is mandatory in real
+startup, although absent in the isolated player fixture. Its ObjectIterator
+requires guarded retirement through later radar/containment/perception helpers;
+the original raw iterator is freed only at the normal end of that branch.
+Candidate-root construction must establish the correct parent/global identities
+through local-player selection, not borrow an accepted root's partition/client
+while building a new cohort. This callback ownership and phase order are pending
+actual root evidence, not established by the CPU-only cohort manifest81.

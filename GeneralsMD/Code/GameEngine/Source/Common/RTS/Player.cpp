@@ -44,6 +44,8 @@
 
 #include <algorithm>
 #include <climits>
+#include <array>
+#include <memory>
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #define DEFINE_SCIENCE_AVAILABILITY_NAMES
@@ -310,9 +312,9 @@ Player::Player( Int playerIndex )
 
 	m_playerIndex = playerIndex;
 
-	// allocate new relation map pools
-	m_playerRelations = newInstance(PlayerRelationMap);
-	m_teamRelations = newInstance(TeamRelationMap);
+	// Initialize all owned fields before any fallible pooled acquisition.
+	m_playerRelations = NULL;
+	m_teamRelations = NULL;
 
 	m_upgradeList = NULL;
 	m_pBuildList = NULL;
@@ -355,13 +357,33 @@ Player::Player( Int playerIndex )
 	m_attackedFrame = 0;
 
 	m_unitsShouldHunt = FALSE;
-	init( NULL );
+	try
+	{
+		if (!TheRankInfoStore)
+			throw ERROR_BAD_ARG;
+		m_playerRelations = newInstance(PlayerRelationMap);
+		m_teamRelations = newInstance(TeamRelationMap);
+		init( NULL );
+	}
+	catch (...)
+	{
+		releaseOwnedResources();
+		throw;
+	}
 
 }
 
 //=============================================================================
 void Player::init(const PlayerTemplate* pt)
 {
+	if (!TheRankInfoStore)
+		throw ERROR_BAD_ARG;
+	// Stage the complete source selection backing before retiring any old squad.
+	auto retireSquad = [](Squad* squad) { if (squad) squad->deleteInstance(); };
+	using SquadOwner = std::unique_ptr<Squad, decltype(retireSquad)>;
+	std::array<SquadOwner, NUM_HOTKEY_SQUADS + 1> selection;
+	for (auto& squad : selection)
+		squad.reset(newInstance(Squad));
 
 	DEBUG_ASSERTCRASH(m_playerTeamPrototypes.size() == 0, ("Player::m_playerTeamPrototypes is not empty at game start!\n"));
 	m_skillPointsModifier = 1.0f;
@@ -411,14 +433,14 @@ void Player::init(const PlayerTemplate* pt)
 			m_squads[i]->deleteInstance();
 			m_squads[i] = NULL;
 		}
-		m_squads[i] = newInstance(Squad);	
+		m_squads[i] = selection[i].release();
 	}
 
 	if (m_currentSelection != NULL) {
 		m_currentSelection->deleteInstance() ;
 		m_currentSelection = NULL;
 	}
-	m_currentSelection = newInstance(Squad);
+	m_currentSelection = selection[NUM_HOTKEY_SQUADS].release();
 	
 	if( m_tunnelSystem )
 	{
@@ -549,9 +571,30 @@ Player::~Player()
 	}
 	m_playerTeamPrototypes.clear();	// empty, but don't free the contents
 
-	// delete the relation maps (the destructor clears the actual map if any data is present)
-	m_teamRelations->deleteInstance();
-	m_playerRelations->deleteInstance();
+	releaseOwnedResources();
+}
+
+//=============================================================================
+void Player::releaseOwnedResources()
+{
+	// Do not call init(): teardown must neither acquire squads nor notify sciences.
+	deleteUpgradeList();
+	if (m_pBuildList) m_pBuildList->deleteInstance();
+	m_pBuildList = NULL;
+	if (m_ai) m_ai->deleteInstance();
+	m_ai = NULL;
+	if (m_resourceGatheringManager) m_resourceGatheringManager->deleteInstance();
+	m_resourceGatheringManager = NULL;
+	if (m_tunnelSystem) m_tunnelSystem->deleteInstance();
+	m_tunnelSystem = NULL;
+	for (auto* change : m_kindOfPercentProductionChangeList)
+		if (change) change->deleteInstance();
+	m_kindOfPercentProductionChangeList.clear();
+	m_specialPowerReadyTimerList.clear();
+	if (m_teamRelations) m_teamRelations->deleteInstance();
+	m_teamRelations = NULL;
+	if (m_playerRelations) m_playerRelations->deleteInstance();
+	m_playerRelations = NULL;
 
 	for (Int i = 0; i < NUM_HOTKEY_SQUADS; ++i) {
 		if (m_squads[i] != NULL) {
@@ -3843,7 +3886,8 @@ void Player::addKindOfProductionCostChange(	KindOfMaskType kindOf, Real percent 
 	newTof->m_kindOf = kindOf;
 	newTof->m_percent = percent;
 	newTof->m_ref = 1;
-	m_kindOfPercentProductionChangeList.push_back(newTof);
+	try { m_kindOfPercentProductionChangeList.push_back(newTof); }
+	catch (...) { newTof->deleteInstance(); throw; }
 
 }
 

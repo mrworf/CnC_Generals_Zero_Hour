@@ -678,6 +678,9 @@ private:
 	*/
 	Bool addScience(ScienceType science);
 
+	// Constructor rollback and whole-owner retirement, without allocating a reset.
+	void releaseOwnedResources();
+
 public:
 	Int getSkillPoints() const						{ return m_skillPoints; }
 	Int getSciencePurchasePoints() const	{ return m_sciencePurchasePoints; }

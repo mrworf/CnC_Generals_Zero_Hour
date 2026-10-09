@@ -74,22 +74,26 @@ PlayerList::PlayerList() :
 	m_local(NULL),
 	m_playerCount(0)
 {
-	// we only allocate a few of these, so don't bother pooling 'em
-	for (Int i = 0; i < MAX_PLAYER_COUNT; i++)
-		m_players[ i ] = NEW Player( i );
-	init();
+	for (auto& player : m_players) player = NULL;
+	try
+	{
+		// we only allocate a few of these, so don't bother pooling 'em
+		for (Int i = 0; i < MAX_PLAYER_COUNT; i++)
+			m_players[ i ] = NEW Player( i );
+		init();
+	}
+	catch (...)
+	{
+		for (auto* player : m_players) delete player;
+		throw;
+	}
 }
 
 //-----------------------------------------------------------------------------
 PlayerList::~PlayerList() 
 {
-	try {
-		// the world is happier if we reinit things before destroying them,
-		// to avoid debug warnings
-		init();
-	} catch (...) {
-		// nothing
-	}
+	// Explicit reset owns initialization; destruction only retires ownership.
+	m_local = NULL;
 	for( Int i = 0; i < MAX_PLAYER_COUNT; ++i )
 		delete m_players[ i ];
 }
