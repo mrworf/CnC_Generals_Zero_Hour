@@ -4455,3 +4455,75 @@ Source anchors: Common/GameEngine.cpp::{init,~GameEngine};
 Common/System/SubsystemBase.cpp::shutdownAll; Common/RTS/Team.cpp::{
 ~TeamFactory,clear,~Team}; GameLogic/System/GameLogic.cpp::~GameLogic;
 tests/original/object_ownership.cpp::Context::retire.
+
+Real native CPU font implementation checkpoint (N2 plan01/slice03):
+NativeFontLibrary now owns an explicit FT_Library, FcConfig and local FcFontSet.
+Actual VFS font bytes remain alive through their metadata and independently
+matched faces; set patterns retire before borrowed metadata faces. Generated BDF
+execution proves the public FT_FACE property survives stock matching and selects
+the local family; generated primary/Unicode advances prove source below256/
+alternate-above255 routing and exact mono pixels. Copied coverage is independent
+of the mutable FreeType glyph slot. Whole derived font-list destruction precedes
+native library retirement. Six focused families pass GCC and both GCC/Clang
+unsuppressed sanitizers; broader validation is pending. Evidence and limits:
+evidence/qa/N2-native-font-checkpoint.md. This is not Language.ini startup,
+display-string wrapping, physical rendering or GDI metric/raster parity.
+Generals average-width interpretation uses public OS/2 metrics, still needing
+original-output comparison; point0 default-size semantics remain unresolved at
+integration. FreeType bitmap pitch is the signed next-row offset, not merely
+padding magnitude; native copying validates absolute stride then follows that
+signed offset. Reference:
+[FreeType bitmap contract](https://freetype.org/freetype2/docs/reference/ft2-basic_types.html#ft_bitmap).
+
+Native string integration source census (not implementation acceptance):
+W3DDisplayString::getWidth sums raw character spacing up to charPos, counting
+newlines in that position but omitting their width; it does not parse ampersand
+hotkeys or return the longest formatted line. computeExtents instead calls
+Get_Formatted_Text_Extents -> Build_Sentence_Not_Centered, whose final X adds
+Get_Extra_Overlap (PixelOverlap). Nonempty trailing-newline text adds a blank
+line; empty/no-font display strings report0x0. Word-break lookahead wraps on
+>=width, and source hard wrap also breaks on >=width, not strictly greater.
+PixelOverlap is derived from negative requested pixel height/8 clamped0..4;
+spacing subtracts it, formatted extent adds it back once. Native font's glyph
+advance alone does not establish formatted width parity.
+
+Hotkey parsing skips '&' only before a following nonspace character, consumes
+that character's normal spacing without blitting it and records its position;
+draw uses HotKeyManager::searchHotKey on the original text and renders a bold
+overlay. searchHotKey returns the first marker's following character, while the
+sentence traversal updates its marker position as it traverses. Define/check
+multiple/trailing-marker behavior against these source paths; do not transplant
+the word-lookahead expression (*word+1), which adds to the current character
+instead of examining word[1]. Centering uses a separate draw traversal while
+formatted extents remain the noncentered calculation. Complete current string
+mutation (text/font/wrap/hotkey), geometry, clipping and borrowed-font cleanup
+must be staged before publication; inherited setText/append/remove change text
+before fallible notifyTextChanged and do not provide native failure atomicity.
+
+W3DDisplayStringManager::newDisplayString defaults to the language descriptor
+or Times New Roman12 and sets the font before list admission, requiring a
+candidate guard. setFont obtains a bold font as well as the normal borrowed font.
+postProcessLoad eagerly creates MAX_GROUPS localized NUMBER:i strings and
+LABEL:FORMATION with DrawGroupInfo's font; repeat initialization needs offside
+cache replacement, not overwriting owned pointers. Concrete cleanup must retire
+all tracked strings and cache aliases before FontLibrary and the base manager's
+empty-list check. Source periodic render-resource cleanup processes10 records
+per update, uses unsigned frame deltas>60 and preserves CPU text/metrics. A
+headless native manager must not pretend that absent physical text output was
+rendered successfully. Source anchors: W3DDisplayString.cpp::{getWidth,
+computeExtents,setFont,setUseHotkey,draw}; W3DDisplayStringManager.cpp::{
+newDisplayString,postProcessLoad,update}; render2dsentence.cpp::{
+Build_Sentence_Not_Centered,Build_Sentence_Centered}; render2dsentence.h::
+Get_Extra_Overlap; MessageStream/HotKey.cpp::searchHotKey; DisplayString.cpp.
+
+Font-size integration boundary: GlobalLanguage::parseFontDesc uses scanInt
+without enforcing a positive range. FontDesc's source default is Arial Unicode
+MS12; DrawGroupInfo defaults10; no direct literal getFont(name,0,bold) call was
+found in the original engine/device source census. That absence does not prove
+all supplied configuration sizes are positive. Original W3DFontLibrary's
+unsigned>100 check allows0, and Create_GDI_Font passes height0 to CreateFont
+(system default semantics), so native point0 rejection is not proven identical.
+Keep it as a pending input/compatibility gate before native original-root
+adoption, not evidence that a source requirement can be dropped. The current
+generated backend fixture deliberately tests rejection; it is not a retail-font
+configuration census or default-size parity oracle.

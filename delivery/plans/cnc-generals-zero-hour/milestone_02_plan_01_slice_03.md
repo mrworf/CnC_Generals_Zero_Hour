@@ -2872,3 +2872,30 @@ retry pair, including zero demand for warmed APIs, under GCC and Clang sanitizer
 Use focused builds/tests during implementation, then frozen related matrix.
 Native string/UI/client/root/camera/snapshot/popup/journal integration remains
 mandatory follow-through in this same governing plan; no fake adapter is adopted.
+
+Native CPU backing is implemented and focused6 passes GCC/GCC sanitizer/Clang
+sanitizer on canonical636, with actual generated glyph coverage and complete
+native/standard acquisition pairs and typed pooled exhaustion. Evidence:
+evidence/qa/N2-native-font-checkpoint.md. Frozen related159/full configured
+builds passed all3; evidence records terminal execution handles and logs.
+This is a supporting implementation checkpoint, not slice03 or N2 completion.
+Continue actual native string/UI/root behavior after this coherent validation
+batch; do not replace the governing plan. Point0 and Generals GDI metric/raster
+comparison remain explicit integration limits, not silently settled behavior.
+
+Native string follow-through, same plan/slice: use the durable full string-path
+census in docs/original-engine-formats.md. Implement actual original manager
+contracts with staged text/font/wrap/hotkey state and owned glyph/layout backing,
+normal/bold borrowed fonts and localized group/formation caches. Preserve the
+distinction between raw charPos width and formatted extents including source
+overlap, >= word/hard wrapping and newline/centering behavior. Do not accept
+stubbed width/output or replace that source contract with generic typesetting.
+Test missing configuration/fonts/game-text and constructor/cache replacement
+failures with exact admission/retirement and corrected retries. Retire caches and
+every tracked string before font backing; integrate with actual UI and client
+owners, not only a separate font fixture. Physical submission remains explicit
+and must reject an absent renderer; N2 headless output cannot claim rendering.
+Native-font related159 passed all3: GCC148.46s, GCC sanitizer642.98s, Clang
+sanitizer393.10s; full configured builds/focused6 passed all3. All handles are
+terminal0. Commit this coherent backing checkpoint, then continue the planned
+string/UI/client/root follow-through. Full349 and N2 acceptance remain pending.

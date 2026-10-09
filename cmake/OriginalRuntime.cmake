@@ -37,6 +37,8 @@ add_test(NAME original_id_representations COMMAND original_id_fixture)
 set_tests_properties(original_id_representations PROPERTIES LABELS "original;graph" TIMEOUT 60
   ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 find_package(ZLIB REQUIRED)
+find_package(Freetype REQUIRED)
+find_package(Fontconfig REQUIRED)
 add_executable(original_list_selection_fixture tests/original/list_selection.cpp tests/original/AllocationFault.cpp)
 target_link_libraries(original_list_selection_fixture PRIVATE original_core)
 foreach(family IN ITEMS functional negative faults)
@@ -276,6 +278,9 @@ set(ZH_ORIGINAL_LOGICAL_CLIENT
 list(TRANSFORM ZH_ORIGINAL_LOGICAL_CLIENT PREPEND "${ZH_CODE}/GameEngine/Source/GameClient/")
 add_library(original_logical_client STATIC ${ZH_ORIGINAL_LOGICAL_CLIENT})
 target_sources(original_logical_client PRIVATE
+  "${ZH_CODE}/GameEngine/Source/GameClient/GUI/NativeFontLibrary.cpp")
+target_link_libraries(original_logical_client PUBLIC Freetype::Freetype Fontconfig::Fontconfig)
+target_sources(original_logical_client PRIVATE
   "${ZH_CODE}/GameEngine/Source/GameClient/ScriptedView.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeHeadlessGameClient.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeWaterGrid.cpp"
@@ -460,6 +465,15 @@ add_executable(original_sides_scripts_fixture tests/original/sides_scripts.cpp t
 add_executable(original_logical_world_fixture tests/original/logical_world.cpp tests/original/AllocationFault.cpp)
 add_executable(original_waypoint_graph_fixture tests/original/waypoint_graph.cpp tests/original/AllocationFault.cpp)
 add_executable(original_script_camera_fixture tests/original/script_camera.cpp tests/original/AllocationFault.cpp)
+add_executable(original_native_font_fixture tests/original/native_font.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_native_font_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_native_font_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS functional negative native-faults allocation-faults host pool-failures)
+  add_test(NAME original_native_font_${family} COMMAND original_native_font_fixture "${family}")
+  set_tests_properties(original_native_font_${family} PROPERTIES LABELS "original;runtime;fonts" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 add_executable(original_text_ownership_fixture tests/original/text_ownership.cpp tests/original/AllocationFault.cpp)
 add_executable(original_ai_pathfinder_fixture tests/original/ai_pathfinder.cpp tests/original/AllocationFault.cpp)
 add_executable(original_player_ownership_fixture tests/original/player_ownership.cpp tests/original/AllocationFault.cpp)
