@@ -67,7 +67,7 @@
     "milestone_complete": false,
     "slice_complete": false,
     "evidence": "evidence/qa/N2-native-font-checkpoint.md",
-    "repository_commit": null
+    "repository_commit": "54374a797ace4ec92eeb9851ce5c45435d62e7b3"
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
