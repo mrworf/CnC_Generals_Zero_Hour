@@ -32,7 +32,7 @@ decisions:
   revision: sha256:420ba5b4335f242276fdd06c8f4f9dca60608b11c670a2d3812b890c2dd2b940
 accepted_risks: []
 validation:
-  repository_commit: PENDING_PAYLOAD_COMMIT
+  repository_commit: e0a32f1c92b113733bbe588cfc00aeb7b019e4d7
   prd:
     status: passed
     result: workflow/definition/results/prd.yaml

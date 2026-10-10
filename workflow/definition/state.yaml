@@ -5,7 +5,7 @@ scope: "R07/HQ-01\u201307 headless qualification amendment, with inherited appro
   \ stage passes are bounded to this amendment; no full-game implementation or feature-by-feature baseline recertification."
 transaction:
   parent_commit: c5e1fcb34f5c25151f583f6fa9e3b88833c82ab7
-  repository_commit: PENDING_PAYLOAD_COMMIT
+  repository_commit: e0a32f1c92b113733bbe588cfc00aeb7b019e4d7
 execution:
   mode: sequential_in_chat_skill_workflows
   agents: prohibited by repository/user instructions
