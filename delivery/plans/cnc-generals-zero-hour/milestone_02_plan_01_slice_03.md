@@ -3465,3 +3465,5 @@ terminal0, no suppressions or timeout changes. Frozen canonical660/inclusive667
 fingerprints rechecked before commit. No live jobs remain. This closes the
 coherent environment admission checkpoint, not slice03/N2: full401, concrete
 native factory/full original startup and loaded simulation remain pending.
+
+Environment payload commit: `2b14ad41699323b5243b4ab061bf02aa27773826`.

@@ -62,3 +62,5 @@ Both live sanitizer suites have passed all nine frozen environment families,
 including actual root-prefix cleanup (GCC sanitizer 8.33s, Clang sanitizer 4.75s).
 This proves that family on the frozen source, not full-game startup or simulation.
 No failed case remains in the final frozen related suites.
+
+Validated payload commit: `2b14ad41699323b5243b4ab061bf02aa27773826`.
