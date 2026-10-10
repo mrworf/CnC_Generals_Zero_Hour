@@ -3774,3 +3774,28 @@ admission are exercised. Evidence: evidence/qa/N2-drawable-queries.md. Full441,
 slice03 and N2 remain pending. Next concrete current-client/native draw providers
 and derived19 registrations, condition transfer/material/prototype completion,
 then full native factory/GameEngine startup and loaded deterministic simulation.
+
+Derived-provider continuation (parent2bac36ab, clean worktree): extract all original
+draw-provider ModuleData declarations, constructors and field tables into shared
+original-source units. Preserve the exact19 registered names and their original
+data inheritance; PoliceCar reuses Truck data, and default/debris/rope/tracer
+use plain ModuleData. Register real parser creators through original factory
+admission in generated fixtures, including inherited model pristine consumers.
+Do not collapse independent beam/tree/prop data into base model data or claim
+concrete presentation modules from data-only admission. Guard complete derived
+data candidates and namespace allocation through late parser/factory rejection.
+Inspect all13 unique derived tables as one cohort; test every registered type,
+source defaults and conversions, inherited fields, malformed late input,
+repeated owners and exact standard-allocation failure/retry terminals. Run focused
+GCC first, then frozen relevant data/query/factory GCC and sanitizer coverage.
+This batch supports the actual native factory; concrete19 runtime behaviors,
+current-client pose, transfer/materials/startup and full441+ remain required.
+
+Frozen provider-data checkpoint: focused8 PASS1.07s, related93 PASS GCC23.10s/
+GCCsan111.39s/Clangsan68.16s, terminal0 all3. All19 exact names and source parser
+inheritance are admitted through original ModuleFactory; model-derived data
+reaches original pristine consumers. Every cold/seeded standard prefix and retry
+is retained (38 manifests, three repetitions); namespace/pool/backing retirement
+is exact. Evidence: evidence/qa/N2-draw-provider-data.md. Full449, concrete runtime
+providers, current-client animation, condition transfer/materials/startup and
+loaded simulation remain the same slice03/N2 gate. No live validation jobs remain.

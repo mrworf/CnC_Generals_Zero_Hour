@@ -41,20 +41,7 @@ class TextureClass;
 class Vector3;
 
 //-------------------------------------------------------------------------------------------------
-class W3DProjectileStreamDrawModuleData : public ModuleData
-{
-public:
-
-	AsciiString m_textureName;
-	Real m_width;
-	Real m_tileFactor;
-	Real m_scrollRate;
-	Int m_maxSegments;
-
-	W3DProjectileStreamDrawModuleData();
-	~W3DProjectileStreamDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 class W3DProjectileStreamDraw : public DrawModule

@@ -35,29 +35,13 @@
 #include "Common/Xfer.h"
 
 //-------------------------------------------------------------------------------------------------
-W3DScienceModelDrawModuleData::W3DScienceModelDrawModuleData() 
-{
-	m_requiredScience = SCIENCE_INVALID;
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-W3DScienceModelDrawModuleData::~W3DScienceModelDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-void W3DScienceModelDrawModuleData::buildFieldParse(MultiIniFieldParse& p) 
-{
-  W3DModelDrawModuleData::buildFieldParse(p);
-
-	static const FieldParse dataFieldParse[] = 
-	{
-		{ "RequiredScience", INI::parseScience, NULL, offsetof(W3DScienceModelDrawModuleData, m_requiredScience) },
-
-		{ 0, 0, 0, 0 }
-	};
-  p.add(dataFieldParse);
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------

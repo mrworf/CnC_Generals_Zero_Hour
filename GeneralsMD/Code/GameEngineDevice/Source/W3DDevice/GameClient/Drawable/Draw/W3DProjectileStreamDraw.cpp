@@ -38,36 +38,13 @@
 #include "WWMath/Vector3.h"
 
 //-------------------------------------------------------------------------------------------------
-W3DProjectileStreamDrawModuleData::W3DProjectileStreamDrawModuleData() 
-{
-	m_textureName = "";
-	m_width = 0.0f;
-	m_tileFactor = 0.0f;
-	m_scrollRate = 0.0f;
-	m_maxSegments = 0;
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-W3DProjectileStreamDrawModuleData::~W3DProjectileStreamDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-void W3DProjectileStreamDrawModuleData::buildFieldParse(MultiIniFieldParse& p) 
-{
-  ModuleData::buildFieldParse(p);
-
-	static const FieldParse dataFieldParse[] = 
-	{
-		{ "Texture",			INI::parseAsciiString,	NULL, offsetof(W3DProjectileStreamDrawModuleData, m_textureName) },
-		{ "Width",				INI::parseReal,					NULL, offsetof(W3DProjectileStreamDrawModuleData, m_width) },
-		{ "TileFactor",		INI::parseReal,					NULL, offsetof(W3DProjectileStreamDrawModuleData, m_tileFactor) },
-		{ "ScrollRate",		INI::parseReal,					NULL, offsetof(W3DProjectileStreamDrawModuleData, m_scrollRate) },
-		{ "MaxSegments",	INI::parseInt,					NULL, offsetof(W3DProjectileStreamDrawModuleData, m_maxSegments) },
-		{ 0, 0, 0, 0 }
-	};
-  p.add(dataFieldParse);
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------

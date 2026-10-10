@@ -36,26 +36,13 @@
 #include "W3DDevice/GameClient/Module/W3DOverlordTruckDraw.h"
 
 //-------------------------------------------------------------------------------------------------
-W3DOverlordTruckDrawModuleData::W3DOverlordTruckDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-W3DOverlordTruckDrawModuleData::~W3DOverlordTruckDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-void W3DOverlordTruckDrawModuleData::buildFieldParse(MultiIniFieldParse& p) 
-{
-  W3DTruckDrawModuleData::buildFieldParse(p);
-
-	static const FieldParse dataFieldParse[] = 
-	{
-		{ 0, 0, 0, 0 }
-	};
-  p.add(dataFieldParse);
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------

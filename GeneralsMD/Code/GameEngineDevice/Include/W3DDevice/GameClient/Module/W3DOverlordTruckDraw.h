@@ -37,20 +37,7 @@
 #include "W3DDevice/GameClient/Module/W3DTruckDraw.h"
 
 //-------------------------------------------------------------------------------------------------
-class W3DOverlordTruckDrawModuleData : public W3DTruckDrawModuleData
-{
-public:
-	AsciiString m_treadDebrisNameLeft;
-	AsciiString m_treadDebrisNameRight;
-
-	Real m_treadAnimationRate;	///<amount of tread texture to scroll per sec.  1.0 == full width.
-	Real m_treadPivotSpeedFraction;	///<fraction of locomotor speed below which we allow pivoting.
-	Real m_treadDriveSpeedFraction;	///<fraction of locomotor speed below which treads stop animating.
-
-	W3DOverlordTruckDrawModuleData();
-	~W3DOverlordTruckDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 class W3DOverlordTruckDraw : public W3DTruckDraw

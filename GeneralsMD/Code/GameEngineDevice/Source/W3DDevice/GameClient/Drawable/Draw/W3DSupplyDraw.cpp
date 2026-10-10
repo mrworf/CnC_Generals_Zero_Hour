@@ -32,28 +32,13 @@
 #include "W3DDevice/GameClient/Module/W3DSupplyDraw.h"
 
 //-------------------------------------------------------------------------------------------------
-W3DSupplyDrawModuleData::W3DSupplyDrawModuleData() 
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-W3DSupplyDrawModuleData::~W3DSupplyDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-void W3DSupplyDrawModuleData::buildFieldParse(MultiIniFieldParse& p) 
-{
-  W3DModelDrawModuleData::buildFieldParse(p);
-
-	static const FieldParse dataFieldParse[] = 
-	{
-		{ "SupplyBonePrefix", INI::parseAsciiString, NULL, offsetof(W3DSupplyDrawModuleData, m_supplyBonePrefix) },
-
-		{ 0, 0, 0, 0 }
-	};
-  p.add(dataFieldParse);
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------

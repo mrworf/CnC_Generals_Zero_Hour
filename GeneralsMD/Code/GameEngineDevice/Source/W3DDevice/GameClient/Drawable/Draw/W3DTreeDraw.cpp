@@ -45,68 +45,13 @@
 #endif
 
 //-------------------------------------------------------------------------------------------------
-W3DTreeDrawModuleData::W3DTreeDrawModuleData() :
-m_framesToMoveInward(1),
-m_framesToMoveOutward(1),
-m_darkening(0.0f),
-m_maxOutwardMovement(1.0f)
-{
-
-	// Topple parameters. [7/7/2003]
-	const Real START_VELOCITY_PERCENT = 0.2f;
-	const Real START_ACCEL_PERCENT = 0.01f;
-	const Real VELOCITY_BOUNCE_PERCENT = 0.3f;			// multiply the velocity by this when you bounce
-  const Real MINIMUM_TOPPLE_SPEED = 0.5f;         // Won't let trees fall slower than this
-	m_toppleFX = NULL;
-	m_bounceFX = NULL;
-	m_stumpName.clear();
-	m_killWhenToppled = true;
-	m_doTopple = false;
-	m_doShadow = false;
-	m_initialVelocityPercent = START_VELOCITY_PERCENT;
-	m_initialAccelPercent = START_ACCEL_PERCENT;
-	m_bounceVelocityPercent = VELOCITY_BOUNCE_PERCENT;
-  m_minimumToppleSpeed = MINIMUM_TOPPLE_SPEED;
-	m_sinkFrames = 10*LOGICFRAMES_PER_SECOND;
-	m_sinkDistance = 20.0f;
-
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-W3DTreeDrawModuleData::~W3DTreeDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-void W3DTreeDrawModuleData::buildFieldParse(MultiIniFieldParse& p) 
-{
-  ModuleData::buildFieldParse(p);
-	static const FieldParse dataFieldParse[] = 
-	{
-		{ "ModelName", INI::parseAsciiString, NULL, offsetof(W3DTreeDrawModuleData, m_modelName) },
-		{ "TextureName", INI::parseAsciiString, NULL, offsetof(W3DTreeDrawModuleData, m_textureName) },
-		{ "MoveOutwardTime", INI::parseDurationUnsignedInt, NULL, offsetof(W3DTreeDrawModuleData, m_framesToMoveOutward) },
-		{ "MoveInwardTime", INI::parseDurationUnsignedInt, NULL, offsetof(W3DTreeDrawModuleData, m_framesToMoveInward) },
-		{ "MoveOutwardDistanceFactor", INI::parseReal, NULL, offsetof(W3DTreeDrawModuleData, m_maxOutwardMovement) },
-		{ "DarkeningFactor", INI::parseReal, NULL, offsetof(W3DTreeDrawModuleData, m_darkening) },
-
-// Topple parameters [7/7/2003]		
-		{ "ToppleFX",	INI::parseFXList, NULL, offsetof( W3DTreeDrawModuleData, m_toppleFX ) },
-		{ "BounceFX",	INI::parseFXList, NULL, offsetof( W3DTreeDrawModuleData, m_bounceFX ) },
-		{ "StumpName",	INI::parseAsciiString, NULL, offsetof( W3DTreeDrawModuleData, m_stumpName ) },
-		{ "KillWhenFinishedToppling",	INI::parseBool, NULL, offsetof( W3DTreeDrawModuleData, m_killWhenToppled ) },
-		{ "DoTopple",	INI::parseBool, NULL, offsetof( W3DTreeDrawModuleData, m_doTopple ) },
-		{ "InitialVelocityPercent",	INI::parsePercentToReal, NULL, offsetof( W3DTreeDrawModuleData, m_initialVelocityPercent ) },
-		{ "InitialAccelPercent",	INI::parsePercentToReal, NULL, offsetof( W3DTreeDrawModuleData, m_initialAccelPercent ) },
-		{ "BounceVelocityPercent",	INI::parsePercentToReal, NULL, offsetof( W3DTreeDrawModuleData, m_bounceVelocityPercent ) },
-    { "MinimumToppleSpeed",	INI::parsePositiveNonZeroReal, NULL, offsetof( W3DTreeDrawModuleData, m_minimumToppleSpeed ) },
-    { "SinkDistance",	INI::parsePositiveNonZeroReal, NULL, offsetof( W3DTreeDrawModuleData, m_sinkDistance ) },
-		{ "SinkTime", INI::parseDurationUnsignedInt, NULL, offsetof(W3DTreeDrawModuleData, m_sinkFrames) },
-		{ "DoShadow",	INI::parseBool, NULL, offsetof( W3DTreeDrawModuleData, m_doShadow ) },
-		{ 0, 0, 0, 0 }
-	};
-  p.add(dataFieldParse);
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PUBLIC FUNCTIONS ///////////////////////////////////////////////////////////////////////////////

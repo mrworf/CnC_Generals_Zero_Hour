@@ -41,20 +41,7 @@
 #include "WW3D2/Part_Emt.h"
 
 //-------------------------------------------------------------------------------------------------
-class W3DTankDrawModuleData : public W3DModelDrawModuleData
-{
-public:
-	AsciiString m_treadDebrisNameLeft;
-	AsciiString m_treadDebrisNameRight;
-
-	Real m_treadAnimationRate;	///<amount of tread texture to scroll per sec.  1.0 == full width.
-	Real m_treadPivotSpeedFraction;	///<fraction of locomotor speed below which we allow pivoting.
-	Real m_treadDriveSpeedFraction;	///<fraction of locomotor speed below which treads stop animating.
-
-	W3DTankDrawModuleData();
-	~W3DTankDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 class W3DTankDraw : public W3DModelDraw

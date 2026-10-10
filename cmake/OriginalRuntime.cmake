@@ -233,6 +233,7 @@ target_sources(original_gameplay_common PRIVATE
   "${ZH_CODE}/GameEngine/Source/Common/System/MapObject.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/MapObjectTeams.cpp")
 target_sources(original_gameplay_common PRIVATE "${ZH_CODE}/GameEngine/Source/Common/System/W3DModelDrawData.cpp")
+target_sources(original_gameplay_common PRIVATE "${ZH_CODE}/GameEngine/Source/Common/System/W3DDrawProviderData.cpp")
 target_sources(original_gameplay_common PRIVATE "${ZH_CODE}/GameEngine/Source/Common/System/W3DModelQueries.cpp")
 target_link_libraries(original_gameplay_common PUBLIC original_runtime_common)
 target_include_directories(original_gameplay_common PRIVATE
@@ -331,6 +332,15 @@ target_link_libraries(original_map_object_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_map_object_fixture PRIVATE -Wl,--gc-sections)
 add_executable(original_w3d_draw_data_fixture tests/original/w3d_draw_data.cpp tests/original/AllocationFault.cpp)
+add_executable(original_draw_provider_data_fixture tests/original/draw_provider_data.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_draw_provider_data_fixture PRIVATE "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_draw_provider_data_fixture PRIVATE -Wl,--gc-sections)
+target_include_directories(original_draw_provider_data_fixture PRIVATE "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
+target_compile_definitions(original_draw_provider_data_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+foreach(family IN ITEMS functional negative cold-base cold-vehicles cold-special seeded-base seeded-vehicles seeded-special)
+  add_test(NAME original_draw_provider_data_${family} COMMAND original_draw_provider_data_fixture "${family}")
+  set_tests_properties(original_draw_provider_data_${family} PROPERTIES LABELS "original;model;draw-provider-data" TIMEOUT 60 ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 add_executable(original_drawable_queries_fixture tests/original/drawable_queries.cpp tests/original/AllocationFault.cpp)
 target_link_libraries(original_drawable_queries_fixture PRIVATE "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_drawable_queries_fixture PRIVATE -Wl,--gc-sections)

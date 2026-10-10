@@ -43,14 +43,7 @@
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
 
 //-------------------------------------------------------------------------------------------------
-class W3DOverlordAircraftDrawModuleData : public W3DModelDrawModuleData
-{
-public:
-
-	W3DOverlordAircraftDrawModuleData();
-	~W3DOverlordAircraftDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 class W3DOverlordAircraftDraw : public W3DModelDraw

@@ -42,41 +42,7 @@
 #include "WW3D2/Part_Emt.h"
 
 //-------------------------------------------------------------------------------------------------
-class W3DTruckDrawModuleData : public W3DModelDrawModuleData
-{
-public:
-	AsciiString m_dustEffectName;
-	AsciiString m_dirtEffectName;
-	AsciiString m_powerslideEffectName;
-
-	AsciiString m_frontLeftTireBoneName;
-	AsciiString m_frontRightTireBoneName;
-	AsciiString m_rearLeftTireBoneName;
-	AsciiString m_rearRightTireBoneName;
-	//4 extra tires to support up to 8 tires.
-	AsciiString m_midFrontLeftTireBoneName;
-	AsciiString m_midFrontRightTireBoneName;
-	AsciiString m_midRearLeftTireBoneName;
-	AsciiString m_midRearRightTireBoneName;
-	//And some more
-	AsciiString m_midMidLeftTireBoneName;
-	AsciiString m_midMidRightTireBoneName;
-
-	// Cab bone for a segmented truck.
-	AsciiString m_cabBoneName;
-	AsciiString m_trailerBoneName;
-	Real				m_cabRotationFactor;
-	Real				m_trailerRotationFactor;
-	Real				m_rotationDampingFactor;
-
-
-	Real				m_rotationSpeedMultiplier;
-	Real				m_powerslideRotationAddition;
-
-	W3DTruckDrawModuleData();
-	~W3DTruckDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 class W3DTruckDraw : public W3DModelDraw

@@ -41,15 +41,7 @@
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
 
 //-------------------------------------------------------------------------------------------------
-class W3DDependencyModelDrawModuleData : public W3DModelDrawModuleData
-{
-public:
-	AsciiString	m_attachToDrawableBoneInContainer;// Not just a different draw module, this bone is in our container
-
-	W3DDependencyModelDrawModuleData();
-	~W3DDependencyModelDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 class W3DDependencyModelDraw : public W3DModelDraw

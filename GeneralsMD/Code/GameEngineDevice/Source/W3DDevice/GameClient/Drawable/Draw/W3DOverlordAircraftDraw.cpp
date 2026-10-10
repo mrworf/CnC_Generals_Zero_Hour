@@ -50,26 +50,13 @@
 
 
 //-------------------------------------------------------------------------------------------------
-W3DOverlordAircraftDrawModuleData::W3DOverlordAircraftDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-W3DOverlordAircraftDrawModuleData::~W3DOverlordAircraftDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-void W3DOverlordAircraftDrawModuleData::buildFieldParse(MultiIniFieldParse& p) 
-{
-  W3DModelDrawModuleData::buildFieldParse(p);
-
-	static const FieldParse dataFieldParse[] = 
-	{
-		{ 0, 0, 0, 0 }
-	};
-  p.add(dataFieldParse);
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------

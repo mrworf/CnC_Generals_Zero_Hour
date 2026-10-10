@@ -42,38 +42,7 @@
 #include "WW3D2/Part_Emt.h"
 
 //-------------------------------------------------------------------------------------------------
-class W3DTankTruckDrawModuleData : public W3DModelDrawModuleData
-{
-public:
-	AsciiString m_dustEffectName;
-	AsciiString m_dirtEffectName;
-	AsciiString m_powerslideEffectName;
-
-	AsciiString m_frontLeftTireBoneName;
-	AsciiString m_frontRightTireBoneName;
-	AsciiString m_rearLeftTireBoneName;
-	AsciiString m_rearRightTireBoneName;
-	//4 extra tires to support up to 8 tires.
-	AsciiString m_midFrontLeftTireBoneName;
-	AsciiString m_midFrontRightTireBoneName;
-	AsciiString m_midRearLeftTireBoneName;
-	AsciiString m_midRearRightTireBoneName;
-
-	Real				m_rotationSpeedMultiplier;
-	Real				m_powerslideRotationAddition;
-
-	//Tank data
-	AsciiString m_treadDebrisNameLeft;
-	AsciiString m_treadDebrisNameRight;
-
-	Real m_treadAnimationRate;	///<amount of tread texture to scroll per sec.  1.0 == full width.
-	Real m_treadPivotSpeedFraction;	///<fraction of locomotor speed below which we allow pivoting.
-	Real m_treadDriveSpeedFraction;	///<fraction of locomotor speed below which treads stop animating.
-
-	W3DTankTruckDrawModuleData();
-	~W3DTankTruckDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 class W3DTankTruckDraw : public W3DModelDraw

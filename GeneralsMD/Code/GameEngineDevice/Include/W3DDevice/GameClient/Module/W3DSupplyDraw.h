@@ -36,15 +36,7 @@
 #include "W3DDevice/GameClient/Module/W3DModelDraw.h"
 
 //-------------------------------------------------------------------------------------------------
-class W3DSupplyDrawModuleData : public W3DModelDrawModuleData
-{
-public:
-	AsciiString m_supplyBonePrefix;
-
-	W3DSupplyDrawModuleData();
-	~W3DSupplyDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 class W3DSupplyDraw : public W3DModelDraw

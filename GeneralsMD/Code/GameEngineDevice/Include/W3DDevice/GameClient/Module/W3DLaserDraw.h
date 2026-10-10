@@ -40,29 +40,7 @@
 class SegmentedLineClass;
 class TextureClass;
 
-class W3DLaserDrawModuleData : public ModuleData
-{
-public:
-
-  Color m_innerColor;
-  Color m_outerColor;
-	Real m_innerBeamWidth;
-	Real m_outerBeamWidth;
-	Real m_scrollRate;
-	Bool m_tile;
-  UnsignedInt m_numBeams;
-  UnsignedInt m_maxIntensityFrames;
-  UnsignedInt m_fadeFrames;
-	AsciiString m_textureName;
-	UnsignedInt m_segments;
-	Real m_arcHeight;
-	Real m_segmentOverlapRatio;
-	Real m_tilingScalar;
-
-	W3DLaserDrawModuleData();
-	~W3DLaserDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 /** W3D laser draw */

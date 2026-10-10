@@ -48,28 +48,13 @@
 
 
 //-------------------------------------------------------------------------------------------------
-W3DDependencyModelDrawModuleData::W3DDependencyModelDrawModuleData() 
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-W3DDependencyModelDrawModuleData::~W3DDependencyModelDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-void W3DDependencyModelDrawModuleData::buildFieldParse(MultiIniFieldParse& p) 
-{
-  W3DModelDrawModuleData::buildFieldParse(p);
-
-	static const FieldParse dataFieldParse[] = 
-	{
-		{ "AttachToBoneInContainer", INI::parseAsciiString, NULL, offsetof(W3DDependencyModelDrawModuleData, m_attachToDrawableBoneInContainer) },
-
-		{ 0, 0, 0, 0 }
-	};
-  p.add(dataFieldParse);
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------

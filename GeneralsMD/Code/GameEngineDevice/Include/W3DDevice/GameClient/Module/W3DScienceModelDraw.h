@@ -38,15 +38,7 @@
 enum ScienceType;
 
 //-------------------------------------------------------------------------------------------------
-class W3DScienceModelDrawModuleData : public W3DModelDrawModuleData
-{
-public:
-	ScienceType m_requiredScience; ///< Local player must have this science for me to ever draw
-
-	W3DScienceModelDrawModuleData();
-	~W3DScienceModelDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 class W3DScienceModelDraw : public W3DModelDraw

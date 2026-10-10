@@ -5830,3 +5830,47 @@ and Drawable production cursor proof before fixture rollback. See
 `evidence/qa/N2-drawable-queries.md` for exact frozen fingerprints and remaining
 runtime boundaries. Full441, current-client/rendered callbacks, complete native
 factory/derived19, startup and loaded simulation are not accepted here.
+
+### Original draw-provider data inheritance (current integration batch)
+
+`W3DModuleFactory.cpp::init` registers exactly19 providers, in order: Default,
+Debris, Model, Laser, OverlordTank, OverlordTruck, OverlordAircraft,
+ProjectileStream, PoliceCar, Rope, ScienceModel, Supply, DependencyModel, Tank,
+Truck, Tracer, TankTruck, Tree, Prop (all retain W3D prefix/Draw suffix). Default,
+Debris, Rope and Tracer inherit the plain Module::friend_newModuleData creator.
+PoliceCar has no data creator of its own: its static inherited creator is Truck's.
+The other14 providers include the shared base Model and13 derived data classes.
+
+The original13 derived declarations, constructors and parser bodies are now
+shared in Common/W3DDrawProviderData.h and System/W3DDrawProviderData.cpp; legacy
+device headers/sources consume those same declarations, rather than retaining a
+second schema. The data-creator census retains original registration order and
+guards namespace and complete candidate ownership until parsing finishes.
+Concrete module instance creators are deliberately separate and still pending.
+
+OverlordTank/OverlordTruck declare duplicate tread fields that shadow their base
+data members, but their buildFieldParse calls only the Tank/Truck base table.
+Their constructors do not initialize the duplicate primitives. Test the base
+fields that source consumers actually read; do not infer new per-Overlord INI
+fields or read these undefined duplicate values. Truck's constructor likewise
+leaves primitive articulation/rotation values uninitialized; authored parsing,
+not guessed defaults, is needed before a runtime consumes them. The extraction
+preserves source bodies; omitted-field runtime admission remains a pending
+concrete-provider boundary rather than evidence of safe default articulation.
+
+Model condition names use parseAsciiStringLC (lowercase); prop/tree ModelName and
+effect string fields use ordinary parseAsciiString. Velocity fields convert
+seconds to logic-frame units; duration unsigned fields ceil milliseconds to
+frames (30 per second). Science defaults to SCIENCE_INVALID. Tree defaults
+include outward/inward1 frame, sink300 frames/distance20, topple/shadow disabled;
+laser defaults include1 beam/segment, outer width1 and tiling scalar1.
+Generated fixtures omit external FX/science lookups until those real parents
+are initialized, not a successful fake lookup. All19 malformed late fields and
+parser/factory failure-retry paths are tested together; runtime19 callbacks,
+current-client animation, rendering and startup are not implied by data admission.
+
+Frozen evidence: `evidence/qa/N2-draw-provider-data.md`, related93 PASS GCC23.10s,
+GCCsan111.39s/Clangsan68.16s. Exact38 cold/seeded manifests agree across all3,
+three whole-cohort repetitions/every retry, production cursor and pooled-key
+retirement proof. Canonical710/inclusive717 source identity is recorded there.
+Full449, runtime19 and N2 acceptance remain pending.

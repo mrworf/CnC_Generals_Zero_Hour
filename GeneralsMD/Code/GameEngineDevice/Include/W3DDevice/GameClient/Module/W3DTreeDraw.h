@@ -37,38 +37,7 @@
 #include "WW3D2/Line3D.h"
 
 //-------------------------------------------------------------------------------------------------
-class W3DTreeDrawModuleData : public ModuleData
-{
-public:
-	AsciiString m_modelName;
-	AsciiString m_textureName;
-	// Push aside parameters. [5/29/2003]
-	UnsignedInt	m_framesToMoveOutward;
-	UnsignedInt	m_framesToMoveInward;
-	Real				m_maxOutwardMovement;
-	Real				m_darkening;
-
-	// Topple parameters. [7/7/2003]
-	const FXList* m_toppleFX;
-	const FXList* m_bounceFX;
-	AsciiString m_stumpName;
-	Real m_initialVelocityPercent;
-	Real m_initialAccelPercent;
-	Real m_bounceVelocityPercent;
-  Real m_minimumToppleSpeed;
-	Bool m_killWhenToppled;
-	Bool m_doTopple;
-	UnsignedInt m_sinkFrames; // How long it takes to sink after toppling. [7/11/2003]
-	Real m_sinkDistance;		// How far it sinks.
-
-	Bool m_doShadow;
-
-	W3DTreeDrawModuleData();
-	~W3DTreeDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-	// ugh, hack
-	virtual const W3DTreeDrawModuleData* getAsW3DTreeDrawModuleData() const { return this; }
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 /** W3D tree draw */

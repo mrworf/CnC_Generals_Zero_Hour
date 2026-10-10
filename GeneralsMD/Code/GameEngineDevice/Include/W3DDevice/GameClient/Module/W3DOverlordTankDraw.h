@@ -37,20 +37,7 @@
 #include "W3DDevice/GameClient/Module/W3DTankDraw.h"
 
 //-------------------------------------------------------------------------------------------------
-class W3DOverlordTankDrawModuleData : public W3DTankDrawModuleData
-{
-public:
-	AsciiString m_treadDebrisNameLeft;
-	AsciiString m_treadDebrisNameRight;
-
-	Real m_treadAnimationRate;	///<amount of tread texture to scroll per sec.  1.0 == full width.
-	Real m_treadPivotSpeedFraction;	///<fraction of locomotor speed below which we allow pivoting.
-	Real m_treadDriveSpeedFraction;	///<fraction of locomotor speed below which treads stop animating.
-
-	W3DOverlordTankDrawModuleData();
-	~W3DOverlordTankDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 class W3DOverlordTankDraw : public W3DTankDraw

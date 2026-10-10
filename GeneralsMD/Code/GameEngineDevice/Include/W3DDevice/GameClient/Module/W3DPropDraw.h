@@ -37,17 +37,7 @@
 #include "WW3D2/Line3D.h"
 
 //-------------------------------------------------------------------------------------------------
-class W3DPropDrawModuleData : public ModuleData
-{
-public:
-	AsciiString m_modelName;
-
-	W3DPropDrawModuleData();
-	~W3DPropDrawModuleData();
-	static void buildFieldParse(MultiIniFieldParse& p);
-	// ugh, hack
-	virtual const W3DPropDrawModuleData* getAsW3DPropDrawModuleData() const { return this; }
-};
+#include "Common/W3DDrawProviderData.h"
 
 //-------------------------------------------------------------------------------------------------
 /** W3D prop draw */

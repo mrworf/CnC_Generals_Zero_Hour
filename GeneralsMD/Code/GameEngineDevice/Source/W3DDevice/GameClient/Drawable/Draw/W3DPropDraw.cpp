@@ -45,27 +45,13 @@
 #endif
 
 //-------------------------------------------------------------------------------------------------
-W3DPropDrawModuleData::W3DPropDrawModuleData() 
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-W3DPropDrawModuleData::~W3DPropDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-void W3DPropDrawModuleData::buildFieldParse(MultiIniFieldParse& p) 
-{
-  ModuleData::buildFieldParse(p);
-	static const FieldParse dataFieldParse[] = 
-	{
-		{ "ModelName", INI::parseAsciiString, NULL, offsetof(W3DPropDrawModuleData, m_modelName) },
-		
-		{ 0, 0, 0, 0 }
-	};
-  p.add(dataFieldParse);
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // PUBLIC FUNCTIONS ///////////////////////////////////////////////////////////////////////////////

@@ -56,36 +56,13 @@
 class Matrix3D;
 
 //-------------------------------------------------------------------------------------------------
-W3DTankDrawModuleData::W3DTankDrawModuleData() :
-	m_treadDebrisNameLeft("TrackDebrisDirtLeft"),
-	m_treadDebrisNameRight("TrackDebrisDirtRight"),
-	m_treadAnimationRate(0.0f),
-	m_treadPivotSpeedFraction(0.6f),
-	m_treadDriveSpeedFraction(0.3f)
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-W3DTankDrawModuleData::~W3DTankDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-void W3DTankDrawModuleData::buildFieldParse(MultiIniFieldParse& p) 
-{
-  W3DModelDrawModuleData::buildFieldParse(p);
-
-	static const FieldParse dataFieldParse[] = 
-	{
-		{ "TreadDebrisLeft", INI::parseAsciiString, NULL, offsetof(W3DTankDrawModuleData, m_treadDebrisNameLeft) },
-		{ "TreadDebrisRight", INI::parseAsciiString, NULL, offsetof(W3DTankDrawModuleData, m_treadDebrisNameRight) },
-		{ "TreadAnimationRate", INI::parseVelocityReal, NULL, offsetof(W3DTankDrawModuleData, m_treadAnimationRate) },
-		{ "TreadPivotSpeedFraction", INI::parseReal, NULL, offsetof(W3DTankDrawModuleData, m_treadPivotSpeedFraction) },
-		{ "TreadDriveSpeedFraction", INI::parseReal, NULL, offsetof(W3DTankDrawModuleData, m_treadDriveSpeedFraction) },
-		{ 0, 0, 0, 0 }
-	};
-  p.add(dataFieldParse);
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------

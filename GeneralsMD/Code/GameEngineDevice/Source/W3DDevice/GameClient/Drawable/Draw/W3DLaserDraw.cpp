@@ -62,53 +62,15 @@
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-W3DLaserDrawModuleData::W3DLaserDrawModuleData()
-{
-	m_innerBeamWidth = 0.0f;         //The total width of beam
-	m_outerBeamWidth = 1.0f;         //The total width of beam
-  m_numBeams = 1;                 //Number of overlapping cylinders that make the beam. 1 beam will just use inner data.
-  m_maxIntensityFrames = 0;				//Laser stays at max intensity for specified time in ms.
-  m_fadeFrames = 0;               //Laser will fade and delete.
-	m_scrollRate = 0.0f;
-	m_tile = false;
-	m_segments = 1;
-	m_arcHeight = 0.0f;
-	m_segmentOverlapRatio = 0.0f;
-	m_tilingScalar = 1.0f;
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-W3DLaserDrawModuleData::~W3DLaserDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-void W3DLaserDrawModuleData::buildFieldParse(MultiIniFieldParse& p) 
-{
-  ModuleData::buildFieldParse(p);
-
-	static const FieldParse dataFieldParse[] = 
-	{
-		{ "NumBeams",							INI::parseUnsignedInt,					NULL, offsetof( W3DLaserDrawModuleData, m_numBeams ) },
-		{ "InnerBeamWidth",				INI::parseReal,									NULL, offsetof( W3DLaserDrawModuleData, m_innerBeamWidth ) },
-		{ "OuterBeamWidth",				INI::parseReal,									NULL, offsetof( W3DLaserDrawModuleData, m_outerBeamWidth ) },
-		{ "InnerColor",						INI::parseColorInt,							NULL, offsetof( W3DLaserDrawModuleData, m_innerColor ) },
-		{ "OuterColor",						INI::parseColorInt,							NULL, offsetof( W3DLaserDrawModuleData, m_outerColor ) },
-		{ "MaxIntensityLifetime",	INI::parseDurationUnsignedInt,	NULL, offsetof( W3DLaserDrawModuleData, m_maxIntensityFrames ) },
-		{ "FadeLifetime",					INI::parseDurationUnsignedInt,	NULL, offsetof( W3DLaserDrawModuleData, m_fadeFrames ) },
-		{ "Texture",							INI::parseAsciiString,					NULL, offsetof( W3DLaserDrawModuleData, m_textureName ) },
-		{ "ScrollRate",						INI::parseReal,									NULL, offsetof( W3DLaserDrawModuleData, m_scrollRate ) },
-		{ "Tile",									INI::parseBool,									NULL, offsetof( W3DLaserDrawModuleData, m_tile ) },
-		{ "Segments",							INI::parseUnsignedInt,					NULL, offsetof( W3DLaserDrawModuleData, m_segments ) },
-    { "ArcHeight",						INI::parseReal,									NULL, offsetof( W3DLaserDrawModuleData, m_arcHeight ) },
-		{ "SegmentOverlapRatio",	INI::parseReal,									NULL, offsetof( W3DLaserDrawModuleData, m_segmentOverlapRatio ) },
-		{ "TilingScalar",					INI::parseReal,									NULL, offsetof( W3DLaserDrawModuleData, m_tilingScalar ) },
-		{ 0, 0, 0, 0 }
-	};
-  p.add(dataFieldParse);
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 
 //-------------------------------------------------------------------------------------------------

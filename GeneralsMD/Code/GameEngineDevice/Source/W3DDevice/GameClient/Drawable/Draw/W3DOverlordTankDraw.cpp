@@ -36,26 +36,13 @@
 #include "W3DDevice/GameClient/Module/W3DOverlordTankDraw.h"
 
 //-------------------------------------------------------------------------------------------------
-W3DOverlordTankDrawModuleData::W3DOverlordTankDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-W3DOverlordTankDrawModuleData::~W3DOverlordTankDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-void W3DOverlordTankDrawModuleData::buildFieldParse(MultiIniFieldParse& p) 
-{
-  W3DTankDrawModuleData::buildFieldParse(p);
-
-	static const FieldParse dataFieldParse[] = 
-	{
-		{ 0, 0, 0, 0 }
-	};
-  p.add(dataFieldParse);
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------

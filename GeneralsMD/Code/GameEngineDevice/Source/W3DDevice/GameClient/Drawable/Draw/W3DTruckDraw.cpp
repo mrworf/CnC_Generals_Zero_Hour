@@ -56,49 +56,13 @@
 #endif
 
 //-------------------------------------------------------------------------------------------------
-W3DTruckDrawModuleData::W3DTruckDrawModuleData() 
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-W3DTruckDrawModuleData::~W3DTruckDrawModuleData()
-{
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-void W3DTruckDrawModuleData::buildFieldParse(MultiIniFieldParse& p) 
-{
-  W3DModelDrawModuleData::buildFieldParse(p);
-
-	static const FieldParse dataFieldParse[] = 
-	{
-		{ "Dust", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_dustEffectName) },
-		{ "DirtSpray", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_dirtEffectName) },
-		{ "PowerslideSpray", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_powerslideEffectName) },
-
-		{ "LeftFrontTireBone", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_frontLeftTireBoneName) },
-		{ "RightFrontTireBone", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_frontRightTireBoneName) },
-		{ "LeftRearTireBone", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_rearLeftTireBoneName) },
-		{ "RightRearTireBone", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_rearRightTireBoneName) },
-		{ "MidLeftFrontTireBone", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_midFrontLeftTireBoneName) },
-		{ "MidRightFrontTireBone", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_midFrontRightTireBoneName) },
-		{ "MidLeftRearTireBone", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_midRearLeftTireBoneName) },
-		{ "MidRightRearTireBone", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_midRearRightTireBoneName) },
-		{ "MidLeftMidTireBone", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_midMidLeftTireBoneName) },
-		{ "MidRightMidTireBone", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_midMidRightTireBoneName) },
-
-		{ "TireRotationMultiplier", INI::parseReal, NULL, offsetof(W3DTruckDrawModuleData, m_rotationSpeedMultiplier) },
-		{ "PowerslideRotationAddition", INI::parseReal, NULL, offsetof(W3DTruckDrawModuleData, m_powerslideRotationAddition) },
-		{ "CabBone", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_cabBoneName) },
-		{ "TrailerBone", INI::parseAsciiString, NULL, offsetof(W3DTruckDrawModuleData, m_trailerBoneName) },
-		{ "CabRotationMultiplier", INI::parseReal, NULL, offsetof(W3DTruckDrawModuleData, m_cabRotationFactor) },
-		{ "TrailerRotationMultiplier", INI::parseReal, NULL, offsetof(W3DTruckDrawModuleData, m_trailerRotationFactor) },
-		{ "RotationDamping", INI::parseReal, NULL, offsetof(W3DTruckDrawModuleData, m_rotationDampingFactor) },
-
-		{ 0, 0, 0, 0 }
-	};
-  p.add(dataFieldParse);
-}
+// Shared data implementation: Common/System/W3DDrawProviderData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
