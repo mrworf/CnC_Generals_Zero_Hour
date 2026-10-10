@@ -67,7 +67,7 @@
     "milestone_complete": false,
     "slice_complete": false,
     "evidence": "evidence/qa/N2-camera-cohort-implementation.md",
-    "repository_commit": null
+    "repository_commit": "e9821721595b958123b359b812a5a078aea730cc"
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
@@ -84,7 +84,7 @@
     "canonical_source_sha256": "b74aeb56f781fc11e3f7f2ddf9afc58d4335dce283f9262e5c3bdc737c0447b5",
     "toolchain_inclusive_sha256": "fe029a0a5b927324faed9edd18a14260f26691dab4fc69f0834faa3f574d2b7f",
     "configured_suite_tests": 374,
-    "status": "all3 frozen configured builds/focused17/related184 PASS; coherent camera checkpoint ready for commit; no live jobs",
+    "status": "all3 frozen configured builds/focused17/related184 PASS; coherent camera checkpoint committed as e9821721595b958123b359b812a5a078aea730cc; no live jobs",
     "iteration_sessions": {
       "GCC": 48765,
       "GCC sanitizer": 36703,

@@ -3201,3 +3201,7 @@ remain unsuppressed; full374 is unrun. Evidence and every development failure/
 retry are retained in evidence/qa/N2-camera-cohort-implementation.md. Commit this
 coherent behavior without marking slice03 or N2 complete; resume actual native
 UI/Display/root/client factory integration and production model providers.
+
+Camera checkpoint payload: `e9821721595b958123b359b812a5a078aea730cc`, parent
+`31ccae864d3b9cb0b77a1f2eacfcd6c61dd7d191`. This provenance closeout records the
+verified checkpoint only; slice03 and N2 remain in progress.
