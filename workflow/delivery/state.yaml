@@ -28,7 +28,7 @@
   "condition_walk_validation": {
     "parent_commit": "b9edefc4",
     "implementation_checkpoint": "4d2370c02b546e2697491ecf0dce3d6f5873e050",
-    "repository_commit": null,
+    "repository_commit": "c86548d85a13b93cbb848e1a945d1eded92efcd6",
     "evidence": "evidence/qa/N2-condition-walk.md",
     "status": "Frozen related138 PASS all3; component-validated whole condition walk/mutation cohort, not concrete19/startup/N2 acceptance",
     "canonical_source_files": 728,
@@ -70,7 +70,7 @@
   "working_checkpoint": {
     "parent": "b9edefc4",
     "label": "original-condition-walk-mutations",
-    "repository_commit": null,
+    "repository_commit": "c86548d85a13b93cbb848e1a945d1eded92efcd6",
     "evidence": "evidence/qa/N2-condition-walk.md",
     "validation": "Frozen related138 PASS GCC/GCCsan/Clangsan;302 matching allocation manifests, initialized whole-walk/query/callback rollback and first-leaf admission. Full475 unrun; component evidence only.",
     "next": "Resume concrete19 runtime creators and complete logical tick/effect admission under actual physics/AI/geometry/particle parents in the same N2 plan01/slice03. New-owner/effect lifecycle, lazy bone/event behavior and full startup/loaded simulation remain pending.",
