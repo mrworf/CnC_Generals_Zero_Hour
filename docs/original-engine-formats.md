@@ -6132,3 +6132,8 @@ callbacks run only on the recreation path (2292). Constructor defaults at858
 include saved mode LOOP, pause false, no current/pending state, animation index-1
 and NO_NEXT_DURATION; constructor validation/initial idle admission still must
 acquire and unwind the real original namespace, configuration and asset parents.
+Recreation also calls nukeCurrentRender (1922), which resets pause false and
+preserves the previous root transform (or uses the Drawable root on first
+admission). Same-model state changes do not reset pause. A paused new animation
+on a reused model is therefore not automatically re-paused by an identical
+notification; on a recreated model the next true pause notification acts again.

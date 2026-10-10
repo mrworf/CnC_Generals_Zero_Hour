@@ -57,6 +57,18 @@
     "source_fingerprints_rechecked": true,
     "repository_commit": "2b14ad41699323b5243b4ab061bf02aa27773826"
   },
+  "producer_worktree_review": {
+    "parent_commit": "f44b668adea375546d391d75827e296b4bbd1701",
+    "evidence": "evidence/qa/N2-worktree-review.md",
+    "purpose": "User-requested inventory; commit verified source findings and existing plan without absorbing unfinished production work",
+    "initial_modified_files": 16,
+    "initial_untracked_files": 3,
+    "unfinished_modified_files": 14,
+    "unfinished_untracked_files": 3,
+    "validation": "Existing coupled GCC build PASS; producer functional/transitions PASS, selection FAIL at weighted idle retained completion. Diff whitespace PASS. No live build/test jobs. Current producer fault/retry and sanitizer matrix pending.",
+    "resume": "Continue the same N2 plan01/slice03 producer batch. Resolve weighted-idle fixture completion precondition against source completion/reselection order; retain original RNG and frame precedence. Add whole-owner cold/seeded failure/retry coverage and frozen GCC/GCCsan/Clangsan validation before committing the 17 source/build/test files together.",
+    "milestone_complete": false
+  },
   "worktree_review": {
     "parent_commit": "eab07f4a",
     "purpose": "User-requested inventory and safe documentation checkpoint; preserve unfinished production work without presenting it as delivered",

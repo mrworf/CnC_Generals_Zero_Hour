@@ -3978,3 +3978,34 @@ Evidence: evidence/qa/N2-runtime-frame-domain.md. Continue shared condition/RNG/
 transition/pause/duration and concrete19/event/resource-reuse producer work,
 then native startup/loaded simulation. Full458, slice03 and N2 remain incomplete.
 Runtime raw-domain payload commit: a7f1f9672dad077e62179083433a4175feb9038b.
+
+Shared producer continuation (parent f44b668a, clean worktree): implement the
+original condition/animation state owner as a shared abstract native module,
+keeping specialized effects/physical callbacks explicit rather than successful
+stubs. Actual DrawModule condition/pause/frame/duration callbacks consume the
+registered Display presentation-time service. Stage a complete model/pose/bounds/
+clock candidate and source selected/next/index/duration/pause metadata together
+with NameKey/asset admission and the original six-word client RNG lease.
+Reuse preserves captured pose controls, root and ObjectScale; recreation resets
+pause false per nukeCurrentRender and invokes the appropriate later effects
+contract. Keep real effect parents and unsupported condition effects explicit;
+do not report concrete19 or N2 acceptance from empty-effect generated cases.
+Share persisted animation flag numbers with original parsing; no new bit values.
+Test source index rejection-sampling/weights, all start precedences and raw -1,
+duplicate/pending/cancel/wait/explicit transitions, pause mode/sync/rate resets,
+completion-time partition/deferred target duration, source movement-rate
+preconditions, retained controls/scale, no-model/non-HLOD completion, absent/wrong
+time owner, and whole transaction failure/retry under both compiler sanitizers.
+Do not commit isolated helper definitions; this remains one coherent producer
+batch within the existing plan/slice, with frozen related validation after the
+coupled implementation settles.
+
+User-requested worktree review at f44b668a: inventory19 initial nonignored files,
+all belonging to this batch. Source findings/plan and review state are eligible
+for a documentation checkpoint only. Retain14 modified and3 new implementation
+files together, uncommitted: GCC coupled build passed, functional/transitions
+passed, weighted-selection failed its retained-completion fixture precondition;
+whole-owner failure/retry and current-batch sanitizer coverage remain pending.
+See evidence/qa/N2-worktree-review.md for exact inventory, evidence and resume.
+This review does not supersede the accepted runtime raw checkpoint or declare
+producer, slice03, N2 or the configured full suite accepted.
