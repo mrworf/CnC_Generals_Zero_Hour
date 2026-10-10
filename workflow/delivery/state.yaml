@@ -401,7 +401,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan02/slice01: actual native entry and original GameEngine post-init/retirement on generated roots. Plan02 governs HQ-01\u201307; old Full475/Full509 and plan01 slice03 are historical.",
+  "resume_point": "N2 plan02/slice02: load exact H1 world and run original updates. Slice01 original generated root startup and corrected retry passed; N2 and plan01 slice03 remain unaccepted.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -574,11 +574,12 @@
   },
   "active_implementation": {
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02.md",
-    "slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02_slice_01.md",
-    "status": "planned",
+    "slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02_slice_02.md",
+    "status": "slice01_complete_slice02_pending",
     "accepted_runtime": false,
     "supersedes_remaining_directive": "milestone_02_plan_01_slice_03.md",
-    "preexisting_dirty_paths": 17
+    "preexisting_dirty_paths": 17,
+    "slice01_evidence": "evidence/qa/N2-native-root-startup.md"
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -1246,10 +1247,13 @@
     "execution": "autonomous",
     "current_milestone": "N2",
     "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02.md",
-    "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02_slice_01.md",
+    "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02_slice_02.md",
     "blockers": [],
-    "resume_point": "N2 plan02/slice01: actual native entry and original GameEngine post-init/retirement on generated roots. Plan02 governs HQ-01\u201307; old Full475/Full509 and plan01 slice03 are historical.",
+    "resume_point": "N2 plan02/slice02: exact H1 loaded original world and 120 updates; slice01 original root admission accepted, N2 pending.",
     "plan_phase": "complete",
-    "transaction_parent": "7f18fc0f97a0d6a4dfba311b845420080eaa2ad7"
+    "transaction_parent": "7f18fc0f97a0d6a4dfba311b845420080eaa2ad7",
+    "completed_slices": [
+      "N2/plan02/slice01"
+    ]
   }
 }

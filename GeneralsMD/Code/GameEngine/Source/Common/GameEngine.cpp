@@ -298,11 +298,7 @@ void GameEngine::init( int argc, char *argv[] )
     // The native file factory must return admitted explicit asset mounts. User
     // ownership is acquired before GlobalData publishes paths, and outlives
     // every subsystem that retains scratch or persistence state.
-    m_serviceOwners.create(TheNativeUserStorage,[&] {
-      auto storage=std::make_unique<NativeUserStorage>(NativeUserPaths::fromEnvironment(),*TheFileSystem);
-      TheFileSystem->attachUserStorage(storage.get());
-      return storage.release();
-    });
+    m_serviceOwners.create(TheNativeUserStorage,[&] { return createUserStorage(); });
 
 		// Supplied game content is read-only. Patch-era archive deletion is retired.
 
@@ -871,6 +867,13 @@ MessageStream *GameEngine::createMessageStream( void )
 FileSystem *GameEngine::createFileSystem( void )
 {
 	return MSGNEW("GameEngineSubsystem") FileSystem;
+}
+
+NativeUserStorage *GameEngine::createUserStorage( void )
+{
+  auto storage=std::make_unique<NativeUserStorage>(NativeUserPaths::fromEnvironment(),*TheFileSystem);
+  TheFileSystem->attachUserStorage(storage.get());
+  return storage.release();
 }
 
 //-------------------------------------------------------------------------------------------------

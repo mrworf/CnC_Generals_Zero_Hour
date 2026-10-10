@@ -153,6 +153,7 @@ add_library(original_bootstrap STATIC
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeEnvironmentSettings.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeStartupPublications.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/GameEngine.cpp"
+  "${ZH_CODE}/GameEngine/Source/Common/NativeHeadlessGameEngine.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/GameMain.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/GameClient.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/MapUtil.cpp"
@@ -393,6 +394,28 @@ endforeach()
 foreach(family IN ITEMS values references constructor-faults names name-faults pool-failure template-binding)
   add_test(NAME original_map_object_${family} COMMAND original_map_object_fixture "${family}")
   set_tests_properties(original_map_object_${family} PROPERTIES LABELS "original;runtime;map" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
+add_executable(original_native_headless_root_fixture tests/original/native_headless_root.cpp)
+add_executable(zero_hour_headless tools/zero_hour_headless.cpp)
+target_link_libraries(original_native_headless_root_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_libraries(zero_hour_headless PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_include_directories(original_native_headless_root_fixture PRIVATE
+  "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
+target_include_directories(zero_hour_headless PRIVATE
+  "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
+target_compile_definitions(original_native_headless_root_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+target_compile_definitions(zero_hour_headless PRIVATE _OPERATOR_NEW_DEFINED_)
+target_link_options(original_native_headless_root_fixture PRIVATE -Wl,--gc-sections)
+target_link_options(zero_hour_headless PRIVATE -Wl,--gc-sections)
+add_dependencies(original_native_headless_root_fixture zero_hour_headless)
+add_test(NAME original_native_headless_help COMMAND zero_hour_headless --help)
+set_tests_properties(original_native_headless_help PROPERTIES LABELS "original;runtime;native_root" TIMEOUT 60)
+foreach(family IN ITEMS generated missing missing-ini storage-refusal)
+  add_test(NAME original_native_headless_root_${family} COMMAND original_native_headless_root_fixture "${family}")
+  set_tests_properties(original_native_headless_root_${family} PROPERTIES LABELS "original;runtime;native_root" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()
 # Explicit diagnostic only. Its expected unresolved providers must not prevent

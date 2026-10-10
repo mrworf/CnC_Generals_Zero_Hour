@@ -53,6 +53,7 @@ class Radar;
 class WebBrowser;
 class ParticleSystemManager;
 class NativeEnvironmentSettings;
+class NativeUserStorage;
 
 /**
  * The implementation of the game engine
@@ -90,6 +91,7 @@ protected:
 	void resetOwnedWorld();
 
 	virtual FileSystem *createFileSystem( void );								///< Factory for FileSystem classes
+	virtual NativeUserStorage *createUserStorage( void );			///< Factory for native user storage
 	virtual GameLogic *createGameLogic( void ) = 0;							///< Factory for GameLogic classes.
 	virtual GameClient *createGameClient( void ) = 0;						///< Factory for GameClient classes.
 	virtual MessageStream *createMessageStream( void );					///< Factory for the message stream

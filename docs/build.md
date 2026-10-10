@@ -82,6 +82,31 @@ capacity; integrated scene demand and original ownership remain later gates.
 
 ## Headless original core
 
+The N2 native startup entry is `build/original-core-gcc/zero_hour_headless`.
+`--help` lists its modes. A caller supplies one or more read-only asset mounts
+and separate writable user-data and cache locations:
+
+```sh
+build/original-core-gcc/zero_hour_headless --startup \
+  --data-root "$ASSET_MOUNT" --user-data "$USER_DATA_DIR" --user-cache "$USER_CACHE_DIR"
+```
+
+It runs the original `GameEngine::init` and complete owner teardown. It does
+not yet load a map or advance gameplay; that is the next N2 slice. It prints
+only a generic success or rejection, never supplied paths. To check this
+boundary without retail content, run:
+
+```sh
+cmake --build build/original-core-gcc --target zero_hour_headless original_native_headless_root_fixture -j 4
+ctest --test-dir build/original-core-gcc -R '^original_native_headless_' --output-on-failure
+```
+
+The fixture exercises two original startup/shutdown cycles in one process and
+rejects missing roots, missing required INI, and user storage inside a supplied
+asset mount. Its generated tables are deliberately minimal and are not a
+whole-game data set. Use corresponding `build/original-core-gcc-sanitize` and
+`build/original-core-clang-sanitize` directories for ownership validation.
+
 No private assets or bgfx SDK is needed for this renderer-disabled configuration.
 The complete included original-runtime graph requires SDL3, FreeType, Fontconfig,
 zlib and OpenSSL3 Crypto development packages (`cmake/OriginalRuntime.cmake`).

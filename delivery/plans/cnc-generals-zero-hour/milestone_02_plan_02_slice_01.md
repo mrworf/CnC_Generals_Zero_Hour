@@ -40,6 +40,18 @@ Target-specific commands must be written here once tests/targets exist; no
 command absent from repository evidence is claimed as already runnable.
 A timeout or unavailable private input is incomplete, never a pass.
 
+The reached target and focused selector are now runnable in each configured
+`build/original-core-{gcc,gcc-sanitize,clang-sanitize}` directory:
+
+```sh
+cmake --build build/original-core-gcc --target zero_hour_headless original_native_headless_root_fixture -j 4
+ctest --test-dir build/original-core-gcc -R '^original_native_headless_' --output-on-failure
+```
+
+The same build and CTest commands with the other two directory names passed
+in host execution context. The related GCC debug selector passed 10/10:
+`^original_(environment_(root-prefix|ownership)|native_font_(composition-root-reset|manager)|audio_admission_(functional|lifetimes)|native_client_(functional|tactical-startup)|lod_(functional|negative))$`.
+
 ## Expected implementation surfaces
 
 `cmake/OriginalRuntime.cmake`, original GameEngine/GameLogic/native provider
@@ -49,10 +61,10 @@ pre-existing paths before touching overlapping files; stage only owned hunks.
 
 ## Acceptance criteria
 
-- [ ] An actual native executable documents its modes, initializes the original GameEngine on generated root inputs, reaches post-init, and retires its complete owner graph.
-- [ ] Positive and negative behavior above is directly demonstrated by
+- [x] An actual native executable documents its modes, initializes the original GameEngine on generated root inputs, reaches post-init, and retires its complete owner graph.
+- [x] Positive and negative behavior above is directly demonstrated by
   executable source or a bounded public report, with current source identity.
-- [ ] Ownership, input integrity and accepted existing regression guarantees
+- [x] Ownership, input integrity and accepted existing regression guarantees
   remain intact; no private data is committed.
 
 ## Commit boundary

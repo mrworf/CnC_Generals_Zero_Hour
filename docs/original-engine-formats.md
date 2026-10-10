@@ -6978,3 +6978,21 @@ No dynamic ambient metadata or whole-frame registration rollback acceptance is
 claimed by the current parsed-audio admission fixture. Carry this source finding
 into real map-property/transfer integration; queued payloads borrow metadata and
 must retire before its owner.
+
+#### Reached native root startup and teardown (N2 plan02 slice01)
+
+`GameEngine::init` now runs through the concrete `NativeHeadlessGameEngine`
+factory on generated inputs. Source inspection and the executable fixture show
+that `GameLODManager::init`, `GlobalLanguage::init`, `AudioManager::init`,
+`ParticleSystemManager::init`, logical `GameClient::init`, and the map cache
+each require their selected rooted tables. Missing required GameData rejects
+startup; optional user map cache misses may be rescanned, while the standard
+`Maps/MapCache.ini` remains required. `GameLogic::reset` calls the water and
+weather override owners, so generated configuration must parse both before
+the original post-init reset. The native `NativeDisplayString` pool also needs
+an explicit compiled size record for first allocation. These are source
+contracts, not fixture-only defaults. The two-cycle generated startup,
+missing-input rejection and same-root corrected retries pass GCC debug and
+GCC/Clang sanitizers; see `evidence/qa/N2-native-root-startup.md` for commands.
+No loaded map, gameplay tick, physical output or retail-data acceptance is
+claimed by this boundary.
