@@ -29,7 +29,8 @@ public:
 protected:
   void cameraStateChanged() noexcept override {m_cameraDirty=TRUE;}
   Coord3D projectElevatedLookAt(const Coord3D&) override;
-  void synchronizeCamera() const;
+  virtual void synchronizeCamera() const;
+  NativeCamera::State cameraState() const;
   mutable NativeCamera m_spatialCamera;
   Coord2D m_scrollAmount{};
 private:

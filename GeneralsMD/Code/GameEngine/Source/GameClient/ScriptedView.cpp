@@ -100,8 +100,8 @@ Bool ScriptedView::updateCameraMovements(Int elapsedMilliseconds) {
   Bool updated=FALSE;
   if(m_doingZoomCamera){zoomCameraOneFrame();updated=TRUE;}
   if(m_doingPitchCamera){pitchCameraOneFrame();updated=TRUE;}
-  if(m_doingRotateCamera){rotateCameraOneFrame();updated=TRUE;}
-  else if(m_doingMoveCameraOnWaypointPath){moveAlongWaypointPath(elapsedMilliseconds);updated=TRUE;}
+  if(m_doingRotateCamera){beforeCameraPositionStep();rotateCameraOneFrame();updated=TRUE;}
+  else if(m_doingMoveCameraOnWaypointPath){beforeCameraPositionStep();moveAlongWaypointPath(elapsedMilliseconds);updated=TRUE;}
   if(m_doingScriptedCameraLock)updated=TRUE;
   if(updated)cameraStateChanged();
   return updated;

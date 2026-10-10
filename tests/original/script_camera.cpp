@@ -5,6 +5,7 @@
 #include "ScriptCameraFixture.h"
 #include "NativeTerrainDeviceFixture.h"
 #include "GameClient/NativeCamera.h"
+#include "GameClient/NativeCameraShaker.h"
 #include "GameClient/NativeCameraView.h"
 #include "Common/FileSystem.h"
 #include "Common/GlobalData.h"
@@ -12,9 +13,11 @@
 #include "GameClient/ScriptedView.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/TerrainLogic.h"
+#include "WWMath/matrix3d.h"
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <cstdlib>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -213,11 +216,15 @@ void spatialNegative(){
   for(unsigned field=0;field<8;++field){auto bad=valid;
     if(field==0)bad.width=0;else if(field==1)bad.height=-1;else if(field==2)bad.zoom=0;else if(field==3)bad.offset={0,0,0};
     else if(field==4)bad.fieldOfView=PI;else if(field==5)bad.angle=std::numeric_limits<Real>::quiet_NaN();
-    else if(field==6)bad.lookAt.x=std::numeric_limits<Real>::infinity();else {bad.zoom=1;bad.ground=300;}
+    else if(field==6)bad.lookAt.x=std::numeric_limits<Real>::infinity();else bad.ground=std::numeric_limits<Real>::quiet_NaN();
     rejects([&]{camera.configure(bad);});require(camera.eye().x==accepted.x && camera.eye().y==accepted.y && camera.eye().z==accepted.z,"rejected candidate preserves accepted camera");
     camera.configure(valid);
   }
   auto horizon=valid;horizon.fxPitch=0;camera.configure(horizon);rejects([&]{camera.atZ({320,240},10);});camera.configure(valid);
+  auto coincident=valid;coincident.ground=300;camera.configure(coincident);
+  require(camera.pose().backward.x==-1 && camera.pose().up.z==1,"normal camera preserves original coincident Look_At fallback");
+  const auto coplanar=camera.atZ({320,240},300);require(coplanar.x==camera.eye().x && coplanar.y==camera.eye().y && coplanar.z==300,
+    "coplanar source ray returns its plane-origin point instead of original NaN arithmetic");camera.configure(valid);
   ICoord2D output{19,21};require(camera.project(nullptr,&output)==View::WTS_INVALID && output.x==19 && output.y==21,"null projection preserves source optional-output contract");
   const Coord3D nan{std::numeric_limits<Real>::quiet_NaN(),0,0};require(camera.project(&nan,&output)==View::WTS_INVALID && output.x==0 && output.y==0,"defined malformed projection invalid");
   const auto extreme=camera.ray({std::numeric_limits<Int>::min(),std::numeric_limits<Int>::max()});
@@ -299,6 +306,132 @@ void navigationNegative(){
   TheWritableGlobalData=const_cast<GlobalData*>(previous);require(camera.getCameraLock()==static_cast<ObjectID>(19),"missing lock parent preserves accepted ID");
   camera.setCameraLock(INVALID_ID);
 }
+void poses(){
+  NativeCamera::State state;state.originX=17;state.originY=23;
+  NativeCamera camera;const Coord3D eye{40,50,300},target{40,50,0};
+  const auto pose=NativeCamera::lookAtPose(eye,target);camera.configurePose(state,pose);
+  ICoord2D pixel;require(camera.project(&target,&pixel)==View::WTS_INSIDE_FRUSTUM && pixel.x==337 && pixel.y==263,
+    "explicit source chase pose projects its target to the absolute viewport center");
+  const auto ray=camera.ray(pixel),center=camera.centerRay();
+  require(close(ray[0].z,300) && close(ray[1].z,-900) && close(center[1].z,-900),"explicit pose uses normalized far-depth rays");
+  const auto ground=camera.atZ(pixel,0);require(close(ground.x,40) && close(ground.y,50),"chase plane projection preserves actual pose eye");
+  NativeCamera::Pose identity;identity.eye=eye;
+  const auto x=NativeCamera::rotateLocal(identity,{PI/2,0,0});
+  const auto y=NativeCamera::rotateLocal(identity,{0,PI/2,0});
+  const auto z=NativeCamera::rotateLocal(identity,{0,0,PI/2});
+  require(close(x.up.z,1) && close(x.backward.y,-1) && close(y.right.z,-1) && close(y.backward.x,1) &&
+    close(z.right.y,1) && close(z.up.x,-1),"local X/Y/Z shake rotations retain original postmultiply signs");
+  const auto combined=NativeCamera::rotateLocal(identity,{PI/2,PI/2,PI/2});
+  require(close(combined.right.z,1) && close(combined.up.y,-1) && close(combined.backward.x,1),
+    "combined shake preserves ordered local X then Y then Z rather than world-axis rotations");
+  Matrix3D source(1);source.Rotate_X(.13f);source.Rotate_Y(-.27f);source.Rotate_Z(.41f);
+  const auto ordered=NativeCamera::rotateLocal(identity,{.13f,-.27f,.41f});
+  const auto sourceX=source.Get_X_Vector(),sourceY=source.Get_Y_Vector(),sourceZ=source.Get_Z_Vector();
+  require(close(ordered.right.x,sourceX.X) && close(ordered.right.y,sourceX.Y) && close(ordered.right.z,sourceX.Z) &&
+    close(ordered.up.x,sourceY.X) && close(ordered.up.y,sourceY.Y) && close(ordered.up.z,sourceY.Z) &&
+    close(ordered.backward.x,sourceZ.X) && close(ordered.backward.y,sourceZ.Y) && close(ordered.backward.z,sourceZ.Z),
+    "all nine combined pose columns match actual original Matrix3D rotation methods");
+  auto authored=identity;authored.right={2,0,0};authored.up={.25f,3,0};authored.backward={0,0,4};
+  camera.configurePose(state,authored);const Coord3D point{41,50,200};
+  const Int expectedX=state.originX+Int((Real(state.width)*(Real(.5/(25*std::tan(double(state.fieldOfView)/2)))+1))/2);
+  require(camera.project(&point,&pixel)==View::WTS_INSIDE_FRUSTUM && pixel.x==expectedX,
+    "finite authored scale and shear use actual general inverse rather than normalization or transpose projection");
+  const auto authoredPose=camera.pose();require(authoredPose.right.x==2 && authoredPose.up.x==.25f && authoredPose.up.y==3 && authoredPose.backward.z==4,
+    "explicit source bone pose round trip retains every raw column");
+  const auto normalized=camera.centerRay();require(close(normalized[1].z,-900),"scaled bone pose still uses normalized source pick-ray length");
+  const auto displacement=camera.viewPlaneDisplacement({20,0});
+  require(close(displacement.x,Real(2*20*std::tan(double(state.fieldOfView)/2)/state.width)*2),"device plane displacement preserves authored axis scale");
+  state.drawEntireTerrain=TRUE;camera.configurePose(state,identity);require(close(camera.centerRay()[1].z,-11700),"explicit pose retains source extended clip range");
+  AllocationFault::arm(0);try{for(unsigned n=0;n<100;++n){camera.configurePose(state,NativeCamera::rotateLocal(pose,{.01f,.02f,.03f}));
+      camera.project(&target,&pixel);camera.ray(pixel);camera.centerRay();camera.atZ(pixel,0);camera.pose();}}
+  catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();const bool hit=AllocationFault::triggered();AllocationFault::disarm();
+  require(attempts==0 && !hit,"explicit chase/shake/slave spatial operations have exact allocation terminal0");
+}
+void posesNegative(){
+  NativeCamera::State state;NativeCamera camera;NativeCamera::Pose pose;pose.eye={10,20,300};camera.configurePose(state,pose);
+  const auto accepted=camera.pose();const auto end=camera.centerRay()[1];
+  for(unsigned failure=0;failure<5;++failure){auto bad=pose;
+    if(failure==0)bad.eye.x=std::numeric_limits<Real>::quiet_NaN();
+    if(failure==1)bad.right.x=std::numeric_limits<Real>::infinity();
+    if(failure==2)bad.up=bad.right;
+    if(failure==3)bad.backward={};
+    if(failure==4)bad.eye.z=std::numeric_limits<Real>::infinity();
+    rejects([&]{camera.configurePose(state,bad);});
+    require(camera.eye().x==accepted.eye.x && camera.eye().z==accepted.eye.z && camera.centerRay()[1].z==end.z,
+      "malformed bone/chase pose rejection preserves complete accepted spatial backing");
+    camera.configurePose(state,pose);require(camera.pose().right.x==1,"each rejection permits corrected same-owner pose retry");
+  }
+  auto badState=state;badState.width=0;rejects([&]{camera.configurePose(badState,pose);});
+  badState=state;badState.fieldOfView=PI;rejects([&]{camera.configurePose(badState,pose);});
+  const auto coincident=NativeCamera::lookAtPose(pose.eye,pose.eye);
+  require(coincident.right.y==-1 && coincident.up.z==1 && coincident.backward.x==-1,
+    "source-defined coincident Look_At preserves default +X facing, not invented rejection");
+  rejects([&]{NativeCamera::rotateLocal(pose,{0,std::numeric_limits<Real>::quiet_NaN(),0});});
+  NativeCamera empty;rejects([&]{empty.pose();});
+  Region3D extent{{0,0,0},{500,500,20}};
+  rejects([&]{empty.constraintRegion(extent,10,FALSE);});
+  auto malformed=extent;malformed.lo.x=501;rejects([&]{camera.constraintRegion(malformed,10,FALSE);});
+  malformed=extent;malformed.hi.y=std::numeric_limits<Real>::quiet_NaN();rejects([&]{camera.constraintRegion(malformed,10,FALSE);});
+  rejects([&]{camera.constraintRegion(extent,std::numeric_limits<Real>::infinity(),FALSE);});
+  Region2D badBounds{{0,0},{std::numeric_limits<Real>::quiet_NaN(),10}};
+  rejects([&]{NativeCamera::clipPosition({0,0,0},badBounds);});
+  auto hugeOrigin=state;hugeOrigin.originX=std::numeric_limits<Int>::max();camera.configurePose(hugeOrigin,pose);
+  rejects([&]{camera.constraintRegion(extent,10,FALSE);});
+  camera.configurePose(state,pose);camera.constraintRegion(extent,10,FALSE);
+  require(camera.eye().z==accepted.eye.z,"invalid construction/rotation/state does not mutate existing owner");
+}
+void shaker(){
+  // Independent original-formula oracle and RNG cardinality. One source
+  // record, not a replacement implementation injected into a camera provider.
+  const auto random=[](Real lo,Real hi){return (Real(std::rand()&0xFFF)/Real(0xFFF))*(hi-lo)+lo;};
+  constexpr Real dt=1.0f/30;
+  const Real minOmega=DEG_TO_RADF(12.5f*360),maxOmega=DEG_TO_RADF(15.0f*360),endOmega=DEG_TO_RADF(360);
+  std::srand(123);Real omega[3],phase[3];
+  for(auto& value:omega)value=random(minOmega,maxOmega);for(auto& value:phase)value=random(0,DEG_TO_RADF(360));
+  Real expected[3]{};const Real axis[3]={DEG_TO_RADF(7.5f),DEG_TO_RADF(15),DEG_TO_RADF(5)};
+  const Real intensity=(10*PI/180.0f)*(1-dt/2);
+  for(unsigned n=0;n<3;++n){const Real frequency=omega[n]+(endOmega-omega[n])*dt;
+    expected[n]+=axis[n]*intensity*std::sin(frequency*dt+phase[n]);
+    for(auto& value:expected)value+=random(-intensity*.5f,intensity*.5f);}
+  const int expectedNext=std::rand();
+  std::srand(123);NativeCameraShaker effects;effects.add({0,0,0},100,2,10);effects.timestep(dt);
+  const auto actual=effects.angles({0,0,0});
+  require(close(actual.x,expected[0]) && close(actual.y,expected[1]) && close(actual.z,expected[2]) && std::rand()==expectedNext,
+    "owned C3 shaker uses original six admission/nine secondary draws and sinusoid/degree/time formulas");
+  std::srand(17);const int first=std::rand();std::srand(17);const auto outside=effects.angles({1000,0,0});
+  require(outside.x==0 && outside.y==0 && outside.z==0 && std::rand()==first,"outside-radius query neither contributes angles nor consumes visual RNG");
+  AllocationFault::arm(0);try{effects.timestep(2);}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();const bool hit=AllocationFault::triggered();AllocationFault::disarm();
+  require(attempts==0 && !hit && !effects.active() && effects.count()==0,"expiry retires records without fallible temporary-list acquisition");
+  effects.add({0,0,0},100,.1f,1);effects.add({0,0,0},100,.2f,1);effects.timestep(.1f);
+  require(effects.count()==1,"exact duration endpoint retires only the expired record");effects.timestep(.1f);
+  require(!effects.active(),"whole C3 cohort expires exactly");
+}
+void shakerOwnership(){
+  for(unsigned ordinal=0;ordinal<=1;++ordinal){const auto live=AllocationFault::live();
+    {NativeCameraShaker effects;std::srand(31);const int first=std::rand();std::srand(31);
+      AllocationFault::arm(ordinal);bool failed=false;try{effects.add({0,0,0},100,1,10);}catch(const std::bad_alloc&){failed=true;}
+      const auto attempts=AllocationFault::attempts();const bool hit=AllocationFault::triggered();AllocationFault::disarm();
+      require(failed==(ordinal==0) && hit==failed && attempts==1,"exact C3 admission allocation failure/terminal pair");
+      if(failed)require(!effects.active() && AllocationFault::live()==live && std::rand()==first,
+        "failed admission preserves owner and consumes no visual random draws");
+      std::srand(31);effects.add({0,0,0},100,1,10);require(effects.active(),"each admission failure has a successful same-owner retry");}
+    require(AllocationFault::live()==live,"whole root-owned C3 capacity retires exactly");
+  }
+  NativeCameraShaker effects;effects.add({0,0,0},100,1,10);
+  for(unsigned invalid=0;invalid<6;++invalid){Real radius=100,duration=1,power=10;Coord3D point{};
+    if(invalid==0)radius=0;if(invalid==1)duration=-1;if(invalid==2)power=-1;
+    if(invalid==3)point.x=std::numeric_limits<Real>::quiet_NaN();
+    if(invalid==4)radius=std::numeric_limits<Real>::max();if(invalid==5)duration=std::numeric_limits<Real>::max();
+    const auto count=effects.count();std::srand(29);const int first=std::rand();std::srand(29);
+    rejects([&]{effects.add(point,radius,duration,power);});
+    require(effects.count()==count && std::rand()==first,"malformed C3 admission preserves existing cohort and visual RNG");
+    effects.add({0,0,0},100,1,10);require(effects.count()==count+1,"corrected C3 admission retry preserves prior records");
+  }
+  const auto count=effects.count();rejects([&]{effects.timestep(-1);});rejects([&]{effects.angles({0,std::numeric_limits<Real>::infinity(),0});});
+  require(effects.count()==count,"invalid timestep/eye query preserves active cohort");
+}
 void ownership(){
   require(!TheTacticalView,"camera fixture requires no foreign tactical publication");
   NativeServiceOwners<1> owners;
@@ -332,7 +465,9 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
       for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();const auto views=View::liveViewCount();
         const std::string_view family=argv[1];if(family=="modes")modes(parents);else if(family=="paths")paths(parents);else if(family=="negative")negative();else if(family=="ownership")ownership();
         else if(family=="spatial")spatial();else if(family=="spatial-negative")spatialNegative();else if(family=="spatial-ownership")spatialOwnership();
-        else if(family=="navigation")navigation(parents);else if(family=="navigation-negative")navigationNegative();else require(false,"unknown family");
+        else if(family=="navigation")navigation(parents);else if(family=="navigation-negative")navigationNegative();
+        else if(family=="poses")poses();else if(family=="poses-negative")posesNegative();
+        else if(family=="shaker")shaker();else if(family=="shaker-ownership")shakerOwnership();else require(false,"unknown family");
         require(AllocationFault::live()==live && View::liveViewCount()==views && TheMemoryPoolFactory->findMemoryPool("Waypoint")->getUsedBlockCount()==0,"repeated camera/View registration and actual waypoint owners retire exactly");}}
     shutdownMemoryManager();initialized=false;require(AllocationFault::live()==initial,"whole memory manager retirement");
     std::cout<<"PASS original camera choreography; native UI/root/output still pending\n";return 0;

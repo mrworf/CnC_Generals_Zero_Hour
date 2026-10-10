@@ -4996,3 +4996,80 @@ require its withdrawal during source rollback. Test output/frame/model providers
 remain deliberately absent/rejected; no concrete frame/root/physical acceptance
 follows. Evidence: evidence/qa/N2-camera-lifetime-checkpoint.md. Full369, slice03
 and N2 completion remain pending.
+
+Concrete camera cohort pose/constraint source verification (parent31ccae86;
+implementation iteration, not frame/root acceptance): the camera's explicit
+world transform columns can include authored scale/shear from a slave bone.
+CameraClass::Update_Frustum in WW3D2/camera.cpp calls Transform.Get_Inverse;
+WWMath/matrix3d.cpp::Get_Inverse uses a general D3DX inverse. It does NOT call
+Get_Orthogonal_Inverse. Preserve raw columns for Un_Project and device-to-world,
+but use the general inverse rows for Project. Normalizing a bone transform or
+using transpose for scaled/sheared poses changes the original camera contract.
+NativeCamera now stages finite/nonsingular explicit pose admission, separate
+world/projection bases, ordered local X/Y/Z rotations and source Look_At vertical
+yaw fallback. Original Matrix3D inline rotation methods provide the nine-column
+test oracle. Scaled/sheared projection has an independent analytic inverse check.
+
+NativeCamera's constraint query consumes an accepted pose and actual authored
+extent without clock/RNG/model callbacks; canonical clipping is a separate
+low-then-high XY operation preserving Z and inverted small-map behavior. Generated
+factory-creation-camera composes actual NativeTerrainLogic extent with odd-height/
+nonzero-origin samples, retained ground-Z border, DebugAI expansion and exact
+allocation terminal0. Invalid extent/ground/origin arithmetic and corrected retry
+receive defined rejection tests. Rebuild invalidation/cardinality and production
+View frame adoption remain pending; these value queries do not replace them.
+
+Shake RNG carry-forward: original WWMath::Random_Float(void) uses
+float(rand() & 0xFFF)/float(0xFFF). C3 shakes use that stream for six admission
+draws and nine per in-range record per transform build. Legacy View::shake uses
+GameClientRandomValueReal instead. RandomValue.cpp has distinct six-word client/
+audio/logic state; no public snapshot/restore transaction exists in the active
+RandomValue header/source. Do not equate those streams
+or advance simulation RNG while querying/validating a camera pose. Final owned
+C3 provider/admission/RNG lifetime remains implementation work, not acceptance.
+
+NativeCameraShaker now implements those C3 formulas as an explicitly root-owned
+shared value (View integration pending), without static AutoPool/MultiList
+metadata. Reserve geometric capacity before the six admission random draws;
+append without shifting and accumulate in reverse to preserve newest-first
+source order. Expire records in place without a temporary deletion owner, keep
+capacity only until whole owner destruction, and do not apply the original
+ignored Clamp result. Source degree operations retain multiplication before
+division; use original DEG_TO_RADF macros in the independent fixture oracle.
+Validate radius/duration/phase arithmetic and total intensity before admission.
+The oracle also proves RNG draw cardinality and no outside-radius draws; actual
+allocation failure/terminal/retry checks verify no RNG consumption on failed
+admission and exact whole-owner capacity retirement. No frame/root acceptance
+is inferred. See evidence/qa/N2-camera-cohort-implementation.md.
+
+Concrete camera phase checkpoint (same N2 plan01/slice03):
+`GameEngineDevice/Source/W3DDevice/GameClient/W3DView.cpp::buildCameraTransform`
+and `updateView` define the explicit rebuild/effect cadence. NativeFrameCameraView
+now preserves temporary-plus-final builds for invalid constraints versus one
+cached build, actual first-DrawModule chase selection, first ObjectDrawInterface
+slave selection, original follow/tether/snap and height settlement. Root-owned
+NativeCameraShaker supplies shared C3 records and follow ramp; const spatial
+queries never advance effects or resolve model bones. False bone output retains
+the normal pose rather than reading the source's uninitialized Matrix3D.
+
+`Libraries/Source/WWVegas/WWMath/matrix3d.cpp:354` explicitly defines coincident
+Look_At eye/target as +X forward, -Y right, +Z up. It is not malformed input.
+`WWMath/vector3.h:828` and `:836` divide by zero when ray and requested plane
+are coplanar; native atZ returns the plane-origin point as a defined original
+bug repair. Noncoplanar parallel rays still reject. Positive source-fallback and
+coplanar tests accompany nonfinite ground rejection and accepted-state retry.
+
+`GameEngine/Source/Common/Thing/ModuleFactory.cpp::newModuleDataFromINI` admits
+ModuleData to its owning list before returning; ModuleInfo borrows that pointer.
+Production LTA callers in ThingTemplate.cpp use this registry ownership too.
+Stage generated fixture name/tag conversions before creation/admission nonetheless;
+do not incorrectly classify a registry-owned return as an unowned candidate.
+
+Frame fixture initialization loads actual registered GameData and its separate
+user-storage parent before partition-grid initialization. Original pooled model
+probes retire their used units exactly through repeated actor/root lifetimes.
+Generated metadata validates selection/transforms, not production model decoding.
+Root/UI integration remains pending; paused-frame validation needs actual Mouse/
+Audio parents and airborne validation needs parsed AIUpdate/Locomotor. Physical
+rendering remains an explicit adapter obligation. Current evidence and retained
+failure/retry pairs: evidence/qa/N2-camera-cohort-implementation.md.

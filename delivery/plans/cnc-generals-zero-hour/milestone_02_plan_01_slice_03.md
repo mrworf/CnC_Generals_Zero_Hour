@@ -3113,3 +3113,91 @@ Clang ASan/UBSan/LSan. Evidence: evidence/qa/N2-camera-lifetime-checkpoint.md.
 Commit this coherent batch without marking slice03/N2 complete. Resume concrete
 camera frame/constraints/model/shake/slave and actual UI/root integration; full369
 is still unrun. No live validation jobs or failures remain.
+
+Concrete camera cohort refinement (parent31ccae86, clean tree): build the actual
+client-frame camera on the verified spatial/lifetime owners, not a fake fixed
+eye or a component test substituted for root execution. First extend the native
+spatial value to adopt validated explicit world camera poses for actor chase,
+ordered local shake rotations and source model-bone slave transforms. All fallible
+pose validation precedes adoption; nonfinite/degenerate transforms must not create
+undefined projection or poison accepted backing. Queries remain callback/RNG/
+clock/allocation-free. Derive normal-pose basis from the existing source contract;
+do not import renderer internals or introduce a dependency patch.
+Preserve finite authored scale/shear in an explicit pose: CameraClass::
+Update_Frustum calls Transform.Get_Inverse, whose original Matrix3D implementation
+uses a general D3DX inverse (not Get_Orthogonal_Inverse). Use inverse rows for
+projection and raw world columns for unprojection. Ray direction alone is
+normalized as in getPickRay. This was verified before frame/model adoption;
+do not silently normalize bones or substitute transpose for scaled transforms.
+
+Then compose source cached real-map constraints and explicit rebuild cardinality,
+original Object follow/tether/snap/airborne and first-DrawModule chase queries,
+freeze/pause/fast ordering, terrain-height settlement, legacy shake and reachable
+C3 shake/slave resolution. Preserve Object/Drawable identity checks and actual
+parent cleanup from the previous checkpoint. Inspect original RNG and model query
+acquisition/output contracts together before adopting their providers. Unsupported
+physical picking/drawing remains explicit, not successful empty output.
+
+Validation: stage focused generated pose/negative/retry/zero-allocation tests,
+then real NativeTerrainLogic and original actor/model/root composition; test
+rebuild versus const-query effects, invalidation, inverted bounds, surviving
+Objects and all callback/failure lifetimes. Freeze the complete coherent cohort
+for all3 build/related ownership-world checks before its payload commit. Full369
+and later added families remain milestone completion gates. The current stage
+is implementation in progress, not concrete frame or full-root acceptance.
+
+C3 ownership detail: use a root-owned shared NativeCameraShaker value, borrowed
+by camera Views, rather than a process-global AutoPool/MultiList whose metadata
+outlives a root. Preserve original libc rand() low12-bit visual draw contract,
+six admission draws, newest-first accumulation and nine secondary draws per
+in-range live record per rebuild. Keep legacy client RNG separate. Stage vector
+capacity before random initialization/admission; allocation failure cannot consume
+random values or mutate accepted records. Expire in place without a temporary
+fallible deletion list. Advance exactly the caller-supplied rebuild step and
+compute angles without hidden timestep; no RNG calls in const spatial queries.
+Require finite positions/nonnegative power and positive radius/duration, retaining
+original degree-to-radian conversion and original discarded-clamp behavior.
+Generated tests need an independent original-formula oracle and standard-owner
+admission failure/retry/whole-destruction, not a claim from descriptor counts.
+
+Concrete View composition refinement before production frame changes: add
+NativeFrameCameraView on the verified NativeCameraView with mandatory borrowed
+root-owned C3 context. Keep frame/rebuild actions explicit and override spatial
+synchronization to read accepted backing only; never invoke models, RNG or clock
+from const eye/projection/ray queries. Preserve source two-build invalid-constraint
+path, explicit recalculation without clipping/rebuild, viewport-only projection
+refresh, and cached constraints across angle/position/scroll changes. Keep the
+source shared follow ramp in root context rather than a process-static survivor.
+The complete camera phase includes actor lookup/loss, follow/tether/immediate snap,
+airborne orientation, actual first-DrawModule chase, debug/script freeze versus
+pause/fast distinctions, legacy spring shake, C3 rotations and actual first
+ObjectDrawInterface slave-bone selection/listener publication. Missing bone output
+must never be read: source ignores the Bool with an uninitialized Matrix3D, an
+original UB bug; preserve the valid normal pose when no bone was produced.
+
+The native View still has explicit physical picking/drawing adapter obligations
+for N3; no successful empty render path. Tests must compose actual ActorParents,
+ScriptEngine, native terrain and original Drawable module selection, and measure
+explicit rebuild counts and borrowed publications through shutdown. Missing root
+parents reject before advancing the frame/effect context. Existing production
+ScriptedView algorithms remain the frame choreography, not replacement movement.
+
+Camera cohort checkpoint boundary: at the user's worktree cleanup request,
+commit the coupled spatial-pose/constraints, shared C3 owner and production
+camera-phase implementation with generated original actor/model/lifecycle tests,
+source findings and truthful workflow recovery state. This is independently
+testable camera behavior, not a helper-only commit or N2/root/render acceptance.
+Source-defined coincident Look_At and coplanar-plane bug handling were reviewed
+together; retained failure/retry evidence is in
+evidence/qa/N2-camera-cohort-implementation.md. Required frozen validation is
+all3 configured builds, focused17 and related184 on canonical651/inclusive658;
+full374 remains the later milestone gate. Continue actual UI/Display/root/client
+factory integration only after this clean committed checkpoint. No asset,
+dependency or recovery archive changes are included.
+
+Frozen camera checkpoint closeout: all3 full configured builds/focused17/
+related184 PASS on unchanged canonical651/inclusive658. GCC and Clang sanitizers
+remain unsuppressed; full374 is unrun. Evidence and every development failure/
+retry are retained in evidence/qa/N2-camera-cohort-implementation.md. Commit this
+coherent behavior without marking slice03 or N2 complete; resume actual native
+UI/Display/root/client factory integration and production model providers.

@@ -9,12 +9,14 @@
 #include <cmath>
 
 void NativeCameraView::init(){ScriptedView::init();synchronizeCamera();}
+NativeCamera::State NativeCameraView::cameraState()const{
+  if(!TheGlobalData)throw ERROR_BAD_ARG;
+  return {m_pos,m_cameraOffset,m_groundLevel,m_zoom,m_angle,m_pitchAngle,getFXPitch(),
+    m_FOV,m_width,m_height,m_originX,m_originY,TheGlobalData->m_drawEntireTerrain};
+}
 void NativeCameraView::synchronizeCamera() const {
   if(!m_cameraDirty)return;
-  if(!TheGlobalData)throw ERROR_BAD_ARG;
-  const NativeCamera::State state{m_pos,m_cameraOffset,m_groundLevel,m_zoom,m_angle,m_pitchAngle,getFXPitch(),
-    m_FOV,m_width,m_height,m_originX,m_originY,TheGlobalData->m_drawEntireTerrain};
-  m_spatialCamera.configure(state);m_cameraDirty=FALSE;
+  m_spatialCamera.configure(cameraState());m_cameraDirty=FALSE;
 }
 void NativeCameraView::setWidth(Int width){
   if(width<1 || !TheDisplay || !TheDisplay->getWidth())throw ERROR_BAD_ARG;

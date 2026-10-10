@@ -58,7 +58,13 @@ protected:
   // camera backing. No false success for missing output or elevated look-at.
   virtual void cameraStateChanged() noexcept = 0;
   virtual Coord3D projectElevatedLookAt(const Coord3D&) = 0;
+  virtual void beforeCameraPositionStep() noexcept {}
   void cancelCameraRotation() noexcept { m_doingRotateCamera=FALSE; }
+  void cancelWaypointTracking() noexcept {m_doingMoveCameraOnWaypointPath=FALSE;m_CameraArrivedAtWaypointOnPathFlag=FALSE;}
+  Bool hasScriptedCameraWork() const noexcept {
+    return m_doingRotateCamera || m_doingMoveCameraOnWaypointPath || m_doingPitchCamera || m_doingZoomCamera || m_doingScriptedCameraLock;
+  }
+  Int frameLengthMilliseconds() const noexcept {return m_frameLengthMilliseconds;}
   Coord3D m_cameraOffset{};
   Real m_groundLevel=10.0f;
   Region2D m_cameraConstraint{};

@@ -2,11 +2,13 @@
 #include "AllocationFault.h"
 #include "ScriptCameraFixture.h"
 #include "NativeCameraViewFixture.h"
+#include "NativeFrameCameraViewFixture.h"
 #include "NativeTerrainDeviceFixture.h"
 #include "GameLogic/NativeTerrainLogic.h"
 #include "GameLogic/NativeTerrainLightingState.h"
 #include "Common/FileSystem.h"
 #include "Common/GlobalData.h"
+#include "Common/RandomValue.h"
 #include "Common/NativeUserStorage.h"
 #include "Common/NativeServiceOwners.h"
 #include "Common/MapObject.h"
@@ -20,6 +22,7 @@
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/SidesList.h"
 #include "GameLogic/AI.h"
+#include "GameLogic/AIDebugOptions.h"
 #include "GameLogic/AIPathfind.h"
 #include "GameLogic/PartitionManager.h"
 #include "GameLogic/GameLogic.h"
@@ -423,6 +426,51 @@ struct ActorRadar:Radar{void draw(Int,Int,Int,Int)override{} void clearShroud()o
 // Test-only callback faults, not replacement gameplay or presentation modules.
 // Execute original registry, pooled construction and binding notification paths.
 unsigned bindingFaultPhase=0,bindingDrawCalls=0,bindingBehaviorCalls=0,bindingUnbindCalls=0;
+bool cameraPrimaryInterface=true,cameraModelOutput=true,cameraBoneOutput=true;
+unsigned cameraModelCalls=0,cameraPrimaryBones=0,cameraSecondBones=0;
+// Test-only generated model metadata for actual source module selection. This
+// is not a production model parser, physical renderer or retail bone acceptance.
+struct CameraModelProbe:DrawModule,ObjectDrawInterface {
+  MEMORY_POOL_GLUE_WITH_EXPLICIT_CREATE(CameraModelProbe,"CameraModelProbe",8,0)
+  bool second;
+public:
+  CameraModelProbe(Thing* thing,const ModuleData* data,bool secondary):DrawModule(thing,data),second(secondary){}
+  NameKeyType getModuleNameKey()const override{static const StaticNameKey first("CameraModelProbe"),other("CameraSecondProbe");return second?other.key():first.key();}
+  ObjectDrawInterface* getObjectDrawInterface()override{return (second||cameraPrimaryInterface)?this:nullptr;}
+  const ObjectDrawInterface* getObjectDrawInterface()const override{return (second||cameraPrimaryInterface)?this:nullptr;}
+  Bool clientOnly_getRenderObjInfo(Coord3D* point,Real* radius,Matrix3D* transform)const override{
+    ++cameraModelCalls;if(!cameraModelOutput)return FALSE;
+    *point=*getDrawable()->getObject()->getPosition();*radius=20;transform->Make_Identity();return TRUE;}
+  Bool clientOnly_getRenderObjBoneTransform(const AsciiString&,Matrix3D* transform)const override{
+    ++(second?cameraSecondBones:cameraPrimaryBones);if(!cameraBoneOutput)return FALSE;
+    transform->Make_Identity();transform->Set_Translation(Vector3(second?110:100,200,300));
+    (*transform)[0][0]=2;(*transform)[1][1]=3;(*transform)[2][2]=4;return TRUE;}
+  Bool clientOnly_getRenderObjBoundBox(OBBoxClass*)const override{throw ERROR_BAD_ARG;}
+  Int getPristineBonePositionsForConditionState(const ModelConditionFlags&,const char*,Int,Coord3D*,Matrix3D*,Int)const override{throw ERROR_BAD_ARG;}
+  Int getCurrentBonePositions(const char*,Int,Coord3D*,Matrix3D*,Int)const override{throw ERROR_BAD_ARG;}
+  Bool getCurrentWorldspaceClientBonePositions(const char*,Matrix3D&)const override{throw ERROR_BAD_ARG;}
+  Bool getProjectileLaunchOffset(const ModelConditionFlags&,WeaponSlotType,Int,Matrix3D*,WhichTurretType,Coord3D*,Coord3D*)const override{throw ERROR_BAD_ARG;}
+  void updateProjectileClipStatus(UnsignedInt,UnsignedInt,WeaponSlotType)override{throw ERROR_BAD_ARG;}
+  void updateDrawModuleSupplyStatus(Int,Int)override{throw ERROR_BAD_ARG;}
+  void notifyDrawModuleDependencyCleared()override{throw ERROR_BAD_ARG;}
+  void setHidden(Bool)override{} void replaceModelConditionState(const ModelConditionFlags&)override{}
+  void replaceIndicatorColor(Color)override{} void setSelectable(Bool)override{}
+  Bool handleWeaponFireFX(WeaponSlotType,Int,const FXList*,Real,const Coord3D*,Real)override{throw ERROR_BAD_ARG;}
+  Int getBarrelCount(WeaponSlotType)const override{throw ERROR_BAD_ARG;}
+  void setAnimationLoopDuration(UnsignedInt)override{throw ERROR_BAD_ARG;}
+  void setAnimationCompletionTime(UnsignedInt)override{throw ERROR_BAD_ARG;}
+  Bool updateBonesForClientParticleSystems()override{throw ERROR_BAD_ARG;}
+  void setAnimationFrame(int)override{throw ERROR_BAD_ARG;}
+  void setPauseAnimation(Bool)override{throw ERROR_BAD_ARG;}
+  void updateSubObjects()override{throw ERROR_BAD_ARG;}
+  void showSubObject(const AsciiString&,Bool)override{throw ERROR_BAD_ARG;}
+  void doDrawModule(const Matrix3D*)override{throw ERROR_BAD_ARG;}
+  void setFullyObscuredByShroud(Bool)override{}
+  void reactToTransformChange(const Matrix3D*,const Coord3D*,Real)override{}
+  void reactToGeometryChange()override{}
+  void setShadowsEnabled(Bool)override{} void releaseShadows()override{} void allocateShadows()override{throw ERROR_BAD_ARG;}
+};
+CameraModelProbe::~CameraModelProbe()=default;
 struct BindingDrawProbe:DrawModule{
   MEMORY_POOL_GLUE_WITH_EXPLICIT_CREATE(BindingDrawProbe,"BindingDrawProbe",8,0)
 public:
@@ -453,6 +501,12 @@ public:
 };
 BindingBehaviorProbe::~BindingBehaviorProbe()=default;
 struct ActorModuleFactory:ModuleFactory{
+  void addCameraProbes(){
+    addModuleInternal([](Thing* thing,const ModuleData* data)->Module*{return newInstance(CameraModelProbe)(thing,data,false);},
+      [](INI* ini)->ModuleData*{if(ini)throw ERROR_BAD_ARG;return new ModuleData;},MODULETYPE_DRAW,"CameraModelProbe",MODULEINTERFACE_DRAW);
+    addModuleInternal([](Thing* thing,const ModuleData* data)->Module*{return newInstance(CameraModelProbe)(thing,data,true);},
+      [](INI* ini)->ModuleData*{if(ini)throw ERROR_BAD_ARG;return new ModuleData;},MODULETYPE_DRAW,"CameraSecondProbe",MODULEINTERFACE_DRAW);
+  }
   void addBindingProbes(){
     addModuleInternal([](Thing* thing,const ModuleData* data)->Module*{return newInstance(BindingDrawProbe)(thing,data);},
       [](INI* ini)->ModuleData*{if(ini)throw ERROR_BAD_ARG;return new ModuleData;},MODULETYPE_DRAW,"BindingDrawProbe",MODULEINTERFACE_DRAW);
@@ -548,7 +602,98 @@ struct GhostAttachment:GhostObject{
   void freeSnapShot(int)override{throw ERROR_BAD_ARG;}
   void updateParentObject(Object* object,PartitionData* data)override{m_parentObject=object;m_partitionData=data;}
 };
-void factoryCreation(Context& context,bool faults,bool binding=false,bool cameraTracking=false){
+void cameraFrames(Context& context,ActorParents& parents,LogicFixture& terrain,Object* actor){
+  cameraPrimaryInterface=cameraModelOutput=cameraBoneOutput=true;
+  struct ResetProbes{~ResetProbes(){cameraPrimaryInterface=cameraModelOutput=cameraBoneOutput=true;}}resetProbes;
+  context.data->m_debugAI=AI_DEBUG_PATHS;context.data->m_disableCameraMovement=FALSE;
+  NativeCameraShaker effects;NativeFrameCameraViewFixture camera(effects);camera.init();camera.setFrameLengthMilliseconds(33);
+  require(camera.transformBuildCount()==2 && !camera.constraintsValid(),"original initial constraint rebuilds twice, then invalidates cache for later map/viewport setup");
+  auto* prior=TheTacticalView;TheTacticalView=&camera;
+  struct RestoreView{View* prior;~RestoreView(){TheTacticalView=prior;}}restoreView{prior};
+  const Coord3D origin{},east{100,80,0};camera.setZoom(1);camera.lookAt(&origin);
+  auto count=camera.transformBuildCount();camera.setHeight(481);camera.setOrigin(17,23);
+  require(camera.transformBuildCount()==count && camera.constraintsValid(),"viewport refresh has no shake/rebuild or constraint invalidation");
+  camera.forceCameraConstraintRecalc();require(camera.transformBuildCount()==count,"explicit constraint query does not rebuild or advance effects");
+  camera.setAngle(0);require(camera.transformBuildCount()==count+1,"cached angle change rebuilds exactly once");
+  count=camera.transformBuildCount();camera.setZoom(1);require(camera.transformBuildCount()==count+2,"zoom invalidation preserves both temporary and final transform builds");
+  actor->setPosition(&east);camera.setCameraLock(actor->getID());camera.updateView();
+  auto near=[](Real a,Real b){return std::abs(a-b)<.0001f;};
+  require(near(camera.position().x,5) && near(camera.position().y,4),"actual source actor follow starts at five percent");
+  camera.updateView();require(near(camera.position().x,14.5f) && near(camera.position().y,11.6f),"actual source follow ramp advances to ten percent");
+  camera.snapToCameraLock();camera.updateView();require(camera.position().x==100 && camera.position().y==80,"actual one-frame immediate snap reaches actor");
+  const Coord3D equalHeight{100,80,300};actor->setPosition(&equalHeight);camera.updateView();
+  require(camera.get3DCameraPosition().z==300 && camera.spatial.pose().backward.x==-1,
+    "source actor ground equal to camera offset preserves defined coincident-eye Look_At fallback");
+  camera.setCameraLock(INVALID_ID);camera.updateView();camera.lookAt(&origin);
+  const Real cell=context.data->m_partitionCellSize;const Coord3D far{cell*2,0,0};actor->setPosition(&far);
+  camera.setCameraLock(actor->getID());camera.setSnapMode(View::LOCK_TETHER,2);camera.updateView();
+  require(near(camera.position().x,cell*.75f),"outer tether uses source cell-squared threshold and half-distance ratio");
+  camera.lookAt(&origin);const Coord3D inside{cell*.5f,0,0};actor->setPosition(&inside);camera.updateView();
+  require(near(camera.position().x,cell*.01f),"inner tether uses lock-distance slow ratio");
+  camera.setCameraLock(static_cast<ObjectID>(static_cast<UnsignedInt>(actor->getID())+100));camera.setCameraLockDrawable(actor->getDrawable());camera.updateView();
+  require(camera.getCameraLock()==INVALID_ID && !camera.getCameraLockDrawable(),"missing actual actor withdraws both lock ID and Drawable borrow");
+  camera.lookAt(&origin);context.scripts->doFreezeTime();camera.rotateCamera(.25f,66,0,0);camera.updateView();
+  require(near(camera.getAngle(),PI/4) && camera.previousLookAtPosition().x==0,"actual script freeze still advances source camera choreography and captures pre-step position");
+  context.scripts->doUnfreezeTime();camera.updateView();require(camera.isCameraMovementFinished() && near(camera.getAngle(),PI/2),"actual camera frame reaches original scripted endpoint");
+  camera.setAngle(0);camera.lookAt(&origin);actor->setPosition(&east);camera.setCameraLock(actor->getID());camera.setCameraLockDrawable(actor->getDrawable());
+  const auto previous=camera.get3DCameraPosition();const auto calls=cameraModelCalls;camera.updateView();
+  const auto chase=camera.get3DCameraPosition();
+  require(cameraModelCalls==calls+1 && near(chase.x,previous.x+(10-previous.x)*.1f) &&
+    near(chase.y,previous.y+(80-previous.y)*.1f) && near(chase.z,previous.z+(20-previous.z)*.1f),
+    "actual first DrawModule chase uses sphere-top/four-and-a-half-radius target and ten-percent eye smoothing");
+  cameraPrimaryInterface=false;count=cameraModelCalls;const auto retained=camera.get3DCameraPosition();camera.updateView();
+  require(cameraModelCalls==count && camera.get3DCameraPosition().x==retained.x,
+    "first-module chase does not search later available ObjectDrawInterfaces");cameraPrimaryInterface=true;
+  cameraModelOutput=false;camera.updateView();require(camera.get3DCameraPosition().x==retained.x,"missing first render metadata preserves accepted chase backing");cameraModelOutput=true;
+  camera.setCameraLock(INVALID_ID);camera.setCameraLockDrawable(nullptr);camera.forceRedraw();
+  actor->setName(AsciiString("GeneratedCameraActor"));context.scripts->addObjectToCache(actor);
+  const AsciiString objectName("GeneratedCameraActor"),boneName("GeneratedCameraBone");
+  camera.cameraEnableSlaveMode(objectName,boneName);count=camera.transformBuildCount();
+  const auto firstBones=cameraPrimaryBones,secondBones=cameraSecondBones;camera.updateView();
+  require(camera.transformBuildCount()==count+1 && cameraPrimaryBones==firstBones+1 && cameraSecondBones==secondBones &&
+    camera.get3DCameraPosition().x==100 && camera.position().z==300 && camera.spatial.pose().right.x==2 && camera.spatial.pose().backward.z==4,
+    "actual ScriptEngine named actor resolves first bone provider, retains scale and publishes listener position");
+  cameraPrimaryInterface=false;camera.updateView();require(camera.get3DCameraPosition().x==110 && cameraSecondBones==secondBones+1,
+    "slave lookup skips non-interface first module and selects first available interface");cameraPrimaryInterface=true;
+  cameraBoneOutput=false;NativeCamera expectedNormal;expectedNormal.configure(camera.state());camera.updateView();
+  require(near(camera.get3DCameraPosition().x,expectedNormal.eye().x) && near(camera.get3DCameraPosition().y,expectedNormal.eye().y) &&
+    near(camera.get3DCameraPosition().z,expectedNormal.eye().z),
+    "missing bone output retains defined normal pose rather than source uninitialized-matrix adoption");cameraBoneOutput=true;
+  camera.cameraEnableSlaveMode(AsciiString("GeneratedMissingCameraActor"),boneName);count=camera.transformBuildCount();camera.updateView();camera.updateView();
+  require(camera.transformBuildCount()==count+1,"missing named actor disables slave mode after one source rebuild rather than repeated idle work");
+  camera.cameraDisableSlaveMode();camera.lookAt(&origin);camera.Add_Camera_Shake(origin,10000,.05f,1);
+  count=camera.transformBuildCount();const auto boneQueries=cameraPrimaryBones+cameraSecondBones;
+  for(unsigned n=0;n<100;++n){camera.get3DCameraPosition();ICoord2D pixel;camera.worldToScreenTriReturn(&origin,&pixel);Coord3D ground;camera.screenToWorldAtZ(&pixel,&ground,0);}
+  require(effects.count()==1 && camera.transformBuildCount()==count && cameraPrimaryBones+cameraSecondBones==boneQueries,
+    "all accepted spatial queries leave C3 clock and model callbacks unchanged");
+  camera.forceRedraw();require(effects.count()==1,"one explicit cached rebuild advances C3 by only one thirtieth");
+  camera.forceCameraConstraintRecalc();require(effects.count()==1,"explicit constraint query does not consume C3 lifetime");
+  camera.forceRedraw();require(!effects.active(),"second explicit rebuild expires C3 record at original source cadence");
+  camera.Add_Camera_Shake(origin,10000,.05f,1);count=camera.transformBuildCount();camera.setZoom(1);
+  require(camera.transformBuildCount()==count+2 && !effects.active(),"invalidated constraint settlement advances both original C3 rebuild steps");
+  count=camera.transformBuildCount();const auto eye=camera.get3DCameraPosition();auto* originalLogic=TheGameLogic;TheGameLogic=nullptr;
+  bool rejected=false;try{camera.updateView();}catch(ErrorCode error){rejected=error==ERROR_BAD_ARG;}catch(...){TheGameLogic=originalLogic;throw;}
+  TheGameLogic=originalLogic;require(rejected && camera.transformBuildCount()==count && camera.get3DCameraPosition().x==eye.x,
+    "missing actual frame parent rejects before mutating accepted backing or effects");camera.updateView();
+  camera.initHeightForMap();camera.setHeightAboveGround(100);camera.setZoom(1);camera.setOkToAdjustHeight(TRUE);
+  const auto position=camera.position();Real terrainHeight=terrain.getGroundHeight(position.x,position.y);
+  for(const Coord2D delta:{Coord2D{40,-40},Coord2D{-40,-40},Coord2D{40,40},Coord2D{-40,40}})
+    terrainHeight=std::max(terrainHeight,terrain.getGroundHeight(position.x+delta.x,position.y+delta.y));
+  const Real desiredZoom=(terrainHeight+camera.getHeightAboveGround())/camera.state().offset.z;
+  const Real expectedZoom=1-(1-desiredZoom)*context.data->m_cameraAdjustSpeed;camera.updateView();
+  require(near(camera.getZoom(),expectedZoom) && camera.getTerrainHeightUnderCamera()==terrainHeight,
+    "actual native terrain drives exact five-sample idle height settlement");camera.setOkToAdjustHeight(FALSE);
+  context.data->m_maxShakeRange=10000;context.data->m_shakeNormalIntensity=1;context.data->m_maxShakeIntensity=3;
+  const auto logicCRC=GetGameLogicRandomSeedCRC();count=camera.transformBuildCount();camera.shake(&origin,View::SHAKE_NORMAL);camera.updateView();
+  require(camera.transformBuildCount()==count+1 && GetGameLogicRandomSeedCRC()==logicCRC,"actual legacy shake rebuilds without consuming simulation RNG");
+  AllocationFault::arm(0);try{for(unsigned n=0;n<10;++n)camera.updateView();}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();const bool hit=AllocationFault::triggered();AllocationFault::disarm();
+  require(attempts==0 && !hit,"actual repeated source camera frames have exact allocation terminal0");
+  camera.setCameraLock(actor->getID());camera.setCameraLockDrawable(actor->getDrawable());auto* retiring=actor->getDrawable();parents.client.owner->destroyDrawable(retiring);
+  require(!camera.getCameraLockDrawable() && actor==parents.logic.owner->findObjectByID(actor->getID()),"actual Drawable retirement withdraws concrete camera borrow while Object survives");
+  camera.updateView();require(camera.getCameraLock()==actor->getID(),"concrete frame safely falls back to source actor following after Drawable-only loss");
+}
+void factoryCreation(Context& context,bool faults,bool binding=false,bool cameraTracking=false,bool cameraFrame=false){
   std::unique_ptr<Tree> generatedUser;
   NativeServiceOwners<1> userOwner;
   if(cameraTracking){
@@ -560,24 +705,31 @@ void factoryCreation(Context& context,bool faults,bool binding=false,bool camera
   context.load(wire());DeviceFixture visual;LogicFixture terrain(visual);logicLoad(terrain,providerWorld(),"GeneratedCreation.map");
   const auto oldTerrain=TheTerrainLogic;TheTerrainLogic=&terrain;
   struct Restore{TerrainLogic* previous;~Restore(){TheTerrainLogic=previous;}} restore{oldTerrain};
-  PartitionPublication partition;partition.owner->init();ActorParents parents(true);
+  PartitionPublication partition;if(!cameraFrame)partition.owner->init();ActorParents parents(true);
   {std::ofstream definitions(context.tree.path/"creation.ini");
     definitions<<"Object GeneratedCreatedActor\n Geometry = BOX\n GeometryMajorRadius = 5\n GeometryMinorRadius = 3\n IsTrainable = Yes\n"
       " Body = InactiveBody GeneratedBody\n End\n Behavior = VeterancyGainCreate GeneratedCreate\n StartingLevel = VETERAN\n End\n End\n";
-    if(cameraTracking)definitions<<"GameData\n CameraHeight = 300\n CameraPitch = 45\n CameraYaw = 0\n End\n";
+    if(cameraTracking){definitions<<"GameData\n CameraHeight = 300\n CameraPitch = 45\n CameraYaw = 0\n";
+      if(cameraFrame)definitions<<" PartitionCellSize = 20\n CameraAdjustSpeed = 0.2\n";
+      definitions<<" End\n";}
     definitions.close();require(bool(definitions),"generated actual body/create definitions");}
   // Generated files must exist before the read-only mount indexes this tree.
   // No user-storage lease or open input survives here; refresh through the VFS.
   context.files.mountReadOnly({context.tree.path.string()});
   if(cameraTracking)context.data->init(); // Actual GameData parser requires an initialized registered root.
   INI ini;ini.load("creation.ini",INI_LOAD_OVERWRITE,nullptr);
+  if(cameraFrame)partition.owner->init(); // Parsed cell-size contract precedes partition grid admission.
   auto* definition=const_cast<ThingTemplate*>(context.factory->findTemplate("GeneratedCreatedActor",FALSE));
   if(binding){parents.modules.owner->addBindingProbes();
-    auto add=[&](ModuleInfo& info,const char* name,ModuleType type,Int interfaces){const AsciiString tag(name);
+    auto add=[&](ModuleInfo& info,const char* name,ModuleType type,Int interfaces){const AsciiString moduleName(name),tag(name);
       auto* data=parents.modules.owner->newModuleDataFromINI(nullptr,name,type,tag);
-      require(data,"test-only binding callback data");info.addModuleInfo(definition,name,tag,data,interfaces,FALSE);};
+      require(data,"test-only binding callback data");info.addModuleInfo(definition,moduleName,tag,data,interfaces,FALSE);};
     add(const_cast<ModuleInfo&>(definition->getDrawModuleInfo()),"BindingDrawProbe",MODULETYPE_DRAW,MODULEINTERFACE_DRAW);
     add(const_cast<ModuleInfo&>(definition->getBehaviorModuleInfo()),"BindingBehaviorProbe",MODULETYPE_BEHAVIOR,0);}
+  if(cameraFrame){parents.modules.owner->addCameraProbes();
+    for(const char* name:{"CameraModelProbe","CameraSecondProbe"}){const AsciiString moduleName(name),tag(name);
+      auto* data=parents.modules.owner->newModuleDataFromINI(nullptr,name,MODULETYPE_DRAW,tag);require(data,"generated camera module data");
+      const_cast<ModuleInfo&>(definition->getDrawModuleInfo()).addModuleInfo(definition,moduleName,tag,data,MODULEINTERFACE_DRAW,FALSE);}}
   auto make=[&]{return context.factory->newObject(context.factory->findTemplate("GeneratedCreatedActor",FALSE),nullptr,OBJECT_STATUS_MASK_NONE);};
   auto verify=[&](Object* actor){auto* draw=actor->getDrawable();require(actor->getBodyModule() && actor->getExperienceTracker()->getVeterancyLevel()==LEVEL_VETERAN &&
       actor->friend_getPartitionData() && draw && draw->getObject()==actor && parents.client.owner->findDrawableByID(draw->getID())==draw &&
@@ -585,8 +737,33 @@ void factoryCreation(Context& context,bool faults,bool binding=false,bool camera
   auto retire=[&](Object* actor){parents.logic.owner->destroyObject(actor);parents.logic.owner->processDestroyList();};
   auto* survivor=make();verify(survivor);auto* survivorDraw=survivor->getDrawable();auto* survivorPartition=survivor->friend_getPartitionData();
   auto* warm=make();verify(warm);retire(warm);
+  if(cameraFrame){cameraFrames(context,parents,terrain,survivor);retire(survivor);return;}
   if(cameraTracking){
     NativeCameraViewFixture camera;camera.init();camera.setFrameLengthMilliseconds(10);
+    camera.setOrigin(17,23);camera.setHeight(481);camera.get3DCameraPosition();
+    Region3D extent;terrain.getExtent(&extent);
+    const auto constraints=camera.spatial.constraintRegion(extent,10,FALSE);
+    const auto center=camera.spatial.atZ({337,263},10),bottom=camera.spatial.atZ({337,479},10);
+    const Real dx=center.x-bottom.x,dy=center.y-bottom.y;
+    const Real border=std::sqrt(dx*dx+dy*dy+100);
+    require(constraints.lo.x==extent.lo.x+border && constraints.hi.x==extent.hi.x-border &&
+      constraints.lo.y==extent.lo.y+border && constraints.hi.y==extent.hi.y-border,
+      "native camera constraints use actual authored terrain extent and truncated odd-viewport samples with retained ground Z");
+    const auto debugConstraints=camera.spatial.constraintRegion(extent,10,TRUE);
+    require(debugConstraints.lo.x==extent.lo.x-1000 && debugConstraints.hi.y==extent.hi.y+1000,
+      "original debug AI staging-area expansion retains actual map extent");
+    Region3D tiny=extent;tiny.hi.x=tiny.lo.x+1;tiny.hi.y=tiny.lo.y+1;
+    const auto inverted=camera.spatial.constraintRegion(tiny,10,FALSE);
+    require(inverted.lo.x>inverted.hi.x && inverted.lo.y>inverted.hi.y,
+      "small-map source bounds remain inverted rather than replaced with invented midpoint clipping");
+    const auto clipped=NativeCamera::clipPosition({0,0,123},inverted);
+    require(clipped.x==inverted.hi.x && clipped.y==inverted.hi.y && clipped.z==123,
+      "actual small-map camera clipping applies low then high and preserves canonical Z");
+    AllocationFault::arm(0);try{for(unsigned n=0;n<100;++n){
+      const auto bounds=camera.spatial.constraintRegion(extent,10,FALSE);NativeCamera::clipPosition({0,0,0},bounds);}}
+    catch(...){AllocationFault::disarm();throw;}
+    const auto constraintAttempts=AllocationFault::attempts();const bool constraintHit=AllocationFault::triggered();AllocationFault::disarm();
+    require(constraintAttempts==0 && !constraintHit,"actual map constraint query and clipping have exact allocation terminal0");
     auto* prior=TheTacticalView;TheTacticalView=&camera;
     struct RestoreView{View* prior;~RestoreView(){TheTacticalView=prior;}}restoreView{prior};
     const auto actorID=survivor->getID();auto* oldDraw=survivor->getDrawable();
@@ -869,8 +1046,11 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
     // Module definitions borrow their registry's data: warm complete roots,
     // not a template graph retained after its module-data owner was retired.
     if(std::string_view(argv[1]).starts_with("factory-creation"))for(unsigned repeat=0;repeat<2;++repeat){Context warm;factoryCreation(warm,false,
-      std::string_view(argv[1])=="factory-creation-binding",std::string_view(argv[1])=="factory-creation-camera");}
+      std::string_view(argv[1])=="factory-creation-binding",
+      std::string_view(argv[1])=="factory-creation-camera" || std::string_view(argv[1])=="factory-creation-camera-frame",
+      std::string_view(argv[1])=="factory-creation-camera-frame");}
     for(unsigned repeat=0;repeat<3;++repeat){auto live=AllocationFault::live();const auto views=View::liveViewCount();const PoolUsage pools;
+      auto* cameraPool=TheMemoryPoolFactory->findMemoryPool("CameraModelProbe");const auto cameraUnits=cameraPool?cameraPool->getUsedBlockCount():0;
       {Context context;const std::string_view family=argv[1];if(family=="functional")functional(context);
         else if(family=="negative")negative(context);else if(family=="faults"){faults(context);optionalFaults(context);}
         else if(family=="ownership")ownership(context);else if(family=="pool-failures")poolFailures(context);
@@ -883,8 +1063,9 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
         else if(family=="factory-creation")factoryCreation(context,false);else if(family=="factory-creation-faults")factoryCreation(context,true);
         else if(family=="factory-creation-binding")factoryCreation(context,false,true);
         else if(family=="factory-creation-camera")factoryCreation(context,false,false,true);
+        else if(family=="factory-creation-camera-frame")factoryCreation(context,false,false,true,true);
         else require(false,"unknown world family");}
-      require(AllocationFault::live()==live && View::liveViewCount()==views && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
+      require((!cameraPool || cameraPool->getUsedBlockCount()==cameraUnits) && AllocationFault::live()==live && View::liveViewCount()==views && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
         !MapObject::getFirstMapObject() && !PolygonTrigger::getFirstPolygonTrigger(),"repeated full-world owner retirement");}
     shutdownMemoryManager();initialized=false;require(AllocationFault::live()==initial,"whole original pool metadata retirement");
     std::cout<<"PASS actual logical world; native startup still pending\n";return 0;

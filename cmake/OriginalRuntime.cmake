@@ -287,6 +287,8 @@ target_link_libraries(original_logical_client PUBLIC Freetype::Freetype Fontconf
 target_sources(original_logical_client PRIVATE
   "${ZH_CODE}/GameEngine/Source/GameClient/ScriptedView.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeCamera.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeCameraShaker.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeFrameCameraView.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeCameraView.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeHeadlessGameClient.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeWaterGrid.cpp"
@@ -552,7 +554,7 @@ target_include_directories(original_script_camera_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_options(original_script_camera_fixture PRIVATE -ffp-contract=off)
 target_link_options(original_script_camera_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS modes paths negative ownership spatial spatial-negative spatial-ownership navigation navigation-negative)
+foreach(family IN ITEMS modes paths negative ownership spatial spatial-negative spatial-ownership navigation navigation-negative poses poses-negative shaker shaker-ownership)
   add_test(NAME original_script_camera_${family} COMMAND original_script_camera_fixture "${family}")
   set_tests_properties(original_script_camera_${family} PROPERTIES LABELS "original;runtime;camera" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
@@ -572,7 +574,7 @@ target_compile_definitions(original_logical_world_fixture PRIVATE _OPERATOR_NEW_
 target_include_directories(original_logical_world_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_link_options(original_logical_world_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS functional negative faults ownership pool-failures continuation terrain terrain-negative terrain-faults pathfinder-map pathfinder-map-faults partition-grid partition-grid-faults partition-actors partition-ghost-attachment factory-creation factory-creation-faults factory-creation-binding factory-creation-camera)
+foreach(family IN ITEMS functional negative faults ownership pool-failures continuation terrain terrain-negative terrain-faults pathfinder-map pathfinder-map-faults partition-grid partition-grid-faults partition-actors partition-ghost-attachment factory-creation factory-creation-faults factory-creation-binding factory-creation-camera factory-creation-camera-frame)
   add_test(NAME original_logical_world_${family} COMMAND original_logical_world_fixture "${family}")
   set_tests_properties(original_logical_world_${family} PROPERTIES LABELS "original;runtime;map" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
