@@ -6893,6 +6893,75 @@ future bridge enablement needs a source-established game activation path; do not
 invent one to exercise a test. The generic library sound interval algorithm is
 not itself proof that the Zero Hour process emitted those events.
 
+#### Ordered model tick: lazy control and demand census
+
+Source review at parent95d2d962 (source inspection, not new runtime acceptance):
+
+- `GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DModelDraw.cpp`
+  `doDrawModule:1161` checks power pause, applies nonunit instance root/ObjectScale,
+  tests retained completion, admits pending/restarted state, adjusts movement
+  duration, sets adjusted world root, writes turrets, creates state particles,
+  optionally updates animated particles, then writes recoil. A state recreation
+  after the early ObjectScale write can replace that render owner. Do not move
+  ObjectScale publication after state admission merely to make it persistent.
+- `animobj.cpp:690` Capture_Bone marks capture only; `:752` Control_Bone writes
+  the control and invalidates hierarchy, without progression or evaluation.
+  `:658` Get_Bone_Transform validates/evaluates only an invalid hierarchy.
+  Thus eager native applyControls evaluation is component backing, not yet
+  an accepted replacement for the original full-tick scheduling boundary.
+- `animobj.cpp:288` Render always progresses a visible nonmanual single motion
+  before hierarchy evaluation. Update_Sub_Object_Transforms progresses again
+  when it evaluates; same-time Single_Anim_Progress preserves old PrevFrame.
+  A render cannot be modeled as just an invalid-hierarchy read: even an already
+  valid pose must advance on a later sync time. Ordinary hidden Render returns
+  before this work; Special_Render:319 does not use that hidden gate.
+- `W3DModelDraw.cpp:1710` initial particle creation sets a temporary modelspace
+  root scaled by Drawable::getScale, then reads each nonzero bone before restoring
+  the original world root. That read can advance the shared animation clock.
+  Restoring the root invalidates the hierarchy again. Capture state must survive
+  this temporary-root evaluation; using an independently advancing cloned clock
+  would lose the source-owned frame/PrevFrame boundary.
+- `W3DModelDraw.cpp:1798` animated particle updates read world bones before
+  recoil, then write position, orientation, local transform and skip-parent.
+  Existing `NativeParticleSystemAdmission` snapshots exactly those retained
+  client fields (plus stopped state), and enrolls every ancestor. This existing
+  protection must be used by the combined tick, not replaced by creation-only
+  rollback. Retained particle transforms can intentionally precede final recoil.
+- `W3DModelDraw.cpp:2954` pause uses Peek_Animation_And_Info's retained frame,
+  not a freshly advanced frame; Set_Animation restarts sync and multiplier at1.
+  Movement speed adjustment:1088 uses the actually selected animation distance
+  and real PhysicsBehavior velocity; duration:1355 uses real milliseconds,
+  not the ceil(logic-frame duration) helper used by the separate public callback.
+
+Implementation boundary: preserve retained clock reads separately from invalid
+pose backing, stage captured-control writes without mandatory evaluation, and
+provide distinct bone-demand and visible-render progression routes. Both routes
+use the same source-owned clock; retain the verified NULL embedded-sound bridge
+branch, with no invented event cursor or successful playback sink. A failed
+whole walk must restore lazy-validity, controls, clock, pose/root, shared pristine
+attachment flag/value, current/condition owners and retained particle fields.
+Use owner-thread client pristine staging rather than weakening public logic
+query phase guards. These are game-source changes; no WW3D/bgfx vendor patch.
+
+Generated composition must use one actual ModuleFactory/ThingFactory/NameKey
+namespace. `tests/original/object_ownership.cpp:137` supplies actual actor parent
+lifecycle; its ActorModules base init already registers Physics/AI.
+`tests/original/drawable_queries.cpp:96` has a draw-only Factory, so creating the
+two fixture Contexts side by side would replace singleton identities rather
+than compose them. Build one generated root including parsed GameData/user
+storage, real actor Physics/AI/turrets/geometry, camera/script/display, particles
+and registered native draw modules. Source Actor/Drawable cleanup must retain
+its real GameLogic/Radar/client identities until all dependent objects retire.
+
+Required distinguishing oracles: no-demand tick retains frame; first invalid
+bone read progresses once; repeated same-time demand retains PrevFrame; later
+visible render progresses a valid pose; hidden render does not; temporary-root
+particle sampling advances that same clock; particles observe pre-recoil bones;
+retained completion is processed on the next tick after actual progression;
+pause freezes the retained frame. Test coupled late failure and caught-child
+failure/outer commit, every corrected retry, both scale branches and whole-owner
+retirement. Full original startup/simulation and concrete19 remain unaccepted.
+
 #### Remaining dynamic ambient metadata boundary
 
 Parsed newAudioEventInfo insertion is covered above; external addAudioEventInfo

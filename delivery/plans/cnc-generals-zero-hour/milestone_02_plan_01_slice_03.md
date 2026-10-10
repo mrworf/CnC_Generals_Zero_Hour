@@ -4709,3 +4709,44 @@ admission/queue/retirement support, not full tick, physical playback, original
 startup/loaded simulation or N2/slice03 completion. Continue the existing
 real-parent/full-tick/transfer/concrete-provider integration contract, preserving
 the original no-bridge animation-sound branch and external metadata boundaries.
+
+Ordered-tick production gate after audio commit95d2d962: source census in
+docs/original-engine-formats.md (Ordered model tick: lazy control and demand
+census) resolves the next batch. Continue this slice, not a new micro-plan.
+Deliver one actual Drawable draw walk with composed actor parents, lazy pose/
+clock demands and ancestor rollback; do not stack the independent object and
+draw-query fixture contexts, which replace the same singleton namespace.
+
+The coupled implementation surfaces are NativeModelDrawCurrentQueries,
+NativeModelDrawAnimationProducer, NativeModelDrawQueries/ConditionBatch,
+NativeW3DPose, Drawable::draw's walk boundary, and a generated composed root.
+Before changing these, inspect all current bone/bounds/FX query callers and pose
+clone/publication routes. Retained complete/peek/pause reads do not demand pose;
+control/root writes invalidate without advancing; bone demand advances only
+when invalid; visible render progresses even valid pose. Keep explicit-frame
+fixture utilities distinct from the production lazy route. State recreation
+can replace the ObjectScale written earlier in the original tick. Movement
+duration must use actual selected distance and physics velocity in milliseconds.
+
+Initial state particle creation must use the same clock while evaluating under
+the source temporary modelspace root, then restore/invalidate the world root;
+independent cloned-clock advancement is not equivalent. Animated particles sample
+before recoil. Enroll existing particle client-state rollback and shared pristine
+attachment cache in all owning ancestors, not just an inner success scope.
+Keep public logic-query guards and stage attachment through a separate supported
+client owner route. Preserve NULL embedded-sound bridge behavior; do not activate
+new gameplay/audio merely from metadata. Physical submission remains a later
+milestone, not a successful placeholder callback here.
+
+Validation additions must distinguish no-demand tick, first invalid read,
+repeated same-time read, later valid-pose render, hidden/special render, temporary
+particle root, pre-recoil particle sample, retained next-tick completion, pause,
+unit/nonunit scale and actual Physics/AI/construction/instance transforms.
+Exercise complete ordered multi-module walk late failure/retry, caught child
+failure plus outer commit, child success plus outer rollback, and repeated whole
+owner destruction. Warm identical complete generated parents/configuration and
+cursor/RNG state; measure standard allocation and used pool units. Freeze the
+entire production cohort before GCC/GCC sanitizer/Clang sanitizer focused and
+related matrices; existing timeouts and leak checks stay enabled. No runtime
+acceptance is claimed by this source audit. Audio7/related72 need not be rerun
+until a change actually affects their source/lifecycle contract.
