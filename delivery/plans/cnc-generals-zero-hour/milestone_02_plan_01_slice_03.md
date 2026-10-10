@@ -4627,3 +4627,25 @@ with outer commit and accepted child with outer rollback, GCC/Clang sanitizers.
 Stage fallible strings before raw owning calls. No mock event sink, physical
 playback claim, renderer callback into simulation or dependency patch. These
 engineering facts extend the same full-tick cohort, not a new tiny plan.
+
+Audio cohort implementation contract: add a main-owner nested admission scope
+capturing exact queue boundary, handle counter, audio-only RNG, four SoundManager
+counters and each touched caller's cached info/playing index. Register caller
+snapshots in all ancestors before mutation; rollback retires new requests and
+restores primitive/borrowed state without allocations. Guard candidate events
+and pooled requests through every fallible helper/append. Queue acceptance makes
+Play payload ownership explicit; provide a take operation for a later physical
+consumer, and forbid consumption while an admission is active. Sound rejection
+must clear its caller pointer after release so GameAudio never reads freed data.
+Guard paired Music/Sound startup acquisitions, initialize invalid settings/count
+backing, and retire queued payloads before metadata/managers in whole-owner
+destruction. Legacy Miles playback is not an active Linux provider; its raw
+handoff is evidence of the required future take boundary, not vendor code to
+patch. Validate with parsed generated settings/events and original managers,
+not synthetic successful audio output. This phase owns game source and generated
+fixtures only; source AudioRequest/manager interfaces may change internally.
+
+Working-tree cleanup checkpoint: the unfinished audio implementation is preserved
+in [checkpoints/N2-audio-admission-unfinished.md](checkpoints/N2-audio-admission-unfinished.md)
+and its adjacent patch. Active source remains at the last verified checkpoint;
+resume this coupled cohort from that artifact without claiming audio acceptance.

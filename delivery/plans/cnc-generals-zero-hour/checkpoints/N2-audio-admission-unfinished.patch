@@ -1,0 +1,234 @@
+diff --git a/GeneralsMD/Code/GameEngine/Include/Common/AudioEventRTS.h b/GeneralsMD/Code/GameEngine/Include/Common/AudioEventRTS.h
+index 8af6065d..d7368074 100644
+--- a/GeneralsMD/Code/GameEngine/Include/Common/AudioEventRTS.h
++++ b/GeneralsMD/Code/GameEngine/Include/Common/AudioEventRTS.h
+@@ -143,8 +143,8 @@ public:
+ 	Int getPlayerIndex( void ) const;
+ 	void setPlayerIndex( Int playerNdx );
+ 
+-	Int getPlayingAudioIndex( void ) { return m_playingAudioIndex; };
+-	void setPlayingAudioIndex( Int pai )  { m_playingAudioIndex = pai; };
++	Int getPlayingAudioIndex( void ) const { return m_playingAudioIndex; };
++	void setPlayingAudioIndex( Int pai ) const { m_playingAudioIndex = pai; };
+ 
+ 	Bool getUninterruptable( ) const { return m_uninterruptable; }
+ 	void setUninterruptable( Bool uninterruptable ) { m_uninterruptable = uninterruptable; } 
+@@ -193,7 +193,7 @@ protected:
+ 	Real m_volumeShift;							///< Volume shift that should occur on this piece of audio
+ 	Real m_delay;										///< Amount to delay before playing this sound
+ 	Int m_loopCount;								///< The current loop count value. Only valid if this is a looping type event or the override has been set.
+-	Int m_playingAudioIndex;				///< The sound index we are currently playing. In the case of non-random, we increment this to move to the next sound
++	mutable Int m_playingAudioIndex;				///< Cached choice; also updated through the original const admission API.
+ 	Int m_allCount;									///< If this sound is an ALL type, then this is how many sounds we have played so far.
+ 	
+ 	Int m_playerIndex;							///< The index of the player who owns this sound. Used for sounds that should have an owner, but don't have an object, etc.
+diff --git a/GeneralsMD/Code/GameEngine/Include/Common/AudioRandomValue.h b/GeneralsMD/Code/GameEngine/Include/Common/AudioRandomValue.h
+index 26318922..21fb46ca 100644
+--- a/GeneralsMD/Code/GameEngine/Include/Common/AudioRandomValue.h
++++ b/GeneralsMD/Code/GameEngine/Include/Common/AudioRandomValue.h
+@@ -38,6 +38,17 @@
+ extern Int GetGameAudioRandomValue( int lo, int hi, const char *file, int line );
+ extern Real GetGameAudioRandomValueReal( Real lo, Real hi, const char *file, int line );
+ 
++class GameAudioRandomTransaction final {
++  UnsignedInt m_previous[6];
++  bool m_committed=false;
++public:
++  GameAudioRandomTransaction() noexcept;
++  ~GameAudioRandomTransaction() noexcept;
++  GameAudioRandomTransaction(const GameAudioRandomTransaction&)=delete;
++  GameAudioRandomTransaction& operator=(const GameAudioRandomTransaction&)=delete;
++  void commit() noexcept {m_committed=true;}
++};
++
+ // use these macros to access the random value functions
+ #define GameAudioRandomValue( lo, hi ) GetGameAudioRandomValue( lo, hi, __FILE__, __LINE__ )
+ #define GameAudioRandomValueReal( lo, hi ) GetGameAudioRandomValueReal( lo, hi, __FILE__, __LINE__ )
+diff --git a/GeneralsMD/Code/GameEngine/Include/Common/AudioRequest.h b/GeneralsMD/Code/GameEngine/Include/Common/AudioRequest.h
+index 730a4954..c2c0d150 100644
+--- a/GeneralsMD/Code/GameEngine/Include/Common/AudioRequest.h
++++ b/GeneralsMD/Code/GameEngine/Include/Common/AudioRequest.h
+@@ -48,6 +48,10 @@ struct AudioRequest : public MemoryPoolObject
+ 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( AudioRequest, "AudioRequest" )
+ 
+ public:
++  AudioRequest():m_request(AR_Stop),m_pendingEvent(nullptr),m_usePendingEvent(FALSE),m_requiresCheckForSample(FALSE){}
++  Bool m_ownsPendingEvent=FALSE;
++  AudioManager* m_queueOwner=nullptr;
++  AudioEventRTS* takePendingEvent(); // Consumer transfers exactly one ownership unit.
+ 	RequestType m_request;
+ 	union 
+ 	{
+diff --git a/GeneralsMD/Code/GameEngine/Include/Common/GameAudio.h b/GeneralsMD/Code/GameEngine/Include/Common/GameAudio.h
+index 41205b7b..0ff5d2fa 100644
+--- a/GeneralsMD/Code/GameEngine/Include/Common/GameAudio.h
++++ b/GeneralsMD/Code/GameEngine/Include/Common/GameAudio.h
+@@ -48,6 +48,7 @@
+ #include "Lib/BaseType.h"
+ #include "Common/STLTypedefs.h"
+ #include "Common/SubsystemInterface.h"
++#include <thread>
+ 
+ 
+ // Forward Declarations
+@@ -134,6 +135,7 @@ enum
+ 
+ class AudioManager : public SubsystemInterface
+ {
++  friend class NativeAudioAdmission;
+ 	public:
+ 		AudioManager();
+ 		virtual ~AudioManager();
+@@ -325,6 +327,7 @@ class AudioManager : public SubsystemInterface
+     
+ 	protected:
+ 		AudioSettings *m_audioSettings;
++    const std::thread::id m_admissionThread=std::this_thread::get_id();
+ 		MiscAudio *m_miscAudio;
+ 		MusicManager *m_music;
+ 		SoundManager *m_sound;
+diff --git a/GeneralsMD/Code/GameEngine/Include/Common/GameSounds.h b/GeneralsMD/Code/GameEngine/Include/Common/GameSounds.h
+index d7b4c021..03f34dda 100644
+--- a/GeneralsMD/Code/GameEngine/Include/Common/GameSounds.h
++++ b/GeneralsMD/Code/GameEngine/Include/Common/GameSounds.h
+@@ -52,6 +52,7 @@ class AudioEventRTS;
+ 
+ class SoundManager : public SubsystemInterface
+ {
++  friend class NativeAudioAdmission;
+ 	public:
+ 		SoundManager();
+ 		virtual ~SoundManager();
+@@ -69,7 +70,7 @@ class SoundManager : public SubsystemInterface
+ 		virtual void setCameraAudibleDistance( Real audibleDistance );
+ 		virtual Real getCameraAudibleDistance( void );
+ 		
+-		virtual void addAudioEvent(AudioEventRTS *eventToAdd);	// pre-copied
++		virtual void addAudioEvent(AudioEventRTS *&eventToAdd);	// accepted queue owns; rejection clears
+ 
+ 		virtual void notifyOf2DSampleStart( void );
+ 		virtual void notifyOf3DSampleStart( void );
+diff --git a/GeneralsMD/Code/GameEngine/Source/Common/Audio/AudioRequest.cpp b/GeneralsMD/Code/GameEngine/Source/Common/Audio/AudioRequest.cpp
+index c4e17884..d0943f61 100644
+--- a/GeneralsMD/Code/GameEngine/Source/Common/Audio/AudioRequest.cpp
++++ b/GeneralsMD/Code/GameEngine/Source/Common/Audio/AudioRequest.cpp
+@@ -26,9 +26,16 @@
+ #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
+ 
+ #include "Common/AudioRequest.h"
++#include "Common/AudioEventRTS.h"
++#include "Common/NativeAudioAdmission.h"
+ 
+ 
+ AudioRequest::~AudioRequest() 
+ {
+-	
++  if(m_ownsPendingEvent)delete m_pendingEvent;
++}
++AudioEventRTS* AudioRequest::takePendingEvent(){
++  if(m_queueOwner)NativeAudioAdmission::requireConsumption(*m_queueOwner);
++  if(!m_usePendingEvent)return nullptr;
++  auto* value=m_pendingEvent;m_pendingEvent=nullptr;m_ownsPendingEvent=FALSE;return value;
+ }
+diff --git a/GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp b/GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp
+index 05c8a0dc..9af71910 100644
+--- a/GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp
++++ b/GeneralsMD/Code/GameEngine/Source/Common/RandomValue.cpp
+@@ -76,6 +76,12 @@ static UnsignedInt theGameAudioSeed[6] =
+ };
+ 
+ static UnsignedInt theGameLogicBaseSeed = 0;
++GameAudioRandomTransaction::GameAudioRandomTransaction() noexcept {
++  for(unsigned n=0;n<6;++n)m_previous[n]=theGameAudioSeed[n];
++}
++GameAudioRandomTransaction::~GameAudioRandomTransaction() noexcept {
++  if(!m_committed)for(unsigned n=0;n<6;++n)theGameAudioSeed[n]=m_previous[n];
++}
+ static UnsignedInt theGameLogicSeed[6] =
+ {
+     0xf22d0e56L, 0x883126e9L, 0xc624dd2fL, 0x702c49cL, 0x9e353f7dL, 0x6fdf3b64L
+diff --git a/GeneralsMD/Code/GameEngine/Include/Common/NativeAudioAdmission.h b/GeneralsMD/Code/GameEngine/Include/Common/NativeAudioAdmission.h
+new file mode 100644
+index 00000000..03f8830e
+--- /dev/null
++++ b/GeneralsMD/Code/GameEngine/Include/Common/NativeAudioAdmission.h
+@@ -0,0 +1,20 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++#pragma once
++#include <memory>
++class AudioManager;
++class AudioEventRTS;
++// Main-owner admission savepoint. A committed child retains its outer boundary.
++// Queue processing/ownership transfer happens only after all admissions retire.
++class NativeAudioAdmission final {
++  struct Impl;
++  std::unique_ptr<Impl> m_state;
++  static thread_local Impl* current;
++public:
++  explicit NativeAudioAdmission(AudioManager&);
++  ~NativeAudioAdmission() noexcept;
++  NativeAudioAdmission(const NativeAudioAdmission&)=delete;
++  NativeAudioAdmission& operator=(const NativeAudioAdmission&)=delete;
++  void commit() noexcept;
++  static void touch(const AudioEventRTS&);
++  static void requireConsumption(AudioManager&);
++};
+diff --git a/GeneralsMD/Code/GameEngine/Source/Common/Audio/NativeAudioAdmission.cpp b/GeneralsMD/Code/GameEngine/Source/Common/Audio/NativeAudioAdmission.cpp
+new file mode 100644
+index 00000000..4aa909a7
+--- /dev/null
++++ b/GeneralsMD/Code/GameEngine/Source/Common/Audio/NativeAudioAdmission.cpp
+@@ -0,0 +1,52 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++#include "PreRTS.h"
++#include "Common/NativeAudioAdmission.h"
++#include "Common/GameAudio.h"
++#include "Common/GameSounds.h"
++#include "Common/AudioEventRTS.h"
++#include "Common/AudioRandomValue.h"
++#include <vector>
++#include <array>
++
++struct NativeAudioAdmission::Impl {
++  struct Caller {const AudioEventRTS* event;const AudioEventInfo* info;Int index;};
++  AudioManager& owner;
++  SoundManager* const sound;
++  MusicManager* const music;
++  const AudioHandle handle;
++  const std::size_t count;
++  std::array<UnsignedInt,4> samples{};
++  GameAudioRandomTransaction random;
++  std::vector<Caller> callers;
++  Impl* parent;
++  bool committed=false;
++  Impl(AudioManager& value,Impl* prior):owner(value),sound(value.m_sound),music(value.m_music),handle(value.theAudioHandlePool),count(value.m_audioRequests.size()),parent(prior){
++    if(sound)samples={sound->m_num2DSamples,sound->m_num3DSamples,sound->m_numPlaying2DSamples,sound->m_numPlaying3DSamples};
++  }
++  void remember(const AudioEventRTS& event){
++    if(parent)parent->remember(event);
++    for(const auto& entry:callers)if(entry.event==&event)return;
++    callers.push_back({&event,event.getAudioEventInfo(),event.getPlayingAudioIndex()});
++  }
++  ~Impl()noexcept{
++    if(!committed){
++      while(owner.m_audioRequests.size()>count){auto* request=owner.m_audioRequests.back();owner.m_audioRequests.pop_back();owner.releaseAudioRequest(request);}
++      owner.theAudioHandlePool=handle;
++      if(sound){sound->m_num2DSamples=samples[0];sound->m_num3DSamples=samples[1];sound->m_numPlaying2DSamples=samples[2];sound->m_numPlaying3DSamples=samples[3];}
++      for(auto it=callers.rbegin();it!=callers.rend();++it){it->event->setAudioEventInfo(it->info);it->event->setPlayingAudioIndex(it->index);}
++    }
++  }
++};
++thread_local NativeAudioAdmission::Impl* NativeAudioAdmission::current=nullptr;
++NativeAudioAdmission::NativeAudioAdmission(AudioManager& owner){
++  if(owner.m_admissionThread!=std::this_thread::get_id())throw ERROR_BAD_ARG;
++  if(TheAudio!=&owner)throw ERROR_BAD_ARG;
++  if(current&&(&current->owner!=&owner||current->sound!=owner.m_sound||current->music!=owner.m_music))throw ERROR_BAD_ARG;
++  m_state=std::make_unique<Impl>(owner,current);current=m_state.get();
++}
++NativeAudioAdmission::~NativeAudioAdmission()noexcept{auto* prior=m_state->parent;m_state.reset();current=prior;}
++void NativeAudioAdmission::commit()noexcept{m_state->random.commit();m_state->committed=true;}
++void NativeAudioAdmission::touch(const AudioEventRTS& event){if(!current)throw ERROR_BAD_ARG;current->remember(event);}
++void NativeAudioAdmission::requireConsumption(AudioManager& owner){
++  if(owner.m_admissionThread!=std::this_thread::get_id()||TheAudio!=&owner||current)throw ERROR_BAD_ARG;
++}
+
