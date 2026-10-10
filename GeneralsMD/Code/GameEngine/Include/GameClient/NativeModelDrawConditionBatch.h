@@ -3,6 +3,7 @@
 #include "Common/DrawModule.h"
 #include <memory>
 class NativeModelDrawAnimationProducer;
+class ParticleSystemManager;
 
 // Enroll from raw lists, never a dirty getter. Nested notifications share the
 // original namespace/assets/client cursor and retain exact prior module owners.
@@ -20,4 +21,5 @@ public:
   static void validate(const NativeModelDrawAnimationProducer&);
   static bool needsCopy(const NativeModelDrawAnimationProducer&);
   static void retainPrevious(NativeModelDrawAnimationProducer&)noexcept;
+  static void enrollParticles(ParticleSystemManager&);
 };

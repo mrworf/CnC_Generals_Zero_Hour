@@ -1253,6 +1253,7 @@ void ParticleSystem::setSaveable(Bool b)
 // ------------------------------------------------------------------------------------------------
 void ParticleSystem::start( void )
 {
+	NativeParticleSystemAdmission::touch(*this);
 	m_isStopped = false;
 }
 
@@ -1261,6 +1262,7 @@ void ParticleSystem::start( void )
 // ------------------------------------------------------------------------------------------------
 void ParticleSystem::stop( void )
 {
+	NativeParticleSystemAdmission::touch(*this);
 	m_isStopped = true;
 }
 
@@ -1292,6 +1294,7 @@ void ParticleSystem::getPosition( Coord3D *pos )
 // ------------------------------------------------------------------------------------------------
 void ParticleSystem::setPosition( const Coord3D *pos )
 {
+	NativeParticleSystemAdmission::touch(*this);
 	m_localTransform.Set_X_Translation( pos->x );
 	m_localTransform.Set_Y_Translation( pos->y );
 	m_localTransform.Set_Z_Translation( pos->z );
@@ -1303,6 +1306,7 @@ void ParticleSystem::setPosition( const Coord3D *pos )
 // ------------------------------------------------------------------------------------------------
 void ParticleSystem::setLocalTransform( const Matrix3D *matrix )
 {
+	NativeParticleSystemAdmission::touch(*this);
 	m_localTransform = *matrix;
 	m_isLocalIdentity = false;
 }
@@ -1312,6 +1316,7 @@ void ParticleSystem::setLocalTransform( const Matrix3D *matrix )
 // ------------------------------------------------------------------------------------------------
 void ParticleSystem::rotateLocalTransformX( Real x )
 {
+	NativeParticleSystemAdmission::touch(*this);
 	m_localTransform.Rotate_X( x );
 	m_isLocalIdentity = false;
 }
@@ -1321,6 +1326,7 @@ void ParticleSystem::rotateLocalTransformX( Real x )
 // ------------------------------------------------------------------------------------------------
 void ParticleSystem::rotateLocalTransformY( Real y )
 {
+	NativeParticleSystemAdmission::touch(*this);
 	m_localTransform.Rotate_Y( y );
 	m_isLocalIdentity = false;
 }
@@ -1330,6 +1336,7 @@ void ParticleSystem::rotateLocalTransformY( Real y )
 // ------------------------------------------------------------------------------------------------
 void ParticleSystem::rotateLocalTransformZ( Real z )
 {
+	NativeParticleSystemAdmission::touch(*this);
 	m_localTransform.Rotate_Z( z );
 	m_isLocalIdentity = false;
 }
@@ -1343,6 +1350,10 @@ void ParticleSystem::attachToDrawable( const Drawable *draw )
 		m_attachedToDrawableID = draw->getID();
 	else
 		m_attachedToDrawableID = INVALID_DRAWABLE_ID;
+}
+
+void ParticleSystem::setSkipParentXfrm(Bool enable){
+	NativeParticleSystemAdmission::touch(*this);m_skipParentXfrm=enable;
 }
 
 // ------------------------------------------------------------------------------------------------

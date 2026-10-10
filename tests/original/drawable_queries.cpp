@@ -5,6 +5,8 @@
 #include "GameClient/NativeModelDrawCurrentQueries.h"
 #include "GameClient/NativeModelDrawAnimationProducer.h"
 #include "GameClient/ClientRandomValue.h"
+#include "GameClient/ParticleSys.h"
+#include "GeneratedParticleInput.h"
 #include "GameClient/NativeHeadlessGameClient.h"
 #include "GameClient/NativeHeadlessDisplay.h"
 #include "NativeCameraViewFixture.h"
@@ -31,6 +33,11 @@ public:
   bool producerEnabled=false;
   void initializeProducer(){initializeNativeAnimationProducer();producerEnabled=true;}
   void producerStep(const Matrix3D& root){advanceNativeConditionAnimation(root);}
+  void particles(){recalcNativeStateParticles();}
+  std::size_t particleCount()const{return nativeStateParticleCount();}
+  ParticleSystemID particleID(std::size_t index)const{return ParticleSystemID(nativeStateParticleID(index));}
+  void particleVisibility(Bool obscured){NativeModelDrawAnimationProducer::setFullyObscuredByShroud(obscured);}
+  void particleBones(){NativeModelDrawAnimationProducer::updateBonesForClientParticleSystems();}
   const ModelConditionInfo* selected()const{return nativeSelectedCondition();}
   const ModelConditionInfo* pending()const{return nativePendingCondition();}
   Int selectedAnimation()const{return nativeSelectedAnimation();}
@@ -91,7 +98,8 @@ Data numberedClientTree(){Data header,pivots;word(header,0x40001);text(header,"N
 std::vector<std::pair<std::string,Data>> inputs(){
   const std::string parent="Draw\nIgnoreConditionStates = NIGHT\nDefaultConditionState\nModel = Outer\nAnimation = Tree.Walk\nFlags = PRISTINE_BONE_POS_IN_FINAL_FRAME\nEnd\nConditionState = MOVING\nFlags = None\nEnd\nAliasConditionState = ATTACKING\nExtraPublicBone = Arm\nExtraPublicBone = Muzzle\nEnd\n";
   const std::string child="Draw\nDefaultConditionState\nModel = Outer\nAnimation = Tree.Walk\nFlags = PRISTINE_BONE_POS_IN_FINAL_FRAME\nWeaponFireFXBone = PRIMARY Muzzle\nWeaponLaunchBone = PRIMARY Muzzle\nWeaponRecoilBone = PRIMARY Arm\nTurret = Arm\nTurretArtAngle = 90\nEnd\nConditionState = MOVING\nFlags = None\nEnd\nAliasConditionState = ATTACKING\nAttachToBoneInAnotherModule = Arm\nEnd\n";
-  return {{"parent.ini",bytes(parent)},{"child.ini",bytes(child)},{"definition.ini",bytes("Definition\nScale = 1\nEnd\n")},
+  return {{"Data/INI/ParticleSystem.ini",bytes(GeneratedParticleInput::definition("GeneratedStateParticles","GeneratedStateSlave")+GeneratedParticleInput::definition("GeneratedStateSlave"))},
+    {"parent.ini",bytes(parent)},{"child.ini",bytes(child)},{"definition.ini",bytes("Definition\nScale = 1\nEnd\n")},
     {"Art/W3D/NumberedTree.w3d",numberedClientTree()},{"Art/W3D/Numbered.w3d",hlod("Numbered","NumberedTree",{{"NULL",0}})},
     {"Art/W3D/BBox.w3d",join({box("BBox.BOUNDINGBOX"),box("BBox.Other",2)})},
     {"Art/W3D/Bounded.w3d",hlod("Bounded","Tree",{{"BBox.BOUNDINGBOX",2}})},
@@ -421,6 +429,60 @@ void configureProducer(Fixture& fixture,unsigned index=0){
   attacking.m_conditionsYesVec={attackFlags};attacking.m_transitionKey=NAMEKEY_INVALID;
   attacking.m_mode=5;attacking.m_flags=(1<<START_FRAME_FIRST)|(1<<START_FRAME_LAST);
   data.m_conditionStates={idle,moving,attacking};data.m_transitionMap.clear();
+}
+struct ParticleParents {
+  struct Manager:ParticleSystemManager {
+    Int getOnScreenParticleCount()override{return m_onScreenParticleCount;}
+    void doParticles(RenderInfoClass&)override{throw ERROR_BAD_ARG;}
+    void queueParticleRender()override{throw ERROR_BAD_ARG;}
+  };
+  Fixture& fixture;ParticleSystemManager* previous=TheParticleSystemManager;
+  std::unique_ptr<Manager> owner;
+  explicit ParticleParents(Fixture& value):fixture(value){
+    try{owner=std::make_unique<Manager>();TheParticleSystemManager=owner.get();owner->init();}
+    catch(...){owner.reset();TheParticleSystemManager=previous;throw;}
+  }
+  ~ParticleParents(){
+    // Actual module teardown must precede its actual particle manager parent.
+    if(fixture.draw){fixture.client->destroyDrawable(fixture.draw);fixture.draw=nullptr;}
+    TheParticleSystemManager=owner.get();owner.reset();TheParticleSystemManager=previous;
+  }
+};
+bool sameParticleState(const ParticleSystem::NativeClientState& a,const ParticleSystem::NativeClientState& b){
+  if(a.localIdentity!=b.localIdentity||a.skipParent!=b.skipParent||a.stopped!=b.stopped)return false;
+  for(unsigned n=0;n<3;++n)for(unsigned k=0;k<4;++k)if(a.local[n][k]!=b.local[n][k])return false;return true;
+}
+void producerParticles(Fixture& fixture,bool rollback){
+  ProducerTimeOwner time;ParticleParents particles(fixture);GameClientRandomTransaction random;
+  for(unsigned n=0;n<2;++n)configureProducer(fixture,n);
+  auto& module=fixture.module(0);auto& data=module.inputData();
+  const AsciiString name("GeneratedStateParticles");const auto* source=particles.owner->findTemplate(name);require(source,"actual parsed state particle parent");
+  data.m_conditionStates[0].m_particleSysBones={{AsciiString("Muzzle"),source},{AsciiString("Missing"),source}};
+  module.initializeProducer();fixture.module(1).initializeProducer();
+  require(!module.particleCount()&&!particles.owner->getParticleSystemCount(),"native condition selection preserves delayed particle creation");
+  module.particles();require(module.particleCount()==2&&particles.owner->getParticleSystemCount()==4,"whole authored tracker cohort admits both actual master/slave chains");
+  auto* primary=particles.owner->findParticleSystem(module.particleID(0));auto* missing=particles.owner->findParticleSystem(module.particleID(1));
+  Coord3D position;primary->getPosition(&position);
+  require(position.x==16&&primary->getAttachedDrawable()==fixture.draw->getID()&&!primary->isSaveable()&&!primary->getSlave()->isSaveable(),"initial source model-space pose and non-saveable chain attachment");
+  missing->getPosition(&position);require(position.x==0&&!missing->nativeClientState().skipParent,"missing/index0 initial bone has source zero fallback");
+  module.setAnimationFrame(1);auto world=Matrix3D(true);world.Set_Translation(Vector3(100,0,0));module.producerStep(world);module.particleBones();
+  primary->getPosition(&position);require(position.x==120&&primary->nativeClientState().skipParent,"animated particle callback uses complete world bone and skips parent transform");
+  missing->getPosition(&position);require(position.x==0&&!missing->nativeClientState().skipParent,"animated update skips missing/index0 bones");
+  module.particleVisibility(TRUE);require(primary->nativeClientState().stopped&&missing->nativeClientState().stopped&&!primary->getSlave()->nativeClientState().stopped,"source shroud start/stop affects tracked primaries, not invented slave propagation");
+  module.particleVisibility(FALSE);const auto accepted=primary->nativeClientState();const auto missed=missing->nativeClientState();
+  const auto* binding=module.currentBinding();const auto id=module.particleID(0);const auto live=AllocationFault::live();
+  {NativeModelDrawConditionBatch root(fixture.draw->getDrawModules());
+    module.particleVisibility(TRUE);module.setAnimationFrame(0);world.Set_Translation(Vector3(200,0,0));module.producerStep(world);module.particleBones();
+  }
+  require(module.currentBinding()==binding&&module.particleID(0)==id&&sameParticleState(primary->nativeClientState(),accepted)&&sameParticleState(missing->nativeClientState(),missed)&&AllocationFault::live()==live,"whole root rollback restores exact tracker/current/particle client state and standard owners");
+  ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);
+  if(rollback){auto& bad=fixture.module(1).inputData().m_conditionStates[1];bad.m_hideShowVec.push_back({AsciiString("GeneratedPart"),TRUE});
+    clientRejects([&]{fixture.draw->replaceModelConditionFlags(moving,TRUE);});
+    require(module.currentBinding()==binding&&module.particleID(0)==id&&!primary->isDestroyed()&&!missing->isDestroyed(),"late actual condition walk rejection retains accepted effects without premature destroy");bad.m_hideShowVec.clear();
+  }
+  fixture.draw->replaceModelConditionFlags(moving,TRUE);
+  require(!module.particleCount()&&primary->isDestroyed()&&missing->isDestroyed()&&particles.owner->getParticleSystemCount()==4,"committed state replacement retires old tracker cohort via source deferred destruction");
+  module.particles();require(!module.particleCount()&&particles.owner->getParticleSystemCount()==4,"empty next condition creates no invented particles");
 }
 void producerFunctional(Fixture& fixture){
   ProducerTimeOwner time;configureProducer(fixture);auto& module=fixture.module(0);
@@ -880,6 +942,7 @@ int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawa
     {Fixture warm;producerSelection(warm);}
     {Fixture warm;producerLifecycle(warm);}
     {Fixture warm;producerNegative(warm);}
+    if(std::string_view(argv[1]).starts_with("producer-particles-")){Fixture warm;producerParticles(warm,true);}
     if(std::string_view(argv[1]).starts_with("producer-walk")||std::string_view(argv[1])=="producer-first-root"){
       {Fixture warm;producerWalk(warm,false);}
       {Fixture warm;producerWalk(warm,true);}
@@ -890,7 +953,7 @@ int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawa
     }
   }
   for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
-    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else if(family=="display-time")displayTime(fixture);else if(family=="model-bounds")modelBounds(fixture);else if(family=="producer-functional")producerFunctional(fixture);else if(family=="producer-transitions")producerTransitions(fixture);else if(family=="producer-selection")producerSelection(fixture);else if(family=="producer-cold")producerFaults(fixture,false);else if(family=="producer-seeded")producerFaults(fixture,true);else if(family=="producer-lifecycle")producerLifecycle(fixture);else if(family=="producer-negative")producerNegative(fixture);else if(family=="producer-walk-dirty")producerWalk(fixture,false);else if(family=="producer-walk-forced")producerWalk(fixture,true);else if(family=="producer-walk-query")producerWalkQuery(fixture);else if(family=="producer-first-root")producerFirstRoot(fixture);else if(family=="producer-walk-wait")producerWalkWait(fixture);else if(family=="producer-walk-dirty-faults")producerWalkFaults(fixture,0);else if(family=="producer-walk-forced-faults")producerWalkFaults(fixture,1);else if(family=="producer-walk-query-faults")producerWalkFaults(fixture,2);else if(family=="producer-walk-mutations")producerWalkMutations(fixture);else if(family=="producer-walk-mutation-faults")producerMutationFaults(fixture);else throw GeneratedFixtureFailure("unknown Drawable query family");}
+    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else if(family=="display-time")displayTime(fixture);else if(family=="model-bounds")modelBounds(fixture);else if(family=="producer-functional")producerFunctional(fixture);else if(family=="producer-transitions")producerTransitions(fixture);else if(family=="producer-selection")producerSelection(fixture);else if(family=="producer-cold")producerFaults(fixture,false);else if(family=="producer-seeded")producerFaults(fixture,true);else if(family=="producer-lifecycle")producerLifecycle(fixture);else if(family=="producer-negative")producerNegative(fixture);else if(family=="producer-walk-dirty")producerWalk(fixture,false);else if(family=="producer-walk-forced")producerWalk(fixture,true);else if(family=="producer-walk-query")producerWalkQuery(fixture);else if(family=="producer-first-root")producerFirstRoot(fixture);else if(family=="producer-walk-wait")producerWalkWait(fixture);else if(family=="producer-walk-dirty-faults")producerWalkFaults(fixture,0);else if(family=="producer-walk-forced-faults")producerWalkFaults(fixture,1);else if(family=="producer-walk-query-faults")producerWalkFaults(fixture,2);else if(family=="producer-walk-mutations")producerWalkMutations(fixture);else if(family=="producer-walk-mutation-faults")producerMutationFaults(fixture);else if(family=="producer-particles-functional")producerParticles(fixture,false);else if(family=="producer-particles-rollback")producerParticles(fixture,true);else throw GeneratedFixtureFailure("unknown Drawable query family");}
     require(AllocationFault::live()==live,"whole original Drawable/client/definition/query/parent cohort retirement");
   }shutdownMemoryManager();initialized=false;std::cout<<"PASS actual Drawable query dispatch; renderer/full simulation pending\n";return 0;
  }catch(const GeneratedFixtureFailure& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(const std::exception&){std::cerr<<"FAIL generated Drawable query\n";}catch(ErrorCode){std::cerr<<"FAIL source Drawable query\n";}

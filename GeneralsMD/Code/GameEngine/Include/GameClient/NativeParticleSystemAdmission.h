@@ -3,6 +3,7 @@
 #include <memory>
 class ParticleSystemManager;
 class ParticleSystemTemplate;
+class ParticleSystem;
 
 // Source-owner savepoint, including systems committed by nested creators.
 // Candidate cleanup is immediate; accepted destroy() remains deferred.
@@ -17,4 +18,5 @@ public:
   NativeParticleSystemAdmission& operator=(const NativeParticleSystemAdmission&)=delete;
   void commit() noexcept;
   static const ParticleSystemTemplate* slave(const ParticleSystemTemplate&);
+  static void touch(ParticleSystem&); // Snapshot existing client state before writing.
 };

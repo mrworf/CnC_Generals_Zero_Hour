@@ -4185,3 +4185,46 @@ Current related145/full482 remain unrun. Include this family in the next coupled
 production freeze; do not repeat the whole matrix just for this test-only
 extension. Resume concrete tracker/bone/effect/physics/AI/geometry owner integration
 above before asserting a complete logical model tick, startup or N2 acceptance.
+
+Concrete state-particle implementation batch (clean parent632c54d4): extend the
+shared native model producer's actual condition state with a shared owned
+tracker cohort and delayed recalculation flag. Candidate state changes release
+the old cohort only when the condition root commits; rollback retains exact old
+tracker identity. Idle animation restart must keep effects, unlike true state
+replacement. Cohort destruction uses accepted deferred system destruction under
+the legitimate original manager, with no allocations or simulation callbacks.
+Prepare new trackers and cloned model-space pose offside under one complete
+manager admission, then publish only after every system/pose/append succeeds.
+Source index0 fallback, template order, Drawable attachment, chain saveability,
+definition/tree scale and initial-versus-animated sampling remain authoritative.
+
+Enroll particle admission lazily into the condition root before any effects
+acquisition, without changing empty/no-particle paths. Extend manager savepoints
+with snapshots of pre-existing local-transform/local-identity/skip-parent/stopped
+state. Before each original position/rotation/transform/visibility setter writes,
+record its old state into every enclosing scope. Capture only systems present
+at that scope's entry; retire new systems before restoring old snapshots.
+Snapshot restore assigns raw game-owned fields, not fallible setters. Batch all
+animated-bone/visibility changes inside a local savepoint so a locally caught
+late rejection does not leave a prefix, even if the outer condition root commits.
+Do not add simulation/removal rollback claims or hooks that allocate during
+accepted deferred destruction.
+
+Implementation surfaces: original ParticleSys client setter/snapshot boundary,
+NativeParticleSystemAdmission, NativeModelDrawConditionBatch and shared animation
+producer, with generated actual manager/Drawable/model/clock fixtures. Tests must
+cover real creation, delayed selection, old-owner retention on late condition
+rejection, initial and animated transforms, hidden/shroud changes, missing/index0
+bones, suppressed state particles, idle restart, every std/pool failure/retry,
+correct parent cleanup and repeated lifetimes in GCC and both sanitizer builds.
+Keep complete model tick/turret/recoil/physics/AI/geometry/lazy event integration
+and concrete19 factory admission pending until their real paths are connected;
+these particle callbacks are not a successful replacement for doDrawModule.
+
+User-requested consolidation checkpoint: all12 pending state-particle paths are
+preserved together as WIP, not accepted implementation. The GCC coupled build
+failed linking Matrix3D::Get_Z_Rotation in both initial/animated callbacks; the
+chained focused CTest did not execute. No live owned jobs remain. Resume the
+same batch above, including its outstanding failure/retry and sanitizer gates;
+do not inherit older green results for this changed source. Inventory, failure
+and continuation: evidence/qa/N2-state-particle-wip.md. Slice03/N2 remain pending.

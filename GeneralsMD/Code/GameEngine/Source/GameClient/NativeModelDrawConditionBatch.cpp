@@ -4,6 +4,7 @@
 #include "GameClient/NativeModelDrawAnimationProducer.h"
 #include "GameClient/ClientRandomValue.h"
 #include "Common/GlobalData.h"
+#include "GameClient/NativeParticleSystemAdmission.h"
 #include <exception>
 
 struct NativeModelDrawConditionBatch::Impl {
@@ -23,6 +24,7 @@ struct NativeModelDrawConditionBatch::Impl {
   GameClientRandomTransaction random;
   NativeW3DAssets& assets;
   const GlobalData* const configuration=TheGlobalData;
+  std::unique_ptr<NativeParticleSystemAdmission> particles;
   std::vector<Previous> previous;
   std::vector<Publication> publications;
   bool committed=false;
@@ -82,7 +84,7 @@ NativeModelDrawConditionBatch::~NativeModelDrawConditionBatch()noexcept{
   if(m_owned){m_owned.reset();current=nullptr;}
 }
 void NativeModelDrawConditionBatch::commit()noexcept{
-  if(m_owned){m_root->admission.commit();m_root->keys.commit();m_root->random.commit();m_root->committed=true;}
+  if(m_owned){if(m_root->particles)m_root->particles->commit();m_root->admission.commit();m_root->keys.commit();m_root->random.commit();m_root->committed=true;}
 }
 void NativeModelDrawConditionBatch::validate(const NativeModelDrawAnimationProducer& module){
   if(!current)return;
@@ -99,4 +101,7 @@ void NativeModelDrawConditionBatch::retainPrevious(NativeModelDrawAnimationProdu
   if(!current||!module.m_state.source)return;
   auto* prior=current->find(module);if(!prior)std::terminate(); // validate precedes publication.
   if(!prior->retained){prior->saved.current=std::move(module.m_current);prior->saved.validated=std::move(module.m_validated);prior->retained=true;}
+}
+void NativeModelDrawConditionBatch::enrollParticles(ParticleSystemManager& owner){
+  if(current&&!current->particles)current->particles=std::make_unique<NativeParticleSystemAdmission>(owner);
 }

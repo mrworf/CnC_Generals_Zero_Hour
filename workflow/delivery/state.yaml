@@ -132,16 +132,21 @@
     "next": "Continue N2 plan01/slice03: validate coupled copy-on-first-mutation callbacks and locally caught rejection inside the root, then freeze and run related GCC/GCCsan/Clangsan before accepting this component. Concrete19/effect/new-owner lifetimes and full startup/simulation remain pending."
   },
   "working_checkpoint": {
-    "parent": "cd91e1c447096f2ab5192aac4296d730ef056952",
-    "label": "original-particle-growth-validation",
-    "repository_commit": "865bf8df071bdfaa6798d4806deef044fd224062",
-    "evidence": "evidence/qa/N2-particle-growth.md",
-    "validation": "Test-only focused7 PASS all3;22 matching manifests. Production unchanged from frozen related144. Current related145/full482 unrun; component evidence only.",
-    "next": "Continue concrete19 tracker/bone/effect integration under real physics/AI/geometry parents, camera and actual startup/loaded simulation in same N2 plan01/slice03; include growth in next production freeze.",
+    "parent": "632c54d415bf6868b936bd0893a439bed3438236",
+    "label": "original-state-particle-wip",
+    "commit_locator": "git log -1 --format=%H -- evidence/qa/N2-state-particle-wip.md",
+    "evidence": "evidence/qa/N2-state-particle-wip.md",
+    "status": "User-requested WIP consolidation; not an accepted slice or delivery handoff",
+    "validation": "GCC coupled build failed linking Matrix3D::Get_Z_Rotation in both particle callbacks; chained focused CTest did not execute. Diff whitespace PASS. No live owned jobs. Current source has no focused/sanitizer/related-matrix acceptance.",
+    "initial_modified_files": 11,
+    "initial_untracked_files": 1,
+    "live_sessions": {},
+    "next": "Review native math linkage and complete the same N2 plan01/slice03 state-particle batch with coupled semantics and every failure/retry coverage; focused GCC/GCCsan/Clangsan then frozen related matrix. Concrete19, camera, startup and loaded simulation remain pending.",
+    "slice_complete": false,
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03: creation-only particle-chain admission has frozen related144 PASS all3; test-only growth extension focused7 PASS all3 and22 matching manifests. Resume concrete19 tracker/bone/effect/physics/AI/geometry integration and full logical model tick under durable source contracts, then camera actor-follow and actual startup/loaded simulation. Include growth in next production freeze; related145/full482 unrun. Slice03 and N2 remain incomplete.",
+  "resume_point": "N2 plan01/slice03 state-particle WIP consolidated at user request. GCC link failed on Matrix3D::Get_Z_Rotation; focused tests did not execute. See evidence/qa/N2-state-particle-wip.md. Review coupled math/particle paths, complete semantic and allocation failure/retry coverage, then focused all3 and frozen related matrix. Older related144/growth passes are historical source-specific evidence, not current acceptance. Concrete19/camera/startup/loaded simulation, slice03 and N2 remain incomplete.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",

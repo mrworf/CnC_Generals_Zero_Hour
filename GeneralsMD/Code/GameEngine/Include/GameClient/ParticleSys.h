@@ -538,13 +538,20 @@ public:
 
 	inline ParticleSystemID getSystemID( void ) const { return m_systemID; }	///< get unique system ID
 
+	// Game-owned client publication only; not serialized or simulation state.
+	struct NativeClientState {Matrix3D local;Bool localIdentity,skipParent,stopped;};
+	NativeClientState nativeClientState() const noexcept {return {m_localTransform,m_isLocalIdentity,m_skipParentXfrm,m_isStopped};}
+	void restoreNativeClientState(const NativeClientState& state) noexcept {
+		m_localTransform=state.local;m_isLocalIdentity=state.localIdentity;m_skipParentXfrm=state.skipParent;m_isStopped=state.stopped;
+	}
+
 	void setPosition( const Coord3D *pos );			///< set the position of the particle system
 	void getPosition( Coord3D *pos );				///< get the position of the particle system
 	void setLocalTransform( const Matrix3D *matrix );	///< set the system's local transform
 	void rotateLocalTransformX( Real x );				///< rotate local transform matrix
 	void rotateLocalTransformY( Real y );				///< rotate local transform matrix
 	void rotateLocalTransformZ( Real z );				///< rotate local transform matrix
-  void setSkipParentXfrm(Bool enable) { m_skipParentXfrm = enable; } ///<disable transforming particle system with parent matrix.
+  void setSkipParentXfrm(Bool enable); ///<disable transforming particle system with parent matrix.
 		
 	const Coord3D *getDriftVelocity( void ) { return &m_driftVelocity; }	///< get the drift velocity of the system
 

@@ -6,6 +6,8 @@
 #include "GameClient/Display.h"
 #include "GameClient/Drawable.h"
 #include "Common/GlobalData.h"
+#include "GameClient/NativeParticleSystemAdmission.h"
+#include "GameClient/ParticleSys.h"
 #include <cmath>
 #include <limits>
 
@@ -19,9 +21,20 @@ NativeW3DPose::Matrix raw(const Matrix3D& value){NativeW3DPose::Matrix out;
 bool has(Int flags,ACBits bit){return (flags&(1<<bit))!=0;}
 void supportedEffects(const ModelConditionInfo& value){
   // These still require the concrete source owners; never pretend application.
-  if(!value.m_particleSysBones.empty() || !value.m_hideShowVec.empty())throw ERROR_BAD_ARG;
+  if(!value.m_hideShowVec.empty())throw ERROR_BAD_ARG;
 }
 }
+struct NativeModelDrawAnimationProducer::ParticleCohort {
+  struct Tracker {ParticleSystemID id;std::size_t bone;};
+  ParticleSystemManager* owner;
+  std::vector<Tracker> trackers;
+  explicit ParticleCohort(ParticleSystemManager& value):owner(&value){}
+  ~ParticleCohort()noexcept{
+    if(trackers.empty())return;
+    if(TheParticleSystemManager!=owner)std::terminate();
+    for(const auto& tracker:trackers)if(auto* system=owner->findParticleSystem(tracker.id))system->destroy();
+  }
+};
 NativeModelDrawAnimationProducer::NativeModelDrawAnimationProducer(Thing* thing,const ModuleData* data,NativeW3DAssets& assets)
   :NativeModelDrawCurrentQueries(thing,data,assets){}
 NativeModelDrawAnimationProducer::~NativeModelDrawAnimationProducer()=default;
@@ -116,6 +129,7 @@ NativeModelDrawAnimationProducer::Candidate NativeModelDrawAnimationProducer::pr
   out.validated=std::move(query.condition);out.state=m_state;
   if(recreate)out.state.paused=FALSE; // Source nukeCurrentRender lifecycle.
   out.state.source=selected;out.state.pending=pending;out.state.pendingDuration=~UnsignedInt(0);
+  if(!restart){out.state.particles.reset();out.state.recalcParticles=!getDrawable()->testDrawableStatus(DRAWABLE_STATUS_NO_STATE_PARTICLES);}
   selectAnimation(out,m_state.source,fraction(m_state,m_current.get()),now);
   return out;
 }
@@ -123,6 +137,77 @@ void NativeModelDrawAnimationProducer::publish(Candidate&& candidate)noexcept{
   NativeModelDrawConditionBatch::retainPrevious(*this);
   m_current=std::move(candidate.current);m_validated=std::move(candidate.validated);m_state=candidate.state;
 }
+std::size_t NativeModelDrawAnimationProducer::nativeStateParticleCount()const noexcept{
+  return m_state.particles?m_state.particles->trackers.size():0;
+}
+UnsignedInt NativeModelDrawAnimationProducer::nativeStateParticleID(std::size_t index)const{
+  if(index>=nativeStateParticleCount())throw ERROR_BAD_ARG;
+  return UnsignedInt(m_state.particles->trackers[index].id);
+}
+void NativeModelDrawAnimationProducer::recalcNativeStateParticles(){
+  requireClientPhase();NativeModelDrawConditionBatch::validate(*this);
+  if(!m_state.recalcParticles)return;
+  if(!m_state.source||getDrawable()->testDrawableStatus(DRAWABLE_STATUS_NO_STATE_PARTICLES)||m_state.source->m_particleSysBones.empty()){
+    m_state.recalcParticles=FALSE;return;
+  }
+  if(!TheParticleSystemManager)throw ERROR_BAD_ARG;
+  NativeModelDrawConditionBatch::enrollParticles(*TheParticleSystemManager);
+  NativeParticleSystemAdmission admission(*TheParticleSystemManager);
+  auto candidate=std::make_shared<ParticleCohort>(*TheParticleSystemManager);
+  std::optional<NativeW3DPose> pose;
+  if(m_current&&m_current->binding.model->hierarchy){
+    pose.emplace(m_current->binding.pose.clone());Matrix3D root(true);root.Scale(getDrawable()->getScale());
+    pose->evaluateRuntime(raw(root),m_current->binding.animation?m_current->binding.animation->motion.get():nullptr,m_current->frame,m_current->treeScale);
+  }
+  for(const auto& source:m_state.source->m_particleSysBones){
+    auto* system=TheParticleSystemManager->createParticleSystem(source.particleSystemTemplate);
+    if(!system)continue;
+    const auto bone=pose?pose->sourceBoneIndex(source.boneName.str()):0;
+    Coord3D position{0,0,0};Real rotation=0;
+    if(bone){const auto& value=pose->bone(bone).transform;Matrix3D transform;
+      for(unsigned n=0;n<3;++n)for(unsigned k=0;k<4;++k)transform[n][k]=value[4*n+k];
+      const auto translation=transform.Get_Translation();position={translation.X,translation.Y,translation.Z};rotation=transform.Get_Z_Rotation();
+    }
+    system->setPosition(&position);system->rotateLocalTransformZ(rotation);
+    system->attachToDrawable(getDrawable());system->setSaveable(FALSE);
+    if(getDrawable()->isDrawableEffectivelyHidden()||m_state.fullyObscured)system->stop();
+    candidate->trackers.push_back({system->getSystemID(),bone});
+  }
+  m_state.particles=std::move(candidate);m_state.recalcParticles=FALSE;
+  admission.commit();
+}
+Bool NativeModelDrawAnimationProducer::updateBonesForClientParticleSystems(){
+  requireClientPhase();NativeModelDrawConditionBatch::validate(*this);
+  if(!m_state.particles||!m_current||!m_state.source)return TRUE;
+  auto& cohort=*m_state.particles;
+  if(TheParticleSystemManager!=cohort.owner)throw ERROR_BAD_ARG;
+  NativeModelDrawConditionBatch::enrollParticles(*cohort.owner);
+  NativeParticleSystemAdmission admission(*cohort.owner);
+  for(const auto& tracker:cohort.trackers){
+    auto* system=cohort.owner->findParticleSystem(tracker.id);
+    if(!system||!tracker.bone)continue;
+    const auto& value=m_current->binding.pose.bone(tracker.bone).transform;Matrix3D transform;
+    for(unsigned n=0;n<3;++n)for(unsigned k=0;k<4;++k)transform[n][k]=value[4*n+k];
+    const auto translation=transform.Get_Translation();const Coord3D position{translation.X,translation.Y,translation.Z};
+    system->setPosition(&position);system->rotateLocalTransformZ(transform.Get_Z_Rotation());
+    system->setLocalTransform(&transform);system->setSkipParentXfrm(TRUE);
+  }
+  admission.commit();return TRUE;
+}
+void NativeModelDrawAnimationProducer::applyParticleVisibility(Bool fullyObscured){
+  requireClientOwner();NativeModelDrawConditionBatch::validate(*this);
+  if(!m_state.particles){m_state.fullyObscured=fullyObscured;return;}
+  auto& cohort=*m_state.particles;if(TheParticleSystemManager!=cohort.owner)throw ERROR_BAD_ARG;
+  NativeModelDrawConditionBatch::enrollParticles(*cohort.owner);
+  NativeParticleSystemAdmission admission(*cohort.owner);
+  const bool hidden=getDrawable()->isDrawableEffectivelyHidden()||fullyObscured;
+  for(const auto& tracker:cohort.trackers)if(auto* system=cohort.owner->findParticleSystem(tracker.id)){
+    if(hidden)system->stop();else system->start();
+  }
+  m_state.fullyObscured=fullyObscured;admission.commit();
+}
+void NativeModelDrawAnimationProducer::setHidden(Bool){applyParticleVisibility(m_state.fullyObscured);}
+void NativeModelDrawAnimationProducer::setFullyObscuredByShroud(Bool value){applyParticleVisibility(value);}
 void NativeModelDrawAnimationProducer::initializeNativeAnimationProducer(){
   requireClientOwner();if(m_display || m_state.source || !TheDisplay)throw ERROR_BAD_ARG;
   const auto now=TheDisplay->getAnimationSyncTime();
