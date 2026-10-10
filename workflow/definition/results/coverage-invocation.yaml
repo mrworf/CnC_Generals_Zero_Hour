@@ -1,0 +1,20 @@
+workflow: product-definition
+stage: coverage
+skill: generate-prd-coverage-matrix
+mode: full
+scope: "First coverage review of HQ-01\u201307/R07 amendment; R01\u2013R12 remain inherited baseline, not independently recertified\
+  \ feature by feature"
+authoritative_inputs:
+- path: docs/zero-hour-linux-port-plan.md
+  revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+- path: product/headless-qualification.md
+  revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+decisions_path: workflow/definition/decisions.md
+open_questions_path: workflow/definition/open-questions.md
+workflow_state_path: workflow/definition/state.yaml
+result_path: workflow/definition/results/coverage.yaml
+owned_artifacts:
+- docs/zero-hour-linux-port-plan-coverage-matrix.md
+user_interaction: orchestrator_owned
+execution: sequential_in_chat_skill_workflow
+commit_policy: orchestrator_owned_no_child_commit

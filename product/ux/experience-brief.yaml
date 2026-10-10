@@ -1,0 +1,41 @@
+experience:
+  revision: hq-v1
+  scope: "Nonvisual HQ-01\u201307 developer qualification; original game UX unchanged"
+  audience:
+    primary:
+    - local developer
+    - automated runner
+    secondary:
+    - asset owner
+    - maintainer
+  principles:
+  - Truthful scoped progress/results
+  - Actionable failures without private input disclosure
+  - Original game experience preserved
+  product_character:
+    tone: Direct diagnostic
+    density: Compact stage/category and documented options
+    complexity_strategy: Separate generated qualification and supplied-data startup
+    guidance_level: Prerequisites and corrective category without exposing private selectors
+  information_priorities:
+  - Selected probe and stage
+  - Success/incomplete/failure
+  - Required local correction
+  interaction_direction:
+    navigation: Documented nonvisual development entry
+    routine_actions: Explicit roots, finite run, observe result
+    consequential_actions: No new destructive operation
+    progressive_disclosure: Help and public failure categories
+  responsive_priority: Plain text remains readable without color, sound or GUI
+  explicit_po_preferences:
+  - statement: Preserve intended original game UI/visual/audio behavior; no redesign
+    decision_refs:
+    - D-BASELINE-001
+  explicit_po_dislikes: []
+  designer_discretion:
+  - CLI help layout and routine diagnostic formatting within redaction contract
+  approval:
+    approved: true
+    basis: Existing user-approved preservation direction, not approval of a newly proposed visual design
+    decision_refs:
+    - D-BASELINE-001

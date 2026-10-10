@@ -1,0 +1,70 @@
+workflow: product-definition
+product_id: cnc-generals-zero-hour
+status: ready_for_delivery_planning
+scope: "R07/HQ-01\u201307 headless qualification amendment, with inherited approved R01\u2013R12 baseline preserved. All six\
+  \ stage passes are bounded to this amendment; no full-game implementation or feature-by-feature baseline recertification."
+generated_from_state: workflow/definition/state.yaml
+artifacts:
+  prd:
+    path: docs/zero-hour-linux-port-plan.md
+    revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+  qualification:
+    path: product/headless-qualification.md
+    revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+  coverage:
+    path: docs/zero-hour-linux-port-plan-coverage-matrix.md
+    revision: sha256:82a2f89781feced2bbc222c9c8c2ddb35deacf7cd77ba22180c0549e10d218c1
+  journeys:
+    path: docs/zero-hour-linux-port-plan-user-journey-audit.md
+    revision: sha256:9b23f19060298cd7a6b4cc8c425dca15989d6d87f50b7e80dc7a8abd8854cd4b
+  ux:
+    manifest: product/ux/manifest.yaml
+    revision: sha256:708ca54ec9e93d62084c6f163acba3e4bc1212cbcd372df88f5f397aad854997
+    scope: headless developer experience only; original game UX unchanged
+  architecture:
+    path: product/architecture/headless-review.md
+    revision: sha256:0d682587c7dd7f89d72ba4ace76521a650cc146e0f4435aa817aa232a59470b7
+  security:
+    path: product/security/headless-review.md
+    revision: sha256:09aba3f3eab1088212c69ff038a7bd11646c6151f7181fac9b3687eb206c4f1b
+decisions:
+  path: workflow/definition/decisions.md
+  revision: sha256:420ba5b4335f242276fdd06c8f4f9dca60608b11c670a2d3812b890c2dd2b940
+accepted_risks: []
+validation:
+  repository_commit: PENDING_PAYLOAD_COMMIT
+  prd:
+    status: passed
+    result: workflow/definition/results/prd.yaml
+    revision: sha256:56113ba2f28a498f9f8fe4102ca60df7bc667716451eab2d80d5b67b884cf8bf
+  coverage:
+    status: passed
+    result: workflow/definition/results/coverage.yaml
+    revision: sha256:404fb89577a75d44000b06b1287e6199ece0487d7466ed9e077e079e79c2d655
+  journeys:
+    status: passed
+    result: workflow/definition/results/journeys.yaml
+    revision: sha256:3b5133ab30698b908bbc4e491a02d5c3a3fd13be7716843917323a4052b03376
+  ux:
+    status: passed
+    result: workflow/definition/results/ux.yaml
+    revision: sha256:5007da02ff857b7de6ed4c1bd19549fc17137434b81db751f3561a1e03518768
+  architecture:
+    status: passed
+    result: workflow/definition/results/architecture.yaml
+    revision: sha256:4030c65e5a32531cb7d59105f444b2bbf4548ea00b561bf7462c0c07c12e4910
+  security:
+    status: passed
+    result: workflow/definition/results/security.yaml
+    revision: sha256:c988c408c8191769e56bcacff8ef66ab050b00441dd00f47b09657e9cc5eb012
+preservation:
+  baseline_specification_revision: sha256:0316702c3fb75979f3ef5cdafb3adcf3a4c1bfa3dc84e94f883aceb6ce49bf90
+  baseline_product_commit: c5e1fcb34f5c25151f583f6fa9e3b88833c82ab7
+  requirements: "R01\u2013R12 unchanged; additive R07 qualification reference only"
+  milestone_packet: linux-upstream-v2
+  milestone_graph_changed: false
+  implementation_acceptance: false
+limitations:
+- Scoped definition review, not a whole-game UX/security/runtime certification
+- All 17 pre-existing implementation/plan edits remain unaccepted and untouched
+- Existing delivery metadata retains the old specification fingerprint until separate planning adoption

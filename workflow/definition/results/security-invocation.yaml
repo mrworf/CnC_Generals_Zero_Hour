@@ -1,0 +1,26 @@
+workflow: product-definition
+stage: security
+skill: security-code-reviewer
+mode: full
+scope: Definition and direct input/storage/privacy consequences of headless qualification; not an exhaustive game vulnerability
+  audit
+authoritative_inputs:
+- path: docs/zero-hour-linux-port-plan.md
+  revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+- path: product/headless-qualification.md
+  revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+- path: docs/zero-hour-linux-port-plan-user-journey-audit.md
+  revision: sha256:9b23f19060298cd7a6b4cc8c425dca15989d6d87f50b7e80dc7a8abd8854cd4b
+- path: product/ux/manifest.yaml
+  revision: sha256:708ca54ec9e93d62084c6f163acba3e4bc1212cbcd372df88f5f397aad854997
+- path: product/ux/headless-experience.md
+  revision: sha256:32ceebe8b1b74585411c9f55a2ea437d1c620218156d5614d7d9527040011211
+decisions_path: workflow/definition/decisions.md
+open_questions_path: workflow/definition/open-questions.md
+workflow_state_path: workflow/definition/state.yaml
+result_path: workflow/definition/results/security.yaml
+owned_artifacts:
+- product/security/headless-review.md
+user_interaction: orchestrator_owned
+execution: sequential_in_chat_skill_workflow
+commit_policy: orchestrator_owned_no_child_commit

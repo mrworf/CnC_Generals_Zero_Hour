@@ -131,3 +131,23 @@ classified from source, not silently promoted into first-release scope.
 Engine-internal refactoring, resource organization and equivalent rendering
 techniques are delegated implementation choices. They cannot change gameplay,
 source-required visible effects, external encodings, or the upstream-only policy.
+
+
+## R07 foundation qualification
+
+The bounded acceptance contract for R07 is
+[Original-engine headless qualification](../product/headless-qualification.md),
+HQ-01–HQ-07. It fixes the generated H1 workload, original entry/update reachability,
+semantic checkpoints, required logical-provider boundary, repeated ownership,
+failure/retry and separate read-only supplied-data startup probe.
+
+This is a qualification of the original-engine foundation, not whole-game parity.
+The approved R01–R12 outcomes, exclusions, N0–N7 dependency graph and later rendering,
+interactive/media, single-player, persistence and LAN acceptance remain unchanged.
+Internal fixture encoding and equivalent provider mechanisms remain engineering
+choices. A source-required simulation query cannot be replaced by a success stub;
+unreached physical features do not automatically become H1 prerequisites.
+
+Product Definition readiness for this amendment means the bounded contract is
+specified and reviewed. It does not accept current implementation, retire an
+existing validation obligation, or by itself recompile the delivery packet.

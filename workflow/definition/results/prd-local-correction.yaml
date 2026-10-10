@@ -1,0 +1,39 @@
+stage: prd-development-partner
+status: FIX_LOCAL
+validated_inputs:
+- path: docs/zero-hour-linux-port-plan.md
+  revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+- path: product/headless-qualification.md
+  revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+artifact_changes:
+- path: docs/zero-hour-linux-port-plan.md
+  change: Created or scoped definition update
+  revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+- path: workflow/definition/results/prd-readiness.md
+  change: Created or scoped definition update
+  revision: sha256:8f9d0a4b9a954bf61beb1b7203b0e21647d30e62e40ae85f05cf315211de6055
+changed_paths:
+- docs/zero-hour-linux-port-plan.md
+- workflow/definition/results/prd-readiness.md
+- workflow/definition/results/prd.yaml
+findings: []
+questions: []
+affected_requirements:
+- R03
+- R04
+- R05
+- R07
+- R08
+- R09
+affected_artifacts:
+- docs/zero-hour-linux-port-plan.md
+- product/headless-qualification.md
+- docs/zero-hour-linux-port-plan.md
+- workflow/definition/results/prd-readiness.md
+reconciliation_required: false
+change_impact:
+  product: false
+  user_journeys: true
+  ux: false
+  architecture: true
+  security: false

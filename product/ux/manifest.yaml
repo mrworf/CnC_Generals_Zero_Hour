@@ -1,0 +1,28 @@
+ux:
+  revision: hq-v1
+  scope: "HQ-01\u201307 amendment only; no global game UX synthesis or new visual concepts"
+  authority:
+    status: approved_direction_preserved
+    decision_refs:
+    - D-BASELINE-001
+  source_revisions:
+  - path: docs/zero-hour-linux-port-plan.md
+    revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+  - path: product/headless-qualification.md
+    revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+  - path: docs/zero-hour-linux-port-plan-user-journey-audit.md
+    revision: sha256:9b23f19060298cd7a6b4cc8c425dca15989d6d87f50b7e80dc7a8abd8854cd4b
+  surfaces:
+  - headless developer diagnostics/help
+  platforms:
+  - Linux local terminal and automation
+  artifacts:
+    experience_brief:
+      path: product/ux/experience-brief.yaml
+      revision: sha256:ffde3411eb857d9c84dd7e99f2b33d34607610a7f315aaadbd17d8ccde126453
+    rules_and_checklist:
+      path: product/ux/headless-experience.md
+      revision: sha256:32ceebe8b1b74585411c9f55a2ea437d1c620218156d5614d7d9527040011211
+  visual_concepts:
+    applicable: false
+    reason: No new visual UI within amendment; unchanged original game visuals are outside this bounded stage

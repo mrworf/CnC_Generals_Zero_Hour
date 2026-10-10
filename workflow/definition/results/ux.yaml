@@ -1,0 +1,67 @@
+stage: product-ux
+status: PASS
+validated_inputs:
+- path: docs/zero-hour-linux-port-plan.md
+  revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+- path: product/headless-qualification.md
+  revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+- path: docs/zero-hour-linux-port-plan-user-journey-audit.md
+  revision: sha256:9b23f19060298cd7a6b4cc8c425dca15989d6d87f50b7e80dc7a8abd8854cd4b
+artifact_changes:
+- path: product/ux/manifest.yaml
+  change: Created or scoped definition update
+  revision: sha256:708ca54ec9e93d62084c6f163acba3e4bc1212cbcd372df88f5f397aad854997
+- path: product/ux/experience-brief.yaml
+  change: Created or scoped definition update
+  revision: sha256:ffde3411eb857d9c84dd7e99f2b33d34607610a7f315aaadbd17d8ccde126453
+- path: product/ux/headless-experience.md
+  change: Created or scoped definition update
+  revision: sha256:32ceebe8b1b74585411c9f55a2ea437d1c620218156d5614d7d9527040011211
+changed_paths:
+- product/ux/manifest.yaml
+- product/ux/experience-brief.yaml
+- product/ux/headless-experience.md
+- workflow/definition/results/ux.yaml
+findings: []
+questions: []
+affected_requirements:
+- R03
+- R04
+- R05
+- R07
+- R08
+- R09
+affected_artifacts:
+- docs/zero-hour-linux-port-plan.md
+- product/headless-qualification.md
+- docs/zero-hour-linux-port-plan-user-journey-audit.md
+- product/ux/manifest.yaml
+- product/ux/experience-brief.yaml
+- product/ux/headless-experience.md
+reconciliation_required: false
+change_impact:
+  product: false
+  user_journeys: false
+  ux: false
+  architecture: false
+  security: false
+scope: Nonvisual qualification amendment; existing preservation approval only
+ux_handoff:
+  manifest:
+    path: product/ux/manifest.yaml
+    revision: hq-v1
+  experience_brief:
+    path: product/ux/experience-brief.yaml
+    revision: hq-v1
+  approval:
+    status: approved_existing_direction
+    decision_refs:
+    - D-BASELINE-001
+  authoritative_artifacts_changed:
+  - product/ux/manifest.yaml
+  - product/ux/experience-brief.yaml
+  - product/ux/headless-experience.md
+  downstream_freshness:
+    affected_domains: []
+    potentially_stale_artifacts: []
+implementation_conformance: NOT_ATTEMPTED

@@ -1,0 +1,21 @@
+workflow: product-definition
+stage: prd
+skill: prd-development-partner
+mode: full
+scope: REC-001/R07 qualification clarification under unchanged approved R01-R12 intent; initial scoped definition review,
+  not revalidation of nonexistent passes
+authoritative_inputs:
+- path: docs/zero-hour-linux-port-plan.md
+  revision: sha256:0316702c3fb75979f3ef5cdafb3adcf3a4c1bfa3dc84e94f883aceb6ce49bf90
+- path: product/headless-qualification.md
+  revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+decisions_path: workflow/definition/decisions.md
+open_questions_path: workflow/definition/open-questions.md
+workflow_state_path: workflow/definition/state.yaml
+result_path: workflow/definition/results/prd.yaml
+owned_artifacts:
+- docs/zero-hour-linux-port-plan.md
+- workflow/definition/results/prd-readiness.md
+user_interaction: orchestrator_owned
+execution: sequential_in_chat_skill_workflow
+commit_policy: orchestrator_owned_no_child_commit

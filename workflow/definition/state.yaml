@@ -1,0 +1,168 @@
+workflow: product-definition
+product_id: cnc-generals-zero-hour
+status: ready_for_delivery_planning
+scope: "R07/HQ-01\u201307 headless qualification amendment, with inherited approved R01\u2013R12 baseline preserved. All six\
+  \ stage passes are bounded to this amendment; no full-game implementation or feature-by-feature baseline recertification."
+transaction:
+  parent_commit: c5e1fcb34f5c25151f583f6fa9e3b88833c82ab7
+  repository_commit: PENDING_PAYLOAD_COMMIT
+execution:
+  mode: sequential_in_chat_skill_workflows
+  agents: prohibited by repository/user instructions
+  specialist_review_independence: Skill-separated responsibilities; no claim of independent agent review
+authoritative_artifacts:
+  prd:
+    path: docs/zero-hour-linux-port-plan.md
+    revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+  qualification:
+    path: product/headless-qualification.md
+    revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+  ux:
+    manifest: product/ux/manifest.yaml
+    revision: sha256:708ca54ec9e93d62084c6f163acba3e4bc1212cbcd372df88f5f397aad854997
+    scope: headless developer experience only; original game UX unchanged
+stages:
+  prd:
+    status: passed
+    validated_inputs:
+    - path: docs/zero-hour-linux-port-plan.md
+      revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+    - path: product/headless-qualification.md
+      revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+    result: workflow/definition/results/prd.yaml
+  coverage:
+    status: passed
+    validated_inputs:
+    - path: docs/zero-hour-linux-port-plan.md
+      revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+    - path: product/headless-qualification.md
+      revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+    result: workflow/definition/results/coverage.yaml
+  journeys:
+    status: passed
+    validated_inputs:
+    - path: docs/zero-hour-linux-port-plan.md
+      revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+    - path: product/headless-qualification.md
+      revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+    result: workflow/definition/results/journeys.yaml
+  ux:
+    status: passed
+    validated_inputs:
+    - path: docs/zero-hour-linux-port-plan.md
+      revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+    - path: product/headless-qualification.md
+      revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+    - path: docs/zero-hour-linux-port-plan-user-journey-audit.md
+      revision: sha256:9b23f19060298cd7a6b4cc8c425dca15989d6d87f50b7e80dc7a8abd8854cd4b
+    result: workflow/definition/results/ux.yaml
+  architecture:
+    status: passed
+    validated_inputs:
+    - path: docs/zero-hour-linux-port-plan.md
+      revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+    - path: product/headless-qualification.md
+      revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+    - path: docs/zero-hour-linux-port-plan-user-journey-audit.md
+      revision: sha256:9b23f19060298cd7a6b4cc8c425dca15989d6d87f50b7e80dc7a8abd8854cd4b
+    - path: product/ux/manifest.yaml
+      revision: sha256:708ca54ec9e93d62084c6f163acba3e4bc1212cbcd372df88f5f397aad854997
+    - path: product/ux/headless-experience.md
+      revision: sha256:32ceebe8b1b74585411c9f55a2ea437d1c620218156d5614d7d9527040011211
+    result: workflow/definition/results/architecture.yaml
+  security:
+    status: passed
+    validated_inputs:
+    - path: docs/zero-hour-linux-port-plan.md
+      revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+    - path: product/headless-qualification.md
+      revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+    - path: docs/zero-hour-linux-port-plan-user-journey-audit.md
+      revision: sha256:9b23f19060298cd7a6b4cc8c425dca15989d6d87f50b7e80dc7a8abd8854cd4b
+    - path: product/ux/manifest.yaml
+      revision: sha256:708ca54ec9e93d62084c6f163acba3e4bc1212cbcd372df88f5f397aad854997
+    - path: product/ux/headless-experience.md
+      revision: sha256:32ceebe8b1b74585411c9f55a2ea437d1c620218156d5614d7d9527040011211
+    result: workflow/definition/results/security.yaml
+last_reconciliation:
+  id: REC-RUN-002
+  path: workflow/reconciliation/REC-RUN-002/reconciliation-result.yaml
+  schema_version: 1
+  result_revision: sha256:011a5c2b04400275a9d260a20d30f8834963627e9fecd1ae92a59afcd7c245ca
+  repository_commit: 8f81ed1b62edbb9f1842fd5a92d696c723f2a246
+  status: RESOLVED
+  adoption_status: complete
+  definition_action: CONTINUE_DEFINITION
+  definition_package:
+    status: new_scoped_amendment_package
+    path: workflow/definition/definition-package.yaml
+  change_ids:
+  - REC-IMPACT-002
+  remediation_ids: []
+  implementation_required: false
+  implementation_ready: false
+  delivery_planning_ready: false
+reconciliation_cycles:
+  REC-001:
+    attempts: 1
+    status: resolved
+    last_result_revision: sha256:011a5c2b04400275a9d260a20d30f8834963627e9fecd1ae92a59afcd7c245ca
+    progress:
+    - Finite H1/provider/ownership contract supplied
+    - PRD adopted normative contract without changing R01-R12 or graph
+    - All six scoped definition results validate current exact inputs
+    - REC-RUN-002 resolves REC-001 and REC-DEC-001
+blocking_questions: []
+unresolved_decisions: []
+decision_graph:
+  nodes:
+    REC-DEC-001:
+      resolution_category: SPECIALIST_RESOLUTION
+      resolution_owner:
+      - architecture
+      - prd
+      depends_on: []
+      routing_status: resolved
+      result_path: workflow/definition/results/headless-resolution.yaml
+      accepted_by: REC-RUN-002
+  ready: []
+accepted_risks: []
+blockers: []
+next_handoff:
+  next: null
+  reason: Reconciliation closed definition-only work with zero new implementation remediation; do not generate an empty CHANGE_PLAN.
+    Existing delivery packet adoption/replanning is a separate explicitly requested transition.
+  definition_package: workflow/definition/definition-package.yaml
+  reconciliation_result: workflow/reconciliation/REC-RUN-002/reconciliation-result.yaml
+  delivery_planning_ready: false
+  existing_delivery_records_unchanged: true
+reconciliation_history:
+- id: REC-RUN-001
+  path: workflow/reconciliation/REC-RUN-001/reconciliation-result.yaml
+  status: PARTIALLY_RESOLVED
+  definition_action: RESOLUTION_REQUIRED
+  adoption_status: complete
+  converged_by: REC-RUN-002
+validation:
+  artifact_checks: PASS; exact revisions, links, matrices, six results and sidecar invariants
+  runtime_tests: NOT_ATTEMPTED; documentation/definition only
+  preserved_dirty_paths:
+  - GeneralsMD/Code/GameEngine/Include/Common/NativeW3DPose.h
+  - GeneralsMD/Code/GameEngine/Include/GameClient/Drawable.h
+  - GeneralsMD/Code/GameEngine/Include/GameClient/NativeModelDrawAnimationProducer.h
+  - GeneralsMD/Code/GameEngine/Include/GameClient/NativeModelDrawConditionBatch.h
+  - GeneralsMD/Code/GameEngine/Include/GameClient/NativeModelDrawCurrentQueries.h
+  - GeneralsMD/Code/GameEngine/Include/GameClient/NativeModelDrawQueries.h
+  - GeneralsMD/Code/GameEngine/Source/Common/System/NativeW3DPose.cpp
+  - GeneralsMD/Code/GameEngine/Source/GameClient/Drawable.cpp
+  - GeneralsMD/Code/GameEngine/Source/GameClient/NativeModelDrawAnimationProducer.cpp
+  - GeneralsMD/Code/GameEngine/Source/GameClient/NativeModelDrawConditionBatch.cpp
+  - GeneralsMD/Code/GameEngine/Source/GameClient/NativeModelDrawCurrentQueries.cpp
+  - GeneralsMD/Code/GameEngine/Source/GameClient/NativeModelDrawQueries.cpp
+  - GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Locomotor.cpp
+  - cmake/OriginalRuntime.cmake
+  - delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md
+  - tests/original/object_ownership.cpp
+  - tests/original/w3d_animation.cpp
+  specialist_execution: Applied named skills sequentially in this chat under the no-agent instruction; not independent-agent
+    reviews

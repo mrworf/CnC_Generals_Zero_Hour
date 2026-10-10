@@ -1,0 +1,42 @@
+stage: prd-to-user-journey-audit
+status: PASS
+validated_inputs:
+- path: docs/zero-hour-linux-port-plan.md
+  revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+- path: product/headless-qualification.md
+  revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+artifact_changes:
+- path: docs/zero-hour-linux-port-plan-user-journey-audit.md
+  change: Created or scoped definition update
+  revision: sha256:9b23f19060298cd7a6b4cc8c425dca15989d6d87f50b7e80dc7a8abd8854cd4b
+changed_paths:
+- docs/zero-hour-linux-port-plan-user-journey-audit.md
+- workflow/definition/results/journeys.yaml
+findings: []
+questions: []
+affected_requirements:
+- R03
+- R04
+- R05
+- R07
+- R08
+- R09
+affected_artifacts:
+- docs/zero-hour-linux-port-plan.md
+- product/headless-qualification.md
+- docs/zero-hour-linux-port-plan-user-journey-audit.md
+reconciliation_required: false
+change_impact:
+  product: false
+  user_journeys: false
+  ux: false
+  architecture: false
+  security: false
+scope: "HQ-01\u201307 amendment; baseline unchanged"
+audit_counts:
+  actors: 4
+  journeys: 5
+  matrix_rows: 5
+  specification_gaps: 0
+  implementation_gaps: 1
+  runtime_reachability: Indeterminate

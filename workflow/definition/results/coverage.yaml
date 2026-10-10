@@ -1,0 +1,50 @@
+stage: generate-prd-coverage-matrix
+status: PASS
+validated_inputs:
+- path: docs/zero-hour-linux-port-plan.md
+  revision: sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74
+- path: product/headless-qualification.md
+  revision: sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b
+artifact_changes:
+- path: docs/zero-hour-linux-port-plan-coverage-matrix.md
+  change: Created or scoped definition update
+  revision: sha256:82a2f89781feced2bbc222c9c8c2ddb35deacf7cd77ba22180c0549e10d218c1
+changed_paths:
+- docs/zero-hour-linux-port-plan-coverage-matrix.md
+- workflow/definition/results/coverage.yaml
+findings:
+- id: F-COV-HQ-01
+  significance: OBSERVATION
+  summary: Native root and integrated H1 remain implementation work, GAP-HQ-01
+  affected_requirement: R07
+  affected_artifact: cmake/OriginalRuntime.cmake
+  evidence: original_runtime_link_probe / tests/toolchain/original_runtime_link_probe.cpp
+  why_it_matters: A passed definition must not be reported as runtime acceptance
+  local_correction_possible: false
+  reconciliation_required: false
+questions: []
+affected_requirements:
+- R03
+- R04
+- R05
+- R07
+- R08
+- R09
+affected_artifacts:
+- docs/zero-hour-linux-port-plan.md
+- product/headless-qualification.md
+- docs/zero-hour-linux-port-plan-coverage-matrix.md
+reconciliation_required: false
+change_impact:
+  product: false
+  user_journeys: false
+  ux: false
+  architecture: false
+  security: false
+scope: "HQ-01\u201307 qualification amendment"
+coverage_counts:
+  rows: 8
+  specification_gaps: 0
+  implementation_gaps: 1
+  unverified_cells: 9
+  unmapped_amendment_requirements: 0
