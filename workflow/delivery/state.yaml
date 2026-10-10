@@ -26,15 +26,15 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "48f61848",
-    "label": "original-environment-admission",
-    "evidence": "evidence/qa/N2-environment-settings.md",
-    "validation": "Frozen configured builds/related249 PASS all3, exact parser terminals16/11 and snow1, every retry and separate typed-pool exhaustion; full401 unrun.",
-    "next": "Continue concrete native factory/full original startup and loaded simulation under existing N2 plan01/slice03; do not substitute prefix or empty providers for those gates.",
+    "parent": "d172c2fc",
+    "label": "original-w3d-input-owner",
+    "evidence": "evidence/qa/N2-w3d-document.md",
+    "validation": "Frozen W3D/core/data builds/related23 PASS all3; exact terminal51/every retry. Full405 unrun.",
+    "next": "Continue motion/material/channel admission, asset/prototype relationships and original condition/bone query consumers under existing slice03; then actual loaded terrain/ghost and native factory/full root/nonempty simulation.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 environment checkpoint 2b14ad41 committed and verified: configured builds/related249 PASS GCC271.38s/GCCsan1116.02s/Clangsan708.31s, all terminal0; canonical660/inclusive667 rechecked. No live jobs. Continue concrete native factory/full original startup and loaded simulation under existing plan. Full401/slice03/N2 acceptance remain pending; no agents or blockers.",
+  "resume_point": "N2 plan01/slice03 W3D input-owner supporting checkpoint: builds/related23 PASS GCC0.98s/GCCsan5.93s/Clangsan4.15s; exact terminal51/every retry; canonical663/inclusive670; no live jobs. Continue the existing whole CPU model/prototype/condition/bone-query cohort, then actual native factory/full startup and loaded world. Full405 and slice03/N2 acceptance pending; no agents or blockers.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -254,5 +254,36 @@
     "milestone_complete": false,
     "slice_complete": false,
     "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
+  },
+  "native_factory_continuation": {
+    "parent_commit": "d172c2fc",
+    "status": "validated_w3d_input_owner_supporting_checkpoint",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "findings": "docs/original-engine-formats.md",
+    "production_changes_started": true,
+    "next": "Continue motion/material/channel admission, asset/prototype relationships and original condition/bone query consumers under existing slice03; then actual loaded terrain/ghost and native factory/full root/nonempty simulation.",
+    "evidence": "evidence/qa/N2-w3d-document.md"
+  },
+  "w3d_document_checkpoint": {
+    "parent_commit": "d172c2fc",
+    "status": "validated supporting checkpoint; not slice03 or N2 acceptance",
+    "evidence": "evidence/qa/N2-w3d-document.md",
+    "canonical_source_files": 663,
+    "canonical_source_sha256": "6f70925e806cc48a87266bf771dada77ef3d9dec742353e1ddc4446a3415ab8a",
+    "toolchain_inclusive_files": 670,
+    "toolchain_inclusive_sha256": "4507d426d0944ac621840cf4099b3455dcf43bb5e34d59549bf60afd9d1bf451",
+    "related_tests_per_configuration": 23,
+    "configured_suite_tests": 405,
+    "frozen_results": {
+      "gcc": "PASS0.98s; terminal0",
+      "gcc_sanitize": "PASS5.93s; terminal0",
+      "clang_sanitize": "PASS4.15s; terminal0"
+    },
+    "allocation_terminal": 51,
+    "every_failure_retry": true,
+    "live_sessions": {},
+    "full_suite_run": false,
+    "slice_complete": false,
+    "milestone_complete": false
   }
 }

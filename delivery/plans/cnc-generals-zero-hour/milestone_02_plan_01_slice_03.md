@@ -3467,3 +3467,49 @@ coherent environment admission checkpoint, not slice03/N2: full401, concrete
 native factory/full original startup and loaded simulation remain pending.
 
 Environment payload commit: `2b14ad41699323b5243b4ab061bf02aa27773826`.
+
+Concrete native factory continuation (parent d172c2fc, clean transaction start):
+retain the entire original-root/model/loaded-simulation contract above. Before
+production wiring, close the CPU asset/prototype/model-query prerequisite as one
+coherent admission/lifecycle cohort: original W3D hierarchy, HLOD relationships,
+mesh attributes/bounds and raw/compressed animation semantics; actual condition
+selection, pristine/current bones and projectile offsets; immutable supplied
+bytes, owned runtime metadata and exact candidate/cache retirement. Refer to the
+new source anchors in original-engine-formats.md, not historical generated-only
+model acceptance. Inspect all shipped draw-data extension registrations and
+paired query callers; do not skip unrecognized retail draw definitions, substitute
+identity transforms or replace the loaded terrain/fog providers with empty bases.
+
+The concrete root must own CPU terrain visual metadata through world/logic/client
+retirement. Its no-output mode remains explicit and does not accept physical
+render/audio success. Existing AbsentAudioFixture is not a production provider;
+actual source audio configuration/music readiness and camera/terrain listener
+ordering remain part of full startup. Preserve actual original GameMain ownership,
+GameEngine update ordering, source GameLogic/module behavior and serialized layouts.
+
+Add coherent generated file/prototype/query admission, malformed nested extents,
+versions/names/counts/parent/asset relationships, cold/cached failure/retry and
+whole-owner tests while wiring their production consumers. Freeze the complete
+model/provider cohort before the broader compiler/sanitizer matrix. A decoder or
+factory link alone is supporting evidence only: full registered root, shipped
+fog/geometry/bridge behavior and nonempty original simulation remain required.
+
+CPU input-owner implementation phase: add NativeW3DDocument to the actual
+original_data graph. Read from the original File boundary into owned immutable
+bytes, bound nested chunk extents/depth and decode source hierarchy, HLOD,
+mesh-header/channel backing and raw/compressed animation headers. Retain every
+uninterpreted payload rather than making a lossy replacement for later rendering.
+Stage replacement in a complete candidate and preserve accepted owner/view
+identity on malformed input or allocation failure. Generated whole-document,
+VFS, truncation/nesting/typed-count and exact failure/retry tests exercise this
+production reader. Animation sampling, material decoding, asset cross-reference
+resolution and original draw/query consumers remain part of the same model
+cohort; this input-owner phase is not a usable-model or N2 acceptance boundary.
+
+User-requested worktree checkpoint: this phase is independently exercisable
+through the actual original File/VFS boundary and committed as supporting
+behavior, without closing the encompassing model cohort or slice03. Frozen
+W3D/core/data related23 PASS all3 (GCC0.98s/GCCsan5.93s/Clangsan4.15s), exact
+allocation terminal51 and every retry, canonical663/inclusive670. Evidence:
+`evidence/qa/N2-w3d-document.md`. Full405 unrun; continue model sampling/material
+admission and original query consumers, then actual native factory/loaded world.

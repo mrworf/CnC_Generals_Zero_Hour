@@ -53,8 +53,17 @@ target_sources(original_data PRIVATE
   "${ZH_CODE}/GameEngine/Source/GameClient/LanguageFilter.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeTextPaths.cpp")
 target_link_libraries(original_data PUBLIC original_core)
+target_sources(original_data PRIVATE
+  "${ZH_CODE}/GameEngine/Source/Common/System/NativeW3DDocument.cpp")
 target_compile_options(original_data PRIVATE -Wall -Wextra -Wno-unknown-pragmas)
 add_executable(original_data_fixture tests/original/data.cpp tests/original/AllocationFault.cpp)
+add_executable(original_w3d_document_fixture tests/original/w3d_document.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_w3d_document_fixture PRIVATE original_data)
+foreach(family IN ITEMS functional negative faults vfs)
+  add_test(NAME original_w3d_document_${family} COMMAND original_w3d_document_fixture "${family}")
+  set_tests_properties(original_w3d_document_${family} PROPERTIES LABELS "original;data;model" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 target_link_libraries(original_data_fixture PRIVATE original_data)
 add_executable(original_data_audit tests/original/data_audit.cpp)
 target_link_libraries(original_data_audit PRIVATE original_data)

@@ -5478,3 +5478,90 @@ GCC and both GCC/Clang ASan/UBSan/LSan, all terminal0; source fingerprints and
 attribution are in that evidence. Full401 and actual complete native process
 startup/loaded simulation remain pending. Do not elevate prefix admission into
 whole-game parity or reuse earlier source stages as this checkpoint's acceptance.
+
+Native factory/model prerequisite census (parent d172c2fc; source findings, not
+runtime acceptance): GameLogic's shared factory methods still return TerrainLogic
+and GhostObjectManager bases; their empty contracts cannot replace the shipped
+loaded world. NativeHeadlessGameClient's LogicalServices composition owns real
+UI/camera/font services but deliberately does not create TerrainVisual. A concrete
+world factory must pair a real CPU visual owner with NativeTerrainLogic and keep
+that identity alive through logic/world callbacks and client retirement. Adding a
+provider in a factory is not proof of full root admission or loaded frames.
+
+W3D CPU asset format anchors for that integration:
+
+- WWLib/chunkio.h::ChunkHeader is two 32-bit words; payload length occupies the
+  low31 bits of ChunkSize and its high bit indicates subchunks. Decode file words
+  explicitly, bound every nested extent, and do not use native structure casts.
+- WW3D2/w3d_file.h defines 16-byte fixed names and major/minor version words.
+  Hierarchy header carries version, name, pivot count and center. Each pivot has
+  name, parent index, translation, Euler angles and quaternion. Parent sentinel
+  is uint32 all-ones; the native reader must not perform invalid signed casts.
+- HTreeClass::Load_W3D/read_pivots adds a synthetic RootTransform for versions
+  before3.0 and adjusts stored parent indices. Base transform uses translation
+  followed by the authored quaternion matrix, not Euler angles. Base_Update sets
+  pivot0 to the external root transform and composes remaining pivots in source
+  order; do not apply the authored pivot0 transform again. Get_Bone_Index is
+  case-insensitive and returns0 on absence. Preserve the query's root/miss
+  distinction instead of fabricating successful available-bone data.
+- HLOD header stores version, LOD count, model name and hierarchy name. Each LOD
+  array carries model count/max screen size; subobject records carry a 32-bit bone
+  index and a 32-byte name. Ordered LOD arrays, aggregate arrays and proxy arrays
+  are separate relationships, not interchangeable instances. Source loader
+  assumes complete typed arrays; native admission needs bounded counts and
+  transactional cross-reference resolution.
+- MeshHeader3 preserves attributes, mesh/container names, triangle/vertex/material
+  counts, damage-stage count, sort/prelit/future fields, channel masks, bounding
+  box, sphere center/radius. Vertex influence is a 16-bit bone index plus six
+  padding bytes. Keep packed/channel data for N3 rather than deriving a lossy
+  positions-only replacement. Raw/compressed animation, material/channel and
+  hierarchy relationship decoding remain source investigation, not established
+  by this header census.
+
+AudioManager::update additionally requires the actual TacticalView eye and loaded
+TerrainLogic before processing microphone/listener state. The base
+processRequestList is empty: it cannot serve as a working native playback queue.
+AbsentAudioFixture explicitly rejects device calls and is test-only, never an
+implementation to promote into the native factory. Actual audio init must retain
+all source-selected files and real music VFS readiness. Sources: GameLogic.cpp::
+createTerrainLogic/createGhostObjectManager, NativeHeadlessGameClient.cpp::init,
+GameClient.cpp::initHeadlessLogicalServices, GameAudio.cpp::init/update/
+processRequestList, w3d_file.h, htree.cpp::Load_W3D/read_pivots/Base_Update/
+Get_Bone_Index, hlod.cpp::Load_W3D/read_header, chunkio.h::ChunkHeader.
+
+Animation census for the same native model prerequisite: raw headers store
+32-bit frame rate; compressed headers store 16-bit frame rate and 16-bit flavor
+in the same total header width. HCompressedAnimClass::Load_W3D declares the
+compressed type despite using sizeof(W3dAnimHeaderStruct) for its read; do not
+interpret that spelling as a 32-bit compressed frame rate. Both loaders resolve
+the named hierarchy before allocating their per-node channel cohort. Raw vector
+channels use 16-bit first/last frame, vector length, flags and pivot with float
+samples; raw visibility uses a separate bit channel/default. Time-coded vector
+records prefix each sample with a 32-bit time code whose high bit marks binary
+movement; time-coded visibility stores the bit in that high position. Adaptive
+delta has a distinct scale/opcode stream and is not interchangeable with raw
+samples. Complete motion sampling/boundary behavior still requires motchan.cpp
+and the hierarchy update overloads; do not accept animated model queries from
+the schema census alone. Sources: w3d_file.h::W3dAnimHeaderStruct/
+W3dCompressedAnimHeaderStruct/W3dAnimChannelStruct/W3dBitChannelStruct/
+W3dTimeCodedAnimChannelStruct/W3dTimeCodedBitChannelStruct/
+W3dAdaptiveDeltaAnimChannelStruct, hrawanim.cpp::Load_W3D,
+hcanim.cpp::Load_W3D, motchan.{h,cpp}.
+
+Verified input-owner implementation details: hierarchy header36 bytes and
+pivot60; pre3.0 count0 still produces the source synthetic root, whereas modern
+count0 cannot provide the required root. Original hierarchy load ignores center
+and Euler fields; retain their raw representations rather than rejecting unused
+numeric values. HLOD header40, array header8 and subobject36; proxy and aggregate
+arrays both use chunk703/704 backing (HLodDefClass::read_proxy_array). MeshHeader3
+is116 and influence8, triangle32. Raw/compressed animation headers are both44,
+with distinct rate/flavor representation. Original motion loader can skip
+exporter trailing bytes; future channel admission must not infer exact-length
+rejection from the header reader. Source ChunkLoad uses MAX_STACK_DEPTH256 with
+Open_Chunk stackindex<255, preserved as the document nesting limit.
+
+`NativeW3DDocument` now owns original File bytes and bounded metadata while
+retaining unknown payloads. Generated functional/negative/fault/VFS evidence and
+GCC plus both sanitizer related23 results are in `evidence/qa/N2-w3d-document.md`.
+Exact replacement terminal51/every retry passed; channels, sampled poses,
+materials and production model consumers are not yet admitted or accepted.
