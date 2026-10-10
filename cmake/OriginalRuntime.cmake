@@ -99,6 +99,7 @@ add_library(original_runtime_common STATIC
   "${ZH_CODE}/GameEngine/Source/Common/INI/INIMapCache.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeWellKnownKeys.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeModuleData.cpp"
+  "${ZH_CODE}/GameEngine/Source/Common/System/W3DModelConditionData.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeAudioEventData.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeThingTemplateData.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/Geometry.cpp"

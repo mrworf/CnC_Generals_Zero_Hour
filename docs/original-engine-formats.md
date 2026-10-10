@@ -5656,3 +5656,33 @@ queries after complete input retirement. Current support is mesh/HLOD/null and
 owned raw/compressed animations; other prototype/material/morph/combo formats,
 incidental eager clip-loading interactions, condition/draw consumer integration,
 full startup and simulation remain pending. This is not retail visual parity.
+
+Original condition query boundary: `W3DModelDraw.cpp::validateCachedBones`
+selects m_animations.front, never client-random animation selection; flag bit4
+PRISTINE_BONE_POS_IN_FINAL_FRAME selects frames-1, otherwise0. An empty model
+exits before loading clips. Original no-retained-handle animation metadata has
+natural duration -1 initially and owns no renderer handle. ModelConditionInfo
+and these lifecycle methods are now shared with native admission, not duplicated
+as a new parsed schema; renderer-only methods/INI registration remain unported.
+
+Scale is not a presumed single multiplication: `W3DAssetManager.cpp` (738,859)
+scales HLOD/HTree only outside abs(scale-1)>.01; `hlod.cpp::Scale` (3264) and
+`htree.cpp::Scale` (982) scale base translations and animation ScaleFactor.
+`validateCachedBones` additionally installs an unconditionally scaled root
+matrix (`WWMath/matrix3d.h::Scale`,975). Native first/final query tests preserve
+both factors and the epsilon rather than silently simplifying source behavior.
+
+`SparseMatchFinder.h` chooses greatest yes intersection, then fewest extraneous
+yes bits, with stable earlier-state ties and reverse alias traversal. A copied
+matcher must not retain addresses into another condition vector. matchesMode
+tests NIGHT/SNOW against each alias separately, not a union of all aliases.
+Public bone names are lowercased, NONE/empty ignored and duplicates omitted.
+Bone discovery still needs source unadorned then contiguous01..99, nonzero-bone
+semantics and subobject fallback only when no bone matched; weapon/turret/cache
+publication and valid logic-update/FPU ownership remain required integration.
+
+Evidence: `evidence/qa/N2-w3d-conditions.md`, frozen related69 all3 PASS,
+exact coupled cold172/populated mesh-cache175 allocation terminals/every retry.
+Model/clip/pose and cache publication are one transaction; late pose failure
+cannot leave a partial admitted request. This original-data-to-owned-pose boundary
+does not establish real Drawable/full GameEngine or retail rendering acceptance.

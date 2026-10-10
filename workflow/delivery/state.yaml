@@ -26,15 +26,15 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "bd5b835f",
-    "label": "original-w3d-asset-graph",
-    "evidence": "evidence/qa/N2-w3d-assets.md",
-    "validation": "Frozen builds/related42 PASS all3; exact cold144/47 and NULL-seeded143/48 failure/retry, File descriptor/pool retirement and retained graph queries. Full423 unrun.",
-    "next": "Continue material/other prototype admission and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then full native factory/startup and loaded simulation. Full423 and N2 acceptance pending.",
+    "parent": "2f6a09b0",
+    "label": "original-w3d-condition-data",
+    "evidence": "evidence/qa/N2-w3d-conditions.md",
+    "validation": "Frozen related69 all3 PASS; exact cold172/populated cache175 every retry, shared original condition/alias/mode/public-bone types and coupled first/final pose ownership; full426 unrun.",
+    "next": "Extract/admit original draw-module INI definitions and connect native condition binding to real pristine weapon/turret/subobject and Drawable query consumers; complete all required draw registrations and remaining material/prototype types, then full native factory/startup and loaded deterministic simulation under same N2 plan01/slice03. Full426/N2 acceptance pending.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 asset graph supporting checkpoint committed in 8639ce2cbdffefd56feebdc90020263d60de599f; no live jobs. Continue material/other prototype admission and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then full native factory/startup and loaded simulation. Full423 and N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 original condition-data supporting checkpoint validated; no live jobs. Extract/admit original draw-module INI definitions and connect native condition binding to real pristine weapon/turret/subobject and Drawable query consumers; complete all required draw registrations and remaining material/prototype types, then full native factory/startup and loaded deterministic simulation under same N2 plan01/slice03. Full426/N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -168,37 +168,37 @@
     "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
   },
   "active_implementation": {
-    "label": "original-w3d-asset-graph",
-    "parent_commit": "bd5b835f",
-    "status": "committed supporting asset graph checkpoint; not slice03 or N2 acceptance",
+    "label": "original-w3d-condition-data",
+    "parent_commit": "2f6a09b0",
+    "status": "validated supporting original condition-data checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
-    "evidence": "evidence/qa/N2-w3d-assets.md",
-    "canonical_source_files": 671,
-    "canonical_source_sha256": "a56981c8634df5a88322aa503d07d1499cfd501978b98394bbcc175379d92ebb",
-    "toolchain_inclusive_files": 678,
-    "toolchain_inclusive_sha256": "411b526da842d6bb2408b5d6aa85aa7538132e0c77b5face580bb5b663209ae9",
-    "configured_suite_tests": 423,
-    "related_tests_per_configuration": 42,
+    "evidence": "evidence/qa/N2-w3d-conditions.md",
+    "canonical_source_files": 675,
+    "canonical_source_sha256": "0049583d583569d8629afdbbe8bedd3cfbce3e1e52bfbeb0e5fec497cd519256",
+    "toolchain_inclusive_files": 682,
+    "toolchain_inclusive_sha256": "569c3176da391ee9e0e2a875abdd1e3ce20f286ee905953819dc8324f1243023",
+    "configured_suite_tests": 426,
+    "related_tests_per_configuration": 69,
     "frozen_results": {
-      "gcc": "PASS3.06s; terminal0",
-      "gcc_sanitize": "Host PASS13.32s; terminal0",
-      "clang_sanitize": "Host PASS9.81s; terminal0"
+      "gcc": "PASS4.54s; terminal0",
+      "gcc_sanitize": "PASS26.03s; terminal0",
+      "clang_sanitize": "PASS18.58s; terminal0"
     },
     "allocation_terminals": {
-      "cold_model": 144,
-      "cold_animation": 47,
-      "null_seeded_model": 143,
-      "null_seeded_animation": 48
+      "condition_cold": 172,
+      "condition_populated_mesh_cache": 175
     },
     "every_failure_retry": true,
-    "cache_hit_and_clear_allocation_attempts": 0,
     "live_sessions": {},
     "full_suite_run": false,
     "slice_complete": false,
     "milestone_complete": false,
-    "next": "Continue material/other prototype admission and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then full native factory/startup and loaded simulation. Full423 and N2 acceptance pending.",
-    "environment": "Sandbox sanitizer process inspection prohibited (terminal8); identical host tests passed with ASan/UBSan/LSan enabled and no suppressions.",
-    "repository_commit": "8639ce2cbdffefd56feebdc90020263d60de599f"
+    "next": "Extract/admit original draw-module INI definitions and connect native condition binding to real pristine weapon/turret/subobject and Drawable query consumers; complete all required draw registrations and remaining material/prototype types, then full native factory/startup and loaded deterministic simulation under same N2 plan01/slice03. Full426/N2 acceptance pending.",
+    "initial_frozen_results": {
+      "gcc": "PASS4.59s; terminal0",
+      "gcc_sanitize": "PASS26.60s; terminal0",
+      "clang_sanitize": "PASS19.19s; terminal0"
+    }
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -271,12 +271,12 @@
   },
   "native_factory_continuation": {
     "parent_commit": "d172c2fc",
-    "status": "validated_asset_graph_supporting_cohort",
+    "status": "validated_original_condition_data_supporting_cohort",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "findings": "docs/original-engine-formats.md",
     "production_changes_started": true,
-    "next": "Continue material/other prototype admission and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then full native factory/startup and loaded simulation. Full423 and N2 acceptance pending.",
-    "evidence": "evidence/qa/N2-w3d-assets.md"
+    "next": "Extract/admit original draw-module INI definitions and connect native condition binding to real pristine weapon/turret/subobject and Drawable query consumers; complete all required draw registrations and remaining material/prototype types, then full native factory/startup and loaded deterministic simulation under same N2 plan01/slice03. Full426/N2 acceptance pending.",
+    "evidence": "evidence/qa/N2-w3d-conditions.md"
   },
   "w3d_document_checkpoint": {
     "parent_commit": "d172c2fc",
@@ -386,5 +386,38 @@
     "next": "Continue material/other prototype admission and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then full native factory/startup and loaded simulation. Full423 and N2 acceptance pending.",
     "environment": "Sandbox sanitizer process inspection prohibited (terminal8); identical host tests passed with ASan/UBSan/LSan enabled and no suppressions.",
     "repository_commit": "8639ce2cbdffefd56feebdc90020263d60de599f"
+  },
+  "w3d_conditions_checkpoint": {
+    "label": "original-w3d-condition-data",
+    "parent_commit": "2f6a09b0",
+    "status": "validated supporting original condition-data checkpoint; not slice03 or N2 acceptance",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "evidence": "evidence/qa/N2-w3d-conditions.md",
+    "canonical_source_files": 675,
+    "canonical_source_sha256": "0049583d583569d8629afdbbe8bedd3cfbce3e1e52bfbeb0e5fec497cd519256",
+    "toolchain_inclusive_files": 682,
+    "toolchain_inclusive_sha256": "569c3176da391ee9e0e2a875abdd1e3ce20f286ee905953819dc8324f1243023",
+    "configured_suite_tests": 426,
+    "related_tests_per_configuration": 69,
+    "frozen_results": {
+      "gcc": "PASS4.54s; terminal0",
+      "gcc_sanitize": "PASS26.03s; terminal0",
+      "clang_sanitize": "PASS18.58s; terminal0"
+    },
+    "allocation_terminals": {
+      "condition_cold": 172,
+      "condition_populated_mesh_cache": 175
+    },
+    "every_failure_retry": true,
+    "live_sessions": {},
+    "full_suite_run": false,
+    "slice_complete": false,
+    "milestone_complete": false,
+    "next": "Extract/admit original draw-module INI definitions and connect native condition binding to real pristine weapon/turret/subobject and Drawable query consumers; complete all required draw registrations and remaining material/prototype types, then full native factory/startup and loaded deterministic simulation under same N2 plan01/slice03. Full426/N2 acceptance pending.",
+    "initial_frozen_results": {
+      "gcc": "PASS4.59s; terminal0",
+      "gcc_sanitize": "PASS26.60s; terminal0",
+      "clang_sanitize": "PASS19.19s; terminal0"
+    }
   }
 }

@@ -293,52 +293,13 @@ static char *TerrainDecalTextureName[TERRAIN_DECAL_MAX]=
 const UnsignedInt NO_NEXT_DURATION = 0xffffffff;
 
 //-------------------------------------------------------------------------------------------------
-W3DAnimationInfo::W3DAnimationInfo(const AsciiString& name, Bool isIdle, Real distanceCovered) : 
-#ifdef RETAIN_ANIM_HANDLES
-	m_handle(NULL), 
-	m_naturalDurationInMsec(0),
-#else
-	m_naturalDurationInMsec(-1),
-#endif
-	m_name(name),
-	m_isIdleAnim(isIdle), 
-	m_distanceCovered(distanceCovered)
-{ 
-}
+// Renderer-neutral animation metadata lifecycle is shared.
 
 //-------------------------------------------------------------------------------------------------
-W3DAnimationInfo::W3DAnimationInfo( const W3DAnimationInfo &r ) : 
-	m_name(r.m_name),
-#ifdef RETAIN_ANIM_HANDLES
-	m_handle(r.m_handle),
-#endif
-	m_distanceCovered(r.m_distanceCovered),
-	m_isIdleAnim(r.m_isIdleAnim),
-	m_naturalDurationInMsec(r.m_naturalDurationInMsec)
-{
-#ifdef RETAIN_ANIM_HANDLES
-	if (m_handle)
-		m_handle->Add_Ref();
-#endif
-}
+// Renderer-neutral animation metadata lifecycle is shared.
 
 //-------------------------------------------------------------------------------------------------
-W3DAnimationInfo& W3DAnimationInfo::operator=(const W3DAnimationInfo &r)
-{
-	m_name = r.m_name;
-	m_distanceCovered = r.m_distanceCovered;
-	m_naturalDurationInMsec = r.m_naturalDurationInMsec;
-	m_isIdleAnim = r.m_isIdleAnim;
-
-#ifdef RETAIN_ANIM_HANDLES
-	REF_PTR_RELEASE(m_handle);
-	m_handle = r.m_handle;
-	if (m_handle)
-		m_handle->Add_Ref();
-#endif
-
-	return (*this);
-}
+// Renderer-neutral animation metadata lifecycle is shared.
 
 
 //-------------------------------------------------------------------------------------------------
@@ -375,13 +336,7 @@ HAnimClass* W3DAnimationInfo::getAnimHandle() const
 }
 
 //-------------------------------------------------------------------------------------------------
-W3DAnimationInfo::~W3DAnimationInfo() 
-{ 
-#ifdef RETAIN_ANIM_HANDLES
-	REF_PTR_RELEASE(m_handle); 
-	m_handle = NULL; 
-#endif
-}
+// Renderer-neutral animation metadata lifecycle is shared.
 
 //-------------------------------------------------------------------------------------------------
 void ModelConditionInfo::preloadAssets( TimeOfDay timeOfDay, Real scale )
@@ -400,34 +355,10 @@ void ModelConditionInfo::preloadAssets( TimeOfDay timeOfDay, Real scale )
 }
 
 //-------------------------------------------------------------------------------------------------
-void ModelConditionInfo::addPublicBone(const AsciiString& boneName) const
-{
-	if (boneName.isEmpty() || boneName.isNone())
-		return;
-
-	AsciiString tmp = boneName;
-	tmp.toLower();
-	if (std::find(m_publicBones.begin(), m_publicBones.end(), tmp) == m_publicBones.end())
-	{
-		m_publicBones.push_back(tmp);
-	}
-}
+// Renderer-neutral implementation lives in W3DModelConditionData.cpp.
 
 //-------------------------------------------------------------------------------------------------
-Bool ModelConditionInfo::matchesMode(Bool night, Bool snowy) const
-{
-	for (std::vector<ModelConditionFlags>::const_iterator it = m_conditionsYesVec.begin(); 
-				it != m_conditionsYesVec.end(); 
-				++it)
-	{
-		if (it->test(MODELCONDITION_NIGHT) == (night) &&
-				it->test(MODELCONDITION_SNOW) == (snowy))
-		{
-			return true;
-		}
-	}
-	return false;
-}
+// Renderer-neutral implementation lives in W3DModelConditionData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 inline Bool testFlagBit(Int flags, Int bit)
@@ -980,41 +911,7 @@ void ModelConditionInfo::loadAnimations() const
 }
 
 //-------------------------------------------------------------------------------------------------
-void ModelConditionInfo::clear()
-{ 
-	int i;
-#if defined(_DEBUG) || defined(_INTERNAL)
-	m_description.clear();
-#endif
-	m_conditionsYesVec.clear();
-	m_modelName.clear();
-	for (i = 0; i < MAX_TURRETS; ++i)
-	{
-		m_turrets[i].clear();
-	}
-	m_hideShowVec.clear();
-	for (i = 0; i < WEAPONSLOT_COUNT; ++i)
-	{
-		m_weaponFireFXBoneName[i].clear();
-		m_weaponRecoilBoneName[i].clear();
-		m_weaponMuzzleFlashName[i].clear();
-		m_weaponProjectileLaunchBoneName[i].clear();
-		m_weaponBarrelInfoVec[i].clear();
-		m_hasRecoilBonesOrMuzzleFlashes[i] = false;
-	}
-	m_particleSysBones.clear();
-	m_animations.clear();
-	m_flags = 0;
-	m_transitionKey = NAMEKEY_INVALID;
-	m_allowToFinishKey = NAMEKEY_INVALID;
-	m_iniReadFlags = 0;
-	m_mode = RenderObjClass::ANIM_MODE_ONCE;
-	m_transitionSig = NO_TRANSITION;
-	m_animMinSpeedFactor = 1.0f;
-	m_animMaxSpeedFactor = 1.0f;
-	m_pristineBones.clear();
-	m_validStuff = 0;
-}
+// Renderer-neutral implementation lives in W3DModelConditionData.cpp.
 
 //-------------------------------------------------------------------------------------------------
 W3DModelDrawModuleData::W3DModelDrawModuleData() : 

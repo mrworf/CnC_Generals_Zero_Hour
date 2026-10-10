@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "AllocationFault.h"
 #include "Common/NativeW3DAssets.h"
+#include "Common/W3DModelConditionData.h"
 #include "Common/NativeDataFile.h"
 #include "Common/NativeUserStorage.h"
 #include "Common/FileSystem.h"
@@ -8,6 +9,7 @@
 #include <algorithm>
 #include <bit>
 #include <cstring>
+#include <cmath>
 #include <dirent.h>
 #include <filesystem>
 #include <fstream>
@@ -47,7 +49,7 @@ Data hlod(std::string_view name,std::string_view hierarchy,const std::vector<std
 Data outer(){Data header;word(header,0x10000);word(header,2);text(header,"Outer");text(header,"Tree");
   return join({chunk(0x700,join({chunk(0x701,header),objects(0x702,{{"Inner",1}},5),objects(0x702,{{"Body.Part",2},{"NULL",0}},std::numeric_limits<float>::max()),
     objects(0x705,{{"Marker.Null",2}},0),objects(0x706,{{"NotAFile",2}},0)}),true),chunk(0x12345678,{1,2,3})});}
-Data animation(){Data header,channel;word(header,0x40001);text(header,"Walk");text(header,"Tree");word(header,2);word(header,30);
+Data animation(std::string_view hierarchy="Tree",std::string_view name="Walk"){Data header,channel;word(header,0x40001);text(header,name);text(header,hierarchy);word(header,2);word(header,30);
   half(channel,0);half(channel,1);half(channel,1);half(channel,0);half(channel,1);half(channel,0);real(channel,2);real(channel,6);
   return chunk(0x200,join({chunk(0x201,header),chunk(0x202,channel)}),true);}
 struct Root {
@@ -62,6 +64,7 @@ std::vector<std::pair<std::string,Data>> entries(){return {
   {"Art/W3D/Outer.w3d",outer()},{"Art/W3D/Inner.w3d",hlod("Inner","Tree",{{"Body.Part",2}})},
   {"Art/W3D/Body.w3d",mesh("Body","Part",true)},{"Art/W3D/Tree.w3d",tree()},
   {"Art/W3D/Marker.w3d",null("Marker.Null")},{"Art/W3D/Walk.w3d",animation()},
+  {"Art/W3D/OtherTree.w3d",tree("OtherTree")},{"Art/W3D/OtherWalk.w3d",animation("OtherTree","OtherWalk")},
   {"Art/W3D/Static.w3d",mesh("Static","Mesh")},{"Art/W3D/Default.w3d",hlod("Default","",{{"Static.Mesh",0}})},
   {"Art/W3D/DupWinner.w3d",join({hlod("DupWinner","",{{"Static.Mesh",0}}),mesh("","DupWinner")})},
   {"Art/W3D/DupMesh.w3d",join({mesh("","DupMesh"),hlod("DupMesh","",{{"Static.Mesh",0}})})},
@@ -161,14 +164,68 @@ void faults(Context& context,bool animation,bool seeded){auto operation=[&](Asse
     }require(AllocationFault::live()==outerLive,"complete fault/retry asset owner retires all standard backing");units.check();
   }std::cout<<"assets "<<(animation?"animation":"model")<<(seeded?" seeded":" cold")<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every retry\n";
 }
-void warm(Context& context){graph(context);routing(context);cache(context);}
+ModelConditionInfo condition(){ModelConditionInfo info;info.m_modelName="Outer";
+  info.m_conditionsYesVec.emplace_back();info.m_animations.emplace_back(AsciiString("Tree.Walk"),false,0);
+  info.m_animations.emplace_back(AsciiString("Tree.MissingSecond"),false,0);return info;}
+void conditions(Context& context){Assets owner(context.files,"English");auto info=condition();
+  auto first=info.prepareNativeBinding(owner,1);require(first.pose.bone(2).transform[3]==16,"original condition chooses first animation/frame0");
+  info.m_flags=1<<4;auto last=info.prepareNativeBinding(owner,1);require(last.pose.bone(2).transform[3]==20,"original pristine final-frame flag");
+  auto scaled=info.prepareNativeBinding(owner,2);require(scaled.pose.bone(2).transform[3]==80,"source tree scale and external root scale both retained");
+  auto near=info.prepareNativeBinding(owner,1.005f);require(std::fabs(near.pose.bone(2).transform[3]-20.1f)<.00001f,"source asset scale epsilon does not remove external root scale");
+  info.addPublicBone(AsciiString("Muzzle"));info.addPublicBone(AsciiString("mUzZlE"));info.addPublicBone(AsciiString("NONE"));
+  require(info.m_publicBones.size()==1 && info.m_publicBones[0]==AsciiString("muzzle"),"original public bone normalization and deduplication");
+  require(info.m_pristineBones.empty() && info.m_validStuff==0,"admission does not partially publish original bone caches");
+  const auto counts=owner.counts();info.m_animations.front()=W3DAnimationInfo(AsciiString("Tree.Absent"),false,0);
+  rejects([&]{(void)info.prepareNativeBinding(owner,1);});require(owner.counts()==counts,"missing first clip preserves complete accepted cache");
+  Assets cold(context.files,"English");rejects([&]{(void)info.prepareNativeBinding(cold,1);});require(cold.counts()==Assets::Counts{},"missing clip retires newly acquired cold model graph");
+  info.m_animations.front()=W3DAnimationInfo(AsciiString("OtherTree.OtherWalk"),false,0);
+  rejects([&]{(void)info.prepareNativeBinding(cold,1);});require(cold.counts()==Assets::Counts{},"incompatible named hierarchy retires both graphs");
+  info.m_animations.front()=W3DAnimationInfo(AsciiString(),false,0);rejects([&]{(void)info.prepareNativeBinding(cold,1);});
+  require(cold.counts()==Assets::Counts{},"an authored empty first clip is not silent no-animation success");
+  info=condition();rejects([&]{(void)info.prepareNativeBinding(owner,std::numeric_limits<float>::quiet_NaN());});
+  ModelConditionInfo empty;empty.m_animations=info.m_animations;require(!empty.prepareNativeBinding(owner,1).model,"source no-model state does not load incidental clips");
+  info.m_modelName="NULL";info.m_animations.clear();require(info.prepareNativeBinding(owner,1).model->kind==Assets::Prototype::Kind::Null,"explicit null condition is valid without a fake hierarchy");
+  std::vector<ModelConditionInfo> states(3);for(auto& state:states)state.m_conditionsYesVec.emplace_back();
+  states[1].m_conditionsYesVec[0].set(MODELCONDITION_MOVING);
+  ModelConditionFlags alias;alias.set(MODELCONDITION_ATTACKING);states[1].m_conditionsYesVec.push_back(alias);
+  states[2].m_conditionsYesVec[0].set(MODELCONDITION_MOVING);states[2].m_conditionsYesVec[0].set(MODELCONDITION_DAMAGED);
+  SparseMatchFinder<ModelConditionInfo,ModelConditionFlags> finder;ModelConditionFlags bits;
+  require(finder.findBestInfo(states,bits)==&states[0],"source empty condition winner");bits.set(MODELCONDITION_MOVING);
+  require(finder.findBestInfo(states,bits)==&states[1],"source fewest extraneous bits tie-break");bits.set(MODELCONDITION_DAMAGED);
+  require(finder.findBestInfo(states,bits)==&states[2],"source most intersecting conditions");bits.clear();bits.set(MODELCONDITION_ATTACKING);
+  require(finder.findBestInfo(states,bits)==&states[1],"source aliases resolve to same original condition");
+  auto copied=states;auto copiedFinder=finder;require(copiedFinder.findBestInfo(copied,bits)==&copied[1],"copied matcher resolves copied condition storage");
+  states[1].m_conditionsYesVec[0].set(MODELCONDITION_NIGHT);states[1].m_conditionsYesVec[1].set(MODELCONDITION_SNOW);
+  require(states[1].matchesMode(true,false) && states[1].matchesMode(false,true) && !states[1].matchesMode(true,true),"source night/snow mode uses each actual alias");
+  owner.clear();last.pose.evaluate(NativeW3DPose::identity(),last.animation->motion.get(),1);require(last.pose.bone(2).transform[3]==20,"condition binding survives cache retirement");
+}
+void conditionFaults(Context& context,bool seeded=false){auto info=condition();info.m_flags=1<<4;std::size_t terminal;
+  {Assets measured(context.files,"English");if(seeded)(void)measured.model("Static.Mesh");AllocationFault::arm(std::numeric_limits<std::size_t>::max());
+    try{auto binding=info.prepareNativeBinding(measured,1);terminal=AllocationFault::attempts();AllocationFault::disarm();require(binding.pose.bone(2).transform[3]==20,"complete condition census");}
+    catch(...){AllocationFault::disarm();throw;}}
+  require(terminal>0 && terminal<512,"bounded condition binding census");
+  for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){const auto outer=AllocationFault::live();NativeUnits units;
+    {Assets owner(context.files,"English");Assets::Model retained;if(seeded)retained=owner.model("Static.Mesh");const auto counts=owner.counts();const auto live=AllocationFault::live();bool failed=false;
+      AllocationFault::arm(ordinal);try{(void)info.prepareNativeBinding(owner,1);}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+      const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+      require(failed==(ordinal<terminal) && failed==hit && attempts==(failed?ordinal+1:terminal),"exact condition failure prefixes and terminal");
+      if(failed){require(owner.counts()==counts && AllocationFault::live()==live,"late condition failure retains whole accepted cache and retires candidate");
+        if(seeded)require(owner.model("Static.Mesh")==retained,"failed coupled condition admission retains accepted populated model identity");}
+      require(info.m_pristineBones.empty() && info.m_validStuff==0,"condition failure cannot publish original bone cache");units.check();
+      auto retry=info.prepareNativeBinding(owner,1);require(retry.pose.bone(2).transform[3]==20,"every condition failure/terminal has exact same-owner retry");units.check();
+    }require(AllocationFault::live()==outer,"whole condition binding owner retirement");units.check();
+  }std::cout<<"condition binding "<<(seeded?"seeded":"cold")<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every retry\n";
+}
+void warm(Context& context){graph(context);routing(context);cache(context);conditions(context);}
 }
 int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"asset family");initMemoryManager();initialized=true;
   {Context context;warm(context);for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();NativeUnits units;const std::string_view family=argv[1];
     if(family=="graph")graph(context);else if(family=="routing")routing(context);else if(family=="negative")negative(context);else if(family=="cache")cache(context);
     else if(family=="lifetime")lifetime();else if(family=="archives"){Context archived(true);warm(archived);graph(archived);routing(archived);}
     else if(family=="cold_model")faults(context,false,false);else if(family=="cold_animation")faults(context,true,false);
-    else if(family=="seeded_model")faults(context,false,true);else if(family=="seeded_animation")faults(context,true,true);else throw std::runtime_error("unknown asset family");
+    else if(family=="seeded_model")faults(context,false,true);else if(family=="seeded_animation")faults(context,true,true);
+    else if(family=="conditions")conditions(context);else if(family=="condition_faults")conditionFaults(context);
+    else if(family=="condition_seeded_faults")conditionFaults(context,true);else throw std::runtime_error("unknown asset family");
     require(AllocationFault::live()==live,"repeated entire source asset cohort retires standard ownership");units.check();}}
   shutdownMemoryManager();initialized=false;std::cout<<"PASS W3D asset graph; original draw consumers and N2 pending\n";return 0;
  }catch(const std::exception& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(ErrorCode){std::cerr<<"FAIL source error\n";}

@@ -3619,3 +3619,44 @@ queries passed. Evidence: `evidence/qa/N2-w3d-assets.md`; canonical671/inclusive
 Full423 unrun; broader populated-cache fault shapes and remaining prototype,
 material, condition/draw integration are not claimed. This is a supporting
 checkpoint only: slice03 and N2 remain in progress under this same plan.
+
+Condition-data continuation (parent2f6a09b0): extract the original
+W3DAnimationInfo/ModelConditionInfo definitions and renderer-independent lifecycle
+methods into a game-owned shared data header/source. The existing W3DModelDraw
+header must consume these exact definitions, not a parallel replacement schema.
+Retain flags, field order, source sparse matching and mode values; no serialized
+encoding changes. Keep renderer-only operations explicitly pending rather than
+linking legacy private renderer backends into the native graph.
+
+Add original condition-to-native-owner admission: model, deterministic first
+animation (never client random selection), exact hierarchy binding and owned
+pose evaluated at frame0 or frames-1 for flag4, with source scale semantics.
+Return a completely owned candidate without publishing partial original bone
+caches; empty/no-model states remain legitimate and invalid required assets fail.
+Cover source alias selection, night/snow mode matching, flags, scale, no-model,
+incompatible trees, missing clip, retained owners and whole-operation allocation
+failure/retry using generated original FileSystem inputs. Do not claim INI draw
+registration, weapon/turret/subobject caches or actual Drawable consumers are
+accepted until their real paths are wired and tested. Preserve the existing
+N2 plan/transaction and broaden into those consumers after this shared boundary.
+
+Admission must stage both model/clip graph and pose before publishing the asset
+cache as well: use a coupled NativeW3DAssets binding transaction so a missing
+clip, incompatible tree or late pose acquisition cannot retain a partial request.
+Verified scale path: W3DAssetManager scales HTree only when abs(scale-1)>.01;
+validateCachedBones then unconditionally scales the external root matrix. Preserve
+both factors in these original condition queries, not a presumed single factor.
+
+Frozen original condition-data checkpoint: related69 GCC4.59s/GCCsan26.60s/
+Clangsan19.19s PASS, terminal0 all3, condition cold172/populated mesh-cache175
+exact prefixes and every retry, three full repetitions. Shared original types,
+alias matcher/copy/mode semantics, public-bone normalization and coupled
+first/final owned poses are tested. Canonical675/inclusive682; full426 unrun.
+Evidence: `evidence/qa/N2-w3d-conditions.md`. This does not complete draw INI
+registration, weapon/turret/subobject caches, actual Drawable consumers or N2.
+Continue those original paths under this same plan, then full native startup and
+loaded deterministic simulation; no new milestone or acceptance waiver.
+
+Final source after inherited-whitespace normalization: GCC4.54s/GCCsan26.03s/
+Clangsan18.58s related69 PASS/terminal0. Hashes and evidence refer to this final
+source; initial passing matrix logs are retained separately.

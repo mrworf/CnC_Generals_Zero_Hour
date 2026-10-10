@@ -50,6 +50,11 @@ public:
     std::size_t documents=0,hierarchies=0,definitions=0,animationDefinitions=0,models=0,animations=0;
     bool operator==(const Counts&)const=default;
   };
+  struct Binding { Model model; Animation animation; NativeW3DPose pose; };
+  // Model, optional clip and query pose are one admission transaction. Even a
+  // late pose allocation failure preserves the complete accepted cache state.
+  Binding bind(std::string_view model, std::string_view animation, bool finalFrame,
+               const NativeW3DPose::Matrix& root, float treeScale);
   // FileSystem is borrowed through admission and must outlive this owner. User
   // art, when supplied, is an explicit read-only directory admitted by that VFS.
   NativeW3DAssets(FileSystem&,std::string language,std::string userModelDirectory={});

@@ -4,6 +4,7 @@
 #include "Common/FileSystem.h"
 #include "Common/FileOwner.h"
 #include <algorithm>
+#include <cmath>
 #include <map>
 
 namespace {
@@ -144,6 +145,24 @@ NativeW3DAssets::Animation NativeW3DAssets::animation(std::string_view name){
 NativeW3DAssets::Counts NativeW3DAssets::counts()const noexcept{
   if(!m_state)return {};
   return {m_state->documents.size(),m_state->hierarchies.size(),m_state->definitions.size(),m_state->animationDefinitions.size(),m_state->models.size(),m_state->animations.size()};
+}
+NativeW3DAssets::Binding NativeW3DAssets::bind(std::string_view name, std::string_view clip, bool finalFrame,
+                                            const NativeW3DPose::Matrix& root, float treeScale) {
+  identifier(name); if (!clip.empty()) identifier(clip);
+  if (!std::isfinite(treeScale)) throw ERROR_BAD_ARG;
+  for (float value:root) if (!std::isfinite(value)) throw ERROR_BAD_ARG;
+  auto candidate=m_state?std::make_shared<State>(*m_state):std::make_shared<State>();
+  std::vector<std::string_view> ancestors;
+  Binding binding; binding.model=resolveModel(*candidate,name,ancestors);
+  if (!clip.empty()) binding.animation=resolveAnimation(*candidate,clip);
+  if (binding.model->hierarchy) {
+    if (binding.animation) validateMotionBinding(binding.model,binding.animation);
+    binding.pose=createPose(binding.model);
+    const float frame=binding.animation && finalFrame?float(binding.animation->motion->frames()-1):0;
+    binding.pose.evaluate(root,binding.animation?binding.animation->motion.get():nullptr,frame,treeScale);
+  } else relationship(!binding.animation);
+  m_state=std::move(candidate);
+  return binding;
 }
 void NativeW3DAssets::clear()noexcept{m_state.reset();}
 NativeW3DPose NativeW3DAssets::createPose(const Model& model){if(!model || !model->hierarchy)throw ERROR_BAD_ARG;return NativeW3DPose::decode(*model->hierarchy);}
