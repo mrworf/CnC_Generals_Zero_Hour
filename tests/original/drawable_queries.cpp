@@ -407,8 +407,8 @@ struct ProducerTimeOwner {
   ~ProducerTimeOwner(){retire();}
   void tick(Fixture& fixture){fixture.client->setFrame(frame++);display->advanceLogicalFrame();}
 };
-void configureProducer(Fixture& fixture){
-  auto& data=fixture.module(0).inputData();
+void configureProducer(Fixture& fixture,unsigned index=0){
+  auto& data=fixture.module(index).inputData();
   auto idle=data.m_conditionStates[0];idle.m_flags=1<<MAINTAIN_FRAME_ACROSS_STATES;idle.m_mode=2;
   idle.m_animations.clear();idle.m_animations.emplace_back(AsciiString("Tree.Walk"),FALSE,0);
   idle.m_transitionKey=TheNameKeyGenerator->nameToKey("generatedProducerIdle");
@@ -621,6 +621,123 @@ void producerNegative(Fixture& fixture){
   auto invalid=Matrix3D(true);invalid[0][0]=std::numeric_limits<Real>::infinity();
   clientRejects([&]{module.producerStep(invalid);});require(module.clock()->frame()==expectedFrame,"invalid root/phase cannot consume accepted playback");
 }
+std::array<QueryModule*,2> rawProducers(Fixture& fixture){
+  const auto modules=fixture.draw->getDrawModulesNonDirty();
+  return {dynamic_cast<QueryModule*>(modules[0]),dynamic_cast<QueryModule*>(modules[1])};
+}
+void configureWalk(Fixture& fixture){
+  for(unsigned n=0;n<2;++n){configureProducer(fixture,n);auto& target=fixture.module(n).inputData().m_conditionStates[1];
+    target.m_flags=1<<RANDOMIZE_START_FRAME;target.m_animations.clear();
+    for(unsigned k=0;k<3;++k)target.m_animations.emplace_back(AsciiString("Tree.Walk"),FALSE,0);
+    target.m_animMinSpeedFactor=.5f;target.m_animMaxSpeedFactor=1.5f;
+  }
+}
+void initializeWalk(Fixture& fixture){for(auto module:rawProducers(fixture))module->initializeProducer();}
+void producerWalk(Fixture& fixture,bool forced){
+  ProducerTimeOwner time;configureWalk(fixture);GameClientRandomTransaction randomOwner;initializeWalk(fixture);
+  const auto modules=rawProducers(fixture);ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);
+  const ModelConditionFlags empty;
+  const std::array accepted{modules[0]->currentBinding(),modules[1]->currentBinding()};
+  const std::array selected{modules[0]->selected(),modules[1]->selected()};
+  const auto before=probeClientCursor();const auto counts=fixture.assets.counts();const auto live=AllocationFault::live();
+  auto& bad=modules[1]->inputData().m_conditionStates[1];bad.m_animMaxSpeedFactor=std::numeric_limits<Real>::infinity();
+  bool rejected=false;try{
+    if(forced)fixture.draw->replaceModelConditionFlags(moving,TRUE);
+    else {fixture.draw->replaceModelConditionFlags(moving,FALSE);(void)fixture.draw->getDrawModules();}
+  }catch(const std::invalid_argument&){rejected=true;}
+  bad.m_animMaxSpeedFactor=1.5f;
+  require(rejected,"late second producer rejection in actual Drawable notification walk");
+  for(unsigned n=0;n<2;++n)require(modules[n]->currentBinding()==accepted[n]&&modules[n]->selected()==selected[n]&&!modules[n]->pending()&&modules[n]->clock()->frame()==0,
+    "whole-walk rollback preserves both exact accepted bindings and source clocks");
+  require(probeClientCursor()==before&&fixture.assets.counts()==counts&&AllocationFault::live()==live,"whole-walk namespace/assets/RNG/standard candidate retirement");
+  require(fixture.draw->getModelConditionFlags()==(forced?empty:moving),"forced rollback restores prior flags; deferred rollback retains requested flags");
+  if(forced)fixture.draw->replaceModelConditionFlags(moving,FALSE);
+  (void)static_cast<const Drawable*>(fixture.draw)->getDrawModules();
+  for(auto module:modules)require(module->selected()==&module->inputData().m_conditionStates[1],"const dirty getter retries the original requested state after rollback");
+  AllocationFault::arm(0);try{(void)fixture.draw->getDrawModules();(void)static_cast<const Drawable*>(fixture.draw)->getDrawModules();}
+  catch(...){AllocationFault::disarm();throw;}const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+  require(attempts==0,"clean const/nonconst getters retain exact zero standard demand");
+}
+void producerWalkQuery(Fixture& fixture){
+  ProducerTimeOwner time;configureWalk(fixture);GameClientRandomTransaction randomOwner;initializeWalk(fixture);
+  const auto modules=rawProducers(fixture);const std::array accepted{modules[0]->currentBinding(),modules[1]->currentBinding()};
+  const auto before=probeClientCursor();const auto counts=fixture.assets.counts();const auto live=AllocationFault::live();
+  ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);fixture.draw->replaceModelConditionFlags(moving,FALSE);
+  Coord3D point{91,92,93};fixture.logic->phase([&]{clientRejects([&]{fixture.draw->getPristineBonePositions("Muzzle",100,&point,nullptr,1);});});
+  require(point.x==91&&modules[0]->currentBinding()==accepted[0]&&modules[1]->currentBinding()==accepted[1]&&probeClientCursor()==before&&fixture.assets.counts()==counts&&AllocationFault::live()==live,
+    "late pristine-query rejection rolls back earlier successful dirty publications and all source cursors");
+  fixture.logic->phase([&]{require(fixture.draw->getPristineBonePositions("Muzzle",0,&point,nullptr,1)==1,"corrected whole-query retry");});
+  for(auto module:modules)require(module->selected()==&module->inputData().m_conditionStates[1],"query rollback restores dirty status until complete corrected dispatch");
+}
+void producerWalkWait(Fixture& fixture){
+  ProducerTimeOwner time;configureWalk(fixture);
+  auto modules=rawProducers(fixture);auto& first=modules[0]->inputData();auto& second=modules[1]->inputData();
+  first.m_conditionStates[1].m_allowToFinishKey=first.m_conditionStates[0].m_transitionKey;
+  second.m_conditionStates[1].m_animMaxSpeedFactor=std::numeric_limits<Real>::infinity();
+  GameClientRandomTransaction randomOwner;initializeWalk(fixture);
+  modules[0]->setPauseAnimation(TRUE);modules[0]->setAnimationLoopDuration(7);const auto rate=modules[0]->clock()->multiplier();
+  const auto before=probeClientCursor();const auto* accepted=modules[0]->currentBinding();ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);
+  bool rejected=false;try{fixture.draw->replaceModelConditionFlags(moving,TRUE);}catch(const std::invalid_argument&){rejected=true;}
+  second.m_conditionStates[1].m_animMaxSpeedFactor=1.5f;
+  require(rejected&&modules[0]->currentBinding()==accepted&&!modules[0]->pending()&&modules[0]->paused()&&modules[0]->clock()->mode()==NativeModelAnimationClock::Mode::Manual&&modules[0]->clock()->multiplier()==rate&&probeClientCursor()==before,
+    "metadata-only wait is rolled back with retained pause/clock when a later module fails");
+  fixture.draw->replaceModelConditionFlags(moving,TRUE);
+  require(modules[0]->pending()==&first.m_conditionStates[1]&&modules[1]->selected()==&second.m_conditionStates[1],"corrected wait/instant source cohort publishes together");
+  modules[0]->setPauseAnimation(FALSE);require(modules[0]->clock()->mode()==NativeModelAnimationClock::Mode::Once,"rollback preserves saved pause mode");
+}
+void producerWalkFaults(Fixture& fixture,unsigned route){
+  ProducerTimeOwner time;configureWalk(fixture);ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);
+  auto setup=[&]{fixture.fresh();initializeWalk(fixture);if(route!=1)fixture.draw->replaceModelConditionFlags(moving,FALSE);};
+  auto operation=[&]{if(route==1)fixture.draw->replaceModelConditionFlags(moving,TRUE);
+    else if(route==0)(void)static_cast<const Drawable*>(fixture.draw)->getDrawModules();
+    else fixture.logic->phase([&]{Coord3D point;require(fixture.draw->getPristineBonePositions("Muzzle",0,&point,nullptr,1)==1,"faulted whole-query operation");});};
+  auto retire=[&]{fixture.client->destroyDrawable(fixture.draw);fixture.draw=nullptr;fixture.assets.clear();};
+  std::size_t terminal;
+  {NameKeyTransaction keys(fixture.names);GameClientRandomTransaction random;setup();AllocationFault::arm(SIZE_MAX);
+    try{operation();terminal=AllocationFault::attempts();AllocationFault::disarm();}catch(...){AllocationFault::disarm();throw;}retire();}
+  for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){
+    NameKeyTransaction keys(fixture.names);GameClientRandomTransaction random;setup();const auto modules=rawProducers(fixture);
+    const std::array accepted{modules[0]->currentBinding(),modules[1]->currentBinding()};const std::array selected{modules[0]->selected(),modules[1]->selected()};
+    const auto flags=fixture.draw->getModelConditionFlags();const auto counts=fixture.assets.counts();const auto before=probeClientCursor();const auto nextID=fixture.client->getDrawableIDCounter();
+    auto* pool=TheMemoryPoolFactory->findMemoryPool("NameKeyBucketPool");const auto units=pool->getUsedBlockCount();
+    NameKeyType nextKey;{NameKeyTransaction proof(fixture.names);nextKey=fixture.names.nameToKey("walk-production-cursor");}
+    struct Selection{Int index,frame;Real rate;};std::array<Selection,2> expected;
+    {GameClientRandomTransaction proof;for(auto& value:expected)value={GameClientRandomValue(0,2),GameClientRandomValue(0,1),GameClientRandomValueReal(.5f,1.5f)};}
+    const auto live=AllocationFault::live();bool failed=false;AllocationFault::arm(ordinal);
+    try{operation();}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+    const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+    require(failed==(ordinal<terminal)&&failed==hit&&attempts==(failed?ordinal+1:terminal),"whole condition/query walk exact terminal and every failure prefix");
+    if(failed){
+      for(unsigned n=0;n<2;++n)require(modules[n]->currentBinding()==accepted[n]&&modules[n]->selected()==selected[n]&&!modules[n]->pending()&&modules[n]->clock()->frame()==0,
+        "every root fault restores exact accepted module binding and source state");
+      require(fixture.draw->getModelConditionFlags()==flags&&probeClientCursor()==before&&fixture.assets.counts()==counts&&AllocationFault::live()==live&&pool->getUsedBlockCount()==units,
+        "every root fault restores flags/client cursor/assets/live/pooled units before fixture lease");
+      {NameKeyTransaction proof(fixture.names);require(fixture.names.nameToKey("walk-production-cursor")==nextKey,"root namespace cursor restored before fixture lease");}
+      operation();
+    }
+    for(unsigned n=0;n<2;++n)require(modules[n]->selected()==&modules[n]->inputData().m_conditionStates[1]&&modules[n]->selectedAnimation()==expected[n].index&&modules[n]->clock()->frame()==expected[n].frame&&modules[n]->clock()->multiplier()==expected[n].rate,
+      "every corrected whole-walk retry consumes exact original source index/frame/rate order");
+    require(fixture.client->getDrawableIDCounter()==nextID,"whole condition/query walk never acquires Drawable IDs");
+    retire();
+  }
+  fixture.create();std::cout<<"condition walk "<<(route==0?"dirty":route==1?"forced":"query")<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every failure/retry\n";
+}
+void producerFirstRoot(Fixture& fixture){
+  ProducerTimeOwner time;configureProducer(fixture);auto& module=fixture.module(0);
+  module.inputData().m_conditionStates[0].m_modelName="Static.Mesh";
+  GameClientRandomTransaction randomOwner;
+  // The object is mutable and fixture-owned. Inject a defined float into its
+  // raw borrowed matrix, not an invalid enum/object representation or setter
+  // path whose own geometry callbacks would change the tested boundary.
+  auto& world=*const_cast<Matrix3D*>(fixture.draw->getTransformMatrix());const auto original=world;
+  world[0][0]=std::numeric_limits<Real>::infinity();const auto before=probeClientCursor();const auto counts=fixture.assets.counts();const auto live=AllocationFault::live();
+  clientRejects([&]{module.initializeProducer();});
+  world=original;
+  require(!module.selected()&&!module.currentBinding()&&fixture.assets.counts()==counts&&AllocationFault::live()==live&&probeClientCursor()==before,
+    "malformed first leaf root rejects before model/condition/RNG publication and retires candidate ownership");
+  module.initializeProducer();Coord3D position;Real radius;Matrix3D output;
+  require(module.clientOnly_getRenderObjInfo(&position,&radius,&output)&&radius==3,"corrected first leaf root admits on the same owner");
+}
 void modelBounds(Fixture& fixture){auto& module=fixture.module(0);const Matrix3D identity(true);const AsciiString empty("");
   Coord3D position{91,92,93};Real radius=99;Matrix3D world(true);world.Set_Translation(Vector3(99,0,0));OBBoxClass box(Vector3(91,92,93),Vector3(99,99,99));
   module.current("","",identity,0);require(!fixture.draw->clientOnly_getFirstRenderObjInfo(&position,&radius,&world)&&position.x==91&&radius==99&&world.Get_X_Translation()==99,"absent first model leaves every info output untouched");
@@ -664,9 +781,16 @@ int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawa
     {Fixture warm;producerSelection(warm);}
     {Fixture warm;producerLifecycle(warm);}
     {Fixture warm;producerNegative(warm);}
+    if(std::string_view(argv[1]).starts_with("producer-walk")||std::string_view(argv[1])=="producer-first-root"){
+      {Fixture warm;producerWalk(warm,false);}
+      {Fixture warm;producerWalk(warm,true);}
+      {Fixture warm;producerWalkQuery(warm);}
+      {Fixture warm;producerFirstRoot(warm);}
+      {Fixture warm;producerWalkWait(warm);}
+    }
   }
   for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
-    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else if(family=="display-time")displayTime(fixture);else if(family=="model-bounds")modelBounds(fixture);else if(family=="producer-functional")producerFunctional(fixture);else if(family=="producer-transitions")producerTransitions(fixture);else if(family=="producer-selection")producerSelection(fixture);else if(family=="producer-cold")producerFaults(fixture,false);else if(family=="producer-seeded")producerFaults(fixture,true);else if(family=="producer-lifecycle")producerLifecycle(fixture);else if(family=="producer-negative")producerNegative(fixture);else throw GeneratedFixtureFailure("unknown Drawable query family");}
+    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else if(family=="display-time")displayTime(fixture);else if(family=="model-bounds")modelBounds(fixture);else if(family=="producer-functional")producerFunctional(fixture);else if(family=="producer-transitions")producerTransitions(fixture);else if(family=="producer-selection")producerSelection(fixture);else if(family=="producer-cold")producerFaults(fixture,false);else if(family=="producer-seeded")producerFaults(fixture,true);else if(family=="producer-lifecycle")producerLifecycle(fixture);else if(family=="producer-negative")producerNegative(fixture);else if(family=="producer-walk-dirty")producerWalk(fixture,false);else if(family=="producer-walk-forced")producerWalk(fixture,true);else if(family=="producer-walk-query")producerWalkQuery(fixture);else if(family=="producer-first-root")producerFirstRoot(fixture);else if(family=="producer-walk-wait")producerWalkWait(fixture);else if(family=="producer-walk-dirty-faults")producerWalkFaults(fixture,0);else if(family=="producer-walk-forced-faults")producerWalkFaults(fixture,1);else if(family=="producer-walk-query-faults")producerWalkFaults(fixture,2);else throw GeneratedFixtureFailure("unknown Drawable query family");}
     require(AllocationFault::live()==live,"whole original Drawable/client/definition/query/parent cohort retirement");
   }shutdownMemoryManager();initialized=false;std::cout<<"PASS actual Drawable query dispatch; renderer/full simulation pending\n";return 0;
  }catch(const GeneratedFixtureFailure& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(const std::exception&){std::cerr<<"FAIL generated Drawable query\n";}catch(ErrorCode){std::cerr<<"FAIL source Drawable query\n";}

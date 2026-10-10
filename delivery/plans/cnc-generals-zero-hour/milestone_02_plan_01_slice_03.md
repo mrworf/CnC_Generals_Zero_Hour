@@ -4036,3 +4036,39 @@ walks, first-leaf malformed-root admission, concrete19/effects/movement parents,
 camera actor-follow, actual startup/loaded simulation and full465 remain pending.
 These are documented coupled integration work, not a new plan or N2 acceptance.
 Condition-animation producer payload commit: 43fc6b1eced6f85c26e5f2e5b11c955eea5fec9d.
+
+Whole-condition-walk continuation (parent926c41d9, clean worktree): preserve
+original dirty/forced notification order while enrolling initialized native
+producer owners from the raw non-dirty module list. A root candidate scope owns
+namespace/assets/client RNG and preallocated per-module previous selected/
+pending/pause/duration metadata. On first publication, retain the original
+current/validated owners by move, not cloned replacements, so late failure
+restores accepted binding identity without allocation/callbacks. Nested getter
+walks enroll in the same root; save requested flags only for immediate mutation,
+and dirty status before dirty getters clear it. Deferred requested flags remain
+pending on failure, while forced mutation restores prior flags. Pristine query
+dispatch must open this scope before dirty notification and keep it until its
+existing whole-query cache/admission result is known. No new guard allocation
+for old uninitialized/non-native fixture paths. Stage finite world conversion on
+every existing-model admission, including first leaf initialization.
+Test two real initialized generated modules, const/nonconst dirty getters,
+forced replacement, late second-module semantic rejection and corrected retry,
+namespace/client cursor and exact binding/clock/pending/flag/dirty restoration,
+finite first-leaf malformed/corrected admission, and independent complete
+allocation failure/retry sweeps. Retain all original lifecycle/constructor/pool
+checks and frozen GCC/GCCsan/Clangsan validation. Concrete19/effect owners remain
+pending; extend owner enrollment for their additional mutable resources before
+claiming full runtime. This remains the same N2 plan01/slice03 transaction.
+
+Worktree checkpoint requested by the user: retain the coupled root, Drawable
+callers, pristine-query dispatch, first-leaf conversion and generated fixtures in
+one commit, without declaring this slice complete. Parallel-path review also
+identified in-place pause/frame/duration/ordinary advancement inside a root;
+these now stage a copy before first publication, retaining the exact accepted
+owner for allocation-free rollback. Their dedicated nested callback and locally
+caught rejection cases still need validation before component acceptance. Run
+the existing eight whole-walk families on the current source in GCC and both
+compiler sanitizer configurations, record the results separately from earlier
+producer evidence, and persist the remaining frozen related-matrix requirement.
+This user-requested implementation checkpoint is not a completed-slice commit
+and does not waive that requirement or create a replacement plan.

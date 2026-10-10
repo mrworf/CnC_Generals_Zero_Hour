@@ -2,6 +2,7 @@
 #pragma once
 #include "Common/DrawModule.h"
 #include "Common/W3DModelDrawData.h"
+#include "GameClient/NativeModelDrawConditionBatch.h"
 #include <thread>
 #include <optional>
 
@@ -70,10 +71,11 @@ public:
 // Stack-owned root scope for complete original Drawable module walks, including
 // recursive attachment lookups. Non-native draw paths retain their old routing.
 class NativeModelDrawQueryDispatch final {
+  std::optional<NativeModelDrawConditionBatch> m_conditions;
   std::optional<NativeModelQueryTransaction> m_transaction;
   bool m_active=false;
 public:
   explicit NativeModelDrawQueryDispatch(const Drawable&);
   bool active()const noexcept{return m_active;}
-  void commit()noexcept{if(m_transaction)m_transaction->commit();}
+  void commit()noexcept{if(m_transaction)m_transaction->commit();if(m_conditions)m_conditions->commit();}
 };

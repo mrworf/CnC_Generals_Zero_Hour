@@ -35,13 +35,21 @@ void NativeModelQueryTransaction::commit() noexcept {m_admission.commit();m_keys
 thread_local NativeModelQueryTransaction* NativeModelQueryTransaction::current=nullptr;
 
 NativeModelDrawQueryDispatch::NativeModelDrawQueryDispatch(const Drawable& draw){
-  for(const DrawModule** modules=draw.getDrawModules();*modules;++modules){
+  const DrawModule* const* raw=const_cast<Drawable&>(draw).getDrawModulesNonDirty();
+  NativeW3DAssets* owner=nullptr;
+  for(auto modules=raw;*modules;++modules){
     if(const auto* native=dynamic_cast<const NativeModelDrawQueries*>(*modules)){
       native->requireLogicPhase();m_active=true;
-      if(!NativeModelQueryTransaction::current)m_transaction.emplace(native->m_assets);
-      else if(&NativeModelQueryTransaction::current->assets!=&native->m_assets)throw ERROR_BAD_ARG;
+      if(owner&&owner!=&native->m_assets)throw ERROR_BAD_ARG;
+      owner=&native->m_assets;
     }
   }
+  if(owner){
+      m_conditions.emplace(raw);
+      if(!NativeModelQueryTransaction::current)m_transaction.emplace(*owner);
+      else if(&NativeModelQueryTransaction::current->assets!=owner)throw ERROR_BAD_ARG;
+  }
+  (void)draw.getDrawModules(); // Dirty publication participates in this root.
 }
 
 namespace {

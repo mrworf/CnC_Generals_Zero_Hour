@@ -6174,3 +6174,18 @@ check. Stage that conversion for every existing model before ownership
 publication, and pair malformed first-leaf admission with a corrected retry in
 the whole-walk/constructor cohort. Generated finite-root component cases do not
 prove this boundary. This is a pending implementation finding, not acceptance.
+
+Follow-up at the user-requested condition-walk worktree checkpoint (parent
+926c41d9): NativeModelDrawConditionBatch now stages the initialized producer
+cohort from raw module lists, retaining exact old owners on first publication.
+Drawable dirty/forced callers and pristine query dispatch share that root;
+query cache rollback runs before producer/asset rollback. First-leaf preparation
+now also calls raw(world) before ownership publication. In-place pause/frame/
+duration/ordinary advancement paths need copy-on-first-mutation inside that root,
+not merely metadata snapshots; they otherwise alter the retained accepted owner.
+The implementation includes that staging, but its dedicated nested callback
+rejection/rollback tests and the frozen related matrix remain pending. See
+evidence/qa/N2-condition-walk-worktree-checkpoint.md for precise current evidence
+and exclusions. Earlier pending observations above describe the predecessor;
+neither the new code nor focused tests establish concrete-provider or full-game
+acceptance.

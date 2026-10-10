@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "PreRTS.h"
 #include "GameClient/NativeModelDrawAnimationProducer.h"
+#include "GameClient/NativeModelDrawConditionBatch.h"
 #include "GameClient/ClientRandomValue.h"
 #include "GameClient/Display.h"
 #include "GameClient/Drawable.h"
@@ -105,10 +106,11 @@ NativeModelDrawAnimationProducer::Candidate NativeModelDrawAnimationProducer::pr
   if(!recreate)out=cloneCandidate();
   else if(query.binding.model){
     const Matrix3D world=m_current?m_current->world:*getDrawable()->getTransformMatrix();
+    const auto root=raw(world); // Also stage first leaf roots before publication.
     const Real scale=getDrawable()->getScale(),treeScale=std::abs(scale-1)>.01f?scale:1;
     auto bounds=NativeW3DModelBounds::decode(query.binding.model,treeScale);
     query.binding.animation.reset(); // Pristine first clip is not the selected current clip.
-    if(query.binding.model->hierarchy)query.binding.pose.evaluateRuntime(raw(world),nullptr,0,treeScale);
+    if(query.binding.model->hierarchy)query.binding.pose.evaluateRuntime(root,nullptr,0,treeScale);
     out.current=std::make_unique<Current>(Current{std::move(query.binding),world,treeScale,0,std::move(bounds),1,{}});
   }
   out.validated=std::move(query.condition);out.state=m_state;
@@ -118,6 +120,7 @@ NativeModelDrawAnimationProducer::Candidate NativeModelDrawAnimationProducer::pr
   return out;
 }
 void NativeModelDrawAnimationProducer::publish(Candidate&& candidate)noexcept{
+  NativeModelDrawConditionBatch::retainPrevious(*this);
   m_current=std::move(candidate.current);m_validated=std::move(candidate.validated);m_state=candidate.state;
 }
 void NativeModelDrawAnimationProducer::initializeNativeAnimationProducer(){
@@ -129,6 +132,7 @@ void NativeModelDrawAnimationProducer::initializeNativeAnimationProducer(){
   assets.commit();keys.commit();random.commit();
 }
 void NativeModelDrawAnimationProducer::replaceModelConditionState(const ModelConditionFlags& conditions){
+  NativeModelDrawConditionBatch::validate(*this);
   const auto now=syncTime();const auto* requested=nativeModelDrawData().findBestInfoUncached(conditions);
   if(!requested)return;
   if(m_state.source && ((requested==m_state.source&&!m_state.pending)||requested==m_state.pending))return;
@@ -142,6 +146,13 @@ void NativeModelDrawAnimationProducer::replaceModelConditionState(const ModelCon
 }
 void NativeModelDrawAnimationProducer::setPauseAnimation(Bool paused){
   const auto now=syncTime();if(m_state.paused==paused)return;
+  if(NativeModelDrawConditionBatch::needsCopy(*this)&&m_current&&m_current->clock){
+    auto candidate=cloneCandidate();auto& state=candidate.state;auto& current=*candidate.current;
+    auto clock=NativeModelAnimationClock::start(current.binding.animation->motion->frames(),
+      float(current.binding.animation->motion->frameRate()),current.frame,paused?Mode::Manual:state.savedMode,now,current.frame);
+    if(paused)state.savedMode=current.clock->mode();current.clock=clock;state.paused=paused;
+    publish(std::move(candidate));return;
+  }
   if(m_current && m_current->clock && m_current->binding.model->kind==NativeW3DAssets::Prototype::Kind::Hlod){
     auto clock=NativeModelAnimationClock::start(m_current->binding.animation->motion->frames(),
       float(m_current->binding.animation->motion->frameRate()),m_current->frame,paused?Mode::Manual:m_state.savedMode,now,m_current->frame);
@@ -155,6 +166,11 @@ void NativeModelDrawAnimationProducer::setAnimationFrame(int frame){
   const auto clip=nativeAssets().animation(m_state.source->m_animations[m_state.animation].getName().str());
   if(m_current->binding.model->kind!=NativeW3DAssets::Prototype::Kind::Hlod)return;
   auto clock=NativeModelAnimationClock::start(clip->motion->frames(),float(clip->motion->frameRate()),float(frame),Mode::Manual,now,m_current->frame);
+  if(NativeModelDrawConditionBatch::needsCopy(*this)){
+    auto candidate=cloneCandidate();auto& current=*candidate.current;
+    current.binding.pose.evaluateRuntime(raw(current.world),clip->motion.get(),float(frame),current.treeScale);
+    current.binding.animation=clip;current.frame=float(frame);current.clock=clock;publish(std::move(candidate));return;
+  }
   m_current->binding.pose.evaluateRuntime(raw(m_current->world),clip->motion.get(),float(frame),m_current->treeScale);
   m_current->binding.animation=clip;m_current->frame=float(frame);m_current->clock=clock;
 }
@@ -173,7 +189,12 @@ Real NativeModelDrawAnimationProducer::naturalDuration(const ModelConditionInfo*
   return result;
 }
 void NativeModelDrawAnimationProducer::setAnimationLoopDuration(UnsignedInt frames){
-  (void)syncTime();duration(m_current.get(),frames);m_state.pendingDuration=~UnsignedInt(0);
+  (void)syncTime();
+  if(NativeModelDrawConditionBatch::needsCopy(*this)&&m_current&&m_current->clock){
+    auto candidate=cloneCandidate();duration(candidate.current.get(),frames);candidate.state.pendingDuration=~UnsignedInt(0);
+    publish(std::move(candidate));return;
+  }
+  duration(m_current.get(),frames);m_state.pendingDuration=~UnsignedInt(0);
 }
 void NativeModelDrawAnimationProducer::setAnimationCompletionTime(UnsignedInt frames){
   (void)syncTime();
@@ -183,21 +204,36 @@ void NativeModelDrawAnimationProducer::setAnimationCompletionTime(UnsignedInt fr
     const Real a=naturalDuration(m_state.source),b=naturalDuration(m_state.pending);
     const auto split=REAL_TO_INT_FLOOR((float(frames)*a)/(a+b));
     if(split<0 || std::uint32_t(split)>frames)throw ERROR_BAD_ARG;
-    duration(m_current.get(),UnsignedInt(split));m_state.pendingDuration=frames-UnsignedInt(split);admission.commit();
+    if(NativeModelDrawConditionBatch::needsCopy(*this)&&m_current&&m_current->clock){
+      auto candidate=cloneCandidate();duration(candidate.current.get(),UnsignedInt(split));candidate.state.pendingDuration=frames-UnsignedInt(split);
+      publish(std::move(candidate));
+    }else {duration(m_current.get(),UnsignedInt(split));m_state.pendingDuration=frames-UnsignedInt(split);}
+    admission.commit();
   }else setAnimationLoopDuration(frames);
+}
+void NativeModelDrawAnimationProducer::advanceRetained(const Matrix3D& world,UnsignedInt now){
+  if(NativeModelDrawConditionBatch::needsCopy(*this)&&m_current){
+    auto candidate=cloneCandidate();auto& current=*candidate.current;
+    if(current.clock){auto clock=current.clock->advanced(now);
+      current.binding.pose.evaluateRuntime(raw(world),current.binding.animation->motion.get(),clock.frame(),current.treeScale);
+      current.frame=clock.frame();current.clock=clock;
+    }else if(current.binding.model->hierarchy)
+      current.binding.pose.evaluateRuntime(raw(world),current.binding.animation?current.binding.animation->motion.get():nullptr,current.frame,current.treeScale);
+    current.world=world;publish(std::move(candidate));return;
+  }
+  if(m_current&&!m_current->clock)updateNativeCurrentPose(world,m_current->frame);
+  else advanceNativeCurrentPose(world,now);
 }
 void NativeModelDrawAnimationProducer::advanceNativeConditionAnimation(const Matrix3D& world){
   requireClientPhase();const auto now=syncTime();const auto root=raw(world);
   if(!complete()){
-    if(m_current && !m_current->clock)updateNativeCurrentPose(world,m_current->frame);
-    else advanceNativeCurrentPose(world,now);
+    advanceRetained(world,now);
     return;
   }
   const bool restart=m_state.source && m_state.animation>=0 &&
     (m_state.source->m_animations[m_state.animation].isIdleAnim() || has(m_state.source->m_flags,RESTART_ANIM_WHEN_COMPLETE));
   if(!m_state.pending && !restart){
-    if(m_current && !m_current->clock)updateNativeCurrentPose(world,m_current->frame);
-    else advanceNativeCurrentPose(world,now);
+    advanceRetained(world,now);
     return;
   }
   NameKeyTransaction keys(*TheNameKeyGenerator);NativeW3DAssets::Transaction assets(nativeAssets());GameClientRandomTransaction random;

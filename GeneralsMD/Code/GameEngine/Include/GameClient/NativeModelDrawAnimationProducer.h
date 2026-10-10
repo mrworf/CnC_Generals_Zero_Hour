@@ -2,10 +2,12 @@
 #pragma once
 #include "GameClient/NativeModelDrawCurrentQueries.h"
 class Display;
+class NativeModelDrawConditionBatch;
 // Shared source state owner. Specialized effects/physical callbacks remain
 // abstract, never successful substitutes. Concrete source providers are pending.
 class NativeModelDrawAnimationProducer : public NativeModelDrawCurrentQueries {
   MEMORY_POOL_GLUE_ABC(NativeModelDrawAnimationProducer)
+  friend class NativeModelDrawConditionBatch;
   using Mode=NativeModelAnimationClock::Mode;
   struct State {
     const ModelConditionInfo* source=nullptr;
@@ -32,6 +34,7 @@ class NativeModelDrawAnimationProducer : public NativeModelDrawCurrentQueries {
   static Real fraction(const State&,const Current*);
   static void duration(Current*,UnsignedInt);
   Real naturalDuration(const ModelConditionInfo*)const;
+  void advanceRetained(const Matrix3D&,UnsignedInt);
 protected:
   void initializeNativeAnimationProducer();
   void advanceNativeConditionAnimation(const Matrix3D&);

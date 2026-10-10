@@ -300,6 +300,7 @@ target_sources(original_logical_client PRIVATE
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeModelDrawQueries.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeModelDrawCurrentQueries.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeModelDrawAnimationProducer.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeModelDrawConditionBatch.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeW3DModelBounds.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeModelAnimationClock.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeWaterGrid.cpp"
@@ -351,7 +352,7 @@ target_link_libraries(original_drawable_queries_fixture PRIVATE "$<LINK_GROUP:RE
 target_link_options(original_drawable_queries_fixture PRIVATE -Wl,--gc-sections)
 target_include_directories(original_drawable_queries_fixture PRIVATE "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_definitions(original_drawable_queries_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
-foreach(family IN ITEMS functional negative faults seeded_faults wide_faults wide_seeded_faults constructor_faults client-functional client-negative client-numbered client-cold client-seeded animation-clock animation-pose display-time model-bounds producer-functional producer-transitions producer-selection producer-cold producer-seeded producer-lifecycle producer-negative)
+foreach(family IN ITEMS functional negative faults seeded_faults wide_faults wide_seeded_faults constructor_faults client-functional client-negative client-numbered client-cold client-seeded animation-clock animation-pose display-time model-bounds producer-functional producer-transitions producer-selection producer-cold producer-seeded producer-lifecycle producer-negative producer-walk-dirty producer-walk-forced producer-walk-query producer-first-root producer-walk-wait producer-walk-dirty-faults producer-walk-forced-faults producer-walk-query-faults)
   add_test(NAME original_drawable_queries_${family} COMMAND original_drawable_queries_fixture "${family}")
   set_tests_properties(original_drawable_queries_${family} PROPERTIES LABELS "original;model;drawable-queries" TIMEOUT 60 ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()
