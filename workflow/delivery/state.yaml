@@ -34,7 +34,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 original pristine-query supporting checkpoint validated; no live jobs. Integrate actual Drawable pristine/projectile dispatch and source logic-phase/FPU ownership; preserve current-client/attachment query distinctions and resolve nested-HLOD source flattening, then complete derived19 draw registrations, condition transfer/material/prototypes and full native factory/GameEngine startup/loaded deterministic simulation under the same N2 plan01/slice03. Full434 and N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 original pristine-query supporting checkpoint committed in e2ec000839b5b9d6d69d9d8677d48a385b1c92ab; no live jobs. Integrate actual Drawable pristine/projectile dispatch and source logic-phase/FPU ownership; preserve current-client/attachment query distinctions and resolve nested-HLOD source flattening, then complete derived19 draw registrations, condition transfer/material/prototypes and full native factory/GameEngine startup/loaded deterministic simulation under the same N2 plan01/slice03. Full434 and N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -170,7 +170,7 @@
   "active_implementation": {
     "label": "original-w3d-pristine-queries",
     "parent_commit": "3fb53069",
-    "status": "validated supporting original pristine-query checkpoint; not slice03 or N2 acceptance",
+    "status": "committed supporting original pristine-query checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-w3d-pristine-queries.md",
     "canonical_source_files": 680,
@@ -199,7 +199,8 @@
       "gcc": "PASS5.73s; terminal0",
       "gcc_sanitize": "PASS34.05s; terminal0",
       "clang_sanitize": "PASS24.32s; terminal0"
-    }
+    },
+    "repository_commit": "e2ec000839b5b9d6d69d9d8677d48a385b1c92ab"
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -461,7 +462,7 @@
   "w3d_pristine_query_checkpoint": {
     "label": "original-w3d-pristine-queries",
     "parent_commit": "3fb53069",
-    "status": "validated supporting original pristine-query checkpoint; not slice03 or N2 acceptance",
+    "status": "committed supporting original pristine-query checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-w3d-pristine-queries.md",
     "canonical_source_files": 680,
@@ -490,6 +491,7 @@
       "gcc": "PASS5.73s; terminal0",
       "gcc_sanitize": "PASS34.05s; terminal0",
       "clang_sanitize": "PASS24.32s; terminal0"
-    }
+    },
+    "repository_commit": "e2ec000839b5b9d6d69d9d8677d48a385b1c92ab"
   }
 }
