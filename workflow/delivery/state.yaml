@@ -34,7 +34,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 original draw-definition supporting checkpoint validated; no live jobs. Continue derived draw-data registrations and actual Drawable pristine weapon/turret/subobject query consumers using the shared original definitions; validate condition-specific transfer, complete remaining material/prototype types, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full431 and N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 original draw-definition supporting checkpoint committed in 0a04e12de64a03bd3c00fb653fc7ff3c4dea128f; no live jobs. Continue derived draw-data registrations and actual Drawable pristine weapon/turret/subobject query consumers using the shared original definitions; validate condition-specific transfer, complete remaining material/prototype types, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full431 and N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -170,7 +170,7 @@
   "active_implementation": {
     "label": "original-w3d-draw-definition",
     "parent_commit": "bbcd6554",
-    "status": "validated supporting original draw-definition checkpoint; not slice03 or N2 acceptance",
+    "status": "committed supporting original draw-definition checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-w3d-draw-data.md",
     "canonical_source_files": 679,
@@ -200,7 +200,8 @@
       "gcc": "Supporting73 PASS4.88s; terminal0",
       "gcc_sanitize": "Supporting73 PASS28.41s; terminal0",
       "clang_sanitize": "Supporting73 PASS20.07s; terminal0"
-    }
+    },
+    "repository_commit": "0a04e12de64a03bd3c00fb653fc7ff3c4dea128f"
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -426,7 +427,7 @@
   "w3d_draw_data_checkpoint": {
     "label": "original-w3d-draw-definition",
     "parent_commit": "bbcd6554",
-    "status": "validated supporting original draw-definition checkpoint; not slice03 or N2 acceptance",
+    "status": "committed supporting original draw-definition checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-w3d-draw-data.md",
     "canonical_source_files": 679,
@@ -456,6 +457,7 @@
       "gcc": "Supporting73 PASS4.88s; terminal0",
       "gcc_sanitize": "Supporting73 PASS28.41s; terminal0",
       "clang_sanitize": "Supporting73 PASS20.07s; terminal0"
-    }
+    },
+    "repository_commit": "0a04e12de64a03bd3c00fb653fc7ff3c4dea128f"
   }
 }
