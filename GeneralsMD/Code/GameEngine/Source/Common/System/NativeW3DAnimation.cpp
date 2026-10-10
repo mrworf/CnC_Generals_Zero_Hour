@@ -54,6 +54,13 @@ std::array<float,4> slerp(const std::array<float,4>& a,const std::array<float,4>
 // the truncating non-MSVC fallback or the caller's floating-point round mode.
 std::uint32_t rounded(float frame){const double base=std::floor(double(frame)),fraction=double(frame)-base;
   auto result=std::uint32_t(base);if(fraction>0.5 || (fraction==0.5 && (result&1)))++result;return result;}
+std::int32_t signedRounded(float frame){
+  const double base=std::floor(double(frame)),fraction=double(frame)-base;
+  valid(base>=INT32_MIN && base<=INT32_MAX);
+  auto result=std::int64_t(base);
+  if(fraction>0.5 || (fraction==0.5 && result%2!=0))++result;
+  valid(result>=INT32_MIN && result<=INT32_MAX);return std::int32_t(result);
+}
 }
 
 NativeW3DAnimation NativeW3DAnimation::decode(const NativeW3DDocument& document,std::size_t index,
@@ -118,8 +125,8 @@ void NativeW3DAnimation::readVisibility(Bytes bytes,std::uint32_t version){Visib
 
 std::array<float,4> NativeW3DAnimation::sampleChannel(const Channel& channel,float frame,RawSampling mode)const{
   const unsigned width=channel.width;std::array<float,4> identity{0,0,0,width==4?1.f:0.f};if(!channel.present)return identity;
-  auto at=[&](std::uint32_t index){auto result=identity;
-    if(!channel.sparse && (index<channel.first || index>channel.last))return result;
+  auto at=[&](std::int64_t index){auto result=identity;
+    if(!channel.sparse && (index<std::int64_t(channel.first) || index>std::int64_t(channel.last)))return result;
     auto offset=std::size_t(channel.sparse?index:index-channel.first)*width;
     for(unsigned n=0;n<width;++n)result[n]=channel.values[offset+n];
     return result;};
@@ -128,6 +135,8 @@ std::array<float,4> NativeW3DAnimation::sampleChannel(const Channel& channel,flo
       [](std::uint32_t value,std::uint32_t key){return value<(key&~flag);});
     first=std::uint32_t(it-channel.times.begin()-1);if(first+1==channel.times.size() || (channel.times[first+1]&flag))return at(first);
     second=first+1;ratio=(frame-float(channel.times[first]&~flag))/float((channel.times[second]&~flag)-(channel.times[first]&~flag));
+  } else if(!m_compressed && mode==RawSampling::RuntimeGeneralsRounded){
+    auto index=signedRounded(frame);if(std::int64_t(index)>=m_frames)index=0;return at(index);
   } else if(!m_compressed && mode==RawSampling::GeneralsRounded){auto index=rounded(frame);if(index>=m_frames)index=0;return at(index);}
   else {first=std::uint32_t(frame);ratio=frame-float(first);second=first+1;
     if(m_compressed){first=std::min(first,channel.last);second=std::min(second,channel.last);}
@@ -135,16 +144,20 @@ std::array<float,4> NativeW3DAnimation::sampleChannel(const Channel& channel,flo
   const auto a=at(first),b=at(second);if(width==4)return slerp(a,b,ratio);auto result=a;result[0]=lerp(a[0],b[0],ratio);valid(std::isfinite(result[0]));return result;
 }
 NativeW3DAnimation::Motion NativeW3DAnimation::sample(std::size_t pivot,float frame,RawSampling mode)const{
-  valid(mode==RawSampling::GeneralsRounded || mode==RawSampling::Interpolated);
-  valid(pivot<m_nodes.size() && std::isfinite(frame) && frame>=0 && double(frame)<double(m_frames));
+  valid(mode==RawSampling::GeneralsRounded || mode==RawSampling::Interpolated || mode==RawSampling::RuntimeGeneralsRounded);
+  valid(pivot<m_nodes.size() && std::isfinite(frame));
+  if(!m_compressed && mode==RawSampling::RuntimeGeneralsRounded)(void)signedRounded(frame);
+  else valid(frame>=0 && double(frame)<double(m_frames));
   const auto& node=m_nodes[pivot];Motion result;
   for(unsigned n=0;n<3;++n)result.translation[n]=sampleChannel(node.channels[n],frame,mode)[0];
   result.rotation=sampleChannel(node.channels[6],frame,mode);const auto& visibility=node.visibility;
   if(visibility.present){if(visibility.sparse){auto integer=std::uint32_t(frame);auto it=std::upper_bound(visibility.times.begin(),visibility.times.end(),integer,
         [](std::uint32_t value,std::uint32_t key){return value<(key&~flag);});
       auto index=it==visibility.times.begin()?0:std::size_t(it-visibility.times.begin()-1);result.visible=(visibility.times[index]&flag)!=0;
-    }else {auto index=mode==RawSampling::GeneralsRounded?rounded(frame):std::uint32_t(frame);if(index>=m_frames)index=0;
-      result.visible=index<visibility.first || index>visibility.last?visibility.defaultValue:
+    }else {std::int64_t index=mode==RawSampling::RuntimeGeneralsRounded?signedRounded(frame):
+        mode==RawSampling::GeneralsRounded?std::int64_t(rounded(frame)):std::int64_t(std::uint32_t(frame));
+      if(index>=m_frames)index=0;
+      result.visible=index<std::int64_t(visibility.first) || index>std::int64_t(visibility.last)?visibility.defaultValue:
         (visibility.bits[(index-visibility.first)/8]&(1u<<((index-visibility.first)%8)))!=0;}}
   return result;
 }

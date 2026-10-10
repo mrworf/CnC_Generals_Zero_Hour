@@ -30,7 +30,7 @@ Matrix3D orthogonalInverse(const Matrix3D& world){
 void nameInput(const char* name){if(!name || std::strlen(name)>255)throw ERROR_BAD_ARG;}
 void evaluate(NativeW3DAssets::Binding& binding,const NativeW3DPose::Matrix& root,Real frame,Real scale){
   if(!std::isfinite(frame))throw ERROR_BAD_ARG;
-  if(binding.model->hierarchy)binding.pose.evaluate(root,binding.animation?binding.animation->motion.get():nullptr,frame,scale);
+  if(binding.model->hierarchy)binding.pose.evaluateRuntime(root,binding.animation?binding.animation->motion.get():nullptr,frame,scale);
 }
 }
 NativeModelDrawCurrentQueries::NativeModelDrawCurrentQueries(Thing* thing,const ModuleData* data,NativeW3DAssets& assets)

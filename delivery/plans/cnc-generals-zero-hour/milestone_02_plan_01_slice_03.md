@@ -3943,3 +3943,37 @@ actor-follow, complete native startup and loaded simulation remain pending;
 slice03/N2 are not complete. User-requested worktree inventory found13 initial
 owned paths and no unrelated nonignored files; retain assets/dependencies/recovery.
 Model-bounds payload commit: 9dce617c38c16b71af10020de25cc2a6b686beeb.
+
+Coupled condition-producer investigation (parent ca5afa8c; no unrelated dirty
+paths): use docs/original-engine-formats.md's source contract before production
+edits. Batch signed raw runtime sampling/defaults, source weighted client RNG and
+rollback, state/pending transitions, frame precedence, duration and pause/reset
+semantics together with actual current pose/bounds ownership. The strict decoded
+sampler rejects raw source frames that maintain-state and oversized pingpong can
+legitimately produce. Preserve signed/default raw behavior; compressed uint32
+conversion paths must retain pre-cast rejection. Do not change clock reflection
+or reparenthesize the original maintain-frame expression to avoid this gate.
+Generic raw interpolation, optimized single-motion sampling and visibility have
+distinct rounding/wrap rules; inspect all before changing their entry contracts.
+Keep existing malformed-input checks where truly malformed, replace only
+source-disproved frame oracles, and add independent raw/compressed boundary pairs.
+Prove paused mode/rate/sync changes, duplicate notifications, cancel/restart versus
+wait/transition precedence, first-record completion-time split, actual Drawable
+dispatch and zero-demand accepted ticks. Stage all resource/condition/RNG changes
+offside, test failures late in admission and corrected same-owner retries with
+identical production RNG/cursor state, then freeze related GCC/GCCsan/Clangsan.
+The concrete19 specialized callback cohort, particle/audio events, source
+Object/Physics parents, same-model retained controls/materials, condition transfer
+and full startup remain within this existing slice03; no new plan or milestone,
+fake missing-parent effects, frame-domain waiver or dependency fork is authorized.
+
+Frozen runtime raw-domain correction: final focused6 PASS2.34s; related121 PASS
+GCC113.34s/GCCsan442.09s/Clangsan289.34s, all exits0/no live jobs. All218 manifest
+lines agree; current cold182/seeded185 retain every failure/retry and production
+cursor proof, accepted runtime raw reads0 and constructor standard1/module-pool2.
+Actual Drawable supports signed raw identity/default poses from source clock
+reflection and maintain-frame -1, without changing reflection/selection formulas;
+explicit bounded/interpolated and compressed conversion checks remain intact.
+Evidence: evidence/qa/N2-runtime-frame-domain.md. Continue shared condition/RNG/
+transition/pause/duration and concrete19/event/resource-reuse producer work,
+then native startup/loaded simulation. Full458, slice03 and N2 remain incomplete.

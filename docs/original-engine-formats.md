@@ -5964,9 +5964,12 @@ clock and pose for a corrected same-time retry. Actual Drawable consumer tests
 prove source30fps advancement, backward completion and zero standard demand.
 The source forward pingpong branch can return a negative frame after oversized
 elapsed time (it tests the reflected value only against the upper endpoint).
-Preserve that result in clock math; NativeW3DAnimation rejects invalid sampling
-without integer conversion UB, and the owning current state remains unchanged.
-Do not silently normalize this path or claim oversized negative-pose parity.
+Preserve that result in clock math. That checkpoint rejected negative sampling
+and retained owning state; the later coupled producer review below establishes
+signed raw identity/default behavior separately from unsafe compressed conversion.
+The explicit runtime raw entry now admits those source poses without rewriting
+clock reflection. Bounded explicit/interpolated APIs and compressed runtime
+sampling retain their admission checks. See evidence/qa/N2-runtime-frame-domain.md.
 
 W3DModelDraw::setPauseAnimation uses Set_Animation at the retained frame with
 MANUAL, then the saved mode on resume, resetting the rate multiplier each time.
@@ -6036,7 +6039,7 @@ W3DModelDraw.cpp:2371 returns root position, root transform and world sphere
 radius, not the sphere's center. Its bound-box consumer transforms the local AABB
 to an OBB, retaining local extents and copying root basis, rather than constructing
 a world AABB. These functions are under
-GameEngineDevice/Source/W3DDevice/GameClient/Draw.
+GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw.
 Normal world sphere radius uses separately published ObjectScale
 (rendobj.cpp:902), not scale inferred from root matrix. Drawable's draw path
 publishes that scale separately (GameEngine/Source/GameClient/Drawable.cpp:1181).
@@ -6049,3 +6052,83 @@ consumer are covered by generated tests; concrete doDraw ObjectScale publication
 and camera actor-follow end-to-end remain pending. No claim is made for internal
 LOD cost spheres, physical draws or retail visual parity. See
 evidence/qa/N2-model-bounds.md for checkpoint validation and limits.
+
+### Coupled condition/animation producer source contract
+
+The following findings refine the next N2 producer batch; they are not runtime
+acceptance. Source references below use
+GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/W3DModelDraw.cpp.
+
+State changes (2046..2313) ignore an already-current state only when no next state
+exists, and ignore a request already pending. A request for the current state
+while another is pending deliberately restarts it and cancels that pending state.
+AllowToFinish takes precedence over explicit transition lookup, tests the target's
+allow key against the current transition key, and waits only while an actual HLOD
+animation is incomplete. Missing/non-HLOD render objects are complete (1090).
+Explicit transition lookup uses both valid transition keys and the shared 64-bit
+buildTransitionSig; the target remains pending behind the transition. Completion
+in doDrawModule (1191..1226) admits the pending state before idle/restart handling.
+
+Animation selection (1288..1362) chooses an index among the repeated weighted
+records, not among unique clip names. Same-state idle restart rejection-samples
+until its index differs; different-state selection consumes one client integer
+draw, while a single record consumes none. Equal min/max speed factors consume no
+real draw: GetGameClientRandomValueReal returns hi when delta<=0
+(GameEngine/Source/Common/RandomValue.cpp:322). Preserve that complete cursor
+contract on failed candidate admission; logic/audio streams must remain separate.
+The original client stream has six uint32 words and no public save/restore API.
+Any game-owned rollback scope belongs to this original source, not a replacement
+PRNG, new logic RNG dependency, or upstream framework patch.
+
+Start precedence is backwards default, RANDOMSTART, FIRST, LAST, then common
+maintain-frame flags across different states. The authored expression at1345 is
+REAL_TO_INT(prevFraction * NumFrames - 1), NOT
+REAL_TO_INT(prevFraction * (NumFrames - 1)). A zero fraction can therefore select
+-1. Set_Animation stores that signed frame unchanged (animobj.cpp:472); substituting
+0 or a differently parenthesized formula would silently change source behavior.
+Raw MotionChannelClass/BitChannelClass return identity/default outside their
+authored range (motchan.h:121,191). HTree's single raw path uses signed iframe and
+only redirects iframe>=NumFrames to0 (htree.cpp:623); negative indices remain
+bounded channel lookups. Generic raw interpolation and visibility are separate
+hrawanim.cpp:449,514,666 paths. Time-coded/adaptive sampling instead converts to
+uint32 (motchan.cpp:428,1230); a negative float there is not equivalent to raw
+default-channel behavior and must not be cast before admission.
+These WW3D2 references are under Libraries/Source/WWVegas/WW3D2.
+
+Consequently the earlier animation-clock checkpoint's blanket description of
+negative frames as unsafe sampling is too broad. Its recorded native rejection
+is real evidence of the current implementation, not proof of raw source parity.
+The strict NativeW3DAnimation::sample boundary currently rejects these source
+raw defaults. Resolve the signed raw runtime domain, rounded versus interpolated
+sampling and compressed rejection together before accepting state transitions;
+do not waive compressed bounds or rewrite source clock reflection to avoid it.
+
+Pause (2968..3000) is a changed-state-only Set_Animation at the retained frame:
+save the current mode, replace it by MANUAL, and restore the saved mode on resume.
+Both calls reset sync/direction/rate multiplier via animobj.cpp:472; multiplying
+the rate by0 is not equivalent. New animation selection while already paused does
+not force another pause because duplicate pause notifications return immediately.
+Duration (2907..2953) clears pending duration, uses ceil(logicFrames*33.333ms),
+and divides natural clip duration by desired duration. Completion-time splitting
+uses the first animation in each transition/target list, floors the ratio, and
+defers only the target's remainder. Movement speed overrides a chosen rate only
+with distance>0, a real Object/Physics owner and positive velocity (1109..1131);
+zero speed leaves the previous multiplier, not a fabricated pause.
+
+The full producer batch must retain condition pointers/index, pending state and
+duration, clock/pose/bounds, same-model resource reuse, explicit ObjectScale,
+particle/subobject/turret/recoil/event parents and client RNG together. Do not
+accept runtime19 or whole startup from isolated selection or clock tests.
+
+Resource recreation is gated by absent current state, model-name change or
+turret-name change (W3DModelDraw.cpp:2149). Same-model state changes instead
+validate/rebuild recoil and apply hide/show against the existing object
+(2296..2313); they do not acquire a new prototype clone. Preserve captured bones,
+root/world identity and separately published ObjectScale on that reuse path.
+Fresh objects start ObjectScale1, but doDraw only republishes instance scale
+when it differs from1 (1181). This retained-state quirk is not permission to
+reset ObjectScale on a same-model animation change. Derived onRenderObjRecreated
+callbacks run only on the recreation path (2292). Constructor defaults at858
+include saved mode LOOP, pause false, no current/pending state, animation index-1
+and NO_NEXT_DURATION; constructor validation/initial idle admission still must
+acquire and unwind the real original namespace, configuration and asset parents.

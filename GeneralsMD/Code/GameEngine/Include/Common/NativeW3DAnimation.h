@@ -6,7 +6,10 @@
 // the call; subsequent sampling needs neither the document nor its hierarchy.
 class NativeW3DAnimation final {
 public:
-  enum class RawSampling { GeneralsRounded, Interpolated };
+  // Runtime single-motion raw channels have signed default-channel semantics.
+  // Explicit bounded sampling/blending and compressed channels retain their
+  // clip-domain admission; runtime is not a waiver for uint32 conversions.
+  enum class RawSampling { GeneralsRounded, Interpolated, RuntimeGeneralsRounded };
   struct Motion {
     std::array<float,3> translation{};
     std::array<float,4> rotation{0,0,0,1};

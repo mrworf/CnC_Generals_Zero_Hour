@@ -27,6 +27,12 @@ math retains it; native decoded-pose admission rejects unsafe sampling and retai
 accepted clock/pose for retry. This is an explicit malformed sampling boundary,
 not a source bug repair, modulo substitution or oversized-pose parity claim.
 
+Subsequent source review distinguishes bounded compressed conversion from signed
+raw channel identity/default lookup. The rejection above is historical evidence
+of that checkpoint, not the current raw runtime contract. See
+N2-runtime-frame-domain.md for the source-derived correction through actual
+Drawable; original clock reflection remains unchanged.
+
 Cold and populated candidate failure/retry sweeps now admit timed current state,
 checking the accepted clock on successful retries. Every prefix and retry remains
 in each independent family, with three complete owner lifetimes. Standard and

@@ -79,8 +79,26 @@ void rawTests(){auto animation=admit(rawFile());require(animation.pivots()==3 &&
   require(!bits.sample(1,0).visible && bits.sample(1,1).visible && bits.sample(1,8).visible && !bits.sample(1,9).visible && bits.sample(1,10).visible && !bits.sample(1,11).visible,"packed visibility crosses byte boundary and retains defaults");
   auto bitReplacement=admit(file(false,0,1,join({rawBits(1,0,0,false,{0}),rawBits(1,0,0,false,{1})})));
   require(bitReplacement.sample(1,0).visible,"duplicate visibility retains last source value and retires prior owner");
+  const auto runtime=Animation::RawSampling::RuntimeGeneralsRounded;
+  for(float frame:{-1.f,-2.f,-100.f}){
+    auto value=animation.sample(1,frame,runtime);
+    require(value.translation==std::array<float,3>{0,0,0}&&value.rotation==std::array<float,4>{0,0,0,1}&&value.visible,"runtime signed raw channels return source identity and visibility default");
+  }
+  require(!bits.sample(1,-1,runtime).visible,"runtime negative raw visibility retains authored false default");
+  close(animation.sample(1,-.5f,runtime).translation[0],animation.sample(1,0).translation[0],"negative nearest-even tie selects0");
+  close(animation.sample(1,100,runtime).translation[0],animation.sample(1,0).translation[0],"runtime raw frame beyond clip redirects to0");
+  require(animation.sample(1,float(INT32_MIN),runtime).translation==std::array<float,3>{0,0,0},"defined signed raw lower conversion endpoint");
+  for(float frame:{2147483648.f,-std::numeric_limits<float>::max(),std::numeric_limits<float>::infinity()})
+    rejects([&]{(void)animation.sample(1,frame,runtime);});
+  AllocationFault::arm(0);
+  try{for(float frame:{-1.f,-100.f,100.f,float(INT32_MIN)})(void)animation.sample(1,frame,runtime);}
+  catch(...){AllocationFault::disarm();throw;}
+  const auto runtimeAttempts=AllocationFault::attempts();AllocationFault::disarm();
+  require(runtimeAttempts==0,"signed runtime raw reads allocate nothing");
 }
 void sparseTests(){auto animation=admit(sparseFile());close(animation.sample(1,1).translation[0],10,"sparse linear interpolation");
+  for(float frame:{-1.f,4.f,std::numeric_limits<float>::max()})
+    rejects([&]{(void)animation.sample(1,frame,Animation::RawSampling::RuntimeGeneralsRounded);});
   close(animation.sample(1,2.75f).translation[0],20,"next-key binary flag holds earlier sample");close(animation.sample(1,3.75f).translation[0],30,"sparse terminal holds last key");
   require(animation.sample(1,0).visible && !animation.sample(1,2).visible && animation.sample(1,3).visible,"time-coded visibility high bits");
   close(animation.sample(1,1).rotation[2],std::sqrt(0.5f),"sparse quaternion slerp");close(animation.sample(1,2.5f).rotation[2],1,"quaternion hemisphere flip");
@@ -97,6 +115,8 @@ void deltaTests(){auto animation=admit(deltaFile());for(unsigned frame=0;frame<3
     close(sample.rotation[3],1,"delta quaternion w backing");}
   close(animation.sample(1,32.5f).translation[0],10.25f,"delta fractional translation interpolation");
   close(animation.sample(1,33.75f).translation[0],10.5f,"delta terminal clamps rather than wraps");
+  for(float frame:{-1.f,34.f,std::numeric_limits<float>::max()})
+    rejects([&]{(void)animation.sample(1,frame,Animation::RawSampling::RuntimeGeneralsRounded);});
   for(unsigned frame:{32u,1u,33u,16u,0u,17u})close(animation.sample(1,float(frame)).translation[1],10.f+2.f*frame,"delta random seek independent of source cache defects");
   auto filter=admit(file(true,1,2,delta(0,1,2,1.f,136,0x11)));close(filter.sample(1,1).translation[0],10.f+(1.f-std::sin(3.141592654f/4)),"source generated filter-table selection");
   auto shortened=admit(file(true,1,4,delta(0,1,2,1.f,8,0x11)));close(shortened.sample(1,3).translation[0],11,"source adaptive channel owns its own frame count and clamps independently");
@@ -134,6 +154,13 @@ void poseTests(){using Pose=NativeW3DPose;auto pose=Pose::decode(hierarchy());au
   const auto prior=pose.bone(2);const auto* view=&pose.bone(2);auto explosive=root;explosive[0]=std::numeric_limits<float>::max();rejects([&]{pose.evaluate(explosive);});
   require(&pose.bone(2)==view && pose.bone(2).transform==prior.transform && pose.bone(2).visible==prior.visible,"late numeric rejection preserves entire accepted pose/view");
   rejects([&]{pose.evaluate(root,&motion,4);});rejects([&]{pose.control(1,control,false);});rejects([&]{pose.capture(99);});
+  pose.evaluateRuntime(root,&motion,-1);
+  close(pose.bone(2).transform[7],204,"runtime raw signed defaults preserve authored base hierarchy");
+  auto compressedMotion=admit(sparseFile());const auto runtimeAccepted=pose.bone(2);
+  rejects([&]{pose.evaluateRuntime(root,&compressedMotion,-1);});
+  require(pose.bone(2).transform==runtimeAccepted.transform&&pose.bone(2).visible==runtimeAccepted.visible,"compressed runtime negative conversion rejection preserves entire accepted raw pose");
+  pose.evaluateRuntime(root,&compressedMotion,0);
+  pose.evaluateRuntime(root,&motion,4);close(pose.bone(2).transform[7],204,"runtime raw beyond-clip0 retry uses source root frame");
   rejects([&]{(void)pose.pristineBone(99,root);});rejects([&]{pose.evaluateBlend(root,motion,0,motion,0,1.1f);});
   auto wrong=hierarchy();wrong.name="other";auto incompatible=Pose::decode(wrong);rejects([&]{incompatible.evaluate(root,&motion,1);});
   auto cyclic=hierarchy();cyclic.pivots[2].parent=2;rejects([&]{pose.replace(cyclic);});

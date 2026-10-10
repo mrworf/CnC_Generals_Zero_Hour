@@ -20,6 +20,7 @@ public:
   void replace(const NativeW3DDocument::Hierarchy&);
   void swap(NativeW3DPose&) noexcept;
   void evaluate(const Matrix& root,const NativeW3DAnimation* motion=nullptr,float frame=0,float scale=1);
+  void evaluateRuntime(const Matrix&,const NativeW3DAnimation*,float frame,float scale=1);
   void evaluateBlend(const Matrix& root,const NativeW3DAnimation&,float frame0,
                      const NativeW3DAnimation&,float frame1,float percentage,float scale=1);
   std::optional<std::size_t> findBone(std::string_view) const noexcept;
@@ -34,5 +35,5 @@ private:
   std::string m_name;
   std::vector<Node> m_nodes;
   std::vector<Bone> m_pose,m_candidate;
-  void evaluate(const Matrix&,const NativeW3DAnimation*,float,const NativeW3DAnimation*,float,float,float);
+  void evaluate(const Matrix&,const NativeW3DAnimation*,float,const NativeW3DAnimation*,float,float,float,bool runtime=false);
 };

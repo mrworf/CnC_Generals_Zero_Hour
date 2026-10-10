@@ -325,11 +325,17 @@ void animationPose(Fixture& fixture){using Mode=NativeModelAnimationClock::Mode;
   require(module.clock()->frame()==0&&!module.clock()->complete(),"late pose failure preserves frame, sync and completion");
   module.advance(root,134);require(module.clock()->complete(),"corrected same-time pose retry advances source clock");
   module.timed(root,1,Mode::OnceBackwards,100);module.advance(root,134);require(module.clock()->complete(),"actual backward current pose");
-  module.timed(root,0,Mode::PingPong,100);const auto* identity=module.currentBinding();clientRejects([&]{module.advance(root,1000);});
-  require(module.currentBinding()==identity&&module.clock()->frame()==0&&module.clock()->direction()==1,"source oversized negative frame safely rejects pose and retains clock");
-  module.advance(root,120);require(module.clock()->frame()>0,"oversized pingpong rejection permits corrected retry");
+  module.timed(root,0,Mode::PingPong,100);const auto* identity=module.currentBinding();module.advance(root,1000);
+  Matrix3D negativeOutput(true);
+  require(module.currentBinding()==identity&&module.clock()->frame()<0&&module.clock()->direction()==-1&&
+    fixture.draw->getCurrentWorldspaceClientBonePositions("Muzzle",negativeOutput)&&close(negativeOutput.Get_Y_Translation(),214),"source oversized negative raw frame publishes bounded default-channel pose without rewriting clock");
+  module.advance(root,1020);require(module.clock()->frame()==0&&module.clock()->direction()==1,"source reverse reflection fallback remains coupled to accepted raw pose");
+  module.current("Outer","Tree.Walk",root,-1);require(fixture.draw->getCurrentWorldspaceClientBonePositions("Muzzle",negativeOutput)&&close(negativeOutput.Get_Y_Translation(),214),"source maintain-frame -1 admits raw default pose through actual Drawable");
+  clientRejects([&]{module.pose(root,2147483648.f);});
+  require(fixture.draw->getCurrentWorldspaceClientBonePositions("Muzzle",negativeOutput)&&close(negativeOutput.Get_Y_Translation(),214),"undefined signed conversion rejection preserves accepted whole current pose");
+  module.timed(root,0,Mode::Once,100);
   fixture.logic->phase([&]{clientRejects([&]{module.advance(root,121);});});
-  module.multiplier(0);const auto frame=module.clock()->frame();module.advance(root,10000);require(module.clock()->frame()==frame,"pause via source multiplier");
+  module.multiplier(0);const auto frame=module.clock()->frame();module.advance(root,10000);require(module.clock()->frame()==frame,"explicit zero rate multiplier retains frame; not source pause callback");
   module.pose(root,0);require(!module.clock(),"explicit manual frame supersedes timed advancement");
   module.pose(root,1);module.timed(root,0,Mode::Once,100);require(module.clock()->previousFrame()==1,"manual-to-timed replacement retains prior source frame");
 }
