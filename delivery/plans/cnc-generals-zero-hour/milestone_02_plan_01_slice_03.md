@@ -4609,3 +4609,21 @@ git log -1 --format=%H -- evidence/qa/N2-shared-attachment-owner.md.
 Continue the composed full tick/lazy-event/real-parent contract above; no slice03
 or N2 completion, full502 remains unrun. Earlier live/pending text is retained
 as observation history, not current execution instructions.
+
+Coupled lazy-event prerequisite census after shared attachment commit: original
+AudioManager, MusicManager play/stop, SoundManager acceptance/rejection and base
+request teardown must be delivered together. addAudioEvent changes handle/audio
+RNG/caller playing index before admission; preserve accepted policy rejection
+semantics but roll back exceptions and outer pose/event rejection. Source sound
+rejection deletes a by-value pointer that GameAudio later dereferences: fix its
+ownership/acceptance contract as an original bug, not a gameplay redesign.
+Initialize and restore all sample-discovery/used-count state, guard every pooled
+request before append, and trace queued event transfer plus whole-manager
+destruction (base AudioRequest dtor is empty). Build a real parsed audio settings/
+event cohort with actual Music/Sound managers; AbsentAudioFixture's NoSound-only
+coverage is insufficient. Cover Play/Stop/music/sound and rejected-policy paths,
+every failure/retry, handle/index/RNG/queue/pool retirement, locally caught failure
+with outer commit and accepted child with outer rollback, GCC/Clang sanitizers.
+Stage fallible strings before raw owning calls. No mock event sink, physical
+playback claim, renderer callback into simulation or dependency patch. These
+engineering facts extend the same full-tick cohort, not a new tiny plan.

@@ -6783,3 +6783,36 @@ addVelocityTo followed by scrubVelocity2D(5), since addition alone does not reti
 the source velocity magnitude cache; actual main/alternate turret state machines
 and authored initial angles are already available, not synthetic test getters.
 Full composed model-tick execution remains unaccepted.
+
+### Audio admission cohort required by lazy embedded events
+
+GameAudio.cpp::addAudioEvent (424) copies an event, consumes a handle, generates
+filename/play info and mutates the caller's playing index before delegating to
+MusicManager or SoundManager. GameMusic.cpp::playTrack/stopTrack (102/111),
+GameSounds.cpp::addAudioEvent (139), and GameAudio.cpp::removeAudioEvent (591)
+each acquire a pooled AudioRequest before fallible list append. Inspect and guard
+the entire admission cohort, not only the copied event or one append caller.
+Legitimate muted/locality rejection already consumes original handle/RNG state;
+exception rollback and accepted policy rejection must remain distinct.
+
+Verified original bug: SoundManager::addAudioEvent takes the event pointer by
+value, deletes it when canPlayNow rejects, and cannot clear GameAudio's copy.
+GameAudio subsequently dereferences that unchanged pointer for its playing
+handle. Its "possible to nuke" comment and null check do not withdraw ownership.
+Preserve intended NoSound rejection with explicit ownership/acceptance, rather
+than carrying this use-after-free into the native event pipeline. SoundManager's
+constructor/init also leave all four sample-count members uninitialized; first
+addAudioEvent reads channel counts before discovering them, and reset only sets
+playing counts. Define this whole source discovery/used-count lifecycle.
+
+AudioRequest's destructor is empty, while the base releaseAudioRequest only
+deleteInstances the request. Base removeAllAudioRequests therefore does not prove
+retirement of owned pending Play events. Physical backends can separately consume
+or transfer those events; trace every transfer and teardown before making the
+request own its payload, to avoid a double release in a later native backend.
+The current AbsentAudioFixture only permits base empty/NoSound admission and
+rejects physical/audio-discovery paths. It cannot validate nonempty embedded
+event playback or request ownership. Complete parsed settings/event parents and
+real base Music/Sound managers are required for the next generated cohort; never
+report physical playback from a successful queue append. No native audio
+admission acceptance is claimed by this source inspection.
