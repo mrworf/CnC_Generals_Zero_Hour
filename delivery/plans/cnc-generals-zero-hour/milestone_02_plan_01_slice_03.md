@@ -4338,3 +4338,65 @@ tick/pose/event integration, concrete19 and original startup/loaded simulation.
 Source PrevFrame is shared between progression and sound consumption; preserve
 the documented same-sync behavior rather than treating an independent cursor as
 unaffected by clock advancement. Full494 remains the unrun milestone gate.
+
+Ordered model-instance continuation (clean parent f040b8d3): build the game-owned
+mutable subobject cohort before enabling condition visibility or recoil. Flatten
+all authored LOD children followed by aggregates; retain each attachment as a
+distinct instance even when immutable prototypes are shared. Proxies are not
+children. Resolve exact names before first-dot suffixes, case-insensitively.
+Named hide/show changes the selected child and strict bone descendants, not all
+same-bone siblings. Muzzle-flash changes only the first attachment on its bone.
+Keep the root hidden flag distinct from individual children and authored pose
+visibility. No prototype or asset mutation is permitted.
+
+Implement complete admission, replacement/clone, name/bone mutation and rollback
+before connecting the cohort to Current/condition state, persistent overrides
+and recoil. Use actual admitted generated W3D graphs for multi-LOD, aggregate,
+duplicate-prototype, name-priority, root/descendant and instance isolation tests.
+Prove allocation-free steady mutation and clone/admission every-prefix retries;
+malformed late input must preserve the entire accepted cohort. Source's flattened
+name index passed into LOD0 indexing is not valid for later LODs/aggregates:
+native code uses each row's actual attachment bone, fixing that source bug rather
+than reproducing undefined indexing. Coupled recoil/clock/event/full-tick and
+concrete19 admission remain required under this same batch; these supporting
+instance tests must not be presented as whole model-tick or N2 acceptance.
+
+Instance cohort admission/clone and actual Current/condition/queued override/root
+hidden integration are implemented together. Frozen canonical735/inclusive742,
+full497 configured. Focused3 PASS all3,15 identical manifests: instance admission/
+clone terminal1; actual queue3/application16/root-hidden16, every failure/retry,
+including local catch followed by outer commit. Related56 sessions17750/49104/
+39342 remain live; observe those exact jobs before production edits or commit.
+Current evidence: evidence/qa/N2-model-instance-visibility.md. Keep this same
+coherent tick batch and all remaining recoil/pose/event/startup outcomes active;
+do not mark slice03/N2 complete or inherit the prior source's broad acceptance.
+
+Read-only constructor census during the freeze verified authored mesh hidden
+defaults and actual Drawable root-hidden restoration on recreated models.
+After the three current jobs retire, complete those coupled constructor inputs
+and add generated authored/default/recreation tests before instance acceptance
+or commit. Preserve the first freeze as supporting evidence; do not pretend it
+covered these unimplemented inputs. Same plan/batch, no new tiny slice.
+
+First freeze completed focused3/related56 PASS all3 with96 matching related
+manifests; all first-freeze jobs retired terminal0. Coupled authored mesh defaults
+and actual Drawable recreation inputs are now implemented. Final source frozen
+canonical735/inclusive742, focused3 PASS all3 with15 matching manifests; final
+related56 sessions96288/88961/19977 remain live. Observe those exact handles,
+reconcile their terminal results and final fingerprints before the coherent
+instance behavior commit. See final constructor freeze in the same QA artifact.
+No unrelated milestone, replacement plan or full-model/N2 acceptance is added.
+
+Final GCC related56 PASS206.62s, session96288 retired terminal0 with96 matching
+manifests. Only final sanitizer handles88961/19977 remain live. Keep source frozen
+and observe those exact jobs before coherent commit or further tick work.
+
+Final constructor freeze completed: focused3/related56 PASS all3, related elapsed
+GCC206.62s/GCCsan797.56s/Clangsan488.91s.15/96 normalized manifests match and both
+source fingerprints were rechecked unchanged. All owned jobs retired terminal0.
+The introducing commit of evidence/qa/N2-model-instance-visibility.md is the
+coherent instance lifecycle checkpoint. Continue actual ordered tick/real-parent
+composition, recoil/pose/event/source transfer and concrete19/startup outcomes
+above. The format document now records source recoil/override transfer widths
+and byte-count limits too; none is accepted by visibility alone. Keep full497,
+slice03 and N2 pending. No replacement plan or reduced acceptance boundary.

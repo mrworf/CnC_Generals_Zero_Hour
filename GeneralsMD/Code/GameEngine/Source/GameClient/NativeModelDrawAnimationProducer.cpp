@@ -20,9 +20,10 @@ NativeW3DPose::Matrix raw(const Matrix3D& value){NativeW3DPose::Matrix out;
   }return out;
 }
 bool has(Int flags,ACBits bit){return (flags&(1<<bit))!=0;}
-void supportedEffects(const ModelConditionInfo& value){
-  // These still require the concrete source owners; never pretend application.
-  if(!value.m_hideShowVec.empty())throw ERROR_BAD_ARG;
+void applySubobjects(NativeW3DSubobjects& target,const std::vector<ModelConditionInfo::HideShowSubObjInfo>& rules){
+  // Validate the complete list before a retained current model is changed.
+  for(const auto& rule:rules)(void)target.find(rule.subObjName.str());
+  for(const auto& rule:rules){const NativeW3DSubobjects::Rule value{rule.subObjName.str(),bool(rule.hide)};target.apply(std::span(&value,1));}
 }
 }
 struct NativeModelDrawAnimationProducer::ParticleCohort {
@@ -61,7 +62,7 @@ NativeModelDrawAnimationProducer::Candidate NativeModelDrawAnimationProducer::cl
   if(m_current){
     auto binding=NativeW3DAssets::Binding{m_current->binding.model,m_current->binding.animation,m_current->binding.pose.clone()};
     out.current=std::make_unique<Current>(Current{std::move(binding),m_current->world,m_current->treeScale,
-      m_current->frame,m_current->bounds,m_current->objectScale,m_current->clock});
+      m_current->frame,m_current->bounds,m_current->objectScale,m_current->clock,m_current->subobjects.clone()});
   }
   if(m_validated)out.validated=std::make_unique<ModelConditionInfo>(*m_validated);
   return out;
@@ -104,7 +105,6 @@ NativeModelDrawAnimationProducer::Candidate NativeModelDrawAnimationProducer::pr
     auto found=transitions.find(buildTransitionSig(m_state.source->m_transitionKey,requested->m_transitionKey));
     if(found!=transitions.end()){pending=requested;selected=&found->second;}
   }
-  supportedEffects(*selected);
   const auto model=selected->m_modelName.isEmpty() || selected->m_modelName.isNone()?
     NativeW3DAssets::Model{}:nativeAssets().model(selected->m_modelName.str());
   ModelConditionInfo querySource=*selected;
@@ -123,20 +123,39 @@ NativeModelDrawAnimationProducer::Candidate NativeModelDrawAnimationProducer::pr
     const auto root=raw(world); // Also stage first leaf roots before publication.
     const Real scale=getDrawable()->getScale(),treeScale=std::abs(scale-1)>.01f?scale:1;
     auto bounds=NativeW3DModelBounds::decode(query.binding.model,treeScale);
+    auto subobjects=NativeW3DSubobjects::admit(query.binding.model);
+    if(getDrawable()->isDrawableEffectivelyHidden())subobjects.setHidden(true);
     query.binding.animation.reset(); // Pristine first clip is not the selected current clip.
     if(query.binding.model->hierarchy)query.binding.pose.evaluateRuntime(root,nullptr,0,treeScale);
-    out.current=std::make_unique<Current>(Current{std::move(query.binding),world,treeScale,0,std::move(bounds),1,{}});
+    out.current=std::make_unique<Current>(Current{std::move(query.binding),world,treeScale,0,std::move(bounds),1,{},std::move(subobjects)});
   }
   out.validated=std::move(query.condition);out.state=m_state;
   if(recreate)out.state.paused=FALSE; // Source nukeCurrentRender lifecycle.
   out.state.source=selected;out.state.pending=pending;out.state.pendingDuration=~UnsignedInt(0);
   if(!restart){out.state.particles.reset();out.state.recalcParticles=!getDrawable()->testDrawableStatus(DRAWABLE_STATUS_NO_STATE_PARTICLES);}
+  if(!restart&&out.current){applySubobjects(out.current->subobjects,selected->m_hideShowVec);applySubobjects(out.current->subobjects,out.state.subobjectOverrides);}
   selectAnimation(out,m_state.source,fraction(m_state,m_current.get()),now);
   return out;
 }
 void NativeModelDrawAnimationProducer::publish(Candidate&& candidate)noexcept{
   NativeModelDrawConditionBatch::retainPrevious(*this);
-  m_current=std::move(candidate.current);m_validated=std::move(candidate.validated);m_state=candidate.state;
+  m_current=std::move(candidate.current);m_validated=std::move(candidate.validated);m_state=std::move(candidate.state);
+}
+void NativeModelDrawAnimationProducer::showSubObject(const AsciiString& name,Bool show){
+  requireClientOwner();NativeModelDrawConditionBatch::validate(*this);
+  if(name.isEmpty())return; // Source empty notification is a no-op.
+  if(name.getLength()>255)throw ERROR_BAD_ARG;
+  auto overrides=m_state.subobjectOverrides;bool found=false;
+  for(auto& rule:overrides)if(rule.subObjName.compareNoCase(name)==0){rule.hide=!show;found=true;}
+  if(!found)overrides.push_back({name,!show});
+  m_state.subobjectOverrides=std::move(overrides); // Queue only, source applies later.
+}
+void NativeModelDrawAnimationProducer::updateSubObjects(){
+  requireClientPhase();NativeModelDrawConditionBatch::validate(*this);
+  if(!m_current||m_state.subobjectOverrides.empty())return;
+  if(NativeModelDrawConditionBatch::needsCopy(*this)){
+    auto candidate=cloneCandidate();applySubobjects(candidate.current->subobjects,candidate.state.subobjectOverrides);publish(std::move(candidate));
+  }else applySubobjects(m_current->subobjects,m_state.subobjectOverrides);
 }
 std::size_t NativeModelDrawAnimationProducer::nativeStateParticleCount()const noexcept{
   return m_state.particles?m_state.particles->trackers.size():0;
@@ -207,7 +226,13 @@ void NativeModelDrawAnimationProducer::applyParticleVisibility(Bool fullyObscure
   }
   m_state.fullyObscured=fullyObscured;admission.commit();
 }
-void NativeModelDrawAnimationProducer::setHidden(Bool){applyParticleVisibility(m_state.fullyObscured);}
+void NativeModelDrawAnimationProducer::setHidden(Bool hidden){
+  requireClientOwner();NativeModelDrawConditionBatch::validate(*this);
+  Candidate candidate;const bool copy=m_current&&NativeModelDrawConditionBatch::needsCopy(*this);
+  if(copy){candidate=cloneCandidate();candidate.current->subobjects.setHidden(hidden);}
+  applyParticleVisibility(m_state.fullyObscured);
+  if(copy)publish(std::move(candidate));else if(m_current)m_current->subobjects.setHidden(hidden);
+}
 void NativeModelDrawAnimationProducer::setFullyObscuredByShroud(Bool value){applyParticleVisibility(value);}
 void NativeModelDrawAnimationProducer::initializeNativeAnimationProducer(){
   requireClientOwner();if(m_display || m_state.source || !TheDisplay)throw ERROR_BAD_ARG;

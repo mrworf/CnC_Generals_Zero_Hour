@@ -48,7 +48,7 @@ struct NativeModelDrawConditionBatch::Impl {
     if(!committed){
       for(auto it=previous.rbegin();it!=previous.rend();++it){auto& module=*it->module;
         if(it->retained){module.m_current=std::move(it->saved.current);module.m_validated=std::move(it->saved.validated);}
-        module.m_state=it->saved.state;
+        module.m_state=std::move(it->saved.state);
       }
       for(auto it=publications.rbegin();it!=publications.rend();++it){
         if(it->flags)*it->flags=it->oldFlags;if(it->dirty)*it->dirty=it->oldDirty;

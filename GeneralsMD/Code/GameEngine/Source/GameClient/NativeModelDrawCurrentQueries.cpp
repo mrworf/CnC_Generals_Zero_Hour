@@ -55,7 +55,8 @@ void NativeModelDrawCurrentQueries::replaceNativeCurrentModel(std::string_view m
   auto binding=nativeAssets().bind(model,animation,false,root,treeScale);
   evaluate(binding,root,frame,treeScale);
   auto bounds=NativeW3DModelBounds::decode(binding.model,treeScale);
-  auto candidate=std::make_unique<Current>(Current{std::move(binding),world,treeScale,frame,std::move(bounds),1,{}});
+  auto subobjects=NativeW3DSubobjects::admit(binding.model);
+  auto candidate=std::make_unique<Current>(Current{std::move(binding),world,treeScale,frame,std::move(bounds),1,{},std::move(subobjects)});
   m_current=std::move(candidate);admission.commit();
 }
 void NativeModelDrawCurrentQueries::updateNativeCurrentPose(const Matrix3D& world,Real frame){
@@ -78,7 +79,8 @@ void NativeModelDrawCurrentQueries::replaceNativeTimedModel(std::string_view mod
     float(binding.animation->motion->frameRate()),frame,mode,syncTime,m_current?m_current->frame:0);
   evaluate(binding,root,frame,treeScale);
   auto bounds=NativeW3DModelBounds::decode(binding.model,treeScale);
-  auto candidate=std::make_unique<Current>(Current{std::move(binding),world,treeScale,frame,std::move(bounds),1,clock});
+  auto subobjects=NativeW3DSubobjects::admit(binding.model);
+  auto candidate=std::make_unique<Current>(Current{std::move(binding),world,treeScale,frame,std::move(bounds),1,clock,std::move(subobjects)});
   m_current=std::move(candidate);admission.commit();
 }
 void NativeModelDrawCurrentQueries::advanceNativeCurrentPose(const Matrix3D& world,std::uint32_t syncTime){

@@ -6542,3 +6542,85 @@ recoil row on both recreated-model and same-model branches, before final selecte
 state/animation publication. An idle animation reselection without setModelState
 does not reset those rows. These verified source facts refine the existing tick
 batch, not new acceptance or a reason to edit frozen production source.
+
+### Model instance visibility: named rules, persistent overrides and flashes
+
+Verified source: WW3D2/hlod.cpp::Get_Num_Sub_Objects, Get_Sub_Object,
+Get_Sub_Object_On_Bone and constructor aggregate admission; rendobj.cpp::
+Get_Sub_Object_By_Name; W3DModelDraw.cpp::doHideShowSubObjs,
+doHideShowBoneSubObjs, showSubObject, updateSubObjects and
+WeaponBarrelInfo::setMuzzleFlashHidden. Immediate children are flattened in LOD
+order, followed by additional aggregate models. Proxies are metadata, not child
+instances; nested HLOD children are not recursively searched by the name helper.
+Each attachment owns mutable instance flags even when its prototype is shared.
+Exact case-insensitive full-name matches are searched across the entire cohort
+before searching suffixes following the first dot. A named rule changes that
+child plus strict bone descendants, not all siblings on the same bone. The muzzle
+flash path changes only the first flattened child on the selected bone.
+
+Condition rules run in stored order, followed by persistent overrides. Source
+showSubObject merely queues/replaces the case-insensitive persistent name; it
+does not immediately change child flags. Empty notification names are no-ops.
+updateSubObjects applies that queue later. Root hidden state is independent of
+child flags, hierarchy animation visibility and shroud particle stopping.
+
+Source bug: the flattened name lookup index is passed to
+Get_Sub_Object_Bone_Index(0,index), which indexes only LOD0; later-LOD/aggregate
+matches can therefore index outside that vector. The native instance cohort uses
+the actual attachment bone for each flattened row. This preserves the intended
+descendant rule while fixing that original indexing bug; it is not reproduction
+of the undefined path. Likewise handleClientRecoil has no assignment from
+RECOIL_START to RECOIL in this code: do not invent a transition while porting the
+flash/recoil algorithm. State selection and idle reselection remain distinct.
+
+NativeW3DSubobjects owns only mutable game-side flags and admitted immutable
+model references. It validates an entire rule list before mutation, skips missing
+names as source no-ops, and rejects malformed names without applying a prefix.
+Steady lookup/mutation allocate nothing. Current model admission and producer
+candidate clones carry that cohort; source condition publication applies rules
+then persistent overrides offside. ConditionBatch rollback moves its saved State
+instead of copying the newly added override vector during noexcept unwind.
+Queue, update and root-hidden callbacks stage fallible work before publication;
+locally caught failure with outer-root commit is covered by generated actual
+Drawable fixtures. This is supporting instance behavior, not complete recoil,
+lazy pose/event, physical rendering or startup/simulation acceptance. Current
+execution evidence belongs in evidence/qa/N2-model-instance-visibility.md.
+
+Read-only whole-initialization follow-up during that freeze found two additional
+inputs to apply before accepting this cohort: mesh.cpp::Load_W3D initializes
+the render-object hidden flag from W3D_MESH_FLAG_HIDDEN (0x00001000), not always
+false. This affects both leaf roots and each mesh attachment. Source setModelState
+also restores a newly created root to hidden when its actual Drawable is
+effectively hidden (W3DModelDraw.cpp around2262); it does not force visible roots
+when the Drawable is visible, nor replace retained same-model hidden flags.
+The current frozen implementation has not yet applied these constructor inputs.
+Complete the authored-default and recreation cohort/tests after all named frozen
+jobs retire; do not report present focused results as acceptance of initial or
+recreated visibility. This is source-driven coupled follow-up, not a failed-assert
+diagnosis or permission to change a library/asset.
+
+The coupled constructor follow-up now initializes each mesh root/attachment
+from its admitted metadata's hidden bit and preserves that default unless a
+source rule/notification overrides it. Recreated producer models additionally
+observe the real Drawable's effectively-hidden flag without forcing visible
+defaults on visible Drawables. Generated tests cover independently attached
+authored-hidden meshes, descendant overrides, leaf/HLOD recreation and retained
+same-model root flags. Refer to the final constructor freeze in the QA artifact;
+the first freeze above remains historical supporting evidence, not acceptance
+of these newly implemented paths.
+
+Recoil/override transfer prerequisite for the same tick continuation:
+W3DModelDraw.h::WeaponRecoilInfo orders IDLE=0, RECOIL_START=1, RECOIL=2,
+SETTLE=3, with shift/rate Real fields; clear resets all three. Fire admission
+replaces state/rate but retains existing shift. rebuildWeaponRecoilInfo resizes
+and clears every row even on same-model state selection, whereas idle animation
+reselection does not call it. Source W3DModelDraw.cpp::xfer version2 writes one
+UnsignedByte count per weapon slot, then each state via xferUser(sizeof enum),
+shift and rate via xferReal. It then writes an UnsignedByte persistent-override
+count followed by each xferAsciiString/xferBool pair, before version2 animation
+data. Windows file state width is32 bits; do not serialize a new native enum's
+incidental size or vector layout. Counts beyond255 need defined rejection, not
+the original count truncation followed by writing every row. RECOIL remains a
+valid persisted state even though the ordinary source fire path does not assign
+it. Native transfer/runtime implementation and acceptance remain pending; the
+new instance cohort is not evidence of saved-game compatibility by itself.

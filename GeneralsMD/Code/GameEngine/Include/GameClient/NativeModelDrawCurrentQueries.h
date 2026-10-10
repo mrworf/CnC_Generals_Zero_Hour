@@ -3,6 +3,7 @@
 #include "GameClient/NativeModelDrawQueries.h"
 #include "GameClient/NativeModelAnimationClock.h"
 #include "Common/NativeW3DModelBounds.h"
+#include "Common/NativeW3DSubobjects.h"
 
 class GameClient;
 
@@ -19,6 +20,7 @@ protected:
     NativeW3DModelBounds bounds;
     Real objectScale=1;
     std::optional<NativeModelAnimationClock> clock;
+    NativeW3DSubobjects subobjects;
   };
 private:
   GameClient* const m_client;

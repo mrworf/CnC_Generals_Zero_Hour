@@ -20,6 +20,7 @@ class NativeModelDrawAnimationProducer : public NativeModelDrawCurrentQueries {
     std::shared_ptr<ParticleCohort> particles;
     Bool recalcParticles=FALSE;
     Bool fullyObscured=FALSE;
+    std::vector<ModelConditionInfo::HideShowSubObjInfo> subobjectOverrides;
   };
   struct Candidate {
     std::unique_ptr<Current> current;
@@ -50,6 +51,7 @@ protected:
   const ModelConditionInfo* nativePendingCondition()const noexcept{return m_state.pending;}
   Int nativeSelectedAnimation()const noexcept{return m_state.animation;}
   Bool nativeAnimationPaused()const noexcept{return m_state.paused;}
+  std::size_t nativeSubobjectOverrideCount()const noexcept{return m_state.subobjectOverrides.size();}
   UnsignedInt nativePendingDuration()const noexcept{return m_state.pendingDuration;}
 public:
   NativeModelDrawAnimationProducer(Thing*,const ModuleData*,NativeW3DAssets&);
@@ -61,4 +63,6 @@ public:
   Bool updateBonesForClientParticleSystems()override;
   void setHidden(Bool)override;
   void setFullyObscuredByShroud(Bool)override;
+  void showSubObject(const AsciiString&,Bool)override;
+  void updateSubObjects()override;
 };

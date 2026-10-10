@@ -58,6 +58,9 @@ public:
   void multiplier(Real value){setNativeAnimationMultiplier(value);}
   const NativeModelAnimationClock* clock()const{return nativeAnimationClock();}
   const NativeW3DAssets::Binding* currentBinding()const{return nativeCurrentBinding();}
+  const NativeW3DSubobjects* subobjects()const{return m_current?&m_current->subobjects:nullptr;}
+  std::size_t overrideCount()const{return nativeSubobjectOverrideCount();}
+  void clientHidden(Bool value){NativeModelDrawAnimationProducer::setHidden(value);}
   void objectScale(Real value){setNativeCurrentObjectScale(value);}
   void updateProjectileClipStatus(UnsignedInt,UnsignedInt,WeaponSlotType)override{throw ERROR_BAD_ARG;}
   void updateDrawModuleSupplyStatus(Int,Int)override{throw ERROR_BAD_ARG;}
@@ -73,8 +76,8 @@ public:
   Bool updateBonesForClientParticleSystems()override{throw ERROR_BAD_ARG;}
   void setAnimationFrame(int value)override{if(!producerEnabled)throw ERROR_BAD_ARG;NativeModelDrawAnimationProducer::setAnimationFrame(value);}
   void setPauseAnimation(Bool value)override{if(!producerEnabled)throw ERROR_BAD_ARG;NativeModelDrawAnimationProducer::setPauseAnimation(value);}
-  void updateSubObjects()override{throw ERROR_BAD_ARG;}
-  void showSubObject(const AsciiString&,Bool)override{throw ERROR_BAD_ARG;}
+  void updateSubObjects()override{NativeModelDrawAnimationProducer::updateSubObjects();}
+  void showSubObject(const AsciiString& name,Bool show)override{NativeModelDrawAnimationProducer::showSubObject(name,show);}
   void doDrawModule(const Matrix3D*)override{throw ERROR_BAD_ARG;}
   void setFullyObscuredByShroud(Bool)override{}
   void reactToTransformChange(const Matrix3D*,const Coord3D*,Real)override{}
@@ -478,7 +481,7 @@ void producerParticles(Fixture& fixture,bool rollback){
   }
   require(module.currentBinding()==binding&&module.particleID(0)==id&&sameParticleState(primary->nativeClientState(),accepted)&&sameParticleState(missing->nativeClientState(),missed)&&AllocationFault::live()==live,"whole root rollback restores exact tracker/current/particle client state and standard owners");
   ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);
-  if(rollback){auto& bad=fixture.module(1).inputData().m_conditionStates[1];bad.m_hideShowVec.push_back({AsciiString("GeneratedPart"),TRUE});
+  if(rollback){auto& bad=fixture.module(1).inputData().m_conditionStates[1];bad.m_hideShowVec.push_back({AsciiString(),TRUE});
     clientRejects([&]{fixture.draw->replaceModelConditionFlags(moving,TRUE);});
     require(module.currentBinding()==binding&&module.particleID(0)==id&&!primary->isDestroyed()&&!missing->isDestroyed(),"late actual condition walk rejection retains accepted effects without premature destroy");bad.m_hideShowVec.clear();
   }
@@ -581,6 +584,69 @@ void producerParticlePoolFaults(Fixture& fixture){
   }
   module.particles();require(module.particleCount()==2&&pool->getUsedBlockCount()==4,"accepted complete callback uses four actual pooled systems");
   std::cout<<"state particle pooled prefixes [0,4); terminal 4; every failure/retry\n";
+}
+void producerSubobjects(Fixture& fixture){
+  ProducerTimeOwner time;configureProducer(fixture);auto& module=fixture.module(0);
+  GameClientRandomTransaction random;auto& states=module.inputData().m_conditionStates;
+  states[0].m_hideShowVec={{AsciiString("Inner"),TRUE}};
+  states[1].m_hideShowVec={{AsciiString("Inner"),FALSE}};
+  module.initializeProducer();
+  require(module.subobjects()->children().size()==4&&module.subobjects()->children()[0].hidden&&module.subobjects()->children()[1].hidden&&module.subobjects()->children()[3].hidden,"actual condition producer publishes all-LOD descendant visibility");
+  module.showSubObject(AsciiString("Part"),TRUE);
+  require(module.subobjects()->children()[1].hidden,"source explicit override queues without early application");
+  module.updateSubObjects();require(!module.subobjects()->children()[1].hidden&&module.subobjects()->children()[3].hidden,"source explicit override applied independently of sibling");
+  const auto* accepted=module.currentBinding();const auto live=AllocationFault::live();
+  {NativeModelDrawConditionBatch root(fixture.draw->getDrawModulesNonDirty());
+    module.showSubObject(AsciiString("pArT"),FALSE);module.updateSubObjects();
+    require(module.subobjects()->children()[1].hidden,"queued override and actual instance mutate together inside root");
+  }
+  require(module.currentBinding()==accepted&&!module.subobjects()->children()[1].hidden&&AllocationFault::live()==live,"root rollback restores exact instance and queued overrides without allocations");
+  ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);module.replaceModelConditionState(moving);
+  require(!module.subobjects()->children()[0].hidden&&!module.subobjects()->children()[1].hidden&&!module.subobjects()->children()[3].hidden,"state rules run before retained explicit overrides");
+  module.showSubObject(AsciiString("Part"),FALSE);module.updateSubObjects();
+  module.replaceModelConditionState(ModelConditionFlags{});
+  require(module.subobjects()->children()[1].hidden,"explicit hide persists across same-model state replacement");
+  module.showSubObject(AsciiString(),TRUE); // Source no-op, no manufactured rule.
+  const auto stable=AllocationFault::live();AllocationFault::arm(0);
+  try{module.updateSubObjects();}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+  require(!hit&&attempts==0&&AllocationFault::live()==stable,"retained override application outside root allocates nothing");
+  // Actual Drawable hidden publication, not a fake visibility getter. The
+  // fixture's physical callback deliberately does nothing; recreation itself
+  // must observe the source Drawable status as the original setModelState does.
+  fixture.draw->setDrawableHidden(TRUE);ModelConditionFlags attacking;attacking.set(MODELCONDITION_ATTACKING);
+  states[2].m_modelName="Static.Mesh";states[2].m_animations.clear();module.replaceModelConditionState(attacking);
+  require(module.subobjects()->hidden(),"recreated leaf retains actual Drawable hidden state");
+  module.replaceModelConditionState(ModelConditionFlags{});require(module.subobjects()->hidden(),"recreated HLOD restores actual Drawable hidden state");
+  fixture.draw->setDrawableHidden(FALSE);module.clientHidden(TRUE);module.replaceModelConditionState(moving);
+  require(module.subobjects()->hidden(),"same-model state replacement does not silently reset retained root hidden flag");
+  module.replaceModelConditionState(attacking);require(module.subobjects()->hidden(),"visible Drawable does not erase authored mesh hidden default on recreation");
+  module.replaceModelConditionState(ModelConditionFlags{});require(!module.subobjects()->hidden(),"visible Drawable and newly recreated nonhidden HLOD produce visible root");
+}
+void producerSubobjectFaults(Fixture& fixture){
+  ProducerTimeOwner time;configureProducer(fixture);auto& module=fixture.module(0);
+  GameClientRandomTransaction random;module.initializeProducer();const AsciiString name("Part");
+  for(unsigned route=0;route<3;++route){
+    if(route==1)module.showSubObject(name,FALSE);
+    const auto* accepted=module.currentBinding();const auto overrides=module.overrideCount();const auto counts=fixture.assets.counts();const auto cursor=probeClientCursor();
+    auto operation=[&]{NativeModelDrawConditionBatch root(fixture.draw->getDrawModulesNonDirty());
+      try{if(route==2)module.clientHidden(TRUE);else if(route==1)module.updateSubObjects();else module.showSubObject(name,FALSE);}
+      catch(const std::bad_alloc&){root.commit();throw;} // Deliberately keep a caught outer root.
+      require(route==2?module.subobjects()->hidden():route==1?module.subobjects()->children()[1].hidden:module.overrideCount()==1,"complete actual callback publishes before enclosing successful rollback");
+    };
+    std::size_t terminal;AllocationFault::arm(SIZE_MAX);
+    try{operation();terminal=AllocationFault::attempts();AllocationFault::disarm();}catch(...){AllocationFault::disarm();throw;}
+    require(terminal>0&&terminal<128,"bounded complete queue/application callback census");
+    for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){const auto live=AllocationFault::live();bool failed=false;
+      AllocationFault::arm(ordinal);try{operation();}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+      const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+      require(failed==(ordinal<terminal)&&hit==failed&&attempts==(failed?ordinal+1:terminal),"exact complete visibility callback prefixes and terminal");
+      require(module.currentBinding()==accepted&&!module.subobjects()->hidden()&&!module.subobjects()->children()[1].hidden&&module.overrideCount()==overrides&&fixture.assets.counts()==counts&&probeClientCursor()==cursor&&AllocationFault::live()==live,"locally caught failure/outer commit preserves exact current, queue, cache, RNG and ownership");
+      operation();require(module.currentBinding()==accepted&&module.overrideCount()==overrides&&AllocationFault::live()==live,"every callback failure/terminal has exact same-owner corrected retry");
+    }
+    std::cout<<"producer subobjects route "<<route<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every failure/retry\n";
+  }
+  module.updateSubObjects();require(module.subobjects()->children()[1].hidden,"final accepted queued override is actually applied");
 }
 void producerFunctional(Fixture& fixture){
   ProducerTimeOwner time;configureProducer(fixture);auto& module=fixture.module(0);
@@ -733,7 +799,7 @@ void producerLifecycle(Fixture& fixture){
   auto bare=data.m_conditionStates[0];ModelConditionFlags damaged;damaged.set(MODELCONDITION_DAMAGED);
   bare.m_conditionsYesVec={damaged};bare.m_animations.clear();data.m_conditionStates.push_back(bare);
   auto unsupported=data.m_conditionStates[0];ModelConditionFlags night;night.set(MODELCONDITION_NIGHT);
-  unsupported.m_conditionsYesVec={night};unsupported.m_hideShowVec.push_back({AsciiString("GeneratedPart"),TRUE});data.m_conditionStates.push_back(unsupported);
+  unsupported.m_conditionsYesVec={night};unsupported.m_hideShowVec.push_back({AsciiString(),TRUE});data.m_conditionStates.push_back(unsupported);
   // The fixture's parsed ignore mask would otherwise remove this negative state.
   data.m_ignoreConditionStates.clear();
   GameClientRandomTransaction randomOwner;module.initializeProducer();
@@ -753,7 +819,7 @@ void producerLifecycle(Fixture& fixture){
   const auto* accepted=module.currentBinding();const auto counts=fixture.assets.counts();const auto before=probeClientCursor();
   clientRejects([&]{module.replaceModelConditionState(night);});
   require(module.currentBinding()==accepted&&fixture.assets.counts()==counts&&probeClientCursor()==before,
-    "unsupported effects reject without claiming application or changing current owners");
+    "malformed visibility rule rejects without changing current owners");
   Int expectedAbsentIndex;std::array<Int,8> expectedAbsentCursor;
   {GameClientRandomTransaction proof;expectedAbsentIndex=GameClientRandomValue(0,2);expectedAbsentCursor=probeClientCursor();}
   module.replaceModelConditionState(dying);
@@ -1052,6 +1118,11 @@ int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawa
     }
   }
   for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
+    if(std::string_view(argv[1])=="producer-subobjects"){
+      {Fixture fixture;producerSubobjects(fixture);}
+      {Fixture fixture;producerSubobjectFaults(fixture);}
+      require(AllocationFault::live()==live,"whole actual producer visibility cohort retirement");continue;
+    }
     {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else if(family=="display-time")displayTime(fixture);else if(family=="model-bounds")modelBounds(fixture);else if(family=="producer-functional")producerFunctional(fixture);else if(family=="producer-transitions")producerTransitions(fixture);else if(family=="producer-selection")producerSelection(fixture);else if(family=="producer-cold")producerFaults(fixture,false);else if(family=="producer-seeded")producerFaults(fixture,true);else if(family=="producer-lifecycle")producerLifecycle(fixture);else if(family=="producer-negative")producerNegative(fixture);else if(family=="producer-walk-dirty")producerWalk(fixture,false);else if(family=="producer-walk-forced")producerWalk(fixture,true);else if(family=="producer-walk-query")producerWalkQuery(fixture);else if(family=="producer-first-root")producerFirstRoot(fixture);else if(family=="producer-walk-wait")producerWalkWait(fixture);else if(family=="producer-walk-dirty-faults")producerWalkFaults(fixture,0);else if(family=="producer-walk-forced-faults")producerWalkFaults(fixture,1);else if(family=="producer-walk-query-faults")producerWalkFaults(fixture,2);else if(family=="producer-walk-mutations")producerWalkMutations(fixture);else if(family=="producer-walk-mutation-faults")producerMutationFaults(fixture);else if(family=="producer-particles-functional")producerParticles(fixture,false);else if(family=="producer-particles-rollback")producerParticles(fixture,true);else if(family=="producer-particles-create-faults")producerParticleFaults(fixture,0);else if(family=="producer-particles-bones-faults")producerParticleFaults(fixture,1);else if(family=="producer-particles-visibility-faults")producerParticleFaults(fixture,2);else if(family=="producer-particles-lifecycle")producerParticleLifecycle(fixture);else if(family=="producer-particles-pool-faults")producerParticlePoolFaults(fixture);else throw GeneratedFixtureFailure("unknown Drawable query family");}
     require(AllocationFault::live()==live,"whole original Drawable/client/definition/query/parent cohort retirement");
   }shutdownMemoryManager();initialized=false;std::cout<<"PASS actual Drawable query dispatch; renderer/full simulation pending\n";return 0;

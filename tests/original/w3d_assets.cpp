@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "AllocationFault.h"
 #include "Common/NativeW3DAssets.h"
+#include "Common/NativeW3DSubobjects.h"
 #include "Common/W3DModelConditionData.h"
 #include "Common/NativeDataFile.h"
 #include "Common/NativeUserStorage.h"
@@ -148,6 +149,64 @@ void conditionFaults(Context& context,bool seeded=false){auto info=condition();i
     }require(AllocationFault::live()==outer,"whole condition binding owner retirement");units.check();
   }std::cout<<"condition binding "<<(seeded?"seeded":"cold")<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every retry\n";
 }
+void subobjects(Context& context){
+  Assets assets(context.files,"English");const auto model=assets.model("Outer");
+  auto first=NativeW3DSubobjects::admit(model),second=NativeW3DSubobjects::admit(model);
+  require(first.children().size()==4&&first.children()[0].bone==1&&first.children()[1].bone==2&&first.children()[2].bone==0&&first.children()[3].bone==2,"all LODs then aggregates, not proxies or nested children");
+  require(first.find("pArT")==1&&first.find("bOdY.pArT")==1&&first.find("null")==2,"exact full-name search precedes first-dot suffix search across all rows");
+  const NativeW3DSubobjects::Rule hideArm[]{ {"Inner",true} };
+  first.apply(hideArm);
+  require(first.children()[0].hidden&&first.children()[1].hidden&&!first.children()[2].hidden&&first.children()[3].hidden,"strict descendants span later LODs and aggregates");
+  const NativeW3DSubobjects::Rule showBody[]{ {"Part",false} };
+  first.apply(showBody);
+  require(!first.children()[1].hidden&&first.children()[3].hidden,"same-bone sibling does not inherit named child change");
+  require(first.setFirstOnBone(2,true)&&first.children()[1].hidden&&first.children()[3].hidden,"flash selects first flattened attachment on bone");
+  require(first.setFirstOnBone(2,false)&&!first.children()[1].hidden&&first.children()[3].hidden,"flash does not change same-bone aggregate");
+  for(const auto& child:second.children())require(!child.hidden,"shared immutable prototype does not share mutable instance flags");
+  auto copy=first.clone();first.setHidden(true);require(first.hidden()&&!copy.hidden(),"root flag distinct and clone independent");
+  const NativeW3DSubobjects::Rule malformed[]{ {"Inner",false},{std::string_view("bad\0key",7),true} };
+  rejects([&]{first.apply(malformed);});require(first.hidden()&&first.children()[0].hidden&&first.children()[3].hidden&&!first.children()[1].hidden,"late malformed rule retains entire accepted cohort");
+  const NativeW3DSubobjects::Rule missing[]{ {"AbsentChild",true} };first.apply(missing);
+  const auto live=AllocationFault::live();AllocationFault::arm(0);
+  try{first.apply(showBody);first.setFirstOnBone(2,false);first.setHidden(false);require(first.find("Part")==1,"steady name lookup");}
+  catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+  require(attempts==0&&!hit&&AllocationFault::live()==live,"steady visibility mutation is allocation-free");
+  auto bad=std::make_shared<Assets::Prototype>(*model);bad->aggregates.back().bone=UINT32_MAX;
+  rejects([&]{(void)NativeW3DSubobjects::admit(bad);});
+  auto badTree=std::make_shared<NativeW3DDocument::Hierarchy>(*model->hierarchy);badTree->pivots[2].parent=2;bad->hierarchy=badTree;
+  rejects([&]{(void)NativeW3DSubobjects::admit(bad);});
+  rejects([&]{(void)NativeW3DSubobjects::admit({});});
+  auto leaf=NativeW3DSubobjects::admit(assets.model("Static.Mesh"));require(leaf.children().empty(),"leaf has no invented children");
+  require(leaf.hidden(),"authored W3D mesh hidden default retained on leaf root");
+  {Context generated(false,{{"Art/W3D/HiddenParts.w3d",hlod("HiddenParts","Tree",{{"Static.Mesh",1},{"Static.Mesh",2},{"Body.Part",2}})}});
+    Assets owner(generated.files,"English");auto instance=NativeW3DSubobjects::admit(owner.model("HiddenParts"));
+    require(!instance.hidden()&&instance.children()[0].hidden&&instance.children()[1].hidden&&!instance.children()[2].hidden,"every mesh attachment retains its own authored hidden default");
+    const NativeW3DSubobjects::Rule show[]{ {"Static.Mesh",false} };instance.apply(show);
+    require(!instance.children()[0].hidden&&!instance.children()[1].hidden&&!instance.children()[2].hidden,"authored hidden defaults remain overrideable by actual descendant rule");
+  }
+  first.swap(second);require(!first.children()[0].hidden&&second.children()[0].hidden,"whole cohort swap preserves instance flags");
+  assets.clear();require(copy.children()[3].model==model->aggregates[0].model,"instance retains admitted graph through cache retirement");
+}
+void subobjectFaults(Context& context){
+  Assets assets(context.files,"English");const auto model=assets.model("Outer");auto accepted=NativeW3DSubobjects::admit(model);
+  const NativeW3DSubobjects::Rule hidden[]{ {"Inner",true} };accepted.apply(hidden);
+  for(bool clone:{false,true}){
+    auto operation=[&]{return clone?accepted.clone():NativeW3DSubobjects::admit(model);};std::size_t terminal;
+    {AllocationFault::arm(SIZE_MAX);try{auto measured=operation();terminal=AllocationFault::attempts();AllocationFault::disarm();require(measured.children().size()==4,"complete instance discovery");}catch(...){AllocationFault::disarm();throw;}}
+    require(terminal>0&&terminal<16,"bounded exact instance admission/clone census");
+    const auto counts=assets.counts();
+    for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){const auto live=AllocationFault::live();bool failed=false;
+      AllocationFault::arm(ordinal);try{auto candidate=operation();require(candidate.children()[0].hidden==clone,"candidate flags follow requested admission or clone");}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+      const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+      require(failed==(ordinal<terminal)&&hit==failed&&attempts==(failed?ordinal+1:terminal),"exact instance failure prefix and terminal");
+      require(AllocationFault::live()==live&&assets.counts()==counts&&accepted.children()[0].hidden&&accepted.children()[1].hidden&&accepted.children()[3].hidden,"candidate retires and accepted complete cohort/cache stays exact");
+      {auto retry=operation();require(retry.children().size()==4&&retry.children()[0].hidden==clone,"every instance failure/terminal has corrected same-owner retry");}
+      require(AllocationFault::live()==live,"complete corrected candidate retirement");
+    }
+    std::cout<<"subobject "<<(clone?"clone":"admission")<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every retry\n";
+  }
+}
 void warm(Context& context){graph(context);routing(context);cache(context);conditions(context);}
 }
 int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"asset family");initMemoryManager();initialized=true;
@@ -157,7 +216,7 @@ int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"asset
     else if(family=="cold_model")faults(context,false,false);else if(family=="cold_animation")faults(context,true,false);
     else if(family=="seeded_model")faults(context,false,true);else if(family=="seeded_animation")faults(context,true,true);
     else if(family=="conditions")conditions(context);else if(family=="condition_faults")conditionFaults(context);
-    else if(family=="condition_seeded_faults")conditionFaults(context,true);else throw std::runtime_error("unknown asset family");
+    else if(family=="condition_seeded_faults")conditionFaults(context,true);else if(family=="subobjects")subobjects(context);else if(family=="subobject_faults")subobjectFaults(context);else throw std::runtime_error("unknown asset family");
     require(AllocationFault::live()==live,"repeated entire source asset cohort retires standard ownership");units.check();}}
   shutdownMemoryManager();initialized=false;std::cout<<"PASS W3D asset graph; original draw consumers and N2 pending\n";return 0;
  }catch(const std::exception& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(ErrorCode){std::cerr<<"FAIL source error\n";}

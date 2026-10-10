@@ -57,7 +57,8 @@ target_sources(original_data PRIVATE
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeW3DDocument.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeW3DAnimation.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeW3DPose.cpp"
-  "${ZH_CODE}/GameEngine/Source/Common/System/NativeW3DAssets.cpp")
+  "${ZH_CODE}/GameEngine/Source/Common/System/NativeW3DAssets.cpp"
+  "${ZH_CODE}/GameEngine/Source/Common/System/NativeW3DSubobjects.cpp")
 target_compile_options(original_data PRIVATE -Wall -Wextra -Wno-unknown-pragmas -ffp-contract=off)
 add_executable(original_data_fixture tests/original/data.cpp tests/original/AllocationFault.cpp)
 add_executable(original_w3d_document_fixture tests/original/w3d_document.cpp tests/original/AllocationFault.cpp)
@@ -68,7 +69,7 @@ add_executable(original_w3d_assets_fixture tests/original/w3d_assets.cpp tests/o
 target_link_libraries(original_w3d_assets_fixture PRIVATE original_runtime_common)
 target_include_directories(original_w3d_assets_fixture PRIVATE "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_definitions(original_w3d_assets_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
-foreach(family IN ITEMS graph routing negative cache lifetime archives cold_model cold_animation seeded_model seeded_animation conditions condition_faults condition_seeded_faults)
+foreach(family IN ITEMS graph routing negative cache lifetime archives cold_model cold_animation seeded_model seeded_animation conditions condition_faults condition_seeded_faults subobjects subobject_faults)
   add_test(NAME original_w3d_assets_${family} COMMAND original_w3d_assets_fixture "${family}")
   set_tests_properties(original_w3d_assets_${family} PROPERTIES LABELS "original;data;model;assets" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
