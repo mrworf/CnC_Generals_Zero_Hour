@@ -68,7 +68,7 @@
     "milestone_complete": false,
     "slice_complete": false,
     "evidence": "evidence/qa/N2-native-client-composition.md",
-    "repository_commit": null
+    "repository_commit": "fe34a74eb2ceb07149816059d3d15ae2820511ee"
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
