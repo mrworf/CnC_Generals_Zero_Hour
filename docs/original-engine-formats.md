@@ -5767,3 +5767,14 @@ not accepted actual Drawable dispatch or simulation-phase integration. Full
 current-pose/attachment behavior, nested-HLOD source flattening, all derived
 registrations and full startup remain pending; direct attachment lookup is not
 whole-model rendering parity. Evidence: evidence/qa/N2-w3d-pristine-queries.md.
+
+Construction-path follow-through (after that checkpoint): nested flattening is
+not required for file-loaded HLOD prototypes. hlod.cpp::HLodPrototypeClass::Create
+(251) constructs HLodClass(const HLodDefClass&) (1082), which adds each declared
+child directly through Add_Lod_Model (3519) and each aggregate through
+Add_Sub_Object_To_Bone. Neither removes nested children. The flattening loop at
+1029 belongs to HLodClass(const char*,RenderObjClass**,int), a separate in-memory
+LOD-array constructor. Do not apply its behavior to serialized prototype loads.
+Current native prototype graphs preserve the file-loaded nesting correctly;
+nested current-pose/recursive rendering transforms still require integration,
+but a generic flattening rewrite is not a prerequisite to pristine queries.

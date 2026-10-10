@@ -55,7 +55,13 @@ declarations; both were corrected together, with no production behavior change.
 That compile attempt remains in `/tmp/n2-pristine-gcc-focused-build.log`.
 
 Not accepted: actual Drawable dispatch and logic-phase/FPU integration, current
-client pose/attachment queries, nested-HLOD source flattening, derived19 draw
+client pose/attachment queries and nested transforms, derived19 draw
 registrations, whole native ModuleFactory, remaining material/prototype types,
 GameEngine startup/loaded simulation, particle rendering or retail visual parity.
 No adopted dependency sources or retail files were changed. N2 remains in progress.
+
+Post-checkpoint source review distinguished the serialized HLodDef constructor
+from the separate in-memory LOD-array constructor: only the latter flattens its
+children. File-loaded nesting must remain intact. This resolves the speculative
+flattening prerequisite without changing production source or acceptance claims;
+anchors and remaining recursive-transform boundary are in original-engine-formats.md.

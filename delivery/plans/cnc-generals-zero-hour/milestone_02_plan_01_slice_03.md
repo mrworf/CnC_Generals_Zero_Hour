@@ -3722,5 +3722,14 @@ and turret tables and consumers, including numbered barrels/FX reuse, second-LOD
 and additional-model fallback and full-name-before-suffix precedence. Production
 NameKey cursor, pool units and asset counts are preserved on late rejection.
 Evidence: evidence/qa/N2-w3d-pristine-queries.md. Full434 and N2 remain pending;
-next actual Drawable/phase/FPU integration, nested HLOD source flattening and
+next actual Drawable/phase/FPU integration, nested HLOD transform integration and
 derived module registrations, alongside remaining transfer/material/startup work.
+
+Serialized-prototype follow-through: HLodPrototypeClass::Create constructs from
+HLodDef, retaining nested models. The flattening loop belongs to a separate
+in-memory LOD-array constructor, not this load path. Preserve nested prototypes;
+do not insert a flattening implementation prerequisite. Record the actual
+Drawable adapter's logic/current-client/attachment distinctions and callbacks
+before adding it; standard bones come from borrowed TheGlobalData identity,
+pristine queries are admitted only in original logic-update/load-game phases,
+and presentation callbacks cannot claim output from a headless fixture.
