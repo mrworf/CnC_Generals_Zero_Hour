@@ -6373,3 +6373,116 @@ destroy/reset preserves deferred accepted retirement. All7 focused families
 PASS GCC/GCCsan/Clangsan with22 identical manifests; current related145/full482
 remain unrun. This replaces the earlier overflow-testing gap only, not concrete
 effects, exact startup profile, malloc-fault injection or complete simulation.
+
+### Native particle client mutation and math boundaries
+
+ParticleSys.cpp::setPosition writes the translation of m_localTransform and
+clears m_isLocalIdentity; it does not write the simulation m_pos field.
+setLocalTransform, rotateLocalTransformX/Y/Z, start/stop and setSkipParentXfrm
+change the same local-transform/identity/skip-parent/stopped client cohort.
+Rollback therefore needs all12 matrix elements and all3 flags, not a position
+snapshot alone. Record before each write into every enclosing manager scope;
+systems acquired after that scope's entry are instead retired as a whole.
+The list append boundary and unchanged entry-owned rows are preconditions;
+this is not arbitrary simulation/update/removal rollback. Raw snapshot restore
+must not call fallible setters. Accepted destroy stays deferred and nonallocating.
+
+NativeModelDrawConditionBatch's prior state retains the old shared tracker owner
+through fallible condition replacement. Its manager savepoint is enrolled lazily
+before the first effects operation. Member destruction order must retire saved
+tracker states while the real manager is still published, before the manager
+savepoint itself retires candidate systems. A local callback scope is also
+necessary: catching a late callback failure then committing the outer root must
+not retain a successfully mutated prefix.
+
+WWMath/matrix3d.cpp::Get_Z_Rotation reads WWMath::Atan2(Row[1][0],Row[0][0]).
+The native target already provides this exact source operation through the
+game-owned Common/NativeSourceMath.h::nativeSourceYaw; source_boundaries.cpp
+tests its bit representation and allocation-free behavior. Use this adapter
+consistently in initial and animated particle callbacks, not an unlinked library
+member replacement or a renderer/private implementation import.
+
+Current generated semantic tests exercise actual parsed master/slave templates,
+registered Drawable modules and the source clock/manager. New whole-callback
+fault families cover creation, animated transforms and visibility, including
+outer commit after locally caught rejection; the typed-pool family uses public
+initial64/overflow0 for all four acquired systems. Production defaults are not
+changed. Tests also distinguish temporary root plus hierarchy scale from world
+sampling, source primary-only stopping, null/missing bones/templates, restart
+retention and suppression. These are implementation/test descriptions, not
+acceptance claims: consult the current QA artifact for executed results. Full
+concrete model tick, lazy hierarchy/clock/sound publication and actual startup/
+loaded simulation remain pending; accepted-pose particle sampling alone does
+not implement those paths.
+
+### Concrete model tick ordering: coupled next consumers
+
+Source: GameEngineDevice/Source/W3DDevice/GameClient/Drawable/Draw/
+W3DModelDraw.cpp::doDrawModule (1161), adjustAnimSpeedToMovementSpeed (1088),
+adjustTransformMtx (1115), handleClientTurretPositioning (1536) and
+handleClientRecoil (1612). These are implementation prerequisites, not new scope
+or acceptance. Power-derived pause is applied first. A nonunit instance scale
+scales the supplied transform and writes ObjectScale; the unit-scale branch
+does not reset a previously assigned ObjectScale. Test2-to1 reuse explicitly;
+do not silently normalize the retained property while porting this branch.
+
+Positive authored animation distance, actual Object/Physics and positive source
+velocity are required before movement duration becomes distance/speed multiplied
+by MSEC_PER_LOGICFRAME_REAL. Missing parents and nonpositive speed retain existing
+duration. Attachment/construction transform adjustment precedes turret controls:
+cached attachment rotates the source offset into the root before translation;
+construction height requires actual Object geometry and a nonnegative percentage.
+
+Turret control reads the actual AIUpdateInterface when present, otherwise uses
+zero dynamic rotation/pitch plus authored art offsets. It captures/controls yaw
+around Z and negative pitch around Y. State-particle creation and optional
+animated-bone updates follow those controls; recoil runs afterward. Thus particle
+sampling cannot be moved to the end of a combined tick without changing which
+controls it observes. Lazy pose invalidation/evaluation must preserve this order.
+
+Recoil is render-call/visibility driven in the original code, not elapsed-time
+simulation. RECOIL_START visibility is evaluated before the shift state machine;
+recoil adds its rate then applies authored damping, settles at maximum shift or
+absolute rate below0.01, and SETTLE subtracts the authored settle amount until
+zero. Capture/control then translates local X by negative shift. The legacy
+barrel/recoil count mismatch path uses the larger count after an assertion and
+can access missing rows: a native admission must reject invalid paired cardinality
+before any prefix mutation, not reproduce undefined access or waive the check.
+Original intended normal paired behavior remains authoritative. These coupled
+state/pose/visibility/ownership paths still need actual parent fixtures and
+failure/retry evidence before any complete native model tick can be claimed.
+
+Embedded-sound source contract for that same next cohort: WW3D2/
+animatedsoundmgr.cpp::Initialize (section iteration), Find_Sound_List and Trigger_Sound,
+plus animobj.cpp::Update_Sub_Object_Transforms. Definitions use section-style
+INI keyed by case-normalized full animation name, with a BoneName entry and
+ordered comma-separated event values (frame, sound name, optional2D/STOP tokens).
+This is not the engine's block/End INI grammar or a decoded W3D animation channel.
+Native loading must preserve source entry order; malformed missing parameters
+need defined rejection instead of the original unchecked array indexing.
+
+Trigger_Sound selects oldFrame < authoredFrame <= newFrame in stored order,
+dispatches stop before considering2D/3D playback, and returns the last actually
+triggered authored frame, not newFrame. With no bridge/animation it returns the
+old cursor unchanged. It does not synthesize wrapped intervals on decreasing
+frames. The source animatable owner assigns that return to its separate event
+cursor after pose evaluation; blended/multiple motions have separate cursors.
+This prevents inferring event consumption from a clock advance or assuming that
+same-sync repeated invalidation should replay all crossings. The game-owned
+native adapter needs transactional event/pose publication under the actual audio
+owner; a mock sink, generic frame callback, or library/private backend import
+cannot establish original audiovisual acceptance. No native implementation or
+current runtime evidence for this embedded-sound path is claimed here.
+
+Actual parent fixture reference for concrete model tick integration:
+tests/original/object_ownership.cpp::Context constructs/init-registers the source
+ModuleFactory and ThingFactory, parses generated Object definitions, initializes
+PartitionManager, PlayerList and TeamFactory, and establishes the neutral default
+team before GameLogic::friend_createObject. Its retire method clears actors first,
+then retires UI/radar/partition/team/player/AI/script/template/module services
+while legitimate GameLogic is still published; radar cleanup also reads it.
+Reuse that source lifecycle discipline when combining real Physics/AI modules
+with registered native Drawable modules. It is not proof of initialized GameData
+or full startup, and its present generated actor does not yet establish a physics/
+turret model tick. Inspect the complete new provider initialization contract and
+warm the identical whole cohort before fault census/ownership baselines.

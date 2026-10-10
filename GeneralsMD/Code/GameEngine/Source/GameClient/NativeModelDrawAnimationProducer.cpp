@@ -6,6 +6,7 @@
 #include "GameClient/Display.h"
 #include "GameClient/Drawable.h"
 #include "Common/GlobalData.h"
+#include "Common/NativeSourceMath.h"
 #include "GameClient/NativeParticleSystemAdmission.h"
 #include "GameClient/ParticleSys.h"
 #include <cmath>
@@ -166,7 +167,7 @@ void NativeModelDrawAnimationProducer::recalcNativeStateParticles(){
     Coord3D position{0,0,0};Real rotation=0;
     if(bone){const auto& value=pose->bone(bone).transform;Matrix3D transform;
       for(unsigned n=0;n<3;++n)for(unsigned k=0;k<4;++k)transform[n][k]=value[4*n+k];
-      const auto translation=transform.Get_Translation();position={translation.X,translation.Y,translation.Z};rotation=transform.Get_Z_Rotation();
+      const auto translation=transform.Get_Translation();position={translation.X,translation.Y,translation.Z};rotation=nativeSourceYaw(transform);
     }
     system->setPosition(&position);system->rotateLocalTransformZ(rotation);
     system->attachToDrawable(getDrawable());system->setSaveable(FALSE);
@@ -189,7 +190,7 @@ Bool NativeModelDrawAnimationProducer::updateBonesForClientParticleSystems(){
     const auto& value=m_current->binding.pose.bone(tracker.bone).transform;Matrix3D transform;
     for(unsigned n=0;n<3;++n)for(unsigned k=0;k<4;++k)transform[n][k]=value[4*n+k];
     const auto translation=transform.Get_Translation();const Coord3D position{translation.X,translation.Y,translation.Z};
-    system->setPosition(&position);system->rotateLocalTransformZ(transform.Get_Z_Rotation());
+    system->setPosition(&position);system->rotateLocalTransformZ(nativeSourceYaw(transform));
     system->setLocalTransform(&transform);system->setSkipParentXfrm(TRUE);
   }
   admission.commit();return TRUE;

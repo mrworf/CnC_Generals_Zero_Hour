@@ -4228,3 +4228,62 @@ chained focused CTest did not execute. No live owned jobs remain. Resume the
 same batch above, including its outstanding failure/retry and sanitizer gates;
 do not inherit older green results for this changed source. Inventory, failure
 and continuation: evidence/qa/N2-state-particle-wip.md. Slice03/N2 remain pending.
+
+Resume correction: both new particle yaw reads must use the existing game-owned
+nativeSourceYaw adapter, already tested against the unchanged public WWMath
+source operation in source_boundaries.cpp. Do not link/import a legacy renderer
+or define a replacement WWMath library member. Inspect initial and animated
+transform paths together, then run both particle semantic families and existing
+particle admission families. Extend callback failure/retry coverage before
+acceptance; this math correction alone cannot accept the particle batch.
+
+Coupled callback verification now includes creation/bones/visibility standard
+prefix sweeps with every same-owner corrected retry and exact source IDs/RNG,
+list/pooled-used/standard-live and retained system fields. Locally caught
+callback failures deliberately commit the outer condition root. Successful
+discovery/retry roots unwind to identical cursor/cache/cohort entry state;
+separate final accepted calls prove real publication before fixture restoration.
+Add a public bounded-pool family exhausting each of the four partial authored
+master/slave acquisitions, plus scale2/null-template/restart/suppression/thread/
+phase lifecycle semantics. Keep the existing source-math oracle in the focused
+selector. Freeze source before GCC/GCCsan/Clangsan focused and related validation;
+do not claim these new tests passed merely because they were authored.
+
+Frozen focused15 PASS all3: GCC39.95s/GCCsan178.09s/Clangsan93.88s,34 matching
+fault/retry manifests and source-math checkpoint. Source canonical732/inclusive739
+and configured489 suite are recorded in evidence/qa/N2-state-particle-validation.md.
+Related153 jobs42720/25980/38000 are still live; source must remain frozen until
+their terminal results are inspected. Continuation remains uncommitted and not
+component/slice/N2 acceptance while that matrix is running. Resume observation
+of those exact handles before any new production changes or duplicate jobs.
+
+GCC related153 subsequently PASS275.15s, job42720 retired terminal0,336 normalized
+manifest rows. Only sanitizer jobs25980/38000 remain live. Keep source frozen and
+continue observing those exact handles before component acceptance or commit.
+
+Read-only review during the freeze verified the next coupled tick contracts in
+docs/original-engine-formats.md (Concrete model tick ordering). Preserve power
+pause, nonunit root/ObjectScale and source2-to1 reuse, real positive Physics
+movement duration, attachment/construction adjustment, real AI turret controls,
+then particle sampling, then render-call recoil/flash state. Validate paired
+barrel/recoil cardinality before any writes, and retain lazy hierarchy/event
+ordering rather than composing already-sampled particle callbacks at an arbitrary
+point. These findings refine the existing concrete tick investigation; they do
+not authorize a replacement plan, fake Object parents, library changes, or
+production edits while sanitizer jobs25980/38000 remain live.
+
+Clang related153 now PASS668.99s, process25980 retired terminal0;336 manifests
+and source-math checkpoint exactly match GCC related. Only GCCsan session38000
+is live. Keep frozen source until that exact job terminates, then reconcile
+all3 results/fingerprints before the coherent continuation commit. Full489 and
+concrete tick/startup/loaded simulation remain unrun/incomplete, not waived.
+
+Final frozen state-particle continuation: focused15/related153 PASS all3,
+GCC related275.15s/GCCsan1172.74s/Clangsan668.99s. All jobs retired terminal0,
+no live owned handles,34 focused/336 related manifests and source-math checksum
+agree. Canonical732/inclusive739 source hashes rechecked unchanged. Evidence:
+evidence/qa/N2-state-particle-validation.md; its introducing commit is the coherent
+continuation checkpoint. This validates shared state-particle callbacks and
+coupled rollback, not complete concrete19/full tick/lazy events or N2 startup.
+Continue the actual physics/AI/geometry, ordered full tick and event-cursor cohort
+above within this same plan; full489, slice03 and N2 acceptance remain pending.

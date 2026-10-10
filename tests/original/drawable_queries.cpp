@@ -6,6 +6,7 @@
 #include "GameClient/NativeModelDrawAnimationProducer.h"
 #include "GameClient/ClientRandomValue.h"
 #include "GameClient/ParticleSys.h"
+#include "GameClient/NativeParticleSystemAdmission.h"
 #include "GeneratedParticleInput.h"
 #include "GameClient/NativeHeadlessGameClient.h"
 #include "GameClient/NativeHeadlessDisplay.h"
@@ -432,6 +433,7 @@ void configureProducer(Fixture& fixture,unsigned index=0){
 }
 struct ParticleParents {
   struct Manager:ParticleSystemManager {
+    ParticleSystemID cursor()const{return m_uniqueSystemID;}
     Int getOnScreenParticleCount()override{return m_onScreenParticleCount;}
     void doParticles(RenderInfoClass&)override{throw ERROR_BAD_ARG;}
     void queueParticleRender()override{throw ERROR_BAD_ARG;}
@@ -483,6 +485,102 @@ void producerParticles(Fixture& fixture,bool rollback){
   fixture.draw->replaceModelConditionFlags(moving,TRUE);
   require(!module.particleCount()&&primary->isDestroyed()&&missing->isDestroyed()&&particles.owner->getParticleSystemCount()==4,"committed state replacement retires old tracker cohort via source deferred destruction");
   module.particles();require(!module.particleCount()&&particles.owner->getParticleSystemCount()==4,"empty next condition creates no invented particles");
+}
+void producerParticleLifecycle(Fixture& fixture){
+  ProducerTimeOwner time;ParticleParents particles(fixture);GameClientRandomTransaction random;
+  fixture.draw->setInstanceScale(2);for(unsigned n=0;n<2;++n)configureProducer(fixture,n);
+  auto& module=fixture.module(0);const AsciiString name("GeneratedStateParticles");const auto* source=particles.owner->findTemplate(name);
+  require(source,"parsed lifecycle particle parent");
+  auto& initial=module.inputData().m_conditionStates[0];initial.m_flags|=1<<RESTART_ANIM_WHEN_COMPLETE;
+  initial.m_particleSysBones={{AsciiString("Muzzle"),source},{AsciiString("MissingTemplate"),nullptr}};
+  module.initializeProducer();fixture.module(1).initializeProducer();module.particleVisibility(TRUE);module.particles();
+  require(module.particleCount()==1&&particles.owner->getParticleSystemCount()==2,"null template retains source skip behavior");
+  const auto id=module.particleID(0);auto* system=particles.owner->findParticleSystem(id);Coord3D position;system->getPosition(&position);
+  require(position.x==64&&system->nativeClientState().stopped,"initial source scale includes prototype hierarchy and temporary root; initial shroud stops primary");
+  module.particleVisibility(FALSE);for(unsigned n=0;n<4;++n)time.tick(fixture);module.producerStep(Matrix3D(true));
+  require(module.clock()->complete(),"actual retained clock reaches completion before restart");
+  module.producerStep(Matrix3D(true));module.particles();
+  require(module.clock()->frame()==0&&module.particleID(0)==id&&!system->isDestroyed()&&particles.owner->getParticleSystemCount()==2,"idle-style restart preserves accepted tracker cohort rather than re-creating systems");
+  bool rejected=false;std::thread worker([&]{try{module.particles();}catch(ErrorCode error){rejected=error==ERROR_BAD_ARG;}});worker.join();
+  require(rejected&&module.particleID(0)==id,"worker particle callback rejects before mutable parents");
+  fixture.logic->phase([&]{clientRejects([&]{module.particleBones();});});
+  fixture.draw->setDrawableStatus(DRAWABLE_STATUS_NO_STATE_PARTICLES);ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);
+  fixture.draw->replaceModelConditionFlags(moving,TRUE);module.particles();
+  require(!module.particleCount()&&system->isDestroyed(),"suppression still retires old effects on true state replacement");
+  fixture.draw->clearDrawableStatus(DRAWABLE_STATUS_NO_STATE_PARTICLES);module.particles();
+  require(!module.particleCount(),"clearing suppression does not invent a pending recalculation");
+  fixture.draw->replaceModelConditionFlags(ModelConditionFlags{},TRUE);module.particles();
+  require(module.particleCount()==1&&module.particleID(0)!=id&&particles.owner->getParticleSystemCount()==4,"corrected state selection admits new effects while old manager retirement remains deferred");
+}
+std::array<Int,8> probeClientCursor();
+void producerParticleFaults(Fixture& fixture,unsigned route){
+  ProducerTimeOwner time;ParticleParents particles(fixture);GameClientRandomTransaction random;
+  for(unsigned n=0;n<2;++n)configureProducer(fixture,n);
+  auto& module=fixture.module(0);const AsciiString name("GeneratedStateParticles");
+  const auto* source=particles.owner->findTemplate(name);require(source,"parsed particle fault parent");
+  module.inputData().m_conditionStates[0].m_particleSysBones={{AsciiString("Muzzle"),source},{AsciiString("Arm"),source}};
+  module.initializeProducer();fixture.module(1).initializeProducer();
+  if(route){module.particles();module.setAnimationFrame(1);Matrix3D world(true);world.Set_Translation(Vector3(100,0,0));module.producerStep(world);}
+  auto operation=[&]{
+    NativeModelDrawConditionBatch root(fixture.draw->getDrawModulesNonDirty());
+    try{
+      if(route==0)module.particles();else if(route==1)module.particleBones();else module.particleVisibility(TRUE);
+      require(module.particleCount()==2&&particles.owner->getParticleSystemCount()==4,"complete particle callback publication before root rollback");
+    }catch(const std::bad_alloc&){
+      // Commit the outer root after a locally caught callback rejection. The
+      // callback itself must have undone every prefix of its own mutations.
+      root.commit();throw;
+    }
+    // A successful discovery/retry rolls back the whole root, preserving the
+    // identical source cursor, IDs, caches and accepted cohort for every pair.
+  };
+  AllocationFault::arm(SIZE_MAX);try{operation();}catch(...){AllocationFault::disarm();throw;}
+  const auto terminal=AllocationFault::attempts();AllocationFault::disarm();require(terminal>0,"measured complete particle callback allocation terminal");
+  auto* pool=TheMemoryPoolFactory->findMemoryPool("ParticleSystemPool");require(pool,"warmed original system pool");
+  const auto units=pool->getUsedBlockCount();const auto count=particles.owner->getParticleSystemCount();
+  const auto next=particles.owner->cursor();const auto before=probeClientCursor();const auto counts=fixture.assets.counts();
+  const auto* binding=module.currentBinding();const auto* selected=module.selected();const auto live=AllocationFault::live();
+  std::array<ParticleSystem*,2> accepted{};std::array<ParticleSystem::NativeClientState,2> states;
+  if(route)for(unsigned n=0;n<2;++n){accepted[n]=particles.owner->findParticleSystem(module.particleID(n));states[n]=accepted[n]->nativeClientState();}
+  auto verify=[&]{
+    require(particles.owner->cursor()==next&&particles.owner->getParticleSystemCount()==count&&pool->getUsedBlockCount()==units&&AllocationFault::live()==live&&probeClientCursor()==before&&fixture.assets.counts()==counts,"whole particle callback rollback restores IDs/client cursor/list/pool/standard ownership");
+    require(module.currentBinding()==binding&&module.selected()==selected&&module.particleCount()==(route?2:0),"callback rollback retains accepted producer/tracker identity");
+    if(route)for(unsigned n=0;n<2;++n)require(particles.owner->findParticleSystem(module.particleID(n))==accepted[n]&&!accepted[n]->isDestroyed()&&sameParticleState(accepted[n]->nativeClientState(),states[n]),"late callback failure preserves every existing system client field");
+  };
+  for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){
+    bool failed=false;AllocationFault::arm(ordinal);try{operation();}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+    const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+    require(failed==(ordinal<terminal)&&failed==hit&&attempts==(failed?ordinal+1:terminal),"exact complete callback failure prefixes and terminal");verify();
+    if(failed){AllocationFault::arm(SIZE_MAX);try{operation();}catch(...){AllocationFault::disarm();throw;}
+      const auto retry=AllocationFault::attempts();AllocationFault::disarm();require(retry==terminal,"corrected same-owner retry preserves complete demand");verify();}
+  }
+  if(!route){module.particles();require(module.particleCount()==2&&particles.owner->getParticleSystemCount()==4&&UnsignedInt(particles.owner->cursor())==UnsignedInt(next)+4&&probeClientCursor()!=before,"accepted actual creation advances source ID/client cursor before fixture restoration");}
+  else if(route==1){module.particleBones();Coord3D position;accepted[0]->getPosition(&position);require(position.x==120&&accepted[0]->nativeClientState().skipParent,"accepted animated callback after all failure/retry pairs");}
+  else{module.particleVisibility(TRUE);for(auto* system:accepted)require(system->nativeClientState().stopped&&!system->getSlave()->nativeClientState().stopped,"accepted visibility callback preserves primary-only source semantics");}
+  std::cout<<"state particle route "<<route<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every failure/retry\n";
+}
+void producerParticlePoolFaults(Fixture& fixture){
+  ProducerTimeOwner time;ParticleParents particles(fixture);GameClientRandomTransaction random;
+  for(unsigned n=0;n<2;++n)configureProducer(fixture,n);
+  auto& module=fixture.module(0);const AsciiString name("GeneratedStateParticles");const auto* source=particles.owner->findTemplate(name);
+  require(source,"parsed typed-pool parent");module.inputData().m_conditionStates[0].m_particleSysBones={{AsciiString("Muzzle"),source},{AsciiString("Arm"),source}};
+  module.initializeProducer();fixture.module(1).initializeProducer();
+  auto* pool=TheMemoryPoolFactory->findMemoryPool("ParticleSystemPool");require(pool,"explicit bounded callback pool");
+  struct Held {MemoryPool* pool;std::vector<void*> blocks;~Held(){for(auto* block:blocks)pool->freeBlock(block);}} held{pool,{}};
+  held.blocks.reserve(pool->getFreeBlockCount());
+  auto operation=[&]{NativeModelDrawConditionBatch root(fixture.draw->getDrawModulesNonDirty());
+    try{module.particles();}catch(ErrorCode){root.commit();throw;}
+    require(module.particleCount()==2&&particles.owner->getParticleSystemCount()==4,"corrected complete typed-pool callback publishes before root rollback");};
+  for(unsigned available=0;available<4;++available){
+    while(pool->getFreeBlockCount()>Int(available))held.blocks.push_back(pool->allocateBlock("generated tracker exhaustion"));
+    const auto live=AllocationFault::live();const auto units=pool->getUsedBlockCount();const auto next=particles.owner->cursor();const auto before=probeClientCursor();
+    bool failed=false;try{operation();}catch(ErrorCode error){failed=error==ERROR_OUT_OF_MEMORY;}
+    require(failed&&!module.particleCount()&&!particles.owner->getParticleSystemCount()&&particles.owner->cursor()==next&&probeClientCursor()==before&&pool->getUsedBlockCount()==units&&AllocationFault::live()==live,"each partial authored-chain exhaustion restores whole callback even with outer commit");
+    for(auto* block:held.blocks)pool->freeBlock(block);held.blocks.clear();const auto retryLive=AllocationFault::live();
+    operation();require(!module.particleCount()&&!particles.owner->getParticleSystemCount()&&particles.owner->cursor()==next&&probeClientCursor()==before&&!pool->getUsedBlockCount()&&AllocationFault::live()==retryLive,"corrected same-owner typed-pool retry restores exact source owner");
+  }
+  module.particles();require(module.particleCount()==2&&pool->getUsedBlockCount()==4,"accepted complete callback uses four actual pooled systems");
+  std::cout<<"state particle pooled prefixes [0,4); terminal 4; every failure/retry\n";
 }
 void producerFunctional(Fixture& fixture){
   ProducerTimeOwner time;configureProducer(fixture);auto& module=fixture.module(0);
@@ -935,6 +1033,7 @@ void modelBounds(Fixture& fixture){auto& module=fixture.module(0);const Matrix3D
 }
 }
 int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawable query family");initMemoryManager();initialized=true;
+  if(std::string_view(argv[1])=="producer-particles-pool-faults")TheMemoryPoolFactory->createMemoryPool("ParticleSystemPool",sizeof(ParticleSystem),64,0);
   {Fixture warm;functional(warm);negative(warm);clientFunctional(warm);clientNegative(warm);clientNumbered(warm);animationClock();animationPose(warm);displayTime(warm);modelBounds(warm);}
   if(std::string_view(argv[1]).starts_with("producer-")){
     {Fixture warm;producerFunctional(warm);}
@@ -953,7 +1052,7 @@ int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawa
     }
   }
   for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
-    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else if(family=="display-time")displayTime(fixture);else if(family=="model-bounds")modelBounds(fixture);else if(family=="producer-functional")producerFunctional(fixture);else if(family=="producer-transitions")producerTransitions(fixture);else if(family=="producer-selection")producerSelection(fixture);else if(family=="producer-cold")producerFaults(fixture,false);else if(family=="producer-seeded")producerFaults(fixture,true);else if(family=="producer-lifecycle")producerLifecycle(fixture);else if(family=="producer-negative")producerNegative(fixture);else if(family=="producer-walk-dirty")producerWalk(fixture,false);else if(family=="producer-walk-forced")producerWalk(fixture,true);else if(family=="producer-walk-query")producerWalkQuery(fixture);else if(family=="producer-first-root")producerFirstRoot(fixture);else if(family=="producer-walk-wait")producerWalkWait(fixture);else if(family=="producer-walk-dirty-faults")producerWalkFaults(fixture,0);else if(family=="producer-walk-forced-faults")producerWalkFaults(fixture,1);else if(family=="producer-walk-query-faults")producerWalkFaults(fixture,2);else if(family=="producer-walk-mutations")producerWalkMutations(fixture);else if(family=="producer-walk-mutation-faults")producerMutationFaults(fixture);else if(family=="producer-particles-functional")producerParticles(fixture,false);else if(family=="producer-particles-rollback")producerParticles(fixture,true);else throw GeneratedFixtureFailure("unknown Drawable query family");}
+    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else if(family=="display-time")displayTime(fixture);else if(family=="model-bounds")modelBounds(fixture);else if(family=="producer-functional")producerFunctional(fixture);else if(family=="producer-transitions")producerTransitions(fixture);else if(family=="producer-selection")producerSelection(fixture);else if(family=="producer-cold")producerFaults(fixture,false);else if(family=="producer-seeded")producerFaults(fixture,true);else if(family=="producer-lifecycle")producerLifecycle(fixture);else if(family=="producer-negative")producerNegative(fixture);else if(family=="producer-walk-dirty")producerWalk(fixture,false);else if(family=="producer-walk-forced")producerWalk(fixture,true);else if(family=="producer-walk-query")producerWalkQuery(fixture);else if(family=="producer-first-root")producerFirstRoot(fixture);else if(family=="producer-walk-wait")producerWalkWait(fixture);else if(family=="producer-walk-dirty-faults")producerWalkFaults(fixture,0);else if(family=="producer-walk-forced-faults")producerWalkFaults(fixture,1);else if(family=="producer-walk-query-faults")producerWalkFaults(fixture,2);else if(family=="producer-walk-mutations")producerWalkMutations(fixture);else if(family=="producer-walk-mutation-faults")producerMutationFaults(fixture);else if(family=="producer-particles-functional")producerParticles(fixture,false);else if(family=="producer-particles-rollback")producerParticles(fixture,true);else if(family=="producer-particles-create-faults")producerParticleFaults(fixture,0);else if(family=="producer-particles-bones-faults")producerParticleFaults(fixture,1);else if(family=="producer-particles-visibility-faults")producerParticleFaults(fixture,2);else if(family=="producer-particles-lifecycle")producerParticleLifecycle(fixture);else if(family=="producer-particles-pool-faults")producerParticlePoolFaults(fixture);else throw GeneratedFixtureFailure("unknown Drawable query family");}
     require(AllocationFault::live()==live,"whole original Drawable/client/definition/query/parent cohort retirement");
   }shutdownMemoryManager();initialized=false;std::cout<<"PASS actual Drawable query dispatch; renderer/full simulation pending\n";return 0;
  }catch(const GeneratedFixtureFailure& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(const std::exception&){std::cerr<<"FAIL generated Drawable query\n";}catch(ErrorCode){std::cerr<<"FAIL source Drawable query\n";}
