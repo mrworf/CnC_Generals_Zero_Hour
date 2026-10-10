@@ -3961,11 +3961,13 @@ UnsignedInt GameLogic::getCRC( Int mode, AsciiString deepCRCFileName )
 
 	LatchRestore<Bool> latch(inCRCGen, !isInGameLogicUpdate());
 
+	std::unique_ptr<XferCRC> xferOwner;
 	XferCRC *xferCRC;
 	AsciiString marker;
 	if (deepCRCFileName.isNotEmpty())
 	{
-		xferCRC = NEW XferDeepCRC;
+		xferOwner.reset(NEW XferDeepCRC);
+		xferCRC = xferOwner.get();
 		xferCRC->open(deepCRCFileName.str());
 	}
 	else
@@ -3974,13 +3976,15 @@ UnsignedInt GameLogic::getCRC( Int mode, AsciiString deepCRCFileName )
 #ifdef DEBUG_CRC
 		if (isInGameLogicUpdate() && g_keepCRCSaves && m_frame < 5)
 		{
-			xferCRC = NEW XferDeepCRC;
+			xferOwner.reset(NEW XferDeepCRC);
+			xferCRC = xferOwner.get();
 			crcName.format("logicFrame%d.crc", (m_frame%5));
 		}
 		else
 #endif DEBUG_CRC
 		{
-			xferCRC = NEW XferCRC;
+			xferOwner.reset(NEW XferCRC);
+			xferCRC = xferOwner.get();
 			crcName = "lightCRC";
 		}
 		xferCRC->open(crcName);
@@ -4063,7 +4067,7 @@ UnsignedInt GameLogic::getCRC( Int mode, AsciiString deepCRCFileName )
 
 	UnsignedInt theCRC = xferCRC->getCRC();
 
-	delete xferCRC;
+	xferOwner.reset();
 	xferCRC = NULL;
 
 	if (isInGameLogicUpdate())

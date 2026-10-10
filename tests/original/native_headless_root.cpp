@@ -23,6 +23,7 @@
 #include "GameClient/GameClient.h"
 #include "GameClient/TerrainVisual.h"
 #include "GameClient/MapUtil.h"
+#include "AllocationFault.h"
 #include "Common/ThingTemplate.h"
 #include "Common/Team.h"
 #include "Common/Module.h"
@@ -230,8 +231,21 @@ std::string h1Record(unsigned tick,ObjectID persistentID,ObjectID expiringID){
   require(bytes.size()==224,"version-one checkpoint record width");
   return bytes;
 }
+void requireH1PoolsRetired(bool completeCohort=false){
+  for(const char* poolName:{"ObjectPool","MapObject","ScriptList","DeletionUpdate"}){
+    auto* pool=TheMemoryPoolFactory->findMemoryPool(poolName);
+    require((pool || !completeCohort) && (!pool || pool->getUsedBlockCount()==0),
+      "H1 actor/map/script/module pool units retired");
+  }
+}
+struct FaultProbe {
+  std::size_t ordinal=SIZE_MAX;
+  std::size_t attempts=0;
+  bool triggered=false;
+};
 void loadH1(NativeHeadlessConfiguration config,bool runTicks=false,
-            std::vector<std::string>* checkpoints=nullptr){
+            std::vector<std::string>* checkpoints=nullptr,FaultProbe* fault=nullptr,
+            bool interruptAfterLoad=false){
   require(!checkpoints || runTicks,"checkpoints require original steady updates");
   const auto scriptCursorBefore=checkpoints?ScriptList::currentID():0;
   auto engine=std::make_unique<NativeHeadlessGameEngine>(std::move(config));
@@ -244,7 +258,9 @@ void loadH1(NativeHeadlessConfiguration config,bool runTicks=false,
     TheGameLogic->setGameMode(GAME_SINGLE_PLAYER);
     TheGameLogic->startNewGame(FALSE);
     require(TheGameLogic->isLoadingMap(),"original pending H1 load");
+    if(fault)AllocationFault::arm(fault->ordinal);
     engine->update();
+    if(fault){fault->attempts=AllocationFault::attempts();fault->triggered=AllocationFault::triggered();AllocationFault::disarm();}
     require(!TheGameLogic->isLoadingMap(),"original H1 load completed");
     if(checkpoints)require(ScriptList::currentID()>scriptCursorBefore,
       "production H1 parsing advances source script cursor");
@@ -286,6 +302,7 @@ void loadH1(NativeHeadlessConfiguration config,bool runTicks=false,
     ICoord2D left{20,20},right{45,20};
     require(TheTerrainVisual->getRawMapHeight(&left)==20 && TheTerrainVisual->getRawMapHeight(&right)==24,
       "two authored terrain plateaus loaded");
+    if(interruptAfterLoad)throw std::runtime_error("controlled H1 stop");
     if(runTicks){
       auto* expiring=TheGameLogic->findObjectByID(expiringID);
       auto* deletion=static_cast<DeletionUpdate*>(expiring->findUpdateModule(
@@ -316,11 +333,11 @@ void loadH1(NativeHeadlessConfiguration config,bool runTicks=false,
     }
     engine.reset();TheGameEngine=nullptr;
     require(!TheGameLogic && !TheGameClient && !TheFileSystem,"H1 root retired");
-    for(const char* poolName:{"ObjectPool","MapObject","ScriptList","DeletionUpdate"}){
-      auto* pool=TheMemoryPoolFactory->findMemoryPool(poolName);
-      require(pool && pool->getUsedBlockCount()==0,"H1 actor/map/script/module pool units retired");
-    }
-  } catch (...) {engine.reset();TheGameEngine=nullptr;throw;}
+    requireH1PoolsRetired(true);
+  } catch (...) {
+    if(fault){fault->attempts=AllocationFault::attempts();fault->triggered=AllocationFault::triggered();AllocationFault::disarm();}
+    engine.reset();TheGameEngine=nullptr;throw;
+  }
 }
 void requireH1(NativeHeadlessConfiguration config,const char* stage){
   try{loadH1(std::move(config));}catch(...){throw std::runtime_error(stage);}
@@ -371,7 +388,9 @@ void runGenerated(const std::string& mode){
   input.put("Data/INI/Music.ini","MusicTrack GeneratedMusic\n Filename = generated-track\n Volume = 100%\n Priority = NORMAL\n Type = UI EVERYONE\n End\n");
   input.put("Data/Audio/Tracks/generated-track","generated-not-decoded");
   if(mode=="h1-map" || mode=="h1-map-negative" || mode=="h1-ticks" ||
-     mode=="h1-ticks-negative" || mode=="h1-records") {
+     mode=="h1-ticks-negative" || mode=="h1-records" ||
+     mode=="h1-fault-census" || mode=="h1-fault-late" ||
+     mode=="h1-startup-negative" || mode=="h1-interrupt") {
     input.put("Data/INI/Default/Multiplayer.ini",
       "MultiplayerColor H1Color\n RGBColor = R:255 G:0 B:0\n RGBNightColor = R:128 G:0 B:0\n End\n");
     constexpr auto h1Objects=
@@ -392,6 +411,7 @@ void runGenerated(const std::string& mode){
       require(rejected,"truncated original map rejected");
       require(!TheGameEngine && !TheGameLogic && !TheGameClient && !TheFileSystem,
         "rejected H1 root retired");
+      requireH1PoolsRetired();
       input.putBytes("Maps/H1.map",map);
       requireH1(input.config(),"corrected map retry");
       input.putBytes("Maps/H1.map",malformedActorMap);
@@ -400,6 +420,7 @@ void runGenerated(const std::string& mode){
       require(rejected,"nonfinite authored actor rejected");
       require(!TheGameEngine && !TheGameLogic && !TheGameClient && !TheFileSystem,
         "rejected H1 actor root retired");
+      requireH1PoolsRetired();
       input.putBytes("Maps/H1.map",map);
       requireH1(input.config(),"corrected actor retry");
       input.put("Data/INI/Default/Object.ini",
@@ -409,6 +430,7 @@ void runGenerated(const std::string& mode){
       require(rejected,"unknown H1 module rejected");
       require(!TheGameEngine && !TheGameLogic && !TheGameClient && !TheFileSystem,
         "rejected H1 module root retired");
+      requireH1PoolsRetired();
       input.put("Data/INI/Default/Object.ini",h1Objects);
     }
     if(mode=="h1-ticks-negative"){
@@ -418,8 +440,97 @@ void runGenerated(const std::string& mode){
       require(rejected,"H1 road requires absent physical provider");
       require(!TheGameEngine && !TheGameLogic && !TheGameClient && !TheFileSystem,
         "unsupported H1 road root retired");
+      requireH1PoolsRetired();
     }
     input.putBytes("Maps/H1.map",map);
+    if(mode=="h1-interrupt"){
+      const auto config=input.config();
+      bool stopped=false;
+      try{loadH1(config,false,nullptr,nullptr,true);}
+      catch(const std::runtime_error& error){stopped=std::string_view(error.what())=="controlled H1 stop";}
+      require(stopped && !TheGameEngine && !TheGameLogic && !TheGameClient && !TheFileSystem,
+        "controlled H1 interruption retires loaded root");
+      requireH1PoolsRetired();
+      loadH1(config,true);
+      return;
+    }
+    if(mode=="h1-startup-negative"){
+      const auto config=input.config();
+      fs::remove(input.directory/"assets/Data/INI/Default/GameData.ini");
+      bool rejected=false;
+      try{loadH1(config);}catch(...){rejected=true;}
+      require(rejected && !TheGameEngine && !TheGameLogic && !TheFileSystem,
+        "missing required H1 GameData rejects and retires");
+      requireH1PoolsRetired();
+      input.put("Data/INI/Default/GameData.ini",gameData);
+      loadH1(config,true);
+      input.put("Data/INI/Default/GameData.ini",
+        "GameData\n XResolution = invalid\n End\n");
+      rejected=false;
+      try{loadH1(config);}catch(...){rejected=true;}
+      require(rejected && !TheGameEngine && !TheGameLogic && !TheFileSystem,
+        "malformed required H1 GameData rejects and retires");
+      requireH1PoolsRetired();
+      input.put("Data/INI/Default/GameData.ini",gameData);
+      loadH1(config,true);
+      auto missing=config;
+      missing.dataRoots={(input.directory/"missing-assets").string()};
+      rejected=false;
+      try{loadH1(missing);}catch(...){rejected=true;}
+      require(rejected && !TheGameEngine && !TheGameLogic && !TheFileSystem,
+        "missing H1 root rejects and retires");
+      requireH1PoolsRetired();
+      loadH1(config,true);
+      return;
+    }
+    if(mode=="h1-fault-late"){
+      const auto config=input.config();
+      const auto cursor=ScriptList::currentID();
+      auto measured=[&](FaultProbe* probe){
+        ScriptList::IDTransaction lease;
+        loadH1(config,false,nullptr,probe);
+        require(ScriptList::currentID()>cursor,"production map advances script ID before fixture lease");
+      };
+      measured(nullptr);
+      require(ScriptList::currentID()==cursor,"warm-up script cursor lease retired");
+      const auto outside=AllocationFault::live();
+      FaultProbe first,second;
+      measured(&first);
+      require(ScriptList::currentID()==cursor && AllocationFault::live()==outside,
+        "first warmed fault census retires exact owner baseline");
+      measured(&second);
+      require(ScriptList::currentID()==cursor && AllocationFault::live()==outside &&
+        first.attempts==second.attempts && first.attempts>0,
+        "identical warmed H1 map admission fault terminal");
+      FaultProbe late{second.attempts-1};
+      bool rejected=false;
+      {
+        ScriptList::IDTransaction lease;
+        try{loadH1(config,false,nullptr,&late);}catch(const std::bad_alloc&){rejected=true;}
+        require(ScriptList::currentID()>cursor,"late failed production map advanced script cursor");
+      }
+      require(rejected && late.triggered && late.attempts==second.attempts &&
+        ScriptList::currentID()==cursor && AllocationFault::live()==outside,
+        "late map allocation failure retires all owned standard state");
+      requireH1PoolsRetired();
+      measured(nullptr);
+      require(ScriptList::currentID()==cursor && AllocationFault::live()==outside,
+        "corrected H1 after late allocation failure retires exactly");
+      FaultProbe terminal{second.attempts};
+      measured(&terminal);
+      require(!terminal.triggered && terminal.attempts==second.attempts &&
+        ScriptList::currentID()==cursor && AllocationFault::live()==outside,
+        "exact terminal after all failure/retry owners retire");
+      std::cout<<"H1_FAULT_MAP_TERMINAL "<<second.attempts<<'\n';
+      return;
+    }
+    if(mode=="h1-fault-census"){
+      FaultProbe probe;
+      loadH1(input.config(),false,nullptr,&probe);
+      require(!probe.triggered,"unlimited original map admission fault census");
+      std::cout<<"H1_FAULT_MAP_ATTEMPTS "<<probe.attempts<<'\n';
+      return;
+    }
     if(mode=="h1-records"){
       const auto config=input.config();
       std::vector<std::string> baseline;
@@ -489,7 +600,9 @@ int main(int argc,char** argv){
     const std::string name=argv[1];
     if(name=="generated" || name=="missing-ini" || name=="storage-refusal" ||
        name=="h1-map" || name=="h1-map-negative" || name=="h1-ticks" ||
-       name=="h1-ticks-negative" || name=="h1-records")runGenerated(name);
+       name=="h1-ticks-negative" || name=="h1-records" ||
+       name=="h1-fault-census" || name=="h1-fault-late" ||
+       name=="h1-startup-negative" || name=="h1-interrupt")runGenerated(name);
     else if(name=="missing")rejectMissing();
     else throw std::runtime_error("unknown test family");
     shutdownMemoryManager();

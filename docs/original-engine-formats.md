@@ -7061,3 +7061,31 @@ three-lifetime in-process runner and independent cross-build comparator check
 all record bytes, with semantic witnesses retained separately. The digest is
 an evidence identifier, not a substitute oracle; see
 `evidence/qa/N2-h1-checkpoints.md`.
+
+#### Reached H1 late failure and CRC owner (N2 plan02 slice05)
+
+The complete generated pending-map update has 11,074 standard-allocation
+attempts on the first normal GCC census, including a large parser/data cohort.
+The H1 integration probe warms the full root, then uses two identical
+successful map admissions with the same configuration value and an outer
+script-ID lease to derive the current host/configuration terminal. It proves
+production script cursor advancement before each lease restores the fixture
+start state. The warmed normal GCC terminal is 10,937; the fixture derives it
+at runtime in each configuration rather than reusing that number. Injecting
+at the preceding ordinal reaches the original CRC computation late in
+`GameLogic::update`.
+
+`GameLogic::getCRC` previously allocated `XferCRC` or `XferDeepCRC` into a raw
+pointer and deleted it only after many fallible snapshot operations. A late
+allocation failure there leaked the transfer object and its string: two
+standard allocations, 57 bytes under GCC LeakSanitizer. A local owning guard
+now covers `open`, snapshot transfer and `close`, while the existing normal
+success path and CRC contents stay on the original code path. After failure,
+the entire native root retires and a corrected H1 load succeeds; the measured
+terminal ordinal succeeds with no fault trigger. Map/actor/script/deletion
+typed pools have zero used units after complete H1 retirement, and any pool
+that was created before a rejected cold startup has zero used units. Pools
+not yet created by an early rejection have no acquired units. Separate
+existing component fixtures exhaust actual map/script and actor pools and
+retain their failure/retry pairs under both compiler sanitizers; see
+`evidence/qa/N2-h1-failure-retry.md`.

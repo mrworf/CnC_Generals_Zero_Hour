@@ -397,7 +397,7 @@ foreach(family IN ITEMS values references constructor-faults names name-faults p
   set_tests_properties(original_map_object_${family} PROPERTIES LABELS "original;runtime;map" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()
-add_executable(original_native_headless_root_fixture tests/original/native_headless_root.cpp)
+add_executable(original_native_headless_root_fixture tests/original/native_headless_root.cpp tests/original/AllocationFault.cpp)
 add_executable(zero_hour_headless tools/zero_hour_headless.cpp)
 target_link_libraries(original_native_headless_root_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
@@ -414,7 +414,7 @@ target_link_options(zero_hour_headless PRIVATE -Wl,--gc-sections)
 add_dependencies(original_native_headless_root_fixture zero_hour_headless)
 add_test(NAME original_native_headless_help COMMAND zero_hour_headless --help)
 set_tests_properties(original_native_headless_help PROPERTIES LABELS "original;runtime;native_root" TIMEOUT 60)
-foreach(family IN ITEMS generated missing missing-ini storage-refusal h1-map h1-map-negative h1-ticks h1-ticks-negative h1-records)
+foreach(family IN ITEMS generated missing missing-ini storage-refusal h1-map h1-map-negative h1-ticks h1-ticks-negative h1-records h1-fault-late h1-startup-negative h1-interrupt)
   add_test(NAME original_native_headless_root_${family} COMMAND original_native_headless_root_fixture "${family}")
   set_tests_properties(original_native_headless_root_${family} PROPERTIES LABELS "original;runtime;native_root" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

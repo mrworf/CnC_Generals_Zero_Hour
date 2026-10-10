@@ -121,6 +121,15 @@ The comparison also rejects tampered, reordered, truncated and divergent-seed
 records. Its digest identifies evidence; the oracle also checks source
 semantics and compares all bytes.
 
+The generated `h1-startup-negative` mode rejects missing or malformed required
+GameData and a missing data root, then completes corrected H1 after each.
+`h1-fault-late` measures an exact warmed standard-allocation terminal,
+rejects a late pending-map allocation, completes corrected H1, and proves the
+terminal ordinal succeeds. `h1-interrupt` retires a deliberately stopped loaded
+world and completes corrected H1. These fixture modes run without retail
+data; see `evidence/qa/N2-h1-failure-retry.md` for their scoped ownership
+checks and sanitizer results.
+
 The `generated` fixture mode exercises two original startup/shutdown cycles
 in one process. Other modes reject missing roots, missing required INI and
 user storage inside a supplied asset mount. Its generated tables are

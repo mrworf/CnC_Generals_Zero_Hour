@@ -30,14 +30,23 @@ committed; retail bytes/derivatives and private selectors must not be.
 
 ## Validation, errors and recovery
 
-Positive corrected H1 retry and terminal; negative every failure ordinal, malformed required INI/truncated map/missing provider; GCC and Clang sanitizer owner checks. Preserve every failure/retry pair and scoped resource baseline.
+Positive corrected H1 retry and exact success terminal; negative a source-proven
+late map-admission allocation failure, malformed required INI, truncated map
+and missing provider; GCC and Clang sanitizer owner checks. The unbounded
+pending-map update has 11,074 standard-allocation attempts in the first
+generated GCC census, so an exhaustive full-root sweep would repeat thousands
+of parser/data allocations and obscure the integration boundary. Exhaustive
+component owner manifests remain required; the H1 integration probe must
+measure its terminal on the same warmed cohort, inject at a late measured
+ordinal, prove failure and corrected retry, and compare exact owner baselines.
+Preserve every failure/retry pair and scoped resource baseline.
 During implementation run focused affected tests first; after stabilization run
 related tests. At milestone end run the complete required frozen matrix.
 Use `cmake -S . -B build/original-core-gcc -G Ninja -DCMAKE_BUILD_TYPE=Debug
 -DZH_BUILD_RENDERER=OFF`, analogous GCC/Clang sanitizer build directories with
 `-DZH_SANITIZE=ON`, `cmake --build`, and `ctest --test-dir ... --output-on-failure`.
-Target-specific commands must be written here once tests/targets exist; no
-command absent from repository evidence is claimed as already runnable.
+Target-specific commands and bounded results are recorded in
+`evidence/qa/N2-h1-failure-retry.md`.
 A timeout or unavailable private input is incomplete, never a pass.
 
 ## Expected implementation surfaces
@@ -49,11 +58,18 @@ pre-existing paths before touching overlapping files; stage only owned hunks.
 
 ## Acceptance criteria
 
-- [ ] Every specified H1 startup/admission failure reports non-success, retires partial owners and accepts corrected input in the same process.
-- [ ] Positive and negative behavior above is directly demonstrated by
+- [x] Every specified H1 startup/admission failure reports non-success, retires partial owners and accepts corrected input in the same process.
+- [x] Positive and negative behavior above is directly demonstrated by
   executable source or a bounded public report, with current source identity.
-- [ ] Ownership, input integrity and accepted existing regression guarantees
+- [x] Ownership, input integrity and accepted existing regression guarantees
   remain intact; no private data is committed.
+
+The late fault and measured terminal both use the same complete warmed root
+and source script-ID starting state. The fixture proves production cursor
+advancement before its outer lease restores the measurement state. GCC and
+Clang sanitizer runs retain each H1 failure/retry pair; existing map/script
+and actor component tests separately exhaust actual typed pools. The CRC
+transfer owner leak found by the late fault is corrected in source.
 
 ## Commit boundary
 
