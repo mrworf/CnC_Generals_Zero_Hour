@@ -1,0 +1,136 @@
+"schema_version": 1
+"reconciliation_id": "REC-RUN-001"
+"product_id": "cnc-generals-zero-hour"
+"status": "PARTIALLY_RESOLVED"
+"transaction":
+  "parent_commit": "76ca9e453bfa3fbc39530aa7da0f44d417fc1116"
+  "repository_commit": "PENDING_PAYLOAD_COMMIT"
+"source":
+  "invocation": "standalone"
+  "triggering_findings":
+  - "OBS-001"
+  "affected_requirements":
+  - "R03"
+  - "R05"
+  - "R07"
+  - "R08"
+  - "R09"
+  "artifact_revisions":
+  - "artifact": "docs/zero-hour-linux-port-plan.md"
+    "revision": "sha256:0316702c3fb75979f3ef5cdafb3adcf3a4c1bfa3dc84e94f883aceb6ce49bf90"
+    "basis": "76ca9e453bfa3fbc39530aa7da0f44d417fc1116"
+  - "artifact": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md"
+    "revision": "sha256:63546063c109b1dd28922382ad0140b9142f2c2f2066b5087447c0bcf70b17f1"
+    "basis": "76ca9e453bfa3fbc39530aa7da0f44d417fc1116"
+  - "artifact": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md"
+    "revision": "sha256:0f368e91b399012531eee9464c664c7048644fb36f99bcdbdcdd39b106d45430"
+    "basis": "pre-existing worktree"
+  - "artifact": "workflow/delivery/state.yaml"
+    "revision": "sha256:99243d6d5eddde1a7eed45986d23338b4303672cbd825e11b02fe15fb331af5e"
+    "basis": "76ca9e453bfa3fbc39530aa7da0f44d417fc1116"
+  - "artifact": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml"
+    "revision": "sha256:84989b5da44c002c87b3da9b168815f86146cfe00e7269dc00810d5ae01d40b6"
+    "basis": "76ca9e453bfa3fbc39530aa7da0f44d417fc1116"
+  - "artifact": "docs/original-runtime-source-graph.md"
+    "revision": "sha256:09f7a5a0479ab8fc89445838e3a579b9397f57dd8f47d8f2b3620eb042ce1151"
+    "basis": "76ca9e453bfa3fbc39530aa7da0f44d417fc1116"
+  - "artifact": "docs/original-engine-formats.md"
+    "revision": "sha256:5a02dc99061719c6402fd5403c9156eda02e0afe7bf9567915faf6911823449a"
+    "basis": "76ca9e453bfa3fbc39530aa7da0f44d417fc1116"
+  - "artifact": "evidence/qa/N2-audio-admission-ownership.md"
+    "revision": "sha256:1a3f5449fd4144cfb3f2149ef75ee190e8860720d873bf62948c39b63a2f691a"
+    "basis": "76ca9e453bfa3fbc39530aa7da0f44d417fc1116"
+  - "artifact": "cmake/OriginalRuntime.cmake"
+    "revision": "sha256:052a6ba882547bdce81b3e60f94520b7345f1e6df8f0ba5ac031adebf82bfaf0"
+    "basis": "pre-existing worktree"
+  - "artifact": "tests/toolchain/original_runtime_link_probe.cpp"
+    "revision": "sha256:19d76672da9c1a5847732f4fdd90623fe5455954354fda53839584b371db1a03"
+    "basis": "76ca9e453bfa3fbc39530aa7da0f44d417fc1116"
+  "inspected_commit": "76ca9e453bfa3fbc39530aa7da0f44d417fc1116"
+  "runtime_reproduction": "NOT_ATTEMPTED"
+  "preexisting_dirty_paths":
+  - "GeneralsMD/Code/GameEngine/Include/Common/NativeW3DPose.h"
+  - "GeneralsMD/Code/GameEngine/Include/GameClient/Drawable.h"
+  - "GeneralsMD/Code/GameEngine/Include/GameClient/NativeModelDrawAnimationProducer.h"
+  - "GeneralsMD/Code/GameEngine/Include/GameClient/NativeModelDrawConditionBatch.h"
+  - "GeneralsMD/Code/GameEngine/Include/GameClient/NativeModelDrawCurrentQueries.h"
+  - "GeneralsMD/Code/GameEngine/Include/GameClient/NativeModelDrawQueries.h"
+  - "GeneralsMD/Code/GameEngine/Source/Common/System/NativeW3DPose.cpp"
+  - "GeneralsMD/Code/GameEngine/Source/GameClient/Drawable.cpp"
+  - "GeneralsMD/Code/GameEngine/Source/GameClient/NativeModelDrawAnimationProducer.cpp"
+  - "GeneralsMD/Code/GameEngine/Source/GameClient/NativeModelDrawConditionBatch.cpp"
+  - "GeneralsMD/Code/GameEngine/Source/GameClient/NativeModelDrawCurrentQueries.cpp"
+  - "GeneralsMD/Code/GameEngine/Source/GameClient/NativeModelDrawQueries.cpp"
+  - "GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Locomotor.cpp"
+  - "cmake/OriginalRuntime.cmake"
+  - "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md"
+  - "tests/original/object_ownership.cpp"
+  - "tests/original/w3d_animation.cpp"
+"findings":
+  "resolved":
+  - "REC-002"
+  "unresolved":
+  - "REC-001"
+"authoritative_changes":
+  "changed": false
+  "entries":
+  - "change_id": "REC-CHANGE-001"
+    "source_findings":
+    - "REC-001"
+    "path": "docs/zero-hour-linux-port-plan.md"
+    "requirements":
+    - "R07"
+    "status": "PROPOSED_AWAITING_DECISION"
+  - "change_id": "REC-CHANGE-002"
+    "source_findings":
+    - "REC-002"
+    "path": null
+    "requirements":
+    - "R03"
+    - "R04"
+    - "R05"
+    - "R07"
+    "status": "NO_SOURCE_MUTATION"
+"definition_changed": false
+"implementation_required": false
+"implementation_ready": false
+"decisions_required":
+- "id": "REC-DEC-001"
+  "source_findings":
+  - "REC-001"
+  "product_owner_feedback": []
+  "domain": "architecture"
+  "affected_requirement": "R07"
+  "blocking": true
+  "question": "What finite original-engine startup/load/update/checkpoint/shutdown scenario and source-derived\
+    \ headless provider contract sufficiently qualify R07 while preserving R05 and leaving physical rendering/media\
+    \ acceptance in R08/R09?"
+  "reason": "The approved intent fixes real source execution and fidelity, but neither the specification nor\
+    \ current plans settles the workload, observable checkpoint contract or required-versus-deferred provider\
+    \ closure; new prerequisites keep accumulating in slice03."
+  "implementation_ready": false
+"change_impact":
+  "change_id": "REC-IMPACT-001"
+  "source_findings":
+  - "REC-001"
+  - "REC-002"
+  "changed_artifacts": []
+  "changed_requirements": []
+  "change_types":
+  - "documentation"
+  - "test_expectation"
+  - "architecture_boundary"
+  "affected_domains":
+    "product": true
+    "user_journeys": true
+    "ux": false
+    "architecture": true
+    "security": false
+  "potentially_stale":
+  - "docs/zero-hour-linux-port-plan.md"
+  "revalidation_required": true
+"handoff":
+  "category": "DECISION_RESOLUTION"
+  "definition_revalidation_required": true
+  "delivery_planning_ready": false
+  "next_workflow": "product-definition-orchestrator"
