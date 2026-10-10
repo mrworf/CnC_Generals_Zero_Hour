@@ -46,6 +46,10 @@
 #include "GameClient/GameClient.h"
 #include "GameClient/InGameUI.h"
 #include "GameClient/ParticleSys.h"
+#include "GameClient/NativeParticleSystemAdmission.h"
+#include <algorithm>
+#include <memory>
+#include <vector>
 
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
@@ -1035,8 +1039,7 @@ void ParticleSystemInfo::loadPostProcess( void )
 /** Read particle system properties from given file */
 // ------------------------------------------------------------------------------------------------
 ParticleSystem::ParticleSystem( const ParticleSystemTemplate *sysTemplate, 
-																ParticleSystemID id, 
-																Bool createSlaves )
+																ParticleSystemID id )
 {
 	m_systemParticlesHead = m_systemParticlesTail = NULL;
 
@@ -1107,7 +1110,9 @@ ParticleSystem::ParticleSystem( const ParticleSystemTemplate *sysTemplate,
 
 	m_isOneShot = sysTemplate->m_isOneShot;
 
-	m_delayLeft = (UnsignedInt)sysTemplate->m_initialDelay.getValue();
+	const Real initialDelay=sysTemplate->m_initialDelay.getValue();
+	if(!std::isfinite(initialDelay)||initialDelay<0||double(initialDelay)>=4294967296.0)throw ERROR_BAD_ARG;
+	m_delayLeft=static_cast<UnsignedInt>(initialDelay);
 
 	m_startTimestamp = TheGameClient->getFrame();
 	m_systemLifetimeLeft = sysTemplate->m_systemLifetime;
@@ -1162,26 +1167,12 @@ ParticleSystem::ParticleSystem( const ParticleSystemTemplate *sysTemplate,
 	m_slaveSystemID = INVALID_PARTICLE_SYSTEM_ID;
 	m_masterSystem = NULL;
 	m_slaveSystem = NULL;
-	if( createSlaves )
-	{
-		ParticleSystem *slaveSystem = sysTemplate->createSlaveSystem();
-
-		if( slaveSystem )
-		{
-
-			setSlave( slaveSystem );
-			m_slaveSystem->setMaster( this );
-
-		}  // end if
-
-	}  // end if
-
 	m_attachedSystemName = sysTemplate->m_attachedSystemName;
 	m_particleCount = 0;
 	m_personalityStore = 0;
 	m_controlParticle = NULL;
 
-	TheParticleSystemManager->friend_addParticleSystem(this);
+	// The manager publishes only after every chain candidate and link is ready.
 
 	//DEBUG_ASSERTLOG(!(m_totalParticleSystemCount % 10 == 0), ( "TotalParticleSystemCount = %d\n", m_totalParticleSystemCount ));
 }
@@ -1254,9 +1245,7 @@ void ParticleSystem::setSlave( ParticleSystem *slave )
 // ------------------------------------------------------------------------------------------------
 void ParticleSystem::setSaveable(Bool b)
 {
-	m_isSaveable = b;
-	if (m_slaveSystem)
-		m_slaveSystem->setSaveable(b);
+	for(auto* system=this;system;system=system->m_slaveSystem)system->m_isSaveable=b;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1280,11 +1269,8 @@ void ParticleSystem::stop( void )
 // ------------------------------------------------------------------------------------------------
 void ParticleSystem::destroy( void )
 {
-	m_isDestroyed = true;
-	if( m_slaveSystem )
-	{
-		m_slaveSystem->destroy();  // If we don't it will leak forever.  We are solely responsible for it.
-	}
+	// Preserve deferred retirement, without recursion over a valid long chain.
+	for(auto* system=this;system;system=system->m_slaveSystem)system->m_isDestroyed=true;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2808,14 +2794,11 @@ ParticleSystemTemplate::~ParticleSystemTemplate()
 // ------------------------------------------------------------------------------------------------
 ParticleSystem *ParticleSystemTemplate::createSlaveSystem( Bool createSlaves ) const
 {
-	if (m_slaveTemplate == NULL && m_slaveSystemName.isEmpty() == false)
-		m_slaveTemplate = TheParticleSystemManager->findTemplate( m_slaveSystemName );
-
-	ParticleSystem *slave = NULL;
-	if (m_slaveTemplate)
-		slave = TheParticleSystemManager->createParticleSystem( m_slaveTemplate, createSlaves );
-
-	return slave;
+	if(!TheParticleSystemManager)throw ERROR_BAD_ARG;
+	NativeParticleSystemAdmission admission(*TheParticleSystemManager);
+	const auto* source=NativeParticleSystemAdmission::slave(*this);
+	auto* slave=source?TheParticleSystemManager->createParticleSystem(source,createSlaves):nullptr;
+	admission.commit();return slave;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2973,9 +2956,28 @@ ParticleSystem *ParticleSystemManager::createParticleSystem( const ParticleSyste
 	if (sysTemplate == NULL)
 		return NULL;
 
-	m_uniqueSystemID = (ParticleSystemID)((UnsignedInt)m_uniqueSystemID + 1);
-	ParticleSystem *sys = newInstance(ParticleSystem)( sysTemplate, m_uniqueSystemID, createSlaves );
-	return sys;
+	NativeParticleSystemAdmission admission(*this);
+	std::vector<const ParticleSystemTemplate*> chain;
+	for(auto* source=sysTemplate;source;source=createSlaves?NativeParticleSystemAdmission::slave(*source):nullptr){
+		if(std::find(chain.begin(),chain.end(),source)!=chain.end())throw ERROR_BAD_ARG;
+		chain.push_back(source);
+	}
+	auto retire=[](ParticleSystem* value){value->deleteInstance();};
+	using Candidate=std::unique_ptr<ParticleSystem,decltype(retire)>;
+	std::vector<Candidate> candidates;candidates.reserve(chain.size());
+	for(const auto* source:chain){
+		m_uniqueSystemID=(ParticleSystemID)((UnsignedInt)m_uniqueSystemID+1);
+		Candidate candidate(newInstance(ParticleSystem)(source,m_uniqueSystemID),retire);
+		candidates.push_back(std::move(candidate));
+	}
+	for(std::size_t index=1;index<candidates.size();++index){
+		candidates[index-1]->setSlave(candidates[index].get());
+		candidates[index]->setMaster(candidates[index-1].get());
+	}
+	for(auto it=candidates.rbegin();it!=candidates.rend();++it)friend_addParticleSystem(it->get());
+	auto* result=candidates.front().get();
+	for(auto& candidate:candidates)candidate.release();
+	admission.commit();return result;
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -4098,3 +4098,35 @@ with real physics/AI/geometry/particle parents and original client-only event
 semantics. Constructor/new-owner/effect resources need their complete admission
 contract before enrollment; do not infer them from the initialized producer
 guard. Actual startup/loaded simulation, full475, slice03 and N2 remain pending.
+
+Concrete effect-owner continuation (clean parent1ea25c4e): production census has
+one ParticleSystem constructor caller, the original manager. Move whole-chain
+admission into that caller: construct parent-first to preserve ID/client RNG
+order, link after every constructor succeeds, register child-first to preserve
+original manager update order. Stage an iterative template chain and reject
+cycles before construction; do not impose an arbitrary valid-chain depth cap.
+Do not publish systems from their constructors. Guard every pooled candidate
+until complete manager admission; immediate candidate cleanup differs from
+accepted destroy's deferred retirement. Provide nested creation savepoints for
+later fallible tracker admission, restoring exact ID/list/count/client cursor
+and template slave-lookup caches. Enroll cache changes into every enclosing
+savepoint before writing; avoid allocations and callbacks during rollback.
+Reject wrong thread/manager/client identity before mutable admission. Preserve
+serialized fields and accepted master/slave link and destroy semantics; internal
+constructor ABI is not authority. Inspect attached-system and direct slave
+helper callers together with manager creation. Before wiring concrete particle
+effects, test actual parsed primary/slave/grandchild chains, missing/no-slave,
+cycles, worker/parent rejection, outer tracker failure, deferred accepted cleanup,
+and exact standard/pool failure/retry/cohort retirement with original parents.
+Use focused checks while implementing, then freeze coupled source for related
+GCC and both compiler sanitizer validation. No asset/framework edits or rendering
+acceptance; concrete19 full tick/startup remain the governing integration goal.
+
+User-requested sorted particle-admission checkpoint: retain the coupled manager,
+admission scope, parsed/generated fixture and build registration together.
+Current-source focused6 PASS GCC0.51s/GCCsan4.22s/Clangsan2.41s, terminal0;
+all18 normalized allocation rows agree. Evidence:
+evidence/qa/N2-particle-admission-checkpoint.md. This checkpoint does not mark
+slice03 or N2 complete and does not replace frozen related144 validation.
+Production growing-pool behavior, concrete tracker/effect/parent integration,
+camera and startup/loaded simulation remain pending; full481 is unrun.

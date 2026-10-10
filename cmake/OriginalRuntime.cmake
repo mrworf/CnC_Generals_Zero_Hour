@@ -301,6 +301,7 @@ target_sources(original_logical_client PRIVATE
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeModelDrawCurrentQueries.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeModelDrawAnimationProducer.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeModelDrawConditionBatch.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeParticleSystemAdmission.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeW3DModelBounds.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeModelAnimationClock.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeWaterGrid.cpp"
@@ -348,6 +349,15 @@ foreach(family IN ITEMS functional negative cold-base cold-vehicles cold-special
   set_tests_properties(original_draw_provider_data_${family} PROPERTIES LABELS "original;model;draw-provider-data" TIMEOUT 60 ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()
 add_executable(original_drawable_queries_fixture tests/original/drawable_queries.cpp tests/original/AllocationFault.cpp)
+add_executable(original_particle_admission_fixture tests/original/particle_admission.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_particle_admission_fixture PRIVATE "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_particle_admission_fixture PRIVATE -Wl,--gc-sections)
+target_include_directories(original_particle_admission_fixture PRIVATE "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
+target_compile_definitions(original_particle_admission_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+foreach(family IN ITEMS functional negative chain-faults slave-faults leaf-faults pool-faults)
+  add_test(NAME original_particle_admission_${family} COMMAND original_particle_admission_fixture "${family}")
+  set_tests_properties(original_particle_admission_${family} PROPERTIES LABELS "original;particles;ownership" TIMEOUT 60 ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 target_link_libraries(original_drawable_queries_fixture PRIVATE "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_drawable_queries_fixture PRIVATE -Wl,--gc-sections)
 target_include_directories(original_drawable_queries_fixture PRIVATE "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")

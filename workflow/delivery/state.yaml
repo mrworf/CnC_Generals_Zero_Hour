@@ -25,6 +25,24 @@
   "source_commit": "d0483ca911b029460fb46d878fe260e90ec8d071",
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
+  "particle_admission_worktree_checkpoint": {
+    "parent_commit": "1ea25c4e611bef7315a392c2372245d6c7fdaf49",
+    "repository_commit": null,
+    "purpose": "User-requested sorted commit of coupled unfinished particle admission, not completed-slice acceptance",
+    "evidence": "evidence/qa/N2-particle-admission-checkpoint.md",
+    "initial_modified_files": 4,
+    "initial_untracked_files": 3,
+    "canonical_source_files": 731,
+    "canonical_source_sha256": "37c0d390bacd2fa229d9e7073ec7614e90f2220da8032fe156bfb66da9e5693a",
+    "toolchain_inclusive_files": 738,
+    "toolchain_inclusive_sha256": "8d948073057590ef9211a9ca615d52527f54a37615c5d79e636380594208ff15",
+    "validation": "Current builds/focused6 PASS GCC0.51s/GCCsan4.22s/Clangsan2.41s, terminal0; all18 allocation rows match; no live owned jobs. Frozen related144 pending.",
+    "normalized_allocation_manifest_sha256": "1199bc473ebbc72a9670940af385863026e6264af2a168b765eb1801b1e1c411",
+    "configured_suite_tests": 481,
+    "milestone_complete": false,
+    "slice_complete": false,
+    "next": "Run frozen related144 all3 before component acceptance; continue same slice03 concrete tracker/bone/effect and source physics/AI/geometry parents, then camera and startup/loaded simulation. Production growing-pool behavior and full481 remain unvalidated."
+  },
   "condition_walk_validation": {
     "parent_commit": "b9edefc4",
     "implementation_checkpoint": "4d2370c02b546e2697491ecf0dce3d6f5873e050",
@@ -68,16 +86,16 @@
     "next": "Continue N2 plan01/slice03: validate coupled copy-on-first-mutation callbacks and locally caught rejection inside the root, then freeze and run related GCC/GCCsan/Clangsan before accepting this component. Concrete19/effect/new-owner lifetimes and full startup/simulation remain pending."
   },
   "working_checkpoint": {
-    "parent": "b9edefc4",
-    "label": "original-condition-walk-mutations",
-    "repository_commit": "c86548d85a13b93cbb848e1a945d1eded92efcd6",
-    "evidence": "evidence/qa/N2-condition-walk.md",
-    "validation": "Frozen related138 PASS GCC/GCCsan/Clangsan;302 matching allocation manifests, initialized whole-walk/query/callback rollback and first-leaf admission. Full475 unrun; component evidence only.",
-    "next": "Resume concrete19 runtime creators and complete logical tick/effect admission under actual physics/AI/geometry/particle parents in the same N2 plan01/slice03. New-owner/effect lifecycle, lazy bone/event behavior and full startup/loaded simulation remain pending.",
+    "parent": "1ea25c4e611bef7315a392c2372245d6c7fdaf49",
+    "label": "original-particle-chain-admission-checkpoint",
+    "repository_commit": null,
+    "evidence": "evidence/qa/N2-particle-admission-checkpoint.md",
+    "validation": "Current focused6 PASS all3;18 matching manifests. Frozen related144 pending; full481 unrun. User-requested checkpoint, not slice/component acceptance.",
+    "next": "Run frozen related144 all3, then continue concrete19 tracker/bone/effect integration under real source parents, camera and actual startup/loaded simulation in the same N2 plan01/slice03.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03: whole-walk/mutation component validated with frozen related138 PASS all3 and302 matching manifests. Continue concrete19 logical tick/effect/new-owner admission with real source parents and recorded lazy bone/event contracts, then camera actor-follow and actual startup/loaded simulation. Full475, slice03 and N2 remain incomplete.",
+  "resume_point": "N2 plan01/slice03: particle-chain admission user-requested checkpoint; focused6 PASS all3 and18 matching manifests, related144 pending. Earlier whole-walk matrix is committed-source provenance only. Continue concrete19 tracker/bone/effect integration with real source parents, camera actor-follow and actual startup/loaded simulation. Full481, slice03 and N2 remain incomplete.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",

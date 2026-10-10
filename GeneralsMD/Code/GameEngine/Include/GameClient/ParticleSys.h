@@ -40,6 +40,7 @@
 #include "Common/Snapshot.h"
 #include "Common/SubsystemInterface.h"
 #include "GameClient/ClientRandomValue.h"
+#include <thread>
 
 #include "WWMath/matrix3d.h"		///< @todo Replace with our own matrix library
 #include "Common/STLTypedefs.h"
@@ -49,6 +50,7 @@
  
 class Particle;
 class ParticleSystem;
+class File;
 class ParticleSystemManager;
 class Drawable;
 class Object;
@@ -479,6 +481,7 @@ public:
  */
 class ParticleSystemTemplate : public MemoryPoolObject, protected ParticleSystemInfo
 {
+	friend class NativeParticleSystemAdmission;
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( ParticleSystemTemplate, "ParticleSystemTemplatePool" )		
 
 public:
@@ -530,9 +533,8 @@ class ParticleSystem : public MemoryPoolObject,
 
 public:
 
-	ParticleSystem( const ParticleSystemTemplate *sysTemplate, 
-									ParticleSystemID id,
-									Bool createSlaves );			///< create a particle system from a template and assign it this ID
+	ParticleSystem( const ParticleSystemTemplate *sysTemplate,
+									ParticleSystemID id ); ///< Unpublished state; manager admission owns the complete chain.
 
 	inline ParticleSystemID getSystemID( void ) const { return m_systemID; }	///< get unique system ID
 
@@ -711,6 +713,8 @@ protected:
 class ParticleSystemManager : public SubsystemInterface,
 															public Snapshot
 {
+	friend class NativeParticleSystemAdmission;
+	const std::thread::id m_creationThread=std::this_thread::get_id();
 
 public:
 

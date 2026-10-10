@@ -6266,3 +6266,44 @@ component-validated, including exact accepted binding/clock/source/pending/pause
 identity and namespace/client/Drawable cursor retirement. Earlier checkpoint
 language about those pending dedicated cases is historical; concrete tick,
 effect/new-owner enrollment, lazy hierarchy/sound and full runtime limits remain.
+
+### Particle-chain admission checkpoint (after 1ea25c4e)
+
+The original ParticleSystem constructor has one production acquisition caller:
+ParticleSystemManager::createParticleSystem in ParticleSys.cpp. The native
+continuation now stages the complete template chain iteratively, constructs
+unpublished pooled candidates parent-first (preserving source IDs and client
+wind RNG draws), links complete candidates, then registers child-first
+(preserving source list/update order). Candidate ownership persists across all
+fallible list appends. InitialDelay accepts the original defined nonnegative
+float-to-unsigned domain; negative/nonfinite/2^32 values reject before casting.
+
+NativeParticleSystemAdmission snapshots source ID, list boundary, client RNG
+and lazy slave-template caches. A lookup change is enrolled into every enclosing
+scope before writing. A caught nested failure therefore restores cold lookup
+demand even if the outer scope commits. An uncommitted outer scope immediately
+retires nested accepted creations under the actual manager; it does not call
+the accepted destroy path, which still only marks systems for later retirement.
+Saveability/destroy propagation is iterative over valid chains. Missing named
+slaves retain leaf behavior; template cycles reject before construction.
+
+The scope is creation-only: manager, client, borrowed configuration identity
+and templates must remain alive and unchanged until cleanup. It does not undo
+removal or mutation of pre-existing systems. Original createAttachedParticleSystemID
+calls manager creation then attachToObject; concrete model tracker append,
+attachment/bone effects and their complete parent lifecycle still need integration
+and validation. Serialized post-load link handling is unchanged; these tests do
+not establish malformed saved-graph rejection or complete particle simulation.
+
+MemoryInit.cpp configures the production ParticleSystemPool as initial1024,
+overflow32. Pool exhaustion tests instead precreate initial64/overflow0 via the
+public MemoryPoolFactory configuration, which userMemoryAdjustPoolSize honors
+when the initial count is explicit. This is an isolated fixture, not a changed
+production profile; growing-pool allocation/retained-capacity behavior remains
+outside this checkpoint's acceptance. GameClient's constructor owns global
+DrawGroupInfo through its service registry. A replacement client fixture must
+withdraw the borrowed group while constructing, retire the replacement under
+its own legitimate client identity, then restore borrowed publication without
+callbacks or allocations. Particle fixtures parse authored generated INI and
+use constructor-valid client frame state, not complete GameClient/GameData
+startup. Checkpoint evidence: evidence/qa/N2-particle-admission-checkpoint.md.
