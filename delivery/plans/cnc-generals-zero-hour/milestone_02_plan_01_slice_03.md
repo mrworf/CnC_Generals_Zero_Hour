@@ -4035,3 +4035,4 @@ the shared abstract producer. Whole Drawable dirty/forced/immediate condition
 walks, first-leaf malformed-root admission, concrete19/effects/movement parents,
 camera actor-follow, actual startup/loaded simulation and full465 remain pending.
 These are documented coupled integration work, not a new plan or N2 acceptance.
+Condition-animation producer payload commit: 43fc6b1eced6f85c26e5f2e5b11c955eea5fec9d.

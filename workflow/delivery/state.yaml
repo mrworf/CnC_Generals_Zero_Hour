@@ -28,13 +28,14 @@
   "working_checkpoint": {
     "parent": "f44b668adea375546d391d75827e296b4bbd1701",
     "label": "original-condition-animation-producer",
+    "repository_commit": "43fc6b1eced6f85c26e5f2e5b11c955eea5fec9d",
     "evidence": "evidence/qa/N2-condition-animation-producer.md",
     "validation": "Frozen related128 PASS GCC/GCCsan/Clangsan; source weighted client RNG rollback, pending transitions, pause/duration/frame callbacks and same-model controls/ObjectScale.278 matching allocation manifests. Full465 unrun; component evidence only.",
     "next": "Implement whole Drawable condition-walk publication/rollback and unconditional first-leaf root admission together; complete concrete19 movement/effect/event callbacks and condition transfer/material/prototypes, camera actor-follow, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full465, slice03 and N2 acceptance pending.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 supporting condition-animation producer checkpoint: frozen related128 PASS all3,278 matching allocation manifests, no live jobs. Implement whole Drawable condition-walk publication/rollback and unconditional first-leaf root admission together, then concrete19 movement/effect/event callbacks and condition transfer/material/prototypes, camera actor-follow, full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full465, slice03 and N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 supporting condition-animation producer checkpoint committed in43fc6b1eced6f85c26e5f2e5b11c955eea5fec9d: frozen related128 PASS all3,278 matching allocation manifests, no live jobs. Implement whole Drawable condition-walk publication/rollback and unconditional first-leaf root admission together, then concrete19 movement/effect/event callbacks and condition transfer/material/prototypes, camera actor-follow, full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full465, slice03 and N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -60,6 +61,7 @@
   "condition_producer_checkpoint": {
     "parent_commit": "f44b668adea375546d391d75827e296b4bbd1701",
     "documentation_inventory_commit": "5daba00f",
+    "repository_commit": "43fc6b1eced6f85c26e5f2e5b11c955eea5fec9d",
     "evidence": "evidence/qa/N2-condition-animation-producer.md",
     "status": "Frozen related128 PASS all3; verified supporting producer checkpoint, not concrete19/full startup/N2 acceptance",
     "canonical_source_files": 726,
