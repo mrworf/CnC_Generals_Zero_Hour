@@ -82,7 +82,10 @@ capacity; integrated scene demand and original ownership remain later gates.
 
 ## Headless original core
 
-No private assets, SDL or bgfx SDK is needed for the core-only build:
+No private assets or bgfx SDK is needed for this renderer-disabled configuration.
+The complete included original-runtime graph requires SDL3, FreeType, Fontconfig,
+zlib and OpenSSL3 Crypto development packages (`cmake/OriginalRuntime.cmake`).
+Disabling the renderer does not disable those logical/runtime dependencies:
 
 ```sh
 cmake -S . -B build/original-core-gcc -G Ninja -DCMAKE_BUILD_TYPE=Debug -DZH_BUILD_RENDERER=OFF

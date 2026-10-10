@@ -23,14 +23,16 @@ The user-approved replacement graph fixes this milestone's boundary.
 
 ## Preconditions
 
-- N6 accepted before implementation consumes its output.
-- PRE-09: see delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md.
+- N6 accepted before consuming its output.
+- PRE-02, PRE-04, PRE-09, PRE-10, PRE-14: named providers, boundaries and verification are in
+  `delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md`.
 
 ## Readiness checks
 
-- Inspect status.yaml and the named dependency acceptance evidence; pending providers are not accepted.
-- Inspect the governing plan and AGENTS.md; only linux-upstream-v2 is active.
-- Check the prerequisite manifest's command results and milestone-owned deliverables before starting.
+- Inspect the current definition/planning handoff and packet; only `linux-upstream-v2` is active.
+- Verify N6 completed and inspect the dependency pins/provenance and installation contracts.
+- Before portability acceptance, verify declared clean Arch/Ubuntu/Fedora environments with compiler/development prerequisites from `docs/build.md`; a Docker CLI alone is insufficient.
+- Before the upgrade trial, verify official source acquisition in an isolated ignored root through `tools/upstream_bgfx.py`; never reset or patch an existing dependency checkout.
 
 ## Functional Requirements
 

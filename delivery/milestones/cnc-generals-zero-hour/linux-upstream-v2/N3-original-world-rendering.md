@@ -23,15 +23,17 @@ The user-approved replacement graph fixes this milestone's boundary.
 
 ## Preconditions
 
-- N1 accepted before implementation consumes its output.
-- N2 accepted before implementation consumes its output.
-- PRE-03, PRE-04, PRE-06: see delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md.
+- N1 accepted before consuming its output.
+- N2 accepted before consuming its output.
+- PRE-03, PRE-04, PRE-05, PRE-06, PRE-10: named providers, boundaries and verification are in
+  `delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md`.
 
 ## Readiness checks
 
-- Inspect status.yaml and the named dependency acceptance evidence; pending providers are not accepted.
-- Inspect the governing plan and AGENTS.md; only linux-upstream-v2 is active.
-- Check the prerequisite manifest's command results and milestone-owned deliverables before starting.
+- Inspect the current definition/planning handoff and packet; only `linux-upstream-v2` is active.
+- Verify N1 and N2 completed with revision-specific acceptance in `status.yaml`; H1 alone does not accept visual providers.
+- Run `python3 tools/upstream_bgfx.py verify` for the exact locked dependency sources and `vulkaninfo --summary` in the normal host session. Inspect GPU/layer and supported display availability before physical tests; never treat sandbox ICD failure as missing host hardware.
+- Review current tool/library identity against N1 evidence. Revalidate affected suitability when pins/configuration change; retain original N1 completion history.
 
 ## Functional Requirements
 
@@ -73,3 +75,9 @@ Documentation-only work receives artifact review, not invented game tests.
 ## Known Risks / Deferred Work
 
 Prior simplified smudge and shroud fixtures are not visual parity references. User maps need explicit supported limits based on source behavior.
+
+## R07 qualification boundary
+
+H1 qualification in N2 omits physical output only. This milestone still owns complete source-required draw providers, ordered model animation/ticks, terrain/water/shadows/particles and real scene submission. Preserve existing useful CPU/model work and its affected regressions; H1 does not prove it complete.
+
+Governing clarification: `product/headless-qualification.md::HQ-04/HQ-07`.

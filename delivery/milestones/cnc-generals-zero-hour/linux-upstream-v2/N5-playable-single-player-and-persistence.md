@@ -23,15 +23,16 @@ The user-approved replacement graph fixes this milestone's boundary.
 
 ## Preconditions
 
-- N3 accepted before implementation consumes its output.
-- N4 accepted before implementation consumes its output.
-- PRE-04, PRE-07: see delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md.
+- N3 accepted before consuming its output.
+- N4 accepted before consuming its output.
+- PRE-04, PRE-07, PRE-10: named providers, boundaries and verification are in
+  `delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md`.
 
 ## Readiness checks
 
-- Inspect status.yaml and the named dependency acceptance evidence; pending providers are not accepted.
-- Inspect the governing plan and AGENTS.md; only linux-upstream-v2 is active.
-- Check the prerequisite manifest's command results and milestone-owned deliverables before starting.
+- Inspect the current definition/planning handoff and packet; only `linux-upstream-v2` is active.
+- Verify N3/N4 completed with original-runtime rendering, interaction and media evidence.
+- Before retail scenarios, inspect public-only input-availability/integrity results; never infer match support from H1 or archive indexing.
 
 ## Functional Requirements
 
@@ -73,3 +74,9 @@ Documentation-only work receives artifact review, not invented game tests.
 ## Known Risks / Deferred Work
 
 Windows 1.04 import is optional future work. Source fidelity is required even when archived modeled-runtime tests passed.
+
+## R07 qualification boundary
+
+N2 H1 is a bounded foundation demonstration. This milestone retains full original gameplay/combat/AI, representative full matches and cross-build saves/replays; simulation-facing model/bone/projectile queries require correct backing when reached.
+
+Governing clarification: `product/headless-qualification.md::HQ-04/HQ-07`.

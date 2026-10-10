@@ -23,15 +23,17 @@ The user-approved replacement graph fixes this milestone's boundary.
 
 ## Preconditions
 
-- N1 accepted before implementation consumes its output.
-- N2 accepted before implementation consumes its output.
-- PRE-03, PRE-04, PRE-06: see delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md.
+- N1 accepted before consuming its output.
+- N2 accepted before consuming its output.
+- PRE-03, PRE-04, PRE-05, PRE-06, PRE-10, PRE-12: named providers, boundaries and verification are in
+  `delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md`.
 
 ## Readiness checks
 
-- Inspect status.yaml and the named dependency acceptance evidence; pending providers are not accepted.
-- Inspect the governing plan and AGENTS.md; only linux-upstream-v2 is active.
-- Check the prerequisite manifest's command results and milestone-owned deliverables before starting.
+- Inspect the current definition/planning handoff and packet; only `linux-upstream-v2` is active.
+- Verify N1 and N2 completed with acceptance evidence in `status.yaml`.
+- Verify the upstream lock and normal-host GPU/session as for N3. Inspect SDL3/FreeType/Fontconfig/FFmpeg package discovery in `docs/build.md` and the prerequisite manifest.
+- Before interaction/media acceptance, verify an ordinary supported display/input session and usable output device; exercise specified no-audio-device behavior separately.
 
 ## Functional Requirements
 
@@ -73,3 +75,9 @@ Documentation-only work receives artifact review, not invented game tests.
 ## Known Risks / Deferred Work
 
 System fonts may differ; preserve intended layout and supplied locale semantics. Do not infer audio correctness from silent mocks alone.
+
+## R07 qualification boundary
+
+N2 headless/no-device behavior does not accept actual UI, decoder, voice or movie output. This milestone retains original interaction/media and loading/error journeys; reuse correct existing components with their regression obligations.
+
+Governing clarification: `product/headless-qualification.md::HQ-04/HQ-07`.

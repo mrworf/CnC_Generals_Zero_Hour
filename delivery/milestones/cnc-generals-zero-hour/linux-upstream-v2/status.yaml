@@ -4,13 +4,50 @@
   "packet_id": "linux-upstream-v2",
   "compiled_from": {
     "product_id": "cnc-generals-zero-hour",
-    "input_mode": "CHANGE_PLAN",
-    "plan": {
+    "input_mode": "PRODUCT_BUILD",
+    "definition_package": {
+      "path": "workflow/definition/definition-package.yaml",
+      "revision": "sha256:d6793f43362575ee1ec7ef435130f77d0a6ce80c1d42067f8c0513f59615e874",
+      "repository_commit": "e0a32f1c92b113733bbe588cfc00aeb7b019e4d7"
+    },
+    "authority": "Validated bounded R07/HQ-01\u201307 amendment; inherited approved R01\u2013R12 and N0\u2013N7 graph preserved. No whole-game recertification.",
+    "sources": {
+      "prd": {
+        "path": "docs/zero-hour-linux-port-plan.md",
+        "revision": "sha256:8a45e1772c800e2a74dd0e4df00f6ad97e11edb2db28a3aedbed8463684a8f74"
+      },
+      "qualification": {
+        "path": "product/headless-qualification.md",
+        "revision": "sha256:be4b5f15f1023c0fa97edd0d39006efdf365f6ad762398924b5e8e56d75bf92b"
+      },
+      "coverage": {
+        "path": "docs/zero-hour-linux-port-plan-coverage-matrix.md",
+        "revision": "sha256:82a2f89781feced2bbc222c9c8c2ddb35deacf7cd77ba22180c0549e10d218c1"
+      },
+      "journeys": {
+        "path": "docs/zero-hour-linux-port-plan-user-journey-audit.md",
+        "revision": "sha256:9b23f19060298cd7a6b4cc8c425dca15989d6d87f50b7e80dc7a8abd8854cd4b"
+      },
+      "ux": {
+        "manifest": "product/ux/manifest.yaml",
+        "revision": "sha256:708ca54ec9e93d62084c6f163acba3e4bc1212cbcd372df88f5f397aad854997",
+        "scope": "headless developer experience only; original game UX unchanged"
+      },
+      "architecture": {
+        "path": "product/architecture/headless-review.md",
+        "revision": "sha256:0d682587c7dd7f89d72ba4ace76521a650cc146e0f4435aa817aa232a59470b7"
+      },
+      "security": {
+        "path": "product/security/headless-review.md",
+        "revision": "sha256:09aba3f3eab1088212c69ff038a7bd11646c6151f7181fac9b3687eb206c4f1b"
+      }
+    },
+    "previous_compilation": {
+      "input_mode": "CHANGE_PLAN",
       "path": "docs/zero-hour-linux-port-plan.md",
       "revision": "sha256:0316702c3fb75979f3ef5cdafb3adcf3a4c1bfa3dc84e94f883aceb6ce49bf90",
       "repository_commit": "d0483ca911b029460fb46d878fe260e90ec8d071"
-    },
-    "authority": "User-approved complete restart and replacement graph; no old packet preservation obligation."
+    }
   },
   "milestones": [
     {
@@ -57,7 +94,16 @@
       ],
       "completed_at": null,
       "evidence": null,
-      "notes": "Core and rooted-data slices accepted, 18/18 normal/GCC/Clang original cases; six complete repeated ownership sweeps and read-only stage4/mask63 input-integrity probe. Actual GameEngine/GameLogic slice03 remains the N2 completion gate. Evidence: evidence/qa/N2-original-core.md and evidence/qa/N2-original-data.md."
+      "notes": "Core and rooted-data slices accepted, 18/18 normal/GCC/Clang original cases; six complete repeated ownership sweeps and read-only stage4/mask63 input-integrity probe. The prior plan assigned actual GameEngine/GameLogic integration to slice03; the amended N2 completion gate is HQ-01\u201307, to be delivered under a fresh remaining-work plan. Evidence: evidence/qa/N2-original-core.md and evidence/qa/N2-original-data.md. Planning amendment: finish HQ-01\u201307; create a fresh remaining-work governing plan before resuming implementation. Preserve old slice03 as history and unaccepted work; indexing is not actual startup acceptance.",
+      "qualification_requirements": [
+        "HQ-01",
+        "HQ-02",
+        "HQ-03",
+        "HQ-04",
+        "HQ-05",
+        "HQ-06",
+        "HQ-07"
+      ]
     },
     {
       "id": "N3",

@@ -4,47 +4,129 @@
   "product_id": "cnc-generals-zero-hour",
   "packet_id": "linux-upstream-v2",
   "status": "ready_for_implementation",
+  "scope": "Bounded R07/HQ-01\u201307 adoption; inherited baseline and N0\u2013N7 graph preserved; no implementation acceptance",
   "source": {
-    "mode": "CHANGE_PLAN",
-    "path": "docs/zero-hour-linux-port-plan.md",
-    "revision": "sha256:0316702c3fb75979f3ef5cdafb3adcf3a4c1bfa3dc84e94f883aceb6ce49bf90",
-    "repository_commit": "d0483ca911b029460fb46d878fe260e90ec8d071"
+    "mode": "PRODUCT_BUILD",
+    "type": "definition-package",
+    "path": "workflow/definition/definition-package.yaml",
+    "revision": "sha256:d6793f43362575ee1ec7ef435130f77d0a6ce80c1d42067f8c0513f59615e874",
+    "repository_commit": "e0a32f1c92b113733bbe588cfc00aeb7b019e4d7"
   },
   "planning": {
-    "repository_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808"
+    "parent_commit": "9b320660d8679f5f8bbcf690b8c50dcdca675f2a",
+    "repository_commit": null,
+    "provenance_closeout_required": true
   },
   "milestones": {
     "manifest": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",
-    "packet_revision": "sha256:c51d32dc98bc0d0926ce091b1e38f20880136ad1477269abc7925b2e92d7361a"
+    "packet_revision": "sha256:d1674083fa941836e9ecf1790cd42001d23525d918fbba2dc08ec7688e721bcd",
+    "revision_algorithm": "sha256 of compact sort_keys JSON list of {path,revision}, sorted by path, covering every packet file",
+    "revision_inputs": [
+      {
+        "path": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N0-clean-baseline-and-specification.md",
+        "revision": "sha256:37559999749cfbf292f06c2b7788cbfbd76b76804e30a052e3c02503e49d17f1"
+      },
+      {
+        "path": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N1-stock-renderer-suitability.md",
+        "revision": "sha256:62b405807ced95340ba88fb931168b3f15a2aff66850dc70c569be025384ebec"
+      },
+      {
+        "path": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N2-original-engine-linux-foundation.md",
+        "revision": "sha256:157eb09b815849318164ecb1dcc914324970e5e450aa40215ee8ce5430a037ae"
+      },
+      {
+        "path": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N3-original-world-rendering.md",
+        "revision": "sha256:e0c648ee73aa91b8532ff5ecbf0e417b039825efc6ef85f540827f2d163b362b"
+      },
+      {
+        "path": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N4-interactive-platform-and-media.md",
+        "revision": "sha256:196055a5fe6a87f5ddf97245bed10e4f796b80f3289e57e8f53393641277fe61"
+      },
+      {
+        "path": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N5-playable-single-player-and-persistence.md",
+        "revision": "sha256:674257b9389411fb71dbc3c87d27ad43ad617f75d1a1c80aa168c6b53190a0b8"
+      },
+      {
+        "path": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N6-linux-lan-matches.md",
+        "revision": "sha256:cb6c28df0e41472c173164d0348a8e0893fb8fd553b1cf518259da80f2e1da77"
+      },
+      {
+        "path": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N7-release-and-dependency-maintenance.md",
+        "revision": "sha256:eef9c783d2f2144a472870d01aca00b0c5acb4e4b4aece9b8fb0433848082ab7"
+      },
+      {
+        "path": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/index.md",
+        "revision": "sha256:82fc15194f482aa1d7e7576d1bee2e0595623c525368b093276e2e7081686f09"
+      },
+      {
+        "path": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",
+        "revision": "sha256:225cefb8416d3de62fc231bdf1020d47b6fadacd281deb26e812e453a20663c9"
+      },
+      {
+        "path": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/traceability.md",
+        "revision": "sha256:0c536858b4aeb5abcf5e40a974dd046a1fe03318fa705915ad1b5ccdae19fb87"
+      }
+    ]
   },
   "readiness": {
     "status": "READY_WITH_EXTERNAL_DEPENDENCIES",
     "prerequisite_manifest": "delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md",
-    "result": "delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/readiness-report.md"
+    "result": "delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/readiness-report.md",
+    "specialist_result": "workflow/delivery-planning/readiness-result.yaml"
   },
   "m0": {
     "present": false,
-    "rationale": "User-specified N0 recovery outcome; no extra readiness M0"
+    "milestone": null,
+    "rationale": "No readiness-created M0; completed approved N0 retained."
   },
   "external_dependencies": [
     {
       "id": "PRE-04",
-      "owner": "user",
+      "owner": "asset owner; N2 implementer validates",
       "first_consuming_milestone": "N2",
-      "completion_evidence": "Original-data validation passes against locally supplied read-only files",
-      "blocking_boundary": "Retail-data validation; existing link retained"
+      "blocking_boundary": "HQ-06 supplied-data probe and N2 acceptance, not generated development",
+      "completion_evidence": "Actual original post-init, clean teardown and redacted unchanged input integrity; later consumers validate representative scenarios",
+      "status": "unverified"
+    },
+    {
+      "id": "PRE-03",
+      "owner": "local user/host",
+      "first_consuming_milestone": "N3",
+      "historical_consumer": "N1 completed; no current hardware revalidation",
+      "blocking_boundary": "N3/N4 physical validation",
+      "completion_evidence": "Normal-host supported Vulkan device/validation layer/display session and required physical test evidence",
+      "status": "unverified_current_environment"
+    },
+    {
+      "id": "PRE-12",
+      "owner": "local user/host",
+      "first_consuming_milestone": "N4",
+      "blocking_boundary": "Original interaction/media physical validation",
+      "completion_evidence": "Supported display/input and actual audible playback evidence, plus separately tested no-device behavior",
+      "status": "unverified"
     },
     {
       "id": "PRE-09",
-      "owner": "maintainer",
+      "owner": "user/maintainer environment owner",
       "first_consuming_milestone": "N7",
-      "completion_evidence": "Clean supported distribution builds",
-      "blocking_boundary": "Release acceptance"
+      "blocking_boundary": "Clean distribution build/install portability validation",
+      "completion_evidence": "Usable clean Arch/Ubuntu/Fedora environments and successful declared build/install matrix",
+      "status": "unverified"
     }
   ],
   "next": {
     "workflow": "implementation",
-    "recommended_skill": "minimal-slice-delivery",
-    "milestone": "N1"
+    "recommended_skill": "milestone-delivery-orchestrator",
+    "start_milestone": "N2",
+    "entry_action": "Adopt current packet and create a fresh minimal-slice governing plan for remaining HQ-01\u201307 work before production changes.",
+    "delivery_state": "workflow/delivery/state.yaml",
+    "supersession": {
+      "prior_governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
+      "prior_open_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+      "required_action": "Preserve accepted core/data slices and historical evidence. Inventory all open/dirty work against HQ-01\u201307, explicitly supersede old slice03 as remaining-work directive and replace conflicting Full475/Full509/active_implementation pointers coherently in delivery-owned state. Do not mark old slice complete without evidence.",
+      "state_updated_by_this_run": false
+    },
+    "preservation": "All 17 pre-existing code/test/build/slice edits remain byte-identical and unaccepted; do not discard, absorb or treat them as acceptance.",
+    "downstream_invoked": false
   }
 }

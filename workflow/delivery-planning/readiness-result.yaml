@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "skill": "milestone-readiness",
+  "execution": "inline, parent-owned; no sub-agents or child commit",
+  "status": "READY_WITH_EXTERNAL_DEPENDENCIES",
+  "packet_manifest": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",
+  "prerequisite_manifest": "delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md",
+  "report": "delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/readiness-report.md",
+  "changed_paths": [
+    "docs/build.md",
+    "delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md",
+    "delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/readiness-report.md",
+    "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N3-original-world-rendering.md",
+    "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N4-interactive-platform-and-media.md",
+    "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N5-playable-single-player-and-persistence.md",
+    "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N6-linux-lan-matches.md",
+    "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N7-release-and-dependency-maintenance.md"
+  ],
+  "new_m0": false,
+  "correction_cycles": 0,
+  "validation": {
+    "fresh_headless_configures": {
+      "gcc": 0,
+      "gcc_sanitizers": 0,
+      "clang_sanitizers": 0
+    },
+    "runtime_acceptance_executed": false,
+    "clean_environment_simulation": "passed with declared external boundary conditions",
+    "external_ids": [
+      "PRE-03",
+      "PRE-04",
+      "PRE-09",
+      "PRE-12"
+    ]
+  },
+  "packet_revision": "sha256:d1674083fa941836e9ecf1790cd42001d23525d918fbba2dc08ec7688e721bcd"
+}

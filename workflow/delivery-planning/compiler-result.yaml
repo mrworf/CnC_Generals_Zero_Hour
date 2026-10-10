@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "skill": "delivery-milestone-compiler",
+  "execution": "inline, parent-owned; no sub-agents or child commit",
+  "status": "COMPILED",
+  "source": {
+    "mode": "PRODUCT_BUILD",
+    "type": "definition-package",
+    "path": "workflow/definition/definition-package.yaml",
+    "revision": "sha256:d6793f43362575ee1ec7ef435130f77d0a6ce80c1d42067f8c0513f59615e874",
+    "repository_commit": "e0a32f1c92b113733bbe588cfc00aeb7b019e4d7"
+  },
+  "packet_manifest": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",
+  "changed_paths": [
+    "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",
+    "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/index.md",
+    "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/traceability.md",
+    "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N2-original-engine-linux-foundation.md",
+    "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N3-original-world-rendering.md",
+    "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N4-interactive-platform-and-media.md",
+    "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N5-playable-single-player-and-persistence.md"
+  ],
+  "validation": [
+    "8 milestone records/contracts passed installed validator",
+    "Current indexed definition hashes and six recorded passes verified; no revalidation duplicated",
+    "Producer commit exists in current history",
+    "R01\u2013R12 and HQ-01\u201307 mapped; no unresolved or unmapped implementation obligation",
+    "N0\u2013N7 IDs, graph and implementation statuses preserved; N0/N1 contracts unchanged",
+    "No implementation slices, product authority or pre-existing dirty files changed"
+  ],
+  "boundary": "Complete amended packet ready for milestone-readiness. Passed definition scope is R07/HQ amendment; inherited baseline remains authoritative."
+}

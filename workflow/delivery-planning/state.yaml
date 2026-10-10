@@ -5,25 +5,29 @@
   "packet_id": "linux-upstream-v2",
   "status": "ready_with_external_dependencies",
   "transaction": {
-    "parent_commit": "d0483ca911b029460fb46d878fe260e90ec8d071",
-    "repository_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808"
+    "parent_commit": "9b320660d8679f5f8bbcf690b8c50dcdca675f2a",
+    "repository_commit": null,
+    "provenance_closeout_required": true
   },
   "source": {
-    "mode": "CHANGE_PLAN",
-    "path": "docs/zero-hour-linux-port-plan.md",
-    "revision": "sha256:0316702c3fb75979f3ef5cdafb3adcf3a4c1bfa3dc84e94f883aceb6ce49bf90",
-    "repository_commit": "d0483ca911b029460fb46d878fe260e90ec8d071"
+    "mode": "PRODUCT_BUILD",
+    "type": "definition-package",
+    "path": "workflow/definition/definition-package.yaml",
+    "revision": "sha256:d6793f43362575ee1ec7ef435130f77d0a6ce80c1d42067f8c0513f59615e874",
+    "repository_commit": "e0a32f1c92b113733bbe588cfc00aeb7b019e4d7"
   },
   "stages": {
     "compilation": {
       "status": "COMPILED",
       "packet_manifest": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",
-      "result": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/index.md"
+      "result": "workflow/delivery-planning/compiler-result.yaml",
+      "packet_revision": "sha256:d1674083fa941836e9ecf1790cd42001d23525d918fbba2dc08ec7688e721bcd"
     },
     "readiness": {
       "status": "READY_WITH_EXTERNAL_DEPENDENCIES",
       "prerequisite_manifest": "delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md",
-      "result": "delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/readiness-report.md"
+      "result": "delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/readiness-report.md",
+      "specialist_result": "workflow/delivery-planning/readiness-result.yaml"
     }
   },
   "blockers": [],
@@ -31,5 +35,10 @@
   "handoff": {
     "status": "ready_for_implementation",
     "path": "workflow/delivery-planning/handoff.yaml"
+  },
+  "source_transition": {
+    "reason": "Adopt committed bounded R07/HQ amendment; prior specification fingerprint is stale. Same approved packet and graph.",
+    "previous_mode": "CHANGE_PLAN",
+    "previous_revision": "sha256:0316702c3fb75979f3ef5cdafb3adcf3a4c1bfa3dc84e94f883aceb6ce49bf90"
   }
 }

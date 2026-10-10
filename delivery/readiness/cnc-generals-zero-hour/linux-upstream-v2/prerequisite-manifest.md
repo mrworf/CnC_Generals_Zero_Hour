@@ -1,38 +1,81 @@
 # Milestone prerequisite manifest
 
-Product: cnc-generals-zero-hour. Packet: delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml.
-Source transaction: d0483ca911b029460fb46d878fe260e90ec8d071.
-Audited packet: linux-upstream-v2 initial compilation; revision recorded in handoff.
-Planning transaction: workflow/delivery-planning/handoff.yaml.
-Audit: 2026-10-07. Intended order N0→N1→N2→N3→N4→N5→N6→N7.
+Product: `cnc-generals-zero-hour`. Packet:
+`delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml`.
+Audited packet revision: recorded in `workflow/delivery-planning/handoff.yaml`.
+Source transaction: `e0a32f1c92b113733bbe588cfc00aeb7b019e4d7`.
+Planning transaction: finalized in `workflow/delivery-planning/handoff.yaml::planning.repository_commit`.
+Audit: 2026-10-10. Intended order: N0→N1→N2→N3→N4→N5→N6→N7,
+from `docs/zero-hour-linux-port-plan.md::Delivery order`. N0/N1 completed; next N2.
 
-| ID | Description | Consumers | Classification | Status/provider | Class | Verification/commands executed | Files changed | Blocking | Evidence |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| PRE-01 | Approved baseline, recovery and local toolchain | N0,N1,N2 | Already satisfied | Verified/repository and host | AUTO | git bundle verify; original-subtree diff; gcc/clang/cmake/ninja/python version checks | N0 artifacts | Yes | FACT: recovery evidence; GCC16.2.1, Clang22.1.8, CMake4.4.3, Ninja1.13.2, Python3.14.7 |
-| PRE-02 | Official upstream acquisition | N1 | Already satisfied | Network access verified; pins/build owned by N1 | AUTO | git ls-remote official bgfx HEAD succeeded outside sandbox | None | Yes | FACT: official HEAD cca91681c953d2de9531197b0f580c866ffaa775 observed; this alone is not a build |
-| PRE-03 | Vulkan hardware and validation | N1,N3,N4 | Already satisfied | Verified/host | AUTO | vulkaninfo --summary outside sandbox | None | Yes | FACT: RTX4070, NVIDIA615.71.09, Vulkan1.4.351 device, Khronos layer1.4.357 |
-| PRE-04 | User-supplied retail data and representative scenarios | N2,N3,N4,N5 | Requires user action | Existing link preserved; completeness verified by N2 diagnostics, owner user | USER_ACTION | Link identity checked without reading target; content validation not run | None | At retail boundary only | FACT: link preserved; INFERENCE: usable licensed data based on user statements, verify in N2 |
-| PRE-05 | Development packages/public headers | N1,N2 | Already satisfied | Verified/host; clean-machine instructions owned by consumers | AUTO | pkg-config versions for SDL3, FreeType, Fontconfig,zlib,FFmpeg,X11,GL,Wayland,Vulkan | None | Yes | FACT: all queries succeeded; no OS installs performed |
-| PRE-06 | Accepted renderer and actual original process | N3,N4 | Provided by an earlier milestone | Pending/N1,N2 | AUTO | Inspect accepted statuses and evidence before entry; not run yet | None | Yes | FACT: explicit graph providers |
-| PRE-07 | Integrated world, UI and media | N5 | Provided by an earlier milestone | Pending/N3,N4 | AUTO | Inspect accepted statuses and source-runtime evidence; not run yet | None | Yes | FACT: explicit graph providers |
-| PRE-08 | Playable deterministic process and local UDP facility | N6 | Provided by an earlier milestone | N5 provides process; N6 owns nonprivileged UDP probe | AUTO | Source/runtime acceptance then local socket probe; not run | None | Yes | INFERENCE: local host sockets usable outside sandbox; N6 verifies before integration |
-| PRE-09 | Clean distribution build environments | N7 | Requires user action | External host/container availability verified at N7; owner user/maintainer | USER_ACTION | command -v docker succeeded; daemon/images not assumed available | None | At N7 only | FACT: CLI present; INFERENCE: clean Ubuntu/Fedora environments can be acquired, verify then |
+| ID | Description | Consumers | Classification | Current status | Proposed provider | Class | Verification | Commands executed | Files changed | Blocking | Evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| PRE-01 | Approved baseline and build tools | N0,N1,N2 | Already satisfied | N0 preserved; current tools verified | Repository/host | AUTO | Status evidence; compiler/CMake/Ninja/Python version queries | Version queries passed; no archive access | None | Before build; satisfied | FACT: AGENTS.md; status.yaml; environment checks below |
+| PRE-02 | Pristine upstream sources/acquisition | N1,N3,N4,N7 | Owned by the consuming milestone | N1 historical pass; future acquisition/verification pending | N1 already delivered; N3/N4 verify; N7 upgrade | AUTO | Locked sources match third_party/bgfx.lock.json; documented verify/acquire/build | Not run (no renderer change) | None | Before renderer/upgrade validation | FACT: tools/upstream_bgfx.py and docs/build.md; no current network claim |
+| PRE-03 | Physical Vulkan/session/validation facility | N1,N3,N4 | Requires user action | Historical host success; current GPU/session unverified | Local user/host | USER_ACTION | Normal-host vulkaninfo --summary; live supported session; public capability result | CLI presence only; device test not run | N3/N4 readiness sections | At N3/N4 physical validation; not N2 | FACT: N1 evidence is historical; INFERENCE: facility can be reprovided; verify at boundary |
+| PRE-04 | Locally supplied original data and representative scenarios | N2,N3,N4,N5,N6,N7 | Requires user action | Unverified for current native startup/scenarios; earlier index/integrity only | Asset owner supplies read-only roots; consumer validates | USER_ACTION | Actual native post-init/teardown and redacted integrity for N2; scenario/install checks at later consumers | Not run; no private inputs inspected | N2/N6/N7 readiness sections | N2 retail probe and acceptance, later retail validation; not generated development | FACT: HQ-06; evidence/qa/N2-original-data.md is not native startup |
+| PRE-05 | Declared development headers/libraries | N1,N2,N3,N4 | Already satisfied | Current discovery/configure passed; later integration may require own declared additions | Host; docs/build.md | AUTO | pkg-config plus fresh renderer-disabled CMake configuration in three variants | All queries and three configures passed | docs/build.md | Before relevant configure; satisfied for N2 | FACT: cmake/OriginalRuntime.cmake requires zlib/FreeType/Fontconfig/OpenSSL3/SDL3 |
+| PRE-06 | Accepted renderer and original process | N3,N4 | Provided by an earlier milestone | N1 completed; N2 in progress | N1,N2 | AUTO | Inspect status plus exact accepted source/configuration evidence | Manifest inspection; acceptance not rerun | N3/N4 boundary and readiness sections | Before N3/N4 implementation consumes providers | FACT: approved graph and status.yaml |
+| PRE-07 | Integrated original world, UI/media | N5 | Provided by an earlier milestone | Pending | N3,N4 | AUTO | Source-runtime scene/UI/media acceptance | Not run | N5 readiness section | Before N5 consumes providers | FACT: approved graph; HQ does not replace later acceptance |
+| PRE-08 | Playable deterministic original process | N6 | Provided by an earlier milestone | Pending | N5 | AUTO | Full-match and persistence/determinism acceptance | Not run | N6 readiness section | Before N6 implementation consumes provider | FACT: N5 contract and graph; local UDP split into PRE-13 |
+| PRE-09 | Clean Arch/Ubuntu/Fedora environments | N7 | Requires user action | Docker CLI present; daemon/images/clean hosts unverified | User/maintainer environment owner | USER_ACTION | Clean environment with declared tools/development packages; successful clean configure/build/install matrix | CLI presence only; no daemon/service/image operation | N7 readiness section | At N7 portability validation | FACT: CLI exists; INFERENCE: environments obtainable; verify before validation |
+| PRE-10 | Current bounded definition and packet | N2,N3,N4,N5,N6,N7 | Already satisfied | Exact source hashes, recorded passes and producer ancestry verified | Committed definition package; this planning transaction | AUTO | Hash/ancestry/graph/coverage/contract validation | Passed; provenance finalized before handoff | Packet/state/handoff | Before execution; no unresolved authority | FACT: definition package; compiler-result.yaml |
+| PRE-11 | Remaining N2 plan, native root/H1/evidence harness | N2 | Owned by the consuming milestone | Pending implementation; old slice03 cannot govern new work unreviewed | N2 delivery planner and implementation | AUTO | Fresh governing plan; accepted-work inventory; HQ-01–07 mapped finite outcomes; actual native traces | Contract/source-target inspection only; no acceptance | N2 contract and packet index | Plan before code; runtime/harness before acceptance | FACT: EXCLUDE_FROM_ALL link probe is not runtime; HQ-01–07 |
+| PRE-12 | Original interaction/audio/media validation facility | N4 | Requires user action | Package discovery verified; actual session/devices unverified | Local user/host | USER_ACTION | Supported display/input and audible output for playback evidence; exercise no-device separately | Not run | N4 readiness section | At N4 physical interaction/media validation | FACT: N4 functional/acceptance contract; INFERENCE: host facility available, verify then |
+| PRE-13 | Nonprivileged local UDP harness | N6 | Owned by the consuming milestone | Pending probe/harness | N6 | AUTO | Two local processes bind/exchange and complete required deterministic session/failure checks | Not run | N6 readiness section | Before LAN validation; host restrictions cause explicit blocker | FACT: N6 owns local transport adaptation; no external service required |
+| PRE-14 | Synchronized match outcome | N7 | Provided by an earlier milestone | Pending | N6 | AUTO | N6 accepted two-process match evidence | Not run | N7 readiness section | Before N7 consumes provider | FACT: approved N6→N7 edge |
 
-N1 owns stock source locking/bootstrap and executable GPU fixtures; N2 owns original
-source build/bootstrap and asset validators. These are deliverables, not hidden
-preconditions requiring already-written code. N7 owns packaging/upgrade tooling.
+## Verification boundaries and owner instructions
 
-The sandbox cannot resolve GitHub or load the host NVIDIA ICD. The identical
-read-only checks succeeded outside it through the execution approval mechanism.
-Do not misclassify sandbox driver visibility as a missing host driver.
+PRE-04: generated H1 work is available without retail inputs. Before the N2 supplied-data
+probe, the asset owner makes existing lawful Generals/Zero Hour inputs readable using local
+explicit roots and separate user storage. No upload, copy into Git or retail modification.
+The N2 implementer supplies the actual native probe and bounded audit wrapper; exact CLI is
+that deliverable, not an invented command here. Completion is redacted actual post-init,
+clean teardown and unchanged integrity. Missing data then blocks acceptance. Existing
+stage4/mask63 evidence cannot clear this gate. Later consumers validate their own scenes.
 
-Delivery evidence update (N2 slice02): the read-only data probe reached
-stage4/mask63 and complete before/after SHA256/metadata snapshots were unchanged.
-`evidence/qa/N2-original-data.md` establishes archive admission, basic startup
-content families and populated actual text ownership. PRE04's actual startup
-and representative scenario completeness remains pending at slice03/later
-consumers; this partial evidence does not remove those prerequisite gates.
+PRE-03/PRE-12: before physical validation, use the normal host execution context and
+supported display/input/GPU/audio facilities. If checks fail, the user/host owner restores
+the required facility; do not install OS packages, change drivers or privileges here.
+Record capability and bounded diagnostic results without private device/host identifiers.
+N2 requires logical/runtime libraries, but no physical graphics/audio session.
 
-No new M0 is required: the user explicitly specified N0's recoverable-reset
-outcome. Later milestone outputs have named providers. Ordinary consumers share
-the documented build conventions but headless N2 does not require N1 acceptance.
+PRE-09: before N7, the maintainer provides clean Arch/Ubuntu/Fedora hosts or containers
+with declared build dependencies and lawful local data for installed smoke tests. Verify
+usable environments and the clean build/install matrix, not only a container CLI. Privileged
+OS setup or unavailable facilities become user-action blockers at that boundary.
+
+PRE-11: milestone-owned plan and product code are deliverables, not missing external
+prerequisites. A fresh remaining-work plan must adopt HQ-01–07, preserve accepted code/tests
+and dirty work, replace stale delivery pointers coherently and choose finite behavior exits.
+No feature implementation or slice creation is performed by readiness.
+
+## Current observed environment
+
+- `gcc`: g++ (GCC) 16.2.1 20260810 (exit 0).
+- `clang`: clang version 23.1.1 (exit 0).
+- `cmake`: cmake version 4.4.4 (exit 0).
+- `ninja`: 1.13.2 (exit 0).
+- `python`: Python 3.14.7 (exit 0).
+- `pkg:sdl3`: 3.4.18 (exit 0).
+- `pkg:freetype2`: 26.6.20 (exit 0).
+- `pkg:fontconfig`: 2.18.3 (exit 0).
+- `pkg:zlib`: 1.3.2 (exit 0).
+- `pkg:libavcodec`: 63.1.102 (exit 0).
+- `pkg:libavformat`: 63.1.102 (exit 0).
+- `pkg:libavutil`: 61.1.102 (exit 0).
+- `pkg:libswresample`: 7.1.102 (exit 0).
+- `pkg:libswscale`: 10.1.102 (exit 0).
+- `pkg:vulkan`: 1.4.363 (exit 0).
+- `pkg:x11`: 1.8.13 (exit 0).
+- `pkg:gl`: 1.2 (exit 0).
+- `pkg:wayland-client`: 1.26.0 (exit 0).
+- `pkg:libcrypto`: 3.6.5 (exit 0).
+
+Three fresh temporary CMake configurations passed: normal GCC, GCC with ZH_SANITIZE,
+Clang with ZH_SANITIZE; all Debug/Ninja, ZH_BUILD_RENDERER=OFF. No compile/runtime/sanitizer
+or H1 acceptance executed. Installed versions differ from historical evidence; historical
+results are not transferred to these configurations. Configure observed current worktree,
+including preserved unaccepted edits; prerequisite discovery was also inspected in committed
+CMake sources. No dependence on ignored build outputs was needed for these configurations.

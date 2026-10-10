@@ -23,14 +23,16 @@ The user-approved replacement graph fixes this milestone's boundary.
 
 ## Preconditions
 
-- N5 accepted before implementation consumes its output.
-- PRE-08: see delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md.
+- N5 accepted before consuming its output.
+- PRE-04, PRE-08, PRE-10, PRE-13: named providers, boundaries and verification are in
+  `delivery/readiness/cnc-generals-zero-hour/linux-upstream-v2/prerequisite-manifest.md`.
 
 ## Readiness checks
 
-- Inspect status.yaml and the named dependency acceptance evidence; pending providers are not accepted.
-- Inspect the governing plan and AGENTS.md; only linux-upstream-v2 is active.
-- Check the prerequisite manifest's command results and milestone-owned deliverables before starting.
+- Inspect the current definition/planning handoff and packet; only `linux-upstream-v2` is active.
+- Verify N5 completed with playable original-process and deterministic evidence.
+- Before network acceptance, perform N6-owned nonprivileged two-process UDP check on normal host; no firewall/network-account change is presumed.
+- Verify supplied-data availability for both processes without writing into original mounts; network test harness and exact commands are N6 deliverables.
 
 ## Functional Requirements
 
