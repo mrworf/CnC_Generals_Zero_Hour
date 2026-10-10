@@ -2,6 +2,7 @@
 // Copyright 2025 Electronic Arts Inc. Original W3DModelDraw definitions.
 #pragma once
 #include "Common/W3DModelConditionData.h"
+#include "Common/W3DModelAnimationFlags.h"
 #include "Common/Module.h"
 
 //typedef std::hash_map< TransitionSig, ModelConditionInfo, std::hash<TransitionSig>, std::equal_to<TransitionSig> > TransitionMap;

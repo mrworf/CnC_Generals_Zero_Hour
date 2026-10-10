@@ -15,6 +15,7 @@ public:
   float previousFrame()const noexcept{return m_previous;}
   float direction()const noexcept{return m_direction;}
   float multiplier()const noexcept{return m_multiplier;}
+  Mode mode()const noexcept{return m_mode;}
   bool complete()const noexcept;
 private:
   std::uint32_t m_frames=0,m_sync=0;

@@ -38,6 +38,19 @@
 extern Int GetGameClientRandomValue( int lo, int hi, const char *file, int line );
 extern Real GetGameClientRandomValueReal( Real lo, Real hi, const char *file, int line );
 
+// Main-thread candidate lease for the original client stream only. Nested
+// scopes retain the outer rollback boundary; no replacement PRNG or allocation.
+class GameClientRandomTransaction final {
+  UnsignedInt m_previous[6];
+  bool m_committed=false;
+public:
+  GameClientRandomTransaction() noexcept;
+  ~GameClientRandomTransaction() noexcept;
+  GameClientRandomTransaction(const GameClientRandomTransaction&)=delete;
+  GameClientRandomTransaction& operator=(const GameClientRandomTransaction&)=delete;
+  void commit() noexcept {m_committed=true;}
+};
+
 // use these macros to access the random value functions
 #define GameClientRandomValue( lo, hi ) GetGameClientRandomValue( lo, hi, __FILE__, __LINE__ )
 #define GameClientRandomValueReal( lo, hi ) GetGameClientRandomValueReal( lo, hi, __FILE__, __LINE__ )

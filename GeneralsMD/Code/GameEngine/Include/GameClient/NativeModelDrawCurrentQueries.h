@@ -10,6 +10,7 @@ class GameClient;
 // Concrete source animation/presentation producers remain abstract.
 class NativeModelDrawCurrentQueries : public NativeModelDrawQueries {
   MEMORY_POOL_GLUE_ABC(NativeModelDrawCurrentQueries)
+protected:
   struct Current {
     NativeW3DAssets::Binding binding;
     Matrix3D world;
@@ -19,7 +20,9 @@ class NativeModelDrawCurrentQueries : public NativeModelDrawQueries {
     Real objectScale=1;
     std::optional<NativeModelAnimationClock> clock;
   };
+private:
   GameClient* const m_client;
+protected:
   std::unique_ptr<Current> m_current;
   void requireClientOwner() const;
   void requireClientPhase() const;

@@ -19,6 +19,7 @@ public:
   static NativeW3DPose decode(const NativeW3DDocument::Hierarchy&);
   void replace(const NativeW3DDocument::Hierarchy&);
   void swap(NativeW3DPose&) noexcept;
+  NativeW3DPose clone() const;
   void evaluate(const Matrix& root,const NativeW3DAnimation* motion=nullptr,float frame=0,float scale=1);
   void evaluateRuntime(const Matrix&,const NativeW3DAnimation*,float frame,float scale=1);
   void evaluateBlend(const Matrix& root,const NativeW3DAnimation&,float frame0,

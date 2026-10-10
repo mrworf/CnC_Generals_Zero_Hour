@@ -74,6 +74,20 @@ void randomStreams() {
         rejects([&]{function(0,std::numeric_limits<float>::infinity(),__FILE__,__LINE__);},"nonfinite random range");
         require(GetGameLogicRandomSeedCRC()==before,"invalid real range does not consume seed");
     }
+    InitRandom(17);std::array<Int,4> clientExpected,logicExpected,audioExpected;
+    for(unsigned n=0;n<4;++n){clientExpected[n]=GameClientRandomValue(0,INT32_MAX);
+        logicExpected[n]=GameLogicRandomValue(0,INT32_MAX);audioExpected[n]=GameAudioRandomValue(0,INT32_MAX);}
+    InitRandom(17);
+    {GameClientRandomTransaction outer;
+        require(GameClientRandomValue(0,INT32_MAX)==clientExpected[0],"client lease uses original stream");
+        {GameClientRandomTransaction inner;require(GameClientRandomValue(0,INT32_MAX)==clientExpected[1],"nested client lease position");}
+        require(GameClientRandomValue(0,INT32_MAX)==clientExpected[1],"nested rollback restores inner boundary");
+        {GameClientRandomTransaction inner;require(GameClientRandomValue(0,INT32_MAX)==clientExpected[2],"nested committed client lease position");inner.commit();}
+        require(GameClientRandomValue(0,INT32_MAX)==clientExpected[3],"nested commit advances original stream");
+        require(GameLogicRandomValue(0,INT32_MAX)==logicExpected[0]&&GameAudioRandomValue(0,INT32_MAX)==audioExpected[0],"client lease leaves other streams independent");
+    }
+    require(GameClientRandomValue(0,INT32_MAX)==clientExpected[0],"outer rollback includes nested committed acquisitions");
+    require(GameLogicRandomValue(0,INT32_MAX)==logicExpected[1]&&GameAudioRandomValue(0,INT32_MAX)==audioExpected[1],"client rollback never rewinds logic/audio");
 }
 void strings() {
     AsciiString source("portable"),copy(source);copy.concat(copy.str());

@@ -60,6 +60,8 @@ class Display : public SubsystemInterface
 {
 
 public:
+  // Animation producers consume published logical time, not wall time.
+  virtual UnsignedInt getAnimationSyncTime()const {throw ERROR_BAD_ARG;}
 	enum DrawImageMode
 	{
 		DRAW_IMAGE_SOLID,

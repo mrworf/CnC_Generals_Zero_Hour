@@ -26,15 +26,15 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "ca5afa8c59031b4d51ec1e909c91dfafd6653f8d",
-    "label": "original-runtime-raw-frame-domain",
-    "evidence": "evidence/qa/N2-runtime-frame-domain.md",
-    "validation": "Frozen related121 PASS all3; source signed raw/default runtime through actual Drawable, compressed rejection/pose preservation;218 matching allocation manifests. Full458 unrun.",
-    "next": "Implement shared original condition/animation producer with weighted client RNG rollback, pending transitions, frame precedence, pause/duration/event semantics and same-model controls/material/ObjectScale reuse; complete concrete19 callbacks and condition transfer/material/prototypes, camera actor-follow, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full458, slice03 and N2 acceptance pending.",
+    "parent": "f44b668adea375546d391d75827e296b4bbd1701",
+    "label": "original-condition-animation-producer",
+    "evidence": "evidence/qa/N2-condition-animation-producer.md",
+    "validation": "Frozen related128 PASS GCC/GCCsan/Clangsan; source weighted client RNG rollback, pending transitions, pause/duration/frame callbacks and same-model controls/ObjectScale.278 matching allocation manifests. Full465 unrun; component evidence only.",
+    "next": "Implement whole Drawable condition-walk publication/rollback and unconditional first-leaf root admission together; complete concrete19 movement/effect/event callbacks and condition transfer/material/prototypes, camera actor-follow, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full465, slice03 and N2 acceptance pending.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 supporting runtime raw frame-domain checkpoint committed in a7f1f9672dad077e62179083433a4175feb9038b; no live jobs. Implement shared original condition/animation producer with weighted client RNG rollback, pending transitions, frame precedence, pause/duration/event semantics and same-model controls/material/ObjectScale reuse; complete concrete19 callbacks and condition transfer/material/prototypes, camera actor-follow, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full458, slice03 and N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 supporting condition-animation producer checkpoint: frozen related128 PASS all3,278 matching allocation manifests, no live jobs. Implement whole Drawable condition-walk publication/rollback and unconditional first-leaf root admission together, then concrete19 movement/effect/event callbacks and condition transfer/material/prototypes, camera actor-follow, full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full465, slice03 and N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -57,6 +57,30 @@
     "source_fingerprints_rechecked": true,
     "repository_commit": "2b14ad41699323b5243b4ab061bf02aa27773826"
   },
+  "condition_producer_checkpoint": {
+    "parent_commit": "f44b668adea375546d391d75827e296b4bbd1701",
+    "documentation_inventory_commit": "5daba00f",
+    "evidence": "evidence/qa/N2-condition-animation-producer.md",
+    "status": "Frozen related128 PASS all3; verified supporting producer checkpoint, not concrete19/full startup/N2 acceptance",
+    "canonical_source_files": 726,
+    "canonical_source_sha256": "f609dff2eaad783ca7fb6f484e669e98f73d91c16716c6399de03533d8f0f13f",
+    "toolchain_inclusive_files": 733,
+    "toolchain_inclusive_sha256": "631a391a7fb17ccfd8f7e76d68f40acbdc772b82e40702b6111c360cbfb0864f",
+    "configured_suite_tests": 465,
+    "related_suite_tests_per_configuration": 128,
+    "focused_validation": "producer/core12 PASS35.54s; related128 PASS GCC149.73s/GCCsan584.05s/Clangsan372.56s, all terminal0",
+    "producer_standard_terminals_gcc": {
+      "cold": 223,
+      "seeded": 56
+    },
+    "sanitizer_environment": "Restricted sandbox LSan thread-inspection/ptrace fatal errors on core controls; unusable runs retired143 and logs retained. Identical controls and unchanged full related matrix PASS both compilers on normal host, all leak checks enabled.",
+    "live_sessions_at_last_observation": {},
+    "normalized_allocation_manifest_lines": 278,
+    "normalized_allocation_manifest_sha256": "b241d54105b75410c6bf43cd3fe4a8203664044371fadf35464891e54e8e1a93",
+    "source_fingerprints_rechecked": true,
+    "milestone_complete": false,
+    "next": "Resume whole Drawable condition-walk publication/rollback, unconditional first-leaf root admission and concrete provider/effect cohort in the same N2 plan01/slice03; full465/startup/loaded simulation acceptance remains pending."
+  },
   "producer_worktree_review": {
     "parent_commit": "f44b668adea375546d391d75827e296b4bbd1701",
     "evidence": "evidence/qa/N2-worktree-review.md",
@@ -67,7 +91,8 @@
     "unfinished_untracked_files": 3,
     "validation": "Existing coupled GCC build PASS; producer functional/transitions PASS, selection FAIL at weighted idle retained completion. Diff whitespace PASS. No live build/test jobs. Current producer fault/retry and sanitizer matrix pending.",
     "resume": "Continue the same N2 plan01/slice03 producer batch. Resolve weighted-idle fixture completion precondition against source completion/reselection order; retain original RNG and frame precedence. Add whole-owner cold/seeded failure/retry coverage and frozen GCC/GCCsan/Clangsan validation before committing the 17 source/build/test files together.",
-    "milestone_complete": false
+    "milestone_complete": false,
+    "closeout": "The original17 unfinished implementation files plus direct core RNG verification are included in the coherent frozen producer payload with plan/findings/QA/state; related128 PASS all3. Historical inventory and failure evidence are retained, not current acceptance. Whole-walk and first-leaf admission remain pending."
   },
   "worktree_review": {
     "parent_commit": "eab07f4a",
@@ -106,7 +131,7 @@
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Implement bounding primitive/all-LOD/current model bounds and concrete native draw-provider selection/client RNG/transitions/pause/events; complete runtime19 and condition transfer/material/prototypes, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full457, slice03 and N2 acceptance pending.",
+  "next": "Implement whole Drawable condition-walk publication/rollback and unconditional first-leaf root admission together, then concrete19 movement/effect/event callbacks and condition transfer/material/prototypes, camera actor-follow, full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full465, slice03 and N2 acceptance pending.",
   "implementation_checkpoint": {
     "label": "original-root-lifecycle",
     "reason": "Actual source cleanup/reset, independent cache/audio ownership and loaded partition live containment verified; full original process startup/simulation still pending",

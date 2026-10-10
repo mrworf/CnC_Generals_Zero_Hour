@@ -45,6 +45,11 @@ void NativeW3DPose::release(std::size_t index){valid(index<m_nodes.size());m_nod
 void NativeW3DPose::control(std::size_t index,const Matrix& matrix,bool world){valid(index<m_nodes.size() && m_nodes[index].captured);finite(matrix);
   m_nodes[index].capture=matrix;m_nodes[index].world=world;}
 void NativeW3DPose::evaluate(const Matrix& root,const NativeW3DAnimation* motion,float frame,float scale){evaluate(root,motion,frame,nullptr,0,0,scale);}
+NativeW3DPose NativeW3DPose::clone()const {
+  NativeW3DPose candidate;
+  candidate.m_name=m_name;candidate.m_nodes=m_nodes;
+  candidate.m_pose=m_pose;candidate.m_candidate=m_candidate;return candidate;
+}
 void NativeW3DPose::evaluateRuntime(const Matrix& root,const NativeW3DAnimation* motion,float frame,float scale){evaluate(root,motion,frame,nullptr,0,0,scale,true);}
 void NativeW3DPose::evaluateBlend(const Matrix& root,const NativeW3DAnimation& a,float frameA,const NativeW3DAnimation& b,float frameB,float percentage,float scale){
   valid(std::isfinite(percentage) && percentage>=0 && percentage<=1);evaluate(root,&a,frameA,&b,frameB,percentage,scale);

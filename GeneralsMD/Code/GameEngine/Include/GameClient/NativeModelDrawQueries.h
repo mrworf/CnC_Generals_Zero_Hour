@@ -35,6 +35,7 @@ class NativeModelDrawQueries : public DrawModule, public ObjectDrawInterface {
 protected:
   void requireNativeParents() const;
   NativeW3DAssets& nativeAssets()const noexcept{return m_assets;}
+  const W3DModelDrawModuleData& nativeModelDrawData()const noexcept{return m_data;}
   const ModelConditionInfo* nativeQueryData()const noexcept{return m_cache?m_cache->query.condition.get():nullptr;}
 public:
   NativeModelDrawQueries(Thing*,const ModuleData*,NativeW3DAssets&);

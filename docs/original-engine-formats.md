@@ -6137,3 +6137,40 @@ preserves the previous root transform (or uses the Drawable root on first
 admission). Same-model state changes do not reset pause. A paused new animation
 on a reused model is therefore not automatically re-paused by an identical
 notification; on a recreated model the next true pause notification acts again.
+
+Animation selection consumes RANDOMSTART for any existing render object with an
+acquired clip, before calling Set_Animation (W3DModelDraw::adjustAnimation).
+Leaf models ignore playback but still consume that client integer draw; only
+HLOD consumes the speed-factor draw. A missing render object consumes weighted
+record selection, but neither start-frame nor speed-factor draws. Preserve this
+distinction on parallel no-model/leaf/HLOD paths and after late rejection.
+
+### Current producer admission versus whole Drawable condition publication
+
+The shared producer candidate covers one module's current model/pose/bounds,
+selected/pending/index/duration/pause state, asset admission, namespace and client
+RNG. This does not establish atomicity for the original outer Drawable walks.
+`Drawable::getDrawModules` (both overloads) walks all ObjectDrawInterfaces when
+dirty, then clears m_isModelDirty; `replaceModelConditionFlags(forceReplace)`
+publishes the requested flags before its immediate walk. `clearAndSetModelConditionFlags`
+also changes flags before notification when DIRTY_CONDITION_FLAGS is absent.
+These functions are in GameEngine/Source/GameClient/Drawable.cpp.
+
+The existing NativeModelQueryTransaction in NativeModelDrawQueries.cpp saves
+pristine cache/attachment state only. It does not restore a prior producer
+selection if a later module rejects, nor does it restore outer Drawable flags.
+Before wiring concrete creators/full startup, cover dirty/forced/immediate walks,
+multiple module owners and late failure together; preserve original notification
+ordering and avoid recursion through dirty getDrawModules while enrolling owners.
+Restore accepted module state and source flags/dirty status without callbacks or
+allocation, under the original client/namespace/configuration identities. Treat
+direct module callback tests as narrower evidence, not whole-walk acceptance.
+
+Before first concrete creator admission, also cover the original Drawable root
+on a first leaf-model initialization. Current producer recreation checks root
+finiteness through pose evaluation only for models with a hierarchy; unlike
+advanceNativeConditionAnimation, its leaf path has no unconditional raw(world)
+check. Stage that conversion for every existing model before ownership
+publication, and pair malformed first-leaf admission with a corrected retry in
+the whole-walk/constructor cohort. Generated finite-root component cases do not
+prove this boundary. This is a pending implementation finding, not acceptance.

@@ -4009,3 +4009,29 @@ whole-owner failure/retry and current-batch sanitizer coverage remain pending.
 See evidence/qa/N2-worktree-review.md for exact inventory, evidence and resume.
 This review does not supersede the accepted runtime raw checkpoint or declare
 producer, slice03, N2 or the configured full suite accepted.
+
+Resume from documentation checkpoint5daba00f: preserve source completion-before-
+reselection ordering. Weighted-selection fixture must only advance a selected
+idle clip when it is not already complete; RANDOMSTART can select its endpoint.
+Add independent cold initialization and seeded same-model replacement sweeps,
+deriving each exact terminal before fault arming and retaining every failed
+prefix/corrected retry. Snapshot client cursor via nested public-draw probes
+without exposing seed words, and prove failed namespace/RNG/pose/pending/clock/
+standard-live and pooled-used identity before outer fixture leases unwind.
+Warm the identical generated ScriptEngine/Display/camera/producer cohort before
+whole-owner baselines. Preserve accepted zero-demand ticks and add recreation,
+empty/no-animation and late-rejection tests; no concrete19 effects claim.
+
+Frozen shared producer checkpoint: focused producer/core12 PASS35.54s;
+related128 PASS GCC149.73s/GCCsan584.05s/Clangsan372.56s, all terminal0/no live
+jobs. Unchanged canonical726 f609dff2 and inclusive733 631a391a; all278 normalized
+allocation manifests agree, cold223/seeded56 and every failure/retry retained.
+Sanitizer sandbox LSan thread-inspection failures were isolated by unchanged
+normal-host controls; full unchanged related matrix passed there with all leak
+checks enabled. Evidence: evidence/qa/N2-condition-animation-producer.md.
+Source record selection, pending transitions, pause/duration callbacks, retained
+same-model controls/ObjectScale and no-model/leaf RNG paths are implemented in
+the shared abstract producer. Whole Drawable dirty/forced/immediate condition
+walks, first-leaf malformed-root admission, concrete19/effects/movement parents,
+camera actor-follow, actual startup/loaded simulation and full465 remain pending.
+These are documented coupled integration work, not a new plan or N2 acceptance.

@@ -3,6 +3,8 @@
 #include "PreRTS.h"
 #include "W3DAssetInput.h"
 #include "GameClient/NativeModelDrawCurrentQueries.h"
+#include "GameClient/NativeModelDrawAnimationProducer.h"
+#include "GameClient/ClientRandomValue.h"
 #include "GameClient/NativeHeadlessGameClient.h"
 #include "GameClient/NativeHeadlessDisplay.h"
 #include "NativeCameraViewFixture.h"
@@ -15,16 +17,28 @@
 #include "Common/MessageStream.h"
 #include "GameLogic/GameLogic.h"
 #include <cfenv>
+#include <array>
 #include <cstdio>
 
 namespace {
 using namespace W3DAssetInput;
 Assets* fixtureAssets=nullptr;
 Assets& selectedAssets(){if(!fixtureAssets)throw ERROR_BAD_ARG;return *fixtureAssets;}
-struct QueryModule : NativeModelDrawCurrentQueries {
+struct QueryModule : NativeModelDrawAnimationProducer {
   MEMORY_POOL_GLUE_WITH_EXPLICIT_CREATE(QueryModule,"GeneratedNativeQueryModule",8,0)
 public:
-  QueryModule(Thing* thing,const ModuleData* data):NativeModelDrawCurrentQueries(thing,data,selectedAssets()){}
+  QueryModule(Thing* thing,const ModuleData* data):NativeModelDrawAnimationProducer(thing,data,selectedAssets()){}
+  bool producerEnabled=false;
+  void initializeProducer(){initializeNativeAnimationProducer();producerEnabled=true;}
+  void producerStep(const Matrix3D& root){advanceNativeConditionAnimation(root);}
+  const ModelConditionInfo* selected()const{return nativeSelectedCondition();}
+  const ModelConditionInfo* pending()const{return nativePendingCondition();}
+  Int selectedAnimation()const{return nativeSelectedAnimation();}
+  Bool paused()const{return nativeAnimationPaused();}
+  UnsignedInt pendingDuration()const{return nativePendingDuration();}
+  W3DModelDrawModuleData& inputData(){return const_cast<W3DModelDrawModuleData&>(nativeModelDrawData());}
+  void capture(unsigned bone){m_current->binding.pose.capture(bone);}
+  void control(unsigned bone,const NativeW3DPose::Matrix& value){m_current->binding.pose.control(bone,value,false);}
   static Module* create(Thing* thing,const ModuleData* data){return newInstance(QueryModule)(thing,data);}
   static ModuleData* createData(INI* ini){return W3DModelDrawModuleData::createFromINI(ini).release();}
   NameKeyType getModuleNameKey()const override{static const StaticNameKey name("W3DModelDraw");return name.key();}
@@ -40,15 +54,17 @@ public:
   void updateProjectileClipStatus(UnsignedInt,UnsignedInt,WeaponSlotType)override{throw ERROR_BAD_ARG;}
   void updateDrawModuleSupplyStatus(Int,Int)override{throw ERROR_BAD_ARG;}
   void notifyDrawModuleDependencyCleared()override{throw ERROR_BAD_ARG;}
-  void setHidden(Bool)override{} void replaceModelConditionState(const ModelConditionFlags&)override{}
+  void setHidden(Bool)override{} void replaceModelConditionState(const ModelConditionFlags& value)override{
+    if(producerEnabled)NativeModelDrawAnimationProducer::replaceModelConditionState(value);
+  }
   void replaceIndicatorColor(Color)override{} void setSelectable(Bool)override{}
   Bool handleWeaponFireFX(WeaponSlotType,Int,const FXList*,Real,const Coord3D*,Real)override{throw ERROR_BAD_ARG;}
   Int getBarrelCount(WeaponSlotType)const override{throw ERROR_BAD_ARG;}
-  void setAnimationLoopDuration(UnsignedInt)override{throw ERROR_BAD_ARG;}
-  void setAnimationCompletionTime(UnsignedInt)override{throw ERROR_BAD_ARG;}
+  void setAnimationLoopDuration(UnsignedInt value)override{if(!producerEnabled)throw ERROR_BAD_ARG;NativeModelDrawAnimationProducer::setAnimationLoopDuration(value);}
+  void setAnimationCompletionTime(UnsignedInt value)override{if(!producerEnabled)throw ERROR_BAD_ARG;NativeModelDrawAnimationProducer::setAnimationCompletionTime(value);}
   Bool updateBonesForClientParticleSystems()override{throw ERROR_BAD_ARG;}
-  void setAnimationFrame(int)override{throw ERROR_BAD_ARG;}
-  void setPauseAnimation(Bool)override{throw ERROR_BAD_ARG;}
+  void setAnimationFrame(int value)override{if(!producerEnabled)throw ERROR_BAD_ARG;NativeModelDrawAnimationProducer::setAnimationFrame(value);}
+  void setPauseAnimation(Bool value)override{if(!producerEnabled)throw ERROR_BAD_ARG;NativeModelDrawAnimationProducer::setPauseAnimation(value);}
   void updateSubObjects()override{throw ERROR_BAD_ARG;}
   void showSubObject(const AsciiString&,Bool)override{throw ERROR_BAD_ARG;}
   void doDrawModule(const Matrix3D*)override{throw ERROR_BAD_ARG;}
@@ -373,6 +389,238 @@ void displayTime(Fixture& fixture){
   display.reset();TheDisplay=oldDisplay;auto fresh=std::make_unique<NativeHeadlessDisplay>();require(fresh->animationSyncTime()==0,"new display owns fresh time instead of process-static state");
   scripts.reset();TheScriptEngine=oldScripts;
 }
+struct ProducerTimeOwner {
+  ScriptEngine* oldScripts=TheScriptEngine;Display* oldDisplay=TheDisplay;View* oldView=TheTacticalView;
+  std::unique_ptr<ScriptEngine> scripts;
+  std::unique_ptr<NativeHeadlessDisplay> display;
+  UnsignedInt frame=0;
+  ProducerTimeOwner(){
+    try{
+      scripts=std::make_unique<ScriptEngine>();TheScriptEngine=scripts.get();scripts->init();
+      display=std::make_unique<NativeHeadlessDisplay>();TheDisplay=display.get();
+      auto view=std::make_unique<NativeCameraViewFixture>();view->setFrameLengthMilliseconds(33);
+      TheTacticalView=view.get();display->attachView(view.get());view.release();
+    }catch(...){retire();throw;}
+  }
+  void retire()noexcept{TheDisplay=display.get();display.reset();TheDisplay=oldDisplay;TheTacticalView=oldView;
+    scripts.reset();TheScriptEngine=oldScripts;}
+  ~ProducerTimeOwner(){retire();}
+  void tick(Fixture& fixture){fixture.client->setFrame(frame++);display->advanceLogicalFrame();}
+};
+void configureProducer(Fixture& fixture){
+  auto& data=fixture.module(0).inputData();
+  auto idle=data.m_conditionStates[0];idle.m_flags=1<<MAINTAIN_FRAME_ACROSS_STATES;idle.m_mode=2;
+  idle.m_animations.clear();idle.m_animations.emplace_back(AsciiString("Tree.Walk"),FALSE,0);
+  idle.m_transitionKey=TheNameKeyGenerator->nameToKey("generatedProducerIdle");
+  idle.m_allowToFinishKey=NAMEKEY_INVALID;idle.m_transitionSig=NO_TRANSITION;
+  idle.m_animMinSpeedFactor=idle.m_animMaxSpeedFactor=1;
+  idle.m_conditionsYesVec={ModelConditionFlags{}};
+  auto moving=idle;ModelConditionFlags movingFlags;movingFlags.set(MODELCONDITION_MOVING);
+  moving.m_conditionsYesVec={movingFlags};moving.m_transitionKey=TheNameKeyGenerator->nameToKey("generatedProducerMoving");
+  auto attacking=idle;ModelConditionFlags attackFlags;attackFlags.set(MODELCONDITION_ATTACKING);
+  attacking.m_conditionsYesVec={attackFlags};attacking.m_transitionKey=NAMEKEY_INVALID;
+  attacking.m_mode=5;attacking.m_flags=(1<<START_FRAME_FIRST)|(1<<START_FRAME_LAST);
+  data.m_conditionStates={idle,moving,attacking};data.m_transitionMap.clear();
+}
+void producerFunctional(Fixture& fixture){
+  ProducerTimeOwner time;configureProducer(fixture);auto& module=fixture.module(0);
+  GameClientRandomTransaction randomOwner;module.initializeProducer();
+  const ModelConditionFlags empty;ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);
+  ModelConditionFlags attacking;attacking.set(MODELCONDITION_ATTACKING);
+  require(module.selected()==&module.inputData().m_conditionStates[0]&&module.clock()->mode()==NativeModelAnimationClock::Mode::Once,"shared original producer initializes idle through actual module");
+  const auto model=module.currentBinding()->model;
+  module.objectScale(3);module.capture(1);auto control=NativeW3DPose::identity();control[3]=2;module.control(1,control);
+  Coord3D position;Real radius;Matrix3D transform;
+  module.clientOnly_getRenderObjInfo(&position,&radius,&transform);const auto priorRadius=radius;
+  module.replaceModelConditionState(moving);Matrix3D output(true);
+  require(module.currentBinding()->model==model&&module.clock()->frame()==-1&&fixture.draw->getCurrentWorldspaceClientBonePositions("Muzzle",output)&&output.Get_X_Translation()==16,"same-model maintain -1 retains source captured controls and raw defaults");
+  module.clientOnly_getRenderObjInfo(&position,&radius,&transform);
+  require(radius==priorRadius,"same-model source ObjectScale is retained across condition replacement");
+  module.setAnimationLoopDuration(10);require(module.clock()->multiplier()<1,"source logic-frame loop duration overrides selected rate");
+  module.setPauseAnimation(TRUE);require(module.paused()&&module.clock()->mode()==NativeModelAnimationClock::Mode::Manual&&module.clock()->multiplier()==1,"pause saves mode and resets rate at retained frame");
+  module.setAnimationLoopDuration(10);const auto rate=module.clock()->multiplier();
+  module.setPauseAnimation(TRUE);require(module.clock()->multiplier()==rate,"duplicate pause does not reset rate/sync");
+  module.setPauseAnimation(FALSE);require(!module.paused()&&module.clock()->mode()==NativeModelAnimationClock::Mode::Once&&module.clock()->multiplier()==1,"resume restores saved mode and resets rate");
+  module.replaceModelConditionState(attacking);require(module.clock()->frame()==0&&module.clock()->mode()==NativeModelAnimationClock::Mode::OnceBackwards,"FIRST precedes LAST and backwards default");
+  const auto accepted=module.selected();const auto frame=module.clock()->frame();
+  auto oldDisplay=TheDisplay;TheDisplay=nullptr;clientRejects([&]{module.setAnimationFrame(1);});TheDisplay=oldDisplay;
+  require(module.selected()==accepted&&module.clock()->frame()==frame,"missing time owner preserves selected/current state");
+  module.setAnimationFrame(1);require(module.clock()->mode()==NativeModelAnimationClock::Mode::Manual&&module.clock()->frame()==1,"actual animation frame callback uses source manual mode");
+  clientRejects([&]{module.setAnimationFrame(INT32_MAX);});require(module.clock()->frame()==1,"undefined signed float conversion preserves manual frame");
+  module.replaceModelConditionState(empty);time.tick(fixture);
+  AllocationFault::arm(0);try{module.producerStep(Matrix3D(true));}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();AllocationFault::disarm();require(attempts==0,"ordinary producer pose tick has zero allocation demand");
+}
+void producerTransitions(Fixture& fixture){
+  ProducerTimeOwner time;configureProducer(fixture);auto& module=fixture.module(0);auto& data=module.inputData();
+  data.m_conditionStates[1].m_allowToFinishKey=data.m_conditionStates[0].m_transitionKey;
+  auto transition=data.m_conditionStates[0];transition.m_flags=0;
+  transition.m_transitionKey=NAMEKEY_INVALID;transition.m_allowToFinishKey=NAMEKEY_INVALID;
+  transition.m_transitionSig=buildTransitionSig(data.m_conditionStates[0].m_transitionKey,data.m_conditionStates[1].m_transitionKey);
+  data.m_transitionMap.emplace(transition.m_transitionSig,transition);
+  GameClientRandomTransaction randomOwner;module.initializeProducer();
+  const ModelConditionFlags empty;ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);
+  module.replaceModelConditionState(moving);
+  require(module.selected()==&data.m_conditionStates[0]&&module.pending()==&data.m_conditionStates[1],"AllowToFinish takes precedence over explicit transition");
+  module.setAnimationLoopDuration(7);module.replaceModelConditionState(moving);
+  require(module.pending()==&data.m_conditionStates[1],"duplicate pending request retains wait target");
+  module.replaceModelConditionState(empty);require(!module.pending()&&module.clock()->frame()==0,"request current state while pending cancels and restarts current");
+  module.setAnimationFrame(1); // Manual is not complete, so restore Once before explicit transition.
+  module.replaceModelConditionState(moving);module.replaceModelConditionState(empty);
+  time.tick(fixture);module.producerStep(Matrix3D(true));time.tick(fixture);module.producerStep(Matrix3D(true));
+  require(module.clock()->complete(),"accepted current frame reaches retained source completion");
+  module.replaceModelConditionState(moving);
+  require(module.selected()->m_transitionSig!=NO_TRANSITION&&module.pending()==&data.m_conditionStates[1],"completed wait source enters explicit transition");
+  module.setAnimationCompletionTime(10);
+  require(module.pendingDuration()==5&&module.clock()->multiplier()<1,"completion-time uses first clip durations and defers target remainder");
+  module.replaceModelConditionState(moving);require(module.pendingDuration()==5,"duplicate pending request retains deferred duration");
+  for(unsigned n=0;n<8&&module.pending();++n){time.tick(fixture);module.producerStep(Matrix3D(true));}
+  require(module.selected()==&data.m_conditionStates[1]&&!module.pending()&&module.pendingDuration()==~UnsignedInt(0)&&module.clock()->multiplier()<1,"transition completion admits target and its deferred duration");
+  module.setPauseAnimation(TRUE);
+  module.replaceModelConditionState(empty); // Same model keeps paused flag but starts its selected animation.
+  require(module.paused()&&module.clock()->mode()==NativeModelAnimationClock::Mode::Once,"same-model selection while paused retains source duplicate-notification semantics");
+  module.setPauseAnimation(TRUE);require(module.clock()->mode()==NativeModelAnimationClock::Mode::Once,"duplicate true pause cannot re-pause newly selected reused animation");
+}
+void producerSelection(Fixture& fixture){
+  ProducerTimeOwner time;configureProducer(fixture);auto& module=fixture.module(0);auto& data=module.inputData();
+  auto& idle=data.m_conditionStates[0];idle.m_flags=(1<<RANDOMIZE_START_FRAME)|(1<<START_FRAME_FIRST)|(1<<START_FRAME_LAST);
+  idle.m_animations.clear();for(unsigned n=0;n<3;++n)idle.m_animations.emplace_back(AsciiString("Tree.Walk"),TRUE,0);
+  idle.m_animMinSpeedFactor=.5f;idle.m_animMaxSpeedFactor=1.5f;
+  GameClientRandomTransaction randomOwner;
+  Int expectedIndex,expectedFrame;Real expectedRate;{
+    GameClientRandomTransaction proof;expectedIndex=GameClientRandomValue(0,2);expectedFrame=GameClientRandomValue(0,1);expectedRate=GameClientRandomValueReal(.5f,1.5f);
+  }
+  module.initializeProducer();require(module.selectedAnimation()==expectedIndex&&module.clock()->frame()==expectedFrame&&module.clock()->multiplier()==expectedRate,"weighted repeated records and RANDOMSTART precedence consume exact original client cursor");
+  const auto avoid=module.selectedAnimation();
+  // RANDOMSTART can already select the endpoint. Do not restart that clip
+  // while trying to establish completion of the retained selection.
+  if(!module.clock()->complete()){
+    module.multiplier(100);time.tick(fixture);module.producerStep(Matrix3D(true));
+  }
+  require(module.clock()->complete(),"weighted idle reaches retained completion");
+  Int nextIndex,nextFrame;Real nextRate;{
+    GameClientRandomTransaction proof;do {nextIndex=GameClientRandomValue(0,2);}while(nextIndex==avoid);
+    nextFrame=GameClientRandomValue(0,1);nextRate=GameClientRandomValueReal(.5f,1.5f);
+  }
+  module.producerStep(Matrix3D(true));
+  require(module.selectedAnimation()==nextIndex&&module.selectedAnimation()!=avoid&&module.clock()->frame()==nextFrame&&module.clock()->multiplier()==nextRate,"idle restart rejection-samples a distinct record index without deduplicating clip names");
+  bool workerRejected=false;std::thread worker([&]{try{module.setPauseAnimation(TRUE);}catch(ErrorCode e){workerRejected=e==ERROR_BAD_ARG;}});worker.join();
+  require(workerRejected,"producer rejects workers before RNG/parent access");
+}
+std::array<Int,8> probeClientCursor(){
+  GameClientRandomTransaction proof;std::array<Int,8> values;
+  for(auto& value:values)value=GameClientRandomValue(0,INT32_MAX);
+  return values;
+}
+void producerFaults(Fixture& fixture,bool seeded){
+  ProducerTimeOwner time;configureProducer(fixture);
+  auto& data=fixture.module(0).inputData();
+  auto& selected=data.m_conditionStates[seeded?1:0];
+  selected.m_flags=1<<RANDOMIZE_START_FRAME;
+  selected.m_animations.clear();for(unsigned n=0;n<3;++n)selected.m_animations.emplace_back(AsciiString("Tree.Walk"),FALSE,0);
+  selected.m_animMinSpeedFactor=.5f;selected.m_animMaxSpeedFactor=1.5f;
+  ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);
+  auto setup=[&]{fixture.fresh();if(seeded){fixture.module(0).initializeProducer();fixture.module(0).objectScale(3);
+    fixture.module(0).capture(1);auto control=NativeW3DPose::identity();control[3]=2;fixture.module(0).control(1,control);}};
+  auto operation=[&]{if(seeded)fixture.module(0).replaceModelConditionState(moving);else fixture.module(0).initializeProducer();};
+  auto retire=[&]{fixture.client->destroyDrawable(fixture.draw);fixture.draw=nullptr;fixture.assets.clear();};
+  std::size_t terminal;
+  {NameKeyTransaction keys(fixture.names);GameClientRandomTransaction cursor;setup();
+    AllocationFault::arm(SIZE_MAX);try{operation();terminal=AllocationFault::attempts();AllocationFault::disarm();}catch(...){AllocationFault::disarm();throw;}
+    retire();}
+  for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){
+    NameKeyTransaction keys(fixture.names);GameClientRandomTransaction cursor;setup();auto& module=fixture.module(0);
+    const auto* accepted=module.currentBinding();const auto* source=module.selected();const auto* pending=module.pending();
+    const auto index=module.selectedAnimation();const auto clock=module.clock()?std::optional(*module.clock()):std::nullopt;
+    const auto counts=fixture.assets.counts();const auto nextID=fixture.client->getDrawableIDCounter();
+    auto* pool=TheMemoryPoolFactory->findMemoryPool("NameKeyBucketPool");const auto units=pool->getUsedBlockCount();
+    NameKeyType nextKey;{NameKeyTransaction proof(fixture.names);nextKey=fixture.names.nameToKey("producer-production-cursor");}
+    const auto randomBefore=probeClientCursor();Int expectedIndex,expectedFrame;Real expectedRate;
+    {GameClientRandomTransaction proof;expectedIndex=GameClientRandomValue(0,2);expectedFrame=GameClientRandomValue(0,1);expectedRate=GameClientRandomValueReal(.5f,1.5f);}
+    const auto live=AllocationFault::live();bool failed=false;
+    AllocationFault::arm(ordinal);try{operation();}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+    const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+    require(failed==(ordinal<terminal)&&failed==hit&&attempts==(failed?ordinal+1:terminal),"producer exact terminal and every failure prefix");
+    if(failed){
+      require(module.currentBinding()==accepted&&module.selected()==source&&module.pending()==pending&&module.selectedAnimation()==index,
+        "failed producer candidate preserves accepted binding and selected/pending/index");
+      require(bool(module.clock())==bool(clock)&&(!clock||(module.clock()->frame()==clock->frame()&&module.clock()->mode()==clock->mode()&&module.clock()->multiplier()==clock->multiplier())),
+        "failed producer candidate preserves accepted clock");
+      require(fixture.assets.counts()==counts&&AllocationFault::live()==live&&pool->getUsedBlockCount()==units,
+        "failed producer candidate retires all standard and namespace pooled ownership");
+      require(probeClientCursor()==randomBefore,"production client cursor preserved before fixture rollback");
+      {NameKeyTransaction proof(fixture.names);require(fixture.names.nameToKey("producer-production-cursor")==nextKey,
+        "production namespace preserved before fixture rollback");}
+      operation();
+    }
+    require(module.selected()==&selected&&!module.pending()&&module.selectedAnimation()==expectedIndex&&module.clock()->frame()==expectedFrame&&module.clock()->multiplier()==expectedRate,
+      "corrected producer retry retains exact source selection/frame/rate cursor");
+    require(fixture.client->getDrawableIDCounter()==nextID,"producer never consumes Drawable IDs");
+    retire();
+  }
+  fixture.create();std::cout<<"condition producer "<<(seeded?"seeded":"cold")<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every failure/retry\n";
+}
+void producerLifecycle(Fixture& fixture){
+  ProducerTimeOwner time;configureProducer(fixture);auto& module=fixture.module(0);auto& data=module.inputData();
+  data.m_conditionStates[0].m_flags=1<<START_FRAME_FIRST;
+  data.m_conditionStates[1].m_flags=0;data.m_conditionStates[1].m_animations.clear();
+  data.m_conditionStates[2].m_modelName="Static.Mesh";data.m_conditionStates[2].m_flags=1<<RANDOMIZE_START_FRAME;
+  data.m_conditionStates[2].m_animMinSpeedFactor=.5f;data.m_conditionStates[2].m_animMaxSpeedFactor=1.5f;
+  auto absent=data.m_conditionStates[0];ModelConditionFlags dying;dying.set(MODELCONDITION_DYING);
+  absent.m_conditionsYesVec={dying};absent.m_modelName="None";absent.m_flags=1<<RANDOMIZE_START_FRAME;
+  absent.m_animations.clear();for(unsigned n=0;n<3;++n)absent.m_animations.emplace_back(AsciiString("Tree.Walk"),FALSE,0);
+  data.m_conditionStates.push_back(absent);
+  auto bare=data.m_conditionStates[0];ModelConditionFlags damaged;damaged.set(MODELCONDITION_DAMAGED);
+  bare.m_conditionsYesVec={damaged};bare.m_animations.clear();data.m_conditionStates.push_back(bare);
+  auto unsupported=data.m_conditionStates[0];ModelConditionFlags night;night.set(MODELCONDITION_NIGHT);
+  unsupported.m_conditionsYesVec={night};unsupported.m_hideShowVec.push_back({AsciiString("GeneratedPart"),TRUE});data.m_conditionStates.push_back(unsupported);
+  // The fixture's parsed ignore mask would otherwise remove this negative state.
+  data.m_ignoreConditionStates.clear();
+  GameClientRandomTransaction randomOwner;module.initializeProducer();
+  ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);ModelConditionFlags attacking;attacking.set(MODELCONDITION_ATTACKING);
+  const auto* clip=module.currentBinding()->animation.get();module.setPauseAnimation(TRUE);module.objectScale(3);
+  module.replaceModelConditionState(moving);
+  require(module.selectedAnimation()==-1&&module.currentBinding()->animation.get()==clip&&module.clock()->mode()==NativeModelAnimationClock::Mode::Manual&&module.paused(),
+    "empty animation list on reused HLOD retains current clip/clock/pause");
+  std::array<Int,8> expectedLeafCursor;{GameClientRandomTransaction proof;(void)GameClientRandomValue(0,1);expectedLeafCursor=probeClientCursor();}
+  module.replaceModelConditionState(attacking);
+  require(module.currentBinding()->model->kind==NativeW3DAssets::Prototype::Kind::Mesh&&!module.clock()&&!module.paused()&&probeClientCursor()==expectedLeafCursor,
+    "leaf recreation clears playback/pause but consumes source RANDOMSTART and no rate draw");
+  Coord3D position;Real radius;Matrix3D world;
+  require(module.clientOnly_getRenderObjInfo(&position,&radius,&world)&&radius==3,"recreated model starts ObjectScale1");
+  auto root=Matrix3D(true);root.Set_Translation(Vector3(7,8,9));time.tick(fixture);module.producerStep(root);
+  require(module.clientOnly_getRenderObjInfo(&position,&radius,&world)&&position.x==7,"non-HLOD producer still publishes current root");
+  const auto* accepted=module.currentBinding();const auto counts=fixture.assets.counts();const auto before=probeClientCursor();
+  clientRejects([&]{module.replaceModelConditionState(night);});
+  require(module.currentBinding()==accepted&&fixture.assets.counts()==counts&&probeClientCursor()==before,
+    "unsupported effects reject without claiming application or changing current owners");
+  Int expectedAbsentIndex;std::array<Int,8> expectedAbsentCursor;
+  {GameClientRandomTransaction proof;expectedAbsentIndex=GameClientRandomValue(0,2);expectedAbsentCursor=probeClientCursor();}
+  module.replaceModelConditionState(dying);
+  require(!module.currentBinding()&&module.selectedAnimation()==expectedAbsentIndex&&probeClientCursor()==expectedAbsentCursor,
+    "absent model consumes record selection but neither start frame nor speed draw");
+  module.replaceModelConditionState(damaged);require(module.currentBinding()&&!module.clock(),"recreated empty-animation HLOD is base pose");
+  time.tick(fixture);module.producerStep(root);require(module.currentBinding()&&!module.clock(),"base-pose HLOD does not invent completion or a clock");
+}
+void producerNegative(Fixture& fixture){
+  ProducerTimeOwner time;configureProducer(fixture);auto& module=fixture.module(0);auto& target=module.inputData().m_conditionStates[1];
+  target.m_flags=1<<RANDOMIZE_START_FRAME;target.m_animations.clear();for(unsigned n=0;n<3;++n)target.m_animations.emplace_back(AsciiString("Tree.Walk"),FALSE,0);
+  target.m_animMinSpeedFactor=.5f;target.m_animMaxSpeedFactor=std::numeric_limits<Real>::infinity();
+  GameClientRandomTransaction randomOwner;module.initializeProducer();
+  const auto* accepted=module.currentBinding();const auto* selected=module.selected();const auto before=probeClientCursor();const auto counts=fixture.assets.counts();
+  ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);
+  bool rateRejected=false;try{module.replaceModelConditionState(moving);}catch(const std::invalid_argument&){rateRejected=true;}
+  require(rateRejected,"original random real API rejects the nonfinite factor with its defined exception type");
+  require(module.currentBinding()==accepted&&module.selected()==selected&&!module.pending()&&fixture.assets.counts()==counts&&probeClientCursor()==before,
+    "late invalid rate rejects after randomized index/frame while preserving whole producer and client cursor");
+  target.m_animMaxSpeedFactor=1.5f;Int expectedIndex,expectedFrame;Real expectedRate;
+  {GameClientRandomTransaction proof;expectedIndex=GameClientRandomValue(0,2);expectedFrame=GameClientRandomValue(0,1);expectedRate=GameClientRandomValueReal(.5f,1.5f);}
+  module.replaceModelConditionState(moving);
+  require(module.selectedAnimation()==expectedIndex&&module.clock()->frame()==expectedFrame&&module.clock()->multiplier()==expectedRate,"corrected late rejection retry preserves exact original RNG cursor");
+  fixture.logic->phase([&]{clientRejects([&]{module.producerStep(Matrix3D(true));});});
+  auto invalid=Matrix3D(true);invalid[0][0]=std::numeric_limits<Real>::infinity();
+  clientRejects([&]{module.producerStep(invalid);});require(module.clock()->frame()==expectedFrame,"invalid root/phase cannot consume accepted playback");
+}
 void modelBounds(Fixture& fixture){auto& module=fixture.module(0);const Matrix3D identity(true);const AsciiString empty("");
   Coord3D position{91,92,93};Real radius=99;Matrix3D world(true);world.Set_Translation(Vector3(99,0,0));OBBoxClass box(Vector3(91,92,93),Vector3(99,99,99));
   module.current("","",identity,0);require(!fixture.draw->clientOnly_getFirstRenderObjInfo(&position,&radius,&world)&&position.x==91&&radius==99&&world.Get_X_Translation()==99,"absent first model leaves every info output untouched");
@@ -410,8 +658,15 @@ void modelBounds(Fixture& fixture){auto& module=fixture.module(0);const Matrix3D
 }
 int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawable query family");initMemoryManager();initialized=true;
   {Fixture warm;functional(warm);negative(warm);clientFunctional(warm);clientNegative(warm);clientNumbered(warm);animationClock();animationPose(warm);displayTime(warm);modelBounds(warm);}
+  if(std::string_view(argv[1]).starts_with("producer-")){
+    {Fixture warm;producerFunctional(warm);}
+    {Fixture warm;producerTransitions(warm);}
+    {Fixture warm;producerSelection(warm);}
+    {Fixture warm;producerLifecycle(warm);}
+    {Fixture warm;producerNegative(warm);}
+  }
   for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
-    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else if(family=="display-time")displayTime(fixture);else if(family=="model-bounds")modelBounds(fixture);else throw GeneratedFixtureFailure("unknown Drawable query family");}
+    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else if(family=="display-time")displayTime(fixture);else if(family=="model-bounds")modelBounds(fixture);else if(family=="producer-functional")producerFunctional(fixture);else if(family=="producer-transitions")producerTransitions(fixture);else if(family=="producer-selection")producerSelection(fixture);else if(family=="producer-cold")producerFaults(fixture,false);else if(family=="producer-seeded")producerFaults(fixture,true);else if(family=="producer-lifecycle")producerLifecycle(fixture);else if(family=="producer-negative")producerNegative(fixture);else throw GeneratedFixtureFailure("unknown Drawable query family");}
     require(AllocationFault::live()==live,"whole original Drawable/client/definition/query/parent cohort retirement");
   }shutdownMemoryManager();initialized=false;std::cout<<"PASS actual Drawable query dispatch; renderer/full simulation pending\n";return 0;
  }catch(const GeneratedFixtureFailure& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(const std::exception&){std::cerr<<"FAIL generated Drawable query\n";}catch(ErrorCode){std::cerr<<"FAIL source Drawable query\n";}

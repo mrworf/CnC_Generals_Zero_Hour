@@ -13,6 +13,7 @@ public:
   // Logical cadence only; true means source fast-time skipped ordinary views.
   Bool advanceLogicalFrame();
   UnsignedInt animationSyncTime()const noexcept{return m_clock.published();}
+  UnsignedInt getAnimationSyncTime()const override{return animationSyncTime();}
   UnsignedInt accumulatedAnimationTime()const noexcept{return m_clock.accumulated();}
   Bool setDisplayMode(UnsignedInt,UnsignedInt,UnsignedInt,Bool) override {throw ERROR_BAD_ARG;}
   void setGamma(Real,Real,Real,Bool) override {throw ERROR_BAD_ARG;}

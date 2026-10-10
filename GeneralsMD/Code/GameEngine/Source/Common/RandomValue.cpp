@@ -63,6 +63,13 @@ static UnsignedInt theGameClientSeed[6] =
     0xf22d0e56L, 0x883126e9L, 0xc624dd2fL, 0x702c49cL, 0x9e353f7dL, 0x6fdf3b64L
 };
 
+GameClientRandomTransaction::GameClientRandomTransaction() noexcept {
+  for(unsigned n=0;n<6;++n)m_previous[n]=theGameClientSeed[n];
+}
+GameClientRandomTransaction::~GameClientRandomTransaction() noexcept {
+  if(!m_committed)for(unsigned n=0;n<6;++n)theGameClientSeed[n]=m_previous[n];
+}
+
 static UnsignedInt theGameAudioSeed[6] =
 {
     0xf22d0e56L, 0x883126e9L, 0xc624dd2fL, 0x702c49cL, 0x9e353f7dL, 0x6fdf3b64L
