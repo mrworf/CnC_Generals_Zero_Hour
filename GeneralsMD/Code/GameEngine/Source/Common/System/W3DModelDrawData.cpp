@@ -545,6 +545,7 @@ W3DModelDrawModuleData::W3DModelDrawModuleData() :
   m_particlesAttachedToAnimatedBones(false),
 	m_animationsRequirePower(true),
 #ifdef CACHE_ATTACH_BONE
+	m_attachToDrawableBoneOffset(0,0,0),
 	m_attachToDrawableBoneOffsetValid(false),
 #endif
 	m_minLODRequired(STATIC_GAME_LOD_LOW),

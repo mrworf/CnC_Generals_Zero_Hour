@@ -22,14 +22,14 @@ NativeModelQueryTransaction::NativeModelQueryTransaction(NativeW3DAssets& owner)
 NativeModelQueryTransaction::~NativeModelQueryTransaction() noexcept {
   if(!m_committed)for(auto it=m_previous.rbegin();it!=m_previous.rend();++it){
     it->module->m_cache=std::move(it->cache);
-    it->module->m_attachValid=it->attachValid;
-    it->module->m_attachOffset=it->offset;
+    it->module->m_data.m_attachToDrawableBoneOffsetValid=it->attachValid;
+    it->module->m_data.m_attachToDrawableBoneOffset=it->offset;
   }
   current=nullptr;
 }
 void NativeModelQueryTransaction::touch(const NativeModelDrawQueries& module){
   for(const auto& prior:m_previous)if(prior.module==&module)return;
-  m_previous.push_back({&module,module.m_cache,module.m_attachValid,module.m_attachOffset});
+  m_previous.push_back({&module,module.m_cache,module.m_data.m_attachToDrawableBoneOffsetValid,module.m_data.m_attachToDrawableBoneOffset});
 }
 void NativeModelQueryTransaction::commit() noexcept {m_admission.commit();m_keys.commit();m_committed=true;}
 thread_local NativeModelQueryTransaction* NativeModelQueryTransaction::current=nullptr;
@@ -92,7 +92,7 @@ const ModelConditionInfo* NativeModelDrawQueries::prepare(const ModelConditionFl
   auto query=selected->prepareNativeQueries(m_assets,scale,m_data.m_extraPublicBones,TheGlobalData->m_standardPublicBones);
   auto candidate=std::make_shared<Cache>(Cache{selected,TheGlobalData,scale,std::move(query)});
   NativeModelQueryTransaction::current->touch(*this);
-  m_cache=std::move(candidate);m_attachValid=FALSE;m_attachOffset.Set(0,0,0);
+  m_cache=std::move(candidate);
   return m_cache->query.condition.get();
 }
 
@@ -144,16 +144,18 @@ Bool NativeModelDrawQueries::getProjectileLaunchOffset(const ModelConditionFlags
     if(turret!=TURRET_INVALID){stagedLaunch.Pre_Rotate_Z(data->m_turrets[turret].m_turretArtAngle);stagedLaunch.Pre_Rotate_Y(-data->m_turrets[turret].m_turretArtPitch);}
   }
   if(turret!=TURRET_INVALID){
-    if(!m_attachValid){Vector3 offset(0,0,0);
+    if(m_data.m_attachToDrawableBone.isNotEmpty()&&!m_data.m_attachToDrawableBoneOffsetValid){Vector3 offset(0,0,0);
       if(m_data.m_attachToDrawableBone.isNotEmpty()){
         Matrix3D matrix(true);
         if(getDrawable()->getPristineBonePositions(m_data.m_attachToDrawableBone.str(),0,nullptr,&matrix,1)==1)offset=matrix.Get_Translation();
       }
-      NativeModelQueryTransaction::current->touch(*this);m_attachOffset=offset;m_attachValid=TRUE;
+      NativeModelQueryTransaction::current->touch(*this);
+      m_data.m_attachToDrawableBoneOffset=offset;m_data.m_attachToDrawableBoneOffsetValid=TRUE;
     }
+    const Vector3 offset=m_data.m_attachToDrawableBone.isNotEmpty()?m_data.m_attachToDrawableBoneOffset:Vector3(0,0,0);
     const auto& info=data->m_turrets[turret];
-    if(rotation){data->findPristineBonePos(info.m_turretAngleNameKey,stagedRotation);stagedRotation.x+=m_attachOffset.X;stagedRotation.y+=m_attachOffset.Y;stagedRotation.z+=m_attachOffset.Z;}
-    if(pitch){data->findPristineBonePos(info.m_turretPitchNameKey,stagedPitch);stagedPitch.x+=m_attachOffset.X;stagedPitch.y+=m_attachOffset.Y;stagedPitch.z+=m_attachOffset.Z;}
+    if(rotation){data->findPristineBonePos(info.m_turretAngleNameKey,stagedRotation);stagedRotation.x+=offset.X;stagedRotation.y+=offset.Y;stagedRotation.z+=offset.Z;}
+    if(pitch){data->findPristineBonePos(info.m_turretPitchNameKey,stagedPitch);stagedPitch.x+=offset.X;stagedPitch.y+=offset.Y;stagedPitch.z+=offset.Z;}
   }
   publish(transaction);if(valid)*launch=stagedLaunch;if(rotation)*rotation=stagedRotation;if(pitch)*pitch=stagedPitch;
   m_lastProjectileOutput=TRUE;return valid;

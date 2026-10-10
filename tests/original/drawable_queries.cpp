@@ -160,10 +160,48 @@ struct Fixture {
   }
   ~Fixture(){retire();}
   void create(){draw=client->friend_createDrawable(&*definition,DRAWABLE_STATUS_NONE);}
-  void fresh(){if(draw)client->destroyDrawable(draw);draw=nullptr;assets.clear();create();}
+  void fresh(){
+    // Generated cold census begins with an identical definition cache state.
+    // Runtime Drawable destruction/recreation does not invalidate this cache.
+    if(draw){for(auto modules=draw->getDrawModulesNonDirty();*modules;++modules)
+      if(auto* query=dynamic_cast<const QueryModule*>(*modules)){
+        auto& value=const_cast<QueryModule*>(query)->inputData();
+        value.m_attachToDrawableBoneOffsetValid=FALSE;value.m_attachToDrawableBoneOffset.Set(0,0,0);
+      }
+      client->destroyDrawable(draw);
+    }
+    draw=nullptr;assets.clear();
+    create();}
   QueryModule& module(unsigned index){auto* value=dynamic_cast<QueryModule*>(draw->getDrawModules()[index]);require(value,"actual registered native query module");return *value;}
 };
 template<class F>void rejects(F action){bool failed=false;try{action();}catch(ErrorCode error){failed=error==ERROR_BAD_ARG;}require(failed,"defined invalid query admission");}
+void sharedAttachment(Fixture& fixture,bool missing){
+  auto& data=fixture.module(1).inputData();
+  require(!data.m_attachToDrawableBoneOffsetValid&&data.m_attachToDrawableBoneOffset.X==0,"defined invalid shared attachment backing");
+  if(missing)data.m_attachToDrawableBone=AsciiString("MissingGeneratedAttachment");
+  fixture.logic->phase([&]{Matrix3D launch(true);Coord3D rotation;
+    require(fixture.draw->getProjectileLaunchOffset(PRIMARY_WEAPON,0,&launch,TURRET_MAIN,&rotation),"actual first-owner attachment admission");
+    require(data.m_attachToDrawableBoneOffsetValid&&rotation.x==(missing?16:32),"source first-module pristine selection or cached zero miss");
+  });
+  const auto offset=data.m_attachToDrawableBoneOffset;
+  auto retire=[&](Drawable* owner){fixture.client->destroyDrawable(owner);};
+  std::unique_ptr<Drawable,decltype(retire)> second(fixture.client->friend_createDrawable(&*fixture.definition,DRAWABLE_STATUS_NONE),retire);
+  auto* module=dynamic_cast<QueryModule*>(second->getDrawModules()[1]);
+  require(module&&&module->inputData()==&data,"two genuine registered Drawables borrow identical parsed ModuleData");
+  second->setInstanceScale(2);second->setModelConditionState(MODELCONDITION_MOVING);
+  fixture.logic->phase([&]{Matrix3D launch(true);Coord3D rotation;
+    // Pristine query sampling has both scaled prototype/tree and scaled root.
+    require(second->getProjectileLaunchOffset(PRIMARY_WEAPON,0,&launch,TURRET_MAIN,&rotation)&&rotation.x==(missing?48:64),"new owner state/scale does not replace source definition-lifetime attachment");
+  });
+  require(data.m_attachToDrawableBoneOffsetValid&&data.m_attachToDrawableBoneOffset.X==offset.X,"shared offset survives another owner query");
+  second.reset();fixture.draw->setModelConditionState(MODELCONDITION_MOVING);
+  fixture.logic->phase([&]{Matrix3D launch(true);Coord3D rotation;
+    require(fixture.draw->getProjectileLaunchOffset(PRIMARY_WEAPON,0,&launch,TURRET_MAIN,&rotation)&&rotation.x==(missing?12:28),"state invalidates pristine model cache but not shared attachment, including zero miss");
+  });
+  Matrix3D launch(true);Coord3D sentinel{91,92,93};
+  rejects([&]{fixture.draw->getProjectileLaunchOffset(PRIMARY_WEAPON,0,&launch,TURRET_MAIN,&sentinel);});
+  require(sentinel.x==91&&data.m_attachToDrawableBoneOffsetValid,"shared caching never weakens logic-phase rejection");
+}
 void verify(Fixture& fixture){fixture.logic->phase([&]{
   Coord3D positions[2];Matrix3D transforms[2];
   const auto count=fixture.draw->getPristineBonePositions("MUZZLE",0,positions,transforms,2);
@@ -211,6 +249,7 @@ void faults(Fixture& fixture,bool seeded,bool wide=false){std::size_t terminal;
   }
   for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){NameKeyTransaction lease(fixture.names);setup();
     const auto* parent=fixture.module(0).cached();const auto* child=fixture.module(1).cached();const auto counts=fixture.assets.counts();
+    const auto& attachment=fixture.module(1).inputData();const auto attachValid=attachment.m_attachToDrawableBoneOffsetValid;const auto offset=attachment.m_attachToDrawableBoneOffset;
     NameKeyType cursor;{NameKeyTransaction proof(fixture.names);cursor=fixture.names.nameToKey("query-production-cursor");}
     auto* pool=TheMemoryPoolFactory->findMemoryPool("NameKeyBucketPool");const auto units=pool->getUsedBlockCount();const auto live=AllocationFault::live();
     Matrix3D launch(true);launch.Set_Translation(Vector3(99,0,0));Coord3D rotation{91,92,93};bool failed=false;
@@ -219,6 +258,7 @@ void faults(Fixture& fixture,bool seeded,bool wide=false){std::size_t terminal;
     const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
     require(failed==(ordinal<terminal) && failed==hit && attempts==(failed?ordinal+1:terminal),"every whole Drawable query prefix and exact terminal");
     if(failed){require(fixture.module(0).cached()==parent && fixture.module(1).cached()==child && fixture.assets.counts()==counts && AllocationFault::live()==live && pool->getUsedBlockCount()==units && launch.Get_X_Translation()==99 && rotation.x==91,"late multi-module/recursive failure restores every owner and caller output");
+      require(attachment.m_attachToDrawableBoneOffsetValid==attachValid&&attachment.m_attachToDrawableBoneOffset.X==offset.X&&attachment.m_attachToDrawableBoneOffset.Y==offset.Y&&attachment.m_attachToDrawableBoneOffset.Z==offset.Z,"every rejected recursive query restores exact shared definition attachment backing");
       for(unsigned i=0;i<130;++i)require(positions[i].x==91 && transforms[i].Get_X_Translation()==99,"late wide sweep rejection preserves the complete caller arrays");
       {NameKeyTransaction proof(fixture.names);require(fixture.names.nameToKey("query-production-cursor")==cursor,"production namespace rollback precedes fixture rollback");}
     }
@@ -1248,6 +1288,10 @@ void modelBounds(Fixture& fixture){auto& module=fixture.module(0);const Matrix3D
 int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawable query family");initMemoryManager();initialized=true;
   if(std::string_view(argv[1])=="producer-particles-pool-faults")TheMemoryPoolFactory->createMemoryPool("ParticleSystemPool",sizeof(ParticleSystem),64,0);
   {Fixture warm;functional(warm);negative(warm);clientFunctional(warm);clientNegative(warm);clientNumbered(warm);animationClock();animationPose(warm);displayTime(warm);modelBounds(warm);}
+  if(std::string_view(argv[1]).starts_with("attachment-")){
+    {auto warm=std::make_unique<Fixture>();sharedAttachment(*warm,false);}
+    {auto warm=std::make_unique<Fixture>();sharedAttachment(*warm,true);}
+  }
   if(std::string_view(argv[1]).starts_with("producer-")){
     {Fixture warm;producerFunctional(warm);}
     {Fixture warm;producerTransitions(warm);}
@@ -1269,6 +1313,10 @@ int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawa
     }
   }
   for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
+    if(std::string_view(argv[1]).starts_with("attachment-")){
+      {auto fixture=std::make_unique<Fixture>();sharedAttachment(*fixture,std::string_view(argv[1])=="attachment-missing");}
+      require(AllocationFault::live()==live,"whole shared attachment two-Drawable/ModuleData cohort retirement");continue;
+    }
     if(std::string_view(argv[1]).starts_with("producer-controls")){
       {Fixture fixture;if(std::string_view(argv[1])=="producer-controls")producerControls(fixture);else producerControlFaults(fixture);}
       require(AllocationFault::live()==live,"whole source controls/recoil fixture retirement");continue;

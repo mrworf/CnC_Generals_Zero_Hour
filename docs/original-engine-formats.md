@@ -6724,3 +6724,62 @@ registers ancestors first. The generated actual manager test commits a child
 condition change, then verifies outer rollback restores prior Current/tracker
 identity, count, ID cursor and ParticleSystemPool used units. This is scoped
 component evidence in N2-client-bone-control-lifecycle.md, not full tick parity.
+
+### Shared attachment owner and lazy tick integration (post-d8eaf612)
+
+Original W3DModelDraw.cpp:2484 projectile turret-position queries consume the
+same ModuleData getAttachToDrawableBoneOffset helper as adjustTransformMtx:1120.
+The complete source census finds no cache reset on condition, instance scale or
+Drawable retirement. The first actual pristine module supplying the named bone
+fixes the shared definition-lifetime offset; a first miss similarly fixes zero.
+The native per-instance cache previously invalidated offset alongside condition
+pristine backing. That is a source behavior mismatch, not a reason to invalidate
+the original shared cache. Native query transactions now snapshot/restore the
+definition's flag/value along with each touched module cache. Reverse first-touch
+order preserves the earliest shared boundary when multiple instances borrow one
+definition. Explicit zero initialization makes invalid offset backing defined.
+Generated cold fault census deliberately resets its generated definition cache
+before measurement; production destruction does not. Two-owner differing state/
+scale and cached-miss focused8 PASS all3 is recorded in
+evidence/qa/N2-shared-attachment-owner.md; frozen related62 remains pending.
+Pristine sampling also has both prototype/tree and temporary-root scale
+(W3DModelDraw.cpp:2721, native prepareNativeBinding). At instance scale2 the
+generated first-frame Arm position12 becomes48, then adds the already shared
+attachment16 to yield64; a cached miss yields48. Do not normalize one scale
+away while writing the query/attachment oracle.
+
+animobj.cpp:1089 Is_Animation_Complete and :1107 Peek_Animation_And_Info read the
+retained frame without progression. Set_Transform:353 invalidates hierarchy;
+Get_Bone_Transform:658 evaluates only if hierarchy is invalid. Render:287 skips
+hidden objects before progressing; Special_Render:317 lacks that hidden check.
+Update_Sub_Object_Transforms:780 advances a nonmanual single motion, evaluates
+the pose, then writes Trigger_Sound's return into that same clock PrevFrame.
+Single_Anim_Progress:1048 invalidates hierarchy even when the frame is unchanged,
+while retaining old PrevFrame on that same-frame path. These separate read,
+invalidate, progress, evaluate and consume boundaries must survive the combined
+native tick. Do not infer them from the currently eager producer step; complete
+client tick/lazy embedded audio and original loaded simulation remain pending.
+
+The original caller boundary is Drawable.cpp:2715 draw, not just the W3D module.
+It returns before module execution for hidden/stealthed/fully shrouded Drawables,
+post-multiplies the nonidentity instance matrix, then calls applyPhysicsXform
+before the complete ordered module walk. applyPhysicsXform:1467 reads actual
+Object/AI/Locomotor, camera/script frozen state and showClientPhysics; it applies
+Z translation, Y pitch, negative X roll and Z yaw in that order. Full real-parent
+tick coverage must enter this source caller rather than supply an invented root
+or infer lifecycle from a direct module helper. Its pre-draw opacity updates and
+shadow notifications remain source behaviors; headless omission of output does
+not authorize changing those logical notifications.
+
+Real-parent integration must use one source ModuleFactory/ThingFactory namespace.
+ModuleFactory.cpp::init already registers actual PhysicsBehavior and
+AIUpdateInterface; the existing query fixture Factory::init deliberately only
+registers its query draw module. Combining independently published fixture
+contexts would mismatch retained ModuleData name keys/client parents. A composed
+factory should initialize the original registry, then add the supported native
+draw entry in the same transaction/lifecycle. Reuse object_ownership.cpp::Context
+parent order, not a second replacement namespace. Its verifyModelActor uses
+addVelocityTo followed by scrubVelocity2D(5), since addition alone does not retire
+the source velocity magnitude cache; actual main/alternate turret state machines
+and authored initial angles are already available, not synthetic test getters.
+Full composed model-tick execution remains unaccepted.

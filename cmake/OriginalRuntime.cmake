@@ -349,6 +349,11 @@ foreach(family IN ITEMS functional negative cold-base cold-vehicles cold-special
   set_tests_properties(original_draw_provider_data_${family} PROPERTIES LABELS "original;model;draw-provider-data" TIMEOUT 60 ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()
 add_executable(original_drawable_queries_fixture tests/original/drawable_queries.cpp tests/original/AllocationFault.cpp)
+foreach(family IN ITEMS attachment-shared attachment-missing)
+  add_test(NAME original_drawable_queries_${family} COMMAND original_drawable_queries_fixture ${family})
+  set_tests_properties(original_drawable_queries_${family} PROPERTIES LABELS "original;client;model;drawable-queries" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 foreach(family IN ITEMS producer-controls producer-controls-faults)
   add_test(NAME original_drawable_queries_${family} COMMAND original_drawable_queries_fixture ${family})
   set_tests_properties(original_drawable_queries_${family} PROPERTIES LABELS "original;client;model" TIMEOUT 60

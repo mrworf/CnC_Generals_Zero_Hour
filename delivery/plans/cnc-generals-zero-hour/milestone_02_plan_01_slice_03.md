@@ -4537,3 +4537,75 @@ evidence/qa/N2-client-bone-control-lifecycle.md. Resume real-parent full ordered
 tick/attachment/construction/power/movement, lazy pose/PrevFrame events and transfer,
 then concrete19 and actual original startup/loaded simulation. No N2 or slice03
 completion claim; full500 remains unrun.
+
+Ordered-tick integration prerequisite, source-verified after d8eaf612: the same
+ModuleData attachment offset is consumed by both projectile turret-position
+queries and adjustTransformMtx. It is cached once for the definition lifetime,
+including a zero miss, not invalidated by state/scale changes or another Drawable.
+Native per-instance query-cache invalidation currently violates that source
+contract. Correct the shared owner and whole query transaction together before
+adding the client tick consumer. Initialize the invalid offset backing explicitly
+so rollback never reads an indeterminate Vector3. Preserve existing logic phase
+guards; no client-to-logic callback or simulated phase scope is introduced.
+Test two genuinely registered Drawables sharing parsed ModuleData, differing
+state/scale, cached misses, source first-module selection and every existing
+query failure/retry with exact shared-cache restoration. Generated cold-fixture
+setup explicitly restores definition cache state before census, never in runtime.
+Run focused query behavior/faults on all3, then frozen related matrix; do not
+claim full tick/startup acceptance. Existing coherent slice03 remains active.
+
+Lazy progression finding: animobj Is_Animation_Complete and
+Peek_Animation_And_Info only read retained frames; neither advances time.
+Set_Transform and Control_Bone invalidate hierarchy. Render advances a visible
+nonmanual single motion; Update_Sub_Object_Transforms also advances before
+evaluating, then consumes embedded sounds through the same PrevFrame. Normal
+Render returns early when hidden, Special_Render has no equivalent hidden check.
+Do not implement tick completion by pre-advancing the clock or treat every root
+assignment as eager pose/event publication. This remains the next coupled tick
+and lazy-event owner requirement, not permission to omit headless simulation.
+
+Shared-owner focused validation findings: the first generated scale oracle
+omitted the second pristine scale (prototype/tree plus root); source paths were
+rechecked and the full scale cohort corrected, no production scale change.
+Corrected GCC focused8 passed. Both sanitizer focused8 then stopped at main
+entry with stack overflow, before any test behavior: adding three local Fixture
+declarations expanded the already large monolithic driver's stack frame beyond
+the normal host limit. Move only the new complete warm/test cohorts to guarded
+heap ownership, outside the measured behavior and retired before whole-owner
+baselines. Retain all cases/failure-retry pairs, normal stack limit, sanitizer
+checks and timeouts. This is a fixture lifetime correction, not an engine fix.
+
+Final shared-owner freeze uses canonical735
+3f55a37d3ec2381a8fdccf2e7f444c92186846bb71f71a3b40e988d10b191366,
+inclusive742 3bc89f51ed35a728119e8b84702faf70f5cb7ad261432f91d787d723ca220c2f,
+production659 157a53fa861365b439a5b45690cbd97a01b178ad2d89458f7db19aedbac38a4c.
+Focused8 PASS all3 (21.40s/91.85s/51.96s),12 identical fault manifests.
+Related62 includes the changed constructor's parser/provider consumers; GCC
+PASS233.57s/job54031 retired0, sanitizer jobs21425/85097 remain live. Observe
+exact handles; QA/state retain superseded scale/stack fixture evidence. No source
+edits or acceptance until the related matrix reconciles. Full502 unrun.
+
+Full-tick composition must also enter Drawable::draw's original hidden/shroud
+gate, instance post-multiply and applyPhysicsXform before the module walk. Use
+actual actor Physics/AI/Locomotor and camera/script parents, not fabricated
+getters. For native pristine attachment staging, preserve public logic-query
+guards and use a separate owner-thread client staging path. Cache publication
+must enroll owning condition ancestors as well as its immediate query savepoint;
+otherwise a locally accepted query could survive a later outer tick rejection.
+Include shared definition offset and instance pristine-cache identity in that
+same lifecycle cohort. Completion/peek reads retained clock state first; root/
+captured-control writes invalidate pose, then actual reads/render demand progress,
+evaluate, and consume the same PrevFrame sound boundary. Retain turret → initial/
+optional animated particles → recoil order. No generic event sink or fake parent
+may substitute for original audio/request ownership. These are coupled next
+implementation facts under this plan, not a replacement milestone packet.
+
+Shared attachment checkpoint final reconciliation: related62 PASS all3
+(GCC233.57s/GCCsan990.31s/Clangsan556.13s),223 identical normalized manifests
+ce9ad11363252f71ae95bdf072e7bbabcfd21cdbb7e2b45ec94daccba748217d.
+Focused8 PASS all3 with12 matching rows. All jobs retired0, source fingerprints
+above rechecked unchanged, upstream dependencies pristine. Commit locator:
+git log -1 --format=%H -- evidence/qa/N2-shared-attachment-owner.md.
+Continue the composed full tick/lazy-event/real-parent contract above; no slice03
+or N2 completion, full502 remains unrun. Earlier live/pending text is retained
+as observation history, not current execution instructions.

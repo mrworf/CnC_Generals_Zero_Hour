@@ -27,8 +27,6 @@ class NativeModelDrawQueries : public DrawModule, public ObjectDrawInterface {
   NameKeyGenerator* const m_names;
   const std::thread::id m_thread;
   mutable std::shared_ptr<const Cache> m_cache;
-  mutable Bool m_attachValid=FALSE;
-  mutable Vector3 m_attachOffset{0,0,0};
   mutable Bool m_lastPristineFallback=FALSE;
   mutable Bool m_lastProjectileOutput=FALSE;
   void requireLogicPhase() const;
