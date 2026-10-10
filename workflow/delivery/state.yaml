@@ -21,9 +21,9 @@
   "status": "in_progress",
   "planning_handoff": "workflow/delivery-planning/handoff.yaml",
   "packet_manifest": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",
-  "packet_semantic_revision": "sha256:6ff07a07e808ae8fe0c3699c09e3739d11352cdf9bb7d79b47f54a3e984a6923",
-  "source_commit": "d0483ca911b029460fb46d878fe260e90ec8d071",
-  "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
+  "packet_semantic_revision": "sha256:d1674083fa941836e9ecf1790cd42001d23525d918fbba2dc08ec7688e721bcd",
+  "source_commit": "e0a32f1c92b113733bbe588cfc00aeb7b019e4d7",
+  "planning_commit": "8466486ac071f9a93666f8a2fbf8571e3301a16b",
   "execution": "autonomous",
   "audio_admission_validation": {
     "parent_commit": "c6d2fddbc8f0e2060b3efe1a0e713cf64c64d520",
@@ -40,7 +40,15 @@
     "focused_tests": 7,
     "related_tests": 72,
     "related_selector": "^original_(object_ownership_|drawable_queries_|native_warning_|core_random$)",
-    "first_freeze": {"canonical_sha256": "1a7758e040c6899a0573f26b6d73a723b8d1a633b062e3ce05657cd40a76e33a", "focused": "PASS6/6 GCC12.81s/GCCsan55.20s/Clangsan33.59s; jobs35957/6163/21289 retired0", "related_retired": {"58997": 130, "41927": 130}, "reason": "Source FX stack caller census required nonallocating ancestor retirement tracking; not observation timeout"},
+    "first_freeze": {
+      "canonical_sha256": "1a7758e040c6899a0573f26b6d73a723b8d1a633b062e3ce05657cd40a76e33a",
+      "focused": "PASS6/6 GCC12.81s/GCCsan55.20s/Clangsan33.59s; jobs35957/6163/21289 retired0",
+      "related_retired": {
+        "58997": 130,
+        "41927": 130
+      },
+      "reason": "Source FX stack caller census required nonallocating ancestor retirement tracking; not observation timeout"
+    },
     "gcc_focused": "PASS7/7,14.69s,job25853 retired0",
     "clangsan_focused": "PASS7/7,38.58s,job30153 retired0",
     "gccsan_focused": "PASS7/7,60.35s,job34805 retired0",
@@ -119,10 +127,17 @@
       "gcc_related": "PASS67/67,225.82s,terminal0",
       "focused_manifest_rows": 13,
       "focused_manifest_sha256": "f599763ab13fc186370c55a3287eb53885c18084d8fd225c22f1fe448864491f",
-      "retired_sanitizer_sessions": {"62900": 130, "85675": 130},
+      "retired_sanitizer_sessions": {
+        "62900": 130,
+        "85675": 130
+      },
       "reason": "Intentionally superseded after source Weapon/Drawable caller-phase and whole-walk savepoint review; not timeout or missing-handle restart"
     },
-    "focused_results": {"gcc": "PASS4/4,12.51s,terminal0", "gccsan": "PASS4/4,50.36s,terminal0", "clangsan": "PASS4/4,29.72s,terminal0"},
+    "focused_results": {
+      "gcc": "PASS4/4,12.51s,terminal0",
+      "gccsan": "PASS4/4,50.36s,terminal0",
+      "clangsan": "PASS4/4,29.72s,terminal0"
+    },
     "focused_manifest_rows": 13,
     "focused_manifest_sha256": "64a22398d19b4194d1c73651186a8436d7def1282c36a7884ff73652fae0171f",
     "root_controls_terminal": 62,
@@ -160,7 +175,11 @@
     "gcc_focused": "PASS4/4,23.15s,terminal0",
     "gccsan_focused": "PASS4/4,92.03s,terminal0",
     "clangsan_focused": "PASS4/4,53.86s,terminal0",
-    "related_results": {"gcc": "PASS42/42,210.98s,terminal0", "gccsan": "PASS42/42,843.31s,terminal0", "clangsan": "PASS42/42,497.19s,terminal0"},
+    "related_results": {
+      "gcc": "PASS42/42,210.98s,terminal0",
+      "gccsan": "PASS42/42,843.31s,terminal0",
+      "clangsan": "PASS42/42,497.19s,terminal0"
+    },
     "focused_manifest_rows": 13,
     "focused_manifest_sha256": "b6468a4a9e2fa7f6062d95a8d2910511d4ef7a666635f61fec03200a1f226b24",
     "related_manifest_rows": 76,
@@ -382,7 +401,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03: audio ownership committed95d2d962; focused7/related72 PASS all3,12/153 matching manifests, no live jobs. Next implement the complete ordered Drawable tick/coherent lazy pose demand batch recorded in docs/original-engine-formats.md and existing slice03. Source audit proves Control_Bone invalidates without evaluation, visible Render progresses even valid pose, and initial particle temporary-root demand advances the same clock before recoil. Compose one real actor/native draw namespace; do not stack independent fixture contexts. Include shared attachment/condition/particle ancestor rollback, both scale branches and real Physics/AI/construction/camera parents. No new tiny plans or weakened checks. Dynamic ambient metadata/transfer, concrete19 and actual startup/loaded simulation remain pending; Full509/slice03/N2 incomplete.",
+  "resume_point": "N2 plan02/slice01: actual native entry and original GameEngine post-init/retirement on generated roots. Plan02 governs HQ-01\u201307; old Full475/Full509 and plan01 slice03 are historical.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -467,8 +486,8 @@
     "closeout": "Eight previously unfinished source/build files, new generated test and owned plan/findings/evidence/state are committed together in validated 13-file payload 2b14ad41; preserve earlier inventory as historical review."
   },
   "transaction_parent": "dfb3a3598446e4d36a49c607687eaeb7ce2c4a84",
-  "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
-  "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+  "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02.md",
+  "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02_slice_01.md",
   "completed_slices": [
     "N1_plan_slice_01",
     "N1_plan_slice_02",
@@ -480,7 +499,7 @@
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "N2 plan01/slice03: whole-walk/mutation component validated with frozen related138 PASS all3 and302 matching manifests. Continue concrete19 logical tick/effect/new-owner admission with real source parents and recorded lazy bone/event contracts, then camera actor-follow and actual startup/loaded simulation. Full475, slice03 and N2 remain incomplete.",
+  "next": "N2 plan02/slice01: actual native entry and original GameEngine post-init/retirement on generated roots. Plan02 governs HQ-01\u201307; old Full475/Full509 and plan01 slice03 are historical.",
   "implementation_checkpoint": {
     "label": "original-root-lifecycle",
     "reason": "Actual source cleanup/reset, independent cache/audio ownership and loaded partition live containment verified; full original process startup/simulation still pending",
@@ -554,47 +573,12 @@
     "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
   },
   "active_implementation": {
-    "label": "original-runtime-raw-frame-domain",
-    "parent_commit": "ca5afa8c59031b4d51ec1e909c91dfafd6653f8d",
-    "status": "committed supporting runtime raw frame-domain checkpoint; not slice03 or N2 acceptance",
-    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
-    "evidence": "evidence/qa/N2-runtime-frame-domain.md",
-    "canonical_source_files": 720,
-    "canonical_source_sha256": "1eaba3bdb9c0831db76cf4db3bf79bbc2d4ff4755bf5daa953e251349353ced6",
-    "toolchain_inclusive_files": 727,
-    "toolchain_inclusive_sha256": "188ecbec4bccdd69ac18e8f95dcd84ce5fa6ef0c07ce5abfc9ec2572ca901f7e",
-    "configured_suite_tests": 458,
-    "related_tests_per_configuration": 121,
-    "frozen_results": {
-      "gcc": "PASS113.34s; terminal0",
-      "gcc_sanitize": "PASS442.09s; terminal0",
-      "clang_sanitize": "PASS289.34s; terminal0"
-    },
-    "allocation_terminals": {
-      "current_model_cold": 182,
-      "current_model_seeded": 185,
-      "current_pose_update_and_reads": 0,
-      "current_numbered_128_read": 0,
-      "projectile_cold": 245,
-      "projectile_seeded": 0,
-      "wide_cold": 247,
-      "wide_seeded": 2,
-      "drawable_constructor_standard": 1,
-      "native_module_pool": 2,
-      "display_tick_and_pose_read": 0,
-      "composed_client": 205,
-      "current_bounds_and_info_reads": 0,
-      "runtime_raw_reads": 0
-    },
-    "every_failure_retry": true,
-    "production_cursor_proven_before_fixture_rollback": true,
-    "whole_owner_repetitions": 3,
-    "live_sessions": {},
-    "full_suite_run": false,
-    "slice_complete": false,
-    "milestone_complete": false,
-    "next": "Implement shared original condition/animation producer with weighted client RNG rollback, pending transitions, frame precedence, pause/duration/event semantics and same-model controls/material/ObjectScale reuse; complete concrete19 callbacks and condition transfer/material/prototypes, camera actor-follow, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full458, slice03 and N2 acceptance pending.",
-    "repository_commit": "a7f1f9672dad077e62179083433a4175feb9038b"
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02.md",
+    "slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02_slice_01.md",
+    "status": "planned",
+    "accepted_runtime": false,
+    "supersedes_remaining_directive": "milestone_02_plan_01_slice_03.md",
+    "preexisting_dirty_paths": 17
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -1197,5 +1181,75 @@
     "milestone_complete": false,
     "next": "Implement shared original condition/animation producer with weighted client RNG rollback, pending transitions, frame precedence, pause/duration/event semantics and same-model controls/material/ObjectScale reuse; complete concrete19 callbacks and condition transfer/material/prototypes, camera actor-follow, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full458, slice03 and N2 acceptance pending.",
     "repository_commit": "a7f1f9672dad077e62179083433a4175feb9038b"
+  },
+  "superseded_plan01_active_implementation": {
+    "label": "original-runtime-raw-frame-domain",
+    "parent_commit": "ca5afa8c59031b4d51ec1e909c91dfafd6653f8d",
+    "status": "committed supporting runtime raw frame-domain checkpoint; not slice03 or N2 acceptance",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "evidence": "evidence/qa/N2-runtime-frame-domain.md",
+    "canonical_source_files": 720,
+    "canonical_source_sha256": "1eaba3bdb9c0831db76cf4db3bf79bbc2d4ff4755bf5daa953e251349353ced6",
+    "toolchain_inclusive_files": 727,
+    "toolchain_inclusive_sha256": "188ecbec4bccdd69ac18e8f95dcd84ce5fa6ef0c07ce5abfc9ec2572ca901f7e",
+    "configured_suite_tests": 458,
+    "related_tests_per_configuration": 121,
+    "frozen_results": {
+      "gcc": "PASS113.34s; terminal0",
+      "gcc_sanitize": "PASS442.09s; terminal0",
+      "clang_sanitize": "PASS289.34s; terminal0"
+    },
+    "allocation_terminals": {
+      "current_model_cold": 182,
+      "current_model_seeded": 185,
+      "current_pose_update_and_reads": 0,
+      "current_numbered_128_read": 0,
+      "projectile_cold": 245,
+      "projectile_seeded": 0,
+      "wide_cold": 247,
+      "wide_seeded": 2,
+      "drawable_constructor_standard": 1,
+      "native_module_pool": 2,
+      "display_tick_and_pose_read": 0,
+      "composed_client": 205,
+      "current_bounds_and_info_reads": 0,
+      "runtime_raw_reads": 0
+    },
+    "every_failure_retry": true,
+    "production_cursor_proven_before_fixture_rollback": true,
+    "whole_owner_repetitions": 3,
+    "live_sessions": {},
+    "full_suite_run": false,
+    "slice_complete": false,
+    "milestone_complete": false,
+    "next": "Implement shared original condition/animation producer with weighted client RNG rollback, pending transitions, frame precedence, pause/duration/event semantics and same-model controls/material/ObjectScale reuse; complete concrete19 callbacks and condition transfer/material/prototypes, camera actor-follow, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full458, slice03 and N2 acceptance pending.",
+    "repository_commit": "a7f1f9672dad077e62179083433a4175feb9038b"
+  },
+  "delivery_goal": {
+    "product_id": "cnc-generals-zero-hour",
+    "status": "in_progress",
+    "packet": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",
+    "packet_revision": "sha256:d1674083fa941836e9ecf1790cd42001d23525d918fbba2dc08ec7688e721bcd",
+    "source_commit": "e0a32f1c92b113733bbe588cfc00aeb7b019e4d7",
+    "planning_commit": "8466486ac071f9a93666f8a2fbf8571e3301a16b",
+    "scope": "remaining",
+    "start": null,
+    "end": null,
+    "milestone_ids": [
+      "N2",
+      "N3",
+      "N4",
+      "N5",
+      "N6",
+      "N7"
+    ],
+    "execution": "autonomous",
+    "current_milestone": "N2",
+    "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02.md",
+    "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02_slice_01.md",
+    "blockers": [],
+    "resume_point": "N2 plan02/slice01: actual native entry and original GameEngine post-init/retirement on generated roots. Plan02 governs HQ-01\u201307; old Full475/Full509 and plan01 slice03 are historical.",
+    "plan_phase": "complete",
+    "transaction_parent": "7f18fc0f97a0d6a4dfba311b845420080eaa2ad7"
   }
 }
