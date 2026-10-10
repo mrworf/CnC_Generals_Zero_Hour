@@ -27,7 +27,7 @@
   "execution": "autonomous",
   "condition_walk_worktree_checkpoint": {
     "parent_commit": "926c41d9",
-    "repository_commit": null,
+    "repository_commit": "4d2370c02b546e2697491ecf0dce3d6f5873e050",
     "purpose": "User-requested sorting and commit of coupled unfinished implementation, not completed-slice acceptance",
     "evidence": "evidence/qa/N2-condition-walk-worktree-checkpoint.md",
     "initial_modified_files": 8,
