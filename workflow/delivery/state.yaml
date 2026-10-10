@@ -34,7 +34,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 asset graph supporting checkpoint validated; no live jobs. Continue material/other prototype admission and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then full native factory/startup and loaded simulation. Full423 and N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 asset graph supporting checkpoint committed in 8639ce2cbdffefd56feebdc90020263d60de599f; no live jobs. Continue material/other prototype admission and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then full native factory/startup and loaded simulation. Full423 and N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -170,7 +170,7 @@
   "active_implementation": {
     "label": "original-w3d-asset-graph",
     "parent_commit": "bd5b835f",
-    "status": "validated supporting asset graph checkpoint; not slice03 or N2 acceptance",
+    "status": "committed supporting asset graph checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-w3d-assets.md",
     "canonical_source_files": 671,
@@ -197,7 +197,8 @@
     "slice_complete": false,
     "milestone_complete": false,
     "next": "Continue material/other prototype admission and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then full native factory/startup and loaded simulation. Full423 and N2 acceptance pending.",
-    "environment": "Sandbox sanitizer process inspection prohibited (terminal8); identical host tests passed with ASan/UBSan/LSan enabled and no suppressions."
+    "environment": "Sandbox sanitizer process inspection prohibited (terminal8); identical host tests passed with ASan/UBSan/LSan enabled and no suppressions.",
+    "repository_commit": "8639ce2cbdffefd56feebdc90020263d60de599f"
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -356,7 +357,7 @@
   "w3d_assets_checkpoint": {
     "label": "original-w3d-asset-graph",
     "parent_commit": "bd5b835f",
-    "status": "validated supporting asset graph checkpoint; not slice03 or N2 acceptance",
+    "status": "committed supporting asset graph checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-w3d-assets.md",
     "canonical_source_files": 671,
@@ -383,6 +384,7 @@
     "slice_complete": false,
     "milestone_complete": false,
     "next": "Continue material/other prototype admission and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then full native factory/startup and loaded simulation. Full423 and N2 acceptance pending.",
-    "environment": "Sandbox sanitizer process inspection prohibited (terminal8); identical host tests passed with ASan/UBSan/LSan enabled and no suppressions."
+    "environment": "Sandbox sanitizer process inspection prohibited (terminal8); identical host tests passed with ASan/UBSan/LSan enabled and no suppressions.",
+    "repository_commit": "8639ce2cbdffefd56feebdc90020263d60de599f"
   }
 }
