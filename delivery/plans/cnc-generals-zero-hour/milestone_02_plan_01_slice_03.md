@@ -3977,3 +3977,4 @@ explicit bounded/interpolated and compressed conversion checks remain intact.
 Evidence: evidence/qa/N2-runtime-frame-domain.md. Continue shared condition/RNG/
 transition/pause/duration and concrete19/event/resource-reuse producer work,
 then native startup/loaded simulation. Full458, slice03 and N2 remain incomplete.
+Runtime raw-domain payload commit: a7f1f9672dad077e62179083433a4175feb9038b.
