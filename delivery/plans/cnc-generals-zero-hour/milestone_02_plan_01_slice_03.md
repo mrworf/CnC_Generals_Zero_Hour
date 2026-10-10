@@ -3881,3 +3881,4 @@ three complete owners. Advancement/actual reads measure terminal0. Evidence:
 evidence/qa/N2-animation-clock.md. Source sync-time publication, concrete animation
 selection/transition/pause/sound callbacks, bounds/runtime19 and full456/root/
 loaded deterministic simulation remain pending under existing slice03/N2.
+Single-motion timing payload commit: `f2921f1e5192887878091a59e582a371e8ff70ba`.

@@ -34,7 +34,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 single-motion timing supporting checkpoint validated; payload provenance pending; no live jobs. Integrate original fixed-step client sync-time publication and concrete animation selection/client RNG/flags/transitions/pause/events; complete bounding primitives/all-LOD bounds, concrete19 runtime providers and condition transfer/material/prototypes, then full native root startup and loaded deterministic simulation under N2 plan01/slice03. Full456, slice03 and N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 single-motion timing supporting checkpoint committed in f2921f1e5192887878091a59e582a371e8ff70ba; no live jobs. Integrate original fixed-step client sync-time publication and concrete animation selection/client RNG/flags/transitions/pause/events; complete bounding primitives/all-LOD bounds, concrete19 runtime providers and condition transfer/material/prototypes, then full native root startup and loaded deterministic simulation under N2 plan01/slice03. Full456, slice03 and N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -170,7 +170,7 @@
   "active_implementation": {
     "label": "original-single-motion-timing",
     "parent_commit": "abe51f117456fd33cab85dc0555c1a8a515c5e72",
-    "status": "validated supporting single-motion timing checkpoint; payload provenance pending; not slice03 or N2 acceptance",
+    "status": "committed supporting single-motion timing checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-animation-clock.md",
     "canonical_source_files": 714,
@@ -203,7 +203,8 @@
     "full_suite_run": false,
     "slice_complete": false,
     "milestone_complete": false,
-    "next": "Integrate original fixed-step client sync-time publication and concrete animation selection/client RNG/flags/transitions/pause/events; complete bounding primitives/all-LOD bounds, concrete19 runtime providers and condition transfer/material/prototypes, then full native root startup and loaded deterministic simulation under N2 plan01/slice03. Full456, slice03 and N2 acceptance pending."
+    "next": "Integrate original fixed-step client sync-time publication and concrete animation selection/client RNG/flags/transitions/pause/events; complete bounding primitives/all-LOD bounds, concrete19 runtime providers and condition transfer/material/prototypes, then full native root startup and loaded deterministic simulation under N2 plan01/slice03. Full456, slice03 and N2 acceptance pending.",
+    "repository_commit": "f2921f1e5192887878091a59e582a371e8ff70ba"
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -645,7 +646,7 @@
   "animation_clock_checkpoint": {
     "label": "original-single-motion-timing",
     "parent_commit": "abe51f117456fd33cab85dc0555c1a8a515c5e72",
-    "status": "validated supporting single-motion timing checkpoint; payload provenance pending; not slice03 or N2 acceptance",
+    "status": "committed supporting single-motion timing checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-animation-clock.md",
     "canonical_source_files": 714,
@@ -678,6 +679,7 @@
     "full_suite_run": false,
     "slice_complete": false,
     "milestone_complete": false,
-    "next": "Integrate original fixed-step client sync-time publication and concrete animation selection/client RNG/flags/transitions/pause/events; complete bounding primitives/all-LOD bounds, concrete19 runtime providers and condition transfer/material/prototypes, then full native root startup and loaded deterministic simulation under N2 plan01/slice03. Full456, slice03 and N2 acceptance pending."
+    "next": "Integrate original fixed-step client sync-time publication and concrete animation selection/client RNG/flags/transitions/pause/events; complete bounding primitives/all-LOD bounds, concrete19 runtime providers and condition transfer/material/prototypes, then full native root startup and loaded deterministic simulation under N2 plan01/slice03. Full456, slice03 and N2 acceptance pending.",
+    "repository_commit": "f2921f1e5192887878091a59e582a371e8ff70ba"
   }
 }
