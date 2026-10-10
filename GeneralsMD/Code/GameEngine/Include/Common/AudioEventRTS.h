@@ -62,6 +62,9 @@ enum AudioPriority : UnsignedInt;
 // because we allocate them on the stack frequently.
 class AudioEventRTS
 {	
+  friend class NativeAudioAdmission;
+  using NativeRetirementObserver=void(*)(const AudioEventRTS&) noexcept;
+  static void setNativeRetirementObserver(NativeRetirementObserver) noexcept;
 public:
 	AudioEventRTS( );
 	AudioEventRTS( const AsciiString& eventName );
@@ -69,7 +72,7 @@ public:
 	AudioEventRTS( const AsciiString& eventName, DrawableID drawableID );	// Pass 0 for unused if attaching to drawable
 	AudioEventRTS( const AsciiString& eventName, const Coord3D *positionOfAudio );
 
-	virtual ~AudioEventRTS() = default; // Original empty body; retain member teardown.
+	virtual ~AudioEventRTS(); // Withdraw only active borrowed admission snapshots.
 
 	AudioEventRTS( const AudioEventRTS& right );
 	AudioEventRTS& operator=( const AudioEventRTS& right );
@@ -143,8 +146,8 @@ public:
 	Int getPlayerIndex( void ) const;
 	void setPlayerIndex( Int playerNdx );
 
-	Int getPlayingAudioIndex( void ) { return m_playingAudioIndex; };
-	void setPlayingAudioIndex( Int pai )  { m_playingAudioIndex = pai; };
+	Int getPlayingAudioIndex( void ) const { return m_playingAudioIndex; };
+	void setPlayingAudioIndex( Int pai ) const { m_playingAudioIndex = pai; };
 
 	Bool getUninterruptable( ) const { return m_uninterruptable; }
 	void setUninterruptable( Bool uninterruptable ) { m_uninterruptable = uninterruptable; } 
@@ -193,7 +196,7 @@ protected:
 	Real m_volumeShift;							///< Volume shift that should occur on this piece of audio
 	Real m_delay;										///< Amount to delay before playing this sound
 	Int m_loopCount;								///< The current loop count value. Only valid if this is a looping type event or the override has been set.
-	Int m_playingAudioIndex;				///< The sound index we are currently playing. In the case of non-random, we increment this to move to the next sound
+	mutable Int m_playingAudioIndex;				///< Cached choice; also updated through the original const admission API.
 	Int m_allCount;									///< If this sound is an ALL type, then this is how many sounds we have played so far.
 	
 	Int m_playerIndex;							///< The index of the player who owns this sound. Used for sounds that should have an owner, but don't have an object, etc.

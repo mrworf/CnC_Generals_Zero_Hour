@@ -50,6 +50,8 @@
 #include "Common/AudioEventInfo.h"
 #include "Common/AudioEventRTS.h"
 #include "Common/AudioRequest.h"
+#include "Common/NativeAudioAdmission.h"
+#include <memory>
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 
@@ -64,7 +66,8 @@
 //-------------------------------------------------------------------------------------------------
 SoundManager::SoundManager()
 {
-	// nada to do
+  m_num2DSamples = m_num3DSamples = 0;
+  m_numPlaying2DSamples = m_numPlaying3DSamples = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -136,8 +139,10 @@ Real SoundManager::getCameraAudibleDistance( void )
 }
 
 //-------------------------------------------------------------------------------------------------
-void SoundManager::addAudioEvent(AudioEventRTS *eventToAdd)
+void SoundManager::addAudioEvent(AudioEventRTS *&eventToAdd)
 {
+  if(!TheAudio || !eventToAdd)throw ERROR_BAD_ARG;
+  NativeAudioAdmission admission(*TheAudio);
 	if (m_num2DSamples == 0 && m_num3DSamples == 0) {
 		m_num2DSamples = TheAudio->getNum2DSamples();
 		m_num3DSamples = TheAudio->getNum3DSamples();
@@ -147,13 +152,18 @@ void SoundManager::addAudioEvent(AudioEventRTS *eventToAdd)
 #ifdef INTENSIVE_AUDIO_DEBUG
 		DEBUG_LOG((" - appended to request list with handle '%d'.\n", (UnsignedInt) eventToAdd->getPlayingHandle()));
 #endif
-		AudioRequest *audioRequest = TheAudio->allocateAudioRequest( true );
-		audioRequest->m_pendingEvent = eventToAdd;
-		audioRequest->m_request = AR_Play;
-		TheAudio->appendAudioRequest(audioRequest);
+    auto release=[](AudioRequest* request){TheAudio->releaseAudioRequest(request);};
+    std::unique_ptr<AudioRequest,decltype(release)> request(TheAudio->allocateAudioRequest(true),release);
+    request->m_pendingEvent=eventToAdd;
+    request->m_request=AR_Play;
+    TheAudio->appendAudioRequest(request.get());
+    request->m_ownsPendingEvent=TRUE;
+    request.release();
 	} else {
 		TheAudio->releaseAudioEventRTS(eventToAdd);
+    eventToAdd=nullptr;
 	}
+  admission.commit();
 }
 
 //-------------------------------------------------------------------------------------------------

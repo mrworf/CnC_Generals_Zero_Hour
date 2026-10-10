@@ -38,6 +38,17 @@
 extern Int GetGameAudioRandomValue( int lo, int hi, const char *file, int line );
 extern Real GetGameAudioRandomValueReal( Real lo, Real hi, const char *file, int line );
 
+class GameAudioRandomTransaction final {
+  UnsignedInt m_previous[6];
+  bool m_committed=false;
+public:
+  GameAudioRandomTransaction() noexcept;
+  ~GameAudioRandomTransaction() noexcept;
+  GameAudioRandomTransaction(const GameAudioRandomTransaction&)=delete;
+  GameAudioRandomTransaction& operator=(const GameAudioRandomTransaction&)=delete;
+  void commit() noexcept {m_committed=true;}
+};
+
 // use these macros to access the random value functions
 #define GameAudioRandomValue( lo, hi ) GetGameAudioRandomValue( lo, hi, __FILE__, __LINE__ )
 #define GameAudioRandomValueReal( lo, hi ) GetGameAudioRandomValueReal( lo, hi, __FILE__, __LINE__ )

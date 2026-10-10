@@ -6740,8 +6740,8 @@ order preserves the earliest shared boundary when multiple instances borrow one
 definition. Explicit zero initialization makes invalid offset backing defined.
 Generated cold fault census deliberately resets its generated definition cache
 before measurement; production destruction does not. Two-owner differing state/
-scale and cached-miss focused8 PASS all3 is recorded in
-evidence/qa/N2-shared-attachment-owner.md; frozen related62 remains pending.
+scale and cached-miss focused8/related62 PASS all3 is recorded in
+evidence/qa/N2-shared-attachment-owner.md as that committed frozen checkpoint.
 Pristine sampling also has both prototype/tree and temporary-root scale
 (W3DModelDraw.cpp:2721, native prepareNativeBinding). At instance scale2 the
 generated first-frame Arm position12 becomes48, then adds the already shared
@@ -6816,3 +6816,96 @@ event playback or request ownership. Complete parsed settings/event parents and
 real base Music/Sound managers are required for the next generated cohort; never
 report physical playback from a successful queue append. No native audio
 admission acceptance is claimed by this source inspection.
+
+#### Coupled native audio admission implementation (N2 slice03 component verified)
+
+The main-owner NativeAudioAdmission savepoint enrolls each caller in all active
+ancestors before mutation. It retains the raw borrowed info cache (the original
+getAudioEventInfo getter itself invalidates name mismatches), playing index,
+handle cursor, queue tail boundary, four SoundManager counters, and both six-word
+audio/game-logic RNG streams. Scripted logical AudioEventRTS uses logic RNG for
+random sound/attack/decay selection; ordinary audio uses audio RNG. Successful
+policy rejection commits source handle/RNG changes; exceptions and outer
+rollback restore them. Never infer a separate event-cursor or silent playback.
+
+Music and accepted Sound requests own one copied Play payload only after the
+fallible append succeeds. Stop requests own none. AudioRequest::takePendingEvent
+transfers that ownership once, outside every active admission; queue destruction
+cannot free a transferred payload. Borrowed legacy loop requests are not made
+owning just because their union contains an event pointer. Native physical
+consumers must use the transfer API. The inactive Miles provider is not patched
+or accepted by this cohort. Pending owned payloads retire before borrowed event
+metadata/managers at whole-owner teardown. Metadata insertion itself guards the
+pooled AudioEventInfo until its fallible map node has accepted it.
+
+SoundManager rejection now clears the pointer after release, fixing the verified
+original use-after-free. All four discovery/playing counters start at zero.
+AudioSettings invalid primitive backing is value-initialized before parsing.
+Paired Music/Sound initialization acquisitions are guarded before publication.
+Initialization/reset/drain and payload transfer reject during active admission,
+so a retained queue boundary cannot disappear or acquire different manager parents.
+
+AudioEventRTS::adjustForLocalization had another original Windows-tolerated join:
+reverseFind returns the separator itself, while generateFilenamePrefix already
+ends in one. Appending str+1 preserves the intended localized leaf under strict
+Linux VFS rules. The same helper serves music/streaming/sound/attack/decay;
+missing localized files retain generic paths. Do not weaken VFS doubled-separator
+or traversal rejection to accommodate an internally malformed join.
+
+Generated tests in tests/original/audio_admission.cpp use parsed GameData,
+separate user storage, original AudioManager::init and actual Music/Sound managers.
+The queue-only device reports zero physical channels and no playing voices;
+an interrupt event may still be queued by original policy, not played. Generated
+music sentinels prove only file existence/localized selection, never decoding.
+Lifetime-aware frozen focused7/related72 PASS all3 is recorded in
+evidence/qa/N2-audio-admission-ownership.md. Full tick, lazy embedded event wiring,
+actual loaded simulation, and physical media remain unaccepted.
+
+Original SoundFXNugget::doFXPos/doFXObj (FXList.cpp:106/118) pass temporary stack
+AudioEventRTS callers. Their lifespan may be shorter than an outer full-tick
+admission. A private thread-local retirement observer is active only while a
+native admission exists. Base event destruction withdraws matching caller
+snapshots from every ancestor without allocation; it does not alter queued owned
+copies or invoke gameplay. Reused addresses must register a new lifetime's raw
+cache/index boundary. No destructor dependency on a physical audio provider or
+game singleton is introduced. This supports game-owner thread lifetimes, not
+cross-thread destruction of borrowed simulation objects.
+
+#### Embedded animation sound activation census (not a playback acceptance)
+
+The released GeneralsMD/Code C++/header census finds Set_Sound_Library only in
+animatedsoundmgr.cpp:562 and its declaration, and no concrete SoundLibraryBridge
+implementation. SoundLibrary is initialized NULL (:63). WW3D::Init (:312) may
+load w3danimsound.ini through AnimatedSoundMgr::Initialize (:246); this loads
+animation/bone/list metadata but does not install a bridge. Get_Embedded_Sound_Name
+(:439) reads that metadata independently of a playback bridge. Trigger_Sound
+(:495) returns old_frame immediately when the bridge or animation is absent.
+Therefore metadata presence alone cannot justify enabling new embedded playback
+or advancing PrevFrame as though a sound had fired. Preserve that no-bridge
+branch in the full lazy pose/tick integration. This is source-census evidence,
+not proof about an uninspected external binary or supplied metadata presence.
+
+Ordinary source GameAudio remains necessary: SoundFXNugget and GameLogic/Object
+callers use AudioEventRTS separately from WW3D's optional bridge. The admission
+cohort is justified by those real paths and original startup ownership, not by
+claiming the released game initializes a missing embedded-sound backend. Any
+future bridge enablement needs a source-established game activation path; do not
+invent one to exercise a test. The generic library sound interval algorithm is
+not itself proof that the Zero Hour process emitted those events.
+
+#### Remaining dynamic ambient metadata boundary
+
+Parsed newAudioEventInfo insertion is covered above; external addAudioEventInfo
+is a distinct caller-owned-until-success contract. Drawable::xferSnapshot
+(:5496) calls it inside a catch that deleteInstances customizedInfo on failure.
+Object::updateObjValuesFromMapProperties (:3825) calls it after fallible custom
+name/override preparation but lacks an equivalent visible candidate guard.
+Do not make the callee retire failure candidates without changing/validating both
+callers: that would double-release Drawable's failure path. The duplicate branch
+copies into existing metadata while both callers subsequently publish the
+incoming pointer; registry identity, collision behavior and whole-level retirement
+need a coupled real-actor/transfer cohort, not an isolated map insertion fix.
+No dynamic ambient metadata or whole-frame registration rollback acceptance is
+claimed by the current parsed-audio admission fixture. Carry this source finding
+into real map-property/transfer integration; queued payloads borrow metadata and
+must retire before its owner.

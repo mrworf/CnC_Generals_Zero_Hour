@@ -50,6 +50,7 @@
 #include "Common/AudioEventRTS.h"
 #include "Common/AudioHandleSpecialValues.h"
 #include "Common/AudioRequest.h"
+#include "Common/NativeAudioAdmission.h"
 #include "Common/AudioSettings.h"
 #include "Common/FileSystem.h"
 #include "Common/GameEngine.h"
@@ -178,7 +179,7 @@ AudioManager::AudioManager() :
 	theAudioHandlePool = AHSV_FirstHandle;
 	// Nothing is published until all three constructor acquisitions succeed.
 	// A later failure must retire earlier candidates even before dtor entry.
-	auto settings = std::unique_ptr<AudioSettings>(NEW AudioSettings);
+	auto settings = std::unique_ptr<AudioSettings>(NEW AudioSettings{});
 	auto misc = std::unique_ptr<MiscAudio>(NEW MiscAudio);
 	auto silent = std::unique_ptr<AudioEventRTS>(NEW AudioEventRTS);
 	m_audioSettings = settings.release();
@@ -191,6 +192,9 @@ AudioManager::AudioManager() :
 //-------------------------------------------------------------------------------------------------
 AudioManager::~AudioManager()
 {
+  // Pending payloads borrow metadata; retire them before that metadata.
+  for(auto* request:m_audioRequests)releaseAudioRequest(request);
+  m_audioRequests.clear();
 	// cleanup all of the loaded AudioEventInfos
 	AudioEventInfoHashIt it;
 	for (it = m_allAudioEventInfo.begin(); it != m_allAudioEventInfo.end(); ++it) {
@@ -223,6 +227,7 @@ AudioManager::~AudioManager()
 //-------------------------------------------------------------------------------------------------
 void AudioManager::init()
 {
+  NativeAudioAdmission::requireConsumption(*this);
 	INI ini;
 	ini.load( AsciiString( "Data\\INI\\AudioSettings.ini" ), INI_LOAD_OVERWRITE, NULL);
 
@@ -272,8 +277,12 @@ void AudioManager::init()
 		}
 	}
 	
-	m_music = NEW MusicManager;
-	m_sound = NEW SoundManager;
+  auto music=std::unique_ptr<MusicManager>(NEW MusicManager);
+  auto sound=std::unique_ptr<SoundManager>(NEW SoundManager);
+  delete m_music;
+  delete m_sound;
+  m_music=music.release();
+  m_sound=sound.release();
 
 	// Set our system volumes from the user's preferred settings, not the defaults.
 	m_systemMusicVolume = getAudioSettings() ? getAudioSettings()->m_preferredMusicVolume : 0.55f;
@@ -301,6 +310,7 @@ void AudioManager::postProcessLoad()
 //-------------------------------------------------------------------------------------------------
 void AudioManager::reset()
 {
+  NativeAudioAdmission::requireConsumption(*this);
 	// clear out any adjusted volumes we might have set.
 	m_adjustedVolumes.clear();
 
@@ -423,9 +433,12 @@ void AudioManager::getInfoForAudioEvent( const AudioEventRTS *eventToFindAndFill
 //-------------------------------------------------------------------------------------------------
 AudioHandle AudioManager::addAudioEvent(const AudioEventRTS *eventToAdd)
 {
+  if(!eventToAdd)throw ERROR_BAD_ARG;
 	if (eventToAdd->getEventName().isEmpty() || eventToAdd->getEventName() == AsciiString("NoSound")) {
 		return AHSV_NoSound;
 	}
+  NativeAudioAdmission admission(*this);
+  NativeAudioAdmission::touch(*eventToAdd);
 
 #ifdef INTENSIVE_AUDIO_DEBUG
 	DEBUG_LOG(("AUDIO (%d): Received addAudioEvent('%s')", TheGameLogic->getFrame(), eventToAdd->getEventName().str()));
@@ -434,6 +447,7 @@ AudioHandle AudioManager::addAudioEvent(const AudioEventRTS *eventToAdd)
 		getInfoForAudioEvent(eventToAdd);
 		if (!eventToAdd->getAudioEventInfo()) {
 			DEBUG_CRASH(("No info for requested audio event '%s'\n", eventToAdd->getEventName().str()));
+      admission.commit();
 			return AHSV_Error;
 		}
 	}
@@ -441,29 +455,34 @@ AudioHandle AudioManager::addAudioEvent(const AudioEventRTS *eventToAdd)
 	switch (eventToAdd->getAudioEventInfo()->m_soundType)
 	{
 		case AT_Music:
-			if (!isOn(AudioAffect_Music)) 
-				return AHSV_NoSound;
+			if (!isOn(AudioAffect_Music)) {
+        admission.commit();return AHSV_NoSound;
+      }
 			break;
 		case AT_SoundEffect:
-			if (!isOn(AudioAffect_Sound) || !isOn(AudioAffect_Sound3D)) 
-				return AHSV_NoSound;
+			if (!isOn(AudioAffect_Sound) || !isOn(AudioAffect_Sound3D)) {
+        admission.commit();return AHSV_NoSound;
+      }
 			break;
 		case AT_Streaming:
-			if (!isOn(AudioAffect_Speech)) 
-				return AHSV_NoSound;
+			if (!isOn(AudioAffect_Speech)) {
+        admission.commit();return AHSV_NoSound;
+      }
 			break;
 	}
 
 	// if we're currently playing uninterruptable speech, then disallow the addition of this sample
 	if (getDisallowSpeech() && eventToAdd->getAudioEventInfo()->m_soundType == AT_Streaming) {
+    admission.commit();
 		return AHSV_NoSound;
 	}
 
 
-	AudioEventRTS *audioEvent = MSGNEW("AudioEventRTS") AudioEventRTS(*eventToAdd);		// poolify
+  std::unique_ptr<AudioEventRTS> candidate(MSGNEW("AudioEventRTS") AudioEventRTS(*eventToAdd));
+  AudioEventRTS* audioEvent=candidate.get();
 	audioEvent->setPlayingHandle( allocateNewHandle() );
 	audioEvent->generateFilename();	// which file are we actually going to play?
-	((AudioEventRTS*)eventToAdd)->setPlayingAudioIndex( audioEvent->getPlayingAudioIndex() );
+  eventToAdd->setPlayingAudioIndex(audioEvent->getPlayingAudioIndex());
 	audioEvent->generatePlayInfo();	// generate pitch shift and volume shift now as well
 
 	std::list<std::pair<AsciiString, Real> >::iterator it;
@@ -476,7 +495,7 @@ AudioHandle AudioManager::addAudioEvent(const AudioEventRTS *eventToAdd)
 	
 	if (!audioEvent->getUninterruptable()) {
 		if (!shouldPlayLocally(audioEvent)) {
-			releaseAudioEventRTS(audioEvent);
+      admission.commit();
 			return AHSV_NotForLocal;
 		}
 	}
@@ -486,11 +505,12 @@ AudioHandle AudioManager::addAudioEvent(const AudioEventRTS *eventToAdd)
 #ifdef INTENSIVE_AUDIO_DEBUG
 		DEBUG_LOG((" - culled due to muting (%d).\n", audioEvent->getVolume()));
 #endif
-		releaseAudioEventRTS(audioEvent);
+    admission.commit();
 		return AHSV_Muted;
 	}
 
 	AudioType type = eventToAdd->getAudioEventInfo()->m_soundType;
+  if((type==AT_Music&&!m_music)||(type!=AT_Music&&!m_sound))throw ERROR_BAD_ARG;
 	if (type == AT_Music) 
 	{
 		m_music->addAudioEvent(audioEvent);
@@ -501,11 +521,11 @@ AudioHandle AudioManager::addAudioEvent(const AudioEventRTS *eventToAdd)
 		m_sound->addAudioEvent(audioEvent);
 	}
 
-	if( audioEvent )
-	{
-		return audioEvent->getPlayingHandle();
-	}
-	return AHSV_NoSound;
+  // Accepted queues own the copy; rejected sound admission has deleted/cleared it.
+  candidate.release();
+  const AudioHandle result=audioEvent?audioEvent->getPlayingHandle():AHSV_NoSound;
+  admission.commit();
+  return result;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -590,19 +610,27 @@ AsciiString AudioManager::prevTrackName(const AsciiString& currentTrack )
 //-------------------------------------------------------------------------------------------------
 void AudioManager::removeAudioEvent(AudioHandle audioEvent)
 {
+  NativeAudioAdmission admission(*this);
 	if (audioEvent == AHSV_StopTheMusic || audioEvent == AHSV_StopTheMusicFade) {
+    if(!m_music)throw ERROR_BAD_ARG;
 		m_music->removeAudioEvent(audioEvent);
+    admission.commit();
 		return;
 	}
 
 	if (audioEvent < AHSV_FirstHandle) {
+    admission.commit();
 		return;
 	}
 
-	AudioRequest *req = allocateAudioRequest( false );
+  auto release=[this](AudioRequest* request){releaseAudioRequest(request);};
+  std::unique_ptr<AudioRequest,decltype(release)> request(allocateAudioRequest(false),release);
+  AudioRequest* req=request.get();
 	req->m_handleToInteractOn = audioEvent;
 	req->m_request = AR_Stop;
 	appendAudioRequest( req );
+  request.release();
+  admission.commit();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -828,13 +856,16 @@ void AudioManager::releaseAudioRequest( AudioRequest *requestToRelease )
 //-------------------------------------------------------------------------------------------------
 void AudioManager::appendAudioRequest( AudioRequest *m_request )
 {
+  if(!m_request||m_request->m_queueOwner)throw ERROR_BAD_ARG;
 	m_audioRequests.push_back(m_request);
+  m_request->m_queueOwner=this;
 }
 
 //-------------------------------------------------------------------------------------------------
 // Remove all pending audio requests
 void AudioManager::removeAllAudioRequests( void )
 {
+  NativeAudioAdmission::requireConsumption(*this);
   std::list<AudioRequest*>::iterator it;
   for ( it = m_audioRequests.begin(); it != m_audioRequests.end(); it++ ) {
     releaseAudioRequest( *it );
@@ -858,8 +889,12 @@ AudioEventInfo *AudioManager::newAudioEventInfo( AsciiString audioName )
 		return eventInfo;
 	}
 
-	m_allAudioEventInfo[audioName] = newInstance(AudioEventInfo);
-	return m_allAudioEventInfo[audioName];
+  auto release=[](AudioEventInfo* candidate){candidate->deleteInstance();};
+  std::unique_ptr<AudioEventInfo,decltype(release)> candidate(newInstance(AudioEventInfo),release);
+  auto [position,inserted]=m_allAudioEventInfo.emplace(audioName,candidate.get());
+  if(!inserted)throw ERROR_BAD_ARG;
+  candidate.release();
+  return position->second;
 }
 
 //-------------------------------------------------------------------------------------------------

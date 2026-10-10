@@ -562,7 +562,8 @@ void AudioEventRTS::adjustForLocalization(AsciiString &strToAdjust)
 	// try the localized version first so that we're guarenteed to get it
 	// even if the generic data directory holds a version of the file
 	AsciiString localizedFilePath = generateFilenamePrefix(m_eventInfo->m_soundType, TRUE);
-	AsciiString filename = str;
+  // reverseFind points at the separator; the prefix already supplies it.
+	AsciiString filename = str + 1;
 	localizedFilePath.concat(filename);
 
 	if (TheFileSystem->doesFileExist(localizedFilePath.str())) {

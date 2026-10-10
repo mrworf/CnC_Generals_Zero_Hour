@@ -213,7 +213,7 @@ target_compile_options(original_logic PRIVATE -Wno-unknown-pragmas -Werror=retur
 # Retained actual Common gameplay owners exposed by the whole-root link census.
 # No platform playback, excluded tools/online service or replacement globals.
 set(ZH_ORIGINAL_GAMEPLAY_COMMON
-  Audio/AudioEventRTS.cpp Audio/AudioRequest.cpp Audio/DynamicAudioEventInfo.cpp
+  Audio/AudioEventRTS.cpp Audio/AudioRequest.cpp Audio/NativeAudioAdmission.cpp Audio/DynamicAudioEventInfo.cpp
   Audio/GameAudio.cpp Audio/GameMusic.cpp Audio/GameSounds.cpp
   RTS/AcademyStats.cpp RTS/ActionManager.cpp RTS/Energy.cpp RTS/Handicap.cpp
   RTS/MissionStats.cpp RTS/Money.cpp RTS/Player.cpp RTS/PlayerList.cpp
@@ -567,6 +567,18 @@ add_executable(original_ai_pathfinder_fixture tests/original/ai_pathfinder.cpp t
 add_executable(original_player_ownership_fixture tests/original/player_ownership.cpp tests/original/AllocationFault.cpp)
 add_executable(original_team_ownership_fixture tests/original/team_ownership.cpp tests/original/AllocationFault.cpp)
 add_executable(original_object_ownership_fixture tests/original/object_ownership.cpp tests/original/AllocationFault.cpp)
+add_executable(original_audio_admission_fixture tests/original/audio_admission.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_audio_admission_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_include_directories(original_audio_admission_fixture PRIVATE
+  "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
+target_compile_definitions(original_audio_admission_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+target_link_options(original_audio_admission_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS functional negative faults logical-faults pool-failures startup-faults lifetimes)
+  add_test(NAME original_audio_admission_${family} COMMAND original_audio_admission_fixture "${family}")
+  set_tests_properties(original_audio_admission_${family} PROPERTIES LABELS "original;runtime;audio" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 target_link_libraries(original_object_ownership_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_include_directories(original_object_ownership_fixture PRIVATE

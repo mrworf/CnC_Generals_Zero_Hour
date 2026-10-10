@@ -48,6 +48,7 @@
 #include "Lib/BaseType.h"
 #include "Common/STLTypedefs.h"
 #include "Common/SubsystemInterface.h"
+#include <thread>
 
 
 // Forward Declarations
@@ -134,6 +135,7 @@ enum
 
 class AudioManager : public SubsystemInterface
 {
+  friend class NativeAudioAdmission;
 	public:
 		AudioManager();
 		virtual ~AudioManager();
@@ -325,6 +327,7 @@ class AudioManager : public SubsystemInterface
     
 	protected:
 		AudioSettings *m_audioSettings;
+    const std::thread::id m_admissionThread=std::this_thread::get_id();
 		MiscAudio *m_miscAudio;
 		MusicManager *m_music;
 		SoundManager *m_sound;

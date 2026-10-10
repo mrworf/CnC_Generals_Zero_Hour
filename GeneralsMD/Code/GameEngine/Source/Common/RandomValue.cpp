@@ -76,10 +76,22 @@ static UnsignedInt theGameAudioSeed[6] =
 };
 
 static UnsignedInt theGameLogicBaseSeed = 0;
+GameAudioRandomTransaction::GameAudioRandomTransaction() noexcept {
+  for(unsigned n=0;n<6;++n)m_previous[n]=theGameAudioSeed[n];
+}
+GameAudioRandomTransaction::~GameAudioRandomTransaction() noexcept {
+  if(!m_committed)for(unsigned n=0;n<6;++n)theGameAudioSeed[n]=m_previous[n];
+}
 static UnsignedInt theGameLogicSeed[6] =
 {
     0xf22d0e56L, 0x883126e9L, 0xc624dd2fL, 0x702c49cL, 0x9e353f7dL, 0x6fdf3b64L
 };
+GameLogicRandomTransaction::GameLogicRandomTransaction() noexcept {
+  for(unsigned n=0;n<6;++n)m_previous[n]=theGameLogicSeed[n];
+}
+GameLogicRandomTransaction::~GameLogicRandomTransaction() noexcept {
+  if(!m_committed)for(unsigned n=0;n<6;++n)theGameLogicSeed[n]=m_previous[n];
+}
 
 // Add with carry. SUM is replaced with A + B + C, C is replaced with 1  if there was a carry, 0 if there wasn't. A carry occurred if the sum is  less than one of the inputs. This is addition, so carry can never be  more than one.
 #define ADC(SUM, A, B, C)   SUM = (A) + (B) + (C); C = ((SUM < (A)) || (SUM < (B)))

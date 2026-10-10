@@ -48,6 +48,10 @@ struct AudioRequest : public MemoryPoolObject
 	MEMORY_POOL_GLUE_WITH_USERLOOKUP_CREATE( AudioRequest, "AudioRequest" )
 
 public:
+  AudioRequest():m_request(AR_Stop),m_pendingEvent(nullptr),m_usePendingEvent(FALSE),m_requiresCheckForSample(FALSE){}
+  Bool m_ownsPendingEvent=FALSE;
+  AudioManager* m_queueOwner=nullptr;
+  AudioEventRTS* takePendingEvent(); // Consumer transfers exactly one ownership unit.
 	RequestType m_request;
 	union 
 	{

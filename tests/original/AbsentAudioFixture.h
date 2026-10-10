@@ -3,7 +3,7 @@
 #include "Common/GameAudio.h"
 // Only the original base addAudioEvent's empty/NoSound path is exercised.
 // Any request for physical audio, discovery or output explicitly rejects.
-struct AbsentAudioFixture final:AudioManager {
+struct AbsentAudioFixture:AudioManager {
 #define ZH_ABSENT_AUDIO(result,name,args) result name args override {throw ERROR_BAD_ARG;}
 #if defined(_DEBUG) || defined(_INTERNAL)
   ZH_ABSENT_AUDIO(void,audioDebugDisplay,(DebugDisplayInterface*,void*,FILE*))

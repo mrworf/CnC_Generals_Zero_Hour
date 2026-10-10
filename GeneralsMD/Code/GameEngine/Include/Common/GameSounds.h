@@ -52,6 +52,7 @@ class AudioEventRTS;
 
 class SoundManager : public SubsystemInterface
 {
+  friend class NativeAudioAdmission;
 	public:
 		SoundManager();
 		virtual ~SoundManager();
@@ -69,7 +70,7 @@ class SoundManager : public SubsystemInterface
 		virtual void setCameraAudibleDistance( Real audibleDistance );
 		virtual Real getCameraAudibleDistance( void );
 		
-		virtual void addAudioEvent(AudioEventRTS *eventToAdd);	// pre-copied
+		virtual void addAudioEvent(AudioEventRTS *&eventToAdd);	// accepted queue owns; rejection clears
 
 		virtual void notifyOf2DSampleStart( void );
 		virtual void notifyOf3DSampleStart( void );

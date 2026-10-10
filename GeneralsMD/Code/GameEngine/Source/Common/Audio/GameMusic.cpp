@@ -49,6 +49,8 @@
 
 #include "Common/AudioEventRTS.h"
 #include "Common/AudioRequest.h"
+#include "Common/NativeAudioAdmission.h"
+#include <memory>
 #include "Common/GameAudio.h"
 #include "Common/INI.h"
 
@@ -101,19 +103,30 @@ MusicManager::~MusicManager()
 //-------------------------------------------------------------------------------------------------
 void MusicManager::playTrack( AudioEventRTS *eventToUse )
 {
-	AudioRequest *audioRequest = TheAudio->allocateAudioRequest( true );
-	audioRequest->m_pendingEvent = eventToUse;
-	audioRequest->m_request = AR_Play;
-	TheAudio->appendAudioRequest( audioRequest );
+  if(!TheAudio || !eventToUse)throw ERROR_BAD_ARG;
+  NativeAudioAdmission admission(*TheAudio);
+  auto release=[](AudioRequest* request){TheAudio->releaseAudioRequest(request);};
+  std::unique_ptr<AudioRequest,decltype(release)> request(TheAudio->allocateAudioRequest(true),release);
+  request->m_pendingEvent=eventToUse;
+  request->m_request=AR_Play;
+  TheAudio->appendAudioRequest(request.get());
+  request->m_ownsPendingEvent=TRUE;
+  request.release();
+  admission.commit();
 }
 
 //-------------------------------------------------------------------------------------------------
 void MusicManager::stopTrack( AudioHandle eventToRemove )
 {
-	AudioRequest *audioRequest = TheAudio->allocateAudioRequest( false );
-	audioRequest->m_handleToInteractOn = eventToRemove;
-	audioRequest->m_request = AR_Stop;
-	TheAudio->appendAudioRequest( audioRequest );
+  if(!TheAudio)throw ERROR_BAD_ARG;
+  NativeAudioAdmission admission(*TheAudio);
+  auto release=[](AudioRequest* request){TheAudio->releaseAudioRequest(request);};
+  std::unique_ptr<AudioRequest,decltype(release)> request(TheAudio->allocateAudioRequest(false),release);
+  request->m_handleToInteractOn=eventToRemove;
+  request->m_request=AR_Stop;
+  TheAudio->appendAudioRequest(request.get());
+  request.release();
+  admission.commit();
 }
 
 //-------------------------------------------------------------------------------------------------

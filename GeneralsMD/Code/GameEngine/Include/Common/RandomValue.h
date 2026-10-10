@@ -39,6 +39,18 @@ extern void InitGameLogicRandom( UnsignedInt seed ); ///< Set the GameLogic seed
 extern UnsignedInt GetGameLogicRandomSeed( void );   ///< Get the seed (used for replays)
 extern UnsignedInt GetGameLogicRandomSeedCRC( void );///< Get the seed (used for CRCs)
 
+// Main-thread savepoint for fallible original operations that consume logic RNG.
+class GameLogicRandomTransaction final {
+  UnsignedInt m_previous[6];
+  bool m_committed=false;
+public:
+  GameLogicRandomTransaction() noexcept;
+  ~GameLogicRandomTransaction() noexcept;
+  GameLogicRandomTransaction(const GameLogicRandomTransaction&)=delete;
+  GameLogicRandomTransaction& operator=(const GameLogicRandomTransaction&)=delete;
+  void commit() noexcept {m_committed=true;}
+};
+
 //--------------------------------------------------------------------------------------------------------------
 
 #endif // _RANDOM_VALUE_H_

@@ -4,6 +4,12 @@
 #include "Common/AudioEventRTS.h"
 #include "Common/AudioEventInfo.h"
 
+namespace {thread_local void(*retirementObserver)(const AudioEventRTS&) noexcept=nullptr;}
+void AudioEventRTS::setNativeRetirementObserver(NativeRetirementObserver observer) noexcept {
+  retirementObserver=observer;
+}
+AudioEventRTS::~AudioEventRTS(){if(retirementObserver)retirementObserver(*this);}
+
 AudioEventRTS::AudioEventRTS()
 									: m_eventName(AsciiString::TheEmptyString), 
 										m_priority(AP_NORMAL), 

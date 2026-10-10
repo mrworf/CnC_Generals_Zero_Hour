@@ -26,9 +26,17 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #include "Common/AudioRequest.h"
+#include "Common/AudioEventRTS.h"
+#include "Common/NativeAudioAdmission.h"
 
 
 AudioRequest::~AudioRequest() 
 {
-	
+  if(m_ownsPendingEvent)delete m_pendingEvent;
+}
+AudioEventRTS* AudioRequest::takePendingEvent(){
+  if(m_queueOwner)NativeAudioAdmission::requireConsumption(*m_queueOwner);
+  if(!m_usePendingEvent)return nullptr;
+  if(m_pendingEvent&&!m_ownsPendingEvent)throw ERROR_BAD_ARG;
+  auto* value=m_pendingEvent;m_pendingEvent=nullptr;m_ownsPendingEvent=FALSE;return value;
 }

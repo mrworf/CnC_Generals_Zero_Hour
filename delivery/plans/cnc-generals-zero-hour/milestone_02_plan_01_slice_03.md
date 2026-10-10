@@ -4649,3 +4649,63 @@ Working-tree cleanup checkpoint: the unfinished audio implementation is preserve
 in [checkpoints/N2-audio-admission-unfinished.md](checkpoints/N2-audio-admission-unfinished.md)
 and its adjacent patch. Active source remains at the last verified checkpoint;
 resume this coupled cohort from that artifact without claiming audio acceptance.
+
+Resume source census: AudioEventRTS::generateFilename and generatePlayInfo also
+select the six-word game-logic RNG for logical scripted audio. Admission must
+snapshot/restore that stream as well as the audio stream on exceptions and outer
+rollback; successful policy rejection retains both source streams. Caller info
+snapshotting must read its raw borrowed cache without the getter's lazy
+name-mismatch invalidation. Add generated logical-audio failure/retry coverage.
+
+Startup cohort coverage also sweeps actual constructor + AudioManager::init on
+the same complete parsed GameData/user-storage/file parent cohort. Guard pooled
+AudioEventInfo allocation through its fallible registry insertion: the original
+assignment can allocate the RHS before the map node. Whole-owner teardown must
+retire every partial registry prefix and paired Music/Sound candidate. This does
+not claim atomic metadata reinitialization on an already initialized owner.
+
+The first generated audio startup run stopped in the shared localization helper:
+reverseFind returns the separator itself, while the generated localized prefix
+already terminates in one. Correct the leaf join in AudioEventRTS, which serves
+music, streaming, sound, attack and decay paths; do not relax NativeFileSystem's
+strict logical-path checks. Cover localized hits and generic fallback using
+generated files, with no decoding or physical-output acceptance inferred.
+
+Full-tick caller census found that FXList.cpp's SoundFX::doFX passes stack-local
+AudioEventRTS values to original admission. Ancestor rollback must not retain a
+dead caller, including a different event subsequently occupying the same address.
+Use a private main-thread retirement observer in original AudioEventRTS, activated
+only while an admission is alive, to withdraw retired caller snapshots from all
+ancestors without allocations or gameplay callbacks. Copy/assignment do not
+transfer identity. Cover expired stack callers, address reuse, nested child
+retirement and immutable callers before freezing this entire cohort again.
+Earlier related sweeps are intentionally superseded, not restarted due to an
+observation timeout. Keep their logs and retire their exact process handles.
+
+Further activation census: the released source has no Set_Sound_Library caller
+or concrete SoundLibraryBridge implementation. WW3D initialization loads optional
+sound metadata without installing a bridge; Trigger_Sound returns old_frame when
+that bridge is NULL. Do not activate new embedded playback simply because model
+metadata exists. Preserve lazy pose progression and the no-bridge PrevFrame
+branch. GameAudio admission remains required by real original FX/Object calls
+and startup. See the activation census in docs/original-engine-formats.md; this
+refines implementation reachability, not the product's intended audio contract.
+
+Carry-forward ambient metadata boundary: addAudioEventInfo's external callers
+have different failure cleanup. Drawable transfer explicitly retires its own
+candidate on exception; Object map-property preparation has a raw candidate.
+Its duplicate registry branch and incoming pointer publication also need one
+real-actor/transfer ownership cohort. Do not retrofit callee failure ownership
+alone or infer its acceptance from parsed newAudioEventInfo/startup sweeps. The
+verified source links and remaining boundary are in original-engine-formats.md.
+
+Coupled audio owner checkpoint validated on frozen canonical744 5c67690c /
+inclusive751 c93ea696 / production667 805fc796. Focused7 PASS all3
+(GCC14.69s/GCCsan60.35s/Clangsan38.58s); related72 PASS all3
+(289.04s/1158.17s/681.91s). All12/153 manifests match, all jobs retired0,
+upstream pristine, no timeouts/checks weakened. Evidence and commit locator:
+evidence/qa/N2-audio-admission-ownership.md. This is independently verified audio
+admission/queue/retirement support, not full tick, physical playback, original
+startup/loaded simulation or N2/slice03 completion. Continue the existing
+real-parent/full-tick/transfer/concrete-provider integration contract, preserving
+the original no-bridge animation-sound branch and external metadata boundaries.
