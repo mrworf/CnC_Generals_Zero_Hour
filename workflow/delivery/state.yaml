@@ -267,6 +267,7 @@
   "w3d_document_checkpoint": {
     "parent_commit": "d172c2fc",
     "status": "validated supporting checkpoint; not slice03 or N2 acceptance",
+    "repository_commit": "8929ffbd18def419643b2c24fb097609ec63eecf",
     "evidence": "evidence/qa/N2-w3d-document.md",
     "canonical_source_files": 663,
     "canonical_source_sha256": "6f70925e806cc48a87266bf771dada77ef3d9dec742353e1ddc4446a3415ab8a",
