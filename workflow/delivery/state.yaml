@@ -26,15 +26,15 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "51fc1495fd5dfce1f6c5fe3fa9227075006baf5d",
-    "label": "original-current-model-queries",
-    "evidence": "evidence/qa/N2-current-model-queries.md",
-    "validation": "Frozen related98 PASS all3; actual current Drawable consumers, attachment compatibility and all exact allocation failure/retry manifests. Full454 unrun.",
-    "next": "Complete source sync-time animation/selection/transitions and bounding primitive/all-LOD bounds, concrete19 native runtime providers, condition transfer/material/prototypes, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under existing N2 plan01/slice03. Full454, slice03 and N2 acceptance remain pending.",
+    "parent": "abe51f117456fd33cab85dc0555c1a8a515c5e72",
+    "label": "original-single-motion-timing",
+    "evidence": "evidence/qa/N2-animation-clock.md",
+    "validation": "Frozen related100 PASS all3; source single-motion timing through actual Drawable poses;191 matching allocation manifests. Full456 unrun.",
+    "next": "Integrate original fixed-step client sync-time publication and concrete animation selection/client RNG/flags/transitions/pause/events; complete bounding primitives/all-LOD bounds, concrete19 runtime providers and condition transfer/material/prototypes, then full native root startup and loaded deterministic simulation under N2 plan01/slice03. Full456, slice03 and N2 acceptance pending.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 current-model supporting checkpoint committed in 20140868832d6769c429ba5d746b09ce8c754ed1; no live jobs. Complete source sync-time animation/selection/transitions and bounding primitive/all-LOD bounds, concrete19 native runtime providers, condition transfer/material/prototypes, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under existing N2 plan01/slice03. Full454, slice03 and N2 acceptance remain pending.",
+  "resume_point": "N2 plan01/slice03 single-motion timing supporting checkpoint validated; payload provenance pending; no live jobs. Integrate original fixed-step client sync-time publication and concrete animation selection/client RNG/flags/transitions/pause/events; complete bounding primitives/all-LOD bounds, concrete19 runtime providers and condition transfer/material/prototypes, then full native root startup and loaded deterministic simulation under N2 plan01/slice03. Full456, slice03 and N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -94,7 +94,7 @@
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Complete source sync-time animation/selection/transitions and bounding primitive/all-LOD bounds, concrete19 native runtime providers, condition transfer/material/prototypes, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under existing N2 plan01/slice03. Full454, slice03 and N2 acceptance remain pending.",
+  "next": "Integrate original fixed-step client sync-time publication and concrete animation selection/client RNG/flags/transitions/pause/events; complete bounding primitives/all-LOD bounds, concrete19 runtime providers and condition transfer/material/prototypes, then full native root startup and loaded deterministic simulation under N2 plan01/slice03. Full456, slice03 and N2 acceptance pending.",
   "implementation_checkpoint": {
     "label": "original-root-lifecycle",
     "reason": "Actual source cleanup/reset, independent cache/audio ownership and loaded partition live containment verified; full original process startup/simulation still pending",
@@ -168,21 +168,21 @@
     "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
   },
   "active_implementation": {
-    "label": "original-current-model-queries",
-    "parent_commit": "51fc1495fd5dfce1f6c5fe3fa9227075006baf5d",
-    "status": "committed supporting actual current-model query checkpoint; not slice03 or N2 acceptance",
+    "label": "original-single-motion-timing",
+    "parent_commit": "abe51f117456fd33cab85dc0555c1a8a515c5e72",
+    "status": "validated supporting single-motion timing checkpoint; payload provenance pending; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
-    "evidence": "evidence/qa/N2-current-model-queries.md",
-    "canonical_source_files": 712,
-    "canonical_source_sha256": "2d31f6786bbe723b9dd51c8fd28238895b2223792ab6a7286552cca296cfa7a2",
-    "toolchain_inclusive_files": 719,
-    "toolchain_inclusive_sha256": "80aad1e114e50e4569eaf0139ce9fdc58c6e664a116d9a417f91aaecbb5a5732",
-    "configured_suite_tests": 454,
-    "related_tests_per_configuration": 98,
+    "evidence": "evidence/qa/N2-animation-clock.md",
+    "canonical_source_files": 714,
+    "canonical_source_sha256": "ea62022022b7af5c80307a6a249653a504ce04ca7c08dab3416e8e613f6d0216",
+    "toolchain_inclusive_files": 721,
+    "toolchain_inclusive_sha256": "dd62a69b1f88618e71ba48affedb466f368b5f3bdb42bdb075ab833d47f98da7",
+    "configured_suite_tests": 456,
+    "related_tests_per_configuration": 100,
     "frozen_results": {
-      "gcc": "PASS34.85s; terminal0",
-      "gcc_sanitize": "PASS155.79s; terminal0",
-      "clang_sanitize": "PASS96.25s; terminal0"
+      "gcc": "PASS40.37s; terminal0",
+      "gcc_sanitize": "PASS173.46s; terminal0",
+      "clang_sanitize": "PASS106.74s; terminal0"
     },
     "allocation_terminals": {
       "current_model_cold": 173,
@@ -203,8 +203,7 @@
     "full_suite_run": false,
     "slice_complete": false,
     "milestone_complete": false,
-    "next": "Complete source sync-time animation/selection/transitions and bounding primitive/all-LOD bounds, concrete19 native runtime providers, condition transfer/material/prototypes, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under existing N2 plan01/slice03. Full454, slice03 and N2 acceptance remain pending.",
-    "repository_commit": "20140868832d6769c429ba5d746b09ce8c754ed1"
+    "next": "Integrate original fixed-step client sync-time publication and concrete animation selection/client RNG/flags/transitions/pause/events; complete bounding primitives/all-LOD bounds, concrete19 runtime providers and condition transfer/material/prototypes, then full native root startup and loaded deterministic simulation under N2 plan01/slice03. Full456, slice03 and N2 acceptance pending."
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -642,5 +641,43 @@
     "milestone_complete": false,
     "next": "Complete source sync-time animation/selection/transitions and bounding primitive/all-LOD bounds, concrete19 native runtime providers, condition transfer/material/prototypes, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under existing N2 plan01/slice03. Full454, slice03 and N2 acceptance remain pending.",
     "repository_commit": "20140868832d6769c429ba5d746b09ce8c754ed1"
+  },
+  "animation_clock_checkpoint": {
+    "label": "original-single-motion-timing",
+    "parent_commit": "abe51f117456fd33cab85dc0555c1a8a515c5e72",
+    "status": "validated supporting single-motion timing checkpoint; payload provenance pending; not slice03 or N2 acceptance",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "evidence": "evidence/qa/N2-animation-clock.md",
+    "canonical_source_files": 714,
+    "canonical_source_sha256": "ea62022022b7af5c80307a6a249653a504ce04ca7c08dab3416e8e613f6d0216",
+    "toolchain_inclusive_files": 721,
+    "toolchain_inclusive_sha256": "dd62a69b1f88618e71ba48affedb466f368b5f3bdb42bdb075ab833d47f98da7",
+    "configured_suite_tests": 456,
+    "related_tests_per_configuration": 100,
+    "frozen_results": {
+      "gcc": "PASS40.37s; terminal0",
+      "gcc_sanitize": "PASS173.46s; terminal0",
+      "clang_sanitize": "PASS106.74s; terminal0"
+    },
+    "allocation_terminals": {
+      "current_model_cold": 173,
+      "current_model_seeded": 176,
+      "current_pose_update_and_reads": 0,
+      "current_numbered_128_read": 0,
+      "projectile_cold": 245,
+      "projectile_seeded": 0,
+      "wide_cold": 247,
+      "wide_seeded": 2,
+      "drawable_constructor_standard": 1,
+      "native_module_pool": 2
+    },
+    "every_failure_retry": true,
+    "production_cursor_proven_before_fixture_rollback": true,
+    "whole_owner_repetitions": 3,
+    "live_sessions": {},
+    "full_suite_run": false,
+    "slice_complete": false,
+    "milestone_complete": false,
+    "next": "Integrate original fixed-step client sync-time publication and concrete animation selection/client RNG/flags/transitions/pause/events; complete bounding primitives/all-LOD bounds, concrete19 runtime providers and condition transfer/material/prototypes, then full native root startup and loaded deterministic simulation under N2 plan01/slice03. Full456, slice03 and N2 acceptance pending."
   }
 }

@@ -27,6 +27,10 @@ public:
   const ModelConditionInfo* cached()const{return nativeQueryData();}
   void current(std::string_view model,std::string_view clip,const Matrix3D& root,Real frame){replaceNativeCurrentModel(model,clip,root,frame);}
   void pose(const Matrix3D& root,Real frame){updateNativeCurrentPose(root,frame);}
+  void timed(const Matrix3D& root,Real frame,NativeModelAnimationClock::Mode mode,std::uint32_t now){replaceNativeTimedModel("Outer","Tree.Walk",root,frame,mode,now);}
+  void advance(const Matrix3D& root,std::uint32_t now){advanceNativeCurrentPose(root,now);}
+  void multiplier(Real value){setNativeAnimationMultiplier(value);}
+  const NativeModelAnimationClock* clock()const{return nativeAnimationClock();}
   const NativeW3DAssets::Binding* currentBinding()const{return nativeCurrentBinding();}
   Bool clientOnly_getRenderObjInfo(Coord3D*,Real*,Matrix3D*)const override{throw ERROR_BAD_ARG;}
   Bool clientOnly_getRenderObjBoundBox(OBBoxClass*)const override{throw ERROR_BAD_ARG;}
@@ -266,7 +270,7 @@ void clientNumbered(Fixture& fixture){const Matrix3D identity(true);fixture.modu
   require(!fixture.draw->getCurrentClientBonePositions("Bone",0,positions,transforms,130)&&positions[0].x==91&&transforms[0].Get_X_Translation()==99,"current start0 is exact, not an implicit numbered sweep");
 }
 void clientFaults(Fixture& fixture,bool seeded){const auto root=clientRoot();auto setup=[&]{fixture.fresh();if(seeded)fixture.module(0).current("Static.Mesh","",root,0);};
-  auto operation=[&]{fixture.module(0).current("Outer","Tree.Walk",root,0);};std::size_t terminal;
+  auto operation=[&]{fixture.module(0).timed(root,0,NativeModelAnimationClock::Mode::Once,100);};std::size_t terminal;
   {NameKeyTransaction lease(fixture.names);setup();AllocationFault::arm(SIZE_MAX);try{operation();terminal=AllocationFault::attempts();AllocationFault::disarm();}catch(...){AllocationFault::disarm();throw;}
     fixture.client->destroyDrawable(fixture.draw);fixture.draw=nullptr;fixture.assets.clear();}
   for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){NameKeyTransaction lease(fixture.names);setup();const auto* accepted=fixture.module(0).currentBinding();const auto counts=fixture.assets.counts();const auto live=AllocationFault::live();
@@ -276,15 +280,55 @@ void clientFaults(Fixture& fixture,bool seeded){const auto root=clientRoot();aut
     require(failed==(ordinal<terminal)&&failed==hit&&attempts==(failed?ordinal+1:terminal),"complete current replacement exact terminal and every prefix");
     if(failed){require(fixture.module(0).currentBinding()==accepted&&fixture.assets.counts()==counts&&AllocationFault::live()==live&&pool->getUsedBlockCount()==units,"current candidate and late asset-cache admissions unwind exactly");
       {NameKeyTransaction proof(fixture.names);require(fixture.names.nameToKey("current-production-cursor")==cursor,"current production namespace proof precedes fixture rollback");}
-    }operation();Matrix3D output(true);require(fixture.draw->getCurrentWorldspaceClientBonePositions("Muzzle",output)&&close(output.Get_Y_Translation(),216),"actual current-query corrected retry");
+    }operation();Matrix3D output(true);require(fixture.module(0).clock()&&fixture.module(0).clock()->frame()==0&&fixture.draw->getCurrentWorldspaceClientBonePositions("Muzzle",output)&&close(output.Get_Y_Translation(),216),"actual timed current-query corrected retry");
     fixture.client->destroyDrawable(fixture.draw);fixture.draw=nullptr;fixture.assets.clear();
   }fixture.create();std::cout<<"current model "<<(seeded?"seeded":"cold")<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every retry\n";
 }
+void animationClock(){using Clock=NativeModelAnimationClock;using Mode=Clock::Mode;
+  auto make=[](Mode mode,float frame=0,std::uint32_t now=100){return Clock::start(5,10,frame,mode,now);};
+  require(make(Mode::Manual,2).advanced(10000).frame()==2,"manual timing is retained");
+  auto once=make(Mode::Once).advanced(200);require(close(once.frame(),1)&&once.previousFrame()==0&&!once.complete(),"once progresses but completes only retained endpoint");
+  require(once.advanced(200).previousFrame()==0,"duplicate sync time preserves previous event frame");
+  require(once.advanced(1000).frame()==4&&once.advanced(1000).complete(),"once endpoint clamps and completes");
+  require(close(make(Mode::Loop,3).advanced(300).frame(),1)&&make(Mode::Loop).advanced(1100).frame()==0,"loop wraps once then resets rather than modulo");
+  require(close(make(Mode::LoopBackwards,1).advanced(300).frame(),3)&&make(Mode::LoopBackwards).advanced(1100).frame()==4,"backwards loop adds once then resets to endpoint");
+  require(make(Mode::OnceBackwards,4).advanced(1100).complete(),"backwards once clamps0");
+  auto ping=make(Mode::PingPong,3).advanced(300);require(close(ping.frame(),3)&&ping.direction()==-1,"forward pingpong reflects once");
+  ping=ping.advanced(700);require(close(ping.frame(),1)&&ping.direction()==1,"backward pingpong reflects and reverses");
+  require(make(Mode::PingPong).advanced(1100).frame()==-2,"source forward oversized pingpong retains negative result, not invented modulo");
+  auto backwards=make(Mode::PingPong,3).advanced(300).advanced(1300);require(backwards.frame()==0&&backwards.direction()==1,"source oversized backward reflection resets0");
+  auto paused=make(Mode::Loop,2);paused.setMultiplier(0);require(paused.advanced(10000).frame()==2,"zero multiplier retains source frame");
+  auto wrap=Clock::start(5,10,0,Mode::Once,UINT32_MAX-49).advanced(50);require(close(wrap.frame(),1),"unsigned32 sync time wrap");
+  require(Clock::start(1,30,0,Mode::Once,0).advanced(100).complete(),"single-frame once endpoint");
+  auto accelerated=make(Mode::Once);accelerated.setMultiplier(2);require(close(accelerated.advanced(200).frame(),2),"source rate multiplier");
+  clientRejects([&]{Clock::start(0,10,0,Mode::Once,0);});clientRejects([&]{Clock::start(5,0,0,Mode::Once,0);});
+  clientRejects([&]{Clock::start(5,10,0,static_cast<Mode>(UINT32_MAX),0);});
+  clientRejects([&]{paused.setMultiplier(std::numeric_limits<Real>::infinity());});require(paused.multiplier()==0,"rejected multiplier preserves state");
+  accelerated.setMultiplier(std::numeric_limits<Real>::max());clientRejects([&]{accelerated.advanced(10000);});require(accelerated.frame()==0,"nonfinite timing arithmetic cannot commit");
+}
+void animationPose(Fixture& fixture){using Mode=NativeModelAnimationClock::Mode;auto& module=fixture.module(0);const auto root=clientRoot();
+  module.timed(root,0,Mode::Once,100);Matrix3D output(true);AllocationFault::arm(SIZE_MAX);
+  try{module.advance(root,134);fixture.draw->getCurrentWorldspaceClientBonePositions("Muzzle",output);}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+  require(attempts==0&&module.clock()->complete()&&close(output.Get_Y_Translation(),220),"actual timed pose advances from source30fps with zero standard demand");
+  auto invalid=root;invalid[0][0]=std::numeric_limits<Real>::max();
+  module.timed(root,0,Mode::Once,100);clientRejects([&]{module.advance(invalid,134);});
+  require(module.clock()->frame()==0&&!module.clock()->complete(),"late pose failure preserves frame, sync and completion");
+  module.advance(root,134);require(module.clock()->complete(),"corrected same-time pose retry advances source clock");
+  module.timed(root,1,Mode::OnceBackwards,100);module.advance(root,134);require(module.clock()->complete(),"actual backward current pose");
+  module.timed(root,0,Mode::PingPong,100);const auto* identity=module.currentBinding();clientRejects([&]{module.advance(root,1000);});
+  require(module.currentBinding()==identity&&module.clock()->frame()==0&&module.clock()->direction()==1,"source oversized negative frame safely rejects pose and retains clock");
+  module.advance(root,120);require(module.clock()->frame()>0,"oversized pingpong rejection permits corrected retry");
+  fixture.logic->phase([&]{clientRejects([&]{module.advance(root,121);});});
+  module.multiplier(0);const auto frame=module.clock()->frame();module.advance(root,10000);require(module.clock()->frame()==frame,"pause via source multiplier");
+  module.pose(root,0);require(!module.clock(),"explicit manual frame supersedes timed advancement");
+  module.pose(root,1);module.timed(root,0,Mode::Once,100);require(module.clock()->previousFrame()==1,"manual-to-timed replacement retains prior source frame");
+}
 }
 int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawable query family");initMemoryManager();initialized=true;
-  {Fixture warm;functional(warm);negative(warm);clientFunctional(warm);clientNegative(warm);clientNumbered(warm);}
+  {Fixture warm;functional(warm);negative(warm);clientFunctional(warm);clientNegative(warm);clientNumbered(warm);animationClock();animationPose(warm);}
   for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
-    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else throw GeneratedFixtureFailure("unknown Drawable query family");}
+    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else throw GeneratedFixtureFailure("unknown Drawable query family");}
     require(AllocationFault::live()==live,"whole original Drawable/client/definition/query/parent cohort retirement");
   }shutdownMemoryManager();initialized=false;std::cout<<"PASS actual Drawable query dispatch; renderer/full simulation pending\n";return 0;
  }catch(const GeneratedFixtureFailure& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(const std::exception&){std::cerr<<"FAIL generated Drawable query\n";}catch(ErrorCode){std::cerr<<"FAIL source Drawable query\n";}

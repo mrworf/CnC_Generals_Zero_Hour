@@ -53,7 +53,7 @@ void NativeModelDrawCurrentQueries::replaceNativeCurrentModel(std::string_view m
   NativeW3DAssets::Transaction admission(nativeAssets());
   auto binding=nativeAssets().bind(model,animation,false,root,treeScale);
   evaluate(binding,root,frame,treeScale);
-  auto candidate=std::make_unique<Current>(Current{std::move(binding),world,treeScale});
+  auto candidate=std::make_unique<Current>(Current{std::move(binding),world,treeScale,frame,{}});
   m_current=std::move(candidate);admission.commit();
 }
 void NativeModelDrawCurrentQueries::updateNativeCurrentPose(const Matrix3D& world,Real frame){
@@ -61,6 +61,32 @@ void NativeModelDrawCurrentQueries::updateNativeCurrentPose(const Matrix3D& worl
   if(!m_current)return;
   evaluate(m_current->binding,root,frame,m_current->treeScale);
   m_current->world=world; // Whole pose commits before its corresponding root.
+  m_current->frame=frame;
+  m_current->clock.reset(); // Explicit frame publication becomes manual state.
+}
+void NativeModelDrawCurrentQueries::replaceNativeTimedModel(std::string_view model,std::string_view animation,
+    const Matrix3D& world,Real frame,NativeModelAnimationClock::Mode mode,std::uint32_t syncTime){
+  requireClientOwner();const auto root=raw(world);
+  const Real scale=getDrawable()->getScale();if(!std::isfinite(scale))throw ERROR_BAD_ARG;
+  const Real treeScale=std::abs(scale-1)>.01f?scale:1;
+  NativeW3DAssets::Transaction admission(nativeAssets());
+  auto binding=nativeAssets().bind(model,animation,false,root,treeScale);
+  if(!binding.animation)throw ERROR_BAD_ARG;
+  auto clock=NativeModelAnimationClock::start(binding.animation->motion->frames(),
+    float(binding.animation->motion->frameRate()),frame,mode,syncTime,m_current?m_current->frame:0);
+  evaluate(binding,root,frame,treeScale);
+  auto candidate=std::make_unique<Current>(Current{std::move(binding),world,treeScale,frame,clock});
+  m_current=std::move(candidate);admission.commit();
+}
+void NativeModelDrawCurrentQueries::advanceNativeCurrentPose(const Matrix3D& world,std::uint32_t syncTime){
+  requireClientPhase();const auto root=raw(world);if(!m_current || !m_current->clock)return;
+  auto clock=m_current->clock->advanced(syncTime);
+  evaluate(m_current->binding,root,clock.frame(),m_current->treeScale);
+  m_current->world=world;m_current->frame=clock.frame();m_current->clock=clock;
+}
+void NativeModelDrawCurrentQueries::setNativeAnimationMultiplier(Real value){
+  requireClientOwner();if(!std::isfinite(value))throw ERROR_BAD_ARG;
+  if(m_current && m_current->clock)m_current->clock->setMultiplier(value);
 }
 Bool NativeModelDrawCurrentQueries::clientOnly_getRenderObjBoneTransform(const AsciiString& name,Matrix3D* output)const{
   requireClientPhase();if(!output)throw ERROR_BAD_ARG;nameInput(name.str());

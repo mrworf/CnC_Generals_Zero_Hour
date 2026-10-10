@@ -3858,3 +3858,26 @@ animation producers, bounding primitives, concrete19 runtime callbacks and whole
 native startup/loaded simulation remain pending under this same slice03/N2.
 No live validation jobs remain; this supporting checkpoint is not N2 acceptance.
 Current-model query payload commit: `20140868832d6769c429ba5d746b09ce8c754ed1`.
+
+Source single-animation timing continuation (parent abe51f11, clean worktree):
+implement the original six mode values and Compute_Current_Frame/Single_Anim_Progress
+rules as a game-owned, allocation-free value state, including unsigned32 sync-time
+delta, backward direction, source one-step wraps/reflections, retained-frame
+completion and duplicate-progress previous-frame preservation. Integrate timed
+model admission and advancement with actual current-query pose ownership: stage
+clock and pose together so late pose rejection cannot advance time/direction.
+Keep explicit/manual producers working. Validate all modes and elapsed boundaries,
+zero multiplier, invalid finite/overflow input and clock wrap, actual Drawable
+outputs, worker/logic restrictions, cold/seeded candidate failure/retry sweeps and
+repeated owners under both sanitizer compilers. Concrete condition selection,
+client RNG/transitions, embedded sound dispatch, bounds and runtime19 remain next;
+this does not replace them with a guessed producer. Same slice03/N2 transaction.
+
+Frozen single-motion timing checkpoint: focused14 PASS32.25s; final prior-frame
+focused2 PASS4.41s; related100 PASS GCC40.37s/GCCsan173.46s/Clangsan106.74s,
+exit0 all3, no live jobs. All191 exact allocation manifest lines agree; timed
+current cold173/seeded176 preserve every failure/retry and production cursor,
+three complete owners. Advancement/actual reads measure terminal0. Evidence:
+evidence/qa/N2-animation-clock.md. Source sync-time publication, concrete animation
+selection/transition/pause/sound callbacks, bounds/runtime19 and full456/root/
+loaded deterministic simulation remain pending under existing slice03/N2.

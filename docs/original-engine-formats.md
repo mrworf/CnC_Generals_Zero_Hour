@@ -5946,3 +5946,41 @@ model-space queries use the current instance scale just as the source does.
 Evidence: evidence/qa/N2-current-model-queries.md. Manual generated frames accept
 these consumers and ownership, not source sync-time animation, transitions,
 weighted client RNG, bounding primitives, concrete19 providers or whole startup.
+
+### Source single-motion timing and accepted pose publication
+
+NativeModelAnimationClock preserves the original RenderObj mode values0..5,
+animobj.cpp::Set_Animation direction/multiplier initialization,
+Compute_Current_Frame one-step rules, Single_Anim_Progress previous-frame retention
+and Is_Animation_Complete's retained-frame test. Sync-time subtraction is unsigned
+32-bit before conversion to float; an unsigned wrap is not a signed elapsed-time
+clamp. Multiplier changes do not first advance the frame. The previous frame
+survives Release's motion-handle retirement; manual-to-timed replacement must also
+carry the last accepted frame, not assume every new timed clip starts from0.
+
+Protected timed replacement and advancement now commit clock and live pose
+together under current-model ownership. A late transform overflow preserves both
+clock and pose for a corrected same-time retry. Actual Drawable consumer tests
+prove source30fps advancement, backward completion and zero standard demand.
+The source forward pingpong branch can return a negative frame after oversized
+elapsed time (it tests the reflected value only against the upper endpoint).
+Preserve that result in clock math; NativeW3DAnimation rejects invalid sampling
+without integer conversion UB, and the owning current state remains unchanged.
+Do not silently normalize this path or claim oversized negative-pose parity.
+
+W3DModelDraw::setPauseAnimation uses Set_Animation at the retained frame with
+MANUAL, then the saved mode on resume, resetting the rate multiplier each time.
+Zero multiplier is supported clock behavior, not a substitute for that callback.
+Source selection, pause/event/sound dispatch, model-state transitions and the
+native sync-time publication owner remain concrete-provider integration work.
+Evidence: evidence/qa/N2-animation-clock.md; manual and explicit timed fixtures
+are not source GameClient frames or whole-engine simulation acceptance.
+
+The actual W3DDisplay::draw publication (`W3DDisplay.cpp:1753..1805`) advances a
+retained syncTime by TheW3DFrameLengthInMsec, not wall-clock milliseconds. Freeze
+combines unfinished frozen camera movement, script debug/script freeze, paused
+GameLogic and repeated GameClient frame. The fast-time early-return branch updates
+camera movements and advances retained syncTime without publishing WW3D::Sync
+until a later normal draw. A native clock owner must preserve both accumulated
+and published time, plus same-client-frame suppression; sampling nativeMilliseconds
+directly or publishing the fast-path increment immediately would change behavior.

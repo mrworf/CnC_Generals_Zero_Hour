@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "GameClient/NativeModelDrawQueries.h"
+#include "GameClient/NativeModelAnimationClock.h"
 
 class GameClient;
 
@@ -12,6 +13,8 @@ class NativeModelDrawCurrentQueries : public NativeModelDrawQueries {
     NativeW3DAssets::Binding binding;
     Matrix3D world;
     Real treeScale;
+    Real frame;
+    std::optional<NativeModelAnimationClock> clock;
   };
   GameClient* const m_client;
   std::unique_ptr<Current> m_current;
@@ -21,6 +24,11 @@ protected:
   void replaceNativeCurrentModel(std::string_view model,std::string_view animation,
                                 const Matrix3D& world,Real frame);
   void updateNativeCurrentPose(const Matrix3D& world,Real frame);
+  void replaceNativeTimedModel(std::string_view model,std::string_view animation,const Matrix3D& world,
+                              Real frame,NativeModelAnimationClock::Mode,std::uint32_t syncTime);
+  void advanceNativeCurrentPose(const Matrix3D& world,std::uint32_t syncTime);
+  void setNativeAnimationMultiplier(Real);
+  const NativeModelAnimationClock* nativeAnimationClock()const noexcept{return m_current&&m_current->clock?&*m_current->clock:nullptr;}
   const NativeW3DAssets::Binding* nativeCurrentBinding()const noexcept{return m_current?&m_current->binding:nullptr;}
 public:
   NativeModelDrawCurrentQueries(Thing*,const ModuleData*,NativeW3DAssets&);
