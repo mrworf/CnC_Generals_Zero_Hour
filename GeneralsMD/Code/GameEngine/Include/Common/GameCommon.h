@@ -473,7 +473,7 @@ public:
 
 // ------------------------------------------------------------------------
 
-enum WhichTurretType
+enum WhichTurretType : Int
 {
 	TURRET_INVALID = -1,
 

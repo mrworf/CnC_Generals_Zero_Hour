@@ -607,6 +607,13 @@ void W3DModelDrawModuleData::crc( Xfer *x )
 	xfer(x);
 }
 
+const ModelConditionInfo* W3DModelDrawModuleData::findBestInfoUncached(const ModelConditionFlags& c) const
+{
+	ModelConditionFlags bits=c;
+	bits.clear(m_ignoreConditionStates);
+	return m_conditionStateMap.findBestInfoUncached(m_conditionStates,bits);
+}
+
 void W3DModelDrawModuleData::xfer( Xfer *x )
 {
 

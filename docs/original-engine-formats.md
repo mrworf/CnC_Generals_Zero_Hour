@@ -5778,3 +5778,55 @@ LOD-array constructor. Do not apply its behavior to serialized prototype loads.
 Current native prototype graphs preserve the file-loaded nesting correctly;
 nested current-pose/recursive rendering transforms still require integration,
 but a generic flattening rewrite is not a prerequisite to pristine queries.
+
+Actual Drawable pristine/projectile dispatch now reaches abstract
+NativeModelDrawQueries (presentation/current-animation methods remain abstract).
+It reselects original SparseMatchFinder ordering with ignored bits removed, using
+an uncached entry into that same algorithm rather than fallible shared memo
+publication. Cache identity includes the exact original condition, Drawable scale
+and borrowed GlobalData identity; namespace and VFS parents must match those
+borrowed at construction. Workers reject before inspecting simulation globals.
+Real GameLogic::update now uses the same protected LogicQueryPhase RAII latch as
+the generated phase driver; fixture phase entry is not a GameLogic frame or
+simulation acceptance. Logic queries call the original setFPMode service.
+
+Original projectile behavior retains fallback-to-barrel0 for an out-of-range
+requested barrel, turret art-angle Z/art-pitch negative-Y rotations, and
+CACHE_ATTACH_BONE offsets added to turret rotation/pitch positions, not launch
+translation. Attachment names go through actual Drawable pristine dispatch,
+potentially into an earlier module. Native attachment caching is per Drawable
+module instead of mutable shared definition storage, preventing a first instance
+from permanently fixing another instance's scale/attachment offset.
+
+A stack-owned root query transaction covers the complete Drawable module walk
+and nested attachment dispatch. It retains old immutable module-cache references,
+asset-cache snapshot and namespace cursor until all fallible work finishes. Module
+rollback precedes snapshot/key rollback. A local selected-cache reference also
+keeps projectile data alive if attachment recursion reselects a different state.
+Caller matrices/positions are staged until success; a rejected later module
+cannot expose earlier output. Pristine transforms still receive the source
+uncounted fallback on a miss (object transform or identity without an actor),
+while positions are written only for counted bones. Zero capacity touches
+nothing; valid sweeps cap at64 per module, preserve start0 exact names and stop
+at first missing numbered name. Bounded stack formatting replaces unsafe256-byte
+sprintf; wider aggregate Drawable buffers are bounded by module count and staged.
+
+WhichTurretType now has explicit Int storage with unchanged values/width, so
+defined raw invalid representations can be rejected before table access instead
+of triggering enum-load UB in a malformed-input test. Weapon slots already have
+fixed UnsignedInt storage. Generated registered-module tests use actual
+ModuleFactory, ModuleInfo, ThingTemplate and Drawable ownership. An unparsed
+ThingTemplate has asset scale0; generated visual definitions must parse Scale
+through its original field table rather than assuming LTA-only initialization
+defaults. Source particle parents are not needed when no particle fields are
+parsed; fixtures do not replace them with a fake successful lookup.
+
+Frozen generated actual-Drawable evidence: related136 PASS GCC168.54s,
+GCC ASan/UBSan/LSan713.18s and Clang ASan/UBSan/LSan427.49s. Query allocation
+terminals projectile cold245/seeded0 and wide cold247/seeded2 retain every
+failure/retry; actual construction standard1 and module-pool acquisition2 are
+separate ownership domains. Complete owners retire three times, with namespace
+and Drawable production cursor proof before fixture rollback. See
+`evidence/qa/N2-drawable-queries.md` for exact frozen fingerprints and remaining
+runtime boundaries. Full441, current-client/rendered callbacks, complete native
+factory/derived19, startup and loaded simulation are not accepted here.

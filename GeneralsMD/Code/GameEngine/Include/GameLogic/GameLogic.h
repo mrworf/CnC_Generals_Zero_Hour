@@ -249,6 +249,17 @@ public:
 	void friend_awakenUpdateModule(Object* obj, UpdateModulePtr update, UnsignedInt whenToWakeUp);
 
 protected:
+	// The actual update latch, also usable by explicit native phase fixtures.
+	// It neither advances a frame nor substitutes simulation callbacks.
+	class LogicQueryPhase final {
+		GameLogic& m_owner;
+		Bool m_previous;
+	public:
+		explicit LogicQueryPhase(GameLogic& owner):m_owner(owner),m_previous(owner.m_isInUpdate){owner.m_isInUpdate=TRUE;}
+		~LogicQueryPhase() noexcept {m_owner.m_isInUpdate=m_previous;}
+		LogicQueryPhase(const LogicQueryPhase&)=delete;
+		LogicQueryPhase& operator=(const LogicQueryPhase&)=delete;
+	};
 
 	// snapshot methods
 	virtual void crc( Xfer *xfer );

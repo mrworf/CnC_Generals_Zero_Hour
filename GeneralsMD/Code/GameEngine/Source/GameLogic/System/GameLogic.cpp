@@ -3419,7 +3419,7 @@ void GameLogic::update( void )
 {
 	USE_PERF_TIMER(GameLogic_update)
 
-	LatchRestore<Bool> inUpdateLatch(m_isInUpdate, TRUE);
+	LogicQueryPhase inUpdateLatch(*this);
 #ifdef DO_UNIT_TIMINGS
 	unitTimings();
 #endif

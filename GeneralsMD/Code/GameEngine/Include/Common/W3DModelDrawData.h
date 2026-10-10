@@ -55,6 +55,7 @@ public:
 	static void buildFieldParse(MultiIniFieldParse& p);
 	AsciiString getBestModelNameForWB(const ModelConditionFlags& c) const;
 	const ModelConditionInfo* findBestInfo(const ModelConditionFlags& c) const;
+	const ModelConditionInfo* findBestInfoUncached(const ModelConditionFlags& c) const;
 	void preloadAssets( TimeOfDay timeOfDay, Real scale ) const;
 #ifdef CACHE_ATTACH_BONE
 	const Vector3* getAttachToDrawableBoneOffset(const Drawable* draw) const;

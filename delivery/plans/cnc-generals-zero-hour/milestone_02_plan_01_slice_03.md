@@ -3733,3 +3733,44 @@ Drawable adapter's logic/current-client/attachment distinctions and callbacks
 before adding it; standard bones come from borrowed TheGlobalData identity,
 pristine queries are admitted only in original logic-update/load-game phases,
 and presentation callbacks cannot claim output from a headless fixture.
+
+Actual Drawable query-adapter continuation (parent93abe2f4, clean worktree): add
+an abstract native draw-module base implementing the original ObjectDrawInterface
+pristine/projectile consumers, leaving presentation/current-animation callbacks
+abstract. Generated fixtures register a presentation-rejecting concrete subclass
+through actual ModuleFactory/ThingTemplate/Drawable construction, not a replacement
+Drawable. Pristine methods reselect original conditions with ignored flags cleared,
+keep scale, first/final pose and standard-public-bone identity, cap sweeps at64,
+stop on the first miss and preserve original missing-transform fallback without
+writing for zero capacity. Projectile methods retain barrel fallback, art-angle/
+pitch rotation and CACHE_ATTACH_BONE turret-position offsets. Validate raw slot/
+turret/index/name boundaries before accessing tables or publishing output.
+
+Use a protected RAII logic-update phase shared by real GameLogic::update and the
+fixture's phase driver. Require the module's construction thread and real logic/
+load phase before FPU setup or query work. This fixture is phase/dispatch evidence,
+not simulation acceptance. A root query transaction snapshots asset/name state
+and every participating module cache, including recursive attachment queries;
+fallible work completes before output publication. Preserve cached identities on
+all standard failures and prove exact namespace/pool retirement before fixture
+leases. Use uncached access to the original SparseMatchFinder algorithm so memo
+insertion cannot leak partial shared state into a rejected native query.
+
+Test generated INI -> actual registered module/Drawable -> real query adapter ->
+pristine sweep/projectile/turret/attachment output, absent and malformed routes,
+phase/thread/FPU boundaries, repeated ownership, cached allocation-free queries,
+and cold/seeded standard failure-retry sweeps. Run focused tests, then related
+native-client/query/logic ownership under GCC and both sanitizer configurations
+on frozen source. Full native factory/derived registrations, current client pose,
+renderer callbacks, transfer and loaded simulation remain the same N2 acceptance
+gate. One coherent commit owns adapter, phase scope, consumers and fixtures.
+
+Frozen actual Drawable checkpoint: related136 PASS GCC168.54s/GCCsan713.18s/
+Clangsan427.49s, terminal0 all3. Exact projectile cold245/seeded0, wide
+cold247/seeded2, constructor standard1 and pooled acquisition2; every failure
+has a corrected retry and whole cohorts retire three times. Actual dispatch,
+recursive attachment rollback, condition reselection, FPU and phase/thread
+admission are exercised. Evidence: evidence/qa/N2-drawable-queries.md. Full441,
+slice03 and N2 remain pending. Next concrete current-client/native draw providers
+and derived19 registrations, condition transfer/material/prototype completion,
+then full native factory/GameEngine startup and loaded deterministic simulation.

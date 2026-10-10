@@ -78,6 +78,7 @@ public:
   Hierarchy hierarchy(std::string_view);
   Animation animation(std::string_view);
   Counts counts()const noexcept;
+  FileSystem& files()const noexcept{return m_files;}
   void clear()noexcept;
   // This is the exact admitted named/default HLOD tree, not a fake tree for an
   // unrecognized/missing model. Mesh/null prototypes have no bone hierarchy.

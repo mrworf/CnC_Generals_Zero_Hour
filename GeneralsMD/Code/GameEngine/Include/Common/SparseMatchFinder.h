@@ -227,6 +227,12 @@ public:
 		return info;
 	}
 
+	// Same source ordering/tie rules without a fallible memo publication.
+	const MATCHABLE* findBestInfoUncached(const std::vector<MATCHABLE>& v, const BITSET& bits) const
+	{
+		return findBestInfoSlow(v,bits);
+	}
+
 };
 
 #endif // __SparseMatchFinder_H_

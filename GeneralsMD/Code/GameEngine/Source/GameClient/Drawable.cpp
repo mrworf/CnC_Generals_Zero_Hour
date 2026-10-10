@@ -38,6 +38,7 @@
 #include "Common/BuildAssistant.h"
 #include "Common/ClientUpdateModule.h"
 #include "Common/DrawModule.h"
+#include "GameClient/NativeModelDrawQueries.h"
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
 #include "Common/GameLOD.h"
@@ -703,13 +704,28 @@ Bool Drawable::clientOnly_getFirstRenderObjInfo(Coord3D* pos, Real* boundingSphe
 //-------------------------------------------------------------------------------------------------
 Bool Drawable::getProjectileLaunchOffset(WeaponSlotType wslot, Int specificBarrelToUse, Matrix3D* launchPos, WhichTurretType tur, Coord3D* turretRotPos, Coord3D* turretPitchPos) const
 {
+	NativeModelDrawQueryDispatch dispatch(*this);
+	Matrix3D stagedLaunch(true);Coord3D stagedRotation{0,0,0},stagedPitch{0,0,0};
+	Matrix3D* targetLaunch=dispatch.active() && launchPos?&stagedLaunch:launchPos;
+	Coord3D* targetRotation=dispatch.active() && turretRotPos?&stagedRotation:turretRotPos;
+	Coord3D* targetPitch=dispatch.active() && turretPitchPos?&stagedPitch:turretPitchPos;
+	Bool valid=FALSE,written=FALSE;
 	for (const DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
 		const ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
-		if (di && di->getProjectileLaunchOffset(m_conditionState, wslot, specificBarrelToUse, launchPos, tur, turretRotPos, turretPitchPos))
-			return true;
+		if(di){valid=di->getProjectileLaunchOffset(m_conditionState,wslot,specificBarrelToUse,targetLaunch,tur,targetRotation,targetPitch);
+			if(const auto* native=dynamic_cast<const NativeModelDrawQueries*>(*dm))written=written || native->m_lastProjectileOutput;
+			else written=TRUE;
+			if(valid)break;
+		}
 	}
-	return false;
+	dispatch.commit();
+	if(dispatch.active()){
+		if(valid && launchPos)*launchPos=stagedLaunch;
+		if(written && turretRotPos)*turretRotPos=stagedRotation;
+		if(written && turretPitchPos)*turretPitchPos=stagedPitch;
+	}
+	return valid;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -795,6 +811,19 @@ Real Drawable::getAnimationScrubScalar( void ) const // lorenzen
 //-------------------------------------------------------------------------------------------------
 Int Drawable::getPristineBonePositions(const char* boneNamePrefix, Int startIndex, Coord3D* positions, Matrix3D* transforms, Int maxBones) const
 {
+	if(maxBones<=0)return 0;
+	NativeModelDrawQueryDispatch dispatch(*this);
+	Matrix3D stackTransforms[64];Coord3D stackPositions[64];
+	std::vector<Matrix3D> extraTransforms;std::vector<Coord3D> extraPositions;
+	Matrix3D* targetTransforms=transforms;Coord3D* targetPositions=positions;
+	if(dispatch.active()){
+		std::size_t modules=0;for(const DrawModule** dm=getDrawModules();*dm;++dm)++modules;
+		maxBones=Int(std::min(std::size_t(maxBones),modules*64));
+		if(transforms){if(maxBones>64){extraTransforms.resize(maxBones);targetTransforms=extraTransforms.data();}else targetTransforms=stackTransforms;}
+		if(positions){if(maxBones>64){extraPositions.resize(maxBones);targetPositions=extraPositions.data();}else targetPositions=stackPositions;}
+	}
+	Matrix3D* stagedTransforms=targetTransforms;Coord3D* stagedPositions=targetPositions;
+	Int extent=0;
 	Int count = 0;
 	for (const DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
@@ -805,18 +834,28 @@ Int Drawable::getPristineBonePositions(const char* boneNamePrefix, Int startInde
 		if (di)
 		{
 			Int subcount = 
-				di->getPristineBonePositionsForConditionState(m_conditionState, boneNamePrefix, startIndex, positions, transforms, maxBones);
+				di->getPristineBonePositionsForConditionState(m_conditionState, boneNamePrefix, startIndex, targetPositions, targetTransforms, maxBones);
+			if(dispatch.active()){
+				Int written=subcount;
+				if(const auto* native=dynamic_cast<const NativeModelDrawQueries*>(*dm))written+=native->m_lastPristineFallback?1:0;
+				extent=std::max(extent,count+written);
+			}
 
 			if (subcount > 0)
 			{
 				count += subcount;
-				if (positions)
-					positions += subcount;
-				if (transforms)
-					transforms += subcount;
+				if (targetPositions)
+					targetPositions += subcount;
+				if (targetTransforms)
+					targetTransforms += subcount;
 				maxBones -= subcount;
 			}
 		}
+	}
+	dispatch.commit();
+	if(dispatch.active()){
+		if(positions)for(Int i=0;i<count;++i)positions[i]=stagedPositions[i];
+		if(transforms)for(Int i=0;i<extent;++i)transforms[i]=stagedTransforms[i];
 	}
 	return count;
 }
