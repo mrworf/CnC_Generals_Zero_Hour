@@ -2,6 +2,7 @@
 #pragma once
 #include "GameClient/NativeModelDrawQueries.h"
 #include "GameClient/NativeModelAnimationClock.h"
+#include "Common/NativeW3DModelBounds.h"
 
 class GameClient;
 
@@ -14,6 +15,8 @@ class NativeModelDrawCurrentQueries : public NativeModelDrawQueries {
     Matrix3D world;
     Real treeScale;
     Real frame;
+    NativeW3DModelBounds bounds;
+    Real objectScale=1;
     std::optional<NativeModelAnimationClock> clock;
   };
   GameClient* const m_client;
@@ -28,10 +31,13 @@ protected:
                               Real frame,NativeModelAnimationClock::Mode,std::uint32_t syncTime);
   void advanceNativeCurrentPose(const Matrix3D& world,std::uint32_t syncTime);
   void setNativeAnimationMultiplier(Real);
+  void setNativeCurrentObjectScale(Real);
   const NativeModelAnimationClock* nativeAnimationClock()const noexcept{return m_current&&m_current->clock?&*m_current->clock:nullptr;}
   const NativeW3DAssets::Binding* nativeCurrentBinding()const noexcept{return m_current?&m_current->binding:nullptr;}
 public:
   NativeModelDrawCurrentQueries(Thing*,const ModuleData*,NativeW3DAssets&);
+  Bool clientOnly_getRenderObjInfo(Coord3D*,Real*,Matrix3D*)const override;
+  Bool clientOnly_getRenderObjBoundBox(OBBoxClass*)const override;
   Bool clientOnly_getRenderObjBoneTransform(const AsciiString&,Matrix3D*)const override;
   Int getCurrentBonePositions(const char*,Int,Coord3D*,Matrix3D*,Int)const override;
   Bool getCurrentWorldspaceClientBonePositions(const char*,Matrix3D&)const override;

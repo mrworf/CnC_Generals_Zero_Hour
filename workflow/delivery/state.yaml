@@ -26,15 +26,15 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "b79590c43252f3fefce2c91001c1dcbfd1f2d028",
-    "label": "original-fixed-step-display-time",
-    "evidence": "evidence/qa/N2-display-time.md",
-    "validation": "Frozen related120 PASS all3; actual logical display/current Drawable timing and composed-client ownership;218 matching allocation manifests. Full457 unrun.",
-    "next": "Implement bounding primitive/all-LOD/current model bounds and concrete native draw-provider selection/client RNG/transitions/pause/events; complete runtime19 and condition transfer/material/prototypes, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full457, slice03 and N2 acceptance pending.",
+    "parent": "f9abc2dea527729349b70b99610327db0f6bbf84",
+    "label": "original-current-model-bounds",
+    "evidence": "evidence/qa/N2-model-bounds.md",
+    "validation": "Frozen related121 PASS all3; actual Drawable info/current OBB and source clone bounds;218 matching allocation manifests. Full458 unrun.",
+    "next": "Implement concrete native draw-provider selection/client RNG/transitions/pause/events and source doDraw ObjectScale publication; complete runtime19 and condition transfer/material/prototypes, camera actor-follow, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full458, slice03 and N2 acceptance pending.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 display-time supporting checkpoint committed in 425c341d81cf0f4385dfb527fe74abe1e9281bbb; no live jobs. Implement bounding primitive/all-LOD/current model bounds and concrete native draw-provider selection/client RNG/transitions/pause/events; complete runtime19 and condition transfer/material/prototypes, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full457, slice03 and N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 supporting current-model-bounds checkpoint verified; payload commit pending; no live jobs. Implement concrete native draw-provider selection/client RNG/transitions/pause/events and source doDraw ObjectScale publication; complete runtime19 and condition transfer/material/prototypes, camera actor-follow, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full458, slice03 and N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -168,25 +168,25 @@
     "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
   },
   "active_implementation": {
-    "label": "original-fixed-step-display-time",
-    "parent_commit": "b79590c43252f3fefce2c91001c1dcbfd1f2d028",
-    "status": "committed supporting logical display-time checkpoint; not slice03 or N2 acceptance",
+    "label": "original-current-model-bounds",
+    "parent_commit": "f9abc2dea527729349b70b99610327db0f6bbf84",
+    "status": "verified supporting bounds checkpoint; payload commit pending; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
-    "evidence": "evidence/qa/N2-display-time.md",
-    "canonical_source_files": 716,
-    "canonical_source_sha256": "f21b8a01d0f9a3a9954b5bade1c39fbe25af06c5af67194cfdaeddee58e24b53",
-    "toolchain_inclusive_files": 723,
-    "toolchain_inclusive_sha256": "9e58ade532e70bf6e4fe5a67c99944b46f123cc0a2524f391a02a3f96715f65a",
-    "configured_suite_tests": 457,
-    "related_tests_per_configuration": 120,
+    "evidence": "evidence/qa/N2-model-bounds.md",
+    "canonical_source_files": 720,
+    "canonical_source_sha256": "e79b9a4a78612f953880425beec2200e500b0cd964fcbdf4374d542e0ec98faf",
+    "toolchain_inclusive_files": 727,
+    "toolchain_inclusive_sha256": "4aacaa907ac8e18503be919430b03348005aa0b3ba1fcea4be41ccf8f2fd31cf",
+    "configured_suite_tests": 458,
+    "related_tests_per_configuration": 121,
     "frozen_results": {
-      "gcc": "PASS110.66s; terminal0",
-      "gcc_sanitize": "PASS443.52s; terminal0",
-      "clang_sanitize": "PASS283.05s; terminal0"
+      "gcc": "PASS113.13s; terminal0",
+      "gcc_sanitize": "PASS441.47s; terminal0",
+      "clang_sanitize": "PASS288.91s; terminal0"
     },
     "allocation_terminals": {
-      "current_model_cold": 173,
-      "current_model_seeded": 176,
+      "current_model_cold": 182,
+      "current_model_seeded": 185,
       "current_pose_update_and_reads": 0,
       "current_numbered_128_read": 0,
       "projectile_cold": 245,
@@ -196,7 +196,8 @@
       "drawable_constructor_standard": 1,
       "native_module_pool": 2,
       "display_tick_and_pose_read": 0,
-      "composed_client": 205
+      "composed_client": 205,
+      "current_bounds_and_info_reads": 0
     },
     "every_failure_retry": true,
     "production_cursor_proven_before_fixture_rollback": true,
@@ -205,8 +206,7 @@
     "full_suite_run": false,
     "slice_complete": false,
     "milestone_complete": false,
-    "next": "Implement bounding primitive/all-LOD/current model bounds and concrete native draw-provider selection/client RNG/transitions/pause/events; complete runtime19 and condition transfer/material/prototypes, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full457, slice03 and N2 acceptance pending.",
-    "repository_commit": "425c341d81cf0f4385dfb527fe74abe1e9281bbb"
+    "next": "Implement concrete native draw-provider selection/client RNG/transitions/pause/events and source doDraw ObjectScale publication; complete runtime19 and condition transfer/material/prototypes, camera actor-follow, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full458, slice03 and N2 acceptance pending."
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -724,5 +724,46 @@
     "milestone_complete": false,
     "next": "Implement bounding primitive/all-LOD/current model bounds and concrete native draw-provider selection/client RNG/transitions/pause/events; complete runtime19 and condition transfer/material/prototypes, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full457, slice03 and N2 acceptance pending.",
     "repository_commit": "425c341d81cf0f4385dfb527fe74abe1e9281bbb"
+  },
+  "model_bounds_checkpoint": {
+    "label": "original-current-model-bounds",
+    "parent_commit": "f9abc2dea527729349b70b99610327db0f6bbf84",
+    "status": "verified supporting bounds checkpoint; payload commit pending; not slice03 or N2 acceptance",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "evidence": "evidence/qa/N2-model-bounds.md",
+    "canonical_source_files": 720,
+    "canonical_source_sha256": "e79b9a4a78612f953880425beec2200e500b0cd964fcbdf4374d542e0ec98faf",
+    "toolchain_inclusive_files": 727,
+    "toolchain_inclusive_sha256": "4aacaa907ac8e18503be919430b03348005aa0b3ba1fcea4be41ccf8f2fd31cf",
+    "configured_suite_tests": 458,
+    "related_tests_per_configuration": 121,
+    "frozen_results": {
+      "gcc": "PASS113.13s; terminal0",
+      "gcc_sanitize": "PASS441.47s; terminal0",
+      "clang_sanitize": "PASS288.91s; terminal0"
+    },
+    "allocation_terminals": {
+      "current_model_cold": 182,
+      "current_model_seeded": 185,
+      "current_pose_update_and_reads": 0,
+      "current_numbered_128_read": 0,
+      "projectile_cold": 245,
+      "projectile_seeded": 0,
+      "wide_cold": 247,
+      "wide_seeded": 2,
+      "drawable_constructor_standard": 1,
+      "native_module_pool": 2,
+      "display_tick_and_pose_read": 0,
+      "composed_client": 205,
+      "current_bounds_and_info_reads": 0
+    },
+    "every_failure_retry": true,
+    "production_cursor_proven_before_fixture_rollback": true,
+    "whole_owner_repetitions": 3,
+    "live_sessions": {},
+    "full_suite_run": false,
+    "slice_complete": false,
+    "milestone_complete": false,
+    "next": "Implement concrete native draw-provider selection/client RNG/transitions/pause/events and source doDraw ObjectScale publication; complete runtime19 and condition transfer/material/prototypes, camera actor-follow, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full458, slice03 and N2 acceptance pending."
   }
 }

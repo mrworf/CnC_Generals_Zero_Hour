@@ -32,6 +32,7 @@ void NativeW3DDocument::replace(Bytes bytes){auto candidate=decode(bytes);swap(c
 void NativeW3DDocument::swap(NativeW3DDocument& other)noexcept{
   m_bytes.swap(other.m_bytes);m_chunks.swap(other.m_chunks);m_roots.swap(other.m_roots);
   m_hierarchies.swap(other.m_hierarchies);m_hlods.swap(other.m_hlods);m_meshes.swap(other.m_meshes);m_animations.swap(other.m_animations);
+  m_boxes.swap(other.m_boxes);
 }
 Bytes NativeW3DDocument::payload(std::size_t index)const{valid(index<m_chunks.size());const auto& chunk=m_chunks[index];return Bytes(m_bytes).subspan(chunk.offset,chunk.size);}
 void NativeW3DDocument::parseChunks(std::size_t begin,std::size_t end,unsigned depth,std::size_t parent){
@@ -45,7 +46,14 @@ void NativeW3DDocument::parseChunks(std::size_t begin,std::size_t end,unsigned d
 }
 void NativeW3DDocument::parse(){parseChunks(0,m_bytes.size(),0,none);
   for(auto index:m_roots)switch(m_chunks[index].type){case 0:parseMesh(index);break;case 0x100:parseHierarchy(index);break;
-    case 0x700:parseHlod(index);break;case 0x200:case 0x280:parseAnimation(index);break;default:break;}
+    case 0x700:parseHlod(index);break;case 0x740:parseBox(index);break;case 0x200:case 0x280:parseAnimation(index);break;default:break;}
+}
+void NativeW3DDocument::parseBox(std::size_t index){const auto bytes=payload(index);valid(!m_chunks[index].hasSubchunks && bytes.size()>=68);
+  Box box;box.version=word(bytes,0);box.attributes=word(bytes,4);box.name=name(bytes,8,32);
+  for(unsigned n=0;n<4;++n)box.color[n]=bytes[40+n];
+  box.center=floats<3>(bytes,44);box.extent=floats<3>(bytes,56);
+  for(const auto value:box.extent)valid(value>=0);
+  m_boxes.push_back(std::move(box));
 }
 void NativeW3DDocument::parseHierarchy(std::size_t index){const auto& children=m_chunks[index].children;
   valid(children.size()>=2 && m_chunks[children[0]].type==0x101);const auto header=payload(children[0]);valid(header.size()>=36);

@@ -4,6 +4,7 @@
 #include "GameClient/Drawable.h"
 #include "GameClient/GameClient.h"
 #include "GameLogic/GameLogic.h"
+#include "WWMath/obbox.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -53,7 +54,8 @@ void NativeModelDrawCurrentQueries::replaceNativeCurrentModel(std::string_view m
   NativeW3DAssets::Transaction admission(nativeAssets());
   auto binding=nativeAssets().bind(model,animation,false,root,treeScale);
   evaluate(binding,root,frame,treeScale);
-  auto candidate=std::make_unique<Current>(Current{std::move(binding),world,treeScale,frame,{}});
+  auto bounds=NativeW3DModelBounds::decode(binding.model,treeScale);
+  auto candidate=std::make_unique<Current>(Current{std::move(binding),world,treeScale,frame,std::move(bounds),1,{}});
   m_current=std::move(candidate);admission.commit();
 }
 void NativeModelDrawCurrentQueries::updateNativeCurrentPose(const Matrix3D& world,Real frame){
@@ -75,7 +77,8 @@ void NativeModelDrawCurrentQueries::replaceNativeTimedModel(std::string_view mod
   auto clock=NativeModelAnimationClock::start(binding.animation->motion->frames(),
     float(binding.animation->motion->frameRate()),frame,mode,syncTime,m_current?m_current->frame:0);
   evaluate(binding,root,frame,treeScale);
-  auto candidate=std::make_unique<Current>(Current{std::move(binding),world,treeScale,frame,clock});
+  auto bounds=NativeW3DModelBounds::decode(binding.model,treeScale);
+  auto candidate=std::make_unique<Current>(Current{std::move(binding),world,treeScale,frame,std::move(bounds),1,clock});
   m_current=std::move(candidate);admission.commit();
 }
 void NativeModelDrawCurrentQueries::advanceNativeCurrentPose(const Matrix3D& world,std::uint32_t syncTime){
@@ -87,6 +90,27 @@ void NativeModelDrawCurrentQueries::advanceNativeCurrentPose(const Matrix3D& wor
 void NativeModelDrawCurrentQueries::setNativeAnimationMultiplier(Real value){
   requireClientOwner();if(!std::isfinite(value))throw ERROR_BAD_ARG;
   if(m_current && m_current->clock)m_current->clock->setMultiplier(value);
+}
+void NativeModelDrawCurrentQueries::setNativeCurrentObjectScale(Real value){
+  requireClientOwner();if(!std::isfinite(value)||value<0)throw ERROR_BAD_ARG;
+  if(m_current)m_current->objectScale=value;
+}
+Bool NativeModelDrawCurrentQueries::clientOnly_getRenderObjInfo(Coord3D* position,Real* radius,Matrix3D* transform)const{
+  requireClientPhase();if(!position||!radius||!transform)throw ERROR_BAD_ARG;if(!m_current)return FALSE;
+  const auto world=raw(m_current->world);const auto r=m_current->bounds.worldSphereRadius(m_current->binding.pose,world,m_current->objectScale);
+  const auto p=m_current->world.Get_Translation();*position={p.X,p.Y,p.Z};*radius=r;*transform=m_current->world;return TRUE;
+}
+Bool NativeModelDrawCurrentQueries::clientOnly_getRenderObjBoundBox(OBBoxClass* output)const{
+  requireClientPhase();if(!output)throw ERROR_BAD_ARG;if(!m_current)return FALSE;
+  const auto world=raw(m_current->world);const auto box=m_current->bounds.objectBox(m_current->binding.pose,world);
+  // Source OBBox::Transform preserves extents and multiplies the identity basis.
+  OBBoxClass result;
+  result.Extent=Vector3(box.extent[0],box.extent[1],box.extent[2]);
+  Matrix3D::Transform_Vector(m_current->world,Vector3(box.center[0],box.center[1],box.center[2]),&result.Center);
+  for(unsigned row=0;row<3;++row)for(unsigned col=0;col<3;++col)result.Basis[row][col]=m_current->world[row][col];
+  for(unsigned n=0;n<3;++n){if(!std::isfinite(result.Center[n])||!std::isfinite(result.Extent[n]))throw ERROR_BAD_ARG;
+    for(unsigned k=0;k<3;++k)if(!std::isfinite(result.Basis[n][k]))throw ERROR_BAD_ARG;}
+  *output=result;return TRUE;
 }
 Bool NativeModelDrawCurrentQueries::clientOnly_getRenderObjBoneTransform(const AsciiString& name,Matrix3D* output)const{
   requireClientPhase();if(!output)throw ERROR_BAD_ARG;nameInput(name.str());

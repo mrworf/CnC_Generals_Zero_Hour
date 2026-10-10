@@ -7,6 +7,7 @@
 #include "GameClient/NativeHeadlessDisplay.h"
 #include "NativeCameraViewFixture.h"
 #include "GameLogic/ScriptEngine.h"
+#include "WWMath/obbox.h"
 #include "GameClient/Drawable.h"
 #include "Common/ModuleFactory.h"
 #include "Common/ThingTemplate.h"
@@ -35,8 +36,7 @@ public:
   void multiplier(Real value){setNativeAnimationMultiplier(value);}
   const NativeModelAnimationClock* clock()const{return nativeAnimationClock();}
   const NativeW3DAssets::Binding* currentBinding()const{return nativeCurrentBinding();}
-  Bool clientOnly_getRenderObjInfo(Coord3D*,Real*,Matrix3D*)const override{throw ERROR_BAD_ARG;}
-  Bool clientOnly_getRenderObjBoundBox(OBBoxClass*)const override{throw ERROR_BAD_ARG;}
+  void objectScale(Real value){setNativeCurrentObjectScale(value);}
   void updateProjectileClipStatus(UnsignedInt,UnsignedInt,WeaponSlotType)override{throw ERROR_BAD_ARG;}
   void updateDrawModuleSupplyStatus(Int,Int)override{throw ERROR_BAD_ARG;}
   void notifyDrawModuleDependencyCleared()override{throw ERROR_BAD_ARG;}
@@ -76,7 +76,13 @@ std::vector<std::pair<std::string,Data>> inputs(){
   const std::string parent="Draw\nIgnoreConditionStates = NIGHT\nDefaultConditionState\nModel = Outer\nAnimation = Tree.Walk\nFlags = PRISTINE_BONE_POS_IN_FINAL_FRAME\nEnd\nConditionState = MOVING\nFlags = None\nEnd\nAliasConditionState = ATTACKING\nExtraPublicBone = Arm\nExtraPublicBone = Muzzle\nEnd\n";
   const std::string child="Draw\nDefaultConditionState\nModel = Outer\nAnimation = Tree.Walk\nFlags = PRISTINE_BONE_POS_IN_FINAL_FRAME\nWeaponFireFXBone = PRIMARY Muzzle\nWeaponLaunchBone = PRIMARY Muzzle\nWeaponRecoilBone = PRIMARY Arm\nTurret = Arm\nTurretArtAngle = 90\nEnd\nConditionState = MOVING\nFlags = None\nEnd\nAliasConditionState = ATTACKING\nAttachToBoneInAnotherModule = Arm\nEnd\n";
   return {{"parent.ini",bytes(parent)},{"child.ini",bytes(child)},{"definition.ini",bytes("Definition\nScale = 1\nEnd\n")},
-    {"Art/W3D/NumberedTree.w3d",numberedClientTree()},{"Art/W3D/Numbered.w3d",hlod("Numbered","NumberedTree",{{"NULL",0}})}};
+    {"Art/W3D/NumberedTree.w3d",numberedClientTree()},{"Art/W3D/Numbered.w3d",hlod("Numbered","NumberedTree",{{"NULL",0}})},
+    {"Art/W3D/BBox.w3d",join({box("BBox.BOUNDINGBOX"),box("BBox.Other",2)})},
+    {"Art/W3D/Bounded.w3d",hlod("Bounded","Tree",{{"BBox.BOUNDINGBOX",2}})},
+    {"Art/W3D/Ordinary.w3d",hlod("Ordinary","Tree",{{"BBox.Other",2}})},
+    {"Art/W3D/Second.w3d",box("Second.BoundingBox",1,1,1)},
+    {"Art/W3D/Reverse.w3d",hlod("Reverse","Tree",{{"BBox.BOUNDINGBOX",2},{"Second.BoundingBox",1}})},
+    {"Art/W3D/DuplicateBox.w3d",join({box("DuplicateBox.Shape",0xf002,7,2),box("DuplicateBox.Shape",1,99,9)})}};
 }
 Factory* parserFactory=nullptr;Definition* parserDefinition=nullptr;const char* parserTag=nullptr;
 void parseDefinition(INI* ini){ini->initFromINI(parserDefinition,parserDefinition->getFieldParse());}
@@ -361,11 +367,45 @@ void displayTime(Fixture& fixture){
   display.reset();TheDisplay=oldDisplay;auto fresh=std::make_unique<NativeHeadlessDisplay>();require(fresh->animationSyncTime()==0,"new display owns fresh time instead of process-static state");
   scripts.reset();TheScriptEngine=oldScripts;
 }
+void modelBounds(Fixture& fixture){auto& module=fixture.module(0);const Matrix3D identity(true);const AsciiString empty("");
+  Coord3D position{91,92,93};Real radius=99;Matrix3D world(true);world.Set_Translation(Vector3(99,0,0));OBBoxClass box(Vector3(91,92,93),Vector3(99,99,99));
+  module.current("","",identity,0);require(!fixture.draw->clientOnly_getFirstRenderObjInfo(&position,&radius,&world)&&position.x==91&&radius==99&&world.Get_X_Translation()==99,"absent first model leaves every info output untouched");
+  require(!module.clientOnly_getRenderObjBoundBox(&box)&&box.Center.X==91,"absent bounds leave output untouched");
+  module.current("NULL","",identity,0);require(fixture.draw->clientOnly_getFirstRenderObjInfo(&position,&radius,&world)&&close(radius,.1f),"source NULL has nonzero sphere radius");
+  module.current("Static.Mesh","",clientRoot(),0);require(module.clientOnly_getRenderObjBoundBox(&box)&&close(box.Center.X,99)&&close(box.Center.Y,201)&&box.Extent.X==1&&close(box.Basis[0][1],-1),"source object-space AABB becomes oriented world box, not world AABB");
+  require(fixture.draw->clientOnly_getFirstRenderObjInfo(&position,&radius,&world)&&position.x==100&&position.y==200&&radius==3,"info returns root position/transform and source mesh sphere, not sphere center");
+  fixture.draw->setInstanceScale(2);module.current("Static.Mesh","",identity,0);module.objectScale(2);
+  require(module.clientOnly_getRenderObjInfo(&position,&radius,&world)&&radius==12,"geometry scale and separately published ObjectScale both affect normal sphere");
+  module.current("BBox.BOUNDINGBOX","",identity,0);require(module.clientOnly_getRenderObjBoundBox(&box)&&box.Center.X==3&&box.Extent.X==2,"box inherits source no-op geometry Scale");
+  fixture.draw->setInstanceScale(1);module.current("Bounded","Tree.Walk",identity,0);module.objectScale(9);
+  AllocationFault::arm(SIZE_MAX);try{module.clientOnly_getRenderObjBoundBox(&box);module.clientOnly_getRenderObjInfo(&position,&radius,&world);}catch(...){AllocationFault::disarm();throw;}
+  auto attempts=AllocationFault::attempts();AllocationFault::disarm();require(attempts==0&&close(box.Center.X,19)&&close(radius,std::sqrt(6.f)),"animated source BOUNDINGBOX override ignores normal ObjectScale and allocates nothing");
+  module.pose(identity,1);require(module.clientOnly_getRenderObjBoundBox(&box)&&close(box.Center.X,23),"invisible-independent current override follows selected pose");
+  module.current("Ordinary","Tree.Walk",identity,0);module.pose(identity,1);require(module.clientOnly_getRenderObjBoundBox(&box)&&close(box.Center.X,17),"aligned or differently named box uses base hierarchy bounds, not animated pose");
+  module.current("Reverse","Tree.Walk",identity,0);require(module.clientOnly_getRenderObjBoundBox(&box)&&close(box.Center.X,13),"reverse last-LOD lookup picks final oriented BOUNDINGBOX");
+  module.current("Outer","Tree.Walk",identity,0);module.pose(identity,1);
+  require(module.clientOnly_getRenderObjBoundBox(&box)&&close(box.Center.X,12.95f)&&close(box.Extent.X,13.05f)&&close(box.Extent.Y,1.05f),"nested HLOD bounds include every LOD, null and aggregate in pristine hierarchy, not current animation");
+  fixture.draw->setInstanceScale(2);module.current("Outer","Tree.Walk",identity,0);
+  require(module.clientOnly_getRenderObjBoundBox(&box)&&close(box.Center.X,25.95f)&&close(box.Extent.X,26.05f)&&close(box.Extent.Y,2.05f),"final scaled clone recomputes nested geometry and base hierarchy bounds while null Scale remains no-op");
+  fixture.draw->setInstanceScale(1);
+  auto duplicate=fixture.assets.model("DuplicateBox.Shape");require(duplicate->kind==NativeW3DAssets::Prototype::Kind::AlignedBox&&duplicate->document->boxes()[duplicate->metadataIndex].center[0]==7,"typed roots preserve first duplicate and unknown flags");
+  auto encoded=W3DAssetInput::box("Generated.Shape",0xf001);auto decoded=NativeW3DDocument::decode(encoded);require(decoded.boxes().size()==1&&decoded.boxes()[0].attributes==0xf001&&decoded.boxes()[0].color[3]==0xa5,"BOX fixed fields and RGB padding retained");
+  auto malformed=encoded;malformed[8+56+3]=0xbf; // Defined negative extent float bits.
+  clientRejects([&]{decoded.replace(malformed);});require(decoded.boxes()[0].extent[0]==2,"malformed box replacement preserves accepted metadata");
+  malformed=encoded;std::fill(malformed.begin()+16,malformed.begin()+48,'X');clientRejects([&]{decoded.replace(malformed);});
+  malformed=encoded;malformed.resize(malformed.size()-1);clientRejects([&]{decoded.replace(malformed);});
+  Data extended(encoded.begin()+8,encoded.end());extended.push_back(0xab);decoded.replace(chunk(0x740,extended));require(decoded.boxes()[0].extent[0]==2,"source fixed box read permits retained trailing chunk bytes");
+  fixture.logic->phase([&]{clientRejects([&]{module.clientOnly_getRenderObjInfo(&position,&radius,&world);});});
+  clientRejects([&]{module.clientOnly_getRenderObjBoundBox(nullptr);});clientRejects([&]{module.objectScale(std::numeric_limits<Real>::infinity());});
+  module.current("Static.Mesh","",identity,0);module.objectScale(std::numeric_limits<Real>::max());position={91,92,93};radius=99;world.Set_Translation(Vector3(99,0,0));
+  clientRejects([&]{fixture.draw->clientOnly_getFirstRenderObjInfo(&position,&radius,&world);});require(position.x==91&&radius==99&&world.Get_X_Translation()==99,"late radius overflow preserves all source info outputs");
+  module.objectScale(1);require(module.clientOnly_getRenderObjInfo(&position,&radius,&world)&&radius==3,"corrected model info retry");
+}
 }
 int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawable query family");initMemoryManager();initialized=true;
-  {Fixture warm;functional(warm);negative(warm);clientFunctional(warm);clientNegative(warm);clientNumbered(warm);animationClock();animationPose(warm);displayTime(warm);}
+  {Fixture warm;functional(warm);negative(warm);clientFunctional(warm);clientNegative(warm);clientNumbered(warm);animationClock();animationPose(warm);displayTime(warm);modelBounds(warm);}
   for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
-    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else if(family=="display-time")displayTime(fixture);else throw GeneratedFixtureFailure("unknown Drawable query family");}
+    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else if(family=="display-time")displayTime(fixture);else if(family=="model-bounds")modelBounds(fixture);else throw GeneratedFixtureFailure("unknown Drawable query family");}
     require(AllocationFault::live()==live,"whole original Drawable/client/definition/query/parent cohort retirement");
   }shutdownMemoryManager();initialized=false;std::cout<<"PASS actual Drawable query dispatch; renderer/full simulation pending\n";return 0;
  }catch(const GeneratedFixtureFailure& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(const std::exception&){std::cerr<<"FAIL generated Drawable query\n";}catch(ErrorCode){std::cerr<<"FAIL source Drawable query\n";}

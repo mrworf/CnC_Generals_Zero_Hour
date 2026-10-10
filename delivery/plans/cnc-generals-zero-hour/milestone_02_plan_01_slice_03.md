@@ -3911,3 +3911,34 @@ are verified. Evidence: evidence/qa/N2-display-time.md. Full457 and complete
 GameClient update, bounding primitives, concrete19/condition/event callbacks,
 whole native startup and loaded simulation remain pending under slice03/N2.
 Fixed-step display payload commit: `425c341d81cf0f4385dfb527fe74abe1e9281bbb`.
+
+Bounding-model continuation (parent f9abc2de, clean worktree): decode fixed-width
+BOX0x740/version/flags/name/color/center/extent alongside existing typed metadata,
+admit both source aligned/oriented prototype kinds in original root order, and
+derive owned model bounds across every LOD, aggregate and retained nested HLOD.
+Use source scaled-prototype Clone admission: clone recomputes base hierarchy
+bounds after geometry/HTree scale, so do not retain the temporary pre-clone cache.
+Meshes scale geometry bounds; boxes/null use inherited no-op Scale; null bounds
+are sphere .1 and AABB extent .1. Preserve final-LOD reverse BOUNDINGBOX lookup,
+current animated override, orthogonal inverse/root and distinct sphere/OBB rules.
+Connect actual Drawable first-render-info and bound-box consumers, with client
+phase/thread/parent rejection and staged output on finite/overflow failure.
+Candidate model/bounds/clip/pose/cache ownership must commit together; accepted
+reads allocate nothing. Test typed/unknown flags, malformed widths/names/extents,
+duplicates, no special match, all-LOD/aggregate/nested/scale and animated bounds,
+absent models, real Drawable dispatch, complete cold/seeded failure/retry manifests
+and repeated owners under GCC and both sanitizer compilers. Explicitly retain
+concrete19 animation/condition/event callbacks, complete startup/full loaded
+simulation and physical presentation as unfinished gates, not inferred from
+bounding metadata. Same governing transaction and slice03, no replacement plan.
+
+Frozen bounds checkpoint: focused1 PASS2.22s; related121 PASS GCC113.13s/
+GCCsan441.47s/Clangsan288.91s, exit0 all3, no live jobs. All218 manifest lines
+agree. Current model cold182/seeded185 retain every failure/retry and source cursor
+proof; accepted bounds reads0, independent constructor standard1/module-pool2.
+Typed BOX and source scaled clone bounds feed actual Drawable info and current
+OBB queries. Evidence: evidence/qa/N2-model-bounds.md. Full458, concrete19
+condition/animation/event callbacks, ObjectScale doDraw publication, camera
+actor-follow, complete native startup and loaded simulation remain pending;
+slice03/N2 are not complete. User-requested worktree inventory found13 initial
+owned paths and no unrelated nonignored files; retain assets/dependencies/recovery.

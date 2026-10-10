@@ -55,6 +55,12 @@ public:
     std::uint16_t flavor=0;
     std::size_t chunk=0;
   };
+  struct Box {
+    std::uint32_t version=0,attributes=0;
+    std::string name;
+    std::array<std::uint8_t,4> color{};
+    std::array<float,3> center{},extent{};
+  };
   NativeW3DDocument()=default;
   NativeW3DDocument(const NativeW3DDocument&)=delete;
   NativeW3DDocument& operator=(const NativeW3DDocument&)=delete;
@@ -72,6 +78,7 @@ public:
   const auto& hlods()const noexcept{return m_hlods;}
   const auto& meshes()const noexcept{return m_meshes;}
   const auto& animations()const noexcept{return m_animations;}
+  const auto& boxes()const noexcept{return m_boxes;}
 private:
   std::vector<std::uint8_t> m_bytes;
   std::vector<Chunk> m_chunks;
@@ -80,10 +87,12 @@ private:
   std::vector<Hlod> m_hlods;
   std::vector<Mesh> m_meshes;
   std::vector<Animation> m_animations;
+  std::vector<Box> m_boxes;
   void parse();
   void parseChunks(std::size_t begin,std::size_t end,unsigned depth,std::size_t parent);
   void parseHierarchy(std::size_t);
   void parseHlod(std::size_t);
   void parseMesh(std::size_t);
   void parseAnimation(std::size_t);
+  void parseBox(std::size_t);
 };

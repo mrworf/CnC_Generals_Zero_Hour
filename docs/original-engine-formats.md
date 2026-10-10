@@ -6018,3 +6018,34 @@ times that bone transform, then Transform_Center_Extent_AABox (hlod.cpp:1428).
 Decode/admit and test both prototype types, name/order selection, base versus
 animated bounds and parent transforms before accepting concrete current model
 info/camera queries. These are source findings, not native bounding acceptance.
+
+### Source clone bounds and actual Drawable consumers
+
+The scaled asset path returns a Clone of the modified cached prototype
+(W3DAssetManager.cpp:1524..1549). HLod assignment clones its children and recomputes
+object bounds (hlod.cpp:1232..1314). Therefore final scaled models include both
+scaled mesh geometry and scaled base HTree attachments: temporary bounds notified
+during child Scale before HTree Scale are not the final production result.
+Retain nested HLODs and include all LOD objects and aggregates in this merge.
+Box and null inherit no-op Scale; null AABB extents and sphere radius are .1
+(nullrobj.cpp:80,86). Box sphere radius is its extent length
+(boxrobj.cpp:1302,1320). Mesh header bounds scale with geometry
+(meshgeometry.cpp:2004). These files are under Libraries/Source/WWVegas/WW3D2.
+
+W3DModelDraw.cpp:2371 returns root position, root transform and world sphere
+radius, not the sphere's center. Its bound-box consumer transforms the local AABB
+to an OBB, retaining local extents and copying root basis, rather than constructing
+a world AABB. These functions are under
+GameEngineDevice/Source/W3DDevice/GameClient/Draw.
+Normal world sphere radius uses separately published ObjectScale
+(rendobj.cpp:902), not scale inferred from root matrix. Drawable's draw path
+publishes that scale separately (GameEngine/Source/GameClient/Drawable.cpp:1181).
+Special HLOD BOUNDINGBOX world radius ignores ObjectScale (hlod.cpp:1504);
+HLOD object sphere derives its current AABB extent length (hlod.cpp:1479).
+
+Native bounds admission stages model/clip/pose and bounds under the same asset
+transaction. Actual Drawable first-info dispatch and the current-module OBB
+consumer are covered by generated tests; concrete doDraw ObjectScale publication
+and camera actor-follow end-to-end remain pending. No claim is made for internal
+LOD cost spheres, physical draws or retail visual parity. See
+evidence/qa/N2-model-bounds.md for checkpoint validation and limits.

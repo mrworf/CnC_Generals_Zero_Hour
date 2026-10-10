@@ -45,6 +45,8 @@ inline Data mesh(std::string_view container,std::string_view name,bool skin=fals
   for(auto value:{0u,1u,2u,0xf1234567u})word(triangles,value);for(float value:{0.f,0.f,1.f,0.f})real(triangles,value);
   return chunk(0,join({chunk(0x1f,header),chunk(2,vertices),chunk(0x20,triangles),skin?chunk(0xe,influences):Data{},chunk(0xfefefefe,{9,8,7})}),true);}
 inline Data null(std::string_view name){Data out;word(out,0x10000);word(out,0xf1234567);word(out,0xabcdef01);word(out,0x98765432);text(out,name,32);return chunk(0x750,out);}
+inline Data box(std::string_view name,unsigned flags=1,float center=3,float extent=2){Data out;word(out,0x10000);word(out,flags);text(out,name,32);
+  for(auto color:{1u,2u,3u,0xa5u})out.push_back(color);for(float value:{center,0.f,0.f,extent,1.f,1.f})real(out,value);return chunk(0x740,out);}
 inline Data objects(unsigned type,const std::vector<std::pair<std::string,unsigned>>& entries,float maximum){Data header,out;word(header,entries.size());real(header,maximum);out=chunk(0x703,header);
   for(const auto& [name,bone]:entries){Data object;word(object,bone);text(object,name,32);auto bytes=chunk(0x704,object);out.insert(out.end(),bytes.begin(),bytes.end());}return chunk(type,out,true);}
 inline Data hlod(std::string_view name,std::string_view hierarchy,const std::vector<std::pair<std::string,unsigned>>& entries){Data header;word(header,0x10000);word(header,1);text(header,name);text(header,hierarchy);

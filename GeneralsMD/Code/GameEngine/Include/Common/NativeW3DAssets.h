@@ -48,11 +48,11 @@ public:
   struct Attachment {std::uint32_t bone;Model model;};
   struct Lod {float maxScreenSize;std::vector<Attachment> objects;};
   struct Prototype {
-    enum class Kind { Mesh, Hlod, Null };
+    enum class Kind { Mesh, Hlod, Null, AlignedBox, OrientedBox };
     Kind kind;
     std::string name;
     Document document;
-    // Mesh/HLOD: index into the corresponding document metadata table.
+    // Mesh/HLOD/box: index into the corresponding document metadata table.
     // Named null: chunk index. Built-in NULL: no document.
     std::size_t metadataIndex=0;
     Hierarchy hierarchy;

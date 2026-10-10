@@ -76,7 +76,7 @@ void NativeW3DAssets::load(State& state,const std::string& name){
   state.documents.emplace(name,document);
   // Document metadata tables each preserve the order of their typed roots.
   // Traverse the actual root order, not grouped types: first prototype wins.
-  std::size_t treeIndex=0,meshIndex=0,hlodIndex=0,animationIndex=0;
+  std::size_t treeIndex=0,meshIndex=0,hlodIndex=0,animationIndex=0,boxIndex=0;
   for(auto root:document->roots())switch(document->chunks()[root].type){
     case 0x100:{const auto& tree=document->hierarchies()[treeIndex++];identifier(tree.name);
       state.hierarchies.emplace(tree.name,Hierarchy(document,&tree));break;}
@@ -86,6 +86,8 @@ void NativeW3DAssets::load(State& state,const std::string& name){
       state.definitions.emplace(model.name,State::Definition{Prototype::Kind::Hlod,document,index});break;}
     case 0x750:{auto key=nullName(document->payload(root));identifier(key);
       state.definitions.emplace(std::move(key),State::Definition{Prototype::Kind::Null,document,root});break;}
+    case 0x740:{const auto index=boxIndex++;const auto& box=document->boxes()[index];identifier(box.name);
+      state.definitions.emplace(box.name,State::Definition{box.attributes&1?Prototype::Kind::OrientedBox:Prototype::Kind::AlignedBox,document,index});break;}
     case 0x200:case 0x280:{const auto index=animationIndex++;const auto& animation=document->animations()[index];auto key=animation.hierarchy+"."+animation.name;identifier(key);
       state.animationDefinitions.emplace(std::move(key),State::AnimDefinition{document,index});break;}
     default:break;
