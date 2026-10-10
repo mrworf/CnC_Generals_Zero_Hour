@@ -33,6 +33,7 @@
 #include "Common/GameAudio.h"
 #include "Common/PerfTimer.h"
 #include "Common/RandomValue.h"
+#include "Common/NativeOverrideAdmission.h"
 #include "Common/ThingTemplate.h"
 #include "Common/Xfer.h"
 
@@ -282,8 +283,8 @@ TurretAI::TurretAI(Object* owner, const TurretAIData* data, WhichTurretType tur)
 	m_didFire(false),
 	m_target(TARGET_NONE),
 	m_targetWasSetByIdleMood(false),
-	m_enabled(!data->m_initiallyDisabled),
-	m_firesWhileTurning(data->m_firesWhileTurning),
+	m_enabled(data && !data->m_initiallyDisabled),
+	m_firesWhileTurning(data && data->m_firesWhileTurning),
 	m_isForceAttacking(false),
 	//Added By Sadullah Nader
 	//Initialization(s) inserted
@@ -294,7 +295,7 @@ TurretAI::TurretAI(Object* owner, const TurretAIData* data, WhichTurretType tur)
 	//Initialization(s) inserted
 	m_continuousFireExpirationFrame = -1;
 	//
-	if (!m_data)
+	if (!m_data || !m_owner)
 	{
 		DEBUG_CRASH(("TurretAI MUST have ModuleData"));
 		throw INI_INVALID_DATA;
@@ -315,10 +316,15 @@ TurretAI::TurretAI(Object* owner, const TurretAIData* data, WhichTurretType tur)
 #else
 	const char* smname = "TurretStateMachine";
 #endif
-	m_turretStateMachine = newInstance(TurretStateMachine)(this, m_owner, smname);
+	std::unique_ptr<TurretStateMachine, NativePooledRetire> candidate(
+        newInstance(TurretStateMachine)(this, m_owner, smname));
+    // Default-state callbacks legitimately inspect the turret's current
+    // machine. Publish its borrowed identity while the local guard owns it.
+    m_turretStateMachine = candidate.get();
 	m_turretStateMachine->initDefaultState();
 
 	m_turretRotOrPitchSound = *(m_owner->getTemplate()->getPerUnitSound("TurretMoveLoop"));
+    candidate.release();
 }
 
 //----------------------------------------------------------------------------------------------------------

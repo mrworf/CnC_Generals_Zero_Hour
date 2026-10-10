@@ -4287,3 +4287,54 @@ continuation checkpoint. This validates shared state-particle callbacks and
 coupled rollback, not complete concrete19/full tick/lazy events or N2 startup.
 Continue the actual physics/AI/geometry, ordered full tick and event-cursor cohort
 above within this same plan; full489, slice03 and N2 acceptance remain pending.
+
+Concrete-parent admission batch (clean parent c0ea178b): before composing the
+model tick, exercise the real source Object with parsed PhysicsBehavior and two
+AI turrets, including its actual state machines and geometry. Inspect constructor,
+parser, state-map and onObjectCreated acquisition/retirement together. Source
+StateMachine::defineState presently admits an unguarded pooled state into a
+fallible map; TurretAI owns its machine before fallible default-state/sound setup;
+AIUpdateInterface owns a turret prefix before subsequent turret/locomotor setup.
+Guard these complete candidate cohorts and publish only after successful setup.
+Keep successful gameplay state order unchanged, and preserve valid Object/global
+parents through cleanup. Guard parsed TurretAIData before parsing too.
+
+Extend the actual actor fixture rather than introducing fake physics or AI
+getters. Positive evidence: actual parsed two-turret angles/pitches, velocity and
+construction geometry; paired source Object/Drawable binding and retirement.
+Negative evidence: every standard-allocation prefix and corrected retry, duplicate
+state admission, malformed turret parsing and pooled acquisition exhaustion,
+including late second-turret acquisition. Warm the identical complete cohort
+before census/baselines; preserve fixed source cursor state per attempt. Validate
+GCC and both compiler sanitizer configurations, then frozen related ownership
+families. This is supporting real-parent integration, not a successful abstract
+doDrawModule, audiovisual acceptance, full root startup or loaded simulation.
+Logic RNG draws in actual initialization must be recorded separately from client
+draw behavior; candidate-root RNG rollback remains a coupled follow-on unless
+this batch implements and proves that whole-root boundary.
+
+Source correction: handleClientRecoil clamps its iteration count to the smaller
+barrel/recoil size after its assertion. The earlier larger-count/undefined-access
+finding was a transcription error, not a verified source bug. Native paired
+cardinality validation remains the chosen admission contract, but must not be
+justified by that incorrect original-source claim.
+
+Real-parent frozen checkpoint in progress: canonical733/inclusive740, full494
+configured. Actual physics/two-turret/state-map/nested-parser focused5 PASS all3
+(GCC5.95s/GCCsan24.37s/Clangsan14.41s),40 identical fault/retry rows. Frozen
+related78 GCC PASS154.59s/terminal0; sanitizer jobs89086/18198 remain live.
+No source edits or checkpoint commit before their terminal results. Evidence:
+evidence/qa/N2-model-parent-admission.md. This complete real-parent ownership
+cohort enables subsequent model integration but does not accept the full tick,
+whole-root RNG rollback, slice03 or N2 startup/loaded simulation. Continue the
+same plan, preserving authored outcomes and the remaining full494 gate.
+
+Final real-parent admission checkpoint: focused5/related78 PASS all3; related
+elapsed GCC154.59s/GCCsan647.08s/Clangsan388.17s. All owned jobs retired terminal0,
+40 focused/169 related manifests agree, and both frozen fingerprints match.
+The introducing commit of evidence/qa/N2-model-parent-admission.md is the coherent
+component checkpoint. Keep slice03/N2 incomplete and continue actual ordered
+tick/pose/event integration, concrete19 and original startup/loaded simulation.
+Source PrevFrame is shared between progression and sound consumption; preserve
+the documented same-sync behavior rather than treating an independent cursor as
+unaffected by clock advancement. Full494 remains the unrun milestone gate.

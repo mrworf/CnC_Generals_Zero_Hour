@@ -557,7 +557,7 @@ target_include_directories(original_object_ownership_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_definitions(original_object_ownership_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
 target_link_options(original_object_ownership_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS functional negative faults pool-failures parent-faults id-growth pool-updates-early pool-updates-middle pool-updates-late cold-faults scheduler-faults root-retirement root-quiescence destroy-callbacks root-negative audio-constructor transport-cache)
+foreach(family IN ITEMS functional negative faults pool-failures parent-faults id-growth pool-updates-early pool-updates-middle pool-updates-late cold-faults scheduler-faults root-retirement root-quiescence destroy-callbacks root-negative audio-constructor transport-cache model-functional model-faults model-pools model-state-admission model-data-admission)
   add_test(NAME original_object_ownership_${family} COMMAND original_object_ownership_fixture "${family}")
   set_tests_properties(original_object_ownership_${family} PROPERTIES LABELS "original;runtime;actor" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

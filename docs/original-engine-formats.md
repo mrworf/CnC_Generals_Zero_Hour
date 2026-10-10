@@ -6445,9 +6445,9 @@ simulation. RECOIL_START visibility is evaluated before the shift state machine;
 recoil adds its rate then applies authored damping, settles at maximum shift or
 absolute rate below0.01, and SETTLE subtracts the authored settle amount until
 zero. Capture/control then translates local X by negative shift. The legacy
-barrel/recoil count mismatch path uses the larger count after an assertion and
-can access missing rows: a native admission must reject invalid paired cardinality
-before any prefix mutation, not reproduce undefined access or waive the check.
+barrel/recoil count mismatch path clamps to the smaller count after an assertion.
+Native admission must validate paired cardinality before any prefix mutation;
+do not describe the original smaller-count clamp as out-of-bounds access.
 Original intended normal paired behavior remains authoritative. These coupled
 state/pose/visibility/ownership paths still need actual parent fixtures and
 failure/retry evidence before any complete native model tick can be claimed.
@@ -6486,3 +6486,59 @@ with registered native Drawable modules. It is not proof of initialized GameData
 or full startup, and its present generated actor does not yet establish a physics/
 turret model tick. Inspect the complete new provider initialization contract and
 warm the identical whole cohort before fault census/ownership baselines.
+
+Concrete-parent construction census: PhysicsBehaviorModuleData's constructor
+reads both GlobalData gravity and the actual WeaponStore for optional vehicle
+crash weapon templates before any parsed PhysicsBehavior fields are consumed.
+An empty initialized source WeaponStore legitimately resolves missing optional
+templates to null; omitting the store is not an equivalent fixture. It must live
+through parsed module-data retirement. AIUpdateInterface creates each authored
+TurretAI before choosing its locomotor set; each turret constructs six pooled
+states through StateMachine::defineState, initializes its default state (which
+draws from the logic RNG), then copies its template-owned movement sound. The
+later onObjectCreated builds the complete AIStateMachine and initializes its
+default state. Source physics/AI setup therefore cannot be proven by a geometry-
+only Object or by client RNG evidence. New execution results remain pending.
+
+The same parent cohort requires a published AudioManager through turret cleanup:
+AudioEventRTS::isCurrentlyPlaying unconditionally calls TheAudio, including an
+empty movement sound. An absent-output fixture still constructs the actual
+source audio owner; null audio is not a legitimate cleanup parent. The fixture
+does not accept audible events or establish physical media behavior. Physics
+addVelocityTo does not invalidate m_velMag; source scrubVelocity2D/Z does. A
+generated movement fixture must establish the post-physics cached magnitude
+through a real public scrub path instead of expecting an immediate additive
+velocity call to recompute it. These are source contracts, not authorization to
+change successful simulation behavior to satisfy a fixture.
+
+Native real-parent ownership correction uses the original source StateMachine,
+AIUpdateInterface and TurretAI, not a replacement AI. defineState now guards a
+new pooled State through transition-vector preparation and map-node acquisition;
+duplicate IDs retire the new candidate and already-admitted pointers are rejected
+without retiring the accepted unit. The parser guards TurretAIData before any
+nested INI field. AIUpdateInterface guards all already-created turrets through
+the remaining constructor work, and each TurretAI guards its actual state machine
+through default initialization and fallible movement-sound lookup/copy. The
+onObjectCreated machine has the same initialization guard. Successful state order
+and simulation/RNG behavior remain source-selected. Evidence and pending limits:
+evidence/qa/N2-model-parent-admission.md. This does not accept whole-root child/
+script/logic-RNG rollback, complete native model tick or physical audio output.
+
+Lazy pose/event continuation refinement, source WW3D2/animobj.cpp::
+Single_Anim_Progress and Update_Sub_Object_Transforms: the original PrevFrame
+field is shared by clock progression and sound consumption. Progress assigns
+the previous current frame, but restores the prior PrevFrame if the frame did
+not change; sound publication then overwrites that same field with Trigger_Sound's
+returned last-triggered frame. Thus "separate event cursor" above means an
+independently committed consumption boundary, not a persistent cursor that must
+ignore clock progression. On the next changed frame, the interval begins at the
+previous current frame; at the same sync time it retains the consumed sound
+boundary. A native adapter must preserve this interaction explicitly. Updating
+only a separate long-lived cursor can replay earlier crossings incorrectly.
+
+Control_Bone invalidates the hierarchy; Capture_Bone and Release_Bone do not
+themselves invalidate it. Source setModelState rebuilds and clears every paired
+recoil row on both recreated-model and same-model branches, before final selected
+state/animation publication. An idle animation reselection without setModelState
+does not reset those rows. These verified source facts refine the existing tick
+batch, not new acceptance or a reason to edit frozen production source.

@@ -7,6 +7,7 @@
 #include "Common/GlobalData.h"
 #include "Common/GameEngine.h"
 #include "Common/INI.h"
+#include "Common/INIException.h"
 #include "Common/ModuleFactory.h"
 #include "Common/MessageStream.h"
 #include "Common/NameKeyGenerator.h"
@@ -16,6 +17,9 @@
 #include "Common/Team.h"
 #include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
+#include "Common/StateMachine.h"
+#include "Common/RandomValue.h"
+#include "Common/NativeOverrideAdmission.h"
 #include "GameClient/ControlBar.h"
 #include "GameClient/InGameUI.h"
 #include "GameClient/NativeHeadlessGameClient.h"
@@ -36,7 +40,13 @@
 #include "GameLogic/Module/DeletionUpdate.h"
 #include "GameLogic/Module/OpenContain.h"
 #include "GameLogic/Module/DestroyModule.h"
+#include "GameLogic/Module/PhysicsUpdate.h"
+#include "GameLogic/Module/AIUpdate.h"
+#include "GameLogic/TurretAI.h"
+#include "GameLogic/Weapon.h"
+#include "GameLogic/AIStateMachine.h"
 #include <array>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -106,11 +116,19 @@ struct Tree {
   Tree(){char pattern[]="/tmp/zh-actor-ownership-XXXXXX";auto* value=::mkdtemp(pattern);require(value,"generated actor root");root=value;
     try{std::ofstream out(root/"actors.ini");
       out<<"Object GeneratedActor\n RadarPriority = UNIT\n Geometry = BOX\n GeometryMajorRadius = 5\n GeometryMinorRadius = 5\n End\n";
+      out<<"Object GeneratedModelActor\n RadarPriority = UNIT\n Geometry = BOX\n GeometryMajorRadius = 5\n GeometryMinorRadius = 3\n GeometryHeight = 40\n"
+           " Behavior = PhysicsBehavior GeneratedModelPhysics\n Mass = 10\n End\n"
+           " Behavior = AIUpdateInterface GeneratedModelAI\n Turret\n TurretTurnRate = 45\n ControlledWeaponSlots = PRIMARY\n NaturalTurretAngle = 30\n NaturalTurretPitch = 10\n End\n"
+           " AltTurret\n TurretTurnRate = 90\n ControlledWeaponSlots = SECONDARY\n NaturalTurretAngle = -45\n NaturalTurretPitch = 20\n End\n End\n End\n";
       out<<"Object GeneratedCarrier\n RadarPriority = UNIT\n Behavior = OpenContain GeneratedContainer\n ContainMax = 8\n End\n End\n";
       out<<"Object GeneratedDestroyCallbacks\n RadarPriority = UNIT\n Behavior = DestroyAdmissionProbe GeneratedDestroy\n End\n End\n";
       out<<"Object GeneratedManyUpdates\n RadarPriority = UNIT\n";
       for(unsigned n=0;n<270;++n)out<<" Behavior = DeletionUpdate GeneratedTag"<<n<<"\n MinLifetime = 10000\n MaxLifetime = 10000\n End\n";
       out<<"End\n";out.close();require(bool(out),"complete generated actual object definitions");
+      {std::ofstream ai(root/"model-ai.ini");ai<<"ModelAI\n Turret\n ControlledWeaponSlots = PRIMARY\n End\n AltTurret\n ControlledWeaponSlots = SECONDARY\n End\n End\n";
+        ai.close();require(bool(ai),"complete generated AI data");}
+      {std::ofstream ai(root/"model-ai-bad.ini");ai<<"ModelAI\n Turret\n ControlledWeaponSlots = PRIMARY\n End\n AltTurret\n ControlledWeaponSlots = INVALID_GENERATED_SLOT\n End\n End\n";
+        ai.close();require(bool(ai),"defined malformed second turret data");}
       files.mountReadOnly({root.string()});TheFileSystem=&files;
     }catch(...){std::error_code error;std::filesystem::remove_all(root,error);throw;}}
   ~Tree(){TheFileSystem=previous;std::error_code error;std::filesystem::remove_all(root,error);}
@@ -126,14 +144,16 @@ struct Context {
   Published<InGameUI,UI> ui{TheInGameUI};
   Published<Radar,RadarOwner> radar{TheRadar};
   Published<ModuleFactory,ActorModules> modules{TheModuleFactory};
+  Published<WeaponStore> weapons{TheWeaponStore};
+  Published<AudioManager,AbsentAudioFixture> audio{TheAudio};
   Published<ThingFactory> templates{TheThingFactory};
   Published<PartitionManager> partition{ThePartitionManager};
   Published<PlayerList> players{ThePlayerList};
   Published<TeamFactory> teams{TheTeamFactory};
   Published<GameLogic,Logic> logic{TheGameLogic};
   explicit Context(bool initializeUI=true){try{names.create();names.owner->init();data.create();ranks.create();ranks.owner->init();
-    scripts.create();ai.create();ai.owner->init();logic.create();logic.owner->defaults();
-    if(initializeUI)ui.create();radar.create();modules.create();modules.owner->init();modules.owner->registerProbe();templates.create();templates.owner->init();
+    scripts.create();ai.create();ai.owner->init();logic.create();logic.owner->defaults();audio.create();
+    if(initializeUI)ui.create();radar.create();modules.create();modules.owner->init();modules.owner->registerProbe();weapons.create();templates.create();templates.owner->init();
     INI ini;ini.load("actors.ini",INI_LOAD_OVERWRITE,nullptr);
     partition.create();partition.owner->init();players.create();teams.create();teams.owner->init();
     Dict definition;teams.owner->initTeam("team","",TRUE,&definition);players.owner->getNeutralPlayer()->setDefaultTeam();
@@ -143,11 +163,12 @@ struct Context {
     // consults GameLogic even after its last radar node has retired.
     if(logic.owner)logic.owner->clear();
     ui.retire();radar.retire();partition.retire();teams.retire();players.retire();
-    ai.retire();scripts.retire();templates.retire();modules.retire();logic.retire();
+    ai.retire();scripts.retire();templates.retire();modules.retire();weapons.retire();audio.retire();logic.retire();
     ranks.retire();data.retire();names.retire();
   }
   ~Context(){retire();}
   Object* make(bool many=false){return logic.owner->friend_createObject(templates.owner->findTemplate(many?"GeneratedManyUpdates":"GeneratedActor",FALSE),OBJECT_STATUS_MASK_NONE,nullptr);}
+  Object* model(){return logic.owner->friend_createObject(templates.owner->findTemplate("GeneratedModelActor",FALSE),OBJECT_STATUS_MASK_NONE,nullptr);}
   InspectObject* inspectable(){return new (Object::ObjectMagicEnum(0)) InspectObject(templates.owner->findTemplate("GeneratedActor",FALSE),OBJECT_STATUS_MASK_NONE,nullptr);}
   void retire(Object* object){logic.owner->destroyObject(object);logic.owner->flush();}
 };
@@ -165,6 +186,141 @@ void functional(Context& context){auto& logic=*context.logic.owner;auto* first=c
     require(n==270 && logic.updates()==count,"both heap directions retain every actual scheduler owner");}
   context.retire(second);require(logic.updates()==4 && !logic.findObjectByID(secondID) && logic.findObjectByID(firstID)==first && logic.getFirstObject()==first,"all many-module scheduler owners retire and survivor remains");
   context.retire(first);require(!logic.updates() && !logic.getFirstObject(),"complete source destruction queue and registry retirement");
+}
+template<class Action>void rejects(Action action);
+MemoryPool* modelPoolCensus=nullptr;
+using PoolCohort=std::vector<std::pair<MemoryPool*,Int>>;
+PoolCohort modelUnits(){PoolCohort out;require(modelPoolCensus,"complete model parent pool census warmed");
+  for(auto* pool=modelPoolCensus;pool;pool=pool->getNextPoolInList())out.emplace_back(pool,pool->getUsedBlockCount());return out;
+}
+void requireModelUnits(const PoolCohort& before){for(const auto& [pool,units]:before)
+  require(pool->getUsedBlockCount()==units,"all warmed model parent/state pools retire their precise units");}
+void verifyModelActor(Object& actor){auto* physics=actor.getPhysics();auto* ai=actor.getAIUpdateInterface();
+  require(physics && ai && ai->isIdle() && actor.areModulesReady(),"actual parsed physics/AI and initialized full state machine");
+  Real yaw=0,pitch=0;
+  require(ai->getTurretRotAndPitch(TURRET_MAIN,&yaw,&pitch) && std::abs(yaw-3.14159265358979323846f/6)<.00001f && std::abs(pitch-3.14159265358979323846f/18)<.00001f,"actual main turret authored initial angle/pitch");
+  require(ai->getTurretRotAndPitch(TURRET_ALT,&yaw,&pitch) && std::abs(yaw+3.14159265358979323846f/4)<.00001f && std::abs(pitch-3.14159265358979323846f/9)<.00001f,"actual alternate turret authored initial angle/pitch");
+  const Coord3D velocity{3,4,0};physics->addVelocityTo(&velocity);
+  // addVelocityTo alone does not invalidate the source magnitude cache.
+  // The public scrub path establishes the real post-physics cached read.
+  physics->scrubVelocity2D(5);
+  require(physics->getVelocityMagnitude()==5 && actor.getGeometryInfo().getMaxHeightAbovePosition()==40,"real velocity cache and construction geometry, not fixture-returned values");
+  actor.setConstructionPercent(25);require(actor.getConstructionPercent()==25,"actual source construction percentage");
+}
+void modelParents(Context& context){
+  Published<MessageStream> messages{TheMessageStream};messages.create();
+  Published<GameClient,NativeHeadlessGameClient> client{TheGameClient};
+  client.owner=std::make_unique<NativeHeadlessGameClient>(NativeHeadlessGameClient::Composition::DrawablesOnly);
+  TheGameClient=client.owner.get();
+  {struct BeforeUI{InGameUI* prior=TheInGameUI;BeforeUI(){TheInGameUI=nullptr;}~BeforeUI(){TheInGameUI=prior;}} beforeUI;client.owner->init();}
+  const auto before=GetGameLogicRandomSeedCRC();auto* first=context.model();auto* second=context.model();
+  const auto acquired=GetGameLogicRandomSeedCRC();require(acquired!=before,"real AI default-state admission advances source logic RNG");
+  verifyModelActor(*first);verifyModelActor(*second);
+  require(GetGameLogicRandomSeedCRC()==acquired,"real physics/geometry/turret reads do not consume simulation RNG");
+  auto* draw=client.owner->friend_createDrawable(first->getTemplate(),DRAWABLE_STATUS_NONE);
+  first->friend_bindToDrawable(draw);draw->friend_bindToObject(first);
+  require(first->getDrawable()==draw && draw->getObject()==first && draw->getShouldAnimate(TRUE),"real physics/AI actor and source Drawable paired publication");
+  first->setScriptStatus(OBJECT_STATUS_SCRIPT_UNPOWERED);
+  require(!draw->getShouldAnimate(TRUE) && draw->getShouldAnimate(FALSE),"actual power status reaches source animation gate");
+  first->clearScriptStatus(OBJECT_STATUS_SCRIPT_UNPOWERED);
+  const auto id=first->getID();client.owner->destroyDrawable(draw);
+  require(!first->getDrawable() && context.logic.owner->findObjectByID(id)==first && first->getPhysics() && first->getAI(),"retiring source Drawable preserves actual actor/physics/AI identity");
+  context.retire(second);context.retire(first);
+  require(!context.logic.owner->getFirstObject() && !context.logic.owner->updates(),"whole real model-parent actor/state/scheduler retirement");
+}
+void modelParentFaults(Context& context){auto& logic=*context.logic.owner;
+  const auto start=logic.getObjectIDCounter();std::size_t count=0;
+  AllocationFault::arm(SIZE_MAX);Object* measured=nullptr;
+  try{measured=context.model();count=AllocationFault::attempts();}catch(...){AllocationFault::disarm();throw;}
+  AllocationFault::disarm();verifyModelActor(*measured);context.retire(measured);logic.setObjectIDCounter(start);
+  require(count>50,"real two-turret and full AI state-map manifest, not geometry-only admission");
+  const auto cohort=modelUnits();
+  for(std::size_t ordinal=0;ordinal<=count;++ordinal){const auto live=AllocationFault::live();Object* candidate=nullptr;bool failed=false;
+    AllocationFault::arm(ordinal);
+    try{candidate=context.model();}catch(const std::bad_alloc&){failed=true;}catch(ErrorCode code){require(code==ERROR_OUT_OF_MEMORY,"actual model-parent allocation error");failed=true;}
+    const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+    require(hit==failed && failed==(ordinal<count) && attempts==(failed?ordinal+1:count),"every actual model-parent standard prefix and exact terminal");
+    if(failed){require(!logic.getFirstObject() && !logic.updates() && logic.getObjectIDCounter()==start && AllocationFault::live()==live,"failed model-parent prefix withdraws complete actual actor/registrations/storage");requireModelUnits(cohort);}
+    else{verifyModelActor(*candidate);require(candidate->getID()==ObjectID(start) && logic.getObjectIDCounter()==start+1,"actual model actor cursor publication before fixture restoration");context.retire(candidate);}
+    candidate=context.model();verifyModelActor(*candidate);
+    require(candidate->getID()==ObjectID(start+(failed?0:1)),"every corrected model-parent retry preserves source ID semantics");context.retire(candidate);
+    require(!logic.getFirstObject() && !logic.updates() && AllocationFault::live()==live,"every corrected model-parent retry retires complete standard ownership");requireModelUnits(cohort);logic.setObjectIDCounter(start);
+  }
+  std::cout<<"actual physics/two-turret actor prefixes [0,"<<count<<"); terminal "<<count<<"; every retry\n";
+}
+void modelParentPools(Context& context){auto& logic=*context.logic.owner;
+  for(const auto* name:{"PhysicsBehavior","AIUpdateInterface","TurretAI","TurretStateMachine","TurretAIIdleState","AIStateMachine","AIIdleState"}){
+    auto* pool=TheMemoryPoolFactory->findMemoryPool(name);require(pool,"actual model-parent/state pool warmed");
+    const unsigned acquisitions=std::string_view(name).starts_with("Turret")?2:1;
+    for(unsigned available=0;available<acquisitions;++available){std::vector<void*> held;held.reserve(pool->getFreeBlockCount());
+      struct Retire{MemoryPool* pool;std::vector<void*>& held;~Retire(){for(auto* slot:held)pool->freeBlock(slot);}} retire{pool,held};
+      while(pool->getFreeBlockCount()>Int(available))held.push_back(pool->allocateBlock("generated model-parent exhaustion"));
+      const auto start=logic.getObjectIDCounter();const auto cohort=modelUnits();const auto live=AllocationFault::live();bool failed=false;
+      try{auto* unexpected=context.model();context.retire(unexpected);}catch(ErrorCode code){failed=code==ERROR_OUT_OF_MEMORY;}
+      require(failed && !logic.getFirstObject() && !logic.updates() && logic.getObjectIDCounter()==start && AllocationFault::live()==live,"real model-parent pooled partial acquisition rejects and retires prefix");requireModelUnits(cohort);
+      for(auto* slot:held)pool->freeBlock(slot);held.clear();auto* retry=context.model();verifyModelActor(*retry);context.retire(retry);
+      require(pool->getUsedBlockCount()==0 && !logic.getFirstObject() && !logic.updates() && AllocationFault::live()==live,"every model-parent pool retry retires whole actor");logic.setObjectIDCounter(start);
+    }
+    std::cout<<"model parent "<<name<<" pooled prefixes [0,"<<acquisitions<<"); every retry\n";
+  }
+}
+struct AdmissionMachine:StateMachine {
+  using StateMachine::StateMachine;using StateMachine::defineState;using StateMachine::internalGetState;
+};
+Bool neverTransition(State*,void*){return FALSE;}
+void modelStateAdmission(Context& context){auto* actor=context.make();const AsciiString name("GeneratedStateAdmission");
+  const StateConditionInfo conditions[]={{neverTransition,1,nullptr},{nullptr,0,nullptr}};
+  auto operation=[&](AdmissionMachine& machine){machine.defineState(1,newInstance(ContinueState)(&machine),1,1,conditions);};
+  {AdmissionMachine warm(actor,name);operation(warm);} // Retire typed-pool discovery before the manifest.
+  std::size_t count=0;
+  {AdmissionMachine machine(actor,name);AllocationFault::arm(SIZE_MAX);
+    try{operation(machine);count=AllocationFault::attempts();}catch(...){AllocationFault::disarm();throw;}AllocationFault::disarm();}
+  auto* pool=TheMemoryPoolFactory->findMemoryPool("ContinueState");require(pool && count>=2,"state transition storage and map-node admission census");
+  for(std::size_t ordinal=0;ordinal<=count;++ordinal){const auto live=AllocationFault::live();const auto units=pool->getUsedBlockCount();
+    {AdmissionMachine machine(actor,name);bool failed=false;AllocationFault::arm(ordinal);
+      try{operation(machine);}catch(const std::bad_alloc&){failed=true;}const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+      require(hit==failed && failed==(ordinal<count) && attempts==(failed?ordinal+1:count),"state map/transition every prefix and exact terminal");
+      if(failed){require(pool->getUsedBlockCount()==units && AllocationFault::live()==live && machine.getCurrentStateID()==INVALID_STATE_ID,"unpublished state/transition candidate retires on map or vector failure");operation(machine);}
+      auto* accepted=machine.internalGetState(1);machine.initDefaultState();
+      rejects([&]{machine.defineState(1,newInstance(ContinueState)(&machine),1,1);});
+      rejects([&]{machine.defineState(2,accepted,1,1);});
+      {AdmissionMachine foreign(actor,name);rejects([&]{foreign.defineState(2,accepted,2,2);});}
+      require(machine.internalGetState(1)==accepted && machine.getCurrentStateID()==1 && pool->getUsedBlockCount()==units+1,"duplicate candidate and admitted-pointer rejection retain exact accepted state");
+    }
+    require(pool->getUsedBlockCount()==units && AllocationFault::live()==live,"every state admission/retry and whole machine retires exactly");
+  }
+  const auto cohort=modelPoolCensus?modelUnits():PoolCohort{};const auto live=AllocationFault::live();
+  bool rejected=false;try{std::unique_ptr<TurretAI,NativePooledRetire> invalid(newInstance(TurretAI)(actor,nullptr,TURRET_MAIN));}catch(ErrorCode code){rejected=code==INI_INVALID_DATA;}
+  require(rejected && AllocationFault::live()==live,"null turret data rejects before initializer dereference and retires pooled candidate");
+  if(modelPoolCensus)requireModelUnits(cohort);
+  context.retire(actor);std::cout<<"state admission prefixes [0,"<<count<<"); terminal "<<count<<"; every retry\n";
+}
+std::unique_ptr<AIUpdateModuleData>* modelAIDataDestination=nullptr;
+void parseModelAI(INI* ini){auto candidate=std::make_unique<AIUpdateModuleData>();
+  ini->initFromINIMultiProc(candidate.get(),AIUpdateModuleData::buildFieldParse);
+  *modelAIDataDestination=std::move(candidate);
+}
+void modelDataAdmission(Context& context){
+  auto parse=[&](const char* path){std::unique_ptr<AIUpdateModuleData> candidate;
+    struct Destination{std::unique_ptr<AIUpdateModuleData>* prior=modelAIDataDestination;~Destination(){modelAIDataDestination=prior;}} destination;
+    modelAIDataDestination=&candidate;const INIBlockDefinition blocks[]={{"ModelAI",parseModelAI}};INI ini;ini.loadBlocks(path,INI_LOAD_OVERWRITE,blocks);
+    require(candidate && candidate->m_turretData[0] && candidate->m_turretData[1],"complete actual two-turret parsed data");return candidate;
+  };
+  {auto warm=parse("model-ai.ini");}
+  const auto cohort=modelUnits();const auto outside=AllocationFault::live();bool bad=false;
+  try{auto rejected=parse("model-ai-bad.ini");}catch(const INIException&){bad=true;}catch(ErrorCode code){bad=code==INI_INVALID_DATA;}
+  require(bad && AllocationFault::live()==outside,"malformed second turret retires preceding and unpublished parsed pooled data");requireModelUnits(cohort);
+  std::size_t count=0;
+  {AllocationFault::arm(SIZE_MAX);std::unique_ptr<AIUpdateModuleData> measured;
+    try{measured=parse("model-ai.ini");count=AllocationFault::attempts();}catch(...){AllocationFault::disarm();throw;}AllocationFault::disarm();}
+  for(std::size_t ordinal=0;ordinal<=count;++ordinal){const auto live=AllocationFault::live();bool failed=false;std::unique_ptr<AIUpdateModuleData> candidate;
+    AllocationFault::arm(ordinal);try{candidate=parse("model-ai.ini");}catch(const std::bad_alloc&){failed=true;}
+    const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+    require(hit==failed && failed==(ordinal<count) && attempts==(failed?ordinal+1:count),"actual nested turret data parse prefixes and exact terminal");candidate.reset();
+    require(AllocationFault::live()==live,"failed or accepted whole nested parser retires standard storage");requireModelUnits(cohort);
+    {auto retry=parse("model-ai.ini");}require(AllocationFault::live()==live,"every corrected nested turret parser retry retires");requireModelUnits(cohort);
+  }
+  std::cout<<"actual nested turret data prefixes [0,"<<count<<"); terminal "<<count<<"; every retry\n";
 }
 template<class Action>void rejects(Action action){bool rejected=false;try{action();}catch(ErrorCode code){rejected=code==ERROR_BAD_ARG;}require(rejected,"invalid actor admission rejects");}
 void negative(Context& context){auto& logic=*context.logic.owner;auto* first=context.inspectable();auto* second=context.make();const auto id=first->getID();const auto live=AllocationFault::live();const auto units=usage();const auto updates=logic.updates();
@@ -446,12 +602,20 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
     TheMemoryPoolFactory->createMemoryPool("OpenContain",sizeof(OpenContain),8,0);
     TheMemoryPoolFactory->createMemoryPool("Drawable",sizeof(Drawable),8,0);
     TheMemoryPoolFactory->createMemoryPool("DestroyAdmissionProbe",sizeof(DestroyAdmissionProbe),8,0);
+    const bool modelFamily=std::string_view(argv[1]).starts_with("model-");
+    if(modelFamily){
+      const std::array<const char*,7> names{"PhysicsBehavior","AIUpdateInterface","TurretAI","TurretStateMachine","TurretAIIdleState","AIStateMachine","AIIdleState"};
+      const std::array<std::size_t,7> modelSizes{sizeof(PhysicsBehavior),sizeof(AIUpdateInterface),sizeof(TurretAI),sizeof(TurretStateMachine),sizeof(TurretAIIdleState),sizeof(AIStateMachine),sizeof(AIIdleState)};
+      for(unsigned n=0;n<names.size();++n)TheMemoryPoolFactory->createMemoryPool(names[n],modelSizes[n],8,0);
+    }
     {Context context;functional(context);
       {Context nested;functional(nested);} // Warm shared Squad arenas for two live cohorts.
       const std::string_view selected=argv[1];
       if(selected=="root-retirement" || selected=="root-quiescence")rootRetirement(selected=="root-quiescence");
       if(selected=="destroy-callbacks")destroyCallbacks(context);
       if(selected=="transport-cache")transportCacheOwners(context); // Warm the complete source cohort before baselines.
+      if(modelFamily){modelParents(context);modelStateAdmission(context);
+        modelPoolCensus=TheMemoryPoolFactory->createMemoryPool("GeneratedModelPoolCensus",16,1,0);modelDataAdmission(context);}
       const auto units=usage();const auto live=AllocationFault::live();
       for(unsigned repeat=0;repeat<3;++repeat){const std::string_view family=argv[1];
         if(family=="functional")functional(context);else if(family=="negative")negative(context);else if(family=="faults")faults(context);else if(family=="pool-failures")poolFailures(context);else if(family=="parent-faults")parentFaults(context);else if(family=="id-growth")idGrowth();
@@ -459,7 +623,10 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
         else if(family=="cold-faults")coldFaults(false);else if(family=="scheduler-faults")coldFaults(true);
         else if(family=="root-retirement")rootRetirement(false);else if(family=="root-quiescence")rootRetirement(true);
         else if(family=="destroy-callbacks")destroyCallbacks(context);else if(family=="root-negative")rootNegative(context);
-        else if(family=="audio-constructor")audioConstructorFaults();else if(family=="transport-cache")transportCacheOwners(context);else require(false,"unknown actor family");
+        else if(family=="audio-constructor")audioConstructorFaults();else if(family=="transport-cache")transportCacheOwners(context);
+        else if(family=="model-functional")modelParents(context);else if(family=="model-faults")modelParentFaults(context);
+        else if(family=="model-pools")modelParentPools(context);else if(family=="model-state-admission")modelStateAdmission(context);
+        else if(family=="model-data-admission")modelDataAdmission(context);else require(false,"unknown actor family");
         require(usage()==units && AllocationFault::live()==live,"repeated actor retirement preserves complete accepted parents");}}
     shutdownMemoryManager();initialized=false;require(AllocationFault::live()==initial,"whole original actor parents and manager retire");
     std::cout<<"PASS actual registered actor ownership; full root/simulation pending\n";return 0;

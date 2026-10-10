@@ -41,6 +41,7 @@
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "Common/RandomValue.h"
+#include "Common/NativeOverrideAdmission.h"
 #include "Common/Team.h"
 #include "Common/ThingFactory.h"
 #include "Common/ThingTemplate.h"
@@ -158,9 +159,9 @@ const LocomotorTemplateVector* AIUpdateModuleData::findLocomotorTemplateVector(L
 		throw INI_INVALID_DATA;
 	}
 
-	TurretAIData* td = newInstance(TurretAIData);
-	ini->initFromINIMultiProc(td, td->buildFieldParse);
-	*(TurretAIData**)store = td;
+	std::unique_ptr<TurretAIData, NativePooledRetire> td(newInstance(TurretAIData));
+	ini->initFromINIMultiProc(td.get(), td->buildFieldParse);
+	*(TurretAIData**)store = td.release();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -293,6 +294,17 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 
 	// ---------------------------------------------
 
+    // A failed later turret/locomotor acquisition does not run this class's
+    // destructor. Keep the complete raw turret prefix guarded until ctor exit.
+    struct TurretPrefix {
+        TurretAI** values;
+        bool committed = false;
+        ~TurretPrefix() noexcept {
+            if (!committed) for (int n = MAX_TURRETS; n-- > 0;)
+                if (values[n]) { values[n]->deleteInstance(); values[n] = NULL; }
+        }
+    } turretPrefix{m_turretAI};
+
 	for (i = 0; i < MAX_TURRETS; i++)
 	{
 		if (getAIUpdateModuleData()->m_turretData[i])
@@ -306,6 +318,7 @@ AIUpdateInterface::AIUpdateInterface( Thing *thing, const ModuleData* moduleData
 #ifdef SLEEPY_AI
 	setWakeFrame(getObject(), UPDATE_SLEEP_NONE);
 #endif
+    turretPrefix.committed = true;
 }
 
 #ifdef ALLOW_SURRENDER
@@ -634,7 +647,9 @@ void AIUpdateInterface::onObjectCreated()
 	if (m_stateMachine == NULL)
 	{
 		m_stateMachine = makeStateMachine();
-		m_stateMachine->initDefaultState();
+        if (!m_stateMachine) throw ERROR_BAD_ARG;
+        try { m_stateMachine->initDefaultState(); }
+        catch (...) { m_stateMachine->deleteInstance(); m_stateMachine = NULL; throw; }
 	}
 }
 

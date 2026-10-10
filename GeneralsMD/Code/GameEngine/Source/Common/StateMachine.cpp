@@ -30,6 +30,7 @@
 
 #include "Common/Errors.h"
 #include "Common/StateMachine.h"
+#include "Common/NativeOverrideAdmission.h"
 #include "Common/ThingTemplate.h"
 #include "Common/GameState.h"
 #include "Common/GlobalData.h"
@@ -483,12 +484,17 @@ StateReturnType StateMachine::updateStateMachine()
  */
 void StateMachine::defineState( StateID id, State *state, StateID successID, StateID failureID, const StateConditionInfo* conditions )
 {
+    // Admission owns a new pooled state from call entry. Never release a state
+    // already owned by this machine when rejecting accidental readmission.
+    for (const auto& prior : m_stateMap)
+        if (prior.second == state) throw ERROR_BAD_ARG;
+    if (state && state->getID() != INVALID_STATE_ID) throw ERROR_BAD_ARG;
+    std::unique_ptr<State, NativePooledRetire> candidate(state);
+    if (!state || state->getMachine() != this || id == INVALID_STATE_ID ||
+        m_stateMap.find(id) != m_stateMap.end()) throw ERROR_BAD_ARG;
 #ifdef STATE_MACHINE_DEBUG
 	DEBUG_ASSERTCRASH(m_stateMap.find( id ) == m_stateMap.end(), ("duplicate state ID in statemachine %s\n",m_name.str()));
 #endif
-
-	// map the ID to the state
-	m_stateMap.insert( std::map<StateID, State *>::value_type( id, state ) );
 
 	// store the ID in the state itself, as well
 	state->friend_setID( id );
@@ -501,6 +507,10 @@ void StateMachine::defineState( StateID id, State *state, StateID successID, Sta
 		state->friend_onCondition(conditions->test, conditions->toStateID, conditions->userData);
 		++conditions;
 	}
+
+    // Prepare all transition storage before the fallible map publication.
+    m_stateMap.emplace(id, state);
+    candidate.release();
 
 	if (m_defaultStateID == INVALID_STATE_ID)
 		m_defaultStateID = id;
