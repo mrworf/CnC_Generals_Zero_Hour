@@ -34,7 +34,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 provider-data supporting checkpoint validated; no live jobs. Implement concrete native draw-provider lifecycle/current-client pose and source19 runtime callbacks using the shared provider data; complete condition transfer/material/prototype admission, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full449, slice03 and N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 provider-data supporting checkpoint committed in d1da61c3b9049ec2b62d55805a24dc959ec82e53; no live jobs. Implement concrete native draw-provider lifecycle/current-client pose and source19 runtime callbacks using the shared provider data; complete condition transfer/material/prototype admission, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full449, slice03 and N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -170,7 +170,7 @@
   "active_implementation": {
     "label": "original-draw-provider-data",
     "parent_commit": "2bac36abb91822a1cbfe0890acbd0592611783ab",
-    "status": "validated supporting original19 provider-data checkpoint; not slice03 or N2 acceptance",
+    "status": "committed supporting original19 provider-data checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-draw-provider-data.md",
     "canonical_source_files": 710,
@@ -236,7 +236,7 @@
     "slice_complete": false,
     "milestone_complete": false,
     "next": "Implement concrete native draw-provider lifecycle/current-client pose and source19 runtime callbacks using the shared provider data; complete condition transfer/material/prototype admission, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full449, slice03 and N2 acceptance pending.",
-    "repository_commit": null
+    "repository_commit": "d1da61c3b9049ec2b62d55805a24dc959ec82e53"
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -568,7 +568,7 @@
   "draw_provider_data_checkpoint": {
     "label": "original-draw-provider-data",
     "parent_commit": "2bac36abb91822a1cbfe0890acbd0592611783ab",
-    "status": "validated supporting original19 provider-data checkpoint; not slice03 or N2 acceptance",
+    "status": "committed supporting original19 provider-data checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-draw-provider-data.md",
     "canonical_source_files": 710,
@@ -634,6 +634,6 @@
     "slice_complete": false,
     "milestone_complete": false,
     "next": "Implement concrete native draw-provider lifecycle/current-client pose and source19 runtime callbacks using the shared provider data; complete condition transfer/material/prototype admission, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full449, slice03 and N2 acceptance pending.",
-    "repository_commit": null
+    "repository_commit": "d1da61c3b9049ec2b62d55805a24dc959ec82e53"
   }
 }
