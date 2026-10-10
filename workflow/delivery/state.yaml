@@ -34,7 +34,29 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 lifecycle checkpoint 850bfa4c committed and verified: all configured builds/related208 PASS GCC/GCCsan/Clangsan, exact terminals/retries, canonical656/inclusive663 rechecked. No live jobs. Continue concrete native GameMain factory/full original root admission, acquired water/weather configuration, native terrain/ghost/model/science providers and loaded original simulation/checkpoints under the existing plan. Full392/slice03/N2 acceptance remain pending; no agents or blockers.",
+  "resume_point": "N2 plan01/slice03: lifecycle checkpoint 850bfa4c remains the last validated source. The subsequent environment-configuration admission batch is implemented in eight working-tree files but has no new tests, builds or runtime acceptance yet. Continue that coherent batch and its existing written plan before committing production changes; then continue concrete native factory/full startup and loaded simulation. Prior frozen hashes/results do not cover the new edits. No live jobs or agents; N2 remains incomplete.",
+  "worktree_review": {
+    "parent_commit": "eab07f4a",
+    "purpose": "User-requested inventory and safe documentation checkpoint; preserve unfinished production work without presenting it as delivered",
+    "documentation": [
+      "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+      "docs/original-engine-formats.md"
+    ],
+    "unfinished_modified": [
+      "GeneralsMD/Code/GameEngine/Include/Common/GameEngine.h",
+      "GeneralsMD/Code/GameEngine/Source/Common/GameEngine.cpp",
+      "GeneralsMD/Code/GameEngine/Source/Common/INI/INIWater.cpp",
+      "GeneralsMD/Code/GameEngine/Source/GameClient/Snow.cpp",
+      "cmake/OriginalRuntime.cmake"
+    ],
+    "unfinished_untracked": [
+      "GeneralsMD/Code/GameEngine/Include/Common/NativeEnvironmentSettings.h",
+      "GeneralsMD/Code/GameEngine/Include/Common/NativeOverrideAdmission.h",
+      "GeneralsMD/Code/GameEngine/Source/Common/System/NativeEnvironmentSettings.cpp"
+    ],
+    "validation": "Inventory and diff whitespace checks only; new environment source is unvalidated. Earlier lifecycle acceptance belongs exclusively to its committed source.",
+    "next": "Add parser, override-chain, snow-owner and actual root-prefix tests; focused validation followed by frozen GCC/GCC-Clang sanitizer matrix under existing slice03. Commit the coupled production batch only after verification."
+  },
   "transaction_parent": "dfb3a3598446e4d36a49c607687eaeb7ce2c4a84",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",

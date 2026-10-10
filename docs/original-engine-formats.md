@@ -5420,3 +5420,25 @@ Generated complete-root inputs must satisfy or truthfully reject the source
 content contract; do not report fabricated device/music success. GameMain still
 calls the undefined native CreateGameEngine factory before actual init/execute.
 These remain next integration work, not a newly accepted process entry point.
+
+Coupled environment admission review before production edits: both source
+water/weather override parsers allocate a pooled node and assign the root base
+payload, which also copies Overridable's owning next link. With an existing
+override that can create a cycle when appended, and a fallible payload copy can
+make candidate cleanup delete borrowed units. Reuse the established destination
+link guard pattern from NativeThingTemplateData.cpp; preserve original root-base
+payload selection, not invented inheritance from the final override. First-base
+parsing currently publishes before parsing; malformed data leaves a partial head.
+WaterSetting parsing mutates the static time-of-day payload directly. Actual
+startup must own/restore that whole cohort, not just the two head pointers.
+
+SnowManager's constructor does not initialize m_startingHeights although its
+destructor deletes it. init allocates raw backing before updateIniSettings;
+repeated init overwrites it. updateIniSettings casts SnowBoxDimensions to Int
+then takes rand()%boxDimensions and computes density/velocity reciprocals. Guard
+the constructor/array and validate the relevant numeric cohort before these
+operations; nonintegral box sizes below one also truncate to an invalid divisor.
+Source rand() here is visual snow noise, not GameLogic random state. Sources:
+INIWater.cpp::{parseWaterSettingDefinition,parseWaterTransparencyDefinition},
+Snow.cpp::{INI::parseWeatherDefinition,SnowManager::init,updateIniSettings,
+~SnowManager}, Overridable.h and NativeThingTemplateData.cpp::copyFrom.

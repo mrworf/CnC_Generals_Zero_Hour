@@ -3414,3 +3414,33 @@ startup, loaded simulation/checkpoints, native ghost/model/science or physical
 presentation. Continue those original-root integration gates under this plan.
 
 Lifecycle payload commit: `850bfa4cea5f17962658371ddf43e3b98df580e9`.
+
+Original startup configuration admission continuation (parent eab07f4a; clean
+transaction start): retain this plan/slice03 and the complete native-root goal.
+Own the environment cohort parsed by actual GameEngine::init, not test-only
+base settings. Capture borrowed water/weather base identities and time-of-day
+water payloads before parsing, isolate new source heads, capture acquired heads
+on successful or failed loads, and activate them through legitimate root cleanup.
+Retire only those acquired chains after registered world callbacks finish, then
+restore borrowed configuration without allocation. No serialized layout changes.
+
+Batch source water/weather admission: stage pooled candidates before publication,
+preserve destination ownership links across fallible payload copies, parse before
+linking an override, and withdraw publication if output notification rejects.
+Keep the source root-base copy semantics and water skybox old/new argument order.
+Water time-of-day updates must stage their payload before mutation. Fix the
+coupled snow owner's uninitialized array cleanup/duplicate init and validate
+finite, bounded box size and safe density/velocity before integer conversion,
+modulo or reciprocals. Preserve valid source arithmetic and visual-only RNG;
+do not replace simulation behavior or claim physical output.
+
+Validate actual source parsers with base, multi-override, malformed, pooled and
+standard failure/retry cases, exact terminal census, prior chain identity and
+whole-owner retirement. Include a real GameEngine::init prefix using generated
+mounted data and isolated user storage, ending truthfully at a deliberately
+unavailable device-provider boundary; prove parsed configuration and partial-root
+cleanup, not full startup or gameplay. Existing actual initialized root-reset
+and source configuration/water/client tests remain required. Focused iteration,
+then freeze the coherent cohort for GCC and GCC/Clang sanitizer related checks.
+The concrete native process factory and loaded simulation remain mandatory
+following this configuration admission work; do not accept a prefix as N2.
