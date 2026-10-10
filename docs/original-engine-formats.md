@@ -5073,3 +5073,67 @@ Root/UI integration remains pending; paused-frame validation needs actual Mouse/
 Audio parents and airborne validation needs parsed AIUpdate/Locomotor. Physical
 rendering remains an explicit adapter obligation. Current evidence and retained
 failure/retry pairs: evidence/qa/N2-camera-cohort-implementation.md.
+
+Actual startup-order refinement (parent0d18cdac; implementation in progress):
+GameEngine.cpp::init creates GameClient before GameLogic; GameClient::init
+creates Display and InGameUI, whose init creates TacticalView. W3DView.cpp::
+calcCameraConstraints:481 explicitly checks TheTerrainLogic and leaves the
+constraint cache invalid when absent; setCameraTransform still builds twice.
+NativeFrameCameraView now permits that pre-terrain initialization/transform
+phase, never inventing map bounds, while updateView and map-height initialization
+retain their real parent requirements. ScriptedView::setDefaultView mirrors
+W3DView.cpp:1914 and requires configuration only, not unrelated terrain.
+
+InGameUI::initializeTacticalView now separates guarded logical View admission
+from subsequent physical control-bar/menu initialization. Source previously
+published a raw candidate before init and attached it before fallible viewport/
+default setup. The new guard keeps legitimate tactical identity through candidate
+destruction, restores the previous borrow on failure, transfers ownership to the
+actual Display only after setup, and rejects duplicate initialization without
+orphaning an admitted View. No Display::attachView override exists in the source
+census. UI still does not own the admitted View; Display destruction withdraws
+its exact publication. The eventual root lease must restore any outer borrowed
+publication after complete source cleanup. Full UI/config/menu/root execution
+is not implied by the protected admission helper's generated tests.
+
+Logical headless UI continuation: InGameUI now has an explicit headless mode,
+selected by NativeHeadlessInGameUI with a mandatory borrowed root C3 context.
+Actual source INI/localization loading, tactical View admission, message/subtitle
+aging, floating text, keyboard camera state and selection/nexus bookkeeping stay
+in the common implementation. Only physical menus, money/power windows,
+control-bar display callbacks and idle-worker widget refresh are omitted. Source
+updateIdleWorker only refreshes widgets; worker-list admission/selection is not
+replaced. Draw/pick/region-output requests still reject missing physical output.
+
+Constructor census found uninitialized camera rotate/zoom/tracking and quit-menu
+flags; initialize/reset that complete cohort to false. Selection previously set
+the Drawable flag before std::list node acquisition; now acquire before flag/
+count/frame publication. Deselect validates owned-list membership before clearing
+the flag, avoiding undefined erase(end). Defined null/missing-parent rejection,
+allocation rollback, corrected retry and actual Drawable withdrawal are tested
+together, not a replacement selection implementation.
+
+Headless reset clears pending logical input without invoking physical cursor or
+playback input dispatch; it never deletes a foreign ControlBar. Interactive mode
+retains its original ControlBar/menu path. Important remaining root contract:
+ControlBar::reset also retires CommandSet/CommandButton overrides, and its init
+loads logical command metadata. Omitting physical controls does NOT accept an
+entirely absent logical command registry in the final native root. A logical
+metadata owner/adapter, full native client wiring, native Display/terrain/model
+providers and whole GameEngine initialization/frame/repeat execution still need
+integration. Generated UI component tests do not waive those requirements.
+
+Selection callback acquisition census: Drawable::friend_setSelected originally
+set its flag before onSelected, whose flashAsSelected lazily acquires an actual
+pooled TintEnvelope. Now onSelected completes before publishing the flag;
+InGameUI retains a pending list node and erases it if that fallible callback
+rejects, publishing frame/count only afterward. Normalize the Drawable-owned
+flash envelope before standard-allocation baselines; deselection does not retire
+that valid cached owner, but Drawable destruction must. Generated tests separately
+exhaust the fixed TintEnvelope pool, require no selected flag/list/count after
+rejection, release held units, retry and retire the complete cohort exactly.
+Actual containment flash overrides in HelixContain/OverlordContain can flash
+other Drawables, not mutate UI selection. Their complete multi-actor effect/
+failure semantics are not accepted by the simple generated actor fixture.
+OverlordContain's retained while(*it) loop also needs end-iterator review before
+executing that contained-item path; do not infer its safety from registry linkage.

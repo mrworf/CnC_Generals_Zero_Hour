@@ -4,6 +4,8 @@
 #include "AllocationFault.h"
 #include "NativeCameraViewFixture.h"
 #include "DisplayOwnershipFixture.h"
+#include "NativeFrameCameraViewFixture.h"
+#include "GameClient/InGameUI.h"
 #include "Common/GameMemory.h"
 #include "Common/GlobalData.h"
 #include "Common/FileSystem.h"
@@ -19,6 +21,7 @@
 #include "GameClient/RayEffect.h"
 #include "GameClient/DrawGroupInfo.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/TerrainLogic.h"
 #include "GameLogic/GhostObject.h"
 #include <memory>
 #include <iostream>
@@ -29,6 +32,24 @@ namespace {
 // parsing, modules or gameplay behavior.
 struct Definition:ThingTemplate {~Definition() override=default;};
 struct InspectableClient:NativeHeadlessGameClient {using GameClient::updateDrawableState;};
+unsigned startupFault=0,startupCreations=0,startupRetirements=0;
+bool startupInvalidPublication=false;
+struct StartupView:NativeFrameCameraViewFixture {
+  using NativeFrameCameraViewFixture::NativeFrameCameraViewFixture;
+  ~StartupView()override{++startupRetirements;if(TheTacticalView!=this)startupInvalidPublication=true;}
+  void init()override{NativeFrameCameraViewFixture::init();if(startupFault==1)throw ERROR_BAD_ARG;}
+  void setWidth(Int width)override{NativeFrameCameraViewFixture::setWidth(width);if(startupFault==2)throw ERROR_BAD_ARG;}
+  void setHeight(Int height)override{NativeFrameCameraViewFixture::setHeight(height);if(startupFault==3)throw ERROR_BAD_ARG;}
+  void setDefaultView(Real pitch,Real angle,Real height)override{
+    ScriptedView::setDefaultView(pitch,angle,height);if(startupFault==4)throw ERROR_BAD_ARG;}
+};
+struct StartupUI:InGameUI {
+  NativeCameraShaker& effects;
+  explicit StartupUI(NativeCameraShaker& value):effects(value){}
+  using InGameUI::initializeTacticalView;
+  void draw()override{throw ERROR_BAD_ARG;}
+  View* createView()override{++startupCreations;return startupFault==5?nullptr:new StartupView(effects);}
+};
 void require(bool value,const char* message){if(!value)throw std::runtime_error(message);}
 template<class F>void rejects(F action){bool rejected=false;try{action();}catch(ErrorCode){rejected=true;}require(rejected,"invalid native client admission rejects");}
 struct Context {
@@ -49,6 +70,53 @@ struct Client {
   ~Client(){retire();}
   void init(){owner->init();}
 };
+void tacticalStartup(){
+  Context context;context.data->m_cameraHeight=300;context.data->m_cameraPitch=45;
+  context.data->m_cameraYaw=0;context.data->m_maxCameraHeight=600;
+  NativeCameraShaker effects;NativeCameraViewFixture borrowed;
+  auto* previousTerrain=TheTerrainLogic;auto* previousDisplay=TheDisplay;
+  auto* previousUI=TheInGameUI;auto* previousView=TheTacticalView;
+  struct Restore {TerrainLogic* terrain;Display* display;InGameUI* ui;View* view;
+    ~Restore(){startupFault=0;TheTerrainLogic=terrain;TheDisplay=display;TheInGameUI=ui;TheTacticalView=view;}
+  } restore{previousTerrain,previousDisplay,previousUI,previousView};
+  TheTerrainLogic=nullptr;TheTacticalView=&borrowed;startupInvalidPublication=false;
+  auto operation=[&]{DisplayOwnershipFixture display;display.setWidth(800);display.setHeight(600);TheDisplay=&display;
+    StartupUI ui(effects);TheInGameUI=&ui;
+    ui.initializeTacticalView();auto* view=dynamic_cast<StartupView*>(TheTacticalView);
+    require(view && display.getFirstView()==view && view->getWidth()==800 && view->getHeight()==462 &&
+      view->transformBuildCount()==2 && !view->constraintsValid(),"actual UI admits native tactical camera before source terrain startup");
+    const auto created=startupCreations;rejects([&]{ui.initializeTacticalView();});
+    require(startupCreations==created && display.getFirstView()==view,"duplicate tactical initialization preserves admitted View");
+    const auto builds=view->transformBuildCount();view->forceCameraConstraintRecalc();view->setZoom(1);
+    require(view->transformBuildCount()==builds+2 && !view->constraintsValid(),"pre-terrain invalid constraints retain explicit two-build cadence");
+    rejects([&]{view->updateView();});rejects([&]{view->initHeightForMap();});
+    require(view->transformBuildCount()==builds+2,"missing frame/map parents do not advance accepted camera effects");
+    display.deleteViews();require(!TheTacticalView && !display.getFirstView(),"actual Display cleanup withdraws exact tactical publication");
+    TheTacticalView=&borrowed;TheInGameUI=previousUI;TheDisplay=previousDisplay;
+  };
+  operation();operation();
+  for(unsigned phase=1;phase<=5;++phase){DisplayOwnershipFixture display;display.setWidth(800);display.setHeight(600);TheDisplay=&display;
+    StartupUI ui(effects);TheInGameUI=&ui;const auto live=AllocationFault::live();const auto views=View::liveViewCount();
+    startupFault=phase;rejects([&]{ui.initializeTacticalView();});startupFault=0;
+    require(AllocationFault::live()==live && View::liveViewCount()==views && TheTacticalView==&borrowed && !display.getFirstView(),
+      "every tactical factory/init/viewport/default rejection retires candidate and restores borrowed publication");
+    ui.initializeTacticalView();display.deleteViews();TheTacticalView=&borrowed;
+    require(AllocationFault::live()==live && View::liveViewCount()==views,"each source setup rejection permits exact same-owner retry");
+    TheInGameUI=previousUI;TheDisplay=previousDisplay;
+  }
+  AllocationFault::arm(SIZE_MAX);operation();const auto terminal=AllocationFault::attempts();AllocationFault::disarm();
+  require(terminal>0 && terminal<64,"complete bounded tactical cohort allocation manifest");
+  for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){const auto live=AllocationFault::live();const auto views=View::liveViewCount();
+    AllocationFault::arm(ordinal);bool failed=false;try{operation();}catch(const std::bad_alloc&){failed=true;}
+    const auto attempts=AllocationFault::attempts();const bool hit=AllocationFault::triggered();AllocationFault::disarm();
+    // Restore test-owned outer publications after complete local owner cleanup.
+    TheInGameUI=previousUI;TheDisplay=previousDisplay;TheTacticalView=&borrowed;
+    require(failed==(ordinal<terminal) && hit==failed && (failed || attempts==terminal),"every tactical acquisition prefix and exact terminal");
+    require(AllocationFault::live()==live && View::liveViewCount()==views,"failed/terminal whole tactical cohort retires exactly");
+    if(failed){operation();require(AllocationFault::live()==live && View::liveViewCount()==views,"every tactical allocation failure has complete corrected retry");}
+  }
+  require(!startupInvalidPublication,"legitimate tactical publication remains valid through all derived candidate/owner cleanup");
+}
 // Inspection exposes source state only, never replaces registration or creators.
 struct Factory:ModuleFactory {std::size_t count() const{return m_moduleTemplateMap.size();}};
 constexpr std::size_t registeredCount=198
@@ -312,7 +380,7 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
       checkModules(draw);client.owner->destroyDrawable(draw);
     }
     for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();const auto views=View::liveViewCount();
-      if(family=="functional")functional();else if(family=="frames")frames();else if(family=="draw-faults")drawFaults();else if(family=="client-faults")clientFaults();
+      if(family=="tactical-startup")tacticalStartup();else if(family=="functional")functional();else if(family=="frames")frames();else if(family=="draw-faults")drawFaults();else if(family=="client-faults")clientFaults();
       else if(family=="camera-lifetime")cameraLifetime();else if(family=="view-ownership")viewOwnership();
       else if(family=="modules")modulesFunctional();else if(family=="module-faults")modulesFaults();
       else if(family=="registry-faults-0")registryFaults(0);else if(family=="registry-faults-1")registryFaults(1);

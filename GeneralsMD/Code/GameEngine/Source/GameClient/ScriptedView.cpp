@@ -275,7 +275,8 @@ void ScriptedView::setAngleAndPitchToDefault( void )
 
 void ScriptedView::setDefaultView(Real pitch, Real angle, Real maxHeight)
 {
-  parents();finite(pitch);finite(angle);finite(maxHeight);finite(TheGlobalData->m_maxCameraHeight*maxHeight);
+  if(!TheGlobalData)throw ERROR_BAD_ARG;
+  finite(pitch);finite(angle);finite(maxHeight);finite(TheGlobalData->m_maxCameraHeight*maxHeight);
 	// MDC - we no longer want to rotate maps (design made all of them right to begin with)
 	//	m_defaultAngle = angle * M_PI/180.0f;
 	m_defaultPitchAngle = pitch;

@@ -958,8 +958,8 @@ void Drawable::friend_setSelected( void )
 { 
 	if(isSelected() == false)
 	{
-		m_selected = TRUE;
 		onSelected();
+		m_selected = TRUE; // Fallible flash backing must precede flag publication.
 	}
 
 }			

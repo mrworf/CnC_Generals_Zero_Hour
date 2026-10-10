@@ -361,7 +361,7 @@ public:  // ********************************************************************
 		NUM_ACTIONTYPES
 	};
 
-	InGameUI( void );
+	explicit InGameUI(Bool headless = FALSE);
 	virtual ~InGameUI( void );
 	
 	// Inherited from subsystem interface -----------------------------------------------------------
@@ -686,6 +686,9 @@ protected:
 	void incrementSelectCount( void ) { ++m_selectCount; }			///< Increase by one the running total of "selected" drawables
 	void decrementSelectCount( void ) { --m_selectCount; }			///< Decrease by one the running total of "selected" drawables
 	virtual View *createView( void ) = 0;												///< Factory for Views
+	void initializeTacticalView(); ///< guarded logical View admission, before physical menus
+	Bool m_tacticalViewInitialized = FALSE;
+	Bool m_headless = FALSE; ///< omit physical controls, never logical UI/camera state
 	void clearTimerResources() noexcept; ///< reset and shutdown share paired retirement
 	void admitSuperweapon(Int playerIndex, const AsciiString& powerName, SuperweaponInfo* info);
 	void evaluateSoloNexus( Drawable *newlyAddedDrawable = NULL );

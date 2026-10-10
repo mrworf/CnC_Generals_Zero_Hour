@@ -44,6 +44,8 @@
 #include "Common/Team.h"
 #include "Common/Radar.h"
 #include "GameClient/InGameUI.h"
+#include "GameClient/NativeHeadlessInGameUI.h"
+#include "DisplayOwnershipFixture.h"
 #include "GameClient/ControlBar.h"
 #include <algorithm>
 #include <bit>
@@ -602,12 +604,80 @@ struct GhostAttachment:GhostObject{
   void freeSnapShot(int)override{throw ERROR_BAD_ARG;}
   void updateParentObject(Object* object,PartitionData* data)override{m_parentObject=object;m_partitionData=data;}
 };
+void headlessUIFrames(ActorParents& parents,Object* actor,NativeCameraShaker& effects){
+  auto* previousDisplay=TheDisplay;auto* previousUI=TheInGameUI;auto* previousView=TheTacticalView;
+  struct Restore{Display* display;InGameUI* ui;View* view;
+    ~Restore(){TheDisplay=display;TheInGameUI=ui;TheTacticalView=view;}
+  }restore{previousDisplay,previousUI,previousView};
+  DisplayOwnershipFixture display;display.setWidth(800);display.setHeight(600);TheDisplay=&display;
+  struct UIProbe:NativeHeadlessInGameUI{using NativeHeadlessInGameUI::NativeHeadlessInGameUI;
+    Int delay()const{return m_messageDelayMS;}}ui(effects);TheInGameUI=&ui;ui.init();
+  auto* camera=dynamic_cast<NativeFrameCameraView*>(TheTacticalView);
+  require(camera && camera==display.getFirstView() && ui.delay()==4000 && !ui.isCameraRotatingLeft() &&
+    !ui.isCameraRotatingRight() && !ui.isCameraZoomingIn() && !ui.isCameraZoomingOut() && !ui.isCameraTrackingDrawable() &&
+    !ui.isQuitMenuVisible(),"actual native headless UI loads generated INI and initializes complete deterministic input cohort");
+  auto* draw=actor->getDrawable();
+  bool rejected=false;try{ui.selectDrawable(nullptr);}catch(ErrorCode code){rejected=code==ERROR_BAD_ARG;}
+  require(rejected && ui.getSelectCount()==0,"null selection rejects before source state changes");
+  draw->friend_setSelected();rejected=false;try{ui.deselectDrawable(draw);}catch(ErrorCode code){rejected=code==ERROR_BAD_ARG;}
+  require(rejected && draw->isSelected() && ui.getSelectCount()==0,"unowned selected flag rejects without undefined list erasure or partial withdrawal");
+  draw->friend_clearSelected();
+  // The malformed membership probe legitimately acquires the Drawable's owned
+  // flash envelope. Normalize that same whole cohort before ownership baselines.
+  const auto live=AllocationFault::live();
+  AllocationFault::arm(0);bool failed=false;try{ui.selectDrawable(draw);}catch(const std::bad_alloc&){failed=true;}
+  const auto attempts=AllocationFault::attempts();const bool hit=AllocationFault::triggered();AllocationFault::disarm();
+  require(failed && hit && attempts==1 && !draw->isSelected() && ui.getSelectCount()==0 &&
+    !ui.getFirstSelectedDrawable() && AllocationFault::live()==live,"source selection allocation failure preserves flag/count/list as one admission");
+  ui.selectDrawable(draw);require(draw->isSelected() && ui.getSelectCount()==1 && ui.getFirstSelectedDrawable()==draw,
+    "corrected original source selection succeeds without physical control callbacks");
+  ui.deselectDrawable(draw);require(!draw->isSelected() && ui.getSelectCount()==0 && AllocationFault::live()==live,
+    "paired source deselection retires selected-list ownership exactly");
+  auto* unflashed=parents.client.owner->friend_createDrawable(actor->getTemplate(),DRAWABLE_STATUS_NONE);
+  auto* tintPool=TheMemoryPoolFactory->findMemoryPool("TintEnvelope");require(tintPool,"actual source selection flash pool");
+  {std::vector<void*> held;held.reserve(tintPool->getFreeBlockCount());
+    struct Retire{MemoryPool* pool;std::vector<void*>& held;~Retire(){for(auto* value:held)pool->freeBlock(value);}}retire{tintPool,held};
+    while(tintPool->getFreeBlockCount())held.push_back(tintPool->allocateBlock("generated selection flash exhaustion"));
+    const auto used=tintPool->getUsedBlockCount();const auto baseline=AllocationFault::live();rejected=false;
+    try{ui.selectDrawable(unflashed);}catch(ErrorCode code){rejected=code==ERROR_OUT_OF_MEMORY;}
+    require(rejected && !unflashed->isSelected() && ui.getSelectCount()==0 && !ui.getFirstSelectedDrawable() &&
+      tintPool->getUsedBlockCount()==used && AllocationFault::live()==baseline,
+      "late original flash-pool failure retires list node before publishing selected flag/count");
+    for(auto* value:held)tintPool->freeBlock(value);held.clear();}
+  const auto tintUnits=tintPool->getUsedBlockCount();ui.selectDrawable(unflashed);ui.deselectDrawable(unflashed);
+  parents.client.owner->destroyDrawable(unflashed);
+  require(tintPool->getUsedBlockCount()==tintUnits && AllocationFault::live()==live,
+    "source flash-pool corrected retry retires complete Drawable/envelope/list cohort");
+  const Real previousAngle=camera->getAngle();TheWritableGlobalData->m_keyboardCameraRotateSpeed=.1f;
+  ui.setCameraRotateLeft(TRUE);ui.setCameraTrackingDrawable(TRUE);ui.update();
+  require(std::abs(camera->getAngle()-(previousAngle-.1f))<.0001f,"headless UI retains actual keyboard camera choreography without physical windows");
+  ui.reset();require(!ui.isCameraRotatingLeft() && !ui.isCameraTrackingDrawable() && ui.getInputEnabled() && !ui.isQuitMenuVisible(),
+    "source logical reset clears complete input cohort without absent physical mouse/control parents");
+  ui.selectDrawable(draw);parents.client.owner->destroyDrawable(draw);
+  require(ui.getSelectCount()==0 && !ui.getFirstSelectedDrawable() && !actor->getDrawable(),
+    "actual Drawable retirement withdraws original headless UI selection while Object survives");
+  rejected=false;try{ui.draw();}catch(ErrorCode code){rejected=code==ERROR_BAD_ARG;}
+  require(rejected,"headless UI never reports absent physical drawing as success");
+}
 void cameraFrames(Context& context,ActorParents& parents,LogicFixture& terrain,Object* actor){
   cameraPrimaryInterface=cameraModelOutput=cameraBoneOutput=true;
   struct ResetProbes{~ResetProbes(){cameraPrimaryInterface=cameraModelOutput=cameraBoneOutput=true;}}resetProbes;
   context.data->m_debugAI=AI_DEBUG_PATHS;context.data->m_disableCameraMovement=FALSE;
-  NativeCameraShaker effects;NativeFrameCameraViewFixture camera(effects);camera.init();camera.setFrameLengthMilliseconds(33);
+  NativeCameraShaker effects;NativeFrameCameraViewFixture camera(effects);
+  {auto* previous=TheTerrainLogic;TheTerrainLogic=nullptr;
+    struct RestoreTerrain{TerrainLogic* previous;~RestoreTerrain(){TheTerrainLogic=previous;}}restoreTerrain{previous};
+    camera.init();camera.setDefaultView(0,0,1);
+    require(!camera.constraintsValid() && camera.position().x==870 && camera.position().y==770,
+      "original client camera initializes before real terrain without fabricated extent or clipping");}
+  camera.setFrameLengthMilliseconds(33);
   require(camera.transformBuildCount()==2 && !camera.constraintsValid(),"original initial constraint rebuilds twice, then invalidates cache for later map/viewport setup");
+  camera.forceCameraConstraintRecalc();require(camera.transformBuildCount()==2 && camera.constraintsValid(),
+    "later actual native terrain admits source constraints without rebuilding or advancing effects");
+  {auto* previous=TheTerrainLogic;TheTerrainLogic=nullptr;
+    struct RestoreTerrain{TerrainLogic* previous;~RestoreTerrain(){TheTerrainLogic=previous;}}restoreTerrain{previous};
+    const auto bounds=camera.constraints();camera.forceCameraConstraintRecalc();
+    require(camera.constraintsValid() && camera.constraints().lo.x==bounds.lo.x && camera.transformBuildCount()==2,
+      "source optional terrain query preserves already accepted constraints without callbacks or effect advancement");}
   auto* prior=TheTacticalView;TheTacticalView=&camera;
   struct RestoreView{View* prior;~RestoreView(){TheTacticalView=prior;}}restoreView{prior};
   const Coord3D origin{},east{100,80,0};camera.setZoom(1);camera.lookAt(&origin);
@@ -692,6 +762,11 @@ void cameraFrames(Context& context,ActorParents& parents,LogicFixture& terrain,O
   camera.setCameraLock(actor->getID());camera.setCameraLockDrawable(actor->getDrawable());auto* retiring=actor->getDrawable();parents.client.owner->destroyDrawable(retiring);
   require(!camera.getCameraLockDrawable() && actor==parents.logic.owner->findObjectByID(actor->getID()),"actual Drawable retirement withdraws concrete camera borrow while Object survives");
   camera.updateView();require(camera.getCameraLock()==actor->getID(),"concrete frame safely falls back to source actor following after Drawable-only loss");
+  // A fresh actual Drawable exercises logical UI admission/retirement without
+  // substituting GUI output or losing the surviving Object identity.
+  auto* rebound=parents.client.owner->friend_createDrawable(actor->getTemplate(),DRAWABLE_STATUS_NONE);
+  rebound->friend_bindToObject(actor);actor->friend_bindToDrawable(rebound);
+  headlessUIFrames(parents,actor,effects);
 }
 void factoryCreation(Context& context,bool faults,bool binding=false,bool cameraTracking=false,bool cameraFrame=false){
   std::unique_ptr<Tree> generatedUser;
@@ -713,6 +788,9 @@ void factoryCreation(Context& context,bool faults,bool binding=false,bool camera
       if(cameraFrame)definitions<<" PartitionCellSize = 20\n CameraAdjustSpeed = 0.2\n";
       definitions<<" End\n";}
     definitions.close();require(bool(definitions),"generated actual body/create definitions");}
+  if(cameraFrame){std::filesystem::create_directories(context.tree.path/"Data"/"INI");
+    std::ofstream config(context.tree.path/"Data"/"INI"/"InGameUI.ini");
+    config<<"InGameUI\n MessageDelayMS = 4000\n End\n";config.close();require(bool(config),"generated source headless UI configuration");}
   // Generated files must exist before the read-only mount indexes this tree.
   // No user-storage lease or open input survives here; refresh through the VFS.
   context.files.mountReadOnly({context.tree.path.string()});
@@ -1037,6 +1115,8 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
       TheMemoryPoolFactory->createMemoryPool("InactiveBody",sizeof(InactiveBody),32,0);
       TheMemoryPoolFactory->createMemoryPool("VeterancyGainCreate",sizeof(VeterancyGainCreate),32,0);
       TheMemoryPoolFactory->createMemoryPool("Drawable",sizeof(Drawable),32,0);}
+    if(std::string_view(argv[1])=="factory-creation-camera-frame")
+      TheMemoryPoolFactory->createMemoryPool("TintEnvelope",sizeof(TintEnvelope),32,0);
     if(std::string_view(argv[1])=="partition-actors")TheMemoryPoolFactory->createMemoryPool("PartitionDataPool",sizeof(PartitionData),8,0);
     if(std::string_view(argv[1])=="pool-failures")fixedPools();
     {Context warm;warm.load(wire());warm.load(wire("ReplacementSide"));
@@ -1051,6 +1131,7 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
       std::string_view(argv[1])=="factory-creation-camera-frame");}
     for(unsigned repeat=0;repeat<3;++repeat){auto live=AllocationFault::live();const auto views=View::liveViewCount();const PoolUsage pools;
       auto* cameraPool=TheMemoryPoolFactory->findMemoryPool("CameraModelProbe");const auto cameraUnits=cameraPool?cameraPool->getUsedBlockCount():0;
+      auto* tintPool=TheMemoryPoolFactory->findMemoryPool("TintEnvelope");const auto tintUnits=tintPool?tintPool->getUsedBlockCount():0;
       {Context context;const std::string_view family=argv[1];if(family=="functional")functional(context);
         else if(family=="negative")negative(context);else if(family=="faults"){faults(context);optionalFaults(context);}
         else if(family=="ownership")ownership(context);else if(family=="pool-failures")poolFailures(context);
@@ -1065,7 +1146,7 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
         else if(family=="factory-creation-camera")factoryCreation(context,false,false,true);
         else if(family=="factory-creation-camera-frame")factoryCreation(context,false,false,true,true);
         else require(false,"unknown world family");}
-      require((!cameraPool || cameraPool->getUsedBlockCount()==cameraUnits) && AllocationFault::live()==live && View::liveViewCount()==views && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
+      require((!tintPool || tintPool->getUsedBlockCount()==tintUnits) && (!cameraPool || cameraPool->getUsedBlockCount()==cameraUnits) && AllocationFault::live()==live && View::liveViewCount()==views && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
         !MapObject::getFirstMapObject() && !PolygonTrigger::getFirstPolygonTrigger(),"repeated full-world owner retirement");}
     shutdownMemoryManager();initialized=false;require(AllocationFault::live()==initial,"whole original pool metadata retirement");
     std::cout<<"PASS actual logical world; native startup still pending\n";return 0;

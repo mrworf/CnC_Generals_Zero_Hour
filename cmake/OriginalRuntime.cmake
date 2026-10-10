@@ -617,7 +617,7 @@ target_include_directories(original_native_client_fixture PRIVATE
 target_compile_definitions(original_native_client_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
 target_link_options(original_native_client_fixture PRIVATE -Wl,--gc-sections)
 foreach(family IN ITEMS functional frames draw-faults client-faults modules module-faults
-    registry-faults-0 registry-faults-1 registry-faults-2 registry-faults-3 camera-lifetime view-ownership)
+    registry-faults-0 registry-faults-1 registry-faults-2 registry-faults-3 camera-lifetime view-ownership tactical-startup)
   add_test(NAME original_native_client_${family} COMMAND original_native_client_fixture "${family}")
   set_tests_properties(original_native_client_${family} PROPERTIES LABELS "original;runtime;native_client" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

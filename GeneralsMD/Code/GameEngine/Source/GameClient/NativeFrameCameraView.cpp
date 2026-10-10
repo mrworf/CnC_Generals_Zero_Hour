@@ -35,7 +35,7 @@ NativeCamera::Pose pose(const Matrix3D& transform){
 }
 }
 void NativeFrameCameraView::requireTransformParents()const{
-  if(!TheGlobalData || !TheTerrainLogic || (m_isSlaved && !TheScriptEngine))throw ERROR_BAD_ARG;
+  if(!TheGlobalData || (m_isSlaved && !TheScriptEngine))throw ERROR_BAD_ARG;
 }
 void NativeFrameCameraView::synchronizeCamera()const{
   // Source queries read the accepted CameraClass transform; they never rebuild
@@ -75,7 +75,11 @@ NativeCamera NativeFrameCameraView::buildCameraTransform(){
   candidate.configurePose(state,transform);return candidate;
 }
 void NativeFrameCameraView::forceCameraConstraintRecalc(){
-  requireTransformParents();synchronizeCamera();Region3D extent;TheTerrainLogic->getExtent(&extent);
+  requireTransformParents();synchronizeCamera();
+  // Original GameClient creates its View before GameLogic creates terrain.
+  // Preserve the invalid cache until a real map/terrain parent exists.
+  if(!TheTerrainLogic)return;
+  Region3D extent;TheTerrainLogic->getExtent(&extent);
   const auto bounds=m_spatialCamera.constraintRegion(extent,m_groundLevel,TheGlobalData->m_debugAI);
   m_cameraConstraint=bounds;m_cameraConstraintValid=TRUE;
 }

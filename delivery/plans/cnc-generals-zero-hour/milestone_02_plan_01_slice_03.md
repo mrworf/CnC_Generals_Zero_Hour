@@ -3205,3 +3205,49 @@ UI/Display/root/client factory integration and production model providers.
 Camera checkpoint payload: `e9821721595b958123b359b812a5a078aea730cc`, parent
 `31ccae864d3b9cb0b77a1f2eacfcd6c61dd7d191`. This provenance closeout records the
 verified checkpoint only; slice03 and N2 remain in progress.
+
+Actual UI/root adoption refinement (parent0d18cdac, clean tree): original
+GameEngine initializes GameClient before GameLogic, so InGameUI creates its
+tactical View before TerrainLogic exists. W3DView::calcCameraConstraints simply
+leaves constraints invalid without terrain, while setCameraTransform still does
+the temporary and final builds. NativeFrameCameraView must support this real
+startup phase, retaining invalid constraints and explicit build/effect cadence;
+actual frame update and map-height initialization still require their real parents.
+Do not manufacture a terrain provider or reverse original engine ordering.
+
+Batch tactical admission with that correction: initialize/configure a guarded
+View candidate under a scoped tactical publication, admit it to the actual
+Display only after all fallible setup succeeds, and restore borrowed publication
+on rejection. Duplicate initialization must not orphan a prior Display-owned
+View. Configuration loading, logical UI state and physical control-bar/menu
+creation remain separate integration surfaces; no empty physical success.
+Inspect source constructor/init/reset/update/destructor together before selecting
+the eventual headless UI route. Tests exercise pre-terrain camera creation,
+later real-terrain adoption, explicit missing-frame-parent rejection, failed View
+initialization/configuration and same-owner retry, exact live registration and
+allocation retirement. Continue within this existing coherent root slice;
+focused checks first, frozen broader GCC/Clang ownership checks before commit.
+
+Complete the same UI adoption cohort with an explicit headless InGameUI mode
+and native logical UI factory: retain actual INI/localization loading, tactical
+admission, message/subtitle/timer state, floating text and camera input, while
+omitting only physical control-bar/menu/money/power/idle-widget output. Preserve
+interactive mode unchanged. Root-owned C3 context must outlive every View;
+headless drawing/picking remains explicit rejection. Reset and destruction must
+not call or delete absent/foreign physical controls. Review select/deselect with
+the same lifecycle: stage selected-list allocation before flag/count publication,
+retain actual source selection/nexus logic, skip only control-bar display callbacks
+in explicit headless mode. Initialize previously uninitialized camera-input/
+tracking/quit-menu flags to false, and reset them as one deterministic input
+cohort. Test real generated UI configuration, initialized source flags, headless
+update/reset, selection allocation rejection/retry, Drawable terminal withdrawal
+and whole owner retirement. Native client/root factory wiring remains required;
+these UI tests cannot accept full GameEngine startup.
+
+Logical UI/tactical startup component checkpoint: final configured builds,
+focused26 and related185 PASS in GCC, GCC sanitizer and Clang sanitizer on
+canonical652/inclusive659. Exact hashes, timings and retained failure/retry pairs
+are in evidence/qa/N2-headless-ui-implementation.md. Commit this coherent source,
+test and documentation cohort; continue the same slice03 with logical command
+metadata and actual client/root integration. Full375 and N2 acceptance remain
+pending. Payload provenance is recorded by workflow/delivery/state.yaml.

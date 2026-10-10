@@ -939,12 +939,15 @@ void INI::parseInGameUIDefinition( INI* ini )
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-InGameUI::InGameUI()
+InGameUI::InGameUI(Bool headless):m_headless(headless)
 {
 	Int i;
 	if (!TheGlobalData || TheGlobalData->m_maxLineBuildObjects < 0)
 		throw ERROR_BAD_ARG;
 	m_placeIcon = NULL;
+	m_isQuitMenuVisible = FALSE;
+	m_cameraRotatingLeft = m_cameraRotatingRight = FALSE;
+	m_cameraZoomingIn = m_cameraZoomingOut = m_cameraTrackingDrawable = FALSE;
 
 	
   m_inputEnabled = true;
@@ -1114,8 +1117,10 @@ InGameUI::InGameUI()
 InGameUI::~InGameUI()
 {
 	clearTimerResources();
-	delete TheControlBar;
-	TheControlBar = NULL;
+	if (!m_headless) {
+		delete TheControlBar;
+		TheControlBar = NULL;
+	}
 
 	// free all the display strings if we're
 	removeMilitarySubtitle();
@@ -1140,6 +1145,31 @@ InGameUI::~InGameUI()
 	// clear world animations
 	clearWorldAnimations();
 	resetIdleWorker();
+}
+
+void InGameUI::initializeTacticalView()
+{
+	if (!TheDisplay || TheInGameUI != this || m_tacticalViewInitialized) throw ERROR_BAD_ARG;
+	auto candidate = std::unique_ptr<View>(createView());
+	if (!candidate) throw ERROR_BAD_ARG;
+	View* previous = TheTacticalView;
+	TheTacticalView = candidate.get();
+	struct Publication {
+		View* previous;
+		Bool committed = FALSE;
+		~Publication() { if (!committed) TheTacticalView = previous; }
+	} publication{previous};
+	// Keep the legitimate tactical identity through candidate cleanup on failure.
+	// The candidate must retire before this publication restores the old borrow.
+	auto rollback = std::unique_ptr<View>(candidate.release());
+	rollback->init();
+	rollback->setWidth(TheDisplay->getWidth());
+	rollback->setHeight(TheDisplay->getHeight() * 0.77f);
+	rollback->setDefaultView(0.0f, 0.0f, 1.0f);
+	TheDisplay->attachView(rollback.get());
+	rollback.release();
+	publication.committed = TRUE;
+	m_tacticalViewInitialized = TRUE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1206,19 +1236,8 @@ void InGameUI::init( void )
 	to order the translators when the code is not centralized so it has
 	been moved to where all the other translators are attached in game client */
 
-	// create the tactical view
-	if (TheDisplay)
-	{
-		TheTacticalView = createView();
-		TheTacticalView->init();
-		TheDisplay->attachView( TheTacticalView );
-
-		// make the tactical display the full screen width for now
-		TheTacticalView->setWidth( TheDisplay->getWidth());
-		// make the tactical display 0.76 of full screen so no drawing under GUI.
-		TheTacticalView->setHeight( TheDisplay->getHeight() * 0.77f);
-	}
-	TheTacticalView->setDefaultView(0.0f, 0.0f, 1.0f);
+	initializeTacticalView();
+	if (m_headless) return; // Logical configuration/View retained; no physical menus.
 
 	/** @todo this may be the wrong place to create the sidebar, but for now
 	this is where it lives */
@@ -1663,6 +1682,7 @@ void InGameUI::preDraw( void )
 //DECLARE_PERF_TIMER(InGameUI_update)
 void InGameUI::update( void )
 { 
+	if (m_headless && (!TheGameLogic || !TheTacticalView)) throw ERROR_BAD_ARG;
 	//USE_PERF_TIMER(InGameUI_update)
 	Int i;
 
@@ -1845,6 +1865,7 @@ void InGameUI::update( void )
 		}
 	}
 
+	if (!m_headless) {
 	// update the player money window if the money amount has changed
 	// this seems like as good a place as any to do the power hide/show
 	static Int lastMoney = -1;
@@ -1888,9 +1909,11 @@ void InGameUI::update( void )
 		powerWin->winHide(TRUE);
 	}
 	
+	}
 	// Update the floating Text;
 	updateFloatingText();
 
+	if (!m_headless) {
 	// update the control bar
 	TheControlBar->update();
 
@@ -1903,6 +1926,7 @@ void InGameUI::update( void )
 		layout->runUpdate();
 	}
 
+	}
 	//Handle keyboard camera rotations
 	if( m_cameraRotatingLeft && !m_cameraRotatingRight )
 	{
@@ -1984,20 +2008,29 @@ void InGameUI::clearTimerResources() noexcept
 //-------------------------------------------------------------------------------------------------
 void InGameUI::reset( void )
 {
+	if (m_headless && !TheTacticalView) throw ERROR_BAD_ARG;
 	m_isQuitMenuVisible = FALSE;
 	m_inputEnabled = true;
+	m_cameraRotatingLeft = m_cameraRotatingRight = FALSE;
+	m_cameraZoomingIn = m_cameraZoomingOut = m_cameraTrackingDrawable = FALSE;
 	// reset the command bar
-	TheControlBar->reset();
+	if (!m_headless) TheControlBar->reset();
 
 	TheTacticalView->setDefaultView(0.0f, 0.0f, 1.0f);
 
-	ResetInGameChat();
+	if (!m_headless) ResetInGameChat();
 
 	// stop any movie currently playing
 	stopMovie();
 
 	// remove any pending GUI command
-	setGUICommand( NULL );
+	if (m_headless) {
+		// Reset logical input without a physical cursor or playback input command.
+		m_pendingGUICommand = NULL;
+		m_mouseMode = MOUSEMODE_DEFAULT;
+		m_mouseModeCursor = Mouse::ARROW;
+		setRadiusCursorNone();
+	} else setGUICommand( NULL );
 
 	// remove any build available status
 	placeBuildAvailable( NULL, NULL );
@@ -3190,16 +3223,17 @@ Real InGameUI::getPlacementAngle( void )
 //-------------------------------------------------------------------------------------------------
 void InGameUI::selectDrawable( Drawable *draw )
 {
+	if (!draw || !TheGameLogic) throw ERROR_BAD_ARG;
 
 	if( draw->isSelected() == FALSE )
 	{
 
-		m_frameSelectionChanged = TheGameLogic->getFrame();
+		// Acquire the borrowed-list node before publishing any selected state.
+		auto selected = m_selectedDrawables.insert(m_selectedDrawables.begin(),draw);
 		// set the selection in the drawable
-		draw->friend_setSelected();
-
-		// add to our selected list
-		m_selectedDrawables.push_front( draw );
+		try { draw->friend_setSelected(); }
+		catch (...) { m_selectedDrawables.erase(selected); throw; }
+		m_frameSelectionChanged = TheGameLogic->getFrame();
 
 		// we now have one more selected drawable
 		incrementSelectCount(); 
@@ -3209,7 +3243,7 @@ void InGameUI::selectDrawable( Drawable *draw )
 		evaluateSoloNexus( draw );
 
 		// the control needs to update its context sensitive display now
-		TheControlBar->onDrawableSelected( draw );
+		if (!m_headless) TheControlBar->onDrawableSelected( draw );
 
 	}  // end if
 
@@ -3220,19 +3254,18 @@ void InGameUI::selectDrawable( Drawable *draw )
 //-------------------------------------------------------------------------------------------------
 void InGameUI::deselectDrawable( Drawable *draw )
 {
+	if (!draw || !TheGameLogic) throw ERROR_BAD_ARG;
 
 	if( draw->isSelected() )
 	{
+		DrawableListIt findIt = std::find(m_selectedDrawables.begin(),m_selectedDrawables.end(),draw);
+		if (findIt == m_selectedDrawables.end()) throw ERROR_BAD_ARG;
 
 		m_frameSelectionChanged = TheGameLogic->getFrame();
 		// clear the selected bit out of the drawable
 		draw->friend_clearSelected();
 
 		// find the drawable entry in our list
-		DrawableListIt findIt = std::find( m_selectedDrawables.begin(), 
-																			 m_selectedDrawables.end(), 
-																			 draw );
-
 		// sanity
 		DEBUG_ASSERTCRASH( findIt != m_selectedDrawables.end(),
 											 ("deselectDrawable: Drawable not found in the selected drawable list '%s'\n",
@@ -3248,7 +3281,7 @@ void InGameUI::deselectDrawable( Drawable *draw )
 		evaluateSoloNexus();
 
 		// the control needs to update its context sensitive display now
-		TheControlBar->onDrawableDeselected( draw );
+		if (!m_headless) TheControlBar->onDrawableDeselected( draw );
 
 	}  // end if
 
