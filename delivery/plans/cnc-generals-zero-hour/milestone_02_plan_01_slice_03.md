@@ -4400,3 +4400,32 @@ composition, recoil/pose/event/source transfer and concrete19/startup outcomes
 above. The format document now records source recoil/override transfer widths
 and byte-count limits too; none is accepted by visibility alone. Keep full497,
 slice03 and N2 pending. No replacement plan or reduced acceptance boundary.
+
+Full-tick lifecycle review from clean bd43e346 found a coupled deferred-state
+publication defect before execution: prepareState's boolean currently serves
+both "do not select another transition" and "do not reset/apply state effects".
+Its true caller is pending-target completion, not idle reselection. Original
+doDrawModule calls setModelState on that target, so its state particles and
+visibility rules must replace the old cohort. Actual idle reselection takes the
+clone/selectAnimation branch and must keep those effects. Separate the meaning
+by naming the boolean skipTransition; all actual prepareState admissions reset
+state effects and apply target rules/retained overrides. Inspect immediate,
+allow-to-finish, transition-target and idle paths together. Extend generated
+actual Drawable/manager tests to prove deferred publication, old-particle deferred
+retirement, new rules with persistent overrides, root rollback and same-owner
+failure/retry without retiring accepted owners. This corrects the coupled state
+boundary within the existing slice; no product change, replacement plan or
+source-assert/whole-build loop. Complete it before composing real-parent full tick.
+
+Deferred effect correction now frozen canonical735/inclusive742, configured498.
+GCC focused4 PASS23.15s,13 normalized manifest rows; new actual deferred-target
+family proves terminal65 with every retry and root-held old owner rollback.
+Final builds all3 PASS. Frozen focused4 PASS GCC23.15s/GCCsan92.03s/Clangsan53.86s;
+related42 PASS GCC210.98s/GCCsan843.31s/Clangsan497.19s. All jobs19170/37173/58150
+retired terminal0;13 focused and76 related normalized manifest rows match across
+all3. Source fingerprints rechecked unchanged; upstream dependencies pristine.
+Evidence: evidence/qa/N2-deferred-model-state-effects.md, including retained
+fixture build/cold-warm failures and corrected complete-cohort baselines. The
+introducing QA commit is the supporting checkpoint, not whole-model tick,
+slice03 or milestone completion. User-requested review found exactly eight
+owned files to commit together; no generated/proprietary/recovery files included.

@@ -96,10 +96,10 @@ void NativeModelDrawAnimationProducer::selectAnimation(Candidate& candidate,cons
   current.binding.animation=clip;current.clock=clock;current.frame=float(frame);
 }
 NativeModelDrawAnimationProducer::Candidate NativeModelDrawAnimationProducer::prepareState(
-    const ModelConditionInfo* requested,UnsignedInt now,bool restart)const{
+    const ModelConditionInfo* requested,UnsignedInt now,bool skipTransition)const{
   if(!requested)throw ERROR_BAD_ARG;
   const auto* selected=requested;const ModelConditionInfo* pending=nullptr;
-  if(!restart && m_state.source && requested!=m_state.source &&
+  if(!skipTransition && m_state.source && requested!=m_state.source &&
       m_state.source->m_transitionKey!=NAMEKEY_INVALID && requested->m_transitionKey!=NAMEKEY_INVALID){
     const auto& transitions=nativeModelDrawData().m_transitionMap;
     auto found=transitions.find(buildTransitionSig(m_state.source->m_transitionKey,requested->m_transitionKey));
@@ -132,8 +132,10 @@ NativeModelDrawAnimationProducer::Candidate NativeModelDrawAnimationProducer::pr
   out.validated=std::move(query.condition);out.state=m_state;
   if(recreate)out.state.paused=FALSE; // Source nukeCurrentRender lifecycle.
   out.state.source=selected;out.state.pending=pending;out.state.pendingDuration=~UnsignedInt(0);
-  if(!restart){out.state.particles.reset();out.state.recalcParticles=!getDrawable()->testDrawableStatus(DRAWABLE_STATUS_NO_STATE_PARTICLES);}
-  if(!restart&&out.current){applySubobjects(out.current->subobjects,selected->m_hideShowVec);applySubobjects(out.current->subobjects,out.state.subobjectOverrides);}
+  // Every caller admits a real model state, including a deferred target. Idle
+  // animation reselection uses cloneCandidate/selectAnimation instead.
+  out.state.particles.reset();out.state.recalcParticles=!getDrawable()->testDrawableStatus(DRAWABLE_STATUS_NO_STATE_PARTICLES);
+  if(out.current){applySubobjects(out.current->subobjects,selected->m_hideShowVec);applySubobjects(out.current->subobjects,out.state.subobjectOverrides);}
   selectAnimation(out,m_state.source,fraction(m_state,m_current.get()),now);
   return out;
 }

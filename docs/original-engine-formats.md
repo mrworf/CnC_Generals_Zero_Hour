@@ -6624,3 +6624,17 @@ the original count truncation followed by writing every row. RECOIL remains a
 valid persisted state even though the ordinary source fire path does not assign
 it. Native transfer/runtime implementation and acceptance remain pending; the
 new instance cohort is not evidence of saved-game compatibility by itself.
+
+Deferred target publication census: NativeModelDrawAnimationProducer::prepareState
+has exactly three source callers: initialization, direct state replacement, and
+pending-target completion. Idle animation reselection instead clones current
+state and calls selectAnimation. Pending-target completion's true boolean means
+skip another transition lookup, not skip state-effect replacement. The original
+W3DModelDraw::doDrawModule calls setModelState(nextState), which resets trackers
+and applies target rules. Native code now names that boolean skipTransition and
+resets/applies effects for every prepareState admission. Immediate, deferred and
+idle paths must keep these distinct meanings. Generated actual manager/Drawable
+coverage checks source-clock completion, root-held old trackers, target visibility
+plus persistent overrides, every standard prefix/retry and accepted deferred
+system destruction. Native current code/test descriptions are not acceptance;
+consult the deferred-state QA artifact once the frozen matrix completes.

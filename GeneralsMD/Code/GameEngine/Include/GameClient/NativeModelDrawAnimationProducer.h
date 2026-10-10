@@ -31,7 +31,7 @@ class NativeModelDrawAnimationProducer : public NativeModelDrawCurrentQueries {
   std::unique_ptr<ModelConditionInfo> m_validated;
   Display* m_display=nullptr;
   Candidate cloneCandidate()const;
-  Candidate prepareState(const ModelConditionInfo*,UnsignedInt,bool restart=false)const;
+  Candidate prepareState(const ModelConditionInfo*,UnsignedInt,bool skipTransition=false)const;
   void selectAnimation(Candidate&,const ModelConditionInfo*,Real,UnsignedInt)const;
   void publish(Candidate&&)noexcept;
   UnsignedInt syncTime()const;

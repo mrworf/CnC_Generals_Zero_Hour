@@ -457,6 +457,47 @@ bool sameParticleState(const ParticleSystem::NativeClientState& a,const Particle
   if(a.localIdentity!=b.localIdentity||a.skipParent!=b.skipParent||a.stopped!=b.stopped)return false;
   for(unsigned n=0;n<3;++n)for(unsigned k=0;k<4;++k)if(a.local[n][k]!=b.local[n][k])return false;return true;
 }
+std::array<Int,8> probeClientCursor();
+void producerDeferredEffects(Fixture& fixture){
+  ProducerTimeOwner time;ParticleParents particles(fixture);GameClientRandomTransaction random;
+  configureProducer(fixture);auto& module=fixture.module(0);auto& states=module.inputData().m_conditionStates;
+  const AsciiString templateName("GeneratedStateParticles"),overrideName("Part");
+  const auto* source=particles.owner->findTemplate(templateName);require(source,"actual parsed deferred effects parent");
+  states[0].m_particleSysBones={{AsciiString("Muzzle"),source}};
+  states[0].m_hideShowVec={{AsciiString("Inner"),TRUE}};
+  states[1].m_hideShowVec={{AsciiString("Inner"),FALSE}};
+  states[1].m_allowToFinishKey=states[0].m_transitionKey;
+  module.initializeProducer();module.showSubObject(overrideName,FALSE);module.updateSubObjects();module.particles();
+  const auto id=module.particleID(0);auto* primary=particles.owner->findParticleSystem(id);
+  require(primary&&module.particleCount()==1&&particles.owner->getParticleSystemCount()==2,"accepted old actual master/slave cohort");
+  ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);module.replaceModelConditionState(moving);
+  require(module.pending()==&states[1]&&module.selected()==&states[0]&&module.subobjects()->children()[0].hidden&&!primary->isDestroyed(),"wait request retains whole accepted visibility/effects cohort");
+  for(unsigned n=0;n<8&&!module.clock()->complete();++n){time.tick(fixture);module.producerStep(Matrix3D(true));}
+  require(module.clock()->complete()&&module.pending()==&states[1],"actual retained source clock completes before target publication");
+  const auto* accepted=module.currentBinding();const auto cursor=probeClientCursor();const auto counts=fixture.assets.counts();
+  auto* pool=TheMemoryPoolFactory->findMemoryPool("ParticleSystemPool");require(pool,"actual deferred source system pool");
+  const auto units=pool->getUsedBlockCount();const auto systemCursor=particles.owner->cursor();
+  auto operation=[&]{NativeModelDrawConditionBatch root(fixture.draw->getDrawModulesNonDirty());
+    try{module.producerStep(Matrix3D(true));}catch(const std::bad_alloc&){root.commit();throw;}
+    require(module.selected()==&states[1]&&!module.pending()&&!module.particleCount()&&!module.subobjects()->children()[0].hidden&&module.subobjects()->children()[1].hidden,"deferred actual state replaces effects/rules and then applies persistent override");
+    require(!primary->isDestroyed(),"old tracker owner remains valid until condition root commits");
+  };
+  auto unchanged=[&]{require(module.currentBinding()==accepted&&module.selected()==&states[0]&&module.pending()==&states[1]&&module.particleCount()==1&&module.particleID(0)==id&&module.subobjects()->children()[0].hidden&&!primary->isDestroyed()&&fixture.assets.counts()==counts&&probeClientCursor()==cursor&&particles.owner->cursor()==systemCursor&&particles.owner->getParticleSystemCount()==2&&pool->getUsedBlockCount()==units,"deferred rollback preserves exact source/current/tracker/visibility/cache/RNG/ID/list/pooled cohort");};
+  std::size_t terminal;AllocationFault::arm(SIZE_MAX);
+  try{operation();terminal=AllocationFault::attempts();AllocationFault::disarm();}catch(...){AllocationFault::disarm();throw;}
+  unchanged();require(terminal>0&&terminal<128,"bounded complete deferred-state publication census");
+  for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){const auto live=AllocationFault::live();bool failed=false;
+    AllocationFault::arm(ordinal);try{operation();}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+    const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+    require(failed==(ordinal<terminal)&&hit==failed&&attempts==(failed?ordinal+1:terminal),"exact deferred-state failure prefixes and terminal");unchanged();
+    require(AllocationFault::live()==live,"caught failure with outer commit retires complete unpublished candidate");
+    operation();unchanged();require(AllocationFault::live()==live,"every deferred failure/terminal has same-owner complete corrected retry");
+  }
+  module.producerStep(Matrix3D(true));
+  require(module.selected()==&states[1]&&!module.pending()&&!module.particleCount()&&primary->isDestroyed()&&particles.owner->getParticleSystemCount()==2,"accepted deferred target retires old tracker through source deferred system destruction");
+  module.particles();require(!module.particleCount(),"empty new state does not retain or recreate old authored effects");
+  std::cout<<"deferred state effects prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every failure/retry\n";
+}
 void producerParticles(Fixture& fixture,bool rollback){
   ProducerTimeOwner time;ParticleParents particles(fixture);GameClientRandomTransaction random;
   for(unsigned n=0;n<2;++n)configureProducer(fixture,n);
@@ -1107,6 +1148,7 @@ int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawa
     {Fixture warm;producerSelection(warm);}
     {Fixture warm;producerLifecycle(warm);}
     {Fixture warm;producerNegative(warm);}
+    if(std::string_view(argv[1])=="producer-deferred-effects"){Fixture warm;producerDeferredEffects(warm);}
     if(std::string_view(argv[1]).starts_with("producer-particles-")){Fixture warm;producerParticles(warm,true);}
     if(std::string_view(argv[1]).starts_with("producer-walk")||std::string_view(argv[1])=="producer-first-root"){
       {Fixture warm;producerWalk(warm,false);}
@@ -1118,6 +1160,10 @@ int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawa
     }
   }
   for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
+    if(std::string_view(argv[1])=="producer-deferred-effects"){
+      {Fixture fixture;producerDeferredEffects(fixture);}
+      require(AllocationFault::live()==live,"whole deferred source state/effects cohort retirement");continue;
+    }
     if(std::string_view(argv[1])=="producer-subobjects"){
       {Fixture fixture;producerSubobjects(fixture);}
       {Fixture fixture;producerSubobjectFaults(fixture);}
