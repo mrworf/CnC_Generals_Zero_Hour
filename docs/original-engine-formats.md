@@ -5984,3 +5984,37 @@ camera movements and advances retained syncTime without publishing WW3D::Sync
 until a later normal draw. A native clock owner must preserve both accumulated
 and published time, plus same-client-frame suppression; sampling nativeMilliseconds
 directly or publishing the fast-path increment immediately would change behavior.
+
+NativeHeadlessDisplay now owns that accumulated/published clock and validates
+main-thread, display/client/script/logic and primary tactical View publications
+before ticking. It uses the primary ScriptedView's configured frame length.
+GameClient::updateHeadless's composed-service path calls the logical entry before
+ordinary View updates, or skips that update on a fast-camera-only tick. Physical
+draw still rejects. Ordinary Display::reset preserves time, just as the source;
+a new display owner starts0 instead of inheriting static state across lifetimes.
+The retained native ScriptEngine::isTimeFast and isTimeFrozenDebug return false,
+so fast-time deferred publication is tested as source clock state, not as a
+fabricated debugger route. Generated initialized ScriptEngine/actual Display/
+View/client/Drawable tests cover script freeze, camera freeze, repeated frames,
+configured step and current-pose consumption. Complete GameClient::update with
+all simulation/UI/terrain parents remains the whole startup/frame acceptance gate.
+See evidence/qa/N2-display-time.md for frozen results and limitations.
+
+### Bounding box prototype admission prerequisites
+
+W3D_CHUNK_BOX is0x740. W3dBoxStruct carries fixed-width Version/Attributes,
+Name[32], four-byte W3dRGBStruct and float3 Center/Extent (w3d_file.h:2097).
+BoxPrototypeClass tests ORIENTED bit1; otherwise it creates AABox, even without
+ALIGNED bit2 (boxrobj.cpp:1368). Preserve flags rather than assuming all boxes are
+oriented or requiring a new two-choice encoding.
+
+HLodClass::Update_Obj_Space_Bounding_Volumes searches only the last LOD backwards
+for an oriented box whose suffix after the first dot equals BOUNDINGBOX,
+case-insensitively (hlod.cpp:3402). Other box names/types or aggregate boxes are
+not the special override. The ordinary all-subobject sphere/AABB merge remains
+in base identity hierarchy space. For the override, Get_Obj_Space_Bounding_Box
+uses Simple_Evaluate_Bone even for invisible animation, orthogonal inverse(root)
+times that bone transform, then Transform_Center_Extent_AABox (hlod.cpp:1428).
+Decode/admit and test both prototype types, name/order selection, base versus
+animated bounds and parent transforms before accepting concrete current model
+info/camera queries. These are source findings, not native bounding acceptance.

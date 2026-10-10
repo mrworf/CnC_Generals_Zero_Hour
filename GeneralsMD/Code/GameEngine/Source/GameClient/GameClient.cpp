@@ -35,6 +35,7 @@
 #include "Common/ActionManager.h"
 #include "Common/GameEngine.h"
 #include "Common/NativeClock.h"
+#include "GameClient/NativeHeadlessDisplay.h"
 #include <cstdint>
 #include <sys/resource.h>
 #include "Common/GameState.h"
@@ -512,8 +513,11 @@ void GameClient::updateHeadless()
 	if (m_headlessLogicalServices) {
 		if (TheTerrainVisual) TheTerrainVisual->UPDATE();
 		TheDisplay->UPDATE();
-		// Original physical draw advances the camera; headless has no draw call.
-		TheDisplay->updateViews();
+		// Logical cadence shares source fixed-step/freeze timing without invoking
+		// absent physical drawing. Fast-time updates only camera movements.
+		auto* nativeDisplay=dynamic_cast<NativeHeadlessDisplay*>(TheDisplay);
+		if(!nativeDisplay)throw ERROR_BAD_ARG;
+		if(!nativeDisplay->advanceLogicalFrame())TheDisplay->updateViews();
 		TheDisplayStringManager->update();
 		TheInGameUI->UPDATE();
 	}

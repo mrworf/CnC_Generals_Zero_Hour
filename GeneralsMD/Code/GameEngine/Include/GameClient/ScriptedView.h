@@ -15,6 +15,7 @@ public:
   void init() override;
   void reset() override;
   void setFrameLengthMilliseconds(Int milliseconds);
+  Int frameLengthMilliseconds() const noexcept {return m_frameLengthMilliseconds;}
   Bool updateCameraMovements(Int elapsedMilliseconds);
   void lookAt(const Coord3D*) override;
   void initHeightForMap() override;
@@ -64,7 +65,6 @@ protected:
   Bool hasScriptedCameraWork() const noexcept {
     return m_doingRotateCamera || m_doingMoveCameraOnWaypointPath || m_doingPitchCamera || m_doingZoomCamera || m_doingScriptedCameraLock;
   }
-  Int frameLengthMilliseconds() const noexcept {return m_frameLengthMilliseconds;}
   Coord3D m_cameraOffset{};
   Real m_groundLevel=10.0f;
   Region2D m_cameraConstraint{};

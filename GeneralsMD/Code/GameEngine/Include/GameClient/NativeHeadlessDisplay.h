@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "GameClient/Display.h"
+#include "GameClient/NativePresentationClock.h"
+#include <thread>
 
 // Source View ownership and logical viewport only. Never reports physical
 // presentation, asset upload or device capabilities as successful.
 class NativeHeadlessDisplay final : public Display {
+  NativePresentationClock m_clock;
+  const std::thread::id m_thread=std::this_thread::get_id();
 public:
+  // Logical cadence only; true means source fast-time skipped ordinary views.
+  Bool advanceLogicalFrame();
+  UnsignedInt animationSyncTime()const noexcept{return m_clock.published();}
+  UnsignedInt accumulatedAnimationTime()const noexcept{return m_clock.accumulated();}
   Bool setDisplayMode(UnsignedInt,UnsignedInt,UnsignedInt,Bool) override {throw ERROR_BAD_ARG;}
   void setGamma(Real,Real,Real,Bool) override {throw ERROR_BAD_ARG;}
   Bool testMinSpecRequirements(Bool*,Bool*,Bool*,StaticGameLODLevel*,Real*) override {throw ERROR_BAD_ARG;}

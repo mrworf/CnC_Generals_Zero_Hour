@@ -4,6 +4,9 @@
 #include "W3DAssetInput.h"
 #include "GameClient/NativeModelDrawCurrentQueries.h"
 #include "GameClient/NativeHeadlessGameClient.h"
+#include "GameClient/NativeHeadlessDisplay.h"
+#include "NativeCameraViewFixture.h"
+#include "GameLogic/ScriptEngine.h"
 #include "GameClient/Drawable.h"
 #include "Common/ModuleFactory.h"
 #include "Common/ThingTemplate.h"
@@ -324,11 +327,45 @@ void animationPose(Fixture& fixture){using Mode=NativeModelAnimationClock::Mode;
   module.pose(root,0);require(!module.clock(),"explicit manual frame supersedes timed advancement");
   module.pose(root,1);module.timed(root,0,Mode::Once,100);require(module.clock()->previousFrame()==1,"manual-to-timed replacement retains prior source frame");
 }
+void displayTime(Fixture& fixture){
+  NativePresentationClock fast;require(fast.advance(0,33,false,true).cameraOnly&&fast.accumulated()==33&&fast.published()==0,"fast clock retains accumulated but unpublished time");
+  require(!fast.advance(0,33,false,true).cameraOnly&&fast.published()==33,"repeated fast frame freezes and publishes previously deferred time");
+  fast.advance(1,33,true,true);require(fast.accumulated()==33&&fast.published()==33,"freeze takes precedence over fast time");
+  fast.advance(2,33,false,true);fast.advance(3,33,false,false);require(fast.published()==99,"next ordinary publication includes fast-time accumulation");
+  NativePresentationClock wrap(UINT32_MAX-9,UINT32_MAX-9);wrap.advance(0,20,false,false);require(wrap.published()==10,"fixed-step time preserves unsigned32 wrap");
+  const auto oldScripts=TheScriptEngine;const auto oldDisplay=TheDisplay;const auto oldView=TheTacticalView;
+  struct Restore{ScriptEngine* scripts;Display* display;View* view;~Restore(){TheScriptEngine=scripts;TheDisplay=display;TheTacticalView=view;}}restore{oldScripts,oldDisplay,oldView};
+  auto scripts=std::make_unique<ScriptEngine>();TheScriptEngine=scripts.get();scripts->init();
+  auto display=std::make_unique<NativeHeadlessDisplay>();TheDisplay=display.get();
+  auto view=std::make_unique<NativeCameraViewFixture>();view->setFrameLengthMilliseconds(33);
+  auto* primary=view.get();display->attachView(view.get());view.release();TheTacticalView=primary;
+  fixture.client->setFrame(0);fixture.module(0).timed(clientRoot(),0,NativeModelAnimationClock::Mode::Once,display->animationSyncTime());
+  AllocationFault::arm(SIZE_MAX);try{display->advanceLogicalFrame();fixture.module(0).advance(clientRoot(),display->animationSyncTime());}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();AllocationFault::disarm();Matrix3D output(true);
+  require(attempts==0&&display->animationSyncTime()==33&&fixture.draw->getCurrentWorldspaceClientBonePositions("Muzzle",output)&&close(output.Get_Y_Translation(),220),"actual display-owned source33ms tick reaches current Drawable with zero standard demand");
+  display->advanceLogicalFrame();require(display->animationSyncTime()==33,"actual repeated client frame does not advance display time");
+  scripts->doFreezeTime();fixture.client->setFrame(1);display->advanceLogicalFrame();require(display->animationSyncTime()==33,"actual source script freeze retains display time");
+  scripts->doUnfreezeTime();display->advanceLogicalFrame();require(display->animationSyncTime()==33,"same-frame unfreeze retains source suppression");
+  fixture.client->setFrame(2);primary->rotateCamera(1,330,0,0);primary->cameraModFreezeTime();display->advanceLogicalFrame();require(display->animationSyncTime()==33,"unfinished source frozen camera prevents animation-time advancement");
+  const auto time=display->animationSyncTime();TheScriptEngine=nullptr;clientRejects([&]{display->advanceLogicalFrame();});TheScriptEngine=scripts.get();
+  TheTacticalView=nullptr;clientRejects([&]{display->advanceLogicalFrame();});TheTacticalView=primary;
+  fixture.logic->phase([&]{clientRejects([&]{display->advanceLogicalFrame();});});
+  bool rejected=false;std::thread worker([&]{try{display->advanceLogicalFrame();}catch(ErrorCode e){rejected=e==ERROR_BAD_ARG;}});worker.join();
+  require(rejected&&display->animationSyncTime()==time,"worker and missing/phase parent rejection leave accepted time unchanged");
+  clientRejects([&]{display->draw();});
+  delete primary;TheTacticalView=nullptr;
+  auto replacement=std::make_unique<NativeCameraViewFixture>();replacement->setFrameLengthMilliseconds(17);primary=replacement.get();display->attachView(replacement.get());replacement.release();TheTacticalView=primary;
+  fixture.client->setFrame(3);display->advanceLogicalFrame();require(display->animationSyncTime()==50,"replaced camera shares configured source step and same-owner retry");
+  // Source display reset resets its views, not the retained sync-time owner.
+  delete primary;TheTacticalView=nullptr;display->reset();require(display->animationSyncTime()==50,"ordinary display reset preserves monotonically retained sync time");
+  display.reset();TheDisplay=oldDisplay;auto fresh=std::make_unique<NativeHeadlessDisplay>();require(fresh->animationSyncTime()==0,"new display owns fresh time instead of process-static state");
+  scripts.reset();TheScriptEngine=oldScripts;
+}
 }
 int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawable query family");initMemoryManager();initialized=true;
-  {Fixture warm;functional(warm);negative(warm);clientFunctional(warm);clientNegative(warm);clientNumbered(warm);animationClock();animationPose(warm);}
+  {Fixture warm;functional(warm);negative(warm);clientFunctional(warm);clientNegative(warm);clientNumbered(warm);animationClock();animationPose(warm);displayTime(warm);}
   for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
-    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else throw GeneratedFixtureFailure("unknown Drawable query family");}
+    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else if(family=="animation-clock")animationClock();else if(family=="animation-pose")animationPose(fixture);else if(family=="display-time")displayTime(fixture);else throw GeneratedFixtureFailure("unknown Drawable query family");}
     require(AllocationFault::live()==live,"whole original Drawable/client/definition/query/parent cohort retirement");
   }shutdownMemoryManager();initialized=false;std::cout<<"PASS actual Drawable query dispatch; renderer/full simulation pending\n";return 0;
  }catch(const GeneratedFixtureFailure& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(const std::exception&){std::cerr<<"FAIL generated Drawable query\n";}catch(ErrorCode){std::cerr<<"FAIL source Drawable query\n";}

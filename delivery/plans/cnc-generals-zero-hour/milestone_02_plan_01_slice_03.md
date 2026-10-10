@@ -3882,3 +3882,31 @@ evidence/qa/N2-animation-clock.md. Source sync-time publication, concrete animat
 selection/transition/pause/sound callbacks, bounds/runtime19 and full456/root/
 loaded deterministic simulation remain pending under existing slice03/N2.
 Single-motion timing payload commit: `f2921f1e5192887878091a59e582a371e8ff70ba`.
+
+Fixed-step presentation owner continuation (parent b79590c4, clean worktree):
+implement separate accumulated/published unsigned32 time and source last-client-
+frame suppression, including fast-time deferred publication and freeze precedence.
+Own it in NativeHeadlessDisplay, keeping physical draw APIs explicitly absent.
+Actual GameClient headless logical-service updates call a logical timing entry
+before camera View updates; the fast branch advances only source camera movements
+and skips the ordinary View update. Read the actual script/game/camera parents,
+not duplicated fixture freeze flags. Share the configured ScriptedView step.
+Preserve monotonically accumulated display time through source reset; fresh
+display construction starts a fresh owner, avoiding static state across lifetimes.
+Reject workers/missing or wrong parents before time publication. Test actual
+display/client/Drawable timing consumption, source script/logic/camera freezes,
+same-frame suppression, deferred fast-path values and uint32 wrap; maintain
+zero-allocation ticks and same-owner rejection/retry. Existing timing/pose and
+client ownership cohorts run on frozen GCC/GCCsan/Clangsan source. Full startup,
+real client selection/event callbacks and runtime19 remain the N2 gates; no
+physical rendering, artificial simulation or dependency modification is admitted.
+
+Frozen fixed-step display checkpoint: focused1 PASS2.22s; related120 PASS
+GCC110.66s/GCCsan443.52s/Clangsan283.05s, exit0 all3, no live jobs. All218
+prefix/composed-client manifest lines match; timed current cold173/seeded176,
+advance/read0 and composed-client205 retain complete failure/retry ownership.
+Actual logical display timing feeds current Drawable poses; source freeze and
+same-frame/configured-step behavior, rejection/retry, reset and repeated owners
+are verified. Evidence: evidence/qa/N2-display-time.md. Full457 and complete
+GameClient update, bounding primitives, concrete19/condition/event callbacks,
+whole native startup and loaded simulation remain pending under slice03/N2.
