@@ -31,6 +31,7 @@
 
 #include "PreRTS.h"
 #include <strings.h>
+#include <memory>
 #include <cstdint>	// This must go first in EVERY cpp file int the GameEngine
 #include "Common/GlobalData.h"
 #define DEFINE_GUI_COMMMAND_NAMES
@@ -1009,25 +1010,7 @@ ControlBar::~ControlBar( void )
 //	if(m_controlBarResizer)
 //		delete m_controlBarResizer;
 //	m_controlBarResizer = NULL;
-	// destroy all the command set definitions
-	CommandSet *set;
-	while( m_commandSets )
-	{
-		set = m_commandSets->friend_getNext();
-		m_commandSets->deleteInstance();
-		m_commandSets = set;
-
-	}  // end while
-
-	// destroy all our command button definitions
-	CommandButton *button;
-	while( m_commandButtons )
-	{
-		button = m_commandButtons->friend_getNext();
-		m_commandButtons->deleteInstance();
-		m_commandButtons = button;
-
-	}  // end while
+	clearCommandMetadata();
 	if(m_buildToolTipLayout)
 	{
 		m_buildToolTipLayout->destroyWindows();
@@ -1048,6 +1031,47 @@ ControlBar::~ControlBar( void )
 		delete m_rightHUDCameoWindow->winGetUserData();
 
 }  // end ~ControlBar
+
+void ControlBar::clearCommandMetadata() noexcept
+{
+	// Retire sets before the borrowed buttons they reference.
+	CommandSet *set;
+	while( m_commandSets )
+	{
+		set = m_commandSets->friend_getNext();
+		m_commandSets->deleteInstance();
+		m_commandSets = set;
+
+	}  // end while
+
+	// destroy all our command button definitions
+	CommandButton *button;
+	while( m_commandButtons )
+	{
+		button = m_commandButtons->friend_getNext();
+		m_commandButtons->deleteInstance();
+		m_commandButtons = button;
+
+	}  // end while
+	m_commandMetadataInitialized = FALSE;
+}
+
+void ControlBar::initCommandMetadata()
+{
+	if (TheControlBar != this || m_commandMetadataInitialized || m_commandButtons || m_commandSets)
+		throw ERROR_BAD_ARG;
+	try {
+		INI ini;
+		ini.load(AsciiString("Data\\INI\\Default\\CommandButton.ini"), INI_LOAD_OVERWRITE, NULL);
+		ini.load(AsciiString("Data\\INI\\CommandButton.ini"), INI_LOAD_OVERWRITE, NULL);
+		ini.load(AsciiString("Data\\INI\\CommandSet.ini"), INI_LOAD_OVERWRITE, NULL);
+		postProcessCommands();
+		m_commandMetadataInitialized = TRUE;
+	} catch (...) {
+		clearCommandMetadata();
+		throw;
+	}
+}
 void ControlBarPopupDescriptionUpdateFunc( WindowLayout *layout, void *param );
 
 //-------------------------------------------------------------------------------------------------
@@ -1055,17 +1079,8 @@ void ControlBarPopupDescriptionUpdateFunc( WindowLayout *layout, void *param );
 //-------------------------------------------------------------------------------------------------
 void ControlBar::init( void )
 {
-	INI ini;
 	m_sideSelectAnimateDown = FALSE;
-	// load the command buttons
-	ini.load( AsciiString( "Data\\INI\\Default\\CommandButton.ini" ), INI_LOAD_OVERWRITE, NULL );
-	ini.load( AsciiString( "Data\\INI\\CommandButton.ini" ), INI_LOAD_OVERWRITE, NULL );
-
-	// load the command sets
-	ini.load( AsciiString( "Data\\INI\\CommandSet.ini" ), INI_LOAD_OVERWRITE, NULL );
-
-	// post process step after loading the command buttons and command sets
-	postProcessCommands();
+	initCommandMetadata();
 
 	// Init the scheme manager, this will call it's won INI init funciton.
 	m_controlBarSchemeManager = NEW ControlBarSchemeManager;
@@ -1339,41 +1354,7 @@ void ControlBar::reset( void )
 		m_animateDownWindow = NULL;		
 	}
 
-	// Remove any overridden sets.
-	CommandSet *set, *nextSet;
-	set = m_commandSets;
-	while (set) {
-		Bool possibleAdjustment = FALSE;
-		nextSet = set->friend_getNext();
-		if (set == m_commandSets) {
-			possibleAdjustment = TRUE;
-		}
-
-		Overridable *stillValid = set->deleteOverrides();
-		if (stillValid == NULL && possibleAdjustment) {
-			m_commandSets = nextSet;
-		}
-
-		set = nextSet;
-	}
-
-	// Remove any overridden command buttons.
-	CommandButton *button, *nextButton;
-	button = m_commandButtons;
-	while (button) {
-		Bool possibleAdjustment = FALSE;
-		nextButton = button->friend_getNext();
-		if (button == m_commandButtons) {
-			possibleAdjustment = TRUE;
-		}
-
-		Overridable *stillValid = button->deleteOverrides();
-		if (stillValid == NULL && possibleAdjustment) {
-			m_commandButtons = nextButton;
-		}
-
-		button = nextButton;
-	}
+	resetCommandMetadata();
 	if(TheTransitionHandler)
 		TheTransitionHandler->remove("ControlBarArrow");
 	m_genArrow = NULL;
@@ -1381,6 +1362,28 @@ void ControlBar::reset( void )
 	m_lastFlashedAtPointValue = -1;
 	m_genStarFlash = TRUE;
 }  // end reset
+
+void ControlBar::resetCommandMetadata() noexcept
+{
+	CommandSet* previousSet = NULL;
+	for (auto* set = m_commandSets; set;) {
+		auto* next = set->friend_getNext();
+		if (!set->deleteOverrides()) {
+			if (previousSet) previousSet->friend_setNext(next);
+			else m_commandSets = next;
+		} else previousSet = set;
+		set = next;
+	}
+	CommandButton* previousButton = NULL;
+	for (auto* button = m_commandButtons; button;) {
+		auto* next = button->friend_getNext();
+		if (!button->deleteOverrides()) {
+			if (previousButton) previousButton->friend_setNext(next);
+			else m_commandButtons = next;
+		} else previousButton = button;
+		button = next;
+	}
+}
 
 //-------------------------------------------------------------------------------------------------
 /** Update phase, we can track if our selected object is destroyed, update button
@@ -1961,16 +1964,20 @@ CommandButton *ControlBar::newCommandButtonOverride( CommandButton *buttonToOver
 	if (!buttonToOverride) {
 		return NULL;
 	}
+	if (buttonToOverride->getNextOverride()) throw ERROR_BAD_ARG;
 
 	CommandButton *newOverride;
 
 	// allocate new button
 	newOverride = newInstance(CommandButton);
+	auto retire = [](CommandButton* value) { value->deleteInstance(); };
+	std::unique_ptr<CommandButton, decltype(retire)> candidate(newOverride, retire);
 
 	*newOverride = *buttonToOverride;
 
 	newOverride->markAsOverride();
 	buttonToOverride->setNextOverride(newOverride);
+	candidate.release();
 
 	return newOverride;
 }
@@ -2011,7 +2018,8 @@ CommandButton *ControlBar::newCommandButtonOverride( CommandButton *buttonToOver
 
 		//@todo SUPPORT OVERRIDES -- JM
 	} else {
-		commandSet = TheControlBar->newCommandSetOverride(commandSet);
+		commandSet = TheControlBar->newCommandSetOverride(
+			static_cast<CommandSet*>(commandSet->friend_getFinalOverride()));
 	}
 
 	// sanity
@@ -2082,9 +2090,12 @@ CommandSet *ControlBar::newCommandSetOverride( CommandSet *setToOverride )
 	if (!setToOverride) {
 		return NULL;
 	}
+	if (setToOverride->getNextOverride()) throw ERROR_BAD_ARG;
 
 	// allocate a new set
 	CommandSet* set = newInstance(CommandSet)(setToOverride->getName());
+	auto retire = [](CommandSet* value) { value->deleteInstance(); };
+	std::unique_ptr<CommandSet, decltype(retire)> candidate(set, retire);
 
 	// it's an override; DON'T add it to the main list.
 	// !!! DO NOT DO THIS !!! -- > set->friend_addToList(&m_commandSets); <-- !!! DO NOT DO THIS !!!
@@ -2093,6 +2104,7 @@ CommandSet *ControlBar::newCommandSetOverride( CommandSet *setToOverride )
 	set->markAsOverride();
 
 	setToOverride->setNextOverride(set);
+	candidate.release();
 
 	return set;
 }

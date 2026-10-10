@@ -3251,3 +3251,42 @@ are in evidence/qa/N2-headless-ui-implementation.md. Commit this coherent source
 test and documentation cohort; continue the same slice03 with logical command
 metadata and actual client/root integration. Full375 and N2 acceptance remain
 pending. Payload provenance is recorded by workflow/delivery/state.yaml.
+
+Logical command metadata integration refinement (parent992b8b44, clean tree):
+retain the actual ControlBar CommandButton/CommandSet parsers, command enum and
+lookup semantics. Expose common metadata init/reset independently of physical
+scheme/window setup. Require legitimate ControlBar publication for parsing;
+reject duplicate init, and retire partial definitions on initialization failure
+so that the same unpublished candidate can retry. Interactive init/reset invoke
+the same common operations. Preserve image resolution when its real parent is
+present; an absent image parent retains source-selected names for later binding.
+Review new/override candidate acquisition and both intrusive lists together:
+guard pooled candidates through fallible copying; reset removes every override-
+only definition (including interior nodes), relinks survivors and retires chains.
+No physical GUI success or changed command execution semantics are introduced.
+Generated source INI tests cover actual logical init, duplicate rejection,
+base/override lookup, interior override-only retirement, invalid data teardown,
+allocation and typed-pool failure/retry, repeated whole-owner destruction under
+GCC/Clang sanitizers. Freeze before related checks and commit with evidence.
+This remains preparation for actual native client/root adoption within slice03,
+not standalone N2 acceptance or a replacement implementation plan.
+
+Whole native root continuation contract, following the command metadata cohort:
+adopt native UI/camera/Display and metadata as actual GameClient-owned services,
+with C3 lifetime surviving base-client cleanup. Preserve client-before-logic
+initialization and the real terrain/camera/UI frame phases. Complete factory
+selection and GameMain reachability; generated worlds must enter actual original
+GameEngine init/reset/update and GameLogic simulation, not fixture counters.
+Batch missing logical parent admission with lifecycle closure: real terrain/water,
+ghost/partition, parsed command-science parents and diagnostic loading state.
+Physical output remains explicit absence in headless mode, not fabricated success.
+
+Before execution, inspect whole reset/shutdown dependencies: actor/client-only
+Drawable cleanup needs live team/player/script/radar/UI parents despite registry
+reverse order. Preserve source destruction callback ordering, guard fallible queue
+admission and avoid using allocating GameClient::reset as shutdown cleanup.
+Constrain UI preflights to the branch that actually uses a parent. Exercise live
+actors plus client-only effects, repeated world reset and whole engine destruction,
+and complete failure/retry manifests with identical initialized provider cohorts.
+Current component matrices do not accept these whole-root paths; verified source
+contracts and unresolved implementation limits are in docs/original-engine-formats.md.

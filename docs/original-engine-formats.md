@@ -5137,3 +5137,86 @@ other Drawables, not mutate UI selection. Their complete multi-actor effect/
 failure semantics are not accepted by the simple generated actor fixture.
 OverlordContain's retained while(*it) loop also needs end-iterator review before
 executing that contained-item path; do not infer its safety from registry linkage.
+
+Logical command metadata source refinement (parent992b8b44; implementation under
+validation): ControlBar::init loads default CommandButton, main CommandButton,
+then CommandSet INIs and post-processes button images before scheme/window setup.
+The new common initCommandMetadata retains that exact order and actual parsers,
+with legitimate publication, duplicate admission rejection and full partial-owner
+retirement on failure. resetCommandMetadata retains source override semantics
+without calling physical window/context operations. An absent image collection
+already leaves the source image name unresolved; do not replace that behavior
+with fabricated images or discard later binding information.
+
+Intrusive reset census found override-only roots in interior positions were
+deleted without relinking their predecessor; the prior head-only adjustment was
+insufficient. Relink every surviving predecessor while retiring override chains,
+sets before their borrowed buttons. CommandSet parsing previously requested a
+new override from its base even when earlier overrides existed; append to its
+actual terminal instead of orphaning the existing chain. Direct nonterminal
+override admission now rejects; guard both pooled override candidates through
+fallible member copying. Generated tests exercise multiple parser override passes,
+interior temporary definitions, typed pool exhaustion, invalid command references,
+complete standard-allocation manifests and repeated whole-owner cleanup. These
+metadata tests do not accept native client/root integration or physical ControlBar
+scheme/windows. Tests live in tests/original/command_metadata.cpp.
+
+Next native-root lifecycle contract, verified against current source: GameClient
+destructor explicitly retires UI, terrain visual and then Display; derived class
+members have already retired before that base destructor body. A C3 context that
+only lives in a derived native client/engine member would therefore dangle in
+Display-owned Views during cleanup. Put the shared context in the base-client
+lifetime (or a later-retiring explicit root owner), not a short-lived derived
+factory object. NativeCameraShaker's default constructor acquires no records.
+
+GameClient::reset currently skips Display/TerrainVisual/Video/Eva reset for every
+headless client. Native logical composition must retain actual terrain/water and
+command metadata reset without inventing physical services. Source frame order
+is Drawable/particle state, terrain update, Display update/draw (camera phase),
+string manager, Shell and UI keyboard phase; preserve camera/UI order in explicit
+headless execution. GameEngine::init finishes resetAll then HideControlBar, and
+GameEngine::reset creates a physical blank-window layout. Explicit headless mode
+must separate those output actions, not infer successful GUI initialization from
+null WindowManager. SubsystemInterfaceList::resetAll visits registered owners in
+reverse order; its diagnostic all-subsystems list is not the ownership/reset list.
+GameMain's actual CreateGameEngine factory remains undefined in the native source
+graph: link-only GameEngine tests do not accept this process entry point.
+Sources: GameClient.cpp::{~GameClient,reset,update}, GameEngine.cpp::{init,reset},
+System/SubsystemBase.cpp::resetAll, GameMain.cpp::GameMain, NativeCameraShaker.h.
+
+Nonempty command-science parent census for the next full root: INI::scanScience
+calls the real ScienceStore::friend_lookupScience, not just the enum/name table.
+Science definitions require the initialized NameKeyGenerator. ScienceStore's
+current parser acquires raw pooled ScienceInfo before vector insertion, override
+copy and root-science vector expansion; review its complete init/parse/reset/
+destructor and admission together before adding that provider to generated root
+fault manifests. Constructor-only ScienceStore or empty command science vectors
+do not prove these acquired prefixes. Current command metadata fixtures do not
+accept nonempty science/image/template parent behavior or full root parsing.
+Sources: Common/INI/INI.cpp::scanScience and Common/RTS/Science.cpp::
+friend_parseScienceDefinition, ScienceInfo::addRootSciences, ScienceStore::reset.
+
+Whole-root teardown/reset dependency concern (not component acceptance):
+GameEngine::init registers GameLogic before TeamFactory/PlayerList; the current
+SubsystemInterfaceList reverses ownership order for reset/shutdown. Object
+destruction and authored destruction callbacks still use team/player, radar,
+script and client identities. GameLogic's destructor destroys actors only when
+its own registry entry retires, after later-registered parents may have retired.
+Real root adoption must explicitly quiesce actors and client-only Drawables while
+all required parents are live; inspect reset and shutdown together rather than
+assuming reverse construction alone proves gameplay lifecycle safety. Keep
+source destruction callback order, not a replacement direct-delete simulation.
+GameClient::reset allocates replacement lookup backing and is not a generic
+nonthrowing shutdown helper. GameLogic::destroyAllObjectsImmediate calls the
+ordinary destruction-queue admission path; review its fallible node acquisition
+as part of root failure/shutdown guarantees.
+
+InGameUI::deselectDrawable currently preflights GameLogic even for an already-
+unselected Drawable, although only the selected branch uses its frame. Inspect
+this acquisition/use boundary alongside client-only Drawable retirement after
+logic withdrawal; a stronger irrelevant precondition must not break a legitimate
+no-change cleanup. Generated component fixtures with live borrowed logic do not
+prove whole-root terminal retirement. Sources: GameEngine.cpp::{init,~GameEngine},
+System/SubsystemBase.cpp::{resetAll,shutdownAll}, GameLogic.cpp::{~GameLogic,
+destroyAllObjectsImmediate,destroyObject}, GameClient.cpp::{reset,~GameClient},
+InGameUI.cpp::deselectDrawable.

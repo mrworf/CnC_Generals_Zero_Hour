@@ -368,6 +368,7 @@ public:
 	// only for ControlBar!
 	void friend_addToList(CommandButton** list) {	m_next = *list;	*list = this; }
 	CommandButton* friend_getNext() { return m_next; }
+	void friend_setNext(CommandButton* next) noexcept { m_next = next; }
 
 private:
 	AsciiString										m_name;												///< template name
@@ -431,6 +432,7 @@ public:
 
 	// only for the control bar.
 	CommandSet* friend_getNext() { return m_next; }
+	void friend_setNext(CommandSet* next) noexcept { m_next = next; }
 	const FieldParse* friend_getFieldParse() const { return m_commandSetFieldParseTable; }
 	void friend_addToList(CommandSet** listHead);
 
@@ -662,6 +664,8 @@ public:
 	virtual void init( void );					///< from subsystem interface
 	virtual void reset( void );					///< from subsystem interface
 	virtual void update( void );				///< from subsystem interface
+	void initCommandMetadata(); ///< actual logical definitions without physical widgets
+	void resetCommandMetadata() noexcept; ///< withdraw overrides, retain base definitions
 
 	/// mark the UI as dirty so the context of everything is re-evaluated
 	void markUIDirty( void );
@@ -823,6 +827,8 @@ protected:
 
 	/// post process step, after all commands and command sets are loaded
 	void postProcessCommands( void );
+	void clearCommandMetadata() noexcept;
+	Bool m_commandMetadataInitialized = FALSE;
 
 	// the following methods are for resetting data for vaious contexts
 	void resetCommonCommandData( void );	/// reset shared command data

@@ -622,6 +622,16 @@ foreach(family IN ITEMS functional frames draw-faults client-faults modules modu
   set_tests_properties(original_native_client_${family} PROPERTIES LABELS "original;runtime;native_client" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()
+
+add_executable(original_command_metadata_fixture tests/original/command_metadata.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_command_metadata_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_command_metadata_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS functional faults pools negative)
+  add_test(NAME original_command_metadata_${family} COMMAND original_command_metadata_fixture "${family}")
+  set_tests_properties(original_command_metadata_${family} PROPERTIES LABELS "original;runtime;commands" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 target_link_libraries(original_lod_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_include_directories(original_lod_fixture PRIVATE
