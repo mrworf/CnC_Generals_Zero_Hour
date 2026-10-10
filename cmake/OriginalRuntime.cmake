@@ -233,6 +233,7 @@ target_sources(original_gameplay_common PRIVATE
   "${ZH_CODE}/GameEngine/Source/Common/System/MapObject.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/MapObjectTeams.cpp")
 target_sources(original_gameplay_common PRIVATE "${ZH_CODE}/GameEngine/Source/Common/System/W3DModelDrawData.cpp")
+target_sources(original_gameplay_common PRIVATE "${ZH_CODE}/GameEngine/Source/Common/System/W3DModelQueries.cpp")
 target_link_libraries(original_gameplay_common PUBLIC original_runtime_common)
 target_include_directories(original_gameplay_common PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas"
@@ -333,7 +334,7 @@ target_link_libraries(original_w3d_draw_data_fixture PRIVATE "$<LINK_GROUP:RESCA
 target_link_options(original_w3d_draw_data_fixture PRIVATE -Wl,--gc-sections)
 target_include_directories(original_w3d_draw_data_fixture PRIVATE "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_definitions(original_w3d_draw_data_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
-foreach(family IN ITEMS values negative faults seeded_faults template_faults)
+foreach(family IN ITEMS values negative faults seeded_faults template_faults queries query_faults query_seeded_faults)
   add_test(NAME original_w3d_draw_data_${family} COMMAND original_w3d_draw_data_fixture "${family}")
   set_tests_properties(original_w3d_draw_data_${family} PROPERTIES LABELS "original;model;draw-data" TIMEOUT 60 ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()

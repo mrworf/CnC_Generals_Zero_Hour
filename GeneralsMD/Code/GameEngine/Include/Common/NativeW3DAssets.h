@@ -20,7 +20,21 @@ private:
 };
 
 class NativeW3DAssets final {
+  struct State;
 public:
+  // Logic-thread admission scope; the parent outlives this nonmovable lease.
+  // Coupled consumers may reject after bind without retaining partial caches.
+  class Transaction final {
+    NativeW3DAssets& m_owner;
+    std::shared_ptr<const State> m_previous;
+    bool m_committed=false;
+  public:
+    explicit Transaction(NativeW3DAssets&);
+    ~Transaction() noexcept;
+    Transaction(const Transaction&)=delete;
+    Transaction& operator=(const Transaction&)=delete;
+    void commit() noexcept {m_committed=true;}
+  };
   using Document=std::shared_ptr<const NativeW3DDocument>;
   using Hierarchy=std::shared_ptr<const NativeW3DDocument::Hierarchy>;
   struct AnimationAsset {
@@ -70,7 +84,6 @@ public:
   static NativeW3DPose createPose(const Model&);
   static void validateMotionBinding(const Model&,const Animation&);
 private:
-  struct State;
   FileSystem& m_files;
   std::string m_language,m_userDirectory;
   std::shared_ptr<const State> m_state;

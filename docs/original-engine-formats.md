@@ -5734,3 +5734,36 @@ populated101 draw-parse and particle-template1 exact terminals/every retry, real
 INI/selector-to-owned-final-frame query and negative/parent/retirement evidence.
 Original Drawable/weapon/turret caches, all19 registrations, full native factory,
 startup and loaded simulation remain the acceptance gate, not this data fixture.
+
+Pristine-query source follow-through: rendobj.cpp::Get_Sub_Object_By_Name scans
+all full names before any suffix-after-first-dot comparison. hlod.cpp::{
+Get_Num_Sub_Objects,Get_Sub_Object} enumerate all LODs, then AdditionalModels;
+proxies are not subobjects. Update_Sub_Object_Transforms installs each child's
+own attachment-bone transform, including additional models. This is independent
+of CurLod, initially0. Original W3DModelDraw::findSingleSubObj incorrectly applies
+a global enumeration index to Get_Sub_Object_Bone_Index(0,index), which can index
+past LOD0. Native lookup uses the matching attachment directly, preserving the
+available transform and removing that undefined original shortcut.
+
+Weapon cache source rules: contiguous01..99 discovery stops at the first missing
+bone; subobject fallback runs only if the entire named-bone sweep found nothing.
+Barrels try numbered recoil/flash/FX/launch together and stop when all four are
+absent. A later muzzle flash can reuse the previous numbered FX bone. Only if no
+numbered barrel exists does source try unadorned names. Launch matrices are
+identity when absent; recoil/muzzle-flash presence separately sets the runtime
+flag. Turret indices use the same pristine map and zero missing-name sentinel.
+Original buildWeaponBarrelInfo/buildTurretInfo/findPristineBone/Pos bodies are
+shared in W3DModelQueries.cpp; legacy wrappers retain phase/FPU guards. Numbered
+name formatting now uses owned AsciiString storage rather than unchecked256-byte
+buffers, without altering index order or table representations.
+
+Native prepareNativeQueries stages an owned original condition copy, extra public
+names, exact first/final binding and all pristine/weapon/turret tables. A scoped
+NativeW3DAssets::Transaction preserves the prior immutable cache snapshot through
+late key/map/barrel allocation failure. Destruction order is candidate, asset
+admission, NameKey rollback; cursor and used pool units are checked before fixture
+rollback. Source definitions are not mutated. These are logic-thread candidates,
+not accepted actual Drawable dispatch or simulation-phase integration. Full
+current-pose/attachment behavior, nested-HLOD source flattening, all derived
+registrations and full startup remain pending; direct attachment lookup is not
+whole-model rendering parity. Evidence: evidence/qa/N2-w3d-pristine-queries.md.

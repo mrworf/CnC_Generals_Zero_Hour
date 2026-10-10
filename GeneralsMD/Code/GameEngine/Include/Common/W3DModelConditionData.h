@@ -217,6 +217,12 @@ struct ModelConditionInfo
 	using NativeBinding = NativeW3DAssets::Binding;
   // A complete owned logic-query candidate; does not publish bone caches.
   NativeBinding prepareNativeBinding(NativeW3DAssets&, Real scale) const;
+  struct NativeQuery;
+  NativeQuery prepareNativeQueries(NativeW3DAssets&, Real scale,
+      const std::vector<AsciiString>& extra, const std::vector<AsciiString>& standard) const;
+  // Shared original table derivation; native callers must own the logic phase.
+  void buildWeaponBarrelInfo() const;
+  void buildTurretInfo(Bool logicAllowed) const;
 
 	void clear();
 	void loadAnimations() const;
@@ -241,3 +247,8 @@ private:
 	void validateCachedBones(RenderObjClass* robj, Real scale) const;
 };
 typedef std::vector<ModelConditionInfo> ModelConditionVector;
+
+struct ModelConditionInfo::NativeQuery {
+  std::unique_ptr<ModelConditionInfo> condition;
+  NativeBinding binding;
+};

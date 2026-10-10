@@ -3699,3 +3699,28 @@ preserve prior data. Canonical679/inclusive686, full431 unrun. Evidence:
 evidence/qa/N2-w3d-draw-data.md. Same plan01/slice03 continues: derived19 data,
 native factory/Drawable weapon/turret/subobject queries, condition transfer,
 remaining formats/materials, then full startup/loaded original simulation.
+
+Native pristine-query continuation (parent3fb53069, clean worktree): prepare an
+owned original ModelConditionInfo candidate plus first/final model binding,
+discover public/standard/extra bones with the original unadorned and contiguous
+01..99 rules, then derive the original weapon/turret tables before publication.
+Bone0 is not a named bone; subobjects are a fallback only when no bone matched.
+Search full names before suffix names across all LODs and additional models,
+using the actual attachment bone rather than the original unsafe global-index
+into LOD0 shortcut. Keep source map/weapon/turret representations and algorithms,
+not a competing schema. The candidate, NameKey cursor and asset-cache admission
+must unwind together on late allocation rejection, preserving accepted state.
+Test source INI through selector, original cache lookups, barrel transforms and
+turret indices, with cold/seeded failure-retry cohorts and three compiler modes.
+Actual Drawable dispatch, phase/FPU ownership, client current-pose queries and
+all derived registrations remain required integration, not implied acceptance.
+
+Frozen pristine-query checkpoint: related77 PASS GCC5.70s/GCCsan34.13s/
+Clangsan24.22s, terminal0 all3; exact cold207/populated52 every failure/retry.
+The generated original INI/selector now reaches the original pristine, weapon
+and turret tables and consumers, including numbered barrels/FX reuse, second-LOD
+and additional-model fallback and full-name-before-suffix precedence. Production
+NameKey cursor, pool units and asset counts are preserved on late rejection.
+Evidence: evidence/qa/N2-w3d-pristine-queries.md. Full434 and N2 remain pending;
+next actual Drawable/phase/FPU integration, nested HLOD source flattening and
+derived module registrations, alongside remaining transfer/material/startup work.

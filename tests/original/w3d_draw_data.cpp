@@ -44,8 +44,17 @@ TrackMarks = Example
 End
 )";
 Data bytes(std::string_view text){return Data(text.begin(),text.end());}
+Data numberedTree(){Data header,pivots;word(header,0x40001);text(header,"NumberedTree");word(header,8);for(unsigned i=0;i<3;++i)real(header,0);
+  const char* names[]={"Root","Recoil01","Fx01","Flash01","Flash02","Launch01","Launch02","Recoil03"};
+  for(unsigned n=0;n<8;++n){text(pivots,names[n]);word(pivots,n?0:UINT32_MAX);real(pivots,float(n));for(unsigned i=0;i<8;++i)real(pivots,0);real(pivots,1);}
+  return chunk(0x100,join({chunk(0x101,header),chunk(0x102,pivots)}),true);
+}
 std::vector<std::pair<std::string,Data>> inputs(){return {
   {"draw.ini",bytes(valid)},
+  {"Art/W3D/NumberedTree.w3d",numberedTree()},
+  {"Art/W3D/Numbered.w3d",hlod("Numbered","NumberedTree",{{"Body.Part",2},{"Part",1}})},
+  {"Art/W3D/Part.w3d",mesh("","Part")},
+  {"numbered.ini",bytes("Draw\nConditionState = NONE\nModel = Numbered\nWeaponRecoilBone = PRIMARY Recoil\nWeaponFireFXBone = PRIMARY Fx\nWeaponMuzzleFlash = PRIMARY Flash\nWeaponLaunchBone = PRIMARY Launch\nEnd\nExtraPublicBone = Part\nEnd\n")},
   {"Data/INI/ParticleSystem.ini",bytes("ParticleSystem Spark\nEnd\n")},
   {"alias.ini",bytes("Draw\nAliasConditionState = MOVING\nEnd\n")},
   {"first.ini",bytes("Draw\nConditionState = MOVING\nModel = Outer\nEnd\nEnd\n")},
@@ -150,10 +159,76 @@ void faults(Fixture& context,bool seeded=false){std::size_t terminal;
     }require(AllocationFault::live()==outer,"whole draw parse/retry and key lease retire standard backing");
   }std::cout<<"draw-definition "<<(seeded?"seeded":"cold")<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every retry\n";
 }
+void verifyQuery(const ModelConditionInfo::NativeQuery& query){
+  require(query.condition && query.binding.model,"owned original query candidate");
+  const auto& data=*query.condition;Int index=-1;Coord3D position;
+  auto* muzzle=data.findPristineBone(NAMEKEY("muzzle"),&index);
+  require(muzzle && index==2 && muzzle->Get_X_Translation()==20,"source pristine cache retains selected final-frame bone");
+  require(data.findPristineBonePos(NAMEKEY("arm"),position) && position.x==16 && data.m_turrets[0].m_turretAngleBone==1,"source turret cache and original position consumer");
+  const auto& barrels=data.m_weaponBarrelInfoVec[0];
+  require(barrels.size()==1 && barrels[0].m_fxBone==2 && barrels[0].m_recoilBone==1 && barrels[0].m_projectileOffsetMtx.Get_X_Translation()==20 && data.m_hasRecoilBonesOrMuzzleFlashes[0],"original unadorned weapon barrel derivation");
+  index=-1;require(!data.findPristineBone(NAMEKEY_INVALID,&index) && index==0,"original invalid-key lookup resets the bone sentinel");
+}
+void queryValues(Fixture& context){NameKeyTransaction lease(context.keys);context.load();
+  auto& source=context.accepted->m_conditionStates[0];Assets assets(context.input.files,"English");
+  std::vector<AsciiString> extra{AsciiString("PART"),AsciiString("Marker.Null"),AsciiString("Root")};
+  std::vector<AsciiString> standard{AsciiString("Absent")};
+  auto query=source.prepareNativeQueries(assets,1,extra,standard);verifyQuery(query);
+  Int index=-1;auto* part=query.condition->findPristineBone(NAMEKEY("part"),&index);
+  require(part && index==2 && part->Get_X_Translation()==20,"suffix subobject fallback searches the second LOD and uses its actual attachment");
+  auto* marker=query.condition->findPristineBone(NAMEKEY("marker.null"),&index);
+  require(marker && index==2 && marker->Get_X_Translation()==20,"additional-model full-name fallback preserves attachment transform");
+  require(!query.condition->findPristineBone(NAMEKEY("root"),&index) && index==0 && source.m_pristineBones.empty(),"source bone zero is not a named query and source definitions remain unmodified");
+  const auto counts=assets.counts();const auto live=AllocationFault::live();
+  for(unsigned which=0;which<3;++which){auto bad=source;
+    if(which==0)bad.m_modelName="Missing";
+    if(which==1)bad.m_animations[0]=W3DAnimationInfo(AsciiString("OtherTree.OtherWalk"),false,0);
+    const auto before=AllocationFault::live();bool failed=false;
+    try{(void)bad.prepareNativeQueries(assets,which==2?std::numeric_limits<float>::quiet_NaN():1,extra,standard);}
+    catch(const Failure&){failed=true;}catch(ErrorCode){failed=true;}
+    require(failed && assets.counts()==counts && AllocationFault::live()==before,"whole query invalid model/motion/scale preserves admitted assets and retires candidate");verifyQuery(query);
+  }
+  require(AllocationFault::live()==live,"rejected query cohort does not grow backing");
+  context.load("numbered.ini");auto numbered=context.accepted->m_conditionStates[0].prepareNativeQueries(assets,1,context.accepted->m_extraPublicBones,{});
+  const auto& barrels=numbered.condition->m_weaponBarrelInfoVec[0];
+  require(barrels.size()==2 && barrels[0].m_fxBone==2 && barrels[1].m_fxBone==2 && barrels[0].m_muzzleFlashBone==3 && barrels[1].m_muzzleFlashBone==4,"original numbered barrels reuse the previous FX bone for additional muzzle flashes");
+  require(barrels[0].m_projectileOffsetMtx.Get_X_Translation()==5 && barrels[1].m_projectileOffsetMtx.Get_X_Translation()==6 && !numbered.condition->findPristineBone(NAMEKEY("recoil03"),nullptr),"contiguous discovery stops at first gap and retains distinct numbered launch transforms");
+  auto* exact=numbered.condition->findPristineBone(NAMEKEY("part"),&index);
+  require(exact && index==1 && exact->Get_X_Translation()==1,"complete full-name pass precedes earlier suffix matches");context.accepted.reset();
+}
+void queryFaults(Fixture& context,bool seeded){std::size_t terminal;
+  std::vector<AsciiString> extra{AsciiString("Part"),AsciiString("Marker.Null")},standard{AsciiString("Absent")};
+  {NameKeyTransaction lease(context.keys);context.load();Assets assets(context.input.files,"English");
+    const auto& source=context.accepted->m_conditionStates[0];ModelConditionInfo::NativeQuery accepted;
+    if(seeded)accepted=source.prepareNativeQueries(assets,1,extra,standard);
+    AllocationFault::arm(std::numeric_limits<std::size_t>::max());
+    try{accepted=source.prepareNativeQueries(assets,1,extra,standard);terminal=AllocationFault::attempts();AllocationFault::disarm();}catch(...){AllocationFault::disarm();throw;}
+    context.accepted.reset();
+  }
+  require(terminal>0 && terminal<1024,"bounded coupled pristine query census");
+  for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){const auto outer=AllocationFault::live();
+    {NameKeyTransaction lease(context.keys);context.load();Assets assets(context.input.files,"English");
+      const auto& source=context.accepted->m_conditionStates[0];ModelConditionInfo::NativeQuery accepted;
+      if(seeded)accepted=source.prepareNativeQueries(assets,1,extra,standard);
+      const auto* retained=accepted.condition.get();const auto counts=assets.counts();
+      NameKeyType cursor;{NameKeyTransaction proof(context.keys);cursor=context.keys.nameToKey("query-cursor-proof");}
+      auto* pool=TheMemoryPoolFactory->findMemoryPool("NameKeyBucketPool");const auto units=pool->getUsedBlockCount();
+      const auto live=AllocationFault::live();bool failed=false;
+      AllocationFault::arm(ordinal);try{accepted=source.prepareNativeQueries(assets,1,extra,standard);}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+      const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+      require(failed==(ordinal<terminal) && failed==hit && attempts==(failed?ordinal+1:terminal),"exact coupled query prefixes and terminal");
+      if(failed){require(accepted.condition.get()==retained && assets.counts()==counts && AllocationFault::live()==live && pool->getUsedBlockCount()==units,"late query failure retains complete accepted query/assets and retires every key/candidate");
+        {NameKeyTransaction proof(context.keys);require(context.keys.nameToKey("query-cursor-proof")==cursor,"production query namespace cursor rollback before fixture lease");}
+        if(seeded)verifyQuery(accepted);
+      }
+      accepted=source.prepareNativeQueries(assets,1,extra,standard);verifyQuery(accepted);context.accepted.reset();
+    }require(AllocationFault::live()==outer,"whole query/asset/key cohort retires standard backing");
+  }std::cout<<"pristine-query "<<(seeded?"seeded":"cold")<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every retry\n";
+}
 }
 int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"draw-data family");initMemoryManager();initialized=true;
-  {Fixture context;warm(context);templateFaults();for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
-    const std::string_view family=argv[1];if(family=="values")positive(context);else if(family=="negative")negative(context);else if(family=="faults")faults(context);else if(family=="seeded_faults")faults(context,true);else if(family=="template_faults")templateFaults();else throw std::runtime_error("unknown draw-data family");
+  {Fixture context;warm(context);templateFaults();queryValues(context);for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
+    const std::string_view family=argv[1];if(family=="values")positive(context);else if(family=="negative")negative(context);else if(family=="faults")faults(context);else if(family=="seeded_faults")faults(context,true);else if(family=="template_faults")templateFaults();else if(family=="queries")queryValues(context);else if(family=="query_faults")queryFaults(context,false);else if(family=="query_seeded_faults")queryFaults(context,true);else throw std::runtime_error("unknown draw-data family");
     require(AllocationFault::live()==live,"repeated whole draw/particle/name cohort retirement");}}
   shutdownMemoryManager();initialized=false;std::cout<<"PASS original draw definition; Drawable/full startup pending\n";return 0;
  }catch(const GeneratedFixtureFailure& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(const std::exception&){std::cerr<<"FAIL original draw definition\n";}catch(ErrorCode){std::cerr<<"FAIL source draw data\n";}

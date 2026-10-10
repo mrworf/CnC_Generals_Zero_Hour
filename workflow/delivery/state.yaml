@@ -26,15 +26,15 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "bbcd6554",
-    "label": "original-w3d-draw-definition",
-    "evidence": "evidence/qa/N2-w3d-draw-data.md",
-    "validation": "Final related74 PASS all3; cold104/populated101 parse and template1 exact terminals/every retry, NameKey production cursor/pool retirement, real INI/selector-to-owned-final-frame query. Full431 unrun.",
-    "next": "Continue derived draw-data registrations and actual Drawable pristine weapon/turret/subobject query consumers using the shared original definitions; validate condition-specific transfer, complete remaining material/prototype types, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full431 and N2 acceptance pending.",
+    "parent": "3fb53069",
+    "label": "original-w3d-pristine-queries",
+    "evidence": "evidence/qa/N2-w3d-pristine-queries.md",
+    "validation": "Final related77 PASS all3; query cold207/populated52 exact terminals/every retry; original pristine/weapon/turret tables and lookups, all-LOD/additional-model fallback, namespace/asset/pool rollback. Full434 unrun.",
+    "next": "Integrate actual Drawable pristine/projectile dispatch and source logic-phase/FPU ownership; preserve current-client/attachment query distinctions and resolve nested-HLOD source flattening, then complete derived19 draw registrations, condition transfer/material/prototypes and full native factory/GameEngine startup/loaded deterministic simulation under the same N2 plan01/slice03. Full434 and N2 acceptance pending.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 original draw-definition supporting checkpoint committed in 0a04e12de64a03bd3c00fb653fc7ff3c4dea128f; no live jobs. Continue derived draw-data registrations and actual Drawable pristine weapon/turret/subobject query consumers using the shared original definitions; validate condition-specific transfer, complete remaining material/prototype types, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full431 and N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 original pristine-query supporting checkpoint validated; no live jobs. Integrate actual Drawable pristine/projectile dispatch and source logic-phase/FPU ownership; preserve current-client/attachment query distinctions and resolve nested-HLOD source flattening, then complete derived19 draw registrations, condition transfer/material/prototypes and full native factory/GameEngine startup/loaded deterministic simulation under the same N2 plan01/slice03. Full434 and N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -168,26 +168,25 @@
     "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
   },
   "active_implementation": {
-    "label": "original-w3d-draw-definition",
-    "parent_commit": "bbcd6554",
-    "status": "committed supporting original draw-definition checkpoint; not slice03 or N2 acceptance",
+    "label": "original-w3d-pristine-queries",
+    "parent_commit": "3fb53069",
+    "status": "validated supporting original pristine-query checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
-    "evidence": "evidence/qa/N2-w3d-draw-data.md",
-    "canonical_source_files": 679,
-    "canonical_source_sha256": "b6b1f24c276a677d0af6ca2532c10201e400953e6c3a93c3648d4dd1537366b4",
-    "toolchain_inclusive_files": 686,
-    "toolchain_inclusive_sha256": "20c866dfd83e6bfed8433fa91958074b8aff0df55fcd3b4c2774df11adc62f31",
-    "configured_suite_tests": 431,
-    "related_tests_per_configuration": 74,
+    "evidence": "evidence/qa/N2-w3d-pristine-queries.md",
+    "canonical_source_files": 680,
+    "canonical_source_sha256": "8addc2134fb51ef6cd9bbde3faf3153d803874125fd5cb0a31b1201ef47c4d56",
+    "toolchain_inclusive_files": 687,
+    "toolchain_inclusive_sha256": "ad6bec10cef3378d9205361a77f90e72cd85b7031820e34d7eeb63fd681b2258",
+    "configured_suite_tests": 434,
+    "related_tests_per_configuration": 77,
     "frozen_results": {
-      "gcc": "PASS5.20s; terminal0",
-      "gcc_sanitize": "PASS30.64s; terminal0",
-      "clang_sanitize": "PASS21.67s; terminal0"
+      "gcc": "PASS5.70s; terminal0",
+      "gcc_sanitize": "PASS34.13s; terminal0",
+      "clang_sanitize": "PASS24.22s; terminal0"
     },
     "allocation_terminals": {
-      "draw_parse_cold": 104,
-      "draw_parse_populated_module": 101,
-      "particle_template_insertion": 1
+      "pristine_query_cold": 207,
+      "pristine_query_populated": 52
     },
     "every_failure_retry": true,
     "production_cursor_proven_before_fixture_rollback": true,
@@ -195,13 +194,12 @@
     "full_suite_run": false,
     "slice_complete": false,
     "milestone_complete": false,
-    "next": "Continue derived draw-data registrations and actual Drawable pristine weapon/turret/subobject query consumers using the shared original definitions; validate condition-specific transfer, complete remaining material/prototype types, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full431 and N2 acceptance pending.",
+    "next": "Integrate actual Drawable pristine/projectile dispatch and source logic-phase/FPU ownership; preserve current-client/attachment query distinctions and resolve nested-HLOD source flattening, then complete derived19 draw registrations, condition transfer/material/prototypes and full native factory/GameEngine startup/loaded deterministic simulation under the same N2 plan01/slice03. Full434 and N2 acceptance pending.",
     "initial_frozen_results": {
-      "gcc": "Supporting73 PASS4.88s; terminal0",
-      "gcc_sanitize": "Supporting73 PASS28.41s; terminal0",
-      "clang_sanitize": "Supporting73 PASS20.07s; terminal0"
-    },
-    "repository_commit": "0a04e12de64a03bd3c00fb653fc7ff3c4dea128f"
+      "gcc": "PASS5.73s; terminal0",
+      "gcc_sanitize": "PASS34.05s; terminal0",
+      "clang_sanitize": "PASS24.32s; terminal0"
+    }
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -274,12 +272,12 @@
   },
   "native_factory_continuation": {
     "parent_commit": "d172c2fc",
-    "status": "validated_original_draw_definition_supporting_cohort",
+    "status": "validated_original_pristine_query_supporting_cohort",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "findings": "docs/original-engine-formats.md",
     "production_changes_started": true,
-    "next": "Continue derived draw-data registrations and actual Drawable pristine weapon/turret/subobject query consumers using the shared original definitions; validate condition-specific transfer, complete remaining material/prototype types, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full431 and N2 acceptance pending.",
-    "evidence": "evidence/qa/N2-w3d-draw-data.md"
+    "next": "Integrate actual Drawable pristine/projectile dispatch and source logic-phase/FPU ownership; preserve current-client/attachment query distinctions and resolve nested-HLOD source flattening, then complete derived19 draw registrations, condition transfer/material/prototypes and full native factory/GameEngine startup/loaded deterministic simulation under the same N2 plan01/slice03. Full434 and N2 acceptance pending.",
+    "evidence": "evidence/qa/N2-w3d-pristine-queries.md"
   },
   "w3d_document_checkpoint": {
     "parent_commit": "d172c2fc",
@@ -459,5 +457,39 @@
       "clang_sanitize": "Supporting73 PASS20.07s; terminal0"
     },
     "repository_commit": "0a04e12de64a03bd3c00fb653fc7ff3c4dea128f"
+  },
+  "w3d_pristine_query_checkpoint": {
+    "label": "original-w3d-pristine-queries",
+    "parent_commit": "3fb53069",
+    "status": "validated supporting original pristine-query checkpoint; not slice03 or N2 acceptance",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "evidence": "evidence/qa/N2-w3d-pristine-queries.md",
+    "canonical_source_files": 680,
+    "canonical_source_sha256": "8addc2134fb51ef6cd9bbde3faf3153d803874125fd5cb0a31b1201ef47c4d56",
+    "toolchain_inclusive_files": 687,
+    "toolchain_inclusive_sha256": "ad6bec10cef3378d9205361a77f90e72cd85b7031820e34d7eeb63fd681b2258",
+    "configured_suite_tests": 434,
+    "related_tests_per_configuration": 77,
+    "frozen_results": {
+      "gcc": "PASS5.70s; terminal0",
+      "gcc_sanitize": "PASS34.13s; terminal0",
+      "clang_sanitize": "PASS24.22s; terminal0"
+    },
+    "allocation_terminals": {
+      "pristine_query_cold": 207,
+      "pristine_query_populated": 52
+    },
+    "every_failure_retry": true,
+    "production_cursor_proven_before_fixture_rollback": true,
+    "live_sessions": {},
+    "full_suite_run": false,
+    "slice_complete": false,
+    "milestone_complete": false,
+    "next": "Integrate actual Drawable pristine/projectile dispatch and source logic-phase/FPU ownership; preserve current-client/attachment query distinctions and resolve nested-HLOD source flattening, then complete derived19 draw registrations, condition transfer/material/prototypes and full native factory/GameEngine startup/loaded deterministic simulation under the same N2 plan01/slice03. Full434 and N2 acceptance pending.",
+    "initial_frozen_results": {
+      "gcc": "PASS5.73s; terminal0",
+      "gcc_sanitize": "PASS34.05s; terminal0",
+      "clang_sanitize": "PASS24.32s; terminal0"
+    }
   }
 }

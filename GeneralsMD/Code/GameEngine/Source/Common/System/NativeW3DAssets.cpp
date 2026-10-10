@@ -164,6 +164,8 @@ NativeW3DAssets::Binding NativeW3DAssets::bind(std::string_view name, std::strin
   m_state=std::move(candidate);
   return binding;
 }
+NativeW3DAssets::Transaction::Transaction(NativeW3DAssets& owner):m_owner(owner),m_previous(owner.m_state){}
+NativeW3DAssets::Transaction::~Transaction() noexcept {if(!m_committed)m_owner.m_state.swap(m_previous);}
 void NativeW3DAssets::clear()noexcept{m_state.reset();}
 NativeW3DPose NativeW3DAssets::createPose(const Model& model){if(!model || !model->hierarchy)throw ERROR_BAD_ARG;return NativeW3DPose::decode(*model->hierarchy);}
 void NativeW3DAssets::validateMotionBinding(const Model& model,const Animation& animation){
