@@ -4130,3 +4130,47 @@ evidence/qa/N2-particle-admission-checkpoint.md. This checkpoint does not mark
 slice03 or N2 complete and does not replace frozen related144 validation.
 Production growing-pool behavior, concrete tracker/effect/parent integration,
 camera and startup/loaded simulation remain pending; full481 is unrun.
+
+Concrete effects follow-on contract from the 8123f8cc source review: retain
+source-delayed particle creation (state selection requests recalculation;
+visible draw performs it). Stage old tracker retirement through condition-root
+commit rather than mutating accepted destroyed flags before possible rejection.
+Prepare the whole authored tracker cohort offside under one manager creation
+savepoint, including pose lookup and append; publish only after all acquisitions
+succeed. New effects and previous-owner mutations require explicit root
+enrollment beyond the initialized animation producer guard. Preserve authored
+order, real borrowed template/manager/client/Drawable parents, index0 fallback,
+non-saveability, hidden/shroud start-stop and deferred accepted destruction.
+Initial model-space bone sampling includes source temporary Drawable scale plus
+prototype hierarchy scale; animated updates use world bone transforms and set
+skip-parent true. Do not replace one route with the other. Couple lifecycle
+coverage with lazy hierarchy/clock/event evaluation, turret/recoil/geometry and
+actual physical/AI parents before claiming a complete concrete model tick.
+
+Growing-pool follow-on in this same coupled owner batch: the actual production
+pool has nonzero overflow; bounded exhaustion alone is insufficient. Use a
+separate generated growth family configured through the public factory API,
+holding the complete existing slot cohort before arming standard faults so each
+creation must acquire a fresh overflow blob. Derive and replay every exact
+standard allocation prefix, including MemoryPoolBlob and its live/free-slot
+metadata. Preserve accepted system identity, list/count/IDs/client cursor and
+used units before retry. A fully acquired empty blob may legitimately remain
+after candidate rollback: assert its exact capacity first, then invoke the
+public releaseEmpties boundary while the original blobs remain nonempty, proving
+exact standard-live/capacity retirement without exempting changed live counts.
+Perform each corrected retry from the same cold cache and source cursor with
+identical existing slot state. Also test accepted creation/deferred destroy,
+reset and repeated complete generated-owner lifetimes. Keep actual malloc
+failure outside the standard-new fault injector's claim; ASan/LSan still checks
+backing retirement. Do not change production pool defaults or count retained
+capacity as a leaked system. Implement only after the running related144
+frozen matrix terminates; run focused GCC/GCCsan/Clangsan on the resulting cohort
+before the next coupled freeze. This is not a replacement slice or acceptance
+of complete concrete draw effects.
+
+Frozen particle continuation: related144 PASS GCC235.19s/GCCsan941.46s/
+Clangsan574.64s, all terminal0, no live owned jobs. Canonical731/inclusive738
+hashes remain unchanged; all320 normalized fault/retry rows agree. Evidence:
+evidence/qa/N2-particle-admission.md. Manager creation/savepoint and related
+consumers are component-validated. Continue the growing-pool follow-on and
+concrete effects/real-parent cohort above; full481, slice03 and N2 remain pending.

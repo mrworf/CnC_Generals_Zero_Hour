@@ -6307,3 +6307,53 @@ its own legitimate client identity, then restore borrowed publication without
 callbacks or allocations. Particle fixtures parse authored generated INI and
 use constructor-valid client frame state, not complete GameClient/GameData
 startup. Checkpoint evidence: evidence/qa/N2-particle-admission-checkpoint.md.
+
+### Concrete state-particle lifecycle and scale contract (8123f8cc review)
+
+W3DModelDraw.cpp::setModelState requests particle recalculation unless
+DRAWABLE_STATUS_NO_STATE_PARTICLES is set, but always calls
+stopClientParticleSystems immediately for the old tracker cohort. Actual new
+systems are created later in doDrawModule's recalc callback, not during state
+selection. A suppressed recalc clears its pending flag without creation. The
+native condition root must preserve that delayed creation while retaining the
+old cohort until condition publication is irrevocable; marking accepted old
+systems destroyed inside a fallible root cannot be undone by a creation-only
+manager savepoint. A later model-module rejection must preserve both old
+trackers and their old particle state, not just their list rows.
+
+recalcBonesForClientParticleSystems walks authored ParticleSysBoneInfo order,
+creates the complete manager chain, defaults missing/index0 bones to zero
+position/rotation, then sets position, rotates local Z, attaches the Drawable,
+marks the chain non-saveable, stops it when effectively hidden or fully shrouded,
+and finally appends {systemID,boneIndex}. The append and a subsequent authored
+system's acquisition can both fail after earlier systems have been acquired.
+Use one whole-callback creation savepoint and an offside tracker vector; guard
+the candidate through every fallible pose/read/append step before publication.
+The authored parser stores lowercase bone names and borrowed template pointers
+in W3DModelDrawData.cpp::parseParticleSysBone; template lifetime is therefore a
+real parent prerequisite, not a cache detail.
+
+The initial callback temporarily replaces the render root with identity scaled
+by Drawable::getScale. W3DAssetManager.cpp::Create_Render_Obj separately applies
+nonunit definition scale (epsilon0.01) to the prototype, and HLodClass::Scale
+scales HTree translations. Initial state-particle model-space sampling therefore
+contains both prototype/tree scale and that explicit temporary root scale.
+Do not simplify this to a single scale or use the world/current instance root
+as its oracle. Treat any proposed source-bug correction separately from faithful
+native integration. The later animated-bone callback instead samples the actual
+world root, skips missing/index0 bones, sets position and local Z, then replaces
+the complete local transform and sets skip-parent-transform true. Re-evaluation
+must preserve this distinction and source ordering, not multiply the parent
+transform again. Hidden/shrouded changes start/stop existing primary systems;
+accepted tracker cleanup marks them destroyed and clears the vector, leaving
+manager retirement deferred.
+
+Get_Bone_Transform may evaluate an invalid hierarchy. animobj.cpp's single,
+blended and combined paths trigger embedded sounds only after pose evaluation;
+the single nonmanual path advances its clock first. Single_Anim_Progress retains
+the earlier previous-frame value when invoked twice at the same frame. A shared
+clock tick by itself neither establishes lazy hierarchy validity nor consumes
+events. Complete native tests need failed/retried pose/event publication and
+same-sync-time repeated bone reads, in addition to ordinary explicit advancement.
+These findings define the next concrete owner batch; none asserts completed
+concrete draw factories, audiovisual parity or original loaded simulation.
