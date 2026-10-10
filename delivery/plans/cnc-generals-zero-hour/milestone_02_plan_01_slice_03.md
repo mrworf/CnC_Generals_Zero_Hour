@@ -4174,3 +4174,14 @@ hashes remain unchanged; all320 normalized fault/retry rows agree. Evidence:
 evidence/qa/N2-particle-admission.md. Manager creation/savepoint and related
 consumers are component-validated. Continue the growing-pool follow-on and
 concrete effects/real-parent cohort above; full481, slice03 and N2 remain pending.
+
+The planned growing-pool cohort now passes focused7 all3 (GCC0.53s/GCCsan4.74s/
+Clangsan2.60s), with22 matching manifests and no live owned jobs. It changes only
+the generated fixture/CMake registration; production admission is unchanged
+from the related144 frozen checkpoint. Evidence: evidence/qa/N2-particle-growth.md.
+Metadata terminal3, warmed13/cold17, exact retained-capacity cleanup, every retry,
+actual accepted ID/client-stream advancement and deferred reset are covered.
+Current related145/full482 remain unrun. Include this family in the next coupled
+production freeze; do not repeat the whole matrix just for this test-only
+extension. Resume concrete tracker/bone/effect/physics/AI/geometry owner integration
+above before asserting a complete logical model tick, startup or N2 acceptance.

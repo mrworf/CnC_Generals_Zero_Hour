@@ -6357,3 +6357,19 @@ events. Complete native tests need failed/retried pose/event publication and
 same-sync-time repeated bone reads, in addition to ordinary explicit advancement.
 These findings define the next concrete owner batch; none asserts completed
 concrete draw factories, audiovisual parity or original loaded simulation.
+
+Particle overflow follow-on: evidence/qa/N2-particle-growth.md validates the
+actual MemoryPool overflow path under explicit public initial64/overflow4,
+without changing production1024/32 defaults. MemoryPoolBlob owns its object,
+live-slot vector and reserved free-slot vector through three persistent standard
+allocations; its byte backing is malloc-owned and outside the standard-new fault
+injector. A failed later system/list admission can retain an empty4-slot blob
+legitimately. With the original blob held nonempty, public releaseEmpties removes
+that entire overflow owner and restores exact standard-live/capacity/used units.
+The generated cohort derives warmed-template terminal13 versus cold17; caches
+and cursor state remain identical within each failure/retry pair. Accepted
+growth advances actual IDs/client RNG before fixture restoration, and source
+destroy/reset preserves deferred accepted retirement. All7 focused families
+PASS GCC/GCCsan/Clangsan with22 identical manifests; current related145/full482
+remain unrun. This replaces the earlier overflow-testing gap only, not concrete
+effects, exact startup profile, malloc-fault injection or complete simulation.

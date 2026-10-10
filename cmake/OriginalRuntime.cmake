@@ -354,7 +354,7 @@ target_link_libraries(original_particle_admission_fixture PRIVATE "$<LINK_GROUP:
 target_link_options(original_particle_admission_fixture PRIVATE -Wl,--gc-sections)
 target_include_directories(original_particle_admission_fixture PRIVATE "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_definitions(original_particle_admission_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
-foreach(family IN ITEMS functional negative chain-faults slave-faults leaf-faults pool-faults)
+foreach(family IN ITEMS functional negative chain-faults slave-faults leaf-faults pool-faults growth)
   add_test(NAME original_particle_admission_${family} COMMAND original_particle_admission_fixture "${family}")
   set_tests_properties(original_particle_admission_${family} PROPERTIES LABELS "original;particles;ownership" TIMEOUT 60 ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
 endforeach()

@@ -62,9 +62,9 @@ ParticleSystem* create(Fixture& fixture,unsigned route){
   if(route==1)return source->createSlaveSystem();
   return fixture.manager->createParticleSystem(source,route!=2);
 }
-void verify(Fixture& fixture,ParticleSystem* primary,unsigned route,ParticleSystemID prior){
+void verify(Fixture& fixture,ParticleSystem* primary,unsigned route,ParticleSystemID prior,unsigned existing=0){
   const unsigned count=route==0?3:route==1?2:1;
-  require(primary&&fixture.manager->getParticleSystemCount()==count&&fixture.manager->getAllParticleSystems().size()==count,"complete actual particle chain registration");
+  require(primary&&fixture.manager->getParticleSystemCount()==count+existing&&fixture.manager->getAllParticleSystems().size()==count+existing,"complete actual particle chain registration");
   auto* current=primary;for(unsigned i=0;i<count;++i){require(current&&current->getSystemID()==ParticleSystemID(UnsignedInt(prior)+i+1)&&current->getStartFrame()==fixture.client->getFrame(),"parent-first source IDs and frame identity");
     if(i+1<count)require(current->getSlave()->getMaster()==current,"source reciprocal master/slave links");else require(!current->getSlave(),"terminal source slave");current=current->getSlave();}
   require(fixture.manager->getAllParticleSystems().back()==primary,"source child-first registry order");
@@ -135,15 +135,62 @@ void faults(unsigned route){std::size_t terminal;
     verify(fixture,candidate,route,next);
   }std::cout<<"particle admission route "<<route<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every failure/retry\n";
 }
+void growth(Fixture& fixture){GameClientRandomTransaction lease;
+  auto* accepted=create(fixture,2);auto* pool=TheMemoryPoolFactory->findMemoryPool("ParticleSystemPool");require(pool,"actual growing particle pool");
+  struct Held {
+    MemoryPool* pool;std::vector<void*> blocks;
+    explicit Held(MemoryPool* value):pool(value){blocks.reserve(pool->getFreeBlockCount());}
+    void fill(){while(pool->getFreeBlockCount())blocks.push_back(pool->allocateBlock("generated particle growth hold"));}
+    ~Held(){for(auto* block:blocks)pool->freeBlock(block);}
+  } held(pool);
+  held.fill(); // Fully constructed guard precedes every raw acquisition.
+  const auto capacity=pool->getTotalBlockCount(),units=pool->getUsedBlockCount();const auto live=AllocationFault::live();
+  const auto next=fixture.manager->cursor();const auto before=cursor();std::size_t metadataDemand;
+  struct Probe {
+    MemoryPool* pool;void* block=nullptr;
+    void retire(){if(block){pool->freeBlock(block);block=nullptr;}}
+    ~Probe(){retire();}
+  } probe{pool};
+  AllocationFault::arm(SIZE_MAX);
+  try{probe.block=pool->allocateBlock("generated particle overflow probe");}catch(...){AllocationFault::disarm();throw;}
+  metadataDemand=AllocationFault::attempts();AllocationFault::disarm();
+  require(metadataDemand==3&&pool->getTotalBlockCount()==capacity+4&&AllocationFault::live()==live+metadataDemand,"exact public overflow blob and persistent metadata acquisition");
+  probe.retire();require(pool->releaseEmpties()==4&&pool->getTotalBlockCount()==capacity&&AllocationFault::live()==live,"whole overflow blob backing retires without changing held original slots");
+  auto operation=[&]{NativeParticleSystemAdmission tracker(*fixture.manager);auto* candidate=create(fixture,0);verify(fixture,candidate,0,next,1);};
+  auto retireGrowth=[&]{
+    require(fixture.manager->getParticleSystemCount()==1&&fixture.manager->getAllParticleSystems().front()==accepted&&!accepted->isDestroyed()&&fixture.manager->cursor()==next&&cursor()==before&&pool->getUsedBlockCount()==units,"growth admission rollback preserves complete accepted owner and source cursors");
+    const auto added=pool->getTotalBlockCount()-capacity;
+    require((added==0||added==4)&&AllocationFault::live()==live+(added?metadataDemand:0),"retained empty growth has exact metadata ownership, not an exempted count");
+    require(pool->releaseEmpties()==added&&pool->getTotalBlockCount()==capacity&&pool->getUsedBlockCount()==units&&AllocationFault::live()==live,"public empty-blob retirement restores exact standard and pooled baseline");
+  };
+  std::size_t terminal;AllocationFault::arm(SIZE_MAX);
+  try{operation();}catch(...){AllocationFault::disarm();throw;}
+  terminal=AllocationFault::attempts();AllocationFault::disarm();retireGrowth();
+  for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){bool failed=false;AllocationFault::arm(ordinal);
+    try{operation();}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+    const auto attempts=AllocationFault::attempts();const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+    require(failed==(ordinal<terminal)&&failed==hit&&attempts==(failed?ordinal+1:terminal),"growing particle cohort exact failure prefixes and terminal");retireGrowth();
+    if(failed){AllocationFault::arm(SIZE_MAX);try{operation();}catch(...){AllocationFault::disarm();throw;}
+      const auto retryDemand=AllocationFault::attempts();AllocationFault::disarm();require(retryDemand==terminal,"growth retry repeats identical cold cache and slot state");retireGrowth();}
+  }
+  std::array<int,3> expectedCursor{};
+  {GameClientRandomTransaction expected;for(unsigned n=0;n<3;++n){const Real start=GameClientRandomValueReal(0,PI/4),end=GameClientRandomValueReal(TWO_PI-PI/4,TWO_PI);(void)GameClientRandomValueReal(start,end);}expectedCursor=cursor();}
+  auto* candidate=create(fixture,0);verify(fixture,candidate,0,next,1);
+  require(fixture.manager->cursor()==ParticleSystemID(UnsignedInt(next)+3)&&cursor()==expectedCursor&&cursor()!=before,"accepted overflow advances exact production ID/client stream before fixture lease restoration");
+  require(pool->getTotalBlockCount()==capacity+4&&pool->getUsedBlockCount()==units+3,"accepted chain uses actual overflow slots");
+  candidate->destroy();require(fixture.manager->getParticleSystemCount()==4&&candidate->isDestroyed()&&!accepted->isDestroyed(),"accepted overflow destroy preserves deferred source retirement and prior owner");
+  fixture.manager->reset();require(pool->getUsedBlockCount()==units-1&&pool->releaseEmpties()==4&&pool->getTotalBlockCount()==capacity,"source reset retires accepted overflow chain under its actual manager");
+  std::cout<<"particle growth prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; metadata terminal "<<metadataDemand<<"; every failure/retry\n";
 }
-int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"particle admission family");initMemoryManager();initialized=true;
+}
+int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"particle admission family");const std::string_view family=argv[1];const bool growing=family=="growth";initMemoryManager();initialized=true;
   // Explicit public allocator configuration: production's growing pool cannot
   // serve as an exhaustion fixture. Keep growth tests and bounded acquisition
   // failures distinct without changing the production startup profile.
-  TheMemoryPoolFactory->createMemoryPool("ParticleSystemPool",sizeof(ParticleSystem),64,0);
-  {Fixture warm;functional(warm);negative(warm);poolFailures(warm);}
-  for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();const std::string_view family=argv[1];
-    if(family=="functional"){Fixture fixture;functional(fixture);}else if(family=="negative"){Fixture fixture;negative(fixture);}else if(family=="pool-faults"){Fixture fixture;poolFailures(fixture);}else if(family=="chain-faults")faults(0);else if(family=="slave-faults")faults(1);else if(family=="leaf-faults")faults(2);else throw GeneratedFixtureFailure("unknown particle admission family");
+  TheMemoryPoolFactory->createMemoryPool("ParticleSystemPool",sizeof(ParticleSystem),64,growing?4:0);
+  {Fixture warm;functional(warm);negative(warm);if(growing)growth(warm);else poolFailures(warm);}
+  for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
+    if(family=="functional"){Fixture fixture;functional(fixture);}else if(family=="negative"){Fixture fixture;negative(fixture);}else if(family=="pool-faults"){Fixture fixture;poolFailures(fixture);}else if(family=="growth"){Fixture fixture;growth(fixture);}else if(family=="chain-faults")faults(0);else if(family=="slave-faults")faults(1);else if(family=="leaf-faults")faults(2);else throw GeneratedFixtureFailure("unknown particle admission family");
     require(AllocationFault::live()==live,"whole parsed particle/client/manager/root cohort retirement");
   }shutdownMemoryManager();initialized=false;std::cout<<"PASS original particle chain admission; concrete model/rendering pending\n";return 0;
  }catch(const GeneratedFixtureFailure& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(const std::exception&){std::cerr<<"FAIL generated particle admission\n";}catch(ErrorCode){std::cerr<<"FAIL source particle admission\n";}
