@@ -26,15 +26,37 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "dfb3a3598446e4d36a49c607687eaeb7ce2c4a84",
-    "label": "original-root-lifecycle",
-    "evidence": "evidence/qa/N2-root-retirement.md",
-    "validation": "Frozen configured builds/related208 PASS all3; exact audio constructor terminal4, warmed cache/quiescence terminal0, root reset terminal1/every retry; canonical656/inclusive663 rechecked. Full392 unrun.",
-    "next": "Continue concrete native process entry/full root startup and deterministic loaded simulation under existing N2 plan01/slice03. Lifecycle checkpoint is not N2 acceptance.",
+    "parent": "48f61848",
+    "label": "original-environment-admission",
+    "evidence": "evidence/qa/N2-environment-settings.md",
+    "validation": "Frozen configured builds/related249 PASS all3, exact parser terminals16/11 and snow1, every retry and separate typed-pool exhaustion; full401 unrun.",
+    "next": "Continue concrete native factory/full original startup and loaded simulation under existing N2 plan01/slice03; do not substitute prefix or empty providers for those gates.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03: lifecycle checkpoint 850bfa4c remains the last validated source. The subsequent environment-configuration admission batch is implemented in eight working-tree files but has no new tests, builds or runtime acceptance yet. Continue that coherent batch and its existing written plan before committing production changes; then continue concrete native factory/full startup and loaded simulation. Prior frozen hashes/results do not cover the new edits. No live jobs or agents; N2 remains incomplete.",
+  "resume_point": "N2 plan01/slice03 environment ownership cohort validated: configured builds/related249 PASS GCC271.38s/GCCsan1116.02s/Clangsan708.31s, all terminals0; source fingerprints canonical660/inclusive667 rechecked. No live jobs. Commit the exact environment batch, then continue concrete native factory/full original startup and loaded simulation under the existing plan. Full401/slice03/N2 acceptance remain pending.",
+  "environment_batch": {
+    "parent_commit": "48f61848",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "evidence": "evidence/qa/N2-environment-settings.md",
+    "status": "Validated coherent environment admission checkpoint; all configured builds/related249 PASS all3; full401 unrun",
+    "canonical_source_files": 660,
+    "canonical_source_sha256": "7bb51cbf49cf61fbe452ffa5025ffb49bdf4c8322b232936aba0303677685df1",
+    "toolchain_inclusive_files": 667,
+    "toolchain_inclusive_sha256": "0943f9e7cdfd2777e0e342ab22e967ff8c6fd07a06e89975cdfdabd0e7d50651",
+    "configured_suite_tests": 401,
+    "related_suite_tests_per_configuration": 249,
+    "live_sessions_at_last_observation": {},
+    "frozen_results": {
+      "6023": "GCC configured build and related249 PASS271.38s, process terminal0",
+      "17049": "GCC sanitizer configured build and related249 PASS1116.02s, process terminal0",
+      "50901": "Clang sanitizer configured build and related249 PASS708.31s, process terminal0"
+    },
+    "focused_evidence": "Initial8 PASS all3; subsequent actual root-prefix PASS GCC1.94s. Weather/time parser terminals16/11, snow array1, every failure/retry, separate typed-pool exhaustion.",
+    "milestone_complete": false,
+    "source_fingerprints_rechecked": true,
+    "repository_commit": null
+  },
   "worktree_review": {
     "parent_commit": "eab07f4a",
     "purpose": "User-requested inventory and safe documentation checkpoint; preserve unfinished production work without presenting it as delivered",
@@ -55,7 +77,8 @@
       "GeneralsMD/Code/GameEngine/Source/Common/System/NativeEnvironmentSettings.cpp"
     ],
     "validation": "Inventory and diff whitespace checks only; new environment source is unvalidated. Earlier lifecycle acceptance belongs exclusively to its committed source.",
-    "next": "Add parser, override-chain, snow-owner and actual root-prefix tests; focused validation followed by frozen GCC/GCC-Clang sanitizer matrix under existing slice03. Commit the coupled production batch only after verification."
+    "next": "Add parser, override-chain, snow-owner and actual root-prefix tests; focused validation followed by frozen GCC/GCC-Clang sanitizer matrix under existing slice03. Commit the coupled production batch only after verification.",
+    "closeout": "The eight unfinished source/build files now have generated source tests and complete frozen all3 related validation. Commit the coherent 13-file batch, preserving prior review as historical inventory."
   },
   "transaction_parent": "dfb3a3598446e4d36a49c607687eaeb7ce2c4a84",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
@@ -145,23 +168,22 @@
     "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
   },
   "active_implementation": {
-    "label": "original-root-lifecycle",
-    "parent_commit": "dfb3a3598446e4d36a49c607687eaeb7ce2c4a84",
-    "evidence": "evidence/qa/N2-root-retirement.md",
-    "canonical_source_sha256": "3ac8351c54a1c7c4f1650347c61f4b31c4f40fab71720817d4f271064f22aa13",
-    "toolchain_inclusive_sha256": "016f2923572e9231becd69ff36f90e431a1fa8c2c00e4c6c82bb4170a912857b",
-    "configured_suite_tests": 392,
-    "status": "Committed lifecycle checkpoint 850bfa4c; all configured builds/related208 PASS all3 and every process terminal0. Full392/root startup/simulation acceptance pending.",
-    "live_sessions": [],
-    "frozen_results": {
-      "19475": "GCC sanitizer configured build and related208 PASS960.93s terminal0",
-      "58080": "GCC configured build and related208 PASS234.80s terminal0",
-      "65018": "Clang sanitizer configured build and related208 PASS598.55s terminal0"
-    },
-    "next": "Continue concrete native process entry/full root startup and deterministic loaded simulation under existing N2 plan01/slice03. Lifecycle checkpoint is not N2 acceptance.",
+    "label": "original-environment-admission",
+    "status": "validated_checkpoint_pending_commit",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "evidence": "evidence/qa/N2-environment-settings.md",
+    "canonical_source_sha256": "7bb51cbf49cf61fbe452ffa5025ffb49bdf4c8322b232936aba0303677685df1",
+    "toolchain_inclusive_sha256": "0943f9e7cdfd2777e0e342ab22e967ff8c6fd07a06e89975cdfdabd0e7d50651",
+    "configured_suite_tests": 401,
+    "related_suite_tests_passed": 249,
+    "configurations": [
+      "GCC",
+      "GCC ASan/UBSan/LSan",
+      "Clang ASan/UBSan/LSan"
+    ],
     "milestone_complete": false,
     "slice_complete": false,
-    "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
+    "next": "Continue concrete native factory/full original startup and loaded simulation under existing N2 plan01/slice03; do not substitute prefix or empty providers for those gates."
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -212,5 +234,24 @@
     "next": "Continue actual whole-root/composed frames, science/model/terrain/ghost parents and coupled actor retirement under same N2 plan01/slice03; full384 unrun.",
     "milestone_complete": false,
     "slice_complete": false
+  },
+  "prior_environment_implementation": {
+    "label": "original-root-lifecycle",
+    "parent_commit": "dfb3a3598446e4d36a49c607687eaeb7ce2c4a84",
+    "evidence": "evidence/qa/N2-root-retirement.md",
+    "canonical_source_sha256": "3ac8351c54a1c7c4f1650347c61f4b31c4f40fab71720817d4f271064f22aa13",
+    "toolchain_inclusive_sha256": "016f2923572e9231becd69ff36f90e431a1fa8c2c00e4c6c82bb4170a912857b",
+    "configured_suite_tests": 392,
+    "status": "Committed lifecycle checkpoint 850bfa4c; all configured builds/related208 PASS all3 and every process terminal0. Full392/root startup/simulation acceptance pending.",
+    "live_sessions": [],
+    "frozen_results": {
+      "19475": "GCC sanitizer configured build and related208 PASS960.93s terminal0",
+      "58080": "GCC configured build and related208 PASS234.80s terminal0",
+      "65018": "Clang sanitizer configured build and related208 PASS598.55s terminal0"
+    },
+    "next": "Continue concrete native process entry/full root startup and deterministic loaded simulation under existing N2 plan01/slice03. Lifecycle checkpoint is not N2 acceptance.",
+    "milestone_complete": false,
+    "slice_complete": false,
+    "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
   }
 }

@@ -34,6 +34,8 @@
 #define DEFINE_TIME_OF_DAY_NAMES
 
 #include "Common/INI.h"
+#include "Common/NativeOverrideAdmission.h"
+#include "Common/NativeEnvironmentSettings.h"
 #include "Common/GameType.h"
 
 #include "GameClient/TerrainVisual.h"
@@ -82,35 +84,22 @@ void INI::parseWaterSettingDefinition( INI* ini )
 		throw INI_INVALID_DATA;
 
 	// parse the data
-	ini->initFromINI( waterSetting, waterSetting->getFieldParse() );
+	WaterSetting candidate=*waterSetting;
+	ini->initFromINI(&candidate,candidate.getFieldParse());
+	nativeExchangeWaterSetting(*waterSetting,candidate);
 
 }  // end parseWaterSetting
 
 //-------------------------------------------------------------------------------------------------
 void INI::parseWaterTransparencyDefinition( INI *ini )
 {
-	if (TheWaterTransparency == NULL) {
-		TheWaterTransparency = newInstance(WaterTransparencySetting);
-	} else if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
-		WaterTransparencySetting* wt = (WaterTransparencySetting*) (TheWaterTransparency.getNonOverloadedPointer());
-		WaterTransparencySetting* wtOverride = newInstance(WaterTransparencySetting);
-		*wtOverride = *wt;
-
-		// Mark that it is an override.
-		wtOverride->markAsOverride();
-
-		wt->friend_getFinalOverride()->setNextOverride(wtOverride);
-	} else {
-		throw INI_INVALID_DATA;
-	}
-
-	WaterTransparencySetting* waterTrans = (WaterTransparencySetting*) (TheWaterTransparency.getNonOverloadedPointer());
-	waterTrans = (WaterTransparencySetting*) (waterTrans->friend_getFinalOverride());
-	// parse the data
-	ini->initFromINI( waterTrans, TheWaterTransparency->getFieldParse() );
+	nativeAdmitOverride(TheWaterTransparency,ini->getLoadType()==INI_LOAD_CREATE_OVERRIDES,
+		[]{return newInstance(WaterTransparencySetting);},
+		[&](WaterTransparencySetting& candidate){ini->initFromINI(&candidate,candidate.getFieldParse());},
+		[&](const WaterTransparencySetting* wtOriginal,WaterTransparencySetting& candidate){
 	
 	// If we overrode any skybox textures, then call the W3D Water stuff.
-	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
+	if (wtOriginal && ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
 		// Check to see if we overrode any skybox textures.
 		// If we did, then we need to replace them in the model.
 		// Copy/Paste monkeys PLEASE TAKE NOTE. This technique only works for the skybox because we
@@ -118,11 +107,7 @@ void INI::parseWaterTransparencyDefinition( INI *ini )
 		// technicals, for instance, it would make all technicals in the level have the same new
 		// texture.
 
-		const WaterTransparencySetting* wtOriginal = TheWaterTransparency.getNonOverloadedPointer();
-		OVERRIDE<WaterTransparencySetting> wtOverride = TheWaterTransparency;
-
-		if (wtOriginal == wtOverride) 
-			return;
+		const WaterTransparencySetting* wtOverride=&candidate;
 
 		const AsciiString *oldTextures[5],*newTextures[5];
 
@@ -138,6 +123,8 @@ void INI::parseWaterTransparencyDefinition( INI *ini )
 		oldTextures[4]=&wtOriginal->m_skyboxTextureT;
 		newTextures[4]=&wtOverride->m_skyboxTextureT;
 
+		if(!TheTerrainVisual)throw ERROR_BAD_ARG;
 		TheTerrainVisual->replaceSkyboxTextures(oldTextures, newTextures);
 	}
+	});
 }

@@ -38,6 +38,7 @@
 #include "Common/PlayerList.h"
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
+#include "Common/NativeEnvironmentSettings.h"
 #include "Common/NativeClock.h"
 #include "Common/NativeSubsystemInit.h"
 #include "Common/NativeUserStorage.h"
@@ -180,6 +181,7 @@ GameEngine::GameEngine( void )
 //-------------------------------------------------------------------------------------------------
 GameEngine::~GameEngine()
 {
+	if(m_environmentSettings)m_environmentSettings->activate();
 	auto* registry=m_serviceOwners.acquired(TheSubsystemList);
 	const bool ownsWorld=registry!=nullptr;
 	if (registry) {
@@ -200,6 +202,7 @@ GameEngine::~GameEngine()
 //	TheShell = NULL;
 
 	if (registry) registry->shutdownAll();
+	m_environmentSettings.reset(); // World callbacks are finished; restore borrowed configuration.
 	m_serviceOwners.retire(TheSubsystemList);
 
 	if (ownsWorld) {
@@ -365,10 +368,10 @@ void GameEngine::init( int argc, char *argv[] )
             throw std::runtime_error("Asset-writing image updates are unsupported; supplied assets are read-only");
 
 		// read the water settings from INI (must do prior to initing GameClient, apparently)
-		ini.load( AsciiString( "Data\\INI\\Default\\Water.ini" ), INI_LOAD_OVERWRITE, &xferCRC );
-		ini.load( AsciiString( "Data\\INI\\Water.ini" ), INI_LOAD_OVERWRITE, &xferCRC );
-		ini.load( AsciiString( "Data\\INI\\Default\\Weather.ini" ), INI_LOAD_OVERWRITE, &xferCRC );
-		ini.load( AsciiString( "Data\\INI\\Weather.ini" ), INI_LOAD_OVERWRITE, &xferCRC );
+		m_environmentSettings=std::make_unique<NativeEnvironmentSettings>();
+		for(const char* path:{"Data\\INI\\Default\\Water.ini","Data\\INI\\Water.ini",
+			"Data\\INI\\Default\\Weather.ini","Data\\INI\\Weather.ini"})
+			m_environmentSettings->load([&]{ini.load(AsciiString(path),INI_LOAD_OVERWRITE,&xferCRC);});
 
 
 

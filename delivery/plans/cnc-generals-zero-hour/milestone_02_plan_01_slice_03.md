@@ -3444,3 +3444,24 @@ and source configuration/water/client tests remain required. Focused iteration,
 then freeze the coherent cohort for GCC and GCC/Clang sanitizer related checks.
 The concrete native process factory and loaded simulation remain mandatory
 following this configuration admission work; do not accept a prefix as N2.
+
+Environment continuation implementation: the coupled production owner/parsers
+and generated environment_settings fixture are in progress. Initial eight GCC,
+GCC sanitizer and Clang sanitizer families passed (0.22s/3.44s/1.45s); source
+weather/time standard manifests are 16/11, snow array terminal 1, every prefix
+has a same-owner retry, and fixed typed-pool exhaustion retires owning units.
+The actual root-prefix fixture now reaches the explicit audio-provider stop and
+retires its admitted services/configuration (GCC 1.94s). Its initial missing
+custom INI failure was a fixture defect: source prepFile requires every selected
+file. All selected prefix INIs now exist; empty generated tables are not accepted
+as complete-game content. No physical output or simulation claim is added.
+Freeze this whole cohort for configured builds and related suites including
+configuration/LOD/environment under all three configurations before committing.
+Current evidence and pending limits: evidence/qa/N2-environment-settings.md.
+
+Environment cohort final validation: all configured builds and related249 PASS
+GCC271.38s, GCC sanitizer1116.02s and Clang sanitizer708.31s; every process
+terminal0, no suppressions or timeout changes. Frozen canonical660/inclusive667
+fingerprints rechecked before commit. No live jobs remain. This closes the
+coherent environment admission checkpoint, not slice03/N2: full401, concrete
+native factory/full original startup and loaded simulation remain pending.

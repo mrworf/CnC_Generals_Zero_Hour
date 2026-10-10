@@ -5442,3 +5442,39 @@ Source rand() here is visual snow noise, not GameLogic random state. Sources:
 INIWater.cpp::{parseWaterSettingDefinition,parseWaterTransparencyDefinition},
 Snow.cpp::{INI::parseWeatherDefinition,SnowManager::init,updateIniSettings,
 ~SnowManager}, Overridable.h and NativeThingTemplateData.cpp::copyFrom.
+
+Environment admission implementation and focused evidence (N2 slice03, not full
+startup acceptance): NativeOverrideAdmission stages a pooled node and guards its
+destination links through root payload copying, parses before linking, and
+withdraws the acquired publication when notification fails. Static WaterSetting
+updates stage the whole payload. NativeEnvironmentSettings isolates borrowed
+heads and time-of-day payloads, captures source parsing acquisitions on success
+or failure, then retires only those chains after world shutdown and restores the
+borrowed identities. Snow backing is initialized to null, guarded through
+virtual initialization, and duplicate initialization is rejected before replacing
+backing. Finite numeric checks precede integer conversion and reciprocals.
+
+Generated source parsers prove three-node chains remain acyclic and preserve
+original root-base copy semantics rather than inheriting the last override.
+Standard allocation manifests currently terminate at weather=16 and time-water=11;
+each prefix retains its same-owner corrected retry. Snow backing has terminal=1.
+Separate fixed typed-pool exhaustion/retry checks prove pooled units retire.
+GCC and both sanitizer configurations passed the initial eight focused families;
+the subsequent actual GameEngine initialization-prefix fixture passed GCC.
+These results belong to their recorded source stages, not a final frozen matrix.
+
+The root-prefix fixture exposed the actual INI file precondition:
+INICore.cpp::prepFile rejects every missing explicitly selected file; there is no
+implicit empty custom INI fallback. Supply all default/custom files selected by
+GameEngine and both GameLOD preset files, plus the selected language file.
+Generated empty tables can prove admission/cleanup but not valid whole-game
+configuration. The fixture uses separate disposable user storage and actual
+registered GlobalData, LOD, text, science, multiplayer, terrain/road and language
+owners, and deliberately rejects at createAudioManager. It does not initialize
+audio, client, logic, a map or simulation. Evidence: N2-environment-settings.md.
+
+The final frozen environment cohort passes configured builds/related249 under
+GCC and both GCC/Clang ASan/UBSan/LSan, all terminal0; source fingerprints and
+attribution are in that evidence. Full401 and actual complete native process
+startup/loaded simulation remain pending. Do not elevate prefix admission into
+whole-game parity or reuse earlier source stages as this checkpoint's acceptance.

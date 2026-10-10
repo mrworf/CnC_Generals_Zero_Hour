@@ -30,6 +30,10 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the Game
 #include "GameClient/Snow.h"
 #include "GameClient/View.h"
+#include "Common/NativeOverrideAdmission.h"
+#include <cmath>
+#include <limits>
+#include <memory>
 
 #ifdef _INTERNAL
 // for occasional debugging...
@@ -39,7 +43,22 @@
 
 SnowManager *TheSnowManager=NULL;
 
-SnowManager::SnowManager()
+namespace {
+void validateSnowSettings(const WeatherSetting& value) {
+  for(Real number:{value.m_snowFrequencyScaleX,value.m_snowFrequencyScaleY,
+    value.m_snowAmplitude,value.m_snowPointSize,value.m_snowMaxPointSize,
+    value.m_snowMinPointSize,value.m_snowQuadSize,value.m_snowBoxDimensions,
+    value.m_snowBoxDensity,value.m_snowVelocity})
+    if(!std::isfinite(number))throw INI_INVALID_DATA;
+  if(value.m_snowBoxDimensions<1 ||
+     double(value.m_snowBoxDimensions)>double(std::numeric_limits<Int>::max()) ||
+     value.m_snowBoxDensity<=0 || value.m_snowVelocity<=0 ||
+     !std::isfinite(1.f/value.m_snowBoxDensity) ||
+     !std::isfinite(value.m_snowBoxDimensions/value.m_snowVelocity))throw INI_INVALID_DATA;
+}
+}
+
+SnowManager::SnowManager():m_startingHeights(nullptr)
 {
 	m_time = 0;
 	m_velocity = 1;
@@ -50,14 +69,19 @@ void SnowManager::init( void )
 {
 	//starting heights of each particle
 	//TODO: replace this lookup table with some kind of procedural method that takes x,y as input.
-	m_startingHeights=NEW Real [ SNOW_NOISE_X * SNOW_NOISE_Y];
-	m_time = 0;
-
-	updateIniSettings();
+	if(m_startingHeights || !TheWeatherSetting)throw ERROR_BAD_ARG;
+	validateSnowSettings(**TheWeatherSetting);
+	std::unique_ptr<Real[]> candidate(NEW Real[SNOW_NOISE_X*SNOW_NOISE_Y]);
+	m_startingHeights=candidate.get();
+	try{updateIniSettings();}catch(...){m_startingHeights=nullptr;throw;}
+	candidate.release();
+	m_time=0;
 }
 
 void SnowManager::updateIniSettings(void)
 {
+	if(!m_startingHeights || !TheWeatherSetting)throw ERROR_BAD_ARG;
+	validateSnowSettings(**TheWeatherSetting);
 	Real *dst=m_startingHeights;
 	//initialize a table of random starting positions for each particle.
 	Int boxDimensions = (Int)TheWeatherSetting->m_snowBoxDimensions;
@@ -125,28 +149,10 @@ const FieldParse WeatherSetting::m_weatherSettingFieldParseTable[] =
 //-------------------------------------------------------------------------------------------------
 void INI::parseWeatherDefinition( INI *ini )
 {
-	if (TheWeatherSetting == NULL) {
-		TheWeatherSetting = newInstance(WeatherSetting);
-	} else if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
-		WeatherSetting* ws = (WeatherSetting*) (TheWeatherSetting.getNonOverloadedPointer());
-		WeatherSetting* wsOverride = newInstance(WeatherSetting);
-		*wsOverride = *ws;
-
-		// Mark that it is an override.
-		wsOverride->markAsOverride();
-
-		ws->friend_getFinalOverride()->setNextOverride(wsOverride);
-	} else {
-		throw INI_INVALID_DATA;
-	}
-
-	WeatherSetting* weatherSet = (WeatherSetting*) (TheWeatherSetting.getNonOverloadedPointer());
-	weatherSet = (WeatherSetting*) (weatherSet->friend_getFinalOverride());
-	// parse the data
-	ini->initFromINI( weatherSet, TheWeatherSetting->getFieldParse() );
-
-	if (TheSnowManager)
-		TheSnowManager->updateIniSettings();
+	nativeAdmitOverride(TheWeatherSetting,ini->getLoadType()==INI_LOAD_CREATE_OVERRIDES,
+		[]{return newInstance(WeatherSetting);},
+		[&](WeatherSetting& candidate){ini->initFromINI(&candidate,candidate.getFieldParse());validateSnowSettings(candidate);},
+		[](const WeatherSetting*,WeatherSetting&){if(TheSnowManager)TheSnowManager->updateIniSettings();});
 
 	if (ini->getLoadType() == INI_LOAD_CREATE_OVERRIDES) {
 		// Check to see if we overrode any textures.

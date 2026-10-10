@@ -149,6 +149,7 @@ target_compile_definitions(original_templates PRIVATE _OPERATOR_NEW_DEFINED_)
 target_compile_options(original_templates PRIVATE -Wno-unknown-pragmas -Werror=return-type -ffp-contract=off)
 # Their archive is compilation evidence, not complete executable acceptance.
 add_library(original_bootstrap STATIC
+  "${ZH_CODE}/GameEngine/Source/Common/System/NativeEnvironmentSettings.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeStartupPublications.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/GameEngine.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/GameMain.cpp"
@@ -456,6 +457,18 @@ add_executable(original_diplomacy_fixture tests/original/diplomacy.cpp tests/ori
 add_executable(original_lod_fixture tests/original/lod.cpp tests/original/AllocationFault.cpp)
 add_executable(original_native_client_fixture tests/original/native_client.cpp tests/original/AllocationFault.cpp)
 add_executable(original_native_terrain_fixture tests/original/native_terrain.cpp tests/original/AllocationFault.cpp)
+add_executable(original_environment_fixture tests/original/environment_settings.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_environment_fixture PRIVATE
+  "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_include_directories(original_environment_fixture PRIVATE
+  "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
+target_compile_definitions(original_environment_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+target_link_options(original_environment_fixture PRIVATE -Wl,--gc-sections)
+foreach(family IN ITEMS parsing negative ownership snow snow-faults weather-faults time-faults pools root-prefix)
+  add_test(NAME original_environment_${family} COMMAND original_environment_fixture "${family}")
+  set_tests_properties(original_environment_${family} PROPERTIES LABELS "original;runtime;configuration" TIMEOUT 60
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 add_executable(original_native_water_fixture tests/original/native_water.cpp tests/original/AllocationFault.cpp)
 target_link_libraries(original_native_water_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")

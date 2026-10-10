@@ -52,6 +52,7 @@ class FunctionLexicon;
 class Radar;
 class WebBrowser;
 class ParticleSystemManager;
+class NativeEnvironmentSettings;
 
 /**
  * The implementation of the game engine
@@ -84,6 +85,7 @@ public:
 protected:
 
 	NativeServiceOwners<6> m_serviceOwners;
+	std::unique_ptr<NativeEnvironmentSettings> m_environmentSettings;
 	void quiesceOwnedWorld();
 	void resetOwnedWorld();
 
