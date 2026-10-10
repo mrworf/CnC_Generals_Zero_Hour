@@ -68,7 +68,7 @@
     "milestone_complete": false,
     "slice_complete": false,
     "evidence": "evidence/qa/N2-command-metadata-implementation.md",
-    "repository_commit": null
+    "repository_commit": "294dfb38daf5b59d06812b9ebbb57ec9483af22c"
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
