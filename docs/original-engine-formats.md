@@ -5624,3 +5624,35 @@ allocation-free evaluation/blend/pristine queries and integrated original File
 reads with owned animation/bone queries after complete input retirement. Actual original draw consumers,
 materials/prototypes/conditions, renderer parity, full startup and loaded frames
 remain pending; these CPU query fixtures do not establish whole-game acceptance.
+
+Asset graph cohort (parent bd5b835f): `WW3D2/assetmgr.cpp` Load_3D_Assets,
+Create_Render_Obj (799), Get_HAnim (978), Get_HTree (1032) and Find_Prototype
+(1672) route models by the prefix before the first dot, animations by the suffix,
+and hierarchies by their full name. Explicit NULL exists without a file. Mesh
+names are container.name, or bare name for an empty container
+(`meshmdlio.cpp`, 268). First accepted definitions win; cross-kind collisions
+must follow actual file-root order rather than mesh-first grouped tables.
+
+`W3DFileSystem.cpp::GameFileClass::Set_Name` prioritizes localized
+Data/<language>/Art/W3D, then Art/W3D, then explicit user W3D storage. Native
+lookup deliberately excludes legacy/test-art and literal parent-directory
+fallbacks. Asset/user namespaces remain separately configured and read-only
+for admission. `hlod.cpp` constructor resolves child render objects and
+aggregates; proxies retain names/bones as metadata, not file dependencies.
+`htree.cpp::Init_Default` (85) has one RootTransform and an empty hierarchy name;
+an authored empty HLOD hierarchy legitimately uses it. Missing named trees and
+children are source error paths, not accepted native substitutes.
+
+`w3d_file.h::W3dNullObjectStruct` (2120) is48 bytes: version, attributes,
+two pad words, then32 name bytes at offset16. Preserve all backing. Native
+admission retains exact shared hierarchy identity across model/motion handles;
+equal names/counts do not make old and new cache-generation skeletons identical.
+Whole offside graph publication preserves accepted cache state on any failure.
+
+Evidence: `evidence/qa/N2-w3d-assets.md`, related42 PASS GCC/GCCsan/Clangsan;
+exact cold model/animation terminals144/47, NULL-seeded143/48, every retry,
+descriptor/pooled File retirement, allocation-free hits/clear and retained graph
+queries after complete input retirement. Current support is mesh/HLOD/null and
+owned raw/compressed animations; other prototype/material/morph/combo formats,
+incidental eager clip-loading interactions, condition/draw consumer integration,
+full startup and simulation remain pending. This is not retail visual parity.

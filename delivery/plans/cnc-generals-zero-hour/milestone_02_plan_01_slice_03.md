@@ -3569,3 +3569,53 @@ every retry, allocation-free evaluation. Canonical668/inclusive675; evidence
 checkpoint, not closure of the whole model cohort, slice03 or N2. Continue
 material/prototype/HLOD/cache/condition binding and original production query
 consumers, then actual native factory/full original startup and loaded world.
+
+Asset/prototype continuation (parent bd5b835f, clean tree): implement one coherent
+NativeW3DAssets original FileSystem-to-resolved-model/animation cohort. Preserve
+case-insensitive keys, model container-prefix filenames, animation suffix
+filenames, hierarchy filenames, localized/base/user W3D precedence and first
+accepted duplicate definitions. Release-only lookup stays inside configured
+asset/user namespaces: do not revive legacy/test-art discovery or literal parent
+traversal. Read-only input files and unknown document bytes remain untouched.
+
+Use offside complete cache state and immutable document/definition handles;
+commit a request only after every required hierarchy/HLOD child/aggregate and
+skinned mesh bone relationship resolves. Empty HLOD hierarchy legitimately uses
+the source one-root default; a missing named hierarchy/child rejects rather than
+fabricating a usable model from source error-path omissions. Proxy names are
+metadata, not recursively loaded render objects. Detect prototype/file cycles
+and bounded depth, preserve LOD order/cardinality/thresholds and all authored
+backing for later renderer use. Model, hierarchy and decoded animation handles
+must survive cache clear and FileSystem/asset-owner retirement. Cache hits and
+clear must allocate nothing; failed cold or warm requests preserve exact
+accepted cache identities/counts and retire every candidate acquisition.
+
+Generated whole-file loose/BIG/localized fixtures, nested/external HLOD assets,
+source filename routing, collisions, missing/malformed/cyclic dependencies,
+typed skin relationship rejection, retained-handle lifetimes and complete
+standard-allocation failure/retry sweeps cover this admission cohort. Warm the
+identical whole original FileSystem/provider cohort before each baseline and
+derive exact cold/warm terminals. Reuse existing motion/pose tests and freeze
+GCC plus both sanitizer related matrix only after the coupled cohort stabilizes.
+This supports but does not complete condition binding, all shipped draw-data
+registrations, actual original factory/startup and loaded simulation.
+
+Animation cache handles retain decoded motion, their exact admitted hierarchy
+identity and their immutable input document. Validate model/clip binding by that
+identity, not only an equal hierarchy name/count: handles retained across clear
+must not silently bind to another generation's reordered skeleton. Load definition
+tables in authored root order across prototype kinds; mesh-first grouped loops
+would violate first-winner collisions. Named null records are48 bytes including
+two pad words before their32-byte name; preserve their backing and explicit
+NULL builtin rather than treating arbitrary missing models as null objects.
+
+Asset graph checkpoint verified before commitment: related42 PASS in GCC3.06s,
+GCC sanitizer13.32s and Clang sanitizer9.81s, all terminal0. Sandboxed sanitizer
+process-inspection errors were retained, then identical host reruns passed with
+all checks enabled. Exact cold model/animation144/47 and NULL-seeded143/48
+terminals/every retry; descriptor and pooled File retirement, complete-owner
+standard retirement, allocation-free cache hits/clear and retained model/motion
+queries passed. Evidence: `evidence/qa/N2-w3d-assets.md`; canonical671/inclusive678.
+Full423 unrun; broader populated-cache fault shapes and remaining prototype,
+material, condition/draw integration are not claimed. This is a supporting
+checkpoint only: slice03 and N2 remain in progress under this same plan.
