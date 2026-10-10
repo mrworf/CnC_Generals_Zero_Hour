@@ -3910,3 +3910,4 @@ same-frame/configured-step behavior, rejection/retry, reset and repeated owners
 are verified. Evidence: evidence/qa/N2-display-time.md. Full457 and complete
 GameClient update, bounding primitives, concrete19/condition/event callbacks,
 whole native startup and loaded simulation remain pending under slice03/N2.
+Fixed-step display payload commit: `425c341d81cf0f4385dfb527fe74abe1e9281bbb`.

@@ -34,7 +34,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 display-time supporting checkpoint validated; payload provenance pending; no live jobs. Implement bounding primitive/all-LOD/current model bounds and concrete native draw-provider selection/client RNG/transitions/pause/events; complete runtime19 and condition transfer/material/prototypes, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full457, slice03 and N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 display-time supporting checkpoint committed in 425c341d81cf0f4385dfb527fe74abe1e9281bbb; no live jobs. Implement bounding primitive/all-LOD/current model bounds and concrete native draw-provider selection/client RNG/transitions/pause/events; complete runtime19 and condition transfer/material/prototypes, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full457, slice03 and N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -170,7 +170,7 @@
   "active_implementation": {
     "label": "original-fixed-step-display-time",
     "parent_commit": "b79590c43252f3fefce2c91001c1dcbfd1f2d028",
-    "status": "validated supporting logical display-time checkpoint; payload provenance pending; not slice03 or N2 acceptance",
+    "status": "committed supporting logical display-time checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-display-time.md",
     "canonical_source_files": 716,
@@ -205,7 +205,8 @@
     "full_suite_run": false,
     "slice_complete": false,
     "milestone_complete": false,
-    "next": "Implement bounding primitive/all-LOD/current model bounds and concrete native draw-provider selection/client RNG/transitions/pause/events; complete runtime19 and condition transfer/material/prototypes, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full457, slice03 and N2 acceptance pending."
+    "next": "Implement bounding primitive/all-LOD/current model bounds and concrete native draw-provider selection/client RNG/transitions/pause/events; complete runtime19 and condition transfer/material/prototypes, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full457, slice03 and N2 acceptance pending.",
+    "repository_commit": "425c341d81cf0f4385dfb527fe74abe1e9281bbb"
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -686,7 +687,7 @@
   "display_time_checkpoint": {
     "label": "original-fixed-step-display-time",
     "parent_commit": "b79590c43252f3fefce2c91001c1dcbfd1f2d028",
-    "status": "validated supporting logical display-time checkpoint; payload provenance pending; not slice03 or N2 acceptance",
+    "status": "committed supporting logical display-time checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-display-time.md",
     "canonical_source_files": 716,
@@ -721,6 +722,7 @@
     "full_suite_run": false,
     "slice_complete": false,
     "milestone_complete": false,
-    "next": "Implement bounding primitive/all-LOD/current model bounds and concrete native draw-provider selection/client RNG/transitions/pause/events; complete runtime19 and condition transfer/material/prototypes, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full457, slice03 and N2 acceptance pending."
+    "next": "Implement bounding primitive/all-LOD/current model bounds and concrete native draw-provider selection/client RNG/transitions/pause/events; complete runtime19 and condition transfer/material/prototypes, then full native GameClient/root startup and loaded deterministic simulation under existing N2 plan01/slice03. Full457, slice03 and N2 acceptance pending.",
+    "repository_commit": "425c341d81cf0f4385dfb527fe74abe1e9281bbb"
   }
 }
