@@ -34,7 +34,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 actual Drawable query supporting checkpoint validated; no live jobs. Complete concrete current-client/native draw providers and derived19 registrations, condition transfer/material/prototype admission, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full441, slice03 and N2 acceptance remain pending.",
+  "resume_point": "N2 plan01/slice03 actual Drawable query supporting checkpoint committed in 8948f34ed66586e2aa59604be4a56ec03f96842a; no live jobs. Complete concrete current-client/native draw providers and derived19 registrations, condition transfer/material/prototype admission, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full441, slice03 and N2 acceptance remain pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -170,7 +170,7 @@
   "active_implementation": {
     "label": "original-native-drawable-queries",
     "parent_commit": "93abe2f43da62d1ec0d39484a063b2418e841e9b",
-    "status": "validated supporting actual Drawable query checkpoint; not slice03 or N2 acceptance",
+    "status": "committed supporting actual Drawable query checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-drawable-queries.md",
     "canonical_source_files": 683,
@@ -200,7 +200,7 @@
     "slice_complete": false,
     "milestone_complete": false,
     "next": "Complete concrete current-client/native draw providers and derived19 registrations, condition transfer/material/prototype admission, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full441, slice03 and N2 acceptance remain pending.",
-    "repository_commit": null
+    "repository_commit": "8948f34ed66586e2aa59604be4a56ec03f96842a"
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -497,7 +497,7 @@
   "drawable_query_checkpoint": {
     "label": "original-native-drawable-queries",
     "parent_commit": "93abe2f43da62d1ec0d39484a063b2418e841e9b",
-    "status": "validated supporting actual Drawable query checkpoint; not slice03 or N2 acceptance",
+    "status": "committed supporting actual Drawable query checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-drawable-queries.md",
     "canonical_source_files": 683,
@@ -527,6 +527,6 @@
     "slice_complete": false,
     "milestone_complete": false,
     "next": "Complete concrete current-client/native draw providers and derived19 registrations, condition transfer/material/prototype admission, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full441, slice03 and N2 acceptance remain pending.",
-    "repository_commit": null
+    "repository_commit": "8948f34ed66586e2aa59604be4a56ec03f96842a"
   }
 }
