@@ -3857,3 +3857,4 @@ together. Evidence: evidence/qa/N2-current-model-queries.md. Full454, source clo
 animation producers, bounding primitives, concrete19 runtime callbacks and whole
 native startup/loaded simulation remain pending under this same slice03/N2.
 No live validation jobs remain; this supporting checkpoint is not N2 acceptance.
+Current-model query payload commit: `20140868832d6769c429ba5d746b09ce8c754ed1`.
