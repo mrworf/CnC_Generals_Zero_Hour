@@ -26,15 +26,15 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "d172c2fc",
-    "label": "original-w3d-input-owner",
-    "evidence": "evidence/qa/N2-w3d-document.md",
-    "validation": "Frozen W3D/core/data builds/related23 PASS all3; exact terminal51/every retry. Full405 unrun.",
-    "next": "Continue motion/material/channel admission, asset/prototype relationships and original condition/bone query consumers under existing slice03; then actual loaded terrain/ghost and native factory/full root/nonempty simulation.",
+    "parent": "e0789e5e",
+    "label": "original-w3d-motion-and-pose",
+    "evidence": "evidence/qa/N2-w3d-motion.md",
+    "validation": "Final explicit unfused arithmetic builds/related32 PASS all3, integrated original File-to-model and post-input-retirement bone queries, terminals7/7/6 and pose3/every retry, allocation-free evaluation. Full413 unrun.",
+    "next": "Continue material/prototype/HLOD relationship admission, asset caches and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then actual native factory/full startup, loaded terrain/ghost and nonempty deterministic simulation. Morph/combo and captured controls integration are not accepted by generated CPU queries.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 W3D input-owner supporting checkpoint: builds/related23 PASS GCC0.98s/GCCsan5.93s/Clangsan4.15s; exact terminal51/every retry; canonical663/inclusive670; no live jobs. Continue the existing whole CPU model/prototype/condition/bone-query cohort, then actual native factory/full startup and loaded world. Full405 and slice03/N2 acceptance pending; no agents or blockers.",
+  "resume_point": "N2 plan01/slice03 CPU motion-to-bone cohort validated: final builds/related32 PASS GCC2.59s/GCCsan9.32s/Clangsan6.89s; canonical668/inclusive675; no live jobs. Raw/time-coded/adaptive channels, hierarchy/capture/blend owners, original File-to-model integration and exact failure/retry completed as supporting behavior. Continue prototype/material/cache/condition binding into original query consumers, then actual full native startup and loaded simulation. Full413 and N2/slice03 acceptance pending; no agents or blockers.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -168,23 +168,37 @@
     "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
   },
   "active_implementation": {
-    "label": "original-environment-admission",
-    "status": "committed_checkpoint",
+    "label": "original-w3d-motion-and-pose",
+    "parent_commit": "e0789e5e",
+    "status": "validated supporting CPU motion-to-bone cohort; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
-    "evidence": "evidence/qa/N2-environment-settings.md",
-    "canonical_source_sha256": "7bb51cbf49cf61fbe452ffa5025ffb49bdf4c8322b232936aba0303677685df1",
-    "toolchain_inclusive_sha256": "0943f9e7cdfd2777e0e342ab22e967ff8c6fd07a06e89975cdfdabd0e7d50651",
-    "configured_suite_tests": 401,
-    "related_suite_tests_passed": 249,
-    "configurations": [
-      "GCC",
-      "GCC ASan/UBSan/LSan",
-      "Clang ASan/UBSan/LSan"
-    ],
-    "milestone_complete": false,
+    "evidence": "evidence/qa/N2-w3d-motion.md",
+    "canonical_source_files": 668,
+    "canonical_source_sha256": "2755b260e30fa1f85522f42485d9e6c15716374702e290c7d55db89b6069cd8b",
+    "toolchain_inclusive_files": 675,
+    "toolchain_inclusive_sha256": "2092614a745e304cec8c2663646ffa512ecf09a719610e3987858c05b842e138",
+    "configured_suite_tests": 413,
+    "related_tests_per_configuration": 32,
+    "frozen_results": {
+      "gcc": "PASS2.59s; process terminal0",
+      "gcc_sanitize": "PASS9.32s; process terminal0",
+      "clang_sanitize": "PASS6.89s; process terminal0"
+    },
+    "allocation_terminals": {
+      "raw": 7,
+      "timecoded": 7,
+      "adaptive_delta": 6,
+      "pose": 3,
+      "document": 51
+    },
+    "every_failure_retry": true,
+    "pose_evaluation_allocation_attempts": 0,
+    "live_sessions": {},
+    "full_suite_run": false,
     "slice_complete": false,
-    "next": "Continue concrete native factory/full original startup and loaded simulation under existing N2 plan01/slice03; do not substitute prefix or empty providers for those gates.",
-    "repository_commit": "2b14ad41699323b5243b4ab061bf02aa27773826"
+    "milestone_complete": false,
+    "next": "Continue material/prototype/HLOD relationship admission, asset caches and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then actual native factory/full startup, loaded terrain/ghost and nonempty deterministic simulation. Morph/combo and captured controls integration are not accepted by generated CPU queries.",
+    "integrated_file_to_bone_after_input_retirement": true
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -257,12 +271,12 @@
   },
   "native_factory_continuation": {
     "parent_commit": "d172c2fc",
-    "status": "validated_w3d_input_owner_supporting_checkpoint",
+    "status": "validated_cpu_motion_pose_supporting_cohort",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "findings": "docs/original-engine-formats.md",
     "production_changes_started": true,
-    "next": "Continue motion/material/channel admission, asset/prototype relationships and original condition/bone query consumers under existing slice03; then actual loaded terrain/ghost and native factory/full root/nonempty simulation.",
-    "evidence": "evidence/qa/N2-w3d-document.md"
+    "next": "Continue material/prototype/HLOD relationship admission, asset caches and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then actual native factory/full startup, loaded terrain/ghost and nonempty deterministic simulation. Morph/combo and captured controls integration are not accepted by generated CPU queries.",
+    "evidence": "evidence/qa/N2-w3d-motion.md"
   },
   "w3d_document_checkpoint": {
     "parent_commit": "d172c2fc",
@@ -286,5 +300,57 @@
     "full_suite_run": false,
     "slice_complete": false,
     "milestone_complete": false
+  },
+  "w3d_motion_checkpoint": {
+    "label": "original-w3d-motion-and-pose",
+    "parent_commit": "e0789e5e",
+    "status": "validated supporting CPU motion-to-bone cohort; not slice03 or N2 acceptance",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "evidence": "evidence/qa/N2-w3d-motion.md",
+    "canonical_source_files": 668,
+    "canonical_source_sha256": "2755b260e30fa1f85522f42485d9e6c15716374702e290c7d55db89b6069cd8b",
+    "toolchain_inclusive_files": 675,
+    "toolchain_inclusive_sha256": "2092614a745e304cec8c2663646ffa512ecf09a719610e3987858c05b842e138",
+    "configured_suite_tests": 413,
+    "related_tests_per_configuration": 32,
+    "frozen_results": {
+      "gcc": "PASS2.59s; process terminal0",
+      "gcc_sanitize": "PASS9.32s; process terminal0",
+      "clang_sanitize": "PASS6.89s; process terminal0"
+    },
+    "allocation_terminals": {
+      "raw": 7,
+      "timecoded": 7,
+      "adaptive_delta": 6,
+      "pose": 3,
+      "document": 51
+    },
+    "every_failure_retry": true,
+    "pose_evaluation_allocation_attempts": 0,
+    "live_sessions": {},
+    "full_suite_run": false,
+    "slice_complete": false,
+    "milestone_complete": false,
+    "next": "Continue material/prototype/HLOD relationship admission, asset caches and condition binding into original production draw/bone query consumers under existing N2 plan01/slice03; then actual native factory/full startup, loaded terrain/ghost and nonempty deterministic simulation. Morph/combo and captured controls integration are not accepted by generated CPU queries.",
+    "integrated_file_to_bone_after_input_retirement": true
+  },
+  "prior_motion_implementation": {
+    "label": "original-environment-admission",
+    "status": "committed_checkpoint",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "evidence": "evidence/qa/N2-environment-settings.md",
+    "canonical_source_sha256": "7bb51cbf49cf61fbe452ffa5025ffb49bdf4c8322b232936aba0303677685df1",
+    "toolchain_inclusive_sha256": "0943f9e7cdfd2777e0e342ab22e967ff8c6fd07a06e89975cdfdabd0e7d50651",
+    "configured_suite_tests": 401,
+    "related_suite_tests_passed": 249,
+    "configurations": [
+      "GCC",
+      "GCC ASan/UBSan/LSan",
+      "Clang ASan/UBSan/LSan"
+    ],
+    "milestone_complete": false,
+    "slice_complete": false,
+    "next": "Continue concrete native factory/full original startup and loaded simulation under existing N2 plan01/slice03; do not substitute prefix or empty providers for those gates.",
+    "repository_commit": "2b14ad41699323b5243b4ab061bf02aa27773826"
   }
 }

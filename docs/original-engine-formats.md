@@ -5565,3 +5565,62 @@ retaining unknown payloads. Generated functional/negative/fault/VFS evidence and
 GCC plus both sanitizer related23 results are in `evidence/qa/N2-w3d-document.md`.
 Exact replacement terminal51/every retry passed; channels, sampled poses,
 materials and production model consumers are not yet admitted or accepted.
+
+CPU animation/pose cohort (parent e0789e5e): source
+`animobj.h::Anim_Update` explicitly selects the raw `HTreeClass::Anim_Update`
+overload, which calls Float_To_Long(frame) and does not interpolate. The retail
+x87 conversion is nearest/even; the non-MSVC fallback truncates instead. Native
+sampling makes the retail conversion explicit without depending on host rounding
+mode. Generic raw Get_Translation/Get_Orientation interpolation and blend queries
+remain distinct, including source last-to-first sample wrapping. Raw bit defaults
+are compared with1, not treated as arbitrary nonzero true. Pre3.0 raw motion and
+bit pivot shifts depend on the animation version, not the hierarchy version.
+
+Compressed add_channel switches actually accept flags0/1/2/6 despite separate
+TIMECODED/ADAPTIVEDELTA enum names in w3d_file.h. Time-coded packets use the next
+key's high bit to hold the current vector/quaternion rather than interpolating.
+Visibility uses each key's high bit as its state; before the first visibility key
+the source returns that first key, not DefaultVal. Vector keys require a first
+key at0 and increasing low31 times for the original search to terminate safely.
+Channel frame counts/key endpoints are independent of clip duration: adaptive
+GetFrame clamps to its own NumFrames, and sparse tracks can extend past the clip.
+Native admission must not demand equal duration merely because fixtures do.
+Absent channels yield source zero translation/identity rotation/visible state.
+Original loaders decode then discard channels indexing absent bones; duplicate
+channels use the last record but leak the overwritten pointer. Native owners
+retain the last valid record and retire replaced storage without that leak.
+
+Adaptive-delta backing begins with VectorLen float values, then interleaved
+9-byte packets per component, each filter byte followed by16 signed nibbles
+(low nibble first). A component advances by9*VectorLen to the next packet.
+Filters0..15 are the literal source scale powers;16..255 use
+1-sin((90*i/240)*pi/180), multiplied by channel Scale. Full backing is bounded
+before expansion and each computed value checked finite. motchan.cpp's
+decompress functions declare `done` outside the component loop: after completing
+one component, later components can stop after their first packet. The cached
+forward path additionally supplies CacheFrame+1 values with a CacheFrame source
+index. Native deterministic reconstruction fixes these original defects rather
+than preserving query-order-dependent corrupt results. Generated tests span
+34 frames, multiple components/packets, signed nibbles and random-order seeks.
+
+NativeW3DPose owns all hierarchy/capture/pose backing; external root replaces
+authored pivot0, and children compose parent * base * scaled local motion.
+Build_Matrix3D uses the authored quaternion directly, without normalization.
+Captured local translation rotates with the bone; world-space capture removes
+translation before orientation composition then adds it in world space
+(pivot.cpp::Capture_Update). Capture forces visibility in animated updates.
+Bone visibility is not inherited from the parent. Pristine queries compose only
+the authored chain. Source Blend_Update uses generic interpolated queries and
+visibility OR even at endpoint blend weights. Named lookup is case-insensitive;
+the native optional result distinguishes a real root from original miss0.
+Sources: motchan.{h,cpp}, hrawanim.cpp::read_channel/read_bit_channel/add_channel/
+Get_Translation/Get_Orientation/Get_Visibility, hcanim.cpp::add_channel,
+animobj.h::Anim_Update, htree.cpp::Base_Update/Anim_Update/Blend_Update/Scale/
+Simple_Evaluate_Pivot, pivot.cpp::Capture_Update, WWMath/quat.{h,cpp}, wwmath.{h,cpp}.
+
+Evidence: `evidence/qa/N2-w3d-motion.md`; frozen related32 PASS GCC and both
+GCC/Clang sanitizers, exact raw/sparse/delta terminals7/7/6 and pose3/every retry,
+allocation-free evaluation/blend/pristine queries and integrated original File
+reads with owned animation/bone queries after complete input retirement. Actual original draw consumers,
+materials/prototypes/conditions, renderer parity, full startup and loaded frames
+remain pending; these CPU query fixtures do not establish whole-game acceptance.

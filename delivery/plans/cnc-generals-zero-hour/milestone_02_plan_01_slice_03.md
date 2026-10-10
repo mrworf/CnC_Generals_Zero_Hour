@@ -3513,3 +3513,59 @@ W3D/core/data related23 PASS all3 (GCC0.98s/GCCsan5.93s/Clangsan4.15s), exact
 allocation terminal51 and every retry, canonical663/inclusive670. Evidence:
 `evidence/qa/N2-w3d-document.md`. Full405 unrun; continue model sampling/material
 admission and original query consumers, then actual native factory/loaded world.
+
+Animation/model continuation (parent e0789e5e, clean worktree): implement the
+complete CPU motion admission cohort, not only raw samples. NativeW3DAnimation
+resolves an explicit matching hierarchy and owns all admitted channel backing;
+raw vector/bit, time-coded vector/bit and adaptive-delta streams share staged
+replacement and exact failure/retry tests. Preserve pre3.0 raw pivot shifting,
+source discard of out-of-range pivots, unknown payload retention in the document,
+raw default/identity behavior, next-key binary movement, compressed endpoint
+clamping, low/high nibble signed deltas and original filter-table construction.
+Bound backing before expansion; reject malformed active channels and non-finite
+sample requests without invalid native conversions. Keep raw Generals rounded
+frame sampling distinct from the generic interpolated query. Do not reinterpret
+enum names: compressed add_channel actually selects flags0/1/2/6.
+
+Inspect complete admission/retirement and all interpolation paths before frozen
+GCC/Clang sanitizer evidence. Tests must span multiple delta packets/components,
+random-order seeks, raw last-to-first interpolation, sparse binary transitions,
+visibility boundaries, borrowed-input retirement and whole-owner replacement.
+Known original adaptive cache/reconstruction bugs must not be reproduced as
+undefined behavior or order-dependent corrupt animation; document the source
+defect and the deterministic corrected decoding. This remains supporting model
+work under slice03: pose composition, materials, prototype/condition binding,
+original production query consumers and complete game startup remain mandatory.
+
+Freeze arithmetic as well as ownership: compile original_data with
+`-ffp-contract=off` so the source interpolation/delta/composition operations are
+not silently fused on a different compiler or CPU. Revalidate the whole related
+cohort on that final configuration; retain the earlier freeze as prior evidence.
+
+Coupled pose/query phase before cohort freeze: NativeW3DPose owns hierarchy
+names, parent indices, authored quaternion/translation bases, capture controls
+and two complete pose buffers. Compose external root, parent/base, local scaled
+motion, then capture exactly in source order; root ignores authored root data.
+Case-insensitive bone lookup must distinguish a found root from source miss0.
+Pristine queries exclude animation/capture; captured local versus world-space
+translation and forced visibility follow pivot.cpp. Source blend uses generic
+interpolated motion and visibility OR, not Generals-rounded sampling. Evaluation
+and query must allocate nothing after admission, remain deterministic across
+random seeks, and preserve the previous whole pose on rejection. Generated
+rotation/parent/scale/capture/blend oracles plus exact owner failure/retry and
+allocation-free evaluation tests cover the coupled motion-to-bone boundary.
+
+Before commitment, include a generated integrated original File/VFS -> decoded
+hierarchy/document -> owned animation/pose -> named muzzle-query fixture. Retire
+the file, VFS, document and borrowed hierarchy before querying the resulting
+owners. Warm that identical complete source cohort before ownership baselines.
+This integration is still not original draw-provider or GameEngine acceptance.
+
+Frozen CPU motion/pose cohort: production owners and generated raw/sparse/delta,
+negative/ownership, pose/capture/blend and original File-to-model tests pass related32 in all3
+configurations (final GCC2.59s/GCCsan9.32s/Clangsan6.89s), terminals7/7/6 and pose3,
+every retry, allocation-free evaluation. Canonical668/inclusive675; evidence
+`evidence/qa/N2-w3d-motion.md`. Full413 unrun. This is a supporting admission/query
+checkpoint, not closure of the whole model cohort, slice03 or N2. Continue
+material/prototype/HLOD/cache/condition binding and original production query
+consumers, then actual native factory/full original startup and loaded world.
