@@ -96,7 +96,9 @@ owner teardown; it prints only a generic success or rejection, never supplied
 paths. The separate generated `h1-map` and `h1-map-negative` fixture modes run
 the original pending single-player map transition and verify authored actors,
 script registration, terrain, malformed-input rejection and corrected retry.
-They do not yet perform the 120 steady gameplay updates. To check these
+`h1-ticks` runs 120 original steady updates and checks script execution,
+source-frame progression and timed deletion. `h1-ticks-negative` rejects an
+unsupported road provider, then completes corrected H1. To check these
 boundaries without retail content, run:
 
 ```sh
@@ -104,10 +106,10 @@ cmake --build build/original-core-gcc --target zero_hour_headless original_nativ
 ctest --test-dir build/original-core-gcc -R '^original_native_headless_' --output-on-failure
 ```
 
-The fixture exercises two original startup/shutdown cycles in one process and
-rejects missing roots, missing required INI, and user storage inside a supplied
-asset mount. Its generated tables are deliberately minimal and are not a
-whole-game data set. Use corresponding `build/original-core-gcc-sanitize` and
+The `generated` fixture mode exercises two original startup/shutdown cycles
+in one process. Other modes reject missing roots, missing required INI and
+user storage inside a supplied asset mount. Its generated tables are
+deliberately minimal and are not a whole-game data set. Use corresponding `build/original-core-gcc-sanitize` and
 `build/original-core-clang-sanitize` directories for ownership validation.
 
 No private assets or bgfx SDK is needed for this renderer-disabled configuration.

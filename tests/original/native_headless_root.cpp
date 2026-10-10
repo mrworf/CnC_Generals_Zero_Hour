@@ -7,12 +7,15 @@
 #include "Common/GlobalData.h"
 #include "Common/DataChunk.h"
 #include "Common/NameKeyGenerator.h"
+#include "Common/MapObject.h"
+#include "Common/RandomValue.h"
 #include "Common/WellKnownKeys.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/SidesList.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/Scripts.h"
+#include "GameLogic/Module/DeletionUpdate.h"
 #include "GameClient/GameClient.h"
 #include "GameClient/TerrainVisual.h"
 #include "GameClient/MapUtil.h"
@@ -89,7 +92,7 @@ struct MapAuthoring {
   }
   ~MapAuthoring(){retire();}
 };
-std::string makeH1Map(bool malformedActor=false){
+std::string makeH1Map(bool malformedActor=false,bool unsupportedRoad=false){
   Bytes bytes;
   DataChunkOutput out(&bytes);
   constexpr Int width=65,height=65;
@@ -109,11 +112,11 @@ std::string makeH1Map(bool malformedActor=false){
   team.setAsciiString(TheKey_teamOwner,"H1Player");team.setBool(TheKey_teamIsSingleton,TRUE);
   out.writeDict(team);
   out.openDataChunk("PlayerScriptsList",5);out.openDataChunk("ScriptList",1);
-  out.openDataChunk("ScriptGroup",2);out.writeAsciiString("H1Group");out.writeByte(TRUE);out.writeByte(TRUE);
+  out.openDataChunk("ScriptGroup",2);out.writeAsciiString("H1Group");out.writeByte(TRUE);out.writeByte(FALSE);
   out.openDataChunk("Script",2);
   for(const char* label:{"H1StartScript","H1 generated","H1 condition","H1 action"})out.writeAsciiString(label);
-  for(Bool value:{TRUE,FALSE,TRUE,FALSE,TRUE,FALSE})out.writeByte(value);
-  out.writeInt(3);
+  for(Bool value:{TRUE,FALSE,TRUE,TRUE,TRUE,FALSE})out.writeByte(value);
+  out.writeInt(0);
   out.openDataChunk("OrCondition",1);out.openDataChunk("Condition",4);
   out.writeInt(Condition::CONDITION_TRUE);
   out.writeNameKey(TheScriptEngine->getConditionTemplate(Condition::CONDITION_TRUE)->m_internalNameKey);
@@ -131,7 +134,8 @@ std::string makeH1Map(bool malformedActor=false){
       out.writeInt(std::bit_cast<Int>(std::numeric_limits<Real>::quiet_NaN()));
     else out.writeReal(actor.second);
     out.writeReal(200);out.writeReal(0);
-    out.writeReal(0);out.writeInt(0);out.writeAsciiString(actor.first);
+    out.writeReal(0);out.writeInt(unsupportedRoad && actor.second==Real{200} ? FLAG_ROAD_FLAGS : 0);
+    out.writeAsciiString(actor.first);
     Dict properties;properties.setAsciiString(TheKey_originalOwner,"teamH1Player");out.writeDict(properties);
     out.closeDataChunk();
   }
@@ -163,12 +167,13 @@ void admitAndRetire(NativeHeadlessConfiguration config){
     throw;
   }
 }
-void loadH1(NativeHeadlessConfiguration config){
+void loadH1(NativeHeadlessConfiguration config,bool runTicks=false){
   auto engine=std::make_unique<NativeHeadlessGameEngine>(std::move(config));
   require(!TheGameEngine,"no borrowed engine before H1");
   TheGameEngine=engine.get();
   try {
     engine->init(0,nullptr);
+    if(runTicks)InitRandom(0x5A170001u);
     TheWritableGlobalData->m_mapName="Maps/H1.map";
     TheGameLogic->setGameMode(GAME_SINGLE_PLAYER);
     TheGameLogic->startNewGame(FALSE);
@@ -213,6 +218,31 @@ void loadH1(NativeHeadlessConfiguration config){
     ICoord2D left{20,20},right{45,20};
     require(TheTerrainVisual->getRawMapHeight(&left)==20 && TheTerrainVisual->getRawMapHeight(&right)==24,
       "two authored terrain plateaus loaded");
+    if(runTicks){
+      auto* expiring=TheGameLogic->findObjectByID(expiringID);
+      auto* deletion=static_cast<DeletionUpdate*>(expiring->findUpdateModule(
+        TheNameKeyGenerator->nameToKey("DeletionUpdate")));
+      const auto loadedFrame=TheGameLogic->getFrame();
+      const auto dieFrame=deletion->getDieFrame();
+      require(loadedFrame==1 && dieFrame==30,
+        "parsed 1000ms H1 deletion schedules at source frame 30");
+      Bool found=FALSE;
+      require(TheScriptEngine->readFlagByName("H1Started",&found) && found,
+        "original script runs in pending-load update before steady ticks");
+      for(unsigned tick=0;tick<120;++tick){
+        const auto entered=TheGameLogic->getFrame();
+        const bool before=TheGameLogic->findObjectByID(expiringID)!=nullptr;
+        engine->update();
+        const auto exited=TheGameLogic->getFrame();
+        require(exited==entered+1,"exactly one original source frame per steady update");
+        require(TheGameLogic->findObjectByID(persistentID),"persistent H1 actor survives");
+        require(TheScriptEngine->readFlagByName("H1Started",&found) && found,
+          "original script flag remains set through steady updates");
+        const bool after=TheGameLogic->findObjectByID(expiringID)!=nullptr;
+        require(before==(entered<=dieFrame) && after==(entered<dieFrame),
+          "DeletionUpdate removes actor at source deadline");
+      }
+    }
     engine.reset();TheGameEngine=nullptr;
     require(!TheGameLogic && !TheGameClient && !TheFileSystem,"H1 root retired");
     for(const char* poolName:{"ObjectPool","MapObject","ScriptList","DeletionUpdate"}){
@@ -269,18 +299,19 @@ void runGenerated(const std::string& mode){
   input.put("Data/INI/AudioSettings.ini","AudioSettings\n AudioRoot = Data/Audio\n MusicFolder = Tracks\n SoundsFolder = Sounds\n StreamingFolder = Speech\n SoundsExtension = wav\n Preferred3DSW = GeneratedNoDevice\n Default2DSpeakerType = Stereo\n Default3DSpeakerType = Stereo\n End\n");
   input.put("Data/INI/Music.ini","MusicTrack GeneratedMusic\n Filename = generated-track\n Volume = 100%\n Priority = NORMAL\n Type = UI EVERYONE\n End\n");
   input.put("Data/Audio/Tracks/generated-track","generated-not-decoded");
-  if(mode=="h1-map" || mode=="h1-map-negative") {
+  if(mode=="h1-map" || mode=="h1-map-negative" || mode=="h1-ticks" || mode=="h1-ticks-negative") {
     input.put("Data/INI/Default/Multiplayer.ini",
       "MultiplayerColor H1Color\n RGBColor = R:255 G:0 B:0\n RGBNightColor = R:128 G:0 B:0\n End\n");
     constexpr auto h1Objects=
       "Object H1Persistent\n Geometry = BOX\n GeometryMajorRadius = 5\n GeometryMinorRadius = 3\n Body = InactiveBody H1Body\n End\n End\n"
       "Object H1Expiring\n Geometry = BOX\n GeometryMajorRadius = 5\n GeometryMinorRadius = 3\n Body = InactiveBody H1Body\n End\n Behavior = DeletionUpdate H1Deletion\n MinLifetime = 1000\n MaxLifetime = 1000\n End\n End\n";
     input.put("Data/INI/Default/Object.ini",h1Objects);
-    std::string map,malformedActorMap;
+    std::string map,malformedActorMap,unsupportedRoadMap;
     {
       MapAuthoring author(input);
       map=makeH1Map();
       if(mode=="h1-map-negative")malformedActorMap=makeH1Map(true);
+      if(mode=="h1-ticks-negative")unsupportedRoadMap=makeH1Map(false,true);
     }
     if(mode=="h1-map-negative"){
       input.putBytes("Maps/H1.map",std::string_view(map).substr(0,16));
@@ -308,8 +339,18 @@ void runGenerated(const std::string& mode){
         "rejected H1 module root retired");
       input.put("Data/INI/Default/Object.ini",h1Objects);
     }
+    if(mode=="h1-ticks-negative"){
+      input.putBytes("Maps/H1.map",unsupportedRoadMap);
+      bool rejected=false;
+      try{loadH1(input.config(),true);}catch(...){rejected=true;}
+      require(rejected,"H1 road requires absent physical provider");
+      require(!TheGameEngine && !TheGameLogic && !TheGameClient && !TheFileSystem,
+        "unsupported H1 road root retired");
+    }
     input.putBytes("Maps/H1.map",map);
-    requireH1(input.config(),"final H1 admission");return;
+    if(mode=="h1-ticks" || mode=="h1-ticks-negative")loadH1(input.config(),true);
+    else requireH1(input.config(),"final H1 admission");
+    return;
   }
   if(mode!="generated") {
     auto config=input.config();
@@ -358,7 +399,8 @@ int main(int argc,char** argv){
     executable=fs::absolute(argv[0]).parent_path()/"zero_hour_headless";
     const std::string name=argv[1];
     if(name=="generated" || name=="missing-ini" || name=="storage-refusal" ||
-       name=="h1-map" || name=="h1-map-negative")runGenerated(name);
+       name=="h1-map" || name=="h1-map-negative" || name=="h1-ticks" ||
+       name=="h1-ticks-negative")runGenerated(name);
     else if(name=="missing")rejectMissing();
     else throw std::runtime_error("unknown test family");
     shutdownMemoryManager();

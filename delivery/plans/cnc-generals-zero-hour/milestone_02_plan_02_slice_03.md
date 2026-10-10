@@ -41,8 +41,9 @@ script flag and deadline/retirement witness. Negative unsupported provider or
 stalled/early frame rejects. A failed tick retires its world and permits fresh
 startup; no universal transactional tick rollback is invented. Run focused
 affected tests under GCC debug and both GCC/Clang sanitizer builds, then
-related tests. Target-specific commands and bounded evidence are recorded
-when the executable paths exist. Full frozen matrix waits for N2 acceptance.
+related tests. Target-specific commands and bounded evidence are in
+`evidence/qa/N2-h1-original-updates.md`. Full frozen matrix waits for N2
+acceptance.
 
 ## Expected implementation surfaces
 
@@ -52,12 +53,18 @@ public QA evidence. Stage only owned hunks of pre-existing dirty files.
 
 ## Acceptance criteria
 
-- [ ] The original engine completes 120 steady H1 updates and source frame
+- [x] The original engine completes 120 steady H1 updates and source frame
   advances exactly once per update.
-- [ ] Source script processing sets `H1Started`; original DeletionUpdate
+- [x] Source script processing sets `H1Started`; original DeletionUpdate
   scheduling removes only the expiring actor at its observed deadline.
-- [ ] Corrected-retry and ownership checks pass without private data or
+- [x] Corrected-retry and ownership checks pass without private data or
   weakening accepted regressions.
+
+The pending-load update itself executes the H1 script before steady tick one;
+the 120 steady updates retain the resulting flag. The parsed deletion module
+schedules frame 30 from frame-zero construction; entry/exit observations at
+that source frame prove end-of-update retirement. An unsupported road map
+rejects and a corrected map completes the full tick run in one process.
 
 ## Commit boundary
 

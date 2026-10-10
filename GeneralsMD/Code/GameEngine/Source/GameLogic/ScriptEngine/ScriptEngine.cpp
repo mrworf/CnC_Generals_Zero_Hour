@@ -6162,6 +6162,17 @@ Int ScriptEngine::allocateFlag( const AsciiString& name)
 	return 0; // Shouldn't ever happen.
 }
 
+Bool ScriptEngine::readFlagByName(const AsciiString& name, Bool* exists) const
+{
+	for (Int i=1; i<m_numFlags; ++i)
+		if (m_flags[i].name == name) {
+			if (exists) *exists = TRUE;
+			return m_flags[i].value;
+		}
+	if (exists) *exists = FALSE;
+	return FALSE;
+}
+
 //-------------------------------------------------------------------------------------------------
 /** Locates a group by name. */
 //-------------------------------------------------------------------------------------------------

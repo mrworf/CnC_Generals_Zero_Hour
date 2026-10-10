@@ -7020,3 +7020,27 @@ work is absent from the headless client; logical side, terrain, radar,
 partition and actor work remains on the original path. Source evidence and
 bounded execution are in `evidence/qa/N2-h1-map-admission.md`. Steady update,
 repeated-state, fault-terminal and retail-input claims remain pending.
+
+#### Reached H1 script and timed deletion (N2 plan02 slice03)
+
+`ScriptGroup` version 2 stores active and subroutine bytes in that order. A
+normal group must set the second byte false; otherwise the original update
+loop skips it. `Script` version 2 stores active, one-shot, easy, normal, hard
+and subroutine bytes followed by delay-evaluation seconds. H1 selects all
+three difficulty modes and zero delay. `GameEngine::init` seeds from time;
+the deterministic H1 fixture reseeds through original `InitRandom` after init
+and before map start. The pending-load `GameLogic::update`
+continues into `ScriptEngine::update` after `startNewGame`; the actual
+`CONDITION_TRUE`/`SET_FLAG` action therefore sets `H1Started` before the first
+steady tick. Subsequent source updates retain it.
+
+The parsed `DeletionUpdate` duration 1000ms yields a 30-frame sleep from the
+frame-zero construction point. The pending-load update exits at frame 1. The
+original module callback at entered frame 30 calls
+`GameLogic::destroyObject`; end-of-update `processDestroyList` removes the
+expiring actor before the source frame increments to 31. The fixture observes
+entry/exit frames and both source-assigned actor IDs around all 120 steady
+`GameEngine::update` calls. The persistent actor survives. An authored road
+flag reaches the native headless terrain provider's explicit unsupported
+boundary, rejects, retires and permits a corrected H1 startup. This proves
+the bounded drawless H1 path, not road rendering or general match parity.

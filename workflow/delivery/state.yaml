@@ -1247,14 +1247,15 @@
     "execution": "autonomous",
     "current_milestone": "N2",
     "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02.md",
-    "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02_slice_03.md",
+    "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02_slice_04.md",
     "blockers": [],
-    "resume_point": "N2 plan02/slice03: 120 original steady updates, script flag and DeletionUpdate retirement; slice02 exact H1 map admission accepted, N2 pending.",
+    "resume_point": "N2 plan02/slice04: canonical repeated H1 checkpoint byte comparison across GCC and Clang; slice03 original 120-update witness accepted, N2 pending.",
     "plan_phase": "complete",
     "transaction_parent": "7f18fc0f97a0d6a4dfba311b845420080eaa2ad7",
     "completed_slices": [
       "N2/plan02/slice01",
-      "N2/plan02/slice02"
+      "N2/plan02/slice02",
+      "N2/plan02/slice03"
     ]
   }
 }

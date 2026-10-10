@@ -305,6 +305,7 @@ public:
 	virtual void adjustToppleDirection( Object *object, Coord2D *direction);
 	virtual void adjustToppleDirection( Object *object, Coord3D *direction);
 	virtual const Script *findScriptByName(const AsciiString& scriptName) {return findScript(scriptName);} ///<  Finds a script.
+	Bool readFlagByName(const AsciiString& name, Bool* exists = NULL) const;
 		
 	const BreezeInfo& getBreezeInfo() const {return m_breezeInfo;}
 	void turnBreezeOff(void) {m_breezeInfo.m_intensity = 0.0f;}
