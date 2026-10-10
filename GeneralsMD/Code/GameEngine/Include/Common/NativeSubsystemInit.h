@@ -14,7 +14,7 @@ void initOwnedSubsystem(SUBSYSTEM*& reference, const char* name, SUBSYSTEM* subs
     const SubsystemPublication publication{&reference, prior,
         [](void* slot, void* previous) noexcept {
             *static_cast<SUBSYSTEM**>(slot) = static_cast<SUBSYSTEM*>(previous);
-        }};
+		}, subsystem};
     reference = subsystem;
     try {
         TheSubsystemList->initializeSubsystem(subsystem, AsciiString(name),

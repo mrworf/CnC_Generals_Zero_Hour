@@ -59,6 +59,7 @@
 #include "Common/OSDisplay.h"
 #include "Common/NativeWarningBox.h"
 #include <cstdio>
+#include <memory>
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
 #include "Common/UserPreferences.h"
@@ -175,9 +176,14 @@ AudioManager::AudioManager() :
 
 	m_listenerOrientation.set(0.0, 1.0, 0.0);
 	theAudioHandlePool = AHSV_FirstHandle;
-	m_audioSettings = NEW AudioSettings;
-	m_miscAudio = NEW MiscAudio;
-	m_silentAudioEvent = NEW AudioEventRTS;
+	// Nothing is published until all three constructor acquisitions succeed.
+	// A later failure must retire earlier candidates even before dtor entry.
+	auto settings = std::unique_ptr<AudioSettings>(NEW AudioSettings);
+	auto misc = std::unique_ptr<MiscAudio>(NEW MiscAudio);
+	auto silent = std::unique_ptr<AudioEventRTS>(NEW AudioEventRTS);
+	m_audioSettings = settings.release();
+	m_miscAudio = misc.release();
+	m_silentAudioEvent = silent.release();
 	m_savedValues = NULL;
 	m_disallowSpeech = FALSE;
 }

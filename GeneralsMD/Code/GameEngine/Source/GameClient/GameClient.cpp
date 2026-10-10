@@ -158,13 +158,7 @@ GameClient::~GameClient()
 		m_serviceOwners.retire(TheCampaignManager);
 
 	// destroy all Drawables
-	Drawable *draw, *nextDraw;
-	for( draw = m_drawableList; draw; draw = nextDraw )
-	{
-		nextDraw = draw->getNextDrawable();
-		destroyDrawable( draw );
-	}
-	m_drawableList = NULL;
+	destroyAllDrawablesImmediate();
 
 	// delete the ray effects
 	m_serviceOwners.retire(TheRayEffects);
@@ -554,10 +548,19 @@ void GameClient::cancelDrawableConstruction(Drawable* draw) noexcept
 
 //-------------------------------------------------------------------------------------------------
 /** Reset the game client for a new game */
+void GameClient::destroyAllDrawablesImmediate()
+{
+	for (Drawable* draw=m_drawableList; draw; ) {
+		Drawable* next=draw->getNextDrawable();
+		destroyDrawable(draw);
+		draw=next;
+	}
+	m_drawableList=NULL;
+}
+
 void GameClient::reset( void )
 {
 	if (m_headlessLogicalServices && !TheTerrainLogic) throw ERROR_BAD_ARG;
-	Drawable *draw, *nextDraw;
 //	m_drawableHash.clear();
 //	m_drawableHash.resize(DRAWABLE_HASH_SIZE);
 
@@ -568,12 +571,7 @@ void GameClient::reset( void )
 	else if (!m_headless) throw ERROR_BAD_ARG;
 
 	// destroy all Drawables
-	for( draw = m_drawableList; draw; draw = nextDraw )
-	{
-		nextDraw = draw->getNextDrawable();
-		destroyDrawable( draw );
-	}
-	m_drawableList = NULL;
+	destroyAllDrawablesImmediate();
 	m_drawableVector.swap(replacement);
 	m_lastDrawableFrame = ~UnsignedInt{0};
 

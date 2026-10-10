@@ -39,6 +39,7 @@
 #include "Common/Thing.h"
 #include "Common/ObjectStatusTypes.h"
 #include "Common/Upgrade.h"
+#include <list>
 
 #include "GameClient/Color.h"
 
@@ -683,6 +684,9 @@ protected:
 private:
 	// Shared resource retirement; partial construction must not emit destruction events.
 	void releaseOwnedResources();
+	friend class GameLogic;
+	// Acquired before publication; shutdown transfers, rather than allocates, it.
+	std::list<Object*> m_destroyAdmission;
 
 	// yes, private. No, really. Private. Don't expose.
 	enum ObjectPrivateStatusBits

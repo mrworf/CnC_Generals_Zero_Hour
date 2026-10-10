@@ -95,6 +95,7 @@ public:
 	Bool isHeadless() const noexcept { return m_headless; }
 	void prepareDrawableID(Drawable*, DrawableID);
 	void cancelDrawableConstruction(Drawable*) noexcept;
+	void destroyAllDrawablesImmediate(); // Parents remain live; no reset allocations.
 	virtual ~GameClient();
 
 	// subsystem methods

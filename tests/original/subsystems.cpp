@@ -131,6 +131,34 @@ void negative() {
     registry.list.shutdownAll();
     require(!slot && events.cleanupValid,"negative teardown preserves cleanup identity");
 }
+void targetedRetirement() {
+    Observation events;
+    Probe* firstSlot=nullptr;
+    Probe* otherSlot=nullptr;
+    Registry registry;
+    add(registry,events,firstSlot,1);
+    auto* first=firstSlot;
+    add(registry,events,otherSlot,2);
+    auto* other=otherSlot;
+    add(registry,events,firstSlot,3);
+    auto* top=firstSlot;top->recursiveShutdown=true;
+    require(registry.list.ownedForSlot(&firstSlot)==top &&
+            registry.list.ownedForSlot(&otherSlot)==other &&
+            !registry.list.ownedForSlot(nullptr),"slot lookup returns acquired top owner");
+    // A borrowed reassignment must never replace the cleanup owner.
+    firstSlot=first;otherSlot=nullptr;
+    AllocationFault::arm(0);
+    registry.list.activatePublications();
+    require(firstSlot==top && otherSlot==other,"activate complete acquired publication cohort");
+    registry.list.retireForSlot(&firstSlot);
+    require(firstSlot==first && otherSlot==other && registry.list.ownedCount()==2 && events.cleanupValid,"targeted top retirement restores accepted prefix");
+    registry.list.retireForSlot(&firstSlot);
+    registry.list.retireForSlot(&firstSlot);registry.list.retireForSlot(nullptr);
+    const auto attempts=AllocationFault::attempts();const auto hit=AllocationFault::triggered();AllocationFault::disarm();
+    require(!hit && attempts==0 && !firstSlot && otherSlot==other && registry.list.ownedCount()==1 && events.cleanupValid,"targeted zero-demand terminal preserves unrelated ownership");
+    registry.list.shutdownAll();
+    require(!otherSlot && events.cleanupValid && events.count==3 && events.events[0]==103 && events.events[1]==101 && events.events[2]==102,"targeted retirement order and exact final withdrawal");
+}
 void faults() {
     constexpr std::size_t expected=5; // object, name, init backing, decode, registry growth
     for(std::size_t ordinal=0;ordinal<=expected;++ordinal) {
@@ -170,7 +198,7 @@ int main(int argc,char** argv) {
         const std::string family(argv[1]);
         for(unsigned repeat=0;repeat<3;++repeat) {
             const auto live=AllocationFault::live();
-            if(family=="lifecycle") lifecycle();
+            if(family=="lifecycle") {lifecycle();targetedRetirement();}
             else if(family=="negative") negative();
             else if(family=="faults") faults();
             else throw std::runtime_error("unknown subsystem family");

@@ -74,6 +74,35 @@ void SubsystemInterfaceList::validateCandidate(SubsystemInterface* sys,
 void SubsystemInterfaceList::postProcessLoadAll() {
     for (const auto& entry : m_subsystems) entry.owner->postProcessLoad();
 }
+void SubsystemInterfaceList::adoptInitializedSubsystem(SubsystemInterface* sys,
+    SubsystemPublication publication) {
+    validateCandidate(sys, publication);
+    m_subsystems.push_back({sys, publication});
+}
+SubsystemInterface* SubsystemInterfaceList::ownedForSlot(const void* slot) const noexcept {
+    if (!slot) return nullptr;
+    for (auto it=m_subsystems.rbegin(); it!=m_subsystems.rend(); ++it)
+        if (it->publication.slot==slot) return it->owner;
+    return nullptr;
+}
+void SubsystemInterfaceList::activatePublications() noexcept {
+    for (const auto& entry : m_subsystems) entry.publication.activate();
+}
+void SubsystemInterfaceList::retireForSlot(const void* slot) noexcept {
+    if (!slot || m_shuttingDown) return;
+    for (auto it=m_subsystems.end(); it!=m_subsystems.begin(); ) {
+        --it;
+        if (it->publication.slot!=slot) continue;
+        const OwnedSubsystem retiring=*it;
+        m_subsystems.erase(it);
+        m_shuttingDown=TRUE;
+        retiring.publication.activate();
+        delete retiring.owner;
+        retiring.publication.withdraw();
+        m_shuttingDown=FALSE;
+        return;
+    }
+}
 void SubsystemInterfaceList::resetAll() {
     for (auto it=m_subsystems.rbegin(); it!=m_subsystems.rend(); ++it)
         it->owner->reset();
@@ -85,6 +114,7 @@ void SubsystemInterfaceList::shutdownAll() noexcept {
         const OwnedSubsystem retiring=m_subsystems.back();
         m_subsystems.pop_back(); // No registry callback can observe this owner.
         // Object/Drawable destructors legitimately call their live parent.
+        retiring.publication.activate();
         delete retiring.owner;
         retiring.publication.withdraw(); // No callbacks/allocations after cleanup.
     }

@@ -5375,3 +5375,48 @@ The common GhostObjectManager has empty methods: an empty-owner reset can use
 its actual no-instance contract, but cannot claim snapshot/fog implementation.
 Keep live evacuation/loaded-partition coverage separate from that empty reset
 fixture. The still-pending complete GameEngine startup/simulation gate is unchanged.
+
+Root provider continuation implementation: ScriptConditions now owns its cache
+head, initialized null, rather than sharing a file-static chain. Reset detaches
+each node and iteratively retires it; ObjectID/frame/count and repeated-same-frame
+predicate semantics remain unchanged. The generated actor fixture exercises two
+evaluators and two named actual actors, independent reset/destruction, unknown
+unit absence, zero warmed standard demand, typed backing exhaustion and corrected
+retry. AudioManager stages settings, misc audio and silent event in local guards
+before committing raw members; its actual constructor manifest includes every
+failure/retry and independent owners. Physical audio remains outside this proof.
+
+The default-client fixture now creates actual GameLogic::init parents and enters
+source GameEngine::reset, preserving source NameKey/AI and water/weather bases.
+It repeatedly retires source client-only Drawables and map command overrides,
+then destroys the whole registered client/logic cohort. This is initialized empty
+world reset, not full GameEngine::init or loaded simulation. The logical-world
+fixture separately uses full ThingFactory::newObject, stock OpenContain, original
+reciprocal Drawables and a loaded native terrain/partition grid. Live unload still
+re-registers the actor, restores visible Drawable and actual cell intersections;
+recursive terminal cleanup retires the same cohort. It does not accept physical
+audio, fog snapshots or loaded pathfinder occupancy. Focused GCC evidence and the
+remaining sanitizer/frozen checks are recorded in N2-root-retirement.md.
+
+Next complete-startup census (read-only during the lifecycle freeze):
+GameEngine::init loads water/weather before client initialization, then registers
+source tables, client, AI, GameLogic, teams and players. The water/weather INI
+readers publish new pooled base heads directly; override admission allocates and
+copies a node before linking it, then parses into the published node. The current
+GameEngine destructor does not own those base heads. The reset fixture's explicit
+setting owners do not prove production startup cleanup. Complete root admission
+must retain valid base/override identities through callbacks and retire only its
+acquired configuration, including partial parsing, without deleting a borrowed
+prefix. Sources: GameEngine.cpp::{init,~GameEngine}, INIWater.cpp::
+parseWaterTransparencyDefinition, Snow.cpp::INI::parseWeatherDefinition,
+Override.h::{operator=,getNonOverloadedPointer}.
+
+AudioManager::init parses settings, music, effects, speech, voice and misc audio
+before checking actual music-file presence. isMusicAlreadyLoaded returns false
+if no music definition exists and otherwise queries the generated filename in
+the FileSystem; GameEngine::init marks quitting when it is false. Constructor
+ownership and empty/NoSound callbacks are not evidence for that startup path.
+Generated complete-root inputs must satisfy or truthfully reject the source
+content contract; do not report fabricated device/music success. GameMain still
+calls the undefined native CreateGameEngine factory before actual init/execute.
+These remain next integration work, not a newly accepted process entry point.

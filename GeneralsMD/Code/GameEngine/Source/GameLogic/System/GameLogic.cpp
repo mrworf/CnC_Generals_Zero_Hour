@@ -3885,10 +3885,13 @@ void GameLogic::destroyObject( Object *obj )
 	// if already flagged for destruction, ignore
 	if (!obj || obj->isDestroyed())
 		return;
-	// Reserve the eventual queue node before callbacks or the destroyed flag.
-	// Splice at the original phase so child/parent callback ordering is unchanged.
+	// Empty admission means a callback is already destroying this actor. Keep
+	// recursive child callbacks, but never re-enter this actor's destroy phase.
+	if (obj->m_destroyAdmission.empty()) return;
+	// Transfer the construction-owned node. Keep the original callback/status/
+	// AI/queue phase order without acquiring storage during root cleanup.
 	ObjectPointerList pending;
-	pending.push_back(obj);
+	pending.splice(pending.end(), obj->m_destroyAdmission);
 	try {
 
 	// run the object onDestroy event if provied
@@ -3919,6 +3922,8 @@ void GameLogic::destroyObject( Object *obj )
 		if (obj->isDestroyed() && !pending.empty() &&
 				std::find(m_objectsToDestroy.begin(), m_objectsToDestroy.end(), obj) == m_objectsToDestroy.end())
 			m_objectsToDestroy.splice(m_objectsToDestroy.end(), pending);
+		else if (!obj->isDestroyed())
+			obj->m_destroyAdmission.splice(obj->m_destroyAdmission.end(), pending);
 		throw;
 	}
 	// run any on destroy logic internal to the object

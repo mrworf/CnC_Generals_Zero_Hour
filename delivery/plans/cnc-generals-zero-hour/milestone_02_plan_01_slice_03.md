@@ -3396,3 +3396,19 @@ containment evacuation against loaded partition data. Keep all required parent
 identities alive through source destructor callbacks and restore borrowed globals
 only afterward. No production edit during the current frozen matrix; retain its
 source-attributed results and validate subsequent deltas proportionately.
+
+Coupled lifecycle checkpoint verified before commit: constructor-owned actor
+queue admission and callback/retry ordering, acquired registry parent activation,
+source actor/client-only effect quiescence, team-before-player retirement,
+owner-local transport cache and guarded AudioManager constructor all have
+positive/negative ownership coverage. Actual GameLogic::init plus default native
+client enter original GameEngine::reset repeatedly: replacement-vector failure
+ordinal0, exact terminal1, each with corrected same-owner reset. Loaded-partition
+full ThingFactory actors and stock OpenContain prove live unload visibility/cell
+restoration and recursive terminal retirement. Canonical656/inclusive663 frozen
+configured builds/related208 PASS all3: GCC234.80s, Clangsan598.55s,
+GCCsan960.93s; every process terminal0 and both hashes rechecked. Evidence:
+evidence/qa/N2-root-retirement.md. Commit the complete owned lifecycle cohort;
+this does not complete slice03/N2 or accept full392, GameMain, actual full engine
+startup, loaded simulation/checkpoints, native ghost/model/science or physical
+presentation. Continue those original-root integration gates under this plan.

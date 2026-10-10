@@ -180,7 +180,14 @@ GameEngine::GameEngine( void )
 //-------------------------------------------------------------------------------------------------
 GameEngine::~GameEngine()
 {
-	const bool ownsWorld=m_serviceOwners.owns(TheSubsystemList);
+	auto* registry=m_serviceOwners.acquired(TheSubsystemList);
+	const bool ownsWorld=registry!=nullptr;
+	if (registry) {
+		TheSubsystemList=registry;
+		quiesceOwnedWorld();
+		// Team callbacks require live players/scripts, not reverse init order.
+		while (registry->ownedForSlot(&TheTeamFactory)) registry->retireForSlot(&TheTeamFactory);
+	}
 	//extern std::vector<std::string>	preloadTextureNamesGlobalHack;
 	//preloadTextureNamesGlobalHack.clear();
 
@@ -192,7 +199,7 @@ GameEngine::~GameEngine()
 //	delete TheShell;
 //	TheShell = NULL;
 
-	if (m_serviceOwners.owns(TheSubsystemList)) TheSubsystemList->shutdownAll();
+	if (registry) registry->shutdownAll();
 	m_serviceOwners.retire(TheSubsystemList);
 
 	if (ownsWorld) {
@@ -609,8 +616,8 @@ void GameEngine::init( int argc, char *argv[] )
 	initDisabledMasks();
 	initDamageTypeFlags();
 
-	TheSubsystemList->resetAll();
-	HideControlBar();
+	resetOwnedWorld();
+	if (!TheGameClient->isHeadless()) HideControlBar();
 }  // end init
 
 /** -----------------------------------------------------------------------------------------------
@@ -618,6 +625,18 @@ void GameEngine::init( int argc, char *argv[] )
 	*/
 void GameEngine::reset( void )
 {
+	auto* registry=m_serviceOwners.acquired(TheSubsystemList);
+	if (!registry) throw ERROR_BAD_ARG;
+	auto* client=dynamic_cast<GameClient*>(registry->ownedForSlot(&TheGameClient));
+	auto* logic=dynamic_cast<GameLogic*>(registry->ownedForSlot(&TheGameLogic));
+	if (!client || !logic) throw ERROR_BAD_ARG;
+	registry->activatePublications();
+	if (client->isHeadless()) {
+		const Bool deleteNetwork=logic->isInMultiplayerGame();
+		resetOwnedWorld();
+		if (deleteNetwork) { delete TheNetwork; TheNetwork=NULL; }
+		return;
+	}
 
 	WindowLayout *background = TheWindowManager->winCreateLayout("Menus/BlankWindow.wnd");
 	DEBUG_ASSERTCRASH(background,("We Couldn't Load Menus/BlankWindow.wnd"));
@@ -628,7 +647,7 @@ void GameEngine::reset( void )
 	if (TheGameLogic->isInMultiplayerGame())
 		deleteNetwork = true;
 
-	TheSubsystemList->resetAll();
+	resetOwnedWorld();
 
 	if (deleteNetwork)
 	{
@@ -643,6 +662,26 @@ void GameEngine::reset( void )
 		background->deleteInstance();
 		background = NULL;
 	}
+}
+
+void GameEngine::quiesceOwnedWorld()
+{
+	auto* registry=m_serviceOwners.acquired(TheSubsystemList);
+	if (!registry) return;
+	registry->activatePublications();
+	if (auto* logic=dynamic_cast<GameLogic*>(registry->ownedForSlot(&TheGameLogic)))
+		logic->destroyAllObjectsImmediate();
+	if (auto* client=dynamic_cast<GameClient*>(registry->ownedForSlot(&TheGameClient)))
+		client->destroyAllDrawablesImmediate();
+}
+
+void GameEngine::resetOwnedWorld()
+{
+	auto* registry=m_serviceOwners.acquired(TheSubsystemList);
+	if (!registry) throw ERROR_BAD_ARG;
+	TheSubsystemList=registry;
+	quiesceOwnedWorld();
+	registry->resetAll();
 }
 
 /// -----------------------------------------------------------------------------------------------

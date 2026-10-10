@@ -124,11 +124,9 @@ TransportStatus::~TransportStatus()
 }
 
 //-------------------------------------------------------------------------------------------------
-static TransportStatus *s_transportStatuses;
-
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
-ScriptConditions::ScriptConditions()
+ScriptConditions::ScriptConditions() : m_transportStatuses(NULL)
 {
 
 }  // end ScriptConditions
@@ -156,9 +154,14 @@ void ScriptConditions::init( void )
 void ScriptConditions::reset( void )
 {
 
-	s_transportStatuses->deleteInstance();
-	s_transportStatuses = NULL;
-	// Empty for now.  jba.
+	// The cache belongs to this evaluator. Detach before retirement and avoid
+	// both null member calls and recursive deletion of an unbounded chain.
+	while (m_transportStatuses) {
+		TransportStatus *status = m_transportStatuses;
+		m_transportStatuses = status->m_nextStatus;
+		status->m_nextStatus = NULL;
+		status->deleteInstance();
+	}
 }  // end reset
 
 //-------------------------------------------------------------------------------------------------
@@ -1974,7 +1977,7 @@ Bool ScriptConditions::evaluateUnitHasEmptied(Parameter *pUnitParm)
 	}
 
 	// have we checked this one before?
-	TransportStatus *stats = s_transportStatuses;
+	TransportStatus *stats = m_transportStatuses;
 	while (stats) {
 		if (stats->m_objID == object->getID()) {
 			break;
@@ -1995,8 +1998,8 @@ Bool ScriptConditions::evaluateUnitHasEmptied(Parameter *pUnitParm)
 		transportStatus->m_objID = object->getID();
 		transportStatus->m_frameNumber = frameNum;
 		transportStatus->m_unitCount = numPeeps;
-		transportStatus->m_nextStatus = s_transportStatuses;
-		s_transportStatuses = transportStatus;
+		transportStatus->m_nextStatus = m_transportStatuses;
+		m_transportStatuses = transportStatus;
 		return false;
 	}
 

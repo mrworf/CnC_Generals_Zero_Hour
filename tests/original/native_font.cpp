@@ -23,6 +23,16 @@
 #include "GameClient/GlobalLanguage.h"
 #include "Common/FileSystem.h"
 #include "Common/GameMemory.h"
+#include "Common/GameEngine.h"
+#include "Common/NameKeyGenerator.h"
+#include "GameLogic/AI.h"
+#include "GameLogic/GhostObject.h"
+#include "GameLogic/PartitionManager.h"
+#include "GameLogic/ScriptEngine.h"
+#include "GameLogic/ScriptActions.h"
+#include "GameLogic/ScriptConditions.h"
+#include "GameClient/Water.h"
+#include "GameClient/Snow.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -428,6 +438,43 @@ struct CommandUsage {
   bool matches()const{return buttons==TheMemoryPoolFactory->findMemoryPool("CommandButton")->getUsedBlockCount() &&
     sets==TheMemoryPoolFactory->findMemoryPool("CommandSet")->getUsedBlockCount();}
 };
+struct ResetSourceLogic:GameLogic {
+  DeviceFixture& visual;
+  explicit ResetSourceLogic(DeviceFixture& value):visual(value){}
+  TerrainLogic* createTerrainLogic()override {
+    struct Terrain:NativeTerrainLogic {
+      using NativeTerrainLogic::NativeTerrainLogic;
+      void admitDeviceMap()override{throw ERROR_BAD_ARG;}
+      void loadRoadsAndBridges(Bool)override{throw ERROR_BAD_ARG;}
+    };
+    return new Terrain(visual);
+  }
+};
+struct ResetSourceRoot:GameEngine {
+  ResetSourceRoot(){m_serviceOwners.create(TheSubsystemList,[]{return new SubsystemInterfaceList;});}
+  template<class Base,class Concrete>void admit(std::unique_ptr<Concrete>& owner,Base*& slot){
+    Base* acquired=owner.get();Base* previous=slot;
+    const SubsystemPublication publication{&slot,previous,
+      [](void* target,void* prior)noexcept{*static_cast<Base**>(target)=static_cast<Base*>(prior);},acquired};
+    TheSubsystemList->adoptInitializedSubsystem(acquired,publication);
+    slot=acquired;owner.release();
+  }
+  // Prepared owners exercise source reset/destruction, not full init factories.
+  GameLogic* createGameLogic()override{throw ERROR_BAD_ARG;}
+  GameClient* createGameClient()override{throw ERROR_BAD_ARG;}
+  ModuleFactory* createModuleFactory()override{throw ERROR_BAD_ARG;}
+  ThingFactory* createThingFactory()override{throw ERROR_BAD_ARG;}
+  FunctionLexicon* createFunctionLexicon()override{throw ERROR_BAD_ARG;}
+  Radar* createRadar()override{throw ERROR_BAD_ARG;}
+  WebBrowser* createWebBrowser()override{throw ERROR_BAD_ARG;}
+  ParticleSystemManager* createParticleSystemManager()override{throw ERROR_BAD_ARG;}
+  AudioManager* createAudioManager()override{throw ERROR_BAD_ARG;}
+};
+template<class T>struct ResetSetting {
+  OVERRIDE<T>& slot;const T* previous;T* owner;
+  template<class Factory>ResetSetting(OVERRIDE<T>& target,Factory create):slot(target),previous(target.getNonOverloadedPointer()),owner(create()){slot=owner;}
+  ~ResetSetting(){slot=owner;owner->deleteInstance();slot=const_cast<T*>(previous);}
+};
 void composition(Context& context,std::string_view family) {
   auto put=[&](const char* path,const char* contents){auto target=context.tree.path/path;
     std::filesystem::create_directories(target.parent_path());std::ofstream out(target);out<<contents;
@@ -494,6 +541,41 @@ void composition(Context& context,std::string_view family) {
     owner.friend_createDrawable(&definition,DRAWABLE_STATUS_NONE); // Base cleanup with live UI, no logic parent.
   };
   operation();operation();require(clean(),"whole default client retires complete composed publication cohort");
+  if(family=="composition-root-reset"){
+    NameKeyGenerator names;Publication<NameKeyGenerator> namesLease{TheNameKeyGenerator,names};names.init();
+    AI ai;Publication<AI> aiLease{TheAI,ai};ai.init();
+    ResetSetting<WaterTransparencySetting> water{TheWaterTransparency,[]{return newInstance(WaterTransparencySetting);}};
+    ResetSetting<WeatherSetting> weather{TheWeatherSetting,[]{return newInstance(WeatherSetting);}};
+    data.m_partitionCellSize=10;data.m_scriptDebug=FALSE;data.m_particleEdit=FALSE;
+    const auto* borrowedLogic=TheGameLogic;const auto* borrowedClient=TheGameClient;
+    {
+      ResetSourceRoot root;
+      auto client=std::make_unique<NativeHeadlessGameClient>();
+      {Publication<GameClient> clientLease{TheGameClient,*client};client->init();}
+      root.admit(client,TheGameClient);
+      auto logic=std::make_unique<ResetSourceLogic>(visual);
+      {Publication<GameLogic> logicLease{TheGameLogic,*logic};logic->init();}
+      root.admit(logic,TheGameLogic);
+      auto* camera=TheTacticalView;auto* metadata=TheControlBar->findCommandSet("GeneratedSet");
+      require(ThePartitionManager && TheTerrainLogic && TheGhostObjectManager && TheScriptActions && TheScriptConditions && TheScriptEngine,"actual GameLogic init admits complete source parent cohort");
+      require(TheGameLogic->getFrame()==0 && TheGameLogic->getObjectIDCounter()==1,"actual source initialized frame and actor cursor");
+      for(unsigned repeat=0;repeat<3;++repeat)for(std::size_t ordinal=0;ordinal<=1;++ordinal){
+        INI overrides;overrides.load("override.ini",INI_LOAD_CREATE_OVERRIDES,nullptr);
+        auto* drawable=TheGameClient->friend_createDrawable(&definition,DRAWABLE_STATUS_NONE);const auto id=drawable->getID();
+        require(TheControlBar->findCommandSet("TemporarySet") && TheGameClient->findDrawableByID(id),"root reset starts with actual source overrides and client-only effect");
+        bool failed=false;AllocationFault::arm(ordinal);
+        try{root.reset();}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+        const auto resetAttempts=AllocationFault::attempts();const auto resetHit=AllocationFault::triggered();AllocationFault::disarm();
+        require(resetHit==failed && failed==(ordinal==0) && resetAttempts==1,"initialized source root reset replacement-vector failure and exact terminal one");
+        if(failed)require(TheControlBar->findCommandSet("TemporarySet") && TheTacticalView==camera && !TheGameClient->findDrawableByID(id),"failed source reset preserves parents and metadata after legitimate root quiescence");
+        root.reset(); // Every failure/terminal has a corrected same-owner retry.
+        require(TheGameLogic->getFrame()==0 && TheGameLogic->getObjectIDCounter()==1 && !TheGameLogic->getFirstObject() && !TheGameClient->findDrawableByID(id),"actual root reset retires effect and resets original simulation state");
+        require(TheTacticalView==camera && TheControlBar->findCommandSet("GeneratedSet")==metadata && !TheControlBar->findCommandSet("TemporarySet") && TheWaterTransparency.getNonOverloadedPointer()==water.owner && TheWeatherSetting.getNonOverloadedPointer()==weather.owner,"source root reset preserves complete logical client and base setting identities");
+      }
+    }
+    require(clean() && TheGameLogic==borrowedLogic && TheGameClient==borrowedClient && !ThePartitionManager && !TheTerrainLogic && !TheGhostObjectManager && !TheScriptActions && !TheScriptConditions && !TheScriptEngine,"actual root destruction retires complete initialized logic/client cohort");
+    return;
+  }
   if(family=="composition-pools"){
     for(const char* name:{"CommandButton","CommandSet","GameFont","NativeDisplayString"}){
       auto* pool=TheMemoryPoolFactory->findMemoryPool(name);void* held[32]{};unsigned count=0;
@@ -557,7 +639,7 @@ int main(int argc,char** argv) {
     {Context context;
     for(unsigned warm=0;warm<2;++warm)functional(context);
     if(std::string_view(argv[1]).starts_with("client"))for(unsigned warm=0;warm<2;++warm)client(context,false,false);
-    if(std::string_view(argv[1]).starts_with("composition"))for(unsigned warm=0;warm<2;++warm)composition(context,"composition");
+    if(std::string_view(argv[1]).starts_with("composition"))for(unsigned warm=0;warm<2;++warm)composition(context,std::string_view(argv[1])=="composition-root-reset"?"composition-root-reset":"composition");
     const auto baseline=AllocationFault::live();
     for(unsigned repeat=0;repeat<3;++repeat) {
       std::string_view family=argv[1];if(family=="functional")functional(context);

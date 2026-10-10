@@ -1,4 +1,4 @@
-# N2 coupled world retirement — in progress
+# N2 coupled world lifecycle — verified checkpoint
 
 Parent: `dfb3a3598446e4d36a49c607687eaeb7ce2c4a84`. Clean transaction start;
 existing N2 plan01/slice03, no new milestone or replacement plan. N2 remains
@@ -75,7 +75,7 @@ allocation, exact source/typed ownership retirement and borrowed restoration.
 Both source destructor and explicit quiescence are exercised. Logs:
 `/tmp/n2-root-retirement-gcc-terminal-{build,tests}.log`.
 
-## Frozen related matrix — running
+## Frozen related matrix — completed
 
 Canonical655: `b8f2eff60299a093c85931d7febc351505b75b0fd12059d868e98593e0f6cf66`.
 Toolchain-inclusive662:
@@ -127,3 +127,90 @@ This is an observation, not a terminal or full-suite result. The source freeze
 is unchanged. Actual positive root reset and live containment re-entry coverage
 are still required before the implementation commit. This documentation-only
 checkpoint neither completes slice03/N2 nor waives those requirements.
+
+GCC sanitizer session44478 subsequently ended0: configured build and all
+related204 PASS915.63s. Recomputed canonical655/inclusive662 hashes match the
+frozen identities above. All three processes are terminal; no source edit took
+place during the frozen matrix. Continue the planned cache/audio/root-reset and
+live-containment coverage; neither full388 nor N2 acceptance is claimed.
+
+Next provider-owner focused build session74213 ended1: fixture declared Int
+pool usage and size_t standard usage in one auto declaration. Separated those
+declarations; no production behavior changed. Log:
+`/tmp/n2-root-reset-gcc-owners-build.log`. Subsequent runs require their own
+terminal evidence; this compile failure is not a runtime diagnosis.
+
+Focused provider-owner retry session8573 ended0: build and audio-constructor,
+transport-cache, root-retirement, root-quiescence, destroy-callbacks and
+root-negative6 PASS10.71s. Root-reset build session13482 ended1: missing explicit
+provider headers in the fixture and using the token-pasting newInstance macro
+with a template parameter. Added the actual headers and concrete typed factory
+lambdas; no production behavior change. Logs:
+`/tmp/n2-root-reset-gcc-owners-{build-retry,tests}.log` and
+`/tmp/n2-root-reset-gcc-root-build.log`.
+
+Root reset retry session77213 ended0: actual initialized source GameLogic,
+default native client, source GameEngine reset/destruction and water/weather
+base cohort PASS2.81s. Logs:
+`/tmp/n2-root-reset-gcc-root-{build-retry,tests}.log`.
+This is positive empty-world reset plus client-only effects/metadata, not full
+GameEngine::init or loaded-world simulation. Loaded partition live containment
+coverage is being added in the full source ThingFactory creation fixture.
+
+Loaded containment session46665 ended0: full ThingFactory actors, stock
+OpenContain live unload/loaded partition intersection/Drawable visibility and
+recursive terminal cleanup PASS3.25s. Logs:
+`/tmp/n2-root-reset-gcc-containment-{build,tests}.log`.
+Additional root fault probe session15443 ended8: the test incorrectly expected
+zero standard demand. Source inspection confirms GameClient::reset intentionally
+stages a replacement lookup vector before UI reset; unlike shutdown quiescence,
+normal reset has one allocation. Do not remove that guarded staging to satisfy
+the fixture. Test now retains ordinal0 failure and exact terminal1, each with a
+corrected same-owner reset; failure occurs after legitimate root quiescence and
+must preserve live parents/base metadata. Logs:
+`/tmp/n2-root-reset-gcc-zero-{build,tests}.log`.
+
+Final focused session36223 ended0: configured targets built and related11 PASS16.74s.
+Actual reset retains its source replacement-vector allocation: ordinal0 rejects
+after quiescence without losing parent/base identity, ordinal1 succeeds with
+exactly one attempt, and every pair includes corrected same-owner reset.
+Logs: `/tmp/n2-root-reset-gcc-final-focused-{build,tests}.log`.
+
+## Frozen continuation matrix — completed
+
+Canonical656: `3ac8351c54a1c7c4f1650347c61f4b31c4f40fab71720817d4f271064f22aa13`.
+Inclusive663: `016f2923572e9231becd69ff36f90e431a1fa8c2c00e4c6c82bb4170a912857b`.
+Configured392/full392 unrun. Related208 explicitly enumerated before execution;
+GCC58080, GCC sanitizer19475, Clang sanitizer65018 run configured build -j2,
+then related208 -j1. Logs:
+`/tmp/n2-root-reset-<config>-frozen-{build,related}.log`. Same configs as above;
+unchanged TIMEOUT60, leak checks, no suppressions. No source edit until all
+process terminals are observed. N2/slice03 remain incomplete: actual full root
+startup, loaded simulation/checkpoints and complete milestone acceptance pending.
+
+GCC session58080 ended0: configured build and all related208 PASS234.80s on
+canonical656/inclusive663. Both sanitizer builds completed and their related208
+tests remain live (19475/65018). Do not restart them or change source. Initial
+focused and prior frozen evidence remain attributed to their recorded identities.
+
+Clang sanitizer session65018 ended0: configured build and all related208
+PASS598.55s on canonical656/inclusive663. Only GCC sanitizer19475 remains live;
+at this observation126/208 passed, including the actual positive root reset and
+cache/audio ownership cases. This partial count is not a suite result. No source
+edit occurred during the matrix; full392 and whole-root startup remain pending.
+
+GCC sanitizer session19475 ended0: configured build and all related208
+PASS960.93s. All three configured builds and related suites are terminal0.
+Recomputed canonical656 and inclusive663 match the frozen identities above.
+No source changes occurred during these runs. Required coupled-lifecycle
+coverage passes; commit the owned source/tests/plan/findings/evidence/state
+cohort together. Full392, slice03 completion and N2 acceptance remain pending.
+
+Audio constructor exact terminal4 is captured in CTest LastTest.log: one owner
+and three guarded raw candidates, every ordinal0..3 rejection and corrected
+retry, ordinal4 success. Transport caches have independent owner/reset/destructor
+units, warmed standard terminal0 and typed exhaustion/retry. Root reset has exact
+terminal1/every retry; quiescence and terminal recursive retirement separately
+prove no standard allocation. Existing callback/pool/constructor manifests remain
+in the related208 matrix. This is generated source lifecycle evidence only; no
+retail asset, renderer dependency or proprietary derivative was changed.

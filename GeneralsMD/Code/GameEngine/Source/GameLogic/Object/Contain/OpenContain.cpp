@@ -234,7 +234,7 @@ void OpenContain::addOrRemoveObjFromWorld(Object* obj, Bool add)
 								obj->getTemplate()->getName().str() ));
 
 
-	if (add)
+	if (add && !obj->isDestroyed())
 	{
 		ThePartitionManager->registerObject( obj );
 
@@ -247,7 +247,7 @@ void OpenContain::addOrRemoveObjFromWorld(Object* obj, Bool add)
 		TheAI->pathfinder()->addObjectToPathfindMap( obj );
 
 	}
-	else
+	else if (!add)
 	{
 		// remove object from its group (if any)
 		obj->leaveGroup();

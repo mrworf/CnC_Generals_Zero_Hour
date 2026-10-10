@@ -49,6 +49,11 @@ public:
             if(entries[i].slot==&slot) return true;
         return false;
     }
+    template<class T> T* acquired(T*& slot) const noexcept {
+        for(std::size_t i=0;i<highWater;++i)
+            if(entries[i].slot==&slot) return static_cast<T*>(entries[i].owner);
+        return nullptr;
+    }
     template<class T> void retire(T*& slot) noexcept {
         for(std::size_t i=highWater;i>0;--i) {
             if(entries[i-1].slot!=&slot) continue;

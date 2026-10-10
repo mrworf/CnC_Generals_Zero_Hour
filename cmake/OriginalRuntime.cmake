@@ -480,7 +480,7 @@ target_include_directories(original_native_font_fixture PRIVATE
 target_link_libraries(original_native_font_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_native_font_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS functional negative native-faults allocation-faults host pool-failures strings string-boundaries string-mutation-faults string-native-faults manager manager-native-faults manager-negative client client-faults-early client-faults-late composition composition-negative composition-pools composition-faults-early composition-faults-late)
+foreach(family IN ITEMS functional negative native-faults allocation-faults host pool-failures strings string-boundaries string-mutation-faults string-native-faults manager manager-native-faults manager-negative client client-faults-early client-faults-late composition composition-negative composition-pools composition-faults-early composition-faults-late composition-root-reset)
   add_test(NAME original_native_font_${family} COMMAND original_native_font_fixture "${family}")
   set_tests_properties(original_native_font_${family} PROPERTIES LABELS "original;runtime;fonts" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
@@ -496,7 +496,7 @@ target_include_directories(original_object_ownership_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_compile_definitions(original_object_ownership_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
 target_link_options(original_object_ownership_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS functional negative faults pool-failures parent-faults id-growth pool-updates-early pool-updates-middle pool-updates-late cold-faults scheduler-faults)
+foreach(family IN ITEMS functional negative faults pool-failures parent-faults id-growth pool-updates-early pool-updates-middle pool-updates-late cold-faults scheduler-faults root-retirement root-quiescence destroy-callbacks root-negative audio-constructor transport-cache)
   add_test(NAME original_object_ownership_${family} COMMAND original_object_ownership_fixture "${family}")
   set_tests_properties(original_object_ownership_${family} PROPERTIES LABELS "original;runtime;actor" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
@@ -574,7 +574,7 @@ target_compile_definitions(original_logical_world_fixture PRIVATE _OPERATOR_NEW_
 target_include_directories(original_logical_world_fixture PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
 target_link_options(original_logical_world_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS functional negative faults ownership pool-failures continuation terrain terrain-negative terrain-faults pathfinder-map pathfinder-map-faults partition-grid partition-grid-faults partition-actors partition-ghost-attachment factory-creation factory-creation-faults factory-creation-binding factory-creation-camera factory-creation-camera-frame)
+foreach(family IN ITEMS functional negative faults ownership pool-failures continuation terrain terrain-negative terrain-faults pathfinder-map pathfinder-map-faults partition-grid partition-grid-faults partition-actors partition-ghost-attachment factory-creation factory-creation-faults factory-creation-binding factory-creation-camera factory-creation-camera-frame factory-creation-containment)
   add_test(NAME original_logical_world_${family} COMMAND original_logical_world_fixture "${family}")
   set_tests_properties(original_logical_world_${family} PROPERTIES LABELS "original;runtime;map" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

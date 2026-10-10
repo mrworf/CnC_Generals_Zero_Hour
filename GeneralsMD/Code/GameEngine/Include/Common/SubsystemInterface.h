@@ -44,8 +44,10 @@ struct SubsystemPublication
 	void* slot = nullptr;
 	void* prior = nullptr;
 	void (*restore)(void*, void*) noexcept = nullptr;
-	Bool valid() const noexcept { return slot ? restore != nullptr : !restore && !prior; }
+	void* acquired = nullptr;
+	Bool valid() const noexcept { return slot ? restore != nullptr : !restore && !prior && !acquired; }
 	void withdraw() const noexcept { if (restore) restore(slot, prior); }
+	void activate() const noexcept { if (restore && acquired) restore(slot, acquired); }
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -175,8 +177,13 @@ public:
 		sys->setName(name);
 		sys->init();
 		load();
-		m_subsystems.push_back({sys, publication}); // Last fallible acquisition.
+		adoptInitializedSubsystem(sys, publication); // Last fallible acquisition.
 	}
+	// Caller keeps candidate ownership until admission returns successfully.
+	void adoptInitializedSubsystem(SubsystemInterface*, SubsystemPublication={});
+	SubsystemInterface* ownedForSlot(const void*) const noexcept;
+	void activatePublications() noexcept;
+	void retireForSlot(const void*) noexcept;
 	std::size_t ownedCount() const noexcept { return m_subsystems.size(); }
 	void addSubsystem(SubsystemInterface* sys);
 	void removeSubsystem(SubsystemInterface* sys);

@@ -285,6 +285,7 @@ Object::Object( const ThingTemplate *tt, const ObjectStatusMaskType &objectStatu
 	try {
 
 	// Object's set of these persist for the life of the object.
+	m_destroyAdmission.push_back(this);
 	m_partitionLastLook = newInstance(SightingInfo);
 	m_partitionLastLook->reset();
 	m_partitionRevealAllLastLook = newInstance(SightingInfo);

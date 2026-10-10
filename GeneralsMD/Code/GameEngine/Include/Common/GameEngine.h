@@ -84,6 +84,8 @@ public:
 protected:
 
 	NativeServiceOwners<6> m_serviceOwners;
+	void quiesceOwnedWorld();
+	void resetOwnedWorld();
 
 	virtual FileSystem *createFileSystem( void );								///< Factory for FileSystem classes
 	virtual GameLogic *createGameLogic( void ) = 0;							///< Factory for GameLogic classes.

@@ -36,6 +36,7 @@ class Condition;
 class ObjectTypes;
 class Parameter;
 class Player;
+class TransportStatus;
 //-----------------------------------------------------------------------------
 // ScriptConditionsInterface
 //-----------------------------------------------------------------------------
@@ -72,6 +73,8 @@ class ScriptConditions : public ScriptConditionsInterface
 public:
 	ScriptConditions();
 	~ScriptConditions();
+	ScriptConditions(const ScriptConditions&) = delete;
+	ScriptConditions& operator=(const ScriptConditions&) = delete;
 
 public:
 
@@ -185,6 +188,9 @@ protected:
 	
 	// Stubs
 	Bool evaluateMissionAttempts(Parameter *pPlayerParm, Parameter *pComparisonParm, Parameter *pAttemptsParm);
+
+private:
+	TransportStatus *m_transportStatuses;
 
 
 };  // end class ScriptConditions

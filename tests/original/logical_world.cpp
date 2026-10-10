@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "AllocationFault.h"
+#include "AbsentAudioFixture.h"
 #include "ScriptCameraFixture.h"
 #include "NativeCameraViewFixture.h"
 #include "NativeFrameCameraViewFixture.h"
@@ -41,6 +42,7 @@
 #include "GameLogic/ExperienceTracker.h"
 #include "GameLogic/Module/InactiveBody.h"
 #include "GameLogic/Module/VeterancyGainCreate.h"
+#include "GameLogic/Module/OpenContain.h"
 #include "Common/Team.h"
 #include "Common/Radar.h"
 #include "GameClient/InGameUI.h"
@@ -771,7 +773,7 @@ void cameraFrames(Context& context,ActorParents& parents,LogicFixture& terrain,O
   rebound->friend_bindToObject(actor);actor->friend_bindToDrawable(rebound);
   headlessUIFrames(parents,actor,effects);
 }
-void factoryCreation(Context& context,bool faults,bool binding=false,bool cameraTracking=false,bool cameraFrame=false){
+void factoryCreation(Context& context,bool faults,bool binding=false,bool cameraTracking=false,bool cameraFrame=false,bool containment=false){
   std::unique_ptr<Tree> generatedUser;
   NativeServiceOwners<1> userOwner;
   if(cameraTracking){
@@ -787,6 +789,8 @@ void factoryCreation(Context& context,bool faults,bool binding=false,bool camera
   {std::ofstream definitions(context.tree.path/"creation.ini");
     definitions<<"Object GeneratedCreatedActor\n Geometry = BOX\n GeometryMajorRadius = 5\n GeometryMinorRadius = 3\n IsTrainable = Yes\n"
       " Body = InactiveBody GeneratedBody\n End\n Behavior = VeterancyGainCreate GeneratedCreate\n StartingLevel = VETERAN\n End\n End\n";
+    if(containment)definitions<<"Object GeneratedCreatedCarrier\n Geometry = BOX\n GeometryMajorRadius = 5\n GeometryMinorRadius = 3\n IsTrainable = Yes\n"
+      " Body = InactiveBody GeneratedBody\n End\n Behavior = OpenContain GeneratedContain\n ContainMax = 8\n End\n End\n";
     if(cameraTracking){definitions<<"GameData\n CameraHeight = 300\n CameraPitch = 45\n CameraYaw = 0\n";
       if(cameraFrame)definitions<<" PartitionCellSize = 20\n CameraAdjustSpeed = 0.2\n";
       definitions<<" End\n";}
@@ -818,6 +822,25 @@ void factoryCreation(Context& context,bool faults,bool binding=false,bool camera
   auto retire=[&](Object* actor){parents.logic.owner->destroyObject(actor);parents.logic.owner->processDestroyList();};
   auto* survivor=make();verify(survivor);auto* survivorDraw=survivor->getDrawable();auto* survivorPartition=survivor->friend_getPartitionData();
   auto* warm=make();verify(warm);retire(warm);
+  if(containment){
+    ActorParent<AudioManager,AbsentAudioFixture> audio{TheAudio};audio.create();
+    auto* carrier=context.factory->newObject(context.factory->findTemplate("GeneratedCreatedCarrier",FALSE),nullptr,OBJECT_STATUS_MASK_NONE);
+    auto* contain=dynamic_cast<OpenContain*>(carrier->getContain());require(contain && carrier->friend_getPartitionData(),"actual stock container created through full source factory and loaded partition");
+    auto* draw=survivor->getDrawable();const auto id=survivor->getID();
+    for(unsigned repeat=0;repeat<3;++repeat){
+      contain->addToContain(survivor);
+      require(contain->getContainCount()==1 && survivor->getContainedBy()==carrier && !survivor->friend_getPartitionData() && draw->isDrawableEffectivelyHidden(),"live source containment withdraws partition and hides original Drawable");
+      contain->removeFromContain(survivor);
+      require(!survivor->isDestroyed() && parents.logic.owner->findObjectByID(id)==survivor && !survivor->getContainedBy() && !contain->getContainCount() && survivor->friend_getPartitionData() && !draw->isDrawableEffectivelyHidden(),"live source evacuation preserves actor identity and restores partition and Drawable visibility");
+      survivor->friend_getPartitionData()->friend_updateCellsTouched();
+      require(survivor->friend_getPartitionData()->friend_getCoiInUseCount()>0,"live evacuation restores actual loaded-grid intersection backing");
+    }
+    contain->addToContain(survivor);const auto carrierID=carrier->getID();
+    parents.logic.owner->destroyAllObjectsImmediate();
+    require(!parents.logic.owner->findObjectByID(id) && !parents.logic.owner->findObjectByID(carrierID) && !parents.client.owner->firstDrawable(),"loaded-partition source recursive terminal cleanup retires actors and reciprocal Drawables");
+    require(!TheMemoryPoolFactory->findMemoryPool("OpenContain")->getUsedBlockCount() && !TheMemoryPoolFactory->findMemoryPool("PartitionDataPool")->getUsedBlockCount(),"live and terminal source paths retire actual container and partition units");
+    return;
+  }
   if(cameraFrame){cameraFrames(context,parents,terrain,survivor);retire(survivor);return;}
   if(cameraTracking){
     NativeCameraViewFixture camera;camera.init();camera.setFrameLengthMilliseconds(10);
@@ -1131,7 +1154,7 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
     if(std::string_view(argv[1]).starts_with("factory-creation"))for(unsigned repeat=0;repeat<2;++repeat){Context warm;factoryCreation(warm,false,
       std::string_view(argv[1])=="factory-creation-binding",
       std::string_view(argv[1])=="factory-creation-camera" || std::string_view(argv[1])=="factory-creation-camera-frame",
-      std::string_view(argv[1])=="factory-creation-camera-frame");}
+      std::string_view(argv[1])=="factory-creation-camera-frame",std::string_view(argv[1])=="factory-creation-containment");}
     for(unsigned repeat=0;repeat<3;++repeat){auto live=AllocationFault::live();const auto views=View::liveViewCount();const PoolUsage pools;
       auto* cameraPool=TheMemoryPoolFactory->findMemoryPool("CameraModelProbe");const auto cameraUnits=cameraPool?cameraPool->getUsedBlockCount():0;
       auto* tintPool=TheMemoryPoolFactory->findMemoryPool("TintEnvelope");const auto tintUnits=tintPool?tintPool->getUsedBlockCount():0;
@@ -1148,6 +1171,7 @@ int main(int argc,char** argv){const auto initial=AllocationFault::live();bool i
         else if(family=="factory-creation-binding")factoryCreation(context,false,true);
         else if(family=="factory-creation-camera")factoryCreation(context,false,false,true);
         else if(family=="factory-creation-camera-frame")factoryCreation(context,false,false,true,true);
+        else if(family=="factory-creation-containment")factoryCreation(context,false,false,false,false,true);
         else require(false,"unknown world family");}
       require((!tintPool || tintPool->getUsedBlockCount()==tintUnits) && (!cameraPool || cameraPool->getUsedBlockCount()==cameraUnits) && AllocationFault::live()==live && View::liveViewCount()==views && pools.matches() && !TheThingFactory && !TheSidesList && !TheNameKeyGenerator &&
         !MapObject::getFirstMapObject() && !PolygonTrigger::getFirstPolygonTrigger(),"repeated full-world owner retirement");}
