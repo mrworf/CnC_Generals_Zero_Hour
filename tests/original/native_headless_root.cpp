@@ -5,15 +5,29 @@
 #include "Common/GameMemory.h"
 #include "Common/FileSystem.h"
 #include "Common/GlobalData.h"
+#include "Common/DataChunk.h"
+#include "Common/NameKeyGenerator.h"
+#include "Common/WellKnownKeys.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/Object.h"
+#include "GameLogic/SidesList.h"
+#include "GameLogic/ScriptEngine.h"
+#include "GameLogic/Scripts.h"
 #include "GameClient/GameClient.h"
+#include "GameClient/TerrainVisual.h"
 #include "GameClient/MapUtil.h"
+#include "Common/ThingTemplate.h"
+#include "Common/Team.h"
+#include "Common/Module.h"
 #include <filesystem>
+#include <bit>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -31,16 +45,105 @@ struct Root {
   }
   ~Root(){std::error_code error;fs::remove_all(directory,error);}
   void put(const char* name,const char* text){
+    putBytes(name,text);
+  }
+  void putBytes(const char* name,std::string_view bytes){
     const auto path=directory/"assets"/name;
     fs::create_directories(path.parent_path());
     std::ofstream output(path,std::ios::binary);
-    output<<text;
+    output.write(bytes.data(),static_cast<std::streamsize>(bytes.size()));
     require(bool(output),"generated input write");
   }
   NativeHeadlessConfiguration config()const{
     return {{(directory/"assets").string()}, {(directory/"user-data").string(),(directory/"user-cache").string()}};
   }
 };
+struct Bytes : OutputStream {
+  std::string value;
+  Int write(const void* data,Int size) override {
+    value.append(static_cast<const char*>(data),static_cast<std::size_t>(size));
+    return size;
+  }
+};
+struct MapAuthoring {
+  FileSystem* previousFiles=TheFileSystem;
+  NameKeyGenerator* previousNames=TheNameKeyGenerator;
+  GlobalData* previousData=TheWritableGlobalData;
+  ScriptEngine* previousScripts=TheScriptEngine;
+  std::unique_ptr<FileSystem> files;
+  std::unique_ptr<NameKeyGenerator> names;
+  std::unique_ptr<GlobalData> data;
+  std::unique_ptr<ScriptEngine> scripts;
+  explicit MapAuthoring(const Root& root){
+    try {
+      files=std::make_unique<FileSystem>();files->mountReadOnly({(root.directory/"assets").string()});TheFileSystem=files.get();
+      names=std::make_unique<NameKeyGenerator>();TheNameKeyGenerator=names.get();names->init();
+      data=std::make_unique<GlobalData>();TheWritableGlobalData=data.get();
+      scripts=std::make_unique<ScriptEngine>();TheScriptEngine=scripts.get();scripts->init();
+    } catch (...) {retire();throw;}
+  }
+  void retire() noexcept {
+    scripts.reset();data.reset();names.reset();files.reset();
+    TheFileSystem=previousFiles;
+    TheScriptEngine=previousScripts;TheWritableGlobalData=previousData;TheNameKeyGenerator=previousNames;
+  }
+  ~MapAuthoring(){retire();}
+};
+std::string makeH1Map(bool malformedActor=false){
+  Bytes bytes;
+  DataChunkOutput out(&bytes);
+  constexpr Int width=65,height=65;
+  out.openDataChunk("HeightMapData",4);
+  out.writeInt(width);out.writeInt(height);out.writeInt(2);
+  out.writeInt(1);out.writeInt(61);out.writeInt(61);
+  out.writeInt(width*height);
+  for(Int y=0;y<height;++y)for(Int x=0;x<width;++x)out.writeByte(x<width/2?20:24);
+  out.closeDataChunk();
+  out.openDataChunk("WorldInfo",1);
+  Dict world;world.setInt(TheKey_weather,WEATHER_NORMAL);out.writeDict(world);out.closeDataChunk();
+  out.openDataChunk("SidesList",3);out.writeInt(1);
+  Dict side;side.setAsciiString(TheKey_playerName,"H1Player");
+  side.setBool(TheKey_playerIsHuman,TRUE);side.setBool(TheKey_multiplayerIsLocal,TRUE);
+  out.writeDict(side);out.writeInt(0);
+  out.writeInt(1);Dict team;team.setAsciiString(TheKey_teamName,"teamH1Player");
+  team.setAsciiString(TheKey_teamOwner,"H1Player");team.setBool(TheKey_teamIsSingleton,TRUE);
+  out.writeDict(team);
+  out.openDataChunk("PlayerScriptsList",5);out.openDataChunk("ScriptList",1);
+  out.openDataChunk("ScriptGroup",2);out.writeAsciiString("H1Group");out.writeByte(TRUE);out.writeByte(TRUE);
+  out.openDataChunk("Script",2);
+  for(const char* label:{"H1StartScript","H1 generated","H1 condition","H1 action"})out.writeAsciiString(label);
+  for(Bool value:{TRUE,FALSE,TRUE,FALSE,TRUE,FALSE})out.writeByte(value);
+  out.writeInt(3);
+  out.openDataChunk("OrCondition",1);out.openDataChunk("Condition",4);
+  out.writeInt(Condition::CONDITION_TRUE);
+  out.writeNameKey(TheScriptEngine->getConditionTemplate(Condition::CONDITION_TRUE)->m_internalNameKey);
+  out.writeInt(0);out.closeDataChunk();out.closeDataChunk();
+  out.openDataChunk("ScriptAction",2);out.writeInt(ScriptAction::SET_FLAG);
+  out.writeNameKey(TheScriptEngine->getActionTemplate(ScriptAction::SET_FLAG)->m_internalNameKey);
+  out.writeInt(2);
+  out.writeInt(Parameter::FLAG);out.writeInt(0);out.writeReal(0);out.writeAsciiString("H1Started");
+  out.writeInt(Parameter::BOOLEAN);out.writeInt(1);out.writeReal(0);out.writeAsciiString("");
+  out.closeDataChunk();out.closeDataChunk();out.closeDataChunk();out.closeDataChunk();out.closeDataChunk();out.closeDataChunk();
+  out.openDataChunk("ObjectsList",3);
+  for(const auto& actor:{std::pair{"H1Persistent",Real{200}},std::pair{"H1Expiring",Real{450}}}){
+    out.openDataChunk("Object",3);
+    if(malformedActor && actor.second==Real{200})
+      out.writeInt(std::bit_cast<Int>(std::numeric_limits<Real>::quiet_NaN()));
+    else out.writeReal(actor.second);
+    out.writeReal(200);out.writeReal(0);
+    out.writeReal(0);out.writeInt(0);out.writeAsciiString(actor.first);
+    Dict properties;properties.setAsciiString(TheKey_originalOwner,"teamH1Player");out.writeDict(properties);
+    out.closeDataChunk();
+  }
+  out.closeDataChunk();
+  out.openDataChunk("BlendTileData",8);out.writeInt(width*height);
+  for(unsigned table=0;table<4;++table)for(Int n=0;n<width*height;++n){out.writeByte(0);out.writeByte(0);}
+  for(Int y=0;y<height;++y)for(Int byte=0;byte<(width+7)/8;++byte)out.writeByte(0);
+  out.writeInt(16);out.writeInt(1);out.writeInt(1);out.writeInt(1);
+  out.writeInt(0);out.writeInt(16);out.writeInt(4);out.writeInt(0);out.writeAsciiString("H1Terrain");
+  out.writeInt(0);out.writeInt(0);out.closeDataChunk();
+  out.finish();return bytes.value;
+}
 void admitAndRetire(NativeHeadlessConfiguration config){
   auto engine=std::make_unique<NativeHeadlessGameEngine>(std::move(config));
   require(!TheGameEngine,"no borrowed engine");
@@ -59,6 +162,67 @@ void admitAndRetire(NativeHeadlessConfiguration config){
     TheGameEngine=nullptr;
     throw;
   }
+}
+void loadH1(NativeHeadlessConfiguration config){
+  auto engine=std::make_unique<NativeHeadlessGameEngine>(std::move(config));
+  require(!TheGameEngine,"no borrowed engine before H1");
+  TheGameEngine=engine.get();
+  try {
+    engine->init(0,nullptr);
+    TheWritableGlobalData->m_mapName="Maps/H1.map";
+    TheGameLogic->setGameMode(GAME_SINGLE_PLAYER);
+    TheGameLogic->startNewGame(FALSE);
+    require(TheGameLogic->isLoadingMap(),"original pending H1 load");
+    engine->update();
+    require(!TheGameLogic->isLoadingMap(),"original H1 load completed");
+    require(TheSidesList && TheSidesList->findSideInfo("H1Player"),"authored H1 side loaded");
+    require(TheSidesList->findTeamInfo("teamH1Player"),"authored H1 team loaded");
+    require(TheScriptEngine && TheScriptEngine->findScriptByName("H1StartScript"),"authored H1 script registered");
+    unsigned persistent=0,expiring=0,unexpected=0;
+    ObjectID persistentID=static_cast<ObjectID>(0),expiringID=static_cast<ObjectID>(0);
+    for(Object* actor=TheGameLogic->getFirstObject();actor;actor=actor->getNextObject()){
+      const auto& name=actor->getTemplate()->getName();
+      require(actor->getTeam() && actor->getTeam()->getName()=="teamH1Player",
+        "H1 actor has authored team ownership");
+      unsigned deletionModules=0;
+      for(auto** module=actor->getBehaviorModules();*module;++module)
+        if((*module)->getModuleNameKey()==TheNameKeyGenerator->nameToKey("DeletionUpdate"))
+          ++deletionModules;
+      if(name=="H1Persistent"){
+        require(actor->getPosition()->x==200 && actor->getPosition()->y==200,
+          "H1 persistent actor position");
+        persistentID=actor->getID();
+        require(deletionModules==0,"H1 persistent actor has no timed deletion");
+        ++persistent;
+      }
+      else if(name=="H1Expiring"){
+        require(actor->getPosition()->x==450 && actor->getPosition()->y==200,
+          "H1 expiring actor position");
+        require(deletionModules==1 &&
+          actor->findUpdateModule(TheNameKeyGenerator->nameToKey("DeletionUpdate")),
+          "exactly one H1 DeletionUpdate parsed and constructed");
+        expiringID=actor->getID();
+        ++expiring;
+      }
+      else ++unexpected;
+    }
+    require(persistent==1 && expiring==1 && unexpected==0,"two exact H1 actors loaded");
+    require(persistentID!=0 && expiringID!=0 &&
+      persistentID!=expiringID,"source assigned distinct H1 object IDs");
+    require(TheTerrainVisual,"H1 terrain visual exists");
+    ICoord2D left{20,20},right{45,20};
+    require(TheTerrainVisual->getRawMapHeight(&left)==20 && TheTerrainVisual->getRawMapHeight(&right)==24,
+      "two authored terrain plateaus loaded");
+    engine.reset();TheGameEngine=nullptr;
+    require(!TheGameLogic && !TheGameClient && !TheFileSystem,"H1 root retired");
+    for(const char* poolName:{"ObjectPool","MapObject","ScriptList","DeletionUpdate"}){
+      auto* pool=TheMemoryPoolFactory->findMemoryPool(poolName);
+      require(pool && pool->getUsedBlockCount()==0,"H1 actor/map/script/module pool units retired");
+    }
+  } catch (...) {engine.reset();TheGameEngine=nullptr;throw;}
+}
+void requireH1(NativeHeadlessConfiguration config,const char* stage){
+  try{loadH1(std::move(config));}catch(...){throw std::runtime_error(stage);}
 }
 void runGenerated(const std::string& mode){
   Root input;
@@ -92,6 +256,7 @@ void runGenerated(const std::string& mode){
     "Data/INI/Locomotor.ini","Data/INI/Default/SpecialPower.ini","Data/INI/SpecialPower.ini",
     "Data/INI/DamageFX.ini","Data/INI/Armor.ini",
     "Data/INI/ParticleSystem.ini",
+    "Data/INI/Campaign.ini",
     "Data/INI/Default/CommandButton.ini","Data/INI/CommandButton.ini","Data/INI/CommandSet.ini",
     "Data/INI/InGameUI.ini",
     "Data/INI/Default/Music.ini","Data/INI/Default/SoundEffects.ini","Data/INI/SoundEffects.ini",
@@ -104,6 +269,48 @@ void runGenerated(const std::string& mode){
   input.put("Data/INI/AudioSettings.ini","AudioSettings\n AudioRoot = Data/Audio\n MusicFolder = Tracks\n SoundsFolder = Sounds\n StreamingFolder = Speech\n SoundsExtension = wav\n Preferred3DSW = GeneratedNoDevice\n Default2DSpeakerType = Stereo\n Default3DSpeakerType = Stereo\n End\n");
   input.put("Data/INI/Music.ini","MusicTrack GeneratedMusic\n Filename = generated-track\n Volume = 100%\n Priority = NORMAL\n Type = UI EVERYONE\n End\n");
   input.put("Data/Audio/Tracks/generated-track","generated-not-decoded");
+  if(mode=="h1-map" || mode=="h1-map-negative") {
+    input.put("Data/INI/Default/Multiplayer.ini",
+      "MultiplayerColor H1Color\n RGBColor = R:255 G:0 B:0\n RGBNightColor = R:128 G:0 B:0\n End\n");
+    constexpr auto h1Objects=
+      "Object H1Persistent\n Geometry = BOX\n GeometryMajorRadius = 5\n GeometryMinorRadius = 3\n Body = InactiveBody H1Body\n End\n End\n"
+      "Object H1Expiring\n Geometry = BOX\n GeometryMajorRadius = 5\n GeometryMinorRadius = 3\n Body = InactiveBody H1Body\n End\n Behavior = DeletionUpdate H1Deletion\n MinLifetime = 1000\n MaxLifetime = 1000\n End\n End\n";
+    input.put("Data/INI/Default/Object.ini",h1Objects);
+    std::string map,malformedActorMap;
+    {
+      MapAuthoring author(input);
+      map=makeH1Map();
+      if(mode=="h1-map-negative")malformedActorMap=makeH1Map(true);
+    }
+    if(mode=="h1-map-negative"){
+      input.putBytes("Maps/H1.map",std::string_view(map).substr(0,16));
+      bool rejected=false;
+      try{loadH1(input.config());}catch(...){rejected=true;}
+      require(rejected,"truncated original map rejected");
+      require(!TheGameEngine && !TheGameLogic && !TheGameClient && !TheFileSystem,
+        "rejected H1 root retired");
+      input.putBytes("Maps/H1.map",map);
+      requireH1(input.config(),"corrected map retry");
+      input.putBytes("Maps/H1.map",malformedActorMap);
+      rejected=false;
+      try{loadH1(input.config());}catch(...){rejected=true;}
+      require(rejected,"nonfinite authored actor rejected");
+      require(!TheGameEngine && !TheGameLogic && !TheGameClient && !TheFileSystem,
+        "rejected H1 actor root retired");
+      input.putBytes("Maps/H1.map",map);
+      requireH1(input.config(),"corrected actor retry");
+      input.put("Data/INI/Default/Object.ini",
+        "Object H1Persistent\n Behavior = MissingH1Module Bad\n End\n End\n");
+      rejected=false;
+      try{loadH1(input.config());}catch(...){rejected=true;}
+      require(rejected,"unknown H1 module rejected");
+      require(!TheGameEngine && !TheGameLogic && !TheGameClient && !TheFileSystem,
+        "rejected H1 module root retired");
+      input.put("Data/INI/Default/Object.ini",h1Objects);
+    }
+    input.putBytes("Maps/H1.map",map);
+    requireH1(input.config(),"final H1 admission");return;
+  }
   if(mode!="generated") {
     auto config=input.config();
     if(mode=="missing-ini")fs::remove(input.directory/"assets/Data/INI/Default/GameData.ini");
@@ -150,7 +357,8 @@ int main(int argc,char** argv){
     initMemoryManager();
     executable=fs::absolute(argv[0]).parent_path()/"zero_hour_headless";
     const std::string name=argv[1];
-    if(name=="generated" || name=="missing-ini" || name=="storage-refusal")runGenerated(name);
+    if(name=="generated" || name=="missing-ini" || name=="storage-refusal" ||
+       name=="h1-map" || name=="h1-map-negative")runGenerated(name);
     else if(name=="missing")rejectMissing();
     else throw std::runtime_error("unknown test family");
     shutdownMemoryManager();

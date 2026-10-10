@@ -7,12 +7,14 @@
 #include "GameClient/NativeDisplayStringManager.h"
 #include "GameClient/NativeHeadlessDisplay.h"
 #include "GameClient/NativeHeadlessInGameUI.h"
+#include "GameClient/NativeHeadlessTerrainVisual.h"
 #include <memory>
 
 FontLibrary* NativeHeadlessGameClient::createFontLibrary() { return new NativeFontLibrary; }
 DisplayStringManager* NativeHeadlessGameClient::createDisplayStringManager() { return new NativeDisplayStringManager; }
 Display* NativeHeadlessGameClient::createGameDisplay() { return new NativeHeadlessDisplay; }
 InGameUI* NativeHeadlessGameClient::createInGameUI() { return new NativeHeadlessInGameUI(m_nativeCameraEffects); }
+TerrainVisual* NativeHeadlessGameClient::createTerrainVisual() { return new NativeHeadlessTerrainVisual; }
 void NativeHeadlessGameClient::init()
 {
   if(m_composition==Composition::LogicalServices) initHeadlessLogicalServices();

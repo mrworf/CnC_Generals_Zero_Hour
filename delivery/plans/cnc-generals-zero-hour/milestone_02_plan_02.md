@@ -80,7 +80,7 @@ parts cannot enlarge H1 or enter a completed slice commit silently.
 | Slice | Plan | Observable outcome | Dependencies | Status | Commit | Evidence |
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | [Slice 01](milestone_02_plan_02_slice_01.md) | Original native entry and root admission | accepted plan01 slices 01/02 | complete | this slice commit | [evidence](../../../evidence/qa/N2-native-root-startup.md) |
-| 02 | [Slice 02](milestone_02_plan_02_slice_02.md) | Exact H1 map and actor admission | plan02 slice 01 | pending | | |
+| 02 | [Slice 02](milestone_02_plan_02_slice_02.md) | Exact H1 map and actor admission | plan02 slice 01 | complete | this slice commit | [evidence](../../../evidence/qa/N2-h1-map-admission.md) |
 | 03 | [Slice 03](milestone_02_plan_02_slice_03.md) | 120 original updates, script and deletion | plan02 slice 02 | pending | | |
 | 04 | [Slice 04](milestone_02_plan_02_slice_04.md) | Canonical repeated-state comparison | plan02 slice 03 | pending | | |
 | 05 | [Slice 05](milestone_02_plan_02_slice_05.md) | Failure, corrected retry and ownership | plan02 slice 04 | pending | | |

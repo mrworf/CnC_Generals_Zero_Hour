@@ -92,6 +92,7 @@ void hLineRemoveValue(Int x1, Int x2, Int y, void* userData);
 
 #include "GameClient/Line2D.h"
 #include "GameClient/ControlBar.h"
+#include "GameClient/GameClient.h"
 
 #ifdef _DEBUG
 //#include "GameClient/InGameUI.h"	// for debugHints
@@ -1304,7 +1305,8 @@ void PartitionCell::addLooker(Int playerIndex)
 		// On an edge trigger, tell all objects to think about their shroudedness
 		invalidateShroudedStatusForAllCois( playerIndex );
 
-		if( playerIndex == ThePlayerList->getLocalPlayer()->getPlayerIndex() )
+		if( playerIndex == ThePlayerList->getLocalPlayer()->getPlayerIndex() &&
+			(!TheGameClient || !TheGameClient->isHeadless()) )
 		{
 			// and if this is the local player, do the Client update.
 			TheDisplay->setShroudLevel(m_cellX, m_cellY, newShroud);
@@ -1340,7 +1342,8 @@ void PartitionCell::removeLooker(Int playerIndex)
 		// On an edge trigger, tell all objects to think about their shroudedness
 		invalidateShroudedStatusForAllCois( playerIndex );
 
-		if( playerIndex == ThePlayerList->getLocalPlayer()->getPlayerIndex() )
+		if( playerIndex == ThePlayerList->getLocalPlayer()->getPlayerIndex() &&
+			(!TheGameClient || !TheGameClient->isHeadless()) )
 		{
 			// and if this is the local player, do the Client update.
 			TheDisplay->setShroudLevel(m_cellX, m_cellY, newShroud);
@@ -1368,7 +1371,8 @@ void PartitionCell::addShrouder( Int playerIndex )
 		invalidateShroudedStatusForAllCois( playerIndex );
 
 		// and update the client if we are on the local player
-		if( playerIndex == ThePlayerList->getLocalPlayer()->getPlayerIndex() )
+		if( playerIndex == ThePlayerList->getLocalPlayer()->getPlayerIndex() &&
+			(!TheGameClient || !TheGameClient->isHeadless()) )
 		{
 			TheDisplay->setShroudLevel(m_cellX, m_cellY, newShroud);
 			TheRadar->setShroudLevel(m_cellX, m_cellY, newShroud);
@@ -3076,8 +3080,11 @@ void PartitionManager::shroudMapForPlayer( Int playerIndex )
 void PartitionManager::refreshShroudForLocalPlayer()
 {
 	// This is a drawing refresh only, and so is allowed to use the Local Player.
-	TheDisplay->clearShroud();
-	TheRadar->clearShroud();
+	const Bool publishVisualShroud = !TheGameClient || !TheGameClient->isHeadless();
+	if (publishVisualShroud) {
+		TheDisplay->clearShroud();
+		TheRadar->clearShroud();
+	}
 
 	Int playerIndex = ThePlayerList->getLocalPlayer()->getPlayerIndex();
 	for (int i = 0; i < m_totalCellCount; ++i)
@@ -3085,8 +3092,10 @@ void PartitionManager::refreshShroudForLocalPlayer()
 		Int x = m_cells[i].getCellX();
 		Int y = m_cells[i].getCellY();
 		CellShroudStatus status = m_cells[i].getShroudStatusForPlayer(playerIndex);
-		TheDisplay->setShroudLevel(x, y, status);
-		TheRadar->setShroudLevel(x, y, status);
+		if (publishVisualShroud) {
+			TheDisplay->setShroudLevel(x, y, status);
+			TheRadar->setShroudLevel(x, y, status);
+		}
 		m_cells[i].invalidateShroudedStatusForAllCois(playerIndex);
 	}
 }

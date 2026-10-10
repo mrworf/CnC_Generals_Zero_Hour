@@ -41,7 +41,7 @@ struct NativeTerrainLogic::Load {
   }
   ~Load(){if(!keep){if(published)exchange();if(visualPublished)owner.m_visual.exchangeTerrainState(terrain);lighting.publish(configuration);}}
 };
-NativeTerrainLogic::~NativeTerrainLogic(){deleteWaypoints();deleteBridges();}
+NativeTerrainLogic::~NativeTerrainLogic(){reset();}
 void NativeTerrainLogic::init(){TerrainLogic::init();m_mapDX=m_mapDY=0;m_minZ=0;m_maxZ=1;}
 void NativeTerrainLogic::reset(){TerrainLogic::reset();MapObject::WorldState retired;MapObject::exchangeWorldState(retired);m_mapDX=m_mapDY=0;m_minZ=0;m_maxZ=1;}
 Bool NativeTerrainLogic::loadMap(AsciiString filename,Bool query){

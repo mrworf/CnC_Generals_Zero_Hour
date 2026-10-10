@@ -91,10 +91,13 @@ build/original-core-gcc/zero_hour_headless --startup \
   --data-root "$ASSET_MOUNT" --user-data "$USER_DATA_DIR" --user-cache "$USER_CACHE_DIR"
 ```
 
-It runs the original `GameEngine::init` and complete owner teardown. It does
-not yet load a map or advance gameplay; that is the next N2 slice. It prints
-only a generic success or rejection, never supplied paths. To check this
-boundary without retail content, run:
+The executable's `--startup` mode runs original `GameEngine::init` and complete
+owner teardown; it prints only a generic success or rejection, never supplied
+paths. The separate generated `h1-map` and `h1-map-negative` fixture modes run
+the original pending single-player map transition and verify authored actors,
+script registration, terrain, malformed-input rejection and corrected retry.
+They do not yet perform the 120 steady gameplay updates. To check these
+boundaries without retail content, run:
 
 ```sh
 cmake --build build/original-core-gcc --target zero_hour_headless original_native_headless_root_fixture -j 4

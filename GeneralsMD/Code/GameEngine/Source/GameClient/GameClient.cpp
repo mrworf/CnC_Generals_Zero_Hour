@@ -477,9 +477,15 @@ void GameClient::initHeadlessLogicalServices()
 		TheControlBar->initCommandMetadata();
 		m_serviceOwners.create(TheInGameUI, [&] { return createInGameUI(); });
 		TheInGameUI->init();
+		m_serviceOwners.create(TheTerrainVisual, [&] { return createTerrainVisual(); });
+		TheTerrainVisual->init();
+		m_serviceOwners.create(TheCampaignManager, [] { return new CampaignManager; });
+		TheCampaignManager->init();
 		TheDisplayStringManager->postProcessLoad();
 		m_headlessLogicalServices = TRUE;
 	} catch (...) {
+		m_serviceOwners.retire(TheCampaignManager);
+		m_serviceOwners.retire(TheTerrainVisual);
 		m_serviceOwners.retire(TheInGameUI);
 		m_serviceOwners.retire(TheControlBar);
 		m_serviceOwners.retire(TheDisplay);

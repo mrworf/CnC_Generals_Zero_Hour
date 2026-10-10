@@ -26,7 +26,7 @@ protected:
 private:
   VideoPlayerInterface* createVideoPlayer() override {throw ERROR_BAD_ARG;}
   IMEManagerInterface* createIMEManager() override {throw ERROR_BAD_ARG;}
-  TerrainVisual* createTerrainVisual() override {throw ERROR_BAD_ARG;}
+  TerrainVisual* createTerrainVisual() override;
   Keyboard* createKeyboard() override {throw ERROR_BAD_ARG;}
   Mouse* createMouse() override {throw ERROR_BAD_ARG;}
   SnowManager* createSnowManager() override {throw ERROR_BAD_ARG;}

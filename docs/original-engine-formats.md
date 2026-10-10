@@ -6996,3 +6996,27 @@ missing-input rejection and same-root corrected retries pass GCC debug and
 GCC/Clang sanitizers; see `evidence/qa/N2-native-root-startup.md` for commands.
 No loaded map, gameplay tick, physical output or retail-data acceptance is
 claimed by this boundary.
+
+#### Reached generated H1 map and teardown (N2 plan02 slice02)
+
+The original pending `GameLogic::startNewGame` path calls
+`NativeTerrainLogic::loadMap` after one `GameEngine::update`. The generated
+65×65 map needs legal HeightMapData and BlendTileData widths, WorldInfo,
+SidesList with script table, and two ObjectsList entries. The visual terrain
+chunk version 8 stores `(width + 7) / 8` cliff-flag bytes per row; a shorter
+row fails format admission. `DataChunkOutput::writeReal` rejects nonfinite
+values while authoring, so malformed actor input must use an explicitly
+defined raw 32-bit representation for the field. `NativeLogicalWorld::object`
+rejects nonfinite coordinates before object publication.
+
+The loaded map creates source-required neutral/civilian sides that can have
+null script lists. `ScriptList::reset` must retire only acquired lists. An
+unknown module name makes `ModuleFactory::newModuleDataFromINI` return null;
+`ThingTemplate::parseModuleName` must reject it before dereference. Loaded
+`MapObject` properties stay in the world-state list until
+`NativeTerrainLogic::reset`; its destructor now runs that reset before base
+teardown. Physical load-screen, fade, control-bar, replay and shroud-window
+work is absent from the headless client; logical side, terrain, radar,
+partition and actor work remains on the original path. Source evidence and
+bounded execution are in `evidence/qa/N2-h1-map-admission.md`. Steady update,
+repeated-state, fault-terminal and retail-input claims remain pending.

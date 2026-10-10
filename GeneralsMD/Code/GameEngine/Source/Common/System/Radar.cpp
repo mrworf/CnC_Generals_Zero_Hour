@@ -42,6 +42,7 @@
 #include "Common/Xfer.h"
 
 #include "GameClient/Drawable.h"
+#include "GameClient/GameClient.h"
 #include "GameClient/Eva.h"
 #include "GameClient/GameWindowManager.h"
 #include "GameClient/InGameUI.h"
@@ -335,9 +336,13 @@ void Radar::newMap( TerrainLogic *terrain )
 {
 
 	// keep a pointer for our radar window
-	Int id = NAMEKEY( "ControlBar.wnd:LeftHUD" );
-	m_radarWindow = TheWindowManager->winGetWindowFromId( NULL, id );
-	DEBUG_ASSERTCRASH( m_radarWindow, ("Radar::newMap - Unable to find radar game window\n") );
+	if (TheWindowManager) {
+		Int id = NAMEKEY( "ControlBar.wnd:LeftHUD" );
+		m_radarWindow = TheWindowManager->winGetWindowFromId( NULL, id );
+		DEBUG_ASSERTCRASH( m_radarWindow, ("Radar::newMap - Unable to find radar game window\n") );
+	} else if (!TheGameClient || !TheGameClient->isHeadless()) {
+		throw ERROR_BAD_ARG;
+	}
 
 	// reset all the data in the radar
 	reset();

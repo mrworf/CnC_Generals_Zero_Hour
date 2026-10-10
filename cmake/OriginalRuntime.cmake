@@ -307,6 +307,7 @@ target_sources(original_logical_client PRIVATE
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeModelAnimationClock.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeWaterGrid.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeTerrainVisual.cpp"
+  "${ZH_CODE}/GameEngine/Source/GameClient/NativeHeadlessTerrainVisual.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/INI/INIMappedImage.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeMapPreviewLayout.cpp"
   "${ZH_CODE}/GameEngine/Source/GameClient/NativeMapPreviewStorage.cpp"
@@ -413,7 +414,7 @@ target_link_options(zero_hour_headless PRIVATE -Wl,--gc-sections)
 add_dependencies(original_native_headless_root_fixture zero_hour_headless)
 add_test(NAME original_native_headless_help COMMAND zero_hour_headless --help)
 set_tests_properties(original_native_headless_help PROPERTIES LABELS "original;runtime;native_root" TIMEOUT 60)
-foreach(family IN ITEMS generated missing missing-ini storage-refusal)
+foreach(family IN ITEMS generated missing missing-ini storage-refusal h1-map h1-map-negative)
   add_test(NAME original_native_headless_root_${family} COMMAND original_native_headless_root_fixture "${family}")
   set_tests_properties(original_native_headless_root_${family} PROPERTIES LABELS "original;runtime;native_root" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")

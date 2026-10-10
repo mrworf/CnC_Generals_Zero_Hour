@@ -8,12 +8,36 @@
 #include "Common/Radar.h"
 #include "Common/GameAudio.h"
 #include "GameLogic/GameLogic.h"
+#include "GameLogic/NativeTerrainLogic.h"
+#include "Common/MapObject.h"
 #include "GameClient/NativeHeadlessGameClient.h"
+#include "GameClient/NativeTerrainVisual.h"
 #include "GameClient/ParticleSys.h"
 #include <memory>
 #include <utility>
 
 namespace {
+class NativeHeadlessTerrainLogic final : public NativeTerrainLogic {
+public:
+  using NativeTerrainLogic::NativeTerrainLogic;
+private:
+  // The shared CPU world already admitted terrain and lighting. H1 has no
+  // bridge or road markers, so no device road/bridge work is requested.
+  void admitDeviceMap() override {}
+  void loadRoadsAndBridges(Bool) override {
+    for(auto* node=MapObject::getFirstMapObject();node;node=node->getNext())
+      if(node->getFlags() & (FLAG_ROAD_FLAGS|FLAG_BRIDGE_FLAGS))throw ERROR_BAD_ARG;
+  }
+};
+
+class NativeHeadlessGameLogic final : public GameLogic {
+  TerrainLogic* createTerrainLogic() override {
+    auto* visual=dynamic_cast<NativeTerrainVisual*>(TheTerrainVisual);
+    if(!visual)throw ERROR_BAD_ARG;
+    return new NativeHeadlessTerrainLogic(*visual);
+  }
+};
+
 class NativeHeadlessRadar final : public Radar {
   void draw(Int,Int,Int,Int) override { throw ERROR_BAD_ARG; }
   void clearShroud() override { throw ERROR_BAD_ARG; }
@@ -67,7 +91,7 @@ class NativeHeadlessAudio final : public AudioManager {
   ZH_NO_OUTPUT(void,adjustVolumeOfPlayingAudio,(AsciiString,Real))
   ZH_NO_OUTPUT(void,removePlayingAudio,(AsciiString))
   ZH_NO_OUTPUT(void,removeAllDisabledAudio,())
-  ZH_NO_OUTPUT(Bool,has3DSensitiveStreamsPlaying,()const)
+  Bool has3DSensitiveStreamsPlaying() const override { return FALSE; }
   ZH_NO_OUTPUT(void*,getHandleForBink,())
   ZH_NO_OUTPUT(void,releaseHandleForBink,())
   ZH_NO_OUTPUT(void,friend_forcePlayAudioEventRTS,(const AudioEventRTS*))
@@ -95,7 +119,7 @@ NativeUserStorage* NativeHeadlessGameEngine::createUserStorage() {
   TheFileSystem->attachUserStorage(storage.get());
   return storage.release();
 }
-GameLogic* NativeHeadlessGameEngine::createGameLogic() { return new GameLogic; }
+GameLogic* NativeHeadlessGameEngine::createGameLogic() { return new NativeHeadlessGameLogic; }
 GameClient* NativeHeadlessGameEngine::createGameClient() { return new NativeHeadlessGameClient; }
 ModuleFactory* NativeHeadlessGameEngine::createModuleFactory() { return new ModuleFactory; }
 ThingFactory* NativeHeadlessGameEngine::createThingFactory() { return new ThingFactory; }

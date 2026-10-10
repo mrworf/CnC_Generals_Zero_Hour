@@ -600,6 +600,9 @@ static void placeNetworkBuildingsForPlayer(Int slotNum, const GameSlot *pSlot, P
 // ------------------------------------------------------------------------------------------------
 LoadScreen *GameLogic::getLoadScreen( Bool loadingSaveGame )
 {
+	// A headless client has no WindowManager or load-screen presentation.
+	// The original pending-start and map-load work still runs below.
+	if (TheGameClient && TheGameClient->isHeadless()) return NULL;
 	switch (m_gameMode) 
 	{
 	case GAME_SHELL:
@@ -2156,7 +2159,7 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 	}
 
 	// if we're in a load game, don't fade yet
-	if( loadingSaveGame == FALSE )
+	if( loadingSaveGame == FALSE && (!TheGameClient || !TheGameClient->isHeadless()) )
 	{
 		TheTransitionHandler->setGroup("FadeWholeScreen");
 		while(!TheTransitionHandler->isFinished())
@@ -2228,10 +2231,11 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 			ThePlayerList->setLocalPlayer(ThePlayerList->findPlayerWithNameKey(TheNameKeyGenerator->nameToKey("ReplayObserver")));
 			TheRadar->forceOn(TRUE);
 			ThePartitionManager->refreshShroudForLocalPlayer();
-			TheControlBar->setControlBarSchemeByPlayer( ThePlayerList->getLocalPlayer());
+			if (!TheGameClient || !TheGameClient->isHeadless())
+				TheControlBar->setControlBarSchemeByPlayer( ThePlayerList->getLocalPlayer());
 			DEBUG_LOG(("Start of a replay game %ls, %d\n",ThePlayerList->getLocalPlayer()->getPlayerDisplayName().str(), ThePlayerList->getLocalPlayer()->getPlayerIndex()));
 		}
-		else
+		else if (!TheGameClient || !TheGameClient->isHeadless())
 			TheControlBar->setControlBarSchemeByPlayer(ThePlayerList->getLocalPlayer());
 //		ShowControlBar();
 		
@@ -2394,7 +2398,7 @@ void GameLogic::loadMapINI( AsciiString mapName )
 	}
 
 	// we want to do this before doing the actual map load!
-	if (TheDisplay)
+	if (TheDisplay && (!TheGameClient || !TheGameClient->isHeadless()))
 	{
 		fullFledgeFilename = assetUsage.c_str();
 		// note: call this EVEN IF THE FILE IN QUESTION DOES NOT EXIST.

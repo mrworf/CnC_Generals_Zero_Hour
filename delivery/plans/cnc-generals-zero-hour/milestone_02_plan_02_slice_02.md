@@ -46,8 +46,9 @@ related tests. At milestone end run the complete required frozen matrix.
 Use `cmake -S . -B build/original-core-gcc -G Ninja -DCMAKE_BUILD_TYPE=Debug
 -DZH_BUILD_RENDERER=OFF`, analogous GCC/Clang sanitizer build directories with
 `-DZH_SANITIZE=ON`, `cmake --build`, and `ctest --test-dir ... --output-on-failure`.
-Target-specific commands must be written here once tests/targets exist; no
-command absent from repository evidence is claimed as already runnable.
+The focused target and test commands are recorded in
+`evidence/qa/N2-h1-map-admission.md`. The fixture runs `h1-map` and
+`h1-map-negative` under normal GCC and GCC/Clang sanitizers.
 A timeout or unavailable private input is incomplete, never a pass.
 
 ## Expected implementation surfaces
@@ -59,13 +60,19 @@ pre-existing paths before touching overlapping files; stage only owned hunks.
 
 ## Acceptance criteria
 
-- [ ] The entry loads the exact generated H1 single-player map through the
+- [x] The entry loads the exact generated H1 single-player map through the
   original pending-start path; both actors, parsed DeletionUpdate, script
   registration, sides and nonuniform terrain are observable before steady ticks.
-- [ ] Positive and negative behavior above is directly demonstrated by
+- [x] Positive and negative behavior above is directly demonstrated by
   executable source or a bounded public report, with current source identity.
-- [ ] Ownership, input integrity and accepted existing regression guarantees
+- [x] Ownership, input integrity and accepted existing regression guarantees
   remain intact; no private data is committed.
+
+The checked boundary is map admission before steady ticks. The fixture also
+rejects a truncated map, nonfinite actor coordinate and unknown module, each
+followed by corrected H1 admission; zero used units remain in its actor, map,
+script and deletion pools after loaded-world retirement. The 120-tick witness
+belongs to slice03.
 
 ## Commit boundary
 
