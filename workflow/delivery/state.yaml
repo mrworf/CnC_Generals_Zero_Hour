@@ -68,7 +68,7 @@
     "milestone_complete": false,
     "slice_complete": false,
     "evidence": "evidence/qa/N2-headless-ui-implementation.md",
-    "repository_commit": null
+    "repository_commit": "f6856e501a0248c268d876d551bd7d76b54e6db9"
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
