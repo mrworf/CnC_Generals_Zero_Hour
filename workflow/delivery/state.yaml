@@ -28,7 +28,7 @@
   "particle_admission_validation": {
     "parent_commit": "8123f8cc",
     "implementation_checkpoint": "a3590548bbed558e9c53e4a3b3cb968dd03a2df1",
-    "repository_commit": null,
+    "repository_commit": "e4a1d97db4131e238a0080cb0e403760df9d20d3",
     "status": "Frozen related144 PASS all3; creation-only particle-chain admission component-validated, not concrete19/startup/N2 acceptance",
     "evidence": "evidence/qa/N2-particle-admission.md",
     "canonical_source_files": 731,
@@ -112,7 +112,7 @@
   "working_checkpoint": {
     "parent": "1ea25c4e611bef7315a392c2372245d6c7fdaf49",
     "label": "original-particle-chain-admission-validation",
-    "repository_commit": null,
+    "repository_commit": "e4a1d97db4131e238a0080cb0e403760df9d20d3",
     "evidence": "evidence/qa/N2-particle-admission.md",
     "validation": "Frozen related144 PASS GCC/GCCsan/Clangsan;320 matching manifests and unchanged source hashes. Full481 unrun; component evidence only.",
     "next": "Continue planned growing-pool lifecycle validation and concrete19 tracker/bone/effect integration under real source parents, camera and actual startup/loaded simulation in the same N2 plan01/slice03.",
