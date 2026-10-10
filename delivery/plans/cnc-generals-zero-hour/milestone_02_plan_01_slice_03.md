@@ -3347,3 +3347,52 @@ composition evidence is not accepted. No live jobs. Commit this coherent owned
 source/test/documentation cohort; continue whole-root factory/composed frames,
 science/model/terrain/ghost parents and coupled actor retirement in this same
 slice03. Full384, slice completion and N2 acceptance remain pending.
+
+Coupled world retirement batch (parent dfb3a3598446e4d36a49c607687eaeb7ce2c4a84;
+clean worktree, no pre-existing edits): continue this slice, not a replacement
+plan. Own Object/GameLogic queue admission, GameClient drawable quiescence,
+GameEngine reset/destruction, registry publication/targeted retirement, and their
+generated source ownership fixtures/build definitions/documentation. Reserve
+one destruction node during guarded Object construction and splice at the original
+post-AI phase. A pre-mark rejection returns the node; marked failures remain
+queued. Recursive re-entry while callbacks are active must not acquire another
+node or double-queue. Preserve processDestroyList's append traversal.
+
+Registry cleanup must use acquired owners, not current borrowed globals. Provide
+nonallocating publication activation and slot-based owned retirement, keeping
+borrowed prefixes untouched until restoration after cleanup. Quiesce owned actors
+and all owned client-only Drawables before root reverse reset/shutdown; retire
+owned teams before players while scripts remain alive. Reuse the source drawable
+cleanup loop, not allocating GameClient::reset during destruction. Headless root
+reset explicitly omits the absent blank menu, never claims physical presentation.
+Validate actual GameEngine cleanup with registered source parents/live actors,
+recursive children and client-only effects; distinguish this lifecycle fixture
+from still-pending full GameEngine initialization/simulation acceptance. Inspect
+constructor rollback, callback rejection and all existing actor fault manifests;
+new constructor demand changes their exact terminals. Focused GCC iteration then
+frozen related GCC and both sanitizer matrices, unchanged timeout/leak policies.
+Commit the complete coherent lifecycle cohort only after required evidence passes.
+Source cleanup trace refinement: OpenContain removal currently re-registers an
+already-marked destroyed rider into partition/pathfinding before Object::onDestroy
+finishes. This is not live evacuation: the actor is terminal and will immediately
+be deleted. Close that terminal re-admission across the shared enclosing helper,
+retaining live evacuation and recursive non-enclosing child traversal. Keep
+membership, removal callbacks and audio phases; do not suppress them to obtain
+zero demand. Add source terminal/recursive coverage and preserve source live
+re-entry coverage before committing this coupled batch.
+
+Root init/reset continuation refinement: after the currently frozen related204
+matrix finishes, add actual source GameLogic::init/reset plus default composed
+native GameClient to a registry-owned GameEngine reset fixture, with initialized
+name keys, AI, partition/script owners, actual native no-map terrain and source
+water/weather base settings. This is empty reset/owned lifecycle coverage, not
+full loaded simulation or fog acceptance. Close the inspected ScriptConditions
+transport-cache null-call/global-owner defect and AudioManager's guarded
+constructor cohort together with this provider adoption. Preserve cache predicate
+ObjectID/frame/count semantics, source reset phase order and callbacks; use
+owner-local cache retirement, not global suppression. Test independent source
+conditions cache owners and real failure/retry boundaries, plus nonempty live
+containment evacuation against loaded partition data. Keep all required parent
+identities alive through source destructor callbacks and restore borrowed globals
+only afterward. No production edit during the current frozen matrix; retain its
+source-attributed results and validate subsequent deltas proportionately.

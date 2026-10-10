@@ -5292,3 +5292,86 @@ root execution must prove its actual command-list path and replay owner across
 all reset phases; component FrameTick construction is not that proof. Sources:
 MessageStream.h::GameMessageList, MessageStream.cpp::{reset,propagateMessages},
 GameClientDispatch.cpp::GameClientMessageDispatcher::translateGameMessage.
+
+Coupled root retirement implementation, validation still pending: each Object
+now owns its actual destruction-list node, acquired inside the guarded constructor
+before publication. GameLogic transfers that node before Destroy callbacks and
+splices into the source queue at the original post-AI phase. A pre-mark callback
+rejection restores it; marked failures retain source queue ownership. Empty
+admission prevents same-actor callback re-entry, not recursive child destruction.
+processDestroyList still visits appended children before clearing its nodes.
+The member is internal; explicit Object::xfer does not serialize list storage.
+
+GameEngine retrieves its acquired registry rather than trusting a borrowed global.
+It activates registered acquired publications, drains source actors and client-only
+Drawables while their parents remain live, then retires registered teams before
+players and scripts. The registry's slot lookup/targeted retirement selects the
+most recent ownership unit; duplicate numeric/current publications do not collapse
+acquisitions. Slot withdrawal restores borrowed prefixes only after destruction.
+GameClient's reusable drawable drain is its original cleanup loop without reset
+allocations. Headless reset omits the absent blank menu; full registry reset and
+original simulation execution remain required and not yet accepted.
+
+Recursive source containment census: OpenContain::onDelete walks live riders,
+advancing its iterator before source destroyObject removes the child from that
+containment list. HelixContain also destroys its portable structure; TunnelContain
+withdraws from its live player's tracker; OverlordContain withdraws redirected
+containment before invoking the inherited path. OpenContain admission/removal
+calls TheAudio even for empty sounds. The generated lifecycle fixture supplies
+an actual AudioManager base with all physical virtual operations rejecting, and
+uses only the source addAudioEvent empty/NoSound early return. It does not accept
+audio device support or whole native root startup. AudioManager's constructor
+still acquires three raw candidates without a guard; production native audio/root
+failure admission must close that coupled acquisition before broad root acceptance.
+
+Two source limits retained rather than hidden by this batch: direct GameLogic::reset
+clears/resizes lookup backing before destroying actors (root quiescence is not a
+proof of that standalone entry point); OverlordContain's selected-flash traversal
+uses while(*it) instead of an end check, outside its destruction path. Cover these
+with their actual reset/selection cohorts when those paths are delivered. Current
+source changes and focused build are not acceptance evidence until tests finish.
+Focused root lifecycle execution now proves actual recursive cleanup under GCC:
+the carrier is created last and is the source actor-list head, so its stock
+OpenContain::onDelete reaches still-live children before outer traversal. The
+redacted exception trace exposed a separate terminal reacquisition: child
+Object::onDestroy removes containment after marking DESTROYED, and the shared
+OpenContain world helper re-registered that terminal child into partition and
+pathfinding. The helper now performs add only for a live actor; remove and
+non-enclosing descendant traversal remain unchanged. No removal/audio callback
+was suppressed. Source and fixture corrections, all retained failure/retry logs,
+and the focused root2 PASS6.39s are in evidence/qa/N2-root-retirement.md.
+Canonical655/inclusive662 frozen configured builds and related204 matrix are
+running all3; do not infer their results or full GameEngine init/reset/frame
+acceptance from this focused cleanup result.
+
+Actual root reset/init provider census, before adding coverage: GameLogic::init
+creates its real PartitionManager before terrain, then GhostObjectManager,
+terrain, ScriptActions, ScriptConditions and ScriptEngine. ScriptEngine::init
+requires initialized name keys and rejects optional script-debug/particle-edit
+tools. Source ScriptActions init/reset closes only its existing message window;
+an empty headless window cohort does not require a physical window manager.
+ScriptEngine reset retires sequential scripts, named caches, reveal/type lists,
+and script-read lists; generated reset fixtures must own those source lifetimes,
+not borrow nonempty production script tables and call reset on them.
+
+ScriptConditions has an additional coupled ownership defect: its transport-status
+cache is a cpp-static chain. init, reset and destructor all enter reset, which
+calls deleteInstance on the head even when null. A null member call is not a
+valid C++ cleanup boundary; warm empty reset must not rely on a method's internal
+this check. The three live-cache references are reset and evaluateUnitHasEmptied;
+the latter caches ObjectID/frame/contained-count, not serialized gameplay state.
+Keep that exact predicate and frame behavior while giving the actual conditions
+owner its own cache and guarding/iteratively retiring the complete chain. Prove
+independent owner/reset/cache lifetime and the actual source GameLogic init/reset
+cohort, not only an empty helper. Sources: ScriptConditions.cpp::{init,reset,
+evaluateUnitHasEmptied,TransportStatus::~TransportStatus}, ScriptConditions.h,
+GameLogic.cpp::init and ScriptEngine.cpp::{init,reset}.
+
+Root reset also retires WaterTransparencySetting and WeatherSetting overrides.
+Provide actual source base settings and preserve borrowed override identity;
+camera defaults alone are not that root cohort. Native terrain's initialized
+unloaded bounds are valid for empty reset, not loaded-map or fog acceptance.
+The common GhostObjectManager has empty methods: an empty-owner reset can use
+its actual no-instance contract, but cannot claim snapshot/fog implementation.
+Keep live evacuation/loaded-partition coverage separate from that empty reset
+fixture. The still-pending complete GameEngine startup/simulation gate is unchanged.

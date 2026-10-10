@@ -34,7 +34,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 native default-client composition component verified all3: builds, unaffected173 plus corrected native-font21, exact terminal205. No live sessions. Continue actual whole-root/composed frames, science/model/terrain/ghost parents and coupled actor retirement. Full384 pending.",
+  "resume_point": "N2 plan01/slice03 coupled root retirement from dfb3a359: frozen GCC204/build PASS225.69s and Clangsan204/build PASS590.98s, both terminal0. Only GCCsan44478 remains live at last observation (152/204); preserve source freeze and revalidate its exact terminal before source edits. Same canonical655/inclusive662. Worktree review: documentation checkpoint only; 16 executable/build/test paths remain intentionally uncommitted until actual positive root reset and live containment coverage pass. See N2-root-retirement.md/current slice. Full388 and whole startup/simulation pending.",
   "transaction_parent": "2744b0dc1c4da3adcf293a4686e21001cd582d8e",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -77,6 +77,33 @@
     "findings": "docs/original-engine-formats.md",
     "diagnostic": "Original GameEngine::init link-only probe PASS on current source; no initialization/frame execution acceptance",
     "production_changes_started": true
+  },
+  "pending_batch": {
+    "label": "coupled-root-retirement",
+    "parent_commit": "dfb3a3598446e4d36a49c607687eaeb7ce2c4a84",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "evidence": "evidence/qa/N2-root-retirement.md",
+    "status": "Documentation checkpoint only; implementation remains uncommitted. Frozen configured builds PASS all3; GCC related204 PASS225.69s and Clang sanitizer related204 PASS590.98s terminal0. GCC sanitizer44478 related204 live,152 passed at last observation. Positive root reset/live containment coverage required before implementation commit; whole initialization/simulation and full388 remain pending",
+    "canonical_source_sha256": "b8f2eff60299a093c85931d7febc351505b75b0fd12059d868e98593e0f6cf66",
+    "toolchain_inclusive_sha256": "282fb913b68ed4621448a60a75cdff36bd1f10c443b80c6924cf6c1b7af3278f",
+    "configured_suite_tests": 388,
+    "live_sessions_at_last_observation": [44478],
+    "frozen_results": {
+      "18994": "GCC configured build and related204 PASS225.69s terminal0",
+      "11309": "Clang sanitizer configured build and related204 PASS590.98s terminal0"
+    },
+    "retired_iteration_sessions": {
+      "83051": "terminal1: fixture omitted derived factory's explicit status; corrected",
+      "68659": "terminal0: focused configured build",
+      "56188": "terminal8: registry3 pass, actor7 fixture INI reject; corrected",
+      "12502": "terminal8: actor5 pass, root2 missing source client parents/order; corrected",
+      "85028": "terminal8: root2 fixture borrowed outer UI publication order; corrected",
+      "40074": "terminal8: source terminal containment re-admission exposed by fault; corrected",
+      "63494": "terminal0: redacted cleanup exception trace identifies original dead-rider partition re-admission",
+      "73483": "terminal0: root2 pass,6.39s"
+    },
+    "milestone_complete": false,
+    "slice_complete": false
   },
   "active_implementation": {
     "label": "original-native-client-composition",
