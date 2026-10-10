@@ -5874,3 +5874,48 @@ GCCsan111.39s/Clangsan68.16s. Exact38 cold/seeded manifests agree across all3,
 three whole-cohort repetitions/every retry, production cursor and pooled-key
 retirement proof. Canonical710/inclusive717 source identity is recorded there.
 Full449, runtime19 and N2 acceptance remain pending.
+
+### Current-model integration prerequisites after provider-data admission
+
+`animobj.cpp::Compute_Current_Frame` is not a general modulo clock. It uses
+WW3D sync-time delta, clip frame rate, speed multiplier and retained direction.
+LOOP subtracts frames-1 once, then resets to0 if still past the endpoint;
+LOOP_BACKWARDS adds frames-1 once, then resets to the last frame if still
+negative. PINGPONG reflects once and applies source endpoint fallbacks. ONCE
+completion tests the retained frame, not merely a speculative elapsed-time
+sample. Single_Anim_Progress preserves the older previous frame when called
+twice at identical time, for animation-event semantics. Native client integration
+must preserve these rules, not use fmod or a simulation-driven replacement clock.
+
+`W3DModelDraw.cpp::adjustAnimation` selects from repeated weighted records with
+the client RNG; different idle selection avoids the previous index. Backward
+modes choose the last initial frame. Start-frame precedence is RANDOMIZE, FIRST,
+LAST, then a common maintain-frame flag across different states. State transition,
+duration/pause and movement-speed adjustment remain necessary producer behavior;
+an explicit manual-frame fixture cannot accept those behaviors.
+
+`W3DModelDraw.cpp` current bone accessors have different missing-output contracts:
+clientOnly_getRenderObjBoneTransform leaves output unchanged without a model,
+but writes identity/false for the index0 sentinel when a model exists. Current
+world-space lookup leaves output unchanged on either miss. Model-space sweeps
+apply orthogonal inverse(world), then Drawable scale, to each live world pose;
+they have no pristine-query fallback. Preserve first-only RenderObjInfo routing
+and multi-module current-bone traversal in Drawable.cpp.
+
+`hlod.cpp::Update_Obj_Space_Bounding_Volumes` merges all LOD and aggregate
+subobject spheres/AABBs in the base hierarchy pose at identity, not the currently
+animated pose. A special last-LOD OBBOX instead uses Simple_Evaluate_Bone and its
+local center/extent to derive current bounds. Its world sphere follows the
+bounding-box override path. Decode/admit the original bounding primitive before
+claiming camera radius/bounds parity; root bone poses alone are insufficient.
+
+Attachment admission must distinguish parallel source paths. Add_Lod_Model
+clamps a nonnegative stale bone beyond the hierarchy to0 intentionally, for
+re-exported skeletons. Add_Sub_Object_To_Bone instead returns0 without admission
+for negative or out-of-range indices; HLodDef construction ignores that return.
+Proxy transforms and mesh skin indices have separate hierarchy indexing paths.
+NativeW3DAssets currently uses one strict relationship check for LOD/aggregate/
+proxy attachment. Source-compatible stale-LOD fallback and aggregate rejection,
+alongside safe negative/proxy/skin admission, remain a pending coupled correction
+with generated regressions, not accepted compatibility or authority to weaken
+every relationship check indiscriminately.

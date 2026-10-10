@@ -3799,3 +3799,18 @@ is retained (38 manifests, three repetitions); namespace/pool/backing retirement
 is exact. Evidence: evidence/qa/N2-draw-provider-data.md. Full449, concrete runtime
 providers, current-client animation, condition transfer/materials/startup and
 loaded simulation remain the same slice03/N2 gate. No live validation jobs remain.
+
+Next current-model integration keeps original live-client pose separate from the
+already-integrated pristine logic cache. Connect actual Drawable current bone
+consumers to owned native pose publication/update, preserving exact missing-output
+contracts, orthogonal inverse/scale semantics, bounded numbered sweeps and client
+thread/phase ownership. Replace a complete model/clip candidate under asset/cache
+rollback; ordinary frozen-pose updates and reads must have no standard-allocation
+demand. Keep producer APIs protected until concrete providers perform source
+condition/transition, weighted client RNG and sync-time animation choreography.
+Explicit manual-pose fixtures accept consumers/ownership only, not these producers.
+Source clock, all-LOD base bounds, special bounding primitive and distinct LOD/
+aggregate/proxy/skin admission findings are recorded together in
+docs/original-engine-formats.md. Complete those coupled prerequisites before
+claiming concrete native model/camera or full factory acceptance; never substitute
+a generic modulo clock, guessed sphere or universally relaxed attachment check.
