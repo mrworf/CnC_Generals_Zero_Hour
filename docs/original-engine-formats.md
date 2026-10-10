@@ -5220,3 +5220,75 @@ prove whole-root terminal retirement. Sources: GameEngine.cpp::{init,~GameEngine
 System/SubsystemBase.cpp::{resetAll,shutdownAll}, GameLogic.cpp::{~GameLogic,
 destroyAllObjectsImmediate,destroyObject}, GameClient.cpp::{reset,~GameClient},
 InGameUI.cpp::deselectDrawable.
+
+Native client composition source contract (parent2744b0dc; component verified): the
+original GameClient loads DrawGroupInfo before strings/fonts, applies localized
+font overrides, and invokes display-string postProcessLoad itself during init.
+SubsystemInterfaceList::postProcessLoadAll visits registered root owners, not
+this nested client cache. The default native logical client retains these real
+INI/CSF/local-font operations, actual logical ControlBar and headless UI/View
+ownership. DrawablesOnly is limited fixture mode, never full root acceptance.
+NativeHeadlessDisplay owns the source View list/viewport but rejects physical
+presentation, movies, output, device-mode requests and capability validation.
+
+The base-client C3 member precedes the owner journal and survives its cleanup.
+Rollback retires UI and metadata before Display, strings and fonts. Selected
+Drawable cleanup still requires GameLogic; unselected cleanup does not read that
+parent and may legitimately run during client-only terminal retirement. Composed
+reset requires terrain before mutation, retains source UI/Drawable sequencing,
+and resets metadata and Display without absent menus/video. Composed frame routing
+retains tactical freeze/tracking, terrain, camera and UI order; execution still
+awaits complete root parents. Display::update does not advance Views; headless
+invokes updateViews at the source camera/draw phase, without reporting a draw.
+
+Generated default-client tests use real command INIs, CSF/local fonts, unloaded
+NativeTerrainLogic only as reset parent, client-only Drawables and pool exhaustion.
+Its getExtent initializes the entire no-map output; common TerrainLogic's empty
+extent stub is invalid for this fixture. Composition results using that base
+are superseded, not evidence of safe reset. Corrected native-font21 PASS all3;
+unchanged-source unaffected173 PASS all3, exact manifest terminal205. Source
+identity/delta proof and timings are in N2-native-client-composition.md.
+Loaded terrain/models, nonempty science, composed simulation frames and
+whole engine startup/shutdown are not accepted. See
+evidence/qa/N2-native-client-composition.md.
+
+Whole-root retirement continuation census (source verified, not executed):
+GameLogic::destroyObject currently acquires a temporary std::list node before
+DestroyModule callbacks/status, then splices at the original post-AI phase. Its
+catch queues marked actors but otherwise unwinds that node. processDestroyList
+keeps its actual list nodes until all pending Object destructors finish; callbacks
+may append child retirements and the loop visits them before clearing the list.
+Object::onDestroy is containment withdrawal plus BehaviorModule::onDelete and
+partition maintenance, distinct from DieModule::onDie. SpawnBehavior::onDelete
+recursively destroys live owned spawn IDs. Do not replace this with direct delete
+or confuse CreateObjectDie/CrateDie death effects with destroy callbacks.
+
+An acquisition-safe root teardown must preserve this phase and child ordering.
+Reserve each actor's queue admission node as an Object-owned construction unit,
+before publication; splice it into the actual source queue without allocation
+and return it to the actor if a pre-mark callback rejects. Keep marked actors
+queued on late rejection. All fields remain internal and absent from explicit
+Xfer wire encoding. This is an implementation direction, not delivered evidence.
+Review recursive containment and pooled constructors together before execution.
+Source GameEngine owns the registry but currently just calls shutdownAll; it
+does not quiesce actors ahead of later-registered PlayerList/TeamFactory/Radar.
+Actor quiescence plus explicit owned retirement order must be tested as one root
+cohort; allocating GameClient::reset is not a destructor substitute. The clearing
+flag is set by clearGameData around GameEngine::reset, not by root destruction;
+do not invent a suppression rule from that flag. Sources: GameLogic.cpp::
+{destroyObject,processDestroyList}, Object.cpp::onDestroy, SpawnBehavior.cpp::
+onDelete, GameLogicDispatch.cpp::clearGameData, GameEngine.cpp::~GameEngine.
+
+Root startup/message boundary clarification: GameMessageList::reset is an empty
+inline source operation; MessageStream::reset calls that operation and therefore
+does not discard its pending initial-map message. CommandList::reset separately
+destroys its accepted list. Do not infer message loss from resetAll alone or
+replace stream reset semantics without a source-backed gameplay reason.
+MessageStream::propagateMessages always transfers survivors to TheCommandList,
+even without translators; GameClientMessageDispatcher preserves network-range,
+NEW_GAME, CLEAR_GAME_DATA and FRAME_TICK messages. Physical input conversion and
+direct recorded logic-command delivery are different boundaries. Final native
+root execution must prove its actual command-list path and replay owner across
+all reset phases; component FrameTick construction is not that proof. Sources:
+MessageStream.h::GameMessageList, MessageStream.cpp::{reset,propagateMessages},
+GameClientDispatch.cpp::GameClientMessageDispatcher::translateGameMessage.

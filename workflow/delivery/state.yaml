@@ -26,16 +26,16 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "992b8b44ff9f08d9be7d0d423449de3bf6821531",
-    "label": "original-logical-command-metadata",
-    "evidence": "evidence/qa/N2-command-metadata-implementation.md",
-    "validation": "All3 frozen configured builds/focused4/related189 PASS on canonical653/inclusive660 with unsuppressed GCC/Clang sanitizers; full379 and actual client/root integration remain pending.",
-    "next": "Continue actual native client/root composition and lifecycle closure under existing N2 plan01/slice03. Full379 and remaining N2 acceptance gates pending.",
+    "parent": "2744b0dc1c4da3adcf293a4686e21001cd582d8e",
+    "label": "original-native-client-composition",
+    "evidence": "evidence/qa/N2-native-client-composition.md",
+    "validation": "Configured builds PASS all3; unchanged-production unaffected173 plus corrected native-font21 PASS all3, exact terminal205, canonical654/inclusive661. Full384 and whole-root acceptance pending.",
+    "next": "Continue whole native root/composed frames and actor retirement under existing N2 plan01/slice03. Full384 and remaining N2 acceptance gates pending.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 logical command metadata component verified: all3 builds/focused4/related189 PASS. Continue actual native client/root composition and lifecycle closure. Full379 pending.",
-  "transaction_parent": "992b8b44ff9f08d9be7d0d423449de3bf6821531",
+  "resume_point": "N2 plan01/slice03 native default-client composition component verified all3: builds, unaffected173 plus corrected native-font21, exact terminal205. No live sessions. Continue actual whole-root/composed frames, science/model/terrain/ghost parents and coupled actor retirement. Full384 pending.",
+  "transaction_parent": "2744b0dc1c4da3adcf293a4686e21001cd582d8e",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
   "completed_slices": [
@@ -44,31 +44,31 @@
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-command-metadata-implementation.md",
+  "evidence": "evidence/qa/N2-native-client-composition.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "Continue actual native client/root composition, lifecycle closure and production model providers under existing N2 plan01/slice03. Full379 and remaining N2 acceptance gates pending.",
+  "next": "Continue actual whole-root/composed frames, science/model/terrain/ghost parents and coupled actor retirement under existing N2 plan01/slice03. Full384 and remaining N2 acceptance gates pending.",
   "implementation_checkpoint": {
-    "label": "original-logical-command-metadata",
-    "reason": "Actual metadata initialization/override/reset ownership verified; native root composition and lifecycle closure remain pending",
-    "prior_commit": "f6856e501a0248c268d876d551bd7d76b54e6db9",
-    "parent_commit": "992b8b44ff9f08d9be7d0d423449de3bf6821531",
-    "canonical_source_sha256": "05bd13977ecb84328f8387e3762f977bb1820ffdb2d0a0cae7fe97e80b18ffa9",
-    "toolchain_inclusive_sha256": "8c6a60804b257653d5099ca19dffcd058c8b4074418f0218f6ad1f3e5b85494c",
-    "configured_suite_tests": 379,
-    "related_suite_tests_passed": 189,
+    "label": "original-native-client-composition",
+    "reason": "Default native client startup/reset/terminal composition ownership verified; full root/composed frames and actor retirement remain pending",
+    "prior_commit": "294dfb38daf5b59d06812b9ebbb57ec9483af22c",
+    "parent_commit": "2744b0dc1c4da3adcf293a4686e21001cd582d8e",
+    "canonical_source_sha256": "37e9d2b761a539358fd59b3225478dae727b739a8342e3bdf330832fbed5f936",
+    "toolchain_inclusive_sha256": "bbf2510c68691a29630f9368291a28c5e12d864be67c29de26749865019f89f1",
+    "configured_suite_tests": 384,
+    "related_suite_tests_passed": 194,
     "configurations": [
       "GCC",
       "GCC ASan/UBSan/LSan",
       "Clang ASan/UBSan/LSan"
     ],
-    "full_current_matrix": "full379 not run; configured builds/focused4/related189 PASS all3 on final frozen source",
+    "full_current_matrix": "full384 not run; configured builds and consolidated unaffected173/corrected native-font21 PASS all3. Evidence records both frozen identities/delta proof, not one same-hash194 run",
     "milestone_complete": false,
     "slice_complete": false,
-    "evidence": "evidence/qa/N2-command-metadata-implementation.md",
-    "repository_commit": "294dfb38daf5b59d06812b9ebbb57ec9483af22c"
+    "evidence": "evidence/qa/N2-native-client-composition.md",
+    "repository_commit": null
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
@@ -79,20 +79,32 @@
     "production_changes_started": true
   },
   "active_implementation": {
-    "label": "original-logical-command-metadata",
-    "parent_commit": "992b8b44ff9f08d9be7d0d423449de3bf6821531",
-    "evidence": "evidence/qa/N2-command-metadata-implementation.md",
-    "canonical_source_sha256": "05bd13977ecb84328f8387e3762f977bb1820ffdb2d0a0cae7fe97e80b18ffa9",
-    "toolchain_inclusive_sha256": "8c6a60804b257653d5099ca19dffcd058c8b4074418f0218f6ad1f3e5b85494c",
-    "configured_suite_tests": 379,
-    "status": "Final frozen configured builds/focused4/related189 PASS all3, every terminal0. Actual client/root integration and full379 pending",
+    "label": "original-native-client-composition",
+    "parent_commit": "2744b0dc1c4da3adcf293a4686e21001cd582d8e",
+    "evidence": "evidence/qa/N2-native-client-composition.md",
+    "canonical_source_sha256": "37e9d2b761a539358fd59b3225478dae727b739a8342e3bdf330832fbed5f936",
+    "toolchain_inclusive_sha256": "bbf2510c68691a29630f9368291a28c5e12d864be67c29de26749865019f89f1",
+    "configured_suite_tests": 384,
+    "status": "All configured builds PASS; unaffected173/corrected native-font21 PASS all3. Every process terminal0. Full384/root acceptance pending",
     "iteration_sessions": {
-      "GCC": 93912,
-      "GCC sanitizer": 97376,
-      "Clang sanitizer": 22417
+      "GCC": 75308,
+      "GCC sanitizer": 52980,
+      "Clang sanitizer": 76169
+    },
+    "corrected_fixture_sessions": {
+      "GCC focused": 42273,
+      "GCC native font": 83799,
+      "GCC sanitizer native font": 64650,
+      "Clang sanitizer native font": 4308
+    },
+    "live_sessions": [],
+    "corrected_fixture_results": {
+      "GCC": "configured build/native-font21 PASS48.71s terminal0",
+      "Clang sanitizer": "configured build/native-font21 PASS119.00s terminal0",
+      "GCC sanitizer": "configured build/native-font21 PASS154.43s terminal0"
     },
     "environment": "Host upgrade interrupted compiler/assembler and stale SDL paths; CMake --fresh and clean original-source rebuild, metadata GCC16.2.1/Clang23.1.1. Retain every initial failure/retry.",
-    "next": "Continue actual native client/root composition, lifecycle closure and Display/terrain/model providers under same N2 plan01/slice03; full379 remains unrun.",
+    "next": "Continue actual whole-root/composed frames, science/model/terrain/ghost parents and coupled actor retirement under same N2 plan01/slice03; full384 unrun.",
     "milestone_complete": false,
     "slice_complete": false
   }

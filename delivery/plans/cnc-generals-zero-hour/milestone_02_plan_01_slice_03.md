@@ -3290,3 +3290,60 @@ actors plus client-only effects, repeated world reset and whole engine destructi
 and complete failure/retry manifests with identical initialized provider cohorts.
 Current component matrices do not accept these whole-root paths; verified source
 contracts and unresolved implementation limits are in docs/original-engine-formats.md.
+
+Native client composition implementation refinement (parent2744b0dc; clean tree):
+make native logical service composition the default production client mode.
+Existing Drawables-only fixtures explicitly select that limited mode; it is not
+a whole-root provider. Base GameClient owns the C3 context before its ownership
+journal, keeping it alive through base cleanup and Display-owned View retirement.
+Adopt real native strings/fonts, a logical Display with explicit physical-output
+rejection, actual ControlBar metadata and NativeHeadlessInGameUI. Preserve source
+client-before-terrain startup, configured virtual viewport and source camera/UI
+phase order. Reject foreign/partial publications before acquisition, duplicate
+initialization without replacement, and roll back the complete adopted cohort
+on error so the same client can retry. Keep the pre-existing DrawGroupInfo owner.
+
+Reset logical command overrides and Display Views even in composed headless
+mode; no physical menu/video call. Retire metadata explicitly after UI and before
+other parents. Restrict the GameLogic deselection preflight to selected Drawables,
+the only branch that reads its frame. Add actual default-client generated INI
+composition tests for startup before terrain, configured View/command binding,
+duplicate rejection, reset, missing/bad input rollback and same-owner retry,
+every standard-allocation prefix/terminal and whole-owner retirement. Existing
+client/UI/text and command tests remain required. Native terrain/root factories,
+whole engine actor shutdown ordering and GameMain execution remain pending;
+this change must not claim those gates. Focused iteration precedes frozen related
+GCC/Clang sanitizer validation; preserve all failure/retry pairs and commit the
+coherent source/test/evidence cohort together under this same slice transaction.
+
+Include source DrawGroupInfo INI/localized font overrides and the actual native
+display-string postProcessLoad cache in this same composition, not deferred to
+the root registry (GameClient invokes it itself in the original init). Generated
+CSF and supplied local fonts must exercise nonempty numeral/formation strings.
+Use actual unloaded NativeTerrainLogic, with explicit rejection of missing device
+admission, as reset parent after pre-terrain startup. Its getExtent initializes
+the full output without a loaded map. Common TerrainLogic::getExtent is an empty
+stub and cannot be a valid fixture; discard composition evidence using that base.
+This still proves neither loaded terrain nor composed simulation frames.
+
+Next coupled root retirement implementation direction: reserve the actual
+destruction queue node in each Object during guarded construction, rather than
+allocate while destroying a root under failure. Preserve DestroyModule/status/
+AI/splice/Object::onDestroy order, return the reserved node on a pre-mark callback
+exception, retain marked late-rejected actors in the source queue, and keep
+processDestroyList's child-append traversal. SpawnBehavior::onDelete is an actual
+recursive child path, not a death callback. Batch this with actor/client-only
+Drawable quiescence and explicit owned team-before-player/script retirement;
+test complete root reset/shutdown and live children, not a node helper alone.
+Inspect registry ownership and all source callback parents before execution.
+Current source and verified limits are durable in original-engine-formats.md.
+
+Native default-client composition checkpoint verified: canonical654/inclusive661
+final identity in evidence/qa/N2-native-client-composition.md; configured builds
+PASS all3. Unchanged-production unaffected173 plus corrected native-font21 PASS
+all3; exact terminal205/every retry and four typed pools. The invalid common-base
+terrain reset fixture was replaced with native initialized no-map bounds; its old
+composition evidence is not accepted. No live jobs. Commit this coherent owned
+source/test/documentation cohort; continue whole-root factory/composed frames,
+science/model/terrain/ghost parents and coupled actor retirement in this same
+slice03. Full384, slice completion and N2 acceptance remain pending.

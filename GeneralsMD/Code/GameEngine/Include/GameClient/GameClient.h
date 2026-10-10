@@ -33,6 +33,7 @@
 
 #include "Common/GameType.h"
 #include "Common/NativeServiceOwners.h"
+#include "GameClient/NativeCameraShaker.h"
 #include "Common/MessageStream.h"		// for GameMessageTranslator
 #include "Common/Snapshot.h"
 #include "Common/STLTypedefs.h"
@@ -162,10 +163,15 @@ public:
 protected:
 	void updateDrawableState(Bool freezeTime, Int localPlayerIndex);
 	void initHeadless();
+	void initHeadlessLogicalServices();
 	void updateHeadless();
 	Bool m_headless;
+	Bool m_headlessLogicalServices = FALSE;
 	UnsignedInt m_lastDrawableFrame = ~UnsignedInt{0};
 
+	// Members retire in reverse declaration order, after the destructor body.
+	// Display-owned Views must never outlive their shared camera effect owner.
+	NativeCameraShaker m_nativeCameraEffects;
 	NativeServiceOwners<32> m_serviceOwners;
 
 	// snapshot methods

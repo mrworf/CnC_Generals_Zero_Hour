@@ -5,10 +5,19 @@
 #include "GameClient/RayEffect.h"
 #include "GameClient/NativeFontLibrary.h"
 #include "GameClient/NativeDisplayStringManager.h"
+#include "GameClient/NativeHeadlessDisplay.h"
+#include "GameClient/NativeHeadlessInGameUI.h"
 #include <memory>
 
 FontLibrary* NativeHeadlessGameClient::createFontLibrary() { return new NativeFontLibrary; }
 DisplayStringManager* NativeHeadlessGameClient::createDisplayStringManager() { return new NativeDisplayStringManager; }
+Display* NativeHeadlessGameClient::createGameDisplay() { return new NativeHeadlessDisplay; }
+InGameUI* NativeHeadlessGameClient::createInGameUI() { return new NativeHeadlessInGameUI(m_nativeCameraEffects); }
+void NativeHeadlessGameClient::init()
+{
+  if(m_composition==Composition::LogicalServices) initHeadlessLogicalServices();
+  else GameClient::init();
+}
 
 Drawable* NativeHeadlessGameClient::friend_createDrawable(const ThingTemplate* definition,DrawableStatus status)
 {

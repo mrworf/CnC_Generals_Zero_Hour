@@ -3254,10 +3254,11 @@ void InGameUI::selectDrawable( Drawable *draw )
 //-------------------------------------------------------------------------------------------------
 void InGameUI::deselectDrawable( Drawable *draw )
 {
-	if (!draw || !TheGameLogic) throw ERROR_BAD_ARG;
+	if (!draw) throw ERROR_BAD_ARG;
 
 	if( draw->isSelected() )
 	{
+		if (!TheGameLogic) throw ERROR_BAD_ARG;
 		DrawableListIt findIt = std::find(m_selectedDrawables.begin(),m_selectedDrawables.end(),draw);
 		if (findIt == m_selectedDrawables.end()) throw ERROR_BAD_ARG;
 

@@ -252,6 +252,7 @@ void pools(Context& c) {
   std::cout<<"four actual typed pools; both string constructor acquisitions; every failure/retry pair\n";
 }
 struct Client:NativeHeadlessGameClient {
+  Client():NativeHeadlessGameClient(Composition::DrawablesOnly){}
   void compose(Hooks& hooks) {
     m_serviceOwners.create(TheFontLibrary,[]{return new Fonts;},false);
     m_serviceOwners.create(TheDisplayStringManager,[&]{return new Strings(hooks);});

@@ -523,6 +523,9 @@ template<class Base,class Concrete=Base>struct ActorParent{
   void retire(){if(owner){slot=owner.get();owner.reset();slot=previous;}}
   ~ActorParent(){retire();}
 };
+struct DrawableOnlyClient:NativeHeadlessGameClient {
+  DrawableOnlyClient():NativeHeadlessGameClient(Composition::DrawablesOnly){}
+};
 struct ActorParents{
   ControlBar* previousControl=TheControlBar;
   ActorParent<RankInfoStore> ranks{TheRankInfoStore};ActorParent<AI> ai{TheAI};
@@ -530,7 +533,7 @@ struct ActorParents{
   ActorParent<Radar,ActorRadar> radar{TheRadar};ActorParent<ModuleFactory,ActorModuleFactory> modules{TheModuleFactory};
   ActorParent<PlayerList> players{ThePlayerList};ActorParent<TeamFactory> teams{TheTeamFactory};
   ActorParent<GhostObjectManager> ghosts{TheGhostObjectManager};
-  ActorParent<MessageStream> messages{TheMessageStream};ActorParent<GameClient,NativeHeadlessGameClient> client{TheGameClient};
+  ActorParent<MessageStream> messages{TheMessageStream};ActorParent<GameClient,DrawableOnlyClient> client{TheGameClient};
   ActorParent<UpgradeCenter> upgrades{TheUpgradeCenter};
   explicit ActorParents(bool fullCreation=false){TheControlBar=nullptr;try{ranks.create();ranks.owner->init();ai.create();ai.owner->init();
     logic.create();logic.owner->setObjectIDCounter(ObjectID(1));

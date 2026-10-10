@@ -39,6 +39,9 @@
 #include <sys/resource.h>
 #include "Common/GameState.h"
 #include "Common/GlobalData.h"
+#include "Common/FileSystem.h"
+#include "GameLogic/TerrainLogic.h"
+#include "GameClient/GameText.h"
 #include "Common/PerfTimer.h"
 #include "Common/Player.h"
 #include "Common/PlayerList.h"
@@ -171,6 +174,8 @@ GameClient::~GameClient()
 
 	// destroy the in-game user interface
 	m_serviceOwners.retire(TheInGameUI);
+	// Interactive UI owns its ControlBar; explicit headless metadata is journaled.
+	m_serviceOwners.retire(TheControlBar);
 
 	m_serviceOwners.retire(TheChallengeGenerals);
 
@@ -449,19 +454,75 @@ void GameClient::initHeadless()
 	m_drawableVector.swap(lookup);
 }
 
+void GameClient::initHeadlessLogicalServices()
+{
+	if (m_headlessLogicalServices || TheFontLibrary || TheDisplayStringManager ||
+		TheControlBar || TheDisplay || TheInGameUI || TheWindowManager || TheTacticalView ||
+		TheKeyboard || TheMouse || !TheGlobalData || TheGlobalData->m_xResolution <= 0 ||
+		TheGlobalData->m_yResolution <= 0 || !TheFileSystem || !TheGlobalLanguageData || !TheGameText)
+		throw ERROR_BAD_ARG;
+	initHeadless();
+	try {
+		INI ini;
+		ini.load("Data\\INI\\DrawGroupInfo.ini", INI_LOAD_OVERWRITE, NULL);
+		if (TheGlobalLanguageData->m_drawGroupInfoFont.name.isNotEmpty()) {
+			TheDrawGroupInfo->m_fontName = TheGlobalLanguageData->m_drawGroupInfoFont.name;
+			TheDrawGroupInfo->m_fontSize = TheGlobalLanguageData->m_drawGroupInfoFont.size;
+			TheDrawGroupInfo->m_fontIsBold = TheGlobalLanguageData->m_drawGroupInfoFont.bold;
+		}
+		m_serviceOwners.create(TheDisplayStringManager, [&] { return createDisplayStringManager(); });
+		TheDisplayStringManager->init();
+		m_serviceOwners.create(TheFontLibrary, [&] { return createFontLibrary(); });
+		TheFontLibrary->init();
+		m_serviceOwners.create(TheDisplay, [&] { return createGameDisplay(); });
+		TheDisplay->init();
+		TheDisplay->setWidth(TheGlobalData->m_xResolution);
+		TheDisplay->setHeight(TheGlobalData->m_yResolution);
+		m_serviceOwners.create(TheControlBar, [] { return new ControlBar; });
+		TheControlBar->initCommandMetadata();
+		m_serviceOwners.create(TheInGameUI, [&] { return createInGameUI(); });
+		TheInGameUI->init();
+		TheDisplayStringManager->postProcessLoad();
+		m_headlessLogicalServices = TRUE;
+	} catch (...) {
+		m_serviceOwners.retire(TheInGameUI);
+		m_serviceOwners.retire(TheControlBar);
+		m_serviceOwners.retire(TheDisplay);
+		m_serviceOwners.retire(TheDisplayStringManager);
+		m_serviceOwners.retire(TheFontLibrary);
+		m_serviceOwners.retire(TheRayEffects);
+		throw;
+	}
+}
+
 void GameClient::updateHeadless()
 {
 	if (TheGameClient != this || !TheGlobalData || !TheMessageStream || !TheGameLogic ||
 		!TheScriptEngine || !TheGhostObjectManager || !ThePlayerList || !ThePlayerList->getLocalPlayer()) throw ERROR_BAD_ARG;
-	if (TheDisplay || TheInGameUI || TheWindowManager || TheTacticalView) throw ERROR_BAD_ARG;
+	if (TheWindowManager || (m_headlessLogicalServices ?
+		(!m_serviceOwners.owns(TheDisplay) || !m_serviceOwners.owns(TheInGameUI) || !TheTacticalView || !TheTerrainLogic) :
+		(TheDisplay || TheInGameUI || TheTacticalView))) throw ERROR_BAD_ARG;
 	const Int player = ThePlayerList->getLocalPlayer()->getPlayerIndex();
 	auto retire = [](GameMessage* value) { value->deleteInstance(); };
 	std::unique_ptr<GameMessage, decltype(retire)> frame(newInstance(GameMessage)(GameMessage::MSG_FRAME_TICK, player), retire);
 	frame->appendTimestampArgument(getFrame());
 	TheMessageStream->GameMessageList::appendMessage(frame.release());
-	const Bool freeze = TheScriptEngine->isTimeFrozenDebug() || TheScriptEngine->isTimeFrozenScript() || TheGameLogic->isGamePaused();
+	if (m_headlessLogicalServices && TheInGameUI->isCameraTrackingDrawable()) {
+		if (auto* selected = TheInGameUI->getFirstSelectedDrawable()) TheTacticalView->lookAt(selected->getPosition());
+		else TheInGameUI->setCameraTrackingDrawable(FALSE);
+	}
+	const Bool freeze = (m_headlessLogicalServices && TheTacticalView->isTimeFrozen() && !TheTacticalView->isCameraMovementFinished()) ||
+		TheScriptEngine->isTimeFrozenDebug() || TheScriptEngine->isTimeFrozenScript() || TheGameLogic->isGamePaused();
 	updateDrawableState(freeze, player);
 	if (!freeze && TheParticleSystemManager) TheParticleSystemManager->setLocalPlayerIndex(player);
+	if (m_headlessLogicalServices) {
+		if (TheTerrainVisual) TheTerrainVisual->UPDATE();
+		TheDisplay->UPDATE();
+		// Original physical draw advances the camera; headless has no draw call.
+		TheDisplay->updateViews();
+		TheDisplayStringManager->update();
+		TheInGameUI->UPDATE();
+	}
 }
 
 void GameClient::prepareDrawableID(Drawable* draw, DrawableID value)
@@ -495,6 +556,7 @@ void GameClient::cancelDrawableConstruction(Drawable* draw) noexcept
 /** Reset the game client for a new game */
 void GameClient::reset( void )
 {
+	if (m_headlessLogicalServices && !TheTerrainLogic) throw ERROR_BAD_ARG;
 	Drawable *draw, *nextDraw;
 //	m_drawableHash.clear();
 //	m_drawableHash.resize(DRAWABLE_HASH_SIZE);
@@ -516,6 +578,11 @@ void GameClient::reset( void )
 	m_lastDrawableFrame = ~UnsignedInt{0};
 
 	if (!m_headless) { TheDisplay->reset(); TheTerrainVisual->reset(); TheVideoPlayer->reset(); TheEva->reset(); }
+	else if (m_headlessLogicalServices) {
+		TheControlBar->resetCommandMetadata();
+		TheDisplay->reset();
+		if (TheTerrainVisual) TheTerrainVisual->reset();
+	}
 	if (TheRayEffects) TheRayEffects->reset();
 	if (TheSnowManager)
 		TheSnowManager->reset();

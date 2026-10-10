@@ -31,7 +31,10 @@ namespace {
 // Exposes destruction of the actual source template without replacing data,
 // parsing, modules or gameplay behavior.
 struct Definition:ThingTemplate {~Definition() override=default;};
-struct InspectableClient:NativeHeadlessGameClient {using GameClient::updateDrawableState;};
+struct InspectableClient:NativeHeadlessGameClient {
+  InspectableClient():NativeHeadlessGameClient(Composition::DrawablesOnly){}
+  using GameClient::updateDrawableState;
+};
 unsigned startupFault=0,startupCreations=0,startupRetirements=0;
 bool startupInvalidPublication=false;
 struct StartupView:NativeFrameCameraViewFixture {

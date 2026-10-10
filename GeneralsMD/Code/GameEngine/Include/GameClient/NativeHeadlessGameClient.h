@@ -6,7 +6,9 @@
 // an interactive renderer and must never be selected for player-facing mode.
 class NativeHeadlessGameClient : public GameClient {
 public:
-  NativeHeadlessGameClient():GameClient(TRUE){}
+  enum class Composition { LogicalServices, DrawablesOnly };
+  explicit NativeHeadlessGameClient(Composition mode=Composition::LogicalServices):GameClient(TRUE),m_composition(mode){}
+  void init() override;
   Drawable* friend_createDrawable(const ThingTemplate*,DrawableStatus) override;
   void createRayEffectByTemplate(const Coord3D*,const Coord3D*,const ThingTemplate*) override;
   void addScorch(const Coord3D*,Real,Scorches) override {}
@@ -14,8 +16,9 @@ public:
   void adjustLOD(Int) override {}
   void notifyTerrainObjectMoved(Object*) override {}
 private:
-  Display* createGameDisplay() override {throw ERROR_BAD_ARG;}
-  InGameUI* createInGameUI() override {throw ERROR_BAD_ARG;}
+  Composition m_composition;
+  Display* createGameDisplay() override;
+  InGameUI* createInGameUI() override;
   GameWindowManager* createWindowManager() override {throw ERROR_BAD_ARG;}
 protected:
   FontLibrary* createFontLibrary() override;

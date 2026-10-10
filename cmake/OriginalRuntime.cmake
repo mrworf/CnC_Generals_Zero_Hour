@@ -480,7 +480,7 @@ target_include_directories(original_native_font_fixture PRIVATE
 target_link_libraries(original_native_font_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_native_font_fixture PRIVATE -Wl,--gc-sections)
-foreach(family IN ITEMS functional negative native-faults allocation-faults host pool-failures strings string-boundaries string-mutation-faults string-native-faults manager manager-native-faults manager-negative client client-faults-early client-faults-late)
+foreach(family IN ITEMS functional negative native-faults allocation-faults host pool-failures strings string-boundaries string-mutation-faults string-native-faults manager manager-native-faults manager-negative client client-faults-early client-faults-late composition composition-negative composition-pools composition-faults-early composition-faults-late)
   add_test(NAME original_native_font_${family} COMMAND original_native_font_fixture "${family}")
   set_tests_properties(original_native_font_${family} PROPERTIES LABELS "original;runtime;fonts" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
