@@ -27,7 +27,7 @@
   "execution": "autonomous",
   "particle_admission_worktree_checkpoint": {
     "parent_commit": "1ea25c4e611bef7315a392c2372245d6c7fdaf49",
-    "repository_commit": null,
+    "repository_commit": "a3590548bbed558e9c53e4a3b3cb968dd03a2df1",
     "purpose": "User-requested sorted commit of coupled unfinished particle admission, not completed-slice acceptance",
     "evidence": "evidence/qa/N2-particle-admission-checkpoint.md",
     "initial_modified_files": 4,
@@ -88,7 +88,7 @@
   "working_checkpoint": {
     "parent": "1ea25c4e611bef7315a392c2372245d6c7fdaf49",
     "label": "original-particle-chain-admission-checkpoint",
-    "repository_commit": null,
+    "repository_commit": "a3590548bbed558e9c53e4a3b3cb968dd03a2df1",
     "evidence": "evidence/qa/N2-particle-admission-checkpoint.md",
     "validation": "Current focused6 PASS all3;18 matching manifests. Frozen related144 pending; full481 unrun. User-requested checkpoint, not slice/component acceptance.",
     "next": "Run frozen related144 all3, then continue concrete19 tracker/bone/effect integration under real source parents, camera and actual startup/loaded simulation in the same N2 plan01/slice03.",
