@@ -6189,3 +6189,80 @@ evidence/qa/N2-condition-walk-worktree-checkpoint.md for precise current evidenc
 and exclusions. Earlier pending observations above describe the predecessor;
 neither the new code nor focused tests establish concrete-provider or full-game
 acceptance.
+
+### Concrete model tick integration boundary (source review after b9edefc4)
+
+W3DModelDraw.cpp::doDrawModule performs source power-driven pause first, then
+instance-scale/ObjectScale, retained completion and pending/idle reselection,
+movement-speed duration, adjusted world transform, turret controls, particle
+bone recalculation/animated-bone updates, then recoil. Its shared animation
+producer does not yet supply this complete concrete tick. Preserve the source
+order rather than treating clock advancement as a successful model tick.
+
+adjustAnimSpeedToMovementSpeed uses selected animation distance covered and the
+actual Object PhysicsBehavior velocity magnitude (distance per logic frame).
+Only positive distance and speed override duration: distance/speed times
+MSEC_PER_LOGICFRAME_REAL. Missing Object/physics, zero distance or speed leave the
+existing playback rate unchanged. adjustTransformMtx uses the source-selected
+attach-bone path, then construction-percent height adjustment under an Object.
+handleClientTurretPositioning gates on validated turret metadata, reads the
+original AI rotation/pitch, adds authored articulation and captures/controls
+yaw about Z and negative pitch about Y. These are real physics/AI/geometry
+parents, not justification for fabricated defaults in generated runtime owners.
+
+NativeHeadlessDisplay.cpp::advanceLogicalFrame advances its display clock and
+camera-only motion; it does not execute these module callbacks. Original
+GameClient.cpp::update reaches Display::draw, and Drawable.cpp's model traversal
+calls doDrawModule. The native logical provider must deliberately connect the
+original traversal and complete source cohort before asserting loaded runtime
+behavior. W3DDefaultDraw's optional LOAD_TEST_ASSETS members/calls are a separate
+build configuration, not evidence that plain default providers possess model
+state. These are source findings for the existing N2 slice, not acceptance.
+
+handleClientRecoil advances retained per-barrel state only during that visible
+model tick, not automatically every simulation frame. Muzzle visibility follows
+RECOIL_START; shift/rate accumulate and damp, settle toward zero, and control the
+captured barrel along negative X. Preserve validated barrel/recoil cardinality.
+recalcBonesForClientParticleSystems explicitly prohibits simulation-observable
+mutation. It creates client particle owners, derives scaled model-space bone
+position and Z rotation, attaches to Drawable, marks them non-saveable, stops
+hidden/shrouded systems and retains ID/bone pairs for later cleanup. The append
+after manager creation is fallible: concrete native admission must guard that
+acquired system before retaining its tracker, along with slave/manager ownership
+and source cursor state. Do not invent a successful empty particle callback or
+run these original parent accesses on a GPU/audio worker thread.
+
+ParticleSys.cpp's manager creation increments m_uniqueSystemID before pooled
+construction; the constructor can create a slave before copying the attached
+system name and appending itself to the manager list. Those later operations
+are fallible. friend_addParticleSystem appends before incrementing its count.
+The destructor severs master/slave links, retires particles and removes its
+manager-list row under TheParticleSystemManager's valid original identity.
+ParticleSystem::destroy only marks the system and recursively its slave for
+later retirement; destroyParticleSystemByID and model stopClientParticleSystems
+use that deferred path. A failed unpublished candidate therefore cannot claim
+immediate owner/list/pool retirement merely by calling destroy. Guard the full
+master/slave acquisition and manager cursor/list/count contract before wiring
+concrete model particle callbacks; retain deferred cleanup for accepted source
+systems where gameplay/client cadence expects it. This remains implementation
+work, not an accepted native ownership guarantee.
+
+animobj.cpp::Get_Bone_Transform validates the root and, when hierarchy state is
+invalid, calls Update_Sub_Object_Transforms. For a non-manual single animation
+that routine calls Single_Anim_Progress before evaluating the pose and embedded
+sound events. Simple_Evaluate_Bone instead samples Compute_Current_Frame for
+single/base-pose modes; repeated progress preserves the older previous frame.
+Concrete native current-bone/bounds consumers therefore need before/after clock
+advance, dirty/clean hierarchy and hidden/visible traversal cases, not an oracle
+which assumes every read returns the last explicitly advanced fixture pose.
+Review source invalidation callers and embedded sound event ownership together;
+no native lazy-evaluation or embedded-sound acceptance is asserted here.
+
+Whole-walk follow-up evidence: N2-condition-walk.md now records frozen related138
+PASS GCC/GCCsan/Clangsan on unchanged source and identical302 allocation rows.
+The five copy-on-first-mutation routes, late nested forced rejection, locally
+caught malformed frame/world/completion conversion and corrected retries are
+component-validated, including exact accepted binding/clock/source/pending/pause
+identity and namespace/client/Drawable cursor retirement. Earlier checkpoint
+language about those pending dedicated cases is historical; concrete tick,
+effect/new-owner enrollment, lazy hierarchy/sound and full runtime limits remain.

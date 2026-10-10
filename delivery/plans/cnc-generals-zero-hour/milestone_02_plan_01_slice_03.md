@@ -4072,3 +4072,29 @@ compiler sanitizer configurations, record the results separately from earlier
 producer evidence, and persist the remaining frozen related-matrix requirement.
 This user-requested implementation checkpoint is not a completed-slice commit
 and does not waive that requirement or create a replacement plan.
+
+Resume b9edefc4: exercise each copy-on-first-mutation route independently inside
+the actual enrolled root, then trigger late failure through the original forced
+Drawable walk. Preserve exact binding/source/pending/pause/frame/mode/rate and
+duration identity, namespace/assets/client cursor, pooled-used and standard-live
+ownership. Separately catch invalid frame/root locally and commit the enclosing
+root to prove rejection did not publish a clone. Derive exact standard terminals
+for pause/frame/duration/advancement and completion partition, preserving every
+failed prefix and corrected same-owner retry. Keep this callback cohort coupled
+with the existing whole-walk/query cohort and frozen related matrix.
+
+Whole-walk/mutation frozen checkpoint: focused2 PASS16.86s; related138 PASS
+GCC234.16s/GCCsan924.10s/Clangsan571.86s, all terminal0/no live owned jobs.
+Unchanged canonical728 2cc04ea0/inclusive735 7ed7748b; all302 normalized
+allocation rows agree. Whole-walk terminals119/119/164 and five mutation14
+sweeps preserve every failure/retry across three complete lifetimes. Root
+publication, metadata-only wait, finite first-leaf admission and staged pause/
+frame/duration/advancement/completion partition are now component-validated.
+Evidence: evidence/qa/N2-condition-walk.md. Source review also records concrete
+tick ordering, visibility cadence, lazy bone evaluation and complete particle
+master/slave/deferred-retirement boundaries in original-engine-formats.md.
+Resume concrete19 runtime creators and complete logical tick/effect admission,
+with real physics/AI/geometry/particle parents and original client-only event
+semantics. Constructor/new-owner/effect resources need their complete admission
+contract before enrollment; do not infer them from the initialized producer
+guard. Actual startup/loaded simulation, full475, slice03 and N2 remain pending.
