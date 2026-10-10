@@ -3942,3 +3942,4 @@ condition/animation/event callbacks, ObjectScale doDraw publication, camera
 actor-follow, complete native startup and loaded simulation remain pending;
 slice03/N2 are not complete. User-requested worktree inventory found13 initial
 owned paths and no unrelated nonignored files; retain assets/dependencies/recovery.
+Model-bounds payload commit: 9dce617c38c16b71af10020de25cc2a6b686beeb.
