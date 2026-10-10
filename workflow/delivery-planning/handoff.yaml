@@ -14,8 +14,8 @@
   },
   "planning": {
     "parent_commit": "9b320660d8679f5f8bbcf690b8c50dcdca675f2a",
-    "repository_commit": null,
-    "provenance_closeout_required": true
+    "repository_commit": "8466486ac071f9a93666f8a2fbf8571e3301a16b",
+    "provenance_closeout_required": false
   },
   "milestones": {
     "manifest": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",

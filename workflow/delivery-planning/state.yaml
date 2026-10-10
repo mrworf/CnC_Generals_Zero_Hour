@@ -6,8 +6,8 @@
   "status": "ready_with_external_dependencies",
   "transaction": {
     "parent_commit": "9b320660d8679f5f8bbcf690b8c50dcdca675f2a",
-    "repository_commit": null,
-    "provenance_closeout_required": true
+    "repository_commit": "8466486ac071f9a93666f8a2fbf8571e3301a16b",
+    "provenance_closeout_required": false
   },
   "source": {
     "mode": "PRODUCT_BUILD",
