@@ -106,6 +106,21 @@ cmake --build build/original-core-gcc --target zero_hour_headless original_nativ
 ctest --test-dir build/original-core-gcc -R '^original_native_headless_' --output-on-failure
 ```
 
+`h1-records` runs three complete fixed-seed H1 lifetimes and emits 121
+versioned canonical records per lifetime. After building the corresponding
+sanitizer fixture targets, compare actual bytes across the three builds:
+
+```sh
+python3 tools/compare_h1_checkpoints.py \
+  build/original-core-gcc/original_native_headless_root_fixture \
+  build/original-core-gcc-sanitize/original_native_headless_root_fixture \
+  build/original-core-clang-sanitize/original_native_headless_root_fixture
+```
+
+The comparison also rejects tampered, reordered, truncated and divergent-seed
+records. Its digest identifies evidence; the oracle also checks source
+semantics and compares all bytes.
+
 The `generated` fixture mode exercises two original startup/shutdown cycles
 in one process. Other modes reject missing roots, missing required INI and
 user storage inside a supplied asset mount. Its generated tables are

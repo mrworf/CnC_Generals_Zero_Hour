@@ -1110,6 +1110,7 @@ public:
 	static void updateDefaults(void);
 	static void reset(void); 
 	static Int getNextID(void);
+	static Int currentID() noexcept { return m_curId; }
 	class IDTransaction final {
 		Int m_before=m_curId;
 		Bool m_keep=false;

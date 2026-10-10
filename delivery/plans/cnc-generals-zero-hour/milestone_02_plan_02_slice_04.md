@@ -36,8 +36,8 @@ related tests. At milestone end run the complete required frozen matrix.
 Use `cmake -S . -B build/original-core-gcc -G Ninja -DCMAKE_BUILD_TYPE=Debug
 -DZH_BUILD_RENDERER=OFF`, analogous GCC/Clang sanitizer build directories with
 `-DZH_SANITIZE=ON`, `cmake --build`, and `ctest --test-dir ... --output-on-failure`.
-Target-specific commands must be written here once tests/targets exist; no
-command absent from repository evidence is claimed as already runnable.
+Target-specific commands and bounded results are recorded in
+`evidence/qa/N2-h1-checkpoints.md`.
 A timeout or unavailable private input is incomplete, never a pass.
 
 ## Expected implementation surfaces
@@ -49,11 +49,17 @@ pre-existing paths before touching overlapping files; stage only owned hunks.
 
 ## Acceptance criteria
 
-- [ ] Three legitimate same-process H1 lifetimes emit 121 fixed-width records each and match byte-for-byte across normal GCC and both owner-sanitizer compilers.
-- [ ] Positive and negative behavior above is directly demonstrated by
+- [x] Three legitimate same-process H1 lifetimes emit 121 fixed-width records each and match byte-for-byte across normal GCC and both owner-sanitizer compilers.
+- [x] Positive and negative behavior above is directly demonstrated by
   executable source or a bounded public report, with current source identity.
-- [ ] Ownership, input integrity and accepted existing regression guarantees
+- [x] Ownership, input integrity and accepted existing regression guarantees
   remain intact; no private data is committed.
+
+The 224-byte `H1R1` codec emits 121 records for each of three legitimate
+lifetimes per configuration. The independent comparator checks every byte
+across normal GCC, GCC sanitizers and Clang sanitizers and rejects tampering,
+reordering, truncation and a divergent source RNG field. Source script cursor
+advancement is observed before any fixture teardown; no cursor is restored.
 
 ## Commit boundary
 

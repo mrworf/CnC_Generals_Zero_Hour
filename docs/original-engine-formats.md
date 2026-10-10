@@ -7044,3 +7044,20 @@ entry/exit frames and both source-assigned actor IDs around all 120 steady
 flag reaches the native headless terrain provider's explicit unsupported
 boundary, rejects, retires and permits a corrected H1 startup. This proves
 the bounded drawless H1 path, not road rendering or general match parity.
+
+#### Canonical H1 checkpoint boundary (N2 plan02 slice04)
+
+The fixture's 224-byte `H1R1` record writes explicit little-endian words and
+fixed 16-byte generated labels. It contains tick/source frame, original
+`GetGameLogicRandomSeedCRC` fingerprint, observed script flag, active side and
+local player identity, source-scaled terrain samples at the two actor sites,
+and each actor's source ID, existence, label, team, position, geometry and
+retained module next-call/deletion frame. It never copies C++ object bytes,
+padding, pointers, unordered iteration, private paths or wall-clock state.
+`ScriptList::currentID` is observed before and after each production map load;
+the source cursor advances on every lifetime, and the fixture does not restore
+it. Actor IDs begin from the legitimate engine reset each lifetime. The
+three-lifetime in-process runner and independent cross-build comparator check
+all record bytes, with semantic witnesses retained separately. The digest is
+an evidence identifier, not a substitute oracle; see
+`evidence/qa/N2-h1-checkpoints.md`.

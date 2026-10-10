@@ -9,12 +9,16 @@
 #include "Common/NameKeyGenerator.h"
 #include "Common/MapObject.h"
 #include "Common/RandomValue.h"
+#include "Common/PlayerList.h"
+#include "Common/Player.h"
+#include "Common/Terrain.h"
 #include "Common/WellKnownKeys.h"
 #include "GameLogic/GameLogic.h"
 #include "GameLogic/Object.h"
 #include "GameLogic/SidesList.h"
 #include "GameLogic/ScriptEngine.h"
 #include "GameLogic/Scripts.h"
+#include "GameLogic/TerrainLogic.h"
 #include "GameLogic/Module/DeletionUpdate.h"
 #include "GameClient/GameClient.h"
 #include "GameClient/TerrainVisual.h"
@@ -31,6 +35,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -167,7 +172,68 @@ void admitAndRetire(NativeHeadlessConfiguration config){
     throw;
   }
 }
-void loadH1(NativeHeadlessConfiguration config,bool runTicks=false){
+void putWord(std::string& bytes,std::uint32_t value){
+  for(unsigned n=0;n<4;++n)bytes.push_back(static_cast<char>(value>>(n*8)));
+}
+void putReal(std::string& bytes,Real value){putWord(bytes,std::bit_cast<std::uint32_t>(value));}
+void putLabel(std::string& bytes,std::string_view value){
+  require(value.size()<16,"canonical label width");
+  bytes.append(value);
+  bytes.append(16-value.size(),'\0');
+}
+void putH1Actor(std::string& bytes,ObjectID id,const char* label,bool timed){
+  auto* actor=TheGameLogic->findObjectByID(id);
+  putLabel(bytes,label);
+  putWord(bytes,static_cast<std::uint32_t>(id));
+  putWord(bytes,actor?1:0);
+  putLabel(bytes,"teamH1Player");
+  if(!actor){for(unsigned n=0;n<9;++n)putWord(bytes,0);return;}
+  require(actor->getTemplate()->getName()==label && actor->getTeam() &&
+    actor->getTeam()->getName()=="teamH1Player","checkpoint actor identity");
+  const auto* position=actor->getPosition();
+  const auto& geometry=actor->getGeometryInfo();
+  putReal(bytes,position->x);putReal(bytes,position->y);putReal(bytes,position->z);
+  putWord(bytes,static_cast<std::uint32_t>(geometry.getGeomType()));
+  putReal(bytes,geometry.getMajorRadius());putReal(bytes,geometry.getMinorRadius());
+  putReal(bytes,geometry.getMaxHeightAbovePosition());
+  if(timed){
+    auto* module=static_cast<DeletionUpdate*>(actor->findUpdateModule(
+      TheNameKeyGenerator->nameToKey("DeletionUpdate")));
+    require(module,"checkpoint timed module retained");
+    putWord(bytes,module->friend_getNextCallFrame());putWord(bytes,module->getDieFrame());
+  }else{putWord(bytes,0);putWord(bytes,0);}
+}
+std::string h1Record(unsigned tick,ObjectID persistentID,ObjectID expiringID){
+  std::string bytes="H1R1";
+  putWord(bytes,1);putWord(bytes,tick);putWord(bytes,TheGameLogic->getFrame());
+  putWord(bytes,GetGameLogicRandomSeedCRC());
+  Bool found=FALSE;
+  const Bool flag=TheScriptEngine->readFlagByName("H1Started",&found);
+  require(found && flag,"checkpoint script flag");
+  putWord(bytes,flag?1:0);
+  Int sideIndex=-1;
+  require(TheSidesList->findSideInfo("H1Player",&sideIndex) && sideIndex>=0,
+    "checkpoint active side");
+  auto* player=ThePlayerList->getLocalPlayer();
+  require(player && player->getPlayerNameKey()==TheNameKeyGenerator->nameToKey("H1Player"),
+    "checkpoint source player identity");
+  putWord(bytes,static_cast<std::uint32_t>(sideIndex));
+  putWord(bytes,static_cast<std::uint32_t>(player->getPlayerIndex()));
+  putLabel(bytes,"H1Player");putLabel(bytes,"H1Player");
+  const Real left=TheTerrainLogic->getGroundHeight(200,200);
+  const Real right=TheTerrainLogic->getGroundHeight(450,200);
+  require(left==20*MAP_HEIGHT_SCALE && right==24*MAP_HEIGHT_SCALE && left!=right,
+    "two source-scaled authored terrain plateaus");
+  putReal(bytes,left);putReal(bytes,right);
+  putH1Actor(bytes,persistentID,"H1Persistent",false);
+  putH1Actor(bytes,expiringID,"H1Expiring",true);
+  require(bytes.size()==224,"version-one checkpoint record width");
+  return bytes;
+}
+void loadH1(NativeHeadlessConfiguration config,bool runTicks=false,
+            std::vector<std::string>* checkpoints=nullptr){
+  require(!checkpoints || runTicks,"checkpoints require original steady updates");
+  const auto scriptCursorBefore=checkpoints?ScriptList::currentID():0;
   auto engine=std::make_unique<NativeHeadlessGameEngine>(std::move(config));
   require(!TheGameEngine,"no borrowed engine before H1");
   TheGameEngine=engine.get();
@@ -180,6 +246,8 @@ void loadH1(NativeHeadlessConfiguration config,bool runTicks=false){
     require(TheGameLogic->isLoadingMap(),"original pending H1 load");
     engine->update();
     require(!TheGameLogic->isLoadingMap(),"original H1 load completed");
+    if(checkpoints)require(ScriptList::currentID()>scriptCursorBefore,
+      "production H1 parsing advances source script cursor");
     require(TheSidesList && TheSidesList->findSideInfo("H1Player"),"authored H1 side loaded");
     require(TheSidesList->findTeamInfo("teamH1Player"),"authored H1 team loaded");
     require(TheScriptEngine && TheScriptEngine->findScriptByName("H1StartScript"),"authored H1 script registered");
@@ -229,6 +297,7 @@ void loadH1(NativeHeadlessConfiguration config,bool runTicks=false){
       Bool found=FALSE;
       require(TheScriptEngine->readFlagByName("H1Started",&found) && found,
         "original script runs in pending-load update before steady ticks");
+      if(checkpoints)checkpoints->push_back(h1Record(0,persistentID,expiringID));
       for(unsigned tick=0;tick<120;++tick){
         const auto entered=TheGameLogic->getFrame();
         const bool before=TheGameLogic->findObjectByID(expiringID)!=nullptr;
@@ -241,7 +310,9 @@ void loadH1(NativeHeadlessConfiguration config,bool runTicks=false){
         const bool after=TheGameLogic->findObjectByID(expiringID)!=nullptr;
         require(before==(entered<=dieFrame) && after==(entered<dieFrame),
           "DeletionUpdate removes actor at source deadline");
+        if(checkpoints)checkpoints->push_back(h1Record(tick+1,persistentID,expiringID));
       }
+      if(checkpoints)require(checkpoints->size()==121,"121 canonical H1 records");
     }
     engine.reset();TheGameEngine=nullptr;
     require(!TheGameLogic && !TheGameClient && !TheFileSystem,"H1 root retired");
@@ -299,7 +370,8 @@ void runGenerated(const std::string& mode){
   input.put("Data/INI/AudioSettings.ini","AudioSettings\n AudioRoot = Data/Audio\n MusicFolder = Tracks\n SoundsFolder = Sounds\n StreamingFolder = Speech\n SoundsExtension = wav\n Preferred3DSW = GeneratedNoDevice\n Default2DSpeakerType = Stereo\n Default3DSpeakerType = Stereo\n End\n");
   input.put("Data/INI/Music.ini","MusicTrack GeneratedMusic\n Filename = generated-track\n Volume = 100%\n Priority = NORMAL\n Type = UI EVERYONE\n End\n");
   input.put("Data/Audio/Tracks/generated-track","generated-not-decoded");
-  if(mode=="h1-map" || mode=="h1-map-negative" || mode=="h1-ticks" || mode=="h1-ticks-negative") {
+  if(mode=="h1-map" || mode=="h1-map-negative" || mode=="h1-ticks" ||
+     mode=="h1-ticks-negative" || mode=="h1-records") {
     input.put("Data/INI/Default/Multiplayer.ini",
       "MultiplayerColor H1Color\n RGBColor = R:255 G:0 B:0\n RGBNightColor = R:128 G:0 B:0\n End\n");
     constexpr auto h1Objects=
@@ -348,6 +420,23 @@ void runGenerated(const std::string& mode){
         "unsupported H1 road root retired");
     }
     input.putBytes("Maps/H1.map",map);
+    if(mode=="h1-records"){
+      const auto config=input.config();
+      std::vector<std::string> baseline;
+      constexpr char hex[]="0123456789abcdef";
+      for(unsigned lifetime=0;lifetime<3;++lifetime){
+        std::vector<std::string> records;
+        loadH1(config,true,&records);
+        if(lifetime==0)baseline=records;
+        else require(records==baseline,"three complete H1 lifetimes have identical canonical bytes");
+        for(const auto& record:records){
+          std::cout<<"H1_RECORD ";
+          for(unsigned char byte:record)std::cout<<hex[byte>>4]<<hex[byte&15];
+          std::cout<<'\n';
+        }
+      }
+      return;
+    }
     if(mode=="h1-ticks" || mode=="h1-ticks-negative")loadH1(input.config(),true);
     else requireH1(input.config(),"final H1 admission");
     return;
@@ -400,7 +489,7 @@ int main(int argc,char** argv){
     const std::string name=argv[1];
     if(name=="generated" || name=="missing-ini" || name=="storage-refusal" ||
        name=="h1-map" || name=="h1-map-negative" || name=="h1-ticks" ||
-       name=="h1-ticks-negative")runGenerated(name);
+       name=="h1-ticks-negative" || name=="h1-records")runGenerated(name);
     else if(name=="missing")rejectMissing();
     else throw std::runtime_error("unknown test family");
     shutdownMemoryManager();

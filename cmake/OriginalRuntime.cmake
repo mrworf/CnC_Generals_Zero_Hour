@@ -414,7 +414,7 @@ target_link_options(zero_hour_headless PRIVATE -Wl,--gc-sections)
 add_dependencies(original_native_headless_root_fixture zero_hour_headless)
 add_test(NAME original_native_headless_help COMMAND zero_hour_headless --help)
 set_tests_properties(original_native_headless_help PROPERTIES LABELS "original;runtime;native_root" TIMEOUT 60)
-foreach(family IN ITEMS generated missing missing-ini storage-refusal h1-map h1-map-negative h1-ticks h1-ticks-negative)
+foreach(family IN ITEMS generated missing missing-ini storage-refusal h1-map h1-map-negative h1-ticks h1-ticks-negative h1-records)
   add_test(NAME original_native_headless_root_${family} COMMAND original_native_headless_root_fixture "${family}")
   set_tests_properties(original_native_headless_root_${family} PROPERTIES LABELS "original;runtime;native_root" TIMEOUT 60
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
