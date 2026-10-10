@@ -109,11 +109,24 @@ NativeW3DAssets::Model NativeW3DAssets::resolveModel(State& state,std::string_vi
   prototype->kind=definition->second.kind;prototype->document=definition->second.document;prototype->metadataIndex=definition->second.index;
   if(prototype->kind==Prototype::Kind::Hlod){const auto& data=prototype->document->hlods()[prototype->metadataIndex];relationship(!data.levels.empty());
     prototype->hierarchy=data.hierarchy.empty()?defaultHierarchy():resolveHierarchy(state,data.hierarchy);
-    auto attachment=[&](const NativeW3DDocument::Subobject& object){relationship(object.bone<prototype->hierarchy->pivots.size());
-      auto child=resolveModel(state,object.name,ancestors);skinRelationship(child,prototype->hierarchy->pivots.size());return Attachment{object.bone,std::move(child)};};
     prototype->levels.reserve(data.levels.size());
-    for(const auto& source:data.levels){Lod lod{source.maxScreenSize,{}};lod.objects.reserve(source.objects.size());for(const auto& object:source.objects)lod.objects.push_back(attachment(object));prototype->levels.push_back(std::move(lod));}
-    prototype->aggregates.reserve(data.aggregates.size());for(const auto& object:data.aggregates)prototype->aggregates.push_back(attachment(object));
+    for(const auto& source:data.levels){Lod lod{source.maxScreenSize,{}};lod.objects.reserve(source.objects.size());
+      for(const auto& object:source.objects){
+        // Add_Lod_Model intentionally tolerates re-exported skeletons, but a
+        // negative source Int index was never safe to index into its hierarchy.
+        relationship(object.bone<=std::uint32_t(INT32_MAX));
+        auto child=resolveModel(state,object.name,ancestors);skinRelationship(child,prototype->hierarchy->pivots.size());
+        const auto bone=object.bone<prototype->hierarchy->pivots.size()?object.bone:0;
+        lod.objects.push_back({bone,std::move(child)});
+      }prototype->levels.push_back(std::move(lod));
+    }
+    prototype->aggregates.reserve(data.aggregates.size());for(const auto& object:data.aggregates){
+      // Source resolves the child before Add_Sub_Object_To_Bone rejects its
+      // invalid attachment. Retain dependency admission, not the invalid node.
+      auto child=resolveModel(state,object.name,ancestors);
+      if(object.bone>=prototype->hierarchy->pivots.size())continue;
+      skinRelationship(child,prototype->hierarchy->pivots.size());prototype->aggregates.push_back({object.bone,std::move(child)});
+    }
     prototype->proxies=data.proxies;for(const auto& proxy:prototype->proxies)relationship(proxy.bone<prototype->hierarchy->pivots.size());
   }
   state.models.emplace(prototype->name,prototype);return prototype;

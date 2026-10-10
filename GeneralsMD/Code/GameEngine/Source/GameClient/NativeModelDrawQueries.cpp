@@ -65,11 +65,14 @@ NativeModelDrawQueries::NativeModelDrawQueries(Thing* thing,const ModuleData* da
 }
 NativeModelDrawQueries::~NativeModelDrawQueries()=default;
 
-void NativeModelDrawQueries::requireLogicPhase() const {
+void NativeModelDrawQueries::requireNativeParents() const {
   // Reject workers before inspecting mutable simulation publications.
   if(std::this_thread::get_id()!=m_thread)throw ERROR_BAD_ARG;
-  if(TheNameKeyGenerator!=m_names || !TheGlobalData || &m_assets.files()!=TheFileSystem ||
-      !((TheGameLogic && TheGameLogic->isInGameLogicUpdate()) || (TheGameState && TheGameState->isInLoadGame())))throw ERROR_BAD_ARG;
+  if(TheNameKeyGenerator!=m_names || !TheGlobalData || &m_assets.files()!=TheFileSystem)throw ERROR_BAD_ARG;
+}
+void NativeModelDrawQueries::requireLogicPhase() const {
+  requireNativeParents();
+  if(!((TheGameLogic && TheGameLogic->isInGameLogicUpdate()) || (TheGameState && TheGameState->isInLoadGame())))throw ERROR_BAD_ARG;
   setFPMode();
 }
 const ModelConditionInfo* NativeModelDrawQueries::prepare(const ModelConditionFlags& conditions) const {

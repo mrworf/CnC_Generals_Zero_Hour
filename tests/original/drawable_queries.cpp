@@ -2,7 +2,7 @@
 // Actual registered Drawable query dispatch; presentation is explicitly absent.
 #include "PreRTS.h"
 #include "W3DAssetInput.h"
-#include "GameClient/NativeModelDrawQueries.h"
+#include "GameClient/NativeModelDrawCurrentQueries.h"
 #include "GameClient/NativeHeadlessGameClient.h"
 #include "GameClient/Drawable.h"
 #include "Common/ModuleFactory.h"
@@ -11,24 +11,25 @@
 #include "Common/MessageStream.h"
 #include "GameLogic/GameLogic.h"
 #include <cfenv>
+#include <cstdio>
 
 namespace {
 using namespace W3DAssetInput;
 Assets* fixtureAssets=nullptr;
 Assets& selectedAssets(){if(!fixtureAssets)throw ERROR_BAD_ARG;return *fixtureAssets;}
-struct QueryModule : NativeModelDrawQueries {
+struct QueryModule : NativeModelDrawCurrentQueries {
   MEMORY_POOL_GLUE_WITH_EXPLICIT_CREATE(QueryModule,"GeneratedNativeQueryModule",8,0)
 public:
-  QueryModule(Thing* thing,const ModuleData* data):NativeModelDrawQueries(thing,data,selectedAssets()){}
+  QueryModule(Thing* thing,const ModuleData* data):NativeModelDrawCurrentQueries(thing,data,selectedAssets()){}
   static Module* create(Thing* thing,const ModuleData* data){return newInstance(QueryModule)(thing,data);}
   static ModuleData* createData(INI* ini){return W3DModelDrawModuleData::createFromINI(ini).release();}
   NameKeyType getModuleNameKey()const override{static const StaticNameKey name("W3DModelDraw");return name.key();}
   const ModelConditionInfo* cached()const{return nativeQueryData();}
+  void current(std::string_view model,std::string_view clip,const Matrix3D& root,Real frame){replaceNativeCurrentModel(model,clip,root,frame);}
+  void pose(const Matrix3D& root,Real frame){updateNativeCurrentPose(root,frame);}
+  const NativeW3DAssets::Binding* currentBinding()const{return nativeCurrentBinding();}
   Bool clientOnly_getRenderObjInfo(Coord3D*,Real*,Matrix3D*)const override{throw ERROR_BAD_ARG;}
   Bool clientOnly_getRenderObjBoundBox(OBBoxClass*)const override{throw ERROR_BAD_ARG;}
-  Bool clientOnly_getRenderObjBoneTransform(const AsciiString&,Matrix3D*)const override{throw ERROR_BAD_ARG;}
-  Int getCurrentBonePositions(const char*,Int,Coord3D*,Matrix3D*,Int)const override{throw ERROR_BAD_ARG;}
-  Bool getCurrentWorldspaceClientBonePositions(const char*,Matrix3D&)const override{throw ERROR_BAD_ARG;}
   void updateProjectileClipStatus(UnsignedInt,UnsignedInt,WeaponSlotType)override{throw ERROR_BAD_ARG;}
   void updateDrawModuleSupplyStatus(Int,Int)override{throw ERROR_BAD_ARG;}
   void notifyDrawModuleDependencyCleared()override{throw ERROR_BAD_ARG;}
@@ -59,10 +60,16 @@ struct Logic:GameLogic {
   template<class F>auto phase(F action){LogicQueryPhase scope(*this);return action();}
 };
 Data bytes(std::string_view value){return {value.begin(),value.end()};}
+Data numberedClientTree(){Data header,pivots;word(header,0x40001);text(header,"NumberedTree");word(header,71);for(unsigned n=0;n<3;++n)real(header,0);
+  for(unsigned n=0;n<71;++n){char name[16]="Root";if(n)std::snprintf(name,sizeof(name),"Bone%02u",n);text(pivots,name);word(pivots,n?0:UINT32_MAX);
+    real(pivots,float(n));for(unsigned k=0;k<8;++k)real(pivots,0);real(pivots,1);
+  }return chunk(0x100,join({chunk(0x101,header),chunk(0x102,pivots)}),true);
+}
 std::vector<std::pair<std::string,Data>> inputs(){
   const std::string parent="Draw\nIgnoreConditionStates = NIGHT\nDefaultConditionState\nModel = Outer\nAnimation = Tree.Walk\nFlags = PRISTINE_BONE_POS_IN_FINAL_FRAME\nEnd\nConditionState = MOVING\nFlags = None\nEnd\nAliasConditionState = ATTACKING\nExtraPublicBone = Arm\nExtraPublicBone = Muzzle\nEnd\n";
   const std::string child="Draw\nDefaultConditionState\nModel = Outer\nAnimation = Tree.Walk\nFlags = PRISTINE_BONE_POS_IN_FINAL_FRAME\nWeaponFireFXBone = PRIMARY Muzzle\nWeaponLaunchBone = PRIMARY Muzzle\nWeaponRecoilBone = PRIMARY Arm\nTurret = Arm\nTurretArtAngle = 90\nEnd\nConditionState = MOVING\nFlags = None\nEnd\nAliasConditionState = ATTACKING\nAttachToBoneInAnotherModule = Arm\nEnd\n";
-  return {{"parent.ini",bytes(parent)},{"child.ini",bytes(child)},{"definition.ini",bytes("Definition\nScale = 1\nEnd\n")}};
+  return {{"parent.ini",bytes(parent)},{"child.ini",bytes(child)},{"definition.ini",bytes("Definition\nScale = 1\nEnd\n")},
+    {"Art/W3D/NumberedTree.w3d",numberedClientTree()},{"Art/W3D/Numbered.w3d",hlod("Numbered","NumberedTree",{{"NULL",0}})}};
 }
 Factory* parserFactory=nullptr;Definition* parserDefinition=nullptr;const char* parserTag=nullptr;
 void parseDefinition(INI* ini){ini->initFromINI(parserDefinition,parserDefinition->getFieldParse());}
@@ -192,11 +199,92 @@ void constructorFaults(Fixture& fixture){auto* accepted=fixture.draw;const auto 
   }
   std::cout<<"actual native draw construction prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; pooled prefixes [0,2); terminal 2\n";
 }
+Matrix3D clientRoot(){Matrix3D root(true);root.Rotate_Z(1.5707963267948966f);root.Set_Translation(Vector3(100,200,300));return root;}
+bool close(Real a,Real b){return std::abs(a-b)<.001f;}
+void seedClient(Fixture& fixture){const auto root=clientRoot();fixture.module(0).current("Outer","Tree.Walk",root,0);
+  auto second=root;second.Set_Translation(Vector3(400,500,600));fixture.module(1).current("Outer","Tree.Walk",second,1);}
+void verifyClient(Fixture& fixture){Matrix3D world(true);
+  require(fixture.draw->getCurrentWorldspaceClientBonePositions("MUZZLE",world)&&close(world.Get_X_Translation(),100)&&close(world.Get_Y_Translation(),216)&&close(world.Get_Z_Translation(),300),"actual Drawable current world pose is first valid interface, not final pristine pose");
+  Coord3D positions[2];Matrix3D transforms[2];
+  require(fixture.draw->getCurrentClientBonePositions("Muzzle",0,positions,transforms,2)==2&&close(positions[0].x,16)&&close(positions[1].x,20)&&close(positions[0].y,0),"actual current model-space traversal preserves world inverse and each module's live frame");
+}
+void clientFunctional(Fixture& fixture){seedClient(fixture);verifyClient(fixture);verify(fixture);
+  fixture.logic->phase([&]{fixture.module(0).current("Outer","Tree.Walk",clientRoot(),1);
+    Coord3D point;require(fixture.draw->getPristineBonePositions("Muzzle",0,&point,nullptr,1)==1&&point.x==20,"source logic condition publication does not replace independent pristine query selection");});
+  seedClient(fixture);verifyClient(fixture);
+  const AsciiString bone("Muzzle");const auto* di=fixture.draw->getDrawModules()[0]->getObjectDrawInterface();Matrix3D output(true);
+  require(di->clientOnly_getRenderObjBoneTransform(bone,&output)&&close(output.Get_Y_Translation(),216),"real object draw interface uses current world-space client transform");
+  auto shifted=clientRoot();shifted.Set_Translation(Vector3(7,8,9));AllocationFault::arm(SIZE_MAX);
+  try{fixture.module(0).pose(shifted,1);fixture.draw->getCurrentWorldspaceClientBonePositions("Muzzle",output);fixture.draw->getCurrentClientBonePositions("Muzzle",0,nullptr,nullptr,2);}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+  require(attempts==0&&close(output.Get_X_Translation(),7)&&close(output.Get_Y_Translation(),28),"warmed whole current pose update and actual reads have exact zero standard demand");
+  Matrix3D missing(true);missing.Set_Translation(Vector3(99,0,0));const AsciiString rootName("Root");
+  require(!di->clientOnly_getRenderObjBoneTransform(rootName,&missing)&&missing.Get_X_Translation()==0,"client bone sentinel writes defined identity when a model exists");
+  missing.Set_Translation(Vector3(99,0,0));require(!fixture.draw->getCurrentWorldspaceClientBonePositions("Root",missing)&&missing.Get_X_Translation()==99,"world-space miss leaves output untouched");
+  Coord3D unchanged{91,92,93};require(!fixture.draw->getCurrentClientBonePositions("Missing",0,&unchanged,&missing,1)&&unchanged.x==91&&missing.Get_X_Translation()==99,"current sweep has no pristine missing fallback");
+  fixture.draw->setInstanceScale(2);fixture.module(0).current("Outer","Tree.Walk",clientRoot(),0);
+  Coord3D scaled;require(fixture.module(0).getCurrentBonePositions("Muzzle",0,&scaled,nullptr,1)==1&&close(scaled.x,264)&&close(scaled.y,-100)&&close(scaled.z,300),"source inverse.Scale changes axes, not translation, and retains Drawable tree scaling");
+  fixture.draw->setInstanceScale(1);seedClient(fixture);verifyClient(fixture);
+  fixture.module(0).current("","",clientRoot(),0);missing.Set_Translation(Vector3(99,0,0));
+  require(!di->clientOnly_getRenderObjBoneTransform(bone,&missing)&&missing.Get_X_Translation()==99,"absent model differs from missing bone identity output");
+  fixture.module(0).current("Static.Mesh","",clientRoot(),0);require(!di->clientOnly_getRenderObjBoneTransform(bone,&missing)&&missing.Get_X_Translation()==0,"real static mesh exists but has no named bone");
+  fixture.module(0).current("Outer","Tree.Walk",clientRoot(),0);verifyClient(fixture);
+}
+template<class F>void clientRejects(F action){bool rejected=false;try{action();}catch(ErrorCode error){rejected=error==ERROR_BAD_ARG||error==ERROR_CORRUPT_FILE_FORMAT;}catch(const NativeW3DAssetFailure&){rejected=true;}require(rejected,"defined current-client rejection");}
+void clientNegative(Fixture& fixture){seedClient(fixture);const auto* accepted=fixture.module(0).currentBinding();const auto counts=fixture.assets.counts();Matrix3D output(true);output.Set_Translation(Vector3(99,0,0));
+  require(fixture.draw->getCurrentClientBonePositions(nullptr,-1,nullptr,&output,0)==0&&output.Get_X_Translation()==99,"zero current capacity does not validate or publish");
+  clientRejects([&]{fixture.draw->getCurrentClientBonePositions(nullptr,0,nullptr,&output,1);});
+  clientRejects([&]{fixture.draw->getCurrentClientBonePositions("Muzzle",100,nullptr,&output,1);});
+  clientRejects([&]{fixture.module(0).clientOnly_getRenderObjBoneTransform(AsciiString("Muzzle"),nullptr);});
+  fixture.logic->phase([&]{clientRejects([&]{fixture.draw->getCurrentWorldspaceClientBonePositions("Muzzle",output);});});
+  bool rejected=false;auto& module=fixture.module(0);std::thread worker([&]{try{module.getCurrentWorldspaceClientBonePositions("Muzzle",output);}catch(ErrorCode e){rejected=e==ERROR_BAD_ARG;}});worker.join();require(rejected&&output.Get_X_Translation()==99,"current worker/logic access cannot publish client output");
+  auto invalid=clientRoot();invalid[1][2]=std::numeric_limits<Real>::quiet_NaN();clientRejects([&]{module.pose(invalid,1);});
+  invalid=clientRoot();invalid[0][0]=std::numeric_limits<Real>::max();clientRejects([&]{module.pose(invalid,1);});
+  clientRejects([&]{module.current("Outer","Tree.Walk",clientRoot(),std::numeric_limits<Real>::infinity());});
+  clientRejects([&]{module.current("NoFile","",clientRoot(),0);});
+  clientRejects([&]{module.current("Outer","OtherTree.OtherWalk",clientRoot(),0);});
+  require(module.currentBinding()==accepted&&fixture.assets.counts()==counts,"late/nonfinite/wrong hierarchy rejection preserves accepted current model and asset identities");verifyClient(fixture);
+  fixture.draw->setInstanceScale(std::numeric_limits<Real>::quiet_NaN());
+  clientRejects([&]{module.current("Outer","Tree.Walk",clientRoot(),0);});
+  clientRejects([&]{fixture.draw->getCurrentClientBonePositions("Muzzle",0,nullptr,&output,1);});
+  require(module.currentBinding()==accepted&&output.Get_X_Translation()==99,"nonfinite Drawable scale preserves current state and caller output");fixture.draw->setInstanceScale(1);verifyClient(fixture);
+  auto distant=Matrix3D(true);distant.Set_Translation(Vector3(std::numeric_limits<Real>::max(),0,0));fixture.module(1).pose(distant,1);fixture.draw->setInstanceScale(2);
+  Coord3D positions[2]={{91,92,93},{91,92,93}};Matrix3D transforms[2];for(auto& t:transforms){t.Make_Identity();t.Set_Translation(Vector3(99,0,0));}
+  clientRejects([&]{fixture.draw->getCurrentClientBonePositions("Muzzle",0,positions,transforms,2);});
+  require(positions[0].x==91&&positions[1].x==91&&transforms[0].Get_X_Translation()==99&&transforms[1].Get_X_Translation()==99,"late second-module current query overflow preserves all caller outputs");
+  fixture.draw->setInstanceScale(1);auto second=clientRoot();second.Set_Translation(Vector3(400,500,600));fixture.module(1).pose(second,1);verifyClient(fixture);
+}
+void clientNumbered(Fixture& fixture){const Matrix3D identity(true);fixture.module(0).current("Numbered","",identity,0);fixture.module(1).current("Numbered","",identity,0);
+  Coord3D positions[130];Matrix3D transforms[130];for(unsigned i=0;i<130;++i){positions[i]={91,92,93};transforms[i].Make_Identity();transforms[i].Set_Translation(Vector3(99,0,0));}
+  AllocationFault::arm(SIZE_MAX);Int count;
+  try{count=fixture.draw->getCurrentClientBonePositions("bOnE",1,positions,transforms,130);}catch(...){AllocationFault::disarm();throw;}
+  const auto attempts=AllocationFault::attempts();AllocationFault::disarm();require(count==128&&attempts==0,"actual two-module numbered sweep caps64 per module with zero standard demand");
+  for(unsigned i=0;i<128;++i)require(positions[i].x==float(i%64+1)&&transforms[i].Get_X_Translation()==float(i%64+1),"every actual numbered transform is published in source module/index order");
+  require(positions[128].x==91&&transforms[128].Get_X_Translation()==99,"numbered sweep never publishes uncounted tail");
+  require(fixture.module(0).getCurrentBonePositions("Bone",65,positions,transforms,64)==6&&positions[0].x==65&&positions[5].x==70,"numbered current sweep stops at first gap before99");
+  positions[0]={91,92,93};transforms[0].Set_Translation(Vector3(99,0,0));
+  require(!fixture.draw->getCurrentClientBonePositions("Bone",0,positions,transforms,130)&&positions[0].x==91&&transforms[0].Get_X_Translation()==99,"current start0 is exact, not an implicit numbered sweep");
+}
+void clientFaults(Fixture& fixture,bool seeded){const auto root=clientRoot();auto setup=[&]{fixture.fresh();if(seeded)fixture.module(0).current("Static.Mesh","",root,0);};
+  auto operation=[&]{fixture.module(0).current("Outer","Tree.Walk",root,0);};std::size_t terminal;
+  {NameKeyTransaction lease(fixture.names);setup();AllocationFault::arm(SIZE_MAX);try{operation();terminal=AllocationFault::attempts();AllocationFault::disarm();}catch(...){AllocationFault::disarm();throw;}
+    fixture.client->destroyDrawable(fixture.draw);fixture.draw=nullptr;fixture.assets.clear();}
+  for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){NameKeyTransaction lease(fixture.names);setup();const auto* accepted=fixture.module(0).currentBinding();const auto counts=fixture.assets.counts();const auto live=AllocationFault::live();
+    auto* pool=TheMemoryPoolFactory->findMemoryPool("NameKeyBucketPool");const auto units=pool->getUsedBlockCount();NameKeyType cursor;{NameKeyTransaction proof(fixture.names);cursor=fixture.names.nameToKey("current-production-cursor");}
+    bool failed=false;AllocationFault::arm(ordinal);try{operation();}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+    const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+    require(failed==(ordinal<terminal)&&failed==hit&&attempts==(failed?ordinal+1:terminal),"complete current replacement exact terminal and every prefix");
+    if(failed){require(fixture.module(0).currentBinding()==accepted&&fixture.assets.counts()==counts&&AllocationFault::live()==live&&pool->getUsedBlockCount()==units,"current candidate and late asset-cache admissions unwind exactly");
+      {NameKeyTransaction proof(fixture.names);require(fixture.names.nameToKey("current-production-cursor")==cursor,"current production namespace proof precedes fixture rollback");}
+    }operation();Matrix3D output(true);require(fixture.draw->getCurrentWorldspaceClientBonePositions("Muzzle",output)&&close(output.Get_Y_Translation(),216),"actual current-query corrected retry");
+    fixture.client->destroyDrawable(fixture.draw);fixture.draw=nullptr;fixture.assets.clear();
+  }fixture.create();std::cout<<"current model "<<(seeded?"seeded":"cold")<<" prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every retry\n";
+}
 }
 int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawable query family");initMemoryManager();initialized=true;
-  {Fixture warm;functional(warm);negative(warm);}
+  {Fixture warm;functional(warm);negative(warm);clientFunctional(warm);clientNegative(warm);clientNumbered(warm);}
   for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
-    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else throw GeneratedFixtureFailure("unknown Drawable query family");}
+    {Fixture fixture;const std::string_view family=argv[1];if(family=="functional")functional(fixture);else if(family=="negative")negative(fixture);else if(family=="faults")faults(fixture,false);else if(family=="seeded_faults")faults(fixture,true);else if(family=="wide_faults")faults(fixture,false,true);else if(family=="wide_seeded_faults")faults(fixture,true,true);else if(family=="constructor_faults")constructorFaults(fixture);else if(family=="client-functional")clientFunctional(fixture);else if(family=="client-negative")clientNegative(fixture);else if(family=="client-numbered")clientNumbered(fixture);else if(family=="client-cold")clientFaults(fixture,false);else if(family=="client-seeded")clientFaults(fixture,true);else throw GeneratedFixtureFailure("unknown Drawable query family");}
     require(AllocationFault::live()==live,"whole original Drawable/client/definition/query/parent cohort retirement");
   }shutdownMemoryManager();initialized=false;std::cout<<"PASS actual Drawable query dispatch; renderer/full simulation pending\n";return 0;
  }catch(const GeneratedFixtureFailure& error){std::cerr<<"FAIL "<<error.what()<<'\n';}catch(const std::exception&){std::cerr<<"FAIL generated Drawable query\n";}catch(ErrorCode){std::cerr<<"FAIL source Drawable query\n";}

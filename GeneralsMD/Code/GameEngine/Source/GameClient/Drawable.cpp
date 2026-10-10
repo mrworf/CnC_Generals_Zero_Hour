@@ -39,6 +39,7 @@
 #include "Common/ClientUpdateModule.h"
 #include "Common/DrawModule.h"
 #include "GameClient/NativeModelDrawQueries.h"
+#include "GameClient/NativeModelDrawCurrentQueries.h"
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
 #include "Common/GameLOD.h"
@@ -863,6 +864,19 @@ Int Drawable::getPristineBonePositions(const char* boneNamePrefix, Int startInde
 //-------------------------------------------------------------------------------------------------
 Int Drawable::getCurrentClientBonePositions(const char* boneNamePrefix, Int startIndex, Coord3D* positions, Matrix3D* transforms, Int maxBones) const
 {
+	if(maxBones<=0)return 0;
+	// Native current queries are allocation-free, pure accepted-pose reads.
+	// Validate the complete walk before publishing any caller buffer. Do not
+	// double-call legacy interfaces that may lazily advance their animation.
+	Bool nativeOnly=TRUE;
+	for(const DrawModule** dm=getDrawModules();*dm;++dm)
+		if((*dm)->getObjectDrawInterface() && !dynamic_cast<const NativeModelDrawCurrentQueries*>(*dm)){nativeOnly=FALSE;break;}
+	if(nativeOnly){Int remaining=maxBones;
+		for(const DrawModule** dm=getDrawModules();*dm && remaining>0;++dm){
+			if(const auto* native=dynamic_cast<const NativeModelDrawCurrentQueries*>(*dm))
+				remaining-=native->getCurrentBonePositions(boneNamePrefix,startIndex,nullptr,nullptr,remaining);
+		}
+	}
 	Int count = 0;
 	for (const DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{

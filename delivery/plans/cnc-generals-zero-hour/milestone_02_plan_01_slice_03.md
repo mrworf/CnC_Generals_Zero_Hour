@@ -3814,3 +3814,46 @@ aggregate/proxy/skin admission findings are recorded together in
 docs/original-engine-formats.md. Complete those coupled prerequisites before
 claiming concrete native model/camera or full factory acceptance; never substitute
 a generic modulo clock, guessed sphere or universally relaxed attachment check.
+
+Current-pose/attachment implementation batch (parent51fc1495, clean worktree):
+distinguish source LOD stale-positive fallback0 from rejected negative encodings,
+discard invalid aggregate attachments after their original child resolution,
+and retain strict proxy/skin relationship checks. Generate positive and negative
+parallel-path regressions, including retained accepted graph/pose state.
+Add an abstract NativeModelDrawCurrentQueries base over the existing logic-query
+base, owning the current model/clip/pose/world transform separately. Its protected
+producer admits complete explicit model/clip/frame candidates and allocation-free
+pose updates; actual concrete source animation/transition producers remain next.
+Implement current world-space, client-only bone transform and model-space sweep
+consumers through actual Drawable dispatch. Preserve index0 sentinel, bounded
+start0/01..99 sweeps, all missing-output distinctions and source inverse/scale.
+Reject worker/simulation-phase client access before globals or output publication.
+Test actual two-module Drawable traversal, separate pristine/current frames,
+rotated/scaled world transforms, missing/absent/static models, zero capacity,
+invalid/nonfinite/late-overflow preservation, complete cold/seeded replacement
+failure-retry manifests and repeated retirement with both sanitizer compilers.
+Stage conversions and complete replacements under the existing namespace/asset
+ownership scopes. Ordinary current-pose update and read must measure terminal0;
+existing constructor/pool ownership remains included. Bound-info/OBBOX, native
+sync-time animation, concrete19 callbacks and full startup remain explicit gates,
+not fabricated headless output. Commit this coupled current-query behavior and
+source attachment compatibility together after focused then frozen related tests.
+
+Phase refinement from actual Drawable condition-notification callers: live client
+reads and pose advancement reject simulation phase, but protected current-model
+replacement accepts legitimate main-thread logic-originated condition changes.
+It changes only client-owned state and never supplies live pose values to logic.
+For native-only current-bone walks, preflight the same pure accepted-pose reads
+before caller publication, preserving late second-module overflow without heap
+staging. Do not double-call mixed legacy interfaces with lazy animation effects.
+
+Frozen current-model checkpoint: focused25 PASS28.71s, related98 PASS GCC34.85s/
+GCCsan155.79s/Clangsan96.25s, exit0 all3. Actual current Drawable consumers retain
+all missing/scale/phase/range contracts; current replacement cold173/seeded176
+retains every failure/retry and production cursor proof, three complete owners.
+Explicit-frame updates and128-output numbered reads measure standard terminal0.
+Source LOD/aggregate compatibility and strict negative/proxy/skin paths regress
+together. Evidence: evidence/qa/N2-current-model-queries.md. Full454, source clock/
+animation producers, bounding primitives, concrete19 runtime callbacks and whole
+native startup/loaded simulation remain pending under this same slice03/N2.
+No live validation jobs remain; this supporting checkpoint is not N2 acceptance.

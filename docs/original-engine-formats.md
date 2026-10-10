@@ -5914,8 +5914,35 @@ clamps a nonnegative stale bone beyond the hierarchy to0 intentionally, for
 re-exported skeletons. Add_Sub_Object_To_Bone instead returns0 without admission
 for negative or out-of-range indices; HLodDef construction ignores that return.
 Proxy transforms and mesh skin indices have separate hierarchy indexing paths.
-NativeW3DAssets currently uses one strict relationship check for LOD/aggregate/
-proxy attachment. Source-compatible stale-LOD fallback and aggregate rejection,
-alongside safe negative/proxy/skin admission, remain a pending coupled correction
-with generated regressions, not accepted compatibility or authority to weaken
-every relationship check indiscriminately.
+NativeW3DAssets now distinguishes these paths: nonnegative stale LOD indices
+fall back to0; encoded negative LOD indices reject; invalid aggregate attachments
+are omitted after resolving their child dependency. Proxy and skin relationships
+remain strict. Generated Stale/AggReject/BadBone/BadProxy cases exercise the
+parallel paths; this is not authority to weaken other relationship checks.
+
+### Live current-model bone consumers
+
+NativeModelDrawCurrentQueries owns the accepted current model/clip/pose/world
+separately from NativeModelDrawQueries' pristine condition cache. Protected model
+replacement accepts main-thread condition changes originating in logic; live
+client reads and pose advancement reject logic-update phase. Both reject workers
+before inspecting mutable globals and require their borrowed namespace/VFS/client
+parents. Model/clip replacement guards late pose allocation and cache admission;
+ordinary explicit-frame pose advancement and accepted reads allocate nothing.
+
+Actual Drawable dispatch preserves the three distinct missing-output contracts
+above. Numbered model-space sweeps use bounded names, cap64 per module and stop at
+the first gap; two modules can publish128. Native-only walks preflight pure reads
+before publication, including late second-module overflow. Mixed legacy walks
+are not double-called: original methods may advance animation lazily.
+
+The exact source matrix3d.cpp::Get_Orthogonal_Inverse operation transposes R and
+sets translation to -R'T. Matrix3D::Scale then scales axes only, not translation.
+Do not substitute a generic inverse, normalization, or scale the translation.
+Drawable::getScale returns instanceScale; template scale seeds it at creation.
+Model replacement captures the source .01 epsilon tree-scale rule; later current
+model-space queries use the current instance scale just as the source does.
+
+Evidence: evidence/qa/N2-current-model-queries.md. Manual generated frames accept
+these consumers and ownership, not source sync-time animation, transitions,
+weighted client RNG, bounding primitives, concrete19 providers or whole startup.

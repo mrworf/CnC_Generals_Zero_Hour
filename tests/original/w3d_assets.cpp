@@ -48,12 +48,15 @@ void routing(Context& context){Assets owner(context.files,"English",context.user
   auto defaultModel=owner.model("Default");auto pose=Assets::createPose(defaultModel);require(defaultModel->hierarchy->name.empty() && pose.findBone("RootTransform")==0,"empty hierarchy legitimately uses exact source default tree");
   auto builtin=owner.model("nUlL");require(builtin->kind==Assets::Prototype::Kind::Null && !builtin->document && !builtin->hierarchy,"source explicit NULL requires no missing-file success");
   auto marker=owner.model("Marker.Null");require(marker->document->payload(marker->metadataIndex).size()==48,"named null retains both pad words and authored attributes");
+  auto stale=owner.model("Stale");require(stale->levels[0].objects[0].bone==0,"source stale positive LOD bone clamps to root");
+  auto stalePose=Assets::createPose(stale);require(stalePose.bone(0).transform[3]==0,"stale attachment uses the real root transform");
+  auto aggregate=owner.model("AggReject");require(aggregate->aggregates.size()==1&&aggregate->aggregates[0].bone==2&&aggregate->aggregates[0].model==aggregate->levels[0].objects[0].model,"source aggregate rejects stale/negative nodes while retaining valid child identity");
 }
 void negative(Context& context){context.root.write("Art/W3D/Broken.w3d",hlod("Broken","Tree",{{"Missing.Part",1}}));
   Assets owner(context.files,"English");auto accepted=owner.model("Outer");auto clip=owner.animation("Tree.Walk");const auto counts=owner.counts();
   auto bad=[&](auto action){const auto live=AllocationFault::live();NativeUnits units;rejects(action);
     require(owner.counts()==counts && owner.model("outer")==accepted && owner.animation("tree.walk")==clip && AllocationFault::live()==live,"rejected graph preserves every accepted cache identity/count and retires candidate backing");units.check();};
-  for(const auto* name:{"CycleA","Broken","BadBone","BadSkin","BadTree","WrongName","Malformed","NoFile"})bad([&]{(void)owner.model(name);});
+  for(const auto* name:{"CycleA","Broken","BadBone","BadProxy","BadSkin","BadTree","WrongName","Malformed","NoFile"})bad([&]{(void)owner.model(name);});
   for(const auto* name:{"../escape","C:\\escape","a/b","","..","bad\nkey"})bad([&]{(void)owner.model(name);});
   bad([&]{(void)owner.animation("NoDot");});bad([&]{(void)owner.animation("Tree.NoFile");});bad([&]{(void)owner.hierarchy("AbsentTree");});
   bad([&]{(void)owner.model(std::string_view("bad\0key",7));});bad([&]{(void)Assets::createPose(owner.model("NULL"));});

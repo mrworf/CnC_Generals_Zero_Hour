@@ -76,7 +76,12 @@ inline std::vector<std::pair<std::string,Data>> entries(){return {
   {"Data/English/Art/W3D/Localized.w3d",mesh("","Localized",false,0,7)},
   {"Art/W3D/CycleA.w3d",hlod("CycleA","",{{"CycleB",0}})},{"Art/W3D/CycleB.w3d",hlod("CycleB","",{{"CycleA",0}})},
   {"Art/W3D/Broken.w3d",hlod("Broken","Tree",{{"Missing.Part",1}})},
-  {"Art/W3D/BadBone.w3d",hlod("BadBone","Tree",{{"Body.Part",3}})},
+  {"Art/W3D/BadBone.w3d",hlod("BadBone","Tree",{{"Body.Part",UINT32_MAX}})},
+  {"Art/W3D/Stale.w3d",hlod("Stale","Tree",{{"Body.Part",INT32_MAX}})},
+  {"Art/W3D/BadProxy.w3d",[](){Data header;word(header,0x10000);word(header,1);text(header,"BadProxy");text(header,"Tree");
+    return chunk(0x700,join({chunk(0x701,header),objects(0x702,{{"Body.Part",2}},100),objects(0x706,{{"NotAFile",3}},0)}),true);}()},
+  {"Art/W3D/AggReject.w3d",[](){Data header;word(header,0x10000);word(header,1);text(header,"AggReject");text(header,"Tree");
+    return chunk(0x700,join({chunk(0x701,header),objects(0x702,{{"Body.Part",1}},100),objects(0x705,{{"Body.Part",3},{"Marker.Null",UINT32_MAX},{"Body.Part",2}},0)}),true);}()},
   {"Art/W3D/BadSkin.w3d",hlod("BadSkin","Tree",{{"SkinBroken.Part",1}})},
   {"Art/W3D/SkinBroken.w3d",mesh("SkinBroken","Part",true,3)},
   {"Art/W3D/BadTree.w3d",hlod("BadTree","AbsentTree",{{"Static.Mesh",0}})},
