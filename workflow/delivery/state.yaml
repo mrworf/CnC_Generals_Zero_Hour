@@ -34,7 +34,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 original condition-data supporting checkpoint validated; no live jobs. Extract/admit original draw-module INI definitions and connect native condition binding to real pristine weapon/turret/subobject and Drawable query consumers; complete all required draw registrations and remaining material/prototype types, then full native factory/startup and loaded deterministic simulation under same N2 plan01/slice03. Full426/N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 original condition-data supporting checkpoint committed in 420364404959bd525f8a45288a6e99249b5ada2c; no live jobs. Extract/admit original draw-module INI definitions and connect native condition binding to real pristine weapon/turret/subobject and Drawable query consumers; complete all required draw registrations and remaining material/prototype types, then full native factory/startup and loaded deterministic simulation under same N2 plan01/slice03. Full426/N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -170,7 +170,7 @@
   "active_implementation": {
     "label": "original-w3d-condition-data",
     "parent_commit": "2f6a09b0",
-    "status": "validated supporting original condition-data checkpoint; not slice03 or N2 acceptance",
+    "status": "committed supporting original condition-data checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-w3d-conditions.md",
     "canonical_source_files": 675,
@@ -198,7 +198,8 @@
       "gcc": "PASS4.59s; terminal0",
       "gcc_sanitize": "PASS26.60s; terminal0",
       "clang_sanitize": "PASS19.19s; terminal0"
-    }
+    },
+    "repository_commit": "420364404959bd525f8a45288a6e99249b5ada2c"
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -390,7 +391,7 @@
   "w3d_conditions_checkpoint": {
     "label": "original-w3d-condition-data",
     "parent_commit": "2f6a09b0",
-    "status": "validated supporting original condition-data checkpoint; not slice03 or N2 acceptance",
+    "status": "committed supporting original condition-data checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-w3d-conditions.md",
     "canonical_source_files": 675,
@@ -418,6 +419,7 @@
       "gcc": "PASS4.59s; terminal0",
       "gcc_sanitize": "PASS26.60s; terminal0",
       "clang_sanitize": "PASS19.19s; terminal0"
-    }
+    },
+    "repository_commit": "420364404959bd525f8a45288a6e99249b5ada2c"
   }
 }
