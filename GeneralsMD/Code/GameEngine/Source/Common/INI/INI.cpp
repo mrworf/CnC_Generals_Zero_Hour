@@ -597,9 +597,11 @@ void INI::parseFXList( INI* ini, void * /*instance*/, void *store, const void* /
 //-------------------------------------------------------------------------------------------------
 void INI::parseParticleSystemTemplate( INI *ini, void * /*instance*/, void *store, const void *userData )
 {
+	if (!ini || !store || !TheParticleSystemManager) throw ERROR_BAD_ARG;
 	const char *token = ini->getNextToken();
 
 	const ParticleSystemTemplate *pSystemT = TheParticleSystemManager->findTemplate( AsciiString( token ) );
+	if (!pSystemT && strcasecmp(token,"None") != 0) throw INI_INVALID_DATA;
 	DEBUG_ASSERTCRASH( pSystemT || strcasecmp( token, "None" ) == 0, ("ParticleSystem %s not found!\n",token) );
 
 	typedef const ParticleSystemTemplate* ConstParticleSystemTemplatePtr;

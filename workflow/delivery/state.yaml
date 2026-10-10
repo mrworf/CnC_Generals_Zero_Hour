@@ -26,15 +26,15 @@
   "planning_commit": "f92a3e5c5b8a9d7433e13e80a8de83eda7399808",
   "execution": "autonomous",
   "working_checkpoint": {
-    "parent": "2f6a09b0",
-    "label": "original-w3d-condition-data",
-    "evidence": "evidence/qa/N2-w3d-conditions.md",
-    "validation": "Frozen related69 all3 PASS; exact cold172/populated cache175 every retry, shared original condition/alias/mode/public-bone types and coupled first/final pose ownership; full426 unrun.",
-    "next": "Extract/admit original draw-module INI definitions and connect native condition binding to real pristine weapon/turret/subobject and Drawable query consumers; complete all required draw registrations and remaining material/prototype types, then full native factory/startup and loaded deterministic simulation under same N2 plan01/slice03. Full426/N2 acceptance pending.",
+    "parent": "bbcd6554",
+    "label": "original-w3d-draw-definition",
+    "evidence": "evidence/qa/N2-w3d-draw-data.md",
+    "validation": "Final related74 PASS all3; cold104/populated101 parse and template1 exact terminals/every retry, NameKey production cursor/pool retirement, real INI/selector-to-owned-final-frame query. Full431 unrun.",
+    "next": "Continue derived draw-data registrations and actual Drawable pristine weapon/turret/subobject query consumers using the shared original definitions; validate condition-specific transfer, complete remaining material/prototype types, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full431 and N2 acceptance pending.",
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 original condition-data supporting checkpoint committed in 420364404959bd525f8a45288a6e99249b5ada2c; no live jobs. Extract/admit original draw-module INI definitions and connect native condition binding to real pristine weapon/turret/subobject and Drawable query consumers; complete all required draw registrations and remaining material/prototype types, then full native factory/startup and loaded deterministic simulation under same N2 plan01/slice03. Full426/N2 acceptance pending.",
+  "resume_point": "N2 plan01/slice03 original draw-definition supporting checkpoint validated; no live jobs. Continue derived draw-data registrations and actual Drawable pristine weapon/turret/subobject query consumers using the shared original definitions; validate condition-specific transfer, complete remaining material/prototype types, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full431 and N2 acceptance pending.",
   "environment_batch": {
     "parent_commit": "48f61848",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -168,38 +168,39 @@
     "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
   },
   "active_implementation": {
-    "label": "original-w3d-condition-data",
-    "parent_commit": "2f6a09b0",
-    "status": "committed supporting original condition-data checkpoint; not slice03 or N2 acceptance",
+    "label": "original-w3d-draw-definition",
+    "parent_commit": "bbcd6554",
+    "status": "validated supporting original draw-definition checkpoint; not slice03 or N2 acceptance",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
-    "evidence": "evidence/qa/N2-w3d-conditions.md",
-    "canonical_source_files": 675,
-    "canonical_source_sha256": "0049583d583569d8629afdbbe8bedd3cfbce3e1e52bfbeb0e5fec497cd519256",
-    "toolchain_inclusive_files": 682,
-    "toolchain_inclusive_sha256": "569c3176da391ee9e0e2a875abdd1e3ce20f286ee905953819dc8324f1243023",
-    "configured_suite_tests": 426,
-    "related_tests_per_configuration": 69,
+    "evidence": "evidence/qa/N2-w3d-draw-data.md",
+    "canonical_source_files": 679,
+    "canonical_source_sha256": "b6b1f24c276a677d0af6ca2532c10201e400953e6c3a93c3648d4dd1537366b4",
+    "toolchain_inclusive_files": 686,
+    "toolchain_inclusive_sha256": "20c866dfd83e6bfed8433fa91958074b8aff0df55fcd3b4c2774df11adc62f31",
+    "configured_suite_tests": 431,
+    "related_tests_per_configuration": 74,
     "frozen_results": {
-      "gcc": "PASS4.54s; terminal0",
-      "gcc_sanitize": "PASS26.03s; terminal0",
-      "clang_sanitize": "PASS18.58s; terminal0"
+      "gcc": "PASS5.20s; terminal0",
+      "gcc_sanitize": "PASS30.64s; terminal0",
+      "clang_sanitize": "PASS21.67s; terminal0"
     },
     "allocation_terminals": {
-      "condition_cold": 172,
-      "condition_populated_mesh_cache": 175
+      "draw_parse_cold": 104,
+      "draw_parse_populated_module": 101,
+      "particle_template_insertion": 1
     },
     "every_failure_retry": true,
+    "production_cursor_proven_before_fixture_rollback": true,
     "live_sessions": {},
     "full_suite_run": false,
     "slice_complete": false,
     "milestone_complete": false,
-    "next": "Extract/admit original draw-module INI definitions and connect native condition binding to real pristine weapon/turret/subobject and Drawable query consumers; complete all required draw registrations and remaining material/prototype types, then full native factory/startup and loaded deterministic simulation under same N2 plan01/slice03. Full426/N2 acceptance pending.",
+    "next": "Continue derived draw-data registrations and actual Drawable pristine weapon/turret/subobject query consumers using the shared original definitions; validate condition-specific transfer, complete remaining material/prototype types, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full431 and N2 acceptance pending.",
     "initial_frozen_results": {
-      "gcc": "PASS4.59s; terminal0",
-      "gcc_sanitize": "PASS26.60s; terminal0",
-      "clang_sanitize": "PASS19.19s; terminal0"
-    },
-    "repository_commit": "420364404959bd525f8a45288a6e99249b5ada2c"
+      "gcc": "Supporting73 PASS4.88s; terminal0",
+      "gcc_sanitize": "Supporting73 PASS28.41s; terminal0",
+      "clang_sanitize": "Supporting73 PASS20.07s; terminal0"
+    }
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
@@ -272,12 +273,12 @@
   },
   "native_factory_continuation": {
     "parent_commit": "d172c2fc",
-    "status": "validated_original_condition_data_supporting_cohort",
+    "status": "validated_original_draw_definition_supporting_cohort",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "findings": "docs/original-engine-formats.md",
     "production_changes_started": true,
-    "next": "Extract/admit original draw-module INI definitions and connect native condition binding to real pristine weapon/turret/subobject and Drawable query consumers; complete all required draw registrations and remaining material/prototype types, then full native factory/startup and loaded deterministic simulation under same N2 plan01/slice03. Full426/N2 acceptance pending.",
-    "evidence": "evidence/qa/N2-w3d-conditions.md"
+    "next": "Continue derived draw-data registrations and actual Drawable pristine weapon/turret/subobject query consumers using the shared original definitions; validate condition-specific transfer, complete remaining material/prototype types, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full431 and N2 acceptance pending.",
+    "evidence": "evidence/qa/N2-w3d-draw-data.md"
   },
   "w3d_document_checkpoint": {
     "parent_commit": "d172c2fc",
@@ -421,5 +422,40 @@
       "clang_sanitize": "PASS19.19s; terminal0"
     },
     "repository_commit": "420364404959bd525f8a45288a6e99249b5ada2c"
+  },
+  "w3d_draw_data_checkpoint": {
+    "label": "original-w3d-draw-definition",
+    "parent_commit": "bbcd6554",
+    "status": "validated supporting original draw-definition checkpoint; not slice03 or N2 acceptance",
+    "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
+    "evidence": "evidence/qa/N2-w3d-draw-data.md",
+    "canonical_source_files": 679,
+    "canonical_source_sha256": "b6b1f24c276a677d0af6ca2532c10201e400953e6c3a93c3648d4dd1537366b4",
+    "toolchain_inclusive_files": 686,
+    "toolchain_inclusive_sha256": "20c866dfd83e6bfed8433fa91958074b8aff0df55fcd3b4c2774df11adc62f31",
+    "configured_suite_tests": 431,
+    "related_tests_per_configuration": 74,
+    "frozen_results": {
+      "gcc": "PASS5.20s; terminal0",
+      "gcc_sanitize": "PASS30.64s; terminal0",
+      "clang_sanitize": "PASS21.67s; terminal0"
+    },
+    "allocation_terminals": {
+      "draw_parse_cold": 104,
+      "draw_parse_populated_module": 101,
+      "particle_template_insertion": 1
+    },
+    "every_failure_retry": true,
+    "production_cursor_proven_before_fixture_rollback": true,
+    "live_sessions": {},
+    "full_suite_run": false,
+    "slice_complete": false,
+    "milestone_complete": false,
+    "next": "Continue derived draw-data registrations and actual Drawable pristine weapon/turret/subobject query consumers using the shared original definitions; validate condition-specific transfer, complete remaining material/prototype types, then full native ModuleFactory/GameEngine startup and loaded deterministic simulation under the same N2 plan01/slice03. Full431 and N2 acceptance pending.",
+    "initial_frozen_results": {
+      "gcc": "Supporting73 PASS4.88s; terminal0",
+      "gcc_sanitize": "Supporting73 PASS28.41s; terminal0",
+      "clang_sanitize": "Supporting73 PASS20.07s; terminal0"
+    }
   }
 }

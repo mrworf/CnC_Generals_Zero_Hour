@@ -3660,3 +3660,42 @@ loaded deterministic simulation; no new milestone or acceptance waiver.
 Final source after inherited-whitespace normalization: GCC4.54s/GCCsan26.03s/
 Clangsan18.58s related69 PASS/terminal0. Hashes and evidence refer to this final
 source; initial passing matrix logs are retained separately.
+
+Original draw-definition continuation (parentbbcd6554): extract the complete
+W3DModelDrawModuleData header, constructor/destructor, field tables, condition/
+alias/default/transition parsing and selector/transfer methods to a common source
+that the original draw header consumes. Do not replace original INI vocabulary
+with generated test-only data. Preserve default inheritance, explicit animation
+replacement/None, repeated animation weights, visibility lists, public weapon/
+turret names, ignore flags and transition IDs. Replace pointer-to32bit parse-tag
+casts with defined intptr_t conversions; encoded mode indices remain0..5.
+
+Use a guarded original module-data creator and NameKey transaction, keeping key
+rollback after candidate retirement. Reject invalid enum/tag/weapon slot, missing
+model, ignored/duplicate/late default states and invalid transition rules before
+publication. Keep full source particle-template lookup and its initialized parent
+contract; unknown named templates cannot silently become None in release.
+Generated original INI -> original module-data -> original selector -> owned
+model/first-animation pose is the positive integration boundary. Whole-candidate
+parse failures and allocation sweeps must retain prior data/name cursor and every
+retry, with identical rooted VFS/provider warm-up before baselines. Native whole
+draw factory, derived19 registrations, weapon/turret caches and Drawable queries
+remain required next work, not acceptance inferred from a parsed base definition.
+
+Verified parent follow-through: ParticleSystemManager is abstract only at three
+presentation methods. A fixture subclass rejects render callbacks and otherwise
+executes the real init/INI/template lookup/retirement contract. Its newTemplate
+acquisition must be guarded through fallible map insertion; use the original
+pooled deleter, not ordinary delete. Initialize the module's invalid attach-bone
+cache vector before whole-data copies. These coupled source-owner corrections
+do not claim a production particle renderer or whole native client factory.
+
+Frozen base draw-definition checkpoint: related74 GCC5.20s/GCCsan30.64s/
+Clangsan21.67s PASS, terminal0 all3. Exact cold104/populated prior-module101
+parse terminals and particle-template insertion1, every failure/retry; namespace
+cursor and pool used units proved before fixture rollback. Original INI ->
+module selector -> owned final-frame pose passes; missing/invalid/parent inputs
+preserve prior data. Canonical679/inclusive686, full431 unrun. Evidence:
+evidence/qa/N2-w3d-draw-data.md. Same plan01/slice03 continues: derived19 data,
+native factory/Drawable weapon/turret/subobject queries, condition transfer,
+remaining formats/materials, then full startup/loaded original simulation.

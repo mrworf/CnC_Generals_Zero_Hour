@@ -30,6 +30,7 @@
 #include "PreRTS.h"	// This must go first in EVERY cpp file int the GameEngine
 
 #define DEFINE_PARTICLE_SYSTEM_NAMES
+#include <memory>
 
 #include "Common/GameState.h"
 #include "Common/GlobalData.h"
@@ -3048,12 +3049,9 @@ ParticleSystemTemplate *ParticleSystemManager::newTemplate( const AsciiString &n
 {
 	ParticleSystemTemplate *sysTemplate = findTemplate(name);
 	if (sysTemplate == NULL) {
-		sysTemplate = newInstance(ParticleSystemTemplate)( name );
-
-		if (! m_templateMap.insert(std::make_pair(name, sysTemplate)).second) {
-			sysTemplate->deleteInstance();
-			sysTemplate = NULL;
-		}
+		auto retire=[](ParticleSystemTemplate* value){value->deleteInstance();};
+		std::unique_ptr<ParticleSystemTemplate,decltype(retire)> candidate(newInstance(ParticleSystemTemplate)(name),retire);
+		if (m_templateMap.emplace(name,candidate.get()).second) sysTemplate=candidate.release();
 	}
 
 	return sysTemplate;

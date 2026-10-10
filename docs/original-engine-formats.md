@@ -5686,3 +5686,51 @@ exact coupled cold172/populated mesh-cache175 allocation terminals/every retry.
 Model/clip/pose and cache publication are one transaction; late pose failure
 cannot leave a partial admitted request. This original-data-to-owned-pose boundary
 does not establish real Drawable/full GameEngine or retail rendering acceptance.
+
+Original draw-definition parsing now resides in Common/W3DModelDrawData.h and
+System/W3DModelDrawData.cpp, extracted from W3DModelDraw.cpp. The original draw
+header uses that exact class; its creator guards data plus NameKey ownership.
+DefaultConditionState must be first/unique; without it, the first ConditionState
+must be NONE. Normal states copy default fields and reset their yes-condition
+vector. AliasConditionState appends to the preceding normal state's vector,
+without opening a nested block. Ignored/duplicate conditions reject. Transition
+states copy defaults but clear transition/wait keys, and allow ONCE/ONCE_BACKWARDS
+only, no idle animations and no transition/wait key declarations. They occupy a
+separate map keyed by source32 + destination32 signature; original duplicate
+transition signatures replace their prior entry, unlike rejected condition
+duplicates. Keep that distinction when extending the native factory.
+
+First explicit Animation/IdleAnimation clears inherited animation records and
+read flags. Repeat count weights selection by repeated records (values below1
+clamp to1); None clears inherited clips without adding a record. Mixing idle and
+nonidle animations rejects, and idle distance must be0. Hide/ShowSubObject None
+clears inherited entries; repeated names update their hide flag. Weapon and
+turret bone fields lowercase and add public names. ParticleSysBone lowercases the
+bone name but looks up the template token through the real manager's original
+case-sensitive template registry. Source mode names in rendobj.h retain order
+MANUAL/LOOP/ONCE/LOOP_PINGPONG/LOOP_BACKWARDS/ONCE_BACKWARDS (0..5).
+
+ParticleSystemManager::init loads Data/INI/ParticleSystem.ini through original
+INI::parseParticleSystemDefinition; source newTemplate stores pooled objects in
+a standard map. It now guards the candidate with its original pooled deleter
+through insertion. INI::parseParticleSystemTemplate requires its real parent and
+rejects unknown named inputs rather than release-only null publication. The
+pool's registered name is ParticleSystemTemplatePool (ParticleSys.h), not its
+C++ class name. Staging lookup AsciiStrings before live-count measurements is
+required: a temporary alive within the comparison expression adds legitimate
+owned backing and is not a source leak.
+
+Guarded draw creation permits nullptr INI without a name parent, but parsed
+creation owns a NameKeyTransaction outside its candidate. Candidate retirement
+precedes rollback; failure/retry tests prove production cursor/pooled-key units
+before outer fixture cleanup. Module copies clear SparseMatchFinder addresses,
+and the invalid attach-bone offset vector is explicitly initialized. Shared
+transfer methods retain version1 and48-byte matrices; runtime condition transfer
+roundtrip remains pending. Source-owned renderer methods and derived draw-module
+data are not implied to be delivered by this extraction.
+
+Evidence: evidence/qa/N2-w3d-draw-data.md, frozen related74 all3 PASS, cold104/
+populated101 draw-parse and particle-template1 exact terminals/every retry, real
+INI/selector-to-owned-final-frame query and negative/parent/retirement evidence.
+Original Drawable/weapon/turret caches, all19 registrations, full native factory,
+startup and loaded simulation remain the acceptance gate, not this data fixture.

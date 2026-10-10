@@ -232,6 +232,7 @@ target_sources(original_gameplay_common PRIVATE
   "${ZH_CODE}/GameEngine/Source/Common/System/FunctionLexiconTables.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/MapObject.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/System/MapObjectTeams.cpp")
+target_sources(original_gameplay_common PRIVATE "${ZH_CODE}/GameEngine/Source/Common/System/W3DModelDrawData.cpp")
 target_link_libraries(original_gameplay_common PUBLIC original_runtime_common)
 target_include_directories(original_gameplay_common PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas"
@@ -327,6 +328,15 @@ add_executable(original_map_object_fixture tests/original/map_object.cpp tests/o
 target_link_libraries(original_map_object_fixture PRIVATE
   "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
 target_link_options(original_map_object_fixture PRIVATE -Wl,--gc-sections)
+add_executable(original_w3d_draw_data_fixture tests/original/w3d_draw_data.cpp tests/original/AllocationFault.cpp)
+target_link_libraries(original_w3d_draw_data_fixture PRIVATE "$<LINK_GROUP:RESCAN,original_bootstrap,original_transfer,original_templates,original_definitions,original_logic,original_gameplay_common,original_logical_client,original_runtime_common,original_data,original_core>")
+target_link_options(original_w3d_draw_data_fixture PRIVATE -Wl,--gc-sections)
+target_include_directories(original_w3d_draw_data_fixture PRIVATE "${ZH_CODE}/Libraries/Source/WWVegas" "${ZH_CODE}/Libraries/Source/WWVegas/WWLib")
+target_compile_definitions(original_w3d_draw_data_fixture PRIVATE _OPERATOR_NEW_DEFINED_)
+foreach(family IN ITEMS values negative faults seeded_faults template_faults)
+  add_test(NAME original_w3d_draw_data_${family} COMMAND original_w3d_draw_data_fixture "${family}")
+  set_tests_properties(original_w3d_draw_data_${family} PROPERTIES LABELS "original;model;draw-data" TIMEOUT 60 ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:halt_on_error=1;UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+endforeach()
 foreach(family IN ITEMS values references constructor-faults names name-faults pool-failure template-binding)
   add_test(NAME original_map_object_${family} COMMAND original_map_object_fixture "${family}")
   set_tests_properties(original_map_object_${family} PROPERTIES LABELS "original;runtime;map" TIMEOUT 60
