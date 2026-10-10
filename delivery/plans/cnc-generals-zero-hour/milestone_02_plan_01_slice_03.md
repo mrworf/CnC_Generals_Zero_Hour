@@ -3412,3 +3412,5 @@ evidence/qa/N2-root-retirement.md. Commit the complete owned lifecycle cohort;
 this does not complete slice03/N2 or accept full392, GameMain, actual full engine
 startup, loaded simulation/checkpoints, native ghost/model/science or physical
 presentation. Continue those original-root integration gates under this plan.
+
+Lifecycle payload commit: `850bfa4cea5f17962658371ddf43e3b98df580e9`.

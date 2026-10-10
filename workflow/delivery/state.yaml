@@ -34,7 +34,7 @@
     "milestone_complete": false
   },
   "scope": "remaining",
-  "resume_point": "N2 plan01/slice03 coupled lifecycle verified: frozen configured builds/related208 PASS all3, every process terminal0; canonical656/inclusive663 rechecked. Commit owned lifecycle cohort and close provenance, then continue concrete native GameMain factory/full original root admission, acquired water/weather configuration, native terrain/ghost/model/science providers and loaded original simulation/checkpoints under the existing plan. Full392/slice03/N2 acceptance remain pending; no agents or blockers.",
+  "resume_point": "N2 plan01/slice03 lifecycle checkpoint 850bfa4c committed and verified: all configured builds/related208 PASS GCC/GCCsan/Clangsan, exact terminals/retries, canonical656/inclusive663 rechecked. No live jobs. Continue concrete native GameMain factory/full original root admission, acquired water/weather configuration, native terrain/ghost/model/science providers and loaded original simulation/checkpoints under the existing plan. Full392/slice03/N2 acceptance remain pending; no agents or blockers.",
   "transaction_parent": "dfb3a3598446e4d36a49c607687eaeb7ce2c4a84",
   "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01.md",
   "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
@@ -68,7 +68,7 @@
     "milestone_complete": false,
     "slice_complete": false,
     "evidence": "evidence/qa/N2-root-retirement.md",
-    "repository_commit": null
+    "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
   },
   "planning_checkpoint": {
     "label": "native-root-composition",
@@ -83,7 +83,7 @@
     "parent_commit": "dfb3a3598446e4d36a49c607687eaeb7ce2c4a84",
     "plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_01_slice_03.md",
     "evidence": "evidence/qa/N2-root-retirement.md",
-    "status": "Lifecycle source/tests verified all3 and ready for implementation commit; full startup/simulation and full392 remain pending",
+    "status": "Committed lifecycle source/tests checkpoint 850bfa4c; frozen related208/builds PASS all3. Full original startup/simulation and full392 remain pending.",
     "canonical_source_sha256": "b8f2eff60299a093c85931d7febc351505b75b0fd12059d868e98593e0f6cf66",
     "toolchain_inclusive_sha256": "282fb913b68ed4621448a60a75cdff36bd1f10c443b80c6924cf6c1b7af3278f",
     "configured_suite_tests": 388,
@@ -119,7 +119,8 @@
         "65018": "Clang sanitizer configured build and related208 PASS598.55s terminal0"
       },
       "status": "Frozen configured builds and related208 PASS all3; exact terminals and hashes rechecked; ready for coherent lifecycle checkpoint commit"
-    }
+    },
+    "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
   },
   "active_implementation": {
     "label": "original-root-lifecycle",
@@ -128,7 +129,7 @@
     "canonical_source_sha256": "3ac8351c54a1c7c4f1650347c61f4b31c4f40fab71720817d4f271064f22aa13",
     "toolchain_inclusive_sha256": "016f2923572e9231becd69ff36f90e431a1fa8c2c00e4c6c82bb4170a912857b",
     "configured_suite_tests": 392,
-    "status": "All configured builds/related208 PASS all3; every process terminal0. Implementation commit/provenance pending; full392/root startup/simulation acceptance pending",
+    "status": "Committed lifecycle checkpoint 850bfa4c; all configured builds/related208 PASS all3 and every process terminal0. Full392/root startup/simulation acceptance pending.",
     "live_sessions": [],
     "frozen_results": {
       "19475": "GCC sanitizer configured build and related208 PASS960.93s terminal0",
@@ -137,7 +138,8 @@
     },
     "next": "Continue concrete native process entry/full root startup and deterministic loaded simulation under existing N2 plan01/slice03. Lifecycle checkpoint is not N2 acceptance.",
     "milestone_complete": false,
-    "slice_complete": false
+    "slice_complete": false,
+    "repository_commit": "850bfa4cea5f17962658371ddf43e3b98df580e9"
   },
   "prior_implementation_checkpoint": {
     "label": "original-native-client-composition",
