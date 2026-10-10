@@ -13,7 +13,8 @@ class NativeModelDrawConditionBatch final {
   Impl* m_root=nullptr;
   static thread_local Impl* current;
 public:
-  NativeModelDrawConditionBatch(const DrawModule* const*,ModelConditionFlags* flags=nullptr,Bool* dirty=nullptr);
+  NativeModelDrawConditionBatch(const DrawModule* const*,ModelConditionFlags* flags=nullptr,Bool* dirty=nullptr,
+                               Bool localSavepoint=FALSE);
   ~NativeModelDrawConditionBatch() noexcept;
   NativeModelDrawConditionBatch(const NativeModelDrawConditionBatch&)=delete;
   NativeModelDrawConditionBatch& operator=(const NativeModelDrawConditionBatch&)=delete;

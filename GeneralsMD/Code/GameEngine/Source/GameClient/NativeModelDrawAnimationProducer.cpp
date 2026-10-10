@@ -9,6 +9,11 @@
 #include "Common/NativeSourceMath.h"
 #include "GameClient/NativeParticleSystemAdmission.h"
 #include "GameClient/ParticleSys.h"
+#include "GameClient/FXList.h"
+#include "GameLogic/Object.h"
+#include "GameLogic/Module/AIUpdate.h"
+#include "Common/PlayerList.h"
+#include "GameLogic/PartitionManager.h"
 #include <cmath>
 #include <limits>
 
@@ -132,6 +137,11 @@ NativeModelDrawAnimationProducer::Candidate NativeModelDrawAnimationProducer::pr
   out.validated=std::move(query.condition);out.state=m_state;
   if(recreate)out.state.paused=FALSE; // Source nukeCurrentRender lifecycle.
   out.state.source=selected;out.state.pending=pending;out.state.pendingDuration=~UnsignedInt(0);
+  for(unsigned slot=0;slot<WEAPONSLOT_COUNT;++slot){
+    const auto count=out.validated->m_weaponBarrelInfoVec[slot].size();
+    if(count>255)throw ERROR_BAD_ARG; // Source transfer uses an UnsignedByte count.
+    out.state.recoils[slot].assign(count,Recoil{});
+  }
   // Every caller admits a real model state, including a deferred target. Idle
   // animation reselection uses cloneCandidate/selectAnimation instead.
   out.state.particles.reset();out.state.recalcParticles=!getDrawable()->testDrawableStatus(DRAWABLE_STATUS_NO_STATE_PARTICLES);
@@ -370,4 +380,101 @@ void NativeModelDrawAnimationProducer::advanceNativeConditionAnimation(const Mat
     candidate.current->world=world;
   }
   publish(std::move(candidate));assets.commit();keys.commit();random.commit();
+}
+
+const NativeModelDrawAnimationProducer::Recoil& NativeModelDrawAnimationProducer::nativeRecoil(WeaponSlotType slot,std::size_t barrel)const{
+  requireClientOwner();if(slot<0||slot>=WEAPONSLOT_COUNT||barrel>=m_state.recoils[slot].size())throw ERROR_BAD_ARG;
+  return m_state.recoils[slot][barrel];
+}
+Int NativeModelDrawAnimationProducer::getBarrelCount(WeaponSlotType slot)const{
+  requireClientOwner();if(slot<0||slot>=WEAPONSLOT_COUNT)throw ERROR_BAD_ARG;
+  return m_validated&&(m_validated->m_validStuff&ModelConditionInfo::BARRELS_VALID)?Int(m_validated->m_weaponBarrelInfoVec[slot].size()):0;
+}
+Bool NativeModelDrawAnimationProducer::handleWeaponFireFX(WeaponSlotType slot,Int barrel,const FXList* fx,
+    Real speed,const Coord3D* victim,Real radius){
+  // Original Weapon invokes this client-state notification during GameLogic
+  // update on the owner thread. It is not a client-only pose query.
+  requireClientOwner();(void)syncTime();
+  const auto count=getBarrelCount(slot);if(!count)return FALSE;
+  if(barrel<0||barrel>=count)barrel=0; // Original >size check admits an invalid index.
+  if(m_state.recoils[slot].size()!=std::size_t(count))throw ERROR_BAD_ARG;
+  const auto& info=m_validated->m_weaponBarrelInfoVec[slot][barrel];
+  const auto& data=nativeModelDrawData();if(!std::isfinite(data.m_initialRecoil))throw ERROR_BAD_ARG;
+  // Even an empty original FXList performs the actual local-player/shroud
+  // query. Missing logical parents must reject before recoil/flash publication.
+  if(fx&&info.m_fxBone&&m_current&&(!ThePartitionManager||!ThePlayerList||!ThePlayerList->getLocalPlayer()))throw ERROR_BAD_ARG;
+  Candidate candidate;const bool copy=NativeModelDrawConditionBatch::needsCopy(*this)&&m_current;
+  if(copy)candidate=cloneCandidate();
+  auto* current=copy?candidate.current.get():m_current.get();auto& state=copy?candidate.state:m_state;
+  Bool handled=FALSE;
+  if(fx&&info.m_fxBone&&current){
+    const auto* object=getDrawable()->getObject();Matrix3D transform;
+    if(!current->subobjects.hidden()||!object){
+      const auto& bone=current->binding.pose.bone(info.m_fxBone).transform;
+      for(unsigned row=0;row<3;++row)for(unsigned col=0;col<4;++col)transform[row][col]=bone[4*row+col];
+    }else transform=*object->getTransformMatrix();
+    const Coord3D position{transform.Get_X_Translation(),transform.Get_Y_Translation(),transform.Get_Z_Translation()};
+    FXList::doFXPos(fx,&position,&transform,speed,victim,radius);handled=TRUE;
+  }
+  if(info.m_recoilBone||info.m_muzzleFlashBone){
+    auto& recoil=state.recoils[slot][barrel];recoil.phase=RecoilPhase::Start;recoil.rate=data.m_initialRecoil;
+    if(current&&info.m_muzzleFlashBone)current->subobjects.setFirstOnBone(info.m_muzzleFlashBone,false);
+  }
+  if(copy)publish(std::move(candidate));return handled;
+}
+void NativeModelDrawAnimationProducer::applyControls(Bool turrets,Bool recoil){
+  requireClientPhase();(void)syncTime();if(!m_current||!m_validated)return;
+  const auto& data=nativeModelDrawData();
+  std::array<NativeW3DPose::Control,MAX_TURRETS*2+WEAPONSLOT_COUNT*255> controls;
+  std::array<std::array<Recoil,255>,WEAPONSLOT_COUNT> staged;
+  std::size_t used=0;
+  auto add=[&](Int bone,const Matrix3D& matrix){if(bone)controls[used++]={std::size_t(bone),raw(matrix),false};};
+  if(turrets&&(m_validated->m_validStuff&ModelConditionInfo::TURRETS_VALID)){
+    const auto* object=getDrawable()->getObject();const auto* ai=object?object->getAIUpdateInterface():nullptr;
+    for(unsigned n=0;n<MAX_TURRETS;++n){const auto& info=m_validated->m_turrets[n];Real yaw=0,pitch=0;
+      if(info.m_turretAngleBone||info.m_turretPitchBone){
+        if(ai)ai->getTurretRotAndPitch(WhichTurretType(n),&yaw,&pitch);
+        Matrix3D rotation(true);rotation.Rotate_Z(yaw+info.m_turretArtAngle);add(info.m_turretAngleBone,rotation);
+        rotation.Make_Identity();rotation.Rotate_Y(-(pitch+info.m_turretArtPitch));add(info.m_turretPitchBone,rotation);
+      }
+    }
+  }
+  const bool doRecoil=recoil&&(m_validated->m_validStuff&ModelConditionInfo::BARRELS_VALID);
+  if(doRecoil){
+    for(Real value:{data.m_recoilDamping,data.m_maxRecoil,data.m_recoilSettle})if(!std::isfinite(value))throw ERROR_BAD_ARG;
+    for(unsigned slot=0;slot<WEAPONSLOT_COUNT;++slot){const auto& barrels=m_validated->m_weaponBarrelInfoVec[slot];
+      if(barrels.size()>255||barrels.size()!=m_state.recoils[slot].size())throw ERROR_BAD_ARG;
+      for(std::size_t n=0;n<barrels.size();++n){auto row=m_state.recoils[slot][n];
+        if(m_validated->m_hasRecoilBonesOrMuzzleFlashes[slot]){
+          if(barrels[n].m_recoilBone){switch(row.phase){
+            case RecoilPhase::Idle:break;
+            case RecoilPhase::Start:case RecoilPhase::Recoil:
+              row.shift+=row.rate;row.rate*=data.m_recoilDamping;
+              if(!std::isfinite(row.shift)||!std::isfinite(row.rate))throw ERROR_BAD_ARG;
+              if(row.shift>=data.m_maxRecoil){row.shift=data.m_maxRecoil;row.phase=RecoilPhase::Settle;}
+              else if(std::abs(row.rate)<.01f)row.phase=RecoilPhase::Settle;
+              break;
+            case RecoilPhase::Settle:row.shift-=data.m_recoilSettle;
+              if(row.shift<=0){row.shift=0;row.phase=RecoilPhase::Idle;}break;
+            default:throw ERROR_BAD_ARG;
+          }
+          Matrix3D translation(true);translation.Translate_X(-row.shift);add(barrels[n].m_recoilBone,translation);
+          }else row.phase=RecoilPhase::Idle;
+        }
+        if(!std::isfinite(row.shift)||!std::isfinite(row.rate))throw ERROR_BAD_ARG;staged[slot][n]=row;
+      }
+    }
+  }
+  Candidate candidate;const bool copy=NativeModelDrawConditionBatch::needsCopy(*this);
+  if(copy)candidate=cloneCandidate();auto& current=copy?*candidate.current:*m_current;auto& state=copy?candidate.state:m_state;
+  if(used)current.binding.pose.evaluateControlledRuntime(raw(current.world),current.binding.animation?current.binding.animation->motion.get():nullptr,
+    current.frame,current.treeScale,std::span(controls.data(),used));
+  if(doRecoil)for(unsigned slot=0;slot<WEAPONSLOT_COUNT;++slot){const auto& barrels=m_validated->m_weaponBarrelInfoVec[slot];
+    for(std::size_t n=0;n<barrels.size();++n){
+      if(m_validated->m_hasRecoilBonesOrMuzzleFlashes[slot]&&barrels[n].m_muzzleFlashBone)
+        current.subobjects.setFirstOnBone(barrels[n].m_muzzleFlashBone,state.recoils[slot][n].phase!=RecoilPhase::Start);
+      state.recoils[slot][n]=staged[slot][n];
+    }
+  }
+  if(copy)publish(std::move(candidate));
 }

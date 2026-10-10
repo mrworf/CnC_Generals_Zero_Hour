@@ -4338,6 +4338,10 @@ void Drawable::reactToGeometryChange()
 //-------------------------------------------------------------------------------------------------
 Bool Drawable::handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelToUse, const FXList* fxl, Real weaponSpeed, Real recoilAmount, Real recoilAngle, const Coord3D* victimPos, Real damageRadius)
 {	  
+  NativeModelDrawConditionBatch publication(getDrawModulesNonDirty(),&m_conditionState,&m_isModelDirty,TRUE);
+  const Real priorPitch=m_locoInfo?m_locoInfo->m_accelerationPitchRate:0;
+  const Real priorRoll=m_locoInfo?m_locoInfo->m_accelerationRollRate:0;
+  try {
 	if (recoilAmount != 0.0f)
 	{
 		// adjust recoil from absolute to relative.
@@ -4355,10 +4359,15 @@ Bool Drawable::handleWeaponFireFX(WeaponSlotType wslot, Int specificBarrelToUse,
 	for (DrawModule** dm = getDrawModules(); *dm; ++dm)
 	{
 		ObjectDrawInterface* di = (*dm)->getObjectDrawInterface();
-		if (di && di->handleWeaponFireFX(wslot, specificBarrelToUse, fxl, weaponSpeed, victimPos, damageRadius))
-			return true;
+		if (di && di->handleWeaponFireFX(wslot, specificBarrelToUse, fxl, weaponSpeed, victimPos, damageRadius)) {
+      publication.commit();return true;
+    }
 	}
-	return false;
+  publication.commit();return false;
+  } catch (...) {
+    if(m_locoInfo){m_locoInfo->m_accelerationPitchRate=priorPitch;m_locoInfo->m_accelerationRollRate=priorRoll;}
+    throw;
+  }
 } 
 
 //-------------------------------------------------------------------------------------------------

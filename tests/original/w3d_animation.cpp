@@ -167,6 +167,20 @@ void poseTests(){using Pose=NativeW3DPose;auto pose=Pose::decode(hierarchy());au
   const auto live=AllocationFault::live();AllocationFault::arm(0);try{for(float frame:{0.f,1.f,2.f,3.75f,1.5f}){pose.evaluate(root,&motion,frame);(void)pose.pristineBone(2,root);}
     pose.evaluateBlend(root,motion,1,motion,2,0.5f);}catch(...){AllocationFault::disarm();throw;}
   const auto attempts=AllocationFault::attempts();const bool hit=AllocationFault::triggered();AllocationFault::disarm();require(attempts==0 && !hit && AllocationFault::live()==live,"post-admission pose evaluation/blend/pristine query allocate nothing");
+  auto controlled=Pose::decode(hierarchy());controlled.evaluateRuntime(root,&motion,1);
+  const auto oldBone=controlled.bone(2);const auto* oldView=&controlled.bone(2);
+  auto first=Pose::identity();first[3]=3;auto last=first;last[3]=5;
+  const std::array<NativeW3DPose::Control,2> updates{{{1,first,false},{1,last,true}}};
+  rejects([&]{controlled.evaluateControlledRuntime(explosive,&motion,1,1,updates);});
+  require(&controlled.bone(2)==oldView&&controlled.bone(2).transform==oldBone.transform,"late controlled pose rejection preserves borrowed output identity");
+  controlled.evaluateRuntime(root,&motion,1);require(controlled.bone(2).transform==oldBone.transform,"late controlled rejection restores captured flags/matrices, not only displayed bones");
+  auto invalid=updates;invalid[1].bone=99;rejects([&]{controlled.evaluateControlledRuntime(root,&motion,1,1,invalid);});
+  require(controlled.bone(2).transform==oldBone.transform,"all control indices validate before any mutation");
+  invalid=updates;invalid[1].transform[3]=std::numeric_limits<float>::infinity();rejects([&]{controlled.evaluateControlledRuntime(root,&motion,1,1,invalid);});
+  auto reference=controlled.clone();reference.capture(1);reference.control(1,last,true);reference.evaluateRuntime(root,&motion,1);
+  AllocationFault::arm(0);try{controlled.evaluateControlledRuntime(root,&motion,1,1,updates);}catch(...){AllocationFault::disarm();throw;}
+  const auto controlDemand=AllocationFault::attempts();AllocationFault::disarm();
+  require(controlDemand==0&&controlled.bone(2).transform==reference.bone(2).transform,"duplicate controls preserve source last-write order and world translation with zero demand");
   auto moved=std::move(pose);moved.evaluate(root);close(moved.bone(2).transform[7],204,"whole pose move owns hierarchy after borrowed source retirement");
 }
 void poseFaults(){using Pose=NativeW3DPose;const auto tree=hierarchy();auto pose=Pose::decode(tree);

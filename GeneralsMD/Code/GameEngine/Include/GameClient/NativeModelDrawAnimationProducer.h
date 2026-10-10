@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "GameClient/NativeModelDrawCurrentQueries.h"
+#include <array>
 class Display;
 class NativeModelDrawConditionBatch;
 // Shared source state owner. Specialized effects/physical callbacks remain
@@ -9,6 +10,10 @@ class NativeModelDrawAnimationProducer : public NativeModelDrawCurrentQueries {
   MEMORY_POOL_GLUE_ABC(NativeModelDrawAnimationProducer)
   friend class NativeModelDrawConditionBatch;
   using Mode=NativeModelAnimationClock::Mode;
+protected:
+  enum class RecoilPhase : std::uint32_t {Idle=0,Start=1,Recoil=2,Settle=3};
+  struct Recoil {RecoilPhase phase=RecoilPhase::Idle;Real shift=0,rate=0;};
+private:
   struct ParticleCohort;
   struct State {
     const ModelConditionInfo* source=nullptr;
@@ -21,6 +26,7 @@ class NativeModelDrawAnimationProducer : public NativeModelDrawCurrentQueries {
     Bool recalcParticles=FALSE;
     Bool fullyObscured=FALSE;
     std::vector<ModelConditionInfo::HideShowSubObjInfo> subobjectOverrides;
+    std::array<std::vector<Recoil>,WEAPONSLOT_COUNT> recoils;
   };
   struct Candidate {
     std::unique_ptr<Current> current;
@@ -41,10 +47,14 @@ class NativeModelDrawAnimationProducer : public NativeModelDrawCurrentQueries {
   Real naturalDuration(const ModelConditionInfo*)const;
   void advanceRetained(const Matrix3D&,UnsignedInt);
   void applyParticleVisibility(Bool);
+  void applyControls(Bool turrets,Bool recoil);
 protected:
   void initializeNativeAnimationProducer();
   void advanceNativeConditionAnimation(const Matrix3D&);
   void recalcNativeStateParticles(); // Complete client callback; full model tick is separate.
+  void applyNativeTurretControls(){applyControls(TRUE,FALSE);}
+  void advanceNativeWeaponRecoil(){applyControls(FALSE,TRUE);}
+  const Recoil& nativeRecoil(WeaponSlotType slot,std::size_t barrel)const;
   std::size_t nativeStateParticleCount()const noexcept;
   UnsignedInt nativeStateParticleID(std::size_t)const;
   const ModelConditionInfo* nativeSelectedCondition()const noexcept{return m_state.source;}
@@ -65,4 +75,6 @@ public:
   void setFullyObscuredByShroud(Bool)override;
   void showSubObject(const AsciiString&,Bool)override;
   void updateSubObjects()override;
+  Int getBarrelCount(WeaponSlotType)const override;
+  Bool handleWeaponFireFX(WeaponSlotType,Int,const FXList*,Real,const Coord3D*,Real)override;
 };

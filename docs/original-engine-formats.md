@@ -6638,3 +6638,89 @@ coverage checks source-clock completion, root-held old trackers, target visibili
 plus persistent overrides, every standard prefix/retry and accepted deferred
 system destruction. Native current code/test descriptions are not acceptance;
 consult the deferred-state QA artifact once the frozen matrix completes.
+
+### Client turret/recoil and captured-control publication
+
+Verified original source: GameEngineDevice/Source/W3DDevice/GameClient/Drawable/
+Draw/W3DModelDraw.cpp::handleClientTurretPositioning, handleClientRecoil,
+handleWeaponFireFX, getBarrelCount and rebuildWeaponRecoilInfo. Turrets use real
+AI yaw/pitch when an Object/AI exists, otherwise zero plus art offsets, with Z
+yaw and negative-Y pitch. Recoil state rows reset on every setModelState admission,
+not idle selection. Fire replaces phase/rate and retains accumulated shift.
+Flash visibility is decided from the incoming START phase before advancing that
+row. START stays START until cap/damped-rate settling; do not invent RECOIL.
+A flash-only row resets to IDLE after the flash decision, giving one shown tick.
+Settling subtracts source settle speed and clamps nonpositive displacement to0.
+Controls are client-only. Source doDrawModule samples particles after turrets and
+before recoil, so particles and final displayed bones can intentionally differ
+within that tick. Recoil replaces a turret control if both target the same bone.
+
+Original handleWeaponFireFX's >size fallback incorrectly permits barrel==size.
+Native >=size fallback selects the first barrel, fixing that original out-of-
+bounds path. Null FX still admits recoil but returns false handled, as source.
+Non-null FX calls the original FXList::doFXPos, which unconditionally queries
+PartitionManager/local PlayerList even for an empty list (GameClient/FXList.cpp
+around808). The native boundary rejects missing logical FX parents before
+recoil/flash changes; do not use an empty list as a parent-free successful sink.
+Actual source FX nuggets/audio/particle publication require their own complete
+logical parents and remain unaccepted by the isolated control fixture.
+
+Source W3DModelDrawData.cpp::parseWeaponBoneName and parseBoneNameKey normalize
+all bone names to lowercase and register public bones. Content-key lookups remain
+case-sensitive despite hierarchy name matching being case-insensitive. Direct
+fixture population must mirror that complete parser contract; mixed-case keys
+can silently yield zero barrel/turret indices. These verified findings came from
+the initial generated control fixture failure, not an asset or framework change.
+
+NativeW3DPose::evaluateControlledRuntime validates a whole control list, applies
+last-write ordering and world-translation semantics, and restores every captured
+flag/matrix on late evaluation failure. Rollback backing is admitted with the
+hierarchy; steady controlled evaluation allocates nothing. Producer state owns
+one fixed-phase recoil row per validated barrel, with byte-count bounds reserved
+for source transfer. Root first mutation clones offside and existing ConditionBatch
+restores pose/state/flash identity. Source transfers, lazy sound consumption,
+complete real-parent model tick/concrete19 and startup remain pending. Current
+frozen execution status belongs in evidence/qa/N2-client-bone-control-lifecycle.md;
+these implementation descriptions alone are not acceptance.
+
+Ordered-tick prerequisite resolved while that source remains frozen:
+W3DModelDrawModuleData::getAttachToDrawableBoneOffset is implemented in the
+original device W3DModelDraw.cpp around765, not the retained common data file.
+It queries the actual Drawable's pristine module walk once, caches translation
+or zero on miss in shared ModuleData, and then returns that cached offset; the
+source census finds validity initialized false in W3DModelDrawData.cpp:548 and
+set true only in that helper. adjustTransformMtx rotates the cached offset by
+the incoming root before adding translation, then applies construction height.
+The native query owner currently has a per-module pristine attachment cache
+with transaction rollback, but its query entry points require the logic-query
+phase. Full client tick must stage/consume legitimate pristine attachment data
+without calling simulation from a render/audio thread or weakening phase guards.
+Do not substitute animated world-bone attachment: CACHE_ATTACH_BONE is enabled
+in the original shared header and explicitly assumes pristine/nonanimated input.
+This locates the previously unlocated implementation; actual native full-tick
+integration remains pending, not evidence from the control fixture.
+
+Fire phase/caller evidence: GameLogic/Object/Weapon.cpp around949 invokes
+Drawable.cpp::handleWeaponFireFX directly while simulation runs on its original
+owner thread. Its null-FX path is explicitly retained for recoil. Native fire
+therefore checks owner identity/thread, not the stricter client-only pose phase;
+draw-stage turret/recoil evaluation still uses that stricter phase. Do not defer
+fire notifications or reject ordinary weapon logic to satisfy a test-only client
+route. The Drawable multi-module fire walk now requests an explicit local
+condition savepoint: child failure restores exact owners despite a caught error
+and outer commit, child success promotes earliest ownership into the parent for
+later outer rollback. Default shared nested notification behavior is unchanged.
+Retire the child then restore its parent scope pointer; rollback/promotion do not
+allocate. Source locomotion recoil-rate increments restore on walk exception.
+Actual FX nuggets can have external effects; these local state guarantees are
+not a claim of transactional audio/particle/OCL output across arbitrary FXLists.
+Full real-parent/locomotion/weapon simulation integration remains pending.
+
+Local condition savepoints also lazily admit ParticleSystemManager ownership.
+Enroll all owning condition ancestors before the child manager admission:
+otherwise child commit can retain created master/slave entries after outer
+rollback. NativeModelDrawConditionBatch::Impl::enrollParticles now recursively
+registers ancestors first. The generated actual manager test commits a child
+condition change, then verifies outer rollback restores prior Current/tracker
+identity, count, ID cursor and ParticleSystemPool used units. This is scoped
+component evidence in N2-client-bone-control-lifecycle.md, not full tick parity.

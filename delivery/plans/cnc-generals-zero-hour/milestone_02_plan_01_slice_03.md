@@ -4429,3 +4429,111 @@ fixture build/cold-warm failures and corrected complete-cohort baselines. The
 introducing QA commit is the supporting checkpoint, not whole-model tick,
 slice03 or milestone completion. User-requested review found exactly eight
 owned files to commit together; no generated/proprietary/recovery files included.
+
+Continuation from clean618f7179: implement the coupled client bone-control and
+weapon-fire lifecycle within this same slice. Admit/reset one recoil row for
+every validated barrel on every real state admission, retain rows on genuine
+idle selection, and preserve accumulated shift when firing again. Derive flashes,
+recoil/damping/cap/settling and turret Z/negative-Y controls from original
+W3DModelDraw callbacks, never invent a RECOIL_START-to-RECOIL transition. Use
+actual AI parent reads when an Object exists; art/default controls otherwise.
+Keep controls on the client thread. Stage all control matrices and recoil rows
+before publication; late pose rejection must restore captured controls as well
+as displayed bones. Use preallocated pose rollback storage for warmed zero-demand
+ticks and the existing condition root for first-mutation copy/rollback. Fire FX
+uses the original FXList entry point, not a substitute success sink; null FX must
+still perform recoil and return the original false handled result. Fix the
+original barrel==size out-of-bounds fallback with defined >=size handling.
+Generated actual Drawable tests cover fire/read/control/particle ordering,
+same-state reset vs idle retention, repeated lifetimes, missing/invalid bones,
+nonfinite overflow rejection, duplicate controls, and every root-copy failure
+with same-owner retry. Test ordinary and GCC/Clang sanitizer configurations on
+frozen source, focused before related. This cohort is not full ordered model
+tick, concrete19, physical FX/audio, save transfer or original startup acceptance;
+those remain required before N2 closes. No new plan, framework or asset edits.
+
+Focused fixture investigation: original parseWeaponBoneName/parseBoneNameKey
+lowercase identifiers before content-key lookup. Normalize the whole generated
+weapon/turret cohort, not just one missing lookup. Original FXList::doFXPos also
+always queries PartitionManager and the local PlayerList, even for an empty list.
+The isolated Drawable fixture has neither; preserve that execution failure and
+reject missing logical FX parents before changing recoil/flash instead of adding
+a substitute shroud/FX sink. Actual FX parent composition/effect publication
+remains required later. Pose tests passed before these fixture corrections; do
+not treat this as source recoil math failure or weaken the ownership coverage.
+
+Production caller review before acceptance: Weapon.cpp invokes actual Drawable
+fire callbacks from the same owner thread during GameLogic update. Fire is a
+client-state notification, not a client-only pose query; preserve its legitimate
+phase route while keeping draw-stage turret/recoil controls client-phase-only.
+Extend the actual Drawable fire walk with the existing condition root so a later
+module failure restores earlier recoil/flash/dirty-condition publication; restore
+source locomotion recoil-rate increments on exception. Test the two initialized
+real modules through Drawable dispatch in logic phase, then every root-copy
+failure/retry across that walk. Non-null FX external effect rollback remains
+unaccepted, not inferred from null-FX notification coverage. The first frozen
+GCC related67 passed; sanitizer jobs62900/85675 were intentionally interrupted
+terminal130 after this material source-caller finding, with their logs retained.
+Both owned CTest processes and children were verified retired before source
+changes. This is not a timeout, observation failure or an identical retry.
+
+Coupled transaction review: a nested notification normally shares its outer
+condition root. A multi-module fire walk additionally needs a local savepoint:
+otherwise a locally caught later-module failure plus outer commit keeps an early
+successful recoil prefix. Add an explicit local-savepoint option (default nested
+behavior unchanged). On local failure restore its exact prior current/state;
+on success promote the earliest retained Current/validated ownership into the
+outer root only if it has not already retained that module. Never clone in a
+noexcept rollback or double-own the same original Current. Namespace/assets/RNG/
+particle admissions use their existing nested scopes. Enroll the parent before
+publication and restore current-root identity after child retirement. Exercise
+both child commit followed by outer rollback and child failure followed by outer
+commit, with a complete two-module actual Drawable notification and warmed exact
+standard fault census. This supports full-tick transactions later; it does not
+claim external FX side-effect rollback.
+
+Frozen corrected dispatch focused4 PASS all3, with terminal62 every prefix/retry
+and13 matching manifest rows; related67 jobs39597/64522/98395 remain live. After
+they retire, strengthen the oracle with direct Drawable late-second-module
+nonfinite-recoil rejection and caught failure/outer commit, omitting the fixture's
+extra whole-controls local savepoint. Restore the same actual borrowed config
+and prove a corrected retry. This isolates the production fire walk's own local
+savepoint guarantee. Keep source frozen until the named jobs retire. A test-only
+oracle extension receives new focused all3 validation; unchanged production/
+build artifacts retain their attributable frozen related evidence. Do not
+silently claim old tests ran the added assertion or repeat unchanged broad
+production validation merely for an extra fixture assertion. Full500 remains
+required at actual N2 completion. Do not commit this cohort before that oracle.
+
+Final ownership review of the new local-savepoint option: lazy particle admission
+currently enrolls only the innermost condition root. A successful child particle
+acquisition followed by outer rollback would retain manager entries/cursor growth.
+Enroll every owning ancestor before the child, using the existing manager nested
+savepoint contract. Test successful local moving-state/particle admission followed
+by outer rollback against actual manager count, ID cursor, pooled used units,
+old tracker/current identity and whole fixture ownership. Keep the direct fire
+oracle; it passed all3 without production changes. This additional production
+lifecycle correction requires a new frozen related matrix, not reuse of the
+previous production fingerprint. No new plan, asset or framework change.
+
+Final ancestor-enrollment freeze: canonical735 af10a24d1de6621b8f9c821cb9ec874b1d33537fed2267be0eec3793cf67e9a9,
+inclusive742 59b496d97f989690f432409f705181d378a1bfed55d537314320279ff76cb62d,
+production/build659 720e4d520d54a50ec868ef6ef63aabfb872ca96892c6100c4b0cef07878dd74e.
+Focused4 PASS all3 (12.51s/50.36s/29.72s),13 identical manifests; terminal62
+root and4 pose. Final GCC related67 log PASS225.38s. Existing sanitizer related
+processes301683/301711 remain live; launch handles lost to truncated output,
+not execution failure. Recover/observe exact jobs, do not duplicate. Required
+final results belong in evidence/qa/N2-client-bone-control-lifecycle.md and state.
+No commit until the complete frozen matrix passes. Full500, slice03/N2 incomplete.
+
+Final controls/notification checkpoint: focused4 and related67 PASS all3 on the
+final ancestor-enrollment source. Related GCC225.38s/GCCsan910.02s/Clangsan534.90s;
+122 identical manifests b200b8e3b29e1f17f473d860a13c68d4fb8612a8366ab54267c57e57a45c646c.
+All jobs retired; lost sanitizer launch handles reconciled with exact host
+processes and complete passing logs, without duplicate execution. Canonical735,
+inclusive742 and production659 fingerprints above rechecked unchanged. Upstream
+bgfx/bx/bimg verify pristine. Commit locator: git log -1 --format=%H --
+evidence/qa/N2-client-bone-control-lifecycle.md. Resume real-parent full ordered
+tick/attachment/construction/power/movement, lazy pose/PrevFrame events and transfer,
+then concrete19 and actual original startup/loaded simulation. No N2 or slice03
+completion claim; full500 remains unrun.

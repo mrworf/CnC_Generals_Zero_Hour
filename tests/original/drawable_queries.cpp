@@ -6,6 +6,7 @@
 #include "GameClient/NativeModelDrawAnimationProducer.h"
 #include "GameClient/ClientRandomValue.h"
 #include "GameClient/ParticleSys.h"
+#include "GameClient/FXList.h"
 #include "GameClient/NativeParticleSystemAdmission.h"
 #include "GeneratedParticleInput.h"
 #include "GameClient/NativeHeadlessGameClient.h"
@@ -35,6 +36,11 @@ public:
   void initializeProducer(){initializeNativeAnimationProducer();producerEnabled=true;}
   void producerStep(const Matrix3D& root){advanceNativeConditionAnimation(root);}
   void particles(){recalcNativeStateParticles();}
+  void turrets(){applyNativeTurretControls();}
+  void recoilStep(){advanceNativeWeaponRecoil();}
+  std::array<Real,3> recoilRow(WeaponSlotType slot=PRIMARY_WEAPON,std::size_t barrel=0)const{
+    const auto& value=nativeRecoil(slot,barrel);return {Real(value.phase),value.shift,value.rate};
+  }
   std::size_t particleCount()const{return nativeStateParticleCount();}
   ParticleSystemID particleID(std::size_t index)const{return ParticleSystemID(nativeStateParticleID(index));}
   void particleVisibility(Bool obscured){NativeModelDrawAnimationProducer::setFullyObscuredByShroud(obscured);}
@@ -69,8 +75,10 @@ public:
     if(producerEnabled)NativeModelDrawAnimationProducer::replaceModelConditionState(value);
   }
   void replaceIndicatorColor(Color)override{} void setSelectable(Bool)override{}
-  Bool handleWeaponFireFX(WeaponSlotType,Int,const FXList*,Real,const Coord3D*,Real)override{throw ERROR_BAD_ARG;}
-  Int getBarrelCount(WeaponSlotType)const override{throw ERROR_BAD_ARG;}
+  Bool handleWeaponFireFX(WeaponSlotType slot,Int barrel,const FXList* fx,Real speed,const Coord3D* victim,Real radius)override{
+    if(!producerEnabled)throw ERROR_BAD_ARG;return NativeModelDrawAnimationProducer::handleWeaponFireFX(slot,barrel,fx,speed,victim,radius);
+  }
+  Int getBarrelCount(WeaponSlotType slot)const override{if(!producerEnabled)throw ERROR_BAD_ARG;return NativeModelDrawAnimationProducer::getBarrelCount(slot);}
   void setAnimationLoopDuration(UnsignedInt value)override{if(!producerEnabled)throw ERROR_BAD_ARG;NativeModelDrawAnimationProducer::setAnimationLoopDuration(value);}
   void setAnimationCompletionTime(UnsignedInt value)override{if(!producerEnabled)throw ERROR_BAD_ARG;NativeModelDrawAnimationProducer::setAnimationCompletionTime(value);}
   Bool updateBonesForClientParticleSystems()override{throw ERROR_BAD_ARG;}
@@ -458,6 +466,104 @@ bool sameParticleState(const ParticleSystem::NativeClientState& a,const Particle
   for(unsigned n=0;n<3;++n)for(unsigned k=0;k<4;++k)if(a.local[n][k]!=b.local[n][k])return false;return true;
 }
 std::array<Int,8> probeClientCursor();
+void configureControls(Fixture& fixture,unsigned index=0){configureProducer(fixture,index);auto& data=fixture.module(index).inputData();
+  data.m_initialRecoil=2;data.m_maxRecoil=3;data.m_recoilDamping=.5f;data.m_recoilSettle=1;
+  // Mirror parseWeaponBoneName/parseBoneNameKey's complete normalization.
+  for(auto& state:data.m_conditionStates){state.m_weaponRecoilBoneName[PRIMARY_WEAPON]=AsciiString("arm");
+    state.m_weaponMuzzleFlashName[PRIMARY_WEAPON]=AsciiString("muzzle");state.m_weaponFireFXBoneName[PRIMARY_WEAPON]=AsciiString("muzzle");
+    state.m_turrets[0].m_turretAngleNameKey=fixture.names.nameToKey("arm");state.m_turrets[0].m_turretArtAngle=3.14159265358979323846f/2;
+    state.m_turrets[0].m_turretPitchNameKey=fixture.names.nameToKey("muzzle");state.m_turrets[0].m_turretArtPitch=3.14159265358979323846f/6;
+  }
+  data.m_conditionStates[2].m_weaponRecoilBoneName[PRIMARY_WEAPON].clear();
+}
+void producerControls(Fixture& fixture){ProducerTimeOwner time;ParticleParents particles(fixture);configureControls(fixture);auto& module=fixture.module(0);
+  const AsciiString particleName("GeneratedStateParticles");const auto* source=particles.owner->findTemplate(particleName);
+  require(source,"actual parsed controls particle parent");
+  module.inputData().m_conditionStates[0].m_particleSysBones={{AsciiString("Muzzle"),source}};
+  module.inputData().m_conditionStates[1].m_particleSysBones={{AsciiString("Muzzle"),source}};
+  module.inputData().m_conditionStates[0].m_flags|=1<<RESTART_ANIM_WHEN_COMPLETE;
+  module.initializeProducer();require(module.getBarrelCount(PRIMARY_WEAPON)==1&&!module.getBarrelCount(SECONDARY_WEAPON),"actual validated source barrel census");
+  module.turrets();const auto& turret=module.currentBinding()->pose.bone(1).transform;
+  require(close(turret[0],0)&&close(turret[4],1),"objectless source turret uses authored Z angle");
+  const auto& pitch=module.currentBinding()->pose.bone(2).transform;
+  require(close(pitch[10],std::cos(3.14159265358979323846f/6))&&close(pitch[8],.5f),"source turret pitch rotates negative Y after ancestor yaw");
+  module.particles();module.particleBones();auto* system=particles.owner->findParticleSystem(module.particleID(0));require(system,"actual turret-controlled state particle");
+  const auto* current=module.currentBinding();const auto oldID=module.particleID(0);const auto systemCursor=particles.owner->cursor();
+  auto* systemPool=TheMemoryPoolFactory->findMemoryPool("ParticleSystemPool");require(systemPool,"actual nested particle source pool");const auto units=systemPool->getUsedBlockCount();
+  {
+    NativeModelDrawConditionBatch outer(fixture.draw->getDrawModulesNonDirty());
+    {NativeModelDrawConditionBatch child(fixture.draw->getDrawModulesNonDirty(),nullptr,nullptr,TRUE);
+      ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);module.replaceModelConditionState(moving);module.particles();child.commit();}
+    require(module.particleID(0)!=oldID&&particles.owner->getParticleSystemCount()==4&&!system->isDestroyed(),"accepted child retains old parent tracker while publishing actual new master/slave cohort");
+  }
+  require(module.currentBinding()==current&&module.particleID(0)==oldID&&particles.owner->getParticleSystemCount()==2&&particles.owner->cursor()==systemCursor&&systemPool->getUsedBlockCount()==units&&!system->isDestroyed(),"outer rejection retires child-committed actual manager entries/cursor/pool units and restores exact old current/tracker");
+  const auto sampled=system->nativeClientState();const auto beforeRecoil=module.currentBinding()->pose.bone(2).transform;
+  require(!module.handleWeaponFireFX(PRIMARY_WEAPON,1,nullptr,0,nullptr,0)&&module.recoilRow()==std::array<Real,3>{1,0,2}&&!module.subobjects()->children()[1].hidden,"null FX still starts source recoil/flash; barrel==count safely selects first");
+  AllocationFault::arm(SIZE_MAX);try{module.recoilStep();}catch(...){AllocationFault::disarm();throw;}
+  const auto demand=AllocationFault::attempts();AllocationFault::disarm();
+  require(!demand&&module.recoilRow()==std::array<Real,3>{1,2,1}&&!module.subobjects()->children()[1].hidden,"warmed recoil controls allocate zero and preserve START, not invented RECOIL transition");
+  require(sameParticleState(system->nativeClientState(),sampled)&&module.currentBinding()->pose.bone(2).transform!=beforeRecoil,"actual particle samples retain pre-recoil turret pose until the next source particle callback");
+  module.recoilStep();require(module.recoilRow()==std::array<Real,3>{3,3,.5f}&&!module.subobjects()->children()[1].hidden,"cap enters SETTLE only after this tick's START flash decision");
+  module.recoilStep();require(module.recoilRow()==std::array<Real,3>{3,2,.5f}&&module.subobjects()->children()[1].hidden,"next settle tick hides first flash attachment");
+  module.handleWeaponFireFX(PRIMARY_WEAPON,-1,nullptr,0,nullptr,0);require(module.recoilRow()==std::array<Real,3>{1,2,2},"repeat fire retains source accumulated shift");
+  const auto retained=module.recoilRow();for(unsigned n=0;n<8&&!module.clock()->complete();++n){time.tick(fixture);module.producerStep(Matrix3D(true));}
+  require(module.clock()->complete(),"actual controls clock reaches source idle restart boundary");module.producerStep(Matrix3D(true));
+  require(module.clock()->frame()==0&&module.recoilRow()==retained&&!system->isDestroyed(),"genuine idle reselection retains whole recoil and particle cohort");
+  FXList empty;const auto beforeFX=module.recoilRow();
+  clientRejects([&]{module.handleWeaponFireFX(PRIMARY_WEAPON,0,&empty,0,nullptr,0);});
+  require(module.recoilRow()==beforeFX,"even empty original FX requires actual partition/local-player parents; rejection preserves recoil rather than using fake effect sink");
+  for(unsigned n=0;n<5;++n)module.recoilStep();require(module.recoilRow()[0]==0&&module.recoilRow()[1]==0,"source settle retires displacement at zero");
+  module.inputData().m_initialRecoil=.005f;module.handleWeaponFireFX(PRIMARY_WEAPON,0,nullptr,0,nullptr,0);module.recoilStep();
+  require(module.recoilRow()[0]==3&&close(module.recoilRow()[1],.005f),"source tiny damped rate enters settle without forcing cap");module.recoilStep();module.inputData().m_initialRecoil=2;
+  module.handleWeaponFireFX(PRIMARY_WEAPON,0,nullptr,0,nullptr,0);const auto accepted=module.recoilRow();const auto bone=module.currentBinding()->pose.bone(2).transform;
+  auto& data=module.inputData();data.m_recoilDamping=std::numeric_limits<Real>::max();
+  clientRejects([&]{module.recoilStep();});require(module.recoilRow()==accepted&&module.currentBinding()->pose.bone(2).transform==bone,"overflow rejects coupled row/pose/flash before mutation");data.m_recoilDamping=.5f;
+  const auto invalidSlot=static_cast<WeaponSlotType>(-1);clientRejects([&]{module.getBarrelCount(invalidSlot);});
+  fixture.logic->phase([&]{clientRejects([&]{module.recoilStep();});});
+  ModelConditionFlags moving;moving.set(MODELCONDITION_MOVING);module.replaceModelConditionState(moving);
+  require(module.recoilRow()==std::array<Real,3>{0,0,0},"same-model real state admission resets every recoil row");
+  ModelConditionFlags attacking;attacking.set(MODELCONDITION_ATTACKING);module.replaceModelConditionState(attacking);
+  module.handleWeaponFireFX(PRIMARY_WEAPON,0,nullptr,0,nullptr,0);module.recoilStep();
+  require(module.recoilRow()[0]==0&&!module.subobjects()->children()[1].hidden,"flash-only barrel becomes idle after deciding current START visibility");module.recoilStep();
+  require(module.subobjects()->children()[1].hidden,"flash-only barrel hides on the next source tick");
+  std::cout<<"source bone controls warmed standard terminal 0; source recoil/flash lifecycle\n";
+}
+void producerControlFaults(Fixture& fixture){ProducerTimeOwner time;configureControls(fixture);configureControls(fixture,1);auto& module=fixture.module(0);module.initializeProducer();fixture.module(1).initializeProducer();
+  module.handleWeaponFireFX(PRIMARY_WEAPON,0,nullptr,0,nullptr,0);module.recoilStep();
+  const auto* identity=module.currentBinding();const auto row=module.recoilRow();const auto bone=identity->pose.bone(2).transform;
+  const auto hidden=module.subobjects()->children()[1].hidden;const auto counts=fixture.assets.counts();
+  const auto* second=fixture.module(1).currentBinding();const auto secondRow=fixture.module(1).recoilRow();
+  const auto secondHidden=fixture.module(1).subobjects()->children()[1].hidden;
+  auto operation=[&]{NativeModelDrawConditionBatch root(fixture.draw->getDrawModulesNonDirty());
+    try{NativeModelDrawConditionBatch local(fixture.draw->getDrawModulesNonDirty(),nullptr,nullptr,TRUE);
+      module.turrets();fixture.logic->phase([&]{require(!fixture.draw->handleWeaponFireFX(PRIMARY_WEAPON,0,nullptr,0,0,0,nullptr,0),"actual source Drawable fire dispatch remains valid in GameLogic phase");});module.recoilStep();local.commit();}
+    catch(const std::bad_alloc&){root.commit();throw;}
+    require(module.recoilRow()[0]==3&&module.recoilRow()[1]==3,"complete root controls/fire/recoil publication before rejection");};
+  auto unchanged=[&]{require(module.currentBinding()==identity&&module.recoilRow()==row&&identity->pose.bone(2).transform==bone&&module.subobjects()->children()[1].hidden==hidden&&fixture.assets.counts()==counts&&fixture.module(1).currentBinding()==second&&fixture.module(1).recoilRow()==secondRow&&fixture.module(1).subobjects()->children()[1].hidden==secondHidden,"root rollback restores complete multi-module pose/recoil/flash/cache identity");};
+  std::size_t terminal;AllocationFault::arm(SIZE_MAX);try{operation();terminal=AllocationFault::attempts();}catch(...){AllocationFault::disarm();throw;}AllocationFault::disarm();unchanged();
+  require(terminal>0&&terminal<256,"bounded whole root control acquisition census");
+  for(std::size_t ordinal=0;ordinal<=terminal;++ordinal){const auto live=AllocationFault::live();bool failed=false;
+    AllocationFault::arm(ordinal);try{operation();}catch(const std::bad_alloc&){failed=true;}catch(...){AllocationFault::disarm();throw;}
+    const auto hit=AllocationFault::triggered();const auto attempts=AllocationFault::attempts();AllocationFault::disarm();
+    require(failed==(ordinal<terminal)&&hit==failed&&attempts==(failed?ordinal+1:terminal),"controls exact failure-prefix terminal");unchanged();
+    require(AllocationFault::live()==live,"locally caught root control failure retires unpublished cohort");operation();unchanged();require(AllocationFault::live()==live,"every control failure/terminal has complete same-owner corrected retry");
+  }
+  // Isolate Drawable's own savepoint: no additional fixture-local scope may
+  // conceal an early-module prefix after the real second module rejects.
+  const auto live=AllocationFault::live();auto& secondData=fixture.module(1).inputData();const Real rate=secondData.m_initialRecoil;
+  for(bool withOuter:{false,true}){
+    std::optional<NativeModelDrawConditionBatch> outer;if(withOuter)outer.emplace(fixture.draw->getDrawModulesNonDirty());
+    secondData.m_initialRecoil=std::numeric_limits<Real>::quiet_NaN();bool rejected=false;
+    try{fixture.logic->phase([&]{fixture.draw->handleWeaponFireFX(PRIMARY_WEAPON,0,nullptr,0,0,0,nullptr,0);});}
+    catch(ErrorCode code){rejected=code==ERROR_BAD_ARG;}
+    secondData.m_initialRecoil=rate;if(outer)outer->commit();outer.reset();
+    require(rejected,"actual late second-module source input rejects direct Drawable fire walk");unchanged();
+    require(AllocationFault::live()==live,"direct child failure plus outer commit retires all fire-walk acquisitions");
+  }
+  fixture.logic->phase([&]{require(!fixture.draw->handleWeaponFireFX(PRIMARY_WEAPON,0,nullptr,0,0,0,nullptr,0),"same-owner direct Drawable corrected retry");});
+  require(module.recoilRow()==std::array<Real,3>{1,2,2}&&fixture.module(1).recoilRow()==std::array<Real,3>{1,0,2},"corrected retry publishes both actual recoil rows after direct late rejection");
+  std::cout<<"root bone controls prefixes [0,"<<terminal<<"); terminal "<<terminal<<"; every retry\n";
+}
 void producerDeferredEffects(Fixture& fixture){
   ProducerTimeOwner time;ParticleParents particles(fixture);GameClientRandomTransaction random;
   configureProducer(fixture);auto& module=fixture.module(0);auto& states=module.inputData().m_conditionStates;
@@ -1148,6 +1254,9 @@ int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawa
     {Fixture warm;producerSelection(warm);}
     {Fixture warm;producerLifecycle(warm);}
     {Fixture warm;producerNegative(warm);}
+    if(std::string_view(argv[1]).starts_with("producer-controls")){
+      {Fixture warm;producerControls(warm);}{Fixture warm;producerControlFaults(warm);}
+    }
     if(std::string_view(argv[1])=="producer-deferred-effects"){Fixture warm;producerDeferredEffects(warm);}
     if(std::string_view(argv[1]).starts_with("producer-particles-")){Fixture warm;producerParticles(warm,true);}
     if(std::string_view(argv[1]).starts_with("producer-walk")||std::string_view(argv[1])=="producer-first-root"){
@@ -1160,6 +1269,10 @@ int main(int argc,char** argv){bool initialized=false;try{require(argc==2,"Drawa
     }
   }
   for(unsigned repeat=0;repeat<3;++repeat){const auto live=AllocationFault::live();
+    if(std::string_view(argv[1]).starts_with("producer-controls")){
+      {Fixture fixture;if(std::string_view(argv[1])=="producer-controls")producerControls(fixture);else producerControlFaults(fixture);}
+      require(AllocationFault::live()==live,"whole source controls/recoil fixture retirement");continue;
+    }
     if(std::string_view(argv[1])=="producer-deferred-effects"){
       {Fixture fixture;producerDeferredEffects(fixture);}
       require(AllocationFault::live()==live,"whole deferred source state/effects cohort retirement");continue;

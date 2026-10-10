@@ -28,7 +28,8 @@ struct NativeModelDrawConditionBatch::Impl {
   std::vector<Previous> previous;
   std::vector<Publication> publications;
   bool committed=false;
-  explicit Impl(NativeW3DAssets& owner):keys(*TheNameKeyGenerator),admission(owner),assets(owner){}
+  Impl* parent=nullptr;
+  explicit Impl(NativeW3DAssets& owner,Impl* outer=nullptr):keys(*TheNameKeyGenerator),admission(owner),assets(owner),parent(outer){}
   Previous* find(const NativeModelDrawAnimationProducer& module)noexcept{
     for(auto& prior:previous)if(prior.module==&module)return &prior;return nullptr;
   }
@@ -44,6 +45,12 @@ struct NativeModelDrawConditionBatch::Impl {
     for(const auto& prior:publications)if((!flags||prior.flags==flags)&&(!dirty||prior.dirty==dirty))return;
     publications.push_back({flags,flags?*flags:ModelConditionFlags{},dirty,dirty?*dirty:FALSE});
   }
+  void enrollParticles(ParticleSystemManager& owner){
+    // An inner commit cannot waive the outer owner: register ancestors first
+    // so manager savepoints also unwind a later outer rejection.
+    if(parent)parent->enrollParticles(owner);
+    if(!particles)particles=std::make_unique<NativeParticleSystemAdmission>(owner);
+  }
   ~Impl()noexcept{
     if(!committed){
       for(auto it=previous.rbegin();it!=previous.rend();++it){auto& module=*it->module;
@@ -58,7 +65,7 @@ struct NativeModelDrawConditionBatch::Impl {
 };
 thread_local NativeModelDrawConditionBatch::Impl* NativeModelDrawConditionBatch::current=nullptr;
 NativeModelDrawConditionBatch::NativeModelDrawConditionBatch(const DrawModule* const* modules,
-    ModelConditionFlags* flags,Bool* dirty){
+    ModelConditionFlags* flags,Bool* dirty,Bool localSavepoint){
   if(!modules)throw ERROR_BAD_ARG;
   NativeW3DAssets* assets=nullptr;
   for(auto cursor=modules;*cursor;++cursor){
@@ -71,7 +78,18 @@ NativeModelDrawConditionBatch::NativeModelDrawConditionBatch(const DrawModule* c
     assets=&module->nativeAssets();
   }
   if(!assets)return; // Uninitialized/old paths introduce no new allocation.
-  if(current){if(&current->assets!=assets||current->configuration!=TheGlobalData)throw ERROR_BAD_ARG;m_root=current;}
+  if(current){
+    if(&current->assets!=assets||current->configuration!=TheGlobalData)throw ERROR_BAD_ARG;
+    if(localSavepoint){
+      // Parent enrollment is fallible and must precede any child publication.
+      current->enroll(flags,dirty);
+      for(auto cursor=modules;*cursor;++cursor){
+        auto* module=const_cast<NativeModelDrawAnimationProducer*>(dynamic_cast<const NativeModelDrawAnimationProducer*>(*cursor));
+        if(module&&module->m_state.source)current->enroll(*module);
+      }
+      m_owned=std::make_unique<Impl>(*assets,current);m_root=m_owned.get();
+    }else m_root=current;
+  }
   else {m_owned=std::make_unique<Impl>(*assets);m_root=m_owned.get();}
   m_root->enroll(flags,dirty);
   for(auto cursor=modules;*cursor;++cursor){
@@ -81,10 +99,19 @@ NativeModelDrawConditionBatch::NativeModelDrawConditionBatch(const DrawModule* c
   if(m_owned)current=m_root; // Publish only after all fallible enrollment.
 }
 NativeModelDrawConditionBatch::~NativeModelDrawConditionBatch()noexcept{
-  if(m_owned){m_owned.reset();current=nullptr;}
+  if(m_owned){auto* parent=m_owned->parent;m_owned.reset();current=parent;}
 }
 void NativeModelDrawConditionBatch::commit()noexcept{
-  if(m_owned){if(m_root->particles)m_root->particles->commit();m_root->admission.commit();m_root->keys.commit();m_root->random.commit();m_root->committed=true;}
+  if(m_owned){
+    if(m_root->particles)m_root->particles->commit();m_root->admission.commit();m_root->keys.commit();m_root->random.commit();
+    if(m_root->parent)for(auto& prior:m_root->previous){
+      auto* outer=m_root->parent->find(*prior.module);if(!outer)std::terminate();
+      if(prior.retained&&!outer->retained){
+        outer->saved.current=std::move(prior.saved.current);outer->saved.validated=std::move(prior.saved.validated);outer->retained=true;
+      }
+    }
+    m_root->committed=true;
+  }
 }
 void NativeModelDrawConditionBatch::validate(const NativeModelDrawAnimationProducer& module){
   if(!current)return;
@@ -103,5 +130,5 @@ void NativeModelDrawConditionBatch::retainPrevious(NativeModelDrawAnimationProdu
   if(!prior->retained){prior->saved.current=std::move(module.m_current);prior->saved.validated=std::move(module.m_validated);prior->retained=true;}
 }
 void NativeModelDrawConditionBatch::enrollParticles(ParticleSystemManager& owner){
-  if(current&&!current->particles)current->particles=std::make_unique<NativeParticleSystemAdmission>(owner);
+  if(current)current->enrollParticles(owner);
 }

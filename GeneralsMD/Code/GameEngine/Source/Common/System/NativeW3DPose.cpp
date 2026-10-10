@@ -29,10 +29,11 @@ NativeW3DPose NativeW3DPose::decode(const NativeW3DDocument::Hierarchy& hierarch
     valid(n==0?pivot.parent==UINT32_MAX:pivot.parent<n);auto base=rotation(pivot.rotation);
     for(unsigned axis=0;axis<3;++axis){valid(std::isfinite(pivot.translation[axis]));base[axis*4+3]=pivot.translation[axis];}
     candidate.m_nodes.push_back({pivot.name,pivot.parent,base,identity(),false,false});}
-  candidate.m_pose.resize(candidate.m_nodes.size());candidate.m_candidate.resize(candidate.m_nodes.size());candidate.evaluate(identity());return candidate;
+  candidate.m_pose.resize(candidate.m_nodes.size());candidate.m_candidate.resize(candidate.m_nodes.size());
+  candidate.m_savedControls.resize(candidate.m_nodes.size());candidate.evaluate(identity());return candidate;
 }
 void NativeW3DPose::replace(const NativeW3DDocument::Hierarchy& hierarchy){auto candidate=decode(hierarchy);swap(candidate);}
-void NativeW3DPose::swap(NativeW3DPose& other)noexcept{m_name.swap(other.m_name);m_nodes.swap(other.m_nodes);m_pose.swap(other.m_pose);m_candidate.swap(other.m_candidate);}
+void NativeW3DPose::swap(NativeW3DPose& other)noexcept{m_name.swap(other.m_name);m_nodes.swap(other.m_nodes);m_pose.swap(other.m_pose);m_candidate.swap(other.m_candidate);m_savedControls.swap(other.m_savedControls);}
 std::optional<std::size_t> NativeW3DPose::findBone(std::string_view name)const noexcept{for(std::size_t n=0;n<m_nodes.size();++n)if(equal(m_nodes[n].name,name))return n;return std::nullopt;}
 const NativeW3DPose::Bone& NativeW3DPose::bone(std::size_t index)const{valid(index<m_pose.size());return m_pose[index];}
 NativeW3DPose::Matrix NativeW3DPose::pristineBone(std::size_t index,const Matrix& root,float scale)const{
@@ -48,9 +49,20 @@ void NativeW3DPose::evaluate(const Matrix& root,const NativeW3DAnimation* motion
 NativeW3DPose NativeW3DPose::clone()const {
   NativeW3DPose candidate;
   candidate.m_name=m_name;candidate.m_nodes=m_nodes;
-  candidate.m_pose=m_pose;candidate.m_candidate=m_candidate;return candidate;
+  candidate.m_pose=m_pose;candidate.m_candidate=m_candidate;candidate.m_savedControls=m_savedControls;return candidate;
 }
 void NativeW3DPose::evaluateRuntime(const Matrix& root,const NativeW3DAnimation* motion,float frame,float scale){evaluate(root,motion,frame,nullptr,0,0,scale,true);}
+void NativeW3DPose::evaluateControlledRuntime(const Matrix& root,const NativeW3DAnimation* motion,float frame,
+                                             float scale,std::span<const Control> controls){
+  for(const auto& item:controls){valid(item.bone>0 && item.bone<m_nodes.size());finite(item.transform);}
+  valid(m_savedControls.size()==m_nodes.size());
+  for(std::size_t n=0;n<m_nodes.size();++n){const auto& node=m_nodes[n];m_savedControls[n]={node.capture,node.captured,node.world};}
+  for(const auto& item:controls){auto& node=m_nodes[item.bone];node.capture=item.transform;node.captured=true;node.world=item.worldSpaceTranslation;}
+  try{evaluateRuntime(root,motion,frame,scale);}catch(...){
+    for(std::size_t n=0;n<m_nodes.size();++n){auto& node=m_nodes[n];const auto& saved=m_savedControls[n];node.capture=saved.capture;node.captured=saved.captured;node.world=saved.world;}
+    throw;
+  }
+}
 void NativeW3DPose::evaluateBlend(const Matrix& root,const NativeW3DAnimation& a,float frameA,const NativeW3DAnimation& b,float frameB,float percentage,float scale){
   valid(std::isfinite(percentage) && percentage>=0 && percentage<=1);evaluate(root,&a,frameA,&b,frameB,percentage,scale);
 }
