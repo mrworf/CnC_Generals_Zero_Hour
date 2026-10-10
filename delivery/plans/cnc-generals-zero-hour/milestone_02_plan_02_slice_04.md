@@ -1,18 +1,18 @@
-# N2 plan02 slice 04 — Failure, corrected retry and ownership
+# N2 plan02 slice 04 — Canonical repeated-state comparison
 
 ## Goal and observable outcome
 
-Every specified H1 startup/admission failure reports non-success, retires partial owners and accepts corrected input in the same process.
+Three legitimate same-process H1 lifetimes emit 121 fixed-width records each and match byte-for-byte across normal GCC and both owner-sanitizer compilers.
 
 ## Scope and non-scope
 
-Included: Missing/malformed/provider/late-allocation control; exact standard and pooled fault terminals; same borrowed configuration identity; valid parent cleanup and interruption handling.
-Excluded: No invented universal transactional rollback after a mutated simulation tick.
+Included: Original RNG read-only fingerprint and source frame/scheduler/state accessors; canonical evidence codec; three-lifetime runner and cross-configuration comparator.
+Excluded: No hash-only golden oracle, replay/save format change or fixture-hidden cursor restoration.
 This delivers only N2 R07 qualification, never later milestone acceptance.
 
 ## Dependencies and ordering
 
-Plan02 slice 03 completed and committed. Exact contract: HQ-05, HQ-07 in `product/headless-qualification.md` and the
+Plan02 slice 03 completed and committed. Exact contract: HQ-01, HQ-03, HQ-07 in `product/headless-qualification.md` and the
 current N2 milestone. Preserve accepted plan01 core/data components and
 apply current source-format/ownership findings from `docs/original-engine-formats.md`.
 
@@ -30,7 +30,7 @@ committed; retail bytes/derivatives and private selectors must not be.
 
 ## Validation, errors and recovery
 
-Positive corrected H1 retry and terminal; negative every failure ordinal, malformed required INI/truncated map/missing provider; GCC and Clang sanitizer owner checks. Preserve every failure/retry pair and scoped resource baseline.
+Positive 121×3 records/configuration and semantic witness comparison; negative tampered/reordered/truncated record or divergent seed rejects; no padding/private data. Preserve every failure/retry pair and scoped resource baseline.
 During implementation run focused affected tests first; after stabilization run
 related tests. At milestone end run the complete required frozen matrix.
 Use `cmake -S . -B build/original-core-gcc -G Ninja -DCMAKE_BUILD_TYPE=Debug
@@ -49,7 +49,7 @@ pre-existing paths before touching overlapping files; stage only owned hunks.
 
 ## Acceptance criteria
 
-- [ ] Every specified H1 startup/admission failure reports non-success, retires partial owners and accepts corrected input in the same process.
+- [ ] Three legitimate same-process H1 lifetimes emit 121 fixed-width records each and match byte-for-byte across normal GCC and both owner-sanitizer compilers.
 - [ ] Positive and negative behavior above is directly demonstrated by
   executable source or a bounded public report, with current source identity.
 - [ ] Ownership, input integrity and accepted existing regression guarantees

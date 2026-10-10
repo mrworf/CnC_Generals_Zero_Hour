@@ -1,62 +1,65 @@
-# N2 plan02 slice 03 — Canonical repeated-state comparison
+# N2 plan02 slice 03 — Original H1 updates, script and deletion
 
 ## Goal and observable outcome
 
-Three legitimate same-process H1 lifetimes emit 121 fixed-width records each and match byte-for-byte across normal GCC and both owner-sanitizer compilers.
+The loaded H1 world completes 120 steady `GameEngine::update` /
+`GameLogic::update` frames. The original script sets `H1Started`, and the
+original sleepy-module scheduler removes `H1Expiring` at its parsed 30-frame
+deadline while `H1Persistent` survives.
 
 ## Scope and non-scope
 
-Included: Original RNG read-only fingerprint and source frame/scheduler/state accessors; canonical evidence codec; three-lifetime runner and cross-configuration comparator.
-Excluded: No hash-only golden oracle, replay/save format change or fixture-hidden cursor restoration.
-This delivers only N2 R07 qualification, never later milestone acceptance.
+Included: Source frame and pending-load distinction, original update order,
+required logical radar/audio/client services, actual script action and
+DeletionUpdate callback, observed terrain samples and world cleanup.
+Excluded: No harness-driven module callback, skipped client/audio update,
+fabricated flat terrain, physical output or cross-compiler checkpoint codec.
+The canonical three-lifetime comparison follows in slice04.
 
 ## Dependencies and ordering
 
-Plan02 slice 02 completed and committed. Exact contract: HQ-01, HQ-03, HQ-07 in `product/headless-qualification.md` and the
-current N2 milestone. Preserve accepted plan01 core/data components and
-apply current source-format/ownership findings from `docs/original-engine-formats.md`.
+Plan02 slice02's exact H1 loaded map, actors, script and module registration
+accepted and committed. Exact contract: HQ-01–04 and the active N2 milestone.
+Preserve source-format and ownership findings in `docs/original-engine-formats.md`.
 
 ## Entry point and application behavior
 
-The documented native headless entry or its actual original-runtime test
-invocation exercises this outcome end to end. It must use original factories,
-parsers and owner lifecycle, never a replacement simulator or link-only probe.
+Extend the documented native headless entry or its actual original-runtime
+test invocation. Record map-load completion before counting steady frames;
+do not rewrite the frame counter or use a replacement simulation loop.
 
 ## Data, state and permissions
 
-Ordinary local user; read-only generated/private data and separate user storage; no remote account or elevated privilege. Record source state before/after relevant transitions and retire acquired
-ownership through legitimate source cleanup. Generated test bytes may be
-committed; retail bytes/derivatives and private selectors must not be.
+Generated read-only H1 inputs and separate user storage. Fixed original seed
+`0x5A170001`; no wall-clock advance, pause or camera freeze. Observe source
+IDs, frame, script flag, scheduler/deletion and terrain without mutating them.
 
 ## Validation, errors and recovery
 
-Positive 121×3 records/configuration and semantic witness comparison; negative tampered/reordered/truncated record or divergent seed rejects; no padding/private data. Preserve every failure/retry pair and scoped resource baseline.
-During implementation run focused affected tests first; after stabilization run
-related tests. At milestone end run the complete required frozen matrix.
-Use `cmake -S . -B build/original-core-gcc -G Ninja -DCMAKE_BUILD_TYPE=Debug
--DZH_BUILD_RENDERER=OFF`, analogous GCC/Clang sanitizer build directories with
-`-DZH_SANITIZE=ON`, `cmake --build`, and `ctest --test-dir ... --output-on-failure`.
-Target-specific commands must be written here once tests/targets exist; no
-command absent from repository evidence is claimed as already runnable.
-A timeout or unavailable private input is incomplete, never a pass.
+Positive 120 completed updates, one-frame source increments, surviving actor,
+script flag and deadline/retirement witness. Negative unsupported provider or
+stalled/early frame rejects. A failed tick retires its world and permits fresh
+startup; no universal transactional tick rollback is invented. Run focused
+affected tests under GCC debug and both GCC/Clang sanitizer builds, then
+related tests. Target-specific commands and bounded evidence are recorded
+when the executable paths exist. Full frozen matrix waits for N2 acceptance.
 
 ## Expected implementation surfaces
 
-`cmake/OriginalRuntime.cmake`, original GameEngine/GameLogic/native provider
-source as required by the reached call path, `tests/original/`, `tools/`,
-`docs/build.md`, and a public `evidence/qa/` report. Inspect the 17 dirty
-pre-existing paths before touching overlapping files; stage only owned hunks.
+Original GameEngine/GameLogic native provider code, generated fixture,
+`tools/zero_hour_headless.cpp`, `cmake/OriginalRuntime.cmake`, build docs and
+public QA evidence. Stage only owned hunks of pre-existing dirty files.
 
 ## Acceptance criteria
 
-- [ ] Three legitimate same-process H1 lifetimes emit 121 fixed-width records each and match byte-for-byte across normal GCC and both owner-sanitizer compilers.
-- [ ] Positive and negative behavior above is directly demonstrated by
-  executable source or a bounded public report, with current source identity.
-- [ ] Ownership, input integrity and accepted existing regression guarantees
-  remain intact; no private data is committed.
+- [ ] The original engine completes 120 steady H1 updates and source frame
+  advances exactly once per update.
+- [ ] Source script processing sets `H1Started`; original DeletionUpdate
+  scheduling removes only the expiring actor at its observed deadline.
+- [ ] Corrected-retry and ownership checks pass without private data or
+  weakening accepted regressions.
 
 ## Commit boundary
 
-One reviewable behavior commit when all slice checks pass. Include this updated
-slice plan, directly required code/tests/docs/evidence and an updated governing
-index. Do not stage unrelated or unaccepted pre-existing dirty work.
+One reviewable behavior commit after these checks pass; update the governing
+index and bounded evidence. This is a separate slice from map admission.

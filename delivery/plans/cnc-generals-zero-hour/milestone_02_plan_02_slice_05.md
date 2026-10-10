@@ -1,18 +1,18 @@
-# N2 plan02 slice 05 — Read-only supplied-data startup and frozen acceptance
+# N2 plan02 slice 05 — Failure, corrected retry and ownership
 
 ## Goal and observable outcome
 
-The actual native entry reaches original post-init with locally supplied assets, tears down without changing them, and publishes bounded N2 qualification evidence.
+Every specified H1 startup/admission failure reports non-success, retires partial owners and accepts corrected input in the same process.
 
 ## Scope and non-scope
 
-Included: Distinct retail startup path and redacted audit wrapper; separate writable user storage/cache fallback; frozen source/provider/call/fixture/checkpoint/error matrix and public report.
-Excluded: No retail campaign/match/render/audio/media parity; absence of lawful private data blocks N2 acceptance, never waived.
+Included: Missing/malformed/provider/late-allocation control; exact standard and pooled fault terminals; same borrowed configuration identity; valid parent cleanup and interruption handling.
+Excluded: No invented universal transactional rollback after a mutated simulation tick.
 This delivers only N2 R07 qualification, never later milestone acceptance.
 
 ## Dependencies and ordering
 
-Plan02 slice 04 completed and committed. Exact contract: HQ-06, HQ-07, R04 in `product/headless-qualification.md` and the
+Plan02 slice 04 completed and committed. Exact contract: HQ-05, HQ-07 in `product/headless-qualification.md` and the
 current N2 milestone. Preserve accepted plan01 core/data components and
 apply current source-format/ownership findings from `docs/original-engine-formats.md`.
 
@@ -30,7 +30,7 @@ committed; retail bytes/derivatives and private selectors must not be.
 
 ## Validation, errors and recovery
 
-Positive actual private post-init/teardown and unchanged integrity; negative missing input and required storage failure; full applicable normal/GCC sanitizer/Clang sanitizer matrix on frozen code. Preserve every failure/retry pair and scoped resource baseline.
+Positive corrected H1 retry and terminal; negative every failure ordinal, malformed required INI/truncated map/missing provider; GCC and Clang sanitizer owner checks. Preserve every failure/retry pair and scoped resource baseline.
 During implementation run focused affected tests first; after stabilization run
 related tests. At milestone end run the complete required frozen matrix.
 Use `cmake -S . -B build/original-core-gcc -G Ninja -DCMAKE_BUILD_TYPE=Debug
@@ -49,7 +49,7 @@ pre-existing paths before touching overlapping files; stage only owned hunks.
 
 ## Acceptance criteria
 
-- [ ] The actual native entry reaches original post-init with locally supplied assets, tears down without changing them, and publishes bounded N2 qualification evidence.
+- [ ] Every specified H1 startup/admission failure reports non-success, retires partial owners and accepts corrected input in the same process.
 - [ ] Positive and negative behavior above is directly demonstrated by
   executable source or a bounded public report, with current source identity.
 - [ ] Ownership, input integrity and accepted existing regression guarantees

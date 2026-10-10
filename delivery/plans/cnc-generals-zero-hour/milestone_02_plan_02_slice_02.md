@@ -1,13 +1,19 @@
-# N2 plan02 slice 02 — H1 loaded world and original updates
+# N2 plan02 slice 02 — H1 map and actor admission
 
 ## Goal and observable outcome
 
-The entry loads the exact generated H1 single-player map and executes 120 steady original GameEngine/GameLogic updates, witnessing the script and timed source object deletion.
+The native entry loads the exact generated H1 single-player map through the
+original pending-start transition, observes the legal terrain, sides, scripts,
+and two authored actors, then retires the loaded world and root.
 
 ## Scope and non-scope
 
-Included: Legal H1 map and source-required parents; original ThingFactory, DeletionUpdate and script registration; actual original client/terrain/view/clock and world cleanup.
-Excluded: No physical rendering/media output, weapons/combat or manual update callbacks.
+Included: Legal H1 map and source-required parents; original ThingFactory,
+DeletionUpdate data/module and script registration; actual original
+client/terrain/view/clock and loaded-world cleanup. The initial pending-start
+update may perform map admission, but is not counted as a steady H1 tick.
+Excluded: No 120-tick run, script action or deletion timing witness yet;
+no physical rendering/media output, weapons/combat or manual module update.
 This delivers only N2 R07 qualification, never later milestone acceptance.
 
 ## Dependencies and ordering
@@ -30,7 +36,11 @@ committed; retail bytes/derivatives and private selectors must not be.
 
 ## Validation, errors and recovery
 
-Positive legal H1 load and 120 original updates with source call trace/script/deletion/terrain assertions; negative malformed map/actor/module admission; safe world retirement. Preserve every failure/retry pair and scoped resource baseline.
+Positive legal H1 map and actor admission with source call trace, parsed
+script/module metadata, distinct plateaus and world retirement; negative
+malformed map/actor/module admission with corrected retry. Preserve every
+failure/retry pair and scoped resource baseline. The later tick slice must
+still prove script execution and timed deletion through original updates.
 During implementation run focused affected tests first; after stabilization run
 related tests. At milestone end run the complete required frozen matrix.
 Use `cmake -S . -B build/original-core-gcc -G Ninja -DCMAKE_BUILD_TYPE=Debug
@@ -49,7 +59,9 @@ pre-existing paths before touching overlapping files; stage only owned hunks.
 
 ## Acceptance criteria
 
-- [ ] The entry loads the exact generated H1 single-player map and executes 120 steady original GameEngine/GameLogic updates, witnessing the script and timed source object deletion.
+- [ ] The entry loads the exact generated H1 single-player map through the
+  original pending-start path; both actors, parsed DeletionUpdate, script
+  registration, sides and nonuniform terrain are observable before steady ticks.
 - [ ] Positive and negative behavior above is directly demonstrated by
   executable source or a bounded public report, with current source identity.
 - [ ] Ownership, input integrity and accepted existing regression guarantees

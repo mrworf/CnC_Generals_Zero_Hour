@@ -52,9 +52,11 @@ original-engine-formats findings govern ownership/format work.
 
 The H1 provider closure is driven by the exact reached source path. Drawless H1
 may omit physical output while preserving genuine logical services and later
-N3–N5 obligations. The new plan uses five independently demonstrable outcomes
-because native root admission, loaded gameplay, state comparison, fault recovery
-and private retail startup have distinct execution and trust boundaries.
+N3–N5 obligations. The revised plan uses six independently demonstrable outcomes
+because native root admission, map/actor admission, steady original updates,
+state comparison, fault recovery and private retail startup have distinct
+execution and trust boundaries. Source inspection after slice01 showed that
+the map transition and repeated scheduler path need separate verification.
 No new Product Owner choice or change to source-visible behavior is made here.
 
 ## Scope
@@ -78,10 +80,11 @@ parts cannot enlarge H1 or enter a completed slice commit silently.
 | Slice | Plan | Observable outcome | Dependencies | Status | Commit | Evidence |
 | --- | --- | --- | --- | --- | --- | --- |
 | 01 | [Slice 01](milestone_02_plan_02_slice_01.md) | Original native entry and root admission | accepted plan01 slices 01/02 | complete | this slice commit | [evidence](../../../evidence/qa/N2-native-root-startup.md) |
-| 02 | [Slice 02](milestone_02_plan_02_slice_02.md) | H1 loaded world and original updates | plan02 slice 01 | pending | | |
-| 03 | [Slice 03](milestone_02_plan_02_slice_03.md) | Canonical repeated-state comparison | plan02 slice 02 | pending | | |
-| 04 | [Slice 04](milestone_02_plan_02_slice_04.md) | Failure, corrected retry and ownership | plan02 slice 03 | pending | | |
-| 05 | [Slice 05](milestone_02_plan_02_slice_05.md) | Read-only supplied-data startup and frozen acceptance | plan02 slice 04 | pending | | |
+| 02 | [Slice 02](milestone_02_plan_02_slice_02.md) | Exact H1 map and actor admission | plan02 slice 01 | pending | | |
+| 03 | [Slice 03](milestone_02_plan_02_slice_03.md) | 120 original updates, script and deletion | plan02 slice 02 | pending | | |
+| 04 | [Slice 04](milestone_02_plan_02_slice_04.md) | Canonical repeated-state comparison | plan02 slice 03 | pending | | |
+| 05 | [Slice 05](milestone_02_plan_02_slice_05.md) | Failure, corrected retry and ownership | plan02 slice 04 | pending | | |
+| 06 | [Slice 06](milestone_02_plan_02_slice_06.md) | Read-only supplied-data startup and frozen acceptance | plan02 slice 05 | pending | | |
 
 ## Cross-slice concerns
 
@@ -115,7 +118,7 @@ retry evidence; do not hide it by resetting external fixture state.
 ## Execution notes
 
 Companion transaction: one logical N2 minimal-slice-delivery run. Persist this
-index and all five slice plans before any production edits; update incomplete
+index and all six slice plans before any production edits; update incomplete
 slice contracts when source investigation changes mechanism. Commit each
 completed slice with code, tests, plan/evidence. The existing dirty paths are
 unaccepted pre-existing work and need isolated ownership review before edits.
