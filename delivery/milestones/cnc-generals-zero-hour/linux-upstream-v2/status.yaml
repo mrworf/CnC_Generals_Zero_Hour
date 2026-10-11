@@ -109,7 +109,7 @@
       "id": "N3",
       "title": "Original world rendering",
       "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N3-original-world-rendering.md",
-      "status": "pending",
+      "status": "blocked",
       "dependencies": [
         "N1",
         "N2"
@@ -119,14 +119,14 @@
         "R08"
       ],
       "completed_at": null,
-      "evidence": null,
-      "notes": null
+      "evidence": "evidence/qa/N3-N4-host-readiness.md",
+      "notes": "EXTERNAL_OR_USER_ACTION PRE-03: current normal-host Vulkan enumerates no valid GPU; NVIDIA kernel 615.71.09 and user libraries 615.78.08 mismatch. Restore a matching driver/session and show physical vulkaninfo success, then resume N3 readiness and separate slice planning. No N3 implementation or acceptance claimed."
     },
     {
       "id": "N4",
       "title": "Interactive platform and media",
       "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N4-interactive-platform-and-media.md",
-      "status": "pending",
+      "status": "blocked",
       "dependencies": [
         "N1",
         "N2"
@@ -136,8 +136,8 @@
         "R09"
       ],
       "completed_at": null,
-      "evidence": null,
-      "notes": null
+      "evidence": "evidence/qa/N3-N4-host-readiness.md",
+      "notes": "EXTERNAL_OR_USER_ACTION PRE-03: N4 shares N3's unavailable physical Vulkan/session gate (NVIDIA kernel/user driver mismatch). SDL3, font, FFmpeg and audio discovery are present but do not accept interaction/media. Restore matching driver/session and demonstrate physical vulkaninfo success, then resume N4 readiness and separate slice planning."
     },
     {
       "id": "N5",

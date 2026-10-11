@@ -19,7 +19,7 @@
     "N2"
   ],
   "current_milestone": "N3",
-  "status": "in_progress",
+  "status": "blocked",
   "planning_handoff": "workflow/delivery-planning/handoff.yaml",
   "packet_manifest": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",
   "packet_semantic_revision": "sha256:d1674083fa941836e9ecf1790cd42001d23525d918fbba2dc08ec7688e721bcd",
@@ -499,8 +499,16 @@
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
-  "blockers": [],
-  "next": "N2 plan02 complete and accepted. Check N3 physical-renderer prerequisites and create its separate governing/slice plans before implementation; old plan01 slice03 remains historical.",
+  "blockers": [
+    {
+      "type": "EXTERNAL_OR_USER_ACTION",
+      "source": "PRE-03",
+      "milestones": ["N3", "N4"],
+      "evidence": "evidence/qa/N3-N4-host-readiness.md",
+      "unblock_condition": "Matching host NVIDIA kernel/user driver and a supported display session produce a physical GPU in vulkaninfo --summary"
+    }
+  ],
+  "next": "N2 accepted. N3/N4 physical prerequisites blocked by PRE-03 host NVIDIA driver mismatch; verify corrected Vulkan GPU/session before separate milestone planning. N5-N7 depend on N3/N4.",
   "implementation_checkpoint": {
     "label": "original-root-lifecycle",
     "reason": "Actual source cleanup/reset, independent cache/audio ownership and loaded partition live containment verified; full original process startup/simulation still pending",
@@ -1229,7 +1237,7 @@
   },
   "delivery_goal": {
     "product_id": "cnc-generals-zero-hour",
-    "status": "in_progress",
+    "status": "blocked",
     "packet": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",
     "packet_revision": "sha256:d1674083fa941836e9ecf1790cd42001d23525d918fbba2dc08ec7688e721bcd",
     "source_commit": "e0a32f1c92b113733bbe588cfc00aeb7b019e4d7",
@@ -1249,8 +1257,27 @@
     "current_milestone": "N3",
     "governing_plan": null,
     "current_slice": null,
-    "blockers": [],
-    "resume_point": "N2 accepted; inspect N3 readiness and create a separate N3 governing/slice plan before implementing world rendering.",
+    "blocker_type": "EXTERNAL_OR_USER_ACTION",
+    "blocker": "PRE-03: normal-host NVIDIA kernel/user driver mismatch prevents Vulkan physical GPU enumeration for N3 and N4",
+    "blockers": [
+      {
+        "type": "EXTERNAL_OR_USER_ACTION",
+        "source": "PRE-03",
+        "expected_artifact": "evidence/qa/N3-N4-host-readiness.md updated with normal-host physical Vulkan success",
+        "milestone": "N3",
+        "slice": null,
+        "unblock_condition": "Matching NVIDIA kernel/user driver and supported session make vulkaninfo --summary enumerate a physical GPU"
+      },
+      {
+        "type": "EXTERNAL_OR_USER_ACTION",
+        "source": "PRE-03",
+        "expected_artifact": "evidence/qa/N3-N4-host-readiness.md updated with normal-host physical Vulkan success",
+        "milestone": "N4",
+        "slice": null,
+        "unblock_condition": "The same corrected Vulkan GPU/session supports N4 window and interaction validation"
+      }
+    ],
+    "resume_point": "N2 accepted. N3/N4 readiness blocked at PRE-03; after the host driver/session is corrected, recheck Vulkan once, then plan N3 and N4 separately in dependency order.",
     "plan_phase": "pending",
     "transaction_parent": "7f18fc0f97a0d6a4dfba311b845420080eaa2ad7",
     "completed_slices": [

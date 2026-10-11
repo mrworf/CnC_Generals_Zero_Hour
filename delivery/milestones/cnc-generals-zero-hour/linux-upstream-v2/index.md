@@ -11,8 +11,8 @@ The package's six passes are amendment-only; later game scope is not recertified
 | [N0](N0-clean-baseline-and-specification.md) | Clean baseline and specification | None | completed |
 | [N1](N1-stock-renderer-suitability.md) | Stock renderer suitability | N0 | completed |
 | [N2](N2-original-engine-linux-foundation.md) | Original engine Linux foundation | N0 | completed |
-| [N3](N3-original-world-rendering.md) | Original world rendering | N1, N2 | pending |
-| [N4](N4-interactive-platform-and-media.md) | Interactive platform and media | N1, N2 | pending |
+| [N3](N3-original-world-rendering.md) | Original world rendering | N1, N2 | blocked: PRE-03 host Vulkan |
+| [N4](N4-interactive-platform-and-media.md) | Interactive platform and media | N1, N2 | blocked: PRE-03 host Vulkan |
 | [N5](N5-playable-single-player-and-persistence.md) | Playable single-player and persistence | N3, N4 | pending |
 | [N6](N6-linux-lan-matches.md) | Linux LAN matches | N5 | pending |
 | [N7](N7-release-and-dependency-maintenance.md) | Release and dependency maintenance | N6 | pending |
@@ -33,9 +33,11 @@ regression coverage. See its contract and traceability map.
 N3/N4/N5 retain full rendering, interaction/media and gameplay/persistence obligations;
 drawless H1 is not whole-game parity or authority to remove already-correct code.
 
-N3 is the next default delivery boundary. Its physical renderer, scene and
-resource-lifecycle obligations require a separate governing slice plan and
-current readiness check. The historical old N2 plan01 slice03 remains
+N3/N4 are dependency-ready but currently blocked at their shared PRE-03
+physical Vulkan/session prerequisite. The [current host readiness
+record](../../../../evidence/qa/N3-N4-host-readiness.md) names the driver
+mismatch and exact resumption check. Neither milestone has begun implementation
+or accepted physical output. The historical old N2 plan01 slice03 remains
 unaccepted history; plan02 is the completed bounded N2 transaction.
 
 No unresolved definition item or unmapped requirement. Readiness owns prerequisite
