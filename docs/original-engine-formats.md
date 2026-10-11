@@ -7089,3 +7089,26 @@ not yet created by an early rejection have no acquired units. Separate
 existing component fixtures exhaust actual map/script and actor pools and
 retain their failure/retry pairs under both compiler sanitizers; see
 `evidence/qa/N2-h1-failure-retry.md`.
+
+#### Supplied-data definition and flag boundary (N2 plan02 slice06)
+
+The first original supplied-data startup reaches a W3D draw definition while
+parsing `ThingTemplate`. The base `ModuleFactory` registers original gameplay
+modules; the original W3D factory adds 19 draw schemas. The native headless
+factory now registers the already separated 19 CPU draw-data constructors in
+that source order, retaining original INI field parsing and ownership, while
+rejecting creation of a physical draw instance. `ModuleFactory`'s nested
+registry transaction rolls back keys and templates if admission throws.
+This is definition ingestion, not a substitute W3D runtime; see
+`evidence/qa/N2-native-supplied-startup.md`.
+
+The source `VeterancyLevel` enum starts `LEVEL_REGULAR` at zero. Its previous
+flag helpers shifted by `level - 1`, which is undefined for regular and was
+reached by supplied definitions. They now shift by the checked zero-based
+enum value, preserving the 32-bit flag storage while defining distinct
+regular/veteran/elite/heroic bits. Invalid enum values cannot request a
+shift. Original `CampaignManager::init` also reads the campaign definition
+file during logical-client startup; generated composed-client fixtures must
+provide that file in the same warmed input cohort and retire the resulting
+owner. Physical drawing, decoded media and retail gameplay remain outside
+this startup evidence.

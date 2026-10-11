@@ -15,9 +15,10 @@
   ],
   "completed_milestones": [
     "N0",
-    "N1"
+    "N1",
+    "N2"
   ],
-  "current_milestone": "N2",
+  "current_milestone": "N3",
   "status": "in_progress",
   "planning_handoff": "workflow/delivery-planning/handoff.yaml",
   "packet_manifest": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/status.yaml",
@@ -486,20 +487,20 @@
     "closeout": "Eight previously unfinished source/build files, new generated test and owned plan/findings/evidence/state are committed together in validated 13-file payload 2b14ad41; preserve earlier inventory as historical review."
   },
   "transaction_parent": "dfb3a3598446e4d36a49c607687eaeb7ce2c4a84",
-  "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02.md",
-  "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02_slice_01.md",
+  "governing_plan": null,
+  "current_slice": null,
   "completed_slices": [
     "N1_plan_slice_01",
     "N1_plan_slice_02",
     "N2_plan_slice_01",
     "N2_plan_slice_02"
   ],
-  "evidence": "evidence/qa/N2-root-retirement.md",
+  "evidence": "evidence/qa/N2-native-supplied-startup.md",
   "baseline": "0a05454d8574207440a5fb15241b98ad0b435590",
   "reset_evidence": "evidence/recovery/20261007-reset.md",
   "agents": "prohibited by user",
   "blockers": [],
-  "next": "N2 plan02/slice01: actual native entry and original GameEngine post-init/retirement on generated roots. Plan02 governs HQ-01\u201307; old Full475/Full509 and plan01 slice03 are historical.",
+  "next": "N2 plan02 complete and accepted. Check N3 physical-renderer prerequisites and create its separate governing/slice plans before implementation; old plan01 slice03 remains historical.",
   "implementation_checkpoint": {
     "label": "original-root-lifecycle",
     "reason": "Actual source cleanup/reset, independent cache/audio ownership and loaded partition live containment verified; full original process startup/simulation still pending",
@@ -1245,19 +1246,20 @@
       "N7"
     ],
     "execution": "autonomous",
-    "current_milestone": "N2",
-    "governing_plan": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02.md",
-    "current_slice": "delivery/plans/cnc-generals-zero-hour/milestone_02_plan_02_slice_06.md",
+    "current_milestone": "N3",
+    "governing_plan": null,
+    "current_slice": null,
     "blockers": [],
-    "resume_point": "N2 plan02/slice06: read-only supplied-data startup and frozen N2 acceptance matrix; slice05 failure/retry ownership accepted, N2 pending.",
-    "plan_phase": "complete",
+    "resume_point": "N2 accepted; inspect N3 readiness and create a separate N3 governing/slice plan before implementing world rendering.",
+    "plan_phase": "pending",
     "transaction_parent": "7f18fc0f97a0d6a4dfba311b845420080eaa2ad7",
     "completed_slices": [
       "N2/plan02/slice01",
       "N2/plan02/slice02",
       "N2/plan02/slice03",
       "N2/plan02/slice04",
-      "N2/plan02/slice05"
+      "N2/plan02/slice05",
+      "N2/plan02/slice06"
     ]
   }
 }

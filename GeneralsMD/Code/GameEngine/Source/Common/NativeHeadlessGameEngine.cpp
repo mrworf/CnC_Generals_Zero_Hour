@@ -3,6 +3,7 @@
 #include "Common/NativeHeadlessGameEngine.h"
 #include "Common/FileSystem.h"
 #include "Common/ModuleFactory.h"
+#include "Common/W3DDrawProviderData.h"
 #include "Common/ThingFactory.h"
 #include "Common/FunctionLexicon.h"
 #include "Common/Radar.h"
@@ -17,6 +18,21 @@
 #include <utility>
 
 namespace {
+// Parse the original W3D draw definitions during headless startup. A physical
+// draw instance is outside this runner's contract and must fail explicitly.
+class NativeHeadlessModuleFactory final : public ModuleFactory {
+  static Module* rejectDrawInstance(Thing*,const ModuleData*) { throw ERROR_BAD_ARG; }
+public:
+  void init() override {
+    RegistryTransaction registration(*this);
+    ModuleFactory::init();
+    for(const auto& provider:nativeDrawProviderData())
+      addModuleInternal(rejectDrawInstance,provider.create,MODULETYPE_DRAW,
+                        AsciiString(provider.name),MODULEINTERFACE_DRAW);
+    registration.commit();
+  }
+};
+
 class NativeHeadlessTerrainLogic final : public NativeTerrainLogic {
 public:
   using NativeTerrainLogic::NativeTerrainLogic;
@@ -121,7 +137,7 @@ NativeUserStorage* NativeHeadlessGameEngine::createUserStorage() {
 }
 GameLogic* NativeHeadlessGameEngine::createGameLogic() { return new NativeHeadlessGameLogic; }
 GameClient* NativeHeadlessGameEngine::createGameClient() { return new NativeHeadlessGameClient; }
-ModuleFactory* NativeHeadlessGameEngine::createModuleFactory() { return new ModuleFactory; }
+ModuleFactory* NativeHeadlessGameEngine::createModuleFactory() { return new NativeHeadlessModuleFactory; }
 ThingFactory* NativeHeadlessGameEngine::createThingFactory() { return new ThingFactory; }
 FunctionLexicon* NativeHeadlessGameEngine::createFunctionLexicon() { return new FunctionLexicon(std::span<const NativeFunctionTable>{}); }
 Radar* NativeHeadlessGameEngine::createRadar() { return new NativeHeadlessRadar; }

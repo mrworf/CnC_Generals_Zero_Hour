@@ -84,7 +84,7 @@ parts cannot enlarge H1 or enter a completed slice commit silently.
 | 03 | [Slice 03](milestone_02_plan_02_slice_03.md) | 120 original updates, script and deletion | plan02 slice 02 | complete | this slice commit | [evidence](../../../evidence/qa/N2-h1-original-updates.md) |
 | 04 | [Slice 04](milestone_02_plan_02_slice_04.md) | Canonical repeated-state comparison | plan02 slice 03 | complete | this slice commit | [evidence](../../../evidence/qa/N2-h1-checkpoints.md) |
 | 05 | [Slice 05](milestone_02_plan_02_slice_05.md) | Failure, corrected retry and ownership | plan02 slice 04 | complete | this slice commit | [evidence](../../../evidence/qa/N2-h1-failure-retry.md) |
-| 06 | [Slice 06](milestone_02_plan_02_slice_06.md) | Read-only supplied-data startup and frozen acceptance | plan02 slice 05 | pending | | |
+| 06 | [Slice 06](milestone_02_plan_02_slice_06.md) | Read-only supplied-data startup and frozen acceptance | plan02 slice 05 | complete | this slice commit | [evidence](../../../evidence/qa/N2-native-supplied-startup.md) |
 
 ## Cross-slice concerns
 

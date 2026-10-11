@@ -10,7 +10,7 @@ The package's six passes are amendment-only; later game scope is not recertified
 | --- | --- | --- | --- |
 | [N0](N0-clean-baseline-and-specification.md) | Clean baseline and specification | None | completed |
 | [N1](N1-stock-renderer-suitability.md) | Stock renderer suitability | N0 | completed |
-| [N2](N2-original-engine-linux-foundation.md) | Original engine Linux foundation | N0 | in_progress |
+| [N2](N2-original-engine-linux-foundation.md) | Original engine Linux foundation | N0 | completed |
 | [N3](N3-original-world-rendering.md) | Original world rendering | N1, N2 | pending |
 | [N4](N4-interactive-platform-and-media.md) | Interactive platform and media | N1, N2 | pending |
 | [N5](N5-playable-single-player-and-persistence.md) | Playable single-player and persistence | N3, N4 | pending |
@@ -20,22 +20,23 @@ The package's six passes are amendment-only; later game scope is not recertified
 Default order N0→N1→N2→N3→N4→N5→N6→N7. Graph: N0→N1,N2;
 N1+N2→N3,N4; N3+N4→N5→N6→N7. No reordering or added M0. No agents.
 N0/N1 evidence is preserved historical completion, not freshly executed acceptance.
-N2 remains incomplete; its accepted core/data slices and useful component work survive.
+N2 completed its six-slice bounded original-runtime qualification; current
+acceptance and limits are recorded in
+[`N2-native-supplied-startup.md`](../../../../evidence/qa/N2-native-supplied-startup.md).
 
 ## Active boundary and handoff
 
-N2 now has finite HQ-01–07 acceptance: actual original startup, H1 load/120 updates,
-121×3 checkpoint records per configuration, negative/retry ownership, and separate
-read-only original retail initialization. See its contract and traceability map.
+N2 accepted HQ-01–07: actual original startup, H1 load/120 updates,
+121×3 checkpoint records per configuration, negative/retry ownership, separate
+read-only supplied-data initialization, and complete normal/GCC/Clang sanitizer
+regression coverage. See its contract and traceability map.
 N3/N4/N5 retain full rendering, interaction/media and gameplay/persistence obligations;
 drawless H1 is not whole-game parity or authority to remove already-correct code.
 
-Before further N2 code, `milestone-delivery-orchestrator` must adopt this packet and
-invoke fresh minimal-slice planning for remaining N2. Preserve accepted slices and
-uncommitted work; explicitly supersede old slice03 as the remaining-work directive,
-reconcile its open work against HQ-01–07, and replace conflicting resume pointers
-atomically in delivery-owned state. Do not blindly continue Full475/Full509 or mark
-slice03 complete from documentation. No slices or delivery-state mutations occur here.
+N3 is the next default delivery boundary. Its physical renderer, scene and
+resource-lifecycle obligations require a separate governing slice plan and
+current readiness check. The historical old N2 plan01 slice03 remains
+unaccepted history; plan02 is the completed bounded N2 transaction.
 
 No unresolved definition item or unmapped requirement. Readiness owns prerequisite
 classification; retail data and later physical/release facilities retain explicit

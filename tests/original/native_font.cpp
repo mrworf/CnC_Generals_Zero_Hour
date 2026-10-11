@@ -10,6 +10,7 @@
 #include "GameClient/NativeHeadlessDisplay.h"
 #include "GameClient/NativeFrameCameraView.h"
 #include "GameClient/ControlBar.h"
+#include "GameClient/CampaignManager.h"
 #include "GameClient/RayEffect.h"
 #include "Common/MessageStream.h"
 #include "Common/INI.h"
@@ -484,6 +485,7 @@ void composition(Context& context,std::string_view family) {
   put("Data/INI/Default/CommandButton.ini","CommandButton GeneratedStop\n Command = STOP\nEnd\n");
   put("Data/INI/CommandButton.ini","CommandButton GeneratedMove\n Command = ATTACK_MOVE\nEnd\n");
   put("Data/INI/CommandSet.ini","CommandSet GeneratedSet\n 1 = GeneratedStop\n 2 = GeneratedMove\nEnd\n");
+  put("Data/INI/Campaign.ini",""); // Original composed client initializes this optional list.
   put("override.ini","CommandButton Temporary\n Command = STOP\nEnd\nCommandSet TemporarySet\n 1 = Temporary\nEnd\n");
   context.files.mountReadOnly({context.tree.path.string()});
   GlobalData data;Publication<GlobalData> dataLease{TheWritableGlobalData,data};
@@ -504,7 +506,7 @@ void composition(Context& context,std::string_view family) {
   } resetParent(visual);
   struct Definition:ThingTemplate{~Definition()override=default;} definition;
   auto clean=[&]{return !TheGameClient && !TheInGameUI && !TheDisplay && !TheTacticalView &&
-    !TheControlBar && !TheRayEffects && !TheFontLibrary && !TheDisplayStringManager && !TheDrawGroupInfo &&
+    !TheControlBar && !TheRayEffects && !TheFontLibrary && !TheDisplayStringManager && !TheDrawGroupInfo && !TheCampaignManager &&
     View::liveViewCount()==views;};
   auto operation=[&]{
     struct Restore{GameClient* previous=TheGameClient;~Restore(){TheGameClient=previous;}} restore;

@@ -297,17 +297,17 @@ const VeterancyLevelFlags VETERANCY_LEVEL_FLAGS_NONE = 0x00000000;
 
 inline Bool getVeterancyLevelFlag(VeterancyLevelFlags flags, VeterancyLevel dt)
 {
-	return (flags & (1UL << (dt - 1))) != 0;
+	return dt >= LEVEL_FIRST && dt <= LEVEL_LAST && (flags & (1UL << dt)) != 0;
 }
 
 inline VeterancyLevelFlags setVeterancyLevelFlag(VeterancyLevelFlags flags, VeterancyLevel dt)
 {
-	return (flags | (1UL << (dt - 1)));
+	return dt >= LEVEL_FIRST && dt <= LEVEL_LAST ? (flags | (1UL << dt)) : flags;
 }
 
 inline VeterancyLevelFlags clearVeterancyLevelFlag(VeterancyLevelFlags flags, VeterancyLevel dt)
 {
-	return (flags & ~(1UL << (dt - 1)));
+	return dt >= LEVEL_FIRST && dt <= LEVEL_LAST ? (flags & ~(1UL << dt)) : flags;
 }
 
 // ----------------------------------------------------------------------------------------------

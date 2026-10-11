@@ -40,6 +40,22 @@ Target-specific commands must be written here once tests/targets exist; no
 command absent from repository evidence is claimed as already runnable.
 A timeout or unavailable private input is incomplete, never a pass.
 
+Current target commands, run from the repository root after building each
+configuration (sanitizer commands need host execution for LeakSanitizer):
+
+```sh
+python3 tools/run_native_startup_audit.py --binary build/original-core-gcc/zero_hour_headless --workspace-link
+python3 tools/run_native_startup_audit.py --binary build/original-core-gcc-sanitize/zero_hour_headless --workspace-link
+python3 tools/run_native_startup_audit.py --binary build/original-core-clang-sanitize/zero_hour_headless --workspace-link
+python3 tools/compare_h1_checkpoints.py build/original-core-gcc/original_native_headless_root_fixture build/original-core-gcc-sanitize/original_native_headless_root_fixture build/original-core-clang-sanitize/original_native_headless_root_fixture
+ctest --test-dir build/original-core-gcc --output-on-failure -j4
+ctest --test-dir build/original-core-gcc-sanitize --output-on-failure -j4
+ctest --test-dir build/original-core-clang-sanitize --output-on-failure -j4
+```
+
+An interrupted broad sweep can continue as disjoint whole-test cohorts. Its
+evidence must prove exact union coverage, with interrupted tests rerun in full.
+
 ## Expected implementation surfaces
 
 `cmake/OriginalRuntime.cmake`, original GameEngine/GameLogic/native provider
@@ -49,10 +65,10 @@ pre-existing paths before touching overlapping files; stage only owned hunks.
 
 ## Acceptance criteria
 
-- [ ] The actual native entry reaches original post-init with locally supplied assets, tears down without changing them, and publishes bounded N2 qualification evidence.
-- [ ] Positive and negative behavior above is directly demonstrated by
+- [x] The actual native entry reaches original post-init with locally supplied assets, tears down without changing them, and publishes bounded N2 qualification evidence.
+- [x] Positive and negative behavior above is directly demonstrated by
   executable source or a bounded public report, with current source identity.
-- [ ] Ownership, input integrity and accepted existing regression guarantees
+- [x] Ownership, input integrity and accepted existing regression guarantees
   remain intact; no private data is committed.
 
 ## Commit boundary

@@ -113,6 +113,7 @@ add_library(original_runtime_common STATIC
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeConversionCache.cpp"
   "${ZH_CODE}/GameEngine/Source/Common/NameKeyGenerator.cpp")
 target_link_libraries(original_runtime_common PUBLIC original_data ZLIB::ZLIB OpenSSL::Crypto SDL3::SDL3)
+target_link_libraries(original_graph_headers_fixture PRIVATE original_runtime_common)
 target_include_directories(original_runtime_common PRIVATE
   "${ZH_CODE}/Libraries/Source/WWVegas"
   "${ZH_CODE}/Libraries/Source/WWVegas/WWLib"
@@ -214,7 +215,7 @@ target_compile_options(original_logic PRIVATE -Wno-unknown-pragmas -Werror=retur
 # Retained actual Common gameplay owners exposed by the whole-root link census.
 # No platform playback, excluded tools/online service or replacement globals.
 set(ZH_ORIGINAL_GAMEPLAY_COMMON
-  Audio/AudioEventRTS.cpp Audio/AudioRequest.cpp Audio/NativeAudioAdmission.cpp Audio/DynamicAudioEventInfo.cpp
+  Audio/AudioEventRTS.cpp Audio/AudioRequest.cpp Audio/DynamicAudioEventInfo.cpp
   Audio/GameAudio.cpp Audio/GameMusic.cpp Audio/GameSounds.cpp
   RTS/AcademyStats.cpp RTS/ActionManager.cpp RTS/Energy.cpp RTS/Handicap.cpp
   RTS/MissionStats.cpp RTS/Money.cpp RTS/Player.cpp RTS/PlayerList.cpp
@@ -227,6 +228,7 @@ set(ZH_ORIGINAL_GAMEPLAY_COMMON
   System/ObjectStatusTypes.cpp System/Radar.cpp System/Upgrade.cpp)
 list(TRANSFORM ZH_ORIGINAL_GAMEPLAY_COMMON PREPEND "${ZH_CODE}/GameEngine/Source/Common/")
 add_library(original_gameplay_common STATIC ${ZH_ORIGINAL_GAMEPLAY_COMMON})
+target_sources(original_gameplay_common PRIVATE "${ZH_CODE}/GameEngine/Source/Common/Audio/NativeAudioAdmission.cpp")
 # Actual CPU map owners extracted from the original device-owned translation unit.
 target_sources(original_gameplay_common PRIVATE
   "${ZH_CODE}/GameEngine/Source/Common/System/NativeOriginalStatsSource.cpp"

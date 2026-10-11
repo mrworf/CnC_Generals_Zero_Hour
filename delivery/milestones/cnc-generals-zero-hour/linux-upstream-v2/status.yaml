@@ -83,7 +83,7 @@
       "id": "N2",
       "title": "Original engine Linux foundation",
       "file": "delivery/milestones/cnc-generals-zero-hour/linux-upstream-v2/N2-original-engine-linux-foundation.md",
-      "status": "in_progress",
+      "status": "completed",
       "dependencies": [
         "N0"
       ],
@@ -92,9 +92,9 @@
         "R04",
         "R07"
       ],
-      "completed_at": null,
-      "evidence": null,
-      "notes": "Core and rooted-data slices accepted, 18/18 normal/GCC/Clang original cases; six complete repeated ownership sweeps and read-only stage4/mask63 input-integrity probe. The prior plan assigned actual GameEngine/GameLogic integration to slice03; the amended N2 completion gate is HQ-01\u201307, to be delivered under a fresh remaining-work plan. Evidence: evidence/qa/N2-original-core.md and evidence/qa/N2-original-data.md. Planning amendment: finish HQ-01\u201307; create a fresh remaining-work governing plan before resuming implementation. Preserve old slice03 as history and unaccepted work; indexing is not actual startup acceptance.",
+      "completed_at": "2026-10-10",
+      "evidence": "evidence/qa/N2-native-supplied-startup.md",
+      "notes": "HQ-01 through HQ-07 accepted on the current inclusive code fingerprint: actual original native startup/load/120 updates, source-backed H1 semantics and 121x3 exact checkpoints in all three configurations, complete failure/retry and ownership checks, supplied-data post-init with unchanged read-only inputs, and 524/524 normal GCC, GCC ASan/UBSan/LSan and Clang ASan/UBSan/LSan regression coverage. The GCC sanitizer matrix used two disjoint whole-test segments, 33+491. Physical rendering, interactive media, full matches and LAN remain later milestones.",
       "qualification_requirements": [
         "HQ-01",
         "HQ-02",

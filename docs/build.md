@@ -98,8 +98,17 @@ the original pending single-player map transition and verify authored actors,
 script registration, terrain, malformed-input rejection and corrected retry.
 `h1-ticks` runs 120 original steady updates and checks script execution,
 source-frame progression and timed deletion. `h1-ticks-negative` rejects an
-unsupported road provider, then completes corrected H1. To check these
-boundaries without retail content, run:
+unsupported road provider, then completes corrected H1.
+
+For a locally supplied, read-only data link in the repository root, run
+`python3 tools/run_native_startup_audit.py --binary build/original-core-gcc/zero_hour_headless --workspace-link`.
+The wrapper hashes supplied files before and after original post-init/teardown,
+checks missing-input and required user-storage rejection before a corrected
+startup, and prints only bounded outcomes. It creates disposable user storage
+and cache outside the asset mount. Alternatively pass ordered `--data-root`
+arguments instead of `--workspace-link`; keep those paths out of shared logs.
+
+To check generated fixture boundaries without retail content, run:
 
 ```sh
 cmake --build build/original-core-gcc --target zero_hour_headless original_native_headless_root_fixture -j 4
